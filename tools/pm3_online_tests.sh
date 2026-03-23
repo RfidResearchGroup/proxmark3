@@ -11,6 +11,7 @@ TESTALL=false
 TESTDESFIREVALUE=false
 TESTHIDWIEGAND=false
 TESTMFHIDENCODE=false
+TESTICLASSENCODE=false
 NEED_MF_HID_ENCODE_WIPE=false
 TESTMANUAL=false
 
@@ -20,12 +21,13 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hid_wiegand|mf_hid_encode]
+Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hid_wiegand|mf_hid_encode|iclass_encode]
     --pm3bin ...:    Specify path to pm3 binary to test
-    --manual ...:    Pause after successful online LF HID clone/read checks for external reader verification
+    --manual ...:    Pause for external reader verification for supported card-flow checks
     desfire_value:   Test DESFire value operations with card
     hid_wiegand:     Test LF HID T55xx clone and PM3 readback flows
     mf_hid_encode:   Test MIFARE Classic HID encoding flows
+    iclass_encode:   Test physical iCLASS HID encoding roundtrip
     You must specify a test target - no default 'all' for online tests
 """
       exit 0
@@ -56,6 +58,11 @@ Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hid_wiegand|mf_hid_encode]
     mf_hid_encode)
       TESTALL=false
       TESTMFHIDENCODE=true
+      shift
+      ;;
+    iclass_encode)
+      TESTALL=false
+      TESTICLASSENCODE=true
       shift
       ;;
     -*|--*=) # unsupported flags
@@ -170,6 +177,31 @@ function HexToBin() {
     esac
   done
   printf "%s" "$bin"
+}
+
+function StripAnsiCodes() {
+  LC_ALL=C printf '%s' "$1" | LC_ALL=C sed -E 's/\x1B\[[0-9;?]*[[:alpha:]]//g'
+}
+
+function ExtractIClassBlockHex() {
+  local BLOCK="$1"
+  local OUTPUT="$2"
+  local LINE
+
+  while IFS= read -r LINE; do
+    local CLEANLINE
+    CLEANLINE=$(printf '%s\n' "$LINE" | sed -E 's/\x1B\[[0-9;?]*[[:alpha:]]//g')
+
+    # Support both spaced and compact block print formats from different pm3 versions
+    # (for example: `6/0x06 -> ...` and `  6 | xx xx ...` style output).
+    if [[ "$CLEANLINE" =~ ${BLOCK}/0x[0-9A-Fa-f]{2}.*(\||:|->)[[:space:]]*([0-9A-Fa-f]{16}|([0-9A-Fa-f]{2}([[:space:]]+[0-9A-Fa-f]{2}){7})).* ]]; then
+      local HEX="${BASH_REMATCH[2]}"
+      HEX=${HEX// /}
+      printf '%s' "$HEX"
+      return 0
+    fi
+  done <<< "$OUTPUT"
+  return 1
 }
 
 function RestoreMfHidEncodeSector0() {
@@ -314,6 +346,167 @@ function CheckMfHidEncodeCleanup() {
   return 1
 }
 
+function CheckIClassEncodeRoundTrip() {
+  local LABEL="$1"
+  local ENCODE_ARGS="$2"
+  # Expected decoded PACS length lets us validate that both short and long payload encodings
+  # survive a full physical write/read roundtrip and client-side decode.
+  local EXPECTED_BITS_LEN="$3"
+
+  printf "%-40s" "$LABEL "
+
+  start=$(date +%s)
+  TIMEINFO=""
+
+  local ENCODE_CMD="$PM3BIN -c 'hf iclass encode -v $ENCODE_ARGS'"
+  local ENCODE_OUTPUT
+  ENCODE_OUTPUT=$(eval "$ENCODE_CMD" 2>&1)
+
+  local EXPECTED6="$(ExtractIClassBlockHex 6 "$ENCODE_OUTPUT")"
+  local EXPECTED7="$(ExtractIClassBlockHex 7 "$ENCODE_OUTPUT")"
+  local EXPECTED8="$(ExtractIClassBlockHex 8 "$ENCODE_OUTPUT")"
+  local EXPECTED9="$(ExtractIClassBlockHex 9 "$ENCODE_OUTPUT")"
+
+  if [ -z "$EXPECTED6" ] || [ -z "$EXPECTED7" ] || [ -z "$EXPECTED8" ] || [ -z "$EXPECTED9" ]; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL} $TIMEINFO"
+    echo "Failed to extract expected credential blocks from encode output."
+    echo "$ENCODE_OUTPUT"
+    return 1
+  fi
+
+  local RES
+
+  RES=$(eval "$PM3BIN -c 'hf iclass rdbl --ki 0 --blk 6'" 2>&1)
+  local READ6="$(ExtractIClassBlockHex 6 "$RES")"
+  if [ -z "$READ6" ]; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+    echo "Failed to read block 6 from iCLASS card."
+    echo "$RES"
+    return 1
+  fi
+
+  RES=$(eval "$PM3BIN -c 'hf iclass rdbl --ki 0 --blk 7'" 2>&1)
+  local READ7="$(ExtractIClassBlockHex 7 "$RES")"
+  if [ -z "$READ7" ]; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+    echo "Failed to read block 7 from iCLASS card."
+    echo "$RES"
+    return 1
+  fi
+
+  RES=$(eval "$PM3BIN -c 'hf iclass rdbl --ki 0 --blk 8'" 2>&1)
+  local READ8="$(ExtractIClassBlockHex 8 "$RES")"
+  if [ -z "$READ8" ]; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+    echo "Failed to read block 8 from iCLASS card."
+    echo "$RES"
+    return 1
+  fi
+
+  RES=$(eval "$PM3BIN -c 'hf iclass rdbl --ki 0 --blk 9'" 2>&1)
+  local READ9="$(ExtractIClassBlockHex 9 "$RES")"
+  if [ -z "$READ9" ]; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+    echo "Failed to read block 9 from iCLASS card."
+    echo "$RES"
+    return 1
+  fi
+
+  if [ "${EXPECTED6^^}" != "${READ6^^}" ] || [ "${EXPECTED7^^}" != "${READ7^^}" ] || [ "${EXPECTED8^^}" != "${READ8^^}" ] || [ "${EXPECTED9^^}" != "${READ9^^}" ]; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+    echo "Expected:"
+    echo "  6/0x06: $EXPECTED6"
+    echo "  7/0x07: $EXPECTED7"
+    echo "  8/0x08: $EXPECTED8"
+    echo "  9/0x09: $EXPECTED9"
+    echo "Observed:"
+    echo "  6/0x06: $READ6"
+    echo "  7/0x07: $READ7"
+    echo "  8/0x08: $READ8"
+    echo "  9/0x09: $READ9"
+    return 1
+  fi
+
+  # Persist a fresh tag dump so the existing `hf iclass view` decode path can be exercised.
+  # This catches payload extraction regressions that are not visible from raw block reads alone.
+  local DUMP_FILE
+  DUMP_FILE="$(mktemp)"
+  trap 'rm -f "$DUMP_FILE"' RETURN
+
+  # Verify that we can read the full iCLASS tag contents from the physical card.
+  RES=$($PM3BIN -c "hf iclass dump --ki 0 -f $DUMP_FILE" 2>&1)
+  if [ $? -ne 0 ] || [ ! -f "$DUMP_FILE" ]; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+    echo "Failed to dump iCLASS card for client decode check."
+    echo "$RES"
+    return 1
+  fi
+
+  # Run the client decode path used by normal inspection. Encrypted transport modes need
+  # `decrypt`, plain mode can use `view` directly.
+  local DECODE_RES
+  local DECODE_CMD="hf iclass view -f $DUMP_FILE"
+  if [[ "$ENCODE_ARGS" =~ --enc[[:space:]]+(des|2k3des) ]]; then
+    DECODE_CMD="hf iclass decrypt -f $DUMP_FILE --ns"
+  fi
+  DECODE_RES=$($PM3BIN -c "$DECODE_CMD" 2>&1)
+  if echo "$DECODE_RES" | grep -E -q "Invalid legacy PACS payload|missing sentinel bit"; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+    echo "Client-side decode reported invalid PACS payload."
+    echo "$DECODE_RES"
+    return 1
+  fi
+
+  # Extract the decoded legacy PACS binary line so we can confirm we got back the same payload size.
+  local DECODE_CLEAN
+  DECODE_CLEAN="$(StripAnsiCodes "$DECODE_RES")"
+
+  local DECODE_LINE
+  DECODE_LINE="$(printf '%s\n' "$DECODE_CLEAN" | LANG=C grep -a -m1 -E 'Binary\.\.\.')"
+  local DECODE_BINARY=""
+  local DECODE_LEN=0
+  if [ -n "$DECODE_LINE" ]; then
+    DECODE_BINARY="$(printf '%s\n' "$DECODE_LINE" | LANG=C sed -E 's/.*Binary\.\.\.[[:space:]]+([01]+).*/\1/')"
+    DECODE_LEN="$(printf '%s\n' "$DECODE_LINE" | LANG=C sed -E 's/.*\(([[:space:]]*[0-9]+)[[:space:]]*\).*/\1/' | tr -d '[:space:]')"
+  fi
+
+  # If decode output exists but lacks a parseable bitstring/length, treat as a regression.
+  if [ -z "$DECODE_BINARY" ] || [ "$DECODE_LEN" -eq 0 ]; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+    echo "Failed to extract legacy PACS payload from client decode output."
+    echo "$DECODE_CLEAN"
+    return 1
+  fi
+
+  # Keep test output strict: the decoded PACS length should match the requested encode length.
+  if [ -n "$EXPECTED_BITS_LEN" ] && [ "$DECODE_LEN" -ne "$EXPECTED_BITS_LEN" ]; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+    echo "Expected client decode payload length: $EXPECTED_BITS_LEN"
+    echo "Actual payload length:           $DECODE_LEN"
+    echo "$DECODE_CLEAN"
+    return 1
+  fi
+
+  end=$(date +%s)
+  delta=$(expr $end - $start)
+  if [ $delta -gt 2 ]; then
+    TIMEINFO="  (${delta} s)"
+  fi
+
+  if $TESTMANUAL; then
+    echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK} $TIMEINFO"
+    local MANUAL_PROMPT="PRESENT THE CARD TO ANOTHER READER AND CONFIRM: iCLASS H10301 FC 31 CN 337"
+    if [ "$EXPECTED_BITS_LEN" -eq 143 ]; then
+      MANUAL_PROMPT="PRESENT THE CARD TO ANOTHER READER AND CONFIRM: iCLASS 143-bit CREDENTIAL"
+    fi
+    WaitForEnter "$MANUAL_PROMPT"
+    return 0
+  fi
+
+  echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK} $TIMEINFO"
+  return 0
+}
+
 function WaitForEnter() {
   echo ""
   echo "$1"
@@ -341,7 +534,7 @@ if command -v git >/dev/null && git rev-parse --is-inside-work-tree >/dev/null 2
 fi
 
 # Check that user specified a test
-if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHIDWIEGAND" = false ] && [ "$TESTMFHIDENCODE" = false ]; then
+if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHIDWIEGAND" = false ] && [ "$TESTMFHIDENCODE" = false ] && [ "$TESTICLASSENCODE" = false ]; then
   echo "Error: You must specify a test target. Use -h for help."
   exit 1
 fi
@@ -380,7 +573,9 @@ while true; do
       if ! CheckExecute "lf hid clone bin oversize"    "PAT=\$(printf '01%.0s' {1..48}); $PM3BIN -c \"lf hid clone --bin \$PAT\" 2>&1" "Packed HID encoding supports up to 84 Wiegand bits"; then break; fi
       if ! CheckExecute "lf hid clone new oversize"    "$PM3BIN -c 'lf hid clone --new 0000A4550148AB' 2>&1" "LF HID clone supports only packed credentials up to 37 bits"; then break; fi
 
-      WaitForEnter "PLACE A REWRITABLE T55xx TAG ON THE PM3 NOW"
+      if $TESTMANUAL; then
+        WaitForEnter "PLACE A REWRITABLE T55xx TAG ON THE PM3 NOW"
+      fi
       if ! CheckLfHidCloneReadback "lf hid clone H10301 26-bit" "-w H10301 --fc 118 --cn 1603" "H10301.*FC: 118.*CN: 1603" "H10301 26-bit, FC 118, CN 1603"; then break; fi
       if ! CheckLfHidCloneReadback "lf hid clone C1k35s 35-bit" "-w C1k35s --fc 118 --cn 1603" "C1k35s.*FC: 118.*CN: 1603" "C1k35s 35-bit, FC 118, CN 1603"; then break; fi
       if ! CheckLfHidCloneReadback "lf hid clone H10304 37-bit" "-w H10304 --fc 118 --cn 1603" "H10304.*FC: 118.*CN: 1603" "H10304 37-bit, FC 118, CN 1603"; then break; fi
@@ -390,7 +585,9 @@ while true; do
       echo -e "\n${C_BLUE}Testing MIFARE Classic HID encoding${C_NC} ${PM3BIN:=./pm3}"
       if ! CheckFileExist "pm3 exists"               "$PM3BIN"; then break; fi
 
-      WaitForEnter "PLACE A BLANK MIFARE CLASSIC 1K CARD ON THE PM3 NOW"
+      if $TESTMANUAL; then
+        WaitForEnter "PLACE A BLANK MIFARE CLASSIC 1K CARD ON THE PM3 NOW"
+      fi
       NEED_MF_HID_ENCODE_WIPE=true
       if ! CheckMfHidEncodeRoundTrip "hf mf encodehid bin roundtrip"      "--bin 10001111100000001010100011" "10001111100000001010100011" "H10301.*FC: 31.*CN: 337"; then break; fi
       if ! CheckMfHidEncodeRoundTrip "hf mf encodehid raw roundtrip"      "--raw 063E02A3" "10001111100000001010100011" "H10301.*FC: 31.*CN: 337"; then break; fi
@@ -398,6 +595,26 @@ while true; do
       if ! CheckMfHidEncodeRoundTrip "hf mf encodehid format roundtrip"   "-w H10301 --fc 31 --cn 337" "10001111100000001010100011" "H10301.*FC: 31.*CN: 337"; then break; fi
       if ! RestoreMfHidEncodeCard; then break; fi
       if ! CheckMfHidEncodeCleanup "hf mf encodehid cleanup verify"; then break; fi
+    fi
+
+    if $TESTICLASSENCODE; then
+      echo -e "\n${C_BLUE}Testing physical iCLASS HID encoding${C_NC} ${PM3BIN:=./pm3}"
+      if ! CheckFileExist "pm3 exists"               "$PM3BIN"; then break; fi
+
+      if $TESTMANUAL; then
+        WaitForEnter "PLACE A BLANK iCLASS TAG ON THE PM3 NOW"
+      fi
+      # Build a deterministic 143-bit "all-ones" payload to exercise the legacy max-width path.
+      ICLASS_143_BIN=
+      ICLASS_143_BIN=$(awk 'BEGIN { for (i = 0; i < 143; i++ ) { printf "1" } }')
+      if ! CheckIClassEncodeRoundTrip "hf iclass encode bin roundtrip plain" "--bin 10001111100000001010100011 --ki 0 --enc none" 26; then break; fi
+      if ! CheckIClassEncodeRoundTrip "hf iclass encode bin roundtrip des"   "--bin 10001111100000001010100011 --ki 0 --enc des" 26; then break; fi
+      if ! CheckIClassEncodeRoundTrip "hf iclass encode bin roundtrip 3des"  "--bin 10001111100000001010100011 --ki 0 --enc 2k3des" 26; then break; fi
+      if ! CheckIClassEncodeRoundTrip "hf iclass encode bin 143-bit roundtrip" "--bin $ICLASS_143_BIN --ki 0 --enc none" 143; then break; fi
+      if ! CheckIClassEncodeRoundTrip "hf iclass encode raw roundtrip"     "--raw 063E02A3 --ki 0 --enc none" 26; then break; fi
+      if ! CheckIClassEncodeRoundTrip "hf iclass encode raw 127-bit roundtrip" "--raw 85473b1bcfc4a5def377870aec812d4c --ki 0 --enc none" 127; then break; fi
+      if ! CheckIClassEncodeRoundTrip "hf iclass encode new roundtrip"     "--new 068F80A8C0 --ki 0 --enc none" 26; then break; fi
+      if ! CheckIClassEncodeRoundTrip "hf iclass encode format roundtrip"  "-w H10301 --fc 31 --cn 337 --ki 0 --enc none" 26; then break; fi
     fi
   
   echo -e "\n------------------------------------------------------------"
