@@ -2448,11 +2448,19 @@
         "Type": "access"
     },
     {
+        "AID": "A0000004400001010001000002",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "SEOS Mobile",
+        "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
+        "Type": "access"
+    },
+    {
         "AID": "A00000054000060100010000FF",
         "Vendor": "HID Global",
         "Country": "",
         "Name": "SEOS Mobile",
-        "Description": "Declared by some SEOS-compatible applications for HCE",
+        "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
         "Type": "access"
     },
     {
@@ -2501,6 +2509,22 @@
         "Country": "",
         "Name": "Crescendo OATH #2",
         "Description": "HID Crescendo Key OATH instance 2",
+        "Type": "access"
+    },
+    {
+        "AID": "FF55494420414343455353",
+        "Vendor": "UniFi",
+        "Country": "",
+        "Name": "UniFi Access HCE Credential",
+        "Description": "Declared as 'other' service",
+        "Type": "access"
+    },
+    {
+        "AID": "FF55494420414343455356",
+        "Vendor": "UniFi",
+        "Country": "",
+        "Name": "UniFi Access HCE Credential",
+        "Description": "Declared as 'payment' service",
         "Type": "access"
     }
 ]
