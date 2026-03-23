@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `-t` / `--timeout` option for `hf 15 sim` (@recursivenomad)
 - Added `hf iclass blacktears` command to perform an automated tearoff of block 1 to set non-secure page mode(@antiklesys)
 - Changed wiegand encoding to use shared helpers and have unified parameters (--raw, --bin, --new, --wiegand, etc.) (@cindersocket)
 - Added `hf gst read` command (@kormax)
