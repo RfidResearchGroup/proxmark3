@@ -150,6 +150,16 @@ done
 # set positional arguments in their proper place
 eval set -- "$PARAMS"
 
+CLIENTBIN=${CLIENTBIN:=./client/proxmark3}
+CLIENTBIN_PATH=$CLIENTBIN
+
+# `./pm3` auto-detects and connects to attached hardware, which defeats client-only
+# regression coverage. Force the wrapper into offline mode while leaving direct
+# `proxmark3` binaries unchanged.
+if [ "$(basename "$CLIENTBIN")" = "pm3" ]; then
+  CLIENTBIN="$CLIENTBIN -o"
+fi
+
 C_RED='\033[0;31m'
 C_GREEN='\033[0;32m'
 C_YELLOW='\033[0;33m'
@@ -433,8 +443,8 @@ while true; do
       if ! CheckExecute slow opencl "ht2crack5opencl test"     "cd $HT2CRACK5OPENCLPATH; ./ht2crack5opencl $HT2CRACK5OPENCLUID $HT2CRACK5OPENCLNRAR" "Key found.*$HT2CRACK5OPENCLKEY"; then break; fi
     fi
     if $TESTALL || $TESTCLIENT; then
-      echo -e "\n${C_BLUE}Testing client:${C_NC} ${CLIENTBIN:=./client/proxmark3}"
-      if ! CheckFileExist "proxmark3 exists"               "$CLIENTBIN"; then break; fi
+      echo -e "\n${C_BLUE}Testing client:${C_NC} ${CLIENTBIN}"
+      if ! CheckFileExist "proxmark3 exists"               "$CLIENTBIN_PATH"; then break; fi
       # Avoid mangling history and logs
       CLIENTBIN="$CLIENTBIN --incognito"
       echo -e "\n${C_BLUE}Testing basic help:${C_NC}"
@@ -486,12 +496,17 @@ while true; do
       if ! CheckExecute "wiegand encode test - new bin 96-bit verbose pad"  "PAT=\$(printf '01%.0s' {1..48}); $CLIENTBIN -c \"wiegand encode --bin \$PAT --new --verbose\"" "With Sentinel\\.{4} 0b 00000001010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101 \\(104-bit\\)"; then break; fi
       if ! CheckExecute "wiegand encode test - new bin 96-bit verbose raw"  "PAT=\$(printf '01%.0s' {1..48}); $CLIENTBIN -c \"wiegand encode --bin \$PAT --new --verbose\"" "Wiegand --raw\\.{4} 0x 01555555555555555555555555"; then break; fi
       if ! CheckExecute "wiegand encode test - new 48-bit"  "$CLIENTBIN -c 'wiegand encode -w C1k48s --fc 42069 --cn 42069 --new'" "New PACS\\.{9} 0x 0000A4550148AB"; then break; fi
+      if ! CheckExecute "wiegand encode test - H10302"  "$CLIENTBIN -c 'wiegand encode -w H10302 --cn 1234567'" "Wiegand: 00025AD0F"; then break; fi
+      if ! CheckExecute "lf hid help offline hides online-only commands"  "if $CLIENTBIN -c 'lf hid help' 2>&1 | grep -qE '(^|[[:space:]])(sim|clone)([[:space:]]|$)'; then echo FAIL; else echo OK; fi" "OK"; then break; fi
+      if ! CheckExecute "wiegand encode test - bin 83-bit"  "PAT=\$(printf '1%.0s' {1..83}); $CLIENTBIN -c \"wiegand encode --bin \$PAT\"" "Wiegand raw\\.{4} 0FFFFFFFFFFFFFFFFFFFFF"; then break; fi
+      if ! CheckExecute "wiegand encode test - bin 84-bit"  "PAT=\$(printf '1%.0s' {1..84}); $CLIENTBIN -c \"wiegand encode --bin \$PAT\"" "Wiegand raw\\.{4} 1FFFFFFFFFFFFFFFFFFFFF"; then break; fi
       if ! CheckExecute "wiegand decode test - raw over 96-bit"  "$CLIENTBIN -c 'wiegand decode --raw 01555555555555555555555555' 2>&1" "Raw hex decode supports up to 96 Wiegand bits"; then break; fi
       if ! CheckExecute "wiegand decode test - raw"  "$CLIENTBIN -c 'wiegand decode --raw 2006F623AE'" "FC: 123  CN: 4567  parity \( ok \)"; then break; fi
       if ! CheckExecute "wiegand decode test - bin over 96-bit"  "PAT=\$(printf '01%.0s' {1..49}); $CLIENTBIN -c \"wiegand decode --bin \$PAT\" 2>&1" "Binary decode supports up to 96 Wiegand bits"; then break; fi
       if ! CheckExecute "wiegand decode test - new"  "$CLIENTBIN -c 'wiegand decode --new 06BD88EB80'" "FC: 123  CN: 4567  parity \( ok \)"; then break; fi
       if ! CheckExecute "wiegand decode test - new no padded bin"  "if ! $CLIENTBIN -c 'wiegand decode --new 06BD88EB80' 2>&1 | grep -q 'padded bin'; then echo OK; fi" "OK"; then break; fi
       if ! CheckExecute "wiegand decode test - new 96-bit"  "$CLIENTBIN -c 'wiegand decode --new 00555555555555555555555555'" "hex\\.{14} 555555555555555555555555"; then break; fi
+      if ! CheckExecute "wiegand decode test - H10302"  "$CLIENTBIN -c 'wiegand decode --raw 00025AD0F'" "H10302.*CN: 1234567.*parity \( ok \)"; then break; fi
       if ! CheckExecute "wiegand decode test - new 48-bit"  "$CLIENTBIN -c 'wiegand decode --new 0000A4550148AB'" "C1k48s.*FC: 42069  CN: 42069  parity \( ok \)"; then break; fi
       if ! CheckExecute "wiegand Verkada40 encode test 1" "$CLIENTBIN -c 'wiegand encode -w Verkada40 --fc 50 --cn 1001'" "86400007D3"; then break; fi
       if ! CheckExecute "wiegand Verkada40 decode test 1" "$CLIENTBIN -c 'wiegand decode --raw 86400007D3'" "Verkada40.*FC: 50  CN: 1001  parity \( ok \)"; then break; fi

@@ -81,6 +81,9 @@ int wiegand_set_new_pacs_binstr(const uint8_t *pacs, size_t pacs_len, wiegand_in
 // Build HID transport words from a plain Wiegand payload, including sentinel placement and headers.
 int wiegand_pack_bin_with_hid_header(const char *binstr, wiegand_message_t *packed);
 
+// Build HID prox transport words using the legacy compact long-format wrapping for payloads above 37 bits.
+int wiegand_pack_bin_with_hid_prox(const char *binstr, wiegand_message_t *packed);
+
 // Encode a card-format struct through the existing HID formatter and return packed transport words.
 int wiegand_pack_formatted(int format_idx, wiegand_card_t *card, bool preamble, wiegand_message_t *packed);
 

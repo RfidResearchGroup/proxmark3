@@ -62,11 +62,13 @@ typedef struct {
 // Enforce the narrower LF HID transport limits after the shared Wiegand layer has
 // normalized whichever user-facing input mode was selected.
 static int lf_hid_validate_packed_transport(const wiegand_input_t *input, const char *command_name) {
+    (void)command_name;
+
     // The shared Wiegand layer can normalize credentials that are wider than the LF HID
     // transport. Reject only when this specific command needs a packed HID frame.
     if (input->packed_valid == false) {
         PrintAndLogEx(ERR, "Credential encoded successfully, but %" PRIuMAX "-bit Wiegand data cannot be represented as a packed HID credential", (uintmax_t)input->bin_len);
-        PrintAndLogEx(ERR, "Packed HID encoding supports up to 84 Wiegand bits");
+        PrintAndLogEx(ERR, "Packed HID transport supports up to 84 bits total");
         return PM3_EINVARG;
     }
 
@@ -76,12 +78,32 @@ static int lf_hid_validate_packed_transport(const wiegand_input_t *input, const 
         return PM3_SUCCESS;
     }
 
-    if (input->packed.Length > 37) {
-        PrintAndLogEx(ERR, "%s supports only packed credentials up to 37 bits", command_name);
+    return PM3_SUCCESS;
+}
+
+static int lf_hid_rebuild_transport(wiegand_input_t *input) {
+    // The long HID prox transport uses one extra sentinel/start bit ahead of the user payload.
+    // That leaves room for at most 83 payload bits on the `--bin`/`--new`/formatted paths even
+    // though raw HID transport can still carry 84 bits total.
+    if (input->bin_len > 83) {
+        PrintAndLogEx(ERR, "LF HID payload encoding supports up to 83 bits (`--raw` supports 84 transport bits)");
+        input->packed_valid = false;
         return PM3_EINVARG;
     }
 
-    return PM3_SUCCESS;
+    int res = wiegand_pack_bin_with_hid_prox(input->binstr, &input->packed);
+    input->packed_valid = (res == PM3_SUCCESS);
+    return res;
+}
+
+static int lf_hid_pack_formatted_legacy_short(int format_idx, const wiegand_card_t *card, wiegand_input_t *input) {
+    // Short HID formats worked before the long-format regression because they used the
+    // original HID formatter directly, without rebuilding from a synthetic sentinel-framed
+    // bitstring. Keep that path for <=37-bit formatted cards so H10304 stays 37-bit on
+    // external readers while >37-bit formats continue through the new long transport path.
+    int res = wiegand_pack_from_formatted(format_idx, (wiegand_card_t *)card, true, input);
+    input->packed_valid = (res == PM3_SUCCESS);
+    return res;
 }
 
 // Resolve the CLI's mutually exclusive HID input modes into one normalized representation
@@ -113,12 +135,30 @@ static int lf_hid_resolve_input(const lf_hid_cli_input_t *cli, wiegand_input_t *
         return wiegand_pack_from_raw_hid(cli->raw, cli->raw_len, input);
     }
     if (cli->bin_len) {
-        return wiegand_pack_from_plain_bin((char *)cli->bin, input);
+        int res = wiegand_set_plain_binstr((char *)cli->bin, input);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        return lf_hid_rebuild_transport(input);
     }
     if (cli->new_pacs_len) {
-        return wiegand_pack_from_new_pacs(cli->new_pacs, cli->new_pacs_len, input);
+        int res = wiegand_set_new_pacs_binstr(cli->new_pacs, cli->new_pacs_len, input);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        return lf_hid_rebuild_transport(input);
     }
-    return wiegand_pack_from_formatted(*format_idx, (wiegand_card_t *)&cli->card, true, input);
+
+    int res = wiegand_pack_from_formatted(*format_idx, (wiegand_card_t *)&cli->card, false, input);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (input->bin_len <= 37) {
+        return lf_hid_pack_formatted_legacy_short(*format_idx, &cli->card, input);
+    }
+
+    return lf_hid_rebuild_transport(input);
 }
 
 // sending three times.  Didn't seem to break the previous sim?
@@ -157,7 +197,7 @@ static int sendTry(uint8_t format_idx, wiegand_card_t *card, uint32_t delay, boo
         .hi2 = packed.Top,
         .hi = packed.Mid,
         .lo = packed.Bot,
-        .longFMT = (packed.Mid > 0xFFF)
+        .longFMT = (packed.Length > 37)
     };
 
     clearCommandBuffer();
@@ -319,12 +359,15 @@ static int CmdHIDSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hid sim",
                   "Enables simulation of HID card with card number.\n"
-                  "Simulation runs until the button is pressed or another USB command is issued.",
+                  "Simulation runs until the button is pressed or another USB command is issued.\n"
+                  "Use `--timeout` to stop automatically after a fixed number of milliseconds.\n"
+                  "`--bin`, `--new`, and formatted inputs support up to 83 payload bits; `--raw` supports 84 transport bits.",
                   "lf hid sim -r 2006ec0c86                -> HID 10301 26 bit\n"
                   "lf hid sim --bin 10001111100000001010100011\n"
                   "lf hid sim --new 068F80A8C0\n"
                   "lf hid sim -r 2e0ec00c87                -> HID Corporate 35 bit\n"
                   "lf hid sim -w H10301 --fc 118 --cn 1603 -> HID 10301 26 bit\n"
+                  "lf hid sim -w H10301 --fc 118 --cn 1603 --timeout 2000\n"
                  );
 
     void *argtable[] = {
@@ -334,6 +377,7 @@ static int CmdHIDSim(const char *Cmd) {
         arg_u64_0(NULL, "cn",      "<dec>", "card number"),
         arg_u64_0("i",    NULL,     "<dec>", "issue level"),
         arg_u64_0("o",   "oem",     "<dec>", "OEM code"),
+        arg_u64_0("t", "timeout", "<ms>", "timeout in ms (0 will run until button or <Enter> - def 0)"),
         arg_str0("r",  "raw",     "<hex>", "raw bytes"),
         arg_str0(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
         arg_str0(NULL, "new", "<hex>", "new ASN.1 PACS hex from `wiegand encode --new`"),
@@ -348,11 +392,12 @@ static int CmdHIDSim(const char *Cmd) {
     cli.card.CardNumber = arg_get_u32_def(ctx, 3, 0);
     cli.card.IssueLevel = arg_get_u32_def(ctx, 4, 0);
     cli.card.OEM = arg_get_u32_def(ctx, 5, 0);
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 6), cli.raw, sizeof(cli.raw), &cli.raw_len);
+    uint32_t timeout_ms = arg_get_u32_def(ctx, 6, 0);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 7), cli.raw, sizeof(cli.raw), &cli.raw_len);
     cli.bin_len = sizeof(cli.bin) - 1;
-    CLIGetStrWithReturn(ctx, 7, cli.bin, &cli.bin_len);
+    CLIGetStrWithReturn(ctx, 8, cli.bin, &cli.bin_len);
     cli.bin[cli.bin_len] = '\0';
-    res |= CLIParamHexToBuf(arg_get_str(ctx, 8), cli.new_pacs, sizeof(cli.new_pacs), &cli.new_pacs_len);
+    res |= CLIParamHexToBuf(arg_get_str(ctx, 9), cli.new_pacs, sizeof(cli.new_pacs), &cli.new_pacs_len);
     CLIParserFree(ctx);
 
     if (res) {
@@ -390,11 +435,11 @@ static int CmdHIDSim(const char *Cmd) {
     payload.hi2 = input.packed.Top;
     payload.hi = input.packed.Mid;
     payload.lo = input.packed.Bot;
-    payload.longFMT = (input.packed.Mid > 0xFFF);
+    payload.longFMT = (input.bin_len > 37);
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HID_SIMULATE, (uint8_t *)&payload,  sizeof(payload));
-    return lfsim_wait_check(CMD_LF_HID_SIMULATE);
+    return lfsim_wait_check_timeout(CMD_LF_HID_SIMULATE, timeout_ms);
 }
 
 static int CmdHIDClone(const char *Cmd) {
@@ -402,7 +447,8 @@ static int CmdHIDClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hid clone",
                   "clone a HID Prox tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
-                  "Tag must be on the antenna when issuing this command.",
+                  "Tag must be on the antenna when issuing this command.\n"
+                  "`--bin`, `--new`, and formatted inputs support up to 83 payload bits; `--raw` supports 84 transport bits.",
                   "lf hid clone -r 2006ec0c86                      -> write raw value for T55x7 tag (HID 10301 26 bit)\n"
                   "lf hid clone --bin 10001111100000001010100011  -> write binary HID payload for T55x7 tag\n"
                   "lf hid clone --new 068F80A8C0                  -> write PACS-encoded HID payload for T55x7 tag\n"
@@ -499,7 +545,7 @@ static int CmdHIDClone(const char *Cmd) {
     payload.hi2 = input.packed.Top;
     payload.hi = input.packed.Mid;
     payload.lo = input.packed.Bot;
-    payload.longFMT = (input.packed.Mid > 0xFFF);
+    payload.longFMT = (input.bin_len > 37);
     payload.Q5 = q5;
     payload.EM = em;
 
@@ -721,8 +767,8 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "this help"},
     {"demod",   CmdHIDDemod,    AlwaysAvailable, "demodulate HID Prox tag from the GraphBuffer"},
     {"reader",  CmdHIDReader,   IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdHIDClone,    IfPm3Lf,         "clone HID tag to T55x7, Q5/T5555 or EM4305/4469"},
-    {"sim",     CmdHIDSim,      IfPm3Lf,         "simulate HID tag"},
+    {"clone",   CmdHIDClone,    IfPm3Lf, "clone HID tag to T55x7, Q5/T5555 or EM4305/4469"},
+    {"sim",     CmdHIDSim,      IfPm3Lf, "simulate HID tag"},
     {"brute",   CmdHIDBrute,    IfPm3Lf,         "bruteforce facility code or card number against reader"},
     {"watch",   CmdHIDWatch,    IfPm3Lf,         "continuously watch for cards.  Reader mode"},
     {NULL, NULL, NULL, NULL}

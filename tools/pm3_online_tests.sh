@@ -10,6 +10,7 @@ cd "$PM3PATH" || exit 1
 TESTALL=false
 TESTDESFIREVALUE=false
 TESTHIDWIEGAND=false
+TESTHIDSIM=false
 TESTMFHIDENCODE=false
 NEED_MF_HID_ENCODE_WIPE=false
 TESTMANUAL=false
@@ -20,12 +21,14 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hid_wiegand|mf_hid_encode]
+Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hid_wiegand|hid_sim|mf_hid_encode]
     --pm3bin ...:    Specify path to pm3 binary to test
-    --manual ...:    Pause after successful online LF HID clone/read checks for external reader verification
+    --manual ...:    Enable extra clone/readback prompts for external reader verification
     desfire_value:   Test DESFire value operations with card
-    hid_wiegand:     Test LF HID T55xx clone and PM3 readback flows
+    hid_wiegand:     Test LF HID T55xx clone/readback flows
+    hid_sim:         Test LF HID timed simulation flows against an external reader
     mf_hid_encode:   Test MIFARE Classic HID encoding flows
+    Generic two-PM3 dual-wield encode/decode tests live in tools/pm3_tests_dualwield.py
     You must specify a test target - no default 'all' for online tests
 """
       exit 0
@@ -51,6 +54,11 @@ Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hid_wiegand|mf_hid_encode]
     hid_wiegand)
       TESTALL=false
       TESTHIDWIEGAND=true
+      shift
+      ;;
+    hid_sim)
+      TESTALL=false
+      TESTHIDSIM=true
       shift
       ;;
     mf_hid_encode)
@@ -140,6 +148,64 @@ function CheckLfHidCloneReadback() {
   echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL} $TIMEINFO"
   echo "Execution trace:"
   echo "$RES"
+  return 1
+}
+
+function CheckLfHidManualSim() {
+  printf "%-40s" "$1 "
+
+  start=$(date +%s)
+  TIMEINFO=""
+
+  local logfile
+  logfile=$(mktemp "${TMPDIR:-/tmp}/pm3-hid-sim.XXXXXX") || return 1
+
+  eval "$PM3BIN -c \"lf hid sim $2\"" >"$logfile" 2>&1 &
+  local sim_pid=$!
+
+  sleep 2
+  if ! kill -0 "$sim_pid" 2>/dev/null; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+    echo "Execution trace:"
+    cat "$logfile"
+    rm -f "$logfile"
+    return 1
+  fi
+
+  if $TESTMANUAL; then
+    echo -e "[ ${C_YELLOW}MANUAL${C_NC} ]"
+    echo "  Manual check: $3"
+    WaitForEnter "PRESENT THE PM3 TO THE EXTERNAL READER, CONFIRM THE CREDENTIAL, THEN PRESS <Enter> TO LET THE TIMED SIM COMPLETE"
+  fi
+
+  wait "$sim_pid"
+  local sim_status=$?
+  local sim_output
+  sim_output=$(cat "$logfile")
+  rm -f "$logfile"
+  end=$(date +%s)
+  delta=$(expr $end - $start)
+  if [ $delta -gt 2 ]; then
+    TIMEINFO="  ($delta s)"
+  fi
+
+  if [ $sim_status -ne 0 ] && [ $sim_status -ne 143 ]; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+    echo "Execution trace:"
+    echo "$sim_output"
+    return 1
+  fi
+
+  if echo "$sim_output" | grep -E -q "$4"; then
+    if ! $TESTMANUAL; then
+      echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK} $TIMEINFO"
+    fi
+    return 0
+  fi
+
+  echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+  echo "Execution trace:"
+  echo "$sim_output"
   return 1
 }
 
@@ -341,7 +407,7 @@ if command -v git >/dev/null && git rev-parse --is-inside-work-tree >/dev/null 2
 fi
 
 # Check that user specified a test
-if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHIDWIEGAND" = false ] && [ "$TESTMFHIDENCODE" = false ]; then
+if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHIDWIEGAND" = false ] && [ "$TESTHIDSIM" = false ] && [ "$TESTMFHIDENCODE" = false ]; then
   echo "Error: You must specify a test target. Use -h for help."
   exit 1
 fi
@@ -376,14 +442,26 @@ while true; do
       echo -e "\n${C_BLUE}Testing LF HID T55xx clone flows${C_NC} ${PM3BIN:=./pm3}"
       if ! CheckFileExist "pm3 exists"               "$PM3BIN"; then break; fi
 
-      if ! CheckExecute "lf hid clone raw oversize"    "$PM3BIN -c 'lf hid clone -r 01400076000c86' 2>&1" "LF HID clone supports only packed credentials up to 37 bits"; then break; fi
-      if ! CheckExecute "lf hid clone bin oversize"    "PAT=\$(printf '01%.0s' {1..48}); $PM3BIN -c \"lf hid clone --bin \$PAT\" 2>&1" "Packed HID encoding supports up to 84 Wiegand bits"; then break; fi
-      if ! CheckExecute "lf hid clone new oversize"    "$PM3BIN -c 'lf hid clone --new 0000A4550148AB' 2>&1" "LF HID clone supports only packed credentials up to 37 bits"; then break; fi
+      if ! CheckExecute "lf hid clone raw oversize"    "$PM3BIN -c 'lf hid clone -r 01400076000c86' 2>&1" "Done!"; then break; fi
+      if ! CheckExecute "lf hid clone bin oversize"    "PAT=\$(printf '01%.0s' {1..48}); $PM3BIN -c \"lf hid clone --bin \$PAT\" 2>&1" "LF HID payload encoding supports up to 83 bits"; then break; fi
+      if ! CheckExecute "lf hid clone new oversize"    "$PM3BIN -c 'lf hid clone --new 0000A4550148AB' 2>&1" "Done!"; then break; fi
 
       WaitForEnter "PLACE A REWRITABLE T55xx TAG ON THE PM3 NOW"
       if ! CheckLfHidCloneReadback "lf hid clone H10301 26-bit" "-w H10301 --fc 118 --cn 1603" "H10301.*FC: 118.*CN: 1603" "H10301 26-bit, FC 118, CN 1603"; then break; fi
       if ! CheckLfHidCloneReadback "lf hid clone C1k35s 35-bit" "-w C1k35s --fc 118 --cn 1603" "C1k35s.*FC: 118.*CN: 1603" "C1k35s 35-bit, FC 118, CN 1603"; then break; fi
       if ! CheckLfHidCloneReadback "lf hid clone H10304 37-bit" "-w H10304 --fc 118 --cn 1603" "H10304.*FC: 118.*CN: 1603" "H10304 37-bit, FC 118, CN 1603"; then break; fi
+
+    fi
+
+    if $TESTHIDSIM; then
+      echo -e "\n${C_BLUE}Testing LF HID timed sim flows${C_NC} ${PM3BIN:=./pm3}"
+      if ! CheckFileExist "pm3 exists"               "$PM3BIN"; then break; fi
+
+      if ! CheckLfHidManualSim "lf hid sim H10301 26-bit" "-w H10301 --fc 118 --cn 1603 --timeout 5000" "H10301 26-bit, FC 118, CN 1603" "Simulating HID tag"; then break; fi
+      if ! CheckLfHidManualSim "lf hid sim H10304 37-bit" "-w H10304 --fc 118 --cn 1603 --timeout 5000" "H10304 37-bit, FC 118, CN 1603" "Simulating HID tag"; then break; fi
+      if ! CheckLfHidManualSim "lf hid sim C1k48s 48-bit" "-w C1k48s --fc 42069 --cn 42069 --timeout 5000" "Corporate 1000 48-bit, FC 42069, CN 42069" "Simulating HID tag"; then break; fi
+      if ! CheckLfHidManualSim "lf hid sim synthetic 83-bit" "--bin $(printf '1%.0s' {1..83}) --timeout 5000" "Synthetic 83-bit HID payload" "Simulating HID tag"; then break; fi
+      if ! CheckLfHidManualSim "lf hid sim synthetic 83-bit + sentinel raw" "--raw 0fffffffffffffffffffff --timeout 5000" "Synthetic raw 83-bit HID payload plus sentinel bit" "Simulating HID tag using raw"; then break; fi
     fi
 
     if $TESTMFHIDENCODE; then

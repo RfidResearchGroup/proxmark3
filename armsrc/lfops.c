@@ -995,6 +995,13 @@ void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
     uint16_t n = 8;
 
     if (longFMT) {
+        if (hi2 > 0xFFFFF) {
+            DbpString("Tags can only have 84 bits.");
+            return;
+        }
+
+        // Preserve the legacy long HID prefix used by the pre-regression `lf hid sim l...` path.
+        hi2 |= 0x09E00000;
         bitlen = 8 + 8 * 2 + 84 * 2;
         manchesterEncodeUint32(hi2, 16 + 12, bits, &n);
         manchesterEncodeUint32(hi, 32, bits, &n);
@@ -2295,6 +2302,13 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
     uint8_t last_block = 0;
 
     if (longFMT) {
+        if (hi2 > 0xFFFFF) {
+            DbpString("Tags can only have 84 bits.");
+            return;
+        }
+
+        // Preserve the legacy long HID prefix used by the pre-regression long clone path.
+        hi2 |= 0x09E00000;
         // Build the 6 data blocks for supplied 84bit ID
         last_block = 6;
         // load preamble (1D)

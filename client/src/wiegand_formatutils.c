@@ -318,6 +318,34 @@ int wiegand_pack_bin_with_hid_header(const char *binstr, wiegand_message_t *pack
     return add_HID_header(packed) ? PM3_SUCCESS : PM3_EINVARG;
 }
 
+int wiegand_pack_bin_with_hid_prox(const char *binstr, wiegand_message_t *packed) {
+    size_t bin_len = strlen(binstr);
+    if (packed == NULL || bin_len == 0 || bin_len > 84) {
+        return PM3_EINVARG;
+    }
+
+    if (bin_len <= 37) {
+        return wiegand_pack_bin_with_hid_header(binstr, packed);
+    }
+
+    // Long HID sim/clone expects the compact raw transport form: one sentinel bit plus the
+    // payload, packed into the low end of the 96-bit frame. That is why payload inputs top
+    // out at 83 bits even though the transport itself can carry 84 bits total.
+    char rawbin[86] = {0};
+    uint8_t raw[11] = {0};
+    size_t raw_len = 0;
+    uint8_t aligned[12] = {0};
+
+    rawbin[0] = '1';
+    memcpy(rawbin + 1, binstr, bin_len + 1);
+
+    binstr_2_bytes(raw, &raw_len, rawbin);
+    memcpy(aligned + (sizeof(aligned) - raw_len), raw, raw_len);
+
+    *packed = initialize_message_object(bytes_to_num(aligned, 4), bytes_to_num(aligned + 4, 4), bytes_to_num(aligned + 8, 4), 0);
+    return PM3_SUCCESS;
+}
+
 int wiegand_set_plain_binstr(const char *binstr, wiegand_input_t *input) {
     size_t bin_len = strlen(binstr);
     if (input == NULL || bin_len == 0 || bin_len >= sizeof(input->binstr)) {
