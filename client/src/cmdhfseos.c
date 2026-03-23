@@ -44,6 +44,7 @@ static uint8_t zeros[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 
 #define MAX_DIVERSIFIER_LEN 16
 #define MAX_OID_LEN 32
+#define MAX_SEOS_AID_LEN 16
 
 static int CmdHelp(const char *Cmd);
 
@@ -98,6 +99,19 @@ static const known_algo_t known_algorithm_map[] = {
     {7, "SHA-256"},
     {9, "AES-128_CBC_MODE"},
 };
+
+static const char *known_seos_aids[] = {
+    "A0000004400001010001",   // STANDARD_SEOS
+    "A000000382002D000101",   // MOBILE_SEOS_ADMIN_CARD
+};
+
+static int seos_get_custom_aid(CLIParserContext *ctx, int arg_index, uint8_t *aid, int *aid_len) {
+    int res = CLIParamHexToBuf(arg_get_str(ctx, arg_index), aid, MAX_SEOS_AID_LEN, aid_len);
+    if (res != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+    return res;
+}
 
 static int create_cmac(uint8_t *key, uint8_t *input, uint8_t *out, int input_len, int output_len, int encryption_algorithm) {
     uint8_t iv[16] = {0x00};
@@ -761,37 +775,67 @@ static int select_df_decode(uint8_t *response, uint8_t response_length, int *ALG
     [=]  -- 8E [08] 'elem'
     [=]     00: 81 49 C8 6A 53 5E F8 6A                         | .I.jS^.j
     */
-    int ALGORITHM_INFO_value1_n = 0;
-    int ALGORITHM_INFO_value2_n = 0;
-    int bufferPoint = 0;
-
-    for (int i = 0; i < response_length; i++) {
-        // ALGORITHM_INFO
-        if (response[i] == 0xCD) {
-            *ALGORITHM_INFO_value1 = (int)response[i + 2];
-            ALGORITHM_INFO_value1_n = response[i + 2];
-            *ALGORITHM_INFO_value2 = (int)response[i + 3];
-            ALGORITHM_INFO_value2_n = response[i + 3];
-            bufferPoint = i + (i + 1);
-            break;
-        }
+    if (response == NULL || ALGORITHM_INFO_value1 == NULL || ALGORITHM_INFO_value2 == NULL || CRYPTOGRAM_encrypted_data == NULL || MAC_value == NULL) {
+        PrintAndLogEx(ERR, "Invalid input to ADF response decoder");
+        return PM3_ESOFT;
     }
 
-    for (int i = bufferPoint ; i < response_length; i++) {
-        // CRYPTOGRAM
-        if (response[i] == 0x85) {
-            memcpy(CRYPTOGRAM_encrypted_data, &response[i + 2], 64);
-            bufferPoint = i + (i + 1);
-            break;
+    bool has_algorithm_info = false;
+    bool has_cryptogram = false;
+    bool has_mac = false;
+
+    for (size_t i = 0; i + 1 < response_length;) {
+        uint8_t tag = response[i];
+        uint8_t tag_len = response[i + 1];
+
+        if (i + 2 + tag_len > response_length) {
+            PrintAndLogEx(ERR, "Malformed ADF response: tag 0x%02X length %u exceeds payload size %u", tag, tag_len, response_length);
+            return PM3_ESOFT;
         }
+
+        if (tag == 0xCD) {
+            if (tag_len < 2) {
+                PrintAndLogEx(ERR, "Malformed ADF response: ALGORITHM_INFO (CD) length %u is too short", tag_len);
+                return PM3_ESOFT;
+            }
+            *ALGORITHM_INFO_value1 = response[i + 2];
+            *ALGORITHM_INFO_value2 = response[i + 3];
+            has_algorithm_info = true;
+        } else if (tag == 0x85) {
+            if (tag_len == 0 || tag_len > 64) {
+                PrintAndLogEx(ERR, "Malformed ADF response: CRYPTOGRAM (85) length %u, expected 64", tag_len);
+                return PM3_ESOFT;
+            }
+            memcpy(CRYPTOGRAM_encrypted_data, &response[i + 2], tag_len);
+            has_cryptogram = true;
+        } else if (tag == 0x8E) {
+            if (tag_len != 8) {
+                PrintAndLogEx(ERR, "Malformed ADF response: MAC (8E) length %u, expected 8", tag_len);
+                return PM3_ESOFT;
+            }
+            memcpy(MAC_value, &response[i + 2], tag_len);
+            has_mac = true;
+        }
+
+        i += 2 + tag_len;
     }
 
-    for (int i = bufferPoint; i < response_length; i++) {
-        // MAC
-        if (response[i] == 0x8E) {
-            memcpy(MAC_value, &response[i + 2], 8);
+    if (has_algorithm_info == false || has_cryptogram == false || has_mac == false) {
+        if (has_algorithm_info == false) {
+            PrintAndLogEx(ERR, "ADF response missing ALGORITHM_INFO tag (CD)");
         }
+        if (has_cryptogram == false) {
+            PrintAndLogEx(ERR, "ADF response missing CRYPTOGRAM tag (85)");
+        }
+        if (has_mac == false) {
+            PrintAndLogEx(ERR, "ADF response missing MAC tag (8E)");
+        }
+        PrintAndLogEx(ERR, "Raw ADF response.................. %s", sprint_hex_inrow(response, response_length));
+        return PM3_ESOFT;
     }
+
+    int ALGORITHM_INFO_value1_n = *ALGORITHM_INFO_value1;
+    int ALGORITHM_INFO_value2_n = *ALGORITHM_INFO_value2;
 
     const char *algorithm_name1 = NULL;
     for (int i = 0; i < ARRAYLEN(known_algorithm_map); i++) {
@@ -1088,73 +1132,61 @@ static int seos_mutual_auth(uint8_t *adfOID, size_t adfoid_len, uint8_t *randomI
     return PM3_SUCCESS;
 };
 
-static int seos_aid_select(void) {
-    // Working 100%, pulls from live card
-    bool activate_field = true;
-    bool keep_field_on = true;
+static int seos_try_aid_select(const uint8_t *aid, int aid_len, bool activate_field, bool keep_field_on) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
-    // ---------------  Select AID for SEOS Card ----------------
-    typedef struct {
-        const char *name;
-        const char *value;
-    } seos_aid_t;
+    uint8_t aSELECT_AID[5 + MAX_SEOS_AID_LEN + 1] = {0};
+    aSELECT_AID[0] = 0x00;
+    aSELECT_AID[1] = 0xA4;
+    aSELECT_AID[2] = 0x04;
+    aSELECT_AID[3] = 0x00;
+    aSELECT_AID[4] = aid_len;
+    memcpy(aSELECT_AID + 5, aid, aid_len);
+    aSELECT_AID[5 + aid_len] = 0x00;
 
-    static const seos_aid_t known_AID_map[] = {
-        {"STANDARD_SEOS", "A00000044000010100010"},
-        {"MOBILE_SEOS_ADMIN_CARD", "A000000382002D0001010"},
-    };
-
-    int i;
-    int res = PM3_ESOFT;
-    //PrintAndLogEx(INFO, "--- " _CYAN_("AID Selection") " ---------------------------");
-    for (i = 0; i < ARRAYLEN(known_AID_map); i++) {
-
-        const char *selectedAID = known_AID_map[i].value;
-
-        // Select command prefixed with a 00
-        const char *prefix = "00A404";
-        uint16_t aidlen = strlen(selectedAID) >> 1;
-
-        char aidlenHex[5];
-        snprintf(aidlenHex, sizeof(aidlenHex), "%04X", aidlen);
-
-        const char *suffix = "0";
-        char combinedString[100];
-
-        snprintf(combinedString, sizeof(combinedString), "%s%s%s%s", prefix, aidlenHex, selectedAID, suffix);
-        //PrintAndLogEx(SUCCESS, "AID Selected: " _YELLOW_("%s"), known_AID_map[i].name);
-        //PrintAndLogEx(SUCCESS, "AID Select Command: " _YELLOW_("%s"), combinedString);
-
-        // ---------------  Select AID for SEOS Card ----------------
-        uint8_t aSELECT_AID[80];
-        int aSELECT_AID_n = 0;
-        param_gethex_to_eol(combinedString, 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
-        res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            continue;
-        }
-
-        if (resplen < 2) {
-            DropField();
-            continue;
-        }
-
-        uint16_t sw = get_sw(response, resplen);
-        if (sw != ISO7816_OK) {
-            PrintAndLogEx(ERR, "Selecting SEOS applet aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-            DropField();
-            continue;
-        }
-
-        // if we made it here,  its a success and we break :)
-        break;
+    int res = ExchangeAPDU14a(aSELECT_AID, 6 + aid_len, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
     }
-    if (i == ARRAYLEN(known_AID_map)) {
+
+    if (resplen < 2) {
+        PrintAndLogEx(ERR, "Selecting SEOS applet aid %s failed (short response).", sprint_hex_inrow(aid, aid_len));
+        DropField();
+        return PM3_EWRONGANSWER;
+    }
+
+    uint16_t sw = get_sw(response, resplen);
+    if (sw != ISO7816_OK) {
+        PrintAndLogEx(ERR, "Selecting SEOS applet aid %s failed (%04x - %s).", sprint_hex_inrow(aid, aid_len), sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
         return PM3_ESOFT;
     }
+
+    return PM3_SUCCESS;
+}
+
+static int seos_aid_select(const uint8_t *custom_aid, int custom_aid_len) {
+    // Working 100%, pulls from live card
+    bool activate_field = true;
+    bool keep_field_on = true;
+
+    if (custom_aid_len > 0) {
+        return seos_try_aid_select(custom_aid, custom_aid_len, activate_field, keep_field_on);
+    }
+
+    int res = PM3_ESOFT;
+    for (size_t i = 0; i < ARRAYLEN(known_seos_aids); i++) {
+        uint8_t aid[MAX_SEOS_AID_LEN] = {0};
+        int aid_len = 0;
+        param_gethex_to_eol(known_seos_aids[i], 0, aid, sizeof(aid), &aid_len);
+        res = seos_try_aid_select(aid, aid_len, activate_field, keep_field_on);
+        if (res == PM3_SUCCESS) {
+            return res;
+        }
+    }
+
     return res;
 };
 
@@ -1194,7 +1226,7 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
     char adflenHex[3];
     snprintf(adflenHex, sizeof(adflenHex), "%02X", (selectedADFLen >> 1) & 0xFF);
 
-    char selectADF[strlen(prefix) + strlen(adflenHex) + selectedADFLen + strlen(suffix) + 1];
+    char selectADF[strlen(prefix) + strlen(keyReference) + strlen(adflenHex) + selectedADFLen + strlen(suffix) + 1];
 
     // 80 A5 04 00 13 06 11 2B 06 01 04 01 81 E4 38 01 01 02 01 18 01 01 02 02 00
     snprintf(selectADF, sizeof(selectADF), "%s%s%s%s%s", prefix, keyReference, adflenHex, selectedADF, suffix);
@@ -1238,6 +1270,10 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
     uint8_t Diversified_New_EncryptionKey[24] = {0};
     uint8_t Diversified_New_MACKey[24] = {0};
 
+    if (resplen <= 2) {
+        PrintAndLogEx(ERR, "Selecting ADF file failed (short response).");
+        return PM3_EWRONGANSWER;
+    }
     resplen -= 2;
 
     uint8_t keyslot = keys[key_index].keyslot;
@@ -1331,7 +1367,7 @@ static int seos_adf_select(char *oid, int oid_len, int key_index) {
     uint16_t selectedADFLen = strlen(selectedADF);
     char adflenHex[3];
     snprintf(adflenHex, sizeof(adflenHex), "%02X", (selectedADFLen >> 1) & 0xFF);
-    char selectADF[strlen(prefix) + strlen(adflenHex) + selectedADFLen + strlen(suffix) + 1];
+    char selectADF[strlen(prefix) + strlen(keyReference) + strlen(adflenHex) + selectedADFLen + strlen(suffix) + 1];
 
     // 80 A5 04 00 13 06 11 2B 06 01 04 01 81 E4 38 01 01 02 01 18 01 01 02 02 00
     snprintf(selectADF, sizeof(selectADF), "%s%s%s%s%s", prefix, keyReference, adflenHex, selectedADF, suffix);
@@ -1366,11 +1402,27 @@ static int seos_adf_select(char *oid, int oid_len, int key_index) {
     uint8_t MAC_value[8] = {0};                  // MAC Value
     uint8_t RNDICC[8] = {0};
 
+    if (resplen <= 2) {
+        PrintAndLogEx(ERR, "Selecting ADF file failed (short response).");
+        return PM3_EWRONGANSWER;
+    }
     resplen -= 2;
 
-    seos_challenge_get(RNDICC, sizeof(RNDICC), keys[key_index].keyslot);
-    select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
-    select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
+    res = seos_challenge_get(RNDICC, sizeof(RNDICC), keys[key_index].keyslot);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    res = select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    res = select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
     return PM3_SUCCESS;
 };
 
@@ -1411,15 +1463,32 @@ static int seos_gdf_select(int key_index) {
     uint8_t MAC_value[8] = {0};                  // MAC Value
     uint8_t RNDICC[8] = {0};
 
-    seos_challenge_get(RNDICC, sizeof(RNDICC), keys[key_index].keyslot);
-    select_df_decode(response, (resplen - 2), &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
-    select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
+    if (resplen <= 2) {
+        PrintAndLogEx(ERR, "Get Global_df failed (short response).");
+        return PM3_EWRONGANSWER;
+    }
+    resplen -= 2;
+
+    res = seos_challenge_get(RNDICC, sizeof(RNDICC), keys[key_index].keyslot);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    res = select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    res = select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     return PM3_SUCCESS;
 };
 
-static int seos_select(void) {
-    int res = seos_aid_select();
+static int seos_select(const uint8_t *aid, int aid_len) {
+    int res = seos_aid_select(aid, aid_len);
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
@@ -1432,8 +1501,8 @@ static int seos_select(void) {
     return res;
 }
 
-static int seos_pacs(char *oid, int oid_len, uint8_t *data_tag, int data_tag_len, int key_index) {
-    int res = seos_aid_select();
+static int seos_pacs(char *oid, int oid_len, uint8_t *data_tag, int data_tag_len, int key_index, const uint8_t *aid, int aid_len) {
+    int res = seos_aid_select(aid, aid_len);
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
@@ -1444,8 +1513,8 @@ static int seos_pacs(char *oid, int oid_len, uint8_t *data_tag, int data_tag_len
     return res;
 }
 
-static int seos_write(char *oid, int oid_len, uint8_t *data_tag, int data_tag_len, int key_index, uint8_t *write, int write_len) {
-    int res = seos_aid_select();
+static int seos_write(char *oid, int oid_len, uint8_t *data_tag, int data_tag_len, int key_index, uint8_t *write, int write_len, const uint8_t *aid, int aid_len) {
+    int res = seos_aid_select(aid, aid_len);
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
@@ -1456,8 +1525,8 @@ static int seos_write(char *oid, int oid_len, uint8_t *data_tag, int data_tag_le
     return res;
 }
 
-static int seos_global_df(int key_index) {
-    int res = seos_aid_select();
+static int seos_global_df(int key_index, const uint8_t *aid, int aid_len) {
+    int res = seos_aid_select(aid, aid_len);
     if (res == PM3_SUCCESS) {
         res = seos_gdf_select(key_index);
     }
@@ -1525,10 +1594,6 @@ static int seos_load_keys(char *filename) {
     return PM3_SUCCESS;
 }
 
-int infoSeos(bool verbose) {
-    return seos_select();
-}
-
 static int CmdHfSeosInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf seos info",
@@ -1536,15 +1601,24 @@ static int CmdHfSeosInfo(const char *Cmd) {
                   "- If the card is a SEOS card\n"
                   "- Are static RND.ICC keys used (can detect SEOS default keyset)\n"
                   "- What encryption and hashing algorithm is use\n",
-                  "hf seos info"
+                  "hf seos info\n"
+                  "hf seos info --aid A0000004400001010001"
                  );
     void *argtable[] = {
         arg_param_begin,
+        arg_str0(NULL, "aid", "<hex>", "Use a custom SEOS AID"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t aid[MAX_SEOS_AID_LEN] = {0};
+    int aid_len = 0;
+    int res = seos_get_custom_aid(ctx, 1, aid, &aid_len);
     CLIParserFree(ctx);
-    return infoSeos(true);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    return seos_select(aid, aid_len);
 }
 
 static int CmdHfSeosGDF(const char *Cmd) {
@@ -1553,20 +1627,28 @@ static int CmdHfSeosGDF(const char *Cmd) {
                   "Get Global Data File (GDF) from SEOS card\n\n"
                   "By default:\n"
                   "  - Key Index: 3\n",
-                  "hf seos gdf"
-                  "hf seos gdf --ki 3"
+                  "hf seos gdf\n"
+                  "hf seos gdf --ki 3\n"
+                  "hf seos gdf --aid A0000004400001010001"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
+        arg_str0(NULL, "aid", "<hex>", "Use a custom SEOS AID"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int key_index = arg_get_int_def(ctx, 1, 3);
+    uint8_t aid[MAX_SEOS_AID_LEN] = {0};
+    int aid_len = 0;
+    int res = seos_get_custom_aid(ctx, 2, aid, &aid_len);
 
     CLIParserFree(ctx);
-    return seos_global_df(key_index);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    return seos_global_df(key_index, aid, aid_len);
 }
 
 static int CmdHfSeosPACS(const char *Cmd) {
@@ -1585,6 +1667,7 @@ static int CmdHfSeosPACS(const char *Cmd) {
         arg_param_begin,
         arg_str0("o", "oid", "<hex>", "<0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)"),
         arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
+        arg_str0(NULL, "aid", "<hex>", "Use a custom SEOS AID"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1597,8 +1680,14 @@ static int CmdHfSeosPACS(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, oid_hex, &oid_len);
 
     int key_index = arg_get_int_def(ctx, 2, 0);
+    uint8_t aid[MAX_SEOS_AID_LEN] = {0};
+    int aid_len = 0;
+    int res = seos_get_custom_aid(ctx, 3, aid, &aid_len);
 
     CLIParserFree(ctx);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     // Fall back to default OID
     if (oid_len == 0) {
@@ -1617,7 +1706,7 @@ static int CmdHfSeosPACS(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    return seos_pacs((char *)oid, oid_len, data_tag, data_tag_len, key_index);
+    return seos_pacs((char *)oid, oid_len, data_tag, data_tag_len, key_index, aid, aid_len);
 }
 
 static int CmdHfSeosWrite(const char *Cmd) {
@@ -1636,6 +1725,7 @@ static int CmdHfSeosWrite(const char *Cmd) {
         arg_param_begin,
         arg_str0("o", "oid", "<hex>", "<0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)"),
         arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
+        arg_str0(NULL, "aid", "<hex>", "Use a custom SEOS AID"),
         arg_str0("d", "data", "<hex>", "<0-128> hex bytes for data (Must be valid BER-TLV)"),
         arg_param_end
     };
@@ -1649,12 +1739,18 @@ static int CmdHfSeosWrite(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, oid_hex, &oid_len);
 
     int key_index = arg_get_int_def(ctx, 2, 2);
+    uint8_t aid[MAX_SEOS_AID_LEN] = {0};
+    int aid_len = 0;
+    int res = seos_get_custom_aid(ctx, 3, aid, &aid_len);
 
     int data_len = 0;
     uint8_t data[256] = {};
-    CLIGetHexWithReturn(ctx, 3, data, &data_len);
+    CLIGetHexWithReturn(ctx, 4, data, &data_len);
 
     CLIParserFree(ctx);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     // Fall back to default OID
     if (oid_len == 0) {
@@ -1678,7 +1774,7 @@ static int CmdHfSeosWrite(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    return seos_write((char *)oid, oid_len, data_tag, data_tag_len, key_index, data, data_len);
+    return seos_write((char *)oid, oid_len, data_tag, data_tag_len, key_index, data, data_len, aid, aid_len);
 }
 
 static int CmdHfSeosADF(const char *Cmd) {
@@ -1702,6 +1798,7 @@ static int CmdHfSeosADF(const char *Cmd) {
         arg_str0("t", "tag", "<hex>", "<0-100> hex bytes for tag to read (Default: FF00)"),
         arg_str0("o", "oid", "<hex>", "<0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)"),
         arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
+        arg_str0(NULL, "aid", "<hex>", "Use a custom SEOS AID"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1715,8 +1812,14 @@ static int CmdHfSeosADF(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 2, oid_hex, &oid_len);
 
     int key_index = arg_get_int_def(ctx, 3, 0);
+    uint8_t aid[MAX_SEOS_AID_LEN] = {0};
+    int aid_len = 0;
+    int res = seos_get_custom_aid(ctx, 4, aid, &aid_len);
 
     CLIParserFree(ctx);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     if (data_tag_len == 0) {
         data_tag_len = 2;
@@ -1738,7 +1841,7 @@ static int CmdHfSeosADF(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    return seos_pacs((char *)oid, oid_len, data_tag, data_tag_len, key_index);
+    return seos_pacs((char *)oid, oid_len, data_tag, data_tag_len, key_index, aid, aid_len);
 }
 
 static int CmdHfSeosSim(const char *Cmd) {
@@ -2167,4 +2270,3 @@ int CmdHFSeos(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-
