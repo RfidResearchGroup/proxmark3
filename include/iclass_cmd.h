@@ -24,6 +24,7 @@
 //-----------------------------------------------------------------------------
 // iCLASS / PICOPASS
 //-----------------------------------------------------------------------------
+#define PICOPASS_KEY_SIZE      ( 8 )
 #define PICOPASS_BLOCK_SIZE    ( 8 )
 #define PICOPASS_MAX_BYTES     ( 4096 )  // # 32k bits = 4096 bytes
 
