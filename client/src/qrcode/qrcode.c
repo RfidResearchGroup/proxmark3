@@ -793,6 +793,34 @@ uint16_t qrcode_getBufferSize(uint8_t version) {
     return bb_getGridSizeBytes(4 * version + 17);
 }
 
+int8_t qrcode_getMinVersionForBytes(uint16_t length, uint8_t ecc) {
+    if (ecc > ECC_HIGH) {
+        return -1;
+    }
+
+    uint8_t eccFormatBits = (ECC_FORMAT_BITS >> (2 * ecc)) & 0x03;
+
+#if LOCK_VERSION == 0
+    for (uint8_t version = 1; version <= 40; version++) {
+        uint16_t moduleCount = NUM_RAW_DATA_MODULES[version - 1];
+        uint16_t dataCapacity = moduleCount / 8 - NUM_ERROR_CORRECTION_CODEWORDS[eccFormatBits][version - 1];
+        uint32_t requiredBits = 4 + getModeBits(version, MODE_BYTE) + ((uint32_t)length * 8);
+
+        if (requiredBits <= ((uint32_t)dataCapacity * 8)) {
+            return version;
+        }
+    }
+
+    return -1;
+#else
+    uint8_t version = LOCK_VERSION;
+    uint16_t moduleCount = NUM_RAW_DATA_MODULES;
+    uint16_t dataCapacity = moduleCount / 8 - NUM_ERROR_CORRECTION_CODEWORDS[eccFormatBits];
+    uint32_t requiredBits = 4 + getModeBits(version, MODE_BYTE) + ((uint32_t)length * 8);
+    return (requiredBits <= ((uint32_t)dataCapacity * 8)) ? version : -1;
+#endif
+}
+
 // @TODO: Return error if data is too big.
 int8_t qrcode_initBytes(QRCode *qrcode, uint8_t *modules, uint8_t version, uint8_t ecc, uint8_t *data, uint16_t length) {
     uint8_t size = version * 4 + 17;
@@ -883,6 +911,15 @@ bool qrcode_getModule(QRCode *qrcode, uint8_t x, uint8_t y) {
 
     uint32_t offset = y * qrcode->size + x;
     return (qrcode->modules[offset >> 3] & (1 << (7 - (offset & 0x07)))) != 0;
+}
+
+void qrcode_print_matrix_ascii(QRCode *q) {
+    for (uint8_t y = 0; y < q->size; y++) {
+        for (uint8_t x = 0; x < q->size; x++) {
+            PrintAndLogEx(NORMAL, "%s" NOLF, qrcode_getModule(q, x, y) ? "##" : "  ");
+        }
+        PrintAndLogEx(NORMAL, "");
+    }
 }
 
 void qrcode_print_matrix_utf8(QRCode *q) {
