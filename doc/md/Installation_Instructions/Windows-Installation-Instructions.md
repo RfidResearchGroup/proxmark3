@@ -170,13 +170,15 @@ Install dependencies:
 ```sh
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
 libreadline-dev gcc-arm-none-eabi libnewlib-dev qt6-base-dev \
-libbz2-dev liblz4-dev libpython3-dev libssl-dev libgd-dev
+libbz2-dev liblz4-dev zlib1g-dev libpython3-dev libssl-dev libgd-dev
 ```
 > [!NOTE]
 > * If you don't need the graphical components of the
 >   Proxmark3 client, you can skip the installation of `qtbase6-dev`.
 > * If you don't need support for Python3 scripts in the
 >   Proxmark3 client, you can skip the installation of `libpython3-dev`.
+> * If you don't need support for decompressing compressed Google Smart Tap payloads
+>   in the Proxmark3 client, you can skip the installation of `zlib1g-dev`.
 > * If you don't need support for NFC ePaper devices in the
 >   PM3 device, you can skip the installation of `libgd-dev`.
 

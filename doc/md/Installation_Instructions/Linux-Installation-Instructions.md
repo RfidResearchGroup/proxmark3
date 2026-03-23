@@ -17,6 +17,8 @@
   - [On openSUSE Leap 15.6](#on-opensuse-leap-156)
   - [On openSUSE Tumbleweed](#on-opensuse-tumbleweed)
     - [If you don't need...](#if-you-dont-need-3)
+  - [On NixOS](#on-nixos)
+    - [If you don't need...](#if-you-dont-need-4)
 - [Clone the repository](#clone-the-repository)
 - [Check ModemManager](#check-modemmanager)
     - [⚠️ Very important ⚠️](#️-very-important-️)
@@ -88,7 +90,7 @@ you may have to install `libcanberra-gtk-module`.
 ^[Top](#top)
 
 ```sh
-sudo pacman -Syu git base-devel readline bzip2 lz4 arm-none-eabi-gcc \
+sudo pacman -Syu git base-devel readline bzip2 lz4 zlib arm-none-eabi-gcc \
 arm-none-eabi-newlib qt6-base bluez python gd --needed
 ```
 
@@ -102,6 +104,9 @@ you can skip the installation of `qt6-base`.
 👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
 you can skip the installation of `python`.
 
+👉 If you don't need support for decompressing compressed Google Smart Tap payloads in the Proxmark3 client,
+you can skip the installation of `zlib`.
+
 👉 If you don't need support for NFC ePaper devices,  
 you can skip the installation of `gd`.
 
@@ -111,7 +116,7 @@ you can skip the installation of `gd`.
 
 ```sh
 sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib \
-readline-devel bzip2-devel lz4-devel qt6-qtbase-devel bluez-libs-devel \
+readline-devel bzip2-devel lz4-devel zlib-ng-compat-devel qt6-qtbase-devel bluez-libs-devel \
 python3-devel libatomic openssl-devel gd-devel
 ```
 
@@ -125,6 +130,9 @@ you can skip the installation of `qt6-qtbase-devel`.
 👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
 you can skip the installation of `python3-devel`.
 
+👉 If you don't need support for decompressing compressed Google Smart Tap payloads in the Proxmark3 client,
+you can skip the installation of `zlib-ng-compat-devel`.
+
 👉 If you don't need support for NFC ePaper devices,  
 you can skip the installation of `gd-devel`.
 
@@ -134,7 +142,7 @@ you can skip the installation of `gd-devel`.
 
 ```sh
 sudo zypper install git patterns-devel-base-devel_basis gcc-c++ \
-readline-devel libbz2-devel liblz4-devel \
+readline-devel libbz2-devel liblz4-devel zlib-devel \
 python3-devel libqt5-qtbase-devel libopenssl-devel gd-devel
 sudo zypper addrepo https://download.opensuse.org/repositories/home:wkazubski/15.6/home:wkazubski.repo && \
 sudo zypper --gpg-auto-import-keys refresh && \
@@ -161,7 +169,7 @@ sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-15 100
 
 ```sh
 sudo zypper install git patterns-devel-base-devel_basis gcc-c++ \
-readline-devel libbz2-devel liblz4-devel bluez-devel \
+readline-devel libbz2-devel liblz4-devel zlib-devel bluez-devel \
 python3-devel qt6-core-devel qt6-widgets-devel libopenssl-devel gd-devel \
 cross-arm-none-gcc12 cross-arm-none-newlib-devel
 ```
@@ -172,6 +180,9 @@ you can skip the installation of `qt6-core-devel qt6-widgets-devel`.
 
 👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
 you can skip the installation of `python3-devel`.
+
+👉 If you don't need support for decompressing compressed Google Smart Tap payloads in the Proxmark3 client,
+you can skip the installation of `zlib-devel`.
 
 👉 If you don't need support for NFC ePaper devices,  
 you can skip the installation of `gd-devel`.
@@ -195,6 +206,9 @@ you can comment out `qt6Packages.qtbase` and  `qt6Packages.wrapQtAppsHook` in sh
 
 👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
 you can comment out `python3` in shell.nix.
+
+👉 If you don't need support for decompressing compressed Google Smart Tap payloads in the Proxmark3 client,
+you can comment out `zlib` in shell.nix.
 
 👉 If you don't need support for NFC ePaper devices,  
 you can comment out `gd` in shell.nix.
