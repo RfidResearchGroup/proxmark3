@@ -795,6 +795,11 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                 }
 
                                 uint8_t cmac_size = recvd_cmac_length;
+                                if (cmac_size > 16) {
+                                    Dbprintf(_RED_("Get Data failed") ": CMAC size invalid.");
+                                    break;
+                                }
+
                                 if (!generate_cmac(diver_cmac_key, mac_input, mac_input_idx, cmac, msg->encr_alg)) {
                                     Dbprintf(_RED_("Get Data failed") ": Failed to create reply CMAC.");
                                     break;
