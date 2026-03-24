@@ -1312,6 +1312,8 @@ static int CmdPCSC(const char *Cmd) {
                         }
                     }
 
+                    // ISO 7816-3 specifies that ATRs can be 2 to 33 bytes long
+                    // but some custom cards may support up to 256 bytes long ATRs
                     uint8_t res[2 + 256] = {0};
                     res[1] = atrLen;
                     memcpy(res + 2, atr, atrLen);
