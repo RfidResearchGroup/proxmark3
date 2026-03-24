@@ -727,12 +727,15 @@ size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout) {
     cmd[0] = 0x02;  //  0x0A = send cid,  0x02 = no cid.
     cmd[0] |= pcb_blocknum; // OR the block number into the PCB
 
-    if (g_dbglevel >= DBG_EXTENDED) Dbprintf("pcb_blocknum %d == %d ", pcb_blocknum, cmd[0]);
+    if (g_dbglevel >= DBG_EXTENDED) {
+        Dbprintf("pcb_blocknum %d == %d ", pcb_blocknum, cmd[0]);
+    }
 
     //cmd[1] = 0x90;  //  CID: 0x00 //TODO: allow multiple selected cards
 
-    memcpy(cmd + 1, datain, len);
-    AddCrc14A(cmd, len + 1);
+    // bytes that actually fit; may be less than len
+    memcpy(cmd + 1, datain,  cmdlen - 3);
+    AddCrc14A(cmd,  cmdlen - 3 + 1);
 
     /*
     hf 14a apdu -sk 90 60 00 00 00
