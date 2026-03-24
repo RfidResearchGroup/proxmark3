@@ -4596,6 +4596,14 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                             int received_aid_len = receivedCmd[5 + offset];
                             uint8_t *received_aid = &receivedCmd[6 + offset];
 
+                            // Validate claimed AID length against actual received frame length
+                            if ((6 + offset + received_aid_len) > len) {
+                                dynamic_response_info.response[1 + offset] = 0x6A;
+                                dynamic_response_info.response[2 + offset] = 0x80; // Wrong data
+                                dynamic_response_info.response_n = 3 + offset;
+                                break;
+                            }
+
                             // aid enumeration flag
                             if ((flags & FLAG_ENUMERATE_AID) == FLAG_ENUMERATE_AID) {
                                 Dbprintf("Received AID (%d):", received_aid_len);
