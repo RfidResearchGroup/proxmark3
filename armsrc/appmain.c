@@ -101,19 +101,19 @@ uint8_t g_tearoff_skip = 0;
 int tearoff_hook(void) {
     if (g_tearoff_enabled) {
         if (g_tearoff_delay_us == 0) {
-            Dbprintf(_RED_("No tear-off delay configured!"));
+            if (g_dbglevel >= DBG_ERROR) Dbprintf(_RED_("No tear-off delay configured!"));
             g_tearoff_enabled = false;
             return PM3_SUCCESS; // SUCCESS = the hook didn't do anything
         }
         if (g_tearoff_skip > 0) {
-            Dbprintf(_GREEN_("Tear-off skipped!"));
+            if (g_dbglevel >= DBG_INFO) Dbprintf(_GREEN_("Tear-off skipped!"));
             g_tearoff_skip--;
             return PM3_SUCCESS; // SUCCESS = the hook didn't do anything
         }
         SpinDelayUsPrecision(g_tearoff_delay_us);
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         g_tearoff_enabled = false;
-        if (g_dbglevel >= DBG_ERROR) Dbprintf(_YELLOW_("Tear-off triggered!"));
+        if (g_dbglevel >= DBG_INFO) Dbprintf(_YELLOW_("Tear-off triggered!"));
         return PM3_ETEAROFF;
     } else {
         return PM3_SUCCESS;     // SUCCESS = the hook didn't do anything
@@ -1744,6 +1744,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             setHf14bConfig(&c);
             break;
         }
+        case CMD_HF_ISO14443B_ST25TB_TEAROFF: {
+            ST25TB_TearOff(packet->data.asBytes);
+            break;
+        }
         case CMD_HF_CRYPTORF_SIM : {
 //            simulate_crf_tag();
             break;
@@ -2439,6 +2443,15 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
             uint8_t *mem = BigBuf_get_addr();
+
+            // sanity checks
+            if (payload->bytes_in_packet > sizeof(payload->data) ||
+                payload->idx > BigBuf_get_size() ||
+                payload->idx + payload->bytes_in_packet > BigBuf_get_size()) {
+                reply_ng(CMD_SMART_UPLOAD, PM3_EOVFLOW, NULL, 0);
+                break;
+            }
+
             memcpy(mem + payload->idx, payload->data, payload->bytes_in_packet);
 
             uint8_t a = 0, b = 0;

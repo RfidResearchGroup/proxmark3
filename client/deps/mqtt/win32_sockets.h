@@ -32,7 +32,7 @@ mqtt_pal_socket_handle open_nb_socket(const char *addr, const char *port) {
     // get address information
     int rv = getaddrinfo(addr, port, &hints, &servinfo);
     if (rv != 0) {
-        fprintf(stderr, "error: getaddrinfo: %s", gai_strerror(rv));
+        fprintf(stderr, "error: getaddrinfo: %s", gai_strerrorA(rv));
         WSACleanup();
         return INVALID_SOCKET;
     }

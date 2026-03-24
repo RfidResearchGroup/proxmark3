@@ -18,8 +18,10 @@
 // Code heavily modified by B.Kerler :)
 
 #include "cmdhfmfdes.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+#include "jansson.h"
 #include "commonutil.h"             // ARRAYLEN
 #include "cmdparser.h"              // command_t
 #include "comms.h"
@@ -49,6 +51,12 @@
 
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
+#define MFDES_BRUTEAID_RESELECT_ATTEMPTS 5
+#define MFDES_BRUTEAID_RESELECT_WAIT_MS  200
+#define MFDES_BRUTEAID_MAD_START         0xF0000FU
+#define MFDES_BRUTEAID_MAD_STEP          0x10U
+#define MFDES_BRUTEFID_RESELECT_ATTEMPTS 3
+#define MFDES_BRUTEFID_RESELECT_WAIT_MS 500
 
 #define status(x) ( ((uint16_t)(0x91 << 8)) + (uint16_t)x )
 /*
@@ -171,6 +179,25 @@ static const mfdesCommonAID_t commonAids[] = {
     { 0xF4812F, "\xf4\x81\x2f", "Gallagher card data application" },
     { 0xF48120, "\xf4\x81\x20", "Gallagher card application directory" }, // Can be 0xF48120 - 0xF4812B, but I've only ever seen 0xF48120
     { 0xF47300, "\xf4\x73\x00", "Inner Range card application" },
+};
+
+typedef enum {
+    MFDES_BRUTEAID_PRESET_FULL = 0,
+    MFDES_BRUTEAID_PRESET_ASCII = 1,
+    MFDES_BRUTEAID_PRESET_NUMBERS = 2,
+    MFDES_BRUTEAID_PRESET_LETTERS = 3,
+    MFDES_BRUTEAID_PRESET_DICTIONARY = 4,
+    MFDES_BRUTEAID_PRESET_MAD = 5,
+} mfdes_bruteaid_preset_t;
+
+static const CLIParserOption mfdesBruteAIDPresetOpts[] = {
+    {MFDES_BRUTEAID_PRESET_FULL, "full"},
+    {MFDES_BRUTEAID_PRESET_ASCII, "ascii"},
+    {MFDES_BRUTEAID_PRESET_NUMBERS, "numbers"},
+    {MFDES_BRUTEAID_PRESET_LETTERS, "letters"},
+    {MFDES_BRUTEAID_PRESET_DICTIONARY, "dictionary"},
+    {MFDES_BRUTEAID_PRESET_MAD, "mad"},
+    {0, NULL},
 };
 
 static int CmdHelp(const char *Cmd);
@@ -2174,20 +2201,471 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     return res;
 }
 
+static int CmdHF14ADesISOSelectISOFID(DesfireContext_t *dctx, uint16_t fileid, uint8_t *resp, size_t *resplen, bool fieldon) {
+    // ISO 7816 SELECT FILE command: CLA=00, INS=A4, P1=00, P2=00, Lc=2
+    uint8_t data[2] = {0};
+    Uint2byteToMemBe(data, fileid);
+
+    return DesfireISOSelectEx(dctx, fieldon, ISSMFDFEF, data, sizeof(data), resp, resplen);
+}
+
+static int CmdHF14ADesSelectISOFID(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes selectisofid",
+                  "Select file via ISO Select command by 2-byte ISO file identifier.\n"
+                  "Optionally preselect an application by AID or DF name before selecting the file.",
+                  "hf mfdes selectisofid --isofid e104 -> select file 0xE104\n"
+                  "hf mfdes selectisofid --aid 123456 --isofid 00ef -> select file 0x00EF in app 0x123456\n"
+                  "hf mfdes selectisofid --dfname D2760000850100 --isofid 00ef --apdu -> select file 0x00EF after DF name selection and show APDU logs");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "Verbose output"),
+        arg_str0(NULL, "aid",     "<hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "dfname",  "<hex>", "Application ISO DF Name (1-16 hex bytes, big endian)"),
+        arg_str0(NULL, "isofid",  "<hex>", "File ISO ID (ISO EF ID) (2 hex bytes, big endian)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    DesfireContext_t dctx = {0};
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    DesfireISOSelectWay selectway = ISWDFName;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 4,
+                                         &securechann, DCMNone, &appid, &selectway);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    uint32_t isoid = 0x0000;
+    bool isoidpresent = false;
+    if (CLIGetUint32Hex(ctx, 5, 0x0000, &isoid, &isoidpresent, 2, "File ISO ID must have 2 hex bytes")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (!isoidpresent) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "File ISO ID is required");
+        return PM3_EINVARG;
+    }
+
+    bool aidpresent = (arg_get_str(ctx, 3)->count > 0);
+    bool preselect = aidpresent || (dctx.selectedDFNameLen > 0);
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    uint8_t resp[250] = {0};
+    size_t resplen = 0;
+    if (preselect) {
+        res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, appid, false, 0, true, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            PrintAndLogEx(FAILED, "Application preselect " _RED_("failed"));
+            return res;
+        }
+    }
+
+    res = CmdHF14ADesISOSelectISOFID(&dctx, isoid, resp, &resplen, !preselect);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(FAILED, "ISO Select file 0x%04x " _RED_("failed"), isoid);
+        return res;
+    }
+
+    if (resplen > 0 && verbose) {
+        PrintAndLogEx(INFO, "File select response [%zu] %s", resplen, sprint_hex(resp, resplen));
+    }
+
+    PrintAndLogEx(SUCCESS, "File 0x%04x selected " _GREEN_("succesfully"), isoid);
+    DropField();
+    return PM3_SUCCESS;
+}
+
+
+typedef struct {
+    uint32_t current;
+    uint32_t step;
+    uint64_t total_count;
+    uint64_t generated_count;
+} mfdes_bruteaid_generator_full_t;
+
+typedef struct {
+    uint8_t alphabet[100];
+    size_t alphabet_len;
+    size_t idx0;
+    size_t idx1;
+    size_t idx2;
+    uint32_t id_start;
+    uint32_t id_end;
+    uint32_t step;
+    uint64_t ordinal;
+    uint64_t total_count;
+    uint64_t generated_count;
+    bool exhausted;
+} mfdes_bruteaid_generator_ascii_t;
+
+typedef struct {
+    uint32_t *aids;
+    size_t aids_count;
+    size_t idx;
+    uint32_t step;
+    uint64_t ordinal;
+    uint64_t total_count;
+    uint64_t generated_count;
+} mfdes_bruteaid_generator_dictionary_t;
+
+typedef struct {
+    mfdes_bruteaid_preset_t preset;
+    uint64_t total_count;
+    union {
+        mfdes_bruteaid_generator_full_t full;
+        mfdes_bruteaid_generator_ascii_t ascii;
+        mfdes_bruteaid_generator_dictionary_t dictionary;
+    } g;
+} mfdes_bruteaid_generator_t;
+
+static void mfdesBruteAIDGeneratorFullInit(mfdes_bruteaid_generator_full_t *gen, uint32_t id_start, uint32_t id_end, uint32_t step) {
+    memset(gen, 0, sizeof(*gen));
+    gen->current = id_start;
+    gen->step = step;
+    gen->total_count = ((uint64_t)(id_end - id_start) / step) + 1;
+}
+
+static bool mfdesBruteAIDGeneratorFullNext(mfdes_bruteaid_generator_full_t *gen, uint32_t *id, float *progress) {
+    if (gen->generated_count >= gen->total_count) {
+        return false;
+    }
+
+    *id = gen->current;
+    *progress = (gen->total_count > 1) ? (100.0f * (float)gen->generated_count / (float)(gen->total_count - 1)) : 100.0f;
+
+    gen->generated_count++;
+    if (gen->generated_count < gen->total_count) {
+        gen->current += gen->step;
+    }
+    return true;
+}
+
+static void mfdesBruteAIDGeneratorAsciiInit(mfdes_bruteaid_generator_ascii_t *gen, uint32_t id_start, uint32_t id_end, uint32_t step) {
+    memset(gen, 0, sizeof(*gen));
+    gen->id_start = id_start;
+    gen->id_end = id_end;
+    gen->step = step;
+
+    for (uint8_t b = 0x09; b <= 0x0D; b++) {
+        gen->alphabet[gen->alphabet_len++] = b;
+    }
+    for (uint16_t b = 0x20; b <= 0x7E; b++) {
+        gen->alphabet[gen->alphabet_len++] = (uint8_t)b;
+    }
+
+    uint64_t all_candidates = 0;
+    for (size_t b2 = 0; b2 < gen->alphabet_len; b2++) {
+        for (size_t b1 = 0; b1 < gen->alphabet_len; b1++) {
+            for (size_t b0 = 0; b0 < gen->alphabet_len; b0++) {
+                uint32_t id = ((uint32_t)gen->alphabet[b0]) | ((uint32_t)gen->alphabet[b1] << 8) | ((uint32_t)gen->alphabet[b2] << 16);
+                if (id >= id_start && id <= id_end) {
+                    all_candidates++;
+                }
+            }
+        }
+    }
+
+    gen->total_count = (all_candidates + step - 1) / step;
+    gen->exhausted = (gen->total_count == 0);
+}
+
+static void mfdesBruteAIDGeneratorNumbersInit(mfdes_bruteaid_generator_ascii_t *gen, uint32_t id_start, uint32_t id_end, uint32_t step) {
+    memset(gen, 0, sizeof(*gen));
+    gen->id_start = id_start;
+    gen->id_end = id_end;
+    gen->step = step;
+
+    for (uint8_t b = 0x30; b <= 0x39; b++) {
+        gen->alphabet[gen->alphabet_len++] = b;
+    }
+
+    uint64_t all_candidates = 0;
+    for (size_t b2 = 0; b2 < gen->alphabet_len; b2++) {
+        for (size_t b1 = 0; b1 < gen->alphabet_len; b1++) {
+            for (size_t b0 = 0; b0 < gen->alphabet_len; b0++) {
+                uint32_t id = ((uint32_t)gen->alphabet[b0]) | ((uint32_t)gen->alphabet[b1] << 8) | ((uint32_t)gen->alphabet[b2] << 16);
+                if (id >= id_start && id <= id_end) {
+                    all_candidates++;
+                }
+            }
+        }
+    }
+
+    gen->total_count = (all_candidates + step - 1) / step;
+    gen->exhausted = (gen->total_count == 0);
+}
+
+static void mfdesBruteAIDGeneratorLettersInit(mfdes_bruteaid_generator_ascii_t *gen, uint32_t id_start, uint32_t id_end, uint32_t step) {
+    memset(gen, 0, sizeof(*gen));
+    gen->id_start = id_start;
+    gen->id_end = id_end;
+    gen->step = step;
+
+    for (uint8_t b = 'A'; b <= 'Z'; b++) {
+        gen->alphabet[gen->alphabet_len++] = b;
+    }
+    for (uint8_t b = 'a'; b <= 'z'; b++) {
+        gen->alphabet[gen->alphabet_len++] = b;
+    }
+
+    uint64_t all_candidates = 0;
+    for (size_t b2 = 0; b2 < gen->alphabet_len; b2++) {
+        for (size_t b1 = 0; b1 < gen->alphabet_len; b1++) {
+            for (size_t b0 = 0; b0 < gen->alphabet_len; b0++) {
+                uint32_t id = ((uint32_t)gen->alphabet[b0]) | ((uint32_t)gen->alphabet[b1] << 8) | ((uint32_t)gen->alphabet[b2] << 16);
+                if (id >= id_start && id <= id_end) {
+                    all_candidates++;
+                }
+            }
+        }
+    }
+
+    gen->total_count = (all_candidates + step - 1) / step;
+    gen->exhausted = (gen->total_count == 0);
+}
+
+static int mfdesBruteAIDGeneratorDictionaryInit(mfdes_bruteaid_generator_dictionary_t *gen, uint32_t id_start, uint32_t id_end, uint32_t step) {
+    memset(gen, 0, sizeof(*gen));
+    gen->step = step;
+
+    char *path = NULL;
+    int res = searchFile(&path, RESOURCES_SUBDIR, "aid_desfire", ".json", true);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Cannot locate aid_desfire dictionary file");
+        return PM3_EFILE;
+    }
+
+    json_error_t error;
+    json_t *root = json_load_file(path, 0, &error);
+    free(path);
+    if (root == NULL) {
+        PrintAndLogEx(ERR, "Failed to load aid_desfire dictionary: line %d: %s", error.line, error.text);
+        return PM3_ESOFT;
+    }
+
+    if (json_is_array(root) == false) {
+        PrintAndLogEx(ERR, "Invalid aid_desfire dictionary format (root must be array)");
+        json_decref(root);
+        return PM3_ESOFT;
+    }
+
+    size_t max_count = json_array_size(root);
+    if (max_count == 0) {
+        json_decref(root);
+        return PM3_SUCCESS;
+    }
+
+    if (max_count > (SIZE_MAX / (2 * sizeof(uint32_t)))) {
+        json_decref(root);
+        return PM3_EMALLOC;
+    }
+
+    size_t alloc_count = max_count * 2;
+    gen->aids = calloc(alloc_count, sizeof(uint32_t));
+    if (gen->aids == NULL) {
+        json_decref(root);
+        return PM3_EMALLOC;
+    }
+
+    for (size_t i = 0; i < max_count; i++) {
+        json_t *entry = json_array_get(root, i);
+        if (json_is_object(entry) == false) {
+            continue;
+        }
+
+        json_t *aid_j = json_object_get(entry, "AID");
+        if (json_is_string(aid_j) == false) {
+            continue;
+        }
+
+        const char *aid_str = json_string_value(aid_j);
+        if (aid_str == NULL || strlen(aid_str) != 6) {
+            continue;
+        }
+
+        bool is_hex = true;
+        for (int c = 0; c < 6; c++) {
+            if (isxdigit((uint8_t)aid_str[c]) == 0) {
+                is_hex = false;
+                break;
+            }
+        }
+        if (is_hex == false) {
+            continue;
+        }
+
+        uint32_t aid = 0;
+        if (sscanf(aid_str, "%x", &aid) != 1) {
+            continue;
+        }
+        aid &= 0xFFFFFF;
+
+        // People may fill in AID values in different byte orders
+        // so we will try both big endian and little endian variants of the AID
+        uint32_t aid_variants[] = {
+            aid,
+            ((aid & 0x0000FFU) << 16) | (aid & 0x00FF00U) | ((aid & 0xFF0000U) >> 16)
+        };
+
+        for (size_t v = 0; v < ARRAYLEN(aid_variants); v++) {
+            uint32_t candidate = aid_variants[v];
+            if (candidate < id_start || candidate > id_end) {
+                continue;
+            }
+
+            bool exists = false;
+            for (size_t j = 0; j < gen->aids_count; j++) {
+                if (gen->aids[j] == candidate) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (exists == false) {
+                gen->aids[gen->aids_count++] = candidate;
+            }
+        }
+    }
+    json_decref(root);
+
+    gen->total_count = (gen->aids_count + step - 1) / step;
+    return PM3_SUCCESS;
+}
+
+static bool mfdesBruteAIDGeneratorAsciiNext(mfdes_bruteaid_generator_ascii_t *gen, uint32_t *id, float *progress) {
+    while (gen->exhausted == false) {
+        uint32_t candidate = ((uint32_t)gen->alphabet[gen->idx0]) |
+                             ((uint32_t)gen->alphabet[gen->idx1] << 8) |
+                             ((uint32_t)gen->alphabet[gen->idx2] << 16);
+
+        gen->idx0++;
+        if (gen->idx0 >= gen->alphabet_len) {
+            gen->idx0 = 0;
+            gen->idx1++;
+            if (gen->idx1 >= gen->alphabet_len) {
+                gen->idx1 = 0;
+                gen->idx2++;
+                if (gen->idx2 >= gen->alphabet_len) {
+                    gen->exhausted = true;
+                }
+            }
+        }
+
+        if (candidate < gen->id_start || candidate > gen->id_end) {
+            continue;
+        }
+
+        if ((gen->ordinal++ % gen->step) != 0) {
+            continue;
+        }
+
+        *id = candidate;
+        *progress = (gen->total_count > 1) ? (100.0f * (float)gen->generated_count / (float)(gen->total_count - 1)) : 100.0f;
+
+        gen->generated_count++;
+        if (gen->generated_count >= gen->total_count) {
+            gen->exhausted = true;
+        }
+        return true;
+    }
+
+    return false;
+}
+
+static bool mfdesBruteAIDGeneratorDictionaryNext(mfdes_bruteaid_generator_dictionary_t *gen, uint32_t *id, float *progress) {
+    while (gen->idx < gen->aids_count) {
+        uint32_t candidate = gen->aids[gen->idx++];
+        if ((gen->ordinal++ % gen->step) != 0) {
+            continue;
+        }
+
+        *id = candidate;
+        *progress = (gen->total_count > 1) ? (100.0f * (float)gen->generated_count / (float)(gen->total_count - 1)) : 100.0f;
+
+        gen->generated_count++;
+        return true;
+    }
+
+    return false;
+}
+
+static void mfdesBruteAIDGeneratorFree(mfdes_bruteaid_generator_t *gen) {
+    if (gen->preset == MFDES_BRUTEAID_PRESET_DICTIONARY) {
+        free(gen->g.dictionary.aids);
+        gen->g.dictionary.aids = NULL;
+        gen->g.dictionary.aids_count = 0;
+    }
+}
+
+static int mfdesBruteAIDGeneratorInit(mfdes_bruteaid_generator_t *gen, mfdes_bruteaid_preset_t preset, uint32_t id_start, uint32_t id_end, uint32_t step) {
+    memset(gen, 0, sizeof(*gen));
+    gen->preset = preset;
+
+    if (preset == MFDES_BRUTEAID_PRESET_ASCII) {
+        mfdesBruteAIDGeneratorAsciiInit(&gen->g.ascii, id_start, id_end, step);
+        gen->total_count = gen->g.ascii.total_count;
+    } else if (preset == MFDES_BRUTEAID_PRESET_NUMBERS) {
+        mfdesBruteAIDGeneratorNumbersInit(&gen->g.ascii, id_start, id_end, step);
+        gen->total_count = gen->g.ascii.total_count;
+    } else if (preset == MFDES_BRUTEAID_PRESET_LETTERS) {
+        mfdesBruteAIDGeneratorLettersInit(&gen->g.ascii, id_start, id_end, step);
+        gen->total_count = gen->g.ascii.total_count;
+    } else if (preset == MFDES_BRUTEAID_PRESET_DICTIONARY) {
+        int res = mfdesBruteAIDGeneratorDictionaryInit(&gen->g.dictionary, id_start, id_end, step);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        gen->total_count = gen->g.dictionary.total_count;
+    } else if (preset == MFDES_BRUTEAID_PRESET_MAD) {
+        mfdesBruteAIDGeneratorFullInit(&gen->g.full, id_start, id_end, MFDES_BRUTEAID_MAD_STEP);
+        gen->total_count = gen->g.full.total_count;
+    } else {
+        mfdesBruteAIDGeneratorFullInit(&gen->g.full, id_start, id_end, step);
+        gen->total_count = gen->g.full.total_count;
+    }
+    return PM3_SUCCESS;
+}
+
+static bool mfdesBruteAIDGeneratorNext(mfdes_bruteaid_generator_t *gen, uint32_t *id, float *progress) {
+    if (gen->preset == MFDES_BRUTEAID_PRESET_ASCII ||
+            gen->preset == MFDES_BRUTEAID_PRESET_NUMBERS ||
+            gen->preset == MFDES_BRUTEAID_PRESET_LETTERS) {
+        return mfdesBruteAIDGeneratorAsciiNext(&gen->g.ascii, id, progress);
+    } else if (gen->preset == MFDES_BRUTEAID_PRESET_DICTIONARY) {
+        return mfdesBruteAIDGeneratorDictionaryNext(&gen->g.dictionary, id, progress);
+    }
+    return mfdesBruteAIDGeneratorFullNext(&gen->g.full, id, progress);
+}
+
 static int CmdHF14ADesBruteApps(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes bruteaid",
                   "Recover AIDs by bruteforce.\n"
                   "WARNING: This command takes a loooong time",
                   "hf mfdes bruteaid                    -> Search all apps\n"
-                  "hf mfdes bruteaid --start F0000F -i 16    -> Search MAD range manually");
+                  "hf mfdes bruteaid --preset mad            -> Search MAD range preset (default start F0000F, step 16; can override start)\n"
+                  "hf mfdes bruteaid --preset ascii          -> Search with ASCII printable + whitespace bytes only\n"
+                  "hf mfdes bruteaid --preset numbers        -> Search with numeric bytes ('0'..'9') only\n"
+                  "hf mfdes bruteaid --preset letters        -> Search with letter bytes ('A'..'Z','a'..'z') only\n"
+                  "hf mfdes bruteaid --preset dictionary     -> Search AIDs from `aid_desfire` dictionary (direct + inverted byte order)");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "start", "<hex>", "Starting App ID as hex bytes (3 bytes, big endian)"),
         arg_str0(NULL, "end",   "<hex>", "Last App ID as hex bytes (3 bytes, big endian)"),
         arg_int0("i",  "step",  "<dec>", "Increment step when bruteforcing"),
-        arg_lit0("m",  "mad",   "Only bruteforce the MAD range"),
+        arg_str0(NULL, "preset", "<full|ascii|numbers|letters|dictionary|mad>", "Bruteforce candidate preset (`full` default, `ascii` printable + whitespace, `numbers` = '0'..'9', `letters` = 'A'..'Z'+'a'..'z', `dictionary` = aid_desfire list with direct + inverted byte order, `mad` = step 16 with default start F0000F unless --start is provided)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2206,10 +2684,21 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
     int endLen = 0;
     CLIGetHexWithReturn(ctx, 1, startAid, &startLen);
     CLIGetHexWithReturn(ctx, 2, endAid, &endLen);
-    uint32_t idIncrement = arg_get_int_def(ctx, 3, 1);
-    bool mad = arg_get_lit(ctx, 4);
+    int idIncrementArg = arg_get_int_def(ctx, 3, 1);
+
+    int preset = MFDES_BRUTEAID_PRESET_FULL;
+    if (CLIGetOptionList(arg_get_str(ctx, 4), mfdesBruteAIDPresetOpts, &preset)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
     CLIParserFree(ctx);
+
+    if (idIncrementArg <= 0) {
+        PrintAndLogEx(ERR, "Increment step should be greater than zero");
+        return PM3_EINVARG;
+    }
+    uint32_t idIncrement = (uint32_t)idIncrementArg;
 
     // tru select PICC
     res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
@@ -2219,38 +2708,102 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
         return res;
     }
 
-    // TODO: We need to check the tag version, EV1 should stop after 26 apps are found
-    if (mad) {
-        idIncrement = 0x10;
-        startAid[0] = 0xF0;
-        startAid[1] = 0x00;
-        startAid[2] = 0x0F;
-    }
-
     reverse_array(startAid, 3);
     reverse_array(endAid, 3);
 
     uint32_t idStart = DesfireAIDByteToUint(startAid);
     uint32_t idEnd = DesfireAIDByteToUint(endAid);
 
+    // TODO: We need to check the tag version, EV1 should stop after 26 apps are found
+    if (preset == MFDES_BRUTEAID_PRESET_MAD) {
+        if (startLen == 0) {
+            idStart = MFDES_BRUTEAID_MAD_START;
+        }
+        idIncrement = MFDES_BRUTEAID_MAD_STEP;
+    }
+
     if (idStart > idEnd) {
         PrintAndLogEx(ERR, "Start should be lower than end. start: %06x end: %06x", idStart, idEnd);
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(INFO, "Bruteforce from " _YELLOW_("%06x") " to " _YELLOW_("%06x"), idStart, idEnd);
-    PrintAndLogEx(INFO, "Enumerating through all AIDs manually, this will take a while!");
+    const char *preset_name = CLIGetOptionListStr(mfdesBruteAIDPresetOpts, preset);
+    if (preset_name == NULL) {
+        preset_name = "unknown";
+    }
 
-    for (uint32_t id = idStart; id <= idEnd && id >= idStart; id += idIncrement) {
+    mfdes_bruteaid_generator_t generator = {0};
+    res = mfdesBruteAIDGeneratorInit(&generator, (mfdes_bruteaid_preset_t)preset, idStart, idEnd, idIncrement);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
 
+    if (generator.total_count == 0) {
+        PrintAndLogEx(WARNING, "No AID candidates in selected range/preset");
+        mfdesBruteAIDGeneratorFree(&generator);
+        DropField();
+        return PM3_SUCCESS;
+    }
+
+    if (preset == MFDES_BRUTEAID_PRESET_ASCII ||
+            preset == MFDES_BRUTEAID_PRESET_NUMBERS ||
+            preset == MFDES_BRUTEAID_PRESET_LETTERS ||
+            preset == MFDES_BRUTEAID_PRESET_DICTIONARY) {
+        PrintAndLogEx(INFO, "Bruteforcing with preset " _YELLOW_("%s") " candidates " _YELLOW_("%llu"),
+                      preset_name, (unsigned long long)generator.total_count);
+    } else {
+        PrintAndLogEx(INFO, "Bruteforcing with preset " _YELLOW_("%s") " range " _YELLOW_("%06x") "-" _YELLOW_("%06x") " step " _YELLOW_("%u") " candidates " _YELLOW_("%llu"),
+                      preset_name, idStart, idEnd, idIncrement, (unsigned long long)generator.total_count);
+    }
+    if (preset == MFDES_BRUTEAID_PRESET_FULL) {
+        PrintAndLogEx(INFO, "Enumerating through all AIDs manually, this will take a while!");
+    }
+    if (preset == MFDES_BRUTEAID_PRESET_DICTIONARY) {
+        PrintAndLogEx(INFO, "Dictionary source: `aid_desfire` (direct + inverted byte order)");
+    }
+
+    uint32_t id = 0;
+    float progress = 0;
+    while (mfdesBruteAIDGeneratorNext(&generator, &id, &progress)) {
         if (kbd_enter_pressed()) {
             break;
         }
 
-        float progress = 100.0 * (float)(id - idStart) / ((float)(idEnd - idStart));
         PrintAndLogEx(INPLACE, "Brute DESFire AID Progress " _YELLOW_("%0.1f") " %%   current AID: %06X", progress, id);
 
         res = DesfireSelectAIDHexNoFieldOn(&dctx, id);
+        if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+            for (int attempt = 1; attempt <= MFDES_BRUTEAID_RESELECT_ATTEMPTS; attempt++) {
+                printf("\33[2K\r"); // clear current inplace progress line before logging
+                PrintAndLogEx(WARNING, "No card response while checking AID " _YELLOW_("%06X") ". Reselecting card (%d/%d)...",
+                              id, attempt, MFDES_BRUTEAID_RESELECT_ATTEMPTS);
+
+                msleep(MFDES_BRUTEAID_RESELECT_WAIT_MS);
+
+                res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+                if (res != PM3_SUCCESS) {
+                    if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                        continue;
+                    }
+                    break;
+                }
+
+                res = DesfireSelectAIDHexNoFieldOn(&dctx, id);
+                if (res == PM3_SUCCESS || res == PM3_EAPDU_FAIL ||
+                        (res != PM3_ECARDEXCHANGE && res != PM3_ETIMEOUT && res != PM3_ERFTRANS)) {
+                    break;
+                }
+            }
+
+            if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                PrintAndLogEx(FAILED, "Card is not responding after %d reselect attempts. Aborting at AID " _YELLOW_("%06X"),
+                              MFDES_BRUTEAID_RESELECT_ATTEMPTS, id);
+                mfdesBruteAIDGeneratorFree(&generator);
+                DropField();
+                return res;
+            }
+        }
 
         if (res == PM3_SUCCESS) {
             printf("\33[2K\r"); // clear current line before printing
@@ -2260,6 +2813,155 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, _GREEN_("Done!"));
+    mfdesBruteAIDGeneratorFree(&generator);
+    DropField();
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesBruteISOFIDs(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes bruteisofid",
+                  "Recover ISO file IDs by bruteforce.\n"
+                  "WARNING: This command takes a loooong time",
+                  "hf mfdes bruteisofid --aid 123456     -> bruteforce ISO file IDs for application 123456\n"
+                  "hf mfdes bruteisofid --start 0000 --end 0fff -> bruteforce specific file ISO ID range");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "Verbose output"),
+        arg_str0(NULL, "aid",     "<hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "isoid",   "<hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)"),
+        arg_str0(NULL, "dfname",  "<hex>", "Application ISO DF Name (5-16 hex bytes, big endian)"),
+        arg_str0(NULL, "start",   "<hex>", "Starting File ISO ID (2 hex bytes, big endian)"),
+        arg_str0(NULL, "end",     "<hex>", "Last File ISO ID (2 hex bytes, big endian)"),
+        arg_int0(NULL, "step",    "<dec>", "Increment step when bruteforcing"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    DesfireContext_t dctx = {0};
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    DesfireISOSelectWay selectway = ISW6bAID;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 5,
+                                         &securechann, DCMNone, &appid, &selectway);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    uint32_t isoidStart = 0x0000;
+    if (CLIGetUint32Hex(ctx, 6, 0x0000, &isoidStart, NULL, 2, "File ISO ID start must have 2 hex bytes")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint32_t isoidEnd = 0xFFFF;
+    if (CLIGetUint32Hex(ctx, 7, 0xFFFF, &isoidEnd, NULL, 2, "File ISO ID end must have 2 hex bytes")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int stepArg = arg_get_int_def(ctx, 8, 1);
+    CLIParserFree(ctx);
+
+    if (stepArg <= 0) {
+        PrintAndLogEx(ERR, "Increment step should be greater than zero");
+        return PM3_EINVARG;
+    }
+    uint32_t step = (uint32_t)stepArg;
+
+    if (isoidStart > isoidEnd) {
+        PrintAndLogEx(ERR, "Start should be lower than or equal to end. start: %04x end: %04x", isoidStart, isoidEnd);
+        return PM3_EINVARG;
+    }
+
+    SetAPDULogging(APDULogging);
+
+    res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, appid, false, 0, true, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, appid), res, DesfireAuthErrorToStr(res));
+        return res;
+    }
+
+    uint64_t totalCount = ((isoidEnd - isoidStart) / step) + 1;
+    uint64_t tested = 0;
+    uint64_t found = 0;
+
+    PrintAndLogEx(INFO, "Bruteforcing file ISO IDs range " _YELLOW_("%04x") "-" _YELLOW_("%04x") " step " _YELLOW_("%u") " candidates " _YELLOW_("%llu"),
+                  isoidStart, isoidEnd, step, (unsigned long long)totalCount);
+
+    if (totalCount > 0x7fffffffULL) {
+        PrintAndLogEx(INFO, "Enumerating through all File IDs manually, this will take a while!");
+    }
+
+    for (uint32_t isofid = isoidStart;; isofid += step) {
+        if (kbd_enter_pressed()) {
+            break;
+        }
+
+        tested++;
+        float progress = (totalCount > 0) ? ((float)tested / (float)totalCount) * 100.0f : 100.0f;
+        PrintAndLogEx(INPLACE, "Brute DESFire ISO File ID Progress " _YELLOW_("%0.1f") " %%   current ID: %04X", progress, isofid);
+
+        uint8_t resp[250] = {0};
+        size_t resplen = 0;
+        uint8_t *resp_p = verbose ? resp : NULL;
+        size_t *resplen_p = verbose ? &resplen : NULL;
+        res = CmdHF14ADesISOSelectISOFID(&dctx, isofid, resp_p, resplen_p, false);
+
+        if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+            for (int attempt = 1; attempt <= MFDES_BRUTEFID_RESELECT_ATTEMPTS; attempt++) {
+                printf("\33[2K\r"); // clear current inplace progress line before logging
+                PrintAndLogEx(WARNING, "No card response while checking ISO ID " _YELLOW_("%04X") ". Reselecting card (%d/%d)...",
+                              isofid, attempt, MFDES_BRUTEFID_RESELECT_ATTEMPTS);
+
+                msleep(MFDES_BRUTEFID_RESELECT_WAIT_MS);
+
+                res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, appid, false, 0, true, verbose);
+                if (res != PM3_SUCCESS) {
+                    continue;
+                }
+
+                res = CmdHF14ADesISOSelectISOFID(&dctx, isofid, resp_p, resplen_p, false);
+                if (res == PM3_SUCCESS || res == PM3_EAPDU_FAIL ||
+                        (res != PM3_ECARDEXCHANGE && res != PM3_ETIMEOUT && res != PM3_ERFTRANS)) {
+                    break;
+                }
+            }
+
+            if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                PrintAndLogEx(FAILED, "Card is not responding after %d reselect attempts. Aborting at ISO ID " _YELLOW_("%04X"),
+                              MFDES_BRUTEFID_RESELECT_ATTEMPTS, isofid);
+                DropField();
+                return res;
+            }
+        }
+
+        if (res == PM3_SUCCESS) {
+            found++;
+            printf("\33[2K\r"); // clear current line before printing
+            PrintAndLogEx(SUCCESS, "Found new ISO file ID " _GREEN_("0x%04X"), isofid);
+            if (verbose && resplen > 0) {
+                PrintAndLogEx(INFO, "Response [%zu] " _CYAN_("%s"), resplen, sprint_hex(resp, resplen));
+            }
+        } else {
+            // Non-success status means no file with this identifier
+        }
+
+        if (isoidEnd - isofid < step) {
+            break;
+        }
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "Done! Found " _GREEN_("%llu") " matching file ISO ID candidate(s)",
+                  (unsigned long long)found);
     DropField();
     return PM3_SUCCESS;
 }
@@ -5931,12 +6633,14 @@ static command_t CommandTable[] = {
     {"createapp",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application"},
     {"deleteapp",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application"},
     {"selectapp",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
+    {"selectisofid",     CmdHF14ADesSelectISOFID,     IfPm3Iso14443a,  "Select file by ISO ID"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "------------------------ " _CYAN_("Keys") " -----------------------"},
     {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
     {"chkeysettings",    CmdHF14ADesChKeySettings,    IfPm3Iso14443a,  "Change Key Settings"},
     {"getkeysettings",   CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "Get Key Settings"},
     {"getkeyversions",   CmdHF14ADesGetKeyVersions,   IfPm3Iso14443a,  "Get Key Versions"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("Files") " -----------------------"},
+    {"bruteisofid",      CmdHF14ADesBruteISOFIDs,     IfPm3Iso14443a,  "Recover file ISO IDs by bruteforce"},
     {"getfileids",       CmdHF14ADesGetFileIDs,       IfPm3Iso14443a,  "Get File IDs list"},
     {"getfileisoids",    CmdHF14ADesGetFileISOIDs,    IfPm3Iso14443a,  "Get File ISO IDs list"},
     {"lsfiles",          CmdHF14ADesLsFiles,          IfPm3Iso14443a,  "Show all files list"},

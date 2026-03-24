@@ -5,6 +5,9 @@
 # Table of Contents
 - [Standalone Modes](#standalone-modes)
 - [Table of Contents](#table-of-contents)
+- [What are standalone modes?](#what-are-standalone-modes)
+   - [Individual mode documentation](#individual-mode-documentation)
+- [Developing Standalone Modes](#developing-standalone-modes)
   - [Implementing a standalone mode](#implementing-a-standalone-mode)
   - [Naming your standalone mode](#naming-your-standalone-mode)
   - [Update MAKEFILE.HAL](#update-makefilehal)
@@ -14,7 +17,67 @@
   - [Submitting your code](#submitting-your-code)
 
 
+Standalone modes run directly on the Proxmark3 device without a connected host computer.
+See [Developing Standalone Modes](#developing-standalone-modes) for how to build your own.
+> Only one (1) mode can be compiled into the firmware at a time (except via [DANKARMULTI](../../doc/standalone/dankarmulti.md)).
 
+## Individual Mode Documentation
+
+### LF (Low Frequency — 125 kHz) Standalone Modes
+
+| Mode ID | Document | Description | Hardware |
+|---------|----------|-------------|----------|
+| LF_SAMYRUN | [SamyRun](../../doc/standalone/lf_samyrun.md) | HID26 read/clone/simulate (Samy Kamkar) | Generic |
+| LF_EM4100EMUL | [EM4100 Emulator](../../doc/standalone/lf_em4100emul.md) | Simulate predefined EM4100 tag IDs | Generic |
+| LF_EM4100RSWB | [EM4100 RSWB](../../doc/standalone/lf_em4100rswb.md) | Read/simulate/write/brute EM4100 (4 slots) | RDV4 (flash) |
+| LF_EM4100RSWW | [EM4100 RSWW](../../doc/standalone/lf_em4100rsww.md) | Read/simulate/write/wipe/validate EM4100 | RDV4 (flash) |
+| LF_EM4100RWC | [EM4100 RWC](../../doc/standalone/lf_em4100rwc.md) | Read/simulate/clone EM4100 (16 slots) | RDV4 (flash) |
+| LF_HIDBRUTE | [HID Corporate Brute](../../doc/standalone/lf_hidbrute.md) | HID Corporate 1000 card number bruteforce | Generic |
+| LF_HIDFCBRUTE | [HID FC Brute](../../doc/standalone/lf_hidfcbrute.md) | HID facility code bruteforce (0–255) | RDV4 (flash) |
+| LF_ICEHID | [IceHID Collector](../../doc/standalone/lf_icehid.md) | Multi-format LF credential collector to flash | RDV4 (flash) |
+| LF_MULTIHID | [MultiHID](../../doc/standalone/lf_multihid.md) | HID 26-bit multi-card simulator | Generic |
+| LF_NEDAP_SIM | [Nedap Simulator](../../doc/standalone/lf_nedap_sim.md) | Nedap RFID simple tag simulator | Generic |
+| LF_NEXID | [NexID Collector](../../doc/standalone/lf_nexid.md) | Nexwatch credential collector to flash | RDV4 (flash) |
+| LF_PROXBRUTE | [ProxBrute](../../doc/standalone/lf_proxbrute.md) | HID ProxII card number bruteforce | Generic |
+| LF_PROX2BRUTE | [Prox2Brute](../../doc/standalone/lf_prox2brute.md) | HID ProxII bruteforce v2 (faster, configurable) | Generic |
+| LF_THAREXDE | [Tharexde EM4x50](../../doc/standalone/lf_tharexde.md) | EM4x50 simulate/read/collect | RDV4 (flash) |
+| LF_SKELETON | [Skeleton Template](../../doc/standalone/lf_skeleton.md) | Development template for new LF modes | Generic |
+
+### HF (High Frequency — 13.56 MHz) Standalone Modes
+
+| Mode ID | Document | Description | Hardware |
+|---------|----------|-------------|----------|
+| HF_14ASNIFF | [14A Sniffer](../../doc/standalone/hf_14asniff.md) | ISO14443A passive sniffer to flash | RDV4 (flash) |
+| HF_14BSNIFF | [14B Sniffer](../../doc/standalone/hf_14bsniff.md) | ISO14443B passive sniffer to flash | RDV4 (flash) |
+| HF_15SNIFF | [15693 Sniffer](../../doc/standalone/hf_15sniff.md) | ISO15693 sniffer to flash | RDV4 (flash) |
+| HF_15SIM | [15693 Simulator](../../doc/standalone/hf_15sim.md) | ISO15693 dump and simulate | RDV4 (flash) |
+| HF_AVEFUL | [Aveful UL Reader](../../doc/standalone/hf_aveful.md) | MIFARE Ultralight read and emulate | Generic |
+| HF_BOG | [BogitoRun Auth Sniffer](../../doc/standalone/hf_bog.md) | 14A sniff with ULC/ULEV1/NTAG auth capture | RDV4 (flash) |
+| HF_CARDHOPPER | [CardHopper Relay](../../doc/standalone/hf_cardhopper.md) | Long-range 14A relay over serial/IP | RDV4 (BT) |
+| HF_COLIN | [VIGIKPWN](../../doc/standalone/hf_colin.md) | MIFARE Classic ultra-fast sniff/sim/clone | RDV4 (flash) |
+| HF_CRAFTBYTE | [CraftByte UID Stealer](../../doc/standalone/hf_craftbyte.md) | Scan and emulate ISO14443A UIDs | Generic |
+| HF_DOEGOX_AUTH0 | [UL-C/UL-AES Unlocker](../../doc/standalone/hf_doegox_auth0.md) | Unlock password-protected Ultralight tags | Generic |
+| HF_EMVPNG | [EMV Visa Reader/Emulator](../../doc/standalone/hf_emvpng.md) | Read Visa EMV cards and emulate transactions | RDV4 (flash) |
+| HF_ICECLASS | [IceClass iCLASS](../../doc/standalone/hf_iceclass.md) | iCLASS multi-mode: sim/dump/attack/config | RDV4 (flash) |
+| HF_LEGIC | [Legic Prime Reader](../../doc/standalone/hf_legic.md) | Read and simulate Legic Prime tags | Generic |
+| HF_LEGICSIM | [Legic Prime Simulator](../../doc/standalone/hf_legicsim.md) | Simulate Legic Prime dumps from flash (15 slots) | RDV4 (flash) |
+| HF_MATTYRUN | [MattyRun MFC Clone](../../doc/standalone/hf_mattyrun.md) | MIFARE Classic key check, dump, and emulate | Generic |
+| HF_MFCSIM | [MFC Simulator](../../doc/standalone/hf_mfcsim.md) | Simulate MIFARE Classic 1K from flash (15 slots) | RDV4 (flash) |
+| HF_MSDSAL | [MSD Visa Reader](../../doc/standalone/hf_msdsal.md) | Read and emulate Visa MSD cards | Generic |
+| HF_REBLAY | [Reblay BT Relay](../../doc/standalone/hf_reblay.md) | ISO14443A relay over Bluetooth | RDV4 (BT) |
+| HF_ST25_TEAROFF | [ST25TB Tear-off](../../doc/standalone/hf_st25_tearoff.md) | ST25TB store/restore with counter tear-off | RDV4 (flash) |
+| HF_TCPRST | [IKEA Rothult](../../doc/standalone/hf_tcprst.md) | IKEA Rothult ST25TA master key dump/emulation | Generic |
+| HF_TMUDFORD | [ISO15693 UID Emulator](../../doc/standalone/hf_tmudford.md) | Read and emulate ISO15693 UIDs | Generic |
+| HF_UNISNIFF | [Universal Sniffer](../../doc/standalone/hf_unisniff.md) | Multi-protocol sniffer (14A/14B/15/iCLASS) | RDV4 (flash) |
+| HF_YOUNG | [Young MFC Sniff/Sim](../../doc/standalone/hf_young.md) | MIFARE sniff/simulation with 2-bank storage | Generic |
+
+### Multi-Mode Loader
+
+| Mode ID | Document | Description |
+|---------|----------|-------------|
+| DANKARMULTI | [Dankarmulti Loader](../../doc/standalone/dankarmulti.md) | Combine multiple standalone modes into one firmware image |
+
+# Developing Standalone Modes
 This contains functionality for different StandAlone modes. The fullimage will be built given the correct compiler flags used. Build targets for these files are contained in `Makefile.inc` and `Makefile.hal`
 
 If you want to implement a new standalone mode, you need to implement the methods provided in `standalone.h`.

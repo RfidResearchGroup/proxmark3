@@ -20,6 +20,8 @@
 
 #include "common.h"
 
+#define FELICA_SPECIFICATION_VERSION_MAX_OPTIONS 16U
+
 typedef enum FELICA_COMMAND {
     FELICA_CONNECT = (1 << 0),
     FELICA_NO_DISCONNECT = (1 << 1),
@@ -81,10 +83,74 @@ typedef struct {
     uint8_t IDm[8];
 } PACKED felica_frame_response_t;
 
+typedef struct  {
+    uint8_t sync[2];
+    uint8_t length[1];
+    uint8_t cmd_code[1];
+} PACKED felica_frame_response_noidm_t;
+
 typedef struct {
     uint8_t status_flag1[1];
     uint8_t status_flag2[1];
 } PACKED felica_status_flags_t;
+
+typedef struct {
+    uint8_t length[1];
+    uint8_t command_code[1];
+    uint8_t reserved[2];
+} PACKED felica_get_container_id_request_t;
+
+typedef struct {
+    felica_frame_response_noidm_t frame_response;
+    uint8_t container_idm[8];
+} PACKED felica_get_container_id_response_t;
+
+typedef struct {
+    uint8_t length[1];
+    uint8_t command_code[1];
+    uint8_t property_index[2];
+} PACKED felica_get_container_property_request_t;
+
+typedef struct {
+    felica_frame_response_noidm_t frame_response;
+    uint8_t property_data[];
+} PACKED felica_get_container_property_response_t;
+
+typedef struct {
+    uint8_t length[1];
+    uint8_t command_code[1];
+    uint8_t IDm[8];
+    uint8_t reserved[2];
+} PACKED felica_get_container_issue_info_request_t;
+
+typedef struct {
+    felica_frame_response_t frame_response;
+    uint8_t format_version_carrier_information[5];
+    uint8_t mobile_phone_model_information[11];
+} PACKED felica_get_container_issue_info_response_t;
+
+typedef struct {
+    uint8_t length[1];
+    uint8_t command_code[1];
+    uint8_t IDm[8];
+} PACKED felica_get_platform_info_request_t;
+
+typedef struct {
+    uint8_t length[1];
+    uint8_t command_code[1];
+    uint8_t IDm[8];
+    uint8_t reserved[2];
+} PACKED felica_request_specification_version_request_t;
+
+typedef struct {
+    felica_status_flags_t status_flags;
+    bool has_specification_version;
+    uint8_t format_version;
+    uint8_t basic_version[2];
+    uint8_t number_of_option;
+    size_t option_version_count;
+    uint8_t option_version_list[FELICA_SPECIFICATION_VERSION_MAX_OPTIONS * 2];
+} felica_request_specification_version_info_t;
 
 typedef struct {
     felica_frame_response_t frame_response;
@@ -101,7 +167,7 @@ typedef struct {
     felica_frame_response_t frame_response;
     felica_status_flags_t status_flags;
     uint8_t number_of_block[1];
-    uint8_t block_data[16];
+    uint8_t block_data[16 * 15];
 } PACKED felica_read_without_encryption_response_t;
 
 typedef struct {
@@ -114,15 +180,6 @@ typedef struct {
     uint8_t number_of_systems[1];
     uint8_t system_code_list[32];
 } PACKED felica_syscode_response_t;
-
-typedef struct {
-    felica_frame_response_t frame_response;
-    felica_status_flags_t status_flags;
-    uint8_t format_version[1];
-    uint8_t basic_version[2];
-    uint8_t number_of_option[1];
-    uint8_t option_version_list[4];
-} PACKED felica_request_spec_response_t;
 
 typedef struct {
     felica_frame_response_t frame_response;
@@ -140,7 +197,7 @@ typedef struct {
 typedef struct {
     felica_frame_response_t frame_response;
     uint8_t payload[4];
-} PACKED felica_service_dump_response_t;
+} PACKED felica_search_service_code_response_t;
 
 typedef struct {
     uint8_t command_code[1];

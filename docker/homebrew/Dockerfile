@@ -1,6 +1,6 @@
 FROM homebrew/brew
 
-ENV LANG=C
+ENV LANG=C.UTF-8
 
 ARG UART_GID
 # dialout group may already exist on another numeric ID than on host
@@ -11,6 +11,6 @@ RUN if [ -n "${UART_GID}" ]; then \
 
 USER linuxbrew
 WORKDIR "/home/linuxbrew"
-RUN brew install cmake pkg-config bzip2 lz4 && rm -rf ~/.cache/Homebrew
+RUN brew install cmake pkg-config bzip2 lz4 zlib && rm -rf ~/.cache/Homebrew
 
 CMD ["/bin/bash"]

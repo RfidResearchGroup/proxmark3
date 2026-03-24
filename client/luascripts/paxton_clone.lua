@@ -10,7 +10,7 @@ local logfilecmd
 if package.config:sub(1,1) == "\\" then
   logfilecmd = 'dir /a-d /o-d /tw /b/s "' .. dir .. '" 2>nul:'
 else
-  logfilecmd = 'find "' .. dir .. '" -type f -printf "%T@ %p\\n" | sort -nr | cut -d" " -f2-'
+  logfilecmd = 'find "' .. dir .. '" -type f | sort -nr | cut -d" " -f2-'
 end
 
 local logfile = (io.popen(logfilecmd):read("*a"):match("%C+"))

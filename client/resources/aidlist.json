@@ -1536,6 +1536,14 @@
         "Type": "EMV"
     },
     {
+        "AID": "A000000476416E64726F6964484345",
+        "Vendor": "Google",
+        "Country": "N/A",
+        "Name": "Android HCE",
+        "Description": "Available on AOSP-based android devices with active HCE",
+        "Type": ""
+    },
+    {
         "AID": "A000000476A010",
         "Vendor": "Google",
         "Country": "United States",
@@ -2275,8 +2283,8 @@
         "AID": "A0000008580102",
         "Vendor": "Apple",
         "Country": "",
-        "Name": "Apple Home Key Framework",
-        "Description": "Home Key configuration applet. Used for attestation exchange",
+        "Name": "Apple Home Key Step Up",
+        "Description": "Used for reading the attestation certificate",
         "Type": ""
     },
     {
@@ -2291,8 +2299,8 @@
         "AID": "A0000008580202",
         "Vendor": "Apple",
         "Country": "",
-        "Name": "Apple Access Key Framework",
-        "Description": "Access Key configuration applet. Used for attestation exchange",
+        "Name": "Apple Access Key Step Up",
+        "Description": "Used for reading the attestation certificate",
         "Type": ""
     },
     {
@@ -2307,16 +2315,16 @@
         "AID": "A000000909ACCE5502",
         "Vendor": "Connectivity Standards Alliance (CSA)",
         "Country": "",
-        "Name": "Aliro Framework",
-        "Description": "Used during key provisioning, configuration, attestation exchange",
+        "Name": "Aliro Step Up",
+        "Description": "Used to retrieve 'access documents' in case a reader needs to verify the validity of a credential",
         "Type": ""
     },
     {
         "AID": "A000000909ACCE5501",
         "Vendor": "Connectivity Standards Alliance (CSA)",
         "Country": "",
-        "Name": "Aliro",
-        "Description": "",
+        "Name": "Aliro Expedited",
+        "Description": "Acts as the primary credential holder applet",
         "Type": "access"
     },
     {
@@ -2440,11 +2448,19 @@
         "Type": "access"
     },
     {
+        "AID": "A0000004400001010001000002",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "SEOS Mobile",
+        "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
+        "Type": "access"
+    },
+    {
         "AID": "A00000054000060100010000FF",
         "Vendor": "HID Global",
         "Country": "",
         "Name": "SEOS Mobile",
-        "Description": "Declared by some SEOS-compatible applications for HCE",
+        "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
         "Type": "access"
     },
     {
@@ -2493,6 +2509,22 @@
         "Country": "",
         "Name": "Crescendo OATH #2",
         "Description": "HID Crescendo Key OATH instance 2",
+        "Type": "access"
+    },
+    {
+        "AID": "FF55494420414343455353",
+        "Vendor": "UniFi",
+        "Country": "",
+        "Name": "UniFi Access HCE Credential",
+        "Description": "Declared as 'other' service",
+        "Type": "access"
+    },
+    {
+        "AID": "FF55494420414343455356",
+        "Vendor": "UniFi",
+        "Country": "",
+        "Name": "UniFi Access HCE Credential",
+        "Description": "Declared as 'payment' service",
         "Type": "access"
     }
 ]

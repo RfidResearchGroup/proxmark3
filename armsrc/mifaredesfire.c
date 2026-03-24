@@ -81,7 +81,7 @@ void MifareSendCommand(uint8_t *datain) {
     } PACKED;
     struct p *payload = (struct p *) datain;
 
-    uint8_t resp[RECEIVE_SIZE];
+    uint8_t resp[MAX_FRAME_SIZE];
     memset(resp, 0, sizeof(resp));
 
     if (g_dbglevel >= DBG_EXTENDED) {
@@ -94,7 +94,7 @@ void MifareSendCommand(uint8_t *datain) {
         clear_trace();
 
     if (payload->flags & INIT) {
-        if (!InitDesfireCard()) {
+        if (InitDesfireCard() == false) {
             return;
         }
     }
@@ -103,7 +103,7 @@ void MifareSendCommand(uint8_t *datain) {
     if (g_dbglevel >= DBG_EXTENDED)
         print_result("RESP <--: ", resp, len);
 
-    if (!len) {
+    if (len == 0) {
         OnError(2);
         return;
     }
@@ -697,7 +697,9 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout) {
 
     len = ReaderReceive(resp, sizeof(resp), par);
     if (len == 0) {
-        if (g_dbglevel >= DBG_EXTENDED) Dbprintf("fukked");
+        if (g_dbglevel >= DBG_EXTENDED) {
+            Dbprintf("Error: data link failed");
+        }
         return false; //DATA LINK ERROR
 
     }
@@ -725,12 +727,15 @@ size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout) {
     cmd[0] = 0x02;  //  0x0A = send cid,  0x02 = no cid.
     cmd[0] |= pcb_blocknum; // OR the block number into the PCB
 
-    if (g_dbglevel >= DBG_EXTENDED) Dbprintf("pcb_blocknum %d == %d ", pcb_blocknum, cmd[0]);
+    if (g_dbglevel >= DBG_EXTENDED) {
+        Dbprintf("pcb_blocknum %d == %d ", pcb_blocknum, cmd[0]);
+    }
 
     //cmd[1] = 0x90;  //  CID: 0x00 //TODO: allow multiple selected cards
 
-    memcpy(cmd + 1, datain, len);
-    AddCrc14A(cmd, len + 1);
+    // bytes that actually fit; may be less than len
+    memcpy(cmd + 1, datain,  cmdlen - 3);
+    AddCrc14A(cmd,  cmdlen - 3 + 1);
 
     /*
     hf 14a apdu -sk 90 60 00 00 00

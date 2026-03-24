@@ -1,1 +1,2 @@
 DOCKER_IMAGE=pm3-ubuntu-25.04:1.0
+#SKIPQT=1

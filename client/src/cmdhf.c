@@ -25,6 +25,7 @@
 #include "cmdhf14a.h"       // ISO14443-A
 #include "cmdhf14b.h"       // ISO14443-B
 #include "cmdhf15.h"        // ISO15693
+#include "cmdhfaliro.h"     // ALIRO digital keys
 #include "cmdhfcipurse.h"   // CIPURSE transport cards
 #include "cmdhfcryptorf.h"  // CryptoRF
 #include "cmdhfepa.h"       // German Identification Card
@@ -33,6 +34,7 @@
 #include "cmdhffido.h"      // FIDO authenticators
 #include "cmdhffudan.h"     // Fudan cards
 #include "cmdhfgallagher.h" // Gallagher DESFire cards
+#include "cmdhfgst.h"       // Google Smart Tap
 #include "cmdhficlass.h"    // ICLASS
 #include "cmdhfict.h"       // ICT MFC / DESfire cards
 #include "cmdhfjooki.h"     // MFU based Jooki
@@ -576,6 +578,7 @@ static command_t CommandTable[] = {
     {"14a",         CmdHF14A,         AlwaysAvailable, "{ ISO14443A RFIDs...                  }"},
     {"14b",         CmdHF14B,         AlwaysAvailable, "{ ISO14443B RFIDs...                  }"},
     {"15",          CmdHF15,          AlwaysAvailable, "{ ISO15693 RFIDs...                   }"},
+    {"aliro",       CmdHFAliro,       AlwaysAvailable, "{ ALIRO digital access credentials... }"},
 //    {"cryptorf",    CmdHFCryptoRF,    AlwaysAvailable, "{ CryptoRF RFIDs...                   }"},
     {"cipurse",     CmdHFCipurse,     AlwaysAvailable, "{ Cipurse transport Cards...          }"},
     {"epa",         CmdHFEPA,         AlwaysAvailable, "{ German Identification Card...       }"},
@@ -584,6 +587,7 @@ static command_t CommandTable[] = {
     {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators...    }"},
     {"fudan",       CmdHFFudan,       AlwaysAvailable, "{ Fudan RFIDs...                      }"},
     {"gallagher",   CmdHFGallagher,   AlwaysAvailable, "{ Gallagher DESFire RFIDs...          }"},
+    {"gst",         CmdHFGST,         AlwaysAvailable, "{ Google Smart Tap passes...          }"},
     {"iclass",      CmdHFiClass,      AlwaysAvailable, "{ ICLASS RFIDs...                     }"},
     {"ict",         CmdHFICT,         AlwaysAvailable, "{ ICT MFC/DESfire RFIDs...            }"},
     {"jooki",       CmdHF_Jooki,      AlwaysAvailable, "{ Jooki RFIDs...                      }"},

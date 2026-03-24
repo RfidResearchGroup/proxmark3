@@ -24,6 +24,7 @@
 //-----------------------------------------------------------------------------
 // iCLASS / PICOPASS
 //-----------------------------------------------------------------------------
+#define PICOPASS_KEY_SIZE      ( 8 )
 #define PICOPASS_BLOCK_SIZE    ( 8 )
 #define PICOPASS_MAX_BYTES     ( 4096 )  // # 32k bits = 4096 bytes
 
@@ -120,7 +121,6 @@ typedef struct {
 
 typedef struct {
     iclass_auth_req_t req;
-    iclass_auth_req_t req2;
     uint32_t index;
     uint32_t loop;
     uint8_t nfa[8];
@@ -128,6 +128,7 @@ typedef struct {
     bool test;
     bool fast;
     bool short_delay;
+    bool credit_recovery;
 } PACKED iclass_recover_req_t;
 
 typedef struct iclass_premac {

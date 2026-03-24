@@ -228,6 +228,7 @@ Check column "offline" for their availability.
 |`hf 14b sim             `|N       |`Fake ISO ISO-14443-B tag`
 |`hf 14b sniff           `|N       |`Eavesdrop ISO-14443-B`
 |`hf 14b wrbl            `|N       |`Write data to a SRI512/SRIX4 tag`
+|`hf 14b tearoff         `|N       |`Tear-off attack on ST25TB/SRx counter blocks`
 |`hf 14b view            `|Y       |`Display content from tag dump file`
 |`hf 14b valid           `|Y       |`SRIX4 checksum test`
 |`hf 14b calypso         `|N       |`Read contents of a Calypso card`
@@ -272,6 +273,18 @@ Check column "offline" for their availability.
 |`hf 15 writeafi         `|N       |`Writes the AFI on an ISO-15693 tag`
 |`hf 15 writedsfid       `|N       |`Writes the DSFID on an ISO-15693 tag`
 |`hf 15 csetuid          `|N       |`Set UID for magic card`
+
+
+### hf aliro
+
+ { ALIRO digital access credentials... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf aliro help          `|Y       |`This help`
+|`hf aliro list          `|Y       |`List ISO 14443A/7816 history`
+|`hf aliro info          `|N       |`Get Aliro applet information`
+|`hf aliro read          `|N       |`Run SELECT-AUTH0-AUTH1 and optional step-up document retrieval`
 
 
 ### hf cipurse
@@ -330,12 +343,14 @@ Check column "offline" for their availability.
 |`hf felica help         `|Y       |`This help`
 |`hf felica list         `|Y       |`List ISO 18092/FeliCa history`
 |`hf felica info         `|N       |`Tag information`
+|`hf felica seacinfo     `|N       |`FeliCa SEAC tag information`
 |`hf felica raw          `|N       |`Send raw hex data to tag`
 |`hf felica rdbl         `|N       |`read block data from authentication-not-required Service.`
 |`hf felica reader       `|N       |`Act like an ISO18092/FeliCa reader`
 |`hf felica sniff        `|N       |`Sniff ISO 18092/FeliCa traffic`
 |`hf felica wrbl         `|N       |`write block data to an authentication-not-required Service.`
 |`hf felica dump         `|N       |`Wait for and try dumping FeliCa`
+|`hf felica discnodes    `|N       |`discover Area Code and Service Code nodes.`
 |`hf felica rqservice    `|N       |`verify the existence of Area and Service, and to acquire Key Version.`
 |`hf felica rqresponse   `|N       |`verify the existence of a card and its Mode.`
 |`hf felica scsvcode     `|N       |`acquire Area Code and Service Code.`
@@ -385,12 +400,26 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf gallagher help      `|Y       |`This help`
-|`hf gallagher reader    `|N       |`Read & decode all Gallagher credentials on a DESFire card`
-|`hf gallagher clone     `|N       |`Add Gallagher credentials to a DESFire card`
+|`hf gallagher reader    `|N       |`Read & decode all Gallagher credentials on a DESFire or Classic card`
+|`hf gallagher clone     `|N       |`Clone Gallagher credentials to a DESFire or Classic card`
 |`hf gallagher delete    `|N       |`Delete Gallagher credentials from a DESFire card`
 |`hf gallagher diversifykey`|Y       |`Diversify Gallagher key`
 |`hf gallagher decode    `|Y       |`Decode Gallagher credential block`
 |`hf gallagher encode    `|Y       |`Encode Gallagher credential block`
+|`hf gallagher test      `|Y       |`Test the function of Gallagher Mifare Core`
+
+
+### hf gst
+
+ { Google Smart Tap passes...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf gst help            `|Y       |`This help`
+|`hf gst list            `|Y       |`List ISO 14443A/7816 history`
+|`hf gst test            `|Y       |`Perform self tests`
+|`hf gst info            `|N       |`Get Google Smart Tap applet information`
+|`hf gst read            `|N       |`Read and decode Google Smart Tap pass objects`
 
 
 ### hf iclass
@@ -417,6 +446,7 @@ Check column "offline" for their availability.
 |`hf iclass legrec       `|N       |`Recovers 24 bits of the diversified key of a legacy card provided a valid nr-mac combination`
 |`hf iclass legbrute     `|Y       |`Bruteforces 40 bits of a partial diversified key, provided 24 bits of the key and two valid nr-macs`
 |`hf iclass unhash       `|Y       |`Reverses a diversified key to retrieve hash0 pre-images after DES encryption`
+|`hf iclass blacktears   `|N       |`Automated tearoff attack on new silicon cards to enable non-secure page mode`
 |`hf iclass sim          `|N       |`Simulate iCLASS tag`
 |`hf iclass eload        `|N       |`Upload file into emulator memory`
 |`hf iclass esave        `|N       |`Save emulator memory to file`
@@ -595,7 +625,7 @@ Check column "offline" for their availability.
 |`hf mfp list            `|Y       |`List MIFARE Plus history`
 |`hf mfp auth            `|N       |`Authentication`
 |`hf mfp chk             `|N       |`Check keys`
-|`hf mfp dump            `|N       |`Dump MIFARE Plus tag to binary file`
+|`hf mfp dump            `|N       |`Dump MIFARE Plus tag to file`
 |`hf mfp info            `|N       |`Tag information`
 |`hf mfp mad             `|N       |`Check and print MAD`
 |`hf mfp rdbl            `|N       |`Read blocks from card`
@@ -670,10 +700,12 @@ Check column "offline" for their availability.
 |`hf mfdes createapp     `|N       |`Create Application`
 |`hf mfdes deleteapp     `|N       |`Delete Application`
 |`hf mfdes selectapp     `|N       |`Select Application ID`
+|`hf mfdes selectisofid  `|N       |`Select file by ISO ID`
 |`hf mfdes changekey     `|N       |`Change Key`
 |`hf mfdes chkeysettings `|N       |`Change Key Settings`
 |`hf mfdes getkeysettings`|N       |`Get Key Settings`
 |`hf mfdes getkeyversions`|N       |`Get Key Versions`
+|`hf mfdes bruteisofid   `|N       |`Recover file ISO IDs by bruteforce`
 |`hf mfdes getfileids    `|N       |`Get File IDs list`
 |`hf mfdes getfileisoids `|N       |`Get File ISO IDs list`
 |`hf mfdes lsfiles       `|N       |`Show all files list`
@@ -821,6 +853,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf vas help            `|Y       |`This help`
+|`hf vas info            `|N       |`Get VAS applet information`
 |`hf vas reader          `|N       |`Read and decrypt VAS message`
 |`hf vas decrypt         `|Y       |`Decrypt a previously captured VAS cryptogram`
 

@@ -82,6 +82,9 @@ static size_t tlv_parse_len(const unsigned char **buf, size_t *len) {
     size_t ll = l & ~ TLV_LEN_LONG;
     if (ll > 5)
         return TLV_LEN_INVALID;
+    // Long-form lengths must have all declared length bytes available.
+    if (*len < ll)
+        return TLV_LEN_INVALID;
 
     l = 0;
     for (int i = 1; i <= ll; i++) {

@@ -103,6 +103,9 @@ void print_buffer(const uint8_t *data, const size_t len, int level);
 void print_blocks(uint32_t *data, size_t len);
 
 int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValueLen);
+int parse_uint32_hex_or_dec(const char *text, uint32_t *out);
+bool bytes_equal_not_null(const void *a, size_t a_len, const void *b, size_t b_len);
+int buffer_append_bytes_with_offset(uint8_t *buf, size_t buf_len, size_t *offset, const void *data, size_t data_len);
 void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest);
 void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest);
 void bytes_to_bytebits(const void *src, const size_t srclen, void *dest);
@@ -166,6 +169,8 @@ void strn_upper(char *s, size_t n);
 bool str_startswith(const char *s,  const char *pre);  // check for prefix in string
 bool str_endswith(const char *s,  const char *suffix);    // check for suffix in string
 void clean_ascii(unsigned char *buf, size_t len);
+bool is_printable_ascii(const uint8_t *data, size_t data_len);
+bool decode_zero_padded_ascii(const uint8_t *data, size_t data_len, char *out, size_t out_len);
 void str_cleanrn(char *buf, size_t len);
 void str_creplace(char *buf, size_t len, char from, char to);
 void str_reverse(char *buf,  size_t len);

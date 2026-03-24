@@ -47,44 +47,6 @@ find_package(PkgConfig)
 # Allow specifying a Python version via cmake option
 set(PYTHON3_PKGCONFIG "python3" CACHE STRING "Python3 package config version suffix")
 
-if (NOT SKIPQT EQUAL 1)
-
-    if(APPLE AND EXISTS /usr/local/opt/qt5)
-        # Homebrew installs Qt5 (up to at least 5.11.0) in
-        # /usr/local/opt/qt5. Ensure that it can be found by CMake
-        # since it is not in the default /usr/local prefix.
-        # Add it to PATHS so that it doesn't override the
-        # CMAKE_PREFIX_PATH environment variable.
-        # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
-        # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
-        list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /usr/local/opt/qt5)
-    endif(APPLE AND EXISTS /usr/local/opt/qt5)
-
-    if(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
-        # Homebrew on Apple Silicon installs Qt5 in
-        # /opt/homebrew/opt/qt@5. Ensure that it can be found by CMake
-        # since it is not in the default /usr/local prefix.
-        # Add it to PATHS so that it doesn't override the
-        # CMAKE_PREFIX_PATH environment variable.
-        # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
-        # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
-        list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt@5)
-    endif(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
-    set(QT_PACKAGELIST
-        Qt5Core
-        Qt5Widgets
-        Qt5Gui
-    )
-    set(Qt5_FOUND ON)
-    foreach(_qt_package IN LISTS QT_PACKAGELIST)
-        find_package(${_qt_package} QUIET ${QT_FIND_PACKAGE_OPTIONS})
-        set(Qt5_LIBRARIES ${${_qt_package}_LIBRARIES} ${Qt5_LIBRARIES})
-        if(NOT ${_qt_package}_FOUND)
-            set(Qt5_FOUND OFF)
-        endif(NOT ${_qt_package}_FOUND)
-    endforeach()
-endif (NOT SKIPQT EQUAL 1)
-
 if (NOT SKIPBT EQUAL 1)
     pkg_search_module(BLUEZ QUIET bluez)
 endif (NOT SKIPBT EQUAL 1)
@@ -219,6 +181,8 @@ if (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
     set(LZ4_FOUND ON)
 endif (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
 
+find_package(ZLIB QUIET)
+
 if (NOT SKIPGD EQUAL 1)
     if (EMBED_GD)
         cmake_policy(SET CMP0114 NEW)
@@ -317,6 +281,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/mifare/desfirecore.c
         ${PM3_ROOT}/client/src/mifare/desfiretest.c
         ${PM3_ROOT}/client/src/mifare/gallaghercore.c
+        ${PM3_ROOT}/client/src/mifare/gallaghertest.c
         ${PM3_ROOT}/client/src/uart/ringbuffer.c
         ${PM3_ROOT}/client/src/uart/uart_common.c
         ${PM3_ROOT}/client/src/uart/uart_posix.c
@@ -334,6 +299,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhf14a.c
         ${PM3_ROOT}/client/src/cmdhf14b.c
         ${PM3_ROOT}/client/src/cmdhf15.c
+        ${PM3_ROOT}/client/src/cmdhfaliro.c
         ${PM3_ROOT}/client/src/cmdhfcryptorf.c
         ${PM3_ROOT}/client/src/cmdhfemrtd.c
         ${PM3_ROOT}/client/src/cmdhfepa.c
@@ -341,6 +307,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhffido.c
         ${PM3_ROOT}/client/src/cmdhffudan.c
         ${PM3_ROOT}/client/src/cmdhfgallagher.c
+        ${PM3_ROOT}/client/src/cmdhfgst.c
         ${PM3_ROOT}/client/src/cmdhfcipurse.c
         ${PM3_ROOT}/client/src/cmdhficlass.c
         ${PM3_ROOT}/client/src/cmdhfict.c
@@ -438,7 +405,7 @@ set (TARGET_SOURCES
 
 add_custom_command(
     OUTPUT  ${CMAKE_BINARY_DIR}/version_pm3.c
-    COMMAND ${CMAKE_COMMAND} -E copy ${PM3_ROOT}/common/default_version_pm3.c ${CMAKE_BINARY_DIR}/version_pm3.c
+    COMMAND sh ${PM3_ROOT}/tools/mkversion.sh ${CMAKE_BINARY_DIR}/version_pm3.c || ${CMAKE_COMMAND} -E copy ${PM3_ROOT}/common/default_version_pm3.c ${CMAKE_BINARY_DIR}/version_pm3.c
     DEPENDS ${PM3_ROOT}/common/default_version_pm3.c
 )
 
@@ -470,23 +437,6 @@ if (APPLE)
       set(ADDITIONAL_LNK "-framework Foundation" "-framework AppKit")
     endif()
 endif (APPLE)
-
-if ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
-    set(CMAKE_AUTOMOC ON)
-    set(CMAKE_AUTORCC ON)
-    set(CMAKE_AUTOUIC ON)
-    set (TARGET_SOURCES
-            ${PM3_ROOT}/client/src/proxgui.cpp
-            ${PM3_ROOT}/client/src/proxguiqt.cpp
-            ${TARGET_SOURCES})
-
-    add_definitions("-DHAVE_GUI")
-    set(ADDITIONAL_LNK ${Qt5_LIBRARIES} ${ADDITIONAL_LNK})
-else ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
-    set(TARGET_SOURCES
-            ${PM3_ROOT}/client/src/guidummy.cpp
-            ${TARGET_SOURCES})
-endif ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
 
 if (NOT SKIPBT EQUAL 1)
     if (BLUEZ_FOUND)
@@ -532,6 +482,12 @@ if (LZ4_FOUND)
     set(ADDITIONAL_LNK ${LZ4_LIBRARIES} ${ADDITIONAL_LNK})
 endif (LZ4_FOUND)
 
+if (ZLIB_FOUND)
+    add_definitions("-DHAVE_ZLIB")
+    set(ADDITIONAL_DIRS ${ZLIB_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${ZLIB_LIBRARIES} ${ADDITIONAL_LNK})
+endif (ZLIB_FOUND)
+
 if (NOT SKIPGD EQUAL 1 AND GD_FOUND)
     set(ADDITIONAL_DIRS ${GD_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${GD_LIBRARIES} ${ADDITIONAL_LNK})
@@ -555,15 +511,6 @@ execute_process(
 )
 string(STRIP ${version_pm3} version_pm3)
 message(STATUS "Version info:      ${version_pm3}")
-if (SKIPQT EQUAL 1)
-    message(STATUS "GUI support:       skipped")
-else (SKIPQT EQUAL 1)
-    if (Qt5_FOUND)
-        message(STATUS "GUI support:       QT5 found, enabled")
-    else (Qt5_FOUND)
-        message(STATUS "GUI support:       QT5 not found, disabled")
-    endif (Qt5_FOUND)
-endif (SKIPQT EQUAL 1)
 
 if (SKIPBT EQUAL 1)
     message(STATUS "native BT support: skipped")
@@ -594,6 +541,12 @@ if (LZ4_FOUND)
 else (LZ4_FOUND)
     message(SEND_ERROR "LZ4 library:       LZ4 not found")
 endif (LZ4_FOUND)
+
+if (ZLIB_FOUND)
+    message(STATUS "Zlib library:      system library found (enabled)")
+else (ZLIB_FOUND)
+    message(STATUS "Zlib library:      not found, disabled")
+endif (ZLIB_FOUND)
 
 if (SKIPGD EQUAL 1)
     message(STATUS "GD library:        skipped")
@@ -698,7 +651,7 @@ add_library(pm3rrg_rdv4 SHARED
 
 target_compile_definitions(pm3rrg_rdv4 PRIVATE LIBPM3)
 
-target_compile_options(pm3rrg_rdv4 PUBLIC -Wall -O3)
+target_compile_options(pm3rrg_rdv4 PUBLIC -Wall -Werror -O3)
 if (EMBED_READLINE)
     if (NOT SKIPREADLINE EQUAL 1)
         add_dependencies(pm3rrg_rdv4 ncurses readline)

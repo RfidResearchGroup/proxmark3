@@ -161,8 +161,17 @@ void ulaes_cmac8(uint8_t *cmac, uint8_t *mac) {
 }
 
 void append_cmac(uint8_t *d, size_t n) {
+
+    // sanity check
+    if (n > PM3_CMD_DATA_SIZE) {
+        return;
+    }
+
     uint8_t mac[16] = {0};
+
     uint8_t cmd_mac[2 + n];
+    memset(cmd_mac, 0, sizeof(cmd_mac));
+
     cmd_mac[0] = g_secure_session.counter & 0xFF;
     cmd_mac[1] = (g_secure_session.counter >> 8) & 0xFF;
     memcpy(cmd_mac + 2, d, n);
@@ -177,19 +186,30 @@ void append_cmac(uint8_t *d, size_t n) {
 }
 
 int verify_cmac(uint8_t *d, size_t n, bool verify_crc) {
+
+    // sanity check
+    if (n > PM3_CMD_DATA_SIZE) {
+        return PM3_EOVFLOW;
+    }
+
     // n = data size without cmac and without crc
     uint8_t chk_d[n + ULAES_CMAC8_SIZE + 2];
     memcpy(chk_d, d, n);
     memset(chk_d + n, 0, sizeof(chk_d) - n);
+
     append_cmac(chk_d, n);
+
     if (memcmp(chk_d + n, d + n, ULAES_CMAC8_SIZE) != 0) {
         if (g_dbglevel >= DBG_ERROR) {
             Dbprintf("CMAC response error.");
         }
         return PM3_ECRC;
     }
+
     if (verify_crc) {
+
         AddCrc14A(chk_d, n + ULAES_CMAC8_SIZE);
+
         if (memcmp(chk_d + n + ULAES_CMAC8_SIZE, d + n + ULAES_CMAC8_SIZE, 2) != 0) {
             if (g_dbglevel >= DBG_ERROR) {
                 Dbprintf("CRC response error.");

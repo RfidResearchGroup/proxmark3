@@ -600,6 +600,15 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
 
                     if ((communication_settings & MAC_VERIFY) == MAC_VERIFY) {
 
+                        if (*nbytes < key_macing_length(key)) {
+                            *nbytes = -1;
+                            res = NULL;
+#ifdef WITH_DEBUG
+                            Dbprintf("No room for MAC!");
+#endif
+                            break;
+                        }
+
                         *nbytes -= key_macing_length(key);
 
                         if (*nbytes == 0) {

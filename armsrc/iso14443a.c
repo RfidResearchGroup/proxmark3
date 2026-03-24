@@ -852,10 +852,19 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 
     uint32_t rx_samples = 0;
 
+    uint16_t checker = 12000;
+
     // loop and listen
     while (BUTTON_PRESS() == false) {
         WDT_HIT();
         LED_A_ON();
+
+        if (checker-- == 0) {
+            if (data_available()) {
+                break;
+            }
+            checker = 12000;
+        }
 
         register int readBufDataP = data - dma->buf;
         register int dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
@@ -1434,6 +1443,11 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
                 DbpString("UL-AES UID........ ");
                 Dbhexdump(7, data, false);
             }
+            break;
+        }
+        case 15: { // MIFARE Plus
+            rATQA[0] = 0x44;
+            sak = 0x20;
             break;
         }
         default: {
@@ -2615,7 +2629,7 @@ int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_
         if (flip == 3) {
             if (data_available()) {
                 Dbprintf("----------- " _GREEN_("Breaking / Data") " ----------");
-                return false;
+                return 1;
             }
             flip = 0;
         }
@@ -2624,7 +2638,7 @@ int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_
         if (checker-- == 0) {
             if (BUTTON_PRESS()) {
                 Dbprintf("----------- " _GREEN_("Button pressed, user aborted") " ----------");
-                return false;
+                return 1;
             }
 
             flip++;
@@ -4582,6 +4596,14 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                             int received_aid_len = receivedCmd[5 + offset];
                             uint8_t *received_aid = &receivedCmd[6 + offset];
 
+                            // Validate claimed AID length against actual received frame length
+                            if ((6 + offset + received_aid_len) > len) {
+                                dynamic_response_info.response[1 + offset] = 0x6A;
+                                dynamic_response_info.response[2 + offset] = 0x80; // Wrong data
+                                dynamic_response_info.response_n = 3 + offset;
+                                break;
+                            }
+
                             // aid enumeration flag
                             if ((flags & FLAG_ENUMERATE_AID) == FLAG_ENUMERATE_AID) {
                                 Dbprintf("Received AID (%d):", received_aid_len);
@@ -4590,8 +4612,8 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
 
                             if ((received_aid_len == aid_len) && (memcmp(aid, received_aid, aid_len) == 0)) { // Evaluate the AID sent by the Reader to the AID supplied
                                 // AID Response will be parsed here
-                                memcpy(dynamic_response_info.response + 1 + offset, selectaid_response, selectaid_response_len + 1 + offset);
-                                dynamic_response_info.response_n = selectaid_response_len + 2;
+                                memcpy(dynamic_response_info.response + 1 + offset, selectaid_response, selectaid_response_len);
+                                dynamic_response_info.response_n = selectaid_response_len + 1 + offset;
                             } else { // Any other SELECT FILE command will return with a Not Found
                                 dynamic_response_info.response[1 + offset] = 0x6A;
                                 dynamic_response_info.response[2 + offset] = 0x82;
@@ -4611,8 +4633,8 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                         case 0xCA: { // GET DATA
                             if (sentCount == 0) {
                                 // APDU Command will just be parsed here
-                                memcpy(dynamic_response_info.response + 1 + offset, getdata_response, getdata_response_len + 2);
-                                dynamic_response_info.response_n = selectaid_response_len + 1 + offset;
+                                memcpy(dynamic_response_info.response + 1 + offset, getdata_response, getdata_response_len);
+                                dynamic_response_info.response_n = getdata_response_len + 1 + offset;
                             } else {
                                 finished = true;
                                 break;

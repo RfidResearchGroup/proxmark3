@@ -881,7 +881,7 @@ static int NxpSysInfo(uint8_t *uid) {
 
 static int StCheckSig(uint8_t *uid) {
     // request to be sent to device/card
-    uint8_t approxlen = 2 + 8 + 1 + 2;
+    uint16_t approxlen = 2 + ISO15693_UID_LENGTH + 1 + 2;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
@@ -891,19 +891,27 @@ static int StCheckSig(uint8_t *uid) {
     // ISO15693 Protocol params
     packet->raw[packet->rawlen++] = arg_get_raw_flag(ISO15693_UID_LENGTH, false, false, false);
     packet->raw[packet->rawlen++] = ISO15693_READBLOCK;
+
     // add UID (scan, uid)
     memcpy(packet->raw + packet->rawlen, uid, ISO15693_UID_LENGTH);
     packet->rawlen += ISO15693_UID_LENGTH;
     packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
+
     uint16_t blkoff = packet->rawlen;
     char signature_hex[65] = {0};
-    for (int j = 0; j < 17; j++) {
+
+    for (int i = 0; i < 17; i++) {
+
+        // reset rawlength counter
         packet->rawlen = blkoff;
+
         // block no
-        packet->raw[packet->rawlen++] = 0x3F + j;
-        // crc
+        packet->raw[packet->rawlen++] = 0x3F + i;
+
+        // add crc
         AddCrc15(packet->raw,  packet->rawlen);
         packet->rawlen += 2;
+
         clearCommandBuffer();
         SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
         PacketResponseNG resp;
@@ -913,27 +921,35 @@ static int StCheckSig(uint8_t *uid) {
             DropField();
             return PM3_ETIMEOUT;
         }
+
         ISO15_ERROR_HANDLING_RESPONSE
         uint8_t *d = resp.data.asBytes;
         ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
-        if (j == 0) {
+
+        if (i == 0) {
+
             if (memcmp(d + 1, "K04S", 4) != 0) {
                 // No signature
                 free(packet);
                 return PM3_ESOFT;
             }
+
         } else {
-            memcpy(signature_hex + ((j - 1) * 4), d + 1, 4);
+            memcpy(signature_hex + ((i - 1) * 4), d + 1, 4);
         }
         packet->flags = (ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
     }
+
     free(packet);
     DropField();
+
     uint8_t signature[16];
-    size_t signature_len;
+    size_t signature_len = 0;
     hexstr_to_byte_array(signature_hex, signature, &signature_len);
+    
     uint8_t uid_swap[ISO15693_UID_LENGTH];
     reverse_array_copy(uid, ISO15693_UID_LENGTH, uid_swap);
+
     int index = originality_check_verify_ex(uid_swap, ISO15693_UID_LENGTH, signature, signature_len, PK_ST25TV, false, true);
     PrintAndLogEx(NORMAL, "");
     return originality_check_print(signature, signature_len, index);
@@ -1720,7 +1736,7 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
     }
 
     // request to be sent to device/card
-    uint8_t approxlen = 2 + 8 + 1 + 2;
+    uint16_t approxlen = 2 + ISO15693_UID_LENGTH + 1 + 2;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
@@ -1840,7 +1856,7 @@ static int CmdHF15Dump(const char *Cmd) {
     }
 
     // request to be sent to device/card
-    uint8_t approxlen = 2 + 8 + 1 + 2;
+    uint16_t approxlen = 2 + ISO15693_UID_LENGTH + 1 + 2;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
@@ -2385,7 +2401,7 @@ static int CmdHF15Readblock(const char *Cmd) {
     }
 
     // request to be sent to device/card
-    uint8_t approxlen = 2 + 8 + 1 + 2;
+    uint16_t approxlen = 2 + ISO15693_UID_LENGTH + 1 + 2;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");

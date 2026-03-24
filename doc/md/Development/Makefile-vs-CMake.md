@@ -34,6 +34,7 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | extra GCC warnings | `GCCEXTRA=1` | **no** |   |
 | extra Clang warnings | `CLANGEXTRA=1` | **no** | only on host |
 | AddressSanitize | `SANITIZE=1` | **no** | only on host |
+| Hardening | yes (1) | **no** | only on host; disable it with `NOHARDENING=1` |
 | compilation | in place | in build dir | |
 | user `CFLAGS`/`LDFLAGS` | envvars honored (1) | envvars honored (2) | (1) also `LDLIBS` and `INCLUDES_CLIENT` for more tuning (2) only at first cmake call |
 | Mingw gnu printf | `_ISOC99_SOURCE` | `_ISOC99_SOURCE` | and in cbor.h: `__attribute__((format (__MINGW_PRINTF_FORMAT, 2, 3)))`|
@@ -70,9 +71,10 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | dep pthread | sys | sys |  |
 | pthread detection | **none** | **none** (1) | (1) cf https://stackoverflow.com/questions/1620918/cmake-and-libpthread ? |
 | `SKIPPTHREAD` | yes | yes | e.g. for termux |
-| dep Qt | opt, sys, Qt5 & Qt4 | opt, sys, Qt5 |  |
-| Qt detection | pc(qt5)/pc(qt4)/`QTDIR`(1) (2) | find_package(qt5) (3) | (1) if `QTDIR`: hardcode path (2) OSX: pkg-config hook for Brew (3) OSX: add search path|
+| dep Qt | opt, sys, Qt6 & Qt5 | opt, sys, Qt6 & Qt5 |  |
+| Qt detection | pc(qt6)/pc(qt5)/`QTDIR`(1) (2) | find_package(qt6/qt5) (3) | (1) if `QTDIR`: hardcode path (2) OSX: pkg-config hook for Brew (3) OSX: add search path|
 | `SKIPQT` | yes | yes | |
+| `SKIPQT6` | yes | yes | |
 | dep readline | sys  | sys |  |
 | readline detection | **none** (1) | find*(2), Cross:getzip | (1) OSX: hardcoded path (2) additional paths for OSX |
 | `SKIPREADLINE` | yes | yes | CLI not fully functional without Readline |
