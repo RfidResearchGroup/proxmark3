@@ -1489,6 +1489,7 @@ static int CmdHF15Sim(const char *Cmd) {
         arg_param_begin,
         arg_str0("u", "uid", "<hex>", "UID, 8 hex bytes"),
         arg_int0("b", "blocksize", "<dec>", "block size (def 4)"),
+        arg_int0("t", "timeout", "<dec>", "timeout in ms (def -1, ie. until button press)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1502,6 +1503,7 @@ static int CmdHF15Sim(const char *Cmd) {
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, payload.uid, &uidlen);
     payload.block_size = arg_get_int_def(ctx, 2, 4);
+    size_t timeout = arg_get_int_def(ctx, 3, -1);
     CLIParserFree(ctx);
 
     // sanity checks
@@ -1541,7 +1543,10 @@ static int CmdHF15Sim(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_SIMULATE, (uint8_t *)&payload, sizeof(payload));
-    WaitForResponse(CMD_HF_ISO15693_SIMULATE, &resp);
+    WaitForResponseTimeout(CMD_HF_ISO15693_SIMULATE, &resp, timeout);
+    if (timeout != (size_t) - 1) {
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+    }
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
