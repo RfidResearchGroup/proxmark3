@@ -86,7 +86,11 @@ uint8_t mf_crypto1_encrypt4bit(struct Crypto1State *pcs, uint8_t data) {
 // send X byte basic commands
 uint16_t mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *answer, uint16_t answer_len, uint8_t *answer_parity, uint32_t *timing) {
 
-    uint8_t dcmd[data_size + 3];
+    if (data_size > 32) {
+        return 0;
+    }
+
+    uint8_t dcmd[32 + 3];
     dcmd[0] = cmd;
     if (data_size > 0) {
         memcpy(dcmd + 1, data, data_size);
@@ -99,8 +103,9 @@ uint16_t mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *
     }
     uint16_t len = ReaderReceive(answer, answer_len, answer_parity);
     if (len == 0) {
-        if (g_dbglevel >= DBG_ERROR)
+        if (g_dbglevel >= DBG_ERROR) {
             Dbprintf("%02X Cmd failed. Card timeout.", cmd);
+        }
         len = ReaderReceive(answer, answer_len, answer_parity);
     }
     return len;
@@ -109,7 +114,11 @@ uint16_t mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *
 // send X byte basic commands secure channel (UL AES)
 uint16_t mifare_sendcmd_schann(uint8_t *data, uint8_t data_size, uint8_t *answer, uint16_t answer_len, uint8_t *answer_parity, uint32_t *timing) {
 
-    uint8_t dcmd[data_size + 2];
+    if (data_size > 16) {
+        return 0;
+    }
+
+    uint8_t dcmd[16 + 2];
     memset(dcmd, 0, sizeof(dcmd));
 
     if (data_size > 0) {
@@ -149,6 +158,7 @@ uint16_t mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t
     } else {
         ReaderTransmit(dcmd, sizeof(dcmd), timing);
     }
+
     if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
         return 0;
     }
@@ -160,6 +170,7 @@ uint16_t mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t
     }
 
     if (pcs && (crypted == CRYPT_ALL)) {
+        
         if (len == 1) {
             uint16_t res = 0;
             res |= (crypto1_bit(pcs, 0, 0) ^ BIT(answer[0], 0)) << 0;
@@ -167,7 +178,9 @@ uint16_t mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t
             res |= (crypto1_bit(pcs, 0, 0) ^ BIT(answer[0], 2)) << 2;
             res |= (crypto1_bit(pcs, 0, 0) ^ BIT(answer[0], 3)) << 3;
             answer[0] = res;
+
         } else {
+
             for (pos = 0; pos < len; pos++) {
                 answer[pos] = crypto1_byte(pcs, 0x00, 0) ^ answer[pos];
             }
