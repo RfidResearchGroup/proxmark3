@@ -4633,7 +4633,7 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                         case 0xCA: { // GET DATA
                             if (sentCount == 0) {
                                 // APDU Command will just be parsed here
-                                memcpy(dynamic_response_info.response + 1 + offset, getdata_response, getdata_response_len + 2);
+                                memcpy(dynamic_response_info.response + 1 + offset, getdata_response, getdata_response_len);
                                 dynamic_response_info.response_n = getdata_response_len + 1 + offset;
                             } else {
                                 finished = true;
