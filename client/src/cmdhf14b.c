@@ -122,6 +122,9 @@ static void hf14b_aid_search(bool verbose) {
         if ((AIDGetFromElm(data, vaid, sizeof(vaid), &vaidlen) == false) || (vaidlen == 0)) {
             continue;
         }
+        if (AIDSeenBefore(root, vaid, (size_t)vaidlen, elmindx)) {
+            continue;
+        }
 
 
         // COMPUTE APDU
@@ -172,7 +175,7 @@ static void hf14b_aid_search(bool verbose) {
                 }
             }
 
-            PrintAIDDescriptionBuf(root, vaid, vaidlen, verbose);
+            PrintAIDDescriptionEx(root, sprint_hex_inrow(vaid, vaidlen), result, (size_t)resultlen, verbose);
 
             if (dfnamelen) {
                 if (dfnamelen == vaidlen) {
