@@ -4612,8 +4612,8 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
 
                             if ((received_aid_len == aid_len) && (memcmp(aid, received_aid, aid_len) == 0)) { // Evaluate the AID sent by the Reader to the AID supplied
                                 // AID Response will be parsed here
-                                memcpy(dynamic_response_info.response + 1 + offset, selectaid_response, selectaid_response_len + 1 + offset);
-                                dynamic_response_info.response_n = selectaid_response_len + 2;
+                                memcpy(dynamic_response_info.response + 1 + offset, selectaid_response, selectaid_response_len);
+                                dynamic_response_info.response_n = selectaid_response_len + 1 + offset;
                             } else { // Any other SELECT FILE command will return with a Not Found
                                 dynamic_response_info.response[1 + offset] = 0x6A;
                                 dynamic_response_info.response[2 + offset] = 0x82;
@@ -4634,7 +4634,7 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                             if (sentCount == 0) {
                                 // APDU Command will just be parsed here
                                 memcpy(dynamic_response_info.response + 1 + offset, getdata_response, getdata_response_len + 2);
-                                dynamic_response_info.response_n = selectaid_response_len + 1 + offset;
+                                dynamic_response_info.response_n = getdata_response_len + 1 + offset;
                             } else {
                                 finished = true;
                                 break;
