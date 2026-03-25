@@ -3982,24 +3982,71 @@ static int CmdQRcode(const char *Cmd) {
     CLIParserInit(&ctx, "data qrcode",
                   "Generate a QR code with the input data",
                   "data qrcode -f <filename>\n"
-                  "data qrcode -d 123456789\n"
+                  "data qrcode -d 0123456789\n"
+                  "data qrcode -d AABBCCDD --ascii\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("a", "ascii", "Render with ASCII-safe characters"),
         arg_str0("f", "file", "<fn>", "Specify a filename"),
-        arg_str0("d", "data", "<hex>", "message as hex bytes"),
+        arg_str0("d", "data", "<hex>", "message as a single hex byte string"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
+    bool ascii = arg_get_lit(ctx, 1);
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = { 0 };
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     int dlen = 0;
-    char data[1024] = { 0 };
-    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)data, sizeof(data), &dlen);
+    uint8_t data[512] = { 0 };
+    int data_arg_len = 0;
+    char data_arg[1024] = { 0 };
+    struct arg_str *data_arg_str = arg_get_str(ctx, 3);
+    int data_count = data_arg_str->count;
+
+    if (data_count > 1) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "QR data accepts exactly one -d value. Use a single contiguous hex string and encode spaces as 20.");
+        return PM3_EINVARG;
+    }
+
+    if (data_count == 1) {
+        if (CLIParamStrToBuf(data_arg_str, (uint8_t *)data_arg, sizeof(data_arg), &data_arg_len) != 0) {
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+
+        if (strpbrk(data_arg, " \t") != NULL) {
+            CLIParserFree(ctx);
+            PrintAndLogEx(ERR, "QR data must be one contiguous hex string. Spaces are not supported; encode a space byte as 20.");
+            return PM3_EINVARG;
+        }
+
+        for (int i = 0; i < data_arg_len; i++) {
+            if (isxdigit((unsigned char)data_arg[i]) == 0) {
+                CLIParserFree(ctx);
+                PrintAndLogEx(ERR, "QR data must contain only hex characters 0-9, a-f, or A-F.");
+                return PM3_EINVARG;
+            }
+        }
+
+        if (data_arg_len & 1) {
+            CLIParserFree(ctx);
+            PrintAndLogEx(ERR, "QR data must contain an even number of hex digits.");
+            return PM3_EINVARG;
+        }
+
+        dlen = hex_to_bytes(data_arg, data, sizeof(data));
+        if (dlen < 0) {
+            CLIParserFree(ctx);
+            PrintAndLogEx(ERR, "QR data must be valid hex bytes.");
+            return PM3_EINVARG;
+        }
+    }
+
     CLIParserFree(ctx);
 
     if (fnlen && dlen) {
@@ -4028,17 +4075,27 @@ static int CmdQRcode(const char *Cmd) {
     }
 
     if (dlen) {
+        int8_t smallest_version = qrcode_getMinVersionForBytes(dlen, ECC_LOW);
+        if (smallest_version < 1) {
+            PrintAndLogEx(ERR, "QR data is too large to fit in a supported QR code.");
+            return PM3_EINVARG;
+        }
 
-        // calc size of input data to get the correct
-        int smallest_version = (dlen + 17) / 20;
         uint8_t qr_arr[qrcode_getBufferSize(smallest_version)];
-        qrcode_initText(&qrcode, qr_arr, smallest_version, ECC_LOW, (char *) data);
+        if (qrcode_initBytes(&qrcode, qr_arr, smallest_version, ECC_LOW, data, dlen) < 0) {
+            PrintAndLogEx(ERR, "Failed to encode QR data.");
+            return PM3_ESOFT;
+        }
 
         PrintAndLogEx(NORMAL, "");
-        qrcode_print_matrix_utf8(&qrcode);
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(NORMAL, "");
-        qrcode_print_matrix_utf8_2x2(&qrcode);
+        if (ascii) {
+            qrcode_print_matrix_ascii(&qrcode);
+        } else {
+            qrcode_print_matrix_utf8(&qrcode);
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(NORMAL, "");
+            qrcode_print_matrix_utf8_2x2(&qrcode);
+        }
         PrintAndLogEx(NORMAL, "");
     }
 
