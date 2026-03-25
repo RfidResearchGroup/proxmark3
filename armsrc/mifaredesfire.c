@@ -323,6 +323,10 @@ void MifareDES_Auth1(uint8_t *datain) {
             memcpy(keybytes, PICC_MASTER_KEY24, 24);
         }
     } else {
+        if (payload->keylen > sizeof(keybytes)) {
+            OnErrorNG(CMD_HF_DESFIRE_AUTH1, PM3_EINVARG);
+            return;
+        }
         memcpy(keybytes, payload->key, payload->keylen);
     }
 
