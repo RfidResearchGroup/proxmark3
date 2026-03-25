@@ -286,7 +286,7 @@ static void hitag2_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_
         // Received RWD authentication challenge and response
         case 64: {
             // Store the authentication attempt
-            if (auth_table_len < (AUTH_TABLE_LENGTH - 8)) {
+            if (auth_table_len + 8 <= AUTH_TABLE_LENGTH) {
                 memcpy(auth_table + auth_table_len, rx, 8);
                 auth_table_len += 8;
             }
@@ -1371,7 +1371,7 @@ void SniffHitag2(bool ledcontrol) {
             // Check if we recognize a valid authentication attempt
             if (rxlen == 64) {
                 // Store the authentication attempt
-                if (auth_table_len < (AUTH_TABLE_LENGTH - 8)) {
+                if (auth_table_len + 8 <= AUTH_TABLE_LENGTH) {
                     memcpy(auth_table + auth_table_len, rx, 8);
                     auth_table_len += 8;
                 }
