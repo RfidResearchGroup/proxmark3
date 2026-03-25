@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Added `-f` parameter to `hf iclass sam` command to use the sam to parse a card dump (@antiklesys)
+- Fixed WTX response behavior in `ExchangeRaw14A()` (@team-orangeBlue)
 - Added `-t` / `--timeout` option for `hf 15 sim` (@recursivenomad)
 - Added `--aid` parameter to `hf seos` commands (@kormax)
 - Added `hf iclass blacktears` command to perform an automated tearoff of block 1 to set non-secure page mode(@antiklesys)
