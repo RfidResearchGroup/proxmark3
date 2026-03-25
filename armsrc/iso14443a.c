@@ -3633,6 +3633,9 @@ void ReaderIso14443a(PacketCommandNG *c) {
 
     if ((param & ISO14A_CONNECT) == ISO14A_CONNECT) {
         iso14_pcb_blocknum = 0;
+    }
+
+    if ((param & ISO14A_CLEARTRACE) == ISO14A_CLEARTRACE) {
         clear_trace();
     }
 

@@ -1514,7 +1514,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
     if ((jsonnamelen > 0) && result) {
         DropField();
         // MIFARE DESFire info
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");

@@ -72,7 +72,7 @@ local function sendRaw(rawdata, options)
     local flags = lib14a.ISO14A_COMMAND.ISO14A_NO_DISCONNECT + lib14a.ISO14A_COMMAND.ISO14A_RAW
 
     if options.connect then
-        flags = flags + lib14a.ISO14A_COMMAND.ISO14A_CONNECT
+        flags = flags + lib14a.ISO14A_COMMAND.ISO14A_CONNECT + lib14a.ISO14A_COMMAND.ISO14A_CLEARTRACE
     end
 
     if options.no_select then
