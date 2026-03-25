@@ -715,8 +715,8 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                 uint8_t *request = work_buffer_a;
                                 decrypt_cryptogram(diver_encr_key, cryptogram, cryptogram_length, request, msg->encr_alg);
 
-                                uint8_t tlv_base = 1 + offset;
-                                uint8_t tlv_idx = tlv_base;
+                                uint16_t tlv_base = 1 + offset;
+                                uint16_t tlv_idx = tlv_base;
 
                                 if (is_put) {
                                     // TODO: Add write support
@@ -759,6 +759,12 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                     uint8_t *reply_cryptogram = work_buffer_b;
                                     if (!generate_cryptogram(diver_encr_key, false, reply, reply_len, reply_cryptogram, msg->encr_alg)) {
                                         Dbprintf(_RED_("Get Data failed") ": Failed to create reply cryptogram.");
+                                        break;
+                                    }
+
+                                    // Pre-flight: 2 (cryptogram tag+len) + reply_len + 4 (status) + 2 (CMAC tag+len) + recvd_cmac_length
+                                    if (tlv_base + 2 + reply_len + 4 + 2 + recvd_cmac_length > DYNAMIC_RESPONSE_BUFFER_SIZE) {
+                                        Dbprintf(_RED_("Get Data failed") ": Response too large for buffer.");
                                         break;
                                     }
 
