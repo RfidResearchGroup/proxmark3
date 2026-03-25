@@ -2443,6 +2443,15 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
             uint8_t *mem = BigBuf_get_addr();
+
+            // sanity checks
+            if (payload->bytes_in_packet > sizeof(payload->data) ||
+                payload->idx > BigBuf_get_size() ||
+                payload->idx + payload->bytes_in_packet > BigBuf_get_size()) {
+                reply_ng(CMD_SMART_UPLOAD, PM3_EOVFLOW, NULL, 0);
+                break;
+            }
+
             memcpy(mem + payload->idx, payload->data, payload->bytes_in_packet);
 
             uint8_t a = 0, b = 0;

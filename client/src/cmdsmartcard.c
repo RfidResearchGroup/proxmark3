@@ -1312,7 +1312,9 @@ static int CmdPCSC(const char *Cmd) {
                         }
                     }
 
-                    uint8_t res[22] = {0};
+                    // ISO 7816-3 specifies that ATRs can be 2 to 33 bytes long
+                    // but some custom cards may support up to 256 bytes long ATRs
+                    uint8_t res[2 + 256] = {0};
                     res[1] = atrLen;
                     memcpy(res + 2, atr, atrLen);
                     mbedtls_net_send(&netCtx, res, 2 + atrLen);
@@ -1393,7 +1395,7 @@ static int CmdPCSC(const char *Cmd) {
 
             // ISO 15.
 
-            if (use_contact && IfPm3Iso14443() && smart_select(false, &card) == PM3_SUCCESS) {
+            if (use_contact && IfPm3Iso14443() && smart_select(false, &card)) {
                 have_card = true;
                 card_type = CC_CONTACT;
             }

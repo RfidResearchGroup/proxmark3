@@ -2,7 +2,7 @@ FROM opensuse/leap
 
 ENV LANG=C.UTF-8
 
-RUN zypper --non-interactive install --no-recommends shadow sudo git patterns-devel-base-devel_basis cmake gcc15 gcc15-c++ readline-devel libbz2-devel liblz4-devel bluez-devel python3-devel libopenssl-devel gd-devel
+RUN zypper --non-interactive install --no-recommends shadow sudo git patterns-devel-base-devel_basis cmake gcc15 gcc15-c++ readline-devel libbz2-devel liblz4-devel zlib-devel bluez-devel python3-devel libopenssl-devel gd-devel
 
 RUN zypper --non-interactive install ocl-icd-devel
 

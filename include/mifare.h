@@ -108,6 +108,7 @@ typedef enum ISO14A_COMMAND {
     ISO14A_CRYPTO1MODE = (1 << 14),
     ISO14A_SET_WAIT_US = (1 << 15),
     ISO14A_APPEND_CMAC = (1 << 16),
+    ISO14A_CLEARTRACE = (1 << 17),
 } iso14a_command_t;
 
 typedef struct {

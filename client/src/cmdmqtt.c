@@ -259,7 +259,7 @@ static int CmdMqttSend(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "mqtt send",
                   "This command send MQTT messages.  You can send JSON file\n"
-                  "Default server:  proxdump.com:1883  topic: proxdump\n",
+                  "Default server:  mqtt.proxdump.com:1883  topic: proxdump\n",
                   "mqtt send --msg \"Hello from Pm3\"     --> sending msg to default server/port/topic\n"
                   "mqtt send -f myfile.json               --> sending file to default server/port/topic\n"
                   "mqtt send --addr test.mosquitto.org -p 1883 --topic pm3 --msg \"custom mqtt server \"\n"
@@ -308,7 +308,7 @@ static int CmdMqttSend(const char *Cmd) {
         if (strlen(g_session.mqtt_server)) {
             strcpy(addr, g_session.mqtt_server);
         } else {
-            strcpy(addr, "proxdump.com");
+            strcpy(addr, "mqtt.proxdump.com");
         }
     }
 

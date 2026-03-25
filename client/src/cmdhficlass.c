@@ -98,6 +98,7 @@ bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t *rmac, uint8_t *
 
     iclass_prekey_t *prekey = calloc(ICLASS_KEYS_MAX * 2, sizeof(iclass_prekey_t));
     if (prekey == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return false;
     }
 
@@ -385,6 +386,11 @@ static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t offset, uint16_t
         }
 
         struct p *payload = calloc(4 + bytes_in_packet, sizeof(uint8_t));
+        if (payload == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            break;
+        }
+
         payload->offset = offset + *bytes_sent;
         payload->len = bytes_in_packet;
         memcpy(payload->data, d + *bytes_sent, bytes_in_packet);
@@ -1278,7 +1284,11 @@ int read_iclass_csn(bool loop, bool verbose, bool shallow_mod) {
             }
 
             picopass_hdr_t *card = calloc(1, sizeof(picopass_hdr_t));
-            if (card) {
+            if (card == NULL) {
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
+                DropField();
+                return PM3_EMALLOC;
+            } else {
                 memcpy(card, &r->header.hdr, sizeof(picopass_hdr_t));
                 if (loop == false) {
                     PrintAndLogEx(NORMAL, "");
@@ -1287,9 +1297,6 @@ int read_iclass_csn(bool loop, bool verbose, bool shallow_mod) {
                 iclass_set_last_known_card(card);
                 free(card);
                 res = PM3_SUCCESS;
-            } else {
-                PrintAndLogEx(WARNING, "Failed to allocate memory");
-                res = PM3_EMALLOC;
             }
         }
     } while (loop && (kbd_enter_pressed() == false));
@@ -1395,6 +1402,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
 
     uint8_t *newdump = realloc(dump, bytes_read);
     if (newdump == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(dump);
         return PM3_EMALLOC;
     } else {
@@ -1515,7 +1523,6 @@ static int CmdHFiClassEView(const char *Cmd) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
-    memset(dump, 0, bytes);
 
     PrintAndLogEx(INFO, "downloading from emulator memory");
     if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
@@ -1669,7 +1676,7 @@ static void iclass_decode_credentials(uint8_t *data) {
             }
 
             if (recovered_len > ICLASS_LEGACY_PACS_FORMAT_DECODE_MAX_BITS) {
-                PrintAndLogEx(SUCCESS, "Binary... " _GREEN_("%s") " ( %zu )", recovered_bin, recovered_len);
+                PrintAndLogEx(SUCCESS, "Bin... " _GREEN_("%s") " ( %zu )", recovered_bin, recovered_len);
                 PrintAndLogEx(INFO, "Recovered legacy PACS payload exceeds 96 bits; format decode is not supported above 96 bits.");
             } else {
                 memcpy(pbin, recovered_bin, recovered_len + 1);
@@ -1678,7 +1685,7 @@ static void iclass_decode_credentials(uint8_t *data) {
                     return;
                 }
 
-                PrintAndLogEx(SUCCESS, "Binary... " _GREEN_("%s") " ( %zu )", recovered_bin, recovered_len);
+                PrintAndLogEx(SUCCESS, "Bin... " _GREEN_("%s") " ( %zu )", recovered_bin, recovered_len);
                 PrintAndLogEx(NORMAL, "");
                 if (decode_wiegand(top, mid, bot, (int)recovered_len) == false) {
                     PrintAndLogEx(INFO, "No matching Wiegand formats found in the right-aligned legacy PACS payload.");
@@ -1872,7 +1879,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
             // use the first block (CSN) for filename
             char *fptr = calloc(50, sizeof(uint8_t));
-            if (fptr == false) {
+            if (fptr == NULL) {
                 PrintAndLogEx(WARNING, "Failed to allocate memory");
                 free(decrypted);
                 return PM3_EMALLOC;
@@ -2596,6 +2603,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
         arg_lit0(NULL, "nr", "replay of NR/MAC block write or use privilege escalation if mac is empty"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
+        arg_lit0("@", NULL, "optional - continuous mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2665,6 +2673,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
     bool use_replay = arg_get_lit(ctx, 9);
     bool verbose = arg_get_lit(ctx, 10);
     bool shallow_mod = arg_get_lit(ctx, 11);
+    bool cm = arg_get_lit(ctx, 12);
 
     CLIParserFree(ctx);
 
@@ -2673,19 +2682,31 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    int isok = iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
-    switch (isok) {
-        case PM3_SUCCESS:
-            PrintAndLogEx(SUCCESS, "Wrote block " _YELLOW_("%d") " / " _YELLOW_("0x%02X") " ( " _GREEN_("ok") " )", blockno, blockno);
-            break;
-        case PM3_ETEAROFF:
-            if (verbose)
-                PrintAndLogEx(INFO, "Writing tear off triggered");
-            break;
-        default:
-            PrintAndLogEx(FAILED, "Writing failed");
-            break;
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
+
+    int isok = 0;
+    do {
+        isok = iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
+        switch (isok) {
+            case PM3_SUCCESS: {
+                PrintAndLogEx(SUCCESS, "Wrote block " _YELLOW_("%d") " / " _YELLOW_("0x%02X") " ( " _GREEN_("ok") " )", blockno, blockno);
+                break;
+            }
+            case PM3_ETEAROFF: {
+                if (verbose) {
+                    PrintAndLogEx(INFO, "Writing tear off triggered");
+                }
+                break;
+            }
+            default: {
+                PrintAndLogEx(FAILED, "Writing failed");
+                break;
+            }
+        }
+    } while (cm  && (kbd_enter_pressed() == false));
+
     PrintAndLogEx(NORMAL, "");
     return isok;
 }
@@ -2928,6 +2949,12 @@ static int CmdHFiClassRestore(const char *Cmd) {
     }
 
     iclass_restore_req_t *payload = calloc(1, payload_size);
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(dump);
+        return PM3_EMALLOC;
+    }
+
     payload->req.use_raw = rawkey;
     payload->req.use_elite = elite;
     payload->req.use_credit_key = use_credit_key;
@@ -2990,7 +3017,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
 }
 
 static int iclass_read_block_ex(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool replay, bool verbose,
-                                bool auth, bool shallow_mod, uint8_t *out, bool print) {
+                                bool auth, bool shallow_mod, uint8_t *out, bool print, bool loop) {
 
     iclass_auth_req_t payload = {
         .use_raw = rawkey,
@@ -3027,9 +3054,14 @@ static int iclass_read_block_ex(uint8_t *KEY, uint8_t blockno, uint8_t keyType, 
     }
 
     if (print) {
-        PrintAndLogEx(NORMAL, "");
+
+        if (loop == false) {
+            PrintAndLogEx(NORMAL, "");
+        }
         PrintAndLogEx(SUCCESS, " block %3d/0x%02X : " _GREEN_("%s"), blockno, blockno, sprint_hex(packet->data, sizeof(packet->data)));
-        PrintAndLogEx(NORMAL, "");
+        if (loop == false) {
+            PrintAndLogEx(NORMAL, "");
+        }
     }
 
     if (out) {
@@ -3040,8 +3072,8 @@ static int iclass_read_block_ex(uint8_t *KEY, uint8_t blockno, uint8_t keyType, 
 }
 
 static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool replay, bool verbose,
-                             bool auth, bool shallow_mod, uint8_t *out) {
-    return iclass_read_block_ex(KEY, blockno, keyType, elite, rawkey, replay, verbose, auth, shallow_mod, out, true);
+                             bool auth, bool shallow_mod, uint8_t *out, bool loop) {
+    return iclass_read_block_ex(KEY, blockno, keyType, elite, rawkey, replay, verbose, auth, shallow_mod, out, true, loop);
 }
 
 static int CmdHFiClass_ReadBlock(const char *Cmd) {
@@ -3063,6 +3095,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
         arg_lit0(NULL, "nr", "replay of NR/MAC"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
+        arg_lit0("@", NULL, "optional - continuous mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3114,6 +3147,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     bool use_replay = arg_get_lit(ctx, 7);
     bool verbose = arg_get_lit(ctx, 8);
     bool shallow_mod = arg_get_lit(ctx, 9);
+    bool cm = arg_get_lit(ctx, 10);
 
     CLIParserFree(ctx);
 
@@ -3132,10 +3166,23 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
 
     }
 
+    int res = 0;
     uint8_t data[8] = {0};
-    int res = iclass_read_block(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, data);
-    if (res != PM3_SUCCESS)
-        return res;
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
+    do {
+        memset(data, 0, sizeof(data));
+
+        res = iclass_read_block(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, data, cm);
+        if (!cm && res != PM3_SUCCESS) {
+            return res;
+        }
+
+    } while (cm  && (kbd_enter_pressed() == false));
+
 
     if (blockno < 6 || blockno > 7)
         return PM3_SUCCESS;
@@ -3497,7 +3544,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         read_auth = false;
     }
 
-    int res_orig = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read_orig, false);
+    int res_orig = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read_orig, false, false);
     while (reread) {
         if (res_orig == PM3_SUCCESS && !reread) {
             if (memcmp(data_read_orig, zeros, 8) == 0) {
@@ -3651,7 +3698,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                     read_auth = false;
                 }
 
-                res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read, false);
+                res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read, false, false);
                 if (res == PM3_SUCCESS && !reread) {
                     if (memcmp(data_read, zeros, 8) == 0) {
                         reread = true;
@@ -3836,11 +3883,11 @@ static void iclass_read_interesting_data(uint8_t *key, uint8_t keyType, bool eli
         bool auth = false;
         uint8_t blockno = 3;
         uint8_t kd_read[8] = {0};
-        iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, kd_read, false);
+        iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, kd_read, false, false);
 
         blockno = 4;
         uint8_t kc_read[8] = {0};
-        iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, kc_read, false);
+        iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, kc_read, false, false);
 
         PrintAndLogEx(SUCCESS, "Raw Debit Key.............. " _YELLOW_("%s"), sprint_hex_inrow(kd_read, sizeof(kd_read)));
         PrintAndLogEx(SUCCESS, "Raw Credit Key............. " _YELLOW_("%s"), sprint_hex_inrow(kc_read, sizeof(kc_read)));
@@ -3887,10 +3934,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, key, &key_len);
 
     int key_nr = arg_get_int_def(ctx, 2, -1);
-    int blockno = 1;
-
-    uint8_t data[8] = {0x12, 0xFF, 0xFE, 0xFF, 0x7F, 0x1F, 0xFF, 0x2C}; // tearoff payload
-    uint8_t mac[4] = {0};
+    bool use_credit_key = arg_get_lit(ctx, 3);
 
     // Start at 1700,  end at 1900.
     // 5 steps increments
@@ -3904,17 +3948,17 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     uint8_t otp[2] = {0};
     CLIGetHexWithReturn(ctx, 7, otp, &otp_len);
 
+    bool rawkey = arg_get_lit(ctx, 8);
     bool verbose = arg_get_lit(ctx, 9);
     bool shallow_mod = arg_get_lit(ctx, 10);
+    CLIParserFree(ctx);
+
     bool elite = false;
-    bool rawkey = arg_get_lit(ctx, 8);
-    bool use_replay = false; //not implemented in this mode
+    bool use_replay = false; // not implemented in this mode
     bool read_auth = false;
-    bool use_credit_key = arg_get_lit(ctx, 3);
+
     int tearoff_loop = 1;
     int tearoff_sleep = 0;
-
-    CLIParserFree(ctx);
 
     // Sanity checks
     if (key_len > 0 && key_nr >= 0) {
@@ -3924,7 +3968,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
 
     bool auth = false;
 
-    if (key_len > 0) {
+    if (key_len) {
 
         auth = true;
         if (key_len != 8) {
@@ -3942,19 +3986,17 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), key_nr, sprint_hex_inrow(iClass_Key_Table[key_nr], 8));
         } else {
             PrintAndLogEx(ERR, "Key number is invalid");
+            PrintAndLogEx(NORMAL, "");
             return PM3_EINVARG;
         }
     } else {
         PrintAndLogEx(SUCCESS, "Using Key... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
     }
 
-    if (otp_len > 0) {
-        if (otp_len != 2) {
-            PrintAndLogEx(ERR, "OTP is incorrect length");
-            return PM3_EINVARG;
-        }
-        memcpy(&data[1], otp, 2); //update the otp in the tearoff data value
+    if (otp_len && otp_len != 2) {
+        PrintAndLogEx(ERR, "OTP is incorrect length");
         PrintAndLogEx(NORMAL, "");
+        return PM3_EINVARG;
     }
 
     int loop_count = 0;
@@ -4009,8 +4051,8 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     int fail_tolerance = 1;
     if (memcmp(r->header.hdr.csn + 4, "\xFE\xFF\x12\xE0", 4) == 0) {
         PrintAndLogEx(SUCCESS, "New silicon detected ( %s )",  _GREEN_("ok"));
-        PrintAndLogEx(INFO, "----------------------------------------");
-        PrintAndLogEx(SUCCESS, "CSN.................... %s", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
+        PrintAndLogEx(INFO, "---------------------------------------");
+        PrintAndLogEx(SUCCESS, "CSN................... %s", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
     } else {
         PrintAndLogEx(ERR, "Old silicon detected ( %s )",  _RED_("fail"));
         PrintAndLogEx(INFO, "Unsupported for this operation");
@@ -4033,14 +4075,13 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
         goto out;
     }
 
-    #define TEAR_INITAL         0x3C
-    #define TEAR_PERSO_ENABLED  0xBC
-    #define TEAR_PERSO_STABLE   0xBE
-    #define TEAR_PERSO_STABLE2  0x9C
-    #define TEAR_UNLOCKED       0xAC
+    #define TEAR_NON_SECURE_MODE    0x2C
+    #define TEAR_INITAL             0x3C
+    #define TEAR_PERSO              0xAC
 
-    #define TEAR_IS_PERSO_SET(x)    ((x) & 0x80 == 1)
-    #define TEAR_BAD(x)             ((x) & 0x1  == 0)  
+    #define TEAR_IS_PERSO_SET(x)        (((x) & 0x80) == 0x80)
+    #define TEAR_IS_NONSECURE_SET(x)    ((((x) & 0x18) >> 3) == PICOPASS_NON_SECURE_PAGEMODE)
+    #define TEAR_BAD(x)                 (((x) & 0x01) == 0)  
 
     // perform initial read here, repeat if failed or 00s
 
@@ -4051,8 +4092,10 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     bool erase_phase = false;
 
     read_auth = false;
+
+    int blockno = 1;
     
-    int res_orig = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read_orig, false);
+    int res_orig = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read_orig, false, false);
     while (reread) {
         if (res_orig == PM3_SUCCESS && !reread) {
             if (memcmp(data_read_orig, zeros, 8) == 0) {
@@ -4068,12 +4111,18 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
         }
     }
 
+    uint8_t data[8] = { 0 }; // tearoff payload
     memcpy(data, data_read_orig, sizeof(data));
-    data[7] = 0x2C;
+    data[7] = TEAR_NON_SECURE_MODE;
 
-    PrintAndLogEx(SUCCESS, "Original block data.... " _CYAN_("%s"), sprint_hex_inrow(data_read_orig, sizeof(data_read_orig)));
-    PrintAndLogEx(SUCCESS, "New data to write...... " _YELLOW_("%s"), sprint_hex_inrow(data, sizeof(data)));
-    PrintAndLogEx(SUCCESS, "Target block........... " _YELLOW_("%u") " / " _YELLOW_("0x%02x"), blockno, blockno);
+    // add the modified OTP if needed
+    if (otp_len) {
+        memcpy(data + 1, otp, sizeof(otp)); // update the otp in the tearoff data value
+    }
+
+    PrintAndLogEx(SUCCESS, "Original block data... " _CYAN_("%s"), sprint_hex_inrow(data_read_orig, sizeof(data_read_orig)));
+    PrintAndLogEx(SUCCESS, "New data to write..... " _YELLOW_("%s"), sprint_hex_inrow(data, sizeof(data)));
+    PrintAndLogEx(SUCCESS, "Target block.......... " _YELLOW_("%u") " / " _YELLOW_("0x%02x"), blockno, blockno);
 
     // turn off Device side debug messages
     uint8_t dbg_curr = DBG_NONE;
@@ -4088,13 +4137,15 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     // clear trace log
     SendCommandNG(CMD_BUFF_CLEAR, NULL, 0);
 
-    PrintAndLogEx(INFO, "----------------------------------------");
+    PrintAndLogEx(INFO, "---------------------------------------");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " ------------------\n");
+    PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------\n");
 
     // Main loop
+    uint8_t mac[4] = {0};
+
     while ((tearoff_start <= tearoff_end) && (read_ok == false)) {
 
         if (kbd_enter_pressed()) {
@@ -4145,7 +4196,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
             // skip authentication for config block
             read_auth = false;                
 
-            res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read, false);
+            res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read, false, false);
             if (res == PM3_SUCCESS && !reread) {
                 if (memcmp(data_read, zeros, 8) == 0) {
                     reread = true;
@@ -4214,7 +4265,9 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
 
             bool goto_out = false;
 
-            if (data_read[0] != data_read_orig[0]) {
+            // App limit became SMALLER :(
+            if (data_read[0] > data_read_orig[0]) {
+
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(SUCCESS, "Application limit changed, from "_YELLOW_("%u")" to "_YELLOW_("%u"), data_read_orig[0], data_read[0]);
                 isok = PM3_SUCCESS;
@@ -4322,81 +4375,39 @@ out:
 
     read_auth = false; 
     uint8_t data_read[8]= {0};   
-    uint8_t data_verify[8] = {0}; 
     
-    int res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read, false);
+    int res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read, false, false);
     if (res != PM3_SUCCESS) {
         return res;
     }
 
     uint8_t b7 = data_read[7];
 
-    switch(b7) {
+    if ( b7 == TEAR_INITAL) {
+            PrintAndLogEx(INFO, _YELLOW_("Fuses unchanged. Try again if the OTP is unchanged"));
+            // check for OTP change?
+    } else if (TEAR_IS_NONSECURE_SET(b7)) {
+            // don't do anything as this is ok
+            PrintAndLogEx(SUCCESS, "Detected fuse: " _GREEN_("0x%02X")" _non secure memory_ ( %s )", data_read[7], _GREEN_("ok"));
 
-        case TEAR_PERSO_ENABLED: { 
-            
-            // stabilize 0xBC with write operation to 0xBE
-            PrintAndLogEx(SUCCESS, "Detected fuse: " _GREEN_("0x%02X") " stabilizing to: " _YELLOW_("0xBE") NOLF, data_read[7]);
-
-            memcpy(data, data_read, PICOPASS_BLOCK_SIZE);
-            data[7] = TEAR_PERSO_STABLE;
-
-            iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
-
-            // verify if it was a succesful write
-            res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_verify, false);
-            
-            if (data_verify[7] == TEAR_PERSO_STABLE) {
-
-                PrintAndLogEx(SUCCESS, " ( %s )", _GREEN_("ok"));
-                PrintAndLogEx(SUCCESS, "Detected fuse: " _GREEN_("0x%02X") " set non-secure memory: " _YELLOW_("0xAC"), data_read[7]);
-                
-                memcpy(data, data_verify, PICOPASS_BLOCK_SIZE);
-                data[7] = TEAR_UNLOCKED;
-            
-                // set non-secure memory with 0xAC,  in this state it will always succeed
-                iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
-
-                iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
-            } else {
-                PrintAndLogEx(FAILED, " ( %s )", _RED_("fail"));
-            }
-            break;
-
-        }
-        case TEAR_PERSO_STABLE:
-        case TEAR_PERSO_STABLE2: { 
+            iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
+    } else if (TEAR_IS_PERSO_SET(b7)) {
 
             PrintAndLogEx(SUCCESS, "Detected fuse: " _GREEN_("0x%02X") " set non-secure memory: " _YELLOW_("0xAC"), data_read[7]);
 
             memcpy(data, data_read, PICOPASS_BLOCK_SIZE);
-            data[7] = TEAR_UNLOCKED;
+            data[7] = TEAR_NON_SECURE_MODE;
 
             // set non-secure memory with 0xAC,  in this state it will always succeed
             iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
 
             iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
-            break;
-        }
-        case TEAR_UNLOCKED: { 
-            
-            // don't do anything as this is ok
-            PrintAndLogEx(SUCCESS, "Detected fuse: " _GREEN_("0x%02X")" _non secure memory_ ( %s )", data_read[7], _GREEN_("ok"));
-
-            iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
-            break;
-        } 
-        case TEAR_INITAL: {
-            PrintAndLogEx(INFO, _YELLOW_("Fuses unchanged. Try again if the OTP is unchanged"));
-            // check for OTP change?
-            break;
-        }
-        default: {
-            PrintAndLogEx(INFO, _YELLOW_("Did not detect " _YELLOW_("0xBC") " or " _YELLOW_("0xBE") " or " _YELLOW_("0x9C") " fuse, might need manual intervention!"));
-            break;
-        }
+    } else if (TEAR_BAD(b7)) {
+        PrintAndLogEx(WARNING, "Bad fuse state detected: " _RED_("0x%02X") ", cannot proceed", b7);
+        return PM3_EFAILED;
+    } else {
+        PrintAndLogEx(INFO, _YELLOW_("Did not detect " _YELLOW_("0xBC") " or " _YELLOW_("0xBE") " or " _YELLOW_("0x9C") " fuse, might need manual intervention!"));       
     }
-    
 
     return isok;
 }
@@ -5437,8 +5448,15 @@ static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, u
     }
 
     while (repeat == true) {
+
         uint32_t payload_size = sizeof(iclass_recover_req_t);
+        
         iclass_recover_req_t *payload = calloc(1, payload_size);
+        if (payload == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            break;
+        }
+
         payload->req.use_raw = true;
         payload->req.use_elite = false;
         payload->req.use_credit_key = false;
@@ -5487,8 +5505,10 @@ static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, u
                 repeat = false;
             }
         }
+
         free(payload);
-        if (!repeat) {
+
+        if (repeat == false) {
             return resp.status;
         }
     }
@@ -6355,6 +6375,11 @@ static void shave(uint8_t *data, uint8_t len) {
 }
 static void generate_rev(uint8_t *data, uint8_t len) {
     uint8_t *key = calloc(len, sizeof(uint8_t));
+    if (key == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return;
+    }
+
     PrintAndLogEx(SUCCESS, "permuted key..... %s", sprint_hex_inrow(data, len));
     permute_rev(data, len, key);
     PrintAndLogEx(SUCCESS, "unpermuted key... %s", sprint_hex_inrow(key, len));
@@ -6364,7 +6389,17 @@ static void generate_rev(uint8_t *data, uint8_t len) {
 }
 static void generate(uint8_t *data, uint8_t len) {
     uint8_t *key = calloc(len, sizeof(uint8_t));
+    if (key == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return;
+    }
+    
     uint8_t *pkey = calloc(len, sizeof(uint8_t));
+    if (pkey == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return;
+    }
+    
     PrintAndLogEx(SUCCESS, "input key...... %s", sprint_hex_inrow(data, len));
     permute(data, len, pkey);
     PrintAndLogEx(SUCCESS, "permuted key... %s", sprint_hex_inrow(pkey, len));
@@ -7155,9 +7190,9 @@ int info_iclass(bool shallow_mod) {
     PrintAndLogEx(SUCCESS, "    Card type.... " _GREEN_("%s"), card_types[cardtype]);
 
     if (memcmp(hdr->csn + 4, "\xFE\xFF\x12\xE0", 4) == 0) {
-        PrintAndLogEx(SUCCESS, "    Card chip.... "_YELLOW_("NEW Silicon (No 14b support)"));
+        PrintAndLogEx(SUCCESS, "    Card chip.... " _YELLOW_("New silicon (No 14b support)"));
     } else {
-        PrintAndLogEx(SUCCESS, "    Card chip.... "_YELLOW_("Old Silicon (14b support)"));
+        PrintAndLogEx(SUCCESS, "    Card chip.... " _YELLOW_("Old silicon (14b support)"));
     }
     if (legacy) {
 
@@ -7168,20 +7203,23 @@ int info_iclass(bool shallow_mod) {
 
         bool found_aa1 = false;
         bool found_aa2 = false;
-        uint8_t key[8] = {0};
+        uint8_t aa1_idx = 0;
+        uint8_t key[PICOPASS_KEY_SIZE] = {0};
+        
         for (uint8_t i = 0; i < ARRAYLEN(iClass_Key_Table); i++) {
 
             memcpy(key, iClass_Key_Table[i], sizeof(key));
 
             if (found_aa1 == false) {
-                res = iclass_read_block_ex(key, 6, ICLASS_DEBIT_KEYTYPE, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 6), false);
+                res = iclass_read_block_ex(key, 6, ICLASS_DEBIT_KEYTYPE, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 6), false, false);
                 if (res == PM3_SUCCESS) {
                     PrintAndLogEx(SUCCESS, "    AA1 Key...... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
                     found_aa1 = true;
+                    aa1_idx = i;
                 }
             }
 
-            res = iclass_read_block_ex(key, 6, ICLASS_CREDIT_KEYTYPE, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 7), false);
+            res = iclass_read_block_ex(key, 6, ICLASS_CREDIT_KEYTYPE, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 7), false, false);
             if (res == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "    AA2 Key...... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
                 found_aa2 = true;
@@ -7193,8 +7231,10 @@ int info_iclass(bool shallow_mod) {
         }
 
         if (found_aa1) {
-            res = iclass_read_block_ex(key, 7, ICLASS_DEBIT_KEYTYPE, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 7), false);
+
+            res = iclass_read_block_ex(iClass_Key_Table[aa1_idx], 7, ICLASS_DEBIT_KEYTYPE, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 7), false, false);
             if (res == PM3_SUCCESS) {
+                PrintAndLogEx(INFO, "");
 
                 BLOCK79ENCRYPTION aa1_encryption = (dump[(6 * PICOPASS_BLOCK_SIZE) + 7] & 0x03);
 
@@ -7205,6 +7245,8 @@ int info_iclass(bool shallow_mod) {
                 iclass_load_transport(transport, sizeof(transport));
                 iclass_decrypt_transport(transport, 8, dump, decrypted, aa1_encryption);
                 iclass_decode_credentials(decrypted);
+
+                return PM3_SUCCESS;
             }
         }
     }

@@ -316,6 +316,14 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
         return 3;
     }
 
+    // 4. frame too short to contain IDm + PMm (need 4 header + 8 + 8 = 20 bytes)
+    if (FelicaFrame.len < 20) {
+        if (g_dbglevel >= DBG_DEBUG) {
+            Dbprintf("Error: Frame length smaller than 20, got %u", FelicaFrame.len);
+        }
+        return 4;
+    }
+
     // copy UID
     // idm 8
     if (card) {

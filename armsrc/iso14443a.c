@@ -2275,6 +2275,49 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             EmSendCmd(cmd, sizeof(cmd));
             p_response = NULL;
 
+        } else if (receivedCmd[0] == MFP_WRITEPERSO && len == 21 && (tagType == 15)) {
+            // cmd + 2 bytes block + value + 2 bytes crc
+            if (CheckCrc14A(receivedCmd, len)) {
+                uint16_t page = receivedCmd[1] | (receivedCmd[2] << 8);
+                if (page > 0x9005 || page < 0x9000) {
+                    // send NACK 0x0 == invalid argument
+                    EmSend4bit(CARD_NACK_IV);
+                } else {
+                    // send ACK
+                    EmSend4bit(CARD_ACK);
+
+                    Dbprintf("MFP Perso Key | %04X | %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+                        page,
+                        receivedCmd[3],
+                        receivedCmd[4],
+                        receivedCmd[5],
+                        receivedCmd[6],
+                        receivedCmd[7],
+                        receivedCmd[8],
+                        receivedCmd[9],
+                        receivedCmd[10],
+                        receivedCmd[11],
+                        receivedCmd[12],
+                        receivedCmd[13],
+                        receivedCmd[14],
+                        receivedCmd[15],
+                        receivedCmd[16],
+                        receivedCmd[17],
+                        receivedCmd[18]
+                    );
+
+                    numReads++;  // Increment number of times reader requested a block
+
+                    if (exitAfterNReads > 0 && numReads == exitAfterNReads) {
+                        finished = true;
+                    }
+                }
+            } else {
+                // send NACK 0x1 == crc/parity error
+                EmSend4bit(CARD_NACK_PA);
+            }
+            p_response = NULL;
+
         } else {
 
             // clear old dynamic responses
@@ -3633,6 +3676,9 @@ void ReaderIso14443a(PacketCommandNG *c) {
 
     if ((param & ISO14A_CONNECT) == ISO14A_CONNECT) {
         iso14_pcb_blocknum = 0;
+    }
+
+    if ((param & ISO14A_CLEARTRACE) == ISO14A_CLEARTRACE) {
         clear_trace();
     }
 
@@ -4596,6 +4642,14 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                             int received_aid_len = receivedCmd[5 + offset];
                             uint8_t *received_aid = &receivedCmd[6 + offset];
 
+                            // Validate claimed AID length against actual received frame length
+                            if ((6 + offset + received_aid_len) > len) {
+                                dynamic_response_info.response[1 + offset] = 0x6A;
+                                dynamic_response_info.response[2 + offset] = 0x80; // Wrong data
+                                dynamic_response_info.response_n = 3 + offset;
+                                break;
+                            }
+
                             // aid enumeration flag
                             if ((flags & FLAG_ENUMERATE_AID) == FLAG_ENUMERATE_AID) {
                                 Dbprintf("Received AID (%d):", received_aid_len);
@@ -4604,8 +4658,8 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
 
                             if ((received_aid_len == aid_len) && (memcmp(aid, received_aid, aid_len) == 0)) { // Evaluate the AID sent by the Reader to the AID supplied
                                 // AID Response will be parsed here
-                                memcpy(dynamic_response_info.response + 1 + offset, selectaid_response, selectaid_response_len + 1 + offset);
-                                dynamic_response_info.response_n = selectaid_response_len + 2;
+                                memcpy(dynamic_response_info.response + 1 + offset, selectaid_response, selectaid_response_len);
+                                dynamic_response_info.response_n = selectaid_response_len + 1 + offset;
                             } else { // Any other SELECT FILE command will return with a Not Found
                                 dynamic_response_info.response[1 + offset] = 0x6A;
                                 dynamic_response_info.response[2 + offset] = 0x82;
@@ -4625,8 +4679,8 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                         case 0xCA: { // GET DATA
                             if (sentCount == 0) {
                                 // APDU Command will just be parsed here
-                                memcpy(dynamic_response_info.response + 1 + offset, getdata_response, getdata_response_len + 2);
-                                dynamic_response_info.response_n = selectaid_response_len + 1 + offset;
+                                memcpy(dynamic_response_info.response + 1 + offset, getdata_response, getdata_response_len);
+                                dynamic_response_info.response_n = getdata_response_len + 1 + offset;
                             } else {
                                 finished = true;
                                 break;

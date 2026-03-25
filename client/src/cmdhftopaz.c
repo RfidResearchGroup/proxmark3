@@ -41,7 +41,7 @@
 static topaz_tag_t topaz_tag;
 
 static void topaz_switch_on_field(void) {
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT | ISO14A_TOPAZMODE | ISO14A_NO_RATS, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT | ISO14A_TOPAZMODE | ISO14A_NO_RATS, 0, 0, NULL, 0);
 }
 
 static void topaz_switch_off_field(void) {

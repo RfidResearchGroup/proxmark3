@@ -5,6 +5,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Added support for multi-block/max-size (143-bit) iCLASS. (@cindersocket)
 - Added support for unencrypted and DES-encrypted iCLASS (@cindersocket)
+- Added `-t` / `--timeout` option for `hf 15 sim` (@recursivenomad)
+- Added `--aid` parameter to `hf seos` commands (@kormax)
 - Added `hf iclass blacktears` command to perform an automated tearoff of block 1 to set non-secure page mode(@antiklesys)
 - Changed wiegand encoding to use shared helpers and have unified parameters (--raw, --bin, --new, --wiegand, etc.) (@cindersocket)
 - Added `hf gst read` command (@kormax)

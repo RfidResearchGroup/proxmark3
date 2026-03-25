@@ -1643,7 +1643,11 @@ void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t *start_
  */
 int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *response_byte, uint16_t *responselen) {
 
-    uint8_t real_cmd[msg_len + 4];
+    if (msg_len > PM3_CMD_DATA_SIZE) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t real_cmd[PM3_CMD_DATA_SIZE + 4];
 
     if (msg_len) {
         // ISO 14443 APDU frame: PCB [CID] [NAD] APDU CRC PCB=0x02
@@ -3096,8 +3100,10 @@ void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
 
     set_tracing(true);
 
-    // receive buffer
-    uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
+    // receive buffer — sized for APDU response header + max payload, reused for all paths
+    uint8_t buf[sizeof(iso14b_raw_apdu_response_t) + PM3_CMD_DATA_SIZE];
+    memset(buf, 0, sizeof(buf));
+    iso14b_raw_apdu_response_t *payload = (iso14b_raw_apdu_response_t *)buf;
 
     int status = 0;
     uint32_t sendlen = sizeof(iso14b_card_select_t);
@@ -3159,17 +3165,14 @@ void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
         uint16_t responselen = 0;
         uint8_t response_byte = 0;
         bool chaining = ((p->flags & ISO14B_SEND_CHAINING) == ISO14B_SEND_CHAINING);
-        status = iso14443b_apdu(p->raw, p->rawlen, chaining, buf, sizeof(buf), &response_byte, &responselen);
+        status = iso14443b_apdu(p->raw, p->rawlen, chaining, payload->data, PM3_CMD_DATA_SIZE, &response_byte, &responselen);
 
         if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
             reply_ng(CMD_HF_ISO14443B_COMMAND, PM3_ETEAROFF, NULL, 0);
         } else {
-            uint8_t packet[responselen + 1 + 2];
-            iso14b_raw_apdu_response_t *payload = (iso14b_raw_apdu_response_t *)packet;
             payload->response_byte = response_byte;
             payload->datalen = responselen;
-            memcpy(payload->data, buf, payload->datalen);
-            reply_ng(CMD_HF_ISO14443B_COMMAND, status, packet, sizeof(packet));
+            reply_ng(CMD_HF_ISO14443B_COMMAND, status, buf, sizeof(iso14b_raw_apdu_response_t) + responselen);
         }
     }
 
@@ -3198,7 +3201,7 @@ void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
             eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
 
             uint16_t retlen = 0;
-            status = Get14443bAnswerFromTag(buf, sizeof(buf), s_iso14b_timeout, &eof_time, &retlen);
+            status = Get14443bAnswerFromTag(buf, PM3_CMD_DATA_SIZE, s_iso14b_timeout, &eof_time, &retlen);
             if (status == PM3_SUCCESS) {
                 sendlen = MIN(retlen, PM3_CMD_DATA_SIZE);
                 reply_ng(CMD_HF_ISO14443B_COMMAND, status, Demod.output, sendlen);

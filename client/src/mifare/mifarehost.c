@@ -1392,7 +1392,7 @@ int detect_classic_prng(void) {
 
     PacketResponseNG resp, respA;
     uint8_t cmd[] = {MIFARE_AUTH_KEYA, 0x00};
-    uint32_t flags = ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS;
+    uint32_t flags = ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS;
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, flags, sizeof(cmd), 0, cmd, sizeof(cmd));
@@ -1432,7 +1432,7 @@ int detect_classic_auth(uint8_t key_type) {
 
     PacketResponseNG resp, respA;
     uint8_t cmd[] = {MIFARE_AUTH_KEYA + key_type, 0x00};
-    uint32_t flags = ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS;
+    uint32_t flags = ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS;
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, flags, sizeof(cmd), 0, cmd, sizeof(cmd));

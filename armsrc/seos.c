@@ -276,6 +276,7 @@ void SimulateSeos(seos_emulate_req_t *msg) {
             if (odd_reply) {
                 p_response = &responses[RESP_INDEX_ATQA];
             }
+
         } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) { // Received a WAKEUP
             p_response = &responses[RESP_INDEX_ATQA];
         } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {    // Received request for UID (cascade 1)
@@ -301,6 +302,7 @@ void SimulateSeos(seos_emulate_req_t *msg) {
             p_response = &responses[RESP_INDEX_ATS];
             got_rats = true;
         } else {
+
             // clear old dynamic responses
             dynamic_response_info.response_n = 0;
             dynamic_response_info.modulation_n = 0;
@@ -367,9 +369,16 @@ void SimulateSeos(seos_emulate_req_t *msg) {
 
                             // Check all requested OIDs and see if we support any
                             uint8_t tlv_offset = 0;
-                            while (tlv_offset < received_tlv_len) {
+                            while (tlv_offset + 2 <= received_tlv_len) {
+
                                 uint8_t tag = received_tlv[tlv_offset++];
+                                
                                 uint8_t length = received_tlv[tlv_offset++];
+
+                                if (length > received_tlv_len - tlv_offset) {
+                                    break;
+                                }
+                                
                                 uint8_t *value = &received_tlv[tlv_offset];
                                 if (tag == 0x06) {
                                     if (length == msg->oid_len && memcmp(value, msg->oid, length) == 0) {
@@ -615,9 +624,15 @@ void SimulateSeos(seos_emulate_req_t *msg) {
 
                             // Check all requested OIDs and see if we support any
                             uint8_t tlv_offset = 0;
-                            while (tlv_offset < received_tlv_len) {
+                            while (tlv_offset + 2 <= received_tlv_len) {
+                                
                                 uint8_t tag = received_tlv[tlv_offset];
+                                
                                 uint8_t length = received_tlv[tlv_offset + 1];
+                                if (length > received_tlv_len - tlv_offset - 2) {
+                                    break;
+                                }
+
                                 uint8_t *value = &received_tlv[tlv_offset + 2];
 
                                 if (tag == 0x85) {
@@ -628,6 +643,7 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                     recvd_cmac_length = length;
                                     recvd_cmac_offset = tlv_offset;
                                 }
+                                
                                 tlv_offset += 2 + length;
                             }
 
@@ -642,13 +658,17 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                 memcpy(rndCounter, RND_ICC, half_bs);
                                 memcpy(rndCounter + half_bs, RND_IFD, half_bs);
 
+                                // skip zero bytes
                                 for (int8_t i = bs - 1; i >= 0; i--) {
                                     rndCounter[i]++;
-                                    if (rndCounter[i] != 0x00) break;
+
+                                    if (rndCounter[i]) {
+                                        break;
+                                    }
                                 }
 
                                 uint8_t *mac_input = work_buffer_a;
-                                uint8_t mac_input_idx = 0;
+                                uint16_t mac_input_idx = 0;
 
                                 // Add RND_* counter to mac_input
                                 memcpy(mac_input + mac_input_idx, rndCounter, bs);
@@ -662,6 +682,10 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                 mac_input_idx += bs;
 
                                 // Add received TLV data to mac_input
+                                if (mac_input_idx + recvd_cmac_offset + bs > WORK_BUFFER_SIZE) {
+                                    Dbprintf(_RED_("Get Data failed") ": CMAC input too large.");
+                                    break;
+                                }
                                 memcpy(mac_input + mac_input_idx, received_tlv, recvd_cmac_offset);
                                 mac_input_idx += recvd_cmac_offset;
 
@@ -756,6 +780,10 @@ void SimulateSeos(seos_emulate_req_t *msg) {
 
                                 memcpy(mac_input + mac_input_idx, rndCounter, bs);
                                 mac_input_idx += bs;
+                                if (mac_input_idx + (tlv_idx - tlv_base) + bs > WORK_BUFFER_SIZE) {
+                                    Dbprintf(_RED_("Get Data failed") ": Reply CMAC input too large.");
+                                    break;
+                                }
                                 memcpy(mac_input + mac_input_idx, dynamic_response_info.response + tlv_base, tlv_idx - tlv_base);
                                 mac_input_idx += tlv_idx - tlv_base;
 
@@ -767,6 +795,11 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                 }
 
                                 uint8_t cmac_size = recvd_cmac_length;
+                                if (cmac_size > 16) {
+                                    Dbprintf(_RED_("Get Data failed") ": CMAC size invalid.");
+                                    break;
+                                }
+
                                 if (!generate_cmac(diver_cmac_key, mac_input, mac_input_idx, cmac, msg->encr_alg)) {
                                     Dbprintf(_RED_("Get Data failed") ": Failed to create reply CMAC.");
                                     break;
