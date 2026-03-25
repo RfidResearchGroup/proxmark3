@@ -6703,6 +6703,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
                   "hf iclass sam\n"
                   "hf iclass sam -p -d a005a103800104  -> get PACS data, prevent epurse update\n"
                   "hf iclass sam --break               -> get Nr-MAC for extracting encrypted SIO\n"
+                  "hf iclass sam -f hf-iclass-dump.bin -> emulate card from dump file to SAM\n"
                  );
 
     void *argtable[] = {
@@ -6717,6 +6718,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
         arg_strx0("d", "data", "<hex>", "DER encoded command to send to SAM"),
         arg_lit0("s", "snmp",  "data is in snmp format without headers"),
         arg_lit0(NULL, "info",  "get SAM infos (version, serial number)"),
+        arg_str0("f",  "file", "<fn>", "dump file to emulate to SAM instead of a real card"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -6730,6 +6732,11 @@ static int CmdHFiClassSAM(const char *Cmd) {
     bool shallow_mod = arg_get_lit(ctx, 7);
     bool snmp_data = arg_get_lit(ctx, 9);
     bool info = arg_get_lit(ctx, 10);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 11), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool emulate_from_file = (fnlen > 0);
 
     uint8_t flags = 0;
     if (disconnect_after) {
@@ -6756,6 +6763,10 @@ static int CmdHFiClassSAM(const char *Cmd) {
         flags |= BITMASK(5);
     }
 
+    if (emulate_from_file) {
+        flags |= BITMASK(6);
+    }
+
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};
     data[0] = flags;
 
@@ -6769,6 +6780,23 @@ static int CmdHFiClassSAM(const char *Cmd) {
 
     if (IsHIDSamPresent(verbose) == false) {
         return PM3_ESOFT;
+    }
+
+    if (emulate_from_file) {
+        // Load dump and upload to ARM emulator memory
+        uint8_t *dump = NULL;
+        size_t bytes_read = 2048;
+        int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, 2048);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+
+        PrintAndLogEx(INFO, "Loaded %zu bytes from " _YELLOW_("%s"), bytes_read, filename);
+
+        uint16_t bytes_sent = 0;
+        iclass_upload_emul(dump, bytes_read, 0, &bytes_sent);
+        free(dump);
+        PrintAndLogEx(SUCCESS, "Uploaded " _YELLOW_("%u") " bytes to emulator memory", bytes_sent);
     }
 
     if (snmp_data) {
