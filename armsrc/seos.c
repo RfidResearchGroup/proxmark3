@@ -413,8 +413,14 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                 memcpy(reply + reply_idx, msg->diversifier, msg->diversifier_len);
                                 reply_idx += msg->diversifier_len;
 
-                                uint8_t tlv_base = 1 + offset;
-                                uint8_t tlv_idx = tlv_base;
+                                uint16_t tlv_base = 1 + offset;
+                                uint16_t tlv_idx = tlv_base;
+
+                                // Pre-flight: 6 fixed bytes + bs (IV) + reply_len (cryptogram) + 10 (CMAC tag+len+data)
+                                if (tlv_base + 6 + bs + reply_len + 10 > DYNAMIC_RESPONSE_BUFFER_SIZE) {
+                                    Dbprintf(_RED_("Select ADF failed") ": Response too large for buffer.");
+                                    break;
+                                }
 
                                 dynamic_response_info.response[tlv_idx++] = 0xCD; // Tag: cryptography type
                                 dynamic_response_info.response[tlv_idx++] = 0x02; // Length
