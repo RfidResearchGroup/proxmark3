@@ -73,11 +73,13 @@ extern "C" {
 
 
 uint16_t qrcode_getBufferSize(uint8_t version);
+int8_t qrcode_getMinVersionForBytes(uint16_t length, uint8_t ecc);
 
 int8_t qrcode_initText(QRCode *qrcode, uint8_t *modules, uint8_t version, uint8_t ecc, const char *data);
 int8_t qrcode_initBytes(QRCode *qrcode, uint8_t *modules, uint8_t version, uint8_t ecc, uint8_t *data, uint16_t length);
 
 bool qrcode_getModule(QRCode *qrcode, uint8_t x, uint8_t y);
+void qrcode_print_matrix_ascii(QRCode *q);
 void qrcode_print_matrix_utf8(QRCode *q);
 void qrcode_print_matrix_utf8_2x2(QRCode *q);
 

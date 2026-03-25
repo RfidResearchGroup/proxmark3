@@ -1499,6 +1499,90 @@ size_t str_nlen(const char *src, size_t maxlen) {
     return len;
 }
 
+static bool str_regex_atom_matches(char atom, bool escaped, char c) {
+    if (!escaped && atom == '.') {
+        return true;
+    }
+    return (atom == c);
+}
+
+static bool str_regex_match_here(const char *regexp, const char *text);
+
+static bool str_regex_match_star(char atom, bool escaped, const char *regexp, const char *text) {
+    do {
+        if (str_regex_match_here(regexp, text)) {
+            return true;
+        }
+    } while (*text != '\0' && str_regex_atom_matches(atom, escaped, *text++));
+
+    return false;
+}
+
+static bool str_regex_match_here(const char *regexp, const char *text) {
+    if (regexp[0] == '\0') {
+        return true;
+    }
+
+    if (regexp[0] == '$' && regexp[1] == '\0') {
+        return (text[0] == '\0');
+    }
+
+    bool escaped = false;
+    char atom = regexp[0];
+    size_t atom_len = 1;
+    if (regexp[0] == '\\' && regexp[1] != '\0') {
+        escaped = true;
+        atom = regexp[1];
+        atom_len = 2;
+    }
+
+    if (regexp[atom_len] == '*') {
+        return str_regex_match_star(atom, escaped, regexp + atom_len + 1, text);
+    }
+
+    if (text[0] != '\0' && str_regex_atom_matches(atom, escaped, text[0])) {
+        return str_regex_match_here(regexp + atom_len, text + 1);
+    }
+
+    return false;
+}
+
+bool str_regex_match(const char *regexp, const char *text) {
+    if (regexp[0] == '^') {
+        return str_regex_match_here(regexp + 1, text);
+    }
+
+    do {
+        if (str_regex_match_here(regexp, text)) {
+            return true;
+        }
+    } while (*text++ != '\0');
+
+    return false;
+}
+
+bool str_regex_match_case_insensitive(const char *regexp, const char *text) {
+    if (regexp == NULL || text == NULL) {
+        return false;
+    }
+
+    char *pattern_lc = str_dup(regexp);
+    char *text_lc = str_dup(text);
+    if (pattern_lc == NULL || text_lc == NULL) {
+        free(pattern_lc);
+        free(text_lc);
+        return false;
+    }
+
+    str_lower(pattern_lc);
+    str_lower(text_lc);
+    bool matched = str_regex_match(pattern_lc, text_lc);
+
+    free(pattern_lc);
+    free(text_lc);
+    return matched;
+}
+
 void str_reverse(char *buf,  size_t len) {
     for (size_t i = 0; i < (len >> 1); i++) {
         char tmp = buf[i];

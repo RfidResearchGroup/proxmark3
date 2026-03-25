@@ -2217,11 +2217,30 @@
     },
     {
         "AID": "4F53452E5641532E3031",
-        "Vendor": "Apple, Google",
+        "Vendor": "Apple",
         "Country": "",
-        "Name": "Value-Added Services (OSE.VAS.01)",
-        "Description": "Used by Apple VAS and Google SmartTap",
-        "Type": "loyalty"
+        "Name": "Apple VAS (OSE.VAS.01)",
+        "Description": "Apple VAS",
+        "Type": "loyalty",
+        "ResponseContains": "50084170706c65506179"
+    },
+    {
+        "AID": "4F53452E5641532E3031",
+        "Vendor": "Google",
+        "Country": "",
+        "Name": "Google Smart Tap (OSE.VAS.01)",
+        "Description": "Google Smart Tap",
+        "Type": "loyalty",
+        "ResponseContains": "500a416e64726f6964506179"
+    },
+    {
+        "AID": "4F53452E5641532E3031",
+        "Vendor": "Samsung",
+        "Country": "",
+        "Name": "Samsung VAS (OSE.VAS.01)",
+        "Description": "Samsung VAS",
+        "Type": "loyalty",
+        "ResponseContains": "500d53616d73756e6757616c6c6574"
     },
     {
         "AID": "A000000476D0000101",
@@ -2236,6 +2255,14 @@
         "Vendor": "Google",
         "Country": "",
         "Name": "Google SmartTap 2.0",
+        "Description": "",
+        "Type": "loyalty"
+    },
+    {
+        "AID": "A000000870FC000000000034",
+        "Vendor": "Samsung",
+        "Country": "",
+        "Name": "Samsung VAS",
         "Description": "",
         "Type": "loyalty"
     },

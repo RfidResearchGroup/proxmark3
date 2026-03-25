@@ -618,7 +618,7 @@ static const char *get_uid_type(iso14a_card_select_t *card) {
 
 int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
@@ -695,9 +695,10 @@ static int CmdHF14AReader(const char *Cmd) {
 
     bool silent = arg_get_lit(ctx, 2);
 
-    uint32_t cm = ISO14A_CONNECT;
+    uint32_t cm = ISO14A_CONNECT | ISO14A_CLEARTRACE;
     if (arg_get_lit(ctx, 3)) {
         cm &= ~ISO14A_CONNECT;
+        cm &= ~ISO14A_CLEARTRACE;
     }
 
     if (arg_get_lit(ctx, 4)) {
@@ -872,7 +873,7 @@ static int CmdHF14ACUIDs(const char *Cmd) {
         }
 
         // execute anticollision procedure
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_RATS, 0, 0, NULL, 0);
         PacketResponseNG resp;
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
@@ -1225,9 +1226,9 @@ int SelectCard14443A_4_WithParameters(bool disconnect, bool verbose, iso14a_card
     // Anticollision + SELECT card
     PacketResponseNG resp;
     if (polling_parameters != NULL) {
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_USE_CUSTOM_POLLING, 0, 0, (uint8_t *)polling_parameters, sizeof(iso14a_polling_parameters_t));
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT | ISO14A_USE_CUSTOM_POLLING, 0, 0, (uint8_t *)polling_parameters, sizeof(iso14a_polling_parameters_t));
     } else {
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     }
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
@@ -1719,6 +1720,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
 
     if (active || active_select) {
         flags |= ISO14A_CONNECT;
+        flags |= ISO14A_CLEARTRACE;
         if (active)
             flags |= ISO14A_NO_SELECT;
     }
@@ -2695,7 +2697,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
@@ -2912,7 +2914,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
                         // reconnect for further tests
                         clearCommandBuffer();
-                        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+                        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
                         if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
                             PrintAndLogEx(WARNING, "timeout while waiting for reply");
                             DropField();
@@ -3182,6 +3184,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     if ((AIDGetFromElm(data, vaid, sizeof(vaid), &vaidlen) == false) || (vaidlen == 0)) {
                         continue;
                     }
+                    if (AIDSeenBefore(root, vaid, (size_t)vaidlen, elmindx)) {
+                        continue;
+                    }
 
                     uint16_t sw = 0;
                     uint8_t result[1024] = {0};
@@ -3214,7 +3219,15 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                             if (verbose) PrintAndLogEx(WARNING, "Application ( " _RED_("blocked") " )");
                         }
 
-                        PrintAIDDescriptionBuf(root, vaid, vaidlen, verbose);
+                        uint8_t response_for_match[1026] = {0};
+                        size_t response_for_match_len = resultlen;
+                        memcpy(response_for_match, result, MIN(resultlen, sizeof(response_for_match)));
+                        if ((response_for_match_len + 2) <= sizeof(response_for_match)) {
+                            response_for_match[response_for_match_len] = sw >> 8;
+                            response_for_match[response_for_match_len + 1] = sw & 0xff;
+                            response_for_match_len += 2;
+                        }
+                        PrintAIDDescriptionEx(root, sprint_hex_inrow(vaid, vaidlen), response_for_match, response_for_match_len, verbose);
 
                         if (dfnamelen) {
                             if (dfnamelen == vaidlen) {

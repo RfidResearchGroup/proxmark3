@@ -181,6 +181,12 @@ void str_trim(char *s);
 char *str_dup(const char *src);
 char *str_ndup(const char *src, size_t len);
 size_t str_nlen(const char *src, size_t maxlen);
+// Lightweight regex subset:
+//  - supported metacharacters: '^' (start), '$' (end), '.' (any char), '*' (zero or more)
+//  - escaping: '\\' to match the following char literally
+//  - all other regex constructs are currently treated as literal characters
+bool str_regex_match(const char *regexp, const char *text);
+bool str_regex_match_case_insensitive(const char *regexp, const char *text);
 
 int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
 int binstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
