@@ -3182,6 +3182,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     if ((AIDGetFromElm(data, vaid, sizeof(vaid), &vaidlen) == false) || (vaidlen == 0)) {
                         continue;
                     }
+                    if (AIDSeenBefore(root, vaid, (size_t)vaidlen, elmindx)) {
+                        continue;
+                    }
 
                     uint16_t sw = 0;
                     uint8_t result[1024] = {0};
@@ -3214,7 +3217,15 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                             if (verbose) PrintAndLogEx(WARNING, "Application ( " _RED_("blocked") " )");
                         }
 
-                        PrintAIDDescriptionBuf(root, vaid, vaidlen, verbose);
+                        uint8_t response_for_match[1026] = {0};
+                        size_t response_for_match_len = resultlen;
+                        memcpy(response_for_match, result, MIN(resultlen, sizeof(response_for_match)));
+                        if ((response_for_match_len + 2) <= sizeof(response_for_match)) {
+                            response_for_match[response_for_match_len] = sw >> 8;
+                            response_for_match[response_for_match_len + 1] = sw & 0xff;
+                            response_for_match_len += 2;
+                        }
+                        PrintAIDDescriptionEx(root, sprint_hex_inrow(vaid, vaidlen), response_for_match, response_for_match_len, verbose);
 
                         if (dfnamelen) {
                             if (dfnamelen == vaidlen) {
