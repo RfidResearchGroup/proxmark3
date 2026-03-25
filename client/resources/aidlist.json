@@ -2222,7 +2222,7 @@
         "Name": "Apple VAS (OSE.VAS.01)",
         "Description": "Apple VAS",
         "Type": "loyalty",
-        "ResponseContains": "50084170706c65506179"
+        "ResponseRegex": ".*50084170706c65506179.*9000$"
     },
     {
         "AID": "4F53452E5641532E3031",
@@ -2231,7 +2231,7 @@
         "Name": "Google Smart Tap (OSE.VAS.01)",
         "Description": "Google Smart Tap",
         "Type": "loyalty",
-        "ResponseContains": "500a416e64726f6964506179"
+        "ResponseRegex": ".*500a416e64726f6964506179.*9000$"
     },
     {
         "AID": "4F53452E5641532E3031",
@@ -2240,7 +2240,7 @@
         "Name": "Samsung VAS (OSE.VAS.01)",
         "Description": "Samsung VAS",
         "Type": "loyalty",
-        "ResponseContains": "500d53616d73756e6757616c6c6574"
+        "ResponseRegex": ".*500d53616d73756e6757616c6c6574.*9000$"
     },
     {
         "AID": "A000000476D0000101",

@@ -112,27 +112,6 @@ static bool aidCompare(const char *aidlarge, const char *aidsmall) {
     return false;
 }
 
-static bool ResponseContainsMatch(const char *needle, const char *text) {
-    if (needle == NULL || text == NULL || needle[0] == '\0' || text[0] == '\0') {
-        return false;
-    }
-
-    char *needle_lc = str_dup(needle);
-    char *text_lc = str_dup(text);
-    if (needle_lc == NULL || text_lc == NULL) {
-        free(needle_lc);
-        free(text_lc);
-        return false;
-    }
-
-    str_lower(needle_lc);
-    str_lower(text_lc);
-    bool matched = (strstr(text_lc, needle_lc) != NULL);
-    free(needle_lc);
-    free(text_lc);
-    return matched;
-}
-
 bool AIDGetFromElm(json_t *data, uint8_t *aid, size_t aidmaxlen, int *aidlen) {
     *aidlen = 0;
     const char *hexaid = jsonStrGet(data, "AID");
@@ -245,8 +224,8 @@ int PrintAIDDescriptionEx(json_t *xroot, char *aid, const uint8_t *response, siz
         }
 
         if (response_hex != NULL) {
-            const char *response_contains = jsonStrGet(data, "ResponseContains");
-            if (response_contains && ResponseContainsMatch(response_contains, response_hex)) {
+            const char *response_regex = jsonStrGet(data, "ResponseRegex");
+            if (response_regex && str_regex_match_case_insensitive(response_regex, response_hex)) {
                 contains_elm = data;
             }
         }
