@@ -290,7 +290,7 @@ error:
     res = PM3_ESOFT;
 
 out:
-    BigBuf_free();
+    BigBuf_free_keep_EM();
 
     if (g_dbglevel >= DBG_DEBUG) {
         DbpString("end sam_get_version");
@@ -360,7 +360,7 @@ error:
     res = PM3_ESOFT;
 
 out:
-    BigBuf_free();
+    BigBuf_free_keep_EM();
 
     if (g_dbglevel >= DBG_DEBUG) {
         DbpString("end sam_get_serial_number");

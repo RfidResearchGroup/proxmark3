@@ -259,6 +259,279 @@ out:
 
 
 /**
+ * @brief Emulates iClass card responses to the SAM using data from emulator memory.
+ *
+ * Instead of relaying NFC traffic to a real card, generates card responses
+ * from dump data loaded into BigBuf emulator memory. Handles READ, CHECK,
+ * READCHECK, READ4, UPDATE, and PAGESEL commands.
+ *
+ * @param request Pointer to the initial request to send to the SAM.
+ * @param request_len Length of the initial request.
+ * @param response Pointer to the buffer where the SAM's final response will be stored.
+ * @param response_len Pointer to the variable where the response length will be stored.
+ * @param break_on_nr_mac If true, return the Nr-MAC instead of completing authentication.
+ * @param prevent_epurse_update If true, fake the epurse update response.
+ * @return Status code indicating success or failure of the operation.
+ */
+static int sam_send_request_emulated(const uint8_t *const request, const uint8_t request_len, uint8_t *response, uint8_t *response_len, const bool break_on_nr_mac, const bool prevent_epurse_update) {
+    int res = PM3_SUCCESS;
+
+    uint8_t *emulator = BigBuf_get_EM_addr();
+
+    // Pre-compute cipher states for KD and KC from dump blocks 2, 3, 4
+    uint8_t *epurse = emulator + (8 * 2);
+    uint8_t *kd = emulator + (8 * 3);
+    uint8_t *kc = emulator + (8 * 4);
+
+    if (g_dbglevel >= DBG_DEBUG) {
+        Dbprintf("Emulate: epurse (blk2): %02x%02x%02x%02x%02x%02x%02x%02x",
+                 epurse[0], epurse[1], epurse[2], epurse[3],
+                 epurse[4], epurse[5], epurse[6], epurse[7]);
+        Dbprintf("Emulate: KD    (blk3): %02x%02x%02x%02x%02x%02x%02x%02x",
+                 kd[0], kd[1], kd[2], kd[3], kd[4], kd[5], kd[6], kd[7]);
+        Dbprintf("Emulate: KC    (blk4): %02x%02x%02x%02x%02x%02x%02x%02x",
+                 kc[0], kc[1], kc[2], kc[3], kc[4], kc[5], kc[6], kc[7]);
+    }
+
+    State_t cipher_state_KD = opt_doTagMAC_1(epurse, kd);
+    State_t cipher_state_KC = opt_doTagMAC_1(epurse, kc);
+    State_t *cipher_state = &cipher_state_KD;
+    uint8_t *diversified_key = kd;
+
+    uint8_t *buf1 = BigBuf_calloc(ISO7816_MAX_FRAME);
+    uint8_t *buf2 = BigBuf_calloc(ISO7816_MAX_FRAME);
+    if (buf1 == NULL || buf2 == NULL) {
+        res = PM3_EMALLOC;
+        goto out;
+    }
+
+    uint8_t *sam_tx_buf = buf1;
+    uint16_t sam_tx_len;
+
+    uint8_t *sam_rx_buf = buf2;
+    uint16_t sam_rx_len;
+
+    uint8_t *nfc_tx_buf = buf1;
+    uint16_t nfc_tx_len;
+
+    uint8_t *nfc_rx_buf = buf2;
+    uint16_t nfc_rx_len;
+
+    if (request_len > 0) {
+        sam_tx_len = request_len;
+        memcpy(sam_tx_buf, request, sam_tx_len);
+    } else {
+        static const uint8_t payload[] = {
+            0xa0, 19,
+            0xBE, 17,
+            0x80, 1,
+            0x04,
+            0x84, 12,
+            0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x04
+        };
+
+        sam_tx_len = sizeof(payload);
+        memcpy(sam_tx_buf, payload, sam_tx_len);
+    }
+
+    sam_send_payload(
+        0x44, 0x0a, 0x44,
+        sam_tx_buf, &sam_tx_len,
+        sam_rx_buf, &sam_rx_len
+    );
+
+    if (g_dbglevel >= DBG_INFO) {
+        Dbprintf("Emulate: initial SAM resp[1]=%02x rx_len=%u", sam_rx_buf[1], sam_rx_len);
+    }
+
+    if (sam_rx_buf[1] == 0x61) {
+        while (sam_rx_buf[1] == 0x61) {
+            nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf);
+
+            if (g_dbglevel >= DBG_INFO) {
+                Dbprintf("Emulate: SAM NFC cmd [%u]: %02x %02x ...", nfc_tx_len,
+                         nfc_tx_len > 0 ? nfc_tx_buf[0] : 0,
+                         nfc_tx_len > 1 ? nfc_tx_buf[1] : 0);
+            }
+
+            uint8_t cmd = nfc_tx_buf[0] & 0x0F;
+            uint8_t block = nfc_tx_buf[1];
+
+            bool is_cmd_check = (cmd == ICLASS_CMD_CHECK);
+
+            if (is_cmd_check && break_on_nr_mac) {
+                memcpy(response, nfc_tx_buf, nfc_tx_len);
+                *response_len = nfc_tx_len;
+                res = PM3_SUCCESS;
+                goto out;
+            }
+
+            bool is_cmd_update = (cmd == ICLASS_CMD_UPDATE);
+
+            if (is_cmd_update && prevent_epurse_update && nfc_tx_buf[0] == 0x87 && block == 0x02) {
+                // Fake epurse update: swap the two halves of the new epurse value
+                memcpy(nfc_rx_buf + 0, nfc_tx_buf + 6, 4);
+                memcpy(nfc_rx_buf + 4, nfc_tx_buf + 0, 4);
+                AddCrc(nfc_rx_buf, 8);
+                nfc_rx_len = 10;
+            } else {
+                // Generate card response from dump data
+                switch (cmd) {
+                    case ICLASS_CMD_READCHECK: {
+                        // Select debit (0x88) or credit (0x18) key
+                        if (nfc_tx_buf[0] == (0x80 | ICLASS_CMD_READCHECK)) {
+                            cipher_state = &cipher_state_KD;
+                            diversified_key = kd;
+                        } else {
+                            cipher_state = &cipher_state_KC;
+                            diversified_key = kc;
+                        }
+                        // Return block data (epurse) without CRC
+                        memcpy(nfc_rx_buf, emulator + (block * 8), 8);
+                        nfc_rx_len = 8;
+                        break;
+                    }
+                    case ICLASS_CMD_CHECK: {
+                        // Compute tag MAC response: nfc_tx_buf[1..4] is the reader Nr
+                        uint8_t mac[4] = {0};
+                        if (g_dbglevel >= DBG_EXTENDED) {
+                            Dbprintf("Emulate: CHECK NR=%02x%02x%02x%02x MAC_r=%02x%02x%02x%02x",
+                                     nfc_tx_buf[1], nfc_tx_buf[2], nfc_tx_buf[3], nfc_tx_buf[4],
+                                     nfc_tx_buf[5], nfc_tx_buf[6], nfc_tx_buf[7], nfc_tx_buf[8]);
+                            uint8_t mac_r_verify[4] = {0};
+                            opt_doReaderMAC_2(*cipher_state, nfc_tx_buf + 1, mac_r_verify, diversified_key);
+                            Dbprintf("Emulate: KD reader verify: calc=%02x%02x%02x%02x sam=%02x%02x%02x%02x %s",
+                                     mac_r_verify[0], mac_r_verify[1], mac_r_verify[2], mac_r_verify[3],
+                                     nfc_tx_buf[5], nfc_tx_buf[6], nfc_tx_buf[7], nfc_tx_buf[8],
+                                     (memcmp(mac_r_verify, nfc_tx_buf + 5, 4) == 0) ? "(KD OK)" : "(KD MISMATCH)");
+                        }
+                        opt_doTagMAC_2(*cipher_state, nfc_tx_buf + 1, mac, diversified_key);
+                        if (g_dbglevel >= DBG_DEBUG) {
+                            Dbprintf("Emulate: TAG  MAC=%02x%02x%02x%02x", mac[0], mac[1], mac[2], mac[3]);
+                        }
+                        memcpy(nfc_rx_buf, mac, 4);
+                        nfc_rx_len = 4;  // iClass CHECK response: 4 bytes MAC, no CRC
+                        break;
+                    }
+                    case ICLASS_CMD_READ_OR_IDENTIFY: {
+                        // Key blocks 3 and 4 always return 0xFF
+                        if (block == 3 || block == 4) {
+                            memset(nfc_rx_buf, 0xFF, 8);
+                        } else {
+                            memcpy(nfc_rx_buf, emulator + (block * 8), 8);
+                        }
+                        AddCrc(nfc_rx_buf, 8);
+                        nfc_rx_len = 10;
+                        break;
+                    }
+                    case ICLASS_CMD_READ4: {
+                        // Read 4 consecutive blocks (32 bytes + CRC)
+                        memcpy(nfc_rx_buf, emulator + (block * 8), 32);
+                        AddCrc(nfc_rx_buf, 32);
+                        nfc_rx_len = 34;
+                        break;
+                    }
+                    case ICLASS_CMD_UPDATE: {
+                        // Acknowledge write: echo back data field + CRC
+                        memcpy(nfc_rx_buf, nfc_tx_buf + 2, 8);
+                        AddCrc(nfc_rx_buf, 8);
+                        nfc_rx_len = 10;
+                        break;
+                    }
+                    case ICLASS_CMD_PAGESEL: {
+                        // Respond with config block of the selected page
+                        memcpy(nfc_rx_buf, emulator + (1 * 8), 8);
+                        AddCrc(nfc_rx_buf, 8);
+                        nfc_rx_len = 10;
+                        break;
+                    }
+                    default: {
+                        if (g_dbglevel >= DBG_ERROR) {
+                            Dbprintf("Emulate: unhandled NFC cmd %02x", nfc_tx_buf[0]);
+                        }
+                        res = PM3_ECARDEXCHANGE;
+                        goto out;
+                    }
+                }
+
+                if (g_dbglevel >= DBG_INFO) {
+                    Dbprintf("Emulate: NFC resp [%u]: %02x %02x ...", nfc_rx_len,
+                             nfc_rx_len > 0 ? nfc_rx_buf[0] : 0,
+                             nfc_rx_len > 1 ? nfc_rx_buf[1] : 0);
+                }
+            }
+
+            sam_tx_len = sam_copy_payload_nfc2sam(sam_tx_buf, nfc_rx_buf, nfc_rx_len);
+
+            sam_send_payload(
+                0x14, 0x0a, 0x14,
+                sam_tx_buf, &sam_tx_len,
+                sam_rx_buf, &sam_rx_len
+            );
+
+            if (g_dbglevel >= DBG_DEBUG) {
+                Dbprintf("Emulate: SAM rx[1]=%02x rx[7]=%02x", sam_rx_buf[1], sam_rx_buf[7]);
+            }
+
+            if (sam_rx_buf[7] == 0x82) {
+                break;
+            }
+        }
+
+        static const uint8_t hfack[] = {
+            0xbd, 0x04, 0xa0, 0x02, 0x82, 0x00
+        };
+
+        sam_tx_len = sizeof(hfack);
+        memcpy(sam_tx_buf, hfack, sam_tx_len);
+
+        sam_send_payload(
+            0x14, 0x0a, 0x00,
+            sam_tx_buf, &sam_tx_len,
+            sam_rx_buf, &sam_rx_len
+        );
+    }
+
+    if (g_dbglevel >= DBG_INFO) {
+        DbpString("Emulate: final SAM response: ");
+        Dbhexdump(sam_rx_len, sam_rx_buf, false);
+    }
+
+    if (request_len == 0) {
+        if (!(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0x8a && sam_rx_buf[5 + 4] == 0x03) &&
+                !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0xb3 && sam_rx_buf[5 + 4] == 0xa0)) {
+
+            if (g_dbglevel >= DBG_ERROR) {
+                Dbprintf("No PACS data in SAM response");
+            }
+            if (g_dbglevel >= DBG_INFO) {
+                Dbhexdump(sam_rx_len > 16 ? 16 : sam_rx_len, sam_rx_buf, false);
+            }
+            res = PM3_ESOFT;
+        }
+    }
+
+    if (sam_rx_buf[6] == 0x81 && sam_rx_buf[8] == 0x8a && sam_rx_buf[9] == 0x81) {
+        *response_len = sam_rx_buf[5 + 2] + 3;
+    } else {
+        *response_len = sam_rx_buf[5 + 1] + 2;
+    }
+
+    if (sam_rx_buf[5] == 0xBD && sam_rx_buf[4] != 0x00) {
+        Dbprintf(_YELLOW_("Secure channel flag set to: ")"%02x", sam_rx_buf[4]);
+    }
+
+    memcpy(response, sam_rx_buf + 5, *response_len);
+
+    goto out;
+
+out:
+    BigBuf_free();
+    return res;
+}
+
+
+/**
  * @brief Sets the card detected status for the SAM (Secure Access Module).
  *
  * This function informs that a card has been detected by the reader and
@@ -326,7 +599,9 @@ error:
     res = PM3_ESOFT;
 
 out:
-    BigBuf_free();
+    // Use BigBuf_free_keep_EM() so the emulator memory is preserved for emulate-from-file mode.
+    // sam_send_request_iso15 / sam_send_request_emulated will allocate below the EM area.
+    BigBuf_free_keep_EM();
 
     if (g_dbglevel >= DBG_DEBUG) {
         DbpString("end sam_set_card_detected");
@@ -352,6 +627,7 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
     const bool preventEpurseUpdate = !!(flags & BITMASK(3));
     const bool shallow_mod = !!(flags & BITMASK(4));
     const bool info = !!(flags & BITMASK(5));
+    const bool emulate_from_file = !!(flags & BITMASK(6));
 
     uint8_t *cmd = c->data.asBytes + 1;
     uint16_t cmd_len = c->length - 1;
@@ -374,25 +650,46 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
         goto out;
     }
 
-    if (skipDetect == false) {
-        // step 2: get card information
+    if (emulate_from_file) {
+        // Use dump data from emulator memory instead of a real card
         picopass_hdr_t card_a_info;
-        uint32_t eof_time = 0;
+        uint8_t *em = BigBuf_get_EM_addr();
+        memcpy(&card_a_info, em, sizeof(picopass_hdr_t));
 
-        // implicit StartSspClk() happens here
-        Iso15693InitReader();
-        if (select_iclass_tag(&card_a_info, false, &eof_time, shallow_mod) == false) {
-            goto err;
+        if (g_dbglevel >= DBG_INFO) {
+            Dbprintf("Emulate: CSN %02x%02x%02x%02x%02x%02x%02x%02x",
+                     card_a_info.csn[0], card_a_info.csn[1],
+                     card_a_info.csn[2], card_a_info.csn[3],
+                     card_a_info.csn[4], card_a_info.csn[5],
+                     card_a_info.csn[6], card_a_info.csn[7]);
         }
 
-        switch_clock_to_ticks();
-
-        // step 3: SamCommand CardDetected
+        // step 2: SamCommand CardDetected using CSN from dump
         sam_set_card_detected_picopass(&card_a_info);
-    }
 
-    // step 3: SamCommand RequestPACS, relay NFC communication
-    res = sam_send_request_iso15(cmd, cmd_len, sam_response, &sam_response_len, shallow_mod, breakOnNrMac, preventEpurseUpdate);
+        // step 3: SamCommand RequestPACS, emulate NFC communication from dump
+        res = sam_send_request_emulated(cmd, cmd_len, sam_response, &sam_response_len, breakOnNrMac, preventEpurseUpdate);
+    } else {
+        if (skipDetect == false) {
+            // step 2: get card information
+            picopass_hdr_t card_a_info;
+            uint32_t eof_time = 0;
+
+            // implicit StartSspClk() happens here
+            Iso15693InitReader();
+            if (select_iclass_tag(&card_a_info, false, &eof_time, shallow_mod) == false) {
+                goto err;
+            }
+
+            switch_clock_to_ticks();
+
+            // step 3: SamCommand CardDetected
+            sam_set_card_detected_picopass(&card_a_info);
+        }
+
+        // step 3: SamCommand RequestPACS, relay NFC communication
+        res = sam_send_request_iso15(cmd, cmd_len, sam_response, &sam_response_len, shallow_mod, breakOnNrMac, preventEpurseUpdate);
+    }
     if (res != PM3_SUCCESS) {
         goto err;
     }

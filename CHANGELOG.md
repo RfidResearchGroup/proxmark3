@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `-f` parameter to `hf iclass sam` command to use the sam to parse a card dump (@antiklesys)
 - Added `-t` / `--timeout` option for `hf 15 sim` (@recursivenomad)
 - Added `--aid` parameter to `hf seos` commands (@kormax)
 - Added `hf iclass blacktears` command to perform an automated tearoff of block 1 to set non-secure page mode(@antiklesys)
