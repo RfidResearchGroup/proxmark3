@@ -306,7 +306,7 @@ void RunMod(void) {
                 for (uint8_t i = 0; i < 4; i++) {
 
                     if (i == 3 && chktoken) {
-                        break; // já achei a 57 no GPO, não preciso de READ RECORD
+                        break; // Tag 57 was already found in GPO, no need to issue READ RECORD
                     }
                     
                     LED_C_OFF();
