@@ -1162,6 +1162,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 
     uint8_t *recv;
     PacketResponseNG resp;
+resend:
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         recv = resp.data.asBytes;
         int iLen = resp.oldarg[0];
@@ -1184,7 +1185,23 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
             }
             return PM3_ELENGTH;
         }
-
+        if (recv[0] & 0xf0) {
+            uint8_t dbg_curr = DBG_NONE;
+            if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
+                return PM3_EFAILED;
+            }
+            if (dbg_curr >= DBG_DEBUG) {
+                PrintAndLogEx(WARNING, "Card requested WTX");
+            }
+            // WARNING for users of this function:
+            // This NO_DISCONNECT flag will NOT save you. If you run your commands with LeaveSignalOn set to false, they will still fail if a card asks for WTX.
+            // Better keep the flag on and do a DropField(); at the end.
+            SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | cmdc, 5, 0, recv, min); // 2b frame +1b "data" + 2b crc. Hardcode length to 5 and reply to response
+            goto resend;
+        }
+        // OBS
+        // This if check below breaks command flow if the card for whatever reason decides to request a WTX.
+        // Because WTX will do a |= 0xF0 to the framing, this check triggers and everything that was happening will stop.
         if (recv[0] != data[0]) {
             if (silentMode == false) {
                 PrintAndLogEx(ERR, "iso14443-4 framing error. Card send %2x must be %2x", recv[0], data[0]);
