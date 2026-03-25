@@ -4492,16 +4492,21 @@ void DetectNACKbug(void) {
     set_tracing(false);
 }
 
-/* ///
-Based upon the SimulateIso14443aTag, this aims to instead take an AID Value you've supplied, and return your selected response.
-It can also continue after the AID has been selected, and respond to other request types.
-This was forked from the original function to allow for more flexibility in the future, and to increase the processing speed of the original function.
-/// */
 
+// Increased the buffer size to allow for more complex responses
+#define DYNAMIC_RESPONSE_BUFFER2_SIZE       ( 512 )
+#define DYNAMIC_MODULATION_BUFFER2_SIZE     ( 1536 )
+
+// EvilDaemond
+// Based upon the SimulateIso14443aTag, this aims to instead take an AID Value you've supplied, and return your selected response.
+// It can also continue after the AID has been selected, and respond to other request types.
+// This was forked from the original function to allow for more flexibility in the future, and to increase the processing speed of the original function.
+//
 void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                              uint8_t *ats, size_t ats_len,  uint8_t *aid, size_t aid_len,
                              uint8_t *selectaid_response, size_t selectaid_response_len,
                              uint8_t *getdata_response, size_t getdata_response_len) {
+
     tag_response_info_t *responses;
     uint32_t cuid = 0;
     uint8_t pages = 0;
@@ -4514,14 +4519,19 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
     // Copy the AID, AID Response, and the GetData APDU response into our variables
     if ((aid == NULL) || (selectaid_response == NULL) || (getdata_response == NULL)) {
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINVARG, NULL, 0);
+        return;
     }
 
     // free eventually allocated BigBuf memory but keep Emulator Memory
     BigBuf_free_keep_EM();
 
-    // Increased the buffer size to allow for more complex responses
-#define DYNAMIC_RESPONSE_BUFFER2_SIZE 512
-#define DYNAMIC_MODULATION_BUFFER2_SIZE 1536
+    // Response payloads must fit within the dynamic response buffer,
+    // accounting for 1-byte IBlock header + 1-byte optional CID (offset 0 or 1)
+    if (selectaid_response_len + 2 > DYNAMIC_RESPONSE_BUFFER2_SIZE ||
+            getdata_response_len + 2 > DYNAMIC_RESPONSE_BUFFER2_SIZE) {
+        reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINVARG, NULL, 0);
+        return;
+    }
 
     uint8_t *dynamic_response_buffer2 = BigBuf_calloc(DYNAMIC_RESPONSE_BUFFER2_SIZE);
     if (dynamic_response_buffer2 == NULL) {
