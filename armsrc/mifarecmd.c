@@ -363,8 +363,24 @@ out:
 }
 
 void MifareU3PassChkKeys(mful_3passchk_t *packet) {
+
+    uint8_t keysize = (packet->segment != 4) ? (MIFAREU3P_KEY_SIZE >> 2) : MIFAREU3P_KEY_SIZE;
+
+    // sanity checks
+
+    // All key reads must stay within data[]
+    if ((uint32_t)packet->nkeys * keysize > sizeof(packet->data)) {
+        reply_ng(CMD_HF_MIFAREU3P_CHKKEY, PM3_EINVARG, NULL, 0);
+        return;
+    }
+
+    // Segment must be a valid value (0-3 = quarter, 4 = full key)
+    if (packet->segment > 4) {
+        reply_ng(CMD_HF_MIFAREU3P_CHKKEY, PM3_EINVARG, NULL, 0);
+        return;
+    }
+
     static uint8_t foundkeys = 0;
-    uint8_t keysize = packet->segment != 4 ? MIFAREU3P_KEY_SIZE / 4 : MIFAREU3P_KEY_SIZE;
 
     int oldbg = g_dbglevel;
     int res = PM3_ESOFT;
