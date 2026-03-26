@@ -1076,6 +1076,320 @@ static int CmdHFiClassSim(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHFiClassSimTag(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass simtag",
+                  "Build a complete iCLASS 2K tag dump from facility code, card number, and keys,\n"
+                  "upload it to emulator memory, and start a full simulation.\n"
+                  "Use either --bin or --wiegand/--fc/--cn to specify the credential.\n"
+                  "Provide a debit key via --kd or --ki.  If no transport key is given,\n"
+                  "the tool tries to load " ICLASS_DECRYPTION_BIN ".",
+                  "hf iclass simtag --fc 101 --cn 1337\n"
+                  "hf iclass simtag -w H10301 --fc 101 --cn 1337 --ki 0\n"
+                  "hf iclass simtag -w H10301 --fc 101 --cn 1337 --kd 0102030405060708 --elite\n"
+                  "hf iclass simtag --bin 10001111100000001010100011 --ki 0\n"
+                  "hf iclass simtag -w H10301 --fc 101 --cn 1337 --ki 0 --enckey 00000000000000000000000000000000\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("w",   "wiegand",  "<format>",  "Wiegand format (default H10301), see `wiegand list`"),
+        arg_u64_0(NULL, "fc",       "<dec>",      "Facility code"),
+        arg_u64_0(NULL, "cn",       "<dec>",      "Card number"),
+        arg_u64_0(NULL, "issue",    "<dec>",      "Issue level"),
+        arg_str0(NULL,  "bin",      "<bin>",      "Binary wiegand string (alternative to --wiegand/--fc/--cn)"),
+        arg_str0(NULL,  "kd",       "<hex>",      "Debit master key, 8 hex bytes"),
+        arg_str0(NULL,  "kc",       "<hex>",      "Credit master key, 8 hex bytes (defaults to kd if omitted)"),
+        arg_int0(NULL,  "ki",       "<dec>",      "Debit key index from key manager (replaces --kd)"),
+        arg_int0(NULL,  "ci",       "<dec>",      "Credit key index from key manager (replaces --kc)"),
+        arg_lit0(NULL,  "elite",                  "Elite key diversification"),
+        arg_lit0(NULL,  "raw",                    "Keys are already diversified, skip diversification"),
+        arg_str0(NULL,  "csn",      "<hex>",      "Custom CSN, 8 hex bytes (auto-generated if omitted)"),
+        arg_str0(NULL,  "enckey",   "<hex>",      "3DES transport key, 16 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    // --- wiegand format
+    char format[16] = {0};
+    int format_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)format, sizeof(format), &format_len);
+    if (format_len == 0)
+        strncpy(format, "H10301", sizeof(format) - 1);
+
+    wiegand_card_t card;
+    memset(&card, 0, sizeof(wiegand_card_t));
+    card.FacilityCode = arg_get_u32_def(ctx, 2, 0);
+    card.CardNumber    = arg_get_u32_def(ctx, 3, 0);
+    card.IssueLevel    = arg_get_u32_def(ctx, 4, 0);
+
+    // --- binary string
+    uint8_t bin[65] = {0};
+    int bin_len = sizeof(bin) - 1;
+    CLIGetStrWithReturn(ctx, 5, bin, &bin_len);
+
+    // --- debit key
+    int kd_len = 0;
+    uint8_t kd_master[8] = {0};
+    CLIGetHexWithReturn(ctx, 6, kd_master, &kd_len);
+
+    // --- credit key
+    int kc_len = 0;
+    uint8_t kc_master[8] = {0};
+    CLIGetHexWithReturn(ctx, 7, kc_master, &kc_len);
+
+    // --- key indices
+    int key_nr    = arg_get_int_def(ctx, 8, -1);
+    int credit_nr = arg_get_int_def(ctx, 9, -1);
+
+    // --- flags
+    bool elite  = arg_get_lit(ctx, 10);
+    bool rawkey = arg_get_lit(ctx, 11);
+
+    // --- custom CSN
+    int csn_len = 0;
+    uint8_t csn[8] = {0};
+    CLIGetHexWithReturn(ctx, 12, csn, &csn_len);
+    bool have_custom_csn = (csn_len == 8);
+
+    // --- transport key
+    int enc_key_len = 0;
+    uint8_t enc_key[16] = {0};
+    uint8_t *enckeyptr = NULL;
+    bool have_enc_key = false;
+    CLIGetHexWithReturn(ctx, 13, enc_key, &enc_key_len);
+
+    CLIParserFree(ctx);
+
+    // --- validation
+    if ((rawkey + elite) > 1) {
+        PrintAndLogEx(ERR, "Cannot combine --elite and --raw");
+        return PM3_EINVARG;
+    }
+
+    if (csn_len > 0 && csn_len != 8) {
+        PrintAndLogEx(ERR, "CSN must be exactly 8 hex bytes");
+        return PM3_EINVARG;
+    }
+
+    if (bin_len > 64) {
+        PrintAndLogEx(ERR, "Binary wiegand string must be at most 64 bits");
+        return PM3_EINVARG;
+    }
+
+    if (bin_len == 0 && card.FacilityCode == 0 && card.CardNumber == 0) {
+        PrintAndLogEx(ERR, "Must provide either --cn/--fc or --bin");
+        return PM3_EINVARG;
+    }
+
+    // --- resolve debit key: --kd takes priority, then --ki, then default ki 0
+    if (kd_len == 0) {
+        if (key_nr < 0)
+            key_nr = 0;
+        if (key_nr >= ICLASS_KEYS_MAX) {
+            PrintAndLogEx(ERR, "Debit key index is out of range (max %d)", ICLASS_KEYS_MAX - 1);
+            return PM3_EINVARG;
+        }
+        memcpy(kd_master, iClass_Key_Table[key_nr], 8);
+        kd_len = 8;
+        PrintAndLogEx(SUCCESS, "Using debit key[%d] " _GREEN_("%s"), key_nr, sprint_hex(kd_master, 8));
+    } else if (kd_len != 8) {
+        PrintAndLogEx(ERR, "Debit key must be exactly 8 hex bytes");
+        return PM3_EINVARG;
+    } else if (key_nr >= 0) {
+        PrintAndLogEx(SUCCESS, "Using debit key[%d] " _GREEN_("%s"), key_nr, sprint_hex(kd_master, 8));
+    }
+
+    // --- resolve credit key: --kc takes priority, then --ci, then default ci 1
+    if (kc_len == 0) {
+        if (credit_nr < 0)
+            credit_nr = 1;
+        if (credit_nr >= ICLASS_KEYS_MAX) {
+            PrintAndLogEx(ERR, "Credit key index is out of range (max %d)", ICLASS_KEYS_MAX - 1);
+            return PM3_EINVARG;
+        }
+        memcpy(kc_master, iClass_Key_Table[credit_nr], 8);
+        kc_len = 8;
+        PrintAndLogEx(SUCCESS, "Using credit key[%d] " _GREEN_("%s"), credit_nr, sprint_hex(kc_master, 8));
+    } else if (kc_len != 8) {
+        PrintAndLogEx(ERR, "Credit key must be exactly 8 hex bytes");
+        return PM3_EINVARG;
+    } else if (credit_nr >= 0) {
+        PrintAndLogEx(SUCCESS, "Using credit key[%d] " _GREEN_("%s"), credit_nr, sprint_hex(kc_master, 8));
+    }
+
+    // --- resolve transport key
+    if (enc_key_len > 0) {
+        if (enc_key_len != 16) {
+            PrintAndLogEx(ERR, "Transport key must be 16 hex bytes");
+            return PM3_EINVARG;
+        }
+        have_enc_key = true;
+    }
+
+    if (have_enc_key == false) {
+        // try smart-card helper first, then fall back to file
+        bool use_sc = IsCardHelperPresent(false);
+        if (use_sc == false) {
+            size_t keylen = 0;
+            int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&enckeyptr, &keylen);
+            if (res == PM3_SUCCESS && keylen == 16) {
+                memcpy(enc_key, enckeyptr, 16);
+                free(enckeyptr);
+                have_enc_key = true;
+            } else {
+                if (enckeyptr != NULL)
+                    free(enckeyptr);
+                PrintAndLogEx(WARNING, "No transport key found - credential blocks will be written unencrypted");
+            }
+        } else {
+            have_enc_key = true; // will use Encrypt() via smart card
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Build the 256-byte (32-block) dump in memory
+    // ---------------------------------------------------------------
+    uint8_t dump[32 * PICOPASS_BLOCK_SIZE];
+    memset(dump, 0, sizeof(dump));
+
+    // Block 0: CSN — auto-generate from FC/CN if not provided
+    if (have_custom_csn) {
+        memcpy(dump, csn, 8);
+    } else {
+        uint32_t fc = card.FacilityCode;
+        uint32_t cn = card.CardNumber;
+        dump[0] = (uint8_t)((fc ^ (cn >> 8)) ^ 0xA3);
+        dump[1] = (uint8_t)((fc >> 4) ^ (cn & 0xFF) ^ 0x5C);
+        dump[2] = (uint8_t)((cn >> 16) ^ fc ^ 0x7F);
+        dump[3] = (uint8_t)((cn >> 8) ^ (fc << 3) ^ 0xE9);
+        dump[4] = 0xF7; dump[5] = 0xFF; dump[6] = 0x12; dump[7] = 0xE0;
+    }
+    memcpy(csn, dump, 8);
+
+    // Block 1: Config — standard 2K config
+    const uint8_t config_block[8] = {0x12, 0xFF, 0xFF, 0xFF, 0x7F, 0x1F, 0xFF, 0x3C};
+    memcpy(dump + 1 * PICOPASS_BLOCK_SIZE, config_block, 8);
+
+    // Block 2: Epurse — all 0xFF
+    memset(dump + 2 * PICOPASS_BLOCK_SIZE, 0xFF, 8);
+
+    // Block 3: KD (diversified debit key)
+    uint8_t div_kd[8] = {0};
+    if (rawkey) {
+        memcpy(div_kd, kd_master, 8);
+    } else {
+        HFiClassCalcDivKey(csn, kd_master, div_kd, elite);
+    }
+    memcpy(dump + 3 * PICOPASS_BLOCK_SIZE, div_kd, 8);
+
+    // Block 4: KC (diversified credit key)
+    uint8_t div_kc[8] = {0};
+    if (rawkey) {
+        memcpy(div_kc, kc_master, 8);
+    } else {
+        HFiClassCalcDivKey(csn, kc_master, div_kc, elite);
+    }
+    memcpy(dump + 4 * PICOPASS_BLOCK_SIZE, div_kc, 8);
+
+    // Block 5: AIA — all 0xFF
+    memset(dump + 5 * PICOPASS_BLOCK_SIZE, 0xFF, 8);
+
+    // Blocks 6-9: Credential (app header + wiegand data)
+    uint8_t credential[32] = {
+        0x03, 0x03, 0x03, 0x03, 0x00, 0x03, 0xE0, 0x17,  // block 6: app header
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // block 7: wiegand data
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // block 8: padding
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // block 9: padding
+    };
+
+    if (bin_len > 0) {
+        // raw binary string path
+        uint8_t data[8];
+        memset(data, 0, sizeof(data));
+        BitstreamOut_t bout = {data, 0, 0};
+        for (int i = 0; i < 64 - bin_len - 1; i++)
+            pushBit(&bout, 0);
+        pushBit(&bout, 1); // sentinel bit
+        for (int i = 0; i < bin_len; i++) {
+            char c = (char)bin[i];
+            if (c == '1')       pushBit(&bout, 1);
+            else if (c == '0')  pushBit(&bout, 0);
+        }
+        memcpy(credential + 8, data, 8);
+    } else {
+        // wiegand format path
+        wiegand_message_t packed;
+        memset(&packed, 0, sizeof(wiegand_message_t));
+
+        int format_idx = HIDFindCardFormat(format);
+        if (format_idx == -1) {
+            PrintAndLogEx(WARNING, "Unknown wiegand format: " _YELLOW_("%s"), format);
+            return PM3_EINVARG;
+        }
+
+        if (HIDPack(format_idx, &card, &packed, false) == false) {
+            PrintAndLogEx(WARNING, "Card data could not be encoded in the selected format");
+            return PM3_ESOFT;
+        }
+
+        packed.Length++;
+        set_bit_by_position(&packed, true, 0);
+
+#ifdef HOST_LITTLE_ENDIAN
+        packed.Mid = BSWAP_32(packed.Mid);
+        packed.Bot = BSWAP_32(packed.Bot);
+#endif
+        memcpy(credential + 8,  &packed.Mid, sizeof(packed.Mid));
+        memcpy(credential + 12, &packed.Bot, sizeof(packed.Bot));
+    }
+
+    // Encrypt credential blocks 7, 8, 9
+    if (have_enc_key) {
+        bool use_sc = IsCardHelperPresent(false);
+        if (use_sc) {
+            Encrypt(credential + 8,  credential + 8);
+            Encrypt(credential + 16, credential + 16);
+            Encrypt(credential + 24, credential + 24);
+        } else {
+            iclass_encrypt_block_data(credential + 8,  enc_key);
+            iclass_encrypt_block_data(credential + 16, enc_key);
+            iclass_encrypt_block_data(credential + 24, enc_key);
+        }
+    }
+
+    memcpy(dump + 6 * PICOPASS_BLOCK_SIZE, credential, sizeof(credential));
+
+    // --- print summary
+    PrintAndLogEx(INFO, "CSN......... " _YELLOW_("%s"), sprint_hex(dump, 8));
+    PrintAndLogEx(INFO, "Config...... " _YELLOW_("%s"), sprint_hex(dump + 1 * PICOPASS_BLOCK_SIZE, 8));
+    PrintAndLogEx(INFO, "Epurse...... " _YELLOW_("%s"), sprint_hex(dump + 2 * PICOPASS_BLOCK_SIZE, 8));
+    PrintAndLogEx(INFO, "KD (div).... " _YELLOW_("%s"), sprint_hex(div_kd, 8));
+    PrintAndLogEx(INFO, "KC (div).... " _YELLOW_("%s"), sprint_hex(div_kc, 8));
+    PrintAndLogEx(INFO, "Block 6..... " _YELLOW_("%s"), sprint_hex(dump + 6 * PICOPASS_BLOCK_SIZE, 8));
+    PrintAndLogEx(INFO, "Block 7..... " _YELLOW_("%s"), sprint_hex(dump + 7 * PICOPASS_BLOCK_SIZE, 8));
+
+    // --- upload to emulator memory
+    if (g_session.pm3_present == false) {
+        PrintAndLogEx(ERR, "Device offline");
+        return PM3_EFAILED;
+    }
+
+    uint16_t bytes_sent = 0;
+    iclass_upload_emul(dump, sizeof(dump), 0, &bytes_sent);
+    PrintAndLogEx(SUCCESS, "Uploaded " _YELLOW_("%u") " bytes to emulator memory", bytes_sent);
+
+    // --- start simulation
+    PrintAndLogEx(INFO, "Starting iCLASS full simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("`pm3 button`") " to abort");
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ICLASS_SIMULATE, ICLASS_SIM_MODE_FULL, 0, 1, csn, 8);
+
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass esave -h") "` to save the emulator memory to file");
+    return PM3_SUCCESS;
+}
+
 static int CmdHFiClassInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass info",
@@ -6926,6 +7240,7 @@ static command_t CommandTable[] = {
     {"blacktears",  CmdHFiClass_BlackTears,     IfPm3Iclass,     "Automated tearoff attack on new silicon cards to enable non-secure page mode"},
     {"-----------", CmdHelp,                    IfPm3Iclass,     "-------------------- " _CYAN_("Simulation") " -------------------"},
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "Simulate iCLASS tag"},
+    {"simtag",      CmdHFiClassSimTag,          IfPm3Iclass,     "Simulate a full iCLASS 2K tag from FC/CN and keys"},
     {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "Upload file into emulator memory"},
     {"esave",       CmdHFiClassESave,           IfPm3Iclass,     "Save emulator memory to file"},
     {"esetblk",     CmdHFiClassESetBlk,         IfPm3Iclass,     "Set emulator memory block data"},
