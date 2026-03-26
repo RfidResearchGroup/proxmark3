@@ -2480,7 +2480,32 @@
         "Country": "",
         "Name": "SEOS Mobile",
         "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
-        "Type": "access"
+        "Type": "access",
+        "Sources": [
+            "android://com.lane.lane"
+        ]
+    },
+    {
+        "AID": "A0000004400001010001000003",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "SEOS Mobile",
+        "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
+        "Type": "access",
+        "Sources": [
+            "android://com.assaabloy.stg.msf.config.android"
+        ]
+    },
+    {
+        "AID": "A0000004400001010001000004",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "SEOS Mobile",
+        "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
+        "Type": "access",
+        "Sources": [
+            "android://com.assaabloy.stg.msf.config.android"
+        ]
     },
     {
         "AID": "A00000054000060100010000FF",
@@ -2488,7 +2513,152 @@
         "Country": "",
         "Name": "SEOS Mobile",
         "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
-        "Type": "access"
+        "Type": "access",
+        "Sources": [
+            "android://com.assaabloy.hospitality.mobileaccess.studentliving",
+            "android://com.assaabloy.stg.msf.config.android",
+            "android://com.brivo.pass",
+            "android://com.cardexchangeid.ident",
+            "android://com.cbord.get",
+            "android://com.cohesion.core",
+            "android://com.equiem.equiemandroid",
+            "android://com.hidglobal.pacs.readermanager",
+            "android://com.hotelbird.hbapp",
+            "android://com.hqo",
+            "android://com.kastle.kastlePresence",
+            "android://com.mews.guestPortal",
+            "android://com.soloinsight.cloudpassnew.staging",
+            "android://com.wandera.android",
+            "android://com.workai.app",
+            "android://com.yale.multifamconftool",
+            "android://com.zaplox.premium.*",
+            "android://eu.sharry.swp.gallagherhub",
+            "android://eu.sharry.swp.sharrypartner",
+            "android://eu.sharry.swp.sharryworkplace",
+            "android://io.blinetech.blineandroid",
+            "android://io.swiftconnect.mobile"
+        ]
+    },
+    {
+        "AID": "A0000003820012000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A0000003820021000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A0000003820025000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A0000003820028000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A0000003820029000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A000000382002A000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A000000382002B000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A000000382002C000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A000000382002D000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A000000382002E000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A0000003820031000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
     },
     {
         "AID": "A000000341000101",

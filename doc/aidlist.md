@@ -17,6 +17,9 @@ Each entry in `client/resources/aidlist.json` must contain all of the fields bel
 
 ## Optional fields
 - `ResponseRegex`: Case-insensitive regex matched against the APDU SELECT response encoded as hex without separators. Current regex subset supports `^`, `$`, `.`, `*`, and `\` escape. Use this field when multiple protocols share the same AID and can be distinguished by response content.
+- `Sources`: Array of strings describing where the AID metadata was sourced from. Supported formats:
+  - `android://<package.name>` for Android apps that declare or use this AID.
+  - `http://...` or `https://...` for public references used to add or verify the entry.
 
 Example:
 ```json
@@ -40,5 +43,21 @@ Response-disambiguation example:
     "Description": "Google Smart Tap",
     "Type": "loyalty",
     "ResponseRegex": ".*500a416e64726f6964506179.*9000$"
+}
+```
+
+Sources example:
+```json
+{
+    "AID": "A0000004400001010001000002",
+    "Vendor": "HID Global",
+    "Country": "",
+    "Name": "SEOS Mobile",
+    "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
+    "Type": "access",
+    "Sources": [
+        "android://com.lane.lane",
+        "https://example.com/reference"
+    ]
 }
 ```
