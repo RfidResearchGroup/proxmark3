@@ -6173,24 +6173,29 @@ static int CmdHFiClassUnhash(const char *Cmd) {
 static int CmdHFiClassLookUp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass lookup",
-                  "This command take sniffed trace data and try to recovery a iCLASS Standard or iCLASS Elite key.",
+                  "Takes sniffed trace data and tries to recover a iCLASS Standard or Elite key.\n"
+                  "Use --live to simulate a tag, capture the reader's CHECK command on-device,\n"
+                  "and run the lookup automatically. Built-in key table is always searched first.",
                   "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic\n"
                   "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic --elite\n"
-                  "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b --vb6rng"
+                  "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b --vb6rng\n"
+                  "hf iclass lookup --live\n"
+                  "hf iclass lookup --live --csn 031fec8af7ff12e0 -f iclass_default_keys.dic"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "Dictionary file with default iclass keys"),
-        arg_str1(NULL, "csn", "<hex>", "Specify CSN as 8 hex bytes"),
-        arg_str1(NULL, "epurse", "<hex>", "Specify ePurse as 8 hex bytes"),
-        arg_str1(NULL, "macs", "<hex>", "MACs"),
-        arg_lit0(NULL, "elite", "Elite computations applied to key"),
-        arg_lit0(NULL, "raw", "no computations applied to key"),
-        arg_lit0(NULL, "vb6rng", "use the VB6 rng for elite keys instead of a dictionary file"),
+        arg_str0("f",   "file",   "<fn>",  "Dictionary file with default iclass keys"),
+        arg_str0(NULL,  "csn",    "<hex>", "Specify CSN as 8 hex bytes"),
+        arg_str0(NULL,  "epurse", "<hex>", "Specify ePurse as 8 hex bytes"),
+        arg_str0(NULL,  "macs",   "<hex>", "MACs (NR+MAC from sniffed trace)"),
+        arg_lit0(NULL,  "elite",           "Elite computations applied to key"),
+        arg_lit0(NULL,  "raw",             "no computations applied to key"),
+        arg_lit0(NULL,  "vb6rng",          "use the VB6 rng for elite keys instead of a dictionary file"),
+        arg_lit0(NULL,  "live",            "Simulate tag, capture reader CHECK and run lookup automatically"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
@@ -6208,8 +6213,9 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 4, macs, &macs_len);
 
     bool use_elite = arg_get_lit(ctx, 5);
-    bool use_raw = arg_get_lit(ctx, 6);
+    bool use_raw   = arg_get_lit(ctx, 6);
     bool use_vb6kdf = arg_get_lit(ctx, 7);
+    bool live = arg_get_lit(ctx, 8);
 
     if (use_vb6kdf == false) {
         CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
@@ -6217,14 +6223,13 @@ static int CmdHFiClassLookUp(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    // santity checks
-
+    // sanity checks
     if (csn_len > 0 && csn_len != 8) {
         PrintAndLogEx(ERR, "CSN is incorrect length");
         return PM3_EINVARG;
     }
 
-    if (epurse_len > 0 &&  epurse_len != 8) {
+    if (epurse_len > 0 && epurse_len != 8) {
         PrintAndLogEx(ERR, "ePurse is incorrect length");
         return PM3_EINVARG;
     }
@@ -6234,20 +6239,157 @@ static int CmdHFiClassLookUp(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-
     uint8_t CCNR[12];
-    uint8_t MAC_TAG[4] = { 0, 0, 0, 0 };
+    uint8_t MAC_TAG[4] = {0, 0, 0, 0};
 
-    // Stupid copy.. CCNR is a combo of epurse and reader nonce
-    memcpy(CCNR, epurse, 8);
-    memcpy(CCNR + 8, macs, 4);
-    memcpy(MAC_TAG, macs + 4, 4);
+    if (live) {
+        // Default CSN when not provided
+        if (csn_len == 0) {
+            const uint8_t default_csn[8] = {0x03, 0x1F, 0xEC, 0x8A, 0xF7, 0xFF, 0x12, 0xE0};
+            memcpy(csn, default_csn, 8);
+        }
 
-    PrintAndLogEx(SUCCESS, "CSN....... " _GREEN_("%s"), sprint_hex(csn, sizeof(csn)));
-    PrintAndLogEx(SUCCESS, "Epurse.... %s", sprint_hex(epurse, sizeof(epurse)));
-    PrintAndLogEx(SUCCESS, "MACS...... %s", sprint_hex(macs, sizeof(macs)));
-    PrintAndLogEx(SUCCESS, "CCNR...... " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
-    PrintAndLogEx(SUCCESS, "TAG MAC... %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
+        PrintAndLogEx(INFO, "CSN...... " _YELLOW_("%s"), sprint_hex(csn, 8));
+        PrintAndLogEx(INFO, "Simulating tag - waiting for reader CHECK command...");
+        PrintAndLogEx(INFO, "Press " _GREEN_("`pm3 button`") " to abort");
+
+        // Simulate with reader-attack mode to capture NR+MAC from the reader's CHECK command.
+        // Device returns: epurse[8] + NR[4] + MAC_reader[4]
+        PacketResponseNG resp;
+        clearCommandBuffer();
+        SendCommandMIX(CMD_HF_ICLASS_SIMULATE, ICLASS_SIM_MODE_READER_ATTACK, 1, 1, csn, 8);
+
+        uint8_t tries = 0;
+        while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+            tries++;
+            if (kbd_enter_pressed()) {
+                PrintAndLogEx(WARNING, "\naborted via keyboard.");
+                return PM3_EOPABORTED;
+            }
+            if (tries > 20) {
+                PrintAndLogEx(WARNING, "\ntimeout while waiting for reader");
+                return PM3_ETIMEOUT;
+            }
+        }
+
+        uint8_t num_mac = resp.oldarg[1];
+        if (num_mac == 0) {
+            PrintAndLogEx(WARNING, "No CHECK command captured from reader");
+            return PM3_ESOFT;
+        }
+
+        uint8_t cap_epurse[8], nr[4], mac_r[4];
+        memcpy(cap_epurse, resp.data.asBytes,      8);
+        memcpy(nr,         resp.data.asBytes + 8,  4);
+        memcpy(mac_r,      resp.data.asBytes + 12, 4);
+
+        PrintAndLogEx(SUCCESS, "Captured CHECK:");
+        PrintAndLogEx(SUCCESS, "  ePurse.... %s", sprint_hex(cap_epurse, 8));
+        PrintAndLogEx(SUCCESS, "  NR........ %s", sprint_hex(nr, 4));
+        PrintAndLogEx(SUCCESS, "  MAC_reader " _YELLOW_("%s"), sprint_hex(mac_r, 4));
+
+        memcpy(CCNR,     cap_epurse, 8);
+        memcpy(CCNR + 8, nr,         4);
+        memcpy(MAC_TAG,  mac_r,      4);
+
+        // Search built-in key table (standard + elite) before dictionary
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "Searching built-in key table (standard + elite)...");
+        uint8_t found_key[8] = {0};
+        if (check_known_default(csn, cap_epurse, nr, mac_r, found_key)) {
+            PrintAndLogEx(SUCCESS, "Found master key " _GREEN_("%s"), sprint_hex_inrow(found_key, 8));
+            add_key(found_key);
+        } else {
+            PrintAndLogEx(WARNING, "Key not found in built-in table");
+        }
+
+        // Two-pass dictionary search.
+        // When no -f is given: standard pass uses iclass_default_keys.dic,
+        //                      elite pass uses iclass_elite_keys.dic.
+        // When -f is given: both passes use the provided file.
+        const char *std_file   = (fnlen > 0) ? filename : "iclass_default_keys.dic";
+        const char *elite_file = (fnlen > 0) ? filename : "iclass_elite_keys.dic";
+
+        iclass_prekey_t live_lookup;
+        memcpy(live_lookup.mac, mac_r, 4);
+
+        // Standard diversification pass
+        {
+            uint8_t *live_keyBlock = NULL;
+            uint32_t live_keycount = 0;
+            PrintAndLogEx(INFO, "Searching " _YELLOW_("%s") " (standard)...", std_file);
+            int res = loadFileDICTIONARY_safe(std_file, (void **)&live_keyBlock, 8, &live_keycount);
+            if (res == PM3_SUCCESS && live_keycount > 0) {
+                iclass_prekey_t *live_prekey = calloc(live_keycount, sizeof(iclass_prekey_t));
+                if (live_prekey == NULL) {
+                    PrintAndLogEx(WARNING, "Failed to allocate memory");
+                    free(live_keyBlock);
+                    return PM3_EMALLOC;
+                }
+                GenerateMacKeyFrom(csn, CCNR, false, false, live_keyBlock, live_keycount, live_prekey);
+                qsort(live_prekey, live_keycount, sizeof(iclass_prekey_t), cmp_uint32);
+                iclass_prekey_t *live_item = (iclass_prekey_t *) bsearch(&live_lookup, live_prekey, live_keycount, sizeof(iclass_prekey_t), cmp_uint32);
+                if (live_item != NULL) {
+                    PrintAndLogEx(SUCCESS, "Found standard master key " _GREEN_("%s"), sprint_hex_inrow(live_item->key, 8));
+                    add_key(live_item->key);
+                } else {
+                    PrintAndLogEx(WARNING, "Key not found in %s", std_file);
+                }
+                free(live_prekey);
+            } else {
+                PrintAndLogEx(WARNING, "Failed to load dictionary: %s", std_file);
+            }
+            free(live_keyBlock);
+        }
+
+        // Elite diversification pass
+        {
+            uint8_t *live_keyBlock = NULL;
+            uint32_t live_keycount = 0;
+            PrintAndLogEx(INFO, "Searching " _YELLOW_("%s") " (elite)...", elite_file);
+            int res = loadFileDICTIONARY_safe(elite_file, (void **)&live_keyBlock, 8, &live_keycount);
+            if (res == PM3_SUCCESS && live_keycount > 0) {
+                iclass_prekey_t *live_prekey = calloc(live_keycount, sizeof(iclass_prekey_t));
+                if (live_prekey == NULL) {
+                    PrintAndLogEx(WARNING, "Failed to allocate memory");
+                    free(live_keyBlock);
+                    return PM3_EMALLOC;
+                }
+                GenerateMacKeyFrom(csn, CCNR, false, true, live_keyBlock, live_keycount, live_prekey);
+                qsort(live_prekey, live_keycount, sizeof(iclass_prekey_t), cmp_uint32);
+                iclass_prekey_t *live_item = (iclass_prekey_t *) bsearch(&live_lookup, live_prekey, live_keycount, sizeof(iclass_prekey_t), cmp_uint32);
+                if (live_item != NULL) {
+                    PrintAndLogEx(SUCCESS, "Found elite master key " _GREEN_("%s"), sprint_hex_inrow(live_item->key, 8));
+                    add_key(live_item->key);
+                } else {
+                    PrintAndLogEx(WARNING, "Key not found in %s", elite_file);
+                }
+                free(live_prekey);
+            } else {
+                PrintAndLogEx(WARNING, "Failed to load dictionary: %s", elite_file);
+            }
+            free(live_keyBlock);
+        }
+
+        PrintAndLogEx(NORMAL, "");
+        return PM3_SUCCESS;
+    } else {
+        if (csn_len != 8 || epurse_len != 8 || macs_len != 8) {
+            PrintAndLogEx(ERR, "CSN, ePurse and MACs are required (or use --live)");
+            return PM3_EINVARG;
+        }
+
+        // CCNR is epurse || NR (first 4 bytes of macs)
+        memcpy(CCNR,     epurse, 8);
+        memcpy(CCNR + 8, macs,   4);
+        memcpy(MAC_TAG,  macs + 4, 4);
+
+        PrintAndLogEx(SUCCESS, "CSN....... " _GREEN_("%s"), sprint_hex(csn, sizeof(csn)));
+        PrintAndLogEx(SUCCESS, "Epurse.... %s", sprint_hex(epurse, sizeof(epurse)));
+        PrintAndLogEx(SUCCESS, "MACS...... %s", sprint_hex(macs, sizeof(macs)));
+        PrintAndLogEx(SUCCESS, "CCNR...... " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
+        PrintAndLogEx(SUCCESS, "TAG MAC... %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
+    }
 
     // Run time
     uint64_t t1 = msclock();
