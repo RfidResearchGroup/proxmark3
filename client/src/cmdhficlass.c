@@ -1076,20 +1076,20 @@ static int CmdHFiClassSim(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFiClassSimTag(const char *Cmd) {
+static int CmdHFiClassTagSim(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf iclass simtag",
+    CLIParserInit(&ctx, "hf iclass tagsim",
                   "Build a complete iCLASS 2K tag dump from facility code, card number, and keys,\n"
                   "upload it to emulator memory, and start a full simulation.\n"
                   "Use either --bin or --wiegand/--fc/--cn to specify the credential.\n"
                   "Provide a debit key via --kd or --ki.  If no transport key is given,\n"
                   "the tool tries to load " ICLASS_DECRYPTION_BIN ".",
-                  "hf iclass simtag --fc 101 --cn 1337\n"
-                  "hf iclass simtag -w H10301 --fc 101 --cn 1337 --ki 0\n"
-                  "hf iclass simtag -w H10301 --fc 101 --cn 1337 --kd 0102030405060708 --elite\n"
-                  "hf iclass simtag --bin 10001111100000001010100011 --ki 0\n"
-                  "hf iclass simtag -w H10301 --fc 101 --cn 1337 --ki 0 --enckey 00000000000000000000000000000000\n"
+                  "hf iclass tagsim --fc 101 --cn 1337\n"
+                  "hf iclass tagsim -w H10301 --fc 101 --cn 1337 --ki 0\n"
+                  "hf iclass tagsim -w H10301 --fc 101 --cn 1337 --kd 0102030405060708 --elite\n"
+                  "hf iclass tagsim --bin 10001111100000001010100011 --ki 0\n"
+                  "hf iclass tagsim -w H10301 --fc 101 --cn 1337 --ki 0 --enckey 00000000000000000000000000000000\n"
                  );
 
     void *argtable[] = {
@@ -7240,7 +7240,7 @@ static command_t CommandTable[] = {
     {"blacktears",  CmdHFiClass_BlackTears,     IfPm3Iclass,     "Automated tearoff attack on new silicon cards to enable non-secure page mode"},
     {"-----------", CmdHelp,                    IfPm3Iclass,     "-------------------- " _CYAN_("Simulation") " -------------------"},
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "Simulate iCLASS tag"},
-    {"simtag",      CmdHFiClassSimTag,          IfPm3Iclass,     "Simulate a full iCLASS 2K tag from FC/CN and keys"},
+    {"tagsim",      CmdHFiClassTagSim,          IfPm3Iclass,     "Simulate a full iCLASS 2K tag from FC/CN and keys"},
     {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "Upload file into emulator memory"},
     {"esave",       CmdHFiClassESave,           IfPm3Iclass,     "Save emulator memory to file"},
     {"esetblk",     CmdHFiClassESetBlk,         IfPm3Iclass,     "Set emulator memory block data"},
