@@ -16,7 +16,7 @@ Each entry in `client/resources/aidlist.json` must contain all of the fields bel
 - `Type`: High-level category tag (for example `transport`, `emv`, `gp`, `pacs`, `ndef`).
 
 ## Optional fields
-- `ResponseContains`: Case-insensitive hex substring matched against the APDU SELECT response (encoded as hex without separators). Use this field when multiple protocols share the same AID and can be distinguished by response content.
+- `ResponseRegex`: Case-insensitive regex matched against the APDU SELECT response encoded as hex without separators. Current regex subset supports `^`, `$`, `.`, `*`, and `\` escape. Use this field when multiple protocols share the same AID and can be distinguished by response content.
 
 Example:
 ```json
@@ -39,6 +39,6 @@ Response-disambiguation example:
     "Name": "Google Smart Tap (OSE.VAS.01)",
     "Description": "Google Smart Tap",
     "Type": "loyalty",
-    "ResponseContains": "500a416e64726f6964506179"
+    "ResponseRegex": ".*500a416e64726f6964506179.*9000$"
 }
 ```
