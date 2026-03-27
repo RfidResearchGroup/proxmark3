@@ -102,8 +102,8 @@ typedef enum ISO14A_COMMAND {
     ISO14A_TOPAZMODE = (1 << 8),
     ISO14A_NO_RATS = (1 << 9),
     ISO14A_SEND_CHAINING = (1 << 10),
-    ISO14A_USE_ECP = (1 << 11),
-    ISO14A_USE_MAGSAFE = (1 << 12),
+    // 11, 12 were used for ECP & MAGSAFE, but they were generalized into CUSTOM_POLLING
+    // In case there is a need to add a new flag, feel free to use those indices
     ISO14A_USE_CUSTOM_POLLING = (1 << 13),
     ISO14A_CRYPTO1MODE = (1 << 14),
     ISO14A_SET_WAIT_US = (1 << 15),
