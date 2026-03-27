@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Improved SIO parsing for `hf iclass view` based on Iceman's "Dismantling the SEOS Protocol" talk (@antiklesys)
+- Added live fc/cn update to `hf iclass tagsim` refreshing the csn with each update (@antiklesys)
+- Added `--live` option to `hf iclass lookup` command to perform a live recovery of the reader's key by simulating a tag and running the lookup command against both standard and elite dictionaries (@antiklesys)
+- Added `hf iclass tagsim` command to quickly simulate an iclass card based on facility code and card number(@antiklesys)
 - Added `-f` parameter to `hf iclass sam` command to use the sam to parse a card dump (@antiklesys)
 - Fixed WTX response behavior in `ExchangeRaw14A()` (@team-orangeBlue)
 - Added `-t` / `--timeout` option for `hf 15 sim` (@recursivenomad)

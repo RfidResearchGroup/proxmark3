@@ -1500,8 +1500,10 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
     int samples = 0;
     bool gotFrame = false;
 
-    // the decoder data structure
-    DecodeReader_t *dr = (DecodeReader_t *)BigBuf_calloc(sizeof(DecodeReader_t));
+    // the decoder data structure — use stack, not BigBuf, to avoid a per-call
+    // allocation leak when the function is restarted (e.g. on data_available exit)
+    DecodeReader_t dr_buf = {0};
+    DecodeReader_t *dr = &dr_buf;
     DecodeReaderInit(dr, received, max_len, 0, NULL);
 
     // wait for last transfer to complete
@@ -1566,6 +1568,11 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
 
         if (BUTTON_PRESS()) {
             dr->byteCount = -1;
+            break;
+        }
+
+        if (data_available()) {
+            dr->byteCount = -2;
             break;
         }
 

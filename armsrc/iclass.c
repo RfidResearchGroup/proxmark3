@@ -500,6 +500,27 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
 
         uint32_t reader_eof_time = 0;
         len = GetIso15693CommandFromReader(receivedCmd, MAX_FRAME_SIZE, &reader_eof_time);
+        if (len == -2) {
+            // USB data arrived while waiting for RF — drain all pending EML_MEMSET
+            // commands inline (without FpgaDownloadAndGo) so live tag updates work.
+            PacketCommandNG rx;
+            while (data_available()) {
+                if (receive_ng(&rx) != PM3_SUCCESS) break;
+                if (rx.cmd == CMD_HF_ICLASS_EML_MEMSET) {
+                    struct p {
+                        uint16_t offset;
+                        uint16_t plen;
+                        uint8_t  data[];
+                    } PACKED;
+                    struct p *payload = (struct p *) rx.data.asBytes;
+                    emlSet(payload->data, payload->offset, payload->plen);
+                } else {
+                    exit_loop = true;
+                    break;
+                }
+            }
+            continue;
+        }
         if (len < 0) {
             button_pressed = true;
             exit_loop = true;
@@ -512,6 +533,45 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
         block = receivedCmd[1];
 
         if (cmd == ICLASS_CMD_ACTALL && len == 1) {   // 0x0A
+
+            // Check for a live tag-identity reload requested by the client.
+            // The client writes a non-zero byte to emulator offset 32*8 = 256
+            // (one byte past the 32-block tag data) then updates blocks 0, 3, 4, 6-9
+            // in emulator memory.  We pick it up at the start of each anti-collision
+            // cycle so the reader sees the new identity from the very first SELECT.
+            if ((simulationMode == ICLASS_SIM_MODE_FULL ||
+                 simulationMode == ICLASS_SIM_MODE_FULL_GLITCH ||
+                 simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) &&
+                    emulator[32 * 8] != 0) {
+
+                emulator[32 * 8] = 0;  // consume the flag
+
+                // Reload CSN (block 0) and rebuild anticollision/CSN responses
+                memcpy(csn_data, emulator, 8);
+                rotateCSN(csn_data, anticoll_data);
+                AddCrc(anticoll_data, 8);
+                AddCrc(csn_data, 8);
+
+                CodeIso15693AsTag(anticoll_data, sizeof(anticoll_data));
+                memcpy(resp_anticoll, ts->buf, ts->max);
+                resp_anticoll_len = ts->max;
+
+                CodeIso15693AsTag(csn_data, sizeof(csn_data));
+                memcpy(resp_csn, ts->buf, ts->max);
+                resp_csn_len = ts->max;
+
+                // Reload KD/KC (blocks 3 & 4) and recompute cipher states
+                memcpy(diversified_kd, emulator + (8 * 3), 8);
+                memcpy(diversified_kc, emulator + (8 * 4), 8);
+                cipher_state_KD[0] = opt_doTagMAC_1(card_challenge_data, diversified_kd);
+                cipher_state_KC[0] = opt_doTagMAC_1(card_challenge_data, diversified_kc);
+
+                // Reset per-transaction auth state
+                kc_attempt = 0;
+                using_kc = false;
+                cipher_state = &cipher_state_KD[0];
+            }
+
             // Reader in anti collision phase
             modulated_response = resp_sof;
             modulated_response_size = resp_sof_len;
