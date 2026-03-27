@@ -241,7 +241,7 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 //    if (!ntptr && (g_dbglevel >= DBG_EXTENDED))
     uint32_t nr32 = nr[0] << 24 | nr[1] << 16 | nr[2] << 8 | nr[3];
     if (g_dbglevel >= DBG_EXTENDED) {
-        if (!isNested) {
+        if (isNested == AUTH_FIRST) {
             Dbprintf("auth        cmd: %02x %02x | uid: %08x | nr: %08x %s| nt: %08x %s %5i| par: %i%i%i%i %s",
                      cmd, blockNo, uid,
                      nr32, validate_prng_nonce(nr32) ? "@" : " ",
@@ -253,7 +253,9 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
                      (receivedAnswerPar[0] >> 4) & 1,
                      validate_parity_nonce(nt, receivedAnswerPar[0], nt) ? "ok " : "bad");
         } else {
-            Dbprintf("auth nested cmd: %02x %02x | uid: %08x | nr: %08x %s| nt: %08x %s %5i| par: %i%i%i%i %s| ntenc: %08x %s| parerr: %i%i%i%i",
+
+            if (ntencptr) {
+                Dbprintf("auth nested cmd: %02x %02x | uid: %08x | nr: %08x %s| nt: %08x %s %5i| par: %i%i%i%i %s| ntenc: %08x %s| parerr: %i%i%i%i",
                      cmd, blockNo, uid,
                      nr32, validate_prng_nonce(nr32) ? "@" : " ",
                      nt, validate_prng_nonce(nt) ? "@idx" : " idx",
@@ -269,6 +271,7 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
                      ((receivedAnswerPar[0] >> 5) & 1) ^ oddparity8((*ntencptr >> 8) & 0xFF),
                      ((receivedAnswerPar[0] >> 4) & 1) ^ oddparity8((*ntencptr >> 0) & 0xFF)
                     );
+            }
         }
     }
     // save Nt
