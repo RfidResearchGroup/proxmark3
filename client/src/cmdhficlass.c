@@ -4942,7 +4942,105 @@ static void detect_credential(uint8_t *iclass_dump, size_t dump_len, bool *is_le
     *sio_length = sio_start[1] + 2;
 }
 
-// print ASN1 decoded array in TLV view
+static void print_iclass_sio_decoded(uint8_t *sio, size_t sio_len) {
+    // Outer SEQUENCE already validated by detect_credential (short-form length, 0x30 tag)
+    if (sio_len < 4 || sio[0] != 0x30) {
+        return;
+    }
+
+    uint8_t *p = sio + 2;
+    uint8_t *end = sio + sio_len;
+
+    PrintAndLogEx(INFO, "-------------------- " _CYAN_("SIO - Insights") " -------------------------");
+
+    while (p + 2 <= end) {
+        uint8_t tag = *p++;
+        uint8_t len = *p++;
+        if (p + len > end) {
+            break;
+        }
+        uint8_t *val = p;
+        p += len;
+
+        switch (tag) {
+            case 0x81: {
+                // [1] IMPLICIT - Credential Template OID
+                // For iClass SE / Seos, the first byte is a preamble (0x01) and the actual OID is the remaining 4 bytes
+                if (len == 5 && val[0] == 0x01) {
+                    PrintAndLogEx(INFO, "  Relative OID       : " _YELLOW_("%s") " ( Detected preamble: %02X - SE/SEOS )", sprint_hex_inrow(val, 5), val[0]);
+                } else {
+                    PrintAndLogEx(INFO, "  Relative OID       : " _YELLOW_("%s"), sprint_hex_inrow(val, len));
+                }
+                break;
+            }
+            case 0x83: {
+                // [3] IMPLICIT - Tail present in SR and custom-keyed SE credentials
+                PrintAndLogEx(INFO, "  OID Tail           : " _YELLOW_("%s")" (SR / Custom-Keyed SE)", sprint_hex_inrow(val, len));
+                break;
+            }
+            case 0xA6: {
+                // [6] CONSTRUCTED - Key Info
+                uint8_t *ip = val;
+                uint8_t *ie = val + len;
+                while (ip + 2 <= ie) {
+                    uint8_t itag = *ip++;
+                    uint8_t ilen = *ip++;
+                    if (ip + ilen > ie) break;
+                    uint8_t *ival = ip;
+                    ip += ilen;
+                    if (itag == 0x80) {
+                        // Custom Key OID (used instead of Key Reference ID for custom-keyed credentials)
+                        PrintAndLogEx(INFO, "  Custom Key OID     : " _YELLOW_("%s"), sprint_hex_inrow(ival, ilen));
+                    } else if (itag == 0x81 && ilen == 1) {
+                        const char *ktype;
+                        switch (ival[0]) {
+                            case 0x00: ktype = "Elite keyed"; break;
+                            case 0x01: ktype = "Standard keyed"; break;
+                            default:   ktype = "Custom keyed"; break;
+                        }
+                        PrintAndLogEx(INFO, "  Key Reference ID   : " _YELLOW_("0x%02X") " ( %s )", ival[0], ktype);
+                    } else if (itag == 0x04 && ilen >= 1) {
+                        uint8_t ctype = ival[ilen - 1];
+                        const char *cname;
+                        switch (ctype) {
+                            case 0x08: cname = "EAX"; break;
+                            case 0x09: cname = "EAX'"; break;
+                            default:   cname = "Unknown"; break;
+                        }
+                        PrintAndLogEx(INFO, "  Crypto Suite       : " _YELLOW_("%s") " ( %s )", sprint_hex_inrow(ival, ilen), cname);
+                    }
+                }
+                break;
+            }
+            case 0xA7: {
+                // [7] CONSTRUCTED - PACS Encrypted Payload
+                uint8_t *ip = val;
+                uint8_t *ie = val + len;
+                while (ip + 2 <= ie) {
+                    uint8_t itag = *ip++;
+                    uint8_t ilen = *ip++;
+                    if (ip + ilen > ie) break;
+                    uint8_t *ival = ip;
+                    ip += ilen;
+                    if (itag == 0x85) {
+                        if (ilen > 16) {
+                            size_t data_len = ilen - 16;
+                            PrintAndLogEx(INFO, "  PACS Encrypted Data: " _YELLOW_("%s"), sprint_hex_inrow(ival, data_len));
+                            PrintAndLogEx(INFO, "  PACS MAC Signature : " _YELLOW_("%s"), sprint_hex_inrow(ival + data_len, 16));
+                        } else if (ilen > 0) {
+                            PrintAndLogEx(INFO, "  PACS Payload       : " _YELLOW_("%s"), sprint_hex_inrow(ival, ilen));
+                        }
+                    }
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    }
+}
+
+// print SIO decoded fields and optionally raw ASN1 TLV
 void print_iclass_sio(uint8_t *iclass_dump, size_t dump_len, bool verbose) {
 
     bool is_legacy, is_se, is_sr;
@@ -4963,6 +5061,8 @@ void print_iclass_sio(uint8_t *iclass_dump, size_t dump_len, bool verbose) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--------------------------- " _CYAN_("SIO - RAW") " -----------------------------");
     print_hex_noascii_break(sio_start, sio_length, 32);
+    PrintAndLogEx(NORMAL, "");
+    print_iclass_sio_decoded(sio_start, sio_length);
     PrintAndLogEx(NORMAL, "");
     if (verbose) {
         PrintAndLogEx(INFO, "----------------------- " _CYAN_("SIO - ASN1 TLV") " ---------------------------");
