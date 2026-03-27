@@ -1494,7 +1494,7 @@ static int CmdHFiClassTagSim(const char *Cmd) {
     // --- start simulation
     PrintAndLogEx(INFO, "Starting iCLASS full simulation");
     if (bin_len == 0) {
-        PrintAndLogEx(INFO, _GREEN_("Arrow keys") ": up/down = FC+/-  right/left = CN+/-  |  " _GREEN_("Enter") " or " _GREEN_("`pm3 button`") " to stop");
+        PrintAndLogEx(INFO, _GREEN_("Arrow keys") ": "_CYAN_("up/down")" = FC+/-  "_CYAN_("right/left")" = CN+/-  |  " _GREEN_("Enter") " or " _GREEN_("`pm3 button`") " to stop");
         PrintAndLogEx(INFO, "FC: " _YELLOW_("%u") "  CN: " _YELLOW_("%u") "  CSN: " _YELLOW_("%s"),
                       card.FacilityCode, card.CardNumber, sprint_hex(csn, 8));
     } else {
