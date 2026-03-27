@@ -18,6 +18,12 @@
 
 #include "cmdhficlass.h"
 #include <ctype.h>
+#ifdef _WIN32
+#include <conio.h>
+#else
+#include <termios.h>
+#include <unistd.h>
+#endif
 #include "cliparser.h"
 #include "cmdparser.h"              // command_t
 #include "commonutil.h"             // ARRAYLEN
@@ -370,6 +376,109 @@ static void iclass_encrypt_block_data(uint8_t *blk_data, uint8_t *key) {
     memcpy(blk_data, encrypted, 8);
     mbedtls_des3_free(&ctx);
 }
+
+// ---------------------------------------------------------------------------
+// tagsim live-update helpers
+// ---------------------------------------------------------------------------
+
+// Write a single 8-byte block to emulator memory without any console output.
+static void iclass_emul_write_block_silent(uint8_t blk, const uint8_t *data8) {
+    struct {
+        uint16_t offset;
+        uint16_t len;
+        uint8_t  data[PICOPASS_BLOCK_SIZE];
+    } PACKED p;
+    p.offset = blk * PICOPASS_BLOCK_SIZE;
+    p.len    = PICOPASS_BLOCK_SIZE;
+    memcpy(p.data, data8, PICOPASS_BLOCK_SIZE);
+    SendCommandNG(CMD_HF_ICLASS_EML_MEMSET, (uint8_t *)&p, sizeof(p));
+}
+
+// Write the reload flag to emulator offset 32*8 = 256 (one byte past tag data).
+// The ARM simulation loop consumes this flag on the next ACTALL command.
+static void iclass_emul_set_reload_flag(void) {
+    struct {
+        uint16_t offset;
+        uint16_t len;
+        uint8_t  data[1];
+    } PACKED p;
+    p.offset  = 32 * PICOPASS_BLOCK_SIZE;
+    p.len     = 1;
+    p.data[0] = 1;
+    SendCommandNG(CMD_HF_ICLASS_EML_MEMSET, (uint8_t *)&p, sizeof(p));
+}
+
+// Key codes returned by tagsim_poll_key()
+typedef enum {
+    TAGSIM_KEY_NONE = 0,
+    TAGSIM_KEY_ABORT,
+    TAGSIM_KEY_FC_INC,   // arrow up
+    TAGSIM_KEY_FC_DEC,   // arrow down
+    TAGSIM_KEY_CN_INC,   // arrow right
+    TAGSIM_KEY_CN_DEC,   // arrow left
+} tagsim_key_t;
+
+#ifdef _WIN32
+
+static void tagsim_rawmode_enter(void) {}
+static void tagsim_rawmode_exit(void)  {}
+
+static tagsim_key_t tagsim_poll_key(void) {
+    if (!_kbhit()) return TAGSIM_KEY_NONE;
+    int c = _getch();
+    if (c == '\r' || c == '\n' || c == 0x1B) return TAGSIM_KEY_ABORT;
+    if (c == 0 || c == 0xE0) {
+        c = _getch();
+        if (c == 72) return TAGSIM_KEY_FC_INC;   // up
+        if (c == 80) return TAGSIM_KEY_FC_DEC;   // down
+        if (c == 77) return TAGSIM_KEY_CN_INC;   // right
+        if (c == 75) return TAGSIM_KEY_CN_DEC;   // left
+    }
+    return TAGSIM_KEY_NONE;
+}
+
+#else  // POSIX
+
+static struct termios tagsim_saved_termios;
+static bool tagsim_rawmode_active = false;
+
+static void tagsim_rawmode_enter(void) {
+    if (tcgetattr(STDIN_FILENO, &tagsim_saved_termios) < 0) return;
+    struct termios raw = tagsim_saved_termios;
+    raw.c_lflag &= ~(uint32_t)(ICANON | ECHO);
+    raw.c_cc[VMIN]  = 0;
+    raw.c_cc[VTIME] = 0;
+    tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+    tagsim_rawmode_active = true;
+}
+
+static void tagsim_rawmode_exit(void) {
+    if (tagsim_rawmode_active) {
+        tcsetattr(STDIN_FILENO, TCSANOW, &tagsim_saved_termios);
+        tagsim_rawmode_active = false;
+    }
+}
+
+static tagsim_key_t tagsim_poll_key(void) {
+    char buf[8] = {0};
+    int n = (int)read(STDIN_FILENO, buf, sizeof(buf));
+    if (n <= 0) return TAGSIM_KEY_NONE;
+    if (n == 1) {
+        if (buf[0] == '\n' || buf[0] == '\r' || buf[0] == 0x1B)
+            return TAGSIM_KEY_ABORT;
+        return TAGSIM_KEY_NONE;
+    }
+    if (n >= 3 && buf[0] == '\033' && buf[1] == '[') {
+        if (buf[2] == 'A') return TAGSIM_KEY_FC_INC;
+        if (buf[2] == 'B') return TAGSIM_KEY_FC_DEC;
+        if (buf[2] == 'C') return TAGSIM_KEY_CN_INC;
+        if (buf[2] == 'D') return TAGSIM_KEY_CN_DEC;
+    }
+    return TAGSIM_KEY_NONE;
+}
+
+#endif  // _WIN32
+
 
 static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *key, bool got_kr, uint8_t *card_key, bool got_eki, bool use_elite, bool got_mk, uint8_t *master_key) {
 
@@ -1345,9 +1454,11 @@ static int CmdHFiClassTagSim(const char *Cmd) {
         memcpy(credential + 12, &packed.Bot, sizeof(packed.Bot));
     }
 
+    // Capture smart-card helper state before starting simulation (can't query mid-sim)
+    bool use_sc = have_enc_key ? IsCardHelperPresent(false) : false;
+
     // Encrypt credential blocks 7, 8, 9
     if (have_enc_key) {
-        bool use_sc = IsCardHelperPresent(false);
         if (use_sc) {
             Encrypt(credential + 8,  credential + 8);
             Encrypt(credential + 16, credential + 16);
@@ -1382,9 +1493,126 @@ static int CmdHFiClassTagSim(const char *Cmd) {
 
     // --- start simulation
     PrintAndLogEx(INFO, "Starting iCLASS full simulation");
-    PrintAndLogEx(INFO, "Press " _GREEN_("`pm3 button`") " to abort");
+    if (bin_len == 0) {
+        PrintAndLogEx(INFO, _GREEN_("Arrow keys") ": up/down = FC+/-  right/left = CN+/-  |  " _GREEN_("Enter") " or " _GREEN_("`pm3 button`") " to stop");
+        PrintAndLogEx(INFO, "FC: " _YELLOW_("%u") "  CN: " _YELLOW_("%u") "  CSN: " _YELLOW_("%s"),
+                      card.FacilityCode, card.CardNumber, sprint_hex(csn, 8));
+    } else {
+        PrintAndLogEx(INFO, "Press " _GREEN_("`pm3 button`") " to abort");
+    }
+
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ICLASS_SIMULATE, ICLASS_SIM_MODE_FULL, 0, 1, csn, 8);
+
+    // --- live FC/CN navigation (wiegand mode only; binary mode has no FC/CN to adjust)
+    if (bin_len == 0) {
+        int format_idx = HIDFindCardFormat(format);
+
+        tagsim_rawmode_enter();
+        PacketResponseNG resp;
+        bool running = true;
+        bool arm_ended = false;  // true when ARM sent its own CMD_ACK (e.g. button press)
+
+        while (running) {
+            // A non-zero-timeout poll lets us detect when the ARM ends the sim
+            if (WaitForResponseTimeout(CMD_ACK, &resp, 100)) {
+                arm_ended = true;
+                running = false;
+                break;
+            }
+
+            tagsim_key_t k = tagsim_poll_key();
+            if (k == TAGSIM_KEY_ABORT) { running = false; break; }
+            if (k == TAGSIM_KEY_NONE)  { continue; }
+
+            switch (k) {
+                case TAGSIM_KEY_FC_INC: card.FacilityCode++; break;
+                case TAGSIM_KEY_FC_DEC: card.FacilityCode--; break;
+                case TAGSIM_KEY_CN_INC: card.CardNumber++;   break;
+                case TAGSIM_KEY_CN_DEC: card.CardNumber--;   break;
+                case TAGSIM_KEY_ABORT:  running = false;     break;
+                case TAGSIM_KEY_NONE:                        break;
+            }
+
+            // Rebuild CSN deterministically from new FC/CN
+            {
+                uint32_t fc = card.FacilityCode;
+                uint32_t cn = card.CardNumber;
+                csn[0] = (uint8_t)((fc ^ (cn >> 8))  ^ 0xA3);
+                csn[1] = (uint8_t)((fc >> 4) ^ (cn & 0xFF) ^ 0x5C);
+                csn[2] = (uint8_t)((cn >> 16) ^ fc ^ 0x7F);
+                csn[3] = (uint8_t)((cn >> 8) ^ (fc << 3) ^ 0xE9);
+                csn[4] = 0xF7; csn[5] = 0xFF; csn[6] = 0x12; csn[7] = 0xE0;
+            }
+
+            // New diversified KD/KC for the new CSN
+            uint8_t new_kd[8], new_kc[8];
+            if (rawkey) {
+                memcpy(new_kd, kd_master, 8);
+                memcpy(new_kc, kc_master, 8);
+            } else {
+                HFiClassCalcDivKey(csn, kd_master, new_kd, elite);
+                HFiClassCalcDivKey(csn, kc_master, new_kc, elite);
+            }
+
+            // New credential blocks 6-9 for the new FC/CN
+            uint8_t new_cred[32] = {
+                0x03, 0x03, 0x03, 0x03, 0x00, 0x03, 0xE0, 0x17,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            };
+
+            if (format_idx != -1) {
+                wiegand_message_t packed;
+                memset(&packed, 0, sizeof(wiegand_message_t));
+                if (HIDPack(format_idx, &card, &packed, false)) {
+                    packed.Length++;
+                    set_bit_by_position(&packed, true, 0);
+#ifdef HOST_LITTLE_ENDIAN
+                    packed.Mid = BSWAP_32(packed.Mid);
+                    packed.Bot = BSWAP_32(packed.Bot);
+#endif
+                    memcpy(new_cred + 8,  &packed.Mid, sizeof(packed.Mid));
+                    memcpy(new_cred + 12, &packed.Bot, sizeof(packed.Bot));
+                }
+            }
+
+            if (have_enc_key) {
+                if (use_sc) {
+                    Encrypt(new_cred + 8,  new_cred + 8);
+                    Encrypt(new_cred + 16, new_cred + 16);
+                    Encrypt(new_cred + 24, new_cred + 24);
+                } else {
+                    iclass_encrypt_block_data(new_cred + 8,  enc_key);
+                    iclass_encrypt_block_data(new_cred + 16, enc_key);
+                    iclass_encrypt_block_data(new_cred + 24, enc_key);
+                }
+            }
+
+            // Push only the changed blocks to emulator memory, then set reload flag
+            iclass_emul_write_block_silent(0, csn);     // block 0: CSN
+            iclass_emul_write_block_silent(3, new_kd);  // block 3: KD
+            iclass_emul_write_block_silent(4, new_kc);  // block 4: KC
+            for (int b = 0; b < 4; b++) {
+                iclass_emul_write_block_silent(6 + b, new_cred + b * 8);  // blocks 6-9
+            }
+            iclass_emul_set_reload_flag();  // signal ARM to reload on next ACTALL
+
+            PrintAndLogEx(INFO, "FC: " _YELLOW_("%u") "  CN: " _YELLOW_("%u") "  CSN: " _YELLOW_("%s"),
+                          card.FacilityCode, card.CardNumber, sprint_hex(csn, 8));
+        }
+
+        tagsim_rawmode_exit();
+
+        if (!arm_ended) {
+            // Client exited the loop (Enter/Esc) but the ARM is still simulating.
+            // Tell it to stop and consume the resulting CMD_ACK so the ARM is
+            // cleanly back in the main loop before we return.
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            WaitForResponseTimeout(CMD_ACK, &resp, 2000);
+        }
+    }
 
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass esave -h") "` to save the emulator memory to file");
     return PM3_SUCCESS;
