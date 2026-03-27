@@ -6295,10 +6295,12 @@ static int CmdHFiClassLookUp(const char *Cmd) {
         // Search built-in key table (standard + elite) before dictionary
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "Searching built-in key table (standard + elite)...");
+        bool live_found = false;
         uint8_t found_key[8] = {0};
         if (check_known_default(csn, cap_epurse, nr, mac_r, found_key)) {
             PrintAndLogEx(SUCCESS, "Found master key " _GREEN_("%s"), sprint_hex_inrow(found_key, 8));
             add_key(found_key);
+            live_found = true;
         } else {
             PrintAndLogEx(WARNING, "Key not found in built-in table");
         }
@@ -6314,7 +6316,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
         memcpy(live_lookup.mac, mac_r, 4);
 
         // Standard diversification pass
-        {
+        if (!live_found) {
             uint8_t *live_keyBlock = NULL;
             uint32_t live_keycount = 0;
             PrintAndLogEx(INFO, "Searching " _YELLOW_("%s") " (standard)...", std_file);
@@ -6332,6 +6334,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
                 if (live_item != NULL) {
                     PrintAndLogEx(SUCCESS, "Found standard master key " _GREEN_("%s"), sprint_hex_inrow(live_item->key, 8));
                     add_key(live_item->key);
+                    live_found = true;
                 } else {
                     PrintAndLogEx(WARNING, "Key not found in %s", std_file);
                 }
@@ -6343,7 +6346,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
         }
 
         // Elite diversification pass
-        {
+        if (!live_found) {
             uint8_t *live_keyBlock = NULL;
             uint32_t live_keycount = 0;
             PrintAndLogEx(INFO, "Searching " _YELLOW_("%s") " (elite)...", elite_file);
