@@ -21,7 +21,11 @@ Standalone modes run directly on the Proxmark3 device without a connected host c
 See [Developing Standalone Modes](#developing-standalone-modes) for how to build your own.
 > Only one (1) mode can be compiled into the firmware at a time (except via [DANKARMULTI](../../doc/standalone/dankarmulti.md)).
 
-## Individual Mode Documentation
+
+## Individual Mode Documentation 
+>>> NOTE <<<  This documentation below for the individual standalone mode is AI-generated
+As such the information inside may be false or hallucinated.
+
 
 ### LF (Low Frequency — 125 kHz) Standalone Modes
 
