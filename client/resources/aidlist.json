@@ -2677,6 +2677,45 @@
         "Type": "transport"
     },
     {
+        "AID": "A00000074340CEBCFB34134469050200",
+        "Vendor": "Salto Systems",
+        "Country": "",
+        "Name": "Salto JustIN Mobile",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://com.saltoks.keychain.app",
+            "android://nl.moboa.myclay"
+        ]
+    },
+    {
+        "AID": "A00000074375FB98D0EDE9F874A40200",
+        "Vendor": "Salto Systems",
+        "Country": "",
+        "Name": "Salto JustIN Mobile",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://com.saltosystems.android.homelok",
+            "android://com.saltosystems.android.nebula",
+            "android://com.siemens.accessmobile"
+        ]
+    },
+    {
+        "AID": "A000000743CC843413925E20C59B0100",
+        "Vendor": "Salto Systems",
+        "Country": "",
+        "Name": "Salto JustIN Mobile",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://com.saltosystems.justin",
+            "android://eu.sharry.swp.gallagherhub",
+            "android://eu.sharry.swp.sharrypartner",
+            "android://eu.sharry.swp.sharryworkplace"
+        ]
+    },
+    {
         "AID": "A0000000791000",
         "Vendor": "HID Global",
         "Country": "",
