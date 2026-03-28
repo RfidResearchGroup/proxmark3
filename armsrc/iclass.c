@@ -944,6 +944,9 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             goto send;
 
         } else if (cmd == ICLASS_CMD_DETECT) { // 0x0F
+            // if EAS byte in config block,   (normally 0xFF,  but 0x7F)
+            //    MSB = 1  ,  don't answe with CSN
+            //    MSB = 0  == enabled ,  answer with CSN
             // not supported yet, ignore
 //        } else if (cmd == 0x26 && len == 5) {
             // standard ISO15693 INVENTORY command. Ignore.

@@ -4215,7 +4215,13 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                         for (int i = 7; i >= 0; --i) {
                             int bit1 = (data_read_orig[7] >> i) & 1;
                             int bit2 = (data_read[7] >> i) & 1;
-                            PrintAndLogEx(INFO, "%-11s %-10d %-10d", flag_names[i], bit1, bit2);
+
+                            // if bit flipped,  mark it with color
+                            if (bit1 != bit2) {
+                                PrintAndLogEx(SUCCESS, "%-11s %-10d " _GREEN_("%-10d"), flag_names[i], bit1, bit2);
+                            } else {
+                                PrintAndLogEx(INFO, "%-11s %-10d %-10d", flag_names[i], bit1, bit2);
+                            }
                         }
 
                         isok = PM3_SUCCESS;
