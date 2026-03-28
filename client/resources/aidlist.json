@@ -2748,6 +2748,30 @@
         "Type": "access"
     },
     {
+        "AID": "F053555052454D410000000000000002",
+        "Vendor": "Suprema",
+        "Country": "",
+        "Name": "Suprema Mobile Credential",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://eu.sharry.swp.gallagherhub",
+            "android://eu.sharry.swp.sharrypartner",
+            "android://eu.sharry.swp.sharryworkplace"
+        ]
+    },
+    {
+        "AID": "F053555052454D41AF02000000000001",
+        "Vendor": "Suprema",
+        "Country": "",
+        "Name": "Suprema Mobile Credential",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://com.supremainc.supremapass"
+        ]
+    },
+    {
         "AID": "FF55494420414343455353",
         "Vendor": "UniFi",
         "Country": "",
