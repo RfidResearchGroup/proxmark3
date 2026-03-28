@@ -2318,6 +2318,24 @@
         "Type": "access"
     },
     {
+        "AID": "A0000008400000000000000000001234",
+        "Vendor": "Allegion",
+        "Country": "",
+        "Name": "Schlage Mobile Access",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://com.allegion.schlagemobileaccess",
+            "android://com.brivo.onair",
+            "android://com.cohesion.core",
+            "android://com.kastle.KMF.Portable",
+            "android://com.kastle.kastlePresence",
+            "android://com.lane.lane",
+            "android://com.openpath.admin",
+            "android://com.openpath.mobile"
+        ]
+    },
+    {
         "AID": "A0000008580102",
         "Vendor": "Apple",
         "Country": "",
