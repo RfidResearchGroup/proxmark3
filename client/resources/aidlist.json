@@ -2777,7 +2777,10 @@
         "Country": "",
         "Name": "UniFi Access HCE Credential",
         "Description": "Declared as 'other' service",
-        "Type": "access"
+        "Type": "access",
+        "Sources": [
+            "android://com.ui.uid.standard"
+        ]
     },
     {
         "AID": "FF55494420414343455356",
@@ -2785,6 +2788,9 @@
         "Country": "",
         "Name": "UniFi Access HCE Credential",
         "Description": "Declared as 'payment' service",
-        "Type": "access"
+        "Type": "access",
+        "Sources": [
+            "android://com.ui.uid.standard"
+        ]
     }
 ]
