@@ -1600,6 +1600,17 @@
         "Type": "YKNEO"
     },
     {
+        "AID": "A0000005500011",
+        "Vendor": "Octopus Cards Limited",
+        "Country": "Hong Kong",
+        "Name": "Virtual Octopus for Android",
+        "Description": "Uses ISO7816-based protocol instead of FeliCa",
+        "Type": "transport",
+        "Sources": [
+            "android://com.octopuscards.nfc_reader"
+        ]
+    },
+    {
         "AID": "A0000005591010FFFFFFFF8900000100",
         "Vendor": "GSMA (GSM Association)",
         "Country": "United Kingdom",
