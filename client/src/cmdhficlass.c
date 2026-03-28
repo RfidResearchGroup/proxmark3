@@ -4334,6 +4334,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
         arg_int0("i", NULL, "<dec>", "tearoff delay increment (in us) - default 10"),
         arg_int0("e", NULL, "<dec>", "tearoff delay end (in us) must be a higher value than the start delay"),
         arg_str0("o", "otp", "<hex>", "Custom OTP value as 2 hex bytes"),
+        arg_lit0(NULL, "dns", "Do not stabilize the bits, and return the raw dump of the block after tearoff"),
         arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
@@ -4360,9 +4361,11 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     uint8_t otp[2] = {0};
     CLIGetHexWithReturn(ctx, 7, otp, &otp_len);
 
-    bool rawkey = arg_get_lit(ctx, 8);
-    bool verbose = arg_get_lit(ctx, 9);
-    bool shallow_mod = arg_get_lit(ctx, 10);
+    bool do_not_stabilize = arg_get_lit(ctx, 8);
+    bool rawkey = arg_get_lit(ctx, 9);
+    bool verbose = arg_get_lit(ctx, 10);
+    bool shallow_mod = arg_get_lit(ctx, 11);
+
     CLIParserFree(ctx);
 
     bool elite = false;
@@ -4811,7 +4814,12 @@ out:
             data[7] = TEAR_NON_SECURE_MODE;
 
             // set non-secure memory with 0xAC,  in this state it will always succeed
-            iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
+            if(do_not_stabilize) {
+                PrintAndLogEx(INFO, "Not stabilizing the bits...");
+            } else {
+                PrintAndLogEx(INFO, "Stabilizing the bits...");
+                iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
+            }
 
             iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
     } else if (TEAR_BAD(b7)) {
