@@ -424,16 +424,26 @@ static const char *getProductTypeStr(const uint8_t *versionhw) {
 
     uint8_t product = versionhw[1];
 
-    if (product == 0x01)
+    if (product == 0x01) {
         return "MIFARE DESFire native IC (physical card)";
-    if (product == 0x08)
+    }
+
+    if (product == 0x08) {
         return "MIFARE DESFire Light native IC (physical card)";
-    if (product == 0x81 || product == 0x83)
+    }
+
+    if (product == 0x81 || product == 0x83) {
         return "MIFARE DESFire implementation on microcontroller (physical card)";
-    if (product == 0x91)
+    }
+
+    if (product == 0x91) {
         return "MIFARE DESFire applet on Java card / secure element";
-    if (product == 0xA1)
+    }
+
+    if (product == 0xA1) {
         return "MIFARE DESFire HCE (MIFARE 2GO)";
+    }
+
     return "UNKNOWN PROD";
 }
 
