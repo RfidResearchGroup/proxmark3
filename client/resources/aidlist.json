@@ -2809,6 +2809,19 @@
         ]
     },
     {
+        "AID": "F000F52310",
+        "Vendor": "ICT",
+        "Country": "",
+        "Name": "Protege Mobile Credential",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://co.ict.protegemobile",
+            "android://com.ict.ProtegeMobile",
+            "android://io.blinetech.blineandroid"
+        ]
+    },
+    {
         "AID": "F053555052454D410000000000000002",
         "Vendor": "Suprema",
         "Country": "",
