@@ -1715,6 +1715,23 @@
         "Type": "EMV"
     },
     {
+        "AID": "A0000007690100",
+        "Vendor": "Gallagher Security",
+        "Country": "",
+        "Name": "Gallagher Mobile Connect",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://com.afiaa",
+            "android://com.equiem.equiemandroid",
+            "android://com.gallagher.security.commandcentrecardholderapp",
+            "android://com.lane.lane",
+            "android://eu.sharry.swp.gallagherhub",
+            "android://eu.sharry.swp.sharrypartner",
+            "android://eu.sharry.swp.sharryworkplace"
+        ]
+    },
+    {
         "AID": "A0000007705850",
         "Vendor": "Indian Oil Corporation Limited",
         "Country": "India",
@@ -2307,7 +2324,11 @@
         "Country": "",
         "Name": "Digital Car Key Framework",
         "Description": "Used during key provisioning and configuration",
-        "Type": ""
+        "Type": "",
+        "Sources": [
+            "android://com.google.android.gms",
+            "android://com.samsung.android.dkey"
+        ]
     },
     {
         "AID": "A000000809434343444B417631",
@@ -2381,7 +2402,11 @@
         "Country": "",
         "Name": "Aliro Expedited",
         "Description": "Acts as the primary credential holder applet",
-        "Type": "access"
+        "Type": "access",
+        "Sources": [
+            "android://com.google.android.gms",
+            "android://com.samsung.android.dkey"
+        ]
     },
     {
         "AID": "A000000396564341",
@@ -2544,6 +2569,10 @@
         "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
         "Type": "access",
         "Sources": [
+            "android://app.smartspaces.*",
+            "android://co.any2any.badge.app.stage",
+            "android://com.afiaa",
+            "android://com.alertenterprise.android.wallet",
             "android://com.assaabloy.hospitality.mobileaccess.studentliving",
             "android://com.assaabloy.stg.msf.config.android",
             "android://com.brivo.pass",
@@ -2777,6 +2806,34 @@
         "Type": "access"
     },
     {
+        "AID": "F0006B7369000001",
+        "Vendor": "Kastle Systems",
+        "Country": "",
+        "Name": "Kastle Presence",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://com.cohesion.core",
+            "android://com.hqo",
+            "android://com.kastle.KMF.Portable",
+            "android://com.kastle.kastlePresence",
+            "android://com.lane.lane"
+        ]
+    },
+    {
+        "AID": "F000F52310",
+        "Vendor": "ICT",
+        "Country": "",
+        "Name": "Protege Mobile Credential",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://co.ict.protegemobile",
+            "android://com.ict.ProtegeMobile",
+            "android://io.blinetech.blineandroid"
+        ]
+    },
+    {
         "AID": "F053555052454D410000000000000002",
         "Vendor": "Suprema",
         "Country": "",
@@ -2808,7 +2865,8 @@
         "Description": "Declared as 'other' service",
         "Type": "access",
         "Sources": [
-            "android://com.ui.uid.standard"
+            "android://com.ui.uid.standard",
+            "android://com.ui.uid.client"
         ]
     },
     {
@@ -2819,7 +2877,8 @@
         "Description": "Declared as 'payment' service",
         "Type": "access",
         "Sources": [
-            "android://com.ui.uid.standard"
+            "android://com.ui.uid.standard",
+            "android://com.ui.uid.client"
         ]
     }
 ]
