@@ -97,7 +97,7 @@ uint16_t mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *
     }
 
     AddCrc14A(dcmd, data_size + 1);
-    ReaderTransmit(dcmd, sizeof(dcmd), timing);
+    ReaderTransmit(dcmd, data_size + 3, timing);
     if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
         return 0;
     }
@@ -119,14 +119,14 @@ uint16_t mifare_sendcmd_schann(uint8_t *data, uint8_t data_size, uint8_t *answer
     }
 
     uint8_t dcmd[16 + 2];
-    memset(dcmd, 0, sizeof(dcmd));
+    memset(dcmd, 0, data_size + 2);
 
     if (data_size > 0) {
         memcpy(dcmd, data, data_size);
     }
 
     AddCrc14A(dcmd, data_size);
-    ReaderTransmit(dcmd, sizeof(dcmd), timing);
+    ReaderTransmit(dcmd, data_size + 2, timing);
 
     if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
         return 0;
