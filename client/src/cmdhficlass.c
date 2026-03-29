@@ -279,8 +279,8 @@ static uint8_t card_app2_limit[] = {
     0xff,
 };
 
-static iclass_config_card_item_t iclass_config_options[33] =  {
-    //Byte A8 - LED Operations
+static iclass_config_card_item_t iclass_config_options[] =  {
+    // Byte A8 - LED Operations
     {"(LED) - Led idle (Off) / Led read (Off)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
     {"(LED) - Led idle (Red) / Led read (Off)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
     {"(LED) - Led idle (Grn) / Led read (Off)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0x2F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
@@ -297,43 +297,44 @@ static iclass_config_card_item_t iclass_config_options[33] =  {
     {"(LED) - Led idle (Red) / Led read (Amber)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0xDF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
     {"(LED) - Led idle (Grn) / Led read (Amber)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0xEF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
     {"(LED) - Led idle (Amber) / Led read (Amber)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
-    //Byte A9 - Potentially associated with led blinking / led heartbeat operations?
-    //Byte A6 - Potentially associated with beep pitch?
-    //Byte A7 - BEEP Operations
+    // Byte A9 - Potentially associated with led blinking / led heartbeat operations?
+    // Byte A6 - Potentially associated with beep pitch?
+    // Byte A7 - BEEP Operations
     {"(BEEP) - Beep on Read (On)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA7, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
     {"(BEEP) - Beep on Read (Off)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA7, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
-    //Byte AC - MIFARE CSN Operations
+    // Byte AC - MIFARE CSN Operations
     {"(MIFARE) - CSN Default Output", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAC, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
     {"(MIFARE) - CSN 32 bit Reverse Output", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAC, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
     {"(MIFARE) - CSN 16 bit Output", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAC, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
     {"(MIFARE) - CSN 34 bit Output", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAC, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
-    //Bytes AD, AE, AF, B3 - Keypad Operations + not fully mapped
+    // Bytes AD, AE, AF, B3 - Keypad Operations + not fully mapped
     {"(KEYPAD Output) - Buffer ONE key (8 bit Dorado)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAE, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
     {"(KEYPAD Output) - Buffer ONE to FIVE keys (standard 26 bit)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAE, 0x0B, 0xAF, 0xFF, 0xAD, 0x15, 0xB3, 0x03}},
     {"(KEYPAD Output) - Local PIN verify", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAD, 0x6D, 0xB3, 0x03, 0x00, 0x00, 0x00, 0x00}},
-    //iClass Elite Key Operations
+    // iClass Elite Key Operations
     {"(ELITE Key) - Set ELITE Key and Enable Dual key (Elite + Standard)", {0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0xBF, 0x18, 0xBF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
     {"(ELITE Key) - Set ELITE Key and ENABLE Keyrolling", {0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0xBF, 0x18, 0xBF, 0x03, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
     {"(ELITE Key) - Set ELITE Key and DISABLE Standard Key", {0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0xBF, 0x18, 0xBF, 0x05, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
-    //Erroneous / incorrect reader behaviors (read below)
-    //Elite Bugger:
-    //Sets block 3 of card 0 presented to the reader to 0, sets block 3 of card 1 presented to the reader to the original value of card 0's block 3
-    //Continues setting block 3 of presented cards to block 3 of the previous card the reader scanned
-    //This renders cards unreadable and hardly recoverable unless the order of the scanned cards is known.
+    // Erroneous / incorrect reader behaviors (read below)
+    // Elite Bugger:
+    // Sets block 3 of card 0 presented to the reader to 0, sets block 3 of card 1 presented to the reader to the original value of card 0's block 3
+    // Continues setting block 3 of presented cards to block 3 of the previous card the reader scanned
+    // This renders cards unreadable and hardly recoverable unless the order of the scanned cards is known.
     {"(ELITE Bugger) - Renders cards unusable.", {0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0xBF, 0x18, 0xBF, 0x02, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
-    //Reset Operations
+    // Reset Operations
     {"(RESET) - Reset READER to defaults", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
     {"(RESET) - Reset ENROLLER to defaults", {0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1C, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF}},
-    //Reader Master Key Operations
+    // Reader Master Key Operations
     {"(MASTER Key) - Change Reader Master Key to Custom Key", {0x28, 0xCB, 0x91, 0x9D, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
-    {"(MASTER Key) - Restore Reader Master Key to Factory Defaults", {0x28, 0xCB, 0x91, 0x9D, 0x00, 0x00, 0x00, 0x1C, 0xE0, 0x5C, 0x91, 0xCF, 0x63, 0x34, 0x23, 0xB9}}
+    {"(MASTER Key) - Restore Reader Master Key to Factory Defaults", {0x28, 0xCB, 0x91, 0x9D, 0x00, 0x00, 0x00, 0x1C, 0xE0, 0x5C, 0x91, 0xCF, 0x63, 0x34, 0x23, 0xB9}},
+    {"", {0}}, // must be the last item
 };
 
 static const iclass_config_card_item_t *get_config_card_item(int idx) {
     if (idx > -1 && idx < ARRAYLEN(iclass_config_options)) {
         return &iclass_config_options[idx];
     }
-    return &iclass_config_options[ARRAYLEN(iclass_config_options)];
+    return &iclass_config_options[ARRAYLEN(iclass_config_options) - 1];
 }
 
 static void print_config_cards(void) {
@@ -4215,7 +4216,13 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                         for (int i = 7; i >= 0; --i) {
                             int bit1 = (data_read_orig[7] >> i) & 1;
                             int bit2 = (data_read[7] >> i) & 1;
-                            PrintAndLogEx(INFO, "%-11s %-10d %-10d", flag_names[i], bit1, bit2);
+
+                            // if bit flipped,  mark it with color
+                            if (bit1 != bit2) {
+                                PrintAndLogEx(SUCCESS, "%-11s %-10d " _GREEN_("%-10d"), flag_names[i], bit1, bit2);
+                            } else {
+                                PrintAndLogEx(INFO, "%-11s %-10d %-10d", flag_names[i], bit1, bit2);
+                            }
                         }
 
                         isok = PM3_SUCCESS;
@@ -4334,6 +4341,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
         arg_int0("i", NULL, "<dec>", "tearoff delay increment (in us) - default 10"),
         arg_int0("e", NULL, "<dec>", "tearoff delay end (in us) must be a higher value than the start delay"),
         arg_str0("o", "otp", "<hex>", "Custom OTP value as 2 hex bytes"),
+        arg_lit0(NULL, "dns", "Do not stabilize the bits, and return the raw dump of the block after tearoff"),
         arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
@@ -4360,9 +4368,11 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     uint8_t otp[2] = {0};
     CLIGetHexWithReturn(ctx, 7, otp, &otp_len);
 
-    bool rawkey = arg_get_lit(ctx, 8);
-    bool verbose = arg_get_lit(ctx, 9);
-    bool shallow_mod = arg_get_lit(ctx, 10);
+    bool do_not_stabilize = arg_get_lit(ctx, 8);
+    bool rawkey = arg_get_lit(ctx, 9);
+    bool verbose = arg_get_lit(ctx, 10);
+    bool shallow_mod = arg_get_lit(ctx, 11);
+
     CLIParserFree(ctx);
 
     bool elite = false;
@@ -4811,7 +4821,12 @@ out:
             data[7] = TEAR_NON_SECURE_MODE;
 
             // set non-secure memory with 0xAC,  in this state it will always succeed
-            iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
+            if(do_not_stabilize) {
+                PrintAndLogEx(INFO, "Not stabilizing the bits...");
+            } else {
+                PrintAndLogEx(INFO, "Stabilizing the bits...");
+                iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
+            }
 
             iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
     } else if (TEAR_BAD(b7)) {
@@ -7054,6 +7069,7 @@ static void generate(uint8_t *data, uint8_t len) {
     uint8_t *pkey = calloc(len, sizeof(uint8_t));
     if (pkey == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(key);
         return;
     }
     
@@ -7456,6 +7472,10 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
 
     if (ccidx > -1 && ccidx < ARRAYLEN(iclass_config_options)) {
         const iclass_config_card_item_t *item = get_config_card_item(ccidx);
+        if (strlen(item->desc) == 0) {
+            PrintAndLogEx(ERR, "out of range, %u (got %u)",  ARRAYLEN(iclass_config_options), ccidx);
+            return PM3_EINVARG;
+        }
         if (strstr(item->desc, "ELITE") != NULL && got_kr == false) {
             PrintAndLogEx(ERR, "please specify ELITE Key (--eki) !");
             return PM3_EINVARG;

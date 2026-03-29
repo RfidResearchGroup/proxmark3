@@ -144,7 +144,7 @@ static int mqtt_receive(const char *addr, const char *port, const char *topic, c
     mqtt_init(&client, sockfd, sendbuf, sizeof(sendbuf), recvbuf, sizeof(recvbuf), mqtt_publish_callback);
 
     char cid[20] = "pm3_";
-    sprintf(cid + strlen(cid), "%02x%02x%02x%02x"
+    snprintf(cid + strlen(cid), sizeof(cid) - 4, "%02x%02x%02x%02x"
             , rand() % 0xFF
             , rand() % 0xFF
             , rand() % 0xFF

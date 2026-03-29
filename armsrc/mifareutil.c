@@ -95,9 +95,13 @@ uint16_t mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *
     if (data_size > 0) {
         memcpy(dcmd + 1, data, data_size);
     }
+    data_size ++;
 
-    AddCrc14A(dcmd, data_size + 1);
-    ReaderTransmit(dcmd, data_size + 3, timing);
+    AddCrc14A(dcmd, data_size);
+
+    data_size += 2;
+
+    ReaderTransmit(dcmd, data_size, timing);
     if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
         return 0;
     }
@@ -212,35 +216,24 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
     }
 
     // Save the tag nonce (nt)
-    uint32_t nt = bytes_to_num(receivedAnswer, 4);
-    if (ntencptr) {
-        *ntencptr = nt;
-    }
-
-    if (ntencparptr) {
-        *ntencparptr = receivedAnswerPar[0];
-    }
-
-    //  ----------------------------- crypto1 create
-    if (isNested) {
-        crypto1_deinit(pcs);
-    }
+    uint32_t nt = bytes_to_num(receivedAnswer, 4),
+             ntenc = nt;
 
     // Init cipher with key
     crypto1_init(pcs, ui64Key);
 
     if (isNested == AUTH_NESTED) {
-        // decrypt nt with help of new key
-        nt = crypto1_word(pcs, nt ^ uid, 1) ^ nt;
+        // decrypt ntenc with help of new key
+        nt = crypto1_word(pcs, ntenc ^ uid, 1) ^ ntenc;
     } else {
         // Load (plain) uid^nt into the cipher
         crypto1_word(pcs, nt ^ uid, 0);
     }
 
     // some statistic
-//    if (!ntptr && (g_dbglevel >= DBG_EXTENDED))
-    uint32_t nr32 = nr[0] << 24 | nr[1] << 16 | nr[2] << 8 | nr[3];
     if (g_dbglevel >= DBG_EXTENDED) {
+        uint32_t nr32 = nr[0] << 24 | nr[1] << 16 | nr[2] << 8 | nr[3];
+
         if (isNested == AUTH_FIRST) {
             Dbprintf("auth        cmd: %02x %02x | uid: %08x | nr: %08x %s| nt: %08x %s %5i| par: %i%i%i%i %s",
                      cmd, blockNo, uid,
@@ -253,9 +246,7 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
                      (receivedAnswerPar[0] >> 4) & 1,
                      validate_parity_nonce(nt, receivedAnswerPar[0], nt) ? "ok " : "bad");
         } else {
-
-            if (ntencptr) {
-                Dbprintf("auth nested cmd: %02x %02x | uid: %08x | nr: %08x %s| nt: %08x %s %5i| par: %i%i%i%i %s| ntenc: %08x %s| parerr: %i%i%i%i",
+            Dbprintf("auth nested cmd: %02x %02x | uid: %08x | nr: %08x %s| nt: %08x %s %5i| par: %i%i%i%i %s| ntenc: %08x %s| parerr: %i%i%i%i",
                      cmd, blockNo, uid,
                      nr32, validate_prng_nonce(nr32) ? "@" : " ",
                      nt, validate_prng_nonce(nt) ? "@idx" : " idx",
@@ -264,19 +255,26 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
                      (receivedAnswerPar[0] >> 6) & 1,
                      (receivedAnswerPar[0] >> 5) & 1,
                      (receivedAnswerPar[0] >> 4) & 1,
-                     validate_parity_nonce(*ntencptr, receivedAnswerPar[0], nt) ? "ok " : "bad",
-                     *ntencptr, validate_prng_nonce(*ntencptr) ? "@" : " ",
-                     ((receivedAnswerPar[0] >> 7) & 1) ^ oddparity8((*ntencptr >> 24) & 0xFF),
-                     ((receivedAnswerPar[0] >> 6) & 1) ^ oddparity8((*ntencptr >> 16) & 0xFF),
-                     ((receivedAnswerPar[0] >> 5) & 1) ^ oddparity8((*ntencptr >> 8) & 0xFF),
-                     ((receivedAnswerPar[0] >> 4) & 1) ^ oddparity8((*ntencptr >> 0) & 0xFF)
-                    );
-            }
+                     validate_parity_nonce(ntenc, receivedAnswerPar[0], nt) ? "ok " : "bad",
+                     ntenc, validate_prng_nonce(ntenc) ? "@" : " ",
+                     ((receivedAnswerPar[0] >> 7) & 1) ^ oddparity8((ntenc >> 24) & 0xFF),
+                     ((receivedAnswerPar[0] >> 6) & 1) ^ oddparity8((ntenc >> 16) & 0xFF),
+                     ((receivedAnswerPar[0] >> 5) & 1) ^ oddparity8((ntenc >> 8) & 0xFF),
+                     ((receivedAnswerPar[0] >> 4) & 1) ^ oddparity8((ntenc >> 0) & 0xFF));
         }
     }
+
     // save Nt
     if (ntptr) {
         *ntptr = nt;
+    }
+    // save encrypted Nt
+    if (ntencptr) {
+        *ntencptr = ntenc;
+    }
+    // save encrypted Nt parity
+    if (ntencparptr) {
+        *ntencparptr = receivedAnswerPar[0];
     }
 
     // Generate (encrypted) nr+parity by loading it into the cipher (Nr)
@@ -380,8 +378,9 @@ int mifare_ul_ev1_auth(uint8_t *keybytes, uint8_t *pack) {
     uint8_t key[4] = {0x00, 0x00, 0x00, 0x00};
     memcpy(key, keybytes, 4);
 
-    if (g_dbglevel >= DBG_EXTENDED)
+    if (g_dbglevel >= DBG_EXTENDED) {
         Dbprintf("EV1 Auth : %02x%02x%02x%02x", key[0], key[1], key[2], key[3]);
+    }
 
     len = mifare_sendcmd(MIFARE_ULEV1_AUTH, key, sizeof(key), resp, sizeof(resp), respPar, NULL);
 

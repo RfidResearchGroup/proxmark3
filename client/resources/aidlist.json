@@ -1600,6 +1600,17 @@
         "Type": "YKNEO"
     },
     {
+        "AID": "A0000005500011",
+        "Vendor": "Octopus Cards Limited",
+        "Country": "Hong Kong",
+        "Name": "Virtual Octopus for Android",
+        "Description": "Uses ISO7816-based protocol instead of FeliCa",
+        "Type": "transport",
+        "Sources": [
+            "android://com.octopuscards.nfc_reader"
+        ]
+    },
+    {
         "AID": "A0000005591010FFFFFFFF8900000100",
         "Vendor": "GSMA (GSM Association)",
         "Country": "United Kingdom",
@@ -1702,6 +1713,23 @@
         "Name": "TROY chip debit card",
         "Description": "Turkey's Payment Method",
         "Type": "EMV"
+    },
+    {
+        "AID": "A0000007690100",
+        "Vendor": "Gallagher Security",
+        "Country": "",
+        "Name": "Gallagher Mobile Connect",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://com.afiaa",
+            "android://com.equiem.equiemandroid",
+            "android://com.gallagher.security.commandcentrecardholderapp",
+            "android://com.lane.lane",
+            "android://eu.sharry.swp.gallagherhub",
+            "android://eu.sharry.swp.sharrypartner",
+            "android://eu.sharry.swp.sharryworkplace"
+        ]
     },
     {
         "AID": "A0000007705850",
@@ -2296,7 +2324,11 @@
         "Country": "",
         "Name": "Digital Car Key Framework",
         "Description": "Used during key provisioning and configuration",
-        "Type": ""
+        "Type": "",
+        "Sources": [
+            "android://com.google.android.gms",
+            "android://com.samsung.android.dkey"
+        ]
     },
     {
         "AID": "A000000809434343444B417631",
@@ -2305,6 +2337,24 @@
         "Name": "Digital Car Key",
         "Description": "",
         "Type": "access"
+    },
+    {
+        "AID": "A0000008400000000000000000001234",
+        "Vendor": "Allegion",
+        "Country": "",
+        "Name": "Schlage Mobile Access",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://com.allegion.schlagemobileaccess",
+            "android://com.brivo.onair",
+            "android://com.cohesion.core",
+            "android://com.kastle.KMF.Portable",
+            "android://com.kastle.kastlePresence",
+            "android://com.lane.lane",
+            "android://com.openpath.admin",
+            "android://com.openpath.mobile"
+        ]
     },
     {
         "AID": "A0000008580102",
@@ -2352,7 +2402,11 @@
         "Country": "",
         "Name": "Aliro Expedited",
         "Description": "Acts as the primary credential holder applet",
-        "Type": "access"
+        "Type": "access",
+        "Sources": [
+            "android://com.google.android.gms",
+            "android://com.samsung.android.dkey"
+        ]
     },
     {
         "AID": "A000000396564341",
@@ -2515,6 +2569,10 @@
         "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
         "Type": "access",
         "Sources": [
+            "android://app.smartspaces.*",
+            "android://co.any2any.badge.app.stage",
+            "android://com.afiaa",
+            "android://com.alertenterprise.android.wallet",
             "android://com.assaabloy.hospitality.mobileaccess.studentliving",
             "android://com.assaabloy.stg.msf.config.android",
             "android://com.brivo.pass",
@@ -2748,12 +2806,68 @@
         "Type": "access"
     },
     {
+        "AID": "F0006B7369000001",
+        "Vendor": "Kastle Systems",
+        "Country": "",
+        "Name": "Kastle Presence",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://com.cohesion.core",
+            "android://com.hqo",
+            "android://com.kastle.KMF.Portable",
+            "android://com.kastle.kastlePresence",
+            "android://com.lane.lane"
+        ]
+    },
+    {
+        "AID": "F000F52310",
+        "Vendor": "ICT",
+        "Country": "",
+        "Name": "Protege Mobile Credential",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://co.ict.protegemobile",
+            "android://com.ict.ProtegeMobile",
+            "android://io.blinetech.blineandroid"
+        ]
+    },
+    {
+        "AID": "F053555052454D410000000000000002",
+        "Vendor": "Suprema",
+        "Country": "",
+        "Name": "Suprema Mobile Credential",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://eu.sharry.swp.gallagherhub",
+            "android://eu.sharry.swp.sharrypartner",
+            "android://eu.sharry.swp.sharryworkplace"
+        ]
+    },
+    {
+        "AID": "F053555052454D41AF02000000000001",
+        "Vendor": "Suprema",
+        "Country": "",
+        "Name": "Suprema Mobile Credential",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://com.supremainc.supremapass"
+        ]
+    },
+    {
         "AID": "FF55494420414343455353",
         "Vendor": "UniFi",
         "Country": "",
         "Name": "UniFi Access HCE Credential",
         "Description": "Declared as 'other' service",
-        "Type": "access"
+        "Type": "access",
+        "Sources": [
+            "android://com.ui.uid.standard",
+            "android://com.ui.uid.client"
+        ]
     },
     {
         "AID": "FF55494420414343455356",
@@ -2761,6 +2875,10 @@
         "Country": "",
         "Name": "UniFi Access HCE Credential",
         "Description": "Declared as 'payment' service",
-        "Type": "access"
+        "Type": "access",
+        "Sources": [
+            "android://com.ui.uid.standard",
+            "android://com.ui.uid.client"
+        ]
     }
 ]

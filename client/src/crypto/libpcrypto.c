@@ -1040,9 +1040,12 @@ exit:
     return res;
 }
 
+
+// iceman:  todo,  remove and use xor in commonutil.c
 void bin_xor(uint8_t *d1, const uint8_t *d2, size_t len) {
-    for (size_t i = 0; i < len; i++)
+    for (size_t i = 0; i < len; i++) {
         d1[i] = d1[i] ^ d2[i];
+    }
 }
 
 void AddISO9797M2Padding(uint8_t *ddata, size_t *ddatalen, uint8_t *sdata, size_t sdatalen, size_t blocklen) {
@@ -1093,7 +1096,13 @@ int ansi_x963_sha256(uint8_t *sharedSecret, size_t sharedSecretLen, uint8_t *sha
     uint32_t counter = 0x00000001;
 
     for (int i = 0; i < (keyDataLen / 32); ++i) {
+
         uint8_t *hashMaterial = calloc(4 + sharedSecretLen + sharedInfoLen, sizeof(uint8_t));
+        if (hashMaterial == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return 2;
+        }
+
         memcpy(hashMaterial, sharedSecret, sharedSecretLen);
         hashMaterial[sharedSecretLen] = (counter >> 24);
         hashMaterial[sharedSecretLen + 1] = (counter >> 16) & 0xFF;
@@ -1103,6 +1112,7 @@ int ansi_x963_sha256(uint8_t *sharedSecret, size_t sharedSecretLen, uint8_t *sha
 
         uint8_t hash[32] = {0};
         sha256hash(hashMaterial, 4 + sharedSecretLen + sharedInfoLen, hash);
+
         free(hashMaterial);
 
         memcpy(keyData + (32 * i), hash, 32);

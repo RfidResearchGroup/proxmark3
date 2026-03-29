@@ -161,9 +161,16 @@ void printarr_human_readable(const char *title, uint8_t *arr, int len) {
         return;
     }
 
-    int cx = 0, i;
+    int cx = 0;
+    int i;
+
     size_t outsize = 100 + strlen(title) + (len * 4);
     char *output = calloc(outsize, sizeof(char));
+    if (output == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return;
+    }
+
     PrintAndLogEx(INFO, "%s", title);
 
     for (i = 0;  i < len; i++) {

@@ -168,32 +168,38 @@ static ssize_t emv_pk_read_string(char *buf, size_t buflen, char *str, size_t si
 }
 
 struct emv_pk *emv_pk_parse_pk(char *buf, size_t buflen) {
+
     struct emv_pk *r = calloc(1, sizeof(*r));
     if (r == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         return NULL;
     }
+
     ssize_t l;
-    char temp[10];
+    char temp[10] = {0};
 
     l = emv_pk_read_bin(buf, buflen, r->rid, 5, NULL);
     if (l <= 0)
         goto out;
+
     buf += l;
 
     l = emv_pk_read_bin(buf, buflen, &r->index, 1, NULL);
     if (l <= 0)
         goto out;
+
     buf += l;
 
     l = emv_pk_read_ymv(buf, buflen, &r->expire);
     if (l <= 0)
         goto out;
+
     buf += l;
 
     l = emv_pk_read_string(buf, buflen, temp, sizeof(temp));
     if (l <= 0)
         goto out;
+
     buf += l;
 
     if (!strcmp(temp, "rsa"))
@@ -204,17 +210,24 @@ struct emv_pk *emv_pk_parse_pk(char *buf, size_t buflen) {
     l = emv_pk_read_bin(buf, buflen, r->exp, sizeof(r->exp), &r->elen);
     if (l <= 0)
         goto out;
+
     buf += l;
 
+    // 256 bytes
     r->modulus = calloc(1, (2048 / 8));
+    if (r->modulus == NULL)
+        goto out;
+
     l = emv_pk_read_bin(buf, buflen, r->modulus, 2048 / 8, &r->mlen);
     if (l <= 0)
         goto out2;
+
     buf += l;
 
     l = emv_pk_read_string(buf, buflen, temp, sizeof(temp));
     if (l <= 0)
         goto out2;
+
     buf += l;
 
     if (!strcmp(temp, "sha1"))

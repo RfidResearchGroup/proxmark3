@@ -1499,26 +1499,36 @@ int CmdTraceList(const char *Cmd) {
 
         const uint64_t *dicKeys = NULL;
         uint32_t dicKeysCount = 0;
-        bool dictionaryLoad = false;
+        bool load_dictionary = false;
 
         if (protocol == PROTO_MIFARE || protocol == PROTO_MFPLUS) {
+
             if (diclen > 0) {
+
                 uint8_t *keyBlock = NULL;
+
                 int res = loadFileDICTIONARY_safe(dictionary, (void **) &keyBlock, 6, &dicKeysCount);
                 if (res != PM3_SUCCESS || dicKeysCount == 0 || keyBlock == NULL) {
                     PrintAndLogEx(FAILED, "An error occurred while loading the dictionary! (we will use the default keys now)");
                 } else {
+
                     dicKeys = calloc(dicKeysCount, sizeof(uint64_t));
-                    for (int i = 0; i < dicKeysCount; i++) {
-                        uint64_t key = bytes_to_num(keyBlock + i * 6, 6);
-                        memcpy((uint8_t *) &dicKeys[i], &key, sizeof(uint64_t));
+                    if (dicKeys == NULL) {
+                        PrintAndLogEx(WARNING, "Failed to allocate memory");
+                    } else {
+                        for (int i = 0; i < dicKeysCount; i++) {
+                            uint64_t key = bytes_to_num(keyBlock + i * 6, 6);
+                            memcpy((uint8_t *) &dicKeys[i], &key, sizeof(uint64_t));
+                        }
+                        load_dictionary = true;
                     }
-                    dictionaryLoad = true;
                 }
+
                 if (keyBlock != NULL) {
                     free(keyBlock);
                 }
             }
+
             if (dicKeys == NULL) {
                 dicKeys = g_mifare_default_keys;
                 dicKeysCount = ARRAYLEN(g_mifare_default_keys);
@@ -1533,17 +1543,24 @@ int CmdTraceList(const char *Cmd) {
 
             // load keys
             uint8_t *keyBlock = NULL;
+
             int res = loadFileDICTIONARY_safe(dictionary, (void **) &keyBlock, HITAG_CRYPTOKEY_SIZE, &dicKeysCount);
             if (res != PM3_SUCCESS || dicKeysCount == 0 || keyBlock == NULL) {
                 PrintAndLogEx(FAILED, "An error occurred while loading the dictionary!");
             } else {
+
                 dicKeys = calloc(dicKeysCount, sizeof(uint64_t));
-                for (int i = 0; i < dicKeysCount; i++) {
-                    uint64_t key = bytes_to_num(keyBlock + i * HITAG_CRYPTOKEY_SIZE, HITAG_CRYPTOKEY_SIZE);
-                    memcpy((uint8_t *) &dicKeys[i], &key, sizeof(uint64_t));
+                if (dicKeys == NULL) {
+                    PrintAndLogEx(WARNING, "Failed to allocate memory");
+                } else {
+                    for (int i = 0; i < dicKeysCount; i++) {
+                        uint64_t key = bytes_to_num(keyBlock + i * HITAG_CRYPTOKEY_SIZE, HITAG_CRYPTOKEY_SIZE);
+                        memcpy((uint8_t *) &dicKeys[i], &key, sizeof(uint64_t));
+                    }
+                    load_dictionary = true;
                 }
-                dictionaryLoad = true;
             }
+
             if (keyBlock != NULL) {
                 free(keyBlock);
             }
@@ -1582,7 +1599,7 @@ int CmdTraceList(const char *Cmd) {
             }
         }
 
-        if (dictionaryLoad)  {
+        if (load_dictionary)  {
             free((void *) dicKeys);
         }
     }

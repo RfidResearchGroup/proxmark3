@@ -49,7 +49,7 @@ typedef enum {
     DUOX,
 } nxp_cardtype_t;
 
-typedef struct {
+typedef struct mfdes_info_res {
     uint8_t isOK;
     uint8_t uid[7];
     uint8_t uidlen;

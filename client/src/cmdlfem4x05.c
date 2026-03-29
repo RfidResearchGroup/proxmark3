@@ -2391,6 +2391,11 @@ int CmdEM4x05Sniff(const char *Cmd) {
 
     smartbuf bits = { 0 };
     bits.ptr = calloc(EM4X05_BITS_BUFSIZE, sizeof(uint8_t));
+    if (bits.ptr == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
     bits.size = EM4X05_BITS_BUFSIZE;
     bits.idx = 0;
     size_t idx = 0;

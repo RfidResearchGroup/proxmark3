@@ -1196,6 +1196,11 @@ int CmdLFfskSim(const char *Cmd) {
     }
 
     lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + size);
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
     payload->fchigh = fchigh;
     payload->fclow =  fclow;
     payload->separator = separator;
@@ -1308,6 +1313,11 @@ int CmdLFaskSim(const char *Cmd) {
     }
 
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + size);
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
     payload->encoding = encoding;
     payload->invert = invert;
     payload->separator = separator;
@@ -1439,6 +1449,11 @@ int CmdLFpskSim(const char *Cmd) {
     }
 
     lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + size);
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
     payload->carrier =  carrier;
     payload->invert = invert;
     payload->clock = clk;

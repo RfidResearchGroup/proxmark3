@@ -763,6 +763,11 @@ static int CmdFdxBClone(const char *Cmd) {
     PrintAndLogEx(INFO, "RFU................. 0");
 
     uint8_t *bs = calloc(128, sizeof(uint8_t));
+    if (bs == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
     if (getFDXBBits(national_code, country_code, is_animal, has_extended, extended, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         free(bs);

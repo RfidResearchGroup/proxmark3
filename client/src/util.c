@@ -1785,9 +1785,18 @@ int byte_strrstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size
 }
 
 void sb_append_char(smartbuf *sb, unsigned char c) {
+
     if (sb->idx >= sb->size) {
+
         sb->size *= 2;
-        sb->ptr = realloc(sb->ptr, sb->size);
+
+        void *tmp = realloc(sb->ptr, sb->size);
+        if (tmp == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return;
+        }
+
+        sb->ptr = tmp;
     }
     sb->ptr[sb->idx] = c;
     sb->idx++;
