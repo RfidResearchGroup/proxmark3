@@ -130,7 +130,8 @@ uint16_t mifare_sendcmd_schann(uint8_t *data, uint8_t data_size, uint8_t *answer
     }
 
     AddCrc14A(dcmd, data_size);
-    ReaderTransmit(dcmd, sizeof(dcmd), timing);
+    data_size += 2;
+    ReaderTransmit(dcmd, data_size, timing);
 
     if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
         return 0;
