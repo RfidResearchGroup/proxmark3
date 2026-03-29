@@ -866,6 +866,10 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
     double variance = compute_variance(in, len);
 
     int *correl_buf = calloc(MAX_GRAPH_TRACE_LEN, sizeof(int));
+    if (correl_buf == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return -1;
+    }
 
     uint8_t peak_cnt = 0;
     size_t peaks[10] = {0};

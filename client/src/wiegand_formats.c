@@ -1487,6 +1487,11 @@ void print_desc_wiegand(cardformat_t *fmt, wiegand_message_t *packed) {
 
     size_t s_len = 128;
     char *s = calloc(s_len, sizeof(uint8_t));
+    if (s == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return;
+    }
+
     snprintf(s, s_len * sizeof(uint8_t), _YELLOW_("%-10s")" %-32s",  fmt->Name, fmt->Description);
 
     if (packed->Top != 0) {

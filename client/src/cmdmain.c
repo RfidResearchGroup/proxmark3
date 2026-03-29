@@ -173,8 +173,15 @@ static int CmdAuto(const char *Cmd) {
     PrintAndLogEx(INFO, "Trying " _YELLOW_("`lf read`") " and save a trace for you");
 
     CmdPlot("");
+
     lf_read(false, 40000);
+
     char *fname = calloc(100, sizeof(uint8_t));
+    if (fname == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
     AppendDate(fname, 100, "-f lf_unknown_%Y-%m-%d_%H:%M");
     CmdSave(fname);
     free(fname);

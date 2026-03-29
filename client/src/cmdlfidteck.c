@@ -273,6 +273,11 @@ static int CmdIdteckSim(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
 
     lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
     payload->carrier = 2;
     payload->invert = 0;
     payload->clock = 32;

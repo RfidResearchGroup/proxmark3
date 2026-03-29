@@ -373,6 +373,10 @@ static int CmdFlashMemLoad(const char *Cmd) {
     uint32_t keycount = 0;
     uint8_t keylen = 0;
     uint8_t *data = calloc(FLASH_MEM_MAX_SIZE_P(spi_flash_pages), sizeof(uint8_t));
+    if (data == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
 
     char spiffsDest[32] = {0};
 
