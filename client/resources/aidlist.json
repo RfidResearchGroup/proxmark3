@@ -1600,6 +1600,17 @@
         "Type": "YKNEO"
     },
     {
+        "AID": "A0000005500011",
+        "Vendor": "Octopus Cards Limited",
+        "Country": "Hong Kong",
+        "Name": "Virtual Octopus for Android",
+        "Description": "Uses ISO7816-based protocol instead of FeliCa",
+        "Type": "transport",
+        "Sources": [
+            "android://com.octopuscards.nfc_reader"
+        ]
+    },
+    {
         "AID": "A0000005591010FFFFFFFF8900000100",
         "Vendor": "GSMA (GSM Association)",
         "Country": "United Kingdom",
@@ -2307,6 +2318,24 @@
         "Type": "access"
     },
     {
+        "AID": "A0000008400000000000000000001234",
+        "Vendor": "Allegion",
+        "Country": "",
+        "Name": "Schlage Mobile Access",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://com.allegion.schlagemobileaccess",
+            "android://com.brivo.onair",
+            "android://com.cohesion.core",
+            "android://com.kastle.KMF.Portable",
+            "android://com.kastle.kastlePresence",
+            "android://com.lane.lane",
+            "android://com.openpath.admin",
+            "android://com.openpath.mobile"
+        ]
+    },
+    {
         "AID": "A0000008580102",
         "Vendor": "Apple",
         "Country": "",
@@ -2748,12 +2777,39 @@
         "Type": "access"
     },
     {
+        "AID": "F053555052454D410000000000000002",
+        "Vendor": "Suprema",
+        "Country": "",
+        "Name": "Suprema Mobile Credential",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://eu.sharry.swp.gallagherhub",
+            "android://eu.sharry.swp.sharrypartner",
+            "android://eu.sharry.swp.sharryworkplace"
+        ]
+    },
+    {
+        "AID": "F053555052454D41AF02000000000001",
+        "Vendor": "Suprema",
+        "Country": "",
+        "Name": "Suprema Mobile Credential",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://com.supremainc.supremapass"
+        ]
+    },
+    {
         "AID": "FF55494420414343455353",
         "Vendor": "UniFi",
         "Country": "",
         "Name": "UniFi Access HCE Credential",
         "Description": "Declared as 'other' service",
-        "Type": "access"
+        "Type": "access",
+        "Sources": [
+            "android://com.ui.uid.standard"
+        ]
     },
     {
         "AID": "FF55494420414343455356",
@@ -2761,6 +2817,9 @@
         "Country": "",
         "Name": "UniFi Access HCE Credential",
         "Description": "Declared as 'payment' service",
-        "Type": "access"
+        "Type": "access",
+        "Sources": [
+            "android://com.ui.uid.standard"
+        ]
     }
 ]
