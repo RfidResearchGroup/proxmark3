@@ -962,9 +962,16 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
 
     // Skip synthesized IV
     for (int i = iv_size * 2; i < CRYPTOGRAM_decrypted_data_length; i++) {
+
         // ADF OID tag
         if (CRYPTOGRAM_decrypted_data[i] == 0x06 && CRYPTOGRAM_decrypted_data[i + 1] <= MAX_OID_LEN) {
+
             adf_length = ((CRYPTOGRAM_decrypted_data[i + 1]));
+            if (adf_length > 64) {
+                PrintAndLogEx(ERR, "adf length too large, have 64, ( got %u )", adf_length);
+                return PM3_ESOFT;
+            }
+
             diversifier_length = CRYPTOGRAM_decrypted_data[i + adf_length + 3];
             if (*diversifier_length_out < diversifier_length) {
                 PrintAndLogEx(ERR, "Diversifier too long");
