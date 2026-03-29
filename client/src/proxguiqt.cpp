@@ -843,6 +843,7 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
 
         char *textA = (char *)calloc(1, length);
         if (textA == NULL) {
+            free(annotation);
             return;
         }
 
