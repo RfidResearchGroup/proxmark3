@@ -2794,6 +2794,21 @@
         "Type": "access"
     },
     {
+        "AID": "F0006B7369000001",
+        "Vendor": "Kastle Systems",
+        "Country": "",
+        "Name": "Kastle Presence",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://com.cohesion.core",
+            "android://com.hqo",
+            "android://com.kastle.KMF.Portable",
+            "android://com.kastle.kastlePresence",
+            "android://com.lane.lane"
+        ]
+    },
+    {
         "AID": "F053555052454D410000000000000002",
         "Vendor": "Suprema",
         "Country": "",
