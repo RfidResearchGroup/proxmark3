@@ -2217,14 +2217,16 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
     }
 
     if (do_update) {
-        if (privacy_len != 0) {
+
+        if (privacy_len) {
             memcpy(keys[key_index].privEncKey, privacy, 16);
             memcpy(keys[key_index].privMacKey, privacy + 16, 16);
-            PrintAndLogEx(SUCCESS, "New value for Privacy Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(privacy, 32));
+            PrintAndLogEx(SUCCESS, "New Privacy Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(privacy, sizeof(privacy)));
         }
-        if (auth_len != 0) {
+
+        if (auth_len) {
             memcpy(keys[key_index].authKey, auth, 16);
-            PrintAndLogEx(SUCCESS, "New value for Auth Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].authKey, 16));
+            PrintAndLogEx(SUCCESS, "New Auth Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].authKey, 16));
         }
         return PM3_SUCCESS;
     }
