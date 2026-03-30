@@ -6,26 +6,11 @@
 AEA684A6DAB23278 # AA1
 7665544332211000 # key1/Kc from PicoPass 2k documentation
 0123456789ABCDEF # SAGEM
-#
-# KeyNo 14 X-reader
 5b7c62c491c11b39 # from loclass demo file.
-# KeyNo 13 X-reader
-FEB475FABF65BE43 
-# KeyNo 12 X-reader
-B58EA6E835FFC090
-# KeyNo 460F1F15 X-reader
-976CE582C3263457
 #
 F0E1D2C3B4A59687 # Kd from PicoPass 2k documentation
 5CBCF1DA45D5FB4F # PicoPass Default Exchange Key
 31ad7ebd2f282168 # From HID multiclassSE reader
-#
-0102030405060708 # default HID 3DES
-5CBCF1DA45D5FB5F # picopass? 
-E0D1629F4DAEF400 # unkn
-69434C694D414944 # iCLiMAID
-#
-E9924C13F4BFA82C # custom key
 #
 # From pastebin: https://pastebin.com/uHqpjiuU
 6EFD46EFCBB3C875
