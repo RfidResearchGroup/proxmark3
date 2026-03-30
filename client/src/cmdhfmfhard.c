@@ -741,16 +741,18 @@ static int add_nonce(uint32_t nonce_enc, uint8_t par_enc) {
         first_byte_Sum += evenparity32((nonce_enc & 0xff000000) | (par_enc & 0x08));
 
     } else if ((p1->nonce_enc & 0x00ff0000) != (nonce_enc & 0x00ff0000)) {      // found distinct 2nd byte. Need to insert.
-        if (p2 == NULL) {                                                       // need to insert at start of list
-            p2 = nonces[first_byte].first = calloc(1, sizeof(noncelistentry_t));
-        } else {
-            p2 = p2->next = calloc(1, sizeof(noncelistentry_t));
-        }
 
-        if (p2 == NULL) {
+        noncelistentry_t *tmp = calloc(1, sizeof(noncelistentry_t));
+        if (tmp == NULL) {
             PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
+        if (p2 == NULL) {
+            nonces[first_byte].first = tmp;  // insert at head
+        } else {
+            p2->next = tmp;                  // insert in middle
+        }
+        p2 = tmp;
 
     } else {
         // we have seen this 2nd byte before. Nothing to add or insert.
@@ -906,9 +908,12 @@ static void update_allbitflips_array(void) {
         for (uint16_t i = 0; i < 256; i++) {
             for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
                 if (nonces[i].all_bitflips_dirty[odd_even]) {
+
                     uint32_t old_count = num_all_bitflips_bitarray[odd_even];
+                    
                     num_all_bitflips_bitarray[odd_even] = count_bitarray_low20_AND(all_bitflips_bitarray[odd_even], nonces[i].states_bitarray[odd_even]);
                     nonces[i].all_bitflips_dirty[odd_even] = false;
+                    
                     if (num_all_bitflips_bitarray[odd_even] != old_count) {
                         all_bitflips_bitarray_dirty[odd_even] = true;
                     }
@@ -970,8 +975,7 @@ static uint64_t estimated_num_states_coarse(uint16_t sum_a0, uint16_t sum_a8) {
                 for (uint8_t r = 0; r < NUM_PART_SUMS; r++) {
                     for (uint8_t s = 0; s < NUM_PART_SUMS; s++) {
                         if (2 * r * (16 - 2 * s) + (16 - 2 * r) * 2 * s == sum_a8) {
-                            num_states += (uint64_t)estimated_num_states_part_sum_coarse(p, r, ODD_STATE)
-                                          * estimated_num_states_part_sum_coarse(q, s, EVEN_STATE);
+                            num_states += (uint64_t)estimated_num_states_part_sum_coarse(p, r, ODD_STATE) * estimated_num_states_part_sum_coarse(q, s, EVEN_STATE);
                         }
                     }
                 }
@@ -983,12 +987,15 @@ static uint64_t estimated_num_states_coarse(uint16_t sum_a0, uint16_t sum_a8) {
 
 static void update_p_K(void) {
     if (hardnested_stage & CHECK_2ND_BYTES) {
+
         uint64_t total_count = 0;
         uint16_t sum_a0 = sums[first_byte_Sum];
+
         for (uint8_t sum_a8_idx = 0; sum_a8_idx < NUM_SUMS; sum_a8_idx++) {
             uint16_t sum_a8 = sums[sum_a8_idx];
             total_count += estimated_num_states_coarse(sum_a0, sum_a8);
         }
+
         for (uint8_t sum_a8_idx = 0; sum_a8_idx < NUM_SUMS; sum_a8_idx++) {
             uint16_t sum_a8 = sums[sum_a8_idx];
             float f = estimated_num_states_coarse(sum_a0, sum_a8);
@@ -1004,17 +1011,19 @@ static void update_p_K(void) {
 
 static void update_sum_bitarrays(odd_even_t odd_even) {
     if (all_bitflips_bitarray_dirty[odd_even]) {
+
         for (uint8_t part_sum = 0; part_sum < NUM_PART_SUMS; part_sum++) {
             bitarray_AND(part_sum_a0_bitarrays[odd_even][part_sum], all_bitflips_bitarray[odd_even]);
             bitarray_AND(part_sum_a8_bitarrays[odd_even][part_sum], all_bitflips_bitarray[odd_even]);
         }
+
         for (uint16_t i = 0; i < 256; i++) {
             nonces[i].num_states_bitarray[odd_even] = count_bitarray_AND(nonces[i].states_bitarray[odd_even], all_bitflips_bitarray[odd_even]);
         }
+
         for (uint8_t part_sum_a0 = 0; part_sum_a0 < NUM_PART_SUMS; part_sum_a0++) {
             for (uint8_t part_sum_a8 = 0; part_sum_a8 < NUM_PART_SUMS; part_sum_a8++) {
-                part_sum_count[odd_even][part_sum_a0][part_sum_a8]
-                += count_bitarray_AND2(part_sum_a0_bitarrays[odd_even][part_sum_a0], part_sum_a8_bitarrays[odd_even][part_sum_a8]);
+                part_sum_count[odd_even][part_sum_a0][part_sum_a8] += count_bitarray_AND2(part_sum_a0_bitarrays[odd_even][part_sum_a0], part_sum_a8_bitarrays[odd_even][part_sum_a8]);
             }
         }
         all_bitflips_bitarray_dirty[odd_even] = false;
