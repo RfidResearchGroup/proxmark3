@@ -32,7 +32,7 @@
 #include "cmdhfemrtd.h"     // eMRTD
 #include "cmdhffelica.h"    // ISO18092 / FeliCa
 #include "cmdhffido.h"      // FIDO authenticators
-#include "cmdhfsecc.h" // HID Config Card
+#include "cmdhfsecc.h"      // iClass SE Config Card
 #include "cmdhffudan.h"     // Fudan cards
 #include "cmdhfgallagher.h" // Gallagher DESFire cards
 #include "cmdhfgst.h"       // Google Smart Tap
