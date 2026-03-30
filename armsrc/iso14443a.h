@@ -154,8 +154,12 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                              uint8_t *selectaid_response, size_t selectaid_response_len,
                              uint8_t *getdata_response, size_t getdata_response_len);
 
+void iso14a_set_atqa_sak_override(uint16_t atqa, uint8_t sak);
+uint8_t iso14a_get_pcb_blocknum(void);
+void iso14a_toggle_pcb_blocknum(void);
 bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
-                           uint8_t *ats, size_t ats_len, tag_response_info_t **responses,
+                           uint8_t *ats, size_t ats_len,
+                           tag_response_info_t **responses,
                            uint32_t *cuid, uint8_t *pages,
                            uint8_t *ulc_key);
 
@@ -201,5 +205,20 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_
 
 extern iso14a_polling_parameters_t WUPA_POLLING_PARAMETERS;
 extern iso14a_polling_parameters_t REQA_POLLING_PARAMETERS;
+
+// Sniffer timing delays (carrier clock cycles), for use by external sniff loops.
+#define DELAY_TAG_AIR2ARM_AS_SNIFFER    (3 + 14 + 8)
+
+// When the PM acts as sniffer and is receiving reader data, it takes
+// 2 ticks delay in analogue RF receiver (for the falling edge of the
+// start bit, which marks the start of the communication)
+// 3 ticks A/D conversion
+// 8 ticks on average until the data is stored in to_arm.
+// + the delays in transferring data - which is the same for
+// sniffing reader and tag data and therefore not relevant
+#define DELAY_READER_AIR2ARM_AS_SNIFFER (2 + 3 + 8)
+
+// Maximum ISO 14443A protocol timeout in field cycles (1/13.56 MHz).
+#define MAX_ISO14A_TIMEOUT 524288 // this timeout is in MS
 
 #endif /* __ISO14443A_H */

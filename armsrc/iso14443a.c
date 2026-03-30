@@ -38,14 +38,16 @@
 #include "mifare.h"  // for iso14a_polling_frame_t structure
 #include "cmac_calc.h"
 
-#define MAX_ISO14A_TIMEOUT 524288
-// this timeout is in MS
 static uint32_t iso14a_timeout;
 
 static uint8_t colpos = 0;
 
 // the block number for the ISO14443-4 PCB
 static uint8_t iso14_pcb_blocknum = 0;
+
+// optional ATQA/SAK overrides for SimulateIso14443aInit (set via iso14a_set_atqa_sak_override)
+static uint16_t s_atqa_override = 0;
+static uint8_t  s_sak_override  = 0;
 
 //
 // ISO14443 timing:
@@ -106,7 +108,7 @@ static uint16_t FpgaSendQueueDelay;
 // 8 ticks on average until the data is stored in to_arm.
 // + the delays in transferring data - which is the same for
 // sniffing reader and tag data and therefore not relevant
-#define DELAY_READER_AIR2ARM_AS_SNIFFER (2 + 3 + 8)
+// Delay defined in iso14443a.h as DELAY_READER_AIR2ARM_AS_SNIFFER
 
 //variables used for timing purposes:
 //these are in ssp_clk cycles:
@@ -1233,8 +1235,22 @@ static void Simulate_read_ulaes_key0(uint8_t *ulaes_key0) {
     reverse_array(ulaes_key0 + 12, 4);
 }
 
+void iso14a_set_atqa_sak_override(uint16_t atqa, uint8_t sak) {
+    s_atqa_override = atqa;
+    s_sak_override  = sak;
+}
+
+uint8_t iso14a_get_pcb_blocknum(void) {
+    return iso14_pcb_blocknum;
+}
+
+void iso14a_toggle_pcb_blocknum(void) {
+    iso14_pcb_blocknum ^= 1;
+}
+
 bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
-                           uint8_t *ats, size_t ats_len, tag_response_info_t **responses,
+                           uint8_t *ats, size_t ats_len,
+                           tag_response_info_t **responses,
                            uint32_t *cuid, uint8_t *pages, uint8_t *ulc_key) {
     uint8_t sak = 0;
     // The first response contains the ATQA (note: bytes are transmitted in reverse order).
@@ -1472,6 +1488,11 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
         }
     }
 
+    // Apply SAK override before it is encoded into rSAKc1/2/3.
+    if (flags & FLAG_SAK_IN_DATA) {
+        sak = s_sak_override;
+    }
+
     // if uid not supplied then get from emulator memory
     if ((memcmp(data, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 10) == 0) || IS_FLAG_UID_IN_EMUL(flags)) {
         if (tagType == 2 || tagType == 7 || tagType == 13 || tagType == 14) {
@@ -1563,6 +1584,12 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
     } else {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("[-] ERROR: UID size not defined");
         return false;
+    }
+
+    // Apply ATQA override after all UID-size bits have been set.
+    if (flags & FLAG_ATQA_IN_DATA) {
+        rATQA[0] = (uint8_t)(s_atqa_override >> 8);
+        rATQA[1] = (uint8_t)(s_atqa_override & 0xFF);
     }
 
     AddCrc14A(rATS, rATS_len - 2);
@@ -1702,9 +1729,9 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
         .modulation_n = 0
     };
 
-    if (SimulateIso14443aInit(tagType, flags, useruid, ats, ats_len
-                              , &responses, &cuid, &pages
-                              , ulc_key) == false) {
+    if (SimulateIso14443aInit(tagType, flags, useruid, ats, ats_len,
+                              &responses, &cuid, &pages,
+                              ulc_key) == false) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
         return;
@@ -2417,8 +2444,8 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             }
             if (dynamic_response_info.response_n > 0) {
 
-                // Copy the CID from the reader query
-                if (tagType != 10)
+                // Copy the CID from the reader query (only when CID bit is set in PCB).
+                if (tagType != 10 && (receivedCmd[0] & 0x08))
                     dynamic_response_info.response[1] = receivedCmd[1];
 
                 // Add CRC bytes, always used in ISO 14443A-4 compliant cards

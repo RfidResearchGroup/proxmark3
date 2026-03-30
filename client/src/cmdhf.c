@@ -32,6 +32,7 @@
 #include "cmdhfemrtd.h"     // eMRTD
 #include "cmdhffelica.h"    // ISO18092 / FeliCa
 #include "cmdhffido.h"      // FIDO authenticators
+#include "cmdhfsecc.h" // HID Config Card
 #include "cmdhffudan.h"     // Fudan cards
 #include "cmdhfgallagher.h" // Gallagher DESFire cards
 #include "cmdhfgst.h"       // Google Smart Tap
@@ -588,6 +589,7 @@ static command_t CommandTable[] = {
     {"fudan",       CmdHFFudan,       AlwaysAvailable, "{ Fudan RFIDs...                      }"},
     {"gallagher",   CmdHFGallagher,   AlwaysAvailable, "{ Gallagher DESFire RFIDs...          }"},
     {"gst",         CmdHFGST,         AlwaysAvailable, "{ Google Smart Tap passes...          }"},
+    {"secc",        CmdHFHIDConfig,   AlwaysAvailable, "{ iClass SE Config Card Emulator...                  }"},
     {"iclass",      CmdHFiClass,      AlwaysAvailable, "{ ICLASS RFIDs...                     }"},
     {"ict",         CmdHFICT,         AlwaysAvailable, "{ ICT MFC/DESfire RFIDs...            }"},
     {"jooki",       CmdHF_Jooki,      AlwaysAvailable, "{ Jooki RFIDs...                      }"},

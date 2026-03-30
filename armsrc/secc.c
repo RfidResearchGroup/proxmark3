@@ -28,7 +28,7 @@
 #include "fpgaloader.h"        // FpgaWriteConfWord, FpgaSetupSscDma
 #include "desfire_crypto.h"    // tdes_nxp_send
 #include "mbedtls/des.h"       // mbedtls_des_*, mbedtls_des3_*
-#include "iso14443a.h"         // ReaderTransmit, ReaderReceive, iso14a_get/set_timeout, iso14_pcb_blocknum, MAX_ISO14A_TIMEOUT
+#include "iso14443a.h"         // ReaderTransmit, ReaderReceive, iso14a_get/set_timeout, iso14a_get/toggle_pcb_blocknum, MAX_ISO14A_TIMEOUT
 #include "appmain.h"           // tearoff_hook, send_wtx
 #include "util.h"              // data_available, BUTTON_PRESS
 #include "cmd.h"               // reply_ng
@@ -251,12 +251,12 @@ int hid_config_card_iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chainin
         real_cmd[0] = 0x0A; // I-block, CID present (bit 3), block number in bit 0
         if (send_chaining)
             real_cmd[0] |= 0x10;
-        real_cmd[0] |= iso14_pcb_blocknum;
+        real_cmd[0] |= iso14a_get_pcb_blocknum();
         real_cmd[1] = 0x00; // CID = 0 (as negotiated in RATS)
         memcpy(real_cmd + 2, cmd, cmd_len);
     } else {
         real_cmd[0] = 0xAA; // R-block ACK + CID present
-        real_cmd[0] |= iso14_pcb_blocknum;
+        real_cmd[0] |= iso14a_get_pcb_blocknum();
         real_cmd[1] = 0x00; // CID = 0
     }
     AddCrc14A(real_cmd, cmd_len + 2); // PCB + CID + APDU
@@ -297,8 +297,8 @@ int hid_config_card_iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chainin
     // Toggle block number on valid I-block or R(ACK)
     if (len >= 3
             && ((data_bytes[0] & 0xC0) == 0 || (data_bytes[0] & 0xD0) == 0x80)
-            && (data_bytes[0] & 0x01) == iso14_pcb_blocknum) {
-        iso14_pcb_blocknum ^= 1;
+            && (data_bytes[0] & 0x01) == iso14a_get_pcb_blocknum()) {
+        iso14a_toggle_pcb_blocknum();
     }
 
     if (res)
@@ -355,9 +355,8 @@ void SimulateHIDConfigCard(const hid_sim_payload_t *payload) {
     uint8_t  uid[10];
     memcpy(uid, payload->uid, sizeof(uid));
 
-    // ATQA override: stored big-endian in payload, SimulateIso14443aInit takes uint16
     uint16_t atqa_val = ((uint16_t)payload->atqa[0] << 8) | payload->atqa[1];
-    uint8_t  sak_val  = payload->sak;
+    iso14a_set_atqa_sak_override(atqa_val, payload->sak);
 
     tag_response_info_t *responses;
     uint32_t cuid;
@@ -365,7 +364,6 @@ void SimulateHIDConfigCard(const hid_sim_payload_t *payload) {
 
     if (SimulateIso14443aInit(4, flags, uid,
                               (uint8_t *)payload->ats, payload->ats_len,
-                              atqa_val, sak_val,
                               &responses, &cuid, &pages, NULL) == false) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_HIDCONFIG_SIM, PM3_EINIT, NULL, 0);
