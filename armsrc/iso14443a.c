@@ -28,7 +28,6 @@
 #include "ticks.h"
 #include "dbprint.h"
 #include "util.h"
-#include "util.h"
 #include "parity.h"
 #include "mifareutil.h"
 #include "commonutil.h"
