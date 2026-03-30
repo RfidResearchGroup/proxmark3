@@ -1489,8 +1489,8 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
     }
 
     // Apply SAK override before it is encoded into rSAKc1/2/3.
-    if (flags & FLAG_SAK_IN_DATA) {
-        sak = s_sak_override;
+    if ( (flags & FLAG_SAK_IN_DATA) == FLAG_SAK_IN_DATA) {
+        sak = sak_override;
     }
 
     // if uid not supplied then get from emulator memory
