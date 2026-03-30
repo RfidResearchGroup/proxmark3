@@ -2250,6 +2250,7 @@
         "Name": "Apple VAS (OSE.VAS.01)",
         "Description": "Apple VAS",
         "Type": "loyalty",
+        "Protocol": "apple_vas",
         "ResponseRegex": ".*50084170706c65506179.*9000$"
     },
     {
@@ -2259,6 +2260,7 @@
         "Name": "Google Smart Tap (OSE.VAS.01)",
         "Description": "Google Smart Tap",
         "Type": "loyalty",
+        "Protocol": "google_smart_tap",
         "ResponseRegex": ".*500a416e64726f6964506179.*9000$"
     },
     {
@@ -2268,6 +2270,7 @@
         "Name": "Samsung VAS (OSE.VAS.01)",
         "Description": "Samsung VAS",
         "Type": "loyalty",
+        "Protocol": "samsung_vas",
         "ResponseRegex": ".*500d53616d73756e6757616c6c6574.*9000$"
     },
     {
@@ -2276,7 +2279,8 @@
         "Country": "",
         "Name": "Google SmartTap 1.3 (Deprecated)",
         "Description": "",
-        "Type": "loyalty"
+        "Type": "loyalty",
+        "Protocol": "google_smart_tap"
     },
     {
         "AID": "A000000476D0000111",
@@ -2284,7 +2288,8 @@
         "Country": "",
         "Name": "Google SmartTap 2.0",
         "Description": "",
-        "Type": "loyalty"
+        "Type": "loyalty",
+        "Protocol": "google_smart_tap"
     },
     {
         "AID": "A000000870FC000000000034",
@@ -2292,7 +2297,8 @@
         "Country": "",
         "Name": "Samsung VAS",
         "Description": "",
-        "Type": "loyalty"
+        "Type": "loyalty",
+        "Protocol": "samsung_vas"
     },
     {
         "AID": "A0000002480400",
@@ -2325,6 +2331,7 @@
         "Name": "Digital Car Key Framework",
         "Description": "Used during key provisioning and configuration",
         "Type": "",
+        "Protocol": "ccc_digital_car_key",
         "Sources": [
             "android://com.google.android.gms",
             "android://com.samsung.android.dkey"
@@ -2336,7 +2343,8 @@
         "Country": "",
         "Name": "Digital Car Key",
         "Description": "",
-        "Type": "access"
+        "Type": "access",
+        "Protocol": "ccc_digital_car_key"
     },
     {
         "AID": "A0000008400000000000000000001234",
@@ -2345,6 +2353,7 @@
         "Name": "Schlage Mobile Access",
         "Description": "",
         "Type": "access",
+        "Protocol": "schlage_mobile_access",
         "Sources": [
             "android://com.allegion.schlagemobileaccess",
             "android://com.brivo.onair",
@@ -2362,7 +2371,8 @@
         "Country": "",
         "Name": "Apple Home Key Step Up",
         "Description": "Used for reading the attestation certificate",
-        "Type": ""
+        "Type": "",
+        "Protocol": "apple_home_key"
     },
     {
         "AID": "A0000008580101",
@@ -2370,7 +2380,8 @@
         "Country": "",
         "Name": "Apple Home Key",
         "Description": "NFC Home Key for select HomeKit-compatible locks based on Apple UnifiedAccess protocol",
-        "Type": "access"
+        "Type": "access",
+        "Protocol": "apple_home_key"
     },
     {
         "AID": "A0000008580202",
@@ -2378,7 +2389,8 @@
         "Country": "",
         "Name": "Apple Access Key Step Up",
         "Description": "Used for reading the attestation certificate",
-        "Type": ""
+        "Type": "",
+        "Protocol": "apple_access_key"
     },
     {
         "AID": "A0000008580201",
@@ -2386,7 +2398,8 @@
         "Country": "",
         "Name": "Apple Access Key",
         "Description": "NFC Access Key for commercial properties based on Apple UnifiedAccess protocol",
-        "Type": "access"
+        "Type": "access",
+        "Protocol": "apple_access_key"
     },
     {
         "AID": "A000000909ACCE5502",
@@ -2394,7 +2407,8 @@
         "Country": "",
         "Name": "Aliro Step Up",
         "Description": "Used to retrieve 'access documents' in case a reader needs to verify the validity of a credential",
-        "Type": ""
+        "Type": "",
+        "Protocol": "csa_aliro"
     },
     {
         "AID": "A000000909ACCE5501",
@@ -2403,6 +2417,7 @@
         "Name": "Aliro Expedited",
         "Description": "Acts as the primary credential holder applet",
         "Type": "access",
+        "Protocol": "csa_aliro",
         "Sources": [
             "android://com.google.android.gms",
             "android://com.samsung.android.dkey"
@@ -2526,7 +2541,8 @@
         "Country": "",
         "Name": "SEOS",
         "Description": "Used by both by physical cards and mobile implementations",
-        "Type": "access"
+        "Type": "access",
+        "Protocol": "hid_seos"
     },
     {
         "AID": "A0000004400001010001000002",
@@ -2535,6 +2551,7 @@
         "Name": "SEOS Mobile",
         "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
         "Type": "access",
+        "Protocol": "hid_seos",
         "Sources": [
             "android://com.lane.lane"
         ]
@@ -2546,6 +2563,7 @@
         "Name": "SEOS Mobile",
         "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
         "Type": "access",
+        "Protocol": "hid_seos",
         "Sources": [
             "android://com.assaabloy.stg.msf.config.android"
         ]
@@ -2557,6 +2575,7 @@
         "Name": "SEOS Mobile",
         "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
         "Type": "access",
+        "Protocol": "hid_seos",
         "Sources": [
             "android://com.assaabloy.stg.msf.config.android"
         ]
@@ -2568,6 +2587,7 @@
         "Name": "SEOS Mobile",
         "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
         "Type": "access",
+        "Protocol": "hid_seos",
         "Sources": [
             "android://app.smartspaces.*",
             "android://co.any2any.badge.app.stage",
@@ -2741,6 +2761,7 @@
         "Name": "Salto JustIN Mobile",
         "Description": "",
         "Type": "access",
+        "Protocol": "salto_justin_mobile",
         "Sources": [
             "android://com.saltoks.keychain.app",
             "android://nl.moboa.myclay"
@@ -2753,6 +2774,7 @@
         "Name": "Salto JustIN Mobile",
         "Description": "",
         "Type": "access",
+        "Protocol": "salto_justin_mobile",
         "Sources": [
             "android://com.saltosystems.android.homelok",
             "android://com.saltosystems.android.nebula",
@@ -2766,6 +2788,7 @@
         "Name": "Salto JustIN Mobile",
         "Description": "",
         "Type": "access",
+        "Protocol": "salto_justin_mobile",
         "Sources": [
             "android://com.saltosystems.justin",
             "android://eu.sharry.swp.gallagherhub",
@@ -2812,6 +2835,7 @@
         "Name": "Kastle Presence",
         "Description": "",
         "Type": "access",
+        "Protocol": "kastle_presence",
         "Sources": [
             "android://com.cohesion.core",
             "android://com.hqo",
@@ -2827,6 +2851,7 @@
         "Name": "Protege Mobile Credential",
         "Description": "",
         "Type": "access",
+        "Protocol": "ict_protege_mobile",
         "Sources": [
             "android://co.ict.protegemobile",
             "android://com.ict.ProtegeMobile",
@@ -2840,6 +2865,7 @@
         "Name": "Suprema Mobile Credential",
         "Description": "",
         "Type": "access",
+        "Protocol": "suprema_mobile",
         "Sources": [
             "android://eu.sharry.swp.gallagherhub",
             "android://eu.sharry.swp.sharrypartner",
@@ -2853,6 +2879,7 @@
         "Name": "Suprema Mobile Credential",
         "Description": "",
         "Type": "access",
+        "Protocol": "suprema_mobile",
         "Sources": [
             "android://com.supremainc.supremapass"
         ]
@@ -2864,6 +2891,7 @@
         "Name": "UniFi Access HCE Credential",
         "Description": "Declared as 'other' service",
         "Type": "access",
+        "Protocol": "unifi_identity",
         "Sources": [
             "android://com.ui.uid.standard",
             "android://com.ui.uid.client"
@@ -2876,6 +2904,7 @@
         "Name": "UniFi Access HCE Credential",
         "Description": "Declared as 'payment' service",
         "Type": "access",
+        "Protocol": "unifi_identity",
         "Sources": [
             "android://com.ui.uid.standard",
             "android://com.ui.uid.client"
