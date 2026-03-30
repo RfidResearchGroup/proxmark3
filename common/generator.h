@@ -82,6 +82,9 @@ int mfc_algo_snapmaker_all(uint8_t *uid, uint8_t *keys);
 int mfc_algo_vanderbilt_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
 int mfc_algo_vanderbilt_all(uint8_t *uid, uint8_t *keys);
 
+int mfc_algo_kale_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
+int mfc_algo_kale_all(uint8_t *uid, uint8_t *keys);
+
 uint32_t lf_t55xx_white_pwdgen(uint32_t id);
 
 int mfdes_kdf_input_gallagher(uint8_t *uid, uint8_t uidLen, uint8_t keyNo, uint32_t aid, uint8_t *kdfInputOut, uint8_t *kdfInputLen);

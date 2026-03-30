@@ -44,6 +44,8 @@
 # define prnt Dbprintf
 #endif
 
+#define MIFARE_KEY_SIZE         6
+
 // Implementation tips:
 // For each implementation of the algos, I recommend adding a self test for easy "simple unit" tests when Travis CI / Appveyor runs.
 // See special note for MFC based algos.
@@ -386,15 +388,16 @@ int mfc_algo_mizip_one(const uint8_t *uid, uint8_t sector, uint8_t keytype, uint
     if (keytype > 2) return PM3_EINVARG;
 
     if (sector == 0) {
-        // A
-        if (keytype == 0)
-            *key = 0xA0A1A2A3A4A5U;
-        else    // B
-            *key = 0xB4C132439eef;
+
+        if (keytype == 0) {
+            *key = 0xA0A1A2A3A4A5U; // A
+        } else {   
+            *key = 0xB4C132439eefU; // B
+        }
 
     } else {
 
-        uint8_t txor[6];
+        uint8_t txor[MIFARE_KEY_SIZE];
 
         if (keytype == 0) {
 
@@ -405,7 +408,7 @@ int mfc_algo_mizip_one(const uint8_t *uid, uint8_t sector, uint8_t keytype, uint
                 0x317AB72F4490,
             };
 
-            num_to_bytes(xor_tbl_a[sector - 1], 6, txor);
+            num_to_bytes(xor_tbl_a[sector - 1], MIFARE_KEY_SIZE, txor);
 
             *key =
                 (uint64_t)(uid[0] ^ txor[0]) << 40 |
@@ -425,7 +428,7 @@ int mfc_algo_mizip_one(const uint8_t *uid, uint8_t sector, uint8_t keytype, uint
             };
 
             // B
-            num_to_bytes(xor_tbl_b[sector - 1], 6, txor);
+            num_to_bytes(xor_tbl_b[sector - 1], MIFARE_KEY_SIZE, txor);
 
             *key =
                 (uint64_t)(uid[2] ^ txor[0]) << 40 |
@@ -449,7 +452,7 @@ int mfc_algo_mizip_all(uint8_t *uid, uint8_t *keys) {
         for (int sector = 0; sector < 5; sector++) {
             uint64_t key = 0;
             mfc_algo_mizip_one(uid, sector, keytype, &key);
-            num_to_bytes(key, 6, keys + (keytype * 5 * 6) + (sector * 6));
+            num_to_bytes(key, MIFARE_KEY_SIZE, keys + (keytype * 5 * MIFARE_KEY_SIZE) + (sector * MIFARE_KEY_SIZE));
         }
     }
     return PM3_SUCCESS;
@@ -656,6 +659,64 @@ int mfc_algo_vanderbilt_all(uint8_t *uid, uint8_t *keys) {
     return PM3_SUCCESS;
 }
 
+// Kale
+int mfc_algo_kale_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
+    if (uid == NULL) return PM3_EINVARG;
+    if (sector > 16) return PM3_EINVARG;
+    if (key == NULL) return PM3_EINVARG;
+
+    *key = 0xFFFFFFFFFFFF;
+
+    uint8_t tmp[MIFARE_KEY_SIZE] = {0};
+
+    if ( sector == 11 ) {
+       
+
+        tmp[4] = uid[1] + 0x2A;
+        tmp[5] = uid[3] ^ 0x67;
+
+        if ((uid[2] & 0x02) == 0x02) {
+            tmp[5] ^= (uid[1] ^ 0xFF);
+        }
+
+        tmp[0] = tmp[5] ^ (uid[3] ^ 0xFF);
+        tmp[1] = tmp[5] + (uid[0] ^ 0xFF);
+        tmp[2] = tmp[4] ^ (uid[1] ^ 0xFF);
+        tmp[3] = tmp[1] + (uid[2] ^ 0xFF);
+        tmp[4] = tmp[4] + (tmp[0] ^ uid[0]);
+        tmp[5] = tmp[5] ^ (tmp[2] & uid[2]);
+
+        *key = bytes_to_num(tmp, MIFARE_KEY_SIZE);
+    } 
+    if ( sector == 1 ) {
+ 
+        tmp[0] = uid[2] ^ 0x52 ^ uid[3] ^ 0xFF;
+        tmp[1] = (uid[2] ^ 0x52) + (uid[0] ^ 0xFF);
+        tmp[2] = (uid[1] + 0x1c) ^ uid[1] ^ 0xFF;
+        tmp[3] = tmp[1] + (uid[2] ^ 0xFF);
+        tmp[4] = (uid[0] ^ tmp[0]) + uid[1] + 0x1C;
+        tmp[5] = (uid[2] & tmp[2]) ^ uid[2] ^ 0x52;
+
+        *key = bytes_to_num(tmp, MIFARE_KEY_SIZE);
+    }
+
+    return PM3_SUCCESS;
+}
+
+int mfc_algo_kale_all(uint8_t *uid, uint8_t *keys) {
+    if (uid == NULL) return PM3_EINVARG;
+    if (keys == NULL) return PM3_EINVARG;
+
+    for (int keytype = 0; keytype < 2; keytype++) {
+        for (int sector = 0; sector < 16; sector++) {
+            uint64_t key = 0;
+            mfc_algo_kale_one(uid, sector, keytype, &key);
+            num_to_bytes(key, 6, keys + (keytype * 16 * 6) + (sector * 6));
+        }
+    }
+    return PM3_SUCCESS;
+}
+
 static kdf_t KDFTable[] = {
     {"Saflok / Maid", 16, mfc_algo_saflok_all, 4},
     {"MIZIP", 5, mfc_algo_mizip_all, 4},
@@ -664,6 +725,7 @@ static kdf_t KDFTable[] = {
     {"Bambu Lab Filament Spool", 16, mfc_algo_bambu_all, 4},
     {"Snapmaker Filament Spool", 16, mfc_algo_snapmaker_all, 4},
     {"Vanderbilt ACT", 40, mfc_algo_vanderbilt_all, 0},
+    {"Kale", 16, mfc_algo_kale_all, 4},
     // {"Vinglock", 16, mfc_algo_ving_all, 4}, // not implemented
     // {"Yale Doorman", 16, mfc_algo_yale_all, 4}, // not implemented
 };

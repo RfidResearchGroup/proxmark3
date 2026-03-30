@@ -92,6 +92,7 @@ uint16_t mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *
 
     uint8_t dcmd[32 + 3];
     dcmd[0] = cmd;
+
     if (data_size > 0) {
         memcpy(dcmd + 1, data, data_size);
     }
@@ -122,15 +123,16 @@ uint16_t mifare_sendcmd_schann(uint8_t *data, uint8_t data_size, uint8_t *answer
         return 0;
     }
 
-    uint8_t dcmd[16 + 2];
-    memset(dcmd, 0, sizeof(dcmd));
+    uint8_t dcmd[16 + 2] = {0};
 
     if (data_size > 0) {
         memcpy(dcmd, data, data_size);
     }
 
     AddCrc14A(dcmd, data_size);
+
     data_size += 2;
+
     ReaderTransmit(dcmd, data_size, timing);
 
     if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
@@ -146,10 +148,12 @@ uint16_t mifare_sendcmd_schann(uint8_t *data, uint8_t data_size, uint8_t *answer
 
 // send 2 byte commands
 uint16_t mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t *answer, uint16_t answer_len, uint8_t *answer_parity, uint32_t *timing) {
+
     uint16_t pos;
     uint8_t dcmd[4] = {cmd, data, 0x00, 0x00};
     uint8_t ecmd[4] = {0x00, 0x00, 0x00, 0x00};
     uint8_t par[MAX_MIFARE_PARITY_SIZE] = {0x00}; // used for cmd and answer
+
     AddCrc14A(dcmd, 2);
     memcpy(ecmd, dcmd, sizeof(dcmd));
 

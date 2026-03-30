@@ -737,6 +737,7 @@ static int add_nonce(uint32_t nonce_enc, uint8_t par_enc) {
 
         if (p2 == NULL) {
             PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return PM3_EMALLOC;
         }
 
     } else if ((p1->nonce_enc & 0x00ff0000) != (nonce_enc & 0x00ff0000)) {     // found distinct 2nd byte. Need to insert.
@@ -748,6 +749,7 @@ static int add_nonce(uint32_t nonce_enc, uint8_t par_enc) {
 
         if (p2 == NULL) {
             PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return PM3_EMALLOC;
         }
 
     } else {                                                                   // we have seen this 2nd byte before. Nothing to add or insert.
@@ -1267,8 +1269,17 @@ static int read_nonce_file(char *filename) {
         uint32_t nt_enc1 = bytes_to_num(read_buf, 4);
         uint32_t nt_enc2 = bytes_to_num(read_buf + 4, 4);
         uint8_t par_enc = bytes_to_num(read_buf + 8, 1);
-        add_nonce(nt_enc1, par_enc >> 4);
-        add_nonce(nt_enc2, par_enc & 0x0f);
+
+        int add_res = add_nonce(nt_enc1, par_enc >> 4);
+        if (add_res == PM3_EMALLOC) {
+            return add_res;
+        }
+
+        add_res = add_nonce(nt_enc2, par_enc & 0x0f);
+        if (add_res == PM3_EMALLOC) {
+            return add_res;
+        }
+
         num_acquired_nonces += 2;
         bytes_read = fread(read_buf, 1, 9, fnonces);
     }
@@ -1528,7 +1539,12 @@ static int simulate_acquire_nonces(void) {
 
         for (uint16_t i = 0; i < 113; i++) {
             simulate_MFplus_RNG(cuid, known_target_key, &nt_enc, &par_enc);
-            num_acquired_nonces += add_nonce(nt_enc, par_enc);
+
+            int add_res = add_nonce(nt_enc, par_enc);
+            if ( add_res == PM3_EMALLOC) {
+                return add_res;
+            }
+            num_acquired_nonces += add_res;
             total_num_nonces++;
         }
 
@@ -1663,10 +1679,23 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
                 uint32_t nt_enc2 = bytes_to_num(bufp + 4, 4);
                 uint8_t par_enc = bytes_to_num(bufp + 8, 1);
 
-                //PrintAndLogEx(INFO, "Encrypted nonce: %08x, encrypted_parity: %02x\n", nt_enc1, par_enc >> 4);
-                num_acquired_nonces += add_nonce(nt_enc1, par_enc >> 4);
-                //PrintAndLogEx(INFO, "Encrypted nonce: %08x, encrypted_parity: %02x\n", nt_enc2, par_enc & 0x0f);
-                num_acquired_nonces += add_nonce(nt_enc2, par_enc & 0x0f);
+
+                // PrintAndLogEx(INFO, "Encrypted nonce: %08x, encrypted_parity: %02x\n", nt_enc1, par_enc >> 4);
+                int add_res = add_nonce(nt_enc1, par_enc >> 4);
+                if (add_res == PM3_EMALLOC) {
+                    DropField();
+                    return add_res;
+                }
+                
+                num_acquired_nonces += add_res;
+
+                // PrintAndLogEx(INFO, "Encrypted nonce: %08x, encrypted_parity: %02x\n", nt_enc2, par_enc & 0x0f);
+                add_res = add_nonce(nt_enc2, par_enc & 0x0f);
+                if (add_res == PM3_EMALLOC) {
+                    DropField();
+                    return add_res;
+                }
+                num_acquired_nonces += add_res;
 
                 if (nonce_file_write) {
                     fwrite(bufp, 1, 9, fnonces);
