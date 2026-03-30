@@ -659,63 +659,6 @@ int mfc_algo_vanderbilt_all(uint8_t *uid, uint8_t *keys) {
     return PM3_SUCCESS;
 }
 
-// Kale
-int mfc_algo_kale_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
-    if (uid == NULL) return PM3_EINVARG;
-    if (sector > 16) return PM3_EINVARG;
-    if (key == NULL) return PM3_EINVARG;
-
-    *key = 0xFFFFFFFFFFFF;
-
-    uint8_t tmp[MIFARE_KEY_SIZE] = {0};
-
-    if ( sector == 11 ) {
-       
-
-        tmp[4] = uid[1] + 0x2A;
-        tmp[5] = uid[3] ^ 0x67;
-
-        if ((uid[2] & 0x02) == 0x02) {
-            tmp[5] ^= (uid[1] ^ 0xFF);
-        }
-
-        tmp[0] = tmp[5] ^ (uid[3] ^ 0xFF);
-        tmp[1] = tmp[5] + (uid[0] ^ 0xFF);
-        tmp[2] = tmp[4] ^ (uid[1] ^ 0xFF);
-        tmp[3] = tmp[1] + (uid[2] ^ 0xFF);
-        tmp[4] = tmp[4] + (tmp[0] ^ uid[0]);
-        tmp[5] = tmp[5] ^ (tmp[2] & uid[2]);
-
-        *key = bytes_to_num(tmp, MIFARE_KEY_SIZE);
-    } 
-    if ( sector == 1 ) {
- 
-        tmp[0] = uid[2] ^ 0x52 ^ uid[3] ^ 0xFF;
-        tmp[1] = (uid[2] ^ 0x52) + (uid[0] ^ 0xFF);
-        tmp[2] = (uid[1] + 0x1c) ^ uid[1] ^ 0xFF;
-        tmp[3] = tmp[1] + (uid[2] ^ 0xFF);
-        tmp[4] = (uid[0] ^ tmp[0]) + uid[1] + 0x1C;
-        tmp[5] = (uid[2] & tmp[2]) ^ uid[2] ^ 0x52;
-
-        *key = bytes_to_num(tmp, MIFARE_KEY_SIZE);
-    }
-
-    return PM3_SUCCESS;
-}
-
-int mfc_algo_kale_all(uint8_t *uid, uint8_t *keys) {
-    if (uid == NULL) return PM3_EINVARG;
-    if (keys == NULL) return PM3_EINVARG;
-
-    for (int keytype = 0; keytype < 2; keytype++) {
-        for (int sector = 0; sector < 16; sector++) {
-            uint64_t key = 0;
-            mfc_algo_kale_one(uid, sector, keytype, &key);
-            num_to_bytes(key, 6, keys + (keytype * 16 * 6) + (sector * 6));
-        }
-    }
-    return PM3_SUCCESS;
-}
 
 static kdf_t KDFTable[] = {
     {"Saflok / Maid", 16, mfc_algo_saflok_all, 4},
@@ -725,7 +668,6 @@ static kdf_t KDFTable[] = {
     {"Bambu Lab Filament Spool", 16, mfc_algo_bambu_all, 4},
     {"Snapmaker Filament Spool", 16, mfc_algo_snapmaker_all, 4},
     {"Vanderbilt ACT", 40, mfc_algo_vanderbilt_all, 0},
-    {"Kale", 16, mfc_algo_kale_all, 4},
     // {"Vinglock", 16, mfc_algo_ving_all, 4}, // not implemented
     // {"Yale Doorman", 16, mfc_algo_yale_all, 4}, // not implemented
 };

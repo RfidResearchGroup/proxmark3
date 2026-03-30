@@ -5528,7 +5528,7 @@
         },
         "hf mf keygen": {
             "command": "hf mf keygen",
-            "description": "Generate key table for some known KDFs Available KDFs: 0 - Saflok / Maid 1 - MIZIP 2 - Disney Infinity 3 - Skylanders 4 - Bambu Lab Filament Spool 5 - Snapmaker Filament Spool 6 - Vanderbilt ACT 7 - Kale",
+            "description": "Generate key table for some known KDFs Available KDFs: 0 - Saflok / Maid 1 - MIZIP 2 - Disney Infinity 3 - Skylanders 4 - Bambu Lab Filament Spool 5 - Snapmaker Filament Spool 6 - Vanderbilt ACT",
             "notes": [
                 "hf mf keygen -r -k 0",
                 "hf mf keygen -r -d -k 0",
