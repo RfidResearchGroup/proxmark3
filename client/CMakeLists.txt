@@ -390,6 +390,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhfgallagher.c
         ${PM3_ROOT}/client/src/cmdhfgst.c
         ${PM3_ROOT}/client/src/cmdhfcipurse.c
+        ${PM3_ROOT}/client/src/cmdhfsecc.c
         ${PM3_ROOT}/client/src/cmdhficlass.c
         ${PM3_ROOT}/client/src/cmdhfict.c
         ${PM3_ROOT}/client/src/cmdhfjooki.c
