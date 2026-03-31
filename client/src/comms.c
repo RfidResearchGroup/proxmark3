@@ -846,10 +846,12 @@ bool OpenProxmark(pm3_device_t **dev, const char *port, bool wait_for_port, int 
     }
 }
 
-int SetHfFieldTimeout(uint32_t timeout_ms, bool quiet) {
+int SetHfFieldTimeout(uint32_t timeout_sec, bool quiet) {
     if (g_session.pm3_present == false) {
         return PM3_ENOTTY;
     }
+
+    uint32_t timeout_ms = timeout_sec * 1000U;
 
     clearCommandBuffer();
     SendCommandNG(CMD_SET_HF_FIELD_TIMEOUT, (uint8_t *)&timeout_ms, sizeof(timeout_ms));
@@ -944,10 +946,10 @@ int TestProxmark(pm3_device_t *dev) {
         }
     }
 
-    if (g_session.hf_field_timeout > 0) {
-        int timeout_res = SetHfFieldTimeout(g_session.hf_field_timeout, true);
+    if (g_session.hf_field_timeout_sec > 0) {
+        int timeout_res = SetHfFieldTimeout(g_session.hf_field_timeout_sec, true);
         if (timeout_res != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Failed to apply HF field timeout (" _YELLOW_("%u") " ms)", g_session.hf_field_timeout);
+            PrintAndLogEx(WARNING, "Failed to apply HF field timeout (" _YELLOW_("%u") " s)", g_session.hf_field_timeout_sec);
         }
     }
     return PM3_SUCCESS;

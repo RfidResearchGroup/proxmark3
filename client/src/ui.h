@@ -63,7 +63,7 @@ typedef struct {
     char *history_path;
     pm3_device_t *current_device;
     uint32_t timeout;
-    uint32_t hf_field_timeout;
+    uint32_t hf_field_timeout_sec;
     char *mqtt_server;
     char *mqtt_port;
     char *mqtt_topic;
