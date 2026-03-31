@@ -34,6 +34,7 @@
 #include "iclass_cmd.h"
 #include "hfops.h"
 #include "iso14443a.h"
+#include "secc.h"
 #include "iso14443b.h"
 #include "iso15693.h"
 #include "thinfilm.h"
@@ -1837,6 +1838,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_HF_ISO14443A_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
+        case CMD_HF_HIDCONFIG_SNIFF: {
+            SniffHIDConfigCard(packet->data.asBytes[0]);
+            reply_ng(CMD_HF_HIDCONFIG_SNIFF, PM3_SUCCESS, NULL, 0);
+            break;
+        }
         case CMD_HF_ISO14443A_READER: {
             ReaderIso14443a(packet);
             break;
@@ -1896,6 +1902,10 @@ static void PacketReceived(PacketCommandNG *packet) {
                                     payload->ats, payload->ats_len, payload->aid, payload->aid_len,
                                     payload->selectaid_response, payload->selectaid_response_len,
                                     payload->getdata_response, payload->getdata_response_len);
+            break;
+        }
+        case CMD_HF_HIDCONFIG_SIM: {
+            SimulateHIDConfigCard((const hid_sim_payload_t *) packet->data.asBytes);
             break;
         }
         case CMD_HF_ISO14443A_ANTIFUZZ: {
