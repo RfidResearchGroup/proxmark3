@@ -27,6 +27,7 @@ Each entry in `client/resources/aidlist.json` must contain all of the fields bel
   - `apple_home_key`
   - `apple_vas`
   - `ccc_digital_car_key`
+  - `cna_calypso`
   - `csa_aliro`
   - `google_smart_tap`
   - `hid_seos`

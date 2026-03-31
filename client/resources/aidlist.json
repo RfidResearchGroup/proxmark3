@@ -2771,12 +2771,76 @@
         "Type": "transport"
     },
     {
-        "AID": "A0000004040125",
+        "AID": "315449432E494341",
+        "Vendor": "Calypso Networks Association (CNA)",
+        "Country": "France",
+        "Name": "1TIC.ICA",
+        "Description": "Default legacy header, used by legacy ticketing applications. As defined in Calypso Revision 2. \"1TIC.ICA\" in ISO/IEC 8859-1 coding.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "304554502E494341",
+        "Vendor": "Calypso Networks Association (CNA)",
+        "Country": "France",
+        "Name": "0ETP.ICA",
+        "Description": "Legacy header for the Store Value application. \"0ETP.ICA\" in ISO/IEC 8859-1 coding.",
+        "Type": "",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "324D50502E494341",
+        "Vendor": "Calypso Networks Association (CNA)",
+        "Country": "France",
+        "Name": "2MPP.ICA",
+        "Description": "Legacy header for card applications not dedicated to public transport. \"2MPP.ICA\" in ISO/IEC 8859-1 coding.",
+        "Type": "",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "334D54522E494341",
+        "Vendor": "Calypso Networks Association (CNA)",
+        "Country": "France",
+        "Name": "3MTR.ICA",
+        "Description": "Legacy header dedicated to the Master File. \"3MTR.ICA\" in ISO/IEC 8859-1 coding.",
+        "Type": "",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A0000004040125090101",
         "Vendor": "Ile-de-France Mobilites",
         "Country": "France",
         "Name": "Navigo",
         "Description": "CALYPSO-based transit card",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A0000004040125090101000000000000",
+        "Vendor": "Ile-de-France Mobilites",
+        "Country": "France",
+        "Name": "Navigo",
+        "Description": "CALYPSO-based transit card",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A0000004040125006901000000000000",
+        "Vendor": "Lignes D'Azur",
+        "Country": "France",
+        "Name": "La Carte",
+        "Description": "CALYPSO-based transit card",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+        {
+        "AID": "A0000004040125092001000000000000",
+        "Vendor": "Lignes D'Azur",
+        "Country": "France",
+        "Name": "La Carte",
+        "Description": "CALYPSO-based transit card",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
     },
     {
         "AID": "A00000074340CEBCFB34134469050200",
