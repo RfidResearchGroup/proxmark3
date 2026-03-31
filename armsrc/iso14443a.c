@@ -1587,7 +1587,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
     }
 
     // Apply ATQA override after all UID-size bits have been set.
-    if (flags & FLAG_ATQA_IN_DATA) {
+    if ((flags & FLAG_ATQA_IN_DATA) == FLAG_ATQA_IN_DATA) {
         rATQA[0] = (uint8_t)(s_atqa_override >> 8);
         rATQA[1] = (uint8_t)(s_atqa_override & 0xFF);
     }
