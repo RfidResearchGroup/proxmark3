@@ -118,7 +118,8 @@ Characteristics:
 
 * 1 kHz, 32b (49 days), if used with 16b: 65s
 * Configured at boot (or TIA) with `StartTickCount()`
-* Time events with `GetTickCount()`/`GetTickCountDeltaDelta()`, see example
+* Time events with `GetTickCount()`/`GetTickCountDelta()`, see example
+* Each change in configuration of the clock increments the label value, retreivable through `GetTickCountLabel()`
 * Coarse, based on the ~32kHz RC slow clock with some adjustment factor computed by TIA
 * Maybe 2.5% error, can increase if temperature conditions change and no TIA is recomputed
 * If TimingIntervalAcquisition() is called later, StartTickCount() is called again and RTC is reset
@@ -131,12 +132,24 @@ uint32_t ti = GetTickCount();
 uint32_t delta = GetTickCountDelta(ti);
 ```
 
+If `StartTickCount()` may run between two reads (e.g. via TIA), pair tick with a label:
+
+```
+uint32_t label = GetTickCountLabel();
+uint32_t ti = GetTickCount();
+...do stuff...
+if (label == GetTickCountLabel()) {
+    uint32_t delta = GetTickCountDelta(ti);
+}
+```
+
 Current usages:
 
 * cheap random for nonces, e.g. `prng_successor(GetTickCount(), 32)`
 * rough timing of some operations, only for informative purposes
 * timeouts
 * USB connection speed measure
+* Optional HF field inactivity timeout
 
 ## Occasional PWM timer
 ^[Top](#top)
