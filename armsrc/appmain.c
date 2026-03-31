@@ -3409,10 +3409,8 @@ void  __attribute__((noreturn)) AppMain(void) {
                 last_activity_label = tickcount_label;
                 last_activity_tick = GetTickCount();
             } else if (GetTickCountDelta(last_activity_tick) >= g_hf_field_activity_timeout_ms) {
-                if (g_dbglevel >= DBG_INFO) {
-                    Dbprintf("HF field auto-off: inactivity timeout (%u ms)", g_hf_field_activity_timeout_ms);
-                }
                 hf_field_off();
+                Dbprintf("HF field auto-off: inactivity timeout (%u ms). To disable, use 'prefs set hf.field.timeout_sec --sec 0'", g_hf_field_activity_timeout_ms);
             }
         }
 
