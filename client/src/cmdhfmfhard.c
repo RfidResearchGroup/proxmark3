@@ -727,18 +727,20 @@ static int add_nonce(uint32_t nonce_enc, uint8_t par_enc) {
     if (p1 == NULL) {                                                            // need to add at the end of the list
         if (p2 == NULL) {                                                        // list is empty yet. Add first entry.
             p2 = nonces[first_byte].first = calloc(1, sizeof(noncelistentry_t));
+            if (p2 == NULL) {
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
+                return PM3_EMALLOC;
+            }
+            // first nonce with this 1st byte
+            first_byte_num++;
+            first_byte_Sum += evenparity32((nonce_enc & 0xff000000) | (par_enc & 0x08));
         } else {                                                                 // add new entry at end of existing list.
             p2 = p2->next = calloc(1, sizeof(noncelistentry_t));
+            if (p2 == NULL) {
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
+                return PM3_EMALLOC;
+            }
         }
-
-        if (p2 == NULL) {
-            PrintAndLogEx(WARNING, "Failed to allocate memory");
-            return PM3_EMALLOC;
-        }
-        
-        // first nonce with this 1st byte
-        first_byte_num++;
-        first_byte_Sum += evenparity32((nonce_enc & 0xff000000) | (par_enc & 0x08));
 
     } else if ((p1->nonce_enc & 0x00ff0000) != (nonce_enc & 0x00ff0000)) {      // found distinct 2nd byte. Need to insert.
 
