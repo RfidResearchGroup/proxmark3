@@ -212,14 +212,26 @@ void CmdsHelp(const command_t Commands[]) {
     PrintAndLogEx(NORMAL, "");
 
     int i = 0;
+    size_t max_name_len = 16; // minimum width for command name column
+    while (Commands[i].Name) {
+        if (Commands[i].IsAvailable()) {
+            size_t name_len = strlen(Commands[i].Name);
+            if (name_len > max_name_len) {
+                max_name_len = name_len;
+            }
+        }
+        ++i;
+    }
+
+    i = 0;
     while (Commands[i].Name) {
         if (Commands[i].IsAvailable()) {
             uint8_t old_printAndLog = g_printAndLog;
             g_printAndLog &= PRINTANDLOG_PRINT;
             if (Commands[i].Name[0] == '-' || Commands[i].Name[0] == ' ') {
-                PrintAndLogEx(NORMAL, "%-16s %s", Commands[i].Name, Commands[i].Help);
+                PrintAndLogEx(NORMAL, "%-*s %s", (int)max_name_len, Commands[i].Name, Commands[i].Help);
             } else {
-                PrintAndLogEx(NORMAL, _GREEN_("%-16s")" %s", Commands[i].Name, Commands[i].Help);
+                PrintAndLogEx(NORMAL, _GREEN_("%-*s") " %s", (int)max_name_len, Commands[i].Name, Commands[i].Help);
             }
             g_printAndLog = old_printAndLog;
         }
