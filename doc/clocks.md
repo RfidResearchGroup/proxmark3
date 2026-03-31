@@ -119,7 +119,7 @@ Characteristics:
 * 1 kHz, 32b (49 days), if used with 16b: 65s
 * Configured at boot (or TIA) with `StartTickCount()`
 * Time events with `GetTickCount()`/`GetTickCountDelta()`, see example
-* Each change in configuration of the clock increments the label value, retreivable through `GetTickCountLabel()`
+* Each change in configuration of the clock increments the label value, retrievable through `GetTickCountLabel()`
 * Coarse, based on the ~32kHz RC slow clock with some adjustment factor computed by TIA
 * Maybe 2.5% error, can increase if temperature conditions change and no TIA is recomputed
 * If TimingIntervalAcquisition() is called later, StartTickCount() is called again and RTC is reset
