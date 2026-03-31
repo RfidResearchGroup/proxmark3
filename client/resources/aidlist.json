@@ -2440,6 +2440,24 @@
         "Type": "transport"
     },
     {
+        "AID": "A00000039656434103F213F000000000",
+        "Vendor": "ORCA",
+        "Country": "United States",
+        "Name": "ORCA transit card",
+        "Description": "DESFire-based transit card",
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
+    },
+    {
+        "AID": "A00000039656434103F2142000000000",
+        "Vendor": "Metrolinx",
+        "Country": "Canada",
+        "Name": "PRESTO transit card",
+        "Description": "DESFire-based transit card",
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
+    },
+    {
         "AID": "A00000039656434103F8852200000000",
         "Vendor": "Ubian",
         "Country": "Slovakia",
