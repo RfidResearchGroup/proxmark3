@@ -97,7 +97,6 @@ common_area_t g_common_area __attribute__((section(".commonarea")));
 static int button_status = BUTTON_NO_CLICK;
 static bool allow_send_wtx = false;
 static uint32_t g_hf_field_activity_timeout_ms = 0;
-static uint32_t g_last_activity_ms = 0;
 uint16_t g_tearoff_delay_us = 0;
 bool g_tearoff_enabled = false;
 uint8_t g_tearoff_skip = 0;
@@ -1014,7 +1013,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint32_t timeout_ms = 0;
             memcpy(&timeout_ms, packet->data.asBytes, sizeof(timeout_ms));
             g_hf_field_activity_timeout_ms = timeout_ms;
-            g_last_activity_ms = GetTickCount();
             reply_ng(CMD_SET_HF_FIELD_TIMEOUT, PM3_SUCCESS, NULL, 0);
             break;
         }
@@ -3333,7 +3331,8 @@ void  __attribute__((noreturn)) AppMain(void) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     StartTickCount();
-    g_last_activity_ms = GetTickCount();
+    uint32_t last_activity_tick = GetTickCount();
+    uint32_t last_activity_label = GetTickCountLabel();
 
 #ifdef WITH_LCD
     LCDInit();
@@ -3397,14 +3396,19 @@ void  __attribute__((noreturn)) AppMain(void) {
         int ret = receive_ng(&rx);
         if (ret == PM3_SUCCESS) {
             PacketReceived(&rx);
-            g_last_activity_ms = GetTickCount();
+            last_activity_label = GetTickCountLabel();
+            last_activity_tick = GetTickCount();
         } else if (ret != PM3_ENODATA) {
             Dbprintf("Error in frame reception: %d %s", ret, (ret == PM3_EIO) ? "PM3_EIO" : "");
             // TODO if error, shall we resync ?
         }
 
         if (g_hf_field_activity_timeout_ms > 0 && g_hf_field_timeout_active) {
-            if (GetTickCountDelta(g_last_activity_ms) >= g_hf_field_activity_timeout_ms) {
+            uint32_t tickcount_label = GetTickCountLabel();
+            if (tickcount_label != last_activity_label) {
+                last_activity_label = tickcount_label;
+                last_activity_tick = GetTickCount();
+            } else if (GetTickCountDelta(last_activity_tick) >= g_hf_field_activity_timeout_ms) {
                 if (g_dbglevel >= DBG_INFO) {
                     Dbprintf("HF field auto-off: inactivity timeout (%u ms)", g_hf_field_activity_timeout_ms);
                 }
