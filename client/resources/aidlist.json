@@ -2445,7 +2445,8 @@
         "Country": "Slovakia",
         "Name": "Ubian digital transit card",
         "Description": "DESFire-based virtual transit card",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
     },
     {
         "AID": "DE5C0D1F1CADA5",
@@ -2453,7 +2454,8 @@
         "Country": "Spain",
         "Name": "Madrid transit card",
         "Description": "DESFire-based transit card",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
     },
     {
         "AID": "A00000F21100",
@@ -2461,7 +2463,8 @@
         "Country": "Australia",
         "Name": "Myki transit card",
         "Description": "DESFire-based transit card",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
     },
     {
         "AID": "637001ff4c41",
@@ -2469,7 +2472,8 @@
         "Country": "United States",
         "Name": "LA Tap",
         "Description": "DESFire-based transit card (ASCII cp\\x01\\xffLA)",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
     },
     {
         "AID": "637001ff574d415441",
@@ -2477,7 +2481,8 @@
         "Country": "United States",
         "Name": "Smart Trip",
         "Description": "DESFire-based transit card (ASCII cp\\x01\\xffWMATA)",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
     },
     {
         "AID": "637001ff434c4950504552",
@@ -2485,7 +2490,8 @@
         "Country": "United States",
         "Name": "Clipper",
         "Description": "DESFire-based transit card (ASCII cp\\x01\\xffCLIPPER)",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
     },
     {
         "AID": "A0000002164954534F2D31",
