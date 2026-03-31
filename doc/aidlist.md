@@ -20,8 +20,27 @@ Each entry in `client/resources/aidlist.json` must contain all of the fields bel
 - `Sources`: Array of strings describing where the AID metadata was sourced from. Supported formats:
   - `android://<package.name>` for Android apps that declare or use this AID.
   - `http://...` or `https://...` for public references used to add or verify the entry.
+- `Protocol`: Application-layer protocol implemented by this AID. Use lowercase `snake_case` (for example `apple_vas`).
+  If the protocol is vendor/ecosystem-specific, include an owner qualifier in the name (for example `google_smart_tap`, `ccc_digital_car_key`) instead of using a generic label.
+  Known protocol names currently used:
+  - `apple_access_key`
+  - `apple_home_key`
+  - `apple_vas`
+  - `ccc_digital_car_key`
+  - `csa_aliro`
+  - `google_smart_tap`
+  - `hid_seos`
+  - `ict_protege_mobile`
+  - `kastle_presence`
+  - `salto_justin_mobile`
+  - `samsung_vas`
+  - `schlage_mobile_access`
+  - `suprema_mobile`
+  - `unifi_identity`
 
-Example:
+## Examples
+
+Simple entry:
 ```json
 {
     "AID": "A00000039656434103F1216000000000",
@@ -33,7 +52,7 @@ Example:
 }
 ```
 
-Response-disambiguation example:
+Response format disambiguation example:
 ```json
 {
     "AID": "4F53452E5641532E3031",
@@ -42,6 +61,7 @@ Response-disambiguation example:
     "Name": "Google Smart Tap (OSE.VAS.01)",
     "Description": "Google Smart Tap",
     "Type": "loyalty",
+    "Protocol": "google_smart_tap",
     "ResponseRegex": ".*500a416e64726f6964506179.*9000$"
 }
 ```
