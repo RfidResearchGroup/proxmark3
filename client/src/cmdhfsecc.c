@@ -45,17 +45,17 @@ typedef struct {
 static int CmdHelp(const char *Cmd);
 
 // ---------------------------------------------------------------------------
-// hf hidconfig sim
+// hf secc sim
 // ---------------------------------------------------------------------------
 
 static int CmdHFHIDConfigSim(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf hidconfig sim",
+    CLIParserInit(&ctx, "hf secc sim",
                   "Simulate a HID iCLASS SE Config Card (JCOP / GlobalPlatform SCP02).\n"
                   "Responds to SELECT AID (0013/0017), A0 D4, INITIALIZE UPDATE, and EXTERNAL AUTH.\n"
                   "Load card parameters (UID, AID, SCP02Key) from a JSON file.",
-                  "hf hidconfig sim -f hidconfig_sample\n"
-                  "hf hidconfig sim -f hidconfig_sample -n 5    -> stop after 5 reader interactions");
+                  "hf secc sim -f hidconfig_sample\n"
+                  "hf secc sim -f hidconfig_sample -n 5    -> stop after 5 reader interactions");
 
     void *argtable[] = {
         arg_param_begin,
@@ -218,17 +218,17 @@ static int CmdHFHIDConfigSim(const char *Cmd) {
 }
 
 // ---------------------------------------------------------------------------
-// hf hidconfig sniff
+// hf secc sniff
 // ---------------------------------------------------------------------------
 
 static int CmdHFHIDConfigSniff(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf hidconfig sniff",
+    CLIParserInit(&ctx, "hf secc sniff",
                   "Sniff the communication between a HID Config Card reader and card.\n"
                   "Use `hf 14a list` to view collected data.",
-                  "hf hidconfig sniff\n"
-                  "hf hidconfig sniff -j     -> jam A0 D4 00 00 00, respond 00 00 90 00\n"
-                  "hf hidconfig sniff -c -r  -> trigger on card or reader data");
+                  "hf secc sniff\n"
+                  "hf secc sniff -j     -> jam A0 D4 00 00 00, respond 00 00 90 00\n"
+                  "hf secc sniff -c -r  -> trigger on card or reader data");
 
     void *argtable[] = {
         arg_param_begin,
