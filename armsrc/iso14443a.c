@@ -38,6 +38,10 @@
 #include "mifare.h"  // for iso14a_polling_frame_t structure
 #include "cmac_calc.h"
 
+// Forward declaration: HID Config Card jam support (implemented in secc.c).
+// Called from SniffIso14443a when param bit 0x04 is set.
+bool hid_config_card_jam(const uint8_t *cmd, int len, uint8_t *dma_buf);
+
 static uint32_t iso14a_timeout;
 
 static uint8_t colpos = 0;
@@ -926,6 +930,11 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
                                       true)) {
                             break;
                         }
+                    }
+                    // HID Config Card jam: respond to A0 D4 00 00 00 in-band
+                    if ((param & 0x04) && Uart.len >= 8) {
+                        if (hid_config_card_jam(receivedCmd, Uart.len, (uint8_t *)dma->buf))
+                            data = dma->buf;
                     }
                     // ready to receive another command
                     Uart14aReset();
