@@ -531,6 +531,7 @@ typedef struct {
 #define CMD_TIA 0x0117
 #define CMD_BREAK_LOOP 0x0118
 #define CMD_SET_TEAROFF 0x0119
+#define CMD_SET_HF_FIELD_TIMEOUT 0x011A
 #define CMD_GET_DBGMODE 0x0120
 
 // RDV40, Flash memory operations

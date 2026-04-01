@@ -102,6 +102,7 @@ int preferences_load(void) {
     g_session.client_debug_level = cdbOFF;
     //  g_session.device_debug_level = ddbOFF;
     g_session.timeout = uart_get_timeouts();
+    g_session.hf_field_timeout_sec = 0;
 
     g_session.window_changed = false;
     g_session.plot.x = 10;
@@ -329,6 +330,7 @@ void preferences_save_callback(json_t *root) {
     */
     JsonSaveInt(root, "client.exe.delay", g_session.client_exe_delay);
     JsonSaveInt(root, "client.timeout", g_session.timeout);
+    JsonSaveInt(root, "hf.field.timeout_sec", g_session.hf_field_timeout_sec);
 
     // MQTT
     JsonSaveStr(root, "mqtt.server", g_session.mqtt_server);
@@ -439,6 +441,10 @@ void preferences_load_callback(json_t *root) {
     // client command timeout
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "client.timeout", &i1) == 0)
         g_session.timeout = i1;
+
+    // persistent HF field timeout (seconds)
+    if (json_unpack_ex(root, &up_error, 0, "{s:i}", "hf.field.timeout_sec", &i1) == 0)
+        g_session.hf_field_timeout_sec = (i1 > 0) ? (uint32_t)i1 : 0;
 
     // MQTT server
     if (json_unpack_ex(root, &up_error, 0, "{s:s}", "mqtt.server", &s1) == 0)
@@ -669,6 +675,14 @@ static void showClientExeDelayState(void) {
 
 static void showClientTimeoutState(void) {
     PrintAndLogEx(INFO, "    communication timeout... " _GREEN_("%u") " ms", g_session.timeout);
+}
+
+static void showFieldTimeoutState(void) {
+    if (g_session.hf_field_timeout_sec == 0) {
+        PrintAndLogEx(INFO, "    HF field timeout........ " _WHITE_("off"));
+    } else {
+        PrintAndLogEx(INFO, "    HF field timeout........ " _GREEN_("%u") " s", g_session.hf_field_timeout_sec);
+    }
 }
 
 static void showMqttServer(prefShowOpt_t opt) {
@@ -1064,6 +1078,50 @@ static int setCmdClientTimeout(const char *Cmd) {
     } else {
         showClientTimeoutState();
     }
+    return PM3_SUCCESS;
+}
+
+static int setCmdHfFieldTimeout(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs set hf.field.timeout_sec",
+                  "Set persistent preference of PM3 HF field inactivity timeout",
+                  "prefs set hf.field.timeout_sec --sec 0    --> disable HF field auto timeout\n"
+                  "prefs set hf.field.timeout_sec --sec 5    --> turn HF field off after 5 seconds of inactivity\n"
+                  "prefs set hf.field.timeout_sec --sec 300  --> turn HF field off after 5 minutes of inactivity\n"
+                  "prefs set hf.field.timeout_sec --sec 900  --> turn HF field off after 15 minutes of inactivity\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("s", "sec", "<sec>", "HF field inactivity timeout in seconds"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int32_t arg = arg_get_int_def(ctx, 1, -1);
+    CLIParserFree(ctx);
+
+    if (arg < 0) {
+        showFieldTimeoutState();
+        return PM3_SUCCESS;
+    }
+
+    uint32_t new_value = (uint32_t)arg;
+
+    if (g_session.hf_field_timeout_sec != new_value) {
+        showFieldTimeoutState();
+        g_session.hf_field_timeout_sec = new_value;
+        showFieldTimeoutState();
+        preferences_save();
+    } else {
+        showFieldTimeoutState();
+    }
+
+    if (g_session.pm3_present) {
+        int res = SetHfFieldTimeout(g_session.hf_field_timeout_sec, false);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Failed to apply HF field timeout to connected PM3");
+        }
+    }
+
     return PM3_SUCCESS;
 }
 
@@ -1517,6 +1575,22 @@ static int getCmdClientTimeout(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int getCmdHfFieldTimeout(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs get hf.field.timeout_sec",
+                  "Get preference of PM3 HF field inactivity timeout",
+                  "prefs get hf.field.timeout_sec"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    showFieldTimeoutState();
+    return PM3_SUCCESS;
+}
+
 static int getCmdMqtt(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "prefs get mqtt",
@@ -1540,6 +1614,7 @@ static command_t CommandTableGet[] = {
     {"client.debug",     getCmdDebug,         AlwaysAvailable, "Get client debug level preference"},
     {"client.delay",     getCmdExeDelay,      AlwaysAvailable, "Get client execution delay preference"},
     {"client.timeout",   getCmdClientTimeout, AlwaysAvailable, "Get client execution delay preference"},
+    {"hf.field.timeout_sec", getCmdHfFieldTimeout, AlwaysAvailable, "Get PM3 HF field inactivity timeout preference"},
     {"color",            getCmdColor,         AlwaysAvailable, "Get color support preference"},
     {"savepaths",        getCmdSavePaths,     AlwaysAvailable, "Get file folder  "},
     //  {"devicedebug",      getCmdDeviceDebug,   AlwaysAvailable, "Get device debug level"},
@@ -1557,6 +1632,7 @@ static command_t CommandTableSet[] = {
     {"client.debug",     setCmdDebug,         AlwaysAvailable, "Set client debug level"},
     {"client.delay",     setCmdExeDelay,      AlwaysAvailable, "Set client execution delay"},
     {"client.timeout",   setCmdClientTimeout, AlwaysAvailable, "Set client communication timeout"},
+    {"hf.field.timeout_sec", setCmdHfFieldTimeout, AlwaysAvailable, "Set PM3 HF field inactivity timeout"},
 
     {"color",            setCmdColor,         AlwaysAvailable, "Set color support"},
     {"emoji",            setCmdEmoji,         AlwaysAvailable, "Set emoji display"},
@@ -1630,6 +1706,7 @@ static int CmdPrefShow(const char *Cmd) {
     showClientExeDelayState();
     showOutputState(prefShowNone);
     showClientTimeoutState();
+    showFieldTimeoutState();
     showMqttServer(prefShowNone);
     showMqttPort(prefShowNone);
     showMqttTopic(prefShowNone);
