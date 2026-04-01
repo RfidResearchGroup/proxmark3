@@ -2440,12 +2440,31 @@
         "Type": "transport"
     },
     {
+        "AID": "A00000039656434103F213F000000000",
+        "Vendor": "ORCA",
+        "Country": "United States",
+        "Name": "ORCA transit card",
+        "Description": "DESFire-based transit card",
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
+    },
+    {
+        "AID": "A00000039656434103F2142000000000",
+        "Vendor": "Metrolinx",
+        "Country": "Canada",
+        "Name": "PRESTO transit card",
+        "Description": "DESFire-based transit card",
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
+    },
+    {
         "AID": "A00000039656434103F8852200000000",
         "Vendor": "Ubian",
         "Country": "Slovakia",
         "Name": "Ubian digital transit card",
         "Description": "DESFire-based virtual transit card",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
     },
     {
         "AID": "DE5C0D1F1CADA5",
@@ -2453,7 +2472,8 @@
         "Country": "Spain",
         "Name": "Madrid transit card",
         "Description": "DESFire-based transit card",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
     },
     {
         "AID": "A00000F21100",
@@ -2461,7 +2481,8 @@
         "Country": "Australia",
         "Name": "Myki transit card",
         "Description": "DESFire-based transit card",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
     },
     {
         "AID": "637001ff4c41",
@@ -2469,7 +2490,8 @@
         "Country": "United States",
         "Name": "LA Tap",
         "Description": "DESFire-based transit card (ASCII cp\\x01\\xffLA)",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
     },
     {
         "AID": "637001ff574d415441",
@@ -2477,7 +2499,8 @@
         "Country": "United States",
         "Name": "Smart Trip",
         "Description": "DESFire-based transit card (ASCII cp\\x01\\xffWMATA)",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
     },
     {
         "AID": "637001ff434c4950504552",
@@ -2485,7 +2508,8 @@
         "Country": "United States",
         "Name": "Clipper",
         "Description": "DESFire-based transit card (ASCII cp\\x01\\xffCLIPPER)",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
     },
     {
         "AID": "A0000002164954534F2D31",
@@ -2747,12 +2771,76 @@
         "Type": "transport"
     },
     {
-        "AID": "A0000004040125",
+        "AID": "315449432E494341",
+        "Vendor": "Calypso Networks Association (CNA)",
+        "Country": "France",
+        "Name": "1TIC.ICA",
+        "Description": "Default legacy header, used by legacy ticketing applications. As defined in Calypso Revision 2. \"1TIC.ICA\" in ISO/IEC 8859-1 coding.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "304554502E494341",
+        "Vendor": "Calypso Networks Association (CNA)",
+        "Country": "France",
+        "Name": "0ETP.ICA",
+        "Description": "Legacy header for the Store Value application. \"0ETP.ICA\" in ISO/IEC 8859-1 coding.",
+        "Type": "",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "324D50502E494341",
+        "Vendor": "Calypso Networks Association (CNA)",
+        "Country": "France",
+        "Name": "2MPP.ICA",
+        "Description": "Legacy header for card applications not dedicated to public transport. \"2MPP.ICA\" in ISO/IEC 8859-1 coding.",
+        "Type": "",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "334D54522E494341",
+        "Vendor": "Calypso Networks Association (CNA)",
+        "Country": "France",
+        "Name": "3MTR.ICA",
+        "Description": "Legacy header dedicated to the Master File. \"3MTR.ICA\" in ISO/IEC 8859-1 coding.",
+        "Type": "",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A0000004040125090101",
         "Vendor": "Ile-de-France Mobilites",
         "Country": "France",
         "Name": "Navigo",
         "Description": "CALYPSO-based transit card",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A0000004040125090101000000000000",
+        "Vendor": "Ile-de-France Mobilites",
+        "Country": "France",
+        "Name": "Navigo",
+        "Description": "CALYPSO-based transit card",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A0000004040125006901000000000000",
+        "Vendor": "Lignes D'Azur",
+        "Country": "France",
+        "Name": "La Carte",
+        "Description": "CALYPSO-based transit card",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+        {
+        "AID": "A0000004040125092001000000000000",
+        "Vendor": "Lignes D'Azur",
+        "Country": "France",
+        "Name": "La Carte",
+        "Description": "CALYPSO-based transit card",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
     },
     {
         "AID": "A00000074340CEBCFB34134469050200",
