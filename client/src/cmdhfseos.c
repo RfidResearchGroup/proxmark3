@@ -2017,9 +2017,9 @@ static int CmdHfSeosSim(const char *Cmd) {
                   "  - Encryption : AES128\n"
                   "  - Hashing    : SHA256\n",
                   "hf seos sim -d 12345678\n"
-                  "hf seos sim --privacy-key 8 --auth-key 9 -d 12345678\n"
-                  "hf seos sim -o 2B0601040181E438010102011801010202 -u 01020304050607 --privacy-key 8 --auth-key 9 -d 12345678\n"
-                  "hf seos sim -o 2B0601040181E438010102011801010202 --legacy -t FF41 -d 12345678\n"
+                  "hf seos sim --privacy-key 8 --auth-key 9 -d 03020500\n"
+                  "hf seos sim -o 2B0601040181E438010102011801010202 --div 01020304050607 --privacy-key 8 --auth-key 9 -d 03020500\n"
+                  "hf seos sim -o 2B0601040181E438010102011801010202 --legacy -t FF41 -d 03020500\n"
                  );
 
     void *argtable[] = {
