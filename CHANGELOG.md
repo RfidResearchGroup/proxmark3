@@ -30,7 +30,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added DESFire AID values related to LEAF (@kormax)
 - Added `dict`, `ascii`, `mad` presets for `hf mfdes bruteaid` (@kormax)
 - Added tag loss detection & recovery into `hf mfdes bruteaid` (@kormax)
-- Added --credit option for `hf iclass legrec` command to perform a credit key recovery. This is experimental and unfinished as it only partially works.(@antiklesys)
+- Added `--credit` option to `hf iclass legrec` for credit key recovery. Note: this option alone is experimental and only partially functional; the standard key recovery works normally.(@antiklesys)
 - Added hardening for all host binaries. Exact level of hardening depends on the OS (@doegox)
 - Added `hf aliro read` command (@kormax)
 - Added `hf aliro info` command (@kormax)
