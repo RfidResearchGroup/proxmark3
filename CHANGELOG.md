@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added wildcard support to `hf secc sim` payloads (@antiklesys)
 - Added `hf secc` to build a base for simulating basic function of iclass SE config cards (@antiklesys)
 - Improved SIO parsing for `hf iclass view` based on Iceman's "Dismantling the SEOS Protocol" talk (@antiklesys)
 - Added live fc/cn update to `hf iclass tagsim` refreshing the csn with each update (@antiklesys)

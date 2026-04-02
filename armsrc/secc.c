@@ -128,12 +128,30 @@ bool hid_config_card_handle_iblock(const uint8_t *cmd, int len, tag_response_inf
 
     // ----- Check custom APDU table first (overrides hardcoded responses) -----
     // cmd[off] is the start of the APDU payload; len includes trailing CRC (2 bytes).
+    // apdu_mask bit i=1 → exact match; bit i=0 → wildcard:
+    //   apdu[i]=0x00 → any single byte (**); apdu[i]=0x01 → length-prefix skip (##).
     for (int i = 0; i < s_apdu_count; i++) {
         if (s_apdu_table[i].apdu_len == 0)
             continue;
-        if (len - off < (int)(s_apdu_table[i].apdu_len + 2))
-            continue;
-        if (memcmp(&cmd[off], s_apdu_table[i].apdu, s_apdu_table[i].apdu_len) == 0) {
+        bool match = true;
+        int recv_pos = 0;
+        for (int j = 0; j < (int)s_apdu_table[i].apdu_len && match; j++) {
+            bool is_exact = (s_apdu_table[i].apdu_mask[j / 8] & (1u << (j % 8))) != 0;
+            if (off + recv_pos >= len - 2) { match = false; break; }
+            if (is_exact) {
+                if (cmd[off + recv_pos] != s_apdu_table[i].apdu[j])
+                    match = false;
+                recv_pos++;
+            } else if (s_apdu_table[i].apdu[j] == 0x01) {
+                // ## : read length byte, skip 1 + N bytes total
+                uint8_t payload_len = cmd[off + recv_pos];
+                recv_pos += 1 + payload_len;
+            } else {
+                // ** : skip one byte
+                recv_pos++;
+            }
+        }
+        if (match) {
             memcpy(rsp, s_apdu_table[i].resp, s_apdu_table[i].resp_len);
             ri->response_n = off + s_apdu_table[i].resp_len;
             return true;

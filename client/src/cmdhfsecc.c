@@ -20,10 +20,12 @@
 #define HID_APDU_MAX_ENTRIES 8
 #define HID_APDU_MAX_CMD     20
 #define HID_APDU_MAX_RESP    32
+#define HID_APDU_MASK_LEN    3    // ceil(HID_APDU_MAX_CMD / 8)
 
 typedef struct {
     uint8_t apdu[HID_APDU_MAX_CMD];
     uint8_t apdu_len;
+    uint8_t apdu_mask[HID_APDU_MASK_LEN];
     uint8_t resp[HID_APDU_MAX_RESP];
     uint8_t resp_len;
 } PACKED hid_apdu_entry_t;
@@ -152,11 +154,44 @@ static int CmdHFHIDConfigSim(const char *Cmd) {
             json_t *jresp = json_object_get(entry, "Response");
             if (!json_is_string(japdu) || !json_is_string(jresp))
                 continue;
-            int alen = hex_to_bytes(json_string_value(japdu),
-                                    apdu_table[apdu_count].apdu, HID_APDU_MAX_CMD);
+
+            // Parse APDU hex string with optional "**" wildcard bytes.
+            // mask bit i=1 → exact match; bit i=0 → wildcard.
+            const char *apdu_str = json_string_value(japdu);
+            int alen = 0;
+            bool apdu_ok = true;
+            memset(apdu_table[apdu_count].apdu_mask, 0xFF, HID_APDU_MASK_LEN);
+            while (*apdu_str && alen < HID_APDU_MAX_CMD) {
+                char hi = apdu_str[0];
+                char lo = apdu_str[1];
+                if (lo == '\0') { apdu_ok = false; break; }
+                apdu_str += 2;
+                if (hi == '*' && lo == '*') {
+                    apdu_table[apdu_count].apdu[alen] = 0x00;  // ** wildcard
+                    apdu_table[apdu_count].apdu_mask[alen / 8] &= ~(1u << (alen % 8));
+                } else if (hi == '#' && lo == '#') {
+                    apdu_table[apdu_count].apdu[alen] = 0x01;  // ## length-prefix skip
+                    apdu_table[apdu_count].apdu_mask[alen / 8] &= ~(1u << (alen % 8));
+                } else {
+                    uint8_t val = 0;
+                    for (int nb = 0; nb < 2; nb++) {
+                        char c = (nb == 0) ? hi : lo;
+                        uint8_t nib;
+                        if (c >= '0' && c <= '9')      nib = c - '0';
+                        else if (c >= 'A' && c <= 'F') nib = c - 'A' + 10;
+                        else if (c >= 'a' && c <= 'f') nib = c - 'a' + 10;
+                        else { apdu_ok = false; break; }
+                        val = (val << 4) | nib;
+                    }
+                    if (!apdu_ok) break;
+                    apdu_table[apdu_count].apdu[alen] = val;
+                }
+                alen++;
+            }
+
             int rlen = hex_to_bytes(json_string_value(jresp),
                                     apdu_table[apdu_count].resp, HID_APDU_MAX_RESP);
-            if (alen <= 0 || rlen <= 0) {
+            if (!apdu_ok || alen <= 0 || rlen <= 0) {
                 PrintAndLogEx(WARNING, "APDUResponses[%zu]: invalid hex, skipping", i);
                 continue;
             }
