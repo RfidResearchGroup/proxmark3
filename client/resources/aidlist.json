@@ -2771,6 +2771,30 @@
         "Type": "transport"
     },
     {
+        "AID": "A0000000014145502E4E4643412E5654",
+        "Vendor": "GTT - Gruppo Torinese Trasporti",
+        "Country": "Italy",
+        "Name": "Torino TO Move",
+        "Description": "AEP VTS mobile transit card (AEP.NFCA.VT)",
+        "Type": "transport",
+        "Protocol": "aep_vts",
+        "Sources": [
+            "android://it.to.gtt.tomove"
+        ]
+    },
+    {
+        "AID": "A0000007874145502E4E4643422E5654",
+        "Vendor": "ATM Milano",
+        "Country": "Italy",
+        "Name": "RicaricaMi",
+        "Description": "AEP VTS mobile transit card (AEP.NFCB.VT)",
+        "Type": "transport",
+        "Protocol": "aep_vts",
+        "Sources": [
+            "android://it.atm.appmobile"
+        ]
+    },
+    {
         "AID": "315449432E494341",
         "Vendor": "Calypso Networks Association (CNA)",
         "Country": "France",
