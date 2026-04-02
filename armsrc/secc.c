@@ -237,10 +237,10 @@ bool hid_config_card_jam(const uint8_t *cmd, int len, uint8_t *dma_buf) {
     int off = (pcb & 0x08) ? 2 : 1; // skip CID if present
 
     // Select active APDU pattern and response (custom or default)
-    const uint8_t *match     = (s_jam_apdu_len > 0) ? s_jam_apdu         : s_jam_apdu_default;
-    int            match_len = (s_jam_apdu_len > 0) ? (int)s_jam_apdu_len : (int)sizeof(s_jam_apdu_default);
-    const uint8_t *resp_data     = (s_jam_resp_len > 0) ? s_jam_resp         : s_jam_resp_default;
-    int            resp_data_len = (s_jam_resp_len > 0) ? (int)s_jam_resp_len : (int)sizeof(s_jam_resp_default);
+    const uint8_t *match = (s_jam_apdu_len > 0) ? s_jam_apdu : s_jam_apdu_default;
+    int match_len = (s_jam_apdu_len > 0) ? (int)s_jam_apdu_len : (int)sizeof(s_jam_apdu_default);
+    const uint8_t *resp_data = (s_jam_resp_len > 0) ? s_jam_resp : s_jam_resp_default;
+    int resp_data_len = (s_jam_resp_len > 0) ? (int)s_jam_resp_len : (int)sizeof(s_jam_resp_default);
 
     if (len < off + match_len + 2) // off + APDU pattern + 2-byte CRC
         return false;

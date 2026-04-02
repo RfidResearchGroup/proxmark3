@@ -6063,13 +6063,18 @@ void generate_key_block_inverted(const uint8_t *startingKey, uint64_t index, uin
 typedef struct {
     uint8_t startingKey[8];
     uint64_t index_start;
+    uint64_t index_end;
     uint8_t CCNR1[12];
     uint8_t MAC_TAG1[4];
     uint8_t CCNR2[12];
     uint8_t MAC_TAG2[4];
     int thread_id;
     int thread_count;
-    volatile bool *found;
+    uint64_t start_time;
+    _Atomic bool *found;
+    _Atomic bool *aborted;
+    _Atomic uint64_t *aborted_at;
+    bool debug;
     pthread_mutex_t *log_lock;
 } thread_args_t;
 
@@ -6082,7 +6087,31 @@ static void *brute_thread(void *args_void) {
     uint8_t verification_mac[4];
     uint64_t index = args->index_start;
 
-    while (!*(args->found)) {
+    if (args->debug) {
+        pthread_mutex_lock(args->log_lock);
+
+        PrintAndLogEx(INFO, "Thread[%2d]  range [%" PRIu64 " - %" PRIu64 ")  startingKey: %s"
+                      , args->thread_id
+                      , args->index_start
+                      , args->index_end
+                      , sprint_hex_inrow(args->startingKey, 8));
+
+        // Show first 2 candidates — different threads must start from different candidates
+        for (int d = 0; d < 2; d++) {
+            generate_key_block_inverted(args->startingKey, args->index_start + d, div_key);
+            PrintAndLogEx(INFO, "  [index %" PRIu64 "]: %s", args->index_start + d, sprint_hex_inrow(div_key, 8));
+        }
+
+        // Show the midpoint of the slice — confirms byte-0 carry is reached inside this thread's range
+        uint64_t mid = args->index_start + (args->index_end - args->index_start) / 2;
+        generate_key_block_inverted(args->startingKey, mid, div_key);
+        PrintAndLogEx(INFO, "  [index %" PRIu64 " (mid)]: %s", mid, sprint_hex_inrow(div_key, 8));
+
+        pthread_mutex_unlock(args->log_lock);
+        return NULL;
+    }
+
+    while (index < args->index_end && !*(args->found) && !*(args->aborted)) {
 
         generate_key_block_inverted(args->startingKey, index, div_key);
         doMAC(args->CCNR1, div_key, mac);
@@ -6104,15 +6133,45 @@ static void *brute_thread(void *args_void) {
             }
         }
 
-        if (index % 1000000 == 0 && !*(args->found)) {
+        uint64_t thread_progress = index - args->index_start;
+        if (thread_progress % 1000000 == 0 && !*(args->found)) {
 
             if (args->thread_id == 0) {
+                uint64_t keyspace     = (uint64_t)1 << 40;
+                uint64_t keyspace_m   = keyspace / 1000000;      // 1,099,511
+                uint64_t run_progress = thread_progress * (uint64_t)args->thread_count;
+                // Cumulative absolute position across all threads including any --index offset
+                uint64_t abs_done     = args->index_start * (uint64_t)args->thread_count + run_progress;
+                uint64_t keys_left    = (abs_done < keyspace) ? keyspace - abs_done : 0;
+                uint64_t elapsed_ms   = msclock() - args->start_time;
+
                 pthread_mutex_lock(args->log_lock);
-                PrintAndLogEx(INPLACE, "Tested "_YELLOW_("%" PRIu64)" million keys, curr index: "_YELLOW_("%" PRIu64)", Thread[0]: %s"
-                              , ((index / 1000000) * args->thread_count)
-                              , (index / 1000000)
-                              , sprint_hex_inrow(div_key, 8)
-                             );
+
+                if (elapsed_ms > 0 && run_progress > 0) {
+                    // speed based on keys tested in this run only
+                    uint64_t kps   = run_progress * 1000 / elapsed_ms;
+                    uint64_t eta_s = (kps > 0) ? keys_left / kps : 0;
+                    uint64_t eta_d = eta_s / 86400;
+                    uint64_t eta_h = (eta_s % 86400) / 3600;
+                    uint64_t eta_m = (eta_s % 3600) / 60;
+                    uint64_t eta_r = eta_s % 60;
+                    PrintAndLogEx(INPLACE, "Tested "_YELLOW_("%" PRIu64)"M / %" PRIu64 "M keys  speed: "_YELLOW_("%" PRIu64)" k/s  ETA: "_YELLOW_("%" PRIu64 "d %02" PRIu64 "h %02" PRIu64 "m %02" PRIu64 "s")
+                                  , abs_done / 1000000
+                                  , keyspace_m
+                                  , kps / 1000
+                                  , eta_d, eta_h, eta_m, eta_r
+                                 );
+                } else {
+                    PrintAndLogEx(INPLACE, "Tested "_YELLOW_("%" PRIu64)"M / %" PRIu64 "M keys"
+                                  , abs_done / 1000000
+                                  , keyspace_m
+                                 );
+                }
+
+                if (kbd_enter_pressed()) {
+                    *args->aborted_at = index;
+                    *args->aborted = true;
+                }
                 pthread_mutex_unlock(args->log_lock);
             }
 
@@ -6123,14 +6182,16 @@ static void *brute_thread(void *args_void) {
 }
 
 // HF iClass legbrute - Multithreaded brute-force function
-static int CmdHFiClassLegBrute_MT(uint8_t epurse[8], uint8_t macs[8], uint8_t macs2[8], uint8_t startingKey[8], uint64_t index, int threads) {
+static int CmdHFiClassLegBrute_MT(uint8_t epurse[8], uint8_t macs[8], uint8_t macs2[8], uint8_t startingKey[8], uint64_t index, int threads, bool debug) {
 
     int thread_count = threads;
     if (thread_count < 1) {
         thread_count = 1;
     }
-    if (thread_count > 16) {
-        thread_count = 16;
+    int max_threads = num_CPUs();
+    if (thread_count > max_threads) {
+        PrintAndLogEx(INFO, "Capping threads at available CPU count (%d)", max_threads);
+        thread_count = max_threads;
     }
     PrintAndLogEx(INFO, "Bruteforcing using " _YELLOW_("%u") " threads", thread_count);
     PrintAndLogEx(NORMAL, "");
@@ -6146,25 +6207,48 @@ static int CmdHFiClassLegBrute_MT(uint8_t epurse[8], uint8_t macs[8], uint8_t ma
 
     pthread_t tids[thread_count];
     thread_args_t args[thread_count];
-    volatile bool found = false;
+    _Atomic bool found = false;
+    _Atomic bool aborted = false;
+    _Atomic uint64_t aborted_at = 0;
     pthread_mutex_t log_lock;
     pthread_mutex_init(&log_lock, NULL);
+    PrintAndLogEx(HINT, "Hint: Press " _YELLOW_("<Enter>") " to abort");
 
-    int nibble_range = 16 / thread_count;
+    // Divide the full 40-bit keyspace into equal non-overlapping slices, one per thread.
+    // All threads use the same startingKey; only their index range differs.
+    uint64_t keyspace = (uint64_t)1 << 40;
+    uint64_t slice = keyspace / thread_count;
+    uint64_t start_time = msclock();
+
     for (int i = 0; i < thread_count; i++) {
         memcpy(args[i].startingKey, startingKey, 8);
-        args[i].startingKey[0] = (startingKey[0] & 0x0F) | ((i * nibble_range) << 4);
-        args[i].index_start = index;
+        args[i].index_start = index + (uint64_t)i * slice;
+        args[i].index_end   = (i == thread_count - 1)
+                            ? index + keyspace                      // last thread absorbs remainder
+                            : index + (uint64_t)(i + 1) * slice;
         memcpy(args[i].CCNR1, CCNR, 12);
         memcpy(args[i].MAC_TAG1, MAC_TAG, 4);
         memcpy(args[i].CCNR2, CCNR2, 12);
         memcpy(args[i].MAC_TAG2, MAC_TAG2, 4);
         args[i].thread_id = i;
         args[i].thread_count = thread_count;
+        args[i].start_time = start_time;
         args[i].found = &found;
+        args[i].aborted = &aborted;
+        args[i].aborted_at = &aborted_at;
+        args[i].debug = debug;
         args[i].log_lock = &log_lock;
 
-        pthread_create(&tids[i], NULL, brute_thread, &args[i]);
+        if (pthread_create(&tids[i], NULL, brute_thread, &args[i]) != 0) {
+            PrintAndLogEx(WARNING, "Failed to create thread %d, running with %d thread(s)", i, i);
+            thread_count = i;
+            break;
+        }
+    }
+
+    if (thread_count == 0) {
+        pthread_mutex_destroy(&log_lock);
+        return PM3_ESOFT;
     }
 
     for (int i = 0; i < thread_count; i++) {
@@ -6172,7 +6256,44 @@ static int CmdHFiClassLegBrute_MT(uint8_t epurse[8], uint8_t macs[8], uint8_t ma
     }
     pthread_mutex_destroy(&log_lock);
 
-    return found ? PM3_SUCCESS : ERR;
+    if (debug) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "Index range summary (%d threads, keyspace 2^40 = %" PRIu64 "):", thread_count, (uint64_t)1 << 40);
+        PrintAndLogEx(INFO, "  Thread  start                end                  slice size");
+        for (int i = 0; i < thread_count; i++) {
+            PrintAndLogEx(INFO, "  [%2d]    %-20" PRIu64 " %-20" PRIu64 " %" PRIu64
+                          , i
+                          , args[i].index_start
+                          , args[i].index_end
+                          , args[i].index_end - args[i].index_start);
+        }
+        // Verify ranges are contiguous and non-overlapping
+        bool ok = true;
+        for (int i = 1; i < thread_count; i++) {
+            if (args[i].index_start != args[i - 1].index_end) {
+                PrintAndLogEx(WARNING, _RED_("  Gap or overlap between thread %d and %d!"), i - 1, i);
+                ok = false;
+            }
+        }
+        if (ok) {
+            PrintAndLogEx(SUCCESS, _GREEN_("  Ranges are contiguous and non-overlapping"));
+        }
+        return PM3_SUCCESS;
+    }
+
+    if (aborted) {
+        uint64_t resume_millions = aborted_at / 1000000;
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(WARNING, "aborted via keyboard!");
+        PrintAndLogEx(HINT, "Hint: resume with " _YELLOW_("--index %" PRIu64 " --threads %d"), resume_millions, thread_count);
+        return PM3_EOPABORTED;
+    }
+
+    if (found == false) {
+        PrintAndLogEx(WARNING, "Key not found in the given keyspace");
+    }
+
+    return found ? PM3_SUCCESS : PM3_ESOFT;
 }
 
 // CmdHFiClassLegBrute function with CLI and multithreading support
@@ -6180,8 +6301,7 @@ static int CmdHFiClassLegBrute(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass legbrute",
                   "This command takes sniffed trace data and a partial raw key and bruteforces the remaining 40 bits of the raw key.\n"
-                  "Complete 40 bit keyspace is 1'099'511'627'776 and command is locked down to max 16 threads currently.\n"
-                  "A possible worst case scenario on 16 threads estimates XXX days YYY hours MMM minutes.",
+                  "Complete 40 bit keyspace is 1'099'511'627'776.",
                   "hf iclass legbrute --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk B4F12AADC5301225");
 
     void *argtable[] = {
@@ -6191,7 +6311,8 @@ static int CmdHFiClassLegBrute(const char *Cmd) {
         arg_str1(NULL, "macs2", "<hex>", "MACs captured from the reader, different than the first set (with the same csn and epurse value)"),
         arg_str1(NULL, "pk", "<hex>", "Partial Key from legrec or starting key of keyblock from legbrute"),
         arg_int0(NULL, "index", "<dec>", "Where to start from to retrieve the key, default 0 - value in millions e.g. 1 is 1 million"),
-        arg_int0(NULL, "threads", "<dec>", "Number of threads to use, by default it uses the cpu's max threads (max 16)."),
+        arg_int0(NULL, "threads", "<dec>", "Number of threads to use, by default it uses the cpu's max threads."),
+        arg_lit0(NULL, "dbg",    "Print first 2 key candidates and midpoint per thread, then exit (use to verify thread partitioning)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -6215,6 +6336,7 @@ static int CmdHFiClassLegBrute(const char *Cmd) {
     uint64_t index = arg_get_int_def(ctx, 5, 0);
     index *= 1000000;
     int threads = arg_get_int_def(ctx, 6, num_CPUs());
+    bool debug = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
     if (epurse_len && epurse_len != PICOPASS_BLOCK_SIZE) {
@@ -6237,7 +6359,7 @@ static int CmdHFiClassLegBrute(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    return CmdHFiClassLegBrute_MT(epurse, macs, macs2, startingKey, index, threads);
+    return CmdHFiClassLegBrute_MT(epurse, macs, macs2, startingKey, index, threads, debug);
 }
 
 static void generate_single_key_block_inverted_opt(const uint8_t *startingKey, uint32_t index, uint8_t *keyBlock) {
@@ -7502,6 +7624,7 @@ static bool match_with_wildcard(const uint8_t *data, const uint8_t *pattern, con
     }
     return true;
 }
+
 
 static int CmdHFiClassSAM(const char *Cmd) {
     CLIParserContext *ctx;
