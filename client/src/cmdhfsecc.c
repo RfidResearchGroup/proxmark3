@@ -6,11 +6,11 @@
 #include "cliparser.h"          // CLIParser*
 #include "comms.h"              // SendCommandNG, WaitForResponseTimeout, clearCommandBuffer
 #include "ui.h"                 // PrintAndLogEx
-#include "util.h"               // kbd_enter_pressed, hex_to_bytes
+#include "util.h"               // kbd_enter_pressed, hex_to_bytes, sprint_hex_inrow
 #include "cmdhf14a.h"           // IfPm3Iso14443a
 #include "pm3_cmd.h"            // CMD_HF_ISO14443A_SIMULATE, CMD_HF_ISO14443A_SNIFF, CMD_BREAK_LOOP, FLAG_SET_UID_IN_DATA
-#include "jansson.h"            // json_load_file, json_object_get, json_string_value, json_decref
-#include "fileutils.h"          // searchFile, RESOURCES_SUBDIR
+#include "jansson.h"            // json_object_get, json_is_array, json_string_value, json_decref
+#include "fileutils.h"          // loadFileJSONroot, JsonLoadBufAsHex
 
 // ---------------------------------------------------------------------------
 // Payload structs shared with armsrc/secc.h
@@ -86,30 +86,19 @@ static int CmdHFHIDConfigSim(const char *Cmd) {
     CLIParserFree(ctx);
 
     // Load JSON from client/resources/
-    char *filepath = NULL;
-    if (searchFile(&filepath, RESOURCES_SUBDIR, filename, ".json", false) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "JSON file '%s.json' not found in resources directory", filename);
+    json_t *root = NULL;
+    if (loadFileJSONroot(filename, (void **)&root, false) != PM3_SUCCESS)
         return PM3_EFILE;
-    }
-
-    json_error_t jerr;
-    json_t *root = json_load_file(filepath, 0, &jerr);
-    free(filepath);
-    if (root == NULL) {
-        PrintAndLogEx(ERR, "Failed to load JSON file '%s.json': %s", filename, jerr.text);
-        return PM3_EFILE;
-    }
 
     // Parse UID
     uint8_t uid[10] = {0};
-    int uidlen = 0;
-    json_t *juid = json_object_get(root, "UID");
-    if (json_is_string(juid) == false) {
+    size_t uidlen_sz = 0;
+    if (JsonLoadBufAsHex(root, "$.UID", uid, sizeof(uid), &uidlen_sz) != 0) {
         PrintAndLogEx(ERR, "JSON missing or invalid 'UID' field");
         json_decref(root);
         return PM3_EINVARG;
     }
-    uidlen = hex_to_bytes(json_string_value(juid), uid, sizeof(uid));
+    int uidlen = (int)uidlen_sz;
     if (uidlen != 4 && uidlen != 7 && uidlen != 10) {
         PrintAndLogEx(ERR, "UID must be 4, 7, or 10 bytes (got %d)", uidlen);
         json_decref(root);
@@ -124,33 +113,22 @@ static int CmdHFHIDConfigSim(const char *Cmd) {
 
     // Parse SCP02Key (16 bytes)
     uint8_t scp02_key[16] = {0};
-    json_t *jkey = json_object_get(root, "SCP02Key");
-    if (json_is_string(jkey) == false) {
-        PrintAndLogEx(ERR, "JSON missing or invalid 'SCP02Key' field");
-        json_decref(root);
-        return PM3_EINVARG;
-    }
-    if (hex_to_bytes(json_string_value(jkey), scp02_key, sizeof(scp02_key)) != 16) {
-        PrintAndLogEx(ERR, "SCP02Key must be exactly 16 bytes (32 hex chars)");
+    size_t scp02_len = 0;
+    if (JsonLoadBufAsHex(root, "$.SCP02Key", scp02_key, sizeof(scp02_key), &scp02_len) != 0 || scp02_len != 16) {
+        PrintAndLogEx(ERR, "JSON missing or invalid 'SCP02Key' field (must be 16 bytes)");
         json_decref(root);
         return PM3_EINVARG;
     }
 
     // Parse ATS (1-20 bytes, without CRC)
     uint8_t ats[20] = {0};
-    int ats_len = 0;
-    json_t *jats = json_object_get(root, "ATS");
-    if (json_is_string(jats) == false) {
-        PrintAndLogEx(ERR, "JSON missing or invalid 'ATS' field");
+    size_t ats_len_sz = 0;
+    if (JsonLoadBufAsHex(root, "$.ATS", ats, sizeof(ats), &ats_len_sz) != 0 || ats_len_sz == 0) {
+        PrintAndLogEx(ERR, "JSON missing or invalid 'ATS' field (must be 1-20 bytes)");
         json_decref(root);
         return PM3_EINVARG;
     }
-    ats_len = hex_to_bytes(json_string_value(jats), ats, sizeof(ats));
-    if (ats_len <= 0 || ats_len > 20) {
-        PrintAndLogEx(ERR, "ATS must be 1-20 bytes (got %d)", ats_len);
-        json_decref(root);
-        return PM3_EINVARG;
-    }
+    int ats_len = (int)ats_len_sz;
 
     // Parse optional APDUResponses array
     hid_apdu_entry_t apdu_table[HID_APDU_MAX_ENTRIES];
@@ -220,16 +198,12 @@ static int CmdHFHIDConfigSim(const char *Cmd) {
     uint16_t flags = 0;
     FLAG_SET_UID_IN_DATA(flags, uidlen);
 
-    char uid_str[21] = {0};
-    for (int i = 0; i < uidlen; i++)
-        snprintf(uid_str + i * 2, sizeof(uid_str) - i * 2, "%02X", uid[i]);
-
     PrintAndLogEx(INFO, "HID Config Card sim:"
                   " UID " _YELLOW_("%s")
                   " AID " _YELLOW_("%s")
                   " ATS len " _YELLOW_("%d")
                   " APDU overrides " _YELLOW_("%u"),
-                  uid_str, aid_str, ats_len, apdu_count);
+                  sprint_hex_inrow(uid, uidlen), aid_str, ats_len, apdu_count);
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
 
     hid_sim_payload_t payload;
@@ -251,15 +225,16 @@ static int CmdHFHIDConfigSim(const char *Cmd) {
     SendCommandNG(CMD_HF_HIDCONFIG_SIM, (uint8_t *)&payload, sizeof(payload));
 
     PacketResponseNG resp = {0};
-    while (true) {
-        if (WaitForResponseTimeout(CMD_HF_HIDCONFIG_SIM, &resp, 1500)) {
-            if (resp.status != PM3_SUCCESS)
-                break;
-        }
-        if (kbd_enter_pressed()) {
-            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+    bool keypress = kbd_enter_pressed();
+    while (keypress == false) {
+        keypress = kbd_enter_pressed();
+        // Any response means the device finished (button press or exitAfter reached).
+        if (WaitForResponseTimeout(CMD_HF_HIDCONFIG_SIM, &resp, 1500))
             break;
-        }
+    }
+    if (keypress) {
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        WaitForResponse(CMD_HF_HIDCONFIG_SIM, &resp);
     }
     return PM3_SUCCESS;
 }
@@ -332,28 +307,16 @@ static int CmdHFHIDConfigSniff(const char *Cmd) {
 
     if (jam) {
         param |= 0x04;
-        if (has_apdu) {
-            char apdu_hex[HID_JAM_MAX_APDU * 2 + 1] = {0};
-            for (int i = 0; i < apdu_buf_len; i++)
-                snprintf(apdu_hex + i * 2, sizeof(apdu_hex) - i * 2, "%02X", apdu_buf[i]);
-            if (has_resp) {
-                char resp_hex[HID_JAM_MAX_RESP * 2 + 1] = {0};
-                for (int i = 0; i < resp_buf_len; i++)
-                    snprintf(resp_hex + i * 2, sizeof(resp_hex) - i * 2, "%02X", resp_buf[i]);
-                PrintAndLogEx(INFO, "Sniff with jam of APDU " _YELLOW_("%s") " -> " _YELLOW_("%s"), apdu_hex, resp_hex);
-            } else {
-                PrintAndLogEx(INFO, "Sniff with jam of APDU " _YELLOW_("%s") " -> " _YELLOW_("00009000"), apdu_hex);
-            }
-        } else {
-            if (has_resp) {
-                char resp_hex[HID_JAM_MAX_RESP * 2 + 1] = {0};
-                for (int i = 0; i < resp_buf_len; i++)
-                    snprintf(resp_hex + i * 2, sizeof(resp_hex) - i * 2, "%02X", resp_buf[i]);
-                PrintAndLogEx(INFO, "Sniff with jam of APDU " _YELLOW_("A0D4000000") " -> " _YELLOW_("%s"), resp_hex);
-            } else {
-                PrintAndLogEx(INFO, "Sniff with jam of APDU " _YELLOW_("A0D4000000") " -> " _YELLOW_("00009000"));
-            }
-        }
+        // sprint_hex_inrow uses a single static buffer; copy the APDU string before
+        // calling it again for the response.
+        char apdu_str[HID_JAM_MAX_APDU * 2 + 1];
+        strncpy(apdu_str,
+                has_apdu ? sprint_hex_inrow(apdu_buf, apdu_buf_len) : "A0D4000000",
+                sizeof(apdu_str) - 1);
+        apdu_str[sizeof(apdu_str) - 1] = '\0';
+        PrintAndLogEx(INFO, "Sniff with jam of APDU " _YELLOW_("%s") " -> " _YELLOW_("%s"),
+                      apdu_str,
+                      has_resp ? sprint_hex_inrow(resp_buf, resp_buf_len) : "00009000");
     }
 
     uint16_t sniff_cmd = jam ? CMD_HF_HIDCONFIG_SNIFF : CMD_HF_ISO14443A_SNIFF;
