@@ -6111,13 +6111,14 @@ static void *brute_thread(void *args_void) {
         return NULL;
     }
 
+    uint32_t progress_countdown = 1000000;
     while (index < args->index_end && !*(args->found) && !*(args->aborted)) {
 
         generate_key_block_inverted(args->startingKey, index, div_key);
-        doMAC(args->CCNR1, div_key, mac);
+        doMAC_brute(args->CCNR1, div_key, mac);
 
         if (memcmp(mac, args->MAC_TAG1, 4) == 0) {
-            doMAC(args->CCNR2, div_key, verification_mac);
+            doMAC_brute(args->CCNR2, div_key, verification_mac);
             if (memcmp(verification_mac, args->MAC_TAG2, 4) == 0) {
                 pthread_mutex_lock(args->log_lock);
                 if (!*(args->found)) {
@@ -6134,7 +6135,8 @@ static void *brute_thread(void *args_void) {
         }
 
         uint64_t thread_progress = index - args->index_start;
-        if (thread_progress % 1000000 == 0 && !*(args->found)) {
+        if (--progress_countdown == 0 && !*(args->found)) {
+            progress_countdown = 1000000;
 
             if (args->thread_id == 0) {
                 uint64_t keyspace     = (uint64_t)1 << 40;
