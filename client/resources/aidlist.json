@@ -2804,23 +2804,24 @@
         "Protocol": "cna_calypso",
         "Sources": [
             "android://pt.card4b.navegante",
-            "android://pt.opt.anda"
+            "android://pt.opt.anda",
+            "android://com.spirtech.emiliaromagna"
         ]
     },
     {
-        "AID": "315449432E494341D484",
-        "Vendor": "Secretaria de Movilidad (SEMOVI)",
-        "Country": "Mexico",
-        "Name": "Tarjeta Virtual de Movilidad Integrada",
-        "Description": "Virtual Tarjeta MI for Mexico City public transport, distributed through App CDMX.",
+        "AID": "315449432E494341D48401019101",
+        "Vendor": "Spirtech",
+        "Country": "Italy",
+        "Name": "Mover Emilia Romagna",
+        "Description": "Calypso-based ticket for public transport in Emilia-Romagna.",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Sources": [
-            "android://mx.gob.cdmx.adip.apps"
+            "android://com.spirtech.emiliaromagna"
         ]
     },
     {
-        "AID": "315449432E494341D6",
+        "AID": "315449432E494341D62000029101",
         "Vendor": "Transportes Metropolitanos do Porto",
         "Country": "Portugal",
         "Name": "Andante",
@@ -2884,6 +2885,15 @@
         "Vendor": "Ile-de-France Mobilites",
         "Country": "France",
         "Name": "Navigo",
+        "Description": "CALYPSO-based transit card",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A00000040401250057",
+        "Vendor": "TCL",
+        "Country": "France",
+        "Name": "E-ticket Lyon",
         "Description": "CALYPSO-based transit card",
         "Type": "transport",
         "Protocol": "cna_calypso"
