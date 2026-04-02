@@ -23,6 +23,7 @@ Each entry in `client/resources/aidlist.json` must contain all of the fields bel
 - `Protocol`: Application-layer protocol implemented by this AID. Use lowercase `snake_case` (for example `apple_vas`).
   If the protocol is vendor/ecosystem-specific, include an owner qualifier in the name (for example `google_smart_tap`, `ccc_digital_car_key`) instead of using a generic label.
   Known protocol names currently used:
+  - `aep_vts`
   - `apple_access_key`
   - `apple_home_key`
   - `apple_vas`
