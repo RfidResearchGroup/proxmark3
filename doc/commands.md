@@ -40,6 +40,7 @@ Check column "offline" for their availability.
 |`prefs get client.debug `|Y       |`Get client debug level preference`
 |`prefs get client.delay `|Y       |`Get client execution delay preference`
 |`prefs get client.timeout`|Y       |`Get client execution delay preference`
+|`prefs get hf.field.timeout_sec`|Y       |`Get PM3 HF field inactivity timeout preference`
 |`prefs get color        `|Y       |`Get color support preference`
 |`prefs get savepaths    `|Y       |`Get file folder  `
 |`prefs get emoji        `|Y       |`Get emoji display preference`
@@ -60,6 +61,7 @@ Check column "offline" for their availability.
 |`prefs set client.debug `|Y       |`Set client debug level`
 |`prefs set client.delay `|Y       |`Set client execution delay`
 |`prefs set client.timeout`|Y       |`Set client communication timeout`
+|`prefs set hf.field.timeout_sec`|Y       |`Set PM3 HF field inactivity timeout`
 |`prefs set color        `|Y       |`Set color support`
 |`prefs set emoji        `|Y       |`Set emoji display`
 |`prefs set hints        `|Y       |`Set hint display`
@@ -86,6 +88,7 @@ Check column "offline" for their availability.
 |`analyse demodbuff      `|Y       |`Load binary string to DemodBuffer`
 |`analyse freq           `|Y       |`Calc wave lengths`
 |`analyse foo            `|Y       |`muxer`
+|`analyse regex          `|Y       |`Regex utility (subset: ^ $ . * with \\ escape)`
 |`analyse units          `|Y       |`convert ETU <> US <> SSP_CLK (3.39MHz)`
 
 
@@ -422,6 +425,17 @@ Check column "offline" for their availability.
 |`hf gst read            `|N       |`Read and decode Google Smart Tap pass objects`
 
 
+### hf secc
+
+ { iClass SE Config Card Emulator...   }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf secc help           `|Y       |`This help`
+|`hf secc sim            `|N       |`Simulate HID iCLASS SE Config Card`
+|`hf secc sniff          `|N       |`Sniff reader<->card, jam A0 D4 APDU`
+
+
 ### hf iclass
 
  { ICLASS RFIDs...                     }
@@ -448,6 +462,7 @@ Check column "offline" for their availability.
 |`hf iclass unhash       `|Y       |`Reverses a diversified key to retrieve hash0 pre-images after DES encryption`
 |`hf iclass blacktears   `|N       |`Automated tearoff attack on new silicon cards to enable non-secure page mode`
 |`hf iclass sim          `|N       |`Simulate iCLASS tag`
+|`hf iclass tagsim       `|N       |`Simulate a full iCLASS 2K tag from FC/CN and keys`
 |`hf iclass eload        `|N       |`Upload file into emulator memory`
 |`hf iclass esave        `|N       |`Save emulator memory to file`
 |`hf iclass esetblk      `|N       |`Set emulator memory block data`
@@ -652,6 +667,7 @@ Check column "offline" for their availability.
 |`hf mfu keygen          `|Y       |`Generate DES/3DES/AES MIFARE diversified keys`
 |`hf mfu pwdgen          `|Y       |`Generate pwd from known algos`
 |`hf mfu otptear         `|N       |`Tear-off test on OTP bits`
+|`hf mfu countertear     `|N       |`Tear-off test on Ev1/NTAG Counter bits`
 |`hf mfu cauth           `|N       |`Ultralight-C - Authentication`
 |`hf mfu cchk            `|N       |`Ultralight-C - Authentication dictionary check`
 |`hf mfu aesauth         `|N       |`Ultralight-AES - Authentication`

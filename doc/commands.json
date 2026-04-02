@@ -97,7 +97,7 @@
         },
         "analyse help": {
             "command": "analyse help",
-            "description": "help This help lrc Generate final byte for XOR LRC crc Stub method for CRC evaluations chksum Checksum with adding, masking and one's complement dates Look for datestamps in a given array of bytes lfsr LFSR tests a num bits test nuid create NUID from 7byte UID demodbuff Load binary string to DemodBuffer freq Calc wave lengths foo muxer units convert ETU <> US <> SSP_CLK (3.39MHz) --------------------------------------------------------------------------------------- analyse lrc available offline: yes Specifying the bytes of a UID with a known LRC will find the last byte value needed to generate that LRC with a rolling XOR. All bytes should be specified in HEX.",
+            "description": "help This help lrc Generate final byte for XOR LRC crc Stub method for CRC evaluations chksum Checksum with adding, masking and one's complement dates Look for datestamps in a given array of bytes lfsr LFSR tests a num bits test nuid create NUID from 7byte UID demodbuff Load binary string to DemodBuffer freq Calc wave lengths foo muxer regex Regex utility (subset: ^ $ . * with \\\\ escape) units convert ETU <> US <> SSP_CLK (3.39MHz) --------------------------------------------------------------------------------------- analyse lrc available offline: yes Specifying the bytes of a UID with a known LRC will find the last byte value needed to generate that LRC with a rolling XOR. All bytes should be specified in HEX.",
             "notes": [
                 "analyse lrc -d 04008064BA -> Target (BA) requires final LRC XOR byte value: 5A"
             ],
@@ -135,6 +135,24 @@
                 "-t, --test self test"
             ],
             "usage": "analyse nuid [-ht] [-d <hex>]"
+        },
+        "analyse regex": {
+            "command": "analyse regex",
+            "description": "Regex utility (subset: ^ $ . * with \\\\ escape)",
+            "notes": [
+                "analyse regex --pattern '^A000' --text A000000476D0000111",
+                "analyse regex --pattern '.*500A416E64726F6964506179.*9000$' --text 6F8150500A416E64726F69645061799000 --insensitive",
+                "analyse regex --test"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-p, --pattern <str> regex pattern",
+                "-d, --text <str> text to match",
+                "-i, --insensitive case-insensitive match",
+                "-t, --test run self tests"
+            ],
+            "usage": "analyse regex [-hit] [-p <str>] [-d <str>]"
         },
         "analyse units": {
             "command": "analyse units",
@@ -627,15 +645,17 @@
             "description": "Generate a QR code with the input data",
             "notes": [
                 "data qrcode -f <filename>",
-                "data qrcode -d 123456789"
+                "data qrcode -d 0123456789",
+                "data qrcode -d AABBCCDD --ascii"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
+                "-a, --ascii Render with ASCII-safe characters",
                 "-f, --file <fn> Specify a filename",
-                "-d, --data <hex> message as hex bytes"
+                "-d, --data <hex> message as a single hex byte string"
             ],
-            "usage": "data qrcode [-h] [-f <fn>] [-d <hex>]"
+            "usage": "data qrcode [-ha] [-f <fn>] [-d <hex>]"
         },
         "data rawdemod": {
             "command": "data rawdemod",
@@ -2043,9 +2063,10 @@
             "options": [
                 "-h, --help This help",
                 "-u, --uid <hex> UID, 8 hex bytes",
-                "-b, --blocksize <dec> block size (def 4)"
+                "-b, --blocksize <dec> block size (def 4)",
+                "-t, --timeout <dec> timeout in ms (def -1, ie. until button press)"
             ],
-            "usage": "hf 15 sim [-h] [-u <hex>] [-b <dec>]"
+            "usage": "hf 15 sim [-h] [-u <hex>] [-b <dec>] [-t <dec>]"
         },
         "hf 15 slixeasdisable": {
             "command": "hf 15 slixeasdisable",
@@ -3449,10 +3470,11 @@
                 "--mode <pass-only|payment-only|pass-and-payment|pass-over-payment> Reader mode (default: pass-over-payment)",
                 "--select-smarttap2 <auto|yes|no> Whether to perform Smart Tap applet select (default: auto)",
                 "--no-live-auth Use zeroed handset nonce for reader signature",
+                "-@ continuous mode",
                 "-a, --apdu Show APDU requests and responses",
                 "-v, --verbose Verbose output"
             ],
-            "usage": "hf gst read [-hav] -c <hex|dec> -p <pem|der-b64|der-hex|scalar-b64|scalar-hex|path> [--key-version <hex|dec>] [--session-id <hex>] [--reader-nonce <hex>] [--reader-ephemeral-private-key <hex>] [--mode <pass-only|payment-only|pass-and-payment|pass-over-payment>] [--select-smarttap2 <auto|yes|no>] [--no-live-auth]"
+            "usage": "hf gst read [-h@av] -c <hex|dec> -p <pem|der-b64|der-hex|scalar-b64|scalar-hex|path> [--key-version <hex|dec>] [--session-id <hex>] [--reader-nonce <hex>] [--reader-ephemeral-private-key <hex>] [--mode <pass-only|payment-only|pass-and-payment|pass-over-payment>] [--select-smarttap2 <auto|yes|no>] [--no-live-auth]"
         },
         "hf gst test": {
             "command": "hf gst test",
@@ -3468,7 +3490,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } aliro { ALIRO digital access credentials... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } gst { Google Smart Tap passes... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } saflok { Saflok MFC RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service... } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } aliro { ALIRO digital access credentials... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } gst { Google Smart Tap passes... } secc { iClass SE Config Card Emulator... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } saflok { Saflok MFC RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service... } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf list --frame -> show frame delay times",
                 "hf list -1 -> use trace buffer"
@@ -3491,8 +3513,8 @@
             "command": "hf iclass blacktears",
             "description": "Tear off the iCLASS (new-silicon only) configuration block to set non-secure page mode. Make sure you know the target card credit key. Typical `--ki 1` or `--ki 3`",
             "notes": [
-                "hf iclass blacktears -k 001122334455667B",
-                "hf iclass blacktears --ki 1"
+                "hf iclass blacktears -k 001122334455667B <-- debit custom key",
+                "hf iclass blacktears --credit --ki 1 <-- credit key at index 1"
             ],
             "offline": false,
             "options": [
@@ -3504,11 +3526,12 @@
                 "-i <dec> tearoff delay increment (in us) - default 10",
                 "-e <dec> tearoff delay end (in us) must be a higher value than the start delay",
                 "-o, --otp <hex> Custom OTP value as 2 hex bytes",
+                "--dns Do not stabilize the bits, and return the raw dump of the block after tearoff",
                 "--raw no computations applied to key",
                 "-v, --verbose verbose output",
                 "--shallow use shallow (ASK) reader modulation instead of OOK"
             ],
-            "usage": "hf iclass blacktears [-hv] [-k <hex>] [--ki <dec>] [--credit] [-s <dec>] [-i <dec>] [-e <dec>] [-o <hex>] [--raw] [--shallow]"
+            "usage": "hf iclass blacktears [-hv] [-k <hex>] [--ki <dec>] [--credit] [-s <dec>] [-i <dec>] [-e <dec>] [-o <hex>] [--dns] [--raw] [--shallow]"
         },
         "hf iclass calcnewkey": {
             "command": "hf iclass calcnewkey",
@@ -3839,11 +3862,13 @@
         },
         "hf iclass lookup": {
             "command": "hf iclass lookup",
-            "description": "This command take sniffed trace data and try to recovery a iCLASS Standard or iCLASS Elite key.",
+            "description": "Takes sniffed trace data and tries to recover a iCLASS Standard or Elite key. Use --live to simulate a tag, capture the reader's CHECK command on-device, and run the lookup automatically. Built-in key table is always searched first.",
             "notes": [
                 "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic",
                 "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic --elite",
-                "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b --vb6rng"
+                "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b --vb6rng",
+                "hf iclass lookup --live",
+                "hf iclass lookup --live --csn 031fec8af7ff12e0 -f iclass_default_keys.dic"
             ],
             "offline": true,
             "options": [
@@ -3851,12 +3876,13 @@
                 "-f, --file <fn> Dictionary file with default iclass keys",
                 "--csn <hex> Specify CSN as 8 hex bytes",
                 "--epurse <hex> Specify ePurse as 8 hex bytes",
-                "--macs <hex> MACs",
+                "--macs <hex> MACs (NR+MAC from sniffed trace)",
                 "--elite Elite computations applied to key",
                 "--raw no computations applied to key",
-                "--vb6rng use the VB6 rng for elite keys instead of a dictionary file"
+                "--vb6rng use the VB6 rng for elite keys instead of a dictionary file",
+                "--live Simulate tag, capture reader CHECK and run lookup automatically"
             ],
-            "usage": "hf iclass lookup [-h] [-f <fn>] --csn <hex> --epurse <hex> --macs <hex> [--elite] [--raw] [--vb6rng]"
+            "usage": "hf iclass lookup [-h] [-f <fn>] [--csn <hex>] [--epurse <hex>] [--macs <hex>] [--elite] [--raw] [--vb6rng] [--live]"
         },
         "hf iclass managekeys": {
             "command": "hf iclass managekeys",
@@ -3913,9 +3939,10 @@
                 "--raw no computations applied to key",
                 "--nr replay of NR/MAC",
                 "-v, --verbose verbose output",
-                "--shallow use shallow (ASK) reader modulation instead of OOK"
+                "--shallow use shallow (ASK) reader modulation instead of OOK",
+                "-@ optional - continuous mode"
             ],
-            "usage": "hf iclass rdbl [-hv] [-k <hex>] [--ki <dec>] --blk <dec> [--credit] [--elite] [--raw] [--nr] [--shallow]"
+            "usage": "hf iclass rdbl [-hv@] [-k <hex>] [--ki <dec>] --blk <dec> [--credit] [--elite] [--raw] [--nr] [--shallow]"
         },
         "hf iclass reader": {
             "command": "hf iclass reader",
@@ -3962,7 +3989,8 @@
             "notes": [
                 "hf iclass sam",
                 "hf iclass sam -p -d a005a103800104 -> get PACS data, prevent epurse update",
-                "hf iclass sam --break -> get Nr-MAC for extracting encrypted SIO"
+                "hf iclass sam --break -> get Nr-MAC for extracting encrypted SIO",
+                "hf iclass sam -f hf-iclass-dump.bin -> emulate card from dump file to SAM"
             ],
             "offline": false,
             "options": [
@@ -3976,9 +4004,10 @@
                 "--shallow shallow mod",
                 "-d, --data <hex> DER encoded command to send to SAM",
                 "-s, --snmp data is in snmp format without headers",
-                "--info get SAM infos (version, serial number)"
+                "--info get SAM infos (version, serial number)",
+                "-f, --file <fn> dump file to emulate to SAM instead of a real card"
             ],
-            "usage": "hf iclass sam [-hvkntps] [--break] [--shallow] [-d <hex>]... [--info]"
+            "usage": "hf iclass sam [-hvkntps] [--break] [--shallow] [-d <hex>]... [--info] [-f <fn>]"
         },
         "hf iclass sim": {
             "command": "hf iclass sim",
@@ -4013,6 +4042,35 @@
                 "-j, --jam Jam (prevent) e-purse updates"
             ],
             "usage": "hf iclass sniff [-hj]"
+        },
+        "hf iclass tagsim": {
+            "command": "hf iclass tagsim",
+            "description": "Build a complete iCLASS 2K tag dump from facility code, card number, and keys, upload it to emulator memory, and start a full simulation. Use either --bin or --wiegand/--fc/--cn to specify the credential. Provide a debit key via --kd or --ki. If no transport key is given, the tool tries to load iclass_decryptionkey.bin.",
+            "notes": [
+                "hf iclass tagsim --fc 101 --cn 1337",
+                "hf iclass tagsim -w H10301 --fc 101 --cn 1337 --ki 0",
+                "hf iclass tagsim -w H10301 --fc 101 --cn 1337 --kd 0102030405060708 --elite",
+                "hf iclass tagsim --bin 10001111100000001010100011 --ki 0",
+                "hf iclass tagsim -w H10301 --fc 101 --cn 1337 --ki 0 --enckey 00000000000000000000000000000000"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-w, --wiegand <format> Wiegand format (default H10301), see `wiegand list`",
+                "--fc <dec> Facility code",
+                "--cn <dec> Card number",
+                "--issue <dec> Issue level",
+                "--bin <bin> Binary wiegand string (alternative to --wiegand/--fc/--cn)",
+                "--kd <hex> Debit master key, 8 hex bytes",
+                "--kc <hex> Credit master key, 8 hex bytes (defaults to kd if omitted)",
+                "--ki <dec> Debit key index from key manager (replaces --kd)",
+                "--ci <dec> Credit key index from key manager (replaces --kc)",
+                "--elite Elite key diversification",
+                "--raw Keys are already diversified, skip diversification",
+                "--csn <hex> Custom CSN, 8 hex bytes (auto-generated if omitted)",
+                "--enckey <hex> 3DES transport key, 16 hex bytes"
+            ],
+            "usage": "hf iclass tagsim [-h] [-w <format>] [--fc <dec>] [--cn <dec>] [--issue <dec>] [--bin <bin>] [--kd <hex>] [--kc <hex>] [--ki <dec>] [--ci <dec>] [--elite] [--raw] [--csn <hex>] [--enckey <hex>]"
         },
         "hf iclass tear": {
             "command": "hf iclass tear",
@@ -4100,9 +4158,10 @@
                 "--raw no computations applied to key",
                 "--nr replay of NR/MAC block write or use privilege escalation if mac is empty",
                 "-v, --verbose verbose output",
-                "--shallow use shallow (ASK) reader modulation instead of OOK"
+                "--shallow use shallow (ASK) reader modulation instead of OOK",
+                "-@ optional - continuous mode"
             ],
-            "usage": "hf iclass wrbl [-hv] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow]"
+            "usage": "hf iclass wrbl [-hv@] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow]"
         },
         "hf ict help": {
             "command": "hf ict help",
@@ -7556,6 +7615,26 @@
             ],
             "usage": "hf mfu cchk [-hxn0] [-f <fn>] [-s <0..3>] [-r <0..255>] [-k <hex>]"
         },
+        "hf mfu countertear": {
+            "command": "hf mfu countertear",
+            "description": "Tear-off test against a Ev1 counter",
+            "notes": [
+                "hf mfu countertear -c 0 -> target counter 0",
+                "hf mfu countertear -c 0 -s 200 -> target counter 0, start delay 200",
+                "hf mfu countertear -c 0 -x 020000 -> target counter 0, increasing the counter by 2 bytes"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-c, --cnt <0,1,2> Target this EV1 counter (0,1,2)",
+                "-i, --inc <dec> time interval to increase in each iteration - default 10 us",
+                "-l, --limit <dec> test upper limit time - default 3000 us",
+                "-s, --start <dec> test start time - default 500 us",
+                "--fix <dec> test fixed loop delay",
+                "-x, --hex <string> 3 byte hex to increase counter with - default 010000"
+            ],
+            "usage": "hf mfu countertear [-h] [-c <0,1,2>] [-i <dec>] [-l <dec>] [-s <dec>] [--fix <dec>] [-x <string>]"
+        },
         "hf mfu dump": {
             "command": "hf mfu dump",
             "description": "Dump MIFARE Ultralight/NTAG tag to files (bin/json) It autodetects card type.Supports: Ultralight, Ultralight C, Ultralight AES, Ultralight EV1 NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216",
@@ -8239,36 +8318,74 @@
             ],
             "usage": "hf search [-hv]"
         },
+        "hf secc help": {
+            "command": "hf secc help",
+            "description": "-------- ----------- HID Config Card ----------- help This help --------------------------------------------------------------------------------------- hf secc sim available offline: no Simulate a HID iCLASS SE Config Card (JCOP / GlobalPlatform SCP02). Responds to SELECT AID (0013/0017), A0 D4, INITIALIZE UPDATE, and EXTERNAL AUTH. Load card parameters (UID, AID, SCP02Key) from a JSON file.",
+            "notes": [
+                "hf secc sim -f hidconfig_sample",
+                "hf secc sim -f hidconfig_sample -n 5 -> stop after 5 reader interactions"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> JSON file with UID, AID, SCP02Key (without .json extension)",
+                "-n, --num <dec> Exit after <n> reader interactions. 0 = infinite"
+            ],
+            "usage": "hf secc sim [-h] -f <fn> [-n <dec>]"
+        },
+        "hf secc sniff": {
+            "command": "hf secc sniff",
+            "description": "Sniff the communication between a HID Config Card reader and card. Use `hf 14a list` to view collected data.",
+            "notes": [
+                "hf secc sniff",
+                "hf secc sniff -j -> jam A0 D4 00 00 00, respond 00 00 90 00",
+                "hf secc sniff -c -r -> trigger on card or reader data"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-c, --card triggered by first data from card",
+                "-r, --reader triggered by first 7-bit request from reader (REQ, WUP)",
+                "-i, --interactive console will not be returned until sniff finishes or is aborted",
+                "-j, --jam jam APDU A0 D4 00 00 00, respond with 00 00 90 00"
+            ],
+            "usage": "hf secc sniff [-hcrij]"
+        },
         "hf seos adf": {
             "command": "hf seos adf",
-            "description": "Make a GET DATA request to an Application Data File (ADF) of a SEOS Tag The ADF is meant to be read by an application You still need the valid authentication keys to read a card By default: - ADF OID : 2B0601040181E438010102011801010202 - Key Index: 0 - Data Tag : FF00",
+            "description": "Make a GET DATA request to an Application Data File (ADF) of a SEOS Tag The ADF is meant to be read by an application You still need the valid authentication keys to read a card By default: - ADF OID : 2B0601040181E438010102011801010202 - Privacy Key : 0 The selected privacy slot provides both encryption and MAC subkeys and is sent as the privacy slot identifier. - Auth Key : 0 The selected auth slot provides the auth key and is sent as the auth slot identifier. - Data Tag : FF00",
             "notes": [
                 "hf seos adf",
                 "hf seos adf -o 2B0601040181E438010102011801010202",
-                "hf seos adf -o 2B0601040181E438010102011801010202 --ki 0",
-                "hf seos adf -o 2B0601040181E438010102011801010202 -t FF41"
+                "hf seos adf -o 2B0601040181E438010102011801010202 --privacy-key 8 --auth-key 9",
+                "hf seos adf -o 2B0601040181E438010102011801010202 -t FF41 --privacy-key 8 --auth-key 9"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-t, --tag <hex> <0-100> hex bytes for tag to read (Default: FF00)",
                 "-o, --oid <hex> <0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)",
-                "--ki <dec> Specify key index to set key in memory"
+                "--privacy-key <idx> Privacy key slot index. The selected slot provides both privacy encryption and MAC subkeys and is sent as the privacy slot identifier",
+                "--auth-key <idx> Auth key slot index. The selected slot provides the auth key and is sent as the auth slot identifier",
+                "--aid <hex> Use a custom SEOS AID"
             ],
-            "usage": "hf seos adf [-h] [-t <hex>] [-o <hex>] [--ki <dec>]"
+            "usage": "hf seos adf [-h] [-t <hex>] [-o <hex>] [--privacy-key <idx>] [--auth-key <idx>] [--aid <hex>]"
         },
         "hf seos gdf": {
             "command": "hf seos gdf",
-            "description": "Get Global Data File (GDF) from SEOS card By default: - Key Index: 3",
+            "description": "Get Global Data File (GDF) from SEOS card By default: - Privacy Key: 3",
             "notes": [
-                "hf seos gdfhf seos gdf --ki 3"
+                "hf seos gdf",
+                "hf seos gdf --privacy-key 3",
+                "hf seos gdf --privacy-key 3 --aid A0000004400001010001"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--ki <dec> Specify key index to set key in memory"
+                "--privacy-key <idx> Privacy key slot index. The selected slot provides both privacy encryption and MAC subkeys and is sent as the privacy slot identifier",
+                "--aid <hex> Use a custom SEOS AID"
             ],
-            "usage": "hf seos gdf [-h] [--ki <dec>]"
+            "usage": "hf seos gdf [-h] [--privacy-key <idx>] [--aid <hex>]"
         },
         "hf seos help": {
             "command": "hf seos help",
@@ -8293,15 +8410,20 @@
         },
         "hf seos info": {
             "command": "hf seos info",
-            "description": "Requests the unauthenticated information from the default ADF of a SEOS card - If the card is a SEOS card - Are static RND.ICC keys used (can detect SEOS default keyset) - What encryption and hashing algorithm is use",
+            "description": "Requests the unauthenticated information from the default ADF of a SEOS card - If the card is a SEOS card - Are static RND.ICC keys used (can detect SEOS default keyset) - What encryption and hashing algorithm is use By default: - Privacy Key: 0 The selected privacy slot provides both encryption and MAC subkeys for ADF handling. - Auth Key : 0 The selected auth slot is sent to the card for challenge/authentication.",
             "notes": [
-                "hf seos info"
+                "hf seos info",
+                "hf seos info --privacy-key 8 --auth-key 9",
+                "hf seos info --privacy-key 8 --auth-key 9 --aid A0000004400001010001"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "--privacy-key <idx> Privacy key slot index. The selected slot provides both privacy encryption and MAC subkeys for ADF handling",
+                "--auth-key <idx> Auth key slot index. The selected slot is sent to the card for challenge/authentication",
+                "--aid <hex> Use a custom SEOS AID"
             ],
-            "usage": "hf seos info [-h]"
+            "usage": "hf seos info [-h] [--privacy-key <idx>] [--auth-key <idx>] [--aid <hex>]"
         },
         "hf seos managekeys": {
             "command": "hf seos managekeys",
@@ -8309,8 +8431,8 @@
             "notes": [
                 "hf seos managekeys -p",
                 "hf seos managekeys -p -v",
-                "hf seos managekeys --ki 0 --nonce 0102030405060708 -> Set nonce value at key index 0",
-                "hf seos managekeys --ki 1 --keyslot 1 -> Set keyslot value at key index 1",
+                "hf seos managekeys --ki 8 --privacy 0000000000000000000000000000000000000000000000000000000000000000",
+                "hf seos managekeys --ki 9 --auth 00000000000000000000000000000000",
                 "hf seos managekeys --load -f mykeys.bin -p -> load from file and prints keys",
                 "hf seos managekeys --save -f mykeys.bin -> saves keys to file"
             ],
@@ -8318,34 +8440,33 @@
             "options": [
                 "-h, --help This help",
                 "--ki <dec> Specify key index to set key in memory",
-                "--keyslot <hex> Keyslot value as 1 hex byte",
-                "--nonce <hex> Nonce value as 8 hex bytes",
-                "--privenc <hex> Privacy Encryption key as 16 hex bytes",
-                "--privmac <hex> Privacy MAC key as 16 hex bytes",
-                "--auth <hex> Undiversified Auth key as 16 hex bytes",
+                "--privacy <hex> Privacy key as 32 hex bytes (enc || mac)",
+                "--auth <hex> Auth key as 16 hex bytes",
                 "-f, --file <fn> Specify a filename for load / save operations",
                 "--save Save keys in memory to file specified by filename",
                 "--load Load keys to memory from file specified by filename",
                 "-p, --print Print keys loaded into memory",
                 "-v, --verbose verbose (print all key info)"
             ],
-            "usage": "hf seos managekeys [-hpv] [--ki <dec>] [--keyslot <hex>] [--nonce <hex>] [--privenc <hex>] [--privmac <hex>] [--auth <hex>] [-f <fn>] [--save] [--load]"
+            "usage": "hf seos managekeys [-hpv] [--ki <dec>] [--privacy <hex>] [--auth <hex>] [-f <fn>] [--save] [--load]"
         },
         "hf seos pacs": {
             "command": "hf seos pacs",
-            "description": "Make a GET DATA request to an ADF of a SEOS card By default: - ADF OID : 2B0601040181E438010102011801010202 - Key Index: 0",
+            "description": "Make a GET DATA request to an ADF of a SEOS card By default: - ADF OID : 2B0601040181E438010102011801010202 - Privacy Key : 0 The selected privacy slot provides both encryption and MAC subkeys and is sent as the privacy slot identifier. - Auth Key : 0 The selected auth slot provides the auth key and is sent as the auth slot identifier.",
             "notes": [
                 "hf seos pacs",
-                "hf seos pacs --ki 1",
-                "hf seos pacs -o 2B0601040181E438010102011801010202 --ki 0"
+                "hf seos pacs --privacy-key 8 --auth-key 9",
+                "hf seos pacs -o 2B0601040181E438010102011801010202 --privacy-key 8 --auth-key 9"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-o, --oid <hex> <0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)",
-                "--ki <dec> Specify key index to set key in memory"
+                "--privacy-key <idx> Privacy key slot index. The selected slot provides both privacy encryption and MAC subkeys and is sent as the privacy slot identifier",
+                "--auth-key <idx> Auth key slot index. The selected slot provides the auth key and is sent as the auth slot identifier",
+                "--aid <hex> Use a custom SEOS AID"
             ],
-            "usage": "hf seos pacs [-h] [-o <hex>] [--ki <dec>]"
+            "usage": "hf seos pacs [-h] [-o <hex>] [--privacy-key <idx>] [--auth-key <idx>] [--aid <hex>]"
         },
         "hf seos sam": {
             "command": "hf seos sam",
@@ -8367,42 +8488,45 @@
         },
         "hf seos sim": {
             "command": "hf seos sim",
-            "description": "Simulate a SEOS card with the provided keys and data By default: - ADF OID : 2B0601040181E438010102011801010202 - Diversifier: 01020304050607 - Key Index : 2 - Data Tag : FF00 - Encryption : AES128 - Hashing : SHA256",
+            "description": "Simulate a SEOS card with the provided keys and data By default: - ADF OID : 2B0601040181E438010102011801010202 - Diversifier: 01020304050607 - Privacy Key: 2 - Auth Key : 2 - Data Tag : FF00 - Encryption : AES128 - Hashing : SHA256",
             "notes": [
                 "hf seos sim -d 12345678",
-                "hf seos sim --ki 1",
-                "hf seos sim -o 2B0601040181E438010102011801010202 -u 01020304050607 --ki 2 -d 12345678",
-                "hf seos sim -o 2B0601040181E438010102011801010202 --legacy -t FF41 -d 12345678"
+                "hf seos sim --privacy-key 8 --auth-key 9 -d 03020500",
+                "hf seos sim -o 2B0601040181E438010102011801010202 --div 01020304050607 --privacy-key 8 --auth-key 9 -d 03020500",
+                "hf seos sim -o 2B0601040181E438010102011801010202 --legacy -t FF41 -d 03020500"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-t, --tag <hex> <0-100> hex bytes for tag to simulate (Default: FF00)",
                 "-o, --oid <hex> <0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)",
-                "--ki <dec> Specify key index to set key in memory",
+                "--privacy-key <idx> Privacy key slot index. The selected slot provides both privacy encryption and MAC subkeys",
+                "--auth-key <idx> Auth key slot index. The selected slot provides the auth key",
                 "--div <hex> <0-16> hex bytes for diversifier (Equivalent of UID)",
                 "-d, --data <hex> <0-128> hex bytes for data (Must be valid BER-TLV)",
                 "-u, --uid <hex> <0-10> hex bytes for UID (Must be a RID i.e. [0]=0x08)",
                 "-l, --legacy Use legacy algorithms (3DES/SHA1)"
             ],
-            "usage": "hf seos sim [-hl] [-t <hex>] [-o <hex>] [--ki <dec>] [--div <hex>] [-d <hex>] [-u <hex>]"
+            "usage": "hf seos sim [-hl] [-t <hex>] [-o <hex>] [--privacy-key <idx>] [--auth-key <idx>] [--div <hex>] [-d <hex>] [-u <hex>]"
         },
         "hf seos write": {
             "command": "hf seos write",
-            "description": "Make a PUT DATA request to an ADF of a SEOS card By default: - ADF OID : 2B0601040181E438010102011801010202 - Key Index: 2",
+            "description": "Make a PUT DATA request to an ADF of a SEOS card By default: - ADF OID : 2B0601040181E438010102011801010202 - Privacy Key : 2 - Auth Key : 2",
             "notes": [
                 "hf seos write -d 12345678",
-                "hf seos write --ki 1",
-                "hf seos write -o 2B0601040181E438010102011801010202 --ki 2 -d 12345678"
+                "hf seos write --privacy-key 8 --auth-key 9 -d 12345678",
+                "hf seos write -o 2B0601040181E438010102011801010202 --privacy-key 8 --auth-key 9 -d 12345678"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-o, --oid <hex> <0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)",
-                "--ki <dec> Specify key index to set key in memory",
+                "--privacy-key <idx> Privacy key slot index. The selected slot provides both privacy encryption and MAC subkeys and is sent as the privacy slot identifier",
+                "--auth-key <idx> Auth key slot index. The selected slot provides the auth key and is sent as the auth slot identifier",
+                "--aid <hex> Use a custom SEOS AID",
                 "-d, --data <hex> <0-128> hex bytes for data (Must be valid BER-TLV)"
             ],
-            "usage": "hf seos write [-h] [-o <hex>] [--ki <dec>] [-d <hex>]"
+            "usage": "hf seos write [-h] [-o <hex>] [--privacy-key <idx>] [--auth-key <idx>] [--aid <hex>] [-d <hex>]"
         },
         "hf sniff": {
             "command": "hf sniff",
@@ -13018,7 +13142,7 @@
         },
         "mqtt help": {
             "command": "mqtt help",
-            "description": "help This help send Send messages or json file over MQTT receive Receive message or json file over MQTT --------------------------------------------------------------------------------------- mqtt send available offline: yes This command send MQTT messages. You can send JSON file Default server: proxdump.com:1883 topic: proxdump",
+            "description": "help This help send Send messages or json file over MQTT receive Receive message or json file over MQTT --------------------------------------------------------------------------------------- mqtt send available offline: yes This command send MQTT messages. You can send JSON file Default server: mqtt.proxdump.com:1883 topic: proxdump",
             "notes": [
                 "mqtt send --msg \"Hello from Pm3\" -> sending msg to default server/port/topic",
                 "mqtt send -f myfile.json -> sending file to default server/port/topic",
@@ -13474,6 +13598,18 @@
             ],
             "usage": "prefs get emoji [-h]"
         },
+        "prefs get hf.field.timeout_sec": {
+            "command": "prefs get hf.field.timeout_sec",
+            "description": "Get preference of PM3 HF field inactivity timeout",
+            "notes": [
+                "prefs get hf.field.timeout_sec"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "prefs get hf.field.timeout_sec [-h]"
+        },
         "prefs get hints": {
             "command": "prefs get hints",
             "description": "Get preference of showing hint messages in the client",
@@ -13623,7 +13759,7 @@
         },
         "prefs set help": {
             "command": "prefs set help",
-            "description": "help This help barmode Set bar mode client.debug Set client debug level client.delay Set client execution delay client.timeout Set client communication timeout color Set color support emoji Set emoji display hints Set hint display savepaths ... to be adjusted next ... output Set dump output style plotsliders Set plot slider display mqtt Set MQTT default values --------------------------------------------------------------------------------------- prefs set barmode available offline: yes Set persistent preference of HF/LF tune command styled output in the client",
+            "description": "help This help barmode Set bar mode client.debug Set client debug level client.delay Set client execution delay client.timeout Set client communication timeout hf.field.timeout_sec Set PM3 HF field inactivity timeout color Set color support emoji Set emoji display hints Set hint display savepaths ... to be adjusted next ... output Set dump output style plotsliders Set plot slider display mqtt Set MQTT default values --------------------------------------------------------------------------------------- prefs set barmode available offline: yes Set persistent preference of HF/LF tune command styled output in the client",
             "notes": [
                 "prefs set barmode --mix"
             ],
@@ -13635,6 +13771,22 @@
                 "--val measured values only"
             ],
             "usage": "prefs set barmode [-h] [--bar] [--mix] [--val]"
+        },
+        "prefs set hf.field.timeout_sec": {
+            "command": "prefs set hf.field.timeout_sec",
+            "description": "Set persistent preference of PM3 HF field inactivity timeout",
+            "notes": [
+                "prefs set hf.field.timeout_sec --sec 0 -> disable HF field auto timeout",
+                "prefs set hf.field.timeout_sec --sec 5 -> turn HF field off after 5 seconds of inactivity",
+                "prefs set hf.field.timeout_sec --sec 300 -> turn HF field off after 5 minutes of inactivity",
+                "prefs set hf.field.timeout_sec --sec 900 -> turn HF field off after 15 minutes of inactivity"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-s, --sec <sec> HF field inactivity timeout in seconds"
+            ],
+            "usage": "prefs set hf.field.timeout_sec [-h] [-s <sec>]"
         },
         "prefs set hints": {
             "command": "prefs set hints",
@@ -14134,8 +14286,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 806,
+        "commands_extracted": 813,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-03-20T02:30:24"
+        "extracted_on": "2026-04-02T12:42:42"
     }
 }
