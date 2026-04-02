@@ -6483,7 +6483,7 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass legrec",
                   "Attempts to recover the diversified key of a specific iCLASS card. This may take several days.\n"
-                  "The card must remain be on the PM3 antenna during the whole process.\n"
+                  "The card must remain on the PM3 antenna during the whole process.\n"
                   _RED_(" ! Warning ! ") _WHITE_(" This process may brick the card! ") _RED_(" ! Warning ! "),
                   "hf iclass legrec --macs 0000000089cb984b\n"
                   "hf iclass legrec --macs 0000000089cb984b --index 0 --loop 100 --notest"
@@ -6491,7 +6491,7 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1(NULL, "macs", "<hex>", "AA1 Authentication MACs"),
+        arg_str0(NULL, "macs", "<hex>", "AA1 Authentication MACs"),
         arg_int0(NULL, "index", "<dec>", "Where to start from to retrieve the key (def: 0)"),
         arg_int0(NULL, "loop", "<dec>", "The number of key retrieval cycles to perform, max 10000 (def 100)"),
         arg_lit0(NULL, "debug", "Re-enables tracing for debugging. Limits cycles to 1"),
@@ -6523,6 +6523,12 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     if (sim) {
         CmdHFiClassLegacyRecSim(credit);
         return PM3_SUCCESS;
+    }
+
+    if (macs_len == 0) {
+        PrintAndLogEx(ERR, "Missing required argument: --macs");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
 
     if (no_test) {
