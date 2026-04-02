@@ -44,6 +44,18 @@ typedef struct {
     hid_apdu_entry_t apdu_table[HID_APDU_MAX_ENTRIES];
 } PACKED hid_sim_payload_t;
 
+// Must stay in sync with hid_sniff_payload_t in armsrc/secc.h.
+#define HID_JAM_MAX_APDU  32
+#define HID_JAM_MAX_RESP  32
+
+typedef struct {
+    uint8_t param;
+    uint8_t apdu[HID_JAM_MAX_APDU];    // APDU to jam (0-length = default A0 D4 00 00 00)
+    uint8_t apdu_len;
+    uint8_t resp[HID_JAM_MAX_RESP];    // jam response payload (0-length = default 00 00 90 00)
+    uint8_t resp_len;
+} PACKED hid_sniff_payload_t;
+
 static int CmdHelp(const char *Cmd);
 
 // ---------------------------------------------------------------------------
@@ -260,17 +272,24 @@ static int CmdHFHIDConfigSniff(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf secc sniff",
                   "Sniff the communication between a HID Config Card reader and card.\n"
-                  "Use `hf 14a list` to view collected data.",
+                  "Use `hf seos list` to view collected data.\n"
+                  "With -j and no -d, jams responses to APDU A0 D4 00 00 00.\n"
+                  "With -j -d <hex> jams responses to the specified APDU.\n"
+                  "Use -r <hex> to override the jam response payload (default: 00009000).",
                   "hf secc sniff\n"
-                  "hf secc sniff -j     -> jam A0 D4 00 00 00, respond 00 00 90 00\n"
-                  "hf secc sniff -c -r  -> trigger on card or reader data");
+                  "hf secc sniff -j                        -> jam A0 D4 00 00 00, respond 00 00 90 00\n"
+                  "hf secc sniff -j -d A0D4000000          -> same, APDU specified explicitly\n"
+                  "hf secc sniff -j -d A0D4000000 -r 9000  -> jam A0D4000000, respond 90 00\n"
+                  "hf secc sniff -c -i                      -> trigger on card data, interactive");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("c", "card",        "triggered by first data from card"),
         arg_lit0("r", "reader",      "triggered by first 7-bit request from reader (REQ, WUP)"),
         arg_lit0("i", "interactive", "console will not be returned until sniff finishes or is aborted"),
-        arg_lit0("j", "jam",         "jam APDU A0 D4 00 00 00, respond with 00 00 90 00"),
+        arg_lit0("j", "jam",         "jam responses to a specific APDU (see -d/-a)"),
+        arg_str0("d", "apdu",  "<hex>", "APDU bytes to jam (default: A0D4000000)"),
+        arg_str0("a", "resp",  "<hex>", "response payload when jamming (default: 00009000)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -285,17 +304,78 @@ static int CmdHFHIDConfigSniff(const char *Cmd) {
 
     bool interactive = arg_get_lit(ctx, 3);
     bool jam = arg_get_lit(ctx, 4);
+
+    uint8_t apdu_buf[HID_JAM_MAX_APDU] = {0};
+    int apdu_buf_len = 0;
+    if (CLIParamHexToBuf(arg_get_str(ctx, 5), apdu_buf, sizeof(apdu_buf), &apdu_buf_len)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t resp_buf[HID_JAM_MAX_RESP] = {0};
+    int resp_buf_len = 0;
+    if (CLIParamHexToBuf(arg_get_str(ctx, 6), resp_buf, sizeof(resp_buf), &resp_buf_len)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool has_apdu = (apdu_buf_len > 0);
+    bool has_resp = (resp_buf_len > 0);
+
     CLIParserFree(ctx);
+
+    // -d and -r only make sense with -j
+    if ((has_apdu || has_resp) && !jam) {
+        PrintAndLogEx(ERR, "-d and -r require -j (jam mode)");
+        return PM3_EINVARG;
+    }
 
     if (jam) {
         param |= 0x04;
-        PrintAndLogEx(INFO, "Sniff with jam of APDU " _YELLOW_("A0 D4 00 00 00") " -> " _YELLOW_("00 00 90 00"));
+        if (has_apdu) {
+            char apdu_hex[HID_JAM_MAX_APDU * 2 + 1] = {0};
+            for (int i = 0; i < apdu_buf_len; i++)
+                snprintf(apdu_hex + i * 2, sizeof(apdu_hex) - i * 2, "%02X", apdu_buf[i]);
+            if (has_resp) {
+                char resp_hex[HID_JAM_MAX_RESP * 2 + 1] = {0};
+                for (int i = 0; i < resp_buf_len; i++)
+                    snprintf(resp_hex + i * 2, sizeof(resp_hex) - i * 2, "%02X", resp_buf[i]);
+                PrintAndLogEx(INFO, "Sniff with jam of APDU " _YELLOW_("%s") " -> " _YELLOW_("%s"), apdu_hex, resp_hex);
+            } else {
+                PrintAndLogEx(INFO, "Sniff with jam of APDU " _YELLOW_("%s") " -> " _YELLOW_("00009000"), apdu_hex);
+            }
+        } else {
+            if (has_resp) {
+                char resp_hex[HID_JAM_MAX_RESP * 2 + 1] = {0};
+                for (int i = 0; i < resp_buf_len; i++)
+                    snprintf(resp_hex + i * 2, sizeof(resp_hex) - i * 2, "%02X", resp_buf[i]);
+                PrintAndLogEx(INFO, "Sniff with jam of APDU " _YELLOW_("A0D4000000") " -> " _YELLOW_("%s"), resp_hex);
+            } else {
+                PrintAndLogEx(INFO, "Sniff with jam of APDU " _YELLOW_("A0D4000000") " -> " _YELLOW_("00009000"));
+            }
+        }
     }
 
     uint16_t sniff_cmd = jam ? CMD_HF_HIDCONFIG_SNIFF : CMD_HF_ISO14443A_SNIFF;
 
-    clearCommandBuffer();
-    SendCommandNG(sniff_cmd, (uint8_t *)&param, sizeof(uint8_t));
+    if (jam) {
+        hid_sniff_payload_t payload;
+        memset(&payload, 0, sizeof(payload));
+        payload.param = param;
+        if (has_apdu) {
+            memcpy(payload.apdu, apdu_buf, apdu_buf_len);
+            payload.apdu_len = (uint8_t)apdu_buf_len;
+        }
+        if (has_resp) {
+            memcpy(payload.resp, resp_buf, resp_buf_len);
+            payload.resp_len = (uint8_t)resp_buf_len;
+        }
+        clearCommandBuffer();
+        SendCommandNG(sniff_cmd, (uint8_t *)&payload, sizeof(payload));
+    } else {
+        clearCommandBuffer();
+        SendCommandNG(sniff_cmd, (uint8_t *)&param, sizeof(uint8_t));
+    }
 
     if (interactive) {
         PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort sniffing");
@@ -314,7 +394,7 @@ static int CmdHFHIDConfigSniff(const char *Cmd) {
         }
 
         PrintAndLogEx(INFO, "Done!");
-        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14a list") "` to view captured tracelog");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf seos list") "` to view captured tracelog");
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
     } else {
         PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort sniffing");

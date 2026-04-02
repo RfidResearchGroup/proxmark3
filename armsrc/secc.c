@@ -52,6 +52,16 @@ static hid_apdu_entry_t s_apdu_table[HID_APDU_MAX_ENTRIES];
 static uint8_t s_apdu_count = 0;
 static uint8_t s_scp02_key[16] = {0};
 
+// Jam config — set by SniffHIDConfigCard before entering sniff loop.
+// Length 0 means "use built-in default".
+static uint8_t s_jam_apdu[HID_JAM_MAX_APDU];
+static uint8_t s_jam_apdu_len = 0;
+static uint8_t s_jam_resp[HID_JAM_MAX_RESP];
+static uint8_t s_jam_resp_len = 0;
+
+static const uint8_t s_jam_apdu_default[5] = {0xA0, 0xD4, 0x00, 0x00, 0x00};
+static const uint8_t s_jam_resp_default[4] = {0x00, 0x00, 0x90, 0x00};
+
 void hid_config_card_set_apdu_table(const hid_apdu_entry_t *table, uint8_t count) {
     s_apdu_count = (count > HID_APDU_MAX_ENTRIES) ? HID_APDU_MAX_ENTRIES : count;
     memcpy(s_apdu_table, table, s_apdu_count * sizeof(hid_apdu_entry_t));
@@ -226,22 +236,25 @@ bool hid_config_card_jam(const uint8_t *cmd, int len, uint8_t *dma_buf) {
 
     int off = (pcb & 0x08) ? 2 : 1; // skip CID if present
 
-    if (len < off + 7)
+    // Select active APDU pattern and response (custom or default)
+    const uint8_t *match     = (s_jam_apdu_len > 0) ? s_jam_apdu         : s_jam_apdu_default;
+    int            match_len = (s_jam_apdu_len > 0) ? (int)s_jam_apdu_len : (int)sizeof(s_jam_apdu_default);
+    const uint8_t *resp_data     = (s_jam_resp_len > 0) ? s_jam_resp         : s_jam_resp_default;
+    int            resp_data_len = (s_jam_resp_len > 0) ? (int)s_jam_resp_len : (int)sizeof(s_jam_resp_default);
+
+    if (len < off + match_len + 2) // off + APDU pattern + 2-byte CRC
         return false;
 
-    if (cmd[off]     != 0xA0 || cmd[off + 1] != 0xD4 ||
-            cmd[off + 2] != 0x00 || cmd[off + 3] != 0x00 || cmd[off + 4] != 0x00)
+    if (memcmp(cmd + off, match, match_len) != 0)
         return false;
 
-    // Build jam response: PCB [CID] 00 00 90 00 CRC CRC
-    uint8_t resp[8];
+    // Build jam response: PCB [CID] <resp_data> CRC CRC
+    uint8_t resp[2 + HID_JAM_MAX_RESP + 2]; // PCB + optional CID + payload + CRC
     int rlen = 0;
     resp[rlen++] = pcb;
     if (pcb & 0x08) resp[rlen++] = cmd[1]; // mirror CID
-    resp[rlen++] = 0x00;
-    resp[rlen++] = 0x00;
-    resp[rlen++] = 0x90;
-    resp[rlen++] = 0x00;
+    memcpy(resp + rlen, resp_data, resp_data_len);
+    rlen += resp_data_len;
     AddCrc14A(resp, rlen);
     rlen += 2;
 
@@ -464,9 +477,22 @@ void SimulateHIDConfigCard(const hid_sim_payload_t *payload) {
 // HID Config Card sniff with optional A0 D4 jamming
 // ---------------------------------------------------------------------------
 
-void SniffHIDConfigCard(uint8_t param) {
-    // Delegate entirely to SniffIso14443a.
+void SniffHIDConfigCard(const hid_sniff_payload_t *payload) {
+    // Configure jam pattern and response before entering the sniff loop.
+    if (payload->apdu_len > 0 && payload->apdu_len <= HID_JAM_MAX_APDU) {
+        memcpy(s_jam_apdu, payload->apdu, payload->apdu_len);
+        s_jam_apdu_len = payload->apdu_len;
+    } else {
+        s_jam_apdu_len = 0; // use default A0 D4 00 00 00
+    }
+    if (payload->resp_len > 0 && payload->resp_len <= HID_JAM_MAX_RESP) {
+        memcpy(s_jam_resp, payload->resp, payload->resp_len);
+        s_jam_resp_len = payload->resp_len;
+    } else {
+        s_jam_resp_len = 0; // use default 00 00 90 00
+    }
+    // Delegate to SniffIso14443a.
     // When param bit 0x04 is set, SniffIso14443a calls hid_config_card_jam()
     // inline after each decoded reader frame (see iso14443a.c).
-    SniffIso14443a(param);
+    SniffIso14443a(payload->param);
 }

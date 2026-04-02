@@ -1853,7 +1853,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_HIDCONFIG_SNIFF: {
-            SniffHIDConfigCard(packet->data.asBytes[0]);
+            SniffHIDConfigCard((const hid_sniff_payload_t *)packet->data.asBytes);
             reply_ng(CMD_HF_HIDCONFIG_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }

@@ -61,14 +61,33 @@ typedef struct {
     hid_apdu_entry_t apdu_table[HID_APDU_MAX_ENTRIES];
 } PACKED hid_sim_payload_t;
 
+// ---------------------------------------------------------------------------
+// Sniff payload (sent from client to ARM via CMD_HF_HIDCONFIG_SNIFF).
+// When apdu_len == 0 the default A0 D4 00 00 00 pattern is used.
+// When resp_len == 0 the default 00 00 90 00 response is used.
+// ---------------------------------------------------------------------------
+
+#define HID_JAM_MAX_APDU  32
+#define HID_JAM_MAX_RESP  32
+
+typedef struct {
+    uint8_t param;                      // sniff flags: 0x01=card-triggered, 0x02=reader-triggered, 0x04=jam
+    uint8_t apdu[HID_JAM_MAX_APDU];    // APDU to jam (raw bytes after PCB/CID stripped)
+    uint8_t apdu_len;                   // 0 = use default (A0 D4 00 00 00)
+    uint8_t resp[HID_JAM_MAX_RESP];    // jam response payload (raw APDU, without PCB/CID/CRC)
+    uint8_t resp_len;                   // 0 = use default (00 00 90 00)
+} PACKED hid_sniff_payload_t;
+
 // Load a custom APDU response table into static storage (call before sim loop).
 void hid_config_card_set_apdu_table(const hid_apdu_entry_t *table, uint8_t count);
 
 // Run a complete HID Config Card simulation using payload received from the client.
 void SimulateHIDConfigCard(const hid_sim_payload_t *payload);
 
-// Sniff ISO 14443-A with optional jamming of A0 D4 00 00 00 (param bit 0x04).
-void SniffHIDConfigCard(uint8_t param);
+// Sniff ISO 14443-A with optional jamming (param bit 0x04).
+// When apdu_len > 0 the supplied APDU pattern overrides the default A0 D4 00 00 00.
+// When resp_len > 0 the supplied response overrides the default 00 00 90 00.
+void SniffHIDConfigCard(const hid_sniff_payload_t *payload);
 
 // Handle an I-block received during HID Config Card (tagType=16) simulation.
 // Fills dynamic_response_info with the appropriate response payload (without CRC).
