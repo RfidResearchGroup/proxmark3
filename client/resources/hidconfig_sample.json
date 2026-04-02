@@ -20,8 +20,8 @@
       "Response": "00009000"
     },
     {
-      "_comment": "Busy? -> 9000 (done) / 017B (busy)",
-      "APDU":     "017B",
+      "_comment": "Busy? -> 9000 (done) / 01 (busy)",
+      "APDU":     "01",
       "Response": "9000"
     }
   ]
