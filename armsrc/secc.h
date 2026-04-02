@@ -29,12 +29,18 @@
 #define HID_APDU_MAX_ENTRIES 8
 #define HID_APDU_MAX_CMD     20   // max APDU command bytes to prefix-match
 #define HID_APDU_MAX_RESP    32   // max response bytes (without PCB/CID/CRC)
+#define HID_APDU_MASK_LEN    3    // ceil(HID_APDU_MAX_CMD / 8): bitmask for wildcard bytes
 
-// One custom APDU override entry: if the incoming APDU starts with
-// apdu[0..apdu_len-1], respond with resp[0..resp_len-1] (raw APDU payload).
+// One custom APDU override entry: if the incoming APDU matches the pattern,
+// respond with resp[0..resp_len-1] (raw APDU payload).
+// apdu_mask bit i=1: byte i must match apdu[i] exactly.
+// apdu_mask bit i=0: wildcard — apdu[i] selects type:
+//   0x00 = match any single byte  ("**" in JSON)
+//   0x01 = length-prefix skip: read length byte N, skip N+1 bytes total ("##" in JSON)
 typedef struct {
     uint8_t apdu[HID_APDU_MAX_CMD];
     uint8_t apdu_len;
+    uint8_t apdu_mask[HID_APDU_MASK_LEN];
     uint8_t resp[HID_APDU_MAX_RESP];
     uint8_t resp_len;
 } PACKED hid_apdu_entry_t;
