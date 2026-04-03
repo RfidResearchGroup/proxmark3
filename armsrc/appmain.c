@@ -103,32 +103,33 @@ uint8_t g_tearoff_skip = 0;
 
 int tearoff_hook(void) {
 
-    if (g_tearoff_enabled) {
+    if (g_tearoff_enabled == false) {
+        Dbprintf("no tear off");
+        return PM3_SUCCESS;
+    } 
+    
+    // tear off is happening...
 
-        if (g_tearoff_delay_us == 0) {
+    if (g_tearoff_delay_us == 0) {
 
-            if (g_dbglevel >= DBG_ERROR) Dbprintf(_RED_("No tear-off delay configured!"));
-            g_tearoff_enabled = false;
-            return PM3_SUCCESS; // SUCCESS = the hook didn't do anything
-        }
-
-        if (g_tearoff_skip > 0) {
-            if (g_dbglevel >= DBG_INFO) Dbprintf(_GREEN_("Tear-off skipped!"));
-            g_tearoff_skip--;
-            return PM3_SUCCESS; // SUCCESS = the hook didn't do anything
-        }
-
-        SpinDelayUsPrecision(g_tearoff_delay_us);
-        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        if (g_dbglevel >= DBG_ERROR) Dbprintf(_RED_("No tear-off delay configured!"));
         g_tearoff_enabled = false;
-
-        if (g_dbglevel >= DBG_INFO) Dbprintf(_YELLOW_("Tear-off triggered!"));
-
-        return PM3_ETEAROFF;
-
-    } else {
-        return PM3_SUCCESS;     // SUCCESS = the hook didn't do anything
+        return PM3_SUCCESS; // SUCCESS = the hook didn't do anything
     }
+
+    if (g_tearoff_skip > 0) {
+        if (g_dbglevel >= DBG_INFO) Dbprintf(_GREEN_("Tear-off skipped!"));
+        g_tearoff_skip--;
+        return PM3_SUCCESS; // SUCCESS = the hook didn't do anything
+    }
+
+    SpinDelayUsPrecision(g_tearoff_delay_us);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    g_tearoff_enabled = false;
+
+    if (g_dbglevel >= DBG_INFO) Dbprintf(_YELLOW_("Tear-off triggered!"));
+
+    return PM3_ETEAROFF;
 }
 
 void hf_field_off(void) {

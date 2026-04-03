@@ -1412,6 +1412,7 @@ static int CmdTearoff(const char *Cmd) {
         PrintAndLogEx(INFO, "  lf em 4x05_unlock");
         PrintAndLogEx(INFO, "  lf t55xx dangerraw");
         PrintAndLogEx(INFO, "  hf iclass tear");
+        PrintAndLogEx(INFO, "  hf iclass blacktears");
         PrintAndLogEx(INFO, "  hf mfu otptear");
         PrintAndLogEx(INFO, "  Standalone mode HF_ST25_TEAROFF");
         return PM3_SUCCESS;
