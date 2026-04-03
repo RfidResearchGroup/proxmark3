@@ -4770,7 +4770,7 @@ out:
 
     DropField();
 
-    if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
+    if (setDeviceDebugLevel(verbose ? MAX(dbg_curr, DBG_INFO) : DBG_NONE, false) != PM3_SUCCESS) {
         return PM3_EFAILED;
     }
     // disable tearoff in case of keyboard abort, or it'll trigger on next operation
