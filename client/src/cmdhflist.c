@@ -422,10 +422,12 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 break;
             }
             case MIFARE_ULEV1_INCR_CNT : {
-                if (cmd[1] < 5)
-                    snprintf(exp, size, "INCR(" _MAGENTA_("%d") ")", cmd[1]);
-                else
+                if (cmd[1] < 5) {
+                    uint32_t v = MemLeToUint3byte(cmd + 2);
+                    snprintf(exp, size, "INCR CNT(" _MAGENTA_("%d") ") %u", cmd[1], v);
+                } else {
                     snprintf(exp, size, "?");
+                }
                 break;
             }
             case MIFARE_ULEV1_READSIG:
