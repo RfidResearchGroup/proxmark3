@@ -4338,7 +4338,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
         arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_int0("s", NULL, "<dec>", "tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3 us"),
-        arg_int0("i", NULL, "<dec>", "tearoff delay increment (in us) - default 10"),
+        arg_int0("i", NULL, "<dec>", "tearoff delay increment (in us) - default 5"),
         arg_int0("e", NULL, "<dec>", "tearoff delay end (in us) must be a higher value than the start delay"),
         arg_str0("o", "otp", "<hex>", "Custom OTP value as 2 hex bytes"),
         arg_lit0(NULL, "dns", "Do not stabilize the bits, and return the raw dump of the block after tearoff"),
@@ -4510,27 +4510,16 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     uint8_t data_read_orig[8] = {0};
     uint8_t ff_data[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
     bool first_read = false;
-    bool reread = false;
     bool erase_phase = false;
 
     read_auth = false;
 
     int blockno = 1;
-    
+
     int res_orig = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read_orig, false, false);
-    while (reread) {
-        if (res_orig == PM3_SUCCESS && !reread) {
-            if (memcmp(data_read_orig, zeros, 8) == 0) {
-                reread = true;
-            } else {
-                reread = false;
-            }
-        } else if (res_orig == PM3_SUCCESS && reread) {
-            reread = false;
-            if (blockno == 2 && memcmp(data_read_orig, zeros, 8) == 0) {
-                reread = true;
-            }
-        }
+    if (res_orig == PM3_SUCCESS && memcmp(data_read_orig, zeros, 8) == 0) {
+        // zeros may be a transient read artifact - read once more to confirm
+        res_orig = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read_orig, false, false);
     }
 
     uint8_t data[8] = { 0 }; // tearoff payload
@@ -4604,7 +4593,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
         // read the data back
         uint8_t data_read[8] = {0};
         first_read = false;
-        reread = false;
+        bool reread = false;
         bool decrease = false;
         int readcount = 0;
         while (first_read == false) {
@@ -4631,6 +4620,9 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
                 reread = false;
             } else if (res != PM3_SUCCESS) {
                 decrease = true;
+                if (readcount == 100) {
+                    PrintAndLogEx(WARNING, "\nCard not responding after %d attempts, press " _GREEN_("<Enter>") " to abort", readcount);
+                }
             }
 
             readcount++;
@@ -4688,7 +4680,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
             bool goto_out = false;
 
             // App limit became SMALLER :(
-            if (data_read[0] > data_read_orig[0]) {
+            if (data_read[0] < data_read_orig[0]) {
 
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(SUCCESS, "Application limit changed, from "_YELLOW_("%u")" to "_YELLOW_("%u"), data_read_orig[0], data_read[0]);
@@ -4772,7 +4764,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
             msleep(tearoff_sleep);
         }
     }
-    
+
 
 out:
 
@@ -6111,13 +6103,14 @@ static void *brute_thread(void *args_void) {
         return NULL;
     }
 
+    uint32_t progress_countdown = 1000000;
     while (index < args->index_end && !*(args->found) && !*(args->aborted)) {
 
         generate_key_block_inverted(args->startingKey, index, div_key);
-        doMAC(args->CCNR1, div_key, mac);
+        doMAC_brute(args->CCNR1, div_key, mac);
 
         if (memcmp(mac, args->MAC_TAG1, 4) == 0) {
-            doMAC(args->CCNR2, div_key, verification_mac);
+            doMAC_brute(args->CCNR2, div_key, verification_mac);
             if (memcmp(verification_mac, args->MAC_TAG2, 4) == 0) {
                 pthread_mutex_lock(args->log_lock);
                 if (!*(args->found)) {
@@ -6134,7 +6127,8 @@ static void *brute_thread(void *args_void) {
         }
 
         uint64_t thread_progress = index - args->index_start;
-        if (thread_progress % 1000000 == 0 && !*(args->found)) {
+        if (--progress_countdown == 0 && !*(args->found)) {
+            progress_countdown = 1000000;
 
             if (args->thread_id == 0) {
                 uint64_t keyspace     = (uint64_t)1 << 40;
@@ -6481,7 +6475,7 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass legrec",
                   "Attempts to recover the diversified key of a specific iCLASS card. This may take several days.\n"
-                  "The card must remain be on the PM3 antenna during the whole process.\n"
+                  "The card must remain on the PM3 antenna during the whole process.\n"
                   _RED_(" ! Warning ! ") _WHITE_(" This process may brick the card! ") _RED_(" ! Warning ! "),
                   "hf iclass legrec --macs 0000000089cb984b\n"
                   "hf iclass legrec --macs 0000000089cb984b --index 0 --loop 100 --notest"
@@ -6489,7 +6483,7 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1(NULL, "macs", "<hex>", "AA1 Authentication MACs"),
+        arg_str0(NULL, "macs", "<hex>", "AA1 Authentication MACs"),
         arg_int0(NULL, "index", "<dec>", "Where to start from to retrieve the key (def: 0)"),
         arg_int0(NULL, "loop", "<dec>", "The number of key retrieval cycles to perform, max 10000 (def 100)"),
         arg_lit0(NULL, "debug", "Re-enables tracing for debugging. Limits cycles to 1"),
@@ -6521,6 +6515,12 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     if (sim) {
         CmdHFiClassLegacyRecSim(credit);
         return PM3_SUCCESS;
+    }
+
+    if (macs_len == 0) {
+        PrintAndLogEx(ERR, "Missing required argument: --macs");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
 
     if (no_test) {

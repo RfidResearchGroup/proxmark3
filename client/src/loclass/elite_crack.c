@@ -327,6 +327,24 @@ static void *bf_thread(void *thread_arg) {
     memcpy(bytes_to_recover, targ->bytes_to_recover, sizeof(bytes_to_recover));
     memcpy(keytable, targ->keytable, sizeof(keytable));
 
+    // Precompute which key_sel positions are fixed (already-cracked) vs. brute-forced.
+    // sel_brute_idx[i] == 0xFF: key_sel[i] is constant for this entire brute-force run.
+    // sel_brute_idx[i] == j:    key_sel[i] = (brute >> (j*8)) & 0xFF each iteration.
+    uint8_t sel_brute_idx[8];
+    uint8_t key_sel[8];
+    for (uint8_t i = 0; i < 8; i++) {
+        sel_brute_idx[i] = 0xFF;
+        for (uint8_t j = 0; j < numbytes_to_recover; j++) {
+            if (key_index[i] == bytes_to_recover[j]) {
+                sel_brute_idx[i] = j;
+                break;
+            }
+        }
+        if (sel_brute_idx[i] == 0xFF) {
+            key_sel[i] = keytable[key_index[i]] & 0xFF;
+        }
+    }
+
     while (!(brute & endmask)) {
 
         int found = __atomic_load_n(&loclass_found, __ATOMIC_SEQ_CST);
@@ -335,23 +353,12 @@ static void *bf_thread(void *thread_arg) {
             return NULL;
         }
 
-        //Update the keytable with the brute-values
-        for (uint8_t i = 0; i < numbytes_to_recover; i++) {
-            keytable[bytes_to_recover[i]] &= 0xFF00;
-            keytable[bytes_to_recover[i]] |= (brute >> (i * 8) & 0xFF);
+        // Update only the bruted positions of key_sel directly from brute
+        for (uint8_t i = 0; i < 8; i++) {
+            if (sel_brute_idx[i] != 0xFF) {
+                key_sel[i] = (brute >> (sel_brute_idx[i] * 8)) & 0xFF;
+            }
         }
-
-        uint8_t key_sel[8] = {0};
-
-        // Piece together the key
-        key_sel[0] = keytable[key_index[0]] & 0xFF;
-        key_sel[1] = keytable[key_index[1]] & 0xFF;
-        key_sel[2] = keytable[key_index[2]] & 0xFF;
-        key_sel[3] = keytable[key_index[3]] & 0xFF;
-        key_sel[4] = keytable[key_index[4]] & 0xFF;
-        key_sel[5] = keytable[key_index[5]] & 0xFF;
-        key_sel[6] = keytable[key_index[6]] & 0xFF;
-        key_sel[7] = keytable[key_index[7]] & 0xFF;
 
         // Permute from iclass format to standard format
 
@@ -364,7 +371,7 @@ static void *bf_thread(void *thread_arg) {
 
         // Calc mac
         uint8_t calculated_MAC[4] = {0};
-        doMAC(cc_nr, div_key, calculated_MAC);
+        doMAC_brute(cc_nr, div_key, calculated_MAC);
 
         // success
         if (memcmp(calculated_MAC, mac, 4) == 0) {
@@ -375,8 +382,8 @@ static void *bf_thread(void *thread_arg) {
                 pthread_exit(NULL);
             }
 
-            for (uint8_t i = 0 ; i < numbytes_to_recover; i++) {
-                r->values[i] = keytable[bytes_to_recover[i]] & 0xFF;
+            for (uint8_t i = 0 ; i < numbytes_to_recover && i < sizeof(r->values); i++) {
+                r->values[i] = (brute >> (i * 8)) & 0xFF;
             }
             __atomic_store_n(&loclass_found, targ->thread_idx, __ATOMIC_SEQ_CST);
             pthread_exit((void *)r);

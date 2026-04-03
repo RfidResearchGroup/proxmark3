@@ -3187,12 +3187,13 @@ fast_restore:
             Dbhexdump(8, fast_restore_key, false);
             Dbprintf(_RED_("Attempted to restore original key for %3d times and failed. Stopping. Card is likely unusable."), revert_retries);
         }
-        if (recovered) {
+        if (recovered && reverted) {
             goto restore;
-        } else {
+        } else if (revert_retries >= 7) {
             goto out;
         }
     }
+    goto out;
 
 restore:
     ;// empty statement for compilation

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Optimized `hf iclass legbrute` throughput: replaced recursive `suc()`/`output()` cipher functions with iterative loops, added 256-entry LUT for the `select()` function eliminating redundant bit arithmetic and halving key lookups per state step, switched successor state to in-place pointer update removing per-call struct copies, added `doMAC_brute()` with byte-wise LSB-first processing and direct output bit packing eliminating all bitstream struct overhead and output reversal calls per key candidate, and replaced per-iteration 64-bit modulo progress check with a countdown counter (@antiklesys)
 - Improved `hf iclass legbrute`: fixed multithreaded key-range partitioning so threads cover non-overlapping slices of the 40-bit keyspace, added ETA display, keyboard abort with resume hint, `_Atomic` correctness for shared state, `pthread_create` error handling, and thread count capped at available CPUs (@antiklesys)
 - Added wildcard support to `hf secc sim` payloads (@antiklesys)
 - Added `hf secc` to build a base for simulating basic function of iclass SE config cards (@antiklesys)

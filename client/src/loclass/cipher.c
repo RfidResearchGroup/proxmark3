@@ -59,132 +59,57 @@ typedef struct {
     uint16_t t;
 } State_t;
 
-/**
-*  Definition 2. The feedback function for the top register T : F 16/2 → F 2
-*  is defined as
-*  T (x 0 x 1 . . . . . . x 15 ) = x 0 ⊕ x 1 ⊕ x 5 ⊕ x 7 ⊕ x 10 ⊕ x 11 ⊕ x 14 ⊕ x 15 .
-**/
-static bool T(State_t state) {
-    /*
-        bool x0 = state.t & 0x8000;
-        bool x1 = state.t & 0x4000;
-        bool x5 = state.t & 0x0400;
-        bool x7 = state.t & 0x0100;
-        bool x10 = state.t & 0x0020;
-        bool x11 = state.t & 0x0010;
-        bool x14 = state.t & 0x0002;
-        bool x15 = state.t & 0x0001;
-        return x0 ^ x1 ^ x5 ^ x7 ^ x10 ^ x11 ^ x14 ^ x15;
-    */
-#define  _x0  ((state.t & 0x8000) >> 15 )
-#define  _x1  ((state.t & 0x4000) >> 14 )
-#define  _x5  ((state.t & 0x0400) >> 10 )
-#define  _x7  ((state.t & 0x0100) >> 8 )
-#define  _x10 ((state.t & 0x0020) >> 5 )
-#define  _x11 ((state.t & 0x0010) >> 4 )
-#define  _x14 ((state.t & 0x0002) >> 1 )
-#define  _x15 (state.t & 0x0001)
-    return (_x0) ^ (_x1) ^ (_x5) ^ (_x7) ^ (_x10) ^ (_x11) ^ (_x14) ^ (_x15);
-}
-/**
-*  Similarly, the feedback function for the bottom register B : F 8/2 → F 2 is defined as
-*  B(x 0 x 1 . . . x 7 ) = x 1 ⊕ x 2 ⊕ x 3 ⊕ x 7 .
-**/
-/*static bool B(State_t state) {
-    bool x1 = state.b & 0x40;
-    bool x2 = state.b & 0x20;
-    bool x3 = state.b & 0x10;
-    bool x7 = state.b & 0x01;
-    return x1 ^ x2 ^ x3 ^ x7;
-}
-*/
-#define B(x) (((x.b & 0x40) >> 6)  ^ ((x.b & 0x20) >> 5) ^ ((x.b & 0x10) >> 4) ^ (x.b & 0x01))
-
-//   12 3456
-// 0100 0000
+// Precomputed lookup table for the r-dependent part of select(x, y, r).
+// z0 (bit2) depends only on r. z1 (bit1) = LUT_bit1 ^ x ^ y. z2 (bit0) = LUT_bit0 ^ x.
+// Generated from the _select formula; x and y are folded in at call time.
+static const uint8_t opt_select_LUT[256] = {
+    00, 03, 02, 01, 02, 03, 00, 01, 04, 07, 07, 04, 06, 07, 05, 04,
+    01, 02, 03, 00, 02, 03, 00, 01, 05, 06, 06, 05, 06, 07, 05, 04,
+    06, 05, 04, 07, 04, 05, 06, 07, 06, 05, 05, 06, 04, 05, 07, 06,
+    07, 04, 05, 06, 04, 05, 06, 07, 07, 04, 04, 07, 04, 05, 07, 06,
+    06, 05, 04, 07, 04, 05, 06, 07, 02, 01, 01, 02, 00, 01, 03, 02,
+    03, 00, 01, 02, 00, 01, 02, 03, 07, 04, 04, 07, 04, 05, 07, 06,
+    00, 03, 02, 01, 02, 03, 00, 01, 00, 03, 03, 00, 02, 03, 01, 00,
+    05, 06, 07, 04, 06, 07, 04, 05, 05, 06, 06, 05, 06, 07, 05, 04,
+    02, 01, 00, 03, 00, 01, 02, 03, 06, 05, 05, 06, 04, 05, 07, 06,
+    03, 00, 01, 02, 00, 01, 02, 03, 07, 04, 04, 07, 04, 05, 07, 06,
+    02, 01, 00, 03, 00, 01, 02, 03, 02, 01, 01, 02, 00, 01, 03, 02,
+    03, 00, 01, 02, 00, 01, 02, 03, 03, 00, 00, 03, 00, 01, 03, 02,
+    04, 07, 06, 05, 06, 07, 04, 05, 00, 03, 03, 00, 02, 03, 01, 00,
+    01, 02, 03, 00, 02, 03, 00, 01, 05, 06, 06, 05, 06, 07, 05, 04,
+    04, 07, 06, 05, 06, 07, 04, 05, 04, 07, 07, 04, 06, 07, 05, 04,
+    01, 02, 03, 00, 02, 03, 00, 01, 01, 02, 02, 01, 02, 03, 01, 00,
+};
 
 /**
-*  Definition 3 (Selection function). The selection function select : F 2 × F 2 ×
-*  F 8/2 → F 3/2 is defined as select(x, y, r) = z 0 z 1 z 2 where
-*  z 0 = (r 0 ∧ r 2 ) ⊕ (r 1 ∧ r 3 ) ⊕ (r 2 ∨ r 4 )
-*  z 1 = (r 0 ∨ r 2 ) ⊕ (r 5 ∨ r 7 ) ⊕ r 1 ⊕ r 6 ⊕ x ⊕ y
-*  z 2 = (r 3 ∧ r 5 ) ⊕ (r 4 ∧ r 6 ) ⊕ r 7 ⊕ x
+*  Definition 4 (Successor state). Optimized in-place version.
+*  T(t) computed via parallel XOR reduction on the masked t register.
+*  B(b) computed via parallel XOR reduction on the b register.
+*  select(x,y,r) resolved via opt_select_LUT with a single key lookup.
 **/
-static uint8_t _select(bool x, bool y, uint8_t r) {
-#define _r0 ((r >> 7) & 0x01)
-#define _r1 ((r >> 6) & 0x01)
-#define _r2 ((r >> 5) & 0x01)
-#define _r3 ((r >> 4) & 0x01)
-#define _r4 ((r >> 3) & 0x01)
-#define _r5 ((r >> 2) & 0x01)
-#define _r6 ((r >> 1) & 0x01)
-#define _r7 (r & 0x01)
+static void successor(const uint8_t *k, State_t *s, uint8_t y) {
+    // T(t) = x0^x1^x5^x7^x10^x11^x14^x15, mask selects those bits
+    uint16_t Tt = s->t & 0xc533;
+    Tt ^= Tt >> 1;
+    Tt ^= Tt >> 4;
+    Tt ^= Tt >> 10;
+    Tt ^= Tt >> 8;
+    // bit0 of Tt is now T(t)
 
-#define _z0  ( (_r0 & _r2) ^ ( _r1 & (!_r3)) ^ (_r2 | _r4) )
-#define _z1  ( (_r0 | _r2) ^ ( _r5 | _r7) ^_r1 ^ _r6 ^ (x) ^ (y) )
-#define _z2  ( (_r3 & (!_r5)) ^ (_r4 & _r6) ^ _r7 ^ (x) )
+    s->t = (s->t >> 1) | ((Tt ^ (s->r >> 7) ^ (s->r >> 3)) << 15);
 
-    /*
-        uint8_t r0 = r >> 7 & 0x1;
-        uint8_t r1 = r >> 6 & 0x1;
-        uint8_t r2 = r >> 5 & 0x1;
-        uint8_t r3 = r >> 4 & 0x1;
-        uint8_t r4 = r >> 3 & 0x1;
-        uint8_t r5 = r >> 2 & 0x1;
-        uint8_t r6 = r >> 1 & 0x1;
-        uint8_t r7 = r & 0x1;
+    // B(b) = b1^b2^b3^b7; bit0 of opt_B = B(b) after the XOR reduction
+    uint8_t opt_B = s->b ^ (s->b >> 6) ^ (s->b >> 5) ^ (s->b >> 4);
+    s->b = (s->b >> 1) | ((opt_B ^ s->r) << 7);
 
-        bool z0 = (r0 & r2) ^ (r1 & (!r3)) ^ (r2 | r4);
-        bool z1 = (r0 | r2) ^ (r5 | r7) ^ r1 ^ r6 ^ x ^ y;
-        bool z2 = (r3 & (!r5)) ^ (r4 & r6) ^ r7 ^ x;
+    // select via LUT: z0 from LUT directly, z1/z2 fold in Tt and y
+    uint8_t sel = opt_select_LUT[s->r] & 0x04;
+    sel |= (opt_select_LUT[s->r] ^ ((Tt ^ y) << 1)) & 0x02;
+    sel |= (opt_select_LUT[s->r] ^ Tt) & 0x01;
 
-        // The three bitz z0.. z1 are packed into a uint8_t:
-        // 00000ZZZ
-        //Return value is a uint8_t
-        return ((z0 << 2) & 4) | ((z1 << 1) & 2) | (z2 & 1);
-    */
-    return ((_z0 << 2) & 4) | ((_z1 << 1) & 2) | (_z2 & 1);
-
-    /*
-        uint8_t retval = 0;
-        retval |= (z0 << 2) & 4;
-        retval |= (z1 << 1) & 2;
-        retval |= (z2) & 1;
-
-        // Return value 0 <= retval <= 7
-        return retval;
-    */
-}
-
-/**
-*  Definition 4 (Successor state). Let s = l, r, t, b be a cipher state, k ∈ (F 82 ) 8
-*  be a key and y ∈ F 2 be the input bit. Then, the successor cipher state s ′ =
-*  l ′ , r ′ , t ′ , b ′ is defined as
-*  t ′ := (T (t) ⊕ r 0 ⊕ r 4 )t 0 . . . t 14 l ′ := (k [select(T (t),y,r)] ⊕ b ′ ) ⊞ l ⊞ r
-*  b ′ := (B(b) ⊕ r 7 )b 0 . . . b 6 r ′ := (k [select(T (t),y,r)] ⊕ b ′ ) ⊞ l
-*
-* @param s - state
-* @param k - array containing 8 bytes
-**/
-static State_t successor(const uint8_t *k, State_t s, bool y) {
-    bool r0 = s.r >> 7 & 0x1;
-    bool r4 = s.r >> 3 & 0x1;
-    bool r7 = s.r & 0x1;
-
-    State_t successor = {0, 0, 0, 0};
-
-    successor.t = s.t >> 1;
-    successor.t |= ((T(s)) ^ (r0) ^ (r4)) << 15;
-
-    successor.b = s.b >> 1;
-    successor.b |= ((B(s)) ^ (r7)) << 7;
-
-    bool Tt = T(s);
-
-    successor.l = ((k[_select(Tt, y, s.r)] ^ successor.b) + s.l + s.r) & 0xFF;
-    successor.r = ((k[_select(Tt, y, s.r)] ^ successor.b) + s.l) & 0xFF;
-
-    return successor;
+    uint8_t r = s->r;
+    s->r = (k[sel] ^ s->b) + s->l;
+    s->l = s->r + r;
 }
 /**
 *  We define the successor function suc which takes a key k ∈ (F 82 ) 8 , a state s and
@@ -193,11 +118,9 @@ static State_t successor(const uint8_t *k, State_t s, bool y) {
 * @param k - array containing 8 bytes
 **/
 static State_t suc(uint8_t *k, State_t s, BitstreamIn_t *bitstream) {
-    if (bitsLeft(bitstream) == 0) {
-        return s;
-    }
-    bool lastbit = tailBit(bitstream);
-    return successor(k, suc(k, s, bitstream), lastbit);
+    while (bitsLeft(bitstream) > 0)
+        successor(k, &s, headBit(bitstream));
+    return s;
 }
 
 /**
@@ -208,15 +131,11 @@ static State_t suc(uint8_t *k, State_t s, BitstreamIn_t *bitstream) {
 *  output(k, s, x 0 . . . x n ) = output(s) · output(k, s ′ , x 1 . . . x n )
 *  where s ′ = suc(k, s, x 0 ).
 **/
-static void output(uint8_t *k, State_t s, BitstreamIn_t *in,  BitstreamOut_t *out) {
-    if (bitsLeft(in) == 0) {
-        return;
+static void output(uint8_t *k, State_t s, BitstreamIn_t *in, BitstreamOut_t *out) {
+    while (bitsLeft(in) > 0) {
+        pushBit(out, (s.r >> 2) & 1);
+        successor(k, &s, headBit(in));
     }
-    pushBit(out, (s.r >> 2) & 1);
-    //Remove first bit
-    uint8_t x0 = headBit(in);
-    State_t ss = successor(k, s, x0);
-    output(k, ss, in, out);
 }
 
 /**
@@ -243,19 +162,59 @@ static void MAC(uint8_t *k, BitstreamIn_t input, BitstreamOut_t out) {
 
 void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4]) {
     uint8_t cc_nr[13] = { 0 };
-    uint8_t div_key[8];
 
     memcpy(cc_nr, cc_nr_p, 12);
-    memcpy(div_key, div_key_p, 8);
 
     reverse_arraybytes(cc_nr, 12);
     BitstreamIn_t bitstream = {cc_nr, 12 * 8, 0};
     uint8_t dest [] = {0, 0, 0, 0, 0, 0, 0, 0};
     BitstreamOut_t out = { dest, sizeof(dest) * 8, 0 };
-    MAC(div_key, bitstream, out);
+    MAC(div_key_p, bitstream, out);
     //The output MAC must also be reversed
     reverse_arraybytes(dest, sizeof(dest));
     memcpy(mac, dest, 4);
+}
+
+// Feeds `length` raw bytes into cipher state s, one bit at a time LSB-first.
+// Equivalent to reflect8-then-MSB-first used by doMAC, with no intermediate buffer.
+static void suc_bytes(const uint8_t *k, State_t *s, const uint8_t *in, int length) {
+    for (int i = 0; i < length; i++) {
+        uint8_t b = in[i];
+        successor(k, s, b);  b >>= 1;
+        successor(k, s, b);  b >>= 1;
+        successor(k, s, b);  b >>= 1;
+        successor(k, s, b);  b >>= 1;
+        successor(k, s, b);  b >>= 1;
+        successor(k, s, b);  b >>= 1;
+        successor(k, s, b);  b >>= 1;
+        successor(k, s, b);
+    }
+}
+
+// Collects nbytes of cipher output into `out`, packing bits LSB-first per byte.
+// Equivalent to output()+reflect8 used by doMAC, with no intermediate buffer or reversal.
+static void output_bytes(const uint8_t *k, State_t *s, uint8_t *out, int nbytes) {
+    for (int i = 0; i < nbytes; i++) {
+        uint8_t bout = 0;
+        bout |= (s->r & 0x4) >> 2;  successor(k, s, 0);
+        bout |= (s->r & 0x4) >> 1;  successor(k, s, 0);
+        bout |= (s->r & 0x4);       successor(k, s, 0);
+        bout |= (s->r & 0x4) << 1;  successor(k, s, 0);
+        bout |= (s->r & 0x4) << 2;  successor(k, s, 0);
+        bout |= (s->r & 0x4) << 3;  successor(k, s, 0);
+        bout |= (s->r & 0x4) << 4;  successor(k, s, 0);
+        bout |= (s->r & 0x4) << 5;  successor(k, s, 0);
+        out[i] = bout;
+    }
+}
+
+// doMAC variant for the brute-force hot loop: takes raw (non-reflected) cc_nr and
+// produces the same MAC as doMAC with no intermediate buffers, no reversal calls,
+// and no bitstream overhead.
+void doMAC_brute(const uint8_t *cc_nr, const uint8_t *div_key, uint8_t mac[4]) {
+    State_t s = init(div_key);
+    suc_bytes(div_key, &s, cc_nr, 12);
+    output_bytes(div_key, &s, mac, 4);
 }
 
 void doMAC_N(uint8_t *address_data_p, uint8_t address_data_size, uint8_t *div_key_p, uint8_t mac[4]) {
