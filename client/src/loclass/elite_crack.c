@@ -382,7 +382,7 @@ static void *bf_thread(void *thread_arg) {
                 pthread_exit(NULL);
             }
 
-            for (uint8_t i = 0 ; i < numbytes_to_recover; i++) {
+            for (uint8_t i = 0 ; i < numbytes_to_recover && i < sizeof(r->values); i++) {
                 r->values[i] = (brute >> (i * 8)) & 0xFF;
             }
             __atomic_store_n(&loclass_found, targ->thread_idx, __ATOMIC_SEQ_CST);
