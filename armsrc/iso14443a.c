@@ -3785,6 +3785,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
     }
 
     if ((param & ISO14A_RAW) == ISO14A_RAW) {
+
         if ((param & ISO14A_CRYPTO1MODE) == ISO14A_CRYPTO1MODE) {
             // Intercept special Auth command 6xxx<key>CRCA
             if ((len == 10) && ((cmd[0] & 0xF0) == 0x60)) {

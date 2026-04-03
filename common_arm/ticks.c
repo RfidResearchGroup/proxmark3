@@ -40,8 +40,9 @@ void SpinDelayUsPrecision(int us) {
     AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xFFFF;                      // Channel Period Register
 
     uint16_t end = AT91C_BASE_PWMC_CH0->PWMC_CCNTR + ticks;
-    if (end == 0) // AT91C_BASE_PWMC_CH0->PWMC_CCNTR is never == 0
+    if (end == 0) { // AT91C_BASE_PWMC_CH0->PWMC_CCNTR is never == 0
         end++;    // so we have to end++ to avoid inivity loop
+    }
 
     for (;;) {
         uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
@@ -68,14 +69,16 @@ void SpinDelayUs(int us) {
     AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xffff;                       // Channel Period Register
 
     uint16_t end = AT91C_BASE_PWMC_CH0->PWMC_CCNTR + ticks;
-    if (end == 0) // AT91C_BASE_PWMC_CH0->PWMC_CCNTR is never == 0
+    if (end == 0) { // AT91C_BASE_PWMC_CH0->PWMC_CCNTR is never == 0
         end++;    // so we have to end++ to avoid inivity loop
+    }
 
     for (;;) {
         uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
-        if (now == end)
+        if (now == end) {
             return;
+        }
         WDT_HIT();
     }
 }
