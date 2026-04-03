@@ -4593,7 +4593,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
         // read the data back
         uint8_t data_read[8] = {0};
         first_read = false;
-        reread = false;
+        bool reread = false;
         bool decrease = false;
         int readcount = 0;
         while (first_read == false) {
