@@ -4338,7 +4338,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
         arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_int0("s", NULL, "<dec>", "tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3 us"),
-        arg_int0("i", NULL, "<dec>", "tearoff delay increment (in us) - default 10"),
+        arg_int0("i", NULL, "<dec>", "tearoff delay increment (in us) - default 5"),
         arg_int0("e", NULL, "<dec>", "tearoff delay end (in us) must be a higher value than the start delay"),
         arg_str0("o", "otp", "<hex>", "Custom OTP value as 2 hex bytes"),
         arg_lit0(NULL, "dns", "Do not stabilize the bits, and return the raw dump of the block after tearoff"),
@@ -4510,27 +4510,16 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     uint8_t data_read_orig[8] = {0};
     uint8_t ff_data[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
     bool first_read = false;
-    bool reread = false;
     bool erase_phase = false;
 
     read_auth = false;
 
     int blockno = 1;
-    
+
     int res_orig = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read_orig, false, false);
-    while (reread) {
-        if (res_orig == PM3_SUCCESS && !reread) {
-            if (memcmp(data_read_orig, zeros, 8) == 0) {
-                reread = true;
-            } else {
-                reread = false;
-            }
-        } else if (res_orig == PM3_SUCCESS && reread) {
-            reread = false;
-            if (blockno == 2 && memcmp(data_read_orig, zeros, 8) == 0) {
-                reread = true;
-            }
-        }
+    if (res_orig == PM3_SUCCESS && memcmp(data_read_orig, zeros, 8) == 0) {
+        // zeros may be a transient read artifact - read once more to confirm
+        res_orig = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read_orig, false, false);
     }
 
     uint8_t data[8] = { 0 }; // tearoff payload
@@ -4631,6 +4620,9 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
                 reread = false;
             } else if (res != PM3_SUCCESS) {
                 decrease = true;
+                if (readcount == 100) {
+                    PrintAndLogEx(WARNING, "\nCard not responding after %d attempts, press " _GREEN_("<Enter>") " to abort", readcount);
+                }
             }
 
             readcount++;
@@ -4688,7 +4680,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
             bool goto_out = false;
 
             // App limit became SMALLER :(
-            if (data_read[0] > data_read_orig[0]) {
+            if (data_read[0] < data_read_orig[0]) {
 
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(SUCCESS, "Application limit changed, from "_YELLOW_("%u")" to "_YELLOW_("%u"), data_read_orig[0], data_read[0]);
@@ -4772,13 +4764,13 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
             msleep(tearoff_sleep);
         }
     }
-    
+
 
 out:
 
     DropField();
 
-    if (setDeviceDebugLevel(verbose ? MAX(dbg_curr, DBG_INFO) : DBG_NONE, false) != PM3_SUCCESS) {
+    if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
         return PM3_EFAILED;
     }
     // disable tearoff in case of keyboard abort, or it'll trigger on next operation
