@@ -128,7 +128,6 @@ typedef struct {
     bool test;
     bool fast;
     bool short_delay;
-    bool credit_recovery;
 } PACKED iclass_recover_req_t;
 
 typedef struct iclass_premac {
