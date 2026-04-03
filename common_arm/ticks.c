@@ -46,8 +46,9 @@ void SpinDelayUsPrecision(int us) {
     for (;;) {
         uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
-        if (now == end)
+        if (now == end) {
             return;
+        }
 
         WDT_HIT();
     }
