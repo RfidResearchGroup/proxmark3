@@ -79,6 +79,7 @@ typedef struct {
 // iCLASS dump data structure
 typedef struct {
     iclass_auth_req_t req;
+    uint8_t page;
     uint8_t start_block;
     uint8_t end_block;
 } PACKED iclass_dump_req_t;
@@ -187,6 +188,7 @@ typedef struct {
 // reader flags
 typedef struct {
     uint8_t flags;
+    uint8_t page;
 } PACKED iclass_card_select_t;
 
 // reader flags
