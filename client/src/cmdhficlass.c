@@ -5957,7 +5957,7 @@ void picopass_elite_nextKey(uint8_t *key) {
     memcpy(key, key_state, PICOPASS_BLOCK_SIZE);
 }
 
-static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, uint8_t no_first_auth[8], bool debug, bool test, bool fast, bool short_delay, bool allnight, bool credit) {
+static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, uint8_t no_first_auth[8], bool debug, bool test, bool fast, bool short_delay, bool allnight) {
 
     int runs = 1;
     int cycle = 1;
@@ -5989,7 +5989,6 @@ static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, u
         payload->test = test;
         payload->fast = fast;
         payload->short_delay = short_delay;
-        payload->credit_recovery = credit;
         memcpy(payload->nfa, no_first_auth, PICOPASS_BLOCK_SIZE);
         memcpy(payload->req.key, key, PICOPASS_BLOCK_SIZE);
 
@@ -6396,7 +6395,7 @@ static void generate_single_key_block_inverted_opt(const uint8_t *startingKey, u
 
 }
 
-static int CmdHFiClassLegacyRecSim(bool credit) {
+static int CmdHFiClassLegacyRecSim(void) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, _YELLOW_("This simulation assumes the card is standard keyed."));
@@ -6411,11 +6410,7 @@ static int CmdHFiClassLegacyRecSim(bool credit) {
     }
 
     uint8_t new_div_key[8] = {0};
-    if (credit == true) {
-        HFiClassCalcDivKey(csn, iClass_Key_Table[1], new_div_key, false);
-    } else {
-        HFiClassCalcDivKey(csn, iClass_Key_Table[0], new_div_key, false);
-    }
+    HFiClassCalcDivKey(csn, iClass_Key_Table[0], new_div_key, false);
 
     uint8_t key[PICOPASS_BLOCK_SIZE] = {0};
     uint8_t original_key[PICOPASS_BLOCK_SIZE] = {0};
@@ -6492,7 +6487,6 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
         arg_lit0(NULL, "fast", "Increases the speed (4.6->7.4 key updates/second), higher risk to brick the card"),
         arg_lit0(NULL, "sl", "Lower card comms delay times, further speeds increases, may cause more errors"),
         arg_lit0(NULL, "est", "Estimates the key updates based on the card's CSN assuming standard key, can be used with --credit option"),
-        arg_lit0(NULL, "credit", "EXPERIMENTAL : Recover the credit key using KD 0"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -6510,10 +6504,9 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     bool fast = arg_get_lit(ctx, 7);
     bool short_delay = arg_get_lit(ctx, 8);
     bool sim = arg_get_lit(ctx, 9);
-    bool credit = arg_get_lit(ctx, 10);
 
     if (sim) {
-        CmdHFiClassLegacyRecSim(credit);
+        CmdHFiClassLegacyRecSim();
         return PM3_SUCCESS;
     }
 
@@ -6549,12 +6542,7 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    if (credit == true) {
-        diversifyKey(csn, iClass_Key_Table[0], new_div_key);
-        fast = false;
-    } else {
-        diversifyKey(csn, iClass_Key_Table[1], new_div_key);
-    }
+    diversifyKey(csn, iClass_Key_Table[1], new_div_key);
 
     memcpy(no_first_auth, new_div_key, PICOPASS_BLOCK_SIZE);
 
@@ -6569,7 +6557,7 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     PrintAndLogEx(INFO, "---------------------------------------");
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort");
     PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------\n");
-    iclass_recover(macs, index, loop, no_first_auth, debug, test, fast, short_delay, allnight, credit);
+    iclass_recover(macs, index, loop, no_first_auth, debug, test, fast, short_delay, allnight);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(WARNING, _YELLOW_("If the process completed successfully"));
     PrintAndLogEx(HINT, "Hint: run `" _YELLOW_("hf iclass legbrute -h") "` with the partial key found");
