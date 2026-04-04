@@ -2446,7 +2446,10 @@
         "Name": "ORCA transit card",
         "Description": "DESFire-based transit card",
         "Type": "transport",
-        "Protocol": "mifare_desfire"
+        "Protocol": "mifare_desfire",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "A00000039656434103F2142000000000",
@@ -2455,7 +2458,10 @@
         "Name": "PRESTO transit card",
         "Description": "DESFire-based transit card",
         "Type": "transport",
-        "Protocol": "mifare_desfire"
+        "Protocol": "mifare_desfire",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "A00000039656434103F8852200000000",
@@ -2464,7 +2470,10 @@
         "Name": "Ubian digital transit card",
         "Description": "DESFire-based virtual transit card",
         "Type": "transport",
-        "Protocol": "mifare_desfire"
+        "Protocol": "mifare_desfire",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "DE5C0D1F1CADA5",
@@ -2473,7 +2482,10 @@
         "Name": "Madrid transit card",
         "Description": "DESFire-based transit card",
         "Type": "transport",
-        "Protocol": "mifare_desfire"
+        "Protocol": "mifare_desfire",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "A00000F21100",
@@ -2482,7 +2494,10 @@
         "Name": "Myki transit card",
         "Description": "DESFire-based transit card",
         "Type": "transport",
-        "Protocol": "mifare_desfire"
+        "Protocol": "mifare_desfire",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "637001ff4c41",
@@ -2500,7 +2515,10 @@
         "Name": "Smart Trip",
         "Description": "DESFire-based transit card (ASCII cp\\x01\\xffWMATA)",
         "Type": "transport",
-        "Protocol": "mifare_desfire"
+        "Protocol": "mifare_desfire",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "637001ff434c4950504552",
@@ -2509,7 +2527,10 @@
         "Name": "Clipper",
         "Description": "DESFire-based transit card (ASCII cp\\x01\\xffCLIPPER)",
         "Type": "transport",
-        "Protocol": "mifare_desfire"
+        "Protocol": "mifare_desfire",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "A0000002164954534F2D31",
@@ -2566,7 +2587,32 @@
         "Name": "SEOS",
         "Description": "Used by both by physical cards and mobile implementations",
         "Type": "access",
-        "Protocol": "hid_seos"
+        "Protocol": "hid_seos",
+        "Sources": [
+            "android://app.smartspaces.*",
+            "android://com.afiaa",
+            "android://com.alertenterprise.android.wallet",
+            "android://com.assaabloy.mobilekeys.android.v2",
+            "android://com.assaabloy.stg.msf.config.android",
+            "android://com.cardexchangeid.ident",
+            "android://com.cbord.get",
+            "android://com.cohesion.core",
+            "android://com.equiem.equiemandroid",
+            "android://com.hidglobal.mobilekeys.android.v3",
+            "android://com.honeywell.ext.mobilecredentials",
+            "android://com.hqo",
+            "android://com.kastle.kastlePresence",
+            "android://com.lane.lane",
+            "android://com.s2sys.mobilesecurityuser",
+            "android://com.soloinsight.cloudpassnew.staging",
+            "android://com.wandera.android",
+            "android://com.workai.app",
+            "android://eu.sharry.swp.gallagherhub",
+            "android://eu.sharry.swp.sharrypartner",
+            "android://eu.sharry.swp.sharryworkplace",
+            "android://io.blinetech.blineandroid",
+            "android://io.swiftconnect.mobile"
+        ]
     },
     {
         "AID": "A0000004400001010001000002",
@@ -2625,6 +2671,7 @@
             "android://com.cohesion.core",
             "android://com.equiem.equiemandroid",
             "android://com.hidglobal.pacs.readermanager",
+            "android://com.honeywell.ext.mobilecredentials",
             "android://com.hotelbird.hbapp",
             "android://com.hqo",
             "android://com.kastle.kastlePresence",
