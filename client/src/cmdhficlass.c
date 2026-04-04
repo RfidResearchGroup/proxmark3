@@ -2533,6 +2533,7 @@ static int iclass_dump_non_secure(bool shallow_mod, uint8_t *tag_data, uint16_t 
         .req.shallow_mod    = shallow_mod,
         .start_block        = 3,
         .end_block          = app_limit1,
+        .page = 0 // no page selection support here yet
     };
 
     clearCommandBuffer();
