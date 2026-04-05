@@ -578,7 +578,7 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
     size_t len;
     // tx chaining
     size_t sentdatalen = 0;
-    while (cdatalen >= sentdatalen) {
+    while (cdatalen > sentdatalen) {
 
         if ((cdatalen - sentdatalen) > DESFIRE_TX_FRAME_MAX_LEN) {
             len = DESFIRE_TX_FRAME_MAX_LEN;
@@ -713,7 +713,9 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
     int res;
     // tx chaining
     size_t sentdatalen = 0;
-    while (datalen >= sentdatalen) {
+    bool first_tx_frame = true;
+    while (first_tx_frame || datalen > sentdatalen) {
+        first_tx_frame = false;
         if (datalen - sentdatalen > DESFIRE_TX_FRAME_MAX_LEN) {
             apdu.Lc = DESFIRE_TX_FRAME_MAX_LEN;
         } else {
@@ -2187,6 +2189,33 @@ int DesfireGetDFList(DesfireContext_t *dctx, uint8_t *resp, size_t *resplen) {
 
 int DesfireCreateApplication(DesfireContext_t *dctx, uint8_t *appdata, size_t appdatalen) {
     return DesfireCommandTxData(dctx, MFDES_CREATE_APPLICATION, appdata, appdatalen);
+}
+
+int DesfireCreateDelegatedApplication(DesfireContext_t *dctx, uint8_t *appdata, size_t appdatalen, uint8_t *contdata, size_t contdatalen) {
+    if (dctx == NULL || appdata == NULL || contdata == NULL) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t resp[DESFIRE_BUFFER_SIZE] = {0};
+    size_t resplen = 0;
+    uint8_t respcode = 0xFF;
+    int res = DesfireExchangeEx(false, dctx, MFDES_CREATE_DELEGATE_APP, appdata, appdatalen, &respcode, resp, &resplen, false, 0);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    if (respcode != MFDES_ADDITIONAL_FRAME) {
+        return PM3_EAPDU_FAIL;
+    }
+
+    res = DesfireExchangeEx(false, dctx, MFDES_ADDITIONAL_FRAME, contdata, contdatalen, &respcode, resp, &resplen, false, 0);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    if (respcode != MFDES_S_OPERATION_OK) {
+        return PM3_EAPDU_FAIL;
+    }
+
+    return PM3_SUCCESS;
 }
 
 int DesfireDeleteApplication(DesfireContext_t *dctx, uint32_t aid) {

@@ -209,6 +209,7 @@ void DesfirePrintPICCInfo(DesfireContext_t *dctx, PICCInfo_t *PICCInfo);
 void DesfirePrintAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS appList);
 
 int DesfireCreateApplication(DesfireContext_t *dctx, uint8_t *appdata, size_t appdatalen);
+int DesfireCreateDelegatedApplication(DesfireContext_t *dctx, uint8_t *appdata, size_t appdatalen, uint8_t *contdata, size_t contdatalen);
 int DesfireDeleteApplication(DesfireContext_t *dctx, uint32_t aid);
 
 int DesfireGetKeyVersion(DesfireContext_t *dctx, uint8_t *data, size_t len, uint8_t *resp, size_t *resplen);

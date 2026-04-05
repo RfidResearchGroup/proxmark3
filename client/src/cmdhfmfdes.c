@@ -20,6 +20,7 @@
 #include "cmdhfmfdes.h"
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "jansson.h"
 #include "commonutil.h"             // ARRAYLEN
@@ -3532,6 +3533,325 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14ADesCreateDelegateApp(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes createdelegateapp",
+                  "Create delegated application (CreateDelegatedApplication / 0xC9). Master key needs to be provided.",
+                  "Command is built from fields and sends two frames: C9 + AF continuation.\n"
+                  "Authentication is always performed with DAM key number 0x10.\n"
+                  "EncK and DAMMAC are calculated from supplied key material.\n"
+                  "\n"
+                  "Structured mode examples:\n"
+                  "hf mfdes createdelegateapp --aid 123456 --damslot 0001 --damslotver 00 --quota 0010 --ks1 0F --ks2 AE --algo 2TDEA --key 00000000000000000000000000000000 --damenckey 00112233445566778899AABBCCDDEEFF --dammackey 8899AABBCCDDEEFF0011223344556677 --dstkey 00112233445566778899AABBCCDDEEFF --dstkeyver 00\n"
+                  "hf mfdes createdelegateapp --aid 123456 --damslot 0001 --quota 0010 --ks1 0F --dstalgo aes --numkeys 14 --ks3 01 --fid E110 --dfname D2760000850101 --algo 2TDEA --key 00000000000000000000000000000000 --damenckey 00112233445566778899AABBCCDDEEFF --dammackey 8899AABBCCDDEEFF0011223344556677 --dstkey 00112233445566778899AABBCCDDEEFF --dstkeyver 00");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "Verbose output"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
+        arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
+        arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
+        arg_str0("c",  "ccset",   "<native|niso|iso>", "Communicaton command set"),
+        arg_str0(NULL, "schann",  "<d40|ev1|ev2|lrp>", "Secure channel"),
+        arg_str0(NULL, "aid",     "<hex>", "Application ID for create. Mandatory in structured mode. (3 hex bytes, big endian)"),
+        arg_str0(NULL, "damslot", "<hex>", "DAM slot number (2 hex bytes, little endian on card)"),
+        arg_str0(NULL, "damslotver", "<hex>", "DAM slot version (1 hex byte, def: 00)"),
+        arg_str0(NULL, "quota",   "<hex>", "Quota in blocks (2 hex bytes, little endian on card, def: 0000)"),
+        arg_str0(NULL, "ks1",     "<hex>", "Key settings 1 (1 hex byte, def: 0x0F)"),
+        arg_str0(NULL, "ks2",     "<hex>", "Key settings 2 (1 hex byte, def: 0x0E)"),
+        arg_str0(NULL, "ks3",     "<hex>", "Key settings 3 (1 hex byte, optional)"),
+
+        arg_str0(NULL, "fid",     "<hex>", "ISO file ID (2 hex bytes, big endian), optional"),
+        arg_str0(NULL, "dfname",  "<hex>", "ISO DF Name (1..16 bytes, hex), optional"),
+
+        arg_str0(NULL, "dstalgo", "<DES|2TDEA|3TDEA|AES>",  "Application key crypt algo (used when ks2 omitted, def: DES)"),
+        arg_int0(NULL, "numkeys", "<dec>",  "Number of keys 0x01..0x0e (used when ks2 omitted, def: 0x01)"),
+        arg_str0(NULL, "damenckey", "<hex>", "DAM ENC key (16 bytes for AES/2TDEA, 24 bytes for 3TDEA)"),
+        arg_str0(NULL, "dammackey", "<hex>", "DAM MAC key (16 bytes for AES/2TDEA, 24 bytes for 3TDEA)"),
+        arg_str0(NULL, "dstkey", "<hex>", "Initial delegated-app key (16 bytes for 2TDEA/AES, 24 bytes for 3TDEA)"),
+        arg_str0(NULL, "dstkeyver", "<hex>", "Initial delegated-app key version (1 hex byte, def: 00)"),
+        arg_lit0(NULL, "no-auth", "Execute without authentication"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    DesfireContext_t dctx = {0};
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 0, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0, &securechann, DCMMACed, &appid, NULL);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    dctx.keyNum = 0x10;
+
+    uint32_t damslot = 0x0000;
+    bool damslotpresent = false;
+    if (CLIGetUint32Hex(ctx, 11, 0x0000, &damslot, &damslotpresent, 2, "DAM slot number must have 2 bytes length")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint32_t damslotver = 0x00;
+    if (CLIGetUint32Hex(ctx, 12, 0x00, &damslotver, NULL, 1, "DAM slot version must have 1 byte length")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint32_t quota = 0x0000;
+    if (CLIGetUint32Hex(ctx, 13, 0x0000, &quota, NULL, 2, "Quota must have 2 bytes length")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint32_t ks1 = 0x0f;
+    if (CLIGetUint32Hex(ctx, 14, 0x0f, &ks1, NULL, 1, "Key settings 1 must have 1 byte length")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint32_t ks2 = 0x0e;
+    bool ks2present = false;
+    if (CLIGetUint32Hex(ctx, 15, 0x0e, &ks2, &ks2present, 1, "Key settings 2 must have 1 byte length")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint32_t ks3 = 0x00;
+    bool ks3present = false;
+    if (CLIGetUint32Hex(ctx, 16, 0x00, &ks3, &ks3present, 1, "Key settings 3 must have 1 byte length")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint32_t fileid = 0x0000;
+    bool fileidpresent = false;
+    if (CLIGetUint32Hex(ctx, 17, 0x0000, &fileid, &fileidpresent, 2, "ISO file ID must have 2 bytes length")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t dfname[32] = {0};
+    int dfnamelen = 16;
+    CLIGetHexWithReturn(ctx, 18, dfname, &dfnamelen);
+    if (dfnamelen > 16) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "DF name must be a maximum of 16 bytes in length");
+        return PM3_EINVARG;
+    }
+
+    int dstalgo = T_DES;
+    if (CLIGetOptionList(arg_get_str(ctx, 19), DesfireAlgoOpts, &dstalgo)) {
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
+    }
+
+    int keycount = arg_get_int_def(ctx, 20, 0x01);
+
+    uint8_t damenc[DESFIRE_MAX_KEY_SIZE] = {0};
+    int damenclen = sizeof(damenc);
+    CLIGetHexWithReturn(ctx, 21, damenc, &damenclen);
+
+    uint8_t mac_key[DESFIRE_MAX_KEY_SIZE] = {0};
+    int mac_key_len = sizeof(mac_key);
+    CLIGetHexWithReturn(ctx, 22, mac_key, &mac_key_len);
+
+    uint8_t dstkey[DESFIRE_MAX_KEY_SIZE] = {0};
+    int dstkeylen = sizeof(dstkey);
+    CLIGetHexWithReturn(ctx, 23, dstkey, &dstkeylen);
+
+    uint32_t dstkeyver = 0x00;
+    if (CLIGetUint32Hex(ctx, 24, 0x00, &dstkeyver, NULL, 1, "Delegated-app key version must have 1 byte length")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool noauth = arg_get_lit(ctx, 25);
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    uint8_t data[250] = {0};
+    size_t datalen = 0;
+    uint8_t contdata[250] = {0};
+    size_t contdatalen = 0;
+
+    if (appid == 0x000000) {
+        PrintAndLogEx(ERR, "Creating the root aid (0x000000) is " _RED_("forbidden"));
+        return PM3_ESOFT;
+    }
+
+    if (!damslotpresent) {
+        PrintAndLogEx(ERR, "DAM slot number is mandatory");
+        return PM3_EINVARG;
+    }
+
+    if (keycount > 0x0e || keycount < 1) {
+        PrintAndLogEx(ERR, "Key count must be in the range 1..14");
+        return PM3_EINVARG;
+    }
+
+    if (dfnamelen > 0 && !fileidpresent) {
+        PrintAndLogEx(ERR, "ISO DF Name requires --fid");
+        return PM3_EINVARG;
+    }
+
+    DesfireCryptoAlgorithm damalgo = dctx.keyType;
+    if (damalgo != T_3DES && damalgo != T_3K3DES && damalgo != T_AES) {
+        PrintAndLogEx(ERR, "DAM keys support only --algo 2TDEA, 3TDEA or AES");
+        return PM3_EINVARG;
+    }
+
+    int expecteddamkeylen = desfire_get_key_length(damalgo);
+
+    if (damenclen != expecteddamkeylen) {
+        PrintAndLogEx(ERR, "DAM ENC key must have exactly %d bytes for --algo %s", expecteddamkeylen, CLIGetOptionListStr(DesfireAlgoOpts, damalgo));
+        return PM3_EINVARG;
+    }
+
+    if (mac_key_len != expecteddamkeylen) {
+        PrintAndLogEx(ERR, "DAM MAC key must have exactly %d bytes for --algo %s", expecteddamkeylen, CLIGetOptionListStr(DesfireAlgoOpts, damalgo));
+        return PM3_EINVARG;
+    }
+
+    if (dstkeylen == 0) {
+        PrintAndLogEx(ERR, "Initial delegated-app key is mandatory");
+        return PM3_EINVARG;
+    }
+
+    DesfireAIDUintToByte(appid, &data[0]);
+    Uint2byteToMemLe(&data[3], damslot & 0xffff);
+    data[5] = damslotver & 0xff;
+    Uint2byteToMemLe(&data[6], quota & 0xffff);
+    data[8] = ks1 & 0xff;
+    data[9] = ks2 & 0xff;
+
+    if (!ks2present) {
+        data[9] &= 0xf0;
+        data[9] |= keycount & 0x0f;
+        uint8_t kt = DesfireKeyAlgoToType(dstalgo);
+        data[9] &= 0x3f;
+        data[9] |= (kt & 0x03) << 6;
+    }
+
+    datalen = 10;
+
+    if (ks3present) {
+        data[9] |= 0x10;
+        data[datalen++] = ks3 & 0xff;
+    }
+
+    if (fileidpresent) {
+        Uint2byteToMemLe(&data[datalen], fileid & 0xffff);
+        datalen += 2;
+        if (dfnamelen > 0) {
+            memcpy(&data[datalen], dfname, dfnamelen);
+            datalen += dfnamelen;
+        }
+    }
+
+    if (datalen > DESFIRE_TX_FRAME_MAX_LEN) {
+        PrintAndLogEx(ERR, "First frame is too long (%zu > %d)", datalen, DESFIRE_TX_FRAME_MAX_LEN);
+        return PM3_EINVARG;
+    }
+
+    uint8_t keytype = (data[9] >> 6) & 0x03;
+    int expecteddstkeylen = desfire_get_key_length(DesfireKeyTypeToAlgo(keytype));
+
+    if (dstkeylen != expecteddstkeylen) {
+        PrintAndLogEx(ERR, "Initial delegated-app key length must be %d bytes for key type 0x%02x (got %d)", expecteddstkeylen, keytype, dstkeylen);
+        return PM3_EINVARG;
+    }
+
+    uint8_t cryptogram[32] = {0};
+    uint8_t cryptogram_plain[32] = {0};
+    // Delegated app key blob format:
+    // 7-byte random prefix + dst key + dst key version, then zero padding to 32 bytes.
+    for (size_t i = 0; i < 7; i++) {
+        cryptogram_plain[i] = (uint8_t)(rand() & 0xFF);
+    }
+    memcpy(&cryptogram_plain[7], dstkey, dstkeylen);
+    cryptogram_plain[7 + dstkeylen] = dstkeyver & 0xFF;
+
+    DesfireContext_t damctx = {0};
+    DesfireSetKey(&damctx, 0, damalgo, damenc);
+    uint8_t cryptogram_iv[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+    DesfireCryptoEncDecEx(&damctx, DCOMainKey, cryptogram_plain, sizeof(cryptogram_plain), cryptogram, true, true, cryptogram_iv);
+
+    uint8_t mac_input[1 + DESFIRE_TX_FRAME_MAX_LEN + sizeof(cryptogram)] = {0};
+    size_t mac_input_len = 1 + datalen + sizeof(cryptogram);
+    mac_input[0] = MFDES_CREATE_DELEGATE_APP;
+    memcpy(&mac_input[1], data, datalen);
+    memcpy(&mac_input[1 + datalen], cryptogram, sizeof(cryptogram));
+
+    uint8_t mac[8] = {0};
+    uint8_t fullcmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+    DesfireSetKey(&damctx, 0, damalgo, mac_key);
+    DesfireClearIV(&damctx);
+    DesfireCryptoCMACEx(&damctx, DCOMainKey, mac_input, mac_input_len, 0, fullcmac);
+    if (damalgo == T_AES) {
+        for (size_t i = 0; i < sizeof(mac); i++) {
+            mac[i] = fullcmac[i * 2 + 1];
+        }
+    } else {
+        memcpy(mac, fullcmac, sizeof(mac));
+    }
+
+    memcpy(contdata, cryptogram, sizeof(cryptogram));
+    memcpy(&contdata[sizeof(cryptogram)], mac, sizeof(mac));
+    contdatalen = sizeof(cryptogram) + sizeof(mac);
+
+    if (contdatalen > DESFIRE_TX_FRAME_MAX_LEN) {
+        PrintAndLogEx(ERR, "Continuation frame is too long (%zu > %d)", contdatalen, DESFIRE_TX_FRAME_MAX_LEN);
+        return PM3_EINVARG;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "---------------------------");
+        PrintAndLogEx(INFO, _CYAN_("Creating Delegated Application using:"));
+        PrintAndLogEx(INFO, "AID             0x%02X%02X%02X", data[2], data[1], data[0]);
+        PrintAndLogEx(INFO, "DAM algo        %s", CLIGetOptionListStr(DesfireAlgoOpts, damalgo));
+        if (datalen >= 10) {
+            PrintAndLogEx(INFO, "DAM slot        0x%04x", MemLeToUint2byte(&data[3]));
+            PrintAndLogEx(INFO, "DAM slot ver    0x%02x", data[5]);
+            PrintAndLogEx(INFO, "Quota           0x%04x (%d units)", MemLeToUint2byte(&data[6]), MemLeToUint2byte(&data[6]));
+            PrintAndLogEx(INFO, "Key Set 1       0x%02X", data[8]);
+            PrintAndLogEx(INFO, "Key Set 2       0x%02X", data[9]);
+            PrintKeySettings(data[8], data[9], true, true);
+        }
+        PrintAndLogEx(INFO, "Part1 payload   [%zu]  %s", datalen, sprint_hex(data, datalen));
+        PrintAndLogEx(INFO, "Cryptogram      %s", sprint_hex(cryptogram, sizeof(cryptogram)));
+        PrintAndLogEx(INFO, "MAC             %s", sprint_hex(mac, sizeof(mac)));
+        PrintAndLogEx(INFO, "Part2 payload   [%zu]  %s", contdatalen, sprint_hex(contdata, contdatalen));
+        PrintAndLogEx(INFO, "---------------------------");
+    }
+
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, 0x000000, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    res = DesfireCreateDelegatedApplication(&dctx, data, datalen, contdata, contdatalen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire CreateDelegatedApplication command " _RED_("error") ". Result: %d", res);
+        DropField();
+        return res;
+    }
+
+    PrintAndLogEx(SUCCESS, "Desfire delegated application %06x successfully " _GREEN_("created"), MemLeToUint3byte(data));
+
+    DropField();
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14ADesDeleteApp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes deleteapp",
@@ -6641,6 +6961,7 @@ static command_t CommandTable[] = {
     {"getappnames",      CmdHF14ADesGetAppNames,      IfPm3Iso14443a,  "Get Applications list"},
     {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
     {"createapp",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application"},
+    {"createdelegateapp", CmdHF14ADesCreateDelegateApp, IfPm3Iso14443a, "Create Delegated Application"},
     {"deleteapp",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application"},
     {"selectapp",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
     {"selectisofid",     CmdHF14ADesSelectISOFID,     IfPm3Iso14443a,  "Select file by ISO ID"},
