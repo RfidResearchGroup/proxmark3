@@ -3836,19 +3836,23 @@ void ReaderIso14443a(PacketCommandNG *c) {
             // Force explicit parity
             lenbits = len * 8;
         }
-        // want to send a specific number of bits (e.g. short commands)
+        
         if (lenbits > 0) {
+
+            // want to send a specific number of bits (e.g. short commands)
 
             if ((param & ISO14A_TOPAZMODE) == ISO14A_TOPAZMODE) {
 
                 int bits_to_send = lenbits;
                 uint16_t i = 0;
 
-                ReaderTransmitBitsPar(&cmd[i++], MIN(bits_to_send, 7), NULL, NULL);     // first byte is always short (7bits) and no parity
+                // first byte is always short (7bits) and no parity
+                ReaderTransmitBitsPar(&cmd[i++], MIN(bits_to_send, 7), NULL, NULL);     
                 bits_to_send -= 7;
 
                 while (bits_to_send > 0) {
-                    ReaderTransmitBitsPar(&cmd[i++], MIN(bits_to_send, 8), NULL, NULL); // following bytes are 8 bit and no parity
+                    // following bytes are 8 bit and no parity
+                    ReaderTransmitBitsPar(&cmd[i++], MIN(bits_to_send, 8), NULL, NULL); 
                     bits_to_send -= 8;
                 }
 
@@ -3857,21 +3861,29 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 if ((param & ISO14A_CRYPTO1MODE) == ISO14A_CRYPTO1MODE) {
                     mf_crypto1_encrypt(&crypto1_state, cmd, len, parity_array);
                 }
-                ReaderTransmitBitsPar(cmd, lenbits, parity_array, NULL);               // bytes are 8 bit with odd parity
+                // bytes are 8 bit with odd parity
+                ReaderTransmitBitsPar(cmd, lenbits, parity_array, NULL);               
             }
 
-        } else {                    // want to send complete bytes only
+        } else {
+            
+            // want to send complete bytes only
+            
             if ((param & ISO14A_TOPAZMODE) == ISO14A_TOPAZMODE) {
 
                 size_t i = 0;
-                ReaderTransmitBitsPar(&cmd[i++], 7, NULL, NULL);                        // first byte: 7 bits, no paritiy
 
+                // first byte: 7 bits, no paritiy
+                ReaderTransmitBitsPar(&cmd[i++], 7, NULL, NULL);                        
+                
                 while (i < len) {
-                    ReaderTransmitBitsPar(&cmd[i++], 8, NULL, NULL);                    // following bytes: 8 bits, no paritiy
+                    // following bytes: 8 bits, no paritiy
+                    ReaderTransmitBitsPar(&cmd[i++], 8, NULL, NULL);                    
                 }
 
             } else {
-                ReaderTransmit(cmd, len, NULL);                                         // 8 bits, odd parity
+                // 8 bits, odd parity
+                ReaderTransmit(cmd, len, NULL);                                         
             }
         }
 
