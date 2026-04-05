@@ -548,7 +548,7 @@ static int DESFIRESendRaw(bool activate_field, uint8_t *data, size_t datalen, ui
     return PM3_SUCCESS;
 }
 
-static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
+static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize, size_t firsttxdatalen) {
     if (resplen) {
         *resplen = 0;
     }
@@ -576,11 +576,21 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
 
     int res;
     size_t len;
+    size_t firsttxlen = 0;
+    if (firsttxdatalen > 0 && firsttxdatalen < datalen) {
+        firsttxlen = firsttxdatalen + 1; // +1 for the initial command byte.
+        if (firsttxlen > DESFIRE_TX_FRAME_MAX_LEN) {
+            firsttxlen = DESFIRE_TX_FRAME_MAX_LEN;
+        }
+    }
+
     // tx chaining
     size_t sentdatalen = 0;
     while (cdatalen > sentdatalen) {
 
-        if ((cdatalen - sentdatalen) > DESFIRE_TX_FRAME_MAX_LEN) {
+        if (sentdatalen == 0 && firsttxlen > 0) {
+            len = firsttxlen;
+        } else if ((cdatalen - sentdatalen) > DESFIRE_TX_FRAME_MAX_LEN) {
             len = DESFIRE_TX_FRAME_MAX_LEN;
         } else {
             len = cdatalen - sentdatalen;
@@ -683,7 +693,7 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
     return PM3_SUCCESS;
 }
 
-static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
+static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize, size_t firsttxdatalen) {
     if (resplen) {
         *resplen = 0;
     }
@@ -711,12 +721,22 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
     };
 
     int res;
+    size_t firsttxlen = 0;
+    if (firsttxdatalen > 0 && firsttxdatalen < datalen) {
+        firsttxlen = firsttxdatalen;
+        if (firsttxlen > DESFIRE_TX_FRAME_MAX_LEN) {
+            firsttxlen = DESFIRE_TX_FRAME_MAX_LEN;
+        }
+    }
+
     // tx chaining
     size_t sentdatalen = 0;
     bool first_tx_frame = true;
     while (first_tx_frame || datalen > sentdatalen) {
         first_tx_frame = false;
-        if (datalen - sentdatalen > DESFIRE_TX_FRAME_MAX_LEN) {
+        if (sentdatalen == 0 && firsttxlen > 0) {
+            apdu.Lc = firsttxlen;
+        } else if (datalen - sentdatalen > DESFIRE_TX_FRAME_MAX_LEN) {
             apdu.Lc = DESFIRE_TX_FRAME_MAX_LEN;
         } else {
             apdu.Lc = datalen - sentdatalen;
@@ -876,8 +896,8 @@ static void DesfireSplitBytesToBlock(uint8_t *blockdata, size_t *blockdatacount,
     }
 }
 
-int DesfireExchangeEx(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode,
-                      uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
+static int DesfireExchangeExSplit(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode,
+                                  uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize, size_t firsttxdatalen) {
     int res = PM3_SUCCESS;
 
     if (PrintChannelModeWarning(cmd, ctx->secureChannel, ctx->cmdSet, ctx->commMode) == false) {
@@ -898,9 +918,9 @@ int DesfireExchangeEx(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, u
             DesfireSecureChannelEncode(ctx, cmd, data, datalen, databuf, &databuflen);
 
             if (ctx->cmdSet == DCCNative) {
-                res = DesfireExchangeNative(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize);
+                res = DesfireExchangeNative(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize, firsttxdatalen);
             } else {
-                res = DesfireExchangeISONative(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize);
+                res = DesfireExchangeISONative(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize, firsttxdatalen);
             }
 
             if (splitbysize) {
@@ -926,6 +946,11 @@ int DesfireExchangeEx(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, u
 
     free(databuf);
     return res;
+}
+
+int DesfireExchangeEx(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode,
+                      uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
+    return DesfireExchangeExSplit(activate_field, ctx, cmd, data, datalen, respcode, resp, resplen, enable_chaining, splitbysize, 0);
 }
 
 int DesfireExchange(DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen) {
@@ -2196,18 +2221,24 @@ int DesfireCreateDelegatedApplication(DesfireContext_t *dctx, uint8_t *appdata, 
         return PM3_EINVARG;
     }
 
+    if (appdatalen == 0 || contdatalen == 0) {
+        return PM3_EINVARG;
+    }
+
+    if (appdatalen > DESFIRE_BUFFER_SIZE - contdatalen) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t fulldata[DESFIRE_BUFFER_SIZE] = {0};
+    memcpy(fulldata, appdata, appdatalen);
+    memcpy(&fulldata[appdatalen], contdata, contdatalen);
+
     uint8_t resp[DESFIRE_BUFFER_SIZE] = {0};
     size_t resplen = 0;
     uint8_t respcode = 0xFF;
-    int res = DesfireExchangeEx(false, dctx, MFDES_CREATE_DELEGATE_APP, appdata, appdatalen, &respcode, resp, &resplen, false, 0);
-    if (res != PM3_SUCCESS) {
-        return res;
-    }
-    if (respcode != MFDES_ADDITIONAL_FRAME) {
-        return PM3_EAPDU_FAIL;
-    }
-
-    res = DesfireExchangeEx(false, dctx, MFDES_ADDITIONAL_FRAME, contdata, contdatalen, &respcode, resp, &resplen, false, 0);
+    // CreateDelegatedApplication must go out as C9 + AF frames, but secure messaging
+    // state (CMAC IV / cmd counter) must be advanced as a single logical command.
+    int res = DesfireExchangeExSplit(false, dctx, MFDES_CREATE_DELEGATE_APP, fulldata, appdatalen + contdatalen, &respcode, resp, &resplen, true, 0, appdatalen);
     if (res != PM3_SUCCESS) {
         return res;
     }
