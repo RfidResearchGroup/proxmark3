@@ -104,7 +104,6 @@ uint8_t g_tearoff_skip = 0;
 int tearoff_hook(void) {
 
     if (g_tearoff_enabled == false) {
-        Dbprintf("no tear off");
         return PM3_SUCCESS;
     } 
     
