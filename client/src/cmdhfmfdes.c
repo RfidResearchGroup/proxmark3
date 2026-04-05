@@ -3555,7 +3555,7 @@ static int CmdHF14ADesCreateDelegateApp(const char *Cmd) {
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
         arg_str0("c",  "ccset",   "<native|niso|iso>", "Communicaton command set"),
-        arg_str0(NULL, "schann",  "<d40|ev1|ev2|lrp>", "Secure channel"),
+        arg_str0(NULL, "schann",  "<d40|ev1>", "Secure channel"),
         arg_str0(NULL, "aid",     "<hex>", "Application ID for create. Mandatory in structured mode. (3 hex bytes, big endian)"),
         arg_str0(NULL, "damslot", "<hex>", "DAM slot number (2 hex bytes, little endian on card)"),
         arg_str0(NULL, "damslotver", "<hex>", "DAM slot version (1 hex byte, def: 00)"),
@@ -3682,6 +3682,13 @@ static int CmdHF14ADesCreateDelegateApp(const char *Cmd) {
     size_t datalen = 0;
     uint8_t contdata[250] = {0};
     size_t contdatalen = 0;
+
+    // Fixing EV2 mac calculation requires changes in multiple places (command chaining, counter increment modification, etc.)
+    // and is not worth the effort at the moment, so we just block it for now.
+    if (securechann == DACEV2) {
+        PrintAndLogEx(ERR, "CreateDelegatedApplication is not currently implemented for EV2 secure channel (EV2 MAC calculation issues)");
+        return PM3_EINVARG;
+    }
 
     if (appid == 0x000000) {
         PrintAndLogEx(ERR, "Creating the root aid (0x000000) is " _RED_("forbidden"));
