@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf mfdes getdelegateappinfo` command (@kormax)
 - Added `hf secc info` command to retrieve the Card Recognition Template(@antiklesys)
 - Added `hf mfdes createdelegateapp` command (@kormax)
 - Optimized `hf iclass legbrute` throughput: replaced recursive `suc()`/`output()` cipher functions with iterative loops, added 256-entry LUT for the `select()` function eliminating redundant bit arithmetic and halving key lookups per state step, switched successor state to in-place pointer update removing per-call struct copies, added `doMAC_brute()` with byte-wise LSB-first processing and direct output bit packing eliminating all bitstream struct overhead and output reversal calls per key candidate, and replaced per-iteration 64-bit modulo progress check with a countdown counter (@antiklesys)

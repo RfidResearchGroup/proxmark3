@@ -3852,6 +3852,101 @@ static int CmdHF14ADesCreateDelegateApp(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14ADesGetDelegateAppInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes getdelegateappinfo",
+                  "Get delegated application information for DAM slot (GetDelegatedInfo / 0x69).",
+                  "By default authentication is performed with PICC key number 0x00.\n"
+                  "Use --keyno to pick another key number, or --no-auth to skip authentication.\n"
+                  "hf mfdes getdelegateappinfo --damslot 0001 --algo 2TDEA --key 00000000000000000000000000000000\n"
+                  "hf mfdes getdelegateappinfo --damslot 0001 --no-auth");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "Verbose output"),
+        arg_int0("n",  "keyno",   "<dec>", "Key number (default: 0 / PICC key)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
+        arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
+        arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
+        arg_str0("c",  "ccset",   "<native|niso|iso>", "Communicaton command set"),
+        arg_str0(NULL, "schann",  "<d40|ev1|ev2|lrp>", "Secure channel"),
+        arg_str0(NULL, "damslot", "<hex>", "DAM slot number (2 hex bytes, little endian on card)"),
+        arg_lit0(NULL, "no-auth", "Execute without authentication"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool noauth = arg_get_lit(ctx, 12);
+
+    int keynum = arg_get_int_def(ctx, 3, 0x00);
+    if (keynum < 0 || keynum > 0xFF) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "Key number must be in range 0..255");
+        return PM3_EINVARG;
+    }
+
+    DesfireContext_t dctx = {0};
+    int securechann = defaultSecureChannel;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 0, 4, 5, 6, 7, 8, 9, 10, 0, 0, 0, &securechann, (noauth) ? DCMPlain : DCMMACed, NULL, NULL);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    dctx.keyNum = keynum & 0xFF;
+
+    uint32_t damslot = 0x0000;
+    bool damslotpresent = false;
+    if (CLIGetUint32Hex(ctx, 11, 0x0000, &damslot, &damslotpresent, 2, "DAM slot number must have 2 bytes length")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    if (!damslotpresent) {
+        PrintAndLogEx(ERR, "DAM slot number is mandatory");
+        return PM3_EINVARG;
+    }
+
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, 0x000000, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    uint8_t resp[16] = {0};
+    size_t resplen = 0;
+    res = DesfireGetDelegatedInfo(&dctx, damslot & 0xffff, resp, &resplen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire GetDelegatedInfo command " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (verbose)
+        PrintAndLogEx(SUCCESS, "received data[%zu]: %s", resplen, sprint_hex(resp, resplen));
+
+    uint16_t quota = MemLeToUint2byte(&resp[1]);
+    uint16_t freeblocks = MemLeToUint2byte(&resp[3]);
+    uint32_t delegatedaid = MemLeToUint3byte(&resp[5]);
+
+    PrintAndLogEx(SUCCESS, "DAM slot        0x%04x", damslot & 0xffff);
+    PrintAndLogEx(SUCCESS, "DAM slot ver    0x%02x", resp[0]);
+    PrintAndLogEx(SUCCESS, "Quota limit     0x%04x (%u blocks)", quota, (unsigned int)quota);
+    PrintAndLogEx(SUCCESS, "Free blocks     0x%04x (%u blocks)", freeblocks, (unsigned int)freeblocks);
+    PrintAndLogEx(SUCCESS, "Delegated AID   0x%06x", delegatedaid);
+
+    DropField();
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14ADesDeleteApp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes deleteapp",
@@ -6962,6 +7057,7 @@ static command_t CommandTable[] = {
     {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
     {"createapp",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application"},
     {"createdelegateapp", CmdHF14ADesCreateDelegateApp, IfPm3Iso14443a, "Create Delegated Application"},
+    {"getdelegateappinfo", CmdHF14ADesGetDelegateAppInfo, IfPm3Iso14443a,  "Get Delegated Application info by DAM slot"},
     {"deleteapp",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application"},
     {"selectapp",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
     {"selectisofid",     CmdHF14ADesSelectISOFID,     IfPm3Iso14443a,  "Select file by ISO ID"},

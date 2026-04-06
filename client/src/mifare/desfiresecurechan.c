@@ -68,6 +68,7 @@ static const AllowedChannelModes_t AllowedChannelModes[] = {
     {MFDES_GET_DF_NAMES,              DACd40,  DCCNative,    DCMMACed},
     {MFDES_GET_KEY_SETTINGS,          DACd40,  DCCNative,    DCMMACed},
     {MFDES_GET_KEY_VERSION,           DACd40,  DCCNative,    DCMMACed},
+    {MFDES_GET_DELEGATE_INFO,         DACd40,  DCCNative,    DCMMACed},
     {MFDES_GET_FREE_MEMORY,           DACd40,  DCCNative,    DCMMACed},
     {MFDES_CREATE_STD_DATA_FILE,      DACd40,  DCCNative,    DCMMACed},
     {MFDES_CREATE_BACKUP_DATA_FILE,   DACd40,  DCCNative,    DCMMACed},
@@ -107,6 +108,7 @@ static const AllowedChannelModes_t AllowedChannelModes[] = {
     {MFDES_SELECT_APPLICATION,        DACEV1,  DCCNative,    DCMPlain},
 
     {MFDES_GET_KEY_VERSION,           DACEV1,  DCCNative,    DCMMACed},
+    {MFDES_GET_DELEGATE_INFO,         DACEV1,  DCCNative,    DCMMACed},
     {MFDES_GET_FREE_MEMORY,           DACEV1,  DCCNative,    DCMMACed},
     {MFDES_CREATE_APPLICATION,        DACEV1,  DCCNative,    DCMMACed},
     {MFDES_CREATE_DELEGATE_APP,       DACEV1,  DCCNative,    DCMMACed},
@@ -188,6 +190,7 @@ static const AllowedChannelModes_t AllowedChannelModes[] = {
 static const CmdHeaderLengths_t CmdHeaderLengths[] = {
     {MFDES_CREATE_APPLICATION,     CMD_HEADER_LEN_ALL},
     {MFDES_CREATE_DELEGATE_APP,    CMD_HEADER_LEN_ALL},
+    {MFDES_GET_DELEGATE_INFO,      2},
     {MFDES_DELETE_APPLICATION,     CMD_HEADER_LEN_ALL},
     {MFDES_CHANGE_KEY,             1},
     {MFDES_CHANGE_KEY_EV2,         2},
