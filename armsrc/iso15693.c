@@ -1571,7 +1571,7 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
             break;
         }
 
-        if (data_available()) {
+        if (dr->state == STATE_READER_UNSYNCD && data_available()) {
             dr->byteCount = -2;
             break;
         }
