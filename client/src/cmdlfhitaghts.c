@@ -700,7 +700,7 @@ static int CmdLFHitagSRestore(const char *Cmd) {
     // read dump file
     uint32_t *dump = NULL;
     size_t bytes_read = 0;
-    if (pm3_load_dump(filename, (void **)&dump, &bytes_read, jsfHitag) != PM3_SUCCESS) {
+    if (pm3_load_dump(filename, (void **)&dump, &bytes_read, 64 * HITAGS_PAGE_SIZE) != PM3_SUCCESS) {
         return PM3_EFILE;
     }
 
