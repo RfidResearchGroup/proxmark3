@@ -56,6 +56,222 @@ typedef struct {
     uint8_t resp_len;
 } PACKED hid_sniff_payload_t;
 
+// ---------------------------------------------------------------------------
+// hf secc cardinfo - BER-TLV / OID helpers (file-scope only)
+// ---------------------------------------------------------------------------
+
+// Find the value of the first matching single-byte-tag TLV in buf[0..len).
+// Returns a pointer to the value bytes and sets *vlen, or NULL on failure.
+static const uint8_t *secc_tlv_find(const uint8_t *buf, size_t len, uint8_t tag, size_t *vlen) {
+    size_t i = 0;
+    while (i < len) {
+        uint8_t t = buf[i++];
+        if (i >= len) break;
+        uint8_t lb = buf[i++];
+        size_t l;
+        if (lb == 0x81) {
+            if (i >= len) break;
+            l = buf[i++];
+        } else if (lb == 0x82) {
+            if (i + 2 > len) break;
+            l = ((size_t)buf[i] << 8) | buf[i + 1];
+            i += 2;
+        } else {
+            l = lb;
+        }
+        if (i + l > len) break;
+        if (t == tag) {
+            *vlen = l;
+            return buf + i;
+        }
+        i += l;
+    }
+    return NULL;
+}
+
+// Decode BER-encoded OID bytes into individual 32-bit arcs.
+// Returns the number of arcs decoded (first two arcs are always decoded together).
+static int secc_decode_oid(const uint8_t *p, size_t len, uint32_t *arcs, int max_arcs) {
+    if (len == 0 || max_arcs < 2) return 0;
+    arcs[0] = (uint32_t)(p[0] / 40);
+    arcs[1] = (uint32_t)(p[0] % 40);
+    int n = 2;
+    uint32_t acc = 0;
+    for (size_t i = 1; i < len; i++) {
+        acc = (acc << 7) | (uint32_t)(p[i] & 0x7F);
+        if (!(p[i] & 0x80)) {
+            if (n < max_arcs)
+                arcs[n++] = acc;
+            acc = 0;
+        }
+    }
+    return n;
+}
+
+// Find the inner tag 0x06 (OID) within ctxbuf and decode its arcs.
+static int secc_get_inner_oid(const uint8_t *ctxbuf, size_t ctxlen, uint32_t *arcs, int max_arcs) {
+    size_t oid_len = 0;
+    const uint8_t *oid = secc_tlv_find(ctxbuf, ctxlen, 0x06, &oid_len);
+    if (!oid || oid_len == 0) return 0;
+    return secc_decode_oid(oid, oid_len, arcs, max_arcs);
+}
+
+// ---------------------------------------------------------------------------
+// hf secc cardinfo
+// ---------------------------------------------------------------------------
+
+static int CmdHFHIDConfigCardInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf secc info",
+                  "Read and decode Card Recognition Data from a GlobalPlatform card.\n"
+                  "Sends GET DATA (80 CA 00 66 00) and parses the Card Recognition\n"
+                  "Template (tag 73) to identify platform, SCP type, and chip family.",
+                  "hf secc info");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    // GET DATA: tag 0x0066 = Card Data (Card Recognition Template)
+    const uint8_t apdu[] = {0x80, 0xCA, 0x00, 0x66, 0x00};
+    uint8_t resp[256];
+    int resplen = 0;
+
+    int res = ExchangeAPDU14a(apdu, (int)sizeof(apdu), true, false, resp, (int)sizeof(resp), &resplen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to exchange APDU with card");
+        return res;
+    }
+    if (resplen < 2) {
+        PrintAndLogEx(ERR, "Response too short (%d byte(s))", resplen);
+        return PM3_ESOFT;
+    }
+
+    uint8_t sw1 = resp[resplen - 2];
+    uint8_t sw2 = resp[resplen - 1];
+    if (sw1 != 0x90 || sw2 != 0x00) {
+        PrintAndLogEx(ERR, "Card returned error SW %02X%02X", sw1, sw2);
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "Raw ... " _YELLOW_("%s"), sprint_hex_inrow(resp, resplen));
+
+    // Strip SW bytes before TLV parsing
+    size_t datalen = (size_t)resplen - 2;
+    const uint8_t *data = resp;
+
+    // Outer tag 0x66: Card Data
+    size_t tag66_len = 0;
+    const uint8_t *tag66 = secc_tlv_find(data, datalen, 0x66, &tag66_len);
+    if (!tag66) {
+        PrintAndLogEx(ERR, "Tag 66 (Card Data) not found in response");
+        return PM3_ESOFT;
+    }
+
+    // Inner tag 0x73: Card Recognition Data
+    size_t tag73_len = 0;
+    const uint8_t *tag73 = secc_tlv_find(tag66, tag66_len, 0x73, &tag73_len);
+    if (!tag73) {
+        PrintAndLogEx(ERR, "Tag 73 (Card Recognition Data) not found");
+        return PM3_ESOFT;
+    }
+
+    uint32_t arcs[16];
+    int n;
+    char platform[80]      = "Unknown";
+    char cardspec[80]      = "Unknown";
+    char scp_str[80]       = "Unknown";
+    char keystr[80]        = "Unknown";
+    char challenge_str[80] = "Unknown";
+    char rmac_str[80]      = "Unknown";
+    char chipfamily[128]   = "Unknown";
+
+    // tag 0x60: Card Management Type and Version
+    // OID 1.2.840.114283.2.X.Y.Z -> GlobalPlatform X.Y.Z
+    size_t t60_len = 0;
+    const uint8_t *t60 = secc_tlv_find(tag73, tag73_len, 0x60, &t60_len);
+    if (t60) {
+        n = secc_get_inner_oid(t60, t60_len, arcs, 16);
+        if (n >= 7 && arcs[0] == 1 && arcs[1] == 2 && arcs[2] == 840 &&
+                arcs[3] == 114283 && arcs[4] == 2) {
+            if (n >= 8)
+                snprintf(cardspec, sizeof(cardspec), "GlobalPlatform %u.%u.%u.%u",
+                         arcs[4], arcs[5], arcs[6], arcs[7]);
+            else
+                snprintf(cardspec, sizeof(cardspec), "GlobalPlatform %u.%u.%u",
+                         arcs[4], arcs[5], arcs[6]);
+        }
+    }
+
+    // tag 0x64: Secure Channel Protocol
+    // OID 1.2.840.114283.4.SCP.i -> SCPxx, i=0xii
+    // SCP02 i-parameter bits (GP Card Spec):
+    //   bit 0 (0x01): 1 = 3 Secure Channel Keys, 0 = 1 key
+    //   bit 4 (0x10): 1 = pseudo-random card challenge, 0 = sequential counter
+    //   bit 6 (0x40): 1 = R-MAC supported, 0 = not supported
+    size_t t64_len = 0;
+    const uint8_t *t64 = secc_tlv_find(tag73, tag73_len, 0x64, &t64_len);
+    if (t64) {
+        n = secc_get_inner_oid(t64, t64_len, arcs, 16);
+        if (n >= 7 && arcs[0] == 1 && arcs[1] == 2 && arcs[2] == 840 &&
+                arcs[3] == 114283 && arcs[4] == 4) {
+            uint32_t scp_type = arcs[5];
+            uint32_t i_param  = arcs[6];
+            snprintf(scp_str, sizeof(scp_str), "SCP%02u, i=0x%02X", scp_type, i_param);
+            snprintf(keystr, sizeof(keystr), "%s",
+                     (i_param & 0x01) ? "3 independent session keys" : "1 shared key");
+            snprintf(challenge_str, sizeof(challenge_str), "%s",
+                     (i_param & 0x10) ? "Pseudo-random (RNG)" : "Sequential counter");
+            snprintf(rmac_str, sizeof(rmac_str), "%s",
+                     (i_param & 0x40) ? "Supported but optional" : "Not supported");
+        }
+    }
+
+    // tag 0x65: Card Configuration Details
+    // OID 1.3.656.x.x -> NXP JCOP (proprietary arc under ISO identified-org)
+    size_t t65_len = 0;
+    const uint8_t *t65 = secc_tlv_find(tag73, tag73_len, 0x65, &t65_len);
+    if (t65) {
+        n = secc_get_inner_oid(t65, t65_len, arcs, 16);
+        if (n >= 3 && arcs[0] == 1 && arcs[1] == 3 && arcs[2] == 656)
+            snprintf(chipfamily, sizeof(chipfamily),
+                     "NXP JCOP (tag 65 OID points to NXP/G+D tree)");
+        else if (n >= 2)
+            snprintf(chipfamily, sizeof(chipfamily), "Unknown (OID %u.%u...)",
+                     arcs[0], arcs[1]);
+    }
+
+    // tag 0x66 (inner): Card/Chip Details
+    // OID 1.3.6.1.4.1.42.2.110.1.X -> Java Card Classic 2.X (Sun/Oracle OID space)
+    size_t t66i_len = 0;
+    const uint8_t *t66i = secc_tlv_find(tag73, tag73_len, 0x66, &t66i_len);
+    if (t66i) {
+        n = secc_get_inner_oid(t66i, t66i_len, arcs, 16);
+        if (n >= 11 && arcs[0] == 1  && arcs[1] == 3   && arcs[2] == 6 &&
+                arcs[3] == 1  && arcs[4] == 4   && arcs[5] == 1 &&
+                arcs[6] == 42 && arcs[7] == 2   && arcs[8] == 110 && arcs[9] == 1) {
+            snprintf(platform, sizeof(platform), "Java Card Classic 2.%u", arcs[10]);
+        }
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Card Recognition Data") " ---");
+    PrintAndLogEx(INFO, "  %-20s  %s", "Property", "Value");
+    PrintAndLogEx(INFO, "  %-20s  " _YELLOW_("%s"), "Platform",       platform);
+    PrintAndLogEx(INFO, "  %-20s  " _YELLOW_("%s"), "Card Spec",      cardspec);
+    PrintAndLogEx(INFO, "  %-20s  " _YELLOW_("%s"), "Secure Channel", scp_str);
+    PrintAndLogEx(INFO, "  %-20s  " _YELLOW_("%s"), "Key structure",  keystr);
+    PrintAndLogEx(INFO, "  %-20s  " _YELLOW_("%s"), "Card challenge", challenge_str);
+    PrintAndLogEx(INFO, "  %-20s  " _YELLOW_("%s"), "R-MAC",          rmac_str);
+    PrintAndLogEx(INFO, "  %-20s  " _YELLOW_("%s"), "Chip family",    chipfamily);
+    PrintAndLogEx(NORMAL, "");
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHelp(const char *Cmd);
 
 // ---------------------------------------------------------------------------
@@ -378,10 +594,11 @@ static int CmdHelp(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"--------", CmdHelp,                AlwaysAvailable,  "----------- " _CYAN_("HID Config Card") " -----------"},
-    {"help",     CmdHelp,                AlwaysAvailable,  "This help"},
-    {"sim",      CmdHFHIDConfigSim,      IfPm3Iso14443a,   "Simulate HID iCLASS SE Config Card"},
-    {"sniff",    CmdHFHIDConfigSniff,    IfPm3Iso14443a,   "Sniff reader<->card, jam A0 D4 APDU"},
+    {"--------",  CmdHelp,                  AlwaysAvailable,  "----------- " _CYAN_("HID Config Card") " -----------"},
+    {"help",      CmdHelp,                  AlwaysAvailable,  "This help"},
+    {"info",      CmdHFHIDConfigCardInfo,   IfPm3Iso14443a,   "Read and decode Card Recognition Data (GP tag 0066)"},
+    {"sim",       CmdHFHIDConfigSim,        IfPm3Iso14443a,   "Simulate HID iCLASS SE Config Card"},
+    {"sniff",     CmdHFHIDConfigSniff,      IfPm3Iso14443a,   "Sniff reader<->card, jam A0 D4 APDU"},
     {NULL, NULL, NULL, NULL}
 };
 
