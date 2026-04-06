@@ -4,11 +4,11 @@ TAR = tar Jxvf
 GIT = git clone
 
 get_craptev1:
-	$(WGET) http://crapto1.netgarage.org/craptev1-v1.1.tar.xz
+	$(WGET) https://raw.githubusercontent.com/ApertureLabsLtd/craptern/master/craptev1-v1.1.tar.xz
 	$(TAR) craptev1-v1.1.tar.xz -C craptev1-v1.1
 
 get_crapto1:
-	$(WGET) http://crapto1.netgarage.org/crapto1-v3.3.tar.xz
+	$(WGET) https://raw.githubusercontent.com/ApertureLabsLtd/craptern/master/crapto1-v3.3.tar.xz
 	$(TAR) Jxvf crapto1-v3.3.tar.xz -C crapto1-v3.3
 
 get_xorsearch:
