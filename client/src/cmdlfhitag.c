@@ -1674,13 +1674,13 @@ static int CmdLFHitagEload(const char *Cmd) {
     // read dump file
     uint8_t *dump = NULL;
     size_t bytes_read = (4 * 64);
-    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (4 * 64));
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (HITAG_BLOCK_SIZE * 64));
     if (res != PM3_SUCCESS) {
         return res;
     }
 
     // check dump len..
-    if (bytes_read == HITAG2_MAX_BYTE_SIZE || bytes_read == 4 * 64) {
+    if (bytes_read == HITAG2_MAX_BYTE_SIZE || bytes_read == (HITAG_BLOCK_SIZE * 64)) {
 
         lf_hitag_t *payload = calloc(1, sizeof(lf_hitag_t) + bytes_read);
         if (payload == NULL) {
@@ -1691,10 +1691,13 @@ static int CmdLFHitagEload(const char *Cmd) {
 
         if (use_ht1)
             payload->type = 1;
+
         if (use_ht2)
             payload->type = 2;
+
         if (use_hts)
             payload->type = 3;
+
         if (use_htm)
             payload->type = 4;
 
