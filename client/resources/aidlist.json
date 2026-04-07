@@ -2676,6 +2676,7 @@
             "android://com.hqo",
             "android://com.kastle.kastlePresence",
             "android://com.mews.guestPortal",
+            "android://com.openkey.guest",
             "android://com.soloinsight.cloudpassnew.staging",
             "android://com.wandera.android",
             "android://com.workai.app",
@@ -2685,7 +2686,8 @@
             "android://eu.sharry.swp.sharrypartner",
             "android://eu.sharry.swp.sharryworkplace",
             "android://io.blinetech.blineandroid",
-            "android://io.swiftconnect.mobile"
+            "android://io.swiftconnect.mobile",
+            "android://it.flexipass.app"
         ]
     },
     {
