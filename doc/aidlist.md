@@ -38,6 +38,7 @@ Each entry in `client/resources/aidlist.json` must contain all of the fields bel
   - `salto_justin_mobile`
   - `samsung_vas`
   - `schlage_mobile_access`
+  - `stid_mobile_id`
   - `suprema_mobile`
   - `unifi_identity`
 

@@ -3080,6 +3080,19 @@
         ]
     },
     {
+        "AID": "F051BC535469644D6F62696C652D4944",
+        "Vendor": "STiD",
+        "Country": "France",
+        "Name": "STiD Mobile ID Credential",
+        "Description": "",
+        "Type": "access",
+        "Protocol": "stid_mobile_id",
+        "Sources": [
+            "android://com.stid.stidmobileid",
+            "android://com.swiftlane.employee"
+        ]
+    },
+    {
         "AID": "F053555052454D410000000000000002",
         "Vendor": "Suprema",
         "Country": "",
@@ -3103,6 +3116,18 @@
         "Protocol": "suprema_mobile",
         "Sources": [
             "android://com.supremainc.supremapass"
+        ]
+    },
+    {
+        "AID": "F51BC0535469644D6F62696C65494401",
+        "Vendor": "STiD",
+        "Country": "France",
+        "Name": "STiD Mobile ID Credential",
+        "Description": "",
+        "Type": "access",
+        "Protocol": "stid_mobile_id",
+        "Sources": [
+            "android://com.stid.stidmobileid"
         ]
     },
     {
