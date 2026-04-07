@@ -41,8 +41,8 @@
 // Internal constants
 // ---------------------------------------------------------------------------
 
-// Fixed card challenge used in SCP02 INITIALIZE UPDATE responses.
-static const uint8_t hid_cc[8] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+// Fixed card challenge used in SCP02 INITIALIZE UPDATE responses (CC portion only).
+static const uint8_t s_card_challenge[6] = {0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
 
 // ---------------------------------------------------------------------------
 // Custom APDU response table and SCP02 key (loaded from payload)
@@ -51,6 +51,10 @@ static const uint8_t hid_cc[8] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
 static hid_apdu_entry_t s_apdu_table[HID_APDU_MAX_ENTRIES];
 static uint8_t s_apdu_count = 0;
 static uint8_t s_scp02_key[16] = {0};
+
+// SCP02 session state — updated on each INITIALIZE UPDATE.
+static uint16_t s_seq_counter = 0;
+static uint8_t  s_host_challenge[8] = {0};
 
 // Jam config — set by SniffHIDConfigCard before entering sniff loop.
 // Length 0 means "use built-in default".
@@ -69,52 +73,107 @@ void hid_config_card_set_apdu_table(const hid_apdu_entry_t *table, uint8_t count
 
 static void hid_config_card_set_scp02_key(const uint8_t *key) {
     memcpy(s_scp02_key, key, 16);
+    s_seq_counter = 0;
 }
 
 // ---------------------------------------------------------------------------
-// Internal crypto
+// Internal crypto helpers
 // ---------------------------------------------------------------------------
 
-// Compute GlobalPlatform SCP02 card cryptogram.
-// card_cryptogram = Retail_MAC(S-ENC, host_challenge || card_challenge || 0x80 || 0x00*7)
-// Uses hardcoded master key 404142...4F and SN = 0x0001.
-static void compute_card_cryptogram(const uint8_t *host_challenge, uint8_t *out) {
-    static const uint8_t SN[2] = {0x00, 0x01};
+// Derive a 16-byte SCP02 session key using 3DES-CBC with null IV.
+// constant0/constant1 select the key type (0x01,0x82=S-ENC; 0x01,0x01=S-MAC).
+static void derive_scp02_session_key(uint8_t c0, uint8_t c1, uint16_t sc, uint8_t *out16) {
+    uint8_t deriv[16] = {c0, c1, (uint8_t)(sc >> 8), (uint8_t)(sc & 0xFF),
+                         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t iv[8] = {0};
+    tdes_nxp_send(deriv, out16, 16, s_scp02_key, iv, 2);
+}
 
-    // Derive S-ENC: 3DES-CBC(K, zero_IV, {0x01, 0x82, SN0, SN1, 0x00*12})
-    uint8_t s_enc[16];
-    {
-        uint8_t deriv[16] = {0x01, 0x82, SN[0], SN[1], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-        uint8_t iv[8] = {0};
-        tdes_nxp_send(deriv, s_enc, 16, s_scp02_key, iv, 2);
-    }
-
-    // Retail MAC over HC || CC || 0x80 || 0x00*7
+// Retail MAC (ISO 9797-1 Algorithm 3): single-DES for all-but-last blocks,
+// full 3DES for the final block.  data_len must be a multiple of 8.
+static void scp02_retail_mac(const uint8_t *key16, const uint8_t *data, size_t n_blocks, uint8_t *out8) {
     mbedtls_des_context  des_ctx;
     mbedtls_des3_context des3_ctx;
     mbedtls_des_init(&des_ctx);
     mbedtls_des3_init(&des3_ctx);
-    mbedtls_des_setkey_enc(&des_ctx, s_enc);
-    mbedtls_des3_set2key_enc(&des3_ctx, s_enc);
+    mbedtls_des_setkey_enc(&des_ctx, key16);
+    mbedtls_des3_set2key_enc(&des3_ctx, key16);
 
     uint8_t x[8] = {0};
     uint8_t tmp[8];
 
-    // Block 1: host challenge
-    for (int i = 0; i < 8; i++) tmp[i] = host_challenge[i] ^ x[i];
-    mbedtls_des_crypt_ecb(&des_ctx, tmp, x);
-
-    // Block 2: card challenge
-    for (int i = 0; i < 8; i++) tmp[i] = hid_cc[i] ^ x[i];
-    mbedtls_des_crypt_ecb(&des_ctx, tmp, x);
-
-    // Block 3: 0x80 || 0x00*7 (ISO 9797-1 Method 2 padding)
-    tmp[0] = 0x80 ^ x[0];
-    for (int i = 1; i < 8; i++) tmp[i] = x[i];
-    mbedtls_des3_crypt_ecb(&des3_ctx, tmp, out);
+    for (size_t i = 0; i < n_blocks - 1; i++) {
+        for (int j = 0; j < 8; j++) tmp[j] = data[i * 8 + j] ^ x[j];
+        mbedtls_des_crypt_ecb(&des_ctx, tmp, x);
+    }
+    for (int j = 0; j < 8; j++) tmp[j] = data[(n_blocks - 1) * 8 + j] ^ x[j];
+    mbedtls_des3_crypt_ecb(&des3_ctx, tmp, out8);
 
     mbedtls_des_free(&des_ctx);
     mbedtls_des3_free(&des3_ctx);
+}
+
+// Full 3DES-CBC-MAC: every block (including intermediate) uses full 3DES.
+// data_len must be a multiple of 8.
+static void scp02_full_3des_cbc_mac(const uint8_t *key16, const uint8_t *data, size_t n_blocks, uint8_t *out8) {
+    mbedtls_des3_context ctx;
+    mbedtls_des3_init(&ctx);
+    mbedtls_des3_set2key_enc(&ctx, key16);
+
+    uint8_t x[8] = {0};
+    uint8_t tmp[8];
+
+    for (size_t i = 0; i < n_blocks; i++) {
+        for (int j = 0; j < 8; j++) tmp[j] = data[i * 8 + j] ^ x[j];
+        mbedtls_des3_crypt_ecb(&ctx, tmp, x);
+    }
+    memcpy(out8, x, 8);
+    mbedtls_des3_free(&ctx);
+}
+
+// ---------------------------------------------------------------------------
+// SCP02 cryptogram computation
+// ---------------------------------------------------------------------------
+
+// Card cryptogram = full-3DES-CBC-MAC(S-ENC, HC(8) || SC(2)||CC(6) || 80 00*7)
+static void compute_card_cryptogram(const uint8_t *host_challenge, uint8_t *out) {
+    uint8_t s_enc[16];
+    derive_scp02_session_key(0x01, 0x82, s_seq_counter, s_enc);
+
+    uint8_t data[24];
+    memcpy(data, host_challenge, 8);
+    data[8]  = (uint8_t)(s_seq_counter >> 8);
+    data[9]  = (uint8_t)(s_seq_counter & 0xFF);
+    memcpy(data + 10, s_card_challenge, 6);
+    data[16] = 0x80;
+    memset(data + 17, 0x00, 7);
+
+    scp02_full_3des_cbc_mac(s_enc, data, 3, out);
+}
+
+// Host cryptogram = full-3DES-CBC-MAC(S-ENC, SC(2)||CC(6)||HC(8) || 80 00*7)
+static void compute_host_cryptogram(const uint8_t *s_enc, uint8_t *out) {
+    uint8_t data[24];
+    data[0] = (uint8_t)(s_seq_counter >> 8);
+    data[1] = (uint8_t)(s_seq_counter & 0xFF);
+    memcpy(data + 2, s_card_challenge, 6);
+    memcpy(data + 8, s_host_challenge, 8);
+    data[16] = 0x80;
+    memset(data + 17, 0x00, 7);
+
+    scp02_full_3des_cbc_mac(s_enc, data, 3, out);
+}
+
+// C-MAC = Retail-MAC(S-MAC, {84 82 sec_level 00 10 || HostCrypto(8) || 80 00 00})
+static void compute_ext_auth_cmac(const uint8_t *s_mac, uint8_t sec_level,
+                                   const uint8_t *host_crypto, uint8_t *out) {
+    uint8_t data[16];
+    data[0] = 0x84; data[1] = 0x82; data[2] = sec_level;
+    data[3] = 0x00; data[4] = 0x10;
+    memcpy(data + 5, host_crypto, 8);
+    data[13] = 0x80; data[14] = 0x00; data[15] = 0x00;
+
+    scp02_retail_mac(s_mac, data, 2, out);
 }
 
 // ---------------------------------------------------------------------------
@@ -201,23 +260,55 @@ bool hid_config_card_handle_iblock(const uint8_t *cmd, int len, tag_response_inf
     }
 
     // ----- INITIALIZE UPDATE (INS=0x50) -----
-    // CID frame: INS at cmd[3], host challenge at cmd[off+4] = cmd[6]
+    // CID frame: INS at cmd[3], host challenge at cmd[off+5] (after CLA INS P1 P2 Lc)
     if (has_cid && len >= 17 && cmd[3] == 0x50) {
-        uint8_t cryptogram[8];
-        compute_card_cryptogram(&cmd[off + 4], cryptogram);
+        s_seq_counter++;
+        memcpy(s_host_challenge, &cmd[off + 5], 8);
 
-        memset(rsp, 0x00, 10);          // key diversification data
-        rsp[10] = 0xFF;                  // key version (JCOP factory default)
-        rsp[11] = 0x02;                  // SCP02
-        memcpy(rsp + 12, hid_cc, 8);    // card challenge
-        memcpy(rsp + 20, cryptogram, 8); // card cryptogram
+        uint8_t cryptogram[8];
+        compute_card_cryptogram(s_host_challenge, cryptogram);
+
+        memset(rsp, 0x00, 10);                          // key diversification data
+        rsp[10] = 0xFF;                                  // key version (JCOP factory default)
+        rsp[11] = 0x02;                                  // SCP02
+        rsp[12] = (uint8_t)(s_seq_counter >> 8);         // SC high
+        rsp[13] = (uint8_t)(s_seq_counter & 0xFF);       // SC low
+        memcpy(rsp + 14, s_card_challenge, 6);           // CC
+        memcpy(rsp + 20, cryptogram, 8);                 // card cryptogram
         rsp[28] = 0x90;
         rsp[29] = 0x00;
         ri->response_n = off + 30;
         return true;
     }
 
-    // ----- EXTERNAL AUTH and all other APDUs: generic 90 00 -----
+    // ----- EXTERNAL AUTHENTICATE (INS=0x82) -----
+    // CID frame: sec_level at cmd[off+2], HostCrypto(8) at cmd[off+5], C-MAC(8) at cmd[off+13]
+    if (has_cid && len >= 25 && cmd[3] == 0x82) {
+        uint8_t sec_level          = cmd[off + 2];
+        const uint8_t *host_crypto = &cmd[off + 5];
+        const uint8_t *cmac_recv   = &cmd[off + 13];
+
+        uint8_t s_enc[16], s_mac[16];
+        derive_scp02_session_key(0x01, 0x82, s_seq_counter, s_enc);
+        derive_scp02_session_key(0x01, 0x01, s_seq_counter, s_mac);
+
+        uint8_t host_crypto_exp[8];
+        compute_host_cryptogram(s_enc, host_crypto_exp);
+
+        uint8_t cmac_exp[8];
+        compute_ext_auth_cmac(s_mac, sec_level, host_crypto, cmac_exp);
+
+        if (memcmp(host_crypto_exp, host_crypto, 8) != 0 ||
+                memcmp(cmac_exp, cmac_recv, 8) != 0) {
+            rsp[0] = 0x63; rsp[1] = 0x00;  // Authentication failed
+        } else {
+            rsp[0] = 0x90; rsp[1] = 0x00;
+        }
+        ri->response_n = off + 2;
+        return true;
+    }
+
+    // ----- All other APDUs: generic 90 00 -----
     rsp[0] = 0x90; rsp[1] = 0x00;
     ri->response_n = off + 2;
     return true;
