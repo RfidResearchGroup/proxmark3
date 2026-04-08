@@ -52,6 +52,11 @@ static hid_apdu_entry_t s_apdu_table[HID_APDU_MAX_ENTRIES];
 static uint8_t s_apdu_count = 0;
 static uint8_t s_scp02_key[16] = {0};
 
+// Default response for unmatched APDUs (loaded from JSON "DefaultResponse").
+// When s_default_resp_len == 0 the handler falls back to the legacy 90 00 reply.
+static uint8_t s_default_resp[HID_APDU_MAX_RESP] = {0};
+static uint8_t s_default_resp_len = 0;
+
 // SCP02 session state — updated on each INITIALIZE UPDATE.
 static uint16_t s_seq_counter = 0;
 static uint8_t  s_host_challenge[8] = {0};
@@ -69,6 +74,12 @@ static const uint8_t s_jam_resp_default[4] = {0x00, 0x00, 0x90, 0x00};
 void hid_config_card_set_apdu_table(const hid_apdu_entry_t *table, uint8_t count) {
     s_apdu_count = (count > HID_APDU_MAX_ENTRIES) ? HID_APDU_MAX_ENTRIES : count;
     memcpy(s_apdu_table, table, s_apdu_count * sizeof(hid_apdu_entry_t));
+}
+
+static void hid_config_card_set_default_resp(const uint8_t *resp, uint8_t len) {
+    s_default_resp_len = (len > HID_APDU_MAX_RESP) ? HID_APDU_MAX_RESP : len;
+    if (s_default_resp_len)
+        memcpy(s_default_resp, resp, s_default_resp_len);
 }
 
 static void hid_config_card_set_scp02_key(const uint8_t *key) {
@@ -227,37 +238,9 @@ bool hid_config_card_handle_iblock(const uint8_t *cmd, int len, tag_response_inf
         }
     }
 
-    // ----- SELECT AID (INS=0xA4, P1=0x04) -----
-    // no-CID frame: off=1, INS at cmd[2], Lc at cmd[4+1]=cmd[5], AID[6] at cmd[1+5+6]=cmd[12]
-    // CID frame:    off=2, INS at cmd[3], Lc at cmd[3+3]=cmd[6], AID[6] at cmd[2+5+6]=cmd[13]
-    if (!has_cid && len >= 17 && cmd[2] == 0xA4 && cmd[3] == 0x04 && cmd[5] == 0x0A) {
-        if (cmd[12] == 0x17) {
-            rsp[0] = 0x6A; rsp[1] = 0x82; // File Not Found
-        } else {
-            rsp[0] = 0x90; rsp[1] = 0x00;
-        }
-        ri->response_n = off + 2;
-        return true;
-    }
-
-    if (has_cid && len >= 18 && cmd[3] == 0xA4 && cmd[4] == 0x04 && cmd[6] == 0x0A) {
-        if (cmd[13] == 0x17) {
-            rsp[0] = 0x6A; rsp[1] = 0x82; // File Not Found
-        } else {
-            rsp[0] = 0x90; rsp[1] = 0x00;
-        }
-        ri->response_n = off + 2;
-        return true;
-    }
-
-    // ----- A0 D4 00 00 00 (HID proprietary) -----
-    if (has_cid && len == 9 &&
-            cmd[2] == 0xA0 && cmd[3] == 0xD4 &&
-            cmd[4] == 0x00 && cmd[5] == 0x00 && cmd[6] == 0x00) {
-        rsp[0] = 0x00; rsp[1] = 0x00; rsp[2] = 0x90; rsp[3] = 0x00;
-        ri->response_n = off + 4;
-        return true;
-    }
+    // SELECT AID, A0 D4, and other generic APDUs are now handled exclusively
+    // by the JSON APDUResponses table (above) and the DefaultResponse
+    // fall-through (below). Only SCP02 crypto handlers stay hardcoded.
 
     // ----- INITIALIZE UPDATE (INS=0x50) -----
     // CID frame: INS at cmd[3], host challenge at cmd[off+5] (after CLA INS P1 P2 Lc)
@@ -308,9 +291,14 @@ bool hid_config_card_handle_iblock(const uint8_t *cmd, int len, tag_response_inf
         return true;
     }
 
-    // ----- All other APDUs: generic 90 00 -----
-    rsp[0] = 0x90; rsp[1] = 0x00;
-    ri->response_n = off + 2;
+    // ----- All other APDUs: configured DefaultResponse, or 90 00 if none -----
+    if (s_default_resp_len > 0) {
+        memcpy(rsp, s_default_resp, s_default_resp_len);
+        ri->response_n = off + s_default_resp_len;
+    } else {
+        rsp[0] = 0x90; rsp[1] = 0x00;
+        ri->response_n = off + 2;
+    }
     return true;
 }
 
@@ -448,6 +436,7 @@ int hid_config_card_iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chainin
 
 void SimulateHIDConfigCard(const hid_sim_payload_t *payload) {
     hid_config_card_set_apdu_table(payload->apdu_table, payload->apdu_count);
+    hid_config_card_set_default_resp(payload->default_resp, payload->default_resp_len);
     hid_config_card_set_scp02_key(payload->scp02_key);
 
     // Command buffers
