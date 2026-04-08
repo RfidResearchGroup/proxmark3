@@ -17,7 +17,9 @@
 // Must stay in sync with hid_apdu_entry_t / hid_sim_payload_t.
 // ---------------------------------------------------------------------------
 
-#define HID_APDU_MAX_ENTRIES 8
+// Must stay in sync with armsrc/secc.h. Sized so hid_sim_payload_t fits in
+// PM3_CMD_DATA_SIZE (512); adjust ENTRIES carefully if any field is added.
+#define HID_APDU_MAX_ENTRIES 7
 #define HID_APDU_MAX_CMD     20
 #define HID_APDU_MAX_RESP    32
 #define HID_APDU_MASK_LEN    3    // ceil(HID_APDU_MAX_CMD / 8)
@@ -40,9 +42,15 @@ typedef struct {
     uint8_t  scp02_key[16];    // SCP02 master key (from JSON "SCP02Key")
     uint8_t  ats[20];          // ATS bytes without CRC (from JSON "ATS")
     uint8_t  ats_len;          // actual number of valid bytes in ats[]
+    uint8_t  default_resp[HID_APDU_MAX_RESP]; // fallback reply for unmatched APDUs (from JSON "DefaultResponse")
+    uint8_t  default_resp_len; // 0 = none configured
     uint8_t  apdu_count;
     hid_apdu_entry_t apdu_table[HID_APDU_MAX_ENTRIES];
 } PACKED hid_sim_payload_t;
+
+// Hard guard: SendCommandNG silently drops any payload over PM3_CMD_DATA_SIZE.
+_Static_assert(sizeof(hid_sim_payload_t) <= PM3_CMD_DATA_SIZE,
+               "hid_sim_payload_t exceeds PM3_CMD_DATA_SIZE; shrink HID_APDU_MAX_ENTRIES or HID_APDU_MAX_RESP");
 
 // Must stay in sync with hid_sniff_payload_t in armsrc/secc.h.
 #define HID_JAM_MAX_APDU  32
@@ -282,8 +290,9 @@ static int CmdHFHIDConfigSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf secc sim",
                   "Simulate a HID iCLASS SE Config Card (JCOP / GlobalPlatform SCP02).\n"
-                  "Responds to SELECT AID (0013/0017), A0 D4, INITIALIZE UPDATE, and EXTERNAL AUTH.\n"
-                  "Load card parameters (UID, AID, SCP02Key) from a JSON file.",
+                  "APDUs are matched against the JSON APDUResponses table; INITIALIZE UPDATE\n"
+                  "and EXTERNAL AUTH are handled by the built-in SCP02 crypto. Anything else\n"
+                  "falls through to the JSON DefaultResponse (or 9000 if none is set).",
                   "hf secc sim -f hidconfig_sample\n"
                   "hf secc sim -f hidconfig_sample -n 5    -> stop after 5 reader interactions");
 
@@ -345,6 +354,24 @@ static int CmdHFHIDConfigSim(const char *Cmd) {
         return PM3_EINVARG;
     }
     int ats_len = (int)ats_len_sz;
+
+    // Parse optional DefaultResponse: fallback reply for any APDU not matched
+    // by the APDUResponses table or by hardcoded handlers. If absent, the
+    // simulator will fall back to the legacy "90 00" reply.
+    uint8_t default_resp[HID_APDU_MAX_RESP] = {0};
+    size_t default_resp_len_sz = 0;
+    bool has_default_resp = false;
+    if (json_object_get(root, "DefaultResponse") != NULL) {
+        if (JsonLoadBufAsHex(root, "$.DefaultResponse", default_resp,
+                             sizeof(default_resp), &default_resp_len_sz) != 0
+                || default_resp_len_sz == 0) {
+            PrintAndLogEx(ERR, "JSON 'DefaultResponse' field invalid (must be 1-%d hex bytes)",
+                          HID_APDU_MAX_RESP);
+            json_decref(root);
+            return PM3_EINVARG;
+        }
+        has_default_resp = true;
+    }
 
     // Parse optional APDUResponses array
     hid_apdu_entry_t apdu_table[HID_APDU_MAX_ENTRIES];
@@ -414,12 +441,19 @@ static int CmdHFHIDConfigSim(const char *Cmd) {
     uint16_t flags = 0;
     FLAG_SET_UID_IN_DATA(flags, uidlen);
 
+    // sprint_hex_inrow uses a single static buffer; snapshot the UID string
+    // before calling it again for the default response.
+    char uid_str[2 * sizeof(uid) + 1];
+    strncpy(uid_str, sprint_hex_inrow(uid, uidlen), sizeof(uid_str) - 1);
+    uid_str[sizeof(uid_str) - 1] = '\0';
     PrintAndLogEx(INFO, "HID Config Card sim:"
                   " UID " _YELLOW_("%s")
                   " AID " _YELLOW_("%s")
                   " ATS len " _YELLOW_("%d")
-                  " APDU overrides " _YELLOW_("%u"),
-                  sprint_hex_inrow(uid, uidlen), aid_str, ats_len, apdu_count);
+                  " APDU overrides " _YELLOW_("%u")
+                  " default resp " _YELLOW_("%s"),
+                  uid_str, aid_str, ats_len, apdu_count,
+                  has_default_resp ? sprint_hex_inrow(default_resp, default_resp_len_sz) : "9000 (builtin)");
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
 
     hid_sim_payload_t payload;
@@ -431,10 +465,13 @@ static int CmdHFHIDConfigSim(const char *Cmd) {
     payload.atqa[1]    = 0x00;    // HID Config Card ATQA low byte
     payload.sak        = 0x38;    // HID Config Card SAK
     payload.ats_len    = (uint8_t)ats_len;
+    payload.default_resp_len = has_default_resp ? (uint8_t)default_resp_len_sz : 0;
     payload.apdu_count = apdu_count;
     memcpy(payload.uid, uid, uidlen);
     memcpy(payload.scp02_key, scp02_key, sizeof(scp02_key));
     memcpy(payload.ats, ats, ats_len);
+    if (has_default_resp)
+        memcpy(payload.default_resp, default_resp, default_resp_len_sz);
     memcpy(payload.apdu_table, apdu_table, apdu_count * sizeof(hid_apdu_entry_t));
 
     clearCommandBuffer();

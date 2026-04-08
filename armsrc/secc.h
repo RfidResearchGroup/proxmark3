@@ -26,7 +26,10 @@
 // Shared payload structs (used by both ARM and client via CMD_HF_HIDCONFIG_SIM)
 // ---------------------------------------------------------------------------
 
-#define HID_APDU_MAX_ENTRIES 8
+// Sized so the full hid_sim_payload_t (including default_resp[]) stays within
+// PM3_CMD_DATA_SIZE (512). Adding/removing fields here requires re-checking
+// sizeof(hid_sim_payload_t) against the NG transport limit.
+#define HID_APDU_MAX_ENTRIES 7
 #define HID_APDU_MAX_CMD     20   // max APDU command bytes to prefix-match
 #define HID_APDU_MAX_RESP    32   // max response bytes (without PCB/CID/CRC)
 #define HID_APDU_MASK_LEN    3    // ceil(HID_APDU_MAX_CMD / 8): bitmask for wildcard bytes
@@ -57,6 +60,8 @@ typedef struct {
     uint8_t  scp02_key[16];    // SCP02 master key (from JSON "SCP02Key")
     uint8_t  ats[20];          // ATS bytes without CRC (from JSON "ATS")
     uint8_t  ats_len;          // actual number of valid bytes in ats[]
+    uint8_t  default_resp[HID_APDU_MAX_RESP]; // fallback reply for unmatched APDUs (from JSON "DefaultResponse")
+    uint8_t  default_resp_len; // 0 = none configured (handler will skip the fallback)
     uint8_t  apdu_count;
     hid_apdu_entry_t apdu_table[HID_APDU_MAX_ENTRIES];
 } PACKED hid_sim_payload_t;
