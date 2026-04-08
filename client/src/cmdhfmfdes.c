@@ -3046,7 +3046,7 @@ static int CmdHF14ADesBruteDAMSlots(const char *Cmd) {
         arg_lit0(NULL, "no-auth", "Execute without authentication"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
@@ -3152,6 +3152,39 @@ static int CmdHF14ADesBruteDAMSlots(const char *Cmd) {
                               MFDES_BRUTEDAMSLOT_RESELECT_ATTEMPTS, damslot);
                 DropField();
                 return res;
+            }
+        }
+
+        if (res == PM3_EAPDU_FAIL && noauth == false) {
+            bool restored = false;
+            int authres = DesfireAuthenticate(&dctx, securechann, verbose);
+
+            // An APDU-level failure on GetDelegatedInfo drops the authenticated state.
+            // Try to restore auth in-place first, then fall back to a full reselect.
+            if (authres == PM3_SUCCESS && DesfireIsAuthenticated(&dctx)) {
+                restored = true;
+            }
+
+            for (int attempt = 1; attempt <= MFDES_BRUTEDAMSLOT_RESELECT_ATTEMPTS && restored == false; attempt++) {
+                printf("\33[2K\r"); // clear current inplace progress line before logging
+                PrintAndLogEx(WARNING, "Lost authentication after DAM slot " _YELLOW_("%04X") ". Reselecting card (%d/%d)...",
+                              damslot, attempt, MFDES_BRUTEDAMSLOT_RESELECT_ATTEMPTS);
+
+                msleep(MFDES_BRUTEDAMSLOT_RESELECT_WAIT_MS);
+
+                authres = DesfireSelectAndAuthenticateEx(&dctx, securechann, 0x000000, false, verbose);
+                if (authres == PM3_SUCCESS && DesfireIsAuthenticated(&dctx)) {
+                    restored = true;
+                    break;
+                }
+            }
+
+            if (restored == false) {
+                printf("\33[2K\r"); // clear current inplace progress line before logging
+                PrintAndLogEx(FAILED, "Failed to restore authentication after DAM slot " _YELLOW_("%04X"),
+                              damslot);
+                DropField();
+                return PM3_ECARDEXCHANGE;
             }
         }
 
