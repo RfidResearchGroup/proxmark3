@@ -2827,7 +2827,7 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
         res = DesfireSelectAIDHexNoFieldOn(&dctx, id);
         if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
             for (int attempt = 1; attempt <= MFDES_BRUTEAID_RESELECT_ATTEMPTS; attempt++) {
-                printf("\33[2K\r"); // clear current inplace progress line before logging
+                PROMPT_CLEARLINE;
                 PrintAndLogEx(WARNING, "No card response while checking AID " _YELLOW_("%06X") ". Reselecting card (%d/%d)...",
                               id, attempt, MFDES_BRUTEAID_RESELECT_ATTEMPTS);
 
@@ -2858,7 +2858,7 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
         }
 
         if (res == PM3_SUCCESS) {
-            printf("\33[2K\r"); // clear current line before printing
+            PROMPT_CLEARLINE;
             PrintAndLogEx(SUCCESS, "Found New DESFire AID " _GREEN_("%06X"), id);
         }
     }
@@ -2969,7 +2969,7 @@ static int CmdHF14ADesBruteISOFIDs(const char *Cmd) {
 
         if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
             for (int attempt = 1; attempt <= MFDES_BRUTEFID_RESELECT_ATTEMPTS; attempt++) {
-                printf("\33[2K\r"); // clear current inplace progress line before logging
+                PROMPT_CLEARLINE;
                 PrintAndLogEx(WARNING, "No card response while checking ISO ID " _YELLOW_("%04X") ". Reselecting card (%d/%d)...",
                               isofid, attempt, MFDES_BRUTEFID_RESELECT_ATTEMPTS);
 
@@ -2997,7 +2997,7 @@ static int CmdHF14ADesBruteISOFIDs(const char *Cmd) {
 
         if (res == PM3_SUCCESS) {
             found++;
-            printf("\33[2K\r"); // clear current line before printing
+            PROMPT_CLEARLINE;
             PrintAndLogEx(SUCCESS, "Found new ISO file ID " _GREEN_("0x%04X"), isofid);
             if (verbose && resplen > 0) {
                 PrintAndLogEx(INFO, "Response [%zu] " _CYAN_("%s"), resplen, sprint_hex(resp, resplen));
@@ -3126,7 +3126,7 @@ static int CmdHF14ADesBruteDAMSlots(const char *Cmd) {
 
         if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
             for (int attempt = 1; attempt <= MFDES_BRUTEDAMSLOT_RESELECT_ATTEMPTS; attempt++) {
-                printf("\33[2K\r"); // clear current inplace progress line before logging
+                PROMPT_CLEARLINE;
                 PrintAndLogEx(WARNING, "No card response while checking DAM slot " _YELLOW_("%04X") ". Reselecting card (%d/%d)...",
                               damslot, attempt, MFDES_BRUTEDAMSLOT_RESELECT_ATTEMPTS);
 
@@ -3166,7 +3166,7 @@ static int CmdHF14ADesBruteDAMSlots(const char *Cmd) {
             }
 
             for (int attempt = 1; attempt <= MFDES_BRUTEDAMSLOT_RESELECT_ATTEMPTS && restored == false; attempt++) {
-                printf("\33[2K\r"); // clear current inplace progress line before logging
+                PROMPT_CLEARLINE;
                 PrintAndLogEx(WARNING, "Lost authentication after DAM slot " _YELLOW_("%04X") ". Reselecting card (%d/%d)...",
                               damslot, attempt, MFDES_BRUTEDAMSLOT_RESELECT_ATTEMPTS);
 
@@ -3180,7 +3180,7 @@ static int CmdHF14ADesBruteDAMSlots(const char *Cmd) {
             }
 
             if (restored == false) {
-                printf("\33[2K\r"); // clear current inplace progress line before logging
+                PROMPT_CLEARLINE;
                 PrintAndLogEx(FAILED, "Failed to restore authentication after DAM slot " _YELLOW_("%04X"),
                               damslot);
                 DropField();
@@ -3190,7 +3190,7 @@ static int CmdHF14ADesBruteDAMSlots(const char *Cmd) {
 
         if (res == PM3_SUCCESS) {
             uint32_t delegatedaid = MemLeToUint3byte(&resp[5]);
-            printf("\33[2K\r"); // clear current line before printing
+            PROMPT_CLEARLINE;
             if (delegatedaid == 0x000000) {
                 PrintAndLogEx(SUCCESS, "DAM slot 0x%04X ver 0x%02X AID " _YELLOW_("0x%06X (empty)"),
                               damslot, resp[0], delegatedaid);
