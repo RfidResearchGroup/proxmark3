@@ -494,6 +494,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf mfdes getaids" },
     { 0, "hf mfdes getappnames" },
     { 0, "hf mfdes bruteaid" },
+    { 0, "hf mfdes brutedamslot" },
     { 0, "hf mfdes createapp" },
     { 0, "hf mfdes createdelegateapp" },
     { 0, "hf mfdes getdelegateappinfo" },
