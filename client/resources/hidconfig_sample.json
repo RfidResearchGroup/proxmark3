@@ -6,11 +6,6 @@
   "DefaultResponse": "6A82",
   "APDUResponses": [
     {
-      "_comment": "Prefix-match SELECT by AID (A000000382001700010100) -> 9000 (ok) / 6A82 (file not found)",
-      "APDU":     "00A404000AA000000382001700010100",
-      "Response": "9000"
-    },
-    {
       "_comment": "Prefix-match SELECT by AID (A000000382001300010100) -> 9000 (ok) / 6A82 (file not found)",
       "APDU":     "00A404000AA000000382001300010100",
       "Response": "6A82"
@@ -19,11 +14,6 @@
       "_comment": "Check card credits: A0 D4 00 00 00 -> 00 00 90 00 (reply 0)",
       "APDU":     "A0D4000000",
       "Response": "00009000"
-    },
-    {
-      "_comment": "Busy? -> 9000 (done) / 01 (busy)",
-      "APDU":     "01",
-      "Response": "9000"
     }
   ]
 }
