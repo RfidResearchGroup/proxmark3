@@ -2249,12 +2249,6 @@ int DesfireCreateDelegatedApplication(DesfireContext_t *dctx, uint8_t *appdata, 
     return PM3_SUCCESS;
 }
 
-int DesfireGetDelegatedInfo(DesfireContext_t *dctx, uint16_t damslot, uint8_t *resp, size_t *resplen) {
-    uint8_t data[2] = {0};
-    Uint2byteToMemLe(data, damslot);
-    return DesfireCommand(dctx, MFDES_GET_DELEGATE_INFO, data, sizeof(data), resp, resplen, 8);
-}
-
 int DesfireDeleteApplication(DesfireContext_t *dctx, uint32_t aid) {
     uint8_t data[3] = {0};
     DesfireAIDUintToByte(aid, data);

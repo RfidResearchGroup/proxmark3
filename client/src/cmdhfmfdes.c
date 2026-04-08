@@ -58,6 +58,8 @@
 #define MFDES_BRUTEAID_MAD_STEP          0x10U
 #define MFDES_BRUTEFID_RESELECT_ATTEMPTS 3
 #define MFDES_BRUTEFID_RESELECT_WAIT_MS 500
+#define MFDES_BRUTEDAMSLOT_RESELECT_ATTEMPTS 3
+#define MFDES_BRUTEDAMSLOT_RESELECT_WAIT_MS 500
 
 #define status(x) ( ((uint16_t)(0x91 << 8)) + (uint16_t)x )
 /*
@@ -2659,6 +2661,45 @@ static bool mfdesBruteAIDGeneratorNext(mfdes_bruteaid_generator_t *gen, uint32_t
     return mfdesBruteAIDGeneratorFullNext(&gen->g.full, id, progress);
 }
 
+static int DesfireGetDelegatedInfoNoFieldOn(DesfireContext_t *dctx, uint16_t damslot, uint8_t *resp, size_t *resplen) {
+    uint8_t data[2] = {0};
+    Uint2byteToMemLe(data, damslot);
+
+    uint8_t xresp[16] = {0};
+    size_t xresplen = 0;
+    uint8_t respcode = 0xFF;
+
+    int res = DesfireExchangeEx(false, dctx, MFDES_GET_DELEGATE_INFO, data, sizeof(data), &respcode, xresp, &xresplen, true, 0);
+    if (res != PM3_SUCCESS) {
+        if (res == PM3_EAPDU_FAIL && respcode == 0xFF && xresplen == 0) {
+            return PM3_ECARDEXCHANGE;
+        }
+        return res;
+    }
+
+    if (respcode == 0xFF) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    if (respcode != MFDES_S_OPERATION_OK) {
+        return PM3_EAPDU_FAIL;
+    }
+
+    if (xresplen != 8) {
+        return PM3_EAPDU_FAIL;
+    }
+
+    if (resplen) {
+        *resplen = xresplen;
+    }
+
+    if (resp) {
+        memcpy(resp, xresp, xresplen);
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14ADesBruteApps(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes bruteaid",
@@ -2972,6 +3013,171 @@ static int CmdHF14ADesBruteISOFIDs(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "Done! Found " _GREEN_("%llu") " matching file ISO ID candidate(s)",
+                  (unsigned long long)found);
+    DropField();
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesBruteDAMSlots(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes brutedamslot",
+                  "Recover DAM slot to delegated AID mappings by bruteforce.\n"
+                  "WARNING: This command takes a loooong time",
+                  "hf mfdes brutedamslot                                  -> bruteforce all DAM slots\n"
+                  "hf mfdes brutedamslot --start 0000 --end 00ff         -> bruteforce specific DAM slot range\n"
+                  "hf mfdes brutedamslot --step 16                        -> bruteforce DAM slots with step 16\n"
+                  "hf mfdes brutedamslot --no-auth                        -> execute without authentication");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "Verbose output"),
+        arg_int0("n",  "keyno",   "<dec>", "Key number (default: 0 / PICC key)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
+        arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
+        arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
+        arg_str0("c",  "ccset",   "<native|niso|iso>", "Communicaton command set"),
+        arg_str0(NULL, "schann",  "<d40|ev1|ev2|lrp>", "Secure channel"),
+        arg_str0(NULL, "start",   "<hex>", "Starting DAM slot (2 hex bytes, little endian on card)"),
+        arg_str0(NULL, "end",     "<hex>", "Last DAM slot (2 hex bytes, little endian on card)"),
+        arg_int0(NULL, "step",    "<dec>", "Increment step when bruteforcing DAM slots"),
+        arg_lit0(NULL, "no-auth", "Execute without authentication"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool noauth = arg_get_lit(ctx, 14);
+
+    int keynum = arg_get_int_def(ctx, 3, 0x00);
+    if (keynum < 0 || keynum > 0xFF) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "Key number must be in range 0..255");
+        return PM3_EINVARG;
+    }
+
+    DesfireContext_t dctx = {0};
+    int securechann = defaultSecureChannel;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 0, 4, 5, 6, 7, 8, 9, 10, 0, 0, 0,
+                                         &securechann, (noauth) ? DCMPlain : DCMMACed, NULL, NULL);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    dctx.keyNum = keynum & 0xFF;
+
+    uint32_t damslotStart = 0x0000;
+    if (CLIGetUint32Hex(ctx, 11, 0x0000, &damslotStart, NULL, 2, "DAM slot start must have 2 hex bytes")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint32_t damslotEnd = 0xFFFF;
+    if (CLIGetUint32Hex(ctx, 12, 0xFFFF, &damslotEnd, NULL, 2, "DAM slot end must have 2 hex bytes")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int stepArg = arg_get_int_def(ctx, 13, 1);
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    if (stepArg <= 0) {
+        PrintAndLogEx(ERR, "Increment step should be greater than zero");
+        return PM3_EINVARG;
+    }
+    uint32_t step = (uint32_t)stepArg;
+
+    if (damslotStart > damslotEnd) {
+        PrintAndLogEx(ERR, "Start should be lower than or equal to end. start: %04x end: %04x", damslotStart, damslotEnd);
+        return PM3_EINVARG;
+    }
+
+    res = DesfireSelectAndAuthenticateEx(&dctx, securechann, 0x000000, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    uint64_t totalCount = ((damslotEnd - damslotStart) / step) + 1;
+    uint64_t tested = 0;
+    uint64_t found = 0;
+
+    PrintAndLogEx(INFO, "Bruteforcing DAM slots range " _YELLOW_("%04x") "-" _YELLOW_("%04x") " step " _YELLOW_("%u") " candidates " _YELLOW_("%llu"),
+                  damslotStart, damslotEnd, step, (unsigned long long)totalCount);
+
+    for (uint32_t damslot = damslotStart;; damslot += step) {
+        if (kbd_enter_pressed()) {
+            break;
+        }
+
+        tested++;
+        float progress = (totalCount > 0) ? ((float)tested / (float)totalCount) * 100.0f : 100.0f;
+        PrintAndLogEx(INPLACE, "Brute DESFire DAM slot Progress " _YELLOW_("%0.1f") " %%   current slot: %04X", progress, damslot);
+
+        uint8_t resp[16] = {0};
+        size_t resplen = 0;
+        res = DesfireGetDelegatedInfoNoFieldOn(&dctx, damslot & 0xffff, resp, &resplen);
+
+        if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+            for (int attempt = 1; attempt <= MFDES_BRUTEDAMSLOT_RESELECT_ATTEMPTS; attempt++) {
+                printf("\33[2K\r"); // clear current inplace progress line before logging
+                PrintAndLogEx(WARNING, "No card response while checking DAM slot " _YELLOW_("%04X") ". Reselecting card (%d/%d)...",
+                              damslot, attempt, MFDES_BRUTEDAMSLOT_RESELECT_ATTEMPTS);
+
+                msleep(MFDES_BRUTEDAMSLOT_RESELECT_WAIT_MS);
+
+                res = DesfireSelectAndAuthenticateEx(&dctx, securechann, 0x000000, noauth, verbose);
+                if (res != PM3_SUCCESS) {
+                    if (res != PM3_ECARDEXCHANGE && res != PM3_ETIMEOUT && res != PM3_ERFTRANS) {
+                        res = PM3_ECARDEXCHANGE;
+                    }
+                    continue;
+                }
+
+                res = DesfireGetDelegatedInfoNoFieldOn(&dctx, damslot & 0xffff, resp, &resplen);
+                if (res == PM3_SUCCESS || res == PM3_EAPDU_FAIL ||
+                        (res != PM3_ECARDEXCHANGE && res != PM3_ETIMEOUT && res != PM3_ERFTRANS)) {
+                    break;
+                }
+            }
+
+            if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                PrintAndLogEx(FAILED, "Card is not responding after %d reselect attempts. Aborting at DAM slot " _YELLOW_("%04X"),
+                              MFDES_BRUTEDAMSLOT_RESELECT_ATTEMPTS, damslot);
+                DropField();
+                return res;
+            }
+        }
+
+        if (res == PM3_SUCCESS) {
+            uint32_t delegatedaid = MemLeToUint3byte(&resp[5]);
+            printf("\33[2K\r"); // clear current line before printing
+            if (delegatedaid == 0x000000) {
+                PrintAndLogEx(SUCCESS, "DAM slot 0x%04X ver 0x%02X AID " _YELLOW_("0x%06X (empty)"),
+                              damslot, resp[0], delegatedaid);
+            } else {
+                PrintAndLogEx(SUCCESS, "DAM slot 0x%04X ver 0x%02X AID " _GREEN_("0x%06X"),
+                              damslot, resp[0], delegatedaid);
+            }
+            found++;
+            if (verbose && resplen > 0) {
+                PrintAndLogEx(INFO, "Response [%zu] " _CYAN_("%s"), resplen, sprint_hex(resp, resplen));
+            }
+        }
+
+        if (damslotEnd - damslot < step) {
+            break;
+        }
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "Done! Found " _GREEN_("%llu") " matching DAM slot candidate(s)",
                   (unsigned long long)found);
     DropField();
     return PM3_SUCCESS;
@@ -3923,7 +4129,7 @@ static int CmdHF14ADesGetDelegateAppInfo(const char *Cmd) {
 
     uint8_t resp[16] = {0};
     size_t resplen = 0;
-    res = DesfireGetDelegatedInfo(&dctx, damslot & 0xffff, resp, &resplen);
+    res = DesfireGetDelegatedInfoNoFieldOn(&dctx, damslot & 0xffff, resp, &resplen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire GetDelegatedInfo command " _RED_("error") ". Result: %d", res);
         DropField();
@@ -7055,6 +7261,7 @@ static command_t CommandTable[] = {
     {"getaids",          CmdHF14ADesGetAIDs,          IfPm3Iso14443a,  "Get Application IDs list"},
     {"getappnames",      CmdHF14ADesGetAppNames,      IfPm3Iso14443a,  "Get Applications list"},
     {"bruteaid",         CmdHF14ADesBruteApps,        IfPm3Iso14443a,  "Recover AIDs by bruteforce"},
+    {"brutedamslot",     CmdHF14ADesBruteDAMSlots,    IfPm3Iso14443a,  "Recover DAM slots to delegated AIDs by bruteforce"},
     {"createapp",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application"},
     {"createdelegateapp", CmdHF14ADesCreateDelegateApp, IfPm3Iso14443a, "Create Delegated Application"},
     {"getdelegateappinfo", CmdHF14ADesGetDelegateAppInfo, IfPm3Iso14443a,  "Get Delegated Application info by DAM slot"},

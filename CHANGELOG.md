@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf mfdes brutedamslot` command (@kormax)
 - Added `hf mfdes getdelegateappinfo` command (@kormax)
 - Added `hf secc info` command to retrieve the Card Recognition Template(@antiklesys)
 - Added `hf mfdes createdelegateapp` command (@kormax)
