@@ -150,7 +150,10 @@ static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used) {
             break;
     }
 
-    PrintAndLogEx(NORMAL, "    Memory.... " _YELLOW_("%u") " KB ( " _YELLOW_("%2.0f%%") " used )", mem_avail, mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100);
+    PrintAndLogEx(NORMAL, "    Memory.... " _YELLOW_("%u") " KB ( " _YELLOW_("%2.0f%%") " used )"
+                  , mem_avail
+                  , mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100
+                 );
 }
 
 static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
@@ -408,7 +411,11 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
             break;
     }
 
-    PrintAndLogEx(NORMAL, "  --= %s " _YELLOW_("%uK") " bytes ( " _YELLOW_("%2.0f%%") " used )", asBuff, mem_avail, mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100);
+    PrintAndLogEx(NORMAL, "  --= %s " _YELLOW_("%uK") " bytes ( " _YELLOW_("%2.0f%%") " used )"
+                  , asBuff
+                  , mem_avail
+                  , mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100
+                 );
 
     /*
     switch ((iChipID & 0xF000) >> 12) {
@@ -455,7 +462,8 @@ static int CmdDbg(const char *Cmd) {
                   "Note: option `-4`, this option may cause malfunction itself by\n"
                   "introducing delays in time critical functions like simulation or sniffing",
                   "hw dbg    --> get current log level\n"
-                  "hw dbg -1 --> set log level to _error_\n");
+                  "hw dbg -1 --> set log level to _error_\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -530,7 +538,8 @@ static int CmdDetectReader(const char *Cmd) {
     CLIParserInit(&ctx, "hw detectreader",
                   "Start to detect presences of reader field",
                   "hw detectreader\n"
-                  "hw detectreader -L\n");
+                  "hw detectreader -L\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -580,7 +589,8 @@ static int CmdFPGAOff(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw fpgaoff",
                   "Turn of fpga and antenna field",
-                  "hw fpgaoff\n");
+                  "hw fpgaoff\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -598,7 +608,8 @@ static int CmdLCD(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw lcd",
                   "Send command/data to LCD",
-                  "hw lcd -r AA -c 03    -> sends 0xAA three times");
+                  "hw lcd -r AA -c 03    -> sends 0xAA three times"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -629,7 +640,8 @@ static int CmdLCDReset(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw lcdreset",
                   "Hardware reset LCD",
-                  "hw lcdreset\n");
+                  "hw lcdreset\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -647,7 +659,8 @@ static int CmdReadmem(const char *Cmd) {
     CLIParserInit(&ctx, "hw readmem",
                   "Reads processor flash memory into a file or views on console",
                   "hw readmem -f myfile                    -> save 512KB processor flash memory to file\n"
-                  "hw readmem -a 8192 -l 512               -> display 512 bytes from offset 8192\n");
+                  "hw readmem -a 8192 -l 512               -> display 512 bytes from offset 8192\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -707,7 +720,8 @@ static int CmdReset(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw reset",
                   "Reset the Proxmark3 device.",
-                  "hw reset");
+                  "hw reset"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -730,7 +744,8 @@ static int CmdSetDivisor(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw setlfdivisor",
                   "Drive LF antenna at 12 MHz / (divisor + 1).",
-                  "hw setlfdivisor -d 88");
+                  "hw setlfdivisor -d 88"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -757,7 +772,8 @@ static int CmdSetHFThreshold(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw sethfthresh",
                   "Set thresholds in HF/14a and Legic mode.",
-                  "hw sethfthresh -t 7 -i 20 -l 8");
+                  "hw sethfthresh -t 7 -i 20 -l 8"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -795,7 +811,8 @@ static int CmdSetMux(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw setmux",
                   "Set the ADC mux to a specific value",
-                  "hw setmux --hipkd    -> set HIGH PEAK\n");
+                  "hw setmux --hipkd    -> set HIGH PEAK\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -844,7 +861,8 @@ static int CmdStandalone(const char *Cmd) {
     CLIParserInit(&ctx, "hw standalone",
                   "Start standalone mode",
                   "hw standalone       -> start \n"
-                  "hw standalone -a 1  -> start and send arg 1");
+                  "hw standalone -a 1  -> start and send arg 1"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1010,7 +1028,8 @@ static int CmdTune(const char *Cmd) {
                   "Measure tuning of device antenna. Results shown in graph window.\n"
                   "This command doesn't actively tune your antennas, \n"
                   "it's only informative by measuring voltage that the antennas will generate",
-                  "hw tune");
+                  "hw tune"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -1262,8 +1281,14 @@ static int CmdTune(const char *Cmd) {
     if (test1 > 0) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "-------- " _CYAN_("LF tuning graph") " ------------");
-        PrintAndLogEx(SUCCESS, "Orange line - divisor %d / %.2f kHz", LF_DIVISOR_125, LF_DIV2FREQ(LF_DIVISOR_125));
-        PrintAndLogEx(SUCCESS, "Blue line - divisor   %d / %.2f kHz\n\n", LF_DIVISOR_134, LF_DIV2FREQ(LF_DIVISOR_134));
+        PrintAndLogEx(SUCCESS, "Orange line - divisor %d / %.2f kHz"
+                      , LF_DIVISOR_125
+                      , LF_DIV2FREQ(LF_DIVISOR_125)
+                     );
+        PrintAndLogEx(SUCCESS, "Blue line - divisor   %d / %.2f kHz\n\n"
+                      , LF_DIVISOR_134
+                      , LF_DIV2FREQ(LF_DIVISOR_134)
+                     );
         g_GraphTraceLen = 256;
         g_MarkerC.pos = LF_DIVISOR_125;
         g_MarkerD.pos = LF_DIVISOR_134;
@@ -1283,7 +1308,8 @@ static int CmdVersion(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw version",
                   "Show version information about the client and the connected Proxmark3",
-                  "hw version");
+                  "hw version"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1300,7 +1326,8 @@ static int CmdStatus(const char *Cmd) {
     CLIParserInit(&ctx, "hw status",
                   "Show runtime status information about the connected Proxmark3",
                   "hw status\n"
-                  "hw status --ms 1000 -> Test connection speed with 1000ms timeout\n");
+                  "hw status --ms 1000 -> Test connection speed with 1000ms timeout\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1450,7 +1477,8 @@ static int CmdTia(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw tia",
                   "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider",
-                  "hw tia");
+                  "hw tia"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1478,7 +1506,8 @@ static int CmdTimeout(const char *Cmd) {
                   "Set the communication timeout on the client side",
                   "hw timeout            --> Show current timeout\n"
                   "hw timeout -m 20      --> Set the timeout to 20ms\n"
-                  "hw timeout --ms 500   --> Set the timeout to 500ms\n");
+                  "hw timeout --ms 500   --> Set the timeout to 500ms\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1515,7 +1544,8 @@ static int CmdPing(const char *Cmd) {
     CLIParserInit(&ctx, "hw ping",
                   "Test if the Proxmark3 is responsive",
                   "hw ping\n"
-                  "hw ping --len 32");
+                  "hw ping --len 32"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1550,10 +1580,12 @@ static int CmdPing(const char *Cmd) {
         tms = msclock() - tms;
         if (len) {
             bool error = (memcmp(data, resp.data.asBytes, len) != 0);
-            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") " in " _YELLOW_("%" PRIu64) " ms and content ( %s )",
+            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received")
+                          " in " _YELLOW_("%" PRIu64) " ms and content ( %s )",
                           tms, error ? _RED_("fail") : _GREEN_("ok"));
         } else {
-            PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received") " in " _YELLOW_("%" PRIu64) " ms", tms);
+            PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received")
+                          " in " _YELLOW_("%" PRIu64) " ms", tms);
         }
     } else
         PrintAndLogEx(WARNING, "Ping response " _RED_("timeout"));
@@ -1567,7 +1599,8 @@ static int CmdConnect(const char *Cmd) {
                   "Connects to a Proxmark3 device via specified serial port.\n"
                   "Baudrate here is only for physical UART or UART-BT, NOT for USB-CDC or blue shark add-on",
                   "hw connect -p " SERIAL_PORT_EXAMPLE_H "\n"
-                  "hw connect -p " SERIAL_PORT_EXAMPLE_H " -b 115200");
+                  "hw connect -p "SERIAL_PORT_EXAMPLE_H" -b 115200"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1617,7 +1650,8 @@ static int CmdBreak(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw break",
                   "send break loop package",
-                  "hw break\n");
+                  "hw break\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1635,7 +1669,8 @@ static int CmdBootloader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw bootloader",
                   "Reboot Proxmark3 into bootloader mode",
-                  "hw bootloader\n");
+                  "hw bootloader\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,

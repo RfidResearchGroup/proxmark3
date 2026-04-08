@@ -118,8 +118,9 @@ static void successor(const uint8_t *k, State_t *s, uint8_t y) {
 * @param k - array containing 8 bytes
 **/
 static State_t suc(uint8_t *k, State_t s, BitstreamIn_t *bitstream) {
-    while (bitsLeft(bitstream) > 0)
+    while (bitsLeft(bitstream) > 0) {
         successor(k, &s, headBit(bitstream));
+    }
     return s;
 }
 
