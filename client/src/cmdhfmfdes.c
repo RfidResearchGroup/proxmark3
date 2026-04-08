@@ -4176,11 +4176,11 @@ static int CmdHF14ADesGetDelegateAppInfo(const char *Cmd) {
     uint16_t freeblocks = MemLeToUint2byte(&resp[3]);
     uint32_t delegatedaid = MemLeToUint3byte(&resp[5]);
 
-    PrintAndLogEx(SUCCESS, "DAM slot        0x%04x", damslot & 0xffff);
-    PrintAndLogEx(SUCCESS, "DAM slot ver    0x%02x", resp[0]);
-    PrintAndLogEx(SUCCESS, "Quota limit     0x%04x (%u blocks)", quota, (unsigned int)quota);
-    PrintAndLogEx(SUCCESS, "Free blocks     0x%04x (%u blocks)", freeblocks, (unsigned int)freeblocks);
-    PrintAndLogEx(SUCCESS, "Delegated AID   0x%06x", delegatedaid);
+    PrintAndLogEx(SUCCESS, "DAM slot....... 0x%04x", damslot & 0xffff);
+    PrintAndLogEx(SUCCESS, "DAM slot ver... 0x%02x", resp[0]);
+    PrintAndLogEx(SUCCESS, "Quota limit.... 0x%04x (%u blocks)", quota, (unsigned int)quota);
+    PrintAndLogEx(SUCCESS, "Free blocks.... 0x%04x (%u blocks)", freeblocks, (unsigned int)freeblocks);
+    PrintAndLogEx(SUCCESS, "Delegated AID.. 0x%06x", delegatedaid);
 
     DropField();
     return PM3_SUCCESS;
