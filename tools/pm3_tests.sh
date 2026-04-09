@@ -451,7 +451,7 @@ while true; do
 
       echo -e "\n${C_BLUE}Testing scripts:${C_NC}"
       if ! CheckExecute "script run cmdscript"             "$CLIENTBIN -c 'script run example.cmd'" "remark: world"; then break; fi
-      if ! CheckExecute "script run luascript"             "$CLIENTBIN -c 'script run data_hex_crc -b 010203040506070809'" "CDMA2000.*7B02"; then break; fi
+      if ! CheckExecute "script run luascript"             "$CLIENTBIN -c 'script run data_hex_crc -d 010203040506070809'" "CDMA2000.*7B02"; then break; fi
 
       CheckExecute ignore "check Python support"        "$CLIENTBIN -c 'hw version'" "Python script.*present"
       if [ $RESULT -eq 0 ]; then
