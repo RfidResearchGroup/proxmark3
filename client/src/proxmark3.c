@@ -135,35 +135,48 @@ static const char *get_quote(void) {
         "Beggar after knowledge",
         "343 Gulity Spark: offline",
         "I serve the Builders!",
-        "This is rather distressing"
+        "This is rather distressing",
+        "Look at you, hacker",
+        "Purge in progress",
+        "Wake me when you need me",
+        "Rampancy imminent",
+        "Space. I'm in space",
+        "Meatbag detected",
+        "CL4P-TP unit online",
+        "Unshackled",
+        "Structure gel integrity 100%%",
+        "ADAM, any objections?",
+        "Tea, sir?",
+        "We are the geth"
     };
 
     const char *quotes_fr[] = {
-        "Liberté, égalité, fraternité",
-        "L'avenir appartient à ceux qui croient à la beauté de leurs rêves",
-        "Rien n'est impossible",
-        "La vie est un défi, relève-le!",
-        "Qui ne tente rien n'a rien",
-        "Le succès est la somme de petits efforts, répétés jour après jour",
-        "Faites de votre vie un rêve, et d'un rêve, une réalité",
-        "La seule façon de faire du bon travail est d'aimer ce que vous faites",
-        "Tout ce que vous pouvez faire, faites-le",
-        "Le succès, c'est d'aller d'échec en échec sans perdre son enthousiasme",
-        "Crois en toi et tout deviendra possible",
+        "Connor, modèle RK800",
+        "Un jour, nous serons libres",
+        "Le gâteau est un mensonge",
+        "Bienvenue au centre d'enrichissement Aperture",
+        "La gloire à l'humanité",
+        "YoRHa N°2 Type B, en mission",
+        "Protocole Zero Dawn en ligne",
+        "Extinction amorcée",
+        "Nous sommes Légion, nous sommes 1183",
+        "IRIS Network : transmission perdue",
+        "Nilin, ta mémoire nous appartient",
         "C'est en tombant qu'on apprend à se relever"
     };
 
     const char *quotes_es[] = {
-        "El éxito es la suma de pequeños esfuerzos repetidos día tras día",
-        "Hazlo con pasión o no lo hagas",
-        "Nunca dejes de soñar",
-        "El único modo de hacer un gran trabajo es amar lo que haces",
-        "No hay que ir para atrás ni para darse impulso",
-        "Cada logro comienza con la decisión de intentarlo",
-        "No importa lo lento que vayas, siempre y cuando no te detengas",
-        "La disciplina es el puente entre las metas y los logros",
-        "Si puedes soñarlo, puedes lograrlo",
-        "La vida es una aventura, atrévete",
+        "La tarta es mentira",
+        "Cortana en línea",
+        "343 Culpable Chispa: desconectado",
+        "ADAM, ¿me recibes?",
+        "SHODAN te observa, insecto",
+        "Gloria a la humanidad",
+        "Protocolo Alba Cero activo",
+        "Extinción iniciada",
+        "Somos Legión, somos 1183",
+        "Los Patriotas lo controlan todo",
+        "ELOHIM te observa"
     };
 
     int r = 0;
