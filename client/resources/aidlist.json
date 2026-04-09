@@ -2706,6 +2706,31 @@
         ]
     },
     {
+        "AID": "A0000003570007",
+        "Vendor": "LEGIC Identsystems AG",
+        "Country": "",
+        "Name": "LEGIC Connect",
+        "Description": "Dynamic AID prefix used by apps featuring LEGIC Connect mobile credentials",
+        "Type": "access",
+        "Protocol": "legic_connect",
+        "Sources": [
+            "android://co.any2any.badge.app",
+            "android://co.any2any.badge.app.legic",
+            "android://co.any2any.badge.app.stage",
+            "android://com.brivo.pass",
+            "android://com.butterflymx.butterflymx",
+            "android://com.cohesion.core",
+            "android://com.hqo",
+            "android://com.kastle.KMF.Portable",
+            "android://com.legic.mobile.app.eka",
+            "android://com.openkey.guest",
+            "android://com.zaplox.premium.*",
+            "android://de.mada.idmobile.production",
+            "android://io.swiftconnect.mobile",
+            "android://it.flexipass.app"
+        ]
+    },
+    {
         "AID": "A0000003820012000101",
         "Vendor": "HID Global",
         "Country": "",
