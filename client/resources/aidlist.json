@@ -2261,7 +2261,10 @@
         "Description": "Google Smart Tap",
         "Type": "loyalty",
         "Protocol": "google_smart_tap",
-        "ResponseRegex": ".*500a416e64726f6964506179.*9000$"
+        "ResponseRegex": ".*500a416e64726f6964506179.*9000$",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "4F53452E5641532E3031",
@@ -2271,7 +2274,10 @@
         "Description": "Samsung VAS",
         "Type": "loyalty",
         "Protocol": "samsung_vas",
-        "ResponseRegex": ".*500d53616d73756e6757616c6c6574.*9000$"
+        "ResponseRegex": ".*500d53616d73756e6757616c6c6574.*9000$",
+        "Sources": [
+            "android://com.samsung.android.spay"
+        ]
     },
     {
         "AID": "A000000476D0000101",
@@ -2280,7 +2286,10 @@
         "Name": "Google SmartTap 1.3 (Deprecated)",
         "Description": "",
         "Type": "loyalty",
-        "Protocol": "google_smart_tap"
+        "Protocol": "google_smart_tap",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "A000000476D0000111",
@@ -2289,7 +2298,10 @@
         "Name": "Google SmartTap 2.0",
         "Description": "",
         "Type": "loyalty",
-        "Protocol": "google_smart_tap"
+        "Protocol": "google_smart_tap",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "A000000870FC000000000034",
@@ -2298,7 +2310,10 @@
         "Name": "Samsung VAS",
         "Description": "",
         "Type": "loyalty",
-        "Protocol": "samsung_vas"
+        "Protocol": "samsung_vas",
+        "Sources": [
+            "android://com.samsung.android.spay"
+        ]
     },
     {
         "AID": "A0000002480400",
