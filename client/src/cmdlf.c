@@ -22,8 +22,19 @@
 #include <limits.h>
 #include <ctype.h>
 #include <math.h>
-#include <arpa/inet.h>
 #include <unistd.h>
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#endif
 
 #include "cmdparser.h"      // command_t
 #include "comms.h"
