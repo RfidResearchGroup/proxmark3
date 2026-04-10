@@ -39,6 +39,7 @@ int CmdLFSimBidir(const char *Cmd);
 int CmdLFSniff(const char *Cmd);
 int CmdVchDemod(const char *Cmd);
 int CmdLFfind(const char *Cmd);
+int CmdLFRelay(const char *Cmd);
 
 int lf_read(bool verbose, uint64_t samples);
 int lf_sniff(bool realtime, bool verbose, uint64_t samples);

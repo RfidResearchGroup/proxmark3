@@ -22,6 +22,9 @@
 #include <limits.h>
 #include <ctype.h>
 #include <math.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
 #include "cmdparser.h"      // command_t
 #include "comms.h"
 #include "commonutil.h"     // ARRAYLEN
@@ -70,6 +73,8 @@
 #include "crc.h"
 #include "pm3_cmd.h"        // for LF_CMDREAD_MAX_EXTRA_SYMBOLS
 #include "fpga.h"           // for set_fpga_mode
+#include "util_posix.h"         // msleep
+
 
 static int CmdHelp(const char *Cmd);
 
@@ -1704,6 +1709,214 @@ static int check_autocorrelate(const char *prefix, int clock) {
     return PM3_EFAILED;
 }
 
+static int lf_relay_tag(uint64_t samples, uint16_t port) {
+
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        PrintAndLogEx(ERR, "Failed to create socket");
+        return PM3_EFAILED;
+    }
+
+    struct sockaddr_in addr = { .sin_family = AF_INET, .sin_port = htons(port), .sin_addr.s_addr = INADDR_ANY };
+    int opt = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        PrintAndLogEx(ERR, "Failed to bind to port " _RED_("%u"), port);
+        close(sock);
+        return PM3_EFAILED;
+    }
+
+    if (listen(sock, 1) < 0) {
+        PrintAndLogEx(ERR, "Failed to listen on socket");
+        close(sock);
+        return PM3_EFAILED;
+    }
+
+    PrintAndLogEx(INFO, "Relay listening on port " _YELLOW_("%u") "...", port);
+
+    int client = accept(sock, NULL, NULL);
+    if (client < 0) {
+        PrintAndLogEx(ERR, "Failed to accept connection");
+        close(sock);
+        return PM3_EFAILED;
+    }
+
+    while (true) {
+
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "\naborted via keyboard!");
+            msleep(300);
+            break;
+        }
+
+        lf_read_internal(false, false, samples);
+
+        if (g_GraphTraceLen > 1000 && !getSignalProperties()->isnoise) {
+
+            PrintAndLogEx(INFO, "Tag detected! Sending %zu samples to Client...", g_GraphTraceLen);
+    
+            uint32_t len = (uint32_t)g_GraphTraceLen;
+            if (send(client, &len, sizeof(len), 0) < 0) {
+                break;
+            }
+            
+            if (send(client, g_GraphBuffer, len * sizeof(int32_t), 0) < 0) {
+                break;
+            }
+
+            msleep(500);
+        }
+
+    }
+    close(client);
+    close(sock);
+    return PM3_SUCCESS;
+}
+
+static int lf_relay_rdr(const char *ip, uint16_t port) {
+
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        PrintAndLogEx(ERR, "Failed to create socket");
+        return PM3_EFAILED;
+    }
+    
+    struct sockaddr_in addr = {0};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+
+    if (inet_pton(AF_INET, ip, &addr.sin_addr) <= 0) {
+        PrintAndLogEx(ERR, "Invalid IP address... %s:%u", ip, port);
+        close(sock);
+        return PM3_EFAILED;
+    }
+
+    if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        PrintAndLogEx(ERR, "Connection error to %s:%u", ip, port);
+        close(sock);
+        return PM3_EFAILED;
+    }
+
+    PrintAndLogEx(INFO, "Relay connected to %s:%u", ip, port);
+    PrintAndLogEx(INFO, "Waiting for signal...");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    PrintAndLogEx(NORMAL, "");
+
+    int n = 0;
+    do {
+           
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "\naborted via keyboard!");
+            msleep(300);
+            break;
+        }
+
+        uint32_t incoming_len = 0;
+
+        n = recv(sock, &incoming_len, sizeof(incoming_len), MSG_WAITALL);
+
+        if (n > 0 && incoming_len > 0) {
+
+            if (incoming_len > MAX_GRAPH_TRACE_LEN) {
+                PrintAndLogEx(ERR, "Received length " _RED_("%u") " exceeds buffer size %u, dropping", incoming_len, MAX_GRAPH_TRACE_LEN);
+                break;
+            }
+
+            PrintAndLogEx(INFO, "Received " _YELLOW_("%u") " samples. Processing...", incoming_len);
+            ssize_t rx = recv(sock, g_GraphBuffer, incoming_len * sizeof(int32_t), MSG_WAITALL);
+
+            if (rx != (ssize_t)(incoming_len * sizeof(int32_t))) {
+                PrintAndLogEx(ERR, "Short read: expected %u bytes, got %zd", incoming_len * (uint32_t)sizeof(int32_t), rx);
+                break;
+            }
+
+            // if previous simulation running,  we need to break it.
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            msleep(300);
+
+            g_GraphTraceLen = incoming_len;
+            lf_chk_bitstream();
+            lfsim_upload_gb();
+            struct { 
+                uint16_t len; 
+                uint16_t gap; 
+            } PACKED payload;
+            payload.len = (g_GraphTraceLen > UINT16_MAX) ? UINT16_MAX : (uint16_t)g_GraphTraceLen;
+            payload.gap = 0;
+
+            clearCommandBuffer();
+            SendCommandNG(CMD_LF_SIMULATE, (uint8_t *)&payload, sizeof(payload));
+
+            PrintAndLogEx(SUCCESS, "Simulation active.");
+        }
+
+    } while (n > 0);
+
+    close(sock);
+    
+    return PM3_SUCCESS;
+}
+
+int CmdLFRelay(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf relay",
+                  "Relay LF signal between two Proxmark3 devices over TCP.\n"
+                  "By default it uses PORT 8000.\n"
+                  "One device acts as a Tag Proxy, the other as a Reader Client.",
+                  "lf relay --tag -s 7000\n"
+                  "lf relay --rdr --ip 192.168.1.141"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "tag", "Act as Tag Proxy (Server)"),
+        arg_lit0(NULL, "rdr", "Act as Reader Client (Connects to Proxy)"),
+        arg_str0("i", "ip", "<i>", "Target IP address for Reader mode"),
+        arg_u64_0("s", "samples", "<dec>", "Number of samples to collect (default 40000)"),
+        arg_u64_0("p", "port", "<dec>", "Port number (def: 8000)"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool is_tag = arg_get_lit(ctx, 1);
+    bool is_rdr = arg_get_lit(ctx, 2);
+
+    int iplen = 0;
+    char ip[256] = { 0 };
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)ip, sizeof(ip), &iplen);
+
+    uint64_t samples = arg_get_u64_def(ctx, 4, 40000);
+    uint16_t port = arg_get_u32_def(ctx, 5, 8000) & 0xFFFF;
+
+    CLIParserFree(ctx);
+
+    // sanitize
+    if ((is_tag + is_rdr) == 0) {
+        PrintAndLogEx(ERR, "Specify either --tag or --rdr");
+        return PM3_EINVARG;
+    }
+
+    if (is_rdr && (iplen == 0)) {
+        PrintAndLogEx(ERR, "IP address is empty");
+        PrintAndLogEx(HINT, "try `" _YELLOW_("lf relay --rdr --ip <ip>") "`");
+        return PM3_EINVARG;
+    }
+
+    // main
+    if (is_tag) {
+        return lf_relay_tag(samples, port);
+    }
+    
+    if (is_rdr) {
+        return lf_relay_rdr(ip, port);
+    }
+
+    return PM3_SUCCESS;
+}
+
 int CmdLFfind(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -2173,6 +2386,7 @@ static command_t CommandTable[] = {
     {"config",      CmdLFConfig,        IfPm3Lf,         "Get/Set config for LF sampling, bit/sample, decimation, frequency"},
     {"cmdread",     CmdLFCommandRead,   IfPm3Lf,         "Modulate LF reader field to send command before read"},
     {"read",        CmdLFRead,          IfPm3Lf,         "Read LF tag"},
+    {"relay",       CmdLFRelay,         IfPm3Lf,         "LF relay between two pm3 devices (tag/rdr mode)"},
     {"search",      CmdLFfind,          AlwaysAvailable, "Read and Search for valid known tag"},
     {"sim",         CmdLFSim,           IfPm3Lf,         "Simulate LF tag from buffer"},
     {"simask",      CmdLFaskSim,        IfPm3Lf,         "Simulate " _YELLOW_("ASK") " tag"},
