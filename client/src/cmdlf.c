@@ -1730,7 +1730,7 @@ static int lf_relay_tag(uint64_t samples, uint16_t port) {
 
     struct sockaddr_in addr = { .sin_family = AF_INET, .sin_port = htons(port), .sin_addr.s_addr = INADDR_ANY };
     int opt = 1;
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char *)&opt, sizeof(opt));
     if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
         PrintAndLogEx(ERR, "Failed to bind to port " _RED_("%u"), port);
         close(sock);
@@ -1768,11 +1768,11 @@ static int lf_relay_tag(uint64_t samples, uint16_t port) {
             PrintAndLogEx(INFO, "Tag detected! Sending %zu samples to Client...", g_GraphTraceLen);
     
             uint32_t len = (uint32_t)g_GraphTraceLen;
-            if (send(client, &len, sizeof(len), 0) < 0) {
+            if (send(client, (const char *)&len, sizeof(len), 0) < 0) {
                 break;
             }
             
-            if (send(client, g_GraphBuffer, len * sizeof(int32_t), 0) < 0) {
+            if (send(client, (const char *)g_GraphBuffer, len * sizeof(int32_t), 0) < 0) {
                 break;
             }
 
@@ -1826,7 +1826,7 @@ static int lf_relay_rdr(const char *ip, uint16_t port) {
 
         uint32_t incoming_len = 0;
 
-        n = recv(sock, &incoming_len, sizeof(incoming_len), MSG_WAITALL);
+        n = recv(sock, (char *)&incoming_len, sizeof(incoming_len), MSG_WAITALL);
 
         if (n > 0 && incoming_len > 0) {
 
@@ -1836,7 +1836,7 @@ static int lf_relay_rdr(const char *ip, uint16_t port) {
             }
 
             PrintAndLogEx(INFO, "Received " _YELLOW_("%u") " samples. Processing...", incoming_len);
-            ssize_t rx = recv(sock, g_GraphBuffer, incoming_len * sizeof(int32_t), MSG_WAITALL);
+            ssize_t rx = recv(sock, (char *)g_GraphBuffer, incoming_len * sizeof(int32_t), MSG_WAITALL);
 
             if (rx != (ssize_t)(incoming_len * sizeof(int32_t))) {
                 PrintAndLogEx(ERR, "Short read: expected %u bytes, got %zd", incoming_len * (uint32_t)sizeof(int32_t), rx);
