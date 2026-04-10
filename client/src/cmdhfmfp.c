@@ -809,7 +809,7 @@ static int CmdHFMFPAcl(const char *Cmd) {
                   "  ACCESS = access bytes inside sector trailer block\n"
                   "  Increment, decrement, transfer, restore is for value blocks",
                   "hf mf acl\n"
-                  "hf mf acl -d FF0780\n");
+                  "hf mf acl -d 0FFF0780\n");
 
     void *argtable[] = {
         arg_param_begin,
