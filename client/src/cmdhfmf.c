@@ -1189,14 +1189,23 @@ static int CmdHF14AMfAcl(const char *Cmd) {
     int acllen = 0;
     uint8_t acl[3] = {0};
     CLIGetHexWithReturn(ctx, 1, acl, &acllen);
-
     CLIParserFree(ctx);
 
+    if (acllen && acllen != 3) {
+        PrintAndLogEx(FAILED, "ACL length must be 3 bytes. Got %d", acllen);
+        return PM3_EINVARG;
+    }
     PrintAndLogEx(NORMAL, "");
 
     // look up common default ACL bytes and print a fingerprint line about it.
     if (memcmp(acl, "\xFF\x07\x80", 3) == 0) {
         PrintAndLogEx(INFO, "ACL... " _GREEN_("%s") " (transport configuration)", sprint_hex(acl, sizeof(acl)));
+    } else if (memcmp(acl, "\x7F\x07\x88", 3) == 0) {
+        PrintAndLogEx(INFO, "ACL... " _GREEN_("%s") " (key B enabler configuration)", sprint_hex(acl, sizeof(acl)));
+    } else if (memcmp(acl, "\x78\x77\x88", 3) == 0) {
+        PrintAndLogEx(INFO, "ACL... " _GREEN_("%s") " (no value-commands configuration)", sprint_hex(acl, sizeof(acl)));
+    } else {
+        PrintAndLogEx(INFO, "ACL... " _GREEN_("%s"), sprint_hex(acl, sizeof(acl)));
     }
     if (mfValidateAccessConditions(acl) == false) {
         PrintAndLogEx(ERR, _RED_("Invalid Access Conditions, NEVER write these on a card!"));

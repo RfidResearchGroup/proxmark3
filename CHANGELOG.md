@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mf acl` command to have more recognized generic configurations (@team-orangeBlue)
 - Added `hf mfp acl` command (@team-orangeBlue)
 - Modified `data_hex_crc.lua` script,  it now takes a `-s` parameter and the output is now in alternative row colors. (@iceman1001)
 - Added `hf mfdes brutedamslot` command (@kormax)
