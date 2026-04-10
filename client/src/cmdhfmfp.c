@@ -799,6 +799,72 @@ static int CmdHFMFPCommitPerso(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHFMFPAcl(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp acl",
+                  "Print decoded MIFARE Plus access rights (ACL), \n"
+                  "  A = key A\n"
+                  "  B = key B\n"
+                  "  AB = both key A and B\n"
+                  "  ACCESS = access bytes inside sector trailer block\n"
+                  "  Increment, decrement, transfer, restore is for value blocks",
+                  "hf mf acl\n"
+                  "hf mf acl -d FF0780\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "ACL bytes specified as 4 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int acllen = 0;
+    uint8_t acl[4] = {0};
+
+    CLIGetHexWithReturn(ctx, 1, acl, &acllen);
+    CLIParserFree(ctx);
+
+    if (acllen && acllen != 4) {
+        PrintAndLogEx(FAILED, "ACL length must be 4 bytes. Got %d", acllen);
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+
+    // look up common default ACL bytes and print a fingerprint line about it.
+    if (memcmp(acl, "\x0F\xFF\x07\x80", 4) == 0) {
+        PrintAndLogEx(INFO, "ACL... " _GREEN_("%s") " (transport configuration)", sprint_hex(acl, sizeof(acl)));
+    } else {
+        PrintAndLogEx(INFO, "ACL... " _GREEN_("%s"), sprint_hex(acl, sizeof(acl)));
+    }
+    if (mfValidateAccessConditions(acl + 1) == false || ((acl[0] >> 4) != ((~acl[0]) & 0xF))) {
+        PrintAndLogEx(ERR, _RED_("Invalid Access Conditions, NEVER write these on a card!"));
+    }
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "  # | Access rights");
+    PrintAndLogEx(INFO, "----+-----------------------------------------------------------------");
+    for (int i = 0; i < 4; i++) {
+        PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), i, mfGetAccessConditionsDesc(i, acl + 1));
+    }
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "  # | Block data exchange formats");
+    PrintAndLogEx(INFO, "----+-----------------------------------------------------------------");
+    // When a tag is moved to SL3, its' 6th byte of Crypto1 key A becomes a new ACL byte.
+    // Automatically it becomes 0F. This allows you to read all blocks plaintext.
+    // However, bits can be flipped in order to limit this. Notably, bits in this byte are set like this:
+    // B3 B2 B1 B0 ~B3 ~B2 ~B1 ~B0
+    // So if you set bit B3, you will ONLY be able to read/write the ACL block encrypted.
+    for (int i = 0; i < 4; i++) {
+        // This line could have used a ? _YELLOW_ : _GREEN_, but CC doesn't like it that way.
+        if ((acl[0] >> (4 + i)) & 1)
+            PrintAndLogEx(INFO, "%3d | " _YELLOW_("encrypted only"), i);
+        else
+            PrintAndLogEx(INFO, "%3d | " _GREEN_("encrypted or plaintext"), i);
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHFMFPAuth(const char *Cmd) {
     uint8_t keyn[250] = {0};
     int keynlen = 0;
@@ -2734,6 +2800,7 @@ static command_t CommandTable[] = {
     {"help",        CmdHelp,                 AlwaysAvailable, "This help"},
     {"list",        CmdHFMFPList,            AlwaysAvailable, "List MIFARE Plus history"},
     {"-----------", CmdHelp,                 IfPm3Iso14443a,  "------------------- " _CYAN_("operations") " ---------------------"},
+    {"acl",         CmdHFMFPAcl,             AlwaysAvailable, "Decode ACL values for Mifare Plus"},
     {"auth",        CmdHFMFPAuth,            IfPm3Iso14443a,  "Authentication"},
     {"chk",         CmdHFMFPChk,             IfPm3Iso14443a,  "Check keys"},
     {"dump",        CmdHFMFPDump,            IfPm3Iso14443a,  "Dump MIFARE Plus tag to file"},
@@ -2742,8 +2809,8 @@ static command_t CommandTable[] = {
     {"rdbl",        CmdHFMFPRdbl,            IfPm3Iso14443a,  "Read blocks from card"},
     {"rdsc",        CmdHFMFPRdsc,            IfPm3Iso14443a,  "Read sectors from card"},
     {"wrbl",        CmdHFMFPWrbl,            IfPm3Iso14443a,  "Write block to card"},
-    {"chkey",   CmdHFMFPChKey,      IfPm3Iso14443a,  "Change key on card"},
-    {"chconf",    CmdHFMFPChConf,     IfPm3Iso14443a,  "Change config on card"},
+    {"chkey",       CmdHFMFPChKey,           IfPm3Iso14443a,  "Change key on card"},
+    {"chconf",      CmdHFMFPChConf,          IfPm3Iso14443a,  "Change config on card"},
     {"-----------", CmdHelp,                 IfPm3Iso14443a,  "---------------- " _CYAN_("personalization") " -------------------"},
     {"commitp",     CmdHFMFPCommitPerso,     IfPm3Iso14443a,  "Configure security layer (SL1/SL3 mode)"},
     {"initp",       CmdHFMFPInitPerso,       IfPm3Iso14443a,  "Fill all the card's keys in SL0 mode"},
@@ -2765,4 +2832,3 @@ int CmdHFMFP(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-
