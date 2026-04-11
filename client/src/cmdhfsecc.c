@@ -40,6 +40,8 @@ typedef struct {
     uint8_t  atqa[2];          // big-endian: [0]=high byte, [1]=low byte
     uint8_t  sak;
     uint8_t  scp02_key[16];    // SCP02 master key (from JSON "SCP02Key")
+    uint8_t  kdd[10];          // 10-byte Key Diversification Data (from JSON "KDD"); all-zero = no diversification
+    uint8_t  kvn;              // Key Version Number (from JSON "KVN", default 0x01)
     uint8_t  ats[20];          // ATS bytes without CRC (from JSON "ATS")
     uint8_t  ats_len;          // actual number of valid bytes in ats[]
     uint8_t  default_resp[HID_APDU_MAX_RESP]; // fallback reply for unmatched APDUs (from JSON "DefaultResponse")
@@ -298,7 +300,7 @@ static int CmdHFHIDConfigSim(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>",  "JSON file with UID, AID, SCP02Key (without .json extension)"),
+        arg_str1("f", "file", "<fn>",  "JSON file with UID, AID, SCP02Key, optional KDD/KVN (no .json ext)"),
         arg_int0("n", "num",  "<dec>", "Exit after <n> reader interactions. 0 = infinite"),
         arg_param_end
     };
@@ -343,6 +345,33 @@ static int CmdHFHIDConfigSim(const char *Cmd) {
         PrintAndLogEx(ERR, "JSON missing or invalid 'SCP02Key' field (must be 16 bytes)");
         json_decref(root);
         return PM3_EINVARG;
+    }
+
+    // Parse optional KDD (10 bytes). If present, ARM diversifies SCP02Key
+    // per-card via VISA-2 on each handshake. If absent, all-zero is sent and
+    // ARM uses SCP02Key directly (legacy "no diversification" mode).
+    uint8_t kdd[10] = {0};
+    if (json_object_get(root, "KDD") != NULL) {
+        size_t kdd_len = 0;
+        if (JsonLoadBufAsHex(root, "$.KDD", kdd, sizeof(kdd), &kdd_len) != 0 || kdd_len != 10) {
+            PrintAndLogEx(ERR, "JSON 'KDD' field invalid (must be 10 bytes)");
+            json_decref(root);
+            return PM3_EINVARG;
+        }
+    }
+
+    // Parse optional KVN (Key Version Number, 1 byte). Default 0x01 matches
+    // the GP factory key set on most JCOP-based config cards.
+    uint8_t kvn = 0x01;
+    if (json_object_get(root, "KVN") != NULL) {
+        uint8_t kvn_buf[1] = {0};
+        size_t kvn_len = 0;
+        if (JsonLoadBufAsHex(root, "$.KVN", kvn_buf, sizeof(kvn_buf), &kvn_len) != 0 || kvn_len != 1) {
+            PrintAndLogEx(ERR, "JSON 'KVN' field invalid (must be 1 byte)");
+            json_decref(root);
+            return PM3_EINVARG;
+        }
+        kvn = kvn_buf[0];
     }
 
     // Parse ATS (1-20 bytes, without CRC)
@@ -465,10 +494,12 @@ static int CmdHFHIDConfigSim(const char *Cmd) {
     payload.atqa[1]    = 0x00;    // HID Config Card ATQA low byte
     payload.sak        = 0x38;    // HID Config Card SAK
     payload.ats_len    = (uint8_t)ats_len;
+    payload.kvn        = kvn;
     payload.default_resp_len = has_default_resp ? (uint8_t)default_resp_len_sz : 0;
     payload.apdu_count = apdu_count;
     memcpy(payload.uid, uid, uidlen);
     memcpy(payload.scp02_key, scp02_key, sizeof(scp02_key));
+    memcpy(payload.kdd, kdd, sizeof(kdd));
     memcpy(payload.ats, ats, ats_len);
     if (has_default_resp)
         memcpy(payload.default_resp, default_resp, default_resp_len_sz);

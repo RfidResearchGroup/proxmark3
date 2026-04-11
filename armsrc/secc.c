@@ -52,6 +52,14 @@ static hid_apdu_entry_t s_apdu_table[HID_APDU_MAX_ENTRIES];
 static uint8_t s_apdu_count = 0;
 static uint8_t s_scp02_key[16] = {0};
 
+// Per-card key diversification data emitted in INITIALIZE UPDATE and used to
+// derive card-specific static ENC/MAC/DEK keys via VISA-2. All-zero disables
+// diversification (s_scp02_key is used directly as the static base key).
+static uint8_t s_kdd[10] = {0};
+
+// Key Version Number emitted in the INIT UPDATE response (GP KVN).
+static uint8_t s_kvn = 0x01;
+
 // Default response for unmatched APDUs (loaded from JSON "DefaultResponse").
 // When s_default_resp_len == 0 the handler falls back to the legacy 90 00 reply.
 static uint8_t s_default_resp[HID_APDU_MAX_RESP] = {0};
@@ -82,8 +90,10 @@ static void hid_config_card_set_default_resp(const uint8_t *resp, uint8_t len) {
         memcpy(s_default_resp, resp, s_default_resp_len);
 }
 
-static void hid_config_card_set_scp02_key(const uint8_t *key) {
+static void hid_config_card_set_scp02_key(const uint8_t *key, const uint8_t *kdd, uint8_t kvn) {
     memcpy(s_scp02_key, key, 16);
+    memcpy(s_kdd, kdd, 10);
+    s_kvn = kvn;
     s_seq_counter = 0;
 }
 
@@ -91,13 +101,50 @@ static void hid_config_card_set_scp02_key(const uint8_t *key) {
 // Internal crypto helpers
 // ---------------------------------------------------------------------------
 
+// Derive the per-card static base key for the given SCP02 key type:
+//   type=0x01 -> K_ENC, 0x02 -> K_MAC, 0x03 -> K_DEK
+// VISA-2 diversification block (NIST SP800-108 style, but fixed JCOP layout):
+//   d = KDD[0:2] || KDD[4:8] || F0 || type || KDD[0:2] || KDD[4:8] || 0F || type
+// The diversified key is 3DES-ECB( master, d ) over the two 8-byte halves.
+// When s_kdd is all zero we return s_scp02_key directly (legacy "no
+// diversification" mode - works with test cards that share a common master).
+static void scp02_get_base_key(uint8_t type, uint8_t *out16) {
+    bool kdd_zero = true;
+    for (int i = 0; i < 10; i++) {
+        if (s_kdd[i]) { kdd_zero = false; break; }
+    }
+    if (kdd_zero) {
+        memcpy(out16, s_scp02_key, 16);
+        return;
+    }
+
+    uint8_t block[16];
+    memcpy(block,      s_kdd,     2);
+    memcpy(block + 2,  s_kdd + 4, 4);
+    block[6]  = 0xF0;
+    block[7]  = type;
+    memcpy(block + 8,  s_kdd,     2);
+    memcpy(block + 10, s_kdd + 4, 4);
+    block[14] = 0x0F;
+    block[15] = type;
+
+    mbedtls_des3_context ctx;
+    mbedtls_des3_init(&ctx);
+    mbedtls_des3_set2key_enc(&ctx, s_scp02_key);
+    mbedtls_des3_crypt_ecb(&ctx, block,     out16);
+    mbedtls_des3_crypt_ecb(&ctx, block + 8, out16 + 8);
+    mbedtls_des3_free(&ctx);
+}
+
 // Derive a 16-byte SCP02 session key using 3DES-CBC with null IV.
-// constant0/constant1 select the key type (0x01,0x82=S-ENC; 0x01,0x01=S-MAC).
-static void derive_scp02_session_key(uint8_t c0, uint8_t c1, uint16_t sc, uint8_t *out16) {
+// base_key16 is the diversified per-card static key (from scp02_get_base_key).
+// constant0/constant1 select the key type (0x01,0x82=S-ENC; 0x01,0x01=S-MAC;
+// 0x01,0x81=DEK). The session counter is from the current INIT UPDATE.
+static void derive_scp02_session_key(const uint8_t *base_key16, uint8_t c0, uint8_t c1, uint16_t sc, uint8_t *out16) {
     uint8_t deriv[16] = {c0, c1, (uint8_t)(sc >> 8), (uint8_t)(sc & 0xFF),
                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t iv[8] = {0};
-    tdes_nxp_send(deriv, out16, 16, s_scp02_key, iv, 2);
+    tdes_nxp_send(deriv, out16, 16, base_key16, iv, 2);
 }
 
 // Retail MAC (ISO 9797-1 Algorithm 3): single-DES for all-but-last blocks,
@@ -148,8 +195,10 @@ static void scp02_full_3des_cbc_mac(const uint8_t *key16, const uint8_t *data, s
 
 // Card cryptogram = full-3DES-CBC-MAC(S-ENC, HC(8) || SC(2)||CC(6) || 80 00*7)
 static void compute_card_cryptogram(const uint8_t *host_challenge, uint8_t *out) {
+    uint8_t k_enc[16];
+    scp02_get_base_key(0x01, k_enc);
     uint8_t s_enc[16];
-    derive_scp02_session_key(0x01, 0x82, s_seq_counter, s_enc);
+    derive_scp02_session_key(k_enc, 0x01, 0x82, s_seq_counter, s_enc);
 
     uint8_t data[24];
     memcpy(data, host_challenge, 8);
@@ -251,8 +300,8 @@ bool hid_config_card_handle_iblock(const uint8_t *cmd, int len, tag_response_inf
         uint8_t cryptogram[8];
         compute_card_cryptogram(s_host_challenge, cryptogram);
 
-        memset(rsp, 0x00, 10);                          // key diversification data
-        rsp[10] = 0xFF;                                  // key version (JCOP factory default)
+        memcpy(rsp, s_kdd, 10);                          // key diversification data
+        rsp[10] = s_kvn;                                 // key version number
         rsp[11] = 0x02;                                  // SCP02
         rsp[12] = (uint8_t)(s_seq_counter >> 8);         // SC high
         rsp[13] = (uint8_t)(s_seq_counter & 0xFF);       // SC low
@@ -271,9 +320,13 @@ bool hid_config_card_handle_iblock(const uint8_t *cmd, int len, tag_response_inf
         const uint8_t *host_crypto = &cmd[off + 5];
         const uint8_t *cmac_recv   = &cmd[off + 13];
 
+        uint8_t k_enc[16], k_mac[16];
+        scp02_get_base_key(0x01, k_enc);
+        scp02_get_base_key(0x02, k_mac);
+
         uint8_t s_enc[16], s_mac[16];
-        derive_scp02_session_key(0x01, 0x82, s_seq_counter, s_enc);
-        derive_scp02_session_key(0x01, 0x01, s_seq_counter, s_mac);
+        derive_scp02_session_key(k_enc, 0x01, 0x82, s_seq_counter, s_enc);
+        derive_scp02_session_key(k_mac, 0x01, 0x01, s_seq_counter, s_mac);
 
         uint8_t host_crypto_exp[8];
         compute_host_cryptogram(s_enc, host_crypto_exp);
@@ -437,7 +490,7 @@ int hid_config_card_iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chainin
 void SimulateHIDConfigCard(const hid_sim_payload_t *payload) {
     hid_config_card_set_apdu_table(payload->apdu_table, payload->apdu_count);
     hid_config_card_set_default_resp(payload->default_resp, payload->default_resp_len);
-    hid_config_card_set_scp02_key(payload->scp02_key);
+    hid_config_card_set_scp02_key(payload->scp02_key, payload->kdd, payload->kvn ? payload->kvn : 0x01);
 
     // Command buffers
     uint8_t receivedCmd[MAX_FRAME_SIZE];
