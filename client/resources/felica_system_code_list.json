@@ -1,0 +1,114 @@
+[
+  {
+    "code": "0003",
+    "name": "CJRC Standard",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Mutual Use transit cards"
+  },
+  {
+    "code": "0102",
+    "name": "EZLink",
+    "region": "Singapore",
+    "type": "transit",
+    "description": "Used by legacy EZ-Link transit cards"
+  },
+  {
+    "code": "04C7",
+    "name": "nanaco",
+    "region": "Japan",
+    "type": "payment",
+    "description": "nanaco e-money system"
+  },
+  {
+    "code": "12FC",
+    "name": "NDEF Type 3 Tag",
+    "region": "Global",
+    "type": "ndef",
+    "description": "NFC Forum Type 3 Tag system code"
+  },
+  {
+    "code": "8005",
+    "name": "Shenzhen Tong",
+    "region": "China",
+    "type": "transit",
+    "description": "Used by legacy Shenzen Tong cards"
+  },
+  {
+    "code": "8008",
+    "name": "Octopus",
+    "region": "Hong Kong",
+    "type": "transit",
+    "description": "Used by Octopus transit cards"
+  },
+  {
+    "code": "852B",
+    "name": "WAON",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Can be found on some WAON cards"
+  },
+  {
+    "code": "8592",
+    "name": "PASPY",
+    "region": "Japan",
+    "type": "transit",
+    "description": "PASPY transit card system"
+  },
+  {
+    "code": "86A7",
+    "name": "Suica",
+    "region": "Japan",
+    "type": "transit",
+    "description": "JR East Suica and related transit cards"
+  },
+  {
+    "code": "88B4",
+    "name": "FeliCa Lite",
+    "region": "Global",
+    "type": "common",
+    "description": "Default system code used by FeliCa Lite/Lite-S tags"
+  },
+  {
+    "code": "90B7",
+    "name": "Kartu Multi Trip Commet",
+    "region": "Indonesia",
+    "type": "transit",
+    "description": "Used on Kartu Multi Trip Commet cards"
+  },
+  {
+    "code": "9373",
+    "name": "Kartu Multi Trip Jelajah",
+    "region": "Indonesia",
+    "type": "transit",
+    "description": "Used on Kartu Multi Trip Jelajah cards"
+  },
+  {
+    "code": "9450",
+    "name": "HCMC",
+    "region": "Vietnam",
+    "type": "transit",
+    "description": "Used with Ho Chi Minh City Metro transit cards"
+  },
+  {
+    "code": "FE00",
+    "name": "FeliCa Networks Common Area",
+    "region": "Japan",
+    "type": "common",
+    "description": "Common area for FeliCa Networks services"
+  },
+  {
+    "code": "FE0F",
+    "name": "Osaifu Keitai Container",
+    "region": "Japan",
+    "type": "mobile",
+    "description": "Container system used by devices with Osaifu-Keitai"
+  },
+  {
+    "code": "FFFF",
+    "name": "Unfused system",
+    "region": "Global",
+    "type": "unfused",
+    "description": "Default unfused/pre-personalization system"
+  }
+]
