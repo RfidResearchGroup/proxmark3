@@ -3523,7 +3523,7 @@
                 "--ki <dec> Key index to select key from memory 'hf iclass managekeys'",
                 "--credit key is assumed to be the credit key",
                 "-s <dec> tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3 us",
-                "-i <dec> tearoff delay increment (in us) - default 10",
+                "-i <dec> tearoff delay increment (in us) - default 5",
                 "-e <dec> tearoff delay end (in us) must be a higher value than the start delay",
                 "-o, --otp <hex> Custom OTP value as 2 hex bytes",
                 "--dns Do not stabilize the bits, and return the raw dump of the block after tearoff",
@@ -3805,7 +3805,7 @@
         },
         "hf iclass legbrute": {
             "command": "hf iclass legbrute",
-            "description": "This command takes sniffed trace data and a partial raw key and bruteforces the remaining 40 bits of the raw key. Complete 40 bit keyspace is 1'099'511'627'776 and command is locked down to max 16 threads currently. A possible worst case scenario on 16 threads estimates XXX days YYY hours MMM minutes.",
+            "description": "This command takes sniffed trace data and a partial raw key and bruteforces the remaining 40 bits of the raw key. Complete 40 bit keyspace is 1'099'511'627'776.",
             "notes": [
                 "hf iclass legbrute --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk B4F12AADC5301225"
             ],
@@ -3817,13 +3817,14 @@
                 "--macs2 <hex> MACs captured from the reader, different than the first set (with the same csn and epurse value)",
                 "--pk <hex> Partial Key from legrec or starting key of keyblock from legbrute",
                 "--index <dec> Where to start from to retrieve the key, default 0 - value in millions e.g. 1 is 1 million",
-                "--threads <dec> Number of threads to use, by default it uses the cpu's max threads (max 16)."
+                "--threads <dec> Number of threads to use, by default it uses the cpu's max threads.",
+                "--dbg Print first 2 key candidates and midpoint per thread, then exit (use to verify thread partitioning)"
             ],
-            "usage": "hf iclass legbrute [-h] --epurse <hex> --macs1 <hex> --macs2 <hex> --pk <hex> [--index <dec>] [--threads <dec>]"
+            "usage": "hf iclass legbrute [-h] --epurse <hex> --macs1 <hex> --macs2 <hex> --pk <hex> [--index <dec>] [--threads <dec>] [--dbg]"
         },
         "hf iclass legrec": {
             "command": "hf iclass legrec",
-            "description": "Attempts to recover the diversified key of a specific iCLASS card. This may take several days. The card must remain be on the PM3 antenna during the whole process. ! Warning ! This process may brick the card! ! Warning !",
+            "description": "Attempts to recover the diversified key of a specific iCLASS card. This may take several days. The card must remain on the PM3 antenna during the whole process. ! Warning ! This process may brick the card! ! Warning !",
             "notes": [
                 "hf iclass legrec --macs 0000000089cb984b",
                 "hf iclass legrec --macs 0000000089cb984b --index 0 --loop 100 --notest"
@@ -3839,10 +3840,9 @@
                 "--allnight Loops the loop for 10 times, recommended loop value of 5000",
                 "--fast Increases the speed (4.6->7.4 key updates/second), higher risk to brick the card",
                 "--sl Lower card comms delay times, further speeds increases, may cause more errors",
-                "--est Estimates the key updates based on the card's CSN assuming standard key, can be used with --credit option",
-                "--credit EXPERIMENTAL : Recover the credit key using KD 0"
+                "--est Estimates the key updates based on the card's CSN assuming standard key, can be used with --credit option"
             ],
-            "usage": "hf iclass legrec [-h] --macs <hex> [--index <dec>] [--loop <dec>] [--debug] [--notest] [--allnight] [--fast] [--sl] [--est] [--credit]"
+            "usage": "hf iclass legrec [-h] [--macs <hex>] [--index <dec>] [--loop <dec>] [--debug] [--notest] [--allnight] [--fast] [--sl] [--est]"
         },
         "hf iclass loclass": {
             "command": "hf iclass loclass",
@@ -6045,6 +6045,35 @@
             ],
             "usage": "hf mfdes bruteaid [-h] [--start <hex>] [--end <hex>] [-i <dec>] [--preset <full|ascii|numbers|letters|dictionary|mad>]"
         },
+        "hf mfdes brutedamslot": {
+            "command": "hf mfdes brutedamslot",
+            "description": "Recover DAM slot to delegated AID mappings by bruteforce. WARNING: This command takes a loooong time",
+            "notes": [
+                "hf mfdes brutedamslot -> bruteforce all DAM slots",
+                "hf mfdes brutedamslot --start 0000 --end 00ff -> bruteforce specific DAM slot range",
+                "hf mfdes brutedamslot --step 16 -> bruteforce DAM slots with step 16",
+                "hf mfdes brutedamslot --no-auth -> execute without authentication"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-a, --apdu Show APDU requests and responses",
+                "-v, --verbose Verbose output",
+                "-n, --keyno <dec> Key number (default: 0 / PICC key)",
+                "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
+                "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
+                "--kdf <none|AN10922|gallagher> Key Derivation Function (KDF)",
+                "-i, --kdfi <hex> KDF input (1-31 hex bytes)",
+                "-m, --cmode <plain|mac|encrypt> Communicaton mode",
+                "-c, --ccset <native|niso|iso> Communicaton command set",
+                "--schann <d40|ev1|ev2|lrp> Secure channel",
+                "--start <hex> Starting DAM slot (2 hex bytes, little endian on card)",
+                "--end <hex> Last DAM slot (2 hex bytes, little endian on card)",
+                "--step <dec> Increment step when bruteforcing DAM slots",
+                "--no-auth Execute without authentication"
+            ],
+            "usage": "hf mfdes brutedamslot [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--start <hex>] [--end <hex>] [--step <dec>] [--no-auth]"
+        },
         "hf mfdes bruteisofid": {
             "command": "hf mfdes bruteisofid",
             "description": "Recover ISO file IDs by bruteforce. WARNING: This command takes a loooong time",
@@ -6280,6 +6309,49 @@
                 "--no-auth Execute without authentication"
             ],
             "usage": "hf mfdes createapp [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--rawdata <hex>] [--aid <hex>] [--fid <hex>] [--dfname <str>] [--dfhex <hex>] [--ks1 <hex>] [--ks2 <hex>] [--dstalgo <DES|2TDEA|3TDEA|AES>] [--numkeys <dec>] [--no-auth]"
+        },
+        "hf mfdes createdelegateapp": {
+            "command": "hf mfdes createdelegateapp",
+            "description": "Create delegated application (CreateDelegatedApplication / 0xC9). Master key needs to be provided.",
+            "notes": [
+                "Command is built from fields and sends two frames: C9 + AF continuation.",
+                "Authentication is always performed with DAM key number 0x10.",
+                "EncK and DAMMAC are calculated from supplied key material.",
+                "",
+                "Structured mode examples:",
+                "hf mfdes createdelegateapp --aid 123456 --damslot 0001 --damslotver 00 --quota 0010 --ks1 0F --ks2 AE --algo 2TDEA --key 00000000000000000000000000000000 --damenckey 00112233445566778899AABBCCDDEEFF --dammackey 8899AABBCCDDEEFF0011223344556677 --dstkey 00112233445566778899AABBCCDDEEFF --dstkeyver 00",
+                "hf mfdes createdelegateapp --aid 123456 --damslot 0001 --quota 0010 --ks1 0F --dstalgo aes --numkeys 14 --ks3 01 --fid E110 --dfname D2760000850101 --algo 2TDEA --key 00000000000000000000000000000000 --damenckey 00112233445566778899AABBCCDDEEFF --dammackey 8899AABBCCDDEEFF0011223344556677 --dstkey 00112233445566778899AABBCCDDEEFF --dstkeyver 00"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-a, --apdu Show APDU requests and responses",
+                "-v, --verbose Verbose output",
+                "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
+                "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
+                "--kdf <none|AN10922|gallagher> Key Derivation Function (KDF)",
+                "-i, --kdfi <hex> KDF input (1-31 hex bytes)",
+                "-m, --cmode <plain|mac|encrypt> Communicaton mode",
+                "-c, --ccset <native|niso|iso> Communicaton command set",
+                "--schann <d40|ev1|ev2|lrp> Secure channel",
+                "--aid <hex> Application ID for create. Mandatory in structured mode. (3 hex bytes, big endian)",
+                "--damslot <hex> DAM slot number (2 hex bytes, little endian on card)",
+                "--damslotver <hex> DAM slot version (1 hex byte, def: 00)",
+                "--quota <hex> Quota in blocks (2 hex bytes, little endian on card, def: 0000)",
+                "--ks1 <hex> Key settings 1 (1 hex byte, def: 0x0F)",
+                "--ks2 <hex> Key settings 2 (1 hex byte, def: 0x0E)",
+                "--ks3 <hex> Key settings 3 (1 hex byte, optional)",
+                "--fid <hex> ISO file ID (2 hex bytes, big endian), optional",
+                "--dfname <hex> ISO DF Name (1..16 bytes, hex), optional",
+                "--dstalgo <DES|2TDEA|3TDEA|AES> Application key crypt algo (used when ks2 omitted, def: DES)",
+                "--numkeys <dec> Number of keys 0x01..0x0e (used when ks2 omitted, def: 0x01)",
+                "--damenckey <hex> DAM ENC key (16 bytes for AES/2TDEA, 24 bytes for 3TDEA)",
+                "--dammackey <hex> DAM MAC key (16 bytes for AES/2TDEA, 24 bytes for 3TDEA)",
+                "--dstkey <hex> Initial delegated-app key (16 bytes for 2TDEA/AES, 24 bytes for 3TDEA)",
+                "--dstkeyver <hex> Initial delegated-app key version (1 hex byte, def: 00)",
+                "--no-auth Execute without authentication"
+            ],
+            "usage": "hf mfdes createdelegateapp [-hav] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--damslot <hex>] [--damslotver <hex>] [--quota <hex>] [--ks1 <hex>] [--ks2 <hex>] [--ks3 <hex>] [--fid <hex>] [--dfname <hex>] [--dstalgo <DES|2TDEA|3TDEA|AES>] [--numkeys <dec>] [--damenckey <hex>] [--dammackey <hex>] [--dstkey <hex>] [--dstkeyver <hex>] [--no-auth]"
         },
         "hf mfdes createfile": {
             "command": "hf mfdes createfile",
@@ -6663,6 +6735,33 @@
                 "--no-auth Execute without authentication"
             ],
             "usage": "hf mfdes getappnames [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--no-auth]"
+        },
+        "hf mfdes getdelegateappinfo": {
+            "command": "hf mfdes getdelegateappinfo",
+            "description": "Get delegated application information for DAM slot (GetDelegatedInfo / 0x69).",
+            "notes": [
+                "By default authentication is performed with PICC key number 0x00.",
+                "Use --keyno to pick another key number, or --no-auth to skip authentication.",
+                "hf mfdes getdelegateappinfo --damslot 0001 --algo 2TDEA --key 00000000000000000000000000000000",
+                "hf mfdes getdelegateappinfo --damslot 0001 --no-auth"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-a, --apdu Show APDU requests and responses",
+                "-v, --verbose Verbose output",
+                "-n, --keyno <dec> Key number (default: 0 / PICC key)",
+                "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
+                "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
+                "--kdf <none|AN10922|gallagher> Key Derivation Function (KDF)",
+                "-i, --kdfi <hex> KDF input (1-31 hex bytes)",
+                "-m, --cmode <plain|mac|encrypt> Communicaton mode",
+                "-c, --ccset <native|niso|iso> Communicaton command set",
+                "--schann <d40|ev1|ev2|lrp> Secure channel",
+                "--damslot <hex> DAM slot number (2 hex bytes, little endian on card)",
+                "--no-auth Execute without authentication"
+            ],
+            "usage": "hf mfdes getdelegateappinfo [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--damslot <hex>] [--no-auth]"
         },
         "hf mfdes getfileids": {
             "command": "hf mfdes getfileids",
@@ -7185,6 +7284,20 @@
             ],
             "usage": "hf mfdes write [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--fid <hex>] [--no-auth] [--type <auto|data|value|record|mac>] [-o <hex>] [-d <hex>] [--debit] [--commit] [--updaterec <dec>] [--isoid <hex>] [--fileisoid <hex>] [--readerid <hex>] [--trkey <hex>]"
         },
+        "hf mfp acl": {
+            "command": "hf mfp acl",
+            "description": "Print decoded MIFARE Plus access rights (ACL), A = key A B = key B AB = both key A and B ACCESS = access bytes inside sector trailer block Increment, decrement, transfer, restore is for value blocks",
+            "notes": [
+                "hf mf acl",
+                "hf mf acl -d FF0780"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-d, --data <hex> ACL bytes specified as 4 hex bytes"
+            ],
+            "usage": "hf mfp acl [-h] -d <hex>"
+        },
         "hf mfp auth": {
             "command": "hf mfp auth",
             "description": "Executes AES authentication command for MIFARE Plus card",
@@ -7311,7 +7424,7 @@
         },
         "hf mfp help": {
             "command": "hf mfp help",
-            "description": "help This help list List MIFARE Plus history --------------------------------------------------------------------------------------- hf mfp list available offline: yes Alias of `trace list -t mfp -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List MIFARE Plus history acl Decode ACL values for Mifare Plus --------------------------------------------------------------------------------------- hf mfp list available offline: yes Alias of `trace list -t mfp -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf mfp list --frame -> show frame delay times",
                 "hf mfp list -1 -> use trace buffer"
@@ -8320,12 +8433,24 @@
         },
         "hf secc help": {
             "command": "hf secc help",
-            "description": "-------- ----------- HID Config Card ----------- help This help --------------------------------------------------------------------------------------- hf secc sim available offline: no Simulate a HID iCLASS SE Config Card (JCOP / GlobalPlatform SCP02). Responds to SELECT AID (0013/0017), A0 D4, INITIALIZE UPDATE, and EXTERNAL AUTH. Load card parameters (UID, AID, SCP02Key) from a JSON file.",
+            "description": "-------- ----------- HID Config Card ----------- help This help --------------------------------------------------------------------------------------- hf secc info available offline: no Read and decode Card Recognition Data from a GlobalPlatform card. Sends GET DATA (80 CA 00 66 00) and parses the Card Recognition Template (tag 73) to identify platform, SCP type, and chip family.",
+            "notes": [
+                "hf secc info"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hf secc info [-h]"
+        },
+        "hf secc sim": {
+            "command": "hf secc sim",
+            "description": "Simulate a HID iCLASS SE Config Card (JCOP / GlobalPlatform SCP02). APDUs are matched against the JSON APDUResponses table; INITIALIZE UPDATE and EXTERNAL AUTH are handled by the built-in SCP02 crypto. Anything else falls through to the JSON DefaultResponse (or 9000 if none is set).",
             "notes": [
                 "hf secc sim -f hidconfig_sample",
                 "hf secc sim -f hidconfig_sample -n 5 -> stop after 5 reader interactions"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> JSON file with UID, AID, SCP02Key (without .json extension)",
@@ -8335,11 +8460,13 @@
         },
         "hf secc sniff": {
             "command": "hf secc sniff",
-            "description": "Sniff the communication between a HID Config Card reader and card. Use `hf 14a list` to view collected data.",
+            "description": "Sniff the communication between a HID Config Card reader and card. Use `hf seos list` to view collected data. With -j and no -d, jams responses to APDU A0 D4 00 00 00. With -j -d <hex> jams responses to the specified APDU. Use -r <hex> to override the jam response payload (default: 00009000).",
             "notes": [
                 "hf secc sniff",
                 "hf secc sniff -j -> jam A0 D4 00 00 00, respond 00 00 90 00",
-                "hf secc sniff -c -r -> trigger on card or reader data"
+                "hf secc sniff -j -d A0D4000000 -> same, APDU specified explicitly",
+                "hf secc sniff -j -d A0D4000000 -r 9000 -> jam A0D4000000, respond 90 00",
+                "hf secc sniff -c -i -> trigger on card data, interactive"
             ],
             "offline": false,
             "options": [
@@ -8347,9 +8474,11 @@
                 "-c, --card triggered by first data from card",
                 "-r, --reader triggered by first 7-bit request from reader (REQ, WUP)",
                 "-i, --interactive console will not be returned until sniff finishes or is aborted",
-                "-j, --jam jam APDU A0 D4 00 00 00, respond with 00 00 90 00"
+                "-j, --jam jam responses to a specific APDU (see -d/-a)",
+                "-d, --apdu <hex> APDU bytes to jam (default: A0D4000000)",
+                "-a, --resp <hex> response payload when jamming (default: 00009000)"
             ],
-            "usage": "hf secc sniff [-hcrij]"
+            "usage": "hf secc sniff [-hcrij] [-d <hex>] [-a <hex>]"
         },
         "hf seos adf": {
             "command": "hf seos adf",
@@ -12092,6 +12221,29 @@
             ],
             "usage": "lf read [-hv@] [-s <dec>]"
         },
+        "lf relay": {
+            "command": "lf relay",
+            "description": "Relay LF signal between two Proxmark3 devices over TCP. By default it uses PORT 8000 and uses 40000 samples from Graphbuffer --rdr : Reading device, act as IP client and reads LF tag and sends data --tag : Simulation device, act as IP server and simulates relayed data",
+            "notes": [
+                "Device A, reading LF tag, client",
+                "lf relay --rdr --ip 192.168.1.141 -> Client, connect to IP 192.168.1.141:8000",
+                "lf relay --rdr --ip 192.168.1.141 -p 18111 -> Client, connect to IP 192.168.1.141:18111",
+                "",
+                "Device B, simulate LF tag, server",
+                "lf relay --tag -p 8111 -> Server listening port 8111, recv 40000 samples",
+                "lf relay --tag -s 10000 -> Server listening port 8000, recv 10000 samples"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--tag Simulation device, act as Server",
+                "--rdr Sniffing device, act as client",
+                "-i, --ip <ipaddr> Target IPv4 address to send data to. Used with `--rdr`",
+                "-s, --samples <dec> Number of samples to collect (def: 40000)",
+                "-p, --port <dec> Port number (def: 8000)"
+            ],
+            "usage": "lf relay [-h] [--tag] [--rdr] [-i <ipaddr>] [-s <dec>] [-p <dec>]"
+        },
         "lf search": {
             "command": "lf search",
             "description": "Read and search for valid known tag. For offline mode, you can `data load` first then search.",
@@ -14286,8 +14438,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 813,
+        "commands_extracted": 819,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-04-02T12:42:42"
+        "extracted_on": "2026-04-11T02:04:09"
     }
 }

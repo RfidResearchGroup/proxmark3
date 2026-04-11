@@ -432,6 +432,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf secc help           `|Y       |`This help`
+|`hf secc info           `|N       |`Read and decode Card Recognition Data (GP tag 0066)`
 |`hf secc sim            `|N       |`Simulate HID iCLASS SE Config Card`
 |`hf secc sniff          `|N       |`Sniff reader<->card, jam A0 D4 APDU`
 
@@ -638,6 +639,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf mfp help            `|Y       |`This help`
 |`hf mfp list            `|Y       |`List MIFARE Plus history`
+|`hf mfp acl             `|Y       |`Decode ACL values for Mifare Plus`
 |`hf mfp auth            `|N       |`Authentication`
 |`hf mfp chk             `|N       |`Check keys`
 |`hf mfp dump            `|N       |`Dump MIFARE Plus tag to file`
@@ -713,7 +715,10 @@ Check column "offline" for their availability.
 |`hf mfdes getaids       `|N       |`Get Application IDs list`
 |`hf mfdes getappnames   `|N       |`Get Applications list`
 |`hf mfdes bruteaid      `|N       |`Recover AIDs by bruteforce`
+|`hf mfdes brutedamslot  `|N       |`Recover DAM slots to delegated AIDs by bruteforce`
 |`hf mfdes createapp     `|N       |`Create Application`
+|`hf mfdes createdelegateapp`|N       |`Create Delegated Application`
+|`hf mfdes getdelegateappinfo`|N       |`Get Delegated Application info by DAM slot`
 |`hf mfdes deleteapp     `|N       |`Delete Application`
 |`hf mfdes selectapp     `|N       |`Select Application ID`
 |`hf mfdes selectisofid  `|N       |`Select file by ISO ID`
@@ -940,6 +945,7 @@ Check column "offline" for their availability.
 |`lf config              `|N       |`Get/Set config for LF sampling, bit/sample, decimation, frequency`
 |`lf cmdread             `|N       |`Modulate LF reader field to send command before read`
 |`lf read                `|N       |`Read LF tag`
+|`lf relay               `|N       |`LF relay between two pm3 devices (tag/rdr mode)`
 |`lf search              `|Y       |`Read and Search for valid known tag`
 |`lf sim                 `|N       |`Simulate LF tag from buffer`
 |`lf simask              `|N       |`Simulate ASK tag`

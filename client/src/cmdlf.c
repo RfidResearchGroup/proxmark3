@@ -24,17 +24,7 @@
 #include <math.h>
 #include <unistd.h>
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#else
-#include <netinet/tcp.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#endif
+#include "relay/relay.h"
 
 #include "cmdparser.h"      // command_t
 #include "comms.h"
@@ -1722,33 +1712,9 @@ static int check_autocorrelate(const char *prefix, int clock) {
 
 static int lf_relay_tag(uint64_t samples, uint16_t port) {
 
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) {
-        PrintAndLogEx(ERR, "Failed to create socket");
-        return PM3_EFAILED;
-    }
-
-    struct sockaddr_in addr = { .sin_family = AF_INET, .sin_port = htons(port), .sin_addr.s_addr = INADDR_ANY };
-    int opt = 1;
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-    if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-        PrintAndLogEx(ERR, "Failed to bind to port " _RED_("%u"), port);
-        close(sock);
-        return PM3_EFAILED;
-    }
-
-    if (listen(sock, 1) < 0) {
-        PrintAndLogEx(ERR, "Failed to listen on socket");
-        close(sock);
-        return PM3_EFAILED;
-    }
-
-    PrintAndLogEx(INFO, "Relay listening on port " _YELLOW_("%u") "...", port);
-
-    int client = accept(sock, NULL, NULL);
-    if (client < 0) {
-        PrintAndLogEx(ERR, "Failed to accept connection");
-        close(sock);
+    relay_socket_t listen_sock = RELAY_SOCKET_INVALID;
+    relay_socket_t client = relay_listen_accept(port, &listen_sock);
+    if (client == RELAY_SOCKET_INVALID) {
         return PM3_EFAILED;
     }
 
@@ -1763,49 +1729,32 @@ static int lf_relay_tag(uint64_t samples, uint16_t port) {
 
         lf_read_internal(false, false, samples);
 
-        if (g_GraphTraceLen > 1000 && !getSignalProperties()->isnoise) {
+        if ((g_GraphTraceLen > 1000) && (getSignalProperties()->isnoise == false)) {
 
             PrintAndLogEx(INFO, "Tag detected! Sending %zu samples to Client...", g_GraphTraceLen);
-    
+
             uint32_t len = (uint32_t)g_GraphTraceLen;
-            if (send(client, &len, sizeof(len), 0) < 0) {
+            if (relay_send_all(client, &len, sizeof(len)) != 0) {
                 break;
             }
-            
-            if (send(client, g_GraphBuffer, len * sizeof(int32_t), 0) < 0) {
+
+            if (relay_send_all(client, g_GraphBuffer, len * sizeof(int32_t)) != 0) {
                 break;
             }
 
             msleep(500);
         }
-
     }
-    close(client);
-    close(sock);
+
+    relay_close(client);
+    relay_close(listen_sock);
     return PM3_SUCCESS;
 }
 
 static int lf_relay_rdr(const char *ip, uint16_t port) {
 
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) {
-        PrintAndLogEx(ERR, "Failed to create socket");
-        return PM3_EFAILED;
-    }
-    
-    struct sockaddr_in addr = {0};
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-
-    if (inet_pton(AF_INET, ip, &addr.sin_addr) <= 0) {
-        PrintAndLogEx(ERR, "Invalid IP address... %s:%u", ip, port);
-        close(sock);
-        return PM3_EFAILED;
-    }
-
-    if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-        PrintAndLogEx(ERR, "Connection error to %s:%u", ip, port);
-        close(sock);
+    relay_socket_t sock = relay_connect(ip, port);
+    if (sock == RELAY_SOCKET_INVALID) {
         return PM3_EFAILED;
     }
 
@@ -1814,9 +1763,9 @@ static int lf_relay_rdr(const char *ip, uint16_t port) {
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     PrintAndLogEx(NORMAL, "");
 
-    int n = 0;
-    do {
-           
+    bool running = true;
+    while (running) {
+
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
             PrintAndLogEx(DEBUG, "\naborted via keyboard!");
@@ -1825,67 +1774,74 @@ static int lf_relay_rdr(const char *ip, uint16_t port) {
         }
 
         uint32_t incoming_len = 0;
-
-        n = recv(sock, &incoming_len, sizeof(incoming_len), MSG_WAITALL);
-
-        if (n > 0 && incoming_len > 0) {
-
-            if (incoming_len > MAX_GRAPH_TRACE_LEN) {
-                PrintAndLogEx(ERR, "Received length " _RED_("%u") " exceeds buffer size %u, dropping", incoming_len, MAX_GRAPH_TRACE_LEN);
-                break;
-            }
-
-            PrintAndLogEx(INFO, "Received " _YELLOW_("%u") " samples. Processing...", incoming_len);
-            ssize_t rx = recv(sock, g_GraphBuffer, incoming_len * sizeof(int32_t), MSG_WAITALL);
-
-            if (rx != (ssize_t)(incoming_len * sizeof(int32_t))) {
-                PrintAndLogEx(ERR, "Short read: expected %u bytes, got %zd", incoming_len * (uint32_t)sizeof(int32_t), rx);
-                break;
-            }
-
-            // if previous simulation running,  we need to break it.
-            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            msleep(300);
-
-            g_GraphTraceLen = incoming_len;
-            lf_chk_bitstream();
-            lfsim_upload_gb();
-            struct { 
-                uint16_t len; 
-                uint16_t gap; 
-            } PACKED payload;
-            payload.len = (g_GraphTraceLen > UINT16_MAX) ? UINT16_MAX : (uint16_t)g_GraphTraceLen;
-            payload.gap = 0;
-
-            clearCommandBuffer();
-            SendCommandNG(CMD_LF_SIMULATE, (uint8_t *)&payload, sizeof(payload));
-
-            PrintAndLogEx(SUCCESS, "Simulation active.");
+        int n = relay_recv_all(sock, &incoming_len, sizeof(incoming_len));
+        if (n < 0) {
+            break;
         }
 
-    } while (n > 0);
+        if (incoming_len == 0) {
+            continue;
+        }
 
-    close(sock);
-    
+        if (incoming_len > MAX_GRAPH_TRACE_LEN) {
+            PrintAndLogEx(ERR, "Received length " _RED_("%u") " exceeds buffer size %u, dropping", incoming_len, (uint32_t)MAX_GRAPH_TRACE_LEN);
+            break;
+        }
+
+        PrintAndLogEx(INFO, "Received " _YELLOW_("%u") " samples. Processing...", incoming_len);
+
+        int rx = relay_recv_all(sock, g_GraphBuffer, incoming_len * sizeof(int32_t));
+        if (rx < 0) {
+            PrintAndLogEx(ERR, "Short read receiving sample data");
+            break;
+        }
+
+        // if previous simulation running, we need to break it.
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        msleep(300);
+
+        g_GraphTraceLen = incoming_len;
+        lf_chk_bitstream();
+        lfsim_upload_gb();
+
+        struct {
+            uint16_t len;
+            uint16_t gap;
+        } PACKED payload;
+        payload.len = (g_GraphTraceLen > UINT16_MAX) ? UINT16_MAX : (uint16_t)g_GraphTraceLen;
+        payload.gap = 0;
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_SIMULATE, (uint8_t *)&payload, sizeof(payload));
+
+        PrintAndLogEx(SUCCESS, "Simulation active.");
+    }
+
+    relay_close(sock);
     return PM3_SUCCESS;
 }
 
 int CmdLFRelay(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf relay",
-                  "Relay LF signal between two Proxmark3 devices over TCP.\n"
-                  "By default it uses PORT 8000.\n"
-                  "One device acts as a Tag Proxy, the other as a Reader Client.",
-                  "lf relay --tag -s 7000\n"
-                  "lf relay --rdr --ip 192.168.1.141"
-                 );
+                "Relay LF signal between two Proxmark3 devices over TCP.\n"
+                "By default it uses PORT 8000 and uses 40000 samples from Graphbuffer\n"
+                "  --rdr  : Reading device, act as IP client and reads LF tag and sends data\n"
+                "  --tag  : Simulation device, act as IP server and simulates relayed data\n",
+                _WHITE_("Device A, reading LF tag, client") "\n"                 
+                "lf relay --rdr --ip 192.168.1.141           -> Client, connect to IP 192.168.1.141:8000\n"
+                "lf relay --rdr --ip 192.168.1.141 -p 18111  -> Client, connect to IP 192.168.1.141:18111 \n\n"        
+                _WHITE_("Device B, simulate LF tag, server") "\n"
+                "lf relay --tag -p 8111                     -> Server listening port 8111, recv 40000 samples\n"
+                "lf relay --tag -s 10000                    -> Server listening port 8000, recv 10000 samples\n"
+            );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "tag", "Act as Tag Proxy (Server)"),
-        arg_lit0(NULL, "rdr", "Act as Reader Client (Connects to Proxy)"),
-        arg_str0("i", "ip", "<i>", "Target IP address for Reader mode"),
-        arg_u64_0("s", "samples", "<dec>", "Number of samples to collect (default 40000)"),
+        arg_lit0(NULL, "tag", "Simulation device, act as Server"),
+        arg_lit0(NULL, "rdr", "Sniffing device, act as client"),
+        arg_str0("i", "ip", "<ipaddr>", "Target IPv4 address to send data to. Used with `--rdr`"),
+        arg_u64_0("s", "samples", "<dec>", "Number of samples to collect (def: 40000)"),
         arg_u64_0("p", "port", "<dec>", "Port number (def: 8000)"),
         arg_param_end
     };

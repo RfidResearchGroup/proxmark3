@@ -3,8 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Fixed ACL RO checks on 16-block sectors when using `hf mf wrbl` and `hf mfp wrbl` (@team-orangeBlue)
+- Fixed `hf mf wrbl` and `hf mfp wrbl` the ACL RO checks on 16-block sectors correct  (@team-orangeBlue)
 - Changed `hf mfp wrbl` command to check for Sector Trailer errors that could potentially lock sectors out (@team-orangeBlue)
+- Changed `hf felica info` and `hf felica rqsyscode` system code name annotation (@team-orangeBlue)
 - Added `lf relay` command where it relays between two pm3 devices over internet. Thanks to Moerno for the code! (@iceman1001)
 - Changed `hf mf acl` command to have more recognized generic configurations (@team-orangeBlue)
 - Added `hf mfp acl` command (@team-orangeBlue)
@@ -15,10 +16,10 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added `hf mfdes createdelegateapp` command (@kormax)
 - Optimized `hf iclass legbrute` throughput: replaced recursive `suc()`/`output()` cipher functions with iterative loops, added 256-entry LUT for the `select()` function eliminating redundant bit arithmetic and halving key lookups per state step, switched successor state to in-place pointer update removing per-call struct copies, added `doMAC_brute()` with byte-wise LSB-first processing and direct output bit packing eliminating all bitstream struct overhead and output reversal calls per key candidate, and replaced per-iteration 64-bit modulo progress check with a countdown counter (@antiklesys)
 - Improved `hf iclass legbrute` fixed multithreaded key-range partitioning so threads cover non-overlapping slices of the 40-bit keyspace, added ETA display, keyboard abort with resume hint, `_Atomic` correctness for shared state, `pthread_create` error handling, and thread count capped at available CPUs (@antiklesys)
-- Added wildcard support to `hf secc sim` payloads (@antiklesys)
+- Changed `hf secc sim` it nows supports wildcard to payloads (@antiklesys)
 - Added `hf secc` to build a base for simulating basic function of iclass SE config cards (@antiklesys)
-- Improved SIO parsing for `hf iclass view` based on Iceman's "Dismantling the SEOS Protocol" talk (@antiklesys)
-- Added live fc/cn update to `hf iclass tagsim` refreshing the csn with each update (@antiklesys)
+- Changed `hf iclass view` , improved SIO parsing for based on @Iceman1001's "Dismantling the SEOS Protocol" talk (@antiklesys)
+- Changed `hf iclass tagsim` added live fc/cn update to refreshing the csn with each update (@antiklesys)
 - Added `--live` option to `hf iclass lookup` command to perform a live recovery of the reader's key by simulating a tag and running the lookup command against both standard and elite dictionaries (@antiklesys)
 - Added `hf iclass tagsim` command to quickly simulate an iclass card based on facility code and card number(@antiklesys)
 - Added `-f` parameter to `hf iclass sam` command to use the sam to parse a card dump (@antiklesys)

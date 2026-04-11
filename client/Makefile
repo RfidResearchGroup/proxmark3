@@ -831,6 +831,8 @@ SRCS =  mifare/aiddesfire.c \
         pm3line.c \
         proxmark3.c \
         scandir.c \
+        relay/relay_posix.c \
+        relay/relay_win32.c \
         uart/ringbuffer.c \
         uart/uart_common.c \
         uart/uart_posix.c \

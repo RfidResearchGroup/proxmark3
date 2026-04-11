@@ -176,6 +176,12 @@ typedef struct {
 } PACKED felica_status_response_t;
 
 typedef struct {
+    uint8_t length[1];
+    uint8_t command_code[1];
+    uint8_t IDm[8];
+} PACKED felica_request_system_code_request_t;
+
+typedef struct {
     felica_frame_response_t frame_response;
     uint8_t number_of_systems[1];
     uint8_t system_code_list[32];
