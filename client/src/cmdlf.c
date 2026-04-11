@@ -1824,19 +1824,24 @@ static int lf_relay_rdr(const char *ip, uint16_t port) {
 int CmdLFRelay(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf relay",
-                  "Relay LF signal between two Proxmark3 devices over TCP.\n"
-                  "By default it uses PORT 8000.\n"
-                  "One device acts as a Tag Proxy, the other as a Reader Client.",
-                  "lf relay --tag -s 7000\n"
-                  "lf relay --rdr --ip 192.168.1.141"
-                 );
+                "Relay LF signal between two Proxmark3 devices over TCP.\n"
+                "By default it uses PORT 8000 and uses 40000 samples from Graphbuffer\n"
+                "  --rdr  : Reading device, act as IP client and reads LF tag and sends data\n"
+                "  --tag  : Simulation device, act as IP server and simulates relayed data\n",
+                _WHITE_("Device A, reading LF tag, client") "\n"                 
+                "lf relay --rdr --ip 192.168.1.141           -> Client, connect to IP 192.168.1.141:8000\n"
+                "lf relay --rdr --ip 192.168.1.141 -p 18111  -> Client, connect to IP 192.168.1.141:18111 \n\n"        
+                _WHITE_("Device B, simulate LF tag, server") "\n"
+                "lf relay --tag -p 8111                     -> Server listening port 8111, recv 40000 samples\n"
+                "lf relay --tag -s 10000                    -> Server listening port 8000, recv 10000 samples\n"
+            );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "tag", "Act as Tag Proxy (Server)"),
-        arg_lit0(NULL, "rdr", "Act as Reader Client (Connects to Proxy)"),
-        arg_str0("i", "ip", "<i>", "Target IP address for Reader mode"),
-        arg_u64_0("s", "samples", "<dec>", "Number of samples to collect (default 40000)"),
+        arg_lit0(NULL, "tag", "Simulation device, act as Server"),
+        arg_lit0(NULL, "rdr", "Sniffing device, act as client"),
+        arg_str0("i", "ip", "<ipaddr>", "Target IPv4 address to send data to. Used with `--rdr`"),
+        arg_u64_0("s", "samples", "<dec>", "Number of samples to collect (def: 40000)"),
         arg_u64_0("p", "port", "<dec>", "Port number (def: 8000)"),
         arg_param_end
     };
