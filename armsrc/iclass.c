@@ -1421,17 +1421,19 @@ static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint3
     // save CSN
     memcpy(hdr->csn, resp, sizeof(hdr->csn));
 
-    // card selected, select page
-    uint8_t pagesel_resp[10];
-    start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-    uint8_t pagesel[] = {0x80 | ICLASS_CMD_PAGESEL, page, 0x00, 0x00};
-    AddCrc(pagesel + 1, 1);
+    // card selected, select page if not page 0
+    if (page != 0) {
+        uint8_t pagesel_resp[10];
+        start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        uint8_t pagesel[] = {0x80 | ICLASS_CMD_PAGESEL, page, 0x00, 0x00};
+        AddCrc(pagesel + 1, 1);
 
-    bool pagesel_res = iclass_send_cmd_with_retries(pagesel, sizeof(pagesel), pagesel_resp, sizeof(resp),
-        10, 2, &start_time, ICLASS_READER_TIMEOUT_OTHERS, eof_time, shallow_mod);
+        bool pagesel_res = iclass_send_cmd_with_retries(pagesel, sizeof(pagesel), pagesel_resp, sizeof(resp),
+            10, 2, &start_time, ICLASS_READER_TIMEOUT_OTHERS, eof_time, shallow_mod);
 
-    if (pagesel_res == false) {
-        return false;
+        if (pagesel_res == false) {
+            return false;
+        }
     }
 
     // card selected, now read config (block1) (only 8 bytes no CRC)
