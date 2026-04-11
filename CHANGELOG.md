@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added system code name annotation to 'hf felica info' and 'hf felica rqsyscode'
 - Added `lf relay` command where it relays between two pm3 devices over internet. Thanks to Moerno for the code! (@iceman1001)
 - Changed `hf mf acl` command to have more recognized generic configurations (@team-orangeBlue)
 - Added `hf mfp acl` command (@team-orangeBlue)
