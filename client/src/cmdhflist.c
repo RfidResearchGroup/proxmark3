@@ -1972,48 +1972,77 @@ void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 }
 
 void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
-    switch (cmd[3]) {
-        case FELICA_POLL_REQ:
+    if (cmdsize < 4) {
+        snprintf(exp, size, "?");
+        return;
+    }
+
+    uint16_t cmd_code = cmd[3];
+    if (cmd_code >= 0xC0 && cmdsize > 4) {
+        // Command codes >= 0xC0 include a second-byte subcommand/function code.
+        cmd_code = (uint16_t)((cmd_code << 8) | cmd[4]);
+    }
+
+    switch (cmd_code) {
+        case FELICA_POLL_REQ: {
+            // Polling request code is byte 6 of the trace frame.
+            if (cmdsize > 6) {
+                if (cmd[6] == 0x01) {
+                    snprintf(exp, size, "POLLING (SYSTEM CODE)");
+                    break;
+                }
+                if (cmd[6] == 0x02) {
+                    snprintf(exp, size, "POLLING (COMMUNICATION PERFORMANCE)");
+                    break;
+                }
+            }
             snprintf(exp, size, "POLLING");
             break;
+        }
         case FELICA_POLL_ACK:
-            snprintf(exp, size, "POLL ACK");
+            snprintf(exp, size, "POLLING ACK");
             break;
         case FELICA_REQSRV_REQ:
             snprintf(exp, size, "REQUEST SERVICE");
             break;
         case FELICA_REQSRV_ACK:
-            snprintf(exp, size, "REQ SERV ACK");
+            snprintf(exp, size, "REQUEST SERVICE ACK");
             break;
         case FELICA_REQRESP_REQ:
             snprintf(exp, size, "REQUEST RESPONSE");
             break;
         case FELICA_REQRESP_ACK:
-            snprintf(exp, size, "REQ RESP ACK");
+            snprintf(exp, size, "REQUEST RESPONSE ACK");
             break;
         case FELICA_RDBLK_REQ:
-            snprintf(exp, size, "READ BLK");
+            snprintf(exp, size, "READ WITHOUT ENCRYPTION");
             break;
         case FELICA_RDBLK_ACK:
-            snprintf(exp, size, "READ BLK ACK");
+            snprintf(exp, size, "READ WITHOUT ENCRYPTION ACK");
             break;
         case FELICA_WRTBLK_REQ:
-            snprintf(exp, size, "WRITE BLK");
+            snprintf(exp, size, "WRITE WITHOUT ENCRYPTION");
             break;
         case FELICA_WRTBLK_ACK:
-            snprintf(exp, size, "WRITE BLK ACK");
+            snprintf(exp, size, "WRITE WITHOUT ENCRYPTION ACK");
             break;
         case FELICA_SRCHSYSCODE_REQ:
             snprintf(exp, size, "SEARCH SERVICE CODE");
             break;
         case FELICA_SRCHSYSCODE_ACK:
-            snprintf(exp, size, "SSC ACK");
+            snprintf(exp, size, "SEARCH SERVICE CODE ACK");
             break;
         case FELICA_REQSYSCODE_REQ:
             snprintf(exp, size, "REQUEST SYSTEM CODE");
             break;
         case FELICA_REQSYSCODE_ACK:
-            snprintf(exp, size, "RSC ACK");
+            snprintf(exp, size, "REQUEST SYSTEM CODE ACK");
+            break;
+        case FELICA_REQBLKINFO_REQ:
+            snprintf(exp, size, "REQUEST BLOCK INFORMATION");
+            break;
+        case FELICA_REQBLKINFO_ACK:
+            snprintf(exp, size, "REQUEST BLOCK INFORMATION ACK");
             break;
         case FELICA_AUTH1_REQ:
             snprintf(exp, size, "AUTH 1");
@@ -2045,11 +2074,53 @@ void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case FELICA_GET_NODE_LIST_ACK:
             snprintf(exp, size, "REQUEST CODE LIST ACK");
             break;
+        case FELICA_REQBLKINFO_EX_REQ:
+            snprintf(exp, size, "REQUEST BLOCK INFORMATION EX");
+            break;
+        case FELICA_REQBLKINFO_EX_ACK:
+            snprintf(exp, size, "REQUEST BLOCK INFORMATION EX ACK");
+            break;
+        case FELICA_SET_PARAMETER_REQ:
+            snprintf(exp, size, "SET PARAMETER");
+            break;
+        case FELICA_SET_PARAMETER_ACK:
+            snprintf(exp, size, "SET PARAMETER ACK");
+            break;
+        case FELICA_GET_CONTAINER_ISSUE_INFO_REQ:
+            snprintf(exp, size, "GET CONTAINER ISSUE INFO");
+            break;
+        case FELICA_GET_CONTAINER_ISSUE_INFO_ACK:
+            snprintf(exp, size, "GET CONTAINER ISSUE INFO ACK");
+            break;
+        case FELICA_GET_AREA_INFO_REQ:
+            snprintf(exp, size, "GET AREA INFO");
+            break;
+        case FELICA_GET_AREA_INFO_ACK:
+            snprintf(exp, size, "GET AREA INFO ACK");
+            break;
+        case FELICA_GET_NODE_PROPERTY_REQ:
+            snprintf(exp, size, "GET NODE PROPERTY");
+            break;
+        case FELICA_GET_NODE_PROPERTY_ACK:
+            snprintf(exp, size, "GET NODE PROPERTY ACK");
+            break;
+        case FELICA_GET_CONTAINER_PROPERTY_REQ:
+            snprintf(exp, size, "GET CONTAINER PROPERTY");
+            break;
+        case FELICA_GET_CONTAINER_PROPERTY_ACK:
+            snprintf(exp, size, "GET CONTAINER PROPERTY ACK");
+            break;
         case FELICA_REQSRV2_REQ:
             snprintf(exp, size, "REQUEST SERVICE v2");
             break;
         case FELICA_REQSRV2_ACK:
-            snprintf(exp, size, "REQ SERV v2 ACK");
+            snprintf(exp, size, "REQUEST SERVICE v2 ACK");
+            break;
+        case FELICA_INTERNAL_AUTH_READ_REQ:
+            snprintf(exp, size, "INTERNAL AUTHENTICATE AND READ");
+            break;
+        case FELICA_INTERNAL_AUTH_READ_ACK:
+            snprintf(exp, size, "INTERNAL AUTHENTICATE AND READ ACK");
             break;
         case FELICA_GETSTATUS_REQ:
             snprintf(exp, size, "GET STATUS");
@@ -2057,11 +2128,17 @@ void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case FELICA_GETSTATUS_ACK:
             snprintf(exp, size, "GET STATUS ACK");
             break;
+        case FELICA_GETPLATFORMINFO_REQ:
+            snprintf(exp, size, "GET PLATFORM INFO");
+            break;
+        case FELICA_GETPLATFORMINFO_ACK:
+            snprintf(exp, size, "GET PLATFORM INFO ACK");
+            break;
         case FELICA_REQUEST_SPEC_VERSION_REQ:
             snprintf(exp, size, "REQUEST SPEC VERSION");
             break;
         case FELICA_REQUEST_SPEC_VERSION_ACK:
-            snprintf(exp, size, "REQUEST SPEC ACK");
+            snprintf(exp, size, "REQUEST SPEC VERSION ACK");
             break;
         case FELICA_RESET_MODE_REQ:
             snprintf(exp, size, "RESET MODE");
@@ -2097,7 +2174,16 @@ void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             snprintf(exp, size, "UPDATE RANDOM ID");
             break;
         case FELICA_UPDATE_RNDID_ACK:
-            snprintf(exp, size, "URI ACK");
+            snprintf(exp, size, "UPDATE RANDOM ID ACK");
+            break;
+        case FELICA_GET_CONTAINER_ID_REQ:
+            snprintf(exp, size, "GET CONTAINER ID");
+            break;
+        case FELICA_GET_CONTAINER_ID_ACK:
+            snprintf(exp, size, "GET CONTAINER ID ACK");
+            break;
+        case FELICA_ECHO_REQ:
+            snprintf(exp, size, "ECHO");
             break;
         default                     :
             snprintf(exp, size, "?");

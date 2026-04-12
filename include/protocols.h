@@ -837,6 +837,9 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FELICA_REQSYSCODE_REQ           0x0c
 #define FELICA_REQSYSCODE_ACK           0x0d
 
+#define FELICA_REQBLKINFO_REQ           0x0e
+#define FELICA_REQBLKINFO_ACK           0x0f
+
 #define FELICA_AUTH1_REQ                0x10
 #define FELICA_AUTH1_ACK                0x11
 
@@ -852,14 +855,29 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FELICA_GET_NODE_LIST_REQ        0x1a
 #define FELICA_GET_NODE_LIST_ACK        0x1b
 
+#define FELICA_REQBLKINFO_EX_REQ        0x1e
+#define FELICA_REQBLKINFO_EX_ACK        0x1f
+
+#define FELICA_SET_PARAMETER_REQ        0x20
+#define FELICA_SET_PARAMETER_ACK        0x21
+
 #define FELICA_GET_CONTAINER_ISSUE_INFO_REQ 0x22
 #define FELICA_GET_CONTAINER_ISSUE_INFO_ACK 0x23
+
+#define FELICA_GET_AREA_INFO_REQ        0x24
+#define FELICA_GET_AREA_INFO_ACK        0x25
+
+#define FELICA_GET_NODE_PROPERTY_REQ    0x28
+#define FELICA_GET_NODE_PROPERTY_ACK    0x29
 
 #define FELICA_GET_CONTAINER_PROPERTY_REQ   0x2e
 #define FELICA_GET_CONTAINER_PROPERTY_ACK   0x2f
 
 #define FELICA_REQSRV2_REQ              0x32
 #define FELICA_REQSRV2_ACK              0x33
+
+#define FELICA_INTERNAL_AUTH_READ_REQ   0x34
+#define FELICA_INTERNAL_AUTH_READ_ACK   0x35
 
 #define FELICA_GETSTATUS_REQ            0x38
 #define FELICA_GETSTATUS_ACK            0x39
@@ -889,6 +907,9 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 #define FELICA_GET_CONTAINER_ID_REQ     0x70
 #define FELICA_GET_CONTAINER_ID_ACK     0x71
+
+// Echo is a two-byte command (F000).
+#define FELICA_ECHO_REQ                 0xF000
 
 // FeliCa SYSTEM list
 #define SYSTEMCODE_ANY                  0xffff // ANY
