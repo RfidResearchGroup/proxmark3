@@ -1297,7 +1297,7 @@ static int info_felica(bool verbose) {
     const uint16_t container_properties[] = {0x0000, 0x0001};
     uint8_t container_property_data[FELICA_CONTAINER_PROPERTY_MAX_LEN] = {0};
     bool has_container_properties = false;
-    for (size_t i = 0; i < (sizeof(container_properties) / sizeof(container_properties[0])); i++) {
+    for (size_t i = 0; i < ARRAYLEN(container_properties); i++) {
         felica_get_container_property_request_t container_property_request;
         memset(&container_property_request, 0, sizeof(container_property_request));
         container_property_request.length[0] = sizeof(container_property_request);
@@ -1956,7 +1956,7 @@ static bool felica_discover_nodes_with_request_code_list(uint8_t *flags,
             node.end_code_le = (uint16_t)resp.data.asBytes[offset + 2] |
                                ((uint16_t)resp.data.asBytes[offset + 3] << 8);
             offset += 4;
-            if (batch_count < (sizeof(batch_nodes) / sizeof(batch_nodes[0]))) {
+            if (batch_count < ARRAYLEN(batch_nodes)) {
                 batch_nodes[batch_count++] = node;
             }
         }
@@ -1976,7 +1976,7 @@ static bool felica_discover_nodes_with_request_code_list(uint8_t *flags,
             node.has_end_code = false;
             node.end_code_le = 0;
             offset += 2;
-            if (batch_count < (sizeof(batch_nodes) / sizeof(batch_nodes[0]))) {
+            if (batch_count < ARRAYLEN(batch_nodes)) {
                 batch_nodes[batch_count++] = node;
             }
         }
@@ -2163,7 +2163,7 @@ static bool felica_discover_nodes_with_request_service(uint8_t *flags,
     size_t batch_count = 0;
 
     for (uint16_t number = 0; number <= FELICA_MAX_NODE_NUMBER; number++) {
-        for (size_t j = 0; j < (sizeof(FELICA_REQUEST_SERVICE_PROBE_ATTRIBUTES) / sizeof(FELICA_REQUEST_SERVICE_PROBE_ATTRIBUTES[0])); j++) {
+        for (size_t j = 0; j < ARRAYLEN(FELICA_REQUEST_SERVICE_PROBE_ATTRIBUTES); j++) {
             if (felica_discovery_aborted(stop_status)) {
                 felica_set_discovered_count(discovered_count, local_count);
                 return false;
