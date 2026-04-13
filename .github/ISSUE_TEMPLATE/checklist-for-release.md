@@ -11,7 +11,7 @@ assignees: doegox, iceman1001
 
 - [ ] `make style`
 - [ ] `make miscchecks`
-- [ ] `make clean; make client CC=clang CXX=clang++ LD=clang++` on recent Debian or Ubuntu
+- [ ] `make clean; make host CC=clang CXX=clang++ LD=clang++` on recent Debian or Ubuntu
 - [ ] `mymanualchecks.sh`
 - [ ] `mycppcheck.sh` no alarming warning?
 - [ ] `tools/build_all_firmwares.sh` check that the script contains all standalone modes then compile all standalone modes (linux only)
