@@ -354,7 +354,6 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/mifare/mifaredefault.c
         ${PM3_ROOT}/client/src/mifare/mifarehost.c
         ${PM3_ROOT}/client/src/mifare/gen4.c
-        ${PM3_ROOT}/client/src/nfc/ndef.c
         ${PM3_ROOT}/client/src/mifare/lrpcrypto.c
         ${PM3_ROOT}/client/src/mifare/desfirecrypto.c
         ${PM3_ROOT}/client/src/mifare/desfiresecurechan.c
@@ -362,6 +361,8 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/mifare/desfiretest.c
         ${PM3_ROOT}/client/src/mifare/gallaghercore.c
         ${PM3_ROOT}/client/src/mifare/gallaghertest.c
+        ${PM3_ROOT}/client/src/nfc/ndef.c
+        ${PM3_ROOT}/client/src/qrcode/qrcode.c
         ${PM3_ROOT}/client/src/relay/relay_posix.c
         ${PM3_ROOT}/client/src/relay/relay_win32.c
         ${PM3_ROOT}/client/src/uart/ringbuffer.c
@@ -370,7 +371,6 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/uart/uart_win32.c
         ${PM3_ROOT}/client/src/ui/overlays.ui
         ${PM3_ROOT}/client/src/ui/image.ui
-        ${PM3_ROOT}/client/src/qrcode/qrcode.c
         ${PM3_ROOT}/client/src/aidsearch.c
         ${PM3_ROOT}/client/src/atrs.c
         ${PM3_ROOT}/client/src/cmdanalyse.c
@@ -383,6 +383,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhf14b.c
         ${PM3_ROOT}/client/src/cmdhf15.c
         ${PM3_ROOT}/client/src/cmdhfaliro.c
+        ${PM3_ROOT}/client/src/cmdhfcipurse.c
         ${PM3_ROOT}/client/src/cmdhfcryptorf.c
         ${PM3_ROOT}/client/src/cmdhfemrtd.c
         ${PM3_ROOT}/client/src/cmdhfepa.c
@@ -391,8 +392,6 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhffudan.c
         ${PM3_ROOT}/client/src/cmdhfgallagher.c
         ${PM3_ROOT}/client/src/cmdhfgst.c
-        ${PM3_ROOT}/client/src/cmdhfcipurse.c
-        ${PM3_ROOT}/client/src/cmdhfsecc.c
         ${PM3_ROOT}/client/src/cmdhficlass.c
         ${PM3_ROOT}/client/src/cmdhfict.c
         ${PM3_ROOT}/client/src/cmdhfjooki.c
@@ -407,6 +406,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhfmfu.c
         ${PM3_ROOT}/client/src/cmdhfntag424.c
         ${PM3_ROOT}/client/src/cmdhfsaflok.c
+        ${PM3_ROOT}/client/src/cmdhfsecc.c
         ${PM3_ROOT}/client/src/cmdhfseos.c
         ${PM3_ROOT}/client/src/cmdhfst.c
         ${PM3_ROOT}/client/src/cmdhfst25ta.c
