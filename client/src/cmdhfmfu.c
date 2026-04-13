@@ -687,7 +687,7 @@ static int try_default_aes_keys(bool override, bool use_schann, bool use_fastrea
                     default:
                         break;
                 }
-                PrintAndLogEx(SUCCESS, "%02X " _YELLOW_("%s") " - %s ( "_GREEN_("ok") " )"
+                PrintAndLogEx(SUCCESS, "%02X " _YELLOW_("%16s") " - %s ( "_GREEN_("ok") " )"
                               , keyno
                               , keystr
                               , sprint_hex_inrow(key, 16)
