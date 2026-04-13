@@ -4,14 +4,28 @@
     "name": "CJRC Standard",
     "region": "Japan",
     "type": "transit",
-    "description": "Used by Mutual Use transit cards"
+    "description": "Used by Japanese Mutual Use transit card systems"
   },
   {
     "code": "0102",
     "name": "EZLink",
     "region": "Singapore",
     "type": "transit",
-    "description": "Used by legacy EZ-Link transit cards"
+    "description": "Used by legacy EZ-Link transit card"
+  },
+  {
+    "code": "040F",
+    "name": "NicePass",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Nice Pass transit card (Enshu Railway, Shizuoka)"
+  },
+  {
+    "code": "04A6",
+    "name": "LuLuCa",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by LuLuCa transit card (Shizutetsu Group, Shizuoka)"
   },
   {
     "code": "04C7",
@@ -28,39 +42,214 @@
     "description": "NFC Forum Type 3 Tag system code"
   },
   {
+    "code": "8003",
+    "name": "Yamanashi Kotsu",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Bus IC Card transit card (Yamanashi Kotsu)"
+  },
+  {
     "code": "8005",
     "name": "Shenzhen Tong",
     "region": "China",
     "type": "transit",
-    "description": "Used by legacy Shenzen Tong cards"
+    "description": "Used by legacy Shenzhen Tong transit card"
   },
   {
     "code": "8008",
     "name": "Octopus",
     "region": "Hong Kong",
     "type": "transit",
-    "description": "Used by Octopus transit cards"
+    "description": "Used by Octopus transit card"
+  },
+  {
+    "code": "8016",
+    "name": "Nagasaki Smart Card",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by legacy Nagasaki Smart Card transit system (Nagasaki operators)"
+  },
+  {
+    "code": "801E",
+    "name": "AMPM",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Marker system found on Edy cards issued by AM/PM"
+  },
+  {
+    "code": "8029",
+    "name": "Saitama Railway",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by legacy Saitama Rapid Railway IC commuter pass"
+  },
+  {
+    "code": "802B",
+    "name": "Setamaru",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by legacy Setamaru transit card (Tokyu)"
+  },
+  {
+    "code": "804C",
+    "name": "Kitami Bus",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Hokkaido Kitami Bus transit card"
+  },
+  {
+    "code": "80DE",
+    "name": "IruCa",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by IruCa transit card (Takamatsu-Kotohira Electric Railroad)"
+  },
+  {
+    "code": "80E0",
+    "name": "Shikoku",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Shikoku cards (Desuca/Iyotetsu)"
+  },
+  {
+    "code": "80EF",
+    "name": "ICa",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by ICa transit card (Hokuriku Railroad)"
+  },
+  {
+    "code": "8102",
+    "name": "MIWA FKL",
+    "region": "Japan",
+    "type": "access",
+    "description": "Used by MIWA FKL access control credentials"
+  },
+  {
+    "code": "811D",
+    "name": "Karuwaza Club",
+    "region": "Japan",
+    "type": "loyalty",
+    "description": "Used by Karuwaza Club membership and points services"
+  },
+  {
+    "code": "8157",
+    "name": "CICA",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by CI-CA transit card (Nara Kotsu)"
+  },
+  {
+    "code": "8182",
+    "name": "QUICPay dedicated",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Dedicated system code for QUICPay"
+  },
+  {
+    "code": "8194",
+    "name": "Kagoshima",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Kagoshima cards (RapiCa/Iwasaki IC)"
+  },
+  {
+    "code": "81A1",
+    "name": "Tebra-F ID",
+    "region": "Japan",
+    "type": "access",
+    "description": "Marker system found on Clavis Tebra-F ID access control credentials"
+  },
+  {
+    "code": "81CA",
+    "name": "Honda C Card",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Marker system found on Edy cards issued by Honda"
+  },
+  {
+    "code": "825E",
+    "name": "MIWA IEL",
+    "region": "Japan",
+    "type": "access",
+    "description": "Used by MIWA IEL access control credentials"
+  },
+  {
+    "code": "8287",
+    "name": "NicoPa",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by NicoPa transit card (Shinki Bus)"
+  },
+  {
+    "code": "832C",
+    "name": "Toyama",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Toyama cards (Ecomyca/Passca)"
+  },
+  {
+    "code": "83CC",
+    "name": "HareCa",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by HareCa transit card (Okayama-area operators)"
+  },
+  {
+    "code": "83EE",
+    "name": "ayuca",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by legacy ayuca transit card (Gifu Bus)"
+  },
+  {
+    "code": "84A1",
+    "name": "hanica",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by hanica transit card (Hankyu Bus and Hanshin Bus)"
   },
   {
     "code": "852B",
     "name": "WAON",
     "region": "Japan",
     "type": "payment",
-    "description": "Can be found on some WAON cards"
+    "description": "Marker system found on WAON cards"
   },
   {
     "code": "8592",
     "name": "PASPY",
     "region": "Japan",
     "type": "transit",
-    "description": "PASPY transit card system"
+    "description": "Used by PASPY transit card (Hiroshima-area operators)"
+  },
+  {
+    "code": "862C",
+    "name": "itappy",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by itappy transit card (Itami City Transportation Bureau)"
+  },
+  {
+    "code": "865E",
+    "name": "SAPICA",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by SAPICA transit card (Sapporo General Information Center)"
+  },
+  {
+    "code": "869B",
+    "name": "Tsukica",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Tsukica transit card (Takatsuki City Bus)"
   },
   {
     "code": "86A7",
     "name": "Suica",
     "region": "Japan",
     "type": "transit",
-    "description": "JR East Suica and related transit cards"
+    "description": "JR East Suica and related transit card systems"
   },
   {
     "code": "88B4",
@@ -70,25 +259,151 @@
     "description": "Default system code used by FeliCa Lite/Lite-S tags"
   },
   {
+    "code": "8B43",
+    "name": "NorucA",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by NORUCA transit card (Fukushima Kotsu)"
+  },
+  {
+    "code": "8B5D",
+    "name": "RYUTO",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Ryuto transit card (Niigata Kotsu)"
+  },
+  {
+    "code": "8B98",
+    "name": "RANDEN",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Randen transit card (Keifuku Electric Railroad)"
+  },
+  {
+    "code": "8BDC",
+    "name": "Rakuten Edy",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Used by Rakuten Edy e-money services"
+  },
+  {
+    "code": "8C0B",
+    "name": "San In Shinpan",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Marker system found on Edy cards issued by San in Shinpan"
+  },
+  {
+    "code": "8CC1",
+    "name": "Speedpass",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Used by legacy Speedpass/Speedpass+ payment tools in Japan (ENEOS, QUICPay-enabled)"
+  },
+  {
+    "code": "8D3F",
+    "name": "Kururu",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by legacy Kururu transit card (Nagano City)"
+  },
+  {
+    "code": "8DB6",
+    "name": "ASACA / DoCard",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Asaca/DoCard transit card services (Asahikawa and Dohoku Bus)"
+  },
+  {
+    "code": "8E35",
+    "name": "Skyrail Pass",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by legacy SKYRAIL PASS transit card (Skyrail Service)"
+  },
+  {
+    "code": "8E58",
+    "name": "odeca",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by legacy odeca transit card (JR East Kesennuma and Ofunato BRT)"
+  },
+  {
+    "code": "8F18",
+    "name": "Nankai",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by legacy Nankai transit card (Natchi, Nankai Bus)"
+  },
+  {
+    "code": "8FC1",
+    "name": "OKICA",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by OKICA transit card (Okinawa IC Card Co.)"
+  },
+  {
+    "code": "9027",
+    "name": "Kumamon IC",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Kumamoto Regional Promotion IC Card (Kumamon IC CARD)"
+  },
+  {
+    "code": "9099",
+    "name": "emica",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by emica transit card (Mie Kotsu)"
+  },
+  {
+    "code": "90AB",
+    "name": "Ibappi",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Ibappi transit card (Ibaraki Kotsu)"
+  },
+  {
     "code": "90B7",
     "name": "Kartu Multi Trip Commet",
     "region": "Indonesia",
     "type": "transit",
-    "description": "Used on Kartu Multi Trip Commet cards"
+    "description": "Used on Kartu Multi Trip Commet transit card"
+  },
+  {
+    "code": "9105",
+    "name": "Starbucks Touch",
+    "region": "Japan",
+    "type": "loyalty",
+    "description": "Marker system found on Starbucks Touch fobs"
+  },
+  {
+    "code": "927A",
+    "name": "Hayakaken",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Hayakaken transit card (Fukuoka City Transportation Bureau)"
   },
   {
     "code": "9373",
     "name": "Kartu Multi Trip Jelajah",
     "region": "Indonesia",
     "type": "transit",
-    "description": "Used on Kartu Multi Trip Jelajah cards"
+    "description": "Used on Kartu Multi Trip Jelajah transit card"
   },
   {
     "code": "9450",
     "name": "HCMC",
     "region": "Vietnam",
     "type": "transit",
-    "description": "Used with Ho Chi Minh City Metro transit cards"
+    "description": "Used with Ho Chi Minh City Metro transit card"
+  },
+  {
+    "code": "9506",
+    "name": "kinoca",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by kinoca regional transit card (Wakayama Bus)"
   },
   {
     "code": "FE00",
