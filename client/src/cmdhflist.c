@@ -1194,7 +1194,7 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         break;
                     case MFDES_CHANGE_KEY:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "CHANGE KEY (keyNo %u)", data[0] & 0x3F);
+                            snprintf(exp, size, "CHANGE KEY (keyNo %u)", (uint8_t)(data[0] & 0x3Fu));
                         } else {
                             snprintf(exp, size, "CHANGE KEY");
                         }
