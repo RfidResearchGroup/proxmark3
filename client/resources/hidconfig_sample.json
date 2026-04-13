@@ -1,7 +1,11 @@
 {
+  "_comment_KDD": "Optional 10-byte Key Diversification Data echoed in INITIALIZE UPDATE. When present and non-zero, the SCP02Key above is treated as the static MASTER GP key and diversified per-card via VISA-2 (separate K_ENC/K_MAC). All-zero or absent = no diversification (SCP02Key used directly).",
+  "_comment_KVN": "Optional 1-byte Key Version Number reported in INITIALIZE UPDATE. Default 0x01 matches the GP factory key set on most JCOP cards. Use 0xFF for an uninitialized JCOP factory test card.",
   "UID": "00000000",
   "AID": "A0000003820013000101",
   "SCP02Key": "404142434445464748494A4B4C4D4E4F",
+  "KDD": "00000000000000000000",
+  "KVN": "01",
   "ATS": "1478F7B10280590180415254454346477300011B",
   "DefaultResponse": "6A82",
   "APDUResponses": [
