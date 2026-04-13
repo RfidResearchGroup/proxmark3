@@ -1634,12 +1634,12 @@ static int gst_selftest_zlib(void) {
     // Check that inflation worked properly by validating inner data
     if (inflate_ok) {
         size_t offset = 0;
-        gst_ndef_record_view_t first_record;
-        gst_ndef_record_view_t second_record;
-        gst_ndef_record_view_t loyalty_record;
-        gst_ndef_record_view_t object_id_record;
-        gst_ndef_record_view_t customer_record;
-        gst_ndef_record_view_t customer_id_record;
+        gst_ndef_record_view_t first_record = {0};
+        gst_ndef_record_view_t second_record = {0};
+        gst_ndef_record_view_t loyalty_record = {0};
+        gst_ndef_record_view_t object_id_record = {0};
+        gst_ndef_record_view_t customer_record = {0};
+        gst_ndef_record_view_t customer_id_record = {0};
 
         res = gst_ndef_parse_record(decompressed_payload, decompressed_payload_len, &offset, &first_record);
         if (res == PM3_SUCCESS &&
