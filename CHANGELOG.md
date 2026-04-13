@@ -5,7 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed `hf mf wrbl` and `hf mfp wrbl` the ACL RO checks on 16-block sectors correct  (@team-orangeBlue)
 - Changed `hf mfp wrbl` command to check for Sector Trailer errors that could potentially lock sectors out (@team-orangeBlue)
-- Changed `hf felica info` and `hf felica rqsyscode` system code name annotation (@team-orangeBlue)
+- Changed `hf felica info` and `hf felica rqsyscode` system code name annotation (@kormax)
 - Added `lf relay` command where it relays between two pm3 devices over internet. Thanks to Moerno for the code! (@iceman1001)
 - Changed `hf mf acl` command to have more recognized generic configurations (@team-orangeBlue)
 - Added `hf mfp acl` command (@team-orangeBlue)
