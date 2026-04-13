@@ -391,7 +391,7 @@ int mfc_algo_mizip_one(const uint8_t *uid, uint8_t sector, uint8_t keytype, uint
 
         if (keytype == 0) {
             *key = 0xA0A1A2A3A4A5U; // A
-        } else {   
+        } else {
             *key = 0xB4C132439eefU; // B
         }
 
@@ -629,24 +629,24 @@ int mfc_algo_snapmaker_all(uint8_t *uid, uint8_t *keys) {
 int mfc_algo_vanderbilt_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
     if (key == NULL) return PM3_EINVARG;
     if (sector > 39) return PM3_EINVARG;
-    
+
     // Base pattern: "Acces" in ASCII = 0x4163636573
     // For each sector, we generate keys for all 4 blocks (or 16 for sector 32+)
     // Key format: 41 63 63 65 73 XX where XX is the block number
-    
+
     uint8_t first_block = (sector < 32) ? (sector * 4) : (128 + (sector - 32) * 16);
     uint8_t block_id = first_block + 3; // Use sector trailer block ID
-    
+
     // Both key A and B use the same pattern with block ID
     uint8_t key_bytes[6] = {0x41, 0x63, 0x63, 0x65, 0x73, block_id};
     *key = bytes_to_num(key_bytes, 6);
-    
+
     return PM3_SUCCESS;
 }
 
 int mfc_algo_vanderbilt_all(uint8_t *uid, uint8_t *keys) {
     if (keys == NULL) return PM3_EINVARG;
-    
+
     // Generate keys for all sectors (40 sectors for 4K card)
     for (int keytype = 0; keytype < 2; keytype++) {
         for (int sector = 0; sector < 40; sector++) {
@@ -655,7 +655,7 @@ int mfc_algo_vanderbilt_all(uint8_t *uid, uint8_t *keys) {
             num_to_bytes(key, 6, keys + (keytype * 40 * 6) + (sector * 6));
         }
     }
-    
+
     return PM3_SUCCESS;
 }
 

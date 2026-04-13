@@ -181,13 +181,20 @@ void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4]) {
 static void suc_bytes(const uint8_t *k, State_t *s, const uint8_t *in, int length) {
     for (int i = 0; i < length; i++) {
         uint8_t b = in[i];
-        successor(k, s, b);  b >>= 1;
-        successor(k, s, b);  b >>= 1;
-        successor(k, s, b);  b >>= 1;
-        successor(k, s, b);  b >>= 1;
-        successor(k, s, b);  b >>= 1;
-        successor(k, s, b);  b >>= 1;
-        successor(k, s, b);  b >>= 1;
+        successor(k, s, b);
+        b >>= 1;
+        successor(k, s, b);
+        b >>= 1;
+        successor(k, s, b);
+        b >>= 1;
+        successor(k, s, b);
+        b >>= 1;
+        successor(k, s, b);
+        b >>= 1;
+        successor(k, s, b);
+        b >>= 1;
+        successor(k, s, b);
+        b >>= 1;
         successor(k, s, b);
     }
 }
@@ -197,14 +204,22 @@ static void suc_bytes(const uint8_t *k, State_t *s, const uint8_t *in, int lengt
 static void output_bytes(const uint8_t *k, State_t *s, uint8_t *out, int nbytes) {
     for (int i = 0; i < nbytes; i++) {
         uint8_t bout = 0;
-        bout |= (s->r & 0x4) >> 2;  successor(k, s, 0);
-        bout |= (s->r & 0x4) >> 1;  successor(k, s, 0);
-        bout |= (s->r & 0x4);       successor(k, s, 0);
-        bout |= (s->r & 0x4) << 1;  successor(k, s, 0);
-        bout |= (s->r & 0x4) << 2;  successor(k, s, 0);
-        bout |= (s->r & 0x4) << 3;  successor(k, s, 0);
-        bout |= (s->r & 0x4) << 4;  successor(k, s, 0);
-        bout |= (s->r & 0x4) << 5;  successor(k, s, 0);
+        bout |= (s->r & 0x4) >> 2;
+        successor(k, s, 0);
+        bout |= (s->r & 0x4) >> 1;
+        successor(k, s, 0);
+        bout |= (s->r & 0x4);
+        successor(k, s, 0);
+        bout |= (s->r & 0x4) << 1;
+        successor(k, s, 0);
+        bout |= (s->r & 0x4) << 2;
+        successor(k, s, 0);
+        bout |= (s->r & 0x4) << 3;
+        successor(k, s, 0);
+        bout |= (s->r & 0x4) << 4;
+        successor(k, s, 0);
+        bout |= (s->r & 0x4) << 5;
+        successor(k, s, 0);
         out[i] = bout;
     }
 }

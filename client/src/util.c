@@ -683,7 +683,7 @@ int parse_uint32_hex_or_dec(const char *text, uint32_t *out) {
         base = 16;
     } else {
         for (const char *p = text; *p; p++) {
-            if (isalpha((unsigned char)*p)) {
+            if (isalpha((unsigned char) * p)) {
                 base = 16;
                 break;
             }

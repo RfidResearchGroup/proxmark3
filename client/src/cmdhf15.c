@@ -946,7 +946,7 @@ static int StCheckSig(uint8_t *uid) {
     uint8_t signature[16];
     size_t signature_len = 0;
     hexstr_to_byte_array(signature_hex, signature, &signature_len);
-    
+
     uint8_t uid_swap[ISO15693_UID_LENGTH];
     reverse_array_copy(uid, ISO15693_UID_LENGTH, uid_swap);
 

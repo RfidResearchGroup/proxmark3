@@ -540,8 +540,8 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             // in emulator memory.  We pick it up at the start of each anti-collision
             // cycle so the reader sees the new identity from the very first SELECT.
             if ((simulationMode == ICLASS_SIM_MODE_FULL ||
-                 simulationMode == ICLASS_SIM_MODE_FULL_GLITCH ||
-                 simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) &&
+                    simulationMode == ICLASS_SIM_MODE_FULL_GLITCH ||
+                    simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) &&
                     emulator[32 * 8] != 0) {
 
                 emulator[32 * 8] = 0;  // consume the flag
@@ -1429,7 +1429,7 @@ static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint3
         AddCrc(pagesel + 1, 1);
 
         bool pagesel_res = iclass_send_cmd_with_retries(pagesel, sizeof(pagesel), pagesel_resp, sizeof(resp),
-            10, 2, &start_time, ICLASS_READER_TIMEOUT_OTHERS, eof_time, shallow_mod);
+                                                        10, 2, &start_time, ICLASS_READER_TIMEOUT_OTHERS, eof_time, shallow_mod);
 
         if (pagesel_res == false) {
             return false;

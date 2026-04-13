@@ -714,7 +714,7 @@ static uint64_t num_keys_tested = 0;
 static statelist_t *candidates = NULL;
 
 static int add_nonce(uint32_t nonce_enc, uint8_t par_enc) {
-    
+
     uint8_t first_byte = nonce_enc >> 24;
     noncelistentry_t *p1 = nonces[first_byte].first;
     noncelistentry_t *p2 = NULL;
@@ -912,10 +912,10 @@ static void update_allbitflips_array(void) {
                 if (nonces[i].all_bitflips_dirty[odd_even]) {
 
                     uint32_t old_count = num_all_bitflips_bitarray[odd_even];
-                    
+
                     num_all_bitflips_bitarray[odd_even] = count_bitarray_low20_AND(all_bitflips_bitarray[odd_even], nonces[i].states_bitarray[odd_even]);
                     nonces[i].all_bitflips_dirty[odd_even] = false;
-                    
+
                     if (num_all_bitflips_bitarray[odd_even] != old_count) {
                         all_bitflips_bitarray_dirty[odd_even] = true;
                     }
@@ -1556,7 +1556,7 @@ static int simulate_acquire_nonces(void) {
             simulate_MFplus_RNG(cuid, known_target_key, &nt_enc, &par_enc);
 
             int add_res = add_nonce(nt_enc, par_enc);
-            if ( add_res == PM3_EMALLOC) {
+            if (add_res == PM3_EMALLOC) {
                 return add_res;
             }
             num_acquired_nonces += add_res;
@@ -1701,7 +1701,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
                     DropField();
                     return add_res;
                 }
-                
+
                 num_acquired_nonces += add_res;
 
                 // PrintAndLogEx(INFO, "Encrypted nonce: %08x, encrypted_parity: %02x\n", nt_enc2, par_enc & 0x0f);

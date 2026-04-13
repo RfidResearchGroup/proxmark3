@@ -632,8 +632,8 @@ typedef struct {
 } vas_reader_key_t;
 
 static void VasReaderCleanup(vas_reader_key_t *keys, int keys_initialized,
-                                  char **key_values, int key_count,
-                                  char **pid_values, int pid_count) {
+                             char **key_values, int key_count,
+                             char **pid_values, int pid_count) {
     for (int i = 0; keys != NULL && i < keys_initialized; i++) {
         mbedtls_ecp_keypair_free(&keys[i].key);
     }
@@ -758,9 +758,9 @@ static int VASGetData(const char *passIdentifier, const uint8_t *pidHash, bool h
 }
 
 static int VASRead(bool has_pid, size_t request_count,
-                          char *const *pid_values, const char *url, int urllen,
-                          uint8_t vas_mode, bool verbose,
-                          vas_reader_key_t *keys, int key_count) {
+                   char *const *pid_values, const char *url, int urllen,
+                   uint8_t vas_mode, bool verbose,
+                   vas_reader_key_t *keys, int key_count) {
     uint16_t select_status = VAS_STATUS_NOT_AVAILABLE;
     if (VASSelectOse(&select_status, verbose) != PM3_SUCCESS) {
         PrintVASFailureReason(select_status, VAS_STATUS_NOT_AVAILABLE);
@@ -975,12 +975,12 @@ static int CmdVASReader(const char *Cmd) {
             continue;
         }
         int iter_res = VASRead(has_pid, request_count, pid_values,
-                                        url, urllen, vas_mode, verbose,
-                                        keys, key_count);
+                               url, urllen, vas_mode, verbose,
+                               keys, key_count);
         if (iter_res != PM3_SUCCESS && final_res == PM3_SUCCESS) {
             final_res = iter_res;
         }
-        
+
         if (continuous) {
             // Drop field so that iPhone displays the checkmark or a pass
             DropField();

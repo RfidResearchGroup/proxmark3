@@ -1824,17 +1824,17 @@ static int lf_relay_rdr(const char *ip, uint16_t port) {
 int CmdLFRelay(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf relay",
-                "Relay LF signal between two Proxmark3 devices over TCP.\n"
-                "By default it uses PORT 8000 and uses 40000 samples from Graphbuffer\n"
-                "  --rdr  : Reading device, act as IP client and reads LF tag and sends data\n"
-                "  --tag  : Simulation device, act as IP server and simulates relayed data\n",
-                _WHITE_("Device A, reading LF tag, client") "\n"                 
-                "lf relay --rdr --ip 192.168.1.141           -> Client, connect to IP 192.168.1.141:8000\n"
-                "lf relay --rdr --ip 192.168.1.141 -p 18111  -> Client, connect to IP 192.168.1.141:18111 \n\n"        
-                _WHITE_("Device B, simulate LF tag, server") "\n"
-                "lf relay --tag -p 8111                     -> Server listening port 8111, recv 40000 samples\n"
-                "lf relay --tag -s 10000                    -> Server listening port 8000, recv 10000 samples\n"
-            );
+                  "Relay LF signal between two Proxmark3 devices over TCP.\n"
+                  "By default it uses PORT 8000 and uses 40000 samples from Graphbuffer\n"
+                  "  --rdr  : Reading device, act as IP client and reads LF tag and sends data\n"
+                  "  --tag  : Simulation device, act as IP server and simulates relayed data\n",
+                  _WHITE_("Device A, reading LF tag, client") "\n"
+            "lf relay --rdr --ip 192.168.1.141           -> Client, connect to IP 192.168.1.141:8000\n"
+            "lf relay --rdr --ip 192.168.1.141 -p 18111  -> Client, connect to IP 192.168.1.141:18111 \n\n"
+                  _WHITE_("Device B, simulate LF tag, server") "\n"
+            "lf relay --tag -p 8111                     -> Server listening port 8111, recv 40000 samples\n"
+            "lf relay --tag -s 10000                    -> Server listening port 8000, recv 10000 samples\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1876,7 +1876,7 @@ int CmdLFRelay(const char *Cmd) {
     if (is_tag) {
         return lf_relay_tag(samples, port);
     }
-    
+
     if (is_rdr) {
         return lf_relay_rdr(ip, port);
     }
@@ -1986,13 +1986,13 @@ int CmdLFfind(const char *Cmd) {
 
             // identify chipset
             bool lf_special_search = check_chiptype(is_online);
-            if ( lf_special_search ) {
+            if (lf_special_search) {
                 found++;
             } else {
                 PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
             }
 
-            if ( found == 0) {
+            if (found == 0) {
                 PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf search") "` - since tag might not be LF");
             }
 

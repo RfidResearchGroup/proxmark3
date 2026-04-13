@@ -303,7 +303,7 @@ void print_gallagher_creds(GallagherCredentials_t *creds) {
                            ", facility: " _GREEN_("%u")
                            ", card number: " _GREEN_("%u")
                            ", issue level: " _GREEN_("%u"),
-                           'A' + creds->region_code,
+    'A' + creds->region_code,
                   creds->region_code,
                   creds->facility_code,
                   creds->card_number,

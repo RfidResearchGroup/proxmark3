@@ -875,7 +875,7 @@ static int hfgal_read_desfire_card(uint32_t aid, uint8_t *site_key, bool verbose
                                ", card number: " _GREEN_("%u")
                                ", issue level: " _GREEN_("%u"),
                       current_aid,
-                               'A' + creds.region_code,
+        'A' + creds.region_code,
                       creds.region_code,
                       creds.facility_code,
                       creds.card_number,
@@ -1699,7 +1699,7 @@ static int CmdGallagherDecode(const char *cmd) {
                            ", facility: " _GREEN_("%u")
                            ", card number: " _GREEN_("%u")
                            ", issue level: " _GREEN_("%u"),
-                           'A' + creds.region_code,
+    'A' + creds.region_code,
                   creds.region_code,
                   creds.facility_code,
                   creds.card_number,

@@ -1752,13 +1752,13 @@ typedef struct {
 
 static mfu_otp_identify_t mfu_otp_ident_table[] = {
     { "SALTO Systems card", 12, 4, "534C544F", ul_c_otpgenA, "report to iceman!" },
-    { NULL, 0, 0, NULL , NULL, NULL}  // must be the last item
+    { NULL, 0, 0, NULL, NULL, NULL}   // must be the last item
 };
 
 static mfu_otp_identify_t *mfu_match_otp_fingerprint(uint8_t *uid, uint8_t *data) {
     uint8_t i = 0;
     do {
-        if ( mfu_otp_ident_table[i].desc == NULL) {
+        if (mfu_otp_ident_table[i].desc == NULL) {
             break;
         }
         int ml = 0;

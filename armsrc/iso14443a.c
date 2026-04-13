@@ -1498,7 +1498,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
     }
 
     // Apply SAK override before it is encoded into rSAKc1/2/3.
-    if ( (flags & FLAG_SAK_IN_DATA) == FLAG_SAK_IN_DATA) {
+    if ((flags & FLAG_SAK_IN_DATA) == FLAG_SAK_IN_DATA) {
         sak = s_sak_override;
     }
 
@@ -2322,24 +2322,24 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                     EmSend4bit(CARD_ACK);
 
                     Dbprintf("MFP Perso Key | %04X | %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-                        page,
-                        receivedCmd[3],
-                        receivedCmd[4],
-                        receivedCmd[5],
-                        receivedCmd[6],
-                        receivedCmd[7],
-                        receivedCmd[8],
-                        receivedCmd[9],
-                        receivedCmd[10],
-                        receivedCmd[11],
-                        receivedCmd[12],
-                        receivedCmd[13],
-                        receivedCmd[14],
-                        receivedCmd[15],
-                        receivedCmd[16],
-                        receivedCmd[17],
-                        receivedCmd[18]
-                    );
+                             page,
+                             receivedCmd[3],
+                             receivedCmd[4],
+                             receivedCmd[5],
+                             receivedCmd[6],
+                             receivedCmd[7],
+                             receivedCmd[8],
+                             receivedCmd[9],
+                             receivedCmd[10],
+                             receivedCmd[11],
+                             receivedCmd[12],
+                             receivedCmd[13],
+                             receivedCmd[14],
+                             receivedCmd[15],
+                             receivedCmd[16],
+                             receivedCmd[17],
+                             receivedCmd[18]
+                            );
 
                     numReads++;  // Increment number of times reader requested a block
 
@@ -3836,7 +3836,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
             // Force explicit parity
             lenbits = len * 8;
         }
-        
+
         if (lenbits > 0) {
 
             // want to send a specific number of bits (e.g. short commands)
@@ -3847,12 +3847,12 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 uint16_t i = 0;
 
                 // first byte is always short (7bits) and no parity
-                ReaderTransmitBitsPar(&cmd[i++], MIN(bits_to_send, 7), NULL, NULL);     
+                ReaderTransmitBitsPar(&cmd[i++], MIN(bits_to_send, 7), NULL, NULL);
                 bits_to_send -= 7;
 
                 while (bits_to_send > 0) {
                     // following bytes are 8 bit and no parity
-                    ReaderTransmitBitsPar(&cmd[i++], MIN(bits_to_send, 8), NULL, NULL); 
+                    ReaderTransmitBitsPar(&cmd[i++], MIN(bits_to_send, 8), NULL, NULL);
                     bits_to_send -= 8;
                 }
 
@@ -3862,28 +3862,28 @@ void ReaderIso14443a(PacketCommandNG *c) {
                     mf_crypto1_encrypt(&crypto1_state, cmd, len, parity_array);
                 }
                 // bytes are 8 bit with odd parity
-                ReaderTransmitBitsPar(cmd, lenbits, parity_array, NULL);               
+                ReaderTransmitBitsPar(cmd, lenbits, parity_array, NULL);
             }
 
         } else {
-            
+
             // want to send complete bytes only
-            
+
             if ((param & ISO14A_TOPAZMODE) == ISO14A_TOPAZMODE) {
 
                 size_t i = 0;
 
                 // first byte: 7 bits, no paritiy
-                ReaderTransmitBitsPar(&cmd[i++], 7, NULL, NULL);                        
-                
+                ReaderTransmitBitsPar(&cmd[i++], 7, NULL, NULL);
+
                 while (i < len) {
                     // following bytes: 8 bits, no paritiy
-                    ReaderTransmitBitsPar(&cmd[i++], 8, NULL, NULL);                    
+                    ReaderTransmitBitsPar(&cmd[i++], 8, NULL, NULL);
                 }
 
             } else {
                 // 8 bits, odd parity
-                ReaderTransmit(cmd, len, NULL);                                         
+                ReaderTransmit(cmd, len, NULL);
             }
         }
 

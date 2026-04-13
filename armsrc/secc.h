@@ -59,9 +59,9 @@ typedef struct {
     uint8_t  sak;              // SAK override
     uint8_t  scp02_key[16];    // SCP02 master key (from JSON "SCP02Key")
     uint8_t  kdd[10];          // 10-byte Key Diversification Data returned in INITIALIZE UPDATE.
-                               // All-zero = legacy "no diversification" mode (scp02_key used directly).
-                               // Any non-zero value enables VISA-2 diversification of scp02_key per
-                               // SCP02 type (0x01=ENC, 0x02=MAC) on every handshake.
+    // All-zero = legacy "no diversification" mode (scp02_key used directly).
+    // Any non-zero value enables VISA-2 diversification of scp02_key per
+    // SCP02 type (0x01=ENC, 0x02=MAC) on every handshake.
     uint8_t  kvn;              // Key Version Number emitted in INIT UPDATE response (JSON "KVN", default 0x01).
     uint8_t  ats[20];          // ATS bytes without CRC (from JSON "ATS")
     uint8_t  ats_len;          // actual number of valid bytes in ats[]

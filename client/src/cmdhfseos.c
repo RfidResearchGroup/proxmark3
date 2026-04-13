@@ -361,9 +361,9 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
     uint8_t responseCode[2] = {0};
     uint8_t mac[8] = {0};
     size_t cryptogram_length = 0;
-    
+
     // Parse the response to extract the three tags
-    for (int i = 0; i < resplen - 2; ) {
+    for (int i = 0; i < resplen - 2;) {
         if (response[i] == 0x85) {
             // Cryptogram tag
             size_t offset = i + 1;
@@ -384,7 +384,7 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
             i += 2 + response[i + 1];
         }
     }
-    
+
     // ------------------- Cryptogram Response -------------------
     if (cryptogram_length > 0) {
         uint8_t decrypted[cryptogram_length];
@@ -392,15 +392,15 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
 
         // Decrypt the response
         decrypt_cryptogram(diversified_enc_key, cryptogram, decrypted, cryptogram_length, encryption_algorithm);
-        
+
         //PrintAndLogEx(SUCCESS, "Cryptogram....................... " _YELLOW_("%s"), sprint_hex_inrow(cryptogram, cryptogram_length));
         //PrintAndLogEx(SUCCESS, "Decrypted........................ " _YELLOW_("%s"), sprint_hex_inrow(decrypted, cryptogram_length));
-        
+
         // Parse TLV: tag can be 1 or 2 bytes
         int offset = 0;
         uint8_t tag[2] = {0x00, 0x00};
         int tag_len = 1;
-        
+
         // Check if it's a 2-byte tag (first byte has bits 5-1 all set to 1)
         if ((decrypted[offset] & 0x1F) == 0x1F) {
             tag[0] = decrypted[offset];
@@ -411,28 +411,28 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
             tag[0] = decrypted[offset];
             offset += 1;
         }
-        
+
         // Get length byte
         uint8_t length_byte = decrypted[offset];
         offset += 1;
-        
+
         // Extract the value
         getDataSize = length_byte;
         memcpy(sioOutput, decrypted + offset, getDataSize);
         *sio_size = getDataSize;
-        
+
         PrintAndLogEx(SUCCESS, "Tag.............................. " _YELLOW_("%s"), sprint_hex_inrow(tag, tag_len));
         PrintAndLogEx(SUCCESS, "Value............................ " _YELLOW_("%s"), sprint_hex_inrow(sioOutput, getDataSize));
     }
-    
+
     if (responseCode[0] != 0x00 || responseCode[1] != 0x00) {
         PrintAndLogEx(SUCCESS, "Response Code.................... " _YELLOW_("%s"), sprint_hex_inrow(responseCode, ARRAYLEN(responseCode)));
     }
-    
+
     // if (mac[0] != 0x00) {
     //     PrintAndLogEx(SUCCESS, "MAC.............................. " _YELLOW_("%s"), sprint_hex_inrow(mac, sizeof(mac)));
     // }
-    
+
     return PM3_SUCCESS;
 };
 
@@ -874,9 +874,9 @@ static int select_df_decode(uint8_t *response, uint8_t response_length, int *ALG
     }
 
     if (plaintext_adf == false) {
-    if (plaintext_adf == false) {
-        PrintAndLogEx(SUCCESS, "CRYPTOGRAM Encrypted Data........ " _YELLOW_("%s"), sprint_hex_inrow(CRYPTOGRAM_encrypted_data, 64));
-    }
+        if (plaintext_adf == false) {
+            PrintAndLogEx(SUCCESS, "CRYPTOGRAM Encrypted Data........ " _YELLOW_("%s"), sprint_hex_inrow(CRYPTOGRAM_encrypted_data, 64));
+        }
     }
     // PrintAndLogEx(SUCCESS, "MAC.............................. " _YELLOW_("%s"), sprint_hex_inrow(MAC_value, 8));
 

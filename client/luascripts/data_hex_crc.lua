@@ -72,7 +72,7 @@ function main(args)
         if o == 'w' then width = a end
     end
 
-    -- sanitize lua args parsing  
+    -- sanitize lua args parsing
     data = data or '01020304'
     width = width or 0
     search = search or 0
@@ -110,7 +110,7 @@ function main(args)
             results[#results+1] = {i, a1, a2, a3, a4, a5, a6}
 
             for _, v in ipairs({a1, a2, a3, a4, a5, a6}) do
-                if #v > maxlen then 
+                if #v > maxlen then
                     maxlen = #v
         end
             end

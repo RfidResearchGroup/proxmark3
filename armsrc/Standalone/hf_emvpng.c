@@ -301,14 +301,14 @@ void RunMod(void) {
             if (iso14443a_select_card(NULL, &card_a_info, NULL, true, 0, false)) {
 
                 DbpString(_YELLOW_("+") "Found ISO 14443 Type A!");
-                
+
                 chktoken = false;
                 for (uint8_t i = 0; i < 4; i++) {
 
                     if (i == 3 && chktoken) {
                         break; // Tag 57 was already found in GPO, no need to issue READ RECORD
                     }
-                    
+
                     LED_C_OFF();
                     LED_B_ON();
                     uint8_t apdulen = iso14_apdu(apdus[i], (uint16_t) apduslen[i], false, apdubuffer, sizeof(apdubuffer), NULL);

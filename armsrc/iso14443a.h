@@ -219,7 +219,7 @@ extern iso14a_polling_parameters_t REQA_POLLING_PARAMETERS;
 #define DELAY_READER_AIR2ARM_AS_SNIFFER (2 + 3 + 8)
 
 // Maximum ISO 14443A protocol timeout in field cycles (1/13.56 MHz).
-#define MAX_ISO14A_TIMEOUT 524288 
+#define MAX_ISO14A_TIMEOUT 524288
 // this timeout is in MS
 
 #endif /* __ISO14443A_H */

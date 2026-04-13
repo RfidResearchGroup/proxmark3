@@ -142,7 +142,8 @@ static void scp02_get_base_key(uint8_t type, uint8_t *out16) {
 // 0x01,0x81=DEK). The session counter is from the current INIT UPDATE.
 static void derive_scp02_session_key(const uint8_t *base_key16, uint8_t c0, uint8_t c1, uint16_t sc, uint8_t *out16) {
     uint8_t deriv[16] = {c0, c1, (uint8_t)(sc >> 8), (uint8_t)(sc & 0xFF),
-                         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+                         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                        };
     uint8_t iv[8] = {0};
     tdes_nxp_send(deriv, out16, 16, base_key16, iv, 2);
 }
@@ -226,12 +227,17 @@ static void compute_host_cryptogram(const uint8_t *s_enc, uint8_t *out) {
 
 // C-MAC = Retail-MAC(S-MAC, {84 82 sec_level 00 10 || HostCrypto(8) || 80 00 00})
 static void compute_ext_auth_cmac(const uint8_t *s_mac, uint8_t sec_level,
-                                   const uint8_t *host_crypto, uint8_t *out) {
+                                  const uint8_t *host_crypto, uint8_t *out) {
     uint8_t data[16];
-    data[0] = 0x84; data[1] = 0x82; data[2] = sec_level;
-    data[3] = 0x00; data[4] = 0x10;
+    data[0] = 0x84;
+    data[1] = 0x82;
+    data[2] = sec_level;
+    data[3] = 0x00;
+    data[4] = 0x10;
     memcpy(data + 5, host_crypto, 8);
-    data[13] = 0x80; data[14] = 0x00; data[15] = 0x00;
+    data[13] = 0x80;
+    data[14] = 0x00;
+    data[15] = 0x00;
 
     scp02_retail_mac(s_mac, data, 2, out);
 }
@@ -336,9 +342,11 @@ bool hid_config_card_handle_iblock(const uint8_t *cmd, int len, tag_response_inf
 
         if (memcmp(host_crypto_exp, host_crypto, 8) != 0 ||
                 memcmp(cmac_exp, cmac_recv, 8) != 0) {
-            rsp[0] = 0x63; rsp[1] = 0x00;  // Authentication failed
+            rsp[0] = 0x63;
+            rsp[1] = 0x00;  // Authentication failed
         } else {
-            rsp[0] = 0x90; rsp[1] = 0x00;
+            rsp[0] = 0x90;
+            rsp[1] = 0x00;
         }
         ri->response_n = off + 2;
         return true;
@@ -349,7 +357,8 @@ bool hid_config_card_handle_iblock(const uint8_t *cmd, int len, tag_response_inf
         memcpy(rsp, s_default_resp, s_default_resp_len);
         ri->response_n = off + s_default_resp_len;
     } else {
-        rsp[0] = 0x90; rsp[1] = 0x00;
+        rsp[0] = 0x90;
+        rsp[1] = 0x00;
         ri->response_n = off + 2;
     }
     return true;

@@ -180,12 +180,12 @@ typedef struct {
 
 typedef int (*felica_node_discovery_visitor_t)(const felica_discovered_node_t *node, void *ctx);
 typedef bool (*felica_node_discovery_runner_t)(uint8_t *flags,
-        const uint8_t *idm,
-        uint32_t retry_count,
-        felica_node_discovery_visitor_t visitor,
-        void *ctx,
-        uint32_t *discovered_count,
-        int *stop_status);
+                                               const uint8_t *idm,
+                                               uint32_t retry_count,
+                                               felica_node_discovery_visitor_t visitor,
+                                               void *ctx,
+                                               uint32_t *discovered_count,
+                                               int *stop_status);
 
 typedef struct {
     felica_node_discovery_method_t method;
@@ -221,29 +221,29 @@ typedef enum {
 static int CmdHelp(const char *Cmd);
 static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose);
 static int send_felica_payload_with_retries(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
-        int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, uint32_t backoff_ms, bool logging,
-        PacketResponseNG *resp, const char *request_name);
+                                            int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, uint32_t backoff_ms, bool logging,
+                                            PacketResponseNG *resp, const char *request_name);
 static bool felica_discover_nodes_with_request_code_list(uint8_t *flags,
-        const uint8_t *idm,
-        uint32_t retry_count,
-        felica_node_discovery_visitor_t visitor,
-        void *ctx,
-        uint32_t *discovered_count,
-        int *stop_status);
+                                                         const uint8_t *idm,
+                                                         uint32_t retry_count,
+                                                         felica_node_discovery_visitor_t visitor,
+                                                         void *ctx,
+                                                         uint32_t *discovered_count,
+                                                         int *stop_status);
 static bool felica_discover_nodes_with_search_service_code(uint8_t *flags,
-        const uint8_t *idm,
-        uint32_t retry_count,
-        felica_node_discovery_visitor_t visitor,
-        void *ctx,
-        uint32_t *discovered_count,
-        int *stop_status);
+                                                           const uint8_t *idm,
+                                                           uint32_t retry_count,
+                                                           felica_node_discovery_visitor_t visitor,
+                                                           void *ctx,
+                                                           uint32_t *discovered_count,
+                                                           int *stop_status);
 static bool felica_discover_nodes_with_request_service(uint8_t *flags,
-        const uint8_t *idm,
-        uint32_t retry_count,
-        felica_node_discovery_visitor_t visitor,
-        void *ctx,
-        uint32_t *discovered_count,
-        int *stop_status);
+                                                       const uint8_t *idm,
+                                                       uint32_t retry_count,
+                                                       felica_node_discovery_visitor_t visitor,
+                                                       void *ctx,
+                                                       uint32_t *discovered_count,
+                                                       int *stop_status);
 static bool felica_discover_nodes_with_read_without_encryption(uint8_t *flags,
         const uint8_t *idm,
         uint32_t retry_count,
@@ -956,7 +956,7 @@ static int CmdHFFelicaReader(const char *Cmd) {
     if (cm) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
-    
+
     return read_felica_uid(cm, verbose);
 }
 
@@ -1461,8 +1461,8 @@ static void print_read_without_encryption_response(felica_read_without_encryptio
  * @return PM3_SUCCESS on success
  */
 static int send_felica_payload_with_retries(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
-        int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, uint32_t backoff_ms, bool logging,
-        PacketResponseNG *resp, const char *request_name) {
+                                            int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, uint32_t backoff_ms, bool logging,
+                                            PacketResponseNG *resp, const char *request_name) {
     for (uint32_t attempt = 0; attempt <= retries; attempt++) {
         if (attempt > 0) {
             if (logging) {
@@ -1526,10 +1526,10 @@ int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool ve
     }
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, datalen, data, verbose,
-                                            0x03,
-                                            FELICA_DEFAULT_TIMEOUT_MS, 0,
-                                            0, true,
-                                            &resp, "request service") != PM3_SUCCESS) {
+                                         0x03,
+                                         FELICA_DEFAULT_TIMEOUT_MS, 0,
+                                         0, true,
+                                         &resp, "request service") != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "\nGot no response from card");
         return PM3_ERFTRANS;
     }
@@ -1882,12 +1882,12 @@ static void felica_print_node_discovery_method_used(felica_node_discovery_method
 }
 
 static bool felica_discover_nodes_with_request_code_list(uint8_t *flags,
-        const uint8_t *idm,
-        uint32_t retry_count,
-        felica_node_discovery_visitor_t visitor,
-        void *ctx,
-        uint32_t *discovered_count,
-        int *stop_status) {
+                                                         const uint8_t *idm,
+                                                         uint32_t retry_count,
+                                                         felica_node_discovery_visitor_t visitor,
+                                                         void *ctx,
+                                                         uint32_t *discovered_count,
+                                                         int *stop_status) {
 
     uint8_t data[14] = {0};
     data[0] = sizeof(data);
@@ -2000,12 +2000,12 @@ static bool felica_discover_nodes_with_request_code_list(uint8_t *flags,
 }
 
 static bool felica_discover_nodes_with_search_service_code(uint8_t *flags,
-        const uint8_t *idm,
-        uint32_t retry_count,
-        felica_node_discovery_visitor_t visitor,
-        void *ctx,
-        uint32_t *discovered_count,
-        int *stop_status) {
+                                                           const uint8_t *idm,
+                                                           uint32_t retry_count,
+                                                           felica_node_discovery_visitor_t visitor,
+                                                           void *ctx,
+                                                           uint32_t *discovered_count,
+                                                           int *stop_status) {
 
     uint8_t data[12] = {0};
     data[0] = sizeof(data);
@@ -2069,16 +2069,16 @@ static bool felica_discover_nodes_with_search_service_code(uint8_t *flags,
 }
 
 static bool felica_request_service_send_probe_batch(uint8_t *flags,
-        const uint8_t *idm,
-        uint32_t retry_count,
-        const uint16_t *node_codes_le,
-        const bool *is_area_nodes,
-        size_t node_count,
-        felica_node_discovery_visitor_t visitor,
-        void *ctx,
-        bool *supported,
-        uint32_t *discovered_count,
-        int *stop_status) {
+                                                    const uint8_t *idm,
+                                                    uint32_t retry_count,
+                                                    const uint16_t *node_codes_le,
+                                                    const bool *is_area_nodes,
+                                                    size_t node_count,
+                                                    felica_node_discovery_visitor_t visitor,
+                                                    void *ctx,
+                                                    bool *supported,
+                                                    uint32_t *discovered_count,
+                                                    int *stop_status) {
     if (node_count == 0 || node_count > FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE) {
         return false;
     }
@@ -2149,12 +2149,12 @@ static bool felica_request_service_send_probe_batch(uint8_t *flags,
 }
 
 static bool felica_discover_nodes_with_request_service(uint8_t *flags,
-        const uint8_t *idm,
-        uint32_t retry_count,
-        felica_node_discovery_visitor_t visitor,
-        void *ctx,
-        uint32_t *discovered_count,
-        int *stop_status) {
+                                                       const uint8_t *idm,
+                                                       uint32_t retry_count,
+                                                       felica_node_discovery_visitor_t visitor,
+                                                       void *ctx,
+                                                       uint32_t *discovered_count,
+                                                       int *stop_status) {
     bool supported = false;
     uint32_t local_count = 0;
 

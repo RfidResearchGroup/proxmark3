@@ -873,12 +873,12 @@ static int mf_analyse_st_block(uint8_t blockno, uint8_t *block, bool force) {
     uint8_t bar = 4;
     for (uint8_t foo = 0; foo < bar; foo++) {
         if (mfReadOnlyAccessConditions(foo, &block[6])) {
-        // WARNING: Sectors 33+ assume ACLs apply to groups of 4 blocks, not 1 block.
-        // The code as-is is bugged and actually wastes iterations. If you have 16 blocks, it'll run all 16 but only error out like it's a 4-block sector.
-            if (blockno<128)
+            // WARNING: Sectors 33+ assume ACLs apply to groups of 4 blocks, not 1 block.
+            // The code as-is is bugged and actually wastes iterations. If you have 16 blocks, it'll run all 16 but only error out like it's a 4-block sector.
+            if (blockno < 128)
                 PrintAndLogEx(WARNING, "Strict ReadOnly Access Conditions on block " _YELLOW_("%u") " detected", blockno - bar + 1 + foo);
             else
-                PrintAndLogEx(WARNING, "Strict ReadOnly Access Conditions on blocks " _YELLOW_("%u-%u") " detected", blockno - bar*4 + 1 + foo*5, blockno - bar*4 + 1 + foo*5 + 4);
+                PrintAndLogEx(WARNING, "Strict ReadOnly Access Conditions on blocks " _YELLOW_("%u-%u") " detected", blockno - bar * 4 + 1 + foo * 5, blockno - bar * 4 + 1 + foo * 5 + 4);
             ro_detected = true;
         }
     }

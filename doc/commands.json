@@ -3658,9 +3658,10 @@
                 "-z, --dense dense dump output style",
                 "--force force unsecure card read",
                 "--shallow use shallow (ASK) reader modulation instead of OOK",
-                "--ns no save to file"
+                "--ns no save to file",
+                "--page <dec> which page to dump from"
             ],
-            "usage": "hf iclass dump [-hz] [-f <fn>] [-k <hex>] [--ki <dec>] [--credit <hex>] [--ci <dec>] [--elite] [--raw] [--nr] [--force] [--shallow] [--ns]"
+            "usage": "hf iclass dump [-hz] [-f <fn>] [-k <hex>] [--ki <dec>] [--credit <hex>] [--ci <dec>] [--elite] [--raw] [--nr] [--force] [--shallow] [--ns] [--page <dec>]"
         },
         "hf iclass eload": {
             "command": "hf iclass eload",
@@ -7289,7 +7290,7 @@
             "description": "Print decoded MIFARE Plus access rights (ACL), A = key A B = key B AB = both key A and B ACCESS = access bytes inside sector trailer block Increment, decrement, transfer, restore is for value blocks",
             "notes": [
                 "hf mf acl",
-                "hf mf acl -d FF0780"
+                "hf mf acl -d 0FFF0780"
             ],
             "offline": true,
             "options": [
@@ -7600,9 +7601,10 @@
                 "-p, --plain Do not use encrypted transmission",
                 "--nmr Do not expect MAC in response",
                 "-d, --data <hex> Data, 16 hex bytes",
-                "-k, --key <hex> Key, 16 hex bytes"
+                "-k, --key <hex> Key, 16 hex bytes",
+                "--force Override warnings"
             ],
-            "usage": "hf mfp wrbl [-hvbp] --blk <0..255> [--nmr] -d <hex> [-k <hex>]"
+            "usage": "hf mfp wrbl [-hvbp] --blk <0..255> [--nmr] -d <hex> [-k <hex>] [--force]"
         },
         "hf mfp wrp": {
             "command": "hf mfp wrp",
@@ -8453,7 +8455,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> JSON file with UID, AID, SCP02Key (without .json extension)",
+                "-f, --file <fn> JSON file with UID, AID, SCP02Key, optional KDD/KVN (no .json ext)",
                 "-n, --num <dec> Exit after <n> reader interactions. 0 = infinite"
             ],
             "usage": "hf secc sim [-h] -f <fn> [-n <dec>]"
@@ -14440,6 +14442,6 @@
     "metadata": {
         "commands_extracted": 819,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-04-11T02:04:09"
+        "extracted_on": "2026-04-13T07:31:01"
     }
 }

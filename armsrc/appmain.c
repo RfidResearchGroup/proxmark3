@@ -105,8 +105,8 @@ int tearoff_hook(void) {
 
     if (g_tearoff_enabled == false) {
         return PM3_SUCCESS;
-    } 
-    
+    }
+
     // tear off is happening...
 
     if (g_tearoff_delay_us == 0) {
@@ -2477,8 +2477,8 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             // sanity checks
             if (payload->bytes_in_packet > sizeof(payload->data) ||
-                payload->idx > BigBuf_get_size() ||
-                payload->idx + payload->bytes_in_packet > BigBuf_get_size()) {
+                    payload->idx > BigBuf_get_size() ||
+                    payload->idx + payload->bytes_in_packet > BigBuf_get_size()) {
                 reply_ng(CMD_SMART_UPLOAD, PM3_EOVFLOW, NULL, 0);
                 break;
             }
