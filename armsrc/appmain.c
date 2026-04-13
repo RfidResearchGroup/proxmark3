@@ -2355,8 +2355,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_READER: {
-            iclass_card_select_t *payload = (iclass_card_select_t *) packet->data.asBytes;
-            ReaderIClass(payload->flags);
+            ReaderIClass(packet->data.asBytes);
             break;
         }
         case CMD_HF_ICLASS_EML_MEMSET: {

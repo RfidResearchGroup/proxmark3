@@ -1639,7 +1639,8 @@ static int CmdHFiClassInfo(const char *Cmd) {
 int read_iclass_csn(bool loop, bool verbose, bool shallow_mod) {
 
     iclass_card_select_t payload = {
-        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
+        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE),
+        .page = 0 // no page selection support for reader mode yet
     };
 
     if (shallow_mod) {
@@ -2431,7 +2432,8 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
 static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool verbose, bool shallow_mod) {
 
     iclass_card_select_t payload = {
-        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
+        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE),
+        .page = 0 // no page selection support here yet
     };
 
     if (shallow_mod) {
@@ -2481,7 +2483,8 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool verbose, bool shallow_
 static int iclass_dump_non_secure(bool shallow_mod, uint8_t *tag_data, uint16_t *taglen) {
 
     iclass_card_select_t payload_rdr = {
-        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
+        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE),
+        .page = 0 // no page selection support here yet
     };
 
     if (shallow_mod) {
@@ -2530,6 +2533,7 @@ static int iclass_dump_non_secure(bool shallow_mod, uint8_t *tag_data, uint16_t 
         .req.shallow_mod    = shallow_mod,
         .start_block        = 3,
         .end_block          = app_limit1,
+        .page = 0 // no page selection support here yet
     };
 
     clearCommandBuffer();
@@ -2606,6 +2610,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         arg_lit0(NULL, "force", "force unsecure card read"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_lit0(NULL, "ns", "no save to file"),
+        arg_int0(NULL, "page", "<dec>", "which page to dump from"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2632,6 +2637,7 @@ static int CmdHFiClassDump(const char *Cmd) {
     bool force = arg_get_lit(ctx, 10);
     bool shallow_mod = arg_get_lit(ctx, 11);
     bool nosave = arg_get_lit(ctx, 12);
+    int page = arg_get_int_def(ctx, 13, 0);
 
     CLIParserFree(ctx);
 
@@ -2702,7 +2708,8 @@ static int CmdHFiClassDump(const char *Cmd) {
     memset(tag_data, 0xFF, sizeof(tag_data));
 
     iclass_card_select_t payload_rdr = {
-        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
+        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE),
+        .page = page
     };
 
     if (shallow_mod) {
@@ -2791,6 +2798,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         .req.do_auth = auth,
         .req.shallow_mod = shallow_mod,
         .end_block = app_limit1,
+        .page = page,
     };
     memcpy(payload.req.key, key, 8);
 
@@ -3891,7 +3899,8 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
 
     //check if the card is in secure mode or not
     iclass_card_select_t payload_rdr = {
-        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
+        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE),
+        .page = 0 // no page selection support for tearblock yet
     };
 
     if (shallow_mod) {
@@ -4444,7 +4453,8 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
 
     //check if the card is in secure mode or not
     iclass_card_select_t payload_rdr = {
-        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
+        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE),
+        .page = 0 // no page selection support for blacktears yet
     };
 
     clearCommandBuffer();
@@ -7891,7 +7901,8 @@ int CmdHFiClass(const char *Cmd) {
 int info_iclass(bool shallow_mod) {
 
     iclass_card_select_t payload = {
-        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
+        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE),
+        .page = 0 // no page selection support for info yet
     };
 
     if (shallow_mod) {
