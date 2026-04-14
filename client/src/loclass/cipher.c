@@ -233,6 +233,62 @@ void doMAC_brute(const uint8_t *cc_nr, const uint8_t *div_key, uint8_t mac[4]) {
     output_bytes(div_key, &s, mac, 4);
 }
 
+// Expand 12 cc_nr bytes into 96 LSB-first cipher input bits. Done once per thread
+// so the per-candidate hot loop never re-shifts the same bytes.
+void prepare_ccnr_bits(const uint8_t *cc_nr, uint8_t y_bits[96]) {
+    for (int i = 0; i < 12; i++) {
+        uint8_t b = cc_nr[i];
+        y_bits[i * 8 + 0] =  b       & 1;
+        y_bits[i * 8 + 1] = (b >> 1) & 1;
+        y_bits[i * 8 + 2] = (b >> 2) & 1;
+        y_bits[i * 8 + 3] = (b >> 3) & 1;
+        y_bits[i * 8 + 4] = (b >> 4) & 1;
+        y_bits[i * 8 + 5] = (b >> 5) & 1;
+        y_bits[i * 8 + 6] = (b >> 6) & 1;
+        y_bits[i * 8 + 7] = (b >> 7) & 1;
+    }
+}
+
+// Pre-expanded-input variant of doMAC_brute with per-byte early-out comparison.
+// Returns true iff the 32-bit MAC matches target_mac. On miss we bail after the
+// first non-matching byte, skipping the remaining output ticks.
+bool doMAC_brute_match_prebit(const uint8_t *y_bits, const uint8_t *div_key, const uint8_t target_mac[4]) {
+    State_t s = init(div_key);
+
+    for (int i = 0; i < 96; i++) {
+        successor(div_key, &s, y_bits[i]);
+    }
+
+    for (int byte_idx = 0; byte_idx < 4; byte_idx++) {
+        uint8_t bout = 0;
+        bout |= (s.r & 0x4) >> 2;
+        successor(div_key, &s, 0);
+        bout |= (s.r & 0x4) >> 1;
+        successor(div_key, &s, 0);
+        bout |= (s.r & 0x4);
+        successor(div_key, &s, 0);
+        bout |= (s.r & 0x4) << 1;
+        successor(div_key, &s, 0);
+        bout |= (s.r & 0x4) << 2;
+        successor(div_key, &s, 0);
+        bout |= (s.r & 0x4) << 3;
+        successor(div_key, &s, 0);
+        bout |= (s.r & 0x4) << 4;
+        successor(div_key, &s, 0);
+        bout |= (s.r & 0x4) << 5;
+
+        if (bout != target_mac[byte_idx]) {
+            return false;
+        }
+
+        if (byte_idx < 3) {
+            successor(div_key, &s, 0);
+        }
+    }
+
+    return true;
+}
+
 void doMAC_N(uint8_t *address_data_p, uint8_t address_data_size, uint8_t *div_key_p, uint8_t mac[4]) {
     uint8_t *address_data;
     uint8_t div_key[8];
