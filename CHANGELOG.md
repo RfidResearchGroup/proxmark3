@@ -2,7 +2,7 @@
 All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
-## [unreleased][unreleased]
+## [BREAKMEIFYOUCAN!][2026-04-14]
 - Fixed `hf mf wrbl` and `hf mfp wrbl` the ACL RO checks on 16-block sectors correct  (@team-orangeBlue)
 - Changed `hf mfp wrbl` command to check for Sector Trailer errors that could potentially lock sectors out (@team-orangeBlue)
 - Changed `hf felica info` and `hf felica rqsyscode` system code name annotation (@kormax)
