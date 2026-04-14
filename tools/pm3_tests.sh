@@ -336,6 +336,7 @@ while true; do
       if ! CheckFileExist "staticnested_2nt exists"            "$STATICNESTED2NTBIN"; then break; fi
       if ! CheckFileExist "staticnested_2x1nt_rf08s exists"    "$STATICNESTED2X1NTBIN"; then break; fi
       if ! CheckFileExist "staticnested_2x1nt_rf08s_1key exists" "$STATICNESTED2X11KNTBIN"; then break; fi
+      # very slow one...
       if ! CheckExecute slow "staticnested_0nt test"                "$STATICNESTED0NTBIN a13e4902 2e9e49fc 1111 . 7bfc7a5b 1110 a17e4902 50f2abc2 1101; rm keys.dic" "Key ffffffffffff found in 3 arrays"; then break; fi
       if ! CheckExecute "staticnested_1nt 1/2 test"            "$STATICNESTED1NTBIN 5c467f63 0 456ace4e da53428d 1001" "found 19823 keys"; then break; fi
       if ! CheckExecute "staticnested_1nt 2/2 test"            "$STATICNESTED1NTBIN 5c467f63 0 e56f9fa2 7a9616b6 1110" "found 34531 keys"; then break; fi

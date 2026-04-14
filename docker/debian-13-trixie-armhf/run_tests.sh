@@ -13,3 +13,5 @@ fi
 
 git config --global --add safe.directory /home/rrg/proxmark3
 tools/release_tests.sh
+# beeps
+for ((i=0; i<10;i++)) do echo -e "\a";sleep 0.3; done
