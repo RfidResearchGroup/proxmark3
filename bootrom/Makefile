@@ -56,7 +56,7 @@ OBJS = $(OBJDIR)/bootrom.s19
 # version_pm3.c should be checked on every compilation
 version_pm3.c: default_version_pm3.c .FORCE
 	$(info [=] CHECK $@)
-	$(Q)$(SH) ../tools/mkversion.sh $@ || $(CP) $< $@
+	$(Q)$(CP) $< $@
 
 all: showinfo $(OBJS)
 

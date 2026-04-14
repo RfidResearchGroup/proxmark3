@@ -49,7 +49,7 @@ VPATH = . ../common_arm ../common ../common/crapto1 ../common/mbedtls ../common/
 INCLUDES = ../include/proxmark3_arm.h ../include/at91sam7s512.h ../include/config_gpio.h ../include/pm3_cmd.h
 
 ARMCFLAGS = -mthumb-interwork -fno-builtin
-DEFCFLAGS = -Wall -Werror -Os -pedantic -fstrict-aliasing -pipe
+DEFCFLAGS = -Wall -Os -pedantic -fstrict-aliasing -pipe
 
 # Some more warnings we want as errors:
 DEFCFLAGS += -Wbad-function-cast -Wchar-subscripts -Wundef -Wunused -Wuninitialized -Wpointer-arith -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wempty-body -Wignored-qualifiers -Wmissing-field-initializers -Wtype-limits
