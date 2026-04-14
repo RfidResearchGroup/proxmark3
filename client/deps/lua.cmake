@@ -52,5 +52,5 @@ if (NOT MINGW)
 endif (NOT MINGW)
 
 target_include_directories(pm3rrg_rdv4_lua INTERFACE liblua)
-target_compile_options(pm3rrg_rdv4_lua PRIVATE -Wall -O3)
+target_compile_options(pm3rrg_rdv4_lua PRIVATE -Wall -Werror -O3)
 set_property(TARGET pm3rrg_rdv4_lua PROPERTY POSITION_INDEPENDENT_CODE ON)
