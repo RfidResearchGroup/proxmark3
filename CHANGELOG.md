@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf mfdes pc` command (@kormax)
 
 ## [BREAKMEIFYOUCAN!.4.21611][2026-04-14]
 - Fixed `hf mf wrbl` and `hf mfp wrbl` the ACL RO checks on 16-block sectors correct  (@team-orangeBlue)
