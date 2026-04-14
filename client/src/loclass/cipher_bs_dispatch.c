@@ -9,6 +9,8 @@
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 
+#include <stddef.h>
+
 #include "cipher_bs_dispatch.h"
 #include "cipher_bs.h"
 #include "cipher_bs_avx2.h"
