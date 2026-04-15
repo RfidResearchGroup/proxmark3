@@ -141,10 +141,10 @@
   },
   {
     "code": "8182",
-    "name": "QUICPay dedicated",
+    "name": "ANA",
     "region": "Japan",
     "type": "payment",
-    "description": "Dedicated system code for QUICPay"
+    "description": "Used by ANA QuicPay + Nanaco fob"
   },
   {
     "code": "8194",

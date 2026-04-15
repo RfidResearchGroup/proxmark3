@@ -522,22 +522,43 @@ static int DESFIRESendRaw(bool activate_field, uint8_t *data, size_t datalen, ui
     }
 
     if (*result_len < (1 + 2)) {
+        // In native mode of communication, DESFire cards don't seem to return
+        // a status byte for PROXIMITY_CHECK.
+        if (data[0] == MFDES_PROXIMITY_CHECK &&
+                *result_len >= 2) {
+            *result_len -= 2; // strip CRC only
+            if (respcode) {
+                *respcode = MFDES_S_OPERATION_OK;
+            }
+            return PM3_SUCCESS;
+        }
         return PM3_ECARDEXCHANGE;
     }
 
     *result_len -= (1 + 2);
 
     uint8_t rcode = result[0];
+    bool rcode_ok = (rcode == MFDES_S_OPERATION_OK ||
+                     rcode == MFDES_S_SIGNATURE ||
+                     rcode == MFDES_S_ADDITIONAL_FRAME ||
+                     rcode == MFDES_S_NO_CHANGES);
+
+    if (rcode_ok == false &&
+            data[0] == MFDES_PROXIMITY_CHECK) {
+        // Proximity-check response without native status byte:
+        // current *result_len is (rawlen - 3), but we only need to strip CRC.
+        *result_len += 1;
+        if (respcode) {
+            *respcode = MFDES_S_OPERATION_OK;
+        }
+        return PM3_SUCCESS;
+    }
+
     if (respcode) {
         *respcode = rcode;
     }
 
-    memmove(&result[0], &result[1], *result_len);
-
-    if (rcode != MFDES_S_OPERATION_OK &&
-            rcode != MFDES_S_SIGNATURE &&
-            rcode != MFDES_S_ADDITIONAL_FRAME &&
-            rcode != MFDES_S_NO_CHANGES) {
+    if (!rcode_ok) {
 
         if (GetAPDULogging()) {
             PrintAndLogEx(ERR, "Command (%02x) ERROR: 0x%02x", data[0], rcode);
@@ -545,6 +566,8 @@ static int DESFIRESendRaw(bool activate_field, uint8_t *data, size_t datalen, ui
 
         return PM3_EAPDU_FAIL;
     }
+
+    memmove(&result[0], &result[1], *result_len);
     return PM3_SUCCESS;
 }
 

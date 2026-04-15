@@ -60,6 +60,10 @@
 #define MFDES_BRUTEFID_RESELECT_WAIT_MS 500
 #define MFDES_BRUTEDAMSLOT_RESELECT_ATTEMPTS 3
 #define MFDES_BRUTEDAMSLOT_RESELECT_WAIT_MS 500
+#define MFDES_PC_KEY_LEN                16U
+#define MFDES_PC_CHALLENGE_LEN          8U
+#define MFDES_PC_MAX_ROUNDS             8U
+#define MFDES_PC_MAC_LEN                8U
 
 #define status(x) ( ((uint16_t)(0x91 << 8)) + (uint16_t)x )
 /*
@@ -667,6 +671,191 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext_t *d
     }
 
     return PM3_SUCCESS;
+}
+
+static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDES_PC_KEY_LEN], uint8_t rounds, bool verbose) {
+    if (dctx == NULL || proximity_key == NULL || rounds < 1 || rounds > MFDES_PC_MAX_ROUNDS) {
+        return PM3_EINVARG;
+    }
+
+    int res = PM3_SUCCESS;
+    pcrypto_rng_t rng = {0};
+    bool rng_initialized = false;
+
+    const uint8_t rng_personalization[] = "hf_mfdes_pc";
+    res = pcrypto_rng_init(&rng, rng_personalization, sizeof(rng_personalization) - 1);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to initialize random generator for proximity check");
+        return res;
+    }
+    rng_initialized = true;
+
+    uint8_t prepare_resp[APDU_RES_LEN] = {0};
+    size_t prepare_resp_len = 0;
+    uint8_t respcode = 0xFF;
+    res = DesfireExchangeEx(true, dctx, MFDES_PREPARE_PC, NULL, 0, &respcode, prepare_resp, &prepare_resp_len, true, 0);
+    if (res != PM3_SUCCESS) {
+        uint16_t sw = status(respcode);
+        PrintAndLogEx(ERR, "Prepare proximity check command failed. Result: %d %s", res, DesfireGetErrorString(res, &sw));
+        goto out;
+    }
+
+    uint8_t options[3] = {0};
+    size_t options_len = MIN((size_t)3, prepare_resp_len);
+    if (options_len > 0) {
+        memcpy(options, prepare_resp, options_len);
+    }
+
+    bool prepare_extension_present = (prepare_resp_len > 3);
+    uint8_t prepare_extension = prepare_extension_present ? prepare_resp[3] : 0x00;
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Prepare response [%zu] : %s", prepare_resp_len, sprint_hex(prepare_resp, prepare_resp_len));
+        PrintAndLogEx(INFO, "Prepare options[%zu]   : %s", options_len, sprint_hex(options, options_len));
+        if (prepare_extension_present) {
+            PrintAndLogEx(INFO, "Prepare extension      : %02X", prepare_extension);
+        }
+    }
+
+    uint8_t random_challenge[MFDES_PC_CHALLENGE_LEN] = {0};
+    res = pcrypto_rng_fill(&rng, random_challenge, sizeof(random_challenge));
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to generate random challenge");
+        goto out;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Random challenge       : %s", sprint_hex(random_challenge, sizeof(random_challenge)));
+    }
+
+    size_t split_size = MFDES_PC_CHALLENGE_LEN / rounds;
+    if (split_size == 0) {
+        split_size = 1;
+    }
+
+    uint8_t challenge_response[MFDES_PC_CHALLENGE_LEN * 2] = {0};
+    size_t challenge_response_len = 0;
+    size_t challenge_offset = 0;
+
+    for (uint8_t round = 0; round < rounds; round++) {
+        size_t remaining = MFDES_PC_CHALLENGE_LEN - challenge_offset;
+        size_t challenge_part_len = ((round + 1) == rounds) ? remaining : MIN(split_size, remaining);
+        if (challenge_part_len == 0) {
+            PrintAndLogEx(ERR, "Invalid challenge split state at round %u", (unsigned int)round + 1);
+            res = PM3_ESOFT;
+            goto out;
+        }
+
+        uint8_t round_payload[1 + MFDES_PC_CHALLENGE_LEN] = {0};
+        round_payload[0] = (uint8_t)challenge_part_len;
+        memcpy(&round_payload[1], &random_challenge[challenge_offset], challenge_part_len);
+
+        uint8_t round_resp[APDU_RES_LEN] = {0};
+        size_t round_resp_len = 0;
+        respcode = 0xFF;
+
+        res = DesfireExchange(dctx, MFDES_PROXIMITY_CHECK, round_payload, challenge_part_len + 1, &respcode, round_resp, &round_resp_len);
+        if (res != PM3_SUCCESS) {
+            uint16_t sw = status(respcode);
+            PrintAndLogEx(ERR, "Proximity check round %u command failed. Result: %d %s", (unsigned int)round + 1, res, DesfireGetErrorString(res, &sw));
+            goto out;
+        }
+
+        size_t response_slice_len = MIN(round_resp_len, challenge_part_len);
+        memcpy(&challenge_response[challenge_response_len], round_resp, response_slice_len);
+        challenge_response_len += response_slice_len;
+        memcpy(&challenge_response[challenge_response_len], &random_challenge[challenge_offset], challenge_part_len);
+        challenge_response_len += challenge_part_len;
+
+        if (verbose) {
+            PrintAndLogEx(INFO, "Round %u challenge[%zu]: %s", (unsigned int)round + 1, challenge_part_len, sprint_hex(&random_challenge[challenge_offset], challenge_part_len));
+            PrintAndLogEx(INFO, "Round %u response [%zu]: %s", (unsigned int)round + 1, round_resp_len, sprint_hex(round_resp, round_resp_len));
+        }
+
+        challenge_offset += challenge_part_len;
+    }
+
+    bool include_prepare_extension = prepare_extension_present;
+
+    uint8_t verify_cmd_input[1 + 3 + 1 + (MFDES_PC_CHALLENGE_LEN * 2)] = {0};
+    size_t verify_cmd_input_len = 0;
+    verify_cmd_input[verify_cmd_input_len++] = MFDES_VERIFY_PC;
+    if (options_len > 0) {
+        memcpy(&verify_cmd_input[verify_cmd_input_len], options, options_len);
+        verify_cmd_input_len += options_len;
+    }
+    if (include_prepare_extension) {
+        verify_cmd_input[verify_cmd_input_len++] = prepare_extension;
+    }
+    memcpy(&verify_cmd_input[verify_cmd_input_len], challenge_response, challenge_response_len);
+    verify_cmd_input_len += challenge_response_len;
+
+    uint8_t verify_cmd_mac[MFDES_PC_MAC_LEN] = {0};
+    res = aes_cmac8(NULL, (uint8_t *)proximity_key, verify_cmd_input, verify_cmd_mac, (int)verify_cmd_input_len);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to calculate Verify_PC command MAC");
+        res = PM3_ESOFT;
+        goto out;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Verify command input[%zu]: %s", verify_cmd_input_len, sprint_hex(verify_cmd_input, verify_cmd_input_len));
+        PrintAndLogEx(INFO, "Verify command MAC       : %s", sprint_hex(verify_cmd_mac, sizeof(verify_cmd_mac)));
+    }
+
+    uint8_t verify_resp[APDU_RES_LEN] = {0};
+    size_t verify_resp_len = 0;
+    respcode = 0xFF;
+    res = DesfireExchange(dctx, MFDES_VERIFY_PC, verify_cmd_mac, sizeof(verify_cmd_mac), &respcode, verify_resp, &verify_resp_len);
+    if (res != PM3_SUCCESS) {
+        uint16_t sw = status(respcode);
+        PrintAndLogEx(ERR, "Verify proximity check command failed. Result: %d %s", res, DesfireGetErrorString(res, &sw));
+        goto out;
+    }
+
+    if (verify_resp_len < MFDES_PC_MAC_LEN) {
+        PrintAndLogEx(WARNING, "Verify response MAC is not present");
+    } else {
+        uint8_t verify_resp_input[1 + 3 + 1 + (MFDES_PC_CHALLENGE_LEN * 2)] = {0};
+        size_t verify_resp_input_len = 0;
+        verify_resp_input[verify_resp_input_len++] = MFDES_S_SIGNATURE;
+        if (options_len > 0) {
+            memcpy(&verify_resp_input[verify_resp_input_len], options, options_len);
+            verify_resp_input_len += options_len;
+        }
+        if (prepare_extension_present) {
+            verify_resp_input[verify_resp_input_len++] = prepare_extension;
+        }
+        memcpy(&verify_resp_input[verify_resp_input_len], challenge_response, challenge_response_len);
+        verify_resp_input_len += challenge_response_len;
+
+        uint8_t expected_resp_mac[MFDES_PC_MAC_LEN] = {0};
+        res = aes_cmac8(NULL, (uint8_t *)proximity_key, verify_resp_input, expected_resp_mac, (int)verify_resp_input_len);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to calculate expected verify response MAC");
+            res = PM3_ESOFT;
+            goto out;
+        }
+
+        if (memcmp(verify_resp, expected_resp_mac, MFDES_PC_MAC_LEN) != 0) {
+            PrintAndLogEx(WARNING, "Verify response MAC mismatch");
+            if (verbose) {
+                PrintAndLogEx(INFO, "Expected: %s", sprint_hex(expected_resp_mac, MFDES_PC_MAC_LEN));
+                PrintAndLogEx(INFO, "Received: %s", sprint_hex(verify_resp, MFDES_PC_MAC_LEN));
+            }
+        } else if (verbose) {
+            PrintAndLogEx(INFO, "Verify response MAC      : %s", sprint_hex(verify_resp, MFDES_PC_MAC_LEN));
+        }
+    }
+
+    PrintAndLogEx(SUCCESS, "DESFire proximity check " _GREEN_("passed") ", rounds: %u", rounds);
+    res = PM3_SUCCESS;
+
+out:
+    if (rng_initialized) {
+        pcrypto_rng_free(&rng);
+    }
+    return res;
 }
 
 static int CmdHF14ADesDefault(const char *Cmd) {
@@ -4331,6 +4520,70 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14ADesPC(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes pc",
+                  "Perform DESFire proximity check flow (Prepare_PC -> Proximity_Check -> Verify_PC).\n"
+                  "This command uses plain communication with a dedicated 16-byte AES proximity key.",
+                  "hf mfdes pc --key 00000000000000000000000000000000\n"
+                  "hf mfdes pc --key 00112233445566778899aabbccddeeff --rounds 4\n"
+                  "hf mfdes pc --key 00112233445566778899aabbccddeeff -c native -a");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",   "Show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "Verbose output"),
+        arg_str1("k",  "key",    "<hex>", "Key (AES-128, exactly 16 bytes)"),
+        arg_int0("r",  "rounds", "<dec>", "Number of rounds (1..8), default 8"),
+        arg_str0("c",  "ccset",  "<native|niso>", "Communication command set (default from `hf mfdes default`)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    uint8_t proximity_key[MFDES_PC_KEY_LEN] = {0};
+    int proximity_key_len = 0;
+    CLIGetHexWithReturn(ctx, 3, proximity_key, &proximity_key_len);
+    if (proximity_key_len != MFDES_PC_KEY_LEN) {
+        PrintAndLogEx(ERR, "Proximity key must have 16 bytes length.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int rounds = arg_get_int_def(ctx, 4, MFDES_PC_MAX_ROUNDS);
+    if (rounds < 1 || rounds > MFDES_PC_MAX_ROUNDS) {
+        PrintAndLogEx(ERR, "Rounds must be in range 1..8.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int cmdset = defaultCommSet;
+    if (CLIGetOptionList(arg_get_str(ctx, 5), DesfireCommandSetOpts, &cmdset)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    if (cmdset == DCCISO) {
+        PrintAndLogEx(ERR, "`ccset=iso` is not supported for this command. Use `native` or `niso`.");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    DesfireContext_t dctx = {0};
+    DesfireSetCommandSet(&dctx, cmdset);
+    DesfireSetCommMode(&dctx, DCMPlain);
+    DesfireSetSecureChannel(&dctx, DACNone);
+
+    int res = DesfirePCRun(&dctx, proximity_key, rounds, verbose);
+    DropField();
+    return res;
+}
+
 static int CmdHF14ADesFormatPICC(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes formatpicc",
@@ -7286,6 +7539,7 @@ static command_t CommandTable[] = {
     {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
     {"freemem",          CmdHF14ADesGetFreeMem,       IfPm3Iso14443a,  "Get free memory size"},
     {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get uid from card"},
+    {"pc",               CmdHF14ADesPC,               IfPm3Iso14443a,  "Run proximity check"},
     {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
     {"mad",              CmdHF14aDesMAD,              IfPm3Iso14443a,  "Prints MAD records / files from the card"},
     {"setconfig",        CmdHF14ADesSetConfiguration, IfPm3Iso14443a,  "Set card configuration"},

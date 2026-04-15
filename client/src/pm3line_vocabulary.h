@@ -489,6 +489,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf mfdes formatpicc" },
     { 0, "hf mfdes freemem" },
     { 0, "hf mfdes getuid" },
+    { 0, "hf mfdes pc" },
     { 0, "hf mfdes info" },
     { 0, "hf mfdes mad" },
     { 0, "hf mfdes setconfig" },
