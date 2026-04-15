@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Improved `hf iclass legbrute` throughput: added a 64-wide bitsliced MAC1 sweep that tests 64 key candidates in parallel per cipher tick, with a scalar fallback for the non-aligned prefix/tail and for MAC2 verification on the rare MAC1 hits (@antiklesys)
+- Improved `hf iclass legbrute` throughput: added a 64-wide bitsliced MAC1 sweep that tests 64 key candidates in parallel per cipher tick, with a scalar fallback for the non-aligned prefix/tail and for MAC2 verification on the rare MAC1 hits (@antiklesys ported, created by @chick3nman on the hashcat module)
 - Improved `hf iclass legbrute` throughput further: added wider SIMD backends (128-lane NEON, 256-lane AVX2, 512-lane AVX-512F) with a runtime dispatcher that picks the widest one the CPU supports and falls back to the portable 64-lane path elsewhere; the active backend and lane width are printed when the command starts (@antiklesys)
 
 ## [BREAKMEIFYOUCAN!.4.21611][2026-04-14]
