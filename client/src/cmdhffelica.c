@@ -493,6 +493,10 @@ static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
     return "Unknown IC Type";
 }
 
+static bool felica_is_lite_ic_type(uint8_t ic_type) {
+    return (ic_type == 0xF0 || ic_type == 0xF1);
+}
+
 static const char *felica_specification_option_name(size_t option_index) {
     switch (option_index) {
         case 0:
@@ -1217,106 +1221,116 @@ static int info_felica(bool verbose) {
     PrintAndLogEx(INFO, "  MRT..........     " _GREEN_("%s"), sprint_hex_inrow(card.mrt, sizeof(card.mrt)));
     set_last_known_card(card);
     const uint8_t optional_flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
+    const bool is_felica_lite = felica_is_lite_ic_type(card.iccode[1]);
 
-    felica_get_platform_info_request_t platform_info_request;
-    memset(&platform_info_request, 0, sizeof(platform_info_request));
-    platform_info_request.length[0] = sizeof(platform_info_request);
-    platform_info_request.command_code[0] = FELICA_GETPLATFORMINFO_REQ;
-    memcpy(platform_info_request.IDm, card.IDm, sizeof(platform_info_request.IDm));
+    if (is_felica_lite == false) {
+        felica_get_platform_info_request_t platform_info_request;
+        memset(&platform_info_request, 0, sizeof(platform_info_request));
+        platform_info_request.length[0] = sizeof(platform_info_request);
+        platform_info_request.command_code[0] = FELICA_GETPLATFORMINFO_REQ;
+        memcpy(platform_info_request.IDm, card.IDm, sizeof(platform_info_request.IDm));
 
-    felica_status_flags_t platform_status_flags;
-    uint8_t platform_information_data[FELICA_PLATFORM_INFO_MAX_LEN] = {0};
-    size_t platform_information_data_len = 0;
-    if (send_get_platform_information(optional_flags,
-                                      sizeof(platform_info_request), (uint8_t *)&platform_info_request,
-                                      false, &platform_status_flags, platform_information_data,
-                                      sizeof(platform_information_data),
-                                      &platform_information_data_len) == PM3_SUCCESS &&
-            platform_information_data_len > 0) {
-        print_platform_information(platform_information_data, platform_information_data_len);
-    }
-
-    felica_request_specification_version_request_t request_specification_version_request;
-    memset(&request_specification_version_request, 0, sizeof(request_specification_version_request));
-    request_specification_version_request.length[0] = sizeof(request_specification_version_request);
-    request_specification_version_request.command_code[0] = FELICA_REQUEST_SPEC_VERSION_REQ;
-    memcpy(request_specification_version_request.IDm, card.IDm, sizeof(request_specification_version_request.IDm));
-
-    felica_request_specification_version_info_t specification_version_info;
-    if (send_request_specification_version(optional_flags, sizeof(request_specification_version_request),
-                                           (uint8_t *)&request_specification_version_request, false,
-                                           false, FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
-                                           &specification_version_info) == PM3_SUCCESS &&
-            specification_version_info.has_specification_version) {
-        print_specification_versions(INFO, &specification_version_info, true);
-    }
-
-    felica_get_container_id_request_t container_id_request;
-    memset(&container_id_request, 0, sizeof(container_id_request));
-    container_id_request.length[0] = sizeof(container_id_request);
-    container_id_request.command_code[0] = FELICA_GET_CONTAINER_ID_REQ;
-
-    felica_get_container_id_response_t container_id_response;
-    if (send_get_container_id(optional_flags, sizeof(container_id_request),
-                              (uint8_t *)&container_id_request, false,
-                              &container_id_response) == PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "Container IDm.. " _YELLOW_("%s"),
-                      sprint_hex_inrow(container_id_response.container_idm, sizeof(container_id_response.container_idm)));
-    }
-
-    felica_get_container_issue_info_request_t container_issue_info_request;
-    memset(&container_issue_info_request, 0, sizeof(container_issue_info_request));
-    container_issue_info_request.length[0] = sizeof(container_issue_info_request);
-    container_issue_info_request.command_code[0] = FELICA_GET_CONTAINER_ISSUE_INFO_REQ;
-    memcpy(container_issue_info_request.IDm, card.IDm, sizeof(container_issue_info_request.IDm));
-
-    felica_get_container_issue_info_response_t container_issue_info_response;
-    if (send_get_container_issue_information(optional_flags,
-                                             sizeof(container_issue_info_request), (uint8_t *)&container_issue_info_request, false,
-                                             &container_issue_info_response) == PM3_SUCCESS) {
-        char model_ascii[sizeof(container_issue_info_response.mobile_phone_model_information) + 1] = {0};
-        bool model_is_ascii = decode_zero_padded_ascii(
-                                  container_issue_info_response.mobile_phone_model_information,
-                                  sizeof(container_issue_info_response.mobile_phone_model_information),
-                                  model_ascii,
-                                  sizeof(model_ascii)
-                              );
-        PrintAndLogEx(INFO, "Container issue info:");
-        PrintAndLogEx(INFO, "  Format/Carrier... " _YELLOW_("%s"),
-                      sprint_hex_inrow(container_issue_info_response.format_version_carrier_information,
-                                       sizeof(container_issue_info_response.format_version_carrier_information)));
-        if (model_is_ascii) {
-            PrintAndLogEx(INFO, "  Model............ " _GREEN_("%s") " (ASCII)", model_ascii);
-        } else {
-            PrintAndLogEx(INFO, "  Model............ " _YELLOW_("%s") " (HEX)",
-                          sprint_hex_inrow(container_issue_info_response.mobile_phone_model_information,
-                                           sizeof(container_issue_info_response.mobile_phone_model_information)));
+        felica_status_flags_t platform_status_flags;
+        uint8_t platform_information_data[FELICA_PLATFORM_INFO_MAX_LEN] = {0};
+        size_t platform_information_data_len = 0;
+        if (send_get_platform_information(optional_flags,
+                                          sizeof(platform_info_request), (uint8_t *)&platform_info_request,
+                                          false, &platform_status_flags, platform_information_data,
+                                          sizeof(platform_information_data),
+                                          &platform_information_data_len) == PM3_SUCCESS &&
+                platform_information_data_len > 0) {
+            print_platform_information(platform_information_data, platform_information_data_len);
         }
-    }
 
-    const uint16_t container_properties[] = {0x0000, 0x0001};
-    uint8_t container_property_data[FELICA_CONTAINER_PROPERTY_MAX_LEN] = {0};
-    bool has_container_properties = false;
-    for (size_t i = 0; i < ARRAYLEN(container_properties); i++) {
-        felica_get_container_property_request_t container_property_request;
-        memset(&container_property_request, 0, sizeof(container_property_request));
-        container_property_request.length[0] = sizeof(container_property_request);
-        container_property_request.command_code[0] = FELICA_GET_CONTAINER_PROPERTY_REQ;
-        container_property_request.property_index[0] = container_properties[i] & 0xFF;
-        container_property_request.property_index[1] = (container_properties[i] >> 8) & 0xFF;
+        felica_request_specification_version_request_t request_specification_version_request;
+        memset(&request_specification_version_request, 0, sizeof(request_specification_version_request));
+        request_specification_version_request.length[0] = sizeof(request_specification_version_request);
+        request_specification_version_request.command_code[0] = FELICA_REQUEST_SPEC_VERSION_REQ;
+        memcpy(request_specification_version_request.IDm, card.IDm, sizeof(request_specification_version_request.IDm));
 
-        size_t container_property_data_len = 0;
-        if (send_get_container_property(optional_flags, sizeof(container_property_request),
-                                        (uint8_t *)&container_property_request, false,
-                                        container_property_data, sizeof(container_property_data),
-                                        &container_property_data_len) == PM3_SUCCESS &&
-                container_property_data_len > 0) {
-            if (has_container_properties == false) {
-                PrintAndLogEx(INFO, "Container properties:");
-                has_container_properties = true;
+        felica_request_specification_version_info_t specification_version_info;
+        if (send_request_specification_version(optional_flags, sizeof(request_specification_version_request),
+                                               (uint8_t *)&request_specification_version_request, false,
+                                               false, FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
+                                               &specification_version_info) == PM3_SUCCESS &&
+                specification_version_info.has_specification_version) {
+            print_specification_versions(INFO, &specification_version_info, true);
+        }
+
+        felica_get_container_id_request_t container_id_request;
+        memset(&container_id_request, 0, sizeof(container_id_request));
+        container_id_request.length[0] = sizeof(container_id_request);
+        container_id_request.command_code[0] = FELICA_GET_CONTAINER_ID_REQ;
+
+        felica_get_container_id_response_t container_id_response;
+        if (send_get_container_id(optional_flags, sizeof(container_id_request),
+                                  (uint8_t *)&container_id_request, false,
+                                  &container_id_response) == PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Container IDm.. " _YELLOW_("%s"),
+                          sprint_hex_inrow(container_id_response.container_idm, sizeof(container_id_response.container_idm)));
+        }
+
+        felica_get_container_issue_info_request_t container_issue_info_request;
+        memset(&container_issue_info_request, 0, sizeof(container_issue_info_request));
+        container_issue_info_request.length[0] = sizeof(container_issue_info_request);
+        container_issue_info_request.command_code[0] = FELICA_GET_CONTAINER_ISSUE_INFO_REQ;
+        memcpy(container_issue_info_request.IDm, card.IDm, sizeof(container_issue_info_request.IDm));
+
+        felica_get_container_issue_info_response_t container_issue_info_response;
+        if (send_get_container_issue_information(optional_flags,
+                                                 sizeof(container_issue_info_request), (uint8_t *)&container_issue_info_request, false,
+                                                 &container_issue_info_response) == PM3_SUCCESS) {
+            char model_ascii[sizeof(container_issue_info_response.mobile_phone_model_information) + 1] = {0};
+            bool model_is_ascii = decode_zero_padded_ascii(
+                                      container_issue_info_response.mobile_phone_model_information,
+                                      sizeof(container_issue_info_response.mobile_phone_model_information),
+                                      model_ascii,
+                                      sizeof(model_ascii)
+                                  );
+            PrintAndLogEx(INFO, "Container issue info:");
+            PrintAndLogEx(INFO, "  Format/Carrier... " _YELLOW_("%s"),
+                          sprint_hex_inrow(container_issue_info_response.format_version_carrier_information,
+                                           sizeof(container_issue_info_response.format_version_carrier_information)));
+            if (model_is_ascii) {
+                PrintAndLogEx(INFO, "  Model............ " _GREEN_("%s") " (ASCII)", model_ascii);
+            } else {
+                PrintAndLogEx(INFO, "  Model............ " _YELLOW_("%s") " (HEX)",
+                              sprint_hex_inrow(container_issue_info_response.mobile_phone_model_information,
+                                               sizeof(container_issue_info_response.mobile_phone_model_information)));
             }
-            PrintAndLogEx(INFO, "  0x%04X........... " _YELLOW_("%s"), container_properties[i],
-                          sprint_hex_inrow(container_property_data, container_property_data_len));
+        }
+
+        const uint16_t container_properties[] = {0x0000, 0x0001};
+        uint8_t container_property_data[FELICA_CONTAINER_PROPERTY_MAX_LEN] = {0};
+        bool has_container_properties = false;
+        for (size_t i = 0; i < ARRAYLEN(container_properties); i++) {
+            felica_get_container_property_request_t container_property_request;
+            memset(&container_property_request, 0, sizeof(container_property_request));
+            container_property_request.length[0] = sizeof(container_property_request);
+            container_property_request.command_code[0] = FELICA_GET_CONTAINER_PROPERTY_REQ;
+            container_property_request.property_index[0] = container_properties[i] & 0xFF;
+            container_property_request.property_index[1] = (container_properties[i] >> 8) & 0xFF;
+
+            size_t container_property_data_len = 0;
+            int container_property_status = send_get_container_property(optional_flags, sizeof(container_property_request),
+                                                                        (uint8_t *)&container_property_request, false,
+                                                                        container_property_data, sizeof(container_property_data),
+                                                                        &container_property_data_len);
+            if (container_property_status != PM3_SUCCESS) {
+                if (i == 0) {
+                    break;
+                }
+                continue;
+            }
+
+            if (container_property_data_len > 0) {
+                if (has_container_properties == false) {
+                    PrintAndLogEx(INFO, "Container properties:");
+                    has_container_properties = true;
+                }
+                PrintAndLogEx(INFO, "  0x%04X........... " _YELLOW_("%s"), container_properties[i],
+                              sprint_hex_inrow(container_property_data, container_property_data_len));
+            }
         }
     }
 
