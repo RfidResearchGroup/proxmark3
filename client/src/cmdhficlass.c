@@ -6398,7 +6398,7 @@ static int CmdHFiClassLegBrute(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass legbrute",
                   "This command takes sniffed trace data and a partial raw key and bruteforces the remaining 40 bits of the raw key.\n"
                   "Complete 40 bit keyspace is 1'099'511'627'776.",
-                  "hf iclass legbrute --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk B4F12AADC5301225");
+                  "hf iclass legbrute --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk 0401020505000205");
 
     void *argtable[] = {
         arg_param_begin,
@@ -6663,7 +6663,9 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     iclass_recover(macs, index, loop, no_first_auth, debug, test, fast, short_delay, allnight);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(WARNING, _YELLOW_("If the process completed successfully"));
-    PrintAndLogEx(HINT, "Hint: run `" _YELLOW_("hf iclass legbrute -h") "` with the partial key found");
+    PrintAndLogEx(HINT, "Hint-1: run `" _YELLOW_("hf iclass legbrute -h") "` with the partial key found");
+    PrintAndLogEx(HINT, "Hint-2: alternatively run hashcat `" _YELLOW_("./hashcat -a 3 -m 64000 hash.txt ?b?b?b?b?b") "` with the partial key found");
+    PrintAndLogEx(HINT, "hash.txt format would be: `" _YELLOW_("$iclass_leg$partial_key$ccnr1$mac1$ccnr2$mac2") "`");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 
