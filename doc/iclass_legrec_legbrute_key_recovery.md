@@ -340,7 +340,7 @@ $iclass_leg$0401020505000205$feffffffffffffff1306cad9$b6c24466$fefffffffffffffff
 
 Run:
 
-./hashcat.exe -a 3 -m 30501 hash.txt ?b?b?b?b?b
+./hashcat.exe -a 3 -m 64000 hash.txt ?b?b?b?b?b
 
 ### Output
 
