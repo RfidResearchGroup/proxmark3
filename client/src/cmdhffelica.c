@@ -58,10 +58,18 @@
 #define FELICA_CONTAINER_PROPERTY_MAX_LEN 64U
 #define FELICA_OPTIONAL_CMD_TIMEOUT_MS 250U
 #define FELICA_OPTIONAL_CMD_RETRIES 3U
+// Per FeliCa spec, Polling max response at 16 timeslots is ~25ms; keep extra margin.
+#define FELICA_POLL_TIMEOUT_MS 50U
 #define FELICA_SEAC_POLL_TIMEOUT_MS 200U
 #define FELICA_SEAC_POLL_RETRY_COUNT 5U
 #define FELICA_SEAC_POLL_FRAME_LEN 5U
 #define FELICA_SYSTEM_CODE_MAX_COUNT 16U
+#define FELICA_DISCOVERED_SYSTEM_MAX_COUNT 4U
+#define FELICA_SYSTEM_CODE_WILDCARD 0xFFFFU
+#define FELICA_SYSTEM_CODE_NFC_TYPE3 0x12FCU
+#define FELICA_SYSTEM_CODE_FELICA_LITE 0x88B4U
+#define FELICA_POLL_REQUEST_NO_DATA 0x00U
+#define FELICA_POLL_REQUEST_SYSTEM_CODE 0x01U
 #define FELICA_SYSTEM_LIST_JSON "felica_system_code_list"
 
 #define FELICA_SERVICE_ATTRIBUTE_UNAUTH_READ    (0b000001)
@@ -210,6 +218,17 @@ typedef struct {
     uint32_t service_count;
     uint32_t public_service_count;
 } felica_dump_context_t;
+
+typedef struct {
+    uint16_t system_code;
+    uint8_t idm[8];
+    bool has_idm;
+} felica_discovered_system_t;
+
+typedef struct {
+    size_t count;
+    felica_discovered_system_t systems[FELICA_DISCOVERED_SYSTEM_MAX_COUNT];
+} felica_discovered_system_list_t;
 
 typedef enum {
     FELICA_IDM_RESOLVE_STANDALONE = 0,
@@ -679,6 +698,43 @@ static void felica_print_system_code_annotation(int level, const uint8_t *system
     }
 }
 
+static void felica_print_discovered_system_block(int level, const felica_discovered_system_t *system) {
+    if (system == NULL) {
+        return;
+    }
+
+    const json_t *entry = felica_find_system_annotation(system->system_code);
+    const char *name = NULL;
+    const char *region = NULL;
+    const char *card_type = NULL;
+
+    if (entry) {
+        name = felica_get_json_string(entry, "name");
+        region = felica_get_json_string(entry, "region");
+        card_type = felica_get_json_string(entry, "type");
+    }
+
+    if (name == NULL) {
+        PrintAndLogEx(level, "  " _YELLOW_("UNKNOWN") " (" _RED_("REPORT TO ICEMAN") ")");
+    } else if (region && card_type) {
+        PrintAndLogEx(level, "  %s (" _YELLOW_("%s, %s") ")", name, region, card_type);
+    } else if (region) {
+        PrintAndLogEx(level, "  %s (" _YELLOW_("%s") ")", name, region);
+    } else if (card_type) {
+        PrintAndLogEx(level, "  %s (" _YELLOW_("%s") ")", name, card_type);
+    } else {
+        PrintAndLogEx(level, "  %s", name);
+    }
+
+    PrintAndLogEx(level, "    System Code.... " _YELLOW_("%04X"), system->system_code);
+    if (system->has_idm) {
+        PrintAndLogEx(level, "    IDM............ " _GREEN_("%s"),
+                      sprint_hex_inrow(system->idm, sizeof(system->idm)));
+    } else {
+        PrintAndLogEx(level, "    IDM............ " _RED_("N/A"));
+    }
+}
+
 static int send_request_system_code(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
                                     uint32_t timeout_ms, uint32_t retries, bool logging,
                                     felica_syscode_response_t *system_code_response) {
@@ -725,6 +781,202 @@ static int send_request_system_code(uint8_t flags, uint16_t datalen, uint8_t *da
     memcpy(system_code_response->system_code_list,
            resp.data.asBytes + number_of_systems_offset + 1,
            (size_t)reported_system_count * 2U);
+    return PM3_SUCCESS;
+}
+
+static uint16_t felica_system_code_from_bytes(const uint8_t *system_code_bytes) {
+    if (system_code_bytes == NULL) {
+        return 0;
+    }
+    return (uint16_t)((uint16_t)system_code_bytes[0] << 8) | system_code_bytes[1];
+}
+
+static void felica_system_code_to_bytes(uint16_t system_code, uint8_t *system_code_bytes_out) {
+    if (system_code_bytes_out == NULL) {
+        return;
+    }
+    system_code_bytes_out[0] = (uint8_t)((system_code >> 8) & 0xFFU);
+    system_code_bytes_out[1] = (uint8_t)(system_code & 0xFFU);
+}
+
+static bool felica_add_unique_discovered_system(felica_discovered_system_t *systems, size_t *count,
+        uint16_t system_code, const uint8_t *idm) {
+    if (systems == NULL || count == NULL) {
+        return false;
+    }
+
+    for (size_t i = 0; i < *count; i++) {
+        if (systems[i].system_code != system_code) {
+            continue;
+        }
+
+        if (idm) {
+            memcpy(systems[i].idm, idm, sizeof(systems[i].idm));
+            systems[i].has_idm = true;
+        }
+        return true;
+    }
+
+    if (*count >= FELICA_DISCOVERED_SYSTEM_MAX_COUNT) {
+        return false;
+    }
+
+    felica_discovered_system_t *system = &systems[*count];
+    memset(system, 0, sizeof(*system));
+    system->system_code = system_code;
+    if (idm) {
+        memcpy(system->idm, idm, sizeof(system->idm));
+        system->has_idm = true;
+    }
+
+    (*count)++;
+    return true;
+}
+
+static int send_polling(uint8_t flags, uint16_t system_code, uint8_t request_code,
+                        uint32_t timeout_ms, uint32_t retries, bool logging,
+                        uint8_t *idm_out, uint16_t *returned_system_code) {
+    if (idm_out == NULL) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t polling_request[6] = {0};
+    polling_request[0] = sizeof(polling_request);
+    polling_request[1] = FELICA_POLL_REQ;
+    felica_system_code_to_bytes(system_code, polling_request + 2);
+    polling_request[4] = request_code;
+    polling_request[5] = 0x00; // one target at a time
+
+    PacketResponseNG resp;
+    if (send_felica_payload_with_retries(flags, sizeof(polling_request), polling_request, false,
+                                         FELICA_POLL_ACK,
+                                         timeout_ms, retries,
+                                         0, logging, &resp, "polling") != PM3_SUCCESS) {
+        return PM3_ERFTRANS;
+    }
+
+    static const size_t poll_response_min_len = 22U;
+    static const size_t poll_response_idm_offset = 4U;
+    static const size_t poll_response_system_code_offset = 20U;
+
+    if (resp.length < poll_response_min_len) {
+        return PM3_ESOFT;
+    }
+
+    memcpy(idm_out, resp.data.asBytes + poll_response_idm_offset, 8);
+
+    if (returned_system_code) {
+        if (request_code == FELICA_POLL_REQUEST_SYSTEM_CODE) {
+            if (resp.length < (poll_response_min_len + 2U)) {
+                return PM3_ESOFT;
+            }
+            *returned_system_code = felica_system_code_from_bytes(resp.data.asBytes + poll_response_system_code_offset);
+        } else {
+            *returned_system_code = system_code;
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int discover_systems(uint8_t flags, const uint8_t *primary_idm,
+                            felica_discovered_system_list_t *discovered_systems) {
+    if (primary_idm == NULL || discovered_systems == NULL) {
+        return PM3_EINVARG;
+    }
+
+    memset(discovered_systems, 0, sizeof(*discovered_systems));
+
+    felica_request_system_code_request_t request_system_code_request;
+    memset(&request_system_code_request, 0, sizeof(request_system_code_request));
+    request_system_code_request.length[0] = sizeof(request_system_code_request);
+    request_system_code_request.command_code[0] = FELICA_REQSYSCODE_REQ;
+    memcpy(request_system_code_request.IDm, primary_idm, sizeof(request_system_code_request.IDm));
+
+    felica_syscode_response_t system_code_response;
+    const int request_system_code_status = send_request_system_code(flags,
+                                            sizeof(request_system_code_request), (uint8_t *)&request_system_code_request,
+                                            false, FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES, false,
+                                            &system_code_response);
+
+    if (request_system_code_status == PM3_SUCCESS) {
+        const size_t reported_systems = system_code_response.number_of_systems[0];
+        for (size_t i = 0; i < reported_systems; i++) {
+            const uint16_t system_code = felica_system_code_from_bytes(system_code_response.system_code_list + (i * 2U));
+            if (felica_add_unique_discovered_system(discovered_systems->systems, &discovered_systems->count,
+                                                    system_code, NULL) == false) {
+                break;
+            }
+        }
+    }
+
+    // Fallback for cards that do not support Request System Code.
+    if (discovered_systems->count == 0) {
+        uint16_t primary_system_code = 0;
+        uint8_t primary_idm_polled[8] = {0};
+        if (send_polling(flags, FELICA_SYSTEM_CODE_WILDCARD, FELICA_POLL_REQUEST_SYSTEM_CODE,
+                         FELICA_POLL_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES, false,
+                         primary_idm_polled, &primary_system_code) != PM3_SUCCESS) {
+            return PM3_ERFTRANS;
+        }
+
+        felica_add_unique_discovered_system(discovered_systems->systems, &discovered_systems->count,
+                                            primary_system_code, primary_idm_polled);
+
+        if (primary_system_code == FELICA_SYSTEM_CODE_NFC_TYPE3 ||
+                primary_system_code == FELICA_SYSTEM_CODE_FELICA_LITE) {
+            const uint16_t alternate_system_code =
+                (primary_system_code == FELICA_SYSTEM_CODE_NFC_TYPE3)
+                ? FELICA_SYSTEM_CODE_FELICA_LITE
+                : FELICA_SYSTEM_CODE_NFC_TYPE3;
+
+            uint8_t alternate_idm_polled[8] = {0};
+            if (send_polling(flags, alternate_system_code, FELICA_POLL_REQUEST_NO_DATA,
+                             FELICA_POLL_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES, false,
+                             alternate_idm_polled, NULL) == PM3_SUCCESS) {
+                felica_add_unique_discovered_system(discovered_systems->systems, &discovered_systems->count,
+                                                    alternate_system_code, alternate_idm_polled);
+            }
+        }
+    }
+
+    if (discovered_systems->count == 0) {
+        return PM3_ERFTRANS;
+    }
+
+    for (size_t i = 0; i < discovered_systems->count; i++) {
+        uint8_t resolved_idm[8] = {0};
+        if (send_polling(flags,
+                         discovered_systems->systems[i].system_code,
+                         FELICA_POLL_REQUEST_NO_DATA,
+                         FELICA_POLL_TIMEOUT_MS,
+                         FELICA_OPTIONAL_CMD_RETRIES,
+                         false,
+                         resolved_idm, NULL) != PM3_SUCCESS) {
+            continue;
+        }
+
+        memcpy(discovered_systems->systems[i].idm, resolved_idm, sizeof(discovered_systems->systems[i].idm));
+        discovered_systems->systems[i].has_idm = true;
+    }
+
+    size_t write_index = 0;
+    for (size_t i = 0; i < discovered_systems->count; i++) {
+        if (discovered_systems->systems[i].has_idm == false) {
+            continue;
+        }
+
+        if (write_index != i) {
+            discovered_systems->systems[write_index] = discovered_systems->systems[i];
+        }
+        write_index++;
+    }
+    discovered_systems->count = write_index;
+
+    if (discovered_systems->count == 0) {
+        return PM3_ERFTRANS;
+    }
+
     return PM3_SUCCESS;
 }
 
@@ -1320,21 +1572,12 @@ static int info_felica(bool verbose) {
         }
     }
 
-    felica_request_system_code_request_t request_system_code_request;
-    memset(&request_system_code_request, 0, sizeof(request_system_code_request));
-    request_system_code_request.length[0] = sizeof(request_system_code_request);
-    request_system_code_request.command_code[0] = FELICA_REQSYSCODE_REQ;
-    memcpy(request_system_code_request.IDm, card.IDm, sizeof(request_system_code_request.IDm));
-
-    felica_syscode_response_t system_code_response;
-    if (send_request_system_code(optional_flags,
-                                 sizeof(request_system_code_request), (uint8_t *)&request_system_code_request,
-                                 false, FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES, false,
-                                 &system_code_response) == PM3_SUCCESS &&
-            system_code_response.number_of_systems[0] > 0) {
-        PrintAndLogEx(INFO, "System codes.... " _GREEN_("%u"), system_code_response.number_of_systems[0]);
-        for (size_t i = 0; i < system_code_response.number_of_systems[0]; i++) {
-            felica_print_system_code_annotation(INFO, system_code_response.system_code_list + (i * 2));
+    felica_discovered_system_list_t discovered_systems;
+    if (discover_systems(optional_flags, card.IDm, &discovered_systems) == PM3_SUCCESS &&
+            discovered_systems.count > 0) {
+        PrintAndLogEx(INFO, "Systems........ " _GREEN_("%u:"), (unsigned int)discovered_systems.count);
+        for (size_t i = 0; i < discovered_systems.count; i++) {
+            felica_print_discovered_system_block(INFO, &discovered_systems.systems[i]);
         }
     }
 
