@@ -35,11 +35,21 @@
 #ifndef CIPHER_H
 #define CIPHER_H
 #include <stdint.h>
+#include <stdbool.h>
 #include "pm3_cmd.h"
 
 void doMAC(uint8_t *cc_nr_p, uint8_t *div_key_p, uint8_t mac[4]);
 void doMAC_brute(const uint8_t *cc_nr, const uint8_t *div_key, uint8_t mac[4]);
 void doMAC_N(uint8_t *address_data_p, uint8_t address_data_size, uint8_t *div_key_p, uint8_t mac[4]);
+
+// Expand 12 cc_nr bytes into 96 LSB-first input bits for the cipher. Call once per thread
+// and pass the result to doMAC_brute_match_prebit to skip the per-candidate shift work.
+void prepare_ccnr_bits(const uint8_t *cc_nr, uint8_t y_bits[96]);
+
+// doMAC_brute variant with pre-expanded input bits and early-out MAC comparison.
+// Returns true iff the 32-bit MAC for (cc_nr, div_key) equals target_mac.
+// Aborts after the first non-matching output byte, saving ~75% of output ticks on misses.
+bool doMAC_brute_match_prebit(const uint8_t *y_bits, const uint8_t *div_key, const uint8_t target_mac[4]);
 
 #ifndef ON_DEVICE
 int testMAC(void);

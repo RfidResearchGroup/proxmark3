@@ -343,6 +343,11 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cipurse/cipursecore.c
         ${PM3_ROOT}/client/src/cipurse/cipursetest.c
         ${PM3_ROOT}/client/src/loclass/cipher.c
+        ${PM3_ROOT}/client/src/loclass/cipher_bs.c
+        ${PM3_ROOT}/client/src/loclass/cipher_bs_avx2.c
+        ${PM3_ROOT}/client/src/loclass/cipher_bs_avx512.c
+        ${PM3_ROOT}/client/src/loclass/cipher_bs_dispatch.c
+        ${PM3_ROOT}/client/src/loclass/cipher_bs_neon.c
         ${PM3_ROOT}/client/src/loclass/cipherutils.c
         ${PM3_ROOT}/client/src/loclass/elite_crack.c
         ${PM3_ROOT}/client/src/loclass/hash1_brute.c

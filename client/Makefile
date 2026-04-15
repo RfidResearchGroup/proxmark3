@@ -806,6 +806,11 @@ SRCS =  mifare/aiddesfire.c \
         iso7816/apduinfo.c \
         iso7816/iso7816core.c \
         loclass/cipher.c \
+        loclass/cipher_bs.c \
+        loclass/cipher_bs_avx2.c \
+        loclass/cipher_bs_avx512.c \
+        loclass/cipher_bs_dispatch.c \
+        loclass/cipher_bs_neon.c \
         loclass/cipherutils.c \
         loclass/elite_crack.c \
         loclass/ikeys.c \

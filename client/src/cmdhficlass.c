@@ -33,6 +33,8 @@
 #include "des.h"
 #include "loclass/cipherutils.h"
 #include "loclass/cipher.h"
+#include "loclass/cipher_bs.h"
+#include "loclass/cipher_bs_dispatch.h"
 #include "loclass/ikeys.h"
 #include "loclass/elite_crack.h"
 #include "fileutils.h"
@@ -6108,14 +6110,45 @@ typedef struct {
     pthread_mutex_t *log_lock;
 } thread_args_t;
 
+// Lock-guarded "found" announcement; factored out because the bitslice and
+// scalar paths both reach it.
+static void legbrute_announce(thread_args_t *args, const uint8_t div_key[8]) {
+    pthread_mutex_lock(args->log_lock);
+    if (!*(args->found)) {
+        *args->found = true;
+        PrintAndLogEx(NORMAL, "\n");
+        PrintAndLogEx(SUCCESS, "Found valid raw key " _GREEN_("%s"), sprint_hex_inrow(div_key, 8));
+        PrintAndLogEx(HINT, "Hint: Run `"_YELLOW_("hf iclass unhash -k %s")"` to find the needed pre-images", sprint_hex_inrow(div_key, 8));
+        PrintAndLogEx(INFO, "Done!");
+        PrintAndLogEx(NORMAL, "");
+    }
+    pthread_mutex_unlock(args->log_lock);
+}
+
 // HF iClass legbrute - Brute-force worker thread
 static void *brute_thread(void *args_void) {
 
     thread_args_t *args = (thread_args_t *)args_void;
     uint8_t div_key[8];
-    uint8_t mac[4];
-    uint8_t verification_mac[4];
     uint64_t index = args->index_start;
+
+    // Scalar per-candidate hot-loop expansions (used in the alignment
+    // prefix/tail and for MAC2 verification after a bitslice hit).
+    uint8_t y_bits1[96];
+    uint8_t y_bits2[96];
+    prepare_ccnr_bits(args->CCNR1, y_bits1);
+    prepare_ccnr_bits(args->CCNR2, y_bits2);
+
+    // Bitslice expansions for the fast path. The backend is picked once at
+    // startup (widest SIMD width the CPU supports: AVX-512 > AVX2 > NEON > u64).
+    // MAC2 stays scalar — it only runs on the vanishingly rare MAC1 collisions,
+    // so there is no reason to pre-expand it.
+    const bs_backend_t *bs = bs_best_backend();
+    const uint64_t bs_align = (uint64_t)(bs->width - 1);
+    uint64_t y_bits1_bs[96 * BS_MAX_WORDS];
+    uint64_t target_mac1_bs[32 * BS_MAX_WORDS];
+    bs->prepare_ccnr(args->CCNR1, y_bits1_bs);
+    bs->prepare_mac(args->MAC_TAG1, target_mac1_bs);
 
     if (args->debug) {
         pthread_mutex_lock(args->log_lock);
@@ -6144,28 +6177,55 @@ static void *brute_thread(void *args_void) {
     uint32_t progress_countdown = 1000000;
     while (index < args->index_end && !*(args->found) && !*(args->aborted)) {
 
-        generate_key_block_inverted(args->startingKey, index, div_key);
-        doMAC_brute(args->CCNR1, div_key, mac);
+        uint64_t step;
+        const uint64_t remaining = args->index_end - index;
 
-        if (memcmp(mac, args->MAC_TAG1, 4) == 0) {
-            doMAC_brute(args->CCNR2, div_key, verification_mac);
-            if (memcmp(verification_mac, args->MAC_TAG2, 4) == 0) {
-                pthread_mutex_lock(args->log_lock);
-                if (!*(args->found)) {
-                    *args->found = true;
-                    PrintAndLogEx(NORMAL, "\n");
-                    PrintAndLogEx(SUCCESS, "Found valid raw key " _GREEN_("%s"), sprint_hex_inrow(div_key, 8));
-                    PrintAndLogEx(HINT, "Hint: Run `"_YELLOW_("hf iclass unhash -k %s")"` to find the needed pre-images", sprint_hex_inrow(div_key, 8));
-                    PrintAndLogEx(INFO, "Done!");
-                    PrintAndLogEx(NORMAL, "");
+        if ((index & bs_align) == 0 && remaining >= (uint64_t)bs->width) {
+            // Fast path: bs->width-wide bitslice MAC1 sweep. Build the key
+            // schedule for W consecutive candidates and test them in parallel.
+            uint64_t kb[64 * BS_MAX_WORDS];
+            bs->build_key(args->startingKey, index, kb);
+
+            uint64_t match[BS_MAX_WORDS];
+            bs->match(y_bits1_bs, kb, target_mac1_bs, match);
+
+            // MAC1 collisions are ~W / 2^32 per batch on average (i.e., zero
+            // until the true key's batch is reached). For each surviving lane,
+            // reconstruct its div_key and verify against MAC2 with the scalar
+            // prebit matcher.
+            bool done = false;
+            for (int w = 0; w < bs->words && !done; w++) {
+                uint64_t m = match[w];
+                while (m != 0) {
+                    const int L = __builtin_ctzll(m);
+                    m &= m - 1;
+                    const uint64_t cand = index + (uint64_t)(w * 64 + L);
+                    generate_key_block_inverted(args->startingKey, cand, div_key);
+                    if (doMAC_brute_match_prebit(y_bits2, div_key, args->MAC_TAG2)) {
+                        legbrute_announce(args, div_key);
+                        done = true;
+                        break;
+                    }
                 }
-                pthread_mutex_unlock(args->log_lock);
-                break;
             }
+
+            step = (uint64_t)bs->width;
+        } else {
+            // Scalar fallback: non-64-aligned prefix, the sub-64-candidate
+            // tail, or any thread whose slice is not a multiple of 64.
+            generate_key_block_inverted(args->startingKey, index, div_key);
+
+            if (doMAC_brute_match_prebit(y_bits1, div_key, args->MAC_TAG1)) {
+                if (doMAC_brute_match_prebit(y_bits2, div_key, args->MAC_TAG2)) {
+                    legbrute_announce(args, div_key);
+                }
+            }
+
+            step = 1;
         }
 
         uint64_t thread_progress = index - args->index_start;
-        if (--progress_countdown == 0 && !*(args->found)) {
+        if (progress_countdown <= step && !*(args->found)) {
             progress_countdown = 1000000;
 
             if (args->thread_id == 0) {
@@ -6207,8 +6267,10 @@ static void *brute_thread(void *args_void) {
                 pthread_mutex_unlock(args->log_lock);
             }
 
+        } else {
+            progress_countdown -= (uint32_t)step;
         }
-        index++;
+        index += step;
     }
     return NULL;
 }
@@ -6225,7 +6287,9 @@ static int CmdHFiClassLegBrute_MT(uint8_t epurse[8], uint8_t macs[8], uint8_t ma
         PrintAndLogEx(INFO, "Capping threads at available CPU count (%d)", max_threads);
         thread_count = max_threads;
     }
-    PrintAndLogEx(INFO, "Bruteforcing using " _YELLOW_("%u") " threads", thread_count);
+    const bs_backend_t *bs = bs_best_backend();
+    PrintAndLogEx(INFO, "Bruteforcing using " _YELLOW_("%u") " threads, " _YELLOW_("%s") " bitslice (%d lanes)",
+                  thread_count, bs->name, bs->width);
     PrintAndLogEx(NORMAL, "");
 
     uint8_t CCNR[12], CCNR2[12], MAC_TAG[4], MAC_TAG2[4];
@@ -6334,7 +6398,7 @@ static int CmdHFiClassLegBrute(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass legbrute",
                   "This command takes sniffed trace data and a partial raw key and bruteforces the remaining 40 bits of the raw key.\n"
                   "Complete 40 bit keyspace is 1'099'511'627'776.",
-                  "hf iclass legbrute --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk B4F12AADC5301225");
+                  "hf iclass legbrute --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk 0401020505000205");
 
     void *argtable[] = {
         arg_param_begin,
@@ -6599,7 +6663,9 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     iclass_recover(macs, index, loop, no_first_auth, debug, test, fast, short_delay, allnight);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(WARNING, _YELLOW_("If the process completed successfully"));
-    PrintAndLogEx(HINT, "Hint: run `" _YELLOW_("hf iclass legbrute -h") "` with the partial key found");
+    PrintAndLogEx(HINT, "Hint-1: run `" _YELLOW_("hf iclass legbrute -h") "` with the partial key found");
+    PrintAndLogEx(HINT, "Hint-2: alternatively run hashcat `" _YELLOW_("./hashcat -a 3 -m 64000 hash.txt ?b?b?b?b?b") "` with the partial key found");
+    PrintAndLogEx(HINT, "hash.txt format would be: `" _YELLOW_("$iclass_leg$partial_key$ccnr1$mac1$ccnr2$mac2") "`");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 
