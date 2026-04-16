@@ -856,6 +856,8 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     bool triggered = !(param & 0x03);
 
     uint32_t rx_samples = 0;
+    uint32_t overrun_skips = 0;
+    uint32_t dma_stalls = 0;
 
     uint16_t checker = 12000;
 
@@ -879,25 +881,43 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
             dataLen = DMA_BUFFER_SIZE - readBufDataP + dmaBufDataP;
         }
 
-        // test for length of buffer
         if (dataLen > maxDataLen) {
             maxDataLen = dataLen;
-            if (dataLen > (9 * DMA_BUFFER_SIZE / 10)) {
-                Dbprintf("[!] blew circular buffer! | datalen %u", dataLen);
-                break;
-            }
         }
+
+        // DMA fully stalled: both buffers exhausted. Re-arm primary + secondary,
+        // resync the read pointer, and drop the in-flight frame.
+        if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
+            AT91C_BASE_PDC_SSC->PDC_RPR  = (uint32_t) dma->buf;
+            AT91C_BASE_PDC_SSC->PDC_RCR  = DMA_BUFFER_SIZE;
+            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
+            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+            data = dma->buf;
+            rx_samples += DMA_BUFFER_SIZE;
+            Uart14aReset();
+            Demod14aReset();
+            dma_stalls++;
+            continue;
+        }
+
+        // Fell behind the DMA write pointer; skip to catch up rather than abort.
+        if (dataLen > (9 * DMA_BUFFER_SIZE / 10)) {
+            data = dma->buf + dmaBufDataP;
+            if (data == dma->buf + DMA_BUFFER_SIZE) {
+                data = dma->buf;
+            }
+            rx_samples += dataLen;
+            Uart14aReset();
+            Demod14aReset();
+            overrun_skips++;
+            continue;
+        }
+
         if (dataLen < 1) {
             continue;
         }
 
-        // primary buffer was stopped( <-- we lost data!
-        if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
-            AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
-            AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-            Dbprintf("[-] RxEmpty ERROR | data length %d", dataLen); // temporary
-        }
-        // secondary buffer sets as primary, secondary buffer was stopped
+        // secondary buffer exhausted, primary still running — refill secondary
         if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
             AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
             AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
@@ -989,6 +1009,10 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 
     if (g_dbglevel >= DBG_ERROR) {
         Dbprintf("trace len = " _YELLOW_("%d"), BigBuf_get_traceLen());
+        if (overrun_skips || dma_stalls) {
+            Dbprintf(_RED_("[!] sniffer dropped frames") " | overrun recoveries " _YELLOW_("%u") " | DMA stalls " _YELLOW_("%u"),
+                     overrun_skips, dma_stalls);
+        }
     }
     switch_off();
 }
