@@ -439,7 +439,7 @@ int ensure_ec_private_key(const char *input_or_path, mbedtls_ecp_group_id curvei
 // Accepted input formats:
 //   - Raw uncompressed point bytes:   04 || X || Y  (e.g. 65 bytes for P-256)
 //   - Raw X || Y coordinates:         X || Y        (e.g. 64 bytes for P-256)
-//   - Raw compressed point:           02/03 || X    (e.g. 33 bytes for P-256)
+//   - Compressed point:               02/03 || X    (e.g. 33 bytes for P-256)
 //   - DER-encoded SubjectPublicKeyInfo blob
 //   - PEM-encoded public key (-----BEGIN PUBLIC KEY-----)
 //   - Hex string of any of the above
@@ -479,6 +479,58 @@ static int pcrypto_extract_pub_point_from_pk(const mbedtls_pk_context *pkctx,
     return PM3_SUCCESS;
 }
 
+// Decompress a compressed EC point (02/03 || X) to uncompressed (04 || X || Y).
+// Bundled mbedtls does not support reading compressed points.
+// Based on https://github.com/mwarning/mbedtls-ecp-compression
+static int pcrypto_decompress_ec_point(const uint8_t *compressed, size_t comp_len,
+                                       const mbedtls_ecp_group *grp,
+                                       uint8_t *out, size_t out_len) {
+    size_t coord_len = (grp->nbits + 7) / 8;
+    if (comp_len != 1 + coord_len || (compressed[0] != 0x02 && compressed[0] != 0x03)) {
+        return PM3_EINVARG;
+    }
+    if (out_len < 1 + 2 * coord_len) {
+        return PM3_EOVFLOW;
+    }
+
+    // Solve y = sqrt(x^3 + ax + b) mod p, using y = rhs^((p+1)/4) mod p (valid for p ≡ 3 mod 4).
+    // Factor as: r = x(x^2 + a) + b to save one multiplication.
+    mbedtls_mpi r, x, n;
+    mbedtls_mpi_init(&r); mbedtls_mpi_init(&x); mbedtls_mpi_init(&n);
+
+    // Copy X coordinate and output prefix
+    memcpy(out, compressed, comp_len);
+    out[0] = 0x04;
+
+    int ok = (mbedtls_mpi_read_binary(&x, compressed + 1, coord_len) == 0);
+    // r = x^2
+    ok = ok && (mbedtls_mpi_mul_mpi(&r, &x, &x) == 0);
+    // r = x^2 + a (A.p == NULL means implicit a = -3 for NIST curves)
+    if (ok && grp->A.p == NULL) {
+        ok = (mbedtls_mpi_sub_int(&r, &r, 3) == 0);
+    } else {
+        ok = ok && (mbedtls_mpi_add_mpi(&r, &r, &grp->A) == 0);
+    }
+    // r = x(x^2 + a)
+    ok = ok && (mbedtls_mpi_mul_mpi(&r, &r, &x) == 0);
+    // r = x(x^2 + a) + b
+    ok = ok && (mbedtls_mpi_add_mpi(&r, &r, &grp->B) == 0);
+    // n = (p + 1) / 4
+    ok = ok && (mbedtls_mpi_add_int(&n, &grp->P, 1) == 0);
+    ok = ok && (mbedtls_mpi_shift_r(&n, 2) == 0);
+    // r = r^((p+1)/4) mod p
+    ok = ok && (mbedtls_mpi_exp_mod(&r, &r, &n, &grp->P, NULL) == 0);
+    // Fix parity: 02 = even y, 03 = odd y
+    if (ok && ((compressed[0] == 0x03) != mbedtls_mpi_get_bit(&r, 0))) {
+        ok = (mbedtls_mpi_sub_mpi(&r, &grp->P, &r) == 0);
+    }
+    // Write Y coordinate
+    ok = ok && (mbedtls_mpi_write_binary(&r, out + 1 + coord_len, coord_len) == 0);
+
+    mbedtls_mpi_free(&r); mbedtls_mpi_free(&x); mbedtls_mpi_free(&n);
+    return ok ? PM3_SUCCESS : PM3_ESOFT;
+}
+
 static int pcrypto_validate_raw_ec_point(const uint8_t *point, size_t point_len,
                                          mbedtls_ecp_group_id curveid,
                                          uint8_t *out_pub, size_t out_pub_len) {
@@ -513,9 +565,12 @@ static int pcrypto_validate_raw_ec_point(const uint8_t *point, size_t point_len,
         memcpy(buf + 1, point, point_len);
         buf_len = 1 + point_len;
     } else if (point_len == 1 + coord_len && (point[0] == 0x02 || point[0] == 0x03)) {
-        // Compressed point: 02/03 || X
-        memcpy(buf, point, point_len);
-        buf_len = point_len;
+        // Compressed point: decompress (bundled mbedtls lacks read support)
+        if (pcrypto_decompress_ec_point(point, point_len, &grp, buf, sizeof(buf)) != PM3_SUCCESS) {
+            status = PM3_EINVARG;
+            goto out;
+        }
+        buf_len = expected_uncompressed;
     } else {
         status = PM3_EINVARG;
         goto out;
