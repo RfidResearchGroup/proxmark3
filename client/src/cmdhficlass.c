@@ -1508,7 +1508,7 @@ static int CmdHFiClassTagSim(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ICLASS_SIMULATE, ICLASS_SIM_MODE_FULL, 0, 1, csn, 8);
+    SendCommandMIX(CMD_HF_ICLASS_SIMULATE, ICLASS_SIM_MODE_FULL_LIVE, 0, 1, csn, 8);
 
     // --- live FC/CN navigation (wiegand mode only; binary mode has no FC/CN to adjust)
     if (bin_len == 0) {

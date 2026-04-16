@@ -196,7 +196,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
         if (send_reply)
             reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
 
-    } else if (sim_type == ICLASS_SIM_MODE_FULL || sim_type == ICLASS_SIM_MODE_FULL_GLITCH || sim_type == ICLASS_SIM_MODE_FULL_GLITCH_KEY) {
+    } else if (sim_type == ICLASS_SIM_MODE_FULL || sim_type == ICLASS_SIM_MODE_FULL_GLITCH || sim_type == ICLASS_SIM_MODE_FULL_GLITCH_KEY || sim_type == ICLASS_SIM_MODE_FULL_LIVE) {
 
         //This is 'full sim' mode, where we use the emulator storage for data.
         //ie:  BigBuf_get_EM_addr should be previously filled with data from the "eload" command
@@ -291,6 +291,14 @@ out:
  * @param breakAfterMacReceived if true, returns after reader MAC has been received.
  */
 int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
+
+    // FULL_LIVE = FULL + per-byte USB poll so the client can push live emul
+    // updates (see hf iclass tagsim). Unfold the flag and continue as FULL
+    // so all existing FULL-mode checks below work unchanged.
+    const bool allow_usb_interrupt = (simulationMode == ICLASS_SIM_MODE_FULL_LIVE);
+    if (simulationMode == ICLASS_SIM_MODE_FULL_LIVE) {
+        simulationMode = ICLASS_SIM_MODE_FULL;
+    }
 
     // free eventually allocated BigBuf memory
     BigBuf_free_keep_EM();
@@ -499,7 +507,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
         trace_data_size = 0;
 
         uint32_t reader_eof_time = 0;
-        len = GetIso15693CommandFromReader(receivedCmd, MAX_FRAME_SIZE, &reader_eof_time);
+        len = GetIso15693CommandFromReader(receivedCmd, MAX_FRAME_SIZE, &reader_eof_time, allow_usb_interrupt);
         if (len == -2) {
             // USB data arrived while waiting for RF — drain all pending EML_MEMSET
             // commands inline (without FpgaDownloadAndGo) so live tag updates work.
@@ -1118,7 +1126,7 @@ int do_iclass_simulation_nonsec(void) {
         WDT_HIT();
 
         uint32_t reader_eof_time = 0;
-        len = GetIso15693CommandFromReader(receivedCmd, MAX_FRAME_SIZE, &reader_eof_time);
+        len = GetIso15693CommandFromReader(receivedCmd, MAX_FRAME_SIZE, &reader_eof_time, false);
         if (len < 0) {
             button_pressed = true;
             exit_loop = true;
