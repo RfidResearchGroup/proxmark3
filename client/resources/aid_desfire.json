@@ -24,6 +24,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "1010F6",
+        "Vendor": "VDE",
+        "Country": "DE",
+        "Name": "VDE EV charging",
+        "Description": "Found on a DESFire card.",
+        "Type": "payment system"
+    },
+    {
         "AID": "1023F5",
         "Vendor": "Integrated Control Technology Limited (ICT)",
         "Country": "NZ",

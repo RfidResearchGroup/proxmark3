@@ -827,6 +827,7 @@ SRCS =  mifare/aiddesfire.c \
         mifare/mifare4.c \
         mifare/mifaredefault.c \
         mifare/mifarehost.c \
+        mifare/prime.c \
         mifare/gen4.c \
         nfc/ndef.c \
         pm3.c \

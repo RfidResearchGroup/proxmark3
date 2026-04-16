@@ -27,6 +27,7 @@
 #include "cmdhf14a.h"
 #include "mifare/mifare4.h"
 #include "mifare/mad.h"
+#include "mifare/prime.h"
 #include "nfc/ndef.h"
 #include "cliparser.h"
 #include "mifare/mifaredefault.h"
@@ -46,103 +47,6 @@ static uint16_t mfp_card_adresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0
 #define MFP_CHK_KEY_TRIES  (2)
 
 static int CmdHelp(const char *Cmd);
-
-/*
-  The 7 MSBits (= n) code the storage size itself based on 2^n,
-  the LSBit is set to '0' if the size is exactly 2^n
-    and set to '1' if the storage size is between 2^n and 2^(n+1).
-    For this version of DESFire the 7 MSBits are set to 0x0C (2^12 = 4096) and the LSBit is '0'.
-*/
-static char *getCardSizeStr(uint8_t fsize) {
-
-    static char buf[40] = {0x00};
-    char *retStr = buf;
-
-    uint16_t usize = 1 << ((fsize >> 1) + 1);
-    uint16_t lsize = 1 << (fsize >> 1);
-
-    // is  LSB set?
-    if (fsize & 1)
-        snprintf(retStr, sizeof(buf), "0x%02X ( " _GREEN_("%d - %d bytes") " )", fsize, usize, lsize);
-    else
-        snprintf(retStr, sizeof(buf), "0x%02X ( " _GREEN_("%d bytes") " )", fsize, lsize);
-    return buf;
-}
-
-static char *getProtocolStr(uint8_t id, bool hw) {
-
-    static char buf[50] = {0x00};
-    char *retStr = buf;
-
-    if (id == 0x04) {
-        snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("ISO 14443-3 MIFARE, 14443-4") " )", id);
-    } else if (id == 0x05) {
-        if (hw)
-            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("ISO 14443-2, 14443-3") " )", id);
-        else
-            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") " )", id);
-    } else {
-        snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Unknown") " )", id);
-    }
-    return buf;
-}
-
-static char *getVersionStr(uint8_t type, uint8_t major, uint8_t minor) {
-
-    static char buf[40] = {0x00};
-    char *retStr = buf;
-
-    if (type == 0x01 && major == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire MF3ICD40") " )", major, minor);
-    else if (major == 0x10 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("NTAG413DNA") " )", major, minor);
-    else if (type == 0x01 && major == 0x01 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV1") " )", major, minor);
-    else if (type == 0x01 && major == 0x12 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2") " )", major, minor);
-    else if (type == 0x01 && major == 0x22 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2 XL") " )", major, minor);
-    else if (type == 0x01 && major == 0x42 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2") " )", major, minor);
-    else if (type == 0x01 && major == 0x33 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV3") " )", major, minor);
-    else if (type == 0x01 && major == 0x30 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire Light") " )", major, minor);
-    else if (type == 0x02 && major == 0x11 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("Plus EV1") " )", major, minor);
-    else if (type == 0x02 && major == 0x22 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("Plus EV2") " )", major, minor);
-    else
-        snprintf(retStr, sizeof(buf), "%x.%x ( " _YELLOW_("Unknown") " )", major, minor);
-    return buf;
-}
-
-static char *getTypeStr(uint8_t type) {
-
-    static char buf[40] = {0x00};
-    char *retStr = buf;
-
-    switch (type) {
-        case 0x01:
-            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("DESFire") " )", type);
-            break;
-        case 0x02:
-            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Plus") " )", type);
-            break;
-        case 0x03:
-            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Ultralight") " )", type);
-            break;
-        case 0x04:
-            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("NTAG") " )", type);
-            break;
-        case 0x81:
-            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Smartcard") " )", type);
-            break;
-        default:
-            break;
-    }
-    return buf;
-}
 
 // --- GET SIGNATURE
 static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
@@ -184,20 +88,20 @@ static int plus_print_version(uint8_t *version) {
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
     PrintAndLogEx(INFO, "          Raw : %s", sprint_hex(version, 7));
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(version[0]));
-    PrintAndLogEx(INFO, "          Type: %s", getTypeStr(version[1]));
+    PrintAndLogEx(INFO, "          Type: %s", mifare_prime_get_type_str(version[1]));
     PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), version[2]);
-    PrintAndLogEx(INFO, "       Version: %s", getVersionStr(version[1], version[3], version[4]));
-    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(version[5]));
-    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(version[6], true));
+    PrintAndLogEx(INFO, "       Version: %s", mifare_prime_get_version_str(version[1], version[3], version[4]));
+    PrintAndLogEx(INFO, "  Storage size: %s", mifare_prime_get_card_size_str(version[5]));
+    PrintAndLogEx(INFO, "      Protocol: %s", mifare_prime_get_protocol_str(version[6], true));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Software Information"));
     PrintAndLogEx(INFO, "          Raw : %s", sprint_hex(version + 7, 6));
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(version[7]));
-    PrintAndLogEx(INFO, "          Type: %s", getTypeStr(version[8]));
+    PrintAndLogEx(INFO, "          Type: %s", mifare_prime_get_type_str(version[8]));
     PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), version[9]);
     PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  version[10], version[11]);
-    PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(version[12]));
-    PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(version[13], false));
+    PrintAndLogEx(INFO, "  Storage size: %s", mifare_prime_get_card_size_str(version[12]));
+    PrintAndLogEx(INFO, "      Protocol: %s", mifare_prime_get_protocol_str(version[13], false));
     return PM3_SUCCESS;
 }
 

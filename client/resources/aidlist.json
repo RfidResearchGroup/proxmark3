@@ -2381,6 +2381,14 @@
         ]
     },
     {
+        "AID": "A0000008450000000000000000000001",
+        "Vendor": "VDE",
+        "Country": "Germany",
+        "Name": "VDE EV charging",
+        "Description": "Found on a DESFire card.",
+        "Type": ""
+    },
+    {
         "AID": "A0000008580102",
         "Vendor": "Apple",
         "Country": "",
