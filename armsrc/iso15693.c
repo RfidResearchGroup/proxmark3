@@ -1492,7 +1492,7 @@ static int RAMFUNC Handle15693SampleFromReader(bool bit, DecodeReader_t *reader)
 // correctly.
 //-----------------------------------------------------------------------------
 
-int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time) {
+int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time, bool allow_usb_interrupt) {
     int samples = 0;
     bool gotFrame = false;
 
@@ -1567,8 +1567,9 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
             break;
         }
 
-        if ((dr->state == STATE_READER_UNSYNCD ||
-                dr->state == STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF) &&
+        if (allow_usb_interrupt &&
+                (dr->state == STATE_READER_UNSYNCD ||
+                 dr->state == STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF) &&
                 data_available()) {
             dr->byteCount = -2;
             break;
@@ -2267,7 +2268,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
 
         // Listen to reader
         uint32_t reader_eof_time = 0;
-        int cmd_len = GetIso15693CommandFromReader(cmd, sizeof(cmd), &reader_eof_time);
+        int cmd_len = GetIso15693CommandFromReader(cmd, sizeof(cmd), &reader_eof_time, false);
         if (cmd_len < 0) {
             button_pressed = true;
             break;
