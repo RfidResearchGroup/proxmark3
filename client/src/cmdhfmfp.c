@@ -71,7 +71,7 @@ static char *getCardSizeStr(uint8_t fsize) {
 
 static char *getProtocolStr(uint8_t id, bool hw) {
 
-    static char buf[50] = {0x00};
+    static char buf[64] = {0x00};
     char *retStr = buf;
 
     if (id == 0x04) {
@@ -81,6 +81,10 @@ static char *getProtocolStr(uint8_t id, bool hw) {
             snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("ISO 14443-2, 14443-3") " )", id);
         else
             snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") " )", id);
+    } else if (id == 0x20) {
+        snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("I2C") " )", id);
+    } else if (id == 0x25) {
+        snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("I2C and ISO/IEC 14443-4") " )", id);
     } else {
         snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Unknown") " )", id);
     }
