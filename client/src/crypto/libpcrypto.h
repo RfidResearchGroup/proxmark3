@@ -67,6 +67,7 @@ int ecdsa_signature_create(mbedtls_ecp_group_id curveid, uint8_t *key_d, uint8_t
 int ecdsa_signature_verify(mbedtls_ecp_group_id curveid, uint8_t *key_xy, uint8_t *input, int length, uint8_t *signature, size_t signaturelen, bool hash);
 int ecdsa_signature_r_s_verify(mbedtls_ecp_group_id curveid, uint8_t *key_xy, uint8_t *input, int length, uint8_t *r_s, size_t r_s_len, bool hash);
 int ensure_ec_private_key(const char *input_or_path, mbedtls_ecp_group_id curveid, uint8_t *out_priv, size_t out_priv_len);
+int ensure_ec_public_key(const char *input_or_path, mbedtls_ecp_group_id curveid, uint8_t *out_pub, size_t out_pub_len);
 
 char *ecdsa_get_error(int ret);
 

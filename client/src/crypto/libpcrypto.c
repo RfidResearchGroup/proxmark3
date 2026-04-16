@@ -429,6 +429,386 @@ int ensure_ec_private_key(const char *input_or_path, mbedtls_ecp_group_id curvei
     return pcrypto_parse_ec_private_text(input_or_path, true, curveid, out_priv, out_priv_len);
 }
 
+// ============================================================================
+// EC Public Key Loading
+// ============================================================================
+//
+// Output format: uncompressed point 04 || X || Y
+// For P-256 this is 65 bytes.
+//
+// Accepted input formats:
+//   - Raw uncompressed point bytes:   04 || X || Y  (e.g. 65 bytes for P-256)
+//   - Raw X || Y coordinates:         X || Y        (e.g. 64 bytes for P-256)
+//   - Compressed point:               02/03 || X    (e.g. 33 bytes for P-256)
+//   - DER-encoded SubjectPublicKeyInfo blob
+//   - PEM-encoded public key (-----BEGIN PUBLIC KEY-----)
+//   - Hex string of any of the above
+//   - Base64-encoded blob of any of the above
+//   - File path (PEM or DER)
+
+static int pcrypto_extract_pub_point_from_pk(const mbedtls_pk_context *pkctx,
+                                             mbedtls_ecp_group_id curveid,
+                                             uint8_t *out_pub, size_t out_pub_len) {
+    if (pkctx == NULL || out_pub == NULL || out_pub_len == 0) {
+        return PM3_EINVARG;
+    }
+
+    mbedtls_pk_type_t pk_type = mbedtls_pk_get_type(pkctx);
+    if (!(pk_type == MBEDTLS_PK_ECKEY || pk_type == MBEDTLS_PK_ECKEY_DH || pk_type == MBEDTLS_PK_ECDSA)) {
+        return PM3_EINVARG;
+    }
+
+    mbedtls_ecp_keypair *ec = mbedtls_pk_ec(*pkctx);
+    if (ec == NULL || ec->grp.id != curveid) {
+        return PM3_EINVARG;
+    }
+
+    size_t coord_len = (ec->grp.nbits + 7) / 8;
+    size_t expected_len = 1 + 2 * coord_len;
+    if (out_pub_len < expected_len) {
+        return PM3_EOVFLOW;
+    }
+
+    size_t written = 0;
+    int ret = mbedtls_ecp_point_write_binary(&ec->grp, &ec->Q, MBEDTLS_ECP_PF_UNCOMPRESSED,
+                                             &written, out_pub, out_pub_len);
+    if (ret != 0 || written != expected_len) {
+        return PM3_ESOFT;
+    }
+
+    return PM3_SUCCESS;
+}
+
+// Decompress a compressed EC point (02/03 || X) to uncompressed (04 || X || Y).
+// Bundled mbedtls does not support reading compressed points.
+// Based on https://github.com/mwarning/mbedtls-ecp-compression
+static int pcrypto_decompress_ec_point(const uint8_t *compressed, size_t comp_len,
+                                       const mbedtls_ecp_group *grp,
+                                       uint8_t *out, size_t out_len) {
+    size_t coord_len = (grp->nbits + 7) / 8;
+    if (comp_len != 1 + coord_len || (compressed[0] != 0x02 && compressed[0] != 0x03)) {
+        return PM3_EINVARG;
+    }
+    if (out_len < 1 + 2 * coord_len) {
+        return PM3_EOVFLOW;
+    }
+
+    // Solve y = sqrt(x^3 + ax + b) mod p, using y = rhs^((p+1)/4) mod p (valid for p ≡ 3 mod 4).
+    // Factor as: r = x(x^2 + a) + b to save one multiplication.
+    mbedtls_mpi r, x, n;
+    mbedtls_mpi_init(&r); mbedtls_mpi_init(&x); mbedtls_mpi_init(&n);
+
+    // Copy X coordinate and output prefix
+    memcpy(out, compressed, comp_len);
+    out[0] = 0x04;
+
+    int ok = (mbedtls_mpi_read_binary(&x, compressed + 1, coord_len) == 0);
+    // r = x^2
+    ok = ok && (mbedtls_mpi_mul_mpi(&r, &x, &x) == 0);
+    // r = x^2 + a (A.p == NULL means implicit a = -3 for NIST curves)
+    if (ok && grp->A.p == NULL) {
+        ok = (mbedtls_mpi_sub_int(&r, &r, 3) == 0);
+    } else {
+        ok = ok && (mbedtls_mpi_add_mpi(&r, &r, &grp->A) == 0);
+    }
+    // r = x(x^2 + a)
+    ok = ok && (mbedtls_mpi_mul_mpi(&r, &r, &x) == 0);
+    // r = x(x^2 + a) + b
+    ok = ok && (mbedtls_mpi_add_mpi(&r, &r, &grp->B) == 0);
+    // n = (p + 1) / 4
+    ok = ok && (mbedtls_mpi_add_int(&n, &grp->P, 1) == 0);
+    ok = ok && (mbedtls_mpi_shift_r(&n, 2) == 0);
+    // r = r^((p+1)/4) mod p
+    ok = ok && (mbedtls_mpi_exp_mod(&r, &r, &n, &grp->P, NULL) == 0);
+    // Fix parity: 02 = even y, 03 = odd y
+    if (ok && ((compressed[0] == 0x03) != mbedtls_mpi_get_bit(&r, 0))) {
+        ok = (mbedtls_mpi_sub_mpi(&r, &grp->P, &r) == 0);
+    }
+    // Write Y coordinate
+    ok = ok && (mbedtls_mpi_write_binary(&r, out + 1 + coord_len, coord_len) == 0);
+
+    mbedtls_mpi_free(&r); mbedtls_mpi_free(&x); mbedtls_mpi_free(&n);
+    return ok ? PM3_SUCCESS : PM3_ESOFT;
+}
+
+static int pcrypto_validate_raw_ec_point(const uint8_t *point, size_t point_len,
+                                         mbedtls_ecp_group_id curveid,
+                                         uint8_t *out_pub, size_t out_pub_len) {
+    if (point == NULL || out_pub == NULL || point_len == 0 || out_pub_len == 0) {
+        return PM3_EINVARG;
+    }
+
+    mbedtls_ecp_group grp;
+    mbedtls_ecp_point Q;
+    mbedtls_ecp_group_init(&grp);
+    mbedtls_ecp_point_init(&Q);
+
+    int status = PM3_ESOFT;
+    if (mbedtls_ecp_group_load(&grp, curveid) != 0) {
+        goto out;
+    }
+
+    size_t coord_len = (grp.nbits + 7) / 8;
+    size_t expected_uncompressed = 1 + 2 * coord_len;
+
+    // Build a properly-formatted point for mbedtls
+    uint8_t buf[133]; // max for P-521: 1 + 2*66
+    size_t buf_len = 0;
+
+    if (point_len == expected_uncompressed && point[0] == 0x04) {
+        // Already uncompressed: 04 || X || Y
+        memcpy(buf, point, point_len);
+        buf_len = point_len;
+    } else if (point_len == 2 * coord_len) {
+        // Raw X || Y, add 0x04 prefix
+        buf[0] = 0x04;
+        memcpy(buf + 1, point, point_len);
+        buf_len = 1 + point_len;
+    } else if (point_len == 1 + coord_len && (point[0] == 0x02 || point[0] == 0x03)) {
+        // Compressed point: decompress (bundled mbedtls lacks read support)
+        if (pcrypto_decompress_ec_point(point, point_len, &grp, buf, sizeof(buf)) != PM3_SUCCESS) {
+            status = PM3_EINVARG;
+            goto out;
+        }
+        buf_len = expected_uncompressed;
+    } else {
+        status = PM3_EINVARG;
+        goto out;
+    }
+
+    if (mbedtls_ecp_point_read_binary(&grp, &Q, buf, buf_len) != 0) {
+        status = PM3_EINVARG;
+        goto out;
+    }
+
+    if (mbedtls_ecp_check_pubkey(&grp, &Q) != 0) {
+        status = PM3_EINVARG;
+        goto out;
+    }
+
+    // Write out as uncompressed
+    if (out_pub_len < expected_uncompressed) {
+        status = PM3_EOVFLOW;
+        goto out;
+    }
+
+    size_t written = 0;
+    if (mbedtls_ecp_point_write_binary(&grp, &Q, MBEDTLS_ECP_PF_UNCOMPRESSED,
+                                       &written, out_pub, out_pub_len) != 0) {
+        status = PM3_ESOFT;
+        goto out;
+    }
+
+    status = PM3_SUCCESS;
+
+out:
+    mbedtls_ecp_point_free(&Q);
+    mbedtls_ecp_group_free(&grp);
+    return status;
+}
+
+static int pcrypto_parse_ec_public_blob(const uint8_t *blob, size_t blob_len,
+                                        mbedtls_ecp_group_id curveid,
+                                        uint8_t *out_pub, size_t out_pub_len) {
+    if (blob == NULL || out_pub == NULL || blob_len == 0 || out_pub_len == 0) {
+        return PM3_EINVARG;
+    }
+
+    // Try as raw EC point first (uncompressed, X||Y, or compressed)
+    int res = pcrypto_validate_raw_ec_point(blob, blob_len, curveid, out_pub, out_pub_len);
+    if (res == PM3_SUCCESS) {
+        return PM3_SUCCESS;
+    }
+
+    // Try as DER/PEM SubjectPublicKeyInfo via mbedtls pk parser
+    mbedtls_pk_context pkctx;
+    mbedtls_pk_init(&pkctx);
+
+    int ret = mbedtls_pk_parse_public_key(&pkctx, blob, blob_len);
+    if (ret != 0) {
+        // mbedtls_pk_parse_public_key requires NUL-terminated PEM
+        uint8_t *nul_terminated = calloc(blob_len + 1, sizeof(uint8_t));
+        if (nul_terminated == NULL) {
+            mbedtls_pk_free(&pkctx);
+            return PM3_EMALLOC;
+        }
+        memcpy(nul_terminated, blob, blob_len);
+        ret = mbedtls_pk_parse_public_key(&pkctx, nul_terminated, blob_len + 1);
+        free(nul_terminated);
+    }
+
+    if (ret != 0) {
+        mbedtls_pk_free(&pkctx);
+        return PM3_EINVARG;
+    }
+
+    res = pcrypto_extract_pub_point_from_pk(&pkctx, curveid, out_pub, out_pub_len);
+    mbedtls_pk_free(&pkctx);
+    return res;
+}
+
+static int pcrypto_parse_ec_public_text(const char *input, bool allow_file_path,
+                                        mbedtls_ecp_group_id curveid,
+                                        uint8_t *out_pub, size_t out_pub_len);
+
+static int pcrypto_parse_ec_public_file(const char *path,
+                                        mbedtls_ecp_group_id curveid,
+                                        uint8_t *out_pub, size_t out_pub_len) {
+    if (path == NULL || out_pub == NULL || out_pub_len == 0) {
+        return PM3_EINVARG;
+    }
+
+    FILE *f = fopen(path, "rb");
+    if (f == NULL) {
+        return PM3_EFILE;
+    }
+
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return PM3_EFILE;
+    }
+    long file_len_l = ftell(f);
+    if (file_len_l < 0) {
+        fclose(f);
+        return PM3_EFILE;
+    }
+    if ((size_t)file_len_l > PCRYPTO_MAX_KEY_FILE_BYTES) {
+        fclose(f);
+        return PM3_EOVFLOW;
+    }
+    if (fseek(f, 0, SEEK_SET) != 0) {
+        fclose(f);
+        return PM3_EFILE;
+    }
+
+    size_t file_len = (size_t)file_len_l;
+    uint8_t *data = calloc(file_len + 1, sizeof(uint8_t));
+    if (data == NULL) {
+        fclose(f);
+        return PM3_EMALLOC;
+    }
+    size_t read_len = fread(data, 1, file_len, f);
+    fclose(f);
+    if (read_len != file_len) {
+        free(data);
+        return PM3_EFILE;
+    }
+
+    int res = pcrypto_parse_ec_public_blob(data, file_len, curveid, out_pub, out_pub_len);
+    if (res == PM3_SUCCESS) {
+        free(data);
+        return PM3_SUCCESS;
+    }
+
+    char *text = calloc(file_len + 1, sizeof(char));
+    if (text == NULL) {
+        free(data);
+        return PM3_EMALLOC;
+    }
+    memcpy(text, data, file_len);
+    text[file_len] = '\0';
+    free(data);
+
+    res = pcrypto_parse_ec_public_text(text, false, curveid, out_pub, out_pub_len);
+    free(text);
+    return res;
+}
+
+static int pcrypto_parse_ec_public_base64(const char *input,
+                                          mbedtls_ecp_group_id curveid,
+                                          uint8_t *out_pub, size_t out_pub_len) {
+    if (input == NULL || out_pub == NULL || out_pub_len == 0) {
+        return PM3_EINVARG;
+    }
+
+    char compact[PCRYPTO_MAX_KEY_INPUT] = {0};
+    size_t compact_len = 0;
+    int res = pcrypto_copy_without_whitespace(input, compact, sizeof(compact), &compact_len);
+    if (res != PM3_SUCCESS || compact_len == 0) {
+        return PM3_EINVARG;
+    }
+
+    size_t decoded_capacity = ((compact_len * 3) / 4) + 4;
+    uint8_t *decoded = calloc(decoded_capacity, sizeof(uint8_t));
+    if (decoded == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    size_t decoded_len = 0;
+    int b64_res = mbedtls_base64_decode(decoded, decoded_capacity, &decoded_len,
+                                        (const unsigned char *)compact, compact_len);
+    if (b64_res != 0 || decoded_len == 0) {
+        free(decoded);
+        return PM3_EINVARG;
+    }
+
+    res = pcrypto_parse_ec_public_blob(decoded, decoded_len, curveid, out_pub, out_pub_len);
+    free(decoded);
+    return res;
+}
+
+static int pcrypto_parse_ec_public_text(const char *input, bool allow_file_path,
+                                        mbedtls_ecp_group_id curveid,
+                                        uint8_t *out_pub, size_t out_pub_len) {
+    if (input == NULL || out_pub == NULL || out_pub_len == 0) {
+        return PM3_EINVARG;
+    }
+
+    char normalized[PCRYPTO_MAX_KEY_INPUT] = {0};
+    size_t input_len = strlen(input);
+    if (input_len >= sizeof(normalized)) {
+        return PM3_EOVFLOW;
+    }
+    memcpy(normalized, input, input_len + 1);
+    pcrypto_trim_ascii_inplace(normalized);
+
+    if (normalized[0] == '\0') {
+        return PM3_EINVARG;
+    }
+
+    if (allow_file_path) {
+        char *resolved_path = NULL;
+        if (searchFile(&resolved_path, RESOURCES_SUBDIR, normalized, "", true) == PM3_SUCCESS) {
+            int res = pcrypto_parse_ec_public_file(resolved_path, curveid, out_pub, out_pub_len);
+            free(resolved_path);
+            return res;
+        }
+    }
+
+    // Only unescape after path resolution fails
+    pcrypto_unescape_newlines_inplace(normalized);
+
+    // Try as hex string
+    uint8_t decoded[PCRYPTO_MAX_KEY_INPUT] = {0};
+    int decoded_len = -1;
+    char compact[PCRYPTO_MAX_KEY_INPUT] = {0};
+    size_t compact_len = 0;
+    if (pcrypto_copy_without_whitespace(normalized, compact, sizeof(compact), &compact_len) == PM3_SUCCESS &&
+            compact_len > 0) {
+        decoded_len = hex_to_bytes(compact, decoded, sizeof(decoded));
+    }
+    if (decoded_len > 0) {
+        int res = pcrypto_parse_ec_public_blob(decoded, (size_t)decoded_len, curveid, out_pub, out_pub_len);
+        if (res == PM3_SUCCESS) {
+            return PM3_SUCCESS;
+        }
+    }
+
+    // Try as raw blob (PEM)
+    int res = pcrypto_parse_ec_public_blob((const uint8_t *)normalized, strlen(normalized),
+                                           curveid, out_pub, out_pub_len);
+    if (res == PM3_SUCCESS) {
+        return PM3_SUCCESS;
+    }
+
+    // Try as base64
+    return pcrypto_parse_ec_public_base64(normalized, curveid, out_pub, out_pub_len);
+}
+
+int ensure_ec_public_key(const char *input_or_path, mbedtls_ecp_group_id curveid, uint8_t *out_pub, size_t out_pub_len) {
+    return pcrypto_parse_ec_public_text(input_or_path, true, curveid, out_pub, out_pub_len);
+}
+
 void des_encrypt(void *out, const void *in, const void *key) {
     mbedtls_des_context ctx;
     mbedtls_des_setkey_enc(&ctx, key);
