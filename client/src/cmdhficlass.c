@@ -7345,9 +7345,11 @@ static int CmdHFiClassEncode(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass encode",
                   "Encode binary wiegand to block 7,8,9\n"
                   "Use either --bin or --wiegand/--fc/--cn\n"
+                  "Authenticate with either --ki (key slot index) or -k/--key (raw 8-byte hex key)\n"
                   "When using emulator you have to first load a credential into emulator memory",
                   "hf iclass encode --bin 10001111100000001010100011 --ki 0            -> FC 31 CN 337 (H10301)\n"
                   "hf iclass encode -w H10301 --fc 31 --cn 337 --ki 0                  -> FC 31 CN 337 (H10301)\n"
+                  "hf iclass encode -w H10301 --fc 31 --cn 337 -k 0102030405060708     -> authenticate with  hex key\n"
                   "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite    -> FC 31 CN 337 (H10301), writing w elite key\n"
                   "hf iclass encode -w H10301 --fc 31 --cn 337 --emu                   -> Writes the ecoded data to emulator memory"
                  );
@@ -7356,6 +7358,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
         arg_param_begin,
         arg_str0(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
         arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
+        arg_str0("k",  "key", "<hex>", "Key as 8 hex bytes (alternative to --ki)"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key"),
@@ -7377,19 +7380,41 @@ static int CmdHFiClassEncode(const char *Cmd) {
     CLIGetStrWithReturn(ctx, 1, bin, &bin_len);
 
     int key_nr = arg_get_int_def(ctx, 2, -1);
-    bool use_emulator_memory = arg_get_lit(ctx, 11);
+
+    int raw_key_len = 0;
+    uint8_t raw_key[8] = {0};
+    CLIGetHexWithReturn(ctx, 3, raw_key, &raw_key_len);
+
+    bool use_emulator_memory = arg_get_lit(ctx, 12);
 
     bool auth = false;
     uint8_t key[8] = {0};
 
+    if (key_nr >= 0 && raw_key_len > 0) {
+        PrintAndLogEx(ERR, "Use either --ki or -k/--key, not both");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    if (raw_key_len > 0 && raw_key_len != 8) {
+        PrintAndLogEx(ERR, "Raw key must be 8 bytes (got %d)", raw_key_len);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
     // If we use emulator memory skip key requirement
     if (use_emulator_memory == false) {
-        if (key_nr < 0) {
-            PrintAndLogEx(ERR, "Missing required arg for --ki or --emu");
+        if (key_nr < 0 && raw_key_len == 0) {
+            PrintAndLogEx(ERR, "Missing required arg for --ki, -k/--key or --emu");
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
 
-        if (key_nr >= 0) {
+        if (raw_key_len == 8) {
+            auth = true;
+            memcpy(key, raw_key, 8);
+            PrintAndLogEx(SUCCESS, "Using raw key " _GREEN_("%s"), sprint_hex(key, 8));
+        } else if (key_nr >= 0) {
             if (key_nr < ICLASS_KEYS_MAX) {
                 auth = true;
                 memcpy(key, iClass_Key_Table[key_nr], 8);
@@ -7402,32 +7427,32 @@ static int CmdHFiClassEncode(const char *Cmd) {
         }
     }
 
-    bool use_credit_key = arg_get_lit(ctx, 3);
-    bool elite = arg_get_lit(ctx, 4);
-    bool rawkey = arg_get_lit(ctx, 5);
+    bool use_credit_key = arg_get_lit(ctx, 4);
+    bool elite = arg_get_lit(ctx, 5);
+    bool rawkey = arg_get_lit(ctx, 6);
 
     int enc_key_len = 0;
     uint8_t enc_key[16] = {0};
     uint8_t *enckeyptr = NULL;
     bool have_enc_key = false;
     bool use_sc = false;
-    CLIGetHexWithReturn(ctx, 6, enc_key, &enc_key_len);
+    CLIGetHexWithReturn(ctx, 7, enc_key, &enc_key_len);
 
     // FC / CN / Issue Level
     wiegand_card_t card;
     memset(&card, 0, sizeof(wiegand_card_t));
 
-    card.FacilityCode = arg_get_u32_def(ctx, 7, 0);
-    card.CardNumber = arg_get_u32_def(ctx, 8, 0);
-    card.IssueLevel = arg_get_u32_def(ctx, 9, 0);
+    card.FacilityCode = arg_get_u32_def(ctx, 8, 0);
+    card.CardNumber = arg_get_u32_def(ctx, 9, 0);
+    card.IssueLevel = arg_get_u32_def(ctx, 10, 0);
 
     char format[16] = {0};
     int format_len = 0;
 
-    CLIParamStrToBuf(arg_get_str(ctx, 10), (uint8_t *)format, sizeof(format), &format_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 11), (uint8_t *)format, sizeof(format), &format_len);
 
-    bool shallow_mod = arg_get_lit(ctx, 12);
-    bool verbose = arg_get_lit(ctx, 13);
+    bool shallow_mod = arg_get_lit(ctx, 13);
+    bool verbose = arg_get_lit(ctx, 14);
 
     CLIParserFree(ctx);
 
