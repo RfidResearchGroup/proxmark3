@@ -66,6 +66,17 @@
 #define MFDES_PC_MAX_ROUNDS             8U
 #define MFDES_PC_MAC_LEN                8U
 
+// DUOX ISO Internal Authenticate
+#define DUOX_INTAUTH_CHALLENGE_LEN      16
+#define DUOX_INTAUTH_SIG_LEN            64
+#define DUOX_MAX_KEY_INPUT              8192
+// TLV tags for ISO Internal Authenticate
+#define DUOX_TAG_OPTSA                  0x80
+#define DUOX_TAG_DYNAMIC_AUTH_DATA      0x7C
+#define DUOX_TAG_CHALLENGE              0x81
+#define DUOX_TAG_SIGNATURE              0x82
+#define DUOX_INTAUTH_MSG_PREFIX         0xF0
+
 #define status(x) ( ((uint16_t)(0x91 << 8)) + (uint16_t)x )
 /*
 static uint8_t desdefaultkeys[3][8] = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, //Official
@@ -7404,6 +7415,316 @@ static int CmdHF14ADesDump(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14ADesIntAuth(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes intauth",
+                  "Perform ISO Internal Authenticate (ECDSA challenge-response) on MIFARE DUOX.\n"
+                  "Card signs a fresh challenge to prove it possesses its private key.\n"
+                  "Optionally verifies the card's ECDSA-P256 signature with a given public key.",
+                  "hf mfdes intauth                                    -> authenticate with default AID (000000), random challenge\n"
+                  "hf mfdes intauth --aid D61CF5                       -> explicit AID\n"
+                  "hf mfdes intauth --dfname D2760000850100            -> select by DF name\n"
+                  "hf mfdes intauth -d 00112233445566778899AABBCCDDEEFF -> explicit 16-byte challenge\n"
+                  "hf mfdes intauth -p 04AABB...                       -> verify signature with given EC public key (hex, PEM, DER, file path)\n"
+                  "hf mfdes intauth -n 1                               -> use key number 1\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",      "Show APDU requests and responses"),            // 1
+        arg_lit0("v",  "verbose",   "Verbose output"),                              // 2
+        arg_str0("d",  "challenge", "<hex>", "Challenge / RndA (16 bytes, random if omitted)"), // 3
+        arg_str0("p",  "pubkey",    "<hex|pem|der|path>", "EC public key for signature verification"), // 4
+        arg_str0(NULL, "aid",       "<hex>", "Application ID (3 bytes, default 000000)"), // 5
+        arg_int0("n",  "keynum",   "<dec>", "Key number (P2, default 0)"),          // 6
+        arg_str0(NULL, "dfname",   "<hex>", "Application ISO DF Name (1-16 hex bytes)"), // 7
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    // Parse challenge
+    uint8_t challenge[DUOX_INTAUTH_CHALLENGE_LEN] = {0};
+    int challenge_len = 0;
+    CLIGetHexWithReturn(ctx, 3, challenge, &challenge_len);
+    bool challenge_provided = (challenge_len > 0);
+
+    if (challenge_provided && challenge_len != DUOX_INTAUTH_CHALLENGE_LEN) {
+        PrintAndLogEx(ERR, "Challenge must be exactly 16 bytes, got %d", challenge_len);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    // Parse public key input (flexible: hex, PEM, DER, file path)
+    char pubkey_input[DUOX_MAX_KEY_INPUT] = {0};
+    int pubkey_input_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)pubkey_input, sizeof(pubkey_input) - 1, &pubkey_input_len);
+    bool pubkey_provided = (pubkey_input_len > 0);
+
+    // Parse AID
+    uint8_t aid_bytes[3] = {0x00, 0x00, 0x00};
+    int aid_len = 0;
+    CLIGetHexWithReturn(ctx, 5, aid_bytes, &aid_len);
+    if (aid_len > 0 && aid_len != 3) {
+        PrintAndLogEx(ERR, "AID must be exactly 3 bytes, got %d", aid_len);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int keynum = arg_get_int_def(ctx, 6, 0);
+    if (keynum < 0 || keynum > 255) {
+        PrintAndLogEx(ERR, "Key number must be 0..255");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t dfname[16] = {0};
+    int dfnamelen = 0;
+    if (CLIParamHexToBuf(arg_get_str(ctx, 7), dfname, sizeof(dfname), &dfnamelen)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (dfnamelen > 16) {
+        PrintAndLogEx(ERR, "DF name must be 1-16 bytes, got %d", dfnamelen);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    // Load and validate public key if provided
+    uint8_t pubkey_point[65] = {0}; // 04 || X || Y
+    if (pubkey_provided) {
+        int pk_res = ensure_ec_public_key(pubkey_input, MBEDTLS_ECP_DP_SECP256R1, pubkey_point, sizeof(pubkey_point));
+        if (pk_res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to load EC public key");
+            PrintAndLogEx(INFO, "Accepted formats: raw hex (64/65/33 bytes), PEM, DER, base64, or file path");
+            return pk_res;
+        }
+    }
+
+    // Generate random challenge if not provided
+    if (!challenge_provided) {
+        pcrypto_rng_t rng = {0};
+        const uint8_t pers[] = "hf_mfdes_intauth";
+        int res = pcrypto_rng_init(&rng, pers, sizeof(pers) - 1);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to initialize RNG");
+            return res;
+        }
+        res = pcrypto_rng_fill(&rng, challenge, sizeof(challenge));
+        pcrypto_rng_free(&rng);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to generate random challenge");
+            return res;
+        }
+    }
+
+    // AID is stored little-endian in DESFire protocol
+    uint32_t aid = (aid_bytes[2] << 16) | (aid_bytes[1] << 8) | aid_bytes[0];
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("ISO Internal Authenticate"));
+    PrintAndLogEx(INFO, "Challenge.... " _YELLOW_("%s"), sprint_hex_inrow(challenge, DUOX_INTAUTH_CHALLENGE_LEN));
+    if (verbose) {
+        if (dfnamelen > 0)
+            PrintAndLogEx(INFO, "DF name...... " _YELLOW_("%s"), sprint_hex_inrow(dfname, dfnamelen));
+        else
+            PrintAndLogEx(INFO, "AID.......... " _YELLOW_("%02X%02X%02X"), aid_bytes[0], aid_bytes[1], aid_bytes[2]);
+        PrintAndLogEx(INFO, "Key number... " _YELLOW_("%d"), keynum);
+    }
+
+    // Step 1: Anticollision + select application using DESFire framework
+    DesfireContext_t dctx = {0};
+    dctx.commMode = DCMPlain;
+    dctx.cmdSet = DCCNativeISO;
+
+    int res = DesfireAnticollision(false);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Anticollision " _RED_("failed"));
+        DropField();
+        return res;
+    }
+
+    if (dfnamelen > 0) {
+        uint8_t resp[250] = {0};
+        size_t resplen = 0;
+        res = DesfireISOSelect(&dctx, ISSDFName, dfname, dfnamelen, resp, &resplen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Select DF name " _RED_("failed"));
+            DropField();
+            return res;
+        }
+    } else {
+        res = DesfireSelectAIDHex(&dctx, aid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Select application %06X " _RED_("failed"), aid);
+            DropField();
+            return res;
+        }
+    }
+    if (verbose)
+        PrintAndLogEx(SUCCESS, "Application selected " _GREEN_("ok"));
+
+    // Step 2: Build ISO Internal Authenticate APDU
+    //
+    // Data field:
+    //   80 00           - OptsA TLV (tag=0x80, len=0x00, empty value)
+    //   7C 12           - Dynamic Authentication Data wrapper (tag=0x7C, len=18)
+    //     81 10 [16B]   - Challenge TLV (tag=0x81, len=16, value=RndA)
+    //
+    // APDU: CLA=00 INS=88 P1=00 P2=00 Lc=16 [data] Le=00
+    uint8_t optsa_tlv[] = {DUOX_TAG_OPTSA, 0x00};
+    uint8_t apdu_data[22]; // 2 (optsa) + 2 (7C tag+len) + 2 (81 tag+len) + 16 (challenge)
+    size_t apdu_data_len = 0;
+
+    memcpy(apdu_data, optsa_tlv, 2);
+    apdu_data_len += 2;
+    apdu_data[apdu_data_len++] = DUOX_TAG_DYNAMIC_AUTH_DATA;
+    apdu_data[apdu_data_len++] = 2 + DUOX_INTAUTH_CHALLENGE_LEN; // tag+len + challenge
+    apdu_data[apdu_data_len++] = DUOX_TAG_CHALLENGE;
+    apdu_data[apdu_data_len++] = DUOX_INTAUTH_CHALLENGE_LEN;
+    memcpy(apdu_data + apdu_data_len, challenge, DUOX_INTAUTH_CHALLENGE_LEN);
+    apdu_data_len += DUOX_INTAUTH_CHALLENGE_LEN;
+
+    // Encode full APDU: 00 88 00 [keynum] [Lc] [data] 00
+    sAPDU_t apdu = {0x00, ISO7816_INTERNAL_AUTHENTICATION, 0x00, (uint8_t)keynum, apdu_data_len, apdu_data};
+    uint8_t encoded[50] = {0};
+    int encoded_len = 0;
+    if (APDUEncodeS(&apdu, false, APDU_INCLUDE_LE_00, encoded, &encoded_len)) {
+        PrintAndLogEx(ERR, "APDU encoding error");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (APDULogging)
+        PrintAndLogEx(SUCCESS, ">>>> %s", sprint_hex(encoded, encoded_len));
+
+    uint8_t response[PM3_CMD_DATA_SIZE] = {0};
+    int resplen = 0;
+    res = ExchangeAPDU14a(encoded, encoded_len, false, true, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "APDU exchange " _RED_("failed") " (%d)", res);
+        DropField();
+        return res;
+    }
+
+    if (APDULogging)
+        PrintAndLogEx(SUCCESS, "<<<< %s", sprint_hex(response, resplen));
+
+    DropField();
+
+    // Check status word
+    if (resplen < 2) {
+        PrintAndLogEx(ERR, "Response too short");
+        return PM3_ESOFT;
+    }
+
+    uint16_t sw = get_sw(response, resplen);
+    if (sw != ISO7816_OK) {
+        PrintAndLogEx(ERR, "Internal Authenticate " _RED_("failed") " (SW=%04X)", sw);
+        return PM3_ESOFT;
+    }
+
+    // Strip SW from response data
+    int resp_data_len = resplen - 2;
+    PrintAndLogEx(SUCCESS, "Internal Authenticate " _GREEN_("ok") " (SW=%04X)", sw);
+
+    if (verbose)
+        PrintAndLogEx(INFO, "Response data: %s", sprint_hex(response, resp_data_len));
+
+    // Step 3: Parse TLV response
+    // Expected: 7C [len] 81 10 [card_random(16)] 82 [sig_len] [signature]
+    uint8_t *resp = response;
+    if (resp_data_len < 4 || resp[0] != DUOX_TAG_DYNAMIC_AUTH_DATA) {
+        PrintAndLogEx(ERR, "Invalid response: missing 0x7C tag");
+        return PM3_ESOFT;
+    }
+
+    uint8_t outer_len = resp[1];
+    if (outer_len + 2 > resp_data_len) {
+        PrintAndLogEx(ERR, "Invalid response: truncated 0x7C data");
+        return PM3_ESOFT;
+    }
+
+    uint8_t *inner = resp + 2;
+    int inner_len = outer_len;
+    int idx = 0;
+
+    uint8_t card_random[DUOX_INTAUTH_CHALLENGE_LEN] = {0};
+    bool card_random_found = false;
+    uint8_t signature_rs[DUOX_INTAUTH_SIG_LEN] = {0};
+    bool signature_found = false;
+
+    while (idx < inner_len) {
+        if (idx + 2 > inner_len) break;
+        uint8_t tag = inner[idx++];
+        uint8_t tlen = inner[idx++];
+        if (idx + tlen > inner_len) break;
+
+        if (tag == DUOX_TAG_CHALLENGE && tlen == DUOX_INTAUTH_CHALLENGE_LEN) {
+            memcpy(card_random, inner + idx, DUOX_INTAUTH_CHALLENGE_LEN);
+            card_random_found = true;
+        } else if (tag == DUOX_TAG_SIGNATURE) {
+            // Signature: raw r||s. Some implementations may return 0x44 bytes with padding.
+            if (tlen >= DUOX_INTAUTH_SIG_LEN) {
+                memcpy(signature_rs, inner + idx + (tlen - DUOX_INTAUTH_SIG_LEN), DUOX_INTAUTH_SIG_LEN);
+                signature_found = true;
+            }
+        }
+        idx += tlen;
+    }
+
+    if (!card_random_found) {
+        PrintAndLogEx(ERR, "Failed to parse card random (tag 0x81) from response");
+        return PM3_ESOFT;
+    }
+
+    if (!signature_found) {
+        PrintAndLogEx(ERR, "Failed to parse signature (tag 0x82) from response");
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "Card random.. " _YELLOW_("%s"), sprint_hex_inrow(card_random, DUOX_INTAUTH_CHALLENGE_LEN));
+    PrintAndLogEx(INFO, "Signature r.. " _YELLOW_("%s"), sprint_hex_inrow(signature_rs, DUOX_INTAUTH_SIG_LEN / 2));
+    PrintAndLogEx(INFO, "Signature s.. " _YELLOW_("%s"), sprint_hex_inrow(signature_rs + DUOX_INTAUTH_SIG_LEN / 2, DUOX_INTAUTH_SIG_LEN / 2));
+
+    // Step 4: Verify signature if public key provided
+    if (pubkey_provided) {
+        PrintAndLogEx(INFO, "--- " _CYAN_("Signature Verification"));
+
+        // Message = F0F0 || OptsA TLV || RndB (card random) || RndA (our challenge)
+        uint8_t message[2 + 2 + DUOX_INTAUTH_CHALLENGE_LEN + DUOX_INTAUTH_CHALLENGE_LEN];
+        message[0] = DUOX_INTAUTH_MSG_PREFIX;
+        message[1] = DUOX_INTAUTH_MSG_PREFIX;
+        memcpy(message + 2, optsa_tlv, 2);
+        memcpy(message + 4, card_random, DUOX_INTAUTH_CHALLENGE_LEN);
+        memcpy(message + 20, challenge, DUOX_INTAUTH_CHALLENGE_LEN);
+
+        if (verbose)
+            PrintAndLogEx(INFO, "Verify msg... %s", sprint_hex_inrow(message, sizeof(message)));
+
+        int sig_res = ecdsa_signature_r_s_verify(
+            MBEDTLS_ECP_DP_SECP256R1,
+            pubkey_point,
+            message,
+            (int)sizeof(message),
+            signature_rs,
+            DUOX_INTAUTH_SIG_LEN,
+            true  // hash message with SHA-256 before verifying
+        );
+
+        if (sig_res == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "ECDSA signature " _GREEN_("verified"));
+        } else {
+            PrintAndLogEx(ERR, "ECDSA signature " _RED_("verification failed"));
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14ADesTest(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes test",
@@ -7469,6 +7790,8 @@ static command_t CommandTable[] = {
     {"write",            CmdHF14ADesWriteData,        IfPm3Iso14443a,  "Write data to standard/backup/record/value file"},
     {"value",            CmdHF14ADesValueOperations,  IfPm3Iso14443a,  "Operations with value file (get/credit/limited credit/debit/clear)"},
     {"clearrecfile",     CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},
+    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("DUOX") " ------------------------"},
+    {"intauth",          CmdHF14ADesIntAuth,          IfPm3Iso14443a,  "ISO Internal Authenticate (ECDSA challenge-response)"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("System") " -----------------------"},
     {"test",             CmdHF14ADesTest,             AlwaysAvailable, "Regression crypto tests"},
     {NULL, NULL, NULL, NULL}
