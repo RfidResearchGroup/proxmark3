@@ -3,8 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf mfdes intauth` command (@kormax)
 - Improved `hf iclass legbrute` throughput: added a 64-wide bitsliced MAC1 sweep that tests 64 key candidates in parallel per cipher tick. Thanks @chick3nman (@antiklesys)
-- Improved `hf iclass legbrute` throughput further: added wider SIMD backends (128-lane NEON, 256-lane AVX2, 512-lane AVX-512F) with a runtime dispatcher that picks the widest one the CPU supports. Thanks @chick3nman (@antiklesys) 
+- Improved `hf iclass legbrute` throughput further: added wider SIMD backends (128-lane NEON, 256-lane AVX2, 512-lane AVX-512F) with a runtime dispatcher that picks the widest one the CPU supports. Thanks @chick3nman (@antiklesys)
+- Added `hf mfdes pc` command (@kormax)
 
 ## [BREAKMEIFYOUCAN!.4.21611][2026-04-14]
 - Fixed `hf mf wrbl` and `hf mfp wrbl` the ACL RO checks on 16-block sectors correct  (@team-orangeBlue)
