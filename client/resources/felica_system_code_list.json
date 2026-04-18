@@ -4,7 +4,119 @@
     "name": "CJRC Standard",
     "region": "Japan",
     "type": "transit",
-    "description": "Used by Japanese Mutual Use transit card systems"
+    "description": "Used by Japanese Mutual Use transit card systems",
+    "services": [
+      {
+        "name": "Hayakaken",
+        "type": "transit",
+        "description": "Fukuoka City Transportation Bureau Hayakaken mutual-use transit service",
+        "nodes": [
+          {
+            "code": "40247F25"
+          }
+        ]
+      },
+      {
+        "name": "ICOCA",
+        "type": "transit",
+        "description": "JR West ICOCA mutual-use transit service",
+        "nodes": [
+          {
+            "code": "00963F97"
+          }
+        ]
+      },
+      {
+        "name": "ICSCA",
+        "type": "transit",
+        "description": "Sendai-area ICSCA mutual-use transit service",
+        "nodes": [
+          {
+            "code": "40BD7FBE"
+          }
+        ]
+      },
+      {
+        "name": "Kitaca",
+        "type": "transit",
+        "description": "JR Hokkaido Kitaca mutual-use transit service",
+        "nodes": [
+          {
+            "code": "8020BF21"
+          }
+        ]
+      },
+      {
+        "name": "manaca",
+        "type": "transit",
+        "description": "Nagoya-area manaca mutual-use transit service",
+        "nodes": [
+          {
+            "code": "8098BF99"
+          }
+        ]
+      },
+      {
+        "name": "nimoca",
+        "type": "transit",
+        "description": "nimoca mutual-use transit service",
+        "nodes": [
+          {
+            "code": "0820"
+          }
+        ]
+      },
+      {
+        "name": "PASMO",
+        "type": "transit",
+        "description": "PASMO mutual-use transit service",
+        "nodes": [
+          {
+            "code": "C01CFF1D"
+          }
+        ]
+      },
+      {
+        "name": "SUGOCA",
+        "type": "transit",
+        "description": "JR Kyushu SUGOCA mutual-use transit service",
+        "nodes": [
+          {
+            "code": "C021FF22"
+          }
+        ]
+      },
+      {
+        "name": "Suica",
+        "type": "transit",
+        "description": "JR East Suica mutual-use transit service",
+        "nodes": [
+          {
+            "code": "0818"
+          }
+        ]
+      },
+      {
+        "name": "Suica Regional Collaboration",
+        "type": "transit",
+        "description": "Suica Regional Collaboration service in the CJRC mutual-use system",
+        "nodes": [
+          {
+            "code": "80257F26"
+          }
+        ]
+      },
+      {
+        "name": "TOICA",
+        "type": "transit",
+        "description": "JR Central TOICA mutual-use transit service",
+        "nodes": [
+          {
+            "code": "001EFF1E"
+          }
+        ]
+      }
+    ]
   },
   {
     "code": "0102",
@@ -410,7 +522,172 @@
     "name": "FeliCa Networks Common Area",
     "region": "Japan",
     "type": "common",
-    "description": "Common area for FeliCa Networks services"
+    "description": "Common area for FeliCa Networks services",
+    "services": [
+      {
+        "name": "ANA",
+        "type": "loyalty",
+        "description": "ANA mileage and airline membership service",
+        "nodes": [
+          {
+            "code": "C017BF18"
+          }
+        ]
+      },
+      {
+        "name": "Edy",
+        "type": "payment",
+        "description": "Rakuten Edy e-money payment service",
+        "nodes": [
+          {
+            "code": "0B11"
+          }
+        ]
+      },
+      {
+        "name": "FeliCa Kazasu Folder",
+        "type": "loyalty",
+        "description": "FeliCa Kazasu shared area for loyalty and membership services",
+        "nodes": [
+          {
+            "code": "C074FF75"
+          }
+        ]
+      },
+      {
+        "name": "FeliCa Pocket",
+        "type": "loyalty",
+        "description": "FeliCa Pocket shared area for loyalty and membership services",
+        "nodes": [
+          {
+            "code": "4039FF39"
+          }
+        ]
+      },
+      {
+        "name": "JAL",
+        "type": "loyalty",
+        "description": "JAL airline mileage and membership service",
+        "nodes": [
+          {
+            "code": "402F7F30"
+          }
+        ]
+      },
+      {
+        "name": "Karuwaza Club",
+        "type": "loyalty",
+        "description": "Karuwaza Club points and membership service",
+        "nodes": [
+          {
+            "code": "8026FF26"
+          }
+        ]
+      },
+      {
+        "name": "Kesaka",
+        "type": "access",
+        "description": "Kesaka access control service",
+        "nodes": [
+          {
+            "code": "802E3F2F"
+          }
+        ]
+      },
+      {
+        "name": "Kumamon",
+        "type": "loyalty",
+        "description": "Kumamon regional campaign and points service",
+        "nodes": [
+          {
+            "code": "801AFF1A"
+          }
+        ]
+      },
+      {
+        "name": "MIWA",
+        "type": "access",
+        "description": "MIWA access control credential service",
+        "nodes": [
+          {
+            "code": "4042BF42"
+          },
+          {
+            "code": "C03B3F3C"
+          }
+        ]
+      },
+      {
+        "name": "MIWA FKL",
+        "type": "access",
+        "description": "MIWA FKL access control credential service",
+        "nodes": [
+          {
+            "code": "40267F26"
+          }
+        ]
+      },
+      {
+        "name": "MIWA Keymo",
+        "type": "access",
+        "description": "MIWA Keymo access control credential service",
+        "nodes": [
+          {
+            "code": "0B3C"
+          }
+        ]
+      },
+      {
+        "name": "nanaco",
+        "type": "payment",
+        "description": "nanaco e-money payment service",
+        "nodes": [
+          {
+            "code": "8055BF56"
+          }
+        ]
+      },
+      {
+        "name": "QUICPay",
+        "type": "payment",
+        "description": "QUICPay contactless payment service",
+        "nodes": [
+          {
+            "code": "C035BF36"
+          }
+        ]
+      },
+      {
+        "name": "Rakuten Point",
+        "type": "loyalty",
+        "description": "Rakuten Point loyalty points service",
+        "nodes": [
+          {
+            "code": "807BBF7B"
+          }
+        ]
+      },
+      {
+        "name": "WAON",
+        "type": "payment",
+        "description": "WAON e-money payment service",
+        "nodes": [
+          {
+            "code": "C067FF68"
+          }
+        ]
+      },
+      {
+        "name": "Yodobashi Gold Point",
+        "type": "loyalty",
+        "description": "Yodobashi Gold Point loyalty points service",
+        "nodes": [
+          {
+            "code": "802C3F2D"
+          }
+        ]
+      }
+    ]
   },
   {
     "code": "FE0F",
