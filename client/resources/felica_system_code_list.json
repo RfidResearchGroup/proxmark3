@@ -263,7 +263,29 @@
     "name": "Kagoshima",
     "region": "Japan",
     "type": "transit",
-    "description": "Used by Kagoshima cards (RapiCa/Iwasaki IC)"
+    "description": "Used by transit cards in Kagoshima",
+    "services": [
+      {
+        "name": "Iwasaki IC",
+        "type": "transit",
+        "description": "Transit IC card sold by the Iwasaki Group for Kagoshima Kotsu and Tanegashima-Yakushima Kotsu services",
+        "nodes": [
+          {
+            "code": "81027F0C"
+          }
+        ]
+      },
+      {
+        "name": "RapiCa",
+        "type": "transit",
+        "description": "Kagoshima common transit IC card issued by Kagoshima City Transportation Bureau, Nangoku Kotsu, and JR Kyushu Bus",
+        "nodes": [
+          {
+            "code": "010C0021"
+          }
+        ]
+      }
+    ]
   },
   {
     "code": "81A1",
@@ -368,7 +390,61 @@
     "name": "FeliCa Lite",
     "region": "Global",
     "type": "common",
-    "description": "Default system code used by FeliCa Lite/Lite-S tags"
+    "description": "Default system code used by FeliCa Lite/Lite-S tags",
+    "services": [
+      {
+        "name": "Aime",
+        "type": "e-amusement",
+        "description": "AIME E-amusement",
+        "nodes": [
+          {
+            "code": "0b00",
+            "data": {
+              "0082": "^................0078............$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Bandai Namco Pasport",
+        "type": "e-amusement",
+        "description": "Bandai Namco Pasport E-amusement",
+        "nodes": [
+          {
+            "code": "0b00",
+            "data": {
+              "0082": "^................002A............$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Konami",
+        "type": "e-amusement",
+        "description": "Konami E-amusement",
+        "nodes": [
+          {
+            "code": "0b00",
+            "data": {
+              "0082": "^................0068............$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Enekey",
+        "type": "loyalty",
+        "description": "ENEOS Enekey loyalty program",
+        "nodes": [
+          {
+            "code": "0b00",
+            "data": {
+              "0082": "^................0077............$"
+            }
+          }
+        ]
+      }
+    ]
   },
   {
     "code": "8B43",
@@ -421,10 +497,38 @@
   },
   {
     "code": "8DB6",
-    "name": "ASACA / DoCard",
+    "name": "Asahikawa",
     "region": "Japan",
     "type": "transit",
-    "description": "Used by Asaca/DoCard transit card services (Asahikawa and Dohoku Bus)"
+    "description": "Used by Asahikawa transit cards",
+    "services": [
+      {
+        "name": "ASACA",
+        "type": "transit",
+        "description": "Transit card service issued by Asahikawa Denkikidou (Asahikawa Electric Railway)",
+        "nodes": [
+          {
+            "code": "4B00",
+            "data": {
+              "00": "^0102............................$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "DoCARD",
+        "type": "transit",
+        "description": "Transit card service issued by Dohoku Bus",
+        "nodes": [
+          {
+            "code": "4B00",
+            "data": {
+              "00": "^0103............................$"
+            }
+          }
+        ]
+      }
+    ]
   },
   {
     "code": "8E35",
