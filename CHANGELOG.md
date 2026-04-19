@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `mfpReadSector` function to decrypt received data, fixing commands like `hf mfp dump` (@team-orangeBlue) 
 - Added `hf mfdes intauth` command (@kormax)
 - Improved `hf iclass legbrute` throughput: added a 64-wide bitsliced MAC1 sweep that tests 64 key candidates in parallel per cipher tick. Thanks @chick3nman (@antiklesys)
 - Improved `hf iclass legbrute` throughput further: added wider SIMD backends (128-lane NEON, 256-lane AVX2, 512-lane AVX-512F) with a runtime dispatcher that picks the widest one the CPU supports. Thanks @chick3nman (@antiklesys)
