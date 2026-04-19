@@ -126,6 +126,8 @@
 #define FELICA_PRESENCE_SERVICE_CODE_LE ((uint16_t)FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITHOUT_KEY)
 #define FELICA_SYSTEM_SERVICE_MAX_COUNT 32U
 #define FELICA_SYSTEM_SERVICE_NODE_MAX_COUNT 64U
+#define FELICA_SYSTEM_SERVICE_NODE_MATCHER_MAX_COUNT 8U
+#define FELICA_SYSTEM_SERVICE_BLOCK_LIST_ELEMENT_MAX_LEN 3U
 
 typedef struct {
     uint8_t attribute;
@@ -240,8 +242,16 @@ typedef struct {
 } felica_system_service_t;
 
 typedef struct {
+    uint8_t block_list_element[FELICA_SYSTEM_SERVICE_BLOCK_LIST_ELEMENT_MAX_LEN];
+    uint8_t block_list_element_len;
+    const char *data_regex;
+} felica_system_service_node_matcher_t;
+
+typedef struct {
     uint16_t node_code_le;
     size_t service_index;
+    size_t matcher_count;
+    felica_system_service_node_matcher_t matchers[FELICA_SYSTEM_SERVICE_NODE_MATCHER_MAX_COUNT];
 } felica_system_service_node_t;
 
 typedef enum {
@@ -256,6 +266,9 @@ static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *dat
 static int send_felica_payload_with_retries(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
                                             int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, uint32_t backoff_ms, bool logging,
                                             PacketResponseNG *resp, const char *request_name);
+static int send_read_without_encryption_ex(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
+                                           felica_read_without_encryption_response_t *rd_noCry_resp,
+                                           uint32_t timeout_ms, uint32_t retries, uint32_t backoff_ms, bool logging);
 static bool felica_discover_nodes_with_request_code_list(uint8_t *flags,
                                                          const uint8_t *idm,
                                                          uint32_t retry_count,
@@ -748,6 +761,192 @@ static bool felica_parse_service_node_code(const char *code_hex, uint16_t *node_
     return true;
 }
 
+static bool felica_parse_block_list_element(const char *ble_hex, uint8_t *ble_out, uint8_t *ble_len_out) {
+    if (ble_hex == NULL || ble_out == NULL || ble_len_out == NULL) {
+        return false;
+    }
+
+    const bool explicit_raw_ble = str_startswith(ble_hex, "ble:") || str_startswith(ble_hex, "BLE:");
+    const char *value_hex = explicit_raw_ble ? (ble_hex + 4) : ble_hex;
+    const size_t len = strlen(value_hex);
+
+    if (explicit_raw_ble) {
+        if (len != 4U && len != 6U) {
+            return false;
+        }
+
+        uint8_t ble_bytes[FELICA_SYSTEM_SERVICE_BLOCK_LIST_ELEMENT_MAX_LEN] = {0};
+        size_t ble_bytes_len = 0;
+        if (hexstr_to_byte_array(value_hex, ble_bytes, &ble_bytes_len) == false) {
+            return false;
+        }
+
+        if (ble_bytes_len != 2U && ble_bytes_len != 3U) {
+            return false;
+        }
+
+        if (ble_bytes_len == 2U) {
+            // For 2-byte BLE form, bit7 must be set.
+            ble_bytes[0] |= 0x80U;
+        }
+
+        memcpy(ble_out, ble_bytes, ble_bytes_len);
+        *ble_len_out = (uint8_t)ble_bytes_len;
+        return true;
+    }
+
+    // Default matcher key mode: block index in hex (for example "82" or "0082").
+    if (len != 2U && len != 4U) {
+        return false;
+    }
+
+    uint8_t index_bytes[2] = {0};
+    size_t index_bytes_len = 0;
+    if (hexstr_to_byte_array(value_hex, index_bytes, &index_bytes_len) == false) {
+        return false;
+    }
+
+    if (index_bytes_len != 1U && index_bytes_len != 2U) {
+        return false;
+    }
+
+    uint16_t block_index = 0;
+    for (size_t i = 0; i < index_bytes_len; i++) {
+        block_index = (uint16_t)((block_index << 8) | index_bytes[i]);
+    }
+
+    if (block_index > 0xFFU) {
+        return false;
+    }
+
+    // Short (2-byte) block-list element: access mode/order defaults + 8-bit block index.
+    ble_out[0] = 0x80;
+    ble_out[1] = (uint8_t)block_index;
+    *ble_len_out = 2U;
+    return true;
+}
+
+static size_t felica_parse_service_node_matchers(const json_t *node_json,
+        felica_system_service_node_matcher_t *matchers,
+        size_t matcher_capacity) {
+    if (node_json == NULL || matchers == NULL || matcher_capacity == 0) {
+        return 0;
+    }
+
+    json_t *data_json = json_object_get(node_json, "data");
+    if (json_is_object(data_json) == false) {
+        return 0;
+    }
+
+    size_t matcher_count = 0;
+    const char *ble_hex = NULL;
+    json_t *regex_json = NULL;
+    json_object_foreach(data_json, ble_hex, regex_json) {
+        if (matcher_count >= matcher_capacity) {
+            break;
+        }
+
+        if (json_is_string(regex_json) == false) {
+            continue;
+        }
+
+        const char *data_regex = json_string_value(regex_json);
+        if (data_regex == NULL || data_regex[0] == '\0') {
+            continue;
+        }
+
+        felica_system_service_node_matcher_t *matcher = &matchers[matcher_count];
+        memset(matcher, 0, sizeof(*matcher));
+        if (felica_parse_block_list_element(ble_hex, matcher->block_list_element, &matcher->block_list_element_len) == false) {
+            continue;
+        }
+
+        matcher->data_regex = data_regex;
+        matcher_count++;
+    }
+
+    return matcher_count;
+}
+
+static int felica_read_service_block_for_node(uint8_t flags, const uint8_t *idm,
+        uint16_t node_code_le,
+        const uint8_t *block_list_element, uint8_t block_list_element_len,
+        uint8_t *block_data_out, size_t block_data_out_capacity, size_t *block_data_len_out) {
+    if (idm == NULL || block_list_element == NULL || block_data_out == NULL || block_data_len_out == NULL) {
+        return PM3_EINVARG;
+    }
+
+    *block_data_len_out = 0;
+
+    if (block_list_element_len != 2U && block_list_element_len != 3U) {
+        return PM3_EINVARG;
+    }
+
+    const uint16_t datalen = (uint16_t)(1 + 1 + 8 + 1 + 2 + 1 + block_list_element_len);
+    uint8_t data[1 + 1 + 8 + 1 + 2 + 1 + FELICA_SYSTEM_SERVICE_BLOCK_LIST_ELEMENT_MAX_LEN] = {0};
+    data[0] = (uint8_t)datalen;
+    data[1] = FELICA_RDBLK_REQ;
+    memcpy(data + 2, idm, 8);
+    data[10] = 0x01;
+    data[11] = node_code_le & 0xFF;
+    data[12] = (node_code_le >> 8) & 0xFF;
+    data[13] = 0x01;
+    memcpy(data + 14, block_list_element, block_list_element_len);
+
+    felica_read_without_encryption_response_t rd_resp;
+    if (send_read_without_encryption_ex(flags, datalen, data, false, &rd_resp,
+                                        FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
+                                        0, false) != PM3_SUCCESS) {
+        return PM3_ERFTRANS;
+    }
+
+    if (rd_resp.status_flags.status_flag1[0] != 0x00 || rd_resp.status_flags.status_flag2[0] != 0x00) {
+        return PM3_ESOFT;
+    }
+
+    if (rd_resp.number_of_block[0] == 0) {
+        return PM3_ESOFT;
+    }
+
+    size_t copy_len = MIN((size_t)FELICA_BLK_SIZE, block_data_out_capacity);
+    memcpy(block_data_out, rd_resp.block_data, copy_len);
+    *block_data_len_out = copy_len;
+    return PM3_SUCCESS;
+}
+
+static bool felica_match_service_node_data(uint8_t flags, const uint8_t *idm, uint16_t node_code_le,
+        const felica_system_service_node_matcher_t *matchers, size_t matcher_count) {
+    if (idm == NULL || matchers == NULL || matcher_count == 0) {
+        return true;
+    }
+
+    for (size_t i = 0; i < matcher_count; i++) {
+        if (matchers[i].data_regex == NULL || matchers[i].data_regex[0] == '\0') {
+            return false;
+        }
+
+        uint8_t block_data[FELICA_BLK_SIZE] = {0};
+        size_t block_data_len = 0;
+        if (felica_read_service_block_for_node(flags, idm, node_code_le,
+                                               matchers[i].block_list_element, matchers[i].block_list_element_len,
+                                               block_data, sizeof(block_data), &block_data_len) != PM3_SUCCESS) {
+            return false;
+        }
+
+        char block_hex[(FELICA_BLK_SIZE * 2) + 1] = {0};
+        hex_to_buffer((uint8_t *)block_hex, block_data, block_data_len, sizeof(block_hex) - 1, 0, 0, true);
+        if (str_regex_match_case_insensitive(matchers[i].data_regex, block_hex) == false) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool felica_is_lite_assumed_node(uint16_t node_code_le) {
+    return (node_code_le == 0x000BU || node_code_le == 0x0009U);
+}
+
 static int felica_request_service_key_versions(uint8_t flags, const uint8_t *idm,
         const uint16_t *node_codes_le, size_t node_count,
         uint16_t *key_versions_le_out, size_t *returned_nodes_out) {
@@ -808,7 +1007,7 @@ static int felica_request_service_key_versions(uint8_t flags, const uint8_t *idm
 }
 
 static void felica_info_process_system_services(int level, uint8_t flags,
-        const uint8_t *idm, const json_t *system_entry) {
+        uint16_t system_code, const uint8_t *idm, const json_t *system_entry) {
     if (idm == NULL || system_entry == NULL) {
         return;
     }
@@ -862,8 +1061,18 @@ static void felica_info_process_system_services(int level, uint8_t flags,
                 continue;
             }
 
+            json_t *data_json = json_object_get(node_json, "data");
+            const bool has_data_matchers = json_is_object(data_json) && (json_object_size(data_json) > 0);
+            const size_t matcher_count = felica_parse_service_node_matchers(node_json,
+                                       nodes[node_count].matchers,
+                                       ARRAYLEN(nodes[node_count].matchers));
+            if (has_data_matchers && matcher_count == 0) {
+                continue;
+            }
+
             nodes[node_count].node_code_le = node_code_le;
             nodes[node_count].service_index = this_service_index;
+            nodes[node_count].matcher_count = matcher_count;
             node_count++;
             service->required_node_count++;
         }
@@ -881,33 +1090,61 @@ static void felica_info_process_system_services(int level, uint8_t flags,
         return;
     }
 
-    size_t processed_nodes = 0;
-    while (processed_nodes < node_count) {
-        const size_t batch_count = MIN(FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE, node_count - processed_nodes);
-        uint16_t batch_codes[FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE] = {0};
-        uint16_t key_versions[FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE] = {0};
-
-        for (size_t i = 0; i < batch_count; i++) {
-            batch_codes[i] = nodes[processed_nodes + i].node_code_le;
-        }
-
-        size_t returned_nodes = 0;
-        if (felica_request_service_key_versions(flags, idm, batch_codes, batch_count,
-                                                key_versions, &returned_nodes) != PM3_SUCCESS) {
-            return;
-        }
-
-        for (size_t i = 0; i < returned_nodes; i++) {
-            if (key_versions[i] == 0xFFFFU) {
+    if (system_code == FELICA_SYSTEM_CODE_FELICA_LITE) {
+        for (size_t i = 0; i < node_count; i++) {
+            const felica_system_service_node_t *node = &nodes[i];
+            if (felica_is_lite_assumed_node(node->node_code_le) == false) {
                 continue;
             }
-            const size_t service_index = nodes[processed_nodes + i].service_index;
+
+            if (node->matcher_count > 0 &&
+                    felica_match_service_node_data(flags, idm, node->node_code_le,
+                                                   node->matchers, node->matcher_count) == false) {
+                continue;
+            }
+
+            const size_t service_index = node->service_index;
             if (service_index < service_count) {
                 services[service_index].present_node_count++;
             }
         }
+    } else {
+        size_t processed_nodes = 0;
+        while (processed_nodes < node_count) {
+            const size_t batch_count = MIN(FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE, node_count - processed_nodes);
+            uint16_t batch_codes[FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE] = {0};
+            uint16_t key_versions[FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE] = {0};
 
-        processed_nodes += batch_count;
+            for (size_t i = 0; i < batch_count; i++) {
+                batch_codes[i] = nodes[processed_nodes + i].node_code_le;
+            }
+
+            size_t returned_nodes = 0;
+            if (felica_request_service_key_versions(flags, idm, batch_codes, batch_count,
+                                                    key_versions, &returned_nodes) != PM3_SUCCESS) {
+                return;
+            }
+
+            for (size_t i = 0; i < returned_nodes; i++) {
+                if (key_versions[i] == 0xFFFFU) {
+                    continue;
+                }
+
+                const felica_system_service_node_t *node = &nodes[processed_nodes + i];
+                if (node->matcher_count > 0 &&
+                        felica_match_service_node_data(flags, idm, node->node_code_le,
+                                                       node->matchers, node->matcher_count) == false) {
+                    continue;
+                }
+
+                const size_t service_index = node->service_index;
+                if (service_index < service_count) {
+                    services[service_index].present_node_count++;
+                }
+            }
+
+            processed_nodes += batch_count;
+        }
     }
 
     size_t present_services_count = 0;
@@ -972,7 +1209,7 @@ static void felica_info_process_system(int level, uint8_t flags, const felica_di
     }
 
     if (system->has_idm) {
-        felica_info_process_system_services(level, flags, system->idm, entry);
+        felica_info_process_system_services(level, flags, system->system_code, system->idm, entry);
     }
 }
 
@@ -2052,6 +2289,10 @@ int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool ve
 static int send_read_without_encryption_ex(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
                                            felica_read_without_encryption_response_t *rd_noCry_resp,
                                            uint32_t timeout_ms, uint32_t retries, uint32_t backoff_ms, bool logging) {
+    if (rd_noCry_resp == NULL) {
+        return PM3_EINVARG;
+    }
+
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, datalen, data, verbose,
                                          0x07, timeout_ms, retries,
@@ -2063,7 +2304,27 @@ static int send_read_without_encryption_ex(uint8_t flags, uint16_t datalen, uint
         return PM3_ERFTRANS;
     }
 
-    memcpy(rd_noCry_resp, (felica_read_without_encryption_response_t *)resp.data.asBytes, sizeof(felica_read_without_encryption_response_t));
+    const size_t min_response_len = sizeof(felica_frame_response_t) + sizeof(felica_status_flags_t) + 1U;
+    if (resp.length < min_response_len) {
+        return PM3_ESOFT;
+    }
+
+    memset(rd_noCry_resp, 0, sizeof(*rd_noCry_resp));
+    const size_t copy_len = MIN(resp.length, sizeof(*rd_noCry_resp));
+    memcpy(rd_noCry_resp, resp.data.asBytes, copy_len);
+
+    if (rd_noCry_resp->status_flags.status_flag1[0] == 0x00 && rd_noCry_resp->status_flags.status_flag2[0] == 0x00) {
+        const size_t block_count = rd_noCry_resp->number_of_block[0];
+        if (block_count == 0 || block_count > 15U) {
+            return PM3_ESOFT;
+        }
+
+        const size_t expected_len = min_response_len + (block_count * FELICA_BLK_SIZE);
+        if (resp.length < expected_len) {
+            return PM3_ESOFT;
+        }
+    }
+
     return PM3_SUCCESS;
 }
 
