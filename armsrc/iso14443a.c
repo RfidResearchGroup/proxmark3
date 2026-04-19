@@ -1026,6 +1026,15 @@ static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, const uint8_
 
     tosend_t *ts = get_tosend();
 
+    // Each input byte produces 9 entries (8 data + 1 parity), plus
+    // 1 correction byte + 1 start + 1 stop = 3 + 9*len total.
+    // Reject frames that would overflow the tosend buffer.
+    if (3 + (9 * (int)len) > TOSEND_BUFFER_SIZE) {
+        Dbprintf("CodeIso14443aAsTagPar: frame too large (%u bytes, max %u)",
+                 len, (TOSEND_BUFFER_SIZE - 3) / 9);
+        return;
+    }
+
     // Correction bit, might be removed when not needed
     tosend_stuffbit(0);
     tosend_stuffbit(0);
@@ -1196,6 +1205,12 @@ bool prepare_tag_modulation(tag_response_info_t *response_info, size_t max_buffe
     CodeIso14443aAsTag(response_info->response, response_info->response_n);
 
     tosend_t *ts = get_tosend();
+
+    // Check that encoding produced valid output
+    if (ts->max <= 0) {
+        Dbprintf("ToSend buffer empty after modulation (frame rejected or too large)");
+        return false;
+    }
 
     // Make sure we do not exceed the free buffer space
     if (ts->max > max_buffer_size) {
@@ -4567,7 +4582,10 @@ void DetectNACKbug(void) {
 
 // Increased the buffer size to allow for more complex responses
 #define DYNAMIC_RESPONSE_BUFFER2_SIZE       ( 512 )
-#define DYNAMIC_MODULATION_BUFFER2_SIZE     ( 1536 )
+// Modulation buffer must hold 3 + 9*frame_len bytes (1 byte per bit in OOK encoding).
+// Max frame = 256 bytes (TOSEND_BUFFER_SIZE limit) → 3 + 9*256 = 2307 bytes needed.
+// Original value of 1536 only supported ~170-byte frames.
+#define DYNAMIC_MODULATION_BUFFER2_SIZE     ( 2308 )
 
 // EvilDaemond
 // Based upon the SimulateIso14443aTag, this aims to instead take an AID Value you've supplied, and return your selected response.
