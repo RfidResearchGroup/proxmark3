@@ -6226,7 +6226,7 @@ static void *brute_thread(void *args_void) {
 
         uint64_t thread_progress = index - args->index_start;
         if (progress_countdown <= step && !*(args->found)) {
-            progress_countdown = 1000000;
+            progress_countdown = 100000000;
 
             if (args->thread_id == 0) {
                 uint64_t keyspace     = (uint64_t)1 << 40;
