@@ -4210,8 +4210,8 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                 if (blockno == 2) {
                     if (memcmp(data_read, ff_data, 8) == 0 && memcmp(data_read_orig, ff_data, 8) != 0) {
                         PrintAndLogEx(SUCCESS, "E-purse has been teared ( %s )", _GREEN_("ok"));
-                        PrintAndLogEx(HINT, "Hint: try `hf iclass creditepurse -d FEFFFEFF --ki 1`");
-                        PrintAndLogEx(HINT, "Hint: try `hf iclass wrbl -d 'FFFFFFFF FFFF FEFF' --blk 2 --ki 1 --credit`");
+                        PrintAndLogEx(HINT, "Hint: Try `hf iclass creditepurse -d FEFFFEFF --ki 1`");
+                        PrintAndLogEx(HINT, "Hint: Try `hf iclass wrbl -d 'FFFFFFFF FFFF FEFF' --blk 2 --ki 1 --credit`");
                         isok = PM3_SUCCESS;
                         goto_out = true;
                     }
@@ -6308,7 +6308,8 @@ static int CmdHFiClassLegBrute_MT(uint8_t epurse[8], uint8_t macs[8], uint8_t ma
     _Atomic uint64_t aborted_at = 0;
     pthread_mutex_t log_lock;
     pthread_mutex_init(&log_lock, NULL);
-    PrintAndLogEx(HINT, "Hint: Press " _YELLOW_("<Enter>") " to abort");
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort");
 
     // Divide the full 40-bit keyspace into equal non-overlapping slices, one per thread.
     // All threads use the same startingKey; only their index range differs.
@@ -6379,8 +6380,7 @@ static int CmdHFiClassLegBrute_MT(uint8_t epurse[8], uint8_t macs[8], uint8_t ma
 
     if (aborted) {
         uint64_t resume_millions = aborted_at / 1000000;
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(WARNING, "aborted via keyboard!");
+        PrintAndLogEx(WARNING, "\naborted via keyboard!");
         PrintAndLogEx(HINT, "Hint: resume with " _YELLOW_("--index %" PRIu64 " --threads %d"), resume_millions, thread_count);
         return PM3_EOPABORTED;
     }

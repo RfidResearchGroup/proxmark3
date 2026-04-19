@@ -10370,33 +10370,33 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     if ((card_type & MTDESFIRE) == MTDESFIRE) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "MIFARE DESFire detected");
-        PrintAndLogEx(HINT, "Hint:  try `" _YELLOW_("hf mfdes info") "`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfdes info") "`");
         goto out;
     }
 
     if ((card_type & MTULTRALIGHT) == MTULTRALIGHT) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "MIFARE Ultralight / NTAG detected");
-        PrintAndLogEx(HINT, "Hint:  try `" _YELLOW_("hf mfu info") "`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu info") "`");
         goto out;
     }
 
     if ((card_type & MTPLUS) == MTPLUS) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "MIFARE Plus detected");
-        PrintAndLogEx(HINT, "Hint:  try `" _YELLOW_("hf mfp info") "`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfp info") "`");
     }
 
     if ((card_type & MTEMV) == MTEMV) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "EMV detected");
-        PrintAndLogEx(HINT, "Hint:  try `" _YELLOW_("emv info") "`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("emv info") "`");
     }
 
     if ((card_type & MTFUDAN) == MTFUDAN) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "FUDAN FM11RF005 detected");
-        PrintAndLogEx(HINT, "Hint:  try `" _YELLOW_("hf fudan dump") "`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf fudan dump") "`");
         goto out;
     }
 

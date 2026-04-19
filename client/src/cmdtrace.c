@@ -1605,7 +1605,7 @@ int CmdTraceList(const char *Cmd) {
     }
 
     if (show_hex) {
-        PrintAndLogEx(HINT, "Hint: Syntax to use: `" _YELLOW_("text2pcap -t \"%%S.\" -l 264 -n <input-text-file> <output-pcapng-file>") "`");
+        PrintAndLogEx(HINT, "Hint: Syntax is: `" _YELLOW_("text2pcap -t \"%%S.\" -l 264 -n <input-text-file> <output-pcapng-file>") "`");
     }
 
     return PM3_SUCCESS;

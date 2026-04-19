@@ -859,6 +859,39 @@ static int ul_print_default(uint8_t *data, uint8_t *real_uid) {
     return PM3_SUCCESS;
 }
 
+static bool ndef_detect_message(const uint8_t *d, uint16_t n) {
+
+    if (n < 17) {
+        return false;
+    }
+
+    // start at OTP block and detect a CC container instead
+    const uint8_t *p = d + (3 * MFU_BLOCK_SIZE);
+ 
+    // no NDEF capability container
+    if (p[0] != 0xE1 && p[0] != 0xF1) {
+        return false;
+    }
+
+    p += 4;
+    const uint8_t *end = d + n;
+
+    // empty data area
+    if (p[0] == 0x00) {
+        return false;
+    }
+
+    while (p < end) {
+
+        // NDEF terminator TLV (0xFE 0x00)
+        if (p[0] == 0xFE && (p + 1) < end && p[1] == 0x00) {
+            return true;
+        }
+        p++;
+    }
+    return false;
+}
+
 static int ndef_get_maxsize(const uint8_t *data) {
     // no NDEF message
     if (data[0] != 0xE1)
@@ -2567,7 +2600,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         status = ul_read(0x28, ulc_conf, sizeof(ulc_conf), false);
         if (status <= 0) {
             PrintAndLogEx(ERR, "Error: tag didn't answer to page 40 read command");
-            PrintAndLogEx(HINT, "Hint: tag config may be set to read-protect those pages, try dumping");
+            PrintAndLogEx(HINT, "Hint: Tag config may be set to read-protect those pages, try dumping");
             DropField();
             return PM3_ESOFT;
         }
@@ -3400,6 +3433,7 @@ void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool de
             // and the current block data is the same as the previous and next two block
             in_repeated_block = true;
             PrintAndLogEx(INFO, "  ......");
+
         } else if (in_repeated_block &&
                    (memcmp(blk, blk + MFU_BLOCK_SIZE, MFU_BLOCK_SIZE) || i == pages)
                   ) {
@@ -3411,14 +3445,29 @@ void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool de
         if ((startpage == 0) && ((i < 16) || (pages == 44))) {
             lckbitchar = (lckbit) ? _RED_("1") : "0";
         }
+
         if (in_repeated_block == false) {
-            PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s | %s"
+
+            if (i == 3) {
+                // otp block
+                PrintAndLogEx(INFO, "%3d/0x%02X | " _CYAN_("%s")"| %s | %s"
                           , i + startpage
                           , i + startpage
                           , sprint_hex(data + i * 4, 4)
                           , lckbitchar
                           , sprint_ascii(data + i * 4, 4)
-                         );
+                );
+
+            } else {
+                // normal block
+                PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s | %s"
+                          , i + startpage
+                          , i + startpage
+                          , sprint_hex(data + i * 4, 4)
+                          , lckbitchar
+                          , sprint_ascii(data + i * 4, 4)
+                );
+            }
         }
     }
     PrintAndLogEx(INFO, "---------------------------------");
@@ -3746,6 +3795,10 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
     mfu_print_dump(&dump_file_data, pages, start_page, dense_output);
 
+    if (ndef_detect_message(dump_file_data.data, pages * MFU_BLOCK_SIZE)) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu ndefread")"`");
+    }
+
     if (nosave) {
         PrintAndLogEx(INFO, "Called with no save option");
         PrintAndLogEx(NORMAL, "");
@@ -3768,6 +3821,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     if (is_partial) {
         PrintAndLogEx(WARNING, "Partial dump created. (%d of %d blocks)", pages, card_mem_size);
     }
+
     return PM3_SUCCESS;
 }
 
@@ -6495,7 +6549,7 @@ static int CmdHF14AMfuEView(const char *Cmd) {
     bool override_end = (end != -1) ;
 
     if (override_end && (end < 0 || end > MFU_MAX_BLOCKS)) {
-        PrintAndLogEx(WARNING, "Invalid value for end: %d   Must be be positive integer < %d", end, MFU_MAX_BLOCKS);
+        PrintAndLogEx(WARNING, "Invalid value for end: " _RED_("%d") ". Must be be positive integer < %d", end, MFU_MAX_BLOCKS);
         return PM3_EINVARG ;
     }
 
@@ -6512,6 +6566,11 @@ static int CmdHF14AMfuEView(const char *Cmd) {
     }
 
     mfu_print_dump(dump, end, 0, dense_output);
+
+    if (ndef_detect_message(dump->data, end * MFU_BLOCK_SIZE)) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu ndefread")"`");
+    }
+
     free(dump);
     return PM3_SUCCESS;
 }
@@ -6631,7 +6690,14 @@ static int CmdHF14AMfuView(const char *Cmd) {
         PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
     }
 
-    mfu_print_dump((mfu_dump_t *)dump, block_cnt, 0, dense_output);
+    mfu_dump_t *p = (mfu_dump_t *)dump;
+    mfu_print_dump(p, block_cnt, 0, dense_output);
+
+    // we need to skip prefix
+    if (ndef_detect_message(p->data, block_cnt * MFU_BLOCK_SIZE)) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu ndefread")"`");
+    }
+
     free(dump);
     return PM3_SUCCESS;
 }

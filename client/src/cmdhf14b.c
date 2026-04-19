@@ -3320,7 +3320,7 @@ static int CmdHF14BSriTearoff(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "");
-    PrintAndLogEx(HINT, "Hint: use " _YELLOW_("`hf 14b rdbl -b %d`") " to verify the block", blockno);
+    PrintAndLogEx(HINT, "Hint: Use " _YELLOW_("`hf 14b rdbl -b %d`") " to verify the block", blockno);
     return PM3_SUCCESS;
 }
 

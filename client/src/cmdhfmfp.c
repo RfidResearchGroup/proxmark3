@@ -2386,7 +2386,7 @@ static int CmdHFMFPDump(const char *Cmd) {
 
     if (sectorsRead != numSectors) {
         PrintAndLogEx(HINT, "Partial dump: %d of %d sectors read", sectorsRead, numSectors);
-        PrintAndLogEx(HINT, "Hint: use " _YELLOW_("`hf mfp chk --dump`") " and/or " _YELLOW_("`hf mf chk`") " to find more keys");
+        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfp chk --dump`") " and/or " _YELLOW_("`hf mf chk`") " to find more keys");
     }
 
     free(carddata);
