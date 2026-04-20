@@ -222,7 +222,14 @@ void doMAC_brute_match512(const uint64_t y_bits_bs[96 * BS512_WORDS],
     __m512i mac_match = BS_ONES;
     for (int tick = 0; tick < 32; tick++) {
         const __m512i diff = _mm512_xor_si512(r[2], _mm512_loadu_si512((const void *)&target_mac_bs[tick * BS512_WORDS]));
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#endif
         mac_match = _mm512_andnot_si512(diff, mac_match);
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
         if ((tick == 7 || tick == 15 || tick == 23) &&
                 _mm512_test_epi64_mask(mac_match, mac_match) == 0) {
