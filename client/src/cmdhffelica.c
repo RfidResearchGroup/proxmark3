@@ -1209,6 +1209,29 @@ static void felica_info_process_system(int level, uint8_t flags, const felica_di
     }
 
     if (system->has_idm) {
+        if (system->system_code == FELICA_SYSTEM_CODE_FELICA_LITE) {
+            static const uint8_t lite_id_block_list_element[] = {0x80U, FELICA_BLK_NUMBER_ID};
+            uint8_t lite_id_block[FELICA_BLK_SIZE] = {0};
+            size_t lite_id_block_len = 0;
+
+            if (felica_read_service_block_for_node(flags, system->idm, FELICA_PRESENCE_SERVICE_CODE_LE,
+                                                   lite_id_block_list_element, sizeof(lite_id_block_list_element),
+                                                   lite_id_block, sizeof(lite_id_block), &lite_id_block_len) == PM3_SUCCESS &&
+                    lite_id_block_len >= FELICA_BLK_SIZE) {
+                const uint8_t *lite_tail = lite_id_block + FELICA_BLK_HALF;
+                const uint16_t dfc = (uint16_t)((uint16_t)lite_tail[0] << 8) | lite_tail[1];
+                if (dfc == 0x0000U) {
+                    PrintAndLogEx(level, "    DFC............ " _YELLOW_("%02X%02X") " ( Unused )", lite_tail[0], lite_tail[1]);
+                } else {
+                    PrintAndLogEx(level, "    DFC............ " _YELLOW_("%02X%02X"), lite_tail[0], lite_tail[1]);
+                }
+                PrintAndLogEx(level, "    ARB............ " _YELLOW_("%s"), sprint_hex_inrow(lite_tail + 2, 6));
+            } else {
+                PrintAndLogEx(level, "    DFC............ " _RED_("N/A"));
+                PrintAndLogEx(level, "    ARB............ " _RED_("N/A"));
+            }
+        }
+
         felica_info_process_system_services(level, flags, system->system_code, system->idm, entry);
     }
 }

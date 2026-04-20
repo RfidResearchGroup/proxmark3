@@ -393,32 +393,6 @@
     "description": "Default system code used by FeliCa Lite/Lite-S tags",
     "services": [
       {
-        "name": "Aime",
-        "type": "e-amusement",
-        "description": "AIME E-amusement",
-        "nodes": [
-          {
-            "code": "0b00",
-            "data": {
-              "0082": "^................0078............$"
-            }
-          }
-        ]
-      },
-      {
-        "name": "Bandai Namco Pasport",
-        "type": "e-amusement",
-        "description": "Bandai Namco Pasport E-amusement",
-        "nodes": [
-          {
-            "code": "0b00",
-            "data": {
-              "0082": "^................002A............$"
-            }
-          }
-        ]
-      },
-      {
         "name": "Konami",
         "type": "e-amusement",
         "description": "Konami E-amusement",
@@ -440,6 +414,58 @@
             "code": "0b00",
             "data": {
               "0082": "^................0077............$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Aime",
+        "type": "e-amusement",
+        "description": "AIME E-amusement",
+        "nodes": [
+          {
+            "code": "0b00",
+            "data": {
+              "0082": "^................0078............$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "NESiCA",
+        "type": "e-amusement",
+        "description": "NESiCA E-amusement",
+        "nodes": [
+          {
+            "code": "0b00",
+            "data": {
+              "0082": "^................0079............$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Bandai Namco Pasport",
+        "type": "e-amusement",
+        "description": "Bandai Namco Pasport E-amusement",
+        "nodes": [
+          {
+            "code": "0b00",
+            "data": {
+              "0082": "^................002A............$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Mobiry Days",
+        "type": "transit",
+        "description": "Mobiry Days transit service",
+        "nodes": [
+          {
+            "code": "0b00",
+            "data": {
+              "0082": "^................0093............$"
             }
           }
         ]
