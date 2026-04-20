@@ -19,8 +19,7 @@
 
 // The u64 match function returns its mask instead of writing through a
 // pointer; wrap it to match the uniform backend signature.
-static void u64_match_adapter(const uint64_t *y, const uint64_t *kb,
-                              const uint64_t *tgt, uint64_t *out) {
+static void u64_match_adapter(const uint64_t *y, const uint64_t *kb, const uint64_t *tgt, uint64_t *out) {
     out[0] = doMAC_brute_match64(y, kb, tgt);
 }
 
@@ -66,7 +65,9 @@ static const bs_backend_t backend_avx512 = {
 
 const bs_backend_t *bs_best_backend(void) {
     static const bs_backend_t *cached = NULL;
-    if (cached != NULL) return cached;
+    if (cached != NULL) {
+        return cached;
+    }
 
     if (bs_avx512_supported()) {
         cached = &backend_avx512;
