@@ -54,8 +54,7 @@ static inline void bs_tick(__m256i *t, __m256i *b, __m256i *l, __m256i *r,
                            const __m256i *kb, __m256i y_bs) {
 
     const __m256i Tt = _mm256_xor_si256(_mm256_xor_si256(_mm256_xor_si256(_mm256_xor_si256(
-                                            _mm256_xor_si256(_mm256_xor_si256(_mm256_xor_si256(t[15], t[14]), t[10]), t[8]),
-                                            t[5]), t[4]), t[1]), t[0]);
+                                            _mm256_xor_si256(_mm256_xor_si256(_mm256_xor_si256(t[15], t[14]), t[10]), t[8]), t[5]), t[4]), t[1]), t[0]);
     const __m256i Bt = _mm256_xor_si256(_mm256_xor_si256(_mm256_xor_si256(b[6], b[5]), b[4]), b[0]);
 
     const __m256i cr0 = r[7], cr1 = r[6], cr2 = r[5], cr3 = r[4];
@@ -64,20 +63,22 @@ static inline void bs_tick(__m256i *t, __m256i *b, __m256i *l, __m256i *r,
     const __m256i new_t = _mm256_xor_si256(_mm256_xor_si256(Tt, cr0), cr4);
     const __m256i new_b = _mm256_xor_si256(Bt, cr7);
 
-    for (int i = 0; i < 15; i++) t[i] = t[i + 1];
+    for (int i = 0; i < 15; i++) {
+        t[i] = t[i + 1];
+    }
     t[15] = new_t;
-    for (int i = 0; i < 7; i++) b[i] = b[i + 1];
+
+    for (int i = 0; i < 7; i++) {
+        b[i] = b[i + 1];
+    }
     b[7] = new_b;
 
     const __m256i ncr3 = bs_not(cr3);
     const __m256i ncr5 = bs_not(cr5);
 
-    const __m256i z0 = _mm256_xor_si256(_mm256_xor_si256(_mm256_and_si256(cr0, cr2), _mm256_and_si256(cr1, ncr3)),
-                                        _mm256_or_si256(cr2, cr4));
-    const __m256i z1 = _mm256_xor_si256(_mm256_xor_si256(_mm256_xor_si256(_mm256_xor_si256(_mm256_xor_si256(
-                                            _mm256_or_si256(cr0, cr2), _mm256_or_si256(cr5, cr7)), cr1), cr6), Tt), y_bs);
-    const __m256i z2 = _mm256_xor_si256(_mm256_xor_si256(_mm256_xor_si256(
-                                            _mm256_and_si256(cr3, ncr5), _mm256_and_si256(cr4, cr6)), cr7), Tt);
+    const __m256i z0 = _mm256_xor_si256(_mm256_xor_si256(_mm256_and_si256(cr0, cr2), _mm256_and_si256(cr1, ncr3)), _mm256_or_si256(cr2, cr4));
+    const __m256i z1 = _mm256_xor_si256(_mm256_xor_si256(_mm256_xor_si256(_mm256_xor_si256(_mm256_xor_si256( _mm256_or_si256(cr0, cr2), _mm256_or_si256(cr5, cr7)), cr1), cr6), Tt), y_bs);
+    const __m256i z2 = _mm256_xor_si256(_mm256_xor_si256(_mm256_xor_si256(_mm256_and_si256(cr3, ncr5), _mm256_and_si256(cr4, cr6)), cr7), Tt);
 
     const __m256i nz0 = bs_not(z0);
     const __m256i nz1 = bs_not(z1);
@@ -92,10 +93,15 @@ static inline void bs_tick(__m256i *t, __m256i *b, __m256i *l, __m256i *r,
                            kb[6 * 8 + bit], kb[7 * 8 + bit]);
     }
 
-    for (int i = 0; i < 8; i++) val[i] = _mm256_xor_si256(val[i], b[i]);
+    for (int i = 0; i < 8; i++) {
+        val[i] = _mm256_xor_si256(val[i], b[i]);
+    }
 
     __m256i old_r[8];
-    for (int i = 0; i < 8; i++) old_r[i] = r[i];
+    for (int i = 0; i < 8; i++) {
+        old_r[i] = r[i];
+    }
+
     bs_add8(val, l, r);
     bs_add8(r, old_r, l);
 }
@@ -118,9 +124,7 @@ static inline __m256i lane_bits_256(int k) {
     return _mm256_loadu_si256((const __m256i *)LANE_BITS_256_RAW[k]);
 }
 
-static inline void bs_init_state(const __m256i kb[64],
-                                 __m256i l[8], __m256i r[8],
-                                 __m256i b[8], __m256i t[16]) {
+static inline void bs_init_state(const __m256i kb[64], __m256i l[8], __m256i r[8], __m256i b[8], __m256i t[16]) {
 
     __m256i k0xor[8];
     k0xor[0] = kb[0];
@@ -181,8 +185,10 @@ void build_bitslice_key_256(const uint8_t partial_key[8], uint64_t index_start, 
     }
 
     for (int j = 0; j < 8; j++) {
+
         const int base_bit = 5 * (7 - j);
         for (int kk = 0; kk < 5; kk++) {
+
             const int idx_bit = base_bit + kk;
             __m256i pattern;
             if (idx_bit < 8) {
@@ -203,7 +209,9 @@ void doMAC_brute_match256(const uint64_t y_bits_bs[96 * BS256_WORDS],
     // Load key into local __m256i array for fast access.
     __m256i k[64];
     const __m256i *kb_m = (const __m256i *)kb;
-    for (int i = 0; i < 64; i++) k[i] = _mm256_loadu_si256(&kb_m[i]);
+    for (int i = 0; i < 64; i++) {
+        k[i] = _mm256_loadu_si256(&kb_m[i]);
+    }
 
     __m256i l[8], r[8], b[8], t[16];
     bs_init_state(k, l, r, b, t);
@@ -217,12 +225,15 @@ void doMAC_brute_match256(const uint64_t y_bits_bs[96 * BS256_WORDS],
 
     __m256i mac_match = BS_ONES;
     for (int tick = 0; tick < 32; tick++) {
+
         const __m256i diff = _mm256_xor_si256(r[2], _mm256_loadu_si256(&tm[tick]));
         // mac_match &= ~diff  →  andnot(diff, mac_match) = ~diff & mac_match
         mac_match = _mm256_andnot_si256(diff, mac_match);
 
         if ((tick == 7 || tick == 15 || tick == 23) && _mm256_testz_si256(mac_match, mac_match)) {
-            for (int i = 0; i < BS256_WORDS; i++) match_out[i] = 0;
+            for (int i = 0; i < BS256_WORDS; i++) {
+                match_out[i] = 0;
+            }
             return;
         }
 
@@ -256,20 +267,28 @@ bool bs_avx2_supported(void) {
 bool bs_avx2_supported(void) { return false; }
 
 void prepare_ccnr_bits_bs256(const uint8_t *cc_nr, uint64_t y_bits_bs[96 * BS256_WORDS]) {
-    (void)cc_nr; (void)y_bits_bs;
+    (void)cc_nr;
+    (void)y_bits_bs;
 }
 void prepare_target_mac_bs256(const uint8_t target_mac[4], uint64_t target_mac_bs[32 * BS256_WORDS]) {
-    (void)target_mac; (void)target_mac_bs;
+    (void)target_mac;
+    (void)target_mac_bs;
 }
 void build_bitslice_key_256(const uint8_t partial_key[8], uint64_t index_start, uint64_t kb[64 * BS256_WORDS]) {
-    (void)partial_key; (void)index_start; (void)kb;
+    (void)partial_key; 
+    (void)index_start; 
+    (void)kb;
 }
 void doMAC_brute_match256(const uint64_t y_bits_bs[96 * BS256_WORDS],
                           const uint64_t kb[64 * BS256_WORDS],
                           const uint64_t target_mac_bs[32 * BS256_WORDS],
                           uint64_t match_out[BS256_WORDS]) {
-    (void)y_bits_bs; (void)kb; (void)target_mac_bs;
-    for (int i = 0; i < BS256_WORDS; i++) match_out[i] = 0;
+    (void)y_bits_bs; 
+    (void)kb; 
+    (void)target_mac_bs;
+    for (int i = 0; i < BS256_WORDS; i++) {
+        match_out[i] = 0;
+    }
 }
 
 #endif

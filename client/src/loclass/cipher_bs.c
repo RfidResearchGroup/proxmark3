@@ -46,8 +46,7 @@ static inline void bs_add8(const uint64_t *a, const uint64_t *b, uint64_t *out) 
 // where array index is bit position (LSB first) and each slot is a uint64_t
 // holding that bit for 64 lanes. kb[64] is the bitsliced key schedule.
 // y_bs is the input bit broadcast to all 64 lanes (0 or all-ones).
-static inline void bs_tick(uint64_t *t, uint64_t *b, uint64_t *l, uint64_t *r,
-                           const uint64_t *kb, uint64_t y_bs) {
+static inline void bs_tick(uint64_t *t, uint64_t *b, uint64_t *l, uint64_t *r, const uint64_t *kb, uint64_t y_bs) {
 
     const uint64_t Tt = t[15] ^ t[14] ^ t[10] ^ t[8] ^ t[5] ^ t[4] ^ t[1] ^ t[0];
     const uint64_t Bt = b[6] ^ b[5] ^ b[4] ^ b[0];
@@ -89,7 +88,9 @@ static inline void bs_tick(uint64_t *t, uint64_t *b, uint64_t *l, uint64_t *r,
     val[4] ^= b[4]; val[5] ^= b[5]; val[6] ^= b[6]; val[7] ^= b[7];
 
     uint64_t old_r[8];
-    for (int i = 0; i < 8; i++) old_r[i] = r[i];
+    for (int i = 0; i < 8; i++) {
+        old_r[i] = r[i];
+    }
 
     // r = val + l ; l = r + old_r
     bs_add8(val, l, r);
@@ -111,7 +112,9 @@ void prepare_ccnr_bits_bs(const uint8_t *cc_nr, uint64_t y_bits_bs[96]) {
 }
 
 void prepare_target_mac_bs(const uint8_t target_mac[4], uint64_t target_mac_bs[32]) {
+
     for (int i = 0; i < 4; i++) {
+
         const uint8_t byte = target_mac[i];
         for (int bit = 0; bit < 8; bit++) {
             target_mac_bs[i * 8 + bit] = ((byte >> bit) & 1) ? BS_ALL_ONES : 0;
@@ -145,8 +148,10 @@ void build_bitslice_key_64(const uint8_t partial_key[8], uint64_t index_start, u
     // (index_start + L) equal the lane index L, so they pick up LANE_BITS;
     // bits 6..39 are broadcast from index_start.
     for (int j = 0; j < 8; j++) {
+
         const int base_bit = 5 * (7 - j);
         for (int k = 0; k < 5; k++) {
+
             const int idx_bit = base_bit + k;
             uint64_t pattern;
             if (idx_bit < 6) {
@@ -165,9 +170,7 @@ void build_bitslice_key_64(const uint8_t partial_key[8], uint64_t index_start, u
 //   b = 0x4C, t = 0xE012
 // Bitsliced: flip kb[0..7] bits that differ under XOR with 0x4C, then bs_add8
 // against the broadcast 0xEC / 0x21 bit patterns.
-static inline void bs_init_state(const uint64_t kb[64],
-                                 uint64_t l[8], uint64_t r[8],
-                                 uint64_t b[8], uint64_t t[16]) {
+static inline void bs_init_state(const uint64_t kb[64], uint64_t l[8], uint64_t r[8], uint64_t b[8], uint64_t t[16]) {
 
     // 0x4C = 0b01001100 → bits set at positions 2, 3, 6.
     uint64_t k0xor[8];

@@ -27,7 +27,9 @@
 #define BS_ZERO   _mm512_setzero_si512()
 #define BS_ONES   _mm512_set1_epi64(-1)
 
-static inline __m512i bs_not(__m512i v) { return _mm512_xor_si512(v, BS_ONES); }
+static inline __m512i bs_not(__m512i v) { 
+    return _mm512_xor_si512(v, BS_ONES);
+}
 
 static inline __m512i bs_mux8(__m512i z0, __m512i z1, __m512i z2,
                               __m512i nz0, __m512i nz1, __m512i nz2,
@@ -55,8 +57,7 @@ static inline void bs_tick(__m512i *t, __m512i *b, __m512i *l, __m512i *r,
                            const __m512i *kb, __m512i y_bs) {
 
     const __m512i Tt = _mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(
-                                            _mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(t[15], t[14]), t[10]), t[8]),
-                                            t[5]), t[4]), t[1]), t[0]);
+                                            _mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(t[15], t[14]), t[10]), t[8]), t[5]), t[4]), t[1]), t[0]);
     const __m512i Bt = _mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(b[6], b[5]), b[4]), b[0]);
 
     const __m512i cr0 = r[7], cr1 = r[6], cr2 = r[5], cr3 = r[4];
@@ -65,20 +66,24 @@ static inline void bs_tick(__m512i *t, __m512i *b, __m512i *l, __m512i *r,
     const __m512i new_t = _mm512_xor_si512(_mm512_xor_si512(Tt, cr0), cr4);
     const __m512i new_b = _mm512_xor_si512(Bt, cr7);
 
-    for (int i = 0; i < 15; i++) t[i] = t[i + 1];
+    for (int i = 0; i < 15; i++) {
+        t[i] = t[i + 1];
+    }
+
     t[15] = new_t;
-    for (int i = 0; i < 7; i++) b[i] = b[i + 1];
+
+    for (int i = 0; i < 7; i++) {
+        b[i] = b[i + 1];
+    }
+
     b[7] = new_b;
 
     const __m512i ncr3 = bs_not(cr3);
     const __m512i ncr5 = bs_not(cr5);
 
-    const __m512i z0 = _mm512_xor_si512(_mm512_xor_si512(_mm512_and_si512(cr0, cr2), _mm512_and_si512(cr1, ncr3)),
-                                        _mm512_or_si512(cr2, cr4));
-    const __m512i z1 = _mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(
-                                            _mm512_or_si512(cr0, cr2), _mm512_or_si512(cr5, cr7)), cr1), cr6), Tt), y_bs);
-    const __m512i z2 = _mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(
-                                            _mm512_and_si512(cr3, ncr5), _mm512_and_si512(cr4, cr6)), cr7), Tt);
+    const __m512i z0 = _mm512_xor_si512(_mm512_xor_si512(_mm512_and_si512(cr0, cr2), _mm512_and_si512(cr1, ncr3)), _mm512_or_si512(cr2, cr4));
+    const __m512i z1 = _mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512( _mm512_or_si512(cr0, cr2), _mm512_or_si512(cr5, cr7)), cr1), cr6), Tt), y_bs);
+    const __m512i z2 = _mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(_mm512_and_si512(cr3, ncr5), _mm512_and_si512(cr4, cr6)), cr7), Tt);
 
     const __m512i nz0 = bs_not(z0);
     const __m512i nz1 = bs_not(z1);
@@ -93,10 +98,15 @@ static inline void bs_tick(__m512i *t, __m512i *b, __m512i *l, __m512i *r,
                            kb[6 * 8 + bit], kb[7 * 8 + bit]);
     }
 
-    for (int i = 0; i < 8; i++) val[i] = _mm512_xor_si512(val[i], b[i]);
+    for (int i = 0; i < 8; i++) {
+        val[i] = _mm512_xor_si512(val[i], b[i]);
+    }
 
     __m512i old_r[8];
-    for (int i = 0; i < 8; i++) old_r[i] = r[i];
+    for (int i = 0; i < 8; i++) {
+        old_r[i] = r[i];
+    }
+
     bs_add8(val, l, r);
     bs_add8(r, old_r, l);
 }
@@ -165,8 +175,7 @@ void prepare_ccnr_bits_bs512(const uint8_t *cc_nr, uint64_t y_bits_bs[96 * BS512
     for (int i = 0; i < 12; i++) {
         const uint8_t byte = cc_nr[i];
         for (int bit = 0; bit < 8; bit++) {
-            _mm512_storeu_si512((void *)&y_bits_bs[(i * 8 + bit) * BS512_WORDS],
-                                ((byte >> bit) & 1) ? BS_ONES : BS_ZERO);
+            _mm512_storeu_si512((void *)&y_bits_bs[(i * 8 + bit) * BS512_WORDS], ((byte >> bit) & 1) ? BS_ONES : BS_ZERO);
         }
     }
 }
@@ -175,8 +184,7 @@ void prepare_target_mac_bs512(const uint8_t target_mac[4], uint64_t target_mac_b
     for (int i = 0; i < 4; i++) {
         const uint8_t byte = target_mac[i];
         for (int bit = 0; bit < 8; bit++) {
-            _mm512_storeu_si512((void *)&target_mac_bs[(i * 8 + bit) * BS512_WORDS],
-                                ((byte >> bit) & 1) ? BS_ONES : BS_ZERO);
+            _mm512_storeu_si512((void *)&target_mac_bs[(i * 8 + bit) * BS512_WORDS], ((byte >> bit) & 1) ? BS_ONES : BS_ZERO);
         }
     }
 }
@@ -190,9 +198,13 @@ void build_bitslice_key_512(const uint8_t partial_key[8], uint64_t index_start, 
     }
 
     for (int j = 0; j < 8; j++) {
+
         const int base_bit = 5 * (7 - j);
+
         for (int kk = 0; kk < 5; kk++) {
+
             const int idx_bit = base_bit + kk;
+
             __m512i pattern;
             if (idx_bit < 9) {
                 pattern = lane_bits_512(idx_bit);
@@ -210,8 +222,9 @@ void doMAC_brute_match512(const uint64_t y_bits_bs[96 * BS512_WORDS],
                           uint64_t match_out[BS512_WORDS]) {
 
     __m512i k[64];
-    for (int i = 0; i < 64; i++) k[i] = _mm512_loadu_si512((const void *)&kb[i * BS512_WORDS]);
-
+    for (int i = 0; i < 64; i++) {
+        k[i] = _mm512_loadu_si512((const void *)&kb[i * BS512_WORDS]);
+    }
     __m512i l[8], r[8], b[8], t[16];
     bs_init_state(k, l, r, b, t);
 
@@ -221,12 +234,15 @@ void doMAC_brute_match512(const uint64_t y_bits_bs[96 * BS512_WORDS],
 
     __m512i mac_match = BS_ONES;
     for (int tick = 0; tick < 32; tick++) {
+
         const __m512i diff = _mm512_xor_si512(r[2], _mm512_loadu_si512((const void *)&target_mac_bs[tick * BS512_WORDS]));
+
         mac_match = _mm512_andnot_si512(diff, mac_match);
 
-        if ((tick == 7 || tick == 15 || tick == 23) &&
-                _mm512_test_epi64_mask(mac_match, mac_match) == 0) {
-            for (int i = 0; i < BS512_WORDS; i++) match_out[i] = 0;
+        if ((tick == 7 || tick == 15 || tick == 23) && _mm512_test_epi64_mask(mac_match, mac_match) == 0) {
+            for (int i = 0; i < BS512_WORDS; i++) {
+                match_out[i] = 0;
+            }
             return;
         }
 
@@ -260,20 +276,30 @@ bool bs_avx512_supported(void) {
 bool bs_avx512_supported(void) { return false; }
 
 void prepare_ccnr_bits_bs512(const uint8_t *cc_nr, uint64_t y_bits_bs[96 * BS512_WORDS]) {
-    (void)cc_nr; (void)y_bits_bs;
+    (void)cc_nr; 
+    (void)y_bits_bs;
 }
 void prepare_target_mac_bs512(const uint8_t target_mac[4], uint64_t target_mac_bs[32 * BS512_WORDS]) {
-    (void)target_mac; (void)target_mac_bs;
+    (void)target_mac; 
+    (void)target_mac_bs;
 }
 void build_bitslice_key_512(const uint8_t partial_key[8], uint64_t index_start, uint64_t kb[64 * BS512_WORDS]) {
-    (void)partial_key; (void)index_start; (void)kb;
+    (void)partial_key; 
+    (void)index_start; 
+    (void)kb;
 }
 void doMAC_brute_match512(const uint64_t y_bits_bs[96 * BS512_WORDS],
                           const uint64_t kb[64 * BS512_WORDS],
                           const uint64_t target_mac_bs[32 * BS512_WORDS],
                           uint64_t match_out[BS512_WORDS]) {
-    (void)y_bits_bs; (void)kb; (void)target_mac_bs;
-    for (int i = 0; i < BS512_WORDS; i++) match_out[i] = 0;
+    
+    (void)y_bits_bs; 
+    (void)kb; 
+    (void)target_mac_bs;
+    
+    for (int i = 0; i < BS512_WORDS; i++) {
+        match_out[i] = 0;
+    }
 }
 
 #endif
