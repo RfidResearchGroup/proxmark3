@@ -221,7 +221,35 @@
     "name": "Shikoku",
     "region": "Japan",
     "type": "transit",
-    "description": "Used by Shikoku cards (Desuca/Iyotetsu)"
+    "description": "Used by Shikoku cards (Desuca/Iyotetsu)",
+    "services": [
+      {
+        "name": "DESUCA",
+        "type": "transit",
+        "description": "DESUCA transit card service operated by Desuka Co., Ltd. (Kochi)",
+        "nodes": [
+          {
+            "code": "0B00",
+            "data": {
+              "00": "^0ff0............................$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Iyotetsu",
+        "type": "transit",
+        "description": "IC-E-Card transit card service used on Iyo Railway (Iyotetsu)",
+        "nodes": [
+          {
+            "code": "0B00",
+            "data": {
+              "00": "^05d3............................$"
+            }
+          }
+        ]
+      }
+    ]
   },
   {
     "code": "80EF",
@@ -320,7 +348,35 @@
     "name": "Toyama",
     "region": "Japan",
     "type": "transit",
-    "description": "Used by Toyama cards (Ecomyca/Passca)"
+    "description": "Used by Toyama cards (Ecomyca/Passca)",
+    "services": [
+      {
+        "name": "ECOMYCA",
+        "type": "transit",
+        "description": "ECOMYCA transit card service operated by Toyama Chiho Railway Co., Ltd.",
+        "nodes": [
+          {
+            "code": "4B80",
+            "data": {
+              "00": "^0367............................$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "PASSCA",
+        "type": "transit",
+        "description": "PASSCA transit card service introduced by Toyama Light Rail Co., Ltd. (legacy)",
+        "nodes": [
+          {
+            "code": "4B80",
+            "data": {
+              "00": "^0d69............................$"
+            }
+          }
+        ]
+      }
+    ]
   },
   {
     "code": "83CC",
@@ -477,7 +533,35 @@
     "name": "NorucA",
     "region": "Japan",
     "type": "transit",
-    "description": "Used by NORUCA transit card (Fukushima Kotsu)"
+    "description": "Used by NORUCA transit card (Fukushima Kotsu)",
+    "services": [
+      {
+        "name": "NORUCA",
+        "type": "transit",
+        "description": "NORUCA transit card service operated by Fukushima Kotsu Co., Ltd.",
+        "nodes": [
+          {
+            "code": "4B80",
+            "data": {
+              "00": "^0fc9............................$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "AIZU NORUCA",
+        "type": "transit",
+        "description": "AIZU NORUCA transit card service operated by Aizu Bus (Aizu Noriai Jidosha Co., Ltd.)",
+        "nodes": [
+          {
+            "code": "4B80",
+            "data": {
+              "00": "^0fca............................$"
+            }
+          }
+        ]
+      }
+    ]
   },
   {
     "code": "8B5D",
