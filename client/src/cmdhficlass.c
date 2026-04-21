@@ -8082,7 +8082,7 @@ static int CmdHFiClassLiberate(const char *Cmd) {
             }
 
             if (memcmp(decrypted, mkf_expected_pt, 8) == 0) {
-                PrintAndLogEx(SUCCESS, _GREEN_("MKF card detected") " — block %u signature verified", MKF_KNOWN_SECTOR);
+                PrintAndLogEx(SUCCESS, "Detected " _GREEN_("MKF card") ", block %u signature verified", MKF_KNOWN_SECTOR);
                 card_type = CARD_TYPE_MKF;
             } else {
                 if (verbose) {
@@ -8107,7 +8107,7 @@ static int CmdHFiClassLiberate(const char *Cmd) {
 
         int res = iclass_read_block_ex(key_icl, 6, ICLASS_DEBIT_KEYTYPE, false, false, false, verbose, true, shallow_mod, dummy, false, false);
         if (res == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, _GREEN_("iCopy-X iCL card detected") " — DRM key 2020666666668888");
+            PrintAndLogEx(SUCCESS, "Detected " _GREEN_("iCopy-X iCL") ", DRM key 2020666666668888");
             card_type = CARD_TYPE_ICOPY_ICL;
             memcpy(drm_key, icopy_key_icl, PICOPASS_BLOCK_SIZE);
         } else {
@@ -8117,7 +8117,7 @@ static int CmdHFiClassLiberate(const char *Cmd) {
 
             res = iclass_read_block_ex(key_ics, 6, ICLASS_DEBIT_KEYTYPE, false, false, false, verbose, true, shallow_mod, dummy, false, false);
             if (res == PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, _GREEN_("iCopy-X iCS card detected") " — DRM key 6666202066668888");
+                PrintAndLogEx(SUCCESS, "Detected " _GREEN_("iCopy-X iCS") ", DRM key 6666202066668888");
                 card_type = CARD_TYPE_ICOPY_ICS;
                 memcpy(drm_key, icopy_key_ics, PICOPASS_BLOCK_SIZE);
             }
@@ -8159,7 +8159,7 @@ static int CmdHFiClassLiberate(const char *Cmd) {
         case CARD_TYPE_ICOPY_ICL:
         case CARD_TYPE_ICOPY_ICS: {
             // change KD from DRM key to default key (ki 0)
-        PrintAndLogEx(INFO, "Changing KD from iCopy-X DRM key to default `ki 0`");
+        PrintAndLogEx(INFO, "Changing KD from iCopy-X DRM key to default");
 
             // calculate XOR div key
             uint8_t xor_div_key[PICOPASS_BLOCK_SIZE] = {0};
@@ -8175,9 +8175,9 @@ static int CmdHFiClassLiberate(const char *Cmd) {
 
             int res = iclass_write_block(3, xor_div_key, NULL, auth_key, false, false, false, false, verbose, false, shallow_mod);
             if (res == PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "Change to default key `ki 0` ( %s )", _GREEN_("ok"));
+                PrintAndLogEx(SUCCESS, "Change to default key ( %s )", _GREEN_("ok"));
             } else {
-                PrintAndLogEx(ERR,  "Change to default key `ki 0` ( %s )", _RED_("fail"));
+                PrintAndLogEx(ERR,  "Change to default key ( %s )", _RED_("fail"));
                 return res;
             }
 
@@ -8189,9 +8189,9 @@ static int CmdHFiClassLiberate(const char *Cmd) {
             res = iclass_read_block_ex(default_key, 6, ICLASS_DEBIT_KEYTYPE, false, false, false,
                                         verbose, true, shallow_mod, verify, false, false);
             if (res == PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "Verified default key `ki 0` ( %s ), " _GREEN_("ok"));
+                PrintAndLogEx(SUCCESS, "Verified default key ( %s ), " _GREEN_("ok"));
             } else {
-                PrintAndLogEx(WARNING, "Verified default key `ki 0` ( %s ), " _RED_("fail"));
+                PrintAndLogEx(WARNING, "Verified default key ( %s ), " _RED_("fail"));
             }
             break;
         }
