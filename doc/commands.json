@@ -3681,10 +3681,11 @@
         },
         "hf iclass encode": {
             "command": "hf iclass encode",
-            "description": "Encode binary wiegand to block 7,8,9 Use either --bin or --wiegand/--fc/--cn When using emulator you have to first load a credential into emulator memory",
+            "description": "Encode binary wiegand to block 7,8,9 Use either --bin or --wiegand/--fc/--cn Authenticate with either --ki (key slot index) or -k/--key (raw 8-byte hex key) When using emulator you have to first load a credential into emulator memory",
             "notes": [
                 "hf iclass encode --bin 10001111100000001010100011 --ki 0 -> FC 31 CN 337 (H10301)",
                 "hf iclass encode -w H10301 --fc 31 --cn 337 --ki 0 -> FC 31 CN 337 (H10301)",
+                "hf iclass encode -w H10301 --fc 31 --cn 337 -k 0102030405060708 -> authenticate with hex key",
                 "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite -> FC 31 CN 337 (H10301), writing w elite key",
                 "hf iclass encode -w H10301 --fc 31 --cn 337 --emu -> Writes the ecoded data to emulator memory"
             ],
@@ -3693,6 +3694,7 @@
                 "-h, --help This help",
                 "--bin <bin> Binary string i.e 0001001001",
                 "--ki <dec> Key index to select key from memory 'hf iclass managekeys'",
+                "-k, --key <hex> Key as 8 hex bytes (alternative to --ki)",
                 "--credit key is assumed to be the credit key",
                 "--elite elite computations applied to key",
                 "--raw no computations applied to key",
@@ -3705,7 +3707,7 @@
                 "--shallow use shallow (ASK) reader modulation instead of OOK",
                 "-v verbose (print encoded blocks)"
             ],
-            "usage": "hf iclass encode [-hv] [--bin <bin>] [--ki <dec>] [--credit] [--elite] [--raw] [--enckey <hex>] [--fc <dec>] [--cn <dec>] [--issue <dec>] [-w <format>] [--emu] [--shallow]"
+            "usage": "hf iclass encode [-hv] [--bin <bin>] [--ki <dec>] [-k <hex>] [--credit] [--elite] [--raw] [--enckey <hex>] [--fc <dec>] [--cn <dec>] [--issue <dec>] [-w <format>] [--emu] [--shallow]"
         },
         "hf iclass encrypt": {
             "command": "hf iclass encrypt",
@@ -3808,7 +3810,7 @@
             "command": "hf iclass legbrute",
             "description": "This command takes sniffed trace data and a partial raw key and bruteforces the remaining 40 bits of the raw key. Complete 40 bit keyspace is 1'099'511'627'776.",
             "notes": [
-                "hf iclass legbrute --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk B4F12AADC5301225"
+                "hf iclass legbrute --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk 0401020505000205"
             ],
             "offline": true,
             "options": [
@@ -3844,6 +3846,22 @@
                 "--est Estimates the key updates based on the card's CSN assuming standard key, can be used with --credit option"
             ],
             "usage": "hf iclass legrec [-h] [--macs <hex>] [--index <dec>] [--loop <dec>] [--debug] [--notest] [--allnight] [--fast] [--sl] [--est]"
+        },
+        "hf iclass liberate": {
+            "command": "hf iclass liberate",
+            "description": "Detect and liberate MKF or iCopy-X cloned iCLASS cards. MKF cards: verifies block 18 signature, then zeroes it. iCopy-X cards: detects DRM key, then changes KD to default (ki 0).",
+            "notes": [
+                "hf iclass liberate",
+                "hf iclass liberate --selftest"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--shallow use shallow (ASK) reader modulation instead of OOK",
+                "-v, --verbose verbose output",
+                "--selftest run MKF detection self-test"
+            ],
+            "usage": "hf iclass liberate [-hv] [--shallow] [--selftest]"
         },
         "hf iclass loclass": {
             "command": "hf iclass loclass",
@@ -6970,6 +6988,30 @@
             ],
             "usage": "hf mfdes info [-h]"
         },
+        "hf mfdes intauth": {
+            "command": "hf mfdes intauth",
+            "description": "Perform ISO Internal Authenticate (ECDSA challenge-response) on MIFARE DUOX. Card signs a fresh challenge to prove it possesses its private key. Optionally verifies the card's ECDSA-P256 signature with a given public key.",
+            "notes": [
+                "hf mfdes intauth -> authenticate with default AID (000000), random challenge",
+                "hf mfdes intauth --aid D61CF5 -> explicit AID",
+                "hf mfdes intauth --dfname D2760000850100 -> select by DF name",
+                "hf mfdes intauth -d 00112233445566778899AABBCCDDEEFF -> explicit 16-byte challenge",
+                "hf mfdes intauth -p 04AABB... -> verify signature with given EC public key (hex, PEM, DER, file path)",
+                "hf mfdes intauth -n 1 -> use key number 1"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-a, --apdu Show APDU requests and responses",
+                "-v, --verbose Verbose output",
+                "-d, --challenge <hex> Challenge / RndA (16 bytes, random if omitted)",
+                "-p, --pubkey <hex|pem|der|path> EC public key for signature verification",
+                "--aid <hex> Application ID (3 bytes, default 000000)",
+                "-n, --keynum <dec> Key number (P2, default 0)",
+                "--dfname <hex> Application ISO DF Name (1-16 hex bytes)"
+            ],
+            "usage": "hf mfdes intauth [-hav] [-d <hex>] [-p <hex|pem|der|path>] [--aid <hex>] [-n <dec>] [--dfname <hex>]"
+        },
         "hf mfdes lsapp": {
             "command": "hf mfdes lsapp",
             "description": "Show application list. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
@@ -7054,6 +7096,25 @@
                 "--auth Authenticate to get info from GetApplicationIDs command (non-standard feature!)"
             ],
             "usage": "hf mfdes mad [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--auth]"
+        },
+        "hf mfdes pc": {
+            "command": "hf mfdes pc",
+            "description": "Perform DESFire proximity check flow (Prepare_PC -> Proximity_Check -> Verify_PC). This command uses plain communication with a dedicated 16-byte AES proximity key.",
+            "notes": [
+                "hf mfdes pc --key 00000000000000000000000000000000",
+                "hf mfdes pc --key 00112233445566778899aabbccddeeff --rounds 4",
+                "hf mfdes pc --key 00112233445566778899aabbccddeeff -c native -a"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-a, --apdu Show APDU requests and responses",
+                "-v, --verbose Verbose output",
+                "-k, --key <hex> Key (AES-128, exactly 16 bytes)",
+                "-r, --rounds <dec> Number of rounds (1..8), default 8",
+                "-c, --ccset <native|niso> Communication command set (default from `hf mfdes default`)"
+            ],
+            "usage": "hf mfdes pc [-hav] -k <hex> [-r <dec>] [-c <native|niso>]"
         },
         "hf mfdes read": {
             "command": "hf mfdes read",
@@ -14440,8 +14501,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 819,
+        "commands_extracted": 822,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-04-13T07:31:01"
+        "extracted_on": "2026-04-21T04:12:30"
     }
 }

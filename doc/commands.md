@@ -455,6 +455,7 @@ Check column "offline" for their availability.
 |`hf iclass wrbl         `|N       |`Write Picopass / iCLASS block`
 |`hf iclass creditepurse `|N       |`Credit epurse value`
 |`hf iclass tear         `|N       |`Performs tearoff attack on iCLASS block`
+|`hf iclass liberate     `|N       |`Detect and liberate MKF / iCopy-X cloned cards`
 |`hf iclass chk          `|N       |`Check keys`
 |`hf iclass loclass      `|Y       |`Use loclass to perform bruteforce reader attack`
 |`hf iclass lookup       `|Y       |`Uses authentication trace to check for key in dictionary file`
@@ -708,6 +709,7 @@ Check column "offline" for their availability.
 |`hf mfdes formatpicc    `|N       |`Format PICC`
 |`hf mfdes freemem       `|N       |`Get free memory size`
 |`hf mfdes getuid        `|N       |`Get uid from card`
+|`hf mfdes pc            `|N       |`Run proximity check`
 |`hf mfdes info          `|N       |`Tag information`
 |`hf mfdes mad           `|N       |`Prints MAD records / files from the card`
 |`hf mfdes setconfig     `|N       |`Set card configuration`
@@ -742,6 +744,7 @@ Check column "offline" for their availability.
 |`hf mfdes write         `|N       |`Write data to standard/backup/record/value file`
 |`hf mfdes value         `|N       |`Operations with value file (get/credit/limited credit/debit/clear)`
 |`hf mfdes clearrecfile  `|N       |`Clear record File`
+|`hf mfdes intauth       `|N       |`ISO Internal Authenticate (ECDSA challenge-response)`
 |`hf mfdes test          `|Y       |`Regression crypto tests`
 
 

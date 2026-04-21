@@ -7947,6 +7947,269 @@ static int CmdHFiClassSAM(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// ---------------------------------------------------------------------------
+// hf iclass liberate — detect and liberate MKF / iCopy-X cloned cards
+// ---------------------------------------------------------------------------
+
+// iCopy-X DRM keys
+static const uint8_t icopy_key_icl[PICOPASS_BLOCK_SIZE] = { 0x20, 0x20, 0x66, 0x66, 0x66, 0x66, 0x88, 0x88 };
+static const uint8_t icopy_key_ics[PICOPASS_BLOCK_SIZE] = { 0x66, 0x66, 0x20, 0x20, 0x66, 0x66, 0x88, 0x88 };
+
+// MKF 3DES key suffix (appended to CSN to form 16-byte 2-key 3DES key: CSN || suffix)
+static const uint8_t mkf_key_suffix[8] = { 0x05, 0x70, 0xF6, 0x9A, 0x06, 0x97, 0x5C, 0xD8 };
+
+// MKF expected plaintext for block 18
+static const uint8_t mkf_expected_pt[PICOPASS_BLOCK_SIZE] = { 0xCD, 0x00, 0x00, 0x00, 0xCD, 0xFF, 0xFF, 0xFF };
+
+#define MKF_KNOWN_SECTOR    ( 18 )
+
+typedef enum {
+    CARD_TYPE_UNKNOWN = 0,
+    CARD_TYPE_MKF,
+    CARD_TYPE_ICOPY_ICL,
+    CARD_TYPE_ICOPY_ICS,
+} liberate_card_type_t;
+
+static int iclass_mfk_selftest(void) {
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--------------- " _CYAN_("selftest") " -----------------------");
+
+    // Test vector: CSN E44B4403F8FF12E0, encrypted block 18 = B34E6C637CEDFE9C
+    // 3DES key = CSN || 0570F69A06975CD8 = E44B4403F8FF12E00570F69A06975CD8
+    // Expected plaintext = CD000000CDFFFFFF
+    const uint8_t tv_csn[8]   = { 0xE4, 0x4B, 0x44, 0x03, 0xF8, 0xFF, 0x12, 0xE0 };
+    const uint8_t tv_blk18[8] = { 0xB3, 0x4E, 0x6C, 0x63, 0x7C, 0xED, 0xFE, 0x9C };
+
+    // build 3DES key
+    uint8_t des_key[16] = {0};
+    memcpy(des_key, tv_csn, 8);
+    memcpy(des_key + 8, mkf_key_suffix, 8);
+
+    // decrypt
+    uint8_t decrypted[8] = {0};
+    mbedtls_des3_context des3_ctx;
+    mbedtls_des3_set2key_dec(&des3_ctx, des_key);
+    mbedtls_des3_crypt_ecb(&des3_ctx, tv_blk18, decrypted);
+    mbedtls_des3_free(&des3_ctx);
+
+    PrintAndLogEx(INFO, "CSN............ %s", sprint_hex_inrow(tv_csn, 8));
+    PrintAndLogEx(INFO, "Block 18 enc... %s", sprint_hex_inrow(tv_blk18, 8));
+    PrintAndLogEx(INFO, "2k3DES key..... %s", sprint_hex_inrow(des_key, 16));
+    PrintAndLogEx(INFO, "Decrypted...... %s", sprint_hex_inrow(decrypted, 8));
+
+    if (memcmp(decrypted, mkf_expected_pt, 8) == 0) {
+        PrintAndLogEx(SUCCESS, "MKF test ( %s )", _GREEN_("ok"));
+    } else {
+        PrintAndLogEx(FAILED, "MKF test ( %s )" _RED_("fail"));
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
+static int CmdHFiClassLiberate(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass liberate",
+                  "Detect and liberate MKF or iCopy-X cloned iCLASS cards.\n"
+                  "MKF cards: verifies block 18 signature, then zeroes it.\n"
+                  "iCopy-X cards: detects DRM key, then changes KD to default (ki 0).\n",
+                  "hf iclass liberate\n"
+                  "hf iclass liberate --selftest\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "selftest", "run MKF detection self-test"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool shallow_mod = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool selftest = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    if (selftest) {
+        return iclass_mfk_selftest();
+    }
+
+    PrintAndLogEx(NORMAL, "");
+
+    // Select card, get CSN
+    uint8_t csn[PICOPASS_BLOCK_SIZE] = {0};
+    uint8_t CCNR[12] = {0};
+
+    if (select_only(csn, CCNR, true, shallow_mod) == false) {
+        DropField();
+        PrintAndLogEx(ERR, "Failed to select card");
+        return PM3_ESOFT;
+    }
+    DropField();
+
+    PrintAndLogEx(SUCCESS, "CSN: " _GREEN_("%s"), sprint_hex_inrow(csn, PICOPASS_BLOCK_SIZE));
+
+    liberate_card_type_t card_type = CARD_TYPE_UNKNOWN;
+    uint8_t drm_key[PICOPASS_BLOCK_SIZE] = {0};
+
+    // Try MKF detection — read block 18 with default key (ki 0)
+    PrintAndLogEx(INFO, "Checking for MKF signature...");
+    {
+        uint8_t blk18[PICOPASS_BLOCK_SIZE] = {0};
+        uint8_t key[PICOPASS_BLOCK_SIZE];
+        memcpy(key, iClass_Key_Table[0], PICOPASS_BLOCK_SIZE);
+
+        int res = iclass_read_block_ex(key, MKF_KNOWN_SECTOR, ICLASS_DEBIT_KEYTYPE, false, false, false,
+                                        verbose, true, shallow_mod, blk18, false, false);
+        if (res == PM3_SUCCESS) {
+            // build 2-key 3DES key: CSN || 0570F69A06975CD8
+            uint8_t des_key[16] = {0};
+            memcpy(des_key, csn, 8);
+            memcpy(des_key + 8, mkf_key_suffix, 8);
+
+            // decrypt block 18
+            uint8_t decrypted[8] = {0};
+            mbedtls_des3_context des3_ctx;
+            mbedtls_des3_set2key_dec(&des3_ctx, des_key);
+            mbedtls_des3_crypt_ecb(&des3_ctx, blk18, decrypted);
+            mbedtls_des3_free(&des3_ctx);
+
+            if (verbose) {
+                PrintAndLogEx(INFO, "Block 18..... %s", sprint_hex_inrow(blk18, 8));
+                PrintAndLogEx(INFO, "2k3DES key... %s", sprint_hex_inrow(des_key, 16));
+                PrintAndLogEx(INFO, "Decrypted.... %s", sprint_hex_inrow(decrypted, 8));
+            }
+
+            if (memcmp(decrypted, mkf_expected_pt, 8) == 0) {
+                PrintAndLogEx(SUCCESS, _GREEN_("MKF card detected") " — block %u signature verified", MKF_KNOWN_SECTOR);
+                card_type = CARD_TYPE_MKF;
+            } else {
+                if (verbose) {
+                    PrintAndLogEx(INFO, "Block %u decrypted to %s — not MKF", MKF_KNOWN_SECTOR, sprint_hex_inrow(decrypted, 8));
+                }
+            }
+        } else {
+            if (verbose) {
+                PrintAndLogEx(INFO, "Block %u read with ki 0 ( %s )", MKF_KNOWN_SECTOR, _RED_("fail"));
+            }
+        }
+    }
+
+    // Try iCopy-X detection — attempt auth with each DRM key
+    if (card_type == CARD_TYPE_UNKNOWN) {
+        PrintAndLogEx(INFO, "Checking for iCopy-X DRM keys...");
+
+        // try iCL key first
+        uint8_t dummy[PICOPASS_BLOCK_SIZE] = {0};
+        uint8_t key_icl[PICOPASS_BLOCK_SIZE];
+        memcpy(key_icl, icopy_key_icl, PICOPASS_BLOCK_SIZE);
+
+        int res = iclass_read_block_ex(key_icl, 6, ICLASS_DEBIT_KEYTYPE, false, false, false, verbose, true, shallow_mod, dummy, false, false);
+        if (res == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, _GREEN_("iCopy-X iCL card detected") " — DRM key 2020666666668888");
+            card_type = CARD_TYPE_ICOPY_ICL;
+            memcpy(drm_key, icopy_key_icl, PICOPASS_BLOCK_SIZE);
+        } else {
+            // try iCS key
+            uint8_t key_ics[PICOPASS_BLOCK_SIZE];
+            memcpy(key_ics, icopy_key_ics, PICOPASS_BLOCK_SIZE);
+
+            res = iclass_read_block_ex(key_ics, 6, ICLASS_DEBIT_KEYTYPE, false, false, false, verbose, true, shallow_mod, dummy, false, false);
+            if (res == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, _GREEN_("iCopy-X iCS card detected") " — DRM key 6666202066668888");
+                card_type = CARD_TYPE_ICOPY_ICS;
+                memcpy(drm_key, icopy_key_ics, PICOPASS_BLOCK_SIZE);
+            }
+        }
+    }
+
+    PrintAndLogEx(NORMAL, "");
+
+    // Perform liberation
+    switch (card_type) {
+
+        case CARD_TYPE_MKF: {
+            // write all-zero block 18
+            PrintAndLogEx(INFO, "Zeroing block %u...", MKF_KNOWN_SECTOR);
+
+            uint8_t key[PICOPASS_BLOCK_SIZE];
+            memcpy(key, iClass_Key_Table[0], PICOPASS_BLOCK_SIZE);
+
+            int res = iclass_write_block(MKF_KNOWN_SECTOR, zeros, NULL, key, false, false, false, false, verbose, false, shallow_mod);
+            if (res == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "MFK block %u write ( %s )" _GREEN_("ok"));
+            } else {
+                PrintAndLogEx(ERR, "Write block %u ( %s )", MKF_KNOWN_SECTOR, _RED_("fail"));
+                return res;
+            }
+
+            // verify
+            uint8_t verify[PICOPASS_BLOCK_SIZE] = {0};
+            res = iclass_read_block_ex(key, MKF_KNOWN_SECTOR, ICLASS_DEBIT_KEYTYPE, false, false, false, verbose, true, shallow_mod, verify, false, false);
+
+            if (res == PM3_SUCCESS && memcmp(verify, zeros, PICOPASS_BLOCK_SIZE) == 0) {
+                PrintAndLogEx(SUCCESS, "Verify block %u zero ( %s )", MKF_KNOWN_SECTOR , _GREEN_("ok"));
+            } else {
+                PrintAndLogEx(WARNING, "Verification read ( %s )", _RED_("fail"));
+            }
+            break;
+        }
+
+        case CARD_TYPE_ICOPY_ICL:
+        case CARD_TYPE_ICOPY_ICS: {
+            // change KD from DRM key to default key (ki 0)
+        PrintAndLogEx(INFO, "Changing KD from iCopy-X DRM key to default `ki 0`");
+
+            // calculate XOR div key
+            uint8_t xor_div_key[PICOPASS_BLOCK_SIZE] = {0};
+            HFiClassCalcNewKey(csn, drm_key, iClass_Key_Table[0], xor_div_key, false, false, verbose);
+
+            if (verbose) {
+                PrintAndLogEx(INFO, "XOR div key... %s", sprint_hex_inrow(xor_div_key, PICOPASS_BLOCK_SIZE));
+            }
+
+            // write XOR'd key to block 3 using current DRM key for auth
+            uint8_t auth_key[PICOPASS_BLOCK_SIZE];
+            memcpy(auth_key, drm_key, PICOPASS_BLOCK_SIZE);
+
+            int res = iclass_write_block(3, xor_div_key, NULL, auth_key, false, false, false, false, verbose, false, shallow_mod);
+            if (res == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "Change to default key `ki 0` ( %s )", _GREEN_("ok"));
+            } else {
+                PrintAndLogEx(ERR,  "Change to default key `ki 0` ( %s )", _RED_("fail"));
+                return res;
+            }
+
+            // verify — try reading block 6 with default key
+            uint8_t verify[PICOPASS_BLOCK_SIZE] = {0};
+            uint8_t default_key[PICOPASS_BLOCK_SIZE];
+            memcpy(default_key, iClass_Key_Table[0], PICOPASS_BLOCK_SIZE);
+
+            res = iclass_read_block_ex(default_key, 6, ICLASS_DEBIT_KEYTYPE, false, false, false,
+                                        verbose, true, shallow_mod, verify, false, false);
+            if (res == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "Verified default key `ki 0` ( %s ), " _GREEN_("ok"));
+            } else {
+                PrintAndLogEx(WARNING, "Verified default key `ki 0` ( %s ), " _RED_("fail"));
+            }
+            break;
+        }
+
+        case CARD_TYPE_UNKNOWN: {
+            PrintAndLogEx(INFO, "Card is neither MKF nor iCopy-X (or authentication failed)");
+            return PM3_ESOFT;
+        }
+
+        default: {
+            break;
+        }
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                    AlwaysAvailable, "This help"},
     {"list",        CmdHFiClassList,            AlwaysAvailable, "List iclass history"},
@@ -7963,6 +8226,7 @@ static command_t CommandTable[] = {
     {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "Write Picopass / iCLASS block"},
     {"creditepurse", CmdHFiClassCreditEpurse,   IfPm3Iclass,     "Credit epurse value"},
     {"tear",        CmdHFiClass_TearBlock,      IfPm3Iclass,     "Performs tearoff attack on iCLASS block"},
+    {"liberate",    CmdHFiClassLiberate,        IfPm3Iclass,     "Detect and liberate MKF / iCopy-X cloned cards"},
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("Recovery") " --------------------"},
 //    {"autopwn",     CmdHFiClassAutopwn,         IfPm3Iclass,     "Automatic key recovery tool for iCLASS"},
     {"chk",         CmdHFiClassCheckKeys,       IfPm3Iclass,     "Check keys"},
