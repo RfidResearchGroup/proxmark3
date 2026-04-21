@@ -8000,7 +8000,7 @@ static int iclass_mfk_selftest(void) {
     if (memcmp(decrypted, mkf_expected_pt, 8) == 0) {
         PrintAndLogEx(SUCCESS, "MKF test ( %s )", _GREEN_("ok"));
     } else {
-        PrintAndLogEx(FAILED, "MKF test ( %s )" _RED_("fail"));
+        PrintAndLogEx(FAILED, "MKF test ( %s )", _RED_("fail"));
         return PM3_ESOFT;
     }
     PrintAndLogEx(NORMAL, "");
@@ -8138,7 +8138,7 @@ static int CmdHFiClassLiberate(const char *Cmd) {
 
             int res = iclass_write_block(MKF_KNOWN_SECTOR, zeros, NULL, key, false, false, false, false, verbose, false, shallow_mod);
             if (res == PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "MFK block %u write ( %s )" _GREEN_("ok"));
+                PrintAndLogEx(SUCCESS, "MFK block %u write ( %s )", _GREEN_("ok"));
             } else {
                 PrintAndLogEx(ERR, "Write block %u ( %s )", MKF_KNOWN_SECTOR, _RED_("fail"));
                 return res;
@@ -8189,9 +8189,9 @@ static int CmdHFiClassLiberate(const char *Cmd) {
             res = iclass_read_block_ex(default_key, 6, ICLASS_DEBIT_KEYTYPE, false, false, false,
                                         verbose, true, shallow_mod, verify, false, false);
             if (res == PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "Verified default key ( %s ), " _GREEN_("ok"));
+                PrintAndLogEx(SUCCESS, "Verified default key ( %s )", _GREEN_("ok"));
             } else {
-                PrintAndLogEx(WARNING, "Verified default key ( %s ), " _RED_("fail"));
+                PrintAndLogEx(WARNING, "Verified default key ( %s )", _RED_("fail"));
             }
             break;
         }
