@@ -8086,7 +8086,7 @@ static int CmdHFiClassLiberate(const char *Cmd) {
                 card_type = CARD_TYPE_MKF;
             } else {
                 if (verbose) {
-                    PrintAndLogEx(INFO, "Block %u decrypted to %s — not MKF", MKF_KNOWN_SECTOR, sprint_hex_inrow(decrypted, 8));
+                    PrintAndLogEx(INFO, "Not MFK. Block %u decrypted to %s", MKF_KNOWN_SECTOR, sprint_hex_inrow(decrypted, 8));
                 }
             }
         } else {
