@@ -1512,6 +1512,28 @@
         "Type": "EMV"
     },
     {
+        "AID": "A00000047609",
+        "Vendor": "Google",
+        "Country": "United States",
+        "Name": "Android Gesture Exchange",
+        "Description": "Used to initiate data transfer between Android devices",
+        "Type": "",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
+    },
+    {
+        "AID": "F00000FE2C",
+        "Vendor": "Google",
+        "Country": "United States",
+        "Name": "Nearby Connections NFC Advertising",
+        "Description": "Nearby Connections NFC advertising",
+        "Type": "",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
+    },
+    {
         "AID": "A0000004762010",
         "Vendor": "Google",
         "Country": "United States",
@@ -2106,6 +2128,17 @@
         "Name": "",
         "Description": "",
         "Type": ""
+    },
+    {
+        "AID": "D41000003453504159",
+        "Vendor": "Samsung",
+        "Country": "",
+        "Name": "Samsung Pay",
+        "Description": "Returns language preferences and other device information.",
+        "Type": "",
+        "Sources": [
+            "android://com.samsung.android.spay"
+        ]
     },
     {
         "AID": "D5280050218002",
