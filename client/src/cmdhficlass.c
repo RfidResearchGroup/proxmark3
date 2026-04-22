@@ -7961,7 +7961,7 @@ static const uint8_t mkf_key_suffix[8] = { 0x05, 0x70, 0xF6, 0x9A, 0x06, 0x97, 0
 // MKF expected plaintext for block 18
 static const uint8_t mkf_expected_pt[PICOPASS_BLOCK_SIZE] = { 0xCD, 0x00, 0x00, 0x00, 0xCD, 0xFF, 0xFF, 0xFF };
 
-#define MKF_KNOWN_SECTOR    ( 18 )
+#define MKF_KNOWN_BLOCK    ( 18 )
 
 typedef enum {
     CARD_TYPE_UNKNOWN = 0,
@@ -8060,7 +8060,7 @@ static int CmdHFiClassLiberate(const char *Cmd) {
         uint8_t key[PICOPASS_BLOCK_SIZE];
         memcpy(key, iClass_Key_Table[0], PICOPASS_BLOCK_SIZE);
 
-        int res = iclass_read_block_ex(key, MKF_KNOWN_SECTOR, ICLASS_DEBIT_KEYTYPE, false, false, false,
+        int res = iclass_read_block_ex(key, MKF_KNOWN_BLOCK, ICLASS_DEBIT_KEYTYPE, false, false, false,
                                         verbose, true, shallow_mod, blk18, false, false);
         if (res == PM3_SUCCESS) {
             // build 2-key 3DES key: CSN || 0570F69A06975CD8
@@ -8082,16 +8082,16 @@ static int CmdHFiClassLiberate(const char *Cmd) {
             }
 
             if (memcmp(decrypted, mkf_expected_pt, 8) == 0) {
-                PrintAndLogEx(SUCCESS, "Detected " _GREEN_("MKF card") ", block %u signature verified", MKF_KNOWN_SECTOR);
+                PrintAndLogEx(SUCCESS, "Detected " _GREEN_("MKF card") ", block %u signature verified", MKF_KNOWN_BLOCK);
                 card_type = CARD_TYPE_MKF;
             } else {
                 if (verbose) {
-                    PrintAndLogEx(INFO, "Not MFK. Block %u decrypted to %s", MKF_KNOWN_SECTOR, sprint_hex_inrow(decrypted, 8));
+                    PrintAndLogEx(INFO, "Not MFK. Block %u decrypted to %s", MKF_KNOWN_BLOCK, sprint_hex_inrow(decrypted, 8));
                 }
             }
         } else {
             if (verbose) {
-                PrintAndLogEx(INFO, "Block %u read with ki 0 ( %s )", MKF_KNOWN_SECTOR, _RED_("fail"));
+                PrintAndLogEx(INFO, "Block %u read with ki 0 ( %s )", MKF_KNOWN_BLOCK, _RED_("fail"));
             }
         }
     }
@@ -8131,27 +8131,31 @@ static int CmdHFiClassLiberate(const char *Cmd) {
 
         case CARD_TYPE_MKF: {
             // write all-zero block 18
-            PrintAndLogEx(INFO, "Zeroing block %u...", MKF_KNOWN_SECTOR);
+            PrintAndLogEx(INFO, "Zeroing block %u...", MKF_KNOWN_BLOCK);
 
             uint8_t key[PICOPASS_BLOCK_SIZE];
             memcpy(key, iClass_Key_Table[0], PICOPASS_BLOCK_SIZE);
 
-            int res = iclass_write_block(MKF_KNOWN_SECTOR, zeros, NULL, key, false, false, false, false, verbose, false, shallow_mod);
+            int res = iclass_write_block(MKF_KNOWN_BLOCK, zeros, NULL, key, false, false, false, false, verbose, false, shallow_mod);
             if (res == PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "MFK block %u write ( %s )", _GREEN_("ok"));
+                PrintAndLogEx(SUCCESS, "MFK block %u write ( %s )", MKF_KNOWN_BLOCK, _GREEN_("ok"));
             } else {
-                PrintAndLogEx(ERR, "Write block %u ( %s )", MKF_KNOWN_SECTOR, _RED_("fail"));
+                PrintAndLogEx(ERR, "Write block %u ( %s )", MKF_KNOWN_BLOCK, _RED_("fail"));
                 return res;
             }
 
             // verify
             uint8_t verify[PICOPASS_BLOCK_SIZE] = {0};
-            res = iclass_read_block_ex(key, MKF_KNOWN_SECTOR, ICLASS_DEBIT_KEYTYPE, false, false, false, verbose, true, shallow_mod, verify, false, false);
+            res = iclass_read_block_ex(key, MKF_KNOWN_BLOCK, ICLASS_DEBIT_KEYTYPE, false, false, false, verbose, true, shallow_mod, verify, false, false);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Reading block %u ( %s )", MKF_KNOWN_BLOCK, _RED_("fail"));
+                return res;
+            }
 
-            if (res == PM3_SUCCESS && memcmp(verify, zeros, PICOPASS_BLOCK_SIZE) == 0) {
-                PrintAndLogEx(SUCCESS, "Verify block %u zero ( %s )", MKF_KNOWN_SECTOR , _GREEN_("ok"));
+            if (memcmp(verify, zeros, PICOPASS_BLOCK_SIZE) == 0) {
+                PrintAndLogEx(SUCCESS, "Block %u cleared ( %s )", MKF_KNOWN_BLOCK, _GREEN_("ok"));
             } else {
-                PrintAndLogEx(WARNING, "Verification read ( %s )", _RED_("fail"));
+                PrintAndLogEx(WARNING, "Block %u not cleared ( %s )", MKF_KNOWN_BLOCK, _RED_("fail"));
             }
             break;
         }
