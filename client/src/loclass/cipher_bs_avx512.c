@@ -237,7 +237,8 @@ void doMAC_brute_match512(const uint64_t y_bits_bs[96 * BS512_WORDS],
 
         const __m512i diff = _mm512_xor_si512(r[2], _mm512_loadu_si512((const void *)&target_mac_bs[tick * BS512_WORDS]));
 
-        mac_match = _mm512_andnot_si512(diff, mac_match);
+        //mac_match = _mm512_andnot_si512(diff, mac_match); //works fine but throws errors with some GCC version
+        mac_match = _mm512_maskz_andnot_epi32(0xFFFF, diff, mac_match); //test to remove GCC errors, should perform exactly the same upon compilation
 
         if ((tick == 7 || tick == 15 || tick == 23) && _mm512_test_epi64_mask(mac_match, mac_match) == 0) {
             for (int i = 0; i < BS512_WORDS; i++) {
