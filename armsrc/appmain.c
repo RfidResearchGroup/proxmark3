@@ -103,9 +103,7 @@ uint8_t g_tearoff_skip = 0;
 
 int tearoff_hook(void) {
 
-    Dbprintf("<enter> tear off");
     if (g_tearoff_enabled == false) {
-        Dbprintf("<exit> no tear off");
         return PM3_SUCCESS;
     }
 
