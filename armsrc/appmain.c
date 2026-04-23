@@ -1911,7 +1911,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t uid[10];
                 uint8_t ats[20];
                 uint8_t aid[30];
-                uint8_t selectaid_response[100];
+                uint8_t selectaid_response[256];
                 uint8_t getdata_response[100];
                 uint32_t ats_len;
                 uint32_t aid_len;
