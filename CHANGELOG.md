@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf mfdes vdesign` command (@kormax)
 - Added `hf iclass liberate` - simple command to remove changes to MKF or Icopy-X iclass tags (@iceman1001)
 - Fixed `mfpReadSector` function to decrypt received data, fixing commands like `hf mfp dump` (@team-orangeBlue) 
 - Added `hf mfdes intauth` command (@kormax)
