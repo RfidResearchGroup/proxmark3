@@ -526,6 +526,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf mfdes value" },
     { 0, "hf mfdes clearrecfile" },
     { 0, "hf mfdes intauth" },
+    { 0, "hf mfdes vdesign" },
     { 1, "hf mfdes test" },
     { 1, "hf ntag424 help" },
     { 0, "hf ntag424 info" },

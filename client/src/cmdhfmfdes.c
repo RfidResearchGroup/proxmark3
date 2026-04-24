@@ -69,6 +69,8 @@
 // DUOX ISO Internal Authenticate
 #define DUOX_INTAUTH_CHALLENGE_LEN      16
 #define DUOX_INTAUTH_SIG_LEN            64
+#define DUOX_VDE_CHALLENGE_LEN          32
+#define DUOX_VDE_SIG_LEN                64
 #define DUOX_MAX_KEY_INPUT              8192
 // TLV tags for ISO Internal Authenticate
 #define DUOX_TAG_OPTSA                  0x80
@@ -76,6 +78,12 @@
 #define DUOX_TAG_CHALLENGE              0x81
 #define DUOX_TAG_SIGNATURE              0x82
 #define DUOX_INTAUTH_MSG_PREFIX         0xF0
+#define DUOX_VDE_DEFAULT_AID            0x1010F6U
+
+static const uint8_t kDuoxVDEDefaultDFName[] = {
+    0xA0, 0x00, 0x00, 0x08, 0x45, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
+};
 
 #define status(x) ( ((uint16_t)(0x91 << 8)) + (uint16_t)x )
 /*
@@ -7725,6 +7733,235 @@ static int CmdHF14ADesIntAuth(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14ADesVdeSign(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes vdesign",
+                  "Perform VDE_ECDSASign on MIFARE DUOX EV charging application.\n"
+                  "Card signs a 32-byte challenge with the EV charging key (KeyNo 0x00).\n"
+                  "Optionally verifies the returned ECDSA signature with a BrainpoolP256r1 public key.",
+                  "hf mfdes vdesign                                             -> sign random 32-byte challenge using default EV DF name\n"
+                  "hf mfdes vdesign --aid 1010F6                                -> select EV app by native AID\n"
+                  "hf mfdes vdesign --dfname A0000008450000000000000000000001  -> select EV app by ISO DF name\n"
+                  "hf mfdes vdesign -d 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF -> explicit 32-byte challenge\n"
+                  "hf mfdes vdesign -p 04A7C6...                                -> verify signature with given EC public key (hex, PEM, DER, file path)\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",      "Show APDU requests and responses"),            // 1
+        arg_lit0("v",  "verbose",   "Verbose output"),                              // 2
+        arg_str0("d",  "challenge", "<hex>", "Challenge to sign (32 bytes, random if omitted)"), // 3
+        arg_str0("p",  "pubkey",    "<hex|pem|der|path>", "BrainpoolP256r1 public key for signature verification"), // 4
+        arg_str0(NULL, "aid",       "<hex>", "Application ID (3 bytes, native DESFire select)"), // 5
+        arg_str0(NULL, "dfname",    "<hex>", "Application ISO DF Name (1-16 hex bytes, default EV DF name)"), // 6
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    uint8_t challenge[DUOX_VDE_CHALLENGE_LEN] = {0};
+    int challenge_len = 0;
+    CLIGetHexWithReturn(ctx, 3, challenge, &challenge_len);
+    bool challenge_provided = (challenge_len > 0);
+    if (challenge_provided && challenge_len != DUOX_VDE_CHALLENGE_LEN) {
+        PrintAndLogEx(ERR, "Challenge must be exactly 32 bytes, got %d", challenge_len);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    char pubkey_input[DUOX_MAX_KEY_INPUT] = {0};
+    int pubkey_input_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)pubkey_input, sizeof(pubkey_input) - 1, &pubkey_input_len);
+    bool pubkey_provided = (pubkey_input_len > 0);
+
+    uint8_t aid_bytes[3] = {0};
+    int aid_len = 0;
+    CLIGetHexWithReturn(ctx, 5, aid_bytes, &aid_len);
+    bool aid_provided = (aid_len > 0);
+    if (aid_provided && aid_len != 3) {
+        PrintAndLogEx(ERR, "AID must be exactly 3 bytes, got %d", aid_len);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t dfname[16] = {0};
+    int dfnamelen = 0;
+    if (CLIParamHexToBuf(arg_get_str(ctx, 6), dfname, sizeof(dfname), &dfnamelen)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    bool dfname_provided = (dfnamelen > 0);
+    if (dfnamelen > 16) {
+        PrintAndLogEx(ERR, "DF name must be 1-16 bytes, got %d", dfnamelen);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    uint8_t pubkey_point[65] = {0}; // 04 || X || Y
+    if (pubkey_provided) {
+        int pk_res = ensure_ec_public_key(pubkey_input, MBEDTLS_ECP_DP_BP256R1, pubkey_point, sizeof(pubkey_point));
+        if (pk_res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to load BrainpoolP256r1 public key");
+            PrintAndLogEx(INFO, "Accepted formats: raw hex (64/65/33 bytes), PEM, DER, base64, or file path");
+            return pk_res;
+        }
+    }
+
+    if (!challenge_provided) {
+        pcrypto_rng_t rng = {0};
+        const uint8_t pers[] = "hf_mfdes_vdesign";
+        int res = pcrypto_rng_init(&rng, pers, sizeof(pers) - 1);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to initialize RNG");
+            return res;
+        }
+        res = pcrypto_rng_fill(&rng, challenge, sizeof(challenge));
+        pcrypto_rng_free(&rng);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to generate random challenge");
+            return res;
+        }
+    }
+
+    uint32_t aid = DUOX_VDE_DEFAULT_AID;
+    if (aid_provided) {
+        aid = ((uint32_t)aid_bytes[2] << 16) | ((uint32_t)aid_bytes[1] << 8) | aid_bytes[0];
+    }
+
+    const uint8_t *selected_dfname = NULL;
+    uint8_t selected_dfname_len = 0;
+    if (dfname_provided) {
+        selected_dfname = dfname;
+        selected_dfname_len = dfnamelen;
+    } else if (!aid_provided) {
+        selected_dfname = kDuoxVDEDefaultDFName;
+        selected_dfname_len = ARRAYLEN(kDuoxVDEDefaultDFName);
+    }
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("VDE_ECDSASign"));
+    if (verbose) {
+        if (selected_dfname_len > 0) {
+            PrintAndLogEx(INFO, "DF name...... " _YELLOW_("%s"), sprint_hex_inrow(selected_dfname, selected_dfname_len));
+            if (!dfname_provided)
+                PrintAndLogEx(INFO, "Selection..... " _YELLOW_("default EV charging DF name"));
+        } else {
+            PrintAndLogEx(INFO, "AID.......... " _YELLOW_("%02X%02X%02X"), aid_bytes[0], aid_bytes[1], aid_bytes[2]);
+        }
+    }
+
+    DesfireContext_t dctx = {0};
+    dctx.commMode = DCMPlain;
+    dctx.cmdSet = DCCNativeISO;
+
+    int res = DesfireAnticollision(false);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Anticollision " _RED_("failed"));
+        DropField();
+        return res;
+    }
+
+    if (selected_dfname_len > 0) {
+        uint8_t resp[250] = {0};
+        size_t resplen = 0;
+        res = DesfireISOSelect(&dctx, ISSDFName, (uint8_t *)selected_dfname, selected_dfname_len, resp, &resplen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Select DF name " _RED_("failed"));
+            DropField();
+            return res;
+        }
+    } else {
+        res = DesfireSelectAIDHex(&dctx, aid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Select application %06X " _RED_("failed"), aid);
+            DropField();
+            return res;
+        }
+    }
+    if (verbose)
+        PrintAndLogEx(SUCCESS, "Application selected " _GREEN_("ok"));
+    PrintAndLogEx(INFO, "Challenge.... " _YELLOW_("%s"), sprint_hex_inrow(challenge, sizeof(challenge)));
+
+    sAPDU_t apdu = {0x80, 0x03, 0x0C, 0x09, sizeof(challenge), challenge};
+    uint8_t encoded[64] = {0};
+    int encoded_len = 0;
+    if (APDUEncodeS(&apdu, false, APDU_INCLUDE_LE_00, encoded, &encoded_len)) {
+        PrintAndLogEx(ERR, "APDU encoding error");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (APDULogging)
+        PrintAndLogEx(SUCCESS, ">>>> %s", sprint_hex(encoded, encoded_len));
+
+    uint8_t response[PM3_CMD_DATA_SIZE] = {0};
+    int resplen = 0;
+    res = ExchangeAPDU14a(encoded, encoded_len, false, true, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "APDU exchange " _RED_("failed") " (%d)", res);
+        DropField();
+        return res;
+    }
+
+    if (APDULogging)
+        PrintAndLogEx(SUCCESS, "<<<< %s", sprint_hex(response, resplen));
+
+    DropField();
+
+    if (resplen < 2) {
+        PrintAndLogEx(ERR, "Response too short");
+        return PM3_ESOFT;
+    }
+
+    uint16_t sw = get_sw(response, resplen);
+    if (sw != ISO7816_OK) {
+        PrintAndLogEx(ERR, "VDE_ECDSASign " _RED_("failed") " (%04X - %s)", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        return PM3_ESOFT;
+    }
+
+    int resp_data_len = resplen - 2;
+    if (resp_data_len != DUOX_VDE_SIG_LEN) {
+        PrintAndLogEx(ERR, "Unexpected signature length: %d bytes", resp_data_len);
+        return PM3_ESOFT;
+    }
+
+    uint8_t signature_rs[DUOX_VDE_SIG_LEN] = {0};
+    memcpy(signature_rs, response, sizeof(signature_rs));
+
+    PrintAndLogEx(SUCCESS, "VDE_ECDSASign " _GREEN_("ok") " (SW=%04X)", sw);
+    if (verbose)
+        PrintAndLogEx(INFO, "Signature.... %s", sprint_hex_inrow(signature_rs, sizeof(signature_rs)));
+    PrintAndLogEx(INFO, "Signature r.. " _YELLOW_("%s"), sprint_hex_inrow(signature_rs, DUOX_VDE_SIG_LEN / 2));
+    PrintAndLogEx(INFO, "Signature s.. " _YELLOW_("%s"), sprint_hex_inrow(signature_rs + (DUOX_VDE_SIG_LEN / 2), DUOX_VDE_SIG_LEN / 2));
+
+    if (pubkey_provided) {
+        PrintAndLogEx(INFO, "--- " _CYAN_("Signature Verification"));
+        if (verbose)
+            PrintAndLogEx(INFO, "Verify msg... %s", sprint_hex_inrow(challenge, sizeof(challenge)));
+
+        int sig_res = ecdsa_signature_r_s_verify(
+            MBEDTLS_ECP_DP_BP256R1,
+            pubkey_point,
+            challenge,
+            (int)sizeof(challenge),
+            signature_rs,
+            sizeof(signature_rs),
+            true
+        );
+
+        if (sig_res == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "ECDSA signature " _GREEN_("verified"));
+        } else {
+            PrintAndLogEx(ERR, "ECDSA signature " _RED_("verification failed"));
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14ADesTest(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes test",
@@ -7792,6 +8029,7 @@ static command_t CommandTable[] = {
     {"clearrecfile",     CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("DUOX") " ------------------------"},
     {"intauth",          CmdHF14ADesIntAuth,          IfPm3Iso14443a,  "ISO Internal Authenticate (ECDSA challenge-response)"},
+    {"vdesign",          CmdHF14ADesVdeSign,          IfPm3Iso14443a,  "VDE ECDSASign (EV charging signature over 32-byte challenge)"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("System") " -----------------------"},
     {"test",             CmdHF14ADesTest,             AlwaysAvailable, "Regression crypto tests"},
     {NULL, NULL, NULL, NULL}
