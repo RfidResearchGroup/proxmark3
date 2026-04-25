@@ -76,8 +76,8 @@ static int lf_hid_validate_packed_transport(const wiegand_input_t *input, const 
         return PM3_SUCCESS;
     }
 
-    if (input->packed.Length > 37) {
-        PrintAndLogEx(ERR, "%s supports only packed credentials up to 37 bits", command_name);
+    if (input->packed.Length > 48) {
+        PrintAndLogEx(ERR, "%s supports only packed credentials up to 48 bits", command_name);
         return PM3_EINVARG;
     }
 
