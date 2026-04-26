@@ -27,14 +27,24 @@
 #include "iso18.h"
 
 // FeliCa timings
-// minimum time between the start bits of consecutive transfers from reader to tag: 6800 carrier (13.56MHz) cycles
+//
+// In the ISO18092/FeliCa FPGA bitstream, the SSC clock is the RF bit clock:
+// fc/64 at 212 kbit/s and fc/32 at 424 kbit/s.  Trace timestamps are stored
+// in carrier periods, so convert at the logging boundary.
+#define FELICA_PREAMBLE_BYTES 6U
+#define FELICA_BITS_PER_BYTE 8U
+#define FELICA_212K_CARRIER_PERIODS_PER_BIT 64U
+#define FELICA_424K_CARRIER_PERIODS_PER_BIT 32U
+#define FELICA_212K_CARRIER_TO_TIMER_TICKS(x) (((x) + FELICA_212K_CARRIER_PERIODS_PER_BIT - 1U) / FELICA_212K_CARRIER_PERIODS_PER_BIT)
+
+// Keep a conservative reader-to-reader guard of one FeliCa polling slot-0 wait
+// (512 bit periods). The spec minimum of 6800 carrier periods is shorter.
 #ifndef FELICA_REQUEST_GUARD_TIME
-//# define FELICA_REQUEST_GUARD_TIME (6800 / 16 + 1) // 426
-# define FELICA_REQUEST_GUARD_TIME ((512 + 0 * 256) * 64 / 16 + 1)
+# define FELICA_REQUEST_GUARD_TIME ((512 + 0 * 256) + 1)
 #endif
 // FRAME DELAY TIME 2672 carrier cycles
 #ifndef FELICA_FRAME_DELAY_TIME
-# define FELICA_FRAME_DELAY_TIME (2672/16 + 1) // 168
+# define FELICA_FRAME_DELAY_TIME (FELICA_212K_CARRIER_TO_TIMER_TICKS(2672) + 1)
 #endif
 #ifndef DELAY_AIR2ARM_AS_READER
 #define DELAY_AIR2ARM_AS_READER (3 + 16 + 8 + 8*16 + 4*16 - 8*16) // 91
@@ -55,11 +65,11 @@ static void TransmitFor18092_AsReader(const uint8_t *frame, uint16_t len, const 
 static bool WaitForFelicaReply(uint16_t maxbytes);
 
 static void iso18092_set_timeout(uint32_t timeout) {
-    felica_timeout = timeout + (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / (16 * 8) + 2;
+    felica_timeout = timeout + (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / (FELICA_212K_CARRIER_PERIODS_PER_BIT * FELICA_BITS_PER_BYTE) + 2;
 }
 
 static uint32_t iso18092_get_timeout(void) {
-    return felica_timeout - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / (16 * 8) - 2;
+    return felica_timeout - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / (FELICA_212K_CARRIER_PERIODS_PER_BIT * FELICA_BITS_PER_BYTE) - 2;
 }
 
 #ifndef FELICA_MAX_DATA_SIZE
@@ -71,7 +81,6 @@ static uint32_t iso18092_get_timeout(void) {
 // 255 base length (max 254 data + 1 len byte) + 2 sync + 2 crc + 1 extra for safety.
 #define FELICA_MAX_RF_FRAME_SIZE 260
 #endif
-
 
 //structure to hold outgoing NFC frame
 static uint8_t frameSpace[FELICA_MAX_RF_FRAME_SIZE];
@@ -95,6 +104,8 @@ typedef struct {
     uint16_t  len;
     uint8_t   byte_offset;
     uint8_t   polarity;
+    uint32_t  startTime;
+    uint32_t  endTime;
     uint8_t   *framebytes;
 //should be enough. maxlen is 255, 254 for data, 2 for sync, 2 for crc
 // 0,1 -> SYNC, 2 - len,  3-(len+1)->data, then crc
@@ -124,18 +135,31 @@ static void FelicaFrameReset(felica_frame_t *f) {
     f->len = 0;
     f->byte_offset = 0;
     f->polarity = FELICA_POLARITY_UNKNOWN;
+    f->startTime = 0;
+    f->endTime = 0;
 }
 static void FelicaFrameinit(felica_frame_t *f, uint8_t *data) {
     f->framebytes = data;
     FelicaFrameReset(f);
 }
 
+static uint32_t felica_timer_to_carrier_periods(uint32_t timer_ticks, bool highspeed) {
+    return timer_ticks * (highspeed ? FELICA_424K_CARRIER_PERIODS_PER_BIT : FELICA_212K_CARRIER_PERIODS_PER_BIT);
+}
+
+static uint32_t felica_get_rx_byte_start_time(void) {
+    return (GetCountSspClk() & 0xfffffff8) - FELICA_BITS_PER_BYTE;
+}
+
 //shift byte into frame, reversing it at the same time
-static void shiftInByte(felica_frame_t *f, uint8_t bt) {
+static void shiftInByte(felica_frame_t *f, uint8_t bt, uint32_t byte_start_time) {
     uint8_t j;
     for (j = 0; j < f->byte_offset; j++) {
         f->framebytes[f->posCnt] = (f->framebytes[f->posCnt] << 1) + (bt & 1);
         bt >>= 1;
+    }
+    if (f->byte_offset > 0) {
+        f->endTime = byte_start_time + f->byte_offset;
     }
     f->posCnt++;
     f->rem_len--;
@@ -143,9 +167,12 @@ static void shiftInByte(felica_frame_t *f, uint8_t bt) {
         f->framebytes[f->posCnt] = (f->framebytes[f->posCnt] << 1) + (bt & 1);
         bt >>= 1;
     }
+    if (f->byte_offset == 0) {
+        f->endTime = byte_start_time + FELICA_BITS_PER_BYTE;
+    }
 }
 
-static void Process18092Byte(felica_frame_t *f, uint8_t bt) {
+static void Process18092Byte(felica_frame_t *f, uint8_t bt, uint32_t byte_start_time) {
 
     switch (f->state) {
 
@@ -180,6 +207,8 @@ static void Process18092Byte(felica_frame_t *f, uint8_t bt) {
                     f->framebytes[2] = 0x00;
                     f->byte_offset = i;
                     f->polarity = use_inverted ? FELICA_POLARITY_INVERTED : FELICA_POLARITY_NORMAL;
+                    f->startTime = byte_start_time + i - (2U * FELICA_BITS_PER_BYTE);
+                    f->endTime = f->startTime;
 
                     // shift in remaining byte, slowly...
                     for (uint8_t j = i; j < 8; j++) {
@@ -208,6 +237,8 @@ static void Process18092Byte(felica_frame_t *f, uint8_t bt) {
                 f->byte_offset = 0;
                 f->posCnt = 1;
                 f->polarity = use_inverted ? FELICA_POLARITY_INVERTED : FELICA_POLARITY_NORMAL;
+                f->startTime = byte_start_time + FELICA_BITS_PER_BYTE - (2U * FELICA_BITS_PER_BYTE);
+                f->endTime = f->startTime;
             }
             break;
         }
@@ -215,7 +246,7 @@ static void Process18092Byte(felica_frame_t *f, uint8_t bt) {
             if (f->polarity == FELICA_POLARITY_INVERTED) {
                 bt = (uint8_t)~bt;
             }
-            shiftInByte(f, bt);
+            shiftInByte(f, bt, byte_start_time);
             if (f->framebytes[2] == 0 || (f->framebytes[2] + 4 > FELICA_MAX_RF_FRAME_SIZE)) {
                 // invalid frame length, drop frame and start over.
                 FelicaFrameReset(f);
@@ -230,7 +261,7 @@ static void Process18092Byte(felica_frame_t *f, uint8_t bt) {
             if (f->polarity == FELICA_POLARITY_INVERTED) {
                 bt = (uint8_t)~bt;
             }
-            shiftInByte(f, bt);
+            shiftInByte(f, bt, byte_start_time);
             if (f->rem_len <= 0) {
                 f->state = STATE_GET_CRC;
                 f->rem_len = 2;
@@ -241,7 +272,7 @@ static void Process18092Byte(felica_frame_t *f, uint8_t bt) {
             if (f->polarity == FELICA_POLARITY_INVERTED) {
                 bt = (uint8_t)~bt;
             }
-            shiftInByte(f, bt);
+            shiftInByte(f, bt, byte_start_time);
             if (f->rem_len <= 0) {
                 f->rem_len = 0;
                 // skip sync 2bytes. IF ok, residue should be 0x0000
@@ -463,12 +494,15 @@ static void TransmitFor18092_AsReader(const uint8_t *frame, uint16_t len, const 
     AT91C_BASE_SSC->SSC_THR = 0x00; //spin
     /**/
 
+    const uint32_t frame_start = felica_lasttime_prox2air_start + (FELICA_PREAMBLE_BYTES * FELICA_BITS_PER_BYTE);
+    const uint32_t frame_end = frame_start + (len * FELICA_BITS_PER_BYTE);
+
     // log
     LogTrace(
         frame,
         len,
-        (felica_lasttime_prox2air_start << 4) + DELAY_ARM2AIR_AS_READER,
-        ((felica_lasttime_prox2air_start + felica_lasttime_prox2air_start) << 4) + DELAY_ARM2AIR_AS_READER,
+        felica_timer_to_carrier_periods(frame_start, highspeed) + DELAY_ARM2AIR_AS_READER,
+        felica_timer_to_carrier_periods(frame_end, highspeed) + DELAY_ARM2AIR_AS_READER,
         NULL,
         true
     );
@@ -505,7 +539,7 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
 
             b = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
 
-            Process18092Byte(&FelicaFrame, b);
+            Process18092Byte(&FelicaFrame, b, felica_get_rx_byte_start_time());
             felica_frame_t *received = NULL;
 
             if (FelicaFrame.state == STATE_FULL) {
@@ -536,13 +570,13 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
 
                 felica_nexttransfertime = MAX(
                                               felica_nexttransfertime,
-                                              (GetCountSspClk() & 0xfffffff8) - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 16 + FELICA_FRAME_DELAY_TIME);
+                                              received->endTime - FELICA_212K_CARRIER_TO_TIMER_TICKS(DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) + FELICA_FRAME_DELAY_TIME);
 
                 LogTrace(
                     received->framebytes,
                     received->len,
-                    ((GetCountSspClk() & 0xfffffff8) << 4) - DELAY_AIR2ARM_AS_READER - timeout,
-                    ((GetCountSspClk() & 0xfffffff8) << 4) - DELAY_AIR2ARM_AS_READER,
+                    felica_timer_to_carrier_periods(received->startTime, false) - DELAY_AIR2ARM_AS_READER,
+                    felica_timer_to_carrier_periods(received->endTime, false) - DELAY_AIR2ARM_AS_READER,
                     NULL,
                     false
                 );
@@ -578,7 +612,7 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
     BigBuf_free();
     FelicaFrameinit(&FelicaFrame, BigBuf_calloc(FELICA_MAX_RF_FRAME_SIZE));
 
-    felica_nexttransfertime = 2 * DELAY_ARM2AIR_AS_READER;  // 418
+    felica_nexttransfertime = 2 * FELICA_212K_CARRIER_TO_TIMER_TICKS(DELAY_ARM2AIR_AS_READER);
     // iso18092_set_timeout(2120); // 106 * 20ms  maximum start-up time of card
     iso18092_set_timeout(1060); // 106 * 10ms  maximum start-up time of card
 
@@ -756,7 +790,6 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
     int retval = PM3_SUCCESS;
     int remFrames = (samplesToSkip) ? samplesToSkip : 0;
     int trigger_cnt = 0;
-    uint32_t timeout = iso18092_get_timeout();
     bool isReaderFrame;
 
     uint8_t flip = 0;
@@ -789,7 +822,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
 
             uint8_t dist = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
-            Process18092Byte(&FelicaFrame, dist);
+            Process18092Byte(&FelicaFrame, dist, felica_get_rx_byte_start_time());
 
             if ((dist >= 178) && (++trigger_cnt > triggersToSkip)) {
                 Dbprintf("triggers To skip kicked %d", dist);
@@ -808,8 +841,8 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
                 }
                 LogTrace(FelicaFrame.framebytes,
                          FelicaFrame.len,
-                         ((GetCountSspClk() & 0xfffffff8) << 4) - DELAY_AIR2ARM_AS_READER - timeout,
-                         ((GetCountSspClk() & 0xfffffff8) << 4) - DELAY_AIR2ARM_AS_READER,
+                         felica_timer_to_carrier_periods(FelicaFrame.startTime, false) - DELAY_AIR2ARM_AS_READER,
+                         felica_timer_to_carrier_periods(FelicaFrame.endTime, false) - DELAY_AIR2ARM_AS_READER,
                          NULL,
                          isReaderFrame
                         );
@@ -901,7 +934,7 @@ void felica_sim_lite(const uint8_t *uid) {
 
                 uint8_t dist = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
                 // frtm = GetCountSspClk();
-                Process18092Byte(&FelicaFrame, dist);
+                Process18092Byte(&FelicaFrame, dist, felica_get_rx_byte_start_time());
 
                 if (FelicaFrame.state == STATE_FULL) {
 
@@ -926,7 +959,7 @@ void felica_sim_lite(const uint8_t *uid) {
                                 timeslot = 0;
                             }
                             // first time slot (#0) starts after 512 * 64 / fc, slot length equals 256 * 64 / fc
-                            felica_nexttransfertime = GetCountSspClk() - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 16 + (512 + timeslot * 256) * 64 / 16 + 1;
+                            felica_nexttransfertime = GetCountSspClk() - FELICA_212K_CARRIER_TO_TIMER_TICKS(DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) + (512 + timeslot * 256) + 1;
                             timeslot++; // we should use a random time slot, but responding in incremental slots should do just fine for now
                         }
 
