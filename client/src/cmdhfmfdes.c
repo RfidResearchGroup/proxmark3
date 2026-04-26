@@ -50,6 +50,9 @@
 #include "mifare/prime.h"
 #include "util.h"
 #include "crypto/originality.h"
+#include "x509_crt.h"
+#include "mbedtls/oid.h"
+#include "mbedtls/sha256.h"
 
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
@@ -79,6 +82,20 @@
 #define DUOX_TAG_SIGNATURE              0x82
 #define DUOX_INTAUTH_MSG_PREFIX         0xF0
 #define DUOX_VDE_DEFAULT_AID            0x1010F6U
+
+// LEAF Verified Open Application
+#define LEAF_VERIFIED_DEFAULT_AID       0xF51CD6U  // 0xD61CF5 in user-facing (wire bytes D6 1C F5)
+#define LEAF_VERIFIED_CERT_FILE         0x02
+#define LEAF_VERIFIED_MAX_CERT_LEN      4096
+
+// LEAF Root CA public key (P-256, uncompressed: 04 || X(32) || Y(32))
+static const uint8_t kLeafRootP256PubKey[65] = {
+    0x04,
+    0x2D, 0x27, 0x81, 0xBE, 0x41, 0xC2, 0x27, 0x58, 0xA6, 0x13, 0x81, 0x0F, 0x67, 0xEC, 0x78, 0xDF,
+    0x11, 0x76, 0xC4, 0x76, 0x5B, 0x21, 0x2B, 0x49, 0x21, 0x8C, 0x6C, 0x58, 0x40, 0x8A, 0x5A, 0xDA,
+    0x3D, 0x99, 0x73, 0x20, 0x9D, 0x82, 0x28, 0x91, 0x3A, 0x88, 0x16, 0x97, 0x3C, 0xFE, 0x5C, 0x9E,
+    0xBF, 0xD8, 0xC6, 0x69, 0x75, 0x32, 0xCD, 0xD5, 0xB5, 0x3E, 0xE1, 0x34, 0xD2, 0xF1, 0x1B, 0x3C
+};
 
 static const uint8_t kDuoxVDEDefaultDFName[] = {
     0xA0, 0x00, 0x00, 0x08, 0x45, 0x00, 0x00, 0x00,
@@ -7962,6 +7979,343 @@ static int CmdHF14ADesVdeSign(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// Look up an attribute in a DN by OID. Returns pointer to mbedtls value buf or NULL.
+static const mbedtls_x509_buf *leaf_dn_find_oid(const mbedtls_x509_name *dn, const char *oid_buf, size_t oid_len) {
+    while (dn != NULL) {
+        if (dn->oid.len == oid_len && memcmp(dn->oid.p, oid_buf, oid_len) == 0)
+            return &dn->val;
+        dn = dn->next;
+    }
+    return NULL;
+}
+
+static int CmdHF14ADesLeaf(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes leaf",
+                  "Read and verify a LEAF Verified credential on a MIFARE DUOX card.\n"
+                  "Selects the LEAF Verified Open Application, reads the X.509 certificate\n"
+                  "from file 0x02, verifies it was signed by the LEAF Root CA, performs ISO\n"
+                  "Internal Authenticate, and verifies the card signature with the public key\n"
+                  "embedded in the certificate.",
+                  "hf mfdes leaf                              -> verify with default AID D61CF5\n"
+                  "hf mfdes leaf -v                           -> verbose output\n"
+                  "hf mfdes leaf --aid D61CF5                 -> override AID\n"
+                  "hf mfdes leaf -d 00112233445566778899AABBCCDDEEFF -> explicit 16-byte challenge\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",      "Show APDU requests and responses"),            // 1
+        arg_lit0("v",  "verbose",   "Verbose output"),                              // 2
+        arg_str0("d",  "challenge", "<hex>", "Challenge / RndA (16 bytes, random if omitted)"), // 3
+        arg_str0(NULL, "aid",       "<hex>", "Application ID (3 bytes, default D61CF5)"),       // 4
+        arg_int0("n",  "keynum",    "<dec>", "Key number (P2, default 0)"),                     // 5
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    uint8_t challenge[DUOX_INTAUTH_CHALLENGE_LEN] = {0};
+    int challenge_len = 0;
+    CLIGetHexWithReturn(ctx, 3, challenge, &challenge_len);
+    bool challenge_provided = (challenge_len > 0);
+    if (challenge_provided && challenge_len != DUOX_INTAUTH_CHALLENGE_LEN) {
+        PrintAndLogEx(ERR, "Challenge must be exactly 16 bytes, got %d", challenge_len);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t aid_bytes[3] = {0xD6, 0x1C, 0xF5}; // little-endian default D61CF5
+    int aid_len = 0;
+    CLIGetHexWithReturn(ctx, 4, aid_bytes, &aid_len);
+    if (aid_len > 0 && aid_len != 3) {
+        PrintAndLogEx(ERR, "AID must be exactly 3 bytes, got %d", aid_len);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int keynum = arg_get_int_def(ctx, 5, 0);
+    if (keynum < 0 || keynum > 255) {
+        PrintAndLogEx(ERR, "Key number must be 0..255");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    if (!challenge_provided) {
+        pcrypto_rng_t rng = {0};
+        const uint8_t pers[] = "hf_mfdes_leaf";
+        int rres = pcrypto_rng_init(&rng, pers, sizeof(pers) - 1);
+        if (rres != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to initialize RNG");
+            return rres;
+        }
+        rres = pcrypto_rng_fill(&rng, challenge, sizeof(challenge));
+        pcrypto_rng_free(&rng);
+        if (rres != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to generate random challenge");
+            return rres;
+        }
+    }
+
+    // aid_bytes default {0xD6,0x1C,0xF5} = wire bytes for AID "D61CF5".
+    // DesfireSelectAIDHex expects LE uint32: byte[2]<<16 | byte[1]<<8 | byte[0].
+    uint32_t aid = (aid_bytes[2] << 16) | (aid_bytes[1] << 8) | aid_bytes[0];
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("LEAF Verified Credential Check"));
+    PrintAndLogEx(INFO, "AID.......... " _YELLOW_("%02X%02X%02X"), aid_bytes[0], aid_bytes[1], aid_bytes[2]);
+    PrintAndLogEx(INFO, "Challenge.... " _YELLOW_("%s"), sprint_hex_inrow(challenge, sizeof(challenge)));
+
+    // Step 1: Anticollision + select application
+    DesfireContext_t dctx = {0};
+    dctx.commMode = DCMPlain;
+    dctx.cmdSet = DCCNativeISO;
+
+    int res = DesfireAnticollision(false);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Anticollision " _RED_("failed"));
+        DropField();
+        return res;
+    }
+
+    res = DesfireSelectAIDHex(&dctx, aid, false, 0);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Select application %06X " _RED_("failed"), aid);
+        DropField();
+        return res;
+    }
+    if (verbose)
+        PrintAndLogEx(SUCCESS, "Application selected " _GREEN_("ok"));
+
+    // Step 2: Read X.509 certificate from file 0x02 (length=0 reads to EOF)
+    uint8_t cert_buf[LEAF_VERIFIED_MAX_CERT_LEN] = {0};
+    size_t cert_len = 0;
+    res = DesfireReadFile(&dctx, LEAF_VERIFIED_CERT_FILE, 0, 0, cert_buf, &cert_len);
+    if (res != PM3_SUCCESS || cert_len == 0) {
+        PrintAndLogEx(ERR, "Read certificate file 0x%02X " _RED_("failed") " (%d)", LEAF_VERIFIED_CERT_FILE, res);
+        DropField();
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(SUCCESS, "Certificate read " _GREEN_("ok") " (%zu bytes)", cert_len);
+    if (verbose)
+        print_hex_break(cert_buf, cert_len, 32);
+
+    // Step 3: Parse certificate
+    mbedtls_x509_crt cert;
+    mbedtls_x509_crt_init(&cert);
+    int xres = mbedtls_x509_crt_parse_der(&cert, cert_buf, cert_len);
+    if (xres != 0) {
+        PrintAndLogEx(ERR, "X.509 parse " _RED_("failed") " (-0x%04x)", -xres);
+        mbedtls_x509_crt_free(&cert);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    // Print certificate details
+    PrintAndLogEx(INFO, "--- " _CYAN_("Certificate"));
+
+    char dnbuf[256] = {0};
+    mbedtls_x509_dn_gets(dnbuf, sizeof(dnbuf), &cert.subject);
+    PrintAndLogEx(INFO, "Subject...... " _YELLOW_("%s"), dnbuf);
+    mbedtls_x509_dn_gets(dnbuf, sizeof(dnbuf), &cert.issuer);
+    PrintAndLogEx(INFO, "Issuer....... " _YELLOW_("%s"), dnbuf);
+
+    const mbedtls_x509_buf *open_id = leaf_dn_find_oid(&cert.subject,
+                                      MBEDTLS_OID_AT_SERIAL_NUMBER,
+                                      MBEDTLS_OID_SIZE(MBEDTLS_OID_AT_SERIAL_NUMBER));
+    if (open_id != NULL && open_id->len > 0) {
+        char idbuf[128] = {0};
+        size_t cp = (open_id->len < sizeof(idbuf) - 1) ? open_id->len : sizeof(idbuf) - 1;
+        memcpy(idbuf, open_id->p, cp);
+        PrintAndLogEx(INFO, "Open ID...... " _YELLOW_("%s"), idbuf);
+    }
+
+    PrintAndLogEx(INFO, "Valid from... " _YELLOW_("%04d-%02d-%02d %02d:%02d:%02d"),
+                  cert.valid_from.year, cert.valid_from.mon, cert.valid_from.day,
+                  cert.valid_from.hour, cert.valid_from.min, cert.valid_from.sec);
+    PrintAndLogEx(INFO, "Valid to..... " _YELLOW_("%04d-%02d-%02d %02d:%02d:%02d"),
+                  cert.valid_to.year, cert.valid_to.mon, cert.valid_to.day,
+                  cert.valid_to.hour, cert.valid_to.min, cert.valid_to.sec);
+
+    if (cert.serial.len > 0)
+        PrintAndLogEx(INFO, "Serial....... " _YELLOW_("%s"), sprint_hex_inrow(cert.serial.p, cert.serial.len));
+
+    uint8_t fp[32] = {0};
+    if (mbedtls_sha256_ret(cert_buf, cert_len, fp, 0) == 0)
+        PrintAndLogEx(INFO, "SHA-256...... " _YELLOW_("%s"), sprint_hex_inrow(fp, sizeof(fp)));
+
+    // Step 4: Verify certificate signature against LEAF Root CA public key.
+    // The certificate uses ECDSA-SHA256 over secp256r1; ecdsa_signature_verify
+    // accepts the DER-encoded signature stored in cert.sig.
+    PrintAndLogEx(INFO, "--- " _CYAN_("Root CA Verification"));
+    bool root_ok = false;
+    int rres = ecdsa_signature_verify(
+                   MBEDTLS_ECP_DP_SECP256R1,
+                   (uint8_t *)kLeafRootP256PubKey,
+                   cert.tbs.p,
+                   (int)cert.tbs.len,
+                   cert.sig.p,
+                   cert.sig.len,
+                   true);
+    if (rres == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Root signature " _GREEN_("verified") " (LEAF Root CA P-256)");
+        root_ok = true;
+    } else {
+        PrintAndLogEx(ERR, "Root signature " _RED_("verification failed") " (%d)", rres);
+    }
+
+    // Extract card public key (P-256, uncompressed)
+    uint8_t card_pubkey[65] = {0};
+    int kres = ecdsa_public_key_from_pk(&cert.pk, MBEDTLS_ECP_DP_SECP256R1, card_pubkey, sizeof(card_pubkey));
+    mbedtls_x509_crt_free(&cert);
+    if (kres != 0) {
+        PrintAndLogEx(ERR, "Failed to extract card public key (-0x%04x)", -kres);
+        DropField();
+        return PM3_ESOFT;
+    }
+    if (verbose)
+        PrintAndLogEx(INFO, "Card pubkey.. %s", sprint_hex_inrow(card_pubkey, sizeof(card_pubkey)));
+
+    // Step 5: ISO Internal Authenticate
+    PrintAndLogEx(INFO, "--- " _CYAN_("ISO Internal Authenticate"));
+
+    uint8_t optsa_tlv[] = {DUOX_TAG_OPTSA, 0x00};
+    uint8_t apdu_data[22];
+    size_t apdu_data_len = 0;
+    memcpy(apdu_data, optsa_tlv, 2);
+    apdu_data_len += 2;
+    apdu_data[apdu_data_len++] = DUOX_TAG_DYNAMIC_AUTH_DATA;
+    apdu_data[apdu_data_len++] = 2 + DUOX_INTAUTH_CHALLENGE_LEN;
+    apdu_data[apdu_data_len++] = DUOX_TAG_CHALLENGE;
+    apdu_data[apdu_data_len++] = DUOX_INTAUTH_CHALLENGE_LEN;
+    memcpy(apdu_data + apdu_data_len, challenge, DUOX_INTAUTH_CHALLENGE_LEN);
+    apdu_data_len += DUOX_INTAUTH_CHALLENGE_LEN;
+
+    sAPDU_t apdu = {0x00, ISO7816_INTERNAL_AUTHENTICATION, 0x00, (uint8_t)keynum, apdu_data_len, apdu_data};
+    uint8_t encoded[50] = {0};
+    int encoded_len = 0;
+    if (APDUEncodeS(&apdu, false, APDU_INCLUDE_LE_00, encoded, &encoded_len)) {
+        PrintAndLogEx(ERR, "APDU encoding error");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (APDULogging)
+        PrintAndLogEx(SUCCESS, ">>>> %s", sprint_hex(encoded, encoded_len));
+
+    uint8_t response[PM3_CMD_DATA_SIZE] = {0};
+    int resplen = 0;
+    res = ExchangeAPDU14a(encoded, encoded_len, false, true, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "APDU exchange " _RED_("failed") " (%d)", res);
+        DropField();
+        return res;
+    }
+
+    if (APDULogging)
+        PrintAndLogEx(SUCCESS, "<<<< %s", sprint_hex(response, resplen));
+
+    DropField();
+
+    if (resplen < 2) {
+        PrintAndLogEx(ERR, "Response too short");
+        return PM3_ESOFT;
+    }
+
+    uint16_t sw = get_sw(response, resplen);
+    if (sw != ISO7816_OK) {
+        PrintAndLogEx(ERR, "Internal Authenticate " _RED_("failed") " (SW=%04X)", sw);
+        return PM3_ESOFT;
+    }
+    int resp_data_len = resplen - 2;
+    PrintAndLogEx(SUCCESS, "Internal Authenticate " _GREEN_("ok") " (SW=%04X)", sw);
+
+    // Parse 7C [len] 81 10 [card_random(16)] 82 [sig_len] [signature]
+    uint8_t *resp = response;
+    if (resp_data_len < 4 || resp[0] != DUOX_TAG_DYNAMIC_AUTH_DATA) {
+        PrintAndLogEx(ERR, "Invalid response: missing 0x7C tag");
+        return PM3_ESOFT;
+    }
+    uint8_t outer_len = resp[1];
+    if (outer_len + 2 > resp_data_len) {
+        PrintAndLogEx(ERR, "Invalid response: truncated 0x7C data");
+        return PM3_ESOFT;
+    }
+    uint8_t *inner = resp + 2;
+    int inner_len = outer_len;
+    int idx = 0;
+    uint8_t card_random[DUOX_INTAUTH_CHALLENGE_LEN] = {0};
+    bool card_random_found = false;
+    uint8_t signature_rs[DUOX_INTAUTH_SIG_LEN] = {0};
+    bool signature_found = false;
+    while (idx < inner_len) {
+        if (idx + 2 > inner_len) break;
+        uint8_t tag = inner[idx++];
+        uint8_t tlen = inner[idx++];
+        if (idx + tlen > inner_len) break;
+        if (tag == DUOX_TAG_CHALLENGE && tlen == DUOX_INTAUTH_CHALLENGE_LEN) {
+            memcpy(card_random, inner + idx, DUOX_INTAUTH_CHALLENGE_LEN);
+            card_random_found = true;
+        } else if (tag == DUOX_TAG_SIGNATURE) {
+            if (tlen >= DUOX_INTAUTH_SIG_LEN) {
+                memcpy(signature_rs, inner + idx + (tlen - DUOX_INTAUTH_SIG_LEN), DUOX_INTAUTH_SIG_LEN);
+                signature_found = true;
+            }
+        }
+        idx += tlen;
+    }
+    if (!card_random_found || !signature_found) {
+        PrintAndLogEx(ERR, "Failed to parse card random / signature from response");
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "Card random.. " _YELLOW_("%s"), sprint_hex_inrow(card_random, DUOX_INTAUTH_CHALLENGE_LEN));
+    PrintAndLogEx(INFO, "Signature r.. " _YELLOW_("%s"), sprint_hex_inrow(signature_rs, DUOX_INTAUTH_SIG_LEN / 2));
+    PrintAndLogEx(INFO, "Signature s.. " _YELLOW_("%s"), sprint_hex_inrow(signature_rs + DUOX_INTAUTH_SIG_LEN / 2, DUOX_INTAUTH_SIG_LEN / 2));
+
+    // Step 6: Verify card signature with extracted public key.
+    // Message = F0F0 || OptsA TLV || RndB || RndA
+    PrintAndLogEx(INFO, "--- " _CYAN_("Signature Verification"));
+    uint8_t message[2 + 2 + DUOX_INTAUTH_CHALLENGE_LEN + DUOX_INTAUTH_CHALLENGE_LEN];
+    message[0] = DUOX_INTAUTH_MSG_PREFIX;
+    message[1] = DUOX_INTAUTH_MSG_PREFIX;
+    memcpy(message + 2, optsa_tlv, 2);
+    memcpy(message + 4, card_random, DUOX_INTAUTH_CHALLENGE_LEN);
+    memcpy(message + 20, challenge, DUOX_INTAUTH_CHALLENGE_LEN);
+
+    if (verbose)
+        PrintAndLogEx(INFO, "Verify msg... %s", sprint_hex_inrow(message, sizeof(message)));
+
+    bool card_ok = false;
+    int sig_res = ecdsa_signature_r_s_verify(
+                      MBEDTLS_ECP_DP_SECP256R1,
+                      card_pubkey,
+                      message,
+                      (int)sizeof(message),
+                      signature_rs,
+                      DUOX_INTAUTH_SIG_LEN,
+                      true);
+    if (sig_res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Card signature " _GREEN_("verified"));
+        card_ok = true;
+    } else {
+        PrintAndLogEx(ERR, "Card signature " _RED_("verification failed"));
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    if (root_ok && card_ok) {
+        PrintAndLogEx(SUCCESS, "LEAF Verified credential " _GREEN_("AUTHENTIC"));
+    } else {
+        PrintAndLogEx(ERR, "LEAF Verified credential " _RED_("FAILED") " (root=%s, card=%s)",
+                      root_ok ? "ok" : "fail", card_ok ? "ok" : "fail");
+    }
+
+    return (root_ok && card_ok) ? PM3_SUCCESS : PM3_ESOFT;
+}
+
 static int CmdHF14ADesTest(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes test",
@@ -8030,6 +8384,7 @@ static command_t CommandTable[] = {
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("DUOX") " ------------------------"},
     {"intauth",          CmdHF14ADesIntAuth,          IfPm3Iso14443a,  "ISO Internal Authenticate (ECDSA challenge-response)"},
     {"vdesign",          CmdHF14ADesVdeSign,          IfPm3Iso14443a,  "VDE ECDSASign (EV charging signature over 32-byte challenge)"},
+    {"leaf",             CmdHF14ADesLeaf,             IfPm3Iso14443a,  "LEAF Verified credential read + cert + auth check"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("System") " -----------------------"},
     {"test",             CmdHF14ADesTest,             AlwaysAvailable, "Regression crypto tests"},
     {NULL, NULL, NULL, NULL}
