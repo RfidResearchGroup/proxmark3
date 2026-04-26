@@ -1820,6 +1820,7 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is
         if (memcmp(cmd + pos, "\x00\xA4\x04\x00", 4) == 0) {
             uint8_t n = cmd[pos + 4];
             snprintf(exp, size, "SELECT AID " _WHITE_("%s"), sprint_hex_inrow(cmd + pos + 4 + 1, n));
+            // iceman:  add a lookup to known SEOS AID's
             return;
         }
 
@@ -1874,60 +1875,52 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is
             return;
         }
         
-        // 
-        /*
-        0A  00  00  D4  00  00  00  E4  E4 
-            0A  00  7F  FF  90  00  AF  29     
-   
-        */
-        if (memcmp(cmd + pos, "\x00\xD4\x00\x00\0x00", 5) == 0) {
-            snprintf(exp, size, "Get remaining credits");
+        if (memcmp(cmd + pos, "\x00\xD4\x00\x00\x00", 5) == 0) {
+            snprintf(exp, size, "GET REMAINING CREDITS");
             return;
         }
 
-        /*
-        0B  00  A0  10  00  00  00  C0  D8 
-        0B  00  6F  00  88  70          
-        */
         if (memcmp(cmd + pos, "\xA0\x10\x00\x00\x00", 5) == 0) {
-            snprintf(exp, size, "Get applet info");
+            snprintf(exp, size, "GET APPLET INFO");
             return;
         }
     
         if (memcmp(cmd + pos, "\xA0\xD3\x00\x00\x00", 5) == 0) {
-            snprintf(exp, size, "Get applet version");
+            snprintf(exp, size, "GET APPLET VERSION");
             return;
         }
 
         if (memcmp(cmd + pos, "\xA0\xDA\x04", 3) == 0) {
-            snprintf(exp, size, "Push engine id");
+            snprintf(exp, size, "PUSH ENGINE ID");
             return;
         }
 
         if (memcmp(cmd + pos, "\xA0\xDA\x05", 3) == 0) {
-            snprintf(exp, size, "Push user name");
+            snprintf(exp, size, "PUSH USERNAME");
             return;
         }
-        /*
-        00 A4 04 00 0A <AID>     SELECT ConfigCardProgrammer
-00 D4 00 00 00           GetRemainingCredits      -> 7FFF 9000
 
-A0 DA 10 00 01 01        FinalPersonalize
+        if (memcmp(cmd + pos, "\xA0\xDA\x10\x00\x01\x01", 6) == 0) {
+            snprintf(exp, size, "FINAL PERSONALIZE");
+            return;
+        }
 
-A0 DA 25 00 02 01 AA     undocumented opcode 0x25
-A0 CA 00 00 00           GET DATA (returns SNMPv3 authPriv blob)
-        */
+        if (memcmp(cmd + pos, "\xA0\xDA\x25\x00\x02\x01", 6) == 0) {
+            snprintf(exp, size, "UNKNOWN OPCODE ( 0x25 )");
+            return;
+        }
 
-        /*
-        |0A  00  6D  00  83  5F      
-        */
+        if (memcmp(cmd + pos, "\xA0\xCA\x00\x00\x00", 5) == 0) {
+            snprintf(exp, size, "GET DATA");
+            return ;
+        }
 
         //	CLA	0x90    Proprietary class - DESFire's "ISO 7816 wrap of native commands" indicator. 
         //  Tells the card "the next byte is a DESFire native opcode, not an ISO 7816 standard INS."
         //  INS 0x5A    DESFire native opcode SelectApplication (3-byte AID).
 
         if (memcmp(cmd + pos, "\x90\x5A\x00\x00", 4) == 0) {
-            snprintf(exp, size, "(desfire) Selected AID " _CYAN_("%02X%02X%02X"), cmd[pos + 5], cmd[pos + 6], cmd[pos + 7]);
+            snprintf(exp, size, "(desfire) SELECT AID " _CYAN_("%02X%02X%02X"), cmd[pos + 5], cmd[pos + 6], cmd[pos + 7]);
             return;
         }
 
