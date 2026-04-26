@@ -224,7 +224,7 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
     uint8_t padded_encrypted_Command[padded_unencrypted_Command_len];
     create_cryptogram(diversified_enc_key, padded_unencrypted_Command, padded_encrypted_Command, padded_unencrypted_Command_len, encryption_algorithm);
 
-    uint8_t asn1_tag_cryptograph[2] = {0x85, ARRAYLEN(padded_encrypted_Command)};
+    uint8_t asn1_tag_cryptograph[3] = {0x85, 0x81, ARRAYLEN(padded_encrypted_Command)};
     uint8_t asn1_tag_mac[2] = {0x8e, 0x08};
     uint8_t command_trailer[2] = {0x97, 0x00};
 
@@ -1844,6 +1844,7 @@ static int CmdHfSeosWrite(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_str0("t", "tag", "<hex>", "<0-100> hex bytes for tag to read (Default: FF00)"),
         arg_str0("o", "oid", "<hex>", "<0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)"),
         arg_str0(NULL, "privacy-key", "<idx>", "Privacy key slot index. The selected slot provides both privacy encryption and MAC subkeys and is sent as the privacy slot identifier"),
         arg_str0(NULL, "auth-key", "<idx>", "Auth key slot index. The selected slot provides the auth key and is sent as the auth slot identifier"),
@@ -1853,12 +1854,13 @@ static int CmdHfSeosWrite(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    int data_tag_len = 2;
-    uint8_t data_tag[2] = {0xff, 0x00};
+    int data_tag_len = 0; 
+    uint8_t data_tag[16] = {0xff, 0x00};
+    CLIGetHexWithReturn(ctx, 1, data_tag, &data_tag_len);
 
     int oid_len = 0;
     uint8_t oid_hex[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02, 0x02};
-    CLIGetHexWithReturn(ctx, 1, oid_hex, &oid_len);
+    CLIGetHexWithReturn(ctx, 2, oid_hex, &oid_len);
 
     int privacy_key_index = 2;
     int auth_key_index = 2;
@@ -1868,8 +1870,8 @@ static int CmdHfSeosWrite(const char *Cmd) {
     int aid_len = 0;
     char privacy_key_str[12] = {0};
     char auth_key_str[12] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)privacy_key_str, sizeof(privacy_key_str), &privacy_key_len);
-    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)auth_key_str, sizeof(auth_key_str), &auth_key_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)privacy_key_str, sizeof(privacy_key_str), &privacy_key_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)auth_key_str, sizeof(auth_key_str), &auth_key_len);
     if (privacy_key_len != 0 && seos_parse_key_index(privacy_key_str, &privacy_key_index) == false) {
         CLIParserFree(ctx);
         PrintAndLogEx(ERR, "Invalid privacy key. Expected --privacy-key N with index in range 0-%zu", ARRAYLEN(keys) - 1);
@@ -1880,11 +1882,11 @@ static int CmdHfSeosWrite(const char *Cmd) {
         PrintAndLogEx(ERR, "Invalid auth key. Expected --auth-key N with index in range 0-%zu", ARRAYLEN(keys) - 1);
         return PM3_EINVARG;
     }
-    int res = seos_get_custom_aid(ctx, 4, aid, &aid_len);
+    int res = seos_get_custom_aid(ctx, 5, aid, &aid_len);
 
     int data_len = 0;
     uint8_t data[256] = {};
-    CLIGetHexWithReturn(ctx, 5, data, &data_len);
+    CLIGetHexWithReturn(ctx, 6, data, &data_len);
 
     CLIParserFree(ctx);
     if (res != PM3_SUCCESS) {
