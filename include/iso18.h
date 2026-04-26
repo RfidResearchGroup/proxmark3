@@ -28,6 +28,7 @@ typedef enum FELICA_COMMAND {
     FELICA_RAW = (1 << 3),
     FELICA_APPEND_CRC = (1 << 5),
     FELICA_NO_SELECT = (1 << 6),
+    FELICA_CLEARTRACE = (1 << 7),
 } felica_command_t;
 
 typedef struct {

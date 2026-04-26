@@ -1603,7 +1603,7 @@ static int info_seac(void) {
         // {0x05, FELICA_POLL_REQ, 0x01, 0x01, 0x0F},
         {0x05, FELICA_POLL_REQ, 0x01, 0x01, 0x01},
     };
-    const uint8_t seac_flags = FELICA_CONNECT | FELICA_RAW | FELICA_APPEND_CRC | FELICA_NO_SELECT;
+    const uint8_t seac_flags = FELICA_CONNECT | FELICA_CLEARTRACE | FELICA_RAW | FELICA_APPEND_CRC | FELICA_NO_SELECT;
 
     for (size_t i = 0; i < ARRAYLEN(seac_poll_frames); i++) {
         PacketResponseNG resp;
@@ -1643,7 +1643,7 @@ int read_felica_uid(bool loop, bool verbose) {
     int res = PM3_ETIMEOUT;
 
     do {
-        clear_and_send_command(FELICA_CONNECT, 0, NULL, false);
+        clear_and_send_command(FELICA_CONNECT | FELICA_CLEARTRACE, 0, NULL, false);
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_FELICA_COMMAND, &resp, 2500)) {
 
@@ -1913,7 +1913,7 @@ static int send_request_specification_version(uint8_t flags, uint16_t datalen, u
 
 static int info_felica(bool verbose) {
 
-    clear_and_send_command(FELICA_CONNECT | FELICA_NO_DISCONNECT, 0, NULL, false);
+    clear_and_send_command(FELICA_CONNECT | FELICA_CLEARTRACE | FELICA_NO_DISCONNECT, 0, NULL, false);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_FELICA_COMMAND, &resp, 2500) == false) {
         DropField();
@@ -2368,7 +2368,7 @@ static int felica_discover_target(felica_card_select_t *card) {
 
     int last_status = PM3_ETIMEOUT;
     for (uint32_t attempt = 0; attempt < FELICA_TARGET_PRESENCE_ATTEMPTS; attempt++) {
-        clear_and_send_command(FELICA_CONNECT, 0, NULL, false);
+        clear_and_send_command(FELICA_CONNECT | FELICA_CLEARTRACE, 0, NULL, false);
 
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_FELICA_COMMAND, &resp, 2500) == false) {
@@ -2417,7 +2417,7 @@ static int felica_presence_check_idm(const uint8_t *idm) {
     data[15] = 0x00;
 
     PacketResponseNG resp;
-    const uint8_t flags = FELICA_CONNECT | FELICA_NO_SELECT | FELICA_APPEND_CRC | FELICA_RAW;
+    const uint8_t flags = FELICA_CONNECT | FELICA_CLEARTRACE | FELICA_NO_SELECT | FELICA_APPEND_CRC | FELICA_RAW;
     const int ret = send_felica_payload_with_retries(flags, sizeof(data), data, false,
                                                      FELICA_RDBLK_ACK,
                                                      FELICA_DEFAULT_TIMEOUT_MS, FELICA_TARGET_PRESENCE_ATTEMPTS - 1U,
@@ -4418,7 +4418,7 @@ static int CmdHFFelicaDump(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort discovery or dumping");
 
-    uint8_t flags = FELICA_CONNECT | FELICA_NO_SELECT | FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
+    uint8_t flags = FELICA_CONNECT | FELICA_CLEARTRACE | FELICA_NO_SELECT | FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
 
     felica_dump_context_t dump_ctx;
     memset(&dump_ctx, 0, sizeof(dump_ctx));
@@ -4610,6 +4610,8 @@ static int CmdHFFelicaDiscoverNodes(const char *Cmd) {
     PrintAndLogEx(HINT, "Area and service codes are printed in network order.");
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort discovery");
 
+    // Do not set FELICA_CLEARTRACE here; auto discovery may try several methods
+    // before finding the supported one, and the trace should include all probes.
     uint8_t flags = FELICA_CONNECT | FELICA_NO_SELECT | FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
     felica_scsvcode_context_t scsv_ctx;
     memset(&scsv_ctx, 0, sizeof(scsv_ctx));
@@ -4686,7 +4688,7 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
     PrintAndLogEx(HINT, "Area and service codes are printed in network order.");
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort discovery");
 
-    uint8_t flags = FELICA_CONNECT | FELICA_NO_SELECT | FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
+    uint8_t flags = FELICA_CONNECT | FELICA_CLEARTRACE | FELICA_NO_SELECT | FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
     felica_scsvcode_context_t scsv_ctx;
     memset(&scsv_ctx, 0, sizeof(scsv_ctx));
     scsv_ctx.area_end_stack[0] = 0xFFFF;
@@ -5765,7 +5767,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     }
 
     if (active || active_select) {
-        flags |= FELICA_CONNECT;
+        flags |= FELICA_CONNECT | FELICA_CLEARTRACE;
         if (active) {
             flags |= FELICA_NO_SELECT;
         }

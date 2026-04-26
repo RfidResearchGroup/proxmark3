@@ -644,7 +644,7 @@ void felica_sendraw(const PacketCommandNG *c) {
     bool do_connect = ((param & FELICA_CONNECT) == FELICA_CONNECT);
     bool no_disconnect = ((param & FELICA_NO_DISCONNECT) == FELICA_NO_DISCONNECT);
 
-    if (do_connect) {
+    if ((param & FELICA_CLEARTRACE) == FELICA_CLEARTRACE) {
         clear_trace();
     }
 
