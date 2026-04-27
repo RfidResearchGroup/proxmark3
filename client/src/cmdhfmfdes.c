@@ -8070,7 +8070,6 @@ static int CmdHF14ADesLeaf(const char *Cmd) {
 
     PrintAndLogEx(INFO, "--- " _CYAN_("LEAF Verified Credential Check"));
     PrintAndLogEx(INFO, "AID.......... " _YELLOW_("%02X%02X%02X"), aid_bytes[0], aid_bytes[1], aid_bytes[2]);
-    PrintAndLogEx(INFO, "Challenge.... " _YELLOW_("%s"), sprint_hex_inrow(challenge, sizeof(challenge)));
 
     // Step 1: Anticollision + select application
     DesfireContext_t dctx = {0};
@@ -8126,11 +8125,11 @@ static int CmdHF14ADesLeaf(const char *Cmd) {
     mbedtls_x509_dn_gets(dnbuf, sizeof(dnbuf), &cert.issuer);
     PrintAndLogEx(INFO, "Issuer....... " _YELLOW_("%s"), dnbuf);
 
+    char idbuf[128] = {0};
     const mbedtls_x509_buf *open_id = leaf_dn_find_oid(&cert.subject,
                                       MBEDTLS_OID_AT_SERIAL_NUMBER,
                                       MBEDTLS_OID_SIZE(MBEDTLS_OID_AT_SERIAL_NUMBER));
     if (open_id != NULL && open_id->len > 0) {
-        char idbuf[128] = {0};
         size_t cp = (open_id->len < sizeof(idbuf) - 1) ? open_id->len : sizeof(idbuf) - 1;
         memcpy(idbuf, open_id->p, cp);
         PrintAndLogEx(INFO, "Open ID...... " _YELLOW_("%s"), idbuf);
@@ -8184,6 +8183,7 @@ static int CmdHF14ADesLeaf(const char *Cmd) {
 
     // Step 5: ISO Internal Authenticate
     PrintAndLogEx(INFO, "--- " _CYAN_("ISO Internal Authenticate"));
+    PrintAndLogEx(INFO, "Challenge.... " _YELLOW_("%s"), sprint_hex_inrow(challenge, sizeof(challenge)));
     uint8_t card_random[DUOX_INTAUTH_CHALLENGE_LEN] = {0};
     uint8_t signature_rs[DUOX_INTAUTH_SIG_LEN] = {0};
     res = duox_intauth_exchange(APDULogging, verbose, (uint8_t)keynum, challenge, card_random, signature_rs);
@@ -8204,6 +8204,8 @@ static int CmdHF14ADesLeaf(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     if (root_ok && card_ok) {
         PrintAndLogEx(SUCCESS, "LEAF Verified credential " _GREEN_("AUTHENTIC"));
+        if (idbuf[0] != '\0')
+            PrintAndLogEx(SUCCESS, "Open ID...... " _GREEN_("%s"), idbuf);
     } else {
         PrintAndLogEx(ERR, "LEAF Verified credential " _RED_("FAILED") " (root=%s, card=%s)",
                       root_ok ? "ok" : "fail", card_ok ? "ok" : "fail");
