@@ -756,11 +756,19 @@ size_t CreateAPDU(uint8_t *datain, size_t len, uint8_t *dataout) {
 // uint32_t crc = crc_finish(&desfire_crc32);
 
 void OnSuccess(void) {
+    size_t len = 0;
+    uint8_t resp[MAX_FRAME_SIZE];
+    uint8_t par[MAX_PARITY_SIZE];
+
     pcb_blocknum = 0;
     ReaderTransmit(deselect_cmd, 3, NULL);
-    if (mifare_ultra_halt()) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Halt error");
+    len = ReaderReceive(resp, sizeof(resp), par);
+    if (len == 0) {
+        if (mifare_ultra_halt()) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Halt error");
+        }
     }
+
     switch_off();
 }
 
