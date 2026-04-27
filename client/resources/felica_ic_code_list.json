@@ -1,0 +1,405 @@
+[
+  {
+    "ic": "00",
+    "name": "FeliCa Standard RC-S830",
+    "description": "Observed FeliCa Standard IC type",
+    "sources": [
+      "https://github.com/nfcpy/nfcpy/"
+    ]
+  },
+  {
+    "ic": "01",
+    "name": "FeliCa Standard RC-S915",
+    "description": "",
+    "sources": [
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html",
+      "https://github.com/nfcpy/nfcpy/"
+    ]
+  },
+  {
+    "ic": "02",
+    "name": "FeliCa Standard RC-S919",
+    "description": "Observed FeliCa Standard IC type",
+    "sources": [
+      "https://github.com/nfcpy/nfcpy/"
+    ]
+  },
+  {
+    "ic": "06",
+    "name": "Mobile FeliCa 1.0",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/",
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "07",
+    "name": "Mobile FeliCa 1.1",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/",
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "08",
+    "name": "FeliCa Standard RC-S952",
+    "description": "",
+    "sources": [
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html",
+      "https://github.com/nfcpy/nfcpy/"
+    ]
+  },
+  {
+    "ic": "09",
+    "name": "FeliCa Standard RC-S953",
+    "description": "",
+    "sources": [
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html",
+      "https://github.com/nfcpy/nfcpy/"
+    ]
+  },
+  {
+    "ic": "0B",
+    "name": "Suica card (FeliCa Standard RC-S ?)",
+    "description": "Observed Suica card IC type",
+    "sources": [
+      "https://github.com/nfcpy/nfcpy/"
+    ]
+  },
+  {
+    "ic": "0C",
+    "name": "FeliCa Standard RC-S954",
+    "description": "",
+    "sources": [
+      "https://github.com/nfcpy/nfcpy/"
+    ]
+  },
+  {
+    "ic": "0D",
+    "name": "FeliCa Standard RC-S960",
+    "description": "",
+    "sources": [
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html",
+      "https://github.com/nfcpy/nfcpy/"
+    ]
+  },
+  {
+    "ic": "10",
+    "name": "Mobile FeliCa 2.0",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/",
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "11",
+    "name": "Mobile FeliCa 2.0",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/",
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "12",
+    "name": "Mobile FeliCa 2.0",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/",
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "13",
+    "name": "Mobile FeliCa 2.0",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/",
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "14",
+    "name": "Mobile FeliCa 3.0",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/",
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "15",
+    "name": "Mobile FeliCa 3.0",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/",
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "16",
+    "name": "Mobile FeliCa for Apple Wallet",
+    "description": "",
+    "sources": [
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html",
+      "https://github.com/kormax/felica-tool#supported-felica-commands"
+    ]
+  },
+  {
+    "ic": "17",
+    "name": "Mobile FeliCa 4.0",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/",
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "18",
+    "name": "Mobile FeliCa 4.1",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/",
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "19",
+    "name": "Mobile FeliCa 4.1",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/",
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "1A",
+    "name": "Mobile FeliCa 4.1",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/",
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "1B",
+    "name": "Mobile FeliCa 4.1",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/",
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "1C",
+    "name": "Mobile FeliCa 4.1",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/",
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "1D",
+    "name": "Mobile FeliCa 4.1",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/",
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "1E",
+    "name": "Mobile FeliCa 4.1",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/",
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "1F",
+    "name": "Mobile FeliCa 4.1",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/",
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "20",
+    "name": "FeliCa Standard RC-S962",
+    "description": "",
+    "sources": [
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html",
+      "https://github.com/nfcpy/nfcpy/"
+    ]
+  },
+  {
+    "ic": "24",
+    "name": "Mobile FeliCa Hong Kong version",
+    "description": "Lacks support for some commands supported by previous cards.",
+    "sources": [
+      "https://github.com/kormax/felica-tool#supported-felica-commands"
+    ]
+  },
+  {
+    "ic": "31",
+    "name": "Suica card (FeliCa Standard RC-S ?)",
+    "description": "Observed Suica card IC type"
+  },
+  {
+    "ic": "32",
+    "name": "FeliCa Standard RC-SA00/1",
+    "description": "",
+    "sources": [
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html",
+      "https://github.com/nfcpy/nfcpy/"
+    ]
+  },
+  {
+    "ic": "33",
+    "name": "FeliCa Standard RC-SA00/2",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/"
+    ]
+  },
+  {
+    "ic": "34",
+    "name": "FeliCa Standard RC-SA01/1",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/"
+    ]
+  },
+  {
+    "ic": "35",
+    "name": "FeliCa Standard RC-SA01/2",
+    "description": "",
+    "sources": [
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html",
+      "https://github.com/nfcpy/nfcpy/"
+    ]
+  },
+  {
+    "ic": "36",
+    "name": "Suica card (FeliCa Standard RC-S ?)",
+    "description": "Observed Suica card IC type"
+  },
+  {
+    "ic": "3E",
+    "name": "FeliCa Standard RC-SA08/1",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/"
+    ]
+  },
+  {
+    "ic": "43",
+    "name": "FeliCa Standard RC-SA24/1",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/"
+    ]
+  },
+  {
+    "ic": "44",
+    "name": "FeliCa Standard RC-SA20/1",
+    "description": "",
+    "sources": [
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "45",
+    "name": "FeliCa Standard RC-SA20/2",
+    "description": "",
+    "sources": [
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "46",
+    "name": "FeliCa Standard RC-SA21/2",
+    "description": "",
+    "sources": [
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "47",
+    "name": "FeliCa Standard RC-SA24/1x1",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/"
+    ]
+  },
+  {
+    "ic": "48",
+    "name": "FeliCa Standard RC-SA21/2x1",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/"
+    ]
+  },
+  {
+    "ic": "A2",
+    "name": "FeliCa Standard RC-SA14",
+    "description": "",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/"
+    ]
+  },
+  {
+    "ic": "E0",
+    "name": "NFC Dynamic Tag (FeliCa Plug) RC-S926",
+    "description": "",
+    "sources": [
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "E1",
+    "name": "FeliCa Link RC-S967 (Plug Mode)",
+    "description": "",
+    "sources": [
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "F0",
+    "name": "FeliCa Lite RC-S965",
+    "description": "",
+    "sources": [
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "F1",
+    "name": "FeliCa Lite-S RC-S966",
+    "description": "",
+    "sources": [
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "F2",
+    "name": "FeliCa Link RC-S967 (Lite-S Mode or Lite-S HT Mode)",
+    "description": "",
+    "sources": [
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  },
+  {
+    "ic": "FF",
+    "name": "FeliCa Link RC-S967 (NFC-DEP Mode)",
+    "description": "FeliCa Link product in NFC-DEP Mode when ROM type is FF",
+    "sources": [
+      "https://www.sony.co.jp/en/Products/felica/business/tech-support/list.html"
+    ]
+  }
+]
