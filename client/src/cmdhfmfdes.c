@@ -89,6 +89,7 @@
 #define LEAF_VERIFIED_MAX_CERT_LEN      4096
 
 // LEAF Root CA public key (P-256, uncompressed: 04 || X(32) || Y(32))
+// https://github.com/LEAF-Community/leaf-verified-device-onboarding-guide/blob/82b51a1958a0f9eedaa2f97b7f533490bc108463/detect_and_select.py#L95
 static const uint8_t kLeafRootP256PubKey[65] = {
     0x04,
     0x2D, 0x27, 0x81, 0xBE, 0x41, 0xC2, 0x27, 0x58, 0xA6, 0x13, 0x81, 0x0F, 0x67, 0xEC, 0x78, 0xDF,
@@ -223,6 +224,7 @@ static const mfdesCommonAID_t commonAids[] = {
     { 0xF4812F, "\xf4\x81\x2f", "Gallagher card data application" },
     { 0xF48120, "\xf4\x81\x20", "Gallagher card application directory" }, // Can be 0xF48120 - 0xF4812B, but I've only ever seen 0xF48120
     { 0xF47300, "\xf4\x73\x00", "Inner Range card application" },
+    { 0xF51CD6, "\xF5\x1C\xD6", "LEAF Verified Open Application" },
 };
 
 typedef enum {
@@ -7440,6 +7442,176 @@ static int CmdHF14ADesDump(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// Generate `len` random bytes using the CSPRNG.
+static int duox_gen_random(uint8_t *buf, size_t len, const char *pers) {
+    pcrypto_rng_t rng = {0};
+    int res = pcrypto_rng_init(&rng, (const uint8_t *)pers, strlen(pers));
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to initialize RNG");
+        return res;
+    }
+    res = pcrypto_rng_fill(&rng, buf, len);
+    pcrypto_rng_free(&rng);
+    if (res != PM3_SUCCESS)
+        PrintAndLogEx(ERR, "Failed to generate random bytes");
+    return res;
+}
+
+// Build and send ISO Internal Authenticate (INS 88), then parse the TLV response.
+// Assumes the application is already selected (field on). Calls DropField before returning.
+// On PM3_SUCCESS: out_card_random[DUOX_INTAUTH_CHALLENGE_LEN] and out_sig_rs[DUOX_INTAUTH_SIG_LEN] are filled.
+static int duox_intauth_exchange(bool apdu_logging, bool verbose, uint8_t keynum,
+                                  const uint8_t *challenge,
+                                  uint8_t *out_card_random, uint8_t *out_sig_rs) {
+    // Build ISO Internal Authenticate APDU
+    //
+    // Data field:
+    //   80 00           - OptsA TLV (tag=0x80, len=0x00, empty value)
+    //   7C 12           - Dynamic Authentication Data wrapper (tag=0x7C, len=18)
+    //     81 10 [16B]   - Challenge TLV (tag=0x81, len=16, value=RndA)
+    //
+    // APDU: CLA=00 INS=88 P1=00 P2=00 Lc=16 [data] Le=00
+    static const uint8_t optsa_tlv[] = {DUOX_TAG_OPTSA, 0x00};
+    uint8_t apdu_data[22];
+    size_t apdu_data_len = 0;
+
+    memcpy(apdu_data, optsa_tlv, 2);
+    apdu_data_len += 2;
+    apdu_data[apdu_data_len++] = DUOX_TAG_DYNAMIC_AUTH_DATA;
+    apdu_data[apdu_data_len++] = 2 + DUOX_INTAUTH_CHALLENGE_LEN;
+    apdu_data[apdu_data_len++] = DUOX_TAG_CHALLENGE;
+    apdu_data[apdu_data_len++] = DUOX_INTAUTH_CHALLENGE_LEN;
+    memcpy(apdu_data + apdu_data_len, challenge, DUOX_INTAUTH_CHALLENGE_LEN);
+    apdu_data_len += DUOX_INTAUTH_CHALLENGE_LEN;
+
+    // Encode full APDU: 00 88 00 [keynum] [Lc] [data] 00
+    sAPDU_t apdu = {0x00, ISO7816_INTERNAL_AUTHENTICATION, 0x00, keynum, apdu_data_len, apdu_data};
+    uint8_t encoded[50] = {0};
+    int encoded_len = 0;
+    if (APDUEncodeS(&apdu, false, APDU_INCLUDE_LE_00, encoded, &encoded_len)) {
+        PrintAndLogEx(ERR, "APDU encoding error");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (apdu_logging)
+        PrintAndLogEx(SUCCESS, ">>>> %s", sprint_hex(encoded, encoded_len));
+
+    uint8_t response[PM3_CMD_DATA_SIZE] = {0};
+    int resplen = 0;
+    int res = ExchangeAPDU14a(encoded, encoded_len, false, true, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "APDU exchange " _RED_("failed") " (%d)", res);
+        DropField();
+        return res;
+    }
+
+    if (apdu_logging)
+        PrintAndLogEx(SUCCESS, "<<<< %s", sprint_hex(response, resplen));
+
+    DropField();
+
+    // Check status word
+    if (resplen < 2) {
+        PrintAndLogEx(ERR, "Response too short");
+        return PM3_ESOFT;
+    }
+
+    uint16_t sw = get_sw(response, resplen);
+    if (sw != ISO7816_OK) {
+        PrintAndLogEx(ERR, "Internal Authenticate " _RED_("failed") " (SW=%04X)", sw);
+        return PM3_ESOFT;
+    }
+
+    // Strip SW from response data
+    int resp_data_len = resplen - 2;
+    PrintAndLogEx(SUCCESS, "Internal Authenticate " _GREEN_("ok") " (SW=%04X)", sw);
+
+    if (verbose)
+        PrintAndLogEx(INFO, "Response data: %s", sprint_hex(response, resp_data_len));
+
+    // Parse TLV response
+    // Expected: 7C [len] 81 10 [card_random(16)] 82 [sig_len] [signature]
+    uint8_t *resp = response;
+    if (resp_data_len < 4 || resp[0] != DUOX_TAG_DYNAMIC_AUTH_DATA) {
+        PrintAndLogEx(ERR, "Invalid response: missing 0x7C tag");
+        return PM3_ESOFT;
+    }
+
+    uint8_t outer_len = resp[1];
+    if (outer_len + 2 > resp_data_len) {
+        PrintAndLogEx(ERR, "Invalid response: truncated 0x7C data");
+        return PM3_ESOFT;
+    }
+
+    uint8_t *inner = resp + 2;
+    int inner_len = outer_len;
+    int idx = 0;
+
+    bool card_random_found = false;
+    bool signature_found = false;
+
+    while (idx < inner_len) {
+        if (idx + 2 > inner_len) break;
+        uint8_t tag = inner[idx++];
+        uint8_t tlen = inner[idx++];
+        if (idx + tlen > inner_len) break;
+
+        if (tag == DUOX_TAG_CHALLENGE && tlen == DUOX_INTAUTH_CHALLENGE_LEN) {
+            memcpy(out_card_random, inner + idx, DUOX_INTAUTH_CHALLENGE_LEN);
+            card_random_found = true;
+        } else if (tag == DUOX_TAG_SIGNATURE) {
+            // Signature: raw r||s. Some implementations may return 0x44 bytes with padding.
+            if (tlen >= DUOX_INTAUTH_SIG_LEN) {
+                memcpy(out_sig_rs, inner + idx + (tlen - DUOX_INTAUTH_SIG_LEN), DUOX_INTAUTH_SIG_LEN);
+                signature_found = true;
+            }
+        }
+        idx += tlen;
+    }
+    if (!card_random_found) {
+        PrintAndLogEx(ERR, "Failed to parse card random (tag 0x81) from response");
+        return PM3_ESOFT;
+    }
+    if (!signature_found) {
+        PrintAndLogEx(ERR, "Failed to parse signature (tag 0x82) from response");
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "Card random.. " _YELLOW_("%s"), sprint_hex_inrow(out_card_random, DUOX_INTAUTH_CHALLENGE_LEN));
+    PrintAndLogEx(INFO, "Signature r.. " _YELLOW_("%s"), sprint_hex_inrow(out_sig_rs, DUOX_INTAUTH_SIG_LEN / 2));
+    PrintAndLogEx(INFO, "Signature s.. " _YELLOW_("%s"), sprint_hex_inrow(out_sig_rs + DUOX_INTAUTH_SIG_LEN / 2, DUOX_INTAUTH_SIG_LEN / 2));
+    return PM3_SUCCESS;
+}
+
+// Build the Internal Authenticate verify message (F0F0 || OptsA || RndB || RndA)
+// and verify the ECDSA-P256-SHA256 signature. Returns PM3_SUCCESS if valid.
+static int duox_intauth_verify_sig(bool verbose, const uint8_t *pubkey_point,
+                                    const uint8_t *challenge, const uint8_t *card_random,
+                                    const uint8_t *sig_rs) {                                        
+    // Message = F0F0 || OptsA TLV || RndB (card random) || RndA (our challenge)
+    static const uint8_t optsa_tlv[] = {DUOX_TAG_OPTSA, 0x00};
+    uint8_t message[2 + 2 + DUOX_INTAUTH_CHALLENGE_LEN + DUOX_INTAUTH_CHALLENGE_LEN];
+    message[0] = DUOX_INTAUTH_MSG_PREFIX;
+    message[1] = DUOX_INTAUTH_MSG_PREFIX;
+    memcpy(message + 2, optsa_tlv, 2);
+    memcpy(message + 4, card_random, DUOX_INTAUTH_CHALLENGE_LEN);
+    memcpy(message + 20, challenge, DUOX_INTAUTH_CHALLENGE_LEN);
+
+    if (verbose)
+        PrintAndLogEx(INFO, "Verify msg... %s", sprint_hex_inrow(message, sizeof(message)));
+    
+    return ecdsa_signature_r_s_verify(
+        MBEDTLS_ECP_DP_SECP256R1,
+        (uint8_t *)pubkey_point,
+        message,
+        (int)sizeof(message),
+        (uint8_t *)sig_rs,
+        DUOX_INTAUTH_SIG_LEN,
+        true // hash message with SHA-256 before verifying
+    );
+}
+
 static int CmdHF14ADesIntAuth(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes intauth",
@@ -7532,19 +7704,8 @@ static int CmdHF14ADesIntAuth(const char *Cmd) {
 
     // Generate random challenge if not provided
     if (!challenge_provided) {
-        pcrypto_rng_t rng = {0};
-        const uint8_t pers[] = "hf_mfdes_intauth";
-        int res = pcrypto_rng_init(&rng, pers, sizeof(pers) - 1);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Failed to initialize RNG");
-            return res;
-        }
-        res = pcrypto_rng_fill(&rng, challenge, sizeof(challenge));
-        pcrypto_rng_free(&rng);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Failed to generate random challenge");
-            return res;
-        }
+        int res = duox_gen_random(challenge, sizeof(challenge), "hf_mfdes_intauth");
+        if (res != PM3_SUCCESS) return res;
     }
 
     // AID is stored little-endian in DESFire protocol
@@ -7591,155 +7752,19 @@ static int CmdHF14ADesIntAuth(const char *Cmd) {
     }
     if (verbose)
         PrintAndLogEx(SUCCESS, "Application selected " _GREEN_("ok"));
-
     // Step 2: Build ISO Internal Authenticate APDU
-    //
-    // Data field:
-    //   80 00           - OptsA TLV (tag=0x80, len=0x00, empty value)
-    //   7C 12           - Dynamic Authentication Data wrapper (tag=0x7C, len=18)
-    //     81 10 [16B]   - Challenge TLV (tag=0x81, len=16, value=RndA)
-    //
-    // APDU: CLA=00 INS=88 P1=00 P2=00 Lc=16 [data] Le=00
-    uint8_t optsa_tlv[] = {DUOX_TAG_OPTSA, 0x00};
-    uint8_t apdu_data[22]; // 2 (optsa) + 2 (7C tag+len) + 2 (81 tag+len) + 16 (challenge)
-    size_t apdu_data_len = 0;
-
-    memcpy(apdu_data, optsa_tlv, 2);
-    apdu_data_len += 2;
-    apdu_data[apdu_data_len++] = DUOX_TAG_DYNAMIC_AUTH_DATA;
-    apdu_data[apdu_data_len++] = 2 + DUOX_INTAUTH_CHALLENGE_LEN; // tag+len + challenge
-    apdu_data[apdu_data_len++] = DUOX_TAG_CHALLENGE;
-    apdu_data[apdu_data_len++] = DUOX_INTAUTH_CHALLENGE_LEN;
-    memcpy(apdu_data + apdu_data_len, challenge, DUOX_INTAUTH_CHALLENGE_LEN);
-    apdu_data_len += DUOX_INTAUTH_CHALLENGE_LEN;
-
-    // Encode full APDU: 00 88 00 [keynum] [Lc] [data] 00
-    sAPDU_t apdu = {0x00, ISO7816_INTERNAL_AUTHENTICATION, 0x00, (uint8_t)keynum, apdu_data_len, apdu_data};
-    uint8_t encoded[50] = {0};
-    int encoded_len = 0;
-    if (APDUEncodeS(&apdu, false, APDU_INCLUDE_LE_00, encoded, &encoded_len)) {
-        PrintAndLogEx(ERR, "APDU encoding error");
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (APDULogging)
-        PrintAndLogEx(SUCCESS, ">>>> %s", sprint_hex(encoded, encoded_len));
-
-    uint8_t response[PM3_CMD_DATA_SIZE] = {0};
-    int resplen = 0;
-    res = ExchangeAPDU14a(encoded, encoded_len, false, true, response, sizeof(response), &resplen);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "APDU exchange " _RED_("failed") " (%d)", res);
-        DropField();
-        return res;
-    }
-
-    if (APDULogging)
-        PrintAndLogEx(SUCCESS, "<<<< %s", sprint_hex(response, resplen));
-
-    DropField();
-
-    // Check status word
-    if (resplen < 2) {
-        PrintAndLogEx(ERR, "Response too short");
-        return PM3_ESOFT;
-    }
-
-    uint16_t sw = get_sw(response, resplen);
-    if (sw != ISO7816_OK) {
-        PrintAndLogEx(ERR, "Internal Authenticate " _RED_("failed") " (SW=%04X)", sw);
-        return PM3_ESOFT;
-    }
-
-    // Strip SW from response data
-    int resp_data_len = resplen - 2;
-    PrintAndLogEx(SUCCESS, "Internal Authenticate " _GREEN_("ok") " (SW=%04X)", sw);
-
-    if (verbose)
-        PrintAndLogEx(INFO, "Response data: %s", sprint_hex(response, resp_data_len));
-
     // Step 3: Parse TLV response
-    // Expected: 7C [len] 81 10 [card_random(16)] 82 [sig_len] [signature]
-    uint8_t *resp = response;
-    if (resp_data_len < 4 || resp[0] != DUOX_TAG_DYNAMIC_AUTH_DATA) {
-        PrintAndLogEx(ERR, "Invalid response: missing 0x7C tag");
-        return PM3_ESOFT;
-    }
-
-    uint8_t outer_len = resp[1];
-    if (outer_len + 2 > resp_data_len) {
-        PrintAndLogEx(ERR, "Invalid response: truncated 0x7C data");
-        return PM3_ESOFT;
-    }
-
-    uint8_t *inner = resp + 2;
-    int inner_len = outer_len;
-    int idx = 0;
 
     uint8_t card_random[DUOX_INTAUTH_CHALLENGE_LEN] = {0};
-    bool card_random_found = false;
     uint8_t signature_rs[DUOX_INTAUTH_SIG_LEN] = {0};
-    bool signature_found = false;
-
-    while (idx < inner_len) {
-        if (idx + 2 > inner_len) break;
-        uint8_t tag = inner[idx++];
-        uint8_t tlen = inner[idx++];
-        if (idx + tlen > inner_len) break;
-
-        if (tag == DUOX_TAG_CHALLENGE && tlen == DUOX_INTAUTH_CHALLENGE_LEN) {
-            memcpy(card_random, inner + idx, DUOX_INTAUTH_CHALLENGE_LEN);
-            card_random_found = true;
-        } else if (tag == DUOX_TAG_SIGNATURE) {
-            // Signature: raw r||s. Some implementations may return 0x44 bytes with padding.
-            if (tlen >= DUOX_INTAUTH_SIG_LEN) {
-                memcpy(signature_rs, inner + idx + (tlen - DUOX_INTAUTH_SIG_LEN), DUOX_INTAUTH_SIG_LEN);
-                signature_found = true;
-            }
-        }
-        idx += tlen;
-    }
-
-    if (!card_random_found) {
-        PrintAndLogEx(ERR, "Failed to parse card random (tag 0x81) from response");
-        return PM3_ESOFT;
-    }
-
-    if (!signature_found) {
-        PrintAndLogEx(ERR, "Failed to parse signature (tag 0x82) from response");
-        return PM3_ESOFT;
-    }
-
-    PrintAndLogEx(INFO, "Card random.. " _YELLOW_("%s"), sprint_hex_inrow(card_random, DUOX_INTAUTH_CHALLENGE_LEN));
-    PrintAndLogEx(INFO, "Signature r.. " _YELLOW_("%s"), sprint_hex_inrow(signature_rs, DUOX_INTAUTH_SIG_LEN / 2));
-    PrintAndLogEx(INFO, "Signature s.. " _YELLOW_("%s"), sprint_hex_inrow(signature_rs + DUOX_INTAUTH_SIG_LEN / 2, DUOX_INTAUTH_SIG_LEN / 2));
+    res = duox_intauth_exchange(APDULogging, verbose, (uint8_t)keynum, challenge, card_random, signature_rs);
+    if (res != PM3_SUCCESS)
+        return res;
 
     // Step 4: Verify signature if public key provided
     if (pubkey_provided) {
         PrintAndLogEx(INFO, "--- " _CYAN_("Signature Verification"));
-
-        // Message = F0F0 || OptsA TLV || RndB (card random) || RndA (our challenge)
-        uint8_t message[2 + 2 + DUOX_INTAUTH_CHALLENGE_LEN + DUOX_INTAUTH_CHALLENGE_LEN];
-        message[0] = DUOX_INTAUTH_MSG_PREFIX;
-        message[1] = DUOX_INTAUTH_MSG_PREFIX;
-        memcpy(message + 2, optsa_tlv, 2);
-        memcpy(message + 4, card_random, DUOX_INTAUTH_CHALLENGE_LEN);
-        memcpy(message + 20, challenge, DUOX_INTAUTH_CHALLENGE_LEN);
-
-        if (verbose)
-            PrintAndLogEx(INFO, "Verify msg... %s", sprint_hex_inrow(message, sizeof(message)));
-
-        int sig_res = ecdsa_signature_r_s_verify(
-            MBEDTLS_ECP_DP_SECP256R1,
-            pubkey_point,
-            message,
-            (int)sizeof(message),
-            signature_rs,
-            DUOX_INTAUTH_SIG_LEN,
-            true  // hash message with SHA-256 before verifying
-        );
-
+        int sig_res = duox_intauth_verify_sig(verbose, pubkey_point, challenge, card_random, signature_rs);
         if (sig_res == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "ECDSA signature " _GREEN_("verified"));
         } else {
@@ -7758,7 +7783,7 @@ static int CmdHF14ADesVdeSign(const char *Cmd) {
                   "Optionally verifies the returned ECDSA signature with a BrainpoolP256r1 public key.",
                   "hf mfdes vdesign                                             -> sign random 32-byte challenge using default EV DF name\n"
                   "hf mfdes vdesign --aid 1010F6                                -> select EV app by native AID\n"
-                  "hf mfdes vdesign --dfname A0000008450000000000000000000001  -> select EV app by ISO DF name\n"
+                  "hf mfdes vdesign --dfname A0000008450000000000000000000001   -> select EV app by ISO DF name\n"
                   "hf mfdes vdesign -d 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF -> explicit 32-byte challenge\n"
                   "hf mfdes vdesign -p 04A7C6...                                -> verify signature with given EC public key (hex, PEM, DER, file path)\n");
 
@@ -7829,19 +7854,8 @@ static int CmdHF14ADesVdeSign(const char *Cmd) {
     }
 
     if (!challenge_provided) {
-        pcrypto_rng_t rng = {0};
-        const uint8_t pers[] = "hf_mfdes_vdesign";
-        int res = pcrypto_rng_init(&rng, pers, sizeof(pers) - 1);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Failed to initialize RNG");
-            return res;
-        }
-        res = pcrypto_rng_fill(&rng, challenge, sizeof(challenge));
-        pcrypto_rng_free(&rng);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Failed to generate random challenge");
-            return res;
-        }
+        int res = duox_gen_random(challenge, sizeof(challenge), "hf_mfdes_vdesign");
+        if (res != PM3_SUCCESS) return res;
     }
 
     uint32_t aid = DUOX_VDE_DEFAULT_AID;
@@ -8046,19 +8060,8 @@ static int CmdHF14ADesLeaf(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (!challenge_provided) {
-        pcrypto_rng_t rng = {0};
-        const uint8_t pers[] = "hf_mfdes_leaf";
-        int rres = pcrypto_rng_init(&rng, pers, sizeof(pers) - 1);
-        if (rres != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Failed to initialize RNG");
-            return rres;
-        }
-        rres = pcrypto_rng_fill(&rng, challenge, sizeof(challenge));
-        pcrypto_rng_free(&rng);
-        if (rres != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Failed to generate random challenge");
-            return rres;
-        }
+        int res = duox_gen_random(challenge, sizeof(challenge), "hf_mfdes_leaf");
+        if (res != PM3_SUCCESS) return res;
     }
 
     // aid_bytes default {0xD6,0x1C,0xF5} = wire bytes for AID "D61CF5".
@@ -8181,123 +8184,16 @@ static int CmdHF14ADesLeaf(const char *Cmd) {
 
     // Step 5: ISO Internal Authenticate
     PrintAndLogEx(INFO, "--- " _CYAN_("ISO Internal Authenticate"));
-
-    uint8_t optsa_tlv[] = {DUOX_TAG_OPTSA, 0x00};
-    uint8_t apdu_data[22];
-    size_t apdu_data_len = 0;
-    memcpy(apdu_data, optsa_tlv, 2);
-    apdu_data_len += 2;
-    apdu_data[apdu_data_len++] = DUOX_TAG_DYNAMIC_AUTH_DATA;
-    apdu_data[apdu_data_len++] = 2 + DUOX_INTAUTH_CHALLENGE_LEN;
-    apdu_data[apdu_data_len++] = DUOX_TAG_CHALLENGE;
-    apdu_data[apdu_data_len++] = DUOX_INTAUTH_CHALLENGE_LEN;
-    memcpy(apdu_data + apdu_data_len, challenge, DUOX_INTAUTH_CHALLENGE_LEN);
-    apdu_data_len += DUOX_INTAUTH_CHALLENGE_LEN;
-
-    sAPDU_t apdu = {0x00, ISO7816_INTERNAL_AUTHENTICATION, 0x00, (uint8_t)keynum, apdu_data_len, apdu_data};
-    uint8_t encoded[50] = {0};
-    int encoded_len = 0;
-    if (APDUEncodeS(&apdu, false, APDU_INCLUDE_LE_00, encoded, &encoded_len)) {
-        PrintAndLogEx(ERR, "APDU encoding error");
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (APDULogging)
-        PrintAndLogEx(SUCCESS, ">>>> %s", sprint_hex(encoded, encoded_len));
-
-    uint8_t response[PM3_CMD_DATA_SIZE] = {0};
-    int resplen = 0;
-    res = ExchangeAPDU14a(encoded, encoded_len, false, true, response, sizeof(response), &resplen);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "APDU exchange " _RED_("failed") " (%d)", res);
-        DropField();
-        return res;
-    }
-
-    if (APDULogging)
-        PrintAndLogEx(SUCCESS, "<<<< %s", sprint_hex(response, resplen));
-
-    DropField();
-
-    if (resplen < 2) {
-        PrintAndLogEx(ERR, "Response too short");
-        return PM3_ESOFT;
-    }
-
-    uint16_t sw = get_sw(response, resplen);
-    if (sw != ISO7816_OK) {
-        PrintAndLogEx(ERR, "Internal Authenticate " _RED_("failed") " (SW=%04X)", sw);
-        return PM3_ESOFT;
-    }
-    int resp_data_len = resplen - 2;
-    PrintAndLogEx(SUCCESS, "Internal Authenticate " _GREEN_("ok") " (SW=%04X)", sw);
-
-    // Parse 7C [len] 81 10 [card_random(16)] 82 [sig_len] [signature]
-    uint8_t *resp = response;
-    if (resp_data_len < 4 || resp[0] != DUOX_TAG_DYNAMIC_AUTH_DATA) {
-        PrintAndLogEx(ERR, "Invalid response: missing 0x7C tag");
-        return PM3_ESOFT;
-    }
-    uint8_t outer_len = resp[1];
-    if (outer_len + 2 > resp_data_len) {
-        PrintAndLogEx(ERR, "Invalid response: truncated 0x7C data");
-        return PM3_ESOFT;
-    }
-    uint8_t *inner = resp + 2;
-    int inner_len = outer_len;
-    int idx = 0;
     uint8_t card_random[DUOX_INTAUTH_CHALLENGE_LEN] = {0};
-    bool card_random_found = false;
     uint8_t signature_rs[DUOX_INTAUTH_SIG_LEN] = {0};
-    bool signature_found = false;
-    while (idx < inner_len) {
-        if (idx + 2 > inner_len) break;
-        uint8_t tag = inner[idx++];
-        uint8_t tlen = inner[idx++];
-        if (idx + tlen > inner_len) break;
-        if (tag == DUOX_TAG_CHALLENGE && tlen == DUOX_INTAUTH_CHALLENGE_LEN) {
-            memcpy(card_random, inner + idx, DUOX_INTAUTH_CHALLENGE_LEN);
-            card_random_found = true;
-        } else if (tag == DUOX_TAG_SIGNATURE) {
-            if (tlen >= DUOX_INTAUTH_SIG_LEN) {
-                memcpy(signature_rs, inner + idx + (tlen - DUOX_INTAUTH_SIG_LEN), DUOX_INTAUTH_SIG_LEN);
-                signature_found = true;
-            }
-        }
-        idx += tlen;
-    }
-    if (!card_random_found || !signature_found) {
-        PrintAndLogEx(ERR, "Failed to parse card random / signature from response");
-        return PM3_ESOFT;
-    }
-
-    PrintAndLogEx(INFO, "Card random.. " _YELLOW_("%s"), sprint_hex_inrow(card_random, DUOX_INTAUTH_CHALLENGE_LEN));
-    PrintAndLogEx(INFO, "Signature r.. " _YELLOW_("%s"), sprint_hex_inrow(signature_rs, DUOX_INTAUTH_SIG_LEN / 2));
-    PrintAndLogEx(INFO, "Signature s.. " _YELLOW_("%s"), sprint_hex_inrow(signature_rs + DUOX_INTAUTH_SIG_LEN / 2, DUOX_INTAUTH_SIG_LEN / 2));
+    res = duox_intauth_exchange(APDULogging, verbose, (uint8_t)keynum, challenge, card_random, signature_rs);
+    if (res != PM3_SUCCESS)
+        return res;
 
     // Step 6: Verify card signature with extracted public key.
-    // Message = F0F0 || OptsA TLV || RndB || RndA
     PrintAndLogEx(INFO, "--- " _CYAN_("Signature Verification"));
-    uint8_t message[2 + 2 + DUOX_INTAUTH_CHALLENGE_LEN + DUOX_INTAUTH_CHALLENGE_LEN];
-    message[0] = DUOX_INTAUTH_MSG_PREFIX;
-    message[1] = DUOX_INTAUTH_MSG_PREFIX;
-    memcpy(message + 2, optsa_tlv, 2);
-    memcpy(message + 4, card_random, DUOX_INTAUTH_CHALLENGE_LEN);
-    memcpy(message + 20, challenge, DUOX_INTAUTH_CHALLENGE_LEN);
-
-    if (verbose)
-        PrintAndLogEx(INFO, "Verify msg... %s", sprint_hex_inrow(message, sizeof(message)));
-
     bool card_ok = false;
-    int sig_res = ecdsa_signature_r_s_verify(
-                      MBEDTLS_ECP_DP_SECP256R1,
-                      card_pubkey,
-                      message,
-                      (int)sizeof(message),
-                      signature_rs,
-                      DUOX_INTAUTH_SIG_LEN,
-                      true);
+    int sig_res = duox_intauth_verify_sig(verbose, card_pubkey, challenge, card_random, signature_rs);
     if (sig_res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Card signature " _GREEN_("verified"));
         card_ok = true;
