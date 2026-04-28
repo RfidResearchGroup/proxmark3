@@ -1447,7 +1447,9 @@
  *
  * Enable the checkup functions (*_self_test).
  */
+#ifndef ON_DEVICE
 #define MBEDTLS_SELF_TEST
+#endif // ON_DEVICE
 
 /**
  * \def MBEDTLS_SHA256_SMALLER
