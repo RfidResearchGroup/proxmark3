@@ -71,6 +71,7 @@
 #define FELICA_POLL_REQUEST_NO_DATA 0x00U
 #define FELICA_POLL_REQUEST_SYSTEM_CODE 0x01U
 #define FELICA_SYSTEM_LIST_JSON "felica_system_code_list"
+#define FELICA_IC_CODE_LIST_JSON "felica_ic_code_list"
 
 #define FELICA_SERVICE_ATTRIBUTE_UNAUTH_READ    (0b000001)
 #define FELICA_SERVICE_ATTRIBUTE_READ_ONLY      (0b000010)
@@ -318,9 +319,13 @@ static const felica_node_discovery_method_info_t *felica_get_node_discovery_meth
 static const char *felica_node_discovery_method_display_name(felica_node_discovery_method_t method);
 static void felica_print_node_discovery_method_used(felica_node_discovery_method_t method);
 static int felica_compare_discovered_nodes(const void *lhs, const void *rhs);
+static const char *felica_get_json_string(const json_t *obj, const char *key);
+static const char *felica_ic_code_name(uint8_t rom_type, uint8_t ic_type);
 static felica_card_select_t last_known_card;
 static json_t *felica_system_list = NULL;
 static bool felica_system_list_loaded = false;
+static json_t *felica_ic_code_list = NULL;
+static bool felica_ic_code_list_loaded = false;
 
 static void set_last_known_card(felica_card_select_t card) {
     last_known_card = card;
@@ -473,89 +478,6 @@ static int print_authentication2(void) {
     return PM3_SUCCESS;
 }
 
-static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
-    // source: mainly https://www.sony.net/Products/felica/business/tech-support/list.html
-    switch (ic_type) {
-        // FeliCa Standard Products:
-        case 0x46:
-            return "FeliCa Standard RC-SA21/2";
-        case 0x45:
-            return "FeliCa Standard RC-SA20/2";
-        case 0x44:
-            return "FeliCa Standard RC-SA20/1";
-        case 0x35:
-            return "FeliCa Standard RC-SA01/2";
-        case 0x32:
-            return "FeliCa Standard RC-SA00/1";
-        case 0x20:
-            return "FeliCa Standard RC-S962";
-        case 0x0D:
-            return "FeliCa Standard RC-S960";
-        case 0x0C:
-            return "FeliCa Standard RC-S954";
-        case 0x09:
-            return "FeliCa Standard RC-S953";
-        case 0x08:
-            return "FeliCa Standard RC-S952";
-        case 0x01:
-            return "FeliCa Standard RC-S915";
-        // FeliCa Lite Products:
-        case 0xF1:
-            return "FeliCa Lite-S RC-S966";
-        case 0xF0:
-            return "FeliCa Lite RC-S965";
-        // FeliCa Link Products:
-        case 0xF2:
-            return "FeliCa Link RC-S967 (Lite-S Mode or Lite-S HT Mode)";
-        case 0xE1:
-            return "FeliCa Link RC-S967 (Plug Mode)";
-        case 0xFF:
-            if (rom_type == 0xFF) { // from FeliCa Link User's Manual
-                return "FeliCa Link RC-S967 (NFC-DEP Mode)";
-            }
-            break;
-        // NFC Dynamic Tag (FeliCa Plug) Products:
-        case 0xE0:
-            return "NFC Dynamic Tag (FeliCa Plug) RC-S926";
-
-        // FeliCa Mobile Chip
-        case 0x14:
-        case 0x15:
-        case 0x16:
-        case 0x17:
-        case 0x18:
-        case 0x19:
-        case 0x1A:
-        case 0x1B:
-        case 0x1C:
-        case 0x1D:
-        case 0x1E:
-        case 0x1F:
-            return "FeliCa Mobile IC Chip V3.0";
-        case 0x10:
-        case 0x11:
-        case 0x12:
-        case 0x13:
-            return "Mobile FeliCa IC Chip V2.0";
-        case 0x06:
-        case 0x07:
-            return "Mobile FeliCa IC Chip V1.0";
-
-        // odd findings
-        case 0x00:
-            return "FeliCa Standard RC-S830";
-        case 0x02:
-            return "FeliCa Standard RC-S919";
-        case 0x0B:
-        case 0x31:
-        case 0x36:
-            return "Suica card (FeliCa Standard RC-S ?)";
-        default:
-            break;
-    }
-    return "Unknown IC Type";
-}
-
 static bool felica_is_lite_ic_type(uint8_t ic_type) {
     return (ic_type == 0xF0 || ic_type == 0xF1);
 }
@@ -673,6 +595,10 @@ static json_t *felica_get_system_list(void) {
 }
 
 static const char *felica_get_json_string(const json_t *obj, const char *key) {
+    if (obj == NULL || key == NULL) {
+        return NULL;
+    }
+
     json_t *value = json_object_get(obj, key);
     if (json_is_string(value) == false) {
         return NULL;
@@ -684,6 +610,73 @@ static const char *felica_get_json_string(const json_t *obj, const char *key) {
     }
 
     return str;
+}
+
+static json_t *felica_get_ic_code_list(void) {
+    if (felica_ic_code_list_loaded) {
+        return felica_ic_code_list;
+    }
+
+    felica_ic_code_list_loaded = true;
+
+    char *path = NULL;
+    if (searchFile(&path, RESOURCES_SUBDIR, FELICA_IC_CODE_LIST_JSON, ".json", true) != PM3_SUCCESS) {
+        return NULL;
+    }
+
+    json_error_t error;
+    json_t *root = json_load_file(path, 0, &error);
+    if (root == NULL) {
+        PrintAndLogEx(WARNING, "Failed to parse `%s` line %d: %s", path, error.line, error.text);
+        free(path);
+        return NULL;
+    }
+
+    if (json_is_array(root) == false) {
+        PrintAndLogEx(WARNING, "Invalid `%s` format, expected array root", path);
+        json_decref(root);
+        free(path);
+        return NULL;
+    }
+
+    felica_ic_code_list = root;
+    free(path);
+    return felica_ic_code_list;
+}
+
+static const json_t *felica_find_ic_annotation(uint8_t ic_type) {
+    json_t *ic_code_list = felica_get_ic_code_list();
+    if (ic_code_list == NULL) {
+        return NULL;
+    }
+
+    char ic_hex[3] = {0};
+    snprintf(ic_hex, sizeof(ic_hex), "%02X", ic_type);
+
+    size_t index = 0;
+    json_t *entry = NULL;
+    json_array_foreach(ic_code_list, index, entry) {
+        if (json_is_object(entry) == false) {
+            continue;
+        }
+
+        const char *entry_ic = felica_get_json_string(entry, "ic");
+        if (entry_ic && strcmp(entry_ic, ic_hex) == 0) {
+            return entry;
+        }
+    }
+
+    return NULL;
+}
+
+static const char *felica_ic_code_name(uint8_t rom_type, uint8_t ic_type) {
+    if (ic_type == 0xFF && rom_type != 0xFF) {
+        return "Unknown IC Type";
+    }
+
+    const json_t *entry = felica_find_ic_annotation(ic_type);
+    const char *name = felica_get_json_string(entry, "name");
+    return name ? name : "Unknown IC Type";
 }
 
 static const json_t *felica_find_system_annotation(uint16_t system_code) {
@@ -2076,7 +2069,7 @@ static int info_felica(bool verbose) {
     PrintAndLogEx(INFO, "PMM............ " _YELLOW_("%s"), sprint_hex_inrow(card.PMm, sizeof(card.PMm)));
     PrintAndLogEx(INFO, "  IC code...... " _GREEN_("%s") " ( %s )",
                   sprint_hex_inrow(card.iccode, sizeof(card.iccode)),
-                  felica_model_name(card.iccode[0], card.iccode[1]));
+                  felica_ic_code_name(card.iccode[0], card.iccode[1]));
     PrintAndLogEx(INFO, "  MRT..........     " _GREEN_("%s"), sprint_hex_inrow(card.mrt, sizeof(card.mrt)));
     set_last_known_card(card);
     const uint8_t optional_flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
