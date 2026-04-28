@@ -31,8 +31,7 @@ endif
 #remove one of the following defines and comment out the relevant line
 #in the next section to remove that particular feature from compilation.
 # NO space,TABs after the "\" sign.
-APP_CFLAGS = $(PLATFORM_DEFS) \
-             -ffunction-sections -fdata-sections
+APP_CFLAGS = $(PLATFORM_DEFS)
 
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
 SRC_HF = hfops.c
@@ -115,8 +114,7 @@ APP_CFLAGS += $(LZ4_CFLAGS)
 APP_CFLAGS += -I../common/lz4
 
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant,
-# stack-protect , no-pie reduces size on Gentoo Hardened 8.2 gcc
-APP_CFLAGS += -I. -fno-stack-protector -fno-pie
+APP_CFLAGS += -I.
 
 # Compile these in thumb mode (small size)
 THUMBSRC = start.c \
