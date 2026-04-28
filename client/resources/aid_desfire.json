@@ -416,6 +416,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "F51CD6",
+        "Vendor": "LEAF",
+        "Country": "N/A",
+        "Name": "LEAF Verified Open Application",
+        "Description": "LEAF Verified Open Application",
+        "Type": "pacs"
+    },
+    {
         "AID": "F51CD8",
         "Vendor": "LEAF",
         "Country": "N/A",
