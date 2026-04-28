@@ -65,6 +65,16 @@ libreadline-dev gcc-arm-none-eabi libnewlib-dev qt6-base-dev \
 libbz2-dev liblz4-dev zlib1g-dev libbluetooth-dev libpython3-dev libssl-dev libgd-dev
 ```
 
+On recent distros such as Debian Forky, you may have a conflict between `gcc-arm-none-eabi` and `libnewlib-dev`. In this case, ignore `libnewlib-dev` in favor of `picolibc-arm-none-eabi`:
+
+```sh
+sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
+libreadline-dev gcc-arm-none-eabi picolibc-arm-none-eabi qt6-base-dev \
+libbz2-dev liblz4-dev zlib1g-dev libbluetooth-dev libpython3-dev libssl-dev libgd-dev
+```
+
+If you want to compile `crack5opencl`, you will also need `opencl-dev` or, on newer distros such as Debian Forky, `ocl-icd-opencl-dev`.
+
 ### If you don't need... 
 👉 If you don't need the native Bluetooth support in the client,  
 you can skip the installation of `libbluetooth-dev`.
@@ -94,6 +104,8 @@ sudo pacman -Syu git base-devel readline bzip2 lz4 zlib arm-none-eabi-gcc \
 arm-none-eabi-newlib qt6-base bluez python gd --needed
 ```
 
+If you want to compile `crack5opencl`, you will also need `ocl-icd`.
+
 ### If you don't need... 
 👉 If you don't need the native Bluetooth support in the client,  
 you can skip the installation of `bluez`.
@@ -119,6 +131,8 @@ sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib 
 readline-devel bzip2-devel lz4-devel zlib-ng-compat-devel qt6-qtbase-devel bluez-libs-devel \
 python3-devel libatomic openssl-devel gd-devel
 ```
+
+If you want to compile `crack5opencl`, you will also need `mesa-libOpenCL` and  `ocl-icd-devel`.
 
 ### If you don't need... 
 👉 If you don't need the native Bluetooth support in the client,  
@@ -173,6 +187,8 @@ readline-devel libbz2-devel liblz4-devel zlib-devel bluez-devel \
 python3-devel qt6-core-devel qt6-widgets-devel libopenssl-devel gd-devel \
 cross-arm-none-gcc12 cross-arm-none-newlib-devel
 ```
+
+If you want to compile `crack5opencl`, you will also need `ocl-icd-devel`
 
 ### If you don't need... 
 👉 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`),  
