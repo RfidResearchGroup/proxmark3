@@ -89,6 +89,23 @@ int pcrypto_rng_fill(pcrypto_rng_t *rng, uint8_t *out, size_t out_len) {
     return (mbedtls_ctr_drbg_random(&rng->ctr_drbg, out, out_len) == 0) ? PM3_SUCCESS : PM3_ESOFT;
 }
 
+int pcrypto_rng_fill_oneshot(uint8_t *out, size_t out_len, const char *personalization) {
+    if (out == NULL || personalization == NULL) {
+        return PM3_EINVARG;
+    }
+
+    pcrypto_rng_t rng = {0};
+    int res = pcrypto_rng_init(&rng, (const uint8_t *)personalization, strlen(personalization));
+    if (res != PM3_SUCCESS) {
+        pcrypto_rng_free(&rng);
+        return res;
+    }
+
+    res = pcrypto_rng_fill(&rng, out, out_len);
+    pcrypto_rng_free(&rng);
+    return res;
+}
+
 static void pcrypto_trim_ascii_inplace(char *text) {
     if (text == NULL) {
         return;
