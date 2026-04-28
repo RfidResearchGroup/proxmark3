@@ -87,16 +87,7 @@
 #define LEAF_VERIFIED_DEFAULT_AID       0xF51CD6U  // 0xD61CF5 in user-facing (wire bytes D6 1C F5)
 #define LEAF_VERIFIED_CERT_FILE         0x02
 #define LEAF_VERIFIED_MAX_CERT_LEN      4096
-
-// LEAF Root CA public key (P-256, uncompressed: 04 || X(32) || Y(32))
-// https://github.com/LEAF-Community/leaf-verified-device-onboarding-guide/blob/82b51a1958a0f9eedaa2f97b7f533490bc108463/detect_and_select.py#L95
-static const uint8_t kLeafRootP256PubKey[65] = {
-    0x04,
-    0x2D, 0x27, 0x81, 0xBE, 0x41, 0xC2, 0x27, 0x58, 0xA6, 0x13, 0x81, 0x0F, 0x67, 0xEC, 0x78, 0xDF,
-    0x11, 0x76, 0xC4, 0x76, 0x5B, 0x21, 0x2B, 0x49, 0x21, 0x8C, 0x6C, 0x58, 0x40, 0x8A, 0x5A, 0xDA,
-    0x3D, 0x99, 0x73, 0x20, 0x9D, 0x82, 0x28, 0x91, 0x3A, 0x88, 0x16, 0x97, 0x3C, 0xFE, 0x5C, 0x9E,
-    0xBF, 0xD8, 0xC6, 0x69, 0x75, 0x32, 0xCD, 0xD5, 0xB5, 0x3E, 0xE1, 0x34, 0xD2, 0xF1, 0x1B, 0x3C
-};
+#define LEAF_COMMUNITY_ROOT_KEY_PATH    "duox_trust/leaf_community/leaf_community-root-public-key.der"
 
 static const uint8_t kDuoxVDEDefaultDFName[] = {
     0xA0, 0x00, 0x00, 0x08, 0x45, 0x00, 0x00, 0x00,
@@ -8035,6 +8026,13 @@ static int CmdHF14ADesLeaf(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
+    uint8_t leaf_root_pubkey[65] = {0};
+    int pk_res = ensure_ec_public_key(LEAF_COMMUNITY_ROOT_KEY_PATH, MBEDTLS_ECP_DP_SECP256R1, leaf_root_pubkey, sizeof(leaf_root_pubkey));
+    if (pk_res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to load LEAF Root CA public key from " _YELLOW_("%s") " (%d)", LEAF_COMMUNITY_ROOT_KEY_PATH, pk_res);
+        return pk_res;
+    }
+
     if (!challenge_provided) {
         int res = pcrypto_rng_fill_oneshot(challenge, sizeof(challenge), "hf_mfdes_leaf");
         if (res != PM3_SUCCESS) {
@@ -8134,7 +8132,7 @@ static int CmdHF14ADesLeaf(const char *Cmd) {
     bool root_ok = false;
     int rres = ecdsa_signature_verify(
                    MBEDTLS_ECP_DP_SECP256R1,
-                   (uint8_t *)kLeafRootP256PubKey,
+                   leaf_root_pubkey,
                    cert.tbs.p,
                    (int)cert.tbs.len,
                    cert.sig.p,
