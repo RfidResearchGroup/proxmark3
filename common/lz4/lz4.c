@@ -1390,6 +1390,7 @@ int LZ4_compress_destSize(const char *src, char *dst, int *srcSizePtr, int targe
 *  Streaming functions
 ********************************/
 
+#if (LZ4_HEAPMODE)
 LZ4_stream_t *LZ4_createStream(void) {
     LZ4_stream_t *const lz4s = (LZ4_stream_t *)ALLOC(sizeof(LZ4_stream_t));
     LZ4_STATIC_ASSERT(LZ4_STREAMSIZE >= sizeof(LZ4_stream_t_internal));    /* A compilation error here means LZ4_STREAMSIZE is not large enough */
@@ -1398,6 +1399,7 @@ LZ4_stream_t *LZ4_createStream(void) {
     LZ4_initStream(lz4s, sizeof(*lz4s));
     return lz4s;
 }
+#endif
 
 #ifndef _MSC_VER  /* for some reason, Visual fails the aligment test on 32-bit x86 :
                      it reports an aligment of 8-bytes,
@@ -1432,12 +1434,14 @@ void LZ4_resetStream_fast(LZ4_stream_t *ctx) {
     LZ4_prepareTable(&(ctx->internal_donotuse), 0, byU32);
 }
 
+#if (LZ4_HEAPMODE)
 int LZ4_freeStream(LZ4_stream_t *LZ4_stream) {
     if (!LZ4_stream) return 0;   /* support free on NULL */
     DEBUGLOG(5, "LZ4_freeStream %p", LZ4_stream);
     FREEMEM(LZ4_stream);
     return (0);
 }
+#endif
 
 
 #define HASH_UNIT sizeof(reg_t)
@@ -2229,6 +2233,7 @@ int LZ4_decompress_fast_doubleDict(const char *src, char *dst, int originalSize,
 
 /*===== streaming decompression functions =====*/
 
+#if (LZ4_HEAPMODE)
 LZ4_streamDecode_t *LZ4_createStreamDecode(void) {
     LZ4_streamDecode_t *lz4s = (LZ4_streamDecode_t *) ALLOC_AND_ZERO(sizeof(LZ4_streamDecode_t));
     LZ4_STATIC_ASSERT(LZ4_STREAMDECODESIZE >= sizeof(LZ4_streamDecode_t_internal));    /* A compilation error here means LZ4_STREAMDECODESIZE is not large enough */
@@ -2240,6 +2245,7 @@ int LZ4_freeStreamDecode(LZ4_streamDecode_t *LZ4_stream) {
     FREEMEM(LZ4_stream);
     return 0;
 }
+#endif
 
 /*! LZ4_setStreamDecode() :
  *  Use this function to instruct where to find the dictionary.
@@ -2430,10 +2436,12 @@ int LZ4_resetStreamState(void *state, char *inputBuffer) {
     return 0;
 }
 
+#if (LZ4_HEAPMODE)
 void *LZ4_create(char *inputBuffer) {
     (void)inputBuffer;
     return LZ4_createStream();
 }
+#endif
 
 char *LZ4_slideInputBuffer(void *state) {
     /* avoid const char * -> char * conversion warning */

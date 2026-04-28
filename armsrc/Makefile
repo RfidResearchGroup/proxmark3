@@ -108,7 +108,7 @@ include Standalone/Makefile.inc
 #the lz4 source files required for decompressing the fpga config at run time
 SRC_LZ4 = lz4.c
 #additional defines required to compile lz4
-LZ4_CFLAGS = -DLZ4_MEMORY_USAGE=8
+LZ4_CFLAGS = -DLZ4_MEMORY_USAGE=8 -DLZ4_HEAPMODE=0
 APP_CFLAGS += $(LZ4_CFLAGS)
 # lz4 includes:
 APP_CFLAGS += -I../common/lz4
