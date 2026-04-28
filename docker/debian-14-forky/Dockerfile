@@ -3,19 +3,22 @@ FROM debian:forky-slim
 ENV LANG=C.UTF-8
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get dist-upgrade -y && \
-    apt-get install -y --no-install-recommends git ca-certificates build-essential cmake pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev liblz4-dev zlib1g-dev libbluetooth-dev libpython3-dev libssl-dev libgd-dev sudo && \
-    apt-get clean
+RUN apt update && \
+    apt upgrade -y && \
+    apt dist-upgrade -y && \
+    apt install -y --no-install-recommends git ca-certificates build-essential cmake pkg-config libreadline-dev libbz2-dev liblz4-dev zlib1g-dev libbluetooth-dev libpython3-dev libssl-dev libgd-dev sudo && \
+    apt clean
 
-RUN apt-get install -y opencl-dev && \
-    apt-get clean
+RUN apt install -y --no-install-recommends gcc-arm-none-eabi picolibc-arm-none-eabi && \
+    apt clean
+
+RUN apt install -y ocl-icd-opencl-dev && \
+    apt clean
 
 ARG SKIPQT=false
 RUN if [ "${SKIPQT}" = "false" ]; then \
-      apt-get install -y qt6-base-dev && \
-      apt-get clean; \
+      apt install -y qt6-base-dev && \
+      apt clean; \
     fi
 
 # uv
