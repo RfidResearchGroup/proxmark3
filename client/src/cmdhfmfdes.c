@@ -609,16 +609,12 @@ static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDE
     }
 
     int res = PM3_SUCCESS;
-    pcrypto_rng_t rng = {0};
-    bool rng_initialized = false;
-
-    const uint8_t rng_personalization[] = "hf_mfdes_pc";
-    res = pcrypto_rng_init(&rng, rng_personalization, sizeof(rng_personalization) - 1);
+    uint8_t random_challenge[MFDES_PC_CHALLENGE_LEN] = {0};
+    res = pcrypto_rng_fill_oneshot(random_challenge, sizeof(random_challenge), "hf_mfdes_pc");
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to initialize random generator for proximity check");
+        PrintAndLogEx(ERR, "Failed to generate random challenge");
         return res;
     }
-    rng_initialized = true;
 
     uint8_t prepare_resp[APDU_RES_LEN] = {0};
     size_t prepare_resp_len = 0;
@@ -645,13 +641,6 @@ static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDE
         if (prepare_extension_present) {
             PrintAndLogEx(INFO, "Prepare extension      : %02X", prepare_extension);
         }
-    }
-
-    uint8_t random_challenge[MFDES_PC_CHALLENGE_LEN] = {0};
-    res = pcrypto_rng_fill(&rng, random_challenge, sizeof(random_challenge));
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to generate random challenge");
-        goto out;
     }
 
     if (verbose) {
@@ -782,9 +771,6 @@ static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDE
     res = PM3_SUCCESS;
 
 out:
-    if (rng_initialized) {
-        pcrypto_rng_free(&rng);
-    }
     return res;
 }
 
@@ -7442,21 +7428,6 @@ static int CmdHF14ADesDump(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// Generate `len` random bytes using the CSPRNG.
-static int duox_gen_random(uint8_t *buf, size_t len, const char *pers) {
-    pcrypto_rng_t rng = {0};
-    int res = pcrypto_rng_init(&rng, (const uint8_t *)pers, strlen(pers));
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to initialize RNG");
-        return res;
-    }
-    res = pcrypto_rng_fill(&rng, buf, len);
-    pcrypto_rng_free(&rng);
-    if (res != PM3_SUCCESS)
-        PrintAndLogEx(ERR, "Failed to generate random bytes");
-    return res;
-}
-
 // Build and send ISO Internal Authenticate (INS 88), then parse the TLV response.
 // Assumes the application is already selected (field on). Calls DropField before returning.
 // On PM3_SUCCESS: out_card_random[DUOX_INTAUTH_CHALLENGE_LEN] and out_sig_rs[DUOX_INTAUTH_SIG_LEN] are filled.
@@ -7704,8 +7675,11 @@ static int CmdHF14ADesIntAuth(const char *Cmd) {
 
     // Generate random challenge if not provided
     if (!challenge_provided) {
-        int res = duox_gen_random(challenge, sizeof(challenge), "hf_mfdes_intauth");
-        if (res != PM3_SUCCESS) return res;
+        int res = pcrypto_rng_fill_oneshot(challenge, sizeof(challenge), "hf_mfdes_intauth");
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to generate random challenge");
+            return res;
+        }
     }
 
     // AID is stored little-endian in DESFire protocol
@@ -7854,8 +7828,11 @@ static int CmdHF14ADesVdeSign(const char *Cmd) {
     }
 
     if (!challenge_provided) {
-        int res = duox_gen_random(challenge, sizeof(challenge), "hf_mfdes_vdesign");
-        if (res != PM3_SUCCESS) return res;
+        int res = pcrypto_rng_fill_oneshot(challenge, sizeof(challenge), "hf_mfdes_vdesign");
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to generate random challenge");
+            return res;
+        }
     }
 
     uint32_t aid = DUOX_VDE_DEFAULT_AID;
@@ -8060,8 +8037,11 @@ static int CmdHF14ADesLeaf(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (!challenge_provided) {
-        int res = duox_gen_random(challenge, sizeof(challenge), "hf_mfdes_leaf");
-        if (res != PM3_SUCCESS) return res;
+        int res = pcrypto_rng_fill_oneshot(challenge, sizeof(challenge), "hf_mfdes_leaf");
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to generate random challenge");
+            return res;
+        }
     }
 
     // aid_bytes default {0xD6,0x1C,0xF5} = wire bytes for AID "D61CF5".

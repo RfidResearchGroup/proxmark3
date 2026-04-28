@@ -38,6 +38,7 @@ typedef struct {
 int pcrypto_rng_init(pcrypto_rng_t *rng, const uint8_t *personalization, size_t personalization_len);
 void pcrypto_rng_free(pcrypto_rng_t *rng);
 int pcrypto_rng_fill(pcrypto_rng_t *rng, uint8_t *out, size_t out_len);
+int pcrypto_rng_fill_oneshot(uint8_t *out, size_t out_len, const char *personalization);
 
 void des_encrypt(void *out, const void *in, const void *key);
 void des_decrypt(void *out, const void *in, const void *key);
