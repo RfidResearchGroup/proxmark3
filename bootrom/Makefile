@@ -69,7 +69,8 @@ tarbin: $(OBJS)
 
 $(OBJDIR)/bootrom.elf: $(VERSIONOBJ) $(ASMOBJ) $(ARMOBJ) $(THUMBOBJ)
 	$(info [=] LD $@)
-	$(Q)$(CROSS_LD) $(CROSS_LDFLAGS) -Wl,-T,ldscript-flash,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
+# Using -T instead of -Wl,-T is needed to prevent the linker from using the default ldscript when using picolibc instead of newlib
+	$(Q)$(CROSS_LD) $(CROSS_LDFLAGS) -T ldscript-flash -Wl,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
 clean:
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.o

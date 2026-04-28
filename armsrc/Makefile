@@ -214,7 +214,8 @@ $(FPGA_COMPRESSOR):
 
 $(OBJDIR)/fullimage.stage1.elf: $(VERSIONOBJ) $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
 	$(info [=] LD $@)
-	$(Q)$(CROSS_LD) $(CROSS_LDFLAGS) -Wl,-T,ldscript,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
+# Using -T instead of -Wl,-T is needed to prevent the linker from using the default ldscript when using picolibc instead of newlib
+	$(Q)$(CROSS_LD) $(CROSS_LDFLAGS) -T ldscript -Wl,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
 $(OBJDIR)/fullimage.data.bin: $(OBJDIR)/fullimage.stage1.elf
 	$(info [-] GEN $@)
