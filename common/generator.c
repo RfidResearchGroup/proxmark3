@@ -187,6 +187,7 @@ uint32_t ul_ev1_pwdgenE(const uint8_t *uid) {
     return pwd;
 }
 
+#ifndef ON_DEVICE
 // NDEF tools format password generator
 uint32_t ul_ev1_pwdgenF(const uint8_t *uid) {
     uint8_t hash[16] = {0};;
@@ -198,6 +199,7 @@ uint32_t ul_ev1_pwdgenF(const uint8_t *uid) {
     pwd |= hash[3];
     return pwd;
 }
+#endif // ON_DEVICE
 
 // Solution from @atc1441
 // https://gist.github.com/atc1441/41af75048e4c22af1f5f0d4c1d94bb56
@@ -546,6 +548,7 @@ int mfc_algo_sky_all(uint8_t *uid, uint8_t *keys) {
 }
 
 
+#ifndef ON_DEVICE
 static const uint8_t bambu_salt[] = { 0x9a, 0x75, 0x9c, 0xf2, 0xc4, 0xf7, 0xca, 0xff, 0x22, 0x2c, 0xb9, 0x76, 0x9b, 0x41, 0xbc, 0x96 };
 static const uint8_t bambu_context_a[] = "RFID-A";
 static const uint8_t bambu_context_b[] = "RFID-B";
@@ -622,6 +625,7 @@ int mfc_algo_snapmaker_all(uint8_t *uid, uint8_t *keys) {
 
     return PM3_SUCCESS;
 }
+#endif // ON_DEVICE
 
 // Vanderbilt ACT pattern-based key generation
 // Generates keys by appending block ID to "Acces" (0x4163636573)
@@ -665,8 +669,11 @@ static kdf_t KDFTable[] = {
     {"MIZIP", 5, mfc_algo_mizip_all, 4},
     {"Disney Infinity", 5, mfc_algo_di_all, 7},
     {"Skylanders", 16, mfc_algo_sky_all, 4},
+#ifndef ON_DEVICE
     {"Bambu Lab Filament Spool", 16, mfc_algo_bambu_all, 4},
     {"Snapmaker Filament Spool", 16, mfc_algo_snapmaker_all, 4},
+#endif // ON_DEVICE
+
     {"Vanderbilt ACT", 40, mfc_algo_vanderbilt_all, 0},
     // {"Vinglock", 16, mfc_algo_ving_all, 4}, // not implemented
     // {"Yale Doorman", 16, mfc_algo_yale_all, 4}, // not implemented
