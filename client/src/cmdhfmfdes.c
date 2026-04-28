@@ -7682,8 +7682,7 @@ static int CmdHF14ADesIntAuth(const char *Cmd) {
         }
     }
 
-    // AID is stored little-endian in DESFire protocol
-    uint32_t aid = (aid_bytes[2] << 16) | (aid_bytes[1] << 8) | aid_bytes[0];
+    uint32_t aid = DesfireAIDByteToUint(aid_bytes);
 
     PrintAndLogEx(INFO, "--- " _CYAN_("ISO Internal Authenticate"));
     PrintAndLogEx(INFO, "Challenge.... " _YELLOW_("%s"), sprint_hex_inrow(challenge, DUOX_INTAUTH_CHALLENGE_LEN));
@@ -7837,7 +7836,7 @@ static int CmdHF14ADesVdeSign(const char *Cmd) {
 
     uint32_t aid = DUOX_VDE_DEFAULT_AID;
     if (aid_provided) {
-        aid = ((uint32_t)aid_bytes[2] << 16) | ((uint32_t)aid_bytes[1] << 8) | aid_bytes[0];
+        aid = DesfireAIDByteToUint(aid_bytes);
     }
 
     const uint8_t *selected_dfname = NULL;
@@ -8045,8 +8044,7 @@ static int CmdHF14ADesLeaf(const char *Cmd) {
     }
 
     // aid_bytes default {0xD6,0x1C,0xF5} = wire bytes for AID "D61CF5".
-    // DesfireSelectAIDHex expects LE uint32: byte[2]<<16 | byte[1]<<8 | byte[0].
-    uint32_t aid = (aid_bytes[2] << 16) | (aid_bytes[1] << 8) | aid_bytes[0];
+    uint32_t aid = DesfireAIDByteToUint(aid_bytes);
 
     PrintAndLogEx(INFO, "--- " _CYAN_("LEAF Verified Credential Check"));
     PrintAndLogEx(INFO, "AID.......... " _YELLOW_("%02X%02X%02X"), aid_bytes[0], aid_bytes[1], aid_bytes[2]);
