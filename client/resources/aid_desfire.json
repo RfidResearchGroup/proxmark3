@@ -416,6 +416,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "F51CD6",
+        "Vendor": "LEAF",
+        "Country": "N/A",
+        "Name": "LEAF Verified Open Application",
+        "Description": "LEAF Verified Open Application",
+        "Type": "pacs"
+    },
+    {
         "AID": "F51CD8",
         "Vendor": "LEAF",
         "Country": "N/A",
@@ -1464,6 +1472,14 @@
         "Type": "transport"
     },
     {
+        "AID": "7D0005",
+        "Vendor": "Rejsekort & Rejseplan A/S",
+        "Country": "DK",
+        "Name": "Rejsekort (DNK)",
+        "Description": "DNK Rejsekort",
+        "Type": "transport"
+    },
+    {
         "AID": "992CB5",
         "Vendor": "Umo Mobility via Cubic Transportation Systems",
         "Country": "US / CA",
@@ -1560,6 +1576,14 @@
         "Type": "transport"
     },
     {
+        "AID": "F00230",
+        "Vendor": "Consorcio de Transportes de Bizkaia (CTB)",
+        "Country": "ES",
+        "Name": "Barik Card (BIO)",
+        "Description": "BIO Barik Card",
+        "Type": "transport"
+    },
+    {
         "AID": "F20330",
         "Vendor": "NJ Transit via Conduent Inc and G+D GmbH",
         "Country": "US",
@@ -1573,6 +1597,14 @@
         "Country": "AU",
         "Name": "metroCARD (ADL)",
         "Description": "FIDs 00,02-07,09-0B,10-17,1B-1C: Backup Data; 01,1D: Linear Record File; 08: ABNote/HID Adelaide; 1E: Standard Data; 0C-0F: Card Balance",
+        "Type": "transport"
+    },
+    {
+        "AID": "F20701",
+        "Vendor": "Abu Dhabi Mobility",
+        "Country": "AE",
+        "Name": "Hafilat Card (AUH)",
+        "Description": "AUH Hafilat Card",
         "Type": "transport"
     },
     {
