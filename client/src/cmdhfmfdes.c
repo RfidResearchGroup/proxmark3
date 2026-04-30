@@ -203,30 +203,6 @@ typedef struct aidhdr {
     uint8_t name[16];
 } PACKED aidhdr_t;
 
-typedef struct {
-    const uint32_t aidnum;
-    const char *aid;
-    const char *comment;
-} mfdesCommonAID_t;
-
-/*
-PACS application id(s) - HID Factory, CP1000 Standard, Mobile, Custom and Elite
-We have HID Factory,  Field Encoder == CP1000 (?)
-No mobile, Custom or Elite
-*/
-
-static const mfdesCommonAID_t commonAids[] = {
-    { 0x53494F, "\x53\x49\x4F", "SIO DESFire EV1 - HID Factory" },
-    { 0xD3494F, "\xD3\x49\x4F", "SIO DESFire EV1 - Field Encoder" },
-    { 0xD9494F, "\xD9\x49\x4F", "SIO DESFire EV1 - Field Encoder" },
-    { 0xF484E3, "\xF4\x84\xE3", "SE Enhanced" },
-    { 0xF484E4, "\xF4\x84\xE4", "SE Enhanced" },
-    { 0xF4812F, "\xf4\x81\x2f", "Gallagher card data application" },
-    { 0xF48120, "\xf4\x81\x20", "Gallagher card application directory" }, // Can be 0xF48120 - 0xF4812B, but I've only ever seen 0xF48120
-    { 0xF47300, "\xf4\x73\x00", "Inner Range card application" },
-    { 0xF51CD6, "\xF5\x1C\xD6", "LEAF Verified Open Application" },
-};
-
 typedef enum {
     MFDES_BRUTEAID_PRESET_FULL = 0,
     MFDES_BRUTEAID_PRESET_ASCII = 1,
@@ -267,15 +243,6 @@ static int CLIGetUint32Hex(CLIParserContext *ctx, uint8_t paramnum, uint32_t def
     }
 
     return PM3_SUCCESS;
-}
-
-static const char *getAidCommentStr(uint32_t aid) {
-    for (int i = 0; i < ARRAYLEN(commonAids); i++) {
-        if (aid == commonAids[i].aidnum) {
-            return commonAids[i].comment;
-        }
-    }
-    return "";
 }
 
 nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
@@ -1010,7 +977,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         j = 0;
         for (int i = 0; i < aidbuflen; i += 3, j++) {
             uint32_t aid = DesfireAIDByteToUint(&aidbuf[i]);
-            PrintAndLogEx(SUCCESS, _YELLOW_("%06X") ", %s", aid, getAidCommentStr(aid));
+            PrintAndLogEx(SUCCESS, _YELLOW_("%06X") ", %s", aid, AIDDFGetCommentStr(aid));
         }
         PrintAndLogEx(NORMAL, "");
     }
@@ -4956,7 +4923,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "--- " _CYAN_("AID list")  " ( " _YELLOW_("%u") " found )", j);
         for (int i = 0; i < buflen; i += 3) {
             uint32_t aid  = DesfireAIDByteToUint(&buf[i]);
-            PrintAndLogEx(SUCCESS, _YELLOW_("%06X") " %s", aid, getAidCommentStr(aid));
+            PrintAndLogEx(SUCCESS, _YELLOW_("%06X") " %s", aid, AIDDFGetCommentStr(aid));
         }
         PrintAndLogEx(NORMAL, "");
     } else {
