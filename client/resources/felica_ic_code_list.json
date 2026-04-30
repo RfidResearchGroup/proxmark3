@@ -25,6 +25,15 @@
     ]
   },
   {
+    "ic": "00",
+    "rom": "03",
+    "name": "RC-S830 (Export version)",
+    "description": "Used with old Shenzhen Tong and EZLink cards. Does not support SearchServiceCode.",
+    "sources": [
+      "https://github.com/kormax/felica-tool#supported-felica-commands"
+    ]
+  },
+  {
     "ic": "06",
     "name": "Mobile FeliCa 1.0",
     "description": "",
@@ -240,16 +249,30 @@
   },
   {
     "ic": "24",
-    "name": "Mobile FeliCa Hong Kong version",
-    "description": "Lacks support for some commands supported by previous cards.",
+    "rom": "02",
+    "name": "FeliCa Standard China/Hong Kong version",
+    "description": "Lacks support for SearchServiceCode and Echo commands supported by previous cards.",
     "sources": [
       "https://github.com/kormax/felica-tool#supported-felica-commands"
     ]
   },
   {
     "ic": "31",
-    "name": "Suica card (FeliCa Standard RC-S ?)",
-    "description": "Observed Suica card IC type"
+    "rom": "05",
+    "name": "FeliCa Standard RC-S1XX",
+    "description": "Used on 2-in-1 Suica regional collaboration cards.",
+    "sources": [
+      "https://nullablevoidptr.github.io/nfcf-info/IC-chips/card/"
+    ]
+  },
+  {
+    "ic": "31",
+    "rom": "06",
+    "name": "FeliCa Standard RC-S1XX (Collaboration version)",
+    "description": "Used on 2-in-1 Suica regional collaboration cards. Supports Extended Overlap feature.",
+    "sources": [
+      "https://github.com/kormax/felica-tool#supported-felica-commands"
+    ]
   },
   {
     "ic": "32",
