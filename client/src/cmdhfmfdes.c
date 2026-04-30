@@ -81,27 +81,27 @@
 #define DUOX_TAG_CHALLENGE              0x81
 #define DUOX_TAG_SIGNATURE              0x82
 #define DUOX_INTAUTH_MSG_PREFIX         0xF0
-#define DUOX_VDE_DEFAULT_AID            0x1010F6U
 
 // LEAF Verified Open Application
 #define LEAF_VERIFIED_DEFAULT_AID       0xF51CD6U  // 0xD61CF5 in user-facing (wire bytes D6 1C F5)
 #define LEAF_VERIFIED_CERT_FILE         0x02
 #define LEAF_VERIFIED_MAX_CERT_LEN      4096
-
-// LEAF Root CA public key (P-256, uncompressed: 04 || X(32) || Y(32))
-// https://github.com/LEAF-Community/leaf-verified-device-onboarding-guide/blob/82b51a1958a0f9eedaa2f97b7f533490bc108463/detect_and_select.py#L95
-static const uint8_t kLeafRootP256PubKey[65] = {
-    0x04,
-    0x2D, 0x27, 0x81, 0xBE, 0x41, 0xC2, 0x27, 0x58, 0xA6, 0x13, 0x81, 0x0F, 0x67, 0xEC, 0x78, 0xDF,
-    0x11, 0x76, 0xC4, 0x76, 0x5B, 0x21, 0x2B, 0x49, 0x21, 0x8C, 0x6C, 0x58, 0x40, 0x8A, 0x5A, 0xDA,
-    0x3D, 0x99, 0x73, 0x20, 0x9D, 0x82, 0x28, 0x91, 0x3A, 0x88, 0x16, 0x97, 0x3C, 0xFE, 0x5C, 0x9E,
-    0xBF, 0xD8, 0xC6, 0x69, 0x75, 0x32, 0xCD, 0xD5, 0xB5, 0x3E, 0xE1, 0x34, 0xD2, 0xF1, 0x1B, 0x3C
-};
+#define LEAF_COMMUNITY_ROOT_KEY_PATH    "duox_trust/leaf_community/leaf_community-root-public-key.der"
 
 static const uint8_t kDuoxVDEDefaultDFName[] = {
     0xA0, 0x00, 0x00, 0x08, 0x45, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
 };
+
+typedef struct mfd_app_select {
+    bool dfname_present;
+    uint8_t dfname[16];
+    uint8_t dfname_len;
+    bool isoid_present;
+    uint16_t isoid;
+    bool aid_present;
+    uint32_t aid;
+} mfd_app_select;
 
 #define status(x) ( ((uint16_t)(0x91 << 8)) + (uint16_t)x )
 /*
@@ -576,16 +576,12 @@ static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDE
     }
 
     int res = PM3_SUCCESS;
-    pcrypto_rng_t rng = {0};
-    bool rng_initialized = false;
-
-    const uint8_t rng_personalization[] = "hf_mfdes_pc";
-    res = pcrypto_rng_init(&rng, rng_personalization, sizeof(rng_personalization) - 1);
+    uint8_t random_challenge[MFDES_PC_CHALLENGE_LEN] = {0};
+    res = pcrypto_rng_fill_oneshot(random_challenge, sizeof(random_challenge), "hf_mfdes_pc");
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to initialize random generator for proximity check");
+        PrintAndLogEx(ERR, "Failed to generate random challenge");
         return res;
     }
-    rng_initialized = true;
 
     uint8_t prepare_resp[APDU_RES_LEN] = {0};
     size_t prepare_resp_len = 0;
@@ -612,13 +608,6 @@ static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDE
         if (prepare_extension_present) {
             PrintAndLogEx(INFO, "Prepare extension      : %02X", prepare_extension);
         }
-    }
-
-    uint8_t random_challenge[MFDES_PC_CHALLENGE_LEN] = {0};
-    res = pcrypto_rng_fill(&rng, random_challenge, sizeof(random_challenge));
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to generate random challenge");
-        goto out;
     }
 
     if (verbose) {
@@ -749,9 +738,6 @@ static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDE
     res = PM3_SUCCESS;
 
 out:
-    if (rng_initialized) {
-        pcrypto_rng_free(&rng);
-    }
     return res;
 }
 
@@ -7409,19 +7395,138 @@ static int CmdHF14ADesDump(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// Generate `len` random bytes using the CSPRNG.
-static int duox_gen_random(uint8_t *buf, size_t len, const char *pers) {
-    pcrypto_rng_t rng = {0};
-    int res = pcrypto_rng_init(&rng, (const uint8_t *)pers, strlen(pers));
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to initialize RNG");
-        return res;
+static bool MfdSelectionHasAny(const mfd_app_select *select) {
+    return select != NULL && (select->dfname_present || select->isoid_present || select->aid_present);
+}
+
+static mfd_app_select MfdSelectionInitAID(uint32_t aid) {
+    mfd_app_select select = {0};
+    select.aid_present = true;
+    select.aid = aid;
+    return select;
+}
+
+static mfd_app_select MfdSelectionInitDFName(const uint8_t *dfname, size_t dfname_len) {
+    mfd_app_select select = {0};
+    if (dfname != NULL && dfname_len > 0 && dfname_len <= sizeof(select.dfname)) {
+        select.dfname_present = true;
+        select.dfname_len = (uint8_t)dfname_len;
+        memcpy(select.dfname, dfname, dfname_len);
     }
-    res = pcrypto_rng_fill(&rng, buf, len);
-    pcrypto_rng_free(&rng);
-    if (res != PM3_SUCCESS)
-        PrintAndLogEx(ERR, "Failed to generate random bytes");
-    return res;
+    return select;
+}
+
+static int MfdSelectionApplyCmdParameters(CLIParserContext *ctx, uint8_t aidid, uint8_t isoidid, uint8_t dfnameid,
+                                          mfd_app_select *select) {
+    if (ctx == NULL || select == NULL) {
+        return PM3_EINVARG;
+    }
+
+    mfd_app_select cmd_select = {0};
+
+    if (dfnameid) {
+        uint8_t dfname[64] = {0};
+        int dfname_len = 0;
+        if (CLIParamHexToBuf(arg_get_str(ctx, dfnameid), dfname, sizeof(dfname), &dfname_len)) {
+            return PM3_EINVARG;
+        }
+        if (dfname_len > 0) {
+            if (dfname_len > (int)sizeof(cmd_select.dfname)) {
+                PrintAndLogEx(ERR, "DF name must be 1-16 bytes, got %d", dfname_len);
+                return PM3_EINVARG;
+            }
+            cmd_select.dfname_present = true;
+            cmd_select.dfname_len = dfname_len;
+            memcpy(cmd_select.dfname, dfname, dfname_len);
+        }
+    }
+
+    if (isoidid) {
+        uint32_t isoid = 0;
+        bool isoid_present = false;
+        if (CLIGetUint32Hex(ctx, isoidid, 0x0000, &isoid, &isoid_present, 2, "Application ISO ID (ISO DF FID) must have 2 bytes length") != PM3_SUCCESS) {
+            return PM3_EINVARG;
+        }
+        if (isoid_present) {
+            cmd_select.isoid_present = true;
+            cmd_select.isoid = isoid & 0xFFFFU;
+        }
+    }
+
+    if (aidid) {
+        uint8_t aid_bytes[3] = {0};
+        int aid_len = 0;
+        CLIGetHexWithReturn(ctx, aidid, aid_bytes, &aid_len);
+        if (aid_len > 0) {
+            if (aid_len != (int)sizeof(aid_bytes)) {
+                PrintAndLogEx(ERR, "AID must be exactly 3 bytes, got %d", aid_len);
+                return PM3_EINVARG;
+            }
+            cmd_select.aid_present = true;
+            cmd_select.aid = DesfireAIDByteToUint(aid_bytes);
+        }
+    }
+
+    if (MfdSelectionHasAny(&cmd_select)) {
+        *select = cmd_select;
+    }
+
+    return PM3_SUCCESS;
+}
+
+static void MfdSelectionPrint(const mfd_app_select *select) {
+    if (select == NULL) {
+        return;
+    }
+    if (select->dfname_present) {
+        PrintAndLogEx(INFO, "DF name...... " _YELLOW_("%s"), sprint_hex_inrow(select->dfname, select->dfname_len));
+    }
+    if (select->isoid_present) {
+        PrintAndLogEx(INFO, "ISO DF ID.... " _YELLOW_("%04X"), select->isoid);
+    }
+    if (select->aid_present) {
+        uint8_t aid_bytes[3] = {0};
+        DesfireAIDUintToByte(select->aid, aid_bytes);
+        PrintAndLogEx(INFO, "AID.......... " _YELLOW_("%02X%02X%02X"), aid_bytes[0], aid_bytes[1], aid_bytes[2]);
+    }
+}
+
+static int MfdSelectionSelectApplication(DesfireContext_t *dctx, const mfd_app_select *select, bool verbose) {
+    if (dctx == NULL || MfdSelectionHasAny(select) == false) {
+        return PM3_EINVARG;
+    }
+
+    bool fieldon = true;
+
+    if (select->dfname_present) {
+        uint8_t resp[250] = {0};
+        size_t resplen = 0;
+        if (DesfireISOSelect(dctx, ISSDFName, (uint8_t *)select->dfname, select->dfname_len, resp, &resplen) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Select DF name " _RED_("failed"));
+            return PM3_ESOFT;
+        }
+        fieldon = false;
+    }
+
+    if (select->isoid_present) {
+        if (DesfireSelectEx(dctx, fieldon, ISWIsoID, select->isoid, NULL) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Select ISO DF ID %04X " _RED_("failed"), select->isoid);
+            return PM3_ESOFT;
+        }
+        fieldon = false;
+    }
+
+    if (select->aid_present) {
+        if (DesfireSelectEx(dctx, fieldon, ISW6bAID, select->aid, NULL) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Select application %06X " _RED_("failed"), select->aid);
+            return PM3_ESOFT;
+        }
+    }
+
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Application selected " _GREEN_("ok"));
+    }
+    return PM3_SUCCESS;
 }
 
 // Build and send ISO Internal Authenticate (INS 88), then parse the TLV response.
@@ -7587,6 +7692,7 @@ static int CmdHF14ADesIntAuth(const char *Cmd) {
                   "Optionally verifies the card's ECDSA-P256 signature with a given public key.",
                   "hf mfdes intauth                                    -> authenticate with default AID (000000), random challenge\n"
                   "hf mfdes intauth --aid D61CF5                       -> explicit AID\n"
+                  "hf mfdes intauth --isoid DF01                       -> select by ISO DF FID\n"
                   "hf mfdes intauth --dfname D2760000850100            -> select by DF name\n"
                   "hf mfdes intauth -d 00112233445566778899AABBCCDDEEFF -> explicit 16-byte challenge\n"
                   "hf mfdes intauth -p 04AABB...                       -> verify signature with given EC public key (hex, PEM, DER, file path)\n"
@@ -7601,6 +7707,7 @@ static int CmdHF14ADesIntAuth(const char *Cmd) {
         arg_str0(NULL, "aid",       "<hex>", "Application ID (3 bytes, default 000000)"), // 5
         arg_int0("n",  "keynum",   "<dec>", "Key number (P2, default 0)"),          // 6
         arg_str0(NULL, "dfname",   "<hex>", "Application ISO DF Name (1-16 hex bytes)"), // 7
+        arg_str0(NULL, "isoid",    "<hex>", "Application ISO ID / ISO DF FID (2 bytes)"), // 8
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -7626,16 +7733,6 @@ static int CmdHF14ADesIntAuth(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)pubkey_input, sizeof(pubkey_input) - 1, &pubkey_input_len);
     bool pubkey_provided = (pubkey_input_len > 0);
 
-    // Parse AID
-    uint8_t aid_bytes[3] = {0x00, 0x00, 0x00};
-    int aid_len = 0;
-    CLIGetHexWithReturn(ctx, 5, aid_bytes, &aid_len);
-    if (aid_len > 0 && aid_len != 3) {
-        PrintAndLogEx(ERR, "AID must be exactly 3 bytes, got %d", aid_len);
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
     int keynum = arg_get_int_def(ctx, 6, 0);
     if (keynum < 0 || keynum > 255) {
         PrintAndLogEx(ERR, "Key number must be 0..255");
@@ -7643,14 +7740,8 @@ static int CmdHF14ADesIntAuth(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t dfname[16] = {0};
-    int dfnamelen = 0;
-    if (CLIParamHexToBuf(arg_get_str(ctx, 7), dfname, sizeof(dfname), &dfnamelen)) {
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-    if (dfnamelen > 16) {
-        PrintAndLogEx(ERR, "DF name must be 1-16 bytes, got %d", dfnamelen);
+    mfd_app_select app_select = MfdSelectionInitAID(0x000000);
+    if (MfdSelectionApplyCmdParameters(ctx, 5, 8, 7, &app_select) != PM3_SUCCESS) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -7671,60 +7762,35 @@ static int CmdHF14ADesIntAuth(const char *Cmd) {
 
     // Generate random challenge if not provided
     if (!challenge_provided) {
-        int res = duox_gen_random(challenge, sizeof(challenge), "hf_mfdes_intauth");
-        if (res != PM3_SUCCESS) return res;
+        int res = pcrypto_rng_fill_oneshot(challenge, sizeof(challenge), "hf_mfdes_intauth");
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to generate random challenge");
+            return res;
+        }
     }
-
-    // AID is stored little-endian in DESFire protocol
-    uint32_t aid = (aid_bytes[2] << 16) | (aid_bytes[1] << 8) | aid_bytes[0];
 
     PrintAndLogEx(INFO, "--- " _CYAN_("ISO Internal Authenticate"));
     PrintAndLogEx(INFO, "Challenge.... " _YELLOW_("%s"), sprint_hex_inrow(challenge, DUOX_INTAUTH_CHALLENGE_LEN));
     if (verbose) {
-        if (dfnamelen > 0)
-            PrintAndLogEx(INFO, "DF name...... " _YELLOW_("%s"), sprint_hex_inrow(dfname, dfnamelen));
-        else
-            PrintAndLogEx(INFO, "AID.......... " _YELLOW_("%02X%02X%02X"), aid_bytes[0], aid_bytes[1], aid_bytes[2]);
+        MfdSelectionPrint(&app_select);
         PrintAndLogEx(INFO, "Key number... " _YELLOW_("%d"), keynum);
     }
 
-    // Step 1: Anticollision + select application using DESFire framework
+    // Step 1: Select application using the requested/default route.
     DesfireContext_t dctx = {0};
     dctx.commMode = DCMPlain;
     dctx.cmdSet = DCCNativeISO;
 
-    int res = DesfireAnticollision(false);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Anticollision " _RED_("failed"));
+    if (MfdSelectionSelectApplication(&dctx, &app_select, verbose) != PM3_SUCCESS) {
         DropField();
-        return res;
+        return PM3_ESOFT;
     }
-
-    if (dfnamelen > 0) {
-        uint8_t resp[250] = {0};
-        size_t resplen = 0;
-        res = DesfireISOSelect(&dctx, ISSDFName, dfname, dfnamelen, resp, &resplen);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Select DF name " _RED_("failed"));
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAIDHex(&dctx, aid, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Select application %06X " _RED_("failed"), aid);
-            DropField();
-            return res;
-        }
-    }
-    if (verbose)
-        PrintAndLogEx(SUCCESS, "Application selected " _GREEN_("ok"));
     // Step 2: Build ISO Internal Authenticate APDU
     // Step 3: Parse TLV response
 
     uint8_t card_random[DUOX_INTAUTH_CHALLENGE_LEN] = {0};
     uint8_t signature_rs[DUOX_INTAUTH_SIG_LEN] = {0};
-    res = duox_intauth_exchange(APDULogging, verbose, (uint8_t)keynum, challenge, card_random, signature_rs);
+    int res = duox_intauth_exchange(APDULogging, verbose, (uint8_t)keynum, challenge, card_random, signature_rs);
     if (res != PM3_SUCCESS)
         return res;
 
@@ -7750,6 +7816,7 @@ static int CmdHF14ADesVdeSign(const char *Cmd) {
                   "Optionally verifies the returned ECDSA signature with a BrainpoolP256r1 public key.",
                   "hf mfdes vdesign                                             -> sign random 32-byte challenge using default EV DF name\n"
                   "hf mfdes vdesign --aid 1010F6                                -> select EV app by native AID\n"
+                  "hf mfdes vdesign --isoid 00DF                               -> select EV app by ISO DF FID\n"
                   "hf mfdes vdesign --dfname A0000008450000000000000000000001   -> select EV app by ISO DF name\n"
                   "hf mfdes vdesign -d 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF -> explicit 32-byte challenge\n"
                   "hf mfdes vdesign -p 04A7C6...                                -> verify signature with given EC public key (hex, PEM, DER, file path)\n");
@@ -7761,7 +7828,8 @@ static int CmdHF14ADesVdeSign(const char *Cmd) {
         arg_str0("d",  "challenge", "<hex>", "Challenge to sign (32 bytes, random if omitted)"), // 3
         arg_str0("p",  "pubkey",    "<hex|pem|der|path>", "BrainpoolP256r1 public key for signature verification"), // 4
         arg_str0(NULL, "aid",       "<hex>", "Application ID (3 bytes, native DESFire select)"), // 5
-        arg_str0(NULL, "dfname",    "<hex>", "Application ISO DF Name (1-16 hex bytes, default EV DF name)"), // 6
+        arg_str0(NULL, "isoid",     "<hex>", "Application ISO ID / ISO DF FID (2 bytes)"), // 6
+        arg_str0(NULL, "dfname",    "<hex>", "Application ISO DF Name (1-16 hex bytes, default EV DF name)"), // 7
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -7784,25 +7852,8 @@ static int CmdHF14ADesVdeSign(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)pubkey_input, sizeof(pubkey_input) - 1, &pubkey_input_len);
     bool pubkey_provided = (pubkey_input_len > 0);
 
-    uint8_t aid_bytes[3] = {0};
-    int aid_len = 0;
-    CLIGetHexWithReturn(ctx, 5, aid_bytes, &aid_len);
-    bool aid_provided = (aid_len > 0);
-    if (aid_provided && aid_len != 3) {
-        PrintAndLogEx(ERR, "AID must be exactly 3 bytes, got %d", aid_len);
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
-    uint8_t dfname[16] = {0};
-    int dfnamelen = 0;
-    if (CLIParamHexToBuf(arg_get_str(ctx, 6), dfname, sizeof(dfname), &dfnamelen)) {
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-    bool dfname_provided = (dfnamelen > 0);
-    if (dfnamelen > 16) {
-        PrintAndLogEx(ERR, "DF name must be 1-16 bytes, got %d", dfnamelen);
+    mfd_app_select app_select = MfdSelectionInitDFName(kDuoxVDEDefaultDFName, ARRAYLEN(kDuoxVDEDefaultDFName));
+    if (MfdSelectionApplyCmdParameters(ctx, 5, 6, 7, &app_select) != PM3_SUCCESS) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -7821,66 +7872,26 @@ static int CmdHF14ADesVdeSign(const char *Cmd) {
     }
 
     if (!challenge_provided) {
-        int res = duox_gen_random(challenge, sizeof(challenge), "hf_mfdes_vdesign");
-        if (res != PM3_SUCCESS) return res;
-    }
-
-    uint32_t aid = DUOX_VDE_DEFAULT_AID;
-    if (aid_provided) {
-        aid = ((uint32_t)aid_bytes[2] << 16) | ((uint32_t)aid_bytes[1] << 8) | aid_bytes[0];
-    }
-
-    const uint8_t *selected_dfname = NULL;
-    uint8_t selected_dfname_len = 0;
-    if (dfname_provided) {
-        selected_dfname = dfname;
-        selected_dfname_len = dfnamelen;
-    } else if (!aid_provided) {
-        selected_dfname = kDuoxVDEDefaultDFName;
-        selected_dfname_len = ARRAYLEN(kDuoxVDEDefaultDFName);
+        int res = pcrypto_rng_fill_oneshot(challenge, sizeof(challenge), "hf_mfdes_vdesign");
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to generate random challenge");
+            return res;
+        }
     }
 
     PrintAndLogEx(INFO, "--- " _CYAN_("VDE_ECDSASign"));
     if (verbose) {
-        if (selected_dfname_len > 0) {
-            PrintAndLogEx(INFO, "DF name...... " _YELLOW_("%s"), sprint_hex_inrow(selected_dfname, selected_dfname_len));
-            if (!dfname_provided)
-                PrintAndLogEx(INFO, "Selection..... " _YELLOW_("default EV charging DF name"));
-        } else {
-            PrintAndLogEx(INFO, "AID.......... " _YELLOW_("%02X%02X%02X"), aid_bytes[0], aid_bytes[1], aid_bytes[2]);
-        }
+        MfdSelectionPrint(&app_select);
     }
 
     DesfireContext_t dctx = {0};
     dctx.commMode = DCMPlain;
     dctx.cmdSet = DCCNativeISO;
 
-    int res = DesfireAnticollision(false);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Anticollision " _RED_("failed"));
+    if (MfdSelectionSelectApplication(&dctx, &app_select, verbose) != PM3_SUCCESS) {
         DropField();
-        return res;
+        return PM3_ESOFT;
     }
-
-    if (selected_dfname_len > 0) {
-        uint8_t resp[250] = {0};
-        size_t resplen = 0;
-        res = DesfireISOSelect(&dctx, ISSDFName, (uint8_t *)selected_dfname, selected_dfname_len, resp, &resplen);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Select DF name " _RED_("failed"));
-            DropField();
-            return res;
-        }
-    } else {
-        res = DesfireSelectAIDHex(&dctx, aid, false, 0);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Select application %06X " _RED_("failed"), aid);
-            DropField();
-            return res;
-        }
-    }
-    if (verbose)
-        PrintAndLogEx(SUCCESS, "Application selected " _GREEN_("ok"));
     PrintAndLogEx(INFO, "Challenge.... " _YELLOW_("%s"), sprint_hex_inrow(challenge, sizeof(challenge)));
 
     sAPDU_t apdu = {0x80, 0x03, 0x0C, 0x09, sizeof(challenge), challenge};
@@ -7897,7 +7908,7 @@ static int CmdHF14ADesVdeSign(const char *Cmd) {
 
     uint8_t response[PM3_CMD_DATA_SIZE] = {0};
     int resplen = 0;
-    res = ExchangeAPDU14a(encoded, encoded_len, false, true, response, sizeof(response), &resplen);
+    int res = ExchangeAPDU14a(encoded, encoded_len, false, true, response, sizeof(response), &resplen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "APDU exchange " _RED_("failed") " (%d)", res);
         DropField();
@@ -7990,6 +8001,8 @@ static int CmdHF14ADesLeaf(const char *Cmd) {
         arg_str0("d",  "challenge", "<hex>", "Challenge / RndA (16 bytes, random if omitted)"), // 3
         arg_str0(NULL, "aid",       "<hex>", "Application ID (3 bytes, default D61CF5)"),       // 4
         arg_int0("n",  "keynum",    "<dec>", "Key number (P2, default 0)"),                     // 5
+        arg_str0(NULL, "isoid",     "<hex>", "Application ISO ID / ISO DF FID (2 bytes)"),      // 6
+        arg_str0(NULL, "dfname",    "<hex>", "Application ISO DF Name (1-16 hex bytes)"),       // 7
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -8007,15 +8020,6 @@ static int CmdHF14ADesLeaf(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t aid_bytes[3] = {0xD6, 0x1C, 0xF5}; // little-endian default D61CF5
-    int aid_len = 0;
-    CLIGetHexWithReturn(ctx, 4, aid_bytes, &aid_len);
-    if (aid_len > 0 && aid_len != 3) {
-        PrintAndLogEx(ERR, "AID must be exactly 3 bytes, got %d", aid_len);
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
     int keynum = arg_get_int_def(ctx, 5, 0);
     if (keynum < 0 || keynum > 255) {
         PrintAndLogEx(ERR, "Key number must be 0..255");
@@ -8023,46 +8027,49 @@ static int CmdHF14ADesLeaf(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    mfd_app_select app_select = MfdSelectionInitAID(LEAF_VERIFIED_DEFAULT_AID);
+    if (MfdSelectionApplyCmdParameters(ctx, 4, 6, 7, &app_select) != PM3_SUCCESS) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    if (!challenge_provided) {
-        int res = duox_gen_random(challenge, sizeof(challenge), "hf_mfdes_leaf");
-        if (res != PM3_SUCCESS) return res;
+    uint8_t leaf_root_pubkey[65] = {0};
+    int pk_res = ensure_ec_public_key(LEAF_COMMUNITY_ROOT_KEY_PATH, MBEDTLS_ECP_DP_SECP256R1, leaf_root_pubkey, sizeof(leaf_root_pubkey));
+    if (pk_res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to load LEAF Root CA public key from " _YELLOW_("%s") " (%d)", LEAF_COMMUNITY_ROOT_KEY_PATH, pk_res);
+        return pk_res;
     }
 
-    // aid_bytes default {0xD6,0x1C,0xF5} = wire bytes for AID "D61CF5".
-    // DesfireSelectAIDHex expects LE uint32: byte[2]<<16 | byte[1]<<8 | byte[0].
-    uint32_t aid = (aid_bytes[2] << 16) | (aid_bytes[1] << 8) | aid_bytes[0];
+    if (!challenge_provided) {
+        int res = pcrypto_rng_fill_oneshot(challenge, sizeof(challenge), "hf_mfdes_leaf");
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to generate random challenge");
+            return res;
+        }
+    }
 
     PrintAndLogEx(INFO, "--- " _CYAN_("LEAF Verified Credential Check"));
-    PrintAndLogEx(INFO, "AID.......... " _YELLOW_("%02X%02X%02X"), aid_bytes[0], aid_bytes[1], aid_bytes[2]);
+    if (verbose) {
+        MfdSelectionPrint(&app_select);
+    }
 
-    // Step 1: Anticollision + select application
+    // Step 1: Select application
     DesfireContext_t dctx = {0};
     dctx.commMode = DCMPlain;
     dctx.cmdSet = DCCNativeISO;
 
-    int res = DesfireAnticollision(false);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Anticollision " _RED_("failed"));
+    if (MfdSelectionSelectApplication(&dctx, &app_select, verbose) != PM3_SUCCESS) {
         DropField();
-        return res;
+        return PM3_ESOFT;
     }
-
-    res = DesfireSelectAIDHex(&dctx, aid, false, 0);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Select application %06X " _RED_("failed"), aid);
-        DropField();
-        return res;
-    }
-    if (verbose)
-        PrintAndLogEx(SUCCESS, "Application selected " _GREEN_("ok"));
 
     // Step 2: Read X.509 certificate from file 0x02 (length=0 reads to EOF)
     uint8_t cert_buf[LEAF_VERIFIED_MAX_CERT_LEN] = {0};
     size_t cert_len = 0;
-    res = DesfireReadFile(&dctx, LEAF_VERIFIED_CERT_FILE, 0, 0, cert_buf, &cert_len);
+    int res = DesfireReadFile(&dctx, LEAF_VERIFIED_CERT_FILE, 0, 0, cert_buf, &cert_len);
     if (res != PM3_SUCCESS || cert_len == 0) {
         PrintAndLogEx(ERR, "Read certificate file 0x%02X " _RED_("failed") " (%d)", LEAF_VERIFIED_CERT_FILE, res);
         DropField();
@@ -8123,7 +8130,7 @@ static int CmdHF14ADesLeaf(const char *Cmd) {
     bool root_ok = false;
     int rres = ecdsa_signature_verify(
                    MBEDTLS_ECP_DP_SECP256R1,
-                   (uint8_t *)kLeafRootP256PubKey,
+                   leaf_root_pubkey,
                    cert.tbs.p,
                    (int)cert.tbs.len,
                    cert.sig.p,
