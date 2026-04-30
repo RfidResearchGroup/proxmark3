@@ -131,7 +131,7 @@ const ecdsa_publickey_ng_t manufacturer_public_keys[] = {
     },
 
     {
-        PK_15,      MBEDTLS_ECP_DP_SECP128R1, 33, "NXP ICODE DNA, ICODE SLIX2",
+        PK_15,      MBEDTLS_ECP_DP_SECP128R1, 33, "NXP ICODE DNA, ICODE 3, ICODE SLIX2",
         "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"
     },
     {
