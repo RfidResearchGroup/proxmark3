@@ -1099,17 +1099,36 @@ static int CmdHF15Info(const char *Cmd) {
 
     // Check if SLIX2 and attempt to get NXP System Information
     PrintAndLogEx(DEBUG, "Byte 6 :: %02x   Byte 7 :: %02x   Byte 8 :: %02x", d[6], d[7], d[8]);
-    // SLIX2 uses xxx0 1xxx format on d[6] of UID
-    uint8_t nxp_version = d[6] & 0x18;
-    PrintAndLogEx(DEBUG, "NXP Version: %02x", nxp_version);
 
     if (d[8] == 0x04) {
         // NXP
+        
+        // from: SL2S6002_SDS
+        // Bit 37 Bit 36 ICODE Type
+        // -------------------------
+        // 0      0      ICODE SLI
+        // 1      0      ICODE SLIX
+        // 0      1      ICODE SLIX2
+        // 1      1      ICODE DNA
+
+        // SLIX2 uses xxx0 1xxx format on d[6] of UID
+        uint8_t nxp_version = d[6] & 0x18;
+        PrintAndLogEx(DEBUG, "NXP Version: %02x", nxp_version);
+
+        // from: SL2S3103
+        // Bit 39 Bit 38 Bit 37 Bit 36 ICODE Type
+        // --------------------------------------
+        // 0      1      0      0      ICODE 3
+        // --> it can be mismached with a ICODE SLI, but lets assume Bit 39 & Bit 38 at 0 when ICODE SLI*/DNA...
+        
         if (d[7] == 0x01 && nxp_version == 0x08) {
             PrintAndLogEx(DEBUG, "SLIX2 Detected, getting NXP System Info");
             return NxpSysInfo(uid);
-        } else if (d[7] == 0x01 && nxp_version == 0x18) { // If it is an NTAG 5
-            PrintAndLogEx(DEBUG, "NTAG 5 Detected, getting NXP System Info");
+        } else if (d[7] == 0x01 && nxp_version == 0x18) { // If it is an NTAG 5 / ICODE DNA
+            PrintAndLogEx(DEBUG, "NTAG 5 / ICODE DNA Detected, getting NXP System Info");
+            return NxpSysInfo(uid);
+        } else if (d[7] == 0x01 && ((d[6] & 0x78) == 0x20)) { // If it is an NTAG ICODE 3 
+            PrintAndLogEx(DEBUG, "ICODE 3 Detected, getting NXP System Info");
             return NxpSysInfo(uid);
         } else if ((d[7] == 0x01 || d[7] == 0x02 || d[7] == 0x03)) { // If SLI, SLIX, SLIX-l, or SLIX-S check EAS status
             PrintAndLogEx(DEBUG, "SLI, SLIX, SLIX-L, or SLIX-S Detected checking EAS status");
