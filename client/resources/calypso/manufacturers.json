@@ -1,0 +1,198 @@
+[
+    {
+        "id": "00",
+        "name": "ASK",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "01",
+        "name": "Intec",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "02",
+        "name": "Calypso Networks Association",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "03",
+        "name": "Ascom",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "04",
+        "name": "Thales",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "05",
+        "name": "Sagem",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "06",
+        "name": "Axalto",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "07",
+        "name": "Bull",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "08",
+        "name": "Spirtech",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "09",
+        "name": "BMS",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "0A",
+        "name": "Oberthur",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "0B",
+        "name": "Gemplus",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "0C",
+        "name": "Magnadata",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "0D",
+        "name": "Calmell",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "0E",
+        "name": "Mecstar",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "0F",
+        "name": "ACG Identification Technologies",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "10",
+        "name": "STMicroelectronics",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "11",
+        "name": "Calypso Networks Association",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "12",
+        "name": "Giesecke & Devrient",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "13",
+        "name": "OTI",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "14",
+        "name": "Gemalto",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "15",
+        "name": "Watchdata",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "16",
+        "name": "Alios",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "17",
+        "name": "S-P-S",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "18",
+        "name": "IRSA",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "20",
+        "name": "Calypso Networks Association",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "21",
+        "name": "Innovatron",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "2E",
+        "name": "Calypso Networks Association",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    }
+]
