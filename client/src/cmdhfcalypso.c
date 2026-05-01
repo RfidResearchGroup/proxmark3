@@ -703,8 +703,22 @@ static int calypso_scan_aidlist(bool verbose, calypso_select_result_t *selected,
     }
 
     if (probe_matched) {
-        *selected = probe_selected;
-        *matched = true;
+        bool restored = false;
+        int res = calypso_select_aid(probe_selected.requested_aid, probe_selected.requested_aid_len, false, verbose, selected, &restored);
+        if (res != PM3_SUCCESS || restored == false) {
+            res = calypso_select_aid(probe_selected.requested_aid, probe_selected.requested_aid_len, true, verbose, selected, &restored);
+        }
+        if (res != PM3_SUCCESS) {
+            AIDSearchFree(root);
+            return res;
+        }
+        if (restored == false) {
+            if (verbose) {
+                PrintAndLogEx(DEBUG, "Unable to restore selected Calypso AID %s", sprint_hex_inrow(probe_selected.requested_aid, probe_selected.requested_aid_len));
+            }
+        } else {
+            *matched = true;
+        }
     }
 
     AIDSearchFree(root);
