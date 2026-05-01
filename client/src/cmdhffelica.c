@@ -644,29 +644,41 @@ static json_t *felica_get_ic_code_list(void) {
     return felica_ic_code_list;
 }
 
-static const json_t *felica_find_ic_annotation(uint8_t ic_type) {
+static const json_t *felica_find_ic_annotation(uint8_t rom_type, uint8_t ic_type) {
     json_t *ic_code_list = felica_get_ic_code_list();
     if (ic_code_list == NULL) {
         return NULL;
     }
 
+    char rom_hex[3] = {0};
     char ic_hex[3] = {0};
+    snprintf(rom_hex, sizeof(rom_hex), "%02X", rom_type);
     snprintf(ic_hex, sizeof(ic_hex), "%02X", ic_type);
 
     size_t index = 0;
     json_t *entry = NULL;
+    const json_t *ic_fallback = NULL;
     json_array_foreach(ic_code_list, index, entry) {
         if (json_is_object(entry) == false) {
             continue;
         }
 
         const char *entry_ic = felica_get_json_string(entry, "ic");
-        if (entry_ic && strcmp(entry_ic, ic_hex) == 0) {
+        if (entry_ic == NULL || strcmp(entry_ic, ic_hex) != 0) {
+            continue;
+        }
+
+        if (ic_fallback == NULL) {
+            ic_fallback = entry;
+        }
+
+        const char *entry_rom = felica_get_json_string(entry, "rom");
+        if (entry_rom != NULL && strcmp(entry_rom, rom_hex) == 0) {
             return entry;
         }
     }
 
-    return NULL;
+    return ic_fallback;
 }
 
 static const char *felica_ic_code_name(uint8_t rom_type, uint8_t ic_type) {
@@ -674,7 +686,7 @@ static const char *felica_ic_code_name(uint8_t rom_type, uint8_t ic_type) {
         return "Unknown IC Type";
     }
 
-    const json_t *entry = felica_find_ic_annotation(ic_type);
+    const json_t *entry = felica_find_ic_annotation(rom_type, ic_type);
     const char *name = felica_get_json_string(entry, "name");
     return name ? name : "Unknown IC Type";
 }
