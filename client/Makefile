@@ -686,6 +686,7 @@ SRCS =  mifare/aiddesfire.c \
         cmdhf14b.c \
         cmdhf15.c \
         cmdhfaliro.c \
+        cmdhfcalypso.c \
         cmdhfcryptorf.c \
         cmdhfepa.c \
         cmdhfemrtd.c \

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf calypso info` command (@kormax)
 - Added ARM compilation support for picolibc, fixing compilation on Debian Forky (@doegox)
 - Added `hf mdfes leaf` command (@pcunning)
 - Added `hf mfdes vdesign` command (@kormax)

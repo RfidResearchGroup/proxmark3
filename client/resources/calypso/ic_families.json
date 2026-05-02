@@ -1,0 +1,80 @@
+[
+    {
+        "id": "2F",
+        "name": "ST31N family",
+        "sources": [
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2023-087_certification-letter-stm-calypso-prime-cd21-flash-rev-3.3-sign.pdf"
+        ]
+    },
+    {
+        "id": "3C",
+        "name": "SLE77CLFXxxxxP(M) family",
+        "sources": [
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2022-001-certification-letter-hid-calypso-po-prime-soma-atlas-v2-v1.0.0.pdf"
+        ]
+    },
+    {
+        "id": "3E",
+        "name": "SLE77CLF family",
+        "sources": [
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2023-083_certification-letter-hid-calypso-light-soma-atlas-clap-v2-sign.pdf"
+        ]
+    },
+    {
+        "id": "3F",
+        "name": "SLC32 family",
+        "sources": [
+            "https://www.paycert.eu/certificats/cert_cer_cle_2020-069-certification-report_calypsog2prime_v1.0.0.pdf"
+        ]
+    },
+    {
+        "id": "49",
+        "name": "ST33J",
+        "sources": [
+            "https://www.paycert.eu/certificats/cert_cer_cle_2021-005-certification-report_st54h_v1.0.0.pdf"
+        ]
+    },
+    {
+        "id": "50",
+        "name": "SLC36 family",
+        "sources": [
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2024-188-certification-letter_calypso-applet_idemia-urbango-fly-40-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2023-188-certification-letter_thales-gemalto-calypso-prime-g3_sign.pdf"
+        ]
+    },
+    {
+        "id": "51",
+        "name": "SLM10TLD002Y",
+        "sources": [
+            "https://www.infineon.com/assets/row/public/documents/30/67/infineon-calypsotm-move-calypsor-basic-certificatepaycert-certificates-en.pdf"
+        ]
+    },
+    {
+        "id": "52",
+        "name": "SLC26 family",
+        "sources": [
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-177-v1.0.0_paragon-id-tango-prime-v3-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-086-v3.0.0_watchdata-timecos-clap-1.2-sign.pdf"
+        ]
+    },
+    {
+        "id": "53",
+        "name": "S3DxxxA family",
+        "sources": [
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2026-032-v1.0.0_hid-global-soma-atlas-v2s-sign.pdf"
+        ]
+    },
+    {
+        "id": "C0",
+        "name": "Java Card",
+        "note": "Some older HCE implementations also report platform byte C0.",
+        "sources": [
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2024-001-certification-letter_calypso-applet_mobileknowledge-sn300-b5-series-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2023-148-certification-letter_calypso-applet_thales-tess-v5.0-publi.pdf"
+        ]
+    },
+    {
+        "id": "E0",
+        "name": "HCE"
+    }
+]

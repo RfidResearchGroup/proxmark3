@@ -1,0 +1,93 @@
+[
+    {
+        "id": "056001",
+        "name": "MOBIB / Brussels",
+        "sources": [
+            "https://github.com/zoobab/mobib-extractor",
+            "https://github.com/metrodroid/metrodroid/blob/04a603ba6/src/commonMain/kotlin/au/id/micolous/metrodroid/transit/mobib/MobibTransitData.kt"
+        ]
+    },
+    {
+        "id": "250000",
+        "name": "Pass Pass",
+        "sources": [
+            "https://github.com/metrodroid/metrodroid/blob/04a603ba6/src/commonMain/kotlin/au/id/micolous/metrodroid/transit/intercode/IntercodeTransitData.kt"
+        ]
+    },
+    {
+        "id": "250057",
+        "name": "Lyon TCL"
+    },
+    {
+        "id": "250064",
+        "name": "TaM Montpellier",
+        "sources": [
+            "https://github.com/metrodroid/metrodroid/blob/04a603ba6/src/commonMain/kotlin/au/id/micolous/metrodroid/transit/intercode/IntercodeTransitData.kt"
+        ]
+    },
+    {
+        "id": "250069",
+        "name": "Lignes D Azur"
+    },
+    {
+        "id": "250091",
+        "name": "CTS Strasbourg"
+    },
+    {
+        "id": "250502",
+        "name": "Oura",
+        "sources": [
+            "https://github.com/metrodroid/metrodroid/blob/04a603ba6/src/commonMain/kotlin/au/id/micolous/metrodroid/transit/intercode/IntercodeTransitData.kt"
+        ]
+    },
+    {
+        "id": "250901",
+        "name": "Navigo",
+        "sources": [
+            "https://github.com/metrodroid/metrodroid/blob/04a603ba6/src/commonMain/kotlin/au/id/micolous/metrodroid/transit/intercode/IntercodeTransitData.kt"
+        ]
+    },
+    {
+        "id": "250908",
+        "name": "KorriGo",
+        "sources": [
+            "https://github.com/metrodroid/metrodroid/blob/04a603ba6/src/commonMain/kotlin/au/id/micolous/metrodroid/transit/intercode/IntercodeTransitData.kt"
+        ]
+    },
+    {
+        "id": "250916",
+        "name": "Tisseo / Pastel",
+        "sources": [
+            "https://github.com/metrodroid/metrodroid/blob/04a603ba6/src/commonMain/kotlin/au/id/micolous/metrodroid/transit/intercode/IntercodeTransitData.kt"
+        ]
+    },
+    {
+        "id": "250920",
+        "name": "Lignes D Azur / Envibus",
+        "sources": [
+            "https://github.com/metrodroid/metrodroid/blob/04a603ba6/src/commonMain/kotlin/au/id/micolous/metrodroid/transit/intercode/IntercodeTransitData.kt"
+        ]
+    },
+    {
+        "id": "250921",
+        "name": "TransGironde",
+        "sources": [
+            "https://github.com/metrodroid/metrodroid/blob/04a603ba6/src/commonMain/kotlin/au/id/micolous/metrodroid/transit/intercode/IntercodeTransitData.kt"
+        ]
+    },
+    {
+        "id": "380100",
+        "name": "Pisa Carta Mobile",
+        "sources": [
+            "https://github.com/metrodroid/metrodroid/blob/04a603ba6/src/commonMain/kotlin/au/id/micolous/metrodroid/transit/pisa/PisaTransitData.kt"
+        ]
+    },
+    {
+        "id": "802640",
+        "name": "CDMX"
+    },
+    {
+        "id": "988008",
+        "name": "Andante / Transportes Metropolitanos do Porto"
+    }
+]

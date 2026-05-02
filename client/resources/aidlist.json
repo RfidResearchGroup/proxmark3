@@ -2925,6 +2925,24 @@
         ]
     },
     {
+        "AID": "A000000291",
+        "Vendor": "Calypso Networks Association (CNA)",
+        "Country": "France",
+        "Name": "",
+        "Description": "AID prefix for new CALYPSO-based transit cards",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A000000404",
+        "Vendor": "Calypso Networks Association (CNA)",
+        "Country": "France",
+        "Name": "",
+        "Description": "AID prefix for some CALYPSO-based transit cards",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
         "AID": "315449432E494341",
         "Vendor": "Calypso Networks Association (CNA)",
         "Country": "France",
@@ -2939,30 +2957,6 @@
         ]
     },
     {
-        "AID": "315449432E494341D48401019101",
-        "Vendor": "Spirtech",
-        "Country": "Italy",
-        "Name": "Mover Emilia Romagna",
-        "Description": "Calypso-based ticket for public transport in Emilia-Romagna.",
-        "Type": "transport",
-        "Protocol": "cna_calypso",
-        "Sources": [
-            "android://com.spirtech.emiliaromagna"
-        ]
-    },
-    {
-        "AID": "315449432E494341D62000029101",
-        "Vendor": "Transportes Metropolitanos do Porto",
-        "Country": "Portugal",
-        "Name": "Andante",
-        "Description": "Calypso-based ticket for public transport in the Porto Metropolitan Area, used by the Anda app.",
-        "Type": "transport",
-        "Protocol": "cna_calypso",
-        "Sources": [
-            "android://pt.opt.anda"
-        ]
-    },
-    {
         "AID": "304554502E494341",
         "Vendor": "Calypso Networks Association (CNA)",
         "Country": "France",
@@ -2970,18 +2964,6 @@
         "Description": "Legacy header for the Store Value application. \"0ETP.ICA\" in ISO/IEC 8859-1 coding.",
         "Type": "",
         "Protocol": "cna_calypso"
-    },
-    {
-        "AID": "304554502E494341D484010192",
-        "Vendor": "Secretaria de Movilidad (SEMOVI)",
-        "Country": "Mexico",
-        "Name": "Tarjeta Virtual de Movilidad Integrada",
-        "Description": "Store value application for the virtual Tarjeta MI used on Mexico City public transport, distributed through App CDMX.",
-        "Type": "transport",
-        "Protocol": "cna_calypso",
-        "Sources": [
-            "android://mx.gob.cdmx.adip.apps"
-        ]
     },
     {
         "AID": "324D50502E494341",
@@ -3002,34 +2984,79 @@
         "Protocol": "cna_calypso"
     },
     {
-        "AID": "A0000004040125090101",
+        "AID": "315449432E494341D48401019101",
+        "Vendor": "Spirtech",
+        "Country": "N/A",
+        "Name": "Mover Emilia Romagna | CDMX Tarjeta de Movilidad",
+        "Description": "Calypso-based ticket for public transport in Emilia-Romagna or Mexico City.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Sources": [
+            "android://com.spirtech.emiliaromagna",
+            "android://mx.gob.cdmx.adip.apps"
+        ]
+    },
+    {
+        "AID": "A000000291D62000029101",
+        "Vendor": "Transportes Metropolitanos do Porto",
+        "Country": "Portugal",
+        "Name": "Andante",
+        "Description": "Calypso-based ticket for public transport in the Porto Metropolitan Area, used by the Anda app.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Sources": [
+            "android://pt.opt.anda"
+        ]
+    },
+    {
+        "AID": "304554502E494341D484010192",
+        "Vendor": "Secretaria de Movilidad (SEMOVI)",
+        "Country": "Mexico",
+        "Name": "Tarjeta Virtual de Movilidad Integrada",
+        "Description": "Store value application for the virtual Tarjeta MI used on Mexico City public transport, distributed through App CDMX.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Sources": [
+            "android://mx.gob.cdmx.adip.apps"
+        ]
+    },
+    {
+        "AID": "A00000040401250901",
         "Vendor": "Ile-de-France Mobilites",
         "Country": "France",
         "Name": "Navigo",
         "Description": "CALYPSO-based transit card",
         "Type": "transport",
-        "Protocol": "cna_calypso"
+        "Protocol": "cna_calypso",
+        "Sources": [
+            "android://com.applidium.vianavigo",
+            "android://com.worldline.wallet"
+        ]
     },
     {
-        "AID": "A0000004040125090101000000000000",
-        "Vendor": "Ile-de-France Mobilites",
-        "Country": "France",
-        "Name": "Navigo",
-        "Description": "CALYPSO-based transit card",
-        "Type": "transport",
-        "Protocol": "cna_calypso"
-    },
-    {
-        "AID": "A00000040401250057",
+        "AID": "A00000040401250057F0",
         "Vendor": "TCL",
         "Country": "France",
         "Name": "E-ticket Lyon",
         "Description": "CALYPSO-based transit card",
         "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Sources": [
+            "android://com.tcl.eticket",
+            "android://com.worldline.wallet"
+        ]
+    },
+    {
+        "AID": "A0000004040125009101",
+        "Vendor": "CTS",
+        "Country": "France",
+        "Name": "Strasbourg",
+        "Description": "CALYPSO-based transit card used by Strasbourg CTS.",
+        "Type": "transport",
         "Protocol": "cna_calypso"
     },
     {
-        "AID": "A0000004040125006901000000000000",
+        "AID": "A00000040401250920",
         "Vendor": "Lignes D'Azur",
         "Country": "France",
         "Name": "La Carte",
@@ -3038,11 +3065,24 @@
         "Protocol": "cna_calypso"
     },
     {
-        "AID": "A0000004040125092001000000000000",
+        "AID": "54494C414D4F32000000",
         "Vendor": "Lignes D'Azur",
         "Country": "France",
         "Name": "La Carte",
         "Description": "CALYPSO-based transit card",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Sources": [
+            "android://eu.mobeepass.nfcniceticket",
+            "android://eu.mobeepass.walletapplication"
+        ]
+    },
+    {
+        "AID": "A000000291D05600019001",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "Calypso-based transit card used by Brussels public transport.",
         "Type": "transport",
         "Protocol": "cna_calypso"
     },
