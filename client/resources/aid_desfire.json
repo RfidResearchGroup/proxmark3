@@ -1624,6 +1624,14 @@
         "Type": "transport"
     },
     {
+        "AID": "F210C0",
+        "Vendor": "Ubian",
+        "Country": "SK",
+        "Name": "Ubian digital transit card",
+        "Description": "DESFire-based virtual transit card",
+        "Type": "transport"
+    },
+    {
         "AID": "F210E0",
         "Vendor": "TriMet via INIT",
         "Country": "US",
@@ -1752,6 +1760,22 @@
         "Type": "transport"
     },
     {
+        "AID": "F21420",
+        "Vendor": "Metrolinx via Accenture",
+        "Country": "CA",
+        "Name": "PRESTO Card (YYZ/YHM/YOW)",
+        "Description": "YYZ/YHM/YOW PRESTO Card",
+        "Type": "transport"
+    },
+    {
+        "AID": "F21450",
+        "Vendor": "Metropolitan Atlanta Rapid Transit Authority (MARTA)",
+        "Country": "US",
+        "Name": "MARTA Breeze Card (ATL)",
+        "Description": "ATL MARTA Breeze Card",
+        "Type": "transport"
+    },
+    {
         "AID": "F40110",
         "Vendor": "ITSO Ltd",
         "Country": "GB",
@@ -1790,6 +1814,14 @@
         "Country": "GB",
         "Name": "ITSO Smartcard / The Key Card / touch Card (GBR)",
         "Description": "UK National Smartcard Project // Provision of Citizen Services #5",
+        "Type": "transport"
+    },
+    {
+        "AID": "F88522",
+        "Vendor": "Ubian",
+        "Country": "SK",
+        "Name": "Ubian digital transit card (Secondary)",
+        "Description": "DESFire-based virtual transit card secondary application",
         "Type": "transport"
     },
     {
