@@ -2520,6 +2520,15 @@
         ]
     },
     {
+        "AID": "A00000039656434103F2145000000000",
+        "Vendor": "Metropolitan Atlanta Rapid Transit Authority (MARTA)",
+        "Country": "United States",
+        "Name": "MARTA Breeze transit card",
+        "Description": "DESFire-based transit card",
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
+    },
+    {
         "AID": "A00000039656434103F8852200000000",
         "Vendor": "Ubian",
         "Country": "Slovakia",
