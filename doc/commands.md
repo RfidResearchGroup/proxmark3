@@ -234,8 +234,6 @@ Check column "offline" for their availability.
 |`hf 14b tearoff         `|N       |`Tear-off attack on ST25TB/SRx counter blocks`
 |`hf 14b view            `|Y       |`Display content from tag dump file`
 |`hf 14b valid           `|Y       |`SRIX4 checksum test`
-|`hf 14b calypso         `|N       |`Read contents of a Calypso card`
-|`hf 14b mobib           `|N       |`Read contents of a Mobib card`
 |`hf 14b setuid          `|N       |`Set UID for magic card`
 
 

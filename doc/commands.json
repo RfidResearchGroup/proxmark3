@@ -1501,18 +1501,6 @@
             ],
             "usage": "hf 14b apdu [-hskte] [--decode] [-m <hex>] [-l <int>] -d <hex> [--timeout <dec>]"
         },
-        "hf 14b calypso": {
-            "command": "hf 14b calypso",
-            "description": "Reads out the contents of a ISO14443B Calypso card",
-            "notes": [
-                "hf 14b calypso"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help"
-            ],
-            "usage": "hf 14b calypso [-h]"
-        },
         "hf 14b dump": {
             "command": "hf 14b dump",
             "description": "This command dumps the contents of a ISO-14443-B tag and save it to file Tries to autodetect cardtype, memory size defaults to SRI4K",
@@ -1531,7 +1519,7 @@
         },
         "hf 14b help": {
             "command": "hf 14b help",
-            "description": "--------- ----------------------- General ----------------------- help This help list List ISO-14443-B history --------- ----------------------- Operations ----------------------- view Display content from tag dump file valid SRIX4 checksum test --------- ------------------ Calypso / Mobib ------------------ --------------------------------------------------------------------------------------- hf 14b config available offline: no --------------------------------------------------------------------------------------- hf 14b list available offline: yes Alias of `trace list -t 14b -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "--------- ----------------------- General ----------------------- help This help list List ISO-14443-B history --------- ----------------------- Operations ----------------------- view Display content from tag dump file valid SRIX4 checksum test --------------------------------------------------------------------------------------- hf 14b config available offline: no --------------------------------------------------------------------------------------- hf 14b list available offline: yes Alias of `trace list -t 14b -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf 14b list --frame -> show frame delay times",
                 "hf 14b list -1 -> use trace buffer"
@@ -1563,19 +1551,6 @@
                 "-v, --verbose verbose output"
             ],
             "usage": "hf 14b info [-hsv]"
-        },
-        "hf 14b mobib": {
-            "command": "hf 14b mobib",
-            "description": "Reads out the contents of a ISO14443B Mobib card",
-            "notes": [
-                "hf 14b mobib"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-o, --old for old cards"
-            ],
-            "usage": "hf 14b mobib [-ho]"
         },
         "hf 14b ndefread": {
             "command": "hf 14b ndefread",
