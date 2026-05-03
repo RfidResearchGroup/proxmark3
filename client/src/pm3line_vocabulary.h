@@ -183,8 +183,6 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf 14b tearoff" },
     { 1, "hf 14b view" },
     { 1, "hf 14b valid" },
-    { 0, "hf 14b calypso" },
-    { 0, "hf 14b mobib" },
     { 0, "hf 14b setuid" },
     { 1, "hf 15 help" },
     { 1, "hf 15 list" },
