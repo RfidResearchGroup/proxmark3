@@ -10,7 +10,8 @@
         "id": "3C",
         "name": "SLE77CLFXxxxxP(M) family",
         "sources": [
-            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2022-001-certification-letter-hid-calypso-po-prime-soma-atlas-v2-v1.0.0.pdf"
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2022-001-certification-letter-hid-calypso-po-prime-soma-atlas-v2-v1.0.0.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2026-013-v1.1.0_calmell-calypso-prime-soma-atlas-v2-sign.pdf"
         ]
     },
     {
@@ -39,14 +40,19 @@
         "name": "SLC36 family",
         "sources": [
             "https://www.paycert.eu/certificats/cert_cer_cle_cna_2024-188-certification-letter_calypso-applet_idemia-urbango-fly-40-sign.pdf",
-            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2023-188-certification-letter_thales-gemalto-calypso-prime-g3_sign.pdf"
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2023-188-certification-letter_thales-gemalto-calypso-prime-g3_sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2024-186-v1.0.0_hid-soma-atlas-v3r_certification-letter-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cl2.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2023-188-v1.1.0-certification-letter_thales-gemalto-calypso-prime-g3-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_2023-013-certification-letter_timecos-cl-calypso-prime-3.2_v1.1.0-sign.pdf"
         ]
     },
     {
         "id": "51",
         "name": "SLM10TLD002Y",
         "sources": [
-            "https://www.infineon.com/assets/row/public/documents/30/67/infineon-calypsotm-move-calypsor-basic-certificatepaycert-certificates-en.pdf"
+            "https://www.infineon.com/assets/row/public/documents/30/67/infineon-calypsotm-move-calypsor-basic-certificatepaycert-certificates-en.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_2023-001-certification-letter_infineon_calypso%E2%84%A2-move-v1.0.0-sign.pdf"
         ]
     },
     {
@@ -54,7 +60,10 @@
         "name": "SLC26 family",
         "sources": [
             "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-177-v1.0.0_paragon-id-tango-prime-v3-sign.pdf",
-            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-086-v3.0.0_watchdata-timecos-clap-1.2-sign.pdf"
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-086-v3.0.0_watchdata-timecos-clap-1.2-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-168-v1.0.0_paragon-id-tango-clap-v3-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-191-v2.0.0_confidex-beon-clap-1.0-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2026-010-v1.0.0_gd-convego-calypso-prime-3.3-v1-sign.pdf"
         ]
     },
     {
@@ -70,7 +79,15 @@
         "note": "Some older HCE implementations also report platform byte C0.",
         "sources": [
             "https://www.paycert.eu/certificats/cert_cer_cle_cna_2024-001-certification-letter_calypso-applet_mobileknowledge-sn300-b5-series-sign.pdf",
-            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2023-148-certification-letter_calypso-applet_thales-tess-v5.0-publi.pdf"
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2023-148-certification-letter_calypso-applet_thales-tess-v5.0-publi.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-144-v1.0.0_mobileknowledge-nxp-sn330-a0-series-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-125-v1.0.0_thales-tess-v7.1-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-124-v1.0.0_thales-tess-v5.2-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-179-v1.0.0_thales-tess-v5.2.1-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2026-091-v1.0.0_infineon-secora-connect-sls21-d1-calypso-2.2-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2026-084-v1.0.0_thales-tess-v6.1-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2021-007-certification-letter_st54j-st54k-rev-c_v1.0.0-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_2021-006-certification-report_st54j_v1.0.0.pdf"
         ]
     },
     {

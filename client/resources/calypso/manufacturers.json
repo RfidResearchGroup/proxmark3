@@ -1,9 +1,11 @@
 [
     {
         "id": "00",
-        "name": "ASK",
+        "name": "ASK / Paragon ID",
         "sources": [
-            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-177-v1.0.0_paragon-id-tango-prime-v3-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-168-v1.0.0_paragon-id-tango-clap-v3-sign.pdf"
         ]
     },
     {
@@ -141,16 +143,20 @@
     },
     {
         "id": "14",
-        "name": "Gemalto",
+        "name": "Gemalto / Thales DIS",
         "sources": [
-            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-001-v1.0.0_thales-gemalto-calypso-prime-g3-v1.1-sign.pdf"
         ]
     },
     {
         "id": "15",
         "name": "Watchdata",
         "sources": [
-            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py",
+            "https://www.paycert.eu/certificats/cert_cer_cl2.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-086-v3.0.0_watchdata-timecos-clap-1.2-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_2023-013-certification-letter_timecos-cl-calypso-prime-3.2_v1.1.0-sign.pdf"
         ]
     },
     {
@@ -178,7 +184,15 @@
         "id": "20",
         "name": "Calypso Networks Association",
         "sources": [
-            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+            "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2024-188-certification-letter_calypso-applet_idemia-urbango-fly-40-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2026-010-v1.0.0_gd-convego-calypso-prime-3.3-v1-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-144-v1.0.0_mobileknowledge-nxp-sn330-a0-series-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-125-v1.0.0_thales-tess-v7.1-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-124-v1.0.0_thales-tess-v5.2-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-179-v1.0.0_thales-tess-v5.2.1-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2026-091-v1.0.0_infineon-secora-connect-sls21-d1-calypso-2.2-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2026-084-v1.0.0_thales-tess-v6.1-sign.pdf"
         ]
     },
     {
@@ -189,10 +203,26 @@
         ]
     },
     {
+        "id": "29",
+        "name": "HID Global (Arjo Systems)",
+        "sources": [
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2024-186-v1.0.0_hid-soma-atlas-v3r_certification-letter-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2026-032-v1.0.0_hid-global-soma-atlas-v2s-sign.pdf",
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2026-013-v1.1.0_calmell-calypso-prime-soma-atlas-v2-sign.pdf"
+        ]
+    },
+    {
         "id": "2E",
         "name": "Calypso Networks Association",
         "sources": [
             "https://github.com/zoobab/mobib-extractor/blob/master/MOBIB-Extractor.py"
+        ]
+    },
+    {
+        "id": "3D",
+        "name": "Confidex / Beontag",
+        "sources": [
+            "https://www.paycert.eu/certificats/cert_cer_cle_cna_2025-191-v2.0.0_confidex-beon-clap-1.0-sign.pdf"
         ]
     }
 ]
