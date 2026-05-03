@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Added `hf calypso dump` command (@kormax)
+- Added `pm3trace_edit.py`  script for editing of pm3 trace files (@iceman1001)
 - Added `hf calypso info` command (@kormax)
 - Added ARM compilation support for picolibc, fixing compilation on Debian Forky (@doegox)
 - Added `hf mdfes leaf` command (@pcunning)
