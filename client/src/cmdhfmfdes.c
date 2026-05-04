@@ -30,6 +30,7 @@
 #include "cmdhf14a.h"
 #include "aes.h"
 #include "crypto/libpcrypto.h"
+#include "crypto/duoxcrypto.h"
 #include "protocols.h"
 #include "cmdtrace.h"
 #include "cliparser.h"
@@ -72,8 +73,6 @@
 // DUOX ISO Internal Authenticate
 #define DUOX_INTAUTH_CHALLENGE_LEN      16
 #define DUOX_INTAUTH_SIG_LEN            64
-#define DUOX_VDE_CHALLENGE_LEN          32
-#define DUOX_VDE_SIG_LEN                64
 #define DUOX_MAX_KEY_INPUT              8192
 // TLV tags for ISO Internal Authenticate
 #define DUOX_TAG_OPTSA                  0x80
@@ -83,15 +82,18 @@
 #define DUOX_INTAUTH_MSG_PREFIX         0xF0
 
 // LEAF Verified Open Application
-#define LEAF_VERIFIED_DEFAULT_AID       0xF51CD6U  // 0xD61CF5 in user-facing (wire bytes D6 1C F5)
+#define LEAF_VERIFIED_DEFAULT_AID       0xF51CD6U
 #define LEAF_VERIFIED_CERT_FILE         0x02
 #define LEAF_VERIFIED_MAX_CERT_LEN      4096
 #define LEAF_COMMUNITY_ROOT_KEY_PATH    "duox_trust/leaf_community/leaf_community-root-public-key.der"
+#define DUOX_VDE_DEFAULT_AID            0x1010F6U
+#define DUOX_VDE_CERT_FILE              0x00
 
 static const uint8_t kDuoxVDEDefaultDFName[] = {
     0xA0, 0x00, 0x00, 0x08, 0x45, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
 };
+#define MFDES_VERIFYCERT_MAX_CAS        DUOX_MAX_CERTIFICATE_ANCHORS
 
 typedef struct mfd_app_select {
     bool dfname_present;
@@ -102,6 +104,65 @@ typedef struct mfd_app_select {
     bool aid_present;
     uint32_t aid;
 } mfd_app_select;
+
+typedef enum {
+    MFDES_VALIDATE_METHOD_AUTO = 0,
+    MFDES_VALIDATE_METHOD_INTAUTH,
+    MFDES_VALIDATE_METHOD_VDE,
+    MFDES_VALIDATE_METHOD_SKIP,
+} mfdes_validate_method_t;
+
+typedef enum {
+    MFDES_READ_METHOD_AUTO = 0,
+    MFDES_READ_METHOD_DESFIRE,
+} mfdes_read_method_t;
+
+#define MFDES_VERIFYCERT_CERTIFICATE_PROFILE_MAX_DATA 4
+#define MFDES_VERIFYCERT_PROFILE_MAX_NAMES     4
+#define MFDES_VERIFYCERT_PROFILE_MAX_METHODS   3
+#define MFDES_VERIFYCERT_NO_FID                0xFF
+
+typedef struct {
+    char label[32];
+    char value[DUOX_CERT_TEXT_LEN];
+} mfdes_certificate_profile_value_t;
+
+typedef struct {
+    duox_certificate_format_t format;
+    mbedtls_ecp_group_id curveid;
+    uint8_t pubkey[DUOX_EC_PUBKEY_MAX_LEN];
+    size_t pubkey_len;
+    char issuer[DUOX_CERT_TEXT_LEN];
+    char subject[DUOX_CERT_TEXT_LEN];
+    char serial[DUOX_CERT_TEXT_LEN];
+    char valid_from[DUOX_CERT_TEXT_LEN];
+    char valid_to[DUOX_CERT_TEXT_LEN];
+    char certificate_profile_note[DUOX_CERT_TEXT_LEN];
+    mfdes_certificate_profile_value_t certificate_profile_data[MFDES_VERIFYCERT_CERTIFICATE_PROFILE_MAX_DATA];
+    size_t certificate_profile_data_count;
+} mfdes_verified_cert_t;
+
+typedef enum {
+    MFDES_VERIFYCERT_CERTIFICATE_PROFILE_DATA_SUBJECT_DN = 0,
+    MFDES_VERIFYCERT_CERTIFICATE_PROFILE_DATA_ISSUER_DN,
+} mfdes_certificate_profile_data_source_t;
+
+typedef struct {
+    const char *label;
+    mfdes_certificate_profile_data_source_t source;
+    const char *dn_component;
+} mfdes_certificate_profile_data_t;
+
+typedef struct {
+    const char *names[MFDES_VERIFYCERT_PROFILE_MAX_NAMES];
+    mfd_app_select cert_select;
+    bool key_select_present;
+    mfd_app_select key_select;
+    uint8_t fid;
+    uint8_t keyidx;
+    mfdes_validate_method_t validate_methods[MFDES_VERIFYCERT_PROFILE_MAX_METHODS];
+    const mfdes_certificate_profile_data_t *certificate_profile_data;
+} mfdes_verifycert_profile_t;
 
 #define status(x) ( ((uint16_t)(0x91 << 8)) + (uint16_t)x )
 /*
@@ -7491,17 +7552,35 @@ static void MfdSelectionPrint(const mfd_app_select *select) {
     }
 }
 
-static int MfdSelectionSelectApplication(DesfireContext_t *dctx, const mfd_app_select *select, bool verbose) {
+static void MfdSelectionPrintPrefixed(const mfd_app_select *select, const char *prefix) {
+    if (select == NULL) {
+        return;
+    }
+    if (prefix == NULL) {
+        prefix = "";
+    }
+    if (select->dfname_present) {
+        PrintAndLogEx(INFO, "%sDF name...........: " _YELLOW_("%s"), prefix, sprint_hex_inrow(select->dfname, select->dfname_len));
+    }
+    if (select->isoid_present) {
+        PrintAndLogEx(INFO, "%sISO DF ID.........: " _YELLOW_("%04X"), prefix, select->isoid);
+    }
+    if (select->aid_present) {
+        uint8_t aid_bytes[3] = {0};
+        DesfireAIDUintToByte(select->aid, aid_bytes);
+        PrintAndLogEx(INFO, "%sAID...............: " _YELLOW_("%02X%02X%02X"), prefix, aid_bytes[0], aid_bytes[1], aid_bytes[2]);
+    }
+}
+
+static int MfdSelectionSelectApplicationEx(DesfireContext_t *dctx, const mfd_app_select *select, bool verbose, bool fieldon) {
     if (dctx == NULL || MfdSelectionHasAny(select) == false) {
         return PM3_EINVARG;
     }
 
-    bool fieldon = true;
-
     if (select->dfname_present) {
         uint8_t resp[250] = {0};
         size_t resplen = 0;
-        if (DesfireISOSelect(dctx, ISSDFName, (uint8_t *)select->dfname, select->dfname_len, resp, &resplen) != PM3_SUCCESS) {
+        if (DesfireISOSelectEx(dctx, fieldon, ISSDFName, (uint8_t *)select->dfname, select->dfname_len, resp, &resplen) != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Select DF name " _RED_("failed"));
             return PM3_ESOFT;
         }
@@ -7518,7 +7597,10 @@ static int MfdSelectionSelectApplication(DesfireContext_t *dctx, const mfd_app_s
 
     if (select->aid_present) {
         if (DesfireSelectEx(dctx, fieldon, ISW6bAID, select->aid, NULL) != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Select application %06X " _RED_("failed"), select->aid);
+            uint8_t aid_bytes[3] = {0};
+            DesfireAIDUintToByte(select->aid, aid_bytes);
+            PrintAndLogEx(ERR, "Select application %02X%02X%02X " _RED_("failed"),
+                          aid_bytes[0], aid_bytes[1], aid_bytes[2]);
             return PM3_ESOFT;
         }
     }
@@ -7529,8 +7611,12 @@ static int MfdSelectionSelectApplication(DesfireContext_t *dctx, const mfd_app_s
     return PM3_SUCCESS;
 }
 
+static int MfdSelectionSelectApplication(DesfireContext_t *dctx, const mfd_app_select *select, bool verbose) {
+    return MfdSelectionSelectApplicationEx(dctx, select, verbose, true);
+}
+
 // Build and send ISO Internal Authenticate (INS 88), then parse the TLV response.
-// Assumes the application is already selected (field on). Calls DropField before returning.
+// Assumes the application is already selected.
 // On PM3_SUCCESS: out_card_random[DUOX_INTAUTH_CHALLENGE_LEN] and out_sig_rs[DUOX_INTAUTH_SIG_LEN] are filled.
 static int duox_intauth_exchange(bool apdu_logging, bool verbose, uint8_t keynum,
                                   const uint8_t *challenge,
@@ -7562,7 +7648,6 @@ static int duox_intauth_exchange(bool apdu_logging, bool verbose, uint8_t keynum
     int encoded_len = 0;
     if (APDUEncodeS(&apdu, false, APDU_INCLUDE_LE_00, encoded, &encoded_len)) {
         PrintAndLogEx(ERR, "APDU encoding error");
-        DropField();
         return PM3_ESOFT;
     }
 
@@ -7574,14 +7659,11 @@ static int duox_intauth_exchange(bool apdu_logging, bool verbose, uint8_t keynum
     int res = ExchangeAPDU14a(encoded, encoded_len, false, true, response, sizeof(response), &resplen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "APDU exchange " _RED_("failed") " (%d)", res);
-        DropField();
         return res;
     }
 
     if (apdu_logging)
         PrintAndLogEx(SUCCESS, "<<<< %s", sprint_hex(response, resplen));
-
-    DropField();
 
     // Check status word
     if (resplen < 2) {
@@ -7791,6 +7873,7 @@ static int CmdHF14ADesIntAuth(const char *Cmd) {
     uint8_t card_random[DUOX_INTAUTH_CHALLENGE_LEN] = {0};
     uint8_t signature_rs[DUOX_INTAUTH_SIG_LEN] = {0};
     int res = duox_intauth_exchange(APDULogging, verbose, (uint8_t)keynum, challenge, card_random, signature_rs);
+    DropField();
     if (res != PM3_SUCCESS)
         return res;
 
@@ -8161,6 +8244,7 @@ static int CmdHF14ADesLeaf(const char *Cmd) {
     uint8_t card_random[DUOX_INTAUTH_CHALLENGE_LEN] = {0};
     uint8_t signature_rs[DUOX_INTAUTH_SIG_LEN] = {0};
     res = duox_intauth_exchange(APDULogging, verbose, (uint8_t)keynum, challenge, card_random, signature_rs);
+    DropField();
     if (res != PM3_SUCCESS)
         return res;
 
@@ -8186,6 +8270,994 @@ static int CmdHF14ADesLeaf(const char *Cmd) {
     }
 
     return (root_ok && card_ok) ? PM3_SUCCESS : PM3_ESOFT;
+}
+
+static const CLIParserOption mfdesValidateMethodOpts[] = {
+    {MFDES_VALIDATE_METHOD_AUTO, "auto"},
+    {MFDES_VALIDATE_METHOD_INTAUTH, "intauth"},
+    {MFDES_VALIDATE_METHOD_INTAUTH, "internal-auth"},
+    {MFDES_VALIDATE_METHOD_INTAUTH, "internal"},
+    {MFDES_VALIDATE_METHOD_VDE, "vde"},
+    {MFDES_VALIDATE_METHOD_VDE, "vdesign"},
+    {MFDES_VALIDATE_METHOD_VDE, "vde-sign"},
+    {MFDES_VALIDATE_METHOD_SKIP, "skip"},
+    {MFDES_VALIDATE_METHOD_SKIP, "none"},
+    {-1, NULL},
+};
+
+static const CLIParserOption mfdesReadMethodOpts[] = {
+    {MFDES_READ_METHOD_AUTO, "auto"},
+    {MFDES_READ_METHOD_DESFIRE, "desfire"},
+    {-1, NULL},
+};
+
+static const mfdes_certificate_profile_data_t kMfdesVerifyCertLeafCertificateProfileData[] = {
+    {
+        .label = "Open ID",
+        .source = MFDES_VERIFYCERT_CERTIFICATE_PROFILE_DATA_SUBJECT_DN,
+        .dn_component = "serialNumber",
+    },
+    {0},
+};
+
+static const mfdes_verifycert_profile_t kMfdesVerifyCertProfiles[] = {
+    {
+        .names = {"generic"},
+        .cert_select = {.aid_present = true, .aid = 0x000000},
+        .fid = MFDES_VERIFYCERT_NO_FID,
+        .keyidx = 0x00,
+        .validate_methods = {MFDES_VALIDATE_METHOD_INTAUTH, MFDES_VALIDATE_METHOD_VDE},
+    },
+    {
+        .names = {"leaf"},
+        .cert_select = {.aid_present = true, .aid = LEAF_VERIFIED_DEFAULT_AID},
+        .fid = LEAF_VERIFIED_CERT_FILE,
+        .keyidx = 0x00,
+        .validate_methods = {MFDES_VALIDATE_METHOD_INTAUTH},
+        .certificate_profile_data = kMfdesVerifyCertLeafCertificateProfileData,
+    },
+    {
+        .names = {"vde"},
+        .cert_select = {.aid_present = true, .aid = DUOX_VDE_DEFAULT_AID},
+        .fid = DUOX_VDE_CERT_FILE,
+        .keyidx = 0x00,
+        .validate_methods = {MFDES_VALIDATE_METHOD_VDE, MFDES_VALIDATE_METHOD_INTAUTH},
+    },
+    {
+        .names = {"orig", "originality"},
+        .cert_select = {.aid_present = true, .aid = 0x000000},
+        .fid = 0x01,
+        .keyidx = 0x01,
+        .validate_methods = {MFDES_VALIDATE_METHOD_INTAUTH, MFDES_VALIDATE_METHOD_VDE},
+    },
+    {
+        .names = {"picc"},
+        .cert_select = {.aid_present = true, .aid = 0x000000},
+        .fid = 0x00,
+        .keyidx = 0x00,
+        .validate_methods = {MFDES_VALIDATE_METHOD_SKIP},
+    },
+};
+
+static const mfdes_verifycert_profile_t *mfdes_find_verifycert_profile(const char *value) {
+    if (value == NULL || value[0] == '\0') {
+        return &kMfdesVerifyCertProfiles[0];
+    }
+
+    for (size_t i = 0; i < ARRAYLEN(kMfdesVerifyCertProfiles); i++) {
+        const mfdes_verifycert_profile_t *profile = &kMfdesVerifyCertProfiles[i];
+        for (size_t n = 0; n < ARRAYLEN(profile->names); n++) {
+            if (profile->names[n] != NULL && str_equal_case_insensitive(value, profile->names[n])) {
+                return profile;
+            }
+        }
+    }
+    return NULL;
+}
+
+static int mfdes_prepare_data_file_read(DesfireContext_t *dctx, uint8_t fnum, bool noauth, bool verbose, bool *auth_needed) {
+    if (dctx == NULL) {
+        return PM3_EINVARG;
+    }
+    if (auth_needed != NULL) {
+        *auth_needed = false;
+    }
+
+    dctx->isoChaining |= (dctx->secureChannel == DACLRP);
+
+    FileSettings_t fsettings = {0};
+    DesfireCommunicationMode comm_mode = dctx->commMode;
+    DesfireSetCommMode(dctx, DCMMACed);
+    int res = DesfireFileSettingsStruct(dctx, fnum, &fsettings);
+    DesfireSetCommMode(dctx, comm_mode);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "GetFileSettings error. Reading certificate file with current communication mode.");
+        return PM3_SUCCESS;
+    }
+
+    if (fsettings.fileType != 0x00 && fsettings.fileType != 0x01) {
+        PrintAndLogEx(ERR, "Certificate file must be a standard or backup data file, got %s",
+                      GetDesfireFileType(fsettings.fileType));
+        return PM3_EINVARG;
+    }
+
+    bool read_free = (fsettings.rAccess == 0x0e || fsettings.rwAccess == 0x0e);
+    bool read_denied = (fsettings.rAccess == 0x0f && fsettings.rwAccess == 0x0f);
+    bool read_needs_auth = (!read_free && !read_denied && (fsettings.rAccess < 0x0e || fsettings.rwAccess < 0x0e));
+
+    comm_mode = fsettings.commMode;
+    if (read_free && !DesfireIsAuthenticated(dctx)) {
+        comm_mode = DCMPlain;
+    }
+    DesfireSetCommMode(dctx, comm_mode);
+
+    if (fsettings.fileCommMode != 0 && noauth && !read_free) {
+        PrintAndLogEx(WARNING, "File needs communication mode `%s` but there is no authentication",
+                      CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
+    }
+    if (auth_needed != NULL && read_needs_auth && !DesfireIsAuthenticated(dctx)) {
+        *auth_needed = true;
+    }
+    if ((fsettings.rAccess < 0x0e && fsettings.rAccess != dctx->keyNum) &&
+            (fsettings.rwAccess < 0x0e && fsettings.rwAccess != dctx->keyNum)) {
+        PrintAndLogEx(WARNING, "File needs to be authenticated with key 0x%02x or 0x%02x but current authentication key is 0x%02x",
+                      fsettings.rAccess, fsettings.rwAccess, dctx->keyNum);
+    }
+    if (fsettings.rAccess == 0x0f && fsettings.rwAccess == 0x0f) {
+        PrintAndLogEx(WARNING, "File access denied. All read access rights is 0x0F");
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, _CYAN_("Certificate file type:") " %s  comm mode: %s",
+                      GetDesfireFileType(fsettings.fileType),
+                      CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
+    }
+    return PM3_SUCCESS;
+}
+
+static int mfdes_read_cert_file_once(const DesfireContext_t *base_dctx, DesfireSecureChannel securechann,
+                                     uint8_t fid, bool authenticate, bool verbose,
+                                     uint8_t *cert_buf, size_t *cert_buf_len, bool *auth_needed) {
+    if (base_dctx == NULL || cert_buf == NULL || cert_buf_len == NULL) {
+        return PM3_EINVARG;
+    }
+
+    DesfireContext_t dctx = *base_dctx;
+    int res = PM3_SUCCESS;
+
+    if (authenticate) {
+        res = DesfireAuthenticate(&dctx, securechann, verbose);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: [%d] %s", res, DesfireAuthErrorToStr(res));
+            return res;
+        }
+        if (!DesfireIsAuthenticated(&dctx)) {
+            return 201;
+        }
+    }
+
+    res = mfdes_prepare_data_file_read(&dctx, fid, !authenticate, verbose, auth_needed);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    *cert_buf_len = 0;
+    res = DesfireReadFile(&dctx, fid, 0, 0, cert_buf, cert_buf_len);
+    return res;
+}
+
+static int mfdes_read_cert_file_desfire(const DesfireContext_t *base_dctx, DesfireSecureChannel securechann,
+                                        uint8_t fid, bool noauth, bool force_auth, bool verbose,
+                                        uint8_t *cert_buf, size_t *cert_buf_len) {
+    if (base_dctx == NULL || cert_buf == NULL || cert_buf_len == NULL) {
+        return PM3_EINVARG;
+    }
+
+    bool auth_needed = false;
+    int res = PM3_SUCCESS;
+    if (noauth || !force_auth) {
+        res = mfdes_read_cert_file_once(base_dctx, securechann, fid, false, verbose,
+                                        cert_buf, cert_buf_len, &auth_needed);
+        if (res == PM3_SUCCESS) {
+            return PM3_SUCCESS;
+        }
+        if (noauth) {
+            return res;
+        }
+        if (auth_needed) {
+            PrintAndLogEx(INFO, "File settings indicate authentication is needed; retrying with authentication");
+        } else {
+            PrintAndLogEx(WARNING, "Unauthenticated ReadFile failed (%d); retrying with authentication", res);
+        }
+    }
+
+    res = mfdes_read_cert_file_once(base_dctx, securechann, fid, true, verbose,
+                                    cert_buf, cert_buf_len, NULL);
+    return res;
+}
+
+static void mfdes_print_certificate_info(const mfdes_verified_cert_t *cert_info) {
+    if (cert_info == NULL) {
+        return;
+    }
+
+    PrintAndLogEx(INFO, _CYAN_("Certificate"));
+    PrintAndLogEx(INFO, "  format............: " _YELLOW_("%s"), duox_certificate_format_name(cert_info->format));
+    PrintAndLogEx(INFO, "  issuer............: " _YELLOW_("%s"), (cert_info->issuer[0] != '\0') ? cert_info->issuer : "n/a");
+    PrintAndLogEx(INFO, "  subject...........: " _YELLOW_("%s"), (cert_info->subject[0] != '\0') ? cert_info->subject : "n/a");
+    PrintAndLogEx(INFO, "  serial number.....: " _YELLOW_("%s"), (cert_info->serial[0] != '\0') ? cert_info->serial : "n/a");
+    PrintAndLogEx(INFO, "  valid from........: " _YELLOW_("%s"), (cert_info->valid_from[0] != '\0') ? cert_info->valid_from : "n/a");
+    PrintAndLogEx(INFO, "  valid to..........: " _YELLOW_("%s"), (cert_info->valid_to[0] != '\0') ? cert_info->valid_to : "n/a");
+    if (cert_info->certificate_profile_note[0] != '\0') {
+        PrintAndLogEx(INFO, "  profile data......: " _YELLOW_("%s"), cert_info->certificate_profile_note);
+    }
+    for (size_t i = 0; i < cert_info->certificate_profile_data_count && i < ARRAYLEN(cert_info->certificate_profile_data); i++) {
+        const mfdes_certificate_profile_value_t *item = &cert_info->certificate_profile_data[i];
+        if (item->label[0] != '\0' && item->value[0] != '\0') {
+            PrintAndLogEx(INFO, "  profile data......: " _YELLOW_("%s %s"), item->label, item->value);
+        }
+    }
+    PrintAndLogEx(INFO, "  public key........: " _YELLOW_("%s"), (cert_info->pubkey_len > 0) ? sprint_hex_inrow(cert_info->pubkey, cert_info->pubkey_len) : "n/a");
+}
+
+static void mfdes_cert_info_from_duox(const duox_cert_info_t *src, mfdes_verified_cert_t *dst) {
+    if (src == NULL || dst == NULL) {
+        return;
+    }
+
+    memset(dst, 0, sizeof(*dst));
+    dst->format = src->format;
+    dst->curveid = src->curveid;
+    dst->pubkey_len = MIN(src->pubkey_len, sizeof(dst->pubkey));
+    if (dst->pubkey_len > 0) {
+        memcpy(dst->pubkey, src->pubkey, dst->pubkey_len);
+    }
+    snprintf(dst->issuer, sizeof(dst->issuer), "%s", src->issuer);
+    snprintf(dst->subject, sizeof(dst->subject), "%s", src->subject);
+    snprintf(dst->serial, sizeof(dst->serial), "%s", src->serial);
+    snprintf(dst->valid_from, sizeof(dst->valid_from), "%s", src->valid_from);
+    snprintf(dst->valid_to, sizeof(dst->valid_to), "%s", src->valid_to);
+    snprintf(dst->certificate_profile_note, sizeof(dst->certificate_profile_note), "%s", src->certificate_profile_note);
+}
+
+static bool mfdes_extract_dn_component(const char *dn, const char *key, char *out, size_t out_len) {
+    if (dn == NULL || key == NULL || out == NULL || out_len == 0) {
+        return false;
+    }
+
+    out[0] = '\0';
+    const char *p = strstr(dn, key);
+    if (p == NULL) {
+        return false;
+    }
+    p += strlen(key);
+    while (*p == ' ' || *p == '=') {
+        p++;
+    }
+    if (*p == '"') {
+        p++;
+    }
+
+    size_t n = 0;
+    while (p[n] != '\0' && p[n] != ',' && p[n] != '"' && n + 1 < out_len) {
+        out[n] = p[n];
+        n++;
+    }
+    out[n] = '\0';
+    return n > 0;
+}
+
+static bool mfdes_add_certificate_profile_data(mfdes_verified_cert_t *cert_info, const char *label, const char *value) {
+    if (cert_info == NULL || label == NULL || value == NULL || value[0] == '\0' ||
+            cert_info->certificate_profile_data_count >= ARRAYLEN(cert_info->certificate_profile_data)) {
+        return false;
+    }
+
+    mfdes_certificate_profile_value_t *item = &cert_info->certificate_profile_data[cert_info->certificate_profile_data_count++];
+    snprintf(item->label, sizeof(item->label), "%s", label);
+    snprintf(item->value, sizeof(item->value), "%s", value);
+    return true;
+}
+
+static void mfdes_apply_certificate_profile_data(const mfdes_verifycert_profile_t *profile, mfdes_verified_cert_t *cert_info) {
+    if (profile == NULL || cert_info == NULL || profile->certificate_profile_data == NULL) {
+        return;
+    }
+
+    cert_info->certificate_profile_data_count = 0;
+    memset(cert_info->certificate_profile_data, 0, sizeof(cert_info->certificate_profile_data));
+
+    for (const mfdes_certificate_profile_data_t *item = profile->certificate_profile_data; item->label != NULL; item++) {
+        if (item->dn_component == NULL) {
+            continue;
+        }
+
+        const char *dn = NULL;
+        switch (item->source) {
+            case MFDES_VERIFYCERT_CERTIFICATE_PROFILE_DATA_SUBJECT_DN:
+                dn = cert_info->subject;
+                break;
+            case MFDES_VERIFYCERT_CERTIFICATE_PROFILE_DATA_ISSUER_DN:
+                dn = cert_info->issuer;
+                break;
+            default:
+                break;
+        }
+        if (dn == NULL || dn[0] == '\0') {
+            continue;
+        }
+
+        char value[DUOX_CERT_TEXT_LEN] = {0};
+        if (mfdes_extract_dn_component(dn, item->dn_component, value, sizeof(value))) {
+            mfdes_add_certificate_profile_data(cert_info, item->label, value);
+        }
+    }
+}
+
+static int mfdes_verify_certificate_variants(const uint8_t *data, size_t data_len,
+                                             const duox_certificate_anchor_t *ca_anchors, size_t ca_anchor_count,
+                                             bool verify_signature,
+                                             bool verbose, mfdes_verified_cert_t *out, size_t *matched_index) {
+    duox_cert_info_t cert = {0};
+    int res = duox_parse_or_verify_certificate_variants(data, data_len,
+              ca_anchors, ca_anchor_count,
+              verify_signature,
+              verbose, &cert, matched_index);
+    if (res == PM3_SUCCESS || res == PM3_ECRYPTO) {
+        mfdes_cert_info_from_duox(&cert, out);
+    }
+    return res;
+}
+
+static int duox_vde_sign_exchange(bool apdu_logging, bool verbose,
+                                  const uint8_t challenge[DUOX_VDE_CHALLENGE_LEN],
+                                  uint8_t signature_rs[DUOX_VDE_SIG_LEN]) {
+    if (challenge == NULL || signature_rs == NULL) {
+        return PM3_EINVARG;
+    }
+
+    sAPDU_t apdu = {0x80, 0x03, 0x0C, 0x09, DUOX_VDE_CHALLENGE_LEN, (uint8_t *)challenge};
+    uint8_t encoded[64] = {0};
+    int encoded_len = 0;
+    if (APDUEncodeS(&apdu, false, APDU_INCLUDE_LE_00, encoded, &encoded_len)) {
+        PrintAndLogEx(ERR, "APDU encoding error");
+        return PM3_ESOFT;
+    }
+
+    if (apdu_logging) {
+        PrintAndLogEx(SUCCESS, ">>>> %s", sprint_hex(encoded, encoded_len));
+    }
+
+    uint8_t response[PM3_CMD_DATA_SIZE] = {0};
+    int resplen = 0;
+    int res = ExchangeAPDU14a(encoded, encoded_len, false, true, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "APDU exchange " _RED_("failed") " (%d)", res);
+        return res;
+    }
+
+    if (apdu_logging) {
+        PrintAndLogEx(SUCCESS, "<<<< %s", sprint_hex(response, resplen));
+    }
+
+    if (resplen < 2) {
+        PrintAndLogEx(ERR, "Response too short");
+        return PM3_ESOFT;
+    }
+
+    uint16_t sw = get_sw(response, resplen);
+    if (sw != ISO7816_OK) {
+        PrintAndLogEx(ERR, "VDE_ECDSASign " _RED_("failed") " (%04X - %s)", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        return PM3_ESOFT;
+    }
+
+    int resp_data_len = resplen - 2;
+    if (resp_data_len != DUOX_VDE_SIG_LEN) {
+        PrintAndLogEx(ERR, "Unexpected signature length: %d bytes", resp_data_len);
+        return PM3_ESOFT;
+    }
+
+    memcpy(signature_rs, response, DUOX_VDE_SIG_LEN);
+    PrintAndLogEx(SUCCESS, "VDE_ECDSASign " _GREEN_("ok") " (SW=%04X)", sw);
+    if (verbose) {
+        PrintAndLogEx(INFO, "Signature.... %s", sprint_hex_inrow(signature_rs, DUOX_VDE_SIG_LEN));
+    }
+    return PM3_SUCCESS;
+}
+
+static int mfdes_verify_vde_signature(const uint8_t challenge[DUOX_VDE_CHALLENGE_LEN],
+                                      const uint8_t signature_rs[DUOX_VDE_SIG_LEN],
+                                      const uint8_t pubkey_point[65],
+                                      bool verbose) {
+    if (challenge == NULL || signature_rs == NULL || pubkey_point == NULL) {
+        return PM3_EINVARG;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Verify msg... %s", sprint_hex_inrow(challenge, DUOX_VDE_CHALLENGE_LEN));
+    }
+
+    int sig_res = ecdsa_signature_r_s_verify(
+                      MBEDTLS_ECP_DP_BP256R1,
+                      (uint8_t *)pubkey_point,
+                      (uint8_t *)challenge,
+                      DUOX_VDE_CHALLENGE_LEN,
+                      (uint8_t *)signature_rs,
+                      DUOX_VDE_SIG_LEN,
+                      true
+                  );
+    return (sig_res == PM3_SUCCESS) ? PM3_SUCCESS : PM3_ESOFT;
+}
+
+static bool mfdes_validate_method_is_compatible(mfdes_validate_method_t method, const mfdes_verified_cert_t *cert_info, int keyidx, char *reason, size_t reason_len) {
+    if (cert_info == NULL) {
+        return false;
+    }
+    if (reason != NULL && reason_len > 0) {
+        reason[0] = '\0';
+    }
+
+    switch (method) {
+        case MFDES_VALIDATE_METHOD_INTAUTH:
+            if (cert_info->curveid != MBEDTLS_ECP_DP_SECP256R1 || cert_info->pubkey_len != 65) {
+                if (reason != NULL && reason_len > 0) {
+                    snprintf(reason, reason_len, "Internal Authenticate needs a secp256r1 65-byte public key");
+                }
+                return false;
+            }
+            return true;
+        case MFDES_VALIDATE_METHOD_VDE:
+            if (keyidx != 0) {
+                if (reason != NULL && reason_len > 0) {
+                    snprintf(reason, reason_len, "VDE_ECDSASign supports key index 00");
+                }
+                return false;
+            }
+            if (cert_info->curveid != MBEDTLS_ECP_DP_BP256R1 || cert_info->pubkey_len != 65) {
+                if (reason != NULL && reason_len > 0) {
+                    snprintf(reason, reason_len, "VDE_ECDSASign needs a BrainpoolP256r1 65-byte public key");
+                }
+                return false;
+            }
+            return true;
+        case MFDES_VALIDATE_METHOD_SKIP:
+            return true;
+        case MFDES_VALIDATE_METHOD_AUTO:
+        default:
+            return false;
+    }
+}
+
+static size_t mfdes_copy_validate_methods(const mfdes_verifycert_profile_t *profile,
+                                          mfdes_validate_method_t *methods, size_t max_methods) {
+    if (profile == NULL || methods == NULL || max_methods == 0) {
+        return 0;
+    }
+
+    size_t count = 0;
+    while (count < max_methods && profile->validate_methods[count] != MFDES_VALIDATE_METHOD_AUTO) {
+        methods[count] = profile->validate_methods[count];
+        count++;
+    }
+    return count;
+}
+
+static int mfdes_run_intauth_validation(bool APDULogging, bool verbose, const mfd_app_select *key_select,
+                                        int keyidx, const mfdes_verified_cert_t *cert_info) {
+    uint8_t challenge[DUOX_INTAUTH_CHALLENGE_LEN] = {0};
+    int res = pcrypto_rng_fill_oneshot(challenge, sizeof(challenge), "hf_mfdes_verifycert_intauth");
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to generate challenge");
+        return res;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "  method............: " _YELLOW_("ISO Internal Authenticate"));
+    }
+
+    uint8_t card_random[DUOX_INTAUTH_CHALLENGE_LEN] = {0};
+    uint8_t signature_rs[DUOX_INTAUTH_SIG_LEN] = {0};
+    DesfireContext_t verify_dctx = {0};
+    verify_dctx.commMode = DCMPlain;
+    verify_dctx.cmdSet = DCCNativeISO;
+    res = MfdSelectionSelectApplicationEx(&verify_dctx, key_select, verbose, false);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Challenge.... " _YELLOW_("%s"), sprint_hex_inrow(challenge, DUOX_INTAUTH_CHALLENGE_LEN));
+    }
+    res = duox_intauth_exchange(APDULogging, verbose, (uint8_t)keyidx, challenge, card_random, signature_rs);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Card random...... " _YELLOW_("%s"), sprint_hex_inrow(card_random, DUOX_INTAUTH_CHALLENGE_LEN));
+        PrintAndLogEx(INFO, "Signature r...... " _YELLOW_("%s"), sprint_hex_inrow(signature_rs, DUOX_INTAUTH_SIG_LEN / 2));
+        PrintAndLogEx(INFO, "Signature s...... " _YELLOW_("%s"), sprint_hex_inrow(signature_rs + DUOX_INTAUTH_SIG_LEN / 2, DUOX_INTAUTH_SIG_LEN / 2));
+    }
+
+    res = duox_intauth_verify_sig(verbose, cert_info->pubkey, challenge, card_random, signature_rs);
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Internal Authenticate signature " _GREEN_("verified"));
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(ERR, "Internal Authenticate signature " _RED_("verification failed"));
+    return PM3_ESOFT;
+}
+
+static int mfdes_run_vde_validation(bool APDULogging, bool verbose, const mfd_app_select *key_select,
+                                    const mfdes_verified_cert_t *cert_info) {
+    uint8_t challenge[DUOX_VDE_CHALLENGE_LEN] = {0};
+    int res = pcrypto_rng_fill_oneshot(challenge, sizeof(challenge), "hf_mfdes_verifycert_vde");
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to generate VDE challenge");
+        return res;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "  method............: " _YELLOW_("VDE_ECDSASign"));
+    }
+
+    uint8_t signature_rs[DUOX_VDE_SIG_LEN] = {0};
+    DesfireContext_t verify_dctx = {0};
+    verify_dctx.commMode = DCMPlain;
+    verify_dctx.cmdSet = DCCNativeISO;
+    res = MfdSelectionSelectApplicationEx(&verify_dctx, key_select, verbose, false);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Challenge.... " _YELLOW_("%s"), sprint_hex_inrow(challenge, DUOX_VDE_CHALLENGE_LEN));
+    }
+    res = duox_vde_sign_exchange(APDULogging, verbose, challenge, signature_rs);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "VDE signature r... " _YELLOW_("%s"), sprint_hex_inrow(signature_rs, DUOX_VDE_SIG_LEN / 2));
+        PrintAndLogEx(INFO, "VDE signature s... " _YELLOW_("%s"), sprint_hex_inrow(signature_rs + DUOX_VDE_SIG_LEN / 2, DUOX_VDE_SIG_LEN / 2));
+    }
+
+    res = mfdes_verify_vde_signature(challenge, signature_rs, cert_info->pubkey, verbose);
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "VDE_ECDSASign signature " _GREEN_("verified"));
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(ERR, "VDE_ECDSASign signature " _RED_("verification failed"));
+    return PM3_ESOFT;
+}
+
+static int mfdes_run_key_possession_verification(bool APDULogging, bool verbose,
+                                                 const mfdes_validate_method_t *methods,
+                                                 size_t method_count,
+                                                 bool forced_method,
+                                                 const mfd_app_select *key_select,
+                                                 int keyidx,
+                                                 const mfdes_verified_cert_t *cert_info) {
+    if (methods == NULL || method_count == 0 || key_select == NULL || cert_info == NULL) {
+        return PM3_EINVARG;
+    }
+
+    if (method_count == 1 && methods[0] == MFDES_VALIDATE_METHOD_SKIP) {
+        PrintAndLogEx(SUCCESS, "Key possession verification " _YELLOW_("skipped"));
+        return PM3_SUCCESS;
+    }
+
+    int last_res = PM3_ENOTIMPL;
+    bool tried_any = false;
+    for (size_t i = 0; i < method_count; i++) {
+        char reason[128] = {0};
+        if (!mfdes_validate_method_is_compatible(methods[i], cert_info, keyidx, reason, sizeof(reason))) {
+            if (forced_method) {
+                PrintAndLogEx(ERR, "%s is not compatible with this certificate/key selection: %s",
+                              CLIGetOptionListStr(mfdesValidateMethodOpts, methods[i]), reason);
+                return PM3_ENOTIMPL;
+            }
+            if (verbose && reason[0] != '\0') {
+                PrintAndLogEx(INFO, "Skipping %s: %s", CLIGetOptionListStr(mfdesValidateMethodOpts, methods[i]), reason);
+            }
+            continue;
+        }
+
+        tried_any = true;
+        if (methods[i] == MFDES_VALIDATE_METHOD_INTAUTH) {
+            last_res = mfdes_run_intauth_validation(APDULogging, verbose, key_select, keyidx, cert_info);
+        } else if (methods[i] == MFDES_VALIDATE_METHOD_VDE) {
+            last_res = mfdes_run_vde_validation(APDULogging, verbose, key_select, cert_info);
+        }
+
+        if (last_res == PM3_SUCCESS) {
+            return PM3_SUCCESS;
+        }
+        if (forced_method) {
+            return last_res;
+        }
+        PrintAndLogEx(WARNING, "%s validation failed; trying next compatible method", CLIGetOptionListStr(mfdesValidateMethodOpts, methods[i]));
+    }
+
+    if (!tried_any) {
+        PrintAndLogEx(ERR, "Certificate key is unsupported for key possession verification");
+        PrintAndLogEx(INFO, "Supported methods: secp256r1 via ISO Internal Authenticate, or BrainpoolP256r1 key index 00 via VDE_ECDSASign");
+        return PM3_ENOTIMPL;
+    }
+
+    return last_res;
+}
+
+static int CmdHF14ADesVerifyCert(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes verifycert",
+                  "Read a certificate from DESFire file,\n"
+                  "validate it against root CA keys, extract device public key,\n"
+                  "then verify key possession with ISO Internal Authenticate or VDE_ECDSASign.",
+                  "hf mfdes verifycert leaf\n"
+                  "hf mfdes verifycert vde\n"
+                  "hf mfdes verifycert orig\n"
+                  "hf mfdes verifycert picc\n"
+                  "hf mfdes verifycert --fid 01\n"
+                  "hf mfdes verifycert leaf --aid D61CF5 --keyidx 0\n"
+                  "hf mfdes verifycert vde --dfname A0000008450000000000000000000001 --aid F61010\n"
+                  "hf mfdes verifycert orig --ca nxp-orig-e200\n"
+                  "hf mfdes verifycert vde --ca skip\n"
+                  "hf mfdes verifycert --fid 01 --ca ./rootca.pem --ca ./backup_root.der\n"
+                  "hf mfdes verifycert --fid 01 --ca 04AABB... (public key)\n"
+                  "hf mfdes verifycert --fid 01 --keyaid 123456 --keyidx 2");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, NULL,        "<profile>", "Profile: leaf, vde, orig, originality, picc"), // 1
+        arg_lit0("a",  "apdu",      "Show APDU requests and responses"), // 2
+        arg_lit0("v",  "verbose",   "Verbose output"), // 3
+        arg_int0("n",  "keyno",     "<dec>", "Key number for DESFire authentication"), // 4
+        arg_str0("t",  "algo",      "<DES|2TDEA|3TDEA|AES>",  "DESFire auth crypt algo"), // 5
+        arg_str0("k",  "key",       "<hex>", "DESFire authentication key"), // 6
+        arg_str0(NULL, "kdf",       "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"), // 7
+        arg_str0("i",  "kdfi",      "<hex>", "KDF input (1-31 hex bytes)"), // 8
+        arg_str0("m",  "cmode",     "<plain|mac|encrypt>", "Communication mode"), // 9
+        arg_str0("c",  "ccset",     "<native|niso|iso>", "Communication command set"), // 10
+        arg_str0(NULL, "schann",    "<ev2>", "Secure channel (verifycert supports only ev2 for auth)"), // 11
+        arg_str0(NULL, "aid",       "<hex>", "Certificate application ID (3 bytes)"), // 12
+        arg_str0(NULL, "isoid",     "<hex>", "Certificate application ISO DF ID (2 bytes)"), // 13
+        arg_str0(NULL, "dfname",    "<hex>", "Certificate application DF name (1-16 bytes)"), // 14
+        arg_str0(NULL, "fid",       "<hex>", "Certificate file ID (1 byte)"), // 15
+        arg_lit0(NULL, "no-auth",   "Read certificate file without authentication"), // 16
+        arg_strn(NULL, "ca", "<name|cert|pubkey|path|skip>", 0, MFDES_VERIFYCERT_MAX_CAS,
+                 "CA input, or `skip` to skip certificate signature validation. Repeat --ca for multiple entries"), // 17
+        arg_str0(NULL, "keyaid",    "<hex>", "Key application ID (default: cert app)"), // 18
+        arg_str0(NULL, "keyisoid",  "<hex>", "Key application ISO DF ID (2 bytes)"), // 19
+        arg_str0(NULL, "keydfname", "<hex>", "Key application DF name (default: cert app)"), // 20
+        arg_int0(NULL, "keyidx",    "<dec>", "Key index for possession verification (profile default)"), // 21
+        arg_str0(NULL, "validatemethod", "<auto|intauth|vde|skip>", "Key possession verification method (default: profile/auto)"), // 22
+        arg_str0(NULL, "readmethod", "<auto|desfire>", "Certificate read method (reserved for future methods)"), // 23
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 2);
+    bool verbose = arg_get_lit(ctx, 3);
+    bool noauth = arg_get_lit(ctx, 16);
+    bool secure_channel_present = (arg_get_str(ctx, 11)->count > 0);
+    bool auth_params_present = (arg_get_int_count(ctx, 4) > 0 ||
+                                arg_get_str(ctx, 5)->count > 0 ||
+                                arg_get_str(ctx, 6)->count > 0 ||
+                                arg_get_str(ctx, 7)->count > 0 ||
+                                arg_get_str(ctx, 8)->count > 0 ||
+                                arg_get_str(ctx, 9)->count > 0 ||
+                                arg_get_str(ctx, 10)->count > 0 ||
+                                secure_channel_present);
+    bool force_auth = auth_params_present && !noauth;
+
+    const char *profile_arg = (arg_get_str(ctx, 1)->count > 0) ? arg_get_str(ctx, 1)->sval[0] : NULL;
+    const mfdes_verifycert_profile_t *profile = mfdes_find_verifycert_profile(profile_arg);
+    if (profile == NULL) {
+        PrintAndLogEx(ERR, "Unknown verifycert profile `%s`", profile_arg);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    mfd_app_select cert_select = profile->cert_select;
+    mfd_app_select key_select = profile->key_select_present ? profile->key_select : profile->cert_select;
+    uint8_t cert_fid = profile->fid;
+    uint8_t default_keyidx = profile->keyidx;
+    mfdes_validate_method_t validate_methods[MFDES_VERIFYCERT_PROFILE_MAX_METHODS] = {0};
+    size_t validate_method_count = mfdes_copy_validate_methods(profile, validate_methods, ARRAYLEN(validate_methods));
+    bool validate_method_forced = false;
+    int res = PM3_SUCCESS;
+
+    if (MfdSelectionApplyCmdParameters(ctx, 12, 13, 14, &cert_select) != PM3_SUCCESS) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool key_selector_present = (arg_get_str(ctx, 18)->count > 0 ||
+                                 arg_get_str(ctx, 19)->count > 0 ||
+                                 arg_get_str(ctx, 20)->count > 0);
+    if (!key_selector_present) {
+        if (!profile->key_select_present) {
+            key_select = cert_select;
+        }
+    } else if (MfdSelectionApplyCmdParameters(ctx, 18, 19, 20, &key_select) != PM3_SUCCESS) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool fid_present = (arg_get_str(ctx, 15)->count > 0);
+    if (fid_present) {
+        uint32_t parsed_fid = 0;
+        if (CLIGetUint32Hex(ctx, 15, 0, &parsed_fid, NULL, 1, "File ID must have 1 byte length")) {
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+        cert_fid = parsed_fid & 0xFF;
+    } else if (cert_fid == MFDES_VERIFYCERT_NO_FID) {
+        PrintAndLogEx(ERR, "Verifycert profile has no default certificate file; specify --fid");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (cert_fid == MFDES_VERIFYCERT_NO_FID || cert_fid > 0x1F) {
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0x00 - 0x1f), got 0x%02x", cert_fid);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int keyidx = arg_get_int_def(ctx, 21, default_keyidx);
+    if (keyidx < 0 || keyidx > 255) {
+        PrintAndLogEx(ERR, "Key index must be 0..255");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    mfdes_validate_method_t cli_validate_method = MFDES_VALIDATE_METHOD_AUTO;
+    if (CLIGetOptionList(arg_get_str(ctx, 22), mfdesValidateMethodOpts, (int *)&cli_validate_method)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (arg_get_str(ctx, 22)->count > 0 && cli_validate_method != MFDES_VALIDATE_METHOD_AUTO) {
+        validate_methods[0] = cli_validate_method;
+        validate_method_count = 1;
+        validate_method_forced = true;
+    }
+    if (validate_method_count == 0) {
+        PrintAndLogEx(ERR, "Verifycert profile has no validation methods configured");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    mfdes_read_method_t read_method = MFDES_READ_METHOD_AUTO;
+    if (CLIGetOptionList(arg_get_str(ctx, 23), mfdesReadMethodOpts, (int *)&read_method)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    char ca_inputs[MFDES_VERIFYCERT_MAX_CAS][DUOX_MAX_KEY_INPUT] = {{0}};
+    int ca_input_count = arg_get_str(ctx, 17)->count;
+    bool ca_validation_skipped = false;
+    if (ca_input_count > MFDES_VERIFYCERT_MAX_CAS) {
+        PrintAndLogEx(ERR, "Too many --ca options (%d), max %d", ca_input_count, MFDES_VERIFYCERT_MAX_CAS);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    for (int i = 0; i < ca_input_count; i++) {
+        const char *src = arg_get_str(ctx, 17)->sval[i];
+        if (src == NULL || src[0] == '\0') {
+            PrintAndLogEx(ERR, "Empty --ca argument");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+        if (str_equal_case_insensitive(src, "skip")) {
+            if (ca_input_count != 1) {
+                PrintAndLogEx(ERR, "`--ca skip` cannot be combined with other CA inputs");
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
+            }
+            ca_validation_skipped = true;
+            continue;
+        }
+        snprintf(ca_inputs[i], sizeof(ca_inputs[i]), "%s", src);
+    }
+
+    DesfireContext_t dctx = {0};
+    int securechann = defaultSecureChannel;
+    res = CmdDesGetSessionParameters(ctx, &dctx,
+                                         4, 5, 6, 7, 8, 9, 10, 11,
+                                         0, 0, 0,
+                                         &securechann,
+                                         force_auth ? DCMMACed : DCMPlain,
+                                         NULL, NULL);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+    if (secure_channel_present && securechann != DACEV2) {
+        PrintAndLogEx(ERR, "DUOX verifycert supports only EV2 secure channel, got %s",
+                      CLIGetOptionListStr(DesfireSecureChannelOpts, securechann));
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    securechann = DACEV2;
+    if (!noauth && !auth_params_present) {
+        uint8_t zero_key[CRYPTO_AES128_KEY_SIZE] = {0};
+        DesfireSetKeyNoClear(&dctx, dctx.keyNum, T_AES, zero_key);
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    duox_certificate_anchor_t ca_list[MFDES_VERIFYCERT_MAX_CAS] = {0};
+    size_t ca_count = 0;
+    if (ca_validation_skipped) {
+        ca_count = 0;
+    } else if (ca_input_count > 0) {
+        for (int i = 0; i < ca_input_count; i++) {
+            if (ca_count >= ARRAYLEN(ca_list)) {
+                PrintAndLogEx(ERR, "Too many CA entries, max %d", MFDES_VERIFYCERT_MAX_CAS);
+                return PM3_EOVFLOW;
+            }
+            res = duox_load_certificate_anchor_from_input(ca_inputs[i], DUOX_DEFAULT_CA_DIR, &ca_list[ca_count]);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Unable to parse `--ca %s` as X.509 certificate or EC public key", ca_inputs[i]);
+                return PM3_EINVARG;
+            }
+            ca_count++;
+        }
+    } else {
+        res = duox_load_certificate_anchors_from_store(DUOX_DEFAULT_CA_DIR, ca_list, ARRAYLEN(ca_list), &ca_count);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Unable to load default DUOX CA files from resources");
+            return PM3_ESOFT;
+        }
+    }
+
+    if (!ca_validation_skipped && ca_count == 0) {
+        PrintAndLogEx(ERR, "No CA entries available for certificate validation");
+        return PM3_EINVARG;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "--- " _CYAN_("Certificate read"));
+        MfdSelectionPrintPrefixed(&cert_select, "  ");
+        PrintAndLogEx(INFO, "  file id...........: " _YELLOW_("%02X"), (uint8_t)cert_fid);
+        PrintAndLogEx(INFO, "  read method.......: " _YELLOW_("%s"), CLIGetOptionListStr(mfdesReadMethodOpts, read_method));
+        PrintAndLogEx(INFO, "  auth mode.........: " _YELLOW_("%s"), noauth ? "no-auth" : (force_auth ? "forced" : "auto"));
+    }
+
+    uint8_t *cert_buf = calloc(DESFIRE_BUFFER_SIZE, sizeof(uint8_t));
+    if (cert_buf == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    size_t cert_buf_len = 0;
+    mfdes_verified_cert_t cert_info = {0};
+    size_t matched_ca_index = 0;
+
+    int retval = PM3_SUCCESS;
+    bool field_active = false;
+
+    res = MfdSelectionSelectApplication(&dctx, &cert_select, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(ERR, "Certificate application selection failed");
+        retval = res;
+        goto out;
+    }
+    field_active = true;
+
+    res = mfdes_read_cert_file_desfire(&dctx, (DesfireSecureChannel)securechann, cert_fid,
+                                       noauth, force_auth, verbose, cert_buf, &cert_buf_len);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Certificate file read " _RED_("failed") ". Result: %d", res);
+        retval = res;
+        goto out;
+    }
+
+    if (cert_buf_len == 0) {
+        PrintAndLogEx(ERR, "Certificate file is empty");
+        retval = PM3_ESOFT;
+        goto out;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "  file size.........: " _YELLOW_("%zu bytes"), cert_buf_len);
+        PrintAndLogEx(INFO, "  raw certificate data:");
+        print_hex_break(cert_buf, cert_buf_len, 16);
+    }
+
+    res = mfdes_verify_certificate_variants(cert_buf, cert_buf_len,
+                                            ca_list, ca_count,
+                                            !ca_validation_skipped,
+                                            verbose, &cert_info, &matched_ca_index);
+    if (res == PM3_ENODATA && !noauth && !auth_params_present) {
+        PrintAndLogEx(WARNING, "Certificate data was not parseable; retrying read with default AES authentication");
+        DesfireContext_t aes_dctx = dctx;
+        uint8_t zero_key[CRYPTO_AES128_KEY_SIZE] = {0};
+        DesfireSetKeyNoClear(&aes_dctx, aes_dctx.keyNum, T_AES, zero_key);
+        cert_buf_len = 0;
+        int read_res = mfdes_read_cert_file_desfire(&aes_dctx, (DesfireSecureChannel)securechann, cert_fid,
+                       false, true, verbose, cert_buf, &cert_buf_len);
+        if (read_res == PM3_SUCCESS && cert_buf_len > 0) {
+            if (verbose) {
+                PrintAndLogEx(INFO, "  retry file size....: " _YELLOW_("%zu bytes"), cert_buf_len);
+                PrintAndLogEx(INFO, "  retry certificate data:");
+                print_hex_break(cert_buf, cert_buf_len, 16);
+            }
+            memset(&cert_info, 0, sizeof(cert_info));
+            matched_ca_index = 0;
+            res = mfdes_verify_certificate_variants(cert_buf, cert_buf_len,
+                                                    ca_list, ca_count,
+                                                    !ca_validation_skipped,
+                                                    verbose, &cert_info, &matched_ca_index);
+        } else if (verbose) {
+            PrintAndLogEx(INFO, "Default AES authenticated retry did not return certificate data (%d)", read_res);
+        }
+    }
+
+    if (cert_info.format != DUOX_CERTIFICATE_FORMAT_UNKNOWN) {
+        mfdes_apply_certificate_profile_data(profile, &cert_info);
+        mfdes_print_certificate_info(&cert_info);
+    }
+
+    if (res != PM3_SUCCESS) {
+        if (res == PM3_ENODATA) {
+            PrintAndLogEx(ERR, "Unable to parse certificate file data as X.509 or GP VDE certificate");
+        } else if (res == PM3_ECRYPTO) {
+            PrintAndLogEx(ERR, ca_validation_skipped
+                          ? "Certificate parsed, but public key extraction failed"
+                          : "Certificate parsed, but signature validation failed with CA entries");
+        } else {
+            PrintAndLogEx(ERR, "Certificate validation failed (%d)", res);
+        }
+        retval = res;
+        goto out;
+    }
+
+    if (ca_validation_skipped) {
+        PrintAndLogEx(WARNING, "Certificate signature validation skipped (--ca skip)");
+    } else {
+        const duox_certificate_anchor_t *matched_ca = &ca_list[matched_ca_index];
+        const char *verified_ca_name = duox_certificate_anchor_display_name(matched_ca);
+        PrintAndLogEx(SUCCESS, "Certificate signature verified successfully using " _GREEN_("%s"), verified_ca_name);
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, _CYAN_("Key possession verification"));
+        MfdSelectionPrintPrefixed(&key_select, "  ");
+        PrintAndLogEx(INFO, "  key index.........: " _YELLOW_("%d"), keyidx);
+        PrintAndLogEx(INFO, "  method............: " _YELLOW_("%s"),
+                      (validate_method_count == 1) ? CLIGetOptionListStr(mfdesValidateMethodOpts, validate_methods[0]) : "auto");
+    }
+
+    res = mfdes_run_key_possession_verification(APDULogging, verbose, validate_methods,
+            validate_method_count, validate_method_forced,
+            &key_select, keyidx, &cert_info);
+    if (res != PM3_SUCCESS) {
+        retval = res;
+        goto out;
+    }
+
+    bool key_possession_skipped = (validate_method_count == 1 && validate_methods[0] == MFDES_VALIDATE_METHOD_SKIP);
+    if (ca_validation_skipped && key_possession_skipped) {
+        PrintAndLogEx(SUCCESS, "Certificate parsed; signature validation and key possession verification " _GREEN_("skipped"));
+    } else if (ca_validation_skipped) {
+        PrintAndLogEx(SUCCESS, "Certificate parsed and key possession " _GREEN_("verified"));
+    } else if (key_possession_skipped) {
+        PrintAndLogEx(SUCCESS, "Certificate chain validated; key possession verification " _GREEN_("skipped"));
+    } else {
+        PrintAndLogEx(SUCCESS, "Certificate chain validated; key possession " _GREEN_("verified"));
+    }
+
+out:
+    if (field_active) {
+        DropField();
+    }
+    free(cert_buf);
+    return retval;
 }
 
 static int CmdHF14ADesTest(const char *Cmd) {
@@ -8254,6 +9326,7 @@ static command_t CommandTable[] = {
     {"value",            CmdHF14ADesValueOperations,  IfPm3Iso14443a,  "Operations with value file (get/credit/limited credit/debit/clear)"},
     {"clearrecfile",     CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("DUOX") " ------------------------"},
+    {"verifycert",       CmdHF14ADesVerifyCert,       IfPm3Iso14443a,  "Validate cert from file and verify key possession"},
     {"intauth",          CmdHF14ADesIntAuth,          IfPm3Iso14443a,  "ISO Internal Authenticate (ECDSA challenge-response)"},
     {"vdesign",          CmdHF14ADesVdeSign,          IfPm3Iso14443a,  "VDE ECDSASign (EV charging signature over 32-byte challenge)"},
     {"leaf",             CmdHF14ADesLeaf,             IfPm3Iso14443a,  "LEAF Verified credential read + cert + auth check"},
