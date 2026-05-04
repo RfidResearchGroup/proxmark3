@@ -6439,6 +6439,7 @@ static int CmdHF14ADesMakeMFCLicense(const char *Cmd) {
 
         uint8_t last_sector = license[1] / 4;
         num_sectors = 1;
+        int last_block = -1;
 
         for (int i = 0; i < num_blocks; i++) {
             uint8_t block_nr = license[1 + 2*i];
@@ -6448,6 +6449,12 @@ static int CmdHF14ADesMakeMFCLicense(const char *Cmd) {
                 num_sectors++;
                 last_sector = block_nr / 4;
             }
+
+            if (block_nr <= last_block) {
+                PrintAndLogEx(ERR, "Blocks must be unique and sorted in ascending order");
+                goto mfclicense_parsing_error;
+            }
+            last_block = block_nr;
 
             if (block_nr >= 64) {
                 PrintAndLogEx(ERR, "Invalid block number %d", block_nr);
@@ -6596,10 +6603,10 @@ static int CmdHF14ADesMakeMFCLicense(const char *Cmd) {
     PrintAndLogEx(INFO, "MAC: %s", sprint_hex_inrow(mac, 8));
 
     if (save) {
-        memset(saved_mfclicense, license, license_len);
+        memcpy(saved_mfclicense, license, license_len);
         saved_mfclicense_len = license_len;
         saved_mfclicense_set = true;
-        memset(saved_mfclicense_mac, mac, 8);
+        memcpy(saved_mfclicense_mac, mac, 8);
         saved_mfclicense_mac_set = true;
         PrintAndLogEx(INFO, "Saved license and license MAC for the next commands in this session");
     }
