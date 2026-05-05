@@ -275,4 +275,6 @@ int DesfireISOUpdateBinary(DesfireContext_t *dctx, bool use_file_id, uint8_t fil
 int DesfireISOReadRecords(DesfireContext_t *dctx, uint8_t recordnum, bool read_all_records, uint8_t fileid, uint8_t length, uint8_t *resp, size_t *resplen);
 int DesfireISOAppendRecord(DesfireContext_t *dctx, uint8_t fileid, uint8_t *data, size_t datalen);
 
+int DesfireCreateMFCMapping(DesfireContext_t *dctx, uint8_t *data, size_t datalen);
+
 #endif // __DESFIRECORE_H

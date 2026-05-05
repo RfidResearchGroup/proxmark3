@@ -528,6 +528,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf mfdes value" },
     { 0, "hf mfdes clearrecfile" },
     { 1, "hf mfdes makemfclicense" },
+    { 0, "hf mfdes createmfcmapping" },
     { 0, "hf mfdes verifycert" },
     { 0, "hf mfdes intauth" },
     { 0, "hf mfdes vdesign" },
