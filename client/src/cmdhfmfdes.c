@@ -6399,6 +6399,82 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+/**
+ * Parse MFC blocks given on the command line
+ * 
+ * If given for making the license, the blocks must be unique and in ascending order.
+ * 
+ * If given for the CreateMFCMapping command, the blocks must be unique and either all data blocks or all trailer blocks.
+ */
+static int parse_mfc_blocks(const char *in, uint8_t blocks_out[], size_t *blocks_out_len, bool for_license) {
+    if (!in || !blocks_out_len) {
+        return PM3_EINVARG;
+    }
+    *blocks_out_len = 0;
+    char blk_str[512];
+    if (strlen(in) + 1 > sizeof (blk_str)) {
+        PrintAndLogEx(ERR, "Argument too long");
+        return PM3_EINVARG;
+    }
+    strcpy(blk_str, in);
+
+    char *ptr = blk_str;
+    char *saveptr = NULL;
+    char *token;
+    int last = -1;
+    uint64_t seen_so_far = 0;
+    bool has_data = false;
+    bool has_trailer = false;
+    for (int i = 0;; i++) {
+        token = strtok_r(ptr, ",", &saveptr);
+        ptr = NULL;
+
+        if (!token) {
+            break;
+        }
+
+        char *endptr = NULL;
+        long blk_val = strtol(token, &endptr, 0);
+        if (endptr == NULL || *token == '\0' || *endptr != '\0' || blk_val < 0 || blk_val >= 64) {
+            PrintAndLogEx(ERR, "Invalid block number: %s", token);
+            return PM3_EINVARG;
+        }
+        if (for_license) { // check if sorted in ascending order
+            if (blk_val <= last) {
+                PrintAndLogEx(ERR, "Blocks must be unique and sorted in ascending order");
+                return PM3_EINVARG;
+            }
+        } else { // check if unique and all data / all trailer
+            if (seen_so_far & (1ULL << blk_val)) {
+                PrintAndLogEx(ERR, "Blocks must be unique");
+                return PM3_EINVARG;
+            }
+            seen_so_far |= (1ULL << blk_val);
+            has_data |= !!((blk_val + 1) % 4 != 0);
+            has_trailer |= !!((blk_val + 1) % 4 == 0);
+
+            if (has_data && has_trailer) {
+                PrintAndLogEx(ERR, "Either data blocks or trailer blocks must be given, not both");
+                return PM3_EINVARG;
+            }
+        }
+        blocks_out[(*blocks_out_len)++] = blk_val;
+        last = blk_val;
+
+        if (*blocks_out_len > 64) {
+            PrintAndLogEx(ERR, "Too many blocks");
+            return PM3_EINVARG;
+        }
+    }
+
+    if (*blocks_out_len == 0) {
+        PrintAndLogEx(ERR, "At least one block must be given");
+        return PM3_EINVARG;
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14ADesMakeMFCLicense(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes makemfclicense",
@@ -6541,47 +6617,7 @@ static int CmdHF14ADesMakeMFCLicense(const char *Cmd) {
             }
             num_blocks = 64;
         } else {
-            char blk_str[512];
-            if (strlen(blk_str_arg->sval[0]) + 1 > sizeof (blk_str)) {
-                PrintAndLogEx(ERR, "Argument too long");
-                CLIParserFree(ctx);
-                return PM3_EINVARG;
-            }
-            strcpy(blk_str, blk_str_arg->sval[0]);
-
-            char *ptr = blk_str;
-            char *saveptr = NULL;
-            char *token;
-            int last = -1;
-            for (;;) {
-                token = strtok_r(ptr, ",", &saveptr);
-                ptr = NULL;
-
-                if (!token) {
-                    break;
-                }
-
-                char *endptr = NULL;
-                long blk_val = strtol(token, &endptr, 0);
-                if (endptr == NULL || *token == '\0' || *endptr != '\0' || blk_val < 0 || blk_val >= 64) {
-                    PrintAndLogEx(ERR, "Invalid block number: %s", token);
-                    goto mfclicense_parsing_error;
-                }
-                if (blk_val <= last) {
-                    PrintAndLogEx(ERR, "Blocks must be unique and sorted in ascending order");
-                    goto mfclicense_parsing_error;
-                }
-                blocks[num_blocks++] = blk_val;
-                last = blk_val;
-
-                if (num_blocks > 64) {
-                    PrintAndLogEx(ERR, "Too many blocks");
-                    goto mfclicense_parsing_error;
-                }
-            }
-
-            if (num_blocks == 0) {
-                PrintAndLogEx(ERR, "At least one block must be given");
+            if (parse_mfc_blocks(blk_str_arg->sval[0], blocks, &num_blocks, true) != PM3_SUCCESS) {
                 goto mfclicense_parsing_error;
             }
         }
@@ -6628,7 +6664,7 @@ static int CmdHF14ADesMakeMFCLicense(const char *Cmd) {
         license_len = 1 + 2*num_blocks;
     }
 
-    PrintAndLogEx(loglevel, "Covering %d sectors in total", num_sectors);
+    PrintAndLogEx(loglevel, "Covering %d sector%s in total", num_sectors, num_sectors != 1 ? "s" : "");
 
     if (use_default_keys) {
         // by default: all key A FFFFFFFFFFFF, all key B readable
@@ -6642,7 +6678,7 @@ static int CmdHF14ADesMakeMFCLicense(const char *Cmd) {
             PrintAndLogEx(ERR, "MFC keys length must be a multiple of 6 bytes");
             goto mfclicense_parsing_error;
         }
-        // Quick sanity checks: do we have more or less the right number of keys for the number of sectors?
+        // Quick sanity check: do we have more or less the right number of keys for the number of sectors?
         if (mfc_keys_len / 6 < num_sectors || (mfc_keys_len / 6) > 2 * num_sectors) {
             PrintAndLogEx(ERR, "Not enough or too many keys for the number of sectors (expecting 1 or 2 keys per sector)");
             goto mfclicense_parsing_error;
