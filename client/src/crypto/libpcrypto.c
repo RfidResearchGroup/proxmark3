@@ -22,7 +22,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <ctype.h>
 #include <mbedtls/asn1.h>
 #include <mbedtls/des.h>
 #include <mbedtls/aes.h>
@@ -104,78 +103,6 @@ int pcrypto_rng_fill_oneshot(uint8_t *out, size_t out_len, const char *personali
     res = pcrypto_rng_fill(&rng, out, out_len);
     pcrypto_rng_free(&rng);
     return res;
-}
-
-static void pcrypto_trim_ascii_inplace(char *text) {
-    if (text == NULL) {
-        return;
-    }
-
-    size_t start = 0;
-    size_t len = strlen(text);
-    while (start < len && isspace((unsigned char)text[start])) {
-        start++;
-    }
-    while (len > start && isspace((unsigned char)text[len - 1])) {
-        len--;
-    }
-
-    if (start > 0) {
-        memmove(text, text + start, len - start);
-    }
-    text[len - start] = '\0';
-}
-
-static void pcrypto_unescape_newlines_inplace(char *text) {
-    if (text == NULL) {
-        return;
-    }
-
-    size_t read_pos = 0;
-    size_t write_pos = 0;
-    size_t len = strlen(text);
-    while (read_pos < len) {
-        if (text[read_pos] == '\\' && (read_pos + 1) < len) {
-            char esc = text[read_pos + 1];
-            if (esc == 'n') {
-                text[write_pos++] = '\n';
-                read_pos += 2;
-                continue;
-            }
-            if (esc == 'r') {
-                text[write_pos++] = '\r';
-                read_pos += 2;
-                continue;
-            }
-            if (esc == 't') {
-                text[write_pos++] = '\t';
-                read_pos += 2;
-                continue;
-            }
-        }
-        text[write_pos++] = text[read_pos++];
-    }
-    text[write_pos] = '\0';
-}
-
-static int pcrypto_copy_without_whitespace(const char *src, char *dst, size_t dst_size, size_t *dst_len) {
-    if (src == NULL || dst == NULL || dst_len == NULL || dst_size == 0) {
-        return PM3_EINVARG;
-    }
-
-    size_t out = 0;
-    for (size_t i = 0; src[i] != '\0'; i++) {
-        if (isspace((unsigned char)src[i])) {
-            continue;
-        }
-        if ((out + 1) >= dst_size) {
-            return PM3_EOVFLOW;
-        }
-        dst[out++] = src[i];
-    }
-    dst[out] = '\0';
-    *dst_len = out;
-    return PM3_SUCCESS;
 }
 
 static int pcrypto_extract_priv_scalar_from_pk(const mbedtls_pk_context *pkctx,
@@ -265,7 +192,7 @@ static int pcrypto_parse_ec_private_base64(const char *input,
 
     char compact[PCRYPTO_MAX_KEY_INPUT] = {0};
     size_t compact_len = 0;
-    int res = pcrypto_copy_without_whitespace(input, compact, sizeof(compact), &compact_len);
+    int res = str_copy_without_whitespace(input, compact, sizeof(compact), &compact_len);
     if (res != PM3_SUCCESS || compact_len == 0) {
         return PM3_EINVARG;
     }
@@ -399,7 +326,7 @@ static int pcrypto_parse_ec_private_text(const char *input, bool allow_file_path
         return PM3_EOVFLOW;
     }
     memcpy(normalized, input, input_len + 1);
-    pcrypto_trim_ascii_inplace(normalized);
+    str_trim_ascii_inplace(normalized);
 
     if (normalized[0] == '\0') {
         return PM3_EINVARG;
@@ -416,13 +343,13 @@ static int pcrypto_parse_ec_private_text(const char *input, bool allow_file_path
 
     // Only unescape after path resolution fails, to avoid mutating valid paths
     // (for example Windows paths containing '\t', '\n' or '\r').
-    pcrypto_unescape_newlines_inplace(normalized);
+    str_unescape_newlines_inplace(normalized);
 
     uint8_t decoded[PCRYPTO_MAX_KEY_INPUT] = {0};
     int decoded_len = -1;
     char compact[PCRYPTO_MAX_KEY_INPUT] = {0};
     size_t compact_len = 0;
-    if (pcrypto_copy_without_whitespace(normalized, compact, sizeof(compact), &compact_len) == PM3_SUCCESS &&
+    if (str_copy_without_whitespace(normalized, compact, sizeof(compact), &compact_len) == PM3_SUCCESS &&
             compact_len > 0) {
         decoded_len = hex_to_bytes(compact, decoded, sizeof(decoded));
     }
@@ -740,7 +667,7 @@ static int pcrypto_parse_ec_public_base64(const char *input,
 
     char compact[PCRYPTO_MAX_KEY_INPUT] = {0};
     size_t compact_len = 0;
-    int res = pcrypto_copy_without_whitespace(input, compact, sizeof(compact), &compact_len);
+    int res = str_copy_without_whitespace(input, compact, sizeof(compact), &compact_len);
     if (res != PM3_SUCCESS || compact_len == 0) {
         return PM3_EINVARG;
     }
@@ -777,7 +704,7 @@ static int pcrypto_parse_ec_public_text(const char *input, bool allow_file_path,
         return PM3_EOVFLOW;
     }
     memcpy(normalized, input, input_len + 1);
-    pcrypto_trim_ascii_inplace(normalized);
+    str_trim_ascii_inplace(normalized);
 
     if (normalized[0] == '\0') {
         return PM3_EINVARG;
@@ -793,14 +720,14 @@ static int pcrypto_parse_ec_public_text(const char *input, bool allow_file_path,
     }
 
     // Only unescape after path resolution fails
-    pcrypto_unescape_newlines_inplace(normalized);
+    str_unescape_newlines_inplace(normalized);
 
     // Try as hex string
     uint8_t decoded[PCRYPTO_MAX_KEY_INPUT] = {0};
     int decoded_len = -1;
     char compact[PCRYPTO_MAX_KEY_INPUT] = {0};
     size_t compact_len = 0;
-    if (pcrypto_copy_without_whitespace(normalized, compact, sizeof(compact), &compact_len) == PM3_SUCCESS &&
+    if (str_copy_without_whitespace(normalized, compact, sizeof(compact), &compact_len) == PM3_SUCCESS &&
             compact_len > 0) {
         decoded_len = hex_to_bytes(compact, decoded, sizeof(decoded));
     }

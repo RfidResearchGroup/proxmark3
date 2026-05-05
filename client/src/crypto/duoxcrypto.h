@@ -76,7 +76,6 @@ typedef struct {
 } duox_certificate_anchor_t;
 
 const char *duox_certificate_format_name(duox_certificate_format_t format);
-const char *duox_cert_info_format_name(const duox_cert_info_t *cert);
 int duox_certificate_anchor_public_key(const duox_certificate_anchor_t *anchor,
                                        mbedtls_ecp_group_id *curveid,
                                        const uint8_t **pubkey, size_t *pubkey_len);

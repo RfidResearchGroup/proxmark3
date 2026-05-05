@@ -1944,3 +1944,75 @@ size_t unduplicate(uint8_t *d, size_t n, const uint8_t item_n) {
 
     return write_index;
 }
+
+void str_trim_ascii_inplace(char *s) {
+    if (s == NULL) {
+        return;
+    }
+
+    size_t start = 0;
+    size_t len = strlen(s);
+    while (start < len && isspace((unsigned char)s[start])) {
+        start++;
+    }
+    while (len > start && isspace((unsigned char)s[len - 1])) {
+        len--;
+    }
+
+    if (start > 0) {
+        memmove(s, s + start, len - start);
+    }
+    s[len - start] = '\0';
+}
+
+void str_unescape_newlines_inplace(char *s) {
+    if (s == NULL) {
+        return;
+    }
+
+    size_t read_pos = 0;
+    size_t write_pos = 0;
+    size_t len = strlen(s);
+    while (read_pos < len) {
+        if (s[read_pos] == '\\' && (read_pos + 1) < len) {
+            char esc = s[read_pos + 1];
+            if (esc == 'n') {
+                s[write_pos++] = '\n';
+                read_pos += 2;
+                continue;
+            }
+            if (esc == 'r') {
+                s[write_pos++] = '\r';
+                read_pos += 2;
+                continue;
+            }
+            if (esc == 't') {
+                s[write_pos++] = '\t';
+                read_pos += 2;
+                continue;
+            }
+        }
+        s[write_pos++] = s[read_pos++];
+    }
+    s[write_pos] = '\0';
+}
+
+int str_copy_without_whitespace(const char *src, char *dst, size_t dst_size, size_t *dst_len) {
+    if (src == NULL || dst == NULL || dst_len == NULL || dst_size == 0) {
+        return PM3_EINVARG;
+    }
+
+    size_t out = 0;
+    for (size_t i = 0; src[i] != '\0'; i++) {
+        if (isspace((unsigned char)src[i])) {
+            continue;
+        }
+        if ((out + 1) >= dst_size) {
+            return PM3_EOVFLOW;
+        }
+        dst[out++] = src[i];
+    }
+    dst[out] = '\0';
+    *dst_len = out;
+    return PM3_SUCCESS;
+}
