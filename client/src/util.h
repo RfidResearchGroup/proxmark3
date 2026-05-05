@@ -166,6 +166,9 @@ void str_lower(char *s); // converts string to lower case
 void str_upper(char *s); // converts string to UPPER case
 void strn_upper(char *s, size_t n);
 
+bool str_equal_case_insensitive(const char *a, const char *b);
+bool str_startswith_case_insensitive(const char *s, const char *pre);
+bool str_contains_case_insensitive(const char *s, const char *needle);
 bool str_startswith(const char *s,  const char *pre);  // check for prefix in string
 bool str_endswith(const char *s,  const char *suffix);    // check for suffix in string
 void clean_ascii(unsigned char *buf, size_t len);
@@ -181,6 +184,7 @@ void str_trim(char *s);
 char *str_dup(const char *src);
 char *str_ndup(const char *src, size_t len);
 size_t str_nlen(const char *src, size_t maxlen);
+size_t str_copy(char *dst, size_t dst_size, const char *src);
 // Lightweight regex subset:
 //  - supported metacharacters: '^' (start), '$' (end), '.' (any char), '*' (zero or more)
 //  - escaping: '\\' to match the following char literally

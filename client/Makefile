@@ -770,6 +770,7 @@ SRCS =  mifare/aiddesfire.c \
         comms.c \
         crypto/asn1dump.c \
         crypto/asn1utils.c\
+        crypto/duoxcrypto.c\
         crypto/libpcrypto.c\
         crypto/originality.c\
         emv/cmdemv.c \
