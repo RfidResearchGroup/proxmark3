@@ -67,6 +67,10 @@
 #define MFDES_PC_MAX_ROUNDS             8U
 #define MFDES_PC_MAC_LEN                8U
 
+#define MFDES_EV3C_MFC_KILL_KEY                ((uint8_t)0x31U)
+#define MFDES_EV3C_ALLOWED_DATA_PERMISSIONS    ((uint8_t)0x11)
+#define MFDES_EV3C_ALLOWED_TRAILER_PERMISSIONS ((uint8_t)0x1F)
+
 // DUOX ISO Internal Authenticate
 #define DUOX_INTAUTH_CHALLENGE_LEN      16
 #define DUOX_INTAUTH_SIG_LEN            64
@@ -89,6 +93,12 @@ static const uint8_t kDuoxVDEDefaultDFName[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
 };
 #define MFDES_VERIFYCERT_MAX_CAS        DUOX_MAX_CERTIFICATE_ANCHORS
+
+static uint8_t saved_mfclicense[192];
+static size_t saved_mfclicense_len = 0;
+static bool saved_mfclicense_set = false;
+static uint8_t saved_mfclicense_mac[8];
+static bool saved_mfclicense_mac_set = false;
 
 typedef struct mfd_app_select {
     bool dfname_present;
@@ -3356,9 +3366,10 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes auth",
                   "Select application on the card. It selects app if it is a valid one or returns an error.",
-                  "hf mfdes auth  -n 0 -t des -k 0000000000000000 --kdf none       -> select PICC level and authenticate with key num=0, key type=des, key=00..00 and key derivation = none\n"
-                  "hf mfdes auth  -n 0 -t aes -k 00000000000000000000000000000000  -> select PICC level and authenticate with key num=0, key type=aes, key=00..00 and key derivation = none\n"
-                  "hf mfdes auth  -n 0 -t des -k 0000000000000000 --save           -> select PICC level and authenticate and in case of successful authentication - save channel parameters to defaults\n"
+                  "hf mfdes auth  -n 0  -t des -k 0000000000000000 --kdf none              -> select PICC level and authenticate with key num=0, key type=des, key=00..00 and key derivation = none\n"
+                  "hf mfdes auth  -n 0  -t aes -k 00000000000000000000000000000000         -> select PICC level and authenticate with key num=0, key type=aes, key=00..00 and key derivation = none\n"
+                  "hf mfdes auth  -n 0  -t des -k 0000000000000000 --save                  -> select PICC level and authenticate and in case of successful authentication - save channel parameters to defaults\n"
+                  "hf mfdes auth  -n 49 -t aes -k 00000000000000000000000000000000 --force -> permanently disable Mifare Classic functionality on a DESFire EV3C\n"
                   "hf mfdes auth --aid 123456    -> select application 123456 and authenticate via parameters from `default` command\n"
                   "hf mfdes auth --dfname D2760000850100 -n 0 -t aes -k 00000000000000000000000000000000 -> select DF by name and authenticate");
 
@@ -3366,6 +3377,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
+        arg_lit0("f",  "force",   "Force irreversible operations"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
         arg_str0("k",  "key",     "<hex>", "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -3384,21 +3396,28 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
+    bool force = arg_get_lit(ctx, 3);
 
     DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, &securechann, DCMPlain, &id, &selectway);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, &securechann, DCMPlain, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
     }
 
-    bool save = arg_get_lit(ctx, 14);
+    bool save = arg_get_lit(ctx, 15);
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
+
+    if (dctx.keyNum == MFDES_EV3C_MFC_KILL_KEY && !force) {
+        DropField();
+        PrintAndLogEx(FAILED, "This operation would permanently disable the Mifare Classic functionality, use --force to override");
+        return PM3_EOPABORTED;
+    }
 
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, false, verbose);
     if (res != PM3_SUCCESS) {
@@ -6375,6 +6394,322 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+/**
+ * Parse MFC blocks given on the command line
+ * 
+ * If given for making the license, the blocks must be unique and in ascending order.
+ * 
+ * If given for the CreateMFCMapping command, the blocks must be unique and either all data blocks or all trailer blocks.
+ */
+static int parse_mfc_blocks(const char *in, uint8_t blocks_out[], size_t *blocks_out_len, bool for_license) {
+    if (!in || !blocks_out_len) {
+        return PM3_EINVARG;
+    }
+    *blocks_out_len = 0;
+    char blk_str[512];
+    if (strlen(in) + 1 > sizeof (blk_str)) {
+        PrintAndLogEx(ERR, "Argument too long");
+        return PM3_EINVARG;
+    }
+    strcpy(blk_str, in);
+
+    char *ptr = blk_str;
+    char *saveptr = NULL;
+    char *token;
+    int last = -1;
+    uint64_t seen_so_far = 0;
+    bool has_data = false;
+    bool has_trailer = false;
+    for (;;) {
+        token = strtok_r(ptr, ",", &saveptr);
+        ptr = NULL;
+
+        if (!token) {
+            break;
+        }
+
+        char *endptr = NULL;
+        long blk_val = strtol(token, &endptr, 0);
+        if (endptr == NULL || *token == '\0' || *endptr != '\0' || blk_val < 0 || blk_val >= 64) {
+            PrintAndLogEx(ERR, "Invalid block number: %s", token);
+            return PM3_EINVARG;
+        }
+        if (for_license) { // check if sorted in ascending order
+            if (blk_val <= last) {
+                PrintAndLogEx(ERR, "Blocks must be unique and sorted in ascending order");
+                return PM3_EINVARG;
+            }
+        } else { // check if unique and all data / all trailer
+            if (seen_so_far & (1ULL << blk_val)) {
+                PrintAndLogEx(ERR, "Blocks must be unique");
+                return PM3_EINVARG;
+            }
+            seen_so_far |= (1ULL << blk_val);
+            has_data |= !!((blk_val + 1) % 4 != 0);
+            has_trailer |= !!((blk_val + 1) % 4 == 0);
+
+            if (has_data && has_trailer) {
+                PrintAndLogEx(ERR, "Either data blocks or trailer blocks must be given, not both");
+                return PM3_EINVARG;
+            }
+        }
+        blocks_out[(*blocks_out_len)++] = blk_val;
+        last = blk_val;
+
+        if (*blocks_out_len > 64) {
+            PrintAndLogEx(ERR, "Too many blocks");
+            return PM3_EINVARG;
+        }
+    }
+
+    if (*blocks_out_len == 0) {
+        PrintAndLogEx(ERR, "At least one block must be given");
+        return PM3_EINVARG;
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesMakeMFCLicense(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes makemfclicense",
+                  "Create a Mifare Classic license for DESFire EV3C, as well as a license MAC.\n"
+                  "The MFC license MAC key must have the same value as PICC level key 50.\n"
+                  "\n"
+                  "The permissions are a bitwise-or combination of:\n"
+                  "    0x01: allow mapping block\n"
+                  "    0x02: allow updating key B (only for trailers)\n"
+                  "    0x04: allow updating ACs (only for trailers)\n"
+                  "    0x08: allow updating key A (only for trailers)\n"
+                  "    0x10: allow the DESFire RestrictMFCUpdate command",
+                  "hf mfdes makemfclicense -b 4,5,6,8,9,10 --mfc-keys FFFFFFFFFFFF111111111111222222222222\n"
+                  "        -> Create a license for blocks 4, 5, 6, 8, 9, 10 where sector 1 has key A = FFFFFFFFFFFF and key B readable,\n"
+                  "        -> and sector 2 has key A = 111111111111, key B = 222222222222 with key B non readable");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v", "verbose",                     "Show more output"),
+        arg_str0("k",  "key", "<hex>",               "Key for computing the MAC, must be HEX 16(AES)"),
+        arg_str0("b",  "blk", "<num>[,<num>[,...]]", "The MFC blocks to map, must be given in ascending order (use the special value 'all' for all blocks)"),
+        arg_lit0(NULL, "key-a",                      "Allow updating key A from inside sector trailers mapped to DESFire files"),
+        arg_lit0(NULL, "key-b",                      "Allow updating key B from inside sector trailers mapped to DESFire files"),
+        arg_lit0(NULL, "restrict",                   "Allow the restriction of data updates by the MFC side"),
+        arg_lit0(NULL, "map",                        "Allow mapping the blocks to DESFire files"),
+        arg_lit0(NULL, "access-conditions",          "Allow updating the access conditions from inside sector trailers mapped to DESFire files"),
+        arg_str0("r",  "raw", "<hex>",               "Raw license in case not all blocks should have the same permissions, of the form num_blocks||block1nr||block1perm||block2nr||block2perm||..."),
+        arg_str0(NULL, "mfc-keys", "<hex>",          "The concatenated MFC sector keys, one (if key B is readable) or two per sector"),
+        arg_lit0("s",  "save",                       "Save the license and license MAC for the next commands in this session"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    logLevel_t loglevel = arg_get_lit(ctx, 1) ? INFO : DEBUG;
+    bool allow_key_a_update = arg_get_lit(ctx, 4);
+    bool allow_key_b_update = arg_get_lit(ctx, 5);
+    bool allow_restrict = arg_get_lit(ctx, 6);
+    bool allow_map = arg_get_lit(ctx, 7);
+    bool allow_ac = arg_get_lit(ctx, 8);
+    bool save = arg_get_lit(ctx, 11);
+    struct arg_str *key_arg = arg_get_str(ctx, 2);
+    struct arg_str *blk_str_arg = arg_get_str(ctx, 3);
+    struct arg_str *raw_arg = arg_get_str(ctx, 9);
+    struct arg_str *mfc_keys_arg = arg_get_str(ctx, 10);
+
+    bool has_raw = raw_arg->count == 1;
+    bool use_default_keys;
+    uint8_t license[192];
+    int license_len = 0;
+    size_t num_sectors;
+    uint8_t mfc_keys[192];
+    int mfc_keys_len = 0;
+    uint8_t mac_key[16];
+    int mac_key_len = 0;
+
+    if (key_arg->count != 1) {
+        PrintAndLogEx(ERR, "At most one instance of --key is required");
+        goto mfclicense_parsing_error;
+    }
+    if (CLIParamHexToBuf(key_arg, mac_key, sizeof (mac_key), &mac_key_len) != 0) {
+        goto mfclicense_parsing_error;
+    }
+    if (mac_key_len != 16) {
+        PrintAndLogEx(ERR, "The MFC License MAC key must be exactly 16 bytes");
+        goto mfclicense_parsing_error;
+    }
+
+    switch (mfc_keys_arg->count) {
+    case 0:
+        use_default_keys = true;
+        break;
+    case 1:
+        use_default_keys = false;
+        break;
+    default:
+        PrintAndLogEx(ERR, "At most instance of --mfc-keys is required");
+        goto mfclicense_parsing_error;
+    }
+
+    if (raw_arg->count + blk_str_arg->count != 1) {
+        PrintAndLogEx(ERR, "Exactly one of --raw or --blk are needed");
+        goto mfclicense_parsing_error;
+    }
+
+    if (has_raw) {
+        if (CLIParamHexToBuf(raw_arg, license, sizeof (license), &license_len) != 0) {
+            goto mfclicense_parsing_error;
+        }
+        if (allow_key_a_update || allow_key_b_update || allow_restrict || allow_map || allow_ac) {
+            PrintAndLogEx(WARNING, "Permission flags are not used when --raw is used");
+        }
+
+        // Verify the license
+        size_t num_blocks = license[0];
+        if (license_len != 2 * num_blocks + 1) {
+            PrintAndLogEx(ERR, "Invalid number of blocks in the license");
+            goto mfclicense_parsing_error;
+        }
+
+        uint8_t last_sector = license[1] / 4;
+        num_sectors = 1;
+        int last_block = -1;
+
+        for (int i = 0; i < num_blocks; i++) {
+            uint8_t block_nr = license[1 + 2*i];
+            uint8_t permissions = license[1 + 2*i + 1];
+
+            if (block_nr / 4 != last_sector) {
+                num_sectors++;
+                last_sector = block_nr / 4;
+            }
+
+            if (block_nr <= last_block) {
+                PrintAndLogEx(ERR, "Blocks must be unique and sorted in ascending order");
+                goto mfclicense_parsing_error;
+            }
+            last_block = block_nr;
+
+            if (block_nr >= 64) {
+                PrintAndLogEx(ERR, "Invalid block number %d", block_nr);
+                goto mfclicense_parsing_error;
+            }
+
+            if ( (((block_nr + 1) % 4 == 0) && (permissions & ~MFDES_EV3C_ALLOWED_TRAILER_PERMISSIONS)) ||
+                 (((block_nr + 1) % 4 != 0) && (permissions & ~MFDES_EV3C_ALLOWED_DATA_PERMISSIONS)))  {
+                PrintAndLogEx(ERR, "Invalid permissions %02X", permissions);
+                goto mfclicense_parsing_error;
+            }
+
+            PrintAndLogEx(loglevel, "[%d] Block %d: permissions %02X", i, block_nr, permissions);
+        }
+    } else {
+        uint8_t blocks[64];
+        size_t num_blocks = 0;
+
+        if (strcmp("all", blk_str_arg->sval[0]) == 0) {
+            PrintAndLogEx(loglevel, "Using all blocks");
+            for (int i = 0; i < 64; i++) {
+                blocks[i] = i;
+            }
+            num_blocks = 64;
+        } else {
+            if (parse_mfc_blocks(blk_str_arg->sval[0], blocks, &num_blocks, true) != PM3_SUCCESS) {
+                goto mfclicense_parsing_error;
+            }
+        }
+
+        uint8_t data_permissions = 0;
+        uint8_t trailer_permissions = 0;
+        if (allow_map) {
+            data_permissions |= 0x01;
+            trailer_permissions |= 0x01;
+        }
+        if (allow_key_b_update) {
+            trailer_permissions |= 0x02;
+        }
+        if (allow_ac) {
+            trailer_permissions |= 0x04;
+        }
+        if (allow_key_a_update) {
+            trailer_permissions |= 0x08;
+        }
+        if (allow_restrict) {
+            data_permissions |= 0x10;
+            trailer_permissions |= 0x10;
+        }
+
+        uint8_t last_sector = blocks[0] / 4;
+        num_sectors = 1;
+        license[0] = num_blocks;
+        for (int i = 0; i < num_blocks; i++) {
+            if (blocks[i] / 4 != last_sector) {
+                num_sectors++;
+                last_sector = blocks[i] / 4;
+            }
+
+            license[1 + 2*i] = blocks[i];
+            if ((blocks[i] + 1) % 4 == 0) {
+                // mapping a trailer block
+                license[1 + 2*i + 1] = trailer_permissions;
+            } else {
+                // mapping a data block
+                license[1 + 2*i + 1] = data_permissions;
+            }
+            PrintAndLogEx(loglevel, "[%d] Block %d: permissions %02X", i, license[1 + 2*i], license[1 + 2*i + 1]);
+        }
+        license_len = 1 + 2*num_blocks;
+    }
+
+    PrintAndLogEx(loglevel, "Covering %d sector%s in total", num_sectors, num_sectors != 1 ? "s" : "");
+
+    if (use_default_keys) {
+        // by default: all key A FFFFFFFFFFFF, all key B readable
+        memset(mfc_keys, '\xFF', 6 * num_sectors);
+        mfc_keys_len = 6 * num_sectors;
+    } else {
+        if (CLIParamHexToBuf(mfc_keys_arg, mfc_keys, sizeof (mfc_keys), &mfc_keys_len) != 0) {
+            goto mfclicense_parsing_error;
+        }
+        if (mfc_keys_len % 6 != 0) {
+            PrintAndLogEx(ERR, "MFC keys length must be a multiple of 6 bytes");
+            goto mfclicense_parsing_error;
+        }
+        // Quick sanity check: do we have more or less the right number of keys for the number of sectors?
+        if (mfc_keys_len / 6 < num_sectors || (mfc_keys_len / 6) > 2 * num_sectors) {
+            PrintAndLogEx(ERR, "Not enough or too many keys for the number of sectors (expecting 1 or 2 keys per sector)");
+            goto mfclicense_parsing_error;
+        }
+    }
+
+    CLIParserFree(ctx);
+
+    // Compute the MAC
+    uint8_t license_mac_data[384];
+    uint8_t mac[8];
+    license_mac_data[0] = 0x01;
+    memcpy(license_mac_data + 1, license, license_len);
+    memcpy(license_mac_data + 1 + license_len, mfc_keys, mfc_keys_len);
+
+    aes_cmac8(NULL, mac_key, license_mac_data, mac, 1 + license_len + mfc_keys_len);
+
+    PrintAndLogEx(INFO, "License: %s", sprint_hex_inrow(license, license_len));
+    PrintAndLogEx(INFO, "MAC: %s", sprint_hex_inrow(mac, 8));
+
+    if (save) {
+        memcpy(saved_mfclicense, license, license_len);
+        saved_mfclicense_len = license_len;
+        saved_mfclicense_set = true;
+        memcpy(saved_mfclicense_mac, mac, 8);
+        saved_mfclicense_mac_set = true;
+        PrintAndLogEx(INFO, "Saved license and license MAC for the next commands in this session");
+    }
+
+    return PM3_SUCCESS;
+
+mfclicense_parsing_error:
+    CLIParserFree(ctx);
+    return PM3_EINVARG;
+}
+
 static int DesfileReadISOFileAndPrint(DesfireContext_t *dctx,
                                       bool select_current_file, uint8_t fnum,
                                       uint16_t fisoid, int filetype,
@@ -9103,6 +9438,7 @@ static command_t CommandTable[] = {
     {"write",            CmdHF14ADesWriteData,        IfPm3Iso14443a,  "Write data to standard/backup/record/value file"},
     {"value",            CmdHF14ADesValueOperations,  IfPm3Iso14443a,  "Operations with value file (get/credit/limited credit/debit/clear)"},
     {"clearrecfile",     CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},
+    {"makemfclicense",   CmdHF14ADesMakeMFCLicense,   AlwaysAvailable, "Generate a Mifare Classic license for DESFire EV3C"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("DUOX") " ------------------------"},
     {"verifycert",       CmdHF14ADesVerifyCert,       IfPm3Iso14443a,  "Validate cert from file and verify key possession"},
     {"intauth",          CmdHF14ADesIntAuth,          IfPm3Iso14443a,  "ISO Internal Authenticate (ECDSA challenge-response)"},
