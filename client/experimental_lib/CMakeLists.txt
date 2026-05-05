@@ -233,6 +233,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/common/hitag2/hitag2_crypto.c
         ${PM3_ROOT}/client/src/crypto/asn1dump.c
         ${PM3_ROOT}/client/src/crypto/asn1utils.c
+        ${PM3_ROOT}/client/src/crypto/duoxcrypto.c
         ${PM3_ROOT}/client/src/crypto/libpcrypto.c
         ${PM3_ROOT}/client/src/crypto/originality.c
         ${PM3_ROOT}/client/src/emv/test/cda_test.c

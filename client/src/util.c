@@ -1391,6 +1391,71 @@ void strn_upper(char *s, size_t n) {
         s[i] = toupper(s[i]);
     }
 }
+
+static int char_compare_case_insensitive(char a, char b) {
+    return tolower((unsigned char)a) - tolower((unsigned char)b);
+}
+
+bool str_equal_case_insensitive(const char *a, const char *b) {
+    if (a == NULL || b == NULL) {
+        return false;
+    }
+
+    while (*a != '\0' && *b != '\0') {
+        if (char_compare_case_insensitive(*a, *b) != 0) {
+            return false;
+        }
+        a++;
+        b++;
+    }
+
+    return *a == '\0' && *b == '\0';
+}
+
+bool str_startswith_case_insensitive(const char *s, const char *pre) {
+    if (s == NULL || pre == NULL) {
+        return false;
+    }
+
+    while (*pre != '\0') {
+        if (*s == '\0' || char_compare_case_insensitive(*s, *pre) != 0) {
+            return false;
+        }
+        s++;
+        pre++;
+    }
+
+    return true;
+}
+
+bool str_contains_case_insensitive(const char *s, const char *needle) {
+    if (s == NULL || needle == NULL) {
+        return false;
+    }
+
+    size_t needle_len = strlen(needle);
+    if (needle_len == 0) {
+        return true;
+    }
+
+    size_t s_len = strlen(s);
+    if (needle_len > s_len) {
+        return false;
+    }
+
+    for (size_t i = 0; i <= (s_len - needle_len); i++) {
+        size_t j = 0;
+        while (j < needle_len && char_compare_case_insensitive(s[i + j], needle[j]) == 0) {
+            j++;
+        }
+        if (j == needle_len) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // check for prefix in string
 bool str_startswith(const char *s,  const char *pre) {
     return strncmp(pre, s, strlen(pre)) == 0;
@@ -1497,6 +1562,28 @@ size_t str_nlen(const char *src, size_t maxlen) {
         }
     }
     return len;
+}
+
+size_t str_copy(char *dst, size_t dst_size, const char *src) {
+    if (src == NULL) {
+        if (dst != NULL && dst_size > 0) {
+            dst[0] = '\0';
+        }
+        return 0;
+    }
+
+    size_t src_len = strlen(src);
+    if (dst == NULL || dst_size == 0) {
+        return src_len;
+    }
+
+    size_t copy_len = src_len;
+    if (copy_len >= dst_size) {
+        copy_len = dst_size - 1;
+    }
+    memcpy(dst, src, copy_len);
+    dst[copy_len] = '\0';
+    return src_len;
 }
 
 static bool str_regex_atom_matches(char atom, bool escaped, char c) {
