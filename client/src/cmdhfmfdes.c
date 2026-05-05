@@ -51,9 +51,6 @@
 #include "mifare/prime.h"
 #include "util.h"
 #include "crypto/originality.h"
-#include "x509_crt.h"
-#include "mbedtls/oid.h"
-#include "mbedtls/sha256.h"
 
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
@@ -84,8 +81,6 @@
 // LEAF Verified Open Application
 #define LEAF_VERIFIED_DEFAULT_AID       0xF51CD6U
 #define LEAF_VERIFIED_CERT_FILE         0x02
-#define LEAF_VERIFIED_MAX_CERT_LEN      4096
-#define LEAF_COMMUNITY_ROOT_CERT_PATH   "duox_trust/nxp/nxp-leaf-e200-sn63709320131000-c02.pem"
 #define DUOX_VDE_DEFAULT_AID            0x1010F6U
 #define DUOX_VDE_CERT_FILE              0x00
 
@@ -8055,235 +8050,6 @@ static int CmdHF14ADesVdeSign(const char *Cmd) {
 }
 
 // Look up an attribute in a DN by OID. Returns pointer to mbedtls value buf or NULL.
-static const mbedtls_x509_buf *leaf_dn_find_oid(const mbedtls_x509_name *dn, const char *oid_buf, size_t oid_len) {
-    while (dn != NULL) {
-        if (dn->oid.len == oid_len && memcmp(dn->oid.p, oid_buf, oid_len) == 0)
-            return &dn->val;
-        dn = dn->next;
-    }
-    return NULL;
-}
-
-static int CmdHF14ADesLeaf(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes leaf",
-                  "Read and verify a LEAF Verified credential on a MIFARE DUOX card.\n"
-                  "Selects the LEAF Verified Open Application, reads the X.509 certificate\n"
-                  "from file 0x02, verifies it was signed by the LEAF Root CA, performs ISO\n"
-                  "Internal Authenticate, and verifies the card signature with the public key\n"
-                  "embedded in the certificate.",
-                  "hf mfdes leaf                              -> verify with default AID D61CF5\n"
-                  "hf mfdes leaf -v                           -> verbose output\n"
-                  "hf mfdes leaf --aid D61CF5                 -> override AID\n"
-                  "hf mfdes leaf -d 00112233445566778899AABBCCDDEEFF -> explicit 16-byte challenge\n");
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_lit0("a",  "apdu",      "Show APDU requests and responses"),            // 1
-        arg_lit0("v",  "verbose",   "Verbose output"),                              // 2
-        arg_str0("d",  "challenge", "<hex>", "Challenge / RndA (16 bytes, random if omitted)"), // 3
-        arg_str0(NULL, "aid",       "<hex>", "Application ID (3 bytes, default D61CF5)"),       // 4
-        arg_int0("n",  "keynum",    "<dec>", "Key number (P2, default 0)"),                     // 5
-        arg_str0(NULL, "isoid",     "<hex>", "Application ISO ID / ISO DF FID (2 bytes)"),      // 6
-        arg_str0(NULL, "dfname",    "<hex>", "Application ISO DF Name (1-16 hex bytes)"),       // 7
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-
-    bool APDULogging = arg_get_lit(ctx, 1);
-    bool verbose = arg_get_lit(ctx, 2);
-
-    uint8_t challenge[DUOX_INTAUTH_CHALLENGE_LEN] = {0};
-    int challenge_len = 0;
-    CLIGetHexWithReturn(ctx, 3, challenge, &challenge_len);
-    bool challenge_provided = (challenge_len > 0);
-    if (challenge_provided && challenge_len != DUOX_INTAUTH_CHALLENGE_LEN) {
-        PrintAndLogEx(ERR, "Challenge must be exactly 16 bytes, got %d", challenge_len);
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
-    int keynum = arg_get_int_def(ctx, 5, 0);
-    if (keynum < 0 || keynum > 255) {
-        PrintAndLogEx(ERR, "Key number must be 0..255");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
-    mfd_app_select app_select = MfdSelectionInitAID(LEAF_VERIFIED_DEFAULT_AID);
-    if (MfdSelectionApplyCmdParameters(ctx, 4, 6, 7, &app_select) != PM3_SUCCESS) {
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
-    SetAPDULogging(APDULogging);
-    CLIParserFree(ctx);
-
-    duox_certificate_anchor_t leaf_root_anchor = {0};
-    int pk_res = duox_load_certificate_anchor_from_input(LEAF_COMMUNITY_ROOT_CERT_PATH, DUOX_DEFAULT_CA_DIR, &leaf_root_anchor);
-    mbedtls_ecp_group_id leaf_root_curveid = MBEDTLS_ECP_DP_NONE;
-    const uint8_t *leaf_root_anchor_pubkey = NULL;
-    size_t leaf_root_pubkey_len = 0;
-    if (pk_res == PM3_SUCCESS) {
-        pk_res = duox_certificate_anchor_public_key(&leaf_root_anchor, &leaf_root_curveid, &leaf_root_anchor_pubkey, &leaf_root_pubkey_len);
-    }
-    if (pk_res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to load LEAF Root CA certificate from " _YELLOW_("%s") " (%d)", LEAF_COMMUNITY_ROOT_CERT_PATH, pk_res);
-        return pk_res;
-    }
-    if (leaf_root_curveid != MBEDTLS_ECP_DP_SECP256R1 || leaf_root_anchor_pubkey == NULL || leaf_root_pubkey_len != 65) {
-        PrintAndLogEx(ERR, "LEAF Root CA certificate has unsupported public key");
-        return PM3_ECRYPTO;
-    }
-    uint8_t leaf_root_pubkey[65] = {0};
-    memcpy(leaf_root_pubkey, leaf_root_anchor_pubkey, sizeof(leaf_root_pubkey));
-
-    if (!challenge_provided) {
-        int res = pcrypto_rng_fill_oneshot(challenge, sizeof(challenge), "hf_mfdes_leaf");
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Failed to generate random challenge");
-            return res;
-        }
-    }
-
-    PrintAndLogEx(INFO, "--- " _CYAN_("LEAF Verified Credential Check"));
-    if (verbose) {
-        MfdSelectionPrint(&app_select);
-    }
-
-    // Step 1: Select application
-    DesfireContext_t dctx = {0};
-    dctx.commMode = DCMPlain;
-    dctx.cmdSet = DCCNativeISO;
-
-    if (MfdSelectionSelectApplication(&dctx, &app_select, verbose) != PM3_SUCCESS) {
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    // Step 2: Read X.509 certificate from file 0x02 (length=0 reads to EOF)
-    uint8_t cert_buf[LEAF_VERIFIED_MAX_CERT_LEN] = {0};
-    size_t cert_len = 0;
-    int res = DesfireReadFile(&dctx, LEAF_VERIFIED_CERT_FILE, 0, 0, cert_buf, &cert_len);
-    if (res != PM3_SUCCESS || cert_len == 0) {
-        PrintAndLogEx(ERR, "Read certificate file 0x%02X " _RED_("failed") " (%d)", LEAF_VERIFIED_CERT_FILE, res);
-        DropField();
-        return PM3_ESOFT;
-    }
-    PrintAndLogEx(SUCCESS, "Certificate read " _GREEN_("ok") " (%zu bytes)", cert_len);
-    if (verbose)
-        print_hex_break(cert_buf, cert_len, 32);
-
-    // Step 3: Parse certificate
-    mbedtls_x509_crt cert;
-    mbedtls_x509_crt_init(&cert);
-    int xres = mbedtls_x509_crt_parse_der(&cert, cert_buf, cert_len);
-    if (xres != 0) {
-        PrintAndLogEx(ERR, "X.509 parse " _RED_("failed") " (-0x%04x)", -xres);
-        mbedtls_x509_crt_free(&cert);
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    // Print certificate details
-    PrintAndLogEx(INFO, "--- " _CYAN_("Certificate"));
-
-    char dnbuf[256] = {0};
-    mbedtls_x509_dn_gets(dnbuf, sizeof(dnbuf), &cert.subject);
-    PrintAndLogEx(INFO, "Subject...... " _YELLOW_("%s"), dnbuf);
-    mbedtls_x509_dn_gets(dnbuf, sizeof(dnbuf), &cert.issuer);
-    PrintAndLogEx(INFO, "Issuer....... " _YELLOW_("%s"), dnbuf);
-
-    char idbuf[128] = {0};
-    const mbedtls_x509_buf *open_id = leaf_dn_find_oid(&cert.subject,
-                                      MBEDTLS_OID_AT_SERIAL_NUMBER,
-                                      MBEDTLS_OID_SIZE(MBEDTLS_OID_AT_SERIAL_NUMBER));
-    if (open_id != NULL && open_id->len > 0) {
-        size_t cp = (open_id->len < sizeof(idbuf) - 1) ? open_id->len : sizeof(idbuf) - 1;
-        memcpy(idbuf, open_id->p, cp);
-        PrintAndLogEx(INFO, "Open ID...... " _YELLOW_("%s"), idbuf);
-    }
-
-    PrintAndLogEx(INFO, "Valid from... " _YELLOW_("%04d-%02d-%02d %02d:%02d:%02d"),
-                  cert.valid_from.year, cert.valid_from.mon, cert.valid_from.day,
-                  cert.valid_from.hour, cert.valid_from.min, cert.valid_from.sec);
-    PrintAndLogEx(INFO, "Valid to..... " _YELLOW_("%04d-%02d-%02d %02d:%02d:%02d"),
-                  cert.valid_to.year, cert.valid_to.mon, cert.valid_to.day,
-                  cert.valid_to.hour, cert.valid_to.min, cert.valid_to.sec);
-
-    if (cert.serial.len > 0)
-        PrintAndLogEx(INFO, "Serial....... " _YELLOW_("%s"), sprint_hex_inrow(cert.serial.p, cert.serial.len));
-
-    uint8_t fp[32] = {0};
-    if (mbedtls_sha256_ret(cert_buf, cert_len, fp, 0) == 0)
-        PrintAndLogEx(INFO, "SHA-256...... " _YELLOW_("%s"), sprint_hex_inrow(fp, sizeof(fp)));
-
-    // Step 4: Verify certificate signature against LEAF Root CA public key.
-    // The certificate uses ECDSA-SHA256 over secp256r1; ecdsa_signature_verify
-    // accepts the DER-encoded signature stored in cert.sig.
-    PrintAndLogEx(INFO, "--- " _CYAN_("Root CA Verification"));
-    bool root_ok = false;
-    int rres = ecdsa_signature_verify(
-                   MBEDTLS_ECP_DP_SECP256R1,
-                   leaf_root_pubkey,
-                   cert.tbs.p,
-                   (int)cert.tbs.len,
-                   cert.sig.p,
-                   cert.sig.len,
-                   true);
-    if (rres == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Root signature " _GREEN_("verified") " (LEAF Root CA P-256)");
-        root_ok = true;
-    } else {
-        PrintAndLogEx(ERR, "Root signature " _RED_("verification failed") " (%d)", rres);
-    }
-
-    // Extract card public key (P-256, uncompressed)
-    uint8_t card_pubkey[65] = {0};
-    int kres = ecdsa_public_key_from_pk(&cert.pk, MBEDTLS_ECP_DP_SECP256R1, card_pubkey, sizeof(card_pubkey));
-    mbedtls_x509_crt_free(&cert);
-    if (kres != 0) {
-        PrintAndLogEx(ERR, "Failed to extract card public key (-0x%04x)", -kres);
-        DropField();
-        return PM3_ESOFT;
-    }
-    if (verbose)
-        PrintAndLogEx(INFO, "Card pubkey.. %s", sprint_hex_inrow(card_pubkey, sizeof(card_pubkey)));
-
-    // Step 5: ISO Internal Authenticate
-    PrintAndLogEx(INFO, "--- " _CYAN_("ISO Internal Authenticate"));
-    PrintAndLogEx(INFO, "Challenge.... " _YELLOW_("%s"), sprint_hex_inrow(challenge, sizeof(challenge)));
-    uint8_t card_random[DUOX_INTAUTH_CHALLENGE_LEN] = {0};
-    uint8_t signature_rs[DUOX_INTAUTH_SIG_LEN] = {0};
-    res = duox_intauth_exchange(APDULogging, verbose, (uint8_t)keynum, challenge, card_random, signature_rs);
-    DropField();
-    if (res != PM3_SUCCESS)
-        return res;
-
-    // Step 6: Verify card signature with extracted public key.
-    PrintAndLogEx(INFO, "--- " _CYAN_("Signature Verification"));
-    bool card_ok = false;
-    int sig_res = duox_intauth_verify_sig(verbose, card_pubkey, challenge, card_random, signature_rs);
-    if (sig_res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Card signature " _GREEN_("verified"));
-        card_ok = true;
-    } else {
-        PrintAndLogEx(ERR, "Card signature " _RED_("verification failed"));
-    }
-
-    PrintAndLogEx(NORMAL, "");
-    if (root_ok && card_ok) {
-        PrintAndLogEx(SUCCESS, "LEAF Verified credential " _GREEN_("AUTHENTIC"));
-        if (idbuf[0] != '\0')
-            PrintAndLogEx(SUCCESS, "Open ID...... " _GREEN_("%s"), idbuf);
-    } else {
-        PrintAndLogEx(ERR, "LEAF Verified credential " _RED_("FAILED") " (root=%s, card=%s)",
-                      root_ok ? "ok" : "fail", card_ok ? "ok" : "fail");
-    }
-
-    return (root_ok && card_ok) ? PM3_SUCCESS : PM3_ESOFT;
-}
-
 static const CLIParserOption mfdesValidateMethodOpts[] = {
     {MFDES_VALIDATE_METHOD_AUTO, "auto"},
     {MFDES_VALIDATE_METHOD_INTAUTH, "intauth"},
@@ -9341,7 +9107,6 @@ static command_t CommandTable[] = {
     {"verifycert",       CmdHF14ADesVerifyCert,       IfPm3Iso14443a,  "Validate cert from file and verify key possession"},
     {"intauth",          CmdHF14ADesIntAuth,          IfPm3Iso14443a,  "ISO Internal Authenticate (ECDSA challenge-response)"},
     {"vdesign",          CmdHF14ADesVdeSign,          IfPm3Iso14443a,  "VDE ECDSASign (EV charging signature over 32-byte challenge)"},
-    {"leaf",             CmdHF14ADesLeaf,             IfPm3Iso14443a,  "LEAF Verified credential read + cert + auth check"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("System") " -----------------------"},
     {"test",             CmdHF14ADesTest,             AlwaysAvailable, "Regression crypto tests"},
     {NULL, NULL, NULL, NULL}
