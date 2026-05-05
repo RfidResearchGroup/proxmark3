@@ -6425,7 +6425,7 @@ static int parse_mfc_blocks(const char *in, uint8_t blocks_out[], size_t *blocks
     uint64_t seen_so_far = 0;
     bool has_data = false;
     bool has_trailer = false;
-    for (int i = 0;; i++) {
+    for (;;) {
         token = strtok_r(ptr, ",", &saveptr);
         ptr = NULL;
 
