@@ -127,18 +127,174 @@ int fileExists(const char *filename) {
  * @param filename
  * @return
  */
-static bool is_directory(const char *filename) {
+bool path_is_directory(const char *path) {
+    if (path == NULL) {
+        return false;
+    }
 #ifdef _WIN32
     struct _stat st;
-    if (_stat(filename, &st) == -1)
+    if (_stat(path, &st) == -1)
         return false;
 #else
     struct stat st;
 //    stat(filename, &st);
-    if (lstat(filename, &st) == -1)
+    if (lstat(path, &st) == -1)
         return false;
 #endif
     return S_ISDIR(st.st_mode) != 0;
+}
+
+bool path_is_regular_file(const char *path) {
+    if (path == NULL) {
+        return false;
+    }
+#ifdef _WIN32
+    struct _stat st;
+    if (_stat(path, &st) == -1)
+        return false;
+#else
+    struct stat st;
+    if (stat(path, &st) == -1)
+        return false;
+#endif
+    return S_ISREG(st.st_mode) != 0;
+}
+
+const char *path_basename(const char *path) {
+    if (path == NULL) {
+        return "";
+    }
+
+    const char *base = strrchr(path, '/');
+    const char *base_win = strrchr(path, '\\');
+    if (base == NULL || (base_win != NULL && base_win > base)) {
+        base = base_win;
+    }
+    return (base == NULL) ? path : (base + 1);
+}
+
+void path_basename_without_ext(const char *path, char *out, size_t out_len) {
+    if (out == NULL || out_len == 0) {
+        return;
+    }
+    out[0] = '\0';
+
+    const char *base = path_basename(path);
+    if (base[0] == '\0') {
+        return;
+    }
+
+    snprintf(out, out_len, "%s", base);
+    char *dot = strrchr(out, '.');
+    if (dot != NULL && dot != out) {
+        *dot = '\0';
+    }
+}
+
+static int qsort_path_cmp(const void *a, const void *b) {
+    const char *pa = (const char *)a;
+    const char *pb = (const char *)b;
+    return strcmp(pa, pb);
+}
+
+static char *path_list_slot(char *paths, size_t path_len, size_t index) {
+    return paths + (index * path_len);
+}
+
+int collect_file_paths_recursive(const char *dirpath, char *paths, size_t path_len,
+                                 size_t max_paths, size_t *count, bool include_hidden, size_t max_depth) {
+    if (dirpath == NULL || paths == NULL || path_len == 0 || count == NULL) {
+        return PM3_EINVARG;
+    }
+
+    DIR *dir = opendir(dirpath);
+    if (dir == NULL) {
+        return PM3_EFILE;
+    }
+
+    struct dirent *entry = NULL;
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 ||
+                (include_hidden == false && entry->d_name[0] == '.')) {
+            continue;
+        }
+
+        char *fullpath = calloc(path_len, sizeof(char));
+        if (fullpath == NULL) {
+            closedir(dir);
+            return PM3_EMALLOC;
+        }
+        const char *sep = "";
+        size_t dir_len = strlen(dirpath);
+        if (dir_len > 0 && dirpath[dir_len - 1] != '/' && dirpath[dir_len - 1] != '\\') {
+            sep = PATHSEP;
+        }
+        if (snprintf(fullpath, path_len, "%s%s%s", dirpath, sep, entry->d_name) >= (int)path_len) {
+            free(fullpath);
+            continue;
+        }
+
+        if (path_is_directory(fullpath)) {
+            if (max_depth == 0) {
+                free(fullpath);
+                continue;
+            }
+            int res = collect_file_paths_recursive(fullpath, paths, path_len, max_paths, count, include_hidden, max_depth - 1);
+            free(fullpath);
+            if (res != PM3_SUCCESS) {
+                closedir(dir);
+                return res;
+            }
+            continue;
+        }
+
+        if (!path_is_regular_file(fullpath)) {
+            free(fullpath);
+            continue;
+        }
+        if (*count >= max_paths) {
+            free(fullpath);
+            closedir(dir);
+            return PM3_EOVFLOW;
+        }
+        if (snprintf(path_list_slot(paths, path_len, *count), path_len, "%s", fullpath) >= (int)path_len) {
+            free(fullpath);
+            continue;
+        }
+        free(fullpath);
+        (*count)++;
+    }
+
+    closedir(dir);
+    return PM3_SUCCESS;
+}
+
+int collect_resource_file_paths(const char *resource_dir, char *paths, size_t path_len,
+                                size_t max_paths, size_t *count, bool include_hidden, size_t max_depth) {
+    if (resource_dir == NULL || resource_dir[0] == '\0' || paths == NULL || path_len == 0 || count == NULL) {
+        return PM3_EINVARG;
+    }
+
+    char *rootdir = NULL;
+    int res = searchFile(&rootdir, RESOURCES_SUBDIR, resource_dir, "", true);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (!path_is_directory(rootdir)) {
+        free(rootdir);
+        return PM3_EFILE;
+    }
+
+    *count = 0;
+    res = collect_file_paths_recursive(rootdir, paths, path_len, max_paths, count, include_hidden, max_depth);
+    free(rootdir);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    qsort(paths, *count, path_len, qsort_path_cmp);
+    return PM3_SUCCESS;
 }
 
 bool setDefaultPath(savePaths_t pathIndex, const char *path) {
@@ -2884,7 +3040,7 @@ static int filelist(const char *path, const char *ext, uint8_t last, bool tentat
         tmp_fullpath[1023] = 0x00;
         strncat(tmp_fullpath, namelist[i]->d_name, strlen(tmp_fullpath) - 1);
 
-        if (is_directory(tmp_fullpath)) {
+        if (path_is_directory(tmp_fullpath)) {
 
             char newpath[1024];
             if (strcmp(namelist[i]->d_name, ".") == 0 || strcmp(namelist[i]->d_name, "..") == 0)
@@ -3144,7 +3300,7 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
         return PM3_EINVARG;
     }
 
-    if (is_directory(searchname)) {
+    if (path_is_directory(searchname)) {
         return PM3_EINVARG;
     }
 
@@ -3397,4 +3553,3 @@ int pm3_save_fm11rf08s_nonces(const char *fn, iso14a_fm11rf08s_nonces_with_data_
     }
     return PM3_SUCCESS;
 }
-

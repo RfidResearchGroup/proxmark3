@@ -114,6 +114,42 @@ typedef enum {
 
 int fileExists(const char *filename);
 
+/**
+ * @brief Check whether a path exists and is a directory.
+ */
+bool path_is_directory(const char *path);
+
+/**
+ * @brief Check whether a path exists and is a regular file.
+ */
+bool path_is_regular_file(const char *path);
+
+/**
+ * @brief Return the final path component, or an empty string for NULL input.
+ */
+const char *path_basename(const char *path);
+
+/**
+ * @brief Copy the final path component without its last file extension.
+ */
+void path_basename_without_ext(const char *path, char *out, size_t out_len);
+
+/**
+ * @brief Recursively collect regular file paths under a directory into fixed-size slots.
+ *
+ * A max_depth of 0 scans only dirpath and does not descend into subdirectories.
+ */
+int collect_file_paths_recursive(const char *dirpath, char *paths, size_t path_len,
+                                 size_t max_paths, size_t *count, bool include_hidden, size_t max_depth);
+
+/**
+ * @brief Resolve a resources subdirectory and recursively collect regular file paths from it.
+ *
+ * A max_depth of 0 scans only the resolved resource_dir and does not descend into subdirectories.
+ */
+int collect_resource_file_paths(const char *resource_dir, char *paths, size_t path_len,
+                                size_t max_paths, size_t *count, bool include_hidden, size_t max_depth);
+
 // set a path in the path list g_session.defaultPaths
 bool setDefaultPath(savePaths_t pathIndex, const char *path);
 

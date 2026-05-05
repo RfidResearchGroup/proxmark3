@@ -18,12 +18,9 @@
 
 #include "crypto/duoxcrypto.h"
 
-#include <ctype.h>
-#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <mbedtls/asn1.h>
 #include <mbedtls/ecdsa.h>
 #include <mbedtls/ecp.h>
@@ -40,6 +37,7 @@
 #include "x509_crt.h"
 
 #define DUOX_CERTIFICATE_ANCHOR_INPUT_LEN 8192
+#define DUOX_CERTIFICATE_ANCHOR_SEARCH_DEPTH 4
 
 static int duox_cert_info_from_x509_crt(const mbedtls_x509_crt *cert, duox_cert_info_t *out);
 
@@ -53,189 +51,6 @@ const char *duox_certificate_format_name(duox_certificate_format_t format) {
         default:
             return "unknown";
     }
-}
-
-const char *duox_cert_info_format_name(const duox_cert_info_t *cert) {
-    if (cert == NULL) {
-        return duox_certificate_format_name(DUOX_CERTIFICATE_FORMAT_UNKNOWN);
-    }
-    return duox_certificate_format_name(cert->format);
-}
-
-static void duox_trim_ascii_inplace(char *text) {
-    if (text == NULL) {
-        return;
-    }
-
-    size_t start = 0;
-    size_t len = strlen(text);
-    while (start < len && isspace((unsigned char)text[start])) {
-        start++;
-    }
-    while (len > start && isspace((unsigned char)text[len - 1])) {
-        len--;
-    }
-
-    if (start > 0) {
-        memmove(text, text + start, len - start);
-    }
-    text[len - start] = '\0';
-}
-
-static int duox_copy_without_whitespace(const char *src, char *dst, size_t dst_size, size_t *dst_len) {
-    if (src == NULL || dst == NULL || dst_len == NULL || dst_size == 0) {
-        return PM3_EINVARG;
-    }
-
-    size_t out = 0;
-    for (size_t i = 0; src[i] != '\0'; i++) {
-        if (isspace((unsigned char)src[i])) {
-            continue;
-        }
-        if ((out + 1) >= dst_size) {
-            return PM3_EOVFLOW;
-        }
-        dst[out++] = src[i];
-    }
-    dst[out] = '\0';
-    *dst_len = out;
-    return PM3_SUCCESS;
-}
-
-static bool duox_path_is_directory(const char *path) {
-    if (path == NULL) {
-        return false;
-    }
-    struct stat st;
-    if (stat(path, &st) != 0) {
-        return false;
-    }
-    return S_ISDIR(st.st_mode) != 0;
-}
-
-static bool duox_path_is_regular_file(const char *path) {
-    if (path == NULL) {
-        return false;
-    }
-    struct stat st;
-    if (stat(path, &st) != 0) {
-        return false;
-    }
-    return S_ISREG(st.st_mode) != 0;
-}
-
-static const char *duox_path_basename(const char *path) {
-    if (path == NULL) {
-        return "";
-    }
-
-    const char *base = strrchr(path, '/');
-    const char *base_win = strrchr(path, '\\');
-    if (base == NULL || (base_win != NULL && base_win > base)) {
-        base = base_win;
-    }
-    return (base == NULL) ? path : (base + 1);
-}
-
-static void duox_path_basename_without_ext(const char *path, char *out, size_t out_len) {
-    if (out == NULL || out_len == 0) {
-        return;
-    }
-    out[0] = '\0';
-
-    const char *base = duox_path_basename(path);
-    if (base[0] == '\0') {
-        return;
-    }
-
-    snprintf(out, out_len, "%s", base);
-    char *dot = strrchr(out, '.');
-    if (dot != NULL && dot != out) {
-        *dot = '\0';
-    }
-}
-
-static int duox_qsort_path_cmp(const void *a, const void *b) {
-    const char *pa = (const char *)a;
-    const char *pb = (const char *)b;
-    return strcmp(pa, pb);
-}
-
-static int duox_collect_certificate_anchor_paths_recursive(const char *dirpath,
-                                                           char paths[][DUOX_CERTIFICATE_ANCHOR_PATH_LEN],
-                                                           size_t max_paths, size_t *count) {
-    if (dirpath == NULL || paths == NULL || count == NULL) {
-        return PM3_EINVARG;
-    }
-
-    DIR *dir = opendir(dirpath);
-    if (dir == NULL) {
-        return PM3_EFILE;
-    }
-
-    struct dirent *entry = NULL;
-    while ((entry = readdir(dir)) != NULL) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || entry->d_name[0] == '.') {
-            continue;
-        }
-
-        char fullpath[DUOX_CERTIFICATE_ANCHOR_PATH_LEN] = {0};
-        if (snprintf(fullpath, sizeof(fullpath), "%s/%s", dirpath, entry->d_name) >= (int)sizeof(fullpath)) {
-            continue;
-        }
-
-        if (duox_path_is_directory(fullpath)) {
-            int res = duox_collect_certificate_anchor_paths_recursive(fullpath, paths, max_paths, count);
-            if (res != PM3_SUCCESS) {
-                closedir(dir);
-                return res;
-            }
-            continue;
-        }
-
-        if (!duox_path_is_regular_file(fullpath)) {
-            continue;
-        }
-        if (*count >= max_paths) {
-            closedir(dir);
-            return PM3_EOVFLOW;
-        }
-
-        snprintf(paths[*count], DUOX_CERTIFICATE_ANCHOR_PATH_LEN, "%s", fullpath);
-        (*count)++;
-    }
-
-    closedir(dir);
-    return PM3_SUCCESS;
-}
-
-static int duox_collect_certificate_anchor_paths(const char *anchor_store_dir,
-                                                 char paths[][DUOX_CERTIFICATE_ANCHOR_PATH_LEN],
-                                                 size_t max_paths, size_t *count) {
-    if (anchor_store_dir == NULL || anchor_store_dir[0] == '\0' || paths == NULL || count == NULL) {
-        return PM3_EINVARG;
-    }
-
-    char *rootdir = NULL;
-    int res = searchFile(&rootdir, RESOURCES_SUBDIR, anchor_store_dir, "", true);
-    if (res != PM3_SUCCESS) {
-        return res;
-    }
-
-    if (!duox_path_is_directory(rootdir)) {
-        free(rootdir);
-        return PM3_EFILE;
-    }
-
-    *count = 0;
-    res = duox_collect_certificate_anchor_paths_recursive(rootdir, paths, max_paths, count);
-    free(rootdir);
-    if (res != PM3_SUCCESS) {
-        return res;
-    }
-
-    qsort(paths, *count, sizeof(paths[0]), duox_qsort_path_cmp);
-    return PM3_SUCCESS;
 }
 
 int duox_certificate_anchor_public_key(const duox_certificate_anchor_t *anchor,
@@ -299,7 +114,7 @@ static int duox_load_x509_certificate_input(const char *input, mbedtls_x509_crt 
         return PM3_EOVFLOW;
     }
     memcpy(normalized, input, input_len + 1);
-    duox_trim_ascii_inplace(normalized);
+    str_trim_ascii_inplace(normalized);
     if (normalized[0] == '\0') {
         return PM3_EINVARG;
     }
@@ -319,7 +134,7 @@ static int duox_load_x509_certificate_input(const char *input, mbedtls_x509_crt 
 
     char compact[DUOX_CERTIFICATE_ANCHOR_INPUT_LEN] = {0};
     size_t compact_len = 0;
-    if (duox_copy_without_whitespace(normalized, compact, sizeof(compact), &compact_len) != PM3_SUCCESS || compact_len == 0) {
+    if (str_copy_without_whitespace(normalized, compact, sizeof(compact), &compact_len) != PM3_SUCCESS || compact_len == 0) {
         return PM3_EINVARG;
     }
 
@@ -425,7 +240,7 @@ static int duox_load_certificate_anchor_from_file_path(const char *filepath, duo
     }
 
     char filename_anchor_name[DUOX_CERTIFICATE_ANCHOR_NAME_LEN] = {0};
-    duox_path_basename_without_ext(filepath, filename_anchor_name, sizeof(filename_anchor_name));
+    path_basename_without_ext(filepath, filename_anchor_name, sizeof(filename_anchor_name));
     if (filename_anchor_name[0] == '\0') {
         return PM3_EINVARG;
     }
@@ -446,14 +261,15 @@ static int duox_load_named_certificate_anchor_from_store(const char *token, cons
 
     char paths[DUOX_CERTIFICATE_ANCHOR_MAX_PATHS][DUOX_CERTIFICATE_ANCHOR_PATH_LEN] = {{0}};
     size_t path_count = 0;
-    int res = duox_collect_certificate_anchor_paths(anchor_store_dir, paths, ARRAYLEN(paths), &path_count);
+    int res = collect_resource_file_paths(anchor_store_dir, (char *)paths, sizeof(paths[0]), ARRAYLEN(paths), &path_count,
+                                          false, DUOX_CERTIFICATE_ANCHOR_SEARCH_DEPTH);
     if (res != PM3_SUCCESS) {
         return res;
     }
 
     for (size_t i = 0; i < path_count; i++) {
         char filename_anchor_name[DUOX_CERTIFICATE_ANCHOR_NAME_LEN] = {0};
-        duox_path_basename_without_ext(paths[i], filename_anchor_name, sizeof(filename_anchor_name));
+        path_basename_without_ext(paths[i], filename_anchor_name, sizeof(filename_anchor_name));
         if (filename_anchor_name[0] == '\0') {
             continue;
         }
@@ -466,7 +282,7 @@ static int duox_load_named_certificate_anchor_from_store(const char *token, cons
     const char *matched_path = NULL;
     for (size_t i = 0; i < path_count; i++) {
         char filename_anchor_name[DUOX_CERTIFICATE_ANCHOR_NAME_LEN] = {0};
-        duox_path_basename_without_ext(paths[i], filename_anchor_name, sizeof(filename_anchor_name));
+        path_basename_without_ext(paths[i], filename_anchor_name, sizeof(filename_anchor_name));
         if (filename_anchor_name[0] == '\0' || !str_startswith_case_insensitive(filename_anchor_name, token)) {
             continue;
         }
@@ -491,7 +307,7 @@ int duox_load_certificate_anchor_from_input(const char *input, const char *ancho
 
     char normalized[DUOX_CERTIFICATE_ANCHOR_INPUT_LEN] = {0};
     snprintf(normalized, sizeof(normalized), "%s", input);
-    duox_trim_ascii_inplace(normalized);
+    str_trim_ascii_inplace(normalized);
     if (normalized[0] == '\0') {
         return PM3_EINVARG;
     }
@@ -499,7 +315,7 @@ int duox_load_certificate_anchor_from_input(const char *input, const char *ancho
     char *resolved_path = NULL;
     if (searchFile(&resolved_path, RESOURCES_SUBDIR, normalized, "", true) == PM3_SUCCESS) {
         int res = PM3_EINVARG;
-        if (duox_path_is_regular_file(resolved_path)) {
+        if (path_is_regular_file(resolved_path)) {
             res = duox_load_certificate_anchor_from_file_path(resolved_path, anchor);
         }
         free(resolved_path);
@@ -532,7 +348,8 @@ int duox_load_certificate_anchors_from_store(const char *anchor_store_dir,
 
     char paths[DUOX_CERTIFICATE_ANCHOR_MAX_PATHS][DUOX_CERTIFICATE_ANCHOR_PATH_LEN] = {{0}};
     size_t path_count = 0;
-    int res = duox_collect_certificate_anchor_paths(anchor_store_dir, paths, ARRAYLEN(paths), &path_count);
+    int res = collect_resource_file_paths(anchor_store_dir, (char *)paths, sizeof(paths[0]), ARRAYLEN(paths), &path_count,
+                                          false, DUOX_CERTIFICATE_ANCHOR_SEARCH_DEPTH);
     if (res != PM3_SUCCESS) {
         return res;
     }
