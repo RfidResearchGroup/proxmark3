@@ -85,7 +85,7 @@
 #define LEAF_VERIFIED_DEFAULT_AID       0xF51CD6U
 #define LEAF_VERIFIED_CERT_FILE         0x02
 #define LEAF_VERIFIED_MAX_CERT_LEN      4096
-#define LEAF_COMMUNITY_ROOT_KEY_PATH    "duox_trust/leaf_community/leaf_community-root-public-key.der"
+#define LEAF_COMMUNITY_ROOT_CERT_PATH   "duox_trust/nxp/nxp-leaf-e200-sn63709320131000-c02.pem"
 #define DUOX_VDE_DEFAULT_AID            0x1010F6U
 #define DUOX_VDE_CERT_FILE              0x00
 
@@ -8119,12 +8119,24 @@ static int CmdHF14ADesLeaf(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    uint8_t leaf_root_pubkey[65] = {0};
-    int pk_res = ensure_ec_public_key(LEAF_COMMUNITY_ROOT_KEY_PATH, MBEDTLS_ECP_DP_SECP256R1, leaf_root_pubkey, sizeof(leaf_root_pubkey));
+    duox_certificate_anchor_t leaf_root_anchor = {0};
+    int pk_res = duox_load_certificate_anchor_from_input(LEAF_COMMUNITY_ROOT_CERT_PATH, DUOX_DEFAULT_CA_DIR, &leaf_root_anchor);
+    mbedtls_ecp_group_id leaf_root_curveid = MBEDTLS_ECP_DP_NONE;
+    const uint8_t *leaf_root_anchor_pubkey = NULL;
+    size_t leaf_root_pubkey_len = 0;
+    if (pk_res == PM3_SUCCESS) {
+        pk_res = duox_certificate_anchor_public_key(&leaf_root_anchor, &leaf_root_curveid, &leaf_root_anchor_pubkey, &leaf_root_pubkey_len);
+    }
     if (pk_res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to load LEAF Root CA public key from " _YELLOW_("%s") " (%d)", LEAF_COMMUNITY_ROOT_KEY_PATH, pk_res);
+        PrintAndLogEx(ERR, "Failed to load LEAF Root CA certificate from " _YELLOW_("%s") " (%d)", LEAF_COMMUNITY_ROOT_CERT_PATH, pk_res);
         return pk_res;
     }
+    if (leaf_root_curveid != MBEDTLS_ECP_DP_SECP256R1 || leaf_root_anchor_pubkey == NULL || leaf_root_pubkey_len != 65) {
+        PrintAndLogEx(ERR, "LEAF Root CA certificate has unsupported public key");
+        return PM3_ECRYPTO;
+    }
+    uint8_t leaf_root_pubkey[65] = {0};
+    memcpy(leaf_root_pubkey, leaf_root_anchor_pubkey, sizeof(leaf_root_pubkey));
 
     if (!challenge_provided) {
         int res = pcrypto_rng_fill_oneshot(challenge, sizeof(challenge), "hf_mfdes_leaf");
