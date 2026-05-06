@@ -712,14 +712,25 @@ static int CmdEM410xClone(const char *Cmd) {
 
             switch (step) {
                 case 0: {
+                    memcpy(packet.data, &data[HITAGS_PAGE_SIZE * 0], HITAGS_PAGE_SIZE);
+                    packet.page = 4;
+                    break;
+                }
+                case 1: {
+                    memcpy(packet.data, &data[HITAGS_PAGE_SIZE * 1], HITAGS_PAGE_SIZE);
+                    packet.page = 5;
+                    break;
+                }
+                case 2: {
                     hitags_config_page_t config_page = {0};
                     config_page.s.MEMT = 0x02; // compatiable for 82xx, no impact on Hitag S
                     config_page.s.TTFM = 0x01; // 0 = "Block 0, Block 1, Block 2, Block 3", 1 = "Block 0, Block 1"
                     config_page.s.TTFC = 0x00; // Manchester
-                    config_page.s.auth = 0x00; // Plain
+                    config_page.s.auth = 0x01; // Auth mode for better compatibility with 82xx readers
 
-                    //compatiable for 82xx, no impact on Hitag S
+                    // Set RES bits to match 'DA' (1101 1010) for 82xx reader compatibility
                     config_page.s.RES1 = 0x01;
+                    config_page.s.RES2 = 0x01; // This makes it 'DA' instead of 'CA'
                     config_page.s.RES4 = 0x01;
                     config_page.s.RES5 = 0x01;
                     switch (clk) {
@@ -744,21 +755,11 @@ static int CmdEM410xClone(const char *Cmd) {
                     packet.page = 1;
                     break;
                 }
-                case 1: {
-                    memcpy(packet.data, &data[HITAGS_PAGE_SIZE * 0], HITAGS_PAGE_SIZE);
-                    packet.page = 4;
-                    break;
-                }
-                case 2: {
-                    memcpy(packet.data, &data[HITAGS_PAGE_SIZE * 1], HITAGS_PAGE_SIZE);
-                    packet.page = 5;
-                    break;
-                }
             }
 
             packet.cmd = HTSF_82xx;
             memcpy(packet.pwd, "\xBB\xDD\x33\x99", HITAGS_PAGE_SIZE);
-            packet.mode = HITAGS_UID_REQ_FADV;
+            packet.mode = HITAGS_UID_REQ_ADV1;
 
             SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *)&packet, sizeof(packet));
             if (WaitForResponseTimeout(CMD_LF_HITAGS_WRITE, &resp, 4000) == false) {
