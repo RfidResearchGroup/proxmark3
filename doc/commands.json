@@ -1455,7 +1455,7 @@
                 "-u, --uid <hex> <4|7|10> hex bytes UID",
                 "-r, --ats <hex> <0-20> hex bytes ATS",
                 "-a, --aid <hex> <0-30> hex bytes for AID to respond to (Default: A000000000000000000000)",
-                "-e, --selectaid_response <hex> <0-100> hex bytes for APDU Response to AID Select (Default: 9000)",
+                "-e, --selectaid_response <hex> <0-256> hex bytes for APDU Response to AID Select (Default: 9000)",
                 "-p, --getdata_response <hex> <0-100> hex bytes for APDU Response to Get Data request after AID (Default: 9000)",
                 "-x, --enumerate Enumerate all AID values via returning Not Found and print them to console"
             ],
@@ -2286,6 +2286,41 @@
                 "-a, --apdu Show APDU requests and responses"
             ],
             "usage": "hf aliro read [-ha] [-k <hex>] -g <hex> [-s <hex>] -p <pem|der-b64|der-hex|scalar-b64|scalar-hex|path> [-t <hex>] [-e <hex>] [-f <step-up|standard|fast>] [--step-up-scopes <scope1,scope2>]"
+        },
+        "hf calypso dump": {
+            "command": "hf calypso dump",
+            "description": "Dump readable files and records from Calypso DFs",
+            "notes": [
+                "hf calypso dump",
+                "hf calypso dump --aid 315449432E494341",
+                "hf calypso dump -f my-calypso-dump",
+                "hf calypso dump --ns -v"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--aid <hex> Calypso application AID or AID prefix (5..16 bytes)",
+                "-f, --file <fn> Specify a filename for JSON dump file",
+                "--ns no save to file",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf calypso dump [-hv] [--aid <hex>] [-f <fn>] [--ns]"
+        },
+        "hf calypso help": {
+            "command": "hf calypso help",
+            "description": "help This help --------------------------------------------------------------------------------------- hf calypso info available offline: no Tag information for Calypso cards",
+            "notes": [
+                "hf calypso info",
+                "hf calypso info -v",
+                "hf calypso info --aid 315449432E494341"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--aid <hex> Calypso application AID or AID prefix (5..16 bytes)",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf calypso info [-hv] [--aid <hex>]"
         },
         "hf cipurse aread": {
             "command": "hf cipurse aread",
@@ -3465,7 +3500,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } aliro { ALIRO digital access credentials... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } gst { Google Smart Tap passes... } secc { iClass SE Config Card Emulator... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } saflok { Saflok MFC RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service... } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } aliro { ALIRO digital access credentials... } calypso { Calypso transport cards... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } gst { Google Smart Tap passes... } secc { iClass SE Config Card Emulator... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } saflok { Saflok MFC RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service... } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf list --frame -> show frame delay times",
                 "hf list -1 -> use trace buffer"
@@ -6969,6 +7004,7 @@
             "notes": [
                 "hf mfdes intauth -> authenticate with default AID (000000), random challenge",
                 "hf mfdes intauth --aid D61CF5 -> explicit AID",
+                "hf mfdes intauth --isoid DF01 -> select by ISO DF FID",
                 "hf mfdes intauth --dfname D2760000850100 -> select by DF name",
                 "hf mfdes intauth -d 00112233445566778899AABBCCDDEEFF -> explicit 16-byte challenge",
                 "hf mfdes intauth -p 04AABB... -> verify signature with given EC public key (hex, PEM, DER, file path)",
@@ -6983,9 +7019,10 @@
                 "-p, --pubkey <hex|pem|der|path> EC public key for signature verification",
                 "--aid <hex> Application ID (3 bytes, default 000000)",
                 "-n, --keynum <dec> Key number (P2, default 0)",
-                "--dfname <hex> Application ISO DF Name (1-16 hex bytes)"
+                "--dfname <hex> Application ISO DF Name (1-16 hex bytes)",
+                "--isoid <hex> Application ISO ID / ISO DF FID (2 bytes)"
             ],
-            "usage": "hf mfdes intauth [-hav] [-d <hex>] [-p <hex|pem|der|path>] [--aid <hex>] [-n <dec>] [--dfname <hex>]"
+            "usage": "hf mfdes intauth [-hav] [-d <hex>] [-p <hex|pem|der|path>] [--aid <hex>] [-n <dec>] [--dfname <hex>] [--isoid <hex>]"
         },
         "hf mfdes lsapp": {
             "command": "hf mfdes lsapp",
@@ -7271,6 +7308,76 @@
                 "--no-auth Execute without authentication"
             ],
             "usage": "hf mfdes value [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--isoid <hex>] [--fid <hex>] [-o <get/credit/limcredit/debit/clear>] [-d <hex>] [--no-auth]"
+        },
+        "hf mfdes vdesign": {
+            "command": "hf mfdes vdesign",
+            "description": "Perform VDE_ECDSASign on MIFARE DUOX EV charging application. Card signs a 32-byte challenge with the EV charging key (KeyNo 0x00). Optionally verifies the returned ECDSA signature with a BrainpoolP256r1 public key.",
+            "notes": [
+                "hf mfdes vdesign -> sign random 32-byte challenge using default EV DF name",
+                "hf mfdes vdesign --aid 1010F6 -> select EV app by native AID",
+                "hf mfdes vdesign --isoid 00DF -> select EV app by ISO DF FID",
+                "hf mfdes vdesign --dfname A0000008450000000000000000000001 -> select EV app by ISO DF name",
+                "hf mfdes vdesign -d 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF -> explicit 32-byte challenge",
+                "hf mfdes vdesign -p 04A7C6... -> verify signature with given EC public key (hex, PEM, DER, file path)"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-a, --apdu Show APDU requests and responses",
+                "-v, --verbose Verbose output",
+                "-d, --challenge <hex> Challenge to sign (32 bytes, random if omitted)",
+                "-p, --pubkey <hex|pem|der|path> BrainpoolP256r1 public key for signature verification",
+                "--aid <hex> Application ID (3 bytes, native DESFire select)",
+                "--isoid <hex> Application ISO ID / ISO DF FID (2 bytes)",
+                "--dfname <hex> Application ISO DF Name (1-16 hex bytes, default EV DF name)"
+            ],
+            "usage": "hf mfdes vdesign [-hav] [-d <hex>] [-p <hex|pem|der|path>] [--aid <hex>] [--isoid <hex>] [--dfname <hex>]"
+        },
+        "hf mfdes verifycert": {
+            "command": "hf mfdes verifycert",
+            "description": "Read a certificate from DESFire file, validate it against root CA keys, extract device public key, then verify key possession with ISO Internal Authenticate or VDE_ECDSASign.",
+            "notes": [
+                "hf mfdes verifycert leaf",
+                "hf mfdes verifycert vde",
+                "hf mfdes verifycert orig",
+                "hf mfdes verifycert picc",
+                "hf mfdes verifycert --fid 01",
+                "hf mfdes verifycert leaf --aid D61CF5 --keyidx 0",
+                "hf mfdes verifycert vde --dfname A0000008450000000000000000000001 --aid F61010",
+                "hf mfdes verifycert orig --ca nxp-orig-e200",
+                "hf mfdes verifycert vde --ca skip",
+                "hf mfdes verifycert --fid 01 --ca ./rootca.pem --ca ./backup_root.der",
+                "hf mfdes verifycert --fid 01 --ca 04AABB... (public key)",
+                "hf mfdes verifycert --fid 01 --keyaid 123456 --keyidx 2"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "<profile> Profile: leaf, vde, orig, originality, picc",
+                "-a, --apdu Show APDU requests and responses",
+                "-v, --verbose Verbose output",
+                "-n, --keyno <dec> Key number for DESFire authentication",
+                "-t, --algo <DES|2TDEA|3TDEA|AES> DESFire auth crypt algo",
+                "-k, --key <hex> DESFire authentication key",
+                "--kdf <none|AN10922|gallagher> Key Derivation Function (KDF)",
+                "-i, --kdfi <hex> KDF input (1-31 hex bytes)",
+                "-m, --cmode <plain|mac|encrypt> Communication mode",
+                "-c, --ccset <native|niso|iso> Communication command set",
+                "--schann <ev2> Secure channel (verifycert supports only ev2 for auth)",
+                "--aid <hex> Certificate application ID (3 bytes)",
+                "--isoid <hex> Certificate application ISO DF ID (2 bytes)",
+                "--dfname <hex> Certificate application DF name (1-16 bytes)",
+                "--fid <hex> Certificate file ID (1 byte)",
+                "--no-auth Read certificate file without authentication",
+                "--ca <name|cert|pubkey|path|skip> CA input, or `skip` to skip certificate signature validation. Repeat --ca for multiple entries",
+                "--keyaid <hex> Key application ID (default: cert app)",
+                "--keyisoid <hex> Key application ISO DF ID (2 bytes)",
+                "--keydfname <hex> Key application DF name (default: cert app)",
+                "--keyidx <dec> Key index for possession verification (profile default)",
+                "--validatemethod <auto|intauth|vde|skip> Key possession verification method (default: profile/auto)",
+                "--readmethod <auto|desfire> Certificate read method (reserved for future methods)"
+            ],
+            "usage": "hf mfdes verifycert [-hav] [<profile>] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <ev2>] [--aid <hex>] [--isoid <hex>] [--dfname <hex>] [--fid <hex>] [--no-auth] [--ca <name|cert|pubkey|path|skip>]... [--keyaid <hex>] [--keyisoid <hex>] [--keydfname <hex>] [--keyidx <dec>] [--validatemethod <auto|intauth|vde|skip>] [--readmethod <auto|desfire>]"
         },
         "hf mfdes write": {
             "command": "hf mfdes write",
@@ -8687,13 +8794,14 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
+                "-t, --tag <hex> <0-100> hex bytes for tag to read (Default: FF00)",
                 "-o, --oid <hex> <0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)",
                 "--privacy-key <idx> Privacy key slot index. The selected slot provides both privacy encryption and MAC subkeys and is sent as the privacy slot identifier",
                 "--auth-key <idx> Auth key slot index. The selected slot provides the auth key and is sent as the auth slot identifier",
                 "--aid <hex> Use a custom SEOS AID",
                 "-d, --data <hex> <0-128> hex bytes for data (Must be valid BER-TLV)"
             ],
-            "usage": "hf seos write [-h] [-o <hex>] [--privacy-key <idx>] [--auth-key <idx>] [--aid <hex>] [-d <hex>]"
+            "usage": "hf seos write [-h] [-t <hex>] [-o <hex>] [--privacy-key <idx>] [--auth-key <idx>] [--aid <hex>] [-d <hex>]"
         },
         "hf sniff": {
             "command": "hf sniff",
@@ -14476,8 +14584,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 822,
+        "commands_extracted": 824,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-04-21T04:12:30"
+        "extracted_on": "2026-05-07T09:23:19"
     }
 }

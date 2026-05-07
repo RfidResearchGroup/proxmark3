@@ -350,10 +350,10 @@ static void print_status_flag1_interpretation(void) {
     PrintAndLogEx(INFO, "----+--------------------------------------------------------------------------------------------------------------------");
     PrintAndLogEx(INFO, " 00 | Indicates the successful completion of a command.");
     PrintAndLogEx(INFO, " FF | If an error occurs during the processing of a command that includes no list in the command packet, \n"
-                        "    | or if an error occurs independently of any list, the card returns a response by setting FFh to Status Flag1.");
+                  "    | or if an error occurs independently of any list, the card returns a response by setting FFh to Status Flag1.");
     PrintAndLogEx(INFO, " XX | If an error occurs while processing a command that includes Service Code List or Block List \n"
-                        "    | in the command packet, the card returns a response by setting a number in the list to Status Flag1,\n"
-                        "    | indicating the location of the error.");
+                  "    | in the command packet, the card returns a response by setting a number in the list to Status Flag1,\n"
+                  "    | indicating the location of the error.");
     PrintAndLogEx(INFO, "----+--------------------------------------------------------------------------------------------------------------------");
 }
 
@@ -362,28 +362,28 @@ static void print_status_flag2_interpration(void) {
     PrintAndLogEx(INFO, "----+--------------------------------------------------------------------------------------------------------------------");
     PrintAndLogEx(INFO, " 00 | Indicates the successful completion of a command.");
     PrintAndLogEx(INFO, " 01 | The calculated result is either less than zero when the purse data is decremented, or exceeds 4\n"
-                        "    | Bytes when the purse data is incremented.");
+                  "    | Bytes when the purse data is incremented.");
     PrintAndLogEx(INFO, " 02 | The specified data exceeds the value of cashback data at cashback of purse.");
     PrintAndLogEx(INFO, " 70 | Memory error (fatal error).");
     PrintAndLogEx(INFO, " 71 | The number of memory rewrites exceeds the upper limit (this is only a warning; data writing is performed as normal).\n"
-                        "    | The maximum number of rewrites can differ, depending on the product being used.\n"
-                        "    | In addition, Status Flag1 is either 00h or FFh depending on the product being used.");
+                  "    | The maximum number of rewrites can differ, depending on the product being used.\n"
+                  "    | In addition, Status Flag1 is either 00h or FFh depending on the product being used.");
 
     PrintAndLogEx(INFO, " A1 | Illegal Number of Service| Number of Service or Number of Node specified by the command \n"
-                        "    | falls outside the range of the prescribed value.");
+                  "    | falls outside the range of the prescribed value.");
     PrintAndLogEx(INFO, " A2 | Illegal command packet (specified Number of Block) : Number of Block specified by the \n"
-                        "    | command falls outside the range of the prescribed values for the product.");
+                  "    | command falls outside the range of the prescribed values for the product.");
     PrintAndLogEx(INFO, " A3 | Illegal Block List (specified order of Service) : Service Code List Order specified by \n"
-                        "    | Block List Element falls outside the Number of Service specified by the command \n"
-                        "    | (or the Number of Service specified at the times of mutual authentication).");
+                  "    | Block List Element falls outside the Number of Service specified by the command \n"
+                  "    | (or the Number of Service specified at the times of mutual authentication).");
     PrintAndLogEx(INFO, " A4 | Illegal Service type : Area Attribute specified by the command or Service Attribute of Service Code is incorrect.");
     PrintAndLogEx(INFO, " A5 | Access is not allowed : Area or Service specified by the command cannot be accessed.\n"
-                        "    | The parameter specified by the command does not satisfy the conditions for success.");
+                  "    | The parameter specified by the command does not satisfy the conditions for success.");
     PrintAndLogEx(INFO, " A6 | Illegal Service Code List : Target to be accessed, identified by Service Code List Order, specified by Block\n"
-                        "    | List Element does not exist. Or, Node specified by Node Code List does not exist.");
+                  "    | List Element does not exist. Or, Node specified by Node Code List does not exist.");
     PrintAndLogEx(INFO, " A7 | Illegal Block List (Access Mode) : Access Mode specified by Block List Element is incorrect.");
     PrintAndLogEx(INFO, " A8 | Illegal Block Number Block Number (access to the specified data is inhibited) :\n"
-                        "    | specified by Block List Element exceeds the number of Blocks assigned to Service.");
+                  "    | specified by Block List Element exceeds the number of Blocks assigned to Service.");
     PrintAndLogEx(INFO, " A9 | Data write failure : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " AA | Key-change failure : Key change failed.");
     PrintAndLogEx(INFO, " AB | Illegal Package Parity or illegal Package MAC : This is the error that occurs in issuance commands.");
@@ -391,7 +391,7 @@ static void print_status_flag2_interpration(void) {
     PrintAndLogEx(INFO, " AD | Service exists already : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " AE | Illegal System Code : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " AF | Too many simultaneous cyclic write operations : Number of simultaneous write Blocks\n"
-                        "    | specified by the command to Cyclic Service exceeds the number of Blocks assigned to Service.");
+                  "    | specified by the command to Cyclic Service exceeds the number of Blocks assigned to Service.");
     PrintAndLogEx(INFO, " C0 | Illegal Package Identifier : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " C1 | Discrepancy of parameters inside and outside Package : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " C2 | Command is disabled already : This is the error that occurs in issuance commands.");
@@ -415,16 +415,16 @@ static void print_number_of_service_constraints(void) {
 
 static void print_number_of_block_constraints(void) {
     PrintAndLogEx(INFO, "    - Number of Block: shall be less than or equal to the maximum number of Blocks that can be read simultaneously.\n"
-                        "            The maximum number of Blocks that can be read simultaneously can differ, depending on the product being used.\n"
-                        "            Use as default 01");
+                  "            The maximum number of Blocks that can be read simultaneously can differ, depending on the product being used.\n"
+                  "            Use as default 01");
 }
 
 static void print_service_code_list_constraints(void) {
     PrintAndLogEx(INFO, "    - Service Code List: For Service Code List, only Service Code existing in the product shall be specified:");
     PrintAndLogEx(INFO, "        - Even when Service Code exists in the product, Service Code not referenced from Block List shall not \n"
-                        "          be specified to Service Code List.");
+                  "          be specified to Service Code List.");
     PrintAndLogEx(INFO, "        - For existence or nonexistence of Service in a product, please check using the Request Service \n"
-                        "          (or Request Service v2) command.");
+                  "          (or Request Service v2) command.");
 }
 
 /*
@@ -846,8 +846,8 @@ static bool felica_parse_block_list_element(const char *ble_hex, uint8_t *ble_ou
 }
 
 static size_t felica_parse_service_node_matchers(const json_t *node_json,
-        felica_system_service_node_matcher_t *matchers,
-        size_t matcher_capacity) {
+                                                 felica_system_service_node_matcher_t *matchers,
+                                                 size_t matcher_capacity) {
     if (node_json == NULL || matchers == NULL || matcher_capacity == 0) {
         return 0;
     }
@@ -888,9 +888,9 @@ static size_t felica_parse_service_node_matchers(const json_t *node_json,
 }
 
 static int felica_read_service_block_for_node(uint8_t flags, const uint8_t *idm,
-        uint16_t node_code_le,
-        const uint8_t *block_list_element, uint8_t block_list_element_len,
-        uint8_t *block_data_out, size_t block_data_out_capacity, size_t *block_data_len_out) {
+                                              uint16_t node_code_le,
+                                              const uint8_t *block_list_element, uint8_t block_list_element_len,
+                                              uint8_t *block_data_out, size_t block_data_out_capacity, size_t *block_data_len_out) {
     if (idm == NULL || block_list_element == NULL || block_data_out == NULL || block_data_len_out == NULL) {
         return PM3_EINVARG;
     }
@@ -934,7 +934,7 @@ static int felica_read_service_block_for_node(uint8_t flags, const uint8_t *idm,
 }
 
 static bool felica_block_number_from_block_list_element(const uint8_t *block_list_element,
-        uint8_t block_list_element_len, uint16_t *block_number) {
+                                                        uint8_t block_list_element_len, uint16_t *block_number) {
     if (block_list_element == NULL || block_number == NULL) {
         return false;
     }
@@ -953,7 +953,7 @@ static bool felica_block_number_from_block_list_element(const uint8_t *block_lis
 }
 
 static bool felica_service_block_data_cache_entry_matches(const felica_service_block_data_cache_entry_t *entry,
-        const uint8_t *idm, uint16_t service_code_le, uint16_t block_number) {
+                                                          const uint8_t *idm, uint16_t service_code_le, uint16_t block_number) {
     return entry && entry->valid &&
            memcmp(entry->idm, idm, sizeof(entry->idm)) == 0 &&
            entry->service_code_le == service_code_le &&
@@ -961,10 +961,10 @@ static bool felica_service_block_data_cache_entry_matches(const felica_service_b
 }
 
 static int felica_read_service_block_for_node_cached(uint8_t flags, const uint8_t *idm,
-        uint16_t service_code_le,
-        const uint8_t *block_list_element, uint8_t block_list_element_len,
-        uint8_t *block_data_out, size_t block_data_out_capacity, size_t *block_data_len_out,
-        felica_service_block_data_cache_t *cache) {
+                                                     uint16_t service_code_le,
+                                                     const uint8_t *block_list_element, uint8_t block_list_element_len,
+                                                     uint8_t *block_data_out, size_t block_data_out_capacity, size_t *block_data_len_out,
+                                                     felica_service_block_data_cache_t *cache) {
     if (idm == NULL || block_list_element == NULL || block_data_out == NULL || block_data_len_out == NULL) {
         return PM3_EINVARG;
     }
@@ -977,7 +977,7 @@ static int felica_read_service_block_for_node_cached(uint8_t flags, const uint8_
 
     uint16_t block_number = 0;
     if (felica_block_number_from_block_list_element(block_list_element,
-                                                   block_list_element_len, &block_number) == false) {
+                                                    block_list_element_len, &block_number) == false) {
         return PM3_EINVARG;
     }
 
@@ -1021,8 +1021,8 @@ static int felica_read_service_block_for_node_cached(uint8_t flags, const uint8_
 }
 
 static bool felica_match_service_node_data(uint8_t flags, const uint8_t *idm, uint16_t node_code_le,
-        const felica_system_service_node_matcher_t *matchers, size_t matcher_count,
-        felica_service_block_data_cache_t *block_data_cache) {
+                                           const felica_system_service_node_matcher_t *matchers, size_t matcher_count,
+                                           felica_service_block_data_cache_t *block_data_cache) {
     if (idm == NULL || matchers == NULL || matcher_count == 0) {
         return true;
     }
@@ -1056,8 +1056,8 @@ static bool felica_is_lite_assumed_node(uint16_t node_code_le) {
 }
 
 static int felica_request_service_key_versions(uint8_t flags, const uint8_t *idm,
-        const uint16_t *node_codes_le, size_t node_count,
-        uint16_t *key_versions_le_out, size_t *returned_nodes_out) {
+                                               const uint16_t *node_codes_le, size_t node_count,
+                                               uint16_t *key_versions_le_out, size_t *returned_nodes_out) {
     if (idm == NULL || node_codes_le == NULL || key_versions_le_out == NULL) {
         return PM3_EINVARG;
     }
@@ -1115,8 +1115,8 @@ static int felica_request_service_key_versions(uint8_t flags, const uint8_t *idm
 }
 
 static void felica_info_process_system_services(int level, uint8_t flags,
-        uint16_t system_code, const uint8_t *idm, const json_t *system_entry,
-        felica_service_block_data_cache_t *block_data_cache) {
+                                                uint16_t system_code, const uint8_t *idm, const json_t *system_entry,
+                                                felica_service_block_data_cache_t *block_data_cache) {
     if (idm == NULL || system_entry == NULL) {
         return;
     }
@@ -1173,8 +1173,8 @@ static void felica_info_process_system_services(int level, uint8_t flags,
             json_t *data_json = json_object_get(node_json, "data");
             const bool has_data_matchers = json_is_object(data_json) && (json_object_size(data_json) > 0);
             const size_t matcher_count = felica_parse_service_node_matchers(node_json,
-                                       nodes[node_count].matchers,
-                                       ARRAYLEN(nodes[node_count].matchers));
+                                         nodes[node_count].matchers,
+                                         ARRAYLEN(nodes[node_count].matchers));
             if (has_data_matchers && matcher_count == 0) {
                 continue;
             }
@@ -1414,7 +1414,7 @@ static void felica_system_code_to_bytes(uint16_t system_code, uint8_t *system_co
 }
 
 static bool felica_add_unique_discovered_system(felica_discovered_system_t *systems, size_t *count,
-        uint16_t system_code, const uint8_t *idm) {
+                                                uint16_t system_code, const uint8_t *idm) {
     if (systems == NULL || count == NULL) {
         return false;
     }
@@ -1510,9 +1510,9 @@ static int discover_systems(uint8_t flags, const uint8_t *primary_idm, bool requ
 
         felica_syscode_response_t system_code_response;
         const int request_system_code_status = send_request_system_code(flags,
-                                                sizeof(request_system_code_request), (uint8_t *)&request_system_code_request,
-                                                false, FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES, false,
-                                                &system_code_response);
+                                               sizeof(request_system_code_request), (uint8_t *)&request_system_code_request,
+                                               false, FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES, false,
+                                               &system_code_response);
 
         if (request_system_code_status == PM3_SUCCESS) {
             const size_t reported_systems = system_code_response.number_of_systems[0];

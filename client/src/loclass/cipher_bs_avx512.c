@@ -27,7 +27,7 @@
 #define BS_ZERO   _mm512_setzero_si512()
 #define BS_ONES   _mm512_set1_epi64(-1)
 
-static inline __m512i bs_not(__m512i v) { 
+static inline __m512i bs_not(__m512i v) {
     return _mm512_xor_si512(v, BS_ONES);
 }
 
@@ -57,7 +57,7 @@ static inline void bs_tick(__m512i *t, __m512i *b, __m512i *l, __m512i *r,
                            const __m512i *kb, __m512i y_bs) {
 
     const __m512i Tt = _mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(
-                                            _mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(t[15], t[14]), t[10]), t[8]), t[5]), t[4]), t[1]), t[0]);
+                                                             _mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(t[15], t[14]), t[10]), t[8]), t[5]), t[4]), t[1]), t[0]);
     const __m512i Bt = _mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(b[6], b[5]), b[4]), b[0]);
 
     const __m512i cr0 = r[7], cr1 = r[6], cr2 = r[5], cr3 = r[4];
@@ -82,7 +82,7 @@ static inline void bs_tick(__m512i *t, __m512i *b, __m512i *l, __m512i *r,
     const __m512i ncr5 = bs_not(cr5);
 
     const __m512i z0 = _mm512_xor_si512(_mm512_xor_si512(_mm512_and_si512(cr0, cr2), _mm512_and_si512(cr1, ncr3)), _mm512_or_si512(cr2, cr4));
-    const __m512i z1 = _mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512( _mm512_or_si512(cr0, cr2), _mm512_or_si512(cr5, cr7)), cr1), cr6), Tt), y_bs);
+    const __m512i z1 = _mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(_mm512_or_si512(cr0, cr2), _mm512_or_si512(cr5, cr7)), cr1), cr6), Tt), y_bs);
     const __m512i z2 = _mm512_xor_si512(_mm512_xor_si512(_mm512_xor_si512(_mm512_and_si512(cr3, ncr5), _mm512_and_si512(cr4, cr6)), cr7), Tt);
 
     const __m512i nz0 = bs_not(z0);
@@ -115,27 +115,45 @@ static inline void bs_tick(__m512i *t, __m512i *b, __m512i *l, __m512i *r,
 // w*64 .. w*64+63, bit b of word w = lane w*64+b).
 static const uint64_t LANE_BITS_512_RAW[9][BS512_WORDS] = {
     // k=0..5 are the same in-word pattern repeated across all 8 words.
-    {0xAAAAAAAAAAAAAAAAULL, 0xAAAAAAAAAAAAAAAAULL, 0xAAAAAAAAAAAAAAAAULL, 0xAAAAAAAAAAAAAAAAULL,
-     0xAAAAAAAAAAAAAAAAULL, 0xAAAAAAAAAAAAAAAAULL, 0xAAAAAAAAAAAAAAAAULL, 0xAAAAAAAAAAAAAAAAULL}, // k=0
-    {0xCCCCCCCCCCCCCCCCULL, 0xCCCCCCCCCCCCCCCCULL, 0xCCCCCCCCCCCCCCCCULL, 0xCCCCCCCCCCCCCCCCULL,
-     0xCCCCCCCCCCCCCCCCULL, 0xCCCCCCCCCCCCCCCCULL, 0xCCCCCCCCCCCCCCCCULL, 0xCCCCCCCCCCCCCCCCULL}, // k=1
-    {0xF0F0F0F0F0F0F0F0ULL, 0xF0F0F0F0F0F0F0F0ULL, 0xF0F0F0F0F0F0F0F0ULL, 0xF0F0F0F0F0F0F0F0ULL,
-     0xF0F0F0F0F0F0F0F0ULL, 0xF0F0F0F0F0F0F0F0ULL, 0xF0F0F0F0F0F0F0F0ULL, 0xF0F0F0F0F0F0F0F0ULL}, // k=2
-    {0xFF00FF00FF00FF00ULL, 0xFF00FF00FF00FF00ULL, 0xFF00FF00FF00FF00ULL, 0xFF00FF00FF00FF00ULL,
-     0xFF00FF00FF00FF00ULL, 0xFF00FF00FF00FF00ULL, 0xFF00FF00FF00FF00ULL, 0xFF00FF00FF00FF00ULL}, // k=3
-    {0xFFFF0000FFFF0000ULL, 0xFFFF0000FFFF0000ULL, 0xFFFF0000FFFF0000ULL, 0xFFFF0000FFFF0000ULL,
-     0xFFFF0000FFFF0000ULL, 0xFFFF0000FFFF0000ULL, 0xFFFF0000FFFF0000ULL, 0xFFFF0000FFFF0000ULL}, // k=4
-    {0xFFFFFFFF00000000ULL, 0xFFFFFFFF00000000ULL, 0xFFFFFFFF00000000ULL, 0xFFFFFFFF00000000ULL,
-     0xFFFFFFFF00000000ULL, 0xFFFFFFFF00000000ULL, 0xFFFFFFFF00000000ULL, 0xFFFFFFFF00000000ULL}, // k=5
+    {
+        0xAAAAAAAAAAAAAAAAULL, 0xAAAAAAAAAAAAAAAAULL, 0xAAAAAAAAAAAAAAAAULL, 0xAAAAAAAAAAAAAAAAULL,
+        0xAAAAAAAAAAAAAAAAULL, 0xAAAAAAAAAAAAAAAAULL, 0xAAAAAAAAAAAAAAAAULL, 0xAAAAAAAAAAAAAAAAULL
+    }, // k=0
+    {
+        0xCCCCCCCCCCCCCCCCULL, 0xCCCCCCCCCCCCCCCCULL, 0xCCCCCCCCCCCCCCCCULL, 0xCCCCCCCCCCCCCCCCULL,
+        0xCCCCCCCCCCCCCCCCULL, 0xCCCCCCCCCCCCCCCCULL, 0xCCCCCCCCCCCCCCCCULL, 0xCCCCCCCCCCCCCCCCULL
+    }, // k=1
+    {
+        0xF0F0F0F0F0F0F0F0ULL, 0xF0F0F0F0F0F0F0F0ULL, 0xF0F0F0F0F0F0F0F0ULL, 0xF0F0F0F0F0F0F0F0ULL,
+        0xF0F0F0F0F0F0F0F0ULL, 0xF0F0F0F0F0F0F0F0ULL, 0xF0F0F0F0F0F0F0F0ULL, 0xF0F0F0F0F0F0F0F0ULL
+    }, // k=2
+    {
+        0xFF00FF00FF00FF00ULL, 0xFF00FF00FF00FF00ULL, 0xFF00FF00FF00FF00ULL, 0xFF00FF00FF00FF00ULL,
+        0xFF00FF00FF00FF00ULL, 0xFF00FF00FF00FF00ULL, 0xFF00FF00FF00FF00ULL, 0xFF00FF00FF00FF00ULL
+    }, // k=3
+    {
+        0xFFFF0000FFFF0000ULL, 0xFFFF0000FFFF0000ULL, 0xFFFF0000FFFF0000ULL, 0xFFFF0000FFFF0000ULL,
+        0xFFFF0000FFFF0000ULL, 0xFFFF0000FFFF0000ULL, 0xFFFF0000FFFF0000ULL, 0xFFFF0000FFFF0000ULL
+    }, // k=4
+    {
+        0xFFFFFFFF00000000ULL, 0xFFFFFFFF00000000ULL, 0xFFFFFFFF00000000ULL, 0xFFFFFFFF00000000ULL,
+        0xFFFFFFFF00000000ULL, 0xFFFFFFFF00000000ULL, 0xFFFFFFFF00000000ULL, 0xFFFFFFFF00000000ULL
+    }, // k=5
     // k=6: alternate zero/all-ones per word.
-    {0x0000000000000000ULL, 0xFFFFFFFFFFFFFFFFULL, 0x0000000000000000ULL, 0xFFFFFFFFFFFFFFFFULL,
-     0x0000000000000000ULL, 0xFFFFFFFFFFFFFFFFULL, 0x0000000000000000ULL, 0xFFFFFFFFFFFFFFFFULL}, // k=6
+    {
+        0x0000000000000000ULL, 0xFFFFFFFFFFFFFFFFULL, 0x0000000000000000ULL, 0xFFFFFFFFFFFFFFFFULL,
+        0x0000000000000000ULL, 0xFFFFFFFFFFFFFFFFULL, 0x0000000000000000ULL, 0xFFFFFFFFFFFFFFFFULL
+    }, // k=6
     // k=7: 00110011 across words.
-    {0x0000000000000000ULL, 0x0000000000000000ULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL,
-     0x0000000000000000ULL, 0x0000000000000000ULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL}, // k=7
+    {
+        0x0000000000000000ULL, 0x0000000000000000ULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL,
+        0x0000000000000000ULL, 0x0000000000000000ULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL
+    }, // k=7
     // k=8: low half zero, high half all-ones.
-    {0x0000000000000000ULL, 0x0000000000000000ULL, 0x0000000000000000ULL, 0x0000000000000000ULL,
-     0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL}, // k=8
+    {
+        0x0000000000000000ULL, 0x0000000000000000ULL, 0x0000000000000000ULL, 0x0000000000000000ULL,
+        0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL
+    }, // k=8
 };
 
 static inline __m512i lane_bits_512(int k) {
@@ -162,13 +180,31 @@ static inline void bs_init_state(const __m512i kb[64],
     bs_add8(k0xor, ec, l);
     bs_add8(k0xor, x21, r);
 
-    b[0] = BS_ZERO; b[1] = BS_ZERO; b[2] = BS_ONES; b[3] = BS_ONES;
-    b[4] = BS_ZERO; b[5] = BS_ZERO; b[6] = BS_ONES; b[7] = BS_ZERO;
+    b[0] = BS_ZERO;
+    b[1] = BS_ZERO;
+    b[2] = BS_ONES;
+    b[3] = BS_ONES;
+    b[4] = BS_ZERO;
+    b[5] = BS_ZERO;
+    b[6] = BS_ONES;
+    b[7] = BS_ZERO;
 
-    t[ 0] = BS_ZERO; t[ 1] = BS_ONES; t[ 2] = BS_ZERO; t[ 3] = BS_ZERO;
-    t[ 4] = BS_ONES; t[ 5] = BS_ZERO; t[ 6] = BS_ZERO; t[ 7] = BS_ZERO;
-    t[ 8] = BS_ZERO; t[ 9] = BS_ZERO; t[10] = BS_ZERO; t[11] = BS_ZERO;
-    t[12] = BS_ZERO; t[13] = BS_ONES; t[14] = BS_ONES; t[15] = BS_ONES;
+    t[ 0] = BS_ZERO;
+    t[ 1] = BS_ONES;
+    t[ 2] = BS_ZERO;
+    t[ 3] = BS_ZERO;
+    t[ 4] = BS_ONES;
+    t[ 5] = BS_ZERO;
+    t[ 6] = BS_ZERO;
+    t[ 7] = BS_ZERO;
+    t[ 8] = BS_ZERO;
+    t[ 9] = BS_ZERO;
+    t[10] = BS_ZERO;
+    t[11] = BS_ZERO;
+    t[12] = BS_ZERO;
+    t[13] = BS_ONES;
+    t[14] = BS_ONES;
+    t[15] = BS_ONES;
 }
 
 void prepare_ccnr_bits_bs512(const uint8_t *cc_nr, uint64_t y_bits_bs[96 * BS512_WORDS]) {
@@ -277,27 +313,27 @@ bool bs_avx512_supported(void) {
 bool bs_avx512_supported(void) { return false; }
 
 void prepare_ccnr_bits_bs512(const uint8_t *cc_nr, uint64_t y_bits_bs[96 * BS512_WORDS]) {
-    (void)cc_nr; 
+    (void)cc_nr;
     (void)y_bits_bs;
 }
 void prepare_target_mac_bs512(const uint8_t target_mac[4], uint64_t target_mac_bs[32 * BS512_WORDS]) {
-    (void)target_mac; 
+    (void)target_mac;
     (void)target_mac_bs;
 }
 void build_bitslice_key_512(const uint8_t partial_key[8], uint64_t index_start, uint64_t kb[64 * BS512_WORDS]) {
-    (void)partial_key; 
-    (void)index_start; 
+    (void)partial_key;
+    (void)index_start;
     (void)kb;
 }
 void doMAC_brute_match512(const uint64_t y_bits_bs[96 * BS512_WORDS],
                           const uint64_t kb[64 * BS512_WORDS],
                           const uint64_t target_mac_bs[32 * BS512_WORDS],
                           uint64_t match_out[BS512_WORDS]) {
-    
-    (void)y_bits_bs; 
-    (void)kb; 
+
+    (void)y_bits_bs;
+    (void)kb;
     (void)target_mac_bs;
-    
+
     for (int i = 0; i < BS512_WORDS; i++) {
         match_out[i] = 0;
     }

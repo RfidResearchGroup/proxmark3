@@ -440,7 +440,9 @@ static int pcrypto_decompress_ec_point(const uint8_t *compressed, size_t comp_le
     // Solve y = sqrt(x^3 + ax + b) mod p, using y = rhs^((p+1)/4) mod p (valid for p ≡ 3 mod 4).
     // Factor as: r = x(x^2 + a) + b to save one multiplication.
     mbedtls_mpi r, x, n;
-    mbedtls_mpi_init(&r); mbedtls_mpi_init(&x); mbedtls_mpi_init(&n);
+    mbedtls_mpi_init(&r);
+    mbedtls_mpi_init(&x);
+    mbedtls_mpi_init(&n);
 
     // Copy X coordinate and output prefix
     memcpy(out, compressed, comp_len);
@@ -471,7 +473,9 @@ static int pcrypto_decompress_ec_point(const uint8_t *compressed, size_t comp_le
     // Write Y coordinate
     ok = ok && (mbedtls_mpi_write_binary(&r, out + 1 + coord_len, coord_len) == 0);
 
-    mbedtls_mpi_free(&r); mbedtls_mpi_free(&x); mbedtls_mpi_free(&n);
+    mbedtls_mpi_free(&r);
+    mbedtls_mpi_free(&x);
+    mbedtls_mpi_free(&n);
     return ok ? PM3_SUCCESS : PM3_ESOFT;
 }
 

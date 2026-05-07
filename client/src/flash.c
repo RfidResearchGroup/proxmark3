@@ -124,7 +124,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, uint32_t flash_size) {
                       offset);
         if (filesz != memsz) {
             PrintAndLogEx(ERR, "Error: PHDR file size does not equal memory size\n"
-                               "(DATA+BSS PHDRs do not make sense on ROM platforms!)");
+                          "(DATA+BSS PHDRs do not make sense on ROM platforms!)");
             return PM3_EFILE;
         }
         if (paddr < last_end) {

@@ -533,7 +533,7 @@ int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data
             DropField();
             return 6;
         }
-        
+
         // Encrypted mode is always used. Doing an if to check will waste instructions
         mfp_data_crypt(&_session, &data[1], &data[1], true);
 

@@ -7614,8 +7614,8 @@ static int MfdSelectionSelectApplication(DesfireContext_t *dctx, const mfd_app_s
 // Assumes the application is already selected.
 // On PM3_SUCCESS: out_card_random[DUOX_INTAUTH_CHALLENGE_LEN] and out_sig_rs[DUOX_INTAUTH_SIG_LEN] are filled.
 static int duox_intauth_exchange(bool apdu_logging, bool verbose, uint8_t keynum,
-                                  const uint8_t *challenge,
-                                  uint8_t *out_card_random, uint8_t *out_sig_rs) {
+                                 const uint8_t *challenge,
+                                 uint8_t *out_card_random, uint8_t *out_sig_rs) {
     // Build ISO Internal Authenticate APDU
     //
     // Data field:
@@ -7736,8 +7736,8 @@ static int duox_intauth_exchange(bool apdu_logging, bool verbose, uint8_t keynum
 // Build the Internal Authenticate verify message (F0F0 || OptsA || RndB || RndA)
 // and verify the ECDSA-P256-SHA256 signature. Returns PM3_SUCCESS if valid.
 static int duox_intauth_verify_sig(bool verbose, const uint8_t *pubkey_point,
-                                    const uint8_t *challenge, const uint8_t *card_random,
-                                    const uint8_t *sig_rs) {                                        
+                                   const uint8_t *challenge, const uint8_t *card_random,
+                                   const uint8_t *sig_rs) {
     // Message = F0F0 || OptsA TLV || RndB (card random) || RndA (our challenge)
     static const uint8_t optsa_tlv[] = {DUOX_TAG_OPTSA, 0x00};
     uint8_t message[2 + 2 + DUOX_INTAUTH_CHALLENGE_LEN + DUOX_INTAUTH_CHALLENGE_LEN];
@@ -7749,16 +7749,16 @@ static int duox_intauth_verify_sig(bool verbose, const uint8_t *pubkey_point,
 
     if (verbose)
         PrintAndLogEx(INFO, "Verify msg... %s", sprint_hex_inrow(message, sizeof(message)));
-    
+
     return ecdsa_signature_r_s_verify(
-        MBEDTLS_ECP_DP_SECP256R1,
-        (uint8_t *)pubkey_point,
-        message,
-        (int)sizeof(message),
-        (uint8_t *)sig_rs,
-        DUOX_INTAUTH_SIG_LEN,
-        true // hash message with SHA-256 before verifying
-    );
+               MBEDTLS_ECP_DP_SECP256R1,
+               (uint8_t *)pubkey_point,
+               message,
+               (int)sizeof(message),
+               (uint8_t *)sig_rs,
+               DUOX_INTAUTH_SIG_LEN,
+               true // hash message with SHA-256 before verifying
+           );
 }
 
 static int CmdHF14ADesIntAuth(const char *Cmd) {
@@ -8030,14 +8030,14 @@ static int CmdHF14ADesVdeSign(const char *Cmd) {
             PrintAndLogEx(INFO, "Verify msg... %s", sprint_hex_inrow(challenge, sizeof(challenge)));
 
         int sig_res = ecdsa_signature_r_s_verify(
-            MBEDTLS_ECP_DP_BP256R1,
-            pubkey_point,
-            challenge,
-            (int)sizeof(challenge),
-            signature_rs,
-            sizeof(signature_rs),
-            true
-        );
+                          MBEDTLS_ECP_DP_BP256R1,
+                          pubkey_point,
+                          challenge,
+                          (int)sizeof(challenge),
+                          signature_rs,
+                          sizeof(signature_rs),
+                          true
+                      );
 
         if (sig_res == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "ECDSA signature " _GREEN_("verified"));
@@ -8378,9 +8378,9 @@ static int mfdes_verify_certificate_variants(const uint8_t *data, size_t data_le
                                              bool verbose, mfdes_verified_cert_t *out, size_t *matched_index) {
     duox_cert_info_t cert = {0};
     int res = duox_parse_or_verify_certificate_variants(data, data_len,
-              ca_anchors, ca_anchor_count,
-              verify_signature,
-              verbose, &cert, matched_index);
+                                                        ca_anchors, ca_anchor_count,
+                                                        verify_signature,
+                                                        verbose, &cert, matched_index);
     if (res == PM3_SUCCESS || res == PM3_ECRYPTO) {
         mfdes_cert_info_from_duox(&cert, out);
     }
@@ -8844,11 +8844,11 @@ static int CmdHF14ADesVerifyCert(const char *Cmd) {
     DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     res = CmdDesGetSessionParameters(ctx, &dctx,
-                                         4, 5, 6, 7, 8, 9, 10, 11,
-                                         0, 0, 0,
-                                         &securechann,
-                                         force_auth ? DCMMACed : DCMPlain,
-                                         NULL, NULL);
+                                     4, 5, 6, 7, 8, 9, 10, 11,
+                                     0, 0, 0,
+                                     &securechann,
+                                     force_auth ? DCMMACed : DCMPlain,
+                                     NULL, NULL);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -8958,7 +8958,7 @@ static int CmdHF14ADesVerifyCert(const char *Cmd) {
         DesfireSetKeyNoClear(&aes_dctx, aes_dctx.keyNum, T_AES, zero_key);
         cert_buf_len = 0;
         int read_res = mfdes_read_cert_file_desfire(&aes_dctx, (DesfireSecureChannel)securechann, cert_fid,
-                       false, true, verbose, cert_buf, &cert_buf_len);
+                                                    false, true, verbose, cert_buf, &cert_buf_len);
         if (read_res == PM3_SUCCESS && cert_buf_len > 0) {
             if (verbose) {
                 PrintAndLogEx(INFO, "  retry file size....: " _YELLOW_("%zu bytes"), cert_buf_len);
@@ -9012,8 +9012,8 @@ static int CmdHF14ADesVerifyCert(const char *Cmd) {
     }
 
     res = mfdes_run_key_possession_verification(APDULogging, verbose, validate_methods,
-            validate_method_count, validate_method_forced,
-            &key_select, keyidx, &cert_info);
+                                                validate_method_count, validate_method_forced,
+                                                &key_select, keyidx, &cert_info);
     if (res != PM3_SUCCESS) {
         retval = res;
         goto out;

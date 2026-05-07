@@ -8061,7 +8061,7 @@ static int CmdHFiClassLiberate(const char *Cmd) {
         memcpy(key, iClass_Key_Table[0], PICOPASS_BLOCK_SIZE);
 
         int res = iclass_read_block_ex(key, MKF_KNOWN_BLOCK, ICLASS_DEBIT_KEYTYPE, false, false, false,
-                                        verbose, true, shallow_mod, blk18, false, false);
+                                       verbose, true, shallow_mod, blk18, false, false);
         if (res == PM3_SUCCESS) {
             // build 2-key 3DES key: CSN || 0570F69A06975CD8
             uint8_t des_key[16] = {0};
@@ -8163,7 +8163,7 @@ static int CmdHFiClassLiberate(const char *Cmd) {
         case CARD_TYPE_ICOPY_ICL:
         case CARD_TYPE_ICOPY_ICS: {
             // change KD from DRM key to default key (ki 0)
-        PrintAndLogEx(INFO, "Changing KD from iCopy-X DRM key to default");
+            PrintAndLogEx(INFO, "Changing KD from iCopy-X DRM key to default");
 
             // calculate XOR div key
             uint8_t xor_div_key[PICOPASS_BLOCK_SIZE] = {0};
@@ -8191,7 +8191,7 @@ static int CmdHFiClassLiberate(const char *Cmd) {
             memcpy(default_key, iClass_Key_Table[0], PICOPASS_BLOCK_SIZE);
 
             res = iclass_read_block_ex(default_key, 6, ICLASS_DEBIT_KEYTYPE, false, false, false,
-                                        verbose, true, shallow_mod, verify, false, false);
+                                       verbose, true, shallow_mod, verify, false, false);
             if (res == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "Verified default key ( %s )", _GREEN_("ok"));
             } else {

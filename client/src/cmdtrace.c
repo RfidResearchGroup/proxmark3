@@ -1469,7 +1469,7 @@ int CmdTraceList(const char *Cmd) {
 
         if (protocol == LEGIC)
             PrintAndLogEx(INFO, _YELLOW_("LEGIC") " - Reader Mode: Timings are in ticks (1us == 1.5ticks)\n"
-                                         "        Tag Mode: Timings are in sub carrier periods (1/212 kHz == 4.7us)");
+                          "        Tag Mode: Timings are in sub carrier periods (1/212 kHz == 4.7us)");
 
         if (protocol == ISO_14443B || protocol == PROTO_CRYPTORF) {
             if (use_us)

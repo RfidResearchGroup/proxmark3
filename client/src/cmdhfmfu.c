@@ -867,7 +867,7 @@ static bool ndef_detect_message(const uint8_t *d, uint16_t n) {
 
     // start at OTP block and detect a CC container instead
     const uint8_t *p = d + (3 * MFU_BLOCK_SIZE);
- 
+
     // no NDEF capability container
     if (p[0] != 0xE1 && p[0] != 0xF1) {
         return false;
@@ -3451,22 +3451,22 @@ void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool de
             if (i == 3) {
                 // otp block
                 PrintAndLogEx(INFO, "%3d/0x%02X | " _CYAN_("%s")"| %s | %s"
-                          , i + startpage
-                          , i + startpage
-                          , sprint_hex(data + i * 4, 4)
-                          , lckbitchar
-                          , sprint_ascii(data + i * 4, 4)
-                );
+                              , i + startpage
+                              , i + startpage
+                              , sprint_hex(data + i * 4, 4)
+                              , lckbitchar
+                              , sprint_ascii(data + i * 4, 4)
+                             );
 
             } else {
                 // normal block
                 PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s | %s"
-                          , i + startpage
-                          , i + startpage
-                          , sprint_hex(data + i * 4, 4)
-                          , lckbitchar
-                          , sprint_ascii(data + i * 4, 4)
-                );
+                              , i + startpage
+                              , i + startpage
+                              , sprint_hex(data + i * 4, 4)
+                              , lckbitchar
+                              , sprint_ascii(data + i * 4, 4)
+                             );
             }
         }
     }
@@ -5935,7 +5935,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
             clearCommandBuffer();
             PacketResponseNG resp;
-            SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t*)&payload, sizeof(payload));
+            SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t *)&payload, sizeof(payload));
             if (WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000) == false) {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(WARNING, "\nTear off command failed");
@@ -6057,7 +6057,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
         clearCommandBuffer();
         PacketResponseNG resp;
-        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t*)&payload, sizeof(payload));
+        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t *)&payload, sizeof(payload));
         if (WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000) == false) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "\nTear off command failed");
@@ -6146,7 +6146,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
         clearCommandBuffer();
         PacketResponseNG resp;
-        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t*)&payload, sizeof(payload));
+        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t *)&payload, sizeof(payload));
         if (WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000) == false) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "\nTear off command failed");
@@ -6168,7 +6168,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
         memcpy(payload.value, (uint8_t[]) {0x00, 0x00, 0x00}, sizeof(payload.value));
 
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t*)&payload, sizeof(payload));
+        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t *)&payload, sizeof(payload));
         if (WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000) == false) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "\nTear off command failed");

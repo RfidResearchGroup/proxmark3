@@ -58,13 +58,31 @@ static inline void bs_tick(uint64_t *t, uint64_t *b, uint64_t *l, uint64_t *r, c
     const uint64_t new_b = Bt ^ cr7;
 
     // Shift t (bit 0 drops out, new_t goes in at bit 15) and b similarly.
-    t[0]  = t[1];  t[1]  = t[2];  t[2]  = t[3];  t[3]  = t[4];
-    t[4]  = t[5];  t[5]  = t[6];  t[6]  = t[7];  t[7]  = t[8];
-    t[8]  = t[9];  t[9]  = t[10]; t[10] = t[11]; t[11] = t[12];
-    t[12] = t[13]; t[13] = t[14]; t[14] = t[15]; t[15] = new_t;
+    t[0]  = t[1];
+    t[1]  = t[2];
+    t[2]  = t[3];
+    t[3]  = t[4];
+    t[4]  = t[5];
+    t[5]  = t[6];
+    t[6]  = t[7];
+    t[7]  = t[8];
+    t[8]  = t[9];
+    t[9]  = t[10];
+    t[10] = t[11];
+    t[11] = t[12];
+    t[12] = t[13];
+    t[13] = t[14];
+    t[14] = t[15];
+    t[15] = new_t;
 
-    b[0] = b[1]; b[1] = b[2]; b[2] = b[3]; b[3] = b[4];
-    b[4] = b[5]; b[5] = b[6]; b[6] = b[7]; b[7] = new_b;
+    b[0] = b[1];
+    b[1] = b[2];
+    b[2] = b[3];
+    b[3] = b[4];
+    b[4] = b[5];
+    b[5] = b[6];
+    b[6] = b[7];
+    b[7] = new_b;
 
     const uint64_t ncr3 = ~cr3;
     const uint64_t ncr5 = ~cr5;
@@ -84,8 +102,14 @@ static inline void bs_tick(uint64_t *t, uint64_t *b, uint64_t *l, uint64_t *r, c
                            kb[6 * 8 + bit], kb[7 * 8 + bit]);
     }
 
-    val[0] ^= b[0]; val[1] ^= b[1]; val[2] ^= b[2]; val[3] ^= b[3];
-    val[4] ^= b[4]; val[5] ^= b[5]; val[6] ^= b[6]; val[7] ^= b[7];
+    val[0] ^= b[0];
+    val[1] ^= b[1];
+    val[2] ^= b[2];
+    val[3] ^= b[3];
+    val[4] ^= b[4];
+    val[5] ^= b[5];
+    val[6] ^= b[6];
+    val[7] ^= b[7];
 
     uint64_t old_r[8];
     for (int i = 0; i < 8; i++) {
@@ -192,19 +216,35 @@ static inline void bs_init_state(const uint64_t kb[64], uint64_t l[8], uint64_t 
     bs_add8(k0xor, x21, r);
 
     // b = 0x4C → 0,0,1,1,0,0,1,0 (LSB first)
-    b[0] = 0;           b[1] = 0;
-    b[2] = BS_ALL_ONES; b[3] = BS_ALL_ONES;
-    b[4] = 0;           b[5] = 0;
-    b[6] = BS_ALL_ONES; b[7] = 0;
+    b[0] = 0;
+    b[1] = 0;
+    b[2] = BS_ALL_ONES;
+    b[3] = BS_ALL_ONES;
+    b[4] = 0;
+    b[5] = 0;
+    b[6] = BS_ALL_ONES;
+    b[7] = 0;
 
     // t = 0xE012 → LSB-first across 16 bits:
     //   0xE012 = 0b1110_0000_0001_0010
     //   bit0=0 bit1=1 bit2=0 bit3=0 bit4=1 bit5=0 bit6=0 bit7=0
     //   bit8=0 bit9=0 bit10=0 bit11=0 bit12=0 bit13=1 bit14=1 bit15=1
-    t[ 0] = 0;           t[ 1] = BS_ALL_ONES; t[ 2] = 0;           t[ 3] = 0;
-    t[ 4] = BS_ALL_ONES; t[ 5] = 0;           t[ 6] = 0;           t[ 7] = 0;
-    t[ 8] = 0;           t[ 9] = 0;           t[10] = 0;           t[11] = 0;
-    t[12] = 0;           t[13] = BS_ALL_ONES; t[14] = BS_ALL_ONES; t[15] = BS_ALL_ONES;
+    t[ 0] = 0;
+    t[ 1] = BS_ALL_ONES;
+    t[ 2] = 0;
+    t[ 3] = 0;
+    t[ 4] = BS_ALL_ONES;
+    t[ 5] = 0;
+    t[ 6] = 0;
+    t[ 7] = 0;
+    t[ 8] = 0;
+    t[ 9] = 0;
+    t[10] = 0;
+    t[11] = 0;
+    t[12] = 0;
+    t[13] = BS_ALL_ONES;
+    t[14] = BS_ALL_ONES;
+    t[15] = BS_ALL_ONES;
 }
 
 uint64_t doMAC_brute_match64(const uint64_t y_bits_bs[96], const uint64_t kb[64], const uint64_t target_mac_bs[32]) {

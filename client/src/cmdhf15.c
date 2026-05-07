@@ -1102,7 +1102,7 @@ static int CmdHF15Info(const char *Cmd) {
 
     if (d[8] == 0x04) {
         // NXP
-        
+
         // from: SL2S6002_SDS
         // Bit 37 Bit 36 ICODE Type
         // -------------------------
@@ -1120,14 +1120,14 @@ static int CmdHF15Info(const char *Cmd) {
         // --------------------------------------
         // 0      1      0      0      ICODE 3
         // --> it can be mismached with a ICODE SLI, but lets assume Bit 39 & Bit 38 at 0 when ICODE SLI*/DNA...
-        
+
         if (d[7] == 0x01 && nxp_version == 0x08) {
             PrintAndLogEx(DEBUG, "SLIX2 Detected, getting NXP System Info");
             return NxpSysInfo(uid);
         } else if (d[7] == 0x01 && nxp_version == 0x18) { // If it is an NTAG 5 / ICODE DNA
             PrintAndLogEx(DEBUG, "NTAG 5 / ICODE DNA Detected, getting NXP System Info");
             return NxpSysInfo(uid);
-        } else if (d[7] == 0x01 && ((d[6] & 0x78) == 0x20)) { // If it is an NTAG ICODE 3 
+        } else if (d[7] == 0x01 && ((d[6] & 0x78) == 0x20)) { // If it is an NTAG ICODE 3
             PrintAndLogEx(DEBUG, "ICODE 3 Detected, getting NXP System Info");
             return NxpSysInfo(uid);
         } else if ((d[7] == 0x01 || d[7] == 0x02 || d[7] == 0x03)) { // If SLI, SLIX, SLIX-l, or SLIX-S check EAS status

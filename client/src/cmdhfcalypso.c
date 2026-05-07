@@ -978,9 +978,9 @@ static uint8_t calypso_icc_check_value(const uint8_t *data, size_t len) {
 static bool calypso_bcd_country(const uint8_t *data, uint16_t *country_code) {
     uint8_t nibbles[] = {
         data[0] >> 4,
-        data[0] & 0x0F,
-        data[1] >> 4,
-        data[1] & 0x0F,
+                data[0] & 0x0F,
+                data[1] >> 4,
+                data[1] & 0x0F,
     };
 
     for (size_t i = 0; i < ARRAYLEN(nibbles); i++) {

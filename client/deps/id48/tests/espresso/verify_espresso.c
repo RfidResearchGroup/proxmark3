@@ -571,7 +571,7 @@ static bool verify_alternatives(void) {
 
     for (uint16_t q = 0; q < ARRAY_SIZE2(verification_table); ++q) {
         bool any_failures_this_table = false;
-        VERIFICATION_T const * vt = &verification_table[q];
+        VERIFICATION_T const *vt = &verification_table[q];
         const char *fstr = vt->output_name;
         uint16_t limit = 1u << vt->input_count;
 
@@ -718,7 +718,7 @@ static bool verify_lut_XX(void) {
 
 // order of input_names is based on resulting .PLA output,
 // so least significant bit is at input_names[input_count-1]
-static bool generate_espresso_file(uint8_t input_count, const char * const * input_names, const char * output_name, const uint8_t * lut_table_start, FILE* f_output) {
+static bool generate_espresso_file(uint8_t input_count, const char *const *input_names, const char *output_name, const uint8_t *lut_table_start, FILE *f_output) {
     if (input_count > 8) {
         printf("FAILURE - Cannot generate espresso file for more than 8 inputs (code would need update)\n");
     }
@@ -760,10 +760,10 @@ bool generate_all_lut_espresso_files(void) {
     bool any_failures = false;
 
     for (size_t i = 0; i < ARRAY_SIZE2(verification_table); ++i) {
-        VERIFICATION_T const * args = &verification_table[i];
+        VERIFICATION_T const *args = &verification_table[i];
 
         bool current_result = false;
-        FILE* file = NULL;
+        FILE *file = NULL;
         char filename[20] = {0}; // needs: 14 for two-letter output name
 
         // First create the filename to be written

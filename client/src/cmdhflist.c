@@ -1874,7 +1874,7 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is
             snprintf(exp, size, "CREATE ADF");
             return;
         }
-        
+
         if (memcmp(cmd + pos, "\x00\xD4\x00\x00\x00", 5) == 0) {
             snprintf(exp, size, "GET REMAINING CREDITS");
             return;
@@ -1884,7 +1884,7 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is
             snprintf(exp, size, "GET APPLET INFO");
             return;
         }
-    
+
         if (memcmp(cmd + pos, "\xA0\xD3\x00\x00\x00", 5) == 0) {
             snprintf(exp, size, "GET APPLET VERSION");
             return;
@@ -1915,7 +1915,7 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is
             return ;
         }
 
-        //	CLA	0x90    Proprietary class - DESFire's "ISO 7816 wrap of native commands" indicator. 
+        //	CLA	0x90    Proprietary class - DESFire's "ISO 7816 wrap of native commands" indicator.
         //  Tells the card "the next byte is a DESFire native opcode, not an ISO 7816 standard INS."
         //  INS 0x5A    DESFire native opcode SelectApplication (3-byte AID).
 
