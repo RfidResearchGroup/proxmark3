@@ -3058,7 +3058,7 @@ static int CmdDiff(const char *Cmd) {
 
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, hdr1);
-    PrintAndLogEx(INFO, hdr0);
+    PrintAndLogEx(INFO, "%s", hdr0);
     PrintAndLogEx(INFO, hdr1);
 
     char line[880] = {0};
