@@ -1739,13 +1739,6 @@ static bool calypso_ef_list_contains_lid(const calypso_ef_list_t *ef_list, uint1
     return false;
 }
 
-static void calypso_print_get_data_hex_block(const uint8_t *data, size_t data_len) {
-    for (size_t pos = 0; pos < data_len; pos += CALYPSO_GET_DATA_HEX_BREAK) {
-        size_t chunk_len = MIN(data_len - pos, CALYPSO_GET_DATA_HEX_BREAK);
-        PrintAndLogEx(INFO, CALYPSO_GET_DATA_HEX_INDENT _YELLOW_("%s"), sprint_hex(data + pos, chunk_len));
-    }
-}
-
 static void calypso_print_get_data_object(const calypso_get_data_probe_t *probe, const uint8_t *data, size_t data_len) {
     if (data_len <= CALYPSO_GET_DATA_INLINE_MAX) {
         PrintAndLogEx(SUCCESS, " %04X %-24s : " _YELLOW_("%s"), probe->tag, probe->name, sprint_hex(data, data_len));
@@ -1753,7 +1746,7 @@ static void calypso_print_get_data_object(const calypso_get_data_probe_t *probe,
     }
 
     PrintAndLogEx(SUCCESS, " %04X %-24s : " _YELLOW_("%zu bytes"), probe->tag, probe->name, data_len);
-    calypso_print_get_data_hex_block(data, data_len);
+    print_hex_noascii_break_ex(data, data_len, CALYPSO_GET_DATA_HEX_BREAK, CALYPSO_GET_DATA_HEX_INDENT "\x1b[33m", ' ', AEND);
 }
 
 static void calypso_print_info_data_objects(void) {
