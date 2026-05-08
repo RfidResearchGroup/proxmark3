@@ -339,6 +339,38 @@ void print_hex_noascii_break(const uint8_t *data, const size_t len, uint8_t brea
     }
 }
 
+void print_hex_noascii_break_ex(const uint8_t *data, const size_t len, uint8_t breaks, const char *prefix, char separator, const char *suffix) {
+    if (data == NULL || len == 0 || breaks == 0) return;
+
+    if (prefix == NULL) {
+        prefix = "";
+    }
+    if (suffix == NULL) {
+        suffix = "";
+    }
+    char sep[2] = {separator, '\0'};
+
+    for (size_t pos = 0; pos < len; pos += breaks) {
+        char buf[UTIL_BUFFER_SIZE_SPRINT + 3] = {0};
+        size_t chunk_len = len - pos;
+        if (chunk_len > breaks) {
+            chunk_len = breaks;
+        }
+
+        char *p = buf;
+        size_t remaining = sizeof(buf);
+        for (size_t i = 0; i < chunk_len; i++) {
+            int written = snprintf(p, remaining, "%s%02X", (i > 0 && separator != '\0') ? sep : "", data[pos + i]);
+            if (written < 0 || (size_t)written >= remaining) {
+                break;
+            }
+            p += written;
+            remaining -= (size_t)written;
+        }
+        PrintAndLogEx(INFO, "%s%s%s", prefix, buf, suffix);
+    }
+}
+
 static void print_buffer_ex(const uint8_t *data, const size_t len, int level, uint8_t breaks) {
 
     // sanity checks

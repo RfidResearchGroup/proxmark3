@@ -84,6 +84,7 @@ void hex_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len,
 void print_hex(const uint8_t *data, const size_t len);
 void print_hex_break(const uint8_t *data, const size_t len, const uint8_t breaks);
 void print_hex_noascii_break(const uint8_t *data, const size_t len, uint8_t breaks);
+void print_hex_noascii_break_ex(const uint8_t *data, const size_t len, uint8_t breaks, const char *prefix, char separator, const char *suffix);
 
 char *sprint_hex(const uint8_t *data, const size_t len);
 char *sprint_hex_inrow(const uint8_t *data, const size_t len);

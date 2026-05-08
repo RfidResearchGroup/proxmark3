@@ -56,6 +56,9 @@
 #define CALYPSO_DUMP_FILENAME_MAX_SERIALS 8
 #define CALYPSO_MAX_EF_LIST_LIDS 128
 #define CALYPSO_MAX_LID_CANDIDATES 384
+#define CALYPSO_GET_DATA_INLINE_MAX 32
+#define CALYPSO_GET_DATA_HEX_BREAK 32
+#define CALYPSO_GET_DATA_HEX_INDENT "      "
 
 #define CALYPSO_MANUFACTURERS_RESOURCE "calypso/manufacturers"
 #define CALYPSO_IC_FAMILIES_RESOURCE   "calypso/ic_families"
@@ -1736,22 +1739,51 @@ static bool calypso_ef_list_contains_lid(const calypso_ef_list_t *ef_list, uint1
     return false;
 }
 
-static void calypso_print_ef_list_lids(const calypso_ef_list_t *ef_list) {
-    if (ef_list == NULL || ef_list->count == 0) {
+static void calypso_print_get_data_object(const calypso_get_data_probe_t *probe, const uint8_t *data, size_t data_len) {
+    if (data_len <= CALYPSO_GET_DATA_INLINE_MAX) {
+        PrintAndLogEx(SUCCESS, " %04X %-24s : " _YELLOW_("%s"), probe->tag, probe->name, sprint_hex(data, data_len));
         return;
     }
 
-    char lids[CALYPSO_MAX_EF_LIST_LIDS * 6 + 1] = {0};
-    size_t pos = 0;
-    for (size_t i = 0; i < ef_list->count && pos < sizeof(lids); i++) {
-        int written = snprintf(lids + pos, sizeof(lids) - pos, "%s%04X", i == 0 ? "" : " ", ef_list->lids[i]);
-        if (written < 0 || (size_t)written >= sizeof(lids) - pos) {
+    PrintAndLogEx(SUCCESS, " %04X %-24s : " _YELLOW_("%zu bytes"), probe->tag, probe->name, data_len);
+    print_hex_noascii_break_ex(data, data_len, CALYPSO_GET_DATA_HEX_BREAK, CALYPSO_GET_DATA_HEX_INDENT "\x1b[33m", ' ', AEND);
+}
+
+static void calypso_print_info_data_objects(void) {
+    bool printed_header = false;
+
+    for (size_t i = 0; i < ARRAYLEN(calypso_get_data_probes); i++) {
+        const calypso_get_data_probe_t *probe = &calypso_get_data_probes[i];
+        if (probe->tag != 0x0185 && probe->tag != 0x5F52) {
+            continue;
+        }
+
+        uint8_t response[APDU_RES_LEN] = {0};
+        size_t response_len = 0;
+        uint16_t sw = 0;
+        int res = calypso_get_data_object(probe->tag, response, sizeof(response), &response_len, &sw);
+        bool has_data = res == PM3_SUCCESS && calypso_read_sw_has_data(sw, response_len);
+
+        if (printed_header == false && has_data) {
+            PrintAndLogEx(INFO, "");
+            PrintAndLogEx(INFO, "--- " _CYAN_("Get Data Objects") " ----------------------");
+            printed_header = true;
+        }
+
+        if (res != PM3_SUCCESS) {
+            continue;
+        }
+
+        if (sw == ISO7816_INS_NOT_SUPPORTED) {
             break;
         }
-        pos += (size_t)written;
-    }
 
-    PrintAndLogEx(SUCCESS, " EF List LIDs      : " _YELLOW_("%s") "%s", lids, ef_list->truncated ? " (truncated)" : "");
+        if (has_data == false) {
+            continue;
+        }
+
+        calypso_print_get_data_object(probe, response, response_len);
+    }
 }
 
 static size_t calypso_probe_get_data_objects(json_t *entries, bool print_results, bool verbose, calypso_ef_list_t *ef_list) {
@@ -1776,9 +1808,16 @@ static size_t calypso_probe_get_data_objects(json_t *entries, bool print_results
             continue;
         }
 
+        if (sw == ISO7816_INS_NOT_SUPPORTED) {
+            if (verbose) {
+                PrintAndLogEx(INFO, " %04X %-24s : " _YELLOW_("%04X") " - %s", probe->tag, probe->name, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xFF));
+            }
+            break;
+        }
+
         if (calypso_read_sw_has_data(sw, response_len)) {
             if (print_results || verbose) {
-                PrintAndLogEx(SUCCESS, " %04X %-24s : " _YELLOW_("%s"), probe->tag, probe->name, sprint_hex(response, response_len));
+                calypso_print_get_data_object(probe, response, response_len);
                 if (verbose && probe->tlv) {
                     TLVPrintFromBuffer(response, (int)response_len);
                 }
@@ -1788,7 +1827,6 @@ static size_t calypso_probe_get_data_objects(json_t *entries, bool print_results
             }
             if (probe->tag == 0x00C0) {
                 calypso_parse_ef_list_object(response, response_len, ef_list);
-                calypso_print_ef_list_lids(ef_list);
             }
             found++;
             continue;
@@ -2923,6 +2961,8 @@ static int CmdHFCalypsoInfo(const char *Cmd) {
     }
 
     calypso_print_select_info(&selected, verbose);
+    calypso_reselect_exact_df_name(&selected, verbose);
+    calypso_print_info_data_objects();
     calypso_reselect_exact_df_name(&selected, verbose);
 
     uint8_t icc[CALYPSO_ICC_RECORD_LEN] = {0};
