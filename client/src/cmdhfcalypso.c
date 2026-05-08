@@ -56,6 +56,9 @@
 #define CALYPSO_DUMP_FILENAME_MAX_SERIALS 8
 #define CALYPSO_MAX_EF_LIST_LIDS 128
 #define CALYPSO_MAX_LID_CANDIDATES 384
+#define CALYPSO_GET_DATA_INLINE_MAX 32
+#define CALYPSO_GET_DATA_HEX_BREAK 32
+#define CALYPSO_GET_DATA_HEX_INDENT "      "
 
 #define CALYPSO_MANUFACTURERS_RESOURCE "calypso/manufacturers"
 #define CALYPSO_IC_FAMILIES_RESOURCE   "calypso/ic_families"
@@ -1736,22 +1739,21 @@ static bool calypso_ef_list_contains_lid(const calypso_ef_list_t *ef_list, uint1
     return false;
 }
 
-static void calypso_print_ef_list_lids(const calypso_ef_list_t *ef_list) {
-    if (ef_list == NULL || ef_list->count == 0) {
+static void calypso_print_get_data_hex_block(const uint8_t *data, size_t data_len) {
+    for (size_t pos = 0; pos < data_len; pos += CALYPSO_GET_DATA_HEX_BREAK) {
+        size_t chunk_len = MIN(data_len - pos, CALYPSO_GET_DATA_HEX_BREAK);
+        PrintAndLogEx(INFO, CALYPSO_GET_DATA_HEX_INDENT _YELLOW_("%s"), sprint_hex(data + pos, chunk_len));
+    }
+}
+
+static void calypso_print_get_data_object(const calypso_get_data_probe_t *probe, const uint8_t *data, size_t data_len) {
+    if (data_len <= CALYPSO_GET_DATA_INLINE_MAX) {
+        PrintAndLogEx(SUCCESS, " %04X %-24s : " _YELLOW_("%s"), probe->tag, probe->name, sprint_hex(data, data_len));
         return;
     }
 
-    char lids[CALYPSO_MAX_EF_LIST_LIDS * 6 + 1] = {0};
-    size_t pos = 0;
-    for (size_t i = 0; i < ef_list->count && pos < sizeof(lids); i++) {
-        int written = snprintf(lids + pos, sizeof(lids) - pos, "%s%04X", i == 0 ? "" : " ", ef_list->lids[i]);
-        if (written < 0 || (size_t)written >= sizeof(lids) - pos) {
-            break;
-        }
-        pos += (size_t)written;
-    }
-
-    PrintAndLogEx(SUCCESS, " EF List LIDs      : " _YELLOW_("%s") "%s", lids, ef_list->truncated ? " (truncated)" : "");
+    PrintAndLogEx(SUCCESS, " %04X %-24s : " _YELLOW_("%zu bytes"), probe->tag, probe->name, data_len);
+    calypso_print_get_data_hex_block(data, data_len);
 }
 
 static void calypso_print_info_data_objects(void) {
@@ -1783,7 +1785,7 @@ static void calypso_print_info_data_objects(void) {
             continue;
         }
 
-        PrintAndLogEx(SUCCESS, " %04X %-24s : " _YELLOW_("%s"), probe->tag, probe->name, sprint_hex(response, response_len));
+        calypso_print_get_data_object(probe, response, response_len);
     }
 }
 
@@ -1811,7 +1813,7 @@ static size_t calypso_probe_get_data_objects(json_t *entries, bool print_results
 
         if (calypso_read_sw_has_data(sw, response_len)) {
             if (print_results || verbose) {
-                PrintAndLogEx(SUCCESS, " %04X %-24s : " _YELLOW_("%s"), probe->tag, probe->name, sprint_hex(response, response_len));
+                calypso_print_get_data_object(probe, response, response_len);
                 if (verbose && probe->tlv) {
                     TLVPrintFromBuffer(response, (int)response_len);
                 }
@@ -1821,7 +1823,6 @@ static size_t calypso_probe_get_data_objects(json_t *entries, bool print_results
             }
             if (probe->tag == 0x00C0) {
                 calypso_parse_ef_list_object(response, response_len, ef_list);
-                calypso_print_ef_list_lids(ef_list);
             }
             found++;
             continue;
