@@ -1754,6 +1754,39 @@ static void calypso_print_ef_list_lids(const calypso_ef_list_t *ef_list) {
     PrintAndLogEx(SUCCESS, " EF List LIDs      : " _YELLOW_("%s") "%s", lids, ef_list->truncated ? " (truncated)" : "");
 }
 
+static void calypso_print_info_data_objects(void) {
+    bool printed_header = false;
+
+    for (size_t i = 0; i < ARRAYLEN(calypso_get_data_probes); i++) {
+        const calypso_get_data_probe_t *probe = &calypso_get_data_probes[i];
+        if (probe->tag != 0x0185 && probe->tag != 0x5F52) {
+            continue;
+        }
+
+        uint8_t response[APDU_RES_LEN] = {0};
+        size_t response_len = 0;
+        uint16_t sw = 0;
+        int res = calypso_get_data_object(probe->tag, response, sizeof(response), &response_len, &sw);
+        bool has_data = res == PM3_SUCCESS && calypso_read_sw_has_data(sw, response_len);
+
+        if (printed_header == false && has_data) {
+            PrintAndLogEx(INFO, "");
+            PrintAndLogEx(INFO, "--- " _CYAN_("Get Data Objects") " ----------------------");
+            printed_header = true;
+        }
+
+        if (res != PM3_SUCCESS) {
+            continue;
+        }
+
+        if (has_data == false) {
+            continue;
+        }
+
+        PrintAndLogEx(SUCCESS, " %04X %-24s : " _YELLOW_("%s"), probe->tag, probe->name, sprint_hex(response, response_len));
+    }
+}
+
 static size_t calypso_probe_get_data_objects(json_t *entries, bool print_results, bool verbose, calypso_ef_list_t *ef_list) {
     size_t found = 0;
 
@@ -2923,6 +2956,8 @@ static int CmdHFCalypsoInfo(const char *Cmd) {
     }
 
     calypso_print_select_info(&selected, verbose);
+    calypso_reselect_exact_df_name(&selected, verbose);
+    calypso_print_info_data_objects();
     calypso_reselect_exact_df_name(&selected, verbose);
 
     uint8_t icc[CALYPSO_ICC_RECORD_LEN] = {0};
