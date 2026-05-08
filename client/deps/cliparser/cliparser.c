@@ -44,7 +44,7 @@ static void expand_tilde_path(const char *src, char *dst, size_t dst_len) {
     }
 #endif
 
-    if (home != NULL && (strcmp(src, "~") == 0 || strncmp(src, "~/", 2) == 0 || strncmp(src, "~\\", 2) == 0)) {
+    if (home != NULL && src[0] == '~' && (src[1] == '\0' || src[1] == '/' || src[1] == '\\')) {
         snprintf(dst, dst_len, "%s%s", home, src + 1);
         return;
     }
