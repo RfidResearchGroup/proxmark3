@@ -1781,6 +1781,10 @@ static void calypso_print_info_data_objects(void) {
             continue;
         }
 
+        if (sw == ISO7816_INS_NOT_SUPPORTED) {
+            break;
+        }
+
         if (has_data == false) {
             continue;
         }
@@ -1809,6 +1813,13 @@ static size_t calypso_probe_get_data_objects(json_t *entries, bool print_results
                 PrintAndLogEx(INFO, " %04X %-24s : exchange failed (%d)", probe->tag, probe->name, res);
             }
             continue;
+        }
+
+        if (sw == ISO7816_INS_NOT_SUPPORTED) {
+            if (verbose) {
+                PrintAndLogEx(INFO, " %04X %-24s : " _YELLOW_("%04X") " - %s", probe->tag, probe->name, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xFF));
+            }
+            break;
         }
 
         if (calypso_read_sw_has_data(sw, response_len)) {
