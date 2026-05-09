@@ -3159,6 +3159,8 @@ int CmdHF14B(const char *Cmd) {
 // get and print all info known about any known 14b tag
 int infoHF14B(bool verbose, bool do_aid_search) {
 
+    clear_trace_14b();
+
     // try std 14b (atqb)
     if (HF14B_Std_Info(verbose, do_aid_search))
         return PM3_SUCCESS;
