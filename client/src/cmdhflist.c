@@ -199,6 +199,46 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
 }
 
 
+static int annotateEcp(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize) {
+    if (cmdsize < 7 || cmd[0] != ECP_HEADER) {
+        return PM3_ESOFT;
+    }
+
+    // Byte 0 is a header
+    // Byte 1 indicates format version
+    // Version 0x01 format is 7 bytes long (including CRC)
+    // Version 0x02 format is at least 7 bytes long, including CRC.
+    // The low nibble of byte 2 defines extra payload length.
+    if (cmd[1] == 0x01 && cmdsize == 7) {
+        snprintf(exp, size, "ECP1");
+        return PM3_SUCCESS;
+    }
+
+    if (cmd[1] == 0x02 && cmdsize == (cmd[2] & 0x0F) + 7) {
+        // Byte 3 is the reader type
+        switch (cmd[3]) {
+            case 0x01:
+                snprintf(exp, size, "ECP2 (Transit)");
+                break;
+            case 0x02:
+                snprintf(exp, size, "ECP2 (Access)");
+                break;
+            case 0x03:
+                snprintf(exp, size, "ECP2 (Identity)");
+                break;
+            case 0x05:
+                snprintf(exp, size, "ECP2 (AirDrop)");
+                break;
+            default:
+                snprintf(exp, size, "ECP2");
+                break;
+        }
+        return PM3_SUCCESS;
+    }
+
+    return PM3_ESOFT;
+}
+
 int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 
     if (is_response == false) {
@@ -208,35 +248,8 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
             return PM3_SUCCESS;
         }
 
-        if (cmdsize >= 7 && cmd[0] == ECP_HEADER) {
-            // Byte 0 is a header
-            // Byte 1 indicates format version
-            // Version 0x01 format is 7 bytes long (including crc)
-            // Version 0x02 format is at least 7 bytes long (including crc). First 4 bits of byte 2 define extra payload length
-            if (cmd[1] == 0x01 && cmdsize == 7) {
-                snprintf(exp, size, "ECP1");
-                return PM3_SUCCESS;
-            } else if (cmd[1] == 0x02 && cmdsize == (cmd[2] & 0x0F) + 7) {
-                // Byte 3 is the reader type
-                switch (cmd[3]) {
-                    case 0x01:
-                        snprintf(exp, size, "ECP2 (Transit)");
-                        break;
-                    case 0x02:
-                        snprintf(exp, size, "ECP2 (Access)");
-                        break;
-                    case 0x03:
-                        snprintf(exp, size, "ECP2 (Identity)");
-                        break;
-                    case 0x05:
-                        snprintf(exp, size, "ECP2 (AirDrop)");
-                        break;
-                    default:
-                        snprintf(exp, size, "ECP2");
-                        break;
-                }
-                return PM3_SUCCESS;
-            }
+        if (annotateEcp(exp, size, cmd, cmdsize) == PM3_SUCCESS) {
+            return PM3_SUCCESS;
         }
 
         gs_ntag_i2c_state = 0;
@@ -1746,6 +1759,9 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 break;
             }
         default:
+            if (annotateEcp(exp, size, cmd, cmdsize) == PM3_SUCCESS) {
+                break;
+            }
             snprintf(exp, size, "?");
             break;
     }
