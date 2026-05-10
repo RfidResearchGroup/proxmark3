@@ -30,6 +30,7 @@
 #include "crapto1/crapto1.h"
 #include "protocols.h"
 #include "cmdhficlass.h"
+#include "cmdhfcalypso.h"
 #include "mifare/mifaredefault.h"  // mifare consts
 #include "cmdhfseos.h"
 
@@ -943,43 +944,202 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool
     }
 }
 
+static bool iso14443_4_get_i_block_inf(uint8_t *cmd, uint8_t cmdsize, bool is_response, const uint8_t **inf, size_t *inf_len) {
+    (void)is_response;
+    size_t frame_len = cmdsize;
+    if (frame_len < 1 || (cmd[0] & 0xC0) != 0x00 || (cmd[0] & 0x02) != 0x02) {
+        return false;
+    }
+
+    size_t pos = 1;
+    if ((cmd[0] & 0x08) == 0x08) {
+        pos++;
+    }
+    if ((cmd[0] & 0x04) == 0x04) {
+        pos++;
+    }
+    if (pos >= frame_len) {
+        return false;
+    }
+
+    *inf = cmd + pos;
+    if (inf_len != NULL) {
+        *inf_len = frame_len - pos;
+    }
+    return true;
+}
+
+static bool annotateIso14443_s_r_block(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response, bool show_block_number) {
+    (void)is_response;
+    size_t frame_len = cmdsize;
+    if (frame_len < 1 || frame_len > 4) {
+        return false;
+    }
+
+    if ((cmd[0] & 0xC0) == 0xC0) {
+        switch (cmd[0] & 0x30) {
+            case 0x00:
+                snprintf(exp, size, "S-block DESELECT");
+                break;
+            case 0x30:
+                snprintf(exp, size, "S-block WTX");
+                break;
+            default:
+                snprintf(exp, size, "S-block");
+                break;
+        }
+        return true;
+    }
+
+    if ((cmd[0] & 0xD0) == 0x80) {
+        if (show_block_number) {
+            snprintf(exp, size, (cmd[0] & 0x10) ? "R-block NACK(%d)" : "R-block ACK(%d)", cmd[0] & 0x01);
+        } else {
+            snprintf(exp, size, (cmd[0] & 0x10) ? "R-block NACK" : "R-block ACK");
+        }
+        return true;
+    }
+
+    return false;
+}
+
+static void calypso_sfi_file_ref(char *out, size_t out_len, uint8_t p2, uint8_t current_mask, uint8_t sfi_mask) {
+    if (p2 == current_mask) {
+        snprintf(out, out_len, "current EF");
+    } else if ((p2 & 0x07) == sfi_mask && (p2 >> 3) != 0) {
+        snprintf(out, out_len, "sfi=%u", p2 >> 3);
+    } else {
+        snprintf(out, out_len, "p2=%02X", p2);
+    }
+}
+
+static void calypso_binary_ref(char *out, size_t out_len, uint8_t ins, uint8_t p1, uint8_t p2) {
+    if (ins == CALYPSO_READ_BINARY) {
+        if ((p1 & 0x80) == 0x80) {
+            snprintf(out, out_len, "sfi=%u, off=%u", p1 & 0x1F, p2);
+        } else {
+            snprintf(out, out_len, "off=%u", ((p1 & 0x7F) << 8) | p2);
+        }
+    } else if ((p2 & 0x80) == 0x80) {
+        snprintf(out, out_len, "sfi=%u", p2 & 0x1F);
+    } else if (p2 == 0x00) {
+        snprintf(out, out_len, "current EF");
+    } else {
+        snprintf(out, out_len, "p2=%02X", p2);
+    }
+}
+
+static bool annotateCalypsoApdu(char *exp, size_t size, const uint8_t *apdu, size_t apdu_len) {
+    if (apdu_len < 4) {
+        return false;
+    }
+
+    uint8_t ins = apdu[1];
+    uint8_t p1 = apdu[2];
+    uint8_t p2 = apdu[3];
+
+    switch (ins) {
+        case CALYPSO_SELECT: {
+            if (p1 == 0x04) {
+                const char *mode = (p2 == 0x02 || p2 == 0x0E) ? "next" : "first";
+                const char *fci = (p2 == 0x0C || p2 == 0x0E) ? "none" : "return";
+                snprintf(exp, size, "SELECT APPLICATION (mode=%s, fci=%s)", mode, fci);
+            } else if (p1 == 0x02 && (p2 == 0x00 || p2 == 0x02)) {
+                snprintf(exp, size, "SELECT FILE");
+            } else if (p1 == 0x09 && p2 == 0x00) {
+                snprintf(exp, size, "SELECT FILE (current DF)");
+            } else if (p1 == 0x00) {
+                snprintf(exp, size, "SELECT FILE (by file id)");
+            } else if (p1 == 0x08) {
+                snprintf(exp, size, "SELECT FILE (by path)");
+            } else {
+                snprintf(exp, size, "SELECT");
+            }
+            return true;
+        }
+        case CALYPSO_GET_DATA: {
+            uint16_t tag = (p1 << 8) | p2;
+            const char *name = CalypsoGetDataTagName(tag);
+            if (name) {
+                snprintf(exp, size, "GET DATA (tag=%04X - %s)", tag, name);
+            } else {
+                snprintf(exp, size, "GET DATA (tag=%04X)", tag);
+            }
+            return true;
+        }
+        case CALYPSO_READ_RECORD: {
+            char ref[20];
+            calypso_sfi_file_ref(ref, sizeof(ref), p2, 0x04, 0x04);
+            snprintf(exp, size, "READ RECORD (%s, rec=%u)", ref, p1);
+            return true;
+        }
+        case CALYPSO_READ_RECORD_MULTIPLE: {
+            char ref[20];
+            calypso_sfi_file_ref(ref, sizeof(ref), p2, 0x05, 0x05);
+            snprintf(exp, size, "READ RECORDS (%s, rec=%u)", ref, p1);
+            return true;
+        }
+        case CALYPSO_READ_BINARY:
+        case CALYPSO_READ_BINARY_EXTENDED: {
+            char ref[20];
+            calypso_binary_ref(ref, sizeof(ref), ins, p1, p2);
+            snprintf(exp, size, "READ BINARY (%s)", ref);
+            return true;
+        }
+        case CALYPSO_GET_CHALLENGE:
+            snprintf(exp, size, "GET CHALLENGE");
+            return true;
+        case CALYPSO_GET_RESPONSE:
+            snprintf(exp, size, "GET RESPONSE");
+            return true;
+        default:
+            return false;
+    }
+}
+
+void annotateCalypso(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+    if (cmdsize < 1 || is_response) {
+        return;
+    }
+
+    if (applyIso14443a(exp, size, cmd, cmdsize, false) == PM3_SUCCESS) {
+        return;
+    }
+
+    if (cmd[0] == ISO14443B_REQB || cmd[0] == ISO14443B_ATTRIB || cmd[0] == ISO14443B_HALT) {
+        annotateIso14443b(exp, size, cmd, cmdsize);
+        return;
+    }
+
+    if (annotateIso14443_s_r_block(exp, size, cmd, cmdsize, false, false)) {
+        return;
+    }
+
+    const uint8_t *inf = NULL;
+    size_t inf_len = 0;
+    if (iso14443_4_get_i_block_inf(cmd, cmdsize, false, &inf, &inf_len)) {
+        annotateCalypsoApdu(exp, size, inf, inf_len);
+    }
+}
+
 // MIFARE DESFire
 void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
     // it's basically a ISO14443a tag, so try annotation from there
     if (applyIso14443a(exp, size, cmd, cmdsize, false) != PM3_SUCCESS) {
 
-        // S-block 11xxx010
-        if ((cmd[0] & 0xC0) && (cmdsize == 3)) {
-            switch ((cmd[0] & 0x30)) {
-                case 0x00:
-                    snprintf(exp, size, "S-block DESELECT");
-                    break;
-                case 0x30:
-                    snprintf(exp, size, "S-block WTX");
-                    break;
-                default:
-                    snprintf(exp, size, "S-block");
-                    break;
-            }
-        }
-        // R-block (ack) 101xx01x
-        else if (((cmd[0] & 0xB0) == 0xA0) && (cmdsize > 2)) {
-            if ((cmd[0] & 0x10) == 0)
-                snprintf(exp, size, "R-block ACK(%d)", (cmd[0] & 0x01));
-            else
-                snprintf(exp, size, "R-block NACK(%d)", (cmd[0] & 0x01));
+        if (annotateIso14443_s_r_block(exp, size, cmd, cmdsize, false, true)) {
+            return;
         }
         // I-block 000xCN1x
         else if (((cmd[0] & 0xC0) == 0x00) && (cmdsize > 2)) {
 
-            // PCB [CID] [NAD] [INF] CRC CRC
-            int pos = 1;
-            if ((cmd[0] & 0x08) == 0x08)  // cid byte following
-                pos++;
+            const uint8_t *inf = NULL;
+            if (iso14443_4_get_i_block_inf(cmd, cmdsize, false, &inf, NULL) == false) {
+                return;
+            }
 
-            if ((cmd[0] & 0x04) == 0x04)  // nad byte following
-                pos++;
+            int pos = inf - cmd;
 
             for (uint8_t i = 0; i < 2; i++, pos++) {
                 bool found_annotation = true;
@@ -1370,13 +1530,12 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     // ok this part is copy paste from annotateMfDesfire, it seems to work for MIFARE Plus also
     if (((cmd[0] & 0xC0) == 0x00) && (cmdsize > 2)) {
 
-        // PCB [CID] [NAD] [INF] CRC CRC
-        int pos = 1;
-        if ((cmd[0] & 0x08) == 0x08)  // cid byte following
-            pos++;
+        const uint8_t *inf = NULL;
+        if (iso14443_4_get_i_block_inf(cmd, cmdsize, false, &inf, NULL) == false) {
+            return;
+        }
 
-        if ((cmd[0] & 0x04) == 0x04)  // nad byte following
-            pos++;
+        int pos = inf - cmd;
 
         for (uint8_t i = 0; i < 2; i++, pos++) {
             bool found_annotation = true;

@@ -39,6 +39,14 @@ static int CmdHelp(const char *Cmd);
 static uint8_t *gs_trace;
 static uint16_t gs_traceLen = 0;
 
+typedef enum {
+    TRACE_CRC_FAIL = 0,
+    TRACE_CRC_OK = 1,
+    TRACE_CRC_NONE = 2,
+    TRACE_CRC_A_OK = 3,
+    TRACE_CRC_B_OK = 4,
+} trace_crc_status_t;
+
 static bool is_last_record(uint16_t tracepos, uint16_t traceLen) {
     return ((tracepos + TRACELOG_HDR_LEN) >= traceLen);
 }
@@ -542,7 +550,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     }
 
     //Check the CRC status
-    uint8_t crcStatus = 2;
+    trace_crc_status_t crcStatus = TRACE_CRC_NONE;
 
     if (data_len > 2) {
         switch (protocol) {
@@ -569,9 +577,18 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 crcStatus = seos_CRC_check(hdr->isResponse, frame, data_len);
                 break;
             case ISO_7816_4:
-                crcStatus = iso14443A_CRC_check(hdr->isResponse, frame, data_len) == 1 ? 3 : 0;
-                crcStatus = iso14443B_CRC_check(frame, data_len) == 1 ? 4 : crcStatus;
+            case PROTO_CALYPSO: {
+                uint8_t crcA = iso14443A_CRC_check(hdr->isResponse, frame, data_len);
+                uint8_t crcB = iso14443B_CRC_check(frame, data_len);
+                if (crcA == TRACE_CRC_OK) {
+                    crcStatus = TRACE_CRC_A_OK;
+                } else if (crcB == TRACE_CRC_OK) {
+                    crcStatus = TRACE_CRC_B_OK;
+                } else {
+                    crcStatus = crcA;
+                }
                 break;
+            }
             case THINFILM:
                 frame[data_len - 1] ^= frame[data_len - 2];
                 frame[data_len - 2] ^= frame[data_len - 1];
@@ -627,6 +644,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && protocol != ISO_15693
                 && protocol != ICLASS
                 && protocol != ISO_7816_4
+                && protocol != PROTO_CALYPSO
                 && protocol != PROTO_HITAG1
                 && protocol != PROTO_HITAG2
                 && protocol != PROTO_HITAGS
@@ -697,7 +715,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             (*(pos2 + 1)) = '\0';
         } else {
 
-            if (crcStatus == 0 || crcStatus == 1) {
+            if (crcStatus == TRACE_CRC_FAIL || crcStatus == TRACE_CRC_OK) {
 
                 char *pos1 = line[(data_len - 2) / TRACE_MAX_HEX_BYTES];
                 int delta = (data_len - 2) % TRACE_MAX_HEX_BYTES ? 1 : 0;
@@ -708,7 +726,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 char *cb_str = str_dup(pos1 + delta);
 
                 if (g_session.supports_colors) {
-                    if (crcStatus == 0) {
+                    if (crcStatus == TRACE_CRC_FAIL) {
                         snprintf(pos1, 24, AEND " " _RED_("%s"), cb_str);
                     } else {
                         snprintf(pos1, 24, AEND " " _GREEN_("%s"), cb_str);
@@ -726,7 +744,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                     cb_str = str_dup(pos1);
 
                     if (g_session.supports_colors) {
-                        if (crcStatus == 0) {
+                        if (crcStatus == TRACE_CRC_FAIL) {
                             snprintf(pos1, 24, _RED_("%s"), cb_str);
                         } else {
                             snprintf(pos1, 24, _GREEN_("%s"), cb_str);
@@ -742,7 +760,13 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     }
 
     // Draw the CRC column
-    const char *crcstrings[] = { _RED_(" !! "), _GREEN_(" ok "), "    ", _GREEN_("A ok"), _GREEN_("B ok") };
+    const char *crcstrings[] = {
+        [TRACE_CRC_FAIL] = _RED_(" !! "),
+        [TRACE_CRC_OK] = _GREEN_(" ok "),
+        [TRACE_CRC_NONE] = "    ",
+        [TRACE_CRC_A_OK] = _GREEN_("A ok"),
+        [TRACE_CRC_B_OK] = _GREEN_("B ok"),
+    };
     const char *crc = crcstrings[crcStatus];
 
     // mark short bytes (less than 8 Bit + Parity)
@@ -795,6 +819,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         case ISO_7816_4:
         case PROTO_FMCOS20:
             annotateIso14443a(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+            break;
+        case PROTO_CALYPSO:
+            annotateCalypso(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
             break;
         case PROTO_MIFARE:
         case PROTO_MFPLUS:
@@ -1317,6 +1344,7 @@ int CmdTraceList(const char *Cmd) {
                   "trace list -t 14b      -> interpret as " _YELLOW_("ISO14443-B") "\n"
                   "trace list -t 15       -> interpret as " _YELLOW_("ISO15693") "\n"
                   "trace list -t 7816     -> interpret as " _YELLOW_("ISO7816-4") "\n"
+                  "trace list -t calypso  -> interpret as " _YELLOW_("Calypso") "\n"
                   "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") "\n"
                   "trace list -t des      -> interpret as " _YELLOW_("MIFARE DESFire") "\n"
                   "trace list -t felica   -> interpret as " _YELLOW_("ISO18092 / FeliCa") "\n"
@@ -1385,6 +1413,7 @@ int CmdTraceList(const char *Cmd) {
     else if (strcmp(type, "14b") == 0)      protocol = ISO_14443B;
     else if (strcmp(type, "15") == 0)       protocol = ISO_15693;
     else if (strcmp(type, "7816") == 0)     protocol = ISO_7816_4;
+    else if (strcmp(type, "calypso") == 0)  protocol = PROTO_CALYPSO;
     else if (strcmp(type, "cryptorf") == 0) protocol = PROTO_CRYPTORF;
     else if (strcmp(type, "des") == 0)      protocol = MFDES;
     else if (strcmp(type, "felica") == 0)   protocol = FELICA;
@@ -1480,6 +1509,9 @@ int CmdTraceList(const char *Cmd) {
 
         if (protocol == ISO_7816_4)
             PrintAndLogEx(INFO, _YELLOW_("ISO7816-4 / Smartcard") " - Timings n/a");
+
+        if (protocol == PROTO_CALYPSO)
+            PrintAndLogEx(INFO, _YELLOW_("Calypso") " - Timings n/a");
 
         if (protocol == PROTO_HITAG1 || protocol == PROTO_HITAG2 || protocol == PROTO_HITAGS || protocol == PROTO_HITAGU) {
             PrintAndLogEx(INFO, _YELLOW_("Hitag 1 / Hitag 2 / Hitag S / Hitag µ") " - Timings in ETU (8us)");

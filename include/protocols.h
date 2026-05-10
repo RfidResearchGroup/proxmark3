@@ -462,7 +462,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define PROTO_TEXKOM    19
 #define PROTO_XEROX     20
 #define PROTO_FMCOS20   21
-#define COUNT_OF_PROTOCOLS 22
+#define PROTO_CALYPSO   22
+#define COUNT_OF_PROTOCOLS 23
 
 // Picopass fuses
 #define FUSE_FPERS   0x80
@@ -928,6 +929,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 // Calypso protocol
 #define CALYPSO_GET_RESPONSE            0xC0
+#define CALYPSO_GET_DATA                0xCA
 #define CALYPSO_SELECT                  0xA4
 #define CALYPSO_INVALIDATE              0x04
 #define CALYPSO_REHABILITATE            0x44
@@ -935,7 +937,9 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define CALYPSO_DECREASE                0x30
 #define CALYPSO_INCREASE                0x32
 #define CALYPSO_READ_BINARY             0xB0
+#define CALYPSO_READ_BINARY_EXTENDED    0xB1
 #define CALYPSO_READ_RECORD             0xB2
+#define CALYPSO_READ_RECORD_MULTIPLE    0xB3
 #define CALYPSO_UPDATE_BINARY           0xD6
 #define CALYPSO_UPDATE_RECORD           0xDC
 #define CALYPSO_WRITE_RECORD            0xD2
