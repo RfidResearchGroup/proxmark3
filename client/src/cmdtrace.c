@@ -39,6 +39,14 @@ static int CmdHelp(const char *Cmd);
 static uint8_t *gs_trace;
 static uint16_t gs_traceLen = 0;
 
+typedef enum {
+    TRACE_CRC_FAIL = 0,
+    TRACE_CRC_OK = 1,
+    TRACE_CRC_NONE = 2,
+    TRACE_CRC_A_OK = 3,
+    TRACE_CRC_B_OK = 4,
+} trace_crc_status_t;
+
 static bool is_last_record(uint16_t tracepos, uint16_t traceLen) {
     return ((tracepos + TRACELOG_HDR_LEN) >= traceLen);
 }
@@ -542,7 +550,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     }
 
     //Check the CRC status
-    uint8_t crcStatus = 2;
+    trace_crc_status_t crcStatus = TRACE_CRC_NONE;
 
     if (data_len > 2) {
         switch (protocol) {
@@ -569,9 +577,18 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 crcStatus = seos_CRC_check(hdr->isResponse, frame, data_len);
                 break;
             case ISO_7816_4:
-                crcStatus = iso14443A_CRC_check(hdr->isResponse, frame, data_len) == 1 ? 3 : 0;
-                crcStatus = iso14443B_CRC_check(frame, data_len) == 1 ? 4 : crcStatus;
+            {
+                uint8_t crcA = iso14443A_CRC_check(hdr->isResponse, frame, data_len);
+                uint8_t crcB = iso14443B_CRC_check(frame, data_len);
+                if (crcA == TRACE_CRC_OK) {
+                    crcStatus = TRACE_CRC_A_OK;
+                } else if (crcB == TRACE_CRC_OK) {
+                    crcStatus = TRACE_CRC_B_OK;
+                } else {
+                    crcStatus = crcA;
+                }
                 break;
+            }
             case THINFILM:
                 frame[data_len - 1] ^= frame[data_len - 2];
                 frame[data_len - 2] ^= frame[data_len - 1];
@@ -697,7 +714,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             (*(pos2 + 1)) = '\0';
         } else {
 
-            if (crcStatus == 0 || crcStatus == 1) {
+            if (crcStatus == TRACE_CRC_FAIL || crcStatus == TRACE_CRC_OK) {
 
                 char *pos1 = line[(data_len - 2) / TRACE_MAX_HEX_BYTES];
                 int delta = (data_len - 2) % TRACE_MAX_HEX_BYTES ? 1 : 0;
@@ -708,7 +725,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 char *cb_str = str_dup(pos1 + delta);
 
                 if (g_session.supports_colors) {
-                    if (crcStatus == 0) {
+                    if (crcStatus == TRACE_CRC_FAIL) {
                         snprintf(pos1, 24, AEND " " _RED_("%s"), cb_str);
                     } else {
                         snprintf(pos1, 24, AEND " " _GREEN_("%s"), cb_str);
@@ -726,7 +743,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                     cb_str = str_dup(pos1);
 
                     if (g_session.supports_colors) {
-                        if (crcStatus == 0) {
+                        if (crcStatus == TRACE_CRC_FAIL) {
                             snprintf(pos1, 24, _RED_("%s"), cb_str);
                         } else {
                             snprintf(pos1, 24, _GREEN_("%s"), cb_str);
@@ -742,7 +759,13 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     }
 
     // Draw the CRC column
-    const char *crcstrings[] = { _RED_(" !! "), _GREEN_(" ok "), "    ", _GREEN_("A ok"), _GREEN_("B ok") };
+    const char *crcstrings[] = {
+        [TRACE_CRC_FAIL] = _RED_(" !! "),
+        [TRACE_CRC_OK] = _GREEN_(" ok "),
+        [TRACE_CRC_NONE] = "    ",
+        [TRACE_CRC_A_OK] = _GREEN_("A ok"),
+        [TRACE_CRC_B_OK] = _GREEN_("B ok"),
+    };
     const char *crc = crcstrings[crcStatus];
 
     // mark short bytes (less than 8 Bit + Parity)
