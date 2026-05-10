@@ -70,9 +70,9 @@
 #define MFDES_PC_MAX_ROUNDS             8U
 #define MFDES_PC_MAC_LEN                8U
 
-#define MFDES_EV3C_MFC_KILL_KEY                ((uint8_t)0x31U)
-#define MFDES_EV3C_ALLOWED_DATA_PERMISSIONS    ((uint8_t)0x11)
-#define MFDES_EV3C_ALLOWED_TRAILER_PERMISSIONS ((uint8_t)0x1F)
+#define MFDES_EV3C_MFC_KILL_KEY                0x31U
+#define MFDES_EV3C_ALLOWED_DATA_PERMISSIONS    0x11U
+#define MFDES_EV3C_ALLOWED_TRAILER_PERMISSIONS 0x1FU
 
 // DUOX ISO Internal Authenticate
 #define DUOX_INTAUTH_CHALLENGE_LEN      16
