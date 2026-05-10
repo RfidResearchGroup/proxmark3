@@ -577,7 +577,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 crcStatus = seos_CRC_check(hdr->isResponse, frame, data_len);
                 break;
             case ISO_7816_4:
-            {
+            case PROTO_CALYPSO: {
                 uint8_t crcA = iso14443A_CRC_check(hdr->isResponse, frame, data_len);
                 uint8_t crcB = iso14443B_CRC_check(frame, data_len);
                 if (crcA == TRACE_CRC_OK) {
@@ -644,6 +644,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && protocol != ISO_15693
                 && protocol != ICLASS
                 && protocol != ISO_7816_4
+                && protocol != PROTO_CALYPSO
                 && protocol != PROTO_HITAG1
                 && protocol != PROTO_HITAG2
                 && protocol != PROTO_HITAGS
@@ -818,6 +819,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         case ISO_7816_4:
         case PROTO_FMCOS20:
             annotateIso14443a(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+            break;
+        case PROTO_CALYPSO:
+            annotateCalypso(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
             break;
         case PROTO_MIFARE:
         case PROTO_MFPLUS:
@@ -1340,6 +1344,7 @@ int CmdTraceList(const char *Cmd) {
                   "trace list -t 14b      -> interpret as " _YELLOW_("ISO14443-B") "\n"
                   "trace list -t 15       -> interpret as " _YELLOW_("ISO15693") "\n"
                   "trace list -t 7816     -> interpret as " _YELLOW_("ISO7816-4") "\n"
+                  "trace list -t calypso  -> interpret as " _YELLOW_("Calypso") "\n"
                   "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") "\n"
                   "trace list -t des      -> interpret as " _YELLOW_("MIFARE DESFire") "\n"
                   "trace list -t felica   -> interpret as " _YELLOW_("ISO18092 / FeliCa") "\n"
@@ -1408,6 +1413,7 @@ int CmdTraceList(const char *Cmd) {
     else if (strcmp(type, "14b") == 0)      protocol = ISO_14443B;
     else if (strcmp(type, "15") == 0)       protocol = ISO_15693;
     else if (strcmp(type, "7816") == 0)     protocol = ISO_7816_4;
+    else if (strcmp(type, "calypso") == 0)  protocol = PROTO_CALYPSO;
     else if (strcmp(type, "cryptorf") == 0) protocol = PROTO_CRYPTORF;
     else if (strcmp(type, "des") == 0)      protocol = MFDES;
     else if (strcmp(type, "felica") == 0)   protocol = FELICA;
@@ -1503,6 +1509,9 @@ int CmdTraceList(const char *Cmd) {
 
         if (protocol == ISO_7816_4)
             PrintAndLogEx(INFO, _YELLOW_("ISO7816-4 / Smartcard") " - Timings n/a");
+
+        if (protocol == PROTO_CALYPSO)
+            PrintAndLogEx(INFO, _YELLOW_("Calypso") " - Timings n/a");
 
         if (protocol == PROTO_HITAG1 || protocol == PROTO_HITAG2 || protocol == PROTO_HITAGS || protocol == PROTO_HITAGU) {
             PrintAndLogEx(INFO, _YELLOW_("Hitag 1 / Hitag 2 / Hitag S / Hitag µ") " - Timings in ETU (8us)");

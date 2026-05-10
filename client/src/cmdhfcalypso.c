@@ -27,6 +27,7 @@
 #include "cmdhf14a.h"
 #include "cmdhf14b.h"
 #include "cmdparser.h"
+#include "cmdtrace.h"
 #include "commonutil.h"
 #include "comms.h"
 #include "emv/emvcore.h"
@@ -279,6 +280,15 @@ static const calypso_get_data_probe_t calypso_get_data_probes[] = {
     {0x0185, "Traceability Information", false},
     {0x5F52, "ATR historical bytes", true},
 };
+
+const char *CalypsoGetDataTagName(uint16_t tag) {
+    for (size_t i = 0; i < ARRAYLEN(calypso_get_data_probes); i++) {
+        if (calypso_get_data_probes[i].tag == tag) {
+            return calypso_get_data_probes[i].name;
+        }
+    }
+    return NULL;
+}
 
 static const char *calypso_file_structure_desc(uint8_t subtype) {
     switch (subtype) {
@@ -2898,6 +2908,10 @@ static int CmdHFCalypsoDump(const char *Cmd) {
     return first_error;
 }
 
+static int CmdHFCalypsoList(const char *Cmd) {
+    return CmdTraceListAlias(Cmd, "hf calypso", "calypso");
+}
+
 static int CmdHFCalypsoInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf calypso info",
@@ -3006,6 +3020,7 @@ static command_t CommandTable[] = {
     {"help", CmdHelp,          AlwaysAvailable, "This help"},
     {"info", CmdHFCalypsoInfo, IfPm3Iso14443,   "Tag information"},
     {"dump", CmdHFCalypsoDump, IfPm3Iso14443,   "Dump readable files and records"},
+    {"list", CmdHFCalypsoList, AlwaysAvailable, "List Calypso history"},
     {NULL, NULL, NULL, NULL}
 };
 
