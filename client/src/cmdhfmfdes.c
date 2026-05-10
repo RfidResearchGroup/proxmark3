@@ -6664,7 +6664,7 @@ static int CmdHF14ADesMakeMFCLicense(const char *Cmd) {
         license_len = 1 + 2*num_blocks;
     }
 
-    PrintAndLogEx(loglevel, "Covering %d sector%s in total", num_sectors, num_sectors != 1 ? "s" : "");
+    PrintAndLogEx(loglevel, "Covering %lu sector%s in total", num_sectors, num_sectors != 1 ? "s" : "");
 
     if (use_default_keys) {
         // by default: all key A FFFFFFFFFFFF, all key B readable
