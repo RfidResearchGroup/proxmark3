@@ -36,13 +36,25 @@
 #include "i2c.h"
 #include "i2c_direct.h"
 
-static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint8_t *output, uint16_t *olen) {
+// Maximum chained ISO 7816-4 GET RESPONSE (61xx) follow-ups before bailing.
+// A misbehaving card that always returns 61xx would otherwise recurse without
+// bound, allocating fresh smart_card_raw_t payloads from BigBuf each time
+// until the device wedges. Eight rounds is more than any legitimate APDU
+// chain would need.
+#define SC_DIRECT_MAX_DEPTH 8
+
+static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint8_t *output, uint16_t *olen, uint8_t depth) {
     LED_D_ON();
 
     uint16_t len = 0;
     uint8_t *resp = BigBuf_calloc(ISO7816_MAX_FRAME);
+    if (resp == NULL) {
+        Dbprintf("SmartCardDirectSend: BigBuf_calloc failed");
+        if (olen) *olen = 0;
+        LEDsoff();
+        return;
+    }
     resp[0] = prepend;
-    // check if alloacted...
     smartcard_command_t flags = p->flags;
 
     if ((flags & SC_LOG) == SC_LOG)
@@ -70,7 +82,10 @@ static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint
     if (((flags & SC_RAW) == SC_RAW) || ((flags & SC_RAW_T0) == SC_RAW_T0)) {
 
         if ((flags & SC_WAIT) == SC_WAIT) {
-            wait = (uint32_t)((p->wait_delay * 1000) / 3.07);
+            // wait_delay is in ms; one WaitSCL_H_delay iteration is ~3.07us.
+            // Integer-only conversion via uint64_t to avoid soft-float and
+            // avoid overflow at large wait_delay values.
+            wait = (uint32_t)(((uint64_t)p->wait_delay * 100000U + 153U) / 307U);
         }
 
         LogTrace(p->data, p->len, 0, 0, NULL, true);
@@ -82,8 +97,10 @@ static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint
                        I2C_DEVICE_ADDRESS_MAIN
                    );
 
-        if (res == false && g_dbglevel > 3) {
-            Dbprintf("SmartCardDirectSend: I2C_BufferWrite failed\n");
+        if (res == false) {
+            if (g_dbglevel > 3) {
+                Dbprintf("SmartCardDirectSend: I2C_BufferWrite failed");
+            }
             goto OUT;
         }
 
@@ -98,15 +115,25 @@ static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint
     }
 
     if (len == 2 && resp[1] == 0x61) {
+
+        if (depth >= SC_DIRECT_MAX_DEPTH) {
+            Dbprintf("SmartCardDirectSend: GET RESPONSE chain depth (%u) exceeded; aborting", depth);
+            goto OUT;
+        }
+
         uint8_t cmd_getresp[] = {0x00, ISO7816_GET_RESPONSE, 0x00, 0x00, resp[2]};
 
         smart_card_raw_t *payload = (smart_card_raw_t *)BigBuf_calloc(sizeof(smart_card_raw_t) + sizeof(cmd_getresp));
+        if (payload == NULL) {
+            Dbprintf("SmartCardDirectSend: GET RESPONSE alloc failed");
+            goto OUT;
+        }
         payload->flags = SC_RAW | SC_LOG;
         payload->len = sizeof(cmd_getresp);
         payload->wait_delay = 0;
         memcpy(payload->data, cmd_getresp, sizeof(cmd_getresp));
 
-        SmartCardDirectSend(prepend, payload, output, olen);
+        SmartCardDirectSend(prepend, payload, output, olen, depth + 1);
     } else if (len == 2) {
         Dbprintf("***** BAD response from card (response unsupported)...");
         Dbhexdump(3, &resp[0], false);
@@ -199,7 +226,7 @@ int CmdSmartRaw(const uint8_t prepend, const uint8_t *data, int dlen, uint8_t *o
             payload->flags |= SC_RAW;
     }
 
-    SmartCardDirectSend(prepend, payload, output, olen);
+    SmartCardDirectSend(prepend, payload, output, olen, 0);
 
     return PM3_SUCCESS;
 }
