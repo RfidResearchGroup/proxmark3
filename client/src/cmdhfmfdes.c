@@ -3371,10 +3371,9 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes auth",
                   "Select application on the card. It selects app if it is a valid one or returns an error.",
-                  "hf mfdes auth  -n 0  -t des -k 0000000000000000 --kdf none              -> select PICC level and authenticate with key num=0, key type=des, key=00..00 and key derivation = none\n"
-                  "hf mfdes auth  -n 0  -t aes -k 00000000000000000000000000000000         -> select PICC level and authenticate with key num=0, key type=aes, key=00..00 and key derivation = none\n"
-                  "hf mfdes auth  -n 0  -t des -k 0000000000000000 --save                  -> select PICC level and authenticate and in case of successful authentication - save channel parameters to defaults\n"
-                  "hf mfdes auth  -n 49 -t aes -k 00000000000000000000000000000000 --force -> permanently disable Mifare Classic functionality on a DESFire EV3C\n"
+                  "hf mfdes auth  -n 0  -t des -k 0000000000000000 --kdf none       -> select PICC level and authenticate with key num=0, key type=des, key=00..00 and key derivation = none\n"
+                  "hf mfdes auth  -n 0  -t aes -k 00000000000000000000000000000000  -> select PICC level and authenticate with key num=0, key type=aes, key=00..00 and key derivation = none\n"
+                  "hf mfdes auth  -n 0  -t des -k 0000000000000000 --save           -> select PICC level and authenticate and in case of successful authentication - save channel parameters to defaults\n"
                   "hf mfdes auth --aid 123456    -> select application 123456 and authenticate via parameters from `default` command\n"
                   "hf mfdes auth --dfname D2760000850100 -n 0 -t aes -k 00000000000000000000000000000000 -> select DF by name and authenticate");
 
@@ -3382,7 +3381,6 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
-        arg_lit0("f",  "force",   "Force irreversible operations"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
         arg_str0("k",  "key",     "<hex>", "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -3401,28 +3399,21 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
-    bool force = arg_get_lit(ctx, 3);
 
     DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, &securechann, DCMPlain, &id, &selectway);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, &securechann, DCMPlain, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
     }
 
-    bool save = arg_get_lit(ctx, 15);
+    bool save = arg_get_lit(ctx, 14);
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
-
-    if (dctx.keyNum == MFDES_EV3C_MFC_KILL_KEY && !force) {
-        DropField();
-        PrintAndLogEx(FAILED, "This operation would permanently disable the Mifare Classic functionality, use --force to override");
-        return PM3_EOPABORTED;
-    }
 
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, false, verbose);
     if (res != PM3_SUCCESS) {
