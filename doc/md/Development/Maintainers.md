@@ -62,6 +62,8 @@ It's also possible to skip parts even if libraries are present in the compilatio
 * `make client SKIPQT=1` to skip GUI even if Qt is present
 * `make client SKIPQT6=1` to skip Qt6 even if Qt6 is present, anf fallback on Qt5
 * `make client SKIPBT=1` to skip native Bluetooth support even if libbluetooth is present
+* `make client SKIPGD=1` to skip NFC ePaper support even if libgd is present
+* `make client SKIPZPIB=1` to skip decompressing compressed Google Smart Tap payloads support even if libzlib is present
 * `make client SKIPPYTHON=1` to skip embedded Python 3 interpreter even if libpython3 is present
 * `make client SKIPLUASYSTEM=1` to skip system Lua lib even if liblua5.2 is present, use embedded Lua lib instead
 * `make client SKIPJANSSONSYSTEM=1` to skip system Jansson lib even if libjansson is present, use embedded Jansson lib instead
@@ -88,6 +90,19 @@ One tool requires a CUDA compilation environment, it can be skipped as well:
 Some unittests are available via `make check`, which is actually triggering individual targets as for `make install`.
 
 * `SKIPUV=1 tools/pm3_tests.sh` to skip usage of `uv` even if `uv` is present, and force usage of `python3` (in which case you must take care of installing the script dependencies yourself)
+
+Inversely, it's possible to mandate parts and make sure the compilation will fail if libraries are not present in the compilation environment:
+
+* `make client FORCEQT=1` to make sure Qt is present
+* `make client FORCEQT6=1` to make sure Qt6 is present
+* `make client FORCEBT=1` to make sure libbluetooth is present
+* `make client FORCEGD=1` to make sure libgd is present
+* `make client FORCEZPIB=1` to make sure libzlib is present
+* `make client FORCEPYTHON=1` to make sure libpython3 is present
+* `make client FORCELUASYSTEM=1` to make sure liblua5.2 is present in the system
+* `make client FORCEJANSSONSYSTEM=1` to make sure libjansson is present in the system
+* `make client FORCEWHEREAMISYSTEM=1` to make sure libwhereami is present in the system
+* `make client FORCEREADLINE=1` to make sure libreadline is present
 
 Host binaries are compiled with hardening flags (only with Makefile, not with cmake). Exact level of hardening depends on the OS.
 

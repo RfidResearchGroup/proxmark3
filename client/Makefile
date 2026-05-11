@@ -555,10 +555,16 @@ else
         ifeq ($(QT6_FOUND),1)
             $(info GUI support:       QT6 found, enabled ($(shell QT_SELECT=6 $(QMAKE) -v 2>/dev/null|grep -o 'Qt version.*')))
         else
+            ifeq ($(FORCEQT6),1)
+                $(error FORCEQT6 not satisfied, aborting)
+            endif
             $(info GUI support:       QT5 found, enabled ($(shell QT_SELECT=5 $(QMAKE) -v 2>/dev/null|grep -o 'Qt version.*')))
         endif
     else
         $(info GUI support:       QT not found, disabled)
+        ifeq ($(FORCEQT),1)
+            $(error FORCEQT not satisfied, aborting)
+        endif
     endif
 endif
 
@@ -569,6 +575,9 @@ else
         $(info native BT support: Bluez found, enabled)
     else
         $(info native BT support: Bluez not found, disabled)
+        ifeq ($(FORCEBT),1)
+            $(error FORCEBT not satisfied, aborting)
+        endif
     endif
 endif
 
@@ -578,6 +587,9 @@ else ifeq ($(JANSSON_FOUND),1)
     $(info Jansson library:   system library found)
 else
     $(info Jansson library:   system library not found, using local library)
+    ifeq ($(FORCEJANSSONSYSTEM),1)
+        $(error FORCEJANSSONSYSTEM not satisfied, aborting)
+    endif
 endif
 
 ifeq ($(SKIPLUASYSTEM),1)
@@ -587,6 +599,9 @@ else
         $(info Lua library:       system library found)
     else
         $(info Lua library:       system library not found, using local library)
+        ifeq ($(FORCELUASYSTEM),1)
+            $(error FORCELUASYSTEM not satisfied, aborting)
+        endif
     endif
 endif
 
@@ -597,6 +612,9 @@ else
         $(info Python3 library:   Python3 v$(shell $(PKG_CONFIG_ENV) pkg-config --modversion $(PYTHON3_PKGCONFIG)) found, enabled)
     else
         $(info Python3 library:   Python3 not found, disabled)
+        ifeq ($(FORCEPYTHON),1)
+            $(error FORCEPYTHON not satisfied, aborting)
+        endif
     endif
 endif
 
@@ -607,13 +625,23 @@ else
         $(info GD library:        GD v$(shell $(PKG_CONFIG_ENV) pkg-config --modversion gdlib) found, enabled)
     else
         $(info GD library:        GD not found, disabled)
+        ifeq ($(FORCEGD),1)
+            $(error FORCEGD not satisfied, aborting)
+        endif
     endif
 endif
 
-ifeq ($(ZLIB_FOUND),1)
-    $(info Zlib library:      system library found, enabled)
+ifeq ($(SKIPZLIB),1)
+    $(info Zlib library:      skipped)
 else
-    $(info Zlib library:      not found, disabled)
+    ifeq ($(ZLIB_FOUND),1)
+        $(info Zlib library:      system library found, enabled)
+    else
+        $(info Zlib library:      not found, disabled)
+        ifeq ($(FORCEZLIB),1)
+            $(error FORCEZLIB not satisfied, aborting)
+        endif
+    endif
 endif
 
 ifeq ($(SKIPREADLINE),1)
@@ -623,6 +651,9 @@ else
         $(info Readline library:  enabled)
     else
         $(info Readline library:  Readline not found, disabled)
+        ifeq ($(FORCEREADLINE),1)
+            $(error FORCEREADLINE not satisfied, aborting)
+        endif
     endif
 endif
 
@@ -634,6 +665,9 @@ ifneq ($(READLINE_FOUND),1)
             $(info Linenoise library: enabled)
         else
             $(info Linenoise library: Linenoise not found, disabled)
+            ifeq ($(FORCELINENOISE),1)
+                $(error FORCELINENOISE not satisfied, aborting)
+            endif
         endif
     endif
 endif
@@ -645,6 +679,9 @@ else
         $(info Whereami library:  system library found)
     else
         $(info Whereami library:  system library not found, using local library)
+        ifeq ($(FORCEWHEREAMISYSTEM),1)
+            $(error FORCEWHEREAMISYSTEM not satisfied, aborting)
+        endif
     endif
 endif
 
