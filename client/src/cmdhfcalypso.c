@@ -279,6 +279,9 @@ static const calypso_get_data_probe_t calypso_get_data_probes[] = {
     {0x00D0, "Other application AIDs", true},
     {0x0185, "Traceability Information", false},
     {0x5F52, "ATR historical bytes", true},
+    {0xDF4C, "Card Certificate", false},
+    {0xDF4A, "CA Certificate", false},
+    {0xDF2C, "Card Public Key", false},
 };
 
 const char *CalypsoGetDataTagName(uint16_t tag) {
@@ -1764,7 +1767,8 @@ static void calypso_print_info_data_objects(void) {
 
     for (size_t i = 0; i < ARRAYLEN(calypso_get_data_probes); i++) {
         const calypso_get_data_probe_t *probe = &calypso_get_data_probes[i];
-        if (probe->tag != 0x0185 && probe->tag != 0x5F52) {
+        if (probe->tag != 0x0185 && probe->tag != 0x5F52 &&
+                probe->tag != 0xDF4C && probe->tag != 0xDF4A && probe->tag != 0xDF2C) {
             continue;
         }
 
