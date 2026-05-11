@@ -161,6 +161,23 @@ int sam_send_payload(
     uint8_t *response,
     uint16_t *response_len
 ) {
+    return sam_send_payload_ex(addr_src, addr_dest, addr_reply, 0x00,
+                               payload, payload_len,
+                               response, response_len);
+}
+
+int sam_send_payload_ex(
+    const uint8_t addr_src,
+    const uint8_t addr_dest,
+    const uint8_t addr_reply,
+    const uint8_t scFlag,
+
+    const uint8_t *const payload,
+    const uint16_t *payload_len,
+
+    uint8_t *response,
+    uint16_t *response_len
+) {
     int res = PM3_SUCCESS;
 
     uint8_t *buf = response;
@@ -171,13 +188,14 @@ int sam_send_payload(
     buf[3] = 0x63; // P2
     buf[4] = SAM_TX_ASN1_PREFIX_LENGTH + (uint8_t) * payload_len; // LEN
 
+    // Grace routing header: FROM, TO, REPLY-TO, 0x00, 0x00, scFlag
     buf[5] = addr_src;
     buf[6] = addr_dest;
     buf[7] = addr_reply;
 
     buf[8] = 0x00;
     buf[9] = 0x00;
-    buf[10] = 0x00;
+    buf[10] = scFlag;
 
     memcpy(
         &buf[11],

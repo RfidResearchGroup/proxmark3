@@ -187,9 +187,8 @@ static bool WaitSCL_L(void) {
     return WaitSCL_L_delay(5000);
 }
 
-// Wait max 1800ms or until SCL goes LOW.
-// It timeout reading response from card
-// Which ever comes first
+// Wait up to 1200ms or until SCL goes LOW, whichever comes first.
+// Used to bound the timeout while reading a response from the card.
 static bool WaitSCL_L_timeout(void) {
     volatile uint32_t delay = 1200;
     while (delay--) {
@@ -199,7 +198,7 @@ static bool WaitSCL_L_timeout(void) {
 
         WaitMS(1);
     }
-    return (delay == 0);
+    return false;
 }
 
 static bool I2C_Start(void) {
@@ -489,8 +488,9 @@ bool I2C_BufferWrite(const uint8_t *data, uint16_t len, uint8_t device_cmd, uint
 // len = uint16 because we need to read up to 256bytes
 int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address) {
 
-    // sanity check
-    if (data == NULL || len == 0) {
+    // sanity check - need at least 2 bytes for the SIM-module length header
+    // (the response format prepends a 2-byte BE length); fewer cannot be parsed.
+    if (data == NULL || len < 2) {
         return 0;
     }
 
@@ -858,7 +858,11 @@ void SmartCardRaw(const smart_card_raw_t *p) {
 
     uint16_t len = 0;
     uint8_t *resp = BigBuf_calloc(ISO7816_MAX_FRAME);
-    // check if alloacted...
+    if (resp == NULL) {
+        reply_ng(CMD_SMART_RAW, PM3_EMALLOC, NULL, 0);
+        LEDsoff();
+        return;
+    }
     smartcard_command_t flags = p->flags;
 
     if ((flags & SC_CLEARLOG) == SC_CLEARLOG)
@@ -888,7 +892,10 @@ void SmartCardRaw(const smart_card_raw_t *p) {
 
         uint32_t wait = SIM_WAIT_DELAY;
         if ((flags & SC_WAIT) == SC_WAIT) {
-            wait = (uint32_t)((p->wait_delay * 1000) / 3.07);
+            // wait_delay is in ms; one WaitSCL_H_delay iteration is ~3.07us.
+            // Integer-only conversion via uint64_t to avoid soft-float and avoid
+            // overflow at large wait_delay values: (ms * 100000 + 153) / 307.
+            wait = (uint32_t)(((uint64_t)p->wait_delay * 100000U + 153U) / 307U);
         }
 
         LogTrace(p->data, p->len, 0, 0, NULL, true);
@@ -900,8 +907,10 @@ void SmartCardRaw(const smart_card_raw_t *p) {
                        I2C_DEVICE_ADDRESS_MAIN
                    );
 
-        if (res == false && g_dbglevel > 3) {
-            DbpString(I2C_ERROR);
+        if (res == false) {
+            if (g_dbglevel > 3) {
+                DbpString(I2C_ERROR);
+            }
             reply_ng(CMD_SMART_RAW, PM3_ESOFT, NULL, 0);
             goto OUT;
         }
@@ -937,7 +946,12 @@ void SmartCardUpgrade(uint64_t arg0) {
     bool isOK = true;
     uint16_t length = arg0, pos = 0;
     const uint8_t *fwdata = BigBuf_get_addr();
-    uint8_t *verfiydata = BigBuf_calloc(I2C_BLOCK_SIZE);
+    uint8_t *verifydata = BigBuf_calloc(I2C_BLOCK_SIZE);
+    if (verifydata == NULL) {
+        reply_ng(CMD_SMART_UPGRADE, PM3_EMALLOC, NULL, 0);
+        LED_C_OFF();
+        return;
+    }
 
     while (length) {
 
@@ -951,7 +965,7 @@ void SmartCardUpgrade(uint64_t arg0) {
         // write
         int16_t res = I2C_WriteFW(fwdata + pos, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
         if (!res) {
-            DbpString("Writing failed");
+            Dbprintf("Writing failed at offset 0x%04X", pos);
             isOK = false;
             break;
         }
@@ -960,16 +974,16 @@ void SmartCardUpgrade(uint64_t arg0) {
         WaitMS(50);
 
         // read
-        res = I2C_ReadFW(verfiydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
+        res = I2C_ReadFW(verifydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
         if (res <= 0) {
-            DbpString("Reading back failed");
+            Dbprintf("Reading back failed at offset 0x%04X", pos);
             isOK = false;
             break;
         }
 
         // cmp
-        if (0 != memcmp(fwdata + pos, verfiydata, size)) {
-            DbpString("not equal data");
+        if (0 != memcmp(fwdata + pos, verifydata, size)) {
+            Dbprintf("Verify mismatch at offset 0x%04X", pos);
             isOK = false;
             break;
         }
@@ -983,7 +997,20 @@ void SmartCardUpgrade(uint64_t arg0) {
     BigBuf_free();
 }
 
+// Send a single byte to the SIM module's CMD_SETBAUD opcode (0x04).
+// The 8051 firmware uses this to reload Timer1 (UART0 baud generator).
+// Until 2026 the implementation was an empty stub; the SIM module silently
+// ignored any host-driven baud renegotiation. Some smart cards (notably the
+// HID Artemis SLE88 SAM family) advertise non-default Fi/Di in TA1 and need
+// PPS to switch the bridge baud post-ATR.
 void SmartCardSetBaud(uint64_t arg0) {
+    LED_D_ON();
+    I2C_Reset_EnterMainProgram();
+    bool ok = I2C_WriteByte((uint8_t)(arg0 & 0xFF),
+                            I2C_DEVICE_CMD_SETBAUD,
+                            I2C_DEVICE_ADDRESS_MAIN);
+    reply_ng(CMD_SMART_SETBAUD, ok ? PM3_SUCCESS : PM3_ESOFT, NULL, 0);
+    LEDsoff();
 }
 
 void SmartCardSetClock(uint64_t arg0) {
