@@ -46,6 +46,7 @@
 #include "proxendian.h"
 #include "iclass_cmd.h"
 #include "crypto/asn1utils.h"       // ASN1 decoder
+#include "crypto/libpcrypto.h"      // aes_encode, aes_decode (for SAM SC)
 #include "preferences.h"
 #include "generator.h"
 #include "cmdhw.h"
@@ -7744,7 +7745,14 @@ static bool match_with_wildcard(const uint8_t *data, const uint8_t *pattern, con
 }
 
 
-static int CmdHFiClassSAM(const char *Cmd) {
+// ---------------------------------------------------------------------------
+// Legacy "hf iclass sam" PACS-extraction implementation.
+//
+// Reached via the CmdHFiClassSAM dispatcher (below) when no SC subcommand
+// keyword is given - so `hf iclass sam`, `hf iclass sam --info`,
+// `hf iclass sam -p -d ...`, `hf iclass sam -f ...` etc. all land here.
+// ---------------------------------------------------------------------------
+static int CmdHFiClassSAMExtract(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass sam",
                   "Extract PACS via a HID SAM\n",
@@ -7752,6 +7760,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
                   "hf iclass sam -p -d a005a103800104  -> get PACS data, prevent epurse update\n"
                   "hf iclass sam --break               -> get Nr-MAC for extracting encrypted SIO\n"
                   "hf iclass sam -f hf-iclass-dump.bin -> emulate card from dump file to SAM\n"
+                  "hf iclass sam --info                -> get SAM version + serial (also warms up the SAM)\n"
                  );
 
     void *argtable[] = {
@@ -7945,6 +7954,829 @@ static int CmdHFiClassSAM(const char *Cmd) {
     }
 
     return PM3_SUCCESS;
+}
+
+// ===========================================================================
+// HID Artemis secure-channel session - persistent across CLI calls
+// ===========================================================================
+//
+// Sits on top of the new CMD_HF_SAM_SC firmware dispatcher (armsrc/sam_sc.c).
+// The firmware is just a transport pipe - host owns the SCP02 / Grace crypto
+// state (sEnc / sMAC1 / sMAC2 / rolling C-MAC + R-MAC) and the SAM-assigned
+// scFlag. State persists across CLI invocations in the static s_sam_sc.
+//
+// All bit patterns mirror UTILITIES_TOOLS/cp1000_client/secure_channel.py.
+
+// Mirror of armsrc/sam_sc.h - duplicated locally so the client doesn't have
+// to pull armsrc/ headers. Keep in sync if those flags ever change.
+#define SAM_SC_FLAG_FORCE_RESET (1 << 0)
+#define SAM_SC_FLAG_RELEASE     (1 << 1)
+#define SAM_SC_FLAG_NO_PAYLOAD  (1 << 2)
+
+// Mirror of armsrc/i2c.h::ISO7816_MAX_FRAME (270). Not exported to the
+// client; used as an upper bound for SC plaintext / wrap buffers.
+#define SAM_SC_MAX_FRAME 270
+
+// All-zero placeholder master key. Real master keys depend on the target
+// SAM's provisioning state and must be supplied with --key. Slot 0x85 is the
+// canonical HidUserAdmin slot index on CP1000-class encoders.
+static const uint8_t SAM_SC_DEFAULT_MASTER_KEY[16] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+static const uint8_t SAM_SC_DEFAULT_KREF = 0x85;
+
+typedef struct {
+    bool open;
+    uint8_t kref;
+    uint8_t master_key[16];
+    uint8_t suid[8];
+    uint8_t rnd_a[8];
+    uint8_t rnd_b[8];
+    uint8_t scbk[16];
+    uint8_t s_enc[16];
+    uint8_t s_mac1[16];
+    uint8_t s_mac2[16];
+    uint8_t c_mac[16];   // rolling client MAC (advanced by Wrap)
+    uint8_t r_mac[16];   // rolling server MAC (advanced by Unwrap)
+    uint8_t sc_flag;     // SAM-assigned secure-channel routing byte
+} sam_sc_session_t;
+
+static sam_sc_session_t s_sam_sc = {0};
+
+// HID's custom CBC-MAC variant. Zero-pad msg to a 16B multiple; AES-ECB
+// the first N-1 blocks with sMAC1, the last with sMAC2. Initial mac = iv.
+// Output is 16 bytes (no truncation). AES-ECB single block done via
+// aes_encode() with a zero CBC-IV.
+static void sam_sc_hid_mac(const uint8_t s_mac1[16], const uint8_t s_mac2[16],
+                           const uint8_t iv[16],
+                           const uint8_t *msg, size_t msg_len,
+                           uint8_t out[16]) {
+    uint8_t mac[16];
+    memcpy(mac, iv, 16);
+
+    if (msg_len == 0) msg_len = 16;
+    size_t pad = (16 - (msg_len % 16)) % 16;
+    size_t total = msg_len + pad;
+    size_t blocks = total / 16;
+
+    for (size_t i = 0; i < blocks; i++) {
+        uint8_t block[16];
+        size_t off = i * 16;
+        size_t copy = (off + 16 <= msg_len) ? 16 : (msg_len > off ? msg_len - off : 0);
+        if (copy > 0) memcpy(block, msg + off, copy);
+        if (copy < 16) memset(block + copy, 0x00, 16 - copy);
+
+        for (size_t j = 0; j < 16; j++) block[j] ^= mac[j];
+
+        uint8_t zero_iv[16] = {0}, key_copy[16];
+        memcpy(key_copy, (i + 1 == blocks) ? s_mac2 : s_mac1, 16);
+        aes_encode(zero_iv, key_copy, block, mac, 16);
+    }
+    memcpy(out, mac, 16);
+}
+
+// Send a payload via CMD_HF_SAM_SC. Returns SAM-assigned scFlag and the SAM
+// response bytes (BD/BE-prefixed) per the reply layout in armsrc/sam_sc.h.
+static int sam_sc_dispatch(uint8_t flags, uint8_t scflag_in,
+                           const uint8_t *payload, uint16_t payload_len,
+                           uint8_t *sc_flag_out, uint8_t *sam_resp,
+                           uint16_t *sam_resp_len) {
+    if (sc_flag_out == NULL || sam_resp == NULL || sam_resp_len == NULL)
+        return PM3_EINVARG;
+    if ((size_t)payload_len + 5 > PM3_CMD_DATA_SIZE)
+        return PM3_EINVARG;
+
+    uint8_t pkt[PM3_CMD_DATA_SIZE] = {0};
+    pkt[0] = flags;
+    pkt[1] = 0x44;   // ipcNodeIdExternalApplicationA (us)
+    pkt[2] = 0x0A;   // ipcNodeIdPrimarySam
+    pkt[3] = 0x44;   // reply-to = us
+    pkt[4] = scflag_in;
+    if (payload_len > 0)
+        memcpy(pkt + 5, payload, payload_len);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_SAM_SC, pkt, payload_len + 5);
+
+    PacketResponseNG resp;
+    if (WaitForResponse(CMD_HF_SAM_SC, &resp) == false)
+        return PM3_ETIMEOUT;
+    if (resp.status != PM3_SUCCESS)
+        return resp.status;
+    if (resp.length < 1)
+        return PM3_ESOFT;
+
+    *sc_flag_out = resp.data.asBytes[0];
+    uint16_t body_len = (uint16_t)(resp.length - 1);
+    if (body_len > *sam_resp_len) body_len = *sam_resp_len;
+    if (body_len > 0) memcpy(sam_resp, resp.data.asBytes + 1, body_len);
+    *sam_resp_len = body_len;
+    return PM3_SUCCESS;
+}
+
+// Build the InitAuth SAM payload (23 bytes):
+//   A0 15 AF 13 80 01 <ver> 81 01 <kref> 82 08 <rnd_a> 83 01 <tca>
+static uint16_t sam_sc_build_init_auth(uint8_t kref, const uint8_t rnd_a[8],
+                                       uint8_t out[23]) {
+    out[0] = 0xA0; out[1] = 0x15;
+    out[2] = 0xAF; out[3] = 0x13;
+    out[4] = 0x80; out[5] = 0x01; out[6] = 0x00;        // version=0
+    out[7] = 0x81; out[8] = 0x01; out[9] = kref;
+    out[10] = 0x82; out[11] = 0x08;
+    memcpy(out + 12, rnd_a, 8);
+    out[20] = 0x83; out[21] = 0x01; out[22] = 0x00;     // tca=0
+    return 23;
+}
+
+// Build the ContinueAuth SAM payload (40 bytes):
+//   A0 26 B0 24 80 10 <clientCryptogram> 81 10 <clientCmac>
+static uint16_t sam_sc_build_continue_auth(const uint8_t client_crypto[16],
+                                            const uint8_t client_cmac[16],
+                                            uint8_t out[40]) {
+    out[0] = 0xA0; out[1] = 0x26;
+    out[2] = 0xB0; out[3] = 0x24;
+    out[4] = 0x80; out[5] = 0x10;
+    memcpy(out + 6, client_crypto, 16);
+    out[22] = 0x81; out[23] = 0x10;
+    memcpy(out + 24, client_cmac, 16);
+    return 40;
+}
+
+// out = AES-CBC(scbk, IV=0, prefix(2) || rnd_b[0..2] || zeros[12])  (1 block).
+static void sam_sc_kdf_derive(const uint8_t scbk[16], const uint8_t prefix[2],
+                              const uint8_t rnd_b[8], uint8_t out[16]) {
+    uint8_t in[16];
+    in[0] = prefix[0];
+    in[1] = prefix[1];
+    in[2] = rnd_b[0];
+    in[3] = rnd_b[1];
+    memset(in + 4, 0, 12);
+    uint8_t iv[16] = {0}, key_copy[16];
+    memcpy(key_copy, scbk, 16);
+    aes_encode(iv, key_copy, in, out, 16);
+}
+
+// Wrap plaintext for transmission on the open SC. Returns wrapped length.
+//   padded     = plaintext || 0x80 || zeros (to next 16B)
+//   iv_enc     = ~r_mac
+//   ciphertext = AES-CBC(s_enc, iv_enc, padded)
+//   new_cmac   = HID-MAC(s_mac1, s_mac2, IV=r_mac, ciphertext)
+//   c_mac     <- new_cmac (R-MAC unchanged; only Unwrap advances it)
+//   return ciphertext || new_cmac
+static uint16_t sam_sc_wrap(const uint8_t *plaintext, uint16_t plaintext_len,
+                            uint8_t *out, uint16_t out_cap) {
+    if (s_sam_sc.open == false) return 0;
+    uint16_t padded_len = plaintext_len + 1;
+    if ((padded_len % 16) != 0) padded_len += 16 - (padded_len % 16);
+    if ((uint32_t)padded_len + 16 > out_cap) return 0;
+
+    uint8_t padded[SAM_SC_MAX_FRAME];
+    if (padded_len > sizeof(padded)) return 0;
+    if (plaintext_len > 0) memcpy(padded, plaintext, plaintext_len);
+    padded[plaintext_len] = 0x80;
+    if (padded_len > plaintext_len + 1)
+        memset(padded + plaintext_len + 1, 0x00, padded_len - plaintext_len - 1);
+
+    uint8_t iv_enc[16], key_copy[16];
+    for (int i = 0; i < 16; i++) iv_enc[i] = (uint8_t)(s_sam_sc.r_mac[i] ^ 0xFF);
+    memcpy(key_copy, s_sam_sc.s_enc, 16);
+    aes_encode(iv_enc, key_copy, padded, out, padded_len);
+
+    uint8_t new_cmac[16];
+    sam_sc_hid_mac(s_sam_sc.s_mac1, s_sam_sc.s_mac2, s_sam_sc.r_mac,
+                   out, padded_len, new_cmac);
+
+    memcpy(out + padded_len, new_cmac, 16);
+    memcpy(s_sam_sc.c_mac, new_cmac, 16);
+    return (uint16_t)(padded_len + 16);
+}
+
+// Unwrap ciphertext+MAC. Verifies MAC under c_mac, decrypts under sEnc with
+// iv=~c_mac, strips 0x80+zeros padding, advances r_mac. Returns plaintext
+// length on success, -1 on MAC mismatch or padding error.
+static int sam_sc_unwrap(const uint8_t *data, uint16_t data_len,
+                         uint8_t *plaintext_out, uint16_t out_cap) {
+    if (s_sam_sc.open == false) return -1;
+    if (data_len < 16) return -1;
+    uint16_t ct_len = data_len - 16;
+    const uint8_t *ciphertext = data;
+    const uint8_t *received_mac = data + ct_len;
+
+    uint8_t expected_mac[16];
+    sam_sc_hid_mac(s_sam_sc.s_mac1, s_sam_sc.s_mac2, s_sam_sc.c_mac,
+                   ciphertext, ct_len, expected_mac);
+    if (memcmp(expected_mac, received_mac, 16) != 0) return -1;
+
+    if (ct_len == 0) {
+        memcpy(s_sam_sc.r_mac, received_mac, 16);
+        return 0;
+    }
+    if (ct_len > out_cap) return -1;
+
+    uint8_t iv_dec[16], key_copy[16];
+    for (int i = 0; i < 16; i++) iv_dec[i] = (uint8_t)(s_sam_sc.c_mac[i] ^ 0xFF);
+    memcpy(key_copy, s_sam_sc.s_enc, 16);
+    aes_decode(iv_dec, key_copy, (uint8_t *)ciphertext, plaintext_out, ct_len);
+
+    int i = ct_len - 1;
+    while (i >= 0 && plaintext_out[i] == 0x00) i--;
+    if (i < 0 || plaintext_out[i] != 0x80) return -1;
+    int plaintext_len = i;
+
+    memcpy(s_sam_sc.r_mac, received_mac, 16);
+    return plaintext_len;
+}
+
+// Peel BD <len> 8A <len>  or  BD <len> B3 <len>  or  BE <len> envelopes.
+// Returns pointer to inner ciphertext+MAC bytes + its length. *path is set
+// to 'A', 'B', or 'C'. Returns 0 on success, -1 on shape error. Supports
+// short-form and long-form (0x81/0x82) BER lengths.
+static int sam_sc_peel_envelope(const uint8_t *resp, uint16_t resp_len,
+                                const uint8_t **inner, uint16_t *inner_len,
+                                char *path) {
+    if (resp_len < 2) return -1;
+
+    #define SAM_SC_READ_BER_LEN(buf, buflen, off, out_len)                \
+        do {                                                              \
+            if ((off) >= (buflen)) return -1;                             \
+            uint8_t b0 = (buf)[(off)++];                                  \
+            if (b0 < 0x80) { (out_len) = b0; }                            \
+            else if (b0 == 0x81) {                                        \
+                if ((off) >= (buflen)) return -1;                         \
+                (out_len) = (buf)[(off)++];                               \
+            } else if (b0 == 0x82) {                                      \
+                if ((off) + 1 >= (buflen)) return -1;                     \
+                (out_len) = ((uint16_t)(buf)[(off)] << 8) | (buf)[(off)+1]; \
+                (off) += 2;                                               \
+            } else return -1;                                             \
+        } while (0)
+
+    uint16_t off = 0;
+    uint8_t outer_tag = resp[off++];
+    uint16_t outer_len;
+    SAM_SC_READ_BER_LEN(resp, resp_len, off, outer_len);
+    if ((uint32_t)off + outer_len > resp_len) return -1;
+
+    if (outer_tag == 0xBE) {
+        *path = 'C';
+        *inner = resp + off;
+        *inner_len = outer_len;
+        return 0;
+    }
+    if (outer_tag != 0xBD) return -1;
+
+    if (off >= resp_len) return -1;
+    uint8_t inner_tag = resp[off++];
+    uint16_t in_len;
+    SAM_SC_READ_BER_LEN(resp, resp_len, off, in_len);
+    if ((uint32_t)off + in_len > resp_len) return -1;
+
+    if (inner_tag == 0x8A)      *path = 'A';
+    else if (inner_tag == 0xB3) *path = 'B';
+    else return -1;
+
+    *inner = resp + off;
+    *inner_len = in_len;
+    return 0;
+
+    #undef SAM_SC_READ_BER_LEN
+}
+
+// Encode a BER length (short form < 128, otherwise 0x81/0x82).
+static uint8_t sam_sc_emit_ber_len(uint8_t *out, uint16_t len) {
+    if (len < 0x80) { out[0] = (uint8_t)len; return 1; }
+    if (len < 0x100) { out[0] = 0x81; out[1] = (uint8_t)len; return 2; }
+    out[0] = 0x82; out[1] = (uint8_t)(len >> 8); out[2] = (uint8_t)(len & 0xFF);
+    return 3;
+}
+
+// ---------------------------------------------------------------------------
+// hf iclass sam scopen
+// ---------------------------------------------------------------------------
+static int CmdHFiClassSAMSCOpen(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass sam scopen",
+                  "Open a HID Artemis secure channel: InitAuth + ContinueAuth.\n"
+                  "Persists the session state across CLI commands so subsequent\n"
+                  "scsend / scclose operations can wrap/unwrap APDUs against\n"
+                  "the same SAM-side session.\n"
+                  "Defaults: --key 00000000000000000000000000000000 --kref 0x85",
+                  "hf iclass sam scopen --key 00000000000000000000000000000000\n"
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "key",  "<hex>", "16-byte AES master key (default: all zeros - override with real key)"),
+        arg_int0(NULL, "kref", "<dec>", "key reference slot 0..255 (default: 0x85)"),
+        arg_lit0("v",  "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t master_key[16];
+    int key_len = 0;
+    if (CLIParamHexToBuf(arg_get_str(ctx, 1), master_key, sizeof(master_key), &key_len) != PM3_SUCCESS) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (key_len == 0) {
+        memcpy(master_key, SAM_SC_DEFAULT_MASTER_KEY, 16);
+    } else if (key_len != 16) {
+        PrintAndLogEx(FAILED, "--key must be exactly 16 bytes (32 hex chars), got %d", key_len);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    int kref = arg_get_int_def(ctx, 2, SAM_SC_DEFAULT_KREF);
+    bool verbose = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    if (kref < 0 || kref > 0xFF) {
+        PrintAndLogEx(FAILED, "--kref must be 0..255");
+        return PM3_EINVARG;
+    }
+
+    memset(&s_sam_sc, 0, sizeof(s_sam_sc));
+    memcpy(s_sam_sc.master_key, master_key, 16);
+    s_sam_sc.kref = (uint8_t)kref;
+
+    PrintAndLogEx(INFO, "KREF       : 0x%02X", s_sam_sc.kref);
+    PrintAndLogEx(INFO, "Master key : %s", sprint_hex_inrow(master_key, 16));
+
+    // ---------------- Initialize the SAM ----------------
+    // Run the equivalent of `hf iclass sam --info` first. This:
+    //   - Resets the SAM via I2C (CMD_HF_SAM_PICOPASS dispatcher)
+    //   - Sends sam_get_version + sam_get_serial_number as a warmup
+    //   - Prints the version + serial to the user
+    // The InitAuth that follows then reaches a SAM in a known clean state.
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "--- Initializing SAM ('hf iclass sam --info') ---");
+    int init_rc = CmdHFiClassSAMExtract("--info");
+    if (init_rc != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "SAM init returned rc=%d; continuing with InitAuth anyway", init_rc);
+    }
+    PrintAndLogEx(INFO, "--- Opening secure channel ---");
+    PrintAndLogEx(INFO, "");
+
+    // ---------------- InitAuth ----------------
+    uint8_t init_auth[23];
+    sam_sc_build_init_auth(s_sam_sc.kref, s_sam_sc.rnd_a, init_auth);
+
+    uint8_t resp[PM3_CMD_DATA_SIZE];
+    uint16_t resp_len = sizeof(resp);
+    uint8_t sam_flag = 0;
+    int rc = sam_sc_dispatch(SAM_SC_FLAG_FORCE_RESET, 0x00,
+                             init_auth, sizeof(init_auth),
+                             &sam_flag, resp, &resp_len);
+    if (rc != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "InitAuth dispatch failed (rc=%d)", rc);
+        return rc;
+    }
+    if (verbose)
+        PrintAndLogEx(DEBUG, "InitAuth scFlag=0x%02X resp(%u): %s",
+                      sam_flag, resp_len, sprint_hex_inrow(resp, resp_len));
+
+    if (resp_len < 36) {
+        PrintAndLogEx(FAILED, "InitAuth response too short (%u bytes)", resp_len);
+        if (verbose) PrintAndLogEx(DEBUG, "raw: %s", sprint_hex_inrow(resp, resp_len));
+        return PM3_ESOFT;
+    }
+    if (resp[0] != 0xBD || resp[2] != 0x8A || resp[3] != 0x20) {
+        PrintAndLogEx(FAILED, "InitAuth response shape unexpected: %02X %02X %02X %02X ...",
+                      resp[0], resp[1], resp[2], resp[3]);
+        if (verbose) PrintAndLogEx(DEBUG, "raw: %s", sprint_hex_inrow(resp, resp_len));
+        return PM3_ESOFT;
+    }
+    memcpy(s_sam_sc.suid, resp + 4, 8);
+    memcpy(s_sam_sc.rnd_b, resp + 12, 8);
+    uint8_t server_cryptogram[16];
+    memcpy(server_cryptogram, resp + 20, 16);
+    s_sam_sc.sc_flag = sam_flag;
+
+    PrintAndLogEx(INFO, "scFlag     : 0x%02X (SAM-assigned)", s_sam_sc.sc_flag);
+    PrintAndLogEx(INFO, "Server UID : %s", sprint_hex_inrow(s_sam_sc.suid, 8));
+    PrintAndLogEx(INFO, "Server RNDB: %s", sprint_hex_inrow(s_sam_sc.rnd_b, 8));
+    PrintAndLogEx(INFO, "ServerCrypt: %s", sprint_hex_inrow(server_cryptogram, 16));
+
+    // ---------------- Derive SCBK + session keys ----------------
+    {
+        uint8_t suid_data[16];
+        memcpy(suid_data, s_sam_sc.suid, 8);
+        for (int i = 0; i < 8; i++) suid_data[8 + i] = (uint8_t)(s_sam_sc.suid[i] ^ 0xFF);
+        uint8_t iv[16] = {0}, key_copy[16];
+        memcpy(key_copy, master_key, 16);
+        aes_encode(iv, key_copy, suid_data, s_sam_sc.scbk, 16);
+    }
+    static const uint8_t SC_PFX_MAC1[2] = {0x01, 0x01};
+    static const uint8_t SC_PFX_MAC2[2] = {0x01, 0x02};
+    static const uint8_t SC_PFX_ENC[2]  = {0x01, 0x82};
+    sam_sc_kdf_derive(s_sam_sc.scbk, SC_PFX_MAC1, s_sam_sc.rnd_b, s_sam_sc.s_mac1);
+    sam_sc_kdf_derive(s_sam_sc.scbk, SC_PFX_MAC2, s_sam_sc.rnd_b, s_sam_sc.s_mac2);
+    sam_sc_kdf_derive(s_sam_sc.scbk, SC_PFX_ENC,  s_sam_sc.rnd_b, s_sam_sc.s_enc);
+
+    if (verbose) {
+        PrintAndLogEx(DEBUG, "SCBK : %s", sprint_hex_inrow(s_sam_sc.scbk, 16));
+        PrintAndLogEx(DEBUG, "sEnc : %s", sprint_hex_inrow(s_sam_sc.s_enc, 16));
+        PrintAndLogEx(DEBUG, "sMAC1: %s", sprint_hex_inrow(s_sam_sc.s_mac1, 16));
+        PrintAndLogEx(DEBUG, "sMAC2: %s", sprint_hex_inrow(s_sam_sc.s_mac2, 16));
+    }
+
+    uint8_t expected_srv[16];
+    {
+        uint8_t in[16], iv[16] = {0}, key_copy[16];
+        memcpy(in, s_sam_sc.rnd_a, 8);
+        memcpy(in + 8, s_sam_sc.rnd_b, 8);
+        memcpy(key_copy, s_sam_sc.s_enc, 16);
+        aes_encode(iv, key_copy, in, expected_srv, 16);
+    }
+    if (memcmp(expected_srv, server_cryptogram, 16) != 0) {
+        PrintAndLogEx(FAILED, _RED_("Server cryptogram mismatch") " - master key wrong for KREF 0x%02X",
+                      s_sam_sc.kref);
+        if (verbose) {
+            PrintAndLogEx(DEBUG, "expected: %s", sprint_hex_inrow(expected_srv, 16));
+            PrintAndLogEx(DEBUG, "got     : %s", sprint_hex_inrow(server_cryptogram, 16));
+        }
+        memset(&s_sam_sc, 0, sizeof(s_sam_sc));
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(SUCCESS, _GREEN_("InitAuth OK") " - server cryptogram verified");
+
+    // ---------------- ContinueAuth ----------------
+    uint8_t client_crypto[16];
+    {
+        uint8_t in[16], iv[16] = {0}, key_copy[16];
+        memcpy(in, s_sam_sc.rnd_b, 8);
+        memcpy(in + 8, s_sam_sc.rnd_a, 8);
+        memcpy(key_copy, s_sam_sc.s_enc, 16);
+        aes_encode(iv, key_copy, in, client_crypto, 16);
+    }
+    uint8_t client_cmac[16];
+    {
+        uint8_t iv0[16] = {0};
+        sam_sc_hid_mac(s_sam_sc.s_mac1, s_sam_sc.s_mac2, iv0, client_crypto, 16, client_cmac);
+    }
+    if (verbose) {
+        PrintAndLogEx(DEBUG, "client_crypto: %s", sprint_hex_inrow(client_crypto, 16));
+        PrintAndLogEx(DEBUG, "client_cmac  : %s", sprint_hex_inrow(client_cmac, 16));
+    }
+
+    uint8_t cont_auth[40];
+    sam_sc_build_continue_auth(client_crypto, client_cmac, cont_auth);
+
+    resp_len = sizeof(resp);
+    rc = sam_sc_dispatch(0, s_sam_sc.sc_flag, cont_auth, sizeof(cont_auth),
+                         &sam_flag, resp, &resp_len);
+    if (rc != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "ContinueAuth dispatch failed (rc=%d)", rc);
+        memset(&s_sam_sc, 0, sizeof(s_sam_sc));
+        return rc;
+    }
+    if (verbose) {
+        PrintAndLogEx(DEBUG, "ContinueAuth scFlag=0x%02X resp(%u): %s",
+                      sam_flag, resp_len, sprint_hex_inrow(resp, resp_len));
+    }
+    if (resp_len < 20) {
+        PrintAndLogEx(FAILED, "ContinueAuth response too short (%u bytes)", resp_len);
+        if (verbose) PrintAndLogEx(DEBUG, "raw: %s", sprint_hex_inrow(resp, resp_len));
+        memset(&s_sam_sc, 0, sizeof(s_sam_sc));
+        return PM3_ESOFT;
+    }
+    if (resp[0] != 0xBD || resp[2] != 0x8A || resp[3] != 0x10) {
+        PrintAndLogEx(FAILED, "ContinueAuth response shape unexpected: %02X %02X %02X %02X ...",
+                      resp[0], resp[1], resp[2], resp[3]);
+        if (verbose) PrintAndLogEx(DEBUG, "raw: %s", sprint_hex_inrow(resp, resp_len));
+        memset(&s_sam_sc, 0, sizeof(s_sam_sc));
+        return PM3_ESOFT;
+    }
+    uint8_t server_rmac[16];
+    memcpy(server_rmac, resp + 4, 16);
+
+    uint8_t expected_rmac[16];
+    {
+        uint8_t pad_block[16] = {0};
+        pad_block[0] = 0x80;
+        sam_sc_hid_mac(s_sam_sc.s_mac1, s_sam_sc.s_mac2, client_cmac,
+                       pad_block, 16, expected_rmac);
+    }
+    if (memcmp(expected_rmac, server_rmac, 16) != 0) {
+        PrintAndLogEx(FAILED, _RED_("ContinueAuth R-MAC mismatch") " - SAM did not authenticate");
+        if (verbose) {
+            PrintAndLogEx(DEBUG, "expected: %s", sprint_hex_inrow(expected_rmac, 16));
+            PrintAndLogEx(DEBUG, "got     : %s", sprint_hex_inrow(server_rmac, 16));
+        }
+        memset(&s_sam_sc, 0, sizeof(s_sam_sc));
+        return PM3_ESOFT;
+    }
+
+    memcpy(s_sam_sc.c_mac, client_cmac, 16);
+    memcpy(s_sam_sc.r_mac, server_rmac, 16);
+    s_sam_sc.sc_flag = sam_flag;
+    s_sam_sc.open = true;
+
+    PrintAndLogEx(SUCCESS, _GREEN_("Secure channel OPEN") " (scFlag=0x%02X, KREF=0x%02X)",
+                  s_sam_sc.sc_flag, s_sam_sc.kref);
+    PrintAndLogEx(INFO, "Use 'hf iclass sam scsend' to send wrapped APDUs;");
+    PrintAndLogEx(INFO, "use 'hf iclass sam scclose' to terminate.");
+    return PM3_SUCCESS;
+}
+
+// ---------------------------------------------------------------------------
+// hf iclass sam scsend --payload <hex>
+// ---------------------------------------------------------------------------
+static int CmdHFiClassSAMSCSend(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass sam scsend",
+                  "Send a plaintext SAMCommand body through the open secure\n"
+                  "channel. The client wraps it (encrypt + MAC + chain RMAC),\n"
+                  "sends via CMD_HF_SAM_SC, unwraps the response, and prints\n"
+                  "the plaintext. Requires 'scopen' to have been called first.\n"
+                  "Test payload: --payload 8200  (samCommandGetSamVersion)",
+                  "hf iclass sam scsend --payload 8200\n"
+                  "hf iclass sam scsend --payload b9028a00 -v\n"
+                  "hf iclass sam scsend --payload b903850100");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "payload", "<hex>", "plaintext SAMCommand body (the bytes inside A0 <len>)"),
+        arg_lit0("v",  "verbose",          "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    if (s_sam_sc.open == false) {
+        PrintAndLogEx(FAILED, "no open secure channel - run 'scopen' first");
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
+    }
+
+    uint8_t plaintext[SAM_SC_MAX_FRAME];
+    int plaintext_len = 0;
+    if (CLIParamHexToBuf(arg_get_str(ctx, 1), plaintext, sizeof(plaintext), &plaintext_len) != PM3_SUCCESS) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (plaintext_len < 1) {
+        PrintAndLogEx(FAILED, "--payload must be at least 1 byte");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    bool verbose = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(INFO, "Plaintext  : %s", sprint_hex_inrow(plaintext, plaintext_len));
+
+    uint8_t wrapped[SAM_SC_MAX_FRAME];
+    uint16_t wrapped_len = sam_sc_wrap(plaintext, (uint16_t)plaintext_len,
+                                       wrapped, sizeof(wrapped));
+    if (wrapped_len == 0) {
+        PrintAndLogEx(FAILED, "wrap() failed");
+        return PM3_ESOFT;
+    }
+    if (verbose)
+        PrintAndLogEx(DEBUG, "wrapped (%u): %s", wrapped_len, sprint_hex_inrow(wrapped, wrapped_len));
+
+    uint8_t sam_payload[SAM_SC_MAX_FRAME + 4];
+    uint16_t off = 0;
+    sam_payload[off++] = 0xA0;
+    off += sam_sc_emit_ber_len(sam_payload + off, wrapped_len);
+    if ((uint32_t)off + wrapped_len > sizeof(sam_payload)) {
+        PrintAndLogEx(FAILED, "wrapped payload too large for buffer");
+        return PM3_ESOFT;
+    }
+    memcpy(sam_payload + off, wrapped, wrapped_len);
+    off += wrapped_len;
+
+    uint8_t resp[PM3_CMD_DATA_SIZE];
+    uint16_t resp_len = sizeof(resp);
+    uint8_t sam_flag = 0;
+    int rc = sam_sc_dispatch(0, s_sam_sc.sc_flag,
+                             sam_payload, off, &sam_flag, resp, &resp_len);
+    if (rc != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "dispatch failed (rc=%d)", rc);
+        return rc;
+    }
+    if (verbose) {
+        PrintAndLogEx(DEBUG, "scFlag=0x%02X resp(%u): %s",
+                      sam_flag, resp_len, sprint_hex_inrow(resp, resp_len));
+    }
+    if (sam_flag != s_sam_sc.sc_flag && verbose) {
+        PrintAndLogEx(WARNING, "SAM scFlag changed: was 0x%02X, now 0x%02X",
+                      s_sam_sc.sc_flag, sam_flag);
+    }
+
+    const uint8_t *inner = NULL;
+    uint16_t inner_len = 0;
+    char path = '?';
+    if (sam_sc_peel_envelope(resp, resp_len, &inner, &inner_len, &path) != 0) {
+        PrintAndLogEx(FAILED, "could not peel SAM response envelope");
+        if (verbose) PrintAndLogEx(DEBUG, "raw: %s", sprint_hex_inrow(resp, resp_len));
+        return PM3_ESOFT;
+    }
+    if (verbose)
+        PrintAndLogEx(DEBUG, "envelope=Path %c, inner ciphertext+MAC (%u): %s",
+                      path, inner_len, sprint_hex_inrow(inner, inner_len));
+
+    uint8_t plain_resp[SAM_SC_MAX_FRAME];
+    int plain_len = sam_sc_unwrap(inner, inner_len, plain_resp, sizeof(plain_resp));
+    if (plain_len < 0) {
+        PrintAndLogEx(FAILED, _RED_("unwrap failed") " - MAC mismatch or padding error");
+        if (verbose) PrintAndLogEx(DEBUG, "raw response: %s", sprint_hex_inrow(resp, resp_len));
+        return PM3_ESOFT;
+    }
+
+    if (path == 'C') {
+        PrintAndLogEx(WARNING, _YELLOW_("Path C errorResponse") " - SAM returned an error");
+    } else {
+        PrintAndLogEx(SUCCESS, _GREEN_("Decrypt OK") " (Path %c)", path);
+    }
+    PrintAndLogEx(INFO, "Plaintext response (%d): %s",
+                  plain_len, sprint_hex_inrow(plain_resp, plain_len));
+    return PM3_SUCCESS;
+}
+
+// ---------------------------------------------------------------------------
+// hf iclass sam scclose
+// ---------------------------------------------------------------------------
+static int CmdHFiClassSAMSCClose(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass sam scclose",
+                  "Send Terminate (91 00) over the open SC and release the\n"
+                  "firmware-side SAM session.",
+                  "hf iclass sam scclose");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool verbose = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    if (s_sam_sc.open == false) {
+        PrintAndLogEx(WARNING, "no open secure channel - nothing to close");
+        return PM3_SUCCESS;
+    }
+
+    uint8_t terminate[2] = {0x91, 0x00};
+    uint8_t wrapped[64];
+    uint16_t wrapped_len = sam_sc_wrap(terminate, sizeof(terminate),
+                                       wrapped, sizeof(wrapped));
+    if (wrapped_len == 0) {
+        PrintAndLogEx(FAILED, "wrap() of Terminate failed - forcing local close");
+        memset(&s_sam_sc, 0, sizeof(s_sam_sc));
+        return PM3_ESOFT;
+    }
+
+    uint8_t sam_payload[80];
+    uint16_t off = 0;
+    sam_payload[off++] = 0xA0;
+    off += sam_sc_emit_ber_len(sam_payload + off, wrapped_len);
+    memcpy(sam_payload + off, wrapped, wrapped_len);
+    off += wrapped_len;
+
+    uint8_t resp[PM3_CMD_DATA_SIZE];
+    uint16_t resp_len = sizeof(resp);
+    uint8_t sam_flag = 0;
+    int rc = sam_sc_dispatch(SAM_SC_FLAG_RELEASE, s_sam_sc.sc_flag,
+                             sam_payload, off, &sam_flag, resp, &resp_len);
+    if (verbose) {
+        PrintAndLogEx(DEBUG, "Terminate scFlag=0x%02X resp(%u): %s",
+                      sam_flag, resp_len, sprint_hex_inrow(resp, resp_len));
+    }
+
+    memset(&s_sam_sc, 0, sizeof(s_sam_sc));
+
+    if (rc != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Terminate dispatch returned rc=%d - host state cleared anyway", rc);
+        return rc;
+    }
+    PrintAndLogEx(SUCCESS, _GREEN_("Secure channel closed"));
+    return PM3_SUCCESS;
+}
+
+// ---------------------------------------------------------------------------
+// hf iclass sam dispatcher
+// ---------------------------------------------------------------------------
+//
+// Backwards-compat router: when invoked without a subcommand keyword (or
+// with a flag-style argument like `--info` / `-d ...` / `-f ...`), defers
+// to the legacy PACS-extraction implementation (CmdHFiClassSAMExtract).
+// When the first word matches a known SC subcommand, dispatches to the
+// scopen / scsend / scclose / help handlers.
+//
+// So all of these continue to work:
+//   hf iclass sam                       (legacy default)
+//   hf iclass sam --info                (legacy SAM info)
+//   hf iclass sam -p -d <hex>           (legacy with flags)
+//   hf iclass sam -f hf-iclass-dump.bin (legacy emulate-from-file)
+// And these are new:
+//   hf iclass sam scopen
+//   hf iclass sam scsend --payload <hex>
+//   hf iclass sam scclose
+//   hf iclass sam help                  (lists the SC subcommands)
+// ---------------------------------------------------------------------------
+
+static int CmdHFiClassSAMHelp(const char *Cmd);
+
+// SC subcommand dispatch table. Note: no `help` entry here on purpose -
+// use `hf iclass sam --help` (or `-h`) for the SAM-level help. The bare-word
+// `help` keyword is still accepted as a deprecated alias (see sam_cmd_is_help_request).
+static command_t SAMSubCommandTable[] = {
+    {"scopen",  CmdHFiClassSAMSCOpen,  IfPm3Smartcard,  "Open Artemis SC (InitAuth + ContinueAuth); persists session"},
+    {"scsend",  CmdHFiClassSAMSCSend,  IfPm3Smartcard,  "Send wrapped SAMCommand body through the open SC"},
+    {"scclose", CmdHFiClassSAMSCClose, IfPm3Smartcard,  "Send Terminate; release the SC session"},
+    {NULL, NULL, NULL, NULL}
+};
+
+static int CmdHFiClassSAMHelp(const char *Cmd) {
+    (void)Cmd;
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, _YELLOW_("hf iclass sam") " - HID SAM operations");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Secure-channel subcommands:");
+    CmdsHelp(SAMSubCommandTable);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Legacy PACS-extraction flags (no subcommand, applied to " _YELLOW_("hf iclass sam") " directly):");
+    PrintAndLogEx(NORMAL, "      --info               get SAM version + serial number (also warms up the SAM)");
+    PrintAndLogEx(NORMAL, "  -d, --data <hex>         DER-encoded SAMCommand to send (raw, no SC)");
+    PrintAndLogEx(NORMAL, "  -s, --snmp               --data is in SNMP format without the A0/94 headers");
+    PrintAndLogEx(NORMAL, "  -p, --prevent            fake the e-purse update during PACS extraction");
+    PrintAndLogEx(NORMAL, "      --break              stop tag interaction at nr-mac (for SIO extract)");
+    PrintAndLogEx(NORMAL, "  -f, --file <fn>          emulate from a dump file instead of a real card");
+    PrintAndLogEx(NORMAL, "  -n, --nodetect           skip card detect + SetDetectedCardInfo");
+    PrintAndLogEx(NORMAL, "  -k, --keep               keep the field active after the command");
+    PrintAndLogEx(NORMAL, "  -t, --tlv                decode the response as TLV");
+    PrintAndLogEx(NORMAL, "      --shallow            shallow modulation");
+    PrintAndLogEx(NORMAL, "  -v, --verbose            verbose output");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "Examples:");
+    PrintAndLogEx(NORMAL, "  " _YELLOW_("hf iclass sam") "                    extract PACS via SAM (defaults)");
+    PrintAndLogEx(NORMAL, "  " _YELLOW_("hf iclass sam --info") "             get SAM version + serial (warmup ping)");
+    PrintAndLogEx(NORMAL, "  " _YELLOW_("hf iclass sam scopen") "             open Artemis secure channel");
+    PrintAndLogEx(NORMAL, "  " _YELLOW_("hf iclass sam scsend --payload 8200") "  send wrapped SAMCommand");
+    PrintAndLogEx(NORMAL, "  " _YELLOW_("hf iclass sam scclose") "            terminate the SC session");
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
+// Returns true if Cmd consists solely of "-h", "--help", or the bare-word
+// "help" (with optional surrounding whitespace). Used to intercept help
+// requests before the dispatcher would otherwise forward them to the legacy
+// CLIParser. The bare-word "help" is kept as a deprecated alias - it's no
+// longer advertised in the subcommand table, but existing scripts/muscle
+// memory still resolve correctly.
+static bool sam_cmd_is_help_request(const char *Cmd) {
+    while (*Cmd == ' ' || *Cmd == '\t') Cmd++;
+    size_t len = 0;
+    while (Cmd[len] && Cmd[len] != ' ' && Cmd[len] != '\t') len++;
+    if (len == 0) return false;
+    // ensure standalone (no trailing args)
+    const char *tail = Cmd + len;
+    while (*tail == ' ' || *tail == '\t') tail++;
+    if (*tail != '\0') return false;
+    if (len == 2 && memcmp(Cmd, "-h", 2) == 0) return true;
+    if (len == 6 && memcmp(Cmd, "--help", 6) == 0) return true;
+    if (len == 4 && memcmp(Cmd, "help", 4) == 0) return true;
+    return false;
+}
+
+static int CmdHFiClassSAM(const char *Cmd) {
+    // Skip leading whitespace.
+    while (*Cmd == ' ' || *Cmd == '\t') Cmd++;
+
+    // `--help` / `-h` (standalone) -> SC-aware help instead of the legacy
+    // CLIParser's auto-help (which would hide the SC subcommands). The
+    // bare-word `help` is also accepted as a deprecated alias (no longer
+    // listed in the subcommand table but still resolves here).
+    if (sam_cmd_is_help_request(Cmd)) {
+        return CmdHFiClassSAMHelp(Cmd);
+    }
+
+    // No args or a flag-style invocation -> legacy PACS-extract implementation.
+    // Preserves `hf iclass sam`, `hf iclass sam --info`, `hf iclass sam -d ...`,
+    // `hf iclass sam -f ...` etc.
+    if (*Cmd == '\0' || *Cmd == '-') {
+        return CmdHFiClassSAMExtract(Cmd);
+    }
+
+    // Match the first word against known SC subcommands. The CmdsParse
+    // dispatcher would print help on no match, but we want unknown first
+    // words to fall through to the legacy implementation, so we check first.
+    size_t word_len = 0;
+    while (Cmd[word_len] && Cmd[word_len] != ' ' && Cmd[word_len] != '\t')
+        word_len++;
+
+    for (size_t i = 0; SAMSubCommandTable[i].Name != NULL; i++) {
+        const char *name = SAMSubCommandTable[i].Name;
+        size_t nl = strlen(name);
+        if (nl == word_len && memcmp(name, Cmd, word_len) == 0) {
+            clearCommandBuffer();
+            return CmdsParse(SAMSubCommandTable, Cmd);
+        }
+    }
+
+    // Unknown first word - defer to legacy (which will either parse it as a
+    // free-form arg or error out cleanly with its own help).
+    return CmdHFiClassSAMExtract(Cmd);
 }
 
 // ---------------------------------------------------------------------------
@@ -8256,7 +9088,7 @@ static command_t CommandTable[] = {
     {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "Manage keys to use with iclass commands"},
     {"permutekey",  CmdHFiClassPermuteKey,      AlwaysAvailable, "Permute function from 'heart of darkness' paper"},
     {"-----------", CmdHelp,                    IfPm3Smartcard,  "----------------------- " _CYAN_("SAM") " -----------------------"},
-    {"sam",         CmdHFiClassSAM,             IfPm3Smartcard,  "SAM tests"},
+    {"sam",         CmdHFiClassSAM,             IfPm3Smartcard,  "SAM ops: PACS extract + secure channel (scopen/scsend/scclose)"},
     {NULL, NULL, NULL, NULL}
 };
 

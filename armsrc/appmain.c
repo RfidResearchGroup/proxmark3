@@ -69,6 +69,7 @@
 #include "sam_picopass.h"
 #include "sam_seos.h"
 #include "sam_mfc.h"
+#include "sam_sc.h"
 #include "cmac_calc.h"
 
 #ifdef WITH_LCD
@@ -2527,6 +2528,11 @@ static void PacketReceived(PacketCommandNG *packet) {
 
         case CMD_HF_SAM_MFC: {
 //            sam_mfc_get_pacs();
+            break;
+        }
+
+        case CMD_HF_SAM_SC: {
+            sam_sc_handler(packet);
             break;
         }
 
