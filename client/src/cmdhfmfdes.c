@@ -6517,7 +6517,7 @@ static int CmdHF14ADesMakeMFCLicense(const char *Cmd) {
     int mac_key_len = 0;
 
     if (key_arg->count != 1) {
-        PrintAndLogEx(ERR, "At most one instance of --key is required");
+        PrintAndLogEx(ERR, "Exactly one instance of --key is required");
         goto mfclicense_parsing_error;
     }
     if (CLIParamHexToBuf(key_arg, mac_key, sizeof (mac_key), &mac_key_len) != 0) {
