@@ -57,9 +57,11 @@
 #define CALYPSO_DUMP_FILENAME_MAX_SERIALS 8
 #define CALYPSO_MAX_EF_LIST_LIDS 128
 #define CALYPSO_MAX_LID_CANDIDATES 384
-#define CALYPSO_GET_DATA_INLINE_MAX 32
-#define CALYPSO_GET_DATA_HEX_BREAK 32
-#define CALYPSO_GET_DATA_HEX_INDENT "      "
+#define CALYPSO_GET_DATA_NAME_WIDTH 22
+#define CALYPSO_HEX_ENTRY_INLINE_MAX 32
+#define CALYPSO_HEX_ENTRY_BREAK 32
+#define CALYPSO_ANSI_GREEN "\x1b[32m"
+#define CALYPSO_ANSI_YELLOW "\x1b[33m"
 
 #define CALYPSO_MANUFACTURERS_RESOURCE "calypso/manufacturers"
 #define CALYPSO_IC_FAMILIES_RESOURCE   "calypso/ic_families"
@@ -213,6 +215,7 @@ static bool calypso_fcp_default_lid(const calypso_fcp_t *fcp, uint16_t *lid);
 static bool calypso_get_current_ef_lid(bool verbose, uint16_t *lid);
 static bool calypso_read_sw_has_data(uint16_t sw, size_t read_len);
 static int calypso_get_data_object(uint16_t tag, uint8_t *out, size_t out_len, size_t *read_len, uint16_t *sw);
+static void calypso_print_hex_entry(const char *label, const uint8_t *data, size_t data_len, const char *ansi_color);
 static void calypso_reselect_exact_df_name(const calypso_select_result_t *selected, bool verbose);
 static void calypso_print_rf_info(const calypso_rf_info_t *rf);
 
@@ -277,7 +280,7 @@ static const calypso_get_data_probe_t calypso_get_data_probes[] = {
     {0x006F, "FCI For Current DF", true},
     {0x00C0, "EF List", true},
     {0x00D0, "Other application AIDs", true},
-    {0x0185, "Traceability Information", false},
+    {0x0185, "Traceability Info", false},
     {0x5F52, "ATR historical bytes", true},
     {0xDF4C, "Card Certificate", false},
     {0xDF4A, "CA Certificate", false},
@@ -1753,13 +1756,9 @@ static bool calypso_ef_list_contains_lid(const calypso_ef_list_t *ef_list, uint1
 }
 
 static void calypso_print_get_data_object(const calypso_get_data_probe_t *probe, const uint8_t *data, size_t data_len) {
-    if (data_len <= CALYPSO_GET_DATA_INLINE_MAX) {
-        PrintAndLogEx(SUCCESS, " %04X %-24s : " _YELLOW_("%s"), probe->tag, probe->name, sprint_hex(data, data_len));
-        return;
-    }
-
-    PrintAndLogEx(SUCCESS, " %04X %-24s : " _YELLOW_("%zu bytes"), probe->tag, probe->name, data_len);
-    print_hex_noascii_break_ex(data, data_len, CALYPSO_GET_DATA_HEX_BREAK, CALYPSO_GET_DATA_HEX_INDENT "\x1b[33m", ' ', AEND);
+    char label[64] = {0};
+    snprintf(label, sizeof(label), " %04X %-*s : ", probe->tag, CALYPSO_GET_DATA_NAME_WIDTH, probe->name);
+    calypso_print_hex_entry(label, data, data_len, CALYPSO_ANSI_YELLOW);
 }
 
 static void calypso_print_info_data_objects(void) {
@@ -1780,7 +1779,7 @@ static void calypso_print_info_data_objects(void) {
 
         if (printed_header == false && has_data) {
             PrintAndLogEx(INFO, "");
-            PrintAndLogEx(INFO, "--- " _CYAN_("Get Data Objects") " ----------------------");
+            PrintAndLogEx(INFO, "--- " _CYAN_("Get Data") " ------------------------------");
             printed_header = true;
         }
 
@@ -1805,7 +1804,7 @@ static size_t calypso_probe_get_data_objects(json_t *entries, bool print_results
 
     if (print_results || verbose) {
         PrintAndLogEx(INFO, "");
-        PrintAndLogEx(INFO, "--- " _CYAN_("Get Data Objects") " ----------------------");
+        PrintAndLogEx(INFO, "--- " _CYAN_("Get Data") " ------------------------------");
     }
 
     for (size_t i = 0; i < ARRAYLEN(calypso_get_data_probes); i++) {
@@ -1817,14 +1816,14 @@ static size_t calypso_probe_get_data_objects(json_t *entries, bool print_results
 
         if (res != PM3_SUCCESS) {
             if (verbose) {
-                PrintAndLogEx(INFO, " %04X %-24s : exchange failed (%d)", probe->tag, probe->name, res);
+                PrintAndLogEx(INFO, " %04X %-*s : exchange failed (%d)", probe->tag, CALYPSO_GET_DATA_NAME_WIDTH, probe->name, res);
             }
             continue;
         }
 
         if (sw == ISO7816_INS_NOT_SUPPORTED) {
             if (verbose) {
-                PrintAndLogEx(INFO, " %04X %-24s : " _YELLOW_("%04X") " - %s", probe->tag, probe->name, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xFF));
+                PrintAndLogEx(INFO, " %04X %-*s : " _YELLOW_("%04X") " - %s", probe->tag, CALYPSO_GET_DATA_NAME_WIDTH, probe->name, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xFF));
             }
             break;
         }
@@ -1847,7 +1846,7 @@ static size_t calypso_probe_get_data_objects(json_t *entries, bool print_results
         }
 
         if (verbose) {
-            PrintAndLogEx(INFO, " %04X %-24s : " _YELLOW_("%04X") " - %s", probe->tag, probe->name, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xFF));
+            PrintAndLogEx(INFO, " %04X %-*s : " _YELLOW_("%04X") " - %s", probe->tag, CALYPSO_GET_DATA_NAME_WIDTH, probe->name, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xFF));
         }
     }
 
@@ -2078,13 +2077,56 @@ static int calypso_select_file_path(const calypso_file_ref_t *file, uint8_t *fcp
     return PM3_SUCCESS;
 }
 
+static void calypso_print_hex_entry(const char *label, const uint8_t *data, size_t data_len, const char *ansi_color) {
+    if (label == NULL || data == NULL || data_len == 0) {
+        return;
+    }
+
+    if (ansi_color == NULL) {
+        ansi_color = "";
+    }
+
+    const char *suffix = ansi_color[0] == '\0' ? "" : AEND;
+    if (data_len <= CALYPSO_HEX_ENTRY_INLINE_MAX) {
+        PrintAndLogEx(SUCCESS, "%s%s%s%s", label, ansi_color, sprint_hex(data, data_len), suffix);
+        return;
+    }
+
+    size_t first_len = MIN(data_len, CALYPSO_HEX_ENTRY_BREAK);
+    PrintAndLogEx(SUCCESS, "%s%s%s%s", label, ansi_color, sprint_hex(data, first_len), suffix);
+
+    char prefix[128] = {0};
+    char visible_label[128] = {0};
+    size_t label_len = strlen(label) + 1;
+    if (label_len > sizeof(visible_label)) {
+        label_len = sizeof(visible_label);
+    }
+    memcpy_filter_ansi(visible_label, label, label_len, true);
+    visible_label[sizeof(visible_label) - 1] = '\0';
+    size_t label_width = strlen(visible_label);
+    size_t color_len = strlen(ansi_color);
+    if (color_len >= sizeof(prefix)) {
+        color_len = sizeof(prefix) - 1;
+    }
+    size_t spaces = MIN(label_width, sizeof(prefix) - color_len - 1);
+    memset(prefix, ' ', spaces);
+    memcpy(prefix + spaces, ansi_color, color_len);
+    print_hex_noascii_break_ex(data + first_len, data_len - first_len, CALYPSO_HEX_ENTRY_BREAK, prefix, ' ', suffix);
+}
+
+static void calypso_dump_print_record_entry(long long record, const uint8_t *data, size_t data_len) {
+    char label[64] = {0};
+    snprintf(label, sizeof(label), "  record " _GREEN_("%03lld") "       : ", record);
+    calypso_print_hex_entry(label, data, data_len, CALYPSO_ANSI_GREEN);
+}
+
 static bool calypso_dump_print_record(uint8_t record, const uint8_t *data, size_t data_len, json_t *records, bool print_record) {
     if (data_len == 0) {
         return false;
     }
 
     if (print_record) {
-        PrintAndLogEx(SUCCESS, "  record " _GREEN_("%03u") "       : " _GREEN_("%s"), record, sprint_hex(data, data_len));
+        calypso_dump_print_record_entry(record, data, data_len);
     }
     if (records != NULL) {
         calypso_json_add_record(records, record, data, data_len);
@@ -2106,17 +2148,17 @@ static void calypso_dump_print_json_records(json_t *records) {
             continue;
         }
         const char *hex = json_string_value(data_value);
-        char grouped[APDU_RES_LEN * 3 + 1] = {0};
-        size_t grouped_pos = 0;
-        for (size_t i = 0; hex[i] != '\0' && hex[i + 1] != '\0' && grouped_pos + 3 < sizeof(grouped); i += 2) {
-            grouped[grouped_pos++] = hex[i];
-            grouped[grouped_pos++] = hex[i + 1];
-            grouped[grouped_pos++] = ' ';
+        size_t hex_len = strlen(hex);
+        if ((hex_len & 1) || hex_len / 2 > APDU_RES_LEN) {
+            continue;
         }
-        grouped[grouped_pos] = '\0';
-        PrintAndLogEx(SUCCESS, "  record " _GREEN_("%03lld") "       : " _GREEN_("%s"),
-                      (long long)json_integer_value(record_value),
-                      grouped);
+
+        uint8_t data[APDU_RES_LEN] = {0};
+        size_t data_len = 0;
+        if (hexstr_to_byte_array(hex, data, &data_len) == false) {
+            continue;
+        }
+        calypso_dump_print_record_entry((long long)json_integer_value(record_value), data, data_len);
     }
 }
 
@@ -2221,7 +2263,7 @@ static bool calypso_dump_sfi(uint8_t sfi, json_t *sfi_files, bool verbose, size_
         PrintAndLogEx(INFO, "--- " _CYAN_("SFI %02X") " -----------------------------------", sfi);
     }
     if (has_binary) {
-        PrintAndLogEx(SUCCESS, "  binary           : " _GREEN_("%s"), sprint_hex(binary, binary_len));
+        calypso_print_hex_entry("  binary           : ", binary, binary_len, CALYPSO_ANSI_GREEN);
     }
     json_t *records_to_print = json_object_get(file, "records");
     calypso_dump_print_json_records(records_to_print);
@@ -2288,10 +2330,10 @@ static bool calypso_dump_file_path(const calypso_file_ref_t *ref, uint8_t source
         PrintAndLogEx(INFO, "--- " _CYAN_("%s") " (%s) (known) --------------------", ref->name, path);
     }
     if (fcp_len > 0) {
-        PrintAndLogEx(SUCCESS, "  fcp              : " _YELLOW_("%s"), sprint_hex(fcp, fcp_len));
+        calypso_print_hex_entry("  fcp              : ", fcp, fcp_len, CALYPSO_ANSI_YELLOW);
     }
     if (calypso_read_sw_has_data(binary_sw, binary_len) && binary_len > 0) {
-        PrintAndLogEx(SUCCESS, "  binary           : " _GREEN_("%s"), sprint_hex(binary, binary_len));
+        calypso_print_hex_entry("  binary           : ", binary, binary_len, CALYPSO_ANSI_GREEN);
     } else if (verbose && binary_sw != 0 && calypso_read_sw_is_unavailable(binary_sw) == false) {
         PrintAndLogEx(INFO, "  binary unavailable (%04X - %s)", binary_sw, GetAPDUCodeDescription(binary_sw >> 8, binary_sw & 0xFF));
     }
@@ -2450,7 +2492,7 @@ static void calypso_print_icc(const uint8_t *icc, size_t icc_len, bool verbose, 
     bool check_ok = expected_check == icc[CALYPSO_ICC_CHECK_OFF] || expected_full_check == icc[CALYPSO_ICC_CHECK_OFF];
 
     PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("ICC Manufacturing Information") " -----------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("ICC Manufacturing Info") " ------------------");
     PrintAndLogEx(SUCCESS, " ICC serial        : " _GREEN_("%s"), sprint_hex(&icc[CALYPSO_ICC_SERIAL_OFF], CALYPSO_SERIAL_LEN));
     if (country_ok) {
         const char *country_name = calypso_country_name(country_code);
@@ -2518,7 +2560,7 @@ static void calypso_print_select_info(const calypso_select_result_t *selected, b
     const calypso_aid_match_t *aid_line_match = attribution.best != NULL && attribution.best->found ? attribution.best : NULL;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Calypso Information") " ---------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Calypso Info") " ----------------------------");
     if (selected->requested_aid_len > 0) {
         calypso_print_hex_ascii_line(selected->default_selection ? " Default AID       : " : " Selected AID      : ", selected->requested_aid, selected->requested_aid_len);
     }
