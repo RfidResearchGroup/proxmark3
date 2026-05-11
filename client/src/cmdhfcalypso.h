@@ -22,5 +22,6 @@
 #include "common.h"
 
 int CmdHFCalypso(const char *Cmd);
+const char *CalypsoGetDataTagName(uint16_t tag);
 
 #endif
