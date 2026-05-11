@@ -1854,7 +1854,7 @@ static int CmdHfSeosWrite(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    int data_tag_len = 0; 
+    int data_tag_len = 0;
     uint8_t data_tag[16] = {0xff, 0x00};
     CLIGetHexWithReturn(ctx, 1, data_tag, &data_tag_len);
 
@@ -2129,7 +2129,7 @@ static int CmdHfSeosSim(const char *Cmd) {
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_SEOS_SIMULATE, (uint8_t*)&request, sizeof(request));
+    SendCommandNG(CMD_HF_SEOS_SIMULATE, (uint8_t *)&request, sizeof(request));
 
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
     while (WaitForResponseTimeout(CMD_HF_SEOS_SIMULATE, &resp, 1000) == false) {

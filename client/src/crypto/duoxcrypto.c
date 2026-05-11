@@ -151,7 +151,7 @@ static int duox_load_x509_certificate_input(const char *input, mbedtls_x509_crt 
 }
 
 static int duox_load_certificate_anchor_from_certificate_input(const char *input, const char *name_hint,
-                                                               const char *source, duox_certificate_anchor_t *anchor) {
+        const char *source, duox_certificate_anchor_t *anchor) {
     if (input == NULL || anchor == NULL) {
         return PM3_EINVARG;
     }
@@ -713,12 +713,12 @@ static int duox_verify_gp_vde_signature(const uint8_t *signed_data, size_t signe
 
             tried[i] = true;
             int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_BP256R1,
-                      (uint8_t *)pubkey,
-                      (uint8_t *)signed_data,
-                      (int)signed_data_len,
-                      (uint8_t *)signature_rs,
-                      DUOX_VDE_SIG_LEN,
-                      true);
+                                                 (uint8_t *)pubkey,
+                                                 (uint8_t *)signed_data,
+                                                 (int)signed_data_len,
+                                                 (uint8_t *)signature_rs,
+                                                 DUOX_VDE_SIG_LEN,
+                                                 true);
             if (res == PM3_SUCCESS) {
                 if (matched_index != NULL) {
                     *matched_index = i;
@@ -864,8 +864,8 @@ static int duox_parse_or_verify_x509_payload(const uint8_t *data, size_t data_le
                                              bool verbose, duox_cert_info_t *out, size_t *matched_index) {
     return verify_signature
            ? duox_verify_x509_certificate_with_anchors(data, data_len,
-                   ca_anchors, ca_anchor_count,
-                   verbose, out, matched_index)
+                                                       ca_anchors, ca_anchor_count,
+                                                       verbose, out, matched_index)
            : duox_parse_x509_certificate(data, data_len, verbose, out);
 }
 
@@ -915,9 +915,9 @@ static int duox_verify_x509_certificate_variants(const uint8_t *data, size_t dat
             PrintAndLogEx(INFO, "Trying zero-padded X.509 payload (%zu bytes)", payload_len);
         }
         return duox_parse_or_verify_x509_payload(data, payload_len,
-                ca_anchors, ca_anchor_count,
-                verify_signature,
-                verbose, out, matched_index);
+                                                 ca_anchors, ca_anchor_count,
+                                                 verify_signature,
+                                                 verbose, out, matched_index);
     }
 
     return PM3_ENODATA;
@@ -928,17 +928,17 @@ int duox_parse_or_verify_certificate_variants(const uint8_t *data, size_t data_l
                                               bool verify_signature,
                                               bool verbose, duox_cert_info_t *out, size_t *matched_index) {
     int x509_res = duox_verify_x509_certificate_variants(data, data_len,
-                   ca_anchors, ca_anchor_count,
-                   verify_signature,
-                   verbose, out, matched_index);
+                                                         ca_anchors, ca_anchor_count,
+                                                         verify_signature,
+                                                         verbose, out, matched_index);
     if (x509_res != PM3_ENODATA) {
         return x509_res;
     }
 
     int gp_res = duox_parse_gp_vde_certificate(data, data_len,
-                 ca_anchors, ca_anchor_count,
-                 verify_signature,
-                 verbose, out, matched_index);
+                                               ca_anchors, ca_anchor_count,
+                                               verify_signature,
+                                               verbose, out, matched_index);
     if (gp_res != PM3_ENODATA) {
         return gp_res;
     }

@@ -8079,26 +8079,39 @@ static int sam_sc_dispatch(uint8_t flags, uint8_t scflag_in,
 //   A0 15 AF 13 80 01 <ver> 81 01 <kref> 82 08 <rnd_a> 83 01 <tca>
 static uint16_t sam_sc_build_init_auth(uint8_t kref, const uint8_t rnd_a[8],
                                        uint8_t out[23]) {
-    out[0] = 0xA0; out[1] = 0x15;
-    out[2] = 0xAF; out[3] = 0x13;
-    out[4] = 0x80; out[5] = 0x01; out[6] = 0x00;        // version=0
-    out[7] = 0x81; out[8] = 0x01; out[9] = kref;
-    out[10] = 0x82; out[11] = 0x08;
+    out[0] = 0xA0;
+    out[1] = 0x15;
+    out[2] = 0xAF;
+    out[3] = 0x13;
+    out[4] = 0x80;
+    out[5] = 0x01;
+    out[6] = 0x00;        // version=0
+    out[7] = 0x81;
+    out[8] = 0x01;
+    out[9] = kref;
+    out[10] = 0x82;
+    out[11] = 0x08;
     memcpy(out + 12, rnd_a, 8);
-    out[20] = 0x83; out[21] = 0x01; out[22] = 0x00;     // tca=0
+    out[20] = 0x83;
+    out[21] = 0x01;
+    out[22] = 0x00;     // tca=0
     return 23;
 }
 
 // Build the ContinueAuth SAM payload (40 bytes):
 //   A0 26 B0 24 80 10 <clientCryptogram> 81 10 <clientCmac>
 static uint16_t sam_sc_build_continue_auth(const uint8_t client_crypto[16],
-                                            const uint8_t client_cmac[16],
-                                            uint8_t out[40]) {
-    out[0] = 0xA0; out[1] = 0x26;
-    out[2] = 0xB0; out[3] = 0x24;
-    out[4] = 0x80; out[5] = 0x10;
+                                           const uint8_t client_cmac[16],
+                                           uint8_t out[40]) {
+    out[0] = 0xA0;
+    out[1] = 0x26;
+    out[2] = 0xB0;
+    out[3] = 0x24;
+    out[4] = 0x80;
+    out[5] = 0x10;
     memcpy(out + 6, client_crypto, 16);
-    out[22] = 0x81; out[23] = 0x10;
+    out[22] = 0x81;
+    out[23] = 0x10;
     memcpy(out + 24, client_cmac, 16);
     return 40;
 }
@@ -8197,7 +8210,7 @@ static int sam_sc_peel_envelope(const uint8_t *resp, uint16_t resp_len,
                                 char *path) {
     if (resp_len < 2) return -1;
 
-    #define SAM_SC_READ_BER_LEN(buf, buflen, off, out_len)                \
+#define SAM_SC_READ_BER_LEN(buf, buflen, off, out_len)                \
         do {                                                              \
             if ((off) >= (buflen)) return -1;                             \
             uint8_t b0 = (buf)[(off)++];                                  \
@@ -8240,14 +8253,16 @@ static int sam_sc_peel_envelope(const uint8_t *resp, uint16_t resp_len,
     *inner_len = in_len;
     return 0;
 
-    #undef SAM_SC_READ_BER_LEN
+#undef SAM_SC_READ_BER_LEN
 }
 
 // Encode a BER length (short form < 128, otherwise 0x81/0x82).
 static uint8_t sam_sc_emit_ber_len(uint8_t *out, uint16_t len) {
     if (len < 0x80) { out[0] = (uint8_t)len; return 1; }
     if (len < 0x100) { out[0] = 0x81; out[1] = (uint8_t)len; return 2; }
-    out[0] = 0x82; out[1] = (uint8_t)(len >> 8); out[2] = (uint8_t)(len & 0xFF);
+    out[0] = 0x82;
+    out[1] = (uint8_t)(len >> 8);
+    out[2] = (uint8_t)(len & 0xFF);
     return 3;
 }
 
@@ -8893,7 +8908,7 @@ static int CmdHFiClassLiberate(const char *Cmd) {
         memcpy(key, iClass_Key_Table[0], PICOPASS_BLOCK_SIZE);
 
         int res = iclass_read_block_ex(key, MKF_KNOWN_BLOCK, ICLASS_DEBIT_KEYTYPE, false, false, false,
-                                        verbose, true, shallow_mod, blk18, false, false);
+                                       verbose, true, shallow_mod, blk18, false, false);
         if (res == PM3_SUCCESS) {
             // build 2-key 3DES key: CSN || 0570F69A06975CD8
             uint8_t des_key[16] = {0};
@@ -8995,7 +9010,7 @@ static int CmdHFiClassLiberate(const char *Cmd) {
         case CARD_TYPE_ICOPY_ICL:
         case CARD_TYPE_ICOPY_ICS: {
             // change KD from DRM key to default key (ki 0)
-        PrintAndLogEx(INFO, "Changing KD from iCopy-X DRM key to default");
+            PrintAndLogEx(INFO, "Changing KD from iCopy-X DRM key to default");
 
             // calculate XOR div key
             uint8_t xor_div_key[PICOPASS_BLOCK_SIZE] = {0};
@@ -9023,7 +9038,7 @@ static int CmdHFiClassLiberate(const char *Cmd) {
             memcpy(default_key, iClass_Key_Table[0], PICOPASS_BLOCK_SIZE);
 
             res = iclass_read_block_ex(default_key, 6, ICLASS_DEBIT_KEYTYPE, false, false, false,
-                                        verbose, true, shallow_mod, verify, false, false);
+                                       verbose, true, shallow_mod, verify, false, false);
             if (res == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "Verified default key ( %s )", _GREEN_("ok"));
             } else {

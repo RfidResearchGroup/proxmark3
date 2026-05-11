@@ -103,7 +103,7 @@ struct Bad_arg_to_ARRAY_SIZE2 {
     class Is_pointer; /* incomplete */
     class Is_array {};
     template <typename T>
-    static Is_pointer check_type(T const *, T const * const *);
+    static Is_pointer check_type(T const *, T const *const *);
     static Is_array check_type(void const *, void const *);
 };
 

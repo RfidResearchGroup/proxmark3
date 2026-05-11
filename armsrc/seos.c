@@ -478,7 +478,7 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                 uint8_t tlv_idx = 1 + offset;
 
                                 dynamic_response_info.response[tlv_idx++] = 0x7C; // Tag: mutual auth
-                                dynamic_response_info.response[tlv_idx++] = sizeof(RND_ICC) +2; // Length
+                                dynamic_response_info.response[tlv_idx++] = sizeof(RND_ICC) + 2; // Length
                                 dynamic_response_info.response[tlv_idx++] = 0x81; // Tag: request for RND.ICC
                                 dynamic_response_info.response[tlv_idx++] = sizeof(RND_ICC); // Length
                                 memcpy(dynamic_response_info.response + tlv_idx, RND_ICC, sizeof(RND_ICC));

@@ -288,6 +288,18 @@ Check column "offline" for their availability.
 |`hf aliro read          `|N       |`Run SELECT-AUTH0-AUTH1 and optional step-up document retrieval`
 
 
+### hf calypso
+
+ { Calypso transport cards...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf calypso help        `|Y       |`This help`
+|`hf calypso info        `|N       |`Tag information`
+|`hf calypso dump        `|N       |`Dump readable files and records`
+|`hf calypso list        `|Y       |`List Calypso history`
+
+
 ### hf cipurse
 
  { Cipurse transport Cards...          }
@@ -474,7 +486,7 @@ Check column "offline" for their availability.
 |`hf iclass decrypt      `|Y       |`Decrypt given block data or tag dump file`
 |`hf iclass managekeys   `|Y       |`Manage keys to use with iclass commands`
 |`hf iclass permutekey   `|Y       |`Permute function from 'heart of darkness' paper`
-|`hf iclass sam          `|N       |`SAM tests`
+|`hf iclass sam          `|N       |`SAM ops: PACS extract + secure channel (scopen/scsend/scclose)`
 
 
 ### hf ict
@@ -742,7 +754,10 @@ Check column "offline" for their availability.
 |`hf mfdes write         `|N       |`Write data to standard/backup/record/value file`
 |`hf mfdes value         `|N       |`Operations with value file (get/credit/limited credit/debit/clear)`
 |`hf mfdes clearrecfile  `|N       |`Clear record File`
+|`hf mfdes makemfclicense`|Y       |`Generate a Mifare Classic license for DESFire EV3C`
+|`hf mfdes verifycert    `|N       |`Validate cert from file and verify key possession`
 |`hf mfdes intauth       `|N       |`ISO Internal Authenticate (ECDSA challenge-response)`
+|`hf mfdes vdesign       `|N       |`VDE ECDSASign (EV charging signature over 32-byte challenge)`
 |`hf mfdes test          `|Y       |`Regression crypto tests`
 
 

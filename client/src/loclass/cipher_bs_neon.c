@@ -61,7 +61,7 @@ static inline void bs_tick(uint64x2_t *t, uint64x2_t *b, uint64x2_t *l, uint64x2
         t[i] = t[i + 1];
     }
     t[15] = new_t;
-    
+
     for (int i = 0; i < 7; i++) {
         b[i] = b[i + 1];
     }
@@ -134,13 +134,31 @@ static inline void bs_init_state(const uint64x2_t kb[64], uint64x2_t l[8], uint6
     bs_add8(k0xor, ec, l);
     bs_add8(k0xor, x21, r);
 
-    b[0] = BS_ZERO; b[1] = BS_ZERO; b[2] = BS_ONES; b[3] = BS_ONES;
-    b[4] = BS_ZERO; b[5] = BS_ZERO; b[6] = BS_ONES; b[7] = BS_ZERO;
+    b[0] = BS_ZERO;
+    b[1] = BS_ZERO;
+    b[2] = BS_ONES;
+    b[3] = BS_ONES;
+    b[4] = BS_ZERO;
+    b[5] = BS_ZERO;
+    b[6] = BS_ONES;
+    b[7] = BS_ZERO;
 
-    t[ 0] = BS_ZERO; t[ 1] = BS_ONES; t[ 2] = BS_ZERO; t[ 3] = BS_ZERO;
-    t[ 4] = BS_ONES; t[ 5] = BS_ZERO; t[ 6] = BS_ZERO; t[ 7] = BS_ZERO;
-    t[ 8] = BS_ZERO; t[ 9] = BS_ZERO; t[10] = BS_ZERO; t[11] = BS_ZERO;
-    t[12] = BS_ZERO; t[13] = BS_ONES; t[14] = BS_ONES; t[15] = BS_ONES;
+    t[ 0] = BS_ZERO;
+    t[ 1] = BS_ONES;
+    t[ 2] = BS_ZERO;
+    t[ 3] = BS_ZERO;
+    t[ 4] = BS_ONES;
+    t[ 5] = BS_ZERO;
+    t[ 6] = BS_ZERO;
+    t[ 7] = BS_ZERO;
+    t[ 8] = BS_ZERO;
+    t[ 9] = BS_ZERO;
+    t[10] = BS_ZERO;
+    t[11] = BS_ZERO;
+    t[12] = BS_ZERO;
+    t[13] = BS_ONES;
+    t[14] = BS_ONES;
+    t[15] = BS_ONES;
 }
 
 void prepare_ccnr_bits_bs128(const uint8_t *cc_nr, uint64_t y_bits_bs[96 * BS128_WORDS]) {
@@ -156,7 +174,7 @@ void prepare_ccnr_bits_bs128(const uint8_t *cc_nr, uint64_t y_bits_bs[96 * BS128
 
 void prepare_target_mac_bs128(const uint8_t target_mac[4], uint64_t target_mac_bs[32 * BS128_WORDS]) {
     for (int i = 0; i < 4; i++) {
-        
+
         const uint8_t byte = target_mac[i];
         for (int bit = 0; bit < 8; bit++) {
             vst1q_u64(&target_mac_bs[(i * 8 + bit) * BS128_WORDS], ((byte >> bit) & 1) ? BS_ONES : BS_ZERO);
@@ -219,7 +237,7 @@ void doMAC_brute_match128(const uint64_t y_bits_bs[96 * BS128_WORDS],
         mac_match = vbicq_u64(mac_match, diff);
 
         if ((tick == 7 || tick == 15 || tick == 23) && bs128_all_zero(mac_match)) {
-            match_out[0] = 0; 
+            match_out[0] = 0;
             match_out[1] = 0;
             return;
         }
@@ -239,24 +257,24 @@ bool bs_neon_supported(void) { return true; }
 bool bs_neon_supported(void) { return false; }
 
 void prepare_ccnr_bits_bs128(const uint8_t *cc_nr, uint64_t y_bits_bs[96 * BS128_WORDS]) {
-    (void)cc_nr; 
+    (void)cc_nr;
     (void)y_bits_bs;
 }
 void prepare_target_mac_bs128(const uint8_t target_mac[4], uint64_t target_mac_bs[32 * BS128_WORDS]) {
-    (void)target_mac; 
+    (void)target_mac;
     (void)target_mac_bs;
 }
 void build_bitslice_key_128(const uint8_t partial_key[8], uint64_t index_start, uint64_t kb[64 * BS128_WORDS]) {
-    (void)partial_key; 
-    (void)index_start; 
+    (void)partial_key;
+    (void)index_start;
     (void)kb;
 }
 void doMAC_brute_match128(const uint64_t y_bits_bs[96 * BS128_WORDS],
                           const uint64_t kb[64 * BS128_WORDS],
                           const uint64_t target_mac_bs[32 * BS128_WORDS],
                           uint64_t match_out[BS128_WORDS]) {
-    (void)y_bits_bs; 
-    (void)kb; 
+    (void)y_bits_bs;
+    (void)kb;
     (void)target_mac_bs;
     for (int i = 0; i < BS128_WORDS; i++) {
         match_out[i] = 0;

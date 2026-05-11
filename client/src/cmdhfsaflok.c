@@ -323,7 +323,7 @@ static inline uint16_t _get_saflok_mfc_card_creation_year_impl(const saflok_mfc_
     return creation_year;
 }
 static inline bool _set_saflok_mfc_card_creation_year_impl(saflok_mfc_data_t *data, uint16_t year) {
-    if (year < 1980u || year > (1980u+0x7Fu)) {
+    if (year < 1980u || year > (1980u + 0x7Fu)) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " year out of range (%u)", year);
         return false;
     }
@@ -375,7 +375,7 @@ static inline bool _set_saflok_mfc_card_creation_minute_impl(saflok_mfc_data_t *
 
 static inline bool is_saflok_mfc_datetime_valid(const saflok_mfc_datetime_t *date) {
     bool result = true;
-    if ((date->year < 1980) || (date->year > (1980u+0xFFu))) {
+    if ((date->year < 1980) || (date->year > (1980u + 0xFFu))) {
         PrintAndLogEx(WARNING, "year out of range (%d)", date->year);
         result = false;
     }
@@ -415,7 +415,7 @@ static inline saflok_mfc_datetime_t get_saflok_mfc_card_creation_datetime(
     }
     return date;
 }
-static inline bool set_saflok_mfc_card_creation_datetime(saflok_mfc_data_t * data, const saflok_mfc_datetime_t * date) {
+static inline bool set_saflok_mfc_card_creation_datetime(saflok_mfc_data_t *data, const saflok_mfc_datetime_t *date) {
     if (!is_saflok_mfc_datetime_valid(date)) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " creation date is invalid");
         return false;
