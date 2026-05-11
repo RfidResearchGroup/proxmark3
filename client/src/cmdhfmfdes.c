@@ -6725,7 +6725,7 @@ static int CmdHF14ADesCreateMFCMapping(const char *Cmd) {
         arg_str0(NULL, "isoid", "<hex>",                  "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)"),
         arg_str0(NULL, "fid", "<hex>",                    "File ID to map (1 hex byte)"),
         arg_str0(NULL, "restore-fid", "<hex>",            "Restore source when mapping value files to value blocks (1 hex byte)"),
-        arg_str0("b",  "blk", "<num>[,<num>[,...]]",      "The MFC blocks to map, must be unique (use value 'data' for all data blocks, and 'trailer' for all trailer blocks)"),
+        arg_str0("b",  "blk", "<num>[,<num>[,...]]",      "The MFC blocks to map, must be unique (use -b data for all data blocks, and -b trailer for all trailer blocks)"),
         arg_str0(NULL, "mfc-license", "<hex>",            "The MFC license (omit to use saved license and license MAC)"),
         arg_str0(NULL, "mfc-license-mac", "<hex>",        "The MFC license MAC (omit to use saved license and license MAC)"),
         arg_lit0(NULL, "key-a",                           "Allow updating key A from inside sector trailers mapped to DESFire files"),
@@ -6812,7 +6812,19 @@ static int CmdHF14ADesCreateMFCMapping(const char *Cmd) {
     // parse blocks
     uint8_t blocks[64];
     size_t num_blocks = 0;
-    if (parse_mfc_blocks(blk_str_arg->sval[0], blocks, &num_blocks, false) != PM3_SUCCESS) {
+    if (strcmp(blk_str_arg->sval[0], "data") == 0) {
+        for (int i = 0; i < 64; i++) {
+            if (((i + 1) % 4) != 0) {
+                blocks[num_blocks++] = i;
+            }
+        }
+    } else if (strcmp(blk_str_arg->sval[0], "trailer") == 0) {
+        for (int i = 0; i < 64; i++) {
+            if (((i + 1) % 4) == 0) {
+                blocks[num_blocks++] = i;
+            }
+        }
+    } else if (parse_mfc_blocks(blk_str_arg->sval[0], blocks, &num_blocks, false) != PM3_SUCCESS) {
         goto createmfcmapping_parsing_error;
     }
 
