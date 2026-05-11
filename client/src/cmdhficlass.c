@@ -8262,7 +8262,7 @@ static int CmdHFiClassSAMSCOpen(const char *Cmd) {
                   "scsend / scclose operations can wrap/unwrap APDUs against\n"
                   "the same SAM-side session.\n"
                   "Defaults: --key 00000000000000000000000000000000 --kref 0x85",
-                  "hf iclass sam scopen --key 00000000000000000000000000000000\n"
+                  "hf iclass sam scopen --key 00000000000000000000000000000000\n";
 
     void *argtable[] = {
         arg_param_begin,
