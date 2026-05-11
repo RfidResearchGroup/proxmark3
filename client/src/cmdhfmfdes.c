@@ -6892,7 +6892,7 @@ static int CmdHF14ADesCreateMFCMapping(const char *Cmd) {
 
     res = DesfireCreateMFCMapping(&dctx, cmd_data, cmd_data_len);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "Create MFC mapping " _RED_("failed") ". Result 0x%02X");
+        PrintAndLogEx(FAILED, "Create MFC mapping " _RED_("failed") ". Result 0x%02X", res);
     }
     DropField();
     return res;
