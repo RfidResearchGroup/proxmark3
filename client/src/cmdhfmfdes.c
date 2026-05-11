@@ -6711,27 +6711,27 @@ static int CmdHF14ADesCreateMFCMapping(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        /*  1 */ arg_lit0("a",  "apdu",                            "Show APDU requests and responses"),
-        /*  2 */ arg_lit0("v",  "verbose",                         "Verbose output"),
-        /*  3 */ arg_int0("n",  "keyno", "<dec>",                  "Key number"),
-        /*  4 */ arg_str0("t",  "algo", "<DES|2TDEA|3TDEA|AES>",   "Crypt algo"),
-        /*  5 */ arg_str0("k",  "key", "<hex>",                    "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
-        /*  6 */ arg_str0(NULL, "kdf", "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
-        /*  7 */ arg_str0("i",  "kdfi", "<hex>",                   "KDF input (1-31 hex bytes)"),
-        /*  8 */ arg_str0("m",  "cmode", "<plain|mac|encrypt>",    "Communicaton mode"),
-        /*  9 */ arg_str0("c",  "ccset", "<native|niso|iso>",      "Communicaton command set"),
-        /* 10 */ arg_str0(NULL, "schann", "<d40|ev1|ev2|lrp>",     "Secure channel"),
-        /* 11 */ arg_str0(NULL, "aid", "<hex>",                    "Application ID (3 hex bytes, big endian)"),
-        /* 12 */ arg_str0(NULL, "isoid", "<hex>",                  "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)"),
-        /* 13 */ arg_str0(NULL, "fid", "<hex>",                    "File ID to map (1 hex byte)"),
-        /* 14 */ arg_str0(NULL, "restore-fid", "<hex>",            "Restore source when mapping value files to value blocks (1 hex byte)"),
-        /* 15 */ arg_str0("b",  "blk", "<num>[,<num>[,...]]",      "The MFC blocks to map, must be unique (use value 'data' for all data blocks, and 'trailer' for all trailer blocks)"),
-        /* 16 */ arg_str0(NULL, "mfc-license", "<hex>",            "The MFC license (omit to use saved license and license MAC)"),
-        /* 17 */ arg_str0(NULL, "mfc-license-mac", "<hex>",        "The MFC license MAC (omit to use saved license and license MAC)"),
-        /* 18 */ arg_lit0(NULL, "key-a",                           "Allow updating key A from inside sector trailers mapped to DESFire files"),
-        /* 19 */ arg_lit0(NULL, "key-b",                           "Allow updating key B from inside sector trailers mapped to DESFire files"),
-        /* 20 */ arg_lit0(NULL, "access-conditions",               "Allow updating the access conditions from inside sector trailers mapped to DESFire files"),
-        /* 21 */ arg_lit0(NULL, "restore-transfer",                "Enable the RestoreTransfer command for the mapped value blocks"),
+        arg_lit0("a",  "apdu",                            "Show APDU requests and responses"),
+        arg_lit0("v",  "verbose",                         "Verbose output"),
+        arg_int0("n",  "keyno", "<dec>",                  "Key number"),
+        arg_str0("t",  "algo", "<DES|2TDEA|3TDEA|AES>",   "Crypt algo"),
+        arg_str0("k",  "key", "<hex>",                    "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0(NULL, "kdf", "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
+        arg_str0("i",  "kdfi", "<hex>",                   "KDF input (1-31 hex bytes)"),
+        arg_str0("m",  "cmode", "<plain|mac|encrypt>",    "Communicaton mode"),
+        arg_str0("c",  "ccset", "<native|niso|iso>",      "Communicaton command set"),
+        arg_str0(NULL, "schann", "<d40|ev1|ev2|lrp>",     "Secure channel"),
+        arg_str0(NULL, "aid", "<hex>",                    "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "isoid", "<hex>",                  "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)"),
+        arg_str0(NULL, "fid", "<hex>",                    "File ID to map (1 hex byte)"),
+        arg_str0(NULL, "restore-fid", "<hex>",            "Restore source when mapping value files to value blocks (1 hex byte)"),
+        arg_str0("b",  "blk", "<num>[,<num>[,...]]",      "The MFC blocks to map, must be unique (use value 'data' for all data blocks, and 'trailer' for all trailer blocks)"),
+        arg_str0(NULL, "mfc-license", "<hex>",            "The MFC license (omit to use saved license and license MAC)"),
+        arg_str0(NULL, "mfc-license-mac", "<hex>",        "The MFC license MAC (omit to use saved license and license MAC)"),
+        arg_lit0(NULL, "key-a",                           "Allow updating key A from inside sector trailers mapped to DESFire files"),
+        arg_lit0(NULL, "key-b",                           "Allow updating key B from inside sector trailers mapped to DESFire files"),
+        arg_lit0(NULL, "access-conditions",               "Allow updating the access conditions from inside sector trailers mapped to DESFire files"),
+        arg_lit0(NULL, "restore-transfer",                "Enable the RestoreTransfer command for the mapped value blocks"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -6757,14 +6757,12 @@ static int CmdHF14ADesCreateMFCMapping(const char *Cmd) {
 
     if (!arg_get_u32_hexstr_def_nlen(ctx, 13, 0, &fid, 1, false)) {
         PrintAndLogEx(ERR, "--fid is required");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
+        goto createmfcmapping_parsing_error;
     }
     if (!arg_get_u32_hexstr_def_nlen(ctx, 14, 0, &restore_fid, 1, false)) {
         if (restore_transfer) {
             PrintAndLogEx(ERR, "--restore-fid is required");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
+            goto createmfcmapping_parsing_error;
         }
     } else if (!restore_transfer) {
         PrintAndLogEx(WARNING, "--restore-fid is ignored if --restore-transfer is not specified");
@@ -6776,16 +6774,14 @@ static int CmdHF14ADesCreateMFCMapping(const char *Cmd) {
     if (mfc_license_arg->count == 0 && mfc_license_mac_arg->count == 0) {
         if (!saved_mfclicense_set || !saved_mfclicense_mac_set) {
             PrintAndLogEx(ERR, "No saved license, create it with hf mfdes makemfclicense --save");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
+            goto createmfcmapping_parsing_error;
         }
         use_saved_license = true;
     } else if (mfc_license_arg->count == 1 && mfc_license_mac_arg->count == 1) {
         use_saved_license = false;
     } else {
         PrintAndLogEx(ERR, "--mfc-license and --mfc-license-mac must be given together");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
+        goto createmfcmapping_parsing_error;
     }
 
     if (use_saved_license) {
@@ -6794,18 +6790,15 @@ static int CmdHF14ADesCreateMFCMapping(const char *Cmd) {
         memcpy(license_mac, saved_mfclicense_mac, 8);
     } else {
         if (CLIParamHexToBuf(mfc_license_arg, license, sizeof (license), &license_len) != 0) {
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
+            goto createmfcmapping_parsing_error;
         }
         int license_mac_len = 0;
         if (CLIParamHexToBuf(mfc_license_mac_arg, license_mac, 8, &license_mac_len) != 0) {
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
+            goto createmfcmapping_parsing_error;
         }
         if (license_mac_len != 8) {
             PrintAndLogEx(ERR, "The license MAC must be 8 bytes");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
+            goto createmfcmapping_parsing_error;
         }
     }
 
@@ -6814,27 +6807,23 @@ static int CmdHF14ADesCreateMFCMapping(const char *Cmd) {
 
     if (blk_str_arg->count != 1) {
         PrintAndLogEx(ERR, "--blk is mandatory");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
+        goto createmfcmapping_parsing_error;
     }
     // parse blocks
     uint8_t blocks[64];
     size_t num_blocks = 0;
     if (parse_mfc_blocks(blk_str_arg->sval[0], blocks, &num_blocks, false) != PM3_SUCCESS) {
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
+        goto createmfcmapping_parsing_error;
     }
 
     bool trailer = ((blocks[0] + 1) % 4) == 0;
 
     if (trailer && restore_transfer) {
         PrintAndLogEx(ERR, "--restore-transfer not allowed on trailer blocks");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
+        goto createmfcmapping_parsing_error;
     } else if (!trailer && (key_a || key_b || ac)) {
         PrintAndLogEx(ERR, "--key-a, --key-b, --access-conditions not allowed on data/value blocks");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
+        goto createmfcmapping_parsing_error;
     }
 
     DesfireContext_t dctx = {0};
@@ -6895,6 +6884,10 @@ static int CmdHF14ADesCreateMFCMapping(const char *Cmd) {
     }
     DropField();
     return res;
+
+createmfcmapping_parsing_error:
+    CLIParserFree(ctx);
+    return PM3_EINVARG;
 }
 
 static int DesfileReadISOFileAndPrint(DesfireContext_t *dctx,
