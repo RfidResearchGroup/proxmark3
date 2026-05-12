@@ -60,8 +60,6 @@
 #define CALYPSO_GET_DATA_NAME_WIDTH 22
 #define CALYPSO_HEX_ENTRY_INLINE_MAX 32
 #define CALYPSO_HEX_ENTRY_BREAK 32
-#define CALYPSO_ANSI_GREEN "\x1b[32m"
-#define CALYPSO_ANSI_YELLOW "\x1b[33m"
 
 #define CALYPSO_MANUFACTURERS_RESOURCE "calypso/manufacturers"
 #define CALYPSO_IC_FAMILIES_RESOURCE   "calypso/ic_families"
@@ -1758,7 +1756,7 @@ static bool calypso_ef_list_contains_lid(const calypso_ef_list_t *ef_list, uint1
 static void calypso_print_get_data_object(const calypso_get_data_probe_t *probe, const uint8_t *data, size_t data_len) {
     char label[64] = {0};
     snprintf(label, sizeof(label), " %04X %-*s : ", probe->tag, CALYPSO_GET_DATA_NAME_WIDTH, probe->name);
-    calypso_print_hex_entry(label, data, data_len, CALYPSO_ANSI_YELLOW);
+    calypso_print_hex_entry(label, data, data_len, ANSI_YELLOW);
 }
 
 static void calypso_print_info_data_objects(void) {
@@ -2117,7 +2115,7 @@ static void calypso_print_hex_entry(const char *label, const uint8_t *data, size
 static void calypso_dump_print_record_entry(long long record, const uint8_t *data, size_t data_len) {
     char label[64] = {0};
     snprintf(label, sizeof(label), "  record " _GREEN_("%03lld") "       : ", record);
-    calypso_print_hex_entry(label, data, data_len, CALYPSO_ANSI_GREEN);
+    calypso_print_hex_entry(label, data, data_len, ANSI_GREEN);
 }
 
 static bool calypso_dump_print_record(uint8_t record, const uint8_t *data, size_t data_len, json_t *records, bool print_record) {
@@ -2263,7 +2261,7 @@ static bool calypso_dump_sfi(uint8_t sfi, json_t *sfi_files, bool verbose, size_
         PrintAndLogEx(INFO, "--- " _CYAN_("SFI %02X") " -----------------------------------", sfi);
     }
     if (has_binary) {
-        calypso_print_hex_entry("  binary           : ", binary, binary_len, CALYPSO_ANSI_GREEN);
+        calypso_print_hex_entry("  binary           : ", binary, binary_len, ANSI_GREEN);
     }
     json_t *records_to_print = json_object_get(file, "records");
     calypso_dump_print_json_records(records_to_print);
@@ -2330,10 +2328,10 @@ static bool calypso_dump_file_path(const calypso_file_ref_t *ref, uint8_t source
         PrintAndLogEx(INFO, "--- " _CYAN_("%s") " (%s) (known) --------------------", ref->name, path);
     }
     if (fcp_len > 0) {
-        calypso_print_hex_entry("  fcp              : ", fcp, fcp_len, CALYPSO_ANSI_YELLOW);
+        calypso_print_hex_entry("  fcp              : ", fcp, fcp_len, ANSI_YELLOW);
     }
     if (calypso_read_sw_has_data(binary_sw, binary_len) && binary_len > 0) {
-        calypso_print_hex_entry("  binary           : ", binary, binary_len, CALYPSO_ANSI_GREEN);
+        calypso_print_hex_entry("  binary           : ", binary, binary_len, ANSI_GREEN);
     } else if (verbose && binary_sw != 0 && calypso_read_sw_is_unavailable(binary_sw) == false) {
         PrintAndLogEx(INFO, "  binary unavailable (%04X - %s)", binary_sw, GetAPDUCodeDescription(binary_sw >> 8, binary_sw & 0xFF));
     }
