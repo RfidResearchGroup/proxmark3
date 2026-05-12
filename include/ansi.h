@@ -27,14 +27,23 @@
 
 #define _CLR_ "\x1b[0K"
 
-#define _BLACK_(s)          "\x1b[30m" s AEND
-#define _RED_(s)            "\x1b[31m" s AEND
-#define _GREEN_(s)          "\x1b[32m" s AEND
-#define _YELLOW_(s)         "\x1b[33m" s AEND
-#define _BLUE_(s)           "\x1b[34m" s AEND
-#define _MAGENTA_(s)        "\x1b[35m" s AEND
-#define _CYAN_(s)           "\x1b[36m" s AEND
-#define _WHITE_(s)          "\x1b[37m" s AEND
+#define ANSI_BLACK          "\x1b[30m"
+#define ANSI_RED            "\x1b[31m"
+#define ANSI_GREEN          "\x1b[32m"
+#define ANSI_YELLOW         "\x1b[33m"
+#define ANSI_BLUE           "\x1b[34m"
+#define ANSI_MAGENTA        "\x1b[35m"
+#define ANSI_CYAN           "\x1b[36m"
+#define ANSI_WHITE          "\x1b[37m"
+
+#define _BLACK_(s)          ANSI_BLACK s AEND
+#define _RED_(s)            ANSI_RED s AEND
+#define _GREEN_(s)          ANSI_GREEN s AEND
+#define _YELLOW_(s)         ANSI_YELLOW s AEND
+#define _BLUE_(s)           ANSI_BLUE s AEND
+#define _MAGENTA_(s)        ANSI_MAGENTA s AEND
+#define _CYAN_(s)           ANSI_CYAN s AEND
+#define _WHITE_(s)          ANSI_WHITE s AEND
 
 #define _BRIGHT_BLACK_(s)   "\x1b[30;1m" s AEND
 #define _BRIGHT_RED_(s)     "\x1b[31;1m" s AEND
