@@ -2993,17 +2993,62 @@
         "Protocol": "cna_calypso"
     },
     {
+        "AID": "334D54522E494341D48401019001",
+        "Vendor": "Secretaria de Movilidad (SEMOVI)",
+        "Country": "Mexico",
+        "Name": "Tarjeta de Movilidad Integrada",
+        "Description": "Master File AID observed on a Mexico City Tarjeta de Movilidad Integrada matching MF LID 3F00. \"3MTR.ICA\" in ISO/IEC 8859-1 coding.",
+        "Type": "",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "334D54522E4943410000000000000000",
+        "Vendor": "Lignes D'Azur",
+        "Country": "France",
+        "Name": "La Carte",
+        "Description": "Master File AID observed on La Carte matching MF LID 3F00. \"3MTR.ICA\" in ISO/IEC 8859-1 coding with a zero-padded suffix.",
+        "Type": "",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "315449432E494341D4840101",
+        "Vendor": "Secretaria de Movilidad (SEMOVI)",
+        "Country": "Mexico",
+        "Name": "Tarjeta de Movilidad Integrada",
+        "Description": "AID prefix observed for Calypso applications on Mexico City Tarjeta de Movilidad Integrada.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
         "AID": "315449432E494341D48401019101",
-        "Vendor": "Spirtech",
+        "Vendor": "Secretaria de Movilidad (SEMOVI); Spirtech",
         "Country": "N/A",
-        "Name": "Mover Emilia Romagna | CDMX Tarjeta de Movilidad",
-        "Description": "Calypso-based ticket for public transport in Emilia-Romagna or Mexico City.",
+        "Name": "Tarjeta de Movilidad Integrada | Mover Emilia Romagna",
+        "Description": "Calypso-based ticket for public transport in Mexico City or Emilia-Romagna. Observed matching Calypso DF LID 2000.",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Sources": [
             "android://com.spirtech.emiliaromagna",
             "android://mx.gob.cdmx.adip.apps"
         ]
+    },
+    {
+        "AID": "315449432E494341D48401019301",
+        "Vendor": "Secretaria de Movilidad (SEMOVI)",
+        "Country": "Mexico",
+        "Name": "Tarjeta de Movilidad Integrada",
+        "Description": "Calypso-based public transport application observed matching DF LID 3100.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "315449432E494341D05600019101",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "Calypso-based transit card used by Brussels public transport. Observed matching Calypso DF LID 2000.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
     },
     {
         "AID": "A000000291D62000029101",
@@ -3030,6 +3075,15 @@
         ]
     },
     {
+        "AID": "304554502E494341D48401019201",
+        "Vendor": "Secretaria de Movilidad (SEMOVI)",
+        "Country": "Mexico",
+        "Name": "Tarjeta de Movilidad Integrada",
+        "Description": "Store value application observed on a Mexico City Tarjeta de Movilidad Integrada matching Calypso DF LID 1000.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
         "AID": "A00000040401250901",
         "Vendor": "Ile-de-France Mobilites",
         "Country": "France",
@@ -3041,6 +3095,24 @@
             "android://com.applidium.vianavigo",
             "android://com.worldline.wallet"
         ]
+    },
+    {
+        "AID": "A0000004040125090101",
+        "Vendor": "Ile-de-France Mobilites",
+        "Country": "France",
+        "Name": "Navigo",
+        "Description": "CALYPSO-based Navigo paper ticket application observed matching Calypso DF LID 2000.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A0000004040125090101000000000000",
+        "Vendor": "Ile-de-France Mobilites",
+        "Country": "France",
+        "Name": "Navigo",
+        "Description": "CALYPSO-based older Navigo plastic card application observed matching Calypso DF LID 2000.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
     },
     {
         "AID": "A00000040401250057F0",
@@ -3074,6 +3146,24 @@
         "Protocol": "cna_calypso"
     },
     {
+        "AID": "A0000004040125092001000000000000",
+        "Vendor": "Lignes D'Azur",
+        "Country": "France",
+        "Name": "La Carte",
+        "Description": "CALYPSO-based La Carte transit card application observed matching Calypso DF LID 2000.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A000000291D25008009301",
+        "Vendor": "Lignes D'Azur",
+        "Country": "France",
+        "Name": "La Carte",
+        "Description": "CALYPSO-based La Carte transit card application observed matching Calypso DF LID 3200.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
         "AID": "54494C414D4F32000000",
         "Vendor": "Lignes D'Azur",
         "Country": "France",
@@ -3087,11 +3177,83 @@
         ]
     },
     {
+        "AID": "A000000291D05600",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "AID prefix observed across MOBIB Calypso applications.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
         "AID": "A000000291D05600019001",
         "Vendor": "MOBIB",
         "Country": "Belgium",
         "Name": "MOBIB",
-        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Description": "Calypso-based transit card used by Brussels public transport. Observed matching Calypso MF LID 3F00.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A000000291D05600019201",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "Calypso-based transit card used by Brussels public transport. Observed matching Calypso DF LID 1000.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A000000291A00000019102",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "Calypso-based transit card used by Brussels public transport. Observed matching Calypso DF LID 2100.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A000000291D05600019301",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "Calypso-based transit card used by Brussels public transport. Observed matching Calypso DF LID 3100.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A000000291D05600019302",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "Calypso-based transit card used by Brussels public transport. Observed matching Calypso DF LID 3200.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A000000291D05600029302",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "Calypso-based transit card used by Brussels public transport. Observed matching Calypso DF LID 3300.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A000000291D05600019303",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "Calypso-based transit card used by Brussels public transport. Observed matching Calypso DF LID 3400.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A000000291D05600029401",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "Calypso-based transit card used by Brussels public transport. Observed matching Calypso DF LID 4100.",
         "Type": "transport",
         "Protocol": "cna_calypso"
     },
