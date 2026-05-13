@@ -287,6 +287,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/mifare/desfiretest.c
         ${PM3_ROOT}/client/src/mifare/gallaghercore.c
         ${PM3_ROOT}/client/src/mifare/gallaghertest.c
+        ${PM3_ROOT}/client/src/mifare/prime.c
         ${PM3_ROOT}/client/src/nfc/ndef.c
         ${PM3_ROOT}/client/src/qrcode/qrcode.c
         ${PM3_ROOT}/client/src/relay/relay_posix.c
