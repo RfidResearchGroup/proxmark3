@@ -2184,6 +2184,10 @@ static int DesfireCommandRxData(DesfireContext_t *dctx, uint8_t cmd, uint8_t *re
     return DesfireCommand(dctx, cmd, NULL, 0, resp, resplen, checklength);
 }
 
+int DesfireCreateMFCMapping(DesfireContext_t *dctx, uint8_t *data, size_t datalen) {
+    return DesfireCommandTxData(dctx, MFDES_CREATE_MFC_MAPPING, data, datalen);
+}
+
 int DesfireFormatPICC(DesfireContext_t *dctx) {
     return DesfireCommandNoData(dctx, MFDES_FORMAT_PICC);
 }

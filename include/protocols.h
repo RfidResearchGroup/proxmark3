@@ -610,9 +610,11 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_READ_RECORDS2              0xAB
 #define MFDES_READ_DATA2                 0xAD
 #define MFDES_ADDITIONAL_FRAME           0xAF
+#define MFDES_RESTORE_TRANSFER           0xB1
 #define MFDES_UPDATE_RECORD2             0xBA
 #define MFDES_READ_RECORDS               0xBB
 #define MFDES_READ_DATA                  0xBD
+#define MFDES_RESTRICT_MFC_UPDATE        0xBF
 #define MFDES_CREATE_CYCLIC_RECORD_FILE  0xC0
 #define MFDES_CREATE_LINEAR_RECORD_FILE  0xC1
 #define MFDES_CHANGE_KEY                 0xC4
@@ -625,6 +627,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_CREATE_VALUE_FILE          0xCC
 #define MFDES_CREATE_STD_DATA_FILE       0xCD
 #define MFDES_CREATE_TRANS_MAC_FILE      0xCE
+#define MFDES_CREATE_MFC_MAPPING         0xCF
 #define MFDES_DELETE_APPLICATION         0xDA
 #define MFDES_UPDATE_RECORD              0xDB
 #define MFDES_DEBIT                      0xDC

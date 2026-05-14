@@ -6482,8 +6482,8 @@ static int CmdHF14ADesMakeMFCLicense(const char *Cmd) {
         arg_lit0("v", "verbose",                     "Show more output"),
         arg_str0("k",  "key", "<hex>",               "Key for computing the MAC, must be HEX 16(AES)"),
         arg_str0("b",  "blk", "<num>[,<num>[,...]]", "The MFC blocks to map, must be given in ascending order (use the special value 'all' for all blocks)"),
-        arg_lit0(NULL, "key-a",                      "Allow updating key A from inside sector trailers mapped to DESFire files"),
-        arg_lit0(NULL, "key-b",                      "Allow updating key B from inside sector trailers mapped to DESFire files"),
+        arg_lit0(NULL, "ka",                         "Allow updating key A from inside sector trailers mapped to DESFire files"),
+        arg_lit0(NULL, "kb",                         "Allow updating key B from inside sector trailers mapped to DESFire files"),
         arg_lit0(NULL, "restrict",                   "Allow the restriction of data updates by the MFC side"),
         arg_lit0(NULL, "map",                        "Allow mapping the blocks to DESFire files"),
         arg_lit0(NULL, "access-conditions",          "Allow updating the access conditions from inside sector trailers mapped to DESFire files"),
@@ -6517,7 +6517,7 @@ static int CmdHF14ADesMakeMFCLicense(const char *Cmd) {
     int mac_key_len = 0;
 
     if (key_arg->count != 1) {
-        PrintAndLogEx(ERR, "At most one instance of --key is required");
+        PrintAndLogEx(ERR, "Exactly one instance of --key is required");
         goto mfclicense_parsing_error;
     }
     if (CLIParamHexToBuf(key_arg, mac_key, sizeof(mac_key), &mac_key_len) != 0) {
@@ -6697,6 +6697,207 @@ static int CmdHF14ADesMakeMFCLicense(const char *Cmd) {
     return PM3_SUCCESS;
 
 mfclicense_parsing_error:
+    CLIParserFree(ctx);
+    return PM3_EINVARG;
+}
+
+static int CmdHF14ADesCreateMFCMapping(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes createmfcmapping",
+                  "Create a Mifare Classic mapping on a DESFire EV3C. The MFC License MAC key (AES only) must have been set previously as PICC key number 50.",
+                  "hf mfdes createmfcmapping --aid 123456 --fid 01 --mfc-keys FFFFFFFFFFFF111111111111222222222222 --mfc-blocks 4,5,6,8\n"
+                  "                    -> Map blocks 4, 5, 6, 8 where sector 1 key A is FFFFFFFFFFFF with key B readable,\n"
+                  "                    -> sector 2 keys are 111111111111 and 222222222222 with key B used for authentication\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",                            "Show APDU requests and responses"),
+        arg_lit0("v",  "verbose",                         "Verbose output"),
+        arg_int0("n",  "keyno", "<dec>",                  "Key number"),
+        arg_str0("t",  "algo", "<DES|2TDEA|3TDEA|AES>",   "Crypt algo"),
+        arg_str0("k",  "key", "<hex>",                    "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0(NULL, "kdf", "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
+        arg_str0("i",  "kdfi", "<hex>",                   "KDF input (1-31 hex bytes)"),
+        arg_str0("m",  "cmode", "<plain|mac|encrypt>",    "Communicaton mode"),
+        arg_str0("c",  "ccset", "<native|niso|iso>",      "Communicaton command set"),
+        arg_str0(NULL, "schann", "<d40|ev1|ev2|lrp>",     "Secure channel"),
+        arg_str0(NULL, "aid", "<hex>",                    "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "isoid", "<hex>",                  "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)"),
+        arg_str0(NULL, "fid", "<hex>",                    "File ID to map (1 hex byte)"),
+        arg_str0(NULL, "restore-fid", "<hex>",            "Restore source when mapping value files to value blocks (1 hex byte)"),
+        arg_str0("b",  "blk", "<num>[,<num>[,...]]",      "The MFC blocks to map, must be unique (use -b data for all data blocks, and -b trailer for all trailer blocks)"),
+        arg_str0(NULL, "mfc-license", "<hex>",            "The MFC license (omit to use saved license and license MAC)"),
+        arg_str0(NULL, "mfc-license-mac", "<hex>",        "The MFC license MAC (omit to use saved license and license MAC)"),
+        arg_lit0(NULL, "ka",                              "Allow updating key A from inside sector trailers mapped to DESFire files"),
+        arg_lit0(NULL, "kb",                              "Allow updating key B from inside sector trailers mapped to DESFire files"),
+        arg_lit0(NULL, "access-conditions",               "Allow updating the access conditions from inside sector trailers mapped to DESFire files"),
+        arg_lit0(NULL, "restore-transfer",                "Enable the RestoreTransfer command for the mapped value blocks"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool key_a = arg_get_lit(ctx, 18);
+    bool key_b = arg_get_lit(ctx, 19);
+    bool ac = arg_get_lit(ctx, 20);
+    bool restore_transfer = arg_get_lit(ctx, 21);
+
+    uint8_t license[192];
+    int license_len;
+    uint8_t license_mac[8];
+
+    bool use_saved_license;
+    struct arg_str *blk_str_arg = arg_get_str(ctx, 15);
+    struct arg_str *mfc_license_arg = arg_get_str(ctx, 16);
+    struct arg_str *mfc_license_mac_arg = arg_get_str(ctx, 17);
+
+    uint32_t restore_fid = -1;
+    uint32_t fid = -1;
+
+    if (!arg_get_u32_hexstr_def_nlen(ctx, 13, 0, &fid, 1, false)) {
+        PrintAndLogEx(ERR, "--fid is required");
+        goto createmfcmapping_parsing_error;
+    }
+    if (!arg_get_u32_hexstr_def_nlen(ctx, 14, 0, &restore_fid, 1, false)) {
+        if (restore_transfer) {
+            PrintAndLogEx(ERR, "--restore-fid is required");
+            goto createmfcmapping_parsing_error;
+        }
+    } else if (!restore_transfer) {
+        PrintAndLogEx(WARNING, "--restore-fid is ignored if --restore-transfer is not specified");
+    }
+
+    PrintAndLogEx(DEBUG, "FID: %02X", fid);
+    PrintAndLogEx(DEBUG, "Restore FID: %02X", restore_fid);
+
+    if (mfc_license_arg->count == 0 && mfc_license_mac_arg->count == 0) {
+        if (!saved_mfclicense_set || !saved_mfclicense_mac_set) {
+            PrintAndLogEx(ERR, "No saved license, create it with hf mfdes makemfclicense --save");
+            goto createmfcmapping_parsing_error;
+        }
+        use_saved_license = true;
+    } else if (mfc_license_arg->count == 1 && mfc_license_mac_arg->count == 1) {
+        use_saved_license = false;
+    } else {
+        PrintAndLogEx(ERR, "--mfc-license and --mfc-license-mac must be given together");
+        goto createmfcmapping_parsing_error;
+    }
+
+    if (use_saved_license) {
+        memcpy(license, saved_mfclicense, saved_mfclicense_len);
+        license_len = saved_mfclicense_len;
+        memcpy(license_mac, saved_mfclicense_mac, 8);
+    } else {
+        if (CLIParamHexToBuf(mfc_license_arg, license, sizeof (license), &license_len) != 0) {
+            goto createmfcmapping_parsing_error;
+        }
+        int license_mac_len = 0;
+        if (CLIParamHexToBuf(mfc_license_mac_arg, license_mac, 8, &license_mac_len) != 0) {
+            goto createmfcmapping_parsing_error;
+        }
+        if (license_mac_len != 8) {
+            PrintAndLogEx(ERR, "The license MAC must be 8 bytes");
+            goto createmfcmapping_parsing_error;
+        }
+    }
+
+    PrintAndLogEx(INFO, "License: %s", sprint_hex_inrow(license, license_len));
+    PrintAndLogEx(INFO, "MAC: %s", sprint_hex_inrow(license_mac, 8));
+
+    if (blk_str_arg->count != 1) {
+        PrintAndLogEx(ERR, "--blk is mandatory");
+        goto createmfcmapping_parsing_error;
+    }
+    // parse blocks
+    uint8_t blocks[64];
+    size_t num_blocks = 0;
+    if (strcmp(blk_str_arg->sval[0], "data") == 0) {
+        for (int i = 0; i < 64; i++) {
+            if (((i + 1) % 4) != 0) {
+                blocks[num_blocks++] = i;
+            }
+        }
+    } else if (strcmp(blk_str_arg->sval[0], "trailer") == 0) {
+        for (int i = 0; i < 64; i++) {
+            if (((i + 1) % 4) == 0) {
+                blocks[num_blocks++] = i;
+            }
+        }
+    } else if (parse_mfc_blocks(blk_str_arg->sval[0], blocks, &num_blocks, false) != PM3_SUCCESS) {
+        goto createmfcmapping_parsing_error;
+    }
+
+    bool trailer = ((blocks[0] + 1) % 4) == 0;
+
+    if (trailer && restore_transfer) {
+        PrintAndLogEx(ERR, "--restore-transfer not allowed on trailer blocks");
+        goto createmfcmapping_parsing_error;
+    } else if (!trailer && (key_a || key_b || ac)) {
+        PrintAndLogEx(ERR, "--key-a, --key-b, --access-conditions not allowed on data/value blocks");
+        goto createmfcmapping_parsing_error;
+    }
+
+    DesfireContext_t dctx = {0};
+    int securechann = 0;
+    uint32_t id = 0x000000;
+    DesfireISOSelectWay selectway = ISW6bAID;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0, &securechann, DCMEncrypted, &id, &selectway);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    CLIParserFree(ctx);
+    SetAPDULogging(APDULogging);
+
+    uint8_t cmd_data[256];
+    size_t cmd_data_len = 0;
+
+    cmd_data[0] = fid & 0x1F;
+    cmd_data[1] = trailer ? 0x01 : 0x00;
+    if (key_a) {
+        cmd_data[1] |= 0x20;
+    }
+    if (key_b) {
+        cmd_data[1] |= 0x08;
+    }
+    if (restore_transfer) {
+        cmd_data[1] |= 0x04;
+    }
+    if (ac) {
+        cmd_data[1] |= 0x10;
+    }
+    cmd_data[2] = num_blocks;
+    cmd_data_len += 3;
+    memcpy(cmd_data + cmd_data_len, blocks, num_blocks);
+    cmd_data_len += num_blocks;
+
+    if (restore_transfer) {
+        cmd_data[cmd_data_len++] = restore_fid & 0x1F;
+    }
+
+    memcpy(cmd_data + cmd_data_len, license, license_len);
+    cmd_data_len += license_len;
+
+    memcpy(cmd_data + cmd_data_len, license_mac, 8);
+    cmd_data_len += 8;
+
+    res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, false, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
+        return res;
+    }
+
+    res = DesfireCreateMFCMapping(&dctx, cmd_data, cmd_data_len);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Create MFC mapping " _RED_("failed") ". Result 0x%02X", res);
+    }
+    DropField();
+    return res;
+
+createmfcmapping_parsing_error:
     CLIParserFree(ctx);
     return PM3_EINVARG;
 }
@@ -9430,6 +9631,7 @@ static command_t CommandTable[] = {
     {"value",            CmdHF14ADesValueOperations,  IfPm3Iso14443a,  "Operations with value file (get/credit/limited credit/debit/clear)"},
     {"clearrecfile",     CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},
     {"makemfclicense",   CmdHF14ADesMakeMFCLicense,   AlwaysAvailable, "Generate a Mifare Classic license for DESFire EV3C"},
+    {"createmfcmapping", CmdHF14ADesCreateMFCMapping, IfPm3Iso14443a,  "Create a Mifare Classic mapping on a DESFire EV3C"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("DUOX") " ------------------------"},
     {"verifycert",       CmdHF14ADesVerifyCert,       IfPm3Iso14443a,  "Validate cert from file and verify key possession"},
     {"intauth",          CmdHF14ADesIntAuth,          IfPm3Iso14443a,  "ISO Internal Authenticate (ECDSA challenge-response)"},

@@ -140,6 +140,7 @@ static const AllowedChannelModes_t AllowedChannelModes[] = {
     {MFDES_CHANGE_FILE_SETTINGS,      DACEV1,  DCCNative,    DCMEncrypted},
     {MFDES_CREATE_TRANS_MAC_FILE,     DACEV1,  DCCNative,    DCMEncrypted},
     {MFDES_CHANGE_CONFIGURATION,      DACEV1,  DCCNative,    DCMEncrypted},
+    {MFDES_CREATE_MFC_MAPPING,        DACEV1,  DCCNative,    DCMEncrypted},
 
     {MFDES_CHANGE_KEY,                DACEV1,  DCCNative,    DCMEncryptedPlain},
     {MFDES_CHANGE_KEY_EV2,            DACEV1,  DCCNative,    DCMEncryptedPlain},
@@ -186,7 +187,9 @@ static const AllowedChannelModes_t AllowedChannelModes[] = {
     {MFDES_CHANGE_KEY,                DACLRP,  DCCNative,    DCMEncryptedPlain},
 };
 
-#define CMD_HEADER_LEN_ALL 0xffff
+#define CMD_HEADER_LEN_ALL            0xffff
+#define CMD_HEADER_LEN_ALL_EXCEPT_MAC 0xfffe
+
 static const CmdHeaderLengths_t CmdHeaderLengths[] = {
     {MFDES_CREATE_APPLICATION,     CMD_HEADER_LEN_ALL},
     {MFDES_CREATE_DELEGATE_APP,    CMD_HEADER_LEN_ALL},
@@ -212,12 +215,19 @@ static const CmdHeaderLengths_t CmdHeaderLengths[] = {
     {MFDES_CREDIT,                 1},
     {MFDES_DEBIT,                  1},
     {MFDES_LIMITED_CREDIT,         1},
+    {MFDES_CREATE_MFC_MAPPING,     CMD_HEADER_LEN_ALL_EXCEPT_MAC},
 };
 
-static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd) {
+static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd, size_t datalen) {
     for (int i = 0; i < ARRAYLEN(CmdHeaderLengths); i++) {
         if (CmdHeaderLengths[i].cmd == cmd) {
-            return CmdHeaderLengths[i].len;
+            if (CmdHeaderLengths[i].len == CMD_HEADER_LEN_ALL) {
+                return datalen;
+            } else if (CmdHeaderLengths[i].len == CMD_HEADER_LEN_ALL_EXCEPT_MAC) {
+                return datalen >= 8 ? datalen - 8 : datalen;
+            } else {
+                return CmdHeaderLengths[i].len;
+            }
         }
     }
     return 0;
@@ -300,9 +310,10 @@ static void DesfireSecureChannelEncodeD40(DesfireContext_t *ctx, uint8_t cmd, ui
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
 
-    uint8_t hdrlen = DesfireGetCmdHeaderLen(cmd);
-    if (srcdatalen < hdrlen)
+    uint8_t hdrlen = DesfireGetCmdHeaderLen(cmd, srcdatalen);
+    if (srcdatalen < hdrlen) {
         hdrlen = srcdatalen;
+    }
 
     size_t rlen;
 
@@ -376,7 +387,7 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext_t *ctx, uint8_t cmd, ui
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
 
-    uint8_t hdrlen = DesfireGetCmdHeaderLen(cmd);
+    uint8_t hdrlen = DesfireGetCmdHeaderLen(cmd, srcdatalen);
     if (srcdatalen < hdrlen) {
         hdrlen = srcdatalen;
     }
@@ -443,9 +454,10 @@ static void DesfireSecureChannelEncodeEV2(DesfireContext_t *ctx, uint8_t cmd, ui
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
 
-    uint8_t hdrlen = DesfireGetCmdHeaderLen(cmd);
-    if (srcdatalen < hdrlen)
+    uint8_t hdrlen = DesfireGetCmdHeaderLen(cmd, srcdatalen);
+    if (srcdatalen < hdrlen) {
         hdrlen = srcdatalen;
+    }
 
     if (ctx->commMode == DCMMACed) {
         uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
@@ -487,7 +499,7 @@ static void DesfireSecureChannelEncodeLRP(DesfireContext_t *ctx, uint8_t cmd, ui
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
 
-    uint8_t hdrlen = DesfireGetCmdHeaderLen(cmd);
+    uint8_t hdrlen = DesfireGetCmdHeaderLen(cmd, srcdatalen);
     if (srcdatalen < hdrlen)
         hdrlen = srcdatalen;
 
@@ -522,7 +534,7 @@ static void DesfireSecureChannelEncodeLRP(DesfireContext_t *ctx, uint8_t cmd, ui
 
 void DesfireSecureChannelEncode(DesfireContext_t *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
     ctx->lastCommand = cmd;
-    ctx->lastRequestZeroLen = (srcdatalen <= DesfireGetCmdHeaderLen(cmd));
+    ctx->lastRequestZeroLen = (srcdatalen <= DesfireGetCmdHeaderLen(cmd, srcdatalen));
 
     switch (ctx->secureChannel) {
         case DACd40:
