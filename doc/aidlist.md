@@ -42,6 +42,12 @@ Each entry in `client/resources/aidlist.json` must contain all of the fields bel
   - `stid_mobile_id`
   - `suprema_mobile`
   - `unifi_identity`
+- `Extras`: Object containing protocol-specific attributes for this entry, scoped based on `Protocol`. Use `Extras` only when the attribute applies to this exact AID entry; do not put exact-match metadata on broad prefix or wildcard entries.
+
+### Known `Extras` keys
+
+#### `cna_calypso`:
+- `LID`: Calypso Long Identifier as a 4-character uppercase hex string, no spaces or separators. Use this when a Calypso AID/DF Name is known to correspond to a specific MF or DF LID.
 
 ## Examples
 
@@ -84,5 +90,21 @@ Sources example:
         "android://com.lane.lane",
         "https://example.com/reference"
     ]
+}
+```
+
+Extras example:
+```json
+{
+    "AID": "A0000004040125090101",
+    "Vendor": "Ile-de-France Mobilites",
+    "Country": "France",
+    "Name": "Navigo",
+    "Description": "CALYPSO-based Navigo paper ticket application.",
+    "Type": "transport",
+    "Protocol": "cna_calypso",
+    "Extras": {
+        "LID": "2000"
+    }
 }
 ```
