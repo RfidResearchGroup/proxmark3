@@ -41,6 +41,7 @@
 
 #define CALYPSO_SERIAL_LEN       8
 #define CALYPSO_STARTUP_LEN      7
+#define CALYPSO_MIN_AID_LEN      5
 #define CALYPSO_MAX_AID_LEN      16
 #define CALYPSO_ICC_RECORD_LEN   29
 #define CALYPSO_LEGACY_RECORD_LEN 0x1D
@@ -666,7 +667,7 @@ static const char *calypso_json_lookup_name(calypso_resource_t *resource, uint32
 }
 
 static bool calypso_aid_is_prefix(const uint8_t *aid, size_t aid_len) {
-    return aid != NULL && aid_len == 5;
+    return aid != NULL && aid_len == CALYPSO_MIN_AID_LEN;
 }
 
 static bool calypso_aid_is_generic(const uint8_t *aid, size_t aid_len) {
@@ -913,7 +914,7 @@ static int calypso_scan_aidlist(const calypso_rf_info_t *rf, bool verbose, calyp
     int probe_score = -1;
     calypso_select_result_t probe_selected = {0};
 
-    for (int scan_pass = 0; scan_pass < 3; scan_pass++) {
+    for (size_t scan_aid_len = CALYPSO_MIN_AID_LEN; scan_aid_len <= CALYPSO_MAX_AID_LEN; scan_aid_len++) {
         for (size_t elmindx = 0; elmindx < json_array_size(root); elmindx++) {
             json_t *data = AIDSearchGetElm(root, elmindx);
             if (data == NULL || calypso_json_string_is(data, "Protocol", "cna_calypso") == false) {
@@ -926,13 +927,12 @@ static int calypso_scan_aidlist(const calypso_rf_info_t *rf, bool verbose, calyp
                 continue;
             }
 
-            bool prefix = calypso_aid_is_prefix(aid, (size_t)aid_len);
-            bool generic = calypso_aid_is_generic(aid, (size_t)aid_len);
-            if ((scan_pass == 0 && prefix == false) ||
-                    (scan_pass == 1 && (prefix || generic == false)) ||
-                    (scan_pass == 2 && (prefix || generic))) {
+            if ((size_t)aid_len != scan_aid_len) {
                 continue;
             }
+
+            bool prefix = calypso_aid_is_prefix(aid, (size_t)aid_len);
+            bool generic = calypso_aid_is_generic(aid, (size_t)aid_len);
 
             if (AIDSeenBefore(root, aid, (size_t)aid_len, elmindx)) {
                 continue;
@@ -2751,7 +2751,7 @@ static int calypso_dump_all_declared_dfs(json_t *dfs, calypso_rf_info_t *rf, boo
     int first_error = PM3_SUCCESS;
     bool reactivate_before_next_probe = false;
 
-    for (int scan_pass = 0; scan_pass < 3 && first_error == PM3_SUCCESS; scan_pass++) {
+    for (size_t scan_aid_len = CALYPSO_MIN_AID_LEN; scan_aid_len <= CALYPSO_MAX_AID_LEN && first_error == PM3_SUCCESS; scan_aid_len++) {
         for (size_t elmindx = 0; elmindx < json_array_size(root); elmindx++) {
             json_t *data = AIDSearchGetElm(root, elmindx);
             if (data == NULL || calypso_json_string_is(data, "Protocol", "cna_calypso") == false) {
@@ -2764,11 +2764,7 @@ static int calypso_dump_all_declared_dfs(json_t *dfs, calypso_rf_info_t *rf, boo
                 continue;
             }
 
-            bool prefix = calypso_aid_is_prefix(aid, (size_t)aid_len);
-            bool generic = calypso_aid_is_generic(aid, (size_t)aid_len);
-            if ((scan_pass == 0 && prefix == false) ||
-                    (scan_pass == 1 && (prefix || generic == false)) ||
-                    (scan_pass == 2 && (prefix || generic))) {
+            if ((size_t)aid_len != scan_aid_len) {
                 continue;
             }
 
