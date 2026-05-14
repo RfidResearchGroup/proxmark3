@@ -6482,8 +6482,8 @@ static int CmdHF14ADesMakeMFCLicense(const char *Cmd) {
         arg_lit0("v", "verbose",                     "Show more output"),
         arg_str0("k",  "key", "<hex>",               "Key for computing the MAC, must be HEX 16(AES)"),
         arg_str0("b",  "blk", "<num>[,<num>[,...]]", "The MFC blocks to map, must be given in ascending order (use the special value 'all' for all blocks)"),
-        arg_lit0(NULL, "key-a",                      "Allow updating key A from inside sector trailers mapped to DESFire files"),
-        arg_lit0(NULL, "key-b",                      "Allow updating key B from inside sector trailers mapped to DESFire files"),
+        arg_lit0(NULL, "ka",                         "Allow updating key A from inside sector trailers mapped to DESFire files"),
+        arg_lit0(NULL, "kb",                         "Allow updating key B from inside sector trailers mapped to DESFire files"),
         arg_lit0(NULL, "restrict",                   "Allow the restriction of data updates by the MFC side"),
         arg_lit0(NULL, "map",                        "Allow mapping the blocks to DESFire files"),
         arg_lit0(NULL, "access-conditions",          "Allow updating the access conditions from inside sector trailers mapped to DESFire files"),
@@ -6728,8 +6728,8 @@ static int CmdHF14ADesCreateMFCMapping(const char *Cmd) {
         arg_str0("b",  "blk", "<num>[,<num>[,...]]",      "The MFC blocks to map, must be unique (use -b data for all data blocks, and -b trailer for all trailer blocks)"),
         arg_str0(NULL, "mfc-license", "<hex>",            "The MFC license (omit to use saved license and license MAC)"),
         arg_str0(NULL, "mfc-license-mac", "<hex>",        "The MFC license MAC (omit to use saved license and license MAC)"),
-        arg_lit0(NULL, "key-a",                           "Allow updating key A from inside sector trailers mapped to DESFire files"),
-        arg_lit0(NULL, "key-b",                           "Allow updating key B from inside sector trailers mapped to DESFire files"),
+        arg_lit0(NULL, "ka",                              "Allow updating key A from inside sector trailers mapped to DESFire files"),
+        arg_lit0(NULL, "kb",                              "Allow updating key B from inside sector trailers mapped to DESFire files"),
         arg_lit0(NULL, "access-conditions",               "Allow updating the access conditions from inside sector trailers mapped to DESFire files"),
         arg_lit0(NULL, "restore-transfer",                "Enable the RestoreTransfer command for the mapped value blocks"),
         arg_param_end
@@ -6740,7 +6740,7 @@ static int CmdHF14ADesCreateMFCMapping(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     bool key_a = arg_get_lit(ctx, 18);
     bool key_b = arg_get_lit(ctx, 19);
-    bool ac = arg_get_lit(ctx, 20);;
+    bool ac = arg_get_lit(ctx, 20);
     bool restore_transfer = arg_get_lit(ctx, 21);
 
     uint8_t license[192];
