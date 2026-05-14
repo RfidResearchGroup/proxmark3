@@ -673,6 +673,14 @@ static bool calypso_aid_is_generic(const uint8_t *aid, size_t aid_len) {
     return aid != NULL && aid_len > 0 && aid_len <= 8 && aid[0] >= 0x30 && aid[0] <= 0x34;
 }
 
+static size_t calypso_aid_len_without_trailing_zeroes(const uint8_t *aid, size_t aid_len) {
+    while (aid_len > 0 && aid[aid_len - 1] == 0x00) {
+        aid_len--;
+    }
+
+    return aid_len;
+}
+
 static int calypso_aid_specificity(bool prefix, bool generic, size_t aid_len) {
     if (prefix) {
         return (int)aid_len;
@@ -685,7 +693,7 @@ static int calypso_aid_specificity(bool prefix, bool generic, size_t aid_len) {
     return 2000 + (int)aid_len;
 }
 
-static void calypso_find_aid_match(json_t *root, const uint8_t *aid, size_t aid_len, const char *source, calypso_aid_match_t *match) {
+static void calypso_find_aid_match(json_t *root, const uint8_t *aid, size_t aid_len, const char *source, bool fci_aid, calypso_aid_match_t *match) {
     memset(match, 0, sizeof(*match));
     match->source = source;
 
@@ -693,6 +701,7 @@ static void calypso_find_aid_match(json_t *root, const uint8_t *aid, size_t aid_
         return;
     }
 
+    size_t prefix_aid_len = fci_aid ? calypso_aid_len_without_trailing_zeroes(aid, aid_len) : aid_len;
     for (size_t elmindx = 0; elmindx < json_array_size(root); elmindx++) {
         json_t *data = AIDSearchGetElm(root, elmindx);
         if (data == NULL || calypso_json_string_is(data, "Protocol", "cna_calypso") == false) {
@@ -705,14 +714,15 @@ static void calypso_find_aid_match(json_t *root, const uint8_t *aid, size_t aid_
             continue;
         }
 
-        if (aid_len < (size_t)entry_aid_len || memcmp(aid, entry_aid, (size_t)entry_aid_len) != 0) {
+        bool exact = fci_aid && aid_len == (size_t)entry_aid_len && memcmp(aid, entry_aid, aid_len) == 0;
+        if (exact == false && (prefix_aid_len < (size_t)entry_aid_len || memcmp(aid, entry_aid, (size_t)entry_aid_len) != 0)) {
             continue;
         }
 
         bool prefix = calypso_aid_is_prefix(entry_aid, (size_t)entry_aid_len);
         bool generic = calypso_aid_is_generic(entry_aid, (size_t)entry_aid_len);
         int score = calypso_aid_specificity(prefix, generic, (size_t)entry_aid_len);
-        if (match->found) {
+        if (match->found && exact == false) {
             int current_score = calypso_aid_specificity(match->prefix, match->generic, match->aid_len);
             if (current_score >= score) {
                 continue;
@@ -729,6 +739,9 @@ static void calypso_find_aid_match(json_t *root, const uint8_t *aid, size_t aid_
         match->prefix = prefix;
         match->generic = generic;
         match->aid_len = (size_t)entry_aid_len;
+        if (exact) {
+            return;
+        }
     }
 }
 
@@ -740,14 +753,12 @@ static int calypso_aid_match_score(const calypso_aid_match_t *match) {
     return calypso_aid_specificity(match->prefix, match->generic, match->aid_len);
 }
 
-static bool calypso_aid_match_is_specific(const calypso_aid_match_t *match) {
-    return match != NULL && match->found && match->prefix == false && match->generic == false;
-}
-
 static const calypso_aid_match_t *calypso_best_aid_match(const calypso_aid_match_t *selected, const calypso_aid_match_t *df_name) {
-    int selected_score = calypso_aid_match_score(selected);
-    int df_name_score = calypso_aid_match_score(df_name);
-    return df_name_score > selected_score ? df_name : selected;
+    if (df_name != NULL && df_name->found) {
+        return df_name;
+    }
+
+    return selected;
 }
 
 static void calypso_aid_attribution_init(const calypso_select_result_t *selected, bool verbose, calypso_aid_attribution_t *attribution) {
@@ -758,9 +769,9 @@ static void calypso_aid_attribution_init(const calypso_select_result_t *selected
         return;
     }
 
-    calypso_find_aid_match(attribution->root, selected->requested_aid, selected->requested_aid_len, selected->default_selection ? "default selection AID" : "selected AID", &attribution->selected_match);
+    calypso_find_aid_match(attribution->root, selected->requested_aid, selected->requested_aid_len, selected->default_selection ? "default selection AID" : "selected AID", false, &attribution->selected_match);
     if (selected->parsed.has_df_name) {
-        calypso_find_aid_match(attribution->root, selected->parsed.df_name, selected->parsed.df_name_len, "DF name", &attribution->df_name_match);
+        calypso_find_aid_match(attribution->root, selected->parsed.df_name, selected->parsed.df_name_len, "DF name", true, &attribution->df_name_match);
     }
 
     attribution->best = calypso_best_aid_match(&attribution->selected_match, &attribution->df_name_match);
@@ -826,14 +837,14 @@ static void calypso_print_aid_attribution_details(const calypso_aid_attribution_
     }
 }
 
-static bool calypso_df_name_matches_specific_aid(json_t *root, const calypso_select_result_t *selected) {
+static bool calypso_df_name_matches_known_aid(json_t *root, const calypso_select_result_t *selected) {
     if (selected->parsed.has_df_name == false) {
         return false;
     }
 
     calypso_aid_match_t df_name_match;
-    calypso_find_aid_match(root, selected->parsed.df_name, selected->parsed.df_name_len, "DF name", &df_name_match);
-    return calypso_aid_match_is_specific(&df_name_match);
+    calypso_find_aid_match(root, selected->parsed.df_name, selected->parsed.df_name_len, "DF name", true, &df_name_match);
+    return df_name_match.found;
 }
 
 static int calypso_select_attribution_score(json_t *root, const calypso_select_result_t *selected) {
@@ -841,9 +852,9 @@ static int calypso_select_attribution_score(json_t *root, const calypso_select_r
     calypso_aid_match_t df_name_match;
     memset(&df_name_match, 0, sizeof(df_name_match));
 
-    calypso_find_aid_match(root, selected->requested_aid, selected->requested_aid_len, "selected AID", &selected_match);
+    calypso_find_aid_match(root, selected->requested_aid, selected->requested_aid_len, "selected AID", false, &selected_match);
     if (selected->parsed.has_df_name) {
-        calypso_find_aid_match(root, selected->parsed.df_name, selected->parsed.df_name_len, "DF name", &df_name_match);
+        calypso_find_aid_match(root, selected->parsed.df_name, selected->parsed.df_name_len, "DF name", true, &df_name_match);
     }
 
     const calypso_aid_match_t *best = calypso_best_aid_match(&selected_match, &df_name_match);
@@ -935,7 +946,7 @@ static int calypso_scan_aidlist(const calypso_rf_info_t *rf, bool verbose, calyp
 
             if (*matched) {
                 if (prefix || generic) {
-                    if (calypso_df_name_matches_specific_aid(root, selected)) {
+                    if (calypso_df_name_matches_known_aid(root, selected)) {
                         AIDSearchFree(root);
                         return PM3_SUCCESS;
                     }
