@@ -51,6 +51,7 @@ Each entry in `client/resources/aidlist.json` must contain all of the fields bel
 
 #### `mifare_desfire`:
 - `AID`: MIFARE DESFire application identifier as a 6-character uppercase hex string, no spaces or separators. Use the same byte order and notation as `client/resources/aid_desfire.json` when an ISO/IEC 7816 AID entry is known to correspond to a specific DESFire application.
+- `ISOFID`: ISO/IEC 7816 file identifier associated with the DESFire application as a 4-character uppercase hex string, no spaces or separators.
 
 ## Examples
 
@@ -123,7 +124,8 @@ MIFARE DESFire extras example:
     "Type": "transport",
     "Protocol": "mifare_desfire",
     "Extras": {
-        "AID": "F213F0"
+        "AID": "F213F0",
+        "ISOFID": "EA00"
     }
 }
 ```
