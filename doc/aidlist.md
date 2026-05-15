@@ -49,6 +49,9 @@ Each entry in `client/resources/aidlist.json` must contain all of the fields bel
 #### `cna_calypso`:
 - `LID`: Calypso Long Identifier as a 4-character uppercase hex string, no spaces or separators. Use this when a Calypso AID/DF Name is known to correspond to a specific MF or DF LID.
 
+#### `mifare_desfire`:
+- `AID`: MIFARE DESFire application identifier as a 6-character uppercase hex string, no spaces or separators. Use the same byte order and notation as `client/resources/aid_desfire.json` when an ISO/IEC 7816 AID entry is known to correspond to a specific DESFire application.
+
 ## Examples
 
 Simple entry:
@@ -105,6 +108,22 @@ Extras example:
     "Protocol": "cna_calypso",
     "Extras": {
         "LID": "2000"
+    }
+}
+```
+
+MIFARE DESFire extras example:
+```json
+{
+    "AID": "A00000039656434103F213F000000000",
+    "Vendor": "ORCA",
+    "Country": "United States",
+    "Name": "ORCA transit card",
+    "Description": "DESFire-based transit card",
+    "Type": "transport",
+    "Protocol": "mifare_desfire",
+    "Extras": {
+        "AID": "F213F0"
     }
 }
 ```
