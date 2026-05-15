@@ -2526,7 +2526,10 @@
         "Name": "MARTA Breeze transit card",
         "Description": "DESFire-based transit card",
         "Type": "transport",
-        "Protocol": "mifare_desfire"
+        "Protocol": "mifare_desfire",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "A00000039656434103F8852200000000",
@@ -2546,6 +2549,30 @@
         "Country": "Spain",
         "Name": "Madrid transit card",
         "Description": "DESFire-based transit card",
+        "Type": "transport",
+        "Protocol": "mifare_desfire",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
+    },
+    {
+        "AID": "A00000039656434103F210C000000000",
+        "Vendor": "Ubian",
+        "Country": "Slovakia",
+        "Name": "Ubian digital transit card (Secondary)",
+        "Description": "DESFire-based virtual transit card secondary application",
+        "Type": "transport",
+        "Protocol": "mifare_desfire",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
+    },
+    {
+        "AID": "A00000F210F0",
+        "Vendor": "PTV",
+        "Country": "Australia",
+        "Name": "Myki transit card (Secondary)",
+        "Description": "DESFire-based transit card secondary application",
         "Type": "transport",
         "Protocol": "mifare_desfire",
         "Sources": [
@@ -2574,7 +2601,7 @@
         "Protocol": "mifare_desfire"
     },
     {
-        "AID": "637001ff574d415441",
+        "AID": "637001FF574D415441",
         "Vendor": "Cubic",
         "Country": "United States",
         "Name": "Smart Trip",
@@ -2586,7 +2613,7 @@
         ]
     },
     {
-        "AID": "637001ff434c4950504552",
+        "AID": "637001FF434C4950504552",
         "Vendor": "Cubic",
         "Country": "United States",
         "Name": "Clipper",
