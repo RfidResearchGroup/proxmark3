@@ -2503,6 +2503,10 @@
         "Description": "DESFire-based transit card",
         "Type": "transport",
         "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F213F0",
+            "ISOFID": "EA00"
+        },
         "Sources": [
             "android://com.google.android.gms"
         ]
@@ -2515,6 +2519,10 @@
         "Description": "DESFire-based transit card",
         "Type": "transport",
         "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F21420",
+            "ISOFID": "F214"
+        },
         "Sources": [
             "android://com.google.android.gms"
         ]
@@ -2526,7 +2534,14 @@
         "Name": "MARTA Breeze transit card",
         "Description": "DESFire-based transit card",
         "Type": "transport",
-        "Protocol": "mifare_desfire"
+        "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F21450",
+            "ISOFID": "EA00"
+        },
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "A00000039656434103F8852200000000",
@@ -2536,6 +2551,10 @@
         "Description": "DESFire-based virtual transit card",
         "Type": "transport",
         "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F88522",
+            "ISOFID": "8522"
+        },
         "Sources": [
             "android://com.google.android.gms"
         ]
@@ -2548,6 +2567,42 @@
         "Description": "DESFire-based transit card",
         "Type": "transport",
         "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "010000",
+            "ISOFID": "000E"
+        },
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
+    },
+    {
+        "AID": "A00000039656434103F210C000000000",
+        "Vendor": "Ubian",
+        "Country": "Slovakia",
+        "Name": "Ubian digital transit card (Secondary)",
+        "Description": "DESFire-based virtual transit card secondary application",
+        "Type": "transport",
+        "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F210C0",
+            "ISOFID": "10C0"
+        },
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
+    },
+    {
+        "AID": "A00000F210F0",
+        "Vendor": "PTV",
+        "Country": "Australia",
+        "Name": "Myki transit card (Secondary)",
+        "Description": "DESFire-based transit card secondary application",
+        "Type": "transport",
+        "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F210F0",
+            "ISOFID": "02E0"
+        },
         "Sources": [
             "android://com.google.android.gms"
         ]
@@ -2560,6 +2615,10 @@
         "Description": "DESFire-based transit card",
         "Type": "transport",
         "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F21100",
+            "ISOFID": "01E0"
+        },
         "Sources": [
             "android://com.google.android.gms"
         ]
@@ -2571,28 +2630,40 @@
         "Name": "LA Tap",
         "Description": "DESFire-based transit card (ASCII cp\\x01\\xffLA)",
         "Type": "transport",
-        "Protocol": "mifare_desfire"
+        "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "000001",
+            "ISOFID": "0001"
+        }
     },
     {
-        "AID": "637001ff574d415441",
+        "AID": "637001FF574D415441",
         "Vendor": "Cubic",
         "Country": "United States",
         "Name": "Smart Trip",
         "Description": "DESFire-based transit card (ASCII cp\\x01\\xffWMATA)",
         "Type": "transport",
         "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "000001",
+            "ISOFID": "0001"
+        },
         "Sources": [
             "android://com.google.android.gms"
         ]
     },
     {
-        "AID": "637001ff434c4950504552",
+        "AID": "637001FF434C4950504552",
         "Vendor": "Cubic",
         "Country": "United States",
         "Name": "Clipper",
         "Description": "DESFire-based transit card (ASCII cp\\x01\\xffCLIPPER)",
         "Type": "transport",
         "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F21191",
+            "ISOFID": "2119"
+        },
         "Sources": [
             "android://com.google.android.gms"
         ]
