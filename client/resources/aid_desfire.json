@@ -992,6 +992,14 @@
         "Type": "transport"
     },
     {
+        "AID": "818000",
+        "Vendor": "Cairo Metro",
+        "Country": "EG",
+        "Name": "Cairo Metro Card (CAI)",
+        "Description": "Cairo Metro Card",
+        "Type": "transport"
+    },
+    {
         "AID": "010000",
         "Vendor": "Consorcio Regional de Transportes Publicos Regulares de Madrid (CRTM) / AF Payments Inc (AFPI)",
         "Country": "ES / PH",
@@ -1549,6 +1557,14 @@
         "Country": "US",
         "Name": "MyRide Card (DEN)",
         "Description": "DEN MyRide Card; Masabi Justride Tap and Ride DESFire Smartcard",
+        "Type": "transport"
+    },
+    {
+        "AID": "F213E0",
+        "Vendor": "San Diego Metropolitan Transit System (MTS)",
+        "Country": "US",
+        "Name": "PRONTO Card (SAN)",
+        "Description": "SAN PRONTO Card",
         "Type": "transport"
     },
     {
