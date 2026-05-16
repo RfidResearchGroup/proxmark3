@@ -40,6 +40,7 @@ Makefile.platform
 Makefile.platform.*
 !Makefile.platform.sample
 !Makefile.platform.autodetect
+.Makefile.platform.autodetect.cache
 
 # Cache for detecting platform def changes
 .Makefile.options.cache
