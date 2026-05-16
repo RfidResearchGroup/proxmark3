@@ -2,16 +2,23 @@
 # Copy this file as Makefile.platform to use auto-detection.
 # Requires a connected Proxmark3 device and a pre-built client.
 #
-# Set PM3_PORT to your device, e.g.:
-#   make PM3_PORT=/dev/ttyACM0
+# Device is auto-detected via ./pm3. To select a specific device
+# when multiple are connected, set PM3_PORT:
+#   make PM3_PORT=/dev/ttyACM1
 #
-PM3_PORT ?= /dev/ttyACM0
 
 _AUTODETECT_CACHE := .Makefile.platform.autodetect.cache
-_AUTODETECT_DONE := $(shell client/proxmark3 $(PM3_PORT) -c "hw platformconfig" 2>/dev/null | grep -E '^[A-Z_]+=' > $(_AUTODETECT_CACHE) && echo ok)
+
+ifdef PM3_PORT
+_AUTODETECT_CMD := ./pm3 -p $(PM3_PORT) -c "hw platformconfig"
+else
+_AUTODETECT_CMD := ./pm3 -c "hw platformconfig"
+endif
+
+_AUTODETECT_DONE := $(shell $(_AUTODETECT_CMD) 2>/dev/null | grep -E '^[A-Z_]+=' > $(_AUTODETECT_CACHE) && echo ok)
 
 ifeq ($(_AUTODETECT_DONE),ok)
     include $(_AUTODETECT_CACHE)
 else
-    $(warning Auto-detection failed. Is the device connected on $(PM3_PORT)?)
+    $(warning Auto-detection failed. Is a Proxmark3 device connected?)
 endif

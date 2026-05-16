@@ -11,6 +11,7 @@
   - [PLATFORM\_EXTRAS](#platform_extras)
   - [STANDALONE](#standalone)
   - [256KB versions](#256kb-versions)
+  - [Auto-detecting platform from a connected device](#auto-detecting-platform-from-a-connected-device)
   - [Next step](#next-step)
 
 
@@ -204,6 +205,42 @@ SKIP_FELICA=1
 Situation might change when the firmware is growing of course, requiring to skip more elements.
 
 Last note: if you skip a tech, be careful not to use a standalone mode which requires that same tech, else the firmware size reduction won't be much.
+
+## Auto-detecting platform from a connected device
+^[Top](#top)
+
+If you have a Proxmark3 device connected and a working client, you can auto-generate the platform configuration instead of writing `Makefile.platform` by hand.
+
+### Using the CLI command
+
+The `hw platformconfig` command queries the connected device and prints valid `Makefile.platform` content:
+
+```
+./pm3 -c "hw platformconfig"
+```
+
+Example output for an iCopy-X:
+```
+PLATFORM=PM3ICOPYX
+PLATFORM_EXTRAS=FLASH
+STANDALONE=
+```
+
+### Using `Makefile.platform.autodetect`
+
+A ready-made `Makefile.platform.autodetect` file is provided that probes the device at build time. To use it, simply copy it as your `Makefile.platform`:
+
+```
+cp Makefile.platform.autodetect Makefile.platform
+```
+
+The `./pm3` script handles device auto-detection automatically. If you have multiple devices connected, specify which one to probe:
+
+```
+make PM3_PORT=/dev/ttyACM1
+```
+
+Note: the `STANDALONE` mode cannot be determined from the device alone. If you use a standalone mode, edit `Makefile.platform` after copying to set `STANDALONE=` to your desired value.
 
 ## Next step
 ^[Top](#top)
