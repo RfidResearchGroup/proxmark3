@@ -39,6 +39,7 @@ originalitysig.csv
 Makefile.platform
 Makefile.platform.*
 !Makefile.platform.sample
+!Makefile.platform.autodetect
 
 # Cache for detecting platform def changes
 .Makefile.options.cache

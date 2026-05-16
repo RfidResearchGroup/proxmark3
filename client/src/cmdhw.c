@@ -1809,8 +1809,8 @@ static int CmdPlatformConfig(const char *Cmd) {
     if (!g_pm3_capabilities.compiled_with_hfplot)
         PrintAndLogEx(NORMAL, "SKIP_HFPLOT=1");
 
-    // Standalone placeholder (cannot be determined from capabilities alone)
-    PrintAndLogEx(NORMAL, "#STANDALONE=");
+    // Standalone (cannot be determined from capabilities alone, leave empty)
+    PrintAndLogEx(NORMAL, "STANDALONE=");
 
     return PM3_SUCCESS;
 }
