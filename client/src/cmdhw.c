@@ -1732,11 +1732,15 @@ static int CmdPlatformConfig(const char *Cmd) {
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_BUILD_CONFIG, &resp, 1000) && resp.status == PM3_SUCCESS) {
             memcpy(&bc, resp.data.asBytes, sizeof(bc));
-            has_build_config = true;
+            if (bc.version == BUILD_CONFIG_VERSION) {
+                has_build_config = true;
 
-            const char *platform_names[] = {"PM3RDV4", "PM3GENERIC", "PM3ICOPYX", "PM3ULTIMATE"};
-            if (bc.platform < 4)
-                platform = platform_names[bc.platform];
+                const char *platform_names[] = {"PM3RDV4", "PM3GENERIC", "PM3ICOPYX", "PM3ULTIMATE"};
+                if (bc.platform < 4)
+                    platform = platform_names[bc.platform];
+            } else {
+                PrintAndLogEx(WARNING, "Build config version mismatch (device=%u, client=%u), falling back to heuristic detection", bc.version, BUILD_CONFIG_VERSION);
+            }
         }
     }
 
