@@ -2122,6 +2122,15 @@
         "Type": "SmartChess"
     },
     {
+        "AID": "D2760001834467323031324C50303431",
+        "Vendor": "Hamburger Verkehrsverbund (HVV)",
+        "Country": "Germany",
+        "Name": "HVV (Hamburg) card",
+        "Description": "Hamburg public transport card",
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
+    },
+    {
         "AID": "D4100000011010",
         "Vendor": "",
         "Country": "Republic of Korea",
@@ -2486,6 +2495,15 @@
         "Name": "MIFARE 2GO",
         "Description": "AID prefix used by MIFARE 2GO-based cards",
         "Type": ""
+    },
+    {
+        "AID": "A00000039656434103F015400000000B",
+        "Vendor": "NXP",
+        "Country": "",
+        "Name": "MIFARE DESFire Light",
+        "Description": "",
+        "Type": "",
+        "Protocol": "mifare_desfire"
     },
     {
         "AID": "A00000039656434103F1216000000000",
