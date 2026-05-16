@@ -261,8 +261,6 @@ typedef struct {
     uint8_t version;
     uint8_t platform;        // BUILD_PLATFORM_* enum
     uint8_t led_order;       // 0=default, 1=PM3EASY
-    // standalone mode name (e.g., "HF_UNISNIFF" or empty string if none)
-    char standalone[32];
 } PACKED build_config_t;
 
 #define BUILD_CONFIG_VERSION 1

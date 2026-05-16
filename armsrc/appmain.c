@@ -774,14 +774,6 @@ static void SendBuildConfig(void) {
     config.led_order = 0;
 #endif
 
-    // Standalone mode name
-#ifdef STANDALONE_NAME
-    strncpy(config.standalone, STANDALONE_NAME, sizeof(config.standalone) - 1);
-    config.standalone[sizeof(config.standalone) - 1] = '\0';
-#else
-    config.standalone[0] = '\0';
-#endif
-
     reply_ng(CMD_BUILD_CONFIG, PM3_SUCCESS, (uint8_t *)&config, sizeof(config));
 }
 
