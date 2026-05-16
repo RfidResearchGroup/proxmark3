@@ -2,6 +2,10 @@
 # Copy this file as Makefile.platform to use auto-detection.
 # Requires a connected Proxmark3 device and a pre-built client.
 #
+# PLATFORM and PLATFORM_EXTRAS are auto-detected from the device.
+# Everything below the auto-detection block can be edited to
+# override or add settings (standalone mode, skip flags, etc.)
+#
 # Device is auto-detected via ./pm3. To select a specific device
 # when multiple are connected, set PM3_PORT:
 #   make PM3_PORT=/dev/ttyACM1
@@ -22,3 +26,24 @@ ifeq ($(_AUTODETECT_DONE),ok)
 else
     $(warning Auto-detection failed. Is a Proxmark3 device connected?)
 endif
+
+# --- Manual overrides below this line ---
+# Uncomment and edit as needed:
+
+#STANDALONE=
+#SKIP_LF=1
+#SKIP_HITAG=1
+#SKIP_EM4x50=1
+#SKIP_EM4x70=1
+#SKIP_ZX8211=1
+#SKIP_HF=1
+#SKIP_ISO15693=1
+#SKIP_LEGICRF=1
+#SKIP_ISO14443b=1
+#SKIP_ISO14443a=1
+#SKIP_ICLASS=1
+#SKIP_SEOS=1
+#SKIP_FELICA=1
+#SKIP_NFCBARCODE=1
+#SKIP_HFSNIFF=1
+#SKIP_HFPLOT=1

@@ -1721,42 +1721,60 @@ static int CmdPlatformConfig(const char *Cmd) {
         return PM3_ENOTTY;
     }
 
-    // Determine platform from version string (FPGA bitstream names)
+    // Try CMD_BUILD_CONFIG for full structured data
     const char *platform = "PM3GENERIC";
+    build_config_t bc;
+    bool has_build_config = false;
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_VERSION, NULL, 0);
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
-        struct p {
-            uint32_t id;
-            uint32_t section_size;
-            uint32_t versionstr_len;
-            char versionstr[PM3_CMD_DATA_SIZE - 12];
-        } PACKED;
-        struct p *payload = (struct p *)&resp.data.asBytes;
+    if (g_pm3_capabilities.has_build_config) {
+        clearCommandBuffer();
+        SendCommandNG(CMD_BUILD_CONFIG, NULL, 0);
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_BUILD_CONFIG, &resp, 1000) && resp.status == PM3_SUCCESS) {
+            memcpy(&bc, resp.data.asBytes, sizeof(bc));
+            bc.standalone[sizeof(bc.standalone) - 1] = '\0';
+            has_build_config = true;
 
-        if (strstr(payload->versionstr, "fpga_icopyx")) {
-            platform = "PM3ICOPYX";
-        } else if (strstr(payload->versionstr, "fpga_pm3_ult")) {
-            platform = "PM3ULTIMATE";
+            const char *platform_names[] = {"PM3RDV4", "PM3GENERIC", "PM3ICOPYX", "PM3ULTIMATE"};
+            if (bc.platform < 4)
+                platform = platform_names[bc.platform];
+        }
+    }
+
+    // Fallback: heuristic platform detection from version string
+    if (!has_build_config) {
+        clearCommandBuffer();
+        SendCommandNG(CMD_VERSION, NULL, 0);
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
+            struct p {
+                uint32_t id;
+                uint32_t section_size;
+                uint32_t versionstr_len;
+                char versionstr[PM3_CMD_DATA_SIZE - 12];
+            } PACKED;
+            struct p *payload = (struct p *)&resp.data.asBytes;
+
+            if (strstr(payload->versionstr, "fpga_icopyx")) {
+                platform = "PM3ICOPYX";
+            } else if (strstr(payload->versionstr, "fpga_pm3_ult")) {
+                platform = "PM3ULTIMATE";
+            } else if (g_pm3_capabilities.is_rdv4) {
+                platform = "PM3RDV4";
+            }
         } else if (g_pm3_capabilities.is_rdv4) {
             platform = "PM3RDV4";
         }
-    } else if (g_pm3_capabilities.is_rdv4) {
-        platform = "PM3RDV4";
     }
 
-    // Print PLATFORM
+    // --- Output ---
+
     PrintAndLogEx(NORMAL, "PLATFORM=%s", platform);
 
-    // Reconstruct PLATFORM_EXTRAS from capability flags
+    // PLATFORM_EXTRAS from capabilities (these flags are stable across versions)
     char extras[128] = {0};
-    if (g_pm3_capabilities.compiled_with_fpc_usart_host) {
-        if (extras[0]) strncat(extras, " ", sizeof(extras) - strlen(extras) - 1);
+    if (g_pm3_capabilities.compiled_with_fpc_usart_host)
         strncat(extras, "BTADDON", sizeof(extras) - strlen(extras) - 1);
-    }
-    // FLASH and SMARTCARD are implicit for RDV4, only emit for other platforms
     if (strcmp(platform, "PM3RDV4") != 0) {
         if (g_pm3_capabilities.compiled_with_flash) {
             if (extras[0]) strncat(extras, " ", sizeof(extras) - strlen(extras) - 1);
@@ -1771,46 +1789,8 @@ static int CmdPlatformConfig(const char *Cmd) {
         if (extras[0]) strncat(extras, " ", sizeof(extras) - strlen(extras) - 1);
         strncat(extras, "FPC_USART_DEV", sizeof(extras) - strlen(extras) - 1);
     }
-
-    if (extras[0]) {
+    if (extras[0])
         PrintAndLogEx(NORMAL, "PLATFORM_EXTRAS=%s", extras);
-    }
-
-    // Reconstruct SKIP_* from negation of compiled_with_* flags
-    // Only print lines for features that are actually skipped (disabled)
-    if (!g_pm3_capabilities.compiled_with_lf)
-        PrintAndLogEx(NORMAL, "SKIP_LF=1");
-    if (!g_pm3_capabilities.compiled_with_hitag)
-        PrintAndLogEx(NORMAL, "SKIP_HITAG=1");
-    if (!g_pm3_capabilities.compiled_with_em4x50)
-        PrintAndLogEx(NORMAL, "SKIP_EM4x50=1");
-    if (!g_pm3_capabilities.compiled_with_em4x70)
-        PrintAndLogEx(NORMAL, "SKIP_EM4x70=1");
-    if (!g_pm3_capabilities.compiled_with_zx8211)
-        PrintAndLogEx(NORMAL, "SKIP_ZX8211=1");
-    if (!g_pm3_capabilities.compiled_with_iso15693)
-        PrintAndLogEx(NORMAL, "SKIP_ISO15693=1");
-    if (!g_pm3_capabilities.compiled_with_legicrf)
-        PrintAndLogEx(NORMAL, "SKIP_LEGICRF=1");
-    if (!g_pm3_capabilities.compiled_with_iso14443b)
-        PrintAndLogEx(NORMAL, "SKIP_ISO14443b=1");
-    if (!g_pm3_capabilities.compiled_with_iso14443a)
-        PrintAndLogEx(NORMAL, "SKIP_ISO14443a=1");
-    if (!g_pm3_capabilities.compiled_with_iclass)
-        PrintAndLogEx(NORMAL, "SKIP_ICLASS=1");
-    if (!g_pm3_capabilities.compiled_with_seos)
-        PrintAndLogEx(NORMAL, "SKIP_SEOS=1");
-    if (!g_pm3_capabilities.compiled_with_felica)
-        PrintAndLogEx(NORMAL, "SKIP_FELICA=1");
-    if (!g_pm3_capabilities.compiled_with_nfcbarcode)
-        PrintAndLogEx(NORMAL, "SKIP_NFCBARCODE=1");
-    if (!g_pm3_capabilities.compiled_with_hfsniff)
-        PrintAndLogEx(NORMAL, "SKIP_HFSNIFF=1");
-    if (!g_pm3_capabilities.compiled_with_hfplot)
-        PrintAndLogEx(NORMAL, "SKIP_HFPLOT=1");
-
-    // Standalone (cannot be determined from capabilities alone, leave empty)
-    PrintAndLogEx(NORMAL, "STANDALONE=");
 
     return PM3_SUCCESS;
 }

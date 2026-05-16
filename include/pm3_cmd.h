@@ -243,6 +243,8 @@ typedef struct {
     bool hw_available_flash : 1;
     bool hw_available_smartcard : 1;
     bool is_rdv4 : 1;
+    // build config support
+    bool has_build_config : 1;
 } PACKED capabilities_t;
 #define CAPABILITIES_VERSION 7
 extern capabilities_t g_pm3_capabilities;
@@ -253,35 +255,12 @@ extern capabilities_t g_pm3_capabilities;
 #define BUILD_PLATFORM_ICOPYX   2
 #define BUILD_PLATFORM_ULTIMATE 3
 
-// Build configuration struct — reports exact build settings as structured data
+// Build configuration struct — reports settings not available in capabilities_t.
+// Platform extras and feature flags are read from capabilities_t instead.
 typedef struct {
     uint8_t version;
     uint8_t platform;        // BUILD_PLATFORM_* enum
     uint8_t led_order;       // 0=default, 1=PM3EASY
-    // platform extras (bitfield)
-    bool has_flash : 1;
-    bool has_smartcard : 1;
-    bool has_btaddon : 1;
-    bool has_fpc_usart_dev : 1;
-    // skip flags (true = feature IS compiled in, matching capabilities convention)
-    bool with_lf : 1;
-    bool with_hitag : 1;
-    bool with_em4x50 : 1;
-    bool with_em4x70 : 1;
-    bool with_zx8211 : 1;
-    bool with_hf : 1;
-    bool with_iso15693 : 1;
-    bool with_legicrf : 1;
-    bool with_iso14443b : 1;
-    bool with_iso14443a : 1;
-    bool with_iclass : 1;
-    bool with_seos : 1;
-    bool with_felica : 1;
-    bool with_nfcbarcode : 1;
-    bool with_hfsniff : 1;
-    bool with_hfplot : 1;
-    bool with_compression : 1;
-    bool with_lcd : 1;
     // standalone mode name (e.g., "HF_UNISNIFF" or empty string if none)
     char standalone[32];
 } PACKED build_config_t;

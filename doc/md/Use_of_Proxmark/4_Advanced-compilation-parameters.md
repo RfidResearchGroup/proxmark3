@@ -223,8 +223,9 @@ Example output for an iCopy-X:
 ```
 PLATFORM=PM3ICOPYX
 PLATFORM_EXTRAS=FLASH
-STANDALONE=
 ```
+
+Only `PLATFORM` and `PLATFORM_EXTRAS` are auto-detected. Other settings (standalone mode, skip flags) must be configured manually.
 
 ### Using `Makefile.platform.autodetect`
 
@@ -240,7 +241,7 @@ The `./pm3` script handles device auto-detection automatically. If you have mult
 make PM3_PORT=/dev/ttyACM1
 ```
 
-Note: the `STANDALONE` mode cannot be determined from the device alone. If you use a standalone mode, edit `Makefile.platform` after copying to set `STANDALONE=` to your desired value.
+The file includes a manual overrides section at the bottom where you can uncomment and set `STANDALONE`, `SKIP_*` flags, and other options. These take effect alongside the auto-detected `PLATFORM` and `PLATFORM_EXTRAS`.
 
 ## Next step
 ^[Top](#top)

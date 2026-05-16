@@ -746,6 +746,8 @@ static void SendCapabilities(void) {
     capabilities.compiled_with_zx8211 = false;
 #endif
 
+    capabilities.has_build_config = true;
+
     reply_ng(CMD_CAPABILITIES, PM3_SUCCESS, (uint8_t *)&capabilities, sizeof(capabilities));
 }
 
@@ -770,76 +772,6 @@ static void SendBuildConfig(void) {
     config.led_order = 1;
 #else
     config.led_order = 0;
-#endif
-
-    // Platform extras
-#ifdef WITH_FLASH
-    config.has_flash = true;
-#endif
-#ifdef WITH_SMARTCARD
-    config.has_smartcard = true;
-#endif
-#ifdef WITH_FPC_USART_HOST
-    config.has_btaddon = true;
-#endif
-#ifdef WITH_FPC_USART_DEV
-    config.has_fpc_usart_dev = true;
-#endif
-
-    // Feature flags (true = compiled in)
-#ifdef WITH_LF
-    config.with_lf = true;
-#endif
-#ifdef WITH_HITAG
-    config.with_hitag = true;
-#endif
-#ifdef WITH_EM4x50
-    config.with_em4x50 = true;
-#endif
-#ifdef WITH_EM4x70
-    config.with_em4x70 = true;
-#endif
-#ifdef WITH_ZX8211
-    config.with_zx8211 = true;
-#endif
-#ifdef WITH_GENERAL_HF
-    config.with_hf = true;
-#endif
-#ifdef WITH_ISO15693
-    config.with_iso15693 = true;
-#endif
-#ifdef WITH_LEGICRF
-    config.with_legicrf = true;
-#endif
-#ifdef WITH_ISO14443b
-    config.with_iso14443b = true;
-#endif
-#ifdef WITH_ISO14443a
-    config.with_iso14443a = true;
-#endif
-#ifdef WITH_ICLASS
-    config.with_iclass = true;
-#endif
-#ifdef WITH_SEOS
-    config.with_seos = true;
-#endif
-#ifdef WITH_FELICA
-    config.with_felica = true;
-#endif
-#ifdef WITH_NFCBARCODE
-    config.with_nfcbarcode = true;
-#endif
-#ifdef WITH_HFSNIFF
-    config.with_hfsniff = true;
-#endif
-#ifdef WITH_HFPLOT
-    config.with_hfplot = true;
-#endif
-#ifdef WITH_COMPRESSION
-    config.with_compression = true;
-#endif
-#ifdef WITH_LCD
-    config.with_lcd = true;
 #endif
 
     // Standalone mode name
