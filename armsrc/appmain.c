@@ -749,6 +749,110 @@ static void SendCapabilities(void) {
     reply_ng(CMD_CAPABILITIES, PM3_SUCCESS, (uint8_t *)&capabilities, sizeof(capabilities));
 }
 
+static void SendBuildConfig(void) {
+    build_config_t config;
+    memset(&config, 0, sizeof(config));
+    config.version = BUILD_CONFIG_VERSION;
+
+    // Platform
+#if defined(ICOPYX)
+    config.platform = BUILD_PLATFORM_ICOPYX;
+#elif defined(XC2S50)
+    config.platform = BUILD_PLATFORM_ULTIMATE;
+#elif defined(RDV4)
+    config.platform = BUILD_PLATFORM_RDV4;
+#else
+    config.platform = BUILD_PLATFORM_GENERIC;
+#endif
+
+    // LED order
+#if defined(LED_ORDER_PM3EASY)
+    config.led_order = 1;
+#else
+    config.led_order = 0;
+#endif
+
+    // Platform extras
+#ifdef WITH_FLASH
+    config.has_flash = true;
+#endif
+#ifdef WITH_SMARTCARD
+    config.has_smartcard = true;
+#endif
+#ifdef WITH_FPC_USART_HOST
+    config.has_btaddon = true;
+#endif
+#ifdef WITH_FPC_USART_DEV
+    config.has_fpc_usart_dev = true;
+#endif
+
+    // Feature flags (true = compiled in)
+#ifdef WITH_LF
+    config.with_lf = true;
+#endif
+#ifdef WITH_HITAG
+    config.with_hitag = true;
+#endif
+#ifdef WITH_EM4x50
+    config.with_em4x50 = true;
+#endif
+#ifdef WITH_EM4x70
+    config.with_em4x70 = true;
+#endif
+#ifdef WITH_ZX8211
+    config.with_zx8211 = true;
+#endif
+#ifdef WITH_GENERAL_HF
+    config.with_hf = true;
+#endif
+#ifdef WITH_ISO15693
+    config.with_iso15693 = true;
+#endif
+#ifdef WITH_LEGICRF
+    config.with_legicrf = true;
+#endif
+#ifdef WITH_ISO14443b
+    config.with_iso14443b = true;
+#endif
+#ifdef WITH_ISO14443a
+    config.with_iso14443a = true;
+#endif
+#ifdef WITH_ICLASS
+    config.with_iclass = true;
+#endif
+#ifdef WITH_SEOS
+    config.with_seos = true;
+#endif
+#ifdef WITH_FELICA
+    config.with_felica = true;
+#endif
+#ifdef WITH_NFCBARCODE
+    config.with_nfcbarcode = true;
+#endif
+#ifdef WITH_HFSNIFF
+    config.with_hfsniff = true;
+#endif
+#ifdef WITH_HFPLOT
+    config.with_hfplot = true;
+#endif
+#ifdef WITH_COMPRESSION
+    config.with_compression = true;
+#endif
+#ifdef WITH_LCD
+    config.with_lcd = true;
+#endif
+
+    // Standalone mode name
+#ifdef STANDALONE_NAME
+    strncpy(config.standalone, STANDALONE_NAME, sizeof(config.standalone) - 1);
+    config.standalone[sizeof(config.standalone) - 1] = '\0';
+#else
+    config.standalone[0] = '\0';
+#endif
+
+    reply_ng(CMD_BUILD_CONFIG, PM3_SUCCESS, (uint8_t *)&config, sizeof(config));
+}
+
 // Show some leds in a pattern to identify StandAlone mod is running
 void StandAloneMode(void) {
     DbpString("");
@@ -3257,6 +3361,10 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_CAPABILITIES: {
             SendCapabilities();
+            break;
+        }
+        case CMD_BUILD_CONFIG: {
+            SendBuildConfig();
             break;
         }
         case CMD_PING: {

@@ -1701,6 +1701,120 @@ int set_fpga_mode(uint8_t mode) {
     return resp.status;
 }
 
+static int CmdPlatformConfig(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw platformconfig",
+                  "Query connected device capabilities and print Makefile.platform content\n"
+                  "that matches the device's build configuration.",
+                  "hw platformconfig"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    if (g_session.pm3_present == false) {
+        PrintAndLogEx(ERR, "No Proxmark3 device connected");
+        return PM3_ENOTTY;
+    }
+
+    // Determine platform from version string (FPGA bitstream names)
+    const char *platform = "PM3GENERIC";
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_VERSION, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
+        struct p {
+            uint32_t id;
+            uint32_t section_size;
+            uint32_t versionstr_len;
+            char versionstr[PM3_CMD_DATA_SIZE - 12];
+        } PACKED;
+        struct p *payload = (struct p *)&resp.data.asBytes;
+
+        if (strstr(payload->versionstr, "fpga_icopyx")) {
+            platform = "PM3ICOPYX";
+        } else if (strstr(payload->versionstr, "fpga_pm3_ult")) {
+            platform = "PM3ULTIMATE";
+        } else if (g_pm3_capabilities.is_rdv4) {
+            platform = "PM3RDV4";
+        }
+    } else if (g_pm3_capabilities.is_rdv4) {
+        platform = "PM3RDV4";
+    }
+
+    // Print PLATFORM
+    PrintAndLogEx(NORMAL, "PLATFORM=%s", platform);
+
+    // Reconstruct PLATFORM_EXTRAS from capability flags
+    char extras[128] = {0};
+    if (g_pm3_capabilities.compiled_with_fpc_usart_host) {
+        if (extras[0]) strncat(extras, " ", sizeof(extras) - strlen(extras) - 1);
+        strncat(extras, "BTADDON", sizeof(extras) - strlen(extras) - 1);
+    }
+    // FLASH and SMARTCARD are implicit for RDV4, only emit for other platforms
+    if (strcmp(platform, "PM3RDV4") != 0) {
+        if (g_pm3_capabilities.compiled_with_flash) {
+            if (extras[0]) strncat(extras, " ", sizeof(extras) - strlen(extras) - 1);
+            strncat(extras, "FLASH", sizeof(extras) - strlen(extras) - 1);
+        }
+        if (g_pm3_capabilities.compiled_with_smartcard) {
+            if (extras[0]) strncat(extras, " ", sizeof(extras) - strlen(extras) - 1);
+            strncat(extras, "SMARTCARD", sizeof(extras) - strlen(extras) - 1);
+        }
+    }
+    if (g_pm3_capabilities.compiled_with_fpc_usart_dev) {
+        if (extras[0]) strncat(extras, " ", sizeof(extras) - strlen(extras) - 1);
+        strncat(extras, "FPC_USART_DEV", sizeof(extras) - strlen(extras) - 1);
+    }
+
+    if (extras[0]) {
+        PrintAndLogEx(NORMAL, "PLATFORM_EXTRAS=%s", extras);
+    }
+
+    // Reconstruct SKIP_* from negation of compiled_with_* flags
+    // Only print lines for features that are actually skipped (disabled)
+    if (!g_pm3_capabilities.compiled_with_lf)
+        PrintAndLogEx(NORMAL, "SKIP_LF=1");
+    if (!g_pm3_capabilities.compiled_with_hitag)
+        PrintAndLogEx(NORMAL, "SKIP_HITAG=1");
+    if (!g_pm3_capabilities.compiled_with_em4x50)
+        PrintAndLogEx(NORMAL, "SKIP_EM4x50=1");
+    if (!g_pm3_capabilities.compiled_with_em4x70)
+        PrintAndLogEx(NORMAL, "SKIP_EM4x70=1");
+    if (!g_pm3_capabilities.compiled_with_zx8211)
+        PrintAndLogEx(NORMAL, "SKIP_ZX8211=1");
+    if (!g_pm3_capabilities.compiled_with_iso15693)
+        PrintAndLogEx(NORMAL, "SKIP_ISO15693=1");
+    if (!g_pm3_capabilities.compiled_with_legicrf)
+        PrintAndLogEx(NORMAL, "SKIP_LEGICRF=1");
+    if (!g_pm3_capabilities.compiled_with_iso14443b)
+        PrintAndLogEx(NORMAL, "SKIP_ISO14443b=1");
+    if (!g_pm3_capabilities.compiled_with_iso14443a)
+        PrintAndLogEx(NORMAL, "SKIP_ISO14443a=1");
+    if (!g_pm3_capabilities.compiled_with_iclass)
+        PrintAndLogEx(NORMAL, "SKIP_ICLASS=1");
+    if (!g_pm3_capabilities.compiled_with_seos)
+        PrintAndLogEx(NORMAL, "SKIP_SEOS=1");
+    if (!g_pm3_capabilities.compiled_with_felica)
+        PrintAndLogEx(NORMAL, "SKIP_FELICA=1");
+    if (!g_pm3_capabilities.compiled_with_nfcbarcode)
+        PrintAndLogEx(NORMAL, "SKIP_NFCBARCODE=1");
+    if (!g_pm3_capabilities.compiled_with_hfsniff)
+        PrintAndLogEx(NORMAL, "SKIP_HFSNIFF=1");
+    if (!g_pm3_capabilities.compiled_with_hfplot)
+        PrintAndLogEx(NORMAL, "SKIP_HFPLOT=1");
+
+    // Standalone placeholder (cannot be determined from capabilities alone)
+    PrintAndLogEx(NORMAL, "#STANDALONE=");
+
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help", CmdHelp, AlwaysAvailable, "This help"},
     {"-------------", CmdHelp, AlwaysAvailable, "----------------------- " _CYAN_("Operation") " -----------------------"},
@@ -1718,6 +1832,7 @@ static command_t CommandTable[] = {
     {"lcd", CmdLCD, IfPm3Lcd, "Send command/data to LCD"},
     {"lcdreset", CmdLCDReset, IfPm3Lcd, "Hardware reset LCD"},
     {"ping", CmdPing, IfPm3Present, "Test if the Proxmark3 is responsive"},
+    {"platformconfig", CmdPlatformConfig, IfPm3Present, "Generate Makefile.platform from connected device"},
     {"readmem", CmdReadmem, IfPm3Present, "Read from MCU flash"},
     {"reset", CmdReset, IfPm3Present, "Reset the device"},
     {"setlfdivisor", CmdSetDivisor, IfPm3Lf, "Drive LF antenna at 12MHz / (divisor + 1)"},

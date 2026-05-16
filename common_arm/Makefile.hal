@@ -286,6 +286,11 @@ ifneq (,$(word 2, $(PLATFORM_DEFS_INFO_STANDALONE)))
     $(error You must choose only one Standalone mode!: $(PLATFORM_DEFS_INFO_STANDALONE))
 endif
 
+# Pass standalone mode name as a string to firmware for CMD_BUILD_CONFIG
+ifneq (,$(STANDALONE))
+    PLATFORM_DEFS += -DSTANDALONE_NAME=\"$(STANDALONE)\"
+endif
+
 PLATFORM_EXTRAS_INFO = $(PLATFORM_EXTRAS)
 # info when no extra
 ifeq (,$(PLATFORM_EXTRAS_INFO))
