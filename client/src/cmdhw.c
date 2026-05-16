@@ -1732,7 +1732,6 @@ static int CmdPlatformConfig(const char *Cmd) {
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_BUILD_CONFIG, &resp, 1000) && resp.status == PM3_SUCCESS) {
             memcpy(&bc, resp.data.asBytes, sizeof(bc));
-            bc.standalone[sizeof(bc.standalone) - 1] = '\0';
             has_build_config = true;
 
             const char *platform_names[] = {"PM3RDV4", "PM3GENERIC", "PM3ICOPYX", "PM3ULTIMATE"};
