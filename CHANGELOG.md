@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf calypso probecmdcompat` command (@kormax)
 - Added secure channel operations to `hf iclass sam` and fixed/improved I2C bus operations (@antiklesys)
 - Added `hf calypso list` command (@kormax)
 - Added `hf mfd verifycert` command (@kormax)
