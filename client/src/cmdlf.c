@@ -1893,6 +1893,7 @@ int CmdLFfind(const char *Cmd) {
                   "lf search -u    -> try reading data from tag & search for known and unknown tag\n"
                   "lf search -1    -> use data from the GraphBuffer & search for known tag\n"
                   "lf search -1uc  -> use data from the GraphBuffer & search for known and unknown tag\n"
+                  "lf search -@    -> continuous card polling mode\n"
                  );
 
     void *argtable[] = {
@@ -1900,13 +1901,23 @@ int CmdLFfind(const char *Cmd) {
         arg_lit0("1", NULL, "Use data from Graphbuffer to search (offline mode)"),
         arg_lit0("c", NULL, "Continue searching after successful match"),
         arg_lit0("u", NULL, "Search for unknown tags"),
+        arg_lit0("@", NULL, "continuous card polling, press <Enter> to exit"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool use_gb = arg_get_lit(ctx, 1);
     bool search_cont = arg_get_lit(ctx, 2);
     bool search_unk = arg_get_lit(ctx, 3);
+    bool continuous = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
+
+    if (continuous) {
+        PrintAndLogEx(INFO, "Polling for LF tags, interval " _GREEN_("%u") " ms, press " _GREEN_("<Enter>") " to exit",
+                      g_session.poll_interval_ms);
+    }
+
+    int retval = PM3_ESOFT;
+    do {
     int found = 0;
     bool is_online = (g_session.pm3_present && (use_gb == false));
     if (is_online) {
@@ -1916,7 +1927,8 @@ int CmdLFfind(const char *Cmd) {
     size_t min_length = 2000;
     if (g_GraphTraceLen < min_length) {
         PrintAndLogEx(FAILED, "Data in Graphbuffer was too small.");
-        return PM3_ESOFT;
+        if (!continuous) return PM3_ESOFT;
+        goto out;
     }
 
     if (search_cont) {
@@ -1929,7 +1941,7 @@ int CmdLFfind(const char *Cmd) {
     PrintAndLogEx(INFO, _CYAN_("Checking for known tags..."));
     PrintAndLogEx(INFO, "");
 
-    int retval = PM3_SUCCESS;
+    retval = PM3_SUCCESS;
 
     // only run these tests if device is online
     if (is_online) {
@@ -2314,6 +2326,13 @@ out:
     if (check_chiptype(is_online) == false) {
         PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
     }
+
+    if (continuous) {
+        if (kbd_enter_pressed()) break;
+        msleep(g_session.poll_interval_ms);
+    }
+    } while (continuous);
+
     return retval;
 }
 

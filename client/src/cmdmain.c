@@ -139,19 +139,48 @@ static int lf_search_plus(const char *Cmd) {
 static int CmdAuto(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "auto",
-                  "Run LF SEARCH / HF SEARCH / DATA PLOT / DATA SAVE",
-                  "auto"
+                  "Run LF SEARCH / HF SEARCH / DATA PLOT / DATA SAVE.\n"
+                  "With -@ flag: continuous smart polling.\n"
+                  "Near HF reader  -> only HF polling when HF card detected.\n"
+                  "Near LF reader  -> only LF polling when no HF card present.",
+                  "auto\n"
+                  "auto -@         -> continuous polling, adapts to HF or LF card\n"
+                  "auto -@ -c      -> continuous polling, keep searching after hit"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("c", NULL, "Continue searching even after a first hit"),
+        arg_lit0("@", NULL, "continuous smart polling, press <Enter> to exit"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool exit_first = (arg_get_lit(ctx, 1) == false);
+    bool continuous = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
+    if (continuous) {
+        PrintAndLogEx(INFO, "Smart polling, interval " _GREEN_("%u") " ms, press " _GREEN_("<Enter>") " to exit",
+                      g_session.poll_interval_ms);
+        PrintAndLogEx(INFO, "Near " _CYAN_("HF") " reader: HF only  |  Near " _CYAN_("LF") " reader: LF only");
+        PrintAndLogEx(NORMAL, "");
+
+        do {
+            // Try HF first — if HF card detected, skip LF this iteration
+            int ret = CmdHFSearch("");
+            if (ret != PM3_SUCCESS || !exit_first) {
+                // HF nothing found, or -c flag (search all): also try LF
+                CmdLFfind("");
+            }
+
+            if (kbd_enter_pressed()) break;
+            msleep(g_session.poll_interval_ms);
+        } while (true);
+
+        return PM3_SUCCESS;
+    }
+
+    // --- original single-shot behavior ---
     PrintAndLogEx(INFO, "lf search");
     int ret = CmdLFfind("");
     if (ret == PM3_SUCCESS && exit_first)

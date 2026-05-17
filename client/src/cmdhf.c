@@ -21,6 +21,7 @@
 #include "cmdparser.h"      // command_t
 #include "cliparser.h"      // parse
 #include "comms.h"          // clearCommandBuffer
+#include "util_posix.h"     // msleep
 #include "lfdemod.h"        // computeSignalProperties
 #include "cmdhf14a.h"       // ISO14443-A
 #include "cmdhf14b.h"       // ISO14443-B
@@ -73,20 +74,30 @@ int CmdHFSearch(const char *Cmd) {
     CLIParserInit(&ctx, "hf search",
                   "Will try to find a HF read out of the unknown tag.\n"
                   "Continues to search for all different HF protocols.",
-                  "hf search"
+                  "hf search\n"
+                  "hf search -@  -> continuous card polling mode"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("@", NULL, "continuous card polling, press <Enter> to exit"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool verbose = arg_get_lit(ctx, 1);
+    bool continuous = arg_get_lit(ctx, 2);
 
     CLIParserFree(ctx);
 
-    int res = PM3_ESOFT;
+    if (continuous) {
+        PrintAndLogEx(INFO, "Polling for HF tags, interval " _GREEN_("%u") " ms, press " _GREEN_("<Enter>") " to exit",
+                      g_session.poll_interval_ms);
+    }
+
+    int res;
+    do {
+    res = PM3_ESOFT;
 
     uint8_t success[COUNT_OF_PROTOCOLS] = {0};
 
@@ -241,7 +252,7 @@ int CmdHFSearch(const char *Cmd) {
     PROMPT_CLEARLINE;
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("No known/supported 13.56 MHz tags found"));
-        return res;
+        if (!continuous) return res;
     }
 
     // no need to print 14A hints,  since it will print itself
@@ -289,6 +300,12 @@ int CmdHFSearch(const char *Cmd) {
     if (success[PROTO_CRYPTORF]) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf cryptorf") "` commands\n");
     }
+
+    if (continuous) {
+        if (kbd_enter_pressed()) break;
+        msleep(g_session.poll_interval_ms);
+    }
+    } while (continuous);
 
     return res;
 }
