@@ -103,6 +103,7 @@ int preferences_load(void) {
     //  g_session.device_debug_level = ddbOFF;
     g_session.timeout = uart_get_timeouts();
     g_session.hf_field_timeout_sec = 0;
+    g_session.poll_interval_ms = 500;
 
     g_session.window_changed = false;
     g_session.plot.x = 10;
@@ -331,6 +332,7 @@ void preferences_save_callback(json_t *root) {
     JsonSaveInt(root, "client.exe.delay", g_session.client_exe_delay);
     JsonSaveInt(root, "client.timeout", g_session.timeout);
     JsonSaveInt(root, "hf.field.timeout_sec", g_session.hf_field_timeout_sec);
+    JsonSaveInt(root, "poll.interval_ms", g_session.poll_interval_ms);
 
     // MQTT
     JsonSaveStr(root, "mqtt.server", g_session.mqtt_server);
@@ -445,6 +447,10 @@ void preferences_load_callback(json_t *root) {
     // persistent HF field timeout (seconds)
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "hf.field.timeout_sec", &i1) == 0)
         g_session.hf_field_timeout_sec = (i1 > 0) ? (uint32_t)i1 : 0;
+
+    // card polling interval (milliseconds)
+    if (json_unpack_ex(root, &up_error, 0, "{s:i}", "poll.interval_ms", &i1) == 0)
+        g_session.poll_interval_ms = (i1 > 0) ? (uint32_t)i1 : 500;
 
     // MQTT server
     if (json_unpack_ex(root, &up_error, 0, "{s:s}", "mqtt.server", &s1) == 0)
@@ -683,6 +689,10 @@ static void showFieldTimeoutState(void) {
     } else {
         PrintAndLogEx(INFO, "    HF field timeout........ " _GREEN_("%u") " s", g_session.hf_field_timeout_sec);
     }
+}
+
+static void showPollIntervalState(void) {
+    PrintAndLogEx(INFO, "    card poll interval...... " _GREEN_("%u") " ms", g_session.poll_interval_ms);
 }
 
 static void showMqttServer(prefShowOpt_t opt) {
@@ -1125,6 +1135,62 @@ static int setCmdHfFieldTimeout(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+
+static int setCmdPollInterval(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs set poll.interval",
+                  "Set persistent preference of card polling interval in milliseconds.\n"
+                  "Used by `hf search -@` and `lf search -@` continuous polling commands.",
+                  "prefs set poll.interval --ms 500\n"
+                  "prefs set poll.interval --ms 1000"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "ms", "<ms>", "polling interval in milliseconds"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int32_t arg = arg_get_int_def(ctx, 1, -1);
+    CLIParserFree(ctx);
+
+    if (arg < 0) {
+        showPollIntervalState();
+        return PM3_SUCCESS;
+    }
+
+    uint32_t new_value = (uint32_t)arg;
+
+    if (new_value < 100) {
+        PrintAndLogEx(WARNING, "Polling interval less than 100 ms may cause high device load");
+    }
+
+    if (g_session.poll_interval_ms != new_value) {
+        showPollIntervalState();
+        g_session.poll_interval_ms = new_value;
+        showPollIntervalState();
+        preferences_save();
+    } else {
+        showPollIntervalState();
+    }
+    return PM3_SUCCESS;
+}
+
+static int getCmdPollInterval(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs get poll.interval",
+                  "Get preference of card polling interval",
+                  "prefs get poll.interval"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    showPollIntervalState();
+    return PM3_SUCCESS;
+}
 
 static int setCmdHint(const char *Cmd) {
     CLIParserContext *ctx;
@@ -1615,6 +1681,7 @@ static command_t CommandTableGet[] = {
     {"client.delay",     getCmdExeDelay,      AlwaysAvailable, "Get client execution delay preference"},
     {"client.timeout",   getCmdClientTimeout, AlwaysAvailable, "Get client execution delay preference"},
     {"hf.field.timeout_sec", getCmdHfFieldTimeout, AlwaysAvailable, "Get PM3 HF field inactivity timeout preference"},
+    {"poll.interval",    getCmdPollInterval,  AlwaysAvailable, "Get card polling interval preference"},
     {"color",            getCmdColor,         AlwaysAvailable, "Get color support preference"},
     {"savepaths",        getCmdSavePaths,     AlwaysAvailable, "Get file folder  "},
     //  {"devicedebug",      getCmdDeviceDebug,   AlwaysAvailable, "Get device debug level"},
@@ -1633,6 +1700,7 @@ static command_t CommandTableSet[] = {
     {"client.delay",     setCmdExeDelay,      AlwaysAvailable, "Set client execution delay"},
     {"client.timeout",   setCmdClientTimeout, AlwaysAvailable, "Set client communication timeout"},
     {"hf.field.timeout_sec", setCmdHfFieldTimeout, AlwaysAvailable, "Set PM3 HF field inactivity timeout"},
+    {"poll.interval",    setCmdPollInterval,  AlwaysAvailable, "Set card polling interval (ms)"},
 
     {"color",            setCmdColor,         AlwaysAvailable, "Set color support"},
     {"emoji",            setCmdEmoji,         AlwaysAvailable, "Set emoji display"},
@@ -1707,6 +1775,7 @@ static int CmdPrefShow(const char *Cmd) {
     showOutputState(prefShowNone);
     showClientTimeoutState();
     showFieldTimeoutState();
+    showPollIntervalState();
     showMqttServer(prefShowNone);
     showMqttPort(prefShowNone);
     showMqttTopic(prefShowNone);

@@ -139,19 +139,78 @@ static int lf_search_plus(const char *Cmd) {
 static int CmdAuto(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "auto",
-                  "Run LF SEARCH / HF SEARCH / DATA PLOT / DATA SAVE",
-                  "auto"
+                  "Run LF SEARCH / HF SEARCH / DATA PLOT / DATA SAVE.\n"
+                  "With -@ flag: continuous smart polling.\n"
+                  "Near HF reader  -> only HF polling when HF card detected.\n"
+                  "Near LF reader  -> only LF polling when no HF card present.",
+                  "auto\n"
+                  "auto -@         -> continuous polling, adapts to HF or LF card\n"
+                  "auto -@ -c      -> continuous polling, keep searching after hit"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("c", NULL, "Continue searching even after a first hit"),
+        arg_lit0("@", NULL, "continuous smart polling, press <Enter> to exit"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool exit_first = (arg_get_lit(ctx, 1) == false);
+    bool continuous = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
+    if (continuous) {
+        PrintAndLogEx(INFO, "Smart polling, interval " _GREEN_("%u") " ms, press " _GREEN_("<Enter>") " to exit",
+                      g_session.poll_interval_ms);
+        PrintAndLogEx(INFO, "Adaptive: once a card type is detected it becomes the priority for subsequent polls");
+        PrintAndLogEx(NORMAL, "");
+
+        // Adaptive priority: starts with HF, then remembers whichever type last succeeded.
+        // Result: once a card type is identified, that type is scanned first every iteration,
+        // eliminating the wasted scan time for the other frequency.
+        bool prefer_hf = true;
+
+        do {
+            bool hf_found = false;
+            bool lf_found = false;
+
+            if (!exit_first) {
+                // -c flag: always scan both frequencies every iteration
+                if (CmdHFSearch("") == PM3_SUCCESS) hf_found = true;
+                if (CmdLFfind("") == PM3_SUCCESS)   lf_found = true;
+                // Update preference so display/logging reflects what was found
+                if (hf_found && !lf_found) prefer_hf = true;
+                if (lf_found && !hf_found) prefer_hf = false;
+            } else if (prefer_hf) {
+                // HF priority: try HF first, fall back to LF only on failure
+                if (CmdHFSearch("") == PM3_SUCCESS) {
+                    hf_found = true;
+                } else {
+                    if (CmdLFfind("") == PM3_SUCCESS) {
+                        lf_found = true;
+                        prefer_hf = false;  // LF card found — prioritise LF next round
+                    }
+                }
+            } else {
+                // LF priority: try LF first, fall back to HF only on failure
+                if (CmdLFfind("") == PM3_SUCCESS) {
+                    lf_found = true;
+                } else {
+                    if (CmdHFSearch("") == PM3_SUCCESS) {
+                        hf_found = true;
+                        prefer_hf = true;  // HF card found — prioritise HF next round
+                    }
+                }
+            }
+
+            if (kbd_enter_pressed()) break;
+            msleep(g_session.poll_interval_ms);
+        } while (true);
+
+        return PM3_SUCCESS;
+    }
+
+    // --- original single-shot behavior ---
     PrintAndLogEx(INFO, "lf search");
     int ret = CmdLFfind("");
     if (ret == PM3_SUCCESS && exit_first)
