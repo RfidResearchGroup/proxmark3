@@ -222,6 +222,7 @@ const static vocabulary_t vocabulary[] = {
     { 1, "hf calypso help" },
     { 0, "hf calypso info" },
     { 0, "hf calypso dump" },
+    { 0, "hf calypso probecmdcompat" },
     { 1, "hf calypso list" },
     { 1, "hf cipurse help" },
     { 0, "hf cipurse info" },
