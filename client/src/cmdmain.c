@@ -162,15 +162,45 @@ static int CmdAuto(const char *Cmd) {
     if (continuous) {
         PrintAndLogEx(INFO, "Smart polling, interval " _GREEN_("%u") " ms, press " _GREEN_("<Enter>") " to exit",
                       g_session.poll_interval_ms);
-        PrintAndLogEx(INFO, "Near " _CYAN_("HF") " reader: HF only  |  Near " _CYAN_("LF") " reader: LF only");
+        PrintAndLogEx(INFO, "Adaptive: once a card type is detected it becomes the priority for subsequent polls");
         PrintAndLogEx(NORMAL, "");
 
+        // Adaptive priority: starts with HF, then remembers whichever type last succeeded.
+        // Result: once a card type is identified, that type is scanned first every iteration,
+        // eliminating the wasted scan time for the other frequency.
+        bool prefer_hf = true;
+
         do {
-            // Try HF first — if HF card detected, skip LF this iteration
-            int ret = CmdHFSearch("");
-            if (ret != PM3_SUCCESS || !exit_first) {
-                // HF nothing found, or -c flag (search all): also try LF
-                CmdLFfind("");
+            bool hf_found = false;
+            bool lf_found = false;
+
+            if (!exit_first) {
+                // -c flag: always scan both frequencies every iteration
+                if (CmdHFSearch("") == PM3_SUCCESS) hf_found = true;
+                if (CmdLFfind("") == PM3_SUCCESS)   lf_found = true;
+                // Update preference so display/logging reflects what was found
+                if (hf_found && !lf_found) prefer_hf = true;
+                if (lf_found && !hf_found) prefer_hf = false;
+            } else if (prefer_hf) {
+                // HF priority: try HF first, fall back to LF only on failure
+                if (CmdHFSearch("") == PM3_SUCCESS) {
+                    hf_found = true;
+                } else {
+                    if (CmdLFfind("") == PM3_SUCCESS) {
+                        lf_found = true;
+                        prefer_hf = false;  // LF card found — prioritise LF next round
+                    }
+                }
+            } else {
+                // LF priority: try LF first, fall back to HF only on failure
+                if (CmdLFfind("") == PM3_SUCCESS) {
+                    lf_found = true;
+                } else {
+                    if (CmdHFSearch("") == PM3_SUCCESS) {
+                        hf_found = true;
+                        prefer_hf = true;  // HF card found — prioritise HF next round
+                    }
+                }
             }
 
             if (kbd_enter_pressed()) break;
