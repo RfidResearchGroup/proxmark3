@@ -691,6 +691,36 @@ static const char *felica_ic_code_name(uint8_t rom_type, uint8_t ic_type) {
     return name ? name : "Unknown IC Type";
 }
 
+static const char *felica_idm_prefix_name(const uint8_t *idm, char *buf, size_t buf_len) {
+    if (idm == NULL) {
+        return NULL;
+    }
+
+    const uint16_t prefix = ((uint16_t)idm[0] << 8) | idm[1];
+    switch (prefix) {
+        case 0x01FE:
+            return "NFCIP-1 / peer-to-peer";
+        case 0x02FE:
+            return "Open ID assignment";
+        case 0x03FE:
+            return "FeliCa Plug ID with DFC";
+        case 0x05FE:
+            return "Unregistered mobile device random ID";
+        default:
+            break;
+    }
+
+    if (idm[1] == 0xFE && (idm[0] & 0x0F) == 0x04) {
+        if (buf == NULL || buf_len == 0) {
+            return "Sony FeliCa Standard random ID";
+        }
+        snprintf(buf, buf_len, "Sony FeliCa Standard random ID (system %u)", idm[0] >> 4);
+        return buf;
+    }
+
+    return NULL;
+}
+
 static const json_t *felica_find_system_annotation(uint16_t system_code) {
     json_t *system_list = felica_get_system_list();
     if (system_list == NULL) {
@@ -2076,7 +2106,14 @@ static int info_felica(bool verbose) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(INFO, "Primary IDm.... " _YELLOW_("%s"), sprint_hex_inrow(card.IDm, sizeof(card.IDm)));
-    PrintAndLogEx(INFO, "  Code......... " _GREEN_("%s"), sprint_hex_inrow(card.code, sizeof(card.code)));
+    char idm_prefix_buf[64] = {0};
+    const char *idm_prefix_name = felica_idm_prefix_name(card.IDm, idm_prefix_buf, sizeof(idm_prefix_buf));
+    if (idm_prefix_name) {
+        PrintAndLogEx(INFO, "  Code......... " _GREEN_("%s") " ( %s )",
+                      sprint_hex_inrow(card.code, sizeof(card.code)), idm_prefix_name);
+    } else {
+        PrintAndLogEx(INFO, "  Code......... " _GREEN_("%s"), sprint_hex_inrow(card.code, sizeof(card.code)));
+    }
     PrintAndLogEx(INFO, "  NFCID2.......     " _GREEN_("%s"), sprint_hex_inrow(card.uid, sizeof(card.uid)));
     PrintAndLogEx(INFO, "PMM............ " _YELLOW_("%s"), sprint_hex_inrow(card.PMm, sizeof(card.PMm)));
     PrintAndLogEx(INFO, "  IC code...... " _GREEN_("%s") " ( %s )",
