@@ -141,6 +141,10 @@ MQTTLIBINC = -I$(MQTTLIBPATH)
 MQTTLIB = $(MQTTLIBPATH)/mqtt.a
 MQTTLIBLD =
 
+## VEC
+VECLIBPATH = ./deps/vec
+VECLIBINC = -I$(VECLIBPATH)
+
 ##########################
 # common local libraries #
 ##########################
@@ -254,6 +258,10 @@ PM3INCLUDES += $(WHEREAMILIBINC)
 STATICLIBS += $(MQTTLIB)
 LDLIBS += $(MQTTLIBLD)
 PM3INCLUDES += $(MQTTLIBINC)
+
+## VEC
+# not distributed as system library
+PM3INCLUDES += $(VECLIBINC)
 
 ####################
 # system libraries #
