@@ -14,7 +14,8 @@
 # See LICENSE.txt for the text of the license.
 #-----------------------------------------------------------------------------
 
--include Makefile.platform
+PLATFORM_FILE ?= Makefile.platform
+-include $(PLATFORM_FILE)
 -include .Makefile.options.cache
 include Makefile.defs
 include common_arm/Makefile.hal

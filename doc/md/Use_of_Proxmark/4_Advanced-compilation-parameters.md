@@ -61,7 +61,10 @@ These features make it very different from all other Proxmark3 devices, there is
 **Recommendation**: if you don't have a RDV4, we strongly recommend your device to have at least a 512KB arm chip, since this repo is crossing 256KB limit. There is still a way to skip parts to make it fit on a 256KB device, see below.
 
 If you need to tune things and save the configuration, create a file `Makefile.platform` in the root directory of the repository, see `Makefile.platform.sample`.
-For an up-to-date exhaustive list of options, you can run `make PLATFORM=`.
+
+If you need to maintain several `Makefile.platform` files for different Proxmark3 devices, you can specify which file to use with e.g. `make PLATFORM_FILE=mydevice_platform`.
+
+For an up-to-date exhaustive list of options to use in a `Makefile.platform` file, you can run `make PLATFORM=`.
 
 ## PLATFORM
 ^[Top](#top)

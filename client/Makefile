@@ -15,7 +15,8 @@
 #-----------------------------------------------------------------------------
 
 ifeq ($(PLTNAME),)
-    -include ../Makefile.platform
+    PLATFORM_FILE ?= ../Makefile.platform
+    -include $(PLATFORM_FILE)
     -include ../.Makefile.options.cache
 # Default platform if no platform specified
     PLATFORM?=PM3RDV4

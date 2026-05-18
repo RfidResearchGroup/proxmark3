@@ -19,7 +19,8 @@
 
 # This Makefile might have been called directly, not via the root Makefile, so:
 ifeq ($(PLTNAME),)
-    -include ../Makefile.platform
+    PLATFORM_FILE ?= ../Makefile.platform
+    -include $(PLATFORM_FILE)
     -include ../.Makefile.options.cache
     include ../common_arm/Makefile.hal
 # detect if there were changes in the platform definitions, requiring a clean
