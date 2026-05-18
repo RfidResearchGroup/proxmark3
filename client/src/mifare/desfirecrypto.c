@@ -629,7 +629,7 @@ void DesfireGenSessionKeyEV2(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool en
     DesfireContext_t ctx = {0};
     ctx.keyType = T_AES;
     memcpy(ctx.key, key, 16); // aes-128
-    DesfireCryptoCMAC(&ctx, data, 32, cmac);
+    DesfireCryptoCMACEx(&ctx, DCOMainKey, data, 32, 0, cmac);
 
     memcpy(sessionkey, cmac, CRYPTO_AES_BLOCK_SIZE);
 }
