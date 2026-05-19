@@ -44,8 +44,8 @@
 #include "cmdhflegic.h"     // LEGIC
 #include "cmdhflto.h"       // LTO-CM
 #include "cmdhfmf.h"        // CLASSIC
-#include "cmdhfmfu.h"       // ULTRALIGHT/NTAG etc
 #include "cmdhfmfp.h"       // Mifare Plus
+#include "cmdhfmfu.h"       // ULTRALIGHT/NTAG etc
 #include "cmdhfmfdes.h"     // DESFIRE
 #include "cmdhfntag424.h"   // NTAG 424 DNA
 #include "cmdhfsaflok.h"    // Saflok

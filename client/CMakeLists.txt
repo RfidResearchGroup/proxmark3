@@ -900,6 +900,7 @@ target_link_libraries(proxmark3 PRIVATE
         pm3rrg_rdv4_hardnested
         pm3rrg_rdv4_id48
         pm3rrg_rdv4_mqtt
+        pm3rrg_rdv4_vec
         ${ADDITIONAL_LNK})
 
 if (NOT SKIPPTHREAD EQUAL 1)
