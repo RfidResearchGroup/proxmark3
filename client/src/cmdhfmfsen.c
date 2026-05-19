@@ -2358,6 +2358,12 @@ int CmdHF14AMfSEN(const char *Cmd) {
                 }
                 uint32_t cnt = candidates[sec][kt].count;
                 uint32_t cost = fm11_estimate_candidate_path_cost(&nonces, candidates, keys_found, found_key, sec, kt);
+                if (sec == FM11RF08S_SECTORS - 1 && kt == 1 && cnt > 0) {
+                    // Prioritize sector 32 keyB over keyA
+                    if (best_sec == FM11RF08S_SECTORS - 1) {
+                        cost = best_cost > 0 ? best_cost - 1 : 0;
+                    }
+                }
                 if (cost < best_cost || (cost == best_cost && cnt < best_count)) {
                     best_cost = cost;
                     best_count = cnt;
