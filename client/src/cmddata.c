@@ -3057,9 +3057,9 @@ static int CmdDiff(const char *Cmd) {
     memset(hdr1 + strlen(hdr1), '-', hdr_sln);
 
     PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, hdr1);
-    PrintAndLogEx(INFO, hdr0);
-    PrintAndLogEx(INFO, hdr1);
+    PrintAndLogEx(INFO, "%s", hdr1);
+    PrintAndLogEx(INFO, "%s", hdr0);
+    PrintAndLogEx(INFO, "%s", hdr1);
 
     char line[880] = {0};
 
@@ -3131,7 +3131,7 @@ static int CmdDiff(const char *Cmd) {
     }
 
     // footer
-    PrintAndLogEx(INFO, hdr1);
+    PrintAndLogEx(INFO, "%s", hdr1);
     PrintAndLogEx(NORMAL, "");
 
     free(inB);
