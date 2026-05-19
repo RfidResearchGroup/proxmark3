@@ -249,9 +249,13 @@ static const calypso_file_ref_t calypso_file_refs[] = {
     {"ID", 0x03, {0x0003}, 1},
     {"HOLDER_EXTENDED", -1, {0x3F1C}, 1},
     {"DISPLAY", 0x05, {0x2F10}, 1},
+    // NAVIGO
+    {"UNKNOWN_EF_CAFE", 0x00, {0xCAFE}, 1},
     {"TICKETING_HOLDER", -1, {0x2000, 0x2002}, 2},
     {"TICKETING_AID", -1, {0x2000, 0x2004}, 2},
     {"TICKETING_LOG", 0x08, {0x2000, 0x2010}, 2},
+    // CDMX
+    {"UNKNOWN_EF_2017", 0x17, {0x2000, 0x2017}, 2},
     {"TICKETING_CONTRACTS_1", 0x09, {0x2000, 0x2020}, 2},
     {"TICKETING_CONTRACTS_2", 0x06, {0x2000, 0x2030}, 2},
     {"TICKETING_COUNTERS_1", 0x0A, {0x2000, 0x202A}, 2},
@@ -267,9 +271,15 @@ static const calypso_file_ref_t calypso_file_refs[] = {
     {"TICKETING_COUNTERS_9", 0x19, {0x2000, 0x2069}, 2},
     {"TICKETING_COUNTERS_10", 0x10, {0x2000, 0x206A}, 2},
     {"TICKETING_FREE", 0x01, {0x2000, 0x20F0}, 2},
+    // Lignes D azur
+    {"UNKNOWN_EF_3101", 0x00, {0x3100, 0x3101}, 2},
     {"MPP_PUBLIC_PARAMETERS", 0x17, {0x3100, 0x3102}, 2},
     {"MPP_AID", -1, {0x3100, 0x3104}, 2},
+    // CDMX
+    {"UNKNOWN_EF_3107", 0x07, {0x3100, 0x3107}, 2},
     {"MPP_LOG", -1, {0x3100, 0x3115}, 2},
+    // CDMX
+    {"UNKNOWN_EF_311C", 0x16, {0x3100, 0x311C}, 2},
     {"MPP_CONTRACTS", -1, {0x3100, 0x3120}, 2},
     {"MPP_COUNTERS_1", -1, {0x3100, 0x3113}, 2},
     {"MPP_COUNTERS_2", -1, {0x3100, 0x3123}, 2},
@@ -277,6 +287,20 @@ static const calypso_file_ref_t calypso_file_refs[] = {
     {"MPP_MISCELLANEOUS", -1, {0x3100, 0x3150}, 2},
     {"MPP_COUNTERS_4", -1, {0x3100, 0x3169}, 2},
     {"MPP_FREE", -1, {0x3100, 0x31F0}, 2},
+    // Lignes D azur
+    {"UNKNOWN_EF_3203", 0x03, {0x3200, 0x3203}, 2},
+    // Lignes D azur
+    {"UNKNOWN_EF_3209", 0x09, {0x3200, 0x3209}, 2},
+    // Lignes D azur
+    {"UNKNOWN_EF_3214", 0x14, {0x3200, 0x3214}, 2},
+    // Lignes D azur
+    {"UNKNOWN_EF_3217", 0x17, {0x3200, 0x3217}, 2},
+    // Lignes D azur
+    {"UNKNOWN_EF_3219", 0x19, {0x3200, 0x3219}, 2},
+    // Lignes D azur
+    {"UNKNOWN_EF_321A", 0x1A, {0x3200, 0x321A}, 2},
+    // Lignes D azur
+    {"UNKNOWN_EF_321B", 0x1B, {0x3200, 0x321B}, 2},
     {"RT2_ENVIRONMENT", -1, {0x2100, 0x2101}, 2},
     {"RT2_AID", -1, {0x2100, 0x2104}, 2},
     {"RT2_LOG", -1, {0x2100, 0x2110}, 2},
