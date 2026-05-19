@@ -115,6 +115,8 @@ static const uint64_t g_mifare_default_keys[] = {
     0x587ee5f9350f,
     0xa0478cc39091,
     0x533cb6c723f6,
+    0x717273747555,
+    0x434445464733,
     0x8fd0a4f256e9,
     0x0000014b5c31,
     0xb578f38a5c61,
