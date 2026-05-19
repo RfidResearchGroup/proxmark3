@@ -417,6 +417,25 @@ static int fm11_keylist_push_seeded(fm11_keylist_t *list, uint64_t key, uint16_t
     return res;
 }
 
+static int fm11_cmp_candidate_key(const void *a, const void *b) {
+    const fm11_candidate_t *ca = (const fm11_candidate_t *)a;
+    const fm11_candidate_t *cb = (const fm11_candidate_t *)b;
+    if (ca->key < cb->key) {
+        return -1;
+    }
+    if (ca->key > cb->key) {
+        return 1;
+    }
+    return 0;
+}
+
+static void fm11_keylist_sort(fm11_keylist_t *list) {
+    if (list == NULL || list->count < 2 || list->data == NULL) {
+        return;
+    }
+    qsort(list->data, list->count, sizeof(fm11_candidate_t), fm11_cmp_candidate_key);
+}
+
 static int fm11_keylist_reserve(fm11_keylist_t *list, uint32_t cap) {
     if (list == NULL) {
         return PM3_EINVARG;
@@ -2373,7 +2392,12 @@ int CmdHF14AMfSEN(const char *Cmd) {
                 fm11_keylist_promote_existing(&candidates[sec][kt], keys_found[sec][kt ^ 1]);
             }
         }
+        // Prioritize sector 32 keyB starting with 0000
+        if (real_sec == 32 && kt == 1) {
+            fm11_keylist_sort(&candidates[sec][kt]);
+        }
         snprintf(activity, sizeof(activity), "sec %03u key %c - checking %u candidates", real_sec, kt ? 'B' : 'A', candidates[sec][kt].count);
+
         fm11_sen_progress(nonce_count, activity, candidates[sec][kt].count,
                                   (candidates[sec][kt].count / 2 / FM11RF08S_FCHK_KEYS_PER_SECOND) + 1);
         uint64_t key = 0;
