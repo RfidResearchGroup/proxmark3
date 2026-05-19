@@ -2101,6 +2101,35 @@ int CmdHF14AMfSEN(const char *Cmd) {
     uint64_t t1 = msclock();
 
     PrintAndLogEx(INFO, "Static Encrypted Nonce Key Recovery");
+
+
+    uint64_t tagT = GetHF14AMfU_Type();
+    if (tagT != MFU_TT_UL_ERROR) {
+        PrintAndLogEx(ERR, "Detected a MIFARE Ultralight/C/NTAG Compatible card.");
+        PrintAndLogEx(ERR, "This command targets " _YELLOW_("MIFARE Classic"));
+        return PM3_ESOFT;
+    }
+
+    // Select card to get UID/UIDLEN/ATQA/SAK information
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(DEBUG, "iso14443a card select timeout");
+        DropField();
+        return PM3_ETIMEOUT;
+    }
+
+    uint64_t select_status = resp.oldarg[0];
+    if (select_status == 0) {
+        // iso14443a card select failed
+        PrintAndLogEx(FAILED, "No tag detected or other tag communication error");
+        PrintAndLogEx(HINT, "Hint: Try some distance or position of the card");
+        return PM3_ECARDEXCHANGE;
+    }
+
+
+
     fm11_sen_progress_header();
     for (uint8_t i = 0; i < ARRAYLEN(fm11_backdoor_keys); i++) {
         char activity[80];
