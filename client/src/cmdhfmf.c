@@ -47,6 +47,7 @@
 #include "fpga.h"
 #include "mifare/mifarehost.h"
 #include "crypto/originality.h"
+#include "cmdhfmfsen.h"     // Mifare Classic Static Nonce
 
 // Defines for Saflok parsing
 #define SAFLOK_YEAR_OFFSET 1980
@@ -11086,6 +11087,7 @@ static command_t CommandTable[] = {
     {"nested",      CmdHF14AMfNested,       IfPm3Iso14443a,  "Nested attack"},
     {"hardnested",  CmdHF14AMfNestedHard,   AlwaysAvailable, "Nested attack for hardened MIFARE Classic cards"},
     {"staticnested", CmdHF14AMfNestedStatic, IfPm3Iso14443a, "Nested attack against static nonce MIFARE Classic cards"},
+    {"sen",         CmdHF14AMfSEN,          IfPm3Iso14443a,  "FM11RF08S Static Encrypted Nonce attack"},
     {"brute",       CmdHF14AMfSmartBrute,   IfPm3Iso14443a,  "Smart bruteforce to exploit weak key generators"},
     {"autopwn",     CmdHF14AMfAutoPWN,      IfPm3Iso14443a,  "Automatic key recovery tool for MIFARE Classic"},
 //    {"keybrute",    CmdHF14AMfKeyBrute,     IfPm3Iso14443a,  "J_Run's 2nd phase of multiple sector nested authentication key recovery"},
