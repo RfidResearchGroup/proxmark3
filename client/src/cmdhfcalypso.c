@@ -69,6 +69,7 @@
 #define CALYPSO_MANUFACTURERS_RESOURCE "calypso/manufacturers"
 #define CALYPSO_IC_FAMILIES_RESOURCE   "calypso/ic_families"
 #define CALYPSO_OPERATORS_RESOURCE     "calypso/operators"
+#define CALYPSO_NODES_RESOURCE         "calypso/nodes"
 #define CALYPSO_DUMP_PATH_MAX    2
 // https://docs.keyple.org/keyple-card-calypso-cpp-lib/2.2.5.6/_cmd_card_select_file_8cpp_source.html
 #define CALYPSO_SELECT_FIRST_EF_P1      0x02
@@ -229,6 +230,7 @@ typedef struct {
 static calypso_resource_t calypso_manufacturers_resource = {CALYPSO_MANUFACTURERS_RESOURCE, NULL, false};
 static calypso_resource_t calypso_ic_families_resource = {CALYPSO_IC_FAMILIES_RESOURCE, NULL, false};
 static calypso_resource_t calypso_operators_resource = {CALYPSO_OPERATORS_RESOURCE, NULL, false};
+static calypso_resource_t calypso_nodes_resource = {CALYPSO_NODES_RESOURCE, NULL, false};
 
 static const char *calypso_json_lookup_name(calypso_resource_t *resource, uint32_t id);
 static void calypso_set_selected_result(bool is_implicitly_selected, const uint8_t *aid, size_t aid_len, bool has_df_lid, uint16_t df_lid, const calypso_rf_info_t *rf, const uint8_t *fci_data, size_t fci_len, uint16_t sw, const calypso_fci_t *fci, calypso_select_result_t *selected);
@@ -241,81 +243,6 @@ static void calypso_reselect_exact_df_name(const calypso_select_result_t *select
 static void calypso_print_rf_info(const calypso_rf_info_t *rf);
 
 static int CmdHelp(const char *Cmd);
-
-static const calypso_file_ref_t calypso_file_refs[] = {
-    {"TICKETING_ENVIRONMENT", 0x07, {0x2000, 0x2001}, 2},
-    {"AID", 0x04, {0x3F04}, 1},
-    {"ICC", 0x02, {0x0002}, 1},
-    {"ID", 0x03, {0x0003}, 1},
-    {"HOLDER_EXTENDED", -1, {0x3F1C}, 1},
-    {"DISPLAY", 0x05, {0x2F10}, 1},
-    // NAVIGO
-    {"UNKNOWN_EF_CAFE", 0x00, {0xCAFE}, 1},
-    {"TICKETING_HOLDER", -1, {0x2000, 0x2002}, 2},
-    {"TICKETING_AID", -1, {0x2000, 0x2004}, 2},
-    {"TICKETING_LOG", 0x08, {0x2000, 0x2010}, 2},
-    // CDMX
-    {"UNKNOWN_EF_2017", 0x17, {0x2000, 0x2017}, 2},
-    {"TICKETING_CONTRACTS_1", 0x09, {0x2000, 0x2020}, 2},
-    {"TICKETING_CONTRACTS_2", 0x06, {0x2000, 0x2030}, 2},
-    {"TICKETING_COUNTERS_1", 0x0A, {0x2000, 0x202A}, 2},
-    {"TICKETING_COUNTERS_2", 0x0B, {0x2000, 0x202B}, 2},
-    {"TICKETING_COUNTERS_3", 0x0C, {0x2000, 0x202C}, 2},
-    {"TICKETING_COUNTERS_4", 0x0D, {0x2000, 0x202D}, 2},
-    {"TICKETING_COUNTERS_5", -1, {0x2000, 0x202E}, 2},
-    {"TICKETING_COUNTERS_6", -1, {0x2000, 0x202F}, 2},
-    {"TICKETING_SPECIAL_EVENTS", 0x1D, {0x2000, 0x2040}, 2},
-    {"TICKETING_CONTRACT_LIST", 0x1E, {0x2000, 0x2050}, 2},
-    {"TICKETING_COUNTERS_7", -1, {0x2000, 0x2060}, 2},
-    {"TICKETING_COUNTERS_8", -1, {0x2000, 0x2062}, 2},
-    {"TICKETING_COUNTERS_9", 0x19, {0x2000, 0x2069}, 2},
-    {"TICKETING_COUNTERS_10", 0x10, {0x2000, 0x206A}, 2},
-    {"TICKETING_FREE", 0x01, {0x2000, 0x20F0}, 2},
-    // Lignes D azur
-    {"UNKNOWN_EF_3101", 0x00, {0x3100, 0x3101}, 2},
-    {"MPP_PUBLIC_PARAMETERS", 0x17, {0x3100, 0x3102}, 2},
-    {"MPP_AID", -1, {0x3100, 0x3104}, 2},
-    // CDMX
-    {"UNKNOWN_EF_3107", 0x07, {0x3100, 0x3107}, 2},
-    {"MPP_LOG", -1, {0x3100, 0x3115}, 2},
-    // CDMX
-    {"UNKNOWN_EF_311C", 0x16, {0x3100, 0x311C}, 2},
-    {"MPP_CONTRACTS", -1, {0x3100, 0x3120}, 2},
-    {"MPP_COUNTERS_1", -1, {0x3100, 0x3113}, 2},
-    {"MPP_COUNTERS_2", -1, {0x3100, 0x3123}, 2},
-    {"MPP_COUNTERS_3", -1, {0x3100, 0x3133}, 2},
-    {"MPP_MISCELLANEOUS", -1, {0x3100, 0x3150}, 2},
-    {"MPP_COUNTERS_4", -1, {0x3100, 0x3169}, 2},
-    {"MPP_FREE", -1, {0x3100, 0x31F0}, 2},
-    // Lignes D azur
-    {"UNKNOWN_EF_3203", 0x03, {0x3200, 0x3203}, 2},
-    // Lignes D azur
-    {"UNKNOWN_EF_3209", 0x09, {0x3200, 0x3209}, 2},
-    // Lignes D azur
-    {"UNKNOWN_EF_3214", 0x14, {0x3200, 0x3214}, 2},
-    // Lignes D azur
-    {"UNKNOWN_EF_3217", 0x17, {0x3200, 0x3217}, 2},
-    // Lignes D azur
-    {"UNKNOWN_EF_3219", 0x19, {0x3200, 0x3219}, 2},
-    // Lignes D azur
-    {"UNKNOWN_EF_321A", 0x1A, {0x3200, 0x321A}, 2},
-    // Lignes D azur
-    {"UNKNOWN_EF_321B", 0x1B, {0x3200, 0x321B}, 2},
-    {"RT2_ENVIRONMENT", -1, {0x2100, 0x2101}, 2},
-    {"RT2_AID", -1, {0x2100, 0x2104}, 2},
-    {"RT2_LOG", -1, {0x2100, 0x2110}, 2},
-    {"RT2_CONTRACTS", -1, {0x2100, 0x2120}, 2},
-    {"RT2_SPECIAL_EVENTS", -1, {0x2100, 0x2140}, 2},
-    {"RT2_CONTRACT_LIST", -1, {0x2100, 0x2150}, 2},
-    {"RT2_COUNTERS", -1, {0x2100, 0x2169}, 2},
-    {"RT2_FREE", -1, {0x2100, 0x21F0}, 2},
-    {"EP_AID", -1, {0x1000, 0x1004}, 2},
-    {"EP_LOAD_LOG", 0x14, {0x1000, 0x1014}, 2},
-    {"EP_PURCHASE_LOG", 0x15, {0x1000, 0x1015}, 2},
-    {"ETICKET", -1, {0x8000, 0x8004}, 2},
-    {"ETICKET_EVENT_LOGS", -1, {0x8000, 0x8010}, 2},
-    {"ETICKET_PRESELECTION", -1, {0x8000, 0x8030}, 2},
-};
 
 // https://docs.keypop.org/keypop-calypso-card-cpp-api/latest-stable/namespacekeypop_1_1calypso_1_1card.html#aa274077fbdeafe85dfe208791490462f
 // https://gnupg.org/ftp/specs/OpenPGP-smart-card-application-2.0.pdf
@@ -663,22 +590,17 @@ static json_t *calypso_json_resource_root(calypso_resource_t *resource) {
     return resource->root;
 }
 
-static bool calypso_json_lookup_id(json_t *obj, uint32_t *id) {
-    if (obj == NULL || id == NULL) {
+static bool calypso_json_parse_hex_uint(json_t *value, uint32_t max, uint32_t *out) {
+    if (out == NULL) {
         return false;
     }
 
-    json_t *value = json_object_get(obj, "id");
-    if (value == NULL) {
-        value = json_object_get(obj, "ID");
-    }
-
     if (json_is_integer(value)) {
-        json_int_t int_id = json_integer_value(value);
-        if (int_id < 0 || int_id > UINT32_MAX) {
+        json_int_t int_value = json_integer_value(value);
+        if (int_value < 0 || (uint64_t)int_value > max) {
             return false;
         }
-        *id = (uint32_t)int_id;
+        *out = (uint32_t)int_value;
         return true;
     }
 
@@ -698,7 +620,7 @@ static bool calypso_json_lookup_id(json_t *obj, uint32_t *id) {
     errno = 0;
     char *end = NULL;
     unsigned long parsed = strtoul(text, &end, 16);
-    if (errno != 0 || end == text || parsed > UINT32_MAX) {
+    if (errno != 0 || end == text || parsed > max) {
         return false;
     }
 
@@ -710,7 +632,24 @@ static bool calypso_json_lookup_id(json_t *obj, uint32_t *id) {
         return false;
     }
 
-    *id = (uint32_t)parsed;
+    *out = (uint32_t)parsed;
+    return true;
+}
+
+static bool calypso_json_lookup_id(json_t *obj, uint32_t *id) {
+    if (obj == NULL || id == NULL) {
+        return false;
+    }
+
+    json_t *value = json_object_get(obj, "id");
+    if (value == NULL) {
+        value = json_object_get(obj, "ID");
+    }
+
+    if (calypso_json_parse_hex_uint(value, UINT32_MAX, id) == false) {
+        return false;
+    }
+
     return true;
 }
 
@@ -739,6 +678,46 @@ static const char *calypso_json_lookup_name(calypso_resource_t *resource, uint32
     }
 
     return NULL;
+}
+
+static bool calypso_json_file_ref_parse(json_t *obj, calypso_file_ref_t *file) {
+    if (json_is_object(obj) == false || file == NULL) {
+        return false;
+    }
+
+    const char *name = calypso_json_string_get(obj, "name");
+    json_t *path = json_object_get(obj, "path");
+    if (name == NULL || json_is_array(path) == false) {
+        return false;
+    }
+
+    size_t path_len = json_array_size(path);
+    if (path_len == 0 || path_len > CALYPSO_DUMP_PATH_MAX) {
+        return false;
+    }
+
+    memset(file, 0, sizeof(*file));
+    file->name = name;
+    file->sfi = -1;
+
+    json_t *sfi = json_object_get(obj, "sfi");
+    if (sfi != NULL && json_is_null(sfi) == false) {
+        uint32_t parsed_sfi = 0;
+        if (calypso_json_parse_hex_uint(sfi, CALYPSO_MAX_ENCODED_SFI, &parsed_sfi) == false) {
+            return false;
+        }
+        file->sfi = (int)parsed_sfi;
+    }
+
+    for (size_t i = 0; i < path_len; i++) {
+        uint32_t parsed_lid = 0;
+        if (calypso_json_parse_hex_uint(json_array_get(path, i), UINT16_MAX, &parsed_lid) == false) {
+            return false;
+        }
+        file->path[i] = (uint16_t)parsed_lid;
+    }
+    file->path_len = path_len;
+    return true;
 }
 
 static bool calypso_aid_is_prefix(const uint8_t *aid, size_t aid_len) {
@@ -1945,9 +1924,17 @@ static size_t calypso_probe_get_data_objects(json_t *entries, bool print_results
 }
 
 static const char *calypso_file_name_for_sfi(uint8_t sfi) {
-    for (size_t i = 0; i < ARRAYLEN(calypso_file_refs); i++) {
-        if (calypso_file_refs[i].sfi == sfi) {
-            return calypso_file_refs[i].name;
+    json_t *root = calypso_json_resource_root(&calypso_nodes_resource);
+    if (root == NULL) {
+        return NULL;
+    }
+
+    size_t index;
+    json_t *entry;
+    json_array_foreach(root, index, entry) {
+        calypso_file_ref_t file = {0};
+        if (calypso_json_file_ref_parse(entry, &file) && file.sfi == sfi) {
+            return file.name;
         }
     }
     return NULL;
@@ -1983,8 +1970,16 @@ static bool calypso_file_ref_path_equals(const calypso_file_ref_t *file, const u
 }
 
 static bool calypso_lid_is_known(uint16_t lid) {
-    for (size_t i = 0; i < ARRAYLEN(calypso_file_refs); i++) {
-        if (calypso_file_ref_leaf_lid(&calypso_file_refs[i]) == lid) {
+    json_t *root = calypso_json_resource_root(&calypso_nodes_resource);
+    if (root == NULL) {
+        return false;
+    }
+
+    size_t index;
+    json_t *entry;
+    json_array_foreach(root, index, entry) {
+        calypso_file_ref_t file = {0};
+        if (calypso_json_file_ref_parse(entry, &file) && calypso_file_ref_leaf_lid(&file) == lid) {
             return true;
         }
     }
@@ -2060,12 +2055,22 @@ static size_t calypso_infer_lid_path(uint16_t lid, uint16_t *path) {
 static size_t calypso_build_lid_file_candidates(const calypso_ef_list_t *ef_list, calypso_file_candidate_t *candidates, size_t capacity) {
     size_t count = 0;
 
-    for (size_t i = 0; i < ARRAYLEN(calypso_file_refs); i++) {
-        uint8_t source = CALYPSO_FILE_SOURCE_KNOWN;
-        if (calypso_ef_list_contains_lid(ef_list, calypso_file_ref_leaf_lid(&calypso_file_refs[i]))) {
-            source |= CALYPSO_FILE_SOURCE_EF_LIST;
+    json_t *root = calypso_json_resource_root(&calypso_nodes_resource);
+    if (root != NULL) {
+        size_t index;
+        json_t *entry;
+        json_array_foreach(root, index, entry) {
+            calypso_file_ref_t file = {0};
+            if (calypso_json_file_ref_parse(entry, &file) == false) {
+                continue;
+            }
+
+            uint8_t source = CALYPSO_FILE_SOURCE_KNOWN;
+            if (calypso_ef_list_contains_lid(ef_list, calypso_file_ref_leaf_lid(&file))) {
+                source |= CALYPSO_FILE_SOURCE_EF_LIST;
+            }
+            calypso_add_file_candidate(candidates, capacity, &count, file.name, file.path, file.path_len, source);
         }
-        calypso_add_file_candidate(candidates, capacity, &count, calypso_file_refs[i].name, calypso_file_refs[i].path, calypso_file_refs[i].path_len, source);
     }
 
     if (ef_list == NULL) {
