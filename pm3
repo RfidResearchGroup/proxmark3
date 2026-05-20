@@ -184,7 +184,7 @@ function get_pm3_list_WSL {
     PM3LIST=()
 
     # Normal SERIAL PORTS (COM)
-    for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.PNPDeviceID -like '*VID_9AC4&PID_4B8F*' -or \$_.PNPDeviceID -like '*VID_2D2D&PID_504D*'} | Select -expandproperty DeviceID" 2>/dev/null); do
+    for DEV in $($PSHEXE -NoProfile -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.PNPDeviceID -like '*VID_9AC4&PID_4B8F*' -or \$_.PNPDeviceID -like '*VID_2D2D&PID_504D*'} | Select -expandproperty DeviceID" 2>/dev/null); do
         DEV=$(echo $DEV | tr -dc '[:print:]')
         _comport=$DEV
         DEV=$(echo $DEV | sed -nr 's#^COM([0-9]+)\b#/dev/ttyS\1#p')
@@ -193,7 +193,7 @@ function get_pm3_list_WSL {
 
             #prevent soft bricking when using pm3-flash-all on an outdated bootloader
             if [ $(basename -- "$0") = "pm3-flash-all" ]; then
-                line=$($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.DeviceID -eq '$_comport'} | Select -expandproperty PNPDeviceID" 2>/dev/null | tr -dc '[:print:]');
+                line=$($PSHEXE -NoProfile -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.DeviceID -eq '$_comport'} | Select -expandproperty PNPDeviceID" 2>/dev/null | tr -dc '[:print:]');
                 if [[ ! $line =~ ^"USB\VID_9AC4&PID_4B8F\ICEMAN" ]]; then
                     echo -e "\033[0;31m[!] Using pm3-flash-all on an oudated bootloader, use pm3-flash-bootrom first!"
                     exit 1
@@ -212,7 +212,7 @@ function get_pm3_list_WSL {
 
     #BT direct SERIAL PORTS (COM)
     if $FINDBTRFCOMM; then
-        for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_PnPEntity | Where-Object Caption -like 'Standard Serial over Bluetooth link (COM*' | Select Name" 2> /dev/null | sed -nr 's#.*\bCOM([0-9]+)\b.*#/dev/ttyS\1#p'); do
+        for DEV in $($PSHEXE -NoProfile -command "Get-CimInstance -ClassName Win32_PnPEntity | Where-Object Caption -like 'Standard Serial over Bluetooth link (COM*' | Select Name" 2> /dev/null | sed -nr 's#.*\bCOM([0-9]+)\b.*#/dev/ttyS\1#p'); do
             # ttyS counterpart takes some more time to appear
             if [ -e "$DEV" ]; then
                 PM3LIST+=("$DEV")
@@ -230,7 +230,7 @@ function get_pm3_list_WSL {
 
     #white BT dongle SERIAL PORTS (COM)
     if $FINDBTDONGLE; then
-        for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_10C4&PID_EA60*' | Select DeviceID" 2>/dev/null | sed -nr 's#^COM([0-9]+)\b#/dev/ttyS\1#p'); do
+        for DEV in $($PSHEXE -NoProfile -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_10C4&PID_EA60*' | Select DeviceID" 2>/dev/null | sed -nr 's#^COM([0-9]+)\b#/dev/ttyS\1#p'); do
             # ttyS counterpart takes some more time to appear
             if [ -e "$DEV" ]; then
                 PM3LIST+=("$DEV")
