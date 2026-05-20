@@ -27,16 +27,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if !defined(_WIN32)
-#include <sys/ioctl.h>
-#include <unistd.h>
-#endif
-
 #include "cmdhfmf.h"
 #include "cmdparser.h"
 #include "cliparser.h"
 #include "commonutil.h"
 #include "fileutils.h"
+#include "mifare/mifare4.h"
 #include "mifare/mifaredefault.h"
 #include "mifare/mifarehost.h"
 #include "util_posix.h"
@@ -137,6 +133,9 @@ const uint8_t fm11_backdoor_keys[FM11_BACKDOOR_KEY_COUNT][MIFARE_KEY_SIZE] = {
 
 static uint64_t fm11_sen_start_time  = 0;
 static uint32_t fm11_sen_last_nonces = 0;
+static size_t fm11_sen_inplace_len = 0;
+
+static int fm11_verify_candidates(uint8_t real_sec, uint8_t key_type, const fm11_keylist_t *list, uint64_t *key_out);
 
 static void fm11_wait_for_enter(const char *message) {
     PrintAndLogEx(INFO, "%s", message);
@@ -191,33 +190,53 @@ static void fm11_sen_progress(uint32_t nonces, const char *activity, uint32_t st
                   eta);
 }
 
-static uint16_t fm11_sen_terminal_width(void) {
-#if !defined(_WIN32)
-    struct winsize ws = {0};
-    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0) {
-        return ws.ws_col;
-    }
-#endif
-    return 80;
-}
-
 static void fm11_sen_inplace_row(const char *row) {
     if (row == NULL) {
         return;
     }
-    PrintAndLogEx(INPLACE, "%s", row);
+    static uint8_t spinidx = 0;
+    static const char spinner[] = {'\\', '|', '/', '-'};
+
+    char out[MAX_PRINT_BUFFER] = {0};
+    snprintf(out, sizeof(out), "[" _YELLOW_("%c") "] %s", spinner[spinidx], row);
+    spinidx = (spinidx + 1) % ARRAYLEN(spinner);
+
+    char filtered[MAX_PRINT_BUFFER] = {0};
+    char rendered[MAX_PRINT_BUFFER] = {0};
+    memcpy_filter_ansi(filtered, out, sizeof(filtered), !g_session.supports_colors);
+    memcpy_filter_emoji(rendered, filtered, sizeof(rendered), g_session.emoji_mode);
+
+    size_t len = strlen(rendered);
+    pthread_mutex_lock(&g_print_lock);
+    fprintf(stdout, "\r%s", rendered);
+    if (fm11_sen_inplace_len > len) {
+        fprintf(stdout, "%*s", (int)(fm11_sen_inplace_len - len), "");
+    }
+    fflush(stdout);
+    fm11_sen_inplace_len = len;
+    pthread_mutex_unlock(&g_print_lock);
 }
 
 static void fm11_sen_clear_inplace(void) {
-    uint16_t width = fm11_sen_terminal_width();
-    if (width < 1) {
-        width = 80;
+    if (fm11_sen_inplace_len == 0) {
+        return;
     }
-    if (width > 240) {
-        width = 240;
-    }
-    fprintf(stdout, "\r%*s\r", width - 1, "");
+    pthread_mutex_lock(&g_print_lock);
+    fprintf(stdout, "\r");
     fflush(stdout);
+    fm11_sen_inplace_len = 0;
+    pthread_mutex_unlock(&g_print_lock);
+}
+
+static void fm11_sen_finish_inplace(void) {
+    if (fm11_sen_inplace_len == 0) {
+        return;
+    }
+    pthread_mutex_lock(&g_print_lock);
+    fprintf(stdout, "\n");
+    fflush(stdout);
+    fm11_sen_inplace_len = 0;
+    pthread_mutex_unlock(&g_print_lock);
 }
 
 static void fm11_render_bar(char *out, size_t out_len, uint32_t done, uint32_t total) {
@@ -250,6 +269,27 @@ static void fm11_sen_candidate_progress(uint8_t real_sec, uint8_t key_type, uint
     fm11_sen_inplace_row(row);
 }
 
+static void fm11_sen_keycheck_progress(const char *prefix, uint8_t real_sec, uint8_t key_type,
+                                       uint32_t tested, uint32_t total, uint32_t states) {
+    total = MAX(total, tested);
+    char bar[80] = {0};
+    fm11_render_bar(bar, sizeof(bar), tested, total);
+
+    uint32_t pct = (total == 0) ? 100 : (uint32_t)(((uint64_t)tested * 100) / total);
+    uint64_t elapsed = fm11_sen_start_time ? (msclock() - fm11_sen_start_time) : 0;
+    const char *text = prefix ? prefix : "chk";
+
+    char row[256] = {0};
+    snprintf(row, sizeof(row),
+             " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " | %-3.3s " _CYAN_("%03u") " key " _GREEN_("%c") " [%s] " _YELLOW_("%6u") "/" _YELLOW_("%-6u") " " _YELLOW_("%3u%%") " | " _YELLOW_("%15u") " | %5s ",
+             (float)elapsed / 1000.0,
+             fm11_sen_last_nonces,
+             text, real_sec, key_type ? 'B' : 'A',
+             bar, tested, total, pct,
+             states, "");
+    fm11_sen_inplace_row(row);
+}
+
 static void fm11_sen_compute_progress(const char *activity, uint32_t done, uint32_t total, uint32_t states) {
     total = MAX(total, done);
     char bar[80] = {0};
@@ -261,7 +301,7 @@ static void fm11_sen_compute_progress(const char *activity, uint32_t done, uint3
 
     char row[256] = {0};
     snprintf(row, sizeof(row),
-             " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " | " _CYAN_("%-12.12s") " [%s] " _YELLOW_("%6u") "/" _YELLOW_("%-6u") " " _YELLOW_("%3u%%") " | " _YELLOW_("%15u") " | %5s ",
+             " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " | " _CYAN_("%-12.12s") " [%s] " _YELLOW_("%6u") "/" _YELLOW_("%-6u") " " _YELLOW_("%3u%%") "  | " _YELLOW_("%15u") " | %5s ",
              (float)elapsed / 1000.0,
              fm11_sen_last_nonces,
              text,
@@ -434,6 +474,10 @@ static void fm11_keylist_sort(fm11_keylist_t *list) {
         return;
     }
     qsort(list->data, list->count, sizeof(fm11_candidate_t), fm11_cmp_candidate_key);
+}
+
+static void fm11_prioritize_0000_prefix(fm11_keylist_t *list) {
+    fm11_keylist_sort(list);
 }
 
 static int fm11_keylist_reserve(fm11_keylist_t *list, uint32_t cap) {
@@ -910,11 +954,6 @@ static const fm11_reuse_bucket_t *fm11_reuse_index_find(const fm11_reuse_index_t
         return &index->buckets[lo];
     }
     return NULL;
-}
-
-static uint32_t fm11_reuse_index_ref_count(const fm11_reuse_index_t *index, uint64_t key) {
-    const fm11_reuse_bucket_t *bucket = fm11_reuse_index_find(index, key);
-    return bucket == NULL ? 0 : bucket->count;
 }
 
 static int fm11_cmp_scored_candidate(const void *a, const void *b) {
@@ -1696,7 +1735,7 @@ static int fm11_build_global_priority_keys(fm11_keylist_t candidates[FM11RF08S_S
     }
 
     for (uint32_t d = 0; d < ARRAYLEN(g_mifare_default_keys); d++) {
-        int res = fm11_keylist_add_unique(priority, g_mifare_default_keys[d]);
+        int res = fm11_keylist_push(priority, g_mifare_default_keys[d], 0);
         if (res != PM3_SUCCESS) {
             return res;
         }
@@ -1785,9 +1824,110 @@ out:
     return retval;
 }
 
-static uint32_t fm11_verify_reused_key_fast(uint64_t key,
-                                            uint64_t keys_found[FM11RF08S_SECTORS][2],
-                                            bool found_key[FM11RF08S_SECTORS][2]) {
+static void fm11_print_key_hit_row(uint32_t nonce_count, uint8_t sec, uint8_t kt, uint64_t key,
+                                   const bool found_key[FM11RF08S_SECTORS][2]) {
+    fm11_sen_finish_inplace();
+    uint32_t keys_so_far = fm11_count_found_keys(found_key);
+    uint64_t elapsed_key = fm11_sen_start_time ? (msclock() - fm11_sen_start_time) : 0;
+    char kcount[16] = {0};
+    snprintf(kcount, sizeof(kcount), "%u/%u keys", keys_so_far, FM11RF08S_SECTORS * 2);
+    PrintAndLogEx(SUCCESS,
+                  " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " |"
+                  " Key sec " _YELLOW_("%03u") " key " _YELLOW_("%c") " = " _GREEN_("%012" PRIX64) "                        |"
+                  " " _YELLOW_("%15s") " | %5s ",
+                  (float)elapsed_key / 1000.0, nonce_count,
+                  fm11_real_sector(sec), kt ? 'B' : 'A', key & 0xFFFFFFFFFFFFULL,
+                  kcount, "");
+}
+
+static int fm11_check_default_keys(uint32_t nonce_count,
+                                   uint64_t keys_found[FM11RF08S_SECTORS][2],
+                                   bool found_key[FM11RF08S_SECTORS][2]) {
+    sector_t *e_sector = calloc(FM11RF08S_NORMAL_SECTORS, sizeof(sector_t));
+    if (e_sector == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    bool was_found[FM11RF08S_SECTORS][2] = {{false}};
+    for (uint8_t sec = 0; sec < FM11RF08S_SECTORS; sec++) {
+        for (uint8_t kt = 0; kt < 2; kt++) {
+            was_found[sec][kt] = found_key[sec][kt];
+        }
+    }
+
+    for (uint8_t sec = 0; sec < FM11RF08S_NORMAL_SECTORS; sec++) {
+        for (uint8_t kt = 0; kt < 2; kt++) {
+            if (found_key[sec][kt]) {
+                e_sector[sec].Key[kt] = keys_found[sec][kt];
+                e_sector[sec].foundKey[kt] = true;
+            }
+        }
+    }
+
+    int retval = PM3_SUCCESS;
+    uint32_t keys_count = ARRAYLEN(g_mifare_default_keys);
+    uint32_t pass_total = keys_count * FM11RF08S_NORMAL_SECTORS * 2;
+    bool progress_shown = false;
+    for (uint8_t strategy = 1; strategy < 3; strategy++) {
+        bool first_chunk = true;
+        for (uint32_t idx = 0; idx < keys_count; idx++) {
+            if (kbd_enter_pressed()) {
+                retval = PM3_EOPABORTED;
+                goto normal_out;
+            }
+
+            uint8_t key_block[KEYBLOCK_SIZE] = {0};
+            uint8_t chunk = 1;
+            bool last_chunk = (idx + 1) >= keys_count;
+            num_to_bytes(g_mifare_default_keys[idx], MIFARE_KEY_SIZE, key_block);
+
+            uint32_t shown_before = ((strategy - 1) * pass_total) + (idx * FM11RF08S_NORMAL_SECTORS * 2);
+            uint8_t show_sec_before = (idx % FM11RF08S_NORMAL_SECTORS);
+            uint8_t show_kt_before = (idx / FM11RF08S_NORMAL_SECTORS) & 1;
+            fm11_sen_keycheck_progress("def", show_sec_before, show_kt_before, shown_before, pass_total * 2, keys_count);
+            progress_shown = true;
+
+            int res = mf_check_keys_fast_ex(FM11RF08S_NORMAL_SECTORS, first_chunk, last_chunk, strategy,
+                                            chunk, key_block, e_sector, false, false, true, 0);
+            if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
+                retval = res;
+                goto normal_out;
+            }
+
+            uint32_t pass_done = (idx + 1) * FM11RF08S_NORMAL_SECTORS * 2;
+            uint32_t shown_done = ((strategy - 1) * pass_total) + pass_done;
+            uint8_t show_sec = idx % FM11RF08S_NORMAL_SECTORS;
+            uint8_t show_kt = (idx / FM11RF08S_NORMAL_SECTORS) & 1;
+            fm11_sen_keycheck_progress("def", show_sec, show_kt, shown_done, pass_total * 2, keys_count);
+            first_chunk = false;
+            if (res == PM3_SUCCESS) {
+                goto normal_out;
+            }
+        }
+    }
+
+normal_out:
+    if (progress_shown) {
+        fm11_sen_clear_inplace();
+    }
+    for (uint8_t sec = 0; sec < FM11RF08S_NORMAL_SECTORS; sec++) {
+        for (uint8_t kt = 0; kt < 2; kt++) {
+            if (e_sector[sec].foundKey[kt]) {
+                keys_found[sec][kt] = e_sector[sec].Key[kt] & 0xFFFFFFFFFFFFULL;
+                found_key[sec][kt] = true;
+                if (was_found[sec][kt] == false) {
+                    fm11_print_key_hit_row(nonce_count, sec, kt, keys_found[sec][kt], found_key);
+                }
+            }
+        }
+    }
+    free(e_sector);
+    return retval;
+}
+
+static uint32_t fm11_propagate_key_reuse_online(uint32_t nonce_count, uint64_t key,
+                                                uint64_t keys_found[FM11RF08S_SECTORS][2],
+                                                bool found_key[FM11RF08S_SECTORS][2]) {
     sector_t *e_sector = calloc(FM11RF08S_NORMAL_SECTORS, sizeof(sector_t));
     if (e_sector == NULL) {
         return 0;
@@ -1802,27 +1942,55 @@ static uint32_t fm11_verify_reused_key_fast(uint64_t key,
         }
     }
 
+    key &= 0xFFFFFFFFFFFFULL;
     uint8_t key_block[KEYBLOCK_SIZE] = {0};
-    num_to_bytes(key & 0xFFFFFFFFFFFFULL, MIFARE_KEY_SIZE, key_block);
+    num_to_bytes(key, MIFARE_KEY_SIZE, key_block);
+    uint32_t newly_found = 0;
 
+    uint32_t pass_total = FM11RF08S_NORMAL_SECTORS * 2;
+    bool progress_shown = false;
     for (uint8_t strategy = 1; strategy < 3; strategy++) {
         int res = mf_check_keys_fast_ex(FM11RF08S_NORMAL_SECTORS, true, true, strategy, 1,
                                         key_block, e_sector, false, false, true, 0);
         if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
             break;
         }
+        fm11_sen_keycheck_progress("use", FM11RF08S_NORMAL_SECTORS - 1, MF_KEY_B,
+                                   strategy * pass_total, pass_total * 2, pass_total);
+        progress_shown = true;
         if (res == PM3_SUCCESS) {
             break;
         }
     }
 
-    uint32_t newly_found = 0;
+    uint8_t sec32 = FM11RF08S_SECTORS - 1;
+    uint8_t real_sec32 = fm11_real_sector(sec32);
+    for (uint8_t kt = 0; kt < 2; kt++) {
+        if (found_key[sec32][kt]) {
+            continue;
+        }
+        uint64_t out_key = 0;
+        int res = mf_check_keys(mfFirstBlockOfSector(real_sec32), kt, false, 1, key_block, &out_key);
+        fm11_sen_keycheck_progress("use", real_sec32, kt, (pass_total * 2) + kt + 1, (pass_total * 2) + 2, pass_total + 2);
+        progress_shown = true;
+        if (res == PM3_SUCCESS && ((out_key & 0xFFFFFFFFFFFFULL) == key)) {
+            keys_found[sec32][kt] = key;
+            found_key[sec32][kt] = true;
+            newly_found++;
+            fm11_print_key_hit_row(nonce_count, sec32, kt, key, found_key);
+        }
+    }
+    if (progress_shown) {
+        fm11_sen_clear_inplace();
+    }
+
     for (uint8_t sec = 0; sec < FM11RF08S_NORMAL_SECTORS; sec++) {
         for (uint8_t kt = 0; kt < 2; kt++) {
-            if (found_key[sec][kt] == false && e_sector[sec].foundKey[kt]) {
-                keys_found[sec][kt] = e_sector[sec].Key[kt] & 0xFFFFFFFFFFFFULL;
+            if (e_sector[sec].foundKey[kt] && found_key[sec][kt] == false) {
+                keys_found[sec][kt] = key;
                 found_key[sec][kt] = true;
                 newly_found++;
+                fm11_print_key_hit_row(nonce_count, sec, kt, key, found_key);
             }
         }
     }
@@ -1939,6 +2107,7 @@ static int fm11_verify_candidates(uint8_t real_sec, uint8_t key_type, const fm11
     uint8_t block_no = real_sec * 4;
     uint32_t idx = 0;
     uint8_t timeout_retries = 0;
+    uint32_t last_progress = 0;
     fm11_sen_candidate_progress(real_sec, key_type, 0, list->count);
     while (idx < list->count) {
         uint8_t key_block[KEYBLOCK_SIZE] = {0};
@@ -1947,6 +2116,7 @@ static int fm11_verify_candidates(uint8_t real_sec, uint8_t key_type, const fm11
             num_to_bytes(list->data[idx + i].key, MIFARE_KEY_SIZE, key_block + (i * MIFARE_KEY_SIZE));
         }
         uint64_t found = 0;
+        bool found_valid = false;
         int res = PM3_ESOFT;
         if (real_sec < FM11RF08S_NORMAL_SECTORS) {
             sector_t e_sector[FM11RF08S_NORMAL_SECTORS] = {0};
@@ -1955,38 +2125,48 @@ static int fm11_verify_candidates(uint8_t real_sec, uint8_t key_type, const fm11
                                         1, chunk, key_block, e_sector, false, false, true, single_sector_params);
             if (res == PM3_SUCCESS && e_sector[real_sec].foundKey[key_type]) {
                 found = e_sector[real_sec].Key[key_type];
+                found_valid = true;
             }
         } else {
             res = mf_check_keys(block_no, key_type, false, chunk, key_block, &found);
+            found_valid = (res == PM3_SUCCESS);
         }
-        if (res == PM3_SUCCESS) {
+        if (res == PM3_SUCCESS && found_valid) {
             fm11_sen_candidate_progress(real_sec, key_type, MIN(idx + chunk, list->count), list->count);
-            PrintAndLogEx(NORMAL, "");
             *key_out = found;
             return PM3_SUCCESS;
         }
+        if (res == PM3_SUCCESS) {
+            fm11_sen_clear_inplace();
+            PrintAndLogEx(WARNING, "Ignoring sector %03u key %c check success without returned key material",
+                          real_sec, key_type ? 'B' : 'A');
+            return PM3_ESOFT;
+        }
         if (res == PM3_EOPABORTED) {
-            PrintAndLogEx(NORMAL, "");
+            fm11_sen_clear_inplace();
             return res;
         }
         if (res == PM3_ETIMEOUT && timeout_retries++ < 2) {
-            PrintAndLogEx(NORMAL, "");
+            fm11_sen_clear_inplace();
             PrintAndLogEx(WARNING, "Transient timeout checking sector %03u key %c candidates, retrying chunk %u",
                           real_sec, key_type ? 'B' : 'A', (idx / KEYS_IN_BLOCK) + 1);
             fm11_sen_candidate_progress(real_sec, key_type, idx, list->count);
             continue;
         }
         if (res == PM3_ETIMEOUT) {
-            PrintAndLogEx(NORMAL, "");
+            fm11_sen_clear_inplace();
             PrintAndLogEx(WARNING, "Timeout checking sector %03u key %c candidates after %u retries",
                           real_sec, key_type ? 'B' : 'A', timeout_retries);
             return res;
         }
         timeout_retries = 0;
         idx += chunk;
-        fm11_sen_candidate_progress(real_sec, key_type, idx, list->count);
+        if (idx >= list->count || idx - last_progress >= 500) {
+            fm11_sen_candidate_progress(real_sec, key_type, idx, list->count);
+            last_progress = idx;
+        }
     }
-    PrintAndLogEx(NORMAL, "");
+    fm11_sen_clear_inplace();
     return PM3_ESOFT;
 }
 
@@ -2070,6 +2250,98 @@ static int fm11_save_recovery_outputs(const iso14a_card_select_t *card, const is
     return saveFileEx(fn, ".bin", dump, sizeof(dump), spDump);
 }
 
+static int fm11_select_mifare_classic(iso14a_card_select_t *card_out) {
+    uint64_t tagT = GetHF14AMfU_Type();
+    if (tagT != MFU_TT_UL_ERROR) {
+        PrintAndLogEx(ERR, "Detected a MIFARE Ultralight/C/NTAG Compatible card.");
+        PrintAndLogEx(ERR, "This command targets " _YELLOW_("MIFARE Classic"));
+        return PM3_ESOFT;
+    }
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(DEBUG, "iso14443a card select timeout");
+        DropField();
+        return PM3_ETIMEOUT;
+    }
+
+    uint64_t select_status = resp.oldarg[0];
+    if (select_status == 0) {
+        PrintAndLogEx(FAILED, "No tag detected or other tag communication error");
+        PrintAndLogEx(HINT, "Hint: Try some distance or position of the card");
+        return PM3_ECARDEXCHANGE;
+    }
+
+    iso14a_card_select_t card = {0};
+    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+    if (select_status == 2) {
+        uint8_t rats[] = { 0xE0, 0x80 };
+        clearCommandBuffer();
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+            DropField();
+            return PM3_ETIMEOUT;
+        }
+
+        memcpy(card.ats, resp.data.asBytes, resp.oldarg[0]);
+        card.ats_len = resp.oldarg[0];
+        if (card.ats_len > 3) {
+            select_status = 4;
+        }
+    }
+
+    uint8_t ats_hist_pos = 0;
+    if ((card.ats_len > 3) && (card.ats[0] > 1)) {
+        ats_hist_pos = 2;
+        ats_hist_pos += (card.ats[1] & 0x10) == 0x10;
+        ats_hist_pos += (card.ats[1] & 0x20) == 0x20;
+        ats_hist_pos += (card.ats[1] & 0x40) == 0x40;
+    }
+
+    version_hw_t version_hw = {0};
+    int res = hf14a_getversion_data(&card, select_status, &version_hw);
+    DropField();
+    bool version_hw_available = (res == PM3_SUCCESS);
+
+    int nxptype = detect_nxp_card(card.sak,
+                                  ((card.atqa[1] << 8) + card.atqa[0]),
+                                  select_status,
+                                  card.ats_len - ats_hist_pos,
+                                  card.ats + ats_hist_pos,
+                                  version_hw_available,
+                                  &version_hw);
+
+    if ((nxptype & MTDESFIRE) == MTDESFIRE) {
+        PrintAndLogEx(ERR, "MIFARE DESFire card detected.");
+        PrintAndLogEx(ERR, "This command targets " _YELLOW_("MIFARE Classic"));
+        return PM3_ESOFT;
+    }
+    if ((nxptype & MTULTRALIGHT) == MTULTRALIGHT) {
+        PrintAndLogEx(ERR, "MIFARE Ultralight / NTAG detected.");
+        PrintAndLogEx(ERR, "This command targets " _YELLOW_("MIFARE Classic"));
+        return PM3_ESOFT;
+    }
+    if ((nxptype & MTPLUS) == MTPLUS && (nxptype & MTCLASSIC) == 0) {
+        PrintAndLogEx(ERR, "MIFARE Plus card detected.");
+        PrintAndLogEx(ERR, "This command targets " _YELLOW_("MIFARE Classic"));
+        return PM3_ESOFT;
+    }
+    if ((nxptype & (MTCLASSIC | MTMINI)) == 0) {
+        PrintAndLogEx(ERR, "No MIFARE Classic fingerprint detected.");
+        PrintAndLogEx(ERR, "This command targets " _YELLOW_("MIFARE Classic"));
+        return PM3_ESOFT;
+    }
+
+    if (card_out != NULL) {
+        *card_out = card;
+    }
+    return PM3_SUCCESS;
+}
+
 int CmdHF14AMfSEN(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf sen",
@@ -2121,33 +2393,10 @@ int CmdHF14AMfSEN(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Static Encrypted Nonce Key Recovery");
 
-
-    uint64_t tagT = GetHF14AMfU_Type();
-    if (tagT != MFU_TT_UL_ERROR) {
-        PrintAndLogEx(ERR, "Detected a MIFARE Ultralight/C/NTAG Compatible card.");
-        PrintAndLogEx(ERR, "This command targets " _YELLOW_("MIFARE Classic"));
-        return PM3_ESOFT;
+    int card_res = fm11_select_mifare_classic(&card);
+    if (card_res != PM3_SUCCESS) {
+        return card_res;
     }
-
-    // Select card to get UID/UIDLEN/ATQA/SAK information
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        PrintAndLogEx(DEBUG, "iso14443a card select timeout");
-        DropField();
-        return PM3_ETIMEOUT;
-    }
-
-    uint64_t select_status = resp.oldarg[0];
-    if (select_status == 0) {
-        // iso14443a card select failed
-        PrintAndLogEx(FAILED, "No tag detected or other tag communication error");
-        PrintAndLogEx(HINT, "Hint: Try some distance or position of the card");
-        return PM3_ECARDEXCHANGE;
-    }
-
-
 
     fm11_sen_progress_header();
     for (uint8_t i = 0; i < ARRAYLEN(fm11_backdoor_keys); i++) {
@@ -2195,10 +2444,44 @@ int CmdHF14AMfSEN(const char *Cmd) {
         fm11_wait_for_enter("Reader material processed. Place the FM11RF08S card back on the antenna and press Enter to continue");
     }
 
+    fm11_sen_progress(nonce_count, "Check default keys against all sectors A/B", ARRAYLEN(g_mifare_default_keys), 0);
+    retval = fm11_check_default_keys(nonce_count, keys_found, found_key);
+    if (retval != PM3_SUCCESS) {
+        goto out;
+    }
+    for (uint8_t sec = 0; sec < FM11RF08S_SECTORS; sec++) {
+        for (uint8_t kt = 0; kt < 2; kt++) {
+            if (found_key[sec][kt] == false) {
+                continue;
+            }
+            uint64_t key = keys_found[sec][kt] & 0xFFFFFFFFFFFFULL;
+            if (fm11_keylist_has_key(&confirmed_reuse_keys, key)) {
+                continue;
+            }
+            retval = fm11_keylist_add_unique(&confirmed_reuse_keys, key);
+            if (retval != PM3_SUCCESS) {
+                goto out;
+            }
+            uint32_t reuse_found = fm11_propagate_key_reuse_online(nonce_count, key, keys_found, found_key);
+            if (reuse_found > 0) {
+                snprintf(activity, sizeof(activity), "Key re-use propagation confirmed %u additional key slots", reuse_found);
+                fm11_sen_progress(nonce_count, activity, reuse_found, 0);
+            }
+        }
+    }
+    uint32_t default_found = fm11_count_found_keys(found_key);
+    if (default_found > 0) {
+        snprintf(activity, sizeof(activity), "Default key check recovered %u key%s", default_found, (default_found == 1) ? "" : "s");
+        fm11_sen_progress(nonce_count, activity, default_found, 0);
+    }
+
     fm11_sen_progress(nonce_count, "Generate first-pass candidates from nT/{nT}/parity", 0, 0);
     for (uint8_t sec = 0; sec < FM11RF08S_SECTORS; sec++) {
         uint8_t real_sec = fm11_real_sector(sec);
         for (uint8_t kt = 0; kt < 2; kt++) {
+            if (found_key[sec][kt]) {
+                continue;
+            }
             uint32_t nt = fm11_bytes_to_u32(nonces.nt[sec][kt]);
             uint32_t nt_enc = fm11_bytes_to_u32(nonces.nt_enc[sec][kt]);
             int res = fm11_generate_1nt_candidates(uid, nt, nt_enc, nonces.par_err[sec][kt], parity_mask, &candidates[sec][kt]);
@@ -2210,7 +2493,7 @@ int CmdHF14AMfSEN(const char *Cmd) {
         }
         uint32_t nt_a = fm11_bytes_to_u32(nonces.nt[sec][0]);
         uint32_t nt_b = fm11_bytes_to_u32(nonces.nt[sec][1]);
-        if (nt_a != nt_b) {
+        if (nt_a != nt_b && found_key[sec][0] == false && found_key[sec][1] == false) {
             int res = fm11_intersect_pair(nt_a, &candidates[sec][0], nt_b, &candidates[sec][1]);
             if (res != PM3_SUCCESS) {
                 retval = res;
@@ -2230,6 +2513,9 @@ int CmdHF14AMfSEN(const char *Cmd) {
         }
         fm11_prioritize_defaults(&candidates[sec][0]);
         fm11_prioritize_defaults(&candidates[sec][1]);
+        if (real_sec == 32) {
+            fm11_prioritize_0000_prefix(&candidates[sec][1]);
+        }
         snprintf(activity, sizeof(activity), "Prepared sec %03u candidates (A %u / B %u)",
                  real_sec, candidates[sec][0].count, candidates[sec][1].count);
         fm11_sen_progress(nonce_count, activity, candidates[sec][0].count + candidates[sec][1].count, 0);
@@ -2400,7 +2686,7 @@ int CmdHF14AMfSEN(const char *Cmd) {
         }
         // Prioritize sector 32 keyB starting with 0000
         if (real_sec == 32 && kt == 1) {
-            fm11_keylist_sort(&candidates[sec][kt]);
+            fm11_prioritize_0000_prefix(&candidates[sec][kt]);
         }
         snprintf(activity, sizeof(activity), "sec %03u key %c - checking %u candidates", real_sec, kt ? 'B' : 'A', candidates[sec][kt].count);
 
@@ -2410,29 +2696,17 @@ int CmdHF14AMfSEN(const char *Cmd) {
         int res = fm11_verify_candidates(real_sec, kt, &candidates[sec][kt], &key);
         if (res == PM3_SUCCESS) {
             propagated = fm11_accept_found_key_global(&nonces, candidates, keys_found, found_key, &reuse_index, sec, kt, key, &probe_queue);
+            fm11_print_key_hit_row(nonce_count, sec, kt, key, found_key);
             uint32_t reuse_found = 0;
-            if (fm11_reuse_index_ref_count(&reuse_index, key) > 1 &&
-                    fm11_keylist_has_key(&confirmed_reuse_keys, key) == false) {
+            if (fm11_keylist_has_key(&confirmed_reuse_keys, key) == false) {
                 (void)fm11_keylist_add_unique(&confirmed_reuse_keys, key);
-                reuse_found = fm11_verify_reused_key_fast(key, keys_found, found_key);
+                reuse_found = fm11_propagate_key_reuse_online(nonce_count, key, keys_found, found_key);
             }
             if (reuse_found > 0) {
-                snprintf(activity, sizeof(activity), "Reuse fchk confirmed %u additional key slots", reuse_found);
+                snprintf(activity, sizeof(activity), "Key re-use propagation confirmed %u additional key slots", reuse_found);
                 fm11_sen_progress(nonce_count, activity, reuse_found, 0);
                 propagated += fm11_accept_found_key_global(&nonces, candidates, keys_found, found_key, &reuse_index, sec, kt, key, &probe_queue);
             }
-            uint32_t keys_so_far = fm11_count_found_keys(found_key);
-            uint64_t elapsed_key = fm11_sen_start_time ? (msclock() - fm11_sen_start_time) : 0;
-            char kcount[16] = {0};
-            snprintf(kcount, sizeof(kcount), "%u/%u keys", keys_so_far, FM11RF08S_SECTORS * 2);
-            /* [+] aligned table row: col3 = " Key sec 032 key B = XXXXXXXXXXXX" + 24 spaces + " |" = 57+1 */
-            PrintAndLogEx(SUCCESS,
-                          " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " |"
-                          " Key sec " _YELLOW_("%03u") " key " _YELLOW_("%c") " = " _GREEN_("%012" PRIX64) "                        |"
-                          " " _YELLOW_("%15s") " | %5s ",
-                          (float)elapsed_key / 1000.0, nonce_count,
-                          real_sec, kt ? 'B' : 'A', key,
-                          kcount, "");
             if (propagated > 1) {
                 snprintf(activity, sizeof(activity), "Propagated %u reused candidate key matches", propagated - 1);
                 fm11_sen_progress(nonce_count, activity, propagated - 1, 0);
@@ -2461,28 +2735,17 @@ int CmdHF14AMfSEN(const char *Cmd) {
                     uint64_t out_key = 0;
                     if (fm11_verify_candidates(real_ps, pk, &single, &out_key) == PM3_SUCCESS) {
                         uint32_t prop = fm11_accept_found_key_global(&nonces, candidates, keys_found, found_key, &reuse_index, ps, pk, out_key, &probe_queue);
+                        if (prop > 0) {
+                            fm11_print_key_hit_row(nonce_count, ps, pk, out_key, found_key);
+                        }
                         uint32_t reuse_extra = 0;
-                        if (fm11_reuse_index_ref_count(&reuse_index, out_key) > 1 &&
-                                fm11_keylist_has_key(&confirmed_reuse_keys, out_key) == false) {
+                        if (fm11_keylist_has_key(&confirmed_reuse_keys, out_key) == false) {
                             (void)fm11_keylist_add_unique(&confirmed_reuse_keys, out_key);
-                            reuse_extra = fm11_verify_reused_key_fast(out_key, keys_found, found_key);
+                            reuse_extra = fm11_propagate_key_reuse_online(nonce_count, out_key, keys_found, found_key);
                         }
                         if (reuse_extra > 0) {
-                            snprintf(activity, sizeof(activity), "Reuse fchk confirmed %u additional key slots", reuse_extra);
+                            snprintf(activity, sizeof(activity), "Key re-use propagation confirmed %u additional key slots", reuse_extra);
                             fm11_sen_progress(nonce_count, activity, reuse_extra, 0);
-                        }
-                        if (prop > 0 || reuse_extra > 0) {
-                            uint32_t probe_keys_so_far = fm11_count_found_keys(found_key);
-                            uint64_t elapsed_p = fm11_sen_start_time ? (msclock() - fm11_sen_start_time) : 0;
-                            char pcount[16] = {0};
-                            snprintf(pcount, sizeof(pcount), "%u/%u keys", probe_keys_so_far, FM11RF08S_SECTORS * 2);
-                            PrintAndLogEx(SUCCESS,
-                                          " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " |"
-                                          " Key sec " _YELLOW_("%03u") " key " _YELLOW_("%c") " = " _GREEN_("%012" PRIX64) "                        |"
-                                          " " _YELLOW_("%15s") " | %5s ",
-                                          (float)elapsed_p / 1000.0, nonce_count,
-                                          real_ps, pk ? 'B' : 'A', out_key,
-                                          pcount, "");
                         }
                     }
                     fm11_keylist_free(&single);
@@ -2512,28 +2775,17 @@ int CmdHF14AMfSEN(const char *Cmd) {
             uint64_t out_key = 0;
             if (fm11_verify_candidates(real_ps, pk, &single, &out_key) == PM3_SUCCESS) {
                 uint32_t prop = fm11_accept_found_key_global(&nonces, candidates, keys_found, found_key, &reuse_index, ps, pk, out_key, &probe_queue);
+                if (prop > 0) {
+                    fm11_print_key_hit_row(nonce_count, ps, pk, out_key, found_key);
+                }
                 uint32_t reuse_extra = 0;
-                if (fm11_reuse_index_ref_count(&reuse_index, out_key) > 1 &&
-                        fm11_keylist_has_key(&confirmed_reuse_keys, out_key) == false) {
+                if (fm11_keylist_has_key(&confirmed_reuse_keys, out_key) == false) {
                     (void)fm11_keylist_add_unique(&confirmed_reuse_keys, out_key);
-                    reuse_extra = fm11_verify_reused_key_fast(out_key, keys_found, found_key);
+                    reuse_extra = fm11_propagate_key_reuse_online(nonce_count, out_key, keys_found, found_key);
                 }
                 if (reuse_extra > 0) {
-                    snprintf(activity, sizeof(activity), "Reuse fchk confirmed %u additional key slots", reuse_extra);
+                    snprintf(activity, sizeof(activity), "Key re-use propagation confirmed %u additional key slots", reuse_extra);
                     fm11_sen_progress(nonce_count, activity, reuse_extra, 0);
-                }
-                if (prop > 0 || reuse_extra > 0) {
-                    uint32_t keys_so_far = fm11_count_found_keys(found_key);
-                    uint64_t elapsed_p = fm11_sen_start_time ? (msclock() - fm11_sen_start_time) : 0;
-                    char pcount[16] = {0};
-                    snprintf(pcount, sizeof(pcount), "%u/%u keys", keys_so_far, FM11RF08S_SECTORS * 2);
-                    PrintAndLogEx(SUCCESS,
-                                  " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " |"
-                                  " Key sec " _YELLOW_("%03u") " key " _YELLOW_("%c") " = " _GREEN_("%012" PRIX64) "                        |"
-                                  " " _YELLOW_("%15s") " | %5s ",
-                                  (float)elapsed_p / 1000.0, nonce_count,
-                                  fm11_real_sector(ps), pk ? 'B' : 'A', out_key,
-                                  pcount, "");
                 }
             }
             fm11_keylist_free(&single);
@@ -2554,4 +2806,3 @@ out:
     }
     return retval;
 }
-
