@@ -13,6 +13,8 @@ import subprocess
 import argparse
 import random
 import sys
+import os
+import re
 import threading
 import time
 import queue
@@ -33,7 +35,17 @@ if sys.version_info < required_version:
 
 tools = {
     "mfulc_des_brute": find_tool("mfulc_des_brute"),
+    "mfulc_des_brute_cuda": find_tool("mfulc_des_brute_cuda"),
 }
+
+
+def extract_full_key(output: str) -> Optional[str]:
+    """Extract a 32-hex-digit full key from brute tool output."""
+    pattern = r"Full\s+key(?:\s*\(hex\))?\s*:\s*([0-9A-Fa-f]{32})"
+    match = re.search(pattern, output)
+    if match:
+        return match.group(1).upper()
+    return None
 
 
 class CrackEffect:
@@ -389,10 +401,14 @@ def main():
     parser.add_argument('-d', '--debug', action='store_true', help='Enable debug mode')
     parser.add_argument('-j', '--json', help='Path to JSON file to load or save collected challenges')
     parser.add_argument('-o', '--offline', action='store_true', help='Use offline mode with pre-collected challenges')
+    parser.add_argument('--cuda', action='store_true',
+                        help='Use CUDA implementation')
     args = parser.parse_args()
     debug = args.debug
     num_challenges = args.challenges
     offline = args.offline
+    use_cuda = args.cuda
+    brute_tool = tools["mfulc_des_brute_cuda"] if use_cuda else tools["mfulc_des_brute"]
 
     if not offline:
         import pm3
@@ -435,13 +451,14 @@ def main():
                        2: challenges["challenge_100"]}
         for key_segment_idx in [1, 0, 3, 2]:
             ciphertext = ciphertexts[key_segment_idx]
-            cmd = [tools["mfulc_des_brute"],
+            cmd = [brute_tool,
                    "-c",
                    f"{challenges['challenge_0']}",
                    f"{ciphertext}",
                    "".join(key_segment_values.values()),
-                   str(key_segment_idx+1),
-                   str(args.threads)]
+                   str(key_segment_idx+1)]
+            if not use_cuda:
+                cmd.append(str(args.threads))
             if debug:
                 crack_effect.print_above("[=] CMD:" + ' '.join(cmd))
             start_time = time.time()
@@ -461,19 +478,20 @@ def main():
                     for line in result.stdout.split('\n'):
                         if "LFSR detection" in line:
                             crack_effect.print_above(f"[+] {line}")
-            if "No matching key was found" in result.stdout:
+            if "No matching key was found" in result.stdout or "RESULT: KEY NOT FOUND" in result.stdout:
                 key_found = False
                 crack_effect.stop_event.set()
                 crack_effect.erase_key()
                 print(f"\n\n\n[-] Error: {result.stdout}")
                 break
-            if "Full key (hex): " not in result.stdout:
+            full_key = extract_full_key(result.stdout)
+            if full_key is None:
                 key_found = False
                 crack_effect.stop_event.set()
                 crack_effect.erase_key()
                 print(f"\n\n\n[-] Error: {result}")
                 break
-            key_segment_values[key_segment_idx] = result.stdout.split("Full key (hex): ")[1][(8*key_segment_idx):][:8]
+            key_segment_values[key_segment_idx] = full_key[(8*key_segment_idx):][:8]
             if debug:
                 crack_effect.print_above(f"[+] Found key segment: {key_segment_values[key_segment_idx]}")
             key_found = True
