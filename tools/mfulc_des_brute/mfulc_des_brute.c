@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <openssl/des.h>
 
 #define BLOCK_SIZE 8   // DES (and 3DES) block size in bytes
@@ -23,9 +24,16 @@ typedef enum {
     LFSR_MFC = 2   // For USCUID-UL and FJ8010
 } lfsr_t;
 
+// Dynamic work pool: keyspace is split into many small slots; threads pull slots atomically.
 typedef struct {
-    uint32_t start;               // starting candidate (inclusive)
-    uint32_t end;                 // ending candidate (exclusive)
+    _Atomic uint32_t next_slot;  // index of the next slot to be claimed
+    uint32_t num_slots;
+    uint32_t slot_size;          // number of candidates per slot (last slot may be smaller)
+    uint32_t total;              // total candidate count (2^28)
+} work_pool_t;
+
+typedef struct {
+    work_pool_t *pool;            // shared work pool
     int key_mode;                 // 0 to 3 (i.e. brute force segment 1-4 as 0-indexed)
     union {
         unsigned char init_ciphertext[BLOCK_SIZE];
@@ -119,9 +127,8 @@ static lfsr_t detect_lfsr_type(unsigned char *init_ciphertext) {
 // Worker thread function using low-level DES functions.
 static void *worker(void *arg) {
     thread_args_t *targs = (thread_args_t *) arg;
-    uint32_t start = targs->start;
-    uint32_t end   = targs->end;
-    int key_mode   = targs->key_mode;
+    work_pool_t   *pool  = targs->pool;
+    int key_mode         = targs->key_mode;
 
     // Determine which half is being brute forced.
     // For key_mode 0 or 1 the candidate is in K1; for key_mode 2 or 3 the candidate is in K2.
@@ -154,8 +161,21 @@ static void *worker(void *arg) {
     else
         memcpy(base_half, targs->base_key + 8, 8);
 
-    // Loop over the candidate key indices in this thread's range.
-    for (uint32_t idx = start; idx < end; idx++) {
+    // Pull slots from the shared pool until exhausted.
+    for (;;) {
+        if (key_found && !BENCHMARK_FULL_KEYSPACE)
+            break;
+
+        uint32_t slot = atomic_fetch_add(&pool->next_slot, 1);
+        if (slot >= pool->num_slots)
+            break;
+
+        uint32_t start = slot * pool->slot_size;
+        uint32_t end   = start + pool->slot_size;
+        if (end > pool->total)
+            end = pool->total;
+
+        for (uint32_t idx = start; idx < end; idx++) {
         if (key_found && !BENCHMARK_FULL_KEYSPACE)
             break;  // Some other thread already found the key.
         // Convert the candidate index (28 bits) into 4 bytes.
@@ -229,7 +249,8 @@ static void *worker(void *arg) {
             if (!BENCHMARK_FULL_KEYSPACE)
                 break;
         }
-    }
+        }  // end slot inner loop
+    }  // end pool slot loop
     return NULL;
 }
 
@@ -333,8 +354,14 @@ int main(int argc, char **argv) {
 
     // Total candidate space: 2^28 keys.
     uint32_t total = (1UL << 28);
-    uint32_t chunk = total / num_threads;
-    uint32_t remainder = total % num_threads;
+
+    // Build a work pool: split the keyspace into 20*num_threads slots so that
+    // threads keep running at full utilisation until the very end.
+    work_pool_t pool;
+    pool.total     = total;
+    pool.num_slots = (uint32_t)num_threads * 20;
+    pool.slot_size = (total + pool.num_slots - 1) / pool.num_slots;  // ceiling division
+    atomic_init(&pool.next_slot, 0);
 
     pthread_t *threads = malloc(num_threads * sizeof(pthread_t));
     thread_args_t *targs = malloc(num_threads * sizeof(thread_args_t));
@@ -343,13 +370,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // Divide the candidate space as equally as possible among threads.
-    uint32_t current = 0;
     for (int i = 0; i < num_threads; i++) {
-        targs[i].start = current;
-        targs[i].end   = current + chunk;
-        if (i == num_threads - 1)
-            targs[i].end += remainder;
+        targs[i].pool = &pool;
         targs[i].key_mode = key_mode;
         targs[i].lfsr_type = lfsr_type;
         targs[i].is_reader_mode = is_reader_mode;
@@ -362,7 +384,6 @@ int main(int argc, char **argv) {
         }
         memcpy(targs[i].base_key, base_key, KEY_SIZE);
         targs[i].thread_id = i;
-        current = targs[i].end;
         pthread_create(&threads[i], NULL, worker, &targs[i]);
     }
 
