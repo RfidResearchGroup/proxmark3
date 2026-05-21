@@ -8006,6 +8006,29 @@
             ],
             "usage": "hf mfu countertear [-h] [-c <0,1,2>] [-i <dec>] [-l <dec>] [-s <dec>] [--fix <dec>] [-x <string>]"
         },
+        "hf mfu desbrute": {
+            "command": "hf mfu desbrute",
+            "description": "Recover one 4-byte segment of a MIFARE Ultralight-C 2TDEA key from known authentication ciphertexts.",
+            "notes": [
+                "hf mfu desbrute --counterfeit --null F35C740106ECED87 --target E9E0DC67B35919FC --key 00000000000000000000000000000000 --segment 2",
+                "hf mfu desbrute --counterfeit --null 49C1603621CCAA72 --target 8122262EF5FA8DEB --key 48444C4A4044524200000000544E5846 --segment 3",
+                "hf mfu desbrute --reader --erndb EC9C5CF763244367 --cryptogram 2283BFE8DEBE1780922327794D0706EF --key 48444C4A4044524200000000544E5846 --segment 3"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-c, --counterfeit Counterfeit nonce mode: --null and --target are ERndB blocks",
+                "-r, --reader Reader nonce mode: --erndb and --cryptogram are sniffed authentication blocks",
+                "--null <hex> Null-key ERndB, 8 hex bytes",
+                "--target <hex> Target-key ERndB, 8 hex bytes",
+                "--erndb <hex> Reader mode ERndB, 8 hex bytes",
+                "--cryptogram <hex> Reader mode ERndA|ERndB', 16 hex bytes",
+                "-k, --key <hex> Base 3DES key, 16 hex bytes",
+                "-s, --segment <1..4> 4-byte key segment to brute force",
+                "-t, --threads <n> Worker threads (default: all logical CPUs)"
+            ],
+            "usage": "hf mfu desbrute [-hcr] [--null <hex>] [--target <hex>] [--erndb <hex>] [--cryptogram <hex>] -k <hex> -s <1..4> [-t <n>]"
+        },
         "hf mfu dump": {
             "command": "hf mfu dump",
             "description": "Dump MIFARE Ultralight/NTAG tag to files (bin/json) It autodetects card type.Supports: Ultralight, Ultralight C, Ultralight AES, Ultralight EV1 NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216",
@@ -8079,7 +8102,7 @@
         },
         "hf mfu help": {
             "command": "hf mfu help",
-            "description": "help This help list List MIFARE Ultralight / NTAG history keygen Generate DES/3DES/AES MIFARE diversified keys pwdgen Generate pwd from known algos view Display content from tag dump file --------------------------------------------------------------------------------------- hf mfu list available offline: yes Alias of `trace list -t 14a -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List MIFARE Ultralight / NTAG history keygen Generate DES/3DES/AES MIFARE diversified keys pwdgen Generate pwd from known algos desbrute Ultralight-C - 3DES key segment brute force view Display content from tag dump file --------------------------------------------------------------------------------------- hf mfu list available offline: yes Alias of `trace list -t 14a -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf 14a list --frame -> show frame delay times",
                 "hf 14a list -1 -> use trace buffer"
@@ -14698,8 +14721,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 829,
+        "commands_extracted": 830,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-05-21T18:53:46"
+        "extracted_on": "2026-05-21T19:04:15+00:00"
     }
 }

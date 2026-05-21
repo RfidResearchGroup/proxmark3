@@ -686,6 +686,7 @@ Check column "offline" for their availability.
 |`hf mfu countertear     `|N       |`Tear-off test on Ev1/NTAG Counter bits`
 |`hf mfu cauth           `|N       |`Ultralight-C - Authentication`
 |`hf mfu cchk            `|N       |`Ultralight-C - Authentication dictionary check`
+|`hf mfu desbrute        `|Y       |`Ultralight-C - 3DES key segment brute force`
 |`hf mfu aesauth         `|N       |`Ultralight-AES - Authentication`
 |`hf mfu aeschk          `|N       |`Ultralight-AES - Authentication dictionary check`
 |`hf mfu setkey          `|N       |`Ultralight C/AES - Set 3DES/AES keys`

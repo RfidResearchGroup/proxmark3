@@ -467,6 +467,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf mfu countertear" },
     { 0, "hf mfu cauth" },
     { 0, "hf mfu cchk" },
+    { 1, "hf mfu desbrute" },
     { 0, "hf mfu aesauth" },
     { 0, "hf mfu aeschk" },
     { 0, "hf mfu setkey" },
