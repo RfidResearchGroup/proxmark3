@@ -3954,7 +3954,7 @@ static int ssl_buffer_message(mbedtls_ssl_context *ssl) {
                 /* Silently ignore -- message too far in the future */
                 MBEDTLS_SSL_DEBUG_MSG(2,
                                       ("Ignore future HS message with sequence number %u, "
-                                       "buffering window %u - %u",
+                 "buffering window %u - %u",
                                        recv_msg_seq, ssl->handshake->in_msg_seq,
                                        ssl->handshake->in_msg_seq + MBEDTLS_SSL_MAX_BUFFERED_HS - 1));
 

@@ -1829,11 +1829,11 @@ int CmdLFRelay(const char *Cmd) {
                   "  --rdr  : Reading device, act as IP client and reads LF tag and sends data\n"
                   "  --tag  : Simulation device, act as IP server and simulates relayed data\n",
                   _WHITE_("Device A, reading LF tag, client") "\n"
-                  "lf relay --rdr --ip 192.168.1.141           -> Client, connect to IP 192.168.1.141:8000\n"
-                  "lf relay --rdr --ip 192.168.1.141 -p 18111  -> Client, connect to IP 192.168.1.141:18111 \n\n"
+            "lf relay --rdr --ip 192.168.1.141           -> Client, connect to IP 192.168.1.141:8000\n"
+            "lf relay --rdr --ip 192.168.1.141 -p 18111  -> Client, connect to IP 192.168.1.141:18111 \n\n"
                   _WHITE_("Device B, simulate LF tag, server") "\n"
-                  "lf relay --tag -p 8111                     -> Server listening port 8111, recv 40000 samples\n"
-                  "lf relay --tag -s 10000                    -> Server listening port 8000, recv 10000 samples\n"
+            "lf relay --tag -p 8111                     -> Server listening port 8111, recv 40000 samples\n"
+            "lf relay --tag -s 10000                    -> Server listening port 8000, recv 10000 samples\n"
                  );
 
     void *argtable[] = {

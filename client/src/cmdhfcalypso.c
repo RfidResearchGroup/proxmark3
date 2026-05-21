@@ -613,7 +613,7 @@ static bool calypso_json_parse_hex_uint(json_t *value, uint32_t max, uint32_t *o
         return false;
     }
 
-    while (isspace((unsigned char)*text)) {
+    while (isspace((unsigned char) * text)) {
         text++;
     }
 
@@ -624,7 +624,7 @@ static bool calypso_json_parse_hex_uint(json_t *value, uint32_t max, uint32_t *o
         return false;
     }
 
-    while (isspace((unsigned char)*end)) {
+    while (isspace((unsigned char) * end)) {
         end++;
     }
 

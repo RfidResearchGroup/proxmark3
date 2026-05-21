@@ -297,6 +297,7 @@ Check column "offline" for their availability.
 |`hf calypso help        `|Y       |`This help`
 |`hf calypso info        `|N       |`Tag information`
 |`hf calypso dump        `|N       |`Dump readable files and records`
+|`hf calypso probecmdcompat`|N       |`Probe SELECT command compatibility`
 |`hf calypso list        `|Y       |`List Calypso history`
 
 
@@ -542,6 +543,7 @@ Check column "offline" for their availability.
 |`hf legic rdbl          `|N       |`Read bytes from a LEGIC Prime tag`
 |`hf legic reader        `|N       |`LEGIC Prime Reader UID and tag info`
 |`hf legic restore       `|N       |`Restore a dump file onto a LEGIC Prime tag`
+|`hf legic clone         `|N       |`Clone a LEGIC Prime dump to a new MCC or tag`
 |`hf legic wipe          `|N       |`Wipe a LEGIC Prime tag`
 |`hf legic wrbl          `|N       |`Write data to a LEGIC Prime tag`
 |`hf legic sim           `|N       |`Start tag simulator`
@@ -581,6 +583,7 @@ Check column "offline" for their availability.
 |`hf mf nested           `|N       |`Nested attack`
 |`hf mf hardnested       `|Y       |`Nested attack for hardened MIFARE Classic cards`
 |`hf mf staticnested     `|N       |`Nested attack against static nonce MIFARE Classic cards`
+|`hf mf sen              `|N       |`FM11RF08S Static Encrypted Nonce attack`
 |`hf mf brute            `|N       |`Smart bruteforce to exploit weak key generators`
 |`hf mf autopwn          `|N       |`Automatic key recovery tool for MIFARE Classic`
 |`hf mf nack             `|N       |`Test for MIFARE NACK bug`
@@ -755,6 +758,7 @@ Check column "offline" for their availability.
 |`hf mfdes value         `|N       |`Operations with value file (get/credit/limited credit/debit/clear)`
 |`hf mfdes clearrecfile  `|N       |`Clear record File`
 |`hf mfdes makemfclicense`|Y       |`Generate a Mifare Classic license for DESFire EV3C`
+|`hf mfdes createmfcmapping`|N       |`Create a Mifare Classic mapping on a DESFire EV3C`
 |`hf mfdes verifycert    `|N       |`Validate cert from file and verify key possession`
 |`hf mfdes intauth       `|N       |`ISO Internal Authenticate (ECDSA challenge-response)`
 |`hf mfdes vdesign       `|N       |`VDE ECDSASign (EV charging signature over 32-byte challenge)`

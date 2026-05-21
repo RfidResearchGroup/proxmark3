@@ -467,7 +467,7 @@ static int CmdFlashMemSpiFFSWipe(const char *Cmd) {
     CLIParserInit(&ctx, "mem spiffs wipe",
                   _RED_("* * *  Warning  * * *") " \n"
                   _CYAN_("This command wipes all files on the device SPIFFS file system"),
-                  "mem spiffs wipe");
+           "mem spiffs wipe");
 
     void *argtable[] = {
         arg_param_begin,
