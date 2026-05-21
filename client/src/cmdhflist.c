@@ -33,6 +33,7 @@
 #include "cmdhfcalypso.h"
 #include "mifare/mifaredefault.h"  // mifare consts
 #include "cmdhfseos.h"
+#include "iso7816/apduinfo.h"
 
 enum MifareAuthSeq {
     masNone,
@@ -1034,24 +1035,48 @@ static bool annotateCalypsoApdu(char *exp, size_t size, const uint8_t *apdu, siz
         return false;
     }
 
-    uint8_t ins = apdu[1];
-    uint8_t p1 = apdu[2];
-    uint8_t p2 = apdu[3];
+    uint8_t decoded_data[1024] = {0};
+    APDU_t decoded = {0};
+    bool decoded_ok = false;
+    if (apdu_len <= sizeof(decoded_data)) {
+        memcpy(decoded_data, apdu, apdu_len);
+        decoded_ok = APDUDecode(decoded_data, (int)apdu_len, &decoded) == 0;
+        if (decoded_ok == false && apdu_len > 2) {
+            decoded_ok = APDUDecode(decoded_data, (int)(apdu_len - 2), &decoded) == 0;
+        }
+    }
+
+    uint8_t ins = decoded_ok ? decoded.ins : apdu[1];
+    uint8_t p1 = decoded_ok ? decoded.p1 : apdu[2];
+    uint8_t p2 = decoded_ok ? decoded.p2 : apdu[3];
 
     switch (ins) {
         case CALYPSO_SELECT: {
-            if (p1 == 0x04) {
+            if (decoded_ok && (p1 == 0x00 || p1 == 0x08 || p1 == 0x09)) {
+                char ref[64] = "current DF"; // Select for empty LID implies current DF
+                if (decoded.lc == 2) {
+                    uint16_t fid = (decoded.data[0] << 8) | decoded.data[1];
+                    if (fid == 0x3F00) {
+                        snprintf(ref, sizeof(ref), "MF");
+                    } else if (fid != 0x0000) {
+                        snprintf(ref, sizeof(ref), p1 == 0x08 ? "path=%04X" : "lid=%04X", fid);
+                    }
+                } else if (decoded.lc > 0) {
+                    snprintf(ref, sizeof(ref), p1 == 0x08 ? "path=%s" : "data=%s", sprint_hex_inrow(decoded.data, decoded.lc));
+                }
+                snprintf(exp, size, "SELECT FILE (%s)", ref);
+            } else if (p1 == 0x04) {
                 const char *mode = (p2 == 0x02 || p2 == 0x0E) ? "next" : "first";
-                const char *fci = (p2 == 0x0C || p2 == 0x0E) ? "none" : "return";
-                snprintf(exp, size, "SELECT APPLICATION (mode=%s, fci=%s)", mode, fci);
+                const char *fci = (p2 == 0x0C || p2 == 0x0E) ? "N" : "Y";
+                if (decoded_ok && decoded.lc > 0) {
+                    snprintf(exp, size, "SELECT APP (aid=%s, mode=%s, fci=%s)", sprint_hex_inrow(decoded.data, decoded.lc), mode, fci);
+                } else {
+                    snprintf(exp, size, "SELECT APP (mode=%s, fci=%s)", mode, fci);
+                }
             } else if (p1 == 0x02 && (p2 == 0x00 || p2 == 0x02)) {
-                snprintf(exp, size, "SELECT FILE");
-            } else if (p1 == 0x09 && p2 == 0x00) {
-                snprintf(exp, size, "SELECT FILE (current DF)");
-            } else if (p1 == 0x00) {
-                snprintf(exp, size, "SELECT FILE (by file id)");
-            } else if (p1 == 0x08) {
-                snprintf(exp, size, "SELECT FILE (by path)");
+                snprintf(exp, size, p2 == 0x02 ? "SELECT FILE (next EF)" : "SELECT FILE (first EF)");
+            } else if (p1 == 0x03) {
+                snprintf(exp, size, "SELECT FILE (parent DF)");
             } else {
                 snprintf(exp, size, "SELECT");
             }
