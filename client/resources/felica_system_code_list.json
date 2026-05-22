@@ -697,6 +697,13 @@
     "description": "Used on Kartu Multi Trip Commet transit card"
   },
   {
+    "code": "90E3",
+    "name": "Dhaka Mass Transit",
+    "region": "Bangladesh",
+    "type": "transit",
+    "description": "Used by DMTCL MRT Pass transit card"
+  },
+  {
     "code": "9105",
     "name": "Starbucks Touch",
     "region": "Japan",
@@ -718,6 +725,13 @@
     "description": "Used on Kartu Multi Trip Jelajah transit card"
   },
   {
+    "code": "93EC",
+    "name": "NTASU",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by NTASU transit card"
+  },
+  {
     "code": "9450",
     "name": "HCMC",
     "region": "Vietnam",
@@ -730,6 +744,13 @@
     "region": "Japan",
     "type": "transit",
     "description": "Used by kinoca regional transit card (Wakayama Bus)"
+  },
+  {
+    "code": "957A",
+    "name": "FeliCa Secure ID",
+    "region": "Global",
+    "type": "general",
+    "description": "Used by FeliCa Secure ID credentials"
   },
   {
     "code": "FE00",
