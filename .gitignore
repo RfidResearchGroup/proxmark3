@@ -64,8 +64,8 @@ cov-int/
 
 !client/resources/hardnested/*.bin
 !client/resources/hardnested_tables/*.z
-!client/resources/felica_system_code_list.json
-!client/resources/felica_ic_code_list.json
+!client/resources/felica/
+!client/resources/felica/*.json
 !client/resources/calypso/
 !client/resources/calypso/*.json
 client/src/ui/ui_image.h

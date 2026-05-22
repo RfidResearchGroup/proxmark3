@@ -70,8 +70,8 @@
 #define FELICA_SYSTEM_CODE_FELICA_LITE 0x88B4U
 #define FELICA_POLL_REQUEST_NO_DATA 0x00U
 #define FELICA_POLL_REQUEST_SYSTEM_CODE 0x01U
-#define FELICA_SYSTEM_LIST_JSON "felica_system_code_list"
-#define FELICA_IC_CODE_LIST_JSON "felica_ic_code_list"
+#define FELICA_SYSTEM_LIST_JSON "felica/felica_system_code_list"
+#define FELICA_IC_CODE_LIST_JSON "felica/felica_ic_code_list"
 
 #define FELICA_SERVICE_ATTRIBUTE_UNAUTH_READ    (0b000001)
 #define FELICA_SERVICE_ATTRIBUTE_READ_ONLY      (0b000010)
