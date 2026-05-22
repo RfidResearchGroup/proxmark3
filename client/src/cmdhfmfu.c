@@ -5050,16 +5050,16 @@ static uint64_t mfulc_desbrute_tdea2_dec_ip(uint64_t ip_block, const uint64_t k1
 }
 
 static void mfulc_desbrute_format_duration(uint64_t seconds, char *buf, size_t buflen) {
-    uint64_t h = seconds / 3600;
-    uint64_t m = (seconds / 60) % 60;
-    uint64_t s = seconds % 60;
+    unsigned int h = (unsigned int)(seconds / 3600);
+    unsigned int m = (unsigned int)((seconds / 60) % 60);
+    unsigned int s = (unsigned int)(seconds % 60);
 
     if (h > 99) {
         snprintf(buf, buflen, ">99h");
     } else if (h > 0) {
-        snprintf(buf, buflen, "%02" PRIu64 ":%02" PRIu64 ":%02" PRIu64, h, m, s);
+        snprintf(buf, buflen, "%02u:%02u:%02u", h, m, s);
     } else {
-        snprintf(buf, buflen, "%02" PRIu64 ":%02" PRIu64, m, s);
+        snprintf(buf, buflen, "%02u:%02u", m, s);
     }
 }
 
