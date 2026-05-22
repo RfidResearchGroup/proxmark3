@@ -233,7 +233,7 @@ class CrackEffect:
         scramble_thread.join()
 
 
-def collect(num_challenges: int, p, debug: bool) -> Optional[dict]:
+def collect(num_challenges: int, p, debug: bool, force:bool) -> Optional[dict]:
     """
     Collect challenges from the card and check if it is vulnerable.
 
@@ -241,6 +241,7 @@ def collect(num_challenges: int, p, debug: bool) -> Optional[dict]:
         num_challenges (int): Number of challenges to collect.
         p: Proxmark3 instance.
         debug (bool): Enable debug mode.
+        force (bool): Force the attack even if the card does not appear vulnerable (dangerous!).
 
     Returns:
         Optional[dict]: Collected challenges data or None if the card is not vulnerable.
@@ -279,14 +280,15 @@ def collect(num_challenges: int, p, debug: bool) -> Optional[dict]:
     challenges = {}
     collision = False
 
-    while challenges_collected < num_challenges:
+    while challenges_collected < max(1, num_challenges):
         p.console("hf 14a raw -sc 1A00")
         challenge = p.grabbed_output.split()
         if (len(challenge) > 8) and (challenge[1] == "AF"):
             hex_challenge = "".join(challenge[2:10])
+            if challenges_collected == 0:
+                challenges["challenge_100"] = hex_challenge
             if hex_challenge in challenges_100:
                 collision = True
-                challenges["challenge_100"] = hex_challenge
                 break
             else:
                 challenges_100.add(hex_challenge)
@@ -304,7 +306,8 @@ def collect(num_challenges: int, p, debug: bool) -> Optional[dict]:
         precision = max(1, -int(math.floor(math.log10(probability_no_collision))) + 1)
         print("[+] Status: \033[1;32mNot vulnerable\033[0m"
               f" (false negative probability: {probability_no_collision*100:.{precision-1}f}%)\033[?25h")
-        return
+        if not force:
+            return
 
     # The card is vulnerable, proceed with attack
     # Danger zone. To reset a test card, run: hf mfu setkey -k 49454D4B41455242214E4143554F5946
@@ -403,17 +406,20 @@ def main():
     parser.add_argument('-o', '--offline', action='store_true', help='Use offline mode with pre-collected challenges')
     parser.add_argument('--cuda', action='store_true',
                         help='Use CUDA implementation')
+    parser.add_argument('--force', action='store_true',
+                        help='Force the attack even if the card does not appear vulnerable (dangerous!)')
     args = parser.parse_args()
     debug = args.debug
     num_challenges = args.challenges
     offline = args.offline
     use_cuda = args.cuda
+    force = args.force
     brute_tool = tools["mfulc_des_brute_cuda"] if use_cuda else tools["mfulc_des_brute"]
 
     if not offline:
         import pm3
         p = pm3.pm3()
-        challenges = collect(num_challenges, p, debug)
+        challenges = collect(num_challenges, p, debug, force)
         if challenges is None:
             return
         if args.json:
