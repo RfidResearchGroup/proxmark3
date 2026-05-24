@@ -3266,12 +3266,24 @@
     },
     {
         "AID": "A00000040401250920",
-        "Vendor": "Lignes D'Azur",
+        "Vendor": "Lignes D'Azur / ZOU",
         "Country": "France",
-        "Name": "La Carte",
-        "Description": "CALYPSO-based transit card",
+        "Name": "La Carte / ZOU",
+        "Description": "CALYPSO-based transit card application observed on La Carte and ZOU cards.",
         "Type": "transport",
         "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A0000004040125092001",
+        "Vendor": "Lignes D'Azur / ZOU",
+        "Country": "France",
+        "Name": "La Carte / ZOU",
+        "Description": "CALYPSO-based transit card application observed on La Carte and ZOU cards.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "2000"
+        }
     },
     {
         "AID": "A0000004040125092001000000000000",
@@ -3287,14 +3299,35 @@
     },
     {
         "AID": "A000000291D25008009301",
-        "Vendor": "Lignes D'Azur",
+        "Vendor": "Lignes D'Azur / ZOU",
         "Country": "France",
-        "Name": "La Carte",
-        "Description": "CALYPSO-based La Carte transit card application.",
+        "Name": "La Carte / ZOU",
+        "Description": "CALYPSO-based transit card application observed on La Carte and ZOU cards.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A0000004040225092001",
+        "Vendor": "ZOU",
+        "Country": "France",
+        "Name": "ZOU",
+        "Description": "CALYPSO-based transit card application observed on ZOU cards.",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
-            "LID": "3200"
+            "LID": "1000"
+        }
+    },
+    {
+        "AID": "A0000004044125092001",
+        "Vendor": "ZOU",
+        "Country": "France",
+        "Name": "ZOU",
+        "Description": "CALYPSO-based transit card application observed on ZOU cards.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "2300"
         }
     },
     {
@@ -3345,10 +3378,10 @@
     },
     {
         "AID": "A000000291A00000019102",
-        "Vendor": "MOBIB",
-        "Country": "Belgium",
-        "Name": "MOBIB",
-        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Vendor": "MOBIB / ZOU",
+        "Country": "Belgium / France",
+        "Name": "MOBIB / ZOU",
+        "Description": "Calypso-based transit card application observed on MOBIB and ZOU cards.",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
