@@ -52,6 +52,19 @@ extern int luaopen_pm3(lua_State *L);
 extern PyObject *PyInit__pm3(void);
 #endif // HAVE_PYTHON_SWIG
 
+static void Pm3Py_FlushStream(const char *stream_name) {
+    PyObject *flush_stream = PySys_GetObject(stream_name);
+    if (!flush_stream) {
+        return;
+    }
+    PyObject *fr = PyObject_CallMethod(flush_stream, "flush", NULL);
+    if (fr) {
+        Py_DECREF(fr);
+    } else {
+        PyErr_Clear();
+    }
+}
+
 // Partly ripped from PyRun_SimpleFileExFlags
 // but does not terminate client on sys.exit
 // and print exit code only if != 0
@@ -95,20 +108,34 @@ static int Pm3PyRun_SimpleFileNoExit(FILE *fp, const char *filename) {
         Py_CLEAR(m);
 
         if (PyErr_ExceptionMatches(PyExc_SystemExit)) {
-            // PyErr_Print() exists if SystemExit so we've to handle it ourselves
-            PyObject *ty = 0, *er = 0, *tr = 0;
+            // PyErr_Print() exits on SystemExit, so we handle it ourselves.
+            // Normalize first so `er` is a proper SystemExit instance with .code.
+            // CPython exit-code semantics: None -> 0, int -> int, other -> 1.
+            PyObject *ty = NULL, *er = NULL, *tr = NULL;
             PyErr_Fetch(&ty, &er, &tr);
+            PyErr_NormalizeException(&ty, &er, &tr);
 
-            long err = PyLong_AsLong(er);
+            long err = 0;
+            if (er != NULL) {
+                PyObject *code = PyObject_GetAttrString(er, "code");
+                if (code != NULL && code != Py_None) {
+                    if (PyLong_Check(code)) {
+                        err = PyLong_AsLong(code);
+                    } else {
+                        err = 1;
+                    }
+                }
+                Py_XDECREF(code);
+            }
             if (err) {
                 PrintAndLogEx(WARNING, "\nScript terminated by " _YELLOW_("SystemExit %li"), err);
             } else {
                 ret = 0;
             }
 
-            Py_DECREF(ty);
-            Py_DECREF(er);
-            Py_DECREF(er);
+            Py_XDECREF(ty);
+            Py_XDECREF(er);
+            Py_XDECREF(tr);
             PyErr_Clear();
             goto done;
 
@@ -122,12 +149,18 @@ static int Pm3PyRun_SimpleFileNoExit(FILE *fp, const char *filename) {
     ret = 0;
 
 done:
+    // Flush sys.stdout / sys.stderr explicitly. Since we run with buffering,
+    // they would not otherwise be flushed until Py_Finalize.
+    Pm3Py_FlushStream("stdout");
+    Pm3Py_FlushStream("stderr");
+
     if (set_file_name && PyDict_DelItemString(d, "__file__")) {
         PyErr_Clear();
     }
     Py_XDECREF(m);
     return ret;
 }
+
 #endif // HAVE_PYTHON
 
 typedef enum {
@@ -295,6 +328,8 @@ static int CmdScriptRun(const char *Cmd) {
         arg_strx0(NULL, NULL, "<params>", "script parameters"),
         arg_param_end
     };
+    ctx->argtable = argtable;
+    ctx->argtableLen = arg_getsize(argtable);
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
@@ -310,8 +345,6 @@ static int CmdScriptRun(const char *Cmd) {
     if ((strlen(filename) == 0) ||
             (strcmp(filename, "-h") == 0) ||
             (strcmp(filename, "--help") == 0)) {
-        ctx->argtable = argtable;
-        ctx->argtableLen = arg_getsize(argtable);
         CLIParserPrintHelp(ctx);
         CLIParserFree(ctx);
         return PM3_ESOFT;
@@ -439,26 +472,14 @@ static int CmdScriptRun(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "executing python " _YELLOW_("%s"), script_path);
         PrintAndLogEx(SUCCESS, "args " _YELLOW_("'%s'"), arguments);
 
-#ifdef HAVE_PYTHON_SWIG
-        // hook Proxmark3 API
-        PyImport_AppendInittab("_pm3", PyInit__pm3);
-#endif
-#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 10
-        Py_Initialize();
-#else
-        PyConfig py_conf;
-        PyStatus status;
-        // We need to use Python mode instead of isolated to avoid breaking stuff.
-        PyConfig_InitPythonConfig(&py_conf);
-        // Let's still make things bit safer by being as close as possible to isolated mode.
-        py_conf.configure_c_stdio = -1;
-        py_conf.faulthandler = 0;
-        py_conf.use_hash_seed = 0;
-        py_conf.install_signal_handlers = 0;
-        py_conf.parse_argv = 0;
-        py_conf.user_site_directory = 1;
-        py_conf.use_environment = 0;
-#endif
+        // Python interpreter must be initialized ONCE per client session.
+        // Cycling Py_Initialize / Py_Finalize across script runs is documented
+        // as fragile in CPython because C extension modules (our SWIG-built
+        // _pm3 included) retain static state across the cycle and crash on
+        // re-init. So we init lazily on the first script and leave Python
+        // alive; between runs we just refresh sys.argv and clear __main__'s
+        // globals so each script starts from a clean namespace.
+        static bool s_py_initialized = false;
 
         //int argc, char ** argv
         char *argv[FILE_PATH_SIZE];
@@ -469,57 +490,128 @@ static int CmdScriptRun(const char *Cmd) {
             free(script_path);
             return PM3_ESOFT;
         }
+
 #if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 10
         wchar_t *py_args[argc + 1];
         for (int i = 0; i <= argc; i++) {
             py_args[i] = Py_DecodeLocale(argv[i], NULL);
         }
-
-        PySys_SetArgv(argc + 1, py_args);
-#else
-        // The following line will implicitly pre-initialize Python
-        status = PyConfig_SetBytesArgv(&py_conf, argc + 1, argv);
-        if (PyStatus_Exception(status)) {
-            goto pyexception;
-        }
-        // We disallowed in py_conf environment variables interfering with python interpreter's behavior.
-        // Let's manually enable the ones we truly need.
-        const char *virtual_env = getenv("VIRTUAL_ENV");
-        if (virtual_env != NULL) {
-            size_t length = strlen(virtual_env) + strlen("/bin/python3") + 1;
-            char python_executable_path[length];
-            snprintf(python_executable_path, length, "%s/bin/python3", virtual_env);
-            status = PyConfig_SetBytesString(&py_conf, &py_conf.executable, python_executable_path);
-            if (PyStatus_Exception(status)) {
-                goto pyexception;
-            }
-        } else {
-            // This is required by Proxspace to work with an isolated Python configuration
-            status = PyConfig_SetBytesString(&py_conf, &py_conf.home, getenv("PYTHONHOME"));
-            if (PyStatus_Exception(status)) {
-                goto pyexception;
-            }
-        }
-        // This is required for allowing `import pm3` in python scripts
-        status = PyConfig_SetBytesString(&py_conf, &py_conf.pythonpath_env, getenv("PYTHONPATH"));
-        if (PyStatus_Exception(status)) {
-            goto pyexception;
-        }
-
-        status = Py_InitializeFromConfig(&py_conf);
-        if (PyStatus_Exception(status)) {
-            goto pyexception;
-        }
-
-        // clean up
-        PyConfig_Clear(&py_conf);
 #endif
+
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 10
+        // Declared at this scope so the `pyexception` label below can reach
+        // them after a goto from inside the init block.
+        PyConfig py_conf;
+        PyStatus status;
+#endif
+        if (!s_py_initialized) {
+#ifdef HAVE_PYTHON_SWIG
+            // hook Proxmark3 API
+            PyImport_AppendInittab("_pm3", PyInit__pm3);
+#endif
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 10
+            Py_Initialize();
+            PySys_SetArgv(argc + 1, py_args);
+#else
+            // We need to use Python mode instead of isolated to avoid breaking stuff.
+            PyConfig_InitPythonConfig(&py_conf);
+            // Let's still make things bit safer by being as close as possible to isolated mode.
+            py_conf.faulthandler = 0;
+            py_conf.use_hash_seed = 0;
+            py_conf.install_signal_handlers = 0;
+            py_conf.parse_argv = 0;
+            py_conf.use_environment = 0;
+
+            // The following line will implicitly pre-initialize Python
+            status = PyConfig_SetBytesArgv(&py_conf, argc + 1, argv);
+            if (PyStatus_Exception(status)) {
+                goto pyexception;
+            }
+            // We disallowed in py_conf environment variables interfering with python interpreter's behavior.
+            // Let's manually enable the ones we truly need.
+            const char *virtual_env = getenv("VIRTUAL_ENV");
+            if (virtual_env != NULL) {
+                size_t length = strlen(virtual_env) + strlen("/bin/python3") + 1;
+                char python_executable_path[length];
+                snprintf(python_executable_path, length, "%s/bin/python3", virtual_env);
+                status = PyConfig_SetBytesString(&py_conf, &py_conf.executable, python_executable_path);
+                if (PyStatus_Exception(status)) {
+                    goto pyexception;
+                }
+            } else {
+                // This is required by Proxspace to work with an isolated Python configuration
+                status = PyConfig_SetBytesString(&py_conf, &py_conf.home, getenv("PYTHONHOME"));
+                if (PyStatus_Exception(status)) {
+                    goto pyexception;
+                }
+            }
+            // This is required for allowing `import pm3` in python scripts
+            status = PyConfig_SetBytesString(&py_conf, &py_conf.pythonpath_env, getenv("PYTHONPATH"));
+            if (PyStatus_Exception(status)) {
+                goto pyexception;
+            }
+
+            status = Py_InitializeFromConfig(&py_conf);
+            if (PyStatus_Exception(status)) {
+                goto pyexception;
+            }
+
+            // clean up
+            PyConfig_Clear(&py_conf);
+#endif
+            // setup search paths (only once - PySys_GetObject("path") is
+            // prepended each call, so repeating would grow sys.path).
+            set_python_paths();
+            s_py_initialized = true;
+        } else {
+            // Already initialized. Refresh sys.argv for this run and wipe
+            // __main__ globals so the new script doesn't see leftovers.
+            PyObject *argv_list = PyList_New(argc + 1);
+            for (int i = 0; i <= argc; i++) {
+                PyList_SET_ITEM(argv_list, i, PyUnicode_DecodeFSDefault(argv[i]));
+            }
+            PySys_SetObject("argv", argv_list);
+            Py_DECREF(argv_list);
+
+            PyObject *main_module = PyImport_AddModule("__main__");
+            if (main_module != NULL) {
+                PyObject *main_dict = PyModule_GetDict(main_module);
+                // Wipe leftover user globals from the previous run but preserve
+                // the module attributes Python itself put there at init
+                // (without these, e.g. `if __name__ == '__main__':` raises
+                // NameError and the script silently aborts).
+                // __file__/__cached__ are re-set per-run in Pm3PyRun_SimpleFileNoExit.
+                static const char *const KEEP_KEYS[] = {
+                    "__name__", "__doc__", "__package__",
+                    "__loader__", "__spec__", "__builtins__",
+                    NULL,
+                };
+                PyObject *keys = PyDict_Keys(main_dict);
+                if (keys != NULL) {
+                    Py_ssize_t n = PyList_GET_SIZE(keys);
+                    for (Py_ssize_t i = 0; i < n; i++) {
+                        PyObject *key = PyList_GET_ITEM(keys, i);
+                        const char *k = PyUnicode_AsUTF8(key);
+                        if (k == NULL) {
+                            PyErr_Clear();
+                            continue;
+                        }
+                        bool keep = false;
+                        for (const char *const *kk = KEEP_KEYS; *kk != NULL; kk++) {
+                            if (strcmp(k, *kk) == 0) { keep = true; break; }
+                        }
+                        if (!keep) {
+                            PyDict_DelItem(main_dict, key);
+                        }
+                    }
+                    Py_DECREF(keys);
+                }
+            }
+        }
+
         for (int i = 0; i < argc; ++i) {
             free(argv[i + 1]);
         }
-
-        // setup search paths.
-        set_python_paths();
 
         FILE *f = fopen(script_path, "r");
         if (f == NULL) {
@@ -534,7 +626,6 @@ static int CmdScriptRun(const char *Cmd) {
             PyMem_RawFree(py_args[i]);
         }
 #endif
-        Py_Finalize();
         free(script_path);
         if (ret) {
             PrintAndLogEx(WARNING, "\nfinished " _YELLOW_("%s") " with exception", filename);
@@ -611,3 +702,8 @@ int CmdScript(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
+void CmdScriptCleanup(void) {
+#ifdef HAVE_PYTHON
+    Py_Finalize();
+#endif
+}
