@@ -13,15 +13,14 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// Some Lua and Python scripting glue to proxmark core.
+// Commands for FMCOS CPU smart cards (Fudan Microelectronics)
 //-----------------------------------------------------------------------------
 
-#ifndef CMDSCRIPT_H__
-#define CMDSCRIPT_H__
+#ifndef CMDHFFMCOS_H__
+#define CMDHFFMCOS_H__
 
 #include "common.h"
 
-int CmdScript(const char *Cmd);
-void CmdScriptCleanup(void);
+int CmdHFFmcos(const char *Cmd);
 
-#endif
+#endif // CMDHFFMCOS_H__
