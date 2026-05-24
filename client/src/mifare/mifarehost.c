@@ -319,10 +319,10 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
 
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, "\nTarget block " _GREEN_("%4u") " key type " _GREEN_("%c") " -- found valid key [ " _GREEN_("%s") " ]",
-                            block_no,
-                            key_type ? 'B' : 'A',
-                            sprint_hex_inrow(resp.data.asBytes, MIFARE_KEY_SIZE)
-                            );
+                          block_no,
+                          key_type ? 'B' : 'A',
+                          sprint_hex_inrow(resp.data.asBytes, MIFARE_KEY_SIZE)
+                         );
 
             return PM3_SUCCESS;
         }

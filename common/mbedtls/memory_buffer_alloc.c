@@ -86,7 +86,7 @@ static void debug_header(memory_header *hdr) {
 #endif
 
     mbedtls_fprintf(stderr, "HDR:  PTR(%10zu), PREV(%10zu), NEXT(%10zu), "
-                    "ALLOC(%zu), SIZE(%10zu)\n",
+                            "ALLOC(%zu), SIZE(%10zu)\n",
                     (size_t) hdr, (size_t) hdr->prev, (size_t) hdr->next,
                     hdr->alloc, hdr->size);
     mbedtls_fprintf(stderr, "      FPREV(%10zu), FNEXT(%10zu)\n",
@@ -164,7 +164,7 @@ static int verify_chain(void) {
     if (prv == NULL || verify_header(prv) != 0) {
 #if defined(MBEDTLS_MEMORY_DEBUG)
         mbedtls_fprintf(stderr, "FATAL: verification of first header "
-                        "failed\n");
+                                "failed\n");
 #endif
         return (1);
     }
@@ -172,7 +172,7 @@ static int verify_chain(void) {
     if (heap.first->prev != NULL) {
 #if defined(MBEDTLS_MEMORY_DEBUG)
         mbedtls_fprintf(stderr, "FATAL: verification failed: "
-                        "first->prev != NULL\n");
+                                "first->prev != NULL\n");
 #endif
         return (1);
     }
@@ -183,7 +183,7 @@ static int verify_chain(void) {
         if (verify_header(cur) != 0) {
 #if defined(MBEDTLS_MEMORY_DEBUG)
             mbedtls_fprintf(stderr, "FATAL: verification of header "
-                            "failed\n");
+                                    "failed\n");
 #endif
             return (1);
         }
@@ -191,7 +191,7 @@ static int verify_chain(void) {
         if (cur->prev != prv) {
 #if defined(MBEDTLS_MEMORY_DEBUG)
             mbedtls_fprintf(stderr, "FATAL: verification failed: "
-                            "cur->prev != prv\n");
+                                    "cur->prev != prv\n");
 #endif
             return (1);
         }
@@ -243,7 +243,7 @@ static void *buffer_alloc_calloc(size_t n, size_t size) {
     if (cur->alloc != 0) {
 #if defined(MBEDTLS_MEMORY_DEBUG)
         mbedtls_fprintf(stderr, "FATAL: block in free_list but allocated "
-                        "data\n");
+                                "data\n");
 #endif
         mbedtls_exit(1);
     }
@@ -359,7 +359,7 @@ static void buffer_alloc_free(void *ptr) {
     if (p < heap.buf || p >= heap.buf + heap.len) {
 #if defined(MBEDTLS_MEMORY_DEBUG)
         mbedtls_fprintf(stderr, "FATAL: mbedtls_free() outside of managed "
-                        "space\n");
+                                "space\n");
 #endif
         mbedtls_exit(1);
     }
@@ -373,7 +373,7 @@ static void buffer_alloc_free(void *ptr) {
     if (hdr->alloc != 1) {
 #if defined(MBEDTLS_MEMORY_DEBUG)
         mbedtls_fprintf(stderr, "FATAL: mbedtls_free() on unallocated "
-                        "data\n");
+                                "data\n");
 #endif
         mbedtls_exit(1);
     }

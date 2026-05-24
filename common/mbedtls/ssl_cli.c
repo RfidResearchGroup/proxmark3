@@ -804,7 +804,7 @@ static int ssl_write_use_srtp_ext(mbedtls_ssl_context *ssl,
              */
             MBEDTLS_SSL_DEBUG_MSG(3,
                                   ("client hello, "
-                                   "illegal DTLS-SRTP protection profile %d",
+             "illegal DTLS-SRTP protection profile %d",
                                    ssl->conf->dtls_srtp_profile_list[protection_profiles_index]
                                   ));
             return (MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED);

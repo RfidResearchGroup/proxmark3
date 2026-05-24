@@ -948,9 +948,9 @@ static int CmdT55xxReadBlock(const char *Cmd) {
                   _CYAN_("Use of read with password on a tag not configured") "\n"
                   _CYAN_("for a password can damage the tag") "\n"
                   _RED_("           * * * * * * * * * *"),
-                  "lf t55xx read -b 0                   --> read data from block 0\n"
-                  "lf t55xx read -b 0 --pwd 01020304    --> read data from block 0, pwd 01020304\n"
-                  "lf t55xx read -b 0 --pwd 01020304 -o --> read data from block 0, pwd 01020304, override\n"
+           "lf t55xx read -b 0                   --> read data from block 0\n"
+           "lf t55xx read -b 0 --pwd 01020304    --> read data from block 0, pwd 01020304\n"
+           "lf t55xx read -b 0 --pwd 01020304 -o --> read data from block 0, pwd 01020304, override\n"
                  );
 
     // 1 (help) + 4(four user specified params) + (5 T55XX_DLMODE_SINGLE)

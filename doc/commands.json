@@ -2343,6 +2343,22 @@
             ],
             "usage": "hf calypso list [-h1crux] [--frame] [-f <fn>]"
         },
+        "hf calypso probecmdcompat": {
+            "command": "hf calypso probecmdcompat",
+            "description": "Probe Calypso SELECT command compatibility",
+            "notes": [
+                "hf calypso probecmdcompat",
+                "hf calypso probecmdcompat -v",
+                "hf calypso probecmdcompat --aid 315449432E494341"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--aid <hex> Calypso application AID or AID prefix (5..16 bytes)",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf calypso probecmdcompat [-hv] [--aid <hex>]"
+        },
         "hf cipurse aread": {
             "command": "hf cipurse aread",
             "description": "Read file attributes by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
@@ -4392,6 +4408,24 @@
             ],
             "usage": "hf ksx6924 prec [-hka] <record 1byte HEX>"
         },
+        "hf legic clone": {
+            "command": "hf legic clone",
+            "description": "Rewrite a LEGIC dump for a new target tag or MCC. Use --mcc to rewrite only the dump obfuscation, or --write to clone to the current tag.",
+            "notes": [
+                "hf legic clone -f src.bin -c 39 -o clone.bin",
+                "hf legic clone -f src.bin --write",
+                "hf legic clone -f src.bin --write -o clone.bin"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> Source dump file",
+                "--mcc <hex> Target MCC byte for output-only cloning",
+                "-o, --output <fn> Output cloned dump file",
+                "-w, --write Write cloned dump to the currently attached tag"
+            ],
+            "usage": "hf legic clone [-hw] -f <fn> [--mcc <hex>] [-o <fn>]"
+        },
         "hf legic crc": {
             "command": "hf legic crc",
             "description": "Calculates the legic crc8/crc16 on the given data",
@@ -4572,18 +4606,20 @@
         },
         "hf legic sim": {
             "command": "hf legic sim",
-            "description": "Simulates a LEGIC Prime tag. Following types supported (MIM22, MIM256, MIM1024)",
+            "description": "Simulates a LEGIC Prime tag. If a file is supplied, it is loaded into emulator memory first.",
             "notes": [
-                "hf legic sim --22"
+                "hf legic sim --22",
+                "hf legic sim -f myfile.bin --1024"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "--22 LEGIC Prime MIM22",
                 "--256 LEGIC Prime MIM256 (def)",
-                "--1024 LEGIC Prime MIM1024"
+                "--1024 LEGIC Prime MIM1024",
+                "-f, --file <fn> Optional dump file to load into emulator memory"
             ],
-            "usage": "hf legic sim [-h] [--22] [--256] [--1024]"
+            "usage": "hf legic sim [-h] [--22] [--256] [--1024] [-f <fn>]"
         },
         "hf legic view": {
             "command": "hf legic view",
@@ -5844,6 +5880,28 @@
             ],
             "usage": "hf mf restore [-h] [--mini] [--1k] [--2k] [--4k] [-u <hex>] [-f <fn>] [-k <fn>] [--ka] [--force]"
         },
+        "hf mf sen": {
+            "command": "hf mf sen",
+            "description": "Recover FM11RF08S keys using static encrypted nonce evidence in native client code",
+            "notes": [
+                "hf mf sen",
+                "hf mf sen --keep-nonces",
+                "hf mf sen --no-oob",
+                "hf mf sen --reader"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--keep-nonces save collected nonce/data JSON evidence",
+                "--no-oob do not include FM11RF08S out-of-bounds sector 32 in key file",
+                "--reader pre-pass: emulate this UID to a reader and digest recovered reader keys",
+                "--offline-only stop after offline filtering, do not verify online",
+                "--online-confirm only do online confirmation (skip generation if nonces loaded)",
+                "--max-online-candidates <n> abort online phase if total candidates exceed this limit",
+                "--parity-mask <hex> parity filter mask 1..F (default 1 = vetted staticnested_1nt behavior)"
+            ],
+            "usage": "hf mf sen [-h] [--keep-nonces] [--no-oob] [--reader] [--offline-only] [--online-confirm] [--max-online-candidates <n>] [--parity-mask <hex>]"
+        },
         "hf mf setmod": {
             "command": "hf mf setmod",
             "description": "Sets the load modulation strength of a MIFARE Classic EV1 card",
@@ -6460,6 +6518,41 @@
                 "--mackeyver <hex> AES key version for MAC (1 hex byte). (def: 0x0)"
             ],
             "usage": "hf mfdes createmacfile [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--isoid <hex>] [--fid <hex>] [--amode <plain|mac|encrypt>] [--rawrights <hex>] [--rrights <key0..key13|free|deny>] [--wrights <key0..key13|free|deny>] [--rwrights <key0..key13|free|deny>] [--chrights <key0..key13|free|deny>] [--no-auth] [--mackey <hex>] [--mackeyver <hex>]"
+        },
+        "hf mfdes createmfcmapping": {
+            "command": "hf mfdes createmfcmapping",
+            "description": "Create a Mifare Classic mapping on a DESFire EV3C. The MFC License MAC key (AES only) must have been set previously as PICC key number 50.",
+            "notes": [
+                "hf mfdes createmfcmapping --aid 123456 --fid 01 --mfc-keys FFFFFFFFFFFF111111111111222222222222 --mfc-blocks 4,5,6,8",
+                "-> Map blocks 4, 5, 6, 8 where sector 1 key A is FFFFFFFFFFFF with key B readable,",
+                "-> sector 2 keys are 111111111111 and 222222222222 with key B used for authentication"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-a, --apdu Show APDU requests and responses",
+                "-v, --verbose Verbose output",
+                "-n, --keyno <dec> Key number",
+                "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
+                "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
+                "--kdf <none|AN10922|gallagher> Key Derivation Function (KDF)",
+                "-i, --kdfi <hex> KDF input (1-31 hex bytes)",
+                "-m, --cmode <plain|mac|encrypt> Communicaton mode",
+                "-c, --ccset <native|niso|iso> Communicaton command set",
+                "--schann <d40|ev1|ev2|lrp> Secure channel",
+                "--aid <hex> Application ID (3 hex bytes, big endian)",
+                "--isoid <hex> Application ISO ID (ISO DF ID) (2 hex bytes, big endian)",
+                "--fid <hex> File ID to map (1 hex byte)",
+                "--restore-fid <hex> Restore source when mapping value files to value blocks (1 hex byte)",
+                "-b, --blk <num>[,<num>[,...]] The MFC blocks to map, must be unique (use -b data for all data blocks, and -b trailer for all trailer blocks)",
+                "--mfc-license <hex> The MFC license (omit to use saved license and license MAC)",
+                "--mfc-license-mac <hex> The MFC license MAC (omit to use saved license and license MAC)",
+                "--ka Allow updating key A from inside sector trailers mapped to DESFire files",
+                "--kb Allow updating key B from inside sector trailers mapped to DESFire files",
+                "--access-conditions Allow updating the access conditions from inside sector trailers mapped to DESFire files",
+                "--restore-transfer Enable the RestoreTransfer command for the mapped value blocks"
+            ],
+            "usage": "hf mfdes createmfcmapping [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--isoid <hex>] [--fid <hex>] [--restore-fid <hex>] [-b <num>[,<num>[,...]]] [--mfc-license <hex>] [--mfc-license-mac <hex>] [--ka] [--kb] [--access-conditions] [--restore-transfer]"
         },
         "hf mfdes createrecordfile": {
             "command": "hf mfdes createrecordfile",
@@ -7118,8 +7211,8 @@
                 "-v, --verbose Show more output",
                 "-k, --key <hex> Key for computing the MAC, must be HEX 16(AES)",
                 "-b, --blk <num>[,<num>[,...]] The MFC blocks to map, must be given in ascending order (use the special value 'all' for all blocks)",
-                "--key-a Allow updating key A from inside sector trailers mapped to DESFire files",
-                "--key-b Allow updating key B from inside sector trailers mapped to DESFire files",
+                "--ka Allow updating key A from inside sector trailers mapped to DESFire files",
+                "--kb Allow updating key B from inside sector trailers mapped to DESFire files",
                 "--restrict Allow the restriction of data updates by the MFC side",
                 "--map Allow mapping the blocks to DESFire files",
                 "--access-conditions Allow updating the access conditions from inside sector trailers mapped to DESFire files",
@@ -7127,7 +7220,7 @@
                 "--mfc-keys <hex> The concatenated MFC sector keys, one (if key B is readable) or two per sector",
                 "-s, --save Save the license and license MAC for the next commands in this session"
             ],
-            "usage": "hf mfdes makemfclicense [-hvs] [-k <hex>] [-b <num>[,<num>[,...]]] [--key-a] [--key-b] [--restrict] [--map] [--access-conditions] [-r <hex>] [--mfc-keys <hex>]"
+            "usage": "hf mfdes makemfclicense [-hvs] [-k <hex>] [-b <num>[,<num>[,...]]] [--ka] [--kb] [--restrict] [--map] [--access-conditions] [-r <hex>] [--mfc-keys <hex>]"
         },
         "hf mfdes pc": {
             "command": "hf mfdes pc",
@@ -7913,6 +8006,29 @@
             ],
             "usage": "hf mfu countertear [-h] [-c <0,1,2>] [-i <dec>] [-l <dec>] [-s <dec>] [--fix <dec>] [-x <string>]"
         },
+        "hf mfu desbrute": {
+            "command": "hf mfu desbrute",
+            "description": "Recover one 4-byte segment of a MIFARE Ultralight-C 2TDEA key from known authentication ciphertexts.",
+            "notes": [
+                "hf mfu desbrute --counterfeit --null F35C740106ECED87 --target E9E0DC67B35919FC --key 00000000000000000000000000000000 --segment 2",
+                "hf mfu desbrute --counterfeit --null 49C1603621CCAA72 --target 8122262EF5FA8DEB --key 48444C4A4044524200000000544E5846 --segment 3",
+                "hf mfu desbrute --reader --erndb EC9C5CF763244367 --cryptogram 2283BFE8DEBE1780922327794D0706EF --key 48444C4A4044524200000000544E5846 --segment 3"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-c, --counterfeit Counterfeit nonce mode: --null and --target are ERndB blocks",
+                "-r, --reader Reader nonce mode: --erndb and --cryptogram are sniffed authentication blocks",
+                "--null <hex> Null-key ERndB, 8 hex bytes",
+                "--target <hex> Target-key ERndB, 8 hex bytes",
+                "--erndb <hex> Reader mode ERndB, 8 hex bytes",
+                "--cryptogram <hex> Reader mode ERndA|ERndB', 16 hex bytes",
+                "-k, --key <hex> Base 3DES key, 16 hex bytes",
+                "-s, --segment <1..4> 4-byte key segment to brute force",
+                "-t, --threads <n> Worker threads (default: all logical CPUs)"
+            ],
+            "usage": "hf mfu desbrute [-hcr] [--null <hex>] [--target <hex>] [--erndb <hex>] [--cryptogram <hex>] -k <hex> -s <1..4> [-t <n>]"
+        },
         "hf mfu dump": {
             "command": "hf mfu dump",
             "description": "Dump MIFARE Ultralight/NTAG tag to files (bin/json) It autodetects card type.Supports: Ultralight, Ultralight C, Ultralight AES, Ultralight EV1 NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216",
@@ -7986,7 +8102,7 @@
         },
         "hf mfu help": {
             "command": "hf mfu help",
-            "description": "help This help list List MIFARE Ultralight / NTAG history keygen Generate DES/3DES/AES MIFARE diversified keys pwdgen Generate pwd from known algos view Display content from tag dump file --------------------------------------------------------------------------------------- hf mfu list available offline: yes Alias of `trace list -t 14a -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List MIFARE Ultralight / NTAG history keygen Generate DES/3DES/AES MIFARE diversified keys pwdgen Generate pwd from known algos desbrute Ultralight-C - 3DES key segment brute force view Display content from tag dump file --------------------------------------------------------------------------------------- hf mfu list available offline: yes Alias of `trace list -t 14a -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf 14a list --frame -> show frame delay times",
                 "hf 14a list -1 -> use trace buffer"
@@ -14605,8 +14721,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 825,
+        "commands_extracted": 830,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-05-11T12:35:32"
+        "extracted_on": "2026-05-21T19:04:15+00:00"
     }
 }

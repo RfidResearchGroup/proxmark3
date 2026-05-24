@@ -1236,7 +1236,7 @@ static uint32_t fm11_count_candidate_seed_matches_vec(const fm11_keylist_t *list
     uint32_t i = 0;
     for (; i + 4 <= list->count; i += 4) {
         const union vec probe = VEC_U(list->data[i].seed, list->data[i + 1].seed,
-                                      list->data[i + 2].seed, list->data[i + 3].seed);
+                                          list->data[i + 2].seed, list->data[i + 3].seed);
         const union vec eq = vec_ueq(probe, target);
         matches += eq.elem.u[0] != 0;
         matches += eq.elem.u[1] != 0;
@@ -1289,7 +1289,7 @@ static int fm11_filter_candidates_by_seed(fm11_keylist_t *list, uint32_t nt, uin
     uint32_t i = 0;
     for (; i + 4 <= list->count; i += 4) {
         const union vec probe = VEC_U(list->data[i].seed, list->data[i + 1].seed,
-                                      list->data[i + 2].seed, list->data[i + 3].seed);
+                                          list->data[i + 2].seed, list->data[i + 3].seed);
         const union vec eq = vec_ueq(probe, target);
         if (eq.elem.u[0] != 0) {
             filtered.data[filtered.count++] = list->data[i];
@@ -1401,30 +1401,38 @@ static int fm11_intersect_pair(uint32_t nt_a, fm11_keylist_t *a, uint32_t nt_b, 
     fm11_keylist_t fb = {0};
     for (uint32_t i = 0; i < a->count; i++) {
         if (((i & 0x3FF) == 0) && kbd_enter_pressed()) {
-            free(bset_a); free(bset_b);
-            fm11_keylist_free(&fa); fm11_keylist_free(&fb);
+            free(bset_a);
+            free(bset_b);
+            fm11_keylist_free(&fa);
+            fm11_keylist_free(&fb);
             return PM3_EOPABORTED;
         }
         if (BSET_TEST(bset_b, a->data[i].seed)) {
             int res = fm11_keylist_push_seeded(&fa, a->data[i].key, a->data[i].seed);
             if (res != PM3_SUCCESS) {
-                free(bset_a); free(bset_b);
-                fm11_keylist_free(&fa); fm11_keylist_free(&fb);
+                free(bset_a);
+                free(bset_b);
+                fm11_keylist_free(&fa);
+                fm11_keylist_free(&fb);
                 return res;
             }
         }
     }
     for (uint32_t i = 0; i < b->count; i++) {
         if (((i & 0x3FF) == 0) && kbd_enter_pressed()) {
-            free(bset_a); free(bset_b);
-            fm11_keylist_free(&fa); fm11_keylist_free(&fb);
+            free(bset_a);
+            free(bset_b);
+            fm11_keylist_free(&fa);
+            fm11_keylist_free(&fb);
             return PM3_EOPABORTED;
         }
         if (BSET_TEST(bset_a, b->data[i].seed)) {
             int res = fm11_keylist_push_seeded(&fb, b->data[i].key, b->data[i].seed);
             if (res != PM3_SUCCESS) {
-                free(bset_a); free(bset_b);
-                fm11_keylist_free(&fa); fm11_keylist_free(&fb);
+                free(bset_a);
+                free(bset_b);
+                fm11_keylist_free(&fa);
+                fm11_keylist_free(&fb);
                 return res;
             }
         }
@@ -1462,8 +1470,8 @@ typedef struct {
 } fm11_seed_bucket_t;
 
 static int fm11_build_seed_buckets(fm11_keylist_t *a, fm11_keylist_t *b,
-                                    fm11_seed_bucket_t **buckets_out,
-                                    uint32_t *bucket_count_out) {
+                                   fm11_seed_bucket_t **buckets_out,
+                                   uint32_t *bucket_count_out) {
     uint32_t *count_a = calloc(UINT16_MAX + 1, sizeof(uint32_t));
     uint32_t *count_b = calloc(UINT16_MAX + 1, sizeof(uint32_t));
     if (count_a == NULL || count_b == NULL) {
@@ -1763,7 +1771,7 @@ static void fm11_probe_queue_push(fm11_probe_queue_t *q, uint8_t sec, uint8_t kt
             return;
         }
     }
-    q->entries[q->count++] = (fm11_probe_entry_t){.sec = sec, .key_type = kt, .key = key};
+    q->entries[q->count++] = (fm11_probe_entry_t) {.sec = sec, .key_type = kt, .key = key};
 }
 
 static uint32_t fm11_accept_found_key_global(
@@ -1891,9 +1899,9 @@ static uint32_t fm11_promote_singletons(const iso14a_fm11rf08s_nonces_with_data_
 }
 
 static uint32_t fm11_propagate_exact_reused_keys(fm11_keylist_t candidates[FM11RF08S_SECTORS][2],
-                                                  uint64_t keys_found[FM11RF08S_SECTORS][2],
-                                                  bool found_key[FM11RF08S_SECTORS][2],
-                                                  bool promote_inferred) {
+                                                 uint64_t keys_found[FM11RF08S_SECTORS][2],
+                                                 bool found_key[FM11RF08S_SECTORS][2],
+                                                 bool promote_inferred) {
     uint32_t propagated = 0;
     if (promote_inferred == false) {
         return 0;
@@ -3121,7 +3129,7 @@ int CmdHF14AMfSEN(const char *Cmd) {
         fm11_keylist_free(&priority);
     }
 
-    priority = (fm11_keylist_t){0};
+    priority = (fm11_keylist_t) {0};
     retval = fm11_build_global_priority_keys(candidates, duplicate_prefix, &priority);
     if (retval != PM3_SUCCESS) {
         fm11_keylist_free(&priority);
@@ -3256,7 +3264,7 @@ int CmdHF14AMfSEN(const char *Cmd) {
         snprintf(activity, sizeof(activity), "sec %03u key %c - checking %u candidates", real_sec, kt ? 'B' : 'A', candidates[sec][kt].count);
 
         fm11_sen_progress(nonce_count, activity, candidates[sec][kt].count,
-                                  (candidates[sec][kt].count / 2 / FM11RF08S_FCHK_KEYS_PER_SECOND) + 1);
+                          (candidates[sec][kt].count / 2 / FM11RF08S_FCHK_KEYS_PER_SECOND) + 1);
         uint64_t key = 0;
         int res = fm11_verify_candidates(real_sec, kt, &candidates[sec][kt], &key);
         if (res == PM3_SUCCESS) {

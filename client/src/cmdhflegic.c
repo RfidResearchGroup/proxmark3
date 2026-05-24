@@ -352,7 +352,7 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
             // for printing the complete segment we need at least wrc + wrp_len + remain_seg_payload_len bytes
             if ((i + wrc + wrp_len + remain_seg_payload_len) > card_size) {
                 PrintAndLogEx(FAILED, "Cannot read segment body, because the input buffer is too small. "
-                              "Please check that the data is correct and properly aligned. ");
+                                      "Please check that the data is correct and properly aligned. ");
                 return_value = PM3_EOUTOFBOUND;
                 goto out;
             }
@@ -436,7 +436,7 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
         // for printing the complete segment we need at least wrc + wrp_len + remain_seg_payload_len bytes
         if ((i + wrc + wrp_len + remain_seg_payload_len) > card_size) {
             PrintAndLogEx(FAILED, "Cannot read segment body, because the input buffer is too small. "
-                          "Please check that the data is correct and properly aligned. ");
+                                  "Please check that the data is correct and properly aligned. ");
             return_value = PM3_EOUTOFBOUND;
             goto out;
         }
@@ -607,7 +607,7 @@ static int CmdLegicSim(const char *Cmd) {
                   "If a file is supplied, it is loaded into emulator memory first.",
                   "hf legic sim --22\n"
                   "hf legic sim -f myfile.bin --1024\n"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,

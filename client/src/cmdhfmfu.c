@@ -38,6 +38,9 @@
 #include "preferences.h"    // setDeviceDebugLevel
 #include "crc16.h"
 #include "crypto/originality.h"
+#include "util.h"
+#include <pthread.h>
+#include <vec/vec.h>
 
 #define MAX_UL_BLOCKS       0x0F
 #define MAX_ULC_BLOCKS      0x2F
@@ -4882,6 +4885,631 @@ out:
     return PM3_SUCCESS;
 }
 
+//DESBRUTE Translation: C2Pwn
+
+typedef enum {
+    MFULC_DESBRUTE_LFSR_UNDEF = 0,
+    MFULC_DESBRUTE_LFSR_ULCG = 1,
+    MFULC_DESBRUTE_LFSR_MFC = 2,
+} mfulc_desbrute_lfsr_t;
+
+typedef struct {
+    uint32_t start;
+    uint32_t end;
+    int key_mode;
+    bool candidate_in_k1;
+    int var_offset;
+    uint8_t init_ciphertext[8];
+    uint8_t prev_ciphertext[8];
+    uint8_t ciphertext[8];
+    uint64_t init_ip_block;
+    uint64_t prev_ciphertext_be;
+    uint64_t ciphertext_ip_block;
+    uint8_t base_key[16];
+    uint64_t fixed_sk[16];
+    uint64_t cand_sk_base[16];
+    uint64_t cand_sk_contrib[28 * 16];
+    mfulc_desbrute_lfsr_t lfsr_type;
+    bool is_reader_mode;
+    int thread_id;
+} mfulc_desbrute_thread_args_t;
+
+typedef struct {
+    volatile bool found;
+    volatile bool aborted;
+    uint32_t found_idx;
+    uint8_t found_key[16];
+} mfulc_desbrute_shared_t;
+
+typedef struct {
+    mfulc_desbrute_thread_args_t args;
+    mfulc_desbrute_shared_t *shared;
+    volatile uint32_t progress;
+    volatile bool done;
+} mfulc_desbrute_worker_args_t;
+
+static uint64_t mfulc_desbrute_be64(const uint8_t *b) {
+    return ((uint64_t)b[0] << 56) | ((uint64_t)b[1] << 48) |
+           ((uint64_t)b[2] << 40) | ((uint64_t)b[3] << 32) |
+           ((uint64_t)b[4] << 24) | ((uint64_t)b[5] << 16) |
+           ((uint64_t)b[6] << 8) | (uint64_t)b[7];
+}
+
+static const uint8_t MFULC_DES_PC1[56] = {
+    57, 49, 41, 33, 25, 17, 9, 1, 58, 50, 42, 34, 26, 18,
+    10, 2, 59, 51, 43, 35, 27, 19, 11, 3, 60, 52, 44, 36,
+    63, 55, 47, 39, 31, 23, 15, 7, 62, 54, 46, 38, 30, 22,
+    14, 6, 61, 53, 45, 37, 29, 21, 13, 5, 28, 20, 12, 4
+};
+
+static const uint8_t MFULC_DES_PC2[48] = {
+    14, 17, 11, 24, 1, 5, 3, 28, 15, 6, 21, 10,
+    23, 19, 12, 4, 26, 8, 16, 7, 27, 20, 13, 2,
+    41, 52, 31, 37, 47, 55, 30, 40, 51, 45, 33, 48,
+    44, 49, 39, 56, 34, 53, 46, 42, 50, 36, 29, 32
+};
+
+static const uint8_t MFULC_DES_SHIFTS[16] = {
+    1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1
+};
+
+static const uint8_t MFULC_DES_IP[64] = {
+    58, 50, 42, 34, 26, 18, 10, 2, 60, 52, 44, 36, 28, 20, 12, 4,
+    62, 54, 46, 38, 30, 22, 14, 6, 64, 56, 48, 40, 32, 24, 16, 8,
+    57, 49, 41, 33, 25, 17, 9, 1, 59, 51, 43, 35, 27, 19, 11, 3,
+    61, 53, 45, 37, 29, 21, 13, 5, 63, 55, 47, 39, 31, 23, 15, 7
+};
+
+static const uint8_t MFULC_DES_FP[64] = {
+    40, 8, 48, 16, 56, 24, 64, 32, 39, 7, 47, 15, 55, 23, 63, 31,
+    38, 6, 46, 14, 54, 22, 62, 30, 37, 5, 45, 13, 53, 21, 61, 29,
+    36, 4, 44, 12, 52, 20, 60, 28, 35, 3, 43, 11, 51, 19, 59, 27,
+    34, 2, 42, 10, 50, 18, 58, 26, 33, 1, 41, 9, 49, 17, 57, 25
+};
+
+static const uint32_t MFULC_DES_SP[512] = {
+    0x00808200, 0x00000000, 0x00008000, 0x00808202, 0x00808002, 0x00008202, 0x00000002, 0x00008000, 0x00000200, 0x00808200, 0x00808202, 0x00000200, 0x00800202, 0x00808002, 0x00800000, 0x00000002, 0x00000202, 0x00800200, 0x00800200, 0x00008200, 0x00008200, 0x00808000, 0x00808000, 0x00800202, 0x00008002, 0x00800002, 0x00800002, 0x00008002, 0x00000000, 0x00000202, 0x00008202, 0x00800000, 0x00008000, 0x00808202, 0x00000002, 0x00808000, 0x00808200, 0x00800000, 0x00800000, 0x00000200, 0x00808002, 0x00008000, 0x00008200, 0x00800002, 0x00000200, 0x00000002, 0x00800202, 0x00008202, 0x00808202, 0x00008002, 0x00808000, 0x00800202, 0x00800002, 0x00000202, 0x00008202, 0x00808200, 0x00000202, 0x00800200, 0x00800200, 0x00000000, 0x00008002, 0x00008200, 0x00000000, 0x00808002,
+    0x40084010, 0x40004000, 0x00004000, 0x00084010, 0x00080000, 0x00000010, 0x40080010, 0x40004010, 0x40000010, 0x40084010, 0x40084000, 0x40000000, 0x40004000, 0x00080000, 0x00000010, 0x40080010, 0x00084000, 0x00080010, 0x40004010, 0x00000000, 0x40000000, 0x00004000, 0x00084010, 0x40080000, 0x00080010, 0x40000010, 0x00000000, 0x00084000, 0x00004010, 0x40084000, 0x40080000, 0x00004010, 0x00000000, 0x00084010, 0x40080010, 0x00080000, 0x40004010, 0x40080000, 0x40084000, 0x00004000, 0x40080000, 0x40004000, 0x00000010, 0x40084010, 0x00084010, 0x00000010, 0x00004000, 0x40000000, 0x00004010, 0x40084000, 0x00080000, 0x40000010, 0x00080010, 0x40004010, 0x40000010, 0x00080010, 0x00084000, 0x00000000, 0x40004000, 0x00004010, 0x40000000, 0x40080010, 0x40084010, 0x00084000,
+    0x00000104, 0x04010100, 0x00000000, 0x04010004, 0x04000100, 0x00000000, 0x00010104, 0x04000100, 0x00010004, 0x04000004, 0x04000004, 0x00010000, 0x04010104, 0x00010004, 0x04010000, 0x00000104, 0x04000000, 0x00000004, 0x04010100, 0x00000100, 0x00010100, 0x04010000, 0x04010004, 0x00010104, 0x04000104, 0x00010100, 0x00010000, 0x04000104, 0x00000004, 0x04010104, 0x00000100, 0x04000000, 0x04010100, 0x04000000, 0x00010004, 0x00000104, 0x00010000, 0x04010100, 0x04000100, 0x00000000, 0x00000100, 0x00010004, 0x04010104, 0x04000100, 0x04000004, 0x00000100, 0x00000000, 0x04010004, 0x04000104, 0x00010000, 0x04000000, 0x04010104, 0x00000004, 0x00010104, 0x00010100, 0x04000004, 0x04010000, 0x04000104, 0x00000104, 0x04010000, 0x00010104, 0x00000004, 0x04010004, 0x00010100,
+    0x80401000, 0x80001040, 0x80001040, 0x00000040, 0x00401040, 0x80400040, 0x80400000, 0x80001000, 0x00000000, 0x00401000, 0x00401000, 0x80401040, 0x80000040, 0x00000000, 0x00400040, 0x80400000, 0x80000000, 0x00001000, 0x00400000, 0x80401000, 0x00000040, 0x00400000, 0x80001000, 0x00001040, 0x80400040, 0x80000000, 0x00001040, 0x00400040, 0x00001000, 0x00401040, 0x80401040, 0x80000040, 0x00400040, 0x80400000, 0x00401000, 0x80401040, 0x80000040, 0x00000000, 0x00000000, 0x00401000, 0x00001040, 0x00400040, 0x80400040, 0x80000000, 0x80401000, 0x80001040, 0x80001040, 0x00000040, 0x80401040, 0x80000040, 0x80000000, 0x00001000, 0x80400000, 0x80001000, 0x00401040, 0x80400040, 0x80001000, 0x00001040, 0x00400000, 0x80401000, 0x00000040, 0x00400000, 0x00001000, 0x00401040,
+    0x00000080, 0x01040080, 0x01040000, 0x21000080, 0x00040000, 0x00000080, 0x20000000, 0x01040000, 0x20040080, 0x00040000, 0x01000080, 0x20040080, 0x21000080, 0x21040000, 0x00040080, 0x20000000, 0x01000000, 0x20040000, 0x20040000, 0x00000000, 0x20000080, 0x21040080, 0x21040080, 0x01000080, 0x21040000, 0x20000080, 0x00000000, 0x21000000, 0x01040080, 0x01000000, 0x21000000, 0x00040080, 0x00040000, 0x21000080, 0x00000080, 0x01000000, 0x20000000, 0x01040000, 0x21000080, 0x20040080, 0x01000080, 0x20000000, 0x21040000, 0x01040080, 0x20040080, 0x00000080, 0x01000000, 0x21040000, 0x21040080, 0x00040080, 0x21000000, 0x21040080, 0x01040000, 0x00000000, 0x20040000, 0x21000000, 0x00040080, 0x01000080, 0x20000080, 0x00040000, 0x00000000, 0x20040000, 0x01040080, 0x20000080,
+    0x10000008, 0x10200000, 0x00002000, 0x10202008, 0x10200000, 0x00000008, 0x10202008, 0x00200000, 0x10002000, 0x00202008, 0x00200000, 0x10000008, 0x00200008, 0x10002000, 0x10000000, 0x00002008, 0x00000000, 0x00200008, 0x10002008, 0x00002000, 0x00202000, 0x10002008, 0x00000008, 0x10200008, 0x10200008, 0x00000000, 0x00202008, 0x10202000, 0x00002008, 0x00202000, 0x10202000, 0x10000000, 0x10002000, 0x00000008, 0x10200008, 0x00202000, 0x10202008, 0x00200000, 0x00002008, 0x10000008, 0x00200000, 0x10002000, 0x10000000, 0x00002008, 0x10000008, 0x10202008, 0x00202000, 0x10200000, 0x00202008, 0x10202000, 0x00000000, 0x10200008, 0x00000008, 0x00002000, 0x10200000, 0x00202008, 0x00002000, 0x00200008, 0x10002008, 0x00000000, 0x10202000, 0x10000000, 0x00200008, 0x10002008,
+    0x00100000, 0x02100001, 0x02000401, 0x00000000, 0x00000400, 0x02000401, 0x00100401, 0x02100400, 0x02100401, 0x00100000, 0x00000000, 0x02000001, 0x00000001, 0x02000000, 0x02100001, 0x00000401, 0x02000400, 0x00100401, 0x00100001, 0x02000400, 0x02000001, 0x02100000, 0x02100400, 0x00100001, 0x02100000, 0x00000400, 0x00000401, 0x02100401, 0x00100400, 0x00000001, 0x02000000, 0x00100400, 0x02000000, 0x00100400, 0x00100000, 0x02000401, 0x02000401, 0x02100001, 0x02100001, 0x00000001, 0x00100001, 0x02000000, 0x02000400, 0x00100000, 0x02100400, 0x00000401, 0x00100401, 0x02100400, 0x00000401, 0x02000001, 0x02100401, 0x02100000, 0x00100400, 0x00000000, 0x00000001, 0x02100401, 0x00000000, 0x00100401, 0x02100000, 0x00000400, 0x02000001, 0x02000400, 0x00000400, 0x00100001,
+    0x08000820, 0x00000800, 0x00020000, 0x08020820, 0x08000000, 0x08000820, 0x00000020, 0x08000000, 0x00020020, 0x08020000, 0x08020820, 0x00020800, 0x08020800, 0x00020820, 0x00000800, 0x00000020, 0x08020000, 0x08000020, 0x08000800, 0x00000820, 0x00020800, 0x00020020, 0x08020020, 0x08020800, 0x00000820, 0x00000000, 0x00000000, 0x08020020, 0x08000020, 0x08000800, 0x00020820, 0x00020000, 0x00020820, 0x00020000, 0x08020800, 0x00000800, 0x00000020, 0x08020020, 0x00000800, 0x00020820, 0x08000800, 0x00000020, 0x08000020, 0x08020000, 0x08020020, 0x08000000, 0x00020000, 0x08000820, 0x00000000, 0x08020820, 0x00020020, 0x08000020, 0x08020000, 0x08000800, 0x08000820, 0x00000000, 0x08020820, 0x00020800, 0x00020800, 0x00000820, 0x00000820, 0x00020020, 0x08000000, 0x08020800
+};
+
+static uint64_t mfulc_desbrute_perm(uint64_t src, int src_bits, const uint8_t *tbl, int n) {
+    uint64_t dst = 0;
+    for (int i = 0; i < n; i++) {
+        int sb = tbl[i] - 1;
+        dst |= ((src >> (src_bits - 1 - sb)) & 1ULL) << (n - 1 - i);
+    }
+    return dst;
+}
+
+static void mfulc_desbrute_keyschedule(uint64_t key64, uint64_t sk[16]) {
+    uint64_t key56 = mfulc_desbrute_perm(key64, 64, MFULC_DES_PC1, 56);
+    uint32_t c = (uint32_t)(key56 >> 28) & 0x0FFFFFFF;
+    uint32_t d = (uint32_t)key56 & 0x0FFFFFFF;
+
+    for (int i = 0; i < 16; i++) {
+        int s = MFULC_DES_SHIFTS[i];
+        c = ((c << s) | (c >> (28 - s))) & 0x0FFFFFFF;
+        d = ((d << s) | (d >> (28 - s))) & 0x0FFFFFFF;
+        sk[i] = mfulc_desbrute_perm(((uint64_t)c << 28) | d, 56, MFULC_DES_PC2, 48);
+    }
+}
+
+static uint32_t mfulc_desbrute_f(uint32_t r, uint64_t k) {
+    uint32_t r0 = ((r & 1u) << 5) | ((r >> 27) & 0x1Fu);
+    uint32_t r1 = (r >> 23) & 0x3Fu;
+    uint32_t r2 = (r >> 19) & 0x3Fu;
+    uint32_t r3 = (r >> 15) & 0x3Fu;
+    uint32_t r4 = (r >> 11) & 0x3Fu;
+    uint32_t r5 = (r >> 7) & 0x3Fu;
+    uint32_t r6 = (r >> 3) & 0x3Fu;
+    uint32_t r7 = ((r & 0x1Fu) << 1) | ((r >> 31) & 1u);
+
+    r0 ^= (uint32_t)((k >> 42) & 0x3Fu);
+    r1 ^= (uint32_t)((k >> 36) & 0x3Fu);
+    r2 ^= (uint32_t)((k >> 30) & 0x3Fu);
+    r3 ^= (uint32_t)((k >> 24) & 0x3Fu);
+    r4 ^= (uint32_t)((k >> 18) & 0x3Fu);
+    r5 ^= (uint32_t)((k >> 12) & 0x3Fu);
+    r6 ^= (uint32_t)((k >> 6) & 0x3Fu);
+    r7 ^= (uint32_t)(k & 0x3Fu);
+
+    return MFULC_DES_SP[r0] ^ MFULC_DES_SP[64 + r1] ^ MFULC_DES_SP[128 + r2] ^ MFULC_DES_SP[192 + r3] ^
+           MFULC_DES_SP[256 + r4] ^ MFULC_DES_SP[320 + r5] ^ MFULC_DES_SP[384 + r6] ^ MFULC_DES_SP[448 + r7];
+}
+
+static uint64_t mfulc_desbrute_des_rounds(uint64_t ip_block, const uint64_t sk[16], bool decrypt) {
+    uint32_t l = (uint32_t)(ip_block >> 32);
+    uint32_t r = (uint32_t)ip_block;
+
+    for (int i = 0; i < 16; i++) {
+        uint64_t k = decrypt ? sk[15 - i] : sk[i];
+        uint32_t nr = l ^ mfulc_desbrute_f(r, k);
+        l = r;
+        r = nr;
+    }
+    return ((uint64_t)r << 32) | l;
+}
+
+static uint64_t mfulc_desbrute_des(uint64_t block, const uint64_t sk[16], bool decrypt) {
+    uint64_t t = mfulc_desbrute_perm(block, 64, MFULC_DES_IP, 64);
+    t = mfulc_desbrute_des_rounds(t, sk, decrypt);
+    return mfulc_desbrute_perm(t, 64, MFULC_DES_FP, 64);
+}
+
+static uint64_t mfulc_desbrute_tdea2_dec_ip(uint64_t ip_block, const uint64_t k1_sk[16], const uint64_t k2_sk[16]) {
+    uint64_t t = mfulc_desbrute_des_rounds(ip_block, k1_sk, true);
+    t = mfulc_desbrute_des_rounds(t, k2_sk, false);
+    t = mfulc_desbrute_des_rounds(t, k1_sk, true);
+    return mfulc_desbrute_perm(t, 64, MFULC_DES_FP, 64);
+}
+
+static void mfulc_desbrute_format_duration(uint64_t seconds, char *buf, size_t buflen) {
+    unsigned int h = (unsigned int)(seconds / 3600);
+    unsigned int m = (unsigned int)((seconds / 60) % 60);
+    unsigned int s = (unsigned int)(seconds % 60);
+
+    if (h > 99) {
+        snprintf(buf, buflen, ">99h");
+    } else if (h > 0) {
+        snprintf(buf, buflen, "%02u:%02u:%02u", h, m, s);
+    } else {
+        snprintf(buf, buflen, "%02u:%02u", m, s);
+    }
+}
+
+static void mfulc_desbrute_progress_bar(double pct, char *buf, size_t buflen) {
+    const int width = 28;
+    int filled = (int)((pct / 100.0) * width);
+
+    if (filled < 0) filled = 0;
+    if (filled > width) filled = width;
+    if (buflen < (size_t)width + 3) {
+        if (buflen > 0) buf[0] = '\0';
+        return;
+    }
+
+    buf[0] = '[';
+    for (int i = 0; i < width; i++) {
+        buf[i + 1] = i < filled ? '#' : '.';
+    }
+    buf[width + 1] = ']';
+    buf[width + 2] = '\0';
+}
+
+static const char *mfulc_desbrute_progress_color(double pct) {
+    if (pct >= 90.0) {
+        return "\x1b[32m";
+    }
+    if (pct >= 50.0) {
+        return "\x1b[33m";
+    }
+    return "\x1b[36m";
+}
+
+static void mfulc_desbrute_compute_sk_tables(const uint8_t base_half[8], int var_offset, uint64_t sk_base[16], uint64_t sk_contrib[28 * 16]) {
+    uint8_t half[8] = {0};
+
+    memcpy(half, base_half, sizeof(half));
+    half[var_offset] = 0;
+    half[var_offset + 1] = 0;
+    half[var_offset + 2] = 0;
+    half[var_offset + 3] = 0;
+    mfulc_desbrute_keyschedule(mfulc_desbrute_be64(half), sk_base);
+
+    for (int bit = 0; bit < 28; bit++) {
+        uint8_t tmp[8] = {0};
+        int byte_in_half = bit / 7;
+        int bit_in_byte = bit % 7;
+        uint64_t bit_sk[16] = {0};
+
+        tmp[var_offset + byte_in_half] = (uint8_t)(1u << (bit_in_byte + 1));
+        mfulc_desbrute_keyschedule(mfulc_desbrute_be64(tmp), bit_sk);
+
+        for (int round = 0; round < 16; round++) {
+            sk_contrib[(bit * 16) + round] = bit_sk[round];
+        }
+    }
+}
+
+static void mfulc_desbrute_make_candidate_sk(const mfulc_desbrute_thread_args_t *args, uint32_t idx, uint64_t cand_sk[16]) {
+    memcpy(cand_sk, args->cand_sk_base, sizeof(args->cand_sk_base));
+
+    for (int bit = 0; bit < 28; bit++) {
+        if ((idx >> bit) & 1u) {
+            const uint64_t *contrib = &args->cand_sk_contrib[bit * 16];
+            for (int round = 0; round < 16; round++) {
+                cand_sk[round] ^= contrib[round];
+            }
+        }
+    }
+}
+
+static void mfulc_desbrute_update_candidate_sk(const mfulc_desbrute_thread_args_t *args, uint32_t old_idx, uint32_t new_idx, uint64_t cand_sk[16]) {
+    uint32_t changed = old_idx ^ new_idx;
+
+    while (changed != 0) {
+        int bit = __builtin_ctz(changed);
+        const uint64_t *contrib = &args->cand_sk_contrib[bit * 16];
+
+        for (int round = 0; round < 16; round++) {
+            cand_sk[round] ^= contrib[round];
+        }
+        changed &= changed - 1;
+    }
+}
+
+static bool mfulc_desbrute_valid_lfsr_ulcg(uint64_t x64) {
+    x64 = BSWAP_64(x64);
+    uint16_t x16 = x64 >> 48;
+    x16 = (uint16_t)(x16 << 15 | ((x16 >> 1) ^ ((x16 >> 3 ^ x16 >> 4 ^ x16 >> 6) & 1)));
+    if (x16 != ((x64 >> 32) & 0xFFFF)) return false;
+    x16 = (uint16_t)(x16 << 15 | ((x16 >> 1) ^ ((x16 >> 3 ^ x16 >> 4 ^ x16 >> 6) & 1)));
+    if (x16 != ((x64 >> 16) & 0xFFFF)) return false;
+    x16 = (uint16_t)(x16 << 15 | ((x16 >> 1) ^ ((x16 >> 3 ^ x16 >> 4 ^ x16 >> 6) & 1)));
+    return x16 == (x64 & 0xFFFF);
+}
+
+static bool mfulc_desbrute_valid_lfsr_mfc(uint64_t x64) {
+    x64 = BSWAP_64(x64);
+    uint16_t x16 = x64 & 0xFFFF;
+    for (int i = 0; i < 16; i++) x16 = (uint16_t)(x16 >> 1 | (x16 ^ x16 >> 2 ^ x16 >> 3 ^ x16 >> 5) << 15);
+    if (x16 != ((x64 >> 16) & 0xFFFF)) return false;
+    for (int i = 0; i < 16; i++) x16 = (uint16_t)(x16 >> 1 | (x16 ^ x16 >> 2 ^ x16 >> 3 ^ x16 >> 5) << 15);
+    if (x16 != ((x64 >> 32) & 0xFFFF)) return false;
+    for (int i = 0; i < 16; i++) x16 = (uint16_t)(x16 >> 1 | (x16 ^ x16 >> 2 ^ x16 >> 3 ^ x16 >> 5) << 15);
+    return x16 == ((x64 >> 48) & 0xFFFF);
+}
+
+static bool mfulc_desbrute_valid_lfsr(uint64_t x64, mfulc_desbrute_lfsr_t lfsr_type) {
+    switch (lfsr_type) {
+        case MFULC_DESBRUTE_LFSR_ULCG:
+            return mfulc_desbrute_valid_lfsr_ulcg(x64);
+        case MFULC_DESBRUTE_LFSR_MFC:
+            return mfulc_desbrute_valid_lfsr_mfc(x64);
+        case MFULC_DESBRUTE_LFSR_UNDEF:
+        default:
+            return false;
+    }
+}
+
+static mfulc_desbrute_lfsr_t mfulc_desbrute_detect_lfsr_type(const uint8_t init_ciphertext[8]) {
+    uint64_t zero_sk[16] = {0};
+    uint64_t x_be;
+
+    mfulc_desbrute_keyschedule(0, zero_sk);
+    x_be = mfulc_desbrute_des(mfulc_desbrute_be64(init_ciphertext), zero_sk, true);
+    uint64_t x = BSWAP_64(x_be);
+    if (mfulc_desbrute_valid_lfsr_ulcg(x)) {
+        return MFULC_DESBRUTE_LFSR_ULCG;
+    }
+    if (mfulc_desbrute_valid_lfsr_mfc(x)) {
+        return MFULC_DESBRUTE_LFSR_MFC;
+    }
+    return MFULC_DESBRUTE_LFSR_UNDEF;
+}
+
+static void mfulc_desbrute_fill_candidate(uint8_t key[16], const uint8_t base_key[16], int key_mode, uint32_t idx) {
+    memcpy(key, base_key, 16);
+    int seg_offset = key_mode * 4;
+    key[seg_offset] = (uint8_t)(((idx) & 0x7F) << 1);
+    key[seg_offset + 1] = (uint8_t)(((idx >> 7) & 0x7F) << 1);
+    key[seg_offset + 2] = (uint8_t)(((idx >> 14) & 0x7F) << 1);
+    key[seg_offset + 3] = (uint8_t)(((idx >> 21) & 0x7F) << 1);
+}
+
+static void mfulc_desbrute_candidate_batch(uint32_t start, uint32_t idx[4]) {
+    union vec lanes = vec_uadd(vec_u1(start), vec_u(0, 1, 2, 3));
+    for (int i = 0; i < 4; i++) {
+        idx[i] = lanes.elem.u[i];
+    }
+}
+
+static bool mfulc_desbrute_test_candidate_sk(const mfulc_desbrute_thread_args_t *args, const uint64_t cand_sk[16]) {
+    uint64_t out_be;
+    const uint64_t *k1_sk;
+    const uint64_t *k2_sk;
+
+    k1_sk = args->candidate_in_k1 ? cand_sk : args->fixed_sk;
+    k2_sk = args->candidate_in_k1 ? args->fixed_sk : cand_sk;
+    out_be = mfulc_desbrute_tdea2_dec_ip(args->ciphertext_ip_block, k1_sk, k2_sk);
+
+    bool match = false;
+    if (args->is_reader_mode) {
+        uint64_t init_be = mfulc_desbrute_tdea2_dec_ip(args->init_ip_block, k1_sk, k2_sk);
+        uint64_t rotated_init_be = (init_be << 8) | (init_be >> 56);
+
+        match = (out_be ^ args->prev_ciphertext_be) == rotated_init_be;
+    } else {
+        match = mfulc_desbrute_valid_lfsr(BSWAP_64(out_be), args->lfsr_type);
+    }
+    return match;
+}
+
+static void *mfulc_desbrute_worker(void *arg) {
+    mfulc_desbrute_worker_args_t *ctx = arg;
+
+    uint32_t candidate[4] = {0};
+    uint32_t last_candidate = 0;
+    uint64_t cand_sk[16] = {0};
+    bool have_candidate_sk = false;
+
+    ctx->progress = ctx->args.start;
+    for (uint32_t idx = ctx->args.start; idx < ctx->args.end; idx += 4) {
+        if (ctx->shared->found || ctx->shared->aborted) {
+            break;
+        }
+        if ((idx & 0x3FF) == 0) {
+            ctx->progress = idx;
+        }
+        if (ctx->args.thread_id == 0 && ((idx & 0x3FFFF) == 0) && kbd_enter_pressed()) {
+            ctx->shared->aborted = true;
+            break;
+        }
+
+        mfulc_desbrute_candidate_batch(idx, candidate);
+        for (int lane = 0; lane < 4; lane++) {
+            if (candidate[lane] >= ctx->args.end) {
+                break;
+            }
+
+            if (have_candidate_sk) {
+                mfulc_desbrute_update_candidate_sk(&ctx->args, last_candidate, candidate[lane], cand_sk);
+            } else {
+                mfulc_desbrute_make_candidate_sk(&ctx->args, candidate[lane], cand_sk);
+                have_candidate_sk = true;
+            }
+            last_candidate = candidate[lane];
+
+            if (mfulc_desbrute_test_candidate_sk(&ctx->args, cand_sk)) {
+                ctx->shared->found_idx = candidate[lane];
+                mfulc_desbrute_fill_candidate(ctx->shared->found_key, ctx->args.base_key, ctx->args.key_mode, candidate[lane]);
+                ctx->progress = candidate[lane] + 1;
+                ctx->shared->found = true;
+                ctx->done = true;
+                return NULL;
+            }
+        }
+    }
+    ctx->progress = ctx->shared->found || ctx->shared->aborted ? ctx->progress : ctx->args.end;
+    ctx->done = true;
+    return NULL;
+}
+
+static int CmdHF14AMfUCDesBrute(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu desbrute",
+                  "Recover one 4-byte segment of a MIFARE Ultralight-C 2TDEA key from known authentication ciphertexts.",
+                  "hf mfu desbrute --counterfeit --null F35C740106ECED87 --target E9E0DC67B35919FC --key 00000000000000000000000000000000 --segment 2\n"
+                  "hf mfu desbrute --counterfeit --null 49C1603621CCAA72 --target 8122262EF5FA8DEB --key 48444C4A4044524200000000544E5846 --segment 3\n"
+                  "hf mfu desbrute --reader --erndb EC9C5CF763244367 --cryptogram 2283BFE8DEBE1780922327794D0706EF --key 48444C4A4044524200000000544E5846 --segment 3");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("c", "counterfeit", "Counterfeit nonce mode: --null and --target are ERndB blocks"),
+        arg_lit0("r", "reader", "Reader nonce mode: --erndb and --cryptogram are sniffed authentication blocks"),
+        arg_str0(NULL, "null", "<hex>", "Null-key ERndB, 8 hex bytes"),
+        arg_str0(NULL, "target", "<hex>", "Target-key ERndB, 8 hex bytes"),
+        arg_str0(NULL, "erndb", "<hex>", "Reader mode ERndB, 8 hex bytes"),
+        arg_str0(NULL, "cryptogram", "<hex>", "Reader mode ERndA|ERndB', 16 hex bytes"),
+        arg_str1("k", "key", "<hex>", "Base 3DES key, 16 hex bytes"),
+        arg_int1("s", "segment", "<1..4>", "4-byte key segment to brute force"),
+        arg_int0("t", "threads", "<n>", "Worker threads (default: all logical CPUs)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool counterfeit_mode = arg_get_lit(ctx, 1);
+    bool reader_mode = arg_get_lit(ctx, 2);
+    uint8_t init_ciphertext[8] = {0};
+    uint8_t ciphertext[8] = {0};
+    uint8_t prev_ciphertext[8] = {0};
+    uint8_t tmp_blocks[16] = {0};
+    uint8_t base_key[16] = {0};
+    int init_len = 0;
+    int ciphertext_len = 0;
+    int tmp_len = 0;
+    int key_len = 0;
+
+    if (counterfeit_mode) {
+        CLIGetHexWithReturn(ctx, 3, init_ciphertext, &init_len);
+        CLIGetHexWithReturn(ctx, 4, ciphertext, &ciphertext_len);
+    }
+    if (reader_mode) {
+        CLIGetHexWithReturn(ctx, 5, init_ciphertext, &init_len);
+        CLIGetHexWithReturn(ctx, 6, tmp_blocks, &tmp_len);
+        memcpy(prev_ciphertext, tmp_blocks, 8);
+        memcpy(ciphertext, tmp_blocks + 8, 8);
+    }
+    CLIGetHexWithReturn(ctx, 7, base_key, &key_len);
+    int segment = arg_get_int_def(ctx, 8, 0);
+    int threads = arg_get_int_def(ctx, 9, num_CPUs());
+    CLIParserFree(ctx);
+
+    if (counterfeit_mode == reader_mode) {
+        PrintAndLogEx(WARNING, "Select exactly one mode: --counterfeit or --reader");
+        return PM3_EINVARG;
+    }
+    if (init_len != 8 || key_len != 16 || (counterfeit_mode && ciphertext_len != 8) || (reader_mode && tmp_len != 16)) {
+        PrintAndLogEx(WARNING, "Invalid input length. Blocks are 8 bytes, reader cryptogram is 16 bytes, key is 16 bytes");
+        return PM3_EINVARG;
+    }
+    if (segment < 1 || segment > 4) {
+        PrintAndLogEx(WARNING, "Segment must be 1..4");
+        return PM3_EINVARG;
+    }
+    if (threads < 1) {
+        threads = 1;
+    }
+    int max_threads = num_CPUs();
+    if (threads > max_threads) {
+        PrintAndLogEx(INFO, "Capping threads at available CPU count (%d)", max_threads);
+        threads = max_threads;
+    }
+
+    mfulc_desbrute_lfsr_t lfsr_type = MFULC_DESBRUTE_LFSR_UNDEF;
+    if (counterfeit_mode) {
+        lfsr_type = mfulc_desbrute_detect_lfsr_type(init_ciphertext);
+        if (lfsr_type == MFULC_DESBRUTE_LFSR_UNDEF) {
+            PrintAndLogEx(WARNING, "LFSR detection failed");
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "LFSR detection: %s", lfsr_type == MFULC_DESBRUTE_LFSR_ULCG ? "ULCG" : "MFC (USCUID-UL/FJ8010)");
+    }
+
+    pthread_t *tids = calloc(threads, sizeof(pthread_t));
+    mfulc_desbrute_worker_args_t *worker_args = calloc(threads, sizeof(*worker_args));
+    if (tids == NULL || worker_args == NULL) {
+        free(tids);
+        free(worker_args);
+        return PM3_EMALLOC;
+    }
+
+    mfulc_desbrute_shared_t shared = {0};
+    uint64_t start_ms = msclock();
+    uint32_t total = 1UL << 28;
+    uint32_t chunk = total / (uint32_t)threads;
+    uint32_t remainder = total % (uint32_t)threads;
+    uint32_t current = 0;
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("MFU DESBRUTE"));
+    PrintAndLogEx(INFO, "Mode....... " _YELLOW_("%s"), counterfeit_mode ? "counterfeit nonce" : "reader nonce");
+    PrintAndLogEx(INFO, "Segment.... " _YELLOW_("%d") " (key bytes " _YELLOW_("%d..%d") ")", segment, (segment - 1) * 4, ((segment - 1) * 4) + 3);
+    PrintAndLogEx(INFO, "Keyspace... " _YELLOW_("2^28") " = " _YELLOW_("%" PRIu32) " candidates", total);
+    PrintAndLogEx(INFO, "Threads.... " _YELLOW_("%d") " / " _YELLOW_("%d") " logical CPUs", threads, max_threads);
+    PrintAndLogEx(INFO, "Base key... " _GREEN_("%s"), sprint_hex_inrow(base_key, sizeof(base_key)));
+    if (counterfeit_mode) {
+        PrintAndLogEx(INFO, "Null ERndB. " _GREEN_("%s"), sprint_hex_inrow(init_ciphertext, sizeof(init_ciphertext)));
+        PrintAndLogEx(INFO, "Target..... " _GREEN_("%s"), sprint_hex_inrow(ciphertext, sizeof(ciphertext)));
+        PrintAndLogEx(INFO, "LFSR....... " _YELLOW_("%s"), lfsr_type == MFULC_DESBRUTE_LFSR_ULCG ? "ULCG" : "MFC (USCUID-UL/FJ8010)");
+    } else {
+        PrintAndLogEx(INFO, "ERndB...... " _GREEN_("%s"), sprint_hex_inrow(init_ciphertext, sizeof(init_ciphertext)));
+        PrintAndLogEx(INFO, "ERndA|B'... " _GREEN_("%s"), sprint_hex_inrow(tmp_blocks, sizeof(tmp_blocks)));
+    }
+    PrintAndLogEx(INFO, "Engine..... " _CYAN_("DES SP table + subkey contribution tables + vec candidate lanes"));
+    PrintAndLogEx(INFO, "Abort...... " _YELLOW_("press Enter"));
+    PrintAndLogEx(NORMAL, "");
+
+    for (int i = 0; i < threads; i++) {
+        mfulc_desbrute_worker_args_t *wa = &worker_args[i];
+
+        wa->args.start = current;
+        wa->args.end = current + chunk + (i == threads - 1 ? remainder : 0);
+        wa->progress = wa->args.start;
+        wa->done = false;
+        wa->args.key_mode = segment - 1;
+        wa->args.candidate_in_k1 = wa->args.key_mode < 2;
+        wa->args.var_offset = wa->args.candidate_in_k1 ? ((wa->args.key_mode % 2) * 4) : (((wa->args.key_mode - 2) % 2) * 4);
+        wa->args.lfsr_type = lfsr_type;
+        wa->args.is_reader_mode = reader_mode;
+        wa->args.thread_id = i;
+        memcpy(wa->args.init_ciphertext, init_ciphertext, sizeof(init_ciphertext));
+        memcpy(wa->args.prev_ciphertext, prev_ciphertext, sizeof(prev_ciphertext));
+        memcpy(wa->args.ciphertext, ciphertext, sizeof(ciphertext));
+        memcpy(wa->args.base_key, base_key, sizeof(base_key));
+        wa->args.init_ip_block = mfulc_desbrute_perm(mfulc_desbrute_be64(init_ciphertext), 64, MFULC_DES_IP, 64);
+        wa->args.prev_ciphertext_be = mfulc_desbrute_be64(prev_ciphertext);
+        wa->args.ciphertext_ip_block = mfulc_desbrute_perm(mfulc_desbrute_be64(ciphertext), 64, MFULC_DES_IP, 64);
+        mfulc_desbrute_keyschedule(
+            mfulc_desbrute_be64(wa->args.candidate_in_k1 ? base_key + 8 : base_key),
+            wa->args.fixed_sk
+        );
+        mfulc_desbrute_compute_sk_tables(
+            wa->args.candidate_in_k1 ? base_key : base_key + 8,
+            wa->args.var_offset,
+            wa->args.cand_sk_base,
+            wa->args.cand_sk_contrib
+        );
+        wa->shared = &shared;
+        current = wa->args.end;
+
+        if (pthread_create(&tids[i], NULL, mfulc_desbrute_worker, wa) != 0) {
+            shared.aborted = true;
+            threads = i;
+            PrintAndLogEx(WARNING, "Failed creating worker thread");
+            break;
+        }
+    }
+
+    while (true) {
+        uint64_t checked = 0;
+        bool all_done = true;
+
+        for (int i = 0; i < threads; i++) {
+            uint32_t p = worker_args[i].progress;
+            if (p < worker_args[i].args.start) {
+                p = worker_args[i].args.start;
+            }
+            if (p > worker_args[i].args.end) {
+                p = worker_args[i].args.end;
+            }
+            checked += (uint64_t)(p - worker_args[i].args.start);
+            if (worker_args[i].done == false) {
+                all_done = false;
+            }
+        }
+
+        uint64_t elapsed_now_ms = msclock() - start_ms;
+        double elapsed_s = elapsed_now_ms > 0 ? elapsed_now_ms / 1000.0 : 0.001;
+        double speed = checked / elapsed_s;
+        double pct = ((double)checked * 100.0) / (double)total;
+        uint64_t eta_s = 0;
+        char eta[16] = {0};
+        char elapsed[16] = {0};
+        char bar[32] = {0};
+
+        if (pct > 100.0) pct = 100.0;
+        if (speed > 0.0 && checked < total) {
+            eta_s = (uint64_t)(((double)total - (double)checked) / speed);
+        }
+        mfulc_desbrute_format_duration(eta_s, eta, sizeof(eta));
+        mfulc_desbrute_format_duration(elapsed_now_ms / 1000, elapsed, sizeof(elapsed));
+        mfulc_desbrute_progress_bar(pct, bar, sizeof(bar));
+
+        PrintAndLogEx(INPLACE, "%s%s" AEND " " _YELLOW_("%6.2f%%") "  checked " _CYAN_("%" PRIu64) "/" _CYAN_("%" PRIu32) "  " _GREEN_("%.0f keys/s") "  elapsed " _YELLOW_("%s") "  ETA " _YELLOW_("%s"),
+                      mfulc_desbrute_progress_color(pct), bar, pct, checked, total, speed, elapsed, eta);
+
+        if (all_done || shared.found || shared.aborted) {
+            break;
+        }
+        if (kbd_enter_pressed()) {
+            shared.aborted = true;
+            break;
+        }
+        msleep(250);
+    }
+    PrintAndLogEx(NORMAL, "");
+
+    for (int i = 0; i < threads; i++) {
+        pthread_join(tids[i], NULL);
+    }
+
+    uint64_t elapsed_ms = msclock() - start_ms;
+    free(tids);
+    free(worker_args);
+
+    if (shared.aborted) {
+        PrintAndLogEx(WARNING, "Aborted");
+        return PM3_EOPABORTED;
+    }
+    if (shared.found) {
+        PrintAndLogEx(SUCCESS, "Found key index: " _YELLOW_("%" PRIu32), shared.found_idx);
+        PrintAndLogEx(SUCCESS, "Full key: " _GREEN_("%s"), sprint_hex_inrow(shared.found_key, sizeof(shared.found_key)));
+        PrintAndLogEx(INFO, "Time spent " _YELLOW_("%.1fs"), elapsed_ms / 1000.0);
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(WARNING, "Key segment not found");
+    PrintAndLogEx(INFO, "Time spent " _YELLOW_("%.1fs"), elapsed_ms / 1000.0);
+    return PM3_ESOFT;
+}
+
 /**
 A test function to validate that the polarssl-function works the same
 was as the openssl-implementation.
@@ -5935,7 +6563,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
             clearCommandBuffer();
             PacketResponseNG resp;
-            SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t *)&payload, sizeof(payload));
+            SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t*)&payload, sizeof(payload));
             if (WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000) == false) {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(WARNING, "\nTear off command failed");
@@ -6057,7 +6685,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
         clearCommandBuffer();
         PacketResponseNG resp;
-        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t *)&payload, sizeof(payload));
+        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t*)&payload, sizeof(payload));
         if (WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000) == false) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "\nTear off command failed");
@@ -6146,7 +6774,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
         clearCommandBuffer();
         PacketResponseNG resp;
-        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t *)&payload, sizeof(payload));
+        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t*)&payload, sizeof(payload));
         if (WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000) == false) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "\nTear off command failed");
@@ -6168,7 +6796,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
         memcpy(payload.value, (uint8_t[]) {0x00, 0x00, 0x00}, sizeof(payload.value));
 
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t *)&payload, sizeof(payload));
+        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t*)&payload, sizeof(payload));
         if (WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000) == false) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "\nTear off command failed");
@@ -7302,6 +7930,7 @@ static command_t CommandTable[] = {
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("operations") " -----------------------"},
     {"cauth",    CmdHF14AMfUCAuth,          IfPm3Iso14443a,  "Ultralight-C - Authentication"},
     {"cchk",     CmdHF14AMfUCAuthChk,       IfPm3Iso14443a,  "Ultralight-C - Authentication dictionary check"},
+    {"desbrute", CmdHF14AMfUCDesBrute,      AlwaysAvailable, "Ultralight-C - 3DES key segment brute force"},
     {"aesauth",  CmdHF14AMfUAESAuth,        IfPm3Iso14443a,  "Ultralight-AES - Authentication"},
     {"aeschk",   CmdHF14AMfUAESAuthChk,     IfPm3Iso14443a,  "Ultralight-AES - Authentication dictionary check"},
     {"setkey",   CmdHF14AMfUSetKey,         IfPm3Iso14443a,  "Ultralight C/AES - Set 3DES/AES keys"},
