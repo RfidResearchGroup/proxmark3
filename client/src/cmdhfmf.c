@@ -66,6 +66,13 @@ typedef struct {
 
 static int CmdHelp(const char *Cmd);
 
+static int HFMFAutoPwnSEN(sector_t *e_sector, size_t sector_cnt) {
+    PrintAndLogEx(WARNING, "Static encrypted nonce card detected");
+    PrintAndLogEx(NORMAL, "");
+    DropField();
+    return HFMFSENRecover(false, false, false, false, 0, 0x1, true, e_sector, sector_cnt);
+}
+
 // Static array for Saflok key levels
 static const SaflokKeyLevel saflok_key_levels[] = {
     {1, "Guest Key"},
@@ -3259,6 +3266,13 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         }
     }
 
+    if (has_staticnonce == NONCE_STATIC_ENC) {
+        int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt);
+        free(e_sector);
+        free(fptr);
+        return sen_res;
+    }
+
     // print parameters
     if (verbose) {
         PrintAndLogEx(INFO, "---- " _CYAN_("Command settings") " ------------------------------------------");
@@ -3388,6 +3402,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     // Analyse the dictionary attack
     uint8_t num_found_keys = 0;
+    bool nested_attack_key_from_dictionary = false;
     for (int i = 0; i < sector_cnt; i++) {
         for (int j = MF_KEY_A; j <= MF_KEY_B; j++) {
 
@@ -3406,23 +3421,40 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 known_key = true;
                 sectorno = i;
                 keytype = j;
-                PrintAndLogEx(SUCCESS, "Target sector " _GREEN_("%3u") " key type " _GREEN_("%c") " -- found valid key [ " _GREEN_("%s") " ] (used for nested / hardnested attack)",
-                              i,
-                              (j == MF_KEY_B) ? 'B' : 'A',
-                              sprint_hex_inrow(tmp_key, sizeof(tmp_key))
-                             );
-            } else {
-                PrintAndLogEx(SUCCESS, "Target sector " _GREEN_("%3u") " key type " _GREEN_("%c") " -- found valid key [ " _GREEN_("%s") " ]",
-                              i,
-                              (j == MF_KEY_B) ? 'B' : 'A',
-                              sprint_hex_inrow(tmp_key, sizeof(tmp_key))
-                             );
+                nested_attack_key_from_dictionary = true;
             }
         }
     }
 
     if (num_found_keys == sector_cnt * 2) {
         goto all_found;
+    }
+
+    if (known_key && has_staticnonce == NONCE_NORMAL) {
+        has_staticnonce = detect_classic_static_encrypted_nonce(mfFirstBlockOfSector(sectorno), keytype, key);
+        if (has_staticnonce == NONCE_STATIC_ENC) {
+            int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt);
+            free(keyBlock);
+            free(e_sector);
+            free(fptr);
+            return sen_res;
+        }
+    }
+
+    for (int i = 0; i < sector_cnt; i++) {
+        for (int j = MF_KEY_A; j <= MF_KEY_B; j++) {
+            if (e_sector[i].foundKey[j] != 'D') {
+                continue;
+            }
+
+            num_to_bytes(e_sector[i].Key[j], MIFARE_KEY_SIZE, tmp_key);
+            PrintAndLogEx(SUCCESS, "Target sector " _GREEN_("%3u") " key type " _GREEN_("%c") " -- found valid key [ " _GREEN_("%s") " ]%s",
+                          i,
+                          (j == MF_KEY_B) ? 'B' : 'A',
+                          sprint_hex_inrow(tmp_key, sizeof(tmp_key)),
+                          (nested_attack_key_from_dictionary && i == sectorno && j == keytype) ? " (used for nested / hardnested attack)" : ""
+                         );
+        }
     }
 
     // Check if at least one sector key was found
@@ -3463,7 +3495,7 @@ noValidKeyFound:
 
             if (has_staticnonce == NONCE_STATIC_ENC) {
                 PrintAndLogEx(ERR, "Static encrypted nonce detected. Aborted\n");
-                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
+                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf sen") "`");
             }
 
             DropField();
@@ -3471,6 +3503,17 @@ noValidKeyFound:
             free(e_sector);
             free(fptr);
             return PM3_ESOFT;
+        }
+    }
+
+    if (known_key && has_staticnonce == NONCE_NORMAL) {
+        has_staticnonce = detect_classic_static_encrypted_nonce(mfFirstBlockOfSector(sectorno), keytype, key);
+        if (has_staticnonce == NONCE_STATIC_ENC) {
+            int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt);
+            free(keyBlock);
+            free(e_sector);
+            free(fptr);
+            return sen_res;
         }
     }
 
@@ -3625,17 +3668,12 @@ tryNested:
                                 break;
                             }
                             case PM3_ESTATIC_NONCE: {
-                                PrintAndLogEx(ERR, "Static encrypted nonce detected. Aborted\n");
-                                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
-
                                 e_sector[current_sector_i].Key[current_key_type_i] = 0xffffffffffff;
                                 e_sector[current_sector_i].foundKey[current_key_type_i] = false;
-                                // Show the results to the user
-                                printKeyTable(sector_cnt, e_sector);
-                                PrintAndLogEx(NORMAL, "");
+                                int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt);
                                 free(e_sector);
                                 free(fptr);
-                                return isOK;
+                                return sen_res;
                             }
                             case PM3_SUCCESS: {
                                 calibrate = false;
@@ -3688,15 +3726,12 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                                     break;
                                 }
                                 case PM3_ESTATIC_NONCE: {
-                                    PrintAndLogEx(ERR, "\nError: Static encrypted nonce detected. Aborted\n");
-
                                     e_sector[current_sector_i].Key[current_key_type_i] = 0xffffffffffff;
                                     e_sector[current_sector_i].foundKey[current_key_type_i] = false;
-
-                                    // Show the results to the user
-                                    printKeyTable(sector_cnt, e_sector);
-                                    PrintAndLogEx(NORMAL, "");
-                                    break;
+                                    int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt);
+                                    free(e_sector);
+                                    free(fptr);
+                                    return sen_res;
                                 }
                                 case PM3_EFAILED: {
                                     PrintAndLogEx(FAILED, "\nFailed to recover a key...");
