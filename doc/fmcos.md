@@ -114,10 +114,43 @@ hf fmcos createdir --id 3f01 --space 1500 --cperm f0 --eperm f0 --appid 95 --nam
 |------|-------------|
 | `--id <hex>` | 2-byte file ID for the new DF |
 | `--space <hex>` | Total byte space to reserve (hex, e.g. `1500` = 5376 bytes) |
-| `--cperm <hex>` | Create-permission byte (e.g. `f0` = always allowed) |
-| `--eperm <hex>` | Erase-permission byte |
-| `--appid <hex>` | 1-byte application SID / AID tag |
+| `--cperm <hex>` | Create-permission byte - who may create files inside this DF |
+| `--eperm <hex>` | Erase-permission byte - who may erase this DF |
+| `--appid <hex>` | 1-byte application file ID (DF type + short identifier) |
 | `--name <hex>` | Optional DF name bytes as hex (up to 16 bytes, enables select-by-name) |
+
+**`--cperm` (create permission):**
+
+Controls the minimum security state required to create new EFs or sub-DFs inside this DF.
+Uses the same XY nibble encoding as `--rperm` / `--wperm` in `createfile` (see the permission byte table there).
+
+After `erase` clears the DF, the create-permission check is suspended and any file may be created freely.
+The restriction is reinstated the next time the DF is re-entered once a KEY file has been established inside it.
+
+**`--eperm` (erase permission):**
+
+Controls the minimum security state required to run `erase` on this DF.
+Uses the same XY nibble encoding.
+Erasing a DF destroys all EFs and sub-DFs inside it; the DF record, its permissions, and its allocated space
+are preserved.
+Set to `ef` to prohibit erasing entirely: since E (14) < F (15), the range E..F is impossible and the condition
+can never be satisfied.
+
+**`--appid` (application file ID):**
+
+A 1-byte value stored in the DF control block that encodes both the DF type and a short numeric identifier.
+
+| Bits 7-5 | Meaning |
+|----------|---------|
+| `000` | Dedicated Directory File (DDF) - a plain directory, no application context |
+| `100` | Application Dedicated File (ADF) - holds a PBOC / EMV application |
+
+Bits 4-0 are the short file identifier (0-31) used by the card to link this DF to its keyfile.
+This value must equal the `--dfsid` argument when creating the keyfile for this DF with `createkeyfile`.
+
+Example: `--appid 95` = binary `10010101` - bits 7-5 are `100` (ADF), bits 4-0 are `10101` = 21 = `0x15`,
+so the FCI returned on SELECT FILE references short identifier `0x15` and the matching keyfile uses `--dfsid 95`.
+Standard PBOC wallet DFs conventionally use `0x95`.
 
 ### createfile
 
@@ -616,16 +649,43 @@ Example output:
 
 ### credit
 
-ADD CREDIT -- two-phase credit transaction.
+ADD CREDIT -- two-phase credit (load) transaction (PBOC INITIALIZE FOR LOAD + CREDIT FOR LOAD).
 
-**Phase 1** (`INS 50`, P1=00): send key ID, amount, terminal ID.  Card returns old balance,
-transaction serial, key version, algo ID, random seed, and MAC1.  The implementation:
-- Derives the process key: `encrypt(random[4] | serial[2], credit_key)` -> first 8 bytes
-- Verifies MAC1: `DES-CBC-MAC(old_bal[4] | amount[4] | type[1] | terminal[6], process_key)`
+**Phase 1 -- INITIALIZE FOR LOAD** (`INS 50`, P1=00):
 
-**Phase 2** (`INS 52`, P1=00): send date, time, MAC2.  Card returns TAC.  The implementation:
-- Computes MAC2: `DES-CBC-MAC(amount[4] | type[1] | terminal[6] | date[4] | time[3], process_key)`
-- Verifies TAC: `DES-CBC-MAC(new_bal[4] | serial[2] | MAC2_buf[18], tac_key)`
+Initiates the credit transaction and authenticates the card to the terminal.
+The terminal sends the credit key slot ID, the load amount (4 bytes), and the terminal ID (6 bytes).
+The card responds with 16 bytes:
+
+| Field | Length | Description |
+|-------|--------|-------------|
+| Old balance | 4 bytes | Current balance before loading |
+| Online serial number | 2 bytes | Incremented by the card after each successful load |
+| Key version | 1 byte | Version of the credit key identified by the key slot ID |
+| Algorithm ID | 1 byte | Algorithm of that credit key |
+| Random seed | 4 bytes | Card-generated pseudorandom number for session key derivation |
+| MAC1 | 4 bytes | Card-computed MAC proving it holds the credit key |
+
+The session key (process key) is derived as: `encrypt(random[4] | serial[2] | 0x8000, credit_key)`, first 8 bytes.
+MAC1 is: `DES-CBC-MAC(old_bal[4] | amount[4] | type[1] | terminal[6], process_key)`.
+The terminal verifies MAC1 to confirm the card holds the correct key before proceeding.
+If MAC1 does not match, the transaction is aborted and the balance is unchanged.
+
+**Phase 2 -- CREDIT FOR LOAD** (`INS 52`, P1=00):
+
+Authorizes and commits the balance update.
+The terminal sends the host transaction date (4 bytes), time (3 bytes), and MAC2 (4 bytes).
+MAC2 is: `DES-CBC-MAC(amount[4] | type[1] | terminal[6] | date[4] | time[3], process_key)`.
+
+On success the card:
+- Adds the loaded amount to the balance.
+- Increments the online serial number by 1.
+- Appends a 23-byte transaction record (serial, overdraft limit, amount, type, terminal, date, time) to the linked loop EF for auditing.
+
+The card responds with the TAC (Transaction Authentication Code, 4 bytes):
+`DES-CBC-MAC(new_bal[4] | serial[2] | amount[4] | type[1] | terminal[6] | date[4] | time[3], dtk_xor)`,
+where `dtk_xor` is the left 8 bytes XOR right 8 bytes of the internal key (DTK).
+The terminal verifies the TAC to confirm the card committed the transaction.
 
 ```
 hf fmcos credit --type wallet --id 01 --amount 1000 \
@@ -662,17 +722,56 @@ Example output:
 
 ### purchase
 
-PURCHASE -- two-phase debit transaction from wallet or passbook.
+PURCHASE -- two-phase offline debit transaction from wallet or passbook
+(PBOC INITIALIZE FOR PURCHASE + DEBIT FOR PURCHASE).
 
-**Phase 1** (`INS 50`, P1=01): send key ID, amount, terminal.  Card returns old balance,
-offline serial, overdraft limit, key version, algo, random seed (15 bytes total).
-- Derives process key: `encrypt(random[4] | offline_serial[2] | tx_serial[2], purchase_key)[:8]`
-- Computes MAC1: `DES-CBC-MAC(amount[4] | tx_type[1] | terminal[6] | date[4] | time[3], process_key)`
+Passbook purchase requires a successful PIN verify beforehand; wallet purchase does not.
 
-**Phase 2** (`INS 54`, P1=01, P2=00): send tx serial, date, time, MAC1.  Card returns TAC[4]+MAC2[4].
-- Verifies TAC: `DES-CBC-MAC(amount[4] | tx_type[1] | terminal[6] | serial[4] | date[4] | time[3], tac_key)`
+**Phase 1 -- INITIALIZE FOR PURCHASE** (`INS 50`, P1=01):
 
-Transaction type byte: 0x05 for passbook purchase, 0x06 for wallet purchase.
+Initiates the purchase transaction and returns the card state needed for the terminal to derive
+the session key and compute the authorization MAC.
+The terminal sends the purchase key slot ID, the debit amount (4 bytes), and the terminal ID (6 bytes).
+The card responds with 15 bytes:
+
+| Field | Length | Description |
+|-------|--------|-------------|
+| Old balance | 4 bytes | Current balance before the debit |
+| Offline serial number | 2 bytes | Incremented by the card after each successful purchase |
+| Overdraft limit | 3 bytes | Maximum permitted overdraft on this file |
+| Key version | 1 byte | Version of the purchase key identified by the key slot ID |
+| Algorithm ID | 1 byte | Algorithm of that purchase key |
+| Random seed | 4 bytes | Card-generated pseudorandom number for session key derivation |
+
+Unlike the credit transaction, the card does not return a MAC1 in this phase.
+Instead, the terminal uses the card's response to derive the session key and compute MAC1 locally:
+
+- Session key (process key): `encrypt(random[4] | offline_serial[2] | tx_serial_low2[2], purchase_key)[:8]`,
+  where `tx_serial_low2` is the rightmost 2 bytes of the terminal transaction serial number.
+- MAC1 (computed by terminal): `DES-CBC-MAC(amount[4] | type[1] | terminal[6] | date[4] | time[3], process_key)`.
+
+If the card returns a non-9000 status the transaction is aborted and the balance is unchanged.
+
+**Phase 2 -- DEBIT FOR PURCHASE** (`INS 54`, P1=01, P2=00):
+
+Authorizes and commits the balance deduction.
+The terminal sends the terminal transaction serial (4 bytes), date (4 bytes), time (3 bytes), and MAC1 (4 bytes).
+The card verifies MAC1, then deducts the amount and returns 8 bytes:
+
+| Field | Length | Description |
+|-------|--------|-------------|
+| TAC | 4 bytes | Transaction Authentication Code for terminal verification |
+| MAC2 | 4 bytes | Card-computed MAC over the debit amount |
+
+TAC is: `DES-CBC-MAC(amount[4] | type[1] | terminal[6] | tx_serial[4] | date[4] | time[3], dtk_xor)`,
+where `dtk_xor` is the left 8 bytes XOR right 8 bytes of the internal key (DTK).
+MAC2 is: `DES-CBC-MAC(amount[4], process_key)`.
+
+On success the card:
+- Deducts the purchase amount from the balance.
+- Increments the offline serial number by 1.
+
+Transaction type byte: `0x05` for passbook purchase, `0x06` for wallet purchase.
 
 ```
 # Wallet purchase of 50 units
@@ -710,20 +809,58 @@ Example output:
 
 ### overdraft
 
-UPDATE OVERDRAFT LIMIT -- two-phase overdraft-limit update on the passbook.
+UPDATE OVERDRAFT LIMIT -- two-phase online overdraft-limit update on the passbook
+(PBOC INITIALIZE FOR UPDATE + UPDATE OVERDRAW LIMIT).
 
-**Phase 1** (`INS 50`, P1=04, P2=01): send key ID and terminal.  Card returns old balance,
-online serial, old limit, key version, algo, random seed, and MAC1 (19 bytes total).
-- Derives process key: `encrypt(random[4] | serial[2], overdraft_key)[:8]`
-- Verifies MAC1: `DES-CBC-MAC(old_bal[4] | old_limit[3] | 0x07[1] | terminal[6], process_key)`
+The overdraft limit allows transactions to continue when the actual passbook funds are
+insufficient, up to the issuer-permitted limit.
+This transaction must be performed online at a financial terminal and requires a successful
+PIN verify beforehand.  It applies to passbook only; wallet files do not carry an overdraft limit.
 
-**Phase 2** (`INS 58`, P1=00, P2=00): send new limit (3 bytes), date, time, MAC2.
-- Computes MAC2: `DES-CBC-MAC(new_limit[3] | 0x07[1] | terminal[6] | date[4] | time[3], process_key)`
-- Card returns TAC[4].  When `--ikey` is provided the TAC is verified:
-  `DES-CBC-MAC(XOR(ikey[0:8], ikey[8:16]), tac_bal[4] | online_serial[2] | new_limit[3] | 0x07[1] | terminal[6] | date[4] | time[3])`
-  where `tac_bal = old_balance + new_limit - old_od_limit`.  The card stores
-  `actual_funds + overdraft_limit` as its balance field, so when the limit changes the new
-  stored balance shifts by the limit delta.
+**Phase 1 -- INITIALIZE FOR UPDATE** (`INS 50`, P1=04, P2=01):
+
+Initiates the overdraft-limit update and authenticates the card to the terminal.
+The terminal sends the overdraft key slot ID (1 byte) and the terminal ID (6 bytes).
+Note that no amount is sent in this phase; the new limit is supplied in Phase 2.
+The card responds with 19 bytes:
+
+| Field | Length | Description |
+|-------|--------|-------------|
+| Old balance | 4 bytes | Current stored balance (actual funds + current overdraft limit) |
+| Online serial number | 2 bytes | Incremented by the card after each successful online transaction |
+| Old overdraft limit | 3 bytes | Current overdraft limit before the update |
+| Key version | 1 byte | Version of the overdraft key identified by the key slot ID |
+| Algorithm ID | 1 byte | Algorithm of that overdraft key |
+| Random seed | 4 bytes | Card-generated pseudorandom number for session key derivation |
+| MAC1 | 4 bytes | Card-computed MAC proving it holds the overdraft key |
+
+Session key (process key): `encrypt(random[4] | serial[2] | 0x8000, overdraft_key)[:8]`.
+MAC1 is: `DES-CBC-MAC(old_bal[4] | old_limit[3] | 0x07[1] | terminal[6], process_key)`,
+where `0x07` is the fixed transaction type identifier for overdraft limit updates.
+The terminal verifies MAC1 to confirm the card holds the correct key before proceeding.
+If MAC1 does not match, the transaction is aborted and the limit is unchanged.
+
+**Phase 2 -- UPDATE OVERDRAW LIMIT** (`INS 58`, P1=00, P2=00):
+
+Authorizes and commits the new overdraft limit.
+The terminal sends the new limit (3 bytes), host transaction date (4 bytes), time (3 bytes),
+and MAC2 (4 bytes).
+MAC2 is: `DES-CBC-MAC(new_limit[3] | 0x07[1] | terminal[6] | date[4] | time[3], process_key)`.
+
+The card responds with TAC (4 bytes).
+TAC is: `DES-CBC-MAC(tac_bal[4] | serial[2] | new_limit[3] | 0x07[1] | terminal[6] | date[4] | time[3], dtk_xor)`,
+where `dtk_xor` is the left 8 bytes XOR right 8 bytes of the internal key (DTK), and
+`tac_bal = old_balance + new_limit - old_overdraft_limit` (the new stored balance after the limit shift).
+
+The card stores `actual_funds + overdraft_limit` as its balance field, so changing the limit
+by a delta shifts the stored balance value by the same delta without altering actual funds.
+
+On success the card:
+- Updates the overdraft limit to the new value.
+- Adjusts the stored balance to `actual_funds + new_limit`.
+- Increments the online serial number by 1.
+- Appends a 23-byte transaction record (serial, new limit, amount, type `0x07`, terminal, date, time)
+  to the linked loop EF for auditing.
 
 ```
 hf fmcos overdraft --id 01 --limit 1000 \
@@ -746,9 +883,9 @@ Example output:
 ```
 [=] Old balance: 1000  old overdraft limit: 0
 [=] MAC1 OK
+[+] SW: 9000 - Success
 [+] Overdraft limit updated to 1000
 [+] TAC OK  aabbccdd
-[+] SW: 9000 - Success
 ```
 
 ### history
