@@ -497,6 +497,42 @@ static void xerox_print_footer(void) {
     PrintAndLogEx(NORMAL, "");
 }
 
+static void models_print(json_t *models) {
+    for (size_t k = 0; k < json_array_size(models); k++)
+        PrintAndLogEx(NORMAL, "  %zu.  %s", k + 1, json_string_value(json_array_get(models, k)));
+}
+
+static void consumables_print(json_t *consumables) {
+    for (size_t k = 0; k < json_array_size(consumables); k++) {
+        json_t *cons = json_array_get(consumables, k);
+
+        const char *type  = json_string_value(json_object_get(cons, "consumable_type"));
+        const char *color = json_string_value(json_object_get(cons, "color"));
+        const char *part  = json_string_value(json_object_get(cons, "part_number"));
+        const char *yield = json_string_value(json_object_get(cons, "yield"));
+        const char *zone  = json_string_value(json_object_get(cons, "region_zone"));
+        const char *ms    = json_string_value(json_object_get(cons, "metered_sold"));
+
+        if (zone == NULL || strlen(zone) == 0) zone = "-";
+        if (ms   == NULL || strlen(ms)   == 0) ms   = "-";
+
+        PrintAndLogEx(NORMAL, "  %zu.  %-6s  %-8s  %-14s  %6s pages  %-7s  %-7s",
+                      k + 1, type, color, part, yield, zone, ms);
+    }
+}
+
+static void consumable_print(json_t *consumable) {
+    PrintAndLogEx(NORMAL, "    Model....  %s", json_string_value(json_object_get(consumable, "printer_model")));
+    PrintAndLogEx(NORMAL, "    Consumable  %s", json_string_value(json_object_get(consumable, "consumable_type")));
+    PrintAndLogEx(NORMAL, "    Color....  %s", json_string_value(json_object_get(consumable, "color")));
+    PrintAndLogEx(NORMAL, "    PartNo...  %s", json_string_value(json_object_get(consumable, "part_number")));
+    PrintAndLogEx(NORMAL, "    Zone.....  %s", json_string_value(json_object_get(consumable, "region_zone")));
+    PrintAndLogEx(NORMAL, "    M/s......  %s", json_string_value(json_object_get(consumable, "metered_sold")));
+    PrintAndLogEx(NORMAL, "    Yield....  %s pages", json_string_value(json_object_get(consumable, "yield")));
+    PrintAndLogEx(NORMAL, "    IOT......  %s", json_string_value(json_object_get(consumable, "iot_codename")));
+    PrintAndLogEx(NORMAL, "    Chip.....  %s", json_string_value(json_object_get(consumable, "chip_type")));
+    PrintAndLogEx(NORMAL, "");
+}
 
 // structure and database for uid -> tagtype lookups
 typedef struct {
@@ -1088,56 +1124,156 @@ static int CmdHFXeroxWrBl(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf xerox wrbl",
                   "Write a Fuji/Xerox tag block\n",
-                  "hf xerox wrbl -b 1 -d 80040604"
-                 );
+                  "hf xerox wrbl -b 131 -d DB3ADB3A");
+ 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("b", "blk", "<dec>", "page number (0-255)"),
-        arg_str1("d", "data", "<hex>", "block data (4 bytes as hex, e.g. 80040604)"),
+        arg_int1("b", "blk",  "<dec>", "block number (0-255)"),
+        arg_str1("d", "data", "<hex>", "block data (4 bytes as hex, e.g. DB3ADB3A)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    
-    int blockno = arg_get_int_def(ctx, 1, -1);
-    if (blockno < 0 || blockno > 255) {  // Keep 0-255 limit since it's uint8_t
-        PrintAndLogEx(FAILED, "block number must be 0-255, got %d", blockno);
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-    
-    int dlen = 0;
+ 
+    int blockno  = arg_get_int_def(ctx, 1, -1);
+    int dlen     = 0;
     uint8_t block[4] = {0};
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 2), block, sizeof(block), &dlen);
-    if (res) {
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
+    int status   = CLIParamHexToBuf(arg_get_str(ctx, 2), block, sizeof(block), &dlen);
     CLIParserFree(ctx);
-    
-    if (dlen != 4) {
-        PrintAndLogEx(FAILED, "Data must be 8 hex chars (4 bytes), got %d hex chars", dlen * 2);
+ 
+    if (status != 0) {
         return PM3_EINVARG;
     }
-
+ 
+    if (blockno < 0 || blockno > 255) {
+        PrintAndLogEx(FAILED, "block number must be 0-255, got %d", blockno);
+        return PM3_EINVARG;
+    }
+ 
+    if (dlen != 4) {
+        PrintAndLogEx(FAILED, "data must be 4 bytes, got %d", dlen);
+        return PM3_EINVARG;
+    }
+ 
     iso14b_card_select_t card;
-    int status = xerox_select_card(&card, false);
+    status = xerox_select_card(&card, false);
     if (status != PM3_SUCCESS) {
         switch_off_field();
         return status;
     }
-
+ 
     status = write_xerox_block(&card, (uint8_t)blockno, block);
     switch_off_field();
-
+ 
     if (status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Wrote block %d: %s", blockno, sprint_hex(block, sizeof(block)));
     } else {
         PrintAndLogEx(FAILED, "Fuji/Xerox tag write failed");
     }
+ 
     return status;
 }
 
+static json_t* load_xerox_database(void) {
+    char *path = NULL;
+    if (searchFile(&path, RESOURCES_SUBDIR, "xerox", ".json", false) != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Failed to find " _YELLOW_("xerox.json"));
+        return NULL;
+    }
+
+    json_error_t error;
+    json_t *root = json_load_file(path, 0, &error);
+    if (root == NULL) {
+        PrintAndLogEx(ERR, "json (%s) error on line %d: %s", path, error.line, error.text);
+        free(path);
+        return NULL;
+    }
+    
+    if (json_is_array(root) == false) {
+        PrintAndLogEx(ERR, "Invalid json (%s) format. root must be an array.", path);
+        json_decref(root);
+        free(path);
+        return NULL;
+    }
+    
+    PrintAndLogEx(DEBUG, "Loaded file " _YELLOW_("%s") " " _GREEN_("%zu") " records", path, json_array_size(root));
+    free(path);
+    return root;
+}
+
+static json_t* filter_xerox_database(json_t *db, const char *filter_values[9]) {
+    if (db == NULL || !json_is_array(db)) return NULL;
+    
+    const char *filter_keys[9] = {
+        "printer_model", "color", "consumable_type", "part_number",
+        "region_zone", "metered_sold", "yield", "iot_codename", "chip_type"
+    };
+    
+    json_t *matches = json_array();
+    if (matches == NULL) return NULL;
+    
+    size_t db_idx;
+    json_t *entry;
+    json_array_foreach(db, db_idx, entry) {
+        bool ok = true;
+        
+        for (int f = 0; f < 9 && ok; f++) {
+            if (filter_values[f] == NULL) continue;
+            if (strlen(filter_values[f]) == 0) continue;
+            
+            const char *field_val = json_string_value(json_object_get(entry, filter_keys[f]));
+            if (field_val == NULL) {
+                ok = false;
+                continue;
+            }
+            
+            const char *needle = filter_values[f];
+            size_t field_len = strlen(field_val);
+            size_t needle_len = strlen(needle);
+            bool hit = false;
+            
+            // Manual search (works on all platforms)
+            for (size_t pos = 0; pos + needle_len <= field_len && !hit; pos++) {
+                if (strncasecmp(field_val + pos, needle, needle_len) == 0) {
+                    hit = true;
+                }
+            }
+            
+            if (!hit) ok = false;
+        }
+        
+        if (ok) {
+            json_array_append(matches, entry);
+        }
+    }
+    
+    return matches;
+}
+
+// Helper function for user selection of Printermodel or Consumable
+static int get_user_selection(size_t max_value, const char *prompt) {
+    if (max_value <= 1) {
+        return 0;  // Auto-select the only item
+    }
+    
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "%s (1-%zu): ", prompt, max_value);
+    
+    int selection = 0;
+    if (scanf(" %d", &selection) != 1) {
+        PrintAndLogEx(FAILED, "Invalid input - not a number");
+        return -1;
+    }
+    
+    if (selection < 1 || selection > (int)max_value) {
+        PrintAndLogEx(FAILED, "Invalid selection - must be between 1 and %zu", max_value);
+        return -1;
+    }
+    
+    return selection - 1;  // Convert to zero-based index
+}
+
 static int CmdHFXeroxMap(const char *Cmd) {
+
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf xerox remap",
                   "Remap a Xerox tag by selecting a consumable from the database\n",
@@ -1145,19 +1281,21 @@ static int CmdHFXeroxMap(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("m",  "model",    "<str>", "Printer model substring  (e.g. \"C60\", \"4110\")"),
-        arg_str0("c",  "color",    "<str>", "Color filter             (Black | Cyan | Magenta | Yellow)"),
-        arg_str0("t",  "type",     "<str>", "Consumable type          (toner | drum)"),
-        arg_str0("pn", "part",     "<str>", "Part number substring    (e.g. \"01529\", \"R015\")"),
-        arg_str0("z",  "zone",     "<str>", "Region zone              (DMO | NA/ESG | WW)"),
-        arg_str0("ms", "contract", "<str>", "Contract/sale type       (sold | metered)"),
-        arg_str0("y",  "yield",    "<str>", "Page yield               (e.g. \"30000\")"),
-        arg_str0("i",  "iot",      "<str>", "IOT codename substring   (e.g. \"Hera\")"),
-        arg_str0("ct", "chip",     "<str>", "Chip type substring      (e.g. \"HFD1\")"),
+        arg_str0("m",   "model",   "<str>", "Printer model substring (e.g. \"C60\", \"4110\")"),
+        arg_str0("c",   "color",   "<str>", "Color filter (Black | Cyan | Magenta | Yellow)"),
+        arg_str0("t",   "type",    "<str>", "Consumable type (toner | drum)"),
+        arg_str0("p",   "partno",  "<str>", "Part number substring (e.g. \"01529\", \"R015\")"),
+        arg_str0("z",   "zone",    "<str>", "Region zone (DMO | NA/ESG | WW | global)"),
+        arg_str0(NULL,  "ms",      "<str>", "Contract/sale type (sold | metered)"),
+        arg_str0("y",   "yield",   "<str>", "Page yield (exact: \"30000\" or range: \"20000-35000\")"),
+        arg_str0(NULL,  "iot",     "<str>", "IOT codename substring (e.g. \"Hera\")"),
+        arg_str0(NULL,  "chip",    "<str>", "Chip type filter (e.g. \"HFD1\")"),
         arg_param_end
     };
+
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
+    // Safe filters
     char model_filter[64]    = {0};
     char color_filter[64]    = {0};
     char type_filter[64]     = {0};
@@ -1168,214 +1306,146 @@ static int CmdHFXeroxMap(const char *Cmd) {
     char iot_filter[64]      = {0};
     char chip_filter[64]     = {0};
 
-    int mlen  = 0; if (arg_get_str(ctx, 1)->count) { mlen  = sizeof(model_filter)    - 1; CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)model_filter,    mlen,  &mlen); }
-    int clen  = 0; if (arg_get_str(ctx, 2)->count) { clen  = sizeof(color_filter)    - 1; CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)color_filter,    clen,  &clen); }
-    int tlen  = 0; if (arg_get_str(ctx, 3)->count) { tlen  = sizeof(type_filter)     - 1; CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)type_filter,     tlen,  &tlen); }
-    int plen  = 0; if (arg_get_str(ctx, 4)->count) { plen  = sizeof(part_filter)     - 1; CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)part_filter,     plen,  &plen); }
-    int zlen  = 0; if (arg_get_str(ctx, 5)->count) { zlen  = sizeof(zone_filter)     - 1; CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)zone_filter,     zlen,  &zlen); }
-    int mslen = 0; if (arg_get_str(ctx, 6)->count) { mslen = sizeof(contract_filter) - 1; CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)contract_filter, mslen, &mslen); }
-    int ylen  = 0; if (arg_get_str(ctx, 7)->count) { ylen  = sizeof(yield_filter)    - 1; CLIParamStrToBuf(arg_get_str(ctx, 7), (uint8_t *)yield_filter,    ylen,  &ylen); }
-    int ilen  = 0; if (arg_get_str(ctx, 8)->count) { ilen  = sizeof(iot_filter)      - 1; CLIParamStrToBuf(arg_get_str(ctx, 8), (uint8_t *)iot_filter,      ilen,  &ilen); }
-    int ctlen = 0; if (arg_get_str(ctx, 9)->count) { ctlen = sizeof(chip_filter)     - 1; CLIParamStrToBuf(arg_get_str(ctx, 9), (uint8_t *)chip_filter,     ctlen, &ctlen); }
+    struct arg_str *arg = NULL;
+
+    #define SAFE_COPY(i, dst) do { \
+        arg = arg_get_str(ctx, i); \
+        if (arg && arg->count) { \
+            int _len = 0; \
+            CLIParamStrToBuf(a, (uint8_t *)dst, sizeof(dst) - 1, &_len); \
+        } \
+    } while(0)
+
+    SAFE_COPY(1, model_filter);
+    SAFE_COPY(2, color_filter);
+    SAFE_COPY(3, type_filter);
+    SAFE_COPY(4, part_filter);
+    SAFE_COPY(5, zone_filter);
+    SAFE_COPY(6, contract_filter);
+    SAFE_COPY(7, yield_filter);
+    SAFE_COPY(8, iot_filter);
+    SAFE_COPY(9, chip_filter);
+
     CLIParserFree(ctx);
 
-    // declare all json handles up front so goto cleanup is always safe
-    json_t *root        = NULL;
-    json_t *matches     = NULL;
-    json_t *models      = NULL;
+    const char *filter_values[9] = {
+        model_filter[0]    ? model_filter    : NULL,
+        color_filter[0]    ? color_filter    : NULL,
+        type_filter[0]     ? type_filter     : NULL,
+        part_filter[0]     ? part_filter     : NULL,
+        zone_filter[0]     ? zone_filter     : NULL,
+        contract_filter[0] ? contract_filter : NULL,
+        yield_filter[0]    ? yield_filter    : NULL,
+        iot_filter[0]      ? iot_filter      : NULL,
+        chip_filter[0]     ? chip_filter     : NULL,
+    };
+
+    json_t *db = NULL;
+    json_t *matches = NULL;
+    json_t *models = NULL;
     json_t *consumables = NULL;
-    int retval          = PM3_SUCCESS;
 
-    // load database
-    char *path = NULL;
-    if (searchFile(&path, RESOURCES_SUBDIR, "xerox", ".json", false) != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "Failed to find " _YELLOW_("xerox.json"));
-        retval = PM3_EFILE;
-        goto cleanup;
-    }
+    int retval = PM3_SUCCESS;
 
-    json_error_t error;
-    root = json_load_file(path, 0, &error);
-    free(path);
+    db = load_xerox_database();
+    if (!db) return PM3_EFILE;
 
-    if (root == NULL || json_is_array(root) == false) {
-        PrintAndLogEx(FAILED, "Failed to load " _YELLOW_("xerox.json") " :: %s", error.text);
-        retval = PM3_EFILE;
-        goto cleanup;
-    }
-
-    // filter matching entries
-    matches = json_array();
-    size_t idx;
-    json_t *entry;
-
-    json_array_foreach(root, idx, entry) {
-        bool ok = true;
-
-        const char *fields[9] = {
-            json_string_value(json_object_get(entry, "printer_model")),
-            json_string_value(json_object_get(entry, "color")),
-            json_string_value(json_object_get(entry, "consumable_type")),
-            json_string_value(json_object_get(entry, "part_number")),
-            json_string_value(json_object_get(entry, "region_zone")),
-            json_string_value(json_object_get(entry, "metered_sold")),
-            json_string_value(json_object_get(entry, "yield")),
-            json_string_value(json_object_get(entry, "iot_codename")),
-            json_string_value(json_object_get(entry, "chip_type")),
-        };
-        const char *filters[9] = {
-            mlen  ? model_filter    : NULL,
-            clen  ? color_filter    : NULL,
-            tlen  ? type_filter     : NULL,
-            plen  ? part_filter     : NULL,
-            zlen  ? zone_filter     : NULL,
-            mslen ? contract_filter : NULL,
-            ylen  ? yield_filter    : NULL,
-            ilen  ? iot_filter      : NULL,
-            ctlen ? chip_filter     : NULL,
-        };
-
-        for (int f = 0; f < 9 && ok; f++) {
-            if (filters[f] == NULL)
-                continue;
-            const char *h = fields[f];
-            const char *n = filters[f];
-            size_t hlen = strlen(h);
-            size_t nlen = strlen(n);
-            bool hit = false;
-            for (size_t i = 0; i <= hlen - nlen && hit == false; i++) {
-                if (strncasecmp(h + i, n, nlen) == 0)
-                    hit = true;
-            }
-            if (hit == false)
-                ok = false;
-        }
-
-        if (ok)
-            json_array_append(matches, entry);
-    }
-
-    if (json_array_size(matches) == 0) {
-        PrintAndLogEx(FAILED, "No consumables matched the given filters");
+    matches = filter_xerox_database(db, filter_values);
+    if (!matches || json_array_size(matches) == 0) {
+        PrintAndLogEx(FAILED, "No consumables matched filters");
         retval = PM3_EINVARG;
         goto cleanup;
     }
 
-    // collect unique printer models from matches
+    // Build model list (unique)
     models = json_array();
-    json_array_foreach(matches, idx, entry) {
+    if (!models) goto cleanup;
+
+    size_t i;
+    json_t *entry;
+
+    json_array_foreach(matches, i, entry) {
         const char *model = json_string_value(json_object_get(entry, "printer_model"));
-        bool found = false;
-        for (size_t i = 0; i < json_array_size(models); i++) {
-            if (strcmp(model, json_string_value(json_array_get(models, i))) == 0) {
-                found = true;
+        if (!model) continue;
+
+        bool exists = false;
+
+        size_t k;
+        for (k = 0; k < json_array_size(models); k++) {
+            const char *m = json_string_value(json_array_get(models, k));
+            if (m && strcmp(m, model) == 0) {
+                exists = true;
                 break;
             }
         }
-        if (found == false)
+
+        if (!exists) {
             json_array_append_new(models, json_string(model));
+        }
     }
 
-    // select printer model
-    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Matching printer models:");
-    for (size_t i = 0; i < json_array_size(models); i++)
-        PrintAndLogEx(NORMAL, "  %zu.  %s", i + 1, json_string_value(json_array_get(models, i)));
+    models_print(models);
 
-    int model_idx = 0;
-    if (json_array_size(models) > 1) {
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(NORMAL, "Enter number (1-%zu) : ", json_array_size(models));
-        int sel = 0;
-        if (scanf(" %d", &sel) != 1 || sel < 1 || sel > (int)json_array_size(models)) {
-            PrintAndLogEx(FAILED, "Invalid selection");
-            retval = PM3_EINVARG;
-            goto cleanup;
-        }
-        model_idx = sel - 1;
+    int model_idx = get_user_selection(json_array_size(models), "Select model");
+    if (model_idx < 0) {
+        retval = PM3_EINVARG;
+        goto cleanup;
     }
 
     const char *selected_model = json_string_value(json_array_get(models, model_idx));
 
-    // collect consumables for selected model
+    if (!selected_model) {
+        retval = PM3_EINVARG;
+        goto cleanup;
+    }
+
+    // Filter consumables for model
     consumables = json_array();
-    json_array_foreach(matches, idx, entry) {
-        if (strcmp(json_string_value(json_object_get(entry, "printer_model")), selected_model) == 0)
+    if (!consumables) goto cleanup;
+
+    json_array_foreach(matches, i, entry) {
+        const char *m = json_string_value(json_object_get(entry, "printer_model"));
+        if (m && strcmp(m, selected_model) == 0) {
             json_array_append(consumables, entry);
-    }
-
-    // select consumable
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Available consumables for " _GREEN_("%s") ":", selected_model);
-    for (size_t i = 0; i < json_array_size(consumables); i++) {
-        json_t *c = json_array_get(consumables, i);
-        
-        const char *type   = json_string_value(json_object_get(c, "consumable_type"));
-        const char *color  = json_string_value(json_object_get(c, "color"));
-        const char *part   = json_string_value(json_object_get(c, "part_number"));
-        const char *yield  = json_string_value(json_object_get(c, "yield"));
-        const char *zone   = json_string_value(json_object_get(c, "region_zone"));
-        const char *ms     = json_string_value(json_object_get(c, "metered_sold"));
-        
-        // Handle empty strings
-        if (!zone || strlen(zone) == 0) zone = "-";
-        if (!ms || strlen(ms) == 0) ms = "-";
-        
-        PrintAndLogEx(NORMAL, "  %zu.  %-6s  %-8s  %-14s  %6s pages  %-7s  %-7s",
-                      i + 1,
-                      type,
-                      color,
-                      part,
-                      yield,
-                      zone,
-                      ms);
-    }
-
-    int cons_idx = 0;
-    if (json_array_size(consumables) > 1) {
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(NORMAL, "Enter number (1-%zu) : ", json_array_size(consumables));
-        int sel = 0;
-        if (scanf(" %d", &sel) != 1 || sel < 1 || sel > (int)json_array_size(consumables)) {
-            PrintAndLogEx(FAILED, "Invalid selection");
-            retval = PM3_EINVARG;
-            goto cleanup;
         }
-        cons_idx = sel - 1;
+    }
+
+    PrintAndLogEx(INFO, "Consumables for %s:", selected_model);
+    consumables_print(consumables);
+
+    int cons_idx = get_user_selection(json_array_size(consumables), "Select consumable");
+    if (cons_idx < 0) {
+        retval = PM3_EINVARG;
+        goto cleanup;
     }
 
     json_t *selected = json_array_get(consumables, cons_idx);
+    if (!selected) {
+        retval = PM3_EINVARG;
+        goto cleanup;
+    }
 
-    // show selection summary
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Selected:");
-    PrintAndLogEx(NORMAL, "    Model....  %s", selected_model);
-    PrintAndLogEx(NORMAL, "    Consumable  %s", json_string_value(json_object_get(selected, "consumable_type")));
-    PrintAndLogEx(NORMAL, "    Color....  %s", json_string_value(json_object_get(selected, "color")));
-    PrintAndLogEx(NORMAL, "    PartNo...  %s", json_string_value(json_object_get(selected, "part_number")));
-    PrintAndLogEx(NORMAL, "    Zone.....  %s", json_string_value(json_object_get(selected, "region_zone")));
-    PrintAndLogEx(NORMAL, "    M/s......  %s", json_string_value(json_object_get(selected, "metered_sold")));
-    PrintAndLogEx(NORMAL, "    Yield....  %s pages", json_string_value(json_object_get(selected, "yield")));
-    PrintAndLogEx(NORMAL, "    IOT......  %s", json_string_value(json_object_get(selected, "iot_codename")));
-    PrintAndLogEx(NORMAL, "    Chip.....  %s", json_string_value(json_object_get(selected, "chip_type")));
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Press " _GREEN_("'y'") " to write to tag, any other key to abort");
+    PrintAndLogEx(INFO, "Selected consumable:");
+    consumable_print(selected);
 
-    char ch = 0;
-    if (scanf(" %c", &ch) != 1 || ch != 'y') {
+    // Confirm write
+    PrintAndLogEx(INFO, "Press 'y' to continue writing, anything else to abort");
+
+    char confirm_char = 0;
+    if (scanf(" %c", &confirm_char) != 1 || confirm_char != 'y') {
         PrintAndLogEx(INFO, "Aborted");
         goto cleanup;
     }
 
-    // write to tag
-    // TODO: implement once block data is added to xerox.json
-    PrintAndLogEx(WARNING, "Tag writing is not yet implemented");
+    PrintAndLogEx(WARNING, "Write not implemented yet (needs block mapping from JSON)");
 
 cleanup:
-    json_decref(consumables);
-    json_decref(models);
-    json_decref(matches);
-    json_decref(root);
+    if (consumables) json_decref(consumables);
+    if (models) json_decref(models);
+    if (matches) json_decref(matches);
+    if (db) json_decref(db);
+
     return retval;
 }
 
