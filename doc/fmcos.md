@@ -15,24 +15,24 @@ All commands in this family are reachable via `hf fmcos <subcommand>`.
   - [select](#select)
 - [File Management](#file-management)
   - [erase](#erase)
-  - [create dir](#create-dir)
-  - [create file](#create-file)
-  - [create keyfile](#create-keyfile)
+  - [createdir](#createdir)
+  - [createfile](#createfile)
+  - [createkeyfile](#createkeyfile)
 - [Data Access](#data-access)
-  - [read binary](#read-binary)
-  - [read record](#read-record)
-  - [write binary](#write-binary)
-  - [write record](#write-record)
+  - [readbinary](#readbinary)
+  - [readrecord](#readrecord)
+  - [writebinary](#writebinary)
+  - [writerecord](#writerecord)
   - [append](#append)
   - [key (write key)](#key-write-key)
 - [Authentication](#authentication)
-  - [auth external](#auth-external)
-  - [auth internal](#auth-internal)
+  - [authexternal](#authexternal)
+  - [authinternal](#authinternal)
 - [PIN Management](#pin-management)
-  - [pin verify](#pin-verify)
-  - [pin change](#pin-change)
-  - [pin reset](#pin-reset)
-  - [pin unblock](#pin-unblock)
+  - [pinverify](#pinverify)
+  - [pinchange](#pinchange)
+  - [pinreset](#pinreset)
+  - [pinunblock](#pinunblock)
 - [Financial Operations](#financial-operations)
   - [balance](#balance)
   - [credit](#credit)
@@ -48,14 +48,14 @@ All commands in this family are reachable via `hf fmcos <subcommand>`.
 - [Access Rights Byte](#access-rights-byte)
 - [Complete Wallet Session Walkthrough](#complete-wallet-session-walkthrough)
 - [TID Tag Provisioning](#tid-tag-provisioning)
-  - [tid setcard](#tid-setcard)
-  - [tid setuid](#tid-setuid)
-  - [tid setauth](#tid-setauth)
-  - [tid erase](#tid-erase)
-  - [tid provision](#tid-provision)
-  - [tid createdf](#tid-createdf)
-  - [tid createbin](#tid-createbin)
-  - [tid createrec](#tid-createrec)
+  - [tidsetcard](#tidsetcard)
+  - [tidsetuid](#tidsetuid)
+  - [tidsetauth](#tidsetauth)
+  - [tiderase](#tiderase)
+  - [tidprovision](#tidprovision)
+  - [tidcreatedf](#tidcreatedf)
+  - [tidcreatebin](#tidcreatebin)
+  - [tidcreaterec](#tidcreaterec)
 - [TID Vendor Card Templates](#tid-vendor-card-templates)
 
 ---
@@ -102,39 +102,72 @@ hf fmcos select --id 3f00
 hf fmcos erase
 ```
 
-### create dir
+### createdir
 
 CREATE DF (directory / application directory).
 
 ```
-hf fmcos create dir --id 3f01 --space 1500 --cperm f0 --eperm f0 --appid 95 --name 77616C6C657454657374
+hf fmcos createdir --id 3f01 --space 1500 --cperm f0 --eperm f0 --appid 95 --name 77616C6C657454657374
 ```
 
 | Flag | Description |
 |------|-------------|
 | `--id <hex>` | 2-byte file ID for the new DF |
 | `--space <hex>` | Total byte space to reserve (hex, e.g. `1500` = 5376 bytes) |
-| `--cperm <hex>` | Create-permission byte (e.g. `f0` = always allowed) |
-| `--eperm <hex>` | Erase-permission byte |
-| `--appid <hex>` | 1-byte application SID / AID tag |
+| `--cperm <hex>` | Create-permission byte - who may create files inside this DF |
+| `--eperm <hex>` | Erase-permission byte - who may erase this DF |
+| `--appid <hex>` | 1-byte application file ID (DF type + short identifier) |
 | `--name <hex>` | Optional DF name bytes as hex (up to 16 bytes, enables select-by-name) |
 
-### create file
+**`--cperm` (create permission):**
+
+Controls the minimum security state required to create new EFs or sub-DFs inside this DF.
+Uses the same XY nibble encoding as `--rperm` / `--wperm` in `createfile` (see the permission byte table there).
+
+After `erase` clears the DF, the create-permission check is suspended and any file may be created freely.
+The restriction is reinstated the next time the DF is re-entered once a KEY file has been established inside it.
+
+**`--eperm` (erase permission):**
+
+Controls the minimum security state required to run `erase` on this DF.
+Uses the same XY nibble encoding.
+Erasing a DF destroys all EFs and sub-DFs inside it; the DF record, its permissions, and its allocated space
+are preserved.
+Set to `ef` to prohibit erasing entirely: since E (14) < F (15), the range E..F is impossible and the condition
+can never be satisfied.
+
+**`--appid` (application file ID):**
+
+A 1-byte value stored in the DF control block that encodes both the DF type and a short numeric identifier.
+
+| Bits 7-5 | Meaning |
+|----------|---------|
+| `000` | Dedicated Directory File (DDF) - a plain directory, no application context |
+| `100` | Application Dedicated File (ADF) - holds a PBOC / EMV application |
+
+Bits 4-0 are the short file identifier (0-31) used by the card to link this DF to its keyfile.
+This value must equal the `--dfsid` argument when creating the keyfile for this DF with `createkeyfile`.
+
+Example: `--appid 95` = binary `10010101` - bits 7-5 are `100` (ADF), bits 4-0 are `10101` = 21 = `0x15`,
+so the FCI returned on SELECT FILE references short identifier `0x15` and the matching keyfile uses `--dfsid 95`.
+Standard PBOC wallet DFs conventionally use `0x95`.
+
+### createfile
 
 CREATE EF (elementary file) in the currently selected DF.
 
 ```
 # Unprotected binary file
-hf fmcos create file --id 0002 --type bin --size 50 --rperm f0 --wperm f0 --access ff
+hf fmcos createfile --id 0002 --type bin --size 50 --rperm f0 --wperm f0 --access ff
 
 # Variable-length record file with MAC-only line protection
-hf fmcos create file --id 0006 --type var --size 50 --rperm f0 --wperm f0 --access 7f --prot mac
+hf fmcos createfile --id 0006 --type var --size 50 --rperm f0 --wperm f0 --access 7f --prot mac
 
 # Loop (cyclic) file with MAC+encryption
-hf fmcos create file --id 000a --type loop --size 210 --rperm f0 --wperm f0 --access 7f --prot enc
+hf fmcos createfile --id 000a --type loop --size 210 --rperm f0 --wperm f0 --access 7f --prot enc
 
 # Wallet/passbook balance file (EDEP) linked to loop file 0x0018
-hf fmcos create file --id 0002 --type wallet --size 0208 --rperm f0 --wperm 00 --access 18
+hf fmcos createfile --id 0002 --type wallet --size 0208 --rperm f0 --wperm 00 --access 18
 ```
 
 | Flag | Description |
@@ -231,13 +264,13 @@ have its low nibble set to `4` (`0x04` plain, `0x84` for ISO-secure) when line p
 | `loop` | 0x2E | Cyclic (loop) file -- used for transaction logs |
 | `wallet` | 0x2F | E-purse wallet / passbook balance file |
 
-### create keyfile
+### createkeyfile
 
 CREATE KEYFILE in the currently selected DF.  A DF must have a keyfile before any keys
 can be written to it.
 
 ```
-hf fmcos create keyfile --id 0000 --space 200 --dfsid 95 --perm f0
+hf fmcos createkeyfile --id 0000 --space 200 --dfsid 95 --perm f0
 ```
 
 | Flag | Description |
@@ -278,19 +311,19 @@ Common values:
 
 ## Data Access
 
-### read binary
+### readbinary
 
 READ BINARY from the currently selected transparent (bin) EF.
 
 ```
 # Plain read
-hf fmcos read binary --p1 00 --p2 00 --len 10
+hf fmcos readbinary --p1 00 --p2 00 --len 10
 
 # With MAC line-protection (verifies response MAC)
-hf fmcos read binary --p1 00 --p2 00 --len 10 --prot mac --key 36363636363636363636363636363636
+hf fmcos readbinary --p1 00 --p2 00 --len 10 --prot mac --key 36363636363636363636363636363636
 
 # With MAC+encryption (decrypts response)
-hf fmcos read binary --p1 00 --p2 00 --len 10 --prot enc --key 36363636363636363636363636363636
+hf fmcos readbinary --p1 00 --p2 00 --len 10 --prot enc --key 36363636363636363636363636363636
 ```
 
 | Flag | Description |
@@ -301,19 +334,19 @@ hf fmcos read binary --p1 00 --p2 00 --len 10 --prot enc --key 36363636363636363
 | `--prot <mode>` | `none`, `mac`, or `enc` |
 | `--key <hex>` | Line-protection key (8 or 16 bytes, required when `--prot` is mac/enc) |
 
-### read record
+### readrecord
 
 READ RECORD from the currently selected record or cyclic EF.
 
 ```
 # Read record 1 from var file 0x06 (plain)
-hf fmcos read record --rec 01 --fid 06 --len 10
+hf fmcos readrecord --rec 01 --fid 06 --len 10
 
 # Read with MAC verification
-hf fmcos read record --rec 01 --fid 07 --len 10 --prot mac --key 36363636363636363636363636363636
+hf fmcos readrecord --rec 01 --fid 07 --len 10 --prot mac --key 36363636363636363636363636363636
 
 # Read with decryption
-hf fmcos read record --rec 01 --fid 08 --len 10 --prot enc --key 36363636363636363636363636363636
+hf fmcos readrecord --rec 01 --fid 08 --len 10 --prot enc --key 36363636363636363636363636363636
 ```
 
 | Flag | Description |
@@ -324,20 +357,20 @@ hf fmcos read record --rec 01 --fid 08 --len 10 --prot enc --key 363636363636363
 | `--prot <mode>` | `none`, `mac`, or `enc` |
 | `--key <hex>` | Line-protection key when prot is mac/enc |
 
-### write binary
+### writebinary
 
 UPDATE BINARY -- write data to the currently selected transparent EF.
 
 ```
 # Plain write
-hf fmcos write binary --p1 00 --p2 00 --data 11121314151617181910
+hf fmcos writebinary --p1 00 --p2 00 --data 11121314151617181910
 
 # Write with MAC
-hf fmcos write binary --p1 00 --p2 00 --data 21222324252627282920 \
+hf fmcos writebinary --p1 00 --p2 00 --data 21222324252627282920 \
   --prot mac --key 36363636363636363636363636363636
 
 # Write with MAC+encryption (data is encrypted before sending)
-hf fmcos write binary --p1 00 --p2 00 --data 31323334353637383930 \
+hf fmcos writebinary --p1 00 --p2 00 --data 31323334353637383930 \
   --prot enc --key 36363636363636363636363636363636
 ```
 
@@ -349,20 +382,20 @@ hf fmcos write binary --p1 00 --p2 00 --data 31323334353637383930 \
 | `--prot <mode>` | `none`, `mac`, or `enc` |
 | `--key <hex>` | Line-protection key |
 
-### write record
+### writerecord
 
 UPDATE RECORD -- write a record into the currently selected EF.
 
 ```
 # Plain record write (P1=record number, P2=file-id<<3|04)
-hf fmcos write record --rec 01 --fid 06 --data 5152535455565758595a
+hf fmcos writerecord --rec 01 --fid 06 --data 5152535455565758595a
 
 # With MAC
-hf fmcos write record --rec 01 --fid 07 --data 6162636465666768696a \
+hf fmcos writerecord --rec 01 --fid 07 --data 6162636465666768696a \
   --prot mac --key 36363636363636363636363636363636
 
 # With MAC+encryption
-hf fmcos write record --rec 01 --fid 08 --data 7172737475767778797a \
+hf fmcos writerecord --rec 01 --fid 08 --data 7172737475767778797a \
   --prot enc --key 36363636363636363636363636363636
 ```
 
@@ -477,13 +510,13 @@ hf fmcos key --op 01 --id 00 --type changepin \
 
 ## Authentication
 
-### auth external
+### authexternal
 
 EXTERNAL AUTHENTICATE -- authenticate the reader to the card.  The card issues a challenge,
 the reader encrypts it with the external-auth key, and sends the response back.
 
 ```
-hf fmcos auth external --id 00 --key f49dc1ba1b4deb5264718bc559106c0d
+hf fmcos authexternal --id 00 --key f49dc1ba1b4deb5264718bc559106c0d
 ```
 
 | Flag | Description |
@@ -491,14 +524,14 @@ hf fmcos auth external --id 00 --key f49dc1ba1b4deb5264718bc559106c0d
 | `--id <hex>` | Key slot ID |
 | `--key <hex>` | External-auth key (8 or 16 bytes) |
 
-### auth internal
+### authinternal
 
 INTERNAL AUTHENTICATE -- authenticate the card to the reader.  The reader sends an 8-byte
 challenge (`--data`); the card responds with a DES-encrypted value that the reader verifies
 offline.
 
 ```
-hf fmcos auth internal --p1 00 --p2 00 --data 0102030405060708
+hf fmcos authinternal --p1 00 --p2 00 --data 0102030405060708
 ```
 
 | Flag | Description |
@@ -511,13 +544,13 @@ hf fmcos auth internal --p1 00 --p2 00 --data 0102030405060708
 
 ## PIN Management
 
-### pin verify
+### pinverify
 
 VERIFY PIN -- present the PIN code to the card to unlock PIN-gated operations.
 PIN is 2-6 raw bytes.
 
 ```
-hf fmcos pin verify --id 00 --pin 123456
+hf fmcos pinverify --id 00 --pin 123456
 ```
 
 | Flag | Description |
@@ -525,12 +558,12 @@ hf fmcos pin verify --id 00 --pin 123456
 | `--id <hex>` | PIN key slot ID |
 | `--pin <hex>` | PIN bytes (2-6 bytes) |
 
-### pin change
+### pinchange
 
 CHANGE PIN -- change the PIN using the current (old) PIN for authorization.
 
 ```
-hf fmcos pin change --id 00 --old 123456 --new 13371337
+hf fmcos pinchange --id 00 --old 123456 --new 13371337
 ```
 
 | Flag | Description |
@@ -539,13 +572,13 @@ hf fmcos pin change --id 00 --old 123456 --new 13371337
 | `--old <hex>` | Current PIN (2-6 bytes) |
 | `--new <hex>` | New PIN (2-6 bytes) |
 
-### pin reset
+### pinreset
 
 RESET PIN -- set a new PIN using the change-PIN key MAC for authorization (no old PIN needed).
 The command computes a MAC over the new PIN using the change-PIN key and sends it to the card.
 
 ```
-hf fmcos pin reset --id 00 --pin 13371337 \
+hf fmcos pinreset --id 00 --pin 13371337 \
   --key fb487a6d1b7cbf1bf84c666b8338376e
 ```
 
@@ -555,13 +588,13 @@ hf fmcos pin reset --id 00 --pin 13371337 \
 | `--pin <hex>` | New PIN (2-6 bytes) |
 | `--key <hex>` | Change-PIN key (16 bytes); MAC = DES-MAC(new_pin, XOR_halves(key)) |
 
-### pin unblock
+### pinunblock
 
 UNBLOCK PIN -- clear the PIN blocked state and set a new PIN.
 The new PIN is encrypted with the unlock-PIN key and a GET CHALLENGE IV.
 
 ```
-hf fmcos pin unblock --id 00 --pin 123456 \
+hf fmcos pinunblock --id 00 --pin 123456 \
   --key d8f60fa2d791f3a658d27c054582430e
 ```
 
@@ -616,16 +649,43 @@ Example output:
 
 ### credit
 
-ADD CREDIT -- two-phase credit transaction.
+ADD CREDIT -- two-phase credit (load) transaction (PBOC INITIALIZE FOR LOAD + CREDIT FOR LOAD).
 
-**Phase 1** (`INS 50`, P1=00): send key ID, amount, terminal ID.  Card returns old balance,
-transaction serial, key version, algo ID, random seed, and MAC1.  The implementation:
-- Derives the process key: `encrypt(random[4] | serial[2], credit_key)` -> first 8 bytes
-- Verifies MAC1: `DES-CBC-MAC(old_bal[4] | amount[4] | type[1] | terminal[6], process_key)`
+**Phase 1 -- INITIALIZE FOR LOAD** (`INS 50`, P1=00):
 
-**Phase 2** (`INS 52`, P1=00): send date, time, MAC2.  Card returns TAC.  The implementation:
-- Computes MAC2: `DES-CBC-MAC(amount[4] | type[1] | terminal[6] | date[4] | time[3], process_key)`
-- Verifies TAC: `DES-CBC-MAC(new_bal[4] | serial[2] | MAC2_buf[18], tac_key)`
+Initiates the credit transaction and authenticates the card to the terminal.
+The terminal sends the credit key slot ID, the load amount (4 bytes), and the terminal ID (6 bytes).
+The card responds with 16 bytes:
+
+| Field | Length | Description |
+|-------|--------|-------------|
+| Old balance | 4 bytes | Current balance before loading |
+| Online serial number | 2 bytes | Incremented by the card after each successful load |
+| Key version | 1 byte | Version of the credit key identified by the key slot ID |
+| Algorithm ID | 1 byte | Algorithm of that credit key |
+| Random seed | 4 bytes | Card-generated pseudorandom number for session key derivation |
+| MAC1 | 4 bytes | Card-computed MAC proving it holds the credit key |
+
+The session key (process key) is derived as: `encrypt(random[4] | serial[2] | 0x8000, credit_key)`, first 8 bytes.
+MAC1 is: `DES-CBC-MAC(old_bal[4] | amount[4] | type[1] | terminal[6], process_key)`.
+The terminal verifies MAC1 to confirm the card holds the correct key before proceeding.
+If MAC1 does not match, the transaction is aborted and the balance is unchanged.
+
+**Phase 2 -- CREDIT FOR LOAD** (`INS 52`, P1=00):
+
+Authorizes and commits the balance update.
+The terminal sends the host transaction date (4 bytes), time (3 bytes), and MAC2 (4 bytes).
+MAC2 is: `DES-CBC-MAC(amount[4] | type[1] | terminal[6] | date[4] | time[3], process_key)`.
+
+On success the card:
+- Adds the loaded amount to the balance.
+- Increments the online serial number by 1.
+- Appends a 23-byte transaction record (serial, overdraft limit, amount, type, terminal, date, time) to the linked loop EF for auditing.
+
+The card responds with the TAC (Transaction Authentication Code, 4 bytes):
+`DES-CBC-MAC(new_bal[4] | serial[2] | amount[4] | type[1] | terminal[6] | date[4] | time[3], dtk_xor)`,
+where `dtk_xor` is the left 8 bytes XOR right 8 bytes of the internal key (DTK).
+The terminal verifies the TAC to confirm the card committed the transaction.
 
 ```
 hf fmcos credit --type wallet --id 01 --amount 1000 \
@@ -662,17 +722,56 @@ Example output:
 
 ### purchase
 
-PURCHASE -- two-phase debit transaction from wallet or passbook.
+PURCHASE -- two-phase offline debit transaction from wallet or passbook
+(PBOC INITIALIZE FOR PURCHASE + DEBIT FOR PURCHASE).
 
-**Phase 1** (`INS 50`, P1=01): send key ID, amount, terminal.  Card returns old balance,
-offline serial, overdraft limit, key version, algo, random seed (15 bytes total).
-- Derives process key: `encrypt(random[4] | offline_serial[2] | tx_serial[2], purchase_key)[:8]`
-- Computes MAC1: `DES-CBC-MAC(amount[4] | tx_type[1] | terminal[6] | date[4] | time[3], process_key)`
+Passbook purchase requires a successful PIN verify beforehand; wallet purchase does not.
 
-**Phase 2** (`INS 54`, P1=01, P2=00): send tx serial, date, time, MAC1.  Card returns TAC[4]+MAC2[4].
-- Verifies TAC: `DES-CBC-MAC(amount[4] | tx_type[1] | terminal[6] | serial[4] | date[4] | time[3], tac_key)`
+**Phase 1 -- INITIALIZE FOR PURCHASE** (`INS 50`, P1=01):
 
-Transaction type byte: 0x05 for passbook purchase, 0x06 for wallet purchase.
+Initiates the purchase transaction and returns the card state needed for the terminal to derive
+the session key and compute the authorization MAC.
+The terminal sends the purchase key slot ID, the debit amount (4 bytes), and the terminal ID (6 bytes).
+The card responds with 15 bytes:
+
+| Field | Length | Description |
+|-------|--------|-------------|
+| Old balance | 4 bytes | Current balance before the debit |
+| Offline serial number | 2 bytes | Incremented by the card after each successful purchase |
+| Overdraft limit | 3 bytes | Maximum permitted overdraft on this file |
+| Key version | 1 byte | Version of the purchase key identified by the key slot ID |
+| Algorithm ID | 1 byte | Algorithm of that purchase key |
+| Random seed | 4 bytes | Card-generated pseudorandom number for session key derivation |
+
+Unlike the credit transaction, the card does not return a MAC1 in this phase.
+Instead, the terminal uses the card's response to derive the session key and compute MAC1 locally:
+
+- Session key (process key): `encrypt(random[4] | offline_serial[2] | tx_serial_low2[2], purchase_key)[:8]`,
+  where `tx_serial_low2` is the rightmost 2 bytes of the terminal transaction serial number.
+- MAC1 (computed by terminal): `DES-CBC-MAC(amount[4] | type[1] | terminal[6] | date[4] | time[3], process_key)`.
+
+If the card returns a non-9000 status the transaction is aborted and the balance is unchanged.
+
+**Phase 2 -- DEBIT FOR PURCHASE** (`INS 54`, P1=01, P2=00):
+
+Authorizes and commits the balance deduction.
+The terminal sends the terminal transaction serial (4 bytes), date (4 bytes), time (3 bytes), and MAC1 (4 bytes).
+The card verifies MAC1, then deducts the amount and returns 8 bytes:
+
+| Field | Length | Description |
+|-------|--------|-------------|
+| TAC | 4 bytes | Transaction Authentication Code for terminal verification |
+| MAC2 | 4 bytes | Card-computed MAC over the debit amount |
+
+TAC is: `DES-CBC-MAC(amount[4] | type[1] | terminal[6] | tx_serial[4] | date[4] | time[3], dtk_xor)`,
+where `dtk_xor` is the left 8 bytes XOR right 8 bytes of the internal key (DTK).
+MAC2 is: `DES-CBC-MAC(amount[4], process_key)`.
+
+On success the card:
+- Deducts the purchase amount from the balance.
+- Increments the offline serial number by 1.
+
+Transaction type byte: `0x05` for passbook purchase, `0x06` for wallet purchase.
 
 ```
 # Wallet purchase of 50 units
@@ -710,20 +809,58 @@ Example output:
 
 ### overdraft
 
-UPDATE OVERDRAFT LIMIT -- two-phase overdraft-limit update on the passbook.
+UPDATE OVERDRAFT LIMIT -- two-phase online overdraft-limit update on the passbook
+(PBOC INITIALIZE FOR UPDATE + UPDATE OVERDRAW LIMIT).
 
-**Phase 1** (`INS 50`, P1=04, P2=01): send key ID and terminal.  Card returns old balance,
-online serial, old limit, key version, algo, random seed, and MAC1 (19 bytes total).
-- Derives process key: `encrypt(random[4] | serial[2], overdraft_key)[:8]`
-- Verifies MAC1: `DES-CBC-MAC(old_bal[4] | old_limit[3] | 0x07[1] | terminal[6], process_key)`
+The overdraft limit allows transactions to continue when the actual passbook funds are
+insufficient, up to the issuer-permitted limit.
+This transaction must be performed online at a financial terminal and requires a successful
+PIN verify beforehand.  It applies to passbook only; wallet files do not carry an overdraft limit.
 
-**Phase 2** (`INS 58`, P1=00, P2=00): send new limit (3 bytes), date, time, MAC2.
-- Computes MAC2: `DES-CBC-MAC(new_limit[3] | 0x07[1] | terminal[6] | date[4] | time[3], process_key)`
-- Card returns TAC[4].  When `--ikey` is provided the TAC is verified:
-  `DES-CBC-MAC(XOR(ikey[0:8], ikey[8:16]), tac_bal[4] | online_serial[2] | new_limit[3] | 0x07[1] | terminal[6] | date[4] | time[3])`
-  where `tac_bal = old_balance + new_limit - old_od_limit`.  The card stores
-  `actual_funds + overdraft_limit` as its balance field, so when the limit changes the new
-  stored balance shifts by the limit delta.
+**Phase 1 -- INITIALIZE FOR UPDATE** (`INS 50`, P1=04, P2=01):
+
+Initiates the overdraft-limit update and authenticates the card to the terminal.
+The terminal sends the overdraft key slot ID (1 byte) and the terminal ID (6 bytes).
+Note that no amount is sent in this phase; the new limit is supplied in Phase 2.
+The card responds with 19 bytes:
+
+| Field | Length | Description |
+|-------|--------|-------------|
+| Old balance | 4 bytes | Current stored balance (actual funds + current overdraft limit) |
+| Online serial number | 2 bytes | Incremented by the card after each successful online transaction |
+| Old overdraft limit | 3 bytes | Current overdraft limit before the update |
+| Key version | 1 byte | Version of the overdraft key identified by the key slot ID |
+| Algorithm ID | 1 byte | Algorithm of that overdraft key |
+| Random seed | 4 bytes | Card-generated pseudorandom number for session key derivation |
+| MAC1 | 4 bytes | Card-computed MAC proving it holds the overdraft key |
+
+Session key (process key): `encrypt(random[4] | serial[2] | 0x8000, overdraft_key)[:8]`.
+MAC1 is: `DES-CBC-MAC(old_bal[4] | old_limit[3] | 0x07[1] | terminal[6], process_key)`,
+where `0x07` is the fixed transaction type identifier for overdraft limit updates.
+The terminal verifies MAC1 to confirm the card holds the correct key before proceeding.
+If MAC1 does not match, the transaction is aborted and the limit is unchanged.
+
+**Phase 2 -- UPDATE OVERDRAW LIMIT** (`INS 58`, P1=00, P2=00):
+
+Authorizes and commits the new overdraft limit.
+The terminal sends the new limit (3 bytes), host transaction date (4 bytes), time (3 bytes),
+and MAC2 (4 bytes).
+MAC2 is: `DES-CBC-MAC(new_limit[3] | 0x07[1] | terminal[6] | date[4] | time[3], process_key)`.
+
+The card responds with TAC (4 bytes).
+TAC is: `DES-CBC-MAC(tac_bal[4] | serial[2] | new_limit[3] | 0x07[1] | terminal[6] | date[4] | time[3], dtk_xor)`,
+where `dtk_xor` is the left 8 bytes XOR right 8 bytes of the internal key (DTK), and
+`tac_bal = old_balance + new_limit - old_overdraft_limit` (the new stored balance after the limit shift).
+
+The card stores `actual_funds + overdraft_limit` as its balance field, so changing the limit
+by a delta shifts the stored balance value by the same delta without altering actual funds.
+
+On success the card:
+- Updates the overdraft limit to the new value.
+- Adjusts the stored balance to `actual_funds + new_limit`.
+- Increments the online serial number by 1.
+- Appends a 23-byte transaction record (serial, new limit, amount, type `0x07`, terminal, date, time)
+  to the linked loop EF for auditing.
 
 ```
 hf fmcos overdraft --id 01 --limit 1000 \
@@ -746,9 +883,9 @@ Example output:
 ```
 [=] Old balance: 1000  old overdraft limit: 0
 [=] MAC1 OK
+[+] SW: 9000 - Success
 [+] Overdraft limit updated to 1000
 [+] TAC OK  aabbccdd
-[+] SW: 9000 - Success
 ```
 
 ### history
@@ -974,7 +1111,7 @@ over `CLA|INS|P1|P2|Lc[|data]` with a GET CHALLENGE response as the CBC IV.
 
 ## Access Rights Byte
 
-The access-rights byte passed to `create file` controls whether line protection is needed
+The access-rights byte passed to `createfile` controls whether line protection is needed
 and which key slot guards read / write access.
 
 ```
@@ -1001,32 +1138,35 @@ allows custom UID. These commands below allow a TID tag to be provisioned - UID,
 auth key, and file system, these commands are not the same as the standard fmcos commands.
 
 These cards can often be found on taobao by searching for "CPU TID card".
-When hf fmcos auth external is called with any key, the card will always return
+When hf fmcos authexternal is called with any key, the card will always return
 [+] SW: 9000 - Success
 [+] External authentication successful
 
-All TID subcommands are reached via `hf fmcos tid <subcommand>`.
+All TID commands are direct subcommands of `hf fmcos`, prefixed with `tid`.
 
-| Subcommand | Description |
-|------------|-------------|
-| `setcard` | Write fixed card configuration block (`INS 0xEF`) |
-| `setuid` | Program the ISO14443-A UID (`INS 0x85`) |
-| `setauth` | Write the internal auth key and lock state (`INS 0x21`) |
-| `erase` | Erase the card file system (`CLA 0xE0 INS 0xEC`) |
-| `provision` | Full provisioning sequence in one command |
+| Command | Description |
+|---------|-------------|
+| `tidsetcard` | Write fixed card configuration block (`INS 0xEF`) |
+| `tidsetuid` | Program the ISO14443-A UID (`INS 0x85`) |
+| `tidsetauth` | Write the internal auth key and lock state (`INS 0x21`) |
+| `tiderase` | Erase the card file system (`CLA 0xE0 INS 0xEC`) |
+| `tidprovision` | Full provisioning sequence in one command |
+| `tidcreatedf` | CREATE sub-DF (TID format) |
+| `tidcreatebin` | CREATE binary EF or KEYFILE (TID format) |
+| `tidcreaterec` | CREATE record EF (TID format) |
 
-> **Order matters.** When provisioning manually, always run `setcard` -> `setuid` -> `setauth`
-> -> `erase` -> create file structure.  `provision` does this automatically.
+> **Order matters.** When provisioning manually, always run `tidsetcard` -> `tidsetuid` -> `tidsetauth`
+> -> `tiderase` -> create file structure.  `tidprovision` does this automatically.
 
 ---
 
-### tid setcard
+### tidsetcard
 
 Send the fixed 39-byte SET CARD configuration APDU.  The payload is hardcoded - there is
 limited information on what the fields do.  This must be sent before any other provisioning step.
 
 ```
-hf fmcos tid setcard
+hf fmcos tidsetcard
 ```
 
 | Flag | Description |
@@ -1037,13 +1177,13 @@ hf fmcos tid setcard
 
 ---
 
-### tid setuid
+### tidsetuid
 
 Program the card's ISO14443-A UID.
 
 ```
-hf fmcos tid setuid --uid 13371337
-hf fmcos tid setuid --uid 0102030405060708
+hf fmcos tidsetuid --uid 13371337
+hf fmcos tidsetuid --uid 0102030405060708
 ```
 
 | Flag | Description |
@@ -1055,13 +1195,13 @@ hf fmcos tid setuid --uid 0102030405060708
 
 ---
 
-### tid setauth
+### tidsetauth
 
 Write the 8-byte internal authentication key and set the lock state.
 
 ```
-hf fmcos tid setauth --key 1122334455667788
-hf fmcos tid setauth --key 1122334455667788 --lock
+hf fmcos tidsetauth --key 1122334455667788
+hf fmcos tidsetauth --key 1122334455667788 --lock
 ```
 
 | Flag | Description |
@@ -1076,12 +1216,12 @@ hf fmcos tid setauth --key 1122334455667788 --lock
 
 ---
 
-### tid erase
+### tiderase
 
 Erase the card's file system.  Uses `CLA=0xE0` (not `0x80` as in standard FMCOS erase).
 
 ```
-hf fmcos tid erase
+hf fmcos tiderase
 ```
 
 | Flag | Description |
@@ -1092,7 +1232,7 @@ hf fmcos tid erase
 
 ---
 
-### tid provision
+### tidprovision
 
 Full provisioning sequence in a single command.  Chains all steps with the RF field held on
 and aborts with an error message if any step fails.
@@ -1108,8 +1248,8 @@ Steps performed:
 8. CREATE KEYFILE
 
 ```
-hf fmcos tid provision --uid 13371337 --key 1122334455667788
-hf fmcos tid provision --uid 13371337 --key 1122334455667788 --lock
+hf fmcos tidprovision --uid 13371337 --key 1122334455667788
+hf fmcos tidprovision --uid 13371337 --key 1122334455667788 --lock
 ```
 
 | Flag | Description |
@@ -1119,19 +1259,19 @@ hf fmcos tid provision --uid 13371337 --key 1122334455667788 --lock
 | `--lock` | Lock the auth key permanently after writing |
 | `-k` / `--keep` | Keep field on after completion |
 
-After `provision`, use `tid createdf` / `tid createbin` / `tid createrec` to build
-the file structure, then `hf fmcos write binary` / `hf fmcos write record` to populate data.
+After `tidprovision`, use `tidcreatedf` / `tidcreatebin` / `tidcreaterec` to build
+the file structure, then `hf fmcos writebinary` / `hf fmcos writerecord` to populate data.
 
 ---
 
-### tid createdf
+### tidcreatedf
 
-CREATE a sub-DF using the TID APDU format.  The standard `hf fmcos create dir` uses a
+CREATE a sub-DF using the TID APDU format.  The standard `hf fmcos createdir` uses a
 different data layout (FID in P1/P2, leading `0x38` byte); this command uses the TID layout
 where P1=`0x01` and the FID is the first field in the data.
 
 ```
-hf fmcos tid createdf --id 3f01 --size 0f00 --sfi 96 --name 444446303133
+hf fmcos tidcreatedf --id 3f01 --size 0f00 --sfi 96 --name 444446303133
 ```
 
 | Flag | Description |
@@ -1146,9 +1286,9 @@ hf fmcos tid createdf --id 3f01 --size 0f00 --sfi 96 --name 444446303133
 
 ---
 
-### tid createbin
+### tidcreatebin
 
-CREATE a binary EF or KEYFILE using the TID APDU format.  The standard `hf fmcos create file --type bin`
+CREATE a binary EF or KEYFILE using the TID APDU format.  The standard `hf fmcos createfile --type bin`
 uses a different layout (FID in P1/P2, 7-byte payload); this command uses the TID layout
 where P1=`0x02` and the FID is in the data with a fixed 11-byte payload.
 
@@ -1156,9 +1296,9 @@ Use `--type keyfile` to create the fixed TID keyfile (subtype `1E`) in the curre
 Every sub-DF needs a keyfile before EFs can be created inside it.
 
 ```
-hf fmcos tid createbin --id 0001 --size 0100 --sfi 01
-hf fmcos tid createbin --id 0002 --size 0040 --sfi 02 --rperm 20 --wperm f0
-hf fmcos tid createbin --type keyfile
+hf fmcos tidcreatebin --id 0001 --size 0100 --sfi 01
+hf fmcos tidcreatebin --id 0002 --size 0040 --sfi 02 --rperm 20 --wperm f0
+hf fmcos tidcreatebin --type keyfile
 ```
 
 | Flag | Description |
@@ -1177,15 +1317,15 @@ hf fmcos tid createbin --type keyfile
 
 ---
 
-### tid createrec
+### tidcreaterec
 
-CREATE a fixed-length record EF using the TID APDU format.  The standard `hf fmcos create file --type fix`
+CREATE a fixed-length record EF using the TID APDU format.  The standard `hf fmcos createfile --type fix`
 uses a different layout; this command uses the TID layout where P1=`0x02`, subtype=`0x01`,
 and count+reclen replace the size field.
 
 ```
-hf fmcos tid createrec --id 0003 --count 04 --reclen 08 --sfi 03
-hf fmcos tid createrec --id 0003 --count 04 --reclen 10 --sfi 03 --rperm 20 --wperm f0
+hf fmcos tidcreaterec --id 0003 --count 04 --reclen 08 --sfi 03
+hf fmcos tidcreaterec --id 0003 --count 04 --reclen 10 --sfi 03 --rperm 20 --wperm f0
 ```
 
 | Flag | Description |
@@ -1200,8 +1340,8 @@ hf fmcos tid createrec --id 0003 --count 04 --reclen 10 --sfi 03 --rperm 20 --wp
 
 **APDU:** `80 E0 02 00 0B 01 [fid_hi][fid_lo] [count][reclen] [rperm][wperm] [sfi] 00 FF 00`
 
-> **Note**: To write data into TID EFs after creation, use the standard `hf fmcos write binary`
-> and `hf fmcos write record` - those APDUs (`00 D6` / `00 DC`) are identical in TID and standard FMCOS.
+> **Note**: To write data into TID EFs after creation, use the standard `hf fmcos writebinary`
+> and `hf fmcos writerecord` - those APDUs (`00 D6` / `00 DC`) are identical in TID and standard FMCOS.
 
 ---
 
@@ -1217,7 +1357,7 @@ normally provided when you buy these TID cards.
   command finishes without `-k` the field drops and the card resets to MF context on the
   next activation.
 - Each sub-DF requires a TID-format keyfile created immediately after selecting it.  Use
-  `hf fmcos tid createbin --type keyfile` - the standard `hf fmcos create keyfile` uses a
+  `hf fmcos tidcreatebin --type keyfile` - the standard `hf fmcos createkeyfile` uses a
   different APDU layout and cannot create TID keyfiles.
 
 ---
@@ -1231,17 +1371,17 @@ MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
 ```
 
 ```
-hf fmcos tid provision --uid 13371337 --key 0001020304050607
-hf fmcos tid createdf --id 7572 --size 0200 --sfi 02 --name 390130990807 -k
+hf fmcos tidprovision --uid 13371337 --key 0001020304050607
+hf fmcos tidcreatedf --id 7572 --size 0200 --sfi 02 --name 390130990807 -k
 hf fmcos select --id 7572 -k
-hf fmcos tid createbin --type keyfile -k
-hf fmcos tid createrec --id 0001 --count 06 --reclen 10 --sfi 03 -k
-hf fmcos write record --rec 01 --fid 03 --data 018609DD110000000000010100000000 -k
-hf fmcos write record --rec 02 --fid 03 --data 00000000000000000000000000000000 -k
-hf fmcos write record --rec 03 --fid 03 --data 0000000000070A0D1707120000008800 -k
-hf fmcos write record --rec 04 --fid 03 --data 00000000000000000000000000000000 -k
-hf fmcos write record --rec 05 --fid 03 --data 00000000000000000000000000000000 -k
-hf fmcos write record --rec 06 --fid 03 --data 00000000000000000000000000000000
+hf fmcos tidcreatebin --type keyfile -k
+hf fmcos tidcreaterec --id 0001 --count 06 --reclen 10 --sfi 03 -k
+hf fmcos writerecord --rec 01 --fid 03 --data 018609DD110000000000010100000000 -k
+hf fmcos writerecord --rec 02 --fid 03 --data 00000000000000000000000000000000 -k
+hf fmcos writerecord --rec 03 --fid 03 --data 0000000000070A0D1707120000008800 -k
+hf fmcos writerecord --rec 04 --fid 03 --data 00000000000000000000000000000000 -k
+hf fmcos writerecord --rec 05 --fid 03 --data 00000000000000000000000000000000 -k
+hf fmcos writerecord --rec 06 --fid 03 --data 00000000000000000000000000000000
 ```
 
 ---
@@ -1256,16 +1396,16 @@ MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
 ```
 
 ```
-hf fmcos tid provision --uid 13371337 --key 0001020304050607
-hf fmcos tid createdf --id 1001 --size 0200 --sfi 02 --name A00000000386980701 -k
+hf fmcos tidprovision --uid 13371337 --key 0001020304050607
+hf fmcos tidcreatedf --id 1001 --size 0200 --sfi 02 --name A00000000386980701 -k
 hf fmcos select --id 1001 -k
-hf fmcos tid createbin --type keyfile -k
-hf fmcos tid createbin --id 0018 --size 008C --sfi 18 -k
+hf fmcos tidcreatebin --type keyfile -k
+hf fmcos tidcreatebin --id 0018 --size 008C --sfi 18 -k
 hf fmcos select --id 0018 -k
-hf fmcos write binary --p1 00 --p2 00 --data 001FD921090700000001000023590000000000E0FFFFFF7F0700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 -k
-hf fmcos tid createbin --id 0019 --size 008C --sfi 19 -k
+hf fmcos writebinary --p1 00 --p2 00 --data 001FD921090700000001000023590000000000E0FFFFFF7F0700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 -k
+hf fmcos tidcreatebin --id 0019 --size 008C --sfi 19 -k
 hf fmcos select --id 0019 -k
-hf fmcos write binary --p1 00 --p2 00 --data 001FD921090700000001000023590000FFFFFFFFFFFF010000000000E0FFFFFF0F0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+hf fmcos writebinary --p1 00 --p2 00 --data 001FD921090700000001000023590000FFFFFFFFFFFF010000000000E0FFFFFF0F0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 ```
 
 ---
@@ -1279,13 +1419,13 @@ MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
 ```
 
 ```
-hf fmcos tid provision --uid 13371337 --key 0001020304050607
-hf fmcos tid createdf --id 4A54 --size 0300 --sfi 02 --name 6A696E00000000626FA5049F080102 -k
+hf fmcos tidprovision --uid 13371337 --key 0001020304050607
+hf fmcos tidcreatedf --id 4A54 --size 0300 --sfi 02 --name 6A696E00000000626FA5049F080102 -k
 hf fmcos select --id 4A54 -k
-hf fmcos tid createbin --type keyfile -k
-hf fmcos tid createbin --id 4200 --size 0270 --sfi 01 -k
+hf fmcos tidcreatebin --type keyfile -k
+hf fmcos tidcreatebin --id 4200 --size 0270 --sfi 01 -k
 hf fmcos select --id 4200 -k
-hf fmcos write binary --p1 02 --p2 50 --data 530030FFFFFFFFFFFFFF3A2B0000000022012200002403081106000000007F00
+hf fmcos writebinary --p1 02 --p2 50 --data 530030FFFFFFFFFFFFFF3A2B0000000022012200002403081106000000007F00
 ```
 
 ---
@@ -1304,26 +1444,26 @@ MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
 ```
 
 ```
-hf fmcos tid provision --uid 13371337 --key 0001020304050607
-hf fmcos tid createdf --id 3F01 --size 0400 --sfi 02 --name 4444463031 -k
+hf fmcos tidprovision --uid 13371337 --key 0001020304050607
+hf fmcos tidcreatedf --id 3F01 --size 0400 --sfi 02 --name 4444463031 -k
 hf fmcos select --id 3F01 -k
-hf fmcos tid createbin --type keyfile -k
-hf fmcos tid createbin --id 0001 --size 0001 --sfi 01 -k
-hf fmcos tid createbin --id 0003 --size 001C --sfi 03 -k
+hf fmcos tidcreatebin --type keyfile -k
+hf fmcos tidcreatebin --id 0001 --size 0001 --sfi 01 -k
+hf fmcos tidcreatebin --id 0003 --size 001C --sfi 03 -k
 hf fmcos select --id 0003 -k
-hf fmcos write binary --p1 00 --p2 00 --data FE937B922D7EDEF50000000000000000000000000000000000000000 -k
-hf fmcos tid createbin --id 0004 --size 0078 --sfi 04 -k
+hf fmcos writebinary --p1 00 --p2 00 --data FE937B922D7EDEF50000000000000000000000000000000000000000 -k
+hf fmcos tidcreatebin --id 0004 --size 0078 --sfi 04 -k
 hf fmcos select --id 0004 -k
-hf fmcos write binary --p1 00 --p2 00 --data 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 -k
-hf fmcos tid createbin --id 0005 --size 0024 --sfi 05 -k
+hf fmcos writebinary --p1 00 --p2 00 --data 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 -k
+hf fmcos tidcreatebin --id 0005 --size 0024 --sfi 05 -k
 hf fmcos select --id 0005 -k
-hf fmcos write binary --p1 00 --p2 00 --data 6403FE9C7434FCBC6E00FC9F2802F1448F06F3BA8CF6F0B98DF7F1B84D0BF60000000000 -k
-hf fmcos tid createbin --id 0006 --size 0084 --sfi 06 -k
+hf fmcos writebinary --p1 00 --p2 00 --data 6403FE9C7434FCBC6E00FC9F2802F1448F06F3BA8CF6F0B98DF7F1B84D0BF60000000000 -k
+hf fmcos tidcreatebin --id 0006 --size 0084 --sfi 06 -k
 hf fmcos select --id 0006 -k
-hf fmcos write binary --p1 00 --p2 00 --data 616BEACE7705FCBD7604FDBC7107F2BB7006F3BA7309F0B97208F1B84D0B09B74C0AF7494F0DF4B5B10CF5B449F0EAB3480E14B24B31E84E4A30E9B0BA33EEAF44CDEFAE473513AD4634ED534137E2ABBF36E3AA43C6E0A942381EA85D3BE6585C3AE7A6A03DE4A55E000000000000000000000000000000000000000000000000000000 -k
-hf fmcos tid createbin --id 0007 --size 0066 --sfi 07 -k
+hf fmcos writebinary --p1 00 --p2 00 --data 616BEACE7705FCBD7604FDBC7107F2BB7006F3BA7309F0B97208F1B84D0B09B74C0AF7494F0DF4B5B10CF5B449F0EAB3480E14B24B31E84E4A30E9B0BA33EEAF44CDEFAE473513AD4634ED534137E2ABBF36E3AA43C6E0A942381EA85D3BE6585C3AE7A6A03DE4A55E000000000000000000000000000000000000000000000000000000 -k
+hf fmcos tidcreatebin --id 0007 --size 0066 --sfi 07 -k
 hf fmcos select --id 0007 -k
-hf fmcos write binary --p1 00 --p2 00 --data 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+hf fmcos writebinary --p1 00 --p2 00 --data 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 ```
 
 ---
@@ -1339,19 +1479,19 @@ MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
 ```
 
 ```
-hf fmcos tid provision --uid 13371337 --key 0001020304050607
-hf fmcos tid createdf --id D0F1 --size 0100 --sfi 02 --name 584C313233 -k
+hf fmcos tidprovision --uid 13371337 --key 0001020304050607
+hf fmcos tidcreatedf --id D0F1 --size 0100 --sfi 02 --name 584C313233 -k
 hf fmcos select --id D0F1 -k
-hf fmcos tid createbin --type keyfile -k
-hf fmcos tid createbin --id 0005 --size 0040 --sfi 05 -k
+hf fmcos tidcreatebin --type keyfile -k
+hf fmcos tidcreatebin --id 0005 --size 0040 --sfi 05 -k
 hf fmcos select --id 0005 -k
-hf fmcos write binary --p1 00 --p2 00 --data 0200FC20006200000000000000000000000000272E2C6A0000000000000000080000000000000000000000000000000000000000000000000000000000000000
-hf fmcos tid createdf --id D0F2 --size 0100 --sfi 02 --name 584C343536 -k
+hf fmcos writebinary --p1 00 --p2 00 --data 0200FC20006200000000000000000000000000272E2C6A0000000000000000080000000000000000000000000000000000000000000000000000000000000000
+hf fmcos tidcreatedf --id D0F2 --size 0100 --sfi 02 --name 584C343536 -k
 hf fmcos select --id D0F2 -k
-hf fmcos tid createbin --type keyfile -k
-hf fmcos tid createbin --id 0005 --size 0040 --sfi 05 -k
+hf fmcos tidcreatebin --type keyfile -k
+hf fmcos tidcreatebin --id 0005 --size 0040 --sfi 05 -k
 hf fmcos select --id 0005 -k
-hf fmcos write binary --p1 00 --p2 00 --data 0200FC20006200000000000000000000000000272E2C6A0000000000000000080000000000000000000000000000000000000000000000000000000000000000
+hf fmcos writebinary --p1 00 --p2 00 --data 0200FC20006200000000000000000000000000272E2C6A0000000000000000080000000000000000000000000000000000000000000000000000000000000000
 ```
 
 ---
@@ -1365,12 +1505,12 @@ MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
 ```
 
 ```
-hf fmcos tid provision --uid 13371337 --key 0001020304050607
-hf fmcos tid createdf --id 3F01 --size 0200 --sfi 02 --name 4144463031 -k
+hf fmcos tidprovision --uid 13371337 --key 0001020304050607
+hf fmcos tidcreatedf --id 3F01 --size 0200 --sfi 02 --name 4144463031 -k
 hf fmcos select --id 3F01 -k
-hf fmcos tid createbin --type keyfile -k
-hf fmcos tid createbin --id 0003 --size 00FA --sfi 03 -k
+hf fmcos tidcreatebin --type keyfile -k
+hf fmcos tidcreatebin --id 0003 --size 00FA --sfi 03 -k
 hf fmcos select --id 0003 -k
-hf fmcos write binary --p1 00 --p2 00 --data D15190D7E1E379732295C97D62A3172BE3BBA1D1B32CE32FED72CB3DCDB115E7DC2670978E241822F298C9951260FC55D54F9988C7FCAC5032F94281DFC39C973E570101764D5BBF367F84EBDA1B012ABD4568F35D5BC08BAFD76B988CA916C985692337FCF02C9FD2C8BDD583BC05EF55582C3921FA2CAFAE26308FBADE0598DB750EE1F0522D29EAB6FA5D0F3971F785692337FCF02C9FD2C8BDD583BC05EF55582C3921FA2CAFAE26308FBADE0598DB750EE1F0522D29EAB6FA5D0F3971F7EA545FC5B27B7F40DF6D0F71FCEE2A1BCED2DEDE67BB57B1C1F98C8CDA5259CC7BD83158086F215F5E1E0246EE0504760000000000 -k
-hf fmcos write binary --p1 00 --p2 F5 --data 0000000000
+hf fmcos writebinary --p1 00 --p2 00 --data D15190D7E1E379732295C97D62A3172BE3BBA1D1B32CE32FED72CB3DCDB115E7DC2670978E241822F298C9951260FC55D54F9988C7FCAC5032F94281DFC39C973E570101764D5BBF367F84EBDA1B012ABD4568F35D5BC08BAFD76B988CA916C985692337FCF02C9FD2C8BDD583BC05EF55582C3921FA2CAFAE26308FBADE0598DB750EE1F0522D29EAB6FA5D0F3971F785692337FCF02C9FD2C8BDD583BC05EF55582C3921FA2CAFAE26308FBADE0598DB750EE1F0522D29EAB6FA5D0F3971F7EA545FC5B27B7F40DF6D0F71FCEE2A1BCED2DEDE67BB57B1C1F98C8CDA5259CC7BD83158086F215F5E1E0246EE0504760000000000 -k
+hf fmcos writebinary --p1 00 --p2 F5 --data 0000000000
 ```
