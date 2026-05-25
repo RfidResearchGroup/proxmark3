@@ -60,7 +60,9 @@
             "2000",
             "2003"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "TICKETING_AID",
@@ -85,7 +87,9 @@
             "2000",
             "2011"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_2012",
@@ -94,7 +98,9 @@
             "2000",
             "2012"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_2016",
@@ -103,7 +109,9 @@
             "2000",
             "2016"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_2017",
@@ -121,7 +129,9 @@
             "2000",
             "2018"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_201C",
@@ -130,7 +140,9 @@
             "2000",
             "201C"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "TICKETING_CONTRACTS_1",
@@ -147,7 +159,9 @@
             "2000",
             "2023"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "TICKETING_COUNTERS_1",
@@ -220,7 +234,9 @@
             "2000",
             "2043"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "TICKETING_CONTRACT_LIST",
@@ -253,7 +269,9 @@
             "2000",
             "2063"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "TICKETING_COUNTERS_9",
@@ -278,7 +296,9 @@
             "2000",
             "2091"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "TICKETING_FREE",
@@ -303,7 +323,9 @@
             "2100",
             "2103"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "RT2_AID",
@@ -372,7 +394,9 @@
             "2100",
             "2118"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_211A",
@@ -403,7 +427,9 @@
             "2100",
             "211C"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "RT2_CONTRACTS",
@@ -420,7 +446,9 @@
             "2100",
             "2123"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "RT2_SPECIAL_EVENTS",
@@ -437,7 +465,9 @@
             "2100",
             "2143"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "RT2_CONTRACT_LIST",
@@ -454,7 +484,9 @@
             "2100",
             "2163"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "RT2_COUNTERS",
@@ -772,7 +804,9 @@
             "3100",
             "3101"
         ],
-        "description": "Found on Lignes D azur card"
+        "cards": [
+            "LIGNES_D_AZUR"
+        ]
     },
     {
         "name": "MPP_PUBLIC_PARAMETERS",
@@ -806,7 +840,9 @@
             "3100",
             "3112"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "MPP_COUNTERS_1",
@@ -831,7 +867,9 @@
             "3100",
             "3116"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_311A",
@@ -840,7 +878,9 @@
             "3100",
             "311A"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_311C",
@@ -906,7 +946,9 @@
             "3200",
             "3202"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_3203",
@@ -915,7 +957,9 @@
             "3200",
             "3203"
         ],
-        "description": "Found on Lignes D azur card"
+        "cards": [
+            "LIGNES_D_AZUR"
+        ]
     },
     {
         "name": "UNKNOWN_EF_3209",
@@ -924,7 +968,9 @@
             "3200",
             "3209"
         ],
-        "description": "Found on Lignes D azur card"
+        "cards": [
+            "LIGNES_D_AZUR"
+        ]
     },
     {
         "name": "UNKNOWN_EF_3214",
@@ -933,7 +979,9 @@
             "3200",
             "3214"
         ],
-        "description": "Found on Lignes D azur card"
+        "cards": [
+            "LIGNES_D_AZUR"
+        ]
     },
     {
         "name": "UNKNOWN_EF_3217",
@@ -942,7 +990,9 @@
             "3200",
             "3217"
         ],
-        "description": "Found on Lignes D azur card"
+        "cards": [
+            "LIGNES_D_AZUR"
+        ]
     },
     {
         "name": "UNKNOWN_EF_3219",
@@ -951,7 +1001,9 @@
             "3200",
             "3219"
         ],
-        "description": "Found on Lignes D azur card"
+        "cards": [
+            "LIGNES_D_AZUR"
+        ]
     },
     {
         "name": "UNKNOWN_EF_321A",
@@ -960,7 +1012,9 @@
             "3200",
             "321A"
         ],
-        "description": "Found on Lignes D azur card"
+        "cards": [
+            "LIGNES_D_AZUR"
+        ]
     },
     {
         "name": "UNKNOWN_EF_321B",
@@ -969,7 +1023,9 @@
             "3200",
             "321B"
         ],
-        "description": "Found on Lignes D azur card"
+        "cards": [
+            "LIGNES_D_AZUR"
+        ]
     },
     {
         "name": "UNKNOWN_EF_3220",
@@ -978,7 +1034,9 @@
             "3200",
             "3220"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_3250",
@@ -987,7 +1045,9 @@
             "3200",
             "3250"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_3269",
@@ -996,7 +1056,9 @@
             "3200",
             "3269"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_3302",
@@ -1005,7 +1067,9 @@
             "3300",
             "3302"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_3320",
@@ -1014,7 +1078,9 @@
             "3300",
             "3320"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_3350",
@@ -1023,7 +1089,9 @@
             "3300",
             "3350"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_3369",
@@ -1032,7 +1100,9 @@
             "3300",
             "3369"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_3402",
@@ -1041,7 +1111,9 @@
             "3400",
             "3402"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_3420",
@@ -1050,7 +1122,9 @@
             "3400",
             "3420"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_3450",
@@ -1059,7 +1133,9 @@
             "3400",
             "3450"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_3469",
@@ -1068,7 +1144,9 @@
             "3400",
             "3469"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "AID",
@@ -1083,7 +1161,9 @@
         "path": [
             "3F05"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_3F06",
@@ -1091,7 +1171,9 @@
         "path": [
             "3F06"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "HOLDER_EXTENDED",
@@ -1107,7 +1189,9 @@
             "4100",
             "4101"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_4102",
@@ -1116,7 +1200,9 @@
             "4100",
             "4102"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "UNKNOWN_EF_4150",
@@ -1125,7 +1211,9 @@
             "4100",
             "4150"
         ],
-        "description": "Found on MOBIB card"
+        "cards": [
+            "MOBIB"
+        ]
     },
     {
         "name": "ETICKET",
