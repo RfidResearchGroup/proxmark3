@@ -1691,8 +1691,8 @@ static int CmdHFFmcosReadBinary(const char *Cmd) {
     uint8_t data_out[256] = {0};
     int data_out_len = 0;
     res = fmcos_read_cmd(0xB0, p1b[0], p2b[0], (uint8_t)rlen,
-                             prot, key, (size_t)key_len,
-                             true, keep, data_out, &data_out_len);
+                         prot, key, (size_t)key_len,
+                         true, keep, data_out, &data_out_len);
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Data: " _GREEN_("%s"), sprint_hex(data_out, (size_t)data_out_len));
     }
@@ -1770,8 +1770,8 @@ static int CmdHFFmcosReadRecord(const char *Cmd) {
     uint8_t data_out[256] = {0};
     int data_out_len = 0;
     res = fmcos_read_cmd(0xB2, (uint8_t)rec, p2, (uint8_t)le,
-                             prot, key, (size_t)key_len,
-                             true, keep, data_out, &data_out_len);
+                         prot, key, (size_t)key_len,
+                         true, keep, data_out, &data_out_len);
     if (res == PM3_SUCCESS) {
         uint8_t *payload = data_out;
         int payload_len  = data_out_len;
@@ -1852,9 +1852,9 @@ static int CmdHFFmcosWriteBinary(const char *Cmd) {
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
     res = fmcos_write_cmd(0x00, 0xD6, p1b[0], p2b[0],
-                              wdata, (size_t)wdata_len,
-                              prot, key, (size_t)key_len,
-                              true, keep, resp, &resp_len);
+                          wdata, (size_t)wdata_len,
+                          prot, key, (size_t)key_len,
+                          true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
@@ -1964,9 +1964,9 @@ static int CmdHFFmcosWriteRecord(const char *Cmd) {
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
     res = fmcos_write_cmd(0x00, 0xDC, (uint8_t)rec, p2,
-                              send_buf, send_len,
-                              prot, key, (size_t)key_len,
-                              true, keep, resp, &resp_len);
+                          send_buf, send_len,
+                          prot, key, (size_t)key_len,
+                          true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
@@ -2051,9 +2051,9 @@ static int CmdHFFmcosAppend(const char *Cmd) {
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
     res = fmcos_write_cmd(0x00, 0xE2, 0x00, p2,
-                              wdata, (size_t)wdata_len,
-                              prot, key, (size_t)key_len,
-                              true, keep, resp, &resp_len);
+                          wdata, (size_t)wdata_len,
+                          prot, key, (size_t)key_len,
+                          true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
@@ -2259,9 +2259,9 @@ static int CmdHFFmcosWriteKey(const char *Cmd) {
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
     res = fmcos_write_cmd(0x80, 0xD4, op_buf[0], id_buf[0],
-                              data, data_len,
-                              prot, authkey, (size_t)authkey_len,
-                              true, keep, resp, &resp_len);
+                          data, data_len,
+                          prot, authkey, (size_t)authkey_len,
+                          true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
