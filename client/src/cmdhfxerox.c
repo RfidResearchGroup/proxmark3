@@ -1312,7 +1312,7 @@ static int CmdHFXeroxMap(const char *Cmd) {
         arg = arg_get_str(ctx, i); \
         if (arg && arg->count) { \
             int _len = 0; \
-            CLIParamStrToBuf(a, (uint8_t *)dst, sizeof(dst) - 1, &_len); \
+            CLIParamStrToBuf(arg, (uint8_t *)dst, sizeof(dst) - 1, &_len); \
         } \
     } while(0)
 
