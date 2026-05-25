@@ -67,8 +67,6 @@ typedef struct {
 static int CmdHelp(const char *Cmd);
 
 static int HFMFAutoPwnSEN(sector_t *e_sector, size_t sector_cnt) {
-    PrintAndLogEx(WARNING, "Static encrypted nonce card detected");
-    PrintAndLogEx(NORMAL, "");
     DropField();
     return HFMFSENRecover(false, false, false, false, 0, 0x1, true, e_sector, sector_cnt);
 }
@@ -3175,23 +3173,30 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     uint64_t key1 = 0;
 
     // iceman: todo, need to add all generated keys
+    uint8_t keyn = 0;
+
     mfc_algo_mizip_one(card.uid, 0, MF_KEY_A, &key1);
-    num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (0 * MIFARE_KEY_SIZE));
+    num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (keyn++ * MIFARE_KEY_SIZE));
 
     mfc_algo_di_one(card.uid, 0, MF_KEY_A, &key1);
-    num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (1 * MIFARE_KEY_SIZE));
+    num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (keyn++ * MIFARE_KEY_SIZE));
 
     mfc_algo_sky_one(card.uid, 15, MF_KEY_A, &key1);
-    num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (2 * MIFARE_KEY_SIZE));
+    num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (keyn++ * MIFARE_KEY_SIZE));
 
     // one key
     mfc_algo_saflok_one(card.uid, 0, MF_KEY_A, &key1);
-    num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (3 * MIFARE_KEY_SIZE));
+    num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (keyn++ * MIFARE_KEY_SIZE));
 
     mfc_algo_touch_one(card.uid, 0, MF_KEY_A, &key1);
-    num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (4 * MIFARE_KEY_SIZE));
+    num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (keyn++ * MIFARE_KEY_SIZE));
 
-    in_keys_len += (MIFARE_KEY_SIZE * 5);
+
+    memcpy(in_keys + key1_offset + (keyn++ * MIFARE_KEY_SIZE), g_mifare_default_key, MIFARE_KEY_SIZE);
+    memcpy(in_keys + key1_offset + (keyn++ * MIFARE_KEY_SIZE), g_mifare_mad_key, MIFARE_KEY_SIZE);
+    memcpy(in_keys + key1_offset + (keyn++ * MIFARE_KEY_SIZE), g_mifare_mad_key_b, MIFARE_KEY_SIZE);
+
+    in_keys_len += (MIFARE_KEY_SIZE * keyn);
 
     // detect MFC EV1 Signature
     bool is_ev1 = detect_mfc_ev1_signature();
@@ -3214,6 +3219,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         known_key = false;
     } else {
         num_to_bytes(key64, MIFARE_KEY_SIZE, key);
+        known_key = true;
     }
 
     // create/initialize key storage structure
@@ -3248,7 +3254,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     int has_staticnonce = detect_classic_static_nonce();
 
     // card prng type (weak=1 / hard=0 / select/card comm error = negative value)
-    if (has_staticnonce == NONCE_NORMAL)  {
+    if ((has_staticnonce == NONCE_NORMAL) || (has_staticnonce == NONCE_FAIL)) {
 
         prng_type = detect_classic_prng();
 
@@ -3430,7 +3436,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         goto all_found;
     }
 
-    if (known_key && has_staticnonce == NONCE_NORMAL) {
+    if (known_key && ((has_staticnonce == NONCE_NORMAL) || (has_staticnonce == NONCE_FAIL))) {
         has_staticnonce = detect_classic_static_encrypted_nonce(mfFirstBlockOfSector(sectorno), keytype, key);
         if (has_staticnonce == NONCE_STATIC_ENC) {
             int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt);
