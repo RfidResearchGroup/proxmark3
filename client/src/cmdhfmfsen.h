@@ -19,9 +19,12 @@
 #ifndef CMDHFMFSEN_H__
 #define CMDHFMFSEN_H__
 
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include "mifare.h"
 #include "mifare/mifaredefault.h"
+#include "mifare/mifarehost.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,6 +34,7 @@ extern "C" {
 extern const uint8_t fm11_backdoor_keys[FM11_BACKDOOR_KEY_COUNT][MIFARE_KEY_SIZE];
 
 int fm11_collect_nonces(const uint8_t *key, iso14a_card_select_t *card, iso14a_fm11rf08s_nonces_with_data_t *nonces);
+int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline_only, int max_online_candidates, uint8_t parity_mask, bool skip_default_key_check, const sector_t *known_sectors, size_t known_sector_count);
 int CmdHF14AMfSEN(const char *Cmd);
 
 #ifdef __cplusplus

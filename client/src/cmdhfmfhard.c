@@ -125,13 +125,45 @@ static void print_progress_header(void) {
     char progress_text[80];
     char instr_set[12] = "";
     get_SIMD_instruction_set(instr_set);
-    snprintf(progress_text, sizeof(progress_text), "Start using " _YELLOW_("%d") " threads and " _YELLOW_("%s") " SIMD core", num_CPUs(), instr_set);
+    snprintf(progress_text, sizeof(progress_text), "Start using %d threads and %s SIMD core", num_CPUs(), instr_set);
 
-    PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+-----------------+-------");
-    PrintAndLogEx(INFO, "         |         |                                                         | Expected to brute force");
-    PrintAndLogEx(INFO, " Time    | #nonces | Activity                                                | #states         | time ");
-    PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+-----------------+-------");
-    PrintAndLogEx(INFO, "       0 |       0 | %-73s |                 |", progress_text);
+    PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+---------------------------+---------------");
+    PrintAndLogEx(INFO, "         |         |                                                         | Expected to brute force   | Estimated     ");
+    PrintAndLogEx(INFO, " Time    | #nonces | Activity                                                | #states                   | time for task ");
+    PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+---------------------------+---------------");
+    PrintAndLogEx(INFO, "       0 |       0 | %-55.55s | %25s | %13s ", progress_text, "", "");
+}
+
+static void hardnested_format_activity(char *out, size_t out_len, const char *activity, size_t width) {
+    const char *src = activity ? activity : "";
+    size_t pos = 0;
+    size_t visible = 0;
+    bool copied_ansi = false;
+
+    while (*src && visible < width && pos + 1 < out_len) {
+        if (src[0] == '\x1b' && src[1] == '[') {
+            do {
+                if (pos + 1 >= out_len) {
+                    break;
+                }
+                out[pos++] = *src;
+            } while (*src && (*src++ < '@' || src[-1] > '~'));
+            copied_ansi = true;
+            continue;
+        }
+        out[pos++] = *src++;
+        visible++;
+    }
+
+    if (*src && copied_ansi && pos + strlen(AEND) < out_len) {
+        memcpy(out + pos, AEND, strlen(AEND));
+        pos += strlen(AEND);
+    }
+    while (visible < width && pos + 1 < out_len) {
+        out[pos++] = ' ';
+        visible++;
+    }
+    out[pos] = '\0';
 }
 
 void hardnested_print_progress(uint32_t nonces, const char *activity, float brute_force, uint64_t min_diff_print_time) {
@@ -155,24 +187,30 @@ void hardnested_print_progress(uint32_t nonces, const char *activity, float brut
             snprintf(brute_force_time_string, sizeof(brute_force_time_string), "%2.0fd", brute_force_time / (60 * 60 * 24));
         }
 
-        if (strlen(activity) > 67) {
-            PrintAndLogEx(INFO, " %7.0f | %7u | %-82s | %15.0f | %5s"
-                          , (float)total_time / 1000.0
-                          , nonces
-                          , activity
-                          , brute_force
-                          , brute_force_time_string
-                         );
-        } else {
-            PrintAndLogEx(INFO, " %7.0f | %7u | %-55s | %15.0f | %5s"
-                          , (float)total_time / 1000.0
-                          , nonces
-                          , activity
-                          , brute_force
-                          , brute_force_time_string
-                         );
-        }
+        char activity_col[128] = {0};
+        hardnested_format_activity(activity_col, sizeof(activity_col), activity, 55);
+
+        PrintAndLogEx(INFO, " %7.0f | %7u | %s | %25.0f | %13s "
+                      , (float)total_time / 1000.0
+                      , nonces
+                      , activity_col
+                      , brute_force
+                      , brute_force_time_string
+                     );
     }
+}
+
+void hardnested_print_key_found_progress(uint32_t nonces, const char *keystr) {
+    uint64_t total_time = msclock() - start_time;
+
+    PrintAndLogEx(INFO, " %7.0f | %7u | %-33s" _GREEN_("%22s") " | %25.0f | %13s "
+                  , (float)total_time / 1000.0
+                  , nonces
+                  , "Brute force completed. Key found:"
+                  , keystr ? keystr : ""
+                  , 0.0
+                  , "0s"
+                 );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -508,7 +546,7 @@ static void init_bitflip_bitarrays(void) {
     {
         char progress_text[100];
         memset(progress_text, 0, sizeof(progress_text));
-        snprintf(progress_text, sizeof(progress_text), "Loaded " _YELLOW_("%u") " RAW / " _YELLOW_("%u") " LZ4 / " _YELLOW_("%u") " BZ2 in %4"PRIu64" ms"
+        snprintf(progress_text, sizeof(progress_text), "Loaded %u RAW / %u LZ4 / %u BZ2 in %4"PRIu64" ms"
                  , nraw
                  , nlz4
                  , nbz2
@@ -1267,7 +1305,7 @@ static int read_nonce_file(char *filename) {
         return PM3_EFILE;
     }
 
-    snprintf(progress_text, 80, "Reading nonces from file " _YELLOW_("%s"), filename);
+    snprintf(progress_text, 80, "Reading nonces from file %s", filename);
     hardnested_print_progress(0, progress_text, (float)(1LL << 47), 0);
     size_t bytes_read = fread(read_buf, 1, 6, fnonces);
     if (bytes_read != 6) {
@@ -1674,7 +1712,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
                     return PM3_EFILE;
                 }
 
-                snprintf(progress_text, 80, "Writing acquired nonces to binary file " _YELLOW_("%s"), filename);
+                snprintf(progress_text, 80, "Writing acquired nonces to binary file %s", filename);
                 hardnested_print_progress(0, progress_text, (float)(1LL << 47), 0);
                 num_to_bytes(cuid, 4, write_buf);
                 fwrite(write_buf, 1, 4, fnonces);

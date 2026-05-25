@@ -176,11 +176,11 @@ static void fm11_sen_format_eta(uint32_t seconds, char *out, size_t out_len) {
 
 static void fm11_sen_progress_header(void) {
     fm11_sen_start_time = msclock();
-    PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+-----------------+-------");
-    PrintAndLogEx(INFO, "         |         |                                                         | Expected to verify      ");
-    PrintAndLogEx(INFO, " Time    | #nonces | Activity                                                | #keys/cands     | time  ");
-    PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+-----------------+-------");
-    PrintAndLogEx(INFO, " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " | %-55s | %15s | %5s ",
+    PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+---------------------------+---------------");
+    PrintAndLogEx(INFO, "         |         |                                                         | Expected to verify        | Estimated     ");
+    PrintAndLogEx(INFO, " Time    | #nonces | Activity                                                | #keys/candidates          | time for task ");
+    PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+---------------------------+---------------");
+    PrintAndLogEx(INFO, " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " | %-55s | %25s | %13s ",
                   0.0, (uint32_t)0, "Start FM11RF08S static encrypted nonce recovery", "", "");
 }
 
@@ -197,7 +197,7 @@ static void fm11_sen_progress(uint32_t nonces, const char *activity, uint32_t st
 
     fm11_sen_last_nonces = nonces;
     uint64_t elapsed = fm11_sen_start_time ? (msclock() - fm11_sen_start_time) : 0;
-    PrintAndLogEx(INFO, " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " | %-55.55s | " _YELLOW_("%15s") " | " _YELLOW_("%5s") " ",
+    PrintAndLogEx(INFO, " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " | %-55.55s | " _YELLOW_("%25s") " | " _YELLOW_("%13s") " ",
                   (float)elapsed / 1000.0,
                   nonces,
                   activity_text,
@@ -275,7 +275,7 @@ static void fm11_sen_candidate_progress(uint8_t real_sec, uint8_t key_type, uint
 
     char row[256] = {0};
     snprintf(row, sizeof(row),
-             " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " | sec " _CYAN_("%03u") " key " _GREEN_("%c") " [%s] " _YELLOW_("%6u") "/" _YELLOW_("%-6u") " " _YELLOW_("%3u%%") " | " _YELLOW_("%15u") " | %5s ",
+             " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " | sec " _CYAN_("%03u") " key " _GREEN_("%c") " [%s] " _YELLOW_("%6u") "/" _YELLOW_("%-6u") " " _YELLOW_("%3u%%") " | " _YELLOW_("%25u") " | %13s ",
              (float)elapsed / 1000.0,
              fm11_sen_last_nonces,
              real_sec, key_type ? 'B' : 'A',
@@ -296,7 +296,7 @@ static void fm11_sen_keycheck_progress(const char *prefix, uint8_t real_sec, uin
 
     char row[256] = {0};
     snprintf(row, sizeof(row),
-             " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " | %-3.3s " _CYAN_("%03u") " key " _GREEN_("%c") " [%s] " _YELLOW_("%6u") "/" _YELLOW_("%-6u") " " _YELLOW_("%3u%%") " | " _YELLOW_("%15u") " | %5s ",
+             " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " | %-3.3s " _CYAN_("%03u") " key " _GREEN_("%c") " [%s] " _YELLOW_("%6u") "/" _YELLOW_("%-6u") " " _YELLOW_("%3u%%") " | " _YELLOW_("%25u") " | %13s ",
              (float)elapsed / 1000.0,
              fm11_sen_last_nonces,
              text, real_sec, key_type ? 'B' : 'A',
@@ -316,7 +316,7 @@ static void fm11_sen_compute_progress(const char *activity, uint32_t done, uint3
 
     char row[256] = {0};
     snprintf(row, sizeof(row),
-             " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " | " _CYAN_("%-12.12s") " [%s] " _YELLOW_("%6u") "/" _YELLOW_("%-6u") " " _YELLOW_("%3u%%") "  | " _YELLOW_("%15u") " | %5s ",
+             " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " | " _CYAN_("%-12.12s") " [%s] " _YELLOW_("%6u") "/" _YELLOW_("%-6u") " " _YELLOW_("%3u%%") "  | " _YELLOW_("%25u") " | %13s ",
              (float)elapsed / 1000.0,
              fm11_sen_last_nonces,
              text,
@@ -326,7 +326,7 @@ static void fm11_sen_compute_progress(const char *activity, uint32_t done, uint3
 }
 
 static void fm11_sen_progress_footer(void) {
-    PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+-----------------+-------");
+    PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+---------------------------+---------------");
 }
 
 static bool fm11_digest_reader_nonce(const nonces_t *data,
@@ -2166,7 +2166,7 @@ static void fm11_print_key_hit_row(uint32_t nonce_count, uint8_t sec, uint8_t kt
     PrintAndLogEx(SUCCESS,
                   " " _YELLOW_("%7.0f") " | " _YELLOW_("%7u") " |"
                   " Key sec " _YELLOW_("%03u") " key " _YELLOW_("%c") " = " _GREEN_("%012" PRIX64) "                        |"
-                  " " _YELLOW_("%15s") " | %5s ",
+                  " " _YELLOW_("%25s") " | %13s ",
                   (float)elapsed_key / 1000.0, nonce_count,
                   fm11_real_sector(sec), kt ? 'B' : 'A', key & 0xFFFFFFFFFFFFULL,
                   kcount, "");
@@ -2216,6 +2216,7 @@ static bool fm11_key_matches_nonce(uint32_t uid,
 static int fm11_collect_default_nonce_matches(uint32_t uid,
                                               const iso14a_fm11rf08s_nonces_with_data_t *nonces,
                                               const fm11_keylist_t *defaults,
+                                              const bool found_key[FM11RF08S_SECTORS][2],
                                               uint8_t parity_mask,
                                               fm11_keylist_t *matches) {
     if (nonces == NULL || defaults == NULL || matches == NULL) {
@@ -2225,11 +2226,24 @@ static int fm11_collect_default_nonce_matches(uint32_t uid,
         return PM3_SUCCESS;
     }
 
-    uint32_t total = defaults->count * FM11RF08S_SECTORS * 2;
+    uint32_t slots = 0;
+    for (uint8_t sec = 0; sec < FM11RF08S_SECTORS; sec++) {
+        for (uint8_t kt = 0; kt < 2; kt++) {
+            if (found_key != NULL && found_key[sec][kt]) {
+                continue;
+            }
+            slots++;
+        }
+    }
+
+    uint32_t total = defaults->count * slots;
     uint32_t done = 0;
     for (uint8_t sec = 0; sec < FM11RF08S_SECTORS; sec++) {
         uint8_t real_sec = fm11_real_sector(sec);
         for (uint8_t kt = 0; kt < 2; kt++) {
+            if (found_key != NULL && found_key[sec][kt]) {
+                continue;
+            }
             for (uint32_t i = 0; i < defaults->count; i++) {
                 if ((done & 0x3F) == 0) {
                     if (kbd_enter_pressed()) {
@@ -2262,7 +2276,7 @@ static int fm11_check_default_keys(uint32_t uid,
                                    uint64_t keys_found[FM11RF08S_SECTORS][2],
                                    bool found_key[FM11RF08S_SECTORS][2]) {
     fm11_keylist_t matches = {0};
-    int retval = fm11_collect_default_nonce_matches(uid, nonces, defaults, parity_mask, &matches);
+    int retval = fm11_collect_default_nonce_matches(uid, nonces, defaults, found_key, parity_mask, &matches);
     if (retval != PM3_SUCCESS) {
         fm11_keylist_free(&matches);
         return retval;
@@ -2848,49 +2862,7 @@ static int fm11_select_mifare_classic(iso14a_card_select_t *card_out) {
     return PM3_SUCCESS;
 }
 
-int CmdHF14AMfSEN(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mf sen",
-                  "Recover FM11RF08S keys using static encrypted nonce evidence in native client code",
-                  "hf mf sen\n"
-                  "hf mf sen --keep-nonces\n"
-                  "hf mf sen --no-oob\n"
-                  "hf mf sen --reader\n");
-    void *argtable[] = {
-        arg_param_begin,
-        arg_lit0(NULL, "keep-nonces", "save collected nonce/data JSON evidence"),
-        arg_lit0(NULL, "no-oob", "do not include FM11RF08S out-of-bounds sector 32 in key file"),
-        arg_lit0(NULL, "reader", "pre-pass: emulate this UID to a reader and digest recovered reader keys"),
-        arg_lit0(NULL, "offline-only", "stop after offline filtering, do not verify online"),
-        arg_lit0(NULL, "online-confirm", "only do online confirmation (skip generation if nonces loaded)"),
-        arg_int0(NULL, "max-online-candidates", "<n>", "abort online phase if total candidates exceed this limit"),
-        arg_str0(NULL, "parity-mask", "<hex>", "parity filter mask 1..F (default 1 = vetted staticnested_1nt behavior)"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool keep_nonces = arg_get_lit(ctx, 1);
-    bool no_oob = arg_get_lit(ctx, 2);
-    bool reader_mode = arg_get_lit(ctx, 3);
-    bool offline_only = arg_get_lit(ctx, 4);
-    bool online_confirm = arg_get_lit(ctx, 5);
-    int max_online_candidates = arg_get_int_def(ctx, 6, 0);
-    /* Only bit 0 (byte 0 parity) carries reliable data leakage from FM11RF08S.
-     * Bits 1-3 are not valid keystream leakage for this card variant — using
-     * them filters out correct keys.  Override via --parity-mask if needed. */
-    uint8_t parity_mask = 0x1;
-    {
-        int pm_len = 0;
-        char pm_str[8] = {0};
-        if (arg_get_str_len(ctx, 7) > 0) {
-            CLIGetStrWithReturn(ctx, 7, (uint8_t *)pm_str, &pm_len);
-            unsigned long pm_val = strtoul(pm_str, NULL, 16);
-            if (pm_val >= 1 && pm_val <= 0xF) {
-                parity_mask = (uint8_t)(pm_val & 0x0F);
-            }
-        }
-    }
-    (void)online_confirm;
-    CLIParserFree(ctx);
+int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline_only, int max_online_candidates, uint8_t parity_mask, bool skip_default_key_check, const sector_t *known_sectors, size_t known_sector_count) {
 
     iso14a_card_select_t card = {0};
     iso14a_fm11rf08s_nonces_with_data_t nonces = {0};
@@ -2968,6 +2940,24 @@ int CmdHF14AMfSEN(const char *Cmd) {
     fm11_keylist_t confirmed_reuse_keys = {0};
     int retval = PM3_SUCCESS;
 
+    uint32_t seeded_known = 0;
+    size_t seed_sector_count = MIN(known_sector_count, (size_t)FM11RF08S_NORMAL_SECTORS);
+    for (size_t sec = 0; sec < seed_sector_count; sec++) {
+        for (uint8_t kt = 0; kt < 2; kt++) {
+            if (known_sectors == NULL || known_sectors[sec].foundKey[kt] == 0) {
+                continue;
+            }
+            uint64_t known_key = known_sectors[sec].Key[kt] & 0xFFFFFFFFFFFFULL;
+            keys_found[sec][kt] = known_key;
+            found_key[sec][kt] = true;
+            seeded_known++;
+            (void)fm11_keylist_add_unique(&confirmed_reuse_keys, known_key);
+        }
+    }
+    if (seeded_known > 0) {
+        fm11_sen_progress(nonce_count, "Seed known keys from earlier autopwn stages", seeded_known, 0);
+    }
+
     if (reader_mode) {
         retval = fm11_collect_reader_material(&card, reader_keys, reader_found);
         if (retval != PM3_SUCCESS) {
@@ -2983,35 +2973,39 @@ int CmdHF14AMfSEN(const char *Cmd) {
         }
     }
 
-    fm11_sen_progress(nonce_count, "Check default-key dictionary against nonce evidence", default_keys.count, 0);
-    retval = fm11_check_default_keys(uid, nonce_count, &nonces, &default_keys, parity_mask, keys_found, found_key);
-    if (retval != PM3_SUCCESS) {
-        goto out;
-    }
-    for (uint8_t sec = 0; sec < FM11RF08S_SECTORS; sec++) {
-        for (uint8_t kt = 0; kt < 2; kt++) {
-            if (found_key[sec][kt] == false) {
-                continue;
-            }
-            uint64_t key = keys_found[sec][kt] & 0xFFFFFFFFFFFFULL;
-            if (fm11_keylist_has_key(&confirmed_reuse_keys, key)) {
-                continue;
-            }
-            retval = fm11_keylist_add_unique(&confirmed_reuse_keys, key);
-            if (retval != PM3_SUCCESS) {
-                goto out;
-            }
-            uint32_t reuse_found = fm11_propagate_key_reuse_online(nonce_count, key, keys_found, found_key);
-            if (reuse_found > 0) {
-                snprintf(activity, sizeof(activity), "Key re-use propagation confirmed %u additional key slots", reuse_found);
-                fm11_sen_progress(nonce_count, activity, reuse_found, 0);
+    if (skip_default_key_check) {
+        fm11_sen_progress(nonce_count, "Skip default-key dictionary check already done by autopwn", seeded_known, 0);
+    } else {
+        fm11_sen_progress(nonce_count, "Check default-key dictionary against nonce evidence", default_keys.count, 0);
+        retval = fm11_check_default_keys(uid, nonce_count, &nonces, &default_keys, parity_mask, keys_found, found_key);
+        if (retval != PM3_SUCCESS) {
+            goto out;
+        }
+        for (uint8_t sec = 0; sec < FM11RF08S_SECTORS; sec++) {
+            for (uint8_t kt = 0; kt < 2; kt++) {
+                if (found_key[sec][kt] == false) {
+                    continue;
+                }
+                uint64_t key = keys_found[sec][kt] & 0xFFFFFFFFFFFFULL;
+                if (fm11_keylist_has_key(&confirmed_reuse_keys, key)) {
+                    continue;
+                }
+                retval = fm11_keylist_add_unique(&confirmed_reuse_keys, key);
+                if (retval != PM3_SUCCESS) {
+                    goto out;
+                }
+                uint32_t reuse_found = fm11_propagate_key_reuse_online(nonce_count, key, keys_found, found_key);
+                if (reuse_found > 0) {
+                    snprintf(activity, sizeof(activity), "Key re-use propagation confirmed %u additional key slots", reuse_found);
+                    fm11_sen_progress(nonce_count, activity, reuse_found, 0);
+                }
             }
         }
-    }
-    uint32_t default_found = fm11_count_found_keys(found_key);
-    if (default_found > 0) {
-        snprintf(activity, sizeof(activity), "Default key check recovered %u key%s", default_found, (default_found == 1) ? "" : "s");
-        fm11_sen_progress(nonce_count, activity, default_found, 0);
+        uint32_t default_found = fm11_count_found_keys(found_key);
+        if (default_found > 0) {
+            snprintf(activity, sizeof(activity), "Default key check recovered %u key%s", default_found, (default_found == 1) ? "" : "s");
+            fm11_sen_progress(nonce_count, activity, default_found, 0);
+        }
     }
 
     fm11_sen_progress(nonce_count, "Generate first-pass candidates from nT/{nT}/parity", 0, 0);
@@ -3379,4 +3373,52 @@ out:
         fm11_keylist_free(&candidates[sec][1]);
     }
     return retval;
+}
+
+int CmdHF14AMfSEN(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf sen",
+                  "Recover FM11RF08S keys using static encrypted nonce evidence in native client code",
+                  "hf mf sen\n"
+                  "hf mf sen --keep-nonces\n"
+                  "hf mf sen --no-oob\n"
+                  "hf mf sen --reader\n");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "keep-nonces", "save collected nonce/data JSON evidence"),
+        arg_lit0(NULL, "no-oob", "do not include FM11RF08S out-of-bounds sector 32 in key file"),
+        arg_lit0(NULL, "reader", "pre-pass: emulate this UID to a reader and digest recovered reader keys"),
+        arg_lit0(NULL, "offline-only", "stop after offline filtering, do not verify online"),
+        arg_lit0(NULL, "online-confirm", "only do online confirmation (skip generation if nonces loaded)"),
+        arg_int0(NULL, "max-online-candidates", "<n>", "abort online phase if total candidates exceed this limit"),
+        arg_str0(NULL, "parity-mask", "<hex>", "parity filter mask 1..F (default 1 = vetted staticnested_1nt behavior)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool keep_nonces = arg_get_lit(ctx, 1);
+    bool no_oob = arg_get_lit(ctx, 2);
+    bool reader_mode = arg_get_lit(ctx, 3);
+    bool offline_only = arg_get_lit(ctx, 4);
+    bool online_confirm = arg_get_lit(ctx, 5);
+    int max_online_candidates = arg_get_int_def(ctx, 6, 0);
+    /* Only bit 0 (byte 0 parity) carries reliable data leakage from FM11RF08S.
+     * Bits 1-3 are not valid keystream leakage for this card variant - using
+     * them filters out correct keys.  Override via --parity-mask if needed for
+     * any weird chinese clones, normally you should never use this parameter. */
+    uint8_t parity_mask = 0x1;
+    {
+        int pm_len = 0;
+        char pm_str[8] = {0};
+        if (arg_get_str_len(ctx, 7) > 0) {
+            CLIGetStrWithReturn(ctx, 7, (uint8_t *)pm_str, &pm_len);
+            unsigned long pm_val = strtoul(pm_str, NULL, 16);
+            if (pm_val >= 1 && pm_val <= 0xF) {
+                parity_mask = (uint8_t)(pm_val & 0x0F);
+            }
+        }
+    }
+    (void)online_confirm;
+    CLIParserFree(ctx);
+
+    return HFMFSENRecover(keep_nonces, no_oob, reader_mode, offline_only, max_online_candidates, parity_mask, false, NULL, 0);
 }

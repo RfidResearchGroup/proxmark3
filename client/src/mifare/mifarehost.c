@@ -317,12 +317,14 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
                 e_sector[sector_no].foundKey[key_type] = true;
             }
 
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(SUCCESS, "\nTarget block " _GREEN_("%4u") " key type " _GREEN_("%c") " -- found valid key [ " _GREEN_("%s") " ]",
-                          block_no,
-                          key_type ? 'B' : 'A',
-                          sprint_hex_inrow(resp.data.asBytes, MIFARE_KEY_SIZE)
-                         );
+            if (quiet == false) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(SUCCESS, "Target block " _GREEN_("%4u") " key type " _GREEN_("%c") " -- found valid key [ " _GREEN_("%s") " ]",
+                              block_no,
+                              key_type ? 'B' : 'A',
+                              sprint_hex_inrow(resp.data.asBytes, MIFARE_KEY_SIZE)
+                             );
+            }
 
             return PM3_SUCCESS;
         }
