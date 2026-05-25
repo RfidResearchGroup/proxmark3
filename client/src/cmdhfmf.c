@@ -2177,7 +2177,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
                 break;
             case PM3_ESTATIC_NONCE:
                 PrintAndLogEx(ERR, "Static encrypted nonce detected. Aborted\n");
-                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
+                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf sen") "`");
                 break;
             case PM3_SUCCESS: {
 
@@ -2281,7 +2281,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
                             continue;
                         case PM3_ESTATIC_NONCE:
                             PrintAndLogEx(ERR, "Static encrypted nonce detected. Aborted\n");
-                            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
+                            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf sen") "`");
                             break;
                         case PM3_SUCCESS:
                             calibrate = false;
@@ -2870,7 +2870,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
             break;
         case PM3_ESTATIC_NONCE:
             PrintAndLogEx(ERR, "Static encrypted nonce detected. Aborted\n");
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf sen") "`");
             break;
         case PM3_EFAILED: {
             PrintAndLogEx(FAILED, "\nFailed to recover a key...");
@@ -10741,7 +10741,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     }
 
     if (res == NONCE_STATIC_ENC) {
-        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf sen") "`");
     }
 
 out:
@@ -10804,6 +10804,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     } else if (arg_get_lit(ctx, 3)) {
         keytype = MF_KEY_B;
     }
+
     uint8_t prev_keytype = keytype;
     keytype = arg_get_int_def(ctx, 4, keytype);
     if ((arg_get_lit(ctx, 2) || arg_get_lit(ctx, 3)) && (keytype != prev_keytype)) {
@@ -10828,6 +10829,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     } else if (arg_get_lit(ctx, 8)) {
         keytype_nested = MF_KEY_B;
     }
+
     uint8_t prev_keytype_nested = keytype_nested;
     keytype_nested = arg_get_int_def(ctx, 9, keytype_nested);
     if ((arg_get_lit(ctx, 7) || arg_get_lit(ctx, 8)) && (keytype_nested != prev_keytype_nested)) {
@@ -10850,6 +10852,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
         PrintAndLogEx(WARNING, "Choose one single type of reset");
         return PM3_EINVARG;
     }
+
     bool addread = arg_get_lit(ctx, 14);
     bool addauth = arg_get_lit(ctx, 15);
     bool incblk2 = arg_get_lit(ctx, 16);
@@ -10860,15 +10863,18 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     if (collect_fm11rf08s_with_data) {
         collect_fm11rf08s = 1;
     }
+
     bool collect_fm11rf08s_without_backdoor = arg_get_lit(ctx, 23);
     if (collect_fm11rf08s_without_backdoor) {
         collect_fm11rf08s = 1;
     }
+
     if (collect_fm11rf08s_with_data && collect_fm11rf08s_without_backdoor) {
         CLIParserFree(ctx);
         PrintAndLogEx(WARNING, "Don't mix with_data and without_backdoor options");
         return PM3_EINVARG;
     }
+
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 24), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
@@ -11001,7 +11007,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     }
 
     if (res == NONCE_STATIC_ENC) {
-        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf sen") "`");
     }
 
     if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
