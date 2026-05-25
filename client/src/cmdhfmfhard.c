@@ -121,49 +121,44 @@ static void get_SIMD_instruction_set(char *instruction_set) {
     }
 }
 
-static void print_progress_header(void) {
-    char progress_text[80];
-    char instr_set[12] = "";
-    get_SIMD_instruction_set(instr_set);
-    snprintf(progress_text, sizeof(progress_text), "Start using %d threads and %s SIMD core", num_CPUs(), instr_set);
-
-    PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+---------------------------+---------------");
-    PrintAndLogEx(INFO, "         |         |                                                         | Expected to brute force   | Estimated     ");
-    PrintAndLogEx(INFO, " Time    | #nonces | Activity                                                | #states                   | time for task ");
-    PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+---------------------------+---------------");
-    PrintAndLogEx(INFO, "       0 |       0 | %-55.55s | %25s | %13s ", progress_text, "", "");
-}
-
-static void hardnested_format_activity(char *out, size_t out_len, const char *activity, size_t width) {
-    const char *src = activity ? activity : "";
-    size_t pos = 0;
-    size_t visible = 0;
-    bool copied_ansi = false;
-
-    while (*src && visible < width && pos + 1 < out_len) {
-        if (src[0] == '\x1b' && src[1] == '[') {
-            do {
-                if (pos + 1 >= out_len) {
+// Count the bytes in CSI escape sequences (ESC '[' ... terminator in 0x40..0x7E)
+// so a printf field width can be padded to compensate for non-printing bytes.
+static size_t ansi_byte_count(const char *s) {
+    size_t n = 0;
+    if (s == NULL) {
+        return 0;
+    }
+    while (*s) {
+        if (s[0] == '\x1b' && s[1] == '[') {
+            n += 2;
+            s += 2;
+            while (*s) {
+                unsigned char c = (unsigned char)*s++;
+                n++;
+                if (c >= 0x40 && c <= 0x7E) {
                     break;
                 }
-                out[pos++] = *src;
-            } while (*src && (*src++ < '@' || src[-1] > '~'));
-            copied_ansi = true;
-            continue;
+            }
+        } else {
+            s++;
         }
-        out[pos++] = *src++;
-        visible++;
     }
+    return n;
+}
 
-    if (*src && copied_ansi && pos + strlen(AEND) < out_len) {
-        memcpy(out + pos, AEND, strlen(AEND));
-        pos += strlen(AEND);
-    }
-    while (visible < width && pos + 1 < out_len) {
-        out[pos++] = ' ';
-        visible++;
-    }
-    out[pos] = '\0';
+static void print_progress_header(void) {
+    char progress_text[128];
+    char instr_set[12] = "";
+    get_SIMD_instruction_set(instr_set);
+    snprintf(progress_text, sizeof(progress_text), "Start using " _YELLOW_("%d") " threads and " _YELLOW_("%s") " SIMD core", num_CPUs(), instr_set);
+
+    int col_w = (int)(55 + ansi_byte_count(progress_text));
+
+    PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+---------------------------+---------------");
+    PrintAndLogEx(INFO, "         |         |                                                         | Expected to bruteforce    |");
+    PrintAndLogEx(INFO, " Time    | #nonces | Activity                                                | #states                   | Estimated");
+    PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+---------------------------+---------------");
+    PrintAndLogEx(INFO, "       0 |       0 | %-*s | %25s | %13s ", col_w, progress_text, "", "");
 }
 
 void hardnested_print_progress(uint32_t nonces, const char *activity, float brute_force, uint64_t min_diff_print_time) {
@@ -187,13 +182,12 @@ void hardnested_print_progress(uint32_t nonces, const char *activity, float brut
             snprintf(brute_force_time_string, sizeof(brute_force_time_string), "%2.0fd", brute_force_time / (60 * 60 * 24));
         }
 
-        char activity_col[128] = {0};
-        hardnested_format_activity(activity_col, sizeof(activity_col), activity, 55);
+        int col_w = (int)(55 + ansi_byte_count(activity));
 
-        PrintAndLogEx(INFO, " %7.0f | %7u | %s | %25.0f | %13s "
+        PrintAndLogEx(INFO, " %7.0f | %7u | %-*s | %25.0f | %13s "
                       , (float)total_time / 1000.0
                       , nonces
-                      , activity_col
+                      , col_w, activity ? activity : ""
                       , brute_force
                       , brute_force_time_string
                      );
@@ -546,7 +540,7 @@ static void init_bitflip_bitarrays(void) {
     {
         char progress_text[100];
         memset(progress_text, 0, sizeof(progress_text));
-        snprintf(progress_text, sizeof(progress_text), "Loaded %u RAW / %u LZ4 / %u BZ2 in %4"PRIu64" ms"
+        snprintf(progress_text, sizeof(progress_text), "Loaded " _YELLOW_("%u") " RAW / " _YELLOW_("%u") " LZ4 / " _YELLOW_("%u") " BZ2 in %4"PRIu64" ms"
                  , nraw
                  , nlz4
                  , nbz2
