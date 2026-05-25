@@ -882,7 +882,7 @@ static int CmdHFFmcosAuthExternal(const char *Cmd) {
 
     // GET CHALLENGE (8 bytes) - activates the field
     uint8_t challenge[8] = {0};
-    int res = fmcos_get_challenge(8, true, challenge);
+    res = fmcos_get_challenge(8, true, challenge);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
@@ -1358,7 +1358,7 @@ static int CmdHFFmcosCreateDir(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    int res = fmcos_send_apdu(apdu, 5 + data_len, true, keep, resp, &resp_len);
+    res = fmcos_send_apdu(apdu, 5 + data_len, true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
@@ -1506,7 +1506,7 @@ static int CmdHFFmcosCreateFile(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    int res = fmcos_send_apdu(apdu, 12, true, keep, resp, &resp_len);
+    res = fmcos_send_apdu(apdu, 12, true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
@@ -1599,7 +1599,7 @@ static int CmdHFFmcosCreateKeyfile(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    int res = fmcos_send_apdu(apdu, 12, true, keep, resp, &resp_len);
+    res = fmcos_send_apdu(apdu, 12, true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
@@ -1690,7 +1690,7 @@ static int CmdHFFmcosReadBinary(const char *Cmd) {
 
     uint8_t data_out[256] = {0};
     int data_out_len = 0;
-    int res = fmcos_read_cmd(0xB0, p1b[0], p2b[0], (uint8_t)rlen,
+    res = fmcos_read_cmd(0xB0, p1b[0], p2b[0], (uint8_t)rlen,
                              prot, key, (size_t)key_len,
                              true, keep, data_out, &data_out_len);
     if (res == PM3_SUCCESS) {
@@ -1769,7 +1769,7 @@ static int CmdHFFmcosReadRecord(const char *Cmd) {
     uint8_t p2 = (uint8_t)(((fid_buf[0] & 0x1F) << 3) | 4);
     uint8_t data_out[256] = {0};
     int data_out_len = 0;
-    int res = fmcos_read_cmd(0xB2, (uint8_t)rec, p2, (uint8_t)le,
+    res = fmcos_read_cmd(0xB2, (uint8_t)rec, p2, (uint8_t)le,
                              prot, key, (size_t)key_len,
                              true, keep, data_out, &data_out_len);
     if (res == PM3_SUCCESS) {
@@ -1851,7 +1851,7 @@ static int CmdHFFmcosWriteBinary(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    int res = fmcos_write_cmd(0x00, 0xD6, p1b[0], p2b[0],
+    res = fmcos_write_cmd(0x00, 0xD6, p1b[0], p2b[0],
                               wdata, (size_t)wdata_len,
                               prot, key, (size_t)key_len,
                               true, keep, resp, &resp_len);
@@ -1963,7 +1963,7 @@ static int CmdHFFmcosWriteRecord(const char *Cmd) {
     uint8_t p2 = (uint8_t)(((fid_buf[0] & 0x1F) << 3) | 4);
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    int res = fmcos_write_cmd(0x00, 0xDC, (uint8_t)rec, p2,
+    res = fmcos_write_cmd(0x00, 0xDC, (uint8_t)rec, p2,
                               send_buf, send_len,
                               prot, key, (size_t)key_len,
                               true, keep, resp, &resp_len);
@@ -2050,7 +2050,7 @@ static int CmdHFFmcosAppend(const char *Cmd) {
     uint8_t p2 = (uint8_t)(((fid_buf[0] & 0x1F) << 3) | 4);
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    int res = fmcos_write_cmd(0x00, 0xE2, 0x00, p2,
+    res = fmcos_write_cmd(0x00, 0xE2, 0x00, p2,
                               wdata, (size_t)wdata_len,
                               prot, key, (size_t)key_len,
                               true, keep, resp, &resp_len);
@@ -2258,7 +2258,7 @@ static int CmdHFFmcosWriteKey(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    int res = fmcos_write_cmd(0x80, 0xD4, op_buf[0], id_buf[0],
+    res = fmcos_write_cmd(0x80, 0xD4, op_buf[0], id_buf[0],
                               data, data_len,
                               prot, authkey, (size_t)authkey_len,
                               true, keep, resp, &resp_len);
@@ -3395,7 +3395,7 @@ static int CmdHFFmcosOverdraft(const char *Cmd) {
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
 
-    int res = fmcos_send_apdu(ph1, sizeof(ph1), true, true, resp, &resp_len);
+    res = fmcos_send_apdu(ph1, sizeof(ph1), true, true, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         g_fmcos_session_active = keep;
         if (!keep) {
@@ -4373,7 +4373,7 @@ static int CmdHFFmcosTidCreateDF(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    int res = fmcos_send_apdu(apdu, 14 + (size_t)name_len, true, keep, resp, &resp_len);
+    res = fmcos_send_apdu(apdu, 14 + (size_t)name_len, true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
@@ -4498,7 +4498,7 @@ static int CmdHFFmcosTidCreateBin(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    int res = fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len);
+    res = fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
