@@ -49,11 +49,11 @@ static bool g_fmcos_session_active = false;
 // If g_fmcos_session_active is true and activate is true, the activation step is
 // suppressed so the previously selected DF is not reset to MF.
 static int fmcos_send_apdu(const uint8_t *apdu, size_t apdu_len,
-                            bool activate, bool leave_on,
-                            uint8_t *resp, int *resp_len) {
+                           bool activate, bool leave_on,
+                           uint8_t *resp, int *resp_len) {
     bool do_activate = activate && !g_fmcos_session_active;
     int res = ExchangeAPDU14a(apdu, (int)apdu_len, do_activate, leave_on,
-                               resp, APDU_RES_LEN, resp_len);
+                              resp, APDU_RES_LEN, resp_len);
     if (res != PM3_SUCCESS) {
         g_fmcos_session_active = false;
         PrintAndLogEx(ERR, "APDU exchange failed");
@@ -71,13 +71,26 @@ static const char *fmcos_print_sw(uint8_t sw1, uint8_t sw2) {
         case 0x62:
             if (sw2 >= 0x02 && sw2 <= 0x80) { desc = "Triggering by the card"; break; }
             switch (sw2) {
-                case 0x81: desc = "Part of returned data may be corrupted"; break;
-                case 0x82: desc = "End of file/record reached before reading Ne bytes"; break;
-                case 0x83: desc = "Selected file deactivated"; break;
-                case 0x84: desc = "FCI not formatted"; break;
-                case 0x85: desc = "Selected file in termination state"; break;
-                case 0x86: desc = "No input data from sensor"; break;
-                default: break;
+                case 0x81:
+                    desc = "Part of returned data may be corrupted";
+                    break;
+                case 0x82:
+                    desc = "End of file/record reached before reading Ne bytes";
+                    break;
+                case 0x83:
+                    desc = "Selected file deactivated";
+                    break;
+                case 0x84:
+                    desc = "FCI not formatted";
+                    break;
+                case 0x85:
+                    desc = "Selected file in termination state";
+                    break;
+                case 0x86:
+                    desc = "No input data from sensor";
+                    break;
+                default:
+                    break;
             }
             break;
 
@@ -101,42 +114,91 @@ static const char *fmcos_print_sw(uint8_t sw1, uint8_t sw2) {
 
         case 0x68:
             switch (sw2) {
-                case 0x81: desc = "Logical channel not supported"; break;
-                case 0x82: desc = "Secure messaging not supported"; break;
-                case 0x83: desc = "Last command of chain expected"; break;
-                case 0x84: desc = "Command chaining not supported"; break;
-                default: break;
+                case 0x81:
+                    desc = "Logical channel not supported";
+                    break;
+                case 0x82:
+                    desc = "Secure messaging not supported";
+                    break;
+                case 0x83:
+                    desc = "Last command of chain expected";
+                    break;
+                case 0x84:
+                    desc = "Command chaining not supported";
+                    break;
+                default:
+                    break;
             }
             break;
 
         case 0x69:
             switch (sw2) {
-                case 0x81: desc = "Command incompatible with file structure"; break;
-                case 0x82: desc = "Security status not satisfied"; break;
-                case 0x83: desc = "Authentication method blocked"; break;
-                case 0x84: desc = "Reference data not usable"; break;
-                case 0x85: desc = "Conditions of use not satisfied"; break;
-                case 0x86: desc = "Command not allowed (no current EF)"; break;
-                case 0x87: desc = "Secure messaging data objects missing"; break;
-                case 0x88: desc = "Incorrect secure messaging data objects"; break;
-                default: break;
+                case 0x81:
+                    desc = "Command incompatible with file structure";
+                    break;
+                case 0x82:
+                    desc = "Security status not satisfied";
+                    break;
+                case 0x83:
+                    desc = "Authentication method blocked";
+                    break;
+                case 0x84:
+                    desc = "Reference data not usable";
+                    break;
+                case 0x85:
+                    desc = "Conditions of use not satisfied";
+                    break;
+                case 0x86:
+                    desc = "Command not allowed (no current EF)";
+                    break;
+                case 0x87:
+                    desc = "Secure messaging data objects missing";
+                    break;
+                case 0x88:
+                    desc = "Incorrect secure messaging data objects";
+                    break;
+                default:
+                    break;
             }
             break;
 
         case 0x6A:
             switch (sw2) {
-                case 0x80: desc = "Incorrect parameters in data field"; break;
-                case 0x81: desc = "Function not supported"; break;
-                case 0x82: desc = "File or application not found"; break;
-                case 0x83: desc = "Record not found"; break;
-                case 0x84: desc = "Not enough memory in file"; break;
-                case 0x85: desc = "Nc inconsistent with TLV structure"; break;
-                case 0x86: desc = "Incorrect parameters P1-P2"; break;
-                case 0x87: desc = "Nc inconsistent with parameters P1-P2"; break;
-                case 0x88: desc = "Referenced data not found"; break;
-                case 0x89: desc = "File already exists"; break;
-                case 0x8A: desc = "DF name already exists"; break;
-                default: break;
+                case 0x80:
+                    desc = "Incorrect parameters in data field";
+                    break;
+                case 0x81:
+                    desc = "Function not supported";
+                    break;
+                case 0x82:
+                    desc = "File or application not found";
+                    break;
+                case 0x83:
+                    desc = "Record not found";
+                    break;
+                case 0x84:
+                    desc = "Not enough memory in file";
+                    break;
+                case 0x85:
+                    desc = "Nc inconsistent with TLV structure";
+                    break;
+                case 0x86:
+                    desc = "Incorrect parameters P1-P2";
+                    break;
+                case 0x87:
+                    desc = "Nc inconsistent with parameters P1-P2";
+                    break;
+                case 0x88:
+                    desc = "Referenced data not found";
+                    break;
+                case 0x89:
+                    desc = "File already exists";
+                    break;
+                case 0x8A:
+                    desc = "DF name already exists";
+                    break;
+                default:
+                    break;
             }
             break;
 
@@ -154,9 +216,14 @@ static const char *fmcos_print_sw(uint8_t sw1, uint8_t sw2) {
 
         case 0x94:
             switch (sw2) {
-                case 0x01: desc = "Insufficient balance"; break;
-                case 0x03: desc = "Key index not supported"; break;
-                default: break;
+                case 0x01:
+                    desc = "Insufficient balance";
+                    break;
+                case 0x03:
+                    desc = "Key index not supported";
+                    break;
+                default:
+                    break;
             }
             break;
 
@@ -186,7 +253,7 @@ static const char *fmcos_print_sw(uint8_t sw1, uint8_t sw2) {
 // key_len 16 -> 3DES (two-key; if both halves equal, degrades to single DES)
 // Returns 0 on success.
 static int fmcos_ecb_encrypt(const uint8_t *key, size_t key_len,
-                              const uint8_t *in, uint8_t *out) {
+                             const uint8_t *in, uint8_t *out) {
     if (key_len == 8) {
         mbedtls_des_context ctx;
         mbedtls_des_init(&ctx);
@@ -253,9 +320,9 @@ static size_t fmcos_iso7816_pad(const uint8_t *in, size_t in_len, uint8_t *out) 
 // iv is 8 bytes (typically the GET CHALLENGE response).
 // Writes mac_len bytes (<= 8) into mac_out.
 static void fmcos_des_mac(const uint8_t *buf, size_t buf_len,
-                           const uint8_t key[8],
-                           const uint8_t iv[8],
-                           uint8_t *mac_out, size_t mac_len) {
+                          const uint8_t key[8],
+                          const uint8_t iv[8],
+                          uint8_t *mac_out, size_t mac_len) {
     size_t max_padded = buf_len + 8;
     uint8_t *padded = calloc(max_padded, 1);
     if (padded == NULL)
@@ -284,9 +351,9 @@ static void fmcos_des_mac(const uint8_t *buf, size_t buf_len,
 // with right-key-half, then re-encrypt with left-key-half.
 // key must be exactly 16 bytes.  Writes mac_len bytes (<= 8) into mac_out.
 static void fmcos_3des_mac(const uint8_t *buf, size_t buf_len,
-                            const uint8_t key[16],
-                            const uint8_t iv[8],
-                            uint8_t *mac_out, size_t mac_len) {
+                           const uint8_t key[16],
+                           const uint8_t iv[8],
+                           uint8_t *mac_out, size_t mac_len) {
     const uint8_t *key_l = key;
     const uint8_t *key_r = key + 8;
 
@@ -308,10 +375,10 @@ static void fmcos_3des_mac(const uint8_t *buf, size_t buf_len,
 // key_len 8 -> fmcos_des_mac; key_len 16 -> fmcos_3des_mac.
 // Lc encodes payload_len + 4 (reserves space for the MAC itself).
 static void fmcos_packet_mac(uint8_t cla, uint8_t ins, uint8_t p1, uint8_t p2,
-                              const uint8_t *data, size_t data_len,
-                              const uint8_t *iv,
-                              const uint8_t *key, size_t key_len,
-                              uint8_t *mac_out) {
+                             const uint8_t *data, size_t data_len,
+                             const uint8_t *iv,
+                             const uint8_t *key, size_t key_len,
+                             uint8_t *mac_out) {
     size_t buf_len = 5 + data_len;
     uint8_t *mac_buf = calloc(buf_len, 1);
     if (mac_buf == NULL)
@@ -353,7 +420,7 @@ static int fmcos_iso7816_unpad(const uint8_t *buf, size_t padded_len, size_t *ou
 // Pad with ISO7816 and ECB-encrypt (DES or 3DES) the full buffer.
 // out must hold at least data_len + 8 bytes.  Returns encrypted length.
 static size_t fmcos_encrypt(const uint8_t *key, size_t key_len,
-                             const uint8_t *data, size_t data_len, uint8_t *out) {
+                            const uint8_t *data, size_t data_len, uint8_t *out) {
     uint8_t padded[512] = {0};
     size_t padded_len = fmcos_iso7816_pad(data, data_len, padded);
     for (size_t off = 0; off < padded_len; off += 8)
@@ -364,8 +431,8 @@ static size_t fmcos_encrypt(const uint8_t *key, size_t key_len,
 // ECB-decrypt (DES or 3DES) then remove ISO7816 padding.
 // out must be at least data_len bytes.  *out_len receives unpadded length.
 static int fmcos_decrypt(const uint8_t *key, size_t key_len,
-                          const uint8_t *data, size_t data_len,
-                          uint8_t *out, size_t *out_len) {
+                         const uint8_t *data, size_t data_len,
+                         uint8_t *out, size_t *out_len) {
     if (data_len == 0 || data_len % 8 != 0) {
         PrintAndLogEx(ERR, "Encrypted length must be a non-zero multiple of 8");
         return PM3_ESOFT;
@@ -390,7 +457,7 @@ static int fmcos_decrypt(const uint8_t *key, size_t key_len,
 
 // SELECT FILE by 2-byte file ID.
 static int fmcos_select(uint16_t file_id, bool activate, bool leave_on,
-                         uint8_t *resp, int *resp_len) {
+                        uint8_t *resp, int *resp_len) {
     uint8_t apdu[7];
     apdu[0] = 0x00;
     apdu[1] = 0xA4;
@@ -404,8 +471,8 @@ static int fmcos_select(uint16_t file_id, bool activate, bool leave_on,
 
 // SELECT by AID / DF name.
 static int fmcos_select_by_name(const uint8_t *name, size_t name_len,
-                                 bool activate, bool leave_on,
-                                 uint8_t *resp, int *resp_len) {
+                                bool activate, bool leave_on,
+                                uint8_t *resp, int *resp_len) {
     if (name_len == 0 || name_len > 16) {
         PrintAndLogEx(ERR, "AID must be 1-16 bytes");
         return PM3_EINVARG;
@@ -463,7 +530,7 @@ static int fmcos_get_challenge(uint8_t chal_len, bool activate, uint8_t *chal_ou
 
 // Simple TLV walker: find first occurrence of a 1-byte tag.
 static const uint8_t *fmcos_tlv_find(const uint8_t *buf, size_t len,
-                                      uint8_t tag, size_t *vlen) {
+                                     uint8_t tag, size_t *vlen) {
     size_t i = 0;
     while (i + 1 < len) {
         uint8_t t = buf[i++];
@@ -887,10 +954,10 @@ static int CmdHFFmcosAuth(const char *Cmd) {
 // activate: true to wake the card (passed to GET CHALLENGE if protected, else
 //           to the write APDU directly).
 static int fmcos_write_cmd(uint8_t cla, uint8_t ins, uint8_t p1, uint8_t p2,
-                            const uint8_t *data, size_t data_len,
-                            int prot, const uint8_t *key, size_t key_len,
-                            bool activate, bool leave_on,
-                            uint8_t *resp_out, int *resp_len_out) {
+                           const uint8_t *data, size_t data_len,
+                           int prot, const uint8_t *key, size_t key_len,
+                           bool activate, bool leave_on,
+                           uint8_t *resp_out, int *resp_len_out) {
     uint8_t payload[260] = {0};
     size_t  payload_len = 0;
 
@@ -921,7 +988,10 @@ static int fmcos_write_cmd(uint8_t cla, uint8_t ins, uint8_t p1, uint8_t p2,
     }
 
     uint8_t apdu[270];
-    apdu[0] = cla; apdu[1] = ins; apdu[2] = p1; apdu[3] = p2;
+    apdu[0] = cla;
+    apdu[1] = ins;
+    apdu[2] = p1;
+    apdu[3] = p2;
     apdu[4] = (uint8_t)payload_len;
     memcpy(apdu + 5, payload, payload_len);
     return fmcos_send_apdu(apdu, 5 + payload_len, activate, leave_on, resp_out, resp_len_out);
@@ -932,9 +1002,9 @@ static int fmcos_write_cmd(uint8_t cla, uint8_t ins, uint8_t p1, uint8_t p2,
 // to data_out and *data_out_len receives the byte count.
 // The response MAC is verified when prot != FMCOS_PROT_NONE.
 static int fmcos_read_cmd(uint8_t ins, uint8_t p1, uint8_t p2, uint8_t read_len,
-                           int prot, const uint8_t *key, size_t key_len,
-                           bool activate, bool leave_on,
-                           uint8_t *data_out, int *data_out_len) {
+                          int prot, const uint8_t *key, size_t key_len,
+                          bool activate, bool leave_on,
+                          uint8_t *data_out, int *data_out_len) {
     uint8_t cla = 0x00;
     uint8_t mac_iv[8] = {0};
 
@@ -952,14 +1022,20 @@ static int fmcos_read_cmd(uint8_t ins, uint8_t p1, uint8_t p2, uint8_t read_len,
         // Case 4: CLA INS P1 P2 Lc=4 [MAC4] Le
         uint8_t mac[4] = {0};
         fmcos_packet_mac(cla, ins, p1, p2, NULL, 0, mac_iv, key, key_len, mac);
-        apdu[0] = cla; apdu[1] = ins; apdu[2] = p1; apdu[3] = p2;
+        apdu[0] = cla;
+        apdu[1] = ins;
+        apdu[2] = p1;
+        apdu[3] = p2;
         apdu[4] = 0x04;
         memcpy(apdu + 5, mac, 4);
         apdu[9] = read_len;
         apdu_len = 10;
     } else {
         // Case 2: CLA INS P1 P2 Le
-        apdu[0] = cla; apdu[1] = ins; apdu[2] = p1; apdu[3] = p2;
+        apdu[0] = cla;
+        apdu[1] = ins;
+        apdu[2] = p1;
+        apdu[3] = p2;
         apdu[4] = read_len;
         apdu_len = 5;
     }
@@ -1081,16 +1157,21 @@ static int CmdHFFmcosCreateDir(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t id_buf[2] = {0}; int id_len = 0;
+    uint8_t id_buf[2] = {0};
+    int id_len = 0;
     CLIGetHexWithReturn(ctx, 1, id_buf, &id_len);
     int space = (int)strtol(arg_get_str(ctx, 2)->sval[0], NULL, 16);
-    uint8_t cperm[1] = {0};  int cperm_len = 0;
+    uint8_t cperm[1] = {0};
+    int cperm_len = 0;
     CLIGetHexWithReturn(ctx, 3, cperm, &cperm_len);
-    uint8_t eperm[1] = {0};  int eperm_len = 0;
+    uint8_t eperm[1] = {0};
+    int eperm_len = 0;
     CLIGetHexWithReturn(ctx, 4, eperm, &eperm_len);
-    uint8_t appid[1] = {0};  int appid_len = 0;
+    uint8_t appid[1] = {0};
+    int appid_len = 0;
     CLIGetHexWithReturn(ctx, 5, appid, &appid_len);
-    uint8_t name[16] = {0};  int name_len = 0;
+    uint8_t name[16] = {0};
+    int name_len = 0;
     CLIGetHexWithReturn(ctx, 6, name, &name_len);
     bool keep     = arg_get_lit(ctx, 7);
     bool apdu_log = arg_get_lit(ctx, 8);
@@ -1099,7 +1180,8 @@ static int CmdHFFmcosCreateDir(const char *Cmd) {
     if (id_len != 2) { PrintAndLogEx(ERR, "--id must be 2 bytes"); return PM3_EINVARG; }
     if (space < 1 || space > 0xFFFF) { PrintAndLogEx(ERR, "--space out of range"); return PM3_EINVARG; }
     if (cperm_len != 1 || eperm_len != 1 || appid_len != 1) {
-        PrintAndLogEx(ERR, "--cperm, --eperm, --appid must each be 1 byte"); return PM3_EINVARG;
+        PrintAndLogEx(ERR, "--cperm, --eperm, --appid must each be 1 byte");
+        return PM3_EINVARG;
     }
     SetAPDULogging(apdu_log);
 
@@ -1116,7 +1198,10 @@ static int CmdHFFmcosCreateDir(const char *Cmd) {
     if (name_len > 0) { memcpy(data + data_len, name, (size_t)name_len); data_len += (size_t)name_len; }
 
     uint8_t apdu[30];
-    apdu[0] = 0x80; apdu[1] = 0xE0; apdu[2] = id_buf[0]; apdu[3] = id_buf[1];
+    apdu[0] = 0x80;
+    apdu[1] = 0xE0;
+    apdu[2] = id_buf[0];
+    apdu[3] = id_buf[1];
     apdu[4] = (uint8_t)data_len;
     memcpy(apdu + 5, data, data_len);
 
@@ -1185,16 +1270,20 @@ static int CmdHFFmcosCreateFile(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t id_buf[2] = {0}; int id_len = 0;
+    uint8_t id_buf[2] = {0};
+    int id_len = 0;
     CLIGetHexWithReturn(ctx, 1, id_buf, &id_len);
     int ftype = 0;
     if (CLIGetOptionList(arg_get_str(ctx, 2), g_fmcos_filetype_opts, &ftype)) { CLIParserFree(ctx); return PM3_EINVARG; }
     int size = (int)strtol(arg_get_str(ctx, 3)->sval[0], NULL, 16);
-    uint8_t rperm[1] = {0};  int rperm_len = 0;
+    uint8_t rperm[1] = {0};
+    int rperm_len = 0;
     CLIGetHexWithReturn(ctx, 4, rperm, &rperm_len);
-    uint8_t wperm[1] = {0};  int wperm_len = 0;
+    uint8_t wperm[1] = {0};
+    int wperm_len = 0;
     CLIGetHexWithReturn(ctx, 5, wperm, &wperm_len);
-    uint8_t access[1] = {0}; int access_len = 0;
+    uint8_t access[1] = {0};
+    int access_len = 0;
     CLIGetHexWithReturn(ctx, 6, access, &access_len);
     int prot = FMCOS_PROT_NONE;
     if (CLIGetOptionList(arg_get_str(ctx, 7), g_fmcos_prot_opts, &prot)) { CLIParserFree(ctx); return PM3_EINVARG; }
@@ -1205,7 +1294,8 @@ static int CmdHFFmcosCreateFile(const char *Cmd) {
     if (id_len != 2) { PrintAndLogEx(ERR, "--id must be 2 bytes"); return PM3_EINVARG; }
     if (size < 1 || size > 0xFFFF) { PrintAndLogEx(ERR, "--size out of range"); return PM3_EINVARG; }
     if (rperm_len != 1 || wperm_len != 1 || access_len != 1) {
-        PrintAndLogEx(ERR, "--rperm, --wperm, --access must each be 1 byte"); return PM3_EINVARG;
+        PrintAndLogEx(ERR, "--rperm, --wperm, --access must each be 1 byte");
+        return PM3_EINVARG;
     }
     SetAPDULogging(apdu_log);
 
@@ -1222,7 +1312,10 @@ static int CmdHFFmcosCreateFile(const char *Cmd) {
         access[0]
     };
     uint8_t apdu[12];
-    apdu[0] = 0x80; apdu[1] = 0xE0; apdu[2] = id_buf[0]; apdu[3] = id_buf[1];
+    apdu[0] = 0x80;
+    apdu[1] = 0xE0;
+    apdu[2] = id_buf[0];
+    apdu[3] = id_buf[1];
     apdu[4] = 7;
     memcpy(apdu + 5, data, 7);
 
@@ -1259,12 +1352,15 @@ static int CmdHFFmcosCreateKeyfile(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t id_buf[2] = {0}; int id_len = 0;
+    uint8_t id_buf[2] = {0};
+    int id_len = 0;
     CLIGetHexWithReturn(ctx, 1, id_buf, &id_len);
     int space = (int)strtol(arg_get_str(ctx, 2)->sval[0], NULL, 16);
-    uint8_t dfsid[1] = {0};  int dfsid_len = 0;
+    uint8_t dfsid[1] = {0};
+    int dfsid_len = 0;
     CLIGetHexWithReturn(ctx, 3, dfsid, &dfsid_len);
-    uint8_t perm[1] = {0};   int perm_len = 0;
+    uint8_t perm[1] = {0};
+    int perm_len = 0;
     CLIGetHexWithReturn(ctx, 4, perm, &perm_len);
     bool keep     = arg_get_lit(ctx, 5);
     bool apdu_log = arg_get_lit(ctx, 6);
@@ -1273,7 +1369,8 @@ static int CmdHFFmcosCreateKeyfile(const char *Cmd) {
     if (id_len != 2) { PrintAndLogEx(ERR, "--id must be 2 bytes"); return PM3_EINVARG; }
     if (space < 1 || space > 0xFFFF) { PrintAndLogEx(ERR, "--space out of range"); return PM3_EINVARG; }
     if (dfsid_len != 1 || perm_len != 1) {
-        PrintAndLogEx(ERR, "--dfsid and --perm must each be 1 byte"); return PM3_EINVARG;
+        PrintAndLogEx(ERR, "--dfsid and --perm must each be 1 byte");
+        return PM3_EINVARG;
     }
     SetAPDULogging(apdu_log);
 
@@ -1284,7 +1381,10 @@ static int CmdHFFmcosCreateKeyfile(const char *Cmd) {
         dfsid[0], perm[0], 0xFF, 0xFF
     };
     uint8_t apdu[12];
-    apdu[0] = 0x80; apdu[1] = 0xE0; apdu[2] = id_buf[0]; apdu[3] = id_buf[1];
+    apdu[0] = 0x80;
+    apdu[1] = 0xE0;
+    apdu[2] = id_buf[0];
+    apdu[3] = id_buf[1];
     apdu[4] = 7;
     memcpy(apdu + 5, data, 7);
 
@@ -1342,7 +1442,7 @@ static int CmdHFFmcosReadBinary(const char *Cmd) {
         arg_str1(NULL, "p1",   "<hex>", "P1 byte (offset high)"),
         arg_str1(NULL, "p2",   "<hex>", "P2 byte (offset low)"),
         arg_int1(NULL, "len",  "<n>",   "number of bytes to read (0 = read all)"),
-        arg_str0(NULL, "prot", "<type>","protection: none(def) mac enc"),
+        arg_str0(NULL, "prot", "<type>", "protection: none(def) mac enc"),
         arg_str0(NULL, "key",  "<hex>", "line-protection key (8 or 16 bytes)"),
         arg_lit0("k",  "keep", "keep field ON after command"),
         arg_lit0("a",  "apdu", "show APDU requests and responses"),
@@ -1350,14 +1450,17 @@ static int CmdHFFmcosReadBinary(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t p1b[1] = {0}; int p1_len = 0;
+    uint8_t p1b[1] = {0};
+    int p1_len = 0;
     CLIGetHexWithReturn(ctx, 1, p1b, &p1_len);
-    uint8_t p2b[1] = {0}; int p2_len = 0;
+    uint8_t p2b[1] = {0};
+    int p2_len = 0;
     CLIGetHexWithReturn(ctx, 2, p2b, &p2_len);
     int rlen = arg_get_int_def(ctx, 3, 0);
     int prot = FMCOS_PROT_NONE;
     if (CLIGetOptionList(arg_get_str(ctx, 4), g_fmcos_prot_opts, &prot)) { CLIParserFree(ctx); return PM3_EINVARG; }
-    uint8_t key[16] = {0}; int key_len = 0;
+    uint8_t key[16] = {0};
+    int key_len = 0;
     CLIGetHexWithReturn(ctx, 5, key, &key_len);
     bool keep     = arg_get_lit(ctx, 6);
     bool apdu_log = arg_get_lit(ctx, 7);
@@ -1373,8 +1476,8 @@ static int CmdHFFmcosReadBinary(const char *Cmd) {
     uint8_t data_out[256] = {0};
     int data_out_len = 0;
     int res = fmcos_read_cmd(0xB0, p1b[0], p2b[0], (uint8_t)rlen,
-                              prot, key, (size_t)key_len,
-                              true, keep, data_out, &data_out_len);
+                             prot, key, (size_t)key_len,
+                             true, keep, data_out, &data_out_len);
     if (res == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "Data: " _GREEN_("%s"), sprint_hex(data_out, (size_t)data_out_len));
     if (!keep) DropField();
@@ -1395,7 +1498,7 @@ static int CmdHFFmcosReadRecord(const char *Cmd) {
         arg_int1(NULL, "rec",  "<n>",   "record number (1-based)"),
         arg_str1(NULL, "fid",  "<hex>", "SFI reference byte (1 byte, 1-30)"),
         arg_int1(NULL, "len",  "<n>",   "record data length in bytes (without TLV overhead)"),
-        arg_str0(NULL, "prot", "<type>","protection: none(def) mac enc"),
+        arg_str0(NULL, "prot", "<type>", "protection: none(def) mac enc"),
         arg_str0(NULL, "key",  "<hex>", "line-protection key (8 or 16 bytes)"),
         arg_lit0(NULL, "tlv",  "wrap/unwrap TLV (00[len][data]) for variable-length records"),
         arg_lit0("k",  "keep", "keep field ON after command"),
@@ -1405,12 +1508,14 @@ static int CmdHFFmcosReadRecord(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int rec     = arg_get_int_def(ctx, 1, 0);
-    uint8_t fid_buf[1] = {0}; int fid_len = 0;
+    uint8_t fid_buf[1] = {0};
+    int fid_len = 0;
     CLIGetHexWithReturn(ctx, 2, fid_buf, &fid_len);
     int rlen    = arg_get_int_def(ctx, 3, 0);
     int prot    = FMCOS_PROT_NONE;
     if (CLIGetOptionList(arg_get_str(ctx, 4), g_fmcos_prot_opts, &prot)) { CLIParserFree(ctx); return PM3_EINVARG; }
-    uint8_t key[16] = {0}; int key_len = 0;
+    uint8_t key[16] = {0};
+    int key_len = 0;
     CLIGetHexWithReturn(ctx, 5, key, &key_len);
     bool use_tlv  = arg_get_lit(ctx, 6);
     bool keep     = arg_get_lit(ctx, 7);
@@ -1431,8 +1536,8 @@ static int CmdHFFmcosReadRecord(const char *Cmd) {
     uint8_t data_out[256] = {0};
     int data_out_len = 0;
     int res = fmcos_read_cmd(0xB2, (uint8_t)rec, p2, (uint8_t)le,
-                              prot, key, (size_t)key_len,
-                              true, keep, data_out, &data_out_len);
+                             prot, key, (size_t)key_len,
+                             true, keep, data_out, &data_out_len);
     if (res == PM3_SUCCESS) {
         uint8_t *payload = data_out;
         int payload_len  = data_out_len;
@@ -1491,15 +1596,19 @@ static int CmdHFFmcosWriteBinary(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t p1b[1] = {0}; int p1_len = 0;
+    uint8_t p1b[1] = {0};
+    int p1_len = 0;
     CLIGetHexWithReturn(ctx, 1, p1b, &p1_len);
-    uint8_t p2b[1] = {0}; int p2_len = 0;
+    uint8_t p2b[1] = {0};
+    int p2_len = 0;
     CLIGetHexWithReturn(ctx, 2, p2b, &p2_len);
-    uint8_t wdata[245] = {0}; int wdata_len = 0;
+    uint8_t wdata[245] = {0};
+    int wdata_len = 0;
     CLIGetHexWithReturn(ctx, 3, wdata, &wdata_len);
     int prot = FMCOS_PROT_NONE;
     if (CLIGetOptionList(arg_get_str(ctx, 4), g_fmcos_prot_opts, &prot)) { CLIParserFree(ctx); return PM3_EINVARG; }
-    uint8_t key[16] = {0}; int key_len = 0;
+    uint8_t key[16] = {0};
+    int key_len = 0;
     CLIGetHexWithReturn(ctx, 5, key, &key_len);
     bool keep     = arg_get_lit(ctx, 6);
     bool apdu_log = arg_get_lit(ctx, 7);
@@ -1508,16 +1617,17 @@ static int CmdHFFmcosWriteBinary(const char *Cmd) {
     if (p1_len != 1 || p2_len != 1) { PrintAndLogEx(ERR, "--p1 and --p2 must each be 1 byte"); return PM3_EINVARG; }
     if (wdata_len < 1) { PrintAndLogEx(ERR, "--data required"); return PM3_EINVARG; }
     if (prot != FMCOS_PROT_NONE && key_len != 8 && key_len != 16) {
-        PrintAndLogEx(ERR, "--key must be 8 or 16 bytes when --prot is set"); return PM3_EINVARG;
+        PrintAndLogEx(ERR, "--key must be 8 or 16 bytes when --prot is set");
+        return PM3_EINVARG;
     }
     SetAPDULogging(apdu_log);
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
     int res = fmcos_write_cmd(0x00, 0xD6, p1b[0], p2b[0],
-                               wdata, (size_t)wdata_len,
-                               prot, key, (size_t)key_len,
-                               true, keep, resp, &resp_len);
+                              wdata, (size_t)wdata_len,
+                              prot, key, (size_t)key_len,
+                              true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) { if (!keep) DropField(); return res; }
     if (resp_len < 2)       { if (!keep) DropField(); return PM3_ESOFT; }
 
@@ -1555,13 +1665,16 @@ static int CmdHFFmcosWriteRecord(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int rec = arg_get_int_def(ctx, 1, 0);
-    uint8_t fid_buf[1] = {0}; int fid_len = 0;
+    uint8_t fid_buf[1] = {0};
+    int fid_len = 0;
     CLIGetHexWithReturn(ctx, 2, fid_buf, &fid_len);
-    uint8_t wdata[243] = {0}; int wdata_len = 0;
+    uint8_t wdata[243] = {0};
+    int wdata_len = 0;
     CLIGetHexWithReturn(ctx, 3, wdata, &wdata_len);
     int prot = FMCOS_PROT_NONE;
     if (CLIGetOptionList(arg_get_str(ctx, 4), g_fmcos_prot_opts, &prot)) { CLIParserFree(ctx); return PM3_EINVARG; }
-    uint8_t key[16] = {0}; int key_len = 0;
+    uint8_t key[16] = {0};
+    int key_len = 0;
     CLIGetHexWithReturn(ctx, 5, key, &key_len);
     bool use_tlv  = arg_get_lit(ctx, 6);
     bool keep     = arg_get_lit(ctx, 7);
@@ -1573,7 +1686,8 @@ static int CmdHFFmcosWriteRecord(const char *Cmd) {
     if (wdata_len < 1) { PrintAndLogEx(ERR, "--data required"); return PM3_EINVARG; }
     if (use_tlv && wdata_len > 243) { PrintAndLogEx(ERR, "--data too long for TLV write (max 243 bytes)"); return PM3_EINVARG; }
     if (prot != FMCOS_PROT_NONE && key_len != 8 && key_len != 16) {
-        PrintAndLogEx(ERR, "--key must be 8 or 16 bytes when --prot is set"); return PM3_EINVARG;
+        PrintAndLogEx(ERR, "--key must be 8 or 16 bytes when --prot is set");
+        return PM3_EINVARG;
     }
     SetAPDULogging(apdu_log);
 
@@ -1594,9 +1708,9 @@ static int CmdHFFmcosWriteRecord(const char *Cmd) {
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
     int res = fmcos_write_cmd(0x00, 0xDC, (uint8_t)rec, p2,
-                               send_buf, send_len,
-                               prot, key, (size_t)key_len,
-                               true, keep, resp, &resp_len);
+                              send_buf, send_len,
+                              prot, key, (size_t)key_len,
+                              true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) { if (!keep) DropField(); return res; }
     if (resp_len < 2)       { if (!keep) DropField(); return PM3_ESOFT; }
 
@@ -1649,13 +1763,16 @@ static int CmdHFFmcosAppend(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t fid_buf[1] = {0}; int fid_len = 0;
+    uint8_t fid_buf[1] = {0};
+    int fid_len = 0;
     CLIGetHexWithReturn(ctx, 1, fid_buf, &fid_len);
-    uint8_t wdata[245] = {0}; int wdata_len = 0;
+    uint8_t wdata[245] = {0};
+    int wdata_len = 0;
     CLIGetHexWithReturn(ctx, 2, wdata, &wdata_len);
     int prot = FMCOS_PROT_NONE;
     if (CLIGetOptionList(arg_get_str(ctx, 3), g_fmcos_prot_opts, &prot)) { CLIParserFree(ctx); return PM3_EINVARG; }
-    uint8_t key[16] = {0}; int key_len = 0;
+    uint8_t key[16] = {0};
+    int key_len = 0;
     CLIGetHexWithReturn(ctx, 4, key, &key_len);
     bool keep     = arg_get_lit(ctx, 5);
     bool apdu_log = arg_get_lit(ctx, 6);
@@ -1664,7 +1781,8 @@ static int CmdHFFmcosAppend(const char *Cmd) {
     if (fid_len != 1) { PrintAndLogEx(ERR, "--fid must be 1 byte"); return PM3_EINVARG; }
     if (wdata_len < 1) { PrintAndLogEx(ERR, "--data required"); return PM3_EINVARG; }
     if (prot != FMCOS_PROT_NONE && key_len != 8 && key_len != 16) {
-        PrintAndLogEx(ERR, "--key must be 8 or 16 bytes when --prot is set"); return PM3_EINVARG;
+        PrintAndLogEx(ERR, "--key must be 8 or 16 bytes when --prot is set");
+        return PM3_EINVARG;
     }
     SetAPDULogging(apdu_log);
 
@@ -1673,9 +1791,9 @@ static int CmdHFFmcosAppend(const char *Cmd) {
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
     int res = fmcos_write_cmd(0x00, 0xE2, 0x00, p2,
-                               wdata, (size_t)wdata_len,
-                               prot, key, (size_t)key_len,
-                               true, keep, resp, &resp_len);
+                              wdata, (size_t)wdata_len,
+                              prot, key, (size_t)key_len,
+                              true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) { if (!keep) DropField(); return res; }
     if (resp_len < 2)       { if (!keep) DropField(); return PM3_ESOFT; }
 
@@ -1740,27 +1858,37 @@ static int CmdHFFmcosWriteKey(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t op_buf[1] = {0};    int op_len = 0;
+    uint8_t op_buf[1] = {0};
+    int op_len = 0;
     CLIGetHexWithReturn(ctx, 1,  op_buf, &op_len);
-    uint8_t id_buf[1] = {0};    int id_len = 0;
+    uint8_t id_buf[1] = {0};
+    int id_len = 0;
     CLIGetHexWithReturn(ctx, 2,  id_buf, &id_len);
     int ktype = 0;
     if (CLIGetOptionList(arg_get_str(ctx, 3), g_fmcos_keytype_opts, &ktype)) { CLIParserFree(ctx); return PM3_EINVARG; }
-    uint8_t usage_b[1] = {0};   int usage_len = 0;
+    uint8_t usage_b[1] = {0};
+    int usage_len = 0;
     CLIGetHexWithReturn(ctx, 4,  usage_b, &usage_len);
-    uint8_t change_b[1] = {0};  int change_len = 0;
+    uint8_t change_b[1] = {0};
+    int change_len = 0;
     CLIGetHexWithReturn(ctx, 5,  change_b, &change_len);
-    uint8_t version_b[1] = {0}; int version_len = 0;
+    uint8_t version_b[1] = {0};
+    int version_len = 0;
     CLIGetHexWithReturn(ctx, 6,  version_b, &version_len);
-    uint8_t algo_b[1] = {0};    int algo_len = 0;
+    uint8_t algo_b[1] = {0};
+    int algo_len = 0;
     CLIGetHexWithReturn(ctx, 7,  algo_b, &algo_len);
-    uint8_t followup_b[1] = {0};int followup_len = 0;
+    uint8_t followup_b[1] = {0};
+    int followup_len = 0;
     CLIGetHexWithReturn(ctx, 8,  followup_b, &followup_len);
-    uint8_t errcnt_b[1] = {0};  int errcnt_len = 0;
+    uint8_t errcnt_b[1] = {0};
+    int errcnt_len = 0;
     CLIGetHexWithReturn(ctx, 9,  errcnt_b, &errcnt_len);
-    uint8_t kval[16] = {0};     int kval_len = 0;
+    uint8_t kval[16] = {0};
+    int kval_len = 0;
     CLIGetHexWithReturn(ctx, 10, kval, &kval_len);
-    uint8_t authkey[16] = {0};  int authkey_len = 0;
+    uint8_t authkey[16] = {0};
+    int authkey_len = 0;
     CLIGetHexWithReturn(ctx, 11, authkey, &authkey_len);
     int prot = FMCOS_PROT_NONE;
     if (CLIGetOptionList(arg_get_str(ctx, 12), g_fmcos_prot_opts, &prot)) { CLIParserFree(ctx); return PM3_EINVARG; }
@@ -1776,7 +1904,8 @@ static int CmdHFFmcosWriteKey(const char *Cmd) {
         if (kval_len != 8 && kval_len != 16) { PrintAndLogEx(ERR, "--key must be 8 or 16 bytes"); return PM3_EINVARG; }
     }
     if (prot != FMCOS_PROT_NONE && authkey_len != 8 && authkey_len != 16) {
-        PrintAndLogEx(ERR, "--authkey must be 8 or 16 bytes when --prot is set"); return PM3_EINVARG;
+        PrintAndLogEx(ERR, "--authkey must be 8 or 16 bytes when --prot is set");
+        return PM3_EINVARG;
     }
 
     // Build metadata according to key type group.
@@ -1788,7 +1917,7 @@ static int CmdHFFmcosWriteKey(const char *Cmd) {
 
     // Group A: desenc desdec desmac internal overdraft debit purchase credit
     if (ktype == 0x30 || ktype == 0x31 || ktype == 0x32 || ktype == 0x34 ||
-        ktype == 0x3C || ktype == 0x3D || ktype == 0x3E || ktype == 0x3F) {
+            ktype == 0x3C || ktype == 0x3D || ktype == 0x3E || ktype == 0x3F) {
         if (change_len != 1 || version_len != 1 || algo_len != 1) {
             PrintAndLogEx(ERR, "This key type needs --change --version --algo");
             return PM3_EINVARG;
@@ -1840,9 +1969,9 @@ static int CmdHFFmcosWriteKey(const char *Cmd) {
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
     int res = fmcos_write_cmd(0x80, 0xD4, op_buf[0], id_buf[0],
-                               data, data_len,
-                               prot, authkey, (size_t)authkey_len,
-                               true, keep, resp, &resp_len);
+                              data, data_len,
+                              prot, authkey, (size_t)authkey_len,
+                              true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) { if (!keep) DropField(); return res; }
     if (resp_len < 2)       { if (!keep) DropField(); return PM3_ESOFT; }
 
@@ -1877,9 +2006,11 @@ static int CmdHFFmcosPinVerify(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t id_buf[1] = {0}; int id_len = 0;
+    uint8_t id_buf[1] = {0};
+    int id_len = 0;
     CLIGetHexWithReturn(ctx, 1, id_buf, &id_len);
-    uint8_t pin[8] = {0};    int pin_len = 0;
+    uint8_t pin[8] = {0};
+    int pin_len = 0;
     CLIGetHexWithReturn(ctx, 2, pin, &pin_len);
     bool keep     = arg_get_lit(ctx, 3);
     bool apdu_log = arg_get_lit(ctx, 4);
@@ -1891,7 +2022,10 @@ static int CmdHFFmcosPinVerify(const char *Cmd) {
 
     // CLA=00 INS=20 P1=00 P2=key_id Lc=pin_len Data=pin
     uint8_t apdu[11];
-    apdu[0] = 0x00; apdu[1] = 0x20; apdu[2] = 0x00; apdu[3] = id_buf[0];
+    apdu[0] = 0x00;
+    apdu[1] = 0x20;
+    apdu[2] = 0x00;
+    apdu[3] = id_buf[0];
     apdu[4] = (uint8_t)pin_len;
     memcpy(apdu + 5, pin, (size_t)pin_len);
 
@@ -1932,11 +2066,14 @@ static int CmdHFFmcosPinChange(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t id_buf[1] = {0}; int id_len = 0;
+    uint8_t id_buf[1] = {0};
+    int id_len = 0;
     CLIGetHexWithReturn(ctx, 1, id_buf, &id_len);
-    uint8_t old_pin[8] = {0}; int old_len = 0;
+    uint8_t old_pin[8] = {0};
+    int old_len = 0;
     CLIGetHexWithReturn(ctx, 2, old_pin, &old_len);
-    uint8_t new_pin[8] = {0}; int new_len = 0;
+    uint8_t new_pin[8] = {0};
+    int new_len = 0;
     CLIGetHexWithReturn(ctx, 3, new_pin, &new_len);
     bool keep     = arg_get_lit(ctx, 4);
     bool apdu_log = arg_get_lit(ctx, 5);
@@ -1950,12 +2087,17 @@ static int CmdHFFmcosPinChange(const char *Cmd) {
     // Data = old_pin + 0xFF + new_pin
     uint8_t data[13];
     size_t data_len = 0;
-    memcpy(data, old_pin, (size_t)old_len);     data_len += (size_t)old_len;
+    memcpy(data, old_pin, (size_t)old_len);
+    data_len += (size_t)old_len;
     data[data_len++] = 0xFF;
-    memcpy(data + data_len, new_pin, (size_t)new_len); data_len += (size_t)new_len;
+    memcpy(data + data_len, new_pin, (size_t)new_len);
+    data_len += (size_t)new_len;
 
     uint8_t apdu[22];
-    apdu[0] = 0x80; apdu[1] = 0x5E; apdu[2] = 0x01; apdu[3] = id_buf[0];
+    apdu[0] = 0x80;
+    apdu[1] = 0x5E;
+    apdu[2] = 0x01;
+    apdu[3] = id_buf[0];
     apdu[4] = (uint8_t)data_len;
     memcpy(apdu + 5, data, data_len);
 
@@ -1995,11 +2137,14 @@ static int CmdHFFmcosPinReset(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t id_buf[1] = {0}; int id_len = 0;
+    uint8_t id_buf[1] = {0};
+    int id_len = 0;
     CLIGetHexWithReturn(ctx, 1, id_buf, &id_len);
-    uint8_t pin[8] = {0};    int pin_len = 0;
+    uint8_t pin[8] = {0};
+    int pin_len = 0;
     CLIGetHexWithReturn(ctx, 2, pin, &pin_len);
-    uint8_t key[16] = {0};   int key_len = 0;
+    uint8_t key[16] = {0};
+    int key_len = 0;
     CLIGetHexWithReturn(ctx, 3, key, &key_len);
     bool keep     = arg_get_lit(ctx, 4);
     bool apdu_log = arg_get_lit(ctx, 5);
@@ -2027,7 +2172,10 @@ static int CmdHFFmcosPinReset(const char *Cmd) {
     size_t data_len = (size_t)pin_len + 4;
 
     uint8_t apdu[15];
-    apdu[0] = 0x80; apdu[1] = 0x5E; apdu[2] = 0x00; apdu[3] = id_buf[0];
+    apdu[0] = 0x80;
+    apdu[1] = 0x5E;
+    apdu[2] = 0x00;
+    apdu[3] = id_buf[0];
     apdu[4] = (uint8_t)data_len;
     memcpy(apdu + 5, data, data_len);
 
@@ -2067,11 +2215,14 @@ static int CmdHFFmcosPinUnblock(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t id_buf[1] = {0}; int id_len = 0;
+    uint8_t id_buf[1] = {0};
+    int id_len = 0;
     CLIGetHexWithReturn(ctx, 1, id_buf, &id_len);
-    uint8_t pin[8] = {0};    int pin_len = 0;
+    uint8_t pin[8] = {0};
+    int pin_len = 0;
     CLIGetHexWithReturn(ctx, 2, pin, &pin_len);
-    uint8_t key[16] = {0};   int key_len = 0;
+    uint8_t key[16] = {0};
+    int key_len = 0;
     CLIGetHexWithReturn(ctx, 3, key, &key_len);
     bool keep     = arg_get_lit(ctx, 4);
     bool apdu_log = arg_get_lit(ctx, 5);
@@ -2105,7 +2256,10 @@ static int CmdHFFmcosPinUnblock(const char *Cmd) {
     size_t data_len = enc_len + 4;
 
     uint8_t apdu[25];
-    apdu[0] = 0x84; apdu[1] = 0x24; apdu[2] = id_buf[0]; apdu[3] = 0x00;
+    apdu[0] = 0x84;
+    apdu[1] = 0x24;
+    apdu[2] = id_buf[0];
+    apdu[3] = 0x00;
     apdu[4] = (uint8_t)data_len;
     memcpy(apdu + 5, data, data_len);
 
@@ -2268,10 +2422,16 @@ static int CmdHFFmcosCredit(const char *Cmd) {
     // ---- Phase 1: INITIALIZE FOR CREDIT (INS 50, P1 00) ----
     // APDU: CLA INS P1 P2 Lc[=11] key_id amount[4] terminal[6] Le[=16]
     uint8_t ph1[17];
-    ph1[0] = 0x80; ph1[1] = 0x50; ph1[2] = 0x00; ph1[3] = (uint8_t)bal_type; ph1[4] = 0x0B;
+    ph1[0] = 0x80;
+    ph1[1] = 0x50;
+    ph1[2] = 0x00;
+    ph1[3] = (uint8_t)bal_type;
+    ph1[4] = 0x0B;
     ph1[5]  = (uint8_t)key_id;
-    ph1[6]  = (amount >> 24) & 0xFF; ph1[7]  = (amount >> 16) & 0xFF;
-    ph1[8]  = (amount >>  8) & 0xFF; ph1[9]  = amount & 0xFF;
+    ph1[6]  = (amount >> 24) & 0xFF;
+    ph1[7]  = (amount >> 16) & 0xFF;
+    ph1[8]  = (amount >>  8) & 0xFF;
+    ph1[9]  = amount & 0xFF;
     memcpy(&ph1[10], terminal, 6);
     ph1[16] = 0x10;
 
@@ -2314,8 +2474,10 @@ static int CmdHFFmcosCredit(const char *Cmd) {
     // Verify MAC1: DES-CBC-MAC(old_bal[4] | amount[4] | tx_type[1] | terminal[6], process_key)
     uint8_t mac1_buf[15];
     memcpy(mac1_buf, resp, 4);
-    mac1_buf[4] = (amount >> 24) & 0xFF; mac1_buf[5] = (amount >> 16) & 0xFF;
-    mac1_buf[6] = (amount >>  8) & 0xFF; mac1_buf[7] = amount & 0xFF;
+    mac1_buf[4] = (amount >> 24) & 0xFF;
+    mac1_buf[5] = (amount >> 16) & 0xFF;
+    mac1_buf[6] = (amount >>  8) & 0xFF;
+    mac1_buf[7] = amount & 0xFF;
     mac1_buf[8] = tx_type;
     memcpy(mac1_buf + 9, terminal, 6);
 
@@ -2336,8 +2498,10 @@ static int CmdHFFmcosCredit(const char *Cmd) {
     fmcos_get_datetime_bcd(date, ttime);
 
     uint8_t mac2_buf[18];
-    mac2_buf[0] = (amount >> 24) & 0xFF; mac2_buf[1] = (amount >> 16) & 0xFF;
-    mac2_buf[2] = (amount >>  8) & 0xFF; mac2_buf[3] = amount & 0xFF;
+    mac2_buf[0] = (amount >> 24) & 0xFF;
+    mac2_buf[1] = (amount >> 16) & 0xFF;
+    mac2_buf[2] = (amount >>  8) & 0xFF;
+    mac2_buf[3] = amount & 0xFF;
     mac2_buf[4] = tx_type;
     memcpy(mac2_buf + 5,  terminal, 6);
     memcpy(mac2_buf + 11, date, 4);
@@ -2349,7 +2513,11 @@ static int CmdHFFmcosCredit(const char *Cmd) {
     // ---- Phase 2: CREDIT (INS 52) ----
     // APDU: CLA INS P1 P2 Lc[=11] date[4] time[3] mac2[4] Le[=4]
     uint8_t ph2[17];
-    ph2[0] = 0x80; ph2[1] = 0x52; ph2[2] = 0x00; ph2[3] = 0x00; ph2[4] = 0x0B;
+    ph2[0] = 0x80;
+    ph2[1] = 0x52;
+    ph2[2] = 0x00;
+    ph2[3] = 0x00;
+    ph2[4] = 0x0B;
     memcpy(&ph2[5],  date, 4);
     memcpy(&ph2[9],  ttime, 3);
     memcpy(&ph2[12], mac2, 4);
@@ -2365,7 +2533,8 @@ static int CmdHFFmcosCredit(const char *Cmd) {
         PrintAndLogEx(ERR, "Phase 2 short response (%d bytes)", resp_len);
         return PM3_ESOFT;
     }
-    sw1 = resp[resp_len - 2]; sw2 = resp[resp_len - 1];
+    sw1 = resp[resp_len - 2];
+    sw2 = resp[resp_len - 1];
     if (sw1 != 0x90 || sw2 != 0x00) {
         fmcos_print_sw(sw1, sw2);
         return PM3_ESOFT;
@@ -2378,8 +2547,10 @@ static int CmdHFFmcosCredit(const char *Cmd) {
     for (int i = 0; i < 8; i++) tac_key[i] = ikey[i] ^ ikey[i + 8];
 
     uint8_t tac_buf[24];
-    tac_buf[0] = (new_balance >> 24) & 0xFF; tac_buf[1] = (new_balance >> 16) & 0xFF;
-    tac_buf[2] = (new_balance >>  8) & 0xFF; tac_buf[3] = new_balance & 0xFF;
+    tac_buf[0] = (new_balance >> 24) & 0xFF;
+    tac_buf[1] = (new_balance >> 16) & 0xFF;
+    tac_buf[2] = (new_balance >>  8) & 0xFF;
+    tac_buf[3] = new_balance & 0xFF;
     memcpy(tac_buf + 4, online_serial, 2);
     memcpy(tac_buf + 6, mac2_buf, 18);
 
@@ -2459,10 +2630,16 @@ static int CmdHFFmcosPurchase(const char *Cmd) {
     // ---- Phase 1: INITIALIZE FOR PURCHASE (INS 50, P1 01) ----
     // APDU: CLA INS P1 P2 Lc[=11] key_id amount[4] terminal[6] Le[=15]
     uint8_t ph1[17];
-    ph1[0] = 0x80; ph1[1] = 0x50; ph1[2] = 0x01; ph1[3] = (uint8_t)bal_type; ph1[4] = 0x0B;
+    ph1[0] = 0x80;
+    ph1[1] = 0x50;
+    ph1[2] = 0x01;
+    ph1[3] = (uint8_t)bal_type;
+    ph1[4] = 0x0B;
     ph1[5]  = (uint8_t)key_id;
-    ph1[6]  = (amount >> 24) & 0xFF; ph1[7]  = (amount >> 16) & 0xFF;
-    ph1[8]  = (amount >>  8) & 0xFF; ph1[9]  = amount & 0xFF;
+    ph1[6]  = (amount >> 24) & 0xFF;
+    ph1[7]  = (amount >> 16) & 0xFF;
+    ph1[8]  = (amount >>  8) & 0xFF;
+    ph1[9]  = amount & 0xFF;
     memcpy(&ph1[10], terminal, 6);
     ph1[16] = 0x0F;
 
@@ -2508,8 +2685,10 @@ static int CmdHFFmcosPurchase(const char *Cmd) {
     fmcos_get_datetime_bcd(date, ttime);
 
     uint8_t mac1_buf[18];
-    mac1_buf[0] = (amount >> 24) & 0xFF; mac1_buf[1] = (amount >> 16) & 0xFF;
-    mac1_buf[2] = (amount >>  8) & 0xFF; mac1_buf[3] = amount & 0xFF;
+    mac1_buf[0] = (amount >> 24) & 0xFF;
+    mac1_buf[1] = (amount >> 16) & 0xFF;
+    mac1_buf[2] = (amount >>  8) & 0xFF;
+    mac1_buf[3] = amount & 0xFF;
     mac1_buf[4] = tx_type;
     memcpy(mac1_buf + 5,  terminal, 6);
     memcpy(mac1_buf + 11, date, 4);
@@ -2522,7 +2701,11 @@ static int CmdHFFmcosPurchase(const char *Cmd) {
     // ---- Phase 2: DEBIT (INS 54, P1 01, P2 00) ----
     // APDU: CLA INS P1 P2 Lc[=15] tx_serial[4] date[4] time[3] mac1[4] Le[=8]
     uint8_t ph2[21];
-    ph2[0] = 0x80; ph2[1] = 0x54; ph2[2] = 0x01; ph2[3] = 0x00; ph2[4] = 0x0F;
+    ph2[0] = 0x80;
+    ph2[1] = 0x54;
+    ph2[2] = 0x01;
+    ph2[3] = 0x00;
+    ph2[4] = 0x0F;
     memcpy(&ph2[5],  tx_serial, 4);
     memcpy(&ph2[9],  date, 4);
     memcpy(&ph2[13], ttime, 3);
@@ -2539,7 +2722,8 @@ static int CmdHFFmcosPurchase(const char *Cmd) {
         PrintAndLogEx(ERR, "Phase 2 short response (%d bytes)", resp_len);
         return PM3_ESOFT;
     }
-    sw1 = resp[resp_len - 2]; sw2 = resp[resp_len - 1];
+    sw1 = resp[resp_len - 2];
+    sw2 = resp[resp_len - 1];
     if (sw1 != 0x90 || sw2 != 0x00) {
         fmcos_print_sw(sw1, sw2);
         return PM3_ESOFT;
@@ -2552,8 +2736,10 @@ static int CmdHFFmcosPurchase(const char *Cmd) {
     for (int i = 0; i < 8; i++) tac_key[i] = ikey[i] ^ ikey[i + 8];
 
     uint8_t tac_buf[22];
-    tac_buf[0] = (amount >> 24) & 0xFF; tac_buf[1] = (amount >> 16) & 0xFF;
-    tac_buf[2] = (amount >>  8) & 0xFF; tac_buf[3] = amount & 0xFF;
+    tac_buf[0] = (amount >> 24) & 0xFF;
+    tac_buf[1] = (amount >> 16) & 0xFF;
+    tac_buf[2] = (amount >>  8) & 0xFF;
+    tac_buf[3] = amount & 0xFF;
     tac_buf[4] = tx_type;
     memcpy(tac_buf + 5,  terminal, 6);
     memcpy(tac_buf + 11, tx_serial, 4);
@@ -2625,7 +2811,11 @@ static int CmdHFFmcosOverdraft(const char *Cmd) {
     // ---- Phase 1: INITIALIZE FOR OVERDRAFT (INS 50, P1 04, P2 01=passbook) ----
     // APDU: CLA INS P1 P2 Lc[=7] key_id terminal[6] Le[=19]
     uint8_t ph1[13];
-    ph1[0] = 0x80; ph1[1] = 0x50; ph1[2] = 0x04; ph1[3] = 0x01; ph1[4] = 0x07;
+    ph1[0] = 0x80;
+    ph1[1] = 0x50;
+    ph1[2] = 0x04;
+    ph1[3] = 0x01;
+    ph1[4] = 0x07;
     ph1[5] = (uint8_t)key_id;
     memcpy(&ph1[6], terminal, 6);
     ph1[12] = 0x13;
@@ -2706,7 +2896,11 @@ static int CmdHFFmcosOverdraft(const char *Cmd) {
     // ---- Phase 2: UPDATE OVERDRAFT (INS 58, P1 00, P2 00) ----
     // APDU: CLA INS P1 P2 Lc[=14] new_limit[3] date[4] time[3] mac2[4] Le[=4]
     uint8_t ph2[20];
-    ph2[0] = 0x80; ph2[1] = 0x58; ph2[2] = 0x00; ph2[3] = 0x00; ph2[4] = 0x0E;
+    ph2[0] = 0x80;
+    ph2[1] = 0x58;
+    ph2[2] = 0x00;
+    ph2[3] = 0x00;
+    ph2[4] = 0x0E;
     ph2[5] = (new_limit >> 16) & 0xFF;
     ph2[6] = (new_limit >>  8) & 0xFF;
     ph2[7] = new_limit & 0xFF;
@@ -2724,7 +2918,8 @@ static int CmdHFFmcosOverdraft(const char *Cmd) {
         PrintAndLogEx(ERR, "Phase 2 short response");
         return PM3_ESOFT;
     }
-    sw1 = resp[resp_len - 2]; sw2 = resp[resp_len - 1];
+    sw1 = resp[resp_len - 2];
+    sw2 = resp[resp_len - 1];
     fmcos_print_sw(sw1, sw2);
 
     if (sw1 != 0x90 || sw2 != 0x00)
@@ -2833,10 +3028,14 @@ static int CmdHFFmcosBlock(const char *Cmd) {
 
     uint8_t cla, ins, p2;
     if (block_card) {
-        cla = 0x84; ins = 0x16; p2 = 0x00;
+        cla = 0x84;
+        ins = 0x16;
+        p2 = 0x00;
     } else {
         // APP BLOCK: P2=0x00 temporary, P2=0x01 permanent
-        cla = 0x84; ins = 0x1E; p2 = permanent ? 0x01 : 0x00;
+        cla = 0x84;
+        ins = 0x1E;
+        p2 = permanent ? 0x01 : 0x00;
     }
     uint8_t p1 = 0x00;
 
@@ -2985,7 +3184,8 @@ static int CmdHFFmcosHistory(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t fid_buf[1] = {0}; int fid_len = 0;
+    uint8_t fid_buf[1] = {0};
+    int fid_len = 0;
     CLIGetHexWithReturn(ctx, 1, fid_buf, &fid_len);
     int count    = arg_get_int_def(ctx, 2, 10);
     bool keep    = arg_get_lit(ctx, 3);
@@ -3030,21 +3230,21 @@ static int CmdHFFmcosHistory(const char *Cmd) {
         }
         if (resp_len < 25) break;
 
-        uint8_t *r = resp;
-        uint16_t serial   = ((uint16_t)r[0] << 8) | r[1];
-        uint32_t od_limit = ((uint32_t)r[2] << 16) | ((uint32_t)r[3] << 8) | r[4];
-        uint32_t amount   = ((uint32_t)r[5] << 24) | ((uint32_t)r[6] << 16) |
-                            ((uint32_t)r[7] << 8)  | r[8];
-        uint8_t  tx_type  = r[9];
-        uint8_t *terminal = r + 10;
-        uint8_t *date     = r + 16;
-        uint8_t *ttime    = r + 20;
+        uint8_t *p = resp;
+        uint16_t serial   = ((uint16_t)p[0] << 8) | p[1];
+        uint32_t od_limit = ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 8) | p[4];
+        uint32_t amount   = ((uint32_t)p[5] << 24) | ((uint32_t)p[6] << 16) |
+                            ((uint32_t)p[7] << 8)  | p[8];
+        uint8_t  tx_type  = p[9];
+        uint8_t *terminal = p + 10;
+        uint8_t *date     = p + 16;
+        uint8_t *ttime    = p + 20;
 
-        // BCD date YYYYMMDD → "YYYY-MM-DD"
+        // BCD date YYYYMMDD -> "YYYY-MM-DD"
         char date_str[11];
         snprintf(date_str, sizeof(date_str), "%02X%02X-%02X-%02X",
                  date[0], date[1], date[2], date[3]);
-        // BCD time HHMMSS → "HH:MM:SS"
+        // BCD time HHMMSS -> "HH:MM:SS"
         char time_str[9];
         snprintf(time_str, sizeof(time_str), "%02X:%02X:%02X",
                  ttime[0], ttime[1], ttime[2]);
@@ -3074,6 +3274,558 @@ static int CmdHFFmcosHistory(const char *Cmd) {
 }
 
 // ---------------------------------------------------------------------------
+// TID card provisioning
+// ---------------------------------------------------------------------------
+
+#define FMCOS_TID_AUTH_LOCKED   0xAA
+#define FMCOS_TID_AUTH_UNLOCKED 0x55
+
+static const uint8_t g_fmcos_tid_setcard_data[39] = {
+    0x00, 0x90, 0x80, 0xEC, 0xFF, 0xED, 0x00, 0xFF, 0xFF, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00,
+    0x08, 0x74, 0x11, 0x00, 0x02, 0x5A, 0x54, 0x40, 0xBD
+};
+
+static const uint8_t g_fmcos_tid_keyfile_data[11] = {
+    0x1E, 0x00, 0x00, 0x00, 0x30, 0xFF, 0xFF, 0x00, 0x30, 0x00, 0x00
+};
+
+// "1PAY.SYS.DDF01"
+static const uint8_t g_fmcos_tid_mf_name[] = {
+    0x31, 0x50, 0x41, 0x59, 0x2E, 0x53, 0x59, 0x53,
+    0x2E, 0x44, 0x44, 0x46, 0x30, 0x31
+};
+
+static int CmdHFFmcosTidSetCard(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf fmcos tid setcard",
+                  "Send the TID SET CARD configuration APDU (fixed 39-byte payload).",
+                  "hf fmcos tid setcard");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("k", "keep", "keep field ON after command"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool keep = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    uint8_t apdu[44] = {0x00, 0xEF, 0x00, 0x00, 0x27};
+    memcpy(apdu + 5, g_fmcos_tid_setcard_data, 39);
+
+    uint8_t resp[APDU_RES_LEN] = {0};
+    int resp_len = 0;
+    if (fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len) != PM3_SUCCESS)
+        return PM3_ESOFT;
+
+    if (resp_len < 2) { if (!keep) DropField(); return PM3_ESOFT; }
+    uint8_t sw1 = resp[resp_len - 2], sw2 = resp[resp_len - 1];
+    fmcos_print_sw(sw1, sw2);
+    if (sw1 == 0x90 && sw2 == 0x00)
+        PrintAndLogEx(SUCCESS, "SET CARD " _GREEN_("OK"));
+    else
+        PrintAndLogEx(FAILED, "SET CARD " _RED_("failed"));
+
+    if (!keep) DropField();
+    return (sw1 == 0x90 && sw2 == 0x00) ? PM3_SUCCESS : PM3_ESOFT;
+}
+
+static int CmdHFFmcosTidSetUID(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf fmcos tid setuid",
+                  "Program the TID card UID (4-7 bytes).",
+                  "hf fmcos tid setuid --uid 13371337\n"
+                  "hf fmcos tid setuid --uid 0102030405060708");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "uid", "<hex>", "UID bytes (4-7 bytes)"),
+        arg_lit0("k",  "keep",         "keep field ON after command"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint8_t uid[7] = {0};
+    int uid_len = 0;
+    CLIGetHexWithReturn(ctx, 1, uid, &uid_len);
+    bool keep = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    if (uid_len < 4 || uid_len > 7) {
+        PrintAndLogEx(ERR, "--uid must be 4-7 bytes");
+        return PM3_EINVARG;
+    }
+
+    uint8_t apdu[12] = {0x00, 0x85, 0x00, 0x00, (uint8_t)uid_len};
+    memcpy(apdu + 5, uid, (size_t)uid_len);
+
+    uint8_t resp[APDU_RES_LEN] = {0};
+    int resp_len = 0;
+    if (fmcos_send_apdu(apdu, 5 + (size_t)uid_len, true, keep, resp, &resp_len) != PM3_SUCCESS)
+        return PM3_ESOFT;
+
+    if (resp_len < 2) { if (!keep) DropField(); return PM3_ESOFT; }
+    uint8_t sw1 = resp[resp_len - 2], sw2 = resp[resp_len - 1];
+    fmcos_print_sw(sw1, sw2);
+    if (sw1 == 0x90 && sw2 == 0x00)
+        PrintAndLogEx(SUCCESS, "SET UID " _GREEN_("OK"));
+    else
+        PrintAndLogEx(FAILED, "SET UID " _RED_("failed"));
+
+    if (!keep) DropField();
+    return (sw1 == 0x90 && sw2 == 0x00) ? PM3_SUCCESS : PM3_ESOFT;
+}
+
+static int CmdHFFmcosTidSetAuth(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf fmcos tid setauth",
+                  "Write the TID internal authentication key and set the lock state.\n"
+                  "Lock byte: 0xAA = locked (permanent), 0x55 = unlocked (default).",
+                  "hf fmcos tid setauth --key 1122334455667788\n"
+                  "hf fmcos tid setauth --key 1122334455667788 --lock");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "key",  "<hex>", "internal auth key (8 bytes)"),
+        arg_lit0(NULL, "lock",          "lock the key permanently (0xAA); default unlocked (0x55)"),
+        arg_lit0("k",  "keep",          "keep field ON after command"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint8_t key[8] = {0};
+    int key_len = 0;
+    CLIGetHexWithReturn(ctx, 1, key, &key_len);
+    bool lock = arg_get_lit(ctx, 2);
+    bool keep = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    if (key_len != 8) {
+        PrintAndLogEx(ERR, "--key must be 8 bytes");
+        return PM3_EINVARG;
+    }
+
+    // 00 21 00 00 0A [key[8]] [lock_byte] 00
+    uint8_t apdu[15] = {0x00, 0x21, 0x00, 0x00, 0x0A};
+    memcpy(apdu + 5, key, 8);
+    apdu[13] = lock ? FMCOS_TID_AUTH_LOCKED : FMCOS_TID_AUTH_UNLOCKED;
+    apdu[14] = 0x00;
+
+    uint8_t resp[APDU_RES_LEN] = {0};
+    int resp_len = 0;
+    if (fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len) != PM3_SUCCESS)
+        return PM3_ESOFT;
+
+    if (resp_len < 2) { if (!keep) DropField(); return PM3_ESOFT; }
+    uint8_t sw1 = resp[resp_len - 2], sw2 = resp[resp_len - 1];
+    fmcos_print_sw(sw1, sw2);
+    if (sw1 == 0x90 && sw2 == 0x00)
+        PrintAndLogEx(SUCCESS, "SET INTERNAL AUTH " _GREEN_("OK") " (key %s)",
+                      lock ? _RED_("locked") : "unlocked");
+    else
+        PrintAndLogEx(FAILED, "SET INTERNAL AUTH " _RED_("failed"));
+
+    if (!keep) DropField();
+    return (sw1 == 0x90 && sw2 == 0x00) ? PM3_SUCCESS : PM3_ESOFT;
+}
+
+static int CmdHFFmcosTidErase(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf fmcos tid erase",
+                  "Erase the TID card file system (CLA=E0 INS=EC -- irreversible).",
+                  "hf fmcos tid erase");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("k", "keep", "keep field ON after command"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool keep = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(WARNING, "Erasing TID card file system -- this is irreversible");
+
+    uint8_t apdu[5] = {0xE0, 0xEC, 0x00, 0x00, 0x00};
+    uint8_t resp[APDU_RES_LEN] = {0};
+    int resp_len = 0;
+    if (fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len) != PM3_SUCCESS)
+        return PM3_ESOFT;
+
+    if (resp_len < 2) { if (!keep) DropField(); return PM3_ESOFT; }
+    uint8_t sw1 = resp[resp_len - 2], sw2 = resp[resp_len - 1];
+    fmcos_print_sw(sw1, sw2);
+    if (sw1 == 0x90 && sw2 == 0x00)
+        PrintAndLogEx(SUCCESS, "ERASE " _GREEN_("OK"));
+    else
+        PrintAndLogEx(FAILED, "ERASE " _RED_("failed"));
+
+    if (!keep) DropField();
+    return (sw1 == 0x90 && sw2 == 0x00) ? PM3_SUCCESS : PM3_ESOFT;
+}
+
+static int CmdHFFmcosTidProvision(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf fmcos tid provision",
+                  "Full TID card provisioning sequence:\n"
+                  "  SET CARD -> SET UID -> SET INTERNAL AUTH -> ERASE\n"
+                  "  -> SELECT MF -> CREATE MF (3F00, 1PAY.SYS.DDF01) -> SELECT MF -> CREATE KEYFILE",
+                  "hf fmcos tid provision --uid 13371337 --key 1122334455667788\n"
+                  "hf fmcos tid provision --uid 13371337 --key 1122334455667788 --lock");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "uid",  "<hex>", "UID bytes (4-7 bytes)"),
+        arg_str1(NULL, "key",  "<hex>", "internal auth key (8 bytes)"),
+        arg_lit0(NULL, "lock",          "lock the auth key permanently"),
+        arg_lit0("k",  "keep",          "keep field ON after command"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint8_t uid[7] = {0};
+    int uid_len = 0;
+    CLIGetHexWithReturn(ctx, 1, uid, &uid_len);
+    uint8_t key[8] = {0};
+    int key_len = 0;
+    CLIGetHexWithReturn(ctx, 2, key, &key_len);
+    bool lock = arg_get_lit(ctx, 3);
+    bool keep = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    if (uid_len < 4 || uid_len > 7) { PrintAndLogEx(ERR, "--uid must be 4-7 bytes"); return PM3_EINVARG; }
+    if (key_len != 8)               { PrintAndLogEx(ERR, "--key must be 8 bytes");    return PM3_EINVARG; }
+
+    uint8_t resp[APDU_RES_LEN] = {0};
+    int resp_len = 0;
+
+#define TID_STEP(label, apdu_ptr, apdu_sz, act, lon) \
+    do { \
+        if (fmcos_send_apdu((apdu_ptr), (apdu_sz), (act), (lon), resp, &resp_len) != PM3_SUCCESS || \
+                resp_len < 2 || resp[resp_len-2] != 0x90 || resp[resp_len-1] != 0x00) { \
+            PrintAndLogEx(FAILED, label " " _RED_("failed") " (SW:%02X%02X)", \
+                          resp_len >= 2 ? resp[resp_len-2] : 0, \
+                          resp_len >= 2 ? resp[resp_len-1] : 0); \
+            goto tid_provision_fail; \
+        } \
+        PrintAndLogEx(SUCCESS, label " " _GREEN_("OK")); \
+    } while (0)
+
+    // 1 - SET CARD
+    {
+        uint8_t a[44] = {0x00, 0xEF, 0x00, 0x00, 0x27};
+        memcpy(a + 5, g_fmcos_tid_setcard_data, 39);
+        TID_STEP("SET CARD", a, sizeof(a), true, true);
+    }
+
+    // 2 - SET UID
+    {
+        uint8_t a[12] = {0x00, 0x85, 0x00, 0x00, (uint8_t)uid_len};
+        memcpy(a + 5, uid, (size_t)uid_len);
+        TID_STEP("SET UID", a, 5 + (size_t)uid_len, true, true);
+    }
+
+    // 3 - SET INTERNAL AUTH
+    {
+        uint8_t a[15] = {0x00, 0x21, 0x00, 0x00, 0x0A};
+        memcpy(a + 5, key, 8);
+        a[13] = lock ? FMCOS_TID_AUTH_LOCKED : FMCOS_TID_AUTH_UNLOCKED;
+        a[14] = 0x00;
+        TID_STEP("SET INTERNAL AUTH", a, sizeof(a), true, true);
+    }
+
+    // 4 - ERASE
+    PrintAndLogEx(WARNING, "Erasing card file system...");
+    {
+        uint8_t a[5] = {0xE0, 0xEC, 0x00, 0x00, 0x00};
+        TID_STEP("ERASE", a, sizeof(a), true, true);
+    }
+
+    // 5 - SELECT MF (3F00)
+    {
+        uint8_t a[7] = {0x00, 0xA4, 0x00, 0x00, 0x02, 0x3F, 0x00};
+        TID_STEP("SELECT MF", a, sizeof(a), true, true);
+    }
+
+    // 6 - CREATE DF (3F00, SFI=02, name="1PAY.SYS.DDF01")
+    {
+        uint8_t name_len = (uint8_t)sizeof(g_fmcos_tid_mf_name);
+        uint8_t a[32] = {0x80, 0xE0, 0x00, 0x00, (uint8_t)(name_len + 9),
+                         0x3F, 0x00, 0x6F, 0xFF, 0xF0, 0xF0, 0x02, 0x01, 0x00
+                        };
+        memcpy(a + 14, g_fmcos_tid_mf_name, name_len);
+        TID_STEP("CREATE DF (3F00)", a, 14 + name_len, true, true);
+    }
+
+    // 7 - SELECT DF 3F00
+    {
+        uint8_t a[7] = {0x00, 0xA4, 0x00, 0x00, 0x02, 0x3F, 0x00};
+        TID_STEP("SELECT DF (3F00)", a, sizeof(a), true, true);
+    }
+
+    // 8 - CREATE KEYFILE
+    {
+        uint8_t a[16] = {0x80, 0xE0, 0x02, 0x00, 0x0B};
+        memcpy(a + 5, g_fmcos_tid_keyfile_data, 11);
+        TID_STEP("CREATE KEYFILE", a, sizeof(a), true, keep);
+    }
+
+#undef TID_STEP
+
+    PrintAndLogEx(SUCCESS, "TID provisioning " _GREEN_("complete"));
+    if (!keep) DropField();
+    return PM3_SUCCESS;
+
+tid_provision_fail:
+    DropField();
+    return PM3_ESOFT;
+}
+
+static int CmdHFFmcosTidCreateDF(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf fmcos tid createdf",
+                  "CREATE sub-DF using TID format (P1=01, FID in data).\n"
+                  "Note: TID CREATE DF has a different layout from standard 'hf fmcos create dir'.",
+                  "hf fmcos tid createdf --id 3f01 --size 0f00 --sfi 96 --name 44444630 31");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "id",   "<4hex>", "2-byte file ID"),
+        arg_str1(NULL, "size", "<hex>",  "DF space in bytes (hex, e.g. 0f00)"),
+        arg_str1(NULL, "sfi",  "<hex>",  "short file ID (1 byte)"),
+        arg_str0(NULL, "name", "<hex>",  "DF name bytes (variable, 0-16 bytes)"),
+        arg_lit0("k",  "keep", "keep field ON after command"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint8_t id_buf[2] = {0};
+    int id_len = 0;
+    CLIGetHexWithReturn(ctx, 1, id_buf, &id_len);
+    int size = (int)strtol(arg_get_str(ctx, 2)->sval[0], NULL, 16);
+    uint8_t sfi_buf[1] = {0};
+    int sfi_len = 0;
+    CLIGetHexWithReturn(ctx, 3, sfi_buf, &sfi_len);
+    uint8_t name[16] = {0};
+    int name_len = 0;
+    CLIGetHexWithReturn(ctx, 4, name, &name_len);
+    bool keep = arg_get_lit(ctx, 5);
+    CLIParserFree(ctx);
+
+    if (id_len != 2)  { PrintAndLogEx(ERR, "--id must be 2 bytes");  return PM3_EINVARG; }
+    if (sfi_len != 1) { PrintAndLogEx(ERR, "--sfi must be 1 byte");  return PM3_EINVARG; }
+    if (size < 1 || size > 0xFFFF) { PrintAndLogEx(ERR, "--size out of range"); return PM3_EINVARG; }
+
+    // 80 E0 01 00 <lc> [fid_hi][fid_lo] [size_hi][size_lo] F0 F0 [sfi] 01 FF [name...]
+    uint8_t apdu[32] = {
+        0x80, 0xE0, 0x01, 0x00, (uint8_t)(name_len + 9),
+        id_buf[0], id_buf[1],
+        (size >> 8) & 0xFF, size & 0xFF,
+        0xF0, 0xF0,
+        sfi_buf[0],
+        0x01, 0xFF
+    };
+    memcpy(apdu + 14, name, (size_t)name_len);
+
+    uint8_t resp[APDU_RES_LEN] = {0};
+    int resp_len = 0;
+    if (fmcos_send_apdu(apdu, 14 + (size_t)name_len, true, keep, resp, &resp_len) != PM3_SUCCESS)
+        return PM3_ESOFT;
+    if (resp_len < 2) { if (!keep) DropField(); return PM3_ESOFT; }
+    uint8_t sw1 = resp[resp_len - 2], sw2 = resp[resp_len - 1];
+    fmcos_print_sw(sw1, sw2);
+    if (sw1 == 0x90 && sw2 == 0x00)
+        PrintAndLogEx(SUCCESS, "CREATE DF " _GREEN_("OK"));
+    else
+        PrintAndLogEx(FAILED, "CREATE DF " _RED_("failed"));
+    if (!keep) DropField();
+    return (sw1 == 0x90 && sw2 == 0x00) ? PM3_SUCCESS : PM3_ESOFT;
+}
+
+static const CLIParserOption g_fmcos_tid_create_opts[] = {
+    {0, "bin"},
+    {1, "keyfile"},
+    {0, NULL}
+};
+
+static int CmdHFFmcosTidCreateBin(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf fmcos tid createbin",
+                  "CREATE binary EF or KEYFILE using TID format (P1=02, FID in data, fixed Lc=11).\n"
+                  "Use --type keyfile to create the fixed TID keyfile in the currently selected DF.\n"
+                  "Note: TID CREATE EF has a different layout from standard 'hf fmcos create file'.",
+                  "hf fmcos tid createbin --id 0001 --size 0100 --sfi 01\n"
+                  "hf fmcos tid createbin --id 0002 --size 0040 --sfi 02 --rperm 20 --wperm f0\n"
+                  "hf fmcos tid createbin --type keyfile");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "type",  "<type>", "file type: bin (default) or keyfile"),
+        arg_str0(NULL, "id",    "<4hex>", "2-byte file ID (required for type bin)"),
+        arg_str0(NULL, "size",  "<hex>",  "file size in bytes (required for type bin)"),
+        arg_str0(NULL, "sfi",   "<hex>",  "short file ID, 1 byte (required for type bin)"),
+        arg_str0(NULL, "rperm", "<hex>",  "read permission byte (default F0, bin only)"),
+        arg_str0(NULL, "wperm", "<hex>",  "write permission byte (default F0, bin only)"),
+        arg_lit0("k",  "keep",  "keep field ON after command"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int ftype = 0;
+    if (CLIGetOptionList(arg_get_str(ctx, 1), g_fmcos_tid_create_opts, &ftype)) { CLIParserFree(ctx); return PM3_EINVARG; }
+    bool is_keyfile = (ftype == 1);
+
+    uint8_t id_buf[2] = {0};
+    int id_len = 0;
+    CLIGetHexWithReturn(ctx, 2, id_buf, &id_len);
+    int size = 0;
+    if (arg_get_str(ctx, 3)->count > 0)
+        size = (int)strtol(arg_get_str(ctx, 3)->sval[0], NULL, 16);
+    uint8_t sfi_buf[1] = {0};
+    int sfi_len = 0;
+    CLIGetHexWithReturn(ctx, 4, sfi_buf, &sfi_len);
+    uint8_t rperm_buf[1] = {0};
+    int rperm_len = 0;
+    CLIGetHexWithReturn(ctx, 5, rperm_buf, &rperm_len);
+    uint8_t wperm_buf[1] = {0};
+    int wperm_len = 0;
+    CLIGetHexWithReturn(ctx, 6, wperm_buf, &wperm_len);
+    bool keep = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
+
+    uint8_t apdu[16] = {0x80, 0xE0, 0x02, 0x00, 0x0B};
+
+    if (is_keyfile) {
+        // Fixed TID keyfile: 80 E0 02 00 0B 1E 00 00 00 30 FF FF 00 30 00 00
+        memcpy(apdu + 5, g_fmcos_tid_keyfile_data, 11);
+    } else {
+        if (rperm_len == 0) rperm_buf[0] = 0xF0;
+        if (wperm_len == 0) wperm_buf[0] = 0xF0;
+        if (id_len != 2)  { PrintAndLogEx(ERR, "--id must be 2 bytes");  return PM3_EINVARG; }
+        if (sfi_len != 1) { PrintAndLogEx(ERR, "--sfi must be 1 byte");  return PM3_EINVARG; }
+        if (size < 1 || size > 0xFFFF) { PrintAndLogEx(ERR, "--size out of range"); return PM3_EINVARG; }
+        // 80 E0 02 00 0B 00 [fid_hi][fid_lo] [size_hi][size_lo] [rperm][wperm] [sfi] 00 FF 00
+        apdu[5]  = 0x00;
+        apdu[6]  = id_buf[0];
+        apdu[7]  = id_buf[1];
+        apdu[8]  = (size >> 8) & 0xFF;
+        apdu[9]  = size & 0xFF;
+        apdu[10] = rperm_buf[0];
+        apdu[11] = wperm_buf[0];
+        apdu[12] = sfi_buf[0];
+        apdu[13] = 0x00;
+        apdu[14] = 0xFF;
+        apdu[15] = 0x00;
+    }
+
+    uint8_t resp[APDU_RES_LEN] = {0};
+    int resp_len = 0;
+    if (fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len) != PM3_SUCCESS)
+        return PM3_ESOFT;
+    if (resp_len < 2) { if (!keep) DropField(); return PM3_ESOFT; }
+    uint8_t sw1 = resp[resp_len - 2], sw2 = resp[resp_len - 1];
+    fmcos_print_sw(sw1, sw2);
+    if (sw1 == 0x90 && sw2 == 0x00)
+        PrintAndLogEx(SUCCESS, is_keyfile ? "CREATE KEYFILE " _GREEN_("OK") : "CREATE binary EF " _GREEN_("OK"));
+    else
+        PrintAndLogEx(FAILED,  is_keyfile ? "CREATE KEYFILE " _RED_("failed") : "CREATE binary EF " _RED_("failed"));
+    if (!keep) DropField();
+    return (sw1 == 0x90 && sw2 == 0x00) ? PM3_SUCCESS : PM3_ESOFT;
+}
+
+static int CmdHFFmcosTidCreateRec(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf fmcos tid createrec",
+                  "CREATE fixed-length record EF using TID format (P1=02, subtype=01, FID in data, fixed Lc=11).\n"
+                  "Note: TID CREATE EF has a different layout from standard 'hf fmcos create file'.",
+                  "hf fmcos tid createrec --id 0003 --count 04 --reclen 08 --sfi 03\n"
+                  "hf fmcos tid createrec --id 0003 --count 04 --reclen 10 --sfi 03 --rperm 20 --wperm f0");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "id",     "<4hex>", "2-byte file ID"),
+        arg_str1(NULL, "count",  "<hex>",  "number of records (1 byte)"),
+        arg_str1(NULL, "reclen", "<hex>",  "bytes per record (1 byte)"),
+        arg_str1(NULL, "sfi",    "<hex>",  "short file ID (1 byte)"),
+        arg_str0(NULL, "rperm",  "<hex>",  "read permission byte (default F0)"),
+        arg_str0(NULL, "wperm",  "<hex>",  "write permission byte (default F0)"),
+        arg_lit0("k",  "keep",   "keep field ON after command"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint8_t id_buf[2] = {0};
+    int id_len = 0;
+    CLIGetHexWithReturn(ctx, 1, id_buf, &id_len);
+    uint8_t cnt_buf[1] = {0};
+    int cnt_len = 0;
+    CLIGetHexWithReturn(ctx, 2, cnt_buf, &cnt_len);
+    uint8_t rlen_buf[1] = {0};
+    int rlen_len = 0;
+    CLIGetHexWithReturn(ctx, 3, rlen_buf, &rlen_len);
+    uint8_t sfi_buf[1] = {0};
+    int sfi_len = 0;
+    CLIGetHexWithReturn(ctx, 4, sfi_buf, &sfi_len);
+    uint8_t rperm_buf[1] = {0};
+    int rperm_len = 0;
+    CLIGetHexWithReturn(ctx, 5, rperm_buf, &rperm_len);
+    uint8_t wperm_buf[1] = {0};
+    int wperm_len = 0;
+    CLIGetHexWithReturn(ctx, 6, wperm_buf, &wperm_len);
+    bool keep = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
+
+    if (rperm_len == 0) rperm_buf[0] = 0xF0;
+    if (wperm_len == 0) wperm_buf[0] = 0xF0;
+
+    if (id_len != 2)   { PrintAndLogEx(ERR, "--id must be 2 bytes");    return PM3_EINVARG; }
+    if (cnt_len != 1)  { PrintAndLogEx(ERR, "--count must be 1 byte");  return PM3_EINVARG; }
+    if (rlen_len != 1) { PrintAndLogEx(ERR, "--reclen must be 1 byte"); return PM3_EINVARG; }
+    if (sfi_len != 1)  { PrintAndLogEx(ERR, "--sfi must be 1 byte");    return PM3_EINVARG; }
+
+    // 80 E0 02 00 0B 01 [fid_hi][fid_lo] [count][reclen] [rperm][wperm] [sfi] 00 FF 00
+    uint8_t apdu[16] = {
+        0x80, 0xE0, 0x02, 0x00, 0x0B,
+        0x01,
+        id_buf[0], id_buf[1],
+        cnt_buf[0], rlen_buf[0],
+        rperm_buf[0], wperm_buf[0],
+        sfi_buf[0],
+        0x00, 0xFF, 0x00
+    };
+
+    uint8_t resp[APDU_RES_LEN] = {0};
+    int resp_len = 0;
+    if (fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len) != PM3_SUCCESS)
+        return PM3_ESOFT;
+    if (resp_len < 2) { if (!keep) DropField(); return PM3_ESOFT; }
+    uint8_t sw1 = resp[resp_len - 2], sw2 = resp[resp_len - 1];
+    fmcos_print_sw(sw1, sw2);
+    if (sw1 == 0x90 && sw2 == 0x00)
+        PrintAndLogEx(SUCCESS, "CREATE record EF " _GREEN_("OK"));
+    else
+        PrintAndLogEx(FAILED, "CREATE record EF " _RED_("failed"));
+    if (!keep) DropField();
+    return (sw1 == 0x90 && sw2 == 0x00) ? PM3_SUCCESS : PM3_ESOFT;
+}
+
+static int CmdHFFmcosTidHelp(const char *Cmd);
+
+static command_t TidCommandTable[] = {
+    {"help",      CmdHFFmcosTidHelp,      AlwaysAvailable, "This help"},
+    {"setcard",   CmdHFFmcosTidSetCard,   IfPm3Iso14443a,  "SET CARD configuration block"},
+    {"setuid",    CmdHFFmcosTidSetUID,    IfPm3Iso14443a,  "SET UID"},
+    {"setauth",   CmdHFFmcosTidSetAuth,   IfPm3Iso14443a,  "SET INTERNAL AUTH key"},
+    {"erase",     CmdHFFmcosTidErase,     IfPm3Iso14443a,  "ERASE card file system"},
+    {"provision", CmdHFFmcosTidProvision, IfPm3Iso14443a,  "Full provisioning sequence"},
+    {"--------",  CmdHFFmcosTidHelp,      AlwaysAvailable, "--------- " _CYAN_("File creation") " ----------"},
+    {"createdf",  CmdHFFmcosTidCreateDF,  IfPm3Iso14443a,  "CREATE sub-DF (TID format)"},
+    {"createbin", CmdHFFmcosTidCreateBin, IfPm3Iso14443a,  "CREATE binary EF (TID format)"},
+    {"createrec", CmdHFFmcosTidCreateRec, IfPm3Iso14443a,  "CREATE record EF (TID format)"},
+    {NULL, NULL, NULL, NULL}
+};
+
+static int CmdHFFmcosTidHelp(const char *Cmd) {
+    (void)Cmd;
+    CmdsHelp(TidCommandTable);
+    return PM3_SUCCESS;
+}
+
+static int CmdHFFmcosTid(const char *Cmd) {
+    clearCommandBuffer();
+    return CmdsParse(TidCommandTable, Cmd);
+}
+
+// ---------------------------------------------------------------------------
 // Top-level command table
 // ---------------------------------------------------------------------------
 
@@ -3098,10 +3850,12 @@ static command_t CommandTable[] = {
     {"balance",   CmdHFFmcosBalance,  IfPm3Iso14443a,  "GET BALANCE (wallet or passbook)"},
     {"credit",    CmdHFFmcosCredit,   IfPm3Iso14443a,  "ADD CREDIT to wallet or passbook"},
     {"purchase",  CmdHFFmcosPurchase, IfPm3Iso14443a,  "PURCHASE from wallet or passbook"},
-    {"overdraft", CmdHFFmcosOverdraft,IfPm3Iso14443a,  "UPDATE OVERDRAFT LIMIT"},
+    {"overdraft", CmdHFFmcosOverdraft, IfPm3Iso14443a,  "UPDATE OVERDRAFT LIMIT"},
     {"history",   CmdHFFmcosHistory,  IfPm3Iso14443a,  "READ transaction history from loop EF"},
     {"block",     CmdHFFmcosBlock,    IfPm3Iso14443a,  "BLOCK card or application"},
     {"unblock",   CmdHFFmcosUnblock,  IfPm3Iso14443a,  "UNBLOCK application"},
+    {"--------",  CmdHelp,            AlwaysAvailable, "--------- " _CYAN_("TID provisioning") " ----------"},
+    {"tid",       CmdHFFmcosTid,      IfPm3Iso14443a,  "{ TID card provisioning }"},
     {NULL, NULL, NULL, NULL}
 };
 

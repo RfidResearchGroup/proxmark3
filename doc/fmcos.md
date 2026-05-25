@@ -47,6 +47,16 @@ All commands in this family are reachable via `hf fmcos <subcommand>`.
 - [File Protection Modes](#file-protection-modes)
 - [Access Rights Byte](#access-rights-byte)
 - [Complete Wallet Session Walkthrough](#complete-wallet-session-walkthrough)
+- [TID Tag Provisioning](#tid-tag-provisioning)
+  - [tid setcard](#tid-setcard)
+  - [tid setuid](#tid-setuid)
+  - [tid setauth](#tid-setauth)
+  - [tid erase](#tid-erase)
+  - [tid provision](#tid-provision)
+  - [tid createdf](#tid-createdf)
+  - [tid createbin](#tid-createbin)
+  - [tid createrec](#tid-createrec)
+- [TID Vendor Card Templates](#tid-vendor-card-templates)
 
 ---
 
@@ -132,10 +142,84 @@ hf fmcos create file --id 0002 --type wallet --size 0208 --rperm f0 --wperm 00 -
 | `--id <hex>` | 2-byte file ID |
 | `--type <type>` | `bin` (0x28), `fix` (0x2A), `var` (0x2C), `loop` (0x2E), `wallet` (0x2F) |
 | `--size <hex>` | File size in bytes (hex, e.g. `0208` = 520) |
-| `--rperm <hex>` | Read/usage-rights byte; for wallet type this is the single usage rights byte |
-| `--wperm <hex>` | Write permission byte; ignored for wallet type (always sent as 0x00) |
-| `--access <hex>` | Access-rights byte; for wallet type this is the low byte of the linked loop EF's file ID |
-| `--prot <mode>` | Line-protection mode: `none` (default), `mac`, `enc` (MAC+encrypt) |
+| `--rperm <hex>` | Read permission byte; for wallet type this is the usage-rights byte controlling financial operations |
+| `--wperm <hex>` | Write permission byte; for wallet type always sent as `0x00` (balance is managed by financial APDUs only) |
+| `--access <hex>` | Line-protection control byte for normal EFs; for wallet type this is the low byte of the linked loop EF's file ID |
+| `--prot <mode>` | Line-protection mode: `none` (default), `mac` (append MAC), `enc` (encrypt + MAC) |
+
+**Permission byte encoding (`--rperm` and `--wperm`):**
+
+FMCOS maintains a 4-bit security state register (0-F) per directory, reset to 0 on power-up or DF selection, and advanced by a
+successful PIN verify or external authenticate. Each permission byte is a single hex byte `XY`:
+
+| High nibble X | Low nibble Y | Condition for the operation to be allowed |
+|:---:|:---:|---|
+| `0` | `Y` | MF security state >= Y (uses **MF** register, not current DF) |
+| `X` (1-F) | `Y` | Current DF security state >= Y **and** <= X |
+| `X` | `Y` where X = Y | Current DF security state must equal X exactly |
+| `X` | `Y` where X < Y | **Never** allowed (impossible condition) |
+
+Common values:
+
+| Value | Meaning |
+|-------|---------|
+| `f0` | Open - always allowed (any state 0-F satisfies the range) |
+| `f1` | Requires DF state >= 1 (at least one successful PIN/ext-auth in this DF) |
+| `ff` | Requires DF state = F (15) - highest external-authenticate level only |
+| `53` | Requires DF state in [3, 5] |
+| `ef` | **Never** allowed (E < F - impossible) |
+
+**`--access` byte:**
+
+The meaning differs by file type.
+
+*Normal EFs (bin, fix, var, loop)* - BYTE7 is a line-protection control byte:
+
+| Bit 7 | Bits 6-4 | Bits 3-2 | Bits 1-0 |
+|:---:|:---:|:---:|:---:|
+| Read enforcement | Reserved (always `111`) | Read key ID | Write key ID |
+
+- **Bit 7 = 1**: plain (unprotected) reads are accepted - use with `--prot none`
+- **Bit 7 = 0**: reads *must* carry line protection - use with `--prot mac` or `--prot enc`
+- **Bits 3-2** select which line-protection key in the keyfile is used for read operations
+- **Bits 1-0** select which key is used for write operations
+
+Key ID encoding (same for both read and write selectors):
+
+| Bits | Key ID |
+|:---:|:---:|
+| `11` | 00 |
+| `10` | 01 |
+| `01` | 02 |
+| `00` | 03 |
+
+Common `--access` values for normal EFs:
+
+| `--access` | Binary | Bit 7 | Read key | Write key | Typical use |
+|:---:|:---:|:---:|:---:|:---:|---|
+| `ff` | `1111 1111` | 1 | ID 00 | ID 00 | Unprotected file (`--prot none`) |
+| `7f` | `0111 1111` | 0 | ID 00 | ID 00 | Line-protected file (`--prot mac` or `--prot enc`) |
+| `7e` | `0111 1110` | 0 | ID 00 | ID 01 | Protected, separate keys for read and write |
+
+*Wallet EF (type `wallet`)* - `--access` is the low byte of the linked loop EF's file ID (the transaction-log file).
+For example, `--access 18` links the wallet to loop file `0x0018`.
+
+**`--prot` (line-protection mode):**
+
+A protection mask is ORed into the file type byte (BYTE1 of the CREATE FILE data) at file creation time.
+Thereafter, every read or write to that file must follow the declared protection level.
+
+| Mode | Mask | File type byte effect | Behavior |
+|------|:---:|:---:|---|
+| `none` | `0x00` | unchanged (e.g. `0x28` for bin) | Plain reads and writes; no cryptographic overhead |
+| `mac` | `0x80` | bit 7 set (e.g. `0x28` -> `0xA8`) | Each WRITE must append a 4-byte MAC; READ response includes a 4-byte MAC |
+| `enc` | `0xC0` | bits 7-6 set (e.g. `0x28` -> `0xE8`) | WRITE data is DES/3DES-encrypted **and** followed by a 4-byte MAC; READ response is encrypted with a MAC |
+
+The MAC is computed over the full APDU (CLA, INS, P1, P2, Lc, data payload) using a random 4-byte nonce
+from GET CHALLENGE as the CBC IV, with the keyfile's line-protection key (type `36`).  The CLA byte must
+have its low nibble set to `4` (`0x04` plain, `0x84` for ISO-secure) when line protection is active.
+
+> **Not applicable** to wallet (`0x2F`) - financial file access is controlled entirely by the PBOC transaction APDUs, not line protection.
 
 **File type encodings:**
 
@@ -161,7 +245,34 @@ hf fmcos create keyfile --id 0000 --space 200 --dfsid 95 --perm f0
 | `--id <hex>` | 2-byte file ID for the keyfile (commonly `0000`) |
 | `--space <hex>` | Space to reserve for key storage (bytes, hex, e.g. `200` = 512) |
 | `--dfsid <hex>` | Parent DF SID (must match the DF's `--appid` value) |
-| `--perm <hex>` | Key access permission byte |
+| `--perm <hex>` | Key addition permission byte - security condition required to add a new key to this keyfile via WRITE KEY |
+
+**Permission byte encoding (`--perm`):**
+
+The permission byte is a single hex byte `XY` that defines the required security state before a WRITE KEY (add) operation
+is permitted.  FMCOS maintains a 4-bit security state register (0-F) per directory; the register is set to 0 on reset or
+when selecting a DF, and advances when a PIN verify or external-authenticate succeeds.
+
+| High nibble X | Low nibble Y | Condition for WRITE KEY (add) to be allowed |
+|:---:|:---:|---|
+| `0` | `Y` | MF security state >= Y (uses **MF** register, not the current DF) |
+| `X` (1-F) | `Y` | Current DF security state >= Y **and** <= X |
+| `X` | `Y` where X = Y | Current DF security state must equal X exactly |
+| `X` | `Y` where X < Y | **Never** allowed (impossible condition - effectively locks the key file) |
+
+Common values:
+
+| `--perm` | Meaning |
+|----------|---------|
+| `f0` | Open - no authentication required; any state (0-F) satisfies >= 0 and <= F |
+| `f1` | Requires DF state >= 1 (at least one successful PIN/ext-auth in this DF) |
+| `ff` | Requires DF state = F (15) - typically the highest external-authenticate level |
+| `11` | Requires DF state = 1 exactly |
+| `53` | Requires DF state in [3, 5] |
+| `ef` | **Never** allowed (E < F -> impossible) - effectively write-locks the keyfile |
+
+> **Note:** The `--perm` byte only governs *adding* new keys to the keyfile.  Each individual key record also carries
+> its own separate use-permission and change-permission bytes that are set when writing the key with `hf fmcos write key`.
 
 ---
 
@@ -476,7 +587,7 @@ Authentication Code (TAC) from the card which the terminal verifies.
 | Credit key (16 B) | Derive the session process key for credit operations |
 | Purchase key (16 B) | Derive the session process key for purchase/debit |
 | Overdraft key (16 B) | Derive the session process key for overdraft-limit updates |
-| Internal key / DTK (16 B) | Verify TAC: all financial commands use `tac_key = XOR(ikey[0:8], ikey[8:16])` → DES-CBC-MAC |
+| Internal key / DTK (16 B) | Verify TAC: all financial commands use `tac_key = XOR(ikey[0:8], ikey[8:16])` -> DES-CBC-MAC |
 
 **Terminal ID:** 6 bytes identifying the terminal.  Use any fixed value for testing (e.g. `666666666666`).
 
@@ -771,8 +882,8 @@ hf fmcos unblock --key 8a021972bfec9d152ca9eb82d7d12c09
 ### Wallet/Purse EF (EDEP/EP, type `0x2F`)
 
 - GET BALANCE reads the current balance.
-- Under key control: CREDIT FOR LOAD (圈存), DEBIT FOR PURCHASE / CASH WITHDRAW (消费/取现),
-  DEBIT FOR UNLOAD (圈提), and UPDATE OVERDRAFT LIMIT (修改透支限额).
+- Under key control: CREDIT FOR LOAD, DEBIT FOR PURCHASE / CASH WITHDRAW,
+  DEBIT FOR UNLOAD, and UPDATE OVERDRAFT LIMIT.
 
 ### Variable-Length Record EF (type `0x2C`)
 
@@ -799,7 +910,7 @@ hf fmcos unblock --key 8a021972bfec9d152ca9eb82d7d12c09
 ### Key Independence
 
 Each key is bound to exactly one function (encrypt, decrypt, MAC, etc.) and cannot be used
-for any other function — including keys that generate, derive, or transport other card keys.
+for any other function - including keys that generate, derive, or transport other card keys.
 
 ### PIN Key
 
@@ -880,3 +991,386 @@ Common values:
 | `ff` | No protection required, key0 for both read/write |
 | `7f` | Protection required, key0 for both read/write |
 | `f0` | No protection required (permission byte for directories/keys) |
+
+---
+
+## TID Tag Provisioning
+
+A TID tag is a magic FMCOS tag that bypasses certain authentication mechanisms and
+allows custom UID. These commands below allow a TID tag to be provisioned - UID,
+auth key, and file system, these commands are not the same as the standard fmcos commands.
+
+These cards can often be found on taobao by searching for "CPU TID card".
+When hf fmcos auth external is called with any key, the card will always return
+[+] SW: 9000 - Success
+[+] External authentication successful
+
+All TID subcommands are reached via `hf fmcos tid <subcommand>`.
+
+| Subcommand | Description |
+|------------|-------------|
+| `setcard` | Write fixed card configuration block (`INS 0xEF`) |
+| `setuid` | Program the ISO14443-A UID (`INS 0x85`) |
+| `setauth` | Write the internal auth key and lock state (`INS 0x21`) |
+| `erase` | Erase the card file system (`CLA 0xE0 INS 0xEC`) |
+| `provision` | Full provisioning sequence in one command |
+
+> **Order matters.** When provisioning manually, always run `setcard` -> `setuid` -> `setauth`
+> -> `erase` -> create file structure.  `provision` does this automatically.
+
+---
+
+### tid setcard
+
+Send the fixed 39-byte SET CARD configuration APDU.  The payload is hardcoded - there is
+limited information on what the fields do.  This must be sent before any other provisioning step.
+
+```
+hf fmcos tid setcard
+```
+
+| Flag | Description |
+|------|-------------|
+| `-k` / `--keep` | Keep field on after command |
+
+**APDU:** `00 EF 00 00 27 <39-byte config>`
+
+---
+
+### tid setuid
+
+Program the card's ISO14443-A UID.
+
+```
+hf fmcos tid setuid --uid 13371337
+hf fmcos tid setuid --uid 0102030405060708
+```
+
+| Flag | Description |
+|------|-------------|
+| `--uid <hex>` | UID bytes (4-7 bytes, i.e. 8-14 hex chars) |
+| `-k` / `--keep` | Keep field on after command |
+
+**APDU:** `00 85 00 00 <len> <uid>`
+
+---
+
+### tid setauth
+
+Write the 8-byte internal authentication key and set the lock state.
+
+```
+hf fmcos tid setauth --key 1122334455667788
+hf fmcos tid setauth --key 1122334455667788 --lock
+```
+
+| Flag | Description |
+|------|-------------|
+| `--key <hex>` | Internal auth key (8 bytes) |
+| `--lock` | Lock the key permanently (`0xAA`); default is unlocked (`0x55`) |
+| `-k` / `--keep` | Keep field on after command |
+
+**APDU:** `00 21 00 00 0A <key[8]> <lock_byte> 00`
+
+> **Warning:** `--lock` not much is known about how this functions, use with care.
+
+---
+
+### tid erase
+
+Erase the card's file system.  Uses `CLA=0xE0` (not `0x80` as in standard FMCOS erase).
+
+```
+hf fmcos tid erase
+```
+
+| Flag | Description |
+|------|-------------|
+| `-k` / `--keep` | Keep field on after command |
+
+**APDU:** `E0 EC 00 00 00`
+
+---
+
+### tid provision
+
+Full provisioning sequence in a single command.  Chains all steps with the RF field held on
+and aborts with an error message if any step fails.
+
+Steps performed:
+1. SET CARD (fixed config block)
+2. SET UID
+3. SET INTERNAL AUTH
+4. ERASE
+5. SELECT MF (`3F00`)
+6. CREATE MF (`3F00`, name `1PAY.SYS.DDF01`)
+7. SELECT MF (`3F00`)
+8. CREATE KEYFILE
+
+```
+hf fmcos tid provision --uid 13371337 --key 1122334455667788
+hf fmcos tid provision --uid 13371337 --key 1122334455667788 --lock
+```
+
+| Flag | Description |
+|------|-------------|
+| `--uid <hex>` | UID bytes (4-7 bytes) |
+| `--key <hex>` | Internal auth key (8 bytes) |
+| `--lock` | Lock the auth key permanently after writing |
+| `-k` / `--keep` | Keep field on after completion |
+
+After `provision`, use `tid createdf` / `tid createbin` / `tid createrec` to build
+the file structure, then `hf fmcos write binary` / `hf fmcos write record` to populate data.
+
+---
+
+### tid createdf
+
+CREATE a sub-DF using the TID APDU format.  The standard `hf fmcos create dir` uses a
+different data layout (FID in P1/P2, leading `0x38` byte); this command uses the TID layout
+where P1=`0x01` and the FID is the first field in the data.
+
+```
+hf fmcos tid createdf --id 3f01 --size 0f00 --sfi 96 --name 444446303133
+```
+
+| Flag | Description |
+|------|-------------|
+| `--id <4hex>` | 2-byte file ID |
+| `--size <hex>` | DF space to allocate in bytes (hex) |
+| `--sfi <hex>` | Short file ID (1 byte) |
+| `--name <hex>` | DF name bytes (0-16 bytes, optional) |
+| `-k` / `--keep` | Keep field on after command |
+
+**APDU:** `80 E0 01 00 <lc> [fid_hi][fid_lo] [size_hi][size_lo] F0 F0 [sfi] 01 FF [name...]`
+
+---
+
+### tid createbin
+
+CREATE a binary EF or KEYFILE using the TID APDU format.  The standard `hf fmcos create file --type bin`
+uses a different layout (FID in P1/P2, 7-byte payload); this command uses the TID layout
+where P1=`0x02` and the FID is in the data with a fixed 11-byte payload.
+
+Use `--type keyfile` to create the fixed TID keyfile (subtype `1E`) in the currently selected DF.
+Every sub-DF needs a keyfile before EFs can be created inside it.
+
+```
+hf fmcos tid createbin --id 0001 --size 0100 --sfi 01
+hf fmcos tid createbin --id 0002 --size 0040 --sfi 02 --rperm 20 --wperm f0
+hf fmcos tid createbin --type keyfile
+```
+
+| Flag | Description |
+|------|-------------|
+| `--type <type>` | `bin` (default) or `keyfile` |
+| `--id <4hex>` | 2-byte file ID (required for `bin`) |
+| `--size <hex>` | File size in bytes, hex (required for `bin`) |
+| `--sfi <hex>` | Short file ID, 1 byte (required for `bin`) |
+| `--rperm <hex>` | Read permission byte (default `F0`, `bin` only) |
+| `--wperm <hex>` | Write permission byte (default `F0`, `bin` only) |
+| `-k` / `--keep` | Keep field on after command |
+
+**APDU (bin):** `80 E0 02 00 0B 00 [fid_hi][fid_lo] [size_hi][size_lo] [rperm][wperm] [sfi] 00 FF 00`
+
+**APDU (keyfile):** `80 E0 02 00 0B 1E 00 00 00 30 FF FF 00 30 00 00`
+
+---
+
+### tid createrec
+
+CREATE a fixed-length record EF using the TID APDU format.  The standard `hf fmcos create file --type fix`
+uses a different layout; this command uses the TID layout where P1=`0x02`, subtype=`0x01`,
+and count+reclen replace the size field.
+
+```
+hf fmcos tid createrec --id 0003 --count 04 --reclen 08 --sfi 03
+hf fmcos tid createrec --id 0003 --count 04 --reclen 10 --sfi 03 --rperm 20 --wperm f0
+```
+
+| Flag | Description |
+|------|-------------|
+| `--id <4hex>` | 2-byte file ID |
+| `--count <hex>` | Number of records (1 byte) |
+| `--reclen <hex>` | Bytes per record (1 byte) |
+| `--sfi <hex>` | Short file ID (1 byte) |
+| `--rperm <hex>` | Read permission byte (default `F0`) |
+| `--wperm <hex>` | Write permission byte (default `F0`) |
+| `-k` / `--keep` | Keep field on after command |
+
+**APDU:** `80 E0 02 00 0B 01 [fid_hi][fid_lo] [count][reclen] [rperm][wperm] [sfi] 00 FF 00`
+
+> **Note**: To write data into TID EFs after creation, use the standard `hf fmcos write binary`
+> and `hf fmcos write record` - those APDUs (`00 D6` / `00 DC`) are identical in TID and standard FMCOS.
+
+---
+
+## TID Vendor Card Templates
+
+Six real-world Chinese access-control layouts were translated from the app that is
+normally provided when you buy these TID cards.
+
+### Provisioning notes
+
+- Replace `--uid` and `--key` in the `provision` call with your actual values.
+- `-k` keeps the RF field on between commands, preserving the card's file context.  When a
+  command finishes without `-k` the field drops and the card resets to MF context on the
+  next activation.
+- Each sub-DF requires a TID-format keyfile created immediately after selecting it.  Use
+  `hf fmcos tid createbin --type keyfile` - the standard `hf fmcos create keyfile` uses a
+  different APDU layout and cannot create TID keyfiles.
+
+---
+
+### 01 - Dingbo
+
+```
+MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
++-- DF  7572  39 01 30 99 08 07  SFI 0x02  (proprietary 6-byte name)
+    +-- EF-rec  0001  SFI 0x03  6 records x 16 bytes
+```
+
+```
+hf fmcos tid provision --uid 13371337 --key 0001020304050607
+hf fmcos tid createdf --id 7572 --size 0200 --sfi 02 --name 390130990807 -k
+hf fmcos select --id 7572 -k
+hf fmcos tid createbin --type keyfile -k
+hf fmcos tid createrec --id 0001 --count 06 --reclen 10 --sfi 03 -k
+hf fmcos write record --rec 01 --fid 03 --data 018609DD110000000000010100000000 -k
+hf fmcos write record --rec 02 --fid 03 --data 00000000000000000000000000000000 -k
+hf fmcos write record --rec 03 --fid 03 --data 0000000000070A0D1707120000008800 -k
+hf fmcos write record --rec 04 --fid 03 --data 00000000000000000000000000000000 -k
+hf fmcos write record --rec 05 --fid 03 --data 00000000000000000000000000000000 -k
+hf fmcos write record --rec 06 --fid 03 --data 00000000000000000000000000000000
+```
+
+---
+
+### 02 - Anjubao
+
+```
+MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
++-- DF  1001  A0 00 00 00 03 86 98 07 01  SFI 0x02  (9-byte AID)
+    +-- EF-bin  0018  SFI 0x18  140 bytes  (wallet balance file)
+    +-- EF-bin  0019  SFI 0x19  140 bytes  (passbook balance file)
+```
+
+```
+hf fmcos tid provision --uid 13371337 --key 0001020304050607
+hf fmcos tid createdf --id 1001 --size 0200 --sfi 02 --name A00000000386980701 -k
+hf fmcos select --id 1001 -k
+hf fmcos tid createbin --type keyfile -k
+hf fmcos tid createbin --id 0018 --size 008C --sfi 18 -k
+hf fmcos select --id 0018 -k
+hf fmcos write binary --p1 00 --p2 00 --data 001FD921090700000001000023590000000000E0FFFFFF7F0700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 -k
+hf fmcos tid createbin --id 0019 --size 008C --sfi 19 -k
+hf fmcos select --id 0019 -k
+hf fmcos write binary --p1 00 --p2 00 --data 001FD921090700000001000023590000FFFFFFFFFFFF010000000000E0FFFFFF0F0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+```
+
+---
+
+### 03 - Jinbo
+
+```
+MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
++-- DF  4A54  6A 69 6E 00 00 00 62 6F A5 04 9F 08 01 02  SFI 0x02  (14-byte name, starts "jin")
+    +-- EF-bin  4200  SFI 0x01  624 bytes  (32 B payload at offset 592, remainder zeros)
+```
+
+```
+hf fmcos tid provision --uid 13371337 --key 0001020304050607
+hf fmcos tid createdf --id 4A54 --size 0300 --sfi 02 --name 6A696E00000000626FA5049F080102 -k
+hf fmcos select --id 4A54 -k
+hf fmcos tid createbin --type keyfile -k
+hf fmcos tid createbin --id 4200 --size 0270 --sfi 01 -k
+hf fmcos select --id 4200 -k
+hf fmcos write binary --p1 02 --p2 50 --data 530030FFFFFFFFFFFFFF3A2B0000000022012200002403081106000000007F00
+```
+
+---
+
+### 04 - Jingkong
+
+```
+MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
++-- DF  3F01  "DDF01"  SFI 0x02
+    +-- EF-bin  0001  SFI 0x01    1 byte   (placeholder)
+    +-- EF-bin  0003  SFI 0x03   28 bytes  (key / config data)
+    +-- EF-bin  0004  SFI 0x04  120 bytes  (zeroed)
+    +-- EF-bin  0005  SFI 0x05   36 bytes  (key / config data)
+    +-- EF-bin  0006  SFI 0x06  132 bytes  (key / config data)
+    +-- EF-bin  0007  SFI 0x07  102 bytes  (zeroed)
+```
+
+```
+hf fmcos tid provision --uid 13371337 --key 0001020304050607
+hf fmcos tid createdf --id 3F01 --size 0400 --sfi 02 --name 4444463031 -k
+hf fmcos select --id 3F01 -k
+hf fmcos tid createbin --type keyfile -k
+hf fmcos tid createbin --id 0001 --size 0001 --sfi 01 -k
+hf fmcos tid createbin --id 0003 --size 001C --sfi 03 -k
+hf fmcos select --id 0003 -k
+hf fmcos write binary --p1 00 --p2 00 --data FE937B922D7EDEF50000000000000000000000000000000000000000 -k
+hf fmcos tid createbin --id 0004 --size 0078 --sfi 04 -k
+hf fmcos select --id 0004 -k
+hf fmcos write binary --p1 00 --p2 00 --data 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 -k
+hf fmcos tid createbin --id 0005 --size 0024 --sfi 05 -k
+hf fmcos select --id 0005 -k
+hf fmcos write binary --p1 00 --p2 00 --data 6403FE9C7434FCBC6E00FC9F2802F1448F06F3BA8CF6F0B98DF7F1B84D0BF60000000000 -k
+hf fmcos tid createbin --id 0006 --size 0084 --sfi 06 -k
+hf fmcos select --id 0006 -k
+hf fmcos write binary --p1 00 --p2 00 --data 616BEACE7705FCBD7604FDBC7107F2BB7006F3BA7309F0B97208F1B84D0B09B74C0AF7494F0DF4B5B10CF5B449F0EAB3480E14B24B31E84E4A30E9B0BA33EEAF44CDEFAE473513AD4634ED534137E2ABBF36E3AA43C6E0A942381EA85D3BE6585C3AE7A6A03DE4A55E000000000000000000000000000000000000000000000000000000 -k
+hf fmcos tid createbin --id 0007 --size 0066 --sfi 07 -k
+hf fmcos select --id 0007 -k
+hf fmcos write binary --p1 00 --p2 00 --data 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+```
+
+---
+
+### 05 - Kangtuo
+
+```
+MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
++-- DF  D0F1  "XL123"  SFI 0x02
+|   +-- EF-bin  0005  SFI 0x05  64 bytes
++-- DF  D0F2  "XL456"  SFI 0x02
+    +-- EF-bin  0005  SFI 0x05  64 bytes
+```
+
+```
+hf fmcos tid provision --uid 13371337 --key 0001020304050607
+hf fmcos tid createdf --id D0F1 --size 0100 --sfi 02 --name 584C313233 -k
+hf fmcos select --id D0F1 -k
+hf fmcos tid createbin --type keyfile -k
+hf fmcos tid createbin --id 0005 --size 0040 --sfi 05 -k
+hf fmcos select --id 0005 -k
+hf fmcos write binary --p1 00 --p2 00 --data 0200FC20006200000000000000000000000000272E2C6A0000000000000000080000000000000000000000000000000000000000000000000000000000000000
+hf fmcos tid createdf --id D0F2 --size 0100 --sfi 02 --name 584C343536 -k
+hf fmcos select --id D0F2 -k
+hf fmcos tid createbin --type keyfile -k
+hf fmcos tid createbin --id 0005 --size 0040 --sfi 05 -k
+hf fmcos select --id 0005 -k
+hf fmcos write binary --p1 00 --p2 00 --data 0200FC20006200000000000000000000000000272E2C6A0000000000000000080000000000000000000000000000000000000000000000000000000000000000
+```
+
+---
+
+### 06 - Youhe
+
+```
+MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
++-- DF  3F01  "ADF01"  SFI 0x02
+    +-- EF-bin  0003  SFI 0x03  250 bytes  (key / credential data)
+```
+
+```
+hf fmcos tid provision --uid 13371337 --key 0001020304050607
+hf fmcos tid createdf --id 3F01 --size 0200 --sfi 02 --name 4144463031 -k
+hf fmcos select --id 3F01 -k
+hf fmcos tid createbin --type keyfile -k
+hf fmcos tid createbin --id 0003 --size 00FA --sfi 03 -k
+hf fmcos select --id 0003 -k
+hf fmcos write binary --p1 00 --p2 00 --data D15190D7E1E379732295C97D62A3172BE3BBA1D1B32CE32FED72CB3DCDB115E7DC2670978E241822F298C9951260FC55D54F9988C7FCAC5032F94281DFC39C973E570101764D5BBF367F84EBDA1B012ABD4568F35D5BC08BAFD76B988CA916C985692337FCF02C9FD2C8BDD583BC05EF55582C3921FA2CAFAE26308FBADE0598DB750EE1F0522D29EAB6FA5D0F3971F785692337FCF02C9FD2C8BDD583BC05EF55582C3921FA2CAFAE26308FBADE0598DB750EE1F0522D29EAB6FA5D0F3971F7EA545FC5B27B7F40DF6D0F71FCEE2A1BCED2DEDE67BB57B1C1F98C8CDA5259CC7BD83158086F215F5E1E0246EE0504760000000000 -k
+hf fmcos write binary --p1 00 --p2 F5 --data 0000000000
+```
