@@ -149,13 +149,13 @@ hf fmcos create file --id 0002 --type wallet --size 0208 --rperm f0 --wperm 00 -
 
 **Permission byte encoding (`--rperm` and `--wperm`):**
 
-FMCOS maintains a 4-bit security state register (0–F) per directory, reset to 0 on power-up or DF selection, and advanced by a
+FMCOS maintains a 4-bit security state register (0-F) per directory, reset to 0 on power-up or DF selection, and advanced by a
 successful PIN verify or external authenticate. Each permission byte is a single hex byte `XY`:
 
 | High nibble X | Low nibble Y | Condition for the operation to be allowed |
 |:---:|:---:|---|
-| `0` | `Y` | MF security state ≥ Y (uses **MF** register, not current DF) |
-| `X` (1–F) | `Y` | Current DF security state ≥ Y **and** ≤ X |
+| `0` | `Y` | MF security state >= Y (uses **MF** register, not current DF) |
+| `X` (1-F) | `Y` | Current DF security state >= Y **and** <= X |
 | `X` | `Y` where X = Y | Current DF security state must equal X exactly |
 | `X` | `Y` where X < Y | **Never** allowed (impossible condition) |
 
@@ -163,26 +163,26 @@ Common values:
 
 | Value | Meaning |
 |-------|---------|
-| `f0` | Open — always allowed (any state 0–F satisfies the range) |
-| `f1` | Requires DF state ≥ 1 (at least one successful PIN/ext-auth in this DF) |
-| `ff` | Requires DF state = F (15) — highest external-authenticate level only |
+| `f0` | Open - always allowed (any state 0-F satisfies the range) |
+| `f1` | Requires DF state >= 1 (at least one successful PIN/ext-auth in this DF) |
+| `ff` | Requires DF state = F (15) - highest external-authenticate level only |
 | `53` | Requires DF state in [3, 5] |
-| `ef` | **Never** allowed (E < F — impossible) |
+| `ef` | **Never** allowed (E < F - impossible) |
 
 **`--access` byte:**
 
 The meaning differs by file type.
 
-*Normal EFs (bin, fix, var, loop)* — BYTE7 is a line-protection control byte:
+*Normal EFs (bin, fix, var, loop)* - BYTE7 is a line-protection control byte:
 
-| Bit 7 | Bits 6–4 | Bits 3–2 | Bits 1–0 |
+| Bit 7 | Bits 6-4 | Bits 3-2 | Bits 1-0 |
 |:---:|:---:|:---:|:---:|
 | Read enforcement | Reserved (always `111`) | Read key ID | Write key ID |
 
-- **Bit 7 = 1**: plain (unprotected) reads are accepted — use with `--prot none`
-- **Bit 7 = 0**: reads *must* carry line protection — use with `--prot mac` or `--prot enc`
-- **Bits 3–2** select which line-protection key in the keyfile is used for read operations
-- **Bits 1–0** select which key is used for write operations
+- **Bit 7 = 1**: plain (unprotected) reads are accepted - use with `--prot none`
+- **Bit 7 = 0**: reads *must* carry line protection - use with `--prot mac` or `--prot enc`
+- **Bits 3-2** select which line-protection key in the keyfile is used for read operations
+- **Bits 1-0** select which key is used for write operations
 
 Key ID encoding (same for both read and write selectors):
 
@@ -201,7 +201,7 @@ Common `--access` values for normal EFs:
 | `7f` | `0111 1111` | 0 | ID 00 | ID 00 | Line-protected file (`--prot mac` or `--prot enc`) |
 | `7e` | `0111 1110` | 0 | ID 00 | ID 01 | Protected, separate keys for read and write |
 
-*Wallet EF (type `wallet`)* — `--access` is the low byte of the linked loop EF's file ID (the transaction-log file).
+*Wallet EF (type `wallet`)* - `--access` is the low byte of the linked loop EF's file ID (the transaction-log file).
 For example, `--access 18` links the wallet to loop file `0x0018`.
 
 **`--prot` (line-protection mode):**
@@ -212,14 +212,14 @@ Thereafter, every read or write to that file must follow the declared protection
 | Mode | Mask | File type byte effect | Behavior |
 |------|:---:|:---:|---|
 | `none` | `0x00` | unchanged (e.g. `0x28` for bin) | Plain reads and writes; no cryptographic overhead |
-| `mac` | `0x80` | bit 7 set (e.g. `0x28` → `0xA8`) | Each WRITE must append a 4-byte MAC; READ response includes a 4-byte MAC |
-| `enc` | `0xC0` | bits 7–6 set (e.g. `0x28` → `0xE8`) | WRITE data is DES/3DES-encrypted **and** followed by a 4-byte MAC; READ response is encrypted with a MAC |
+| `mac` | `0x80` | bit 7 set (e.g. `0x28` -> `0xA8`) | Each WRITE must append a 4-byte MAC; READ response includes a 4-byte MAC |
+| `enc` | `0xC0` | bits 7-6 set (e.g. `0x28` -> `0xE8`) | WRITE data is DES/3DES-encrypted **and** followed by a 4-byte MAC; READ response is encrypted with a MAC |
 
 The MAC is computed over the full APDU (CLA, INS, P1, P2, Lc, data payload) using a random 4-byte nonce
 from GET CHALLENGE as the CBC IV, with the keyfile's line-protection key (type `36`).  The CLA byte must
 have its low nibble set to `4` (`0x04` plain, `0x84` for ISO-secure) when line protection is active.
 
-> **Not applicable** to wallet (`0x2F`) — financial file access is controlled entirely by the PBOC transaction APDUs, not line protection.
+> **Not applicable** to wallet (`0x2F`) - financial file access is controlled entirely by the PBOC transaction APDUs, not line protection.
 
 **File type encodings:**
 
@@ -245,31 +245,31 @@ hf fmcos create keyfile --id 0000 --space 200 --dfsid 95 --perm f0
 | `--id <hex>` | 2-byte file ID for the keyfile (commonly `0000`) |
 | `--space <hex>` | Space to reserve for key storage (bytes, hex, e.g. `200` = 512) |
 | `--dfsid <hex>` | Parent DF SID (must match the DF's `--appid` value) |
-| `--perm <hex>` | Key addition permission byte — security condition required to add a new key to this keyfile via WRITE KEY |
+| `--perm <hex>` | Key addition permission byte - security condition required to add a new key to this keyfile via WRITE KEY |
 
 **Permission byte encoding (`--perm`):**
 
 The permission byte is a single hex byte `XY` that defines the required security state before a WRITE KEY (add) operation
-is permitted.  FMCOS maintains a 4-bit security state register (0–F) per directory; the register is set to 0 on reset or
+is permitted.  FMCOS maintains a 4-bit security state register (0-F) per directory; the register is set to 0 on reset or
 when selecting a DF, and advances when a PIN verify or external-authenticate succeeds.
 
 | High nibble X | Low nibble Y | Condition for WRITE KEY (add) to be allowed |
 |:---:|:---:|---|
-| `0` | `Y` | MF security state ≥ Y (uses **MF** register, not the current DF) |
-| `X` (1–F) | `Y` | Current DF security state ≥ Y **and** ≤ X |
+| `0` | `Y` | MF security state >= Y (uses **MF** register, not the current DF) |
+| `X` (1-F) | `Y` | Current DF security state >= Y **and** <= X |
 | `X` | `Y` where X = Y | Current DF security state must equal X exactly |
-| `X` | `Y` where X < Y | **Never** allowed (impossible condition — effectively locks the key file) |
+| `X` | `Y` where X < Y | **Never** allowed (impossible condition - effectively locks the key file) |
 
 Common values:
 
 | `--perm` | Meaning |
 |----------|---------|
-| `f0` | Open — no authentication required; any state (0–F) satisfies ≥ 0 and ≤ F |
-| `f1` | Requires DF state ≥ 1 (at least one successful PIN/ext-auth in this DF) |
-| `ff` | Requires DF state = F (15) — typically the highest external-authenticate level |
+| `f0` | Open - no authentication required; any state (0-F) satisfies >= 0 and <= F |
+| `f1` | Requires DF state >= 1 (at least one successful PIN/ext-auth in this DF) |
+| `ff` | Requires DF state = F (15) - typically the highest external-authenticate level |
 | `11` | Requires DF state = 1 exactly |
 | `53` | Requires DF state in [3, 5] |
-| `ef` | **Never** allowed (E < F → impossible) — effectively write-locks the keyfile |
+| `ef` | **Never** allowed (E < F -> impossible) - effectively write-locks the keyfile |
 
 > **Note:** The `--perm` byte only governs *adding* new keys to the keyfile.  Each individual key record also carries
 > its own separate use-permission and change-permission bytes that are set when writing the key with `hf fmcos write key`.
@@ -587,7 +587,7 @@ Authentication Code (TAC) from the card which the terminal verifies.
 | Credit key (16 B) | Derive the session process key for credit operations |
 | Purchase key (16 B) | Derive the session process key for purchase/debit |
 | Overdraft key (16 B) | Derive the session process key for overdraft-limit updates |
-| Internal key / DTK (16 B) | Verify TAC: all financial commands use `tac_key = XOR(ikey[0:8], ikey[8:16])` → DES-CBC-MAC |
+| Internal key / DTK (16 B) | Verify TAC: all financial commands use `tac_key = XOR(ikey[0:8], ikey[8:16])` -> DES-CBC-MAC |
 
 **Terminal ID:** 6 bytes identifying the terminal.  Use any fixed value for testing (e.g. `666666666666`).
 
@@ -882,8 +882,8 @@ hf fmcos unblock --key 8a021972bfec9d152ca9eb82d7d12c09
 ### Wallet/Purse EF (EDEP/EP, type `0x2F`)
 
 - GET BALANCE reads the current balance.
-- Under key control: CREDIT FOR LOAD (圈存), DEBIT FOR PURCHASE / CASH WITHDRAW (消费/取现),
-  DEBIT FOR UNLOAD (圈提), and UPDATE OVERDRAFT LIMIT (修改透支限额).
+- Under key control: CREDIT FOR LOAD, DEBIT FOR PURCHASE / CASH WITHDRAW,
+  DEBIT FOR UNLOAD, and UPDATE OVERDRAFT LIMIT.
 
 ### Variable-Length Record EF (type `0x2C`)
 
@@ -910,7 +910,7 @@ hf fmcos unblock --key 8a021972bfec9d152ca9eb82d7d12c09
 ### Key Independence
 
 Each key is bound to exactly one function (encrypt, decrypt, MAC, etc.) and cannot be used
-for any other function — including keys that generate, derive, or transport other card keys.
+for any other function - including keys that generate, derive, or transport other card keys.
 
 ### PIN Key
 
@@ -997,10 +997,10 @@ Common values:
 ## TID Tag Provisioning
 
 A TID tag is a magic FMCOS tag that bypasses certain authentication mechanisms and
-allows custom UID. These commands below allow a TID tag to be provisioned — UID,
+allows custom UID. These commands below allow a TID tag to be provisioned - UID,
 auth key, and file system, these commands are not the same as the standard fmcos commands.
 
-These cards can often be found on taobao by searching for (CPU卡TID卡)
+These cards can often be found on taobao by searching for "CPU TID card".
 When hf fmcos auth external is called with any key, the card will always return
 [+] SW: 9000 - Success
 [+] External authentication successful
@@ -1015,14 +1015,14 @@ All TID subcommands are reached via `hf fmcos tid <subcommand>`.
 | `erase` | Erase the card file system (`CLA 0xE0 INS 0xEC`) |
 | `provision` | Full provisioning sequence in one command |
 
-> **Order matters.** When provisioning manually, always run `setcard` → `setuid` → `setauth`
-> → `erase` → create file structure.  `provision` does this automatically.
+> **Order matters.** When provisioning manually, always run `setcard` -> `setuid` -> `setauth`
+> -> `erase` -> create file structure.  `provision` does this automatically.
 
 ---
 
 ### tid setcard
 
-Send the fixed 39-byte SET CARD configuration APDU.  The payload is hardcoded — there is
+Send the fixed 39-byte SET CARD configuration APDU.  The payload is hardcoded - there is
 limited information on what the fields do.  This must be sent before any other provisioning step.
 
 ```
@@ -1048,7 +1048,7 @@ hf fmcos tid setuid --uid 0102030405060708
 
 | Flag | Description |
 |------|-------------|
-| `--uid <hex>` | UID bytes (4–7 bytes, i.e. 8–14 hex chars) |
+| `--uid <hex>` | UID bytes (4-7 bytes, i.e. 8-14 hex chars) |
 | `-k` / `--keep` | Keep field on after command |
 
 **APDU:** `00 85 00 00 <len> <uid>`
@@ -1114,7 +1114,7 @@ hf fmcos tid provision --uid 13371337 --key 1122334455667788 --lock
 
 | Flag | Description |
 |------|-------------|
-| `--uid <hex>` | UID bytes (4–7 bytes) |
+| `--uid <hex>` | UID bytes (4-7 bytes) |
 | `--key <hex>` | Internal auth key (8 bytes) |
 | `--lock` | Lock the auth key permanently after writing |
 | `-k` / `--keep` | Keep field on after completion |
@@ -1139,7 +1139,7 @@ hf fmcos tid createdf --id 3f01 --size 0f00 --sfi 96 --name 444446303133
 | `--id <4hex>` | 2-byte file ID |
 | `--size <hex>` | DF space to allocate in bytes (hex) |
 | `--sfi <hex>` | Short file ID (1 byte) |
-| `--name <hex>` | DF name bytes (0–16 bytes, optional) |
+| `--name <hex>` | DF name bytes (0-16 bytes, optional) |
 | `-k` / `--keep` | Keep field on after command |
 
 **APDU:** `80 E0 01 00 <lc> [fid_hi][fid_lo] [size_hi][size_lo] F0 F0 [sfi] 01 FF [name...]`
@@ -1201,7 +1201,7 @@ hf fmcos tid createrec --id 0003 --count 04 --reclen 10 --sfi 03 --rperm 20 --wp
 **APDU:** `80 E0 02 00 0B 01 [fid_hi][fid_lo] [count][reclen] [rperm][wperm] [sfi] 00 FF 00`
 
 > **Note**: To write data into TID EFs after creation, use the standard `hf fmcos write binary`
-> and `hf fmcos write record` — those APDUs (`00 D6` / `00 DC`) are identical in TID and standard FMCOS.
+> and `hf fmcos write record` - those APDUs (`00 D6` / `00 DC`) are identical in TID and standard FMCOS.
 
 ---
 
@@ -1217,17 +1217,17 @@ normally provided when you buy these TID cards.
   command finishes without `-k` the field drops and the card resets to MF context on the
   next activation.
 - Each sub-DF requires a TID-format keyfile created immediately after selecting it.  Use
-  `hf fmcos tid createbin --type keyfile` — the standard `hf fmcos create keyfile` uses a
+  `hf fmcos tid createbin --type keyfile` - the standard `hf fmcos create keyfile` uses a
   different APDU layout and cannot create TID keyfiles.
 
 ---
 
-### 01 — Dingbo (鼎博)
+### 01 - Dingbo
 
 ```
 MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
-└── DF  7572  39 01 30 99 08 07  SFI 0x02  (proprietary 6-byte name)
-    └── EF-rec  0001  SFI 0x03  6 records × 16 bytes
++-- DF  7572  39 01 30 99 08 07  SFI 0x02  (proprietary 6-byte name)
+    +-- EF-rec  0001  SFI 0x03  6 records x 16 bytes
 ```
 
 ```
@@ -1246,13 +1246,13 @@ hf fmcos write record --rec 06 --fid 03 --data 00000000000000000000000000000000
 
 ---
 
-### 02 — Anjubao (安居宝)
+### 02 - Anjubao
 
 ```
 MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
-└── DF  1001  A0 00 00 00 03 86 98 07 01  SFI 0x02  (9-byte AID)
-    ├── EF-bin  0018  SFI 0x18  140 bytes  (wallet balance file)
-    └── EF-bin  0019  SFI 0x19  140 bytes  (passbook balance file)
++-- DF  1001  A0 00 00 00 03 86 98 07 01  SFI 0x02  (9-byte AID)
+    +-- EF-bin  0018  SFI 0x18  140 bytes  (wallet balance file)
+    +-- EF-bin  0019  SFI 0x19  140 bytes  (passbook balance file)
 ```
 
 ```
@@ -1270,12 +1270,12 @@ hf fmcos write binary --p1 00 --p2 00 --data 001FD921090700000001000023590000FFF
 
 ---
 
-### 03 — Jinbo (金博)
+### 03 - Jinbo
 
 ```
 MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
-└── DF  4A54  6A 69 6E 00 00 00 62 6F A5 04 9F 08 01 02  SFI 0x02  (14-byte name, starts "jin")
-    └── EF-bin  4200  SFI 0x01  624 bytes  (32 B payload at offset 592, remainder zeros)
++-- DF  4A54  6A 69 6E 00 00 00 62 6F A5 04 9F 08 01 02  SFI 0x02  (14-byte name, starts "jin")
+    +-- EF-bin  4200  SFI 0x01  624 bytes  (32 B payload at offset 592, remainder zeros)
 ```
 
 ```
@@ -1290,17 +1290,17 @@ hf fmcos write binary --p1 02 --p2 50 --data 530030FFFFFFFFFFFFFF3A2B00000000220
 
 ---
 
-### 04 — Jingkong (晶控)
+### 04 - Jingkong
 
 ```
 MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
-└── DF  3F01  "DDF01"  SFI 0x02
-    ├── EF-bin  0001  SFI 0x01    1 byte   (placeholder)
-    ├── EF-bin  0003  SFI 0x03   28 bytes  (key / config data)
-    ├── EF-bin  0004  SFI 0x04  120 bytes  (zeroed)
-    ├── EF-bin  0005  SFI 0x05   36 bytes  (key / config data)
-    ├── EF-bin  0006  SFI 0x06  132 bytes  (key / config data)
-    └── EF-bin  0007  SFI 0x07  102 bytes  (zeroed)
++-- DF  3F01  "DDF01"  SFI 0x02
+    +-- EF-bin  0001  SFI 0x01    1 byte   (placeholder)
+    +-- EF-bin  0003  SFI 0x03   28 bytes  (key / config data)
+    +-- EF-bin  0004  SFI 0x04  120 bytes  (zeroed)
+    +-- EF-bin  0005  SFI 0x05   36 bytes  (key / config data)
+    +-- EF-bin  0006  SFI 0x06  132 bytes  (key / config data)
+    +-- EF-bin  0007  SFI 0x07  102 bytes  (zeroed)
 ```
 
 ```
@@ -1328,14 +1328,14 @@ hf fmcos write binary --p1 00 --p2 00 --data 00000000000000000000000000000000000
 
 ---
 
-### 05 — Kangtuo (康拓)
+### 05 - Kangtuo
 
 ```
 MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
-├── DF  D0F1  "XL123"  SFI 0x02
-│   └── EF-bin  0005  SFI 0x05  64 bytes
-└── DF  D0F2  "XL456"  SFI 0x02
-    └── EF-bin  0005  SFI 0x05  64 bytes
++-- DF  D0F1  "XL123"  SFI 0x02
+|   +-- EF-bin  0005  SFI 0x05  64 bytes
++-- DF  D0F2  "XL456"  SFI 0x02
+    +-- EF-bin  0005  SFI 0x05  64 bytes
 ```
 
 ```
@@ -1356,12 +1356,12 @@ hf fmcos write binary --p1 00 --p2 00 --data 0200FC20006200000000000000000000000
 
 ---
 
-### 06 — Youhe (友禾)
+### 06 - Youhe
 
 ```
 MF  3F00  "1PAY.SYS.DDF01"  SFI 0x02
-└── DF  3F01  "ADF01"  SFI 0x02
-    └── EF-bin  0003  SFI 0x03  250 bytes  (key / credential data)
++-- DF  3F01  "ADF01"  SFI 0x02
+    +-- EF-bin  0003  SFI 0x03  250 bytes  (key / credential data)
 ```
 
 ```
