@@ -15,24 +15,24 @@ All commands in this family are reachable via `hf fmcos <subcommand>`.
   - [select](#select)
 - [File Management](#file-management)
   - [erase](#erase)
-  - [create dir](#create-dir)
-  - [create file](#create-file)
-  - [create keyfile](#create-keyfile)
+  - [createdir](#createdir)
+  - [createfile](#createfile)
+  - [createkeyfile](#createkeyfile)
 - [Data Access](#data-access)
-  - [read binary](#read-binary)
-  - [read record](#read-record)
-  - [write binary](#write-binary)
-  - [write record](#write-record)
+  - [readbinary](#readbinary)
+  - [readrecord](#readrecord)
+  - [writebinary](#writebinary)
+  - [writerecord](#writerecord)
   - [append](#append)
   - [key (write key)](#key-write-key)
 - [Authentication](#authentication)
-  - [auth external](#auth-external)
-  - [auth internal](#auth-internal)
+  - [authexternal](#authexternal)
+  - [authinternal](#authinternal)
 - [PIN Management](#pin-management)
-  - [pin verify](#pin-verify)
-  - [pin change](#pin-change)
-  - [pin reset](#pin-reset)
-  - [pin unblock](#pin-unblock)
+  - [pinverify](#pinverify)
+  - [pinchange](#pinchange)
+  - [pinreset](#pinreset)
+  - [pinunblock](#pinunblock)
 - [Financial Operations](#financial-operations)
   - [balance](#balance)
   - [credit](#credit)
@@ -102,12 +102,12 @@ hf fmcos select --id 3f00
 hf fmcos erase
 ```
 
-### create dir
+### createdir
 
 CREATE DF (directory / application directory).
 
 ```
-hf fmcos create dir --id 3f01 --space 1500 --cperm f0 --eperm f0 --appid 95 --name 77616C6C657454657374
+hf fmcos createdir --id 3f01 --space 1500 --cperm f0 --eperm f0 --appid 95 --name 77616C6C657454657374
 ```
 
 | Flag | Description |
@@ -119,22 +119,22 @@ hf fmcos create dir --id 3f01 --space 1500 --cperm f0 --eperm f0 --appid 95 --na
 | `--appid <hex>` | 1-byte application SID / AID tag |
 | `--name <hex>` | Optional DF name bytes as hex (up to 16 bytes, enables select-by-name) |
 
-### create file
+### createfile
 
 CREATE EF (elementary file) in the currently selected DF.
 
 ```
 # Unprotected binary file
-hf fmcos create file --id 0002 --type bin --size 50 --rperm f0 --wperm f0 --access ff
+hf fmcos createfile --id 0002 --type bin --size 50 --rperm f0 --wperm f0 --access ff
 
 # Variable-length record file with MAC-only line protection
-hf fmcos create file --id 0006 --type var --size 50 --rperm f0 --wperm f0 --access 7f --prot mac
+hf fmcos createfile --id 0006 --type var --size 50 --rperm f0 --wperm f0 --access 7f --prot mac
 
 # Loop (cyclic) file with MAC+encryption
-hf fmcos create file --id 000a --type loop --size 210 --rperm f0 --wperm f0 --access 7f --prot enc
+hf fmcos createfile --id 000a --type loop --size 210 --rperm f0 --wperm f0 --access 7f --prot enc
 
 # Wallet/passbook balance file (EDEP) linked to loop file 0x0018
-hf fmcos create file --id 0002 --type wallet --size 0208 --rperm f0 --wperm 00 --access 18
+hf fmcos createfile --id 0002 --type wallet --size 0208 --rperm f0 --wperm 00 --access 18
 ```
 
 | Flag | Description |
@@ -231,13 +231,13 @@ have its low nibble set to `4` (`0x04` plain, `0x84` for ISO-secure) when line p
 | `loop` | 0x2E | Cyclic (loop) file -- used for transaction logs |
 | `wallet` | 0x2F | E-purse wallet / passbook balance file |
 
-### create keyfile
+### createkeyfile
 
 CREATE KEYFILE in the currently selected DF.  A DF must have a keyfile before any keys
 can be written to it.
 
 ```
-hf fmcos create keyfile --id 0000 --space 200 --dfsid 95 --perm f0
+hf fmcos createkeyfile --id 0000 --space 200 --dfsid 95 --perm f0
 ```
 
 | Flag | Description |
@@ -278,19 +278,19 @@ Common values:
 
 ## Data Access
 
-### read binary
+### readbinary
 
 READ BINARY from the currently selected transparent (bin) EF.
 
 ```
 # Plain read
-hf fmcos read binary --p1 00 --p2 00 --len 10
+hf fmcos readbinary --p1 00 --p2 00 --len 10
 
 # With MAC line-protection (verifies response MAC)
-hf fmcos read binary --p1 00 --p2 00 --len 10 --prot mac --key 36363636363636363636363636363636
+hf fmcos readbinary --p1 00 --p2 00 --len 10 --prot mac --key 36363636363636363636363636363636
 
 # With MAC+encryption (decrypts response)
-hf fmcos read binary --p1 00 --p2 00 --len 10 --prot enc --key 36363636363636363636363636363636
+hf fmcos readbinary --p1 00 --p2 00 --len 10 --prot enc --key 36363636363636363636363636363636
 ```
 
 | Flag | Description |
@@ -301,19 +301,19 @@ hf fmcos read binary --p1 00 --p2 00 --len 10 --prot enc --key 36363636363636363
 | `--prot <mode>` | `none`, `mac`, or `enc` |
 | `--key <hex>` | Line-protection key (8 or 16 bytes, required when `--prot` is mac/enc) |
 
-### read record
+### readrecord
 
 READ RECORD from the currently selected record or cyclic EF.
 
 ```
 # Read record 1 from var file 0x06 (plain)
-hf fmcos read record --rec 01 --fid 06 --len 10
+hf fmcos readrecord --rec 01 --fid 06 --len 10
 
 # Read with MAC verification
-hf fmcos read record --rec 01 --fid 07 --len 10 --prot mac --key 36363636363636363636363636363636
+hf fmcos readrecord --rec 01 --fid 07 --len 10 --prot mac --key 36363636363636363636363636363636
 
 # Read with decryption
-hf fmcos read record --rec 01 --fid 08 --len 10 --prot enc --key 36363636363636363636363636363636
+hf fmcos readrecord --rec 01 --fid 08 --len 10 --prot enc --key 36363636363636363636363636363636
 ```
 
 | Flag | Description |
@@ -324,20 +324,20 @@ hf fmcos read record --rec 01 --fid 08 --len 10 --prot enc --key 363636363636363
 | `--prot <mode>` | `none`, `mac`, or `enc` |
 | `--key <hex>` | Line-protection key when prot is mac/enc |
 
-### write binary
+### writebinary
 
 UPDATE BINARY -- write data to the currently selected transparent EF.
 
 ```
 # Plain write
-hf fmcos write binary --p1 00 --p2 00 --data 11121314151617181910
+hf fmcos writebinary --p1 00 --p2 00 --data 11121314151617181910
 
 # Write with MAC
-hf fmcos write binary --p1 00 --p2 00 --data 21222324252627282920 \
+hf fmcos writebinary --p1 00 --p2 00 --data 21222324252627282920 \
   --prot mac --key 36363636363636363636363636363636
 
 # Write with MAC+encryption (data is encrypted before sending)
-hf fmcos write binary --p1 00 --p2 00 --data 31323334353637383930 \
+hf fmcos writebinary --p1 00 --p2 00 --data 31323334353637383930 \
   --prot enc --key 36363636363636363636363636363636
 ```
 
@@ -349,20 +349,20 @@ hf fmcos write binary --p1 00 --p2 00 --data 31323334353637383930 \
 | `--prot <mode>` | `none`, `mac`, or `enc` |
 | `--key <hex>` | Line-protection key |
 
-### write record
+### writerecord
 
 UPDATE RECORD -- write a record into the currently selected EF.
 
 ```
 # Plain record write (P1=record number, P2=file-id<<3|04)
-hf fmcos write record --rec 01 --fid 06 --data 5152535455565758595a
+hf fmcos writerecord --rec 01 --fid 06 --data 5152535455565758595a
 
 # With MAC
-hf fmcos write record --rec 01 --fid 07 --data 6162636465666768696a \
+hf fmcos writerecord --rec 01 --fid 07 --data 6162636465666768696a \
   --prot mac --key 36363636363636363636363636363636
 
 # With MAC+encryption
-hf fmcos write record --rec 01 --fid 08 --data 7172737475767778797a \
+hf fmcos writerecord --rec 01 --fid 08 --data 7172737475767778797a \
   --prot enc --key 36363636363636363636363636363636
 ```
 
@@ -477,13 +477,13 @@ hf fmcos key --op 01 --id 00 --type changepin \
 
 ## Authentication
 
-### auth external
+### authexternal
 
 EXTERNAL AUTHENTICATE -- authenticate the reader to the card.  The card issues a challenge,
 the reader encrypts it with the external-auth key, and sends the response back.
 
 ```
-hf fmcos auth external --id 00 --key f49dc1ba1b4deb5264718bc559106c0d
+hf fmcos authexternal --id 00 --key f49dc1ba1b4deb5264718bc559106c0d
 ```
 
 | Flag | Description |
@@ -491,14 +491,14 @@ hf fmcos auth external --id 00 --key f49dc1ba1b4deb5264718bc559106c0d
 | `--id <hex>` | Key slot ID |
 | `--key <hex>` | External-auth key (8 or 16 bytes) |
 
-### auth internal
+### authinternal
 
 INTERNAL AUTHENTICATE -- authenticate the card to the reader.  The reader sends an 8-byte
 challenge (`--data`); the card responds with a DES-encrypted value that the reader verifies
 offline.
 
 ```
-hf fmcos auth internal --p1 00 --p2 00 --data 0102030405060708
+hf fmcos authinternal --p1 00 --p2 00 --data 0102030405060708
 ```
 
 | Flag | Description |
@@ -511,13 +511,13 @@ hf fmcos auth internal --p1 00 --p2 00 --data 0102030405060708
 
 ## PIN Management
 
-### pin verify
+### pinverify
 
 VERIFY PIN -- present the PIN code to the card to unlock PIN-gated operations.
 PIN is 2-6 raw bytes.
 
 ```
-hf fmcos pin verify --id 00 --pin 123456
+hf fmcos pinverify --id 00 --pin 123456
 ```
 
 | Flag | Description |
@@ -525,12 +525,12 @@ hf fmcos pin verify --id 00 --pin 123456
 | `--id <hex>` | PIN key slot ID |
 | `--pin <hex>` | PIN bytes (2-6 bytes) |
 
-### pin change
+### pinchange
 
 CHANGE PIN -- change the PIN using the current (old) PIN for authorization.
 
 ```
-hf fmcos pin change --id 00 --old 123456 --new 13371337
+hf fmcos pinchange --id 00 --old 123456 --new 13371337
 ```
 
 | Flag | Description |
@@ -539,13 +539,13 @@ hf fmcos pin change --id 00 --old 123456 --new 13371337
 | `--old <hex>` | Current PIN (2-6 bytes) |
 | `--new <hex>` | New PIN (2-6 bytes) |
 
-### pin reset
+### pinreset
 
 RESET PIN -- set a new PIN using the change-PIN key MAC for authorization (no old PIN needed).
 The command computes a MAC over the new PIN using the change-PIN key and sends it to the card.
 
 ```
-hf fmcos pin reset --id 00 --pin 13371337 \
+hf fmcos pinreset --id 00 --pin 13371337 \
   --key fb487a6d1b7cbf1bf84c666b8338376e
 ```
 
@@ -555,13 +555,13 @@ hf fmcos pin reset --id 00 --pin 13371337 \
 | `--pin <hex>` | New PIN (2-6 bytes) |
 | `--key <hex>` | Change-PIN key (16 bytes); MAC = DES-MAC(new_pin, XOR_halves(key)) |
 
-### pin unblock
+### pinunblock
 
 UNBLOCK PIN -- clear the PIN blocked state and set a new PIN.
 The new PIN is encrypted with the unlock-PIN key and a GET CHALLENGE IV.
 
 ```
-hf fmcos pin unblock --id 00 --pin 123456 \
+hf fmcos pinunblock --id 00 --pin 123456 \
   --key d8f60fa2d791f3a658d27c054582430e
 ```
 
@@ -974,7 +974,7 @@ over `CLA|INS|P1|P2|Lc[|data]` with a GET CHALLENGE response as the CBC IV.
 
 ## Access Rights Byte
 
-The access-rights byte passed to `create file` controls whether line protection is needed
+The access-rights byte passed to `createfile` controls whether line protection is needed
 and which key slot guards read / write access.
 
 ```
@@ -1001,7 +1001,7 @@ allows custom UID. These commands below allow a TID tag to be provisioned - UID,
 auth key, and file system, these commands are not the same as the standard fmcos commands.
 
 These cards can often be found on taobao by searching for "CPU TID card".
-When hf fmcos auth external is called with any key, the card will always return
+When hf fmcos authexternal is called with any key, the card will always return
 [+] SW: 9000 - Success
 [+] External authentication successful
 
@@ -1123,13 +1123,13 @@ hf fmcos tidprovision --uid 13371337 --key 1122334455667788 --lock
 | `-k` / `--keep` | Keep field on after completion |
 
 After `tidprovision`, use `tidcreatedf` / `tidcreatebin` / `tidcreaterec` to build
-the file structure, then `hf fmcos write binary` / `hf fmcos write record` to populate data.
+the file structure, then `hf fmcos writebinary` / `hf fmcos writerecord` to populate data.
 
 ---
 
 ### tidcreatedf
 
-CREATE a sub-DF using the TID APDU format.  The standard `hf fmcos create dir` uses a
+CREATE a sub-DF using the TID APDU format.  The standard `hf fmcos createdir` uses a
 different data layout (FID in P1/P2, leading `0x38` byte); this command uses the TID layout
 where P1=`0x01` and the FID is the first field in the data.
 
@@ -1151,7 +1151,7 @@ hf fmcos tidcreatedf --id 3f01 --size 0f00 --sfi 96 --name 444446303133
 
 ### tidcreatebin
 
-CREATE a binary EF or KEYFILE using the TID APDU format.  The standard `hf fmcos create file --type bin`
+CREATE a binary EF or KEYFILE using the TID APDU format.  The standard `hf fmcos createfile --type bin`
 uses a different layout (FID in P1/P2, 7-byte payload); this command uses the TID layout
 where P1=`0x02` and the FID is in the data with a fixed 11-byte payload.
 
@@ -1182,7 +1182,7 @@ hf fmcos tidcreatebin --type keyfile
 
 ### tidcreaterec
 
-CREATE a fixed-length record EF using the TID APDU format.  The standard `hf fmcos create file --type fix`
+CREATE a fixed-length record EF using the TID APDU format.  The standard `hf fmcos createfile --type fix`
 uses a different layout; this command uses the TID layout where P1=`0x02`, subtype=`0x01`,
 and count+reclen replace the size field.
 
@@ -1203,8 +1203,8 @@ hf fmcos tidcreaterec --id 0003 --count 04 --reclen 10 --sfi 03 --rperm 20 --wpe
 
 **APDU:** `80 E0 02 00 0B 01 [fid_hi][fid_lo] [count][reclen] [rperm][wperm] [sfi] 00 FF 00`
 
-> **Note**: To write data into TID EFs after creation, use the standard `hf fmcos write binary`
-> and `hf fmcos write record` - those APDUs (`00 D6` / `00 DC`) are identical in TID and standard FMCOS.
+> **Note**: To write data into TID EFs after creation, use the standard `hf fmcos writebinary`
+> and `hf fmcos writerecord` - those APDUs (`00 D6` / `00 DC`) are identical in TID and standard FMCOS.
 
 ---
 
@@ -1220,7 +1220,7 @@ normally provided when you buy these TID cards.
   command finishes without `-k` the field drops and the card resets to MF context on the
   next activation.
 - Each sub-DF requires a TID-format keyfile created immediately after selecting it.  Use
-  `hf fmcos tidcreatebin --type keyfile` - the standard `hf fmcos create keyfile` uses a
+  `hf fmcos tidcreatebin --type keyfile` - the standard `hf fmcos createkeyfile` uses a
   different APDU layout and cannot create TID keyfiles.
 
 ---
@@ -1239,12 +1239,12 @@ hf fmcos tidcreatedf --id 7572 --size 0200 --sfi 02 --name 390130990807 -k
 hf fmcos select --id 7572 -k
 hf fmcos tidcreatebin --type keyfile -k
 hf fmcos tidcreaterec --id 0001 --count 06 --reclen 10 --sfi 03 -k
-hf fmcos write record --rec 01 --fid 03 --data 018609DD110000000000010100000000 -k
-hf fmcos write record --rec 02 --fid 03 --data 00000000000000000000000000000000 -k
-hf fmcos write record --rec 03 --fid 03 --data 0000000000070A0D1707120000008800 -k
-hf fmcos write record --rec 04 --fid 03 --data 00000000000000000000000000000000 -k
-hf fmcos write record --rec 05 --fid 03 --data 00000000000000000000000000000000 -k
-hf fmcos write record --rec 06 --fid 03 --data 00000000000000000000000000000000
+hf fmcos writerecord --rec 01 --fid 03 --data 018609DD110000000000010100000000 -k
+hf fmcos writerecord --rec 02 --fid 03 --data 00000000000000000000000000000000 -k
+hf fmcos writerecord --rec 03 --fid 03 --data 0000000000070A0D1707120000008800 -k
+hf fmcos writerecord --rec 04 --fid 03 --data 00000000000000000000000000000000 -k
+hf fmcos writerecord --rec 05 --fid 03 --data 00000000000000000000000000000000 -k
+hf fmcos writerecord --rec 06 --fid 03 --data 00000000000000000000000000000000
 ```
 
 ---
@@ -1265,10 +1265,10 @@ hf fmcos select --id 1001 -k
 hf fmcos tidcreatebin --type keyfile -k
 hf fmcos tidcreatebin --id 0018 --size 008C --sfi 18 -k
 hf fmcos select --id 0018 -k
-hf fmcos write binary --p1 00 --p2 00 --data 001FD921090700000001000023590000000000E0FFFFFF7F0700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 -k
+hf fmcos writebinary --p1 00 --p2 00 --data 001FD921090700000001000023590000000000E0FFFFFF7F0700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 -k
 hf fmcos tidcreatebin --id 0019 --size 008C --sfi 19 -k
 hf fmcos select --id 0019 -k
-hf fmcos write binary --p1 00 --p2 00 --data 001FD921090700000001000023590000FFFFFFFFFFFF010000000000E0FFFFFF0F0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+hf fmcos writebinary --p1 00 --p2 00 --data 001FD921090700000001000023590000FFFFFFFFFFFF010000000000E0FFFFFF0F0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 ```
 
 ---
@@ -1288,7 +1288,7 @@ hf fmcos select --id 4A54 -k
 hf fmcos tidcreatebin --type keyfile -k
 hf fmcos tidcreatebin --id 4200 --size 0270 --sfi 01 -k
 hf fmcos select --id 4200 -k
-hf fmcos write binary --p1 02 --p2 50 --data 530030FFFFFFFFFFFFFF3A2B0000000022012200002403081106000000007F00
+hf fmcos writebinary --p1 02 --p2 50 --data 530030FFFFFFFFFFFFFF3A2B0000000022012200002403081106000000007F00
 ```
 
 ---
@@ -1314,19 +1314,19 @@ hf fmcos tidcreatebin --type keyfile -k
 hf fmcos tidcreatebin --id 0001 --size 0001 --sfi 01 -k
 hf fmcos tidcreatebin --id 0003 --size 001C --sfi 03 -k
 hf fmcos select --id 0003 -k
-hf fmcos write binary --p1 00 --p2 00 --data FE937B922D7EDEF50000000000000000000000000000000000000000 -k
+hf fmcos writebinary --p1 00 --p2 00 --data FE937B922D7EDEF50000000000000000000000000000000000000000 -k
 hf fmcos tidcreatebin --id 0004 --size 0078 --sfi 04 -k
 hf fmcos select --id 0004 -k
-hf fmcos write binary --p1 00 --p2 00 --data 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 -k
+hf fmcos writebinary --p1 00 --p2 00 --data 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 -k
 hf fmcos tidcreatebin --id 0005 --size 0024 --sfi 05 -k
 hf fmcos select --id 0005 -k
-hf fmcos write binary --p1 00 --p2 00 --data 6403FE9C7434FCBC6E00FC9F2802F1448F06F3BA8CF6F0B98DF7F1B84D0BF60000000000 -k
+hf fmcos writebinary --p1 00 --p2 00 --data 6403FE9C7434FCBC6E00FC9F2802F1448F06F3BA8CF6F0B98DF7F1B84D0BF60000000000 -k
 hf fmcos tidcreatebin --id 0006 --size 0084 --sfi 06 -k
 hf fmcos select --id 0006 -k
-hf fmcos write binary --p1 00 --p2 00 --data 616BEACE7705FCBD7604FDBC7107F2BB7006F3BA7309F0B97208F1B84D0B09B74C0AF7494F0DF4B5B10CF5B449F0EAB3480E14B24B31E84E4A30E9B0BA33EEAF44CDEFAE473513AD4634ED534137E2ABBF36E3AA43C6E0A942381EA85D3BE6585C3AE7A6A03DE4A55E000000000000000000000000000000000000000000000000000000 -k
+hf fmcos writebinary --p1 00 --p2 00 --data 616BEACE7705FCBD7604FDBC7107F2BB7006F3BA7309F0B97208F1B84D0B09B74C0AF7494F0DF4B5B10CF5B449F0EAB3480E14B24B31E84E4A30E9B0BA33EEAF44CDEFAE473513AD4634ED534137E2ABBF36E3AA43C6E0A942381EA85D3BE6585C3AE7A6A03DE4A55E000000000000000000000000000000000000000000000000000000 -k
 hf fmcos tidcreatebin --id 0007 --size 0066 --sfi 07 -k
 hf fmcos select --id 0007 -k
-hf fmcos write binary --p1 00 --p2 00 --data 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+hf fmcos writebinary --p1 00 --p2 00 --data 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 ```
 
 ---
@@ -1348,13 +1348,13 @@ hf fmcos select --id D0F1 -k
 hf fmcos tidcreatebin --type keyfile -k
 hf fmcos tidcreatebin --id 0005 --size 0040 --sfi 05 -k
 hf fmcos select --id 0005 -k
-hf fmcos write binary --p1 00 --p2 00 --data 0200FC20006200000000000000000000000000272E2C6A0000000000000000080000000000000000000000000000000000000000000000000000000000000000
+hf fmcos writebinary --p1 00 --p2 00 --data 0200FC20006200000000000000000000000000272E2C6A0000000000000000080000000000000000000000000000000000000000000000000000000000000000
 hf fmcos tidcreatedf --id D0F2 --size 0100 --sfi 02 --name 584C343536 -k
 hf fmcos select --id D0F2 -k
 hf fmcos tidcreatebin --type keyfile -k
 hf fmcos tidcreatebin --id 0005 --size 0040 --sfi 05 -k
 hf fmcos select --id 0005 -k
-hf fmcos write binary --p1 00 --p2 00 --data 0200FC20006200000000000000000000000000272E2C6A0000000000000000080000000000000000000000000000000000000000000000000000000000000000
+hf fmcos writebinary --p1 00 --p2 00 --data 0200FC20006200000000000000000000000000272E2C6A0000000000000000080000000000000000000000000000000000000000000000000000000000000000
 ```
 
 ---
@@ -1374,6 +1374,6 @@ hf fmcos select --id 3F01 -k
 hf fmcos tidcreatebin --type keyfile -k
 hf fmcos tidcreatebin --id 0003 --size 00FA --sfi 03 -k
 hf fmcos select --id 0003 -k
-hf fmcos write binary --p1 00 --p2 00 --data D15190D7E1E379732295C97D62A3172BE3BBA1D1B32CE32FED72CB3DCDB115E7DC2670978E241822F298C9951260FC55D54F9988C7FCAC5032F94281DFC39C973E570101764D5BBF367F84EBDA1B012ABD4568F35D5BC08BAFD76B988CA916C985692337FCF02C9FD2C8BDD583BC05EF55582C3921FA2CAFAE26308FBADE0598DB750EE1F0522D29EAB6FA5D0F3971F785692337FCF02C9FD2C8BDD583BC05EF55582C3921FA2CAFAE26308FBADE0598DB750EE1F0522D29EAB6FA5D0F3971F7EA545FC5B27B7F40DF6D0F71FCEE2A1BCED2DEDE67BB57B1C1F98C8CDA5259CC7BD83158086F215F5E1E0246EE0504760000000000 -k
-hf fmcos write binary --p1 00 --p2 F5 --data 0000000000
+hf fmcos writebinary --p1 00 --p2 00 --data D15190D7E1E379732295C97D62A3172BE3BBA1D1B32CE32FED72CB3DCDB115E7DC2670978E241822F298C9951260FC55D54F9988C7FCAC5032F94281DFC39C973E570101764D5BBF367F84EBDA1B012ABD4568F35D5BC08BAFD76B988CA916C985692337FCF02C9FD2C8BDD583BC05EF55582C3921FA2CAFAE26308FBADE0598DB750EE1F0522D29EAB6FA5D0F3971F785692337FCF02C9FD2C8BDD583BC05EF55582C3921FA2CAFAE26308FBADE0598DB750EE1F0522D29EAB6FA5D0F3971F7EA545FC5B27B7F40DF6D0F71FCEE2A1BCED2DEDE67BB57B1C1F98C8CDA5259CC7BD83158086F215F5E1E0246EE0504760000000000 -k
+hf fmcos writebinary --p1 00 --p2 F5 --data 0000000000
 ```

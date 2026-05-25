@@ -713,7 +713,7 @@ static int CmdHFFmcosInfo(const char *Cmd) {
     }
 
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf fmcos select --id 3f00") "` to navigate the file system");
-    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf fmcos auth external --id 0 --key ffffffffffffffff") "` to authenticate");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf fmcos authexternal --id 0 --key ffffffffffffffff") "` to authenticate");
     PrintAndLogEx(NORMAL, "");
 
     DropField();
@@ -829,17 +829,17 @@ static bool fmcos_parse_hex_int(const char *s, int *out) {
 }
 
 // ---------------------------------------------------------------------------
-// hf fmcos auth external  (Phase 2)
+// hf fmcos authexternal  (Phase 2)
 // ---------------------------------------------------------------------------
 
 static int CmdHFFmcosAuthExternal(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos auth external",
+    CLIParserInit(&ctx, "hf fmcos authexternal",
                   "EXTERNAL AUTHENTICATE.\n"
                   "Requests a challenge from the card, encrypts it with the provided\n"
                   "DES (8-byte) or 3DES (16-byte) key, then sends EXTERNAL AUTHENTICATE.",
-                  "hf fmcos auth external --id 0 --key ffffffffffffffff\n"
-                  "hf fmcos auth external --id 1 --key 0102030405060708090a0b0c0d0e0f10");
+                  "hf fmcos authexternal --id 0 --key ffffffffffffffff\n"
+                  "hf fmcos authexternal --id 1 --key 0102030405060708090a0b0c0d0e0f10");
 
     void *argtable[] = {
         arg_param_begin,
@@ -942,15 +942,15 @@ static int CmdHFFmcosAuthExternal(const char *Cmd) {
 }
 
 // ---------------------------------------------------------------------------
-// hf fmcos auth internal  (Phase 2)
+// hf fmcos authinternal  (Phase 2)
 // ---------------------------------------------------------------------------
 
 static int CmdHFFmcosAuthInternal(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos auth internal",
+    CLIParserInit(&ctx, "hf fmcos authinternal",
                   "INTERNAL AUTHENTICATE.\n"
                   "Sends a challenge to the card and the card proves it knows the key.",
-                  "hf fmcos auth internal --p1 00 --p2 00 --data 0102030405060708");
+                  "hf fmcos authinternal --p1 00 --p2 00 --data 0102030405060708");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1030,28 +1030,9 @@ static int CmdHFFmcosAuthInternal(const char *Cmd) {
 }
 
 // ---------------------------------------------------------------------------
-// hf fmcos auth  - sub-dispatcher  (Phase 2)
+// hf fmcos authexternal / authinternal  (Phase 2)
 // ---------------------------------------------------------------------------
 
-static int CmdHFFmcosAuthHelp(const char *Cmd);
-
-static command_t AuthCommandTable[] = {
-    {"help",     CmdHFFmcosAuthHelp,     AlwaysAvailable, "This help"},
-    {"external", CmdHFFmcosAuthExternal, IfPm3Iso14443a,  "EXTERNAL AUTHENTICATE using DES/3DES key"},
-    {"internal", CmdHFFmcosAuthInternal, IfPm3Iso14443a,  "INTERNAL AUTHENTICATE (card proves key knowledge)"},
-    {NULL, NULL, NULL, NULL}
-};
-
-static int CmdHFFmcosAuthHelp(const char *Cmd) {
-    (void)Cmd;
-    CmdsHelp(AuthCommandTable);
-    return PM3_SUCCESS;
-}
-
-static int CmdHFFmcosAuth(const char *Cmd) {
-    clearCommandBuffer();
-    return CmdsParse(AuthCommandTable, Cmd);
-}
 
 // ---------------------------------------------------------------------------
 // Phase 4 - File management
@@ -1296,9 +1277,9 @@ static int CmdHFFmcosErase(const char *Cmd) {
 
 static int CmdHFFmcosCreateDir(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos create dir",
+    CLIParserInit(&ctx, "hf fmcos createdir",
                   "CREATE DIRECTORY (DF) inside the currently selected directory",
-                  "hf fmcos create dir --id 3F01 --space 200 --cperm F0 --eperm F0 --appid 95 --name 77616C6C6574546573740A");
+                  "hf fmcos createdir --id 3F01 --space 200 --cperm F0 --eperm F0 --appid 95 --name 77616C6C6574546573740A");
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "id",    "<4hex>", "2-byte file ID"),
@@ -1428,15 +1409,15 @@ static const CLIParserOption g_fmcos_baltype_opts[] = {
 
 static int CmdHFFmcosCreateFile(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos create file",
+    CLIParserInit(&ctx, "hf fmcos createfile",
                   "CREATE EF in the current DF\n"
                   "Types: bin(0x28)  fix(0x2A)  var(0x2C)  loop(0x2E)  wallet(0x2F)\n"
                   "Prot:  none  mac(0x80)  enc(0xC0)  -- ORed into the type byte\n"
                   "For wallet/passbook type: --rperm=usage rights, --wperm ignored (EDEP write always 0x00),\n"
                   "--access=loop file link (low byte of the linked loop EF's file ID)",
-                  "hf fmcos create file --id 0101 --type bin  --size 32   --rperm FF --wperm FF --access 00\n"
-                  "hf fmcos create file --id 0018 --type loop --size 0517 --rperm F0 --wperm EF --access FF\n"
-                  "hf fmcos create file --id 0002 --type wallet --size 0208 --rperm F0 --wperm 00 --access 18");
+                  "hf fmcos createfile --id 0101 --type bin  --size 32   --rperm FF --wperm FF --access 00\n"
+                  "hf fmcos createfile --id 0018 --type loop --size 0517 --rperm F0 --wperm EF --access FF\n"
+                  "hf fmcos createfile --id 0002 --type wallet --size 0208 --rperm F0 --wperm 00 --access 18");
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "id",     "<4hex>", "2-byte file ID"),
@@ -1550,9 +1531,9 @@ static int CmdHFFmcosCreateFile(const char *Cmd) {
 
 static int CmdHFFmcosCreateKeyfile(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos create keyfile",
+    CLIParserInit(&ctx, "hf fmcos createkeyfile",
                   "CREATE KEYFILE in the current DF",
-                  "hf fmcos create keyfile --id 0000 --space 200 --dfsid 95 --perm F0");
+                  "hf fmcos createkeyfile --id 0000 --space 200 --dfsid 95 --perm F0");
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "id",    "<4hex>", "2-byte file ID (usually 0000)"),
@@ -1640,39 +1621,18 @@ static int CmdHFFmcosCreateKeyfile(const char *Cmd) {
     return (sw1 == 0x90 && sw2 == 0x00) ? PM3_SUCCESS : PM3_ESOFT;
 }
 
-static int CmdHFFmcosCreateHelp(const char *Cmd);
-
-static command_t CreateCommandTable[] = {
-    {"help",    CmdHFFmcosCreateHelp,    AlwaysAvailable, "This help"},
-    {"dir",     CmdHFFmcosCreateDir,     IfPm3Iso14443a,  "CREATE DIRECTORY (DF)"},
-    {"file",    CmdHFFmcosCreateFile,    IfPm3Iso14443a,  "CREATE EF (binary / fixed / variable / loop / wallet)"},
-    {"keyfile", CmdHFFmcosCreateKeyfile, IfPm3Iso14443a,  "CREATE KEYFILE"},
-    {NULL, NULL, NULL, NULL}
-};
-
-static int CmdHFFmcosCreateHelp(const char *Cmd) {
-    (void)Cmd;
-    CmdsHelp(CreateCommandTable);
-    return PM3_SUCCESS;
-}
-
-static int CmdHFFmcosCreate(const char *Cmd) {
-    clearCommandBuffer();
-    return CmdsParse(CreateCommandTable, Cmd);
-}
-
 // ---------------------------------------------------------------------------
 // Phase 5 - Data access
 // ---------------------------------------------------------------------------
 
 static int CmdHFFmcosReadBinary(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos read binary",
+    CLIParserInit(&ctx, "hf fmcos readbinary",
                   "READ BINARY from the current transparent EF\n"
                   "p1/p2 encode the file offset (p1=offset_hi, p2=offset_lo).\n"
                   "Protection: none(def)  mac  enc",
-                  "hf fmcos read binary --p1 00 --p2 00 --len 16\n"
-                  "hf fmcos read binary --p1 00 --p2 00 --len 16 --prot mac --key aabbccddeeff0011");
+                  "hf fmcos readbinary --p1 00 --p2 00 --len 16\n"
+                  "hf fmcos readbinary --p1 00 --p2 00 --len 16 --prot mac --key aabbccddeeff0011");
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "p1",   "<hex>", "P1 byte (offset high)"),
@@ -1738,13 +1698,13 @@ static int CmdHFFmcosReadBinary(const char *Cmd) {
 
 static int CmdHFFmcosReadRecord(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos read record",
+    CLIParserInit(&ctx, "hf fmcos readrecord",
                   "READ RECORD from the current record-based EF\n"
                   "Protection: none(def)  mac  enc\n"
                   "Use --tlv for variable-length (VAR) files: requests 2 extra bytes and strips the 00[len] TLV prefix from the response.",
-                  "hf fmcos read record --rec 01 --fid 01 --len 20\n"
-                  "hf fmcos read record --rec 01 --fid 06 --len 16 --tlv\n"
-                  "hf fmcos read record --rec 01 --fid 01 --len 20 --prot mac --key aabbccddeeff0011");
+                  "hf fmcos readrecord --rec 01 --fid 01 --len 20\n"
+                  "hf fmcos readrecord --rec 01 --fid 06 --len 16 --tlv\n"
+                  "hf fmcos readrecord --rec 01 --fid 01 --len 20 --prot mac --key aabbccddeeff0011");
     void *argtable[] = {
         arg_param_begin,
         arg_int1(NULL, "rec",  "<n>",   "record number (1-based)"),
@@ -1825,33 +1785,14 @@ static int CmdHFFmcosReadRecord(const char *Cmd) {
     return res;
 }
 
-static int CmdHFFmcosReadHelp(const char *Cmd);
-
-static command_t ReadCommandTable[] = {
-    {"help",   CmdHFFmcosReadHelp,   AlwaysAvailable, "This help"},
-    {"binary", CmdHFFmcosReadBinary, IfPm3Iso14443a,  "READ BINARY from transparent EF"},
-    {"record", CmdHFFmcosReadRecord, IfPm3Iso14443a,  "READ RECORD from record-based EF"},
-    {NULL, NULL, NULL, NULL}
-};
-
-static int CmdHFFmcosReadHelp(const char *Cmd) {
-    (void)Cmd;
-    CmdsHelp(ReadCommandTable);
-    return PM3_SUCCESS;
-}
-
-static int CmdHFFmcosRead(const char *Cmd) {
-    clearCommandBuffer();
-    return CmdsParse(ReadCommandTable, Cmd);
-}
 
 static int CmdHFFmcosWriteBinary(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos write binary",
+    CLIParserInit(&ctx, "hf fmcos writebinary",
                   "UPDATE BINARY in the current transparent EF\n"
                   "Protection: none(def)  mac  enc",
-                  "hf fmcos write binary --p1 00 --p2 00 --data 0102030405060708\n"
-                  "hf fmcos write binary --p1 00 --p2 00 --data 01020304 --prot mac --key aabbccddeeff0011");
+                  "hf fmcos writebinary --p1 00 --p2 00 --data 0102030405060708\n"
+                  "hf fmcos writebinary --p1 00 --p2 00 --data 01020304 --prot mac --key aabbccddeeff0011");
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "p1",   "<hex>",  "P1 byte (offset high)"),
@@ -1934,13 +1875,13 @@ static int CmdHFFmcosWriteBinary(const char *Cmd) {
 
 static int CmdHFFmcosWriteRecord(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos write record",
+    CLIParserInit(&ctx, "hf fmcos writerecord",
                   "UPDATE RECORD in the current record-based EF\n"
                   "Protection: none(def)  mac  enc\n"
                   "Use --tlv for variable-length (VAR) files: wraps data as 00[len][data] before sending.",
-                  "hf fmcos write record --rec 01 --fid 01 --data 0102030405060708\n"
-                  "hf fmcos write record --rec 01 --fid 06 --data 0102030405060708 --tlv\n"
-                  "hf fmcos write record --rec 01 --fid 01 --data 01020304 --prot mac --key aabbccddeeff0011");
+                  "hf fmcos writerecord --rec 01 --fid 01 --data 0102030405060708\n"
+                  "hf fmcos writerecord --rec 01 --fid 06 --data 0102030405060708 --tlv\n"
+                  "hf fmcos writerecord --rec 01 --fid 01 --data 01020304 --prot mac --key aabbccddeeff0011");
     void *argtable[] = {
         arg_param_begin,
         arg_int1(NULL, "rec",  "<n>",    "record number (1-based)"),
@@ -2043,25 +1984,6 @@ static int CmdHFFmcosWriteRecord(const char *Cmd) {
     return (sw1 == 0x90 && sw2 == 0x00) ? PM3_SUCCESS : PM3_ESOFT;
 }
 
-static int CmdHFFmcosWriteHelp(const char *Cmd);
-
-static command_t WriteCommandTable[] = {
-    {"help",   CmdHFFmcosWriteHelp,   AlwaysAvailable, "This help"},
-    {"binary", CmdHFFmcosWriteBinary, IfPm3Iso14443a,  "UPDATE BINARY in transparent EF"},
-    {"record", CmdHFFmcosWriteRecord, IfPm3Iso14443a,  "UPDATE RECORD in record-based EF"},
-    {NULL, NULL, NULL, NULL}
-};
-
-static int CmdHFFmcosWriteHelp(const char *Cmd) {
-    (void)Cmd;
-    CmdsHelp(WriteCommandTable);
-    return PM3_SUCCESS;
-}
-
-static int CmdHFFmcosWrite(const char *Cmd) {
-    clearCommandBuffer();
-    return CmdsParse(WriteCommandTable, Cmd);
-}
 
 static int CmdHFFmcosAppend(const char *Cmd) {
     CLIParserContext *ctx;
@@ -2284,7 +2206,7 @@ static int CmdHFFmcosWriteKey(const char *Cmd) {
         data[data_len++] = change_b[0];
         data[data_len++] = version_b[0];
         data[data_len++] = algo_b[0];
-    // Group B-extauth: extauth
+        // Group B-extauth: extauth
     } else if (ktype == 0x39) {
         if (change_len != 1 || followup_len != 1 || errcnt_len != 1) {
             PrintAndLogEx(ERR, "extauth key type needs --change --followup --errcount");
@@ -2293,7 +2215,7 @@ static int CmdHFFmcosWriteKey(const char *Cmd) {
         data[data_len++] = change_b[0];
         data[data_len++] = followup_b[0];
         data[data_len++] = errcnt_b[0];
-    // Group B-pin: pin
+        // Group B-pin: pin
     } else if (ktype == 0x3A) {
         if (followup_len != 1 || errcnt_len != 1) {
             PrintAndLogEx(ERR, "pin key type needs --followup --errcount");
@@ -2302,7 +2224,7 @@ static int CmdHFFmcosWriteKey(const char *Cmd) {
         data[data_len++] = 0xEF;
         data[data_len++] = followup_b[0];
         data[data_len++] = errcnt_b[0];
-    // Group C: lineprotect unlockpin changepin
+        // Group C: lineprotect unlockpin changepin
     } else if (ktype == 0x36 || ktype == 0x37 || ktype == 0x38) {
         if (change_len != 1 || errcnt_len != 1) {
             PrintAndLogEx(ERR, "This key type needs --change --errcount");
@@ -2361,10 +2283,10 @@ static int CmdHFFmcosWriteKey(const char *Cmd) {
 // VERIFY PIN (INS=20): present the PIN to the card.
 static int CmdHFFmcosPinVerify(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos pin verify",
+    CLIParserInit(&ctx, "hf fmcos pinverify",
                   "VERIFY PIN (INS 20) - present PIN to the card",
-                  "hf fmcos pin verify --id 00 --pin 123456\n"
-                  "hf fmcos pin verify --id 00 --pin 1234");
+                  "hf fmcos pinverify --id 00 --pin 123456\n"
+                  "hf fmcos pinverify --id 00 --pin 1234");
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "id",  "<hex>", "key slot (P2), 1 byte"),
@@ -2439,10 +2361,10 @@ static int CmdHFFmcosPinVerify(const char *Cmd) {
 // CHANGE PIN (INS=5E P1=01): present old PIN and new PIN.
 static int CmdHFFmcosPinChange(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos pin change",
+    CLIParserInit(&ctx, "hf fmcos pinchange",
                   "CHANGE PIN (INS 5E P1=01) - change PIN with old PIN authorization\n"
                   "Data sent: old_pin + 0xFF + new_pin",
-                  "hf fmcos pin change --id 00 --old 123456 --new 13371337");
+                  "hf fmcos pinchange --id 00 --old 123456 --new 13371337");
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "id",  "<hex>", "key slot (P2), 1 byte"),
@@ -2532,10 +2454,10 @@ static int CmdHFFmcosPinChange(const char *Cmd) {
 // MAC = DES-MAC(new_pin, XOR(key_left, key_right))
 static int CmdHFFmcosPinReset(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos pin reset",
+    CLIParserInit(&ctx, "hf fmcos pinreset",
                   "RESET PIN (INS 5E P1=00) - set new PIN using change-PIN key\n"
                   "Appends DES-MAC(new_pin, key_left XOR key_right) to the data.",
-                  "hf fmcos pin reset --id 00 --pin 123456 --key aabbccddeeff001122334455667788aa");
+                  "hf fmcos pinreset --id 00 --pin 123456 --key aabbccddeeff001122334455667788aa");
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "id",  "<hex>", "key slot (P2), 1 byte"),
@@ -2635,10 +2557,10 @@ static int CmdHFFmcosPinReset(const char *Cmd) {
 // Data = encrypt([len|new_pin], unlock_key) + packet_mac(cla, ins, p1, p2, enc_data, chal_iv, unlock_key)
 static int CmdHFFmcosPinUnblock(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos pin unblock",
+    CLIParserInit(&ctx, "hf fmcos pinunblock",
                   "UNBLOCK PIN (INS 24) - unblock a locked PIN using the unlock-PIN key\n"
                   "Data = encrypt([len|new_pin], unlock_key) + packet_MAC",
-                  "hf fmcos pin unblock --id 00 --pin 123456 --key aabbccddeeff001122334455667788aa");
+                  "hf fmcos pinunblock --id 00 --pin 123456 --key aabbccddeeff001122334455667788aa");
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "id",  "<hex>", "PIN key slot (P1), 1 byte"),
@@ -2744,27 +2666,6 @@ static int CmdHFFmcosPinUnblock(const char *Cmd) {
     return (sw1 == 0x90 && sw2 == 0x00) ? PM3_SUCCESS : PM3_ESOFT;
 }
 
-static int CmdHFFmcosPinHelp(const char *Cmd);
-
-static command_t PinCommandTable[] = {
-    {"help",    CmdHFFmcosPinHelp,    AlwaysAvailable, "This help"},
-    {"verify",  CmdHFFmcosPinVerify,  IfPm3Iso14443a,  "VERIFY PIN (present PIN to card)"},
-    {"change",  CmdHFFmcosPinChange,  IfPm3Iso14443a,  "CHANGE PIN (old + new, requires old PIN)"},
-    {"reset",   CmdHFFmcosPinReset,   IfPm3Iso14443a,  "RESET PIN (new PIN + change-PIN key MAC)"},
-    {"unblock", CmdHFFmcosPinUnblock, IfPm3Iso14443a,  "UNBLOCK PIN (encrypted new PIN + MAC)"},
-    {NULL, NULL, NULL, NULL}
-};
-
-static int CmdHFFmcosPinHelp(const char *Cmd) {
-    (void)Cmd;
-    CmdsHelp(PinCommandTable);
-    return PM3_SUCCESS;
-}
-
-static int CmdHFFmcosPin(const char *Cmd) {
-    clearCommandBuffer();
-    return CmdsParse(PinCommandTable, Cmd);
-}
 
 // ---------------------------------------------------------------------------
 // Phase 7 helpers
@@ -4250,7 +4151,7 @@ static int CmdHFFmcosTidCreateDF(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf fmcos tidcreatedf",
                   "CREATE sub-DF using TID format (P1=01, FID in data).\n"
-                  "Note: TID CREATE DF has a different layout from standard 'hf fmcos create dir'.",
+                  "Note: TID CREATE DF has a different layout from standard 'hf fmcos createdir'.",
                   "hf fmcos tidcreatedf --id 3f01 --size 0f00 --sfi 96 --name 44444630 31");
     void *argtable[] = {
         arg_param_begin,
@@ -4338,7 +4239,7 @@ static int CmdHFFmcosTidCreateBin(const char *Cmd) {
     CLIParserInit(&ctx, "hf fmcos tidcreatebin",
                   "CREATE binary EF or KEYFILE using TID format (P1=02, FID in data, fixed Lc=11).\n"
                   "Use --type keyfile to create the fixed TID keyfile in the currently selected DF.\n"
-                  "Note: TID CREATE EF has a different layout from standard 'hf fmcos create file'.",
+                  "Note: TID CREATE EF has a different layout from standard 'hf fmcos createfile'.",
                   "hf fmcos tidcreatebin --id 0001 --size 0100 --sfi 01\n"
                   "hf fmcos tidcreatebin --id 0002 --size 0040 --sfi 02 --rperm 20 --wperm f0\n"
                   "hf fmcos tidcreatebin --type keyfile");
@@ -4450,7 +4351,7 @@ static int CmdHFFmcosTidCreateRec(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf fmcos tidcreaterec",
                   "CREATE fixed-length record EF using TID format (P1=02, subtype=01, FID in data, fixed Lc=11).\n"
-                  "Note: TID CREATE EF has a different layout from standard 'hf fmcos create file'.",
+                  "Note: TID CREATE EF has a different layout from standard 'hf fmcos createfile'.",
                   "hf fmcos tidcreaterec --id 0003 --count 04 --reclen 08 --sfi 03\n"
                   "hf fmcos tidcreaterec --id 0003 --count 04 --reclen 10 --sfi 03 --rperm 20 --wperm f0");
     void *argtable[] = {
@@ -4556,16 +4457,24 @@ static command_t CommandTable[] = {
     {"select",    CmdHFFmcosSelect,   IfPm3Iso14443a,  "SELECT FILE by 2-byte ID or AID name"},
     {"--------",  CmdHelp,            AlwaysAvailable, "--------- " _CYAN_("File management") " ----------"},
     {"erase",     CmdHFFmcosErase,    IfPm3Iso14443a,  "ERASE DF contents"},
-    {"create",    CmdHFFmcosCreate,   IfPm3Iso14443a,  "{ Create directory / EF / keyfile... }"},
+    {"createdir",     CmdHFFmcosCreateDir,     IfPm3Iso14443a,  "CREATE DIRECTORY (DF)"},
+    {"createfile",    CmdHFFmcosCreateFile,    IfPm3Iso14443a,  "CREATE EF (binary / fixed / variable / loop / wallet)"},
+    {"createkeyfile", CmdHFFmcosCreateKeyfile, IfPm3Iso14443a,  "CREATE KEYFILE"},
     {"--------",  CmdHelp,            AlwaysAvailable, "--------- " _CYAN_("Data access") " --------------"},
-    {"read",      CmdHFFmcosRead,     IfPm3Iso14443a,  "{ Read binary / record... }"},
-    {"write",     CmdHFFmcosWrite,    IfPm3Iso14443a,  "{ Write binary / record... }"},
+    {"readbinary", CmdHFFmcosReadBinary, IfPm3Iso14443a,  "READ BINARY from transparent EF"},
+    {"readrecord", CmdHFFmcosReadRecord, IfPm3Iso14443a,  "READ RECORD from record-based EF"},
+    {"writebinary", CmdHFFmcosWriteBinary, IfPm3Iso14443a,  "UPDATE BINARY in transparent EF"},
+    {"writerecord", CmdHFFmcosWriteRecord, IfPm3Iso14443a,  "UPDATE RECORD in record-based EF"},
     {"append",    CmdHFFmcosAppend,   IfPm3Iso14443a,  "APPEND RECORD to cyclic / linear EF"},
     {"--------",  CmdHelp,            AlwaysAvailable, "--------- " _CYAN_("Authentication") " -----------"},
-    {"auth",      CmdHFFmcosAuth,     IfPm3Iso14443a,  "{ External / internal authenticate... }"},
+    {"authexternal", CmdHFFmcosAuthExternal, IfPm3Iso14443a,  "EXTERNAL AUTHENTICATE using DES/3DES key"},
+    {"authinternal", CmdHFFmcosAuthInternal, IfPm3Iso14443a,  "INTERNAL AUTHENTICATE (card proves key knowledge)"},
     {"key",       CmdHFFmcosWriteKey, IfPm3Iso14443a,  "WRITE KEY to keyfile"},
     {"--------",  CmdHelp,            AlwaysAvailable, "--------- " _CYAN_("PIN management") " -----------"},
-    {"pin",       CmdHFFmcosPin,      IfPm3Iso14443a,  "{ Verify / change / reset / unblock PIN }"},
+    {"pinverify",  CmdHFFmcosPinVerify,  IfPm3Iso14443a,  "VERIFY PIN (present PIN to card)"},
+    {"pinchange",  CmdHFFmcosPinChange,  IfPm3Iso14443a,  "CHANGE PIN (old + new, requires old PIN)"},
+    {"pinreset",   CmdHFFmcosPinReset,   IfPm3Iso14443a,  "RESET PIN (new PIN + change-PIN key MAC)"},
+    {"pinunblock", CmdHFFmcosPinUnblock, IfPm3Iso14443a,  "UNBLOCK PIN (encrypted new PIN + MAC)"},
     {"--------",  CmdHelp,            AlwaysAvailable, "--------- " _CYAN_("Financial") " ----------------"},
     {"balance",   CmdHFFmcosBalance,  IfPm3Iso14443a,  "GET BALANCE (wallet or passbook)"},
     {"credit",    CmdHFFmcosCredit,   IfPm3Iso14443a,  "ADD CREDIT to wallet or passbook"},
