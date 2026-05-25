@@ -56,7 +56,7 @@ static int fmcos_send_apdu(const uint8_t *apdu, size_t apdu_len,
     if (res != PM3_SUCCESS) {
         g_fmcos_session_active = false;
         PrintAndLogEx(ERR, "APDU exchange failed");
-        return PM3_ESOFT;
+        return res;
     }
     g_fmcos_session_active = leave_on;
     return PM3_SUCCESS;
@@ -352,15 +352,15 @@ static size_t fmcos_iso7816_pad(const uint8_t *in, size_t in_len, uint8_t *out) 
 // DES CBC-MAC with ISO7816 padding.  key must be exactly 8 bytes.
 // iv is 8 bytes (typically the GET CHALLENGE response).
 // Writes mac_len bytes (<= 8) into mac_out.
-static bool fmcos_des_mac(const uint8_t *buf, size_t buf_len,
-                          const uint8_t key[8],
-                          const uint8_t iv[8],
-                          uint8_t *mac_out, size_t mac_len) {
+static int fmcos_des_mac(const uint8_t *buf, size_t buf_len,
+                         const uint8_t key[8],
+                         const uint8_t iv[8],
+                         uint8_t *mac_out, size_t mac_len) {
     size_t max_padded = buf_len + 8;
     uint8_t *padded = calloc(max_padded, 1);
     if (padded == NULL) {
-        PrintAndLogEx(ERR, "calloc failed");
-        return false;
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
     }
 
     size_t padded_len = fmcos_iso7816_pad(buf, buf_len, padded);
@@ -382,22 +382,23 @@ static bool fmcos_des_mac(const uint8_t *buf, size_t buf_len,
         mac_len = 8;
     }
     memcpy(mac_out, val, mac_len);
-    return true;
+    return PM3_SUCCESS;
 }
 
 // 3DES Retail MAC: DES-CBC-MAC with left-key-half (8 bytes), then decrypt
 // with right-key-half, then re-encrypt with left-key-half.
 // key must be exactly 16 bytes.  Writes mac_len bytes (<= 8) into mac_out.
-static bool fmcos_3des_mac(const uint8_t *buf, size_t buf_len,
-                           const uint8_t key[16],
-                           const uint8_t iv[8],
-                           uint8_t *mac_out, size_t mac_len) {
+static int fmcos_3des_mac(const uint8_t *buf, size_t buf_len,
+                          const uint8_t key[16],
+                          const uint8_t iv[8],
+                          uint8_t *mac_out, size_t mac_len) {
     const uint8_t *key_l = key;
     const uint8_t *key_r = key + 8;
 
     uint8_t val[8];
-    if (!fmcos_des_mac(buf, buf_len, key_l, iv, val, 8)) {
-        return false;
+    int res = fmcos_des_mac(buf, buf_len, key_l, iv, val, 8);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     uint8_t tmp[8];
@@ -408,7 +409,7 @@ static bool fmcos_3des_mac(const uint8_t *buf, size_t buf_len,
         mac_len = 8;
     }
     memcpy(mac_out, val, mac_len);
-    return true;
+    return PM3_SUCCESS;
 }
 
 
@@ -416,16 +417,16 @@ static bool fmcos_3des_mac(const uint8_t *buf, size_t buf_len,
 // iv is the 8-byte GET CHALLENGE response used as the CBC IV.
 // key_len 8 -> fmcos_des_mac; key_len 16 -> fmcos_3des_mac.
 // Lc encodes payload_len + 4 (reserves space for the MAC itself).
-static bool fmcos_packet_mac(uint8_t cla, uint8_t ins, uint8_t p1, uint8_t p2,
-                             const uint8_t *data, size_t data_len,
-                             const uint8_t *iv,
-                             const uint8_t *key, size_t key_len,
-                             uint8_t *mac_out) {
+static int fmcos_packet_mac(uint8_t cla, uint8_t ins, uint8_t p1, uint8_t p2,
+                            const uint8_t *data, size_t data_len,
+                            const uint8_t *iv,
+                            const uint8_t *key, size_t key_len,
+                            uint8_t *mac_out) {
     size_t buf_len = 5 + data_len;
     uint8_t *mac_buf = calloc(buf_len, 1);
     if (mac_buf == NULL) {
-        PrintAndLogEx(ERR, "calloc failed");
-        return false;
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
     }
 
     mac_buf[0] = cla;
@@ -437,15 +438,15 @@ static bool fmcos_packet_mac(uint8_t cla, uint8_t ins, uint8_t p1, uint8_t p2,
         memcpy(&mac_buf[5], data, data_len);
     }
 
-    bool ok;
+    int res;
     if (key_len == 8) {
-        ok = fmcos_des_mac(mac_buf, buf_len, key, iv, mac_out, 4);
+        res = fmcos_des_mac(mac_buf, buf_len, key, iv, mac_out, 4);
     } else {
-        ok = fmcos_3des_mac(mac_buf, buf_len, key, iv, mac_out, 4);
+        res = fmcos_3des_mac(mac_buf, buf_len, key, iv, mac_out, 4);
     }
 
     free(mac_buf);
-    return ok;
+    return res;
 }
 
 // ---------------------------------------------------------------------------
@@ -481,7 +482,9 @@ static size_t fmcos_encrypt(const uint8_t *key, size_t key_len,
     }
     size_t padded_len = fmcos_iso7816_pad(data, data_len, padded);
     for (size_t off = 0; off < padded_len; off += 8) {
-        fmcos_ecb_encrypt(key, key_len, padded + off, out + off);
+        if (fmcos_ecb_encrypt(key, key_len, padded + off, out + off) != PM3_SUCCESS) {
+            return 0;
+        }
     }
     return padded_len;
 }
@@ -811,21 +814,21 @@ static int CmdHFFmcosSelect(const char *Cmd) {
     return (sw1 == 0x90 && sw2 == 0x00) ? PM3_SUCCESS : PM3_ESOFT;
 }
 
-// Parse a required hex integer argument; returns false and prints an error on
-// malformed input.  Accepts bare hex digits (no "0x" prefix required).
-static bool fmcos_parse_hex_int(const char *s, int *out) {
+// Parse a required hex integer argument; returns PM3_EINVARG and prints an
+// error on malformed input.  Accepts bare hex digits (no "0x" prefix required).
+static int fmcos_parse_hex_int(const char *s, int *out) {
     if (s == NULL || *s == '\0') {
         PrintAndLogEx(ERR, "Empty hex value");
-        return false;
+        return PM3_EINVARG;
     }
     char *end = NULL;
     long v = strtol(s, &end, 16);
     if (end == s || *end != '\0') {
         PrintAndLogEx(ERR, "Invalid hex value: %s", s);
-        return false;
+        return PM3_EINVARG;
     }
     *out = (int)v;
-    return true;
+    return PM3_SUCCESS;
 }
 
 // ---------------------------------------------------------------------------
@@ -852,9 +855,10 @@ static int CmdHFFmcosAuthExternal(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int key_id;
-    if (!fmcos_parse_hex_int(arg_get_str(ctx, 1)->sval[0], &key_id)) {
+    int res = fmcos_parse_hex_int(arg_get_str(ctx, 1)->sval[0], &key_id);
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
     }
 
     uint8_t key[16] = {0};
@@ -878,7 +882,7 @@ static int CmdHFFmcosAuthExternal(const char *Cmd) {
 
     // GET CHALLENGE (8 bytes) - activates the field
     uint8_t challenge[8] = {0};
-    int res = fmcos_get_challenge(8, true, challenge);
+    res = fmcos_get_challenge(8, true, challenge);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
@@ -1030,11 +1034,6 @@ static int CmdHFFmcosAuthInternal(const char *Cmd) {
 }
 
 // ---------------------------------------------------------------------------
-// hf fmcos authexternal / authinternal  (Phase 2)
-// ---------------------------------------------------------------------------
-
-
-// ---------------------------------------------------------------------------
 // Phase 4 - File management
 // ---------------------------------------------------------------------------
 
@@ -1055,7 +1054,7 @@ static int fmcos_write_cmd(uint8_t cla, uint8_t ins, uint8_t p1, uint8_t p2,
                            int prot, const uint8_t *key, size_t key_len,
                            bool activate, bool leave_on,
                            uint8_t *resp_out, int *resp_len_out) {
-    uint8_t payload[260] = {0};
+    uint8_t payload[272] = {0};
     size_t  payload_len = 0;
 
     if (prot == FMCOS_PROT_ENC) {
@@ -1068,7 +1067,7 @@ static int fmcos_write_cmd(uint8_t cla, uint8_t ins, uint8_t p1, uint8_t p2,
         memcpy(enc_in + 1, data, data_len);
         payload_len = fmcos_encrypt(key, key_len, enc_in, 1 + data_len, payload);
         if (payload_len == 0) {
-            return PM3_EMALLOC;
+            return PM3_ESOFT;
         }
         cla |= 0x04;
     } else {
@@ -1088,14 +1087,15 @@ static int fmcos_write_cmd(uint8_t cla, uint8_t ins, uint8_t p1, uint8_t p2,
         activate = false;
 
         uint8_t mac[4] = {0};
-        if (!fmcos_packet_mac(cla, ins, p1, p2, payload, payload_len, chal, key, key_len, mac)) {
-            return PM3_EMALLOC;
+        res = fmcos_packet_mac(cla, ins, p1, p2, payload, payload_len, chal, key, key_len, mac);
+        if (res != PM3_SUCCESS) {
+            return res;
         }
         memcpy(payload + payload_len, mac, 4);
         payload_len += 4;
     }
 
-    uint8_t apdu[270];
+    uint8_t apdu[280];
     apdu[0] = cla;
     apdu[1] = ins;
     apdu[2] = p1;
@@ -1130,8 +1130,9 @@ static int fmcos_read_cmd(uint8_t ins, uint8_t p1, uint8_t p2, uint8_t read_len,
     if (prot != FMCOS_PROT_NONE) {
         // Case 4: CLA INS P1 P2 Lc=4 [MAC4] Le
         uint8_t mac[4] = {0};
-        if (!fmcos_packet_mac(cla, ins, p1, p2, NULL, 0, mac_iv, key, key_len, mac)) {
-            return PM3_EMALLOC;
+        int res = fmcos_packet_mac(cla, ins, p1, p2, NULL, 0, mac_iv, key, key_len, mac);
+        if (res != PM3_SUCCESS) {
+            return res;
         }
         apdu[0] = cla;
         apdu[1] = ins;
@@ -1184,14 +1185,13 @@ static int fmcos_read_cmd(uint8_t ins, uint8_t p1, uint8_t p2, uint8_t read_len,
     uint8_t *ret_mac = resp + msg_len;
 
     uint8_t calc_mac[4] = {0};
-    bool mac_ok;
     if (key_len == 8) {
-        mac_ok = fmcos_des_mac(resp, (size_t)msg_len, key, mac_iv, calc_mac, 4);
+        res = fmcos_des_mac(resp, (size_t)msg_len, key, mac_iv, calc_mac, 4);
     } else {
-        mac_ok = fmcos_3des_mac(resp, (size_t)msg_len, key, mac_iv, calc_mac, 4);
+        res = fmcos_3des_mac(resp, (size_t)msg_len, key, mac_iv, calc_mac, 4);
     }
-    if (!mac_ok) {
-        return PM3_EMALLOC;
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     if (memcmp(calc_mac, ret_mac, 4) != 0) {
@@ -1298,9 +1298,10 @@ static int CmdHFFmcosCreateDir(const char *Cmd) {
     int id_len = 0;
     CLIGetHexWithReturn(ctx, 1, id_buf, &id_len);
     int space;
-    if (!fmcos_parse_hex_int(arg_get_str(ctx, 2)->sval[0], &space)) {
+    int res = fmcos_parse_hex_int(arg_get_str(ctx, 2)->sval[0], &space);
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
     }
     uint8_t cperm[1] = {0};
     int cperm_len = 0;
@@ -1357,7 +1358,7 @@ static int CmdHFFmcosCreateDir(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    int res = fmcos_send_apdu(apdu, 5 + data_len, true, keep, resp, &resp_len);
+    res = fmcos_send_apdu(apdu, 5 + data_len, true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
@@ -1437,15 +1438,17 @@ static int CmdHFFmcosCreateFile(const char *Cmd) {
     int id_len = 0;
     CLIGetHexWithReturn(ctx, 1, id_buf, &id_len);
     int ftype = 0;
-    if (CLIGetOptionList(arg_get_str(ctx, 2), g_fmcos_filetype_opts, &ftype)) {
+    int res = CLIGetOptionList(arg_get_str(ctx, 2), g_fmcos_filetype_opts, &ftype);
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
     }
 
     int size;
-    if (!fmcos_parse_hex_int(arg_get_str(ctx, 3)->sval[0], &size)) {
+    res = fmcos_parse_hex_int(arg_get_str(ctx, 3)->sval[0], &size);
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
     }
     uint8_t rperm[1] = {0};
     int rperm_len = 0;
@@ -1457,9 +1460,10 @@ static int CmdHFFmcosCreateFile(const char *Cmd) {
     int access_len = 0;
     CLIGetHexWithReturn(ctx, 6, access, &access_len);
     int prot = FMCOS_PROT_NONE;
-    if (CLIGetOptionList(arg_get_str(ctx, 7), g_fmcos_prot_opts, &prot)) {
+    res = CLIGetOptionList(arg_get_str(ctx, 7), g_fmcos_prot_opts, &prot);
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
     }
 
     bool keep     = arg_get_lit(ctx, 8);
@@ -1502,7 +1506,7 @@ static int CmdHFFmcosCreateFile(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    int res = fmcos_send_apdu(apdu, 12, true, keep, resp, &resp_len);
+    res = fmcos_send_apdu(apdu, 12, true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
@@ -1550,9 +1554,10 @@ static int CmdHFFmcosCreateKeyfile(const char *Cmd) {
     int id_len = 0;
     CLIGetHexWithReturn(ctx, 1, id_buf, &id_len);
     int space;
-    if (!fmcos_parse_hex_int(arg_get_str(ctx, 2)->sval[0], &space)) {
+    int res = fmcos_parse_hex_int(arg_get_str(ctx, 2)->sval[0], &space);
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
     }
     uint8_t dfsid[1] = {0};
     int dfsid_len = 0;
@@ -1594,7 +1599,7 @@ static int CmdHFFmcosCreateKeyfile(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    int res = fmcos_send_apdu(apdu, 12, true, keep, resp, &resp_len);
+    res = fmcos_send_apdu(apdu, 12, true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
@@ -1654,9 +1659,10 @@ static int CmdHFFmcosReadBinary(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 2, p2b, &p2_len);
     int rlen = arg_get_int_def(ctx, 3, 0);
     int prot = FMCOS_PROT_NONE;
-    if (CLIGetOptionList(arg_get_str(ctx, 4), g_fmcos_prot_opts, &prot)) {
+    int res = CLIGetOptionList(arg_get_str(ctx, 4), g_fmcos_prot_opts, &prot);
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
     }
 
     uint8_t key[16] = {0};
@@ -1684,9 +1690,9 @@ static int CmdHFFmcosReadBinary(const char *Cmd) {
 
     uint8_t data_out[256] = {0};
     int data_out_len = 0;
-    int res = fmcos_read_cmd(0xB0, p1b[0], p2b[0], (uint8_t)rlen,
-                             prot, key, (size_t)key_len,
-                             true, keep, data_out, &data_out_len);
+    res = fmcos_read_cmd(0xB0, p1b[0], p2b[0], (uint8_t)rlen,
+                         prot, key, (size_t)key_len,
+                         true, keep, data_out, &data_out_len);
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Data: " _GREEN_("%s"), sprint_hex(data_out, (size_t)data_out_len));
     }
@@ -1725,9 +1731,10 @@ static int CmdHFFmcosReadRecord(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 2, fid_buf, &fid_len);
     int rlen    = arg_get_int_def(ctx, 3, 0);
     int prot    = FMCOS_PROT_NONE;
-    if (CLIGetOptionList(arg_get_str(ctx, 4), g_fmcos_prot_opts, &prot)) {
+    int res = CLIGetOptionList(arg_get_str(ctx, 4), g_fmcos_prot_opts, &prot);
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
     }
     uint8_t key[16] = {0};
     int key_len = 0;
@@ -1762,9 +1769,9 @@ static int CmdHFFmcosReadRecord(const char *Cmd) {
     uint8_t p2 = (uint8_t)(((fid_buf[0] & 0x1F) << 3) | 4);
     uint8_t data_out[256] = {0};
     int data_out_len = 0;
-    int res = fmcos_read_cmd(0xB2, (uint8_t)rec, p2, (uint8_t)le,
-                             prot, key, (size_t)key_len,
-                             true, keep, data_out, &data_out_len);
+    res = fmcos_read_cmd(0xB2, (uint8_t)rec, p2, (uint8_t)le,
+                         prot, key, (size_t)key_len,
+                         true, keep, data_out, &data_out_len);
     if (res == PM3_SUCCESS) {
         uint8_t *payload = data_out;
         int payload_len  = data_out_len;
@@ -1816,9 +1823,10 @@ static int CmdHFFmcosWriteBinary(const char *Cmd) {
     int wdata_len = 0;
     CLIGetHexWithReturn(ctx, 3, wdata, &wdata_len);
     int prot = FMCOS_PROT_NONE;
-    if (CLIGetOptionList(arg_get_str(ctx, 4), g_fmcos_prot_opts, &prot)) {
+    int res = CLIGetOptionList(arg_get_str(ctx, 4), g_fmcos_prot_opts, &prot);
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
     }
     uint8_t key[16] = {0};
     int key_len = 0;
@@ -1843,10 +1851,10 @@ static int CmdHFFmcosWriteBinary(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    int res = fmcos_write_cmd(0x00, 0xD6, p1b[0], p2b[0],
-                              wdata, (size_t)wdata_len,
-                              prot, key, (size_t)key_len,
-                              true, keep, resp, &resp_len);
+    res = fmcos_write_cmd(0x00, 0xD6, p1b[0], p2b[0],
+                          wdata, (size_t)wdata_len,
+                          prot, key, (size_t)key_len,
+                          true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
@@ -1904,9 +1912,10 @@ static int CmdHFFmcosWriteRecord(const char *Cmd) {
     int wdata_len = 0;
     CLIGetHexWithReturn(ctx, 3, wdata, &wdata_len);
     int prot = FMCOS_PROT_NONE;
-    if (CLIGetOptionList(arg_get_str(ctx, 4), g_fmcos_prot_opts, &prot)) {
+    int res = CLIGetOptionList(arg_get_str(ctx, 4), g_fmcos_prot_opts, &prot);
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
     }
     uint8_t key[16] = {0};
     int key_len = 0;
@@ -1954,10 +1963,10 @@ static int CmdHFFmcosWriteRecord(const char *Cmd) {
     uint8_t p2 = (uint8_t)(((fid_buf[0] & 0x1F) << 3) | 4);
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    int res = fmcos_write_cmd(0x00, 0xDC, (uint8_t)rec, p2,
-                              send_buf, send_len,
-                              prot, key, (size_t)key_len,
-                              true, keep, resp, &resp_len);
+    res = fmcos_write_cmd(0x00, 0xDC, (uint8_t)rec, p2,
+                          send_buf, send_len,
+                          prot, key, (size_t)key_len,
+                          true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
@@ -2011,9 +2020,10 @@ static int CmdHFFmcosAppend(const char *Cmd) {
     int wdata_len = 0;
     CLIGetHexWithReturn(ctx, 2, wdata, &wdata_len);
     int prot = FMCOS_PROT_NONE;
-    if (CLIGetOptionList(arg_get_str(ctx, 3), g_fmcos_prot_opts, &prot)) {
+    int res = CLIGetOptionList(arg_get_str(ctx, 3), g_fmcos_prot_opts, &prot);
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
     }
     uint8_t key[16] = {0};
     int key_len = 0;
@@ -2040,10 +2050,10 @@ static int CmdHFFmcosAppend(const char *Cmd) {
     uint8_t p2 = (uint8_t)(((fid_buf[0] & 0x1F) << 3) | 4);
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    int res = fmcos_write_cmd(0x00, 0xE2, 0x00, p2,
-                              wdata, (size_t)wdata_len,
-                              prot, key, (size_t)key_len,
-                              true, keep, resp, &resp_len);
+    res = fmcos_write_cmd(0x00, 0xE2, 0x00, p2,
+                          wdata, (size_t)wdata_len,
+                          prot, key, (size_t)key_len,
+                          true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
@@ -2128,9 +2138,10 @@ static int CmdHFFmcosWriteKey(const char *Cmd) {
     int id_len = 0;
     CLIGetHexWithReturn(ctx, 2,  id_buf, &id_len);
     int ktype = 0;
-    if (CLIGetOptionList(arg_get_str(ctx, 3), g_fmcos_keytype_opts, &ktype)) {
+    int res = CLIGetOptionList(arg_get_str(ctx, 3), g_fmcos_keytype_opts, &ktype);
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
     }
     uint8_t usage_b[1] = {0};
     int usage_len = 0;
@@ -2157,9 +2168,10 @@ static int CmdHFFmcosWriteKey(const char *Cmd) {
     int authkey_len = 0;
     CLIGetHexWithReturn(ctx, 11, authkey, &authkey_len);
     int prot = FMCOS_PROT_NONE;
-    if (CLIGetOptionList(arg_get_str(ctx, 12), g_fmcos_prot_opts, &prot)) {
+    res = CLIGetOptionList(arg_get_str(ctx, 12), g_fmcos_prot_opts, &prot);
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
     }
     bool keep     = arg_get_lit(ctx, 13);
     bool apdu_log = arg_get_lit(ctx, 14);
@@ -2246,10 +2258,10 @@ static int CmdHFFmcosWriteKey(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    int res = fmcos_write_cmd(0x80, 0xD4, op_buf[0], id_buf[0],
-                              data, data_len,
-                              prot, authkey, (size_t)authkey_len,
-                              true, keep, resp, &resp_len);
+    res = fmcos_write_cmd(0x80, 0xD4, op_buf[0], id_buf[0],
+                          data, data_len,
+                          prot, authkey, (size_t)authkey_len,
+                          true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
@@ -2505,8 +2517,9 @@ static int CmdHFFmcosPinReset(const char *Cmd) {
     // MAC = DES-CBC-MAC(new_pin, mac_key, iv=0)
     uint8_t zero_iv[8] = {0};
     uint8_t mac[4] = {0};
-    if (!fmcos_des_mac(pin, (size_t)pin_len, mac_key, zero_iv, mac, 4)) {
-        return PM3_EMALLOC;
+    int res = fmcos_des_mac(pin, (size_t)pin_len, mac_key, zero_iv, mac, 4);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     // Data = new_pin + mac[4]
@@ -2525,7 +2538,7 @@ static int CmdHFFmcosPinReset(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    int res = fmcos_send_apdu(apdu, 5 + data_len, true, keep, resp, &resp_len);
+    res = fmcos_send_apdu(apdu, 5 + data_len, true, keep, resp, &resp_len);
     if (res != PM3_SUCCESS) {
         if (!keep) {
             DropField();
@@ -2605,6 +2618,9 @@ static int CmdHFFmcosPinUnblock(const char *Cmd) {
     memcpy(plain + 1, pin, (size_t)pin_len);
     uint8_t enc_data[16] = {0};
     size_t  enc_len = fmcos_encrypt(key, (size_t)key_len, plain, 1 + (size_t)pin_len, enc_data);
+    if (enc_len == 0) {
+        return PM3_ESOFT;
+    }
 
     // GET CHALLENGE for packet MAC IV - CLA=84, INS=24
     uint8_t chal[8] = {0};
@@ -2617,9 +2633,13 @@ static int CmdHFFmcosPinUnblock(const char *Cmd) {
     }
 
     uint8_t mac[4] = {0};
-    if (!fmcos_packet_mac(0x84, 0x24, id_buf[0], 0x00,
-                          enc_data, enc_len, chal, key, (size_t)key_len, mac)) {
-        return PM3_EMALLOC;
+    res = fmcos_packet_mac(0x84, 0x24, id_buf[0], 0x00,
+                           enc_data, enc_len, chal, key, (size_t)key_len, mac);
+    if (res != PM3_SUCCESS) {
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     // Build data = enc_data + mac
@@ -2709,19 +2729,26 @@ static int CmdHFFmcosBalance(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (res != PM3_SUCCESS) {
-        return PM3_EINVARG;
+        return res;
     }
 
     uint8_t apdu[5] = {0x80, 0x5C, 0x00, (uint8_t)bal_type, 0x04};
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
 
-    if (fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len) != PM3_SUCCESS) {
-        return PM3_ESOFT;
+    res = fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len);
+    if (res != PM3_SUCCESS) {
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     if (resp_len < 2) {
         PrintAndLogEx(ERR, "Short response");
+        if (!keep) {
+            DropField();
+        }
         return PM3_ESOFT;
     }
     uint8_t sw1 = resp[resp_len - 2], sw2 = resp[resp_len - 1];
@@ -2732,6 +2759,9 @@ static int CmdHFFmcosBalance(const char *Cmd) {
                            ((uint32_t)resp[2] << 8)  | resp[3];
         PrintAndLogEx(SUCCESS, "Balance (%s): " _GREEN_("%u") " (0x%08X)",
                       bal_type == 0x01 ? "passbook" : "wallet", balance, balance);
+    }
+    if (!keep) {
+        DropField();
     }
     return (sw1 == 0x90 && sw2 == 0x00) ? PM3_SUCCESS : PM3_ESOFT;
 }
@@ -2761,10 +2791,15 @@ static int CmdHFFmcosCredit(const char *Cmd) {
 
     int bal_type = 0;
     int res = CLIGetOptionList(arg_get_str(ctx, 1), g_fmcos_baltype_opts, &bal_type);
-    int key_id;
-    if (!fmcos_parse_hex_int(arg_get_str(ctx, 2)->sval[0], &key_id)) {
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
+    }
+    int key_id = 0;
+    res = fmcos_parse_hex_int(arg_get_str(ctx, 2)->sval[0], &key_id);
+    if (res != PM3_SUCCESS) {
+        CLIParserFree(ctx);
+        return res;
     }
     int amount_i = arg_get_int(ctx, 3);
 
@@ -2782,10 +2817,6 @@ static int CmdHFFmcosCredit(const char *Cmd) {
 
     bool keep = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
-
-    if (res != PM3_SUCCESS) {
-        return PM3_EINVARG;
-    }
 
     if (key_id < 0 || key_id > 0xFF) {
         PrintAndLogEx(ERR, "Key ID must be 0-255");
@@ -2830,8 +2861,13 @@ static int CmdHFFmcosCredit(const char *Cmd) {
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
 
-    if (fmcos_send_apdu(ph1, sizeof(ph1), true, true, resp, &resp_len) != PM3_SUCCESS) {
-        return PM3_ESOFT;
+    res = fmcos_send_apdu(ph1, sizeof(ph1), true, true, resp, &resp_len);
+    if (res != PM3_SUCCESS) {
+        g_fmcos_session_active = keep;
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     // Response: old_balance[4] online_serial[2] key_ver[1] algo[1] random_1[4] mac_1[4] SW[2]
@@ -2866,7 +2902,13 @@ static int CmdHFFmcosCredit(const char *Cmd) {
     memcpy(pk_buf, resp + 8, 4);      // random_1
     memcpy(pk_buf + 4, resp + 4, 2);  // online_serial
     uint8_t pk_enc[24] = {0};
-    fmcos_encrypt(crde_key, (size_t)crde_key_len, pk_buf, 6, pk_enc);
+    if (fmcos_encrypt(crde_key, (size_t)crde_key_len, pk_buf, 6, pk_enc) == 0) {
+        g_fmcos_session_active = keep;
+        if (!keep) {
+            DropField();
+        }
+        return PM3_ESOFT;
+    }
     uint8_t process_key[8];
     memcpy(process_key, pk_enc, 8);
 
@@ -2882,8 +2924,13 @@ static int CmdHFFmcosCredit(const char *Cmd) {
 
     uint8_t zero_iv[8] = {0};
     uint8_t mac1_calc[4] = {0};
-    if (!fmcos_des_mac(mac1_buf, 15, process_key, zero_iv, mac1_calc, 4)) {
-        return PM3_EMALLOC;
+    res = fmcos_des_mac(mac1_buf, 15, process_key, zero_iv, mac1_calc, 4);
+    if (res != PM3_SUCCESS) {
+        g_fmcos_session_active = keep;
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     if (memcmp(mac1_calc, resp + 12, 4) != 0) {
@@ -2911,8 +2958,13 @@ static int CmdHFFmcosCredit(const char *Cmd) {
     memcpy(mac2_buf + 15, ttime, 3);
 
     uint8_t mac2[4] = {0};
-    if (!fmcos_des_mac(mac2_buf, 18, process_key, zero_iv, mac2, 4)) {
-        return PM3_EMALLOC;
+    res = fmcos_des_mac(mac2_buf, 18, process_key, zero_iv, mac2, 4);
+    if (res != PM3_SUCCESS) {
+        g_fmcos_session_active = keep;
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     // ---- Phase 2: CREDIT (INS 52) ----
@@ -2930,19 +2982,29 @@ static int CmdHFFmcosCredit(const char *Cmd) {
 
     memset(resp, 0, sizeof(resp));
     resp_len = 0;
-    if (fmcos_send_apdu(ph2, sizeof(ph2), false, keep, resp, &resp_len) != PM3_SUCCESS) {
-        return PM3_ESOFT;
+    res = fmcos_send_apdu(ph2, sizeof(ph2), false, keep, resp, &resp_len);
+    if (res != PM3_SUCCESS) {
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     // Response: TAC[4] SW[2]
     if (resp_len < 6) {
         PrintAndLogEx(ERR, "Phase 2 short response (%d bytes)", resp_len);
+        if (!keep) {
+            DropField();
+        }
         return PM3_ESOFT;
     }
     sw1 = resp[resp_len - 2];
     sw2 = resp[resp_len - 1];
     if (sw1 != 0x90 || sw2 != 0x00) {
         fmcos_print_sw(sw1, sw2);
+        if (!keep) {
+            DropField();
+        }
         return PM3_ESOFT;
     }
 
@@ -2963,8 +3025,12 @@ static int CmdHFFmcosCredit(const char *Cmd) {
     memcpy(tac_buf + 6, mac2_buf, 18);
 
     uint8_t tac_calc[4] = {0};
-    if (!fmcos_des_mac(tac_buf, 24, tac_key, zero_iv, tac_calc, 4)) {
-        return PM3_EMALLOC;
+    res = fmcos_des_mac(tac_buf, 24, tac_key, zero_iv, tac_calc, 4);
+    if (res != PM3_SUCCESS) {
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     if (memcmp(tac_calc, resp, 4) != 0) {
@@ -2973,6 +3039,9 @@ static int CmdHFFmcosCredit(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "TAC OK  new balance " _GREEN_("%u"), new_balance);
     }
     fmcos_print_sw(sw1, sw2);
+    if (!keep) {
+        DropField();
+    }
     return PM3_SUCCESS;
 }
 
@@ -3003,10 +3072,15 @@ static int CmdHFFmcosPurchase(const char *Cmd) {
 
     int bal_type = 0;
     int res = CLIGetOptionList(arg_get_str(ctx, 1), g_fmcos_baltype_opts, &bal_type);
-    int key_id;
-    if (!fmcos_parse_hex_int(arg_get_str(ctx, 2)->sval[0], &key_id)) {
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
+    }
+    int key_id = 0;
+    res = fmcos_parse_hex_int(arg_get_str(ctx, 2)->sval[0], &key_id);
+    if (res != PM3_SUCCESS) {
+        CLIParserFree(ctx);
+        return res;
     }
     int amount_i = arg_get_int(ctx, 3);
 
@@ -3028,10 +3102,6 @@ static int CmdHFFmcosPurchase(const char *Cmd) {
 
     bool keep = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
-
-    if (res != PM3_SUCCESS) {
-        return PM3_EINVARG;
-    }
 
     if (key_id < 0 || key_id > 0xFF) {
         PrintAndLogEx(ERR, "Key ID must be 0-255");
@@ -3081,8 +3151,13 @@ static int CmdHFFmcosPurchase(const char *Cmd) {
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
 
-    if (fmcos_send_apdu(ph1, sizeof(ph1), true, true, resp, &resp_len) != PM3_SUCCESS) {
-        return PM3_ESOFT;
+    res = fmcos_send_apdu(ph1, sizeof(ph1), true, true, resp, &resp_len);
+    if (res != PM3_SUCCESS) {
+        g_fmcos_session_active = keep;
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     // Response: old_balance[4] offline_serial[2] overdraft_lim[3] key_ver[1] algo[1] random_1[4] SW[2]
@@ -3118,7 +3193,13 @@ static int CmdHFFmcosPurchase(const char *Cmd) {
     pk_buf[6] = tx_serial[2];
     pk_buf[7] = tx_serial[3];
     uint8_t pk_enc[24] = {0};
-    fmcos_encrypt(purch_key, (size_t)purch_key_len, pk_buf, 8, pk_enc);
+    if (fmcos_encrypt(purch_key, (size_t)purch_key_len, pk_buf, 8, pk_enc) == 0) {
+        g_fmcos_session_active = keep;
+        if (!keep) {
+            DropField();
+        }
+        return PM3_ESOFT;
+    }
     uint8_t process_key[8];
     memcpy(process_key, pk_enc, 8);
 
@@ -3138,8 +3219,13 @@ static int CmdHFFmcosPurchase(const char *Cmd) {
 
     uint8_t zero_iv[8] = {0};
     uint8_t mac1[4] = {0};
-    if (!fmcos_des_mac(mac1_buf, 18, process_key, zero_iv, mac1, 4)) {
-        return PM3_EMALLOC;
+    res = fmcos_des_mac(mac1_buf, 18, process_key, zero_iv, mac1, 4);
+    if (res != PM3_SUCCESS) {
+        g_fmcos_session_active = keep;
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     // ---- Phase 2: DEBIT (INS 54, P1 01, P2 00) ----
@@ -3158,19 +3244,29 @@ static int CmdHFFmcosPurchase(const char *Cmd) {
 
     memset(resp, 0, sizeof(resp));
     resp_len = 0;
-    if (fmcos_send_apdu(ph2, sizeof(ph2), false, keep, resp, &resp_len) != PM3_SUCCESS) {
-        return PM3_ESOFT;
+    res = fmcos_send_apdu(ph2, sizeof(ph2), false, keep, resp, &resp_len);
+    if (res != PM3_SUCCESS) {
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     // Response: TAC[4] mac2_card[4] SW[2]
     if (resp_len < 10) {
         PrintAndLogEx(ERR, "Phase 2 short response (%d bytes)", resp_len);
+        if (!keep) {
+            DropField();
+        }
         return PM3_ESOFT;
     }
     sw1 = resp[resp_len - 2];
     sw2 = resp[resp_len - 1];
     if (sw1 != 0x90 || sw2 != 0x00) {
         fmcos_print_sw(sw1, sw2);
+        if (!keep) {
+            DropField();
+        }
         return PM3_ESOFT;
     }
 
@@ -3194,8 +3290,12 @@ static int CmdHFFmcosPurchase(const char *Cmd) {
     memcpy(tac_buf + 19, ttime, 3);
 
     uint8_t tac_calc[4] = {0};
-    if (!fmcos_des_mac(tac_buf, 22, tac_key, zero_iv, tac_calc, 4)) {
-        return PM3_EMALLOC;
+    res = fmcos_des_mac(tac_buf, 22, tac_key, zero_iv, tac_calc, 4);
+    if (res != PM3_SUCCESS) {
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     if (memcmp(tac_calc, resp, 4) != 0) {
@@ -3204,6 +3304,9 @@ static int CmdHFFmcosPurchase(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "TAC OK  new balance " _GREEN_("%u"), new_balance);
     }
     fmcos_print_sw(sw1, sw2);
+    if (!keep) {
+        DropField();
+    }
     return PM3_SUCCESS;
 }
 
@@ -3231,9 +3334,10 @@ static int CmdHFFmcosOverdraft(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int key_id;
-    if (!fmcos_parse_hex_int(arg_get_str(ctx, 1)->sval[0], &key_id)) {
+    int res = fmcos_parse_hex_int(arg_get_str(ctx, 1)->sval[0], &key_id);
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
     }
     int limit_i = arg_get_int(ctx, 2);
 
@@ -3291,8 +3395,13 @@ static int CmdHFFmcosOverdraft(const char *Cmd) {
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
 
-    if (fmcos_send_apdu(ph1, sizeof(ph1), true, true, resp, &resp_len) != PM3_SUCCESS) {
-        return PM3_ESOFT;
+    res = fmcos_send_apdu(ph1, sizeof(ph1), true, true, resp, &resp_len);
+    if (res != PM3_SUCCESS) {
+        g_fmcos_session_active = keep;
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     // Response: old_balance[4] online_serial[2] old_od_limit[3] key_ver[1] algo[1] random_1[4] card_mac1[4] SW[2]
@@ -3329,7 +3438,13 @@ static int CmdHFFmcosOverdraft(const char *Cmd) {
     memcpy(pk_buf, resp + 11, 4);
     memcpy(pk_buf + 4, resp + 4, 2);
     uint8_t pk_enc[24] = {0};
-    fmcos_encrypt(od_key, (size_t)od_key_len, pk_buf, 6, pk_enc);
+    if (fmcos_encrypt(od_key, (size_t)od_key_len, pk_buf, 6, pk_enc) == 0) {
+        g_fmcos_session_active = keep;
+        if (!keep) {
+            DropField();
+        }
+        return PM3_ESOFT;
+    }
     uint8_t process_key[8];
     memcpy(process_key, pk_enc, 8);
 
@@ -3342,8 +3457,13 @@ static int CmdHFFmcosOverdraft(const char *Cmd) {
 
     uint8_t zero_iv[8] = {0};
     uint8_t mac1_calc[4] = {0};
-    if (!fmcos_des_mac(mac1_buf, 14, process_key, zero_iv, mac1_calc, 4)) {
-        return PM3_EMALLOC;
+    res = fmcos_des_mac(mac1_buf, 14, process_key, zero_iv, mac1_calc, 4);
+    if (res != PM3_SUCCESS) {
+        g_fmcos_session_active = keep;
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     if (memcmp(mac1_calc, resp + 15, 4) != 0) {
@@ -3370,8 +3490,13 @@ static int CmdHFFmcosOverdraft(const char *Cmd) {
     memcpy(mac2_buf + 14, ttime, 3);
 
     uint8_t mac2[4] = {0};
-    if (!fmcos_des_mac(mac2_buf, 17, process_key, zero_iv, mac2, 4)) {
-        return PM3_EMALLOC;
+    res = fmcos_des_mac(mac2_buf, 17, process_key, zero_iv, mac2, 4);
+    if (res != PM3_SUCCESS) {
+        g_fmcos_session_active = keep;
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     // ---- Phase 2: UPDATE OVERDRAFT (INS 58, P1 00, P2 00) ----
@@ -3392,12 +3517,19 @@ static int CmdHFFmcosOverdraft(const char *Cmd) {
 
     memset(resp, 0, sizeof(resp));
     resp_len = 0;
-    if (fmcos_send_apdu(ph2, sizeof(ph2), false, keep, resp, &resp_len) != PM3_SUCCESS) {
-        return PM3_ESOFT;
+    res = fmcos_send_apdu(ph2, sizeof(ph2), false, keep, resp, &resp_len);
+    if (res != PM3_SUCCESS) {
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     if (resp_len < 2) {
         PrintAndLogEx(ERR, "Phase 2 short response");
+        if (!keep) {
+            DropField();
+        }
         return PM3_ESOFT;
     }
     sw1 = resp[resp_len - 2];
@@ -3405,6 +3537,9 @@ static int CmdHFFmcosOverdraft(const char *Cmd) {
     fmcos_print_sw(sw1, sw2);
 
     if (sw1 != 0x90 || sw2 != 0x00) {
+        if (!keep) {
+            DropField();
+        }
         return PM3_ESOFT;
     }
 
@@ -3439,8 +3574,12 @@ static int CmdHFFmcosOverdraft(const char *Cmd) {
             memcpy(tac_buf + 20, ttime, 3);
 
             uint8_t tac_calc[4] = {0};
-            if (!fmcos_des_mac(tac_buf, 23, tac_key, zero_iv, tac_calc, 4)) {
-                return PM3_EMALLOC;
+            res = fmcos_des_mac(tac_buf, 23, tac_key, zero_iv, tac_calc, 4);
+            if (res != PM3_SUCCESS) {
+                if (!keep) {
+                    DropField();
+                }
+                return res;
             }
 
             if (memcmp(tac_calc, resp, 4) != 0) {
@@ -3454,6 +3593,9 @@ static int CmdHFFmcosOverdraft(const char *Cmd) {
         PrintAndLogEx(INFO, "TAC (unverified): %s", sprint_hex(resp, 4));
     }
 
+    if (!keep) {
+        DropField();
+    }
     return PM3_SUCCESS;
 }
 
@@ -3529,8 +3671,12 @@ static int CmdHFFmcosBlock(const char *Cmd) {
     uint8_t p1 = 0x00;
 
     uint8_t mac[4] = {0};
-    if (!fmcos_packet_mac(cla, ins, p1, p2, NULL, 0, chal, key, (size_t)key_len, mac)) {
-        return PM3_EMALLOC;
+    res = fmcos_packet_mac(cla, ins, p1, p2, NULL, 0, chal, key, (size_t)key_len, mac);
+    if (res != PM3_SUCCESS) {
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     uint8_t apdu[9];
@@ -3623,8 +3769,12 @@ static int CmdHFFmcosUnblock(const char *Cmd) {
 
     // APP UNBLOCK: CLA=84 INS=18 P1=00 P2=00
     uint8_t mac[4] = {0};
-    if (!fmcos_packet_mac(0x84, 0x18, 0x00, 0x00, NULL, 0, chal, key, (size_t)key_len, mac)) {
-        return PM3_EMALLOC;
+    res = fmcos_packet_mac(0x84, 0x18, 0x00, 0x00, NULL, 0, chal, key, (size_t)key_len, mac);
+    if (res != PM3_SUCCESS) {
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     uint8_t apdu[9];
@@ -3844,8 +3994,12 @@ static int CmdHFFmcosTidSetCard(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    if (fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len) != PM3_SUCCESS) {
-        return PM3_ESOFT;
+    int res = fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len);
+    if (res != PM3_SUCCESS) {
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     if (resp_len < 2) {
@@ -3897,8 +4051,12 @@ static int CmdHFFmcosTidSetUID(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    if (fmcos_send_apdu(apdu, 5 + (size_t)uid_len, true, keep, resp, &resp_len) != PM3_SUCCESS) {
-        return PM3_ESOFT;
+    int res = fmcos_send_apdu(apdu, 5 + (size_t)uid_len, true, keep, resp, &resp_len);
+    if (res != PM3_SUCCESS) {
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     if (resp_len < 2) {
@@ -3956,8 +4114,12 @@ static int CmdHFFmcosTidSetAuth(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    if (fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len) != PM3_SUCCESS) {
-        return PM3_ESOFT;
+    int res = fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len);
+    if (res != PM3_SUCCESS) {
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     if (resp_len < 2) {
@@ -4000,8 +4162,12 @@ static int CmdHFFmcosTidErase(const char *Cmd) {
     uint8_t apdu[5] = {0xE0, 0xEC, 0x00, 0x00, 0x00};
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    if (fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len) != PM3_SUCCESS) {
-        return PM3_ESOFT;
+    int res = fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len);
+    if (res != PM3_SUCCESS) {
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
 
     if (resp_len < 2) {
@@ -4167,9 +4333,10 @@ static int CmdHFFmcosTidCreateDF(const char *Cmd) {
     int id_len = 0;
     CLIGetHexWithReturn(ctx, 1, id_buf, &id_len);
     int size;
-    if (!fmcos_parse_hex_int(arg_get_str(ctx, 2)->sval[0], &size)) {
+    int res = fmcos_parse_hex_int(arg_get_str(ctx, 2)->sval[0], &size);
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
     }
     uint8_t sfi_buf[1] = {0};
     int sfi_len = 0;
@@ -4206,8 +4373,12 @@ static int CmdHFFmcosTidCreateDF(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    if (fmcos_send_apdu(apdu, 14 + (size_t)name_len, true, keep, resp, &resp_len) != PM3_SUCCESS) {
-        return PM3_ESOFT;
+    res = fmcos_send_apdu(apdu, 14 + (size_t)name_len, true, keep, resp, &resp_len);
+    if (res != PM3_SUCCESS) {
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
     if (resp_len < 2) {
         if (!keep) {
@@ -4257,9 +4428,10 @@ static int CmdHFFmcosTidCreateBin(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int ftype = 0;
-    if (CLIGetOptionList(arg_get_str(ctx, 1), g_fmcos_tid_create_opts, &ftype)) {
+    int res = CLIGetOptionList(arg_get_str(ctx, 1), g_fmcos_tid_create_opts, &ftype);
+    if (res != PM3_SUCCESS) {
         CLIParserFree(ctx);
-        return PM3_EINVARG;
+        return res;
     }
     bool is_keyfile = (ftype == 1);
 
@@ -4268,9 +4440,10 @@ static int CmdHFFmcosTidCreateBin(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 2, id_buf, &id_len);
     int size = 0;
     if (arg_get_str(ctx, 3)->count > 0) {
-        if (!fmcos_parse_hex_int(arg_get_str(ctx, 3)->sval[0], &size)) {
+        res = fmcos_parse_hex_int(arg_get_str(ctx, 3)->sval[0], &size);
+        if (res != PM3_SUCCESS) {
             CLIParserFree(ctx);
-            return PM3_EINVARG;
+            return res;
         }
     }
     uint8_t sfi_buf[1] = {0};
@@ -4325,8 +4498,12 @@ static int CmdHFFmcosTidCreateBin(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    if (fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len) != PM3_SUCCESS) {
-        return PM3_ESOFT;
+    res = fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len);
+    if (res != PM3_SUCCESS) {
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
     if (resp_len < 2) {
         if (!keep) {
@@ -4424,8 +4601,12 @@ static int CmdHFFmcosTidCreateRec(const char *Cmd) {
 
     uint8_t resp[APDU_RES_LEN] = {0};
     int resp_len = 0;
-    if (fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len) != PM3_SUCCESS) {
-        return PM3_ESOFT;
+    int res = fmcos_send_apdu(apdu, sizeof(apdu), true, keep, resp, &resp_len);
+    if (res != PM3_SUCCESS) {
+        if (!keep) {
+            DropField();
+        }
+        return res;
     }
     if (resp_len < 2) {
         if (!keep) {
