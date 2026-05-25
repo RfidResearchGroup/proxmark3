@@ -672,7 +672,20 @@ static int CmdHFFmcosInfo(const char *Cmd) {
             size_t dfname_len = 0;
             const uint8_t *dfname = fmcos_tlv_find(outer, outer_len, 0x84, &dfname_len);
             if (dfname != NULL) {
-                PrintAndLogEx(INFO, "DF Name (84): %s", sprint_hex(dfname, dfname_len));
+                bool name_is_ascii = true;
+                for (size_t i = 0; i < dfname_len; i++) {
+                    if (dfname[i] < 0x20 || dfname[i] > 0x7E) {
+                        name_is_ascii = false;
+                        break;
+                    }
+                }
+                if (name_is_ascii) {
+                    PrintAndLogEx(INFO, "DF Name (84): %s ( " _GREEN_("%.*s") " )",
+                                  sprint_hex(dfname, dfname_len),
+                                  (int)dfname_len, (const char *)dfname);
+                } else {
+                    PrintAndLogEx(INFO, "DF Name (84): %s", sprint_hex(dfname, dfname_len));
+                }
             }
 
             size_t prop_len = 0;
@@ -3913,9 +3926,9 @@ static const uint8_t g_fmcos_tid_mf_name[] = {
 
 static int CmdHFFmcosTidSetCard(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos tid setcard",
+    CLIParserInit(&ctx, "hf fmcos tidsetcard",
                   "Send the TID SET CARD configuration APDU (fixed 39-byte payload).",
-                  "hf fmcos tid setcard");
+                  "hf fmcos tidsetcard");
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("k", "keep", "keep field ON after command"),
@@ -3956,10 +3969,10 @@ static int CmdHFFmcosTidSetCard(const char *Cmd) {
 
 static int CmdHFFmcosTidSetUID(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos tid setuid",
+    CLIParserInit(&ctx, "hf fmcos tidsetuid",
                   "Program the TID card UID (4-7 bytes).",
-                  "hf fmcos tid setuid --uid 13371337\n"
-                  "hf fmcos tid setuid --uid 0102030405060708");
+                  "hf fmcos tidsetuid --uid 13371337\n"
+                  "hf fmcos tidsetuid --uid 0102030405060708");
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "uid", "<hex>", "UID bytes (4-7 bytes)"),
@@ -4009,11 +4022,11 @@ static int CmdHFFmcosTidSetUID(const char *Cmd) {
 
 static int CmdHFFmcosTidSetAuth(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos tid setauth",
+    CLIParserInit(&ctx, "hf fmcos tidsetauth",
                   "Write the TID internal authentication key and set the lock state.\n"
                   "Lock byte: 0xAA = locked (permanent), 0x55 = unlocked (default).",
-                  "hf fmcos tid setauth --key 1122334455667788\n"
-                  "hf fmcos tid setauth --key 1122334455667788 --lock");
+                  "hf fmcos tidsetauth --key 1122334455667788\n"
+                  "hf fmcos tidsetauth --key 1122334455667788 --lock");
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "key",  "<hex>", "internal auth key (8 bytes)"),
@@ -4069,9 +4082,9 @@ static int CmdHFFmcosTidSetAuth(const char *Cmd) {
 
 static int CmdHFFmcosTidErase(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos tid erase",
+    CLIParserInit(&ctx, "hf fmcos tiderase",
                   "Erase the TID card file system (CLA=E0 INS=EC -- irreversible).",
-                  "hf fmcos tid erase");
+                  "hf fmcos tiderase");
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("k", "keep", "keep field ON after command"),
@@ -4112,12 +4125,12 @@ static int CmdHFFmcosTidErase(const char *Cmd) {
 
 static int CmdHFFmcosTidProvision(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos tid provision",
+    CLIParserInit(&ctx, "hf fmcos tidprovision",
                   "Full TID card provisioning sequence:\n"
                   "  SET CARD -> SET UID -> SET INTERNAL AUTH -> ERASE\n"
                   "  -> SELECT MF -> CREATE MF (3F00, 1PAY.SYS.DDF01) -> SELECT MF -> CREATE KEYFILE",
-                  "hf fmcos tid provision --uid 13371337 --key 1122334455667788\n"
-                  "hf fmcos tid provision --uid 13371337 --key 1122334455667788 --lock");
+                  "hf fmcos tidprovision --uid 13371337 --key 1122334455667788\n"
+                  "hf fmcos tidprovision --uid 13371337 --key 1122334455667788 --lock");
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "uid",  "<hex>", "UID bytes (4-7 bytes)"),
@@ -4235,10 +4248,10 @@ tid_provision_fail:
 
 static int CmdHFFmcosTidCreateDF(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos tid createdf",
+    CLIParserInit(&ctx, "hf fmcos tidcreatedf",
                   "CREATE sub-DF using TID format (P1=01, FID in data).\n"
                   "Note: TID CREATE DF has a different layout from standard 'hf fmcos create dir'.",
-                  "hf fmcos tid createdf --id 3f01 --size 0f00 --sfi 96 --name 44444630 31");
+                  "hf fmcos tidcreatedf --id 3f01 --size 0f00 --sfi 96 --name 44444630 31");
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "id",   "<4hex>", "2-byte file ID"),
@@ -4322,13 +4335,13 @@ static const CLIParserOption g_fmcos_tid_create_opts[] = {
 
 static int CmdHFFmcosTidCreateBin(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos tid createbin",
+    CLIParserInit(&ctx, "hf fmcos tidcreatebin",
                   "CREATE binary EF or KEYFILE using TID format (P1=02, FID in data, fixed Lc=11).\n"
                   "Use --type keyfile to create the fixed TID keyfile in the currently selected DF.\n"
                   "Note: TID CREATE EF has a different layout from standard 'hf fmcos create file'.",
-                  "hf fmcos tid createbin --id 0001 --size 0100 --sfi 01\n"
-                  "hf fmcos tid createbin --id 0002 --size 0040 --sfi 02 --rperm 20 --wperm f0\n"
-                  "hf fmcos tid createbin --type keyfile");
+                  "hf fmcos tidcreatebin --id 0001 --size 0100 --sfi 01\n"
+                  "hf fmcos tidcreatebin --id 0002 --size 0040 --sfi 02 --rperm 20 --wperm f0\n"
+                  "hf fmcos tidcreatebin --type keyfile");
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "type",  "<type>", "file type: bin (default) or keyfile"),
@@ -4435,11 +4448,11 @@ static int CmdHFFmcosTidCreateBin(const char *Cmd) {
 
 static int CmdHFFmcosTidCreateRec(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf fmcos tid createrec",
+    CLIParserInit(&ctx, "hf fmcos tidcreaterec",
                   "CREATE fixed-length record EF using TID format (P1=02, subtype=01, FID in data, fixed Lc=11).\n"
                   "Note: TID CREATE EF has a different layout from standard 'hf fmcos create file'.",
-                  "hf fmcos tid createrec --id 0003 --count 04 --reclen 08 --sfi 03\n"
-                  "hf fmcos tid createrec --id 0003 --count 04 --reclen 10 --sfi 03 --rperm 20 --wperm f0");
+                  "hf fmcos tidcreaterec --id 0003 --count 04 --reclen 08 --sfi 03\n"
+                  "hf fmcos tidcreaterec --id 0003 --count 04 --reclen 10 --sfi 03 --rperm 20 --wperm f0");
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "id",     "<4hex>", "2-byte file ID"),
@@ -4532,33 +4545,6 @@ static int CmdHFFmcosTidCreateRec(const char *Cmd) {
     return (sw1 == 0x90 && sw2 == 0x00) ? PM3_SUCCESS : PM3_ESOFT;
 }
 
-static int CmdHFFmcosTidHelp(const char *Cmd);
-
-static command_t TidCommandTable[] = {
-    {"help",      CmdHFFmcosTidHelp,      AlwaysAvailable, "This help"},
-    {"setcard",   CmdHFFmcosTidSetCard,   IfPm3Iso14443a,  "SET CARD configuration block"},
-    {"setuid",    CmdHFFmcosTidSetUID,    IfPm3Iso14443a,  "SET UID"},
-    {"setauth",   CmdHFFmcosTidSetAuth,   IfPm3Iso14443a,  "SET INTERNAL AUTH key"},
-    {"erase",     CmdHFFmcosTidErase,     IfPm3Iso14443a,  "ERASE card file system"},
-    {"provision", CmdHFFmcosTidProvision, IfPm3Iso14443a,  "Full provisioning sequence"},
-    {"--------",  CmdHFFmcosTidHelp,      AlwaysAvailable, "--------- " _CYAN_("File creation") " ----------"},
-    {"createdf",  CmdHFFmcosTidCreateDF,  IfPm3Iso14443a,  "CREATE sub-DF (TID format)"},
-    {"createbin", CmdHFFmcosTidCreateBin, IfPm3Iso14443a,  "CREATE binary EF (TID format)"},
-    {"createrec", CmdHFFmcosTidCreateRec, IfPm3Iso14443a,  "CREATE record EF (TID format)"},
-    {NULL, NULL, NULL, NULL}
-};
-
-static int CmdHFFmcosTidHelp(const char *Cmd) {
-    (void)Cmd;
-    CmdsHelp(TidCommandTable);
-    return PM3_SUCCESS;
-}
-
-static int CmdHFFmcosTid(const char *Cmd) {
-    clearCommandBuffer();
-    return CmdsParse(TidCommandTable, Cmd);
-}
-
 // ---------------------------------------------------------------------------
 // Top-level command table
 // ---------------------------------------------------------------------------
@@ -4588,8 +4574,16 @@ static command_t CommandTable[] = {
     {"history",   CmdHFFmcosHistory,  IfPm3Iso14443a,  "READ transaction history from loop EF"},
     {"block",     CmdHFFmcosBlock,    IfPm3Iso14443a,  "BLOCK card or application"},
     {"unblock",   CmdHFFmcosUnblock,  IfPm3Iso14443a,  "UNBLOCK application"},
-    {"--------",  CmdHelp,            AlwaysAvailable, "--------- " _CYAN_("TID provisioning") " ----------"},
-    {"tid",       CmdHFFmcosTid,      IfPm3Iso14443a,  "{ TID card provisioning }"},
+    {"--------",      CmdHelp,                AlwaysAvailable, "--------- " _CYAN_("TID provisioning") " ----------"},
+    {"tidsetcard",   CmdHFFmcosTidSetCard,   IfPm3Iso14443a,  "SET CARD configuration block"},
+    {"tidsetuid",    CmdHFFmcosTidSetUID,    IfPm3Iso14443a,  "SET UID"},
+    {"tidsetauth",   CmdHFFmcosTidSetAuth,   IfPm3Iso14443a,  "SET INTERNAL AUTH key"},
+    {"tiderase",     CmdHFFmcosTidErase,     IfPm3Iso14443a,  "ERASE TID card file system"},
+    {"tidprovision", CmdHFFmcosTidProvision, IfPm3Iso14443a,  "Full TID provisioning sequence"},
+    {"--------",      CmdHelp,                AlwaysAvailable, "--------- " _CYAN_("TID file creation") " ---------"},
+    {"tidcreatedf",  CmdHFFmcosTidCreateDF,  IfPm3Iso14443a,  "CREATE sub-DF (TID format)"},
+    {"tidcreatebin", CmdHFFmcosTidCreateBin, IfPm3Iso14443a,  "CREATE binary EF (TID format)"},
+    {"tidcreaterec", CmdHFFmcosTidCreateRec, IfPm3Iso14443a,  "CREATE record EF (TID format)"},
     {NULL, NULL, NULL, NULL}
 };
 
