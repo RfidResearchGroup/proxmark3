@@ -142,10 +142,84 @@ hf fmcos create file --id 0002 --type wallet --size 0208 --rperm f0 --wperm 00 -
 | `--id <hex>` | 2-byte file ID |
 | `--type <type>` | `bin` (0x28), `fix` (0x2A), `var` (0x2C), `loop` (0x2E), `wallet` (0x2F) |
 | `--size <hex>` | File size in bytes (hex, e.g. `0208` = 520) |
-| `--rperm <hex>` | Read/usage-rights byte; for wallet type this is the single usage rights byte |
-| `--wperm <hex>` | Write permission byte; ignored for wallet type (always sent as 0x00) |
-| `--access <hex>` | Access-rights byte; for wallet type this is the low byte of the linked loop EF's file ID |
-| `--prot <mode>` | Line-protection mode: `none` (default), `mac`, `enc` (MAC+encrypt) |
+| `--rperm <hex>` | Read permission byte; for wallet type this is the usage-rights byte controlling financial operations |
+| `--wperm <hex>` | Write permission byte; for wallet type always sent as `0x00` (balance is managed by financial APDUs only) |
+| `--access <hex>` | Line-protection control byte for normal EFs; for wallet type this is the low byte of the linked loop EF's file ID |
+| `--prot <mode>` | Line-protection mode: `none` (default), `mac` (append MAC), `enc` (encrypt + MAC) |
+
+**Permission byte encoding (`--rperm` and `--wperm`):**
+
+FMCOS maintains a 4-bit security state register (0–F) per directory, reset to 0 on power-up or DF selection, and advanced by a
+successful PIN verify or external authenticate. Each permission byte is a single hex byte `XY`:
+
+| High nibble X | Low nibble Y | Condition for the operation to be allowed |
+|:---:|:---:|---|
+| `0` | `Y` | MF security state ≥ Y (uses **MF** register, not current DF) |
+| `X` (1–F) | `Y` | Current DF security state ≥ Y **and** ≤ X |
+| `X` | `Y` where X = Y | Current DF security state must equal X exactly |
+| `X` | `Y` where X < Y | **Never** allowed (impossible condition) |
+
+Common values:
+
+| Value | Meaning |
+|-------|---------|
+| `f0` | Open — always allowed (any state 0–F satisfies the range) |
+| `f1` | Requires DF state ≥ 1 (at least one successful PIN/ext-auth in this DF) |
+| `ff` | Requires DF state = F (15) — highest external-authenticate level only |
+| `53` | Requires DF state in [3, 5] |
+| `ef` | **Never** allowed (E < F — impossible) |
+
+**`--access` byte:**
+
+The meaning differs by file type.
+
+*Normal EFs (bin, fix, var, loop)* — BYTE7 is a line-protection control byte:
+
+| Bit 7 | Bits 6–4 | Bits 3–2 | Bits 1–0 |
+|:---:|:---:|:---:|:---:|
+| Read enforcement | Reserved (always `111`) | Read key ID | Write key ID |
+
+- **Bit 7 = 1**: plain (unprotected) reads are accepted — use with `--prot none`
+- **Bit 7 = 0**: reads *must* carry line protection — use with `--prot mac` or `--prot enc`
+- **Bits 3–2** select which line-protection key in the keyfile is used for read operations
+- **Bits 1–0** select which key is used for write operations
+
+Key ID encoding (same for both read and write selectors):
+
+| Bits | Key ID |
+|:---:|:---:|
+| `11` | 00 |
+| `10` | 01 |
+| `01` | 02 |
+| `00` | 03 |
+
+Common `--access` values for normal EFs:
+
+| `--access` | Binary | Bit 7 | Read key | Write key | Typical use |
+|:---:|:---:|:---:|:---:|:---:|---|
+| `ff` | `1111 1111` | 1 | ID 00 | ID 00 | Unprotected file (`--prot none`) |
+| `7f` | `0111 1111` | 0 | ID 00 | ID 00 | Line-protected file (`--prot mac` or `--prot enc`) |
+| `7e` | `0111 1110` | 0 | ID 00 | ID 01 | Protected, separate keys for read and write |
+
+*Wallet EF (type `wallet`)* — `--access` is the low byte of the linked loop EF's file ID (the transaction-log file).
+For example, `--access 18` links the wallet to loop file `0x0018`.
+
+**`--prot` (line-protection mode):**
+
+A protection mask is ORed into the file type byte (BYTE1 of the CREATE FILE data) at file creation time.
+Thereafter, every read or write to that file must follow the declared protection level.
+
+| Mode | Mask | File type byte effect | Behavior |
+|------|:---:|:---:|---|
+| `none` | `0x00` | unchanged (e.g. `0x28` for bin) | Plain reads and writes; no cryptographic overhead |
+| `mac` | `0x80` | bit 7 set (e.g. `0x28` → `0xA8`) | Each WRITE must append a 4-byte MAC; READ response includes a 4-byte MAC |
+| `enc` | `0xC0` | bits 7–6 set (e.g. `0x28` → `0xE8`) | WRITE data is DES/3DES-encrypted **and** followed by a 4-byte MAC; READ response is encrypted with a MAC |
+
+The MAC is computed over the full APDU (CLA, INS, P1, P2, Lc, data payload) using a random 4-byte nonce
+from GET CHALLENGE as the CBC IV, with the keyfile's line-protection key (type `36`).  The CLA byte must
+have its low nibble set to `4` (`0x04` plain, `0x84` for ISO-secure) when line protection is active.
+
+> **Not applicable** to wallet (`0x2F`) — financial file access is controlled entirely by the PBOC transaction APDUs, not line protection.
 
 **File type encodings:**
 
@@ -171,7 +245,34 @@ hf fmcos create keyfile --id 0000 --space 200 --dfsid 95 --perm f0
 | `--id <hex>` | 2-byte file ID for the keyfile (commonly `0000`) |
 | `--space <hex>` | Space to reserve for key storage (bytes, hex, e.g. `200` = 512) |
 | `--dfsid <hex>` | Parent DF SID (must match the DF's `--appid` value) |
-| `--perm <hex>` | Key access permission byte |
+| `--perm <hex>` | Key addition permission byte — security condition required to add a new key to this keyfile via WRITE KEY |
+
+**Permission byte encoding (`--perm`):**
+
+The permission byte is a single hex byte `XY` that defines the required security state before a WRITE KEY (add) operation
+is permitted.  FMCOS maintains a 4-bit security state register (0–F) per directory; the register is set to 0 on reset or
+when selecting a DF, and advances when a PIN verify or external-authenticate succeeds.
+
+| High nibble X | Low nibble Y | Condition for WRITE KEY (add) to be allowed |
+|:---:|:---:|---|
+| `0` | `Y` | MF security state ≥ Y (uses **MF** register, not the current DF) |
+| `X` (1–F) | `Y` | Current DF security state ≥ Y **and** ≤ X |
+| `X` | `Y` where X = Y | Current DF security state must equal X exactly |
+| `X` | `Y` where X < Y | **Never** allowed (impossible condition — effectively locks the key file) |
+
+Common values:
+
+| `--perm` | Meaning |
+|----------|---------|
+| `f0` | Open — no authentication required; any state (0–F) satisfies ≥ 0 and ≤ F |
+| `f1` | Requires DF state ≥ 1 (at least one successful PIN/ext-auth in this DF) |
+| `ff` | Requires DF state = F (15) — typically the highest external-authenticate level |
+| `11` | Requires DF state = 1 exactly |
+| `53` | Requires DF state in [3, 5] |
+| `ef` | **Never** allowed (E < F → impossible) — effectively write-locks the keyfile |
+
+> **Note:** The `--perm` byte only governs *adding* new keys to the keyfile.  Each individual key record also carries
+> its own separate use-permission and change-permission bytes that are set when writing the key with `hf fmcos write key`.
 
 ---
 
