@@ -1254,22 +1254,27 @@ static int get_user_selection(size_t max_value, const char *prompt) {
     if (max_value <= 1) {
         return 0;  // Auto-select the only item
     }
-    
+
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "%s (1-%zu): ", prompt, max_value);
-    
+    PrintAndLogEx(NORMAL, "%s (1-%zu, 0 to cancel): ", prompt, max_value);
+
     int selection = 0;
     if (scanf(" %d", &selection) != 1) {
         PrintAndLogEx(FAILED, "Invalid input - not a number");
         return -1;
     }
-    
-    if (selection < 1 || selection > (int)max_value) {
-        PrintAndLogEx(FAILED, "Invalid selection - must be between 1 and %zu", max_value);
+
+    if (selection == 0) {
+        PrintAndLogEx(INFO, "Cancelled");
         return -1;
     }
-    
-    return selection - 1;  // Convert to zero-based index
+
+    if (selection < 1 || selection > (int)max_value) {
+        PrintAndLogEx(FAILED, "Invalid selection - must be between 0 and %zu", max_value);
+        return -1;
+    }
+
+    return selection - 1;
 }
 
 // Interactively filter the Xerox database and let the user pick a consumable entry
@@ -1379,6 +1384,30 @@ static int map_generator(const json_t *selected) {
     //
     //   const char *block_data = json_string_value(json_object_get(selected, "block0"));
     //   CmdHFXeroxWriteBlock(block_data);
+
+    iso14b_card_select_t card;
+    int status = xerox_select_card(&card, false);
+    if (status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Fuji/Xerox tag select failed");
+        return status;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, " UID..... %s", sprint_hex(card.uid, card.uidlen));
+    PrintAndLogEx(SUCCESS, " ATQB.... %s", sprint_hex(card.atqb, sizeof(card.atqb)));
+
+    uint8_t data[256 * XEROX_BLOCK_SIZE] = {0};
+    uint16_t blockno = 0;
+    for (; blockno < 0x100; blockno++) {
+
+        int res = read_xerox_block(&card, blockno, data + (blockno * XEROX_BLOCK_SIZE));
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Fuji/Xerox tag read failed");
+            break;
+        }
+
+        PrintAndLogEx(INPLACE, "blk %3d", blockno);
+    }
  
     PrintAndLogEx(WARNING, "Write not implemented yet (needs block mapping from JSON)");
  
