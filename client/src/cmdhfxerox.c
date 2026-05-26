@@ -1272,13 +1272,126 @@ static int get_user_selection(size_t max_value, const char *prompt) {
     return selection - 1;  // Convert to zero-based index
 }
 
-static int CmdHFXeroxMap(const char *Cmd) {
+// Interactively filter the Xerox database and let the user pick a consumable entry
+// filter_values: Array of 9 nullable filter strings: model, color, type, part, zone, contract, yield, iot, chip
+// return json_t* reference to selected consumable (caller must json_decref() it), or NULL on failure / user abort
+static json_t *map_selector(const char *filter_values[9]) {
+ 
+    json_t *db          = NULL;
+    json_t *matches     = NULL;
+    json_t *models      = NULL;
+    json_t *consumables = NULL;
+    json_t *result      = NULL;
+ 
+    db = load_xerox_database();
+    if (!db) return NULL;
+ 
+    matches = filter_xerox_database(db, filter_values);
+    if (!matches || json_array_size(matches) == 0) {
+        PrintAndLogEx(FAILED, "No consumables matched filters");
+        goto cleanup;
+    }
+ 
+    // Build unique model list
+    models = json_array();
+    if (!models) goto cleanup;
+ 
+    size_t i;
+    json_t *entry;
+ 
+    json_array_foreach(matches, i, entry) {
+        const char *model = json_string_value(json_object_get(entry, "printer_model"));
+        if (!model) continue;
+ 
+        bool exists = false;
+        size_t k;
+        for (k = 0; k < json_array_size(models); k++) {
+            const char *m = json_string_value(json_array_get(models, k));
+            if (m && strcmp(m, model) == 0) {
+                exists = true;
+                break;
+            }
+        }
+ 
+        if (!exists) {
+            json_array_append_new(models, json_string(model));
+        }
+    }
+ 
+    PrintAndLogEx(INFO, "Matching printer models:");
+    models_print(models);
+ 
+    int model_idx = get_user_selection(json_array_size(models), "Select model");
+    if (model_idx < 0) goto cleanup;
+ 
+    const char *selected_model = json_string_value(json_array_get(models, model_idx));
+    if (!selected_model) goto cleanup;
+ 
+    // Filter consumables for the chosen model
+    consumables = json_array();
+    if (!consumables) goto cleanup;
+ 
+    json_array_foreach(matches, i, entry) {
+        const char *m = json_string_value(json_object_get(entry, "printer_model"));
+        if (m && strcmp(m, selected_model) == 0) {
+            json_array_append(consumables, entry);
+        }
+    }
+ 
+    PrintAndLogEx(INFO, "Consumables for %s:", selected_model);
+    consumables_print(consumables);
+ 
+    int cons_idx = get_user_selection(json_array_size(consumables), "Select consumable");
+    if (cons_idx < 0) goto cleanup;
+ 
+    json_t *candidate = json_array_get(consumables, cons_idx);
+    if (!candidate) goto cleanup;
+ 
+    PrintAndLogEx(INFO, "Selected consumable:");
+    consumable_print(candidate);
+ 
+    // Confirm before handing off to the generator
+    PrintAndLogEx(INFO, "Press 'y' to continue writing, anything else to abort");
+ 
+    char confirm_char = 0;
+    if (scanf(" %c", &confirm_char) != 1 || confirm_char != 'y') {
+        PrintAndLogEx(INFO, "Aborted");
+        goto cleanup;
+    }
+ 
+    // Increment refcount so the entry survives the consumables array being freed
+    result = json_incref(candidate);
+ 
+cleanup:
+    if (consumables) json_decref(consumables);
+    if (models)      json_decref(models);
+    if (matches)     json_decref(matches);
+    if (db)          json_decref(db);
+    return result;
+}
 
+static int map_generator(const json_t *selected) {
+ 
+    if (!selected) return PM3_EINVARG;
+ 
+    // TODO: read block mapping from the JSON entry and write each block to the
+    //       tag via the appropriate HF Xerox write primitive, e.g.:
+    //
+    //   const char *block_data = json_string_value(json_object_get(selected, "block0"));
+    //   CmdHFXeroxWriteBlock(block_data);
+ 
+    PrintAndLogEx(WARNING, "Write not implemented yet (needs block mapping from JSON)");
+ 
+    return PM3_SUCCESS;
+}
+
+static int CmdHFXeroxMap(const char *Cmd) {
+ 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf xerox remap",
                   "Remap a Xerox tag by selecting a consumable from the database\n",
                   "hf xerox remap -m 4110 -t toner");
-
+ 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("m",   "model",   "<str>", "Printer model substring (e.g. \"C60\", \"4110\")"),
@@ -1292,10 +1405,9 @@ static int CmdHFXeroxMap(const char *Cmd) {
         arg_str0(NULL,  "chip",    "<str>", "Chip type filter (e.g. \"HFD1\")"),
         arg_param_end
     };
-
+ 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-
-    // Safe filters
+ 
     char model_filter[64]    = {0};
     char color_filter[64]    = {0};
     char type_filter[64]     = {0};
@@ -1305,9 +1417,9 @@ static int CmdHFXeroxMap(const char *Cmd) {
     char yield_filter[64]    = {0};
     char iot_filter[64]      = {0};
     char chip_filter[64]     = {0};
-
+ 
     struct arg_str *arg = NULL;
-
+ 
     #define SAFE_COPY(i, dst) do { \
         arg = arg_get_str(ctx, i); \
         if (arg && arg->count) { \
@@ -1315,7 +1427,7 @@ static int CmdHFXeroxMap(const char *Cmd) {
             CLIParamStrToBuf(arg, (uint8_t *)dst, sizeof(dst) - 1, &_len); \
         } \
     } while(0)
-
+ 
     SAFE_COPY(1, model_filter);
     SAFE_COPY(2, color_filter);
     SAFE_COPY(3, type_filter);
@@ -1325,9 +1437,9 @@ static int CmdHFXeroxMap(const char *Cmd) {
     SAFE_COPY(7, yield_filter);
     SAFE_COPY(8, iot_filter);
     SAFE_COPY(9, chip_filter);
-
+ 
     CLIParserFree(ctx);
-
+ 
     const char *filter_values[9] = {
         model_filter[0]    ? model_filter    : NULL,
         color_filter[0]    ? color_filter    : NULL,
@@ -1339,113 +1451,12 @@ static int CmdHFXeroxMap(const char *Cmd) {
         iot_filter[0]      ? iot_filter      : NULL,
         chip_filter[0]     ? chip_filter     : NULL,
     };
-
-    json_t *db = NULL;
-    json_t *matches = NULL;
-    json_t *models = NULL;
-    json_t *consumables = NULL;
-
-    int retval = PM3_SUCCESS;
-
-    db = load_xerox_database();
-    if (!db) return PM3_EFILE;
-
-    matches = filter_xerox_database(db, filter_values);
-    if (!matches || json_array_size(matches) == 0) {
-        PrintAndLogEx(FAILED, "No consumables matched filters");
-        retval = PM3_EINVARG;
-        goto cleanup;
-    }
-
-    // Build model list (unique)
-    models = json_array();
-    if (!models) goto cleanup;
-
-    size_t i;
-    json_t *entry;
-
-    json_array_foreach(matches, i, entry) {
-        const char *model = json_string_value(json_object_get(entry, "printer_model"));
-        if (!model) continue;
-
-        bool exists = false;
-
-        size_t k;
-        for (k = 0; k < json_array_size(models); k++) {
-            const char *m = json_string_value(json_array_get(models, k));
-            if (m && strcmp(m, model) == 0) {
-                exists = true;
-                break;
-            }
-        }
-
-        if (!exists) {
-            json_array_append_new(models, json_string(model));
-        }
-    }
-
-    PrintAndLogEx(INFO, "Matching printer models:");
-    models_print(models);
-
-    int model_idx = get_user_selection(json_array_size(models), "Select model");
-    if (model_idx < 0) {
-        retval = PM3_EINVARG;
-        goto cleanup;
-    }
-
-    const char *selected_model = json_string_value(json_array_get(models, model_idx));
-
-    if (!selected_model) {
-        retval = PM3_EINVARG;
-        goto cleanup;
-    }
-
-    // Filter consumables for model
-    consumables = json_array();
-    if (!consumables) goto cleanup;
-
-    json_array_foreach(matches, i, entry) {
-        const char *m = json_string_value(json_object_get(entry, "printer_model"));
-        if (m && strcmp(m, selected_model) == 0) {
-            json_array_append(consumables, entry);
-        }
-    }
-
-    PrintAndLogEx(INFO, "Consumables for %s:", selected_model);
-    consumables_print(consumables);
-
-    int cons_idx = get_user_selection(json_array_size(consumables), "Select consumable");
-    if (cons_idx < 0) {
-        retval = PM3_EINVARG;
-        goto cleanup;
-    }
-
-    json_t *selected = json_array_get(consumables, cons_idx);
-    if (!selected) {
-        retval = PM3_EINVARG;
-        goto cleanup;
-    }
-
-    PrintAndLogEx(INFO, "Selected consumable:");
-    consumable_print(selected);
-
-    // Confirm write
-    PrintAndLogEx(INFO, "Press 'y' to continue writing, anything else to abort");
-
-    char confirm_char = 0;
-    if (scanf(" %c", &confirm_char) != 1 || confirm_char != 'y') {
-        PrintAndLogEx(INFO, "Aborted");
-        goto cleanup;
-    }
-
-    PrintAndLogEx(WARNING, "Write not implemented yet (needs block mapping from JSON)");
-
-cleanup:
-    if (consumables) json_decref(consumables);
-    if (models) json_decref(models);
-    if (matches) json_decref(matches);
-    if (db) json_decref(db);
-
+ 
+    json_t *selected = map_selector(filter_values);
+    if (!selected) return PM3_EINVARG;
+ 
+    int retval = map_generator(selected);
+    json_decref(selected);
     return retval;
 }
 
