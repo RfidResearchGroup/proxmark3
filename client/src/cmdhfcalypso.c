@@ -2197,6 +2197,18 @@ static bool calypso_dump_candidate_add(calypso_dump_candidate_list_t *list, uint
     return true;
 }
 
+static int calypso_dump_candidate_compare(const void *a, const void *b) {
+    const calypso_dump_lid_candidate_t *left = a;
+    const calypso_dump_lid_candidate_t *right = b;
+    if (left->lid < right->lid) {
+        return -1;
+    }
+    if (left->lid > right->lid) {
+        return 1;
+    }
+    return 0;
+}
+
 static size_t calypso_dump_walk_effective_path(const calypso_dump_walk_context_t *ctx, uint16_t *path, size_t path_max) {
     if (ctx == NULL || path == NULL || path_max == 0) {
         return 0;
@@ -3377,6 +3389,9 @@ static int calypso_dump_process_context(const calypso_select_result_t *selected,
         if (calypso_dump_candidate_add(&candidates, c0_candidates.items[i].lid, CALYPSO_DUMP_SOURCE_EFLIST) == false) {
             return PM3_EMALLOC;
         }
+    }
+    if (candidates.count > 1) {
+        qsort(candidates.items, candidates.count, sizeof(candidates.items[0]), calypso_dump_candidate_compare);
     }
 
     if (verbose) {
