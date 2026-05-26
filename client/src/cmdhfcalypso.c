@@ -3343,7 +3343,7 @@ static int calypso_dump_process_context(const calypso_select_result_t *selected,
 
     if (ctx.depth == 0 || ctx.is_mf) {
         calypso_dump_node_t root_raw = {0};
-        bool selected_is_root = ctx.from_root == false || (selected->has_df_lid && selected->df_lid == 0x3F00);
+        bool selected_is_root = ctx.from_root == false || ctx.is_mf || (selected->has_df_lid && selected->df_lid == 0x3F00);
         if (selected_is_root) {
             calypso_dump_node_init_from_selected(&root_raw, selected);
         }
@@ -3654,6 +3654,7 @@ static int calypso_dump_selected_df(const calypso_select_result_t *selected, uin
     uint8_t selected_fcp[APDU_RES_LEN] = {0};
     size_t selected_fcp_len = 0;
     uint16_t selected_fcp_sw = 0;
+    bool selected_lid_from_mf_select = false;
     int res = calypso_get_data_object(0x0062, selected_fcp, sizeof(selected_fcp), &selected_fcp_len, &selected_fcp_sw);
     if (res != PM3_SUCCESS) {
         return res;
@@ -3665,19 +3666,42 @@ static int calypso_dump_selected_df(const calypso_select_result_t *selected, uin
         }
     }
     if (have_selected_lid == false) {
+        uint8_t selected_cur_fcp[APDU_RES_LEN] = {0};
         size_t selected_cur_fcp_len = 0;
         uint16_t selected_cur_fcp_sw = 0;
         bool has_current_lid = false;
-        res = calypso_select_current_file_fcp(verbose, NULL, 0, &selected_cur_fcp_len, &selected_cur_fcp_sw, &selected_lid, &has_current_lid);
+        res = calypso_select_current_file_fcp(verbose, selected_cur_fcp, sizeof(selected_cur_fcp), &selected_cur_fcp_len, &selected_cur_fcp_sw, &selected_lid, &has_current_lid);
         if (res != PM3_SUCCESS) {
             return res;
         }
         have_selected_lid = has_current_lid;
+        if (have_selected_lid == false) {
+            // Some cards return broken FCP LID fields; if selecting 3F00 returns the same FCP we already saw, treat it as MF.
+            uint8_t mf_response[APDU_RES_LEN] = {0};
+            size_t mf_response_len = 0;
+            uint16_t mf_sw = 0;
+            const uint16_t mf_path[] = {0x3F00};
+            res = calypso_select_file_path_then_id_fallback(mf_path, ARRAYLEN(mf_path), 0x3F00, mf_response, sizeof(mf_response), &mf_response_len, &mf_sw);
+            if (res != PM3_SUCCESS) {
+                return res;
+            }
+            uint16_t mf_lid = 0;
+            bool matches_previous_fcp = (calypso_data_is_fcp(selected_fcp, selected_fcp_len) && selected_fcp_len == mf_response_len && memcmp(selected_fcp, mf_response, selected_fcp_len) == 0) ||
+                                        (calypso_data_is_fcp(selected_cur_fcp, selected_cur_fcp_len) && selected_cur_fcp_len == mf_response_len && memcmp(selected_cur_fcp, mf_response, selected_cur_fcp_len) == 0);
+            if (calypso_select_sw_has_file(mf_sw) && calypso_data_is_fcp(mf_response, mf_response_len) &&
+                    (calypso_fcp_lid_with_hint(mf_response, mf_response_len, true, 0x3F00, &mf_lid) || matches_previous_fcp)) {
+                selected_lid = 0x3F00;
+                have_selected_lid = true;
+                selected_lid_from_mf_select = true;
+            }
+        }
     }
-    bool from_root = false;
-    res = calypso_dump_select_root_mode(selected, verbose, &from_root);
-    if (res != PM3_SUCCESS) {
-        return res;
+    bool from_root = selected_lid_from_mf_select;
+    if (from_root == false) {
+        res = calypso_dump_select_root_mode(selected, verbose, &from_root);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
     }
 
     calypso_dump_walk_context_t root = {0};
