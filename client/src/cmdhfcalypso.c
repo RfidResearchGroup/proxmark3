@@ -208,6 +208,17 @@ typedef struct {
     uint8_t sources;
 } calypso_dump_lid_candidate_t;
 
+typedef enum {
+    CALYPSO_DUMP_PRESET_KNOWN = 0,
+    CALYPSO_DUMP_PRESET_BRUTE,
+} calypso_dump_preset_t;
+
+static const CLIParserOption calypsoDumpPresetOpts[] = {
+    {CALYPSO_DUMP_PRESET_KNOWN, "known"},
+    {CALYPSO_DUMP_PRESET_BRUTE, "brute"},
+    {0, NULL},
+};
+
 typedef struct {
     calypso_dump_lid_candidate_t items[CALYPSO_DUMP_CANDIDATE_MAX];
     size_t count;
@@ -2197,6 +2208,18 @@ static bool calypso_dump_candidate_add(calypso_dump_candidate_list_t *list, uint
     return true;
 }
 
+static int calypso_dump_candidate_compare(const void *a, const void *b) {
+    const calypso_dump_lid_candidate_t *left = a;
+    const calypso_dump_lid_candidate_t *right = b;
+    if (left->lid < right->lid) {
+        return -1;
+    }
+    if (left->lid > right->lid) {
+        return 1;
+    }
+    return 0;
+}
+
 static size_t calypso_dump_walk_effective_path(const calypso_dump_walk_context_t *ctx, uint16_t *path, size_t path_max) {
     if (ctx == NULL || path == NULL || path_max == 0) {
         return 0;
@@ -3260,7 +3283,7 @@ static void calypso_dump_print_node(const calypso_dump_walk_context_t *ctx, cons
                   source);
 }
 
-static int calypso_dump_process_context(const calypso_select_result_t *selected, const calypso_dump_walk_context_t *base_ctx, uint16_t max_depth, bool brute, bool verbose, calypso_dump_json_context_t *dump) {
+static int calypso_dump_process_context(const calypso_select_result_t *selected, const calypso_dump_walk_context_t *base_ctx, uint16_t max_depth, calypso_dump_preset_t preset, bool verbose, calypso_dump_json_context_t *dump) {
     calypso_dump_walk_context_t ctx = *base_ctx;
     calypso_dump_resume_t context_resume = {selected, &ctx, verbose, CALYPSO_DUMP_RESUME_CONTEXT, 0};
     bool restore_base_needed = false;
@@ -3320,7 +3343,7 @@ static int calypso_dump_process_context(const calypso_select_result_t *selected,
 
     if (ctx.depth == 0 || ctx.is_mf) {
         calypso_dump_node_t root_raw = {0};
-        bool selected_is_root = ctx.from_root == false || (selected->has_df_lid && selected->df_lid == 0x3F00);
+        bool selected_is_root = ctx.from_root == false || ctx.is_mf || (selected->has_df_lid && selected->df_lid == 0x3F00);
         if (selected_is_root) {
             calypso_dump_node_init_from_selected(&root_raw, selected);
         }
@@ -3363,7 +3386,7 @@ static int calypso_dump_process_context(const calypso_select_result_t *selected,
     uint16_t inferred_parent = 0;
     bool have_inferred_parent = ctx.is_mf == false && ctx.from_root == false && ctx.path_len == 0 &&
                                 calypso_dump_infer_parent_from_c0(&c0_candidates, &inferred_parent);
-    if (brute && calypso_dump_add_brute_file_candidates(&candidates, &ctx, have_inferred_parent, inferred_parent) == false) {
+    if (preset == CALYPSO_DUMP_PRESET_BRUTE && calypso_dump_add_brute_file_candidates(&candidates, &ctx, have_inferred_parent, inferred_parent) == false) {
         return PM3_EMALLOC;
     }
     if (calypso_dump_add_known_candidates(&candidates, &ctx, have_inferred_parent, inferred_parent) == false) {
@@ -3377,6 +3400,9 @@ static int calypso_dump_process_context(const calypso_select_result_t *selected,
         if (calypso_dump_candidate_add(&candidates, c0_candidates.items[i].lid, CALYPSO_DUMP_SOURCE_EFLIST) == false) {
             return PM3_EMALLOC;
         }
+    }
+    if (candidates.count > 1) {
+        qsort(candidates.items, candidates.count, sizeof(candidates.items[0]), calypso_dump_candidate_compare);
     }
 
     if (verbose) {
@@ -3565,7 +3591,7 @@ static int calypso_dump_process_context(const calypso_select_result_t *selected,
                 child.lid = have_node_lid ? node_lid : 0;
                 child.has_seed_lid = false;
                 child.seed_lid = 0;
-                res = calypso_dump_process_context(selected, &child, max_depth, brute, verbose, dump);
+                res = calypso_dump_process_context(selected, &child, max_depth, preset, verbose, dump);
                 if (res != PM3_SUCCESS) {
                     goto done;
                 }
@@ -3620,7 +3646,7 @@ static int calypso_dump_select_root_mode(const calypso_select_result_t *selected
     return calypso_dump_reselect_base(selected, &aid_ctx, verbose);
 }
 
-static int calypso_dump_selected_df(const calypso_select_result_t *selected, uint16_t max_depth, bool brute, bool verbose, bool default_selection, calypso_dump_json_context_t *dump) {
+static int calypso_dump_selected_df(const calypso_select_result_t *selected, uint16_t max_depth, calypso_dump_preset_t preset, bool verbose, bool default_selection, calypso_dump_json_context_t *dump) {
     calypso_print_select_info_ex(selected, verbose, false);
 
     uint16_t selected_lid = 0;
@@ -3628,6 +3654,7 @@ static int calypso_dump_selected_df(const calypso_select_result_t *selected, uin
     uint8_t selected_fcp[APDU_RES_LEN] = {0};
     size_t selected_fcp_len = 0;
     uint16_t selected_fcp_sw = 0;
+    bool selected_lid_from_mf_select = false;
     int res = calypso_get_data_object(0x0062, selected_fcp, sizeof(selected_fcp), &selected_fcp_len, &selected_fcp_sw);
     if (res != PM3_SUCCESS) {
         return res;
@@ -3639,19 +3666,42 @@ static int calypso_dump_selected_df(const calypso_select_result_t *selected, uin
         }
     }
     if (have_selected_lid == false) {
+        uint8_t selected_cur_fcp[APDU_RES_LEN] = {0};
         size_t selected_cur_fcp_len = 0;
         uint16_t selected_cur_fcp_sw = 0;
         bool has_current_lid = false;
-        res = calypso_select_current_file_fcp(verbose, NULL, 0, &selected_cur_fcp_len, &selected_cur_fcp_sw, &selected_lid, &has_current_lid);
+        res = calypso_select_current_file_fcp(verbose, selected_cur_fcp, sizeof(selected_cur_fcp), &selected_cur_fcp_len, &selected_cur_fcp_sw, &selected_lid, &has_current_lid);
         if (res != PM3_SUCCESS) {
             return res;
         }
         have_selected_lid = has_current_lid;
+        if (have_selected_lid == false) {
+            // Some cards return broken FCP LID fields; if selecting 3F00 returns the same FCP we already saw, treat it as MF.
+            uint8_t mf_response[APDU_RES_LEN] = {0};
+            size_t mf_response_len = 0;
+            uint16_t mf_sw = 0;
+            const uint16_t mf_path[] = {0x3F00};
+            res = calypso_select_file_path_then_id_fallback(mf_path, ARRAYLEN(mf_path), 0x3F00, mf_response, sizeof(mf_response), &mf_response_len, &mf_sw);
+            if (res != PM3_SUCCESS) {
+                return res;
+            }
+            uint16_t mf_lid = 0;
+            bool matches_previous_fcp = (calypso_data_is_fcp(selected_fcp, selected_fcp_len) && selected_fcp_len == mf_response_len && memcmp(selected_fcp, mf_response, selected_fcp_len) == 0) ||
+                                        (calypso_data_is_fcp(selected_cur_fcp, selected_cur_fcp_len) && selected_cur_fcp_len == mf_response_len && memcmp(selected_cur_fcp, mf_response, selected_cur_fcp_len) == 0);
+            if (calypso_select_sw_has_file(mf_sw) && calypso_data_is_fcp(mf_response, mf_response_len) &&
+                    (calypso_fcp_lid_with_hint(mf_response, mf_response_len, true, 0x3F00, &mf_lid) || matches_previous_fcp)) {
+                selected_lid = 0x3F00;
+                have_selected_lid = true;
+                selected_lid_from_mf_select = true;
+            }
+        }
     }
-    bool from_root = false;
-    res = calypso_dump_select_root_mode(selected, verbose, &from_root);
-    if (res != PM3_SUCCESS) {
-        return res;
+    bool from_root = selected_lid_from_mf_select;
+    if (from_root == false) {
+        res = calypso_dump_select_root_mode(selected, verbose, &from_root);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
     }
 
     calypso_dump_walk_context_t root = {0};
@@ -3664,7 +3714,7 @@ static int calypso_dump_selected_df(const calypso_select_result_t *selected, uin
         root.has_seed_lid = true;
         root.seed_lid = selected_lid;
     }
-    return calypso_dump_process_context(selected, &root, max_depth, brute, verbose, dump);
+    return calypso_dump_process_context(selected, &root, max_depth, preset, verbose, dump);
 }
 
 static int calypso_dump_reactivate(calypso_rf_info_t *rf, bool verbose) {
@@ -4210,7 +4260,7 @@ static int calypso_dump_scan_applications(calypso_rf_info_t *rf, bool verbose, c
     return first_error;
 }
 
-static int calypso_dump_profile(calypso_dump_profile_t *dump_profile, calypso_rf_info_t *rf, uint16_t max_depth, bool brute, bool verbose, bool keep_field, json_t *profiles_json, calypso_dump_filename_context_t *filename_ctx, calypso_select_result_t *first_selected, bool *have_first_selected) {
+static int calypso_dump_profile(calypso_dump_profile_t *dump_profile, calypso_rf_info_t *rf, uint16_t max_depth, calypso_dump_preset_t preset, bool verbose, bool keep_field, json_t *profiles_json, calypso_dump_filename_context_t *filename_ctx, calypso_select_result_t *first_selected, bool *have_first_selected) {
     if (dump_profile == NULL || rf == NULL || profiles_json == NULL) {
         return PM3_EINVARG;
     }
@@ -4245,7 +4295,7 @@ static int calypso_dump_profile(calypso_dump_profile_t *dump_profile, calypso_rf
         .nodes = nodes,
         .profile = dump_profile,
     };
-    res = calypso_dump_selected_df(&walk_selected, max_depth, brute, verbose, root_default_selection, &dump);
+    res = calypso_dump_selected_df(&walk_selected, max_depth, preset, verbose, root_default_selection, &dump);
 
     json_array_append_new(profiles_json, profile);
     return res;
@@ -4256,14 +4306,14 @@ static int CmdHFCalypsoDump(const char *Cmd) {
     CLIParserInit(&ctx, "hf calypso dump",
                   "Dump Calypso nodes by first scanning available application profiles",
                   "hf calypso dump\n"
-                  "hf calypso dump --brute\n"
+                  "hf calypso dump --preset brute\n"
                   "hf calypso dump -f my-calypso-dump\n"
                   "hf calypso dump --ns -v");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "Specify a filename for JSON dump file"),
-        arg_lit0(NULL, "brute", "bruteforce LID candidates"),
+        arg_str0(NULL, "preset", "<known|brute>", "candidate preset (`known` default, `brute` also bruteforces LID candidates)"),
         arg_lit0(NULL, "ns", "no save to file"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
@@ -4274,7 +4324,12 @@ static int CmdHFCalypsoDump(const char *Cmd) {
     int fnlen = 0;
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    bool brute = arg_get_lit(ctx, 2);
+    int preset_arg = CALYPSO_DUMP_PRESET_KNOWN;
+    if (CLIGetOptionList(arg_get_str(ctx, 2), calypsoDumpPresetOpts, &preset_arg)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    calypso_dump_preset_t preset = (calypso_dump_preset_t)preset_arg;
     bool no_save = arg_get_lit(ctx, 3);
     bool verbose = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
@@ -4318,7 +4373,7 @@ static int CmdHFCalypsoDump(const char *Cmd) {
 
     for (size_t i = 0; i < dump_profiles.count; i++) {
         bool keep_field = dump_profiles.count == 1 && calypso_dump_profile_default_selected(&dump_profiles.items[i]) == false;
-        first_error = calypso_dump_profile(&dump_profiles.items[i], &rf, max_depth, brute, verbose, keep_field, profiles, &filename_ctx, &first_selected, &have_first_selected);
+        first_error = calypso_dump_profile(&dump_profiles.items[i], &rf, max_depth, preset, verbose, keep_field, profiles, &filename_ctx, &first_selected, &have_first_selected);
         if (first_error != PM3_SUCCESS) {
             break;
         }
