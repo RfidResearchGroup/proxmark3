@@ -1,5 +1,14 @@
 [
     {
+        "AID": "0000000000000001",
+        "Vendor": "",
+        "Country": "",
+        "Name": "Livin' card",
+        "Description": "",
+        "Type": "",
+        "Protocol": "mifare_plus"
+    },
+    {
         "AID": "315041592E5359532E4444463031",
         "Vendor": "EMV",
         "Country": "United States",
@@ -2495,6 +2504,24 @@
         "Name": "MIFARE 2GO",
         "Description": "AID prefix used by MIFARE 2GO-based cards",
         "Type": ""
+    },
+    {
+        "AID": "A000000396564341034D464300000000",
+        "Vendor": "Touch 'N GO",
+        "Country": "Malaysia",
+        "Name": "Touch 'N GO card (DESFIRE EV3C)",
+        "Description": "MIFARE DESFire EV3C-based Touch 'N GO card",
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
+    },
+    {
+        "AID": "A000000396564341FFFFFFFFFFFFFFFF",
+        "Vendor": "NXP",
+        "Country": "",
+        "Name": "MIFARE Plus default AID",
+        "Description": "Default AID for MIFARE Plus; used by Riocard Mais and Touch 'N GO cards",
+        "Type": "",
+        "Protocol": "mifare_plus"
     },
     {
         "AID": "A00000039656434103F015400000000B",

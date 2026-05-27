@@ -36,6 +36,7 @@ Each entry in `client/resources/aidlist.json` must contain all of the fields bel
   - `kastle_presence`
   - `legic_connect`
   - `mifare_desfire`
+  - `mifare_plus`
   - `salto_justin_mobile`
   - `samsung_vas`
   - `schlage_mobile_access`
