@@ -147,6 +147,7 @@ static bool find_tag(tag_t *tag_type) {
             }
             break;
         }
+        case 0x00:
         case 0x01: {
             if (iso14443a_select_card(NULL, &card, NULL, true, 0, true) == false) {
                 goto out;
