@@ -409,7 +409,7 @@ def collect(num_challenges: int, p, debug: bool, force: bool = False, erndarndb:
     # Danger zone. To reset a test card, run: hf mfu setkey -k 49454D4B41455242214E4143554F5946
 
     # Overwrite block 47
-    p.console("hf mfu wrbl -b 47 -d 00000000", capture=False, quiet=False)
+    p.console("hf 14a raw -sc A22F00000000", capture=False, quiet=True)
 
     # Collect challenges (75)
     p.console("hf 14a raw -sc 1A00")
@@ -420,7 +420,7 @@ def collect(num_challenges: int, p, debug: bool, force: bool = False, erndarndb:
     print("\n[+] 75 collection complete")
 
     # Overwrite block 46
-    p.console("hf mfu wrbl -b 46 -d 00000000", capture=False, quiet=False)
+    p.console("hf 14a raw -sc A22E00000000", capture=False, quiet=True)
 
     # Collect challenges (50)
     p.console("hf 14a raw -sc 1A00")
@@ -431,7 +431,7 @@ def collect(num_challenges: int, p, debug: bool, force: bool = False, erndarndb:
     print("\n[+] 50 collection complete")
 
     # Overwrite block 45
-    p.console("hf mfu wrbl -b 45 -d 00000000", capture=False, quiet=False)
+    p.console("hf 14a raw -sc A22D00000000", capture=False, quiet=True)
 
     # Collect challenges (25)
     p.console("hf 14a raw -sc 1A00")
@@ -442,7 +442,7 @@ def collect(num_challenges: int, p, debug: bool, force: bool = False, erndarndb:
     print("\n[+] 25 collection complete")
 
     # Overwrite block 44
-    p.console("hf mfu wrbl -b 44 -d 00000000", capture=False, quiet=False)
+    p.console("hf 14a raw -sc A22C00000000", capture=False, quiet=True)
 
     # Collect challenges (0)
     p.console("hf 14a raw -sc 1A00")
