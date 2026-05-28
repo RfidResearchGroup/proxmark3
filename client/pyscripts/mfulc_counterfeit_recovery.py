@@ -539,6 +539,16 @@ def main():
         print(f"[+] \033[1;33mhf mfu sim -t 13 -u {uid} --1a1 {challenges['challenge_100']}\033[0m")
         return
 
+    if use_cuda:
+        cmd = [brute_tool, "-c", "00" * 8, "00" * 8, "00" * 16, "1"]
+        if debug:
+            print("[=] CMD:" + ' '.join(cmd))
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL,
+                         stdin=subprocess.DEVNULL,
+                         close_fds=True,
+                         start_new_session=True,)
+
     if not offline:
         import pm3
         p = pm3.pm3()
