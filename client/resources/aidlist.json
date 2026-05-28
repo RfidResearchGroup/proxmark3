@@ -33,6 +33,14 @@
         "Type": ""
     },
     {
+        "AID": "5041592E535A54",
+        "Vendor": "Shenzhen Tong",
+        "Country": "China",
+        "Name": "Shenzhen Tong",
+        "Description": "Shenzhen Tong transit card (ASCII PAY.SZT)",
+        "Type": "transport"
+    },
+    {
         "AID": "A00000000101",
         "Vendor": "PBS Danmnt A/S",
         "Country": "Denmark",
@@ -183,6 +191,14 @@
         "Name": "VISA Plus",
         "Description": "VISA plus",
         "Type": "EMV"
+    },
+    {
+        "AID": "A00000000386980701",
+        "Vendor": "China City Union",
+        "Country": "China",
+        "Name": "China City Union",
+        "Description": "China City Union transit card",
+        "Type": "transport"
     },
     {
         "AID": "A0000000039010",
@@ -1505,6 +1521,15 @@
         "Type": ""
     },
     {
+        "AID": "A0000004520001",
+        "Vendor": "T MONEY",
+        "Country": "Republic of Korea",
+        "Name": "T MONEY (KS X 6924)",
+        "Description": "KS X 6924-based T MONEY transit card",
+        "Type": "transport",
+        "Protocol": "ks_x_6924"
+    },
+    {
         "AID": "A0000004540010",
         "Vendor": "eTranzact",
         "Country": "Nigeria",
@@ -2148,6 +2173,15 @@
         "Type": ""
     },
     {
+        "AID": "D4100000030001",
+        "Vendor": "T MONEY",
+        "Country": "Republic of Korea",
+        "Name": "T MONEY (KS X 6924)",
+        "Description": "KS X 6924-based T MONEY transit card",
+        "Type": "transport",
+        "Protocol": "ks_x_6924"
+    },
+    {
         "AID": "D41000003453504159",
         "Vendor": "Samsung",
         "Country": "",
@@ -2411,6 +2445,14 @@
         "Description": "",
         "Type": "access",
         "Protocol": "ccc_digital_car_key"
+    },
+    {
+        "AID": "A0000008118001",
+        "Vendor": "",
+        "Country": "",
+        "Name": "Otto card",
+        "Description": "EMV-like card; protocol unknown",
+        "Type": ""
     },
     {
         "AID": "A0000008400000000000000000001234",

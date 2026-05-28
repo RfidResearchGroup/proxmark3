@@ -34,6 +34,7 @@ Each entry in `client/resources/aidlist.json` must contain all of the fields bel
   - `hid_seos`
   - `ict_protege_mobile`
   - `kastle_presence`
+  - `ks_x_6924`
   - `legic_connect`
   - `mifare_desfire`
   - `mifare_plus`
