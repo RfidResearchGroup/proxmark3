@@ -584,7 +584,7 @@
   },
   {
     "part_number": "013R00663",
-    "color": "Black",
+    "color": "K",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "drum",
     "yield": "190000",
@@ -595,7 +595,7 @@
   },
   {
     "part_number": "013R00664",
-    "color": "Color",
+    "color": "COL",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "drum",
     "yield": "85000",
@@ -606,7 +606,7 @@
   },
   {
     "part_number": "006R01529",
-    "color": "Black",
+    "color": "K",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -617,7 +617,7 @@
   },
   {
     "part_number": "006R01659",
-    "color": "Black",
+    "color": "K",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -628,7 +628,7 @@
   },
   {
     "part_number": "006R01738",
-    "color": "Black",
+    "color": "K",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -639,7 +639,7 @@
   },
   {
     "part_number": "006R01532",
-    "color": "Cyan",
+    "color": "C",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -650,7 +650,7 @@
   },
   {
     "part_number": "006R01660",
-    "color": "Cyan",
+    "color": "C",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -661,7 +661,7 @@
   },
   {
     "part_number": "006R01739",
-    "color": "Cyan",
+    "color": "C",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -672,7 +672,7 @@
   },
   {
     "part_number": "006R01531",
-    "color": "Magenta",
+    "color": "M",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "34000",
@@ -683,7 +683,7 @@
   },
   {
     "part_number": "006R01661",
-    "color": "Magenta",
+    "color": "M",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "34000",
@@ -694,7 +694,7 @@
   },
   {
     "part_number": "006R01740",
-    "color": "Magenta",
+    "color": "M",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "34000",
@@ -705,7 +705,7 @@
   },
   {
     "part_number": "006R01530",
-    "color": "Yellow",
+    "color": "Y",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "34000",
@@ -716,7 +716,7 @@
   },
   {
     "part_number": "006R01662",
-    "color": "Yellow",
+    "color": "Y",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "34000",
@@ -727,7 +727,7 @@
   },
   {
     "part_number": "006R01741",
-    "color": "Yellow",
+    "color": "Y",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "34000",
@@ -738,7 +738,7 @@
   },
   {
     "part_number": "006R01525",
-    "color": "Black",
+    "color": "K",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -749,7 +749,7 @@
   },
   {
     "part_number": "006R01655",
-    "color": "Black",
+    "color": "K",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -760,7 +760,7 @@
   },
   {
     "part_number": "006R01734",
-    "color": "Black",
+    "color": "K",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -771,7 +771,7 @@
   },
   {
     "part_number": "006R01528",
-    "color": "Cyan",
+    "color": "C",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -782,7 +782,7 @@
   },
   {
     "part_number": "006R01656",
-    "color": "Cyan",
+    "color": "C",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -793,7 +793,7 @@
   },
   {
     "part_number": "006R01735",
-    "color": "Cyan",
+    "color": "C",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -804,7 +804,7 @@
   },
   {
     "part_number": "006R01527",
-    "color": "Magenta",
+    "color": "M",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "34000",
@@ -815,7 +815,7 @@
   },
   {
     "part_number": "006R01657",
-    "color": "Magenta",
+    "color": "M",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "34000",
@@ -826,7 +826,7 @@
   },
   {
     "part_number": "006R01736",
-    "color": "Magenta",
+    "color": "M",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "34000",
@@ -837,7 +837,7 @@
   },
   {
     "part_number": "006R01526",
-    "color": "Yellow",
+    "color": "Y",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "34000",
@@ -848,7 +848,7 @@
   },
   {
     "part_number": "006R01658",
-    "color": "Yellow",
+    "color": "Y",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "34000",
@@ -859,7 +859,7 @@
   },
   {
     "part_number": "006R01737",
-    "color": "Yellow",
+    "color": "Y",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "34000",
@@ -870,7 +870,7 @@
   },
   {
     "part_number": "006R01521",
-    "color": "Black",
+    "color": "K",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -881,7 +881,7 @@
   },
   {
     "part_number": "006R01524",
-    "color": "Cyan",
+    "color": "C",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -892,7 +892,7 @@
   },
   {
     "part_number": "006R01523",
-    "color": "Magenta",
+    "color": "M",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "34000",
@@ -903,7 +903,7 @@
   },
   {
     "part_number": "006R01522",
-    "color": "Yellow",
+    "color": "Y",
     "printer_model": "DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)",
     "consumable_type": "toner",
     "yield": "34000",
@@ -1090,7 +1090,7 @@
   },
   {
     "part_number": "006R01449",
-    "color": "Black",
+    "color": "K",
     "printer_model": "DocuColor 240/242/250/252/260, Xerox WorkCentre 7655/7665/7675/7755/7765/7775 (Color)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -1101,7 +1101,7 @@
   },
   {
     "part_number": "006R01452",
-    "color": "Cyan",
+    "color": "C",
     "printer_model": "DocuColor 240/242/250/252/260, Xerox WorkCentre 7655/7665/7675/7755/7765/7775 (Color)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -1112,7 +1112,7 @@
   },
   {
     "part_number": "006R01451",
-    "color": "Magenta",
+    "color": "M",
     "printer_model": "DocuColor 240/242/250/252/260, Xerox WorkCentre 7655/7665/7675/7755/7765/7775 (Color)",
     "consumable_type": "toner",
     "yield": "34000",
@@ -1123,7 +1123,7 @@
   },
   {
     "part_number": "006R01450",
-    "color": "Yellow",
+    "color": "Y",
     "printer_model": "DocuColor 240/242/250/252/260, Xerox WorkCentre 7655/7665/7675/7755/7765/7775 (Color)",
     "consumable_type": "toner",
     "yield": "34000",
@@ -1244,7 +1244,7 @@
   },
   {
     "part_number": "CT350813",
-    "color": "CMY",
+    "color": "COL",
     "printer_model": "Fuji XEROX DocuPrint-C3350",
     "consumable_type": "",
     "yield": "24K",
@@ -1354,7 +1354,7 @@
   },
   {
     "part_number": "CT200649/50/51/52",
-    "color": "KCMY",
+    "color": "FC-COL",
     "printer_model": "Fuji Xeorx DocuPrint 525A/2090",
     "consumable_type": "",
     "yield": "4K",
@@ -1365,7 +1365,7 @@
   },
   {
     "part_number": "CT350390",
-    "color": "KCMY",
+    "color": "FC-COL",
     "printer_model": "Fuji Xeorx DocuPrint 525A/2090",
     "consumable_type": "",
     "yield": "10.5K",
@@ -1464,7 +1464,7 @@
   },
   {
     "part_number": "CT350865/66/67/68",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox  DocuCentre IV-C5580/6680/7780,V-C5580/5585/6680/6685/7780/7785,ApeosPort IV-C5580/6680/7780,V-C5580/5585/6680/6685/7780/7785/, ApeosPort-VII  C6688/7788",
     "consumable_type": "",
     "yield": "115K",
@@ -1475,7 +1475,7 @@
   },
   {
     "part_number": "CT350868",
-    "color": "CYM",
+    "color": "COL",
     "printer_model": "Fuji Xerox  DocuCentre IV-C5580/6680/7780,V-C5580/5585/6680/6685/7780/7785,ApeosPort IV-C5580/6680/7780,V-C5580/5585/6680/6685/7780/7785/, ApeosPort-VII  C6688/7788",
     "consumable_type": "",
     "yield": "115K",
@@ -1563,7 +1563,7 @@
   },
   {
     "part_number": "CT350748",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox  DocuCentre-III C2200/2201/2205/3300/3305/ApeosPort-III2200/3300",
     "consumable_type": "",
     "yield": "91K",
@@ -1618,7 +1618,7 @@
   },
   {
     "part_number": "CT350595",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox  DocuCentre-III C2200/2205/3300/3305/ApeosPort-III2200/3300",
     "consumable_type": "",
     "yield": "91K",
@@ -1662,7 +1662,7 @@
   },
   {
     "part_number": "CT350850",
-    "color": "CYM",
+    "color": "COL",
     "printer_model": "Fuji Xerox  DocuCentre-IV2270/2275/3370/3371/3373/3375/, 4470/4475/5570/5575,ApeosPort-C2270/2275/3370/3371/, 3373/3375/4470/4475/5570/5575",
     "consumable_type": "",
     "yield": "103K",
@@ -1717,7 +1717,7 @@
   },
   {
     "part_number": "CT201260/61/62/63",
-    "color": "KCMY",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox  DocuPrint C1190",
     "consumable_type": "",
     "yield": "3K",
@@ -1728,7 +1728,7 @@
   },
   {
     "part_number": "CT390795",
-    "color": "KCMY",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox  DocuPrint C1190",
     "consumable_type": "",
     "yield": "20K",
@@ -1904,7 +1904,7 @@
   },
   {
     "part_number": "CT350988",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox  DocuPrint C4000 d",
     "consumable_type": "",
     "yield": "65K",
@@ -1937,7 +1937,7 @@
   },
   {
     "part_number": "CT350778",
-    "color": "CMY",
+    "color": "COL",
     "printer_model": "Fuji Xerox 700i/700 Digital Color Press /Color C75 Press/J75 Press",
     "consumable_type": "",
     "yield": "50K",
@@ -1959,7 +1959,7 @@
   },
   {
     "part_number": "CT350777/778",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox 700i/700 Digital Color Press /Color C75 Press/J75 Press",
     "consumable_type": "",
     "yield": "80K",
@@ -2146,7 +2146,7 @@
   },
   {
     "part_number": "013R00656",
-    "color": "CYM",
+    "color": "COL",
     "printer_model": "Fuji Xerox 700i/700 Digital Color Press /Color C75 Press/J75 Press",
     "consumable_type": "",
     "yield": "50K",
@@ -2311,7 +2311,7 @@
   },
   {
     "part_number": "CT351236",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox ApeosPort Print C4570/5570",
     "consumable_type": "",
     "yield": "70K",
@@ -2388,7 +2388,7 @@
   },
   {
     "part_number": "CT351237",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox ApeosPort Print C4570/5570",
     "consumable_type": "",
     "yield": "80K",
@@ -2652,7 +2652,7 @@
   },
   {
     "part_number": "CT351104",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox ApeosPort-VI C3370/C3371/C4471/C5571/C6671/7771, DocuCentre-VI C2271/C3370/C3371/C4471",
     "consumable_type": "",
     "yield": "190K",
@@ -2707,7 +2707,7 @@
   },
   {
     "part_number": "CT351105",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox ApeosPort-VI C3370/C3371/C4471/C5571/C6671/7771, DocuCentre-VI C2271/C3370/C3371/C4471, ApeosPort-VII C7773 / C6673 / C5573 / C4473 / C3373 / C3372, DocuCentre-VII C4473 / C3373 / C3372 / C2273, ApeosPort C3070/3570/4570/5570/6570/7070",
     "consumable_type": "",
     "yield": "190K",
@@ -2762,7 +2762,7 @@
   },
   {
     "part_number": "CT351108",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox ApeosPort-VI C3370/C3371/C4471/C5571/C6671/7771, DocuCentre-VI C2271/C3370/C3371/C4471, ApeosPort-VII C7773 / C6673 / C5573 / C4473 / C3373 / C3372, DocuCentre-VII C4473 / C3373 / C3372 / C2273, ApeosPort C3070/3570/4570/5570/6570/7070",
     "consumable_type": "",
     "yield": "190K",
@@ -3356,7 +3356,7 @@
   },
   {
     "part_number": "CT350362",
-    "color": "CYM",
+    "color": "COL",
     "printer_model": "Fuji Xerox DocuCentre C5540/C6550/C7550, ApeosPort-II C5400/C6500/C7500, ApeosPort-III C5500/C6500/C7600,DocuColor 5065/5065 II/ 6075 II, DocuCenter C5540 I/C6550 I/ C7550 I, DocuCenter II C5400/C6500/C7500DocuCenter III C5500/C6500/C7600",
     "consumable_type": "",
     "yield": "100K",
@@ -3422,7 +3422,7 @@
   },
   {
     "part_number": "CT350360",
-    "color": "CYM",
+    "color": "COL",
     "printer_model": "Fuji Xerox DocuCentre C5540/C6550/C7550, ApeosPort-II C5400/C6500/C7500, ApeosPort-III C5500/C6500/C7600,DocuColor 5065/5065 II/ 6075 II, DocuCenter C5540 I/C6550 I/ C7550 I, DocuCenter II C5400/C6500/C7500DocuCenter III C5500/C6500/C7600",
     "consumable_type": "",
     "yield": "100K",
@@ -3477,7 +3477,7 @@
   },
   {
     "part_number": "CT350737",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox DocuCentre III C3100/4100",
     "consumable_type": "",
     "yield": "22.1K",
@@ -3664,7 +3664,7 @@
   },
   {
     "part_number": "013R00677",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox DocuCentre SC2020",
     "consumable_type": "",
     "yield": "76K",
@@ -3697,7 +3697,7 @@
   },
   {
     "part_number": "CT351053",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox DocuCentre SC2020/2022/2021",
     "consumable_type": "",
     "yield": "89K",
@@ -3829,7 +3829,7 @@
   },
   {
     "part_number": "CT350489",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox DocuCentre-II C3000",
     "consumable_type": "",
     "yield": "35K",
@@ -4368,7 +4368,7 @@
   },
   {
     "part_number": "CT350806",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox DocuCentre-IV2270/2275/3370/3371/3373/3375/, 4470/4475/5570/5575,ApeosPort-C2270/2275/3370/3371/, 3373/3375/4470/4475/5570/5575,V2275/3373/3375/4475/, 5575/6675/7775",
     "consumable_type": "",
     "yield": "103K",
@@ -4379,7 +4379,7 @@
   },
   {
     "part_number": "CT350851",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox DocuCentre-IV2270/2275/3370/3371/3373/3375/, 4470/4475/5570/5575,ApeosPort-C2270/2275/3370/3371/, 3373/3375/4470/4475/5570/5575,V2275/3373/3375/4475/, 5575/6675/7775",
     "consumable_type": "",
     "yield": "150K",
@@ -4533,7 +4533,7 @@
   },
   {
     "part_number": "CT351088",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox DocuCentre-V C2263/2263L/2265, ApeosPort C2060/2560/3060",
     "consumable_type": "",
     "yield": "66.9K",
@@ -5094,7 +5094,7 @@
   },
   {
     "part_number": "CT350615/654",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox DocuPrint C2250/C2255/C3360, Sambo e-Laser CA3250",
     "consumable_type": "",
     "yield": "40K",
@@ -5347,7 +5347,7 @@
   },
   {
     "part_number": "CT351190",
-    "color": "CYM",
+    "color": "COL",
     "printer_model": "Fuji Xerox DocuPrint C2555d/C3555d",
     "consumable_type": "",
     "yield": "24K",
@@ -5369,7 +5369,7 @@
   },
   {
     "part_number": "CT200822/95",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox DocuPrint C3050/3055",
     "consumable_type": "",
     "yield": "6.5K",
@@ -5380,7 +5380,7 @@
   },
   {
     "part_number": "CT350445",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox DocuPrint C3050/3055",
     "consumable_type": "",
     "yield": "28K",
@@ -6799,7 +6799,7 @@
   },
   {
     "part_number": "CT350769",
-    "color": "Black",
+    "color": "K",
     "printer_model": "Fuji Xerox Docucentre 236/286/336, Fuji Xerox DocuCentre-II 2005/2055/3005, Fuji Xerox DocuCentre-III 2007/3007 (Mono)",
     "consumable_type": "drum",
     "yield": "",
@@ -6810,7 +6810,7 @@
   },
   {
     "part_number": "CT350770",
-    "color": "Black",
+    "color": "K",
     "printer_model": "Fuji Xerox Docucentre 236/286/336, Fuji Xerox DocuCentre-II 2005/2055/3005, Fuji Xerox DocuCentre-III 2007/3007 (Mono)",
     "consumable_type": "drum",
     "yield": "",
@@ -6821,7 +6821,7 @@
   },
   {
     "part_number": "CT200417",
-    "color": "Black",
+    "color": "K",
     "printer_model": "Fuji Xerox Docucentre 236/286/336, Fuji Xerox DocuCentre-II 2005/2055/3005, Fuji Xerox DocuCentre-III 2007/3007 (Mono)",
     "consumable_type": "toner",
     "yield": "25000",
@@ -7019,7 +7019,7 @@
   },
   {
     "part_number": "CT351050",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fuji Xerox Versant 80 Press/180 Press/2100 Press",
     "consumable_type": "",
     "yield": "348K",
@@ -7283,7 +7283,7 @@
   },
   {
     "part_number": "CT351242",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fujifilm Apeos Apeos C8180/C7580/C6580",
     "consumable_type": "",
     "yield": "34.2K/31.6K",
@@ -7360,7 +7360,7 @@
   },
   {
     "part_number": "CT351241",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fujifilm Apeos Apeos C8180/C7580/C6580",
     "consumable_type": "",
     "yield": "34.2K/31.6K",
@@ -7393,7 +7393,7 @@
   },
   {
     "part_number": "CT351410",
-    "color": "KCMY",
+    "color": "FC-COL",
     "printer_model": "Fujifilm Apeos C2450S",
     "consumable_type": "",
     "yield": "71K",
@@ -7591,7 +7591,7 @@
   },
   {
     "part_number": "CT351440",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fujifilm Apeos C2567/3067/3567/2061/2561/3061",
     "consumable_type": "",
     "yield": "73.4K",
@@ -7668,7 +7668,7 @@
   },
   {
     "part_number": "CT351388",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fujifilm Apeos C3060/C2560/C2060/C2360",
     "consumable_type": "",
     "yield": "73.4K",
@@ -7745,7 +7745,7 @@
   },
   {
     "part_number": "CT351307",
-    "color": "KCMY",
+    "color": "FC-COL",
     "printer_model": "Fujifilm Apeos C320 z/ApeosPrint C320 dw",
     "consumable_type": "",
     "yield": "50K",
@@ -7756,7 +7756,7 @@
   },
   {
     "part_number": "CWAA1003",
-    "color": "KCMY",
+    "color": "FC-COL",
     "printer_model": "Fujifilm Apeos C320 z/ApeosPrint C320 dw",
     "consumable_type": "",
     "yield": "6K",
@@ -7943,7 +7943,7 @@
   },
   {
     "part_number": "CT351282",
-    "color": "KCMY",
+    "color": "FC-COL",
     "printer_model": "Fujifilm Apeos C325 z / C325 dw /ApeosPrint C325 dw Apeos C328",
     "consumable_type": "",
     "yield": "50K",
@@ -7954,7 +7954,7 @@
   },
   {
     "part_number": "CWAA0980",
-    "color": "KCMY",
+    "color": "FC-COL",
     "printer_model": "Fujifilm Apeos C325 z / C325 dw /ApeosPrint C325 dw/Apeos C328",
     "consumable_type": "",
     "yield": "6K",
@@ -8207,7 +8207,7 @@
   },
   {
     "part_number": "CT351312",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fujifilm Apeos C7070/C6570/C5570/C4570/C3570/C3070",
     "consumable_type": "",
     "yield": "270/250K",
@@ -8262,7 +8262,7 @@
   },
   {
     "part_number": "CT351313",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fujifilm Apeos C7070/C6570/C5570/C4570/C3570/C3070",
     "consumable_type": "",
     "yield": "270/250K",
@@ -8317,7 +8317,7 @@
   },
   {
     "part_number": "CT351364",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fujifilm Apeos C7070/C6570/C5570/C4570/C3570/C3070",
     "consumable_type": "",
     "yield": "270/250K",
@@ -8416,7 +8416,7 @@
   },
   {
     "part_number": "CT203579",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Fujifilm Apeos C7070/C6570/C5570/C4570/C3570/C3070/C2570",
     "consumable_type": "",
     "yield": "270/250K",
@@ -8449,7 +8449,7 @@
   },
   {
     "part_number": "CT351368",
-    "color": "KCMY",
+    "color": "FC-COL",
     "printer_model": "Fujifilm ApeosPort Print C3320SD",
     "consumable_type": "",
     "yield": "125K",
@@ -8889,7 +8889,7 @@
   },
   {
     "part_number": "CT351368",
-    "color": "KCMY",
+    "color": "FC-COL",
     "printer_model": "Fujifilm ApeosPrint C5570",
     "consumable_type": "",
     "yield": "80K",
@@ -9153,7 +9153,7 @@
   },
   {
     "part_number": "CT202925",
-    "color": "Gold",
+    "color": "GD",
     "printer_model": "Fujifilm Revoria Press PC1120",
     "consumable_type": "",
     "yield": "82K",
@@ -9186,7 +9186,7 @@
   },
   {
     "part_number": "CT202918",
-    "color": "Silver",
+    "color": "SV",
     "printer_model": "Fujifilm Revoria Press PC1120",
     "consumable_type": "",
     "yield": "82K",
@@ -9197,7 +9197,7 @@
   },
   {
     "part_number": "CT202927",
-    "color": "White",
+    "color": "W",
     "printer_model": "Fujifilm Revoria Press PC1120",
     "consumable_type": "",
     "yield": "82K",
@@ -10022,7 +10022,7 @@
   },
   {
     "part_number": "106R01469/66/67/68",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox  Phaser C6121",
     "consumable_type": "",
     "yield": "2.6K",
@@ -10033,7 +10033,7 @@
   },
   {
     "part_number": "108R00868",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox  Phaser C6121",
     "consumable_type": "",
     "yield": "100K",
@@ -10044,7 +10044,7 @@
   },
   {
     "part_number": "108R00581/82",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox  Phaser C7750",
     "consumable_type": "",
     "yield": "32K",
@@ -10363,7 +10363,7 @@
   },
   {
     "part_number": "013R00681",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox AltaLink C8130/8135/8145/8155/8170",
     "consumable_type": "",
     "yield": "180K",
@@ -10704,7 +10704,7 @@
   },
   {
     "part_number": "006R01182",
-    "color": "Black",
+    "color": "K",
     "printer_model": "Xerox CC/WC C/M 118/123/128/133 (Mono)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -10715,7 +10715,7 @@
   },
   {
     "part_number": "CT350888",
-    "color": "CYM",
+    "color": "COL",
     "printer_model": "Xerox Color 550/560/570",
     "consumable_type": "",
     "yield": "85K",
@@ -10825,7 +10825,7 @@
   },
   {
     "part_number": "013R00664",
-    "color": "CMY",
+    "color": "COL",
     "printer_model": "Xerox Color 550/560/570/C60/70",
     "consumable_type": "",
     "yield": "85K",
@@ -10935,7 +10935,7 @@
   },
   {
     "part_number": "013R00672",
-    "color": "CYM",
+    "color": "COL",
     "printer_model": "Xerox Color C75 Press/J75 Press",
     "consumable_type": "",
     "yield": "50K",
@@ -11111,7 +11111,7 @@
   },
   {
     "part_number": "006R01375",
-    "color": "Black",
+    "color": "K",
     "printer_model": "Xerox DC 700, Digital Colorpress 700/770/C75/J75 (Color)",
     "consumable_type": "toner",
     "yield": "20000",
@@ -11122,7 +11122,7 @@
   },
   {
     "part_number": "006R01376",
-    "color": "Cyan",
+    "color": "C",
     "printer_model": "Xerox DC 700, Digital Colorpress 700/770/C75/J75 (Color)",
     "consumable_type": "toner",
     "yield": "20000",
@@ -11133,7 +11133,7 @@
   },
   {
     "part_number": "006R01377",
-    "color": "Magenta",
+    "color": "M",
     "printer_model": "Xerox DC 700, Digital Colorpress 700/770/C75/J75 (Color)",
     "consumable_type": "toner",
     "yield": "22000",
@@ -11144,7 +11144,7 @@
   },
   {
     "part_number": "006R01378",
-    "color": "Yellow",
+    "color": "Y",
     "printer_model": "Xerox DC 700, Digital Colorpress 700/770/C75/J75 (Color)",
     "consumable_type": "toner",
     "yield": "22000",
@@ -11155,7 +11155,7 @@
   },
   {
     "part_number": "006R01583",
-    "color": "Black",
+    "color": "K",
     "printer_model": "Xerox DP 4590, WC Pro 4110/4112/4127/4590/4595 (Mono)",
     "consumable_type": "toner",
     "yield": "",
@@ -11188,7 +11188,7 @@
   },
   {
     "part_number": "CT350767",
-    "color": "Black",
+    "color": "K",
     "printer_model": "Xerox DocuCentre A235/A285/F235/F285, Fuji Xerox ApeosPort 350i/450i (Mono)",
     "consumable_type": "drum",
     "yield": "60000",
@@ -11199,7 +11199,7 @@
   },
   {
     "part_number": "CT350593",
-    "color": "Black",
+    "color": "K",
     "printer_model": "Xerox DocuCentre A235/A285/F235/F285, Fuji Xerox ApeosPort 350i/450i (Mono)",
     "consumable_type": "toner",
     "yield": "60000",
@@ -11210,7 +11210,7 @@
   },
   {
     "part_number": "013R00579",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox DocuCentre C450",
     "consumable_type": "",
     "yield": "25K",
@@ -11342,7 +11342,7 @@
   },
   {
     "part_number": "013R00603",
-    "color": "CMY",
+    "color": "COL",
     "printer_model": "Xerox DocuColor 240/242/250/252/260 WorkCentre 7655//7665/7675/7755/7765/7775",
     "consumable_type": "",
     "yield": "100K",
@@ -11628,7 +11628,7 @@
   },
   {
     "part_number": "013R00648/620",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox DocuColor 5000",
     "consumable_type": "",
     "yield": "80/50K",
@@ -11705,7 +11705,7 @@
   },
   {
     "part_number": "CT350894",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox DocuPrint C5005d/C5155d",
     "consumable_type": "",
     "yield": "70K",
@@ -12541,7 +12541,7 @@
   },
   {
     "part_number": "113R00668",
-    "color": "Black",
+    "color": "K",
     "printer_model": "Xerox Phaser 5500 (Mono)",
     "consumable_type": "toner",
     "yield": "",
@@ -12574,7 +12574,7 @@
   },
   {
     "part_number": "106R01294",
-    "color": "Black",
+    "color": "K",
     "printer_model": "Xerox Phaser 5500/5550 (Mono)",
     "consumable_type": "toner",
     "yield": "",
@@ -12585,7 +12585,7 @@
   },
   {
     "part_number": "106R1294",
-    "color": "Black",
+    "color": "K",
     "printer_model": "Xerox Phaser 5500/5550 (Mono)",
     "consumable_type": "toner",
     "yield": "",
@@ -13619,7 +13619,7 @@
   },
   {
     "part_number": "108R01148",
-    "color": "CMY",
+    "color": "COL",
     "printer_model": "Xerox Phaser 7100/7100n",
     "consumable_type": "",
     "yield": "24K",
@@ -13641,7 +13641,7 @@
   },
   {
     "part_number": "106R01163",
-    "color": "Black",
+    "color": "K",
     "printer_model": "Xerox Phaser 7760 (Color)",
     "consumable_type": "toner",
     "yield": "",
@@ -13652,7 +13652,7 @@
   },
   {
     "part_number": "106R01160",
-    "color": "Cyan",
+    "color": "C",
     "printer_model": "Xerox Phaser 7760 (Color)",
     "consumable_type": "toner",
     "yield": "",
@@ -13663,7 +13663,7 @@
   },
   {
     "part_number": "106R01161",
-    "color": "Magenta",
+    "color": "M",
     "printer_model": "Xerox Phaser 7760 (Color)",
     "consumable_type": "toner",
     "yield": "",
@@ -13674,7 +13674,7 @@
   },
   {
     "part_number": "106R01162",
-    "color": "Yellow",
+    "color": "Y",
     "printer_model": "Xerox Phaser 7760 (Color)",
     "consumable_type": "toner",
     "yield": "",
@@ -13850,7 +13850,7 @@
   },
   {
     "part_number": "106R01582",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox Phaser 7800",
     "consumable_type": "",
     "yield": "145K",
@@ -15291,7 +15291,7 @@
   },
   {
     "part_number": "108R00861",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox Phaser C7500",
     "consumable_type": "",
     "yield": "80K",
@@ -15302,7 +15302,7 @@
   },
   {
     "part_number": "016188300/600",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox Phaser C7700",
     "consumable_type": "",
     "yield": "24K",
@@ -15335,7 +15335,7 @@
   },
   {
     "part_number": "108R00713",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox Phaser C7760/7760dn/7760dx/7760gx",
     "consumable_type": "",
     "yield": "35K",
@@ -17271,7 +17271,7 @@
   },
   {
     "part_number": "113R00782",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox VersaLink C7000DN/C7000N",
     "consumable_type": "",
     "yield": "82.2K",
@@ -17502,7 +17502,7 @@
   },
   {
     "part_number": "113R00780",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox VersaLink C7020/7025/7030",
     "consumable_type": "",
     "yield": "109K/87K",
@@ -17535,7 +17535,7 @@
   },
   {
     "part_number": "013R00688",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox VersaLink C7120/7125/C7130",
     "consumable_type": "",
     "yield": "109K/87K",
@@ -17788,7 +17788,7 @@
   },
   {
     "part_number": "101R00602 CT351141",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox VersaLink C8000/C9000",
     "consumable_type": "",
     "yield": "190K",
@@ -18118,7 +18118,7 @@
   },
   {
     "part_number": "013R00674",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox Versant 80 Press/180 Press/2100 Press",
     "consumable_type": "",
     "yield": "348K",
@@ -18129,7 +18129,7 @@
   },
   {
     "part_number": "CT351050",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox Versant 80 Press/180 Press/2100 Press/3100 Press",
     "consumable_type": "",
     "yield": "348K",
@@ -18140,7 +18140,7 @@
   },
   {
     "part_number": "013R00676",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox Versant 80 Press/180 Press/2100 Press/3100 Press",
     "consumable_type": "",
     "yield": "348K",
@@ -18371,7 +18371,7 @@
   },
   {
     "part_number": "006R01317",
-    "color": "Black",
+    "color": "K",
     "printer_model": "Xerox WC 7132/7232/7242 (Color)",
     "consumable_type": "toner",
     "yield": "24300",
@@ -18382,7 +18382,7 @@
   },
   {
     "part_number": "6R1317",
-    "color": "Black",
+    "color": "K",
     "printer_model": "Xerox WC 7132/7232/7242 (Color)",
     "consumable_type": "toner",
     "yield": "",
@@ -18393,7 +18393,7 @@
   },
   {
     "part_number": "006R01265",
-    "color": "Cyan",
+    "color": "C",
     "printer_model": "Xerox WC 7132/7232/7242 (Color)",
     "consumable_type": "toner",
     "yield": "24300",
@@ -18404,7 +18404,7 @@
   },
   {
     "part_number": "6R1265",
-    "color": "Cyan",
+    "color": "C",
     "printer_model": "Xerox WC 7132/7232/7242 (Color)",
     "consumable_type": "toner",
     "yield": "",
@@ -18415,7 +18415,7 @@
   },
   {
     "part_number": "006R01264",
-    "color": "Magenta",
+    "color": "M",
     "printer_model": "Xerox WC 7132/7232/7242 (Color)",
     "consumable_type": "toner",
     "yield": "5000",
@@ -18426,7 +18426,7 @@
   },
   {
     "part_number": "6R1264",
-    "color": "Magenta",
+    "color": "M",
     "printer_model": "Xerox WC 7132/7232/7242 (Color)",
     "consumable_type": "toner",
     "yield": "",
@@ -18437,7 +18437,7 @@
   },
   {
     "part_number": "006R01263",
-    "color": "Yellow",
+    "color": "Y",
     "printer_model": "Xerox WC 7132/7232/7242 (Color)",
     "consumable_type": "toner",
     "yield": "5000",
@@ -18448,7 +18448,7 @@
   },
   {
     "part_number": "6R1263",
-    "color": "Yellow",
+    "color": "Y",
     "printer_model": "Xerox WC 7132/7232/7242 (Color)",
     "consumable_type": "toner",
     "yield": "",
@@ -18470,7 +18470,7 @@
   },
   {
     "part_number": "013R00624",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox WoKeCentre C7228/7235/7245/C7328/7335/7345/7346,C2128 /C2636 /C3545",
     "consumable_type": "",
     "yield": "38K",
@@ -19108,7 +19108,7 @@
   },
   {
     "part_number": "106R01306",
-    "color": "Black",
+    "color": "K",
     "printer_model": "Xerox WorkCentre 5222/5225/5230 (Mono)",
     "consumable_type": "toner",
     "yield": "30000",
@@ -19691,7 +19691,7 @@
   },
   {
     "part_number": "013R00636, CT350580",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox WorkCentre 7132/7232/7242",
     "consumable_type": "",
     "yield": "80K",
@@ -19966,7 +19966,7 @@
   },
   {
     "part_number": "013R00647",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox WorkCentre 7425/7428/7435",
     "consumable_type": "",
     "yield": "61K",
@@ -20109,7 +20109,7 @@
   },
   {
     "part_number": "013R00662",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox WorkCentre 7525/7530/7535/7545/7556/7825/7830/7835/7845/7855/7970, AltaLinK C8030/C8035/C8045/C8055/C8070",
     "consumable_type": "",
     "yield": "125K",
@@ -20175,7 +20175,7 @@
   },
   {
     "part_number": "013R00579",
-    "color": "KCYM",
+    "color": "FC-COL",
     "printer_model": "Xerox WorkCentre M24/1632/2240,Docucolor 3535,CopyCentre C32,C40",
     "consumable_type": "",
     "yield": "30K",
