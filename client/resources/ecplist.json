@@ -51,6 +51,13 @@
     },
     {
         "type": "transit",
+        "key": ["marta", "atlanta", "breeze"],
+        "value": "6a02c801000304080000000000",
+        "name": "Transit: MARTA",
+        "description": ""
+    },
+    {
+        "type": "transit",
         "key": ["wmata", "smarttrip", "washington"],
         "value": "6a02c801000300010000000000",
         "name": "Transit: WMATA",
@@ -97,6 +104,13 @@
         "value": "6a02c3020002ffff",
         "name": "Access: Demo TCI 02FFFF",
         "description": "Demo TCI assigned by Apple to test access control systems; Also used as a placeholder in some cases"
+    },
+    {
+        "type": "access",
+        "key": ["intuitdome", "intuit"],
+        "value": "6a02c30200023c20",
+        "name": "Access: Intuit Dome",
+        "description": ""
     },
     {
         "type": "access",
