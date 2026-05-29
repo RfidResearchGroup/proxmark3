@@ -779,7 +779,7 @@ static int CmdHFMFPAuth(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfp auth",
                   "Executes AES authentication command for MIFARE Plus card",
                   "hf mfp auth --ki 4000 --key 000102030405060708090a0b0c0d0e0f      -> executes authentication\n"
-                  "hf mfp auth --ki 9003 --key FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -v   -> executes authentication and shows all the system data"
+                  "hf mfp auth --ki 9003 --key FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -v   -> upgrades tag to SL3 and shows all the system data"
                  );
 
     void *argtable[] = {
@@ -806,10 +806,13 @@ static int CmdHFMFPAuth(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    return MifareAuth4(NULL, keyn, key, true, false, true, verbose, false);
+    int resBuffer = MifareAuth4(NULL, keyn, key, false, true, false, true, verbose, false);
+    if (resBuffer == PM3_SUCCESS && keyn[0] == 0x90 && (keyn[1] == 0x02 || keyn[1] == 0x03))
+        PrintAndLogEx(INFO, "Switched security level ( " _GREEN_("ok") " )");
+    return resBuffer;
 }
 
-int mfp_data_crypt(mf4Session_t *mf4session, uint8_t *dati, uint8_t *dato, bool rev) {
+int mfp_data_crypt(mf4Session_t *mf4session, uint8_t *dati, uint8_t *dato, bool rev, int bc) {
     uint8_t kenc[MFBLOCK_SIZE];
     memcpy(kenc, mf4session->Kenc, MFBLOCK_SIZE);
 
@@ -841,9 +844,9 @@ int mfp_data_crypt(mf4Session_t *mf4session, uint8_t *dati, uint8_t *dato, bool 
     }
 
     if (rev) {
-        aes_decode(IV, kenc, dati, dato, MFBLOCK_SIZE);
+        aes_decode(IV, kenc, dati, dato, MFBLOCK_SIZE*bc);
     } else {
-        aes_encode(IV, kenc, dati, dato, MFBLOCK_SIZE);
+        aes_encode(IV, kenc, dati, dato, MFBLOCK_SIZE*bc);
     }
 
     return PM3_SUCCESS;
@@ -921,7 +924,7 @@ static int CmdHFMFPRdbl(const char *Cmd) {
     }
 
     mf4Session_t mf4session;
-    int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);
+    int res = MifareAuth4(&mf4session, keyn, key, false, true, true, true, verbose, false);
     if (res) {
         PrintAndLogEx(ERR, "Authentication error: %d", res);
         return res;
@@ -947,7 +950,7 @@ static int CmdHFMFPRdbl(const char *Cmd) {
     }
 
     if (plain == false) {
-        mfp_data_crypt(&mf4session, &data[1], &data[1], true);
+        mfp_data_crypt(&mf4session, &data[1], &data[1], true, blocksCount);
     }
 
     uint8_t sector = mfSectorNum(blockn);
@@ -1030,7 +1033,7 @@ static int CmdHFMFPRdsc(const char *Cmd) {
     }
 
     mf4Session_t mf4session;
-    int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);
+    int res = MifareAuth4(&mf4session, keyn, key, false, true, true, true, verbose, false);
     if (res) {
         PrintAndLogEx(ERR, "Authentication error: %d", res);
         return res;
@@ -1216,7 +1219,7 @@ static int CmdHFMFPWrbl(const char *Cmd) {
     }
 
     if (plain == false) {
-        mfp_data_crypt(&mf4session, &datain[0], &datain[0], false);
+        mfp_data_crypt(&mf4session, &datain[0], &datain[0], false, 1);
     }
 
     uint8_t data[250] = {0};
@@ -1333,13 +1336,13 @@ static int CmdHFMFPChKey(const char *Cmd) {
         PrintAndLogEx(INFO, "--key index:", sprint_hex(keyn, 2));
     }
 
-    int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);
+    int res = MifareAuth4(&mf4session, keyn, key, false, true, true, true, verbose, false);
     if (res) {
         PrintAndLogEx(ERR, "Authentication error: %d", res);
         return res;
     }
 
-    mfp_data_crypt(&mf4session, &datain[0], &datain[0], false);
+    mfp_data_crypt(&mf4session, &datain[0], &datain[0], false, 1);
 
     uint8_t data[250] = {0};
     int datalen = 0;
@@ -1451,13 +1454,13 @@ static int CmdHFMFPChConf(const char *Cmd) {
         PrintAndLogEx(INFO, "--key index:", sprint_hex(keyn, 2));
     }
 
-    int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);
+    int res = MifareAuth4(&mf4session, keyn, key, false, true, true, true, verbose, false);
     if (res) {
         PrintAndLogEx(ERR, "Authentication error: %d", res);
         return res;
     }
 
-    mfp_data_crypt(&mf4session, &datain[0], &datain[0], false);
+    mfp_data_crypt(&mf4session, &datain[0], &datain[0], false, 1);
 
     uint8_t data[250] = {0};
     int datalen = 0;
@@ -1548,7 +1551,7 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
                 // authentication loop with retries
                 for (int retry = 0; retry < MFP_CHK_KEY_TRIES; retry++) {
 
-                    res = MifareAuth4(NULL, keyn, currkey, selectCard, true, false, false, true);
+                    res = MifareAuth4(NULL, keyn, currkey, false, selectCard, true, false, false, true);
                     if (res == PM3_SUCCESS || res == PM3_EWRONGANSWER) {
                         break;
                     }
