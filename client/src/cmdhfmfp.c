@@ -1067,7 +1067,7 @@ static int CmdHFMFPRdsc(const char *Cmd) {
         }
 
         if (plain == false) {
-            mfp_data_crypt(&mf4session, &data[1], &data[1], true);
+            mfp_data_crypt(&mf4session, &data[1], &data[1], true, 1);
         }
 
         mf_print_block_one(blockno, data + 1, verbose);
@@ -1212,7 +1212,7 @@ static int CmdHFMFPWrbl(const char *Cmd) {
     }
 
     mf4Session_t mf4session;
-    int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);
+    int res = MifareAuth4(&mf4session, keyn, key, false, true, true, true, verbose, false);
     if (res) {
         PrintAndLogEx(ERR, "Authentication error: %d", res);
         return res;
