@@ -33,5 +33,5 @@ typedef struct mfp_keys {
 
 int CmdHFMFP(const char *Cmd);
 int CmdHFMFPNDEFRead(const char *Cmd);
-int mfp_data_crypt(mf4Session_t *mf4session, uint8_t *dati, uint8_t *dato, bool rev);
+int mfp_data_crypt(mf4Session_t *mf4session, uint8_t *dati, uint8_t *dato, bool rev, int bc);
 #endif
