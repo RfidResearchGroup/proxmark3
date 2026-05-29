@@ -2331,16 +2331,16 @@ chunkCycle2:
             MifareAuth4(&_session, ki_pB, &aesFoundKeys[MF_KEY_B][sl3Count][1], true, false, true, true, verbose, false);
             if (STBuffer[6] & 0xF0) { // At least one bit is set to force enc. only
 chunkBlank2: // Jumping here will start the cycle which will blank out the remaining 5 chunks anyway
-                for (c=0; c<4; ++c) {
+                for (c=0; c<5; ++c) {
                     MFPReadBlock(&_session, false, false, true, 128+(sl3Count-32)*16+c*3, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
                     if (STRead && STBuffer[0] != 0x90) {
                         PrintAndLogEx(ERR, "Chunk read error: %02x %s", STBuffer[0], mfpGetErrorDescription(STBuffer[0]));
                         PrintAndLogEx(WARNING, "Quick-reading sector %3d / %3d chunk %d ( " _RED_("fail") " )", sl3Count, numSectors - 1, c);
                         memcpy(carddata + ((128+(sl3Count-31)*16-1) * MFBLOCK_SIZE), nullBlock, 1 * MFBLOCK_SIZE);
-                        memcpy(carddata + ((128 + (sl3Count-32)+c*3) * MFBLOCK_SIZE), nullChunk, 3 * MFBLOCK_SIZE);
+                        memcpy(carddata + ((128 + 16*(sl3Count-32)+c*3) * MFBLOCK_SIZE), nullChunk, 3 * MFBLOCK_SIZE);
                         nonfirst = false;
                         if (c<5) {continue;} else {sl3Count++; goto chunkCycleClean2;}; 
-                    } 
+                    }
                     if (STRead != 1 + 48 + 2) {
                         PrintAndLogEx(ERR, "Error return length: %d", STRead);
                         DropField();
@@ -2348,26 +2348,26 @@ chunkBlank2: // Jumping here will start the cycle which will blank out the remai
                     }
                     mfp_data_crypt(&_session, &STBuffer[1], &STBuffer[1], true, 3);
                     PrintAndLogEx(INPLACE, "Quick-reading sector %3d / %3d ( " _GREEN_("ok") " )", sl3Count, numSectors - 1);
-                    memcpy(carddata + ((128 + (sl3Count-32)+c*3) * MFBLOCK_SIZE), &STBuffer[1], 3 * MFBLOCK_SIZE);
+                    memcpy(carddata + ((128 + 16*(sl3Count-32)+c*3) * MFBLOCK_SIZE), &STBuffer[1], 3 * MFBLOCK_SIZE);
                 }
                 sectorsRead++;
                 sl3Count++;
             } else {
-                for (c=0; c<4; ++c) {
+                for (c=0; c<5; ++c) {
                     MFPReadBlock(&_session, true, false, true, 128+(sl3Count-32)*16+c*3, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
                     if (STRead && STBuffer[0] != 0x90) {
                         PrintAndLogEx(ERR, "Chunk read error: %02x %s", STBuffer[0], mfpGetErrorDescription(STBuffer[0]));
-                        memcpy(carddata + ((128 + (sl3Count-32)+c*3) * MFBLOCK_SIZE), nullChunk, 3 * MFBLOCK_SIZE);
+                        memcpy(carddata + ((128 + 16*(sl3Count-32)+c*3) * MFBLOCK_SIZE), nullChunk, 3 * MFBLOCK_SIZE);
                         PrintAndLogEx(WARNING, "Quick-reading sector %3d / %3d ( " _RED_("fail") " )", sl3Count, numSectors - 1);
                         continue;
-                    } 
+                    }
                     if (STRead != 1 + 48 + 2) {
                         PrintAndLogEx(ERR, "Error return length: %d", STRead);
                         DropField();
                         return PM3_ESOFT;
                     }
                     PrintAndLogEx(INPLACE, "Quick-reading sector %3d / %3d ( " _GREEN_("ok") " )", sl3Count, numSectors - 1);
-                    memcpy(carddata + ((128 + (sl3Count-32)+c*3) * MFBLOCK_SIZE), &STBuffer[1], 3 * MFBLOCK_SIZE);
+                    memcpy(carddata + ((128 + 16*(sl3Count-32)+c*3) * MFBLOCK_SIZE), &STBuffer[1], 3 * MFBLOCK_SIZE);
                     
                 }
                 sectorsRead++;
