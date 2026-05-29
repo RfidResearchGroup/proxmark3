@@ -420,8 +420,6 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
 
     if (mf4session) {
         mf4session->Authenticated = true;
-        mf4session->R_Ctr = 0;
-        mf4session->W_Ctr = 0;
         mf4session->KeyNum = keyn[1] + (keyn[0] << 8);
         memmove(mf4session->RndA, RndA, 16);
         memmove(mf4session->RndB, RndB, 16);
@@ -429,6 +427,8 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
         memmove(mf4session->Kenc, kenc, 16);
         memmove(mf4session->Kmac, kmac, 16);
         if (!nonfirst) {
+            mf4session->R_Ctr = 0;
+            mf4session->W_Ctr = 0;
             memmove(mf4session->TI, raw, 4);
             memmove(mf4session->PICCap2, &raw[20], 6);
             memmove(mf4session->PCDCap2, &raw[26], 6);
