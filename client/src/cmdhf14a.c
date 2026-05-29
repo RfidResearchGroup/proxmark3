@@ -1163,7 +1163,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     uint8_t *recv;
     PacketResponseNG resp;
 resend:
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 7000)) {
         recv = resp.data.asBytes;
         int iLen = resp.oldarg[0];
 

@@ -6833,7 +6833,7 @@ static int CmdHF14AMfAuth4(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    return MifareAuth4(NULL, keyn, key, true, false, true, true, false);
+    return MifareAuth4(NULL, keyn, key, false, true, false, true, true, false);
 }
 
 // https://www.nxp.com/docs/en/application-note/AN10787.pdf

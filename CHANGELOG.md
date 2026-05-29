@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mfp rdbl` when using "read multiple" blocks by decrypting the entire buffer instead of one block only (@team-orangeBlue)
+- Improved `hf mfp dump` execution speed by removing crypto+card restarts, approx. 40% faster (@team-orangeBlue)
+- Added support for non-first authentication in Mifare Plus (@team-orangeBlue)
 - Added CUDA version of tools/mfulc_des_brute (@C2Pwn)
 - Added `hf mfu desbrute` command: native client support for ULC key recovery (@C2Pwn)
 - Added `hf mf sen` command: native client support for FM11RF08S SEN recovery (@C2Pwn)
