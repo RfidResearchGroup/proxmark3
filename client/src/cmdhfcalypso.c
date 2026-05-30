@@ -178,6 +178,7 @@ typedef struct {
     uint16_t tag;
     const char *name;
     bool tlv;
+    const char *profile_json_key;
 } calypso_get_data_probe_t;
 
 typedef struct {
@@ -283,6 +284,7 @@ static bool calypso_get_current_ef_lid(bool verbose, uint16_t *lid);
 static bool calypso_get_current_file_lid(bool verbose, uint16_t *lid);
 static bool calypso_read_sw_has_data(uint16_t sw, size_t read_len);
 static int calypso_get_data_object(uint16_t tag, uint8_t *out, size_t out_len, size_t *read_len, uint16_t *sw);
+static void calypso_dump_add_profile_data_objects(json_t *profile);
 static void calypso_print_hex_entry(const char *label, const uint8_t *data, size_t data_len, const char *ansi_color);
 static void calypso_reselect_exact_df_name(const calypso_select_result_t *selected, bool verbose);
 static void calypso_print_rf_info(const calypso_rf_info_t *rf);
@@ -306,15 +308,15 @@ static int CmdHelp(const char *Cmd);
 // https://docs.keypop.org/keypop-calypso-card-cpp-api/latest-stable/namespacekeypop_1_1calypso_1_1card.html#aa274077fbdeafe85dfe208791490462f
 // https://gnupg.org/ftp/specs/OpenPGP-smart-card-application-2.0.pdf
 static const calypso_get_data_probe_t calypso_get_data_probes[] = {
-    {0x0062, "FCP For Current File", true},
-    {0x006F, "FCI For Current DF", true},
-    {0x00C0, "EF List", true},
-    {0x00D0, "Other application AIDs", true},
-    {0x0185, "Traceability Info", false},
-    {0x5F52, "ATR historical bytes", true},
-    {0xDF4C, "Card Certificate", false},
-    {0xDF4A, "CA Certificate", false},
-    {0xDF2C, "Card Public Key", false},
+    {0x0062, "FCP For Current File", true, NULL},
+    {0x006F, "FCI For Current DF", true, NULL},
+    {0x00C0, "EF List", true, "efList"},
+    {0x00D0, "Other application AIDs", true, "otherApplicationAids"},
+    {0x0185, "Traceability Info", false, "traceabilityInformation"},
+    {0x5F52, "ATR historical bytes", true, "atrHistoricalBytes"},
+    {0xDF4C, "Card Certificate", false, "cardCertificate"},
+    {0xDF4A, "CA Certificate", false, "caCertificate"},
+    {0xDF2C, "Card Public Key", false, "cardPublicKey"},
 };
 
 static const uint8_t calypso_probe_cla_values[] = {
@@ -1828,6 +1830,35 @@ static void calypso_print_get_data_object(const calypso_get_data_probe_t *probe,
     calypso_print_hex_entry(label, data, data_len, ANSI_YELLOW);
 }
 
+static void calypso_dump_add_profile_data_objects(json_t *profile) {
+    if (profile == NULL) {
+        return;
+    }
+
+    for (size_t i = 0; i < ARRAYLEN(calypso_get_data_probes); i++) {
+        const calypso_get_data_probe_t *probe = &calypso_get_data_probes[i];
+        if (probe->profile_json_key == NULL) {
+            continue;
+        }
+
+        uint8_t response[APDU_RES_LEN] = {0};
+        size_t response_len = 0;
+        uint16_t sw = 0;
+        int res = calypso_get_data_object(probe->tag, response, sizeof(response), &response_len, &sw);
+        if (res != PM3_SUCCESS) {
+            continue;
+        }
+        if (sw == ISO7816_INS_NOT_SUPPORTED || sw == ISO7816_CLA_NOT_SUPPORTED) {
+            break;
+        }
+        if (calypso_read_sw_has_data(sw, response_len) == false) {
+            continue;
+        }
+
+        calypso_json_set_hex(profile, probe->profile_json_key, response, response_len);
+    }
+}
+
 static void calypso_print_info_data_objects(void) {
     bool printed_header = false;
 
@@ -1854,7 +1885,7 @@ static void calypso_print_info_data_objects(void) {
             continue;
         }
 
-        if (sw == ISO7816_INS_NOT_SUPPORTED) {
+        if (sw == ISO7816_INS_NOT_SUPPORTED || sw == ISO7816_CLA_NOT_SUPPORTED) {
             break;
         }
 
@@ -4288,6 +4319,7 @@ static int calypso_dump_profile(calypso_dump_profile_t *dump_profile, calypso_rf
 
     json_t *profile = json_object();
     calypso_json_set_hex(profile, "serial", dump_profile->serial, sizeof(dump_profile->serial));
+    calypso_dump_add_profile_data_objects(profile);
     json_t *nodes = json_array();
     json_object_set_new(profile, "nodes", nodes);
 
