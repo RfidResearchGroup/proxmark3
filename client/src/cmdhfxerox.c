@@ -151,7 +151,6 @@ static const char *xerox_c_type[] = { "drum", "yellow", "magenta", "cyan", "blac
 static const uint8_t FACTORY_SOLD[]    = { 0xDB, 0x3A, 0xDB, 0x3A };
 static const uint8_t FACTORY_METERED[] = { 0xD8, 0x3A, 0xD8, 0x3A };
 
-
 static int CmdHelp(const char *Cmd);
 void RC2_set_key(RC2_KEY *key, int len, const unsigned char *data, int bits);
 void RC2_encrypt(unsigned long *d, RC2_KEY *key);
@@ -375,6 +374,35 @@ void RC2_cbc_encrypt(const unsigned char *in, unsigned char *out, long length,
     }
     tin0 = tin1 = tout0 = tout1 = xor0 = xor1 = 0;
     tin[0] = tin[1] = 0;
+}
+
+static void xerox_derive_key(const uint8_t *data, RC2_KEY *out_key) {
+    uint8_t k1[8], iv[8], k2[8];
+
+    k1[0] = data[8];
+    k1[1] = data[5];
+    k1[2] = data[6];
+    k1[3] = data[7];
+    k1[4] = data[(0x18 * XEROX_BLOCK_SIZE) + 0];
+    k1[5] = data[(0x18 * XEROX_BLOCK_SIZE) + 1];
+    k1[6] = data[(0x22 * XEROX_BLOCK_SIZE) + 0];
+    k1[7] = 0;
+
+    RC2_set_key(out_key, 8, k1, 64);
+
+    memset(iv, 0, sizeof(iv));
+    iv[0] = k1[6];
+    iv[1] = k1[7];
+    iv[2] = 1;
+
+    RC2_cbc_encrypt(k1, k2, 8, out_key, iv, RC2_ENCRYPT);
+
+    memcpy(k1, k2, sizeof(k1));
+    k1[2] = k2[3] ^ data[(0x22 * XEROX_BLOCK_SIZE) + 0];
+    k1[3] = k2[4] ^ data[(0x22 * XEROX_BLOCK_SIZE) + 1];
+    k1[5] = k2[1] ^ 0x01;
+
+    RC2_set_key(out_key, 8, k1, 64);
 }
 
 static int switch_off_field(void) {
@@ -971,33 +999,9 @@ static int CmdHFXeroxDump(const char *Cmd) {
         PrintAndLogEx(INFO, "Decrypting secret blocks...");
 
         RC2_KEY exp_key;
-        uint8_t k1[8], iv[8], k2[8], decr[8];
+        uint8_t iv[8], decr[8];
 
-        k1[0] = data[8];
-        k1[1] = data[5];
-        k1[2] = data[6];
-        k1[3] = data[7];
-        k1[4] = data[(0x18 * XEROX_BLOCK_SIZE) + 0];
-        k1[5] = data[(0x18 * XEROX_BLOCK_SIZE) + 1];
-        k1[6] = data[(0x22 * XEROX_BLOCK_SIZE) + 0];
-        k1[7] = 0;
-
-        RC2_set_key(&exp_key, 8, k1, 64);
-
-        memset(iv, 0, sizeof(iv));
-        iv[0] = k1[6];
-        iv[1] = k1[7];
-        iv[2] = 1;
-
-        RC2_cbc_encrypt(k1, k2, 8, &exp_key, iv, RC2_ENCRYPT);
-
-        memcpy(k1, k2, sizeof(k1));
-
-        k1[2] = k2[3] ^ data[(0x22 * XEROX_BLOCK_SIZE) + 0];
-        k1[3] = k2[4] ^ data[(0x22 * XEROX_BLOCK_SIZE) + 1]; // first_key[7];
-        k1[5] = k2[1] ^ 0x01;       // 01 = crypto method? rfid[23][2]
-
-        RC2_set_key(&exp_key, 8, k1, 64);
+        xerox_derive_key(data, &exp_key);
 
         for (int n = 0; n < sizeof(var_list); n++) {
 
@@ -1457,6 +1461,62 @@ static int map_generator(const json_t *selected) {
         PrintAndLogEx(INPLACE, "blk %3d", blockno);
     }
 
+    RC2_KEY enc_key;
+    xerox_derive_key(data, &enc_key);
+
+    typedef struct {
+        uint8_t  dadr;
+        uint8_t  plain[8];
+        bool     patch_lo;
+        bool     patch_hi;
+        uint8_t  cipher_lo[4];
+        uint8_t  cipher_hi[4];
+    } xerox_secret_plain_t;
+
+    xerox_secret_plain_t secret_plains[] = {
+        { 0x1D, {0x28,0x00,0xA5,0xF5, 0x00,0x00,0x00,0x00}, true, true, {0}, {0} }, // Block 29 - signature
+        // Block 30 - zeros
+        { 0x1E, {0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00}, true, true, {0}, {0} }, // Block 30 - zeros
+        // Block 31 - FF FF pattern (low half only)
+        { 0x1F, {0x00,0x00,0xFF,0xFF, 0x00,0x00,0x00,0x00}, true, false, {0}, {0} }, // Block 31 - FF FF pattern
+        // Block 33 - fixed value (high half only)
+        { 0x21, {0x00,0x00,0x3F,0xFD, 0x00,0x00,0x00,0x00}, false, true, {0}, {0} }, // Block 33 - 3F FD
+        // Block 38 - 999 decimal (low half only)
+        { 0x26, {0x00,0x00,0xE7,0x03, 0x00,0x00,0x00,0x00}, true, false, {0}, {0} }, // Block 38 - 999
+        // Block 40 - zeros
+        { 0x28, {0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00}, true, true, {0}, {0} }, // Block 40 - zeros
+        // Block 42 - zeros
+        { 0x2A, {0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00}, true, true, {0}, {0} }, // Block 42 - zeros
+        // Block 43 - FF FF pattern (low half only)
+        { 0x2B, {0x00,0x00,0xFF,0xFF, 0x00,0x00,0x00,0x00}, true, false, {0}, {0} }, // Block 43 - FF FF pattern
+        // Block 44 - zeros
+        { 0x2C, {0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00}, true, true, {0}, {0} }, // Block 44 - zeros
+        // Block 45 - FF FF pattern (low half only)
+        { 0x2D, {0x00,0x00,0xFF,0xFF, 0x00,0x00,0x00,0x00}, true, false, {0}, {0} }, // Block 45 - FF FF pattern
+        // Block 46 - zeros
+        { 0x2E, {0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00}, true, true, {0}, {0} }, // Block 46 - zeros
+        // Block 47 - FF FF pattern (low half only)
+        { 0x2F, {0x00,0x00,0xFF,0xFF, 0x00,0x00,0x00,0x00}, true, false, {0}, {0} }, // Block 47 - FF FF pattern
+    };
+
+    for (int s = 0; s < ARRAYLEN(secret_plains); s++) {
+        xerox_secret_plain_t *sp = &secret_plains[s];
+
+        if (!sp->patch_lo)
+            memcpy(sp->plain,     data + (sp->dadr       * XEROX_BLOCK_SIZE), 4);
+        if (!sp->patch_hi)
+            memcpy(sp->plain + 4, data + ((sp->dadr + 1) * XEROX_BLOCK_SIZE), 4);
+
+        uint8_t iv[8] = {0};
+        iv[0] = sp->dadr;
+
+        uint8_t cipher[8] = {0};
+        RC2_cbc_encrypt(sp->plain, cipher, 8, &enc_key, iv, RC2_ENCRYPT);
+
+        memcpy(sp->cipher_lo, cipher,     4);
+        memcpy(sp->cipher_hi, cipher + 4, 4);
+    }
+
     // Partnumber (encode partnumber string → 6 bytes for blocks 0x15–0x16)
     uint8_t pbytes[6] = {0};
     xerox_encode_partno(part_number, pbytes);
@@ -1493,13 +1553,27 @@ static int map_generator(const json_t *selected) {
         const char *desc;
     } block_entry_t;
 
-    // Named blocks with specific target values
+    // Now named[] points directly into the struct — no switch, no separate buffers
     block_entry_t named[] = {
-        { 0x15, target_15, "Part# (1/2)"    },
-        { 0x16, target_16, "Part# (2/2)"    },
-        { 0x0C, target_12, "Type/Color"     },
-        { 0x22, target_22, "Type/Color"     },
-        { 0x83, target_83, "Factory pattern"},
+        { 0x15, target_15,                  "Part# (1/2)"     },
+        { 0x16, target_16,                  "Part# (2/2)"     },
+        { 0x0C, target_12,                  "Type/Color"      },
+        { 0x22, target_22,                  "Type/Color"      },
+        { 0x83, target_83,                  "Factory pattern" },
+        
+        // Secret blocks from secret_plains
+        { 0x1D, secret_plains[0].cipher_lo, "Secret (enc)"    }, // Block 29 - signature (low)
+        { 0x1E, secret_plains[1].cipher_lo, "Secret (enc)"    }, // Block 30 - zeros (low)
+        { 0x1F, secret_plains[2].cipher_lo, "Secret (enc)"    }, // Block 31 - FF FF (low)
+        { 0x21, secret_plains[3].cipher_hi, "Secret (enc)"    }, // Block 33 - 3F FD (high)
+        { 0x26, secret_plains[4].cipher_lo, "Secret (enc)"    }, // Block 38 - 999 (low)
+        { 0x28, secret_plains[5].cipher_lo, "Secret (enc)"    }, // Block 40 - zeros (low)
+        { 0x2A, secret_plains[6].cipher_lo, "Secret (enc)"    }, // Block 42 - zeros (low)
+        { 0x2B, secret_plains[7].cipher_lo, "Secret (enc)"    }, // Block 43 - FF FF (low)
+        { 0x2C, secret_plains[8].cipher_lo, "Secret (enc)"    }, // Block 44 - zeros (low)
+        { 0x2D, secret_plains[9].cipher_lo, "Secret (enc)"    }, // Block 45 - FF FF (low)
+        { 0x2E, secret_plains[10].cipher_lo, "Secret (enc)"   }, // Block 46 - zeros (low)
+        { 0x2F, secret_plains[11].cipher_lo, "Secret (enc)"   }, // Block 47 - FF FF (low)
     };
 
     // Blocks to zero out (counters, firmware, etc.)
@@ -1522,7 +1596,8 @@ static int map_generator(const json_t *selected) {
         0xCF, 0xD1, 0xD3, 0xD5, 0xD7, 0xD8, 0xD9, 0xDA, 0xDB,
         0xDC, 0xDD, 0xDE, 0xDF, 0xE0, 0xE2, 0xE3, 0xE4, 0xE5,
         0xE7, 0xE9, 0xEA, 0xEB, 0xEC, 0xEE, 0xEF, 0xF0, 0xF1,
-        0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xFA, 0xFC
+        0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xFA, 0xFC,
+        0xFE, 0xFF
     };
 
     int num_named = ARRAYLEN(named);
