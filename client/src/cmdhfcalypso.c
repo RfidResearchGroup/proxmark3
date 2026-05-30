@@ -4319,6 +4319,9 @@ static int calypso_dump_profile(calypso_dump_profile_t *dump_profile, calypso_rf
 
     json_t *profile = json_object();
     calypso_json_set_hex(profile, "serial", dump_profile->serial, sizeof(dump_profile->serial));
+    if (walk_selected.parsed.has_startup) {
+        calypso_json_set_hex(profile, "startupInfo", walk_selected.parsed.startup, sizeof(walk_selected.parsed.startup));
+    }
     calypso_dump_add_profile_data_objects(profile);
     json_t *nodes = json_array();
     json_object_set_new(profile, "nodes", nodes);
