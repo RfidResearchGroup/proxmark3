@@ -1418,6 +1418,16 @@ cleanup:
     return result;
 }
 
+typedef struct {
+    uint8_t     blk;
+    uint8_t    *target;
+    const char *desc;
+} block_entry_t;
+
+static int sort_by_block_ascending(const void *a, const void *b) {
+    return (int)((const block_entry_t *)a)->blk - (int)((const block_entry_t *)b)->blk;
+}
+
 static int map_generator(const json_t *selected) {
 
     if (!selected) return PM3_EINVARG;
@@ -1506,12 +1516,6 @@ static int map_generator(const json_t *selected) {
 
     uint8_t zero[4] = {0};
 
-    typedef struct {
-        uint8_t     blk;
-        uint8_t    *target;
-        const char *desc;
-    } block_entry_t;
-
     block_entry_t named[] = {
         { 0x15, target_15,                    "Part# (1/2)"     },
         { 0x16, target_16,                    "Part# (2/2)"     },
@@ -1584,9 +1588,6 @@ static int map_generator(const json_t *selected) {
         };
     }
 
-    int sort_by_block_ascending(const void *a, const void *b) {
-        return (int)((const block_entry_t *)a)->blk - (int)((const block_entry_t *)b)->blk;
-    }
     qsort(all, total, sizeof(block_entry_t), sort_by_block_ascending);
 
     PrintAndLogEx(NORMAL, "");
