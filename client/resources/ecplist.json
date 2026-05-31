@@ -72,6 +72,20 @@
     },
     {
         "type": "transit",
+        "key": ["mbta", "boston"],
+        "value": "6a02c801000300030000000000",
+        "name": "Transit: MBTA",
+        "description": ""
+    },
+    {
+        "type": "transit",
+        "key": ["brisbane"],
+        "value": "6a02c801000300040000000000",
+        "name": "Transit: Brisbane",
+        "description": ""
+    },
+    {
+        "type": "transit",
         "key": ["latap", "losangeles"],
         "value": "6a02c801000300050000000000",
         "name": "Transit: LA TAP",
@@ -96,6 +110,20 @@
         "key": ["presto", "toronto"],
         "value": "6a02c801000309600000000000",
         "name": "Transit: Presto",
+        "description": ""
+    },
+    {
+        "type": "transit",
+        "key": ["lyon"],
+        "value": "6a02c80100030b300000000000",
+        "name": "Transit: Lyon",
+        "description": ""
+    },
+    {
+        "type": "transit",
+        "key": ["regielignedazur", "rla", "nice"],
+        "value": "6a02c80100030c540000000000",
+        "name": "Transit: Régie Ligne d'Azur",
         "description": ""
     },
     {

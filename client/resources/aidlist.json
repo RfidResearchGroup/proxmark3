@@ -3101,6 +3101,15 @@
         "Protocol": "cna_calypso"
     },
     {
+        "AID": "A000000291D1240400",
+        "Vendor": "OPUS",
+        "Country": "Canada",
+        "Name": "OPUS",
+        "Description": "CALYPSO-based OPUS transit card application.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
         "AID": "A000000404",
         "Vendor": "Calypso Networks Association (CNA)",
         "Country": "France",
@@ -3323,6 +3332,15 @@
             "android://com.tcl.eticket",
             "android://com.worldline.wallet"
         ]
+    },
+    {
+        "AID": "A0000004040125006901",
+        "Vendor": "Lignes D'Azur",
+        "Country": "France",
+        "Name": "Lignes D'Azur",
+        "Description": "CALYPSO-based Lignes D'Azur transit card.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
     },
     {
         "AID": "A0000004040125009101",
