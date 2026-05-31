@@ -474,18 +474,13 @@ static void xerox_generate_partno(const uint8_t *data, char *pn) {
     pn[12] = 0;
 }
 
-// Inverse of xerox_generate_partno: encode "006R01529" -> 6 raw bytes
 static void xerox_encode_partno(const char *pn, uint8_t *out) {
-    // pn format: DDDLDDDD-DD  (D=digit, L=letter, e.g. "006R01529-01")
-    // bytes 0-5 pack the significant digits and letter back
     if (!pn || strlen(pn) < 9) return;
-
     out[0] = ((pn[0] - '0') << 4) | (pn[1] - '0');
-    out[1] = ((pn[2] - '0') << 4) | ((pn[3] & 0x0F));   // letter upper nibble
-    out[2] = ((pn[3] << 4) & 0xF0) | (pn[4] - '0');     // letter lower nibble + digit
+    out[1] = ((pn[2] - '0') << 4) | (pn[3] >> 4);        // '6' in high nibble, upper nibble of 'R' (0x52 >> 4 = 0x5) in low nibble
+    out[2] = ((pn[3] << 4) & 0xF0) | (pn[4] - '0');      // lower nibble of 'R' (0x52 & 0xF = 0x2) in high nibble, next digit in low nibble
     out[3] = ((pn[5] - '0') << 4) | (pn[6] - '0');
     out[4] = ((pn[7] - '0') << 4) | (pn[8] - '0');
-    // out[5] = suffix digits if present (pn[10], pn[11])
     if (strlen(pn) >= 12) {
         out[5] = ((pn[10] - '0') << 4) | (pn[11] - '0');
     }
@@ -1467,78 +1462,42 @@ static int map_generator(const json_t *selected) {
     typedef struct {
         uint8_t  dadr;
         uint8_t  plain[8];
-        bool     patch_lo;
-        bool     patch_hi;
-        uint8_t  cipher_lo[4];
-        uint8_t  cipher_hi[4];
+        uint8_t  cipher[8];
     } xerox_secret_plain_t;
 
+    // Secret plain/decrypted patterns from the var_list
     xerox_secret_plain_t secret_plains[] = {
-        { 0x1D, {0x28,0x00,0xA5,0xF5, 0x00,0x00,0x00,0x00}, true, true, {0}, {0} }, // Block 29 - signature
-        // Block 30 - zeros
-        { 0x1E, {0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00}, true, true, {0}, {0} }, // Block 30 - zeros
-        // Block 31 - FF FF pattern (low half only)
-        { 0x1F, {0x00,0x00,0xFF,0xFF, 0x00,0x00,0x00,0x00}, true, false, {0}, {0} }, // Block 31 - FF FF pattern
-        // Block 33 - fixed value (high half only)
-        { 0x21, {0x00,0x00,0x3F,0xFD, 0x00,0x00,0x00,0x00}, false, true, {0}, {0} }, // Block 33 - 3F FD
-        // Block 38 - 999 decimal (low half only)
-        { 0x26, {0x00,0x00,0xE7,0x03, 0x00,0x00,0x00,0x00}, true, false, {0}, {0} }, // Block 38 - 999
-        // Block 40 - zeros
-        { 0x28, {0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00}, true, true, {0}, {0} }, // Block 40 - zeros
-        // Block 42 - zeros
-        { 0x2A, {0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00}, true, true, {0}, {0} }, // Block 42 - zeros
-        // Block 43 - FF FF pattern (low half only)
-        { 0x2B, {0x00,0x00,0xFF,0xFF, 0x00,0x00,0x00,0x00}, true, false, {0}, {0} }, // Block 43 - FF FF pattern
-        // Block 44 - zeros
-        { 0x2C, {0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00}, true, true, {0}, {0} }, // Block 44 - zeros
-        // Block 45 - FF FF pattern (low half only)
-        { 0x2D, {0x00,0x00,0xFF,0xFF, 0x00,0x00,0x00,0x00}, true, false, {0}, {0} }, // Block 45 - FF FF pattern
-        // Block 46 - zeros
-        { 0x2E, {0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00}, true, true, {0}, {0} }, // Block 46 - zeros
-        // Block 47 - FF FF pattern (low half only)
-        { 0x2F, {0x00,0x00,0xFF,0xFF, 0x00,0x00,0x00,0x00}, true, false, {0}, {0} }, // Block 47 - FF FF pattern
+        { 0x1C, {0x11,0x0A,0x21,0x00, 0x28,0x00,0xA5,0xF5}, {0} }, // Block 28+29
+        { 0x1E, {0x00,0x00,0x00,0x00, 0x00,0x00,0xFF,0xFF}, {0} }, // Block 30+31
+        { 0x20, {0xC0,0x00,0x00,0x02, 0x00,0x00,0x3F,0xFD}, {0} }, // Block 32+33
+        { 0x26, {0x00,0x00,0xE7,0x03, 0x00,0x00,0x18,0xFC}, {0} }, // Block 38+39
+        { 0x28, {0x00,0x00,0x00,0x00, 0x00,0x00,0xFF,0xFF}, {0} }, // Block 40+41
+        { 0x2A, {0x00,0x00,0x00,0x00, 0x00,0x00,0xFF,0xFF}, {0} }, // Block 42+43
+        { 0x2C, {0x00,0x00,0x00,0x00, 0x00,0x00,0xFF,0xFF}, {0} }, // Block 44+45
+        { 0x2E, {0x00,0x00,0x00,0x00, 0x00,0x00,0xFF,0xFF}, {0} }, // Block 46+47
     };
 
     for (int s = 0; s < ARRAYLEN(secret_plains); s++) {
         xerox_secret_plain_t *sp = &secret_plains[s];
 
-        if (!sp->patch_lo)
-            memcpy(sp->plain,     data + (sp->dadr       * XEROX_BLOCK_SIZE), 4);
-        if (!sp->patch_hi)
-            memcpy(sp->plain + 4, data + ((sp->dadr + 1) * XEROX_BLOCK_SIZE), 4);
-
         uint8_t iv[8] = {0};
         iv[0] = sp->dadr;
 
-        uint8_t cipher[8] = {0};
-        RC2_cbc_encrypt(sp->plain, cipher, 8, &enc_key, iv, RC2_ENCRYPT);
-
-        memcpy(sp->cipher_lo, cipher,     4);
-        memcpy(sp->cipher_hi, cipher + 4, 4);
+        RC2_cbc_encrypt(sp->plain, sp->cipher, 8, &enc_key, iv, RC2_ENCRYPT);
     }
 
-    // Partnumber (encode partnumber string → 6 bytes for blocks 0x15–0x16)
+    // Partnumber
     uint8_t pbytes[6] = {0};
     xerox_encode_partno(part_number, pbytes);
-    // Get old block data to preserve unknown fields
     uint8_t *blk16 = data + (0x16 * XEROX_BLOCK_SIZE);
-    // Target block 0x15: use first 4 bytes of encoded part number
     uint8_t target_15[4] = { pbytes[0], pbytes[1], pbytes[2], pbytes[3] };
-    // Target block 0x16: 
-    // Bytes 0-1: remaining 2 bytes of encoded part number
-    // Bytes 2-3: preserve original data from blk16[2] and blk16[3] (instead of zeroing)
-    uint8_t target_16[4] = { 
-        pbytes[4],           // 5th byte of encoded part number
-        blk16[1],            // preserve original byte 1
-        blk16[2],            // preserve original byte 2
-        blk16[3]             // preserve original byte 3
-    };
+    uint8_t target_16[4] = { pbytes[4], blk16[1], blk16[2], blk16[3] };
 
-    // Color wrapped with old data
-    uint8_t *blk12    = data + (0x0C * XEROX_BLOCK_SIZE);
+    // Color
+    uint8_t *blk12 = data + (0x0C * XEROX_BLOCK_SIZE);
     uint8_t target_12[4] = { xerox_color_code(color), blk12[1], blk12[2], blk12[3] };
 
-    uint8_t *blk22    = data + (0x22 * XEROX_BLOCK_SIZE);
+    uint8_t *blk22 = data + (0x22 * XEROX_BLOCK_SIZE);
     uint8_t target_22[4] = { blk22[0], blk22[1], xerox_color_code(color), blk22[3] };
 
     // Factory pattern
@@ -1553,38 +1512,40 @@ static int map_generator(const json_t *selected) {
         const char *desc;
     } block_entry_t;
 
-    // Now named[] points directly into the struct — no switch, no separate buffers
     block_entry_t named[] = {
-        { 0x15, target_15,                  "Part# (1/2)"     },
-        { 0x16, target_16,                  "Part# (2/2)"     },
-        { 0x0C, target_12,                  "Type/Color"      },
-        { 0x22, target_22,                  "Type/Color"      },
-        { 0x83, target_83,                  "Factory pattern" },
-        
-        // Secret blocks from secret_plains
-        { 0x1D, secret_plains[0].cipher_lo, "Secret (enc)"    }, // Block 29 - signature (low)
-        { 0x1E, secret_plains[1].cipher_lo, "Secret (enc)"    }, // Block 30 - zeros (low)
-        { 0x1F, secret_plains[2].cipher_lo, "Secret (enc)"    }, // Block 31 - FF FF (low)
-        { 0x21, secret_plains[3].cipher_hi, "Secret (enc)"    }, // Block 33 - 3F FD (high)
-        { 0x26, secret_plains[4].cipher_lo, "Secret (enc)"    }, // Block 38 - 999 (low)
-        { 0x28, secret_plains[5].cipher_lo, "Secret (enc)"    }, // Block 40 - zeros (low)
-        { 0x2A, secret_plains[6].cipher_lo, "Secret (enc)"    }, // Block 42 - zeros (low)
-        { 0x2B, secret_plains[7].cipher_lo, "Secret (enc)"    }, // Block 43 - FF FF (low)
-        { 0x2C, secret_plains[8].cipher_lo, "Secret (enc)"    }, // Block 44 - zeros (low)
-        { 0x2D, secret_plains[9].cipher_lo, "Secret (enc)"    }, // Block 45 - FF FF (low)
-        { 0x2E, secret_plains[10].cipher_lo, "Secret (enc)"   }, // Block 46 - zeros (low)
-        { 0x2F, secret_plains[11].cipher_lo, "Secret (enc)"   }, // Block 47 - FF FF (low)
+        { 0x15, target_15,                    "Part# (1/2)"     },
+        { 0x16, target_16,                    "Part# (2/2)"     },
+        { 0x0C, target_12,                    "Type/Color"      },
+        { 0x22, target_22,                    "Type/Color"      },
+        { 0x83, target_83,                    "Factory pattern" },
+
+        { 0x1C, secret_plains[0].cipher,     "Secret (enc)" }, // Block 28
+        { 0x1D, secret_plains[0].cipher + 4, "Secret (enc)" }, // Block 29
+        { 0x1E, secret_plains[1].cipher,     "Secret (enc)" }, // Block 30
+        { 0x1F, secret_plains[1].cipher + 4, "Secret (enc)" }, // Block 31
+        { 0x20, secret_plains[2].cipher,     "Secret (enc)" }, // Block 32
+        { 0x21, secret_plains[2].cipher + 4, "Secret (enc)" }, // Block 33
+        { 0x26, secret_plains[3].cipher,     "Secret (enc)" }, // Block 38
+        { 0x27, secret_plains[3].cipher + 4, "Secret (enc)" }, // Block 39
+        { 0x28, secret_plains[4].cipher,     "Secret (enc)" }, // Block 40
+        { 0x29, secret_plains[4].cipher + 4, "Secret (enc)" }, // Block 41
+        { 0x2A, secret_plains[5].cipher,     "Secret (enc)" }, // Block 42
+        { 0x2B, secret_plains[5].cipher + 4, "Secret (enc)" }, // Block 43
+        { 0x2C, secret_plains[6].cipher,     "Secret (enc)" }, // Block 44
+        { 0x2D, secret_plains[6].cipher + 4, "Secret (enc)" }, // Block 45
+        { 0x2E, secret_plains[7].cipher,     "Secret (enc)" }, // Block 46
+        { 0x2F, secret_plains[7].cipher + 4, "Secret (enc)" }, // Block 47
     };
 
-    // Blocks to zero out (counters, firmware, etc.)
+    // Blocks to zero out
     static const uint8_t zero_blks[] = {
-        0x05, 0x06, 0x07, 0x08, 0x0A, 0x0F, 0x11, 0x13, 0x1B,
+        0x05, 0x06, 0x07, 0x08, 0x0A, 0x0F, 0x10, 0x11, 0x13, 0x1B,
         0x24, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
-        0x38, 0x39, 0x3B, 0x3C, 0x3E, 0x40, 0x42, 0x44, 0x46,
-        0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F,
-        0x50, 0x52, 0x54, 0x56, 0x57, 0x58, 0x59, 0x5B, 0x5D,
+        0x38, 0x39, 0x3B, 0x3C, 0x3E, 0x3F, 0x40, 0x41, 0x42, 0x43,
+        0x44, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E,
+        0x4F, 0x50, 0x52, 0x54, 0x56, 0x57, 0x58, 0x59, 0x5B, 0x5D,
         0x5E, 0x5F, 0x60, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67,
-        0x68, 0x6A, 0x6B, 0x6C, 0x6D, 0x6F, 0x71, 0x72, 0x73,
+        0x68, 0x6A, 0x6B, 0x6C, 0x6D, 0x6F, 0x70, 0x71, 0x72, 0x73,
         0x74, 0x75, 0x77, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E,
         0x7F, 0x80, 0x81, 0x82, 0x84, 0x86, 0x88, 0x89, 0x8A,
         0x8B, 0x8D, 0x8F, 0x90, 0x91, 0x92, 0x93, 0x94, 0x95,
@@ -1610,11 +1571,9 @@ static int map_generator(const json_t *selected) {
         return PM3_EMALLOC;
     }
 
-    // Populate named entries
     for (int i = 0; i < num_named; i++)
         all[i] = named[i];
 
-    // Populate zero entries, distinguishing firmware blocks by description
     for (int i = 0; i < num_zero; i++) {
         uint8_t b = zero_blks[i];
         bool is_fw = (b == 0x80 || b == 0x81 || b == 0x82);
@@ -1625,11 +1584,10 @@ static int map_generator(const json_t *selected) {
         };
     }
 
-    // Sort by block number ascending
-    int cmp_blk(const void *a, const void *b) {
+    int sort_by_block_ascending(const void *a, const void *b) {
         return (int)((const block_entry_t *)a)->blk - (int)((const block_entry_t *)b)->blk;
     }
-    qsort(all, total, sizeof(block_entry_t), cmp_blk);
+    qsort(all, total, sizeof(block_entry_t), sort_by_block_ascending);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "block | data       | ascii | description");
@@ -1642,7 +1600,6 @@ static int map_generator(const json_t *selected) {
         uint8_t *target  = all[i].target;
         uint8_t *current = data + (blk * XEROX_BLOCK_SIZE);
 
-        // Build printable ASCII from whichever value we'll display
         uint8_t *display = memcmp(current, target, 4) == 0 ? current : target;
         char ascii[5] = {0};
         for (int j = 0; j < 4; j++)
@@ -1658,7 +1615,6 @@ static int map_generator(const json_t *selected) {
             continue;
         }
 
-        // Block needs updating — show what it was
         char was_hex[12];
         snprintf(was_hex, sizeof(was_hex), "%02X %02X %02X %02X",
                  current[0], current[1], current[2], current[3]);
