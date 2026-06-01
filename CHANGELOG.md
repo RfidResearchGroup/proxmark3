@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added two Mifare Classic keys into extensive dictionary which are hardcoded into Mifare Plus SE (@team-orangeBlue)
 - Fixed `hf mfp rdbl` when using "read multiple" blocks by decrypting the entire buffer instead of one block only (@team-orangeBlue)
 - Improved `hf mfp dump` execution speed by removing crypto+card restarts, approx. 40% faster (@team-orangeBlue)
 - Added support for non-first authentication in Mifare Plus (@team-orangeBlue)
