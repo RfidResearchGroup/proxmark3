@@ -32,6 +32,12 @@ D01AFEEB890A
 # 17 B
 4B791BEA7BCC
 #
+# Mifare Plus SE post-1K blocks
+# Key A
+4823741386AB
+# Key B
+326587C3D17F
+#
 # QL88 keys
 # 17 A/B
 2612C6DE84CA
