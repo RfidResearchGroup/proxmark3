@@ -2623,7 +2623,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
     }
 
     if (aidlen == 2 || decodeholder) {
-        uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
+        uint16_t mad[MAD_MAX_AID_ENTRIES] = {0};
         size_t madlen = 0;
         if (MADDecode(sector0, sector16, mad, &madlen, swapmad, override)) {
             PrintAndLogEx(ERR, "can't decode MAD");
@@ -2809,7 +2809,7 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
         }
     }
 
-    uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
+    uint16_t mad[MAD_MAX_AID_ENTRIES] = {0};
     size_t madlen = 0;
     res = MADDecode(sector0, (haveMAD2 ? sector16 : NULL), mad, &madlen, false, override);
     if (res != PM3_SUCCESS) {

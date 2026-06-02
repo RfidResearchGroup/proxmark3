@@ -6956,7 +6956,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         }
 
         if (aidlen == 2 || decodeholder) {
-            uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
+            uint16_t mad[MAD_MAX_AID_ENTRIES] = {0};
             size_t madlen = 0;
             if (MADDecode(dump, dump + (0x10 * MIFARE_1K_MAXBLOCK), mad, &madlen, swapmad, override)) {
                 PrintAndLogEx(ERR, "can't decode MAD");
@@ -7041,7 +7041,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     }
 
     if (aidlen == 2 || decodeholder) {
-        uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
+        uint16_t mad[MAD_MAX_AID_ENTRIES] = {0};
         size_t madlen = 0;
         if (MADDecode(sector0, sector10, mad, &madlen, swapmad, override)) {
             PrintAndLogEx(ERR, "can't decode MAD");
@@ -7218,7 +7218,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
             return res;
     }
 
-    uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
+    uint16_t mad[MAD_MAX_AID_ENTRIES] = {0};
     size_t madlen = 0;
     res = MADDecode(sector0, sector10, mad, &madlen, false, override);
     if (res != PM3_SUCCESS) {
@@ -7648,7 +7648,7 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
     }
 
     // decode MAD v1
-    uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
+    uint16_t mad[MAD_MAX_AID_ENTRIES] = {0};
     size_t madlen = 0;
     res = MADDecode(sector0, sector10, mad, &madlen, false, false);
     if (res != PM3_SUCCESS) {
@@ -8528,7 +8528,7 @@ static int CmdHF14AMfView(const char *Cmd) {
         PrintAndLogEx(INFO, _CYAN_("VIGIK PACS detected"));
 
         // decode MAD v1
-        uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
+        uint16_t mad[MAD_MAX_AID_ENTRIES] = {0};
         size_t madlen = 0;
         res = MADDecode(dump, NULL, mad, &madlen, false, true);
         if (res != PM3_SUCCESS) {

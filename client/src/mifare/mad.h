@@ -21,6 +21,9 @@
 
 #include "common.h"
 
+// 16 MAD1 AIDs + 1 MAD2 marker (0x0005) + 23 MAD2 AIDs = 40
+#define MAD_MAX_AID_ENTRIES 40
+
 int MADCheck(uint8_t *sector0, uint8_t *sector16, bool verbose, bool *haveMAD2);
 int MADDecode(uint8_t *sector0, uint8_t *sector16, uint16_t *mad, size_t *madlen, bool swapmad, bool override);
 int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMAD2);
