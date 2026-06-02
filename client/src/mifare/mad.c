@@ -117,6 +117,8 @@ static int print_aid_description(json_t *root, uint16_t aid, char *fmt, bool ver
             continue;
         }
         const char *fmad = mad_json_get_str(data, "mad");
+        if (fmad == NULL)
+            continue;
         char lfmad[strlen(fmad) + 1];
         strcpy(lfmad, fmad);
         str_lower(lfmad);
