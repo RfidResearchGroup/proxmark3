@@ -262,8 +262,7 @@ int MADDecode(uint8_t *sector0, uint8_t *sector16, uint16_t *mad, size_t *madlen
         PrintAndLogEx(INFO, "overriding crc check");
     }
 
-    // 7 + 8 == 15
-    for (int i = 1; i <= 16; i++) {
+    for (int i = 1; i < 16; i++) {
         mad[*madlen] = madGetAID(sector0, swapmad, 1, i);
         (*madlen)++;
     }
