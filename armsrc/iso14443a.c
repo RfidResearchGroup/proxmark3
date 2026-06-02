@@ -2214,10 +2214,14 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             ror(rnd_ab + 8, 8);
 
             if (memcmp(rnd_ab + 8, ULC_TAG_NONCE, 8) != 0) {
-                Dbprintf("failed authentication");
-                EmSend4bit(CARD_NACK_IV);
-                p_response = NULL;
-                goto jump;
+                if (ulauth_1a2_len == 8 && ulauth_1a2 != NULL) {
+                    Dbprintf("failed authentication but --1a2 is set, responding with it anyway");
+                } else {
+                    Dbprintf("failed authentication");
+                    EmSend4bit(CARD_NACK_IV);
+                    p_response = NULL;
+                    goto jump;
+                }
             }
 
             // OK response
@@ -2289,10 +2293,14 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
             // Remember our tag nonce is twice the ULC_TAG_NONCE
             if ((memcmp(rnd_ab + 16, ULC_TAG_NONCE, 8) != 0) || (memcmp(rnd_ab + 24, ULC_TAG_NONCE, 8) != 0)) {
-                Dbprintf("failed authentication");
-                EmSend4bit(CARD_NACK_IV);
-                p_response = NULL;
-                goto jump;
+                if (ulauth_1a2_len == 16 && ulauth_1a2 != NULL) {
+                    Dbprintf("failed authentication but --1a2 is set, responding with it anyway");
+                } else {
+                    Dbprintf("failed authentication");
+                    EmSend4bit(CARD_NACK_IV);
+                    p_response = NULL;
+                    goto jump;
+                }
             }
 
             // OK response
