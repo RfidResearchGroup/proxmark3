@@ -500,7 +500,7 @@ int convert_mad_to_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen,
         memcpy(sector16, in + (MF_MAD2_SECTOR * 4 * MFBLOCK_SIZE), sizeof(sector16));
     }
 
-    uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
+    uint16_t mad[MAD_MAX_AID_ENTRIES] = {0};
     size_t madlen = 0;
     if (MADDecode(sector0, sector16, mad, &madlen, false, override)) {
         PrintAndLogEx(ERR, "can't decode MAD");
