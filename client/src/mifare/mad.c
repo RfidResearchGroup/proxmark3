@@ -291,12 +291,14 @@ int MADCardHolderInfoDecode(uint8_t *data, size_t datalen, bool verbose) {
         uint8_t len = data[idx] & 0x3f;
         uint8_t type = data[idx] >> 6;
         idx++;
-        if (len > 0) {
-            PrintAndLogEx(INFO, "%14s " _GREEN_("%.*s"), holder_info_type[type], len, &data[idx]);
-            idx += len;
-        } else {
+        if (len == 0)
+            break;
+        if (idx + len > datalen) {
+            PrintAndLogEx(WARNING, "Card holder info truncated (need %u bytes, %zu available)", len, datalen - idx);
             break;
         }
+        PrintAndLogEx(INFO, "%14s " _GREEN_("%.*s"), holder_info_type[type], len, &data[idx]);
+        idx += len;
     }
     return PM3_SUCCESS;
 }
