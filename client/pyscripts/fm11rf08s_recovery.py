@@ -279,12 +279,12 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False,
                        nt[sec][key_type], nt_enc[sec][key_type], par_err[sec][key_type]]
                 if debug:
                     print(' '.join(cmd))
-                subprocess.run(cmd, capture_output=True)
+                subprocess.run(cmd, capture_output=True, shell=False)
             cmd = [staticnested_2x1nt_path,
                    f"keys_{uid:08x}_{real_sec:02}_{nt[sec][0]}.dic", f"keys_{uid:08x}_{real_sec:02}_{nt[sec][1]}.dic"]
             if debug:
                 print(' '.join(cmd))
-            subprocess.run(cmd, capture_output=True)
+            subprocess.run(cmd, capture_output=True, shell=False)
             filtered_dicts[sec][key_type] = True
             for key_type in [0, 1]:
                 keys_set = set()
@@ -300,7 +300,7 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False,
                            f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}_filtered.dic"]
                     if debug:
                         print(' '.join(cmd))
-                    result = subprocess.run(cmd, capture_output=True, text=True).stdout
+                    result = subprocess.run(cmd, capture_output=True, text=True, shell=False).stdout
                     keys_def_set = set()
                     for line in result.split('\n'):
                         matched = match_key(line)
@@ -332,7 +332,7 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False,
                    nt[sec][key_type], nt_enc[sec][key_type], par_err[sec][key_type]]
             if debug:
                 print(' '.join(cmd))
-            subprocess.run(cmd, capture_output=True)
+            subprocess.run(cmd, capture_output=True, shell=False)
             keys_set = set()
             with (open(f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}.dic")) as f:
                 while line := f.readline().rstrip():
