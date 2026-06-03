@@ -999,20 +999,19 @@ static int hfgal_update_mad(uint8_t cred_sector, uint8_t cad_sector,
         return res;
     }
 
+    mad1_sector_t *m = (mad1_sector_t *)sector0;
+
     // Set AID for credential sector (0x4812)
     if (cred_sector >= 1 && cred_sector <= 15) {
-        sector0[16 + 2 + (cred_sector - 1) * 2]     = CLASSIC_CRED_AID & 0xFF;
-        sector0[16 + 2 + (cred_sector - 1) * 2 + 1]  = (CLASSIC_CRED_AID >> 8) & 0xFF;
+        mad_aid_set(&m->aid[cred_sector - 1], CLASSIC_CRED_AID);
     }
 
     // Set AID for CAD sector (0x4811)
     if (cad_sector >= 1 && cad_sector <= 15) {
-        sector0[16 + 2 + (cad_sector - 1) * 2]     = CLASSIC_CAD_AID & 0xFF;
-        sector0[16 + 2 + (cad_sector - 1) * 2 + 1]  = (CLASSIC_CAD_AID >> 8) & 0xFF;
+        mad_aid_set(&m->aid[cad_sector - 1], CLASSIC_CAD_AID);
     }
 
-    // Recalculate CRC over bytes 17..47 (info byte + 15 AID entries)
-    sector0[16] = CRC8Mad(&sector0[16 + 1], 15 + 16);
+    m->crc = MADComputeCRC(m);
 
     // Write blocks 1 and 2 of sector 0 back (block 0 is manufacturer block, don't touch)
     res = mf_write_block(1, mad_key_type, mad_key, &sector0[MFBLOCK_SIZE]);
