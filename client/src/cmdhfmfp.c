@@ -2610,7 +2610,8 @@ static int CmdHFMFPMAD(const char *Cmd) {
     }
 
     bool haveMAD2 = false;
-    MAD1DecodeAndPrint(sector0, swapmad, verbose, &haveMAD2);
+    mad_sector_t s0 = {sector0, sizeof(sector0)};
+    MAD1DecodeAndPrint(&s0, swapmad, verbose, &haveMAD2);
 
     if (haveMAD2) {
         if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector16, verbose)) {
@@ -2619,13 +2620,14 @@ static int CmdHFMFPMAD(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        MAD2DecodeAndPrint(sector16, swapmad, verbose);
+        mad_sector_t s16 = {sector16, sizeof(sector16)};
+        MAD2DecodeAndPrint(&s16, swapmad, verbose);
     }
 
     if (aidlen == 2 || decodeholder) {
-        uint16_t mad[MAD_MAX_AID_ENTRIES] = {0};
-        size_t madlen = 0;
-        if (MADDecode(sector0, sector16, mad, &madlen, swapmad, override)) {
+        mad_sector_t s16 = {sector16, sizeof(sector16)};
+        mad_t mad = {0};
+        if (MADDecode(&s0, &s16, &mad, swapmad, override) != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "can't decode MAD");
             return PM3_EWRONGANSWER;
         }
@@ -2645,17 +2647,17 @@ static int CmdHFMFPMAD(const char *Cmd) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(INFO, "-------------- " _CYAN_("AID 0x%04x") " ---------------", aaid);
 
-            for (int i = 0; i < madlen; i++) {
-                if (aaid == mad[i]) {
+            for (size_t i = 0; i < mad.count; i++) {
+                if (aaid == mad.entries[i]) {
                     uint8_t vsector[16 * 4] = {0};
                     if (mfpReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector, false)) {
                         PrintAndLogEx(NORMAL, "");
-                        PrintAndLogEx(ERR, "error, read sector %d error", i + 1);
+                        PrintAndLogEx(ERR, "error, read sector %d error", (int)(i + 1));
                         return PM3_ESOFT;
                     }
 
                     for (int j = 0; j < (verbose ? 4 : 3); j ++)
-                        PrintAndLogEx(NORMAL, " [%03d] %s", (i + 1) * 4 + j, sprint_hex(&vsector[j * 16], 16));
+                        PrintAndLogEx(NORMAL, " [%03d] %s", (int)((i + 1) * 4 + j), sprint_hex(&vsector[j * 16], 16));
                 }
             }
         }
@@ -2668,18 +2670,20 @@ static int CmdHFMFPMAD(const char *Cmd) {
             uint8_t data[4096] = {0};
             int datalen = 0;
 
-            for (int i = 0; i < madlen; i++) {
-                if (aaid == mad[i]) {
+            for (size_t i = 0; i < mad.count; i++) {
+                if (aaid == mad.entries[i]) {
 
                     uint8_t vsector[16 * 4] = {0};
                     if (mf_read_sector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
                         PrintAndLogEx(NORMAL, "");
-                        PrintAndLogEx(ERR, "error, read sector %d", i + 1);
+                        PrintAndLogEx(ERR, "error, read sector %d", (int)(i + 1));
                         return PM3_ESOFT;
                     }
 
-                    memcpy(&data[datalen], vsector, 16 * 3);
-                    datalen += 16 * 3;
+                    if (datalen + MFBLOCK_SIZE * 3 > (int)sizeof(data))
+                        break;
+                    memcpy(&data[datalen], vsector, MFBLOCK_SIZE * 3);
+                    datalen += MFBLOCK_SIZE * 3;
                 }
             }
 
@@ -2788,7 +2792,8 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
     }
 
     bool haveMAD2 = false;
-    int res = MADCheck(sector0, NULL, verbose, &haveMAD2);
+    mad_sector_t s0 = {sector0, sizeof(sector0)};
+    int res = MADCheck(&s0, NULL, verbose, &haveMAD2);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "MAD error %d", res);
         if (override)
@@ -2809,17 +2814,21 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
         }
     }
 
-    uint16_t mad[MAD_MAX_AID_ENTRIES] = {0};
-    size_t madlen = 0;
-    res = MADDecode(sector0, (haveMAD2 ? sector16 : NULL), mad, &madlen, false, override);
+    mad_sector_t s16 = {0};
+    if (haveMAD2) {
+        s16.data = sector16;
+        s16.len = sizeof(sector16);
+    }
+    mad_t mad = {0};
+    res = MADDecode(&s0, haveMAD2 ? &s16 : NULL, &mad, false, override);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "can't decode MAD");
         return res;
     }
 
     PrintAndLogEx(INFO, "reading data from tag");
-    for (int i = 0; i < madlen; i++) {
-        if (ndefAID == mad[i]) {
+    for (size_t i = 0; i < mad.count; i++) {
+        if (ndefAID == mad.entries[i]) {
             uint8_t vsector[MIFARE_1K_MAXBLOCK] = {0};
             if (mfpReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector, false)) {
                 PrintAndLogEx(ERR, "error, reading sector %d", i + 1);
