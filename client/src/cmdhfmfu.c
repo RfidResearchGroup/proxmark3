@@ -4338,6 +4338,7 @@ static int CmdHF14AMfUSim(const char *Cmd) {
         arg_lit0("v", "verbose", "Verbose output"),
         arg_str0(NULL, "1a1", "<hex>", "<8|16> hex bytes ULC/ULAES Auth reply step1: ek(RndB)"),
         arg_str0(NULL, "1a2", "<hex>", "<8|16> hex bytes ULC/ULAES Auth reply step2: ek(RndA')"),
+        arg_lit0(NULL, "1a2-mirror", "Mirror ek(RndA) from step1 reply into step2 reply"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

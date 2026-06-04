@@ -927,6 +927,8 @@ int CmdHF14ASim(const char *Cmd) {
         arg_lit0("v", "verbose", "verbose output"),
         arg_str0(NULL, "1a1", "<hex>", "<8|16> hex bytes ULC/ULAES Auth reply step1: ek(RndB)"),
         arg_str0(NULL, "1a2", "<hex>", "<8|16> hex bytes ULC/ULAES Auth reply step2: ek(RndA')"),
+        arg_lit0(NULL, "1a2-mirror", "Mirror ek(RndA) from step1 reply into step2 reply"),
+
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -966,6 +968,7 @@ int CmdHF14ASim(const char *Cmd) {
     uint8_t ulauth_1a2[16] = {0};
     CLIGetHexWithReturn(ctx, 7, ulauth_1a1, &ulauth_1a1_len);
     CLIGetHexWithReturn(ctx, 8, ulauth_1a2, &ulauth_1a2_len);
+    bool ulauth_1a2_mirror = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
 
     if (ulauth_1a1_len > 0) {
@@ -1026,6 +1029,7 @@ int CmdHF14ASim(const char *Cmd) {
         uint8_t ulauth_1a2_len;
         uint8_t ulauth_1a1[16];
         uint8_t ulauth_1a2[16];
+        bool ulauth_1a2_mirror;
     } PACKED payload;
 
     payload.tagtype = tagtype;
@@ -1033,6 +1037,7 @@ int CmdHF14ASim(const char *Cmd) {
     payload.exitAfter = exitAfterNReads;
     payload.ulauth_1a1_len = ulauth_1a1_len;
     payload.ulauth_1a2_len = ulauth_1a2_len;
+    payload.ulauth_1a2_mirror = ulauth_1a2_mirror;
     memcpy(payload.uid, uid, uid_len);
     memcpy(payload.ulauth_1a1, ulauth_1a1, ulauth_1a1_len);
     memcpy(payload.ulauth_1a2, ulauth_1a2, ulauth_1a2_len);

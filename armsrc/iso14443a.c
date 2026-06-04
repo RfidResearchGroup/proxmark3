@@ -1716,13 +1716,14 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
 // 'hf 14a sim'
 //-----------------------------------------------------------------------------
 void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uint8_t exitAfterNReads) {
-    SimulateIso14443aTagEx(tagType, flags, useruid, exitAfterNReads, NULL, 0, NULL, 0, NULL, 0);
+    SimulateIso14443aTagEx(tagType, flags, useruid, exitAfterNReads, NULL, 0, NULL, 0, NULL, 0, false);
 }
 
 void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, uint8_t exitAfterNReads,
                             uint8_t *ats, size_t ats_len,
                             uint8_t *ulauth_1a1, uint8_t ulauth_1a1_len,
-                            uint8_t *ulauth_1a2, uint8_t ulauth_1a2_len) {
+                            uint8_t *ulauth_1a2, uint8_t ulauth_1a2_len,
+                            bool ulauth_1a2_mirror) {
 #define ATTACK_KEY_COUNT 16
 #define ULC_TAG_NONCE       "\x01\x02\x03\x04\x05\x06\x07\x08"
 
@@ -2214,10 +2215,12 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             ror(rnd_ab + 8, 8);
 
             if (memcmp(rnd_ab + 8, ULC_TAG_NONCE, 8) != 0) {
+                Dbprintf("failed authentication");
                 if (ulauth_1a2_len == 8 && ulauth_1a2 != NULL) {
-                    Dbprintf("failed authentication but --1a2 is set, responding with it anyway");
+                    Dbprintf("but honoring --1a2 anyway");
+                } else if (ulauth_1a2_mirror) {
+                    Dbprintf("but honoring --1a2-mirror anyway");
                 } else {
-                    Dbprintf("failed authentication");
                     EmSend4bit(CARD_NACK_IV);
                     p_response = NULL;
                     goto jump;
@@ -2235,6 +2238,9 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
                 // encrypt RndA
                 tdes_nxp_send(rnd_ab, dynamic_response_info.response + 1, 8, ulc_key, ulc_iv, 2);
+                if (ulauth_1a2_mirror) {
+                    memcpy(dynamic_response_info.response + 1, enc_rnd_ab, 8);
+                }
             }
 
             // Add CRC
@@ -2293,10 +2299,12 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
             // Remember our tag nonce is twice the ULC_TAG_NONCE
             if ((memcmp(rnd_ab + 16, ULC_TAG_NONCE, 8) != 0) || (memcmp(rnd_ab + 24, ULC_TAG_NONCE, 8) != 0)) {
+                Dbprintf("failed authentication");
                 if (ulauth_1a2_len == 16 && ulauth_1a2 != NULL) {
-                    Dbprintf("failed authentication but --1a2 is set, responding with it anyway");
+                    Dbprintf("but honoring --1a2 anyway");
+                } else if (ulauth_1a2_mirror) {
+                    Dbprintf("but honoring --1a2-mirror anyway");
                 } else {
-                    Dbprintf("failed authentication");
                     EmSend4bit(CARD_NACK_IV);
                     p_response = NULL;
                     goto jump;
@@ -2315,6 +2323,9 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                 memset(ulc_iv, 0x00, 16);
                 // encrypt RndA
                 aes128_nxp_send(rnd_ab, dynamic_response_info.response + 1, 16, ulc_key, ulc_iv);
+                if (ulauth_1a2_mirror) {
+                    memcpy(dynamic_response_info.response + 1, enc_rnd_ab, 16);
+                }
             }
 
             // Add CRC

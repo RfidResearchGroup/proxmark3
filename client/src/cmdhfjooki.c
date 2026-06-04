@@ -565,13 +565,18 @@ static int CmdHF14AJookiSim(const char *Cmd) {
         uint8_t flags;
         uint8_t uid[10];
         uint8_t exitAfter;
+        uint8_t rats[20];
+        uint8_t ulauth_1a1_len;
+        uint8_t ulauth_1a2_len;
+        uint8_t ulauth_1a1[16];
+        uint8_t ulauth_1a2[16];
+        bool ulauth_1a2_mirror;
     } PACKED payload;
 
+    memset(&payload, 0x00, sizeof(payload));
     // NTAG,  7 byte UID in eloaded data.
     payload.tagtype = 7;
-    payload.flags = 0;
     FLAG_SET_UID_IN_EMUL(payload.flags);
-    payload.exitAfter = 0;
     memcpy(payload.uid, uid, sizeof(uid));
 
     clearCommandBuffer();
