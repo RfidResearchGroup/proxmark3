@@ -19,7 +19,7 @@ Useful docs:
     * [ID-F8268](#id-f8268)
   * [H series](#h-series)
     * [H1](#h1)
-    * [H5.5 / H7](#h7)
+    * [H7](#h7)
     * [i57 / i57v2](#i57--i57v2)
 * [ISO14443A](#iso14443a)
   * [Identifying broken ISO14443A magic](#identifying-broken-iso14443a-magic)
