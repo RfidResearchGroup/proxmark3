@@ -542,8 +542,9 @@ Check column "offline" for their availability.
 |`hf legic list          `|Y       |`List LEGIC history`
 |`hf legic rdbl          `|N       |`Read bytes from a LEGIC Prime tag`
 |`hf legic reader        `|N       |`LEGIC Prime Reader UID and tag info`
-|`hf legic restore       `|N       |`Restore a dump file onto a LEGIC Prime tag`
-|`hf legic clone         `|N       |`Clone a LEGIC Prime dump to a new MCC or tag`
+|`hf legic restore       `|N       |`Restore an exact dump back onto the same LEGIC Prime card family`
+|`hf legic clone         `|N       |`Clone a LEGIC Prime dump to a new MCC or different tag`
+|`hf legic migrate       `|N       |`Clone a LEGIC Prime dump to a tag; DCF stays opt-in`
 |`hf legic wipe          `|N       |`Wipe a LEGIC Prime tag`
 |`hf legic wrbl          `|N       |`Write data to a LEGIC Prime tag`
 |`hf legic sim           `|N       |`Start tag simulator`
