@@ -263,7 +263,7 @@ local function read_config()
     if pwd == '04' then lib14a.disconnect(); return nil, "can't read configuration, "..err_lock end
     -- read PACK
     cpack = send("30F1"):sub(1,4)
-    pack = send("30E6"):sub(1,4)
+    pack = send("3013"):sub(1,4) -- *should* be E6, testing shows 13.
     -- read SIGNATURE
     signature1 = send('30F2'):sub(1,32)
     signature2 = send('30F6'):sub(1,32)
@@ -293,7 +293,7 @@ local function read_config()
         print(string.rep('=', 88))
         print(' - ATS          ', atsstr)
         print(' - Password     ', '[0xE5] '..pwd, '[0xF0] '..cpwd)
-        print(' - Pack         ', '[0xE6] '..pack, '[0xF1] '..cpack)
+        print(' - Pack         ', '[0x13] '..pack, '[0xF1] '..cpack)
         print(' - Version      ', cversion)
         print(' - Signature    ', signature1..signature2)
     end
@@ -444,7 +444,7 @@ local function write_pack(userpack)
     local info = connect()
     if not info then return false, "Can't select card" end
     print('Writing new PACK', userpack)
-    send('A2E6'..userpack..'0000')
+    send('A213'..userpack..'0000')
     send('A2F1'..userpack..'0000')
     lib14a.disconnect()
     return true, 'Ok'
