@@ -19,7 +19,7 @@ Useful docs:
     * [ID-F8268](#id-f8268)
   * [H series](#h-series)
     * [H1](#h1)
-    * [H5.5 / H7](#h55--h7)
+    * [H7](#h7)
     * [i57 / i57v2](#i57--i57v2)
 * [ISO14443A](#iso14443a)
   * [Identifying broken ISO14443A magic](#identifying-broken-iso14443a-magic)
@@ -159,8 +159,9 @@ This is the cheapest and most common ID82xx chip available. It is usually sold a
 
 * Chip is likely a cut down version of Hitag µ (micro) clone
 * UID `00 00 00 00 00 00`
-* Password protection (4b), usually "00000000"(default) or "9AC4999C"(FURUI)
-* Config block 0xFF
+* Data pages available: 0-14
+* Password block: 0xFE
+* Config block: 0xFF
   * Byte0
     * bit 0-1 : Data Rate. ’00’ -> 2kbit/s, ’01’ -> 4kbit/s, ’10’ -> 8kbit/s, ’11’ -> 2kbit/s
     * bit 2   : 1 -> fixed to 2kbit/s
@@ -171,14 +172,31 @@ This is the cheapest and most common ID82xx chip available. It is usually sold a
   * Byte1 only bit 0 changable
   * Byte2 fixed 0x00
   * Byte3 only higher nibble changable
-* Currently unimplemented in proxmark3 client
-* Other names:
-  * ID8210 (CN)
-  * H-125 (CN)
-  * H5 (RU)
-    * The sales of "H5" have been ceased because "the chip was leaked".
+* Proxmark has support for those tags: `lf hitag htu ... --82xx`
+
+#### Variations
+
+*China naming can have ID before chip number (ID8265, ID8210)*
+
+* 8265 (CN), H5 (RU). Password: `00000000`
+* 8210 (CN) (advices for FURUI Chinese cloner). Password: `9AC4999C`
+* H5.5 (RU). Password: `496B0E59`
 
 #### Detect
+
+Can be detected by `lf search command`:
+```
+[usb] pm3 --> lf search
+...
+[=] Searching for auth LF and special cases...
+[+] UID....... 000000000000
+[+] Chipset... Hitag � / 8265
+[?] Hint: Try `lf hitag htu` commands
+```
+⚠️ *That kind of detection is very sensitive to tag position on Proxmark. Few milimiters or tag rotation to other side and tag can be detected no more* ⚠️
+
+
+Or in a manual way:
 
 ```
 [usb] pm3 --> lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00011 -s 3000
@@ -190,6 +208,24 @@ Check the green line of the plot. It must be a straight line at the end with no 
 ### Commands
 
 *Try NXP Hitag µ datasheet for sending commands to chip*
+
+Cloning EM410x to 8265 chip: `lf em 410x clone --id ... --htu`. Works only with 8265 chips, which have default password (`00000000`)
+Specific chip commands:
+```
+[usb] pm3 --> lf hitag htu
+
+help             This help
+list             List Hitag � trace history
+-----------      ----------- General -----------
+reader           Act like a Hitag � reader
+rdbl             Read Hitag � block
+dump             Dump Hitag � blocks to a file
+wrbl             Write Hitag � block
+-----------      ----------- Simulation -----------
+sim              Simulate Hitag � transponder
+```
+
+Or in a manual way:
 
 ```
 # login with pass 00000000
@@ -310,11 +346,11 @@ Simplest EM ID cloning chip available. Officially discontinued.
   * RW64bit
   * RW125FL
 
-### H5.5 / H7
+### H7
 
 ^[Top](#top)
 
-First "advanced" custom chip with H naming.
+First "advanced" custom chip with H naming. Probably variation of Hitag S chip with KDF.
 
 #### Characteristics
 
