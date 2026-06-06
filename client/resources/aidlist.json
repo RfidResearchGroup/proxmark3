@@ -2583,6 +2583,19 @@
         "Type": "transport"
     },
     {
+        "AID": "A00000039656434103F121A000000002",
+        "Vendor": "Urban Mobility Center",
+        "Country": "Bulgaria",
+        "Name": "Sofia Mobile Transit Card",
+        "Description": "DESFire-based mobile transit card",
+        "Type": "transport",
+        "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F121A0",
+            "ISOFID": "5677"
+        }
+    },
+    {
         "AID": "A00000039656434103F213F000000000",
         "Vendor": "ORCA",
         "Country": "United States",
