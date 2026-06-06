@@ -1600,6 +1600,14 @@
         "Type": "transport"
     },
     {
+        "AID": "F121A0",
+        "Vendor": "Urban Mobility Center",
+        "Country": "BG",
+        "Name": "Sofia Mobile Transit Card",
+        "Description": "DESFire-based mobile transit card",
+        "Type": "transport"
+    },
+    {
         "AID": "F20330",
         "Vendor": "NJ Transit via Conduent Inc and G+D GmbH",
         "Country": "US",
