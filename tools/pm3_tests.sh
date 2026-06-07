@@ -500,6 +500,15 @@ while true; do
       if ! CheckExecute "wiegand decode new no padded bin"  "if ! $CLIENTBIN -c 'wiegand decode --new 06BD88EB80' 2>&1 | grep -q 'padded bin'; then echo OK; fi" "OK"; then break; fi
       if ! CheckExecute "wiegand decode new 96-bit"       "$CLIENTBIN -c 'wiegand decode --new 00555555555555555555555555'" "hex\\.{14} 555555555555555555555555"; then break; fi
       if ! CheckExecute "wiegand decode new 48-bit"       "$CLIENTBIN -c 'wiegand decode --new 0000A4550148AB'" "C1k48s.*FC: 42069  CN: 42069  parity \( ok \)"; then break; fi
+
+      if ! CheckFileExist "iCLASS transport key exists"    "$RESOURCEPATH/iclass_decryptionkey.bin"; then break; fi
+      ICLASS_TRANSPORT_KEY="$(od -An -tx1 -v "$RESOURCEPATH/iclass_decryptionkey.bin" | tr -d ' \n')"
+      if ! CheckExecute "hf iclass encrypt default 2k3des" "$CLIENTBIN -c 'hf iclass encrypt -d 00000000063E02A3 -k $ICLASS_TRANSPORT_KEY'" "encrypted\\.\\.\\. 10A145919ED16F50"; then break; fi
+      if ! CheckExecute "hf iclass decrypt default 2k3des" "$CLIENTBIN -c 'hf iclass decrypt -d 10A145919ED16F50 -k $ICLASS_TRANSPORT_KEY'" "plain\\.\\.\\.\\.\\.\\.\\. 00000000063E02A3"; then break; fi
+      if ! CheckExecute "hf iclass encrypt des"           "$CLIENTBIN -c 'hf iclass encrypt -d 00000000063E02A3 --enc des -k $ICLASS_TRANSPORT_KEY'" "encrypted\\.\\.\\. D50D3FC66AF7E0F3"; then break; fi
+      if ! CheckExecute "hf iclass decrypt des"           "$CLIENTBIN -c 'hf iclass decrypt -d D50D3FC66AF7E0F3 --enc des -k $ICLASS_TRANSPORT_KEY'" "plain\\.\\.\\.\\.\\.\\.\\. 00000000063E02A3"; then break; fi
+      if ! CheckExecute "hf iclass view dump"             "$CLIENTBIN -c 'hf iclass view -f traces/iclass/hf-iclass-dump.json'" "7/0x07 \\| 78 36 02 A2 28 30 10 E8"; then break; fi
+      if ! CheckExecute "hf iclass decrypt dump"          "$CLIENTBIN -c 'hf iclass decrypt -f traces/iclass/hf-iclass-dump.json --ns -k $ICLASS_TRANSPORT_KEY'" "C1k48s.*FC: 69  CN: 69420  parity \\( ok \\)"; then break; fi
       if ! CheckExecute "wiegand Verkada40 encode test 1" "$CLIENTBIN -c 'wiegand encode -w Verkada40 --fc 50 --cn 1001'" "86400007D3"; then break; fi
       if ! CheckExecute "wiegand Verkada40 decode test 1" "$CLIENTBIN -c 'wiegand decode --raw 86400007D3'" "Verkada40.*FC: 50  CN: 1001  parity \( ok \)"; then break; fi
       if ! CheckExecute "wiegand Verkada40 encode test 2" "$CLIENTBIN -c 'wiegand encode -w Verkada40 --fc 50 --cn 1004'" "86400007D9"; then break; fi
