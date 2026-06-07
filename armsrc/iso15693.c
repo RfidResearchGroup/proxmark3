@@ -1562,16 +1562,8 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
             break;
         }
 
-        if (BUTTON_PRESS()) {
+        if (BUTTON_PRESS() || data_available()) {
             dr->byteCount = -1;
-            break;
-        }
-
-        if (allow_usb_interrupt &&
-                (dr->state == STATE_READER_UNSYNCD ||
-                 dr->state == STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF) &&
-                data_available()) {
-            dr->byteCount = -2;
             break;
         }
 
