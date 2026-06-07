@@ -7270,6 +7270,7 @@
                 "hf mfdes read --aid 123456 --fid 10 --type data -c iso -> read file via ISO channel: app=123456, short iso id=10, offset=0.",
                 "hf mfdes read --aid 123456 --fileisoid 1000 --type data -c iso -> read file via ISO channel: app=123456, iso id=1000, offset=0. Select via native ISO wrapper",
                 "hf mfdes read --isoid 0102 --fileisoid 1000 --type data -c iso -> read file via ISO channel: app iso id=0102, iso id=1000, offset=0. Select via ISO commands",
+                "hf mfdes read --dfname D2760000850100 --fid 01 -> select DF by name and read file 01",
                 "hf mfdes read --isoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000001 -> get one record (number 5) from file 1100 via iso commands",
                 "hf mfdes read --isoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000000 -> get all record (from 5 to 1) from file 1100 via iso commands",
                 "hf mfdes read --isoid df01 --fid 00 --schann lrp -t aes --length 000010 -> read via lrp channel",
@@ -7295,10 +7296,11 @@
                 "-o, --offset <hex> File Offset (3 hex bytes, big endian). For records - record number (0 - lastest record). (def: 0)",
                 "-l, --length <hex> Length to read (3 hex bytes, big endian -> 000000 = Read all data). For records - records count (0 - all). (def: 0)",
                 "--isoid <hex> Application ISO ID (ISO DF ID) (2 hex bytes, big endian)",
+                "--dfname <hex> Application ISO DF Name (1-16 hex bytes, big endian)",
                 "--fileisoid <hex> File ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands",
                 "--isochain use iso chaining commands. Switched on by default if secure channel = lrp"
             ],
-            "usage": "hf mfdes read [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--fid <hex>] [--no-auth] [--type <auto|data|value|record|mac>] [-o <hex>] [-l <hex>] [--isoid <hex>] [--fileisoid <hex>] [--isochain]"
+            "usage": "hf mfdes read [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--fid <hex>] [--no-auth] [--type <auto|data|value|record|mac>] [-o <hex>] [-l <hex>] [--isoid <hex>] [--dfname <hex>] [--fileisoid <hex>] [--isochain]"
         },
         "hf mfdes selectapp": {
             "command": "hf mfdes selectapp",

@@ -282,6 +282,8 @@ Create standard file with mac access mode and specified access settings. access 
 
 `hf mfdes read --aid 123456 --fid 01` - autodetect file type (with `hf mfdes getfilesettings`) and read its contents
 
+`hf mfdes read --dfname D2760000850100 --fid 01` - select an application by ISO DF name and read file 01
+
 `hf mfdes read --aid 123456 --fid 01 --type record --offset 000000 --length 000001` - read one last record from a record file
 
 *read via ISO command set:*
@@ -579,5 +581,3 @@ or in the LRP mode
 Switch LRP mode on
 
 `hf mfdes setconfig --appisoid df01 -t aes -s ev2 --param 05 --data 00000000010000000000`
-
-
