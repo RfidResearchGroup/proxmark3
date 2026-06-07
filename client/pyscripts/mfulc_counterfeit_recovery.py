@@ -389,7 +389,8 @@ def is_known_counterfeit(p) -> bool:
     return False
 
 
-def collect(num_challenges: int, p, debug: bool, force: bool = False, erndarndb: Optional[str] = None) -> Optional[dict]:
+def collect(num_challenges: int, p, debug: bool, force: bool = False,
+            erndarndb: Optional[str] = None) -> Optional[dict]:
     """
     Collect challenges from the card and check if it is vulnerable.
 
@@ -568,11 +569,24 @@ def main():
         uid = get_ulc_uid(p)
         if uid is None:
             return
-        max_occurrence, challenges = collect_100(num_challenges, p, early_stop=False)
-        print(f"[+] Most frequent challenge: \033[1;34m{challenges['challenge_100']}\033[0m"
-              f" (occurrences: {max_occurrence}/{num_challenges})")
-        print("[+] Get the corresponding reader response with")
-        print(f"[+] \033[1;33mhf mfu sim -t 13 -u {uid} --1a1 {challenges['challenge_100']}\033[0m")
+        common_nonces = []
+        legacy_collect = False
+        if legacy_collect:
+            max_occurrence, challenges = collect_100(num_challenges, p, early_stop=False)
+            if max_occurrence <= 1:
+                return
+            common_nonces.append((challenges["challenge_100"], max_occurrence))
+        else:
+            p.console(f"hf mfu cauth -c {num_challenges}")
+            for line in p.grabbed_output.splitlines():
+                match = re.search(r"\[=\]\s+([0-9a-fA-F]{16})\s+\(count:\s*(\d+)\)", line)
+                if match:
+                    common_nonces.append((match.group(1), int(match.group(2))))
+        for i in range(len(common_nonces)):
+            challenge_hex = common_nonces[i][0]
+            occurrence = common_nonces[i][1]
+            print(f"E(RndB): {challenge_hex} Count: {occurrence:3d} Cmd:"
+                  f" \033[1;33mhf mfu sim -t 13 -u {uid} --1a1 {challenge_hex}\033[0m")
         return
 
     if use_cuda:

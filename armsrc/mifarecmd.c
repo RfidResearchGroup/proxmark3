@@ -320,6 +320,71 @@ static uint8_t chkKey3Pass(uint8_t keyno, uint8_t *keybytes, uint32_t *auths, bo
     return res;
 }
 
+//-----------------------------------------------------------------------------
+// acquire encrypted nonces of Ultralight C or Ultralight AES
+//-----------------------------------------------------------------------------
+void MifareU3PAcquireEncryptedNonces(uint8_t keyno, uint8_t num_nonces_to_acquire) {
+    uint8_t i = 0;
+    int res = PM3_SUCCESS;
+    bool selected = false;
+    // Buf first byte is nr of nonces in the buffer, uint8_t
+    uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
+    uint8_t nonce_size = keyno == MIFAREULC_KEY_INDEX ? 8 : 16;
+    uint8_t max_nonces_per_response = (PM3_CMD_DATA_SIZE - sizeof(uint8_t)) / nonce_size;
+    uint8_t acquired_nonces = 0;
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    clear_trace();
+    set_tracing(false);
+    set_tracing(true);
+    LED_A_ON();
+    LED_C_ON();
+    if (num_nonces_to_acquire > max_nonces_per_response) {
+        Dbprintf("Limiting number of nonces to acquire to %u per response", max_nonces_per_response);
+        num_nonces_to_acquire = max_nonces_per_response;
+    }
+    for (acquired_nonces = 0; acquired_nonces < num_nonces_to_acquire; acquired_nonces++) {
+
+        // Needed for USCUID-UL
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        SpinDelayUsPrecision(500);
+
+        selected = false;
+        while (i < 5 && selected == false) {
+            if (MifareUFastRead0() == 0) {
+                ++i;
+                continue;
+            }
+            selected = true;
+        }
+        if (selected == false) {
+            Dbprintf("acquire nonces: Failed at fast selecting the card!");
+            res = PM3_ESOFT;
+            break;
+        }
+        uint16_t len = 0;
+        uint8_t resp[19] = {0x00};
+        if (keyno == MIFAREULC_KEY_INDEX) {
+            len = mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_ULC_AUTH_1, 0x00, resp, sizeof(resp), NULL, NULL);
+            if (len != 1 + nonce_size + 2) {
+                res = PM3_ESOFT;
+                break;
+            }
+        } else {
+            len = mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_ULAES_AUTH_1, keyno, resp, sizeof(resp), NULL, NULL);
+            if (len != 1 + nonce_size + 2) {
+                res = PM3_ESOFT;
+                break;
+            }
+        }
+        memcpy(buf + 1 + acquired_nonces * nonce_size, resp + 1, nonce_size);
+    }
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    LED_B_ON();
+    buf[0] = acquired_nonces;
+    reply_ng(CMD_HF_MIFAREU3P_ACQ_ENCRYPTED_NONCES, res, buf, sizeof(uint8_t) + acquired_nonces * nonce_size);
+    LEDsoff();
+}
+
 void MifareU3PassAuth(mful_3passauth_t *packet) {
 
     LED_A_ON();

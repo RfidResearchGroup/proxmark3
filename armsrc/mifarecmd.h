@@ -33,6 +33,7 @@ void MifareUWriteBlock(mful_writeblock_t *packet);
 
 void MifareU3PassAuth(mful_3passauth_t *packet);
 void MifareU3PassChkKeys(mful_3passchk_t *packet);
+void MifareU3PAcquireEncryptedNonces(uint8_t keyno, uint8_t num_nonces_to_acquire);
 
 void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, bool calibrate, uint8_t *key);
 void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t *key, uint8_t forceDetectDist);

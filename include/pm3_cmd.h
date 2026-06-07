@@ -835,7 +835,7 @@ typedef struct {
 
 // ultralight-C & AES
 #define CMD_HF_MIFAREU3P_AUTH 0x0724
-// 0x0725 is free
+#define CMD_HF_MIFAREU3P_ACQ_ENCRYPTED_NONCES 0x0725
 #define CMD_HF_MIFAREU3P_CHKKEY 0x0726
 #define CMD_HF_MIFAREU_SETKEY 0x0727
 

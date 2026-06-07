@@ -4473,6 +4473,122 @@ static int mfu_3pass_check_keys(uint8_t key_index, uint8_t firstChunk, uint8_t l
 // Ultralight C Methods
 //-------------------------------------------------------------------------------
 
+static uint32_t acquire_ul3p_nonces(uint8_t keytype, uint32_t num_nonces_to_acquire, uint64_t *nonces) {
+
+    uint32_t num_acquired_nonces = 0;
+    uint8_t nonce_size = keytype == 1 ? 8 : 16;
+    uint8_t max_nonces_per_response = (PM3_CMD_DATA_SIZE - sizeof(uint8_t)) / nonce_size;
+    PacketResponseNG resp;
+    memset(&resp, 0, sizeof(resp));
+
+    if (keytype != 1) {
+        PrintAndLogEx(ERR, "Currently, only supported keytype for acquiring nonces is ULC");
+        return PM3_ENOTIMPL;
+    }
+
+    do {
+        clearCommandBuffer();
+        SendCommandMIX(CMD_HF_MIFAREU3P_ACQ_ENCRYPTED_NONCES, MIFAREULC_KEY_INDEX, MIN(num_nonces_to_acquire - num_acquired_nonces, max_nonces_per_response), 0, NULL, 0);
+        if (WaitForResponseTimeout(CMD_HF_MIFAREU3P_ACQ_ENCRYPTED_NONCES, &resp, 1500 + num_nonces_to_acquire * 15) == false) {
+            PrintAndLogEx(WARNING, "Timeout");
+            return num_acquired_nonces;
+        }
+
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Failure to collect tag nonces");
+            return num_acquired_nonces;
+        }
+
+        uint8_t num_sampled_nonces = resp.data.asBytes[0];
+        uint8_t *bufp = resp.data.asBytes + 1;
+
+        for (uint16_t i = 0; i < num_sampled_nonces; i++) {
+            uint64_t nt_enc = bytes_to_num(bufp + i * nonce_size, nonce_size);
+            if (nonces != NULL) {
+                nonces[num_acquired_nonces] = nt_enc;
+            }
+            num_acquired_nonces++;
+        }
+
+    } while (num_acquired_nonces < num_nonces_to_acquire);
+    return num_acquired_nonces;
+}
+
+static int collect_and_stat_nonces(uint32_t collect_nonces) {
+    PrintAndLogEx(INFO, "Collecting %d nonces...", collect_nonces);
+    uint64_t *nonces = calloc(collect_nonces, sizeof(uint64_t));
+    if (nonces == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    uint32_t num_sampled_nonces = acquire_ul3p_nonces(1, collect_nonces, nonces);
+    for (uint16_t i = 0; i < num_sampled_nonces; i++) {
+        PrintAndLogEx(DEBUG, "Encrypted nonce: %016" PRIx64 "\n", nonces[i]);
+    }
+
+    if (num_sampled_nonces != collect_nonces) {
+        PrintAndLogEx(WARNING, "Failed to acquire all nonces");
+    }
+
+    // Count nonce frequencies
+    typedef struct {
+        uint64_t nonce;
+        uint32_t count;
+    } nonce_count_t;
+
+    nonce_count_t *counts = calloc(num_sampled_nonces, sizeof(nonce_count_t));
+    if (counts == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory for counts");
+        free(nonces);
+        return PM3_EMALLOC;
+    }
+    uint32_t unique_count = 0;
+
+    for (uint32_t i = 0; i < num_sampled_nonces; i++) {
+        bool found = false;
+        for (uint32_t j = 0; j < unique_count; j++) {
+            if (counts[j].nonce == nonces[i]) {
+                counts[j].count++;
+                found = true;
+                break;
+            }
+        }
+        if (!found && unique_count < num_sampled_nonces) {
+            counts[unique_count].nonce = nonces[i];
+            counts[unique_count].count = 1;
+            unique_count++;
+        }
+    }
+
+    // Sort by count (descending)
+    for (uint32_t i = 0; i < unique_count - 1; i++) {
+        for (uint32_t j = i + 1; j < unique_count; j++) {
+            if (counts[j].count > counts[i].count) {
+                nonce_count_t temp = counts[i];
+                counts[i] = counts[j];
+                counts[j] = temp;
+            }
+        }
+    }
+
+    // Show top 10
+    uint32_t show_count = unique_count < 10 ? unique_count : 10;
+    if (counts[0].count == 1) {
+        PrintAndLogEx(INFO, "All %u collected nonces are unique.", num_sampled_nonces);
+        free(nonces);
+        free(counts);
+        return PM3_SUCCESS;
+    }
+    PrintAndLogEx(INFO, "Top %u most common nonces:", show_count);
+    for (uint32_t i = 0; i < show_count; i++) {
+        PrintAndLogEx(INFO, "  %016" PRIx64 " (count: %u)", counts[i].nonce, counts[i].count);
+    }
+    free(nonces);
+    free(counts);
+    return PM3_SUCCESS;
+}
+
 // Ultralight C Authentication
 //
 static int CmdHF14AMfUCAuth(const char *Cmd) {
@@ -4492,6 +4608,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
         arg_int0("r", "retries", "<n>", "Number of retries with provided key (def: 0)"),
         arg_lit0("n", "nocheck", "Skip checking tag answer correctness (only if a key is provided)"),
         arg_lit0("0", "read0", "Use fast READ0 (skip anticol)"),
+        arg_int0("c", "collect", "<n>", "Collect <n> nonces and show top 10 (def: 0, no collection)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4505,6 +4622,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
     int retries = arg_get_int_def(ctx, 4, 0);
     bool check_answer = !arg_get_lit(ctx, 5);
     bool use_fastread0 = arg_get_lit(ctx, 6);
+    int collect_nonces = arg_get_int_def(ctx, 7, 0);
     CLIParserFree(ctx);
 
     if (ak_len != 16 && ak_len != 0) {
@@ -4522,6 +4640,14 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
     if ((! check_answer) && (ak_len == 0)) {
         PrintAndLogEx(WARNING, "ERROR: Key is required for nocheck");
         return PM3_EINVARG;
+    }
+
+    if (collect_nonces > 0) {
+        if (ak_len != 0 || keep_field_on || retries > 0 || check_answer == false) {
+            PrintAndLogEx(WARNING, "ERROR: Nonce collection incompatible with other options");
+            return PM3_EINVARG;
+        }
+        return collect_and_stat_nonces(collect_nonces);
     }
 
     // Swap endianness
