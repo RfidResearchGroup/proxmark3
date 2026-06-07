@@ -1375,6 +1375,8 @@ static int CmdHFiClassTagSim(const char *Cmd) {
                   "the tool tries to load " ICLASS_DECRYPTION_BIN ".",
                   "hf iclass tagsim --fc 101 --cn 1337\n"
                   "hf iclass tagsim -w H10301 --fc 101 --cn 1337 --ki 0\n"
+                  "hf iclass tagsim -w H10301 --fc 101 --cn 1337 --enc none\n"
+                  "hf iclass tagsim -w H10301 --fc 101 --cn 1337 --enc des\n"
                   "hf iclass tagsim -w H10301 --fc 101 --cn 1337 --kd 0102030405060708 --elite\n"
                   "hf iclass tagsim --bin 10001111100000001010100011 --ki 0\n"
                   "hf iclass tagsim -w H10301 --fc 101 --cn 1337 --ki 0 --enckey 00000000000000000000000000000000\n"
@@ -1395,6 +1397,7 @@ static int CmdHFiClassTagSim(const char *Cmd) {
         arg_lit0(NULL,  "raw",                    "Keys are already diversified, skip diversification"),
         arg_str0(NULL,  "csn",      "<hex>",      "Custom CSN, 8 hex bytes (auto-generated if omitted)"),
         arg_str0(NULL,  "enckey",   "<hex>",      "3DES transport key, 16 hex bytes"),
+        arg_str0(NULL,  "enc",      "<none|des|2k3des>", "credential transport mode (default: 2k3des)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1447,6 +1450,8 @@ static int CmdHFiClassTagSim(const char *Cmd) {
     uint8_t *enckeyptr = NULL;
     bool have_enc_key = false;
     CLIGetHexWithReturn(ctx, 13, enc_key, &enc_key_len);
+    BLOCK79ENCRYPTION enc_mode = TRIPLEDES;
+    int enc_mode_res = CLIGetOptionList(arg_get_str(ctx, 14), IClassEncodeEncryptionOpts, (int *)&enc_mode);
 
     CLIParserFree(ctx);
 
@@ -1516,24 +1521,30 @@ static int CmdHFiClassTagSim(const char *Cmd) {
         have_enc_key = true;
     }
 
-    if (have_enc_key == false) {
-        // try smart-card helper first, then fall back to file
-        bool use_sc = IsCardHelperPresent(false);
-        if (use_sc == false) {
-            size_t keylen = 0;
-            int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&enckeyptr, &keylen);
-            if (res == PM3_SUCCESS && keylen == 16) {
-                memcpy(enc_key, enckeyptr, 16);
-                free(enckeyptr);
-                have_enc_key = true;
-            } else {
-                if (enckeyptr != NULL)
-                    free(enckeyptr);
-                PrintAndLogEx(WARNING, "No transport key found - credential blocks will be written unencrypted");
-            }
+    if (enc_mode_res != 0) {
+        return PM3_EINVARG;
+    }
+
+    if (enc_mode == None && have_enc_key) {
+        PrintAndLogEx(WARNING, "Transport mode marker is none; --enckey will be ignored.");
+    }
+
+    if (enc_mode != None && have_enc_key == false) {
+        size_t keylen = 0;
+        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&enckeyptr, &keylen);
+        if (res == PM3_SUCCESS && keylen == 16) {
+            memcpy(enc_key, enckeyptr, 16);
+            free(enckeyptr);
+            have_enc_key = true;
         } else {
-            have_enc_key = true; // will use Encrypt() via smart card
+            if (enckeyptr != NULL)
+                free(enckeyptr);
         }
+    }
+
+    if (enc_mode != None && have_enc_key == false) {
+        PrintAndLogEx(WARNING, "No transport key found - credential blocks will be written unencrypted");
+        enc_mode = None;
     }
 
     // ---------------------------------------------------------------
@@ -1636,20 +1647,11 @@ static int CmdHFiClassTagSim(const char *Cmd) {
         memcpy(credential + 12, &packed.Bot, sizeof(packed.Bot));
     }
 
-    // Capture smart-card helper state before starting simulation (can't query mid-sim)
-    bool use_sc = have_enc_key ? IsCardHelperPresent(false) : false;
+    iclass_set_transport_mode(credential, enc_mode);
 
-    // Encrypt credential blocks 7, 8, 9
-    if (have_enc_key) {
-        if (use_sc) {
-            Encrypt(credential + 8,  credential + 8);
-            Encrypt(credential + 16, credential + 16);
-            Encrypt(credential + 24, credential + 24);
-        } else {
-            iclass_encrypt_block_data(credential + 8,  enc_key);
-            iclass_encrypt_block_data(credential + 16, enc_key);
-            iclass_encrypt_block_data(credential + 24, enc_key);
-        }
+    if (iclass_apply_transport_mode_to_credential(credential + 8, enc_key, enc_mode, true) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to encode credential transport blocks");
+        return PM3_EINVARG;
     }
 
     memcpy(dump + 6 * PICOPASS_BLOCK_SIZE, credential, sizeof(credential));
@@ -1774,16 +1776,11 @@ static int CmdHFiClassTagSim(const char *Cmd) {
                 }
             }
 
-            if (have_enc_key) {
-                if (use_sc) {
-                    Encrypt(new_cred + 8,  new_cred + 8);
-                    Encrypt(new_cred + 16, new_cred + 16);
-                    Encrypt(new_cred + 24, new_cred + 24);
-                } else {
-                    iclass_encrypt_block_data(new_cred + 8,  enc_key);
-                    iclass_encrypt_block_data(new_cred + 16, enc_key);
-                    iclass_encrypt_block_data(new_cred + 24, enc_key);
-                }
+            iclass_set_transport_mode(new_cred, enc_mode);
+            if (iclass_apply_transport_mode_to_credential(new_cred + 8, enc_key, enc_mode, true) != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Failed to encode credential transport blocks");
+                running = false;
+                break;
             }
 
             // Push only the changed blocks to emulator memory, then set reload flag
