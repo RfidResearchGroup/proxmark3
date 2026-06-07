@@ -865,90 +865,75 @@ static int CmdHF14ADesDefault(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHF14ADesInfo(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes info",
-                  "Get info from MIFARE DESfire tags",
-                  "hf mfdes info");
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-
-    SetAPDULogging(false);
-    DropField();
-
-    mfdes_info_res_t info;
-    int res = mfdes_get_info(&info);
-    if (res != PM3_SUCCESS) {
-        DropField();
-        return res;
+static bool DesfirePrintVersionInfo(const mfdes_info_res_t *info, nxp_cardtype_t *cardtype) {
+    if (info == NULL) {
+        return false;
     }
 
-    nxp_cardtype_t cardtype = getCardType(info.versionHW[1], info.versionHW[3], info.versionHW[4]);
-    if (cardtype == PLUS_EV1) {
+    nxp_cardtype_t local_cardtype = getCardType(info->versionHW[1], info->versionHW[3], info->versionHW[4]);
+    if (cardtype != NULL) {
+        *cardtype = local_cardtype;
+    }
+
+    if (local_cardtype == PLUS_EV1) {
         PrintAndLogEx(INFO, "Card seems to be MIFARE Plus EV1.  Try " _YELLOW_("`hf mfp info`"));
-        DropField();
-        return PM3_SUCCESS;
+        return false;
     }
 
-    if (cardtype == PLUS_EV2) {
+    if (local_cardtype == PLUS_EV2) {
         PrintAndLogEx(INFO, "Card seems to be MIFARE Plus EV2.  Try " _YELLOW_("`hf mfp info`"));
-        DropField();
-        return PM3_SUCCESS;
+        return false;
     }
 
-    if (cardtype == NTAG424) {
+    if (local_cardtype == NTAG424) {
         PrintAndLogEx(INFO, "Card seems to be NTAG 424.  Try " _YELLOW_("`hf ntag424 info`"));
-        DropField();
-        return PM3_SUCCESS;
+        return false;
     }
 
-    if (cardtype == NXP_UNKNOWN) {
-        PrintAndLogEx(INFO, "HW Version.. %s", sprint_hex_inrow(info.versionHW, sizeof(info.versionHW)));
-        PrintAndLogEx(INFO, "SW Version.. %s", sprint_hex_inrow(info.versionSW, sizeof(info.versionSW)));
+    nxp_producttype_t prodtype = getProductType(info->versionHW);
+    if (local_cardtype == NXP_UNKNOWN && prodtype == DESFIRE_UNKNOWN_PROD) {
+        PrintAndLogEx(INFO, "HW Version.. %s", sprint_hex_inrow(info->versionHW, sizeof(info->versionHW)));
+        PrintAndLogEx(INFO, "SW Version.. %s", sprint_hex_inrow(info->versionSW, sizeof(info->versionSW)));
         PrintAndLogEx(INFO, "Version data identification failed. Report to Iceman!");
-        DropField();
-        return PM3_SUCCESS;
+        return false;
     }
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "---------------------------------- " _CYAN_("Tag Information") " ----------------------------------");
-    PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(info.uid, info.uidlen));
-    PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(info.details + 7, 5));
-    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), info.details[12], info.details[13]);
+    PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(info->uid, info->uidlen));
+    PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(info->details + 7, 5));
+    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), info->details[12], info->details[13]);
 
-    nxp_producttype_t prodtype = getProductType(info.versionHW);
     if (prodtype != DESFIRE_UNKNOWN_PROD) {
-        PrintAndLogEx(SUCCESS, "     Product type: %s", getProductTypeStr(info.versionHW));
+        PrintAndLogEx(SUCCESS, "     Product type: %s", getProductTypeStr(info->versionHW));
+    }
+    if (local_cardtype == NXP_UNKNOWN) {
+        PrintAndLogEx(WARNING, "Version tuple not fully identified. Report to Iceman!");
     }
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
-    PrintAndLogEx(INFO, "   raw: %s", sprint_hex_inrow(info.versionHW, sizeof(info.versionHW)));
+    PrintAndLogEx(INFO, "   raw: %s", sprint_hex_inrow(info->versionHW, sizeof(info->versionHW)));
 
-    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info.versionHW[0]));
-    PrintAndLogEx(INFO, "          Type: " _YELLOW_("%s"), mifare_prime_get_type_str(info.versionHW[1]));
-    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info.versionHW[2]);
-    PrintAndLogEx(INFO, "       Version: %s", mifare_prime_get_version_str(info.versionHW[1], info.versionHW[3], info.versionHW[4]));
-    PrintAndLogEx(INFO, "  Storage size: %s", mifare_prime_get_card_size_str(info.versionHW[5]));
-    PrintAndLogEx(INFO, "      Protocol: %s", mifare_prime_get_protocol_str(info.versionHW[6], true));
+    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info->versionHW[0]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("%s"), mifare_prime_get_type_str(info->versionHW[1]));
+    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info->versionHW[2]);
+    PrintAndLogEx(INFO, "       Version: %s", mifare_prime_get_version_str(info->versionHW[1], info->versionHW[3], info->versionHW[4]));
+    PrintAndLogEx(INFO, "  Storage size: %s", mifare_prime_get_card_size_str(info->versionHW[5]));
+    PrintAndLogEx(INFO, "      Protocol: %s", mifare_prime_get_protocol_str(info->versionHW[6], true));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Software Information"));
-    PrintAndLogEx(INFO, "   raw: %s", sprint_hex_inrow(info.versionSW, sizeof(info.versionSW)));
-    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info.versionSW[0]));
-    PrintAndLogEx(INFO, "          Type: " _YELLOW_("%s"), mifare_prime_get_type_str(info.versionSW[1]));
-    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info.versionSW[2]);
-    PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  info.versionSW[3], info.versionSW[4]);
-    PrintAndLogEx(INFO, "  Storage size: %s", mifare_prime_get_card_size_str(info.versionSW[5]));
-    PrintAndLogEx(INFO, "      Protocol: %s", mifare_prime_get_protocol_str(info.versionSW[6], false));
+    PrintAndLogEx(INFO, "   raw: %s", sprint_hex_inrow(info->versionSW, sizeof(info->versionSW)));
+    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info->versionSW[0]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("%s"), mifare_prime_get_type_str(info->versionSW[1]));
+    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info->versionSW[2]);
+    PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  info->versionSW[3], info->versionSW[4]);
+    PrintAndLogEx(INFO, "  Storage size: %s", mifare_prime_get_card_size_str(info->versionSW[5]));
+    PrintAndLogEx(INFO, "      Protocol: %s", mifare_prime_get_protocol_str(info->versionSW[6], false));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--------------------------------- " _CYAN_("Card capabilities") " ---------------------------------");
-    uint8_t major = info.versionSW[3];
-    uint8_t minor = info.versionSW[4];
+    uint8_t major = info->versionSW[3];
+    uint8_t minor = info->versionSW[4];
 
     if (major == 0 && minor == 2)
         PrintAndLogEx(INFO, "\t0.2 - DESFire Light, Originality check, ");
@@ -977,6 +962,38 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     if (major == 0xA0 && minor == 0)
         PrintAndLogEx(INFO, "\tx.x - DUOX, Originality check, proximity check, EAL6++");
+
+    return true;
+}
+
+static int CmdHF14ADesInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes info",
+                  "Get info from MIFARE DESfire tags",
+                  "hf mfdes info");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    SetAPDULogging(false);
+    DropField();
+
+    mfdes_info_res_t info;
+    int res = mfdes_get_info(&info);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    nxp_cardtype_t cardtype = NXP_UNKNOWN;
+    if (DesfirePrintVersionInfo(&info, &cardtype) == false) {
+        DropField();
+        return PM3_SUCCESS;
+    }
 
 
     DesfireContext_t dctx = {0};
