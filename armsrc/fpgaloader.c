@@ -495,8 +495,7 @@ static bool FpgaConfCurrentMode(int bitstream_target) {
 // Check which FPGA image is currently loaded (if any). If necessary
 // decompress and load the correct (HF or LF) image to the FPGA
 //----------------------------------------------------------------------------
-void FpgaDownloadAndGo(int bitstream_target) {
-
+static void FpgaDownloadAndGoEx(int bitstream_target, bool keep_em) {
     // check whether or not the bitstream is already loaded
     if (downloaded_bitstream == bitstream_target) {
         FpgaEnableTracing();
@@ -517,8 +516,13 @@ void FpgaDownloadAndGo(int bitstream_target) {
     bool verbose = (g_dbglevel > 3);
 
     // make sure that we have enough memory to decompress
-    BigBuf_free();
-    BigBuf_Clear_ext(verbose);
+    if (keep_em) {
+        BigBuf_free_keep_EM();
+        BigBuf_Clear_keep_EM();
+    } else {
+        BigBuf_free();
+        BigBuf_Clear_ext(verbose);
+    }
 
     lz4_stream_t compressed_fpga_stream;
     LZ4_streamDecode_t lz4StreamDecode_body = {{ 0 }};
@@ -545,8 +549,21 @@ void FpgaDownloadAndGo(int bitstream_target) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     // free eventually allocated BigBuf memory
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
+    if (keep_em) {
+        BigBuf_free_keep_EM();
+        BigBuf_Clear_keep_EM();
+    } else {
+        BigBuf_free();
+        BigBuf_Clear_ext(false);
+    }
+}
+
+void FpgaDownloadAndGo(int bitstream_target) {
+    FpgaDownloadAndGoEx(bitstream_target, false);
+}
+
+void FpgaDownloadAndGo_keep_EM(int bitstream_target) {
+    FpgaDownloadAndGoEx(bitstream_target, true);
 }
 
 //-----------------------------------------------------------------------------

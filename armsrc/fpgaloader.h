@@ -166,6 +166,7 @@ void FpgaWriteConfWord(uint16_t v);
 void FpgaEnableTracing(void);
 void FpgaDisableTracing(void);
 void FpgaDownloadAndGo(int bitstream_target);
+void FpgaDownloadAndGo_keep_EM(int bitstream_target);
 // void FpgaGatherVersion(int bitstream_target, char *dst, int len);
 void FpgaSetupSsc(uint16_t fpga_mode);
 void SetupSpi(int mode);
