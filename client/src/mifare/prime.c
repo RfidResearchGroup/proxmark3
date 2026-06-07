@@ -97,6 +97,8 @@ const char *mifare_prime_get_version_str(uint8_t type, uint8_t major, uint8_t mi
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("Plus EV2") " )", major, minor);
     } else if (type == 0x01 && major == 0xA0 && minor == 0x00) {
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DUOX") " )", major, minor);
+    } else if (type == 0xA1) {
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire HCE") " )", major, minor);
     } else if ((type & 0x08) == 0x08) {
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire Light") " )", major, minor);
     } else {
@@ -128,6 +130,9 @@ const char *mifare_prime_get_type_str(uint8_t type) {
             break;
         case 0x91:
             snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Applet") " )", type);
+            break;
+        case 0xA1:
+            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("HCE") " )", type);
             break;
         default:
             snprintf(retStr, sizeof(buf), "0x%02X", type);

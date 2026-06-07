@@ -865,90 +865,75 @@ static int CmdHF14ADesDefault(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHF14ADesInfo(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes info",
-                  "Get info from MIFARE DESfire tags",
-                  "hf mfdes info");
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-
-    SetAPDULogging(false);
-    DropField();
-
-    mfdes_info_res_t info;
-    int res = mfdes_get_info(&info);
-    if (res != PM3_SUCCESS) {
-        DropField();
-        return res;
+static bool DesfirePrintVersionInfo(const mfdes_info_res_t *info, nxp_cardtype_t *cardtype) {
+    if (info == NULL) {
+        return false;
     }
 
-    nxp_cardtype_t cardtype = getCardType(info.versionHW[1], info.versionHW[3], info.versionHW[4]);
-    if (cardtype == PLUS_EV1) {
+    nxp_cardtype_t local_cardtype = getCardType(info->versionHW[1], info->versionHW[3], info->versionHW[4]);
+    if (cardtype != NULL) {
+        *cardtype = local_cardtype;
+    }
+
+    if (local_cardtype == PLUS_EV1) {
         PrintAndLogEx(INFO, "Card seems to be MIFARE Plus EV1.  Try " _YELLOW_("`hf mfp info`"));
-        DropField();
-        return PM3_SUCCESS;
+        return false;
     }
 
-    if (cardtype == PLUS_EV2) {
+    if (local_cardtype == PLUS_EV2) {
         PrintAndLogEx(INFO, "Card seems to be MIFARE Plus EV2.  Try " _YELLOW_("`hf mfp info`"));
-        DropField();
-        return PM3_SUCCESS;
+        return false;
     }
 
-    if (cardtype == NTAG424) {
+    if (local_cardtype == NTAG424) {
         PrintAndLogEx(INFO, "Card seems to be NTAG 424.  Try " _YELLOW_("`hf ntag424 info`"));
-        DropField();
-        return PM3_SUCCESS;
+        return false;
     }
 
-    if (cardtype == NXP_UNKNOWN) {
-        PrintAndLogEx(INFO, "HW Version.. %s", sprint_hex_inrow(info.versionHW, sizeof(info.versionHW)));
-        PrintAndLogEx(INFO, "SW Version.. %s", sprint_hex_inrow(info.versionSW, sizeof(info.versionSW)));
+    nxp_producttype_t prodtype = getProductType(info->versionHW);
+    if (local_cardtype == NXP_UNKNOWN && prodtype == DESFIRE_UNKNOWN_PROD) {
+        PrintAndLogEx(INFO, "HW Version.. %s", sprint_hex_inrow(info->versionHW, sizeof(info->versionHW)));
+        PrintAndLogEx(INFO, "SW Version.. %s", sprint_hex_inrow(info->versionSW, sizeof(info->versionSW)));
         PrintAndLogEx(INFO, "Version data identification failed. Report to Iceman!");
-        DropField();
-        return PM3_SUCCESS;
+        return false;
     }
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "---------------------------------- " _CYAN_("Tag Information") " ----------------------------------");
-    PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(info.uid, info.uidlen));
-    PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(info.details + 7, 5));
-    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), info.details[12], info.details[13]);
+    PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(info->uid, info->uidlen));
+    PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(info->details + 7, 5));
+    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), info->details[12], info->details[13]);
 
-    nxp_producttype_t prodtype = getProductType(info.versionHW);
     if (prodtype != DESFIRE_UNKNOWN_PROD) {
-        PrintAndLogEx(SUCCESS, "     Product type: %s", getProductTypeStr(info.versionHW));
+        PrintAndLogEx(SUCCESS, "     Product type: %s", getProductTypeStr(info->versionHW));
+    }
+    if (local_cardtype == NXP_UNKNOWN) {
+        PrintAndLogEx(WARNING, "Version tuple not fully identified. Report to Iceman!");
     }
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
-    PrintAndLogEx(INFO, "   raw: %s", sprint_hex_inrow(info.versionHW, sizeof(info.versionHW)));
+    PrintAndLogEx(INFO, "   raw: %s", sprint_hex_inrow(info->versionHW, sizeof(info->versionHW)));
 
-    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info.versionHW[0]));
-    PrintAndLogEx(INFO, "          Type: " _YELLOW_("%s"), mifare_prime_get_type_str(info.versionHW[1]));
-    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info.versionHW[2]);
-    PrintAndLogEx(INFO, "       Version: %s", mifare_prime_get_version_str(info.versionHW[1], info.versionHW[3], info.versionHW[4]));
-    PrintAndLogEx(INFO, "  Storage size: %s", mifare_prime_get_card_size_str(info.versionHW[5]));
-    PrintAndLogEx(INFO, "      Protocol: %s", mifare_prime_get_protocol_str(info.versionHW[6], true));
+    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info->versionHW[0]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("%s"), mifare_prime_get_type_str(info->versionHW[1]));
+    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info->versionHW[2]);
+    PrintAndLogEx(INFO, "       Version: %s", mifare_prime_get_version_str(info->versionHW[1], info->versionHW[3], info->versionHW[4]));
+    PrintAndLogEx(INFO, "  Storage size: %s", mifare_prime_get_card_size_str(info->versionHW[5]));
+    PrintAndLogEx(INFO, "      Protocol: %s", mifare_prime_get_protocol_str(info->versionHW[6], true));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Software Information"));
-    PrintAndLogEx(INFO, "   raw: %s", sprint_hex_inrow(info.versionSW, sizeof(info.versionSW)));
-    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info.versionSW[0]));
-    PrintAndLogEx(INFO, "          Type: " _YELLOW_("%s"), mifare_prime_get_type_str(info.versionSW[1]));
-    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info.versionSW[2]);
-    PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  info.versionSW[3], info.versionSW[4]);
-    PrintAndLogEx(INFO, "  Storage size: %s", mifare_prime_get_card_size_str(info.versionSW[5]));
-    PrintAndLogEx(INFO, "      Protocol: %s", mifare_prime_get_protocol_str(info.versionSW[6], false));
+    PrintAndLogEx(INFO, "   raw: %s", sprint_hex_inrow(info->versionSW, sizeof(info->versionSW)));
+    PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info->versionSW[0]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("%s"), mifare_prime_get_type_str(info->versionSW[1]));
+    PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info->versionSW[2]);
+    PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  info->versionSW[3], info->versionSW[4]);
+    PrintAndLogEx(INFO, "  Storage size: %s", mifare_prime_get_card_size_str(info->versionSW[5]));
+    PrintAndLogEx(INFO, "      Protocol: %s", mifare_prime_get_protocol_str(info->versionSW[6], false));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--------------------------------- " _CYAN_("Card capabilities") " ---------------------------------");
-    uint8_t major = info.versionSW[3];
-    uint8_t minor = info.versionSW[4];
+    uint8_t major = info->versionSW[3];
+    uint8_t minor = info->versionSW[4];
 
     if (major == 0 && minor == 2)
         PrintAndLogEx(INFO, "\t0.2 - DESFire Light, Originality check, ");
@@ -977,6 +962,38 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     if (major == 0xA0 && minor == 0)
         PrintAndLogEx(INFO, "\tx.x - DUOX, Originality check, proximity check, EAL6++");
+
+    return true;
+}
+
+static int CmdHF14ADesInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes info",
+                  "Get info from MIFARE DESfire tags",
+                  "hf mfdes info");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    SetAPDULogging(false);
+    DropField();
+
+    mfdes_info_res_t info;
+    int res = mfdes_get_info(&info);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    nxp_cardtype_t cardtype = NXP_UNKNOWN;
+    if (DesfirePrintVersionInfo(&info, &cardtype) == false) {
+        DropField();
+        return PM3_SUCCESS;
+    }
 
 
     DesfireContext_t dctx = {0};
@@ -1111,6 +1128,97 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         keys 12,13,14,15 R
 
     */
+
+    DropField();
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesGetVersion(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes getversion",
+                  "Request and print DESFire GetVersion data. Optionally select an ISO DF name first.",
+                  "hf mfdes getversion -> request and print card version/type information\n"
+                  "hf mfdes getversion --dfname D2760000850100 -> select DF by name, then request and print version/type information");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "Verbose output"),
+        arg_str0(NULL, "dfname",  "<hex>", "Application ISO DF Name (1-16 hex bytes, big endian)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    uint8_t dfname[64] = {0};
+    int dfnamelen = 0;
+    if (CLIParamHexToBuf(arg_get_str(ctx, 3), dfname, sizeof(dfname), &dfnamelen)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (dfnamelen > 16) {
+        PrintAndLogEx(ERR, "DF name must be 1-16 bytes, got %d", dfnamelen);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    DesfireContext_t dctx = {0};
+    dctx.commMode = DCMPlain;
+    dctx.cmdSet = DCCNativeISO;
+
+    DropField();
+
+    int res = PM3_SUCCESS;
+    if (dfnamelen > 0) {
+        uint8_t select_resp[250] = {0};
+        size_t select_resplen = 0;
+        res = DesfireISOSelect(&dctx, ISSDFName, dfname, (uint8_t)dfnamelen, select_resp, &select_resplen);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            PrintAndLogEx(ERR, "Select DF name %s " _RED_("failed") ". Result: %d", sprint_hex_inrow(dfname, dfnamelen), res);
+            return res;
+        }
+
+        if (verbose) {
+            PrintAndLogEx(SUCCESS, "DF name %s selected " _GREEN_("ok"), sprint_hex_inrow(dfname, dfnamelen));
+        }
+    } else {
+        res = DesfireAnticollision(verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+    }
+
+    mfdes_info_res_t info = {0};
+    uint8_t version[sizeof(info.versionHW) + sizeof(info.versionSW) + sizeof(info.details)] = {0};
+    size_t version_len = 0;
+    res = DesfireGetVersion(&dctx, version, &version_len);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(ERR, "Desfire GetVersion command " _RED_("error") ". Result: %d", res);
+        return res;
+    }
+
+    if (version_len != sizeof(version)) {
+        DropField();
+        PrintAndLogEx(ERR, "Desfire GetVersion returned wrong length: %zu bytes, expected %zu", version_len, sizeof(version));
+        return PM3_ESOFT;
+    }
+
+    info.isOK = 1;
+    memcpy(info.versionHW, version, sizeof(info.versionHW));
+    memcpy(info.versionSW, version + sizeof(info.versionHW), sizeof(info.versionSW));
+    memcpy(info.details, version + sizeof(info.versionHW) + sizeof(info.versionSW), sizeof(info.details));
+    memcpy(info.uid, info.details, sizeof(info.uid));
+    info.uidlen = sizeof(info.uid);
+
+    DesfirePrintVersionInfo(&info, NULL);
 
     DropField();
     return PM3_SUCCESS;
@@ -7220,6 +7328,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
                   "hf mfdes read --aid 123456 --fid 10 --type data -c iso -> read file via ISO channel: app=123456, short iso id=10, offset=0.\n"
                   "hf mfdes read --aid 123456 --fileisoid 1000 --type data -c iso -> read file via ISO channel: app=123456, iso id=1000, offset=0. Select via native ISO wrapper\n"
                   "hf mfdes read --isoid 0102 --fileisoid 1000 --type data -c iso -> read file via ISO channel: app iso id=0102, iso id=1000, offset=0. Select via ISO commands\n"
+                  "hf mfdes read --dfname D2760000850100 --fid 01 -> select DF by name and read file 01\n"
                   "hf mfdes read --isoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000001 -> get one record (number 5) from file 1100 via iso commands\n"
                   "hf mfdes read --isoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000000 -> get all record (from 5 to 1) from file 1100 via iso commands\n"
                   "hf mfdes read --isoid df01 --fid 00 --schann lrp -t aes --length 000010 -> read via lrp channel\n"
@@ -7244,6 +7353,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         arg_str0("o", "offset",   "<hex>", "File Offset (3 hex bytes, big endian). For records - record number (0 - lastest record). (def: 0)"),
         arg_str0("l", "length",   "<hex>", "Length to read (3 hex bytes, big endian -> 000000 = Read all data). For records - records count (0 - all). (def: 0)"),
         arg_str0(NULL, "isoid",     "<hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)"),
+        arg_str0(NULL, "dfname",    "<hex>", "Application ISO DF Name (1-16 hex bytes, big endian)"),
         arg_str0(NULL, "fileisoid", "<hex>", "File ISO ID (ISO DF ID) (2 hex bytes, big endian). Works only for ISO read commands"),
         arg_lit0(NULL, "isochain", "use iso chaining commands. Switched on by default if secure channel = lrp"),
         arg_param_end
@@ -7258,7 +7368,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 17, 0, &securechann, DCMMACed, &id, &selectway);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 17, 18, &securechann, DCMMACed, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -7290,12 +7400,12 @@ static int CmdHF14ADesReadData(const char *Cmd) {
 
     uint32_t fileisoid = 0x0000;
     bool fileisoidpresent = false;
-    if (CLIGetUint32Hex(ctx, 18, 0x0000, &fileisoid, &fileisoidpresent, 2, "File ISO ID (for DF) must have 2 bytes length")) {
+    if (CLIGetUint32Hex(ctx, 19, 0x0000, &fileisoid, &fileisoidpresent, 2, "File ISO ID (for DF) must have 2 bytes length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    dctx.isoChaining = arg_get_lit(ctx, 19);
+    dctx.isoChaining = arg_get_lit(ctx, 20);
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
@@ -9591,6 +9701,7 @@ static command_t CommandTable[] = {
     {"detect",           CmdHF14aDesDetect,           IfPm3Iso14443a,  "Detect key type and tries to find one from the list"},
     {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
     {"freemem",          CmdHF14ADesGetFreeMem,       IfPm3Iso14443a,  "Get free memory size"},
+    {"getversion",       CmdHF14ADesGetVersion,       IfPm3Iso14443a,  "Get version/type information"},
     {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get uid from card"},
     {"pc",               CmdHF14ADesPC,               IfPm3Iso14443a,  "Run proximity check"},
     {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},

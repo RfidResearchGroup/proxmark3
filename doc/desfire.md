@@ -177,6 +177,13 @@ The card can return UID in encrypted communication mode. Needs to authenticate w
 
 `hf mfdes getuid -s ev2 -t aes -k 11223344556677889900112233445566` - via ev2 secure channel with specified aes key
 
+### How to get version/type information
+^[Top](#top)
+
+`hf mfdes getversion` - request and print card version/type information
+
+`hf mfdes getversion --dfname D2760000850100` - select an application by ISO DF name before requesting version/type information
+
 ### How to get/set default communication channel settings
 ^[Top](#top)
 
@@ -274,6 +281,8 @@ Create standard file with mac access mode and specified access settings. access 
 *read:*
 
 `hf mfdes read --aid 123456 --fid 01` - autodetect file type (with `hf mfdes getfilesettings`) and read its contents
+
+`hf mfdes read --dfname D2760000850100 --fid 01` - select an application by ISO DF name and read file 01
 
 `hf mfdes read --aid 123456 --fid 01 --type record --offset 000000 --length 000001` - read one last record from a record file
 
@@ -572,5 +581,3 @@ or in the LRP mode
 Switch LRP mode on
 
 `hf mfdes setconfig --appisoid df01 -t aes -s ev2 --param 05 --data 00000000010000000000`
-
-

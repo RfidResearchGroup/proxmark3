@@ -2192,6 +2192,10 @@ int DesfireFormatPICC(DesfireContext_t *dctx) {
     return DesfireCommandNoData(dctx, MFDES_FORMAT_PICC);
 }
 
+int DesfireGetVersion(DesfireContext_t *dctx, uint8_t *resp, size_t *resplen) {
+    return DesfireCommandRxData(dctx, MFDES_GET_VERSION, resp, resplen, 28);
+}
+
 int DesfireGetFreeMem(DesfireContext_t *dctx, uint32_t *freemem) {
     *freemem = 0;
 
