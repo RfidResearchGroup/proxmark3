@@ -177,6 +177,13 @@ The card can return UID in encrypted communication mode. Needs to authenticate w
 
 `hf mfdes getuid -s ev2 -t aes -k 11223344556677889900112233445566` - via ev2 secure channel with specified aes key
 
+### How to get version/type information
+^[Top](#top)
+
+`hf mfdes getversion` - request and print card version/type information
+
+`hf mfdes getversion --dfname D2760000850100` - select an application by ISO DF name before requesting version/type information
+
 ### How to get/set default communication channel settings
 ^[Top](#top)
 

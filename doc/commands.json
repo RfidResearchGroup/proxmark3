@@ -7053,6 +7053,22 @@
             ],
             "usage": "hf mfdes getuid [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--isoid <hex>] [--dfname <hex>]"
         },
+        "hf mfdes getversion": {
+            "command": "hf mfdes getversion",
+            "description": "Request and print DESFire GetVersion data. Optionally select an ISO DF name first.",
+            "notes": [
+                "hf mfdes getversion -> request and print card version/type information",
+                "hf mfdes getversion --dfname D2760000850100 -> select DF by name, then request and print version/type information"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-a, --apdu Show APDU requests and responses",
+                "-v, --verbose Verbose output",
+                "--dfname <hex> Application ISO DF Name (1-16 hex bytes, big endian)"
+            ],
+            "usage": "hf mfdes getversion [-hav] [--dfname <hex>]"
+        },
         "hf mfdes help": {
             "command": "hf mfdes help",
             "description": "help This help list List DESFire (ISO 14443A) history makemfclicense Generate a Mifare Classic license for DESFire EV3C test Regression crypto tests --------------------------------------------------------------------------------------- hf mfdes list available offline: yes Alias of `trace list -t des -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",

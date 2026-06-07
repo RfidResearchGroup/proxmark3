@@ -199,6 +199,7 @@ void DesfireCheckAuthCommands(DesfireISOSelectWay way, uint32_t appID, char *dfn
 void DesfireCheckAuthCommandsPrint(AuthCommandsChk_t *authCmdCheck);
 
 int DesfireFormatPICC(DesfireContext_t *dctx);
+int DesfireGetVersion(DesfireContext_t *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetFreeMem(DesfireContext_t *dctx, uint32_t *freemem);
 int DesfireGetUID(DesfireContext_t *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetAIDList(DesfireContext_t *dctx, uint8_t *resp, size_t *resplen);

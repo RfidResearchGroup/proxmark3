@@ -1133,6 +1133,97 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14ADesGetVersion(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes getversion",
+                  "Request and print DESFire GetVersion data. Optionally select an ISO DF name first.",
+                  "hf mfdes getversion -> request and print card version/type information\n"
+                  "hf mfdes getversion --dfname D2760000850100 -> select DF by name, then request and print version/type information");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "Verbose output"),
+        arg_str0(NULL, "dfname",  "<hex>", "Application ISO DF Name (1-16 hex bytes, big endian)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    uint8_t dfname[64] = {0};
+    int dfnamelen = 0;
+    if (CLIParamHexToBuf(arg_get_str(ctx, 3), dfname, sizeof(dfname), &dfnamelen)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (dfnamelen > 16) {
+        PrintAndLogEx(ERR, "DF name must be 1-16 bytes, got %d", dfnamelen);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    DesfireContext_t dctx = {0};
+    dctx.commMode = DCMPlain;
+    dctx.cmdSet = DCCNativeISO;
+
+    DropField();
+
+    int res = PM3_SUCCESS;
+    if (dfnamelen > 0) {
+        uint8_t select_resp[250] = {0};
+        size_t select_resplen = 0;
+        res = DesfireISOSelect(&dctx, ISSDFName, dfname, (uint8_t)dfnamelen, select_resp, &select_resplen);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            PrintAndLogEx(ERR, "Select DF name %s " _RED_("failed") ". Result: %d", sprint_hex_inrow(dfname, dfnamelen), res);
+            return res;
+        }
+
+        if (verbose) {
+            PrintAndLogEx(SUCCESS, "DF name %s selected " _GREEN_("ok"), sprint_hex_inrow(dfname, dfnamelen));
+        }
+    } else {
+        res = DesfireAnticollision(verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+    }
+
+    mfdes_info_res_t info = {0};
+    uint8_t version[sizeof(info.versionHW) + sizeof(info.versionSW) + sizeof(info.details)] = {0};
+    size_t version_len = 0;
+    res = DesfireGetVersion(&dctx, version, &version_len);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(ERR, "Desfire GetVersion command " _RED_("error") ". Result: %d", res);
+        return res;
+    }
+
+    if (version_len != sizeof(version)) {
+        DropField();
+        PrintAndLogEx(ERR, "Desfire GetVersion returned wrong length: %zu bytes, expected %zu", version_len, sizeof(version));
+        return PM3_ESOFT;
+    }
+
+    info.isOK = 1;
+    memcpy(info.versionHW, version, sizeof(info.versionHW));
+    memcpy(info.versionSW, version + sizeof(info.versionHW), sizeof(info.versionSW));
+    memcpy(info.details, version + sizeof(info.versionHW) + sizeof(info.versionSW), sizeof(info.details));
+    memcpy(info.uid, info.details, sizeof(info.uid));
+    info.uidlen = sizeof(info.uid);
+
+    DesfirePrintVersionInfo(&info, NULL);
+
+    DropField();
+    return PM3_SUCCESS;
+}
+
 static void DesFill2bPattern(
     uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t *deskeyListLen,
     uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t *aeskeyListLen,
@@ -9608,6 +9699,7 @@ static command_t CommandTable[] = {
     {"detect",           CmdHF14aDesDetect,           IfPm3Iso14443a,  "Detect key type and tries to find one from the list"},
     {"formatpicc",       CmdHF14ADesFormatPICC,       IfPm3Iso14443a,  "Format PICC"},
     {"freemem",          CmdHF14ADesGetFreeMem,       IfPm3Iso14443a,  "Get free memory size"},
+    {"getversion",       CmdHF14ADesGetVersion,       IfPm3Iso14443a,  "Get version/type information"},
     {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get uid from card"},
     {"pc",               CmdHF14ADesPC,               IfPm3Iso14443a,  "Run proximity check"},
     {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},

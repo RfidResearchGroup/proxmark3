@@ -723,6 +723,7 @@ Check column "offline" for their availability.
 |`hf mfdes detect        `|N       |`Detect key type and tries to find one from the list`
 |`hf mfdes formatpicc    `|N       |`Format PICC`
 |`hf mfdes freemem       `|N       |`Get free memory size`
+|`hf mfdes getversion    `|N       |`Get version/type information`
 |`hf mfdes getuid        `|N       |`Get uid from card`
 |`hf mfdes pc            `|N       |`Run proximity check`
 |`hf mfdes info          `|N       |`Tag information`
