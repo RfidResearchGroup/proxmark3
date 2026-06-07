@@ -42,6 +42,7 @@ int CmdLFfind(const char *Cmd);
 int CmdLFRelay(const char *Cmd);
 
 int lf_read(bool verbose, uint64_t samples);
+int lf_read_cotag(bool realtime, bool verbose, uint64_t samples);
 int lf_sniff(bool realtime, bool verbose, uint64_t samples);
 int lf_setconfig(sample_config *config);
 int lf_getconfig(sample_config *config);

@@ -28,6 +28,7 @@
 #include "string.h"  // memset
 #include "appmain.h" // print stack
 #include "usb_cdc.h" // real-time sampling
+#include "lfops.h"
 
 /*
 Default LF config is set to:
@@ -422,9 +423,11 @@ uint32_t DoPartialAcquisition(int trigger_threshold, bool verbose, uint32_t samp
                          , ledcontrol);  // samples to skip
 }
 
-static uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size, bool ledcontrol) {
+static uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size, bool ledcontrol, bool cotag) {
     if (verbose)
         printLFConfig();
+
+    if (cotag) cotag_start_pulse();
 
     LFSetupFPGAForADC(config.divisor, reader_field);
     uint32_t ret = DoAcquisition_config(verbose, sample_size, ledcontrol);
@@ -437,9 +440,9 @@ static uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size, bo
 * Initializes the FPGA for reader-mode (field on), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SampleLF(bool verbose, uint32_t sample_size, bool ledcontrol) {
+uint32_t SampleLF(bool verbose, uint32_t sample_size, bool ledcontrol, bool cotag) {
     BigBuf_Clear_ext(false);
-    return ReadLF(true, verbose, sample_size, ledcontrol);
+    return ReadLF(true, verbose, sample_size, ledcontrol, cotag);
 }
 
 /**
@@ -450,7 +453,7 @@ uint32_t SampleLF(bool verbose, uint32_t sample_size, bool ledcontrol) {
  * @param reader_field - true for reading tags, false for sniffing
  * @return sampling result
 **/
-int ReadLF_realtime(bool reader_field) {
+int ReadLF_realtime(bool reader_field, bool cotag) {
     // parameters from config and constants
     const uint8_t bits_per_sample = config.bits_per_sample;
     const int16_t trigger_threshold = config.trigger_threshold;
@@ -480,6 +483,9 @@ int ReadLF_realtime(bool reader_field) {
     }
 
     BigBuf_Clear_ext(false);
+
+    if (cotag) cotag_start_pulse();
+
     LFSetupFPGAForADC(config.divisor, reader_field);
 
     while (BUTTON_PRESS() == false) {
@@ -567,7 +573,7 @@ out:
 **/
 uint32_t SniffLF(bool verbose, uint32_t sample_size, bool ledcontrol) {
     BigBuf_Clear_ext(false);
-    return ReadLF(false, verbose, sample_size, ledcontrol);
+    return ReadLF(false, verbose, sample_size, ledcontrol, false);
 }
 
 /**

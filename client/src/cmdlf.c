@@ -748,12 +748,13 @@ int CmdLFConfig(const char *Cmd) {
     return lf_setconfig(&config);
 }
 
-static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
+static int lf_read_internal(bool realtime, bool verbose, uint64_t samples, bool cotag) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
     lf_sample_payload_t payload = {0};
     payload.realtime = realtime;
     payload.verbose = verbose;
+    payload.cotag = cotag;
 
     sample_config current_config;
     int retval = lf_getconfig(&current_config);
@@ -824,7 +825,11 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
 }
 
 int lf_read(bool verbose, uint64_t samples) {
-    return lf_read_internal(false, verbose, samples);
+    return lf_read_internal(false, verbose, samples, false);
+}
+
+int lf_read_cotag(bool realtime, bool verbose, uint64_t samples) {
+    return lf_read_internal(realtime, verbose, samples, true);
 }
 
 int CmdLFRead(const char *Cmd) {
@@ -864,7 +869,7 @@ int CmdLFRead(const char *Cmd) {
     }
     int ret = PM3_SUCCESS;
     do {
-        ret = lf_read_internal(realtime, verbose, samples);
+        ret = lf_read_internal(realtime, verbose, samples, false);
     } while (cm && (kbd_enter_pressed() == false));
 
     if (ret == PM3_SUCCESS) {
@@ -1727,7 +1732,7 @@ static int lf_relay_tag(uint64_t samples, uint16_t port) {
             break;
         }
 
-        lf_read_internal(false, false, samples);
+        lf_read_internal(false, false, samples, false);
 
         if ((g_GraphTraceLen > 1000) && (getSignalProperties()->isnoise == false)) {
 

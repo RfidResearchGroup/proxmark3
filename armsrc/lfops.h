@@ -78,6 +78,7 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd, bool ledcontrol);
 void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd, bool ledcontrol);
 void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd, bool ledcontrol);
 
+void cotag_start_pulse(void);
 void Cotag(uint32_t arg0, bool ledcontrol);
 void setT55xxConfig(uint8_t arg0, const t55xx_configurations_t *c);
 t55xx_configurations_t *getT55xxConfig(void);
