@@ -296,7 +296,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf calypso help        `|Y       |`This help`
 |`hf calypso info        `|N       |`Tag information`
-|`hf calypso dump        `|N       |`Dump readable files and records`
+|`hf calypso dump        `|N       |`Dump nodes after application profile scan`
 |`hf calypso probecmdcompat`|N       |`Probe SELECT command compatibility`
 |`hf calypso list        `|Y       |`List Calypso history`
 
@@ -391,6 +391,48 @@ Check column "offline" for their availability.
 |`hf fido auth           `|N       |`FIDO U2F Authentication Message.`
 |`hf fido make           `|N       |`FIDO2 MakeCredential command.`
 |`hf fido assert         `|N       |`FIDO2 GetAssertion command.`
+
+
+### hf fmcos
+
+ { FMCOS CPU cards...                  }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf fmcos help          `|Y       |`This help`
+|`hf fmcos info          `|N       |`Detect card and print file-system info`
+|`hf fmcos select        `|N       |`SELECT FILE by 2-byte ID or AID name`
+|`hf fmcos erase         `|N       |`ERASE DF contents`
+|`hf fmcos createdir     `|N       |`CREATE DIRECTORY (DF)`
+|`hf fmcos createfile    `|N       |`CREATE EF (binary / fixed / variable / loop / wallet)`
+|`hf fmcos createkeyfile `|N       |`CREATE KEYFILE`
+|`hf fmcos readbinary    `|N       |`READ BINARY from transparent EF`
+|`hf fmcos readrecord    `|N       |`READ RECORD from record-based EF`
+|`hf fmcos writebinary   `|N       |`UPDATE BINARY in transparent EF`
+|`hf fmcos writerecord   `|N       |`UPDATE RECORD in record-based EF`
+|`hf fmcos append        `|N       |`APPEND RECORD to cyclic / linear EF`
+|`hf fmcos authexternal  `|N       |`EXTERNAL AUTHENTICATE using DES/3DES key`
+|`hf fmcos authinternal  `|N       |`INTERNAL AUTHENTICATE (card proves key knowledge)`
+|`hf fmcos key           `|N       |`WRITE KEY to keyfile`
+|`hf fmcos pinverify     `|N       |`VERIFY PIN (present PIN to card)`
+|`hf fmcos pinchange     `|N       |`CHANGE PIN (old + new, requires old PIN)`
+|`hf fmcos pinreset      `|N       |`RESET PIN (new PIN + change-PIN key MAC)`
+|`hf fmcos pinunblock    `|N       |`UNBLOCK PIN (encrypted new PIN + MAC)`
+|`hf fmcos balance       `|N       |`GET BALANCE (wallet or passbook)`
+|`hf fmcos credit        `|N       |`ADD CREDIT to wallet or passbook`
+|`hf fmcos purchase      `|N       |`PURCHASE from wallet or passbook`
+|`hf fmcos overdraft     `|N       |`UPDATE OVERDRAFT LIMIT`
+|`hf fmcos history       `|N       |`READ transaction history from loop EF`
+|`hf fmcos block         `|N       |`BLOCK card or application`
+|`hf fmcos unblock       `|N       |`UNBLOCK application`
+|`hf fmcos tidsetcard    `|N       |`SET CARD configuration block`
+|`hf fmcos tidsetuid     `|N       |`SET UID`
+|`hf fmcos tidsetauth    `|N       |`SET INTERNAL AUTH key`
+|`hf fmcos tiderase      `|N       |`ERASE TID card file system`
+|`hf fmcos tidprovision  `|N       |`Full TID provisioning sequence`
+|`hf fmcos tidcreatedf   `|N       |`CREATE sub-DF (TID format)`
+|`hf fmcos tidcreatebin  `|N       |`CREATE binary EF (TID format)`
+|`hf fmcos tidcreaterec  `|N       |`CREATE record EF (TID format)`
 
 
 ### hf fudan

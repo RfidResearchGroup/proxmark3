@@ -133,7 +133,7 @@ static size_t ansi_byte_count(const char *s) {
             n += 2;
             s += 2;
             while (*s) {
-                unsigned char c = (unsigned char)*s++;
+                unsigned char c = (unsigned char) * s++;
                 n++;
                 if (c >= 0x40 && c <= 0x7E) {
                     break;

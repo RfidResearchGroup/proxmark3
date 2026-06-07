@@ -844,9 +844,9 @@ int mfp_data_crypt(mf4Session_t *mf4session, uint8_t *dati, uint8_t *dato, bool 
     }
 
     if (rev) {
-        aes_decode(IV, kenc, dati, dato, MFBLOCK_SIZE*bc);
+        aes_decode(IV, kenc, dati, dato, MFBLOCK_SIZE * bc);
     } else {
-        aes_encode(IV, kenc, dati, dato, MFBLOCK_SIZE*bc);
+        aes_encode(IV, kenc, dati, dato, MFBLOCK_SIZE * bc);
     }
 
     return PM3_SUCCESS;
@@ -2244,10 +2244,10 @@ static int CmdHFMFPDump(const char *Cmd) {
         int STRead;
         uint8_t mac[8] = {0};
 chunkCycle:
-        ki_pA[1] = sl3Count*2;
+        ki_pA[1] = sl3Count * 2;
         MifareAuth4(&_session, ki_pA, &aesFoundKeys[MF_KEY_A][sl3Count][1], nonfirst, !nonfirst, true, true, verbose, false);
         nonfirst = true;
-        MFPReadBlock(&_session, false, false, true, 3+sl3Count*4, 1, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
+        MFPReadBlock(&_session, false, false, true, 3 + sl3Count * 4, 1, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
         if (STRead && STBuffer[0] != 0x90) {
             PrintAndLogEx(ERR, "\nTrailer read error: %02x %s", STBuffer[0], mfpGetErrorDescription(STBuffer[0]));
             goto chunkBlank;
@@ -2257,17 +2257,17 @@ chunkCycle:
         }
         mfp_data_crypt(&_session, &STBuffer[1], &STBuffer[1], true, 1);
         // Multiblock reads do not allow reading out STs, as such this is the time to save them into the final dump
-        memcpy(carddata + ((3+4*sl3Count) * MFBLOCK_SIZE), &STBuffer[1], 1 * MFBLOCK_SIZE);
+        memcpy(carddata + ((3 + 4 * sl3Count) * MFBLOCK_SIZE), &STBuffer[1], 1 * MFBLOCK_SIZE);
         // Check if any block is encrypted only
-        ki_pB[1] = 0x01+sl3Count*2;
+        ki_pB[1] = 0x01+sl3Count * 2;
         MifareAuth4(&_session, ki_pB, &aesFoundKeys[MF_KEY_B][sl3Count][1], true, false, true, true, verbose, false);
         if (STBuffer[6] & 0xF0) { // At least one bit is set to force enc. only
-            MFPReadBlock(&_session, false, false, true, sl3Count*4, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
+            MFPReadBlock(&_session, false, false, true, sl3Count * 4, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
             if (STRead && STBuffer[0] != 0x90) {
 chunkBlank:
                 PrintAndLogEx(ERR, "\nChunk read error: %02x %s", STBuffer[0], mfpGetErrorDescription(STBuffer[0]));
                 memcpy(carddata + (sl3Count * 4 * MFBLOCK_SIZE), nullChunk, 3 * MFBLOCK_SIZE);
-                memcpy(carddata + ((3+4*sl3Count) * MFBLOCK_SIZE), nullBlock, 1 * MFBLOCK_SIZE);
+                memcpy(carddata + ((3 + 4 * sl3Count) * MFBLOCK_SIZE), nullBlock, 1 * MFBLOCK_SIZE);
                 PrintAndLogEx(WARNING, "Quick-reading sector %3d / %3d ( " _RED_("fail") " )", sl3Count, numSectors - 1);
                 // Restart auth since a read failure resets it
                 nonfirst = false;
@@ -2285,7 +2285,7 @@ chunkBlank:
             sectorsRead++;
             sl3Count++;
         } else {
-            MFPReadBlock(&_session, true, false, true, sl3Count*4, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
+            MFPReadBlock(&_session, true, false, true, sl3Count * 4, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
             if (STRead && STBuffer[0] != 0x90) {
                 PrintAndLogEx(ERR, "Chunk read error: %02x %s", STBuffer[0], mfpGetErrorDescription(STBuffer[0]));
                 memcpy(carddata + (sl3Count * 4 * MFBLOCK_SIZE), nullChunk, 3 * MFBLOCK_SIZE);
@@ -2308,12 +2308,12 @@ chunkCycleClean:
 
 
 
-        if (numSectors>32){
+        if (numSectors > 32) {
 chunkCycle2:
-            ki_pA[1] = sl3Count*2;
+            ki_pA[1] = sl3Count * 2;
             MifareAuth4(&_session, ki_pA, &aesFoundKeys[MF_KEY_A][sl3Count][1], nonfirst, !nonfirst, true, true, verbose, false);
             nonfirst = true;
-            MFPReadBlock(&_session, false, false, true, 128+(sl3Count-31)*16-1, 1, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
+            MFPReadBlock(&_session, false, false, true, 128 + (sl3Count - 31) * 16 - 1, 1, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
             if (STRead && STBuffer[0] != 0x90) {
                 PrintAndLogEx(ERR, "Trailer read error: %02x %s", STBuffer[0], mfpGetErrorDescription(STBuffer[0]));
                 goto chunkBlank2;
@@ -2324,22 +2324,23 @@ chunkCycle2:
             }
             mfp_data_crypt(&_session, &STBuffer[1], &STBuffer[1], true, 1);
             // Multiblock reads do not allow reading out STs, as such this is the time to save them into the final dump
-            memcpy(carddata + ((128+(sl3Count-31)*16-1) * MFBLOCK_SIZE), &STBuffer[1], 1 * MFBLOCK_SIZE);
+            memcpy(carddata + ((128 + (sl3Count - 31) * 16 - 1) * MFBLOCK_SIZE), &STBuffer[1], 1 * MFBLOCK_SIZE);
             int c = 0;
             // Check if any block is encrypted only
-            ki_pB[1] = 0x01+sl3Count*2;
+            ki_pB[1] = 0x01+sl3Count * 2;
             MifareAuth4(&_session, ki_pB, &aesFoundKeys[MF_KEY_B][sl3Count][1], true, false, true, true, verbose, false);
             if (STBuffer[6] & 0xF0) { // At least one bit is set to force enc. only
 chunkBlank2: // Jumping here will start the cycle which will blank out the remaining 5 chunks anyway
-                for (c=0; c<5; ++c) {
-                    MFPReadBlock(&_session, false, false, true, 128+(sl3Count-32)*16+c*3, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
+                for (c = 0; c < 5; ++c) {
+                    MFPReadBlock(&_session, false, false, true, 128 + (sl3Count - 32) * 16 + c * 3, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
                     if (STRead && STBuffer[0] != 0x90) {
                         PrintAndLogEx(ERR, "Chunk read error: %02x %s", STBuffer[0], mfpGetErrorDescription(STBuffer[0]));
                         PrintAndLogEx(WARNING, "Quick-reading sector %3d / %3d chunk %d ( " _RED_("fail") " )", sl3Count, numSectors - 1, c);
-                        memcpy(carddata + ((128+(sl3Count-31)*16-1) * MFBLOCK_SIZE), nullBlock, 1 * MFBLOCK_SIZE);
-                        memcpy(carddata + ((128 + 16*(sl3Count-32)+c*3) * MFBLOCK_SIZE), nullChunk, 3 * MFBLOCK_SIZE);
+                        memcpy(carddata + ((128 + (sl3Count - 31) * 16 - 1) * MFBLOCK_SIZE), nullBlock, 1 * MFBLOCK_SIZE);
+                        memcpy(carddata + ((128 + 16 * (sl3Count - 32) + c * 3) * MFBLOCK_SIZE), nullChunk, 3 * MFBLOCK_SIZE);
                         nonfirst = false;
-                        if (c<5) {continue;} else {sl3Count++; goto chunkCycleClean2;}; 
+                        if (c < 5) {continue;}
+                        else {sl3Count++; goto chunkCycleClean2;};
                     }
                     if (STRead != 1 + 48 + 2) {
                         PrintAndLogEx(ERR, "Error return length: %d", STRead);
@@ -2348,16 +2349,16 @@ chunkBlank2: // Jumping here will start the cycle which will blank out the remai
                     }
                     mfp_data_crypt(&_session, &STBuffer[1], &STBuffer[1], true, 3);
                     PrintAndLogEx(INPLACE, "Quick-reading sector %3d / %3d ( " _GREEN_("ok") " )", sl3Count, numSectors - 1);
-                    memcpy(carddata + ((128 + 16*(sl3Count-32)+c*3) * MFBLOCK_SIZE), &STBuffer[1], 3 * MFBLOCK_SIZE);
+                    memcpy(carddata + ((128 + 16 * (sl3Count - 32) + c * 3) * MFBLOCK_SIZE), &STBuffer[1], 3 * MFBLOCK_SIZE);
                 }
                 sectorsRead++;
                 sl3Count++;
             } else {
-                for (c=0; c<5; ++c) {
-                    MFPReadBlock(&_session, true, false, true, 128+(sl3Count-32)*16+c*3, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
+                for (c = 0; c < 5; ++c) {
+                    MFPReadBlock(&_session, true, false, true, 128 + (sl3Count - 32) * 16 + c * 3, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
                     if (STRead && STBuffer[0] != 0x90) {
                         PrintAndLogEx(ERR, "Chunk read error: %02x %s", STBuffer[0], mfpGetErrorDescription(STBuffer[0]));
-                        memcpy(carddata + ((128 + 16*(sl3Count-32)+c*3) * MFBLOCK_SIZE), nullChunk, 3 * MFBLOCK_SIZE);
+                        memcpy(carddata + ((128 + 16 * (sl3Count - 32) + c * 3) * MFBLOCK_SIZE), nullChunk, 3 * MFBLOCK_SIZE);
                         PrintAndLogEx(WARNING, "Quick-reading sector %3d / %3d ( " _RED_("fail") " )", sl3Count, numSectors - 1);
                         continue;
                     }
@@ -2367,8 +2368,8 @@ chunkBlank2: // Jumping here will start the cycle which will blank out the remai
                         return PM3_ESOFT;
                     }
                     PrintAndLogEx(INPLACE, "Quick-reading sector %3d / %3d ( " _GREEN_("ok") " )", sl3Count, numSectors - 1);
-                    memcpy(carddata + ((128 + 16*(sl3Count-32)+c*3) * MFBLOCK_SIZE), &STBuffer[1], 3 * MFBLOCK_SIZE);
-                    
+                    memcpy(carddata + ((128 + 16 * (sl3Count - 32) + c * 3) * MFBLOCK_SIZE), &STBuffer[1], 3 * MFBLOCK_SIZE);
+
                 }
                 sectorsRead++;
                 sl3Count++;
@@ -2445,7 +2446,7 @@ chunkCycleClean2:
 
     DropField();
     t1 = msclock() - t1;
-    
+
     // ========================================
     // Print sector summary
     // ========================================
@@ -2546,7 +2547,7 @@ chunkCycleClean2:
         PrintAndLogEx(HINT, "Partial dump: %d of %d sectors read", sectorsRead, numSectors);
         PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfp chk --dump`") " and/or " _YELLOW_("`hf mf chk`") " to find more keys");
     }
-    
+
     PrintAndLogEx(INFO, "\ntime in dump " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
     free(carddata);
     return PM3_SUCCESS;

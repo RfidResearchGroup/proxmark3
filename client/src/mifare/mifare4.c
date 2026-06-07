@@ -224,7 +224,8 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
     }
 
     uint8_t cmd1[4];
-    if (nonfirst) { cmd1[0] = 0x76; cmd1[1] = keyn[1]; cmd1[2] = keyn[0]; } else { cmd1[0] = 0x70; cmd1[1] = keyn[1]; cmd1[2] = keyn[0]; cmd1[3] = 0x00; }
+    if (nonfirst) { cmd1[0] = 0x76; cmd1[1] = keyn[1]; cmd1[2] = keyn[0]; }
+    else { cmd1[0] = 0x70; cmd1[1] = keyn[1]; cmd1[2] = keyn[0]; cmd1[3] = 0x00; }
     int res = ExchangeRAW14a(cmd1, nonfirst ? 3 : 4, activateField, true, data, sizeof(data), &datalen, silentMode);
     if (res != PM3_SUCCESS) {
 
@@ -307,7 +308,7 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
         memcpy(&IVW[12], &mf4session->R_Ctr, 2);
         memcpy(&IVW[14], &mf4session->W_Ctr, 2);
         memcpy(IVW, mf4session->TI, 4);
-        
+
         aes_decode(IVR, key, &data[1], RndB, 16);
         RndB[16] = RndB[0];
         if (verbose) {
@@ -353,7 +354,7 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
         PrintAndLogEx(INFO, "< phase2: %s", sprint_hex(data, datalen));
     }
 
-    if (data[0]!=0x90) {
+    if (data[0] != 0x90) {
         if (silentMode == false) {
             PrintAndLogEx(ERR, "\nAuthentication FAILED. Card did not ACK response");
         }
@@ -364,7 +365,8 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
         return PM3_EWRONGANSWER;
     }
 
-    if (nonfirst) { aes_decode(IVR, key, &data[1], raw, 16); } else { aes_decode(NULL, key, &data[1], raw, 32); }
+    if (nonfirst) { aes_decode(IVR, key, &data[1], raw, 16); }
+    else { aes_decode(NULL, key, &data[1], raw, 32); }
 
     if (verbose) {
         if (nonfirst) {

@@ -176,79 +176,79 @@ static void *worker(void *arg) {
             end = pool->total;
 
         for (uint32_t idx = start; idx < end; idx++) {
-        if (key_found && !BENCHMARK_FULL_KEYSPACE)
-            break;  // Some other thread already found the key.
-        // Convert the candidate index (28 bits) into 4 bytes.
-        // Each candidate byte is constructed from a 7-bit chunk shifted left by 1 so that the LSB is zero.
-        uint8_t b0 = ((idx) & 0x7F) << 1;
-        uint8_t b1 = ((idx >> 7) & 0x7F) << 1;
-        uint8_t b2 = ((idx >> 14) & 0x7F) << 1;
-        uint8_t b3 = ((idx >> 21) & 0x7F) << 1;
-        // Build the candidate half key by starting with the fixed base half and substituting candidate bytes.
-        DES_cblock candidate_half = {0};
-        memcpy(candidate_half, base_half, 8);
-        candidate_half[var_offset    ] = b0;
-        candidate_half[var_offset + 1] = b1;
-        candidate_half[var_offset + 2] = b2;
-        candidate_half[var_offset + 3] = b3;
+            if (key_found && !BENCHMARK_FULL_KEYSPACE)
+                break;  // Some other thread already found the key.
+            // Convert the candidate index (28 bits) into 4 bytes.
+            // Each candidate byte is constructed from a 7-bit chunk shifted left by 1 so that the LSB is zero.
+            uint8_t b0 = ((idx) & 0x7F) << 1;
+            uint8_t b1 = ((idx >> 7) & 0x7F) << 1;
+            uint8_t b2 = ((idx >> 14) & 0x7F) << 1;
+            uint8_t b3 = ((idx >> 21) & 0x7F) << 1;
+            // Build the candidate half key by starting with the fixed base half and substituting candidate bytes.
+            DES_cblock candidate_half = {0};
+            memcpy(candidate_half, base_half, 8);
+            candidate_half[var_offset    ] = b0;
+            candidate_half[var_offset + 1] = b1;
+            candidate_half[var_offset + 2] = b2;
+            candidate_half[var_offset + 3] = b3;
 
-        // Compute the candidate half's DES key schedule.
-        DES_key_schedule candidate_schedule;
-        DES_set_key_unchecked(&candidate_half, &candidate_schedule);
+            // Compute the candidate half's DES key schedule.
+            DES_key_schedule candidate_schedule;
+            DES_set_key_unchecked(&candidate_half, &candidate_schedule);
 
-        // Perform 2-key triple DES decryption on the ciphertext.
-        // If candidate is in K1: decryption = DES_ecb3_encrypt(cipher, out, candidate, fixed, candidate, DES_DECRYPT)
-        // If candidate is in K2: decryption = DES_ecb3_encrypt(cipher, out, fixed, candidate, fixed, DES_DECRYPT)
-        if (candidate_in_K1) {
-            DES_ecb3_encrypt((DES_cblock *)targs->ciphertext, (DES_cblock *)&out,
-                             &candidate_schedule, &fixed_schedule, &candidate_schedule, DES_DECRYPT);
-        } else {
-            DES_ecb3_encrypt((DES_cblock *)targs->ciphertext, (DES_cblock *)&out,
-                             &fixed_schedule, &candidate_schedule, &fixed_schedule, DES_DECRYPT);
-        }
-
-        bool match = false;
-        if (targs->is_reader_mode) {
-            // In reader mode, also decrypt init_ciphertext and check for rotation relationship
-            // Apply XOR block to the second decrypted block (for CBC mode)
+            // Perform 2-key triple DES decryption on the ciphertext.
+            // If candidate is in K1: decryption = DES_ecb3_encrypt(cipher, out, candidate, fixed, candidate, DES_DECRYPT)
+            // If candidate is in K2: decryption = DES_ecb3_encrypt(cipher, out, fixed, candidate, fixed, DES_DECRYPT)
             if (candidate_in_K1) {
-                DES_ecb3_encrypt((DES_cblock *)targs->init_ciphertext, (DES_cblock *)&init_out,
+                DES_ecb3_encrypt((DES_cblock *)targs->ciphertext, (DES_cblock *)&out,
                                  &candidate_schedule, &fixed_schedule, &candidate_schedule, DES_DECRYPT);
             } else {
-                DES_ecb3_encrypt((DES_cblock *)targs->init_ciphertext, (DES_cblock *)&init_out,
+                DES_ecb3_encrypt((DES_cblock *)targs->ciphertext, (DES_cblock *)&out,
                                  &fixed_schedule, &candidate_schedule, &fixed_schedule, DES_DECRYPT);
             }
-            // Apply XOR block to the second decrypted block (for CBC mode)
-            out ^= targs->prev_ciphertext_u64;
 
-            // Check if out is 8-bit (1-byte) left rotated version of init_out
-            // Need to convert to big-endian for byte rotation, then back to little-endian
-            uint64_t init_be = __builtin_bswap64(init_out);
-            uint64_t rotated_be = (init_be << 8) | (init_be >> 56);
-            uint64_t rotated = __builtin_bswap64(rotated_be);
-            match = (out == rotated);
-        } else {
-            // In counterfeit mode, check the resulting plaintext against LFSR
-            match = valid_lfsr(out, targs->lfsr_type);
-        }
+            bool match = false;
+            if (targs->is_reader_mode) {
+                // In reader mode, also decrypt init_ciphertext and check for rotation relationship
+                // Apply XOR block to the second decrypted block (for CBC mode)
+                if (candidate_in_K1) {
+                    DES_ecb3_encrypt((DES_cblock *)targs->init_ciphertext, (DES_cblock *)&init_out,
+                                     &candidate_schedule, &fixed_schedule, &candidate_schedule, DES_DECRYPT);
+                } else {
+                    DES_ecb3_encrypt((DES_cblock *)targs->init_ciphertext, (DES_cblock *)&init_out,
+                                     &fixed_schedule, &candidate_schedule, &fixed_schedule, DES_DECRYPT);
+                }
+                // Apply XOR block to the second decrypted block (for CBC mode)
+                out ^= targs->prev_ciphertext_u64;
 
-        if (match) {
-            key_found = 1;  // signal to other threads
+                // Check if out is 8-bit (1-byte) left rotated version of init_out
+                // Need to convert to big-endian for byte rotation, then back to little-endian
+                uint64_t init_be = __builtin_bswap64(init_out);
+                uint64_t rotated_be = (init_be << 8) | (init_be >> 56);
+                uint64_t rotated = __builtin_bswap64(rotated_be);
+                match = (out == rotated);
+            } else {
+                // In counterfeit mode, check the resulting plaintext against LFSR
+                match = valid_lfsr(out, targs->lfsr_type);
+            }
 
-            // Build the full 16-byte key: start with the base key and substitute the candidate 4 bytes.
-            unsigned char full_key[KEY_SIZE];
-            memcpy(full_key, targs->base_key, KEY_SIZE);
-            int seg_offset = key_mode * 4;  // key_mode: 0->bytes0, 1->bytes4, 2->bytes8, 3->bytes12.
-            full_key[seg_offset]     = b0;
-            full_key[seg_offset + 1] = b1;
-            full_key[seg_offset + 2] = b2;
-            full_key[seg_offset + 3] = b3;
-            printf("Thread %d: Found key index: %u\n", targs->thread_id, idx);
-            printf("Full key (hex): ");
-            print_hex(full_key, KEY_SIZE);
-            if (!BENCHMARK_FULL_KEYSPACE)
-                break;
-        }
+            if (match) {
+                key_found = 1;  // signal to other threads
+
+                // Build the full 16-byte key: start with the base key and substitute the candidate 4 bytes.
+                unsigned char full_key[KEY_SIZE];
+                memcpy(full_key, targs->base_key, KEY_SIZE);
+                int seg_offset = key_mode * 4;  // key_mode: 0->bytes0, 1->bytes4, 2->bytes8, 3->bytes12.
+                full_key[seg_offset]     = b0;
+                full_key[seg_offset + 1] = b1;
+                full_key[seg_offset + 2] = b2;
+                full_key[seg_offset + 3] = b3;
+                printf("Thread %d: Found key index: %u\n", targs->thread_id, idx);
+                printf("Full key (hex): ");
+                print_hex(full_key, KEY_SIZE);
+                if (!BENCHMARK_FULL_KEYSPACE)
+                    break;
+            }
         }  // end slot inner loop
     }  // end pool slot loop
     return NULL;
