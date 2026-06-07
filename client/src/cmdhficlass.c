@@ -140,6 +140,22 @@ typedef enum {
     TRIPLEDES
 } BLOCK79ENCRYPTION;
 
+static void iclass_set_transport_mode(uint8_t *data, BLOCK79ENCRYPTION mode);
+static int iclass_apply_transport_mode_to_block(uint8_t *blk_data, const uint8_t *key, BLOCK79ENCRYPTION mode, bool encrypt);
+
+static const CLIParserOption IClassEncodeEncryptionOpts[] = {
+    {None, "none"},
+    {DES, "des"},
+    {TRIPLEDES, "2k3des"},
+    {0, NULL},
+};
+
+static const CLIParserOption IClassTransportEncryptionOpts[] = {
+    {DES, "des"},
+    {TRIPLEDES, "2k3des"},
+    {0, NULL},
+};
+
 // 16 bytes key
 static int iclass_load_transport(uint8_t *key, uint8_t n) {
     size_t keylen = 0;
@@ -169,39 +185,98 @@ static int iclass_load_transport(uint8_t *key, uint8_t n) {
 
 static void iclass_decrypt_transport(uint8_t *key, uint8_t limit, uint8_t *enc_data, uint8_t *dec_data,  BLOCK79ENCRYPTION aa1_encryption) {
 
-    // tripledes
-    mbedtls_des3_context ctx;
-    mbedtls_des3_set2key_dec(&ctx, key);
+    bool should_decrypt = false;
+    switch (aa1_encryption) {
+        case DES:
+        case TRIPLEDES:
+            should_decrypt = true;
+            break;
+        case RFU:
+        case None:
+        default:
+            break;
+    }
 
     bool decrypted_block789 = false;
     for (uint8_t i = 0; i < limit; ++i) {
 
         uint16_t idx = i * PICOPASS_BLOCK_SIZE;
-
-        switch (aa1_encryption) {
-            // Right now, only 3DES is supported
-            case TRIPLEDES:
-                // Decrypt block 7,8,9 if configured.
-                if (i > 6 && i <= 9 && memcmp(enc_data + idx, empty, PICOPASS_BLOCK_SIZE) != 0) {
-                    mbedtls_des3_crypt_ecb(&ctx, enc_data + idx, dec_data + idx);
-                    decrypted_block789 = true;
-                }
-                break;
-            case DES:
-            case RFU:
-            case None:
-            // Nothing to do for None anyway...
-            default:
-                continue;
+        if (should_decrypt == false || i <= 6 || i > 9) {
+            continue;
         }
+
+        if (memcmp(enc_data + idx, empty, PICOPASS_BLOCK_SIZE) == 0 || memcmp(enc_data + idx, zeros, PICOPASS_BLOCK_SIZE) == 0) {
+            continue;
+        }
+
+        memcpy(dec_data + idx, enc_data + idx, PICOPASS_BLOCK_SIZE);
+        if (iclass_apply_transport_mode_to_block(dec_data + idx, key, aa1_encryption, false) != PM3_SUCCESS) {
+            break;
+        }
+        decrypted_block789 = true;
 
         if (decrypted_block789) {
             // Set the 2 last bits of block6 to 0 to mark the data as decrypted
             dec_data[(6 * PICOPASS_BLOCK_SIZE) + 7] &= 0xFC;
         }
     }
+}
 
+static void iclass_set_transport_mode(uint8_t *data, BLOCK79ENCRYPTION mode) {
+    data[7] &= 0xFC;
+    data[7] |= (mode & 0x03);
+}
+
+static void iclass_des_block_transform(uint8_t *blk_data, const uint8_t *key, bool encrypt) {
+    mbedtls_des_context ctx;
+    if (encrypt) {
+        mbedtls_des_setkey_enc(&ctx, key);
+    } else {
+        mbedtls_des_setkey_dec(&ctx, key);
+    }
+    mbedtls_des_crypt_ecb(&ctx, blk_data, blk_data);
+    mbedtls_des_free(&ctx);
+}
+
+static void iclass_2k3des_block_transform(uint8_t *blk_data, const uint8_t *key, bool encrypt) {
+    mbedtls_des3_context ctx;
+    if (encrypt) {
+        mbedtls_des3_set2key_enc(&ctx, key);
+    } else {
+        mbedtls_des3_set2key_dec(&ctx, key);
+    }
+    mbedtls_des3_crypt_ecb(&ctx, blk_data, blk_data);
     mbedtls_des3_free(&ctx);
+}
+
+static int iclass_apply_transport_mode_to_block(uint8_t *blk_data, const uint8_t *key, BLOCK79ENCRYPTION mode, bool encrypt) {
+    if (blk_data == NULL) {
+        return PM3_EINVARG;
+    }
+
+    switch (mode) {
+        case None:
+        case RFU:
+            return PM3_SUCCESS;
+        case DES:
+            iclass_des_block_transform(blk_data, key, encrypt);
+            return PM3_SUCCESS;
+        case TRIPLEDES:
+            iclass_2k3des_block_transform(blk_data, key, encrypt);
+            return PM3_SUCCESS;
+        default:
+            return PM3_EINVARG;
+    }
+}
+
+static int iclass_apply_transport_mode_to_credential(uint8_t *credential, const uint8_t *key, BLOCK79ENCRYPTION mode, bool encrypt) {
+    for (uint8_t blockno = 0; blockno < 3; blockno++) {
+        int res = iclass_apply_transport_mode_to_block(credential + (blockno * PICOPASS_BLOCK_SIZE), key, mode, encrypt);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+    }
+    return PM3_SUCCESS;
 }
 
 static inline uint32_t leadingzeros(uint64_t a) {
@@ -1200,6 +1275,8 @@ static int CmdHFiClassTagSim(const char *Cmd) {
                   "the tool tries to load " ICLASS_DECRYPTION_BIN ".",
                   "hf iclass tagsim --fc 101 --cn 1337\n"
                   "hf iclass tagsim -w H10301 --fc 101 --cn 1337 --ki 0\n"
+                  "hf iclass tagsim -w H10301 --fc 101 --cn 1337 --enc none\n"
+                  "hf iclass tagsim -w H10301 --fc 101 --cn 1337 --enc des\n"
                   "hf iclass tagsim -w H10301 --fc 101 --cn 1337 --kd 0102030405060708 --elite\n"
                   "hf iclass tagsim --bin 10001111100000001010100011 --ki 0\n"
                   "hf iclass tagsim -w H10301 --fc 101 --cn 1337 --ki 0 --enckey 00000000000000000000000000000000\n"
@@ -1220,6 +1297,7 @@ static int CmdHFiClassTagSim(const char *Cmd) {
         arg_lit0(NULL,  "raw",                    "Keys are already diversified, skip diversification"),
         arg_str0(NULL,  "csn",      "<hex>",      "Custom CSN, 8 hex bytes (auto-generated if omitted)"),
         arg_str0(NULL,  "enckey",   "<hex>",      "3DES transport key, 16 hex bytes"),
+        arg_str0(NULL,  "enc",      "<none|des|2k3des>", "credential transport mode (default: 2k3des)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1272,8 +1350,14 @@ static int CmdHFiClassTagSim(const char *Cmd) {
     uint8_t *enckeyptr = NULL;
     bool have_enc_key = false;
     CLIGetHexWithReturn(ctx, 13, enc_key, &enc_key_len);
+    BLOCK79ENCRYPTION enc_mode = TRIPLEDES;
+    int enc_mode_res = CLIGetOptionList(arg_get_str(ctx, 14), IClassEncodeEncryptionOpts, (int *)&enc_mode);
 
     CLIParserFree(ctx);
+
+    if (enc_mode_res != 0) {
+        return PM3_EINVARG;
+    }
 
     // --- validation
     if ((rawkey + elite) > 1) {
@@ -1341,9 +1425,16 @@ static int CmdHFiClassTagSim(const char *Cmd) {
         have_enc_key = true;
     }
 
-    if (have_enc_key == false) {
-        // try smart-card helper first, then fall back to file
-        bool use_sc = IsCardHelperPresent(false);
+    bool use_sc = false;
+    if (enc_mode == None && have_enc_key) {
+        PrintAndLogEx(WARNING, "Transport mode marker is none; --enckey will be ignored.");
+    }
+
+    if (enc_mode != None && have_enc_key == false) {
+        // Try smart-card helper for 2K3DES only, then fall back to file.
+        if (enc_mode == TRIPLEDES) {
+            use_sc = IsCardHelperPresent(false);
+        }
         if (use_sc == false) {
             size_t keylen = 0;
             int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&enckeyptr, &keylen);
@@ -1359,6 +1450,10 @@ static int CmdHFiClassTagSim(const char *Cmd) {
         } else {
             have_enc_key = true; // will use Encrypt() via smart card
         }
+    }
+
+    if (enc_mode != None && have_enc_key == false) {
+        enc_mode = None;
     }
 
     // ---------------------------------------------------------------
@@ -1461,19 +1556,15 @@ static int CmdHFiClassTagSim(const char *Cmd) {
         memcpy(credential + 12, &packed.Bot, sizeof(packed.Bot));
     }
 
-    // Capture smart-card helper state before starting simulation (can't query mid-sim)
-    bool use_sc = have_enc_key ? IsCardHelperPresent(false) : false;
-
-    // Encrypt credential blocks 7, 8, 9
-    if (have_enc_key) {
+    iclass_set_transport_mode(credential, enc_mode);
+    if (enc_mode != None) {
         if (use_sc) {
             Encrypt(credential + 8,  credential + 8);
             Encrypt(credential + 16, credential + 16);
             Encrypt(credential + 24, credential + 24);
-        } else {
-            iclass_encrypt_block_data(credential + 8,  enc_key);
-            iclass_encrypt_block_data(credential + 16, enc_key);
-            iclass_encrypt_block_data(credential + 24, enc_key);
+        } else if (iclass_apply_transport_mode_to_credential(credential + 8, enc_key, enc_mode, true) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to encode credential transport blocks");
+            return PM3_EINVARG;
         }
     }
 
@@ -1599,15 +1690,16 @@ static int CmdHFiClassTagSim(const char *Cmd) {
                 }
             }
 
-            if (have_enc_key) {
+            iclass_set_transport_mode(new_cred, enc_mode);
+            if (enc_mode != None) {
                 if (use_sc) {
                     Encrypt(new_cred + 8,  new_cred + 8);
                     Encrypt(new_cred + 16, new_cred + 16);
                     Encrypt(new_cred + 24, new_cred + 24);
-                } else {
-                    iclass_encrypt_block_data(new_cred + 8,  enc_key);
-                    iclass_encrypt_block_data(new_cred + 16, enc_key);
-                    iclass_encrypt_block_data(new_cred + 24, enc_key);
+                } else if (iclass_apply_transport_mode_to_credential(new_cred + 8, enc_key, enc_mode, true) != PM3_SUCCESS) {
+                    PrintAndLogEx(ERR, "Failed to encode credential transport blocks");
+                    running = false;
+                    break;
                 }
             }
 
@@ -2119,7 +2211,7 @@ static void iclass_decode_credentials(uint8_t *data) {
 static int CmdHFiClassDecrypt(const char *Cmd) {
     CLIParserContext *clictx;
     CLIParserInit(&clictx, "hf iclass decrypt",
-                  "3DES decrypt data\n"
+                  "DES/3DES decrypt data\n"
                   "This is a naive implementation, it tries to decrypt every block after block 6.\n"
                   "Correct behaviour would be to decrypt only the application areas where the key is valid,\n"
                   "which is defined by the configuration block.\n"
@@ -2135,8 +2227,9 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
-        arg_str0("d", "data", "<hex>", "3DES encrypted data"),
-        arg_str0("k", "key", "<hex>", "3DES transport key"),
+        arg_str0("d", "data", "<hex>", "DES/3DES encrypted data"),
+        arg_str0("k", "key", "<hex>", "DES/3DES transport key"),
+        arg_str0(NULL, "enc", "[des|2k3des]", "transport encryption mode"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "d6", "decode as block 6"),
         arg_lit0("z", "dense", "dense dump output style"),
@@ -2162,10 +2255,16 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
     CLIGetHexWithReturn(clictx, 3, key, &key_len);
 
-    bool verbose = arg_get_lit(clictx, 4);
-    bool use_decode6 = arg_get_lit(clictx, 5);
-    bool dense_output = g_session.dense_output || arg_get_lit(clictx, 6);
-    bool nosave = arg_get_lit(clictx, 7);
+    int transport_mode = TRIPLEDES;
+    if (CLIGetOptionList(arg_get_str(clictx, 4), IClassTransportEncryptionOpts, &transport_mode)) {
+        CLIParserFree(clictx);
+        return PM3_EINVARG;
+    }
+
+    bool verbose = arg_get_lit(clictx, 5);
+    bool use_decode6 = arg_get_lit(clictx, 6);
+    bool dense_output = g_session.dense_output || arg_get_lit(clictx, 7);
+    bool nosave = arg_get_lit(clictx, 8);
     CLIParserFree(clictx);
 
     // sanity checks
@@ -2206,15 +2305,9 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     bool use_sc = false;
     if (have_key == false) {
         use_sc = IsCardHelperPresent(verbose);
-        if (use_sc == false) {
-            size_t keylen = 0;
-            res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
-            if (res != PM3_SUCCESS) {
-                PrintAndLogEx(INFO, "Couldn't find any decryption methods");
-                free(decrypted);
-                return PM3_EINVARG;
-            }
-
+        size_t keylen = 0;
+        res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
+        if (res == PM3_SUCCESS) {
             if (keylen != 16) {
                 PrintAndLogEx(ERR, "Failed to load transport key from file");
                 free(keyptr);
@@ -2223,21 +2316,30 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             }
             memcpy(key, keyptr, sizeof(key));
             free(keyptr);
+            have_key = true;
+        } else if (use_sc == false) {
+            PrintAndLogEx(INFO, "Couldn't find any decryption methods");
+            free(decrypted);
+            return PM3_EINVARG;
         }
     }
-
-    // tripledes
-    mbedtls_des3_context ctx;
-    mbedtls_des3_set2key_dec(&ctx, key);
 
     // decrypt user supplied data
     if (have_data) {
 
         uint8_t dec_data[PICOPASS_BLOCK_SIZE] = {0};
-        if (use_sc) {
+        memcpy(dec_data, enc_data, sizeof(dec_data));
+        if (use_sc && transport_mode == TRIPLEDES) {
             Decrypt(enc_data, dec_data);
+        } else if (have_key) {
+            if (iclass_apply_transport_mode_to_block(dec_data, key, (BLOCK79ENCRYPTION)transport_mode, false) != PM3_SUCCESS) {
+                free(decrypted);
+                return PM3_EINVARG;
+            }
         } else {
-            mbedtls_des3_crypt_ecb(&ctx, enc_data, dec_data);
+            PrintAndLogEx(INFO, "Couldn't find any decryption methods");
+            free(decrypted);
+            return PM3_EINVARG;
         }
 
         PrintAndLogEx(SUCCESS, "encrypted... %s", sprint_hex_inrow(enc_data, sizeof(enc_data)));
@@ -2280,19 +2382,26 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             memcpy(enc_data, decrypted + idx, PICOPASS_BLOCK_SIZE);
 
             switch (aa1_encryption) {
-                // Right now, only 3DES is supported
+                case DES:
                 case TRIPLEDES:
                     // Decrypt block 7,8,9 if configured.
-                    if (blocknum > 6 && blocknum <= 9 && memcmp(enc_data, empty, PICOPASS_BLOCK_SIZE) != 0) {
-                        if (use_sc) {
+                    if (blocknum > 6 && blocknum <= 9 && memcmp(enc_data, empty, PICOPASS_BLOCK_SIZE) != 0 && memcmp(enc_data, zeros, PICOPASS_BLOCK_SIZE) != 0) {
+                        if (use_sc && aa1_encryption == TRIPLEDES) {
                             Decrypt(enc_data, decrypted + idx);
+                        } else if (have_key) {
+                            memcpy(decrypted + idx, enc_data, PICOPASS_BLOCK_SIZE);
+                            if (iclass_apply_transport_mode_to_block(decrypted + idx, key, aa1_encryption, false) != PM3_SUCCESS) {
+                                free(decrypted);
+                                return PM3_EINVARG;
+                            }
                         } else {
-                            mbedtls_des3_crypt_ecb(&ctx, enc_data, decrypted + idx);
+                            PrintAndLogEx(INFO, "Couldn't find any decryption methods");
+                            free(decrypted);
+                            return PM3_EINVARG;
                         }
                         decrypted_block789 = true;
                     }
                     break;
-                case DES:
                 case RFU:
                 case None:
                 // Nothing to do for None anyway...
@@ -2362,14 +2471,13 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         free(decrypted);
     }
 
-    mbedtls_des3_free(&ctx);
     return PM3_SUCCESS;
 }
 
 static int CmdHFiClassEncryptBlk(const char *Cmd) {
     CLIParserContext *clictx;
     CLIParserInit(&clictx, "hf iclass encrypt",
-                  "3DES encrypt data\n"
+                  "DES/3DES encrypt data\n"
                   "OBS! In order to use this function, the file 'iclass_decryptionkey.bin' must reside\n"
                   "in the resources directory. The file should be 16 hex bytes of binary data",
                   "hf iclass encrypt -d 0102030405060708\n"
@@ -2378,7 +2486,8 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("d", "data", "<hex>", "data to encrypt"),
-        arg_str0("k", "key", "<hex>", "3DES transport key"),
+        arg_str0("k", "key", "<hex>", "DES/3DES transport key"),
+        arg_str0(NULL, "enc", "[des|2k3des]", "transport encryption mode"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
@@ -2402,6 +2511,12 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
 
     CLIGetHexWithReturn(clictx, 2, key, &key_len);
 
+    int transport_mode = TRIPLEDES;
+    if (CLIGetOptionList(arg_get_str(clictx, 3), IClassTransportEncryptionOpts, &transport_mode)) {
+        CLIParserFree(clictx);
+        return PM3_EINVARG;
+    }
+
     if (key_len > 0) {
         if (key_len != 16) {
             PrintAndLogEx(ERR, "Transport key must be 16 hex bytes (32 HEX characters)");
@@ -2411,13 +2526,15 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
         have_key = true;
     }
 
-    bool verbose = arg_get_lit(clictx, 3);
+    bool verbose = arg_get_lit(clictx, 4);
 
     CLIParserFree(clictx);
 
     bool use_sc = false;
     if (have_key == false) {
-        use_sc = IsCardHelperPresent(verbose);
+        if (transport_mode == TRIPLEDES) {
+            use_sc = IsCardHelperPresent(verbose);
+        }
         if (use_sc == false) {
             size_t keylen = 0;
             int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
@@ -2439,10 +2556,10 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "plain....... %s", sprint_hex_inrow(blk_data, sizeof(blk_data)));
 
-    if (use_sc) {
+    if (use_sc && transport_mode == TRIPLEDES) {
         Encrypt(blk_data, blk_data);
-    } else {
-        iclass_encrypt_block_data(blk_data, key);
+    } else if (iclass_apply_transport_mode_to_block(blk_data, key, (BLOCK79ENCRYPTION)transport_mode, true) != PM3_SUCCESS) {
+        return PM3_EINVARG;
     }
 
     PrintAndLogEx(SUCCESS, "encrypted... " _YELLOW_("%s"), sprint_hex_inrow(blk_data, sizeof(blk_data)));
@@ -7371,6 +7488,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
         arg_lit0(NULL, "emu", "Write to emulation memory instead of card"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_lit0("v", NULL, "verbose (print encoded blocks)"),
+        arg_str0(NULL, "enc", "[none|des|2k3des]", "transport encryption mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -7454,6 +7572,11 @@ static int CmdHFiClassEncode(const char *Cmd) {
 
     bool shallow_mod = arg_get_lit(ctx, 13);
     bool verbose = arg_get_lit(ctx, 14);
+    int transport_mode = TRIPLEDES;
+    if (CLIGetOptionList(arg_get_str(ctx, 15), IClassEncodeEncryptionOpts, &transport_mode)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
     CLIParserFree(ctx);
 
@@ -7470,6 +7593,10 @@ static int CmdHFiClassEncode(const char *Cmd) {
         have_enc_key = true;
     }
 
+    if (transport_mode == None && enc_key_len != 0) {
+        PrintAndLogEx(WARNING, "Transport mode marker is none; --enckey will be ignored.");
+    }
+
     if (bin_len > 64) {
         PrintAndLogEx(ERR, "Binary wiegand string must be less than 64 bits");
         return PM3_EINVARG;
@@ -7480,9 +7607,9 @@ static int CmdHFiClassEncode(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (have_enc_key == false) {
+    if (transport_mode != None && have_enc_key == false) {
         // The IsCardHelperPresent function clears the emulator memory
-        if (use_emulator_memory) {
+        if (use_emulator_memory || transport_mode != TRIPLEDES) {
             use_sc = false;
         } else {
             use_sc = IsCardHelperPresent(false);
@@ -7567,18 +7694,20 @@ static int CmdHFiClassEncode(const char *Cmd) {
         memcpy(credential + 12, &packed.Bot, sizeof(packed.Bot));
     }
 
-    // encrypt with transport key
-    if (use_sc) {
-        Encrypt(credential + 8, credential + 8);
-        Encrypt(credential + 16, credential + 16);
-        Encrypt(credential + 24, credential + 24);
-    } else {
-        iclass_encrypt_block_data(credential + 8, enc_key);
-        iclass_encrypt_block_data(credential + 16, enc_key);
-        iclass_encrypt_block_data(credential + 24, enc_key);
+    iclass_set_transport_mode(credential, (BLOCK79ENCRYPTION)transport_mode);
+    if (transport_mode != None) {
+        if (use_sc) {
+            Encrypt(credential + 8, credential + 8);
+            Encrypt(credential + 16, credential + 16);
+            Encrypt(credential + 24, credential + 24);
+        } else if (iclass_apply_transport_mode_to_credential(credential + 8, enc_key, (BLOCK79ENCRYPTION)transport_mode, true) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to apply transport mode");
+            return PM3_EINVARG;
+        }
     }
 
     if (verbose) {
+        PrintAndLogEx(INFO, "Mode: %s", CLIGetOptionListStr(IClassEncodeEncryptionOpts, transport_mode));
         for (uint8_t i = 0; i < 4; i++) {
             PrintAndLogEx(INFO, "Block %d/0x0%x -> " _YELLOW_("%s"), 6 + i, 6 + i, sprint_hex_inrow(credential + (i * 8), 8));
         }
