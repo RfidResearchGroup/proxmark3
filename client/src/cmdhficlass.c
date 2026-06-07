@@ -177,17 +177,35 @@ static int iclass_load_transport(uint8_t *key, uint8_t n) {
     return PM3_SUCCESS;
 }
 
-static void iclass_decrypt_transport(uint8_t *key, uint8_t limit, uint8_t *enc_data, uint8_t *dec_data,  BLOCK79ENCRYPTION aa1_encryption) {
+static void iclass_decrypt_transport(const uint8_t *key, uint8_t limit, const uint8_t *enc_data, uint8_t *dec_data,  BLOCK79ENCRYPTION aa1_encryption) {
 
+    bool should_decrypt = false;
     bool decrypted_block789 = false;
+
+    switch (aa1_encryption) {
+        case None:
+        case RFU:
+            break;
+        case DES:
+        case TRIPLEDES:
+            should_decrypt = true;
+            break;
+        default:
+            return;
+    }
+
     for (uint8_t i = 0; i < limit; ++i) {
         uint16_t idx = i * PICOPASS_BLOCK_SIZE;
         if (i <= 6 || i > 9) {
             continue;
         }
 
-        if (iclass_apply_transport_mode_to_block(dec_data + idx, key, aa1_encryption, false) == PM3_SUCCESS &&
-                (aa1_encryption == DES || aa1_encryption == TRIPLEDES)) {
+        memmove(dec_data + idx, enc_data + idx, PICOPASS_BLOCK_SIZE);
+        if (should_decrypt) {
+            if (iclass_apply_transport_mode_to_block(dec_data + idx, key, aa1_encryption, false) != PM3_SUCCESS) {
+                decrypted_block789 = false;
+                break;
+            }
             decrypted_block789 = true;
         }
     }
@@ -2269,8 +2287,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                   "\nOBS!\n"
                   "In order to use this function, the file `iclass_decryptionkey.bin` must reside\n"
                   "in the resources directory. The file must be 16 bytes binary data\n"
-                  "or...\n"
-                  "make sure your cardhelper is placed in the sim module",
+                  "or provide a 16-byte transport key with `-k`",
                   "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
                   "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin -k 000102030405060708090a0b0c0d0e0f\n"
                   "hf iclass decrypt -d 1122334455667788 -k 000102030405060708090a0b0c0d0e0f");
@@ -2281,7 +2298,6 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         arg_str0("d", "data", "<hex>", "3DES encrypted data"),
         arg_str0("k", "key", "<hex>", "3DES transport key"),
         arg_lit0("v", "verbose", "verbose output"),
-        arg_lit0(NULL, "d6", "decode as block 6"),
         arg_lit0("z", "dense", "dense dump output style"),
         arg_lit0(NULL, "ns", "no save to file"),
         arg_param_end
@@ -2306,9 +2322,8 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     CLIGetHexWithReturn(clictx, 3, key, &key_len);
 
     bool verbose = arg_get_lit(clictx, 4);
-    bool use_decode6 = arg_get_lit(clictx, 5);
-    bool dense_output = g_session.dense_output || arg_get_lit(clictx, 6);
-    bool nosave = arg_get_lit(clictx, 7);
+    bool dense_output = g_session.dense_output || arg_get_lit(clictx, 5);
+    bool nosave = arg_get_lit(clictx, 6);
     CLIParserFree(clictx);
 
     // sanity checks
@@ -2346,27 +2361,23 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     }
 
     // load transport key
-    bool use_sc = false;
     if (have_key == false) {
-        use_sc = IsCardHelperPresent(verbose);
-        if (use_sc == false) {
-            size_t keylen = 0;
-            res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
-            if (res != PM3_SUCCESS) {
-                PrintAndLogEx(INFO, "Couldn't find any decryption methods");
-                free(decrypted);
-                return PM3_EINVARG;
-            }
-
-            if (keylen != 16) {
-                PrintAndLogEx(ERR, "Failed to load transport key from file");
-                free(keyptr);
-                free(decrypted);
-                return PM3_EINVARG;
-            }
-            memcpy(key, keyptr, sizeof(key));
-            free(keyptr);
+        size_t keylen = 0;
+        res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Couldn't find a decryption key");
+            free(decrypted);
+            return PM3_EINVARG;
         }
+
+        if (keylen != 16) {
+            PrintAndLogEx(ERR, "Failed to load transport key from file");
+            free(keyptr);
+            free(decrypted);
+            return PM3_EINVARG;
+        }
+        memcpy(key, keyptr, sizeof(key));
+        free(keyptr);
     }
 
     // tripledes
@@ -2377,18 +2388,10 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     if (have_data) {
 
         uint8_t dec_data[PICOPASS_BLOCK_SIZE] = {0};
-        if (use_sc) {
-            Decrypt(enc_data, dec_data);
-        } else {
-            mbedtls_des3_crypt_ecb(&ctx, enc_data, dec_data);
-        }
+        mbedtls_des3_crypt_ecb(&ctx, enc_data, dec_data);
 
         PrintAndLogEx(SUCCESS, "encrypted... %s", sprint_hex_inrow(enc_data, sizeof(enc_data)));
         PrintAndLogEx(SUCCESS, "plain....... " _YELLOW_("%s"), sprint_hex_inrow(dec_data, sizeof(dec_data)));
-
-        if (use_sc && use_decode6) {
-            DecodeBlock6(dec_data);
-        }
     }
 
     // decrypt dump file data
@@ -2414,27 +2417,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             PrintAndLogEx(INFO, "Setting limit to " _GREEN_("%u"), limit * PICOPASS_BLOCK_SIZE);
         }
 
-        //uint8_t numblocks4userid = GetNumberBlocksForUserId(decrypted + (6 * 8));
-        if (use_sc && aa1_encryption == TRIPLEDES) {
-            bool decrypted_block789 = false;
-            for (uint8_t blocknum = 0; blocknum < limit; ++blocknum) {
-
-                uint16_t idx = blocknum * PICOPASS_BLOCK_SIZE;
-                memcpy(enc_data, decrypted + idx, PICOPASS_BLOCK_SIZE);
-
-                if (blocknum > 6 && blocknum <= 9 && memcmp(enc_data, empty, PICOPASS_BLOCK_SIZE) != 0) {
-                    Decrypt(enc_data, decrypted + idx);
-                    decrypted_block789 = true;
-                }
-            }
-
-            if (decrypted_block789) {
-                // Set the 2 last bits of block6 to 0 to mark the data as decrypted
-                decrypted[(6 * PICOPASS_BLOCK_SIZE) + 7] &= 0xFC;
-            }
-        } else {
-            iclass_decrypt_transport(key, limit, decrypted, decrypted, aa1_encryption);
-        }
+        iclass_decrypt_transport(key, limit, decrypted, decrypted, aa1_encryption);
 
         if (nosave) {
             PrintAndLogEx(INFO, "Called with no save option");
@@ -2460,33 +2443,8 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         print_iclass_sio(decrypted, decryptedlen, verbose);
         PrintAndLogEx(NORMAL, "");
 
-        // decode block 6
-        bool has_values = (memcmp(decrypted + (PICOPASS_BLOCK_SIZE * 6), empty, 8) != 0) && (memcmp(decrypted + (PICOPASS_BLOCK_SIZE * 6), zeros, PICOPASS_BLOCK_SIZE) != 0);
-        if (has_values && use_sc) {
-            DecodeBlock6(decrypted + (PICOPASS_BLOCK_SIZE * 6));
-        }
-
         // decode block 7-8-9
         iclass_decode_credentials(decrypted);
-
-        // decode block 9
-        has_values = (memcmp(decrypted + (PICOPASS_BLOCK_SIZE * 9), empty, PICOPASS_BLOCK_SIZE) != 0) && (memcmp(decrypted + (PICOPASS_BLOCK_SIZE * 9), zeros, PICOPASS_BLOCK_SIZE) != 0);
-        if (has_values && use_sc) {
-            uint8_t usr_blk_len = GetNumberBlocksForUserId(decrypted + (PICOPASS_BLOCK_SIZE * 6));
-            if (usr_blk_len < 3) {
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(INFO, "Block 9 decoder");
-
-                uint8_t pinsize = GetPinSize(decrypted + (PICOPASS_BLOCK_SIZE * 6));
-                if (pinsize > 0) {
-
-                    uint64_t pin = bytes_to_num(decrypted + (PICOPASS_BLOCK_SIZE * 9), 5);
-                    char tmp[17] = {0};
-                    snprintf(tmp, sizeof(tmp), "%."PRIu64, BCD2DEC(pin));
-                    PrintAndLogEx(INFO, "PIN........................ " _GREEN_("%.*s"), pinsize, tmp);
-                }
-            }
-        }
 
         PrintAndLogEx(INFO, "-------------------------------------------------------------------");
         free(decrypted);
