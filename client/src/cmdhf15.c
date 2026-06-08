@@ -1339,6 +1339,60 @@ static int reader_single_tag(bool fast, bool loop, uint8_t *afi_buf, int afi_len
 }
 
 // 16-slot anti-collision tree walking to discover all tags in the field
+// One persistent row per UID ever seen during a continuous `hf 15 reader --all -@`.
+typedef struct {
+    uint8_t  uid[8];
+    uint8_t  dsfid;
+    uint64_t last_seen_ms;
+    bool     present;
+} iso15_seen_tag_t;
+
+// Redraw the presence table in place via cursor-up. Printed with newlines BETWEEN rows but none
+// after the last, so the cursor never drops below the bottom row (a trailing newline at the
+// screen bottom would scroll and leave the header behind). To refresh, return to the top of the
+// block (\r + cursor-up) and clear to end of screen. All printf, so header/data columns align.
+static void iso15_render_presence_table(const iso15_seen_tag_t *seen, int n,
+                                        bool inplace, bool *first_draw, int *table_lines) {
+    if (inplace && (*first_draw == false)) {
+        if (*table_lines > 1) {
+            printf("\r\x1b[%dA\x1b[J", *table_lines - 1);
+        } else {
+            printf("\r\x1b[J");
+        }
+    } else if ((inplace == false) && (*first_draw == false)) {
+        printf("\n"); // piped/non-TTY: separate snapshots
+    }
+
+    int present = 0;
+    for (int i = 0; i < n; i++) {
+        if (seen[i].present) present++;
+    }
+    uint64_t now = msclock();
+
+    const char *c_grn = g_session.supports_colors ? "\x1b[32m" : "";
+    const char *c_yel = g_session.supports_colors ? "\x1b[33m" : "";
+    const char *c_off = g_session.supports_colors ? "\x1b[0m"  : "";
+
+    int lines = 0;
+    printf("hf 15 --all   present %d / %d   " _GREEN_("<Enter>") " to exit", present, n);    lines++;
+    printf("\n%3s   %-25s    %-5s    %s", "#", "UID", "DSFID", "status");                      lines++;
+    printf("\n%3s   %-25s    %-5s    %s", "---", "-------------------------", "-----", "----------------"); lines++;
+    for (int i = 0; i < n; i++) {
+        if (seen[i].present) {
+            printf("\n%3d   %-25s    %02X       %spresent%s",
+                   i + 1, iso15693_sprintUID(NULL, (uint8_t *)seen[i].uid), seen[i].dsfid, c_grn, c_off);
+        } else {
+            uint32_t secs = (uint32_t)((now - seen[i].last_seen_ms) / 1000);
+            printf("\n%3d   %-25s    %02X       %sgone%s (%us ago)",
+                   i + 1, iso15693_sprintUID(NULL, (uint8_t *)seen[i].uid), seen[i].dsfid, c_yel, c_off, secs);
+        }
+        lines++;
+    }
+    *table_lines = lines;
+    *first_draw = false;
+    fflush(stdout);
+}
+
 static int reader_inventory_all(bool fast, bool loop, uint8_t *afi_buf, int afi_len) {
 
     typedef struct {
@@ -1348,6 +1402,14 @@ static int reader_inventory_all(bool fast, bool loop, uint8_t *afi_buf, int afi_
 
     #define MAX_WORK_ITEMS 256
     #define MAX_FOUND_TAGS 64
+    #define MAX_SEEN_TAGS  128
+
+    // Persistent across scans in continuous (-@) mode: every UID seen this session.
+    iso15_seen_tag_t seen[MAX_SEEN_TAGS];
+    int seen_count = 0;
+    bool inplace = loop && g_session.stdoutOnTTY;
+    bool first_draw = true;
+    int table_lines = 0;
 
     do {
         inventory_work_item_t work_queue[MAX_WORK_ITEMS];
@@ -1454,30 +1516,62 @@ static int reader_inventory_all(bool fast, bool loop, uint8_t *afi_buf, int afi_
             }
         }
 
-        DropField();
-        if (found_count > 0) {
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(SUCCESS, "Found " _GREEN_("%d") " tag(s):", found_count);
-            for (int i = 0; i < found_count; i++) {
-                PrintAndLogEx(SUCCESS, "  %2d: UID " _GREEN_("%s") "  DSFID: %02X",
-                              i + 1,
-                              iso15693_sprintUID(NULL, found_uids[i]),
-                              found_dsfids[i]);
+        // NB: don't DropField() per scan in continuous mode -- it re-inits the field every
+        // round (slow, and spams "Setting ISODEP" when APDU logging is on). The next round
+        // re-selects anyway, and the field is dropped once when the loop exits.
+
+        if (loop) {
+            // Continuous mode: fold this scan into the persistent table and redraw it in place.
+            for (int i = 0; i < seen_count; i++) {
+                seen[i].present = false;
             }
-            PrintAndLogEx(NORMAL, "");
-        } else if (!loop) {
-            PrintAndLogEx(WARNING, "No tags found");
+            for (int j = 0; j < found_count; j++) {
+                int idx = -1;
+                for (int i = 0; i < seen_count; i++) {
+                    if (memcmp(seen[i].uid, found_uids[j], 8) == 0) {
+                        idx = i;
+                        break;
+                    }
+                }
+                if (idx < 0 && seen_count < MAX_SEEN_TAGS) {
+                    idx = seen_count++;
+                    memcpy(seen[idx].uid, found_uids[j], 8);
+                }
+                if (idx >= 0) {
+                    seen[idx].dsfid = found_dsfids[j];
+                    seen[idx].last_seen_ms = msclock();
+                    seen[idx].present = true;
+                }
+            }
+            iso15_render_presence_table(seen, seen_count, inplace, &first_draw, &table_lines);
+
+        } else {
+            // Single-shot mode: list what was found.
+            if (found_count > 0) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(SUCCESS, "Found " _GREEN_("%d") " tag(s):", found_count);
+                for (int i = 0; i < found_count; i++) {
+                    PrintAndLogEx(SUCCESS, "  %2d: UID " _GREEN_("%s") "  DSFID: %02X",
+                                  i + 1,
+                                  iso15693_sprintUID(NULL, found_uids[i]),
+                                  found_dsfids[i]);
+                }
+                PrintAndLogEx(NORMAL, "");
+            } else {
+                PrintAndLogEx(WARNING, "No tags found");
+            }
         }
 
     } while (loop && kbd_enter_pressed() == false);
 
+    DropField();
     return PM3_SUCCESS;
 }
 
 static int CmdHF15Reader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 reader",
-                  "Act as a ISO-15693 reader. Look for ISO-15693 tags until Enter or the pm3 button is pressed\n"
+                  "Act as a ISO-15693 reader. Look for ISO-15693 tags until " _GREEN_("<Enter>") " is pressed\n"
                   "Use --all to perform 16-slot inventory with anti-collision tree walking\n"
                   "to discover all tags in the field.",
                   "hf 15 reader\n"
