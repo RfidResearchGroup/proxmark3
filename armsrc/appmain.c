@@ -1857,13 +1857,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ISO14443A_SNIFF: {
-            SniffIso14443a(packet->data.asBytes[0]);
-            reply_ng(CMD_HF_ISO14443A_SNIFF, PM3_SUCCESS, NULL, 0);
+            int retval = SniffIso14443a(packet->data.asBytes[0]);
+            reply_ng(CMD_HF_ISO14443A_SNIFF, retval, NULL, 0);
             break;
         }
         case CMD_HF_HIDCONFIG_SNIFF: {
-            SniffHIDConfigCard((const hid_sniff_payload_t *)packet->data.asBytes);
-            reply_ng(CMD_HF_HIDCONFIG_SNIFF, PM3_SUCCESS, NULL, 0);
+            int retval = SniffHIDConfigCard((const hid_sniff_payload_t *)packet->data.asBytes);
+            reply_ng(CMD_HF_HIDCONFIG_SNIFF, retval, NULL, 0);
             break;
         }
         case CMD_HF_ISO14443A_READER: {

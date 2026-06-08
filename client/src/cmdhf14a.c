@@ -1079,29 +1079,61 @@ int CmdHF14ASniff(const char *Cmd) {
     CLIParserInit(&ctx, "hf 14a sniff",
                   "Sniff the communication between reader and tag\n"
                   "Use `hf 14a list` to view collected data.",
-                  " hf 14a sniff -c -r"
+                  " hf 14a sniff -c -r\n"
+                  " hf 14a sniff --stop"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("c", "card", "triggered by first data from card"),
         arg_lit0("r", "reader", "triggered by first 7-bit request from reader (REQ, WUP)"),
         arg_lit0("i", "interactive", "Console will not be returned until sniff finishes or is aborted"),
+        arg_lit0(NULL, "stop", "stop an active ISO 14443-a sniffer"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
+    bool card_trigger = arg_get_lit(ctx, 1);
+    bool reader_trigger = arg_get_lit(ctx, 2);
+    bool interactive = arg_get_lit(ctx, 3);
+    bool stop = arg_get_lit(ctx, 4);
+
+    if (stop && (card_trigger || reader_trigger || interactive)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "`--stop` cannot be used with `--card`, `--reader`, or `--interactive`");
+        return PM3_EINVARG;
+    }
+
     uint8_t param = 0;
 
-    if (arg_get_lit(ctx, 1)) {
+    if (card_trigger) {
         param |= 0x01;
     }
 
-    if (arg_get_lit(ctx, 2)) {
+    if (reader_trigger) {
         param |= 0x02;
     }
 
-    bool interactive = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
+
+    if (stop) {
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_HF_ISO14443A_SNIFF, &resp, 2000) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for sniffer to stop");
+            return PM3_ETIMEOUT;
+        }
+
+        if (resp.status != PM3_SUCCESS && resp.status != PM3_EOPABORTED) {
+            PrintAndLogEx(WARNING, "sniffer stopped with status %d", resp.status);
+            return resp.status;
+        }
+
+        PrintAndLogEx(INFO, "Done!");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14a list")"` to view captured tracelog");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
+        return PM3_SUCCESS;
+    }
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443A_SNIFF, (uint8_t *)&param, sizeof(uint8_t));
@@ -1124,6 +1156,11 @@ int CmdHF14ASniff(const char *Cmd) {
             // inform device to break the sim loop since client has exited
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
             WaitForResponse(CMD_HF_ISO14443A_SNIFF, &resp);
+        }
+
+        if (resp.status != PM3_SUCCESS && resp.status != PM3_EOPABORTED) {
+            PrintAndLogEx(WARNING, "sniffer stopped with status %d", resp.status);
+            return resp.status;
         }
 
         PrintAndLogEx(INFO, "Done!");

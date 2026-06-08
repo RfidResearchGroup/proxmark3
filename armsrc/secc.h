@@ -97,7 +97,7 @@ void SimulateHIDConfigCard(const hid_sim_payload_t *payload);
 // Sniff ISO 14443-A with optional jamming (param bit 0x04).
 // When apdu_len > 0 the supplied APDU pattern overrides the default A0 D4 00 00 00.
 // When resp_len > 0 the supplied response overrides the default 00 00 90 00.
-void SniffHIDConfigCard(const hid_sniff_payload_t *payload);
+int SniffHIDConfigCard(const hid_sniff_payload_t *payload);
 
 // Handle an I-block received during HID Config Card (tagType=16) simulation.
 // Fills dynamic_response_info with the appropriate response payload (without CRC).

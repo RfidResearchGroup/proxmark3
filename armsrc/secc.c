@@ -619,7 +619,7 @@ void SimulateHIDConfigCard(const hid_sim_payload_t *payload) {
 // HID Config Card sniff with optional A0 D4 jamming
 // ---------------------------------------------------------------------------
 
-void SniffHIDConfigCard(const hid_sniff_payload_t *payload) {
+int SniffHIDConfigCard(const hid_sniff_payload_t *payload) {
     // Configure jam pattern and response before entering the sniff loop.
     if (payload->apdu_len > 0 && payload->apdu_len <= HID_JAM_MAX_APDU) {
         memcpy(s_jam_apdu, payload->apdu, payload->apdu_len);
@@ -636,5 +636,5 @@ void SniffHIDConfigCard(const hid_sniff_payload_t *payload) {
     // Delegate to SniffIso14443a.
     // When param bit 0x04 is set, SniffIso14443a calls hid_config_card_jam()
     // inline after each decoded reader frame (see iso14443a.c).
-    SniffIso14443a(payload->param);
+    return SniffIso14443a(payload->param);
 }

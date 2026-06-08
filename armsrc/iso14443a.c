@@ -803,7 +803,7 @@ static int ManchesterDecoding_Thinfilm(uint8_t bit) {
 // near the reader.
 // "hf 14a sniff"
 //-----------------------------------------------------------------------------
-void RAMFUNC SniffIso14443a(uint8_t param) {
+int RAMFUNC SniffIso14443a(uint8_t param) {
     LEDsoff();
     // param:
     // bit 0 - trigger from first card answer
@@ -846,7 +846,8 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     // Setup and start DMA.
     if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
         if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
-        return;
+        switch_off();
+        return PM3_EINIT;
     }
 
     // We won't start recording the frames that we acquire until we trigger;
@@ -860,6 +861,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     uint32_t dma_stalls = 0;
 
     uint16_t checker = 12000;
+    int retval = PM3_SUCCESS;
 
     // loop and listen
     while (BUTTON_PRESS() == false) {
@@ -868,6 +870,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 
         if (checker-- == 0) {
             if (data_available()) {
+                retval = PM3_EOPABORTED;
                 break;
             }
             checker = 12000;
@@ -948,6 +951,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
                                       Uart.endTime * 16 - DELAY_READER_AIR2ARM_AS_SNIFFER,
                                       Uart.parity,
                                       true)) {
+                            retval = PM3_SUCCESS;
                             break;
                         }
                     }
@@ -980,7 +984,10 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
                                   Demod.startTime * 16 - DELAY_TAG_AIR2ARM_AS_SNIFFER,
                                   Demod.endTime * 16 - DELAY_TAG_AIR2ARM_AS_SNIFFER,
                                   Demod.parity,
-                                  false)) break;
+                                  false)) {
+                        retval = PM3_SUCCESS;
+                        break;
+                    }
 
                     if ((!triggered) && (param & 0x01)) {
                         triggered = true;
@@ -1005,6 +1012,10 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
         }
     } // end main loop
 
+    if (retval == PM3_SUCCESS && BUTTON_PRESS()) {
+        retval = PM3_EOPABORTED;
+    }
+
     FpgaDisableTracing();
 
     if (g_dbglevel >= DBG_ERROR) {
@@ -1015,6 +1026,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
         }
     }
     switch_off();
+    return retval;
 }
 
 //-----------------------------------------------------------------------------
