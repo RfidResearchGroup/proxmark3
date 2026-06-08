@@ -287,11 +287,12 @@ static int MifareUFastRead0(void) {
 //  1 = failed auth
 //  0 = correct
 
-static uint8_t chkKey3Pass(uint8_t keyno, uint8_t *keybytes, uint32_t *auths, bool use_schann, bool check_answer, bool use_fastread0) {
+static uint8_t chkKey3Pass(uint8_t keyno, uint8_t *keybytes, bool use_schann, bool try_auth, bool check_answer, bool use_fastread0, uint8_t *nonce) {
 
     uint8_t i = 0, res = 2;
     bool selected = false;
-    while (i < 5) {
+
+    while (i < 5 && selected == false) {
         if (use_fastread0) {
             if (MifareUFastRead0() == 0) {
                 ++i;
@@ -304,85 +305,19 @@ static uint8_t chkKey3Pass(uint8_t keyno, uint8_t *keybytes, uint32_t *auths, bo
             }
         }
         selected = true;
-        if (g_dbglevel >= DBG_EXTENDED) Dbhexdump(MIFAREU3P_KEY_SIZE, keybytes, false);
-        if (keyno == MIFAREULC_KEY_INDEX) {
-            res = mifare_ultra_3des_auth(keybytes, check_answer) == 1 ? 0 : 1; // 0 = correct, 1 = failed auth
-        } else {
-            res = mifare_ultra_aes_auth(keyno, keybytes, use_schann, check_answer) == 1 ? 0 : 1; // 0 = correct, 1 = failed auth
-        }
-        (*auths)++;
-        break;
     }
     if (selected == false) {
         Dbprintf("chkKey: Failed at fast selecting the card!");
-        res = 4;
+        return 4;
+    }
+
+    if (g_dbglevel >= DBG_EXTENDED) Dbhexdump(MIFAREU3P_KEY_SIZE, keybytes, false);
+    if (keyno == MIFAREULC_KEY_INDEX) {
+        res = mifare_ultra_3des_auth(keybytes, try_auth, check_answer, nonce) == 1 ? 0 : 1; // 0 = correct, 1 = failed auth
+    } else {
+        res = mifare_ultra_aes_auth(keyno, keybytes, use_schann, try_auth, check_answer, nonce) == 1 ? 0 : 1; // 0 = correct, 1 = failed auth
     }
     return res;
-}
-
-//-----------------------------------------------------------------------------
-// acquire encrypted nonces of Ultralight C or Ultralight AES
-//-----------------------------------------------------------------------------
-void MifareU3PAcquireEncryptedNonces(uint8_t keyno, uint8_t num_nonces_to_acquire) {
-    uint8_t i = 0;
-    int res = PM3_SUCCESS;
-    bool selected = false;
-    // Buf first byte is nr of nonces in the buffer, uint8_t
-    uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
-    uint8_t nonce_size = keyno == MIFAREULC_KEY_INDEX ? 8 : 16;
-    uint8_t max_nonces_per_response = (PM3_CMD_DATA_SIZE - sizeof(uint8_t)) / nonce_size;
-    uint8_t acquired_nonces = 0;
-    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-    clear_trace();
-    set_tracing(false);
-    set_tracing(true);
-    LED_A_ON();
-    LED_C_ON();
-    if (num_nonces_to_acquire > max_nonces_per_response) {
-        Dbprintf("Limiting number of nonces to acquire to %u per response", max_nonces_per_response);
-        num_nonces_to_acquire = max_nonces_per_response;
-    }
-    for (acquired_nonces = 0; acquired_nonces < num_nonces_to_acquire; acquired_nonces++) {
-
-        // Needed for USCUID-UL
-        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-        SpinDelayUsPrecision(500);
-
-        selected = false;
-        while (i < 5 && selected == false) {
-            if (MifareUFastRead0() == 0) {
-                ++i;
-                continue;
-            }
-            selected = true;
-        }
-        if (selected == false) {
-            Dbprintf("acquire nonces: Failed at fast selecting the card!");
-            res = PM3_ESOFT;
-            break;
-        }
-        uint16_t len = 0;
-        uint8_t resp[19] = {0x00};
-        if (keyno == MIFAREULC_KEY_INDEX) {
-            len = mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_ULC_AUTH_1, 0x00, resp, sizeof(resp), NULL, NULL);
-            if (len != 1 + nonce_size + 2) {
-                res = PM3_ESOFT;
-                break;
-            }
-        } else {
-            len = mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_ULAES_AUTH_1, keyno, resp, sizeof(resp), NULL, NULL);
-            if (len != 1 + nonce_size + 2) {
-                res = PM3_ESOFT;
-                break;
-            }
-        }
-        memcpy(buf + 1 + acquired_nonces * nonce_size, resp + 1, nonce_size);
-    }
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    LED_B_ON();
-    buf[0] = acquired_nonces;
-    reply_ng(CMD_HF_MIFAREU3P_ACQ_ENCRYPTED_NONCES, res, buf, sizeof(uint8_t) + acquired_nonces * nonce_size);
-    LEDsoff();
 }
 
 void MifareU3PassAuth(mful_3passauth_t *packet) {
@@ -392,9 +327,21 @@ void MifareU3PassAuth(mful_3passauth_t *packet) {
     LED_C_OFF();
     uint32_t auths = 0;
     int res = PM3_ESOFT;
+    const uint8_t nonce_size = packet->keyno == MIFAREULC_KEY_INDEX ? 8 : 16;
+    const uint16_t nonce_buf_size = PM3_CMD_DATA_SIZE - sizeof(uint32_t) * 2;
+    const uint8_t max_nonces_per_response = packet->get_nonces ? nonce_buf_size / nonce_size : 0;
+
+    if (max_nonces_per_response > 0) {
+        if (1 + packet->retries > max_nonces_per_response) {
+            Dbprintf("Limiting number of nonces to acquire to %u", max_nonces_per_response);
+            packet->retries = max_nonces_per_response - 1;
+        }
+    }
+
     struct rp {
         uint32_t auths;
         uint32_t ticks;
+        uint8_t nonces[PM3_CMD_DATA_SIZE - sizeof(uint32_t) * 2]; // nonce_buf_size
     } PACKED rpayload;
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
@@ -406,21 +353,34 @@ void MifareU3PassAuth(mful_3passauth_t *packet) {
 
     for (uint16_t r = 0; r < 1 + packet->retries; r++) {
         WDT_HIT();
-        if (chkKey3Pass(packet->keyno, packet->key, &auths,  packet->use_schann, packet->check_answer, packet->use_fastread0) == 0) {
-            res = PM3_SUCCESS;
-            goto out;
+        if (packet->reset_field) {
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+            SpinDelayUsPrecision(500);
         }
+        if (chkKey3Pass(packet->keyno, packet->key,  packet->use_schann, packet->try_auth, packet->check_answer, packet->use_fastread0, packet->get_nonces ? (rpayload.nonces + auths * nonce_size) : NULL) == 0) {
+            if (packet->try_auth) {
+                auths++;
+                res = PM3_SUCCESS;
+                goto out;
+            }
+        } else {
+            if (!packet->try_auth) {
+                res = PM3_ESOFT;
+                goto out;
+            }
+        }
+        auths++;
     }
 
 out:
     rpayload.auths = auths;
     rpayload.ticks = GetTickCountDelta(ti);
     if (g_dbglevel >= DBG_ERROR) {
-        if (res != PM3_SUCCESS) {
+        if (res != PM3_SUCCESS && packet->try_auth) {
             Dbprintf("Authentication failed");
         }
     }
-    reply_ng(CMD_HF_MIFAREU3P_AUTH, res, (uint8_t *)&rpayload, sizeof(rpayload));
+    reply_ng(CMD_HF_MIFAREU3P_AUTH, res, (uint8_t *)&rpayload, packet->get_nonces ? sizeof(uint32_t) * 2 + nonce_size * auths : sizeof(uint32_t) * 2);
     if (packet->turn_off_field) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         LEDsoff();
@@ -504,12 +464,14 @@ void MifareU3PassChkKeys(mful_3passchk_t *packet) {
                 memcpy(fullkeybytes + (packet->segment * keysize), packet->data + (i * keysize), keysize);
             }
         }
-        if (chkKey3Pass(packet->key_index, fullkeybytes, &auths, false, packet->check_answer, packet->use_fastread0) == 0) {
+        if (chkKey3Pass(packet->key_index, fullkeybytes, false, true, packet->check_answer, packet->use_fastread0, NULL) == 0) {
+            auths++;
             foundkeys++;
             memcpy(rpayload.key, fullkeybytes, MIFAREU3P_KEY_SIZE);
             res = PM3_SUCCESS;
             goto out;
         }
+        auths++;
     }
 out:
     rpayload.auths = auths;
@@ -550,7 +512,7 @@ void MifareUReadBlock(mful_readblock_t *packet) {
 
     // UL-C authentication
     if (useCKey) {
-        if (mifare_ultra_3des_auth(packet->key, true) == 0) {
+        if (mifare_ultra_3des_auth(packet->key, true, true, NULL) == 0) {
             OnErrorNG(CMD_HF_MIFAREU_READBL, PM3_ESOFT);
             return;
         }
@@ -558,7 +520,7 @@ void MifareUReadBlock(mful_readblock_t *packet) {
 
     // UL-AES authentication,  hardcode to use keyno 0
     if (useAESKey) {
-        if (mifare_ultra_aes_auth(0, packet->key, packet->use_schann, true) == 0) {
+        if (mifare_ultra_aes_auth(0, packet->key, packet->use_schann, true, true, NULL) == 0) {
             OnErrorNG(CMD_HF_MIFAREU_READBL, PM3_ESOFT);
             return;
         }
@@ -631,7 +593,7 @@ void MifareUReadCard(mful_readblock_t *packet) {
 
     // UL-C authentication
     if (useCKey) {
-        if (mifare_ultra_3des_auth(packet->key, true) == 0) {
+        if (mifare_ultra_3des_auth(packet->key, true, true, NULL) == 0) {
             OnErrorNG(CMD_HF_MIFAREU_READCARD, PM3_ESOFT);
             return;
         }
@@ -639,7 +601,7 @@ void MifareUReadCard(mful_readblock_t *packet) {
 
     // UL-AES authentication
     if (useAESKey) {
-        if (mifare_ultra_aes_auth(0, packet->key, schann, true) == 0) {
+        if (mifare_ultra_aes_auth(0, packet->key, schann, true, true, NULL) == 0) {
             OnErrorNG(CMD_HF_MIFAREU_READCARD, PM3_ESOFT);
             return;
         }
@@ -817,7 +779,7 @@ static void MifareUWriteBlockEx(mful_writeblock_t *packet, bool reply) {
 
     // UL-C authentication
     if (useCKey) {
-        if (mifare_ultra_3des_auth(packet->key, true) == 0) {
+        if (mifare_ultra_3des_auth(packet->key, true, true, NULL) == 0) {
             OnErrorNG(CMD_HF_MIFAREU_READBL, PM3_ESOFT);
             return;
         }
@@ -825,7 +787,7 @@ static void MifareUWriteBlockEx(mful_writeblock_t *packet, bool reply) {
 
     // UL-AES authentication
     if (useAESKey) {
-        if (mifare_ultra_aes_auth(0, packet->key, packet->use_schann, true) == 0) {
+        if (mifare_ultra_aes_auth(0, packet->key, packet->use_schann, true, true, NULL) == 0) {
             OnErrorNG(CMD_HF_MIFAREU_READBL, PM3_ESOFT);
             return;
         }
@@ -901,7 +863,7 @@ void MifareUWriteBlockCompat(mful_writeblock_t *packet) {
 
     // UL-C authentication
     if (useCKey) {
-        if (mifare_ultra_3des_auth(packet->key, true) == 0) {
+        if (mifare_ultra_3des_auth(packet->key, true, true, NULL) == 0) {
             OnErrorNG(CMD_HF_MIFAREU_WRITEBL_COMPAT, PM3_ESOFT);
             return;
         }
@@ -909,7 +871,7 @@ void MifareUWriteBlockCompat(mful_writeblock_t *packet) {
 
     // UL-AES authentication
     if (useAESKey) {
-        if (mifare_ultra_aes_auth(0, packet->key, packet->use_schann, true) == 0) {
+        if (mifare_ultra_aes_auth(0, packet->key, packet->use_schann, true, true, NULL) == 0) {
             OnErrorNG(CMD_HF_MIFAREU_WRITEBL_COMPAT, PM3_ESOFT);
             return;
         }
@@ -976,7 +938,7 @@ void MifareUSetKey(mful_setkey_t *packet) {
 
     // UL-C authentication
     if (useCKey && packet->has_auth_key) {
-        if (mifare_ultra_3des_auth(packet->auth_key, true) == 0) {
+        if (mifare_ultra_3des_auth(packet->auth_key, true, true, NULL) == 0) {
             OnErrorNG(CMD_HF_MIFAREU_SETKEY, PM3_ESOFT);
             return;
         }
@@ -984,7 +946,7 @@ void MifareUSetKey(mful_setkey_t *packet) {
 
     // UL-AES authentication
     if (useAESKey && packet->has_auth_key) {
-        if (mifare_ultra_aes_auth(0, packet->auth_key, packet->use_schann, true) == 0) {
+        if (mifare_ultra_aes_auth(0, packet->auth_key, packet->use_schann, true, true, NULL) == 0) {
             OnErrorNG(CMD_HF_MIFAREU_SETKEY, PM3_ESOFT);
             return;
         }

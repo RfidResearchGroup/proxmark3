@@ -575,7 +575,7 @@ def main():
                 return
             common_nonces.append((challenges["challenge_100"], max_occurrence))
         else:
-            p.console(f"hf mfu cauth -c {num_challenges}")
+            p.console(f"hf mfu cauth --collect --read0 --noauth --reset --retries {num_challenges - 1}")
             for line in p.grabbed_output.splitlines():
                 match = re.search(r"\[=\]\s+([0-9a-fA-F]{16})\s+\(count:\s*(\d+)\)", line)
                 if match:

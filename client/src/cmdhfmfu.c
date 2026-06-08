@@ -524,14 +524,17 @@ Default AES key is 00-00h. Both the data and UID one.
 Data key is 00, UID is 01. Authenticity is 02h
 Auth is 1A[Key ID][CRC] - AF[RndB] - AF[RndA][RndB'] - 00[RndA']
 */
-static int ul3pass_authentication(const uint8_t *key, uint8_t keyno, bool switch_off_field, int retries, uint32_t *auths, uint32_t *ms, bool schann, bool check_answer, bool use_fastread0) {
+static int ul3pass_authentication(const uint8_t *key, uint8_t keyno, bool switch_off_field, int retries, uint32_t *auths, uint32_t *ms, bool schann, bool try_auth, bool check_answer, bool use_fastread0, bool get_nonces, uint8_t* nonces, bool reset_field) {
     // keyno < 3: ULAES
     // keyno = 3: ULC
     mful_3passauth_t payload = {
         .turn_off_field = switch_off_field,
+        .try_auth = try_auth,
         .check_answer = check_answer,
         .use_schann = schann,
         .use_fastread0 = use_fastread0,
+        .get_nonces = get_nonces,
+        .reset_field = reset_field,
         .keyno = keyno,
         .retries = retries,
     };
@@ -545,6 +548,7 @@ static int ul3pass_authentication(const uint8_t *key, uint8_t keyno, bool switch
     struct rp {
         uint32_t auths;
         uint32_t ticks;
+        uint8_t nonces[PM3_CMD_DATA_SIZE - sizeof(uint32_t) * 2];
     } PACKED;
     struct rp *rpayload = (struct rp *) resp.data.asBytes;
 
@@ -553,6 +557,9 @@ static int ul3pass_authentication(const uint8_t *key, uint8_t keyno, bool switch
     }
     if (ms != NULL) {
         *ms += rpayload->ticks;
+    }
+    if (get_nonces && nonces != NULL) {
+        memcpy(nonces, rpayload->nonces, MIN(sizeof(rpayload->nonces), rpayload->auths * (keyno == 3 ? 8 : 16)));
     }
     return resp.status;
 }
@@ -637,7 +644,7 @@ static int try_default_3des_keys(bool override, uint8_t **correct_key, bool use_
 
     for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
         uint8_t *key = default_3des_keys[i];
-        if (ul3pass_authentication(key, MIFAREULC_KEY_INDEX, true, 0, NULL, NULL, false, true, use_fastread0) == PM3_SUCCESS) {
+        if (ul3pass_authentication(key, MIFAREULC_KEY_INDEX, true, 0, NULL, NULL, false, true, true, use_fastread0, false, NULL, false) == PM3_SUCCESS) {
             *correct_key = key;
             res = PM3_SUCCESS;
             break;
@@ -674,7 +681,7 @@ static int try_default_aes_keys(bool override, bool use_schann, bool use_fastrea
 
         for (uint8_t keyno = 0; keyno < 3; keyno++) {
 
-            if (ul3pass_authentication(key, keyno, true, 0, NULL, NULL, use_schann, true, use_fastread0) == PM3_SUCCESS) {
+            if (ul3pass_authentication(key, keyno, true, 0, NULL, NULL, use_schann, true, true, use_fastread0, false, NULL, false) == PM3_SUCCESS) {
 
                 char keystr[20] = {0};
                 switch (keyno) {
@@ -714,13 +721,13 @@ static int ul_auth_select(iso14a_card_select_t *card, uint64_t tagtype, bool has
     bool use_fastread0 = false;
     if (hasAuthKey && (tagtype & MFU_TT_UL_C)) {
         //will select card automatically and close connection on error
-        if (ul3pass_authentication(authkey, MIFAREULC_KEY_INDEX, false, 0, NULL, NULL, false, true, use_fastread0) != PM3_SUCCESS) {
+        if (ul3pass_authentication(authkey, MIFAREULC_KEY_INDEX, false, 0, NULL, NULL, false, true, true, use_fastread0, false, NULL, false) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Authentication Failed UL-C");
             return PM3_ESOFT;
         }
     } else if (hasAuthKey && (tagtype & MFU_TT_UL_AES)) {
         //will select card automatically and close connection on error
-        if (ul3pass_authentication(authkey, 0, false, 0, NULL, NULL, use_schann, true, use_fastread0) != PM3_SUCCESS) {
+        if (ul3pass_authentication(authkey, 0, false, 0, NULL, NULL, use_schann, true, true, use_fastread0, false, NULL, false) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Authentication Failed UL-AES");
             return PM3_ESOFT;
         }
@@ -4473,66 +4480,9 @@ static int mfu_3pass_check_keys(uint8_t key_index, uint8_t firstChunk, uint8_t l
 // Ultralight C Methods
 //-------------------------------------------------------------------------------
 
-static uint32_t acquire_ul3p_nonces(uint8_t keytype, uint32_t num_nonces_to_acquire, uint64_t *nonces) {
-
-    uint32_t num_acquired_nonces = 0;
-    uint8_t nonce_size = keytype == 1 ? 8 : 16;
-    uint8_t max_nonces_per_response = (PM3_CMD_DATA_SIZE - sizeof(uint8_t)) / nonce_size;
-    PacketResponseNG resp;
-    memset(&resp, 0, sizeof(resp));
-
-    if (keytype != 1) {
-        PrintAndLogEx(ERR, "Currently, only supported keytype for acquiring nonces is ULC");
-        return PM3_ENOTIMPL;
-    }
-
-    do {
-        clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFAREU3P_ACQ_ENCRYPTED_NONCES, MIFAREULC_KEY_INDEX, MIN(num_nonces_to_acquire - num_acquired_nonces, max_nonces_per_response), 0, NULL, 0);
-        if (WaitForResponseTimeout(CMD_HF_MIFAREU3P_ACQ_ENCRYPTED_NONCES, &resp, 1500 + num_nonces_to_acquire * 15) == false) {
-            PrintAndLogEx(WARNING, "Timeout");
-            return num_acquired_nonces;
-        }
-
-        if (resp.status != PM3_SUCCESS) {
-            return num_acquired_nonces;
-        }
-
-        uint8_t num_sampled_nonces = resp.data.asBytes[0];
-        uint8_t *bufp = resp.data.asBytes + 1;
-
-        for (uint16_t i = 0; i < num_sampled_nonces; i++) {
-            uint64_t nt_enc = bytes_to_num(bufp + i * nonce_size, nonce_size);
-            if (nonces != NULL) {
-                nonces[num_acquired_nonces] = nt_enc;
-            }
-            num_acquired_nonces++;
-        }
-
-    } while (num_acquired_nonces < num_nonces_to_acquire);
-    return num_acquired_nonces;
-}
-
-static int collect_and_stat_nonces(uint32_t collect_nonces) {
-    PrintAndLogEx(INFO, "Collecting %d nonces...", collect_nonces);
-    uint64_t *nonces = calloc(collect_nonces, sizeof(uint64_t));
-    if (nonces == NULL) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        return PM3_EMALLOC;
-    }
-
-    uint32_t num_sampled_nonces = acquire_ul3p_nonces(1, collect_nonces, nonces);
-    if (num_sampled_nonces == 0) {
-        PrintAndLogEx(WARNING, "Failed to acquire nonces");
-        free(nonces);
-        return PM3_ESOFT;
-    }
+static int stat_ulc_nonces(uint16_t num_sampled_nonces, uint64_t* nonces) {
     for (uint16_t i = 0; i < num_sampled_nonces; i++) {
         PrintAndLogEx(DEBUG, "Encrypted nonce: %016" PRIx64 "\n", nonces[i]);
-    }
-
-    if (num_sampled_nonces != collect_nonces) {
-        PrintAndLogEx(WARNING, "Failed to acquire all nonces, got %u/%u", num_sampled_nonces, collect_nonces);
     }
 
     // Count nonce frequencies
@@ -4544,7 +4494,6 @@ static int collect_and_stat_nonces(uint32_t collect_nonces) {
     nonce_count_t *counts = calloc(num_sampled_nonces, sizeof(nonce_count_t));
     if (counts == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory for counts");
-        free(nonces);
         return PM3_EMALLOC;
     }
     uint32_t unique_count = 0;
@@ -4584,16 +4533,16 @@ static int collect_and_stat_nonces(uint32_t collect_nonces) {
     uint8_t topn = 10;
     uint32_t show_count = recurring_count < topn ? recurring_count : topn;
     if (counts[0].count == 1) {
-        PrintAndLogEx(INFO, "All %u collected nonces are unique.", num_sampled_nonces);
-        free(nonces);
+        if (unique_count > 1) {
+            PrintAndLogEx(INFO, "All %u collected nonces are unique.", num_sampled_nonces);
+        }
         free(counts);
         return PM3_SUCCESS;
     }
     PrintAndLogEx(INFO, "Top %u most common nonces:", show_count);
     for (uint32_t i = 0; i < show_count; i++) {
-        PrintAndLogEx(INFO, "  %016" PRIx64 " (count: %u)", counts[i].nonce, counts[i].count);
+        PrintAndLogEx(INFO, "  %016" PRIx64 " (count: %u)", BSWAP_64(counts[i].nonce), counts[i].count);
     }
-    free(nonces);
     free(counts);
     return PM3_SUCCESS;
 }
@@ -4613,11 +4562,13 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
         arg_param_begin,
         arg_str0(NULL, "key", "<hex>", "Authentication key (16 bytes in hex)"),
         arg_lit0("l", NULL, "Swap entered key's endianness"),
-        arg_lit0("k", NULL, "Keep field on (only if a key is provided)"),
+        arg_lit0("k", NULL, "Keep field on at the end (only if a key is provided)"),
         arg_int0("r", "retries", "<n>", "Number of retries with provided key (def: 0)"),
         arg_lit0("n", "nocheck", "Skip checking tag answer correctness (only if a key is provided)"),
         arg_lit0("0", "read0", "Use fast READ0 (skip anticol)"),
-        arg_int0("c", "collect", "<n>", "Collect <n> nonces and show top 10 (def: 0, no collection)"),
+        arg_lit0(NULL, "noauth", "Skip authentication (when collecting nonces)"),
+        arg_lit0(NULL, "reset", "Reset field between each attempt"),
+        arg_lit0(NULL, "collect", "Collect nonces and show top 10"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4631,7 +4582,9 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
     int retries = arg_get_int_def(ctx, 4, 0);
     bool check_answer = !arg_get_lit(ctx, 5);
     bool use_fastread0 = arg_get_lit(ctx, 6);
-    int collect_nonces = arg_get_int_def(ctx, 7, 0);
+    bool skip_auth = arg_get_lit(ctx, 7);
+    bool reset_field = arg_get_lit(ctx, 8);
+    bool collect_nonces = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
 
     if (ak_len != 16 && ak_len != 0) {
@@ -4642,7 +4595,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
         PrintAndLogEx(ERR, "Invalid retries (must be 0..10000)");
         return PM3_EINVARG;
     }
-    if ((retries > 0) && (ak_len == 0)) {
+    if ((retries > 0) && (ak_len == 0) && !skip_auth) {
         PrintAndLogEx(WARNING, "ERROR: Key is required for retries");
         return PM3_EINVARG;
     }
@@ -4651,12 +4604,18 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (collect_nonces > 0) {
-        if (ak_len != 0 || keep_field_on || retries > 0 || check_answer == false) {
-            PrintAndLogEx(WARNING, "ERROR: Nonce collection incompatible with other options");
-            return PM3_EINVARG;
+    if (skip_auth && !collect_nonces) {
+        PrintAndLogEx(WARNING, "ERROR: noauth option only valid with collect option");
+        return PM3_EINVARG;
+    }
+
+    uint8_t *nonces = NULL;
+    if (collect_nonces) {
+        nonces = calloc((1 + retries) * sizeof(uint64_t), sizeof(uint8_t));
+        if (nonces == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return PM3_EMALLOC;
         }
-        return collect_and_stat_nonces(collect_nonces);
     }
 
     // Swap endianness
@@ -4669,26 +4628,40 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
     uint32_t ms = 0;
 
     // If no hex key is specified, try default keys
-    if (ak_len == 0) {
+    if (ak_len == 0 && !collect_nonces && !skip_auth) {
 
         PrintAndLogEx(INFO, "Called with no key, checking default keys...");
         isok = try_default_3des_keys(false, &auth_key_ptr, use_fastread0);
     } else {
         // try user-supplied
 
-        isok = ul3pass_authentication(auth_key_ptr, MIFAREULC_KEY_INDEX, !keep_field_on, retries, &auths, &ms, false, check_answer, use_fastread0);
+        do {
+            uint16_t max_retries_per_call = retries;
+            if (collect_nonces) {
+                // Not strictly needed, but to avoid fw warning
+                max_retries_per_call = ((PM3_CMD_DATA_SIZE - sizeof(uint32_t) * 2) / sizeof(uint64_t)) - 1;
+            }
+            isok = ul3pass_authentication(auth_key_ptr, MIFAREULC_KEY_INDEX, !keep_field_on, MIN(retries - auths, max_retries_per_call), &auths, &ms, false, !skip_auth, check_answer, use_fastread0, collect_nonces, nonces + auths * sizeof(uint64_t), reset_field);
+        } while (skip_auth && auths < 1 + retries);
     }
 
-    if (isok == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Authentication 3DES key... " _GREEN_("%s") " ( " _GREEN_("ok")" )", sprint_hex_inrow(auth_key_ptr, 16));
-    } else {
-        PrintAndLogEx(WARNING, "Authentication ( " _RED_("fail") " )");
+    if (collect_nonces) {
+        stat_ulc_nonces(auths, (uint64_t*)nonces);
+    }
+
+    if (!skip_auth) {
+        if (isok == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Authentication 3DES key... " _GREEN_("%s") " ( " _GREEN_("ok")" )", sprint_hex_inrow(auth_key_ptr, 16));
+        } else {
+            PrintAndLogEx(WARNING, "Authentication ( " _RED_("fail") " )");
+        }
     }
     if (retries > 0) {
         PrintAndLogEx(INFO, "Time spent " _YELLOW_("%.1fs"), (float)(ms / 1000.0));
         PrintAndLogEx(INFO, "Authentication attempts: %u", auths);
         PrintAndLogEx(INFO, "Speed: %.1f auths/s", (float)(auths * 1000.0 / ms));
     }
+    free(nonces);
     return isok;
 }
 
@@ -4879,7 +4852,7 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
     uint32_t auths = 0;
     uint32_t ms = 0;
 
-    int result = ul3pass_authentication(auth_key_ptr, key_index, !keep_field_on, retries, &auths, &ms, use_schann, check_answer, use_fastread0);
+    int result = ul3pass_authentication(auth_key_ptr, key_index, !keep_field_on, retries, &auths, &ms, use_schann, true , check_answer, use_fastread0, false, NULL, false);
     if (result == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Authentication with " _YELLOW_("%s") " " _GREEN_("%s") " ( " _GREEN_("ok")" )"
                       , key_type[key_index]

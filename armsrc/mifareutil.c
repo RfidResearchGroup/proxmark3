@@ -402,7 +402,7 @@ int mifare_ul_ev1_auth(uint8_t *keybytes, uint8_t *pack) {
     return 1;
 }
 
-int mifare_ultra_3des_auth(uint8_t *keybytes, bool check_answer) {
+int mifare_ultra_3des_auth(uint8_t *keybytes, bool try_auth, bool check_answer, uint8_t *nonce) {
 
     /// 3des2k
     uint8_t random_a[8] = {1, 1, 1, 1, 1, 1, 1, 2};
@@ -423,6 +423,12 @@ int mifare_ultra_3des_auth(uint8_t *keybytes, bool check_answer) {
         return 0;
     }
 
+    if (nonce != NULL) {
+        memcpy(nonce, resp + 1, 8);
+    }
+    if (!try_auth) {
+        return 1;
+    }
     // decrypt nonce.
     tdes_nxp_receive((void *)(resp + 1), (void *)random_b, sizeof(random_b), (const void *)key, IV, 2);
     rol(random_b, 8);
@@ -480,7 +486,7 @@ int mifare_ultra_3des_auth(uint8_t *keybytes, bool check_answer) {
     return 1;
 }
 
-int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes, bool schann, bool check_answer) {
+int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes, bool schann, bool try_auth, bool check_answer, uint8_t *nonce) {
 
     /// aes-128
     uint8_t random_a[16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2};
@@ -509,6 +515,12 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes, bool schann, bool ch
         return 0;
     }
 
+    if (nonce != NULL) {
+        memcpy(nonce, resp + 1, 16);
+    }
+    if (!try_auth) {
+        return 1;
+    }
     // decrypt tag nonce.
     mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_DECRYPT, sizeof(random_b), IV, resp + 1, random_b);
 

@@ -2049,10 +2049,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareAcquireNonces(packet->oldarg[0], packet->oldarg[2]);
             break;
         }
-        case CMD_HF_MIFAREU3P_ACQ_ENCRYPTED_NONCES: {
-            MifareU3PAcquireEncryptedNonces(packet->oldarg[0], packet->oldarg[1]);
-            break;
-        }
         case CMD_HF_MIFARE_NESTED: {
             struct p {
                 uint8_t block;

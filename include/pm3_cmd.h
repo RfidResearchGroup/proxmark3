@@ -376,12 +376,15 @@ typedef struct {
 } PACKED mfc_eload_t;
 
 typedef struct {
-    uint8_t turn_off_field : 1;
-    uint8_t check_answer : 1;
-    uint8_t keyno : 2;
-    uint8_t use_schann : 1;
-    uint8_t use_fastread0 : 1;
-    uint8_t reserved : 2;
+    uint16_t turn_off_field : 1;
+    uint16_t try_auth : 1;
+    uint16_t check_answer : 1;
+    uint16_t keyno : 2;
+    uint16_t use_schann : 1;
+    uint16_t use_fastread0 : 1;
+    uint16_t get_nonces : 1;
+    uint16_t reset_field : 1;
+    uint16_t reserved : 7;
     uint16_t retries;
     uint8_t key[16];
 } PACKED mful_3passauth_t;
@@ -835,7 +838,7 @@ typedef struct {
 
 // ultralight-C & AES
 #define CMD_HF_MIFAREU3P_AUTH 0x0724
-#define CMD_HF_MIFAREU3P_ACQ_ENCRYPTED_NONCES 0x0725
+// 0x0725 is free
 #define CMD_HF_MIFAREU3P_CHKKEY 0x0726
 #define CMD_HF_MIFAREU_SETKEY 0x0727
 
