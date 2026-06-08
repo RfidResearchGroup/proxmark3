@@ -4495,7 +4495,6 @@ static uint32_t acquire_ul3p_nonces(uint8_t keytype, uint32_t num_nonces_to_acqu
         }
 
         if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Failure to collect tag nonces");
             return num_acquired_nonces;
         }
 
@@ -4523,12 +4522,17 @@ static int collect_and_stat_nonces(uint32_t collect_nonces) {
     }
 
     uint32_t num_sampled_nonces = acquire_ul3p_nonces(1, collect_nonces, nonces);
+    if (num_sampled_nonces == 0) {
+        PrintAndLogEx(WARNING, "Failed to acquire nonces");
+        free(nonces);
+        return PM3_ESOFT;
+    }
     for (uint16_t i = 0; i < num_sampled_nonces; i++) {
         PrintAndLogEx(DEBUG, "Encrypted nonce: %016" PRIx64 "\n", nonces[i]);
     }
 
     if (num_sampled_nonces != collect_nonces) {
-        PrintAndLogEx(WARNING, "Failed to acquire all nonces");
+        PrintAndLogEx(WARNING, "Failed to acquire all nonces, got %u/%u", num_sampled_nonces, collect_nonces);
     }
 
     // Count nonce frequencies
@@ -4544,11 +4548,15 @@ static int collect_and_stat_nonces(uint32_t collect_nonces) {
         return PM3_EMALLOC;
     }
     uint32_t unique_count = 0;
+    uint32_t recurring_count = 0;
 
     for (uint32_t i = 0; i < num_sampled_nonces; i++) {
         bool found = false;
         for (uint32_t j = 0; j < unique_count; j++) {
             if (counts[j].nonce == nonces[i]) {
+                if (counts[j].count == 1) {
+                    recurring_count++;
+                }
                 counts[j].count++;
                 found = true;
                 break;
@@ -4572,8 +4580,9 @@ static int collect_and_stat_nonces(uint32_t collect_nonces) {
         }
     }
 
-    // Show top 10
-    uint32_t show_count = unique_count < 10 ? unique_count : 10;
+    // Show top N
+    uint8_t topn = 10;
+    uint32_t show_count = recurring_count < topn ? recurring_count : topn;
     if (counts[0].count == 1) {
         PrintAndLogEx(INFO, "All %u collected nonces are unique.", num_sampled_nonces);
         free(nonces);
