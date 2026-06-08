@@ -508,6 +508,8 @@ while true; do
       if ! CheckExecute "hf iclass encrypt des"           "$CLIENTBIN -c 'hf iclass encrypt -d 00000000063E02A3 --enc des -k $ICLASS_TRANSPORT_KEY'" "encrypted\\.\\.\\. D50D3FC66AF7E0F3"; then break; fi
       if ! CheckExecute "hf iclass decrypt des"           "$CLIENTBIN -c 'hf iclass decrypt -d D50D3FC66AF7E0F3 --enc des -k $ICLASS_TRANSPORT_KEY'" "plain\\.\\.\\.\\.\\.\\.\\. 00000000063E02A3"; then break; fi
       if ! CheckExecute "hf iclass view dump"             "$CLIENTBIN -c 'hf iclass view -f traces/iclass/hf-iclass-dump.json'" "7/0x07 \\| 78 36 02 A2 28 30 10 E8"; then break; fi
+      if ! CheckExecute "hf iclass view SE AIA SIO block" "$CLIENTBIN -c 'hf iclass view -f traces/iclass/hf-iclass-se-weird.json'" "SIO / SE"; then break; fi
+      if ! CheckExecute "hf iclass view SE AIA SIO raw"   "$CLIENTBIN -c 'hf iclass view -f traces/iclass/hf-iclass-se-weird.json'" "SIO - RAW"; then break; fi
       if ! CheckExecute "hf iclass decrypt dump"          "$CLIENTBIN -c 'hf iclass decrypt -f traces/iclass/hf-iclass-dump.json --ns -k $ICLASS_TRANSPORT_KEY'" "C1k48s.*FC: 69  CN: 69420  parity \\( ok \\)"; then break; fi
       if ! CheckExecute "wiegand Verkada40 encode test 1" "$CLIENTBIN -c 'wiegand encode -w Verkada40 --fc 50 --cn 1001'" "86400007D3"; then break; fi
       if ! CheckExecute "wiegand Verkada40 decode test 1" "$CLIENTBIN -c 'wiegand decode --raw 86400007D3'" "Verkada40.*FC: 50  CN: 1001  parity \( ok \)"; then break; fi
