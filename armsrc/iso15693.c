@@ -2134,7 +2134,7 @@ void ReaderIso15693(iso15_card_select_t *p_card) {
 // When SIM: initialize the Proxmark3 as ISO15693 tag
 void Iso15693InitTag(void) {
 
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+    FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF_15);
 
     // Start from off (no field generated)
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -2180,7 +2180,8 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
         // User supplied not empty?
         if (memcmp(uid, empty, 8)) {
             // Set default values if user supplied a UID.
-            // Assume emulator memory is empty
+            memset(tag, 0, sizeof(*tag));
+
             tag->uid[0] = uid[7]; // always E0
             tag->uid[1] = uid[6]; // IC Manufacturer code
             tag->uid[2] = uid[5];

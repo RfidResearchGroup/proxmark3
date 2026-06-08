@@ -137,10 +137,10 @@ static void CodeIClassTagSOF(void) {
  */
 // turn off afterwards
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
-    iclass_simulate(arg0, arg1, arg2, datain, NULL, NULL);
+    iclass_simulate(arg0, arg1, arg2, true, datain, NULL, NULL);
 }
 
-void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_t *datain, uint8_t *dataout, uint16_t *dataoutlen) {
+void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool trace, uint8_t *datain, uint8_t *dataout, uint16_t *dataoutlen) {
 
     LEDsoff();
 
@@ -148,8 +148,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
 
     clear_trace();
 
-    // only logg if we are called from the client.
-    set_tracing(send_reply);
+    set_tracing(trace);
 
     //Use the emulator memory for SIM
     uint8_t *emulator = BigBuf_get_EM_addr();
@@ -292,10 +291,15 @@ out:
  */
 int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
 
-    // FULL_LIVE = FULL + per-byte USB poll so the client can push live emul
-    // updates (see hf iclass tagsim). Unfold the flag and continue as FULL
-    // so all existing FULL-mode checks below work unchanged.
-    const bool allow_usb_interrupt = (simulationMode == ICLASS_SIM_MODE_FULL_LIVE);
+    // FULL_LIVE = FULL + inline EML_MEMSET handling so the client can push live
+    // emul updates (see hf iclass tagsim). All full sim modes still need USB
+    // polling so commands like hw break or eview can stop the ARM-side loop.
+    const bool handle_live_updates = (simulationMode == ICLASS_SIM_MODE_FULL_LIVE);
+    const bool allow_usb_interrupt =
+        simulationMode == ICLASS_SIM_MODE_FULL ||
+        simulationMode == ICLASS_SIM_MODE_FULL_GLITCH ||
+        simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY ||
+        handle_live_updates;
     if (simulationMode == ICLASS_SIM_MODE_FULL_LIVE) {
         simulationMode = ICLASS_SIM_MODE_FULL;
     }
@@ -509,6 +513,11 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
         uint32_t reader_eof_time = 0;
         len = GetIso15693CommandFromReader(receivedCmd, MAX_FRAME_SIZE, &reader_eof_time, allow_usb_interrupt);
         if (len == -2) {
+            if (handle_live_updates == false) {
+                exit_loop = true;
+                continue;
+            }
+
             // USB data arrived while waiting for RF — drain all pending EML_MEMSET
             // commands inline (without FpgaDownloadAndGo) so live tag updates work.
             PacketCommandNG rx;
@@ -523,6 +532,8 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                     struct p *payload = (struct p *) rx.data.asBytes;
                     emlSet(payload->data, payload->offset, payload->plen);
                 } else {
+                    // LIVE mode owns this packet; non-EML traffic (break or stray
+                    // commands) is treated as an abort and is not redispatched.
                     exit_loop = true;
                     break;
                 }
@@ -1126,7 +1137,13 @@ int do_iclass_simulation_nonsec(void) {
         WDT_HIT();
 
         uint32_t reader_eof_time = 0;
-        len = GetIso15693CommandFromReader(receivedCmd, MAX_FRAME_SIZE, &reader_eof_time, false);
+        len = GetIso15693CommandFromReader(receivedCmd, MAX_FRAME_SIZE, &reader_eof_time, true);
+        if (len == -2) {
+            // Non-secure simulation has no live reload/update path; any USB
+            // command interrupts the sim and is handled by the main dispatcher.
+            exit_loop = true;
+            continue;
+        }
         if (len < 0) {
             button_pressed = true;
             exit_loop = true;
