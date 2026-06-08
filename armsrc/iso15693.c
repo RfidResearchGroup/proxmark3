@@ -51,8 +51,9 @@
 // *) UID is always used "transmission order" (LSB), which is reverse to display order
 
 // TODO / BUGS / ISSUES:
-// *) signal decoding is unable to detect collisions.
-// *) add anti-collision support for inventory-commands
+// *) signal decoding has basic collision detection via signal_activity flag
+//    (detects modulation-in-both-halves and failed SOF patterns)
+// *) 16-slot inventory with anti-collision tree walking is implemented
 // *) read security status of a block
 // *) simulation do not support two subcarrier modes.
 // *) remove or refactor code under "deprecated"
@@ -436,6 +437,7 @@ typedef struct {
     int threshold_sof;
     int threshold_half;
     uint16_t previous_amplitude;
+    bool signal_activity;  // set when signal detected but decode failed (collision hint)
     uint8_t *output;
 } DecodeTag_t;
 
@@ -491,6 +493,7 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                     tag->state = STATE_TAG_SOF_HIGH_END;
                 }
             } else { // high phase was too short
+                tag->signal_activity = true; // signal detected but SOF failed (possible collision)
                 tag->posCount = 1;
                 tag->previous_amplitude = amplitude;
                 tag->state = STATE_TAG_SOF_LOW;
@@ -513,6 +516,7 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
             } else {
                 tag->posCount++;
                 if (tag->posCount > (recv_speed ? 13 : 52)) { // high phase too long
+                    tag->signal_activity = true; // signal detected but SOF failed (possible collision)
                     tag->posCount = 0;
                     tag->previous_amplitude = amplitude;
                     tag->state = STATE_TAG_SOF_LOW;
@@ -539,6 +543,7 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                     if (tag->lastBit == LOGIC0) {  // this was already part of EOF
                         tag->state = STATE_TAG_EOF;
                     } else {
+                        tag->signal_activity = true; // collision: modulation in both halves during data
                         tag->posCount = 0;
                         tag->previous_amplitude = amplitude;
                         tag->state = STATE_TAG_SOF_LOW;
@@ -721,6 +726,7 @@ typedef struct DecodeTagFSK {
     uint8_t  shiftReg;
     uint16_t len;
     uint16_t max_len;
+    bool     signal_activity;  // set when signal detected but decode failed (collision hint)
     uint8_t  *output;
 } DecodeTagFSK_t;
 
@@ -887,6 +893,7 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
                     Dbprintf("RECEIVING_DATA_424 error: freq=%d, count=%d, recv_speed=%d, lastbit=%d, state=%d", freq, DecodeTag->count, recv_speed, DecodeTag->lastBit, DecodeTag->state);
                 }
 #endif
+                DecodeTag->signal_activity = true; // signal present but decode failed (possible collision)
                 DecodeTag->state = STATE_FSK_ERROR;
                 LED_C_OFF();
                 return true;
@@ -944,6 +951,7 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
                 }
 #endif
                 LED_C_OFF();
+                DecodeTag->signal_activity = true; // signal present but decode failed (possible collision)
                 DecodeTag->state = STATE_FSK_ERROR;
                 return true;
             }
@@ -1081,7 +1089,12 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
 
             // timeout
             if (samples > timeout && dtf->state < STATE_FSK_RECEIVING_DATA_484) {
-                ret = PM3_ETIMEOUT;
+                if (dtf->signal_activity) {
+                    ret = PM3_EPARTIAL;
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("ISO15693 FSK: signal activity detected but decode failed (collision hint)");
+                } else {
+                    ret = PM3_ETIMEOUT;
+                }
                 break;
             }
 
@@ -1104,7 +1117,12 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
 
             // timeout
             if (samples > timeout && dt->state < STATE_TAG_RECEIVING_DATA) {
-                ret = PM3_ETIMEOUT;
+                if (dt->signal_activity) {
+                    ret = PM3_EPARTIAL;
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("ISO15693: signal activity detected but decode failed (collision hint)");
+                } else {
+                    ret = PM3_ETIMEOUT;
+                }
                 break;
             }
         }
@@ -2801,76 +2819,172 @@ void SendRawCommand15693(iso15_raw_cmd_t *packet) {
         timeout = ISO15693_READER_TIMEOUT_WRITE;
     }
 
+    if (packet->rawlen == 0) {
+        reply_ng(CMD_HF_ISO15693_COMMAND, PM3_EINVARG, NULL, 0);
+        LED_A_OFF();
+        return;
+    }
+
     bool speed = ((packet->flags & ISO15_HIGH_SPEED) == ISO15_HIGH_SPEED);
     bool keep_field_on = ((packet->flags & ISO15_NO_DISCONNECT) == ISO15_NO_DISCONNECT);
     bool read_respone = ((packet->flags & ISO15_READ_RESPONSE) == ISO15_READ_RESPONSE);
     bool init = ((packet->flags & ISO15_CONNECT) == ISO15_CONNECT);
 
-    // This is part of ISO15693 protocol definitions where the following commands needs to request option.
-    // note:
-    //     it seem like previous we just guessed and never followed the fISO145_REQ_OPTION flag if it was set / not set from client side.
-    //     this is a problem.   Since without this the response from the tag is one byte shorter.   And a lot of client side functions has been
-    //     hardcoded to assume for the extra byte in the response.
+    // Detect 16-slot inventory mode from protocol flags
+    bool is_inventory = (packet->raw[0] & ISO15_REQ_INVENTORY) != 0;
+    bool is_16slot = is_inventory && ((packet->raw[0] & ISO15_REQINV_SLOT1) == 0);
 
-    bool request_answer = false;
+    if (is_16slot) {
+        // 16-slot inventory: send command for slot 0, then EOF for slots 1-15
+        bool fsk = ((packet->raw[0] & ISO15_REQ_SUBCARRIER_TWO) == ISO15_REQ_SUBCARRIER_TWO);
+        bool recv_speed = ((packet->raw[0] & ISO15_REQ_DATARATE_HIGH) == ISO15_REQ_DATARATE_HIGH);
 
-    switch (packet->raw[1]) {
-        case ISO15693_SET_PASSWORD:
-        case ISO15693_ENABLE_PRIVACY:
-        case ISO15693_WRITEBLOCK:
-        case ISO15693_LOCKBLOCK:
-        case ISO15693_WRITE_MULTI_BLOCK:
-        case ISO15693_WRITE_AFI:
-        case ISO15693_LOCK_AFI:
-        case ISO15693_WRITE_DSFID:
-        case ISO15693_WRITE_PASSWORD:
-        case ISO15693_PASSWORD_PROTECT_EAS:
-        case ISO15693_LOCK_DSFID:
-            request_answer = ((packet->raw[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION);
-            break;
-        default:
-            break;
-    }
+        uint8_t resp_buf[PM3_CMD_DATA_SIZE] = {0};
+        iso15_inventory_response_t *resp = (iso15_inventory_response_t *)resp_buf;
+        resp->slot_count = 16;
 
-    uint32_t eof_time = 0;
-    uint32_t start_time = 0;
-    uint16_t recvlen = 0;
+        uint8_t recv[ISO15693_MAX_SLOT_RESPONSE] = {0};
+        uint32_t eof_time = 0;
+        uint32_t start_time = 0;
+        uint16_t recvlen = 0;
+        uint16_t data_offset = 0;
+        // Maximum data space available after the fixed header
+        uint16_t max_data = PM3_CMD_DATA_SIZE - 1 - (ISO15693_MAX_SLOTS * sizeof(iso15_slot_result_t));
 
-    uint8_t buf[ISO15693_MAX_RESPONSE_LENGTH] = {0x00};
+        // Slot 0: send the full command
+        int res = SendDataTag(packet->raw, packet->rawlen, init, speed,
+                              recv, sizeof(recv), start_time, timeout,
+                              &eof_time, &recvlen);
 
-    int res = SendDataTag(packet->raw, packet->rawlen, init, speed, (read_respone ? buf : NULL), sizeof(buf), start_time, timeout, &eof_time, &recvlen);
+        if (res == PM3_ETEAROFF) {
+            reply_ng(CMD_HF_ISO15693_COMMAND, res, NULL, 0);
+            goto out;
+        }
 
-    if (res == PM3_ETEAROFF) { // tearoff occurred
-        reply_ng(CMD_HF_ISO15693_COMMAND, res, NULL, 0);
-    } else {
-
-        // if tag answers with an error code,  it don't care about EOF packet
-        // normal tag answer without Option_flag also processed here
-        if (recvlen || !request_answer) {
-            if (request_answer || read_respone) {
-                recvlen = MIN(recvlen, ISO15693_MAX_RESPONSE_LENGTH);
-                reply_ng(CMD_HF_ISO15693_COMMAND, res, buf, recvlen);
-            } else {
-                reply_ng(CMD_HF_ISO15693_COMMAND, PM3_SUCCESS, NULL, 0);
-            }
+        if (res == PM3_SUCCESS && recvlen > 0) {
+            resp->slots[0].status = 1; // got data (client validates CRC for collision detection)
+            resp->slots[0].len = MIN(recvlen, ISO15693_MAX_SLOT_RESPONSE);
+        } else if (res == PM3_EPARTIAL) {
+            resp->slots[0].status = 2; // signal detected but decode failed (collision hint)
+            resp->slots[0].len = 0;
         } else {
-            // looking at the first byte of the RAW bytes to determine Subcarrier, datarate, request option
-            bool fsk = ((packet->raw[0] & ISO15_REQ_SUBCARRIER_TWO) == ISO15_REQ_SUBCARRIER_TWO);
-            bool recv_speed = ((packet->raw[0] & ISO15_REQ_DATARATE_HIGH) == ISO15_REQ_DATARATE_HIGH);
+            resp->slots[0].status = 0; // no response / timeout
+            resp->slots[0].len = 0;
+        }
 
-            // send a single EOF to get the tag response
+        if (resp->slots[0].len > 0 && data_offset + resp->slots[0].len <= max_data) {
+            memcpy(resp->data + data_offset, recv, resp->slots[0].len);
+            data_offset += resp->slots[0].len;
+        } else {
+            resp->slots[0].len = 0;
+        }
+
+        // Slots 1-15: send EOF and listen
+        for (uint8_t slot = 1; slot < 16; slot++) {
             start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
-            res = SendDataTagEOF((read_respone ? buf : NULL), sizeof(buf), start_time, ISO15693_READER_TIMEOUT, &eof_time, fsk, recv_speed, &recvlen);
+            recvlen = 0;
+            memset(recv, 0, sizeof(recv));
 
-            if (read_respone) {
-                recvlen = MIN(recvlen, ISO15693_MAX_RESPONSE_LENGTH);
-                reply_ng(CMD_HF_ISO15693_COMMAND, res, buf, recvlen);
+            res = SendDataTagEOF(recv, sizeof(recv), start_time,
+                                 ISO15693_READER_TIMEOUT, &eof_time,
+                                 fsk, recv_speed, &recvlen);
+
+            if (res == PM3_SUCCESS && recvlen > 0) {
+                resp->slots[slot].status = 1; // got data (client validates CRC)
+                resp->slots[slot].len = MIN(recvlen, ISO15693_MAX_SLOT_RESPONSE);
+            } else if (res == PM3_EPARTIAL) {
+                resp->slots[slot].status = 2; // signal detected but decode failed (collision hint)
+                resp->slots[slot].len = 0;
             } else {
-                reply_ng(CMD_HF_ISO15693_COMMAND, PM3_SUCCESS, NULL, 0);
+                resp->slots[slot].status = 0; // no response / timeout
+                resp->slots[slot].len = 0;
+            }
+
+            if (resp->slots[slot].len > 0 && data_offset + resp->slots[slot].len <= max_data) {
+                memcpy(resp->data + data_offset, recv, resp->slots[slot].len);
+                data_offset += resp->slots[slot].len;
+            } else if (resp->slots[slot].len > 0) {
+                // No room left, truncate
+                resp->slots[slot].len = 0;
+                resp->slots[slot].status = 0;
+            }
+
+            WDT_HIT();
+        }
+
+        uint16_t total_len = 1 + (16 * sizeof(iso15_slot_result_t)) + data_offset;
+        reply_ng(CMD_HF_ISO15693_COMMAND, PM3_SUCCESS, resp_buf, MIN(total_len, PM3_CMD_DATA_SIZE));
+
+    } else {
+        // Original single send-receive path (1-slot or non-inventory commands)
+
+        // This is part of ISO15693 protocol definitions where the following commands needs to request option.
+        // note:
+        //     it seem like previous we just guessed and never followed the fISO145_REQ_OPTION flag if it was set / not set from client side.
+        //     this is a problem.   Since without this the response from the tag is one byte shorter.   And a lot of client side functions has been
+        //     hardcoded to assume for the extra byte in the response.
+
+        bool request_answer = false;
+
+        switch (packet->raw[1]) {
+            case ISO15693_SET_PASSWORD:
+            case ISO15693_ENABLE_PRIVACY:
+            case ISO15693_WRITEBLOCK:
+            case ISO15693_LOCKBLOCK:
+            case ISO15693_WRITE_MULTI_BLOCK:
+            case ISO15693_WRITE_AFI:
+            case ISO15693_LOCK_AFI:
+            case ISO15693_WRITE_DSFID:
+            case ISO15693_WRITE_PASSWORD:
+            case ISO15693_PASSWORD_PROTECT_EAS:
+            case ISO15693_LOCK_DSFID:
+                request_answer = ((packet->raw[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION);
+                break;
+            default:
+                break;
+        }
+
+        uint32_t eof_time = 0;
+        uint32_t start_time = 0;
+        uint16_t recvlen = 0;
+
+        uint8_t buf[ISO15693_MAX_RESPONSE_LENGTH] = {0x00};
+
+        int res = SendDataTag(packet->raw, packet->rawlen, init, speed, (read_respone ? buf : NULL), sizeof(buf), start_time, timeout, &eof_time, &recvlen);
+
+        if (res == PM3_ETEAROFF) { // tearoff occurred
+            reply_ng(CMD_HF_ISO15693_COMMAND, res, NULL, 0);
+        } else {
+
+            // if tag answers with an error code,  it don't care about EOF packet
+            // normal tag answer without Option_flag also processed here
+            if (recvlen || !request_answer) {
+                if (request_answer || read_respone) {
+                    recvlen = MIN(recvlen, ISO15693_MAX_RESPONSE_LENGTH);
+                    reply_ng(CMD_HF_ISO15693_COMMAND, res, buf, recvlen);
+                } else {
+                    reply_ng(CMD_HF_ISO15693_COMMAND, PM3_SUCCESS, NULL, 0);
+                }
+            } else {
+                // looking at the first byte of the RAW bytes to determine Subcarrier, datarate, request option
+                bool fsk = ((packet->raw[0] & ISO15_REQ_SUBCARRIER_TWO) == ISO15_REQ_SUBCARRIER_TWO);
+                bool recv_speed = ((packet->raw[0] & ISO15_REQ_DATARATE_HIGH) == ISO15_REQ_DATARATE_HIGH);
+
+                // send a single EOF to get the tag response
+                start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+                res = SendDataTagEOF((read_respone ? buf : NULL), sizeof(buf), start_time, ISO15693_READER_TIMEOUT, &eof_time, fsk, recv_speed, &recvlen);
+
+                if (read_respone) {
+                    recvlen = MIN(recvlen, ISO15693_MAX_RESPONSE_LENGTH);
+                    reply_ng(CMD_HF_ISO15693_COMMAND, res, buf, recvlen);
+                } else {
+                    reply_ng(CMD_HF_ISO15693_COMMAND, PM3_SUCCESS, NULL, 0);
+                }
             }
         }
     }
 
+out:
     if (keep_field_on == false) {
         switch_off(); // disconnect raw
         SpinDelay(20);

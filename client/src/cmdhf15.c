@@ -447,6 +447,7 @@ static int getUID(bool verbose, bool loop, uint8_t *buf) {
                 if (verbose) {
                     PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%s"), iso15693_sprintUID(NULL, buf));
+                    PrintAndLogEx(SUCCESS, "DSFID.. %02X", resp.data.asBytes[1]);
                     printTagInfo_15(buf);
                     PrintAndLogEx(NORMAL, "");
                 }
@@ -470,6 +471,124 @@ bool readHF15Uid(bool loop, bool verbose) {
         return false;
     }
     return true;
+}
+
+// Per-slot result for 16-slot inventory
+typedef struct {
+    uint8_t slot;
+    uint8_t status;      // 0=empty, 1=valid, 2=collision (CRC fail)
+    uint8_t data[ISO15693_MAX_SLOT_RESPONSE];
+    uint8_t data_len;
+} iso15_inventory_result_t;
+
+// Performs a 16-slot (or 1-slot) inventory round with arbitrary command bytes.
+// raw_cmd: full ISO 15693 command bytes (flags + cmd_code + params), WITHOUT CRC
+// raw_len: length of raw_cmd
+// add_crc: whether to append CRC15
+// fast: true for high-speed (1 out of 4), false for low-speed (1 out of 256)
+// keep_field_on: if true, keep RF field active after command (for multi-round tree walking)
+// results: caller-provided array of iso15_inventory_result_t[16]
+// num_found: output - number of slots with valid (CRC-OK) responses
+// Returns PM3_SUCCESS or error code
+static int perform_iso15_inventory(
+    const uint8_t *raw_cmd,
+    uint16_t raw_len,
+    bool add_crc,
+    bool fast,
+    bool keep_field_on,
+    iso15_inventory_result_t *results,
+    uint8_t *num_found
+) {
+    *num_found = 0;
+    memset(results, 0, sizeof(iso15_inventory_result_t) * ISO15693_MAX_SLOTS);
+
+    uint16_t cmdlen = raw_len + (add_crc ? 2 : 0);
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + cmdlen);
+    if (packet == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    memcpy(packet->raw, raw_cmd, raw_len);
+    packet->rawlen = raw_len;
+    if (add_crc) {
+        AddCrc15(packet->raw, raw_len);
+        packet->rawlen += 2;
+    }
+    packet->flags = ISO15_CONNECT | ISO15_READ_RESPONSE;
+    if (fast) {
+        packet->flags |= ISO15_HIGH_SPEED;
+    }
+    if (keep_field_on) {
+        packet->flags |= ISO15_NO_DISCONNECT;
+    }
+
+    // Determine if this is a 16-slot request
+    bool is_inventory = (raw_cmd[0] & ISO15_REQ_INVENTORY) != 0;
+    bool is_16slot = is_inventory && ((raw_cmd[0] & ISO15_REQINV_SLOT1) == 0);
+    uint8_t num_slots = is_16slot ? 16 : 1;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+    free(packet);
+
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 4000)) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        return resp.status;
+    }
+
+    if (is_16slot) {
+        // Parse multi-slot response (iso15_inventory_response_t format)
+        if (resp.length < 1 + (num_slots * 2)) {
+            PrintAndLogEx(WARNING, "response too short for 16-slot inventory");
+            return PM3_ESOFT;
+        }
+
+        iso15_inventory_response_t *inv = (iso15_inventory_response_t *)resp.data.asBytes;
+        uint16_t offset = 0;
+
+        for (uint8_t s = 0; s < num_slots; s++) {
+            results[s].slot = s;
+            results[s].status = inv->slots[s].status;
+            results[s].data_len = inv->slots[s].len;
+
+            if (inv->slots[s].len > 0 && inv->slots[s].len <= sizeof(results[s].data)) {
+                memcpy(results[s].data, inv->data + offset, inv->slots[s].len);
+                offset += inv->slots[s].len;
+
+                // Validate CRC to distinguish valid response from collision
+                if (inv->slots[s].status == 1) {
+                    if (inv->slots[s].len >= 4 && CheckCrc15(results[s].data, inv->slots[s].len)) {
+                        (*num_found)++;
+                    } else {
+                        results[s].status = 2; // CRC fail = collision
+                    }
+                }
+            }
+        }
+    } else {
+        // Single-slot: parse as normal single response
+        results[0].slot = 0;
+        if (resp.length >= 12 && CheckCrc15(resp.data.asBytes, resp.length)) {
+            results[0].status = 1;
+            results[0].data_len = MIN(resp.length, sizeof(results[0].data));
+            memcpy(results[0].data, resp.data.asBytes, results[0].data_len);
+            (*num_found)++;
+        } else if (resp.length > 0) {
+            results[0].status = 2; // got data but CRC failed
+            results[0].data_len = MIN(resp.length, sizeof(results[0].data));
+            memcpy(results[0].data, resp.data.asBytes, results[0].data_len);
+        } else {
+            results[0].status = 0;
+            results[0].data_len = 0;
+        }
+    }
+
+    return PM3_SUCCESS;
 }
 
 // adds 6
@@ -1175,26 +1294,235 @@ static int CmdHF15Sniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// Single 1-slot inventory round with optional AFI and speed control
+static int reader_single_tag(bool fast, bool loop, uint8_t *afi_buf, int afi_len) {
+
+    do {
+        uint8_t raw_cmd[8] = {0};
+        uint16_t raw_len = 0;
+
+        raw_cmd[raw_len] = ISO15_REQ_SUBCARRIER_SINGLE
+                         | ISO15_REQ_DATARATE_HIGH
+                         | ISO15_REQ_INVENTORY
+                         | ISO15_REQINV_SLOT1;
+        if (afi_len > 0)
+            raw_cmd[raw_len] |= ISO15_REQINV_AFI;
+        raw_len++;
+
+        raw_cmd[raw_len++] = ISO15693_INVENTORY;
+
+        if (afi_len > 0)
+            raw_cmd[raw_len++] = afi_buf[0];
+
+        raw_cmd[raw_len++] = 0; // mask length = 0
+
+        iso15_inventory_result_t results[ISO15693_MAX_SLOTS] = {{0}};
+        uint8_t num_found = 0;
+
+        int res = perform_iso15_inventory(raw_cmd, raw_len, true, fast, false, results, &num_found);
+        if (res == PM3_SUCCESS && num_found > 0 && results[0].status == 1 && results[0].data_len >= 12) {
+            uint8_t uid[8];
+            memcpy(uid, results[0].data + 2, 8);
+
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
+            PrintAndLogEx(SUCCESS, "DSFID.. %02X", results[0].data[1]);
+            printTagInfo_15(uid);
+            PrintAndLogEx(NORMAL, "");
+
+            if (!loop)
+                return PM3_SUCCESS;
+        }
+    } while (loop && kbd_enter_pressed() == false);
+
+    return PM3_SUCCESS;
+}
+
+// 16-slot anti-collision tree walking to discover all tags in the field
+static int reader_inventory_all(bool fast, bool loop, uint8_t *afi_buf, int afi_len) {
+
+    typedef struct {
+        uint8_t mask[8];
+        uint8_t mask_len; // in bits
+    } inventory_work_item_t;
+
+    #define MAX_WORK_ITEMS 256
+    #define MAX_FOUND_TAGS 64
+
+    do {
+        inventory_work_item_t work_queue[MAX_WORK_ITEMS];
+        int work_head = 0;
+        int work_tail = 0;
+
+        uint8_t found_uids[MAX_FOUND_TAGS][8];
+        uint8_t found_dsfids[MAX_FOUND_TAGS];
+        int found_count = 0;
+
+        // Start with empty mask
+        memset(&work_queue[0], 0, sizeof(inventory_work_item_t));
+        work_tail = 1;
+
+        while (work_head < work_tail && work_head < MAX_WORK_ITEMS) {
+
+            inventory_work_item_t *item = &work_queue[work_head++];
+
+            // Build inventory command with current mask
+            uint8_t raw_cmd[16] = {0};
+            uint16_t raw_len = 0;
+
+            raw_cmd[raw_len] = ISO15_REQ_SUBCARRIER_SINGLE
+                             | ISO15_REQ_DATARATE_HIGH
+                             | ISO15_REQ_INVENTORY;
+            // 16-slot: do NOT set ISO15_REQINV_SLOT1
+            if (afi_len > 0)
+                raw_cmd[raw_len] |= ISO15_REQINV_AFI;
+            raw_len++;
+
+            raw_cmd[raw_len++] = ISO15693_INVENTORY;
+
+            if (afi_len > 0)
+                raw_cmd[raw_len++] = afi_buf[0];
+
+            raw_cmd[raw_len++] = item->mask_len;
+
+            // Copy mask bytes
+            uint8_t mask_bytes = (item->mask_len + 7) / 8;
+            if (mask_bytes > 0) {
+                memcpy(raw_cmd + raw_len, item->mask, mask_bytes);
+                raw_len += mask_bytes;
+            }
+
+            iso15_inventory_result_t results[ISO15693_MAX_SLOTS] = {{0}};
+            uint8_t num_found = 0;
+
+            // Always keep field on during tree walking; we drop it once after the loop
+            int res = perform_iso15_inventory(raw_cmd, raw_len, true, fast, true, results, &num_found);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(DEBUG, "Inventory round failed (mask_len=%d)", item->mask_len);
+                continue;
+            }
+
+            for (uint8_t s = 0; s < 16; s++) {
+                if (results[s].status == 1 && results[s].data_len >= 12) {
+                    // Valid response: extract UID (in transmission order, LSB first)
+                    uint8_t uid[8];
+                    memcpy(uid, results[s].data + 2, 8);
+
+                    // Check for duplicate
+                    bool duplicate = false;
+                    for (int d = 0; d < found_count; d++) {
+                        if (memcmp(found_uids[d], uid, 8) == 0) {
+                            duplicate = true;
+                            break;
+                        }
+                    }
+
+                    if (!duplicate && found_count < MAX_FOUND_TAGS) {
+                        memcpy(found_uids[found_count], uid, 8);
+                        found_dsfids[found_count] = results[s].data[1];
+                        found_count++;
+                    }
+                } else if (results[s].status == 2) {
+                    // Collision in this slot - add to work queue with extended mask
+                    if (item->mask_len + 4 <= 64 && work_tail < MAX_WORK_ITEMS) {
+                        inventory_work_item_t *new_item = &work_queue[work_tail++];
+                        memcpy(new_item->mask, item->mask, sizeof(new_item->mask));
+                        new_item->mask_len = item->mask_len + 4;
+
+                        // The slot number (0-15) represents the 4 bits that
+                        // differentiated this slot. Append slot number to mask.
+                        uint8_t bit_pos = item->mask_len;
+                        uint8_t byte_pos = bit_pos / 8;
+                        uint8_t bit_offset = bit_pos % 8;
+
+                        // Write the 4-bit slot number into the mask at the current position
+                        if (byte_pos < 8) {
+                            new_item->mask[byte_pos] |= (s << bit_offset) & 0xFF;
+                            if (bit_offset > 4 && (byte_pos + 1) < 8) {
+                                new_item->mask[byte_pos + 1] |= (s >> (8 - bit_offset)) & 0xFF;
+                            }
+                        }
+                    }
+                }
+                // status == 0: no response, skip silently
+            }
+
+            if (kbd_enter_pressed()) {
+                PrintAndLogEx(INFO, "Aborted by user");
+                DropField();
+                return PM3_SUCCESS;
+            }
+        }
+
+        DropField();
+        if (found_count > 0) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS, "Found " _GREEN_("%d") " tag(s):", found_count);
+            for (int i = 0; i < found_count; i++) {
+                PrintAndLogEx(SUCCESS, "  %2d: UID " _GREEN_("%s") "  DSFID: %02X",
+                              i + 1,
+                              iso15693_sprintUID(NULL, found_uids[i]),
+                              found_dsfids[i]);
+            }
+            PrintAndLogEx(NORMAL, "");
+        } else if (!loop) {
+            PrintAndLogEx(WARNING, "No tags found");
+        }
+
+    } while (loop && kbd_enter_pressed() == false);
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHF15Reader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 reader",
-                  "Act as a ISO-15693 reader.  Look for ISO-15693 tags until Enter or the pm3 button is pressed\n",
+                  "Act as a ISO-15693 reader. Look for ISO-15693 tags until Enter or the pm3 button is pressed\n"
+                  "Use --all to perform 16-slot inventory with anti-collision tree walking\n"
+                  "to discover all tags in the field.",
                   "hf 15 reader\n"
-                  "hf 15 reader -@   -> Continuous mode");
+                  "hf 15 reader -@                -> continuous mode\n"
+                  "hf 15 reader --afi 01          -> filter by AFI\n"
+                  "hf 15 reader -2                -> slower '1 out of 256' mode\n"
+                  "hf 15 reader --all             -> find all tags (16-slot anti-collision)\n"
+                  "hf 15 reader --all -@          -> continuously scan for all tags\n"
+                  "hf 15 reader --all --afi 01    -> find all tags with AFI filter\n"
+                  "hf 15 reader --all -2          -> find all tags, slow mode\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("@", NULL, "continuous reader mode"),
+        arg_lit0(NULL, "all", "find all tags using 16-slot anti-collision"),
+        arg_str0(NULL, "afi", "<hex>", "Application Family Identifier (1 byte)"),
+        arg_lit0("2", NULL, "use slower '1 out of 256' mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool cm = arg_get_lit(ctx, 1);
+    bool loop = arg_get_lit(ctx, 1);
+    bool all = arg_get_lit(ctx, 2);
+
+    int afi_len = 0;
+    uint8_t afi_buf[1] = {0};
+    CLIGetHexWithReturn(ctx, 3, afi_buf, &afi_len);
+
+    bool fast = (arg_get_lit(ctx, 4) == false); // default is fast
     CLIParserFree(ctx);
 
-    if (cm) {
+    if (loop) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
-    readHF15Uid(cm, true);
+
+    if (all) {
+        return reader_inventory_all(fast, loop, afi_buf, afi_len);
+    }
+
+    // Single-tag mode: use --afi/-2 aware path if those flags are set,
+    // otherwise preserve original behavior via readHF15Uid
+    if (afi_len > 0 || !fast) {
+        return reader_single_tag(fast, loop, afi_buf, afi_len);
+    }
+
+    readHF15Uid(loop, true);
     return PM3_SUCCESS;
 }
 
@@ -2179,15 +2507,49 @@ static int CmdHF15Raw(const char *Cmd) {
     SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(datalen));
     free(packet);
 
+    // Check if this was a 16-slot inventory request
+    bool is_inventory = (datalen > 0) && ((data[0] & ISO15_REQ_INVENTORY) != 0);
+    bool is_16slot = is_inventory && ((data[0] & ISO15_REQINV_SLOT1) == 0);
+
     if (read_respone) {
         PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000)) {
+        if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, is_16slot ? 4000 : 2000)) {
             if (resp.status == PM3_ETEAROFF) {
                 PrintAndLogEx(INFO, "Tear off triggered");
                 return resp.status;
             }
 
-            if (resp.length < 2) {
+            if (is_16slot && resp.length >= 1 + (16 * sizeof(iso15_slot_result_t))) {
+                // Parse 16-slot inventory response
+                iso15_inventory_response_t *inv = (iso15_inventory_response_t *)resp.data.asBytes;
+                uint16_t offset = 0;
+                int found = 0;
+
+                for (uint8_t s = 0; s < inv->slot_count && s < 16; s++) {
+                    if (inv->slots[s].status == 1 && inv->slots[s].len > 0) {
+                        uint8_t *slot_data = inv->data + offset;
+
+                        if (inv->slots[s].len >= 3 && CheckCrc15(slot_data, inv->slots[s].len)) {
+                            // CRC valid - show raw hex (format varies by command)
+                            PrintAndLogEx(SUCCESS, "Slot %2d: (%u) %s", s, inv->slots[s].len,
+                                          sprint_hex(slot_data, inv->slots[s].len));
+                            found++;
+                        } else {
+                            PrintAndLogEx(INFO, "Slot %2d: " _YELLOW_("collision / CRC fail") " (%u) %s", s,
+                                          inv->slots[s].len,
+                                          sprint_hex(slot_data, inv->slots[s].len));
+                        }
+                    }
+                    if (inv->slots[s].len > 0)
+                        offset += inv->slots[s].len;
+                }
+
+                if (found == 0) {
+                    PrintAndLogEx(WARNING, "No valid responses in any slot");
+                } else {
+                    PrintAndLogEx(SUCCESS, "Found %d tag(s) in 16-slot inventory", found);
+                }
+            } else if (resp.length < 2) {
                 PrintAndLogEx(WARNING, "command failed");
             } else {
                 PrintAndLogEx(SUCCESS, "(%u) %s", resp.length, sprint_hex(resp.data.asBytes, resp.length));
