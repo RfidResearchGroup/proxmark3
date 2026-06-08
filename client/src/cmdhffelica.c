@@ -63,11 +63,13 @@
 #define FELICA_SEAC_POLL_TIMEOUT_MS 200U
 #define FELICA_SEAC_POLL_RETRY_COUNT 5U
 #define FELICA_SEAC_POLL_FRAME_LEN 5U
+#define FELICA_REQUEST_SYSTEM_CODE_ATTEMPTS 5U
 #define FELICA_SYSTEM_CODE_MAX_COUNT 16U
 #define FELICA_DISCOVERED_SYSTEM_MAX_COUNT 4U
 #define FELICA_SYSTEM_CODE_WILDCARD 0xFFFFU
 #define FELICA_SYSTEM_CODE_NFC_TYPE3 0x12FCU
 #define FELICA_SYSTEM_CODE_FELICA_LITE 0x88B4U
+#define FELICA_SYSTEM_CODE_FELICA_SECURE_ID 0x957AU
 #define FELICA_POLL_REQUEST_NO_DATA 0x00U
 #define FELICA_POLL_REQUEST_SYSTEM_CODE 0x01U
 #define FELICA_SYSTEM_LIST_JSON "felica/felica_system_code_list"
@@ -235,6 +237,17 @@ typedef struct {
     size_t count;
     felica_discovered_system_t systems[FELICA_DISCOVERED_SYSTEM_MAX_COUNT];
 } felica_discovered_system_list_t;
+
+typedef struct {
+    uint16_t system_code;
+    const char *label;
+} felica_system_probe_target_t;
+
+static const felica_system_probe_target_t FELICA_MANUAL_SYSTEM_PROBE_TARGETS[] = {
+    {FELICA_SYSTEM_CODE_NFC_TYPE3, "NDEF"},
+    {FELICA_SYSTEM_CODE_FELICA_LITE, "FeliCa Lite"},
+    {FELICA_SYSTEM_CODE_FELICA_SECURE_ID, "FeliCa Secure ID"},
+};
 
 typedef struct {
     const char *name;
@@ -1538,13 +1551,17 @@ static int discover_systems(uint8_t flags, const uint8_t *primary_idm, bool requ
         request_system_code_request.command_code[0] = FELICA_REQSYSCODE_REQ;
         memcpy(request_system_code_request.IDm, primary_idm, sizeof(request_system_code_request.IDm));
 
-        felica_syscode_response_t system_code_response;
-        const int request_system_code_status = send_request_system_code(flags,
-                                               sizeof(request_system_code_request), (uint8_t *)&request_system_code_request,
-                                               false, FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES, false,
-                                               &system_code_response);
+        for (uint32_t attempt = 0; attempt < FELICA_REQUEST_SYSTEM_CODE_ATTEMPTS; attempt++) {
+            felica_syscode_response_t system_code_response;
+            const int request_system_code_status = send_request_system_code(flags,
+                                                   sizeof(request_system_code_request), (uint8_t *)&request_system_code_request,
+                                                   false, FELICA_OPTIONAL_CMD_TIMEOUT_MS, 0, false,
+                                                   &system_code_response);
 
-        if (request_system_code_status == PM3_SUCCESS) {
+            if (request_system_code_status != PM3_SUCCESS) {
+                continue;
+            }
+
             const size_t reported_systems = system_code_response.number_of_systems[0];
             for (size_t i = 0; i < reported_systems; i++) {
                 const uint16_t system_code = felica_system_code_from_bytes(system_code_response.system_code_list + (i * 2U));
@@ -1556,34 +1573,26 @@ static int discover_systems(uint8_t flags, const uint8_t *primary_idm, bool requ
         }
     }
 
-    // Fallback for cards that do not support Request System Code.
-    if (discovered_systems->count == 0) {
-        uint16_t primary_system_code = 0;
-        uint8_t primary_idm_polled[8] = {0};
-        if (send_polling(flags, FELICA_SYSTEM_CODE_WILDCARD, FELICA_POLL_REQUEST_SYSTEM_CODE,
+    uint16_t primary_system_code = 0;
+    uint8_t primary_idm_polled[8] = {0};
+    if (send_polling(flags, FELICA_SYSTEM_CODE_WILDCARD, FELICA_POLL_REQUEST_SYSTEM_CODE,
+                     FELICA_POLL_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES, false,
+                     primary_idm_polled, &primary_system_code) == PM3_SUCCESS) {
+        felica_add_unique_discovered_system(discovered_systems->systems, &discovered_systems->count,
+                                            primary_system_code, primary_idm_polled);
+    }
+
+    for (size_t i = 0; i < ARRAYLEN(FELICA_MANUAL_SYSTEM_PROBE_TARGETS); i++) {
+        uint8_t probed_idm[8] = {0};
+        const uint16_t system_code = FELICA_MANUAL_SYSTEM_PROBE_TARGETS[i].system_code;
+        if (send_polling(flags, system_code, FELICA_POLL_REQUEST_NO_DATA,
                          FELICA_POLL_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES, false,
-                         primary_idm_polled, &primary_system_code) != PM3_SUCCESS) {
-            return PM3_ERFTRANS;
+                         probed_idm, NULL) != PM3_SUCCESS) {
+            continue;
         }
 
         felica_add_unique_discovered_system(discovered_systems->systems, &discovered_systems->count,
-                                            primary_system_code, primary_idm_polled);
-
-        if (primary_system_code == FELICA_SYSTEM_CODE_NFC_TYPE3 ||
-                primary_system_code == FELICA_SYSTEM_CODE_FELICA_LITE) {
-            const uint16_t alternate_system_code =
-                (primary_system_code == FELICA_SYSTEM_CODE_NFC_TYPE3)
-                ? FELICA_SYSTEM_CODE_FELICA_LITE
-                : FELICA_SYSTEM_CODE_NFC_TYPE3;
-
-            uint8_t alternate_idm_polled[8] = {0};
-            if (send_polling(flags, alternate_system_code, FELICA_POLL_REQUEST_NO_DATA,
-                             FELICA_POLL_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES, false,
-                             alternate_idm_polled, NULL) == PM3_SUCCESS) {
-                felica_add_unique_discovered_system(discovered_systems->systems, &discovered_systems->count,
-                                                    alternate_system_code, alternate_idm_polled);
-            }
-        }
+                                            system_code, probed_idm);
     }
 
     if (discovered_systems->count == 0) {
@@ -2323,6 +2332,59 @@ static void clear_and_send_command_ex(uint8_t flags, uint16_t datalen, uint8_t *
 
 static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose) {
     clear_and_send_command_ex(flags, datalen, data, 0, verbose, true);
+}
+
+static int felica_select_target_keep_field(const uint8_t *custom_idm, size_t custom_idm_len, uint8_t *idm_out) {
+    if (idm_out == NULL) {
+        return PM3_EINVARG;
+    }
+
+    if (custom_idm_len > 0 && custom_idm_len != sizeof(last_known_card.IDm)) {
+        return PM3_EINVARG;
+    }
+
+    clear_and_send_command(FELICA_CONNECT | FELICA_CLEARTRACE | FELICA_NO_DISCONNECT, 0, NULL, false);
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_FELICA_COMMAND, &resp, 2500) == false) {
+        DropField();
+        PrintAndLogEx(FAILED, "No FeliCa tag detected while polling.");
+        return PM3_ESOFT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(FAILED, "FeliCa card select failed (%d).", resp.status);
+        return resp.status;
+    }
+
+    if (resp.length < sizeof(felica_card_select_t)) {
+        DropField();
+        PrintAndLogEx(FAILED, "FeliCa card select returned invalid payload.");
+        return PM3_ESOFT;
+    }
+
+    felica_card_select_t card;
+    memcpy(&card, (felica_card_select_t *)resp.data.asBytes, sizeof(card));
+
+    if (custom_idm_len == sizeof(card.IDm) && memcmp(custom_idm, card.IDm, sizeof(card.IDm)) != 0) {
+        DropField();
+        PrintAndLogEx(FAILED, "Tag with explicit IDm not detected: " _YELLOW_("%s"),
+                      sprint_hex_inrow(custom_idm, sizeof(card.IDm)));
+        return PM3_ERFTRANS;
+    }
+
+    set_last_known_card(card);
+    memcpy(idm_out, card.IDm, sizeof(card.IDm));
+    if (custom_idm_len == sizeof(card.IDm)) {
+        PrintAndLogEx(INFO, "Using explicit IDm... " _GREEN_("%s"),
+                      sprint_hex_inrow(idm_out, sizeof(card.IDm)));
+    } else {
+        PrintAndLogEx(INFO, "Using selected IDm... " _GREEN_("%s"),
+                      sprint_hex_inrow(idm_out, sizeof(card.IDm)));
+    }
+
+    return PM3_SUCCESS;
 }
 
 /**
@@ -3520,6 +3582,78 @@ static int felica_dump_discovery_visitor(const felica_discovered_node_t *node, v
     return PM3_SUCCESS;
 }
 
+static int felica_dump_single_system(const felica_discovered_system_t *system,
+                                     uint32_t retry_count,
+                                     uint32_t *discovered_nodes_out,
+                                     uint32_t *service_count_out,
+                                     uint32_t *public_service_count_out) {
+    if (system == NULL || discovered_nodes_out == NULL || service_count_out == NULL || public_service_count_out == NULL) {
+        return PM3_EINVARG;
+    }
+
+    *discovered_nodes_out = 0;
+    *service_count_out = 0;
+    *public_service_count_out = 0;
+
+    const json_t *system_annotation = felica_find_system_annotation(system->system_code);
+    const char *system_name = felica_get_json_string(system_annotation, "name");
+    if (system_name) {
+        PrintAndLogEx(INFO, "--- " _CYAN_("System %04X") " (%s) ---------------------------", system->system_code, system_name);
+    } else {
+        PrintAndLogEx(INFO, "--- " _CYAN_("System %04X") " ---------------------------", system->system_code);
+    }
+
+    uint8_t flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
+    uint8_t idm[8] = {0};
+    if (send_polling(flags, system->system_code, FELICA_POLL_REQUEST_NO_DATA,
+                     FELICA_POLL_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES, false,
+                     idm, NULL) != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Unable to poll system " _YELLOW_("%04X") ".", system->system_code);
+        return PM3_ERFTRANS;
+    }
+
+    felica_drop_connect_flag(&flags);
+    PrintAndLogEx(INFO, "IDm............ " _YELLOW_("%s"), sprint_hex_inrow(idm, sizeof(idm)));
+
+    felica_dump_context_t dump_ctx;
+    memset(&dump_ctx, 0, sizeof(dump_ctx));
+    dump_ctx.flags = &flags;
+    dump_ctx.retry_count = retry_count;
+    dump_ctx.block_datalen = 16;
+    dump_ctx.block_frame[0] = dump_ctx.block_datalen;
+    dump_ctx.block_frame[1] = FELICA_RDBLK_REQ;
+    memcpy(dump_ctx.block_frame + 2, idm, sizeof(idm));
+    dump_ctx.block_frame[10] = 0x01;
+    dump_ctx.block_frame[13] = 0x01;
+    dump_ctx.block_frame[14] = 0x80;
+
+    uint32_t discovered_nodes = 0;
+    const int ret = felica_discover_nodes(idm, &flags, retry_count,
+                                          FELICA_NODE_DISCOVERY_NONE,
+                                          felica_dump_discovery_visitor, &dump_ctx,
+                                          NULL, &discovered_nodes);
+
+    *discovered_nodes_out = discovered_nodes;
+    *service_count_out = dump_ctx.service_count;
+    *public_service_count_out = dump_ctx.public_service_count;
+
+    if (ret == PM3_EOPABORTED) {
+        PrintAndLogEx(WARNING, "Unauth service dump aborted by user. Discovered %" PRIu32 " node(s), visited %" PRIu32 " service(s), dumped %" PRIu32 " public service(s).",
+                      discovered_nodes, dump_ctx.service_count, dump_ctx.public_service_count);
+        return ret;
+    }
+
+    if (ret != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Unable to discover nodes using RequestCodeList/SearchServiceCode/RequestService/ReadWithoutEncryption.");
+        return ret;
+    }
+
+    PrintAndLogEx(SUCCESS, "System dump complete. Discovered %" PRIu32 " node(s), visited %" PRIu32 " service(s), dumped %" PRIu32 " public service(s).",
+                  discovered_nodes, dump_ctx.service_count, dump_ctx.public_service_count);
+
+    return PM3_SUCCESS;
+}
+
 /**
  * Sends a write_without_encryption frame to pm3 and stores the response.
  * @param flags to use for pm3 communication.
@@ -4563,51 +4697,62 @@ static int CmdHFFelicaDump(const char *Cmd) {
 
     // bool no_auth = arg_get_lit(ctx, 1);
 
-    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, idm);
+    res = felica_select_target_keep_field(idm, (size_t)ilen, idm);
     if (res != PM3_SUCCESS) {
         return res;
     }
 
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort discovery or dumping");
 
-    uint8_t flags = FELICA_CONNECT | FELICA_CLEARTRACE | FELICA_NO_SELECT | FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
+    uint8_t system_flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
+    felica_discovered_system_list_t discovered_systems;
+    res = discover_systems(system_flags, idm, true, &discovered_systems);
+    if (res != PM3_SUCCESS || discovered_systems.count == 0) {
+        DropField();
+        PrintAndLogEx(FAILED, "Unable to discover FeliCa systems.");
+        return res;
+    }
 
-    felica_dump_context_t dump_ctx;
-    memset(&dump_ctx, 0, sizeof(dump_ctx));
-    dump_ctx.flags = &flags;
-    dump_ctx.retry_count = retry_count;
-    dump_ctx.block_datalen = 16;
-    dump_ctx.block_frame[0] = dump_ctx.block_datalen;
-    dump_ctx.block_frame[1] = FELICA_RDBLK_REQ;
-    memcpy(dump_ctx.block_frame + 2, idm, sizeof(idm));
-    dump_ctx.block_frame[10] = 0x01;
-    dump_ctx.block_frame[13] = 0x01;
-    dump_ctx.block_frame[14] = 0x80;
+    PrintAndLogEx(INFO, "Discovered " _GREEN_("%u") " system(s).", (unsigned int)discovered_systems.count);
 
-    uint32_t discovered_nodes = 0;
-    int ret = felica_discover_nodes(idm, &flags, retry_count,
-                                    FELICA_NODE_DISCOVERY_NONE,
-                                    felica_dump_discovery_visitor, &dump_ctx,
-                                    NULL, &discovered_nodes);
+    uint32_t total_discovered_nodes = 0;
+    uint32_t total_service_count = 0;
+    uint32_t total_public_service_count = 0;
+    uint32_t dumped_system_count = 0;
+    int final_ret = PM3_SUCCESS;
+
+    for (size_t i = 0; i < discovered_systems.count; i++) {
+        uint32_t discovered_nodes = 0;
+        uint32_t service_count = 0;
+        uint32_t public_service_count = 0;
+        const int ret = felica_dump_single_system(&discovered_systems.systems[i], retry_count,
+                        &discovered_nodes, &service_count, &public_service_count);
+
+        if (ret == PM3_EOPABORTED) {
+            DropField();
+            return ret;
+        }
+
+        if (ret != PM3_SUCCESS) {
+            final_ret = ret;
+            continue;
+        }
+
+        dumped_system_count++;
+        total_discovered_nodes += discovered_nodes;
+        total_service_count += service_count;
+        total_public_service_count += public_service_count;
+    }
+
     DropField();
 
-    if (ret == PM3_EOPABORTED) {
-        PrintAndLogEx(WARNING, "Unauth service dump aborted by user. Discovered %" PRIu32 " node(s), visited %" PRIu32 " service(s), dumped %" PRIu32 " public service(s).",
-                      discovered_nodes, dump_ctx.service_count, dump_ctx.public_service_count);
-        return ret;
+    if (dumped_system_count == 0) {
+        return final_ret;
     }
 
-    if (ret != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "Unable to discover nodes using RequestCodeList/SearchServiceCode/RequestService/ReadWithoutEncryption.");
-        return ret;
-    }
-
-    if (dump_ctx.public_service_count == 0) {
-        PrintAndLogEx(WARNING, "No authentication-not-required services discovered.");
-    }
-
-    PrintAndLogEx(SUCCESS, "Unauth service dump complete. Discovered %" PRIu32 " node(s), visited %" PRIu32 " service(s), dumped %" PRIu32 " public service(s).",
-                  discovered_nodes, dump_ctx.service_count, dump_ctx.public_service_count);
+    PrintAndLogEx(SUCCESS, "Card dump complete. Dumped %" PRIu32 "/%u system(s), discovered %" PRIu32 " node(s), visited %" PRIu32 " service(s), dumped %" PRIu32 " public service(s).",
+                  dumped_system_count, (unsigned int)discovered_systems.count,
+                  total_discovered_nodes, total_service_count, total_public_service_count);
 
     return PM3_SUCCESS;
 }
