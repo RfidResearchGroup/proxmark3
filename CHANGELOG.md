@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Added `hf mfdes getversion` command (@kormax)
+- Fixed iCLASS emulator writes clearing previously loaded emulator memory after an FPGA reload (@cindersocket)
 - Added DES transport mode support for iCLASS credential encode/decode helpers. (@cindersocket)
 - Changed `doc/magic_cards_notes.md` - updated the ID82xx / Hitag µ clone section with current Proxmark3 support, chip variations, default passwords and detection notes (@mishamyte)
 - Added two Mifare Classic keys into extensive dictionary which are hardcoded into Mifare Plus SE (@team-orangeBlue)

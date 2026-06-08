@@ -12,6 +12,7 @@ TESTDESFIREVALUE=false
 TESTHIDWIEGAND=false
 TESTMFHIDENCODE=false
 TESTICLASSREADER=false
+TESTICLASSEMU=false
 NEED_MF_HID_ENCODE_WIPE=false
 TESTMANUAL=false
 
@@ -21,13 +22,14 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--pm3bin /path/to/pm3] [--pm3port /dev/tty...] [desfire_value|hid_wiegand|mf_hid_encode|iclass_reader]
+Usage: $0 [--pm3bin /path/to/pm3] [--pm3port /dev/tty...] [desfire_value|hid_wiegand|mf_hid_encode|iclass_emu|iclass_reader]
     --pm3bin ...:    Specify path to pm3 binary to test
     --pm3port ...:   Specify serial port for client/proxmark3
     --manual ...:    Pause after successful online LF HID clone/read checks for external reader verification
     desfire_value:   Test DESFire value operations with card
     hid_wiegand:     Test LF HID T55xx clone and PM3 readback flows
     mf_hid_encode:   Test MIFARE Classic HID encoding flows
+    iclass_emu:      Test iCLASS emulator memory load/write/read flows
     iclass_reader:   Load iCLASS HID credentials into emulator memory for external reader verification
     You must specify a test target - no default 'all' for online tests
 """
@@ -73,6 +75,11 @@ Usage: $0 [--pm3bin /path/to/pm3] [--pm3port /dev/tty...] [desfire_value|hid_wie
     iclass_reader)
       TESTALL=false
       TESTICLASSREADER=true
+      shift
+      ;;
+    iclass_emu)
+      TESTALL=false
+      TESTICLASSEMU=true
       shift
       ;;
     -*|--*=) # unsupported flags
@@ -358,7 +365,7 @@ if command -v git >/dev/null && git rev-parse --is-inside-work-tree >/dev/null 2
 fi
 
 # Check that user specified a test
-if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHIDWIEGAND" = false ] && [ "$TESTMFHIDENCODE" = false ] && [ "$TESTICLASSREADER" = false ]; then
+if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHIDWIEGAND" = false ] && [ "$TESTMFHIDENCODE" = false ] && [ "$TESTICLASSEMU" = false ] && [ "$TESTICLASSREADER" = false ]; then
   echo "Error: You must specify a test target. Use -h for help."
   exit 1
 fi
@@ -415,6 +422,12 @@ while true; do
       if ! CheckMfHidEncodeRoundTrip "hf mf encodehid format roundtrip"   "-w H10301 --fc 31 --cn 337" "10001111100000001010100011" "H10301.*FC: 31.*CN: 337"; then break; fi
       if ! RestoreMfHidEncodeCard; then break; fi
       if ! CheckMfHidEncodeCleanup "hf mf encodehid cleanup verify"; then break; fi
+    fi
+
+    if $TESTICLASSEMU; then
+      echo -e "\n${C_BLUE}Testing iCLASS emulator memory${C_NC} ${PM3BIN:=./pm3}"
+      if ! CheckFileExist "pm3 exists"               "$PM3BIN"; then break; fi
+      if ! CheckExecute "hf iclass esetblk preserves emu" "$PM3BIN -c 'hf iclass eload -f traces/iclass/hf-iclass-dump.json; hw fpgaoff; hf iclass esetblk --blk 7 -d A55AC33C9669F00F; hf iclass eview -s 64' 2>&1 | LC_ALL=C tr -cd '\11\12\15\40-\176' | tr '\n' ' '" "0/0x00.*6D C2 5B 15 FE FF 12 E0.*7/0x07.*A5 5A C3 3C 96 69 F0 0F"; then break; fi
     fi
 
     if $TESTICLASSREADER; then

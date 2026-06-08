@@ -2366,12 +2366,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ICLASS_EML_MEMSET: {
-            //-----------------------------------------------------------------------------
-            // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15) here although FPGA is not
-            // involved in dealing with emulator memory. But if it is called later, it might
-            // destroy the Emulator Memory.
-            //-----------------------------------------------------------------------------
-            FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+            FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF_15);
             struct p {
                 uint16_t offset;
                 uint16_t len;
@@ -2732,6 +2727,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_FPGA_MAJOR_MODE_OFF: { // ## FPGA Control
             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+            FpgaResetBitstream();
             g_hf_field_active = false;
             g_hf_field_timeout_active = false;
             SpinDelay(200);
