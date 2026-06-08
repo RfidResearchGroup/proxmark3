@@ -91,6 +91,11 @@
 // times in samples @ 212kHz when acting as reader
 #define ISO15693_READER_TIMEOUT            330  // 330/212kHz = 1558us
 #define ISO15693_READER_TIMEOUT_WRITE      4700 // 4700/212kHz = 22ms, nominal 20ms
+// Per-slot listen window for 16-slot inventory. Only needs to catch the START of a
+// response (a SOF) within t1 (~320us) + margin -- once a SOF is detected the timeout
+// no longer applies and the full response is received. Tuned down from the single-slot
+// ISO15693_READER_TIMEOUT (1558us) to speed up empty slots. Bump up if tags get missed.
+#define ISO15693_INVENTORY_SLOT_TIMEOUT    160  // 160/212kHz = 755us (~2.3x t1)
 
 // iceman: This defines below exists in the header file,  just here for my easy reading
 // Delays in SSP_CLK ticks.
@@ -2853,7 +2858,7 @@ void SendRawCommand15693(iso15_raw_cmd_t *packet) {
 
         // Slot 0: send the full command
         int res = SendDataTag(packet->raw, packet->rawlen, init, speed,
-                              recv, sizeof(recv), start_time, timeout,
+                              recv, sizeof(recv), start_time, ISO15693_INVENTORY_SLOT_TIMEOUT,
                               &eof_time, &recvlen);
 
         if (res == PM3_ETEAROFF) {
@@ -2886,7 +2891,7 @@ void SendRawCommand15693(iso15_raw_cmd_t *packet) {
             memset(recv, 0, sizeof(recv));
 
             res = SendDataTagEOF(recv, sizeof(recv), start_time,
-                                 ISO15693_READER_TIMEOUT, &eof_time,
+                                 ISO15693_INVENTORY_SLOT_TIMEOUT, &eof_time,
                                  fsk, recv_speed, &recvlen);
 
             if (res == PM3_SUCCESS && recvlen > 0) {
