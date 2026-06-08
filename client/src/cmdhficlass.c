@@ -5065,13 +5065,17 @@ static void detect_credential(uint8_t *iclass_dump, size_t dump_len, bool *is_le
                 }
             }
         }
-    } else if (memcmp(hdr->app_issuer_area, "\xFF\xFF\xFF\x00\x06\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE) == 0) {
+    } else {
+        uint8_t blockno = hdr->app_issuer_area[4];
+        if (blockno < 0x06 || blockno == 0xFF || dump_len < (blockno + 1) * PICOPASS_BLOCK_SIZE) {
+            return;
+        }
+
         // SE AIA
         *is_se = true;
 
         if (sio_start_ptr != NULL) {
-            // SE SIO starts at block 6
-            *sio_start_ptr = iclass_dump + (6 * PICOPASS_BLOCK_SIZE);
+            *sio_start_ptr = iclass_dump + (blockno * PICOPASS_BLOCK_SIZE);
         }
     }
 
@@ -5084,11 +5088,13 @@ static void detect_credential(uint8_t *iclass_dump, size_t dump_len, bool *is_le
 
     if (sio_start[0] != 0x30) {
         // SIOs always start with a SEQUENCE(P), if this is missing then bail
+        *sio_start_ptr = NULL;
         return;
     }
 
     if (sio_start[1] >= 0x80 || sio_start[1] == 0x00) {
         // We only support definite short form lengths
+        *sio_start_ptr = NULL;
         return;
     }
 
@@ -5288,7 +5294,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     bool is_legacy, is_se, is_sr;
     uint8_t *sio_start;
     size_t sio_length;
-    detect_credential(iclass_dump, endblock * 8, &is_legacy, &is_se, &is_sr, &sio_start, &sio_length);
+    detect_credential(iclass_dump, filesize, &is_legacy, &is_se, &is_sr, &sio_start, &sio_length);
 
     bool is_legacy_decrypted = is_legacy && (iclass_dump[(6 * PICOPASS_BLOCK_SIZE) + 7] & 0x03) == 0x00;
 
@@ -5380,7 +5386,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
                              );
             } else if (sio_start_block != 0 && i >= sio_start_block && i <= sio_end_block) {
                 // SIO credential
-                PrintAndLogEx(INFO, "%3d/0x%02X | " _CYAN_("%s") "| " _CYAN_("%s") " | %s | User / SIO / %s"
+                PrintAndLogEx(INFO, "%3d/0x%02X | " _CYAN_("%s") "| " _CYAN_("%s") " | %s | SIO / %s"
                               , i
                               , i
                               , sprint_hex(blk, 8)
