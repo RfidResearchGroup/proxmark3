@@ -4630,9 +4630,9 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t *nonces = NULL;
+    uint64_t *nonces = NULL;
     if (collect_nonces) {
-        nonces = calloc((1 + retries) * sizeof(uint64_t), sizeof(uint8_t));
+        nonces = calloc(1 + retries, sizeof(uint64_t));
         if (nonces == NULL) {
             PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
@@ -4662,12 +4662,12 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
                 // Not strictly needed, but to avoid fw warning
                 max_retries_per_call = ((PM3_CMD_DATA_SIZE - sizeof(uint32_t) * 2) / sizeof(uint64_t)) - 1;
             }
-            isok = ul3pass_authentication(auth_key_ptr, MIFAREULC_KEY_INDEX, !keep_field_on, MIN(retries - auths, max_retries_per_call), &auths, &ms, false, !skip_auth, check_answer, use_fastread0, collect_nonces, nonces + auths * sizeof(uint64_t), reset_field, available_pairs, pairs);
+            isok = ul3pass_authentication(auth_key_ptr, MIFAREULC_KEY_INDEX, !keep_field_on, MIN(retries - auths, max_retries_per_call), &auths, &ms, false, !skip_auth, check_answer, use_fastread0, collect_nonces, (uint8_t *)(nonces + auths), reset_field, available_pairs, pairs);
         } while (skip_auth && auths < 1 + retries);
     }
 
     if (collect_nonces) {
-        stat_ulc_nonces(auths, (uint64_t*)nonces);
+        stat_ulc_nonces(auths, nonces);
     }
 
     if (!skip_auth) {
