@@ -524,7 +524,7 @@ Default AES key is 00-00h. Both the data and UID one.
 Data key is 00, UID is 01. Authenticity is 02h
 Auth is 1A[Key ID][CRC] - AF[RndB] - AF[RndA][RndB'] - 00[RndA']
 */
-static int ul3pass_authentication(const uint8_t *key, uint8_t keyno, bool switch_off_field, int retries, uint32_t *auths, uint32_t *ms, bool schann, bool try_auth, bool check_answer, bool use_fastread0, bool get_nonces, uint8_t* nonces, bool reset_field) {
+static int ul3pass_authentication(const uint8_t *key, uint8_t keyno, bool switch_off_field, int retries, uint32_t *auths, uint32_t *ms, bool schann, bool try_auth, bool check_answer, bool use_fastread0, bool get_nonces, uint8_t* nonces, bool reset_field, uint8_t available_pairs, uint8_t* pairs) {
     // keyno < 3: ULAES
     // keyno = 3: ULC
     mful_3passauth_t payload = {
@@ -537,10 +537,13 @@ static int ul3pass_authentication(const uint8_t *key, uint8_t keyno, bool switch
         .reset_field = reset_field,
         .keyno = keyno,
         .retries = retries,
+        .available_pairs = available_pairs,
     };
     memcpy(payload.key, key, sizeof(payload.key));
+    int pairs_bytecount = (keyno == 3 ? 8 + 16 : 16 + 32) * MIN(available_pairs, keyno == 3 ? 10 : 5);
+    memcpy(payload.pairs, pairs, pairs_bytecount);
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFAREU3P_AUTH, (uint8_t *)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_MIFAREU3P_AUTH, (uint8_t *)&payload, sizeof(payload) - sizeof(payload.pairs) + pairs_bytecount);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFAREU3P_AUTH, &resp, 1500 + (retries * 15)) == false) {
         return PM3_ETIMEOUT;
@@ -644,7 +647,7 @@ static int try_default_3des_keys(bool override, uint8_t **correct_key, bool use_
 
     for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
         uint8_t *key = default_3des_keys[i];
-        if (ul3pass_authentication(key, MIFAREULC_KEY_INDEX, true, 0, NULL, NULL, false, true, true, use_fastread0, false, NULL, false) == PM3_SUCCESS) {
+        if (ul3pass_authentication(key, MIFAREULC_KEY_INDEX, true, 0, NULL, NULL, false, true, true, use_fastread0, false, NULL, false, 0, NULL) == PM3_SUCCESS) {
             *correct_key = key;
             res = PM3_SUCCESS;
             break;
@@ -681,7 +684,7 @@ static int try_default_aes_keys(bool override, bool use_schann, bool use_fastrea
 
         for (uint8_t keyno = 0; keyno < 3; keyno++) {
 
-            if (ul3pass_authentication(key, keyno, true, 0, NULL, NULL, use_schann, true, true, use_fastread0, false, NULL, false) == PM3_SUCCESS) {
+            if (ul3pass_authentication(key, keyno, true, 0, NULL, NULL, use_schann, true, true, use_fastread0, false, NULL, false, 0, NULL) == PM3_SUCCESS) {
 
                 char keystr[20] = {0};
                 switch (keyno) {
@@ -721,13 +724,13 @@ static int ul_auth_select(iso14a_card_select_t *card, uint64_t tagtype, bool has
     bool use_fastread0 = false;
     if (hasAuthKey && (tagtype & MFU_TT_UL_C)) {
         //will select card automatically and close connection on error
-        if (ul3pass_authentication(authkey, MIFAREULC_KEY_INDEX, false, 0, NULL, NULL, false, true, true, use_fastread0, false, NULL, false) != PM3_SUCCESS) {
+        if (ul3pass_authentication(authkey, MIFAREULC_KEY_INDEX, false, 0, NULL, NULL, false, true, true, use_fastread0, false, NULL, false, 0, NULL) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Authentication Failed UL-C");
             return PM3_ESOFT;
         }
     } else if (hasAuthKey && (tagtype & MFU_TT_UL_AES)) {
         //will select card automatically and close connection on error
-        if (ul3pass_authentication(authkey, 0, false, 0, NULL, NULL, use_schann, true, true, use_fastread0, false, NULL, false) != PM3_SUCCESS) {
+        if (ul3pass_authentication(authkey, 0, false, 0, NULL, NULL, use_schann, true, true, use_fastread0, false, NULL, false, 0, NULL) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Authentication Failed UL-AES");
             return PM3_ESOFT;
         }
@@ -4569,6 +4572,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
         arg_lit0(NULL, "noauth", "Skip authentication (when collecting nonces)"),
         arg_lit0(NULL, "reset", "Reset field between each attempt"),
         arg_lit0(NULL, "collect", "Collect nonces and show top 10"),
+        arg_strx0(NULL, "pair", "<ERndB:ERndARndBp>", "Nonce pair (option can be provided up to 10 times)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4585,7 +4589,20 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
     bool skip_auth = arg_get_lit(ctx, 7);
     bool reset_field = arg_get_lit(ctx, 8);
     bool collect_nonces = arg_get_lit(ctx, 9);
+    int available_pairs = 0;
+    int pairs_bytecount = 0;
+    uint8_t pairs[(8 + 16) * 10] = {0};
+    CLIGetHexWithReturn(ctx, 10, pairs, &pairs_bytecount);
     CLIParserFree(ctx);
+    available_pairs = pairs_bytecount / (8 + 16);
+    if (available_pairs * (8 + 16) != pairs_bytecount) {
+        PrintAndLogEx(WARNING, "Invalid nonce pairs provided, byte count does not match expected size");
+        return PM3_EINVARG;
+    }
+    if (available_pairs > 10) {
+        PrintAndLogEx(WARNING, "Too many nonce pairs provided");
+        return PM3_EINVARG;
+    }
 
     if (ak_len != 16 && ak_len != 0) {
         PrintAndLogEx(WARNING, "ERROR: Key is incorrect length");
@@ -4595,12 +4612,16 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
         PrintAndLogEx(ERR, "Invalid retries (must be 0..10000)");
         return PM3_EINVARG;
     }
-    if ((retries > 0) && (ak_len == 0) && !skip_auth) {
+    if ((retries > 0) && (ak_len == 0) && !skip_auth && available_pairs == 0) {
         PrintAndLogEx(WARNING, "ERROR: Key is required for retries");
         return PM3_EINVARG;
     }
     if ((! check_answer) && (ak_len == 0)) {
         PrintAndLogEx(WARNING, "ERROR: Key is required for nocheck");
+        return PM3_EINVARG;
+    }
+    if ((available_pairs > 0) && (ak_len > 0)) {
+        PrintAndLogEx(WARNING, "ERROR: Key and pairs are mutually exclusive");
         return PM3_EINVARG;
     }
 
@@ -4628,7 +4649,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
     uint32_t ms = 0;
 
     // If no hex key is specified, try default keys
-    if (ak_len == 0 && !collect_nonces && !skip_auth) {
+    if (ak_len == 0 && !collect_nonces && !skip_auth && available_pairs == 0) {
 
         PrintAndLogEx(INFO, "Called with no key, checking default keys...");
         isok = try_default_3des_keys(false, &auth_key_ptr, use_fastread0);
@@ -4641,7 +4662,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
                 // Not strictly needed, but to avoid fw warning
                 max_retries_per_call = ((PM3_CMD_DATA_SIZE - sizeof(uint32_t) * 2) / sizeof(uint64_t)) - 1;
             }
-            isok = ul3pass_authentication(auth_key_ptr, MIFAREULC_KEY_INDEX, !keep_field_on, MIN(retries - auths, max_retries_per_call), &auths, &ms, false, !skip_auth, check_answer, use_fastread0, collect_nonces, nonces + auths * sizeof(uint64_t), reset_field);
+            isok = ul3pass_authentication(auth_key_ptr, MIFAREULC_KEY_INDEX, !keep_field_on, MIN(retries - auths, max_retries_per_call), &auths, &ms, false, !skip_auth, check_answer, use_fastread0, collect_nonces, nonces + auths * sizeof(uint64_t), reset_field, available_pairs, pairs);
         } while (skip_auth && auths < 1 + retries);
     }
 
@@ -4651,7 +4672,11 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
 
     if (!skip_auth) {
         if (isok == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Authentication 3DES key... " _GREEN_("%s") " ( " _GREEN_("ok")" )", sprint_hex_inrow(auth_key_ptr, 16));
+            if (available_pairs > 0) {
+                PrintAndLogEx(SUCCESS, "Authentication 3DES with nonce pair... " _GREEN_("ok"));
+            } else {
+                PrintAndLogEx(SUCCESS, "Authentication 3DES key... " _GREEN_("%s") " ( " _GREEN_("ok")" )", sprint_hex_inrow(auth_key_ptr, 16));
+            }
         } else {
             PrintAndLogEx(WARNING, "Authentication ( " _RED_("fail") " )");
         }
@@ -4852,7 +4877,7 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
     uint32_t auths = 0;
     uint32_t ms = 0;
 
-    int result = ul3pass_authentication(auth_key_ptr, key_index, !keep_field_on, retries, &auths, &ms, use_schann, true , check_answer, use_fastread0, false, NULL, false);
+    int result = ul3pass_authentication(auth_key_ptr, key_index, !keep_field_on, retries, &auths, &ms, use_schann, true, check_answer, use_fastread0, false, NULL, false, 0, NULL);
     if (result == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Authentication with " _YELLOW_("%s") " " _GREEN_("%s") " ( " _GREEN_("ok")" )"
                       , key_type[key_index]

@@ -1982,17 +1982,26 @@
         },
         "hf 15 reader": {
             "command": "hf 15 reader",
-            "description": "Act as a ISO-15693 reader. Look for ISO-15693 tags until Enter or the pm3 button is pressed",
+            "description": "Act as a ISO-15693 reader. Look for ISO-15693 tags until <Enter> is pressed Use --all to perform 16-slot inventory with anti-collision tree walking to discover all tags in the field.",
             "notes": [
                 "hf 15 reader",
-                "hf 15 reader -@ -> Continuous mode"
+                "hf 15 reader -@ -> continuous mode",
+                "hf 15 reader --afi 01 -> filter by AFI",
+                "hf 15 reader -2 -> slower '1 out of 256' mode",
+                "hf 15 reader --all -> find all tags (16-slot anti-collision)",
+                "hf 15 reader --all -@ -> continuously scan for all tags",
+                "hf 15 reader --all --afi 01 -> find all tags with AFI filter",
+                "hf 15 reader --all -2 -> find all tags, slow mode"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-@ continuous reader mode"
+                "-@ continuous reader mode",
+                "--all find all tags using 16-slot anti-collision",
+                "--afi <hex> Application Family Identifier (1 byte)",
+                "-2 use slower '1 out of 256' mode"
             ],
-            "usage": "hf 15 reader [-h@]"
+            "usage": "hf 15 reader [-h@2] [--all] [--afi <hex>]"
         },
         "hf 15 restore": {
             "command": "hf 15 restore",
@@ -8608,13 +8617,16 @@
                 "-h, --help This help",
                 "--key <hex> Authentication key (16 bytes in hex)",
                 "-l Swap entered key's endianness",
-                "-k Keep field on (only if a key is provided)",
+                "-k Keep field on at the end (only if a key is provided)",
                 "-r, --retries <n> Number of retries with provided key (def: 0)",
                 "-n, --nocheck Skip checking tag answer correctness (only if a key is provided)",
                 "-0, --read0 Use fast READ0 (skip anticol)",
-                "-c, --collect <n> Collect <n> nonces and show top 10 (def: 0, no collection)"
+                "--noauth Skip authentication (when collecting nonces)",
+                "--reset Reset field between each attempt",
+                "--collect Collect nonces and show top 10",
+                "--pair <ERndB:ERndARndBp> Nonce pair (option can be provided up to 10 times)"
             ],
-            "usage": "hf mfu cauth [-hlkn0] [--key <hex>] [-r <n>] [-c <n>]"
+            "usage": "hf mfu cauth [-hlkn0] [--key <hex>] [-r <n>] [--noauth] [--reset] [--collect] [--pair <ERndB:ERndARndBp>]..."
         },
         "hf mfu cchk": {
             "command": "hf mfu cchk",
@@ -15373,6 +15385,6 @@
     "metadata": {
         "commands_extracted": 865,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-06-07T20:59:30+00:00"
+        "extracted_on": "2026-06-09T23:01:19+00:00"
     }
 }

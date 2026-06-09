@@ -384,9 +384,11 @@ typedef struct {
     uint16_t use_fastread0 : 1;
     uint16_t get_nonces : 1;
     uint16_t reset_field : 1;
-    uint16_t reserved : 7;
+    uint16_t available_pairs : 4;
+    uint16_t reserved : 3;
     uint16_t retries;
     uint8_t key[16];
+    uint8_t pairs[(8 + 16) * 10]; // up to 10 pairs of ULC ERndB:ERndARndBp, 5 pairs of ULAES
 } PACKED mful_3passauth_t;
 
 enum {

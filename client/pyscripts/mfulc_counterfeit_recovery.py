@@ -26,6 +26,9 @@ from typing import Optional, Set
 from pm3_resources import find_tool
 
 
+legacy_collect = False
+legacy_unlock = False
+
 required_version = (3, 8)
 if sys.version_info < required_version:
     print(f"Python version: {sys.version}")
@@ -247,39 +250,62 @@ def try_unlock(num_challenges: int, dict_erndberndarndb: dict, p) -> bool:
     challenges_collected = 0
     next_progress = 10
 
-    print("[=] Waiting for the provided challenge to appear...")
-    while challenges_collected < max(1, num_challenges):
-        p.console("hf 14a raw -sck 1A00")
-        challenge = p.grabbed_output.split()
-        if (len(challenge) > 8) and (challenge[1] == "AF"):
-            hex_challenge = "".join(challenge[2:10]).upper()
-            # print(hex_challenge, erndb)
-            challenges_collected += 1
-            progress = challenges_collected * 100 // max(1, num_challenges)
-            if progress >= next_progress:
-                print(f"[=] Progress: {min(progress, 100)}%")
-                next_progress += 10
-            if hex_challenge in dict_erndberndarndb:
-                p.console(f"hf 14a raw -ck AF{dict_erndberndarndb[hex_challenge]}")
-                response = p.grabbed_output.split()
-                if (len(response) > 8) and (response[1] == "00"):
-                    print("[+] Unlock successful!")
-                    # Rewrite AUTH0
-                    p.console("hf 14a raw -c a2 2a 30000000")
+    if legacy_unlock:
+        print("[=] Waiting for the provided challenge to appear...")
+        while challenges_collected < max(1, num_challenges):
+            p.console("hf 14a raw -sck 1A00")
+            challenge = p.grabbed_output.split()
+            if (len(challenge) > 8) and (challenge[1] == "AF"):
+                hex_challenge = "".join(challenge[2:10]).upper()
+                # print(hex_challenge, erndb)
+                challenges_collected += 1
+                progress = challenges_collected * 100 // max(1, num_challenges)
+                if progress >= next_progress:
+                    print(f"[=] Progress: {min(progress, 100)}%")
+                    next_progress += 10
+                if hex_challenge in dict_erndberndarndb:
+                    p.console(f"hf 14a raw -ck AF{dict_erndberndarndb[hex_challenge]}")
                     response = p.grabbed_output.split()
-                    if response[1] == "0A":
-                        print("[+] AUTH0 reset successful!")
-                        return True
+                    if (len(response) > 8) and (response[1] == "00"):
+                        print("[+] Unlock successful!")
+                        # Rewrite AUTH0
+                        p.console("hf 14a raw -c a2 2a 30000000")
+                        response = p.grabbed_output.split()
+                        if response[1] == "0A":
+                            print("[+] AUTH0 reset successful!")
+                            return True
+                        else:
+                            print("[-] AUTH0 reset failed")
+                            print(response)
+                            return False
                     else:
-                        print("[-] AUTH0 reset failed")
-                        print(response)
+                        print("[-] Unlock failed")
+                        p.console("hf 14a reader --drop", capture=False)
                         return False
-                else:
-                    print("[-] Unlock failed")
-                    p.console("hf 14a reader --drop", capture=False)
-                    return False
-        p.console("hf 14a reader --drop", capture=False)
-    print("[-] Provided challenge not found, try again")
+            p.console("hf 14a reader --drop", capture=False)
+        print("[-] Provided challenge not found, try again")
+
+    else:
+        p.console(f"hf mfu cauth --read0 --retries {num_challenges - 1} --reset -k --pair " +
+                  " --pair ".join([x + y for x, y in dict_erndberndarndb.items()]))
+        result = p.grabbed_output.split()
+        if 'ok' in result:
+            print("[+] Unlock successful!")
+            # Rewrite AUTH0
+            p.console("hf 14a raw -c a2 2a 30000000")
+            response = p.grabbed_output.split()
+            if response[1] == "0A":
+                print("[+] AUTH0 reset successful!")
+                return True
+            else:
+                print("[-] AUTH0 reset failed")
+                print(response)
+                return False
+        else:
+            print("[-] Unlock failed")
+            p.console("hf 14a reader --drop", capture=False)
+            return False
+
     return False
 
 
@@ -568,7 +594,6 @@ def main():
         if uid is None:
             return
         common_nonces = []
-        legacy_collect = False
         if legacy_collect:
             max_occurrence, challenges = collect_100(num_challenges, p, early_stop=False)
             if max_occurrence <= 1:

@@ -402,7 +402,7 @@ int mifare_ul_ev1_auth(uint8_t *keybytes, uint8_t *pack) {
     return 1;
 }
 
-int mifare_ultra_3des_auth(uint8_t *keybytes, bool try_auth, bool check_answer, uint8_t *nonce) {
+int mifare_ultra_3des_auth(uint8_t *keybytes, bool try_auth, bool check_answer, uint8_t *nonce, uint8_t available_pairs, uint8_t *pairs) {
 
     /// 3des2k
     uint8_t random_a[8] = {1, 1, 1, 1, 1, 1, 1, 2};
@@ -429,6 +429,20 @@ int mifare_ultra_3des_auth(uint8_t *keybytes, bool try_auth, bool check_answer, 
     if (!try_auth) {
         return 1;
     }
+    if (available_pairs > 0) {
+        for (uint8_t i = 0; i < available_pairs; i++) {
+            if (memcmp(pairs + i * (8 + 16), resp + 1, 8) == 0) {
+                if (g_dbglevel >= DBG_EXTENDED) {
+                    Dbprintf("Known nonce found");
+                    Dbhexdump(8, resp + 1, false);
+                }
+                len = mifare_sendcmd(MIFARE_ULC_AUTH_2, pairs + i * (8 + 16) + 8, 16, resp, sizeof(resp), respPar, NULL);
+                return len == 11;
+            }
+        }
+        return 0;
+    }
+
     // decrypt nonce.
     tdes_nxp_receive((void *)(resp + 1), (void *)random_b, sizeof(random_b), (const void *)key, IV, 2);
     rol(random_b, 8);

@@ -287,7 +287,7 @@ static int MifareUFastRead0(void) {
 //  1 = failed auth
 //  0 = correct
 
-static uint8_t chkKey3Pass(uint8_t keyno, uint8_t *keybytes, bool use_schann, bool try_auth, bool check_answer, bool use_fastread0, uint8_t *nonce) {
+static uint8_t chkKey3Pass(uint8_t keyno, uint8_t *keybytes, bool use_schann, bool try_auth, bool check_answer, bool use_fastread0, uint8_t *nonce, uint8_t available_pairs, uint8_t *pairs) {
 
     uint8_t i = 0, res = 2;
     bool selected = false;
@@ -313,7 +313,7 @@ static uint8_t chkKey3Pass(uint8_t keyno, uint8_t *keybytes, bool use_schann, bo
 
     if (g_dbglevel >= DBG_EXTENDED) Dbhexdump(MIFAREU3P_KEY_SIZE, keybytes, false);
     if (keyno == MIFAREULC_KEY_INDEX) {
-        res = mifare_ultra_3des_auth(keybytes, try_auth, check_answer, nonce) == 1 ? 0 : 1; // 0 = correct, 1 = failed auth
+        res = mifare_ultra_3des_auth(keybytes, try_auth, check_answer, nonce, available_pairs, pairs) == 1 ? 0 : 1; // 0 = correct, 1 = failed auth
     } else {
         res = mifare_ultra_aes_auth(keyno, keybytes, use_schann, try_auth, check_answer, nonce) == 1 ? 0 : 1; // 0 = correct, 1 = failed auth
     }
@@ -357,7 +357,7 @@ void MifareU3PassAuth(mful_3passauth_t *packet) {
             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
             SpinDelayUsPrecision(500);
         }
-        if (chkKey3Pass(packet->keyno, packet->key,  packet->use_schann, packet->try_auth, packet->check_answer, packet->use_fastread0, packet->get_nonces ? (rpayload.nonces + auths * nonce_size) : NULL) == 0) {
+        if (chkKey3Pass(packet->keyno, packet->key,  packet->use_schann, packet->try_auth, packet->check_answer, packet->use_fastread0, packet->get_nonces ? (rpayload.nonces + auths * nonce_size) : NULL, packet->available_pairs, packet->pairs) == 0) {
             if (packet->try_auth) {
                 auths++;
                 res = PM3_SUCCESS;
@@ -464,7 +464,7 @@ void MifareU3PassChkKeys(mful_3passchk_t *packet) {
                 memcpy(fullkeybytes + (packet->segment * keysize), packet->data + (i * keysize), keysize);
             }
         }
-        if (chkKey3Pass(packet->key_index, fullkeybytes, false, true, packet->check_answer, packet->use_fastread0, NULL) == 0) {
+        if (chkKey3Pass(packet->key_index, fullkeybytes, false, true, packet->check_answer, packet->use_fastread0, NULL, 0, NULL) == 0) {
             auths++;
             foundkeys++;
             memcpy(rpayload.key, fullkeybytes, MIFAREU3P_KEY_SIZE);
@@ -512,7 +512,7 @@ void MifareUReadBlock(mful_readblock_t *packet) {
 
     // UL-C authentication
     if (useCKey) {
-        if (mifare_ultra_3des_auth(packet->key, true, true, NULL) == 0) {
+        if (mifare_ultra_3des_auth(packet->key, true, true, NULL, 0, NULL) == 0) {
             OnErrorNG(CMD_HF_MIFAREU_READBL, PM3_ESOFT);
             return;
         }
@@ -593,7 +593,7 @@ void MifareUReadCard(mful_readblock_t *packet) {
 
     // UL-C authentication
     if (useCKey) {
-        if (mifare_ultra_3des_auth(packet->key, true, true, NULL) == 0) {
+        if (mifare_ultra_3des_auth(packet->key, true, true, NULL, 0, NULL) == 0) {
             OnErrorNG(CMD_HF_MIFAREU_READCARD, PM3_ESOFT);
             return;
         }
@@ -779,7 +779,7 @@ static void MifareUWriteBlockEx(mful_writeblock_t *packet, bool reply) {
 
     // UL-C authentication
     if (useCKey) {
-        if (mifare_ultra_3des_auth(packet->key, true, true, NULL) == 0) {
+        if (mifare_ultra_3des_auth(packet->key, true, true, NULL, 0, NULL) == 0) {
             OnErrorNG(CMD_HF_MIFAREU_READBL, PM3_ESOFT);
             return;
         }
@@ -863,7 +863,7 @@ void MifareUWriteBlockCompat(mful_writeblock_t *packet) {
 
     // UL-C authentication
     if (useCKey) {
-        if (mifare_ultra_3des_auth(packet->key, true, true, NULL) == 0) {
+        if (mifare_ultra_3des_auth(packet->key, true, true, NULL, 0, NULL) == 0) {
             OnErrorNG(CMD_HF_MIFAREU_WRITEBL_COMPAT, PM3_ESOFT);
             return;
         }
@@ -938,7 +938,7 @@ void MifareUSetKey(mful_setkey_t *packet) {
 
     // UL-C authentication
     if (useCKey && packet->has_auth_key) {
-        if (mifare_ultra_3des_auth(packet->auth_key, true, true, NULL) == 0) {
+        if (mifare_ultra_3des_auth(packet->auth_key, true, true, NULL, 0, NULL) == 0) {
             OnErrorNG(CMD_HF_MIFAREU_SETKEY, PM3_ESOFT);
             return;
         }
