@@ -48,6 +48,21 @@ typedef struct {
     uint8_t raw[];      // First byte in raw,  raw[0] is ISO15693 protocol flag byte
 } PACKED iso15_raw_cmd_t;
 
+// 16-slot inventory support
+#define ISO15693_MAX_SLOTS          16
+#define ISO15693_MAX_SLOT_RESPONSE  128
+
+typedef struct {
+    uint8_t status;  // 0=no response (timeout), 1=valid response, 2=collision/error
+    uint8_t len;     // response data length for this slot
+} PACKED iso15_slot_result_t;
+
+typedef struct {
+    uint8_t slot_count;                           // 1 or 16
+    iso15_slot_result_t slots[ISO15693_MAX_SLOTS]; // per-slot metadata
+    uint8_t data[];                                // concatenated response bytes
+} PACKED iso15_inventory_response_t;
+
 #define ISO15693_TAG_MAX_PAGES 160 // in pages  (0xA0)
 #define ISO15693_TAG_MAX_SIZE 2048 // in byte (64 pages of 256 bits)
 
