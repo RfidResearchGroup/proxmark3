@@ -117,14 +117,15 @@ static json_t *mad_lookup_aid(json_t *root, uint16_t aid) {
     for (uint32_t idx = 0; idx < json_array_size(root); idx++) {
         json_t *data = json_array_get(root, idx);
         if (!json_is_object(data)) {
-            PrintAndLogEx(ERR, "data [%d] is not an object\n", idx);
+            PrintAndLogEx(ERR, "data [%u] is not an object", idx);
             continue;
         }
         const char *fmad = mad_json_get_str(data, "mad");
         if (fmad == NULL)
             continue;
-        char lfmad[strlen(fmad) + 1];
-        strcpy(lfmad, fmad);
+        char lfmad[16];
+        strncpy(lfmad, fmad, sizeof(lfmad) - 1);
+        lfmad[sizeof(lfmad) - 1] = '\0';
         str_lower(lfmad);
         if (strcmp(lmad, lfmad) == 0) {
             return data;
@@ -154,7 +155,7 @@ static void mad_print_aid_verbose(json_t *elm) {
     const char *provider = mad_json_get_str(elm, "service_provider");
     const char *integrator = mad_json_get_str(elm, "system_integrator");
 
-    PrintAndLogEx(SUCCESS, "     MAD................. %s", vmad);
+    PrintAndLogEx(SUCCESS, "     MAD................. %s", vmad ? vmad : "n/a");
     if (application) {
         PrintAndLogEx(SUCCESS, "     Application......... %s", application);
     }

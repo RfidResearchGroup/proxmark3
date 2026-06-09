@@ -4,6 +4,7 @@
 #include <string.h>      // memcpy memset
 #include "ui.h"
 #include "crc.h"
+#include "mad.h"
 
 #include "mifare/gallaghercore.h"
 
@@ -137,9 +138,9 @@ static bool test_mad_crc(void) {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x78, 0x77, 0x88, 0xC1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     };
 
-    // MAD v1 CRC: computed over sector0[17..47] (info byte + 15 AID pairs = 31 bytes)
-    uint8_t expected_crc = sector0[16]; // 0xBD
-    uint8_t computed_crc = CRC8Mad(&sector0[16 + 1], 15 + 16);
+    const mad1_sector_t *m = (const mad1_sector_t *)sector0;
+    uint8_t expected_crc = m->mad.crc;
+    uint8_t computed_crc = CRC8Mad((uint8_t *)&m->mad.info, sizeof(mad1_t) - 1);
     if (computed_crc != expected_crc) {
         PrintAndLogEx(INFO, "MAD CRC test failed: expected 0x%02X, got 0x%02X", expected_crc, computed_crc);
         return false;

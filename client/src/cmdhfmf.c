@@ -7045,18 +7045,19 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    got_first = true;
+    const mad2_sector_t *pmad2 = NULL;
+    bool got_mad2 = false;
     if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, (uint8_t *)&mad2_sector) != PM3_SUCCESS) {
         if (verbose) {
             PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD 2 or doesn't have MAD 2 on default keys");
         }
-        got_first = false;
     } else {
         PrintAndLogEx(INFO, "Authentication ( " _GREEN_("ok") " )");
+        got_mad2 = true;
     }
 
     // User supplied key
-    if (got_first == false && keylen == 6) {
+    if (got_mad2 == false && keylen == 6) {
         PrintAndLogEx(INFO, "Trying user specified key...");
         if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, userkey, (uint8_t *)&mad2_sector) != PM3_SUCCESS) {
             if (verbose) {
@@ -7064,21 +7065,25 @@ static int CmdHF14AMfMAD(const char *Cmd) {
             }
         } else {
             PrintAndLogEx(INFO, "Authentication ( " _GREEN_("ok") " )");
+            got_mad2 = true;
         }
     }
+
+    if (got_mad2)
+        pmad2 = &mad2_sector;
 
     MADPrintHeader();
 
     bool haveMAD2 = false;
     MAD1DecodeAndPrint(&sector0, swapmad, verbose, &haveMAD2);
 
-    if (haveMAD2) {
-        MAD2DecodeAndPrint(&mad2_sector, swapmad, verbose);
+    if (haveMAD2 && pmad2) {
+        MAD2DecodeAndPrint(pmad2, swapmad, verbose);
     }
 
     if (aidlen == 2 || decodeholder) {
         mad_entry_list_t mad_list = {0};
-        if (MADDecode(&sector0, &mad2_sector, &mad_list, swapmad, override)) {
+        if (MADDecode(&sector0, pmad2, &mad_list, swapmad, override)) {
             PrintAndLogEx(ERR, "can't decode MAD");
             return PM3_ESOFT;
         }
@@ -7155,10 +7160,12 @@ static int CmdHF14AMfMAD(const char *Cmd) {
             PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex(MF_SECTOR_BLOCK(sector0, i), MFBLOCK_SIZE));
         }
 
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "------------ " _CYAN_("MAD v2 sector raw") " -------------");
-        for (int i = 0; i < 4; i ++) {
-            PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex(MF_SECTOR_BLOCK(mad2_sector, i), MFBLOCK_SIZE));
+        if (pmad2) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "------------ " _CYAN_("MAD v2 sector raw") " -------------");
+            for (int i = 0; i < 4; i ++) {
+                PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex(MF_SECTOR_BLOCK(*pmad2, i), MFBLOCK_SIZE));
+            }
         }
     }
 

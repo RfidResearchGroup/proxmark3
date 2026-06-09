@@ -992,36 +992,33 @@ static int hfgal_update_mad(uint8_t cred_sector, uint8_t cad_sector,
                             const uint8_t *mad_key, uint8_t mad_key_type,
                             bool verbose) {
     // Read current MAD (sector 0)
-    uint8_t sector0[4 * MFBLOCK_SIZE] = {0};
-    int res = mf_read_sector(0, mad_key_type, mad_key, sector0);
+    mad1_sector_t sector0 = {0};
+    int res = mf_read_sector(0, mad_key_type, mad_key, (uint8_t *)&sector0);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed reading MAD sector 0");
         return res;
     }
 
     // Set AID for credential sector (0x4812)
-    if (cred_sector >= 1 && cred_sector <= 15) {
-        sector0[16 + 2 + (cred_sector - 1) * 2]     = CLASSIC_CRED_AID & 0xFF;
-        sector0[16 + 2 + (cred_sector - 1) * 2 + 1]  = (CLASSIC_CRED_AID >> 8) & 0xFF;
+    if (cred_sector >= 1 && cred_sector <= MAD1_NUM_AIDS) {
+        sector0.mad.aid[cred_sector - 1] = CLASSIC_CRED_AID;
     }
 
     // Set AID for CAD sector (0x4811)
-    if (cad_sector >= 1 && cad_sector <= 15) {
-        sector0[16 + 2 + (cad_sector - 1) * 2]     = CLASSIC_CAD_AID & 0xFF;
-        sector0[16 + 2 + (cad_sector - 1) * 2 + 1]  = (CLASSIC_CAD_AID >> 8) & 0xFF;
+    if (cad_sector >= 1 && cad_sector <= MAD1_NUM_AIDS) {
+        sector0.mad.aid[cad_sector - 1] = CLASSIC_CAD_AID;
     }
 
-    // Recalculate CRC over bytes 17..47 (info byte + 15 AID entries)
-    sector0[16] = CRC8Mad(&sector0[16 + 1], 15 + 16);
+    sector0.mad.crc = CRC8Mad((uint8_t *)&sector0.mad.info, sizeof(mad1_t) - 1);
 
     // Write blocks 1 and 2 of sector 0 back (block 0 is manufacturer block, don't touch)
-    res = mf_write_block(1, mad_key_type, mad_key, &sector0[MFBLOCK_SIZE]);
+    res = mf_write_block(1, mad_key_type, mad_key, MF_SECTOR_BLOCK(sector0, 1));
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed writing MAD block 1");
         return res;
     }
 
-    res = mf_write_block(2, mad_key_type, mad_key, &sector0[2 * MFBLOCK_SIZE]);
+    res = mf_write_block(2, mad_key_type, mad_key, MF_SECTOR_BLOCK(sector0, 2));
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed writing MAD block 2");
         return res;
