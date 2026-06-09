@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `mad read`, `mad write`, `mad verify`, `mad decode`, `mad encode` commands with typed struct MAD API (@AlxCzl)
 - Added `hf mfdes getversion` command (@kormax)
 - Fixed iCLASS emulator writes clearing previously loaded emulator memory after an FPGA reload (@cindersocket)
 - Added DES transport mode support for iCLASS credential encode/decode helpers. (@cindersocket)
