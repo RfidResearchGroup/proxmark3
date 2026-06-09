@@ -805,6 +805,7 @@ SRCS =  mifare/aiddesfire.c \
         cmdlfviking.c \
         cmdlfvisa2000.c \
         cmdlfzx8211.c \
+        cmdmad.c \
         cmdmain.c \
         cmdmqtt.c \
         cmdnfc.c \
@@ -873,6 +874,7 @@ SRCS =  mifare/aiddesfire.c \
         mifare/gallaghercore.c \
 		mifare/gallaghertest.c \
         mifare/mad.c \
+        mifare/mad_test.c \
         mifare/mfkey.c \
         mifare/mifare4.c \
         mifare/mifaredefault.c \

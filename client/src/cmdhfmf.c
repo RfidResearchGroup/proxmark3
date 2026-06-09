@@ -48,6 +48,7 @@
 #include "mifare/mifarehost.h"
 #include "crypto/originality.h"
 #include "cmdhfmfsen.h"     // Mifare Classic Static Nonce
+#include "cmdmad.h"
 
 // Defines for Saflok parsing
 #define SAFLOK_YEAR_OFFSET 1980
@@ -703,8 +704,7 @@ void mf_print_blocks(uint16_t n, uint8_t *d, bool verbose) {
     }
 
     // MAD detection
-    mad_sector_t mad_sec = {d, n * MFBLOCK_SIZE};
-    if (HasMADKey(&mad_sec)) {
+    if (n * MFBLOCK_SIZE >= sizeof(mad1_sector_t) && HasMADKey((const mad1_sector_t *)d)) {
         PrintAndLogEx(HINT, "Hint: MAD key detected. Try `" _YELLOW_("hf mf mad") "` for more details");
     }
     PrintAndLogEx(NORMAL, "");
@@ -6837,6 +6837,7 @@ static int CmdHF14AMfAuth4(const char *Cmd) {
     return MifareAuth4(NULL, keyn, key, false, true, false, true, true, false);
 }
 
+
 // https://www.nxp.com/docs/en/application-note/AN10787.pdf
 static int CmdHF14AMfMAD(const char *Cmd) {
 
@@ -6903,18 +6904,30 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         }
 
         // MAD detection
-        mad_sector_t dump_sec = {dump, bytes_read};
-        if ((HasMADKey(&dump_sec) == false) && (force == false)) {
+        if (bytes_read < sizeof(mad1_sector_t)) {
+            PrintAndLogEx(FAILED, "Dump file too small for MAD1 (%zu < %zu)", bytes_read, sizeof(mad1_sector_t));
+            free(dump);
+            return PM3_EINVARG;
+        }
+
+        const mad1_sector_t *s0 = (const mad1_sector_t *)dump;
+
+        if ((HasMADKey(s0) == false) && (force == false)) {
             PrintAndLogEx(FAILED, "No MAD key was detected in the dump file");
             free(dump);
             return PM3_ESOFT;
         }
 
+        const mad2_sector_t *s16 = NULL;
+        size_t mad2_off = mfFirstBlockOfSector(MF_MAD2_SECTOR) * MFBLOCK_SIZE;
+        if (bytes_read >= mad2_off + sizeof(mad2_sector_t))
+            s16 = (const mad2_sector_t *)(dump + mad2_off);
+
         MADPrintHeader();
         bool haveMAD2 = false;
-        MAD1DecodeAndPrint(&dump_sec, swapmad, verbose, &haveMAD2);
+        MAD1DecodeAndPrint(s0, swapmad, verbose, &haveMAD2);
 
-        int sector = DetectHID(&dump_sec, 0x484d);
+        int sector = DetectHID(s0, 0x484d);
         if (sector > -1) {
 
             // decode it
@@ -6922,8 +6935,11 @@ static int CmdHF14AMfMAD(const char *Cmd) {
             PrintAndLogEx(INFO, "------------------------- " _CYAN_("Wiegand") " ---------------------------");
             PrintAndLogEx(INFO, _CYAN_("HID PACS detected"));
 
+            size_t pacs_off = mfFirstBlockOfSector(sector) * MFBLOCK_SIZE;
             uint8_t pacs_sector[MFBLOCK_SIZE * 3] = {0};
-            memcpy(pacs_sector, dump + (sector * 4 * MFBLOCK_SIZE), sizeof(pacs_sector));
+            if (pacs_off + sizeof(pacs_sector) <= bytes_read) {
+                memcpy(pacs_sector, dump + pacs_off, sizeof(pacs_sector));
+            }
 
             if (pacs_sector[16] == 0x02) {
 
@@ -6946,26 +6962,20 @@ static int CmdHF14AMfMAD(const char *Cmd) {
             }
         }
 
-        sector = DetectHID(&dump_sec, 0x4910);
+        sector = DetectHID(s0, 0x4910);
         if (sector > -1) {
             // decode it
             PrintAndLogEx(INFO, "");
             PrintAndLogEx(INFO, _CYAN_("VIGIK PACS detected"));
         }
 
-        if (haveMAD2) {
-            size_t mad2_off = MIFARE_1K_MAXBLOCK * MF_MAD2_SECTOR;
-            size_t mad2_len = (bytes_read > mad2_off) ? bytes_read - mad2_off : 0;
-            mad_sector_t mad2_sec = {dump + mad2_off, mad2_len};
-            MAD2DecodeAndPrint(&mad2_sec, swapmad, verbose);
+        if (haveMAD2 && s16) {
+            MAD2DecodeAndPrint(s16, swapmad, verbose);
         }
 
         if (aidlen == 2 || decodeholder) {
-            size_t sector16_off = 0x10 * MIFARE_1K_MAXBLOCK;
-            size_t sector16_len = (bytes_read > sector16_off) ? bytes_read - sector16_off : 0;
-            mad_sector_t s16 = {dump + sector16_off, sector16_len};
-            mad_t mad = {0};
-            if (MADDecode(&dump_sec, &s16, &mad, swapmad, override) != PM3_SUCCESS) {
+            mad_entry_list_t mad_list = {0};
+            if (MADDecode(s0, s16, &mad_list, swapmad, override)) {
                 PrintAndLogEx(ERR, "can't decode MAD");
                 free(dump);
                 return PM3_ESOFT;
@@ -6981,39 +6991,23 @@ static int CmdHF14AMfMAD(const char *Cmd) {
 
             uint8_t chdata[MIFARE_4K_MAX_BYTES] = {0};
             int chdatalen = 0;
-
-            for (size_t i = 0; i < mad.count; i++) {
-                if (aaid != mad.entries[i])
+            for (size_t i = 0; i < mad_list.len; i++) {
+                if (aaid != mad_list.entries[i].aid)
                     continue;
-
-                uint8_t sectorNo = i + 1;
-                size_t sec_off = mfFirstBlockOfSector(sectorNo) * MFBLOCK_SIZE;
-                uint8_t nblocks = mfNumBlocksPerSector(sectorNo);
-                size_t sec_size = nblocks * MFBLOCK_SIZE;
-
-                if (sec_off + sec_size > bytes_read)
+                uint8_t sno = mad_list.entries[i].sector;
+                size_t sec_off = mfFirstBlockOfSector(sno) * MFBLOCK_SIZE;
+                size_t data_size = (mfNumBlocksPerSector(sno) - 1) * MFBLOCK_SIZE;
+                if (sec_off + data_size > bytes_read)
                     continue;
-
-                if (aidlen == 2) {
-                    for (int j = 0; j < (verbose ? nblocks : nblocks - 1); j++)
-                        PrintAndLogEx(INFO, " [%03d] %s", (int)(mfFirstBlockOfSector(sectorNo) + j), sprint_hex(&dump[sec_off + j * MFBLOCK_SIZE], MFBLOCK_SIZE));
-                }
-
-                if (decodeholder) {
-                    size_t data_size = (nblocks - 1) * MFBLOCK_SIZE;
-                    if (chdatalen + data_size > sizeof(chdata))
-                        break;
-                    memcpy(&chdata[chdatalen], dump + sec_off, data_size);
-                    chdatalen += data_size;
-                }
+                if ((size_t)chdatalen + data_size > sizeof(chdata))
+                    break;
+                memcpy(&chdata[chdatalen], dump + sec_off, data_size);
+                chdatalen += data_size;
             }
-
-            if (decodeholder) {
-                if (chdatalen == 0) {
-                    PrintAndLogEx(WARNING, "no Card Holder Info data");
-                } else {
-                    MADCardHolderInfoDecode(chdata, chdatalen, verbose);
-                }
+            if (chdatalen > 0) {
+                MADCardHolderInfoDecode(chdata, chdatalen, verbose);
+            } else {
+                PrintAndLogEx(WARNING, "no Card Holder Info data");
             }
         }
         free(dump);
@@ -7024,11 +7018,11 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         return PM3_ENOTTY;
 
 
-    uint8_t sector0[MFBLOCK_SIZE * 4] = {0};
-    uint8_t sector10[MFBLOCK_SIZE * 4] = {0};
+    mad1_sector_t sector0 = {0};
+    mad2_sector_t mad2_sector = {0};
 
     bool got_first = true;
-    if (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector0) != PM3_SUCCESS) {
+    if (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, (uint8_t *)&sector0) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
         got_first = false;
     } else {
@@ -7038,7 +7032,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     // User supplied key
     if (got_first == false && keylen == 6) {
         PrintAndLogEx(INFO, "Trying user specified key...");
-        if (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, userkey, sector0) != PM3_SUCCESS) {
+        if (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, userkey, (uint8_t *)&sector0) != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or the custom key is wrong");
         } else {
             PrintAndLogEx(INFO, "Authentication ( " _GREEN_("ok") " )");
@@ -7052,7 +7046,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     }
 
     got_first = true;
-    if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector10) != PM3_SUCCESS) {
+    if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, (uint8_t *)&mad2_sector) != PM3_SUCCESS) {
         if (verbose) {
             PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD 2 or doesn't have MAD 2 on default keys");
         }
@@ -7064,7 +7058,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     // User supplied key
     if (got_first == false && keylen == 6) {
         PrintAndLogEx(INFO, "Trying user specified key...");
-        if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, userkey, sector10) != PM3_SUCCESS) {
+        if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, userkey, (uint8_t *)&mad2_sector) != PM3_SUCCESS) {
             if (verbose) {
                 PrintAndLogEx(ERR, "error, read sector 10. card doesn't have MAD 2 or the custom key is wrong");
             }
@@ -7076,18 +7070,15 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     MADPrintHeader();
 
     bool haveMAD2 = false;
-    mad_sector_t s0 = {sector0, sizeof(sector0)};
-    MAD1DecodeAndPrint(&s0, swapmad, verbose, &haveMAD2);
+    MAD1DecodeAndPrint(&sector0, swapmad, verbose, &haveMAD2);
 
     if (haveMAD2) {
-        mad_sector_t s10 = {sector10, sizeof(sector10)};
-        MAD2DecodeAndPrint(&s10, swapmad, verbose);
+        MAD2DecodeAndPrint(&mad2_sector, swapmad, verbose);
     }
 
     if (aidlen == 2 || decodeholder) {
-        mad_sector_t s10 = {sector10, sizeof(sector10)};
-        mad_t mad = {0};
-        if (MADDecode(&s0, &s10, &mad, swapmad, override) != PM3_SUCCESS) {
+        mad_entry_list_t mad_list = {0};
+        if (MADDecode(&sector0, &mad2_sector, &mad_list, swapmad, override)) {
             PrintAndLogEx(ERR, "can't decode MAD");
             return PM3_ESOFT;
         }
@@ -7109,17 +7100,18 @@ static int CmdHF14AMfMAD(const char *Cmd) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(INFO, "-------------- " _CYAN_("AID 0x%04x") " ---------------", aaid);
 
-            for (size_t i = 0; i < mad.count; i++) {
-                if (aaid == mad.entries[i]) {
+            for (size_t i = 0; i < mad_list.len; i++) {
+                if (aaid == mad_list.entries[i].aid) {
+                    uint8_t sno = mad_list.entries[i].sector;
                     uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
-                    if (mf_read_sector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
+                    if (mf_read_sector(sno, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
                         PrintAndLogEx(NORMAL, "");
-                        PrintAndLogEx(ERR, "error, read sector %d", (int)(i + 1));
+                        PrintAndLogEx(ERR, "error, read sector %d", sno);
                         return PM3_ESOFT;
                     }
 
                     for (int j = 0; j < (verbose ? 4 : 3); j ++)
-                        PrintAndLogEx(NORMAL, " [%03d] %s", (int)((i + 1) * 4 + j), sprint_hex(&vsector[j * MFBLOCK_SIZE], MFBLOCK_SIZE));
+                        PrintAndLogEx(NORMAL, " [%03d] %s", sno * 4 + j, sprint_hex(&vsector[j * MFBLOCK_SIZE], MFBLOCK_SIZE));
                 }
             }
         }
@@ -7132,18 +7124,17 @@ static int CmdHF14AMfMAD(const char *Cmd) {
             uint8_t data[MIFARE_4K_MAX_BYTES] = {0};
             int datalen = 0;
 
-            for (size_t i = 0; i < mad.count; i++) {
-                if (aaid == mad.entries[i]) {
-
+            for (size_t i = 0; i < mad_list.len; i++) {
+                if (aaid == mad_list.entries[i].aid) {
+                    uint8_t sno = mad_list.entries[i].sector;
                     uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
-                    if (mf_read_sector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
+                    if (mf_read_sector(sno, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
                         PrintAndLogEx(NORMAL, "");
-                        PrintAndLogEx(ERR, "error, read sector %d", (int)(i + 1));
+                        PrintAndLogEx(ERR, "error, read sector %d", sno);
                         return PM3_ESOFT;
                     }
 
-                    if (datalen + MFBLOCK_SIZE * 3 > (int)sizeof(data))
-                        break;
+                    // skip ST block hence only 3 blocks copy
                     memcpy(&data[datalen], vsector, MFBLOCK_SIZE * 3);
                     datalen += MFBLOCK_SIZE * 3;
                 }
@@ -7161,13 +7152,13 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "------------ " _CYAN_("MAD v1 sector raw") " -------------");
         for (int i = 0; i < 4; i ++) {
-            PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex(&sector0[i * MFBLOCK_SIZE], MFBLOCK_SIZE));
+            PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex(MF_SECTOR_BLOCK(sector0, i), MFBLOCK_SIZE));
         }
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "------------ " _CYAN_("MAD v2 sector raw") " -------------");
         for (int i = 0; i < 4; i ++) {
-            PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex(&sector10[i * MFBLOCK_SIZE], MFBLOCK_SIZE));
+            PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex(MF_SECTOR_BLOCK(mad2_sector, i), MFBLOCK_SIZE));
         }
     }
 
@@ -7227,8 +7218,8 @@ int CmdHFMFNDEFRead(const char *Cmd) {
         memcpy(ndefkey, key, 6);
     }
 
-    uint8_t sector0[MFBLOCK_SIZE * 4] = {0};
-    uint8_t sector10[MFBLOCK_SIZE * 4] = {0};
+    mad1_sector_t sector0 = {0};
+    mad2_sector_t mad2_sector = {0};
     uint8_t data[4096] = {0};
     int datalen = 0;
 
@@ -7236,7 +7227,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
         PrintAndLogEx(INFO, "reading MAD v1 sector");
     }
 
-    if (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, g_mifare_mad_key, sector0)) {
+    if (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, g_mifare_mad_key, (uint8_t *)&sector0)) {
         PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
         PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
         return PM3_ESOFT;
@@ -7246,17 +7237,16 @@ int CmdHFMFNDEFRead(const char *Cmd) {
         PrintAndLogEx(INFO, "reading MAD v2 sector");
     }
 
-    if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, g_mifare_mad_key, sector10)) {
-        if (verbose) {
-            PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD 2 or doesn't have MAD 2 on default keys");
-            PrintAndLogEx(INFO, "Skipping MAD 2");
-        }
+    const mad2_sector_t *pmad2 = NULL;
+    if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, g_mifare_mad_key, (uint8_t *)&mad2_sector) == PM3_SUCCESS) {
+        pmad2 = &mad2_sector;
+    } else if (verbose) {
+        PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD 2 or doesn't have MAD 2 on default keys");
+        PrintAndLogEx(INFO, "Skipping MAD 2");
     }
 
     bool haveMAD2 = false;
-    mad_sector_t s0 = {sector0, sizeof(sector0)};
-    mad_sector_t s10 = {sector10, sizeof(sector10)};
-    int res = MADCheck(&s0, &s10, verbose, &haveMAD2);
+    int res = MADCheck(&sector0, pmad2, verbose, &haveMAD2);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "MAD error %d", res);
         if (override)
@@ -7265,19 +7255,20 @@ int CmdHFMFNDEFRead(const char *Cmd) {
             return res;
     }
 
-    mad_t mad = {0};
-    res = MADDecode(&s0, &s10, &mad, false, override);
+    mad_entry_list_t mad_list = {0};
+    res = MADDecode(&sector0, pmad2, &mad_list, false, override);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "can't decode MAD");
         return res;
     }
 
     PrintAndLogEx(INFO, "reading data from tag");
-    for (size_t i = 0; i < mad.count; i++) {
-        if (ndef_aid == mad.entries[i]) {
+    for (size_t i = 0; i < mad_list.len; i++) {
+        if (ndef_aid == mad_list.entries[i].aid) {
+            uint8_t sno = mad_list.entries[i].sector;
             uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
-            if (mf_read_sector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector)) {
-                PrintAndLogEx(ERR, "error, reading sector %d ", i + 1);
+            if (mf_read_sector(sno, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector)) {
+                PrintAndLogEx(ERR, "error, reading sector %d ", sno);
                 return PM3_ESOFT;
             }
 
@@ -7675,51 +7666,48 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
         print_buffer(raw, bytes, 0);
     }
 
-    // read MAD Sector 0, block1,2
-    uint8_t sector0[MFBLOCK_SIZE * 4] = {0};
-    if (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, g_mifare_mad_key, sector0)) {
+    // read MAD Sector 0
+    mad1_sector_t sector0 = {0};
+    if (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, g_mifare_mad_key, (uint8_t *)&sector0)) {
         PrintAndLogEx(ERR, "error, reading sector 0. Card doesn't have MAD or doesn't have MAD on default keys");
         PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
         return PM3_ESOFT;
     }
 
-    // read MAD Sector 10, block1,2
-    uint8_t sector10[MFBLOCK_SIZE * 4] = {0};
+    // read MAD Sector 16
+    mad2_sector_t mad2_sector = {0};
+    const mad2_sector_t *pmad2 = NULL;
     if (m4) {
-        if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, g_mifare_mad_key, sector10)) {
+        if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, g_mifare_mad_key, (uint8_t *)&mad2_sector)) {
             PrintAndLogEx(ERR, "error, reading sector 10. Card doesn't have MAD or doesn't have MAD on default keys");
             PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
             return PM3_ESOFT;
         }
+        pmad2 = &mad2_sector;
     }
 
-    // decode MAD v1
-    mad_sector_t s0 = {sector0, sizeof(sector0)};
-    mad_sector_t s10 = {sector10, sizeof(sector10)};
-    mad_t mad = {0};
-    res = MADDecode(&s0, &s10, &mad, false, false);
+    mad_entry_list_t mad_list = {0};
+    res = MADDecode(&sector0, pmad2, &mad_list, false, false);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "can't decode MAD");
         return res;
     }
 
-    // how much memory do I have available ?
-    // Skip sector 0 since its used for MAD
     uint8_t freemem[MIFARE_4K_MAXSECTOR] = {0};
     uint16_t sum = 0;
     uint8_t block_no = 0;
-    for (uint8_t i = 1; i < (mad.count & 0xFF); i++) {
+    for (size_t i = 0; i < mad_list.len; i++) {
+        uint8_t sno = mad_list.entries[i].sector;
+        freemem[sno] = (mad_list.entries[i].aid == NDEF_MFC_AID);
 
-        freemem[i] = (mad.entries[i] == NDEF_MFC_AID);
-
-        if (freemem[i]) {
+        if (freemem[sno]) {
 
             if (block_no == 0) {
-                block_no = mfFirstBlockOfSector(i);
+                block_no = mfFirstBlockOfSector(sno);
             }
 
             if (verbose) {
-                PrintAndLogEx(INFO, "Sector %u is NDEF formatted", i);
+                PrintAndLogEx(INFO, "Sector %u is NDEF formatted", sno);
             }
             sum += (MFBLOCK_SIZE * 3);
         }
@@ -8568,16 +8556,17 @@ static int CmdHF14AMfView(const char *Cmd) {
         mf_save_keys_from_arr(block_cnt, dump);
     }
 
-    mad_sector_t dump_sec = {dump, bytes_read};
-    int sector = DetectHID(&dump_sec, 0x4910);
+    const mad1_sector_t *vigik_s0 = (bytes_read >= sizeof(mad1_sector_t))
+                                   ? (const mad1_sector_t *)dump : NULL;
+
+    int sector = vigik_s0 ? DetectHID(vigik_s0, 0x4910) : -1;
     if (sector > -1) {
         // decode it
         PrintAndLogEx(INFO, "");
         PrintAndLogEx(INFO, _CYAN_("VIGIK PACS detected"));
 
-        // decode MAD v1
-        mad_t mad = {0};
-        res = MADDecode(&dump_sec, NULL, &mad, false, true);
+        mad_entry_list_t mad_list = {0};
+        res = MADDecode(vigik_s0, NULL, &mad_list, false, true);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "can't decode MAD");
             return res;
@@ -8587,7 +8576,6 @@ static int CmdHF14AMfView(const char *Cmd) {
             uint8_t *bytes;
             mfc_vigik_t *vigik;
         } UDATA;
-        // allocate memory
         UDATA d;
         d.bytes = calloc(bytes_read, sizeof(uint8_t));
         if (d.bytes == NULL) {
@@ -8596,21 +8584,17 @@ static int CmdHF14AMfView(const char *Cmd) {
         }
         uint16_t dlen = 0;
 
-        // vigik struture sector 0
-        uint8_t *pdump = dump;
-
-        memcpy(d.bytes + dlen, pdump, MFBLOCK_SIZE * 3);
+        // vigik structure sector 0
+        memcpy(d.bytes + dlen, dump, MFBLOCK_SIZE * 3);
         dlen += MFBLOCK_SIZE * 3;
-        pdump += (MFBLOCK_SIZE * 4);  // skip sectortrailer
 
-        // extract memory from MAD sectors
-        for (size_t i = 0; i < mad.count; i++) {
-            if (0x4910 == mad.entries[i] || 0x4916 == mad.entries[i]) {
-                memcpy(d.bytes + dlen, pdump, MFBLOCK_SIZE * 3);
+        for (size_t i = 0; i < mad_list.len; i++) {
+            if (0x4910 == mad_list.entries[i].aid || 0x4916 == mad_list.entries[i].aid) {
+                uint8_t sno = mad_list.entries[i].sector;
+                uint32_t offset = sno * MFBLOCK_SIZE * 4;
+                memcpy(d.bytes + dlen, dump + offset, MFBLOCK_SIZE * 3);
                 dlen += MFBLOCK_SIZE * 3;
             }
-
-            pdump += (MFBLOCK_SIZE * 4);  // skip sectortrailer
         }
 
 //          convert_mfc_2_arr(pdump, bytes_read, d, &dlen);
@@ -11198,6 +11182,9 @@ static command_t CommandTable[] = {
     {"info",        CmdHF14AMfInfo,         IfPm3Iso14443a,  "Tag information"},
     {"isen",        CmdHF14AMfISEN,         IfPm3Iso14443a,  "Information Static Encrypted Nonces"},
     {"mad",         CmdHF14AMfMAD,          AlwaysAvailable, "Checks and prints MAD"},
+    {"madread",     CmdMADMFRead,           IfPm3Iso14443a,  "Read data from MAD AID sectors"},
+    {"madwrite",    CmdMADMFWrite,          IfPm3Iso14443a,  "Write data to MAD AID sectors"},
+    {"madverify",   CmdMADMFVerify,         IfPm3Iso14443a,  "Verify data in MAD AID sectors"},
     {"personalize", CmdHFMFPersonalize,     IfPm3Iso14443a,  "Personalize UID (MIFARE Classic EV1 only)"},
     {"rdbl",        CmdHF14AMfRdBl,         IfPm3Iso14443a,  "Read MIFARE Classic block"},
     {"rdsc",        CmdHF14AMfRdSc,         IfPm3Iso14443a,  "Read MIFARE Classic sector"},

@@ -32,6 +32,7 @@
 #include "cmddata.h"
 #include "cmdhw.h"
 #include "cmdlf.h"
+#include "cmdmad.h"
 #include "cmdnfc.h"
 #include "cmdtrace.h"
 #include "cmdscript.h"
@@ -345,6 +346,7 @@ static command_t CommandTable[] = {
     {"hf",           CmdHF,        AlwaysAvailable,         "{ High frequency commands... }"},
     {"hw",           CmdHW,        AlwaysAvailable,         "{ Hardware commands... }"},
     {"lf",           CmdLF,        AlwaysAvailable,         "{ Low frequency commands... }"},
+    {"mad",          CmdMAD,       AlwaysAvailable,         "{ MAD commands... }"},
     {"mem",          CmdFlashMem,  IfPm3Flash,              "{ Flash memory manipulation... }"},
     {"mqtt",         CmdMqtt,      AlwaysAvailable,         "{ MQTT commmands... }"},
     {"nfc",          CmdNFC,       AlwaysAvailable,         "{ NFC commands... }"},

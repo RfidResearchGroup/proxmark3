@@ -354,6 +354,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/loclass/hash1_brute.c
         ${PM3_ROOT}/client/src/loclass/ikeys.c
         ${PM3_ROOT}/client/src/mifare/mad.c
+        ${PM3_ROOT}/client/src/mifare/mad_test.c
         ${PM3_ROOT}/client/src/mifare/aiddesfire.c
         ${PM3_ROOT}/client/src/mifare/mfkey.c
         ${PM3_ROOT}/client/src/mifare/mifare4.c
@@ -463,6 +464,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfviking.c
         ${PM3_ROOT}/client/src/cmdlfvisa2000.c
         ${PM3_ROOT}/client/src/cmdlfzx8211.c
+        ${PM3_ROOT}/client/src/cmdmad.c
         ${PM3_ROOT}/client/src/cmdmain.c
         ${PM3_ROOT}/client/src/cmdmqtt.c
         ${PM3_ROOT}/client/src/cmdnfc.c

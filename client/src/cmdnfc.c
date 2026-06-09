@@ -138,13 +138,18 @@ static int CmdNfcDecode(const char *Cmd) {
         } else  {
 
             // convert from MFC dump file to a pure NDEF byte array
-            mad_sector_t s = {tmp, bytes_read};
-            if (HasMADKey(&s)) {
+            if (bytes_read >= sizeof(mad1_sector_t) && HasMADKey((const mad1_sector_t *)tmp)) {
                 PrintAndLogEx(SUCCESS, "MFC dump file detected. Converting...");
                 uint8_t ndef[4096] = {0};
                 size_t ndeflen = 0;
 
-                if (convert_mad_to_arr(tmp, bytes_read, ndef, &ndeflen, sizeof(ndef), override) != PM3_SUCCESS) {
+                const mad1_sector_t *s0 = (const mad1_sector_t *)tmp;
+                const mad2_sector_t *s16 = NULL;
+                size_t mad2_off = mfFirstBlockOfSector(MF_MAD2_SECTOR) * MFBLOCK_SIZE;
+                if (bytes_read >= mad2_off + sizeof(mad2_sector_t))
+                    s16 = (const mad2_sector_t *)(tmp + mad2_off);
+
+                if (convert_mad_to_arr(s0, s16, bytes_read, ndef, sizeof(ndef), &ndeflen, override) != PM3_SUCCESS) {
                     PrintAndLogEx(FAILED, "Failed converting, aborting...");
                     free(dump);
                     return PM3_ESOFT;

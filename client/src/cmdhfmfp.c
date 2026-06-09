@@ -39,6 +39,7 @@
 #include "mifare/mifarehost.h"  // mf_read_sector (SL1 CRYPTO1)
 #include "cmdtrace.h"
 #include "crypto/originality.h"
+#include "cmdmad.h"
 
 static const uint8_t mfp_default_key[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 static uint16_t mfp_card_adresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0x9006, 0x9007, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
@@ -844,9 +845,9 @@ int mfp_data_crypt(mf4Session_t *mf4session, uint8_t *dati, uint8_t *dato, bool 
     }
 
     if (rev) {
-        aes_decode(IV, kenc, dati, dato, MFBLOCK_SIZE * bc);
+        aes_decode(IV, kenc, dati, dato, MFBLOCK_SIZE*bc);
     } else {
-        aes_encode(IV, kenc, dati, dato, MFBLOCK_SIZE * bc);
+        aes_encode(IV, kenc, dati, dato, MFBLOCK_SIZE*bc);
     }
 
     return PM3_SUCCESS;
@@ -2244,10 +2245,10 @@ static int CmdHFMFPDump(const char *Cmd) {
         int STRead;
         uint8_t mac[8] = {0};
 chunkCycle:
-        ki_pA[1] = sl3Count * 2;
+        ki_pA[1] = sl3Count*2;
         MifareAuth4(&_session, ki_pA, &aesFoundKeys[MF_KEY_A][sl3Count][1], nonfirst, !nonfirst, true, true, verbose, false);
         nonfirst = true;
-        MFPReadBlock(&_session, false, false, true, 3 + sl3Count * 4, 1, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
+        MFPReadBlock(&_session, false, false, true, 3+sl3Count*4, 1, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
         if (STRead && STBuffer[0] != 0x90) {
             PrintAndLogEx(ERR, "\nTrailer read error: %02x %s", STBuffer[0], mfpGetErrorDescription(STBuffer[0]));
             goto chunkBlank;
@@ -2257,17 +2258,17 @@ chunkCycle:
         }
         mfp_data_crypt(&_session, &STBuffer[1], &STBuffer[1], true, 1);
         // Multiblock reads do not allow reading out STs, as such this is the time to save them into the final dump
-        memcpy(carddata + ((3 + 4 * sl3Count) * MFBLOCK_SIZE), &STBuffer[1], 1 * MFBLOCK_SIZE);
+        memcpy(carddata + ((3+4*sl3Count) * MFBLOCK_SIZE), &STBuffer[1], 1 * MFBLOCK_SIZE);
         // Check if any block is encrypted only
-        ki_pB[1] = 0x01+sl3Count * 2;
+        ki_pB[1] = 0x01+sl3Count*2;
         MifareAuth4(&_session, ki_pB, &aesFoundKeys[MF_KEY_B][sl3Count][1], true, false, true, true, verbose, false);
         if (STBuffer[6] & 0xF0) { // At least one bit is set to force enc. only
-            MFPReadBlock(&_session, false, false, true, sl3Count * 4, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
+            MFPReadBlock(&_session, false, false, true, sl3Count*4, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
             if (STRead && STBuffer[0] != 0x90) {
 chunkBlank:
                 PrintAndLogEx(ERR, "\nChunk read error: %02x %s", STBuffer[0], mfpGetErrorDescription(STBuffer[0]));
                 memcpy(carddata + (sl3Count * 4 * MFBLOCK_SIZE), nullChunk, 3 * MFBLOCK_SIZE);
-                memcpy(carddata + ((3 + 4 * sl3Count) * MFBLOCK_SIZE), nullBlock, 1 * MFBLOCK_SIZE);
+                memcpy(carddata + ((3+4*sl3Count) * MFBLOCK_SIZE), nullBlock, 1 * MFBLOCK_SIZE);
                 PrintAndLogEx(WARNING, "Quick-reading sector %3d / %3d ( " _RED_("fail") " )", sl3Count, numSectors - 1);
                 // Restart auth since a read failure resets it
                 nonfirst = false;
@@ -2285,7 +2286,7 @@ chunkBlank:
             sectorsRead++;
             sl3Count++;
         } else {
-            MFPReadBlock(&_session, true, false, true, sl3Count * 4, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
+            MFPReadBlock(&_session, true, false, true, sl3Count*4, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
             if (STRead && STBuffer[0] != 0x90) {
                 PrintAndLogEx(ERR, "Chunk read error: %02x %s", STBuffer[0], mfpGetErrorDescription(STBuffer[0]));
                 memcpy(carddata + (sl3Count * 4 * MFBLOCK_SIZE), nullChunk, 3 * MFBLOCK_SIZE);
@@ -2308,12 +2309,12 @@ chunkCycleClean:
 
 
 
-        if (numSectors > 32) {
+        if (numSectors>32){
 chunkCycle2:
-            ki_pA[1] = sl3Count * 2;
+            ki_pA[1] = sl3Count*2;
             MifareAuth4(&_session, ki_pA, &aesFoundKeys[MF_KEY_A][sl3Count][1], nonfirst, !nonfirst, true, true, verbose, false);
             nonfirst = true;
-            MFPReadBlock(&_session, false, false, true, 128 + (sl3Count - 31) * 16 - 1, 1, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
+            MFPReadBlock(&_session, false, false, true, 128+(sl3Count-31)*16-1, 1, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
             if (STRead && STBuffer[0] != 0x90) {
                 PrintAndLogEx(ERR, "Trailer read error: %02x %s", STBuffer[0], mfpGetErrorDescription(STBuffer[0]));
                 goto chunkBlank2;
@@ -2324,23 +2325,22 @@ chunkCycle2:
             }
             mfp_data_crypt(&_session, &STBuffer[1], &STBuffer[1], true, 1);
             // Multiblock reads do not allow reading out STs, as such this is the time to save them into the final dump
-            memcpy(carddata + ((128 + (sl3Count - 31) * 16 - 1) * MFBLOCK_SIZE), &STBuffer[1], 1 * MFBLOCK_SIZE);
+            memcpy(carddata + ((128+(sl3Count-31)*16-1) * MFBLOCK_SIZE), &STBuffer[1], 1 * MFBLOCK_SIZE);
             int c = 0;
             // Check if any block is encrypted only
-            ki_pB[1] = 0x01+sl3Count * 2;
+            ki_pB[1] = 0x01+sl3Count*2;
             MifareAuth4(&_session, ki_pB, &aesFoundKeys[MF_KEY_B][sl3Count][1], true, false, true, true, verbose, false);
             if (STBuffer[6] & 0xF0) { // At least one bit is set to force enc. only
 chunkBlank2: // Jumping here will start the cycle which will blank out the remaining 5 chunks anyway
-                for (c = 0; c < 5; ++c) {
-                    MFPReadBlock(&_session, false, false, true, 128 + (sl3Count - 32) * 16 + c * 3, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
+                for (c=0; c<5; ++c) {
+                    MFPReadBlock(&_session, false, false, true, 128+(sl3Count-32)*16+c*3, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
                     if (STRead && STBuffer[0] != 0x90) {
                         PrintAndLogEx(ERR, "Chunk read error: %02x %s", STBuffer[0], mfpGetErrorDescription(STBuffer[0]));
                         PrintAndLogEx(WARNING, "Quick-reading sector %3d / %3d chunk %d ( " _RED_("fail") " )", sl3Count, numSectors - 1, c);
-                        memcpy(carddata + ((128 + (sl3Count - 31) * 16 - 1) * MFBLOCK_SIZE), nullBlock, 1 * MFBLOCK_SIZE);
-                        memcpy(carddata + ((128 + 16 * (sl3Count - 32) + c * 3) * MFBLOCK_SIZE), nullChunk, 3 * MFBLOCK_SIZE);
+                        memcpy(carddata + ((128+(sl3Count-31)*16-1) * MFBLOCK_SIZE), nullBlock, 1 * MFBLOCK_SIZE);
+                        memcpy(carddata + ((128 + 16*(sl3Count-32)+c*3) * MFBLOCK_SIZE), nullChunk, 3 * MFBLOCK_SIZE);
                         nonfirst = false;
-                        if (c < 5) {continue;}
-                        else {sl3Count++; goto chunkCycleClean2;};
+                        if (c<5) {continue;} else {sl3Count++; goto chunkCycleClean2;}; 
                     }
                     if (STRead != 1 + 48 + 2) {
                         PrintAndLogEx(ERR, "Error return length: %d", STRead);
@@ -2349,16 +2349,16 @@ chunkBlank2: // Jumping here will start the cycle which will blank out the remai
                     }
                     mfp_data_crypt(&_session, &STBuffer[1], &STBuffer[1], true, 3);
                     PrintAndLogEx(INPLACE, "Quick-reading sector %3d / %3d ( " _GREEN_("ok") " )", sl3Count, numSectors - 1);
-                    memcpy(carddata + ((128 + 16 * (sl3Count - 32) + c * 3) * MFBLOCK_SIZE), &STBuffer[1], 3 * MFBLOCK_SIZE);
+                    memcpy(carddata + ((128 + 16*(sl3Count-32)+c*3) * MFBLOCK_SIZE), &STBuffer[1], 3 * MFBLOCK_SIZE);
                 }
                 sectorsRead++;
                 sl3Count++;
             } else {
-                for (c = 0; c < 5; ++c) {
-                    MFPReadBlock(&_session, true, false, true, 128 + (sl3Count - 32) * 16 + c * 3, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
+                for (c=0; c<5; ++c) {
+                    MFPReadBlock(&_session, true, false, true, 128+(sl3Count-32)*16+c*3, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
                     if (STRead && STBuffer[0] != 0x90) {
                         PrintAndLogEx(ERR, "Chunk read error: %02x %s", STBuffer[0], mfpGetErrorDescription(STBuffer[0]));
-                        memcpy(carddata + ((128 + 16 * (sl3Count - 32) + c * 3) * MFBLOCK_SIZE), nullChunk, 3 * MFBLOCK_SIZE);
+                        memcpy(carddata + ((128 + 16*(sl3Count-32)+c*3) * MFBLOCK_SIZE), nullChunk, 3 * MFBLOCK_SIZE);
                         PrintAndLogEx(WARNING, "Quick-reading sector %3d / %3d ( " _RED_("fail") " )", sl3Count, numSectors - 1);
                         continue;
                     }
@@ -2368,8 +2368,8 @@ chunkBlank2: // Jumping here will start the cycle which will blank out the remai
                         return PM3_ESOFT;
                     }
                     PrintAndLogEx(INPLACE, "Quick-reading sector %3d / %3d ( " _GREEN_("ok") " )", sl3Count, numSectors - 1);
-                    memcpy(carddata + ((128 + 16 * (sl3Count - 32) + c * 3) * MFBLOCK_SIZE), &STBuffer[1], 3 * MFBLOCK_SIZE);
-
+                    memcpy(carddata + ((128 + 16*(sl3Count-32)+c*3) * MFBLOCK_SIZE), &STBuffer[1], 3 * MFBLOCK_SIZE);
+                    
                 }
                 sectorsRead++;
                 sl3Count++;
@@ -2446,7 +2446,7 @@ chunkCycleClean2:
 
     DropField();
     t1 = msclock() - t1;
-
+    
     // ========================================
     // Print sector summary
     // ========================================
@@ -2547,7 +2547,7 @@ chunkCycleClean2:
         PrintAndLogEx(HINT, "Partial dump: %d of %d sectors read", sectorsRead, numSectors);
         PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfp chk --dump`") " and/or " _YELLOW_("`hf mf chk`") " to find more keys");
     }
-
+    
     PrintAndLogEx(INFO, "\ntime in dump " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
     free(carddata);
     return PM3_SUCCESS;
@@ -2593,10 +2593,10 @@ static int CmdHFMFPMAD(const char *Cmd) {
         PrintAndLogEx(WARNING, "Using default MAD keys instead");
     }
 
-    uint8_t sector0[16 * 4] = {0};
-    uint8_t sector16[16 * 4] = {0};
+    mad1_sector_t sector0 = {0};
+    mad2_sector_t mad2_sector = {0};
 
-    if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector0, verbose)) {
+    if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, (uint8_t *)&sector0, verbose)) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
         return PM3_ESOFT;
@@ -2606,29 +2606,28 @@ static int CmdHFMFPMAD(const char *Cmd) {
 
     if (verbose) {
         PrintAndLogEx(SUCCESS, "Raw:");
-        for (int i = 0; i < 4; i ++)
-            PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex(&sector0[i * 16], 16));
+        for (int i = 0; i < 4; i++)
+            PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex(MF_SECTOR_BLOCK(sector0, i), MFBLOCK_SIZE));
     }
 
     bool haveMAD2 = false;
-    mad_sector_t s0 = {sector0, sizeof(sector0)};
-    MAD1DecodeAndPrint(&s0, swapmad, verbose, &haveMAD2);
+    MAD1DecodeAndPrint(&sector0, swapmad, verbose, &haveMAD2);
 
+    const mad2_sector_t *pmad2 = NULL;
     if (haveMAD2) {
-        if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector16, verbose)) {
+        if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, (uint8_t *)&mad2_sector, verbose)) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(ERR, "error, read sector " _YELLOW_("0x10") ". Card doesn't have MAD or doesn't have MAD on default keys");
             return PM3_ESOFT;
         }
+        pmad2 = &mad2_sector;
 
-        mad_sector_t s16 = {sector16, sizeof(sector16)};
-        MAD2DecodeAndPrint(&s16, swapmad, verbose);
+        MAD2DecodeAndPrint(pmad2, swapmad, verbose);
     }
 
     if (aidlen == 2 || decodeholder) {
-        mad_sector_t s16 = {sector16, sizeof(sector16)};
-        mad_t mad = {0};
-        if (MADDecode(&s0, &s16, &mad, swapmad, override) != PM3_SUCCESS) {
+        mad_entry_list_t mad_list = {0};
+        if (MADDecode(&sector0, pmad2, &mad_list, swapmad, override)) {
             PrintAndLogEx(ERR, "can't decode MAD");
             return PM3_EWRONGANSWER;
         }
@@ -2648,17 +2647,18 @@ static int CmdHFMFPMAD(const char *Cmd) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(INFO, "-------------- " _CYAN_("AID 0x%04x") " ---------------", aaid);
 
-            for (size_t i = 0; i < mad.count; i++) {
-                if (aaid == mad.entries[i]) {
-                    uint8_t vsector[16 * 4] = {0};
-                    if (mfpReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector, false)) {
+            for (size_t i = 0; i < mad_list.len; i++) {
+                if (aaid == mad_list.entries[i].aid) {
+                    uint8_t sno = mad_list.entries[i].sector;
+                    uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
+                    if (mfpReadSector(sno, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector, false)) {
                         PrintAndLogEx(NORMAL, "");
-                        PrintAndLogEx(ERR, "error, read sector %d error", (int)(i + 1));
+                        PrintAndLogEx(ERR, "error, read sector %d error", sno);
                         return PM3_ESOFT;
                     }
 
                     for (int j = 0; j < (verbose ? 4 : 3); j ++)
-                        PrintAndLogEx(NORMAL, " [%03d] %s", (int)((i + 1) * 4 + j), sprint_hex(&vsector[j * 16], 16));
+                        PrintAndLogEx(NORMAL, " [%03d] %s", sno * 4 + j, sprint_hex(&vsector[j * 16], 16));
                 }
             }
         }
@@ -2671,20 +2671,18 @@ static int CmdHFMFPMAD(const char *Cmd) {
             uint8_t data[4096] = {0};
             int datalen = 0;
 
-            for (size_t i = 0; i < mad.count; i++) {
-                if (aaid == mad.entries[i]) {
-
-                    uint8_t vsector[16 * 4] = {0};
-                    if (mf_read_sector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
+            for (size_t i = 0; i < mad_list.len; i++) {
+                if (aaid == mad_list.entries[i].aid) {
+                    uint8_t sno = mad_list.entries[i].sector;
+                    uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
+                    if (mf_read_sector(sno, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
                         PrintAndLogEx(NORMAL, "");
-                        PrintAndLogEx(ERR, "error, read sector %d", (int)(i + 1));
+                        PrintAndLogEx(ERR, "error, read sector %d", sno);
                         return PM3_ESOFT;
                     }
 
-                    if (datalen + MFBLOCK_SIZE * 3 > (int)sizeof(data))
-                        break;
-                    memcpy(&data[datalen], vsector, MFBLOCK_SIZE * 3);
-                    datalen += MFBLOCK_SIZE * 3;
+                    memcpy(&data[datalen], vsector, 16 * 3);
+                    datalen += 16 * 3;
                 }
             }
 
@@ -2778,23 +2776,22 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
         memcpy(ndefkey, key, 16);
     }
 
-    uint8_t sector0[MIFARE_1K_MAXBLOCK] = {0};
-    uint8_t sector16[MIFARE_1K_MAXBLOCK] = {0};
+    mad1_sector_t sector0 = {0};
+    mad2_sector_t mad2_sector = {0};
     uint8_t data[MIFARE_4K_MAX_BYTES] = {0};
     int datalen = 0;
 
     if (verbose)
         PrintAndLogEx(INFO, "reading MAD v1 sector");
 
-    if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector0, verbose)) {
+    if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, (uint8_t *)&sector0, verbose)) {
         PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
         PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfp ndefread -k `") " with your custom key");
         return PM3_ESOFT;
     }
 
     bool haveMAD2 = false;
-    mad_sector_t s0 = {sector0, sizeof(sector0)};
-    int res = MADCheck(&s0, NULL, verbose, &haveMAD2);
+    int res = MADCheck(&sector0, NULL, verbose, &haveMAD2);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "MAD error %d", res);
         if (override)
@@ -2803,36 +2800,34 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
             return res;
     }
 
+    const mad2_sector_t *pmad2 = NULL;
     if (haveMAD2) {
 
         if (verbose)
             PrintAndLogEx(INFO, "reading MAD v2 sector");
 
-        if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector16, verbose)) {
+        if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, (uint8_t *)&mad2_sector, verbose)) {
             PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD or doesn't have MAD on default keys");
             PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfp ndefread -k `") " with your custom key");
             return PM3_ESOFT;
         }
+        pmad2 = &mad2_sector;
     }
 
-    mad_sector_t s16 = {0};
-    if (haveMAD2) {
-        s16.data = sector16;
-        s16.len = sizeof(sector16);
-    }
-    mad_t mad = {0};
-    res = MADDecode(&s0, haveMAD2 ? &s16 : NULL, &mad, false, override);
+    mad_entry_list_t mad_list = {0};
+    res = MADDecode(&sector0, pmad2, &mad_list, false, override);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "can't decode MAD");
         return res;
     }
 
     PrintAndLogEx(INFO, "reading data from tag");
-    for (size_t i = 0; i < mad.count; i++) {
-        if (ndefAID == mad.entries[i]) {
-            uint8_t vsector[MIFARE_1K_MAXBLOCK] = {0};
-            if (mfpReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector, false)) {
-                PrintAndLogEx(ERR, "error, reading sector %d", i + 1);
+    for (size_t i = 0; i < mad_list.len; i++) {
+        if (ndefAID == mad_list.entries[i].aid) {
+            uint8_t sno = mad_list.entries[i].sector;
+            uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
+            if (mfpReadSector(sno, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector, false)) {
+                PrintAndLogEx(ERR, "error, reading sector %d", sno);
                 return PM3_ESOFT;
             }
 
@@ -2935,6 +2930,9 @@ static command_t CommandTable[] = {
     {"dump",        CmdHFMFPDump,            IfPm3Iso14443a,  "Dump MIFARE Plus tag to file"},
     {"info",        CmdHFMFPInfo,            IfPm3Iso14443a,  "Tag information"},
     {"mad",         CmdHFMFPMAD,             IfPm3Iso14443a,  "Check and print MAD"},
+    {"madread",     CmdMADMFPRead,           IfPm3Iso14443a,  "Read data from MAD AID sectors"},
+    {"madwrite",    CmdMADMFPWrite,          IfPm3Iso14443a,  "Write data to MAD AID sectors"},
+    {"madverify",   CmdMADMFPVerify,         IfPm3Iso14443a,  "Verify data in MAD AID sectors"},
     {"rdbl",        CmdHFMFPRdbl,            IfPm3Iso14443a,  "Read blocks from card"},
     {"rdsc",        CmdHFMFPRdsc,            IfPm3Iso14443a,  "Read sectors from card"},
     {"wrbl",        CmdHFMFPWrbl,            IfPm3Iso14443a,  "Write block to card"},
