@@ -520,8 +520,12 @@ static tagsim_key_t tagsim_poll_key(void) {
 
 static struct termios tagsim_saved_termios;
 static bool tagsim_rawmode_active = false;
+static bool tagsim_stdin_is_tty = false;
 
 static void tagsim_rawmode_enter(void) {
+    tagsim_stdin_is_tty = isatty(STDIN_FILENO);
+    if (tagsim_stdin_is_tty == false) return;
+
     if (tcgetattr(STDIN_FILENO, &tagsim_saved_termios) < 0) return;
     struct termios raw = tagsim_saved_termios;
     raw.c_lflag &= ~(uint32_t)(ICANON | ECHO);
@@ -541,6 +545,7 @@ static void tagsim_rawmode_exit(void) {
 static tagsim_key_t tagsim_poll_key(void) {
     char buf[8] = {0};
     int n = (int)read(STDIN_FILENO, buf, sizeof(buf));
+    if (n == 0 && tagsim_stdin_is_tty == false) return TAGSIM_KEY_ABORT;
     if (n <= 0) return TAGSIM_KEY_NONE;
     if (n == 1) {
         if (buf[0] == '\n' || buf[0] == '\r' || buf[0] == 0x1B)
@@ -1254,7 +1259,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(INFO, "Press " _GREEN_("`pm3 button`") " to abort");
             uint8_t numberOfCSNs = 0;
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 1, csn, 8);
+            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 0, csn, 8);
 
             if (sim_type == ICLASS_SIM_MODE_FULL || sim_type ==  ICLASS_SIM_MODE_FULL_GLITCH || sim_type ==  ICLASS_SIM_MODE_FULL_GLITCH_KEY)
                 PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass esave -h") "` to save the emulator memory to file");
@@ -1602,14 +1607,15 @@ static int CmdHFiClassTagSim(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ICLASS_SIMULATE, ICLASS_SIM_MODE_FULL_LIVE, 0, 1, csn, 8);
 
+    PacketResponseNG resp;
+    bool running = true;
+    bool arm_ended = false;  // true when ARM sent its own CMD_ACK (e.g. button press)
+
     // --- live FC/CN navigation (wiegand mode only; binary mode has no FC/CN to adjust)
     if (bin_len == 0) {
         int format_idx = HIDFindCardFormat(format);
 
         tagsim_rawmode_enter();
-        PacketResponseNG resp;
-        bool running = true;
-        bool arm_ended = false;  // true when ARM sent its own CMD_ACK (e.g. button press)
 
         while (running) {
             // A non-zero-timeout poll lets us detect when the ARM ends the sim
@@ -1717,14 +1723,30 @@ static int CmdHFiClassTagSim(const char *Cmd) {
         }
 
         tagsim_rawmode_exit();
+    } else {
+        tagsim_rawmode_enter();
 
-        if (!arm_ended) {
-            // Client exited the loop (Enter/Esc) but the ARM is still simulating.
-            // Tell it to stop and consume the resulting CMD_ACK so the ARM is
-            // cleanly back in the main loop before we return.
-            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            WaitForResponseTimeout(CMD_ACK, &resp, 2000);
+        while (running) {
+            if (WaitForResponseTimeout(CMD_ACK, &resp, 100)) {
+                arm_ended = true;
+                running = false;
+                break;
+            }
+            if (tagsim_poll_key() == TAGSIM_KEY_ABORT) {
+                running = false;
+                break;
+            }
         }
+
+        tagsim_rawmode_exit();
+    }
+
+    if (!arm_ended) {
+        // Client exited the loop (Enter/Esc) but the ARM is still simulating.
+        // Tell it to stop and consume the resulting CMD_ACK so the ARM is
+        // cleanly back in the main loop before we return.
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        WaitForResponseTimeout(CMD_ACK, &resp, 2000);
     }
 
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass esave -h") "` to save the emulator memory to file");
