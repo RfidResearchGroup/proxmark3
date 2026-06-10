@@ -224,8 +224,7 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
     }
 
     uint8_t cmd1[4];
-    if (nonfirst) { cmd1[0] = 0x76; cmd1[1] = keyn[1]; cmd1[2] = keyn[0]; }
-    else { cmd1[0] = 0x70; cmd1[1] = keyn[1]; cmd1[2] = keyn[0]; cmd1[3] = 0x00; }
+    if (nonfirst) { cmd1[0] = 0x76; cmd1[1] = keyn[1]; cmd1[2] = keyn[0]; } else { cmd1[0] = 0x70; cmd1[1] = keyn[1]; cmd1[2] = keyn[0]; cmd1[3] = 0x00; }
     int res = ExchangeRAW14a(cmd1, nonfirst ? 3 : 4, activateField, true, data, sizeof(data), &datalen, silentMode);
     if (res != PM3_SUCCESS) {
 
@@ -308,7 +307,7 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
         memcpy(&IVW[12], &mf4session->R_Ctr, 2);
         memcpy(&IVW[14], &mf4session->W_Ctr, 2);
         memcpy(IVW, mf4session->TI, 4);
-
+        
         aes_decode(IVR, key, &data[1], RndB, 16);
         RndB[16] = RndB[0];
         if (verbose) {
@@ -354,7 +353,7 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
         PrintAndLogEx(INFO, "< phase2: %s", sprint_hex(data, datalen));
     }
 
-    if (data[0] != 0x90) {
+    if (data[0]!=0x90) {
         if (silentMode == false) {
             PrintAndLogEx(ERR, "\nAuthentication FAILED. Card did not ACK response");
         }
@@ -365,8 +364,7 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
         return PM3_EWRONGANSWER;
     }
 
-    if (nonfirst) { aes_decode(IVR, key, &data[1], raw, 16); }
-    else { aes_decode(NULL, key, &data[1], raw, 32); }
+    if (nonfirst) { aes_decode(IVR, key, &data[1], raw, 16); } else { aes_decode(NULL, key, &data[1], raw, 32); }
 
     if (verbose) {
         if (nonfirst) {
@@ -611,6 +609,59 @@ int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data
     }
     DropField();
 
+    return PM3_SUCCESS;
+}
+
+int mfpWriteSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, const uint8_t *datain, bool verbose) {
+    uint8_t keyn[2] = {0};
+
+    uint16_t uKeyNum = 0x4000 + sectorNo * 2 + (keyType ? 1 : 0);
+    keyn[0] = uKeyNum >> 8;
+    keyn[1] = uKeyNum & 0xff;
+    if (verbose) {
+        PrintAndLogEx(INFO, "--sector[%u]:%02x key:%04x", mfNumBlocksPerSector(sectorNo), sectorNo, uKeyNum);
+    }
+
+    mf4Session_t _session;
+    int res = MifareAuth4(&_session, keyn, key, false, true, true, true, verbose, false);
+    if (res) {
+        PrintAndLogEx(ERR, "Sector %u authentication error: %d", sectorNo, res);
+        return res;
+    }
+
+    uint8_t firstBlockNo = mfFirstBlockOfSector(sectorNo);
+    uint8_t numDataBlocks = mfNumBlocksPerSector(sectorNo) - 1;
+
+    for (int n = 0; n < numDataBlocks; n++) {
+        uint8_t blockNo = firstBlockNo + n;
+
+        uint8_t block[16];
+        memcpy(block, datain + (n * 16), 16);
+        mfp_data_crypt(&_session, block, block, false, 1);
+
+        uint8_t data[250] = {0};
+        int datalen = 0;
+        uint8_t mac[8] = {0};
+        res = MFPWriteBlock(&_session, false, false, blockNo & 0xff, 0x00, block,
+                            false, true, data, sizeof(data), &datalen, mac);
+        if (res) {
+            PrintAndLogEx(ERR, "Sector %u block %d write error: %d", sectorNo, blockNo, res);
+            DropField();
+            return res;
+        }
+
+        if (datalen && data[0] != 0x90) {
+            PrintAndLogEx(ERR, "Sector %u block %d card write error: %02x %s",
+                          sectorNo, blockNo, data[0], mfpGetErrorDescription(data[0]));
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (verbose)
+            PrintAndLogEx(INFO, "wrote block %d: %s", blockNo, sprint_hex(datain + (n * 16), 16));
+    }
+
+    DropField();
     return PM3_SUCCESS;
 }
 

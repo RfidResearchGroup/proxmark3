@@ -18,7 +18,7 @@
 
 #include "mad.h"
 #include "ui.h"
-#include "commonutil.h"  // ARRAYLEN
+#include "commonutil.h"  // ARRAYLEN, BSWAP_16
 #include "pm3_cmd.h"
 #include "crc.h"
 #include "util.h"
@@ -26,10 +26,7 @@
 #include "jansson.h"
 #include "mifaredefault.h"
 #include "mifare4.h"
-
-// Compile-time size sanity checks (force a build error if the structs don't match a 4-block sector).
-typedef char mad_assert_mad1[sizeof(mad1_sector_t) == MFBLOCK_SIZE * 4 ? 1 : -1];
-typedef char mad_assert_mad2[sizeof(mad2_sector_t) == MFBLOCK_SIZE * 4 ? 1 : -1];
+#include "mifare.h"       // MF_MAD1_SECTOR, MF_MAD2_SECTOR
 
 // https://www.nxp.com/docs/en/application-note/AN10787.pdf
 static json_t *mad_known_aids = NULL;
@@ -50,10 +47,6 @@ static const char *aid_admin[] = {
     "not applicable"
 };
 
-// ---------------------------------------------------------------------------
-// JSON helpers
-// ---------------------------------------------------------------------------
-
 static int open_mad_file(json_t **root, bool verbose) {
     char *path;
     int res = searchFile(&path, RESOURCES_SUBDIR, "mad", ".json", true);
@@ -73,6 +66,8 @@ static int open_mad_file(json_t **root, bool verbose) {
 
     if (!json_is_array(*root)) {
         PrintAndLogEx(ERR, "Invalid json (%s) format. root must be an array.", path);
+        json_decref(*root);
+        *root = NULL;
         retval = PM3_ESOFT;
         goto out;
     }
@@ -111,15 +106,13 @@ static const char *mad_json_get_str(json_t *data, const char *name) {
     return cstr;
 }
 
-static int print_aid_description(json_t *root, uint16_t aid, char *fmt, bool verbose) {
-    if (root == NULL || fmt == NULL) {
-        return PM3_EINVARG;
-    }
+static uint16_t madGetAID(uint16_t raw, bool swapmad) {
+    return swapmad ? BSWAP_16(raw) : raw;
+}
 
+static json_t *mad_lookup_aid(json_t *root, uint16_t aid) {
     char lmad[7] = {0};
-    snprintf(lmad, sizeof(lmad), "0x%04x", aid); // must be lowercase
-
-    json_t *elm = NULL;
+    snprintf(lmad, sizeof(lmad), "0x%04x", aid);
 
     for (uint32_t idx = 0; idx < json_array_size(root); idx++) {
         json_t *data = json_array_get(root, idx);
@@ -135,186 +128,127 @@ static int print_aid_description(json_t *root, uint16_t aid, char *fmt, bool ver
         lfmad[sizeof(lfmad) - 1] = '\0';
         str_lower(lfmad);
         if (strcmp(lmad, lfmad) == 0) {
-            elm = data;
-            break;
+            return data;
         }
     }
+    return NULL;
+}
 
-    if (elm == NULL) {
-        PrintAndLogEx(INFO, fmt, " (unknown)");
-        return PM3_ENODATA;
+static const char *mad_aid_description(json_t *elm) {
+    static char result[256];
+    const char *application = mad_json_get_str(elm, "application");
+    const char *company = mad_json_get_str(elm, "company");
+    if (application && company) {
+        snprintf(result, sizeof(result), " %s [%s]", application, company);
+    } else if (application) {
+        snprintf(result, sizeof(result), " %s", application);
+    } else {
+        snprintf(result, sizeof(result), " (unknown)");
     }
+    return result;
+}
 
+static void mad_print_aid_verbose(json_t *elm) {
     const char *vmad = mad_json_get_str(elm, "mad");
     const char *application = mad_json_get_str(elm, "application");
     const char *company = mad_json_get_str(elm, "company");
     const char *provider = mad_json_get_str(elm, "service_provider");
     const char *integrator = mad_json_get_str(elm, "system_integrator");
 
-    if (application && company) {
-        char result[512];
-        snprintf(result, sizeof(result), " %s [%s]", application, company);
-        PrintAndLogEx(INFO, fmt, result);
+    PrintAndLogEx(SUCCESS, "     MAD................. %s", vmad ? vmad : "n/a");
+    if (application) {
+        PrintAndLogEx(SUCCESS, "     Application......... %s", application);
     }
+    if (company) {
+        PrintAndLogEx(SUCCESS, "     Company............. %s", company);
+    }
+    if (provider) {
+        PrintAndLogEx(SUCCESS, "     Service provider.... %s", provider);
+    }
+    if (integrator) {
+        PrintAndLogEx(SUCCESS, "     System integrator... %s", integrator);
+    }
+}
 
-    if (verbose) {
-        PrintAndLogEx(SUCCESS, "     MAD................. %s", vmad ? vmad : "n/a");
-        if (application) {
-            PrintAndLogEx(SUCCESS, "     Application......... %s", application);
-        }
-        if (company) {
-            PrintAndLogEx(SUCCESS, "     Company............. %s", company);
-        }
-        if (provider) {
-            PrintAndLogEx(SUCCESS, "     Service provider.... %s", provider);
-        }
-        if (integrator) {
-            PrintAndLogEx(SUCCESS, "     System integrator... %s", integrator);
-        }
+static int mad1CRCCheck(const mad1_t *mad1, bool verbose) {
+    uint8_t crc = CRC8Mad((uint8_t *)&mad1->info, sizeof(mad1_t) - 1);
+    if (crc != mad1->crc) {
+        PrintAndLogEx(WARNING, _RED_("Wrong MAD 1 CRC") " calculated: 0x%02x != 0x%02x", crc, mad1->crc);
+        return PM3_ESOFT;
     }
     return PM3_SUCCESS;
 }
 
-// ---------------------------------------------------------------------------
-// Low-level MAD sector parsing
-// ---------------------------------------------------------------------------
-
-static bool mad_sector_valid(const mad_sector_t *sector) {
-    return sector != NULL && sector->data != NULL && sector->len >= sizeof(mad1_sector_t);
-}
-
-static int madCRCCheck(const mad_sector_t *sector, int mad_ver) {
-    if (!mad_sector_valid(sector)) {
-        return PM3_EINVARG;
-    }
-
-    if (mad_ver == 1) {
-        const mad1_sector_t *m = (const mad1_sector_t *)sector->data;
-        uint8_t crc = MADComputeCRC(m);
-        if (crc != m->crc) {
-            PrintAndLogEx(WARNING, _RED_("Wrong MAD %d CRC") " calculated: 0x%02x != 0x%02x", mad_ver, crc, m->crc);
-            return PM3_ESOFT;
-        }
-    } else {
-        const mad2_sector_t *m = (const mad2_sector_t *)sector->data;
-        uint8_t crc = MADComputeCRC(m);
-        if (crc != m->crc) {
-            PrintAndLogEx(WARNING,  _RED_("Wrong MAD %d CRC") " calculated: 0x%02x != 0x%02x", mad_ver, crc, m->crc);
-            return PM3_ESOFT;
-        }
+static int mad2CRCCheck(const mad2_t *mad2, bool verbose) {
+    uint8_t crc = CRC8Mad((uint8_t *)&mad2->info, sizeof(mad2_t) - 1);
+    if (crc != mad2->crc) {
+        PrintAndLogEx(WARNING, _RED_("Wrong MAD 2 CRC") " calculated: 0x%02x != 0x%02x", crc, mad2->crc);
+        return PM3_ESOFT;
     }
     return PM3_SUCCESS;
 }
 
-static uint16_t madGetAID(const mad_sector_t *sector, bool swapmad, int mad_ver, int sector_no) {
-    if (!mad_sector_valid(sector)) {
-        return 0;
-    }
-
-    const mad_aid_t *aid = NULL;
-
-    if (mad_ver == 1) {
-        const mad1_sector_t *m = (const mad1_sector_t *)sector->data;
-        if (sector_no >= 1 && sector_no <= 15)
-            aid = &m->aid[sector_no - 1];
-        else
-            return 0;
-    } else {
-        const mad2_sector_t *m = (const mad2_sector_t *)sector->data;
-        if (sector_no >= 1 && sector_no <= 23)
-            aid = &m->aid[sector_no - 1];
-        else
-            return 0;
-    }
-
-    uint16_t val = mad_aid_get(aid);
-    return swapmad ? BSWAP_16(val) : val;
-}
-
-static int MADInfoByteDecode(const mad_sector_t *sector, int mad_ver, bool verbose) {
-    if (!mad_sector_valid(sector)) {
-        return PM3_EINVARG;
-    }
-
-    uint8_t info;
-    if (mad_ver == 1) {
-        const mad1_sector_t *m = (const mad1_sector_t *)sector->data;
-        info = m->info & 0x3f;
-        if (info >= 0x10) {
-            PrintAndLogEx(WARNING, "Invalid Info byte (MAD1) value " _YELLOW_("0x%02x"), info);
-            if (verbose) {
-                PrintAndLogEx(WARNING, "MAD1 Info byte points outside of MAD1 sector space (0x%02x), report a bug?", info);
-            }
-            return PM3_ESOFT;
+static int MADInfoByteDecode(uint8_t info, int mad_ver, bool verbose) {
+    info &= MAD_INFO_MASK;
+    if (mad_ver == 1 && info >= 0xF) {
+        PrintAndLogEx(WARNING, "Invalid Info byte (MAD1) value " _YELLOW_("0x%02x"), info);
+        if (verbose) {
+            PrintAndLogEx(WARNING, "MAD1 Info byte points outside of MAD1 sector space (0x%02x)", info);
         }
-    } else {
-        const mad2_sector_t *m = (const mad2_sector_t *)sector->data;
-        info = m->info & 0x3f;
-        if (info == 0x10 || info >= 0x28) {
-            PrintAndLogEx(WARNING, "Invalid Info byte (MAD2) value " _YELLOW_("0x%02x"), info);
-            return PM3_ESOFT;
-        }
+        return PM3_ESOFT;
     }
-
+    if (mad_ver == 2 && (info == 0x10 || info >= 0x28)) {
+        PrintAndLogEx(WARNING, "Invalid Info byte (MAD2) value " _YELLOW_("0x%02x"), info);
+        return PM3_ESOFT;
+    }
     return info;
 }
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-int MADCheck(const mad_sector_t *sector0, const mad_sector_t *sector16, bool verbose, bool *haveMAD2) {
-    if (!mad_sector_valid(sector0)) {
+int MADCheck(const mad1_sector_t *sector0, const mad2_sector_t *mad2, bool verbose, bool *haveMAD2) {
+    if (sector0 == NULL)
         return PM3_EINVARG;
-    }
 
-    const mad1_sector_t *m1 = (const mad1_sector_t *)sector0->data;
-    uint8_t GPB = m1->gpb;
-
+    uint8_t GPB = sector0->trailer.gpb;
     if (verbose) {
         PrintAndLogEx(SUCCESS, "GPB....... " _GREEN_("0x%02X"), GPB);
     }
 
-    // DA (MAD available)
-    if ((GPB & 0x80) == 0x00) {
+    if ((GPB & MAD_GPB_DA_MASK) == 0x00) {
         PrintAndLogEx(ERR, "DA = 0! MAD not available");
         return PM3_ESOFT;
     }
 
-    uint8_t mad_ver = (GPB & 0x03);
+    uint8_t mad_ver = (GPB & MAD_GPB_VER_MASK);
     if (verbose)
         PrintAndLogEx(SUCCESS, "Version... " _GREEN_("%d"), mad_ver);
 
-    // MAD version
     if ((mad_ver != 0x01) && (mad_ver != 0x02)) {
         PrintAndLogEx(ERR, "Wrong MAD version " _RED_("0x%02X"), mad_ver);
         return PM3_ESOFT;
-    }
+    };
 
-    bool mad2_available = (mad_ver == 2) && mad_sector_valid(sector16);
     if (haveMAD2) {
-        *haveMAD2 = mad2_available;
+        *haveMAD2 = (mad_ver == 2);
     }
 
-    int res = madCRCCheck(sector0, 1);
+    int res = mad1CRCCheck(&sector0->mad, true);
     if (verbose && res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( %s )", m1->crc, _GREEN_("ok"));
+        PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( %s )", sector0->mad.crc, _GREEN_("ok"));
     }
 
-    if (mad2_available) {
-        int res2 = madCRCCheck(sector16, 2);
+    if (mad_ver == 2 && mad2) {
+        int res2 = mad2CRCCheck(&mad2->mad, true);
         if (res == PM3_SUCCESS) {
             res = res2;
         }
-        if (verbose && res2 == PM3_SUCCESS) {
-            const mad2_sector_t *m2 = (const mad2_sector_t *)sector16->data;
-            PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( %s )", m2->crc, _GREEN_("ok"));
+
+        if (verbose && !res2) {
+            PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( %s )", mad2->mad.crc, _GREEN_("ok"));
         }
     }
 
-    // MA (multi-application card)
     if (verbose) {
-        if (GPB & 0x40)
+        if (GPB & MAD_GPB_MA_MASK)
             PrintAndLogEx(SUCCESS, "Multi application card");
         else
             PrintAndLogEx(SUCCESS, "Single application card");
@@ -322,21 +256,10 @@ int MADCheck(const mad_sector_t *sector0, const mad_sector_t *sector16, bool ver
     return res;
 }
 
-int MADDecode(const mad_sector_t *sector0, const mad_sector_t *sector16, mad_t *out, bool swapmad, bool override) {
-    if (out == NULL) {
-        return PM3_EINVARG;
-    }
-
-    memset(out, 0, sizeof(mad_t));
-
+int MADDecode(const mad1_sector_t *sector0, const mad2_sector_t *mad2, mad_entry_list_t *mad_list, bool swapmad, bool override) {
+    mad_list->len = 0;
     bool haveMAD2 = false;
-    int res = MADCheck(sector0, sector16, false, &haveMAD2);
-    out->has_mad2 = haveMAD2;
-
-    if (mad_sector_valid(sector0)) {
-        const mad1_sector_t *m1 = (const mad1_sector_t *)sector0->data;
-        out->gpb = m1->gpb;
-    }
+    int res = MADCheck(sector0, mad2, false, &haveMAD2);
 
     if (res != PM3_SUCCESS && override == false) {
         PrintAndLogEx(WARNING, "Not a valid MAD");
@@ -347,41 +270,27 @@ int MADDecode(const mad_sector_t *sector0, const mad_sector_t *sector16, mad_t *
         PrintAndLogEx(INFO, "overriding crc check");
     }
 
-    out->crc1_ok = (madCRCCheck(sector0, 1) == PM3_SUCCESS);
-
-    for (int i = 1; i <= MAD1_AID_COUNT; i++) {
-        if (out->count >= MAD_MAX_AID_ENTRIES)
-            break;
-        out->entries[out->count++] = madGetAID(sector0, swapmad, 1, i);
+    for (int i = 0; i < MAD1_NUM_AIDS; i++) {
+        mad_list->entries[mad_list->len].sector = i + 1;
+        mad_list->entries[mad_list->len].aid = madGetAID(sector0->mad.aid[i], swapmad);
+        mad_list->len++;
     }
 
-    if (haveMAD2) {
-        out->crc2_ok = (madCRCCheck(sector16, 2) == PM3_SUCCESS);
-
-        if (out->count >= MAD_MAX_AID_ENTRIES)
-            return PM3_ESOFT;
-
-        // MAD2 sector marker
-        out->entries[out->count++] = 0x0005;
-
-        for (int i = 1; i <= MAD2_AID_COUNT; i++) {
-            if (out->count >= MAD_MAX_AID_ENTRIES)
-                break;
-            out->entries[out->count++] = madGetAID(sector16, swapmad, 2, i);
+    if (haveMAD2 && mad2) {
+        for (int i = 0; i < MAD2_NUM_AIDS; i++) {
+            mad_list->entries[mad_list->len].sector = i + 17;
+            mad_list->entries[mad_list->len].aid = madGetAID(mad2->mad.aid[i], swapmad);
+            mad_list->len++;
         }
     }
     return PM3_SUCCESS;
 }
 
 int MADCardHolderInfoDecode(const uint8_t *data, size_t datalen, bool verbose) {
-    if (data == NULL) {
-        return PM3_EINVARG;
-    }
-
     size_t idx = 0;
     while (idx < datalen) {
-        uint8_t len = data[idx] & 0x3f;
-        uint8_t type = data[idx] >> 6;
+        uint8_t len = data[idx] & MAD_TLV_LEN_MASK;
+        uint8_t type = data[idx] >> MAD_TLV_TYPE_SHIFT;
         idx++;
         if (len == 0)
             break;
@@ -389,11 +298,8 @@ int MADCardHolderInfoDecode(const uint8_t *data, size_t datalen, bool verbose) {
             PrintAndLogEx(WARNING, "Card holder info truncated (need %u bytes, %zu available)", len, datalen - idx);
             break;
         }
-        if (type >= ARRAYLEN(holder_info_type)) {
-            PrintAndLogEx(WARNING, "Unknown card holder info type %u", type);
-            idx += len;
-            continue;
-        }
+        if (type >= ARRAYLEN(holder_info_type))
+            type = ARRAYLEN(holder_info_type) - 1;
         PrintAndLogEx(INFO, "%14s " _GREEN_("%.*s"), holder_info_type[type], len, &data[idx]);
         idx += len;
     }
@@ -405,28 +311,17 @@ void MADPrintHeader(void) {
     PrintAndLogEx(INFO, "--- " _CYAN_("MIFARE App Directory Information") " ----------------");
 }
 
-int MAD1DecodeAndPrint(const mad_sector_t *sector, bool swapmad, bool verbose, bool *haveMAD2) {
-    if (!mad_sector_valid(sector)) {
-        return PM3_EINVARG;
-    }
-
-    int res = open_mad_file(&mad_known_aids, verbose);
-    if (res != PM3_SUCCESS) {
-        mad_known_aids = NULL;
+int MAD1DecodeAndPrint(const mad1_sector_t *sector, bool swapmad, bool verbose, bool *haveMAD2) {
+    if (open_mad_file(&mad_known_aids, verbose) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Could not load MAD JSON, AID names will not be resolved");
     }
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "------------ " _CYAN_("MAD v1 details") " -------------");
 
-    // check MAD1 only
     MADCheck(sector, NULL, verbose, haveMAD2);
 
-    int ibs = MADInfoByteDecode(sector, 1, verbose);
-    if (ibs < 0) {
-        close_mad_file(mad_known_aids);
-        mad_known_aids = NULL;
-        return ibs;
-    }
+    int ibs = MADInfoByteDecode(sector->mad.info, 1, verbose);
 
     if (ibs > 0) {
         PrintAndLogEx(SUCCESS, "Card publisher sector " _MAGENTA_("0x%02X"), ibs);
@@ -439,71 +334,59 @@ int MAD1DecodeAndPrint(const mad_sector_t *sector, bool swapmad, bool verbose, b
 
     PrintAndLogEx(INFO, " 00 MAD v1");
     uint32_t prev_aid = 0xFFFFFFFF;
-    for (int i = 1; i <= MAD1_AID_COUNT; i++) {
-        uint16_t aid = madGetAID(sector, swapmad, 1, i);
-        if (aid < ARRAYLEN(aid_admin)) {
+    for (int i = 0; i < MAD1_NUM_AIDS; i++) {
+        int sector_no = i + 1;
+        uint16_t aid = madGetAID(sector->mad.aid[i], swapmad);
+        if (aid <= MAD_AID_ADMIN_MAX) {
             PrintAndLogEx(INFO,
-                          (ibs == i) ? _MAGENTA_(" %02d [%04X] %s") : " %02d [" _GREEN_("%04X") "] %s",
-                          i,
+                          (ibs == sector_no) ? _MAGENTA_(" %02d [%04X] %s") : " %02d [" _GREEN_("%04X") "] %s",
+                          sector_no,
                           aid,
                           aid_admin[aid]
                          );
 
         } else if (prev_aid == aid) {
             PrintAndLogEx(INFO,
-                          (ibs == i) ? _MAGENTA_(" %02d [%04X] continuation") : " %02d [" _YELLOW_("%04X") "] continuation",
-                          i,
+                          (ibs == sector_no) ? _MAGENTA_(" %02d [%04X] continuation") : " %02d [" _YELLOW_("%04X") "] continuation",
+                          sector_no,
                           aid
                          );
         } else {
-            char fmt[80];
-            snprintf(fmt
-                     , sizeof(fmt)
-                     , (ibs == i) ?
-                     _MAGENTA_(" %02d [%04X] %s") :
-                     " %02d [" _GREEN_("%04X") "] %s"
-                     , i
-                     , aid
-                     , "%s"
-                    );
-            print_aid_description(mad_known_aids, aid, fmt, verbose);
+            json_t *elm = mad_lookup_aid(mad_known_aids, aid);
+            const char *desc = elm ? mad_aid_description(elm) : " (unknown)";
+            PrintAndLogEx(INFO,
+                          (ibs == sector_no) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [" _GREEN_("%04X") "]%s",
+                          sector_no,
+                          aid,
+                          desc
+                         );
+            if (verbose && elm) {
+                mad_print_aid_verbose(elm);
+            }
             prev_aid = aid;
         }
     }
     close_mad_file(mad_known_aids);
-    mad_known_aids = NULL;
     return PM3_SUCCESS;
 }
 
-int MAD2DecodeAndPrint(const mad_sector_t *sector, bool swapmad, bool verbose) {
-    if (!mad_sector_valid(sector)) {
-        return PM3_EINVARG;
-    }
-
-    int res = open_mad_file(&mad_known_aids, false);
-    if (res != PM3_SUCCESS) {
-        mad_known_aids = NULL;
+int MAD2DecodeAndPrint(const mad2_sector_t *sector, bool swapmad, bool verbose) {
+    if (open_mad_file(&mad_known_aids, false) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Could not load MAD JSON, AID names will not be resolved");
     }
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "------------ " _CYAN_("MAD v2 details") " -------------");
 
-    int crc_res = madCRCCheck(sector, 2);
+    int res = mad2CRCCheck(&sector->mad, true);
     if (verbose) {
-        const mad2_sector_t *m2 = (const mad2_sector_t *)sector->data;
-        if (crc_res == PM3_SUCCESS)
-            PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( " _GREEN_("%s") " )", m2->crc, "ok");
+        if (res == PM3_SUCCESS)
+            PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( " _GREEN_("%s") " )", sector->mad.crc, "ok");
         else
-            PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( " _RED_("%s") " )", m2->crc, "fail");
+            PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( " _RED_("%s") " )", sector->mad.crc, "fail");
     }
 
-    int ibs = MADInfoByteDecode(sector, 2, verbose);
-    if (ibs < 0) {
-        close_mad_file(mad_known_aids);
-        mad_known_aids = NULL;
-        return ibs;
-    }
-
+    int ibs = MADInfoByteDecode(sector->mad.info, 2, verbose);
     if (ibs > 0) {
         PrintAndLogEx(SUCCESS, "Card publisher sector " _MAGENTA_("0x%02X"), ibs);
     } else {
@@ -516,142 +399,264 @@ int MAD2DecodeAndPrint(const mad_sector_t *sector, bool swapmad, bool verbose) {
     PrintAndLogEx(INFO, " 16 MAD v2");
 
     uint32_t prev_aid = 0xFFFFFFFF;
-    for (int i = 1; i <= MAD2_AID_COUNT; i++) {
-        uint16_t aid = madGetAID(sector, swapmad, 2, i);
-        if (aid < ARRAYLEN(aid_admin)) {
+    for (int i = 0; i < MAD2_NUM_AIDS; i++) {
+        int sector_no = i + 17;
+        uint16_t aid = madGetAID(sector->mad.aid[i], swapmad);
+        if (aid <= MAD_AID_ADMIN_MAX) {
             PrintAndLogEx(INFO,
-                          (ibs == i + 16) ? _MAGENTA_(" %02d [%04X] %s") : " %02d [" _GREEN_("%04X") "] %s",
-                          i + 16,
+                          (ibs == sector_no) ? _MAGENTA_(" %02d [%04X] %s") : " %02d [" _GREEN_("%04X") "] %s",
+                          sector_no,
                           aid,
                           aid_admin[aid]
                          );
         } else if (prev_aid == aid) {
             PrintAndLogEx(INFO,
-                          (ibs == i + 16) ? _MAGENTA_(" %02d [%04X] continuation") : " %02d [" _YELLOW_("%04X") "] continuation",
-                          i + 16,
+                          (ibs == sector_no) ? _MAGENTA_(" %02d [%04X] continuation") : " %02d [" _YELLOW_("%04X") "] continuation",
+                          sector_no,
                           aid
                          );
         } else {
-            char fmt[80];
-            snprintf(fmt
-                     , sizeof(fmt)
-                     , (ibs == i + 16) ?
-                     _MAGENTA_(" %02d [%04X] %s") :
-                     " %02d [" _GREEN_("%04X") "] %s"
-                     , i + 16
-                     , aid
-                     , "%s"
-                    );
-            print_aid_description(mad_known_aids, aid, fmt, verbose);
+            json_t *elm = mad_lookup_aid(mad_known_aids, aid);
+            const char *desc = elm ? mad_aid_description(elm) : " (unknown)";
+            PrintAndLogEx(INFO,
+                          (ibs == sector_no) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [" _GREEN_("%04X") "]%s",
+                          sector_no,
+                          aid,
+                          desc
+                         );
+            if (verbose && elm) {
+                mad_print_aid_verbose(elm);
+            }
             prev_aid = aid;
         }
     }
     close_mad_file(mad_known_aids);
-    mad_known_aids = NULL;
 
     return PM3_SUCCESS;
 }
 
 int MADDFDecodeAndPrint(uint32_t short_aid, bool verbose) {
-    int res = open_mad_file(&mad_known_aids, false);
-    if (res != PM3_SUCCESS) {
-        mad_known_aids = NULL;
+    if (open_mad_file(&mad_known_aids, false) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Could not load MAD JSON, AID names will not be resolved");
     }
 
-    char fmt[128];
-    snprintf(fmt, sizeof(fmt), "   MAD AID Function 0x%04X... " _YELLOW_("%s"), short_aid, "%s");
-    print_aid_description(mad_known_aids, short_aid, fmt, verbose);
+    json_t *elm = mad_lookup_aid(mad_known_aids, short_aid);
+    const char *desc = elm ? mad_aid_description(elm) : " (unknown)";
+    PrintAndLogEx(INFO, "   MAD AID Function 0x%04X... " _YELLOW_("%s"), short_aid, desc);
+    if (verbose && elm) {
+        mad_print_aid_verbose(elm);
+    }
     close_mad_file(mad_known_aids);
-    mad_known_aids = NULL;
     return PM3_SUCCESS;
 }
 
-bool HasMADKey(const mad_sector_t *sector) {
-    if (sector == NULL || sector->data == NULL) {
+bool HasMADKey(const mad1_sector_t *s0) {
+    if (s0 == NULL)
         return false;
-    }
-
-    if (sector->len < sizeof(mad1_sector_t)) {
-        return false;
-    }
-
-    const mad1_sector_t *m = (const mad1_sector_t *)sector->data;
-    return (memcmp(m->key_a, g_mifare_mad_key, sizeof(g_mifare_mad_key)) == 0);
+    return (memcmp(s0->trailer.key_a, g_mifare_mad_key, sizeof(g_mifare_mad_key)) == 0);
 }
 
-int DetectHID(const mad_sector_t *sector, uint16_t manufacture) {
-    if (!mad_sector_valid(sector)) {
+int DetectHID(const mad1_sector_t *s0, uint16_t manufacture) {
+    if (s0 == NULL)
         return -1;
+    for (int i = 0; i < MAD1_NUM_AIDS; i++) {
+        if (madGetAID(s0->mad.aid[i], false) == manufacture)
+            return i + 1;
     }
-
-    for (int i = 1; i <= MAD1_AID_COUNT; i++) {
-        uint16_t aid = madGetAID(sector, false, 1, i);
-        if (aid == manufacture) {
-            return i;
-        }
-    }
-
     return -1;
 }
 
-int convert_mad_to_arr(const uint8_t *in, size_t ilen, uint8_t *out, size_t *olen, size_t olen_max, bool override) {
-    if (in == NULL || out == NULL || olen == NULL || ilen == 0 || olen_max == 0) {
+int convert_mad_to_arr(const mad1_sector_t *s0, const mad2_sector_t *s16,
+                       size_t dump_len,
+                       uint8_t *out, size_t omax, size_t *olen, bool override) {
+    if (s0 == NULL || out == NULL || olen == NULL || dump_len < sizeof(mad1_sector_t) || omax == 0)
         return PM3_EINVARG;
-    }
 
     *olen = 0;
 
-    mad_sector_t dump = { in, ilen };
-    if (HasMADKey(&dump) == false) {
+    if (HasMADKey(s0) == false) {
         PrintAndLogEx(FAILED, "No MAD key was detected in the dump file");
         return PM3_ESOFT;
     }
 
-    uint8_t sector0_buf[MFBLOCK_SIZE * 4] = {0};
-    uint8_t sector16_buf[MFBLOCK_SIZE * 4] = {0};
-
-    memcpy(sector0_buf, in, MIN(sizeof(sector0_buf), ilen));
-
-    mad_sector_t sector16 = { NULL, 0 };
-    size_t sector16_offset = MF_MAD2_SECTOR * 4 * MFBLOCK_SIZE;
-    if (ilen >= sector16_offset + sizeof(sector16_buf)) {
-        memcpy(sector16_buf, in + sector16_offset, sizeof(sector16_buf));
-        sector16.data = sector16_buf;
-        sector16.len = sizeof(sector16_buf);
-    }
-
-    mad_sector_t sector0 = { sector0_buf, sizeof(sector0_buf) };
-    mad_t mad = {0};
-    int res = MADDecode(&sector0, &sector16, &mad, false, override);
-    if (res != PM3_SUCCESS) {
+    mad_entry_list_t mad_list = {0};
+    if (MADDecode(s0, s16, &mad_list, false, override)) {
         PrintAndLogEx(ERR, "can't decode MAD");
         return PM3_ESOFT;
     }
 
+    const uint8_t *dump = (const uint8_t *)s0;
     uint16_t ndef_aid = 0xE103;
-    for (size_t i = 0; i < mad.count; i++) {
-        if (ndef_aid == mad.entries[i]) {
-            uint8_t sectorNo = i + 1;
-            uint16_t first_block = mfFirstBlockOfSector(sectorNo);
-            uint8_t num_blocks = mfNumBlocksPerSector(sectorNo);
-            uint32_t offset = first_block * MFBLOCK_SIZE;
-            uint16_t sector_size = num_blocks * MFBLOCK_SIZE;
+    for (size_t i = 0; i < mad_list.len; i++) {
+        if (ndef_aid != mad_list.entries[i].aid)
+            continue;
 
-            if (offset + sector_size > ilen) {
-                PrintAndLogEx(WARNING, "NDEF sector %u exceeds input bounds", sectorNo);
+        uint8_t sector_no = mad_list.entries[i].sector;
+        size_t offset = mfFirstBlockOfSector(sector_no) * MFBLOCK_SIZE;
+        size_t sector_size = mfNumBlocksPerSector(sector_no) * MFBLOCK_SIZE;
+        size_t data_size = sector_size - MFBLOCK_SIZE;
+
+        if (offset + sector_size > dump_len)
+            break;
+
+        if (*olen + data_size > omax) {
+            PrintAndLogEx(WARNING, "NDEF output buffer full");
+            return PM3_EOVFLOW;
+        }
+
+        memcpy(out + *olen, dump + offset, data_size);
+        *olen += data_size;
+    }
+    return PM3_SUCCESS;
+}
+
+static int mad_read_directory(const mad_ops_t *ops, bool swapmad, bool override,
+                              mad_entry_list_t *mad_list) {
+    mad1_sector_t sector0 = {0};
+    int res = ops->read_sector(MF_MAD1_SECTOR, ops->mad_key_type,
+                               ops->mad_key, (uint8_t *)&sector0, ops->verbose);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "error reading MAD1 sector 0");
+        return res;
+    }
+
+    mad2_sector_t mad2 = {0};
+    const mad2_sector_t *pmad2 = NULL;
+    res = ops->read_sector(MF_MAD2_SECTOR, ops->mad_key_type,
+                           ops->mad_key, (uint8_t *)&mad2, ops->verbose);
+    if (res == PM3_SUCCESS) {
+        pmad2 = &mad2;
+    } else if (ops->verbose) {
+        PrintAndLogEx(INFO, "MAD2 sector not available, skipping");
+    }
+
+    return MADDecode(&sector0, pmad2, mad_list, swapmad, override);
+}
+
+int mad_app_read(const mad_ops_t *ops, uint16_t aid, bool swapmad, bool override,
+                 uint8_t *out, size_t max_len, size_t *out_len) {
+    *out_len = 0;
+
+    mad_entry_list_t mad_list = {0};
+    int res = mad_read_directory(ops, swapmad, override, &mad_list);
+    if (res != PM3_SUCCESS)
+        return res;
+
+    for (size_t i = 0; i < mad_list.len; i++) {
+        if (mad_list.entries[i].aid != aid)
+            continue;
+
+        uint8_t sno = mad_list.entries[i].sector;
+        uint8_t sector_buf[MFBLOCK_SIZE * 16] = {0};
+        res = ops->read_sector(sno, ops->app_key_type,
+                               ops->app_key, sector_buf, ops->verbose);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "error reading sector %u", sno);
+            return res;
+        }
+
+        uint8_t num_data_blocks = mfNumBlocksPerSector(sno) - 1;
+        size_t nbytes = num_data_blocks * MFBLOCK_SIZE;
+
+        if (*out_len + nbytes > max_len) {
+            PrintAndLogEx(ERR, "output buffer too small");
+            return PM3_EOVFLOW;
+        }
+
+        memcpy(out + *out_len, sector_buf, nbytes);
+        *out_len += nbytes;
+
+        if (ops->verbose)
+            PrintAndLogEx(INFO, "read sector %u, %zu data bytes", sno, nbytes);
+    }
+
+    if (*out_len == 0)
+        PrintAndLogEx(WARNING, "no sectors found for AID 0x%04X", aid);
+
+    return PM3_SUCCESS;
+}
+
+int mad_app_write(const mad_ops_t *ops, uint16_t aid, bool swapmad, bool override,
+                  const uint8_t *data, size_t data_len) {
+    mad_entry_list_t mad_list = {0};
+    int res = mad_read_directory(ops, swapmad, override, &mad_list);
+    if (res != PM3_SUCCESS)
+        return res;
+
+    size_t capacity = 0;
+    for (size_t i = 0; i < mad_list.len; i++) {
+        if (mad_list.entries[i].aid == aid)
+            capacity += (mfNumBlocksPerSector(mad_list.entries[i].sector) - 1) * MFBLOCK_SIZE;
+    }
+
+    if (data_len > capacity) {
+        PrintAndLogEx(ERR, "data (%zu bytes) exceeds capacity (%zu bytes) for AID 0x%04X",
+                      data_len, capacity, aid);
+        return PM3_EINVARG;
+    }
+
+    size_t offset = 0;
+    for (size_t i = 0; i < mad_list.len; i++) {
+        if (mad_list.entries[i].aid != aid)
+            continue;
+        if (offset >= data_len)
+            break;
+
+        uint8_t sno = mad_list.entries[i].sector;
+        uint8_t num_data_blocks = mfNumBlocksPerSector(sno) - 1;
+        size_t sector_data_size = num_data_blocks * MFBLOCK_SIZE;
+
+        uint8_t sector_data[MFBLOCK_SIZE * 15] = {0};
+        size_t to_copy = sector_data_size;
+        if (data_len - offset < to_copy)
+            to_copy = data_len - offset;
+        memcpy(sector_data, data + offset, to_copy);
+
+        res = ops->write_sector_data(sno, ops->app_key_type,
+                                     ops->app_key, sector_data, ops->verbose);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "error writing sector %u", sno);
+            return res;
+        }
+
+        if (ops->verbose)
+            PrintAndLogEx(INFO, "wrote sector %u, %zu bytes", sno, to_copy);
+
+        offset += sector_data_size;
+    }
+
+    PrintAndLogEx(SUCCESS, "wrote %zu bytes to AID 0x%04X", data_len, aid);
+    return PM3_SUCCESS;
+}
+
+int mad_app_verify(const mad_ops_t *ops, uint16_t aid, bool swapmad, bool override,
+                   const uint8_t *expected, size_t expected_len) {
+    uint8_t readback[MIFARE_4K_MAX_BYTES];
+    size_t readback_len = 0;
+
+    int res = mad_app_read(ops, aid, swapmad, override,
+                           readback, sizeof(readback), &readback_len);
+    if (res != PM3_SUCCESS)
+        return res;
+
+    size_t cmp_len = readback_len < expected_len ? readback_len : expected_len;
+    if (memcmp(expected, readback, cmp_len) != 0) {
+        PrintAndLogEx(ERR, "Verify " _RED_("FAILED") ": data mismatch");
+        for (size_t j = 0; j < cmp_len; j++) {
+            if (expected[j] != readback[j]) {
+                PrintAndLogEx(ERR, "first difference at offset %zu: expected %02X, got %02X",
+                              j, expected[j], readback[j]);
                 break;
             }
-
-            uint16_t data_size = sector_size - MFBLOCK_SIZE;
-            if (*olen + data_size > olen_max) {
-                PrintAndLogEx(WARNING, "NDEF output buffer full");
-                return PM3_ESOFT;
-            }
-
-            memcpy(out, in + offset, data_size);
-            out += data_size;
-            *olen += data_size;
         }
+        return PM3_ESOFT;
     }
+
+    if (expected_len != readback_len) {
+        PrintAndLogEx(WARNING, "length mismatch: expected %zu, read %zu (data matches up to shorter)",
+                      expected_len, readback_len);
+    }
+
+    PrintAndLogEx(SUCCESS, "Verify " _GREEN_("OK") " (%zu bytes)", cmp_len);
     return PM3_SUCCESS;
 }

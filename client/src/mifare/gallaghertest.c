@@ -139,8 +139,8 @@ static bool test_mad_crc(void) {
     };
 
     const mad1_sector_t *m = (const mad1_sector_t *)sector0;
-    uint8_t expected_crc = m->crc;
-    uint8_t computed_crc = MADComputeCRC(m);
+    uint8_t expected_crc = m->mad.crc;
+    uint8_t computed_crc = CRC8Mad((uint8_t *)&m->mad.info, sizeof(mad1_t) - 1);
     if (computed_crc != expected_crc) {
         PrintAndLogEx(INFO, "MAD CRC test failed: expected 0x%02X, got 0x%02X", expected_crc, computed_crc);
         return false;

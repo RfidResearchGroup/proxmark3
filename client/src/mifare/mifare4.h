@@ -67,6 +67,7 @@ int MFPCommitPerso(bool activateField, bool leaveSignalON, uint8_t *dataout, int
 int MFPReadBlock(mf4Session_t *mf4session, bool plain, bool nomaccmd, bool nomacres, uint8_t blockNum, uint8_t blockCount, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac);
 int MFPWriteBlock(mf4Session_t *mf4session, bool plain, bool nomacres, uint8_t blockNum, uint8_t blockHdr, const uint8_t *data, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac);
 int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *dataout, bool verbose);
+int mfpWriteSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, const uint8_t *datain, bool verbose);
 
 int MFPGetSignature(bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
 int MFPGetVersion(bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
