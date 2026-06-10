@@ -26,9 +26,6 @@ from typing import Optional, Set
 from pm3_resources import find_tool
 
 
-legacy_collect = False
-legacy_unlock = False
-
 required_version = (3, 8)
 if sys.version_info < required_version:
     print(f"Python version: {sys.version}")
@@ -235,79 +232,40 @@ class CrackEffect:
         scramble_thread.join()
 
 
-def try_unlock(num_challenges: int, dict_erndberndarndb: dict, p) -> bool:
+def try_unlock(num_challenges: int, pairs: list, p) -> bool:
     """Try to unlock the card by using the provided reader responses
 
     Args:
         num_challenges (int): Number of challenge reads to attempt.
-        dict_erndberndarndb (dict): Dictionary mapping card challenges to reader responses.
+        pairs (list): List of nonce pairs.
         p: Proxmark3 instance used to issue raw commands and read responses.
 
     Returns:
         bool:
             Success
     """
-    challenges_collected = 0
-    next_progress = 10
-
-    if legacy_unlock:
-        print("[=] Waiting for the provided challenge to appear...")
-        while challenges_collected < max(1, num_challenges):
-            p.console("hf 14a raw -sck 1A00")
-            challenge = p.grabbed_output.split()
-            if (len(challenge) > 8) and (challenge[1] == "AF"):
-                hex_challenge = "".join(challenge[2:10]).upper()
-                # print(hex_challenge, erndb)
-                challenges_collected += 1
-                progress = challenges_collected * 100 // max(1, num_challenges)
-                if progress >= next_progress:
-                    print(f"[=] Progress: {min(progress, 100)}%")
-                    next_progress += 10
-                if hex_challenge in dict_erndberndarndb:
-                    p.console(f"hf 14a raw -ck AF{dict_erndberndarndb[hex_challenge]}")
-                    response = p.grabbed_output.split()
-                    if (len(response) > 8) and (response[1] == "00"):
-                        print("[+] Unlock successful!")
-                        # Rewrite AUTH0
-                        p.console("hf 14a raw -c a2 2a 30000000")
-                        response = p.grabbed_output.split()
-                        if response[1] == "0A":
-                            print("[+] AUTH0 reset successful!")
-                            return True
-                        else:
-                            print("[-] AUTH0 reset failed")
-                            print(response)
-                            return False
-                    else:
-                        print("[-] Unlock failed")
-                        p.console("hf 14a reader --drop", capture=False)
-                        return False
-            p.console("hf 14a reader --drop", capture=False)
-        print("[-] Provided challenge not found, try again")
-
-    else:
-        p.console(f"hf mfu cauth --read0 --retries {num_challenges - 1} --reset -k --pair " +
-                  " --pair ".join([x + y for x, y in dict_erndberndarndb.items()]))
-        result = p.grabbed_output.split()
-        if 'ok' in result:
-            print("[+] Unlock successful!")
-            # Rewrite AUTH0
-            p.console("hf 14a raw -c a2 2a 30000000")
-            response = p.grabbed_output.split()
-            if response[1] == "0A":
-                print("[+] AUTH0 reset successful!")
-                return True
-            else:
-                print("[-] AUTH0 reset failed")
-                print(response)
-                return False
+    print(f"hf mfu cauth --read0 --retries {num_challenges - 1} --reset -k --pair " +
+              " --pair ".join(pairs))
+    p.console(f"hf mfu cauth --read0 --retries {num_challenges - 1} --reset -k --pair " +
+              " --pair ".join(pairs))
+    result = p.grabbed_output.split()
+    print(result)
+    if 'ok' in result:
+        print("[+] Unlock successful!")
+        # Rewrite AUTH0
+        p.console("hf 14a raw -c a2 2a 30000000")
+        response = p.grabbed_output.split()
+        if response[1] == "0A":
+            print("[+] AUTH0 reset successful!")
+            return True
         else:
-            print("[-] Unlock failed")
-            p.console("hf 14a reader --drop", capture=False)
+            print("[-] AUTH0 reset failed")
+            print(response)
             return False
-
-    return False
-
+    else:
+        print("[-] Unlock failed")
+        p.console("hf 14a reader --drop", capture=False)
+        return False
 
 def collect_100(num_challenges: int, p, early_stop: bool) -> tuple[int, dict]:
     """Collect challenges and track the most frequent nonce occurrence.
@@ -567,7 +525,7 @@ def main():
     parser.add_argument('--get_frequent_chals', action='store_true',
                         help='Collect a "gold" challenge to perform an unlock, and quit afterwards')
     parser.add_argument('--unlock', help='Unlock a card with a list of "gold" challenge/response pairs, '
-                        'separated by commas, in the format ERndB:ERndARndB\'',
+                        'as comma-separated 48-char hex <ERndB><ERndARndB\'>,...',
                         type=str, metavar='ERndB:ERndARndB,...\'')
     args = parser.parse_args()
     debug = args.debug
@@ -576,14 +534,14 @@ def main():
     use_cuda = args.cuda
     force = args.force
     get_frequent_chals = args.get_frequent_chals
-    list_erndberndarndb = args.unlock.split(',') if args.unlock else []
+    pairs = args.unlock.split(',') if args.unlock else []
     brute_tool = tools["mfulc_des_brute_cuda"] if use_cuda else tools["mfulc_des_brute"]
 
     if get_frequent_chals and (offline or args.json or force or use_cuda):
         print("[-] Error: --get_frequent_chal can only be combined with --challenges")
         return
 
-    if list_erndberndarndb and offline:
+    if pairs and offline:
         print("[-] Error: --unlock can'n be combined with --offline")
         return
 
@@ -594,18 +552,12 @@ def main():
         if uid is None:
             return
         common_nonces = []
-        if legacy_collect:
-            max_occurrence, challenges = collect_100(num_challenges, p, early_stop=False)
-            if max_occurrence <= 1:
-                return
-            common_nonces.append((challenges["challenge_100"], max_occurrence))
-        else:
-            p.console(f"hf mfu cauth --collect --read0 --noauth --reset --retries {num_challenges - 1}")
-            for line in p.grabbed_output.splitlines():
-                match = re.search(r"\[=\]\s+([0-9a-fA-F]{16})\s+\(count:\s*(\d+)\)", line)
-                if match:
-                    common_nonces.append((match.group(1), int(match.group(2))))
-        for i in range(len(common_nonces)):
+        p.console(f"hf mfu cauth --collect --read0 --noauth --reset --retries {num_challenges - 1}")
+        for line in p.grabbed_output.splitlines():
+            match = re.search(r"\[=\]\s+([0-9a-fA-F]{16})\s+\(count:\s*(\d+)\)", line)
+            if match:
+                common_nonces.append((match.group(1), int(match.group(2))))
+        for i in range(min(3,len(common_nonces))):
             challenge_hex = common_nonces[i][0]
             occurrence = common_nonces[i][1]
             print(f"E(RndB): {challenge_hex} Count: {occurrence:3d} Cmd:"
@@ -625,16 +577,8 @@ def main():
     if not offline:
         import pm3
         p = pm3.pm3()
-        if len(list_erndberndarndb) > 0:
-            dict_erndberndarndb = {}
-            for pair in list_erndberndarndb:
-                try:
-                    erndb, erndarndb = pair.split(':')
-                    dict_erndberndarndb[erndb.upper()] = erndarndb.upper()
-                except ValueError:
-                    print(f"[-] Error: Invalid format for --unlock pair '{pair}'. Expected format is ERndB:ERndARndB'")
-                    return
-            if not try_unlock(num_challenges, dict_erndberndarndb, p):
+        if len(pairs) > 0:
+            if not try_unlock(num_challenges, pairs, p):
                 return
         challenges = collect(p, debug, force)
         if challenges is None:
