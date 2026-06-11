@@ -2854,7 +2854,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
                     break;
                 }
 
-                if (IsSectorTrailer(b)) {
+                if (IsSectorTrailer(tb)) {
                     // sector trailer, keep the keys, set only the AC
                     uint8_t st[MIFARE_BLOCK_SIZE] = {0x00};
                     emlGetMem_xt(st, tb, 1, MIFARE_BLOCK_SIZE);
