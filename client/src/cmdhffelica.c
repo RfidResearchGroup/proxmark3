@@ -55,6 +55,7 @@
 #define FELICA_PLATFORM_INFO_WITH_MAC_INFO_LEN 25U
 #define FELICA_PLATFORM_INFO_WITH_MAC_LEN 20U
 #define FELICA_PLATFORM_INFO_WITH_MAC_TOTAL_LEN (FELICA_PLATFORM_INFO_WITH_MAC_INFO_LEN + FELICA_PLATFORM_INFO_WITH_MAC_LEN)
+#define FELICA_CONTAINER_ISSUE_INFO_LEN 16U
 #define FELICA_CONTAINER_PROPERTY_MAX_LEN 64U
 #define FELICA_SPECIFICATION_VERSION_MAX_LEN (4U + (FELICA_SPECIFICATION_VERSION_MAX_OPTIONS * 2U))
 #define FELICA_OPTIONAL_CMD_TIMEOUT_MS 250U
@@ -315,6 +316,8 @@ typedef struct {
     bool has_product_information;
     uint8_t product_information[FELICA_PLATFORM_INFO_MAX_LEN];
     size_t product_information_len;
+    bool has_container_issue_information;
+    uint8_t container_issue_information[FELICA_CONTAINER_ISSUE_INFO_LEN];
 } felica_dump_metadata_t;
 
 static uint8_t felica_node_attribute(uint16_t node_code_le) {
@@ -4205,7 +4208,11 @@ static json_t *felica_dump_systems_json(const felica_dump_system_t *systems, siz
             felica_dump_json_set_hex_or_null(root, "product_information",
                                              metadata ? metadata->product_information : NULL,
                                              metadata ? metadata->product_information_len : 0,
-                                             metadata && metadata->has_product_information) != PM3_SUCCESS) {
+                                             metadata && metadata->has_product_information) != PM3_SUCCESS ||
+            felica_dump_json_set_hex_or_null(root, "container_issue_information",
+                                             metadata ? metadata->container_issue_information : NULL,
+                                             metadata ? sizeof(metadata->container_issue_information) : 0,
+                                             metadata && metadata->has_container_issue_information) != PM3_SUCCESS) {
         json_decref(systems_json);
         json_decref(root);
         return NULL;
@@ -4303,6 +4310,25 @@ static void felica_dump_collect_metadata(const uint8_t *idm, felica_dump_metadat
                                       &metadata->product_information_len) == PM3_SUCCESS &&
             metadata->product_information_len > 0) {
         metadata->has_product_information = true;
+    }
+
+    felica_get_container_issue_info_request_t container_issue_request;
+    memset(&container_issue_request, 0, sizeof(container_issue_request));
+    container_issue_request.length[0] = sizeof(container_issue_request);
+    container_issue_request.command_code[0] = FELICA_GET_CONTAINER_ISSUE_INFO_REQ;
+    memcpy(container_issue_request.IDm, idm, sizeof(container_issue_request.IDm));
+
+    felica_get_container_issue_info_response_t container_issue_response;
+    if (send_get_container_issue_information(optional_flags,
+                                             sizeof(container_issue_request), (uint8_t *)&container_issue_request,
+                                             false, &container_issue_response) == PM3_SUCCESS) {
+        memcpy(metadata->container_issue_information,
+               container_issue_response.format_version_carrier_information,
+               sizeof(container_issue_response.format_version_carrier_information));
+        memcpy(metadata->container_issue_information + sizeof(container_issue_response.format_version_carrier_information),
+               container_issue_response.mobile_phone_model_information,
+               sizeof(container_issue_response.mobile_phone_model_information));
+        metadata->has_container_issue_information = true;
     }
 }
 
