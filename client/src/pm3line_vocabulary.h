@@ -258,6 +258,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf felica wrbl" },
     { 0, "hf felica dump" },
     { 0, "hf felica discnodes" },
+    { 0, "hf felica sim" },
     { 0, "hf felica rqservice" },
     { 0, "hf felica rqresponse" },
     { 0, "hf felica scsvcode" },

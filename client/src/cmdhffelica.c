@@ -35,6 +35,7 @@
 #include "platform_util.h"
 #include "cliparser.h"   // cliparser
 #include "util_posix.h"  // msleep, msclock
+#include "jansson.h"
 
 
 #define FELICA_BLK_SIZE 16
@@ -69,7 +70,6 @@
 #define FELICA_SYSTEM_CODE_MAX_COUNT 16U
 #define FELICA_DISCOVERED_SYSTEM_MAX_COUNT FELICA_SYSTEM_CODE_MAX_COUNT
 #define FELICA_SYSTEM_CODE_WILDCARD 0xFFFFU
-#define FELICA_SYSTEM_NODE 0xFFFFU
 #define FELICA_SYSTEM_CODE_NFC_TYPE3 0x12FCU
 #define FELICA_SYSTEM_CODE_FELICA_LITE 0x88B4U
 #define FELICA_SYSTEM_CODE_FELICA_SECURE_ID 0x957AU
@@ -81,62 +81,7 @@
 #define FELICA_SYSTEM_LIST_JSON "felica/felica_system_code_list"
 #define FELICA_IC_CODE_LIST_JSON "felica/felica_ic_code_list"
 
-#define FELICA_SERVICE_ATTRIBUTE_UNAUTH_READ    (0b000001)
-#define FELICA_SERVICE_ATTRIBUTE_READ_ONLY      (0b000010)
-#define FELICA_SERVICE_ATTRIBUTE_RANDOM_ACCESS  (0b001000)
-#define FELICA_SERVICE_ATTRIBUTE_CYCLIC         (0b001100)
-#define FELICA_SERVICE_ATTRIBUTE_PURSE          (0b010000)
-#define FELICA_SERVICE_ATTRIBUTE_PIN_REQUIRED   (0b100000)
-#define FELICA_SERVICE_ATTRIBUTE_PURSE_SUBFIELD (0b000110)
-#define FELICA_NODE_ATTRIBUTE_MASK              0x3FU
-
-#define FELICA_AREA_ATTRIBUTE_CAN_CREATE_SUBAREA             0x00U
-#define FELICA_AREA_ATTRIBUTE_CANNOT_CREATE_SUBAREA          0x01U
-#define FELICA_AREA_ATTRIBUTE_CAN_CREATE_SUBAREA_WITH_PIN    0x20U
-#define FELICA_AREA_ATTRIBUTE_CANNOT_CREATE_SUBAREA_WITH_PIN 0x21U
-#define FELICA_AREA_ATTRIBUTE_END_ROOT_AREA                  0x3EU
-#define FELICA_AREA_ATTRIBUTE_END_SUB_AREA                   0x3FU
-
-#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RW_WITH_KEY            0x08U
-#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RW_WITHOUT_KEY         0x09U
-#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITH_KEY            0x0AU
-#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITHOUT_KEY         0x0BU
-#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RW_WITH_KEY            0x0CU
-#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RW_WITHOUT_KEY         0x0DU
-#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RO_WITH_KEY            0x0EU
-#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RO_WITHOUT_KEY         0x0FU
-#define FELICA_SERVICE_ATTRIBUTE_PURSE_RW_WITH_KEY             0x10U
-#define FELICA_SERVICE_ATTRIBUTE_PURSE_RW_WITHOUT_KEY          0x11U
-#define FELICA_SERVICE_ATTRIBUTE_PURSE_CASHBACK_WITH_KEY       0x12U
-#define FELICA_SERVICE_ATTRIBUTE_PURSE_CASHBACK_WITHOUT_KEY    0x13U
-#define FELICA_SERVICE_ATTRIBUTE_PURSE_DECREMENT_WITH_KEY      0x14U
-#define FELICA_SERVICE_ATTRIBUTE_PURSE_DECREMENT_WITHOUT_KEY   0x15U
-#define FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITH_KEY             0x16U
-#define FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITHOUT_KEY          0x17U
-
-#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RW_WITH_KEY_WITH_PIN          0x28U
-#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RW_WITHOUT_KEY_WITH_PIN       0x29U
-#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITH_KEY_WITH_PIN          0x2AU
-#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITHOUT_KEY_WITH_PIN       0x2BU
-#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RW_WITH_KEY_WITH_PIN          0x2CU
-#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RW_WITHOUT_KEY_WITH_PIN       0x2DU
-#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RO_WITH_KEY_WITH_PIN          0x2EU
-#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RO_WITHOUT_KEY_WITH_PIN       0x2FU
-#define FELICA_SERVICE_ATTRIBUTE_PURSE_RW_WITH_KEY_WITH_PIN           0x30U
-#define FELICA_SERVICE_ATTRIBUTE_PURSE_RW_WITHOUT_KEY_WITH_PIN        0x31U
-#define FELICA_SERVICE_ATTRIBUTE_PURSE_CASHBACK_WITH_KEY_WITH_PIN     0x32U
-#define FELICA_SERVICE_ATTRIBUTE_PURSE_CASHBACK_WITHOUT_KEY_WITH_PIN  0x33U
-#define FELICA_SERVICE_ATTRIBUTE_PURSE_DECREMENT_WITH_KEY_WITH_PIN    0x34U
-#define FELICA_SERVICE_ATTRIBUTE_PURSE_DECREMENT_WITHOUT_KEY_WITH_PIN 0x35U
-#define FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITH_KEY_WITH_PIN           0x36U
-#define FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITHOUT_KEY_WITH_PIN        0x37U
-
 #define FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE 32U
-#define FELICA_ENCRYPTION_IDENTIFIER_AES128 0x4FU
-#define FELICA_ENCRYPTION_IDENTIFIER_AES128_DES112 0x43U
-#define FELICA_ENCRYPTION_IDENTIFIER_AES128_DES56 0x41U
-#define FELICA_ENCRYPTION_IDENTIFIER_DES112 0x3FU
-#define FELICA_ENCRYPTION_IDENTIFIER_DES56 0x2FU
 #define FELICA_MAX_NODE_NUMBER 0x03FFU
 #define FELICA_LITE_NODE_DISCOVERY_MAX_NODE_NUMBER 16U
 #define FELICA_PRESENCE_SERVICE_CODE_LE ((uint16_t)FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITHOUT_KEY)
@@ -1155,7 +1100,7 @@ static bool felica_block_number_from_block_list_element(const uint8_t *block_lis
     }
 
     if (block_list_element_len == 3U) {
-        *block_number = ((uint16_t)block_list_element[1] << 8) | block_list_element[2];
+        *block_number = block_list_element[1] | ((uint16_t)block_list_element[2] << 8);
         return true;
     }
 
@@ -5294,16 +5239,20 @@ static int CmdHFFelicaReadPlain(const char *Cmd) {
     // main loop block reads
     if (all_block_list_elements) {
 
-        uint16_t last_blockno = 0xFF;
-        if (long_block_numbers) {
-            last_blockno = 0xFFFF;
-        }
+        const uint32_t last_blockno = long_block_numbers ? 0xFFFFU : 0xFFU;
 
-        for (uint16_t i = 0x00; i < last_blockno; i++) {
-            data[15] = i;
+        for (uint32_t i = 0x00; i <= last_blockno; i++) {
+            if (long_block_numbers) {
+                data[14] &= 0x7FU;
+                data[15] = (uint8_t)(i & 0xFFU);
+                data[16] = (uint8_t)((i >> 8) & 0xFFU);
+            } else {
+                data[14] |= 0x80U;
+                data[15] = (uint8_t)(i & 0xFFU);
+            }
             felica_read_without_encryption_response_t rd_noCry_resp;
             if ((send_read_without_encryption(flags, datalen, data, 0, &rd_noCry_resp) == PM3_SUCCESS)) {
-                print_read_without_encryption_response(&rd_noCry_resp, i);
+                print_read_without_encryption_response(&rd_noCry_resp, (uint16_t)i);
             } else {
                 break;
             }
@@ -6078,6 +6027,874 @@ static int CmdHFFelicaSniff(const char *Cmd) {
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf felica list") "` to view");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
+}
+
+typedef struct {
+    uint8_t *model;
+    size_t model_len;
+    uint16_t system_count;
+    uint16_t node_count;
+    uint16_t block_count;
+} felica_sim_model_t;
+
+typedef struct {
+    felica_sim_system_record_t *systems;
+    felica_sim_node_record_t *nodes;
+    felica_sim_block_record_t *blocks;
+    uint8_t specification_version[FELICA_SIM_SPECIFICATION_VERSION_MAX_LEN];
+    size_t specification_version_len;
+    uint8_t product_information[FELICA_SIM_PRODUCT_INFORMATION_MAX_LEN];
+    size_t product_information_len;
+    uint8_t container_issue_information[FELICA_SIM_CONTAINER_ISSUE_INFORMATION_LEN];
+    size_t container_issue_information_len;
+    size_t system_count;
+    size_t system_capacity;
+    size_t node_count;
+    size_t node_capacity;
+    size_t block_count;
+    size_t block_capacity;
+} felica_sim_model_builder_t;
+
+static void felica_sim_model_free(felica_sim_model_t *model) {
+    if (model == NULL) {
+        return;
+    }
+    free(model->model);
+    memset(model, 0, sizeof(*model));
+}
+
+static void felica_sim_builder_free(felica_sim_model_builder_t *builder) {
+    if (builder == NULL) {
+        return;
+    }
+    free(builder->systems);
+    free(builder->nodes);
+    free(builder->blocks);
+    memset(builder, 0, sizeof(*builder));
+}
+
+static int felica_sim_reserve(void **ptr, size_t *capacity, size_t elem_size, size_t needed) {
+    if (needed <= *capacity) {
+        return PM3_SUCCESS;
+    }
+
+    size_t new_capacity = (*capacity == 0) ? 16U : *capacity;
+    while (new_capacity < needed) {
+        if (new_capacity > (SIZE_MAX / 2U)) {
+            return PM3_EOVFLOW;
+        }
+        new_capacity *= 2U;
+    }
+
+    if (new_capacity > (SIZE_MAX / elem_size)) {
+        return PM3_EOVFLOW;
+    }
+
+    void *tmp = realloc(*ptr, new_capacity * elem_size);
+    if (tmp == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    *ptr = tmp;
+    *capacity = new_capacity;
+    return PM3_SUCCESS;
+}
+
+static int felica_sim_builder_add_system(felica_sim_model_builder_t *builder, const felica_sim_system_record_t *system, size_t *index_out) {
+    if (builder->system_count >= UINT16_MAX) {
+        return PM3_EOVFLOW;
+    }
+    int ret = felica_sim_reserve((void **)&builder->systems, &builder->system_capacity, sizeof(*builder->systems), builder->system_count + 1U);
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+
+    if (index_out) {
+        *index_out = builder->system_count;
+    }
+    builder->systems[builder->system_count++] = *system;
+    return PM3_SUCCESS;
+}
+
+static int felica_sim_builder_add_node(felica_sim_model_builder_t *builder, const felica_sim_node_record_t *node, size_t *index_out) {
+    if (builder->node_count >= UINT16_MAX) {
+        return PM3_EOVFLOW;
+    }
+    int ret = felica_sim_reserve((void **)&builder->nodes, &builder->node_capacity, sizeof(*builder->nodes), builder->node_count + 1U);
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+
+    if (index_out) {
+        *index_out = builder->node_count;
+    }
+    builder->nodes[builder->node_count++] = *node;
+    return PM3_SUCCESS;
+}
+
+static int felica_sim_builder_add_block(felica_sim_model_builder_t *builder, const felica_sim_block_record_t *block) {
+    if (builder->block_count >= UINT16_MAX) {
+        return PM3_EOVFLOW;
+    }
+    int ret = felica_sim_reserve((void **)&builder->blocks, &builder->block_capacity, sizeof(*builder->blocks), builder->block_count + 1U);
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+
+    builder->blocks[builder->block_count++] = *block;
+    return PM3_SUCCESS;
+}
+
+static bool felica_sim_hex_to_bytes(const char *hex, uint8_t *out, size_t expected_len) {
+    if (hex == NULL || out == NULL || strlen(hex) != expected_len * 2U) {
+        return false;
+    }
+
+    size_t len = 0;
+    return hexstr_to_byte_array(hex, out, &len) && len == expected_len;
+}
+
+static bool felica_sim_parse_optional_hex_json(const json_t *value_json, uint8_t *out,
+                                               size_t min_len, size_t max_len, size_t *out_len) {
+    if (out == NULL || out_len == NULL || min_len > max_len) {
+        return false;
+    }
+
+    *out_len = 0;
+    if (value_json == NULL || json_is_null(value_json)) {
+        return true;
+    }
+    if (json_is_string(value_json) == false) {
+        return false;
+    }
+
+    const char *hex = json_string_value(value_json);
+    const size_t hex_len = strlen(hex);
+    if (hex_len == 0 || (hex_len & 1U)) {
+        return false;
+    }
+
+    const size_t byte_len = hex_len / 2U;
+    if (byte_len < min_len || byte_len > max_len) {
+        return false;
+    }
+
+    size_t parsed_len = 0;
+    if (hexstr_to_byte_array(hex, out, &parsed_len) == false || parsed_len != byte_len) {
+        return false;
+    }
+
+    *out_len = byte_len;
+    return true;
+}
+
+static bool felica_sim_validate_specification_version_data(const uint8_t *data, size_t data_len) {
+    if (data_len == 0) {
+        return true;
+    }
+    if (data == NULL || data_len < 4U) {
+        return false;
+    }
+
+    const size_t expected_len = 4U + ((size_t)data[3] * 2U);
+    return data_len == expected_len && data_len <= FELICA_SIM_SPECIFICATION_VERSION_MAX_LEN;
+}
+
+static bool felica_sim_parse_u16_be_hex(const char *hex, uint16_t *value_out) {
+    uint8_t bytes[2] = {0};
+    if (value_out == NULL || felica_sim_hex_to_bytes(hex, bytes, sizeof(bytes)) == false) {
+        return false;
+    }
+    *value_out = ((uint16_t)bytes[0] << 8) | bytes[1];
+    return true;
+}
+
+static uint16_t felica_sim_swap16(uint16_t value) {
+    return (uint16_t)(((value & 0x00FFU) << 8) | ((value & 0xFF00U) >> 8));
+}
+
+static bool felica_sim_parse_key_version_json(const json_t *value_json, uint16_t *value_le_out, bool *has_value_out) {
+    if (value_le_out == NULL || has_value_out == NULL) {
+        return false;
+    }
+
+    *value_le_out = 0;
+    *has_value_out = false;
+    if (value_json == NULL || json_is_null(value_json)) {
+        return true;
+    }
+    if (json_is_string(value_json) == false) {
+        return false;
+    }
+
+    uint8_t bytes[2] = {0};
+    if (felica_sim_hex_to_bytes(json_string_value(value_json), bytes, sizeof(bytes)) == false) {
+        return false;
+    }
+
+    *value_le_out = bytes[0] | ((uint16_t)bytes[1] << 8);
+    *has_value_out = true;
+    return true;
+}
+
+static bool felica_sim_parse_encryption_identifier_json(const json_t *value_json, uint8_t *identifier_out) {
+    if (identifier_out == NULL) {
+        return false;
+    }
+
+    *identifier_out = 0;
+    if (value_json == NULL || json_is_null(value_json)) {
+        return true;
+    }
+    if (json_is_string(value_json) == false) {
+        return false;
+    }
+
+    const char *identifier = json_string_value(value_json);
+    for (size_t i = 0; i < ARRAYLEN(FELICA_ENCRYPTION_IDENTIFIER_INFO); i++) {
+        if (strcmp(identifier, FELICA_ENCRYPTION_IDENTIFIER_INFO[i].name) == 0) {
+            *identifier_out = FELICA_ENCRYPTION_IDENTIFIER_INFO[i].identifier;
+            return true;
+        }
+    }
+
+    uint8_t raw_identifier = 0;
+    if (felica_sim_hex_to_bytes(identifier, &raw_identifier, sizeof(raw_identifier)) == false) {
+        return false;
+    }
+
+    if (felica_encryption_identifier_get_info(raw_identifier) == NULL) {
+        return false;
+    }
+
+    *identifier_out = raw_identifier;
+    return true;
+}
+
+static const char *felica_sim_rwe_error_location_indication_name(uint8_t mode) {
+    switch (mode) {
+        case FELICA_SIM_RWE_ERROR_LOCATION_MASK:
+            return "mask";
+        case FELICA_SIM_RWE_ERROR_LOCATION_INDEX:
+            return "index";
+        case FELICA_SIM_RWE_ERROR_LOCATION_FLAG:
+            return "flag";
+        default:
+            return "unknown";
+    }
+}
+
+static bool felica_sim_parse_rwe_error_location_indication(const char *value, uint8_t *mode_out) {
+    if (value == NULL || value[0] == '\0' || mode_out == NULL) {
+        return false;
+    }
+
+    char mode[16] = {0};
+    const size_t len = strlen(value);
+    if (len >= sizeof(mode)) {
+        return false;
+    }
+
+    for (size_t i = 0; i < len; i++) {
+        mode[i] = (char)tolower((unsigned char)value[i]);
+    }
+
+    if (strcmp(mode, "mask") == 0 || strcmp(mode, "bitmask") == 0) {
+        *mode_out = FELICA_SIM_RWE_ERROR_LOCATION_MASK;
+        return true;
+    }
+    if (strcmp(mode, "index") == 0 || strcmp(mode, "number") == 0) {
+        *mode_out = FELICA_SIM_RWE_ERROR_LOCATION_INDEX;
+        return true;
+    }
+    if (strcmp(mode, "flag") == 0 || strcmp(mode, "ff") == 0) {
+        *mode_out = FELICA_SIM_RWE_ERROR_LOCATION_FLAG;
+        return true;
+    }
+
+    return false;
+}
+
+static int felica_sim_parse_metadata_json(felica_sim_model_builder_t *builder, const json_t *root) {
+    if (builder == NULL || json_is_object(root) == false) {
+        return PM3_EINVARG;
+    }
+
+    if (felica_sim_parse_optional_hex_json(json_object_get(root, "specification_version"),
+                                           builder->specification_version,
+                                           4U, sizeof(builder->specification_version),
+                                           &builder->specification_version_len) == false ||
+            felica_sim_validate_specification_version_data(builder->specification_version,
+                                                           builder->specification_version_len) == false) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: root has invalid specification_version");
+        return PM3_EINVARG;
+    }
+
+    if (felica_sim_parse_optional_hex_json(json_object_get(root, "product_information"),
+                                           builder->product_information,
+                                           1U, sizeof(builder->product_information),
+                                           &builder->product_information_len) == false) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: root has invalid product_information");
+        return PM3_EINVARG;
+    }
+
+    if (felica_sim_parse_optional_hex_json(json_object_get(root, "container_issue_information"),
+                                           builder->container_issue_information,
+                                           sizeof(builder->container_issue_information),
+                                           sizeof(builder->container_issue_information),
+                                           &builder->container_issue_information_len) == false) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: root has invalid container_issue_information");
+        return PM3_EINVARG;
+    }
+
+    return PM3_SUCCESS;
+}
+
+static bool felica_sim_node_duplicate_exists(const felica_sim_model_builder_t *builder, const felica_sim_system_record_t *system,
+                                             uint8_t flags, uint16_t node_code_le, uint16_t end_code_le) {
+    const uint8_t node_type = flags & FELICA_SIM_NODE_TYPE_MASK;
+    const size_t end = (size_t)system->first_node + system->node_count;
+    for (size_t i = system->first_node; i < end; i++) {
+        const felica_sim_node_record_t *node = &builder->nodes[i];
+        if ((node->flags & FELICA_SIM_NODE_TYPE_MASK) != node_type) {
+            continue;
+        }
+        if (node->node_code_le == node_code_le &&
+                (node_type != FELICA_SIM_NODE_TYPE_AREA || node->end_code_le == end_code_le)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool felica_sim_block_duplicate_exists(const felica_sim_model_builder_t *builder, const felica_sim_node_record_t *node,
+                                              uint16_t block_number) {
+    const size_t end = (size_t)node->first_block + node->block_count;
+    for (size_t i = node->first_block; i < end; i++) {
+        if (builder->blocks[i].block_number == block_number) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static int felica_sim_parse_node_json(felica_sim_model_builder_t *builder, const json_t *node_json,
+                                      size_t system_index, size_t node_json_index) {
+    if (json_is_object(node_json) == false) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: node %zu is not an object", node_json_index);
+        return PM3_EINVARG;
+    }
+
+    json_t *type_json = json_object_get(node_json, "type");
+    json_t *code_json = json_object_get(node_json, "code");
+    json_t *des_key_json = json_object_get(node_json, "des_key_version");
+    json_t *aes_key_json = json_object_get(node_json, "aes_key_version");
+    json_t *data_json = json_object_get(node_json, "data");
+
+    if (json_is_string(type_json) == false || json_is_string(code_json) == false || json_is_object(data_json) == false) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: node %zu is missing type/code/data", node_json_index);
+        return PM3_EINVARG;
+    }
+
+    const char *type = json_string_value(type_json);
+    const bool is_area = strcmp(type, "area") == 0;
+    const bool is_system = strcmp(type, "system") == 0;
+    const uint8_t node_type = is_system ? FELICA_SIM_NODE_TYPE_SYSTEM :
+                              is_area ? FELICA_SIM_NODE_TYPE_AREA :
+                              FELICA_SIM_NODE_TYPE_SERVICE;
+    if (is_area == false && is_system == false && strcmp(type, "service") != 0) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: node %zu has unknown type `%s`", node_json_index, type);
+        return PM3_EINVARG;
+    }
+
+    const char *code_hex = json_string_value(code_json);
+    const size_t code_len = strlen(code_hex);
+    if ((is_area && code_len != 4U && code_len != 8U) || (is_area == false && code_len != 4U)) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: node %zu has invalid code length", node_json_index);
+        return PM3_EINVARG;
+    }
+
+    char start_code_hex[5] = {0};
+    memcpy(start_code_hex, code_hex, 4);
+    uint16_t node_code_be = 0;
+    if (felica_sim_parse_u16_be_hex(start_code_hex, &node_code_be) == false) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: node %zu has invalid code", node_json_index);
+        return PM3_EINVARG;
+    }
+    if (is_system && node_code_be != FELICA_SYSTEM_NODE) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: system node %zu must use code FFFF", node_json_index);
+        return PM3_EINVARG;
+    }
+    if (is_system == false && node_code_be == FELICA_SYSTEM_NODE) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: non-system node %zu uses reserved system code FFFF", node_json_index);
+        return PM3_EINVARG;
+    }
+
+    felica_sim_node_record_t node = {
+        .system_index = (uint16_t)system_index,
+        .node_code_le = felica_sim_swap16(node_code_be),
+        .end_code_le = is_area ? 0xFFFEU : 0,
+        .first_block = (uint16_t)builder->block_count,
+        .block_count = 0,
+        .des_key_version_le = 0xFFFFU,
+        .aes_key_version_le = 0xFFFFU,
+        .flags = node_type,
+        .reserved = 0,
+    };
+
+    if (is_area && code_len == 8U) {
+        char end_code_hex[5] = {0};
+        memcpy(end_code_hex, code_hex + 4, 4);
+        uint16_t end_code_be = 0;
+        if (felica_sim_parse_u16_be_hex(end_code_hex, &end_code_be) == false) {
+            PrintAndLogEx(ERR, "Invalid FeliCa dump: node %zu has invalid area end code", node_json_index);
+            return PM3_EINVARG;
+        }
+        node.end_code_le = felica_sim_swap16(end_code_be);
+    }
+
+    bool has_key_version = false;
+    uint16_t key_version_le = 0;
+    if (felica_sim_parse_key_version_json(des_key_json, &key_version_le, &has_key_version) == false) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: node %zu has invalid DES key version", node_json_index);
+        return PM3_EINVARG;
+    }
+    if (has_key_version) {
+        node.des_key_version_le = key_version_le;
+        node.flags |= FELICA_SIM_NODE_HAS_DES_KEY_VERSION;
+    }
+
+    key_version_le = 0;
+    if (felica_sim_parse_key_version_json(aes_key_json, &key_version_le, &has_key_version) == false) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: node %zu has invalid AES key version", node_json_index);
+        return PM3_EINVARG;
+    }
+    if (has_key_version) {
+        node.aes_key_version_le = key_version_le;
+        node.flags |= FELICA_SIM_NODE_HAS_AES_KEY_VERSION;
+    }
+
+    if (is_system && (node.flags & (FELICA_SIM_NODE_HAS_DES_KEY_VERSION | FELICA_SIM_NODE_HAS_AES_KEY_VERSION)) == 0) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: system node `%s` is missing key version data", code_hex);
+        return PM3_EINVARG;
+    }
+
+    const felica_sim_system_record_t *system = &builder->systems[system_index];
+    if (felica_sim_node_duplicate_exists(builder, system, node.flags, node.node_code_le, node.end_code_le)) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: duplicate node code `%s`", code_hex);
+        return PM3_EINVARG;
+    }
+
+    if ((is_area || is_system) && json_object_size(data_json) != 0) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: non-service node `%s` unexpectedly has block data", code_hex);
+        return PM3_EINVARG;
+    }
+
+    size_t node_index = 0;
+    int ret = felica_sim_builder_add_node(builder, &node, &node_index);
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+
+    const char *block_number_hex = NULL;
+    json_t *block_data_json = NULL;
+    json_object_foreach(data_json, block_number_hex, block_data_json) {
+        if (json_is_string(block_data_json) == false) {
+            PrintAndLogEx(ERR, "Invalid FeliCa dump: block `%s` value is not a string", block_number_hex);
+            return PM3_EINVARG;
+        }
+
+        uint16_t block_number = 0;
+        if (felica_sim_parse_u16_be_hex(block_number_hex, &block_number) == false) {
+            PrintAndLogEx(ERR, "Invalid FeliCa dump: invalid block number `%s`", block_number_hex);
+            return PM3_EINVARG;
+        }
+
+        if (felica_sim_block_duplicate_exists(builder, &builder->nodes[node_index], block_number)) {
+            PrintAndLogEx(ERR, "Invalid FeliCa dump: duplicate block `%s` in node `%s`", block_number_hex, code_hex);
+            return PM3_EINVARG;
+        }
+
+        felica_sim_block_record_t block = {
+            .node_index = (uint16_t)node_index,
+            .block_number = block_number,
+            .data = {0},
+        };
+        if (felica_sim_hex_to_bytes(json_string_value(block_data_json), block.data, sizeof(block.data)) == false) {
+            PrintAndLogEx(ERR, "Invalid FeliCa dump: block `%s` is not 16 bytes", block_number_hex);
+            return PM3_EINVARG;
+        }
+
+        ret = felica_sim_builder_add_block(builder, &block);
+        if (ret != PM3_SUCCESS) {
+            return ret;
+        }
+        builder->nodes[node_index].block_count++;
+    }
+
+    builder->systems[system_index].node_count++;
+    return PM3_SUCCESS;
+}
+
+static int felica_sim_parse_system_json(felica_sim_model_builder_t *builder, const json_t *system_json, size_t system_json_index) {
+    if (json_is_object(system_json) == false) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: system %zu is not an object", system_json_index);
+        return PM3_EINVARG;
+    }
+
+    json_t *code_json = json_object_get(system_json, "code");
+    json_t *idm_json = json_object_get(system_json, "idm");
+    json_t *pmm_json = json_object_get(system_json, "pmm");
+    json_t *encryption_identifier_json = json_object_get(system_json, "encryption_identifier");
+    json_t *nodes_json = json_object_get(system_json, "nodes");
+
+    if (json_is_string(code_json) == false ||
+            json_is_string(idm_json) == false ||
+            json_is_string(pmm_json) == false ||
+            json_is_array(nodes_json) == false) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: system %zu is missing code/idm/pmm/nodes", system_json_index);
+        return PM3_EINVARG;
+    }
+
+    uint16_t system_code = 0;
+    if (felica_sim_parse_u16_be_hex(json_string_value(code_json), &system_code) == false) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: system %zu has invalid system code", system_json_index);
+        return PM3_EINVARG;
+    }
+
+    for (size_t i = 0; i < builder->system_count; i++) {
+        if (builder->systems[i].system_code == system_code) {
+            PrintAndLogEx(ERR, "Invalid FeliCa dump: duplicate system code `%04X`", system_code);
+            return PM3_EINVARG;
+        }
+    }
+
+    felica_sim_system_record_t system = {
+        .system_code = system_code,
+        .idm = {0},
+        .pmm = {0},
+        .encryption_identifier = 0,
+        .reserved = 0,
+        .first_node = (uint16_t)builder->node_count,
+        .node_count = 0,
+    };
+
+    if (felica_sim_hex_to_bytes(json_string_value(idm_json), system.idm, sizeof(system.idm)) == false ||
+            felica_sim_hex_to_bytes(json_string_value(pmm_json), system.pmm, sizeof(system.pmm)) == false) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: system %zu has invalid IDm or PMm", system_json_index);
+        return PM3_EINVARG;
+    }
+
+    if (felica_sim_parse_encryption_identifier_json(encryption_identifier_json, &system.encryption_identifier) == false) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: system %zu has invalid encryption identifier", system_json_index);
+        return PM3_EINVARG;
+    }
+
+    size_t system_index = 0;
+    int ret = felica_sim_builder_add_system(builder, &system, &system_index);
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+
+    size_t node_index = 0;
+    json_t *node_json = NULL;
+    json_array_foreach(nodes_json, node_index, node_json) {
+        ret = felica_sim_parse_node_json(builder, node_json, system_index, node_index);
+        if (ret != PM3_SUCCESS) {
+            return ret;
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int felica_sim_model_finalize(const felica_sim_model_builder_t *builder, felica_sim_model_t *model_out) {
+    const size_t systems_len = builder->system_count * sizeof(felica_sim_system_record_t);
+    const size_t nodes_len = builder->node_count * sizeof(felica_sim_node_record_t);
+    const size_t blocks_len = builder->block_count * sizeof(felica_sim_block_record_t);
+    const size_t metadata_len = builder->specification_version_len +
+                                builder->product_information_len +
+                                builder->container_issue_information_len;
+    const size_t model_len = sizeof(felica_sim_model_header_t) + systems_len + nodes_len + blocks_len + metadata_len;
+
+    if (builder->system_count == 0 ||
+            builder->system_count > FELICA_SYSTEM_CODE_MAX_COUNT ||
+            builder->node_count > UINT16_MAX ||
+            builder->block_count > UINT16_MAX ||
+            builder->specification_version_len > UINT16_MAX ||
+            builder->product_information_len > UINT16_MAX ||
+            builder->container_issue_information_len > UINT16_MAX ||
+            model_len > UINT32_MAX) {
+        return PM3_EOVFLOW;
+    }
+
+    uint8_t *model = calloc(1, model_len);
+    if (model == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    felica_sim_model_header_t *hdr = (felica_sim_model_header_t *)model;
+    hdr->magic = FELICA_SIM_MODEL_MAGIC;
+    hdr->version = FELICA_SIM_MODEL_VERSION;
+    hdr->header_len = sizeof(*hdr);
+    hdr->total_len = (uint32_t)model_len;
+    hdr->model_crc = 0;
+    hdr->system_count = (uint16_t)builder->system_count;
+    hdr->node_count = (uint16_t)builder->node_count;
+    hdr->block_count = (uint16_t)builder->block_count;
+    hdr->system_offset = sizeof(*hdr);
+    hdr->node_offset = hdr->system_offset + systems_len;
+    hdr->block_offset = hdr->node_offset + nodes_len;
+    hdr->metadata_offset = hdr->block_offset + blocks_len;
+    hdr->specification_version_len = (uint16_t)builder->specification_version_len;
+    hdr->product_information_len = (uint16_t)builder->product_information_len;
+    hdr->container_issue_information_len = (uint16_t)builder->container_issue_information_len;
+    hdr->reserved = 0;
+
+    if (systems_len) {
+        memcpy(model + hdr->system_offset, builder->systems, systems_len);
+    }
+    if (nodes_len) {
+        memcpy(model + hdr->node_offset, builder->nodes, nodes_len);
+    }
+    if (blocks_len) {
+        memcpy(model + hdr->block_offset, builder->blocks, blocks_len);
+    }
+    uint8_t *metadata = model + hdr->metadata_offset;
+    size_t metadata_pos = 0;
+    if (builder->specification_version_len) {
+        memcpy(metadata + metadata_pos, builder->specification_version, builder->specification_version_len);
+        metadata_pos += builder->specification_version_len;
+    }
+    if (builder->product_information_len) {
+        memcpy(metadata + metadata_pos, builder->product_information, builder->product_information_len);
+        metadata_pos += builder->product_information_len;
+    }
+    if (builder->container_issue_information_len) {
+        memcpy(metadata + metadata_pos, builder->container_issue_information, builder->container_issue_information_len);
+    }
+    hdr->model_crc = Crc16ex(CRC_XMODEM, model, model_len);
+
+    model_out->model = model;
+    model_out->model_len = model_len;
+    model_out->system_count = hdr->system_count;
+    model_out->node_count = hdr->node_count;
+    model_out->block_count = hdr->block_count;
+    return PM3_SUCCESS;
+}
+
+static int felica_sim_model_from_json(json_t *root, felica_sim_model_t *model_out) {
+    if (json_is_object(root) == false || model_out == NULL) {
+        return PM3_EINVARG;
+    }
+
+    json_t *systems_json = json_object_get(root, "systems");
+    if (json_is_array(systems_json) == false || json_array_size(systems_json) == 0) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: root must contain non-empty systems array");
+        return PM3_EINVARG;
+    }
+
+    if (json_array_size(systems_json) > FELICA_SYSTEM_CODE_MAX_COUNT) {
+        PrintAndLogEx(ERR, "Invalid FeliCa dump: system count exceeds %u", FELICA_SYSTEM_CODE_MAX_COUNT);
+        return PM3_EOVFLOW;
+    }
+
+    felica_sim_model_builder_t builder = {0};
+    int ret = felica_sim_parse_metadata_json(&builder, root);
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+
+    size_t system_index = 0;
+    json_t *system_json = NULL;
+    json_array_foreach(systems_json, system_index, system_json) {
+        ret = felica_sim_parse_system_json(&builder, system_json, system_index);
+        if (ret != PM3_SUCCESS) {
+            felica_sim_builder_free(&builder);
+            return ret;
+        }
+    }
+
+    ret = felica_sim_model_finalize(&builder, model_out);
+    felica_sim_builder_free(&builder);
+    if (ret != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Unable to build FeliCa simulator model");
+    }
+    return ret;
+}
+
+static int felica_sim_send_control(uint8_t subcommand, uint32_t total_len, uint32_t offset, uint16_t model_crc,
+                                   const uint8_t *data, uint16_t data_len, uint32_t timeout_ms) {
+    if (data_len > (PM3_CMD_DATA_SIZE - sizeof(felica_sim_upload_t))) {
+        return PM3_EOVFLOW;
+    }
+
+    uint8_t packet[PM3_CMD_DATA_SIZE] = {0};
+    felica_sim_upload_t *payload = (felica_sim_upload_t *)packet;
+    payload->subcommand = subcommand;
+    payload->total_len = total_len;
+    payload->offset = offset;
+    payload->model_crc = model_crc;
+    payload->chunk_len = data_len;
+    if (data_len && data) {
+        memcpy(payload->data, data, data_len);
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_FELICA_SIMULATE, packet, sizeof(*payload) + data_len);
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_FELICA_SIMULATE, &resp, timeout_ms) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for simulator response");
+        return PM3_ETIMEOUT;
+    }
+
+    return resp.status;
+}
+
+static int felica_sim_upload_model(const felica_sim_model_t *model) {
+    const felica_sim_model_header_t *hdr = (const felica_sim_model_header_t *)model->model;
+    int ret = felica_sim_send_control(FELICA_SIM_CLEAR, 0, 0, 0, NULL, 0, 5000);
+    if (ret != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Unable to clear FeliCa simulator state (%d)", ret);
+        return ret;
+    }
+
+    const uint16_t chunk_size = PM3_CMD_DATA_SIZE - sizeof(felica_sim_upload_t);
+    uint32_t offset = 0;
+    PrintAndLogEx(INFO, "Uploading simulator model");
+    PrintAndLogEx(INFO, "." NOLF);
+    fflush(stdout);
+
+    g_conn.block_after_ACK = true;
+    while (offset < model->model_len) {
+        const uint16_t bytes_to_send = MIN(chunk_size, model->model_len - offset);
+        if (offset + bytes_to_send >= model->model_len) {
+            g_conn.block_after_ACK = false;
+        }
+
+        ret = felica_sim_send_control(FELICA_SIM_LOAD, (uint32_t)model->model_len, offset, hdr->model_crc,
+                                      model->model + offset, bytes_to_send, 2500);
+        if (ret != PM3_SUCCESS) {
+            g_conn.block_after_ACK = false;
+            PrintAndLogEx(FAILED, "Unable to upload simulator model at offset %" PRIu32 " (%d)", offset, ret);
+            return ret;
+        }
+
+        PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
+        offset += bytes_to_send;
+    }
+    g_conn.block_after_ACK = false;
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
+static int felica_sim_start(const felica_sim_model_t *model, uint8_t rwe_error_location_indication) {
+    const felica_sim_model_header_t *hdr = (const felica_sim_model_header_t *)model->model;
+    uint8_t packet[sizeof(felica_sim_upload_t)] = {0};
+    felica_sim_upload_t *payload = (felica_sim_upload_t *)packet;
+    payload->subcommand = FELICA_SIM_START;
+    payload->total_len = (uint32_t)model->model_len;
+    payload->model_crc = hdr->model_crc;
+    payload->rwe_error_location_indication = rwe_error_location_indication;
+
+    PrintAndLogEx(INFO, "RWE error location indication.. " _YELLOW_("%s"),
+                  felica_sim_rwe_error_location_indication_name(rwe_error_location_indication));
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
+    PrintAndLogEx(INFO, "After abort, use " _YELLOW_("hf felica list") " to view captured simulator traffic");
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_FELICA_SIMULATE, packet, sizeof(packet));
+
+    PacketResponseNG resp;
+    bool abort_sent = false;
+    for (;;) {
+        if (abort_sent == false && kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "\naborted via keyboard!");
+            abort_sent = true;
+            msleep(300);
+        }
+
+        if (WaitForResponseTimeout(CMD_HF_FELICA_SIMULATE, &resp, 1000)) {
+            if (resp.status == PM3_EOPABORTED) {
+                PrintAndLogEx(DEBUG, "Button pressed, user aborted");
+                return PM3_SUCCESS;
+            }
+            if (resp.status != PM3_SUCCESS) {
+                PrintAndLogEx(FAILED, "FeliCa simulator stopped with status %d", resp.status);
+                return resp.status;
+            }
+            return PM3_SUCCESS;
+        }
+    }
+}
+
+static int CmdHFFelicaSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf felica sim",
+                  "Emulate a FeliCa Standard card from a JSON dump generated by `hf felica dump`.",
+                  "hf felica sim -f hf-felica-dump.json\n"
+                  "hf felica sim -f hf-felica-dump --read-without-encryption-error-location-indication index\n"
+                  "hf felica sim -f hf-felica-dump --read-without-encryption-error-location-indication flag -v"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "JSON dump file"),
+        arg_str0(NULL, "read-without-encryption-error-location-indication",
+                 "<mask|index|flag>", "Read Without Encryption error location indication (default: mask)"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    char filename[FILE_PATH_SIZE] = {0};
+    int filename_len = sizeof(filename) - 1;
+    CLIGetStrWithReturn(ctx, 1, (uint8_t *)filename, &filename_len);
+    uint8_t rwe_error_location_indication = FELICA_SIM_RWE_ERROR_LOCATION_MASK;
+    struct arg_str *rwe_error_location_arg = arg_get_str(ctx, 2);
+    const char *rwe_error_location = rwe_error_location_arg->count ? rwe_error_location_arg->sval[0] : NULL;
+    if (rwe_error_location &&
+            felica_sim_parse_rwe_error_location_indication(rwe_error_location, &rwe_error_location_indication) == false) {
+        PrintAndLogEx(ERR, "Invalid RWE error location indication `%s`; expected mask, index, or flag", rwe_error_location);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    const bool verbose = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    json_t *root = NULL;
+    int ret = loadFileJSONroot(filename, (void **)&root, verbose);
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+
+    felica_sim_model_t model = {0};
+    ret = felica_sim_model_from_json(root, &model);
+    json_decref(root);
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+
+    PrintAndLogEx(SUCCESS, "Prepared FeliCa Standard model: %u system(s), %u node(s), %u block(s), %zu byte(s)",
+                  model.system_count, model.node_count, model.block_count, model.model_len);
+    if (g_pm3_capabilities.bigbuf_size &&
+            model.model_len + FELICA_SIM_RUNTIME_RESERVE > g_pm3_capabilities.bigbuf_size) {
+        PrintAndLogEx(ERR, "Simulator model is too large for device BigBuf: %zu + %u reserve > %" PRIu32,
+                      model.model_len, FELICA_SIM_RUNTIME_RESERVE, g_pm3_capabilities.bigbuf_size);
+        felica_sim_model_free(&model);
+        return PM3_EOVFLOW;
+    }
+
+    ret = felica_sim_upload_model(&model);
+    if (ret == PM3_SUCCESS) {
+        ret = felica_sim_start(&model, rwe_error_location_indication);
+    }
+
+    felica_sim_model_free(&model);
+    PrintAndLogEx(INFO, "Done!");
+    return ret;
 }
 
 // uid  hex
@@ -7127,6 +7944,7 @@ static command_t CommandTable[] = {
     {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Standard") " -----------------------"},
     {"dump",            CmdHFFelicaDump,                  IfPm3Felica,     "Wait for and try dumping FeliCa"},
     {"discnodes",       CmdHFFelicaDiscoverNodes,         IfPm3Felica,     "discover Area Code and Service Code nodes."},
+    {"sim",             CmdHFFelicaSim,                   IfPm3Felica,     "Emulate FeliCa Standard from dump file"},
     {"rqservice",       CmdHFFelicaRequestService,        IfPm3Felica,     "verify the existence of Area and Service, and to acquire Key Version."},
     {"rqresponse",      CmdHFFelicaRequestResponse,       IfPm3Felica,     "verify the existence of a card and its Mode."},
     {"scsvcode",        CmdHFFelicaDumpServiceArea,       IfPm3Felica,     "acquire Area Code and Service Code."},
@@ -7148,7 +7966,6 @@ static command_t CommandTable[] = {
     {"litesim",         CmdHFFelicaSimLite,               IfPm3Felica,     "Emulating ISO/18092 FeliCa Lite tag"},
     {"liteauth",        CmdHFFelicaAuthenticationLite,    IfPm3Felica,     "authenticate a card."},
     {"litedump",        CmdHFFelicaDumpLite,              IfPm3Felica,     "Wait for and try dumping FelicaLite"},
-    //    {"sim",       CmdHFFelicaSim,                   IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"}
     {NULL, NULL, NULL, NULL}
 };
 

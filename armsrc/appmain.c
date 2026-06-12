@@ -39,6 +39,7 @@
 #include "iso15693.h"
 #include "thinfilm.h"
 #include "felica.h"
+#include "felicasim.h"
 #include "hitag2.h"
 #include "hitag2_crack.h"
 #include "hitagS.h"
@@ -1781,6 +1782,10 @@ static void PacketReceived(PacketCommandNG *packet) {
 #ifdef WITH_FELICA
         case CMD_HF_FELICA_COMMAND: {
             felica_sendraw(packet);
+            break;
+        }
+        case CMD_HF_FELICA_SIMULATE: {
+            felicasim_standard(packet);
             break;
         }
         case CMD_HF_FELICALITE_SIMULATE: {
