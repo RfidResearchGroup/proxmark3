@@ -312,6 +312,9 @@ typedef struct {
     bool has_specification_version;
     uint8_t specification_version[FELICA_SPECIFICATION_VERSION_MAX_LEN];
     size_t specification_version_len;
+    bool has_product_information;
+    uint8_t product_information[FELICA_PLATFORM_INFO_MAX_LEN];
+    size_t product_information_len;
 } felica_dump_metadata_t;
 
 static uint8_t felica_node_attribute(uint16_t node_code_le) {
@@ -4198,7 +4201,11 @@ static json_t *felica_dump_systems_json(const felica_dump_system_t *systems, siz
     if (felica_dump_json_set_hex_or_null(root, "specification_version",
                                          metadata ? metadata->specification_version : NULL,
                                          metadata ? metadata->specification_version_len : 0,
-                                         metadata && metadata->has_specification_version) != PM3_SUCCESS) {
+                                         metadata && metadata->has_specification_version) != PM3_SUCCESS ||
+            felica_dump_json_set_hex_or_null(root, "product_information",
+                                             metadata ? metadata->product_information : NULL,
+                                             metadata ? metadata->product_information_len : 0,
+                                             metadata && metadata->has_product_information) != PM3_SUCCESS) {
         json_decref(systems_json);
         json_decref(root);
         return NULL;
@@ -4279,6 +4286,23 @@ static void felica_dump_collect_metadata(const uint8_t *idm, felica_dump_metadat
                                                        sizeof(metadata->specification_version),
                                                        &metadata->specification_version_len)) {
         metadata->has_specification_version = true;
+    }
+
+    felica_get_platform_info_request_t product_request;
+    memset(&product_request, 0, sizeof(product_request));
+    product_request.length[0] = sizeof(product_request);
+    product_request.command_code[0] = FELICA_GETPLATFORMINFO_REQ;
+    memcpy(product_request.IDm, idm, sizeof(product_request.IDm));
+
+    felica_status_flags_t product_status_flags;
+    if (send_get_platform_information(optional_flags,
+                                      sizeof(product_request), (uint8_t *)&product_request,
+                                      false, &product_status_flags,
+                                      metadata->product_information,
+                                      sizeof(metadata->product_information),
+                                      &metadata->product_information_len) == PM3_SUCCESS &&
+            metadata->product_information_len > 0) {
+        metadata->has_product_information = true;
     }
 }
 
