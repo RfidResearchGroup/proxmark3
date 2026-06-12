@@ -145,7 +145,33 @@ jobs:
       - name: Build experimental lib
         env:
           VERBOSE: 1
-        run: cmake --build client/experimental_lib/build -j$((`nproc` + 1))
+        run: |
+          set +e
+          cmake --build client/experimental_lib/build -j$((`nproc` + 1)) 2>&1 | tee experimental-lib-build.log
+          status=${PIPESTATUS[0]}
+
+          if [ "$status" -ne 0 ]; then
+            symbols="$(sed -n "s/.*undefined reference to [\`']\\([^'\`]*\\)['\`].*/\\1/p" experimental-lib-build.log | sort -u)"
+
+            if [ -n "$symbols" ]; then
+              {
+                echo "### Experimental lib unresolved symbols"
+                echo
+                echo "The experimental lib failed to link because these symbols are unresolved:"
+                echo
+                echo '```'
+                echo "$symbols"
+                echo '```'
+                echo
+                echo "Add the defining source file(s) to \`client/experimental_lib/CMakeLists.txt\` under \`TARGET_SOURCES\`."
+              } >> "$GITHUB_STEP_SUMMARY"
+
+              symbols_one_line="$(echo "$symbols" | tr '\n' ',' | sed 's/,$//; s/,/, /g')"
+              echo "::error title=Experimental lib has unresolved symbols::Undefined symbol(s): $symbols_one_line. Add the defining source file(s) to client/experimental_lib/CMakeLists.txt under TARGET_SOURCES."
+            fi
+
+            exit "$status"
+          fi
 
       - name: Import experimental Python module
         run: |
