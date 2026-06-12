@@ -20,7 +20,68 @@
 
 #include "common.h"
 
+// FeliCa length byte includes itself, so application-level payload max is 254 bytes.
+#define FELICA_MAX_DATA_SIZE 254U
+// 255 base length (max 254 data + 1 len byte) + 2 sync + 2 crc + 1 extra for safety.
+#define FELICA_MAX_RF_FRAME_SIZE 260U
 #define FELICA_SPECIFICATION_VERSION_MAX_OPTIONS 16U
+#define FELICA_SYSTEM_NODE 0xFFFFU
+
+#define FELICA_SERVICE_ATTRIBUTE_UNAUTH_READ    0x01U
+#define FELICA_SERVICE_ATTRIBUTE_READ_ONLY      0x02U
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_ACCESS  0x08U
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC         0x0CU
+#define FELICA_SERVICE_ATTRIBUTE_PURSE          0x10U
+#define FELICA_SERVICE_ATTRIBUTE_PIN_REQUIRED   0x20U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_SUBFIELD 0x06U
+#define FELICA_NODE_ATTRIBUTE_MASK              0x3FU
+
+#define FELICA_AREA_ATTRIBUTE_CAN_CREATE_SUBAREA             0x00U
+#define FELICA_AREA_ATTRIBUTE_CANNOT_CREATE_SUBAREA          0x01U
+#define FELICA_AREA_ATTRIBUTE_CAN_CREATE_SUBAREA_WITH_PIN    0x20U
+#define FELICA_AREA_ATTRIBUTE_CANNOT_CREATE_SUBAREA_WITH_PIN 0x21U
+#define FELICA_AREA_ATTRIBUTE_END_ROOT_AREA                  0x3EU
+#define FELICA_AREA_ATTRIBUTE_END_SUB_AREA                   0x3FU
+
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RW_WITH_KEY            0x08U
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RW_WITHOUT_KEY         0x09U
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITH_KEY            0x0AU
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITHOUT_KEY         0x0BU
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RW_WITH_KEY            0x0CU
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RW_WITHOUT_KEY         0x0DU
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RO_WITH_KEY            0x0EU
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RO_WITHOUT_KEY         0x0FU
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_RW_WITH_KEY             0x10U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_RW_WITHOUT_KEY          0x11U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_CASHBACK_WITH_KEY       0x12U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_CASHBACK_WITHOUT_KEY    0x13U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_DECREMENT_WITH_KEY      0x14U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_DECREMENT_WITHOUT_KEY   0x15U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITH_KEY             0x16U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITHOUT_KEY          0x17U
+
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RW_WITH_KEY_WITH_PIN          0x28U
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RW_WITHOUT_KEY_WITH_PIN       0x29U
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITH_KEY_WITH_PIN          0x2AU
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITHOUT_KEY_WITH_PIN       0x2BU
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RW_WITH_KEY_WITH_PIN          0x2CU
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RW_WITHOUT_KEY_WITH_PIN       0x2DU
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RO_WITH_KEY_WITH_PIN          0x2EU
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RO_WITHOUT_KEY_WITH_PIN       0x2FU
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_RW_WITH_KEY_WITH_PIN           0x30U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_RW_WITHOUT_KEY_WITH_PIN        0x31U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_CASHBACK_WITH_KEY_WITH_PIN     0x32U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_CASHBACK_WITHOUT_KEY_WITH_PIN  0x33U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_DECREMENT_WITH_KEY_WITH_PIN    0x34U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_DECREMENT_WITHOUT_KEY_WITH_PIN 0x35U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITH_KEY_WITH_PIN           0x36U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITHOUT_KEY_WITH_PIN        0x37U
+
+#define FELICA_ENCRYPTION_IDENTIFIER_AES128        0x4FU
+#define FELICA_ENCRYPTION_IDENTIFIER_AES128_DES112 0x43U
+#define FELICA_ENCRYPTION_IDENTIFIER_AES128_DES56  0x41U
+#define FELICA_ENCRYPTION_IDENTIFIER_DES112        0x3FU
+#define FELICA_ENCRYPTION_IDENTIFIER_DES56         0x2FU
 
 typedef enum FELICA_COMMAND {
     FELICA_CONNECT = (1 << 0),
@@ -44,6 +105,90 @@ typedef struct {
     uint8_t completed;
     uint16_t tracelen;
 } PACKED felica_lite_dump_resp_t;
+
+typedef enum FELICA_SIM_SUBCOMMAND {
+    FELICA_SIM_CLEAR = 0x00,
+    FELICA_SIM_LOAD = 0x01,
+    FELICA_SIM_START = 0x02,
+} felica_sim_subcommand_t;
+
+typedef enum FELICA_SIM_RWE_ERROR_LOCATION_INDICATION {
+    FELICA_SIM_RWE_ERROR_LOCATION_MASK = 0x00,
+    FELICA_SIM_RWE_ERROR_LOCATION_INDEX = 0x01,
+    FELICA_SIM_RWE_ERROR_LOCATION_FLAG = 0x02,
+} felica_sim_rwe_error_location_indication_t;
+
+#define FELICA_SIM_MODEL_MAGIC 0x31465346U // FSF1
+#define FELICA_SIM_MODEL_VERSION 3U
+#define FELICA_SIM_UPLOAD_CHUNK_MAX (PM3_CMD_DATA_SIZE - sizeof(felica_sim_upload_t))
+#define FELICA_SIM_RUNTIME_RESERVE 512U
+#define FELICA_SIM_SPECIFICATION_VERSION_MAX_LEN (4U + (FELICA_SPECIFICATION_VERSION_MAX_OPTIONS * 2U))
+#define FELICA_SIM_PRODUCT_INFORMATION_MAX_LEN 64U
+#define FELICA_SIM_CONTAINER_ISSUE_INFORMATION_LEN 16U
+
+#define FELICA_SIM_NODE_TYPE_MASK    0x03U
+#define FELICA_SIM_NODE_TYPE_SERVICE 0x01U
+#define FELICA_SIM_NODE_TYPE_AREA    0x02U
+#define FELICA_SIM_NODE_TYPE_SYSTEM  0x03U
+#define FELICA_SIM_NODE_HAS_DES_KEY_VERSION 0x04U
+#define FELICA_SIM_NODE_HAS_AES_KEY_VERSION 0x08U
+
+typedef struct {
+    uint8_t subcommand;
+    uint32_t total_len;
+    uint32_t offset;
+    uint16_t model_crc;
+    uint16_t chunk_len;
+    uint8_t rwe_error_location_indication;
+    uint8_t data[];
+} PACKED felica_sim_upload_t;
+
+typedef struct {
+    uint32_t magic;
+    uint16_t version;
+    uint16_t header_len;
+    uint32_t total_len;
+    uint16_t model_crc;
+    uint16_t system_count;
+    uint16_t node_count;
+    uint16_t block_count;
+    uint32_t system_offset;
+    uint32_t node_offset;
+    uint32_t block_offset;
+    uint32_t metadata_offset;
+    uint16_t specification_version_len;
+    uint16_t product_information_len;
+    uint16_t container_issue_information_len;
+    uint16_t reserved;
+} PACKED felica_sim_model_header_t;
+
+typedef struct {
+    uint16_t system_code;
+    uint8_t idm[8];
+    uint8_t pmm[8];
+    uint8_t encryption_identifier;
+    uint8_t reserved;
+    uint16_t first_node;
+    uint16_t node_count;
+} PACKED felica_sim_system_record_t;
+
+typedef struct {
+    uint16_t system_index;
+    uint16_t node_code_le;
+    uint16_t end_code_le;
+    uint16_t first_block;
+    uint16_t block_count;
+    uint16_t des_key_version_le;
+    uint16_t aes_key_version_le;
+    uint8_t flags;
+    uint8_t reserved;
+} PACKED felica_sim_node_record_t;
+
+typedef struct {
+    uint16_t node_index;
+    uint16_t block_number;
+    uint8_t data[16];
+} PACKED felica_sim_block_record_t;
 
 //-----------------------------------------------------------------------------
 // FeliCa
