@@ -67,6 +67,7 @@
 #define FELICA_SYSTEM_CODE_MAX_COUNT 16U
 #define FELICA_DISCOVERED_SYSTEM_MAX_COUNT FELICA_SYSTEM_CODE_MAX_COUNT
 #define FELICA_SYSTEM_CODE_WILDCARD 0xFFFFU
+#define FELICA_SYSTEM_NODE 0xFFFFU
 #define FELICA_SYSTEM_CODE_NFC_TYPE3 0x12FCU
 #define FELICA_SYSTEM_CODE_FELICA_LITE 0x88B4U
 #define FELICA_SYSTEM_CODE_FELICA_SECURE_ID 0x957AU
@@ -85,6 +86,7 @@
 #define FELICA_SERVICE_ATTRIBUTE_PURSE          (0b010000)
 #define FELICA_SERVICE_ATTRIBUTE_PIN_REQUIRED   (0b100000)
 #define FELICA_SERVICE_ATTRIBUTE_PURSE_SUBFIELD (0b000110)
+#define FELICA_NODE_ATTRIBUTE_MASK              0x3FU
 
 #define FELICA_AREA_ATTRIBUTE_CAN_CREATE_SUBAREA             0x00U
 #define FELICA_AREA_ATTRIBUTE_CANNOT_CREATE_SUBAREA          0x01U
@@ -255,8 +257,14 @@ typedef enum {
     FELICA_NODE_DISCOVERY_READ_WITHOUT_ENCRYPTION,
 } felica_node_discovery_method_t;
 
+typedef enum {
+    FELICA_NODE_TYPE_AREA = 0,
+    FELICA_NODE_TYPE_SERVICE,
+    FELICA_NODE_TYPE_SYSTEM,
+} felica_node_type_t;
+
 typedef struct {
-    bool is_area;
+    felica_node_type_t type;
     uint16_t node_code_le;
     bool has_end_code;
     uint16_t end_code_le;
@@ -278,7 +286,7 @@ typedef struct {
 } felica_dump_encryption_identifier_t;
 
 typedef struct {
-    bool is_area;
+    felica_node_type_t type;
     uint16_t node_code_le;
     bool has_end_code;
     uint16_t end_code_le;
@@ -298,6 +306,32 @@ typedef struct {
     size_t node_count;
     size_t node_capacity;
 } felica_dump_system_t;
+
+static uint8_t felica_node_attribute(uint16_t node_code_le) {
+    return node_code_le & FELICA_NODE_ATTRIBUTE_MASK;
+}
+
+static bool felica_is_area_start_attribute(uint8_t attribute) {
+    switch (attribute) {
+        case FELICA_AREA_ATTRIBUTE_CAN_CREATE_SUBAREA:
+        case FELICA_AREA_ATTRIBUTE_CANNOT_CREATE_SUBAREA:
+        case FELICA_AREA_ATTRIBUTE_CAN_CREATE_SUBAREA_WITH_PIN:
+        case FELICA_AREA_ATTRIBUTE_CANNOT_CREATE_SUBAREA_WITH_PIN:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static felica_node_type_t felica_node_type_from_code(uint16_t node_code_le) {
+    if (node_code_le == FELICA_SYSTEM_NODE) {
+        return FELICA_NODE_TYPE_SYSTEM;
+    }
+    if (felica_is_area_start_attribute(felica_node_attribute(node_code_le))) {
+        return FELICA_NODE_TYPE_AREA;
+    }
+    return FELICA_NODE_TYPE_SERVICE;
+}
 
 typedef struct {
     uint8_t encryption_identifier;
@@ -3182,12 +3216,14 @@ static bool felica_discover_nodes_with_request_code_list(uint8_t *flags,
 
         for (uint8_t i = 0; i < area_count; i++) {
             felica_discovered_node_t node = {0};
-            node.is_area = true;
             node.node_code_le = (uint16_t)resp.data.asBytes[offset] |
                                 ((uint16_t)resp.data.asBytes[offset + 1] << 8);
-            node.has_end_code = true;
-            node.end_code_le = (uint16_t)resp.data.asBytes[offset + 2] |
-                               ((uint16_t)resp.data.asBytes[offset + 3] << 8);
+            node.type = felica_node_type_from_code(node.node_code_le);
+            node.has_end_code = (node.type == FELICA_NODE_TYPE_AREA);
+            node.end_code_le = node.has_end_code
+                               ? ((uint16_t)resp.data.asBytes[offset + 2] |
+                                  ((uint16_t)resp.data.asBytes[offset + 3] << 8))
+                               : 0;
             offset += 4;
             if (batch_count < ARRAYLEN(batch_nodes)) {
                 batch_nodes[batch_count++] = node;
@@ -3203,9 +3239,9 @@ static bool felica_discover_nodes_with_request_code_list(uint8_t *flags,
 
         for (uint8_t i = 0; i < service_count; i++) {
             felica_discovered_node_t node = {0};
-            node.is_area = false;
             node.node_code_le = (uint16_t)resp.data.asBytes[offset] |
                                 ((uint16_t)resp.data.asBytes[offset + 1] << 8);
+            node.type = felica_node_type_from_code(node.node_code_le);
             node.has_end_code = false;
             node.end_code_le = 0;
             offset += 2;
@@ -3224,6 +3260,23 @@ static bool felica_discover_nodes_with_request_code_list(uint8_t *flags,
 
         if (continue_flag == false) {
             break;
+        }
+    }
+
+    if (supported) {
+        felica_discovered_node_t node = {0};
+        node.type = FELICA_NODE_TYPE_SYSTEM;
+        node.node_code_le = FELICA_SYSTEM_NODE;
+        node.has_end_code = false;
+        node.end_code_le = 0;
+        /*
+         * RequestCodeList does not report the system node explicitly, but any
+         * target supporting node-list discovery has a system node. Treat it as
+         * implicit and emit it last, matching SearchServiceCode ordering.
+         */
+        if (felica_emit_discovered_node(&node, visitor, ctx, &local_count, stop_status) != PM3_SUCCESS) {
+            felica_set_discovered_count(discovered_count, local_count);
+            return false;
         }
     }
 
@@ -3280,19 +3333,19 @@ static bool felica_discover_nodes_with_search_service_code(uint8_t *flags,
         }
 
         const uint16_t node_code_le = (uint16_t)resp.payload[0] | ((uint16_t)resp.payload[1] << 8);
-        if (node_code_le == 0xFFFF) {
-            break;
-        }
-
         felica_discovered_node_t node = {0};
-        node.is_area = (frame_len == 0x0E);
         node.node_code_le = node_code_le;
-        node.has_end_code = (frame_len == 0x0E);
+        node.type = felica_node_type_from_code(node_code_le);
+        node.has_end_code = (node.type == FELICA_NODE_TYPE_AREA && frame_len == 0x0E);
         node.end_code_le = node.has_end_code ? ((uint16_t)resp.payload[2] | ((uint16_t)resp.payload[3] << 8)) : 0;
 
         if (felica_emit_discovered_node(&node, visitor, ctx, &local_count, stop_status) != PM3_SUCCESS) {
             felica_set_discovered_count(discovered_count, local_count);
             return false;
+        }
+
+        if (node.type == FELICA_NODE_TYPE_SYSTEM) {
+            break;
         }
     }
 
@@ -3305,7 +3358,7 @@ static bool felica_request_service_send_probe_batch(uint8_t *flags,
                                                     const uint8_t *idm,
                                                     uint32_t retry_count,
                                                     const uint16_t *node_codes_le,
-                                                    const bool *is_area_nodes,
+                                                    const felica_node_type_t *node_types,
                                                     size_t node_count,
                                                     felica_node_discovery_visitor_t visitor,
                                                     void *ctx,
@@ -3358,12 +3411,12 @@ static bool felica_request_service_send_probe_batch(uint8_t *flags,
     for (size_t i = 0; i < returned_nodes; i++) {
         const uint16_t key_version = (uint16_t)resp.data.asBytes[offset + i * 2] |
                                      ((uint16_t)resp.data.asBytes[offset + i * 2 + 1] << 8);
-        if (key_version == 0xFFFF) {
+        if (key_version == 0xFFFF && node_types[i] != FELICA_NODE_TYPE_SYSTEM) {
             continue;
         }
 
         felica_discovered_node_t node = {0};
-        node.is_area = is_area_nodes[i];
+        node.type = node_types[i];
         node.node_code_le = node_codes_le[i];
         node.has_end_code = false;
         node.end_code_le = 0;
@@ -3387,7 +3440,7 @@ static bool felica_discover_nodes_with_request_service(uint8_t *flags,
     uint32_t local_count = 0;
 
     uint16_t batch_codes[FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE] = {0};
-    bool batch_is_area[FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE] = {0};
+    felica_node_type_t batch_types[FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE] = {0};
     size_t batch_count = 0;
 
     for (uint16_t number = 0; number <= FELICA_MAX_NODE_NUMBER; number++) {
@@ -3405,14 +3458,17 @@ static bool felica_discover_nodes_with_request_service(uint8_t *flags,
             }
 
             const uint16_t node_code_le = (uint16_t)((number << 6) | probe_attr.attribute);
+            if (node_code_le == FELICA_SYSTEM_NODE) {
+                continue;
+            }
 
             batch_codes[batch_count] = node_code_le;
-            batch_is_area[batch_count] = probe_attr.is_area;
+            batch_types[batch_count] = felica_node_type_from_code(node_code_le);
             batch_count++;
 
             if (batch_count == FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE) {
                 if (felica_request_service_send_probe_batch(flags, idm, retry_count,
-                                                            batch_codes, batch_is_area, batch_count,
+                                                            batch_codes, batch_types, batch_count,
                                                             visitor, ctx, &supported, &local_count, stop_status) == false) {
                     felica_set_discovered_count(discovered_count, local_count);
                     if (stop_status && *stop_status == PM3_EOPABORTED) {
@@ -3428,9 +3484,13 @@ static bool felica_discover_nodes_with_request_service(uint8_t *flags,
         }
     }
 
+    batch_codes[batch_count] = FELICA_SYSTEM_NODE;
+    batch_types[batch_count] = FELICA_NODE_TYPE_SYSTEM;
+    batch_count++;
+
     if (batch_count > 0) {
         if (felica_request_service_send_probe_batch(flags, idm, retry_count,
-                                                    batch_codes, batch_is_area, batch_count,
+                                                    batch_codes, batch_types, batch_count,
                                                     visitor, ctx, &supported, &local_count, stop_status) == false) {
             felica_set_discovered_count(discovered_count, local_count);
             if (stop_status && *stop_status == PM3_EOPABORTED) {
@@ -3517,7 +3577,7 @@ static bool felica_discover_nodes_with_read_without_encryption_ex(uint8_t *flags
             }
 
             felica_discovered_node_t node = {0};
-            node.is_area = false;
+            node.type = FELICA_NODE_TYPE_SERVICE;
             node.node_code_le = service_code_le;
             node.has_end_code = false;
             node.end_code_le = 0;
@@ -3699,8 +3759,8 @@ static int felica_compare_discovered_nodes(const void *lhs, const void *rhs) {
         return 1;
     }
 
-    if (a->is_area != b->is_area) {
-        return a->is_area ? -1 : 1;
+    if (a->type != b->type) {
+        return a->type < b->type ? -1 : 1;
     }
 
     if (a->has_end_code != b->has_end_code) {
@@ -3742,7 +3802,9 @@ static int felica_scsvcode_discovery_visitor(const felica_discovered_node_t *nod
     const uint16_t node_code_be = felica_to_network_order(node->node_code_le);
     const uint16_t node_number = node->node_code_le >> 6;
 
-    if (node->is_area) {
+    if (node->type == FELICA_NODE_TYPE_SYSTEM) {
+        PrintAndLogEx(INFO, "%sSYSTEM_%04X", prefix, node_code_be);
+    } else if (node->type == FELICA_NODE_TYPE_AREA) {
         scsv_ctx->area_count++;
         if (node->has_end_code) {
             const uint16_t end_code_be = felica_to_network_order(node->end_code_le);
@@ -3816,7 +3878,7 @@ static felica_dump_node_t *felica_dump_system_add_node(felica_dump_system_t *sys
 
     for (size_t i = 0; i < system->node_count; i++) {
         felica_dump_node_t *dump_node = &system->nodes[i];
-        if (dump_node->is_area == node->is_area &&
+        if (dump_node->type == node->type &&
                 dump_node->node_code_le == node->node_code_le &&
                 dump_node->has_end_code == node->has_end_code &&
                 dump_node->end_code_le == node->end_code_le) {
@@ -3842,11 +3904,10 @@ static felica_dump_node_t *felica_dump_system_add_node(felica_dump_system_t *sys
 
     felica_dump_node_t *dump_node = &system->nodes[system->node_count++];
     memset(dump_node, 0, sizeof(*dump_node));
-    dump_node->is_area = node->is_area;
+    dump_node->type = node->type;
     dump_node->node_code_le = node->node_code_le;
     dump_node->has_end_code = node->has_end_code;
     dump_node->end_code_le = node->end_code_le;
-
     return dump_node;
 }
 
@@ -3987,14 +4048,21 @@ static json_t *felica_dump_node_json(const felica_dump_node_t *node) {
 
     char node_code_hex[9] = {0};
     const uint16_t node_code_be = felica_to_network_order(node->node_code_le);
-    if (node->is_area && node->has_end_code) {
+    if (node->type == FELICA_NODE_TYPE_AREA && node->has_end_code) {
         const uint16_t end_code_be = felica_to_network_order(node->end_code_le);
         snprintf(node_code_hex, sizeof(node_code_hex), "%04X%04X", node_code_be, end_code_be);
     } else {
         snprintf(node_code_hex, sizeof(node_code_hex), "%04X", node_code_be);
     }
 
-    if (felica_dump_json_set_new(node_json, "type", json_string(node->is_area ? "area" : "service")) != PM3_SUCCESS ||
+    const char *node_type = "service";
+    if (node->type == FELICA_NODE_TYPE_SYSTEM) {
+        node_type = "system";
+    } else if (node->type == FELICA_NODE_TYPE_AREA) {
+        node_type = "area";
+    }
+
+    if (felica_dump_json_set_new(node_json, "type", json_string(node_type)) != PM3_SUCCESS ||
             felica_dump_json_set_new(node_json, "code", json_string(node_code_hex)) != PM3_SUCCESS ||
             felica_dump_json_set_new(node_json, "des_key_version", node->des_key_version.has_value ? felica_dump_key_version_json(node->des_key_version.value_le) : json_null()) != PM3_SUCCESS ||
             felica_dump_json_set_new(node_json, "aes_key_version", node->aes_key_version.has_value ? felica_dump_key_version_json(node->aes_key_version.value_le) : json_null()) != PM3_SUCCESS) {
@@ -4062,7 +4130,14 @@ static json_t *felica_dump_system_json(const felica_dump_system_t *system) {
     }
 
     for (size_t i = 0; i < system->node_count; i++) {
-        json_t *node_json = felica_dump_node_json(&system->nodes[i]);
+        const felica_dump_node_t *node = &system->nodes[i];
+        if (node->type == FELICA_NODE_TYPE_SYSTEM &&
+                node->des_key_version.has_value == false &&
+                node->aes_key_version.has_value == false) {
+            continue;
+        }
+
+        json_t *node_json = felica_dump_node_json(node);
         if (node_json == NULL) {
             json_decref(nodes_json);
             json_decref(system_json);
@@ -4262,7 +4337,7 @@ static int felica_dump_discovery_visitor(const felica_discovered_node_t *node, v
         }
     }
 
-    if (node->is_area) {
+    if (node->type != FELICA_NODE_TYPE_SERVICE) {
         return PM3_SUCCESS;
     }
 
@@ -4378,25 +4453,31 @@ static int felica_dump_single_system(const felica_discovered_system_t *system,
     dump_ctx.block_frame[14] = 0x80;
 
     uint32_t discovered_nodes = 0;
-    const int ret = felica_discover_nodes(idm, pmm, &flags, retry_count,
-                                          FELICA_NODE_DISCOVERY_NONE,
-                                          felica_dump_discovery_visitor, &dump_ctx,
-                                          NULL, &discovered_nodes);
-
-    *discovered_nodes_out = discovered_nodes;
-    *service_count_out = dump_ctx.service_count;
-    *public_service_count_out = dump_ctx.public_service_count;
+    int ret = felica_discover_nodes(idm, pmm, &flags, retry_count,
+                                    FELICA_NODE_DISCOVERY_NONE,
+                                    felica_dump_discovery_visitor, &dump_ctx,
+                                    NULL, &discovered_nodes);
 
     if (ret == PM3_EOPABORTED) {
+        *discovered_nodes_out = discovered_nodes;
+        *service_count_out = dump_ctx.service_count;
+        *public_service_count_out = dump_ctx.public_service_count;
         PrintAndLogEx(WARNING, "Unauth service dump aborted by user. Discovered %" PRIu32 " node(s), visited %" PRIu32 " service(s), dumped %" PRIu32 " public service(s).",
                       discovered_nodes, dump_ctx.service_count, dump_ctx.public_service_count);
         return ret;
     }
 
     if (ret != PM3_SUCCESS) {
+        *discovered_nodes_out = discovered_nodes;
+        *service_count_out = dump_ctx.service_count;
+        *public_service_count_out = dump_ctx.public_service_count;
         PrintAndLogEx(FAILED, "Unable to discover nodes using RequestCodeList/SearchServiceCode/RequestService/ReadWithoutEncryption.");
         return ret;
     }
+
+    *discovered_nodes_out = discovered_nodes;
+    *service_count_out = dump_ctx.service_count;
+    *public_service_count_out = dump_ctx.public_service_count;
 
     PrintAndLogEx(SUCCESS, "System dump complete. Discovered %" PRIu32 " node(s), visited %" PRIu32 " service(s), dumped %" PRIu32 " public service(s).",
                   discovered_nodes, dump_ctx.service_count, dump_ctx.public_service_count);
