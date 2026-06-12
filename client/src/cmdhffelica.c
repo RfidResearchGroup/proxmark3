@@ -56,6 +56,7 @@
 #define FELICA_PLATFORM_INFO_WITH_MAC_LEN 20U
 #define FELICA_PLATFORM_INFO_WITH_MAC_TOTAL_LEN (FELICA_PLATFORM_INFO_WITH_MAC_INFO_LEN + FELICA_PLATFORM_INFO_WITH_MAC_LEN)
 #define FELICA_CONTAINER_PROPERTY_MAX_LEN 64U
+#define FELICA_SPECIFICATION_VERSION_MAX_LEN (4U + (FELICA_SPECIFICATION_VERSION_MAX_OPTIONS * 2U))
 #define FELICA_OPTIONAL_CMD_TIMEOUT_MS 250U
 #define FELICA_OPTIONAL_CMD_RETRIES 3U
 // Per FeliCa spec, Polling max response at 16 timeslots is ~25ms; keep extra margin.
@@ -306,6 +307,12 @@ typedef struct {
     size_t node_count;
     size_t node_capacity;
 } felica_dump_system_t;
+
+typedef struct {
+    bool has_specification_version;
+    uint8_t specification_version[FELICA_SPECIFICATION_VERSION_MAX_LEN];
+    size_t specification_version_len;
+} felica_dump_metadata_t;
 
 static uint8_t felica_node_attribute(uint16_t node_code_le) {
     return node_code_le & FELICA_NODE_ATTRIBUTE_MASK;
@@ -4033,6 +4040,18 @@ static int felica_dump_json_set_new(json_t *object, const char *key, json_t *val
     return (ret == 0) ? PM3_SUCCESS : PM3_EMALLOC;
 }
 
+static int felica_dump_json_set_hex_or_null(json_t *object, const char *key,
+                                            const uint8_t *data, size_t data_len, bool has_value) {
+    if (has_value == false) {
+        return felica_dump_json_set_new(object, key, json_null());
+    }
+    if (data == NULL) {
+        return PM3_EINVARG;
+    }
+
+    return felica_dump_json_set_new(object, key, json_string(sprint_hex_inrow(data, data_len)));
+}
+
 static json_t *felica_dump_node_json(const felica_dump_node_t *node) {
     if (node == NULL) {
         return NULL;
@@ -4162,7 +4181,8 @@ static json_t *felica_dump_system_json(const felica_dump_system_t *system) {
     return system_json;
 }
 
-static json_t *felica_dump_systems_json(const felica_dump_system_t *systems, size_t system_count) {
+static json_t *felica_dump_systems_json(const felica_dump_system_t *systems, size_t system_count,
+                                        const felica_dump_metadata_t *metadata) {
     if (systems == NULL) {
         return NULL;
     }
@@ -4172,6 +4192,15 @@ static json_t *felica_dump_systems_json(const felica_dump_system_t *systems, siz
     if (root == NULL || systems_json == NULL) {
         json_decref(root);
         json_decref(systems_json);
+        return NULL;
+    }
+
+    if (felica_dump_json_set_hex_or_null(root, "specification_version",
+                                         metadata ? metadata->specification_version : NULL,
+                                         metadata ? metadata->specification_version_len : 0,
+                                         metadata && metadata->has_specification_version) != PM3_SUCCESS) {
+        json_decref(systems_json);
+        json_decref(root);
         return NULL;
     }
 
@@ -4199,6 +4228,58 @@ static json_t *felica_dump_systems_json(const felica_dump_system_t *systems, siz
     json_decref(systems_json);
 
     return root;
+}
+
+static bool felica_dump_specification_version_to_bytes(const felica_request_specification_version_info_t *info,
+                                                       uint8_t *data, size_t data_capacity, size_t *data_len) {
+    if (info == NULL || data == NULL || data_len == NULL || info->has_specification_version == false) {
+        return false;
+    }
+
+    *data_len = 0;
+    if (info->option_version_count < info->number_of_option) {
+        return false;
+    }
+
+    const size_t option_bytes = (size_t)info->number_of_option * 2U;
+    const size_t payload_len = 4U + option_bytes;
+    if (payload_len > data_capacity || option_bytes > sizeof(info->option_version_list)) {
+        return false;
+    }
+
+    data[0] = info->format_version;
+    memcpy(data + 1, info->basic_version, sizeof(info->basic_version));
+    data[3] = info->number_of_option;
+    memcpy(data + 4, info->option_version_list, option_bytes);
+    *data_len = payload_len;
+    return true;
+}
+
+static void felica_dump_collect_metadata(const uint8_t *idm, felica_dump_metadata_t *metadata) {
+    if (idm == NULL || metadata == NULL) {
+        return;
+    }
+
+    memset(metadata, 0, sizeof(*metadata));
+    const uint8_t optional_flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
+
+    felica_request_specification_version_request_t spec_request;
+    memset(&spec_request, 0, sizeof(spec_request));
+    spec_request.length[0] = sizeof(spec_request);
+    spec_request.command_code[0] = FELICA_REQUEST_SPEC_VERSION_REQ;
+    memcpy(spec_request.IDm, idm, sizeof(spec_request.IDm));
+
+    felica_request_specification_version_info_t spec_info;
+    if (send_request_specification_version(optional_flags, sizeof(spec_request),
+                                           (uint8_t *)&spec_request, false, false,
+                                           FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
+                                           &spec_info) == PM3_SUCCESS &&
+            felica_dump_specification_version_to_bytes(&spec_info,
+                                                       metadata->specification_version,
+                                                       sizeof(metadata->specification_version),
+                                                       &metadata->specification_version_len)) {
+        metadata->has_specification_version = true;
+    }
 }
 
 static int felica_dump_collect_key_versions_v2(felica_dump_system_t *system, uint8_t flags, uint32_t retry_count) {
@@ -5541,6 +5622,9 @@ static int CmdHFFelicaDump(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort discovery or dumping");
 
+    felica_dump_metadata_t dump_metadata;
+    felica_dump_collect_metadata(idm, &dump_metadata);
+
     uint8_t system_flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
     felica_discovered_system_list_t discovered_systems;
     res = discover_systems(system_flags, idm, true, retry_count, &discovered_systems);
@@ -5601,7 +5685,7 @@ static int CmdHFFelicaDump(const char *Cmd) {
         snprintf(filename, sizeof(filename), "hf-felica-%s-dump", sprint_hex_inrow(idm, sizeof(idm)));
     }
 
-    json_t *root = felica_dump_systems_json(dump_systems, dump_system_count);
+    json_t *root = felica_dump_systems_json(dump_systems, dump_system_count, &dump_metadata);
     if (root == NULL) {
         felica_dump_systems_free(dump_systems, dump_system_count);
         return PM3_EMALLOC;
