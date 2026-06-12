@@ -667,6 +667,12 @@ add_library(pm3rrg_rdv4 SHARED
 
 target_compile_definitions(pm3rrg_rdv4 PRIVATE LIBPM3)
 
+if (UNIX AND NOT APPLE)
+    # Fail the build if a client source file is missing from TARGET_SOURCES.
+    # Otherwise Linux may defer unresolved shared-library symbols until import.
+    set_property(TARGET pm3rrg_rdv4 APPEND_STRING PROPERTY LINK_FLAGS " -Wl,--no-undefined")
+endif()
+
 target_compile_options(pm3rrg_rdv4 PUBLIC -Wall -Werror -O3)
 if (EMBED_READLINE)
     if (NOT SKIPREADLINE EQUAL 1)
