@@ -2873,6 +2873,26 @@ pulse 3.6 ms
 This triggers COTAG tag to response
 
 */
+
+void cotag_start_pulse(void) {
+#ifndef OFF
+# define OFF(x)  { FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS((x)); }
+#endif
+#ifndef ON
+# define ON(x)   { FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD); WaitUS((x)); }
+#endif
+
+    LFSetupFPGAForADC(LF_FREQ2DIV(132), true);
+
+    ON(800)  OFF(2200)
+    ON(3600) OFF(2200)
+    ON(800)  OFF(2200)
+    //ON(3600)
+
+    // We leave the field on
+}
+
+// TODO: Remove this function?
 void Cotag(uint32_t arg0, bool ledcontrol) {
 #ifndef OFF
 # define OFF(x)  { FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS((x)); }

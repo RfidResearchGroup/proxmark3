@@ -335,6 +335,7 @@ typedef struct {
     LF_SAMPLES_BITS;
     bool realtime : 1;
     bool verbose : 1;
+    bool cotag : 1;
 } PACKED lf_sample_payload_t;
 
 typedef struct {
