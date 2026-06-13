@@ -418,6 +418,25 @@ static uint16_t felica_sim_process_request_system_code(const felica_sim_model_he
     return felica_sim_response_finish(resp, pos);
 }
 
+static uint16_t felica_sim_process_get_container_id(const felica_sim_model_header_t *hdr, const uint8_t *model,
+                                                    const uint8_t *req, uint16_t req_len, uint8_t *resp) {
+    if (req_len != sizeof(felica_get_container_id_request_t) ||
+            req[4] != 0x00 ||
+            req[5] != 0x00) {
+        return 0;
+    }
+
+    const felica_sim_system_record_t *system = felica_sim_find_system_by_code(hdr, model, SYSTEMCODE_OSAIFU_KEITAI, NULL);
+    if (system == NULL) {
+        return 0;
+    }
+
+    uint16_t pos = felica_sim_response_begin(resp, FELICA_GET_CONTAINER_ID_ACK);
+    memcpy(resp + pos, system->idm, sizeof(system->idm));
+    pos += sizeof(system->idm);
+    return felica_sim_response_finish(resp, pos);
+}
+
 static uint16_t felica_sim_process_request_response(const uint8_t *req, uint16_t req_len,
                                                     const felica_sim_system_record_t *active_system, uint8_t *resp) {
     if (req_len != 10 || felica_sim_idm_matches(req, active_system) == false) {
@@ -735,6 +754,8 @@ static uint16_t felica_sim_process_request(const felica_sim_model_header_t *hdr,
             return felica_sim_process_polling(hdr, model, req, req_len, active_system_index, resp);
         case FELICA_ECHO_REQ:
             return felica_sim_process_echo(req, req_len, resp);
+        case FELICA_GET_CONTAINER_ID_REQ:
+            return felica_sim_process_get_container_id(hdr, model, req, req_len, resp);
         case FELICA_REQSYSCODE_REQ:
             return felica_sim_process_request_system_code(hdr, model, req, req_len, active_system, resp);
         case FELICA_REQRESP_REQ:
