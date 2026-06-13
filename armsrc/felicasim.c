@@ -449,6 +449,23 @@ static uint16_t felica_sim_process_request_response(const uint8_t *req, uint16_t
     return felica_sim_response_finish(resp, pos);
 }
 
+static uint16_t felica_sim_process_reset_mode(const uint8_t *req, uint16_t req_len,
+                                              const felica_sim_system_record_t *active_system, uint8_t *resp) {
+    if (req_len != 12 ||
+            felica_sim_idm_matches(req, active_system) == false ||
+            req[12] != 0x00 ||
+            req[13] != 0x00) {
+        return 0;
+    }
+
+    // If authentication handling is added, reset the tracked card mode to Mode0 here.
+    uint16_t pos = felica_sim_response_begin(resp, FELICA_RESET_MODE_ACK);
+    felica_sim_append_idm(resp, &pos, active_system);
+    resp[pos++] = 0x00;
+    resp[pos++] = 0x00;
+    return felica_sim_response_finish(resp, pos);
+}
+
 static uint16_t felica_sim_process_request_specification_version(const felica_sim_model_header_t *hdr, const uint8_t *model,
                                                                  const uint8_t *req, uint16_t req_len,
                                                                  const felica_sim_system_record_t *active_system, uint8_t *resp) {
@@ -760,6 +777,8 @@ static uint16_t felica_sim_process_request(const felica_sim_model_header_t *hdr,
             return felica_sim_process_request_system_code(hdr, model, req, req_len, active_system, resp);
         case FELICA_REQRESP_REQ:
             return felica_sim_process_request_response(req, req_len, active_system, resp);
+        case FELICA_RESET_MODE_REQ:
+            return felica_sim_process_reset_mode(req, req_len, active_system, resp);
         case FELICA_REQUEST_SPEC_VERSION_REQ:
             return felica_sim_process_request_specification_version(hdr, model, req, req_len, active_system, resp);
         case FELICA_GETPLATFORMINFO_REQ:
