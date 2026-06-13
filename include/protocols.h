@@ -920,6 +920,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define SYSTEMCODE_FELICA_LITE          0x88b4 // FeliCa Lite
 #define SYSTEMCODE_COMMON               0xfe00 // Common
 #define SYSTEMCODE_EDY                  0xfe00 // Edy
+#define SYSTEMCODE_OSAIFU_KEITAI        0xfe0f // Osaifu Keitai Container
 #define SYSTEMCODE_CYBERNE              0x0003 // Cyberne
 #define SYSTEMCODE_SUICA                0x0003 // Suica
 #define SYSTEMCODE_PASMO                0x0003 // Pasmo

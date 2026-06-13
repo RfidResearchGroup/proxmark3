@@ -246,6 +246,20 @@ static uint16_t felica_sim_response_finish(uint8_t *resp, uint16_t pos) {
     return resp[2] + 4U;
 }
 
+static uint16_t felica_sim_process_echo(const uint8_t *req, uint16_t req_len, uint8_t *resp) {
+    if (req_len < 3 ||
+            req[3] != ((FELICA_ECHO_REQ >> 8) & 0xFFU) ||
+            req[4] != (FELICA_ECHO_REQ & 0xFFU)) {
+        return 0;
+    }
+
+    resp[0] = 0xb2;
+    resp[1] = 0x4d;
+    memcpy(resp + 2, req + 2, req_len);
+    AddCrc(resp + 2, resp[2]);
+    return resp[2] + 4U;
+}
+
 static void felica_sim_append_idm(uint8_t *resp, uint16_t *pos, const felica_sim_system_record_t *system) {
     memcpy(resp + *pos, system->idm, sizeof(system->idm));
     *pos += sizeof(system->idm);
@@ -404,6 +418,25 @@ static uint16_t felica_sim_process_request_system_code(const felica_sim_model_he
     return felica_sim_response_finish(resp, pos);
 }
 
+static uint16_t felica_sim_process_get_container_id(const felica_sim_model_header_t *hdr, const uint8_t *model,
+                                                    const uint8_t *req, uint16_t req_len, uint8_t *resp) {
+    if (req_len != sizeof(felica_get_container_id_request_t) ||
+            req[4] != 0x00 ||
+            req[5] != 0x00) {
+        return 0;
+    }
+
+    const felica_sim_system_record_t *system = felica_sim_find_system_by_code(hdr, model, SYSTEMCODE_OSAIFU_KEITAI, NULL);
+    if (system == NULL) {
+        return 0;
+    }
+
+    uint16_t pos = felica_sim_response_begin(resp, FELICA_GET_CONTAINER_ID_ACK);
+    memcpy(resp + pos, system->idm, sizeof(system->idm));
+    pos += sizeof(system->idm);
+    return felica_sim_response_finish(resp, pos);
+}
+
 static uint16_t felica_sim_process_request_response(const uint8_t *req, uint16_t req_len,
                                                     const felica_sim_system_record_t *active_system, uint8_t *resp) {
     if (req_len != 10 || felica_sim_idm_matches(req, active_system) == false) {
@@ -412,6 +445,23 @@ static uint16_t felica_sim_process_request_response(const uint8_t *req, uint16_t
 
     uint16_t pos = felica_sim_response_begin(resp, FELICA_REQRESP_ACK);
     felica_sim_append_idm(resp, &pos, active_system);
+    resp[pos++] = 0x00;
+    return felica_sim_response_finish(resp, pos);
+}
+
+static uint16_t felica_sim_process_reset_mode(const uint8_t *req, uint16_t req_len,
+                                              const felica_sim_system_record_t *active_system, uint8_t *resp) {
+    if (req_len != 12 ||
+            felica_sim_idm_matches(req, active_system) == false ||
+            req[12] != 0x00 ||
+            req[13] != 0x00) {
+        return 0;
+    }
+
+    // If authentication handling is added, reset the tracked card mode to Mode0 here.
+    uint16_t pos = felica_sim_response_begin(resp, FELICA_RESET_MODE_ACK);
+    felica_sim_append_idm(resp, &pos, active_system);
+    resp[pos++] = 0x00;
     resp[pos++] = 0x00;
     return felica_sim_response_finish(resp, pos);
 }
@@ -698,7 +748,7 @@ static uint16_t felica_sim_process_read_without_encryption(const felica_sim_mode
 static uint16_t felica_sim_process_request(const felica_sim_model_header_t *hdr, const uint8_t *model,
                                            const felica_frame_t *request, uint16_t *active_system_index,
                                            uint8_t *resp) {
-    if (request == NULL || request->crc_ok == false || request->len < 8 || request->framebytes[2] < 2) {
+    if (request == NULL || request->crc_ok == false || request->len < 6 || request->framebytes[2] < 2) {
         return 0;
     }
 
@@ -711,13 +761,24 @@ static uint16_t felica_sim_process_request(const felica_sim_model_header_t *hdr,
     const felica_sim_system_record_t *systems = felica_sim_systems(hdr, model);
     const felica_sim_system_record_t *active_system = &systems[*active_system_index];
 
-    switch (req[3]) {
+    uint16_t req_command = req[3];
+    if (req[3] >= 0xC0U && req_len >= 3U) {
+        req_command = ((uint16_t)req[3] << 8) | req[4];
+    }
+
+    switch (req_command) {
         case FELICA_POLL_REQ:
             return felica_sim_process_polling(hdr, model, req, req_len, active_system_index, resp);
+        case FELICA_ECHO_REQ:
+            return felica_sim_process_echo(req, req_len, resp);
+        case FELICA_GET_CONTAINER_ID_REQ:
+            return felica_sim_process_get_container_id(hdr, model, req, req_len, resp);
         case FELICA_REQSYSCODE_REQ:
             return felica_sim_process_request_system_code(hdr, model, req, req_len, active_system, resp);
         case FELICA_REQRESP_REQ:
             return felica_sim_process_request_response(req, req_len, active_system, resp);
+        case FELICA_RESET_MODE_REQ:
+            return felica_sim_process_reset_mode(req, req_len, active_system, resp);
         case FELICA_REQUEST_SPEC_VERSION_REQ:
             return felica_sim_process_request_specification_version(hdr, model, req, req_len, active_system, resp);
         case FELICA_GETPLATFORMINFO_REQ:
