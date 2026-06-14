@@ -424,7 +424,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
             case MIFARE_ULC_WRITE : {
                 if (cmd[1] < 0x21)
                     snprintf(exp, size, "WRITEBLOCK(" _MAGENTA_("%d") ")", cmd[1]);
-                else
+                else if (cmdsize >= 6)
                     // outside limits, useful for some tags...
                     snprintf(exp, size, "WRITEBLOCK(" _MAGENTA_("%d") ") (%s)", cmd[1], sprint_hex_inrow(cmd + 2, 4));
                 break;
