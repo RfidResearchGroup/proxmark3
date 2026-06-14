@@ -3158,7 +3158,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         PrintAndLogEx(INFO, "MIFARE Plus card detected.  Using limited set of attacks");
     }
 
-    if (isMifareMini && sector_cnt != MIFARE_MINI_MAXSECTOR) {
+    if (!isMifarePlus && isMifareMini && sector_cnt != MIFARE_MINI_MAXSECTOR) {
         PrintAndLogEx(WARNING, "MIFARE Mini S20 card detected. Changing sector count to %u", MIFARE_MINI_MAXSECTOR);
         sector_cnt = MIFARE_MINI_MAXSECTOR;
     }
