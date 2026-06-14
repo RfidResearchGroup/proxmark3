@@ -114,3 +114,8 @@ fpga_version_info.c
 
 # docs
 !doc/*.json
+
+# codeql
+codeql/
+_codeql_detected_source_root
+

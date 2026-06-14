@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -euo pipefail
 
 git log --format='%H%n%B%x00' | awk -v RS='\0' '
     BEGIN {
@@ -29,4 +29,5 @@ git log --format='%H%n%B%x00' | awk -v RS='\0' '
             print matches[1]
         }
     }
-' | sort --unique --ignore-case > .git-blame-ignore-revs
+' | sort -u -f > .git-blame-ignore-revs
+

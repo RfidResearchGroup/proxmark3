@@ -32,7 +32,7 @@ it was matching against ANY of the (potentially many) lines in the commit messag
 
 ## Fixup how to get the commits of interest....
 
-My goal was to match only when the **entire** commit message begans with the pattern.
+My goal was to match only when the **entire** commit message begins with the pattern.
 For some patterns, I wanted to match against the entire multi-line message.
 
 This seemed like something designed for `awk`, and `git log --format=...` allows
@@ -100,7 +100,7 @@ character, but continues to split the fields with `[ \t\n]+` (default field sepa
 
 Maybe change each record to be of the form:
 
-`([0-9a-fA-F]{39})\x00([^\x00]*)\x00`, which means that
+`([0-9a-fA-F]{40})\x00([^\x00]*)\x00`, which means that
 `$1` == commit hash, and
 `$2` == message body.
 
@@ -324,7 +324,7 @@ clear; git log --format='%H%n%B%x00' | awk -v RS='\0' '
         do_print = 0
         any_match = 0
 
-        # message ... remove trailing whitepace and blank lines
+        # message ... remove trailing whitespace and blank lines
         msg = matches[2]
         sub(/( *(\r?\n))+$/, "", msg)
 
