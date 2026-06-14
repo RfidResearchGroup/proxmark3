@@ -21,6 +21,7 @@ Have you followed the instructions properly?  ie,  flashed bootrom seperately fi
 
 **Describe the bug**
 A clear and concise description of what the bug is.
+Please include text output of the bug happening.
 
 **To Reproduce**
 Steps to reproduce the behavior:
@@ -40,7 +41,7 @@ If applicable, add screenshots to help explain your problem.
  - inside proxmark3 client run the following commands and paste the output here.
  - hw version
  - hw status
- - data tune
+ - hw tune
 
 **Additional context**
 Add any other context about the problem here.

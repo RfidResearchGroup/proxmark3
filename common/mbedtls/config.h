@@ -1447,7 +1447,9 @@
  *
  * Enable the checkup functions (*_self_test).
  */
+#ifndef ON_DEVICE
 #define MBEDTLS_SELF_TEST
+#endif // ON_DEVICE
 
 /**
  * \def MBEDTLS_SHA256_SMALLER
@@ -2849,7 +2851,7 @@
  * This module adds support for the Hashed Message Authentication Code
  * (HMAC)-based key derivation function (HKDF).
  */
-//#define MBEDTLS_HKDF_C
+#define MBEDTLS_HKDF_C
 
 /**
  * \def MBEDTLS_HMAC_DRBG_C

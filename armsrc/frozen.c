@@ -26,7 +26,7 @@
 #include "nprintf.h"
 
 #include "BigBuf.h"
-#define malloc(X) BigBuf_malloc(X)
+#define malloc(X) BigBuf_calloc(X)
 #define free(X)
 
 #if !defined(WEAK)
@@ -57,6 +57,10 @@ typedef unsigned _int64 uint64_t;
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
 #endif
+// problem specific to arm-none-gcc provided by Debian:
+// https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=953844
+// => include <sys/types.h> before <inttypes.h>
+#include <sys/types.h>
 #include <inttypes.h>
 #endif /* _WIN32 */
 
@@ -537,7 +541,7 @@ static int b64dec(const char *src, int n, char *dst) {
     int len = 0;
     while (src + 3 < end) {
         int a = b64rev(src[0]), b = b64rev(src[1]), c = b64rev(src[2]),
-            d = b64rev(src[3]);
+                                                    d = b64rev(src[3]);
         dst[len++] = (a << 2) | (b >> 4);
         if (src[2] != '=') {
             dst[len++] = (b << 4) | (c >> 2);
@@ -1356,7 +1360,7 @@ int json_prettify(const char *s, int len, struct json_out *out) {
 int json_prettify_file(const char *file_name) WEAK;
 int json_prettify_file(const char *file_name) {
     int res = -1;
-    char *s = json_fread(file_name);
+    const char *s = json_fread(file_name);
     FILE *fp;
     if (s != NULL && (fp = fopen(file_name, "wb")) != NULL) {
         struct json_out out = JSON_OUT_FILE(fp);
@@ -1365,6 +1369,9 @@ int json_prettify_file(const char *file_name) {
             /* On error, restore the old content */
             fclose(fp);
             fp = fopen(file_name, "wb");
+            if (fp == NULL) {
+                return -1;
+            }
             fseek(fp, 0, SEEK_SET);
             fwrite(s, 1, strlen(s), fp);
         } else {

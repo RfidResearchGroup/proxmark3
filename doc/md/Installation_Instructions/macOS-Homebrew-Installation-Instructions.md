@@ -41,7 +41,7 @@ Alternatively, and only if the issue still persists after following the steps ab
 ## Apple Silicon (M1) Notes
 ^[Top](#top)
 
-Ensure Rosetta 2 is installed as it's currently needed to run `arm-none-eabi-gcc` as it's delivered as a precombiled x86_64 binary.
+Ensure Rosetta 2 is installed as it's currently needed to run `arm-none-eabi-gcc` as it's delivered as a precombiled x86_64 binary. **Note: Starting from v4.19552, it is no longer necessary to install Rosetta 2, Apple Silicons are already supported**
 
 If you see an error like:
 
@@ -57,6 +57,20 @@ whichever terminal or application you're using must be running under Architectur
 The fastest option is to run the brew command with the `arch -arm64` prefix i.e. `arch -arm64 brew install --HEAD --with-blueshark proxmark3`. This doesn't require running the whole terminal in Rosetta 2.
 
 Visual Studio Code still runs under Rosetta 2 and if you're developing for proxmark3 on an Apple Silicon Mac you might want to consider running the Insiders build which has support for running natively on Apple Silicon.
+
+If you see an error when linking:
+```
+ld: warning: ignoring file /usr/local/Cellar/.../libpython3.9.dylib, building for macOS-arm64 but attempting to link with file built for macOS-x86_64
+Undefined symbols for architecture arm64:
+  "_PyArg_UnpackTuple", referenced from:
+      _SwigPyObject_own in pm3_pywrap.o
+      ...
+```
+your build environment has tried to link python across architectures. You can find or install python via homebrew (arm64) and inform the linker to use this
+```
+brew install python@<VERSION>
+export LDFLAGS="-L/opt/homebrew/Cellar/python@<VERSION>/<VERSION>.<MINORVERSION>/Frameworks/Python.framework/Versions/<VERSION>/lib/" && make
+```
 
 ## Install Proxmark3 tools
 ^[Top](#top)
@@ -161,9 +175,13 @@ These instructions will show how to setup the environment on OSX to the point wh
 2. Install dependencies:
 
 ```
-brew install readline qt5 gd pkgconfig coreutils
+brew install readline qt gd pkgconfig coreutils openssl zlib
 brew install RfidResearchGroup/proxmark3/arm-none-eabi-gcc
 ```
+
+If you don't need support for decompressing compressed Google Smart Tap payloads in the Proxmark3 client,
+you can skip the installation of `zlib`.
+
 3. (optional) Install makefile dependencies:
 ```
 brew install recode

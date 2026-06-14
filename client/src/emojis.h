@@ -37,6 +37,7 @@ static emoji_t EmojiTable[] = {
     {":joy:", "\xf0\x9f\x98\x82"}, // 😂
     {":slightly_smiling_face:", "\xf0\x9f\x99\x82"}, // 🙂
     {":upside_down_face:", "\xf0\x9f\x99\x83"}, // 🙃
+    {":melting_face:", "\xf0\x9f\xab\xa0"}, // 🫠
     {":wink:", "\xf0\x9f\x98\x89"}, // 😉
     {":blush:", "\xf0\x9f\x98\x8a"}, // 😊
     {":innocent:", "\xf0\x9f\x98\x87"}, // 😇
@@ -57,13 +58,17 @@ static emoji_t EmojiTable[] = {
     {":money_mouth_face:", "\xf0\x9f\xa4\x91"}, // 🤑
     {":hugs:", "\xf0\x9f\xa4\x97"}, // 🤗
     {":hand_over_mouth:", "\xf0\x9f\xa4\xad"}, // 🤭
+    {":face_with_open_eyes_and_hand_over_mouth:", "\xf0\x9f\xab\xa2"}, // 🫢
+    {":face_with_peeking_eye:", "\xf0\x9f\xab\xa3"}, // 🫣
     {":shushing_face:", "\xf0\x9f\xa4\xab"}, // 🤫
     {":thinking:", "\xf0\x9f\xa4\x94"}, // 🤔
+    {":saluting_face:", "\xf0\x9f\xab\xa1"}, // 🫡
     {":zipper_mouth_face:", "\xf0\x9f\xa4\x90"}, // 🤐
     {":raised_eyebrow:", "\xf0\x9f\xa4\xa8"}, // 🤨
     {":neutral_face:", "\xf0\x9f\x98\x90"}, // 😐
     {":expressionless:", "\xf0\x9f\x98\x91"}, // 😑
     {":no_mouth:", "\xf0\x9f\x98\xb6"}, // 😶
+    {":dotted_line_face:", "\xf0\x9f\xab\xa5"}, // 🫥
     {":face_in_clouds:", "\xf0\x9f\x98\xb6\xe2\x80\x8d\xf0\x9f\x8c\xab\xef\xb8\x8f"}, // 😶‍🌫️
     {":smirk:", "\xf0\x9f\x98\x8f"}, // 😏
     {":unamused:", "\xf0\x9f\x98\x92"}, // 😒
@@ -71,6 +76,7 @@ static emoji_t EmojiTable[] = {
     {":grimacing:", "\xf0\x9f\x98\xac"}, // 😬
     {":face_exhaling:", "\xf0\x9f\x98\xae\xe2\x80\x8d\xf0\x9f\x92\xa8"}, // 😮‍💨
     {":lying_face:", "\xf0\x9f\xa4\xa5"}, // 🤥
+    {":shaking_face:", "\xf0\x9f\xab\xa8"}, // 🫨
     {":relieved:", "\xf0\x9f\x98\x8c"}, // 😌
     {":pensive:", "\xf0\x9f\x98\x94"}, // 😔
     {":sleepy:", "\xf0\x9f\x98\xaa"}, // 😪
@@ -95,6 +101,7 @@ static emoji_t EmojiTable[] = {
     {":nerd_face:", "\xf0\x9f\xa4\x93"}, // 🤓
     {":monocle_face:", "\xf0\x9f\xa7\x90"}, // 🧐
     {":confused:", "\xf0\x9f\x98\x95"}, // 😕
+    {":face_with_diagonal_mouth:", "\xf0\x9f\xab\xa4"}, // 🫤
     {":worried:", "\xf0\x9f\x98\x9f"}, // 😟
     {":slightly_frowning_face:", "\xf0\x9f\x99\x81"}, // 🙁
     {":frowning_face:", "\xe2\x98\xb9\xef\xb8\x8f"}, // ☹️
@@ -103,6 +110,7 @@ static emoji_t EmojiTable[] = {
     {":astonished:", "\xf0\x9f\x98\xb2"}, // 😲
     {":flushed:", "\xf0\x9f\x98\xb3"}, // 😳
     {":pleading_face:", "\xf0\x9f\xa5\xba"}, // 🥺
+    {":face_holding_back_tears:", "\xf0\x9f\xa5\xb9"}, // 🥹
     {":frowning:", "\xf0\x9f\x98\xa6"}, // 😦
     {":anguished:", "\xf0\x9f\x98\xa7"}, // 😧
     {":fearful:", "\xf0\x9f\x98\xa8"}, // 😨
@@ -146,7 +154,6 @@ static emoji_t EmojiTable[] = {
     {":see_no_evil:", "\xf0\x9f\x99\x88"}, // 🙈
     {":hear_no_evil:", "\xf0\x9f\x99\x89"}, // 🙉
     {":speak_no_evil:", "\xf0\x9f\x99\x8a"}, // 🙊
-    {":kiss:", "\xf0\x9f\x92\x8b"}, // 💋
     {":love_letter:", "\xf0\x9f\x92\x8c"}, // 💌
     {":cupid:", "\xf0\x9f\x92\x98"}, // 💘
     {":gift_heart:", "\xf0\x9f\x92\x9d"}, // 💝
@@ -161,14 +168,18 @@ static emoji_t EmojiTable[] = {
     {":heart_on_fire:", "\xe2\x9d\xa4\xef\xb8\x8f\xe2\x80\x8d\xf0\x9f\x94\xa5"}, // ❤️‍🔥
     {":mending_heart:", "\xe2\x9d\xa4\xef\xb8\x8f\xe2\x80\x8d\xf0\x9f\xa9\xb9"}, // ❤️‍🩹
     {":heart:", "\xe2\x9d\xa4\xef\xb8\x8f"}, // ❤️
+    {":pink_heart:", "\xf0\x9f\xa9\xb7"}, // 🩷
     {":orange_heart:", "\xf0\x9f\xa7\xa1"}, // 🧡
     {":yellow_heart:", "\xf0\x9f\x92\x9b"}, // 💛
     {":green_heart:", "\xf0\x9f\x92\x9a"}, // 💚
     {":blue_heart:", "\xf0\x9f\x92\x99"}, // 💙
+    {":light_blue_heart:", "\xf0\x9f\xa9\xb5"}, // 🩵
     {":purple_heart:", "\xf0\x9f\x92\x9c"}, // 💜
     {":brown_heart:", "\xf0\x9f\xa4\x8e"}, // 🤎
     {":black_heart:", "\xf0\x9f\x96\xa4"}, // 🖤
+    {":grey_heart:", "\xf0\x9f\xa9\xb6"}, // 🩶
     {":white_heart:", "\xf0\x9f\xa4\x8d"}, // 🤍
+    {":kiss:", "\xf0\x9f\x92\x8b"}, // 💋
     {":100:", "\xf0\x9f\x92\xaf"}, // 💯
     {":anger:", "\xf0\x9f\x92\xa2"}, // 💢
     {":boom:", "\xf0\x9f\x92\xa5"}, // 💥
@@ -176,7 +187,6 @@ static emoji_t EmojiTable[] = {
     {":sweat_drops:", "\xf0\x9f\x92\xa6"}, // 💦
     {":dash:", "\xf0\x9f\x92\xa8"}, // 💨
     {":hole:", "\xf0\x9f\x95\xb3\xef\xb8\x8f"}, // 🕳️
-    {":bomb:", "\xf0\x9f\x92\xa3"}, // 💣
     {":speech_balloon:", "\xf0\x9f\x92\xac"}, // 💬
     {":eye_speech_bubble:", "\xf0\x9f\x91\x81\xef\xb8\x8f\xe2\x80\x8d\xf0\x9f\x97\xa8\xef\xb8\x8f"}, // 👁️‍🗨️
     {":left_speech_bubble:", "\xf0\x9f\x97\xa8\xef\xb8\x8f"}, // 🗨️
@@ -188,11 +198,18 @@ static emoji_t EmojiTable[] = {
     {":raised_hand_with_fingers_splayed:", "\xf0\x9f\x96\x90\xef\xb8\x8f"}, // 🖐️
     {":hand:", "\xe2\x9c\x8b"}, // ✋
     {":vulcan_salute:", "\xf0\x9f\x96\x96"}, // 🖖
+    {":rightwards_hand:", "\xf0\x9f\xab\xb1"}, // 🫱
+    {":leftwards_hand:", "\xf0\x9f\xab\xb2"}, // 🫲
+    {":palm_down_hand:", "\xf0\x9f\xab\xb3"}, // 🫳
+    {":palm_up_hand:", "\xf0\x9f\xab\xb4"}, // 🫴
+    {":leftwards_pushing_hand:", "\xf0\x9f\xab\xb7"}, // 🫷
+    {":rightwards_pushing_hand:", "\xf0\x9f\xab\xb8"}, // 🫸
     {":ok_hand:", "\xf0\x9f\x91\x8c"}, // 👌
     {":pinched_fingers:", "\xf0\x9f\xa4\x8c"}, // 🤌
     {":pinching_hand:", "\xf0\x9f\xa4\x8f"}, // 🤏
     {":v:", "\xe2\x9c\x8c\xef\xb8\x8f"}, // ✌️
     {":crossed_fingers:", "\xf0\x9f\xa4\x9e"}, // 🤞
+    {":hand_with_index_finger_and_thumb_crossed:", "\xf0\x9f\xab\xb0"}, // 🫰
     {":love_you_gesture:", "\xf0\x9f\xa4\x9f"}, // 🤟
     {":metal:", "\xf0\x9f\xa4\x98"}, // 🤘
     {":call_me_hand:", "\xf0\x9f\xa4\x99"}, // 🤙
@@ -202,6 +219,7 @@ static emoji_t EmojiTable[] = {
     {":middle_finger:", "\xf0\x9f\x96\x95"}, // 🖕
     {":point_down:", "\xf0\x9f\x91\x87"}, // 👇
     {":point_up:", "\xe2\x98\x9d\xef\xb8\x8f"}, // ☝️
+    {":index_pointing_at_the_viewer:", "\xf0\x9f\xab\xb5"}, // 🫵
     {":+1:", "\xf0\x9f\x91\x8d"}, // 👍
     {":-1:", "\xf0\x9f\x91\x8e"}, // 👎
     {":fist_raised:", "\xe2\x9c\x8a"}, // ✊
@@ -210,6 +228,7 @@ static emoji_t EmojiTable[] = {
     {":fist_right:", "\xf0\x9f\xa4\x9c"}, // 🤜
     {":clap:", "\xf0\x9f\x91\x8f"}, // 👏
     {":raised_hands:", "\xf0\x9f\x99\x8c"}, // 🙌
+    {":heart_hands:", "\xf0\x9f\xab\xb6"}, // 🫶
     {":open_hands:", "\xf0\x9f\x91\x90"}, // 👐
     {":palms_up_together:", "\xf0\x9f\xa4\xb2"}, // 🤲
     {":handshake:", "\xf0\x9f\xa4\x9d"}, // 🤝
@@ -234,6 +253,7 @@ static emoji_t EmojiTable[] = {
     {":eye:", "\xf0\x9f\x91\x81\xef\xb8\x8f"}, // 👁️
     {":tongue:", "\xf0\x9f\x91\x85"}, // 👅
     {":lips:", "\xf0\x9f\x91\x84"}, // 👄
+    {":biting_lip:", "\xf0\x9f\xab\xa6"}, // 🫦
     {":baby:", "\xf0\x9f\x91\xb6"}, // 👶
     {":child:", "\xf0\x9f\xa7\x92"}, // 🧒
     {":boy:", "\xf0\x9f\x91\xa6"}, // 👦
@@ -353,6 +373,7 @@ static emoji_t EmojiTable[] = {
     {":construction_worker:", "\xf0\x9f\x91\xb7"}, // 👷
     {":construction_worker_man:", "\xf0\x9f\x91\xb7\xe2\x80\x8d\xe2\x99\x82\xef\xb8\x8f"}, // 👷‍♂️
     {":construction_worker_woman:", "\xf0\x9f\x91\xb7\xe2\x80\x8d\xe2\x99\x80\xef\xb8\x8f"}, // 👷‍♀️
+    {":person_with_crown:", "\xf0\x9f\xab\x85"}, // 🫅
     {":prince:", "\xf0\x9f\xa4\xb4"}, // 🤴
     {":princess:", "\xf0\x9f\x91\xb8"}, // 👸
     {":person_with_turban:", "\xf0\x9f\x91\xb3"}, // 👳
@@ -367,6 +388,8 @@ static emoji_t EmojiTable[] = {
     {":man_with_veil:", "\xf0\x9f\x91\xb0\xe2\x80\x8d\xe2\x99\x82\xef\xb8\x8f"}, // 👰‍♂️
     {":woman_with_veil:", "\xf0\x9f\x91\xb0\xe2\x80\x8d\xe2\x99\x80\xef\xb8\x8f"}, // 👰‍♀️
     {":pregnant_woman:", "\xf0\x9f\xa4\xb0"}, // 🤰
+    {":pregnant_man:", "\xf0\x9f\xab\x83"}, // 🫃
+    {":pregnant_person:", "\xf0\x9f\xab\x84"}, // 🫄
     {":breast_feeding:", "\xf0\x9f\xa4\xb1"}, // 🤱
     {":woman_feeding_baby:", "\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x8d\xbc"}, // 👩‍🍼
     {":man_feeding_baby:", "\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x8d\xbc"}, // 👨‍🍼
@@ -402,6 +425,7 @@ static emoji_t EmojiTable[] = {
     {":zombie:", "\xf0\x9f\xa7\x9f"}, // 🧟
     {":zombie_man:", "\xf0\x9f\xa7\x9f\xe2\x80\x8d\xe2\x99\x82\xef\xb8\x8f"}, // 🧟‍♂️
     {":zombie_woman:", "\xf0\x9f\xa7\x9f\xe2\x80\x8d\xe2\x99\x80\xef\xb8\x8f"}, // 🧟‍♀️
+    {":troll:", "\xf0\x9f\xa7\x8c"}, // 🧌
     {":massage:", "\xf0\x9f\x92\x86"}, // 💆
     {":massage_man:", "\xf0\x9f\x92\x86\xe2\x80\x8d\xe2\x99\x82\xef\xb8\x8f"}, // 💆‍♂️
     {":massage_woman:", "\xf0\x9f\x92\x86\xe2\x80\x8d\xe2\x99\x80\xef\xb8\x8f"}, // 💆‍♀️
@@ -552,6 +576,8 @@ static emoji_t EmojiTable[] = {
     {":tiger2:", "\xf0\x9f\x90\x85"}, // 🐅
     {":leopard:", "\xf0\x9f\x90\x86"}, // 🐆
     {":horse:", "\xf0\x9f\x90\xb4"}, // 🐴
+    {":moose:", "\xf0\x9f\xab\x8e"}, // 🫎
+    {":donkey:", "\xf0\x9f\xab\x8f"}, // 🫏
     {":racehorse:", "\xf0\x9f\x90\x8e"}, // 🐎
     {":unicorn:", "\xf0\x9f\xa6\x84"}, // 🦄
     {":zebra:", "\xf0\x9f\xa6\x93"}, // 🦓
@@ -614,6 +640,9 @@ static emoji_t EmojiTable[] = {
     {":flamingo:", "\xf0\x9f\xa6\xa9"}, // 🦩
     {":peacock:", "\xf0\x9f\xa6\x9a"}, // 🦚
     {":parrot:", "\xf0\x9f\xa6\x9c"}, // 🦜
+    {":wing:", "\xf0\x9f\xaa\xbd"}, // 🪽
+    {":black_bird:", "\xf0\x9f\x90\xa6\xe2\x80\x8d\xe2\xac\x9b"}, // 🐦‍⬛
+    {":goose:", "\xf0\x9f\xaa\xbf"}, // 🪿
     {":frog:", "\xf0\x9f\x90\xb8"}, // 🐸
     {":crocodile:", "\xf0\x9f\x90\x8a"}, // 🐊
     {":turtle:", "\xf0\x9f\x90\xa2"}, // 🐢
@@ -633,6 +662,8 @@ static emoji_t EmojiTable[] = {
     {":shark:", "\xf0\x9f\xa6\x88"}, // 🦈
     {":octopus:", "\xf0\x9f\x90\x99"}, // 🐙
     {":shell:", "\xf0\x9f\x90\x9a"}, // 🐚
+    {":coral:", "\xf0\x9f\xaa\xb8"}, // 🪸
+    {":jellyfish:", "\xf0\x9f\xaa\xbc"}, // 🪼
     {":snail:", "\xf0\x9f\x90\x8c"}, // 🐌
     {":butterfly:", "\xf0\x9f\xa6\x8b"}, // 🦋
     {":bug:", "\xf0\x9f\x90\x9b"}, // 🐛
@@ -652,6 +683,7 @@ static emoji_t EmojiTable[] = {
     {":bouquet:", "\xf0\x9f\x92\x90"}, // 💐
     {":cherry_blossom:", "\xf0\x9f\x8c\xb8"}, // 🌸
     {":white_flower:", "\xf0\x9f\x92\xae"}, // 💮
+    {":lotus:", "\xf0\x9f\xaa\xb7"}, // 🪷
     {":rosette:", "\xf0\x9f\x8f\xb5\xef\xb8\x8f"}, // 🏵️
     {":rose:", "\xf0\x9f\x8c\xb9"}, // 🌹
     {":wilted_flower:", "\xf0\x9f\xa5\x80"}, // 🥀
@@ -659,6 +691,7 @@ static emoji_t EmojiTable[] = {
     {":sunflower:", "\xf0\x9f\x8c\xbb"}, // 🌻
     {":blossom:", "\xf0\x9f\x8c\xbc"}, // 🌼
     {":tulip:", "\xf0\x9f\x8c\xb7"}, // 🌷
+    {":hyacinth:", "\xf0\x9f\xaa\xbb"}, // 🪻
     {":seedling:", "\xf0\x9f\x8c\xb1"}, // 🌱
     {":potted_plant:", "\xf0\x9f\xaa\xb4"}, // 🪴
     {":evergreen_tree:", "\xf0\x9f\x8c\xb2"}, // 🌲
@@ -672,6 +705,9 @@ static emoji_t EmojiTable[] = {
     {":maple_leaf:", "\xf0\x9f\x8d\x81"}, // 🍁
     {":fallen_leaf:", "\xf0\x9f\x8d\x82"}, // 🍂
     {":leaves:", "\xf0\x9f\x8d\x83"}, // 🍃
+    {":empty_nest:", "\xf0\x9f\xaa\xb9"}, // 🪹
+    {":nest_with_eggs:", "\xf0\x9f\xaa\xba"}, // 🪺
+    {":mushroom:", "\xf0\x9f\x8d\x84"}, // 🍄
     {":grapes:", "\xf0\x9f\x8d\x87"}, // 🍇
     {":melon:", "\xf0\x9f\x8d\x88"}, // 🍈
     {":watermelon:", "\xf0\x9f\x8d\x89"}, // 🍉
@@ -703,9 +739,11 @@ static emoji_t EmojiTable[] = {
     {":broccoli:", "\xf0\x9f\xa5\xa6"}, // 🥦
     {":garlic:", "\xf0\x9f\xa7\x84"}, // 🧄
     {":onion:", "\xf0\x9f\xa7\x85"}, // 🧅
-    {":mushroom:", "\xf0\x9f\x8d\x84"}, // 🍄
     {":peanuts:", "\xf0\x9f\xa5\x9c"}, // 🥜
+    {":beans:", "\xf0\x9f\xab\x98"}, // 🫘
     {":chestnut:", "\xf0\x9f\x8c\xb0"}, // 🌰
+    {":ginger_root:", "\xf0\x9f\xab\x9a"}, // 🫚
+    {":pea_pod:", "\xf0\x9f\xab\x9b"}, // 🫛
     {":bread:", "\xf0\x9f\x8d\x9e"}, // 🍞
     {":croissant:", "\xf0\x9f\xa5\x90"}, // 🥐
     {":baguette_bread:", "\xf0\x9f\xa5\x96"}, // 🥖
@@ -790,6 +828,7 @@ static emoji_t EmojiTable[] = {
     {":beers:", "\xf0\x9f\x8d\xbb"}, // 🍻
     {":clinking_glasses:", "\xf0\x9f\xa5\x82"}, // 🥂
     {":tumbler_glass:", "\xf0\x9f\xa5\x83"}, // 🥃
+    {":pouring_liquid:", "\xf0\x9f\xab\x97"}, // 🫗
     {":cup_with_straw:", "\xf0\x9f\xa5\xa4"}, // 🥤
     {":bubble_tea:", "\xf0\x9f\xa7\x8b"}, // 🧋
     {":beverage_box:", "\xf0\x9f\xa7\x83"}, // 🧃
@@ -800,6 +839,7 @@ static emoji_t EmojiTable[] = {
     {":fork_and_knife:", "\xf0\x9f\x8d\xb4"}, // 🍴
     {":spoon:", "\xf0\x9f\xa5\x84"}, // 🥄
     {":hocho:", "\xf0\x9f\x94\xaa"}, // 🔪
+    {":jar:", "\xf0\x9f\xab\x99"}, // 🫙
     {":amphora:", "\xf0\x9f\x8f\xba"}, // 🏺
     {":earth_africa:", "\xf0\x9f\x8c\x8d"}, // 🌍
     {":earth_americas:", "\xf0\x9f\x8c\x8e"}, // 🌎
@@ -862,6 +902,7 @@ static emoji_t EmojiTable[] = {
     {":bridge_at_night:", "\xf0\x9f\x8c\x89"}, // 🌉
     {":hotsprings:", "\xe2\x99\xa8\xef\xb8\x8f"}, // ♨️
     {":carousel_horse:", "\xf0\x9f\x8e\xa0"}, // 🎠
+    {":playground_slide:", "\xf0\x9f\x9b\x9d"}, // 🛝
     {":ferris_wheel:", "\xf0\x9f\x8e\xa1"}, // 🎡
     {":roller_coaster:", "\xf0\x9f\x8e\xa2"}, // 🎢
     {":barber:", "\xf0\x9f\x92\x88"}, // 💈
@@ -910,12 +951,14 @@ static emoji_t EmojiTable[] = {
     {":railway_track:", "\xf0\x9f\x9b\xa4\xef\xb8\x8f"}, // 🛤️
     {":oil_drum:", "\xf0\x9f\x9b\xa2\xef\xb8\x8f"}, // 🛢️
     {":fuelpump:", "\xe2\x9b\xbd"}, // ⛽
+    {":wheel:", "\xf0\x9f\x9b\x9e"}, // 🛞
     {":rotating_light:", "\xf0\x9f\x9a\xa8"}, // 🚨
     {":traffic_light:", "\xf0\x9f\x9a\xa5"}, // 🚥
     {":vertical_traffic_light:", "\xf0\x9f\x9a\xa6"}, // 🚦
     {":stop_sign:", "\xf0\x9f\x9b\x91"}, // 🛑
     {":construction:", "\xf0\x9f\x9a\xa7"}, // 🚧
     {":anchor:", "\xe2\x9a\x93"}, // ⚓
+    {":ring_buoy:", "\xf0\x9f\x9b\x9f"}, // 🛟
     {":boat:", "\xe2\x9b\xb5"}, // ⛵
     {":canoe:", "\xf0\x9f\x9b\xb6"}, // 🛶
     {":speedboat:", "\xf0\x9f\x9a\xa4"}, // 🚤
@@ -1073,10 +1116,10 @@ static emoji_t EmojiTable[] = {
     {":dart:", "\xf0\x9f\x8e\xaf"}, // 🎯
     {":yo_yo:", "\xf0\x9f\xaa\x80"}, // 🪀
     {":kite:", "\xf0\x9f\xaa\x81"}, // 🪁
+    {":gun:", "\xf0\x9f\x94\xab"}, // 🔫
     {":8ball:", "\xf0\x9f\x8e\xb1"}, // 🎱
     {":crystal_ball:", "\xf0\x9f\x94\xae"}, // 🔮
     {":magic_wand:", "\xf0\x9f\xaa\x84"}, // 🪄
-    {":nazar_amulet:", "\xf0\x9f\xa7\xbf"}, // 🧿
     {":video_game:", "\xf0\x9f\x8e\xae"}, // 🎮
     {":joystick:", "\xf0\x9f\x95\xb9\xef\xb8\x8f"}, // 🕹️
     {":slot_machine:", "\xf0\x9f\x8e\xb0"}, // 🎰
@@ -1084,6 +1127,7 @@ static emoji_t EmojiTable[] = {
     {":jigsaw:", "\xf0\x9f\xa7\xa9"}, // 🧩
     {":teddy_bear:", "\xf0\x9f\xa7\xb8"}, // 🧸
     {":pinata:", "\xf0\x9f\xaa\x85"}, // 🪅
+    {":mirror_ball:", "\xf0\x9f\xaa\xa9"}, // 🪩
     {":nesting_dolls:", "\xf0\x9f\xaa\x86"}, // 🪆
     {":spades:", "\xe2\x99\xa0\xef\xb8\x8f"}, // ♠️
     {":hearts:", "\xe2\x99\xa5\xef\xb8\x8f"}, // ♥️
@@ -1120,6 +1164,7 @@ static emoji_t EmojiTable[] = {
     {":shorts:", "\xf0\x9f\xa9\xb3"}, // 🩳
     {":bikini:", "\xf0\x9f\x91\x99"}, // 👙
     {":womans_clothes:", "\xf0\x9f\x91\x9a"}, // 👚
+    {":folding_hand_fan:", "\xf0\x9f\xaa\xad"}, // 🪭
     {":purse:", "\xf0\x9f\x91\x9b"}, // 👛
     {":handbag:", "\xf0\x9f\x91\x9c"}, // 👜
     {":pouch:", "\xf0\x9f\x91\x9d"}, // 👝
@@ -1134,6 +1179,7 @@ static emoji_t EmojiTable[] = {
     {":sandal:", "\xf0\x9f\x91\xa1"}, // 👡
     {":ballet_shoes:", "\xf0\x9f\xa9\xb0"}, // 🩰
     {":boot:", "\xf0\x9f\x91\xa2"}, // 👢
+    {":hair_pick:", "\xf0\x9f\xaa\xae"}, // 🪮
     {":crown:", "\xf0\x9f\x91\x91"}, // 👑
     {":womans_hat:", "\xf0\x9f\x91\x92"}, // 👒
     {":tophat:", "\xf0\x9f\x8e\xa9"}, // 🎩
@@ -1172,6 +1218,8 @@ static emoji_t EmojiTable[] = {
     {":banjo:", "\xf0\x9f\xaa\x95"}, // 🪕
     {":drum:", "\xf0\x9f\xa5\x81"}, // 🥁
     {":long_drum:", "\xf0\x9f\xaa\x98"}, // 🪘
+    {":maracas:", "\xf0\x9f\xaa\x87"}, // 🪇
+    {":flute:", "\xf0\x9f\xaa\x88"}, // 🪈
     {":iphone:", "\xf0\x9f\x93\xb1"}, // 📱
     {":calling:", "\xf0\x9f\x93\xb2"}, // 📲
     {":phone:", "\xe2\x98\x8e\xef\xb8\x8f"}, // ☎️
@@ -1179,6 +1227,7 @@ static emoji_t EmojiTable[] = {
     {":pager:", "\xf0\x9f\x93\x9f"}, // 📟
     {":fax:", "\xf0\x9f\x93\xa0"}, // 📠
     {":battery:", "\xf0\x9f\x94\x8b"}, // 🔋
+    {":low_battery:", "\xf0\x9f\xaa\xab"}, // 🪫
     {":electric_plug:", "\xf0\x9f\x94\x8c"}, // 🔌
     {":computer:", "\xf0\x9f\x92\xbb"}, // 💻
     {":desktop_computer:", "\xf0\x9f\x96\xa5\xef\xb8\x8f"}, // 🖥️
@@ -1290,7 +1339,7 @@ static emoji_t EmojiTable[] = {
     {":hammer_and_wrench:", "\xf0\x9f\x9b\xa0\xef\xb8\x8f"}, // 🛠️
     {":dagger:", "\xf0\x9f\x97\xa1\xef\xb8\x8f"}, // 🗡️
     {":crossed_swords:", "\xe2\x9a\x94\xef\xb8\x8f"}, // ⚔️
-    {":gun:", "\xf0\x9f\x94\xab"}, // 🔫
+    {":bomb:", "\xf0\x9f\x92\xa3"}, // 💣
     {":boomerang:", "\xf0\x9f\xaa\x83"}, // 🪃
     {":bow_and_arrow:", "\xf0\x9f\x8f\xb9"}, // 🏹
     {":shield:", "\xf0\x9f\x9b\xa1\xef\xb8\x8f"}, // 🛡️
@@ -1319,7 +1368,9 @@ static emoji_t EmojiTable[] = {
     {":drop_of_blood:", "\xf0\x9f\xa9\xb8"}, // 🩸
     {":pill:", "\xf0\x9f\x92\x8a"}, // 💊
     {":adhesive_bandage:", "\xf0\x9f\xa9\xb9"}, // 🩹
+    {":crutch:", "\xf0\x9f\xa9\xbc"}, // 🩼
     {":stethoscope:", "\xf0\x9f\xa9\xba"}, // 🩺
+    {":x_ray:", "\xf0\x9f\xa9\xbb"}, // 🩻
     {":door:", "\xf0\x9f\x9a\xaa"}, // 🚪
     {":elevator:", "\xf0\x9f\x9b\x97"}, // 🛗
     {":mirror:", "\xf0\x9f\xaa\x9e"}, // 🪞
@@ -1340,6 +1391,7 @@ static emoji_t EmojiTable[] = {
     {":roll_of_paper:", "\xf0\x9f\xa7\xbb"}, // 🧻
     {":bucket:", "\xf0\x9f\xaa\xa3"}, // 🪣
     {":soap:", "\xf0\x9f\xa7\xbc"}, // 🧼
+    {":bubbles:", "\xf0\x9f\xab\xa7"}, // 🫧
     {":toothbrush:", "\xf0\x9f\xaa\xa5"}, // 🪥
     {":sponge:", "\xf0\x9f\xa7\xbd"}, // 🧽
     {":fire_extinguisher:", "\xf0\x9f\xa7\xaf"}, // 🧯
@@ -1348,8 +1400,11 @@ static emoji_t EmojiTable[] = {
     {":coffin:", "\xe2\x9a\xb0\xef\xb8\x8f"}, // ⚰️
     {":headstone:", "\xf0\x9f\xaa\xa6"}, // 🪦
     {":funeral_urn:", "\xe2\x9a\xb1\xef\xb8\x8f"}, // ⚱️
+    {":nazar_amulet:", "\xf0\x9f\xa7\xbf"}, // 🧿
+    {":hamsa:", "\xf0\x9f\xaa\xac"}, // 🪬
     {":moyai:", "\xf0\x9f\x97\xbf"}, // 🗿
     {":placard:", "\xf0\x9f\xaa\xa7"}, // 🪧
+    {":identification_card:", "\xf0\x9f\xaa\xaa"}, // 🪪
     {":atm:", "\xf0\x9f\x8f\xa7"}, // 🏧
     {":put_litter_in_its_place:", "\xf0\x9f\x9a\xae"}, // 🚮
     {":potable_water:", "\xf0\x9f\x9a\xb0"}, // 🚰
@@ -1409,6 +1464,7 @@ static emoji_t EmojiTable[] = {
     {":peace_symbol:", "\xe2\x98\xae\xef\xb8\x8f"}, // ☮️
     {":menorah:", "\xf0\x9f\x95\x8e"}, // 🕎
     {":six_pointed_star:", "\xf0\x9f\x94\xaf"}, // 🔯
+    {":khanda:", "\xf0\x9f\xaa\xaf"}, // 🪯
     {":aries:", "\xe2\x99\x88"}, // ♈
     {":taurus:", "\xe2\x99\x89"}, // ♉
     {":gemini:", "\xe2\x99\x8a"}, // ♊
@@ -1444,6 +1500,7 @@ static emoji_t EmojiTable[] = {
     {":low_brightness:", "\xf0\x9f\x94\x85"}, // 🔅
     {":high_brightness:", "\xf0\x9f\x94\x86"}, // 🔆
     {":signal_strength:", "\xf0\x9f\x93\xb6"}, // 📶
+    {":wireless:", "\xf0\x9f\x9b\x9c"}, // 🛜
     {":vibration_mode:", "\xf0\x9f\x93\xb3"}, // 📳
     {":mobile_phone_off:", "\xf0\x9f\x93\xb4"}, // 📴
     {":female_sign:", "\xe2\x99\x80\xef\xb8\x8f"}, // ♀️
@@ -1453,6 +1510,7 @@ static emoji_t EmojiTable[] = {
     {":heavy_plus_sign:", "\xe2\x9e\x95"}, // ➕
     {":heavy_minus_sign:", "\xe2\x9e\x96"}, // ➖
     {":heavy_division_sign:", "\xe2\x9e\x97"}, // ➗
+    {":heavy_equals_sign:", "\xf0\x9f\x9f\xb0"}, // 🟰
     {":infinity:", "\xe2\x99\xbe\xef\xb8\x8f"}, // ♾️
     {":bangbang:", "\xe2\x80\xbc\xef\xb8\x8f"}, // ‼️
     {":interrobang:", "\xe2\x81\x89\xef\xb8\x8f"}, // ⁉️

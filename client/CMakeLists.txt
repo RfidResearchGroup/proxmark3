@@ -44,40 +44,87 @@ endif()
 
 find_package(PkgConfig)
 
+# Allow specifying a Python version via cmake option
+set(PYTHON3_PKGCONFIG "python3" CACHE STRING "Python3 package config version suffix")
+
 if (NOT SKIPQT EQUAL 1)
-    if(APPLE AND EXISTS /usr/local/opt/qt5)
-        # Homebrew installs Qt5 (up to at least 5.11.0) in
-        # /usr/local/opt/qt5. Ensure that it can be found by CMake
-        # since it is not in the default /usr/local prefix.
-        # Add it to PATHS so that it doesn't override the
-        # CMAKE_PREFIX_PATH environment variable.
-        # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
-        # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
-        list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /usr/local/opt/qt5)
-    endif(APPLE AND EXISTS /usr/local/opt/qt5)
-    if(APPLE AND EXISTS /opt/homebrew/opt/qt5)
-        # Homebrew on Apple Silicon installs Qt5 in
-        # /opt/homebrew/opt/qt5. Ensure that it can be found by CMake
-        # since it is not in the default /usr/local prefix.
-        # Add it to PATHS so that it doesn't override the
-        # CMAKE_PREFIX_PATH environment variable.
-        # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
-        # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
-        list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt5)
-    endif(APPLE AND EXISTS /opt/homebrew/opt/qt5)
-    set(QT_PACKAGELIST
-        Qt5Core
-        Qt5Widgets
-        Qt5Gui
-    )
-    set(Qt5_FOUND ON)
-    foreach(_qt_package IN LISTS QT_PACKAGELIST)
-        find_package(${_qt_package} QUIET ${QT_FIND_PACKAGE_OPTIONS})
-        set(Qt5_LIBRARIES ${${_qt_package}_LIBRARIES} ${Qt5_LIBRARIES})
-        if(NOT ${_qt_package}_FOUND)
-            set(Qt5_FOUND OFF)
-        endif(NOT ${_qt_package}_FOUND)
-    endforeach()
+
+    set(Qt5_FOUND FALSE)
+    set(Qt6_FOUND FALSE)
+
+    if (NOT SKIPQT6 EQUAL 1)
+       if(APPLE AND EXISTS /usr/local/opt/qt6)
+            # Homebrew installs Qt6 in /usr/local/opt/qt6 on Intel Macs.
+            # Ensure that it can be found by CMake since it is not in the
+            # default /usr/local prefix.
+            list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /usr/local/opt/qt6)
+        endif(APPLE AND EXISTS /usr/local/opt/qt6)
+
+        if(APPLE AND EXISTS /opt/homebrew/opt/qt6)
+            # Homebrew on Apple Silicon installs Qt6 in
+            # /opt/homebrew/opt/qt6. Ensure that it can be found by CMake
+            # since it is not in the default /opt/homebrew prefix.
+            list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt6)
+        endif(APPLE AND EXISTS /opt/homebrew/opt/qt6)
+
+        if(APPLE AND EXISTS /opt/homebrew/opt/qt@6)
+            # Homebrew may also install Qt6 under the versioned name qt@6
+            # on Apple Silicon.
+            list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt@6)
+        endif(APPLE AND EXISTS /opt/homebrew/opt/qt@6)
+
+        find_package(Qt6 QUIET COMPONENTS Core Widgets Gui ${QT_FIND_PACKAGE_OPTIONS})
+        if(Qt6_FOUND)
+            set(Qt6_LIBRARIES Qt6::Core Qt6::Widgets Qt6::Gui)
+            # tag Qt6 headers as system headers to avoid warnings in Qt headers
+            foreach(lib Core Gui Widgets)
+                if(TARGET Qt6::${lib})
+                    set_target_properties(Qt6::${lib} PROPERTIES
+                        INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                        $<TARGET_PROPERTY:Qt6::${lib},INTERFACE_INCLUDE_DIRECTORIES>
+                    )
+                endif()
+            endforeach()
+        endif (Qt6_FOUND)
+
+    endif (NOT SKIPQT6 EQUAL 1)
+    if (NOT Qt6_FOUND)
+
+        if(APPLE AND EXISTS /usr/local/opt/qt5)
+            # Homebrew installs Qt5 (up to at least 5.11.0) in
+            # /usr/local/opt/qt5. Ensure that it can be found by CMake
+            # since it is not in the default /usr/local prefix.
+            # Add it to PATHS so that it doesn't override the
+            # CMAKE_PREFIX_PATH environment variable.
+            # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
+            # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
+            list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /usr/local/opt/qt5)
+        endif(APPLE AND EXISTS /usr/local/opt/qt5)
+
+        if(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
+            # Homebrew on Apple Silicon installs Qt5 in
+            # /opt/homebrew/opt/qt@5. Ensure that it can be found by CMake
+            # since it is not in the default /usr/local prefix.
+            # Add it to PATHS so that it doesn't override the
+            # CMAKE_PREFIX_PATH environment variable.
+            # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
+            # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
+            list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt@5)
+        endif(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
+        set(QT_PACKAGELIST
+            Qt5Core
+            Qt5Widgets
+            Qt5Gui
+        )
+        set(Qt5_FOUND TRUE)
+        foreach(_qt_package IN LISTS QT_PACKAGELIST)
+            find_package(${_qt_package} QUIET ${QT_FIND_PACKAGE_OPTIONS})
+            set(Qt5_LIBRARIES ${${_qt_package}_LIBRARIES} ${Qt5_LIBRARIES})
+            if(NOT ${_qt_package}_FOUND)
+                set(Qt5_FOUND FALSE)
+            endif(NOT ${_qt_package}_FOUND)
+        endforeach()
+    endif (NOT Qt6_FOUND)
 endif (NOT SKIPQT EQUAL 1)
 
 if (NOT SKIPBT EQUAL 1)
@@ -85,8 +132,8 @@ if (NOT SKIPBT EQUAL 1)
 endif (NOT SKIPBT EQUAL 1)
 
 if (NOT SKIPPYTHON EQUAL 1)
-    pkg_search_module(PYTHON3 QUIET python3)
-    pkg_search_module(PYTHON3EMBED QUIET python3-embed)
+    pkg_search_module(PYTHON3 QUIET ${PYTHON3_PKGCONFIG})
+    pkg_search_module(PYTHON3EMBED QUIET ${PYTHON3_PKGCONFIG}-embed)
 endif (NOT SKIPPYTHON EQUAL 1)
 
 # If cross-compiled, we need to init source and build.
@@ -123,7 +170,7 @@ if (NOT SKIPREADLINE EQUAL 1)
         ExternalProject_Add_StepTargets(ncurses configure build install)
 
         ExternalProject_Add(readline
-            URL                   ftp://ftp.gnu.org/gnu/readline/readline-8.2.tar.gz
+            URL                   https://ftp.gnu.org/gnu/readline/readline-8.2.tar.gz
             PREFIX                deps/readline
             DOWNLOAD_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/deps/readline
             CONFIGURE_COMMAND     ./configure CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} --host=arm --enable-static
@@ -214,6 +261,8 @@ if (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
     set(LZ4_FOUND ON)
 endif (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
 
+find_package(ZLIB QUIET)
+
 if (NOT SKIPGD EQUAL 1)
     if (EMBED_GD)
         cmake_policy(SET CMP0114 NEW)
@@ -261,9 +310,12 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/common/cardhelper.c
         ${PM3_ROOT}/common/generator.c
         ${PM3_ROOT}/common/bruteforce.c
+        ${PM3_ROOT}/common/hitag2/hitag2_crypto.c
         ${PM3_ROOT}/client/src/crypto/asn1dump.c
         ${PM3_ROOT}/client/src/crypto/asn1utils.c
+        ${PM3_ROOT}/client/src/crypto/duoxcrypto.c
         ${PM3_ROOT}/client/src/crypto/libpcrypto.c
+        ${PM3_ROOT}/client/src/crypto/originality.c
         ${PM3_ROOT}/client/src/emv/test/cda_test.c
         ${PM3_ROOT}/client/src/emv/test/crypto_test.c
         ${PM3_ROOT}/client/src/emv/test/cryptotest.c
@@ -292,24 +344,35 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cipurse/cipursecore.c
         ${PM3_ROOT}/client/src/cipurse/cipursetest.c
         ${PM3_ROOT}/client/src/loclass/cipher.c
+        ${PM3_ROOT}/client/src/loclass/cipher_bs.c
+        ${PM3_ROOT}/client/src/loclass/cipher_bs_avx2.c
+        ${PM3_ROOT}/client/src/loclass/cipher_bs_avx512.c
+        ${PM3_ROOT}/client/src/loclass/cipher_bs_dispatch.c
+        ${PM3_ROOT}/client/src/loclass/cipher_bs_neon.c
         ${PM3_ROOT}/client/src/loclass/cipherutils.c
         ${PM3_ROOT}/client/src/loclass/elite_crack.c
         ${PM3_ROOT}/client/src/loclass/hash1_brute.c
         ${PM3_ROOT}/client/src/loclass/ikeys.c
         ${PM3_ROOT}/client/src/mifare/mad.c
+        ${PM3_ROOT}/client/src/mifare/mad_test.c
         ${PM3_ROOT}/client/src/mifare/aiddesfire.c
         ${PM3_ROOT}/client/src/mifare/mfkey.c
         ${PM3_ROOT}/client/src/mifare/mifare4.c
         ${PM3_ROOT}/client/src/mifare/mifaredefault.c
         ${PM3_ROOT}/client/src/mifare/mifarehost.c
+        ${PM3_ROOT}/client/src/mifare/prime.c
         ${PM3_ROOT}/client/src/mifare/gen4.c
-        ${PM3_ROOT}/client/src/nfc/ndef.c
         ${PM3_ROOT}/client/src/mifare/lrpcrypto.c
         ${PM3_ROOT}/client/src/mifare/desfirecrypto.c
         ${PM3_ROOT}/client/src/mifare/desfiresecurechan.c
         ${PM3_ROOT}/client/src/mifare/desfirecore.c
         ${PM3_ROOT}/client/src/mifare/desfiretest.c
         ${PM3_ROOT}/client/src/mifare/gallaghercore.c
+        ${PM3_ROOT}/client/src/mifare/gallaghertest.c
+        ${PM3_ROOT}/client/src/nfc/ndef.c
+        ${PM3_ROOT}/client/src/qrcode/qrcode.c
+        ${PM3_ROOT}/client/src/relay/relay_posix.c
+        ${PM3_ROOT}/client/src/relay/relay_win32.c
         ${PM3_ROOT}/client/src/uart/ringbuffer.c
         ${PM3_ROOT}/client/src/uart/uart_common.c
         ${PM3_ROOT}/client/src/uart/uart_posix.c
@@ -327,14 +390,18 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhf14a.c
         ${PM3_ROOT}/client/src/cmdhf14b.c
         ${PM3_ROOT}/client/src/cmdhf15.c
+        ${PM3_ROOT}/client/src/cmdhfaliro.c
+        ${PM3_ROOT}/client/src/cmdhfcalypso.c
+        ${PM3_ROOT}/client/src/cmdhfcipurse.c
         ${PM3_ROOT}/client/src/cmdhfcryptorf.c
         ${PM3_ROOT}/client/src/cmdhfemrtd.c
         ${PM3_ROOT}/client/src/cmdhfepa.c
         ${PM3_ROOT}/client/src/cmdhffelica.c
         ${PM3_ROOT}/client/src/cmdhffido.c
+        ${PM3_ROOT}/client/src/cmdhffmcos.c
         ${PM3_ROOT}/client/src/cmdhffudan.c
         ${PM3_ROOT}/client/src/cmdhfgallagher.c
-        ${PM3_ROOT}/client/src/cmdhfcipurse.c
+        ${PM3_ROOT}/client/src/cmdhfgst.c
         ${PM3_ROOT}/client/src/cmdhficlass.c
         ${PM3_ROOT}/client/src/cmdhfict.c
         ${PM3_ROOT}/client/src/cmdhfjooki.c
@@ -346,8 +413,11 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhfmfdes.c
         ${PM3_ROOT}/client/src/cmdhfmfhard.c
         ${PM3_ROOT}/client/src/cmdhfmfp.c
+        ${PM3_ROOT}/client/src/cmdhfmfsen.c
         ${PM3_ROOT}/client/src/cmdhfmfu.c
         ${PM3_ROOT}/client/src/cmdhfntag424.c
+        ${PM3_ROOT}/client/src/cmdhfsaflok.c
+        ${PM3_ROOT}/client/src/cmdhfsecc.c
         ${PM3_ROOT}/client/src/cmdhfseos.c
         ${PM3_ROOT}/client/src/cmdhfst.c
         ${PM3_ROOT}/client/src/cmdhfst25ta.c
@@ -372,6 +442,8 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfguard.c
         ${PM3_ROOT}/client/src/cmdlfhid.c
         ${PM3_ROOT}/client/src/cmdlfhitag.c
+        ${PM3_ROOT}/client/src/cmdlfhitaghts.c
+        ${PM3_ROOT}/client/src/cmdlfhitagu.c
         ${PM3_ROOT}/client/src/cmdlfidteck.c
         ${PM3_ROOT}/client/src/cmdlfindala.c
         ${PM3_ROOT}/client/src/cmdlfio.c
@@ -392,7 +464,9 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfviking.c
         ${PM3_ROOT}/client/src/cmdlfvisa2000.c
         ${PM3_ROOT}/client/src/cmdlfzx8211.c
+        ${PM3_ROOT}/client/src/cmdmad.c
         ${PM3_ROOT}/client/src/cmdmain.c
+        ${PM3_ROOT}/client/src/cmdmqtt.c
         ${PM3_ROOT}/client/src/cmdnfc.c
         ${PM3_ROOT}/client/src/cmdparser.c
         ${PM3_ROOT}/client/src/cmdpiv.c
@@ -405,8 +479,11 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/fileutils.c
         ${PM3_ROOT}/client/src/flash.c
         ${PM3_ROOT}/client/src/graph.c
+        ${PM3_ROOT}/client/src/hidsio.c
         ${PM3_ROOT}/client/src/iso4217.c
         ${PM3_ROOT}/client/src/jansson_path.c
+        ${PM3_ROOT}/client/src/lua_bitlib.c
+        ${PM3_ROOT}/client/src/pla.c
         ${PM3_ROOT}/client/src/preferences.c
         ${PM3_ROOT}/client/src/pm3.c
         ${PM3_ROOT}/client/src/pm3_binlib.c
@@ -454,10 +531,9 @@ if (APPLE)
       message(STATUS "AppKit.framework found! ${APPKIT_LIBRARY}")
       set(ADDITIONAL_LNK "-framework Foundation" "-framework AppKit")
     endif()
-
 endif (APPLE)
 
-if ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
+if ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND OR Qt6_FOUND))
     set(CMAKE_AUTOMOC ON)
     set(CMAKE_AUTORCC ON)
     set(CMAKE_AUTOUIC ON)
@@ -467,12 +543,20 @@ if ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
             ${TARGET_SOURCES})
 
     add_definitions("-DHAVE_GUI")
-    set(ADDITIONAL_LNK ${Qt5_LIBRARIES} ${ADDITIONAL_LNK})
-else ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
+    if (Qt6_FOUND)
+        set(ADDITIONAL_DIRS ${Qt6_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+        set(ADDITIONAL_LNK ${Qt6_LIBRARIES} ${ADDITIONAL_LNK})
+    else (Qt6_FOUND)
+        if (Qt5_FOUND)
+            set(ADDITIONAL_DIRS ${Qt5_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+            set(ADDITIONAL_LNK ${Qt5_LIBRARIES} ${ADDITIONAL_LNK})
+        endif (Qt5_FOUND)
+    endif (Qt6_FOUND)
+else ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND OR Qt6_FOUND))
     set(TARGET_SOURCES
             ${PM3_ROOT}/client/src/guidummy.cpp
             ${TARGET_SOURCES})
-endif ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
+endif ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND OR Qt6_FOUND))
 
 if (NOT SKIPBT EQUAL 1)
     if (BLUEZ_FOUND)
@@ -518,6 +602,12 @@ if (LZ4_FOUND)
     set(ADDITIONAL_LNK ${LZ4_LIBRARIES} ${ADDITIONAL_LNK})
 endif (LZ4_FOUND)
 
+if (ZLIB_FOUND)
+    add_definitions("-DHAVE_ZLIB")
+    set(ADDITIONAL_DIRS ${ZLIB_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${ZLIB_LIBRARIES} ${ADDITIONAL_LNK})
+endif (ZLIB_FOUND)
+
 if (NOT SKIPGD EQUAL 1 AND GD_FOUND)
     set(ADDITIONAL_DIRS ${GD_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${GD_LIBRARIES} ${ADDITIONAL_LNK})
@@ -544,11 +634,15 @@ message(STATUS "Version info:      ${version_pm3}")
 if (SKIPQT EQUAL 1)
     message(STATUS "GUI support:       skipped")
 else (SKIPQT EQUAL 1)
-    if (Qt5_FOUND)
-        message(STATUS "GUI support:       QT5 found, enabled")
-    else (Qt5_FOUND)
-        message(STATUS "GUI support:       QT5 not found, disabled")
-    endif (Qt5_FOUND)
+    if (Qt6_FOUND)
+        message(STATUS "GUI support:       QT6 found, enabled")
+    else (Qt6_FOUND)
+        if (Qt5_FOUND)
+            message(STATUS "GUI support:       QT5 found, enabled")
+        else (Qt5_FOUND)
+            message(STATUS "GUI support:       QT not found, disabled")
+        endif (Qt5_FOUND)
+    endif (Qt6_FOUND)
 endif (SKIPQT EQUAL 1)
 
 if (SKIPBT EQUAL 1)
@@ -581,6 +675,12 @@ else (LZ4_FOUND)
     message(SEND_ERROR "LZ4 library:       LZ4 not found")
 endif (LZ4_FOUND)
 
+if (ZLIB_FOUND)
+    message(STATUS "Zlib library:      system library found (enabled)")
+else (ZLIB_FOUND)
+    message(STATUS "Zlib library:      not found, disabled")
+endif (ZLIB_FOUND)
+
 if (SKIPGD EQUAL 1)
     message(STATUS "GD library:        skipped")
 elseif (GD_FOUND)
@@ -607,11 +707,11 @@ if (SKIPPYTHON EQUAL 1)
     message(STATUS "Python3 library:   skipped")
 else (SKIPPYTHON EQUAL 1)
     if (PYTHON3EMBED_FOUND)
-        message(STATUS "Python3 library:   Python3 embed found, enabled")
+        message(STATUS "Python3 library:   ${PYTHON3_PKGCONFIG}-embed found, enabled")
     elseif (PYTHON3_FOUND)
-        message(STATUS "Python3 library:   Python3 found, enabled")
+        message(STATUS "Python3 library:   ${PYTHON3_PKGCONFIG} found, enabled")
     else (PYTHON3EMBED_FOUND)
-        message(STATUS "Python3 library:   Python3 not found, disabled")
+        message(STATUS "Python3 library:   ${PYTHON3_PKGCONFIG} not found, disabled")
     endif (PYTHON3EMBED_FOUND)
 endif(SKIPPYTHON EQUAL 1)
 
@@ -682,6 +782,47 @@ add_executable(proxmark3
         ${ADDITIONAL_SRC}
 )
 
+# Handle overlays.ui manually to apply the Qt6 setNum fix
+if ((NOT SKIPQT EQUAL 1) AND Qt6_FOUND)
+    # Find the UIC tool
+    get_target_property(QT_UIC_EXECUTABLE Qt6::uic IMPORTED_LOCATION)
+
+    set(UI_OVERLAYS_INPUT  ${PM3_ROOT}/client/src/ui/overlays.ui)
+    set(UI_OVERLAYS_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ui/ui_overlays.h)
+
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ui)
+
+    add_custom_command(
+        OUTPUT  ${UI_OVERLAYS_OUTPUT}
+        COMMAND ${QT_UIC_EXECUTABLE} ${UI_OVERLAYS_INPUT} -o ${UI_OVERLAYS_OUTPUT}
+        # Fix bug in headers generated by some Qt6 versions (seen on 6.4.2 & 6.6.3):
+        # replace &QLabel::setNum with qOverload<int>(&QLabel::setNum)
+        COMMAND ${CMAKE_COMMAND}
+            -DFILE=${UI_OVERLAYS_OUTPUT}
+            -P ${CMAKE_CURRENT_BINARY_DIR}/fix_overlays.cmake
+        DEPENDS ${UI_OVERLAYS_INPUT}
+        COMMENT "UIC overlays.ui (with Qt6 setNum fix)"
+    )
+
+    # Write the sed-equivalent cmake script at configure time
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/fix_overlays.cmake [=[
+        file(READ "${FILE}" _content)
+        string(REPLACE
+            "&QLabel::setNum);"
+            "qOverload<int>(&QLabel::setNum));"
+            _content "${_content}")
+        file(WRITE "${FILE}" "${_content}")
+    ]=])
+
+    # Add the generated header as a source so it gets built
+    # and tell AUTOUIC to skip the .ui file (we handle it ourselves)
+    set_property(SOURCE ${UI_OVERLAYS_INPUT} PROPERTY SKIP_AUTOUIC ON)
+
+    # Make proxmark3 depend on the generated header
+    target_sources(proxmark3 PRIVATE ${UI_OVERLAYS_OUTPUT})
+    target_include_directories(proxmark3 PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
 target_compile_options(proxmark3 PUBLIC -Wall -Werror -O3)
 if (EMBED_READLINE)
     if (NOT SKIPREADLINE EQUAL 1)
@@ -732,6 +873,9 @@ target_include_directories(proxmark3 PRIVATE
 if (NOT APPLE)
     # required for Raspberry Pi, but breaks with clang (OSX). Need to be at the end of the linker line.
     set(ADDITIONAL_LNK ${ADDITIONAL_LNK} -Wl,--as-needed -latomic -Wl,--no-as-needed)
+else (NOT APPLE)
+    #set_property(TARGET proxmark3 PROPERTY LINK_FLAGS "-Wl,-undefined dynamic_lookup")
+    set(ADDITIONAL_LNK ${ADDITIONAL_LNK} -Wl,-undefined,dynamic_lookup)
 endif (NOT APPLE)
 
 if (NOT JANSSON_FOUND)
@@ -758,6 +902,9 @@ target_link_libraries(proxmark3 PRIVATE
         pm3rrg_rdv4_amiibo
         pm3rrg_rdv4_reveng
         pm3rrg_rdv4_hardnested
+        pm3rrg_rdv4_id48
+        pm3rrg_rdv4_mqtt
+        pm3rrg_rdv4_vec
         ${ADDITIONAL_LNK})
 
 if (NOT SKIPPTHREAD EQUAL 1)

@@ -141,6 +141,10 @@ typedef struct _cl_image_desc {
 #pragma warning( push )
 #pragma warning( disable : 4201 )   /* Prevents warning about nameless struct/union in /W4 builds */
 #endif
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc11-extensions" /* Prevents warning about nameless union being C11 extension*/
+#endif
 #if defined(_MSC_VER) && defined(__STDC__)
     /* Anonymous unions are not supported in /Za builds */
 #else
@@ -157,6 +161,9 @@ typedef struct _cl_image_desc {
 #endif
 #if defined(_MSC_VER) && !defined(__STDC__)
 #pragma warning( pop )
+#endif
+#ifdef __clang__
+#pragma clang diagnostic pop
 #endif
 #endif
 } cl_image_desc;
@@ -562,11 +569,8 @@ typedef struct _cl_name_version {
 #define CL_RGx                                      0x10BB
 #define CL_RGBx                                     0x10BC
 #endif
-#ifdef CL_VERSION_1_2
-#define CL_DEPTH                                    0x10BD
-#define CL_DEPTH_STENCIL                            0x10BE
-#endif
 #ifdef CL_VERSION_2_0
+#define CL_DEPTH                                    0x10BD
 #define CL_sRGB                                     0x10BF
 #define CL_sRGBx                                    0x10C0
 #define CL_sRGBA                                    0x10C1
@@ -590,9 +594,6 @@ typedef struct _cl_name_version {
 #define CL_UNSIGNED_INT32                           0x10DC
 #define CL_HALF_FLOAT                               0x10DD
 #define CL_FLOAT                                    0x10DE
-#ifdef CL_VERSION_1_2
-#define CL_UNORM_INT24                              0x10DF
-#endif
 #ifdef CL_VERSION_2_1
 #define CL_UNORM_INT_101010_2                       0x10E0
 #endif
@@ -941,6 +942,13 @@ typedef struct _cl_name_version {
 #endif
 
 /********************************************************************************************************/
+
+/* CL_NO_PROTOTYPES implies CL_NO_CORE_PROTOTYPES: */
+#if defined(CL_NO_PROTOTYPES) && !defined(CL_NO_CORE_PROTOTYPES)
+#define CL_NO_CORE_PROTOTYPES
+#endif
+
+#if !defined(CL_NO_CORE_PROTOTYPES)
 
 /* Platform API */
 extern CL_API_ENTRY cl_int CL_API_CALL
@@ -1311,11 +1319,11 @@ clLinkProgram(cl_context           context,
 
 #ifdef CL_VERSION_2_2
 
-extern CL_API_ENTRY CL_EXT_PREFIX__VERSION_2_2_DEPRECATED cl_int CL_API_CALL
+extern CL_API_ENTRY CL_API_PREFIX__VERSION_2_2_DEPRECATED cl_int CL_API_CALL
 clSetProgramReleaseCallback(cl_program          program,
                             void (CL_CALLBACK *pfn_notify)(cl_program program,
                                                            void *user_data),
-                            void               *user_data) CL_EXT_SUFFIX__VERSION_2_2_DEPRECATED;
+                            void               *user_data) CL_API_SUFFIX__VERSION_2_2_DEPRECATED;
 
 extern CL_API_ENTRY cl_int CL_API_CALL
 clSetProgramSpecializationConstant(cl_program  program,
@@ -1857,11 +1865,11 @@ extern CL_API_ENTRY cl_int CL_API_CALL
 clSetCommandQueueProperty(cl_command_queue              command_queue,
                           cl_command_queue_properties   properties,
                           cl_bool                       enable,
-                          cl_command_queue_properties *old_properties) CL_EXT_SUFFIX__VERSION_1_0_DEPRECATED;
+                          cl_command_queue_properties *old_properties) CL_API_SUFFIX__VERSION_1_0_DEPRECATED;
 #endif /* CL_USE_DEPRECATED_OPENCL_1_0_APIS */
 
 /* Deprecated OpenCL 1.1 APIs */
-extern CL_API_ENTRY CL_EXT_PREFIX__VERSION_1_1_DEPRECATED cl_mem CL_API_CALL
+extern CL_API_ENTRY CL_API_PREFIX__VERSION_1_1_DEPRECATED cl_mem CL_API_CALL
 clCreateImage2D(cl_context              context,
                 cl_mem_flags            flags,
                 const cl_image_format *image_format,
@@ -1869,9 +1877,9 @@ clCreateImage2D(cl_context              context,
                 size_t                  image_height,
                 size_t                  image_row_pitch,
                 void                   *host_ptr,
-                cl_int                 *errcode_ret) CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED;
+                cl_int                 *errcode_ret) CL_API_SUFFIX__VERSION_1_1_DEPRECATED;
 
-extern CL_API_ENTRY CL_EXT_PREFIX__VERSION_1_1_DEPRECATED cl_mem CL_API_CALL
+extern CL_API_ENTRY CL_API_PREFIX__VERSION_1_1_DEPRECATED cl_mem CL_API_CALL
 clCreateImage3D(cl_context              context,
                 cl_mem_flags            flags,
                 const cl_image_format *image_format,
@@ -1881,46 +1889,48 @@ clCreateImage3D(cl_context              context,
                 size_t                  image_row_pitch,
                 size_t                  image_slice_pitch,
                 void                   *host_ptr,
-                cl_int                 *errcode_ret) CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED;
+                cl_int                 *errcode_ret) CL_API_SUFFIX__VERSION_1_1_DEPRECATED;
 
-extern CL_API_ENTRY CL_EXT_PREFIX__VERSION_1_1_DEPRECATED cl_int CL_API_CALL
+extern CL_API_ENTRY CL_API_PREFIX__VERSION_1_1_DEPRECATED cl_int CL_API_CALL
 clEnqueueMarker(cl_command_queue    command_queue,
-                cl_event           *event) CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED;
+                cl_event           *event) CL_API_SUFFIX__VERSION_1_1_DEPRECATED;
 
-extern CL_API_ENTRY CL_EXT_PREFIX__VERSION_1_1_DEPRECATED cl_int CL_API_CALL
+extern CL_API_ENTRY CL_API_PREFIX__VERSION_1_1_DEPRECATED cl_int CL_API_CALL
 clEnqueueWaitForEvents(cl_command_queue  command_queue,
                        cl_uint          num_events,
-                       const cl_event *event_list) CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED;
+                       const cl_event *event_list) CL_API_SUFFIX__VERSION_1_1_DEPRECATED;
 
-extern CL_API_ENTRY CL_EXT_PREFIX__VERSION_1_1_DEPRECATED cl_int CL_API_CALL
-clEnqueueBarrier(cl_command_queue command_queue) CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED;
+extern CL_API_ENTRY CL_API_PREFIX__VERSION_1_1_DEPRECATED cl_int CL_API_CALL
+clEnqueueBarrier(cl_command_queue command_queue) CL_API_SUFFIX__VERSION_1_1_DEPRECATED;
 
-extern CL_API_ENTRY CL_EXT_PREFIX__VERSION_1_1_DEPRECATED cl_int CL_API_CALL
-clUnloadCompiler(void) CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED;
+extern CL_API_ENTRY CL_API_PREFIX__VERSION_1_1_DEPRECATED cl_int CL_API_CALL
+clUnloadCompiler(void) CL_API_SUFFIX__VERSION_1_1_DEPRECATED;
 
-extern CL_API_ENTRY CL_EXT_PREFIX__VERSION_1_1_DEPRECATED void *CL_API_CALL
-clGetExtensionFunctionAddress(const char *func_name) CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED;
+extern CL_API_ENTRY CL_API_PREFIX__VERSION_1_1_DEPRECATED void *CL_API_CALL
+clGetExtensionFunctionAddress(const char *func_name) CL_API_SUFFIX__VERSION_1_1_DEPRECATED;
 
 /* Deprecated OpenCL 2.0 APIs */
-extern CL_API_ENTRY CL_EXT_PREFIX__VERSION_1_2_DEPRECATED cl_command_queue CL_API_CALL
+extern CL_API_ENTRY CL_API_PREFIX__VERSION_1_2_DEPRECATED cl_command_queue CL_API_CALL
 clCreateCommandQueue(cl_context                     context,
                      cl_device_id                   device,
                      cl_command_queue_properties    properties,
-                     cl_int                        *errcode_ret) CL_EXT_SUFFIX__VERSION_1_2_DEPRECATED;
+                     cl_int                        *errcode_ret) CL_API_SUFFIX__VERSION_1_2_DEPRECATED;
 
-extern CL_API_ENTRY CL_EXT_PREFIX__VERSION_1_2_DEPRECATED cl_sampler CL_API_CALL
+extern CL_API_ENTRY CL_API_PREFIX__VERSION_1_2_DEPRECATED cl_sampler CL_API_CALL
 clCreateSampler(cl_context          context,
                 cl_bool             normalized_coords,
                 cl_addressing_mode  addressing_mode,
                 cl_filter_mode      filter_mode,
-                cl_int             *errcode_ret) CL_EXT_SUFFIX__VERSION_1_2_DEPRECATED;
+                cl_int             *errcode_ret) CL_API_SUFFIX__VERSION_1_2_DEPRECATED;
 
-extern CL_API_ENTRY CL_EXT_PREFIX__VERSION_1_2_DEPRECATED cl_int CL_API_CALL
+extern CL_API_ENTRY CL_API_PREFIX__VERSION_1_2_DEPRECATED cl_int CL_API_CALL
 clEnqueueTask(cl_command_queue  command_queue,
               cl_kernel         kernel,
               cl_uint           num_events_in_wait_list,
               const cl_event   *event_wait_list,
-              cl_event         *event) CL_EXT_SUFFIX__VERSION_1_2_DEPRECATED;
+              cl_event         *event) CL_API_SUFFIX__VERSION_1_2_DEPRECATED;
+
+#endif /* !defined(CL_NO_CORE_PROTOTYPES) */
 
 #ifdef __cplusplus
 }

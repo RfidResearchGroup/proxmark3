@@ -80,7 +80,7 @@ static int CmdHFCryptoRFSim(const char *Cmd) {
 static int CmdHFCryptoRFSniff(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cryptorf sniff",
-                  "Sniff the communication reader and tag",
+                  "Sniff the communication between reader and tag",
                   "hf cryptorf sniff\n"
                  );
 
@@ -93,16 +93,19 @@ static int CmdHFCryptoRFSniff(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_SNIFF, NULL, 0);
+    PacketResponseNG resp;
+    WaitForResponse(CMD_HF_ISO14443B_SNIFF, &resp);
 
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf cryptorf list") "` to view captured tracelog");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -f hf_cryptorf_mytrace") "` to save tracelog for later analysing");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf cryptorf list") "` to view captured tracelog");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -f hf_cryptorf_mytrace") "` to save tracelog for later analysing");
     return PM3_SUCCESS;
 }
 
 static bool get_14b_UID(iso14b_card_select_t *card) {
 
-    if (card == NULL)
+    if (card == NULL) {
         return false;
+    }
 
     int8_t retry = 3;
     while (retry--) {
@@ -124,7 +127,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
     } // retry
 
     if (retry <= 0) {
-        PrintAndLogEx(FAILED, "command execution timeout");
+        PrintAndLogEx(FAILED, "command execution time out");
     }
 
     return false;
@@ -143,7 +146,7 @@ static int infoHFCryptoRF(bool verbose) {
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
         if (verbose) {
-            PrintAndLogEx(WARNING, "command execution timeout");
+            PrintAndLogEx(WARNING, "command execution time out");
         }
         switch_off_field_cryptorf();
         return false;
@@ -229,8 +232,7 @@ int readHFCryptoRF(bool loop, bool verbose) {
             PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex_inrow(card.uid, card.uidlen));
             set_last_known_card(card);
         }
-    } while (loop && kbd_enter_pressed() == false);
-
+    } while (loop && (kbd_enter_pressed() == false));
     DropField();
     return res;
 }
@@ -309,7 +311,7 @@ static int CmdHFCryptoRFDump(const char *Cmd) {
     // select tag
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + 2);
     if (packet == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     packet->flags = (ISO14B_CONNECT | ISO14B_SELECT_SR);
@@ -443,7 +445,7 @@ static int CmdHFCryptoRFELoad(const char *Cmd) {
     // set up buffer
     uint8_t *data = calloc(datalen, sizeof(uint8_t));
     if (data == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -503,7 +505,7 @@ static int CmdHFCryptoRFESave(const char *Cmd) {
     // set up buffer
     uint8_t *data = calloc(numofbytes, sizeof(uint8_t));
     if (data == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 

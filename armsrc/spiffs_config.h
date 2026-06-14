@@ -28,6 +28,7 @@
 #include "printf.h"
 #include "string.h"
 #include "flashmem.h"
+#include "pmflash.h"
 
 //#include <stddef.h>
 //#include <unistd.h>
@@ -236,7 +237,7 @@ typedef uint8_t u8_t;
 // Instead of giving parameters in config struct, singleton build must
 // give parameters in defines below.
 #ifndef SPIFFS_CFG_PHYS_SZ
-#define SPIFFS_CFG_PHYS_SZ(ignore)        (1024*192)
+#define SPIFFS_CFG_PHYS_SZ(ignore)        ((1024 * 64 * spi_flash_pages64k) - (1024 * 4 * (FLASH_RESERVED_TRAILING_4K_SECTORS + 1)))
 #endif
 #ifndef SPIFFS_CFG_PHYS_ERASE_SZ
 #define SPIFFS_CFG_PHYS_ERASE_SZ(ignore)  (4*1024)

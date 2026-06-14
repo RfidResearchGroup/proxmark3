@@ -511,6 +511,10 @@ OUT:
         Dbprintf("Emulator stopped. Trace length... " _YELLOW_("%d"), BigBuf_get_traceLen());
     }
 
+    if (BUTTON_PRESS()) {
+        DbpString("Button pressed, please wait while the PM3 cleans up...");
+    }
+
     if (res == PM3_EOPABORTED) {
         DbpString("Aborted by user");
     }

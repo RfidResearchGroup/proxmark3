@@ -197,8 +197,8 @@ static void *crack(void *d) {
 
     // create space for tables
     Tk = (struct Tklower *)calloc(sizeof(struct Tklower) * 0x40000, sizeof(uint8_t));
-    if (!Tk) {
-        printf("Failed to allocate memory (Tk)\n");
+    if (Tk == NULL) {
+        printf("Failed to allocate memory\n");
         exit(1);
     }
 
@@ -273,7 +273,7 @@ static void *crack(void *d) {
                     printf("\n\nSuccess - key = %012"PRIx64"\n", foundkey);
                     exit(0);
 
-                    return (void *)foundkey;
+                    return NULL;
                 }
 
             }
@@ -308,9 +308,9 @@ int main(int argc, char *argv[]) {
 
     // read the UID into internal format
     if (!strncmp(argv[1], "0x", 2)) {
-        uid = rev32(hexreversetoulong(argv[1] + 2));
+        uid = rev32(hexreversetouint32(argv[1] + 2));
     } else {
-        uid = rev32(hexreversetoulong(argv[1]));
+        uid = rev32(hexreversetouint32(argv[1]));
     }
 
     // create table of nR aR pairs
@@ -325,7 +325,7 @@ int main(int argc, char *argv[]) {
 
     // set klowerstart (for debugging)
     if (argc > 3) {
-        klowerstart = strtol(argv[3], NULL, 0);
+        klowerstart = strtoull(argv[3], NULL, 0);
     } else {
         klowerstart = 0;
     }
@@ -333,7 +333,7 @@ int main(int argc, char *argv[]) {
     // read in nR aR pairs
     numnrar = 0;
     buf = (char *)calloc(1, lenbuf);
-    if (!buf) {
+    if (buf == NULL) {
         printf("cannot calloc buf\n");
         exit(1);
     }
@@ -353,11 +353,11 @@ int main(int argc, char *argv[]) {
         }
         *buft2 = 0x00;
         if (!strncmp(buf, "0x", 2)) {
-            TnRaR[numnrar].nR = rev32(hexreversetoulong(buf + 2));
-            TnRaR[numnrar].aR = rev32(hexreversetoulong(buft1 + 2));
+            TnRaR[numnrar].nR = rev32(hexreversetouint32(buf + 2));
+            TnRaR[numnrar].aR = rev32(hexreversetouint32(buft1 + 2));
         } else {
-            TnRaR[numnrar].nR = rev32(hexreversetoulong(buf));
-            TnRaR[numnrar].aR = rev32(hexreversetoulong(buft1));
+            TnRaR[numnrar].nR = rev32(hexreversetouint32(buf));
+            TnRaR[numnrar].aR = rev32(hexreversetouint32(buft1));
         }
         numnrar++;
     }
@@ -405,7 +405,7 @@ int main(int argc, char *argv[]) {
         }
         printf("thread %i finished\n", i);
         if (status) {
-            printf("Key = %012"PRIx64"\n", (uint64_t)status);
+            printf("Key = %012"PRIx64"\n", *(uint64_t *)status);
             exit(0);
         }
     }

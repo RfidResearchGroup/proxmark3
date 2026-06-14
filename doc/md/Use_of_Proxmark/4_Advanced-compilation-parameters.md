@@ -8,9 +8,9 @@
   - [Client](#client)
   - [Firmware](#firmware)
   - [PLATFORM](#platform)
-  - [PLATFORM_EXTRAS](#platform_extras)
+  - [PLATFORM\_EXTRAS](#platform_extras)
   - [STANDALONE](#standalone)
-  - [256KB versions](#256KB-versions)
+  - [256KB versions](#256kb-versions)
   - [Next step](#next-step)
 
 
@@ -37,6 +37,13 @@ make clean
 make SKIPQT=1
 ```
 
+or to force a fallback to Qt5 even when Qt6 is installed
+
+```
+make clean
+make SKIPQT6=1
+```
+
 On Linux hosts, if the Bluez headers and library are present, the client will be compiled with native Bluetooth support. It's possible to explicitly skip Bluetooth support with:
 
 ```
@@ -54,18 +61,22 @@ These features make it very different from all other Proxmark3 devices, there is
 **Recommendation**: if you don't have a RDV4, we strongly recommend your device to have at least a 512KB arm chip, since this repo is crossing 256KB limit. There is still a way to skip parts to make it fit on a 256KB device, see below.
 
 If you need to tune things and save the configuration, create a file `Makefile.platform` in the root directory of the repository, see `Makefile.platform.sample`.
-For an up-to-date exhaustive list of options, you can run `make PLATFORM=`.
+
+If you need to maintain several `Makefile.platform` files for different Proxmark3 devices, you can specify which file to use with e.g. `make PLATFORM_FILE=mydevice_platform`.
+
+For an up-to-date exhaustive list of options to use in a `Makefile.platform` file, you can run `make PLATFORM=`.
 
 ## PLATFORM
 ^[Top](#top)
 
 Here are the supported values you can assign to `PLATFORM` in `Makefile.platform`:
 
-| PLATFORM        | DESCRIPTION              |
-|-----------------|--------------------------|
-| PM3RDV4 (def)   | Proxmark3 RDV4           |
-| PM3GENERIC      | Proxmark3 generic target |
-| PM3ICOPYX       | iCopy-X with XC3S100E    |
+| PLATFORM        | DESCRIPTION                   |
+|-----------------|-------------------------------|
+| PM3RDV4 (def)   | Proxmark3 RDV4                |
+| PM3GENERIC      | Proxmark3 generic target      |
+| PM3ICOPYX       | iCopy-X with XC3S100E         |
+| PM3ULTIMATE     | Proxmark3 Ultimate with XC2S50 |
 
 By default `PLATFORM=PM3RDV4`.
 
@@ -103,7 +114,7 @@ You can also define multiple options like
 ^[Top](#top)
 
 The Iceman repository gives you to easily choose which standalone mode to embed in the firmware.
-
+Documentation for each standalone mode can be found in the [Standalone Modes Index](../../armsrc/Standalone/readme.md#individual-mode-documentation).
 Here are the supported values you can assign to `STANDALONE` in `Makefile.platform`:
 
 | STANDALONE      | DESCRIPTION                            |
@@ -127,12 +138,13 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_14ASNIFF     | 14a sniff storing to flashmem - Micolous
 | HF_14BSNIFF     | 14b sniff - jacopo-j
 | HF_15SNIFF      | 15693 sniff storing to flashmem - Glaser
-| HF_15SNIFF      | 15693 simulator - lnv42
+| HF_15SIM        | 15693 simulator - lnv42
 | HF_AVEFUL       | MIFARE Ultralight read/simulation - Ave Ozkal
 | HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth storing in flashmem - Bogito
 | HF_CARDHOPPER   | Long distance (over IP) relay of 14a protocols - Sam Haskins
 | HF_COLIN        | Mifare ultra fast sniff/sim/clone - Colin Brigato
 | HF_CRAFTBYTE    | UID stealer - Emulates scanned 14a UID - Anze Jensterle
+| HF_DOEGOX_AUTH0 | UL-C / UL-AES unlocker - Philippe Teuwen (doegox)
 | HF_ICECLASS     | iCLASS 4-1 mode  sim/read & dump/loclass/glitch & config to flashmem - Iceman1001
 | HF_LEGIC        | HF Legic Prime Read/Store/Sim standalone - uhei
 | HF_LEGICSIM     | HF Legic Prime Simulate standalone - uhei
@@ -140,10 +152,12 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_MFCSIM       | Simulate Mifare Classic 1k card storing in flashmem - Ray Lee
 | HF_MSDSAL       | EMV Read and emulation - Salvador Mendoza
 | HF_REBLAY       | 14A relay over BT  - Salvador Mendoza
+| HF_ST25_TEAROFF | Store/restore ST25TB tags with tear-off for counters - SecLabz 
 | HF_TCPRST       | IKEA Rothult ST25TA, Standalone Master Key Dump/Emulation - Nick Draffen
 | HF_TMUDFORD     | Read and emulate ISO15693 card UID - Tim Mudford
 | HF_UNISNIFF     | Combined 14a/14b/15 sniffer with runtime selection & extra save options
 | HF_YOUNG        | Mifare sniff/simulation - Craig Young
+| HF_EMVPNG       | EMV Read and emulation - Davi Mikael (Penegui)
 | DANKARMULTI     | Standalone mode that bakes together multiple other standalone modes. - dankar
 
 By default `STANDALONE=LF_SAMYRUN`.

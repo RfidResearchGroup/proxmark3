@@ -9,7 +9,6 @@
   - [Setup](#setup)
     - [Setting up Termux](#setting-up-termux)
     - [Install Proxmark3 package which follows tagged releases](#install-proxmark3-package-which-follows-tagged-releases)
-    - [Optional: Install Proxmark3 package which offers a more up to date version from git `master` branch](#optional-install-proxmark3-package-which-offers-a-more-up-to-date-version-from-git-master-branch)
     - [Optional: Building Proxmark3 client from source](#optional-building-proxmark3-client-from-source)
   - [PC-like method](#pc-like-method)
     - [Specific requirements](#specific-requirements)
@@ -38,7 +37,7 @@
 - Android phone
 - [F-Droid](https://f-droid.org/)
 - [Termux](https://f-droid.org/en/packages/com.termux/)
-- [Proxmark3 RDV4](https://www.proxmark.com/proxmark-3-hardware/proxmark-3-rdv4)
+- [Proxmark3](https://www.proxmark.com/proxmark-3-hardware/proxmark-3-rdv4)
 - [Blueshark Standalone Module](https://www.proxmark.com/proxmark-news/proxmark3-blueshark-bluetooth-released) **(ONLY if using Bluetooth)**
 - [Proxmark with BTADDON compiled Firmware](https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#platform_extras) **(ONLY if using Bluetooth)**
 
@@ -66,17 +65,16 @@ Run the following commands:
 ```
 pkg install proxmark3
 ```
-### Optional: Install Proxmark3 package which offers a more up to date version from git `master` branch
-Run the following commands:
-```
-pkg install proxmark3-git
-```
 ### Optional: Building Proxmark3 client from source
 ```
-pkg install make clang readline libc++ git binutils
+pkg install make clang readline libc++ git binutils libgd
 git clone https://github.com/RfidResearchGroup/proxmark3.git
 cd proxmark3
-make clean && make client
+make clean && make host
+```
+Testing:
+```
+make host/check
 ```
 
 ## PC-like method

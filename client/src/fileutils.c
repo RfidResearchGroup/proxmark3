@@ -62,7 +62,7 @@ struct wave_info_t {
  * @param filename
  * @return o
  */
-DumpFileType_t getfiletype(const char *filename) {
+DumpFileType_t get_filetype(const char *filename) {
     // assume unknown file is BINARY
     DumpFileType_t o = BIN;
     if (filename == NULL) {
@@ -72,9 +72,7 @@ DumpFileType_t getfiletype(const char *filename) {
     size_t len = strlen(filename);
     if (len > 4) {
         //  check if valid file extension and attempt to load data
-        char s[FILE_PATH_SIZE];
-        memset(s, 0, sizeof(s));
-        memcpy(s, filename, len);
+        char *s = str_dup(filename);
         str_lower(s);
 
         if (str_endswith(s, "bin")) {
@@ -91,12 +89,18 @@ DumpFileType_t getfiletype(const char *filename) {
             o = FLIPPER;
         } else if (str_endswith(s, "picopass")) {
             o = FLIPPER;
+        } else if (str_endswith(s, "xml")) {
+            o = TAGINFO;
+        } else if (str_endswith(s, "rfid")) {
+            o = BRUCE;
         } else {
             // mfd, trc, trace is binary
             o = BIN;
             // log is text
             // .pm3 is text values of signal data
         }
+
+        free(s);
     }
     return o;
 }
@@ -123,18 +127,174 @@ int fileExists(const char *filename) {
  * @param filename
  * @return
  */
-static bool is_directory(const char *filename) {
+bool path_is_directory(const char *path) {
+    if (path == NULL) {
+        return false;
+    }
 #ifdef _WIN32
     struct _stat st;
-    if (_stat(filename, &st) == -1)
+    if (_stat(path, &st) == -1)
         return false;
 #else
     struct stat st;
 //    stat(filename, &st);
-    if (lstat(filename, &st) == -1)
+    if (lstat(path, &st) == -1)
         return false;
 #endif
     return S_ISDIR(st.st_mode) != 0;
+}
+
+bool path_is_regular_file(const char *path) {
+    if (path == NULL) {
+        return false;
+    }
+#ifdef _WIN32
+    struct _stat st;
+    if (_stat(path, &st) == -1)
+        return false;
+#else
+    struct stat st;
+    if (stat(path, &st) == -1)
+        return false;
+#endif
+    return S_ISREG(st.st_mode) != 0;
+}
+
+const char *path_basename(const char *path) {
+    if (path == NULL) {
+        return "";
+    }
+
+    const char *base = strrchr(path, '/');
+    const char *base_win = strrchr(path, '\\');
+    if (base == NULL || (base_win != NULL && base_win > base)) {
+        base = base_win;
+    }
+    return (base == NULL) ? path : (base + 1);
+}
+
+void path_basename_without_ext(const char *path, char *out, size_t out_len) {
+    if (out == NULL || out_len == 0) {
+        return;
+    }
+    out[0] = '\0';
+
+    const char *base = path_basename(path);
+    if (base[0] == '\0') {
+        return;
+    }
+
+    snprintf(out, out_len, "%s", base);
+    char *dot = strrchr(out, '.');
+    if (dot != NULL && dot != out) {
+        *dot = '\0';
+    }
+}
+
+static int qsort_path_cmp(const void *a, const void *b) {
+    const char *pa = (const char *)a;
+    const char *pb = (const char *)b;
+    return strcmp(pa, pb);
+}
+
+static char *path_list_slot(char *paths, size_t path_len, size_t index) {
+    return paths + (index * path_len);
+}
+
+int collect_file_paths_recursive(const char *dirpath, char *paths, size_t path_len,
+                                 size_t max_paths, size_t *count, bool include_hidden, size_t max_depth) {
+    if (dirpath == NULL || paths == NULL || path_len == 0 || count == NULL) {
+        return PM3_EINVARG;
+    }
+
+    DIR *dir = opendir(dirpath);
+    if (dir == NULL) {
+        return PM3_EFILE;
+    }
+
+    struct dirent *entry = NULL;
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 ||
+                (include_hidden == false && entry->d_name[0] == '.')) {
+            continue;
+        }
+
+        char *fullpath = calloc(path_len, sizeof(char));
+        if (fullpath == NULL) {
+            closedir(dir);
+            return PM3_EMALLOC;
+        }
+        const char *sep = "";
+        size_t dir_len = strlen(dirpath);
+        if (dir_len > 0 && dirpath[dir_len - 1] != '/' && dirpath[dir_len - 1] != '\\') {
+            sep = PATHSEP;
+        }
+        if (snprintf(fullpath, path_len, "%s%s%s", dirpath, sep, entry->d_name) >= (int)path_len) {
+            free(fullpath);
+            continue;
+        }
+
+        if (path_is_directory(fullpath)) {
+            if (max_depth == 0) {
+                free(fullpath);
+                continue;
+            }
+            int res = collect_file_paths_recursive(fullpath, paths, path_len, max_paths, count, include_hidden, max_depth - 1);
+            free(fullpath);
+            if (res != PM3_SUCCESS) {
+                closedir(dir);
+                return res;
+            }
+            continue;
+        }
+
+        if (!path_is_regular_file(fullpath)) {
+            free(fullpath);
+            continue;
+        }
+        if (*count >= max_paths) {
+            free(fullpath);
+            closedir(dir);
+            return PM3_EOVFLOW;
+        }
+        if (snprintf(path_list_slot(paths, path_len, *count), path_len, "%s", fullpath) >= (int)path_len) {
+            free(fullpath);
+            continue;
+        }
+        free(fullpath);
+        (*count)++;
+    }
+
+    closedir(dir);
+    return PM3_SUCCESS;
+}
+
+int collect_resource_file_paths(const char *resource_dir, char *paths, size_t path_len,
+                                size_t max_paths, size_t *count, bool include_hidden, size_t max_depth) {
+    if (resource_dir == NULL || resource_dir[0] == '\0' || paths == NULL || path_len == 0 || count == NULL) {
+        return PM3_EINVARG;
+    }
+
+    char *rootdir = NULL;
+    int res = searchFile(&rootdir, RESOURCES_SUBDIR, resource_dir, "", true);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (!path_is_directory(rootdir)) {
+        free(rootdir);
+        return PM3_EFILE;
+    }
+
+    *count = 0;
+    res = collect_file_paths_recursive(rootdir, paths, path_len, max_paths, count, include_hidden, max_depth);
+    free(rootdir);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    qsort(paths, *count, path_len, qsort_path_cmp);
+    return PM3_SUCCESS;
 }
 
 bool setDefaultPath(savePaths_t pathIndex, const char *path) {
@@ -165,6 +325,7 @@ static char *filenamemcopy(const char *preferredName, const char *suffix) {
 
     char *fileName = (char *) calloc(strlen(preferredName) + strlen(suffix) + 1, sizeof(uint8_t));
     if (fileName == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return NULL;
     }
 
@@ -206,12 +367,15 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
 
     char *pfn = fileName;
 
-    // user preference save paths
-    size_t save_path_len = path_size(e_save_path);
-    if (save_path_len && save_path_len < (FILE_PATH_SIZE - strlen(PATHSEP))) {
-        snprintf(pfn, len, "%s%s", g_session.defaultPaths[e_save_path], PATHSEP);
-        pfn += save_path_len + strlen(PATHSEP);
-        len -= save_path_len + strlen(PATHSEP);
+    // if given path is not an absolute path
+    if ((preferredName[0] !=  '/') && (preferredName[0] !=  '\\')) {
+        // user preference save paths
+        size_t save_path_len = path_size(e_save_path);
+        if (save_path_len && save_path_len < (FILE_PATH_SIZE - strlen(PATHSEP))) {
+            snprintf(pfn, len, "%s%s", g_session.defaultPaths[e_save_path], PATHSEP);
+            pfn += save_path_len + strlen(PATHSEP);
+            len -= save_path_len + strlen(PATHSEP);
+        }
     }
 
     // remove file extension if exist in name
@@ -258,12 +422,14 @@ void truncate_filename(char *fn, uint16_t maxlen) {
 
 // --------- SAVE FILES
 int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen) {
-
+    return saveFileEx(preferredName, suffix, data, datalen, spDefault);
+}
+int saveFileEx(const char *preferredName, const char *suffix, const void *data, size_t datalen, savePaths_t e_save_path) {
     if (data == NULL || datalen == 0) {
         return PM3_EINVARG;
     }
 
-    char *fileName = newfilenamemcopy(preferredName, suffix);
+    char *fileName = newfilenamemcopyEx(preferredName, suffix, e_save_path);
     if (fileName == NULL) {
         return PM3_EMALLOC;
     }
@@ -272,7 +438,7 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
 
     // Opening file for writing in binary mode
     FILE *f = fopen(fileName, "wb");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fileName);
         free(fileName);
         return PM3_EFILE;
@@ -280,27 +446,47 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     fwrite(data, 1, datalen, f);
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to binary file `" _YELLOW_("%s") "`", datalen, fileName);
+    PrintAndLogEx(SUCCESS, "Saved " _YELLOW_("%zu") " bytes to binary file `" _YELLOW_("%s") "`", datalen, fileName);
     free(fileName);
     return PM3_SUCCESS;
 }
 
-// dump file (normally,  we also got preference file, etc)
-int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, void (*callback)(json_t *)) {
-    return saveFileJSONex(preferredName, ftype, data, datalen, true, callback, spDump);
-}
-int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *), savePaths_t e_save_path) {
+int saveFileTXT(const char *preferredName, const char *suffix, const void *data, size_t datalen, savePaths_t e_save_path) {
+    if (data == NULL || datalen == 0) {
+        return PM3_EINVARG;
+    }
 
+    char *fileName = newfilenamemcopyEx(preferredName, suffix, e_save_path);
+    if (fileName == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    // We should have a valid filename now, e.g. dumpdata-3.txt
+
+    // Opening file for writing in text mode
+    FILE *f = fopen(fileName, "w");
+    if (f == NULL) {
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fileName);
+        free(fileName);
+        return PM3_EFILE;
+    }
+    fwrite(data, 1, datalen, f);
+    fflush(f);
+    fclose(f);
+    PrintAndLogEx(SUCCESS, "Saved " _YELLOW_("%zu") " bytes to text file `" _YELLOW_("%s") "`", datalen, fileName);
+    free(fileName);
+    return PM3_SUCCESS;
+}
+
+int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *)) {
     if (ftype != jsfCustom) {
         if (data == NULL || datalen == 0) {
             return PM3_EINVARG;
         }
     }
 
-    int retval = PM3_SUCCESS;
     char path[PATH_MAX_LENGTH] = {0};
 
-    json_t *root = json_object();
     JsonSaveStr(root, "Created", "proxmark3");
     switch (ftype) {
         case jsfRaw: {
@@ -709,6 +895,52 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             }
             break;
         }
+        case jsfFM11RF08SNonces:
+        case jsfFM11RF08SNoncesWithData: {
+            if (datalen != sizeof(iso14a_fm11rf08s_nonces_with_data_t)) {
+                return PM3_EINVARG;
+            }
+            iso14a_fm11rf08s_nonces_with_data_t *p = (iso14a_fm11rf08s_nonces_with_data_t *)data;
+            if (ftype == jsfFM11RF08SNoncesWithData) {
+                JsonSaveStr(root, "FileType", "fm11rf08s_nonces_with_data");
+            } else {
+                JsonSaveStr(root, "FileType", "fm11rf08s_nonces");
+            }
+            for (uint16_t sec = 0; sec < MIFARE_1K_MAXSECTOR + 1; sec++) {
+                uint8_t par2[2];
+                uint8_t par;
+                uint16_t real_sec = sec;
+                if (sec == MIFARE_1K_MAXSECTOR) {
+                    real_sec = 32; // advanced verification method block
+                }
+                snprintf(path, sizeof(path), "$.nt.%u.a", real_sec);
+                JsonSaveBufAsHexCompact(root, path, p->nt[sec][0], 4);
+                snprintf(path, sizeof(path), "$.nt.%u.b", real_sec);
+                JsonSaveBufAsHexCompact(root, path, p->nt[sec][1], 4);
+                snprintf(path, sizeof(path), "$.nt_enc.%u.a", real_sec);
+                JsonSaveBufAsHexCompact(root, path, p->nt_enc[sec][0], 4);
+                snprintf(path, sizeof(path), "$.nt_enc.%u.b", real_sec);
+                JsonSaveBufAsHexCompact(root, path, p->nt_enc[sec][1], 4);
+
+                snprintf(path, sizeof(path), "$.par_err.%u.a", real_sec);
+                par = p->par_err[sec][0];
+                par2[0] = (((par >> 3) & 1) << 4) | ((par >> 2) & 1);
+                par2[1] = (((par >> 1) & 1) << 4) | ((par >> 0) & 1);
+                JsonSaveBufAsHexCompact(root, path, par2, 2);
+                snprintf(path, sizeof(path), "$.par_err.%u.b", real_sec);
+                par = p->par_err[sec][1];
+                par2[0] = (((par >> 3) & 1) << 4) | ((par >> 2) & 1);
+                par2[1] = (((par >> 1) & 1) << 4) | ((par >> 0) & 1);
+                JsonSaveBufAsHexCompact(root, path, par2, 2);
+            }
+            if (ftype == jsfFM11RF08SNoncesWithData) {
+                for (uint16_t blk = 0; blk < MIFARE_1K_MAXBLOCK; blk++) {
+                    snprintf(path, sizeof(path), "$.blocks.%u", blk);
+                    JsonSaveBufAsHexCompact(root, path, p->blocks[blk], MFBLOCK_SIZE);
+                }
+            }
+            break;
+        }
         // no action
         case jsfFido:
             break;
@@ -722,40 +954,42 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
         default:
             break;
     }
+    return PM3_SUCCESS;
+}
 
-    char *fn = newfilenamemcopyEx(preferredName, ".json", e_save_path);
-    if (fn == NULL) {
-        return PM3_EMALLOC;
+// dump file (normally,  we also got preference file, etc)
+int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, void (*callback)(json_t *)) {
+    return saveFileJSONex(preferredName, ftype, data, datalen, true, callback, spDump);
+}
+
+int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *), savePaths_t e_save_path) {
+
+    int retval = PM3_SUCCESS;
+
+    json_t *root = json_object();
+    retval = prepareJSON(root, ftype, data, datalen, verbose, callback);
+    if (retval != PM3_SUCCESS) {
+        return retval;
     }
-
-    if (json_dump_file(root, fn, JSON_INDENT(2))) {
-        PrintAndLogEx(FAILED, "error, can't save the file `" _YELLOW_("%s") "`", fn);
-        retval = 200;
-        free(fn);
-        goto out;
-    }
-
-    if (verbose) {
-        PrintAndLogEx(SUCCESS, "saved to json file `" _YELLOW_("%s") "`", fn);
-    }
-    free(fn);
-
-out:
+    retval = saveFileJSONrootEx(preferredName, root, JSON_INDENT(2), verbose, false, e_save_path);
     json_decref(root);
     return retval;
 }
+
 int saveFileJSONroot(const char *preferredName, void *root, size_t flags, bool verbose) {
-    return saveFileJSONrootEx(preferredName, root, flags, verbose, false);
+    return saveFileJSONrootEx(preferredName, root, flags, verbose, false, spDump);
 }
-int saveFileJSONrootEx(const char *preferredName, void *root, size_t flags, bool verbose, bool overwrite) {
-    if (root == NULL)
+
+int saveFileJSONrootEx(const char *preferredName, const void *root, size_t flags, bool verbose, bool overwrite, savePaths_t e_save_path) {
+    if (root == NULL) {
         return PM3_EINVARG;
+    }
 
     char *filename = NULL;
     if (overwrite)
         filename = filenamemcopy(preferredName, ".json");
     else
-        filename = newfilenamemcopyEx(preferredName, ".json", spDump);
+        filename = newfilenamemcopyEx(preferredName, ".json", e_save_path);
 
     if (filename == NULL)
         return PM3_EMALLOC;
@@ -764,7 +998,7 @@ int saveFileJSONrootEx(const char *preferredName, void *root, size_t flags, bool
 
     if (res == 0) {
         if (verbose) {
-            PrintAndLogEx(SUCCESS, "saved to json file " _YELLOW_("%s"), filename);
+            PrintAndLogEx(SUCCESS, "Saved to json file " _YELLOW_("%s"), filename);
         }
         free(filename);
         return PM3_SUCCESS;
@@ -773,6 +1007,17 @@ int saveFileJSONrootEx(const char *preferredName, void *root, size_t flags, bool
     }
     free(filename);
     return PM3_EFILE;
+}
+
+char *sprintJSON(JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *)) {
+
+    json_t *root = json_object();
+    if (prepareJSON(root, ftype, data, datalen, verbose, callback) != PM3_SUCCESS) {
+        return NULL;
+    }
+    char *s = json_dumps(root, JSON_INDENT(2));
+    json_decref(root);
+    return s;
 }
 
 // wave file of trace,
@@ -821,7 +1066,7 @@ int saveFileWAVE(const char *preferredName, const int *data, size_t datalen) {
 
     fclose(wave_file);
 
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to wave file `" _YELLOW_("%s") "`", 2 * datalen, fileName);
+    PrintAndLogEx(SUCCESS, "Saved " _YELLOW_("%zu") " bytes to wave file `" _YELLOW_("%s") "`", 2 * datalen, fileName);
 
 out:
     free(fileName);
@@ -855,7 +1100,7 @@ int saveFilePM3(const char *preferredName, int *data, size_t datalen) {
 
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to PM3 file `" _YELLOW_("%s") "`", datalen, fileName);
+    PrintAndLogEx(SUCCESS, "Saved " _YELLOW_("%zu") " bytes to PM3 file `" _YELLOW_("%s") "`", datalen, fileName);
 
 out:
     free(fileName);
@@ -863,7 +1108,7 @@ out:
 }
 
 // key file dump
-int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_sector) {
+int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, const sector_t *e_sector) {
 
     if (e_sector == NULL) return PM3_EINVARG;
 
@@ -876,7 +1121,7 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_
         free(fileName);
         return PM3_EFILE;
     }
-    PrintAndLogEx(SUCCESS, "generating binary key file");
+    PrintAndLogEx(SUCCESS, "Generating binary key file");
 
     uint8_t empty[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     uint8_t tmp[6] = {0, 0, 0, 0, 0, 0};
@@ -890,7 +1135,7 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_
     }
 
     for (int i = 0; i < sectorsCnt; i++) {
-        if (e_sector[i].foundKey[0])
+        if (e_sector[i].foundKey[1])
             num_to_bytes(e_sector[i].Key[1], sizeof(tmp), tmp);
         else
             memcpy(tmp, empty, sizeof(tmp));
@@ -899,7 +1144,7 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_
 
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "found keys have been dumped to `" _YELLOW_("%s") "`", fileName);
+    PrintAndLogEx(SUCCESS, "Found keys have been dumped to `" _YELLOW_("%s") "`", fileName);
     PrintAndLogEx(INFO, "--[ " _YELLOW_("FFFFFFFFFFFF") " ]-- has been inserted for unknown keys where " _YELLOW_("res") " is " _RED_("0"));
     free(fileName);
     return PM3_SUCCESS;
@@ -918,7 +1163,7 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
     }
 
     FILE *f = fopen(path, "rb");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         free(path);
         return PM3_EFILE;
@@ -937,8 +1182,8 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
     }
 
     *pdata = calloc(fsize, sizeof(uint8_t));
-    if (!*pdata) {
-        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+    if (*pdata == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
         return PM3_EMALLOC;
     }
@@ -956,7 +1201,59 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
     *datalen = bytes_read;
 
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from binary file `" _YELLOW_("%s") "`", bytes_read, preferredName);
+        PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%zu") " bytes from binary file `" _YELLOW_("%s") "`", bytes_read, preferredName);
+    }
+    return PM3_SUCCESS;
+}
+
+int loadFile_TXTsafe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen, bool verbose) {
+
+    char *path;
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, suffix, false);
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    FILE *f = fopen(path, "r");
+    if (f == NULL) {
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
+        free(path);
+        return PM3_EFILE;
+    }
+    free(path);
+
+    // get filesize in order to malloc memory
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    if (fsize <= 0) {
+        PrintAndLogEx(FAILED, "error, when getting filesize");
+        fclose(f);
+        return PM3_EFILE;
+    }
+
+    *pdata = calloc(fsize, sizeof(uint8_t));
+    if (*pdata == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        fclose(f);
+        return PM3_EMALLOC;
+    }
+
+    size_t bytes_read = fread(*pdata, 1, fsize, f);
+
+    fclose(f);
+
+    if (bytes_read != fsize) {
+        PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
+        free(*pdata);
+        return PM3_EFILE;
+    }
+
+    *datalen = bytes_read;
+
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%zu") " bytes from text file `" _YELLOW_("%s") "`", bytes_read, preferredName);
     }
     return PM3_SUCCESS;
 }
@@ -988,8 +1285,8 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
     }
 
     *pdata = calloc(fsize, sizeof(uint8_t));
-    if (!*pdata) {
-        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+    if (*pdata == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
         return PM3_EMALLOC;
     }
@@ -1030,11 +1327,12 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
         }
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from text file `" _YELLOW_("%s") "`", counter, preferredName);
+    PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%zu") " bytes from text file `" _YELLOW_("%s") "`", counter, preferredName);
 
 
     uint8_t *newdump = realloc(*pdata, counter);
     if (newdump == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(*pdata);
         return PM3_EMALLOC;
     } else {
@@ -1049,7 +1347,9 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
 
 int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, nfc_df_e ft) {
 
-    if (data == NULL) return PM3_EINVARG;
+    if (data == NULL) {
+        return PM3_EINVARG;
+    }
 
     *datalen = 0;
     int retval = PM3_SUCCESS;
@@ -1061,7 +1361,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
     }
 
     FILE *f = fopen(path, "r");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         free(path);
         return PM3_EFILE;
@@ -1081,16 +1381,17 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
         memset(line, 0, sizeof(line));
 
         if (fgets(line, sizeof(line), f) == NULL) {
-            if (feof(f))
+            if (feof(f)) {
                 break;
-
+            }
             fclose(f);
             PrintAndLogEx(FAILED, "file reading error");
             return PM3_EFILE;
         }
 
-        if (line[0] == '#')
+        if (line[0] == '#') {
             continue;
+        }
 
         str_cleanrn(line, sizeof(line));
         str_lower(line);
@@ -1276,7 +1577,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
     }
 
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from NFC file `" _YELLOW_("%s") "`", *datalen, preferredName);
+    PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%zu") " bytes from NFC file `" _YELLOW_("%s") "`", *datalen, preferredName);
     return retval;
 }
 
@@ -1307,8 +1608,8 @@ int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
     }
 
     *pdata = calloc(fsize, sizeof(uint8_t));
-    if (!*pdata) {
-        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+    if (*pdata == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
         return PM3_EMALLOC;
     }
@@ -1350,11 +1651,12 @@ int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
         }
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from MCT file `" _YELLOW_("%s") "`", counter, preferredName);
+    PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%zu") " bytes from MCT file `" _YELLOW_("%s") "`", counter, preferredName);
 
 
     uint8_t *newdump = realloc(*pdata, counter);
     if (newdump == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(*pdata);
         return PM3_EMALLOC;
     } else {
@@ -1384,7 +1686,9 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
 }
 int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, bool verbose, void (*callback)(json_t *)) {
 
-    if (data == NULL) return PM3_EINVARG;
+    if (data == NULL) {
+        return PM3_EINVARG;
+    }
 
     *datalen = 0;
     int retval = PM3_SUCCESS;
@@ -1743,7 +2047,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            snprintf(blocks, sizeof(blocks), "$.blocks.%u", i);
             JsonLoadBufAsHex(root, blocks, &tag->data[sptr], 4, &len);
             if (load_file_sanity(ctype, tag->bytesPerPage, i, len) == false) {
                 break;
@@ -1790,7 +2094,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            snprintf(blocks, sizeof(blocks), "$.blocks.%u", i);
             JsonLoadBufAsHex(root, blocks, &tag->data[sptr], 8, &len);
             if (load_file_sanity(ctype, tag->bytesPerPage, i, len) == false) {
                 break;
@@ -2120,7 +2424,7 @@ int loadFileJSONroot(const char *preferredName, void **proot, bool verbose) {
     json_error_t error;
     json_t *root = json_load_file(path, 0, &error);
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%s"), path);
+        PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%s"), path);
     }
 
     free(path);
@@ -2159,17 +2463,23 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
     return loadFileDICTIONARYEx(preferredName, data, 0, datalen, keylen, keycnt, 0, NULL, true);
 }
 
+// this function handles exceptional large dictionaries,
+// using start position and end position parameters.
 int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint32_t *keycnt,
                          size_t startFilePosition, size_t *endFilePosition, bool verbose) {
 
-    if (data == NULL) return PM3_EINVARG;
+    if (data == NULL) {
+        return PM3_EINVARG;
+    }
 
-    if (endFilePosition)
+    if (endFilePosition) {
         *endFilePosition = 0;
+    }
 
     char *path;
-    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS)
+    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS) {
         return PM3_EFILE;
+    }
 
     // double up since its chars
     keylen <<= 1;
@@ -2180,17 +2490,17 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
     int retval = PM3_SUCCESS;
 
     FILE *f = fopen(path, "r");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
-        retval = PM3_EFILE;
-        goto out;
+        free(path);
+        return PM3_EFILE;
     }
 
     if (startFilePosition) {
         if (fseek(f, startFilePosition, SEEK_SET) < 0) {
             fclose(f);
-            retval = PM3_EFILE;
-            goto out;
+            free(path);
+            return PM3_EFILE;
         }
     }
 
@@ -2198,11 +2508,13 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
 
     // read file
     while (!feof(f)) {
+
         long filepos = ftell(f);
 
         if (!fgets(line, sizeof(line), f)) {
-            if (endFilePosition)
+            if (endFilePosition) {
                 *endFilePosition = 0;
+            }
             break;
         }
 
@@ -2210,51 +2522,68 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
         line[keylen] = 0;
 
         // smaller keys than expected is skipped
-        if (strlen(line) < keylen)
+        if (strlen(line) < keylen) {
             continue;
+        }
 
         // The line start with # is comment, skip
-        if (line[0] == '#')
+        if (line[0] == '#') {
             continue;
+        }
 
-        if (!CheckStringIsHEXValue(line))
+        if (!CheckStringIsHEXValue(line)) {
             continue;
+        }
 
         // cant store more data
         if (maxdatalen && (counter + (keylen >> 1) > maxdatalen)) {
             retval = 1;
-            if (endFilePosition)
+            if (endFilePosition) {
                 *endFilePosition = filepos;
+            }
             break;
         }
 
-        if (hex_to_bytes(line, udata + counter, keylen >> 1) != (keylen >> 1))
+        if (hex_to_bytes(line, udata + counter, keylen >> 1) != (keylen >> 1)) {
             continue;
+        }
 
         vkeycnt++;
         memset(line, 0, sizeof(line));
         counter += (keylen >> 1);
     }
-    fclose(f);
-    if (verbose)
-        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", vkeycnt, path);
 
-    if (datalen)
+    fclose(f);
+
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", vkeycnt, path);
+    }
+
+    if (datalen) {
         *datalen = counter;
-    if (keycnt)
+    }
+
+    if (keycnt) {
         *keycnt = vkeycnt;
-out:
+    }
+
     free(path);
     return retval;
 }
 
+
 int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint32_t *keycnt) {
+    return loadFileDICTIONARY_safe_ex(preferredName, ".dic", pdata, keylen, keycnt, true);
+}
+
+int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, void **pdata, uint8_t keylen, uint32_t *keycnt, bool verbose) {
 
     int retval = PM3_SUCCESS;
 
     char *path;
-    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS)
+    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, suffix, false) != PM3_SUCCESS) {
         return PM3_EFILE;
+    }
 
     // t5577 == 4bytes
     // mifare == 6 bytes
@@ -2262,12 +2591,11 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
     // mf desfire == 3des3k 24 bytes
     // iclass == 8 bytes
     // default to 6 bytes.
-    if (keylen != 4 && keylen != 6 && keylen != 8 && keylen != 16 && keylen != 24) {
+    if (keylen != 4 && keylen != 5 && keylen != 6 && keylen != 8 && keylen != 12 && keylen != 16 && keylen != 24) {
         keylen = 6;
     }
 
-    size_t mem_size;
-    size_t block_size = 10 * keylen;
+    size_t block_size = 1000 * keylen;
 
     // double up since its chars
     keylen <<= 1;
@@ -2277,13 +2605,14 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
     // allocate some space for the dictionary
     *pdata = calloc(block_size, sizeof(uint8_t));
     if (*pdata == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(path);
         return PM3_EFILE;
     }
-    mem_size = block_size;
+    size_t mem_size = block_size;
 
     FILE *f = fopen(path, "r");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         retval = PM3_EFILE;
         goto out;
@@ -2296,9 +2625,10 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
         if ((*keycnt * (keylen >> 1)) >= mem_size) {
 
             mem_size += block_size;
-            *pdata = realloc(*pdata, mem_size);
 
+            *pdata = realloc(*pdata, mem_size);
             if (*pdata == NULL) {
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
                 retval = PM3_EFILE;
                 fclose(f);
                 goto out;
@@ -2307,46 +2637,70 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
             }
         }
 
-        // add null terminator
-        line[keylen] = 0;
+        // The line start with # is comment, skip
+        if (line[0] == '#') {
+            continue;
+        }
+
+        // remove newline/linefeed
+        str_cleanrn(line, strlen(line));
+        str_trim(line);
 
         // smaller keys than expected is skipped
-        if (strlen(line) < keylen)
+        if (strlen(line) < keylen) {
             continue;
+        }
 
-        // The line start with # is comment, skip
-        if (line[0] == '#')
+        char *pos = strstr(line, "#");
+        if (pos) {
+            // we found a inline comment,  add a null terminator, until we hit hexadecimal char
+            while (isxdigit(pos[0]) == 0) {
+                pos[0] = 0x00;
+                --pos;
+            }
+        }
+
+        // larger keys than expected is skipped
+        if (strlen(line) > keylen) {
+            PrintAndLogEx(INFO, "too long line (%zu) ... %s", strlen(line), line);
             continue;
+        }
 
-        if (!CheckStringIsHEXValue(line))
+        if (CheckStringIsHEXValue(line) == false) {
             continue;
+        }
 
-        uint64_t key = strtoull(line, NULL, 16);
-
-        num_to_bytes(key, keylen >> 1, (uint8_t *)*pdata + (*keycnt * (keylen >> 1)));
+        int ret = hex_to_bytes(line, (uint8_t *)*pdata + (*keycnt * (keylen >> 1)),  keylen >> 1);
+        if (ret != (keylen >> 1)) {
+            PrintAndLogEx(INFO, "hex to bytes wrong  %i", ret);
+            continue;
+        }
 
         (*keycnt)++;
 
         memset(line, 0, sizeof(line));
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", *keycnt, path);
+
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%d") " keys from dictionary file `" _YELLOW_("%s") "`", *keycnt, path);
+    }
 
 out:
     free(path);
     return retval;
 }
 
-int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen) {
+int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen, bool verbose) {
 
     char *path;
     int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, suffix, false);
     if (res != PM3_SUCCESS) {
-        return PM3_EFILE;
+        return PM3_ENOFILE;
     }
 
     FILE *f = fopen(path, "rb");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         free(path);
         return PM3_EFILE;
@@ -2369,7 +2723,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
 
     *keya = calloc(fsize, sizeof(uint8_t));
     if (*keya == NULL) {
-        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
         free(path);
         return PM3_EMALLOC;
@@ -2379,7 +2733,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
 
     *keyb = calloc(fsize, sizeof(uint8_t));
     if (*keyb == NULL) {
-        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
         free(*keya);
         free(path);
@@ -2389,7 +2743,9 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
     *blen = fread(*keyb, 1, fsize, f);
     fclose(f);
 
-    PrintAndLogEx(SUCCESS, "loaded binary key file `" _YELLOW_("%s") "`", path);
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Loaded binary key file `" _YELLOW_("%s") "`", path);
+    }
     free(path);
     return PM3_SUCCESS;
 }
@@ -2426,7 +2782,7 @@ mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose) {
 
     // detect plain
     if (retval == MFU_DF_UNKNOWN) {
-        uint8_t *plain = *dump;
+        const uint8_t *plain = *dump;
         bcc0 = ct ^ plain[0] ^ plain[1] ^ plain[2];
         bcc1 = plain[4] ^ plain[5] ^ plain[6] ^ plain[7];
         if ((bcc0 == plain[3]) && (bcc1 == plain[8])) {
@@ -2437,23 +2793,25 @@ mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose) {
     if (verbose) {
         switch (retval) {
             case MFU_DF_NEWBIN:
-                PrintAndLogEx(INFO, "detected " _GREEN_("new") " mfu dump format");
+                PrintAndLogEx(INFO, "Detected " _GREEN_("new") " mfu dump format");
                 break;
             case MFU_DF_OLDBIN:
-                PrintAndLogEx(INFO, "detected " _GREEN_("old") " mfu dump format");
+                PrintAndLogEx(INFO, "Detected " _GREEN_("old") " mfu dump format");
                 break;
             case MFU_DF_PLAINBIN:
-                PrintAndLogEx(INFO, "detected " _GREEN_("plain") " mfu dump format");
+                PrintAndLogEx(INFO, "Detected " _GREEN_("plain") " mfu dump format");
                 break;
             case MFU_DF_UNKNOWN:
-                PrintAndLogEx(WARNING, "failed to detected mfu dump format");
+                PrintAndLogEx(WARNING, "Failed to detected mfu dump format");
                 break;
         }
     }
     return retval;
 }
 
-nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose) {
+int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool verbose) {
+
+    *dump_type = NFC_DF_UNKNOWN;
 
     char *path;
     int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, "", false);
@@ -2462,14 +2820,12 @@ nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose) {
     }
 
     FILE *f = fopen(path, "r");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         free(path);
         return PM3_EFILE;
     }
     free(path);
-
-    nfc_df_e retval = NFC_DF_UNKNOWN;
 
     char line[256];
     memset(line, 0, sizeof(line));
@@ -2492,31 +2848,35 @@ nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose) {
         str_lower(line);
 
         if (str_startswith(line, "device type: ntag")) {
-            retval = NFC_DF_MFU;
+            *dump_type = NFC_DF_MFU;
             break;
         }
         if (str_startswith(line, "device type: mifare classic")) {
-            retval = NFC_DF_MFC;
+            *dump_type = NFC_DF_MFC;
             break;
         }
         if (str_startswith(line, "device type: mifare desfire")) {
-            retval = NFC_DF_MFDES;
+            *dump_type = NFC_DF_MFDES;
             break;
         }
         if (str_startswith(line, "device type: iso14443-3a")) {
-            retval = NFC_DF_14_3A;
+            *dump_type = NFC_DF_14_3A;
             break;
         }
         if (str_startswith(line, "device type: iso14443-3b")) {
-            retval = NFC_DF_14_3B;
+            *dump_type = NFC_DF_14_3B;
             break;
         }
         if (str_startswith(line, "device type: iso14443-4a")) {
-            retval = NFC_DF_14_4A;
+            *dump_type = NFC_DF_14_4A;
+            break;
+        }
+        if (str_startswith(line, "device type: iso15693")) {
+            *dump_type = NFC_DF_15;
             break;
         }
         if (str_startswith(line, "filetype: flipper picopass device")) {
-            retval = NFC_DF_PICOPASS;
+            *dump_type = NFC_DF_PICOPASS;
             break;
         }
 
@@ -2524,40 +2884,44 @@ nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose) {
     fclose(f);
 
     if (verbose) {
-        switch (retval) {
+
+        switch (*dump_type) {
             case NFC_DF_MFU:
-                PrintAndLogEx(INFO, "detected MIFARE Ultralight / NTAG based dump format");
+                PrintAndLogEx(INFO, "Detected MIFARE Ultralight / NTAG based dump format");
                 break;
             case NFC_DF_MFC:
-                PrintAndLogEx(INFO, "detected MIFARE Classic based dump format");
+                PrintAndLogEx(INFO, "Detected MIFARE Classic based dump format");
                 break;
             case NFC_DF_MFDES:
-                PrintAndLogEx(INFO, "detected MIFARE DESFire based dump format");
+                PrintAndLogEx(INFO, "Detected MIFARE DESFire based dump format");
                 break;
             case NFC_DF_14_3A:
-                PrintAndLogEx(INFO, "detected ISO14443-3A based dump format. No data available");
+                PrintAndLogEx(INFO, "Detected ISO14443-3A based dump format. No data available");
                 break;
             case NFC_DF_14_3B:
-                PrintAndLogEx(INFO, "detected ISO14443-3B based dump format. No data available");
+                PrintAndLogEx(INFO, "Detected ISO14443-3B based dump format. No data available");
                 break;
             case NFC_DF_14_4A:
-                PrintAndLogEx(INFO, "detected ISO14443-4A based dump format. No data available");
+                PrintAndLogEx(INFO, "Detected ISO14443-4A based dump format. No data available");
                 break;
             case NFC_DF_PICOPASS:
-                PrintAndLogEx(INFO, "detected PICOPASS based dump format");
+                PrintAndLogEx(INFO, "Detected PICOPASS based dump format");
                 break;
+            case NFC_DF_15:
+                PrintAndLogEx(INFO, "Detected ISO15693 based dump format");
             case NFC_DF_UNKNOWN:
-                PrintAndLogEx(WARNING, "failed to detected dump format");
+                PrintAndLogEx(WARNING, "Failed to detected dump format");
                 break;
         }
     }
-    return retval;
+    return PM3_SUCCESS;
 }
 
 static int convert_plain_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose) {
 
     mfu_dump_t *mfu = (mfu_dump_t *) calloc(sizeof(mfu_dump_t), sizeof(uint8_t));
     if (mfu == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -2566,7 +2930,7 @@ static int convert_plain_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose)
     mfu->pages = *dumplen / 4 - 1;
 
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "plain mfu dump format was converted to " _GREEN_("%d") " blocks", mfu->pages + 1);
+        PrintAndLogEx(SUCCESS, "Plain mfu dump format was converted to " _GREEN_("%d") " blocks", mfu->pages + 1);
     }
 
     *dump = (uint8_t *)mfu;
@@ -2595,6 +2959,7 @@ static int convert_old_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose) {
 
     mfu_dump_t *mfu_dump = (mfu_dump_t *) calloc(sizeof(mfu_dump_t), sizeof(uint8_t));
     if (mfu_dump == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -2615,7 +2980,7 @@ static int convert_old_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose) {
     memcpy(mfu_dump->data + (mfu_dump->pages * 4 + MFU_DUMP_PREFIX_LENGTH), old_mfu_dump->pack, 2);
 
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "old mfu dump format was converted to " _GREEN_("%d") " blocks", mfu_dump->pages + 1);
+        PrintAndLogEx(SUCCESS, "Old mfu dump format was converted to " _GREEN_("%d") " blocks", mfu_dump->pages + 1);
     }
 
     free(*dump);
@@ -2671,11 +3036,9 @@ static int filelist(const char *path, const char *ext, uint8_t last, bool tentat
     for (int i = 0; i < n; i++) {
 
         char tmp_fullpath[1024] = {0};
-        strncat(tmp_fullpath, path, sizeof(tmp_fullpath) - 1);
-        tmp_fullpath[1023] = 0x00;
-        strncat(tmp_fullpath, namelist[i]->d_name, strlen(tmp_fullpath) - 1);
+        snprintf(tmp_fullpath, sizeof(tmp_fullpath), "%s%s", path, namelist[i]->d_name);
 
-        if (is_directory(tmp_fullpath)) {
+        if (path_is_directory(tmp_fullpath)) {
 
             char newpath[1024];
             if (strcmp(namelist[i]->d_name, ".") == 0 || strcmp(namelist[i]->d_name, "..") == 0)
@@ -2741,6 +3104,7 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
     // explicit absolute (/) or relative path (./) => try only to match it directly
     char *filename = calloc(strlen(searchname) + 1, sizeof(char));
     if (filename == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -2926,18 +3290,22 @@ out:
 
 int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix, bool silent) {
 
-    if (foundpath == NULL)
+    if (foundpath == NULL) {
         return PM3_EINVARG;
+    }
 
-    if (searchname == NULL || strlen(searchname) == 0)
+    if (searchname == NULL || strlen(searchname) == 0) {
         return PM3_EINVARG;
+    }
 
-    if (is_directory(searchname))
+    if (path_is_directory(searchname)) {
         return PM3_EINVARG;
+    }
 
     char *filename = filenamemcopy(searchname, suffix);
-    if (filename == NULL)
+    if (filename == NULL) {
         return PM3_EMALLOC;
+    }
 
     if (strlen(filename) == 0) {
         free(filename);
@@ -2954,25 +3322,108 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
     return res;
 }
 
+/**
+ * Inserts a line into a text file only if it does not already exist.
+ * Returns PM3_SUCCES or, PM3_EFILE;
+ *
+ * @param filepath Path to the file.
+ * @param keystr     Line to insert (should not contain a trailing newline).
+ */
+int insert_line_if_not_exists(const char *preferredName, const char *keystr) {
+
+    char *path;
+    int res = searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false);
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    FILE *f = fopen(path, "r");
+    if (f == NULL) {
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
+        free(path);
+        return PM3_EFILE;
+    }
+
+    // Maximum line length we assume (adjust as necessary for your use case)
+    char line[255];
+    bool key_exists = false;
+
+    char *keystrdup = str_dup(keystr);
+    str_upper(keystrdup);
+
+    // First pass: check if the line exists
+    while (fgets(line, sizeof(line), f)) {
+
+        // The line start with # is comment, skip
+        if (line[0] == '#') {
+            continue;
+        }
+
+        // Remove trailing newline for comparison
+        line[strcspn(line, "\n")] = '\0';
+
+        // UPPER CASE
+        str_upper(line);
+
+        key_exists = str_startswith(line, keystrdup);
+        if (key_exists) {
+            fclose(f);
+            free(path);
+            PrintAndLogEx(INFO, "already in there...");
+            return PM3_SUCCESS;
+        }
+    }
+
+    fclose(f);
+
+
+    // Reopen for appending if line doesn't exist
+    f = fopen(path, "a");
+    if (f == NULL) {
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
+        free(path);
+        return PM3_EFILE;
+    }
+
+    free(path);
+
+    // Append the line with a newline
+    if (fprintf(f, "%s\n", keystrdup) < 0) {
+        PrintAndLogEx(WARNING, "error writing to file");
+        fclose(f);
+        return PM3_EFILE;
+    }
+
+    fclose(f);
+    return PM3_SUCCESS;
+}
+
 int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumplen) {
 
     int res = PM3_SUCCESS;
-    DumpFileType_t dftype = getfiletype(fn);
-    switch (dftype) {
+    DumpFileType_t dt = get_filetype(fn);
+    switch (dt) {
         case BIN: {
             res = loadFile_safe(fn, ".bin", pdump, dumplen);
+            if (res == PM3_SUCCESS && *dumplen > maxdumplen) {
+                *dumplen = maxdumplen;
+            }
             break;
         }
         case EML: {
             res = loadFileEML_safe(fn, pdump, dumplen);
+            if (res == PM3_SUCCESS && *dumplen > maxdumplen) {
+                *dumplen = maxdumplen;
+            }
             break;
         }
         case JSON: {
             *pdump = calloc(maxdumplen, sizeof(uint8_t));
             if (*pdump == NULL) {
-                PrintAndLogEx(WARNING, "fail, cannot allocate memory");
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return PM3_EMALLOC;
             }
+
             res = loadFileJSON(fn, *pdump, maxdumplen, dumplen, NULL);
             if (res == PM3_SUCCESS) {
                 return res;
@@ -2983,28 +3434,37 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
             if (res == PM3_ESOFT) {
                 PrintAndLogEx(WARNING, "JSON objects failed to load");
             } else if (res == PM3_EMALLOC) {
-                PrintAndLogEx(WARNING, "wrong size of allocated memory. Check your parameters");
+                PrintAndLogEx(WARNING, "Wrong size of allocated memory. Check your parameters");
             }
             break;
         }
         case DICTIONARY: {
-            PrintAndLogEx(ERR, "only <BIN|EML|JSON|MCT|NFC formats allowed");
+            PrintAndLogEx(ERR, "Only <BIN|EML|JSON|MCT|NFC formats allowed");
             return PM3_EINVARG;
         }
         case MCT: {
             res = loadFileMCT_safe(fn, pdump, dumplen);
+            if (res == PM3_SUCCESS && *dumplen > maxdumplen) {
+                *dumplen = maxdumplen;
+            }
             break;
         }
+        case BRUCE:
         case FLIPPER: {
-            nfc_df_e foo = detect_nfc_dump_format(fn, true);
-            if (foo == NFC_DF_MFC || foo == NFC_DF_MFU || foo == NFC_DF_PICOPASS) {
+            nfc_df_e dumptype = NFC_DF_UNKNOWN;
+            res = detect_nfc_dump_format(fn, &dumptype, true);
+            if (res != PM3_SUCCESS) {
+                break;
+            }
+
+            if (dumptype == NFC_DF_MFC || dumptype == NFC_DF_MFU || dumptype == NFC_DF_PICOPASS || dumptype == NFC_DF_15) {
 
                 *pdump = calloc(maxdumplen, sizeof(uint8_t));
                 if (*pdump == NULL) {
-                    PrintAndLogEx(WARNING, "fail, cannot allocate memory");
+                    PrintAndLogEx(WARNING, "Failed to allocate memory");
                     return PM3_EMALLOC;
                 }
-                res = loadFileNFC_safe(fn, *pdump, maxdumplen, dumplen, foo);
+                res = loadFileNFC_safe(fn, *pdump, maxdumplen, dumplen, dumptype);
                 if (res == PM3_SUCCESS) {
                     return res;
                 }
@@ -3016,7 +3476,14 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
                 } else if (res == PM3_EMALLOC) {
                     PrintAndLogEx(WARNING, "wrong size of allocated memory. Check your parameters");
                 }
+            } else {
+                // unknown dump file type
+                res = PM3_ESOFT;
             }
+            break;
+        }
+        case TAGINFO: {
+            //res = loadFileXML_safe(fn, ".xml", pdump, dumplen);
             break;
         }
     }
@@ -3028,9 +3495,10 @@ int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
         return PM3_EINVARG;
     }
     if (d == NULL || n == 0) {
-        PrintAndLogEx(INFO, "no data to save, skipping...");
+        PrintAndLogEx(INFO, "No data to save, skipping...");
         return PM3_EINVARG;
     }
+
     saveFile(fn, ".bin", d, n);
     saveFileJSON(fn, jsft, d, n, NULL);
     return PM3_SUCCESS;
@@ -3039,10 +3507,10 @@ int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
 int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
 
     if (fn == NULL || d == NULL || n == 0) {
-        PrintAndLogEx(INFO, "no data to save, skipping...");
+        PrintAndLogEx(INFO, "No data to save, skipping...");
         return PM3_EINVARG;
     }
-    saveFile(fn, ".bin", d, n);
+    saveFileEx(fn, ".bin", d, n, spDump);
 
     iso14a_mf_extdump_t jd = {0};
     jd.card_info.ats_len = 0;
@@ -3061,7 +3529,7 @@ int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
         jd.card_info.sak = d[7];
         memcpy(jd.card_info.atqa, &d[8], sizeof(jd.card_info.atqa));
     } else {
-        PrintAndLogEx(WARNING, "invalid dump. UID/SAK/ATQA not found");
+        PrintAndLogEx(WARNING, "Invalid dump. UID/SAK/ATQA not found");
     }
     jd.dump = d;
     jd.dumplen = n;
@@ -3069,3 +3537,17 @@ int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
     return PM3_SUCCESS;
 }
 
+int pm3_save_fm11rf08s_nonces(const char *fn, iso14a_fm11rf08s_nonces_with_data_t *d, bool with_data) {
+
+    if (fn == NULL || d == NULL) {
+        PrintAndLogEx(INFO, "No data to save, skipping...");
+        return PM3_EINVARG;
+    }
+
+    if (with_data) {
+        saveFileJSON(fn, jsfFM11RF08SNoncesWithData, (uint8_t *)d, sizeof(*d), NULL);
+    } else {
+        saveFileJSON(fn, jsfFM11RF08SNonces, (uint8_t *)d, sizeof(*d), NULL);
+    }
+    return PM3_SUCCESS;
+}

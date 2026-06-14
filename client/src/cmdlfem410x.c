@@ -39,6 +39,7 @@
 #include "generator.h"
 #include "cliparser.h"
 #include "cmdhw.h"
+#include "hitag.h"
 
 static uint64_t gs_em410xid = 0;
 
@@ -187,8 +188,7 @@ void printEM410x(uint32_t hi, uint64_t id, bool verbose, int type) {
 
         uint32_t p1id = (id & 0xFFFFFF);
         uint8_t arr[32] = {0x00};
-        int j = 23;
-        for (int k = 0 ; k < 24; ++k, --j) {
+        for (int k = 0 ; k < 24; ++k) {
             arr[k] = (p1id >> k) & 1;
         }
 
@@ -230,6 +230,7 @@ void printEM410x(uint32_t hi, uint64_t id, bool verbose, int type) {
         uint32_t sebury3 = id & 0x7FFFFF;
         PrintAndLogEx(SUCCESS, "Pattern Sebury     : %d %d %d  [0x%X 0x%X 0x%X]", sebury1, sebury2, sebury3, sebury1, sebury2, sebury3);
         PrintAndLogEx(SUCCESS, "VD / ID            : %03" PRIu64 " / %010" PRIu64, (id >> 32LL) & 0xFFFF, (id & 0xFFFFFFFF));
+        PrintAndLogEx(SUCCESS, "Pattern ELECTRA    : %" PRIu64 " %" PRIu64, (id >> 24) & 0xFFFF, id & 0xFFFFFF);
 
         PrintAndLogEx(INFO, "------------------------------------------------");
     }
@@ -245,7 +246,7 @@ static int ask_em410x_binary_decode(bool verbose, uint32_t *hi, uint64_t *lo, ui
         else if (ans == -4)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x preamble not found");
         else if (ans == -5)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x Size not correct: %zu", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x Size not correct: %zu", *size);
         else if (ans == -6)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x parity failed");
 
@@ -369,8 +370,8 @@ static int CmdEM410xDemod(const char *Cmd) {
     size_t max_len = arg_get_u32_def(ctx, 3, 0);
     bool invert = arg_get_lit(ctx, 4);
     bool amplify = arg_get_lit(ctx, 5);
-    int bin_len = 512;
     uint8_t bin[512] = {0};
+    int bin_len = sizeof(bin) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 6, bin, &bin_len);
     CLIParserFree(ctx);
 
@@ -443,7 +444,7 @@ static int CmdEM410xReader(const char *Cmd) {
         if (break_first && gs_em410xid != 0) {
             break;
         }
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }
@@ -454,17 +455,19 @@ static int CmdEM410xSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 410x sim",
                   "Enables simulation of EM 410x card.\n"
-                  "Simulation runs until the button is pressed or another USB command is issued.",
+                  "Simulation runs until the button is pressed or another USB command is issued.\n"
+                  "Most common readers expects the code to be sent in loop without a break (i.e. --gap 0).\n"
+                  "For other, more advanced readers there might be a need to set a non-zero gap value.",
                   "lf em 410x sim --id 0F0368568B\n"
                   "lf em 410x sim --id 0F0368568B --clk 32\n"
-                  "lf em 410x sim --id 0F0368568B --gap 0"
+                  "lf em 410x sim --id 0F0368568B --gap 20"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0(NULL, "clk", "<dec>", "<32|64> clock (default 64)"),
         arg_str1(NULL, "id", "<hex>", "EM Tag ID number (5 hex bytes)"),
-        arg_u64_0(NULL, "gap", "<dec>", "gap (0's) between ID repeats (default 20)"),
+        arg_u64_0(NULL, "gap", "<dec>", "gap (0's) between ID repeats (default 0)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -472,7 +475,7 @@ static int CmdEM410xSim(const char *Cmd) {
     // clock is 64 in EM410x tags
     int clk = arg_get_u32_def(ctx, 1, 64);
     int uid_len = 0;
-    int gap = arg_get_u32_def(ctx, 3, 20);
+    int gap = arg_get_u32_def(ctx, 3, 0);
     uint8_t uid[5] = {0};
     CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
     CLIParserFree(ctx);
@@ -524,74 +527,34 @@ static int CmdEM410xBrute(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint32_t uidcnt = 0;
-    uint8_t stUidBlock = 20;
-    uint8_t *p = NULL;
-    uint8_t uid[5] = {0x00};
-
-    // open file
-    FILE *f = NULL;
-    if ((f = fopen(filename, "r")) == NULL) {
-        PrintAndLogEx(ERR, "Error: Could not open EM Tag IDs file ["_YELLOW_("%s")"]", filename);
-        return PM3_EFILE;
+    // get suffix.
+    char suffix[10] = {0};
+    char *ext = strrchr(filename, '.');
+    if (ext != NULL) {
+        strncpy(suffix, ext, sizeof(suffix) - 1);
     }
 
-    // allocate mem for file contents
-    uint8_t *uidblock = calloc(stUidBlock, 5);
-    if (uidblock == NULL) {
-        fclose(f);
-        PrintAndLogEx(ERR, "Error: can't allocate memory");
-        return PM3_EMALLOC;
+    // load keys
+    uint8_t *uidblock = NULL;
+    uint32_t uidcount = 0;
+    int res = loadFileDICTIONARY_safe_ex(filename, suffix, (void **)&uidblock, 5, &uidcount, false);
+    if (res != PM3_SUCCESS) {
+        free(uidblock);
+        return res;
     }
 
-    // read file into memory
-    char buf[11];
-
-    while (fgets(buf, sizeof(buf), f)) {
-        if (strlen(buf) < 10 || buf[9] == '\n') continue;
-        while (fgetc(f) != '\n' && !feof(f));  //goto next line
-
-        //The line start with # is comment, skip
-        if (buf[0] == '#') continue;
-
-        int uidlen = 0;
-        if (param_gethex_ex(buf, 0, uid, &uidlen) && (uidlen != 10)) {
-            PrintAndLogEx(FAILED, "EM Tag IDs must include 5 hex bytes (10 hex symbols), got ( " _RED_("%d") " )", uidlen);
-            free(uidblock);
-            fclose(f);
-            return PM3_ESOFT;
-        }
-
-        buf[10] = 0;
-
-        if (stUidBlock - uidcnt < 2) {
-            p = realloc(uidblock, 5 * (stUidBlock += 10));
-            if (!p) {
-                PrintAndLogEx(WARNING, "Cannot allocate memory for EM Tag IDs");
-                free(uidblock);
-                fclose(f);
-                return PM3_ESOFT;
-            }
-            uidblock = p;
-        }
-        memset(uidblock + 5 * uidcnt, 0, 5);
-        num_to_bytes(strtoll(buf, NULL, 16), 5, uidblock + 5 * uidcnt);
-        uidcnt++;
-        memset(buf, 0, sizeof(buf));
-    }
-    fclose(f);
-
-    if (uidcnt == 0) {
+    if (uidcount == 0) {
         PrintAndLogEx(FAILED, "No EM Tag IDs found in file");
         free(uidblock);
-        return PM3_ESOFT;
+        return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Loaded "_YELLOW_("%d")" EM Tag IDs from "_YELLOW_("%s")", pause delay:"_YELLOW_("%d")" ms", uidcnt, filename, delay);
+    PrintAndLogEx(SUCCESS, "Loaded "_GREEN_("%d")" EM Tag IDs from `"_YELLOW_("%s")"`  pause delay:"_YELLOW_("%d")" ms", uidcount, filename, delay);
 
     // loop
     uint8_t testuid[5];
-    for (uint32_t c = 0; c < uidcnt; ++c) {
+    for (uint32_t i = 0; i < uidcount; ++i) {
+
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
             PrintAndLogEx(WARNING, "aborted via keyboard!\n");
@@ -599,10 +562,12 @@ static int CmdEM410xBrute(const char *Cmd) {
             return PM3_EOPABORTED;
         }
 
-        memcpy(testuid, uidblock + 5 * c, 5);
+        memset(testuid, 0, sizeof(testuid));
+        memcpy(testuid, uidblock + (5 * i), sizeof(testuid));
+
         PrintAndLogEx(INFO, "Bruteforce %d / %u: simulating EM Tag ID " _YELLOW_("%s")
-                      , c + 1
-                      , uidcnt
+                      , i + 1
+                      , uidcount
                       , sprint_hex_inrow(testuid, sizeof(testuid))
                      );
 
@@ -619,7 +584,6 @@ static int CmdEM410xBrute(const char *Cmd) {
 
         clearCommandBuffer();
         SendCommandNG(CMD_LF_SIMULATE, (uint8_t *)&payload, sizeof(payload));
-
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_LF_SIMULATE, &resp, delay)) {
             if (resp.status == PM3_EOPABORTED) {
@@ -659,10 +623,12 @@ static int CmdEM410xSpoof(const char *Cmd) {
 static int CmdEM410xClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 410x clone",
-                  "clone a EM410x ID to a T55x7, Q5/T5555 or EM4305/4469 tag.",
+                  "clone a EM410x ID to a T55x7, Q5/T5555, EM4305/4469, Hitag S/8211/8268/8310 or Hitag µ/8265 tag.",
                   "lf em 410x clone --id 0F0368568B        -> encode for T55x7 tag\n"
                   "lf em 410x clone --id 0F0368568B --q5   -> encode for Q5/T5555 tag\n"
-                  "lf em 410x clone --id 0F0368568B --em   -> encode for EM4305/4469"
+                  "lf em 410x clone --id 0F0368568B --em   -> encode for EM4305/4469\n"
+                  "lf em 410x clone --id 0F0368568B --hts  -> encode for Hitag S/8211/8268/8310\n"
+                  "lf em 410x clone --id 0F0368568B --htu  -> encode for Hitag µ/8265 tag"
                  );
 
     void *argtable[] = {
@@ -671,6 +637,8 @@ static int CmdEM410xClone(const char *Cmd) {
         arg_str1(NULL, "id", "<hex>", "EM Tag ID number (5 hex bytes)"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_lit0(NULL, "hts", "optional - specify writing to Hitag S/8211/8268/8310 tag"),
+        arg_lit0(NULL, "htu", "optional - specify writing to Hitag µ/8265 tag"),
         arg_lit0(NULL, "electra", "optional - add Electra blocks to tag"),
         arg_param_end
     };
@@ -683,13 +651,23 @@ static int CmdEM410xClone(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
     bool q5 = arg_get_lit(ctx, 3);
     bool em = arg_get_lit(ctx, 4);
-    bool add_electra = arg_get_lit(ctx, 5);
+    bool hts = arg_get_lit(ctx, 5);
+    bool htu = arg_get_lit(ctx, 6);
+    bool add_electra = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
-    uint64_t id = bytes_to_num(uid, uid_len);
+    if (q5 + em + hts + htu > 1) {
+        PrintAndLogEx(FAILED, "Only specify one tag Type");
+        return PM3_EINVARG;
+    }
 
-    if (q5 && em) {
-        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+    if ((hts || htu) && IfPm3Hitag() == false) {
+        PrintAndLogEx(FAILED, "Device not compiled to support Hitag");
+        return PM3_EINVARG;
+    }
+
+    if ((hts || htu) && clk == 40) {
+        PrintAndLogEx(FAILED, "supported clock rates for Hitag are " _YELLOW_("16, 32, 64"));
         return PM3_EINVARG;
     }
 
@@ -699,33 +677,204 @@ static int CmdEM410xClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Preparing to clone EM4102 to " _YELLOW_("%s") " tag with EM Tag ID " _GREEN_("%010" PRIX64) " (RF/%d)", q5 ? "Q5/T5555" : (em ? "EM4305/4469" : "T55x7"), id, clk);
+    uint64_t id = bytes_to_num(uid, uid_len);
+    PrintAndLogEx(SUCCESS, "Preparing to clone EM4102 to " _YELLOW_("%s") " tag with EM Tag ID " _GREEN_("%010" PRIX64) " (RF/%d)",
+                  q5 ? "Q5/T5555" : (em ? "EM4305/4469" : (hts ? "Hitag S/82xx" : (htu ? "Hitag µ/82xx" : "T55x7"))), id, clk);
 
-    struct {
-        bool Q5;
-        bool EM;
-        bool add_electra;
-        uint8_t clock;
-        uint32_t high;
-        uint32_t low;
-    } PACKED payload;
+    uint8_t data[8] = {0xFF, 0x80}; // EM410X_HEADER 9 bits of one
+    uint32_t databits = 9;
+    uint8_t c_parity = 0;
 
-    payload.Q5 = q5;
-    payload.EM = em;
-    payload.add_electra = add_electra;
-    payload.clock = clk;
-    payload.high = (uint32_t)(id >> 32);
-    payload.low = (uint32_t)id;
+    for (int i = 36; i >= 0; i -= 4) {
+        uint8_t r_parity = 0;
+        uint8_t nibble = id >> i & 0xF;
+
+        databits = concatbits(data, databits, &nibble, 4, 4, false);
+        for (size_t j = 0; j < 4; j++) {
+            r_parity ^= nibble >> j & 1;
+        }
+        databits = concatbits(data, databits, &r_parity, 7, 1, false);
+        c_parity ^= nibble;
+    }
+    data[7] |= c_parity << 1;
+
+    PrintAndLogEx(INFO, "Encoded to %s", sprint_hex(data, sizeof(data)));
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM410X_CLONE, (uint8_t *)&payload, sizeof(payload));
-
     PacketResponseNG resp;
-    WaitForResponse(CMD_LF_EM410X_CLONE, &resp);
+
+    if (hts) {
+
+        lf_hitag_data_t packet;
+        memset(&packet, 0, sizeof(packet));
+
+        for (size_t step = 0; step < 3; step++) {
+
+            switch (step) {
+                case 0: {
+                    memcpy(packet.data, &data[HITAGS_PAGE_SIZE * 0], HITAGS_PAGE_SIZE);
+                    packet.page = 4;
+                    break;
+                }
+                case 1: {
+                    memcpy(packet.data, &data[HITAGS_PAGE_SIZE * 1], HITAGS_PAGE_SIZE);
+                    packet.page = 5;
+                    break;
+                }
+                case 2: {
+                    hitags_config_page_t config_page = {0};
+                    config_page.s.MEMT = 0x02; // compatiable for 82xx, no impact on Hitag S
+                    config_page.s.TTFM = 0x01; // 0 = "Block 0, Block 1, Block 2, Block 3", 1 = "Block 0, Block 1"
+                    config_page.s.TTFC = 0x00; // Manchester
+                    config_page.s.auth = 0x01; // Auth mode for better compatibility with 82xx readers
+
+                    // Set RES bits to match 'DA' (1101 1010) for 82xx reader compatibility
+                    config_page.s.RES1 = 0x01;
+                    config_page.s.RES2 = 0x01; // This makes it 'DA' instead of 'CA'
+                    config_page.s.RES4 = 0x01;
+                    config_page.s.RES5 = 0x01;
+                    switch (clk) {
+                        case 64: {
+                            // 2 kBit/s
+                            config_page.s.TTFDR = 0x02;
+                            break;
+                        }
+                        case 32: {
+                            // 4 kBit/s
+                            config_page.s.TTFDR = 0x00;
+                            break;
+                        }
+                        case 16: {
+                            // 8 kBit/s
+                            config_page.s.TTFDR = 0x01;
+                            break;
+                        }
+                    }
+                    //TODO: keep other fields?
+                    memcpy(packet.data, &config_page.asBytes, sizeof(config_page.asBytes));
+                    packet.page = 1;
+                    break;
+                }
+            }
+
+            packet.cmd = HTSF_82xx;
+            memcpy(packet.pwd, "\xBB\xDD\x33\x99", HITAGS_PAGE_SIZE);
+            packet.mode = HITAGS_UID_REQ_ADV1;
+
+            SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *)&packet, sizeof(packet));
+            if (WaitForResponseTimeout(CMD_LF_HITAGS_WRITE, &resp, 4000) == false) {
+                PrintAndLogEx(WARNING, "timeout while waiting for reply");
+                return PM3_ETIMEOUT;
+            }
+
+            if (resp.status != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Something went wrong in step %zu", step);
+                return resp.status;
+            }
+        }
+    } else if (htu) {
+
+        lf_hitag_data_t packet;
+        memset(&packet, 0, sizeof(packet));
+
+        // Use password auth with default password
+        packet.cmd = HTUF_82xx;
+        memcpy(packet.pwd, "\x00\x00\x00\x00", HITAG_PASSWORD_SIZE);
+        // memcpy(packet.pwd, "\x9A\xC4\x99\x9C", HITAGU_BLOCK_SIZE);
+
+        for (size_t step = 0; step < 3; step++) {
+
+            switch (step) {
+                case 0: {
+                    // Configure datarate based on clock
+                    // clk -> datarate
+                    // 64  -> 0x00      2 kBit/s
+                    // 32  -> 0x01      4 kBit/s
+                    // 16  -> 0x10      8 kBit/s
+                    hitagu_config_page_t config_page = {0};
+
+                    config_page.s82xx.datarate_override = 0x00; // no datarate override
+                    config_page.s82xx.encoding = 0x00; // Manchester
+                    config_page.s82xx.ttf_mode = 0x01; // 01 = "Block 0, Block 1"
+                    config_page.s82xx.ttf = 0x01; // enable TTF
+
+                    switch (clk) {
+                        case 64: {
+                            break;
+                        }
+                        case 32: {
+                            config_page.s82xx.datarate = 0x01;
+                            break;
+                        }
+                        case 16: {
+                            config_page.s82xx.datarate = 0x02;
+                            break;
+                        }
+                    }
+                    reverse_arraybytes_copy(config_page.asBytes, packet.data, sizeof(config_page));
+                    packet.page = HITAGU_CONFIG_PADR; // Config block
+                    break;
+                }
+                case 1: {
+                    memcpy(packet.data, &data[HITAGU_BLOCK_SIZE * 0], HITAGU_BLOCK_SIZE);
+                    packet.page = 0; // Start writing EM410x data
+                    break;
+                }
+                case 2: {
+                    memcpy(packet.data, &data[HITAGU_BLOCK_SIZE * 1], HITAGU_BLOCK_SIZE);
+                    packet.page = 1; // Continue with second block
+                    break;
+                }
+            }
+
+            SendCommandNG(CMD_LF_HITAGU_WRITE, (uint8_t *)&packet, sizeof(packet));
+            if (WaitForResponseTimeout(CMD_LF_HITAGU_WRITE, &resp, 4000) == false) {
+                PrintAndLogEx(WARNING, "timeout while waiting for reply");
+                return PM3_ETIMEOUT;
+            }
+
+            if (resp.status != PM3_ENODATA && resp.status != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Something went wrong in step %zu, retrying... Press " _GREEN_("<Enter>") " to exit", step);
+                // 8265 Often fails during continuous command execution, need to retry
+                if (kbd_enter_pressed()) {
+                    PrintAndLogEx(INFO, "Button pressed, user aborted");
+                    return PM3_EOPABORTED;
+                }
+
+                step--;
+                continue;
+            }
+            //TODO: fix this
+            resp.status = PM3_SUCCESS;
+        }
+    } else {
+        struct {
+            bool Q5;
+            bool EM;
+            bool add_electra;
+            uint8_t clock;
+            uint32_t high;
+            uint32_t low;
+        } PACKED payload;
+
+        payload.Q5 = q5;
+        payload.EM = em;
+        payload.add_electra = add_electra;
+        payload.clock = clk;
+        payload.high = (uint32_t)(id >> 32);
+        payload.low = (uint32_t)id;
+
+        SendCommandNG(CMD_LF_EM410X_CLONE, (uint8_t *)&payload, sizeof(payload));
+        if (WaitForResponseTimeout(CMD_LF_EM410X_CLONE, &resp, 2000) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+            return PM3_ETIMEOUT;
+        }
+    }
+
     switch (resp.status) {
         case PM3_SUCCESS: {
-            PrintAndLogEx(SUCCESS, "Done");
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 410x reader`") " to verify");
+            PrintAndLogEx(SUCCESS, "Done!");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf em 410x reader") "` to verify");
             break;
         }
         default: {
@@ -745,7 +894,7 @@ static command_t CommandTable[] = {
     {"brute",  CmdEM410xBrute,    IfPm3Lf,         "reader bruteforce attack by simulating EM410x tags"},
     {"watch",  CmdEM410xWatch,    IfPm3Lf,         "watches for EM410x 125/134 kHz tags"},
     {"spoof",  CmdEM410xSpoof,    IfPm3Lf,         "watches for EM410x 125/134 kHz tags, and replays them" },
-    {"clone",  CmdEM410xClone,    IfPm3Lf,         "write EM410x Tag ID to T55x7 or Q5/T5555 tag"},
+    {"clone",  CmdEM410xClone,    IfPm3Lf,         "clone EM410x Tag ID to T55x7, Q5/T5555 or EM4305/4469"},
     {NULL, NULL, NULL, NULL}
 };
 

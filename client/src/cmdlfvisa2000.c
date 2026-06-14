@@ -84,7 +84,8 @@ static uint8_t visa_parity(uint32_t id) {
 //see ASKDemod for what args are accepted
 int demodVisa2k(bool verbose) {
     (void) verbose; // unused so far
-    save_restoreGB(GRAPH_SAVE);
+    buffer_savestate_t saveState = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
+    saveState.offset = g_GridOffset;
 
     //CmdAskEdgeDetect("");
 
@@ -92,7 +93,8 @@ int demodVisa2k(bool verbose) {
     bool st = true;
     if (ASKDemod_ext(64, 0, 0, 0, false, false, false, 1, &st) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ASK/Manchester Demod failed");
-        save_restoreGB(GRAPH_RESTORE);
+        restore_bufferS32(saveState, g_GraphBuffer);
+        g_GridOffset = saveState.offset;
         return PM3_ESOFT;
     }
     size_t size = g_DemodBufferLen;
@@ -107,7 +109,8 @@ int demodVisa2k(bool verbose) {
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ans: %d", ans);
 
-        save_restoreGB(GRAPH_RESTORE);
+        restore_bufferS32(saveState, g_GraphBuffer);
+        g_GridOffset = saveState.offset;
         return PM3_ESOFT;
     }
     setDemodBuff(g_DemodBuffer, 96, ans);
@@ -125,7 +128,8 @@ int demodVisa2k(bool verbose) {
     // test checksums
     if (chk != calc) {
         PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 checksum (%s) %x - %x\n", _RED_("fail"), chk, calc);
-        save_restoreGB(GRAPH_RESTORE);
+        restore_bufferS32(saveState, g_GraphBuffer);
+        g_GridOffset = saveState.offset;
         return PM3_ESOFT;
     }
     // parity
@@ -133,7 +137,8 @@ int demodVisa2k(bool verbose) {
     uint8_t chk_par = (raw3 & 0xFF0) >> 4;
     if (calc_par != chk_par) {
         PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 parity (%s) %x - %x\n", _RED_("fail"), chk_par, calc_par);
-        save_restoreGB(GRAPH_RESTORE);
+        restore_bufferS32(saveState, g_GraphBuffer);
+        g_GridOffset = saveState.offset;
         return PM3_ESOFT;
     }
     PrintAndLogEx(SUCCESS, "Visa2000 - Card " _GREEN_("%u") ", Raw: %08X%08X%08X", raw2,  raw1, raw2, raw3);
@@ -180,7 +185,7 @@ static int CmdVisa2kReader(const char *Cmd) {
     do {
         lf_read(false, 20000);
         demodVisa2k(!cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
     return PM3_SUCCESS;
 }
 
@@ -239,8 +244,8 @@ static int CmdVisa2kClone(const char *Cmd) {
     } else {
         res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     }
-    PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf visa2000 reader`") " to verify");
+    PrintAndLogEx(SUCCESS, "Done!");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf visa2000 reader") "` to verify");
     return res;
 }
 
@@ -271,6 +276,10 @@ static int CmdVisa2kSim(const char *Cmd) {
         num_to_bytebits(blocks[i], 32, bs + i * 32);
 
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     payload->encoding =  1;
     payload->invert = 0;
     payload->separator = 1;
@@ -295,7 +304,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,         AlwaysAvailable, "This help"},
     {"demod",   CmdVisa2kDemod,  AlwaysAvailable, "demodulate an VISA2000 tag from the GraphBuffer"},
     {"reader",  CmdVisa2kReader, IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdVisa2kClone,  IfPm3Lf,         "clone Visa2000 tag to T55x7 or Q5/T5555"},
+    {"clone",   CmdVisa2kClone,  IfPm3Lf,         "clone Visa2000 tag to T55x7, Q5/T5555 or EM4305/4469"},
     {"sim",     CmdVisa2kSim,    IfPm3Lf,         "simulate Visa2000 tag"},
     {NULL, NULL, NULL, NULL}
 };

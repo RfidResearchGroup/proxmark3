@@ -27,6 +27,7 @@
 int CmdPreferences(const char *Cmd);
 int preferences_load(void);
 int preferences_save(void);
+int preferences_dump(void);
 
 void preferences_save_callback(json_t *root);
 void preferences_load_callback(json_t *root);

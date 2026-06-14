@@ -33,25 +33,37 @@
 #define MIFARE_4K_MAXBLOCK      256
 #define MIFARE_2K_MAXBLOCK      128
 #define MIFARE_1K_MAXBLOCK      64
+#define MIFARE_1K_EV1_MAXBLOCK  (MIFARE_1K_MAXBLOCK + 8)
 #define MIFARE_MINI_MAXBLOCK    20
 
 #define MIFARE_4K_MAXSECTOR     40
 #define MIFARE_2K_MAXSECTOR     32
 #define MIFARE_1K_MAXSECTOR     16
+#define MIFARE_1K_EV1_MAXSECTOR (MIFARE_1K_MAXSECTOR + 2)
 #define MIFARE_MINI_MAXSECTOR   5
 
 #define MIFARE_4K_MAX_BYTES     4096
 #define MIFARE_2K_MAX_BYTES     2048
 #define MIFARE_1K_MAX_BYTES     1024
+#define MIFARE_1K_EV1_MAX_BYTES (MIFARE_1K_MAX_BYTES + 128)
 #define MIFARE_MINI_MAX_BYTES   320
 
 #define MIFARE_KEY_SIZE         6
 
 #define MIFARE_MINI_MAX_KEY_SIZE    (MIFARE_MINI_MAXSECTOR * 2 * MIFARE_KEY_SIZE)
 #define MIFARE_1K_MAX_KEY_SIZE      (MIFARE_1K_MAXSECTOR * 2 * MIFARE_KEY_SIZE)
+#define MIFARE_1K_EV1_MAX_KEY_SIZE  (MIFARE_1K_EV1_MAXSECTOR * 2 * MIFARE_KEY_SIZE)
 #define MIFARE_2K_MAX_KEY_SIZE      (MIFARE_2K_MAXSECTOR * 2 * MIFARE_KEY_SIZE)
 #define MIFARE_4K_MAX_KEY_SIZE      (MIFARE_4K_MAXSECTOR * 2 * MIFARE_KEY_SIZE)
 
+typedef struct {
+    uint8_t key_a[MIFARE_KEY_SIZE];
+    uint8_t access[3];
+    uint8_t gpb;
+    uint8_t key_b[MIFARE_KEY_SIZE];
+} PACKED mf_trailer_t;
+
+_Static_assert(sizeof(mf_trailer_t) == MFBLOCK_SIZE, "mf_trailer_t must be one block");
 
 static const uint64_t g_mifare_default_keys[] = {
     0xffffffffffff, // Default key (first key used by program if no user defined key)
@@ -111,26 +123,32 @@ static const uint64_t g_mifare_default_keys[] = {
     0x587ee5f9350f,
     0xa0478cc39091,
     0x533cb6c723f6,
+    0x717273747555,
+    0x434445464733,
     0x8fd0a4f256e9,
     0x0000014b5c31,
     0xb578f38a5c61,
     0x96a301bce267,
 };
 
-static const uint8_t g_mifare_default_key[] =  {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-static const uint8_t g_mifare_mad_key[] =  {0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5};
-static const uint8_t g_mifare_mad_key_b[] = {0x89, 0xEC, 0xA9, 0x7F, 0x8C, 0x2A};
+static const uint8_t g_mifare_default_key[MIFARE_KEY_SIZE] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+static const uint8_t g_mifare_mad_key[MIFARE_KEY_SIZE] = {0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5};
+static const uint8_t g_mifare_mad_key_b[MIFARE_KEY_SIZE] = {0x89, 0xEC, 0xA9, 0x7F, 0x8C, 0x2A};
 
 // 16 key B  D01AFEEB890A
-static const uint8_t g_mifare_signature_key_a[] = {0x5C, 0x8F, 0xF9, 0x99, 0x0D, 0xA2};
-static const uint8_t g_mifare_signature_key_b[] = {0x4b, 0x79, 0x1b, 0xea, 0x7b, 0xcc};
+static const uint8_t g_mifare_signature_key_a[MIFARE_KEY_SIZE] = {0x5C, 0x8F, 0xF9, 0x99, 0x0D, 0xA2};
+static const uint8_t g_mifare_signature_key_b[MIFARE_KEY_SIZE] = {0x4b, 0x79, 0x1b, 0xea, 0x7b, 0xcc};
 
 // Manufacture MFC / QL88 (S17 / B)
-static const uint8_t g_mifare_ql88_signature_key_b[] = {0x70, 0x7B, 0x11, 0xFC, 0x14, 0x81};
+static const uint8_t g_mifare_ql88_signature_key_b[MIFARE_KEY_SIZE] = {0x70, 0x7B, 0x11, 0xFC, 0x14, 0x81};
 
-static const uint8_t g_mifare_ndef_key[] = {0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7};
+static const uint8_t g_mifare_ndef_key[MIFARE_KEY_SIZE] = {0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7};
 static const uint8_t g_mifarep_mad_key[] =  {0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7};
 static const uint8_t g_mifarep_ndef_key[] = {0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7};
+static const uint8_t g_mifare_k08s[MIFARE_KEY_SIZE] = {0xA3, 0x96, 0xEF, 0xA4, 0xE2, 0x4F};
+static const uint8_t g_mifare_k08[MIFARE_KEY_SIZE] = {0xA3, 0x16, 0x67, 0xA8, 0xCE, 0xC1};
+static const uint8_t g_mifare_k32n[MIFARE_KEY_SIZE] = {0x51, 0x8B, 0x33, 0x54, 0xE7, 0x60};
+static const uint8_t g_mifare_k32n2[MIFARE_KEY_SIZE] = {0x73, 0xB9, 0x83, 0x6C, 0xF1, 0x68};
 
 extern const char *g_mifare_plus_default_keys[];
 extern size_t g_mifare_plus_default_keys_len;

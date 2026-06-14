@@ -517,33 +517,61 @@ static int DESFIRESendRaw(bool activate_field, uint8_t *data, size_t datalen, ui
         PrintAndLogEx(SUCCESS, "raw<< %s", sprint_hex(result, *result_len));
     }
 
-    if (*result_len < 1) {
-        return PM3_SUCCESS;
+    if (*result_len == 0) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    if (*result_len < (1 + 2)) {
+        // In native mode of communication, DESFire cards don't seem to return
+        // a status byte for PROXIMITY_CHECK.
+        if (data[0] == MFDES_PROXIMITY_CHECK &&
+                *result_len >= 2) {
+            *result_len -= 2; // strip CRC only
+            if (respcode) {
+                *respcode = MFDES_S_OPERATION_OK;
+            }
+            return PM3_SUCCESS;
+        }
+        return PM3_ECARDEXCHANGE;
     }
 
     *result_len -= (1 + 2);
 
     uint8_t rcode = result[0];
+    bool rcode_ok = (rcode == MFDES_S_OPERATION_OK ||
+                     rcode == MFDES_S_SIGNATURE ||
+                     rcode == MFDES_S_ADDITIONAL_FRAME ||
+                     rcode == MFDES_S_NO_CHANGES);
+
+    if (rcode_ok == false &&
+            data[0] == MFDES_PROXIMITY_CHECK) {
+        // Proximity-check response without native status byte:
+        // current *result_len is (rawlen - 3), but we only need to strip CRC.
+        *result_len += 1;
+        if (respcode) {
+            *respcode = MFDES_S_OPERATION_OK;
+        }
+        return PM3_SUCCESS;
+    }
+
     if (respcode) {
         *respcode = rcode;
     }
 
-    memmove(&result[0], &result[1], *result_len);
-
-    if (rcode != MFDES_S_OPERATION_OK &&
-            rcode != MFDES_S_SIGNATURE &&
-            rcode != MFDES_S_ADDITIONAL_FRAME &&
-            rcode != MFDES_S_NO_CHANGES) {
+    if (!rcode_ok) {
 
         if (GetAPDULogging()) {
             PrintAndLogEx(ERR, "Command (%02x) ERROR: 0x%02x", data[0], rcode);
         }
+
         return PM3_EAPDU_FAIL;
     }
+
+    memmove(&result[0], &result[1], *result_len);
     return PM3_SUCCESS;
 }
 
-static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
+static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize, size_t firsttxdatalen) {
     if (resplen) {
         *resplen = 0;
     }
@@ -554,6 +582,7 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
 
     uint8_t *buf  = calloc(DESFIRE_BUFFER_SIZE, 1);
     if (buf == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -570,14 +599,25 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
 
     int res;
     size_t len;
+    size_t firsttxlen = 0;
+    if (firsttxdatalen > 0 && firsttxdatalen < datalen) {
+        firsttxlen = firsttxdatalen + 1; // +1 for the initial command byte.
+        if (firsttxlen > DESFIRE_TX_FRAME_MAX_LEN) {
+            firsttxlen = DESFIRE_TX_FRAME_MAX_LEN;
+        }
+    }
+
     // tx chaining
     size_t sentdatalen = 0;
-    while (cdatalen >= sentdatalen) {
+    while (cdatalen > sentdatalen) {
 
-        if ((cdatalen - sentdatalen) > DESFIRE_TX_FRAME_MAX_LEN)
+        if (sentdatalen == 0 && firsttxlen > 0) {
+            len = firsttxlen;
+        } else if ((cdatalen - sentdatalen) > DESFIRE_TX_FRAME_MAX_LEN) {
             len = DESFIRE_TX_FRAME_MAX_LEN;
-        else
+        } else {
             len = cdatalen - sentdatalen;
+        }
 
         size_t sendindx = sentdatalen;
         size_t sendlen = len;
@@ -589,6 +629,9 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
 
         res = DESFIRESendRaw(activate_field, &cdata[sendindx], sendlen, buf, DESFIRE_BUFFER_SIZE, &buflen, &rcode);
         if (res != PM3_SUCCESS) {
+            if (respcode != NULL) {
+                *respcode = rcode;
+            }
             uint16_t ssw = DESFIRE_GET_ISO_STATUS(rcode);
             PrintAndLogEx(DEBUG, "error DESFIRESendRaw %s", DesfireGetErrorString(res, &ssw));
             free(buf);
@@ -636,8 +679,12 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
 
         res = DESFIRESendRaw(false, cdata, 1, buf, DESFIRE_BUFFER_SIZE, &buflen, &rcode);
         if (res != PM3_SUCCESS) {
+            if (respcode != NULL) {
+                *respcode = rcode;
+            }
             uint16_t ssw = DESFIRE_GET_ISO_STATUS(rcode);
             PrintAndLogEx(DEBUG, "error DESFIRESendRaw %s", DesfireGetErrorString(res, &ssw));
+            free(buf);
             return res;
         }
 
@@ -656,8 +703,9 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
         }
         pos += buflen;
 
-        if (rcode != MFDES_ADDITIONAL_FRAME)
+        if (rcode != MFDES_ADDITIONAL_FRAME) {
             break;
+        }
     }
 
     if (resplen) {
@@ -668,18 +716,19 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
     return PM3_SUCCESS;
 }
 
-static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
+static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize, size_t firsttxdatalen) {
     if (resplen) {
         *resplen = 0;
     }
 
     if (respcode) {
-        *respcode = 0xff;
+        *respcode = 0xFF;
     }
 
     uint16_t sw = 0;
-    uint8_t *buf  = calloc(DESFIRE_BUFFER_SIZE, 1);
+    uint8_t *buf = calloc(DESFIRE_BUFFER_SIZE, 1);
     if (buf == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -695,13 +744,26 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
     };
 
     int res;
+    size_t firsttxlen = 0;
+    if (firsttxdatalen > 0 && firsttxdatalen < datalen) {
+        firsttxlen = firsttxdatalen;
+        if (firsttxlen > DESFIRE_TX_FRAME_MAX_LEN) {
+            firsttxlen = DESFIRE_TX_FRAME_MAX_LEN;
+        }
+    }
+
     // tx chaining
     size_t sentdatalen = 0;
-    while (datalen >= sentdatalen) {
-        if (datalen - sentdatalen > DESFIRE_TX_FRAME_MAX_LEN)
+    bool first_tx_frame = true;
+    while (first_tx_frame || datalen > sentdatalen) {
+        first_tx_frame = false;
+        if (sentdatalen == 0 && firsttxlen > 0) {
+            apdu.Lc = firsttxlen;
+        } else if (datalen - sentdatalen > DESFIRE_TX_FRAME_MAX_LEN) {
             apdu.Lc = DESFIRE_TX_FRAME_MAX_LEN;
-        else
+        } else {
             apdu.Lc = datalen - sentdatalen;
+        }
 
         apdu.data = &data[sentdatalen];
 
@@ -711,6 +773,9 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
 
         res = DESFIRESendApdu(activate_field, apdu, buf, DESFIRE_BUFFER_SIZE, &buflen, &sw);
         if (res != PM3_SUCCESS) {
+            if (respcode != NULL && ((sw & 0xFF00) == 0x9100)) {
+                *respcode = sw & 0xFF;
+            }
             PrintAndLogEx(DEBUG, "error DESFIRESendApdu %s", DesfireGetErrorString(res, &sw));
             free(buf);
             return res;
@@ -725,8 +790,8 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
         }
     }
 
-    if (respcode != NULL && ((sw & 0xff00) == 0x9100)) {
-        *respcode = sw & 0xff;
+    if (respcode != NULL && ((sw & 0xFF00) == 0x9100)) {
+        *respcode = sw & 0xFF;
     }
 
     if (resp) {
@@ -759,15 +824,20 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
         apdu.P2 = 0;
         apdu.data = NULL;
 
+        buflen = 0;
+
         res = DESFIRESendApdu(false, apdu, buf, DESFIRE_BUFFER_SIZE, &buflen, &sw);
         if (res != PM3_SUCCESS) {
+            if (respcode != NULL && ((sw & 0xFF00) == 0x9100)) {
+                *respcode = sw & 0xFF;
+            }
             PrintAndLogEx(DEBUG, "error DESFIRESendApdu %s", DesfireGetErrorString(res, &sw));
             free(buf);
             return res;
         }
 
-        if (respcode != NULL && ((sw & 0xff00) == 0x9100)) {
-            *respcode = sw & 0xff;
+        if (respcode != NULL && ((sw & 0xFF00) == 0x9100)) {
+            *respcode = sw & 0xFF;
         }
 
         if (resp != NULL) {
@@ -776,15 +846,17 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
                 memcpy(&resp[i * splitbysize + 1], buf, buflen);
                 i += 1;
             } else {
-                memcpy(&resp[pos], buf, buflen);
+                memcpy(resp + (pos), buf, buflen);
             }
         }
+
         pos += buflen;
 
         if (sw != DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME)) {
             break;
         }
     }
+
 
     if (resplen) {
         *resplen = (splitbysize) ? i : pos;
@@ -797,6 +869,7 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
 static int DesfireExchangeISO(bool activate_field, DesfireContext_t *ctx, sAPDU_t apdu, uint16_t le, uint8_t *resp, size_t *resplen, uint16_t *sw) {
     uint8_t *data  = calloc(DESFIRE_BUFFER_SIZE, 1);
     if (data == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -846,16 +919,17 @@ static void DesfireSplitBytesToBlock(uint8_t *blockdata, size_t *blockdatacount,
     }
 }
 
-int DesfireExchangeEx(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode,
-                      uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
+static int DesfireExchangeExSplit(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode,
+                                  uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize, size_t firsttxdatalen) {
     int res = PM3_SUCCESS;
 
     if (PrintChannelModeWarning(cmd, ctx->secureChannel, ctx->cmdSet, ctx->commMode) == false) {
         DesfirePrintContext(ctx);
     }
 
-    uint8_t *databuf  = calloc(DESFIRE_BUFFER_SIZE, 1);
+    uint8_t *databuf = calloc(DESFIRE_BUFFER_SIZE, 1);
     if (databuf == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -866,13 +940,14 @@ int DesfireExchangeEx(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, u
         case DCCNativeISO:
             DesfireSecureChannelEncode(ctx, cmd, data, datalen, databuf, &databuflen);
 
-            if (ctx->cmdSet == DCCNative)
-                res = DesfireExchangeNative(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize);
-            else
-                res = DesfireExchangeISONative(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize);
+            if (ctx->cmdSet == DCCNative) {
+                res = DesfireExchangeNative(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize, firsttxdatalen);
+            } else {
+                res = DesfireExchangeISONative(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize, firsttxdatalen);
+            }
 
             if (splitbysize) {
-                uint8_t sdata[250 * 5] = {0};
+                uint8_t sdata[DESFIRE_BUFFER_SIZE] = {0};
                 size_t sdatalen = 0;
                 DesfireJoinBlockToBytes(databuf, databuflen, splitbysize, sdata, &sdatalen);
 
@@ -896,12 +971,18 @@ int DesfireExchangeEx(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, u
     return res;
 }
 
+int DesfireExchangeEx(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode,
+                      uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
+    return DesfireExchangeExSplit(activate_field, ctx, cmd, data, datalen, respcode, resp, resplen, enable_chaining, splitbysize, 0);
+}
+
 int DesfireExchange(DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen) {
     return DesfireExchangeEx(false, ctx, cmd, data, datalen, respcode, resp, resplen, true, 0);
 }
 
 int DesfireSelectAID(DesfireContext_t *ctx, uint8_t *aid1, uint8_t *aid2) {
     if (aid1 == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EINVARG;
     }
 
@@ -913,28 +994,36 @@ int DesfireSelectAID(DesfireContext_t *ctx, uint8_t *aid1, uint8_t *aid2) {
 
     uint8_t resp[257] = {0};
     size_t resplen = 0;
-    uint8_t respcode = 0;
+    uint8_t respcode = 0xFF;
 
     ctx->secureChannel = DACNone;
     int res = DesfireExchangeEx(true, ctx, MFDES_SELECT_APPLICATION, data, (aid2 == NULL) ? 3 : 6, &respcode, resp, &resplen, true, 0);
-    if (res == PM3_SUCCESS) {
-        if (resplen != 0) {
+    if (res != PM3_SUCCESS) {
+        if (res == PM3_EAPDU_FAIL && respcode == 0xFF && resplen == 0) {
             return PM3_ECARDEXCHANGE;
         }
-
-        // select operation fail
-        if (respcode != MFDES_S_OPERATION_OK) {
-            return PM3_EAPDU_FAIL;
-        }
-
-        DesfireClearSession(ctx);
-        ctx->appSelected = (aid1[0] != 0x00 || aid1[1] != 0x00 || aid1[2] != 0x00);
-        ctx->selectedAID = DesfireAIDByteToUint(aid1);
-
-        return PM3_SUCCESS;
+        return res;
     }
 
-    return res;
+    if (resplen != 0) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    // no status byte received from card
+    if (respcode == 0xFF) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    // select operation fail
+    if (respcode != MFDES_S_OPERATION_OK) {
+        return PM3_EAPDU_FAIL;
+    }
+
+    DesfireClearSession(ctx);
+    ctx->appSelected = (aid1[0] != 0x00 || aid1[1] != 0x00 || aid1[2] != 0x00);
+    ctx->selectedAID = DesfireAIDByteToUint(aid1);
+
+    return PM3_SUCCESS;
 }
 
 int DesfireSelectAIDHex(DesfireContext_t *ctx, uint32_t aid1, bool select_two, uint32_t aid2) {
@@ -953,25 +1042,36 @@ int DesfireSelectAIDHexNoFieldOn(DesfireContext_t *ctx, uint32_t aid) {
 
     uint8_t resp[257] = {0};
     size_t resplen = 0;
-    uint8_t respcode = 0;
+    uint8_t respcode = 0xFF;
 
     ctx->secureChannel = DACNone;
     int res = DesfireExchangeEx(false, ctx, MFDES_SELECT_APPLICATION, data, 3, &respcode, resp, &resplen, true, 0);
-    if (res == PM3_SUCCESS) {
-        if (resplen != 0)
+    if (res != PM3_SUCCESS) {
+        if (res == PM3_EAPDU_FAIL && respcode == 0xFF && resplen == 0) {
             return PM3_ECARDEXCHANGE;
-
-        // select operation fail
-        if (respcode != MFDES_S_OPERATION_OK)
-            return PM3_EAPDU_FAIL;
-
-        DesfireClearSession(ctx);
-        ctx->appSelected = (aid != 0x000000);
-        ctx->selectedAID = aid;
-
-        return PM3_SUCCESS;
+        }
+        return res;
     }
-    return res;
+
+    if (resplen != 0) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    // no status byte received from card
+    if (respcode == 0xFF) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    // select operation fail
+    if (respcode != MFDES_S_OPERATION_OK) {
+        return PM3_EAPDU_FAIL;
+    }
+
+    DesfireClearSession(ctx);
+    ctx->appSelected = (aid != 0x000000);
+    ctx->selectedAID = aid;
+
+    return PM3_SUCCESS;
 }
 
 void DesfirePrintMADAID(uint32_t appid, bool verbose) {
@@ -1002,7 +1102,7 @@ void DesfirePrintAIDFunctions(uint32_t appid) {
     if ((aid[2] >> 4) == 0xF) {
         uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
         PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
-        PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, nxp_cluster_to_text(short_aid >> 8));
+        PrintAndLogEx(SUCCESS, "   MAD AID Cluster  0x%02X..... " _YELLOW_("%s"), short_aid >> 8, nxp_cluster_to_text(short_aid >> 8));
         MADDFDecodeAndPrint(short_aid, false);
     } else {
         AIDDFDecodeAndPrint(aid);
@@ -1010,53 +1110,64 @@ void DesfirePrintAIDFunctions(uint32_t appid) {
 }
 
 int DesfireSelectAndAuthenticateEx(DesfireContext_t *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool noauth, bool verbose) {
-    if (verbose)
+    if (verbose) {
         DesfirePrintContext(dctx);
+    }
 
     // needs card uid for diversification
-    if (dctx->kdfAlgo == MFDES_KDF_ALGO_GALLAGHER)
+    if (dctx->kdfAlgo == MFDES_KDF_ALGO_GALLAGHER) {
         DesfireGetCardUID(dctx);
+    }
 
     bool isosw = false;
     if (dctx->cmdSet == DCCISO) {
         dctx->cmdSet = DCCNativeISO;
         isosw = true;
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, "Switch to " _CYAN_("native") " for select");
+        }
     }
 
     int res;
     if (aid == 0x000000) {
         res = DesfireAnticollision(verbose);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire anticollision " _RED_("error") ".");
+            PrintAndLogEx(ERR, "Desfire anticollision " _RED_("fail"));
             return 200;
         }
-        if (verbose)
+
+        if (verbose) {
             PrintAndLogEx(INFO, "Anticollision " _GREEN_("ok"));
+        }
+
     } else {
         res = DesfireSelectAIDHex(dctx, aid, false, 0);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            PrintAndLogEx(ERR, "Desfire select " _RED_("fail"));
             return 200;
         }
-        if (verbose)
+
+        if (verbose) {
             PrintAndLogEx(INFO, "App %06x " _GREEN_("selected"), aid);
+        }
     }
 
-    if (isosw)
+    if (isosw) {
         dctx->cmdSet = DCCISO;
+    }
 
     if (noauth == false) {
+
         res = DesfireAuthenticate(dctx, secureChannel, verbose);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: [%d] %s", res, DesfireAuthErrorToStr(res));
+            PrintAndLogEx(ERR, "Desfire authenticate " _RED_("fail") ". Result: [%d] %s", res, DesfireAuthErrorToStr(res));
             return res;
         }
 
         if (DesfireIsAuthenticated(dctx)) {
-            if (verbose)
+            if (verbose) {
                 PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
+            }
         } else {
             return 201;
         }
@@ -1070,46 +1181,134 @@ int DesfireSelectAndAuthenticate(DesfireContext_t *dctx, DesfireSecureChannel se
 }
 
 int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel secureChannel, DesfireISOSelectWay way, uint32_t id, bool selectfile, uint16_t isofileid, bool noauth, bool verbose) {
-    if (verbose)
+    if (verbose) {
         DesfirePrintContext(dctx);
+    }
 
     int res = 0;
-    if (way == ISW6bAID && dctx->cmdSet == DCCISO) {
+
+    // Handle DF Name selection if it's present in the context
+    if (dctx->selectedDFNameLen > 0) {
+        // Select DF by name using ISO7816 SELECT
+        uint8_t resp[250] = {0};
+        size_t resplen = 0;
+
+        res = DesfireISOSelect(dctx, ISSDFName, dctx->selectedDFName, dctx->selectedDFNameLen, resp, &resplen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire DF name select " _RED_("error"));
+            if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                return res;
+            }
+            return 200;
+        }
+
+        if (verbose) {
+            PrintAndLogEx(INFO, "DF %s is " _GREEN_("selected"), sprint_hex(dctx->selectedDFName, dctx->selectedDFNameLen));
+        }
+
+        // If both dfname and aid are specified, now also select by AID
+        if (way == ISW6bAID && id != 0x000000) {
+            if (dctx->cmdSet == DCCISO) {
+                dctx->cmdSet = DCCNativeISO;
+                if (verbose) {
+                    PrintAndLogEx(INFO, "Select via " _CYAN_("native iso wrapping") " interface");
+                }
+
+                res = DesfireSelectAIDHex(dctx, id, false, 0);
+                if (res != PM3_SUCCESS) {
+                    PrintAndLogEx(ERR, "Desfire select " _RED_("error"));
+                    if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                        return res;
+                    }
+                    return 200;
+                }
+
+                if (verbose) {
+                    PrintAndLogEx(INFO, "App %06x via native iso channel is " _GREEN_("selected"), id);
+                }
+
+                dctx->cmdSet = DCCISO;
+
+            } else {
+                res = DesfireSelectEx(dctx, false, way, id, NULL);
+                if (res != PM3_SUCCESS) {
+                    PrintAndLogEx(ERR, "Desfire %s select " _RED_("error"), DesfireSelectWayToStr(way));
+                    if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                        return res;
+                    }
+                    return 202;
+                }
+                if (verbose) {
+                    PrintAndLogEx(INFO, "%s is " _GREEN_("selected"), DesfireWayIDStr(way, id));
+                }
+            }
+
+        } else if (way == ISWIsoID && id != 0x0000) {
+            // Also select by ISO ID if specified
+            res = DesfireSelectEx(dctx, false, way, id, NULL);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Desfire %s select " _RED_("error"), DesfireSelectWayToStr(way));
+                if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                    return res;
+                }
+                return 202;
+            }
+
+            if (verbose) {
+                PrintAndLogEx(INFO, "%s is " _GREEN_("selected"), DesfireWayIDStr(way, id));
+            }
+        }
+    } else if (way == ISW6bAID && dctx->cmdSet == DCCISO) {
         dctx->cmdSet = DCCNativeISO;
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, "Select via " _CYAN_("native iso wrapping") " interface");
+        }
 
         res = DesfireSelectAIDHex(dctx, id, false, 0);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            PrintAndLogEx(ERR, "Desfire select " _RED_("error"));
+            if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                return res;
+            }
             return 200;
         }
-        if (verbose)
+
+        if (verbose) {
             PrintAndLogEx(INFO, "App %06x via native iso channel is " _GREEN_("selected"), id);
+        }
 
         dctx->cmdSet = DCCISO;
+
     } else {
         res = DesfireSelectEx(dctx, true, way, id, NULL);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire %s select " _RED_("error") ".", DesfireSelectWayToStr(way));
+            PrintAndLogEx(ERR, "Desfire %s select " _RED_("error"), DesfireSelectWayToStr(way));
+            if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                return res;
+            }
             return 202;
         }
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, "%s is " _GREEN_("selected"), DesfireWayIDStr(way, id));
+        }
     }
 
     if (selectfile) {
         res = DesfireSelectEx(dctx, false, ISWIsoID, isofileid, NULL);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire iso file select " _RED_("error") ".");
+            PrintAndLogEx(ERR, "Desfire iso file select " _RED_("error"));
+            if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                return res;
+            }
             return 203;
         }
 
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, "Application %s file iso id %04x is " _GREEN_("selected"), DesfireWayIDStr(way, id), isofileid);
+        }
     }
 
-    if (!noauth) {
+    if (noauth == false) {
         res = DesfireAuthenticate(dctx, secureChannel, verbose);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: [%d] %s", res, DesfireAuthErrorToStr(res));
@@ -1117,8 +1316,9 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
         }
 
         if (DesfireIsAuthenticated(dctx)) {
-            if (verbose)
+            if (verbose) {
                 PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
+            }
         } else {
             return 201;
         }
@@ -1216,14 +1416,17 @@ static int DesfireAuthenticateEV1(DesfireContext_t *dctx, DesfireSecureChannel s
 
     // - Encrypt our response
     if (secureChannel == DACd40) {
+        // Original DESFire (MF3ICD40) silicon can only do encryption operations, so all PCD
+        // side operations must be decrypt, even when encrypting when doing D40 compatible
+        // secure channel operations
         memset(IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
-        DesfireCryptoEncDecEx(dctx, DCOMainKey, RndA, rndlen, encRndA, true, true, IV);
+        DesfireCryptoEncDecEx(dctx, DCOMainKey, RndA, rndlen, encRndA, true, false, IV);
 
         memcpy(both, encRndA, rndlen);
         bin_xor(rotRndB, encRndA, rndlen);
 
         memset(IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
-        DesfireCryptoEncDecEx(dctx, DCOMainKey, rotRndB, rndlen, encRndB, true, true, IV);
+        DesfireCryptoEncDecEx(dctx, DCOMainKey, rotRndB, rndlen, encRndB, true, false, IV);
 
         memcpy(both + rndlen, encRndB, rndlen);
     } else if (secureChannel == DACEV1) {
@@ -1855,17 +2058,17 @@ int DesfireFillAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS ap
 
 void DesfirePrintPICCInfo(DesfireContext_t *dctx, PICCInfo_t *PICCInfo) {
     PrintAndLogEx(SUCCESS, "------------------------------------ " _CYAN_("PICC level") " -------------------------------------");
-    if (PICCInfo->freemem == 0xffffffff)
-        PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _YELLOW_("n/a"), PICCInfo->appCount);
-    else
-        PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d") " bytes", PICCInfo->appCount, PICCInfo->freemem);
+    PrintAndLogEx(SUCCESS, "# applications....... " _YELLOW_("%zu"), PICCInfo->appCount);
+    PrintAndLogEx(SUCCESS, "");
+
     if (PICCInfo->authCmdCheck.checked) {
-        PrintAndLogEx(SUCCESS, "PICC level auth commands: ");
+        PrintAndLogEx(SUCCESS, "PICC level auth commands");
         DesfireCheckAuthCommandsPrint(&PICCInfo->authCmdCheck);
     }
+
     if (PICCInfo->numberOfKeys > 0) {
         PrintKeySettings(PICCInfo->keySettings, PICCInfo->numKeysRaw, false, true);
-        PrintAndLogEx(SUCCESS, "PICC key 0 version: %d (0x%02x)", PICCInfo->keyVersion0, PICCInfo->keyVersion0);
+        PrintAndLogEx(SUCCESS, "PICC key "_YELLOW_("0") " version: %d (0x%02x)", PICCInfo->keyVersion0, PICCInfo->keyVersion0);
     }
 }
 
@@ -1877,28 +2080,27 @@ void DesfirePrintAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS 
     PrintAndLogEx(SUCCESS, "--------------------------------- " _CYAN_("Applications list") " ---------------------------------");
 
     for (int i = 0; i < PICCInfo->appCount; i++) {
-        PrintAndLogEx(SUCCESS, _CYAN_("Application number: 0x%02X"), appList[i].appNum);
-        PrintAndLogEx(SUCCESS, "  ISO id.... " _GREEN_("0x%04X"), appList[i].appISONum);
-        PrintAndLogEx(SUCCESS, "  DF name... " _GREEN_("%s") " ( %s)", appList[i].appDFName, sprint_hex((uint8_t *)appList[i].appDFName, sizeof(appList[i].appDFName)));
+        PrintAndLogEx(SUCCESS, "Application ID....... " _CYAN_("0x%02X"), appList[i].appNum);
+        PrintAndLogEx(SUCCESS, "   ISO id............ " _GREEN_("0x%04X"), appList[i].appISONum);
+        PrintAndLogEx(SUCCESS, "   DF name........... " _GREEN_("%s") " ( %s )", appList[i].appDFName, sprint_hex_inrow((uint8_t *)appList[i].appDFName, sizeof(appList[i].appDFName)));
 
         DesfirePrintAIDFunctions(appList[i].appNum);
 
         if (PICCInfo->authCmdCheck.checked) {
-            PrintAndLogEx(SUCCESS, "Auth commands: ");
+            PrintAndLogEx(SUCCESS, "Auth commands");
             DesfireCheckAuthCommandsPrint(&appList[i].authCmdCheck);
             PrintAndLogEx(SUCCESS, "");
         }
 
         if (appList[i].numberOfKeys > 0) {
+
             PrintKeySettings(appList[i].keySettings, appList[i].numKeysRaw, true, true);
 
-            if (appList[i].numberOfKeys > 0) {
-                PrintAndLogEx(SUCCESS, "Key versions [0..%d]: " NOLF, appList[i].numberOfKeys - 1);
-                for (uint8_t keyn = 0; keyn < appList[i].numberOfKeys; keyn++) {
-                    PrintAndLogEx(NORMAL, "%s %02x" NOLF, (keyn == 0) ? "" : ",",  appList[i].keyVersions[keyn]);
-                }
-                PrintAndLogEx(NORMAL, "\n");
+            PrintAndLogEx(SUCCESS, "Key versions [0..%d] " NOLF, appList[i].numberOfKeys - 1);
+            for (uint8_t keyn = 0; keyn < appList[i].numberOfKeys; keyn++) {
+                PrintAndLogEx(NORMAL, "%s %02x" NOLF, (keyn == 0) ? "" : ",",  appList[i].keyVersions[keyn]);
             }
+            PrintAndLogEx(NORMAL, "\n");
 
             if (appList[i].filesReaded) {
                 PrintAndLogEx(SUCCESS, "Application have " _GREEN_("%zu") " files", appList[i].filesCount);
@@ -1909,10 +2111,11 @@ void DesfirePrintAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS 
                         PrintAndLogEx(SUCCESS, "--------------------------------- " _CYAN_("File %02x") " ----------------------------------", appList[i].fileList[fnum].fileNum);
                         PrintAndLogEx(SUCCESS, "File ID         : " _GREEN_("%02x"), appList[i].fileList[fnum].fileNum);
                         if (appList[i].isoPresent) {
-                            if (appList[i].fileList[fnum].fileISONum != 0)
+                            if (appList[i].fileList[fnum].fileISONum != 0) {
                                 PrintAndLogEx(SUCCESS, "File ISO ID     : %04x", appList[i].fileList[fnum].fileISONum);
-                            else
+                            } else {
                                 PrintAndLogEx(SUCCESS, "File ISO ID     : " _YELLOW_("n/a"));
+                            }
                         }
                         DesfirePrintFileSettingsExtended(&appList[i].fileList[fnum].fileSettings);
                     }
@@ -1924,13 +2127,17 @@ void DesfirePrintAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS 
 }
 
 static int DesfireCommandEx(DesfireContext_t *dctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen, int checklength, size_t splitbysize) {
-    if (resplen)
+    if (resplen) {
         *resplen = 0;
+    }
 
-    uint8_t respcode = 0xff;
+    uint8_t respcode = 0xFF;
+
     uint8_t *xresp  = calloc(DESFIRE_BUFFER_SIZE, 1);
-    if (xresp == NULL)
+    if (xresp == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
+    }
 
     size_t xresplen = 0;
     int res = DesfireExchangeEx(false, dctx, cmd, data, datalen, &respcode, xresp, &xresplen, true, splitbysize);
@@ -1938,19 +2145,24 @@ static int DesfireCommandEx(DesfireContext_t *dctx, uint8_t cmd, uint8_t *data, 
         free(xresp);
         return res;
     }
+
     if (respcode != MFDES_S_OPERATION_OK) {
         free(xresp);
         return PM3_EAPDU_FAIL;
     }
+
     if (checklength >= 0 && xresplen != checklength) {
         free(xresp);
         return PM3_EAPDU_FAIL;
     }
 
-    if (resplen)
+    if (resplen) {
         *resplen = xresplen;
-    if (resp)
+    }
+
+    if (resp) {
         memcpy(resp, xresp, (splitbysize == 0) ? xresplen : xresplen * splitbysize);
+    }
 
     free(xresp);
     return PM3_SUCCESS;
@@ -1972,8 +2184,16 @@ static int DesfireCommandRxData(DesfireContext_t *dctx, uint8_t cmd, uint8_t *re
     return DesfireCommand(dctx, cmd, NULL, 0, resp, resplen, checklength);
 }
 
+int DesfireCreateMFCMapping(DesfireContext_t *dctx, uint8_t *data, size_t datalen) {
+    return DesfireCommandTxData(dctx, MFDES_CREATE_MFC_MAPPING, data, datalen);
+}
+
 int DesfireFormatPICC(DesfireContext_t *dctx) {
     return DesfireCommandNoData(dctx, MFDES_FORMAT_PICC);
+}
+
+int DesfireGetVersion(DesfireContext_t *dctx, uint8_t *resp, size_t *resplen) {
+    return DesfireCommandRxData(dctx, MFDES_GET_VERSION, resp, resplen, 28);
 }
 
 int DesfireGetFreeMem(DesfireContext_t *dctx, uint32_t *freemem) {
@@ -1996,13 +2216,16 @@ int DesfireReadSignature(DesfireContext_t *dctx, uint8_t sid, uint8_t *resp, siz
     uint8_t respcode = 0xff;
 
     int res = DesfireExchange(dctx, MFDES_READSIG, &sid, 1, &respcode, xresp, &xresplen);
-    if (res != PM3_SUCCESS)
+    if (res != PM3_SUCCESS) {
         return res;
+    }
 
-    if (respcode != 0x90)
+    if (respcode != 0x90) {
         return PM3_EAPDU_FAIL;
+    }
 
     memcpy(resp, xresp, xresplen);
+
     *resplen = xresplen;
 
     return PM3_SUCCESS;
@@ -2022,6 +2245,39 @@ int DesfireGetDFList(DesfireContext_t *dctx, uint8_t *resp, size_t *resplen) {
 
 int DesfireCreateApplication(DesfireContext_t *dctx, uint8_t *appdata, size_t appdatalen) {
     return DesfireCommandTxData(dctx, MFDES_CREATE_APPLICATION, appdata, appdatalen);
+}
+
+int DesfireCreateDelegatedApplication(DesfireContext_t *dctx, uint8_t *appdata, size_t appdatalen, uint8_t *contdata, size_t contdatalen) {
+    if (dctx == NULL || appdata == NULL || contdata == NULL) {
+        return PM3_EINVARG;
+    }
+
+    if (appdatalen == 0 || contdatalen == 0) {
+        return PM3_EINVARG;
+    }
+
+    if (appdatalen > DESFIRE_BUFFER_SIZE - contdatalen) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t fulldata[DESFIRE_BUFFER_SIZE] = {0};
+    memcpy(fulldata, appdata, appdatalen);
+    memcpy(&fulldata[appdatalen], contdata, contdatalen);
+
+    uint8_t resp[DESFIRE_BUFFER_SIZE] = {0};
+    size_t resplen = 0;
+    uint8_t respcode = 0xFF;
+    // CreateDelegatedApplication must go out as C9 + AF frames, but secure messaging
+    // state (CMAC IV / cmd counter) must be advanced as a single logical command.
+    int res = DesfireExchangeExSplit(false, dctx, MFDES_CREATE_DELEGATE_APP, fulldata, appdatalen + contdatalen, &respcode, resp, &resplen, true, 0, appdatalen);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    if (respcode != MFDES_S_OPERATION_OK) {
+        return PM3_EAPDU_FAIL;
+    }
+
+    return PM3_SUCCESS;
 }
 
 int DesfireDeleteApplication(DesfireContext_t *dctx, uint32_t aid) {
@@ -2172,7 +2428,6 @@ int DesfireReadFile(DesfireContext_t *dctx, uint8_t fnum, uint32_t offset, uint3
     data[0] = fnum;
     Uint3byteToMemLe(&data[1], offset);
     Uint3byteToMemLe(&data[4], len);
-
     return DesfireCommand(dctx, (dctx->isoChaining) ? MFDES_READ_DATA2 : MFDES_READ_DATA, data, 7, resp, resplen, -1);
 }
 
@@ -2197,6 +2452,20 @@ int DesfireValueFileOperations(DesfireContext_t *dctx, uint8_t fid, uint8_t oper
     size_t resplen = 0;
 
     int res = DesfireCommand(dctx, operation, data, datalen, resp, &resplen, -1);
+
+    // Auto-detection fallback: if MAC mode fails with length error, retry with plain mode
+    if ((res == 0x7E || res == -20) && dctx->commMode == DCMMACed) {
+        PrintAndLogEx(INFO, "MAC mode failed with length error, retrying with plain mode");
+        DesfireCommunicationMode original_mode = dctx->commMode;
+        dctx->commMode = DCMPlain;
+
+        memset(resp, 0, sizeof(resp));
+        resplen = 0;
+        res = DesfireCommand(dctx, operation, data, datalen, resp, &resplen, -1);
+
+        // Restore original mode for future commands
+        dctx->commMode = original_mode;
+    }
 
     if (resplen == 4 && value) {
         *value = MemLeToUint4byte(resp);
@@ -2235,63 +2504,68 @@ int DesfireUpdateRecord(DesfireContext_t *dctx, uint8_t fnum, uint32_t recnum, u
 }
 
 static void PrintKeySettingsPICC(uint8_t keysettings, uint8_t numkeys, bool print2ndbyte) {
-    PrintAndLogEx(SUCCESS, "PICC level rights:");
-    PrintAndLogEx(SUCCESS, "[%c...] CMK Configuration changeable   : %s", (keysettings & (1 << 3)) ? '1' : '0', (keysettings & (1 << 3)) ? _GREEN_("YES") : _RED_("NO (frozen)"));
-    PrintAndLogEx(SUCCESS, "[.%c..] CMK required for create/delete : %s", (keysettings & (1 << 2)) ? '1' : '0', (keysettings & (1 << 2)) ? _GREEN_("NO") : "YES");
-    PrintAndLogEx(SUCCESS, "[..%c.] Directory list access with CMK : %s", (keysettings & (1 << 1)) ? '1' : '0', (keysettings & (1 << 1)) ? _GREEN_("NO") : "YES");
-    PrintAndLogEx(SUCCESS, "[...%c] CMK is changeable              : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : _RED_("NO (frozen)"));
+    PrintAndLogEx(SUCCESS, "PICC level rights");
+    PrintAndLogEx(SUCCESS, "[%c...] CMK Configuration changeable               : %s", (keysettings & (1 << 3)) ? '1' : '0', (keysettings & (1 << 3)) ? _GREEN_("YES") : _RED_("NO (frozen)"));
+    PrintAndLogEx(SUCCESS, "[.%c..] CMK required for create/delete             : %s", (keysettings & (1 << 2)) ? '1' : '0', (keysettings & (1 << 2)) ? _GREEN_("NO") : _RED_("YES"));
+    PrintAndLogEx(SUCCESS, "[..%c.] CMK required for AID list / GetKeySettings : %s", (keysettings & (1 << 1)) ? '1' : '0', (keysettings & (1 << 1)) ? _GREEN_("NO") : _RED_("YES"));
+    PrintAndLogEx(SUCCESS, "[...%c] CMK is changeable                          : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : _RED_("NO (frozen)"));
     PrintAndLogEx(SUCCESS, "");
 
     if (print2ndbyte) {
         DesfirePrintCardKeyType(numkeys >> 6);
-        PrintAndLogEx(SUCCESS, "key count: %d", numkeys & 0x0f);
+        PrintAndLogEx(SUCCESS, "Key cnt.... " _YELLOW_("%d"), numkeys & 0x0F);
     }
 }
 
 static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys, bool print2ndbyte) {
     // Access rights.
-    PrintAndLogEx(SUCCESS, "Application level rights:");
+    PrintAndLogEx(SUCCESS, "Application level rights");
     uint8_t rights = ((keysettings >> 4) & 0x0F);
     switch (rights) {
-        case 0x0:
-            PrintAndLogEx(SUCCESS, "-- AMK authentication is necessary to change any key (default)");
+        case 0x0: {
+            PrintAndLogEx(SUCCESS, " - AMK authentication is necessary to change any key (default)");
             break;
-        case 0xE:
-            PrintAndLogEx(SUCCESS, "-- Authentication with the key to be changed (same KeyNo) is necessary to change a key");
+        }
+        case 0xE: {
+            PrintAndLogEx(SUCCESS, " - Authentication with the key to be changed (same KeyNo) is necessary to change a key");
             break;
-        case 0xF:
-            PrintAndLogEx(SUCCESS, "-- All keys (except AMK,see Bit0) within this application are frozen");
+        }
+        case 0xF: {
+            PrintAndLogEx(SUCCESS, " - All keys (except AMK,see Bit0) within this application are frozen");
             break;
-        default:
+        }
+        default: {
             PrintAndLogEx(SUCCESS,
-                          "-- Authentication with the specified key " _YELLOW_("(0x%02x)") " is necessary to change any key.\n"
+                          " - Authentication with the specified key " _YELLOW_("(0x%02x)") " is necessary to change any key.\n"
                           "A change key and a PICC master key (CMK) can only be changed after authentication with the master key.\n"
                           "For keys other then the master or change key, an authentication with the same key is needed.",
                           rights & 0x0f
                          );
             break;
+        }
     }
 
-    PrintAndLogEx(SUCCESS, "[%c...] AMK Configuration changeable   : %s", (keysettings & (1 << 3)) ? '1' : '0', (keysettings & (1 << 3)) ? _GREEN_("YES") : _RED_("NO (frozen)"));
-    PrintAndLogEx(SUCCESS, "[.%c..] AMK required for create/delete : %s", (keysettings & (1 << 2)) ? '1' : '0', (keysettings & (1 << 2)) ? _GREEN_("NO") : "YES");
-    PrintAndLogEx(SUCCESS, "[..%c.] Directory list access with AMK : %s", (keysettings & (1 << 1)) ? '1' : '0', (keysettings & (1 << 1)) ? _GREEN_("NO") : "YES");
-    PrintAndLogEx(SUCCESS, "[...%c] AMK is changeable              : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : _RED_("NO (frozen)"));
+    PrintAndLogEx(SUCCESS, "[%c...] AMK Configuration changeable               : %s", (keysettings & (1 << 3)) ? '1' : '0', (keysettings & (1 << 3)) ? _GREEN_("YES") : _RED_("NO (frozen)"));
+    PrintAndLogEx(SUCCESS, "[.%c..] AMK required for create/delete             : %s", (keysettings & (1 << 2)) ? '1' : '0', (keysettings & (1 << 2)) ? _GREEN_("NO") : _RED_("YES"));
+    PrintAndLogEx(SUCCESS, "[..%c.] AMK required for FID list / GetKeySettings : %s", (keysettings & (1 << 1)) ? '1' : '0', (keysettings & (1 << 1)) ? _GREEN_("NO") : _RED_("YES"));
+    PrintAndLogEx(SUCCESS, "[...%c] AMK is changeable                          : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : _RED_("NO (frozen)"));
     PrintAndLogEx(SUCCESS, "");
 
     if (print2ndbyte) {
         DesfirePrintCardKeyType(numkeys >> 6);
-        PrintAndLogEx(SUCCESS, "key count: %d", numkeys & 0x0f);
-        if (numkeys & 0x20)
+        PrintAndLogEx(SUCCESS, "Key cnt.... " _YELLOW_("%d"), numkeys & 0x0F);
+        if (numkeys & 0x20) {
             PrintAndLogEx(SUCCESS, "iso file id: enabled");
-        PrintAndLogEx(SUCCESS, "");
+        }
     }
 }
 
 void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool print2ndbyte) {
-    if (applevel)
+    if (applevel) {
         PrintKeySettingsApp(keysettings, numkeys, print2ndbyte);
-    else
+    } else {
         PrintKeySettingsPICC(keysettings, numkeys, print2ndbyte);
+    }
 }
 
 static const char *DesfireUnknownStr = "unknown";
@@ -2911,6 +3185,11 @@ int DesfireISOSelectEx(DesfireContext_t *dctx, bool fieldon, DesfireISOSelectCon
     size_t xresplen = 0;
     uint16_t sw = 0;
     int res = DesfireExchangeISO(fieldon, dctx, (sAPDU_t) {0x00, ISO7816_SELECT_FILE, cntr, ((resp == NULL) ? 0x0C : 0x00), datalen, data}, APDU_INCLUDE_LE_00, xresp, &xresplen, &sw);
+    // Distinguish no-response transport errors from valid APDU status errors
+    // (e.g. 6A82 for "file not found"), which also return PM3_EAPDU_FAIL.
+    if (res == PM3_EAPDU_FAIL && sw == 0 && xresplen == 0) {
+        return PM3_ECARDEXCHANGE;
+    }
     if (res == PM3_SUCCESS && sw != ISO7816_OK)
         return PM3_ESOFT;
 
@@ -3034,9 +3313,12 @@ int DesfireISOAppendRecord(DesfireContext_t *dctx, uint8_t fileid, uint8_t *data
 int DesfireGetCardUID(DesfireContext_t *ctx) {
     iso14a_card_select_t card = {0};
 
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
     PacketResponseNG resp;
-    WaitForResponse(CMD_ACK, &resp);
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
+    }
 
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
     uint64_t select_status = resp.oldarg[0];

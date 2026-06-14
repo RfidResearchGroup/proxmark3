@@ -40,6 +40,17 @@ uint16_t ul_ev1_packgenG(const uint8_t *uid, const uint8_t *mfg);
 
 uint32_t ul_c_otpgenA(const uint8_t *uid);
 
+// Stucture for KDF function list
+typedef struct {
+    const char *name;
+    int sector_count;
+    int (*kdf_function)(uint8_t *, uint8_t *);
+    int uid_length;
+} kdf_t;
+
+const kdf_t *get_kdf_table(void);
+size_t get_kdf_table_size(void);
+
 int mfc_algo_ving_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
 int mfc_algo_ving_all(uint8_t *uid, uint8_t *keys);
 
@@ -61,6 +72,15 @@ int mfc_algo_sky_all(uint8_t *uid, uint8_t *keys);
 int mfc_generate4b_nuid(uint8_t *uid, uint8_t *nuid);
 
 int mfc_algo_touch_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
+
+int mfc_algo_bambu_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
+int mfc_algo_bambu_all(uint8_t *uid, uint8_t *keys);
+
+int mfc_algo_snapmaker_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
+int mfc_algo_snapmaker_all(uint8_t *uid, uint8_t *keys);
+
+int mfc_algo_vanderbilt_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
+int mfc_algo_vanderbilt_all(uint8_t *uid, uint8_t *keys);
 
 uint32_t lf_t55xx_white_pwdgen(uint32_t id);
 

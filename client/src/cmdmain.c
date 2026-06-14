@@ -32,6 +32,7 @@
 #include "cmddata.h"
 #include "cmdhw.h"
 #include "cmdlf.h"
+#include "cmdmad.h"
 #include "cmdnfc.h"
 #include "cmdtrace.h"
 #include "cmdscript.h"
@@ -48,6 +49,7 @@
 #include "commonutil.h"   // ARRAYLEN
 #include "preferences.h"
 #include "cliparser.h"
+#include "cmdmqtt.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -59,6 +61,12 @@ static void AppendDate(char *s, size_t slen, const char *fmt) {
 #else
     ct = gmtime_r(&now, &tm_buf);
 #endif
+    if (ct == NULL) {
+        PrintAndLogEx(WARNING, "gmtime failed");
+        return;
+    }
+
+    // If no format is specified, use ISO8601
     if (fmt == NULL)
         strftime(s, slen, "%Y-%m-%dT%H:%M:%SZ", ct);  // ISO8601
     else
@@ -114,7 +122,7 @@ static int lf_search_plus(const char *Cmd) {
         d = config.divisor = default_divisor[i];
         PrintAndLogEx(INFO, "-->  trying  ( " _GREEN_("%d.%02d kHz")" )", 12000 / (d + 1), ((1200000 + (d + 1) / 2) / (d + 1)) - ((12000 / (d + 1)) * 100));
 
-        retval = lf_config(&config);
+        retval = lf_setconfig(&config);
         if (retval != PM3_SUCCESS)
             break;
 
@@ -125,7 +133,7 @@ static int lf_search_plus(const char *Cmd) {
 
     }
 
-    lf_config(&oldconfig);
+    lf_setconfig(&oldconfig);
     return retval;
 }
 
@@ -166,8 +174,15 @@ static int CmdAuto(const char *Cmd) {
     PrintAndLogEx(INFO, "Trying " _YELLOW_("`lf read`") " and save a trace for you");
 
     CmdPlot("");
+
     lf_read(false, 40000);
+
     char *fname = calloc(100, sizeof(uint8_t));
+    if (fname == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
     AppendDate(fname, 100, "-f lf_unknown_%Y-%m-%d_%H:%M");
     CmdSave(fname);
     free(fname);
@@ -331,7 +346,9 @@ static command_t CommandTable[] = {
     {"hf",           CmdHF,        AlwaysAvailable,         "{ High frequency commands... }"},
     {"hw",           CmdHW,        AlwaysAvailable,         "{ Hardware commands... }"},
     {"lf",           CmdLF,        AlwaysAvailable,         "{ Low frequency commands... }"},
+    {"mad",          CmdMAD,       AlwaysAvailable,         "{ MAD commands... }"},
     {"mem",          CmdFlashMem,  IfPm3Flash,              "{ Flash memory manipulation... }"},
+    {"mqtt",         CmdMqtt,      AlwaysAvailable,         "{ MQTT commmands... }"},
     {"nfc",          CmdNFC,       AlwaysAvailable,         "{ NFC commands... }"},
     {"piv",          CmdPIV,       AlwaysAvailable,         "{ PIV commands... }"},
     {"reveng",       CmdRev,       AlwaysAvailable,         "{ CRC calculations from RevEng software... }"},

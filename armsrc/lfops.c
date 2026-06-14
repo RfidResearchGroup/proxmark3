@@ -29,7 +29,6 @@
 #include "dbprint.h"
 #include "util.h"
 #include "commonutil.h"
-
 #include "crc16.h"
 #include "string.h"
 #include "printf.h"
@@ -38,7 +37,8 @@
 #include "protocols.h"
 #include "pmflash.h"
 #include "flashmem.h" // persistence on flash
-#include "appmain.h" // print stack
+#include "spiffs.h"   // spiffs
+#include "appmain.h"  // print stack
 
 /*
 Notes about EM4xxx timings.
@@ -64,11 +64,11 @@ SAM7S has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS
  TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
 
 New timer implementation in ticks.c, which is used in LFOPS.c
-       1 μs = 1.5 ticks
- 1 fc = 8 μs = 12 ticks
+       1 µs = 1.5 ticks
+ 1 fc = 8 µs = 12 ticks
 
 Terms you find in different datasheets and how they match.
-1 Cycle = 8 microseconds (μs)  == 1 field clock (fc)
+1 Cycle = 8 microseconds (µs)  == 1 field clock (fc)
 
 Note about HITAG timing
 Hitag units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
@@ -80,7 +80,7 @@ Hitag units (T0) have duration of 8 microseconds (us), which is 1/125000 per sec
   ==========================================================================================================
 
     ATA5577 Downlink Protocol Timings.
-    Note: All absolute times assume TC = 1 / fC = 8 μs (fC = 125 kHz)
+    Note: All absolute times assume TC = 1 / fC = 8 µs (fC = 125 kHz)
 
     Note: These timings are from the datasheet and doesn't map the best to the features of the RVD4 LF antenna.
           RDV4 LF antenna has high voltage and the drop of power when turning off the rf field takes about 1-2 TC longer.
@@ -325,31 +325,7 @@ void setT55xxConfig(uint8_t arg0, const t55xx_configurations_t *c) {
         return;
     }
 
-    if (!FlashInit()) {
-        BigBuf_free();
-        return;
-    }
-
-    uint8_t *buf = BigBuf_malloc(T55XX_CONFIG_LEN);
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    uint16_t res = Flash_ReadDataCont(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
-    if (res == 0) {
-        FlashStop();
-        BigBuf_free();
-        return;
-    }
-
-    memcpy(buf, &T55xx_Timing, T55XX_CONFIG_LEN);
-
-    // delete old configuration
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    Flash_WriteEnable();
-    Flash_Erase4k(3, 0xD);
-
-    // write new
-    res = Flash_Write(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
-
-    if (res == T55XX_CONFIG_LEN && g_dbglevel > 1) {
+    if (SPIFFS_OK == rdv40_spiffs_write(T55XX_CONFIG_FILE, (uint8_t *)&T55xx_Timing, T55XX_CONFIG_LEN, RDV40_SPIFFS_SAFETY_SAFE)) {
         DbpString("T55XX Config save " _GREEN_("success"));
     }
 
@@ -364,15 +340,23 @@ t55xx_configurations_t *getT55xxConfig(void) {
 void loadT55xxConfig(void) {
 #ifdef WITH_FLASH
 
-    if (!FlashInit()) {
+    uint8_t *buf = BigBuf_calloc(T55XX_CONFIG_LEN);
+
+    uint32_t size = 0;
+    if (exists_in_spiffs(T55XX_CONFIG_FILE)) {
+        size = size_in_spiffs(T55XX_CONFIG_FILE);
+    }
+    if (size == 0) {
+        Dbprintf("Spiffs file: %s does not exists or empty.", T55XX_CONFIG_FILE);
+        BigBuf_free();
         return;
     }
 
-    uint8_t *buf = BigBuf_malloc(T55XX_CONFIG_LEN);
-
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    uint16_t isok = Flash_ReadDataCont(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
-    FlashStop();
+    if (SPIFFS_OK != rdv40_spiffs_read(T55XX_CONFIG_FILE, buf, T55XX_CONFIG_LEN, RDV40_SPIFFS_SAFETY_SAFE)) {
+        Dbprintf("Spiffs file: %s cannot be read.", T55XX_CONFIG_FILE);
+        BigBuf_free();
+        return;
+    }
 
     // verify read mem is actual data.
     uint8_t cntA = T55XX_CONFIG_LEN, cntB = T55XX_CONFIG_LEN;
@@ -381,6 +365,7 @@ void loadT55xxConfig(void) {
         if (buf[i] == 0x00) cntB--;
     }
     if (!cntA || !cntB) {
+        Dbprintf("Spiffs file: %s does not malformed or empty.", T55XX_CONFIG_FILE);
         BigBuf_free();
         return;
     }
@@ -388,8 +373,8 @@ void loadT55xxConfig(void) {
     if (buf[0] != 0xFF) // if not set for clear
         memcpy((uint8_t *)&T55xx_Timing, buf, T55XX_CONFIG_LEN);
 
-    if (isok == T55XX_CONFIG_LEN) {
-        if (g_dbglevel > 1) DbpString("T55XX Config load success");
+    if (size == T55XX_CONFIG_LEN) {
+        if (g_dbglevel > DBG_ERROR) DbpString("T55XX Config load success");
     }
 
     BigBuf_free();
@@ -426,7 +411,10 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint
     // start timer
     StartTicks();
 
-    WaitMS(100);
+    if (!prev_keep) {
+        WaitMS(100);
+    }
+
     // clear read buffer
     BigBuf_Clear_keep_EM();
 
@@ -956,6 +944,33 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, int16_t *remainder) {
     }
 }
 
+bool add_HID_preamble(uint32_t *hi2, uint32_t *hi, uint32_t *lo, uint8_t length) {
+    // Invalid value
+    if (length > 84 || length == 0)
+        return false;
+
+    if (length == 48) {
+        *hi |= 1U << (length - 32); // Example leading 1: start bit
+        return true;
+    }
+    if (length >= 64) {
+        *hi2 |= 0x09e00000; // Extended-length header
+        *hi2 |= 1U << (length - 64); // leading 1: start bit
+    } else if (length > 37) {
+        *hi2 |= 0x09e00000; // Extended-length header
+        *hi |= 1U << (length - 32); // leading 1: start bit
+    } else if (length == 37) {
+        // No header bits added to 37-bit cards
+    } else if (length >= 32) {
+        *hi |= 0x20; // Bit 37; standard header
+        *hi |= 1U << (length - 32); // leading 1: start bit
+    } else {
+        *hi |= 0x20; // Bit 37; standard header
+        *lo |= 1U << length; // leading 1: start bit
+    }
+    return true;
+}
+
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a HID tag until the button is pressed
 void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool ledcontrol, int numcycles) {
@@ -980,13 +995,7 @@ void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
     uint16_t n = 8;
 
     if (longFMT) {
-        // Ensure no more than 84 bits supplied
-        if (hi2 > 0xFFFFF) {
-            DbpString("Tags can only have 84 bits.");
-            return;
-        }
         bitlen = 8 + 8 * 2 + 84 * 2;
-        hi2 |= 0x9E00000; // 9E: long format identifier
         manchesterEncodeUint32(hi2, 16 + 12, bits, &n);
         manchesterEncodeUint32(hi, 32, bits, &n);
         manchesterEncodeUint32(lo, 32, bits, &n);
@@ -1018,7 +1027,6 @@ void CmdFSKsimTAGEx(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t cl
     // free eventually allocated BigBuf memory
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();
     set_tracing(false);
 
     int n = 0, i = 0;
@@ -1881,7 +1889,7 @@ void T55xxDangerousRawTest(const uint8_t *data, bool ledcontrol) {
     for (uint8_t i = 0; i < c->bitlen; i++)
         len = T55xx_SetBits(bs, len, c->data[i], 1, sizeof(bs));
 
-    if (g_dbglevel > 1) {
+    if (g_dbglevel > DBG_ERROR) {
         Dbprintf("LEN %i, TIMING %i", len, c->time);
         for (uint8_t i = 0; i < len; i++) {
             uint8_t sendbits = (bs[BITSTREAM_BYTE(i)] >> BITSTREAM_BIT(i));
@@ -2144,29 +2152,34 @@ void T55xx_ChkPwds(uint8_t flags, bool ledcontrol) {
 #ifdef WITH_FLASH
 
     BigBuf_Clear_EM();
-    uint16_t isok = 0;
-    uint8_t counter[2] = {0x00, 0x00};
-    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET, counter, sizeof(counter));
-    if (isok != sizeof(counter))
-        goto OUT;
+    uint32_t size = 0;
 
-    pwd_count = (uint16_t)(counter[1] << 8 | counter[0]);
+    if (exists_in_spiffs(T55XX_KEYS_FILE)) {
+        size = size_in_spiffs(T55XX_KEYS_FILE);
+    }
+    if (size == 0) {
+        Dbprintf("Spiffs file: %s does not exists or empty.", T55XX_KEYS_FILE);
+        goto OUT;
+    }
+
+    pwd_count = size / T55XX_KEY_LENGTH;
     if (pwd_count == 0)
         goto OUT;
 
     // since flash can report way too many pwds, we need to limit it.
     // bigbuff EM size is determined by CARD_MEMORY_SIZE
     // a password is 4bytes.
-    uint16_t pwd_size_available = MIN(CARD_MEMORY_SIZE, pwd_count * 4);
+    uint16_t pwd_size_available = MIN(CARD_MEMORY_SIZE, pwd_count * T55XX_KEY_LENGTH);
 
     // adjust available pwd_count
-    pwd_count = pwd_size_available / 4;
+    pwd_count = pwd_size_available / T55XX_KEY_LENGTH;
 
-    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET + 2, pwds, pwd_size_available);
-    if (isok != pwd_size_available)
+    if (SPIFFS_OK == rdv40_spiffs_read_as_filetype(T55XX_KEYS_FILE, pwds, pwd_size_available, RDV40_SPIFFS_SAFETY_SAFE)) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Loaded %u passwords from spiffs file: %s", pwd_count, T55XX_KEYS_FILE);
+    } else {
+        Dbprintf("Spiffs file: %s cannot be read.", T55XX_KEYS_FILE);
         goto OUT;
-
-    Dbprintf("Password dictionary count " _YELLOW_("%d"), pwd_count);
+    }
 
 #endif
 
@@ -2227,13 +2240,27 @@ void T55xxWakeUp(uint32_t pwd, uint8_t flags, bool ledcontrol) {
 
 /*-------------- Cloning routines -----------*/
 static void WriteT55xx(const uint32_t *blockdata, uint8_t startblock, uint8_t numblocks, bool ledcontrol) {
-    t55xx_write_block_t cmd;
-    cmd.pwd = 0;
-    cmd.flags = 0;
 
-    for (uint8_t i = numblocks + startblock; i > startblock; i--) {
-        cmd.data = blockdata[i - 1];
-        cmd.blockno = i - 1;
+    // Sanity checks
+    if (blockdata == NULL || numblocks == 0) {
+        reply_ng(CMD_LF_T55XX_WRITEBL, PM3_EINVARG, NULL, 0);
+        return;
+    }
+
+    t55xx_write_block_t cmd = {
+        .pwd = 0,
+        .flags = 0
+    };
+
+    // write in reverse order since we don't want to set
+    // a password enabled configuration first....
+    while (numblocks--) {
+
+        // zero based index
+        cmd.data = blockdata[numblocks];
+        cmd.blockno = startblock + numblocks;
+
+        // since this fct sends a NG packet every time,  this loop will send I number of NG
         T55xxWriteBlock((uint8_t *)&cmd, ledcontrol);
     }
 }
@@ -2268,15 +2295,10 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
     uint8_t last_block = 0;
 
     if (longFMT) {
-        // Ensure no more than 84 bits supplied
-        if (hi2 > 0xFFFFF) {
-            DbpString("Tags can only have 84 bits");
-            return;
-        }
         // Build the 6 data blocks for supplied 84bit ID
         last_block = 6;
-        // load preamble (1D) & long format identifier (9E manchester encoded)
-        data[1] = 0x1D96A900 | (manchesterEncode2Bytes((hi2 >> 16) & 0xF) & 0xFF);
+        // load preamble (1D)
+        data[1] = 0x1D000000 | (manchesterEncode2Bytes((hi2 >> 16) & 0xFFFF) & 0xFFFFFF);
         // load raw id from hi2, hi, lo to data blocks (manchester encoded)
         data[2] = manchesterEncode2Bytes(hi2 & 0xFFFF);
         data[3] = manchesterEncode2Bytes(hi >> 16);
@@ -2435,6 +2457,7 @@ int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t i
     } else { // T5555 (Q5)
         data[0] = T5555_SET_BITRATE(clock) | T5555_MODULATION_MANCHESTER | (blocks << T5555_MAXBLOCK_SHIFT);
     }
+
     if (card == 2) {
         WriteEM4x05(data, 4, 3, ledcontrol);
         if (add_electra) {
@@ -2575,13 +2598,13 @@ static void SendForward(uint8_t fwd_bit_count, bool fast) {
 // 32FC * 8us == 256us / 21.3 ==  12.018 steps. ok
 // 16FC * 8us == 128us / 21.3 ==  6.009 steps. ok
 #ifndef EM_START_GAP
-#define EM_START_GAP 55*8
+#define EM_START_GAP (55 * 8)
 #endif
 
     fwd_write_ptr = forwardLink_data;
     fwd_bit_sz = fwd_bit_count;
 
-    if (! fast) {
+    if (fast == false) {
         // Set up FPGA, 125kHz or 95 divisor
         LFSetupFPGAForADC(LF_DIVISOR_125, true);
     }
@@ -2621,16 +2644,21 @@ void EM4xBruteforce(uint32_t start_pwd, uint32_t n, bool ledcontrol) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     WaitMS(20);
     if (ledcontrol) LED_A_ON();
+
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
+
     uint32_t candidates_found = 0;
     for (uint32_t pwd = start_pwd; pwd < 0xFFFFFFFF; pwd++) {
+
         if (((pwd - start_pwd) & 0x3F) == 0x00) {
+
             WDT_HIT();
             if (BUTTON_PRESS() || data_available()) {
                 Dbprintf("EM4x05 Bruteforce Interrupted");
                 break;
             }
         }
+
         // Report progress every 256 attempts
         if (((pwd - start_pwd) & 0xFF) == 0x00) {
             Dbprintf("Trying: %06Xxx", pwd >> 8);
@@ -2644,7 +2672,9 @@ void EM4xBruteforce(uint32_t start_pwd, uint32_t n, bool ledcontrol) {
 
         WaitUS(400);
         DoPartialAcquisition(0, false, 350, 1000, ledcontrol);
+
         uint8_t *mem = BigBuf_get_addr();
+
         if (mem[334] < 128) {
             candidates_found++;
             Dbprintf("Password candidate: " _GREEN_("%08X"), pwd);
@@ -2653,6 +2683,7 @@ void EM4xBruteforce(uint32_t start_pwd, uint32_t n, bool ledcontrol) {
                 break;
             }
         }
+
         // Beware: if smaller, tag might not have time to be back in listening state yet
         WaitMS(1);
     }
@@ -2701,7 +2732,9 @@ void EM4xReadWord(uint8_t addr, uint32_t pwd, uint8_t usepwd, bool ledcontrol) {
     * 0000 1010 ok
     * 0000 0001 fail
     **/
-    if (usepwd) EM4xLoginEx(pwd);
+    if (usepwd) {
+        EM4xLoginEx(pwd);
+    }
 
     forward_ptr = forwardLink_data;
     uint8_t len = Prepare_Cmd(FWD_CMD_READ);
@@ -2736,7 +2769,9 @@ void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd, bo
     * 0000 1010 ok.
     * 0000 0001 fail
     **/
-    if (usepwd) EM4xLoginEx(pwd);
+    if (usepwd) {
+        EM4xLoginEx(pwd);
+    }
 
     forward_ptr = forwardLink_data;
     uint8_t len = Prepare_Cmd(FWD_CMD_WRITE);
@@ -2779,7 +2814,9 @@ void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd, bool ledcontro
     * 0000 1010 ok.
     * 0000 0001 fail
     **/
-    if (usepwd) EM4xLoginEx(pwd);
+    if (usepwd) {
+        EM4xLoginEx(pwd);
+    }
 
     forward_ptr = forwardLink_data;
     uint8_t len = Prepare_Cmd(FWD_CMD_PROTECT);
@@ -2836,6 +2873,26 @@ pulse 3.6 ms
 This triggers COTAG tag to response
 
 */
+
+void cotag_start_pulse(void) {
+#ifndef OFF
+# define OFF(x)  { FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS((x)); }
+#endif
+#ifndef ON
+# define ON(x)   { FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD); WaitUS((x)); }
+#endif
+
+    LFSetupFPGAForADC(LF_FREQ2DIV(132), true);
+
+    ON(800)  OFF(2200)
+    ON(3600) OFF(2200)
+    ON(800)  OFF(2200)
+    //ON(3600)
+
+    // We leave the field on
+}
+
+// TODO: Remove this function?
 void Cotag(uint32_t arg0, bool ledcontrol) {
 #ifndef OFF
 # define OFF(x)  { FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); WaitUS((x)); }
@@ -2875,7 +2932,7 @@ void Cotag(uint32_t arg0, bool ledcontrol) {
             break;
         }
         case 1: {
-            uint8_t *dest = BigBuf_malloc(COTAG_BITS);
+            uint8_t *dest = BigBuf_calloc(COTAG_BITS);
             uint16_t bits = doCotagAcquisitionManchester(dest, COTAG_BITS);
             reply_ng(CMD_LF_COTAG_READ, PM3_SUCCESS, dest, bits);
             break;

@@ -32,10 +32,37 @@
 #include "cmdnfc.h"            // print_type4_cc_info
 #include "commonutil.h"        // get_sw
 #include "protocols.h"         // ISO7816 APDU return codes
+#include "crypto/libpcrypto.h" // ecdsa
+#include "crypto/originality.h"
 
 #define TIMEOUT 2000
 
 static int CmdHelp(const char *Cmd);
+
+static bool st25ta_select(iso14a_card_select_t *card) {
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(DEBUG, "iso14443a card select timeout");
+        DropField();
+        return false;
+    } else {
+
+        uint16_t len = (resp.oldarg[1] & 0xFFFF);
+        if (len == 0) {
+            PrintAndLogEx(DEBUG, "iso14443a card select failed");
+            DropField();
+            return false;
+        }
+
+        if (card) {
+            memcpy(card, resp.data.asBytes, sizeof(iso14a_card_select_t));
+        }
+    }
+    return true;
+}
 
 static void print_st25ta_system_info(uint8_t *d, uint8_t n) {
     if (n < 0x12) {
@@ -119,6 +146,55 @@ static void print_st25ta_system_info(uint8_t *d, uint8_t n) {
     0012
     80000000001302E2007D0E8DCC
     */
+}
+
+static int print_st25ta_signature(uint8_t *uid, uint8_t *signature) {
+    int index = originality_check_verify_ex(uid, 7, signature, 32, PK_ST25TA, false, true);
+    return originality_check_print(signature, 32, index);
+}
+
+static int st25ta_get_signature(uint8_t *signature) {
+    /*
+    hf 14a raw -sck 0200A4040007D276000085010100
+    hf 14a raw -ck 0300A4000C020001
+    hf 14a raw -c 02a2b000e020
+    */
+    typedef struct {
+        const char *apdu;
+        uint8_t apdulen;
+    } transport_st25a_apdu_t;
+
+    transport_st25a_apdu_t cmds[] = {
+        { "\x00\xA4\x04\x00\x07\xD2\x76\x00\x00\x85\x01\x01\x00", 13 },
+        { "\x00\xA4\x00\x0C\x02\x00\x01", 7 },
+        { "\xa2\xb0\x00\xe0\x20", 5 },
+    };
+
+    uint8_t resp[40] = {0};
+    int resplen = 0;
+    bool activate_field = true;
+
+    for (uint8_t i = 0; i < ARRAYLEN(cmds); i++) {
+        int res = ExchangeAPDU14a((uint8_t *)cmds[i].apdu, cmds[i].apdulen, activate_field, true, resp, sizeof(resp), &resplen);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+        activate_field = false;
+    }
+    if (resplen != 32) {
+        if ((resplen == 2) && (resp[0] == 0x69) && (resp[1] == 0x82)) {
+            PrintAndLogEx(WARNING, "GetSignature: Security status not satisfied");
+        }
+        DropField();
+        return PM3_ESOFT;
+    }
+    if (signature) {
+        memcpy(signature, resp, 32);
+    }
+
+    DropField();
+    return PM3_SUCCESS;
 }
 
 // ST25TA
@@ -225,13 +301,20 @@ static int infoHFST25TA(void) {
         return PM3_ESOFT;
     }
 
-
-
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(NORMAL, "");
+    iso14a_card_select_t card;
+    if (st25ta_select(&card)) {
+        uint8_t sig[32] = {0};
+        if (st25ta_get_signature(sig) == PM3_SUCCESS) {
+            print_st25ta_signature(card.uid, sig);
+        }
+    }
+
     print_type4_cc_info(st_cc_data, sizeof(st_cc_data));
     print_st25ta_system_info(response, resplen - 2);
+
     return PM3_SUCCESS;
 }
 

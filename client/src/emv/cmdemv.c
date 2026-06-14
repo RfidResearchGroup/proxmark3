@@ -39,7 +39,6 @@
 #include "crypto/libpcrypto.h"
 #include "iso4217.h"        // currency lookup
 
-
 static int CmdHelp(const char *Cmd);
 
 #define TLV_ADD(tag, value)( tlvdb_change_or_add_node(tlvRoot, tag, sizeof(value) - 1, (const unsigned char *)value) )
@@ -292,7 +291,7 @@ static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose) {
     // decoder
     char *tmp = str_ndup((const char *)d, n);
     uint8_t i = 0;
-    char delim[2] = "^";
+    const char delim[2] = "^";
     char *token = strtok(tmp, delim);
     while (token != NULL) {
 
@@ -625,6 +624,89 @@ static int CmdEMVSelect(const char *Cmd) {
 
     if (decodeTLV)
         TLVPrintFromBuffer(buf, len);
+
+    SetAPDULogging(false);
+    return PM3_SUCCESS;
+}
+
+static int CmdEMVSmartToNFC(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv smart2nfc",
+                  "Executes ISO14443a payment, TX using ISO7816 interface for authentication",
+                  "emv smart2nfc -t     -> test that the attached card is working (must be VISA)\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("t",  "test",    "test that the attached card is working (must be VISA)"),
+        arg_str0("u", "uid", "<hex>", "optional 7 hex bytes UID"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int uidlen = 0;
+    uint8_t uid[7] = {0};
+    CLIGetHexWithReturn(ctx, 2, uid, &uidlen);
+
+    if (uidlen == 0) {
+        PrintAndLogEx(SUCCESS, "No UID provided, using default.");
+        uint8_t default_uid[7] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
+        memcpy(uid, default_uid, sizeof(default_uid));
+        uidlen = sizeof(default_uid);
+    } else if (uidlen != 7) {
+        PrintAndLogEx(FAILED, "UID must be 7 bytes long.");
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(SUCCESS, "UID length is %d", uidlen);
+
+    bool testMode = arg_get_lit(ctx, 1);
+    bool show_apdu = true;
+
+    if (testMode) {
+        PrintAndLogEx(SUCCESS, "Test mode enabled.");
+    } else {
+        PrintAndLogEx(SUCCESS, "Test mode disabled.");
+    }
+
+    CLIParserFree(ctx);
+
+    // todo for PR: check this is relevant for us.
+    SetAPDULogging(show_apdu);
+
+    struct {
+        uint16_t flags;
+        uint8_t exitAfter;
+        uint8_t uid[7];
+        uint16_t atqa;
+        uint8_t sak;
+    } PACKED payload;
+
+    memcpy(payload.uid, uid, uidlen);
+
+    // Set up the flags for 2K mifare sim with RATS
+    uint16_t flags = 0;
+
+    FLAG_SET_UID_IN_DATA(flags, uidlen);
+    if (IS_FLAG_UID_IN_EMUL(flags)) {
+        PrintAndLogEx(WARNING, "Invalid parameter for UID");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    FLAG_SET_MF_SIZE(flags, MIFARE_2K_MAX_BYTES);
+
+    flags |= FLAG_ATQA_IN_DATA;
+    flags |= FLAG_SAK_IN_DATA;
+
+    payload.flags = flags;
+    payload.exitAfter = 0x1;
+    payload.atqa = 0x0;
+    payload.sak = 0x20;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO14443A_EMV_SIMULATE, (uint8_t *)&payload, sizeof(payload));
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
 
     SetAPDULogging(false);
     return PM3_SUCCESS;
@@ -1352,7 +1434,7 @@ static int CmdEMVExec(const char *Cmd) {
         arg_lit0("j",  "jload",    "Load transaction parameters from `emv_defparams.json` file"),
         arg_lit0(NULL, "force",    "Force search AID. Search AID instead of execute PPSE"),
         arg_rem("By default:",     "Transaction type - MSD"),
-        arg_lit0("v",  "qvsdc",    "Transaction type - qVSDC or M/Chip"),
+        arg_lit0(NULL, "qvsdc",    "Transaction type - qVSDC or M/Chip"),
         arg_lit0("c",  "qvsdccda", "Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)"),
         arg_lit0("x",  "vsdc",     "Transaction type - VSDC. For test only. Not a standard behavior"),
         arg_lit0("g",  "acgpo",    "VISA. generate AC from GPO"),
@@ -2001,7 +2083,7 @@ static int CmdEMVScan(const char *Cmd) {
         arg_lit0("e",  "extract",  "Extract TLV elements and fill Application Data"),
         arg_lit0("j",  "jload",    "Load transaction parameters from `emv_defparams.json` file"),
         arg_rem("By default:",     "Transaction type - MSD"),
-        arg_lit0("v",  "qvsdc",    "Transaction type - qVSDC or M/Chip"),
+        arg_lit0(NULL,  "qvsdc",   "Transaction type - qVSDC or M/Chip"),
         arg_lit0("c",  "qvsdccda", "Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)"),
         arg_lit0("x",  "vsdc",     "Transaction type - VSDC. For test only. Not a standard behavior"),
         arg_lit0("g",  "acgpo",    "VISA. generate AC from GPO"),
@@ -2041,7 +2123,7 @@ static int CmdEMVScan(const char *Cmd) {
     uint8_t psenum = (channel == CC_CONTACT) ? 1 : 2;
 
     uint8_t filename[FILE_PATH_SIZE] = {0};
-    int filenamelen = sizeof(filename);
+    int filenamelen = sizeof(filename) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 12, filename, &filenamelen);
 
     CLIParserFree(ctx);
@@ -2425,7 +2507,7 @@ static int CmdEMVRoca(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("t",  "selftest", "Self test"),
+        arg_lit0(NULL, "test",   "Perform self tests"),
         arg_lit0("a",  "apdu",     "Show APDU requests and responses"),
         arg_lit0("w",  "wired",    "Send data via contact (iso7816) interface. (def: Contactless interface)"),
         arg_param_end
@@ -2899,7 +2981,7 @@ static command_t CommandTable[] =  {
     {"-----------", CmdHelp,                        AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
     {"help",        CmdHelp,                        AlwaysAvailable, "This help"},
     {"list",        CmdEMVList,                     AlwaysAvailable, "List ISO7816 history"},
-    {"test",        CmdEMVTest,                     AlwaysAvailable, "Crypto logic selftest"},
+    {"test",        CmdEMVTest,                     AlwaysAvailable, "Perform crypto logic self tests"},
     {"-----------", CmdHelp,                        IfPm3Iso14443a,  "---------------------- " _CYAN_("Operations") " ---------------------"},
     {"challenge",   CmdEMVGenerateChallenge,        IfPm3Iso14443,   "Generate challenge"},
     {"exec",        CmdEMVExec,                     IfPm3Iso14443,   "Executes EMV contactless transaction"},
@@ -2913,8 +2995,9 @@ static command_t CommandTable[] =  {
     {"scan",        CmdEMVScan,                     IfPm3Iso14443,   "Scan EMV card and save it contents to json file for emulator"},
     {"search",      CmdEMVSearch,                   IfPm3Iso14443,   "Try to select all applets from applets list and print installed applets"},
     {"select",      CmdEMVSelect,                   IfPm3Iso14443,   "Select applet"},
-    /*
     {"-----------", CmdHelp,                        IfPm3Iso14443a,  "---------------------- " _CYAN_("simulation") " ---------------------"},
+    {"smart2nfc",   CmdEMVSmartToNFC,               IfPm3Smartcard,  "Complete transaction as a nfc smart card, using the ISO-7816 interface for auth"},
+    /*
     {"getrng",      CmdEMVGetrng,                   IfPm3Iso14443,   "Get random number from terminal"},
     {"eload",       CmdEmvELoad,                    IfPm3Iso14443,   "Load EMV tag into device"},
     {"dump",        CmdEmvDump,                     IfPm3Iso14443,   "Dump EMV tag values"},

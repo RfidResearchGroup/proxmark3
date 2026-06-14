@@ -180,8 +180,7 @@ int mbedtls_cipher_cmac_starts(mbedtls_cipher_context_t *ctx,
     if (ctx == NULL || ctx->cipher_info == NULL || key == NULL)
         return (MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA);
 
-    if ((retval = mbedtls_cipher_setkey(ctx, key, (int)keybits,
-                                        MBEDTLS_ENCRYPT)) != 0)
+    if ((retval = mbedtls_cipher_setkey(ctx, key, (int)keybits, MBEDTLS_ENCRYPT)) != 0)
         return (retval);
 
     type = ctx->cipher_info->type;
@@ -405,14 +404,12 @@ int mbedtls_aes_cmac_prf_128(const unsigned char *key, size_t key_length,
     } else {
         memset(zero_key, 0, MBEDTLS_AES_BLOCK_SIZE);
 
-        ret = mbedtls_cipher_cmac(cipher_info, zero_key, 128, key,
-                                  key_length, int_key);
+        ret = mbedtls_cipher_cmac(cipher_info, zero_key, 128, key, key_length, int_key);
         if (ret != 0)
             goto exit;
     }
 
-    ret = mbedtls_cipher_cmac(cipher_info, int_key, 128, input, in_len,
-                              output);
+    ret = mbedtls_cipher_cmac(cipher_info, int_key, 128, input, in_len, output);
 
 exit:
     mbedtls_platform_zeroize(int_key, sizeof(int_key));

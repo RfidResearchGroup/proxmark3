@@ -28,12 +28,19 @@
 #include <sys/time.h>
 #include <getopt.h>
 
+#include "ht2crackutils.h"
 #include "ht2crack5opencl.h"
 #include "queue.h"
 #include "threads.h"
 #include "opencl.h"
 #include "hitag2.h"
 #include "dolphin_macro.h"
+
+#define AEND  "\x1b[0m"
+#define _RED_(s) "\x1b[31m" s AEND
+#define _GREEN_(s) "\x1b[32m" s AEND
+#define _YELLOW_(s) "\x1b[33m" s AEND
+#define _CYAN_(s) "\x1b[36m" s AEND
 
 #if defined(__MINGW64__)
 #define timersub(a, b, result) \
@@ -101,24 +108,6 @@ static void bitslice(const uint64_t value, bitslice_t *restrict bitsliced_value)
         const bool bit = get_bit(32 - 1 - bit_idx, value);
         bitsliced_value[bit_idx].value = (bit) ? bs_ones.value : bs_zeroes.value;
     }
-}
-
-// convert byte-reversed 8 digit hex to unsigned long
-static unsigned long hexreversetoulong(char *hex) {
-    unsigned long ret = 0L;
-    unsigned int x;
-    char i;
-
-    if (strlen(hex) != 8)
-        return 0L;
-
-    for (i = 0 ; i < 4 ; ++i) {
-        if (sscanf(hex, "%2X", &x) != 1)
-            return 0L;
-        ret += ((unsigned long) x) << i * 8;
-        hex += 2;
-    }
-    return ret;
 }
 
 #if ENABLE_EMOJ == 1
@@ -282,9 +271,13 @@ int main(int argc, char **argv) {
     free(platforms_selected);
     free(devices_selected);
 
-    if (device_types_selected == 0) device_types_selected = CL_DEVICE_TYPE_GPU;
-    else if (device_types_selected == 1) device_types_selected = CL_DEVICE_TYPE_CPU;
-    else device_types_selected = CL_DEVICE_TYPE_ALL;
+    if (device_types_selected == 0) {
+        device_types_selected = CL_DEVICE_TYPE_GPU;
+    } else if (device_types_selected == 1) {
+        device_types_selected = CL_DEVICE_TYPE_CPU;
+    } else {
+        device_types_selected = CL_DEVICE_TYPE_ALL;
+    }
 
     if (show) {
         plat_sel[0] = 0xff;
@@ -293,17 +286,23 @@ int main(int argc, char **argv) {
     }
 
     if (verbose) {
-        if (plat_sel[0] == 0xff) printf("Platforms selected    : ALL\n");
-        else {
+        if (plat_sel[0] == 0xff) {
+            printf("Platforms selected    : ALL\n");
+        } else {
             printf("Platforms selected    : %u", plat_sel[0]);
-            for (unsigned int i = 1; i < plat_cnt; i++) printf(", %u", plat_sel[i]);
+            for (unsigned int i = 1; i < plat_cnt; i++) {
+                printf(", %u", plat_sel[i]);
+            }
             printf("\n");
         }
 
-        if (dev_sel[0] == 0xff) printf("Devices selected      : ALL\n");
-        else {
+        if (dev_sel[0] == 0xff) {
+            printf("Devices selected      : ALL\n");
+        } else {
             printf("Devices selected      : %u", dev_sel[0]);
-            for (unsigned int i = 1; i < dev_cnt; i++) printf(", %u", dev_sel[i]);
+            for (unsigned int i = 1; i < dev_cnt; i++) {
+                printf(", %u", dev_sel[i]);
+            }
             printf("\n");
         }
 
@@ -312,7 +311,8 @@ int main(int argc, char **argv) {
         printf("Profile selected      : %u\n", profile_selected);
     }
 
-    if (!show) {
+    if (show == false) {
+
         if ((argc - optind) < 5) {
 #if DEBUGME > 0
             printf("Error: invalid extra arguments\n");
@@ -324,41 +324,65 @@ int main(int argc, char **argv) {
             switch (e) {
                 case 0: // UID
                     if (!strncmp(argv[optind], "0x", 2) || !strncmp(argv[optind], "0X", 2)) {
-                        if (strlen(argv[optind]) != 2 + 8) { printf("Error: invalid UID length\n"); usage(argv[0]); }
-                        uid = (uint32_t) rev32(hexreversetoulong(argv[optind] + 2));
+                        if (strlen(argv[optind]) != 2 + 8) {
+                            printf("Error: invalid UID length\n");
+                            usage(argv[0]);
+                        }
+                        uid = (uint32_t) rev32(hexreversetouint32(argv[optind] + 2));
                     } else {
-                        if (strlen(argv[optind]) != 8) { printf("Error: invalid UID length\n"); usage(argv[0]); }
-                        uid = (uint32_t) rev32(hexreversetoulong(argv[optind]));
+                        if (strlen(argv[optind]) != 8) {
+                            printf("Error: invalid UID length\n");
+                            usage(argv[0]);
+                        }
+                        uid = (uint32_t) rev32(hexreversetouint32(argv[optind]));
                     }
                     break;
 
                 case 1: // nR1
                     if (!strncmp(argv[optind], "0x", 2) || !strncmp(argv[optind], "0X", 2)) {
-                        if (strlen(argv[optind]) != 2 + 8) { printf("Error: invalid nR1 length\n"); usage(argv[0]); }
-                        nR1 = (uint32_t) rev32(hexreversetoulong(argv[optind] + 2));
+                        if (strlen(argv[optind]) != 2 + 8) {
+                            printf("Error: invalid nR1 length\n");
+                            usage(argv[0]);
+                        }
+                        nR1 = (uint32_t) rev32(hexreversetouint32(argv[optind] + 2));
                     } else {
-                        if (strlen(argv[optind]) != 8) { printf("Error: invalid nR1 length\n"); usage(argv[0]); }
-                        nR1 = (uint32_t) rev32(hexreversetoulong(argv[optind]));
+                        if (strlen(argv[optind]) != 8) {
+                            printf("Error: invalid nR1 length\n");
+                            usage(argv[0]);
+                        }
+                        nR1 = (uint32_t) rev32(hexreversetouint32(argv[optind]));
                     }
                     break;
 
                 case 2: // aR1
-                    if (strlen(argv[optind]) != 8) { printf("Error: invalid aR1 length\n"); usage(argv[0]); }
+                    if (strlen(argv[optind]) != 8) {
+                        printf("Error: invalid aR1 length\n");
+                        usage(argv[0]);
+                    }
                     aR1 = (uint32_t) strtoul(argv[optind], NULL, 16);
                     break;
 
                 case 3: // nR2
                     if (!strncmp(argv[optind], "0x", 2) || !strncmp(argv[optind], "0X", 2)) {
-                        if (strlen(argv[optind]) != 2 + 8) { printf("Error: invalid nR2 length\n"); usage(argv[0]); }
-                        nR2 = (uint32_t) rev32(hexreversetoulong(argv[optind] + 2));
+                        if (strlen(argv[optind]) != 2 + 8) {
+                            printf("Error: invalid nR2 length\n");
+                            usage(argv[0]);
+                        }
+                        nR2 = (uint32_t) rev32(hexreversetouint32(argv[optind] + 2));
                     } else {
-                        if (strlen(argv[optind]) != 8) { printf("Error: invalid nR2 length\n"); usage(argv[0]); }
-                        nR2 = (uint32_t) rev32(hexreversetoulong(argv[optind]));
+                        if (strlen(argv[optind]) != 8) {
+                            printf("Error: invalid nR2 length\n");
+                            usage(argv[0]);
+                        }
+                        nR2 = (uint32_t) rev32(hexreversetouint32(argv[optind]));
                     }
                     break;
 
                 case 4: // aR2
-                    if (strlen(argv[optind]) != 8) { printf("Error: invalid aR2 length\n"); usage(argv[0]); }
+                    if (strlen(argv[optind]) != 8) {
+                        printf("Error: invalid aR2 length\n");
+                        usage(argv[0]);
+                    }
                     aR2 = (uint32_t) strtoul(argv[optind], NULL, 16);
                     break;
 
@@ -379,8 +403,10 @@ int main(int argc, char **argv) {
 
     uint32_t checks[4] = { uid, aR2, nR1, nR2 };
 
-    if (!show) {
-        if (verbose) printf("uid: %u, aR2: %u, nR1: %u, nR2: %u\n", checks[0], checks[1], checks[2], checks[3]);
+    if (show == false) {
+        if (verbose) {
+            printf("uid: %u, aR2: %u, nR1: %u, nR2: %u\n", checks[0], checks[1], checks[2], checks[3]);
+        }
 
         uint32_t target = ~aR1;
         // bitslice inverse target bits
@@ -419,7 +445,7 @@ int main(int argc, char **argv) {
         exit(3);
     }
 
-    if (!show) {
+    if (show == false) {
         // load OpenCL kernel source
         struct stat st;
         const char *opencl_kernel = "ht2crack5opencl_kernel.cl";
@@ -463,17 +489,23 @@ int main(int argc, char **argv) {
     size_t selected_devices_cnt = 0;
     compute_platform_ctx_t *cd_ctx = NULL;
 
-    if (show) verbose = true;
+    if (show) {
+        verbose = true;
+    }
 
     // now discover and set up compute device(s)
     if ((err = discoverDevices(profile_selected, device_types_selected, &ocl_platform_cnt, &selected_platforms_cnt, &selected_devices_cnt, &cd_ctx, plat_sel, plat_cnt, dev_sel, dev_cnt, verbose, show)) != 0) {
         printf("Error: discoverDevices() failed\n");
-        if (err < -5) free(cd_ctx);
+        if (err < -5) {
+            free(cd_ctx);
+        }
         MEMORY_FREE_ALL
         exit(2);
     }
 
-    if (verbose) printf("\n");
+    if (verbose) {
+        printf("\n");
+    }
 
     // new selection engine, need to support multi-gpu system (with the same platform)
     if (show) {
@@ -504,10 +536,14 @@ int main(int argc, char **argv) {
     printf("Selected %zu OpenCL Device(s)\n\n", selected_devices_cnt);
 
     for (w = 0; w < ocl_platform_cnt; w++) {
-        if (!cd_ctx[w].selected) continue;
+        if (!cd_ctx[w].selected) {
+            continue;
+        }
 
         for (q = 0; q < cd_ctx[w].device_cnt; q++) {
-            if (!cd_ctx[w].device[q].selected) continue;
+            if (!cd_ctx[w].device[q].selected) {
+                continue;
+            }
 
             if (cd_ctx[w].is_apple && !strncmp(cd_ctx[w].device[q].vendor, "Intel", 5)) {
                 // disable hitag2 with apple platform and not apple device vendor (< Apple M1)
@@ -651,21 +687,28 @@ int main(int argc, char **argv) {
     // show buidlog in case of error
     // todo: only for device models
     unsigned int build_errors = 0;
-    unsigned int build_logs = 0;
+    // unsigned int build_logs = 0;
 
     cl_command_queue_properties queue_properties = 0;
 
-    if (opencl_profiling) queue_properties = CL_QUEUE_PROFILING_ENABLE;
+    if (opencl_profiling) {
+        queue_properties = CL_QUEUE_PROFILING_ENABLE;
+    }
 
     // setup, phase 1
 
     z = 0; // dolphin
 
     for (w = 0; w < ocl_platform_cnt; w++) {
-        if (!cd_ctx[w].selected) continue;
+        if (!cd_ctx[w].selected) {
+            continue;
+        }
 
         for (q = 0; q < cd_ctx[w].device_cnt; q++) {
-            if (!cd_ctx[w].device[q].selected) continue;
+
+            if (!cd_ctx[w].device[q].selected) {
+                continue;
+            }
 
             ctx.device_ids[z] = cd_ctx[w].device[q].device_id;
 
@@ -749,7 +792,9 @@ int main(int argc, char **argv) {
                 blen += 21;
             }
 
-            if (verbose) printf("[%zu] Building OpenCL program with options (len %zu): %s\n", z, blen, build_options);
+            if (verbose) {
+                printf("[%zu] Building OpenCL program with options (len %zu): %s\n", z, blen, build_options);
+            }
 
             err = clBuildProgram(ctx.programs[z], 1, &ctx.device_ids[z], build_options, NULL, NULL);
 
@@ -774,9 +819,13 @@ int main(int argc, char **argv) {
                     continue;
                 }
 
-                if (len == 0) continue;
+                if (len == 0) {
+                    continue;
+                }
 
-                if (len > 0xdeadbe) len = 0xdeadbe; // limit build_log size
+                if (len > 0xdeadbe) {
+                    len = 0xdeadbe; // limit build_log size
+                }
 
                 char *buffer = (char *) calloc(len, sizeof(char));
                 if (!buffer) {
@@ -800,7 +849,7 @@ int main(int argc, char **argv) {
 
                 free(buffer);
 
-                build_logs++;
+                // build_logs++;
 #if DEBUGME == 0
                 continue; // todo: evaluate this, one or more can be broken, so continue
 #endif
@@ -852,25 +901,40 @@ int main(int argc, char **argv) {
     z = 0;
 
     for (w = 0; w < ocl_platform_cnt; w++) {
-        if (!cd_ctx[w].selected) continue;
+
+        if (!cd_ctx[w].selected) {
+            continue;
+        }
 
         for (q = 0; q < cd_ctx[w].device_cnt; q++) {
-            if (!cd_ctx[w].device[q].selected) continue;
+
+            if (!cd_ctx[w].device[q].selected) {
+                continue;
+            }
 
             ctx.global_ws[z] = (1 << profiles[profile][1]);
 
             // the following happens with cpu devices or Apple GPU
             if (ctx.local_ws[z] > 256) {
-                if (cd_ctx[w].is_apple) ctx.local_ws[z] = 256;
-                else if (!cd_ctx[w].device[q].is_gpu) ctx.local_ws[z] = 256;
+
+                if (cd_ctx[w].is_apple) {
+                    ctx.local_ws[z] = 256;
+                } else if (!cd_ctx[w].device[q].is_gpu) {
+                    ctx.local_ws[z] = 256;
+                }
             }
 
             // dow't allow gws < lws
-            if (ctx.global_ws[z] < ctx.local_ws[z]) ctx.local_ws[z] = ctx.global_ws[z];
+            if (ctx.global_ws[z] < ctx.local_ws[z]) {
+                ctx.local_ws[z] = ctx.global_ws[z];
+            }
 
-            if (opencl_profiling) printf("[%zu] global_ws %zu, local_ws %zu\n", g, ctx.global_ws[z], ctx.local_ws[z]);
+            if (opencl_profiling) {
+                printf("[%zu] global_ws %zu, local_ws %zu\n", g, ctx.global_ws[z], ctx.local_ws[z]);
+            }
 
             if (!ctx.force_hitag2_opencl) {
+
                 if (!(matches[z] = (uint64_t *) calloc((uint32_t)(ctx.global_ws[z] * WGS_MATCHES_FACTOR), sizeof(uint64_t)))) {
                     printf("[%zu] Error: calloc (matches) failed (%d): %s\n", g, errno, strerror(errno));
                     MEMORY_FREE_OPENCL(ctx, z)
@@ -879,7 +943,9 @@ int main(int argc, char **argv) {
                     MEMORY_FREE_ALL
                     exit(2);
                 }
+
             } else { // one
+
                 if (!(matches[z] = (uint64_t *) calloc(1, sizeof(uint64_t)))) {
                     printf("[%zu] Error: calloc (matches) failed (%d): %s\n", z, errno, strerror(errno));
                     MEMORY_FREE_OPENCL(ctx, z)
@@ -1035,7 +1101,9 @@ int main(int argc, char **argv) {
     printf("[queue] Fill queue with pre-calculated offset using profile (%d): ", profile);
 #endif
 
-    for (size_t step = 0; step < max_step; step++) wu_queue_push(&ctx.queue_ctx, step, step << chunk, max_step);
+    for (size_t step = 0; step < max_step; step++) {
+        wu_queue_push(&ctx.queue_ctx, step, step << chunk, max_step);
+    }
 
 #if DEBUGME > 0
     printf("done\n");
@@ -1128,8 +1196,15 @@ int main(int argc, char **argv) {
 
     printf("Attack 5 - opencl - start (Max Slices %u, %s order", max_step, wu_queue_strdesc(ctx.queue_ctx.queue_type));
 
-    if (!verbose) printf(")\n\n");
-    else printf(", Profile %u, Async Threads %s, HiTag2 key verify on device %s)\n\n", profile, (ctx.thread_sched_type == THREAD_TYPE_ASYNC) ? "yes" : "no", (force_hitag2_opencl) ? "yes" : "no");
+    if (!verbose) {
+        printf(")\n\n");
+    } else {
+        printf(", Profile %u, Async Threads %s, HiTag2 key verify on device %s)\n\n"
+               , profile
+               , (ctx.thread_sched_type == THREAD_TYPE_ASYNC) ? "yes" : "no"
+               , (force_hitag2_opencl) ? "yes" : "no"
+              );
+    }
 
     if (gettimeofday(&cpu_t_start, NULL) == -1) {
         printf("Error: gettimeofday(start) failed (%d): %s\n", errno, strerror(errno));
@@ -1147,17 +1222,27 @@ int main(int argc, char **argv) {
 
     // if found, show the key here
     for (size_t y = 0; y < thread_count; y++) {
+
         if (t_arg[y].r) {
-            if (verbose) printf("\n");
 
-            if (thread_count > 1) printf("[%zu] ", y);
+            if (verbose) {
+                printf("\n");
+            }
 
-            printf("\nKey found @ slice %zu/%zu: [ ", t_arg[y].slice, t_arg[y].max_slices);
+            if (thread_count > 1) {
+                printf("[%zu] ", y);
+            }
+
+            printf("\nKey found @ slice %zu/%zu [ \x1b[32m"
+                   , t_arg[y].slice
+                   , t_arg[y].max_slices
+                  );
+
             for (int i = 0; i < 6; i++) {
                 printf("%02X", (uint8_t)(t_arg[y].key & 0xff));
                 t_arg[y].key = t_arg[y].key >> 8;
             }
-            printf(" ]\n");
+            printf(AEND " ]\n");
             fflush(stdout);
             break;
         }
@@ -1172,14 +1257,21 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (!found) {
-        printf("\nError. %s\n", (error) ? "something went wrong :(" : "Key not found :|");
+    if (found == false) {
+        if (error) {
+            printf("\nSomething went wrong ( " _RED_("fail") " )\n");
+        } else {
+            printf("\nExhausted keyspace ( " _RED_("fail") " )\n");
+        }
     }
 
     printf("\nAttack 5 - opencl - end");
 
-    if (show_overall_time) printf(" in %ld.%2ld second(s).\n\n", (long int)cpu_t_result.tv_sec, (long int)cpu_t_result.tv_usec);
-    else printf("\n");
+    if (show_overall_time) {
+        printf(" in " _YELLOW_("%ld.%2ld") " second(s).\n\n", (long int)cpu_t_result.tv_sec, (long int)cpu_t_result.tv_usec);
+    } else {
+        printf("\n");
+    }
 
     fflush(stdout);
 
@@ -1188,14 +1280,16 @@ int main(int argc, char **argv) {
     fflush(stdout);
 #endif
 
-    if (!error && th_ctx.type != THREAD_TYPE_SEQ) thread_stop(&th_ctx);
+    if (error == false && th_ctx.type != THREAD_TYPE_SEQ) {
+        thread_stop(&th_ctx);
+    }
 
 #if DEBUGME > 1
     printf("destroy threads\n");
     fflush(stdout);
 #endif
 
-    if (!error) {
+    if (error == false) {
         if ((ret = thread_destroy(&th_ctx)) != 0) {
 #if DEBUGME > 0
             printf("Warning: thread_destroy() failed (%d): %s\n", ret, thread_strerror(ret));

@@ -75,10 +75,11 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
     data = crypto_pk_encrypt(kcp, cert_tlv->value, cert_tlv->len, &data_len);
     crypto_pk_close(kcp);
 
-    /*  if (true){
-            PrintAndLogEx(SUCCESS, "Recovered data:\n");
-            print_buffer(data, data_len, 1);
-        }*/
+    if (data == NULL || data_len < 3) {
+        PrintAndLogEx(WARNING, "ERROR: Certificate decrypt failed");
+        free(data);
+        return NULL;
+    }
 
     if (data[data_len - 1] != 0xbc || data[0] != 0x6a || data[1] != msgtype) {
         PrintAndLogEx(WARNING, "ERROR: Certificate format");
@@ -346,6 +347,10 @@ unsigned char *emv_pki_sdatl_fill(const struct tlvdb *db, size_t *sdatl_len) {
     if (len) {
         *sdatl_len = len;
         unsigned char *value = calloc(1, len);
+        if (value == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return NULL;
+        }
         memcpy(value, buf, len);
         return value;
     }

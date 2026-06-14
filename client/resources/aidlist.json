@@ -1,5 +1,14 @@
 [
     {
+        "AID": "0000000000000001",
+        "Vendor": "",
+        "Country": "",
+        "Name": "Livin' card",
+        "Description": "",
+        "Type": "",
+        "Protocol": "mifare_plus"
+    },
+    {
         "AID": "315041592E5359532E4444463031",
         "Vendor": "EMV",
         "Country": "United States",
@@ -22,6 +31,14 @@
         "Name": "DeviceFidelity In2Pay DFare applet",
         "Description": "http://www.nfcworld.com/2010/11/24/35207/devicefidelity-adds-nfc-support-for-android-and-mifare/",
         "Type": ""
+    },
+    {
+        "AID": "5041592E535A54",
+        "Vendor": "Shenzhen Tong",
+        "Country": "China",
+        "Name": "Shenzhen Tong",
+        "Description": "Shenzhen Tong transit card (ASCII PAY.SZT)",
+        "Type": "transport"
     },
     {
         "AID": "A00000000101",
@@ -174,6 +191,14 @@
         "Name": "VISA Plus",
         "Description": "VISA plus",
         "Type": "EMV"
+    },
+    {
+        "AID": "A00000000386980701",
+        "Vendor": "China City Union",
+        "Country": "China",
+        "Name": "China City Union",
+        "Description": "China City Union transit card",
+        "Type": "transport"
     },
     {
         "AID": "A0000000039010",
@@ -1248,14 +1273,6 @@
         "Type": ""
     },
     {
-        "AID": "A000000308000010000100",
-        "Vendor": "National Institute of Standards and Technology",
-        "Country": "United States",
-        "Name": "Personal Identity Verification (PIV) / ID-ONE PIV BIO",
-        "Description": "PIV End Point Applet. Last 2 bytes designate version",
-        "Type": ""
-    },
-    {
         "AID": "A00000031510100528",
         "Vendor": "Currence Holding/PIN BV",
         "Country": "The Netherlands",
@@ -1504,6 +1521,15 @@
         "Type": ""
     },
     {
+        "AID": "A0000004520001",
+        "Vendor": "T MONEY",
+        "Country": "Republic of Korea",
+        "Name": "T MONEY (KS X 6924)",
+        "Description": "KS X 6924-based T MONEY transit card",
+        "Type": "transport",
+        "Protocol": "ks_x_6924"
+    },
+    {
         "AID": "A0000004540010",
         "Vendor": "eTranzact",
         "Country": "Nigeria",
@@ -1518,6 +1544,28 @@
         "Name": "Etranzact Genesis Card 2",
         "Description": "Nigerian local switch company",
         "Type": "EMV"
+    },
+    {
+        "AID": "A00000047609",
+        "Vendor": "Google",
+        "Country": "United States",
+        "Name": "Android Gesture Exchange",
+        "Description": "Used to initiate data transfer between Android devices",
+        "Type": "",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
+    },
+    {
+        "AID": "F00000FE2C",
+        "Vendor": "Google",
+        "Country": "United States",
+        "Name": "Nearby Connections NFC Advertising",
+        "Description": "Nearby Connections NFC advertising",
+        "Type": "",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "A0000004762010",
@@ -1542,6 +1590,14 @@
         "Name": "GOOGLE_PAYMENT_AID",
         "Description": "",
         "Type": "EMV"
+    },
+    {
+        "AID": "A000000476416E64726F6964484345",
+        "Vendor": "Google",
+        "Country": "N/A",
+        "Name": "Android HCE",
+        "Description": "Available on AOSP-based android devices with active HCE",
+        "Type": ""
     },
     {
         "AID": "A000000476A010",
@@ -1598,6 +1654,17 @@
         "Name": "Yubikey NEO OATH Applet",
         "Description": "Javacard Applet AID",
         "Type": "YKNEO"
+    },
+    {
+        "AID": "A0000005500011",
+        "Vendor": "Octopus Cards Limited",
+        "Country": "Hong Kong",
+        "Name": "Virtual Octopus for Android",
+        "Description": "Uses ISO7816-based protocol instead of FeliCa",
+        "Type": "transport",
+        "Sources": [
+            "android://com.octopuscards.nfc_reader"
+        ]
     },
     {
         "AID": "A0000005591010FFFFFFFF8900000100",
@@ -1702,6 +1769,23 @@
         "Name": "TROY chip debit card",
         "Description": "Turkey's Payment Method",
         "Type": "EMV"
+    },
+    {
+        "AID": "A0000007690100",
+        "Vendor": "Gallagher Security",
+        "Country": "",
+        "Name": "Gallagher Mobile Connect",
+        "Description": "",
+        "Type": "access",
+        "Sources": [
+            "android://com.afiaa",
+            "android://com.equiem.equiemandroid",
+            "android://com.gallagher.security.commandcentrecardholderapp",
+            "android://com.lane.lane",
+            "android://eu.sharry.swp.gallagherhub",
+            "android://eu.sharry.swp.sharrypartner",
+            "android://eu.sharry.swp.sharryworkplace"
+        ]
     },
     {
         "AID": "A0000007705850",
@@ -2072,12 +2156,41 @@
         "Type": "SmartChess"
     },
     {
+        "AID": "D2760001834467323031324C50303431",
+        "Vendor": "Hamburger Verkehrsverbund (HVV)",
+        "Country": "Germany",
+        "Name": "HVV (Hamburg) card",
+        "Description": "Hamburg public transport card",
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
+    },
+    {
         "AID": "D4100000011010",
         "Vendor": "",
         "Country": "Republic of Korea",
         "Name": "",
         "Description": "",
         "Type": ""
+    },
+    {
+        "AID": "D4100000030001",
+        "Vendor": "T MONEY",
+        "Country": "Republic of Korea",
+        "Name": "T MONEY (KS X 6924)",
+        "Description": "KS X 6924-based T MONEY transit card",
+        "Type": "transport",
+        "Protocol": "ks_x_6924"
+    },
+    {
+        "AID": "D41000003453504159",
+        "Vendor": "Samsung",
+        "Country": "",
+        "Name": "Samsung Pay",
+        "Description": "Returns language preferences and other device information.",
+        "Type": "",
+        "Sources": [
+            "android://com.samsung.android.spay"
+        ]
     },
     {
         "AID": "D5280050218002",
@@ -2217,11 +2330,39 @@
     },
     {
         "AID": "4F53452E5641532E3031",
-        "Vendor": "Apple, Google",
+        "Vendor": "Apple",
         "Country": "",
-        "Name": "Value-Added Services (OSE.VAS.01)",
-        "Description": "Used by Apple VAS and Google SmartTap",
-        "Type": "loyalty"
+        "Name": "Apple VAS (OSE.VAS.01)",
+        "Description": "Apple VAS",
+        "Type": "loyalty",
+        "Protocol": "apple_vas",
+        "ResponseRegex": ".*50084170706c65506179.*9000$"
+    },
+    {
+        "AID": "4F53452E5641532E3031",
+        "Vendor": "Google",
+        "Country": "",
+        "Name": "Google Smart Tap (OSE.VAS.01)",
+        "Description": "Google Smart Tap",
+        "Type": "loyalty",
+        "Protocol": "google_smart_tap",
+        "ResponseRegex": ".*500a416e64726f6964506179.*9000$",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
+    },
+    {
+        "AID": "4F53452E5641532E3031",
+        "Vendor": "Samsung",
+        "Country": "",
+        "Name": "Samsung VAS (OSE.VAS.01)",
+        "Description": "Samsung VAS",
+        "Type": "loyalty",
+        "Protocol": "samsung_vas",
+        "ResponseRegex": ".*500d53616d73756e6757616c6c6574.*9000$",
+        "Sources": [
+            "android://com.samsung.android.spay"
+        ]
     },
     {
         "AID": "A000000476D0000101",
@@ -2229,7 +2370,11 @@
         "Country": "",
         "Name": "Google SmartTap 1.3 (Deprecated)",
         "Description": "",
-        "Type": "loyalty"
+        "Type": "loyalty",
+        "Protocol": "google_smart_tap",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "A000000476D0000111",
@@ -2237,7 +2382,23 @@
         "Country": "",
         "Name": "Google SmartTap 2.0",
         "Description": "",
-        "Type": "loyalty"
+        "Type": "loyalty",
+        "Protocol": "google_smart_tap",
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
+    },
+    {
+        "AID": "A000000870FC000000000034",
+        "Vendor": "Samsung",
+        "Country": "",
+        "Name": "Samsung VAS",
+        "Description": "",
+        "Type": "loyalty",
+        "Protocol": "samsung_vas",
+        "Sources": [
+            "android://com.samsung.android.spay"
+        ]
     },
     {
         "AID": "A0000002480400",
@@ -2269,7 +2430,12 @@
         "Country": "",
         "Name": "Digital Car Key Framework",
         "Description": "Used during key provisioning and configuration",
-        "Type": ""
+        "Type": "",
+        "Protocol": "ccc_digital_car_key",
+        "Sources": [
+            "android://com.google.android.gms",
+            "android://com.samsung.android.dkey"
+        ]
     },
     {
         "AID": "A000000809434343444B417631",
@@ -2277,23 +2443,101 @@
         "Country": "",
         "Name": "Digital Car Key",
         "Description": "",
-        "Type": "access"
+        "Type": "access",
+        "Protocol": "ccc_digital_car_key"
+    },
+    {
+        "AID": "A0000008118001",
+        "Vendor": "",
+        "Country": "",
+        "Name": "Otto card",
+        "Description": "EMV-like card; protocol unknown",
+        "Type": ""
+    },
+    {
+        "AID": "A0000008400000000000000000001234",
+        "Vendor": "Allegion",
+        "Country": "",
+        "Name": "Schlage Mobile Access",
+        "Description": "",
+        "Type": "access",
+        "Protocol": "schlage_mobile_access",
+        "Sources": [
+            "android://com.allegion.schlagemobileaccess",
+            "android://com.brivo.onair",
+            "android://com.cohesion.core",
+            "android://com.kastle.KMF.Portable",
+            "android://com.kastle.kastlePresence",
+            "android://com.lane.lane",
+            "android://com.openpath.admin",
+            "android://com.openpath.mobile"
+        ]
+    },
+    {
+        "AID": "A0000008450000000000000000000001",
+        "Vendor": "VDE",
+        "Country": "Germany",
+        "Name": "VDE EV charging",
+        "Description": "Found on a DESFire card.",
+        "Type": ""
     },
     {
         "AID": "A0000008580102",
         "Vendor": "Apple",
         "Country": "",
-        "Name": "Apple Home Key Framework",
-        "Description": "Home Key configuration applet. Selected after a first transaction on a newely-invited device (allegedly for mailbox sync/attestation exchange)",
-        "Type": ""
+        "Name": "Apple Home Key Step Up",
+        "Description": "Used for reading the attestation certificate",
+        "Type": "",
+        "Protocol": "apple_home_key"
     },
     {
         "AID": "A0000008580101",
         "Vendor": "Apple",
         "Country": "",
         "Name": "Apple Home Key",
-        "Description": "NFC Home Key for select HomeKit-compatible locks",
-        "Type": "access"
+        "Description": "NFC Home Key for select HomeKit-compatible locks based on Apple UnifiedAccess protocol",
+        "Type": "access",
+        "Protocol": "apple_home_key"
+    },
+    {
+        "AID": "A0000008580202",
+        "Vendor": "Apple",
+        "Country": "",
+        "Name": "Apple Access Key Step Up",
+        "Description": "Used for reading the attestation certificate",
+        "Type": "",
+        "Protocol": "apple_access_key"
+    },
+    {
+        "AID": "A0000008580201",
+        "Vendor": "Apple",
+        "Country": "",
+        "Name": "Apple Access Key",
+        "Description": "NFC Access Key for commercial properties based on Apple UnifiedAccess protocol",
+        "Type": "access",
+        "Protocol": "apple_access_key"
+    },
+    {
+        "AID": "A000000909ACCE5502",
+        "Vendor": "Connectivity Standards Alliance (CSA)",
+        "Country": "",
+        "Name": "Aliro Step Up",
+        "Description": "Used to retrieve 'access documents' in case a reader needs to verify the validity of a credential",
+        "Type": "",
+        "Protocol": "csa_aliro"
+    },
+    {
+        "AID": "A000000909ACCE5501",
+        "Vendor": "Connectivity Standards Alliance (CSA)",
+        "Country": "",
+        "Name": "Aliro Expedited",
+        "Description": "Acts as the primary credential holder applet",
+        "Type": "access",
+        "Protocol": "csa_aliro",
+        "Sources": [
+            "android://com.google.android.gms",
+            "android://com.samsung.android.dkey"
+        ]
     },
     {
         "AID": "A000000396564341",
@@ -2304,6 +2548,33 @@
         "Type": ""
     },
     {
+        "AID": "A000000396564341034D464300000000",
+        "Vendor": "Touch 'N GO",
+        "Country": "Malaysia",
+        "Name": "Touch 'N GO card (DESFIRE EV3C)",
+        "Description": "MIFARE DESFire EV3C-based Touch 'N GO card",
+        "Type": "transport",
+        "Protocol": "mifare_desfire"
+    },
+    {
+        "AID": "A000000396564341FFFFFFFFFFFFFFFF",
+        "Vendor": "NXP",
+        "Country": "",
+        "Name": "MIFARE Plus default AID",
+        "Description": "Default AID for MIFARE Plus; used by Riocard Mais and Touch 'N GO cards",
+        "Type": "",
+        "Protocol": "mifare_plus"
+    },
+    {
+        "AID": "A00000039656434103F015400000000B",
+        "Vendor": "NXP",
+        "Country": "",
+        "Name": "MIFARE DESFire Light",
+        "Description": "",
+        "Type": "",
+        "Protocol": "mifare_desfire"
+    },
+    {
         "AID": "A00000039656434103F1216000000000",
         "Vendor": "LV Monorail",
         "Country": "United States",
@@ -2312,12 +2583,81 @@
         "Type": "transport"
     },
     {
+        "AID": "A00000039656434103F121A000000002",
+        "Vendor": "Urban Mobility Center",
+        "Country": "Bulgaria",
+        "Name": "Sofia Mobile Transit Card",
+        "Description": "DESFire-based mobile transit card",
+        "Type": "transport",
+        "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F121A0",
+            "ISOFID": "5677"
+        }
+    },
+    {
+        "AID": "A00000039656434103F213F000000000",
+        "Vendor": "ORCA",
+        "Country": "United States",
+        "Name": "ORCA transit card",
+        "Description": "DESFire-based transit card",
+        "Type": "transport",
+        "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F213F0",
+            "ISOFID": "EA00"
+        },
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
+    },
+    {
+        "AID": "A00000039656434103F2142000000000",
+        "Vendor": "Metrolinx",
+        "Country": "Canada",
+        "Name": "PRESTO transit card",
+        "Description": "DESFire-based transit card",
+        "Type": "transport",
+        "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F21420",
+            "ISOFID": "F214"
+        },
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
+    },
+    {
+        "AID": "A00000039656434103F2145000000000",
+        "Vendor": "Metropolitan Atlanta Rapid Transit Authority (MARTA)",
+        "Country": "United States",
+        "Name": "MARTA Breeze transit card",
+        "Description": "DESFire-based transit card",
+        "Type": "transport",
+        "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F21450",
+            "ISOFID": "EA00"
+        },
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
+    },
+    {
         "AID": "A00000039656434103F8852200000000",
         "Vendor": "Ubian",
         "Country": "Slovakia",
         "Name": "Ubian digital transit card",
         "Description": "DESFire-based virtual transit card",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F88522",
+            "ISOFID": "8522"
+        },
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "DE5C0D1F1CADA5",
@@ -2325,7 +2665,47 @@
         "Country": "Spain",
         "Name": "Madrid transit card",
         "Description": "DESFire-based transit card",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "010000",
+            "ISOFID": "000E"
+        },
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
+    },
+    {
+        "AID": "A00000039656434103F210C000000000",
+        "Vendor": "Ubian",
+        "Country": "Slovakia",
+        "Name": "Ubian digital transit card (Secondary)",
+        "Description": "DESFire-based virtual transit card secondary application",
+        "Type": "transport",
+        "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F210C0",
+            "ISOFID": "10C0"
+        },
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
+    },
+    {
+        "AID": "A00000F210F0",
+        "Vendor": "PTV",
+        "Country": "Australia",
+        "Name": "Myki transit card (Secondary)",
+        "Description": "DESFire-based transit card secondary application",
+        "Type": "transport",
+        "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F210F0",
+            "ISOFID": "02E0"
+        },
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "A00000F21100",
@@ -2333,7 +2713,15 @@
         "Country": "Australia",
         "Name": "Myki transit card",
         "Description": "DESFire-based transit card",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F21100",
+            "ISOFID": "01E0"
+        },
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "637001ff4c41",
@@ -2341,23 +2729,44 @@
         "Country": "United States",
         "Name": "LA Tap",
         "Description": "DESFire-based transit card (ASCII cp\\x01\\xffLA)",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "000001",
+            "ISOFID": "0001"
+        }
     },
     {
-        "AID": "637001ff574d415441",
+        "AID": "637001FF574D415441",
         "Vendor": "Cubic",
         "Country": "United States",
         "Name": "Smart Trip",
         "Description": "DESFire-based transit card (ASCII cp\\x01\\xffWMATA)",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "000001",
+            "ISOFID": "0001"
+        },
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
-        "AID": "637001ff434c4950504552",
+        "AID": "637001FF434C4950504552",
         "Vendor": "Cubic",
         "Country": "United States",
         "Name": "Clipper",
         "Description": "DESFire-based transit card (ASCII cp\\x01\\xffCLIPPER)",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "mifare_desfire",
+        "Extras": {
+            "AID": "F21191",
+            "ISOFID": "2119"
+        },
+        "Sources": [
+            "android://com.google.android.gms"
+        ]
     },
     {
         "AID": "A0000002164954534F2D31",
@@ -2413,14 +2822,923 @@
         "Country": "",
         "Name": "SEOS",
         "Description": "Used by both by physical cards and mobile implementations",
-        "Type": "access"
+        "Type": "access",
+        "Protocol": "hid_seos",
+        "Sources": [
+            "android://app.smartspaces.*",
+            "android://com.afiaa",
+            "android://com.alertenterprise.android.wallet",
+            "android://com.assaabloy.mobilekeys.android.v2",
+            "android://com.assaabloy.stg.msf.config.android",
+            "android://com.cardexchangeid.ident",
+            "android://com.cbord.get",
+            "android://com.cohesion.core",
+            "android://com.equiem.equiemandroid",
+            "android://com.hidglobal.mobilekeys.android.v3",
+            "android://com.honeywell.ext.mobilecredentials",
+            "android://com.hqo",
+            "android://com.kastle.kastlePresence",
+            "android://com.lane.lane",
+            "android://com.s2sys.mobilesecurityuser",
+            "android://com.soloinsight.cloudpassnew.staging",
+            "android://com.wandera.android",
+            "android://com.workai.app",
+            "android://eu.sharry.swp.gallagherhub",
+            "android://eu.sharry.swp.sharrypartner",
+            "android://eu.sharry.swp.sharryworkplace",
+            "android://io.blinetech.blineandroid",
+            "android://io.swiftconnect.mobile"
+        ]
+    },
+    {
+        "AID": "A0000004400001010001000002",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "SEOS Mobile",
+        "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
+        "Type": "access",
+        "Protocol": "hid_seos",
+        "Sources": [
+            "android://com.lane.lane"
+        ]
+    },
+    {
+        "AID": "A0000004400001010001000003",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "SEOS Mobile",
+        "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
+        "Type": "access",
+        "Protocol": "hid_seos",
+        "Sources": [
+            "android://com.assaabloy.stg.msf.config.android"
+        ]
+    },
+    {
+        "AID": "A0000004400001010001000004",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "SEOS Mobile",
+        "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
+        "Type": "access",
+        "Protocol": "hid_seos",
+        "Sources": [
+            "android://com.assaabloy.stg.msf.config.android"
+        ]
     },
     {
         "AID": "A00000054000060100010000FF",
         "Vendor": "HID Global",
         "Country": "",
         "Name": "SEOS Mobile",
-        "Description": "Declared by some SEOS-compatible applications for HCE",
+        "Description": "Declared by some SEOS-compatible HID partner applications for HCE",
+        "Type": "access",
+        "Protocol": "hid_seos",
+        "Sources": [
+            "android://app.smartspaces.*",
+            "android://co.any2any.badge.app.stage",
+            "android://com.afiaa",
+            "android://com.alertenterprise.android.wallet",
+            "android://com.assaabloy.hospitality.mobileaccess.studentliving",
+            "android://com.assaabloy.stg.msf.config.android",
+            "android://com.brivo.pass",
+            "android://com.cardexchangeid.ident",
+            "android://com.cbord.get",
+            "android://com.cohesion.core",
+            "android://com.equiem.equiemandroid",
+            "android://com.hidglobal.pacs.readermanager",
+            "android://com.honeywell.ext.mobilecredentials",
+            "android://com.hotelbird.hbapp",
+            "android://com.hqo",
+            "android://com.kastle.kastlePresence",
+            "android://com.mews.guestPortal",
+            "android://com.openkey.guest",
+            "android://com.soloinsight.cloudpassnew.staging",
+            "android://com.wandera.android",
+            "android://com.workai.app",
+            "android://com.yale.multifamconftool",
+            "android://com.zaplox.premium.*",
+            "android://eu.sharry.swp.gallagherhub",
+            "android://eu.sharry.swp.sharrypartner",
+            "android://eu.sharry.swp.sharryworkplace",
+            "android://io.blinetech.blineandroid",
+            "android://io.swiftconnect.mobile",
+            "android://it.flexipass.app"
+        ]
+    },
+    {
+        "AID": "A0000003570007",
+        "Vendor": "LEGIC Identsystems AG",
+        "Country": "",
+        "Name": "LEGIC Connect",
+        "Description": "Dynamic AID prefix used by apps featuring LEGIC Connect mobile credentials",
+        "Type": "access",
+        "Protocol": "legic_connect",
+        "Sources": [
+            "android://co.any2any.badge.app",
+            "android://co.any2any.badge.app.legic",
+            "android://co.any2any.badge.app.stage",
+            "android://com.brivo.pass",
+            "android://com.butterflymx.butterflymx",
+            "android://com.cohesion.core",
+            "android://com.hqo",
+            "android://com.kastle.KMF.Portable",
+            "android://com.legic.mobile.app.eka",
+            "android://com.openkey.guest",
+            "android://com.zaplox.premium.*",
+            "android://de.mada.idmobile.production",
+            "android://io.swiftconnect.mobile",
+            "android://it.flexipass.app"
+        ]
+    },
+    {
+        "AID": "A0000003820012000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A0000003820021000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A0000003820025000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A0000003820028000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A0000003820029000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A000000382002A000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A000000382002B000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A000000382002C000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A000000382002D000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A000000382002E000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A0000003820031000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager mobile admin card",
+        "Description": "",
+        "Type": "configuration",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A000000341000101",
+        "Vendor": "TransitLink Pte Ltd",
+        "Country": "Singapore",
+        "Name": "CEPAS",
+        "Description": "Transit and e-money card used in Singapore",
+        "Type": "transport"
+    },
+    {
+        "AID": "A0000000014145502E4E4643412E5654",
+        "Vendor": "GTT - Gruppo Torinese Trasporti",
+        "Country": "Italy",
+        "Name": "Torino TO Move",
+        "Description": "AEP VTS mobile transit card (AEP.NFCA.VT)",
+        "Type": "transport",
+        "Protocol": "aep_vts",
+        "Sources": [
+            "android://it.to.gtt.tomove"
+        ]
+    },
+    {
+        "AID": "A0000007874145502E4E4643422E5654",
+        "Vendor": "ATM Milano",
+        "Country": "Italy",
+        "Name": "RicaricaMi",
+        "Description": "AEP VTS mobile transit card (AEP.NFCB.VT)",
+        "Type": "transport",
+        "Protocol": "aep_vts",
+        "Sources": [
+            "android://it.atm.appmobile"
+        ]
+    },
+    {
+        "AID": "A000000291",
+        "Vendor": "Calypso Networks Association (CNA)",
+        "Country": "France",
+        "Name": "",
+        "Description": "AID prefix for new CALYPSO-based transit cards",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A000000291D1240400",
+        "Vendor": "OPUS",
+        "Country": "Canada",
+        "Name": "OPUS",
+        "Description": "CALYPSO-based OPUS transit card application.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A000000404",
+        "Vendor": "Calypso Networks Association (CNA)",
+        "Country": "France",
+        "Name": "",
+        "Description": "AID prefix for some CALYPSO-based transit cards",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "315449432E494341",
+        "Vendor": "Calypso Networks Association (CNA)",
+        "Country": "France",
+        "Name": "1TIC.ICA",
+        "Description": "Default legacy header, used by legacy ticketing applications. As defined in Calypso Revision 2. \"1TIC.ICA\" in ISO/IEC 8859-1 coding.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Sources": [
+            "android://pt.card4b.navegante",
+            "android://pt.opt.anda",
+            "android://com.spirtech.emiliaromagna"
+        ]
+    },
+    {
+        "AID": "315449432E49434132",
+        "Vendor": "Calypso Networks Association (CNA)",
+        "Country": "France",
+        "Name": "1TIC.ICA2",
+        "Description": "Compatibility AID. \"1TIC.ICA2\" in ISO/IEC 8859-1 coding.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "2100"
+        }
+    },
+    {
+        "AID": "304554502E494341",
+        "Vendor": "Calypso Networks Association (CNA)",
+        "Country": "France",
+        "Name": "0ETP.ICA",
+        "Description": "Legacy header for the Store Value application. \"0ETP.ICA\" in ISO/IEC 8859-1 coding.",
+        "Type": "",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "324D50502E494341",
+        "Vendor": "Calypso Networks Association (CNA)",
+        "Country": "France",
+        "Name": "2MPP.ICA",
+        "Description": "Legacy header for card applications not dedicated to public transport. \"2MPP.ICA\" in ISO/IEC 8859-1 coding.",
+        "Type": "",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "334D54522E494341",
+        "Vendor": "Calypso Networks Association (CNA)",
+        "Country": "France",
+        "Name": "3MTR.ICA",
+        "Description": "Legacy header dedicated to the Master File. \"3MTR.ICA\" in ISO/IEC 8859-1 coding.",
+        "Type": "",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "3F00"
+        }
+    },
+    {
+        "AID": "334D54522E494341D48401019001",
+        "Vendor": "Secretaria de Movilidad (SEMOVI)",
+        "Country": "Mexico",
+        "Name": "Tarjeta de Movilidad Integrada",
+        "Description": "Master File AID observed on a Mexico City Tarjeta de Movilidad Integrada. \"3MTR.ICA\" in ISO/IEC 8859-1 coding.",
+        "Type": "",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "3F00"
+        }
+    },
+    {
+        "AID": "334D54522E4943410000000000000000",
+        "Vendor": "Lignes D'Azur",
+        "Country": "France",
+        "Name": "La Carte",
+        "Description": "Master File AID observed on La Carte. \"3MTR.ICA\" in ISO/IEC 8859-1 coding with a zero-padded suffix.",
+        "Type": "",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "3F00"
+        }
+    },
+    {
+        "AID": "315449432E494341D4840101",
+        "Vendor": "Secretaria de Movilidad (SEMOVI)",
+        "Country": "Mexico",
+        "Name": "Tarjeta de Movilidad Integrada",
+        "Description": "AID prefix observed for Calypso applications on Mexico City Tarjeta de Movilidad Integrada.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "315449432E494341D48401019101",
+        "Vendor": "Secretaria de Movilidad (SEMOVI); Spirtech",
+        "Country": "N/A",
+        "Name": "Tarjeta de Movilidad Integrada | Mover Emilia Romagna",
+        "Description": "Calypso-based ticket for public transport in Mexico City or Emilia-Romagna.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "2000"
+        },
+        "Sources": [
+            "android://com.spirtech.emiliaromagna",
+            "android://mx.gob.cdmx.adip.apps"
+        ]
+    },
+    {
+        "AID": "315449432E494341D48401019301",
+        "Vendor": "Secretaria de Movilidad (SEMOVI)",
+        "Country": "Mexico",
+        "Name": "Tarjeta de Movilidad Integrada",
+        "Description": "Calypso-based public transport application.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "3100"
+        }
+    },
+    {
+        "AID": "315449432E494341D05600019101",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "2000"
+        }
+    },
+    {
+        "AID": "A000000291D62000029101",
+        "Vendor": "Transportes Metropolitanos do Porto",
+        "Country": "Portugal",
+        "Name": "Andante",
+        "Description": "Calypso-based ticket for public transport in the Porto Metropolitan Area, used by the Anda app.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Sources": [
+            "android://pt.opt.anda"
+        ]
+    },
+    {
+        "AID": "304554502E494341D484010192",
+        "Vendor": "Secretaria de Movilidad (SEMOVI)",
+        "Country": "Mexico",
+        "Name": "Tarjeta Virtual de Movilidad Integrada",
+        "Description": "Store value application for the virtual Tarjeta MI used on Mexico City public transport, distributed through App CDMX.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Sources": [
+            "android://mx.gob.cdmx.adip.apps"
+        ]
+    },
+    {
+        "AID": "304554502E494341D48401019201",
+        "Vendor": "Secretaria de Movilidad (SEMOVI)",
+        "Country": "Mexico",
+        "Name": "Tarjeta de Movilidad Integrada",
+        "Description": "Store value application observed on a Mexico City Tarjeta de Movilidad Integrada.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "1000"
+        }
+    },
+    {
+        "AID": "A00000040401250901",
+        "Vendor": "Ile-de-France Mobilites",
+        "Country": "France",
+        "Name": "Navigo",
+        "Description": "CALYPSO-based transit card",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Sources": [
+            "android://com.applidium.vianavigo",
+            "android://com.worldline.wallet"
+        ]
+    },
+    {
+        "AID": "A0000004040125090101",
+        "Vendor": "Ile-de-France Mobilites",
+        "Country": "France",
+        "Name": "Navigo",
+        "Description": "CALYPSO-based Navigo paper ticket application.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "2000"
+        }
+    },
+    {
+        "AID": "A0000004040125090101000000000000",
+        "Vendor": "Ile-de-France Mobilites",
+        "Country": "France",
+        "Name": "Navigo",
+        "Description": "CALYPSO-based older Navigo plastic card application.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "2000"
+        }
+    },
+    {
+        "AID": "A00000040401250057F0",
+        "Vendor": "TCL",
+        "Country": "France",
+        "Name": "E-ticket Lyon",
+        "Description": "CALYPSO-based transit card",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Sources": [
+            "android://com.tcl.eticket",
+            "android://com.worldline.wallet"
+        ]
+    },
+    {
+        "AID": "A0000004040125006901",
+        "Vendor": "Lignes D'Azur",
+        "Country": "France",
+        "Name": "Lignes D'Azur",
+        "Description": "CALYPSO-based Lignes D'Azur transit card.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A0000004040125009101",
+        "Vendor": "CTS",
+        "Country": "France",
+        "Name": "Strasbourg",
+        "Description": "CALYPSO-based transit card used by Strasbourg CTS.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A00000040401250920",
+        "Vendor": "Lignes D'Azur / ZOU",
+        "Country": "France",
+        "Name": "La Carte / ZOU",
+        "Description": "CALYPSO-based transit card application observed on La Carte and ZOU cards.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A0000004040125092001",
+        "Vendor": "Lignes D'Azur / ZOU",
+        "Country": "France",
+        "Name": "La Carte / ZOU",
+        "Description": "CALYPSO-based transit card application observed on La Carte and ZOU cards.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "2000"
+        }
+    },
+    {
+        "AID": "A0000004040125092001000000000000",
+        "Vendor": "Lignes D'Azur",
+        "Country": "France",
+        "Name": "La Carte",
+        "Description": "CALYPSO-based La Carte transit card application.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "2000"
+        }
+    },
+    {
+        "AID": "A000000291D25008009301",
+        "Vendor": "Lignes D'Azur / ZOU",
+        "Country": "France",
+        "Name": "La Carte / ZOU",
+        "Description": "CALYPSO-based transit card application observed on La Carte and ZOU cards.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A0000004040225092001",
+        "Vendor": "ZOU",
+        "Country": "France",
+        "Name": "ZOU",
+        "Description": "CALYPSO-based transit card application observed on ZOU cards.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "1000"
+        }
+    },
+    {
+        "AID": "A0000004044125092001",
+        "Vendor": "ZOU",
+        "Country": "France",
+        "Name": "ZOU",
+        "Description": "CALYPSO-based transit card application observed on ZOU cards.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "2300"
+        }
+    },
+    {
+        "AID": "54494C414D4F32000000",
+        "Vendor": "Lignes D'Azur",
+        "Country": "France",
+        "Name": "La Carte",
+        "Description": "CALYPSO-based transit card",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Sources": [
+            "android://eu.mobeepass.nfcniceticket",
+            "android://eu.mobeepass.walletapplication"
+        ]
+    },
+    {
+        "AID": "A000000291D05600",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "AID prefix observed across MOBIB Calypso applications.",
+        "Type": "transport",
+        "Protocol": "cna_calypso"
+    },
+    {
+        "AID": "A000000291D05600019001",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "3F00"
+        }
+    },
+    {
+        "AID": "A000000291D05600019201",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "1000"
+        }
+    },
+    {
+        "AID": "A000000291A00000019102",
+        "Vendor": "MOBIB / ZOU",
+        "Country": "Belgium / France",
+        "Name": "MOBIB / ZOU",
+        "Description": "Calypso-based transit card application observed on MOBIB and ZOU cards.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "2100"
+        }
+    },
+    {
+        "AID": "A000000291D05600019301",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "3100"
+        }
+    },
+    {
+        "AID": "A000000291D05600019302",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "3200"
+        }
+    },
+    {
+        "AID": "A000000291D05600029302",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "3300"
+        }
+    },
+    {
+        "AID": "A000000291D05600019303",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "3400"
+        }
+    },
+    {
+        "AID": "A000000291D05600029401",
+        "Vendor": "MOBIB",
+        "Country": "Belgium",
+        "Name": "MOBIB",
+        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Extras": {
+            "LID": "4100"
+        }
+    },
+    {
+        "AID": "A000000291D62000019101",
+        "Vendor": "Transportes Metropolitanos de Lisboa",
+        "Country": "Portugal",
+        "Name": "navegante mobile",
+        "Description": "Digital navegante card for phone-based validation in the Lisbon Metropolitan Area.",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Sources": [
+            "android://pt.card4b.navegante"
+        ]
+    },
+    {
+        "AID": "A00000074340CEBCFB34134469050200",
+        "Vendor": "Salto Systems",
+        "Country": "",
+        "Name": "Salto JustIN Mobile",
+        "Description": "",
+        "Type": "access",
+        "Protocol": "salto_justin_mobile",
+        "Sources": [
+            "android://com.saltoks.keychain.app",
+            "android://nl.moboa.myclay"
+        ]
+    },
+    {
+        "AID": "A00000074375FB98D0EDE9F874A40200",
+        "Vendor": "Salto Systems",
+        "Country": "",
+        "Name": "Salto JustIN Mobile",
+        "Description": "",
+        "Type": "access",
+        "Protocol": "salto_justin_mobile",
+        "Sources": [
+            "android://com.saltosystems.android.homelok",
+            "android://com.saltosystems.android.nebula",
+            "android://com.siemens.accessmobile"
+        ]
+    },
+    {
+        "AID": "A000000743CC843413925E20C59B0100",
+        "Vendor": "Salto Systems",
+        "Country": "",
+        "Name": "Salto JustIN Mobile",
+        "Description": "",
+        "Type": "access",
+        "Protocol": "salto_justin_mobile",
+        "Sources": [
+            "android://com.saltosystems.justin",
+            "android://eu.sharry.swp.gallagherhub",
+            "android://eu.sharry.swp.sharrypartner",
+            "android://eu.sharry.swp.sharryworkplace"
+        ]
+    },
+    {
+        "AID": "A0000000791000",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "Crescendo ACA",
+        "Description": "HID Crescendo ACA",
         "Type": "access"
+    },
+    {
+        "AID": "A0000000792300",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "Crescendo OATH #0 (HOTP)",
+        "Description": "HID Crescendo Key OATH instance 0 (default HOTP slot)",
+        "Type": "access"
+    },
+    {
+        "AID": "A0000000792301",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "Crescendo OATH #1",
+        "Description": "HID Crescendo Key OATH instance 1",
+        "Type": "access"
+    },
+    {
+        "AID": "A0000000792302",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "Crescendo OATH #2",
+        "Description": "HID Crescendo Key OATH instance 2",
+        "Type": "access"
+    },
+    {
+        "AID": "F0006B7369000001",
+        "Vendor": "Kastle Systems",
+        "Country": "",
+        "Name": "Kastle Presence",
+        "Description": "",
+        "Type": "access",
+        "Protocol": "kastle_presence",
+        "Sources": [
+            "android://com.cohesion.core",
+            "android://com.hqo",
+            "android://com.kastle.KMF.Portable",
+            "android://com.kastle.kastlePresence",
+            "android://com.lane.lane"
+        ]
+    },
+    {
+        "AID": "F000F52310",
+        "Vendor": "ICT",
+        "Country": "",
+        "Name": "Protege Mobile Credential",
+        "Description": "",
+        "Type": "access",
+        "Protocol": "ict_protege_mobile",
+        "Sources": [
+            "android://co.ict.protegemobile",
+            "android://com.ict.ProtegeMobile",
+            "android://io.blinetech.blineandroid"
+        ]
+    },
+    {
+        "AID": "F051BC535469644D6F62696C652D4944",
+        "Vendor": "STiD",
+        "Country": "France",
+        "Name": "STiD Mobile ID Credential",
+        "Description": "",
+        "Type": "access",
+        "Protocol": "stid_mobile_id",
+        "Sources": [
+            "android://com.stid.stidmobileid",
+            "android://com.swiftlane.employee"
+        ]
+    },
+    {
+        "AID": "F053555052454D410000000000000002",
+        "Vendor": "Suprema",
+        "Country": "",
+        "Name": "Suprema Mobile Credential",
+        "Description": "",
+        "Type": "access",
+        "Protocol": "suprema_mobile",
+        "Sources": [
+            "android://eu.sharry.swp.gallagherhub",
+            "android://eu.sharry.swp.sharrypartner",
+            "android://eu.sharry.swp.sharryworkplace"
+        ]
+    },
+    {
+        "AID": "F053555052454D41AF02000000000001",
+        "Vendor": "Suprema",
+        "Country": "",
+        "Name": "Suprema Mobile Credential",
+        "Description": "",
+        "Type": "access",
+        "Protocol": "suprema_mobile",
+        "Sources": [
+            "android://com.supremainc.supremapass"
+        ]
+    },
+    {
+        "AID": "F51BC0535469644D6F62696C65494401",
+        "Vendor": "STiD",
+        "Country": "France",
+        "Name": "STiD Mobile ID Credential",
+        "Description": "",
+        "Type": "access",
+        "Protocol": "stid_mobile_id",
+        "Sources": [
+            "android://com.stid.stidmobileid"
+        ]
+    },
+    {
+        "AID": "FF55494420414343455353",
+        "Vendor": "UniFi",
+        "Country": "",
+        "Name": "UniFi Access HCE Credential",
+        "Description": "Declared as 'other' service",
+        "Type": "access",
+        "Protocol": "unifi_identity",
+        "Sources": [
+            "android://com.ui.uid.standard",
+            "android://com.ui.uid.client"
+        ]
+    },
+    {
+        "AID": "FF55494420414343455356",
+        "Vendor": "UniFi",
+        "Country": "",
+        "Name": "UniFi Access HCE Credential",
+        "Description": "Declared as 'payment' service",
+        "Type": "access",
+        "Protocol": "unifi_identity",
+        "Sources": [
+            "android://com.ui.uid.standard",
+            "android://com.ui.uid.client"
+        ]
     }
 ]

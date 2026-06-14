@@ -58,9 +58,9 @@ bool tlvdb_parse_root_multi(struct tlvdb_root *root);
 void tlvdb_free(struct tlvdb *tlvdb);
 void tlvdb_root_free(struct tlvdb_root *root);
 
-struct tlvdb *tlvdb_elm_get_next(struct tlvdb *tlvdb);
-struct tlvdb *tlvdb_elm_get_children(struct tlvdb *tlvdb);
-struct tlvdb *tlvdb_elm_get_parent(struct tlvdb *tlvdb);
+struct tlvdb *tlvdb_elm_get_next(const struct tlvdb *tlvdb);
+struct tlvdb *tlvdb_elm_get_children(const struct tlvdb *tlvdb);
+struct tlvdb *tlvdb_elm_get_parent(const struct tlvdb *tlvdb);
 
 struct tlvdb *tlvdb_find_full(struct tlvdb *tlvdb, tlv_tag_t tag); // search also in childrens
 struct tlvdb *tlvdb_find(struct tlvdb *tlvdb, tlv_tag_t tag);
@@ -84,6 +84,6 @@ bool tlv_equal(const struct tlv *a, const struct tlv *b);
 bool tlv_get_uint8(const struct tlv *etlv, uint8_t *value);
 bool tlv_get_int(const struct tlv *etlv, int *value);
 
-bool tlvdb_get_uint8(struct tlvdb *tlvRoot, tlv_tag_t tag, uint8_t *value);
+bool tlvdb_get_uint8(const struct tlvdb *tlvRoot, tlv_tag_t tag, uint8_t *value);
 
 #endif

@@ -41,7 +41,7 @@ void ModInfo(void) {
     DbpString("  LF EM4100 simulator standalone mode");
 }
 
-static uint64_t rev_quads(uint64_t bits) {
+static uint64_t em4100emul_rev_quads(uint64_t bits) {
     uint64_t result = 0;
     for (int i = 0; i < 16; i++) {
         result += ((bits >> (60 - 4 * i)) & 0xf) << (4 * i);
@@ -49,7 +49,7 @@ static uint64_t rev_quads(uint64_t bits) {
     return result >> 24;
 }
 
-static void fill_buff(uint8_t bit) {
+static void em4100emul_fill_buff(uint8_t bit) {
     uint8_t *bba = BigBuf_get_addr();
     memset(bba + em4100emul_buflen, bit, LF_CLOCK / 2);
     em4100emul_buflen += (LF_CLOCK / 2);
@@ -57,7 +57,7 @@ static void fill_buff(uint8_t bit) {
     em4100emul_buflen += (LF_CLOCK / 2);
 }
 
-static void construct_EM410x_emul(uint64_t id) {
+static void em4100emul_construct_EM410x_emul(uint64_t id) {
 
     int i, j;
     int binary[4] = {0, 0, 0, 0};
@@ -65,24 +65,24 @@ static void construct_EM410x_emul(uint64_t id) {
     em4100emul_buflen = 0;
 
     for (i = 0; i < 9; i++)
-        fill_buff(1);
+        em4100emul_fill_buff(1);
 
     for (i = 0; i < 10; i++) {
         for (j = 3; j >= 0; j--, id /= 2)
             binary[j] = id % 2;
 
         for (j = 0; j < 4; j++)
-            fill_buff(binary[j]);
+            em4100emul_fill_buff(binary[j]);
 
-        fill_buff(binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
+        em4100emul_fill_buff(binary[0] ^ binary[1] ^ binary[2] ^ binary[3]);
         for (j = 0; j < 4; j++)
             parity[j] ^= binary[j];
     }
 
     for (j = 0; j < 4; j++)
-        fill_buff(parity[j]);
+        em4100emul_fill_buff(parity[j]);
 
-    fill_buff(0);
+    em4100emul_fill_buff(0);
 }
 
 static void LED_Slot(int i) {
@@ -108,8 +108,18 @@ void RunMod(void) {
         SpinDelay(100);
         SpinUp(100);
         LED_Slot(selected);
-        construct_EM410x_emul(rev_quads(em4100emul_low[selected]));
+        Dbprintf("Emulating 0x%010llX", em4100emul_low[selected]);
+        em4100emul_construct_EM410x_emul(em4100emul_rev_quads(em4100emul_low[selected]));
         SimulateTagLowFrequency(em4100emul_buflen, 0, true);
+
+        //Exit! Button hold break
+        int button_pressed = BUTTON_HELD(500);
+        if (button_pressed == BUTTON_HOLD) {
+            Dbprintf("Button hold, Break!");
+            LEDsoff();
+            Dbprintf("[=] >>  LF EM4100 simulator stopped due to button hold  <<");
+            return; // RunMod end
+        }
         selected = (selected + 1) % em4100emul_slots_count;
     }
 }

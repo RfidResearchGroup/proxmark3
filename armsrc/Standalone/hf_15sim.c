@@ -70,7 +70,9 @@ void RunMod(void) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
 
     iso15_tag_t *tag = (iso15_tag_t *) BigBuf_get_EM_addr();
-    if (tag == NULL) return;
+    if (tag == NULL) {
+        return;
+    }
 
     uint8_t cmd[8] = {0};
     int res;

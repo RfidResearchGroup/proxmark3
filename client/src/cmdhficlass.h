@@ -36,4 +36,12 @@ void PrintPreCalc(iclass_prekey_t *list, uint32_t itemcnt);
 
 uint8_t get_pagemap(const picopass_hdr_t *hdr);
 bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t *rmac, uint8_t *tmac, uint8_t *key);
+
+void picopass_elite_nextKey(uint8_t *key);
+void picopass_elite_reset(void);
+uint32_t picopass_elite_rng(void);
+uint32_t picopass_elite_lcg(void);
+uint8_t picopass_elite_nextByte(void);
+void generate_key_block_inverted(const uint8_t *startingKey, uint64_t index, uint8_t *keyBlock);
+void print_iclass_sio(uint8_t *iclass_dump, size_t dump_len, bool verbose);
 #endif

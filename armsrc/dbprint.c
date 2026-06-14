@@ -16,7 +16,6 @@
 //-----------------------------------------------------------------------------
 
 #include "dbprint.h"
-
 #include "string.h"
 #include "cmd.h"
 #include "printf.h"
@@ -76,33 +75,33 @@ void Dbprintf(const char *fmt, ...) {
 // prints HEX & ASCII
 void Dbhexdump(int len, const uint8_t *d, bool bAsci) {
 #if DEBUG
-    char ascii[17];
-
     while (len > 0) {
 
         int l = (len > 16) ? 16 : len;
 
-        memcpy(ascii, d, l);
-        ascii[l] = 0;
+        if (bAsci) {
+            char ascii[17];
 
-        // filter safe ascii
-        for (int i = 0; i < l; i++) {
-            if (ascii[i] < 32 || ascii[i] > 126) {
-                ascii[i] = '.';
+            memcpy(ascii, d, l);
+            ascii[l] = 0;
+
+            // filter safe ascii
+            for (int i = 0; i < l; i++) {
+                if (ascii[i] < 32 || ascii[i] > 126) {
+                    ascii[i] = '.';
+                }
             }
-        }
 
-        if (bAsci)
             Dbprintf("%-8s %*D", ascii, l, d, " ");
-        else
+        } else {
             Dbprintf("%*D", l, d, " ");
+        }
 
         len -= 16;
         d += 16;
     }
 #endif
 }
-
 void print_result(const char *name, const uint8_t *d, size_t n) {
 
     const uint8_t *p = d;
@@ -129,7 +128,7 @@ void print_result(const char *name, const uint8_t *d, size_t n) {
 }
 
 // Prints message and hexdump
-void print_dbg(char *msg, uint8_t *d, uint16_t n) {
+void print_dbg(const char *msg, const uint8_t *d, uint16_t n) {
     if (g_dbglevel == DBG_DEBUG) {
         print_result(msg, d, n);
     }

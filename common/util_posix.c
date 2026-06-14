@@ -18,7 +18,7 @@
 
 // ensure availability even with -std=c99; must be included before
 #if !defined(_WIN32)
-//#define _POSIX_C_SOURCE 199309L // need nanosleep()
+
 #define _POSIX_C_SOURCE 200112L  // need localtime_r()
 #else
 #include <windows.h>
@@ -116,7 +116,6 @@ int _civet_safe_clock_gettime(int clk_id, struct timespec *t) {
 
 #endif
 
-
 // a milliseconds timer for performance measurement
 uint64_t msclock(void) {
 #if defined(_WIN32)
@@ -140,6 +139,33 @@ uint64_t msclock(void) {
     struct timespec t;
     clock_gettime(CLOCK_MONOTONIC, &t);
     return (1000 * (uint64_t)t.tv_sec + t.tv_nsec / 1000000);
+#endif
+}
+
+// a micro seconds timer for performance measurement
+uint64_t usclock(void) {
+#if defined(_WIN32)
+#include <sys/types.h>
+
+    // WORKAROUND FOR MinGW (some versions - use if normal code does not compile)
+    // It has no _ftime_s and needs explicit inclusion of timeb.h
+#include <sys/timeb.h>
+    struct _timeb t;
+    _ftime(&t);
+    return 1000 * (uint64_t)t.time + t.millitm;
+
+// NORMAL CODE (use _ftime_s)
+    //struct _timeb t;
+    //if (_ftime_s(&t)) {
+    //  return 0;
+    //} else {
+    //  return 1000 * t.time + t.millitm;
+    //}
+#else
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    //return (1000 * (uint64_t)t.tv_sec + t.tv_nsec / 1000);
+    return (1000 * (uint64_t)t.tv_sec + (t.tv_nsec / 1000));
 #endif
 }
 

@@ -48,12 +48,61 @@ static char *prefGetFilename(void) {
         return str_dup(preferencesFilename);
 }
 
+static  bool setDefaultMqttServer(const char *srv) {
+
+    if ((srv == NULL) && (g_session.mqtt_server != NULL)) {
+        free(g_session.mqtt_server);
+        g_session.mqtt_server = NULL;
+    }
+
+    if (srv == NULL) {
+        return false;
+    }
+
+    g_session.mqtt_server = (char *)realloc(g_session.mqtt_server,  strlen(srv) + 1);
+    strcpy(g_session.mqtt_server, srv);
+    return true;
+}
+
+static bool setDefaultMqttPort(const char *port) {
+
+    if ((port == NULL) && (g_session.mqtt_port != NULL)) {
+        free(g_session.mqtt_port);
+        g_session.mqtt_port = NULL;
+    }
+
+    if (port == NULL) {
+        return false;
+    }
+
+    g_session.mqtt_port = (char *)realloc(g_session.mqtt_port,  strlen(port) + 1);
+    strcpy(g_session.mqtt_port, port);
+    return true;
+}
+
+static bool setDefaultMqttTopic(const char *topic) {
+
+    if ((topic == NULL) && (g_session.mqtt_topic != NULL)) {
+        free(g_session.mqtt_topic);
+        g_session.mqtt_topic = NULL;
+    }
+
+    if (topic == NULL) {
+        return false;
+    }
+
+    g_session.mqtt_topic = (char *)realloc(g_session.mqtt_topic, strlen(topic) + 1);
+    strcpy(g_session.mqtt_topic, topic);
+    return true;
+}
+
 int preferences_load(void) {
 
     // Set all defaults
     g_session.client_debug_level = cdbOFF;
     //  g_session.device_debug_level = ddbOFF;
     g_session.timeout = uart_get_timeouts();
+    g_session.hf_field_timeout_sec = 0;
 
     g_session.window_changed = false;
     g_session.plot.x = 10;
@@ -73,23 +122,30 @@ int preferences_load(void) {
     setDefaultPath(spDump, "");
     setDefaultPath(spTrace, "");
 
+    setDefaultMqttServer("");
+    setDefaultMqttPort("");
+    setDefaultMqttTopic("");
+
     // default save path
-    if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
+    if (get_my_user_directory() != NULL) { // should return path to .proxmark3 folder
         setDefaultPath(spDefault, get_my_user_directory());
-    else
+    } else {
         setDefaultPath(spDefault, ".");
+    }
 
     // default dump path
-    if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
+    if (get_my_user_directory() != NULL) { // should return path to .proxmark3 folder
         setDefaultPath(spDump, get_my_user_directory());
-    else
+    } else {
         setDefaultPath(spDump, ".");
+    }
 
     // default dump path
-    if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
+    if (get_my_user_directory() != NULL) {// should return path to .proxmark3 folder
         setDefaultPath(spTrace, get_my_user_directory());
-    else
+    } else {
         setDefaultPath(spTrace, ".");
+    }
 
     if (g_session.incognito) {
         PrintAndLogEx(INFO, "No preferences file will be loaded");
@@ -127,13 +183,13 @@ int preferences_save(void) {
     char *fn = prefGetFilename();
     int fn_len = strlen(fn) + 5; // .bak\0
 
-    // [FILENAME_MAX+sizeof(preferencesFilename)+10]
     char *backupFilename = (char *)calloc(fn_len, sizeof(uint8_t));
     if (backupFilename == NULL) {
-        PrintAndLogEx(ERR, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(fn);
         return PM3_EMALLOC;
     }
+
     snprintf(backupFilename, fn_len, "%s.bak", fn);
 
     // remove old backup file
@@ -165,6 +221,16 @@ int preferences_save(void) {
 
     free(fn);
     free(backupFilename);
+    return PM3_SUCCESS;
+}
+
+// Dump all settings from memory (struct) to console in JSON
+int preferences_dump(void) {
+    uint8_t dummyData = 0x00;
+    size_t dummyDL = 0x01;
+    char *s = sprintJSON(jsfCustom, &dummyData, dummyDL, true, &preferences_save_callback);
+    PrintAndLogEx(NORMAL, "%s", s);
+    free(s);
     return PM3_SUCCESS;
 }
 
@@ -264,7 +330,14 @@ void preferences_save_callback(json_t *root) {
     */
     JsonSaveInt(root, "client.exe.delay", g_session.client_exe_delay);
     JsonSaveInt(root, "client.timeout", g_session.timeout);
+    JsonSaveInt(root, "hf.field.timeout_sec", g_session.hf_field_timeout_sec);
+
+    // MQTT
+    JsonSaveStr(root, "mqtt.server", g_session.mqtt_server);
+    JsonSaveStr(root, "mqtt.port", g_session.mqtt_port);
+    JsonSaveStr(root, "mqtt.topic", g_session.mqtt_topic);
 }
+
 void preferences_load_callback(json_t *root) {
     json_error_t up_error = {0};
     int b1;
@@ -368,6 +441,21 @@ void preferences_load_callback(json_t *root) {
     // client command timeout
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "client.timeout", &i1) == 0)
         g_session.timeout = i1;
+
+    // persistent HF field timeout (seconds)
+    if (json_unpack_ex(root, &up_error, 0, "{s:i}", "hf.field.timeout_sec", &i1) == 0)
+        g_session.hf_field_timeout_sec = (i1 > 0) ? (uint32_t)i1 : 0;
+
+    // MQTT server
+    if (json_unpack_ex(root, &up_error, 0, "{s:s}", "mqtt.server", &s1) == 0)
+        setDefaultMqttServer(s1);
+
+    if (json_unpack_ex(root, &up_error, 0, "{s:s}", "mqtt.port", &s1) == 0)
+        setDefaultMqttPort(s1);
+
+    if (json_unpack_ex(root, &up_error, 0, "{s:s}", "mqtt.topic", &s1) == 0)
+        setDefaultMqttTopic(s1);
+
 }
 
 // Help Functions
@@ -387,7 +475,6 @@ static const char *pref_show_status_msg(prefShowOpt_t opt) {
         case prefShowUnknown:
         default:
             return "";
-
     }
 }
 
@@ -507,6 +594,7 @@ static void showSavePathState(savePaths_t path_index, prefShowOpt_t opt) {
         case spItemCount:
         default:
             strcpy(s, _RED_("unknown")" save path.......");
+            break;
     }
 
     if (path_index < spItemCount) {
@@ -587,6 +675,38 @@ static void showClientExeDelayState(void) {
 
 static void showClientTimeoutState(void) {
     PrintAndLogEx(INFO, "    communication timeout... " _GREEN_("%u") " ms", g_session.timeout);
+}
+
+static void showFieldTimeoutState(void) {
+    if (g_session.hf_field_timeout_sec == 0) {
+        PrintAndLogEx(INFO, "    HF field timeout........ " _WHITE_("off"));
+    } else {
+        PrintAndLogEx(INFO, "    HF field timeout........ " _GREEN_("%u") " s", g_session.hf_field_timeout_sec);
+    }
+}
+
+static void showMqttServer(prefShowOpt_t opt) {
+    if ((g_session.mqtt_server == NULL) || (strcmp(g_session.mqtt_server, "") == 0)) {
+        PrintAndLogEx(INFO, "    MQTT server.............%s "_WHITE_("not set"), pref_show_status_msg(opt));
+    } else {
+        PrintAndLogEx(INFO, "    MQTT server.............%s "_GREEN_("%s"), pref_show_status_msg(opt), g_session.mqtt_server);
+    }
+}
+
+static void showMqttPort(prefShowOpt_t opt) {
+    if ((g_session.mqtt_port == NULL) || (strcmp(g_session.mqtt_port, "") == 0)) {
+        PrintAndLogEx(INFO, "    MQTT port...............%s "_WHITE_("not set"), pref_show_status_msg(opt));
+    } else {
+        PrintAndLogEx(INFO, "    MQTT port...............%s "_GREEN_("%s"), pref_show_status_msg(opt), g_session.mqtt_port);
+    }
+}
+
+static void showMqttTopic(prefShowOpt_t opt) {
+    if ((g_session.mqtt_topic == NULL) || (strcmp(g_session.mqtt_topic, "") == 0)) {
+        PrintAndLogEx(INFO, "    MQTT topic..............%s "_WHITE_("not set"), pref_show_status_msg(opt));
+    } else {
+        PrintAndLogEx(INFO, "    MQTT topic..............%s "_GREEN_("%s"), pref_show_status_msg(opt), g_session.mqtt_topic);
+    }
 }
 
 static int setCmdEmoji(const char *Cmd) {
@@ -924,7 +1044,7 @@ static int setCmdExeDelay(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int setClientTimeout(const char *Cmd) {
+static int setCmdClientTimeout(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "prefs set client.timeout",
                   "Set persistent preference of client communication timeout",
@@ -958,6 +1078,50 @@ static int setClientTimeout(const char *Cmd) {
     } else {
         showClientTimeoutState();
     }
+    return PM3_SUCCESS;
+}
+
+static int setCmdHfFieldTimeout(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs set hf.field.timeout_sec",
+                  "Set persistent preference of PM3 HF field inactivity timeout",
+                  "prefs set hf.field.timeout_sec --sec 0    --> disable HF field auto timeout\n"
+                  "prefs set hf.field.timeout_sec --sec 5    --> turn HF field off after 5 seconds of inactivity\n"
+                  "prefs set hf.field.timeout_sec --sec 300  --> turn HF field off after 5 minutes of inactivity\n"
+                  "prefs set hf.field.timeout_sec --sec 900  --> turn HF field off after 15 minutes of inactivity\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("s", "sec", "<sec>", "HF field inactivity timeout in seconds"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int32_t arg = arg_get_int_def(ctx, 1, -1);
+    CLIParserFree(ctx);
+
+    if (arg < 0) {
+        showFieldTimeoutState();
+        return PM3_SUCCESS;
+    }
+
+    uint32_t new_value = (uint32_t)arg;
+
+    if (g_session.hf_field_timeout_sec != new_value) {
+        showFieldTimeoutState();
+        g_session.hf_field_timeout_sec = new_value;
+        showFieldTimeoutState();
+        preferences_save();
+    } else {
+        showFieldTimeoutState();
+    }
+
+    if (g_session.pm3_present) {
+        int res = SetHfFieldTimeout(g_session.hf_field_timeout_sec, false);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Failed to apply HF field timeout to connected PM3");
+        }
+    }
+
     return PM3_SUCCESS;
 }
 
@@ -1175,6 +1339,80 @@ static int setCmdBarMode(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int setCmdMqtt(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs set mqtt",
+                  "Set persistent preference MQTT Server in the client",
+                  "prefs set mqtt -s test.mosquito.com\n"
+                  "prefs set mqtt -s test.mosquito.com -p 1883 -t proxdump\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("s", "srv", "<path>", "default MQTT Server"),
+        arg_str0("p", "port", "<path>", "default MQTT Port"),
+        arg_str0("t", "topic", "<path>", "default MQTT Topic"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int deflen = 0;
+    char def_server[128] = {0};
+    memset(def_server, 0, sizeof(def_server));
+    int res = CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)def_server, sizeof(def_server), &deflen);
+
+    int plen = 0;
+    char def_port[10] = {0};
+    memset(def_port, 0, sizeof(def_port));
+    res |= CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)def_port, sizeof(def_port), &plen);
+
+    int tlen = 0;
+    char def_topic[10] = {0};
+    memset(def_topic, 0, sizeof(def_topic));
+    res |= CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)def_topic, sizeof(def_topic), &tlen);
+    CLIParserFree(ctx);
+
+    // sanity checks
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing input strings");
+        return PM3_EINVARG;
+    }
+
+    if (deflen) {
+        if (strcmp(def_server, g_session.mqtt_server) != 0) {
+            showMqttServer(prefShowOLD);
+            setDefaultMqttServer(def_server);
+            showMqttServer(prefShowNEW);
+            preferences_save();
+        } else {
+            showMqttServer(prefShowNone);
+        }
+    }
+
+    if (plen) {
+        if (strcmp(def_port, g_session.mqtt_port) != 0) {
+            showMqttPort(prefShowOLD);
+            setDefaultMqttPort(def_port);
+            showMqttPort(prefShowNEW);
+            preferences_save();
+        } else {
+            showMqttPort(prefShowNone);
+        }
+    }
+
+    if (tlen) {
+        if (strcmp(def_topic, g_session.mqtt_topic) != 0) {
+            showMqttTopic(prefShowOLD);
+            setDefaultMqttTopic(def_topic);
+            showMqttTopic(prefShowNEW);
+            preferences_save();
+        } else {
+            showMqttTopic(prefShowNone);
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int getCmdEmoji(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "prefs get emoji",
@@ -1321,7 +1559,7 @@ static int getCmdExeDelay(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int getClientTimeout(const char *Cmd) {
+static int getCmdClientTimeout(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "prefs get client.timeout",
                   "Get preference of delay time before execution of a command in the client",
@@ -1337,11 +1575,46 @@ static int getClientTimeout(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int getCmdHfFieldTimeout(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs get hf.field.timeout_sec",
+                  "Get preference of PM3 HF field inactivity timeout",
+                  "prefs get hf.field.timeout_sec"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    showFieldTimeoutState();
+    return PM3_SUCCESS;
+}
+
+static int getCmdMqtt(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs get mqtt",
+                  "Get preference of MQTT settings in the client",
+                  "prefs get mqtt"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    showMqttServer(prefShowNone);
+    showMqttPort(prefShowNone);
+    showMqttTopic(prefShowNone);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTableGet[] = {
     {"barmode",          getCmdBarMode,       AlwaysAvailable, "Get bar mode preference"},
     {"client.debug",     getCmdDebug,         AlwaysAvailable, "Get client debug level preference"},
     {"client.delay",     getCmdExeDelay,      AlwaysAvailable, "Get client execution delay preference"},
-    {"client.timeout",   getClientTimeout,    AlwaysAvailable, "Get client execution delay preference"},
+    {"client.timeout",   getCmdClientTimeout, AlwaysAvailable, "Get client execution delay preference"},
+    {"hf.field.timeout_sec", getCmdHfFieldTimeout, AlwaysAvailable, "Get PM3 HF field inactivity timeout preference"},
     {"color",            getCmdColor,         AlwaysAvailable, "Get color support preference"},
     {"savepaths",        getCmdSavePaths,     AlwaysAvailable, "Get file folder  "},
     //  {"devicedebug",      getCmdDeviceDebug,   AlwaysAvailable, "Get device debug level"},
@@ -1349,6 +1622,7 @@ static command_t CommandTableGet[] = {
     {"hints",            getCmdHint,          AlwaysAvailable, "Get hint display preference"},
     {"output",           getCmdOutput,        AlwaysAvailable, "Get dump output style preference"},
     {"plotsliders",      getCmdPlotSlider,    AlwaysAvailable, "Get plot slider display preference"},
+    {"mqtt",             getCmdMqtt,          AlwaysAvailable, "Get MQTT preference"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -1357,7 +1631,8 @@ static command_t CommandTableSet[] = {
     {"barmode",          setCmdBarMode,       AlwaysAvailable, "Set bar mode"},
     {"client.debug",     setCmdDebug,         AlwaysAvailable, "Set client debug level"},
     {"client.delay",     setCmdExeDelay,      AlwaysAvailable, "Set client execution delay"},
-    {"client.timeout",   setClientTimeout,    AlwaysAvailable, "Set client communication timeout"},
+    {"client.timeout",   setCmdClientTimeout, AlwaysAvailable, "Set client communication timeout"},
+    {"hf.field.timeout_sec", setCmdHfFieldTimeout, AlwaysAvailable, "Set PM3 HF field inactivity timeout"},
 
     {"color",            setCmdColor,         AlwaysAvailable, "Set color support"},
     {"emoji",            setCmdEmoji,         AlwaysAvailable, "Set emoji display"},
@@ -1366,6 +1641,7 @@ static command_t CommandTableSet[] = {
     //  {"devicedebug",      setCmdDeviceDebug,   AlwaysAvailable, "Set device debug level"},
     {"output",           setCmdOutput,        AlwaysAvailable, "Set dump output style"},
     {"plotsliders",      setCmdPlotSliders,   AlwaysAvailable, "Set plot slider display"},
+    {"mqtt",             setCmdMqtt,          AlwaysAvailable, "Set MQTT default values"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -1393,11 +1669,18 @@ static int CmdPrefShow(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("j", "json", "Dump prefs as JSON"),
         arg_param_end
     };
+
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool json_dump = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
+    if (json_dump) {
+        preferences_dump();
+        return PM3_SUCCESS;
+    }
     if (g_session.preferences_loaded) {
         char *fn = prefGetFilename();
         PrintAndLogEx(NORMAL, "");
@@ -1423,6 +1706,10 @@ static int CmdPrefShow(const char *Cmd) {
     showClientExeDelayState();
     showOutputState(prefShowNone);
     showClientTimeoutState();
+    showFieldTimeoutState();
+    showMqttServer(prefShowNone);
+    showMqttPort(prefShowNone);
+    showMqttTopic(prefShowNone);
 
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;

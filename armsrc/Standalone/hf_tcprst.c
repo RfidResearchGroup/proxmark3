@@ -110,15 +110,14 @@ void RunMod(void) {
 #define DYNAMIC_RESPONSE_BUFFER_SIZE 64
 #define DYNAMIC_MODULATION_BUFFER_SIZE 512
 
-    uint8_t flags = FLAG_7B_UID_IN_DATA; // ST25TA have 7B UID
+    uint8_t flags = 0;
+    FLAG_SET_UID_IN_DATA(flags, 7); // ST25TA have 7B UID
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00}; // in case there is a read command received we shouldn't break
 
     // to initialize the emulation
     uint8_t tagType = 10; // 10 = ST25TA IKEA Rothult
     tag_response_info_t *responses;
     uint32_t cuid = 0;
-    uint32_t counters[3] = { 0x00, 0x00, 0x00 };
-    uint8_t tearings[3] = { 0xbd, 0xbd, 0xbd };
     uint8_t pages = 0;
 
     // command buffers
@@ -192,7 +191,7 @@ void RunMod(void) {
 
             memcpy(data, stuid, sizeof(stuid));
 
-            if (SimulateIso14443aInit(tagType, flags, data, &responses, &cuid, counters, tearings, &pages) == false) {
+            if (SimulateIso14443aInit(tagType, flags, data, NULL, 0, &responses, &cuid, &pages, NULL) == false) {
                 BigBuf_free_keep_EM();
                 reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
                 DbpString(_YELLOW_("!!") "Error initializing the simulation process!");
@@ -217,7 +216,7 @@ void RunMod(void) {
             while (!gotkey) {
                 LED_B_OFF();
                 // Clean receive command buffer
-                if (!GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len)) {
+                if (GetIso14443aCommandFromReader(receivedCmd, sizeof(receivedCmd), receivedCmdPar, &len) == false) {
                     DbpString(_YELLOW_("!!") "Emulator stopped");
                     retval = PM3_EOPABORTED;
                     break;
@@ -246,7 +245,7 @@ void RunMod(void) {
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 9) {  // Received a SELECT (cascade 2)
                     p_response = &responses[RESP_INDEX_SAKC2];
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {  // Received a RATS request
-                    p_response = &responses[RESP_INDEX_RATS];
+                    p_response = &responses[RESP_INDEX_ATS];
                 } else if (receivedCmd[0] == ISO14443A_CMD_PPS) {
                     p_response = &responses[RESP_INDEX_PPS];
                 } else {
@@ -324,7 +323,7 @@ void RunMod(void) {
                 for (uint8_t i = 0; i < 5; i++) {
                     gotndef = false;
                     LED_B_ON();
-                    uint8_t apdulen = iso14_apdu(apdus[i], (uint16_t) apdusLen[i], false, apdubuffer, NULL);
+                    uint8_t apdulen = iso14_apdu(apdus[i], (uint16_t) apdusLen[i], false, apdubuffer, sizeof(apdubuffer), NULL);
 
                     if (apdulen > 2) {
                         DbpString(_YELLOW_("[ ") "Proxmark command" _YELLOW_(" ]"));
@@ -370,7 +369,7 @@ void RunMod(void) {
 
             memcpy(data, stuid, sizeof(stuid));
 
-            if (SimulateIso14443aInit(tagType, flags, data, &responses, &cuid, counters, tearings, &pages) == false) {
+            if (SimulateIso14443aInit(tagType, flags, data, NULL, 0, &responses, &cuid, &pages, NULL) == false) {
                 BigBuf_free_keep_EM();
                 reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
                 DbpString(_YELLOW_("!!") "Error initializing the simulation process!");
@@ -395,7 +394,7 @@ void RunMod(void) {
             for (;;) {
                 LED_B_OFF();
                 // Clean receive command buffer
-                if (!GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len)) {
+                if (GetIso14443aCommandFromReader(receivedCmd, sizeof(receivedCmd), receivedCmdPar, &len) == false) {
                     DbpString(_YELLOW_("!!") "Emulator stopped");
                     retval = PM3_EOPABORTED;
                     break;
@@ -424,7 +423,7 @@ void RunMod(void) {
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 9) {  // Received a SELECT (cascade 2)
                     p_response = &responses[RESP_INDEX_SAKC2];
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {  // Received a RATS request
-                    p_response = &responses[RESP_INDEX_RATS];
+                    p_response = &responses[RESP_INDEX_ATS];
                 } else if (receivedCmd[0] == ISO14443A_CMD_PPS) {
                     p_response = &responses[RESP_INDEX_PPS];
                 } else {

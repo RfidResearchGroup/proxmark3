@@ -125,8 +125,8 @@ int infoThinFilm(bool verbose) {
     SendCommandNG(CMD_HF_THINFILM_READ, NULL, 0);
 
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_HF_THINFILM_READ, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+    if (WaitForResponseTimeout(CMD_HF_THINFILM_READ, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
@@ -186,9 +186,16 @@ int CmdHfThinFilmSim(const char *Cmd) {
 
     int ret;
     while (!(ret = kbd_enter_pressed())) {
-        if (WaitForResponseTimeout(CMD_HF_THINFILM_SIMULATE, &resp, 500) == 0) continue;
-        if (resp.status != PM3_SUCCESS) break;
+
+        if (WaitForResponseTimeout(CMD_HF_THINFILM_SIMULATE, &resp, 500) == false) {
+            continue;
+        }
+
+        if (resp.status != PM3_SUCCESS) {
+            break;
+        }
     }
+
     if (ret) {
         PrintAndLogEx(INFO, "Client side interrupted");
         PrintAndLogEx(WARNING, "Simulation still running on Proxmark3 till next command or button press");

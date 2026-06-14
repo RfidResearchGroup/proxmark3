@@ -226,8 +226,8 @@ static int CmdIdteckClone(const char *Cmd) {
     } else {
         res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     }
-    PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf idteck reader`") " to verify");
+    PrintAndLogEx(SUCCESS, "Done!");
+    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf idteck reader`") " to verify");
     return res;
 }
 
@@ -273,6 +273,11 @@ static int CmdIdteckSim(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
 
     lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
     payload->carrier = 2;
     payload->invert = 0;
     payload->clock = 32;
@@ -315,7 +320,7 @@ static int CmdIdteckReader(const char *Cmd) {
     do {
         lf_read(false, 5000);
         demodIdteck(NULL, !cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

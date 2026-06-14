@@ -125,56 +125,75 @@ uint64_t x_bytes_to_num(uint8_t *src, size_t len) {
     return num;
 }
 
-void reverse_arraybytes(uint8_t *arr, size_t len) {
-    for (size_t i = 0; i < len ; i++) {
-        arr[i] = reflect8(arr[i]);
-    }
-}
-
-void reverse_arraycopy(uint8_t *arr, uint8_t *dest, size_t len) {
-    for (size_t i = 0; i < len ; i++) {
-        dest[i] = reflect8(arr[i]);
-    }
-}
-
 void printarr(const char *name, uint8_t *arr, int len) {
-    if (name == NULL || arr == NULL) return;
+
+    if (name == NULL || arr == NULL) {
+        return;
+    }
 
     int cx, i;
     size_t outsize = 40 + strlen(name) + len * 5;
+
     char *output = calloc(outsize, sizeof(char));
+    if (output == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return;
+    }
+
     cx = snprintf(output, outsize, "uint8_t %s[] = {", name);
     for (i = 0; i < len; i++) {
-        if (cx < outsize)
+        if (cx < outsize) {
             cx += snprintf(output + cx, outsize - cx, "0x%02x,", *(arr + i)); //5 bytes per byte
+        }
     }
-    if (cx < outsize)
+
+    if (cx < outsize) {
         snprintf(output + cx, outsize - cx, "};");
+    }
+
     PrintAndLogEx(INFO, output);
     free(output);
 }
 
 void printarr_human_readable(const char *title, uint8_t *arr, int len) {
 
-    if (arr == NULL) return;
+    if (arr == NULL) {
+        return;
+    }
 
-    int cx = 0, i;
+    int cx = 0;
+    int i;
+
     size_t outsize = 100 + strlen(title) + (len * 4);
     char *output = calloc(outsize, sizeof(char));
+    if (output == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return;
+    }
+
     PrintAndLogEx(INFO, "%s", title);
+
     for (i = 0;  i < len; i++) {
+
         if (i % 16 == 0) {
 
             if (i == 0) {
-                if (cx < outsize)
+
+                if (cx < outsize) {
                     cx += snprintf(output + cx, outsize - cx, "%02x| ", i);
+                }
+
             } else {
-                if (cx < outsize)
+
+                if (cx < outsize) {
                     cx += snprintf(output + cx, outsize - cx, "\n%02x| ", i);
+                }
             }
         }
-        if (cx < outsize)
+
+        if (cx < outsize) {
             cx += snprintf(output + cx, outsize - cx, "%02x ", *(arr + i));
+        }
     }
     PrintAndLogEx(INFO, output);
     free(output);
@@ -241,11 +260,14 @@ static int testReversedBitstream(void) {
 }
 
 int testCipherUtils(void) {
-    PrintAndLogEx(INFO, "Testing some internals...");
-    int retval = testBitStream();
-    if (retval == PM3_SUCCESS)
-        retval = testReversedBitstream();
 
-    return retval;
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "---------------- " _CYAN_("Loclass selftests") " ----------------");
+
+    int res = testBitStream();
+    if (res == PM3_SUCCESS) {
+        res = testReversedBitstream();
+    }
+    return res;
 }
 #endif

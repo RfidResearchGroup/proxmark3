@@ -1,18 +1,38 @@
 # If you want to use it, copy this file as Makefile.platform and adjust it to your needs
 # Run 'make PLATFORM=' to get an exhaustive list of possible parameters for this file.
 
+# By default PM3 RDV4 image is generated.
+# Comment the line below and uncomment further down according to which device you have
 PLATFORM=PM3RDV4
+
+# For PM3 RDV1, RDV2, Easy or rysccorps etc
+# uncomment the line below
 #PLATFORM=PM3GENERIC
+
+# For ICOPY-X and PM3 Max:
+# uncomment the two lines below
+#PLATFORM=PM3ICOPYX
+#PLATFORM_EXTRAS=FLASH
+
+# For PM3 Ultimate:
+# uncomment the line below
+#PLATFORM=PM3ULTIMATE
+
 # If you want more than one PLATFORM_EXTRAS option, separate them by spaces:
 #PLATFORM_EXTRAS=BTADDON
 #PLATFORM_EXTRAS=FLASH
 #PLATFORM_EXTRAS=SMARTCARD
-#PLATFORM_EXTRAS=BTADDON FLASH
-#STANDALONE=LF_SAMYRUN
+#PLATFORM_EXTRAS=BTADDON FPC_USART_DEV FLASH
+#STANDALONE=HF_UNISNIFF
+
 
 # Uncomment the line below to set the correct LED order on board Proxmark3 Easy
 # Only available with PLATFORM=PM3GENERIC
 #LED_ORDER=PM3EASY
+
+# Uncomment a line below to change default USART baud rate
+# defaults to 115200 used by HC-05 in Blueshark
+#USART_BAUD_RATE=19200
 
 # Uncomment the lines below in order to make a 256KB image
 # and comment out the lines above
@@ -20,12 +40,21 @@ PLATFORM=PM3RDV4
 #PLATFORM=PM3GENERIC
 #PLATFORM_SIZE=256
 #STANDALONE=
-#SKIP_HITAG=1
-#SKIP_FELICA=1
-#SKIP_HFPLOT=1
-#SKIP_NFCBARCODE=1
-#SKIP_ZX8211=1
 #SKIP_LF=1
+#SKIP_HITAG=1
+#SKIP_EM4x50=1
+#SKIP_EM4x70=1
+#SKIP_ZX8211=1
+#SKIP_HF=1
+#SKIP_ISO15693=1
+#SKIP_LEGICRF=1
+#SKIP_ISO14443b=1
+#SKIP_ISO14443a=1
+#SKIP_ICLASS=1
+#SKIP_FELICA=1
+#SKIP_NFCBARCODE=1
+#SKIP_HFSNIFF=1
+#SKIP_HFPLOT=1
 
 # To accelerate repetitive compilations:
 # Install package "ccache" -> Debian/Ubuntu: /usr/lib/ccache, Fedora/CentOS/RHEL: /usr/lib64/ccache

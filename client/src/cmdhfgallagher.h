@@ -37,8 +37,8 @@ int CmdHFGallagher(const char *cmd);
  * @param keyOut Buffer to copy the diversified key into (must be 16 bytes).
  * @return PM3_SUCCESS if successful, PM3_EINVARG if an argument is invalid.
  */
-int hfgal_diversify_key(uint8_t *site_key, uint8_t *uid, uint8_t uid_len,
-                        uint8_t key_num, uint32_t aid, uint8_t *key_output);
+int hfgal_diversify_desfire_key(uint8_t *site_key, uint8_t *uid, uint8_t uid_len,
+                                uint8_t key_num, uint32_t aid, uint8_t *key_output);
 
 // The response code when an invalid key is used for authentication
 // Returned in /client/src/mifare/desfirecore.c, line 1185 (if DesfireExchangeEx fails)

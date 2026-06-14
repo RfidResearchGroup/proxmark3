@@ -133,6 +133,7 @@ static void print_time(uint64_t at) {
 
     time_t t = at;
     struct tm lt;
+    memset(&lt, 0, sizeof(struct tm));
 
 #if defined(_WIN32)
     (void)localtime_s(&lt, &t);
@@ -277,6 +278,10 @@ int main(int argc, char *argv[]) {
     uint64_t stop_time = time(NULL);
     for (int i = 0; i < thread_count; ++i) {
         struct thread_args *a = calloc(1, sizeof(struct thread_args));
+        if (a == NULL) {
+            fprintf(stderr, "Failed to allocate memory\n");
+            exit(EXIT_FAILURE);
+        }
         a->thread = i;
         a->idx = i;
         a->starttime = start_time;

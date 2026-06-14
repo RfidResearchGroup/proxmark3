@@ -65,13 +65,21 @@ if [ "$commandGIT" != "" ]; then
     fi
     if [ "$gitbranch" != "" ] && [ "$gitversion" != "" ]; then
         fullgitinfo="${fullgitinfo}/${gitbranch}/${gitversion}"
-        ctime="$(date '+%Y-%m-%d %H:%M:%S')"
+        # if FORCED_DATE present and properly formatted:
+        case "$FORCED_DATE" in
+        [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]" "[0-9][0-9]:[0-9][0-9]:[0-9][0-9])
+            ctime="$FORCED_DATE"
+            ;;
+        *)
+            ctime="$(date '+%Y-%m-%d %H:%M:%S')"
+            ;;
+        esac
     else
         fullgitinfo="${fullgitinfo}/master/release (git)"
     fi
 else
     fullgitinfo="${fullgitinfo}/master/release (no_git)"
-    dl_time=$(stat --printf="%y" ../README.md)
+    dl_time=$(stat --printf="%y" README.md)
     # POSIX way...
     ctime=${dl_time%.*}
 fi
@@ -92,7 +100,12 @@ sha=$(
     cd "$pm3path" || return
     # did we find the src?
     [ -f armsrc/appmain.c ] || return
-    ls armsrc/*.[ch] common_arm/*.[ch]|grep -E -v "(disabled|version_pm3|fpga_version_info)"|sort|xargs sha256sum -t|sha256sum|cut -c -9
+    if [ "${OSTYPE#darwin}" != "$OSTYPE" ]; then
+        # macOS
+        ls armsrc/*.[ch] common_arm/*.[ch]|grep -E -v "(disabled|version_pm3|fpga_version_info)"|sort|xargs shasum -a 256 -t|shasum -a 256|cut -c -9
+    else
+        ls armsrc/*.[ch] common_arm/*.[ch]|grep -E -v "(disabled|version_pm3|fpga_version_info)"|sort|xargs sha256sum -t|sha256sum|cut -c -9
+    fi
 )
 if [ "$sha" = "" ]; then
   sha="no sha256"

@@ -110,7 +110,7 @@ static int asn1_tlv_compare(const void *a, const void *b) {
 }
 
 static const struct asn1_tag *asn1_get_tag(const struct tlv *tlv) {
-    struct asn1_tag *tag = bsearch(tlv, asn1_tags, ARRAYLEN(asn1_tags), sizeof(asn1_tags[0]), asn1_tlv_compare);
+    const struct asn1_tag *tag = bsearch(tlv, asn1_tags, ARRAYLEN(asn1_tags), sizeof(asn1_tags[0]), asn1_tlv_compare);
     return tag ? tag : &asn1_tags[0];
 }
 
@@ -364,7 +364,7 @@ static void asn1_tag_dump_object_id(const struct tlv *tlv, const struct asn1_tag
 
 bool asn1_tag_dump(const struct tlv *tlv, int level, bool *candump) {
     if (tlv == NULL) {
-        PrintAndLogEx(FAILED, "NULL\n");
+        PrintAndLogEx(WARNING, "tlv is NULL\n");
         return false;
     }
 

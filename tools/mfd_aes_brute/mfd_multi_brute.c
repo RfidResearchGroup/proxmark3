@@ -163,6 +163,7 @@ static void print_time(uint64_t at) {
 
     time_t t = at;
     struct tm lt;
+    memset(&lt, 0, sizeof(struct tm));
 
 #if defined(_WIN32)
     (void)localtime_s(&lt, &t);
@@ -222,6 +223,8 @@ static void *brute_thread(void *arguments) {
         //make_key_borland_n(i, key, keylen);
 
         uint8_t iv[keylen << 1];
+        memset(iv, 0, sizeof(iv));
+
         uint8_t dec_tag[16] = {0x00};
         uint8_t dec_rdr[32] = {0x00};
 
@@ -469,6 +472,10 @@ int main(int argc, char *argv[]) {
     uint64_t stop_time = time(NULL);
     for (int i = 0; i < thread_count; ++i) {
         struct thread_args *a = calloc(1, sizeof(struct thread_args));
+        if (a == NULL) {
+            fprintf(stderr, "Failed to allocate memory\n");
+            exit(EXIT_FAILURE);
+        }
         a->thread = i;
         a->idx = i;
         a->generator_idx = g_idx;

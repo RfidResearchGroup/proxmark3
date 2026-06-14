@@ -1,0 +1,941 @@
+[
+  {
+    "code": "0003",
+    "name": "CJRC Standard",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Japanese Mutual Use transit card systems",
+    "services": [
+      {
+        "name": "Hayakaken",
+        "type": "transit",
+        "description": "Fukuoka City Transportation Bureau Hayakaken mutual-use transit service",
+        "nodes": [
+          {
+            "code": "40247F25"
+          }
+        ]
+      },
+      {
+        "name": "ICOCA",
+        "type": "transit",
+        "description": "JR West ICOCA mutual-use transit service",
+        "nodes": [
+          {
+            "code": "00963F97"
+          }
+        ]
+      },
+      {
+        "name": "ICSCA",
+        "type": "transit",
+        "description": "Sendai-area ICSCA mutual-use transit service",
+        "nodes": [
+          {
+            "code": "40BD7FBE"
+          }
+        ]
+      },
+      {
+        "name": "Kitaca",
+        "type": "transit",
+        "description": "JR Hokkaido Kitaca mutual-use transit service",
+        "nodes": [
+          {
+            "code": "8020BF21"
+          }
+        ]
+      },
+      {
+        "name": "manaca",
+        "type": "transit",
+        "description": "Nagoya-area manaca mutual-use transit service",
+        "nodes": [
+          {
+            "code": "8098BF99"
+          }
+        ]
+      },
+      {
+        "name": "nimoca",
+        "type": "transit",
+        "description": "nimoca mutual-use transit service",
+        "nodes": [
+          {
+            "code": "0820"
+          }
+        ]
+      },
+      {
+        "name": "PASMO",
+        "type": "transit",
+        "description": "PASMO mutual-use transit service",
+        "nodes": [
+          {
+            "code": "C01CFF1D"
+          }
+        ]
+      },
+      {
+        "name": "SUGOCA",
+        "type": "transit",
+        "description": "JR Kyushu SUGOCA mutual-use transit service",
+        "nodes": [
+          {
+            "code": "C021FF22"
+          }
+        ]
+      },
+      {
+        "name": "Suica",
+        "type": "transit",
+        "description": "JR East Suica mutual-use transit service",
+        "nodes": [
+          {
+            "code": "0818"
+          }
+        ]
+      },
+      {
+        "name": "Suica Regional Collaboration",
+        "type": "transit",
+        "description": "Suica Regional Collaboration service in the CJRC mutual-use system",
+        "nodes": [
+          {
+            "code": "80257F26"
+          }
+        ]
+      },
+      {
+        "name": "TOICA",
+        "type": "transit",
+        "description": "JR Central TOICA mutual-use transit service",
+        "nodes": [
+          {
+            "code": "001EFF1E"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "code": "0102",
+    "name": "EZLink",
+    "region": "Singapore",
+    "type": "transit",
+    "description": "Used by legacy EZ-Link transit card"
+  },
+  {
+    "code": "040F",
+    "name": "NicePass",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Nice Pass transit card (Enshu Railway, Shizuoka)"
+  },
+  {
+    "code": "04A6",
+    "name": "LuLuCa",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by LuLuCa transit card (Shizutetsu Group, Shizuoka)"
+  },
+  {
+    "code": "04C7",
+    "name": "nanaco",
+    "region": "Japan",
+    "type": "payment",
+    "description": "nanaco e-money system"
+  },
+  {
+    "code": "12FC",
+    "name": "NDEF Type 3 Tag",
+    "region": "Global",
+    "type": "ndef",
+    "description": "NFC Forum Type 3 Tag system code"
+  },
+  {
+    "code": "8003",
+    "name": "Yamanashi Kotsu",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Bus IC Card transit card (Yamanashi Kotsu)"
+  },
+  {
+    "code": "8005",
+    "name": "Shenzhen Tong",
+    "region": "China",
+    "type": "transit",
+    "description": "Used by legacy Shenzhen Tong transit card"
+  },
+  {
+    "code": "8008",
+    "name": "Octopus",
+    "region": "Hong Kong",
+    "type": "transit",
+    "description": "Used by Octopus transit card"
+  },
+  {
+    "code": "8016",
+    "name": "Nagasaki Smart Card",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by legacy Nagasaki Smart Card transit system (Nagasaki operators)"
+  },
+  {
+    "code": "801E",
+    "name": "AMPM",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Marker system found on Edy cards issued by AM/PM"
+  },
+  {
+    "code": "8029",
+    "name": "Saitama Railway",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by legacy Saitama Rapid Railway IC commuter pass"
+  },
+  {
+    "code": "802B",
+    "name": "Setamaru",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by legacy Setamaru transit card (Tokyu)"
+  },
+  {
+    "code": "804C",
+    "name": "Kitami Bus",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Hokkaido Kitami Bus transit card"
+  },
+  {
+    "code": "80DE",
+    "name": "IruCa",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by IruCa transit card (Takamatsu-Kotohira Electric Railroad)"
+  },
+  {
+    "code": "80E0",
+    "name": "Shikoku",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Shikoku cards (Desuca/Iyotetsu)",
+    "services": [
+      {
+        "name": "DESUCA",
+        "type": "transit",
+        "description": "DESUCA transit card service operated by Desuka Co., Ltd. (Kochi)",
+        "nodes": [
+          {
+            "code": "0B00",
+            "data": {
+              "00": "^0ff0............................$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Iyotetsu",
+        "type": "transit",
+        "description": "IC-E-Card transit card service used on Iyo Railway (Iyotetsu)",
+        "nodes": [
+          {
+            "code": "0B00",
+            "data": {
+              "00": "^05d3............................$"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "code": "80EF",
+    "name": "ICa",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by ICa transit card (Hokuriku Railroad)"
+  },
+  {
+    "code": "8102",
+    "name": "MIWA FKL",
+    "region": "Japan",
+    "type": "access",
+    "description": "Used by MIWA FKL access control credentials"
+  },
+  {
+    "code": "811D",
+    "name": "Karuwaza Club",
+    "region": "Japan",
+    "type": "loyalty",
+    "description": "Used by Karuwaza Club membership and points services"
+  },
+  {
+    "code": "8157",
+    "name": "CICA",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by CI-CA transit card (Nara Kotsu)"
+  },
+  {
+    "code": "8182",
+    "name": "ANA",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Used by ANA QuicPay + Nanaco fob"
+  },
+  {
+    "code": "8194",
+    "name": "Kagoshima",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by transit cards in Kagoshima",
+    "services": [
+      {
+        "name": "Iwasaki IC",
+        "type": "transit",
+        "description": "Transit IC card sold by the Iwasaki Group for Kagoshima Kotsu and Tanegashima-Yakushima Kotsu services",
+        "nodes": [
+          {
+            "code": "81027F0C"
+          }
+        ]
+      },
+      {
+        "name": "RapiCa",
+        "type": "transit",
+        "description": "Kagoshima common transit IC card issued by Kagoshima City Transportation Bureau, Nangoku Kotsu, and JR Kyushu Bus",
+        "nodes": [
+          {
+            "code": "010C0021"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "code": "81A1",
+    "name": "Tebra-F ID",
+    "region": "Japan",
+    "type": "access",
+    "description": "Marker system found on Clavis Tebra-F ID access control credentials"
+  },
+  {
+    "code": "81CA",
+    "name": "Honda C Card",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Marker system found on Edy cards issued by Honda"
+  },
+  {
+    "code": "825E",
+    "name": "MIWA IEL",
+    "region": "Japan",
+    "type": "access",
+    "description": "Used by MIWA IEL access control credentials"
+  },
+  {
+    "code": "8287",
+    "name": "NicoPa",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by NicoPa transit card (Shinki Bus)"
+  },
+  {
+    "code": "832C",
+    "name": "Toyama",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Toyama cards (Ecomyca/Passca)",
+    "services": [
+      {
+        "name": "ECOMYCA",
+        "type": "transit",
+        "description": "ECOMYCA transit card service operated by Toyama Chiho Railway Co., Ltd.",
+        "nodes": [
+          {
+            "code": "4B80",
+            "data": {
+              "00": "^0367............................$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "PASSCA",
+        "type": "transit",
+        "description": "PASSCA transit card service introduced by Toyama Light Rail Co., Ltd. (legacy)",
+        "nodes": [
+          {
+            "code": "4B80",
+            "data": {
+              "00": "^0d69............................$"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "code": "83CC",
+    "name": "HareCa",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by HareCa transit card (Okayama-area operators)"
+  },
+  {
+    "code": "83EE",
+    "name": "ayuca",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by legacy ayuca transit card (Gifu Bus)"
+  },
+  {
+    "code": "84A1",
+    "name": "hanica",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by hanica transit card (Hankyu Bus and Hanshin Bus)"
+  },
+  {
+    "code": "852B",
+    "name": "WAON",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Marker system found on WAON cards"
+  },
+  {
+    "code": "8592",
+    "name": "PASPY",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by PASPY transit card (Hiroshima-area operators)"
+  },
+  {
+    "code": "862C",
+    "name": "itappy",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by itappy transit card (Itami City Transportation Bureau)"
+  },
+  {
+    "code": "865E",
+    "name": "SAPICA",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by SAPICA transit card (Sapporo General Information Center)"
+  },
+  {
+    "code": "869B",
+    "name": "Tsukica",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Tsukica transit card (Takatsuki City Bus)"
+  },
+  {
+    "code": "86A7",
+    "name": "Suica",
+    "region": "Japan",
+    "type": "transit",
+    "description": "JR East Suica and related transit card systems"
+  },
+  {
+    "code": "88B4",
+    "name": "FeliCa Lite",
+    "region": "Global",
+    "type": "common",
+    "description": "Default system code used by FeliCa Lite/Lite-S tags",
+    "services": [
+      {
+        "name": "Konami",
+        "type": "e-amusement",
+        "description": "Konami E-amusement",
+        "nodes": [
+          {
+            "code": "0b00",
+            "data": {
+              "0082": "^................0068............$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Enekey",
+        "type": "loyalty",
+        "description": "ENEOS Enekey loyalty program",
+        "nodes": [
+          {
+            "code": "0b00",
+            "data": {
+              "0082": "^................0077............$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Aime",
+        "type": "e-amusement",
+        "description": "AIME E-amusement",
+        "nodes": [
+          {
+            "code": "0b00",
+            "data": {
+              "0082": "^................0078............$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "NESiCA",
+        "type": "e-amusement",
+        "description": "NESiCA E-amusement",
+        "nodes": [
+          {
+            "code": "0b00",
+            "data": {
+              "0082": "^................0079............$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Bandai Namco Pasport",
+        "type": "e-amusement",
+        "description": "Bandai Namco Pasport E-amusement",
+        "nodes": [
+          {
+            "code": "0b00",
+            "data": {
+              "0082": "^................002A............$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Mobiry Days",
+        "type": "transit",
+        "description": "Mobiry Days transit service",
+        "nodes": [
+          {
+            "code": "0b00",
+            "data": {
+              "0082": "^................0093............$"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "code": "8B43",
+    "name": "NorucA",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by NORUCA transit card (Fukushima Kotsu)",
+    "services": [
+      {
+        "name": "NORUCA",
+        "type": "transit",
+        "description": "NORUCA transit card service operated by Fukushima Kotsu Co., Ltd.",
+        "nodes": [
+          {
+            "code": "4B80",
+            "data": {
+              "00": "^0fc9............................$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "AIZU NORUCA",
+        "type": "transit",
+        "description": "AIZU NORUCA transit card service operated by Aizu Bus (Aizu Noriai Jidosha Co., Ltd.)",
+        "nodes": [
+          {
+            "code": "4B80",
+            "data": {
+              "00": "^0fca............................$"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "code": "8B5D",
+    "name": "RYUTO",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Ryuto transit card (Niigata Kotsu)"
+  },
+  {
+    "code": "8B98",
+    "name": "RANDEN",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Randen transit card (Keifuku Electric Railroad)"
+  },
+  {
+    "code": "8BDC",
+    "name": "Rakuten Edy",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Used by Rakuten Edy e-money services"
+  },
+  {
+    "code": "8C0B",
+    "name": "San In Shinpan",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Marker system found on Edy cards issued by San in Shinpan"
+  },
+  {
+    "code": "8CC1",
+    "name": "Speedpass",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Used by legacy Speedpass/Speedpass+ payment tools in Japan (ENEOS, QUICPay-enabled)"
+  },
+  {
+    "code": "8D3F",
+    "name": "Kururu",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by legacy Kururu transit card (Nagano City)"
+  },
+  {
+    "code": "8DB6",
+    "name": "Asahikawa",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Asahikawa transit cards",
+    "services": [
+      {
+        "name": "ASACA",
+        "type": "transit",
+        "description": "Transit card service issued by Asahikawa Denkikidou (Asahikawa Electric Railway)",
+        "nodes": [
+          {
+            "code": "4B00",
+            "data": {
+              "00": "^0102............................$"
+            }
+          }
+        ]
+      },
+      {
+        "name": "DoCARD",
+        "type": "transit",
+        "description": "Transit card service issued by Dohoku Bus",
+        "nodes": [
+          {
+            "code": "4B00",
+            "data": {
+              "00": "^0103............................$"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "code": "8E35",
+    "name": "Skyrail Pass",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by legacy SKYRAIL PASS transit card (Skyrail Service)"
+  },
+  {
+    "code": "8E58",
+    "name": "odeca",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by legacy odeca transit card (JR East Kesennuma and Ofunato BRT)"
+  },
+  {
+    "code": "8F18",
+    "name": "Nankai",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by legacy Nankai transit card (Natchi, Nankai Bus)"
+  },
+  {
+    "code": "8FC1",
+    "name": "OKICA",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by OKICA transit card (Okinawa IC Card Co.)"
+  },
+  {
+    "code": "9027",
+    "name": "Kumamon IC",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Kumamoto Regional Promotion IC Card (Kumamon IC CARD)"
+  },
+  {
+    "code": "9099",
+    "name": "emica",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by emica transit card (Mie Kotsu)"
+  },
+  {
+    "code": "90AB",
+    "name": "Ibappi",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Ibappi transit card (Ibaraki Kotsu)"
+  },
+  {
+    "code": "90B7",
+    "name": "Kartu Multi Trip Commet",
+    "region": "Indonesia",
+    "type": "transit",
+    "description": "Used on Kartu Multi Trip Commet transit card"
+  },
+  {
+    "code": "90E3",
+    "name": "Dhaka Mass Transit",
+    "region": "Bangladesh",
+    "type": "transit",
+    "description": "Used by DMTCL MRT Pass transit card"
+  },
+  {
+    "code": "9105",
+    "name": "Starbucks Touch",
+    "region": "Japan",
+    "type": "loyalty",
+    "description": "Marker system found on Starbucks Touch fobs"
+  },
+  {
+    "code": "927A",
+    "name": "Hayakaken",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by Hayakaken transit card (Fukuoka City Transportation Bureau)"
+  },
+  {
+    "code": "9373",
+    "name": "Kartu Multi Trip Jelajah",
+    "region": "Indonesia",
+    "type": "transit",
+    "description": "Used on Kartu Multi Trip Jelajah transit card"
+  },
+  {
+    "code": "93EC",
+    "name": "NTASU",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by NTASU transit card"
+  },
+  {
+    "code": "9450",
+    "name": "HCMC",
+    "region": "Vietnam",
+    "type": "transit",
+    "description": "Used with Ho Chi Minh City Metro transit card"
+  },
+  {
+    "code": "9506",
+    "name": "kinoca",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by kinoca regional transit card (Wakayama Bus)"
+  },
+  {
+    "code": "957A",
+    "name": "FeliCa Secure ID",
+    "region": "Global",
+    "type": "general",
+    "description": "Used by FeliCa Secure ID credentials"
+  },
+  {
+    "code": "FE00",
+    "name": "FeliCa Networks Common Area",
+    "region": "Japan",
+    "type": "common",
+    "description": "Common area for FeliCa Networks services",
+    "services": [
+      {
+        "name": "ANA",
+        "type": "loyalty",
+        "description": "ANA mileage and airline membership service",
+        "nodes": [
+          {
+            "code": "C017BF18"
+          }
+        ]
+      },
+      {
+        "name": "Edy",
+        "type": "payment",
+        "description": "Rakuten Edy e-money payment service",
+        "nodes": [
+          {
+            "code": "0B11"
+          }
+        ]
+      },
+      {
+        "name": "FeliCa Kazasu Folder",
+        "type": "loyalty",
+        "description": "FeliCa Kazasu shared area for loyalty and membership services",
+        "nodes": [
+          {
+            "code": "C074FF75"
+          }
+        ]
+      },
+      {
+        "name": "FeliCa Pocket",
+        "type": "loyalty",
+        "description": "FeliCa Pocket shared area for loyalty and membership services",
+        "nodes": [
+          {
+            "code": "4039FF39"
+          }
+        ]
+      },
+      {
+        "name": "JAL",
+        "type": "loyalty",
+        "description": "JAL airline mileage and membership service",
+        "nodes": [
+          {
+            "code": "402F7F30"
+          }
+        ]
+      },
+      {
+        "name": "Karuwaza Club",
+        "type": "loyalty",
+        "description": "Karuwaza Club points and membership service",
+        "nodes": [
+          {
+            "code": "8026FF26"
+          }
+        ]
+      },
+      {
+        "name": "Kesaka",
+        "type": "access",
+        "description": "Kesaka access control service",
+        "nodes": [
+          {
+            "code": "802E3F2F"
+          }
+        ]
+      },
+      {
+        "name": "Kumamon",
+        "type": "loyalty",
+        "description": "Kumamon regional campaign and points service",
+        "nodes": [
+          {
+            "code": "801AFF1A"
+          }
+        ]
+      },
+      {
+        "name": "MIWA",
+        "type": "access",
+        "description": "MIWA access control credential service",
+        "nodes": [
+          {
+            "code": "4042BF42"
+          },
+          {
+            "code": "C03B3F3C"
+          }
+        ]
+      },
+      {
+        "name": "MIWA FKL",
+        "type": "access",
+        "description": "MIWA FKL access control credential service",
+        "nodes": [
+          {
+            "code": "40267F26"
+          }
+        ]
+      },
+      {
+        "name": "MIWA Keymo",
+        "type": "access",
+        "description": "MIWA Keymo access control credential service",
+        "nodes": [
+          {
+            "code": "0B3C"
+          }
+        ]
+      },
+      {
+        "name": "nanaco",
+        "type": "payment",
+        "description": "nanaco e-money payment service",
+        "nodes": [
+          {
+            "code": "8055BF56"
+          }
+        ]
+      },
+      {
+        "name": "QUICPay",
+        "type": "payment",
+        "description": "QUICPay contactless payment service",
+        "nodes": [
+          {
+            "code": "C035BF36"
+          }
+        ]
+      },
+      {
+        "name": "Rakuten Point",
+        "type": "loyalty",
+        "description": "Rakuten Point loyalty points service",
+        "nodes": [
+          {
+            "code": "807BBF7B"
+          }
+        ]
+      },
+      {
+        "name": "WAON",
+        "type": "payment",
+        "description": "WAON e-money payment service",
+        "nodes": [
+          {
+            "code": "C067FF68"
+          }
+        ]
+      },
+      {
+        "name": "Yodobashi Gold Point",
+        "type": "loyalty",
+        "description": "Yodobashi Gold Point loyalty points service",
+        "nodes": [
+          {
+            "code": "802C3F2D"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "code": "FE0F",
+    "name": "Osaifu Keitai Container",
+    "region": "Japan",
+    "type": "mobile",
+    "description": "Container system used by devices with Osaifu-Keitai"
+  },
+  {
+    "code": "FFFF",
+    "name": "Unfused system",
+    "region": "Global",
+    "type": "unfused",
+    "description": "Default unfused/pre-personalization system"
+  }
+]

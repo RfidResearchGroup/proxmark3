@@ -71,6 +71,10 @@ static char *GenerateFilename(iso14a_card_select_t *card, const char *prefix, co
         return NULL;
     }
     char *fptr = calloc(sizeof(char) * (strlen(prefix) + strlen(suffix)) + sizeof(card->uid) * 2 + 1,  sizeof(uint8_t));
+    if (fptr == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return NULL;
+    }
     strcpy(fptr, prefix);
     FillFileNameByUID(fptr, card->uid, suffix, card->uidlen);
     return fptr;
@@ -107,7 +111,7 @@ static int fudan_get_type(iso14a_card_select_t *card, bool verbose) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
@@ -184,9 +188,9 @@ int read_fudan_uid(bool loop, bool verbose) {
 
 
         if (loop) {
-            res = handle_hf_plot();
+            res = handle_hf_plot(verbose);
             if (res != PM3_SUCCESS) {
-                break;
+                PrintAndLogEx(DEBUG, "plot failed");
             }
         }
 
@@ -195,7 +199,7 @@ int read_fudan_uid(bool loop, bool verbose) {
             PrintAndLogEx(NORMAL, "");
         }
 
-    } while (loop && kbd_enter_pressed() == false);
+    } while (loop && (kbd_enter_pressed() == false));
 
 
     return PM3_SUCCESS;
@@ -320,7 +324,7 @@ static int CmdHFFudanDump(const char *Cmd) {
                 }
             } else {
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(WARNING, "command execute timeout when trying to read block %2d", b);
+                PrintAndLogEx(WARNING, "command execution time out when trying to read block %2d", b);
             }
         }
 
@@ -340,8 +344,9 @@ static int CmdHFFudanDump(const char *Cmd) {
     // create filename if none was given
     if (strlen(dataFilename) < 1) {
         char *fptr = GenerateFilename(&card, "hf-fudan-", "-dump");
-        if (fptr == NULL)
+        if (fptr == NULL) {
             return PM3_ESOFT;
+        }
 
         strcpy(dataFilename, fptr);
         free(fptr);
@@ -404,14 +409,14 @@ static int CmdHFFudanWrBl(const char *Cmd) {
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        PrintAndLogEx(FAILED, "Command execute timeout");
+        PrintAndLogEx(FAILED, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
     uint8_t isok  = resp.oldarg[0] & 0xff;
     if (isok) {
         PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
-        PrintAndLogEx(HINT, "try `" _YELLOW_("hf fudan rdbl") "` to verify");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf fudan rdbl") "` to verify");
     } else {
         PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
     }

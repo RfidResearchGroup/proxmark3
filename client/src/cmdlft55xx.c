@@ -66,6 +66,265 @@ static t55xx_conf_block_t config = {
 };
 
 static t55xx_memory_item_t cardmem[T55x7_BLOCK_COUNT] = {{0}};
+/*
+#define DC(x)  ((x) + 128)
+
+static bool t55xx_is_valid_block0(uint32_t block, uint8_t rfclk, uint8_t pskcf) {
+
+    if (block == 0x00) {
+        return false;
+    }
+
+    // Master key = 6 or 9
+    if ((((block >> 28)& 0xF) != 0x0) &&
+        (((block >> 28)& 0xF) != 0x6) &&
+        (((block >> 28)& 0xF) != 0x9)) {
+        return false;
+    }
+
+    // X Mode
+    if ( ((block >> 17) & 1) && ((((block >> 28) & 0xf) == 0x6) || (((block >> 28) & 0xf) == 0x9)) ) {
+        // X mode fixed 0 bits
+        if ((block & 0x0F000000) != 0x00) {
+            return false;
+        }
+    } else {
+        // / Basic Mode fixed 0 bits
+        if ((block & 0x0FE00106) != 0x00) {
+            return false;
+        }
+    }
+
+    // Modulation
+    if ( (((block >> 12) & 0x1F) != 0x00) && // Direct
+         (((block >> 12) & 0x1F) != 0x01) && // PSK1
+         (((block >> 12) & 0x1F) != 0x02) && // PSK2
+         (((block >> 12) & 0x1F) != 0x03) && // PSK3
+         (((block >> 12) & 0x1F) != 0x04) && // FSK1
+         (((block >> 12) & 0x1F) != 0x05) && // FSK2
+         (((block >> 12) & 0x1F) != 0x06) && // FSK1a
+         (((block >> 12) & 0x1F) != 0x07) && // FSK2a
+         (((block >> 12) & 0x1F) != 0x08) && // Manchester
+         (((block >> 12) & 0x1F) != 0x10) && // Bi-phase
+         (((block >> 12) & 0x1F) != 0x18) ) { // Reserved
+         return false;
+    }
+
+    PrintAndLogEx(DEBUG, "suggested block... %08x", block);
+
+    // check pskcf
+    if ((pskcf <= 3) && (((block >> 10) & 0x3) != pskcf)) {
+        PrintAndLogEx(DEBUG, "fail 6  -  %u   %u", pskcf,  (block >> 10) & 0x3);
+        return false;
+    }
+
+    uint8_t testSpeed;
+
+    // check rfclk
+    if ((((block >> 17) & 1) == 1) && ((((block >> 28) & 0xf) == 0x6) || (((block >> 28) & 0xf) == 0x9)) ){ // X mode speedBits
+        testSpeed = (((block >> 18) & 0x3F) * 2) + 2;
+    } else {
+        uint8_t basicSpeeds[] = {8,16,32,40,50,64,100,128};
+        testSpeed = basicSpeeds[(block >> 18) & 0x7];
+    }
+
+    if (testSpeed != rfclk) {
+        PrintAndLogEx(DEBUG, "fail 7  - %u  %u ", testSpeed , rfclk);
+        return false;
+    }
+    return true;
+}
+
+static void t55xx_psk1_demod (int *data, uint8_t rfclk, uint8_t pskcf, uint32_t *block) {
+
+    if ((rfclk < 8) || (rfclk > 128)) {
+        return;
+    }
+
+    switch (pskcf) {
+        case 0: {
+            pskcf = 2;
+            break;
+        }
+        case 1: {
+            pskcf = 4;
+            break;
+        }
+        case 2: {
+            pskcf = 8;
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    int startOffset = 1; // where to start reading data samples
+    int sampleCount = 0; // Counter for 1 bit of samples
+    int samples0, samples1;      // Number of High even and odd bits in a sample.
+    int startBitOffset = 1; // which bit to start at e.g. for rf/32 1 33 65 ...
+    int bitCount = 0;
+    uint32_t myblock = 0;
+    int offset;
+    uint8_t drift = 0;
+    uint8_t tuneOffset = 0;
+
+    drift = (rfclk % pskcf);  // 50 2 = 1  50 4 = 2
+
+    // locate first "0" - high transisiton for correct start offset
+    while (DC(data[startOffset]) <= (DC(data[startOffset - 1]) + 5)) {
+    //    sampleToggle ^= 1;
+        startOffset++;
+    }
+
+    // Start sample may be 1 off due to sample alignment with chip modulation
+    // so seach for the first lower value, and adjust as needed
+    if (pskcf == 2) {
+
+        tuneOffset = startOffset + 1;
+
+        while (DC(data[tuneOffset]) >= (DC(data[tuneOffset - 1]) + 5)) {
+            tuneOffset++;
+        }
+
+        if ((tuneOffset - startOffset - 1) % 2) {
+            startOffset++;
+        }
+    }
+
+    uint8_t pskcfidx = 0;
+
+    // Get the offset to the first sample of the data block
+    offset = (rfclk * startBitOffset) + startOffset;
+
+    pskcfidx = (drift / 2);
+    pskcfidx = pskcfidx % pskcf;
+
+    // while data my be in the settle period of sampling
+    // First 18 - 24 bits not usable for reference only
+    while (offset < 20) {
+        offset += (32 * rfclk);
+    }
+
+    // Read 1 block of data
+    for (bitCount = 0; bitCount < 32; bitCount++) {
+
+        samples0 = 0;
+        samples1 = 0;
+
+        // Get 1 bit of data
+        for (sampleCount = 0; sampleCount < rfclk; sampleCount++){
+            // Count number of even and odd high bits at center to edge
+            switch (pskcf) {
+                case 2: {
+
+                    // if current sample is high
+                    if (DC(data[offset]) > DC(data[offset + 1])) {
+                        if (pskcfidx == 0) {
+                            samples0++;
+                        } else {
+                            samples1++;
+                        }
+                    }
+                    break;
+                }
+                case 4: {
+
+                    // only check pskcf 2nd bit x 1 x x
+                    if (pskcfidx == 1) {
+
+                        // if current sample is high
+                        if (DC(data[offset]) > DC(data[offset + 2])) {
+                            samples0++;
+                        } else {
+                            samples1++;
+                        }
+                    }
+                    break;
+                }
+                case 8: {
+
+                    if (pskcfidx == 3) {  // x x x 1 x x x x   // 00041840   : FFFBE7BF
+
+                        // if current sample is high
+                        if (DC(data[offset]) > DC(data[offset + 4])) {
+                            samples0++;
+                        } else {
+                            samples1++;
+                        }
+                    }
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+
+            // If at bit boundary (after first bit) then adjust phase check for drift
+            if ((sampleCount > 0) && (sampleCount % rfclk) == 0) {
+                pskcfidx -= drift;
+            }
+
+            offset++;
+            pskcfidx++;
+            pskcfidx = pskcfidx % pskcf;
+        }
+
+        myblock <<= 1;
+        if (samples1 > samples0) {
+            myblock++;
+        }
+    }
+
+    *block = myblock;
+}
+
+static void t55xx_psk2_demod (int *data, uint8_t rfclk, uint8_t pskcf, uint32_t *block) {
+    // decode PSK
+    t55xx_psk1_demod (data, rfclk, pskcf, block);
+
+    uint32_t new_block = 0;
+    uint8_t prev_phase = 1;
+
+    // Convert to PSK2
+    for (int8_t bit = 31; bit >= 0; bit--) {
+
+        new_block <<= 1;
+
+        if (((*block >> bit) & 1) != prev_phase) {
+            new_block++;
+        }
+
+        prev_phase = ((*block >> bit) & 1);
+    }
+
+    *block = new_block;
+}
+
+static void t55xx_search_config_psk(int *d, int pskV) {
+
+    for (uint8_t pskcf = 0; pskcf < 3; pskcf++) {
+
+        for (uint8_t speedBits = 0; speedBits < 64; speedBits++) {
+
+            uint8_t rfclk = rfclk = (2 * speedBits) + 2;
+            uint32_t block = 0;
+
+            if (pskV == 1) {
+                t55xx_psk1_demod (d, rfclk, pskcf, &block);
+            }
+
+            if (pskV == 2) {
+                t55xx_psk2_demod (d, rfclk, pskcf, &block);
+            }
+
+            if (t55xx_is_valid_block0(block, rfclk, pskcf)) {
+                PrintAndLogEx(SUCCESS, "Valid config block [%08X] - rfclk [%d] - pskcf [%d]", block, rfclk, pskcf);
+            }
+        }
+    }
+}
+*/
 
 t55xx_conf_block_t Get_t55xx_Config(void) {
     return config;
@@ -86,6 +345,14 @@ static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, u
     char *r2 = (char *)calloc(r_count, sizeof(uint8_t));
     char *r3 = (char *)calloc(r_count, sizeof(uint8_t));
 
+    if (r0 == NULL || r1 == NULL || r2 == NULL || r3 == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(r0);
+        free(r1);
+        free(r2);
+        free(r3);
+        return;
+    }
     snprintf(r0, r_len, "downlink - fixed bit length %s", (dl_mode_def == 0) ? "(detected def)" : "");
     snprintf(r1, r_len, "downlink - long leading reference %s", (dl_mode_def == 1) ? "(detected def)" : "");
     snprintf(r2, r_len, "downlink - leading zero %s", (dl_mode_def == 2) ? "(detected def)" : "");
@@ -99,6 +366,14 @@ static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, u
 
     if (show == T55XX_DLMODE_ALL) {
         char *r4 = (char *)calloc(r_count, sizeof(uint8_t));
+        if (r4 == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            free(r0);
+            free(r1);
+            free(r2);
+            free(r3);
+            return;
+        }
         snprintf(r4, r_len, "try all downlink modes %s", (dl_mode_def == 4) ? "(def)" : "");
         at[n++] = arg_lit0(NULL, "all", r4);
     }
@@ -191,7 +466,7 @@ int clone_t55xx_tag(uint32_t *blockdata, uint8_t numblocks) {
         ng.flags = 0;
 
         SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
-        if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, T55XX_WRITE_TIMEOUT)) {
+        if (WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, T55XX_WRITE_TIMEOUT) == false) {
             PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
         }
@@ -389,7 +664,7 @@ int t55xxWrite(uint8_t block, bool page1, bool usepwd, bool testMode, uint32_t p
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
-    if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, 2000)) {
+    if (WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, 2000) == false) {
         PrintAndLogEx(ERR, "Error occurred, device did not ACK write operation.");
         return PM3_ETIMEOUT;
     }
@@ -641,7 +916,7 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
 
             if (t55xxTryDetectModulationEx(downlink_mode, false, 0, password) == false) {
                 PrintAndLogEx(WARNING, "Safety check: Could not detect if PWD bit is set in config block. Exits.");
-                PrintAndLogEx(HINT, "Consider using the override parameter to force read.");
+                PrintAndLogEx(HINT, "Hint: Consider using the override parameter to force read.");
                 return PM3_EWRONGANSWER;
             } else {
                 PrintAndLogEx(WARNING, "Safety check: PWD bit is NOT set in config block. Reading without password...");
@@ -673,9 +948,9 @@ static int CmdT55xxReadBlock(const char *Cmd) {
                   _CYAN_("Use of read with password on a tag not configured") "\n"
                   _CYAN_("for a password can damage the tag") "\n"
                   _RED_("           * * * * * * * * * *"),
-                  "lf t55xx read -b 0                   --> read data from block 0\n"
-                  "lf t55xx read -b 0 --pwd 01020304    --> read data from block 0, pwd 01020304\n"
-                  "lf t55xx read -b 0 --pwd 01020304 -o --> read data from block 0, pwd 01020304, override\n"
+           "lf t55xx read -b 0                   --> read data from block 0\n"
+           "lf t55xx read -b 0 --pwd 01020304    --> read data from block 0, pwd 01020304\n"
+           "lf t55xx read -b 0 --pwd 01020304 -o --> read data from block 0, pwd 01020304, override\n"
                  );
 
     // 1 (help) + 4(four user specified params) + (5 T55XX_DLMODE_SINGLE)
@@ -837,7 +1112,7 @@ static int CmdT55xxWakeUp(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     uint32_t password = 0;
-    int res = arg_get_u32_hexstr_def_nlen(ctx, 2, 0, &password, 4, true);
+    int res = arg_get_u32_hexstr_def_nlen(ctx, 1, 0, &password, 4, true);
     if (res == 0 || res == 2) {
         PrintAndLogEx(ERR, "Password should be 4 hex bytes");
         CLIParserFree(ctx);
@@ -1151,7 +1426,8 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
         clk = GetPskClock("", false);
         if (clk > 0) {
             // allow undo
-            save_restoreGB(GRAPH_SAVE);
+            buffer_savestate_t saveState = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
+            saveState.offset = g_GridOffset;
             // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
             CmdLtrim("-i 160");
             if ((PSKDemod(0, 0, 6, false) == PM3_SUCCESS) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
@@ -1200,7 +1476,10 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 }
             } // inverse waves does not affect this demod
             //undo trim samples
-            save_restoreGB(GRAPH_RESTORE);
+            restore_bufferS32(saveState, g_GraphBuffer);
+            g_GridOffset = saveState.offset;
+            // t55xx_search_config_psk(g_GraphBuffer, 1);
+            // t55xx_search_config_psk(g_GraphBuffer, 2);
         }
     }
     if (hits == 1) {
@@ -1287,6 +1566,8 @@ bool testKnownConfigBlock(uint32_t block0) {
         case T55X7_NEXWATCH_CONFIG_BLOCK:
         case T55X7_JABLOTRON_CONFIG_BLOCK:
         case T55X7_PYRONIX_CONFIG_BLOCK:
+        case T55X7_TEXECOM_CONFIG_BLOCK:
+        case T55X7_BETECH_CONFIG_BLOCK:
             return true;
     }
     return false;
@@ -1450,10 +1731,17 @@ static bool testBitRate(uint8_t readRate, uint8_t clk) {
 
 bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5) {
 
-    if (g_DemodBufferLen < 64) return false;
+    if (g_DemodBufferLen < 64) {
+        return false;
+    }
+
     for (uint8_t idx = 28; idx < 64; idx++) {
+
         uint8_t si = idx;
-        if (PackBits(si, 28, g_DemodBuffer) == 0x00) continue;
+
+        if (PackBits(si, 28, g_DemodBuffer) == 0x00) {
+            continue;
+        }
 
         uint8_t safer    = PackBits(si, 4, g_DemodBuffer);
         si += 4;     //master key
@@ -1461,7 +1749,10 @@ bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
         si += 4;     //was 7 & +=7+3 //should be only 4 bits if extended mode
         // 2nibble must be zeroed.
         // moved test to here, since this gets most faults first.
-        if (resv > 0x00) continue;
+
+        if (resv > 0x00) {
+            continue;
+        }
 
         int bitRate      = PackBits(si, 6, g_DemodBuffer);
         si += 6;     //bit rate (includes extended mode part of rate)
@@ -1476,20 +1767,33 @@ bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
         //if extended mode
         bool extMode = ((safer == 0x6 || safer == 0x9) && extend) ? true : false;
 
-        if (!extMode) {
-            if (bitRate > 7) continue;
-            if (!testBitRate(bitRate, clk)) continue;
-        } else { //extended mode bitrate = same function to calc bitrate as em4x05
-            if (EM4x05_GET_BITRATE(bitRate) != clk) continue;
+        if (extMode == false) {
 
+            if (bitRate > 7) {
+                continue;
+            }
+
+            if (testBitRate(bitRate, clk) == false) {
+                continue;
+            }
+
+        } else { //extended mode bitrate = same function to calc bitrate as em4x05
+            if (EM4x05_GET_BITRATE(bitRate) != clk) {
+                continue;
+            }
         }
+
         //test modulation
-        if (!testModulation(mode, modread)) continue;
+        if (testModulation(mode, modread) == false) {
+            continue;
+        }
+
         *fndBitRate = bitRate;
         *offset = idx;
         *Q5 = false;
         return true;
     }
+
     if (testQ5(mode, offset, fndBitRate, clk)) {
         *Q5 = true;
         return true;
@@ -1654,7 +1958,7 @@ static int CmdT55xxDangerousRaw(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("d", "data", NULL, "raw bit string"),
+        arg_str1("d", "data", "<bitstr>", "raw bit string"),
         arg_int1("t", "time", "<us>", "<0 - 200000> time in microseconds before dropping the field"),
         arg_param_end
     };
@@ -1666,8 +1970,8 @@ static int CmdT55xxDangerousRaw(const char *Cmd) {
     ng.bitlen = 0;
     memset(ng.data, 0x00, sizeof(ng.data));
 
-    int bin_len = 127;
-    uint8_t bin[128] = {0};
+    uint8_t bin[129] = {0};
+    int bin_len = sizeof(bin) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 1, bin, &bin_len);
 
     ng.time = arg_get_int_def(ctx, 2, 0);
@@ -1688,7 +1992,7 @@ static int CmdT55xxDangerousRaw(const char *Cmd) {
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_DANGERRAW, (uint8_t *)&ng, sizeof(ng));
-    if (!WaitForResponseTimeout(CMD_LF_T55XX_DANGERRAW, &resp, 2000)) {
+    if (WaitForResponseTimeout(CMD_LF_T55XX_DANGERRAW, &resp, 2000) == false) {
         PrintAndLogEx(ERR, "Error occurred, device did not ACK write operation.");
         return PM3_ETIMEOUT;
     }
@@ -2012,12 +2316,18 @@ static void printT5x7KnownBlock0(uint32_t b0) {
         case T55X7_PYRONIX_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "Pyronix ");
             break;
+        case T55X7_TEXECOM_CONFIG_BLOCK:
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Texecom ");
+            break;
+        case T55X7_BETECH_CONFIG_BLOCK:
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Be-Tech ");
+            break;
         default:
             break;
     }
 
     if (strlen(s) > 0) {
-        PrintAndLogEx(SUCCESS, "Config block match        : " _YELLOW_("%s"), s);
+        PrintAndLogEx(SUCCESS, "Config block match... " _YELLOW_("%s"), s);
     }
 }
 
@@ -2233,7 +2543,7 @@ static int CmdT55xxDump(const char *Cmd) {
         arg_str0("f", "file", "<fn>", "filename (default is generated on blk 0)"),
         arg_lit0("o", "override", "override, force pwd read despite danger to card"),
         arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
-        arg_lit0(NULL, "ns", "no save"),
+        arg_lit0(NULL, "ns", "no save to file"),
     };
     uint8_t idx = 5;
     arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_SINGLE, T55XX_DLMODE_SINGLE);
@@ -2445,9 +2755,17 @@ static int CmdT55xxRestore(const char *Cmd) {
     config.downlink_mode = downlink_mode;
 
     // Write the page 0 config
-    snprintf(wcmd, sizeof(wcmd), "-b 0 -d %08X %s", dump[0], pwdopt);
-    if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Warning: error writing blk 0");
+    //
+    // when running `lf t55xx dump` and user failed,  the dump file will have a all zero block0 (ie: config block)
+    // writing this bad config block will brick the tag.
+    if (dump[0] != 0x00000000) {
+        snprintf(wcmd, sizeof(wcmd), "-b 0 -d %08X %s", dump[0], pwdopt);
+        if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Warning: error writing blk 0");
+        }
+    } else {
+        PrintAndLogEx(WARNING, "Warning: the dump file contains a all zero config block.");
+        PrintAndLogEx(HINT, "Make sure you dumped the card correct");
     }
     free(dump);
     PrintAndLogEx(INFO, "Done!");
@@ -2530,7 +2848,7 @@ bool AcquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, u
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_READBL, (uint8_t *)&payload, sizeof(payload));
-    if (!WaitForResponseTimeout(CMD_LF_T55XX_READBL, NULL, 2500)) {
+    if (WaitForResponseTimeout(CMD_LF_T55XX_READBL, NULL, 2500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return false;
     }
@@ -2890,7 +3208,7 @@ static int CmdResetRead(const char *Cmd) {
         uint16_t gotsize = g_pm3_capabilities.bigbuf_size - 1;
         uint8_t *got = calloc(gotsize, sizeof(uint8_t));
         if (got == NULL) {
-            PrintAndLogEx(WARNING, "failed to allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
 
@@ -2900,7 +3218,7 @@ static int CmdResetRead(const char *Cmd) {
             free(got);
             return PM3_ETIMEOUT;
         }
-        setGraphBuf(got, gotsize);
+        setGraphBuffer(got, gotsize);
         free(got);
     }
 
@@ -3125,7 +3443,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         PacketResponseNG resp;
 
         uint8_t timeout = 0;
-        while (!WaitForResponseTimeout(CMD_LF_T55XX_CHK_PWDS, &resp, 2000)) {
+        while (WaitForResponseTimeout(CMD_LF_T55XX_CHK_PWDS, &resp, 2000) == false) {
             timeout++;
             PrintAndLogEx(NORMAL, "." NOLF);
             if (timeout > 180) {
@@ -3980,7 +4298,7 @@ static int CmdT55xxProtect(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// if the difference between a and b is less then or eq to d  i.e. does a = b +/- d
+// if the difference between a and b is less than or eq to d  i.e. does a = b +/- d
 #define APPROX_EQ(a, b, d) ((abs(a - b) <= d) ? true : false)
 
 static uint8_t t55sniff_get_packet(const int *pulseBuffer, char *data, uint8_t width0, uint8_t width1, uint8_t tolerance) {
@@ -4384,6 +4702,74 @@ static int CmdT55xxSniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdT55xxView(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf t55xx view",
+                  "Print a T55xx dump file (bin/eml/json)\n",
+                  "lf t55xx view -f lf-t55xx-00000000-11111111-22222222-33333333-dump.bin"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    // bool verbose = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    if (fnlen == 0) {
+        PrintAndLogEx(ERR, "Must specify a filename");
+        return PM3_EINVARG;
+    }
+
+    // read dump file
+    uint32_t *dump = NULL;
+    size_t bytes_read = 0;
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (T55x7_BLOCK_COUNT * 4));
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (bytes_read != (T55x7_BLOCK_COUNT * 4)) {
+        free(dump);
+        PrintAndLogEx(FAILED, "wrong length of dump file. Expected 48 bytes, got %zu", bytes_read);
+        return PM3_EFILE;
+    }
+
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(SUCCESS, "       " _CYAN_("Page 0"));
+    PrintAndLogEx(SUCCESS, "----+----------+-------");
+    PrintAndLogEx(SUCCESS, "blk | hex data | ascii");
+    PrintAndLogEx(SUCCESS, "----+----------+-------");
+
+    uint32_t *pd = dump;
+    uint8_t tmp[4] = {0};
+    for (uint8_t i = 0; i < 8; ++i) {
+        Uint4byteToMemLe(tmp, *pd);
+        PrintAndLogEx(SUCCESS, " %02d | %s | %s", i, sprint_hex_inrow(tmp, sizeof(tmp)), sprint_ascii(tmp, 4));
+        pd++;
+    }
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(SUCCESS, "       " _CYAN_("Page 1"));
+    PrintAndLogEx(SUCCESS, "----+----------+-------");
+    PrintAndLogEx(SUCCESS, "blk | hex data | ascii");
+    PrintAndLogEx(SUCCESS, "----+----------+-------");
+    for (uint8_t i = 0; i < 4; i++) {
+        Uint4byteToMemLe(tmp, *pd);
+        PrintAndLogEx(SUCCESS, " %02d | %s | %s", i, sprint_hex_inrow(tmp, sizeof(tmp)), sprint_ascii(tmp, 4));
+        pd++;
+    }
+    PrintAndLogEx(NORMAL, "");
+    free(dump);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"-----------",  CmdHelp,                 AlwaysAvailable, "---------------------------- " _CYAN_("notice") " -----------------------------"},
     {"",             CmdHelp,                 AlwaysAvailable, "Remember to run `" _YELLOW_("lf t55xx detect") "` first whenever a new card"},
@@ -4404,10 +4790,11 @@ static command_t CommandTable[] = {
     {"restore",      CmdT55xxRestore,         IfPm3Lf,         "Restore T55xx card Page 0 / Page 1 blocks"},
     {"trace",        CmdT55xxReadTrace,       AlwaysAvailable, "Show T55x7 traceability data (page 1/ blk 0-1)"},
     {"wakeup",       CmdT55xxWakeUp,          IfPm3Lf,         "Send AOR wakeup command"},
+    {"view",         CmdT55xxView,            AlwaysAvailable, "Display content from tag dump file"},
     {"write",        CmdT55xxWriteBlock,      IfPm3Lf,         "Write T55xx block data"},
     {"-----------",  CmdHelp,                 AlwaysAvailable, "--------------------- " _CYAN_("recovery") " ---------------------"},
     {"bruteforce",   CmdT55xxBruteForce,      IfPm3Lf,         "Simple bruteforce attack to find password"},
-    {"chk",          CmdT55xxChkPwds,         IfPm3Lf,         "Check passwords from dictionary/flash"},
+    {"chk",          CmdT55xxChkPwds,         IfPm3Lf,         "Check passwords"},
     {"protect",      CmdT55xxProtect,         IfPm3Lf,         "Password protect tag"},
     {"recoverpw",    CmdT55xxRecoverPW,       IfPm3Lf,         "Try to recover from bad password write from a cloner"},
     {"sniff",        CmdT55xxSniff,           AlwaysAvailable, "Attempt to recover T55xx commands from sample buffer"},
@@ -4426,3 +4813,22 @@ int CmdLFT55XX(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
+
+
+/*
+
+one of
+// Leading 0
+lf t55 write -b 3 --pg1 -d 90000800
+
+// 1 of 4
+lf t55 write -b 3 --pg1 -d 90000C00
+
+
+T55xx clone card lock: block 3 page 1 0x00000020                  00000000 00000000 00000000 00100000
+
+(this bit in any combo seems to lock the card)
+
+You can have other data in the block write, but if that single bit is set "1" the entire card locks in its current state; no know way to unlock
+
+*/

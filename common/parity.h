@@ -42,10 +42,8 @@ static const uint8_t g_odd_byte_parity[256] = {
     1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1
 };
 
-//extern const uint8_t OddByteParity[256];
-
-#define ODD_PARITY8(x)   { g_odd_byte_parity[x] }
-#define EVEN_PARITY8(x)  { !g_odd_byte_parity[x] }
+#define ODD_PARITY8(x)   g_odd_byte_parity[x]
+#define EVEN_PARITY8(x)  !g_odd_byte_parity[x]
 
 static inline uint8_t oddparity8(const uint8_t x) {
     return g_odd_byte_parity[x];
@@ -60,7 +58,7 @@ static inline uint8_t evenparity16(uint16_t x) {
     x ^= x >> 8;
     return EVEN_PARITY8(x) ;
 #else
-    return (__builtin_parity(x) & 0xFF);
+    return __builtin_parity(x);
 #endif
 }
 
@@ -77,9 +75,9 @@ static inline uint8_t evenparity32(uint32_t x) {
 #if !defined __GNUC__
     x ^= x >> 16;
     x ^= x >> 8;
-    return EVEN_PARITY8(x);
+    return EVEN_PARITY8(x) ;
 #else
-    return (__builtin_parity(x) & 0xFF);
+    return __builtin_parity(x);
 #endif
 }
 

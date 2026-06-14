@@ -20,9 +20,24 @@
 #define CMDHF15_H__
 
 #include "common.h"
+#include "crc16.h"
+#include "iso15.h"           // typedef structs / enum
+
+#ifndef Crc15
+# define Crc15(data, len)       Crc16ex(CRC_15693, (data), (len))
+#endif
+#ifndef CheckCrc15
+# define CheckCrc15(data, len)  check_crc(CRC_15693, (data), (len))
+#endif
+#ifndef AddCrc15
+#define AddCrc15(data, len)     compute_crc(CRC_15693, (data), (len), (data)+(len), (data)+(len)+1)
+#endif
+
+#ifndef ISO15_RAW_LEN
+#define ISO15_RAW_LEN(x)  (sizeof(iso15_raw_cmd_t) + (x))
+#endif
 
 int CmdHF15(const char *Cmd);
-
 bool readHF15Uid(bool loop, bool verbose);
 
 #endif

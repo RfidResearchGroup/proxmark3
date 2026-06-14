@@ -75,6 +75,9 @@ typedef struct {
     bool appSelected; // for iso auth
     uint32_t selectedAID;
 
+    uint8_t selectedDFName[16];
+    uint8_t selectedDFNameLen;
+
     uint8_t uid[10];
     uint8_t uidlen;
 
@@ -95,7 +98,9 @@ void DesfireSetKey(DesfireContext_t *ctx, uint8_t keyNum, DesfireCryptoAlgorithm
 void DesfireSetKeyNoClear(DesfireContext_t *ctx, uint8_t keyNum, DesfireCryptoAlgorithm keyType, uint8_t *key);
 void DesfireSetCommandSet(DesfireContext_t *ctx, DesfireCommandSet cmdSet);
 void DesfireSetCommMode(DesfireContext_t *ctx, DesfireCommunicationMode commMode);
+void DesfireSetSecureChannel(DesfireContext_t *ctx, DesfireSecureChannel schann);
 void DesfireSetKdf(DesfireContext_t *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, uint8_t kdfInputLen);
+void DesfireSetDFName(DesfireContext_t *ctx, uint8_t *dfname, uint8_t dfnameLen);
 bool DesfireIsAuthenticated(DesfireContext_t *dctx);
 size_t DesfireGetMACLength(DesfireContext_t *ctx);
 

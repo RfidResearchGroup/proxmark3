@@ -53,11 +53,7 @@ static bool TestCRC16(void) {
     len = DesfireSearchCRCPos(data, 1, 0x00, 2);
     res = res && (len == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "CRC16............. " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR, "CRC16............. " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "CRC16............. ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -80,11 +76,7 @@ static bool TestCRC32(void) {
     len = DesfireSearchCRCPos(data, 2, 0x00, 4);
     res = res && (len == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "CRC32............. " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR, "CRC32............. " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "CRC32............. ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -131,11 +123,7 @@ static bool TestCMACSubkeys(void) {
     res = res && (memcmp(sk1, sk1_3tdea, sizeof(sk1_3tdea)) == 0);
     res = res && (memcmp(sk2, sk2_3tdea, sizeof(sk2_3tdea)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "CMAC subkeys...... " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR,  "CMAC subkeys...... " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "CMAC subkeys...... ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -155,11 +143,7 @@ static bool TestAn10922KDFAES(void) {
     uint8_t dkey[] = {0xA8, 0xDD, 0x63, 0xA3, 0xB8, 0x9D, 0x54, 0xB3, 0x7C, 0xA8, 0x02, 0x47, 0x3F, 0xDA, 0x91, 0x75};
     res = res && (memcmp(dctx.key, dkey, sizeof(dkey)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "An10922 AES....... " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR,  "An10922 AES....... " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "An10922 AES....... ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -177,11 +161,7 @@ static bool TestAn10922KDF2TDEA(void) {
     uint8_t dkey[] = {0x16, 0xF8, 0x59, 0x7C, 0x9E, 0x89, 0x10, 0xC8, 0x6B, 0x96, 0x48, 0xD0, 0x06, 0x10, 0x7D, 0xD7};
     res = res && (memcmp(dctx.key, dkey, sizeof(dkey)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "An10922 2TDEA..... " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR,  "An10922 2TDEA..... " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "An10922 2TDEA..... ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -201,11 +181,7 @@ static bool TestAn10922KDF3TDEA(void) {
                      };
     res = res && (memcmp(dctx.key, dkey, sizeof(dkey)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "An10922 3TDEA..... " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR,  "An10922 3TDEA..... " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "An10922 3TDEA..... ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -245,11 +221,7 @@ static bool TestCMAC3TDEA(void) {
     DesfireCryptoCMAC(&dctx, CMACData, 32, cmac);
     res = res && (memcmp(cmac, cmac4, sizeof(cmac1)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "CMAC 3TDEA........ " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR, "CMAC 3TDEA........ " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "CMAC 3TDEA........ ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -289,11 +261,7 @@ static bool TestCMAC2TDEA(void) {
     DesfireCryptoCMAC(&dctx, CMACData, 32, cmac);
     res = res && (memcmp(cmac, cmac4, sizeof(cmac1)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "CMAC 2TDEA........ " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR, "CMAC 2TDEA........ " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "CMAC 2TDEA........ ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -329,11 +297,7 @@ static bool TestCMACDES(void) {
     DesfireCryptoCMAC(&dctx, CMACData, 32, cmac);
     res = res && (memcmp(cmac, cmac4, sizeof(cmac1)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "CMAC DES.......... " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR, "CMAC DES.......... " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "CMAC DES.......... ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -356,11 +320,22 @@ static bool TestEV2SessionKeys(void) {
     DesfireGenSessionKeyEV2(key, rnda, rndb, false, sessionkey);
     res = res && (memcmp(sessionkey, sessionkeymac, sizeof(sessionkeymac)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "EV2 session keys.. " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR,  "EV2 session keys.. " _RED_("fail"));
+    // Non-zero key vectors, cross-checked with an independent AES-CMAC implementation
+    uint8_t key2[]             = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
+    uint8_t rnda2[]            = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF};
+    uint8_t rndb2[]            = {0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10, 0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10};
+    uint8_t sessionkeyauth2[]  = {0x19, 0x54, 0x28, 0x11, 0x9C, 0x85, 0x28, 0xD5, 0x95, 0x80, 0xA7, 0x3C, 0x7C, 0x96, 0xC6, 0xA3};
+    uint8_t sessionkeymac2[]   = {0x0A, 0xF0, 0x0F, 0x6E, 0x39, 0xF9, 0x04, 0xC4, 0xA6, 0x38, 0x8C, 0x81, 0x2D, 0x53, 0xDC, 0x94};
 
+    memset(sessionkey, 0, sizeof(sessionkey));
+    DesfireGenSessionKeyEV2(key2, rnda2, rndb2, true, sessionkey);
+    res = res && (memcmp(sessionkey, sessionkeyauth2, sizeof(sessionkeyauth2)) == 0);
+
+    memset(sessionkey, 0, sizeof(sessionkey));
+    DesfireGenSessionKeyEV2(key2, rnda2, rndb2, false, sessionkey);
+    res = res && (memcmp(sessionkey, sessionkeymac2, sizeof(sessionkeymac2)) == 0);
+
+    PrintAndLogEx(INFO, "EV2 session keys.. ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -392,11 +367,7 @@ static bool TestEV2IVEncode(void) {
     DesfireEV2FillIV(&ctx, true, iv);
     res = res && (memcmp(iv, ivres2, sizeof(ivres2)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "EV2 IV calc....... " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR,  "EV2 IV calc....... " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "EV2 IV calc....... ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -452,17 +423,12 @@ static bool TestEV2MAC(void) {
     DesfireEV2CalcCMAC(&ctx, rc, cmddata4, sizeof(cmddata4), mac);
     res = res && (memcmp(mac, macres4, sizeof(macres4)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "EV2 MAC calc...... " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR,  "EV2 MAC calc...... " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "EV2 MAC calc...... ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
 static bool TestTransSessionKeys(void) {
     bool res = true;
-
     uint8_t key[] = {0x66, 0xA8, 0xCB, 0x93, 0x26, 0x9D, 0xC9, 0xBC, 0x28, 0x85, 0xB7, 0xA9, 0x1B, 0x9C, 0x69, 0x7B};
     uint8_t uid[] = {0x04, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
     uint32_t trCntr = 8;
@@ -476,11 +442,20 @@ static bool TestTransSessionKeys(void) {
     uint8_t keyenc[] = {0x11, 0x9B, 0x90, 0x2A, 0x07, 0xB1, 0x8A, 0x86, 0x5B, 0x8E, 0x1B, 0x00, 0x60, 0x59, 0x47, 0x84};
     res = res && (memcmp(sessionkey, keyenc, sizeof(keyenc)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "Trans session key. " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR,  "Trans session key. " _RED_("fail"));
+    // Second non-zero key vector, cross-checked with an independent AES-CMAC implementation
+    uint8_t key2[]    = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10};
+    uint8_t uid2[]    = {0x04, 0xA1, 0xB2, 0xC3, 0xD4, 0xE5, 0xF6};
+    uint32_t trCntr2  = 0x12345678;
+    uint8_t keymac2[] = {0x8F, 0x76, 0xD2, 0x1B, 0xAE, 0x67, 0x65, 0x84, 0x51, 0x88, 0xBC, 0xF9, 0x15, 0x9B, 0xE0, 0xEC};
+    uint8_t keyenc2[] = {0x6F, 0x70, 0x1D, 0xC0, 0x37, 0xA5, 0xF0, 0x75, 0x7A, 0x7F, 0xF6, 0x67, 0x05, 0x5F, 0x4B, 0x25};
 
+    DesfireGenTransSessionKeyEV2(key2, trCntr2, uid2, true, sessionkey);
+    res = res && (memcmp(sessionkey, keymac2, sizeof(keymac2)) == 0);
+
+    DesfireGenTransSessionKeyEV2(key2, trCntr2, uid2, false, sessionkey);
+    res = res && (memcmp(sessionkey, keyenc2, sizeof(keyenc2)) == 0);
+
+    PrintAndLogEx(INFO, "Trans session key. ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -505,11 +480,7 @@ static bool TestLRPPlaintexts(void) {
     uint8_t pt15[] = {0x71, 0xB4, 0x44, 0xAF, 0x25, 0x7A, 0x93, 0x21, 0x53, 0x11, 0xD7, 0x58, 0xDD, 0x33, 0x32, 0x47};
     res = res && (memcmp(ctx.plaintexts[15], pt15, sizeof(pt15)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "LRP plaintexts.... " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR,  "LRP plaintexts.... " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "LRP plaintexts.... ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -531,11 +502,7 @@ static bool TestLRPUpdatedKeys(void) {
     uint8_t key2[] = {0xFE, 0x30, 0xAB, 0x50, 0x46, 0x7E, 0x61, 0x78, 0x3B, 0xFE, 0x6B, 0x5E, 0x05, 0x60, 0x16, 0x0E};
     res = res && (memcmp(ctx.updatedKeys[2], key2, sizeof(key2)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "LRP updated keys.. " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR,  "LRP updated keys.. " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "LRP updated keys.. ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -587,11 +554,7 @@ static bool TestLRPEval(void) {
     uint8_t y5[] = {0xCF, 0x99, 0x13, 0x92, 0xF0, 0x36, 0x93, 0x50, 0xA7, 0xE2, 0x1B, 0xE5, 0x2F, 0x74, 0x88, 0x21};
     res = res && (memcmp(y, y5, sizeof(y5)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "LRP eval.......... " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR,  "LRP eval.......... " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "LRP eval.......... ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -618,11 +581,7 @@ static bool TestLRPIncCounter(void) {
     uint8_t ctrr4[] = {0x00};
     res = res && (memcmp(ctr4, ctrr4, sizeof(ctrr4)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "LRP inc counter... " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR,  "LRP inc counter... " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "LRP inc counter... ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -686,11 +645,7 @@ static bool TestLRPEncode(void) {
     res = res && (resplen == sizeof(res5));
     res = res && (memcmp(resp, res5, sizeof(res5)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "LRP encode........ " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR,  "LRP encode........ " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "LRP encode........ ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -753,11 +708,7 @@ static bool TestLRPDecode(void) {
     res = res && (resplen == sizeof(res5));
     res = res && (memcmp(resp, res5, sizeof(res5)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "LRP decode........ " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR,  "LRP decode........ " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "LRP decode........ ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -793,11 +744,7 @@ static bool TestLRPSubkeys(void) {
     res = res && (memcmp(sk1, sk1r3, sizeof(sk1r3)) == 0);
     res = res && (memcmp(sk2, sk2r3, sizeof(sk2r3)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "LRP subkeys....... " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR,  "LRP subkeys....... " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "LRP subkeys....... ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -855,11 +802,7 @@ static bool TestLRPCMAC(void) {
     uint8_t cmacres6[] = {0x05, 0xF1, 0xCE, 0x30, 0x45, 0x1A, 0x03, 0xA6, 0xE4, 0x68, 0xB3, 0xA5, 0x90, 0x33, 0xA5, 0x54};
     res = res && (memcmp(cmac, cmacres6, sizeof(cmacres6)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "LRP CMAC.......... " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR,  "LRP CMAC.......... " _RED_("fail"));
-
+    PrintAndLogEx(INFO, "LRP CMAC.......... ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -877,11 +820,17 @@ static bool TestLRPSessionKeys(void) {
     DesfireGenSessionKeyLRP(key, rnda, rndb, true, sessionkey);
     res = res && (memcmp(sessionkey, sessionkeyres, sizeof(sessionkeyres)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "LRP session keys.. " _GREEN_("ok"));
-    else
-        PrintAndLogEx(ERR,  "LRP session keys.. " _RED_("fail"));
+    // Non-zero key vector, cross-checked with an independent LRP-CMAC implementation
+    uint8_t key2[]            = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
+    uint8_t rnda2[]           = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF};
+    uint8_t rndb2[]           = {0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10, 0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10};
+    uint8_t sessionkeyres2[]  = {0x1A, 0xC2, 0xB1, 0x02, 0x1F, 0x6E, 0xF9, 0x9E, 0x79, 0xB7, 0x03, 0xB6, 0xB3, 0x3F, 0x65, 0xE6};
 
+    memset(sessionkey, 0, sizeof(sessionkey));
+    DesfireGenSessionKeyLRP(key2, rnda2, rndb2, true, sessionkey);
+    res = res && (memcmp(sessionkey, sessionkeyres2, sizeof(sessionkeyres2)) == 0);
+
+    PrintAndLogEx(INFO, "LRP session keys.. ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -914,11 +863,7 @@ bool DesfireTest(bool verbose) {
     res = res && TestLRPSessionKeys();
 
     PrintAndLogEx(INFO, "---------------------------");
-    if (res)
-        PrintAndLogEx(SUCCESS, "    Tests [ %s ]", _GREEN_("ok"));
-    else
-        PrintAndLogEx(FAILED, "    Tests [ %s ]", _RED_("fail"));
-
+    PrintAndLogEx(SUCCESS, "Tests ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     PrintAndLogEx(NORMAL, "");
     return res;
 }

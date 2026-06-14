@@ -98,7 +98,7 @@ static int demod_guard_raw(uint8_t *raw, uint8_t rlen) {
 // but will leave the g_GraphBuffer intact.
 // if successful it will push askraw data back to g_DemodBuffer ready for emulation
 int demodGuard(bool verbose) {
-    (void) verbose; // unused so far
+    (void) verbose;
     //Differential Biphase
     //get binary from ask wave
     if (ASKbiphaseDemod(0, 64, 0, 0, false) != PM3_SUCCESS) {
@@ -243,7 +243,7 @@ static int CmdGuardReader(const char *Cmd) {
     do {
         lf_read(false, 10000);
         demodGuard(!cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }
@@ -285,12 +285,16 @@ static int CmdGuardClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    fmtlen &= 0x7f;
+    fmtlen &= 0x7F;
     uint32_t facilitycode = (fc & 0x000000FF);
     uint32_t cardnumber = (cn & 0x00FFFFFF);
 
     //GuardProxII - compat mode, ASK/Biphase,  data rate 64, 3 data blocks
     uint8_t *bs = calloc(96, sizeof(uint8_t));
+    if (bs == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     if (getGuardBits(xorval, fmtlen, facilitycode, cardnumber, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         free(bs);
@@ -317,7 +321,7 @@ static int CmdGuardClone(const char *Cmd) {
 
     free(bs);
 
-    PrintAndLogEx(INFO, "Preparing to clone Guardall to " _YELLOW_("%s") " with Facility Code: " _GREEN_("%u") " Card Number: " _GREEN_("%u") " xorKey: " _GREEN_("%u")
+    PrintAndLogEx(INFO, "Preparing to clone Guardall to " _YELLOW_("%s") " with fc: " _GREEN_("%u") " cn: " _GREEN_("%u") " xor: " _GREEN_("%u")
                   , cardtype
                   , facilitycode
                   , cardnumber
@@ -331,8 +335,8 @@ static int CmdGuardClone(const char *Cmd) {
     } else {
         res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     }
-    PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf gproxii reader`") " to verify");
+    PrintAndLogEx(SUCCESS, "Done!");
+    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf gproxii reader`") " to verify");
     return res;
 }
 
@@ -375,7 +379,7 @@ static int CmdGuardSim(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Simulating Guardall Prox - xorKey: " _YELLOW_("%u") " Facility Code: " _YELLOW_("%u") " CardNumber: " _YELLOW_("%u")
+    PrintAndLogEx(SUCCESS, "Simulating Guardall Prox - xorKey: " _YELLOW_("%u") " fc: " _YELLOW_("%u") " cn: " _YELLOW_("%u")
                   , xorval
                   , facilitycode
                   , cardnumber
@@ -383,6 +387,10 @@ static int CmdGuardSim(const char *Cmd) {
 
     // Guard uses:  clk: 64, invert: 0, encoding: 2 (ASK Biphase)
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     payload->encoding =  2;
     payload->invert = 0;
     payload->separator = 0;
@@ -510,20 +518,23 @@ int getGuardBits(uint8_t xorKey, uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8
     rawbytes[3] = 0;
 
     // add wiegand to rawbytes
-    for (i = 0; i < 5; ++i)
+    for (i = 0; i < 5; ++i) {
         rawbytes[i + 4] = bytebits_to_byte(pre + (i * 8), 8);
+    }
 
     PrintAndLogEx(DEBUG, " WIE | %s", sprint_hex(rawbytes, sizeof(rawbytes)));
 
     // XOR (only works on wiegand stuff)
-    for (i = 1; i < sizeof(rawbytes); ++i)
+    for (i = 1; i < sizeof(rawbytes); ++i) {
         rawbytes[i] ^= xorKey ;
+    }
 
     PrintAndLogEx(DEBUG, " XOR | %s", sprint_hex(rawbytes, sizeof(rawbytes)));
 
     // convert rawbytes to bits in pre
-    for (i = 0; i < sizeof(rawbytes); ++i)
+    for (i = 0; i < sizeof(rawbytes); ++i) {
         num_to_bytebitsLSBF(rawbytes[i], 8, pre + (i * 8));
+    }
 
     PrintAndLogEx(DEBUG, " Raw | %s", sprint_hex(rawbytes, sizeof(rawbytes)));
     PrintAndLogEx(DEBUG, " Raw | %s", sprint_bytebits_bin(pre, 96));

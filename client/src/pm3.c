@@ -26,9 +26,11 @@
 #include "usart_defs.h"
 #include "util_posix.h"
 #include "comms.h"
+#include "preferences.h"
 
 pm3_device_t *pm3_open(const char *port) {
     pm3_init();
+    preferences_load();
     OpenProxmark(&g_session.current_device, port, false, 20, false, USART_BAUD_RATE);
     if (g_session.pm3_present && (TestProxmark(g_session.current_device) != PM3_SUCCESS)) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark3\n");
@@ -53,16 +55,38 @@ void pm3_close(pm3_device_t *dev) {
         msleep(100); // Make sure command is sent before killing client
         CloseProxmark(dev);
     }
+    free_grabber();
 }
 
-int pm3_console(pm3_device_t *dev, const char *cmd) {
+int pm3_console(pm3_device_t *dev, const char *cmd, bool capture, bool quiet) {
     // For now, there is no real device context:
     (void) dev;
-    return CommandReceived(cmd);
+    uint8_t prev_printAndLog = g_printAndLog;
+    if (capture) {
+        g_printAndLog |= PRINTANDLOG_GRAB;
+    }
+    if (quiet) {
+        g_printAndLog &= ~PRINTANDLOG_PRINT;
+    }
+    int ret = CommandReceived(cmd);
+    g_printAndLog = prev_printAndLog;
+    return ret;
 }
 
 const char *pm3_name_get(pm3_device_t *dev) {
     return dev->g_conn->serial_port_name;
+}
+
+const char *pm3_grabbed_output_get(pm3_device_t *dev) {
+    if (g_grabbed_output.ptr != NULL) {
+        char *tmp = g_grabbed_output.ptr;
+        tmp[g_grabbed_output.size] = 0;
+        g_grabbed_output.idx = 0;
+        g_grabbed_output.size = 0;
+        return tmp;
+    } else {
+        return "";
+    }
 }
 
 pm3_device_t *pm3_get_current_dev(void) {

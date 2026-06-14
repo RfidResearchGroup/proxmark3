@@ -623,7 +623,7 @@ int read_texkom_uid(bool loop, bool verbose) {
             }
         }
 
-    } while (loop && kbd_enter_pressed() == false);
+    } while (loop && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }
@@ -664,7 +664,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
         SendCommandNG(CMD_HF_ACQ_RAW_ADC, (uint8_t *)&samplesCount, sizeof(uint32_t));
 
         PacketResponseNG resp;
-        if (!WaitForResponseTimeout(CMD_HF_ACQ_RAW_ADC, &resp, 2500)) {
+        if (WaitForResponseTimeout(CMD_HF_ACQ_RAW_ADC, &resp, 2500) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
         }

@@ -24,6 +24,7 @@
 
 extern uint8_t g_trigger;
 extern bool g_hf_field_active;
+extern bool g_hf_field_timeout_active;
 void hf_field_off(void);
 int tearoff_hook(void);
 

@@ -22,7 +22,7 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
   - [Generic Proxmark3 platforms](#generic-proxmark3-platforms)
 - [What has changed?](#what-has-changed)
 - [Development](#development)
-  - [Supported operative systems](#supported-operative-systems)
+  - [Supported operating systems](#supported-operating-systems)
   - [Precompiled binaries](#precompiled-binaries)
   - [Proxmark3 GUI](#proxmark3-gui)
   - [Official channels](#official-channels)
@@ -38,7 +38,7 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 | [Linux - Important notes on ModemManager](/doc/md/Installation_Instructions/ModemManager-Must-Be-Discarded.md) | [Validating Proxmark3 Client Functionality](/doc/md/Use_of_Proxmark/1_Validation.md)|
 | [macOS - Homebrew & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/macOS-Homebrew-Installation-Instructions.md) | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
 | [macOS - MacPorts](/doc/md/Installation_Instructions/macOS-MacPorts-Installation-Instructions.md) | [Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
-| [macOS - Setup and Build](/doc/md/Installation_Instructions/macOS-Compile-From-Source-Instructions.md) ||
+| [macOS - Setup and Build](/doc/md/Installation_Instructions/macOS-Compile-From-Source-Instructions.md) |[Standalone Modes](/doc/standalone/)|
 | [Windows - Setup and Build](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md) ||
 | [Termux / Android - Setup and Build](/doc/termux_notes.md) ||
 | [iOS - Setup and Build](/doc/md/Installation_Instructions/iOS-Installation-Instructions.md)
@@ -46,6 +46,7 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 | [Advanced Compilation Parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md) | [More Cheat Sheets](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)|
 | [Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md) | [Complete Client Command Set](/doc/commands.md) |
 | [JTAG](/doc/jtag_notes.md) | [T5577 Introduction Guide](/doc/T5577_Guide.md)|
+
 
 
 
@@ -60,7 +61,7 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 |[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode)|[Notes on Magic UID cards](/doc/magic_cards_notes.md)|
 |[Notes on Color usage](/doc/colors_notes.md)|[Makefile vs CMake](/doc/md/Development/Makefile-vs-CMake.md)|[Notes on Cloner guns](/doc/cloner_notes.md)|
 |[Notes on cliparser usage](/doc/cliparser.md)|[Notes on clocks](/doc/clocks.md)|[Notes on MIFARE DESFire](/doc/desfire.md)|
-|[Notes on CIPURSE](/doc/cipurse.md)|[Notes on NDEF type4a](/doc/ndef_type4a.md)|[Notes on downgrade attacks](/doc/hid_downgrade.md)|
+|[Notes on CIPURSE](/doc/cipurse.md)|[Notes on NDEF type4a](/doc/ndef_type4a.md)|[Unofficial MIFARE DESFire bible](/doc/unofficial_desfire_bible.md)|[Notes on iClass legrec-legbrute key recovery](/doc/iclass_legrec_legbrute_key_recovery.md)|[Notes on downgrade attacks](/doc/hid_downgrade.md)|||
 
 # How to build?
 
@@ -96,12 +97,14 @@ We define generic Proxmark3 platforms as following devices.
    - **Note**: currently incompatible with iCopy-X GUI as Proxmark client commands using different syntax
    - **Note**: see also [icopyx-community repos](https://github.com/iCopy-X-Community/) for upstream sources, reversed hw etc.
    - **Note**: Uses DRM to lock down tags, ignores the open source licences. Use on your own risk. 
+-  ⚠ Proxmark3 Ultimate
+   - **Note**: unknown device hw
+   - **Note**: FPGA images is building for it.  Use on your own risk.
 
 **Unknown support status**
  - ⚠  VX
    - **Note**: unknown device hw
--  ⚠ Proxmark3 Ultimate
-   - **Note**: unknown device hw
+
 
 When it comes to these new unknown models we are depending on the community to report in if this repo works and what they did to make it work.
 
@@ -180,10 +183,11 @@ We usually merge your contributions fast since we do like the idea of getting a 
 The [public roadmap](https://github.com/RfidResearchGroup/proxmark3/wiki/Public-Roadmap) is an excellent start to read if you are interesting in contributing.
 
 
-## Supported operative systems 
+## Supported operating systems
 
 This repo compiles nicely on 
    - WSL1 on Windows 10
+   - WSL2 on Windows 10/11
    - Proxspace environment [release v3.xx](https://github.com/Gator96100/ProxSpace/releases)
    - Windows/MinGW environment
    - Ubuntu, ParrotOS, Gentoo, Pentoo, Kali, NetHunter, Arch Linux, Fedora, Debian, Raspbian

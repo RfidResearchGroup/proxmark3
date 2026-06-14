@@ -23,7 +23,7 @@
 
 #include "proxmark3_arm.h"
 #include "appmain.h"
-#ifndef WITH_NO_COMPRESSION
+#ifdef WITH_COMPRESSION
 #include "lz4.h"
 #endif
 #include "BigBuf.h"
@@ -33,7 +33,7 @@
 extern common_area_t g_common_area;
 extern uint32_t __data_src_start__[], __data_start__[], __data_end__[], __bss_start__[], __bss_end__[];
 
-#ifndef WITH_NO_COMPRESSION
+#ifdef WITH_COMPRESSION
 static void uncompress_data_section(void) {
     int avail_in;
     memcpy(&avail_in, __data_src_start__, sizeof(int));
@@ -68,7 +68,7 @@ void Vector(void) {
     g_common_area.flags.osimage_present = 1;
 
     /* Set up data segment: Copy from flash to ram */
-#ifdef WITH_NO_COMPRESSION
+#ifndef WITH_COMPRESSION
     uint32_t *data_src = __data_src_start__;
     uint32_t *data_dst = __data_start__;
     while (data_dst < __data_end__) *data_dst++ = *data_src++;

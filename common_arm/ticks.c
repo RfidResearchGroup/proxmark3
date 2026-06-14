@@ -40,14 +40,16 @@ void SpinDelayUsPrecision(int us) {
     AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xFFFF;                      // Channel Period Register
 
     uint16_t end = AT91C_BASE_PWMC_CH0->PWMC_CCNTR + ticks;
-    if (end == 0) // AT91C_BASE_PWMC_CH0->PWMC_CCNTR is never == 0
+    if (end == 0) { // AT91C_BASE_PWMC_CH0->PWMC_CCNTR is never == 0
         end++;    // so we have to end++ to avoid inivity loop
+    }
 
     for (;;) {
         uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
-        if (now == end)
+        if (now == end) {
             return;
+        }
 
         WDT_HIT();
     }
@@ -67,14 +69,16 @@ void SpinDelayUs(int us) {
     AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xffff;                       // Channel Period Register
 
     uint16_t end = AT91C_BASE_PWMC_CH0->PWMC_CCNTR + ticks;
-    if (end == 0) // AT91C_BASE_PWMC_CH0->PWMC_CCNTR is never == 0
+    if (end == 0) { // AT91C_BASE_PWMC_CH0->PWMC_CCNTR is never == 0
         end++;    // so we have to end++ to avoid inivity loop
+    }
 
     for (;;) {
         uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
-        if (now == end)
+        if (now == end) {
             return;
+        }
         WDT_HIT();
     }
 }
@@ -97,7 +101,13 @@ void SpinDelay(int ms) {
 //    SpinDelay(1000);
 //    ti = GetTickCount() - ti;
 //    Dbprintf("timer(1s): %d t=%d", ti, GetTickCount());
+// Increments whenever StartTickCount() reconfigures/resets RTTC.
+// Callers can use this to detect that previously saved tick deltas are no longer valid.
+static uint32_t g_tickcount_label = 0;
+
 void StartTickCount(void) {
+    g_tickcount_label++;
+
     // This timer is based on the slow clock. The slow clock frequency is between 22kHz and 40kHz.
     // We can determine the actual slow clock frequency by looking at the Main Clock Frequency Register.
     while ((AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINRDY) == 0);       // Wait for MAINF value to become available...
@@ -116,9 +126,18 @@ uint32_t RAMFUNC GetTickCount(void) {
 
 uint32_t RAMFUNC GetTickCountDelta(uint32_t start_ticks) {
     uint32_t stop_ticks = AT91C_BASE_RTTC->RTTC_RTVR;
-    if (stop_ticks >= start_ticks)
+    if (stop_ticks >= start_ticks) {
         return stop_ticks - start_ticks;
+    }
     return (UINT32_MAX - start_ticks) + stop_ticks;
+}
+
+/*
+* Get current RTTC counter label.
+* If counter config changes between calls, the value is incremented.
+*/
+uint32_t GetTickCountLabel(void) {
+    return g_tickcount_label;
 }
 
 //  -------------------------------------------------------------------------
@@ -149,7 +168,8 @@ void StartCountSspClk(void) {
                              | AT91C_TC_WAVE                // Waveform Mode
                              | AT91C_TC_WAVESEL_UP          // just count
                              | AT91C_TC_ACPA_CLEAR          // Clear TIOA0 on RA Compare
-                             | AT91C_TC_ACPC_SET;           // Set TIOA0 on RC Compare
+                             | AT91C_TC_ACPC_SET            // Set TIOA0 on RC Compare
+                             | AT91C_TC_ASWTRG_SET;         // Set TIOA0 on software trigger to trigger instant reset of TC2
     AT91C_BASE_TC0->TC_RA = 1;                              // RA Compare value = 1; pulse width to TC2
     AT91C_BASE_TC0->TC_RC = 0;                              // RC Compare value = 0; increment TC2 on overflow
 
@@ -191,8 +211,8 @@ void StartCountSspClk(void) {
     // whenever the last three bits of our counter go 0, we can be sure to be in the middle of a frame transfer.
     // (just started with the transfer of the 4th Bit).
 
-    // The high word of the counter (TC2) will not reset until the low word (TC0) overflows.
-    // Therefore need to wait quite some time before we can use the counter.
+    // The high word of the counter (TC2) will not reset until the low word (TC0) clocks to process the external trigger.
+    // Therefore may need to wait a little bit before we can use the counter.
     while (AT91C_BASE_TC2->TC_CV > 0);
 }
 void ResetSspClk(void) {
@@ -335,5 +355,5 @@ void WaitUS(uint32_t us) {
 void StopTicks(void) {
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS;
 }
-

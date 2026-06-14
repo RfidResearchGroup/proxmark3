@@ -22,7 +22,8 @@ add_library(pm3rrg_rdv4_mbedtls STATIC
         ../../common/mbedtls/des.c
         ../../common/mbedtls/ecdsa.c
         ../../common/mbedtls/md.c
-        ../../common/mbedtls/md5.c
+        ../../common/mbedtls/hkdf.c
+        ../../common/mbedtls/md5.c        
         ../../common/mbedtls/oid.c
         ../../common/mbedtls/pem.c
         ../../common/mbedtls/arc4.c
@@ -43,7 +44,7 @@ add_library(pm3rrg_rdv4_mbedtls STATIC
         ../../common/mbedtls/x509.c
         ../../common/mbedtls/x509_crl.c
         ../../common/mbedtls/x509_crt.c
-				../../common/mbedtls/net_sockets.c
+		../../common/mbedtls/net_sockets.c
         )
 
 target_include_directories(pm3rrg_rdv4_mbedtls PRIVATE ../../common)

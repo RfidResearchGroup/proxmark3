@@ -8,6 +8,16 @@
 /* Strip "pm3_" from API functions for SWIG */
 %rename("%(strip:[pm3_])s") "";
 %feature("immutable","1") pm3_current_dev;
+
+#ifdef PYWRAP
+    #include <Python.h>
+    %typemap(default) bool capture {
+        $1 = Py_True;
+    }
+    %typemap(default) bool quiet {
+        $1 = Py_True;
+    }
+#endif
 typedef struct {
     %extend {
         pm3() {
@@ -30,8 +40,9 @@ typedef struct {
                 pm3_close($self);
             }
         }
-        int console(char *cmd);
+        int console(char *cmd, bool capture = true, bool quiet = true);
         char const * const name;
+        char const * const grabbed_output;
     }
 } pm3;
 //%nodefaultctor device;

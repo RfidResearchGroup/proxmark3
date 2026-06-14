@@ -34,6 +34,7 @@
 // times in samples @ 212kHz when acting as reader
 #define ICLASS_READER_TIMEOUT_ACTALL     330 // 1558us, nominal 330us + 7slots*160us = 1450us
 #define ICLASS_READER_TIMEOUT_UPDATE    3390 // 16000us, nominal 4-15ms
+#define ICLASS_READER_TIMEOUT_UPDATE_FAST    1600 // A copy of ICLASS_READER_TIMEOUT_UPDATE with reduced timeout values
 #define ICLASS_READER_TIMEOUT_OTHERS      80 // 380us, nominal 330us
 
 // The length of a received command will in most cases be no more than 18 bytes.
@@ -46,7 +47,7 @@
 #define AddCrc(data, len) compute_crc(CRC_ICLASS, (data), (len), (data)+(len), (data)+(len)+1)
 
 void SniffIClass(uint8_t jam_search_len, uint8_t *jam_search_string);
-void ReaderIClass(uint8_t flags);
+void ReaderIClass(uint8_t *flags);
 
 void iClass_WriteBlock(uint8_t *msg);
 void iclass_credit_epurse(iclass_credit_epurse_t *payload);
@@ -57,7 +58,7 @@ void iClass_Restore(iclass_restore_req_t *msg);
 int do_iclass_simulation_nonsec(void);
 int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf);
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
-void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_t *datain, uint8_t *dataout,  uint16_t *dataoutlen);
+void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool trace, uint8_t *datain, uint8_t *dataout,  uint16_t *dataoutlen);
 
 void iClass_Authentication_fast(iclass_chk_t *p);
 bool iclass_auth(iclass_auth_req_t *payload, uint8_t *out);
@@ -66,8 +67,12 @@ void iClass_ReadBlock(uint8_t *msg);
 bool iclass_read_block(uint16_t blockno, uint8_t *data, uint32_t *start_time, uint32_t *eof_time, bool shallow_mod);
 
 bool select_iclass_tag(picopass_hdr_t *hdr, bool use_credit_key, uint32_t *eof_time, bool shallow_mod);
+bool select_iclass_tag_and_page(picopass_hdr_t *hdr, bool use_credit_key, uint32_t *eof_time, bool shallow_mod, uint8_t page);
 bool authenticate_iclass_tag(iclass_auth_req_t *payload, picopass_hdr_t *hdr, uint32_t *start_time, uint32_t *eof_time, uint8_t *mac_out);
 
 uint8_t get_pagemap(const picopass_hdr_t *hdr);
 void iclass_send_as_reader(uint8_t *frame, int len, uint32_t *start_time, uint32_t *end_time, bool shallow_mod);
+
+void iClass_Recover(iclass_recover_req_t *msg);
+void iClass_TearBlock(iclass_tearblock_req_t *msg);
 #endif

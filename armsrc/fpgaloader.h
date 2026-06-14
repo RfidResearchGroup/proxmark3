@@ -20,6 +20,7 @@
 #define __FPGALOADER_H
 
 #include "common.h"
+#include "fpga.h"
 
 #define FpgaDisableSscDma(void) AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
 #define FpgaEnableSscDma(void) AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;
@@ -63,7 +64,7 @@
     000 FPGA_MAJOR_MODE_LF_READER        = Act as LF reader (modulate)
     001 FPGA_MAJOR_MODE_LF_EDGE_DETECT   = Simulate LF
     010 FPGA_MAJOR_MODE_LF_PASSTHRU      = Passthrough mode, CROSS_LO line connected to SSP_DIN. SSP_DOUT logic level controls if we modulate / listening
-    011 FPGA_MAJOR_MODE_LF_ADC           = refactor hitag2, clear ADC sampling
+    011 FPGA_MAJOR_MODE_LF_ADC           = refactor hitag 2, clear ADC sampling
     111 FPGA_MAJOR_MODE_OFF              = turn off sampling.
 
   Each one of this major modes can have options. Currently these two major modes uses options.
@@ -164,13 +165,15 @@ void FpgaSendCommand(uint16_t cmd, uint16_t v);
 void FpgaWriteConfWord(uint16_t v);
 void FpgaEnableTracing(void);
 void FpgaDisableTracing(void);
-void FpgaDownloadAndGo(int bitstream_version);
-// void FpgaGatherVersion(int bitstream_version, char *dst, int len);
+void FpgaDownloadAndGo(int bitstream_target);
+void FpgaDownloadAndGo_keep_EM(int bitstream_target);
+// void FpgaGatherVersion(int bitstream_target, char *dst, int len);
 void FpgaSetupSsc(uint16_t fpga_mode);
 void SetupSpi(int mode);
 bool FpgaSetupSscDma(uint8_t *buf, uint16_t len);
 void Fpga_print_status(void);
 int FpgaGetCurrent(void);
+void FpgaResetBitstream(void);
 void SetAdcMuxFor(uint32_t whichGpio);
 
 // extern and generel turn off the antenna method

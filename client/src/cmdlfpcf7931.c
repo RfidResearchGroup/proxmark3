@@ -44,7 +44,7 @@ int pcf7931_resetConfig(void) {
     configPcf.OffsetWidth = PCF7931_DEFAULT_OFFSET_WIDTH;
     configPcf.OffsetPosition = PCF7931_DEFAULT_OFFSET_POSITION;
     PrintAndLogEx(INFO, "Configuration reset");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf pcf7931 config`") " to view current settings");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf pcf7931 config") "` to view current settings");
     return PM3_SUCCESS;
 }
 
@@ -84,7 +84,7 @@ static int CmdLFPCF7931Reader(const char *Cmd) {
             PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
         }
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }
@@ -105,8 +105,8 @@ static int CmdLFPCF7931Config(const char *Cmd) {
         arg_lit0("r", "reset", "Reset configuration to default values"),
         arg_str0("p", "pwd", "<hex>", "Password, 7bytes, LSB-order"),
         arg_u64_0("d", "delay", "<dec>", "Tag initialization delay (in us)"),
-        arg_int0(NULL, "lw", "<dec>", "offset, low pulses width (in us)"),
-        arg_int0(NULL, "lp", "<dec>", "offset, low pulses position (in us)"),
+        arg_int0(NULL, "lw", "<dec>", "offset, low pulses width (in us), optional!"),
+        arg_int0(NULL, "lp", "<dec>", "offset, low pulses position (in us), optional!"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -193,8 +193,8 @@ static int CmdLFPCF7931Write(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_LF_PCF7931_WRITE, block, idx, data[0], buf, sizeof(buf));
 
-    PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf pcf7931 reader`") " to verify");
+    PrintAndLogEx(SUCCESS, "Done!");
+    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf pcf7931 reader`") " to verify");
     return PM3_SUCCESS;
 }
 

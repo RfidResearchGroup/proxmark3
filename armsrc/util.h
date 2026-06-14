@@ -68,21 +68,6 @@
 #define BUTTON_DOUBLE_CLICK -2
 #define BUTTON_ERROR -99
 
-#ifndef REV8
-#define REV8(x) ((((x)>>7)&1)+((((x)>>6)&1)<<1)+((((x)>>5)&1)<<2)+((((x)>>4)&1)<<3)+((((x)>>3)&1)<<4)+((((x)>>2)&1)<<5)+((((x)>>1)&1)<<6)+(((x)&1)<<7))
-#endif
-
-#ifndef REV16
-#define REV16(x)        (REV8(x) + (REV8 ((x) >> 8) << 8))
-#endif
-
-#ifndef REV32
-#define REV32(x)        (REV16(x) + (REV16((x) >> 16) << 16))
-#endif
-
-#ifndef REV64
-#define REV64(x)        (REV32(x) + ((uint64_t)(REV32((x) >> 32) << 32)))
-#endif
 
 #ifndef BIT32
 #define BIT32(x,n)      ((((x)[(n)>>5])>>((n)))&1)
@@ -97,8 +82,13 @@
 #endif
 
 size_t nbytes(size_t nbits);
+uint8_t hex2int(char x);
 
-uint8_t hex2int(char hexchar);
+int hex2binarray(char *target, const char *source);
+int hex2binarray_n(char *target, const char *source, int sourcelen);
+int binarray2hex(const uint8_t *bs, int bs_len, uint8_t *hex);
+
+void convertToHexArray(uint32_t num, uint8_t *partialkey);
 
 void LED(int led, int ms);
 void LEDsoff(void);

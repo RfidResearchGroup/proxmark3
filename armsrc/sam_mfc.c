@@ -16,7 +16,7 @@
 // Routines to support MFC <-> SAM communication
 //-----------------------------------------------------------------------------
 #include "sam_mfc.h"
-#include "sam_seos.h"
+#include "sam_common.h"
 #include "iclass.h"
 
 #include "proxmark3_arm.h"

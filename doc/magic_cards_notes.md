@@ -1,74 +1,80 @@
 <a id="top"></a>
 
 # Notes on Magic Cards, aka UID changeable
+
 This document is based mostly on information posted on http://www.proxmark.org/forum/viewtopic.php?pid=35372#p35372
 
 Useful docs:
+
 * [AN10833 MIFARE Type Identification Procedure](https://www.nxp.com/docs/en/application-note/AN10833.pdf)
 
-
 # Table of Contents
-- [Low frequency](#low-frequency)
+
+* [Low frequency](#low-frequency)
   * [T55xx](#t55xx)
   * [EM4x05](#em4x05)
   * [ID82xx series](#id82xx-series)
     * [ID8265](#id8265)
+    * [ID8211](#id8211)
     * [ID-F8268](#id-f8268)
-    * [K8678](#k8678)
   * [H series](#h-series)
     * [H1](#h1)
-    * [H5.5 / H7](h55--h7)
+    * [H7](#h7)
     * [i57 / i57v2](#i57--i57v2)
-- [ISO14443A](#iso14443a)
+* [ISO14443A](#iso14443a)
   * [Identifying broken ISO14443A magic](#identifying-broken-iso14443a-magic)
-- [MIFARE Classic](#mifare-classic)
+* [MIFARE Classic](#mifare-classic)
   * [MIFARE Classic block0](#mifare-classic-block0)
   * [MIFARE Classic Gen1A aka UID](#mifare-classic-gen1a-aka-uid)
   * [MIFARE Classic Gen1B](#mifare-classic-gen1b)
-  * [Mifare Classic Direct Write OTP](#mifare-classic-direct-write-otp)
-  * [MIFARE Classic OTP 2.0](#mifare-classic-otp-2.0)
+  * [MIFARE Classic OTP 2.0](#mifare-classic-otp-20)
+  * [MIFARE Classic MF4](#mifare-classic-mf4)
   * [MIFARE Classic DirectWrite aka Gen2 aka CUID](#mifare-classic-directwrite-aka-gen2-aka-cuid)
-  * [MIFARE Classic DirectWrite, FUID version aka 1-write](#mifare-classic-directwrite-fuid-version-aka-1-write)
   * [MIFARE Classic Gen3 aka APDU](#mifare-classic-gen3-aka-apdu)
   * [MIFARE Classic USCUID](#mifare-classic-uscuid)
-     * [FUID](#fuid)
-     * [UFUID](#ufuid)
-     * [ZUID](#zuid)
-     * [GDM](#gdm)
-     * [GDCUID](#gdcuid)
+    * [FUID](#fuid)
+    * [UFUID](#ufuid)
+    * [ZUID](#zuid)
+    * [GDM](#gdm)
+    * [GDCUID](#gdcuid)
   * [MIFARE Classic, other versions](#mifare-classic-other-versions)
   * [MIFARE Classic Super](#mifare-classic-super)
-- [MIFARE Ultralight](#mifare-ultralight)
+* [MIFARE Ultralight](#mifare-ultralight)
   * [MIFARE Ultralight blocks 0..2](#mifare-ultralight-blocks-02)
   * [MIFARE Ultralight Gen1A](#mifare-ultralight-gen1a)
   * [MIFARE Ultralight DirectWrite](#mifare-ultralight-directwrite)
   * [MIFARE Ultralight EV1 DirectWrite](#mifare-ultralight-ev1-directwrite)
   * [MIFARE Ultralight C Gen1A](#mifare-ultralight-c-gen1a)
   * [MIFARE Ultralight C DirectWrite](#mifare-ultralight-c-directwrite)
-  * [UL series (RU)](#ul-series-ru)
+  * [MIFARE Ultralight USCUID-UL](#mifare-ultralight-uscuid-ul)
+    * [UL-2](#ul-2)
+      * [UL-2 (20 blocks)](#ul-2-20-blocks)
+      * [UL-2 (41 blocks)](#ul-2-41-blocks)
+      * [UL-2 (44 blocks)](#ul-2-44-blocks)
     * [UL-Y](#ul-y)
-    * [ULtra](#ultra)
+    * [Ultra](#ultra-ru)
     * [UL-5](#ul-5)
     * [UL, other chips](#ul-other-chips)
-- [NTAG](#ntag)
+* [NTAG](#ntag)
   * [NTAG213 DirectWrite](#ntag213-directwrite)
   * [NTAG21x](#ntag21x)
-- [DESFire](#desfire)
+* [DESFire](#desfire)
   * ["DESFire" APDU, 7b UID](#desfire-apdu-7b-uid)
   * ["DESFire" APDU, 4b UID](#desfire-apdu-4b-uid)
-- [ISO14443B](#iso14443b)
+* [ISO14443B](#iso14443b)
   * [Tiananxin TCOS CPU card](#tiananxin-tcos-cpu-card)
-- [ISO15693](#iso15693)
+* [ISO15693](#iso15693)
   * [ISO15693 magic](#iso15693-magic)
-- [Multi](#multi)
+* [Multi](#multi)
   * [UMC](#umc)
-- [Other](#other)
+* [Other](#other)
   * [SID](#sid)
   * [NSCK-II](#nsck-ii)
 
 # Low frequency
 
 ## T55xx
+
 ^[Top](#top)
 
 The temic T55xx/Atmel ATA5577 is the most commonly used chip for cloning LF RFIDs.
@@ -85,9 +91,9 @@ A useful document can be found [here](https://github.com/RfidResearchGroup/proxm
 * Other names:
   * 5577
   * 5200 (CN)
-    - Cut down version of T55xx chip (no analog frontend setup, no test mode support).
+    * Cut down version of T55xx chip (no analog frontend setup, no test mode support).
   * H2 (RU)
-    - Seems to be renamed 5200 chip.
+    * Seems to be renamed 5200 chip.
   * RW125T5 (RU)
 * Old variant "T5555" is hard to come across
 
@@ -105,10 +111,11 @@ This will **not** work if you have a downlink mode other than fixed bit length!
 
 *See ATMEL ATA5577C datasheet for sending commands to chip*
 
-* **Do not mix "password read" and "regular write" commands! You risk potentially writing incorrect data.
+* *Do not mix* "password read" and "regular write" commands! You risk potentially writing incorrect data.
 * When replying, the chip will use the modulation and data rate specified in block 0.
 
 ## EM4x05
+
 ^[Top](#top)
 
 The EM4305 and EM4205 (and 4469/4569) chips are the 2nd most common used chips for cloning LF RFIDs.
@@ -137,27 +144,59 @@ It is also used by HID Global (but with a custom chip) for HIDProx credentials.
 *See EM microelectronic EM4305 datasheet for sending commands to chip*
 
 ## ID82xx series
+
 ^[Top](#top)
 
-These are custom chinese chips designed to clone EM IDs only. Often times, these are redesigned clones of Hitag chips.
+These are custom Chinese chips mainly used to clone EM IDs. Often times, these are redesigned clones of Hitag chips.
 
 ### ID8265
+
 ^[Top](#top)
 
 This is the cheapest and most common ID82xx chip available. It is usually sold as T55xx on AliExpress, with excuses to use cloners.
 
 #### Characteristics
 
-* Chip is likely a Hitag μ (micro)
-* Password protection (4b), usually "1AC4999C"
-* Currently unimplemented in proxmark3 client
-* Other names:
-  * ID8210 (CN)
-  * H-125 (CN)
-  * H5 (RU)
-    - The sales of "H5" have been ceased because "the chip was leaked".
+* Chip is likely a cut down version of Hitag µ (micro) clone
+* UID `00 00 00 00 00 00`
+* Data pages available: 0-14
+* Password block: 0xFE
+* Config block: 0xFF
+  * Byte0
+    * bit 0-1 : Data Rate. ’00’ -> 2kbit/s, ’01’ -> 4kbit/s, ’10’ -> 8kbit/s, ’11’ -> 2kbit/s
+    * bit 2   : 1 -> fixed to 2kbit/s
+    * bit 3   : 0 -> Manchester, 1 -> Bi-phase
+    * bit 4   : TTF blocks. 0 -> "Block 0, Block 1, Block 2, Block 3", 1 -> "Block 0, Block 1"
+    * bit 5-6 : reversed? all blocks always read without password and write with password
+    * bit 7   : 1 -> enable TTF
+  * Byte1 only bit 0 changable
+  * Byte2 fixed 0x00
+  * Byte3 only higher nibble changable
+* Proxmark has support for those tags: `lf hitag htu ... --82xx`
+
+#### Variations
+
+*China naming can have ID before chip number (ID8265, ID8210)*
+
+* 8265 (CN), H5 (RU). Password: `00000000`
+* 8210 (CN) (advices for FURUI Chinese cloner). Password: `9AC4999C`
+* H5.5 (RU). Password: `496B0E59`
 
 #### Detect
+
+Can be detected by `lf search command`:
+```
+[usb] pm3 --> lf search
+...
+[=] Searching for auth LF and special cases...
+[+] UID....... 000000000000
+[+] Chipset... Hitag � / 8265
+[?] Hint: Try `lf hitag htu` commands
+```
+⚠️ *That kind of detection is very sensitive to tag position on Proxmark. Few milimiters or tag rotation to other side and tag can be detected no more* ⚠️
+
+
+Or in a manual way:
 
 ```
 [usb] pm3 --> lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00011 -s 3000
@@ -166,56 +205,134 @@ This is the cheapest and most common ID82xx chip available. It is usually sold a
 
 Check the green line of the plot. It must be a straight line at the end with no big waves.
 
-### ID-F8268
+### Commands
+
+*Try NXP Hitag µ datasheet for sending commands to chip*
+
+Cloning EM410x to 8265 chip: `lf em 410x clone --id ... --htu`. Works only with 8265 chips, which have default password (`00000000`)
+Specific chip commands:
+```
+[usb] pm3 --> lf hitag htu
+
+help             This help
+list             List Hitag � trace history
+-----------      ----------- General -----------
+reader           Act like a Hitag � reader
+rdbl             Read Hitag � block
+dump             Dump Hitag � blocks to a file
+wrbl             Write Hitag � block
+-----------      ----------- Simulation -----------
+sim              Simulate Hitag � transponder
+```
+
+Or in a manual way:
+
+```
+# login with pass 00000000
+lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -s 1024 -c W0S0010100010100000000000000000000000000000000000000000000000000000000000000000000000000000000 -k
+
+# write EM4100 Data (EMID 0000000000) to block0 and block1
+lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -s 1024 -c W0S001000010100000000011111111100000000000000000000000 -k
+lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -s 1024 -c W0S001000010101000000000000000000000000000000000000000 -k
+
+# write config block 05800000(A0010000 in LSB first)
+lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -s 1024 -c W0S001000010101111111100000101100000000000000000000000
+```
+
+### ID8211
+
 ^[Top](#top)
 
 This is an "improved" variant of ID82xx chips, bypassing some magic detection in China.
 
 #### Characteristics
 
-* Chip is likely a Hitag 1
-* Unsure whether password protection is used
-* Currently unimplemeneted in proxmark3 client
-* Other names:
-  - F8278 (CN)
-  - F8310 (CN)
+* Chip is likely a cut down version of Hitag S2048 clone, Characteristics looks exacly same with [8268](#id-f8268) when set CON1 AUT bit
+* No password protection
+* tearoff time
+  * The OTP bits appear to be erased to '1'. Write done time is less than 735µs
+  * nochange 735µs-
+  * bit flip 735-740µs
+  * wiped 740-3250µs
+  * bit flip 3250-3350µs
+  * write done 3350µs+
+* page 1 fully changeable. default: `CA 24 00 00`
+  * CON0 RES0 enable some extended TTFM
+    * TTFM 01: page 4, page 5, page 6
+    * TTFM 10: page 4, page 5, page 6, page 7, page 8
+    * TTFM 11: page 4, page 5, page 6, page 7, page 8, page 9, page 10, page 11
+  * CON0 RES3 enable FSK TTF mode  0=RF/10 1=RF/8
+* page 41 - 43 unknown data, readonly
+  * page 41 fixed `00 00 20 00`
+  * page 42 examples:
+    * `D4 04 22 CA`
+    * `E3 23 22 CA`
+    * `C7 91 22 CA`
+  * page 43 fixed `68 06 39 E0`
+* page 44 - 63 readonly to  `00 00 00 00`
 
 #### Detect
 
 ```
-[usb] pm3 --> lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00110 -s 3000
-[usb] pm3 --> data plot
+[usb] pm3 --> lf hitag hts rdbl --count 0
 ```
 
-Check the green line of the plot. It must be a straight line at the end with no big waves.
+### Commands
 
-### K8678
+*Try NXP Hitag S datasheet for sending commands to chip*
+
+### ID-F8268
+
 ^[Top](#top)
 
-This is an "even better" chip, manufactured by Hyctec.
+This is an "improved" variant of ID82xx chips, bypassing some magic detection in China.
 
 #### Characteristics
 
-* Chip is likely a Hitag S256
-* Plain mode used, no password protection
-* Currently unimplemented in proxmark3 client
-* Memory access is odd (chip doesnt reply to memory access commands for unknown reason)
+* Chip is likely a cut down version of Hitag S2048 clone, Characteristics looks exacly same with [8211](#id8211) when clear CON1 AUT bit
+* Password protection (4b), usually "BBDD3399"(default) or "AAAAAAAA"
+* page 1 fully changeable. default: `DA A4 00 00`
+  * CON0 RES0 enable some extended TTFM
+    * TTFM 01: page 4, page 5, page 6
+    * TTFM 10: page 4, page 5, page 6, page 7, page 8
+    * TTFM 11: page 4, page 5, page 6, page 7, page 8, page 9, page 10, page 11
+  * CON0 RES3 enable FSK TTF mode  0=RF/10 1=RF/8
+* page 2 password
+* page 41 - 43 unknown data, readonly
+  * page 41 fixed `00 00 20 00`
+  * page 42 examples:
+    * `9A EF 9A CB`
+    * `45 04 9B CB`
+    * `0E 31 37 CC`
+    * `DF 02 99 CA`
+    * `0E CE D8 CB`
+    * `90 3C CB CB`
+  * page 43 fixed `68 04 39 E0`
+* page 44 - 63 readonly to  `00 00 00 00`
+* auth by write password to page 64 after SELECT
+* Other names:
+  * F8278 (CN)
+  * F8310 (CN)
+  * K8678 manufactured by Hyctec.
 
 #### Detect
 
 ```
-[usb] pm3 --> lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00110 -s 3000
-[usb] pm3 --> data plot
+[usb] pm3 --> lf hitag hts rdbl --82xx --count 0
 ```
 
-Check the green line of the plot. It must be a straight line at the end with no big waves.
+### Commands
+
+*Try NXP Hitag S datasheet for sending commands to chip*
 
 ## H series
+
 ^[Top](#top)
 
 These are chips sold in Russia, manufactured by iKey LLC. Often times these are custom.
 
 ### H1
+
 ^[Top](#top)
 
 Simplest EM ID cloning chip available. Officially discontinued.
@@ -229,11 +346,11 @@ Simplest EM ID cloning chip available. Officially discontinued.
   * RW64bit
   * RW125FL
 
+### H7
 
-### H5.5 / H7
 ^[Top](#top)
 
-First "advanced" custom chip with H naming.
+First "advanced" custom chip with H naming. Probably variation of Hitag S chip with KDF.
 
 #### Characteristics
 
@@ -250,6 +367,7 @@ First "advanced" custom chip with H naming.
 # ISO14443A
 
 ## Identifying broken ISO14443A magic
+
 ^[Top](#top)
 
 When a magic card configuration is really messed up and the card is not labeled, it may be hard to find out which type of card it is.
@@ -257,15 +375,19 @@ When a magic card configuration is really messed up and the card is not labeled,
 Here are some tips if the card doesn't react or gives error on a simple `hf 14a reader`:
 
 Let's force a 4b UID anticollision and see what happens:
+
 ```
 hf 14a config --atqa force --bcc ignore --cl2 skip --rats skip
 hf 14a reader
 ```
+
 It it responds, we know it's a TypeA card. But maybe it's a 7b UID, so let's force a 7b UID anticollision:
+
 ```
 hf 14a config --atqa force --bcc ignore --cl2 force --cl3 skip --rats skip
 hf 14a reader
 ```
+
 At this stage, you know if it's a TypeA 4b or 7b card and you can check further on this page how to reconfigure different types of cards.
 
 To restore anticollision config of the Proxmark3:
@@ -275,11 +397,13 @@ hf 14a config --std
 ```
 
 # MIFARE Classic
+
 ^[Top](#top)
 
 Referred as M1, S50 (1k), S70 (4k)
 
 ## MIFARE Classic block0
+
 ^[Top](#top)
 
 UID 4b: (actually NUID as there are no more "unique" IDs on 4b)
@@ -294,8 +418,8 @@ UID 4b: (actually NUID as there are no more "unique" IDs on 4b)
 (*) some cards have a different SAK in their anticollision and in block0: +0x80 in the block0 (e.g. 08->88, 18->98)
 ```
 
- 
-Computing BCC on UID 11223344: `analyse lcr -d 11223344` = `44`
+
+Computing BCC on UID 11223344: `analyse lrc -d 11223344` = `44`
 
 UID 7b:
 
@@ -310,21 +434,24 @@ UID 7b:
 ```
 
 ## MIFARE Classic Gen1A aka UID
+
 ^[Top](#top)
 
 * Other names:
-  - ZERO (RU)
+  * ZERO (RU)
 
 ### Identify
+
 ^[Top](#top)
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 1a
+[+] Magic capabilities... Gen 1a
 ```
 
 ### Magic commands
+
 ^[Top](#top)
 
 * Wipe: `40(7)`, `41` (use 2000ms timeout)
@@ -332,6 +459,7 @@ hf 14a info
 * Write: `40(7)`, `43`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
 
 ### Characteristics
+
 ^[Top](#top)
 
 * UID: Only 4b versions
@@ -347,6 +475,7 @@ hf 14a info
   * no card with ATS
 
 #### MIFARE Classic Gen1A flavour 1
+
 ^[Top](#top)
 
 * SAK: play blindly the block0 SAK byte, beware!
@@ -354,6 +483,7 @@ hf 14a info
 * Wipe: filled with 0xFF
 
 #### MIFARE Classic Gen1A flavour 2
+
 ^[Top](#top)
 
 * SAK: play blindly the block0 SAK byte, beware!
@@ -361,6 +491,7 @@ hf 14a info
 * Wipe: filled with 0x00
 
 #### MIFARE Classic Gen1A flavour 3
+
 ^[Top](#top)
 
 * SAK: 08
@@ -368,6 +499,7 @@ hf 14a info
 * Wipe: filled with 0xFF
 
 #### MIFARE Classic Gen1A flavour 4
+
 ^[Top](#top)
 
 * SAK: 08
@@ -375,6 +507,7 @@ hf 14a info
 * Wipe: timeout, no wipe
 
 #### MIFARE Classic Gen1A flavour 5
+
 ^[Top](#top)
 
 * SAK: 08
@@ -382,6 +515,7 @@ hf 14a info
 * Wipe: reply ok but no wipe performed
 
 #### MIFARE Classic Gen1A flavour 6
+
 ^[Top](#top)
 
 * SAK: 08 or 88 if block0_SAK most significant bit is set
@@ -389,6 +523,7 @@ hf 14a info
 * Wipe: timeout, no wipe
 
 #### MIFARE Classic Gen1A flavour 7
+
 ^[Top](#top)
 
 * SAK: 08 or 88 if block0_SAK most significant bit is set
@@ -396,6 +531,7 @@ hf 14a info
 * Wipe: filled with 0x00
 
 ### Proxmark3 commands
+
 ^[Top](#top)
 
 ```
@@ -404,7 +540,7 @@ hf mf cwipe
 hf mf csetblk
 hf mf cgetblk
 hf mf cgetsc
-hf mf cload 
+hf mf cload
 hf mf csave
 hf mf cview
 ```
@@ -417,7 +553,9 @@ hf mf cwipe -u 11223344 -a 0004 -s 08
 # MFC Gen1A 4k:
 hf mf cwipe -u 11223344 -a 0044 -s 18
 ```
+
 or just fixing block0:
+
 ```
 # MFC Gen1A 1k:
 hf mf csetuid -u 11223344 -a 0004 -s 08
@@ -430,19 +568,23 @@ script run hf_mf_magicrevive
 ```
 
 To execute commands manually:
+
 ```
 hf 14a raw -a -k -b 7       40
 hf 14a raw    -k            43
 hf 14a raw    -k -c         A000
 hf 14a raw       -c -t 1000 11223344440804006263646566676869
 ```
+
 wipe:
+
 ```
 hf 14a raw -a -k -b 7       40
 hf 14a raw -t 1000          41
 ```
 
 ### libnfc commands
+
 ^[Top](#top)
 
 ```
@@ -452,26 +594,30 @@ nfc-mfclassic W a u mydump
 ```
 
 ## MIFARE Classic Gen1B
+
 ^[Top](#top)
 
 Similar to Gen1A, but supports directly read/write after command 40
 
 ### Identify
+
 ^[Top](#top)
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 1b
+[+] Magic capabilities... Gen 1b
 ```
 
 ### Magic commands
+
 ^[Top](#top)
 
 * Read: `40(7)`, `30xx`
 * Write: `40(7)`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
 
 ## Mifare Classic Direct Write OTP
+
 ^[Top](#top)
 
 Chip manufactured by iKey LLC as a bypass for Gen1 filters.
@@ -482,32 +628,35 @@ The chip had an issue in the protocol implementation.
 The reader could interrupt radiofield for 2-3 microseconds (standard pause in the bit period of ISO14443-2).
 After the response to first `26 (7)` command, but before the following `93 70` command. In that case original M1 card will stop the flow, but OTP will continue it.
 
-That issue led to the development of the filters against that card and discontinuation of the production. 
+That issue led to the development of the filters against that card and discontinuation of the production.
 
-As a successor, [OTP 2.0](#mifare-classic-otp-2.0) was created.
+As a successor, [OTP 2.0](#mifare-classic-otp-20) was created.
 
 ### Characteristics
+
 ^[Top](#top)
 
 * Initial UID is AA55C396
 * Android compatible
 
 ### Identify
+
 ^[Top](#top)
 
 Only possible before personalization.
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Write Once / FUID
+[+] Magic capabilities... Write Once / FUID
 ```
 
 ## MIFARE Classic OTP 2.0
+
 ^[Top](#top)
 
 Similar to Gen1A, but after first block 0 edit, tag no longer replies to 0x40 command.
-Were manufactured by iKey LLC as a replacement for [OTP](#mifare-classic-direct-write-otp)
+Were manufactured by iKey LLC as a replacement for [OTP](#fuid)
 
 ### Characteristics
 
@@ -517,46 +666,136 @@ Were manufactured by iKey LLC as a replacement for [OTP](#mifare-classic-direct-
 * All bytes are 00 from factory wherever possible.
 
 ### Identify
+
 ^[Top](#top)
 
 Only possible before personalization.
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 1a
-[+] Prng detection: hard
+[=] --- Magic Tag Information
+[+] Magic capabilities... Gen 1a
+
+[=] --- PRNG Information
+[+] Prng................. hard
 ```
 
 ### Magic commands
+
 ^[Top](#top)
 
 * Write: `40(7)`, `43`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
 
+## MIFARE Classic MF4
+
+^[Top](#top)
+
+Similar to OTP 2.0, but now additional configuration is possible.
+Were manufactured by iKey LLC as a replacement for MF3.
+
+### Characteristics
+
+* Initial UID is 00000000
+* BCC: unknown
+* SAK/ATQA: configurable
+* ATS: configurable
+* PPS: configurable (fake response)
+* All bytes are 00 from factory wherever possible.
+
+### Identify
+
+^[Top](#top)
+
+Only possible before personalization.
+
+```
+hf mf info
+...
+[=] --- Magic Tag Information
+[+] Magic capabilities... Gen 1a
+
+[=] --- PRNG Information
+[+] Prng................. hard
+
+hf mf cgetblk --blk 3
+hf mf rdbl --blk 3
+[ If the ACLs do not match, this is an MF4 ]
+```
+
+### Magic commands
+
+^[Top](#top)
+
+Warning: changing the UID from 00000000 will disable all of these commands permanently.
+
+* Read backdoor: `40(7)`, `43`, `30xx`+crc
+* Write: `40(7)`, `43`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
+
+### Magic configuration
+
+^[Top](#top)
+
+By accessing trailers of sectors 11-15 using gen1 mode, it is possible to re-configure the tag.
+
+The layout for a sector is below:
+* block 0: data
+* block 1: data
+* block 2: data
+* block 3[0-5] - key A
+* block 3[6] - configuration byte
+* block 3[7] - ACL byte [bits 7-4], configuration[3-0]/RFU
+* block 3[8] - ACL byte
+* block 3[9] - ACL user byte
+* block 3[10-15] - key B
+
+Any data set in one mode will be mirrored to the other, as such be careful when configuring from gen1 mode to avoid unintentionally changing access conditions, keys or configurations.
+
+Here is how the IC can be configured:
+* ATS
+  * Maximum length is 16 bytes inclduing TL
+  * Stored in trailers of sectors 0-10 (bytes 0-10: byte 6 of the matching sector; bytes 11-15: byte 7 lower half of sectors `(byte num.-11) (is lower half? +1 if yes)`)
+  * To avoid issues, please set unused bytes to 00
+  * **Example** - to make the 15th byte `AF` you should set block 31 to `FFFFFFFFFFFF 00 0 A 8000 FFFFFFFFFFFF` and block 35 to `FFFFFFFFFFFF 00 0 F 8000 FFFFFFFFFFFF`
+* ATQA/SAK
+  * If the values are changed from defaults, the custom values will be used during anticollision.
+  * SAK (CL2/final select, default 0x08): sector 11 trailer, byte 6
+  * SAK (7b intermediate, default 0x04): sector 12 trailer, byte 6
+  * ATQA (higher half (transmission), default 0x44): sector 13 trailer, byte 6
+  * ATQA (lower half (transmission), default 0x00): sector 14 trailer, byte 6
+  * **Example** - to make the SAK `28`, you should set block 47 to `FFFFFFFFFFFF 28 0 0 8000 FFFFFFFFFFFF`
+* Anticollision behavior
+  * PPS support: sector 14 trailer, byte 7, bit 2 (from least significant); 0: off, 1: on
+  * RATS support: sector 14 trailer, byte 7, bit 0 (from least significant); 0: off; 1: on
+  * CL2 (7 byte UID) support: sector 15 trailer, byte 7, bit 3 (from least significant); 0: 4 bytes, 1: 7 bytes
+  * **Example** - to enable 7 byte UIDs, you should set block 63 to `FFFFFFFFFFFF 00 0 8 8000 FFFFFFFFFFFF`
+* Locking the IC, i.e. removing magic wakeup
+  * In block 63, set byte 7 bits 2 and 0 to `0b1`, resulting in byte 7 containing at least `05`.
+  * Write your UID.
+
 ## MIFARE Classic DirectWrite aka Gen2 aka CUID
+
 ^[Top](#top)
 
 (also referred as MCT compatible by some sellers)
 
 * Other names:
   * MF-8 (RU)
-  * MF3 (RU)
-    - What's so special about this chip in particular..?
-
+  * MF-3 (RU) - not susceptible to "field reset bug", a way to detect [OTP](#fuid) chips.
+  * MF-3.2 (RU) - static nonce `01200145`, potentially fixed chip which can bypass Iron Logic's filters.
+`
 ### Identify
+
 ^[Top](#top)
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 2 / CUID
+[+] Magic capabilities... Gen 2 / CUID
 ```
 
-Not all Gen2 cards can be identified with `hf 14a info`, only those replying to RATS.
-
-To identify the other ones, you've to try to write to block0 and see if it works...
-
 ### Magic commands
+
 ^[Top](#top)
 
 Android compatible
@@ -564,6 +803,7 @@ Android compatible
 * issue regular write to block0
 
 ### Characteristics
+
 ^[Top](#top)
 
 * UID: 4b and 7b versions
@@ -581,6 +821,7 @@ Android compatible
   * some reply with an ATS
 
 #### MIFARE Classic DirectWrite flavour 1
+
 ^[Top](#top)
 
 * UID 4b
@@ -591,6 +832,7 @@ Android compatible
 * PRNG: weak
 
 #### MIFARE Classic DirectWrite flavour 2
+
 ^[Top](#top)
 
 * UID 4b
@@ -601,6 +843,7 @@ Android compatible
 * PRNG: weak
 
 #### MIFARE Classic DirectWrite flavour 3
+
 ^[Top](#top)
 
 * UID 4b
@@ -611,6 +854,7 @@ Android compatible
 * PRNG: weak
 
 #### MIFARE Classic DirectWrite flavour 4
+
 ^[Top](#top)
 
 * UID 7b
@@ -621,6 +865,7 @@ Android compatible
 * PRNG: static 00000000
 
 #### MIFARE Classic DirectWrite flavour 5
+
 ^[Top](#top)
 
 * UID 4b
@@ -631,6 +876,7 @@ Android compatible
 * PRNG: weak
 
 #### MIFARE Classic DirectWrite flavour 6
+
 ^[Top](#top)
 
 **TODO** need more info
@@ -639,6 +885,7 @@ Android compatible
 * ATS: 0D780071028849A13020150608563D
 
 ### Proxmark3 commands
+
 ^[Top](#top)
 
 ```
@@ -684,18 +931,21 @@ hf 14a reader
 ```
 
 ## MIFARE Classic Gen3 aka APDU
+
 ^[Top](#top)
 
 ### Identify
+
 ^[Top](#top)
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 3 / APDU
+[+] Magic capabilities... Gen 3 / APDU ( possibly )
 ```
 
 ### Magic commands
+
 ^[Top](#top)
 
 Android compatible
@@ -708,6 +958,7 @@ cla  ins p1  p2  len
  90  FB  CC  CC  07 <uid>     - change uid (independently of block0 data)
  90  FD  11  11  00           - lock permanently
 ```
+
 It seems the length byte gets ignored anyway.
 
 Note: it seems some cards only accept the "change UID" command.
@@ -721,6 +972,7 @@ Writing to block 0 has some side-effects:
 * On 4-byte UID cards, BCC byte is automatically corrected.
 
 ### Characteristics
+
 ^[Top](#top)
 
 * UID: 4b and 7b versions
@@ -729,6 +981,7 @@ Writing to block 0 has some side-effects:
 * ATS: none
 
 ### Proxmark3 commands
+
 ^[Top](#top)
 
 ```
@@ -739,12 +992,15 @@ hf mf gen3blk
 # lock (uid/block0?) forever:
 hf mf gen3freeze
 ```
+
 See also
+
 ```
 script run hf_mf_gen3_writer -h
 ```
 
 Equivalent:
+
 ```
 # change just UID:
 hf 14a raw -s -c  -t 2000  90FBCCCC07 11223344556677
@@ -757,14 +1013,16 @@ hf 14a raw -s -c 90FD111100
 ```
 
 ## MIFARE Classic USCUID
+
 ^[Top](#top)
 
 TLDR: These magic cards have a 16 byte long configuration page, which usually starts with 0x85.
-All of the known tags using this, except for Ultralight tags, are listed here.
+All of the known tags are using this, except for Ultralight tags, are listed here.
 
 You cannot turn a Classic tag into an Ultralight and vice-versa!
 
 ### Characteristics
+
 ^[Top](#top)
 
 * UID: 4/7 bytes
@@ -773,35 +1031,54 @@ You cannot turn a Classic tag into an Ultralight and vice-versa!
 * BCC: read from memory, beware!
 * ATS: no/unknown
 
+### Identify
+
+^[Top](#top)
+
+```
+hf mf info
+...
+[+] Magic capabilities... Gen 4 GDM / USCUID ( Magic Auth/Gen1 Magic Wakeup/Alt Magic Wakeup )
+```
+
+Possible tag wakeup mechanisms are:
+
+* Magic Auth
+* Gen1 Magic Wakeup
+* Alt Magic Wakeup
+
 ### Magic commands
+
 ^[Top](#top)
 
 * Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
-  - Backdoor read: `38xx+crc`
-  - Backdoor write: `A8xx+crc`, `[16 bytes data]+crc`
-  - Read configuration: `E000+crc`
-  - Write configuration: `E100+crc`; `[16 bytes data]+crc`
+  * Backdoor read: `38xx+crc`
+  * Backdoor write: `A8xx+crc`, `[16 bytes data]+crc`
+  * Read configuration: `E000+crc`
+  * Write configuration: `E100+crc`; `[16 bytes data]+crc`
 * Magic wakeup (A: 00): `40(7)`, `43`
 * Magic wakeup (B: 85): `20(7)`, `23`
-  - Backdoor read main block: `30xx+crc`
-  - Backdoor write main block: `A0xx+crc`, `[16 bytes data]+crc`
-  - Read hidden block: `38xx+crc`
-  - Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
-  - Read configuration: `E000+crc`
-  - Write configuration: `E100+crc`
-  
-  **DANGER**
-  - Set main memory and config to 00 `F000+crc`
-  - Set main memory and config to FF `F100+crc`
-  - Set main memory and config to 55 (no 0A response) `F600+crc`
-  - Set backdoor memory to 00 `F800+crc`
-  - Set backdoor memory to FF `F900+crc`
-  - Set backdoor memory to 55 (no 0A response) `FE00+crc`
- 
+  * Backdoor read main block: `30xx+crc`
+  * Backdoor write main block: `A0xx+crc`, `[16 bytes data]+crc`
+  * Read hidden block: `38xx+crc`
+  * Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
+  * Read configuration: `E000+crc`
+  * Write configuration: `E100+crc`
+
+* **DANGER**
+  * Set main memory and config to 00 `F000+crc`
+  * Set main memory and config to FF `F100+crc`
+  * Set main memory and config to 55 (no 0A response) `F600+crc`
+  * Set backdoor memory to 00 `F800+crc`
+  * Set backdoor memory to FF `F900+crc`
+  * Set backdoor memory to 55 (no 0A response) `FE00+crc`
+
 ### USCUID configuration guide
+
 ^[Top](#top)
 
 1. Configuration
+
 ```
 85000000000000000000000000000008
       ^^^^^^    ^^          ^^   >> ??? Mystery ???
@@ -821,6 +1098,7 @@ To enable an option, set it to 5A.
 ** Do not change the real ACL! Backdoor commands only acknowledge FF0780. To recover, disable this byte and issue regular write to sector trailer.
 *** If perso byte is enabled, this SAK is ignored, and hidden SAK is used instead.
 ```
+
 * Gen1a mode:                            Allow using custom wakeup commands, like real gen1a chip, to run backdoor commands, as well as some extras.
 * Magic wakeup command:                  Use different wakeup commands for entering Gen1a mode. A) 00 - 40(7), 43; B) 85 - 20(7), 23.
 * Block use of Key B if readable by ACL: Per the MF1ICS50 datasheet, if Key B is readable by the ACL, using it shall give a Cmd Error 04. This option controls whether it happens or not.
@@ -832,8 +1110,8 @@ To enable an option, set it to 5A.
 * Signature sector:                      Acknowledge auth commands to sector 17, which is stored in backdoor sector 1.
 * SAK:                                   If perso byte is not set, after UID select, send this value.
 
-
 2. Backdoor blocks
+
 ```
 
 Sector 0
@@ -849,7 +1127,7 @@ Sector 0
 ^^ ^^ ^^ ^^                                     - UID0
             ^^                                  - BCC0
                ^^                               - SAK0
-                  ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ - Unused 
+                  ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ - Unused
 Block 2: unused
 Block 3: ignored (custom keys, acl; broken acl ignored - anticollision will still work)
 Sector 1
@@ -859,55 +1137,76 @@ Sectors 2-15
 ```
 
 ### Proxmark3 commands
-^[Top](#top)
-```
-Using magic auth:
-# Write to persistent memory:
-hf mf gdmsetblk
 
-# Read configuration (0xE0):
+^[Top](#top)
+
+```
+# Read config block from card
 hf mf gdmcfg
 
-# Write configuration (0xE1):
+# Write config block to card
 hf mf gdmsetcfg
+
+# Parse config block to card
+hf mf gdmparsecfg
+
+# Write block to card
+hf mf gdmsetblk
 ```
 
 ### libnfc commands
+
 ^[Top](#top)
 No implemented commands today
 
 ### Variations
-^[Top](#top)
-| Factory configuration | Name |
-| --- | --- |
-| 850000000000000000005A5A00000008 | GDM |
-| 850000000000005A00FF005A00000008 | GDCUID |
-| 850000000000005A0000005A5A5A0008 | UCUID |
-| 8500000000005A00005A005A005A0008 | "7 byte hard" |
-| 7AFF850102015A00005A005A005A0008 | M1-7B |
-| 7AFF85000000000000FF000000000008 | FUID |
-| 7AFF000000000000BAFA358500000008 | PFUID |
-| 7AFF000000000000BAFA000000000008 | UFUID |
-| 7AFF0000000000000000000000000008 | ZUID |
 
-*Not all tags are the same!* UFUID, ZUID and PFUID* are not full implementations of Magic85 - they only acknowledge the first 8 (except wakeup command) and last config byte(s).
+^[Top](#top)
+| Factory configuration            | Name          |
+| -------------------------------- | ------------- |
+| 850000000000000000005A5A00000008 | GDM           |
+| 850000000000005A00FF005A00000008 | GDCUID        |
+| 850000000000005A0000005A5A5A0008 | UCUID         |
+| 8500000000005A00005A005A005A0008 | "7 byte hard" |
+| 7AFF850102015A00005A005A005A0008 | M1-7B         |
+| 7AFF85000000000000FF000000000008 | FUID          |
+| 7AFF000000000000BAFA358500000008 | PFUID         |
+| 7AFF000000000000BAFA000000000008 | UFUID         |
+| 7AFF0000000000000000000000000008 | ZUID          |
+
+*Not all tags are the same!* UFUID, ZUID and PFUID* are not full implementations of USCUID - they only acknowledge the first 8 (except wakeup command) and last config byte(s).
 
 *Read and write config commands are flipped
 
 Well-known variations are described below.
 
 ## FUID
+
 ^[Top](#top)
 
-Known as "write only once", which is only partially true. 
+* Other names:
+  * OTP (RU)
 
-Allows direct write to block 0 only when UID is default `AA55C396`. But always could be rewritten multiple times with backdoors commands.
+Known as "write only once", which is only partially true, because old revisions had backdoor commands enabled, so you could manipulate the tag, using them.
+Newer FUIDs are based on new implementation of chip and have backdoor commands disabled by default.
 
-Backdoor commands are available even after the personalization and makes that tag detectable.
+Allows direct write to block 0 only when UID is default `AA55C396`. If your tag responds to a `20(7)`, `23` magic wakeup, the UID could always be rewritten multiple times with backdoors commands, but that makes that tag detecteable.
 
-That's a key difference from [OTP](#mifare-classic-direct-write-otp)/[OTP 2.0](#mifare-classic-otp-2.0) tags.
+### Market Usage
+
+In ex-USSR countries were widely used as a replacement for UID tags. Especially for protected Iron Logic readers.Later filter `OTP` was created in those readers.
+The idea of the filter is that old version's chip had an issue in the protocol implementation.
+
+The reader could interrupt radiofield for 2-3 microseconds (standard pause in the bit period of ISO14443-2).
+After the response to first `26 (7)` command, but before the following `93 70` command. In that case original M1 card will stop the flow, but OTP will continue it.
+
+That issue led to the development of the filters against that card and discontinuation of the production.
+As a successor, [OTP 2.0](#mifare-classic-otp-20) was created for that market.
+
+Newer FUID tags (with backdoor command disabled) has protocol fixed and works fine on Iron Logic readers with firmware older than 7.28, but are filtered by latest filters on mentioned firmware.
 
 ### Characteristics
+
 ^[Top](#top)
 
 * Configuration block value: `7AFF85000000000000FF000000000008`
@@ -916,31 +1215,64 @@ That's a key difference from [OTP](#mifare-classic-direct-write-otp)/[OTP 2.0](#
 * Responds to magic wakeup `20(7)`, `23` commands
 
 ### Identify
+
 ^[Top](#top)
+
+Unlocked tag type:
+
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Write Once / FUID
+[+] Magic capabilities... Gen 4 GDM / USCUID ( Alt Magic Wakeup )
+[+] Magic capabilities... Write Once / FUID
 
 ```
 
-⚠️ **Current Proxmark3 identification is based on the initial UID. That could lead to the false positives. Also that doesn't allow to detect FUID after the personalization.**
-
-More correct detection should be based on a backdoor commands and configuration block value:
+Or locked down tag type:
 
 ```
-[usb] pm3 --> hf 14a raw -k -a -b 7 20
-[+] 0A
-[usb] pm3 --> hf 14a raw -k -a 23
-[+] 0A
-[usb] pm3 --> hf 14a raw -c -k -a E000
-[+] 7A FF 85 00 00 00 00 00 00 FF 00 00 00 00 00 08 [ 66 92 ]
+hf mf info
+...
+[+] Magic capabilities... Write Once / FUID
+
 ```
-### Commands
+
+### Parsed configuration
+
 ^[Top](#top)
 
-* Commands described under the corresponding section of USCUID chip
-* Example of changing block 0 after the personalization:
+```
+[usb] pm3 --> hf mf gdmcfg --gdm
+[+] Config... 7A FF 85 00 00 00 00 00 00 FF 00 00 00 00 00 08
+[+]           7A FF .........................................  Magic wakeup enabled with GDM config block access
+[+]                 85 ......................................  Magic wakeup style GDM 20(7)/23
+[+]                    00 00 00 .............................  Unknown
+[+]                             00 ..........................  Key B use allowed when readable by ACL
+[+]                                00 .......................  Block 0 Direct Write Disabled (CUID)
+[+]                                   00 ....................  Unknown
+[+]                                      FF .................  MFC EV1 personalization: 4B UID from Block 0
+[+]                                         00 ..............  Shadow mode disabled
+[+]                                            00 ...........  Magic auth disabled
+[+]                                               00 ........  Static encrypted nonce disabled
+[+]                                                  00 .....  MFC EV1 signature disabled
+[+]                                                     00 ..  Unknown
+[+]                                                        08  SAK
+```
+**Note: this is only possile on the FUID style that has not been locked down.
+
+### Commands
+
+^[Top](#top)
+
+* Magic wakeup: `20(7)`, `23`
+  * Backdoor read main block: `30xx+crc`
+  * Backdoor write main block: `A0xx+crc`, `[16 bytes data]+crc`
+  * Read hidden block: `38xx+crc`
+  * Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
+  * Read configuration: `E000+crc`
+  * Write configuration: `E100+crc`
+* Example of changing block 0 after the personalization (only possible on tags that have not been locked down):
+
 ```
 [usb] pm3 --> hf 14a raw -k -a -b 7 20
 [+] 0A
@@ -958,14 +1290,24 @@ More correct detection should be based on a backdoor commands and configuration 
 [=]   0 | B5 02 45 4E BC 08 04 00 01 68 AA 89 47 CE 4D 1D | ..EN.....h..G.M.
 ```
 
-## UFUID
+### Proxmark3 commands
+
 ^[Top](#top)
 
-The tag is positioned as "sealable UID", so that means you could use the same commands, as you could use for UID chip in a default state. But after the sealing (changing the configuration) tag will not answer to the backdoor commands and will behave as a normal Mifare Classic tag. 
+* `hf mf gdmcfg --gdm`
+* `hf mf gdmsetcfg --gdm`
+* `hf mf gdmsetblk --gdm`
 
-*But at the same time there is some unidentified behavior, which doesn't fully corresponds the protocol and original Mifare Classic tags. So the tag could be filtered out with a protocol-based filters (i.e. Iron Logic OTP2 filter).* 
+## UFUID
+
+^[Top](#top)
+
+The tag is positioned as "sealable UID", so that means you could use the same commands, as you could use for UID chip in a default state. But after the sealing (changing the configuration) tag will not answer to the backdoor commands and will behave as a normal Mifare Classic tag.
+
+*But at the same time there is some unidentified behavior, which doesn't fully corresponds the protocol and original Mifare Classic tags. So the tag could be filtered out with a protocol-based filters (i.e. Iron Logic OTP2 filter).*
 
 ### Characteristics
+
 ^[Top](#top)
 
 * Configuration block value: `7AFF000000000000BAFA000000000008`
@@ -974,36 +1316,54 @@ The tag is positioned as "sealable UID", so that means you could use the same co
 * Acknowledge only the first (except wakeup command) and last config byte(s), so doesn't have the hidden block
 
 ### Identify
+
 ^[Top](#top)
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 1a
+[+] Magic capabilities... Gen 1a
+[+] Magic capabilities... Gen 4 GDM / USCUID ( Gen1 Magic Wakeup )
 
 ```
 
-Currently Proxmark3 doesn't identify it as a separate tag. 
-Before the sealing could be detected from the config block value:
+Currently Proxmark3 doesn't identify it as a separate tag.
+Before the sealing could be detected from the config block value.
+
+### Parsed configuration
+
+^[Top](#top)
 
 ```
-[usb] pm3 --> hf 14a raw -k -a -b 7 40
-[+] 0A
-[usb] pm3 --> hf 14a raw -k -a 43
-[+] 0A
-[usb] pm3 --> hf 14a raw -c -k -a E000
-[+] 7A FF 00 00 00 00 00 00 BA FA 00 00 00 00 00 08 [ F1 69 ]
+[usb] pm3 --> hf mf gdmcfg --gen1a
+[+] Config... 7A FF 00 00 00 00 00 00 BA FA 00 00 00 00 00 08
+[+]           7A FF .........................................  Magic wakeup enabled with GDM config block access
+[+]                 00 ......................................  Magic wakeup style Gen1a 40(7)/43
+[+]                    00 00 00 .............................  Unknown
+[+]                             00 ..........................  Key B use allowed when readable by ACL
+[+]                                00 .......................  Block 0 Direct Write Disabled (CUID)
+[+]                                   BA ....................  Unknown
+[+]                                      FA .................  MFC EV1 personalization: 4B UID from Block 0
+[+]                                         00 ..............  Shadow mode disabled
+[+]                                            00 ...........  Magic auth disabled
+[+]                                               00 ........  Static encrypted nonce disabled
+[+]                                                  00 .....  MFC EV1 signature disabled
+[+]                                                     00 ..  Unknown
+[+]                                                        08  SAK
 ```
 
 ### Commands
+
 ^[Top](#top)
 
-All commands are available before sealing.
-* Proxmark3 magic Gen1 commands
-* Read configuration: `E000+crc`
-* Write configuration: `E100+crc`
+All commands are available before sealing. After the sealing acts as a Mifare Classic 1K tag.
 
-Example of the sealing, performed by Chinese copiers in raw commands:
+* Magic wakeup: `40(7)`, `43`
+  * Backdoor read main block: `30xx+crc`
+  * Backdoor write main block: `A0xx+crc`, `[16 bytes data]+crc`
+  * Read configuration: `E000+crc`
+  * Write configuration: `E100+crc`
+* Example of the sealing, performed by Chinese copiers in raw commands:
 
 ```
 hf 14a raw -a -k -b 7 40
@@ -1012,54 +1372,116 @@ hf 14a raw    -k -c   e100
 hf 14a raw       -c   85000000000000000000000000000008
 ```
 
-## ZUID
+### Proxmark3 commands
+
 ^[Top](#top)
 
-That tag is a UID tag, built on USCUID chip. It doesn't sold separately, but could be found on marketplaces under the guise of a UID tag.
+All commands are available before sealing.
+
+* `hf mf gdmcfg --gen1a`
+* `hf mf gdmsetcfg --gen1a`
+* `hf mf gdmsetblk --gen1a`
+* `hf mf csetuid`
+* `hf mf cwipe`
+* `hf mf csetblk`
+* `hf mf cgetblk`
+* `hf mf cgetsc`
+* `hf mf cload`
+* `hf mf csave`
+* `hf mf cview`
+
+## ZUID
+
+^[Top](#top)
+
+That tag is a UID tag, built on USCUID chip. It is not sold separately, but could be found on marketplaces under the guise of a UID tag.
 
 ### Characteristics
+
 ^[Top](#top)
 
-* Configuration block value: `7AFF0000000000000000000000000008`
-* No direct write to block 0
+* Default configuration block value: `7AFF0000000000000000000000000008`
 * Responds to magic wakeup `40(7)`, `43` commands
-* Acknowledge only the first (except wakeup command) and last config byte(s), so doesn't have the hidden block
+* Does not have hidden blocks, and only acknowledges the following bytes marked with carats. As such, Gen 1a mode cannot be disabled. All acknowledged bytes follow the standard USCUID format.
+
+```
+7AFF0000000000000000000000000008
+            ^^                   >> Block use of Key B if readable by ACL
+              ^^                 >> CUID mode
+                              ^^ >> SAK***
+```
 
 ### Identify
+
 ^[Top](#top)
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 1a
+[+] Magic capabilities... Gen 1a
+[+] Magic capabilities... Gen 4 GDM / USCUID ( ZUID Gen1 Magic Wakeup )
 
 ```
 
-Currently Proxmark3 doesn't identify it as a separate tag. 
-Could be detected from the config block value:
+### Parsed configuration
+
+^[Top](#top)
 
 ```
-[usb] pm3 --> hf 14a raw -k -a -b 7 40
-[+] 0A
-[usb] pm3 --> hf 14a raw -k -a 43
-[+] 0A
-[usb] pm3 --> hf 14a raw -c -k -a E000
-[+] 7A FF 00 00 00 00 00 00 00 00 00 00 00 00 00 08 [ 4E 17 ]
+[usb] pm3 --> hf mf gdmcfg --gen1a
+[+] Config... 7A FF 00 00 00 00 00 00 00 00 00 00 00 00 00 08
+[+]           7A FF .........................................  Magic wakeup enabled with GDM config block access
+[+]                 00 ......................................  Magic wakeup style Gen1a 40(7)/43
+[+]                    00 00 00 .............................  Unknown
+[+]                             00 ..........................  Key B use allowed when readable by ACL
+[+]                                00 .......................  Block 0 Direct Write Disabled (CUID)
+[+]                                   00 ....................  Unknown
+[+]                                      00 .................  MFC EV1 personalization: 4B UID from Block 0
+[+]                                         00 ..............  Shadow mode disabled
+[+]                                            00 ...........  Magic auth disabled
+[+]                                               00 ........  Static encrypted nonce disabled
+[+]                                                  00 .....  MFC EV1 signature disabled
+[+]                                                     00 ..  Unknown
+[+]                                                        08  SAK
 ```
 
 ### Commands
+
 ^[Top](#top)
 
-* Proxmark3 magic Gen1 commands
-* Read configuration: `E000+crc`
-* Write configuration: `E100+crc`
+* Magic wakeup: `40(7)`, `43`
+  * Backdoor read main block: `30xx+crc`
+  * Backdoor write main block: `A0xx+crc`, `[16 bytes data]+crc`
+  * Read configuration: `E000+crc`
+  * Write configuration: `E100+crc`
+
+### Proxmark3 commands
+
+^[Top](#top)
+
+* `hf mf gdmcfg --gen1a`
+* `hf mf gdmsetcfg --gen1a`
+* `hf mf gdmsetblk --gen1a`
+* `hf mf csetuid`
+* `hf mf cwipe`
+* `hf mf csetblk`
+* `hf mf cgetblk`
+* `hf mf cgetsc`
+* `hf mf cload`
+* `hf mf csave`
+* `hf mf cview`
 
 ## GDM
+
 ^[Top](#top)
 
 The tag has a shadow mode, which means that every change to normal MFC memory would be restored back from the persistent memory after being off RFID field.
 
+* Other names:
+  * GDMIC
+
 ### Characteristics
+
 ^[Top](#top)
 
 * Configuration block value: `850000000000000000005A5A00000008`
@@ -1067,23 +1489,42 @@ The tag has a shadow mode, which means that every change to normal MFC memory wo
 * Responds to magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
 
 ### Identify
+
 ^[Top](#top)
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 4 GDM
+[+] Magic capabilities... Gen 4 GDM / USCUID ( Magic Auth )
 
 ```
 
-Could be manually validated with the configuration block value:
+Could be manually validated with the configuration block value.
+
+### Parsed configuration
+
+^[Top](#top)
 
 ```
 [usb] pm3 --> hf mf gdmcfg
-[+] config... 85 00 00 00 00 00 00 00 00 00 5A 5A 00 00 00 08
+[+] Config... 85 00 00 00 00 00 00 00 00 00 5A 5A 00 00 00 08
+[+]           85 00 .........................................  Magic wakeup disabled
+[+]                 00 ......................................  Magic wakeup style Gen1a 40(7)/43
+[+]                    00 00 00 .............................  Unknown
+[+]                             00 ..........................  Key B use allowed when readable by ACL
+[+]                                00 .......................  Block 0 Direct Write Disabled (CUID)
+[+]                                   00 ....................  Unknown
+[+]                                      00 .................  MFC EV1 personalization: 4B UID from Block 0
+[+]                                         5A ..............  Shadow mode enabled
+[+]                                            5A ...........  Magic auth enabled
+[+]                                               00 ........  Static encrypted nonce disabled
+[+]                                                  00 .....  MFC EV1 signature disabled
+[+]                                                     00 ..  Unknown
+[+]                                                        08  SAK
 ```
 
 ### Commands
+
 ^[Top](#top)
 
 * Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
@@ -1091,17 +1532,23 @@ Could be manually validated with the configuration block value:
   * Backdoor write: `A8xx+crc`, `[16 bytes data]+crc`
   * Read configuration: `E000+crc`
   * Write configuration: `E100+crc`; `[16 bytes data]+crc`
-* Proxmark3 commands (does auth and executes the corresponding command)
-  * Backdoor write: `gdmsetcfg`
-  * Read configuration: `gdmcfg`
-  * Write configuration: `gdmsetcfg`
+
+### Proxmark3 commands
+
+^[Top](#top)
+
+* Backdoor write: `gdmsetcfg`
+* Read configuration: `gdmcfg`
+* Write configuration: `gdmsetcfg`
 
 ## GDCUID
+
 ^[Top](#top)
 
 That tag is a CUID tag, built on USCUID chip. It doesn't sold separately, but could be found on marketplaces under the guise of a CUID tag.
 
 ### Characteristics
+
 ^[Top](#top)
 
 * Configuration block value: `850000000000005A00FF005A00000008`
@@ -1109,33 +1556,62 @@ That tag is a CUID tag, built on USCUID chip. It doesn't sold separately, but co
 * Responds to magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
 
 ### Identify
+
 ^[Top](#top)
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 4 GDM
+[+] Magic capabilities... Gen 2 / CUID
+[+] Magic capabilities... Gen 4 GDM / USCUID ( Magic Auth )
 
 ```
-Currently Proxmark3 doesn't identify it as a separate tag. 
-Could be manually validated with the configuration block value:
+
+Currently Proxmark3 doesn't identify it as a separate tag.
+Could be manually validated with the configuration block value.
+
+### Parsed configuration
+
+^[Top](#top)
 
 ```
 [usb] pm3 --> hf mf gdmcfg
-[+] config... 85 00 00 00 00 00 00 5A 00 FF 00 5A 00 00 00 08
+[+] Config... 85 00 00 00 00 00 00 5A 00 FF 00 5A 00 00 00 08
+[+]           85 00 .........................................  Magic wakeup disabled
+[+]                 00 ......................................  Magic wakeup style Gen1a 40(7)/43
+[+]                    00 00 00 .............................  Unknown
+[+]                             00 ..........................  Key B use allowed when readable by ACL
+[+]                                5A .......................  Block 0 Direct Write Enabled (CUID)
+[+]                                   00 ....................  Unknown
+[+]                                      FF .................  MFC EV1 personalization: 4B UID from Block 0
+[+]                                         00 ..............  Shadow mode disabled
+[+]                                            5A ...........  Magic auth enabled
+[+]                                               00 ........  Static encrypted nonce disabled
+[+]                                                  00 .....  MFC EV1 signature disabled
+[+]                                                     00 ..  Unknown
+[+]                                                        08  SAK
 ```
 
 ### Commands
+
 ^[Top](#top)
 
 * Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
+  * Backdoor read: `38xx+crc`
+  * Backdoor write: `A8xx+crc`, `[16 bytes data]+crc`
   * Read configuration: `E000+crc`
   * Write configuration: `E100+crc`; `[16 bytes data]+crc`
-* Proxmark3 commands (does auth and executes the corresponding command)
-  * Read configuration: `gdmcfg`
-  * Write configuration: `gdmsetcfg`
+
+### Proxmark3 commands
+
+^[Top](#top)
+
+* Backdoor write: `gdmsetcfg`
+* Read configuration: `gdmcfg`
+* Write configuration: `gdmsetcfg`
 
 ## MIFARE Classic, other versions
+
 ^[Top](#top)
 
 **TODO**
@@ -1143,11 +1619,13 @@ Could be manually validated with the configuration block value:
 * ZXUID, EUID, ICUID, KUID?
 
 ## MIFARE Classic Super
+
 ^[Top](#top)
 
 It behaves like regular Mifare Classic but records reader auth attempts.
 
 ### MIFARE Classic Super Gen1
+
 ^[Top](#top)
 
 Old type of cards, hard to obtain. They are DirectWrite, UID can be changed via 0 block or backdoor commands.
@@ -1174,15 +1652,16 @@ Backdoor commands provided over APDU. Format:
 
 ### MIFARE Classic Super Gen1B
 
-DirectWrite card, ATS unknown. Probably same as Gen1, except backdoor commands. 
+DirectWrite card, ATS unknown. Probably same as Gen1, except backdoor commands.
 Implementation: https://github.com/netscylla/super-card/blob/master/libnfc-1.7.1/utils/nfc-super.c
 
 ### MIFARE Classic Super Gen2
+
 ^[Top](#top)
 
 New generation of cards, based on limited Gen4 chip. Emulates Gen1 backdoor protocol, but can store up to 7 different traces.
 
-Card always answers `ff  ff  ff  ff` as `at`, so reading/writing it via Mifare protocol is impossible. 
+Card always answers `ff  ff  ff  ff` as `at`, so reading/writing it via Mifare protocol is impossible.
 
 UID is changeable via UMC backdoor write to 0 block.
 
@@ -1202,9 +1681,11 @@ CF <passwd> FE <4b new_password>                 // Change password
 ```
 
 ### MIFARE Classic Super Furui
+
 ^[Top](#top)
 
 #### Characteristics
+
 ^[Top](#top)
 
 * SAK/ATQA: play blindly the block0 bytes, beware!
@@ -1214,6 +1695,7 @@ CF <passwd> FE <4b new_password>                 // Change password
 **!!!WARNING!!!** This tag can die for no reason (no reply to WUPA/REQA). We don't know why this happens.
 
 #### Identify
+
 ^[Top](#top)
 
 ```
@@ -1222,6 +1704,7 @@ CF <passwd> FE <4b new_password>                 // Change password
 ```
 
 #### Magic commands
+
 ^[Top](#top)
 
 * Configure: `AAA5[16 byte config]`+crc
@@ -1233,6 +1716,7 @@ Caution: tag does not append CRC to magic responses!
 Please use config as 00 bytes.
 
 Parsing traces:
+
 ```
 44 33 22 11 03 61 08 68 7A C7 4B 62 43 A6 11 6F 64 F3
 ^^ ^^ ^^ ^^                                           -- UID
@@ -1243,14 +1727,15 @@ Parsing traces:
 ```
 
 ### Identify
+
 ^[Top](#top)
 
 Only Gen1/Gen2 at this moment (Gen1B is unsupported):
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Super card (Gen ?)
+[+] Magic capabilities... Super card ( Gen ? )
 ```
 
 ### Proxmark3 commands
@@ -1262,10 +1747,13 @@ hf 14a info
 [usb] pm3 --> hf mf supercard --furui
 ...
 ```
+
 # MIFARE Ultralight
+
 ^[Top](#top)
 
 ## MIFARE Ultralight blocks 0..2
+
 ^[Top](#top)
 
 ```
@@ -1276,9 +1764,9 @@ BCC1 Int  LCK0 LCK1
 
 UID is made of SN0..SN6 bytes
 
-Computing BCC0 on UID 04112233445566: `analyse lcr -d 88041122` = `bf`
+Computing BCC0 on UID 04112233445566: `analyse lrc -d 88041122` = `bf`
 
-Computing BCC1 on UID 04112233445566: `analyse lcr -d 33445566` = `44`
+Computing BCC1 on UID 04112233445566: `analyse lrc -d 33445566` = `44`
 
 Int is internal, typically 0x48
 
@@ -1287,6 +1775,7 @@ Anticol shortcut (CL1/3000) is supported for UL, ULC, NTAG except NTAG I2C
 Some cards have a password: `B6AA558D`. Usually "copykey" chips.
 
 ## MIFARE Ultralight Gen1A
+
 ^[Top](#top)
 
 ### Identify
@@ -1308,6 +1797,7 @@ Only 7b versions
 **TODO** need more tests
 
 ### Proxmark3 commands
+
 ^[Top](#top)
 
 ```
@@ -1322,9 +1812,11 @@ script run hf_mf_magicrevive -u
 ```
 
 ## MIFARE Ultralight DirectWrite
+
 ^[Top](#top)
 
 ### Identify
+
 ^[Top](#top)
 
 ```
@@ -1333,14 +1825,16 @@ hf 14a info
 [+] Magic capabilities : Gen 2 / CUID
 ```
 
-It seems so far that all MFUL DW have an ATS.
+It seems so far that all MFUL DW have an ATS response in factory configuration.
 
 ### Magic commands
+
 ^[Top](#top)
 
 Issue three regular MFU write commands in a row to write first three blocks.
 
 ### Characteristics
+
 ^[Top](#top)
 
 * UID: Only 7b versions
@@ -1355,20 +1849,15 @@ Issue three regular MFU write commands in a row to write first three blocks.
   * all cards reply with an ATS
 
 #### MIFARE Ultralight DirectWrite flavour 1
+
 ^[Top](#top)
 
 * BCC: computed
 * ATS: 0A78008102DBA0C119402AB5
 * Anticol shortcut (CL1/3000): fails
 
-#### MIFARE Ultralight DirectWrite flavour 2
-^[Top](#top)
-
-* BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
-* ATS: 850000A00A000AB00000000000000000184D
-* Anticol shortcut (CL1/3000): succeeds
-
 ### Proxmark3 commands
+
 ^[Top](#top)
 
 ```
@@ -1378,7 +1867,7 @@ hf mfu setuid -h
 Equivalent: don't use `hf mfu wrbl` as you need to write three blocks in a row, but do, with proper BCCx:
 
 ```
-hf 14a raw -s -c -k a2 00 041122bf 
+hf 14a raw -s -c -k a2 00 041122bf
 hf 14a raw    -c -k a2 01 33445566
 hf 14a raw    -c    a2 02 44480000
 ```
@@ -1390,6 +1879,7 @@ hf 14a config -h
 ```
 
 E.g.:
+
 ```
 hf 14a config --atqa force --bcc ignore --cl2 force --cl3 skip --rats skip
 hf mfu setuid --uid 04112233445566
@@ -1398,24 +1888,29 @@ hf 14a reader
 ```
 
 ### libnfc commands
+
 ^[Top](#top)
 
 ```
 nfc-mfultralight -h
 ```
+
 See `--uid` and `--full`
 
 ### Android
+
 ^[Top](#top)
 
 * MIFARE++ Ultralight
 
 ## MIFARE Ultralight EV1 DirectWrite
+
 ^[Top](#top)
 
 Similar to MFUL DirectWrite
 
 ### Identify
+
 ^[Top](#top)
 
 ```
@@ -1425,6 +1920,7 @@ hf 14a info
 ```
 
 ### Characteristics
+
 ^[Top](#top)
 
 * UID: Only 7b versions
@@ -1438,34 +1934,40 @@ hf 14a info
   * all cards reply with an ATS
 
 #### MIFARE Ultralight EV1 DirectWrite flavour 1
+
 ^[Top](#top)
 
 * BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
 * ATS: 850000A000000AC30004030101000B0341DF
 
 #### MIFARE Ultralight EV1 DirectWrite flavour 2
+
 ^[Top](#top)
 
 * BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
 * ATS: 850000A00A000AC30004030101000B0316D7
 
 #### MIFARE Ultralight EV1 DirectWrite flavour 3
+
 ^[Top](#top)
 
 * BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
 * ATS: 850000A000000A3C0004030101000E03
 
 ## MIFARE Ultralight C Gen1A
+
 ^[Top](#top)
 
 Similar to MFUL Gen1A
 
 ## MIFARE Ultralight C DirectWrite
+
 ^[Top](#top)
 
 Similar to MFUL DirectWrite
 
 ### Identify
+
 ^[Top](#top)
 
 ```
@@ -1475,6 +1977,7 @@ hf 14a info
 ```
 
 ### Characteristics
+
 ^[Top](#top)
 
 * UID: Only 7b versions
@@ -1488,6 +1991,7 @@ hf 14a info
   * all cards reply with an ATS
 
 #### MIFARE Ultralight C DirectWrite flavour 1
+
 ^[Top](#top)
 
 * BCC: computed
@@ -1495,14 +1999,17 @@ hf 14a info
 * Anticol shortcut (CL1/3000): fails
 
 # NTAG
+
 ^[Top](#top)
 
 ## NTAG213 DirectWrite
+
 ^[Top](#top)
 
 Similar to MFUL DirectWrite
 
 ### Identify
+
 ^[Top](#top)
 
 ```
@@ -1512,6 +2019,7 @@ hf 14a info
 ```
 
 ### Characteristics
+
 ^[Top](#top)
 
 * UID: Only 7b versions
@@ -1525,6 +2033,7 @@ hf 14a info
   * all cards reply with an ATS
 
 #### NTAG213 DirectWrite flavour 1
+
 ^[Top](#top)
 
 * BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
@@ -1532,9 +2041,11 @@ hf 14a info
 * Anticol shortcut (CL1/3000): succeeds
 
 ## NTAG21x
+
 ^[Top](#top)
 
 ### Identify
+
 ^[Top](#top)
 
 ```
@@ -1544,6 +2055,7 @@ hf 14a info
 ```
 
 ### Characteristics
+
 ^[Top](#top)
 
 Emulates fully NTAG213, 213F, 215, 216, 216F
@@ -1553,116 +2065,428 @@ Emulates partially  UL EV1 48k/128k, NTAG210, NTAG212, NTAGI2C 1K/2K, NTAGI2C 1K
 Anticol shortcut (CL1/3000): fails
 
 ### Proxmark3 commands
+
 ^[Top](#top)
 
 ```
 script run hf_mfu_magicwrite -h
 ```
 
-## UL series (RU)
+## MIFARE Ultralight USCUID-UL
+
 ^[Top](#top)
 
-Custom chips, manufactured by iKey LLC for cloning Ultralight tags used in Visit intercoms. That leads to the non-standard for Ultralight chips tag version.
+TLDR: These magic cards, like the MFC USCUIDs have a 16 byte long configuration page, comprised of 4 blocks of 4 bytes each. This usually starts with 0x85. All of the known tags use the same format config page.
 
-### UL-Y
+The cards will respond to a RATS with the config page in the factory configuration.
+
+As with the MFC USCUIDs, one cannot turn a Classic tag into an Ultralight and vice-versa!
+
+### Characteristics
+
 ^[Top](#top)
 
-Ultralight magic, 16 pages. Recommended for Vizit RF3.1 with markings "3.1" or "4.1".
-Behavior: allows writes to page 0-2.
+* UID: 7 bytes
+* ATQA: always read from hidden block `F6`
+* SAK: always read from hidden block `F6`
+* BCC: read from blocks 0-1 per Ultralight specification
+* ATS: These respond to an ATS request with the config page in factory mode.
+
+### Identify
+
+^[Top](#top)
+
+In factory config state:
+
+```
+hf 14a info
+...
+[=] -------------------------- ATS --------------------------
+[!] ATS may be corrupted. Length of ATS (18 bytes incl. 2 Bytes CRC) doesn't match TL
+[+] ATS: 85 00 85 A0 00 00 0A A5 00 04 04 02 01 00 0F 03 [ 07 00 ]
+```
+
+If config has been modified to not display config block as ATS response:
+
+```
+hf 14a raw -akb 7 40; hf 14a raw -k 43
+
+OR (depending on the magic wakeup method set)
+
+hf 14a raw -akb 7 20; hf 14a raw -k 23
+
+THEN
+
+hf 14a raw -c e100
+[+] 85 00 85 A0 00 00 0A A5 00 04 04 02 01 00 0F 03 [ 07 00 ]
+```
+
+Possible tag wakeup mechanisms are:
+
+* Gen1 Magic Wakeup
+* Alt Magic Wakeup
+
+### Magic commands
+
+^[Top](#top)
+
+* Magic wakeup (A: 00): `40(7)`, `43`
+* Magic wakeup (B: 85): `20(7)`, `23`
+  * Backdoor read main and hidden block: `30xx+crc`
+  * Backdoor write main and hidden block: `A2xx[4 bytes data]+crc`
+  * Read configuration: `E050+crc`
+  * Write configuration: `E2[offset*4, 1b][data, 4b]+crc`
+
+* **DANGER**
+  * Set memory and config to 00 `F000+crc`
+  * Set memory and config to FF `F100+crc`
+  * Set memory and config to 55 (no 0A response) `F600+crc`
+
+### USCUID-UL configuration guide
+
+^[Top](#top)
+
+1. Configuration
+
+```
+0        1        2        3
+850000A0 00000AC3 00040301 01000B03
+           ^^                       >> ??? Mystery ???
+^^^^                                >> Gen1a mode (works with bitflip)
+    ^^                              >> Magic wakeup command (00 for 40-43; 85 for 20-23)
+      ^^                            >> Config available using regular mode (ON: A0)
+         ^^                         >> Auth type (00 = PWD mode, 0A = 2TDEA mode for UL-C)
+             ^^                     >> CUID mode, allows writing to blocks 0-3 (ON: 0A)
+               ^^                   >> Maximum memory configuration, please see below *
+                  ^^^^^^^^ ^^^^^^^^ >> Version info
+
+* This isn't a customizable value - it's a preset. So far:
+C3 = UL11
+3C = UL21
+00 = UL-C
+A5 = NTAG 213
+5A = NTAG 215
+AA = NTAG 216
+55 = Unknown IC w/ 238 pgs.
+```
+
+* Gen1a mode:                            Allow using custom wakeup commands, like real gen1a chip, to run backdoor commands, as well as some extras.
+* Magic wakeup command:                  Use different wakeup commands for entering Gen1a mode. A) 00 - 40(7), 43; B) 85 - 20(7), 23.
+* Config available using regular mode:   If this option is turned on via A0, the tag will reply to RATS with the config block and the config block can be modified without doing a magic wakeup.
+
+To write config:
+
+You must send config info in E2 packets of 4 bytes each (format: `E2[offset*4, 1b][data, 4b]`), eg for a UL-11 tag:
+
+```
+hf 14a raw -sck E200850000A0; hf 14a raw -ck E20100000AC3; hf 14a raw -ck E20200040301; hf 14a raw -c E20301000B03
+```
+
+2. Hidden blocks
+
+```
+F0: 00000000
+    ^^^^^^^^                        >> Unknown, usually always 00
+
+F1: 00000000
+    ^^^^^^^^       >> Unknown, usually always 00
+
+F2: 000000BD
+    ^^^^^^         >> Counter 0
+          ^^       >> Tearing 0
+
+F3: 000000BD
+    ^^^^^^         >> Counter 1
+          ^^       >> Tearing 1
+
+F4: 000000BD
+    ^^^^^^         >> Counter 2
+          ^^       >> Tearing 2
+
+F5: 00000000
+    ^^^^^^^^       >> Unknown, usually always 00
+
+F6: 44000400
+    ^^^^           >> ATQA in byte reverse order. 4400 = ATQA of 0044
+        ^^         >> SAK1, usually set to 04 to call for CL2
+          ^^       >> SAK2, card uses this as SAK
+
+F7: 88AF0000
+    ^^             >> First byte of UID BCC calculation, for Ultralight family is always 88 per the datasheet
+      ^^           >> Unknown, usually always AF.
+        ^^^^       >> Unknown, usually always 00
+
+F8 - FF: xxxxxxxx  >> signature
+```
+
+To read / write hidden blocks:
+
+A config block beginning with `7AFF` must be set to enable a `40:43` / `20:23` magic wakeup. From limited testing, the `20:23` magic wakeup is not guaranteed to work, however the `40:43` wakeup works 100% of the time.
+
+You must send config info in A2 packets of 4 bytes each (format: `A2[offset*4, 1b][data, 4b]`), eg for a UL-11 tag:
+
+```
+hf 14a raw -akb 7 40; hf 14a raw -k 43; hf 14a raw -ck A2F2000000BD; hf 14a raw -ck A2F3000000BD; hf 14a raw -ck A2F4000000BD; hf 14a raw -ck A2F644000400; hf 14a raw -c A2F888AF0000
+```
+
+### Proxmark3 commands
+
+^[Top](#top)
+
+No implemented commands at time of writing
+
+### libnfc commands
+
+^[Top](#top)
+
+No implemented commands at time of writing
+
+### Variations
+
+^[Top](#top)
+
+| Factory configuration               | Name    |
+| ----------------------------------- | ------- |
+| 850000A0 00000AC3 00040301 01000B03 | UL-11   |
+| 850000A0 00000A3C 00040301 01000E03 | UL-21   |
+| 850000A0 0A000A00 00000000 00000000 | UL-C    |
+| 850085A0 00000AA5 00040402 01000F03 | NTAG213 |
+| 850000A0 00000A5A 00040402 01001103 | NTAG215 |
+| 850000A0 00000AAA 00040402 01001303 | NTAG216 |
+
+Variations of USCUID-UL, that were distributed in ex-USSR countries are known as UL-family.
+Different variarions were targeted for copying different original tags + for bypassing of different filters.
+
+## UL-2
+
+^[Top](#top)
+
+Sold on Russian market in variations with 20, 41 and 44 blocks.
+All variations support direct write to block 0-2.
+
+### UL-2 (20 blocks)
+
+#### Characteristics
+
+^[Top](#top)
+
+* Configuration block value: `850000A000000AC30034210101000B03`.
+* EV1 Version: `0034210101000B03`.
 
 #### Identify
+
 ^[Top](#top)
 
 ```
-hf mfu rdbl --force -b 16
-hf 14a raw -sct 250 60
+[usb] pm3 --> hf 14a info
+...
+[+] ATS: 85 00 00 A0 00 00 0A C3 00 34 21 01 01 00 0B 03 [ 84 00 ]
 ```
-If tag replies with
-`Cmd Error: 00`
-`00 00 00 00 00 00 00 00`
-then it is UL-Y.
 
-### ULtra
+### UL-2 (41 blocks)
+
+Default configuration for USCUID-UL with 41 blocks. Can be found in China by names UL-21 or Ultra (targeting Russian market).
+
+In China exists in versions with opened and locked configuration.
+Could be used for intercoms Grazhda (UA) and Vizit (RU) with non-Micron chips (original chips have EV1 Version `0004030101000E03`).
+
+* Other names:
+  * Ultra (China)
+  * UL-21 (China)
+
+#### Characteristics
+
 ^[Top](#top)
 
-Ultralight EV1 magic; 41 page. Recommended for Vizit RF3.1 with 41 page.
-Behavior: allows writes to page 0-2.
+* Configuration block value: `850000A000000A3C0004030101000E03`.
+* EV1 Version: `0004030101000E03`.
 
 #### Identify
+
+^[Top](#top)
+
+```
+[usb] pm3 --> hf 14a info
+...
+[+] ATS: 85 00 00 A0 00 00 0A 3C 00 04 03 01 01 00 0E 03 [ C8 1D ]
+```
+
+### UL-2 (44 blocks)
+
+#### Characteristics
+
+^[Top](#top)
+
+* Configuration block value: `850000A000000A5A0034210101000E03`.
+* EV1 Version: `0034210101000E03`.
+
+#### Identify
+
+^[Top](#top)
+
+```
+[usb] pm3 --> hf 14a info
+...
+[+] ATS: 85 00 00 A0 00 00 0A 5A 00 34 21 01 01 00 0E 03 [ F1 F3 ]
+```
+
+## UL-Y
+
+^[Top](#top)
+
+Variation based on NTAG215 config. 
+Created for copying 16-blocks Vizit tags.
+Now there are well-known 2 variations, which differs only with EV1 Version.
+Newer has *Micron Russia* version.
+
+### Characteristics
+
+^[Top](#top)
+
+* Configuration block value: `850000A0AA000A5A0000000000000000` or `850000A0AA000A5A0034210100000000`.
+* EV1 Version: `0000000000000000` or `0034210100000000`.
+* Has 16 blocks readable.
+* Allows write to pages 0-2.
+* Has next NTAG215-related configuration:
+
+```
+[=] 130/0x82 | 00 00 00 BD | 0 | ...�
+[=] 131/0x83 | 04 00 00 10 | 0 | ....
+[=] 132/0x84 | C0 05 00 00 | 0 | �...
+[=] 133/0x85 | FF FF FF FF | 0 | .... // Password, will not be readable in normal conditions
+```
+
+### Identify
+
+^[Top](#top)
+
+```
+[usb] pm3 --> hf 14a info
+...
+[+] ATS: 85 00 00 A0 AA 00 0A 5A 00 00 00 00 00 00 00 00 [ D5 F9 ]
+```
+
+## Ultra (RU)
+
+^[Top](#top)
+
+Modification of [UL-2 (41 blocks)](#ul-2-41-blocks) for Vizit (RU) intercoms.
+Suitable for tags with EV1 Version `0034210101000E03`.
+
+After communication to iKey LLC (importer of those tags to Russian market), new revisions, imported to Russia have closed config.
+
+### Characteristics
+
+^[Top](#top)
+
+* Configuration block value: `850000A000000A3C0034210101000E03`.
+* EV1 Version: `0034210101000E03`.
+
+### Identify
+
+^[Top](#top)
+
+```
+[usb] pm3 --> hf 14a info
+...
+[+] ATS: 85 00 00 A0 00 00 0A 3C 00 04 03 01 01 00 0E 03 [ C8 1D ]
+```
+
+### Magic commands
+
+^[Top](#top)
+
+Use the script `hf_mfu_ultra.lua` to restore (write) dump to tag or clear previously written tag.
+
+Usage:
+1. Restore dump to tag:
+   ```
+   script run hf_mfu_ultra -f <dump filename> -k <passwd> -r
+   ```
+2. Wipe tag (use it to prepare tag for restoring another dump):
+   ```
+   script run hf_mfu_ultra -k <passwd> -w
+   ```
+3. Show help:
+   ```
+   script run hf_mfu_ultra -h
+   ```
+
+Examples:
+1. Restore dump to tag:
+   ```
+   script run hf_mfu_ultra -f hf-mfu-3476FF1514D866-dump.bin -k ffffffff -r
+   ```
+2. Wipe tag:
+   ```
+   script run hf_mfu_ultra -k 1d237f76 -w
+   ```
+
+## UL-5
+
+^[Top](#top)
+
+Variation of [Ultra](#ultra-ru) tag, which allows to change UID only once.
+
+After editing page 0 become locked and tag becomes the original Mifare Ultralight EV1 (except the tag version, which remains specific).
+
+Created as a response to Vizit (RU) filters that try to overwrite page 0 (as a detection for Ultra (RU) tags).
+
+**WARNING!** When using UL-5 to clone, write UID pages in inverse (from 2 to 0) and do NOT make mistakes! This tag does not allow reversing one-way actions (OTP page, lock bits).
+
+It was confirmed from importers to Russian and Ukrainian market (independently) that UL-5 is a variation of USCUID-UL. But so far it's unknown how to achieve that behaviors, because by default UL-5 has it's config locked.
+
+### Identify
+
 ^[Top](#top)
 
 ```
 hf mfu info
 ...
-[=] TAG IC Signature: 0000000000000000000000000000000000000000000000000000000000000000
-[=] --- Tag Version
-[=]        Raw bytes: 00 34 21 01 01 00 0E 03
-[=]        Vendor ID: 34, Mikron JSC Russia
-[=]     Product type: 21, unknown
-```
-
-#### ULtra flavour 1
-^[Top](#top)
-
-Could be identified by indirect evidence before writing
-
-* Initial UID: `34 D7 08 11 AD D7 D0`
-* `hf mfu dump --ns`
-  ```
-  [=]   3/0x03 | CF 39 A1 C8 | 1 | .9..
-  [=]   4/0x04 | B6 69 26 0D | 1 | .i&.
-  [=]   5/0x05 | EC A1 73 C4 | 1 | ..s.
-  [=]   6/0x06 | 81 3D 29 B8 | 1 | .=).
-  [=]  16/0x10 | 6A F0 2D FF | 0 | j.-.
-  [=]  20/0x14 | 6A F0 2D FF | 0 | j.-.
-  [=]  24/0x18 | 6A F0 2D FF | 0 | j.-.
-  [=]  38/0x26 | 00 E2 00 00 | 0 | .... <- E2, Virtual Card Type Identifier is not default
-
-  ```
-
-#### ULtra flavour 2
-^[Top](#top)
-
-Could be identified by indirect evidence before writing
-
-* Initial UID: `04 15 4A 23 36 2F 81`
-* Values in pages `3, 4, 5, 6, 16, 20, 24, 38` are default for that tag flavour
-
-### UL-5
-^[Top](#top)
-
-Ultralight EV1 magic; 41 page. Recommended for Vizit RF3.1 with 41 page.
-Created as a response to filters that try to overwrite page 0 (as a detection for [ULtra](#mifare-ultra) tags).
-
-Behavior: similar to Ultra, but after editing page 0 become locked and tag becomes the original Mifare Ultralight EV1 (except the tag version, which remains specific).
-
-**WARNING!** When using UL-5 to clone, write UID pages in inverse (from 2 to 0) and do NOT make mistakes! This tag does not allow reversing one-way actions (OTP page, lock bits).
-
-#### Identify
-^[Top](#top)
-
-```
-hf mfu info
-[=] UID: AA 55 C3 A1 30 61 80
 TAG IC Signature: 0000000000000000000000000000000000000000000000000000000000000000
 [=] --- Tag Version
 [=]        Raw bytes: 00 34 21 01 01 00 0E 03
 [=]        Vendor ID: 34, Mikron JSC Russia
 ```
 
-After personalization it is not possible to identify UL-5. 
+After personalization it is not possible to identify UL-5.
 
-Usually chips have initial UIDs: 
-  * `AA 55 C3 A4 30 61 80`
-  * `AA 55 C3 A4 30 61 80`
+The manufacturer confirmed unpersonalized tags could be identified by first 2 bytes of UID:
 
-### UL, other chips
+* `AA 55...`
 
-**TODO**
+### Magic commands
 
-UL-X, UL-Z - ?
+^[Top](#top)
+
+Use the script `hf_mfu_ultra.lua` to restore (write) dump to tag.
+
+Usage:
+1. Restore dump to tag:
+   ```
+   script run hf_mfu_ultra -f <dump filename> -k <passwd> -r
+   ```
+3. Show help:
+   ```
+   script run hf_mfu_ultra -h
+   ```
+
+Examples:
+1. Restore dump to tag:
+   ```
+   script run hf_mfu_ultra -f hf-mfu-3476FF1514D866-dump.bin -k ffffffff -r
+   ```
+
+## UL, other chips
+
+** TODO **
+
+* UL
+* UL-X
+* UL-Z
 
 # DESFire
+
 ^[Top](#top)
 
 ## "DESFire" APDU, 7b UID
@@ -1678,6 +2502,7 @@ Android compatible
 * issue special APDUs
 
 ### Characteristics
+
 ^[Top](#top)
 
 * ATQA: 0344
@@ -1687,18 +2512,23 @@ Android compatible
 Only mimics DESFire anticollision (but wrong ATS), no further DESFire support
 
 ### Proxmark commands
+
 ^[Top](#top)
 
 UID 04112233445566
+
 ```
 hf 14a raw -s -c 0200ab00000704112233445566
 ```
+
 or equivalently
+
 ```
 hf 14a apdu -s 00ab00000704112233445566
 ```
 
 ### libnfc commands
+
 ^[Top](#top)
 
 ```
@@ -1706,10 +2536,13 @@ pn53x-tamashell
 4a0100
 420200ab00000704112233445566
 ```
+
 ## "DESFire" APDU, 4b UID
+
 ^[Top](#top)
 
 ### Magic commands
+
 ^[Top](#top)
 
 Android compatible
@@ -1717,6 +2550,7 @@ Android compatible
 * issue special APDUs
 
 ### Characteristics
+
 ^[Top](#top)
 
 * ATQA: 0008
@@ -1727,13 +2561,17 @@ Android compatible
 Only mimics DESFire anticollision (but wrong ATS), no further DESFire support
 
 ### Proxmark commands
+
 ^[Top](#top)
 
 UID 04112233445566
+
 ```
 hf 14a raw -s -c 0200ab00000411223344
 ```
+
 or equivalently
+
 ```
 hf 14a apdu -s 00ab00000411223344
 ```
@@ -1741,13 +2579,16 @@ hf 14a apdu -s 00ab00000411223344
 It accepts longer UID but that doesn't affect BCC/ATQA/SAK
 
 ### pn53x-tamashell commands
+
 ^[Top](#top)
+
 ```
 4a0100
 420200ab00000411223344
 ```
 
 ### Remarks
+
 ^[Top](#top)
 
 The same effect (with better ATQA!) can be obtained with a MFC Gen1A that uses SAK defined in block0:
@@ -1755,7 +2596,7 @@ The same effect (with better ATQA!) can be obtained with a MFC Gen1A that uses S
 ```
 hf mf csetblk --blk 0 -d 1122334444204403A1A2A3A4A5A6A7A8
 hf 14a info
-[+]  UID: 11 22 33 44 
+[+]  UID: 11 22 33 44
 [+] ATQA: 03 44
 [+]  SAK: 20 [1]
 [+] Possible types:
@@ -1763,9 +2604,11 @@ hf 14a info
 ```
 
 # ISO14443B
+
 ^[Top](#top)
 
 ## Tiananxin TCOS CPU card
+
 ^[Top](#top)
 
 This is a card sold on Taobao for testing readers.
@@ -1798,9 +2641,11 @@ CL IN P1 P2 Lc Data
 More commands to follow. Be careful with some.
 
 # ISO15693
+
 ^[Top](#top)
 
 ## ISO15693 magic
+
 ^[Top](#top)
 
 ### Identify
@@ -1808,6 +2653,7 @@ More commands to follow. Be careful with some.
 **TODO**
 
 ### Proxmark3 commands
+
 ^[Top](#top)
 
 Always set a UID starting with `E0`.
@@ -1815,45 +2661,51 @@ Always set a UID starting with `E0`.
 ```
 hf 15 csetuid E011223344556677
 ```
+
 or (ignore errors):
+
 ```
-script run hf_15_magic -u E004013344556677  
+script run hf_15_magic -u E004013344556677
 ```
 
 <a id="g4top"></a>
 
 # Multi
+
 ^[Top](#top)
 
 ## UMC
+
 ^[Top](#top)
 
 A.k.a ultimate magic card,  most promenent feature is shadow mode (GTU) and optional password protected backdoor commands.
 
 Can emulate MIFARE Classic, Ultralight/NTAG families, 14b UID & App Data
 
-- [Identify](#identify-16)
-- [Magic commands](#magic-commands-9)
-- [Characteristics](#characteristics-12)
-- [Proxmark3 commands](#proxmark3-commands-9)
-- [Change ATQA / SAK](#change-atqa--sak)
-- [Change ATS](#change-ats)
-- [Set UID length (4, 7, 10)](#set-uid-length-4-7-10)
-- [Set 14443A UID](#set-14443a-uid)
-- [Set 14443B UID and ATQB](#set-14443b-uid-and-atqb)
-- [(De)Activate Ultralight mode](#deactivate-ultralight-mode)
-- [Select Ultralight mode](#select-ultralight-mode)
-- [Set shadow mode (GTU)](#set-shadow-mode-gtu)
-- [Direct block read and write](#direct-block-read-and-write)
-- [(De)Activate direct write to block 0](#deactivate-direct-write-to-block-0)
-- [Change backdoor password](#change-backdoor-password)
-- [Dump configuration](#dump-configuration)
-- [Fast configuration](#fast-configuration)
-- [Presets](#presets)
-- [Version and Signature](#version-and-signature)
+* [Identify](#identify-16)
+* [Magic commands](#magic-commands-9)
+* [Characteristics](#characteristics-12)
+* [Proxmark3 commands](#proxmark3-commands-9)
+* [Change ATQA / SAK](#change-atqa--sak)
+* [Change ATS](#change-ats)
+* [Set UID length (4, 7, 10)](#set-uid-length-4-7-10)
+* [Set 14443A UID](#set-14443a-uid)
+* [Set 14443B UID and ATQB](#set-14443b-uid-and-atqb)
+* [(De)Activate Ultralight mode](#deactivate-ultralight-mode)
+* [Select Ultralight mode](#select-ultralight-mode)
+* [NTAG21X/I2C Notes](#ntag-notes)
+* [Set shadow mode (GTU)](#set-shadow-mode-gtu)
+* [Direct block read and write](#direct-block-read-and-write)
+* [(De)Activate direct write to block 0](#deactivate-direct-write-to-block-0)
+* [Change backdoor password](#change-backdoor-password)
+* [Dump configuration](#dump-configuration)
+* [Fast configuration](#fast-configuration)
+* [Presets](#presets)
+* [Version and Signature](#version-and-signature)
 
 
 ### Identify
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 👉 **TODO** If the password is not default, Tag doesn't get identified correctly by latest Proxmark3 client (it might get mislabeled as MFC Gen2/CUID, Gen3/APDU or NTAG21x Modifiable, depending on configured UID/ATQA/SAK/ATS)
@@ -1866,24 +2718,28 @@ hf 14a info
 ```
 
 The card will be identified only if the password is the default one. One can identify manually such card if the password is still the default one, with the command to get the current configuration:
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000C6
 ```
+
 If the card is an Ultimate Magic Card, it returns 30 or 32 bytes.
 
 ### Magic commands
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
-There are two ways to program this card. 
+There are two ways to program this card.
 
    1.  Use the raw commands designated by the `hf 14a` examples.
-    
+
    ***OR***
 
    2.  Use the hf_mf_ultimatecard.lua script commands designated but the `script run hf_mf_ultimatecard` examples. This script is nof fully compartible with new version UMC.
 
 
 script run hf_mf_ultimatecard.lua -h
+
 ```
 This script enables easy programming of an Ultimate Mifare Magic card
 Usage
@@ -1894,20 +2750,20 @@ Arguments
     -c      read magic configuration
     -u      UID (8-20 hexsymbols), set UID on tag
     -t      tag type to impersonate
-                 1 = Mifare Mini S20 4-byte 
+                 1 = Mifare Mini S20 4-byte
                  2 = Mifare Mini S20 7-byte 15 = NTAG 210
                  3 = Mifare Mini S20 10-byte 16 = NTAG 212
                  4 = Mifare 1k S50 4-byte   17 = NTAG 213
                  5 = Mifare 1k S50 7-byte   18 = NTAG 215
-                 6 = Mifare 1k S50 10-byte  19 = NTAG 216 
+                 6 = Mifare 1k S50 10-byte  19 = NTAG 216
                  7 = Mifare 4k S70 4-byte   20 = NTAG I2C 1K
                  8 = Mifare 4k S70 7-byte   21 = NTAG I2C 2K
                  9 = Mifare 4k S70 10-byte  22 = NTAG I2C 1K PLUS
             ***  10 = UL -   NOT WORKING FULLY   23 = NTAG I2C 2K PLUS
             ***  11 = UL-C - NOT WORKING FULLY   24 = NTAG 213F
                  12 = UL EV1 48b                25 = NTAG 216F
-                 13 = UL EV1 128b        
-            ***  14 = UL Plus - NOT WORKING YET  
+                 13 = UL EV1 128b
+            ***  14 = UL Plus - NOT WORKING YET
 
     -p      NTAG password (8 hexsymbols),  set NTAG password on tag.
     -a      NTAG pack ( 4 hexsymbols), set NTAG pack on tag.
@@ -1960,9 +2816,11 @@ CF <passwd> F0 <30b configuration data>          // Configure all params in one 
 CF <passwd> F1 <30b configuration data>          // Configure all params in one cmd and fuse the configuration permanently
 CF <passwd> FE <4b new_password>                 // change password
 ```
+
 Default `<passwd>`: `00000000`
 
 ### Characteristics
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 * UID: 4b, 7b and 10b versions
@@ -1973,22 +2831,30 @@ Default `<passwd>`: `00000000`
 * Shadow mode: GTU
 * Backdoor password mode
 
+## UMC Version/Factory Test
+
+The CF..CC command is commonly considered to be a way of determining UMC versions. The card in circulation in recent years (2024? to present) is 06A0. It has some quirks. The older (previous?) 03A0 is assumed to have a full working featureset. The arm source points to the command being a "factory test." It also lists other possible values:
+- 6666 "Card type generic"
+- 02AA "Card type limited functionality"
+
 ### Proxmark3 commands
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 ```
 # view contents of tag memory:
 hf mf gview
 # Read a specific block via backdoor command:
-hf mf ggetblk 
+hf mf ggetblk
 # Write a specific block via backdoor command:
-hf mf gsetblk 
+hf mf gsetblk
 # Load dump to tag:
-hf mf gload 
+hf mf gload
 # Save dump from tag:
 hf mf gsave
 ```
-👉 **TODO** `hf mf gview` is currently missing Ultralight memory maps 
+
+👉 **TODO** `hf mf gview` is currently missing Ultralight memory maps
 
 Equivalent:
 
@@ -1999,40 +2865,48 @@ hf 14a raw -s -c -t 1000 CF00000000CE02
 ...
 ```
 
-👉 **TODO** In Mifare Ultralight / NTAG mode, the special writes (`hf mfu restore` option `-s`, `-e`, `-r`) do not apply. Use `script run hf_mf_ultimatecard` for UID and signature, and `hf mfu wrbl` for PWD and PACK. 
+👉 **TODO** In Mifare Ultralight / NTAG mode, the special writes (`hf mfu restore` option `-s`, `-e`, `-r`) do not apply. Use `script run hf_mf_ultimatecard` for UID and signature, and `hf mfu wrbl` for [PWD](#set-ntag-pwd) and [PACK](#set-ntag-pack).
 
 ### Change ATQA / SAK
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>35<2b ATQA><1b SAK>
 ```
+
 * ⚠ ATQA bytes are swapped in the command
 * ⚠ ATQA bytes that result in `iso14443a card select failed` (I.E.  ATQA=0040 in raw form) can be corrected with `hf 14a config --atqa force`
 * ⚠ when SAK bit 6 is set (e.g. SAK=20 or 28), ATS must be turned on, otherwise the card may not be recognized by some readers!
 * ⚠ never set SAK bit 3 (e.g. SAK=04), it indicates an extra cascade level is required (see `hf 14a config --cl2 skip` or `hf 14a config --cl3 skip` to recover a misconfigured card)
- 
+
 Example: ATQA 0044 SAK 28, default pwd
+
 ```
 hf 14a raw -s -c -t 1000 CF0000000035440028
 ```
+
 OR (Note the script will correct the ATQA correctly)
+
 ```
 script run hf_mf_ultimatecard -q 004428
 ```
 
 ### Change ATS
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>34<1b length><0-16b ATS>
 ```
- * `<length>`: ATS length byte, set to `00` to disable ATS
- * ⚠ when SAK bit 6 is set (e.g. SAK=20 or 28), ATS must be turned on, otherwise the card may not be recognized by some readers!
- * ATS CRC will be added automatically, don't configure it
- * Max ATS length: 16 bytes (+CRC)
+
+* `<length>`: ATS length byte, set to `00` to disable ATS
+* ⚠ when SAK bit 6 is set (e.g. SAK=20 or 28), ATS must be turned on, otherwise the card may not be recognized by some readers!
+* ATS CRC will be added automatically, don't configure it
+* Max ATS length: 16 bytes (+CRC)
 
 Example: ATS to 0606757781028002F0, default pwd
+
 ```
 hf 14a raw -s -c -t 1000 CF000000003406067577810280
 ```
@@ -2044,39 +2918,45 @@ script run hf_mf_ultimatecard -z 06067577810280`
 ```
 
 ### Set UID length (4, 7, 10)
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>68<1b param>
 ```
- * `<param>`
-   * `00`: 4 bytes
-   * `01`: 7 bytes
-   * `02`: 10 bytes
+
+* `<param>`
+  * `00`: 4 bytes
+  * `01`: 7 bytes
+  * `02`: 10 bytes
 
 Example: set UID length to 7 bytes, default pwd
+
 ```
 hf 14a raw -s -c -t 1000 CF000000006801
 ```
 
 ### Set 14443A UID
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 UID is configured according to block0 with a backdoor write.  (Script commands are below the UID length examples)
 
 Example: preparing first two blocks: (Note the UMC has to be in MFC mode and the correct UID byte length set)
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000CD00000102030405060708090A0B0C0D0E0F
 hf 14a raw -s -c -t 1000 CF00000000CD01101112131415161718191A1B1C1D1E1F
 hf 14a reader
 ```
-MFC mode 4b UID  
+
+MFC mode 4b UID
 
 => UID `00010203`
 
 `script run hf_mf_ultimatecard -t 4 -u 00010203`
 
-MFC mode 7b UID  
+MFC mode 7b UID
 
 => UID `00010203040506`
 
@@ -2088,25 +2968,27 @@ MFC mode, 10b UID
 
 `script run hf_mf_ultimatecard -t 6 -u 00010203040506070809`
 
-Ultralight mode, 4b UID 
+Ultralight mode, 4b UID
 
 => UID `00010203`
 
-Ultralight mode, 7b UID  
+Ultralight mode, 7b UID
 
-=> UID `00010210111213`  
+=> UID `00010210111213`
 
 👉 the UID is composed of first two blocks as in regular Ultralights
- * Examples
-   * UL-EV1 48b = `script run hf_mf_ultimatecard -t 12 -u 00010203040506`
-   * UL EV1 128b = `script run hf_mf_ultimatecard -t 13 -u 00010203040506`
-   * NTAG 215 = `script run hf_mf_ultimatecard -t 18 -u 00010203040506`
 
-Ultralight mode, 10b UID  
-=> UID `00010203040506070809`  
+* Examples
+  * UL-EV1 48b = `script run hf_mf_ultimatecard -t 12 -u 00010203040506`
+  * UL EV1 128b = `script run hf_mf_ultimatecard -t 13 -u 00010203040506`
+  * NTAG 215 = `script run hf_mf_ultimatecard -t 18 -u 00010203040506`
+
+Ultralight mode, 10b UID
+=> UID `00010203040506070809`
 👉 the UID is composed only from block0
 
 ### Set 14443B UID and ATQB
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 * UID and ATQB are configured according to block0 with a (14a) backdoor write.
@@ -2114,22 +2996,26 @@ Ultralight mode, 10b UID
 * 14B will show up only on new cards. (Need more tests on new card. Example not work)
 
 Example:
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000CD00000102030405060708090A0B0C0D0E0F
 hf 14b reader
 ```
-=> UID 00010203  
+
+=> UID 00010203
 => ATQB 0405060708090A
 
 ### (De)Activate Ultralight mode
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>69<1b param>
 ```
- * `<param>`
-   * `00`: MIFARE Classic mode
-   * `01`: MIFARE Ultralight/NTAG mode
+
+* `<param>`
+  * `00`: MIFARE Classic mode
+  * `01`: MIFARE Ultralight/NTAG mode
 
 Example: activate Ultralight protocol, default pwd
 
@@ -2148,17 +3034,18 @@ In this mode, if SAK=`00` and ATQA=`0044`, it acts as an Ultralight card
 ⚠ only the first four bytes of each block will be mapped in the Ultralight memory map (so the Ultralight block numbers follow backdoor R/W block numbers).
 
 ### Select Ultralight mode
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>6A<1b param>
 ```
 
- * `<param>`
-   * `00`: UL EV1
-   * `01`: NTAG
-   * `02`: UL-C
-   * `03`: UL
+* `<param>`
+  * `00`: UL EV1
+  * `01`: NTAG
+  * `02`: UL-C
+  * `03`: UL
 
 ⚠ it supposes Ultralight mode was activated (cf command `69`)
 
@@ -2167,6 +3054,7 @@ Example: set Ultralight mode to Ultralight-C, default pwd
 ```
 hf 14a raw -s -c -t 1000 CF000000006A02
 ```
+
 Or
 
 ```
@@ -2176,11 +3064,13 @@ script run hf_mf_ultimatecard -m 02
 Now the card supports the 3DES UL-C authentication.
 
 ### Set Ultralight and M1 maximum read/write sectors
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>6B<1b blocks>
 ```
+
 Hexadecimal, maximum sector data, default 0xFF, range 0x00-0xFF
 
 Example: set maximum 63 blocks read/write for Mifare Classic 1K
@@ -2189,7 +3079,39 @@ Example: set maximum 63 blocks read/write for Mifare Classic 1K
 hf 14a raw -s -c -t 1000 CF000000006B3F
 ```
 
+### NTAG Notes
+
+^[Top](#top) ^^[Gen4](#g4top)
+
+**For UMC 06A0**
+
+Despite varying memory structures on their specs, the UMC derives things like the
+PWD and PACK from fixed pages. The PWD is stored at E5 which matches the NTAG216/I2C transponders while the PACK is stored at 13 like an NTAG210.
+
+#### Set NTAG PWD
+
+```
+hf mfu wrbl -b e5 -d <new 4-byte PWD>
+```
+or
+```
+hf 14a raw -s -c -t 1000 a2e5<new 4-byte PWD>
+```
+or
+```
+script run hf_mf_ultimatecard -p <new 4-byte PWD>
+```
+#### Set NTAG PACK
+```
+hf mfu wrbl -b 13 -d <2-byte PACK>00
+```
+or
+```
+hf 14a -s -c -t 1000 a213<2-byte PACK>0000
+```
+
 ### Set shadow mode (GTU)
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 This description of shadow modes wroted by seller at marketpalces:
@@ -2199,24 +3121,25 @@ This description of shadow modes wroted by seller at marketpalces:
 And these conclusions were made after a number of tests with UMC (new version, configured as MFC for example):
 
 | Mode | Buffer | Standart command (rdbl, wrbl e.t.c)     | Backdoor command (gsetblk, ggetblk, gload e.t.c.) |
-|------|--------|-----------------------------------------|---------------------------------------------------|
-| 2,3  |  buf23 | read/write from/to buf23                | read/write from/to buf23                          |
-|  0   |  buf0  | read from buf0, write to buf0 and buf23 | read/write from/to buf23                          |
-|  4   |   -    | read from buf0, write to buf23          | read/write from/to buf23                          |
+| ---- | ------ | --------------------------------------- | ------------------------------------------------- |
+| 2,3  | buf23  | read/write from/to buf23                | read/write from/to buf23                          |
+| 0    | buf0   | read from buf0, write to buf0 and buf23 | read/write from/to buf23                          |
+| 4    | -      | read from buf0, write to buf23          | read/write from/to buf23                          |
 
 Mode 1: For new card this mode looks like a bug. Reading/writing first two block use *buf23*. Reading other blocks use invalid region of memory and all returned data looks like pseudo-random. All acl looks like invalid. All data is readable by the keys and acl wich was written in *buf0*. Any writing operations in this mode use copy of *buf0* and only it. It`s not affected any other buffers. So if you change keys or/and acl you will must use new keys to read data.
 
-Example (not work with new UMC): 
+Example (not work with new UMC):
 `script run hf_mf_ultimatecard -w 1 -g 00 -t 18 -u 04112233445566 -s 112233445566778899001122334455667788990011223344556677 -p FFFFFFFF -a 8080 -o 11111111 -g 01`
-   * -w 1 = wipe the card in Ultralight Mode
-   * -g 00 = turn on pre-write mode
-   * -t 18 = change the type of card to NTAG 215
-   * -u = set the uid
-   * -s = set the signature
-   * -p = set the NTAG password
-   * -a = set the PACK
-   * -o = set the OTP
-   * -g 01 = turn on restore mode 
+
+* -w 1 = wipe the card in Ultralight Mode
+* -g 00 = turn on pre-write mode
+* -t 18 = change the type of card to NTAG 215
+* -u = set the uid
+* -s = set the signature
+* -p = set the NTAG password
+* -a = set the PACK
+* -o = set the OTP
+* -g 01 = turn on restore mode
 
 At this point the card is set to a unwritten NTAG 215. Now any data written to the card will only last for 1 read.  Write a popular game toy to it, read it, now it is back to the unwritten NTAG 215.
 
@@ -2227,24 +3150,29 @@ At this point the card is set to a unwritten NTAG 215. Now any data written to t
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>32<1b param>
 ```
- * `<param>`
-   * `00`: pre-write, shadow data can be written
-   * `01`: restore mode
-     - WARNING: new UMC (06a0) cards return garbage data when using 01
-   * `02`: disabled
-   * `03`: disabled, high speed R/W mode for Ultralight?
-   * `04`: split mode, work with new UMC. With old UMC is untested.
+
+* `<param>`
+  * `00`: pre-write, shadow data can be written
+  * `01`: restore mode
+    * WARNING: new UMC (06a0) cards return garbage data when using 01
+  * `02`: disabled
+  * `03`: disabled, high speed R/W mode for Ultralight?
+  * `04`: split mode, work with new UMC. With old UMC is untested.
 
 ### Direct block read and write
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 Using the backdoor command, one can read and write any area without MFC password, similarly to MFC Gen1 card. It should be noted that this command must be used to modify UID.
 
 Backdoor read 16b block:
+
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>CE<1b block number>
 ```
+
 Backdoor write 16b block:
+
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>CD<1b block number><16b block data>
 ```
@@ -2254,15 +3182,19 @@ Read/Write operations work on 16 bytes, no matter the Ultralight mode.
 Note that only the first four bytes of each block will be mapped in the Ultralight memory map.
 
 Example: read block0, default pwd
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000CE00
 ```
+
 Example: write block0 with factory data, default pwd
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000CD00112233441C000011778185BA18000000
 ```
 
 ### (De)Activate direct write to block 0
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 This command enables/disables direct writes to block 0.
@@ -2270,21 +3202,26 @@ This command enables/disables direct writes to block 0.
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>CF<1b param>
 ```
- * `<param>`
-   * `00`: Activate direct write to block 0 (Same behaviour of Gen2 cards. Some readers may identify the card as magic)
-   * `01`: Deactivate direct write to block 0 (Same behaviour of vanilla cards)
-   * `02`: Default value. (Same behaviour as `00` (?))
+
+* `<param>`
+  * `00`: Activate direct write to block 0 (Same behaviour of Gen2 cards. Some readers may identify the card as magic)
+  * `01`: Deactivate direct write to block 0 (Same behaviour of vanilla cards)
+  * `02`: Default value. (Same behaviour as `00` (?))
 
 Example: enable direct writes to block 0, default pwd
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000CF00
 ```
+
 Example: disable direct writes to block 0, default pwd
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000CF01
 ```
 
 ### Change backdoor password
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 All backdoor operations are protected by a password. If password is forgotten, it can't be recovered. Default password is `00000000`.
@@ -2292,25 +3229,33 @@ All backdoor operations are protected by a password. If password is forgotten, i
 WARNING: new UMC (06A0) returns 6300 when issuing password change command. Please write the password using F0 and entering the full configuration, but with the new password.
 
 Change password:
+
 ```
 hf 14a raw -s -c -t 1000 CF <passwd> FE <4b new_password>
 ```
+
 Example: change password from 00000000 to AABBCCDD
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000FEAABBCCDD
 ```
+
 Example: change password from AABBCCDD back to 00000000
+
 ```
 hf 14a raw -s -c -t 1000 CFAABBCCDDFE00000000
 ```
 
 ### Dump configuration
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>C6
 ```
+
 Default configuration:
+
 ```
 00000000000002000978009102DABC191010111213141516040008006B024F6B
                                                             ^^^^ CRC, type unknown
@@ -2326,14 +3271,17 @@ Default configuration:
 ```
 
 ### Fast configuration
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>F0<30b configuration data>
 ```
+
 cf **Dump configuration** for configuration data description.
 
 Example: Write factory configuration, using default password
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000F000000000000002000978009102DABC191010111213141516040008004F6B
 ```
@@ -2341,67 +3289,80 @@ hf 14a raw -s -c -t 1000 CF00000000F000000000000002000978009102DABC1910101112131
 ⚠ Variant with command `F1` instead of `F0` will set and fuse permanently the configuration. Backdoor R/W will still work.
 
 ### Presets
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
 Here are some presets available in the FuseTool (but with all ATS disabled)
 
 **MIFARE Mini S20 4-byte UID**
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000F000000000000002000978009102DABC19101011121314151604000900
 ```
 
 **MIFARE Mini S20 7-byte UID**
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000F000010000000002000978009102DABC19101011121314151644000900
 ```
 
 **MIFARE 1k S50 4-byte UID** (this is the factory setting)
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000F000000000000002000978009102DABC19101011121314151604000800
 ```
 
 **MIFARE 1k S50 7-byte UID**
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000F000010000000002000978009102DABC19101011121314151644000800
 ```
 
 **MIFARE 4k S70 4-byte UID**
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000F000000000000002000978009102DABC19101011121314151602001800
 ```
 
 **MIFARE 4k S70 7 byte UID**
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000F000010000000002000978009102DABC19101011121314151642001800
 ```
 
 **Ultralight**
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000003FB
 ```
 
 **Ultralight-C**
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000002FB
 ```
 
 **Ultralight EV1**
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000000FB
 ```
 
 **NTAG21x**
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000001FB
 ```
 
+
 ### Version and Signature
+
 ^[Top](#top) ^^[Gen4](#g4top)
 
-Don`t forget configure maximum read/write blocks. It`s can be adjusted directly in config (see *Dump configuration*) or by command 6B: 
+Don't forget configure maximum read/write blocks. It's can be adjusted directly in config (see *Dump configuration*) or by command 6B:
 
 ```
-hf mf raw -s -c -t 1000 CF000000006BFB
+hf 14a raw -s -c -t 1000 CF000000006BFB
 ```
 
 Note: 0xFB = 251
@@ -2409,6 +3370,7 @@ Note: 0xFB = 251
 Ultralight EV1 and NTAG Version info and Signature are stored respectively in blocks 250-251 and 242-249.
 
 Example for an Ultralight EV1 128b with the signature sample from tools/recover_pk.py
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000000FB
 hf mfu wrbl -b 0 -d 04C12865
@@ -2427,6 +3389,7 @@ hf mfu info
 ```
 
 Example for an NTAG216 with the signature sample from tools/recover_pk.py
+
 ```
 hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000001FB
 hf mfu wrbl -b 0 -d 04E10C61
@@ -2445,30 +3408,37 @@ hf mfu info
 ```
 
 # Other
+
 ^[Top](#top)
 
 These are chips to clone other ICs. Usually the originals are only sold in China.
 
 ## SID
+
 ^[Top](#top)
 
-- Magic tag for Fudan FM1208-9 chips
+* Magic tag for Fudan FM1208-9 chips
 
 ### Characteristics
+
 ^[Top](#top)
-- ISO14443-A tag
-- ATQA-SAK: `0008`-`20`
-- ATS: `10 78 80 A0 02 00 9D 46 16 40 00 A3 [UID]`
-- Compared to real FM1208 chip:
-  - CLA byte is ignored
-  - Command parsing is irregular (some replies are wrong)
+
+* ISO14443-A tag
+* ATQA-SAK: `0008`-`20`
+* ATS: `10 78 80 A0 02 00 9D 46 16 40 00 A3 [UID]`
+* Compared to real FM1208 chip:
+  * CLA byte is ignored
+  * Command parsing is irregular (some replies are wrong)
 
 ### Magic commands
+
 ^[Top](#top)
 
 **WARNING!!!** Risk of bricking tag - cause is unknown
-- Below you can find a list of all INS bytes not present on real FM1208 chip, and what their output is when executed (P1, P2, Lc = 00)
-  - Results may vary between chips:
+
+* Below you can find a list of all INS bytes not present on real FM1208 chip, and what their output is when executed (P1, P2, Lc = 00)
+  * Results may vary between chips:
+
 ```
 INS | RES
 0A  | 44454641554C540000002018112840000000000000000000000000000000000000000000000000000000400000000000
@@ -2489,17 +3459,21 @@ FB  | 6A82
 ```
 
 ## NSCK-II
+
 ^[Top](#top)
 
-- Magic tag for "NSC/BS-CPU"
+* Magic tag for "NSC/BS-CPU"
 
 ### Characteristics
+
 ^[Top](#top)
-- Programming is done via ISO14443-A (but not sure how to modulate). Original tag is working somewhere hidden from proxmark.
-- ATQA-SAK: `0044`-`20`
-- ATS: `05 72 F7 60 02`
-- Communications encrypted(?)
-   - When writing with copykey, after RATS, this communication takes place (NSC ID programmed: `5800000000`, tag UID: `1D94CE25840000`):
+
+* Programming is done via ISO14443-A (but not sure how to modulate). Original tag is working somewhere hidden from proxmark.
+* ATQA-SAK: `0044`-`20`
+* ATS: `05 72 F7 60 02`
+* Communications encrypted(?)
+  * When writing with copykey, after RATS, this communication takes place (NSC ID programmed: `5800000000`, tag UID: `1D94CE25840000`):
+
      ```
      >>> 54 03 8A BC DF C1 [CRC]
      <<< A2 [CRC]
@@ -2508,7 +3482,8 @@ FB  | 6A82
      ```
 
 ### Magic commands
+
 ^[Top](#top)
 
-- Write NSC UID: `54 [part 1b] [data 4b enc] [CRC]`
-    - Tag replies: `A2 [CRC]`
+* Write NSC UID: `54 [part 1b] [data 4b enc] [CRC]`
+  * Tag replies: `A2 [CRC]`

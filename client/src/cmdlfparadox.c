@@ -105,10 +105,10 @@ int demodParadox(bool verbose, bool oldChksum) {
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
     if (bits == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
-    size_t size = getFromGraphBuf(bits);
+    size_t size = getFromGraphBuffer(bits);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox not enough samples");
         free(bits);
@@ -285,7 +285,7 @@ static int CmdParadoxReader(const char *Cmd) {
     do {
         lf_read(false, 10000);
         demodParadox(!cm, old);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }
@@ -383,8 +383,8 @@ static int CmdParadoxClone(const char *Cmd) {
     } else {
         res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     }
-    PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf paradox read`") " to verify");
+    PrintAndLogEx(SUCCESS, "Done!");
+    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf paradox read`") " to verify");
     return res;
 }
 
@@ -446,6 +446,10 @@ static int CmdParadoxSim(const char *Cmd) {
     uint8_t clk = 50, high = 10, low = 8;
 
     lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     payload->fchigh = high;
     payload->fclow =  low;
     payload->separator = 0;
@@ -471,7 +475,7 @@ static command_t CommandTable[] = {
     {"help",   CmdHelp,          AlwaysAvailable, "This help"},
     {"demod",  CmdParadoxDemod,  AlwaysAvailable, "demodulate a Paradox FSK tag from the GraphBuffer"},
     {"reader", CmdParadoxReader, IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",  CmdParadoxClone,  IfPm3Lf,         "clone paradox tag"},
+    {"clone",  CmdParadoxClone,  IfPm3Lf,         "clone paradox tag to T55x7, Q5/T5555 or EM4305/4469"},
     {"sim",    CmdParadoxSim,    IfPm3Lf,         "simulate paradox tag"},
     {NULL, NULL, NULL, NULL}
 };

@@ -18,7 +18,6 @@
 // SPIFFS api for RDV40 Integration
 //-----------------------------------------------------------------------------
 
-#define SPIFFS_CFG_PHYS_SZ (1024 * 192)
 #define SPIFFS_CFG_PHYS_ERASE_SZ (4 * 1024)
 #define SPIFFS_CFG_PHYS_ADDR (0)
 #define SPIFFS_CFG_LOG_PAGE_SZ (256)
@@ -313,7 +312,7 @@ static int is_valid_filename(const char *filename) {
 */
 static void copy_in_spiffs(const char *src, const char *dst) {
     uint32_t size = size_in_spiffs(src);
-    uint8_t *mem = BigBuf_malloc(size);
+    uint8_t *mem = BigBuf_calloc(size);
     read_from_spiffs(src, (uint8_t *)mem, size);
     write_to_spiffs(dst, (uint8_t *)mem, size);
 }
@@ -578,19 +577,25 @@ int rdv40_spiffs_make_symlink(const char *linkdest, const char *filename, RDV40S
 // preexistence, avoiding a link being created if filename exists, or avoiding a file being created if
 // symlink exists with same name
 int rdv40_spiffs_read_as_filetype(const char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level) {
+
     RDV40_SPIFFS_SAFE_FUNCTION(
+
         RDV40SpiFFSFileType filetype = filetype_in_spiffs((char *)filename);
+
     switch (filetype) {
-    case RDV40_SPIFFS_FILETYPE_REAL:
+    case RDV40_SPIFFS_FILETYPE_REAL: {
         rdv40_spiffs_read(filename, dst, size, level);
             break;
-        case RDV40_SPIFFS_FILETYPE_SYMLINK:
+        }
+        case RDV40_SPIFFS_FILETYPE_SYMLINK: {
             rdv40_spiffs_read_as_symlink(filename, dst, size, level);
             break;
+        }
         case RDV40_SPIFFS_FILETYPE_BOTH:
         case RDV40_SPIFFS_FILETYPE_UNKNOWN:
-        default:
+        default: {
             break;
+        }
     }
     )
 }
@@ -639,24 +644,35 @@ void rdv40_spiffs_safe_print_tree(void) {
     struct spiffs_dirent e;
     struct spiffs_dirent *pe = &e;
 
+    char *resolvedlink = (char *)BigBuf_calloc(11 + SPIFFS_OBJ_NAME_LEN);
+    char *linkdest = (char *)BigBuf_calloc(SPIFFS_OBJ_NAME_LEN);
+    bool printed = false;
+
     SPIFFS_opendir(&fs, "/", &d);
     while ((pe = SPIFFS_readdir(&d, pe))) {
 
-        char resolvedlink[11 + SPIFFS_OBJ_NAME_LEN];
+        memset(resolvedlink, 0, 11 + SPIFFS_OBJ_NAME_LEN);
+
         if (rdv40_spiffs_is_symlink((const char *)pe->name)) {
-            char linkdest[SPIFFS_OBJ_NAME_LEN];
+
             read_from_spiffs((char *)pe->name, (uint8_t *)linkdest, SPIFFS_OBJ_NAME_LEN);
             sprintf(resolvedlink, "(.lnk) --> %s", linkdest);
-            // Kind of stripping the .lnk extension
-            strtok((char *)pe->name, ".");
-        } else {
-            memset(resolvedlink, 0, sizeof(resolvedlink));
+            char *linkname = (char *)pe->name;
+            int len = strlen(linkname);
+            if (len >= 4 && strcmp(&linkname[len - 4], ".lnk") == 0) {
+                linkname[len - 4] = '\0';
+            }
         }
 
-        Dbprintf("[%04x]\t " _YELLOW_("%i") " B |-- %s%s", pe->obj_id, pe->size, pe->name, resolvedlink);
+        Dbprintf("[%04u] " _YELLOW_("%5i") " B |-- %s%s", pe->obj_id, pe->size, pe->name, resolvedlink);
+        printed = true;
+    }
+    if (printed == false) {
+        DbpString("<empty>");
     }
     SPIFFS_closedir(&d);
     rdv40_spiffs_lazy_mount_rollback(changed);
+    BigBuf_free();
 }
 
 void rdv40_spiffs_safe_wipe(void) {
@@ -676,10 +692,10 @@ void rdv40_spiffs_safe_wipe(void) {
             read_from_spiffs((char *)pe->name, (uint8_t *)linkdest, SPIFFS_OBJ_NAME_LEN);
 
             remove_from_spiffs(linkdest);
-            Dbprintf(".lnk removed %s", pe->name);
+            Dbprintf("removed %s", linkdest);
 
             remove_from_spiffs((char *)pe->name);
-            Dbprintf("removed %s", linkdest);
+            Dbprintf(".lnk removed %s", pe->name);
 
         } else {
             remove_from_spiffs((char *)pe->name);

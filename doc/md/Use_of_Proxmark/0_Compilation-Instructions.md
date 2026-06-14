@@ -10,6 +10,7 @@
     - [Compile for generic Proxmark3 platforms](#compile-for-generic-proxmark3-platforms)
   - [Get the latest commits](#get-the-latest-commits)
   - [Clean and compile everything](#clean-and-compile-everything)
+    - [if there are different Python 3 packages installed](#if-there-are-different-python-3-packages-installed)
     - [if you got an error](#if-you-got-an-error)
   - [Install](#install)
   - [Flash the BOOTROM & FULLIMAGE](#flash-the-bootrom--fullimage)
@@ -54,6 +55,15 @@ git pull
 
 ```sh
 make clean && make -j
+```
+
+### if there are different Python 3 packages installed
+^[Top](#top)
+
+It is possible to point to a different Python 3 package. For example, to build against Python 3.11:
+
+```sh
+make clean && make -j PYTHON3_PKGCONFIG=python-3.11
 ```
 
 ### if you got an error
@@ -106,6 +116,17 @@ or
 ```sh
 proxmark3 /dev/ttyACM0 --flash --unlock-bootloader --image /tmp/my-bootrom.elf --image /tmp/my-fullimage.elf
 ```
+
+## Updating SPI flash structure and contents (RDV4.x, some PM3 Easy variants)
+^[Top](#top)
+
+For the devices equipped with external SPI flash memory chip in some cases it might be essential to update the memory structure as well as to upload new keys from the dictionaries. To do so execute following command inside the client:
+
+```
+[usb] pm3 --> script run init_rdv4
+```
+
+For more details prease refer to [this doc](./2_Configuration-and-Verification.md).
 
 ### The button trick
 ^[Top](#top)

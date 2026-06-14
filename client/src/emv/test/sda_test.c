@@ -132,6 +132,10 @@ static int sda_test_raw(bool verbose) {
 
     size_t ipk_pk_len = ipk_data[13];
     unsigned char *ipk_pk = calloc(1, ipk_pk_len);
+    if (!ipk_pk) {
+        free(ipk_data);
+        return 1;
+    }
     memcpy(ipk_pk, ipk_data + 15, ipk_data_len - 36);
     memcpy(ipk_pk + ipk_data_len - 36, issuer_rem, sizeof(issuer_rem));
 
@@ -262,16 +266,16 @@ static int sda_test_pk(bool verbose) {
 int exec_sda_test(bool verbose) {
     int ret = sda_test_raw(verbose);
     if (ret) {
-        PrintAndLogEx(WARNING, "SDA raw test: %s", _RED_("failed"));
+        PrintAndLogEx(WARNING, "SDA raw test ( %s )", _RED_("fa1l"));
         return ret;
     }
-    PrintAndLogEx(SUCCESS, "SDA raw test: %s", _GREEN_("passed"));
+    PrintAndLogEx(SUCCESS, "SDA raw test ( %s )", _GREEN_("ok"));
 
     ret = sda_test_pk(verbose);
     if (ret) {
-        PrintAndLogEx(WARNING, "SDA test pk: %s", _RED_("failed"));
+        PrintAndLogEx(WARNING, "SDA test pk ( %s )", _RED_("fail"));
         return ret;
     }
-    PrintAndLogEx(SUCCESS, "SDA test pk: %s", _GREEN_("passed"));
+    PrintAndLogEx(SUCCESS, "SDA test pk ( %s )", _GREEN_("ok"));
     return 0;
 }

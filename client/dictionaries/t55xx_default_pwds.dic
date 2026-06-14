@@ -5,6 +5,8 @@
 51243648
 000D8787
 19920427
+# White Chinese cloner, circa 2019, firmware v5.04.16.0727 (eBay)
+002BCFCF
 # ZX-copy3  T55xx / EM4305
 # ref. http://www.proxmark.org/forum/viewtopic.php?pid=40662#p40662
 # default PROX
@@ -20,6 +22,8 @@ F9DCEBA0
 89A69E60
 # ref lock
 314159E0
+#Zonsin ZX-COPY10
+7B3D5C48
 # ref. http://www.proxmark.org/forum/viewtopic.php?pid=28115#p28115
 AA55BBBB
 # ref. http://www.proxmark.org/forum/viewtopic.php?pid=33376#p33376

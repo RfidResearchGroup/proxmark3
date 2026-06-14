@@ -51,8 +51,9 @@
 // *) UID is always used "transmission order" (LSB), which is reverse to display order
 
 // TODO / BUGS / ISSUES:
-// *) signal decoding is unable to detect collisions.
-// *) add anti-collision support for inventory-commands
+// *) signal decoding has basic collision detection via signal_activity flag
+//    (detects modulation-in-both-halves and failed SOF patterns)
+// *) 16-slot inventory with anti-collision tree walking is implemented
 // *) read security status of a block
 // *) simulation do not support two subcarrier modes.
 // *) remove or refactor code under "deprecated"
@@ -90,6 +91,11 @@
 // times in samples @ 212kHz when acting as reader
 #define ISO15693_READER_TIMEOUT            330  // 330/212kHz = 1558us
 #define ISO15693_READER_TIMEOUT_WRITE      4700 // 4700/212kHz = 22ms, nominal 20ms
+// Per-slot listen window for 16-slot inventory. Only needs to catch the START of a
+// response (a SOF) within t1 (~320us) + margin -- once a SOF is detected the timeout
+// no longer applies and the full response is received. Tuned down from the single-slot
+// ISO15693_READER_TIMEOUT (1558us) to speed up empty slots. Bump up if tags get missed.
+#define ISO15693_INVENTORY_SLOT_TIMEOUT    160  // 160/212kHz = 755us (~2.3x t1)
 
 // iceman: This defines below exists in the header file,  just here for my easy reading
 // Delays in SSP_CLK ticks.
@@ -180,8 +186,7 @@ static void CodeIso15693AsReaderEOF(void) {
 
 static int get_uid_slix(uint32_t start_time, uint32_t *eof_time, uint8_t *uid) {
 
-    uint8_t *answer = BigBuf_malloc(ISO15693_MAX_RESPONSE_LENGTH);
-    memset(answer, 0x00, ISO15693_MAX_RESPONSE_LENGTH);
+    uint8_t *answer = BigBuf_calloc(ISO15693_MAX_RESPONSE_LENGTH);
 
     start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
 
@@ -437,6 +442,7 @@ typedef struct {
     int threshold_sof;
     int threshold_half;
     uint16_t previous_amplitude;
+    bool signal_activity;  // set when signal detected but decode failed (collision hint)
     uint8_t *output;
 } DecodeTag_t;
 
@@ -492,6 +498,7 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                     tag->state = STATE_TAG_SOF_HIGH_END;
                 }
             } else { // high phase was too short
+                tag->signal_activity = true; // signal detected but SOF failed (possible collision)
                 tag->posCount = 1;
                 tag->previous_amplitude = amplitude;
                 tag->state = STATE_TAG_SOF_LOW;
@@ -514,6 +521,7 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
             } else {
                 tag->posCount++;
                 if (tag->posCount > (recv_speed ? 13 : 52)) { // high phase too long
+                    tag->signal_activity = true; // signal detected but SOF failed (possible collision)
                     tag->posCount = 0;
                     tag->previous_amplitude = amplitude;
                     tag->state = STATE_TAG_SOF_LOW;
@@ -540,6 +548,7 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                     if (tag->lastBit == LOGIC0) {  // this was already part of EOF
                         tag->state = STATE_TAG_EOF;
                     } else {
+                        tag->signal_activity = true; // collision: modulation in both halves during data
                         tag->posCount = 0;
                         tag->previous_amplitude = amplitude;
                         tag->state = STATE_TAG_SOF_LOW;
@@ -722,6 +731,7 @@ typedef struct DecodeTagFSK {
     uint8_t  shiftReg;
     uint16_t len;
     uint16_t max_len;
+    bool     signal_activity;  // set when signal detected but decode failed (collision hint)
     uint8_t  *output;
 } DecodeTagFSK_t;
 
@@ -770,12 +780,13 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
                 // SOF part 1 finished
                 DecodeTag->state = STATE_FSK_SOF_END_484;
                 DecodeTag->count = 1;
-            } else if (FREQ_IS_424(freq) && !MAX_COUNT(DecodeTag->count, recv_speed)) // still in SOF at 424
+            } else if (FREQ_IS_424(freq) && !MAX_COUNT(DecodeTag->count, recv_speed)) { // still in SOF at 424
                 DecodeTag->count++;
-            else { // SOF failed, roll back
+            } else { // SOF failed, roll back
 #ifdef DEBUG
-                if (DEBUG)
+                if (DEBUG) {
                     Dbprintf("SOF_424 failed: freq=%d, count=%d, recv_speed=%d", freq, DecodeTag->count, recv_speed);
+                }
 #endif
                 DecodeTag->state = STATE_FSK_BEFORE_SOF;
             }
@@ -785,12 +796,13 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
             if (FREQ_IS_424(freq) && LOGIC_COUNT(DecodeTag->count, recv_speed)) {
                 DecodeTag->state = STATE_FSK_SOF_END_424;
                 DecodeTag->count = 1;
-            } else if (FREQ_IS_484(freq) && !MAX_COUNT(DecodeTag->count, recv_speed)) // still in SOF_END_484
+            } else if (FREQ_IS_484(freq) && !MAX_COUNT(DecodeTag->count, recv_speed)) { // still in SOF_END_484
                 DecodeTag->count++;
-            else { // SOF failed, roll back
+            } else { // SOF failed, roll back
 #ifdef DEBUG
-                if (DEBUG)
+                if (DEBUG) {
                     Dbprintf("SOF_END_484 failed: freq=%d, count=%d, recv_speed=%d", freq, DecodeTag->count, recv_speed);
+                }
 #endif
                 DecodeTag->state = STATE_FSK_BEFORE_SOF;
             }
@@ -808,12 +820,13 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
                 DecodeTag->lastBit = SOF;
                 DecodeTag->state = STATE_FSK_RECEIVING_DATA_424;
                 LED_C_ON();
-            } else if (FREQ_IS_424(freq) && !MAX_COUNT(DecodeTag->count, recv_speed)) // still in SOF_END_424
+            } else if (FREQ_IS_424(freq) && !MAX_COUNT(DecodeTag->count, recv_speed)) { // still in SOF_END_424
                 DecodeTag->count++;
-            else { // SOF failed, roll back
+            } else { // SOF failed, roll back
 #ifdef DEBUG
-                if (DEBUG)
+                if (DEBUG) {
                     Dbprintf("SOF_END_424 failed: freq=%d, count=%d, recv_speed=%d", freq, DecodeTag->count, recv_speed);
+                }
 #endif
                 DecodeTag->state = STATE_FSK_BEFORE_SOF;
             }
@@ -864,24 +877,28 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
                     DecodeTag->shiftReg = 0;
                 }
                 DecodeTag->count = 2;
-            } else if (FREQ_IS_424(freq) && !MAX_COUNT(DecodeTag->count, recv_speed)) // still at 424
+            } else if (FREQ_IS_424(freq) && !MAX_COUNT(DecodeTag->count, recv_speed)) { // still at 424
                 DecodeTag->count++;
+            }
 
             else if (FREQ_IS_484(freq) && DecodeTag->lastBit == LOGIC0_PART2 &&
                      SEOF_COUNT(DecodeTag->count, recv_speed)) {
                 // EOF has started
 #ifdef DEBUG
-                if (DEBUG)
+                if (DEBUG) {
                     Dbprintf("RECEIVING_DATA_424->EOF: freq=%d, count=%d, recv_speed=%d, lastbit=%d, state=%d", freq, DecodeTag->count, recv_speed, DecodeTag->lastBit, DecodeTag->state);
+                }
 #endif
                 DecodeTag->count = 1;
                 DecodeTag->state = STATE_FSK_EOF;
                 LED_C_OFF();
             } else { // error
 #ifdef DEBUG
-                if (DEBUG)
+                if (DEBUG) {
                     Dbprintf("RECEIVING_DATA_424 error: freq=%d, count=%d, recv_speed=%d, lastbit=%d, state=%d", freq, DecodeTag->count, recv_speed, DecodeTag->lastBit, DecodeTag->state);
+                }
 #endif
+                DecodeTag->signal_activity = true; // signal present but decode failed (possible collision)
                 DecodeTag->state = STATE_FSK_ERROR;
                 LED_C_OFF();
                 return true;
@@ -930,14 +947,16 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
                     DecodeTag->shiftReg = 0;
                 }
                 DecodeTag->count = 2;
-            } else if (FREQ_IS_484(freq) && !MAX_COUNT(DecodeTag->count, recv_speed)) // still at 484
+            } else if (FREQ_IS_484(freq) && !MAX_COUNT(DecodeTag->count, recv_speed)) { // still at 484
                 DecodeTag->count++;
-            else { // error
+            } else { // error
 #ifdef DEBUG
-                if (DEBUG)
+                if (DEBUG) {
                     Dbprintf("RECEIVING_DATA_484 error: freq=%d, count=%d, recv_speed=%d, lastbit=%d, state=%d", freq, DecodeTag->count, recv_speed, DecodeTag->lastBit, DecodeTag->state);
+                }
 #endif
                 LED_C_OFF();
+                DecodeTag->signal_activity = true; // signal present but decode failed (possible collision)
                 DecodeTag->state = STATE_FSK_ERROR;
                 return true;
             }
@@ -946,12 +965,14 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
         case STATE_FSK_EOF:
             if (FREQ_IS_484(freq) && !MAX_COUNT(DecodeTag->count, recv_speed)) { // still at 484
                 DecodeTag->count++;
-                if (SEOF_COUNT(DecodeTag->count, recv_speed))
+                if (SEOF_COUNT(DecodeTag->count, recv_speed)) {
                     return true; // end of the transmission
+                }
             } else { // error
 #ifdef DEBUG
-                if (DEBUG)
+                if (DEBUG) {
                     Dbprintf("EOF error: freq=%d, count=%d, recv_speed=%d", freq, DecodeTag->count, recv_speed);
+                }
 #endif
                 DecodeTag->state = STATE_FSK_ERROR;
                 return true;
@@ -960,8 +981,9 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
         case STATE_FSK_ERROR:
             LED_C_OFF();
 #ifdef DEBUG
-            if (DEBUG)
+            if (DEBUG) {
                 Dbprintf("FSK error: freq=%d, count=%d, recv_speed=%d", freq, DecodeTag->count, recv_speed);
+            }
 #endif
             return true; // error
             break;
@@ -985,10 +1007,11 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
     DecodeTagFSK_t dtfm = { 0 };
     DecodeTagFSK_t *dtf = &dtfm;
 
-    if (fsk)
+    if (fsk) {
         DecodeTagFSKInit(dtf, response, max_len);
-    else
+    } else {
         DecodeTagInit(dt, response, max_len);
+    }
 
     // wait for last transfer to complete
     while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY));
@@ -1004,18 +1027,21 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
 
     // Setup and start DMA.
     if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
+        if (g_dbglevel > DBG_ERROR) {
+            Dbprintf("FpgaSetupSscDma failed. Exiting");
+        }
         return PM3_EINIT;
     }
 
     uint32_t dma_start_time = 0;
-    uint16_t *upTo = dma->buf;
+    const uint16_t *upTo = dma->buf;
 
     for (;;) {
 
         volatile uint16_t behindBy = ((uint16_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
-        if (behindBy == 0)
+        if (behindBy == 0) {
             continue;
+        }
 
         samples++;
         if (samples == 1) {
@@ -1032,12 +1058,12 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
             if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
 
                 // primary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RCR == false) {
+                if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
                     AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
                 }
                 // secondary buffer sets as primary, secondary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RNCR == false) {
+                if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
                     AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
                 }
@@ -1068,7 +1094,12 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
 
             // timeout
             if (samples > timeout && dtf->state < STATE_FSK_RECEIVING_DATA_484) {
-                ret = PM3_ETIMEOUT;
+                if (dtf->signal_activity) {
+                    ret = PM3_EPARTIAL;
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("ISO15693 FSK: signal activity detected but decode failed (collision hint)");
+                } else {
+                    ret = PM3_ETIMEOUT;
+                }
                 break;
             }
 
@@ -1091,7 +1122,12 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
 
             // timeout
             if (samples > timeout && dt->state < STATE_TAG_RECEIVING_DATA) {
-                ret = PM3_ETIMEOUT;
+                if (dt->signal_activity) {
+                    ret = PM3_EPARTIAL;
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("ISO15693: signal activity detected but decode failed (collision hint)");
+                } else {
+                    ret = PM3_ETIMEOUT;
+                }
                 break;
             }
         }
@@ -1392,7 +1428,9 @@ static int RAMFUNC Handle15693SampleFromReader(bool bit, DecodeReader_t *reader)
             if (reader->posCount == 1) {
                 reader->sum1 = bit ? 1 : 0;
             } else if (reader->posCount <= 4) {
-                if (bit) reader->sum1++;
+                if (bit) {
+                    reader->sum1++;
+                }
             } else if (reader->posCount == 5) {
                 reader->sum2 = bit ? 1 : 0;
             } else if (bit) {
@@ -1477,12 +1515,14 @@ static int RAMFUNC Handle15693SampleFromReader(bool bit, DecodeReader_t *reader)
 // correctly.
 //-----------------------------------------------------------------------------
 
-int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time) {
+int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time, bool allow_usb_interrupt) {
     int samples = 0;
     bool gotFrame = false;
 
-    // the decoder data structure
-    DecodeReader_t *dr = (DecodeReader_t *)BigBuf_malloc(sizeof(DecodeReader_t));
+    // the decoder data structure — use stack, not BigBuf, to avoid a per-call
+    // allocation leak when the function is restarted (e.g. on data_available exit)
+    DecodeReader_t dr_buf = {0};
+    DecodeReader_t *dr = &dr_buf;
     DecodeReaderInit(dr, received, max_len, 0, NULL);
 
     // wait for last transfer to complete
@@ -1499,16 +1539,20 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
     // Setup and start DMA.
     dmabuf8_t *dma = get_dma8();
     if (FpgaSetupSscDma(dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
+        if (g_dbglevel > DBG_ERROR) {
+            Dbprintf("FpgaSetupSscDma failed. Exiting");
+        }
         return -4;
     }
-    uint8_t *upTo = dma->buf;
+    const uint8_t *upTo = dma->buf;
 
     uint32_t dma_start_time = GetCountSspClk() & 0xfffffff8;
 
     for (;;) {
         volatile uint16_t behindBy = ((uint8_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
-        if (behindBy == 0) continue;
+        if (behindBy == 0) {
+            continue;
+        }
 
         if (samples == 0) {
             // DMA has transferred the very first data
@@ -1543,6 +1587,14 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
 
         if (BUTTON_PRESS()) {
             dr->byteCount = -1;
+            break;
+        }
+
+        if (allow_usb_interrupt &&
+                (dr->state == STATE_READER_UNSYNCD ||
+                 dr->state == STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF) &&
+                data_available()) {
+            dr->byteCount = -2;
             break;
         }
 
@@ -1587,7 +1639,7 @@ void AcquireRawAdcSamplesIso15693(void) {
 
     LED_A_ON();
 
-    uint8_t *dest = BigBuf_malloc(4000);
+    uint8_t *dest = BigBuf_calloc(4096);
 
     // switch field on
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
@@ -1603,7 +1655,7 @@ void AcquireRawAdcSamplesIso15693(void) {
     SpinDelay(250);
 
     // Now send the command
-    tosend_t *ts = get_tosend();
+    const tosend_t *ts = get_tosend();
 
     uint32_t start_time = 0;
     TransmitTo15693Tag(ts->buf, ts->max, &start_time, false);
@@ -1666,7 +1718,9 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
 
     // Setup and start DMA.
     if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (g_dbglevel > DBG_ERROR) DbpString("FpgaSetupSscDma failed. Exiting");
+        if (g_dbglevel > DBG_ERROR) {
+            DbpString("FpgaSetupSscDma failed. Exiting");
+        }
         switch_off();
         return;
     }
@@ -1681,12 +1735,14 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
     // Count of samples received so far, so that we can include timing
     int samples = 0;
 
-    uint16_t *upTo = dma->buf;
+    const uint16_t *upTo = dma->buf;
 
     for (;;) {
 
         volatile int behind_by = ((uint16_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
-        if (behind_by < 1) continue;
+        if (behind_by < 1) {
+            continue;
+        }
 
         samples++;
         if (samples == 1) {
@@ -1708,12 +1764,12 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
             if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
 
                 // primary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RCR == false) {
+                if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
                     AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
                 }
                 // secondary buffer sets as primary, secondary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RNCR == false) {
+                if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
                     AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
                 }
@@ -1902,7 +1958,7 @@ static void BuildIdentifyRequest(uint8_t *cmd) {
 //  If you do not need the answer use NULL for *recv[]
 //  return: length of received data
 // logging enabled
-int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t *recv,
+int SendDataTag(const uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t *recv,
                 uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time, uint16_t *resp_len) {
 
     if (init) {
@@ -1918,7 +1974,7 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
         CodeIso15693AsReader256(send, sendlen);
     }
 
-    tosend_t *ts = get_tosend();
+    const tosend_t *ts = get_tosend();
     TransmitTo15693Tag(ts->buf, ts->max, &start_time, false);
 
     if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
@@ -1941,7 +1997,7 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
 int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time, bool fsk, bool recv_speed, uint16_t *resp_len) {
 
     CodeIso15693AsReaderEOF();
-    tosend_t *ts = get_tosend();
+    const tosend_t *ts = get_tosend();
     TransmitTo15693Tag(ts->buf, ts->max, &start_time, false);
     uint32_t end_time = start_time + 32 * (8 * ts->max - 4); // subtract the 4 padding bits after EOF
     LogTrace_ISO15693(NULL, 0, (start_time * 4), (end_time * 4), NULL, true);
@@ -1959,14 +2015,15 @@ int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, ui
 
 // Decodes a message from a tag and displays its metadata and content
 #define DBD15STATLEN 48
-static void DbdecodeIso15693Answer(int len, uint8_t *d) {
+static void DbdecodeIso15693Answer(int n, const uint8_t *d) {
 
-    if (len > 3) {
+    if (n > 3) {
 
         char status[DBD15STATLEN + 1] = {0};
 
-        if (d[0] & ISO15_RES_EXT)
+        if (d[0] & ISO15_RES_EXT) {
             strncat(status, "ProtExt ", DBD15STATLEN - strlen(status));
+        }
 
         if (d[0] & ISO15_RES_ERROR) {
             // error
@@ -2007,12 +2064,15 @@ static void DbdecodeIso15693Answer(int len, uint8_t *d) {
             strncat(status, "No error ", DBD15STATLEN - strlen(status));
         }
 
-        if (CheckCrc15(d, len))
+        if (CheckCrc15(d, n)) {
             strncat(status, "[+] crc ( " _GREEN_("ok") " )", DBD15STATLEN - strlen(status));
-        else
+        } else {
             strncat(status, "[!] crc ( " _RED_("fail") " )", DBD15STATLEN - strlen(status));
+        }
 
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("%s", status);
+        if (g_dbglevel >= DBG_ERROR) {
+            Dbprintf("%s", status);
+        }
     }
 }
 
@@ -2029,7 +2089,7 @@ void ReaderIso15693(iso15_card_select_t *p_card) {
     LED_A_ON();
     set_tracing(true);
 
-    uint8_t *answer = BigBuf_malloc(ISO15693_MAX_RESPONSE_LENGTH);
+    uint8_t *answer = BigBuf_calloc(ISO15693_MAX_RESPONSE_LENGTH);
     memset(answer, 0x00, ISO15693_MAX_RESPONSE_LENGTH);
 
     // FIRST WE RUN AN INVENTORY TO GET THE TAG UID
@@ -2097,7 +2157,7 @@ void ReaderIso15693(iso15_card_select_t *p_card) {
 // When SIM: initialize the Proxmark3 as ISO15693 tag
 void Iso15693InitTag(void) {
 
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+    FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF_15);
 
     // Start from off (no field generated)
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -2117,17 +2177,9 @@ void Iso15693InitTag(void) {
     StartCountSspClk();
 }
 
-void EmlClearIso15693(void) {
-    // Resetting the bitstream also frees the BigBuf memory, so we do this here to prevent
-    // an inconvenient reset in the future by Iso15693InitTag
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
-    BigBuf_Clear_EM();
-    reply_ng(CMD_HF_ISO15693_EML_CLEAR, PM3_SUCCESS, NULL, 0);
-}
-
 // Simulate an ISO15693 TAG, perform anti-collision and then print any reader commands
 // all demodulation performed in arm rather than host. - greg
-void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
+void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
 
     // free eventually allocated BigBuf memory
     BigBuf_free_keep_EM();
@@ -2137,7 +2189,9 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
     iso15_tag_t *tag = (iso15_tag_t *) BigBuf_get_EM_addr();
     if (tag == NULL) {
-        Dbprintf("Can't allocate emulator memory");
+        if (g_dbglevel >= DBG_DEBUG) {
+            Dbprintf("Failed to allocate memory");
+        }
         reply_ng(CMD_HF_ISO15693_SIMULATE, PM3_EFAILED, NULL, 0);
         return;
     }
@@ -2149,7 +2203,8 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
         // User supplied not empty?
         if (memcmp(uid, empty, 8)) {
             // Set default values if user supplied a UID.
-            // Assume emulator memory is empty
+            memset(tag, 0, sizeof(*tag));
+
             tag->uid[0] = uid[7]; // always E0
             tag->uid[1] = uid[6]; // IC Manufacturer code
             tag->uid[2] = uid[5];
@@ -2217,8 +2272,9 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
     while (exit_loop == false) {
 
         button_pressed = BUTTON_PRESS();
-        if (button_pressed || data_available())
+        if (button_pressed || data_available()) {
             break;
+        }
 
         WDT_HIT();
 
@@ -2236,21 +2292,23 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
         // Listen to reader
         uint32_t reader_eof_time = 0;
-        int cmd_len = GetIso15693CommandFromReader(cmd, sizeof(cmd), &reader_eof_time);
+        int cmd_len = GetIso15693CommandFromReader(cmd, sizeof(cmd), &reader_eof_time, false);
         if (cmd_len < 0) {
             button_pressed = true;
             break;
         }
 
-        if (cmd_len <= 3)
+        if (cmd_len <= 3) {
             continue;
+        }
 
         // Shorten 0 terminated msgs
         // (Some times received commands are prolonged with a random number of 0 bytes...)
         while (cmd[cmd_len - 1] == 0) {
             cmd_len--;
-            if (cmd_len <= 3)
+            if (cmd_len <= 3) {
                 break;
+            }
         }
 
         if (g_dbglevel >= DBG_DEBUG) {
@@ -2258,8 +2316,9 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             Dbhexdump(cmd_len, cmd, false);
         }
 
-        if (cmd_len < 3)
+        if (cmd_len < 3) {
             continue;
+        }
 
         // Check CRC and drop received cmd with bad CRC
         uint16_t crc = CalculateCrc15(cmd, cmd_len - 2);
@@ -2268,14 +2327,19 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             if (((crc & 0xff) != cmd[cmd_len - 2]) || ((crc >> 8) != cmd[cmd_len - 1])) {
                 crc = CalculateCrc15(cmd, ++cmd_len - 2); // if crc end with 00 00
                 if (((crc & 0xff) != cmd[cmd_len - 2]) || ((crc >> 8) != cmd[cmd_len - 1])) {
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("CrcFail!, expected CRC=%02X%02X", crc & 0xff, crc >> 8);
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("CrcFail!, expected CRC=%02X%02X", crc & 0xff, crc >> 8);
+                    }
                     continue;
-                } else if (g_dbglevel >= DBG_DEBUG)
+                } else if (g_dbglevel >= DBG_DEBUG) {
                     Dbprintf("CrcOK");
-            } else if (g_dbglevel >= DBG_DEBUG)
+                }
+            } else if (g_dbglevel >= DBG_DEBUG) {
                 Dbprintf("CrcOK");
-        } else if (g_dbglevel >= DBG_DEBUG)
+            }
+        } else if (g_dbglevel >= DBG_DEBUG) {
             Dbprintf("CrcOK");
+        }
 
         cmd_len -= 2; // remove the CRC from the cmd
         recvLen = 0;
@@ -2284,12 +2348,15 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
         tag->expectFsk = ((cmd[0] & ISO15_REQ_SUBCARRIER_TWO) == ISO15_REQ_SUBCARRIER_TWO);
 
         if (g_dbglevel >= DBG_DEBUG) {
-            if (tag->expectFsk)
+            if (tag->expectFsk) {
                 Dbprintf("ISO15_REQ_SUBCARRIER_TWO support is currently experimental!");
-            if ((cmd[0] & ISO15_REQ_PROTOCOL_EXT) == ISO15_REQ_PROTOCOL_EXT)
+            }
+            if ((cmd[0] & ISO15_REQ_PROTOCOL_EXT) == ISO15_REQ_PROTOCOL_EXT) {
                 Dbprintf("ISO15_REQ_PROTOCOL_EXT not supported!");
-            if ((cmd[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION)
+            }
+            if ((cmd[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION) {
                 Dbprintf("ISO15_REQ_OPTION not supported!");
+            }
         }
 
         if (((cmd[0] & ISO15_REQ_INVENTORY) == ISO15_REQ_INVENTORY) && tag->state != TAG_STATE_SILENCED) {
@@ -2300,22 +2367,26 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
             if (g_dbglevel >= DBG_DEBUG) {
                 Dbprintf("Inventory req");
-                if ((cmd[0] & ISO15_REQINV_SLOT1) == ISO15_REQINV_SLOT1)
+                if ((cmd[0] & ISO15_REQINV_SLOT1) == ISO15_REQINV_SLOT1) {
                     Dbprintf("ISO15_REQINV_SLOT1/SLOT16 not supported!");
+                }
             }
 
             cmdCpt = 2;
 
             // Check AFI
             if ((cmd[0] & ISO15_REQINV_AFI) == ISO15_REQINV_AFI) {
-                if (cmd[cmdCpt] != tag->afi && cmd[cmdCpt] != 0)
+                if (cmd[cmdCpt] != tag->afi && cmd[cmdCpt] != 0) {
                     continue; // bad AFI : drop request
+                }
                 cmdCpt++;
             }
 
             // Check mask
-            if (cmdCpt >= cmd_len)
+            if (cmdCpt >= cmd_len) {
                 continue; // mask is not present : drop request
+            }
+
             mask_len = cmd[cmdCpt++];
 
             maskCpt = 0;
@@ -2328,8 +2399,9 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                 mask_len -= 8;
             }
 
-            if (mask_len > 0 && cmdCpt >= cmd_len)
+            if (mask_len > 0 && cmdCpt >= cmd_len) {
                 continue; // mask is shorter than declared mask lenght: drop request
+            }
 
             while (mask_len > 0) { // Bit comparison
                 mask_len--;
@@ -2339,171 +2411,217 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                 }
             }
 
-            if (error > 0)
+            if (error > 0) {
                 continue;
+            }
 
             // No error: Answer
             recv[0] = ISO15_NOERROR;
             recv[1] = tag->dsfid;
             memcpy(&recv[2], tag->uid, 8);
             recvLen = 10;
+
         } else {
+
             if ((cmd[0] & ISO15_REQ_SELECT) == ISO15_REQ_SELECT) {
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Selected Request");
-                if (tag->state != TAG_STATE_SELECTED)
+                if (g_dbglevel >= DBG_DEBUG) {
+                    Dbprintf("Selected Request");
+                }
+                if (tag->state != TAG_STATE_SELECTED) {
                     continue; // drop selected request if not selected
+                }
                 tag->state = TAG_STATE_READY; // Select flag set if already selected : unselect
             }
 
             cmdCpt = 2;
             if ((cmd[0] & ISO15_REQ_ADDRESS) == ISO15_REQ_ADDRESS) {
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Addressed Request");
-                if (cmd_len < cmdCpt + 8)
+                if (g_dbglevel >= DBG_DEBUG) {
+                    Dbprintf("Addressed Request");
+                }
+                if (cmd_len < cmdCpt + 8) {
                     continue;
+                }
                 if (memcmp(&cmd[cmdCpt], tag->uid, 8) != 0) {
                     if (cmd_len < cmdCpt + 9 ||  memcmp(&cmd[cmdCpt + 1], tag->uid, 8) != 0) {
                         // check uid even if manifacturer byte is present
-                        if (g_dbglevel >= DBG_DEBUG) Dbprintf("Address don't match tag uid");
-                        if (cmd[1] == ISO15693_SELECT)
+                        if (g_dbglevel >= DBG_DEBUG) {
+                            Dbprintf("Address don't match tag uid");
+                        }
+                        if (cmd[1] == ISO15693_SELECT) {
                             tag->state = TAG_STATE_READY; // we are not anymore the selected TAG
+                        }
                         continue; // drop addressed request with other uid
                     }
                     cmdCpt++;
                 }
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Address match tag uid");
+                if (g_dbglevel >= DBG_DEBUG) {
+                    Dbprintf("Address match tag uid");
+                }
                 cmdCpt += 8;
             } else if (tag->state == TAG_STATE_SILENCED) {
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Unaddressed request in quiet state: drop");
+                if (g_dbglevel >= DBG_DEBUG) {
+                    Dbprintf("Unaddressed request in quiet state: drop");
+                }
                 continue; // drop unadressed request in quiet state
             }
 
             switch (cmd[1]) {
                 case ISO15693_INVENTORY:
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("Inventory cmd");
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("Inventory cmd");
+                    }
                     recv[0] = ISO15_NOERROR;
                     recv[1] = tag->dsfid;
                     memcpy(&recv[2], tag->uid, 8);
                     recvLen = 10;
                     break;
                 case ISO15693_STAYQUIET:
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("StayQuiet cmd");
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("StayQuiet cmd");
+                    }
                     tag->state = TAG_STATE_SILENCED;
                     break;
                 case ISO15693_READBLOCK:
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("ReadBlock cmd");
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("ReadBlock cmd");
+                    }
                     pageNum = cmd[cmdCpt++];
-                    if (pageNum >= tag->pagesCount)
+                    if (pageNum >= tag->pagesCount) {
                         error = ISO15_ERROR_BLOCK_UNAVAILABLE;
-                    else {
+                    } else {
                         recv[0] = ISO15_NOERROR;
                         recvLen = 1;
                         if ((cmd[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION) { // ask for lock status
                             recv[1] = tag->locks[pageNum];
                             recvLen++;
                         }
-                        for (uint8_t i = 0 ; i < tag->bytesPerPage ; i++)
+                        for (uint8_t i = 0 ; i < tag->bytesPerPage ; i++) {
                             recv[recvLen + i] = tag->data[(pageNum * tag->bytesPerPage) + i];
+                        }
                         recvLen += tag->bytesPerPage;
                     }
                     break;
                 case ISO15693_WRITEBLOCK:
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("WriteBlock cmd");
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("WriteBlock cmd");
+                    }
                     pageNum = cmd[cmdCpt++];
-                    if (pageNum >= tag->pagesCount)
+                    if (pageNum >= tag->pagesCount) {
                         error = ISO15_ERROR_BLOCK_UNAVAILABLE;
-                    else {
-                        for (uint8_t i = 0 ; i < tag->bytesPerPage ; i++)
+                    } else {
+                        for (uint8_t i = 0 ; i < tag->bytesPerPage ; i++) {
                             tag->data[(pageNum * tag->bytesPerPage) + i] = cmd[i + cmdCpt];
+                        }
                         recv[0] = ISO15_NOERROR;
                         recvLen = 1;
                     }
                     break;
                 case ISO15693_LOCKBLOCK:
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("LockBlock cmd");
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("LockBlock cmd");
+                    }
                     pageNum = cmd[cmdCpt++];
-                    if (pageNum >= tag->pagesCount)
+                    if (pageNum >= tag->pagesCount) {
                         error = ISO15_ERROR_BLOCK_UNAVAILABLE;
-                    else if (tag->locks[pageNum])
+                    } else if (tag->locks[pageNum]) {
                         error = ISO15_ERROR_BLOCK_LOCKED_ALREADY;
-                    else {
+                    } else {
                         tag->locks[pageNum] = 1;
                         recv[0] = ISO15_NOERROR;
                         recvLen = 1;
                     }
                     break;
                 case ISO15693_READ_MULTI_BLOCK:
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("ReadMultiBlock cmd");
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("ReadMultiBlock cmd");
+                    }
                     pageNum = cmd[cmdCpt++];
                     nbPages = cmd[cmdCpt++];
-                    if (pageNum + nbPages >= tag->pagesCount)
+                    if (pageNum + nbPages >= tag->pagesCount) {
                         error = ISO15_ERROR_BLOCK_UNAVAILABLE;
-                    else {
+                    } else {
                         recv[0] = ISO15_NOERROR;
                         recvLen = 1;
                         for (int i = 0 ; i < (nbPages + 1) * tag->bytesPerPage && \
                                 recvLen + 3 < ISO15693_MAX_RESPONSE_LENGTH ; i++) {
-                            if ((i % tag->bytesPerPage) == 0 && (cmd[0] & ISO15_REQ_OPTION))
+                            if ((i % tag->bytesPerPage) == 0 && (cmd[0] & ISO15_REQ_OPTION)) {
                                 recv[recvLen++] = tag->locks[pageNum + (i / tag->bytesPerPage)];
+                            }
                             recv[recvLen++] = tag->data[(pageNum * tag->bytesPerPage) + i];
                         }
-                        if (recvLen + 3 > ISO15693_MAX_RESPONSE_LENGTH) // limit response size
+                        if (recvLen + 3 > ISO15693_MAX_RESPONSE_LENGTH) { // limit response size
                             recvLen = ISO15693_MAX_RESPONSE_LENGTH - 3; // to avoid overflow
+                        }
                     }
                     break;
                 case ISO15693_WRITE_AFI:
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("WriteAFI cmd");
-                    if (tag->afiLock)
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("WriteAFI cmd");
+                    }
+                    if (tag->afiLock) {
                         error = ISO15_ERROR_BLOCK_LOCKED;
-                    else {
+                    } else {
                         tag->afi = cmd[cmdCpt++];
                         recv[0] = ISO15_NOERROR;
                         recvLen = 1;
                     }
                     break;
                 case ISO15693_LOCK_AFI:
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("LockAFI cmd");
-                    if (tag->afiLock)
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("LockAFI cmd");
+                    }
+                    if (tag->afiLock) {
                         error = ISO15_ERROR_BLOCK_LOCKED_ALREADY;
-                    else {
+                    } else {
                         tag->afiLock = true;
                         recv[0] = ISO15_NOERROR;
                         recvLen = 1;
                     }
                     break;
                 case ISO15693_WRITE_DSFID:
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("WriteDSFID cmd");
-                    if (tag->dsfidLock)
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("WriteDSFID cmd");
+                    }
+                    if (tag->dsfidLock) {
                         error = ISO15_ERROR_BLOCK_LOCKED;
-                    else {
+                    } else {
                         tag->dsfid = cmd[cmdCpt++];
                         recv[0] = ISO15_NOERROR;
                         recvLen = 1;
                     }
                     break;
                 case ISO15693_LOCK_DSFID:
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("LockDSFID cmd");
-                    if (tag->dsfidLock)
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("LockDSFID cmd");
+                    }
+                    if (tag->dsfidLock) {
                         error = ISO15_ERROR_BLOCK_LOCKED_ALREADY;
-                    else {
+                    } else {
                         tag->dsfidLock = true;
                         recv[0] = ISO15_NOERROR;
                         recvLen = 1;
                     }
                     break;
                 case ISO15693_SELECT:
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("Select cmd");
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("Select cmd");
+                    }
                     tag->state = TAG_STATE_SELECTED;
                     recv[0] = ISO15_NOERROR;
                     recvLen = 1;
                     break;
                 case ISO15693_RESET_TO_READY:
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("ResetToReady cmd");
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("ResetToReady cmd");
+                    }
                     tag->state = TAG_STATE_READY;
                     recv[0] = ISO15_NOERROR;
                     recvLen = 1;
                     break;
                 case ISO15693_GET_SYSTEM_INFO:
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("GetSystemInfo cmd");
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("GetSystemInfo cmd");
+                    }
                     recv[0] = ISO15_NOERROR;
                     recv[1] = 0x0f; // sysinfo contain all info
                     memcpy(&recv[2], tag->uid, 8);
@@ -2515,20 +2633,25 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                     recvLen = 15;
                     break;
                 case ISO15693_READ_MULTI_SECSTATUS:
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("ReadMultiSecStatus cmd");
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("ReadMultiSecStatus cmd");
+                    }
                     pageNum = cmd[cmdCpt++];
                     nbPages = cmd[cmdCpt++];
-                    if (pageNum + nbPages >= tag->pagesCount)
+                    if (pageNum + nbPages >= tag->pagesCount) {
                         error = ISO15_ERROR_BLOCK_UNAVAILABLE;
-                    else {
+                    } else {
                         recv[0] = ISO15_NOERROR;
                         recvLen = 1;
-                        for (uint8_t i = 0 ; i < nbPages + 1 ; i++)
+                        for (uint8_t i = 0 ; i < nbPages + 1 ; i++) {
                             recv[recvLen++] = tag->locks[pageNum + i];
+                        }
                     }
                     break;
                 case ISO15693_GET_RANDOM_NUMBER:
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("GetRandomNumber cmd");
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("GetRandomNumber cmd");
+                    }
                     tag->random[0] = (uint8_t)(reader_eof_time) ^ 0xFF; // poor random number
                     tag->random[1] = (uint8_t)(reader_eof_time >> 8) ^ 0xFF;
                     recv[0] = ISO15_NOERROR;
@@ -2537,9 +2660,12 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                     recvLen = 3;
                     break;
                 case ISO15693_SET_PASSWORD:
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("SetPassword cmd");
-                    if (cmd_len > cmdCpt + 5)
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("SetPassword cmd");
+                    }
+                    if (cmd_len > cmdCpt + 5) {
                         cmdCpt++; // skip manifacturer code
+                    }
                     if (cmd_len > cmdCpt + 4) {
                         pwdId = cmd[cmdCpt++];
                         if (pwdId == 4) { // Privacy password
@@ -2553,15 +2679,18 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                     recvLen = 1;
                     break;
                 case ISO15693_ENABLE_PRIVACY:
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("EnablePrivacy cmd");
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("EnablePrivacy cmd");
+                    }
                     // not realy entering privacy mode
                     // just return NOERROR
                     recv[0] = ISO15_NOERROR;
                     recvLen = 1;
                     break;
                 default:
-                    if (g_dbglevel >= DBG_DEBUG)
+                    if (g_dbglevel >= DBG_DEBUG) {
                         Dbprintf("ISO15693 CMD 0x%2X not supported", cmd[1]);
+                    }
 
                     error = ISO15_ERROR_CMD_NOT_SUP;
                     break;
@@ -2572,8 +2701,9 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                 recv[1] = error;
                 recvLen = 2;
                 error = 0;
-                if (g_dbglevel >= DBG_DEBUG)
+                if (g_dbglevel >= DBG_DEBUG) {
                     Dbprintf("ERROR 0x%2X in received request", error);
+                }
             }
         }
 
@@ -2581,14 +2711,17 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             AddCrc15(recv, recvLen);
             recvLen += 2;
             CodeIso15693AsTag(recv, recvLen);
-            tosend_t *ts = get_tosend();
+            const tosend_t *ts = get_tosend();
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
 
             if (tag->expectFsk) { // Not suppoted yet
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("%ERROR: FSK answers are not supported yet");
+                if (g_dbglevel >= DBG_DEBUG) {
+                    Dbprintf("%ERROR: FSK answers are not supported yet");
+                }
                 //TransmitTo15693ReaderFSK(ts->buf,ts->max, &response_time, 0, !tag->expectFast);
-            } else
+            } else {
                 TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, !tag->expectFast);
+            }
 
             LogTrace_ISO15693(recv, recvLen, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
         }
@@ -2665,7 +2798,7 @@ void BruteforceIso15693Afi(uint32_t flags) {
             Dbprintf("AFI = %i  UID = %s", i, iso15693_sprintUID(NULL, recv + 2));
         }
 
-        aborted = (BUTTON_PRESS() && data_available());
+        aborted = (BUTTON_PRESS() || data_available());
         if (aborted) {
             break;
         }
@@ -2692,73 +2825,172 @@ void SendRawCommand15693(iso15_raw_cmd_t *packet) {
         timeout = ISO15693_READER_TIMEOUT_WRITE;
     }
 
+    if (packet->rawlen == 0) {
+        reply_ng(CMD_HF_ISO15693_COMMAND, PM3_EINVARG, NULL, 0);
+        LED_A_OFF();
+        return;
+    }
+
     bool speed = ((packet->flags & ISO15_HIGH_SPEED) == ISO15_HIGH_SPEED);
     bool keep_field_on = ((packet->flags & ISO15_NO_DISCONNECT) == ISO15_NO_DISCONNECT);
     bool read_respone = ((packet->flags & ISO15_READ_RESPONSE) == ISO15_READ_RESPONSE);
     bool init = ((packet->flags & ISO15_CONNECT) == ISO15_CONNECT);
 
-    // This is part of ISO15693 protocol definitions where the following commands needs to request option.
-    // note:
-    //     it seem like previous we just guessed and never followed the fISO145_REQ_OPTION flag if it was set / not set from client side.
-    //     this is a problem.   Since without this the response from the tag is one byte shorter.   And a lot of client side functions has been
-    //     hardcoded to assume for the extra byte in the response.
+    // Detect 16-slot inventory mode from protocol flags
+    bool is_inventory = (packet->raw[0] & ISO15_REQ_INVENTORY) != 0;
+    bool is_16slot = is_inventory && ((packet->raw[0] & ISO15_REQINV_SLOT1) == 0);
 
-    bool request_answer = false;
-
-    switch (packet->raw[1]) {
-        case ISO15693_SET_PASSWORD:
-        case ISO15693_ENABLE_PRIVACY:
-        case ISO15693_WRITEBLOCK:
-        case ISO15693_LOCKBLOCK:
-        case ISO15693_WRITE_MULTI_BLOCK:
-        case ISO15693_WRITE_AFI:
-        case ISO15693_LOCK_AFI:
-        case ISO15693_WRITE_DSFID:
-        case ISO15693_WRITE_PASSWORD:
-        case ISO15693_PASSWORD_PROTECT_EAS:
-        case ISO15693_LOCK_DSFID:
-            request_answer = ((packet->raw[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION);
-            break;
-        default:
-            break;
-    }
-
-    uint32_t eof_time = 0;
-    uint32_t start_time = 0;
-    uint16_t recvlen = 0;
-
-    uint8_t buf[ISO15693_MAX_RESPONSE_LENGTH] = {0x00};
-
-    int res = SendDataTag(packet->raw, packet->rawlen, init, speed, (read_respone ? buf : NULL), sizeof(buf), start_time, timeout, &eof_time, &recvlen);
-
-    if (res == PM3_ETEAROFF) { // tearoff occurred
-        reply_ng(CMD_HF_ISO15693_COMMAND, res, NULL, 0);
-    } else {
-
-        // if tag answers with an error code,  it don't care about EOF packet
-        if (recvlen) {
-            recvlen = MIN(recvlen, ISO15693_MAX_RESPONSE_LENGTH);
-            reply_ng(CMD_HF_ISO15693_COMMAND, res, buf, recvlen);
-        }
-
-        // looking at the first byte of the RAW bytes to determine Subcarrier, datarate, request option
+    if (is_16slot) {
+        // 16-slot inventory: send command for slot 0, then EOF for slots 1-15
         bool fsk = ((packet->raw[0] & ISO15_REQ_SUBCARRIER_TWO) == ISO15_REQ_SUBCARRIER_TWO);
         bool recv_speed = ((packet->raw[0] & ISO15_REQ_DATARATE_HIGH) == ISO15_REQ_DATARATE_HIGH);
 
-        // send a single EOF to get the tag response
-        if (request_answer) {
-            start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
-            res = SendDataTagEOF((read_respone ? buf : NULL), sizeof(buf), start_time, ISO15693_READER_TIMEOUT, &eof_time, fsk, recv_speed, &recvlen);
+        uint8_t resp_buf[PM3_CMD_DATA_SIZE] = {0};
+        iso15_inventory_response_t *resp = (iso15_inventory_response_t *)resp_buf;
+        resp->slot_count = 16;
+
+        uint8_t recv[ISO15693_MAX_SLOT_RESPONSE] = {0};
+        uint32_t eof_time = 0;
+        uint32_t start_time = 0;
+        uint16_t recvlen = 0;
+        uint16_t data_offset = 0;
+        // Maximum data space available after the fixed header
+        uint16_t max_data = PM3_CMD_DATA_SIZE - 1 - (ISO15693_MAX_SLOTS * sizeof(iso15_slot_result_t));
+
+        // Slot 0: send the full command
+        int res = SendDataTag(packet->raw, packet->rawlen, init, speed,
+                              recv, sizeof(recv), start_time, ISO15693_INVENTORY_SLOT_TIMEOUT,
+                              &eof_time, &recvlen);
+
+        if (res == PM3_ETEAROFF) {
+            reply_ng(CMD_HF_ISO15693_COMMAND, res, NULL, 0);
+            goto out;
         }
 
-        if (read_respone) {
-            recvlen = MIN(recvlen, ISO15693_MAX_RESPONSE_LENGTH);
-            reply_ng(CMD_HF_ISO15693_COMMAND, res, buf, recvlen);
+        if (res == PM3_SUCCESS && recvlen > 0) {
+            resp->slots[0].status = 1; // got data (client validates CRC for collision detection)
+            resp->slots[0].len = MIN(recvlen, ISO15693_MAX_SLOT_RESPONSE);
+        } else if (res == PM3_EPARTIAL) {
+            resp->slots[0].status = 2; // signal detected but decode failed (collision hint)
+            resp->slots[0].len = 0;
         } else {
-            reply_ng(CMD_HF_ISO15693_COMMAND, PM3_SUCCESS, NULL, 0);
+            resp->slots[0].status = 0; // no response / timeout
+            resp->slots[0].len = 0;
+        }
+
+        if (resp->slots[0].len > 0 && data_offset + resp->slots[0].len <= max_data) {
+            memcpy(resp->data + data_offset, recv, resp->slots[0].len);
+            data_offset += resp->slots[0].len;
+        } else {
+            resp->slots[0].len = 0;
+        }
+
+        // Slots 1-15: send EOF and listen
+        for (uint8_t slot = 1; slot < 16; slot++) {
+            start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+            recvlen = 0;
+            memset(recv, 0, sizeof(recv));
+
+            res = SendDataTagEOF(recv, sizeof(recv), start_time,
+                                 ISO15693_INVENTORY_SLOT_TIMEOUT, &eof_time,
+                                 fsk, recv_speed, &recvlen);
+
+            if (res == PM3_SUCCESS && recvlen > 0) {
+                resp->slots[slot].status = 1; // got data (client validates CRC)
+                resp->slots[slot].len = MIN(recvlen, ISO15693_MAX_SLOT_RESPONSE);
+            } else if (res == PM3_EPARTIAL) {
+                resp->slots[slot].status = 2; // signal detected but decode failed (collision hint)
+                resp->slots[slot].len = 0;
+            } else {
+                resp->slots[slot].status = 0; // no response / timeout
+                resp->slots[slot].len = 0;
+            }
+
+            if (resp->slots[slot].len > 0 && data_offset + resp->slots[slot].len <= max_data) {
+                memcpy(resp->data + data_offset, recv, resp->slots[slot].len);
+                data_offset += resp->slots[slot].len;
+            } else if (resp->slots[slot].len > 0) {
+                // No room left, truncate
+                resp->slots[slot].len = 0;
+                resp->slots[slot].status = 0;
+            }
+
+            WDT_HIT();
+        }
+
+        uint16_t total_len = 1 + (16 * sizeof(iso15_slot_result_t)) + data_offset;
+        reply_ng(CMD_HF_ISO15693_COMMAND, PM3_SUCCESS, resp_buf, MIN(total_len, PM3_CMD_DATA_SIZE));
+
+    } else {
+        // Original single send-receive path (1-slot or non-inventory commands)
+
+        // This is part of ISO15693 protocol definitions where the following commands needs to request option.
+        // note:
+        //     it seem like previous we just guessed and never followed the fISO145_REQ_OPTION flag if it was set / not set from client side.
+        //     this is a problem.   Since without this the response from the tag is one byte shorter.   And a lot of client side functions has been
+        //     hardcoded to assume for the extra byte in the response.
+
+        bool request_answer = false;
+
+        switch (packet->raw[1]) {
+            case ISO15693_SET_PASSWORD:
+            case ISO15693_ENABLE_PRIVACY:
+            case ISO15693_WRITEBLOCK:
+            case ISO15693_LOCKBLOCK:
+            case ISO15693_WRITE_MULTI_BLOCK:
+            case ISO15693_WRITE_AFI:
+            case ISO15693_LOCK_AFI:
+            case ISO15693_WRITE_DSFID:
+            case ISO15693_WRITE_PASSWORD:
+            case ISO15693_PASSWORD_PROTECT_EAS:
+            case ISO15693_LOCK_DSFID:
+                request_answer = ((packet->raw[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION);
+                break;
+            default:
+                break;
+        }
+
+        uint32_t eof_time = 0;
+        uint32_t start_time = 0;
+        uint16_t recvlen = 0;
+
+        uint8_t buf[ISO15693_MAX_RESPONSE_LENGTH] = {0x00};
+
+        int res = SendDataTag(packet->raw, packet->rawlen, init, speed, (read_respone ? buf : NULL), sizeof(buf), start_time, timeout, &eof_time, &recvlen);
+
+        if (res == PM3_ETEAROFF) { // tearoff occurred
+            reply_ng(CMD_HF_ISO15693_COMMAND, res, NULL, 0);
+        } else {
+
+            // if tag answers with an error code,  it don't care about EOF packet
+            // normal tag answer without Option_flag also processed here
+            if (recvlen || !request_answer) {
+                if (request_answer || read_respone) {
+                    recvlen = MIN(recvlen, ISO15693_MAX_RESPONSE_LENGTH);
+                    reply_ng(CMD_HF_ISO15693_COMMAND, res, buf, recvlen);
+                } else {
+                    reply_ng(CMD_HF_ISO15693_COMMAND, PM3_SUCCESS, NULL, 0);
+                }
+            } else {
+                // looking at the first byte of the RAW bytes to determine Subcarrier, datarate, request option
+                bool fsk = ((packet->raw[0] & ISO15_REQ_SUBCARRIER_TWO) == ISO15_REQ_SUBCARRIER_TWO);
+                bool recv_speed = ((packet->raw[0] & ISO15_REQ_DATARATE_HIGH) == ISO15_REQ_DATARATE_HIGH);
+
+                // send a single EOF to get the tag response
+                start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+                res = SendDataTagEOF((read_respone ? buf : NULL), sizeof(buf), start_time, ISO15693_READER_TIMEOUT, &eof_time, fsk, recv_speed, &recvlen);
+
+                if (read_respone) {
+                    recvlen = MIN(recvlen, ISO15693_MAX_RESPONSE_LENGTH);
+                    reply_ng(CMD_HF_ISO15693_COMMAND, res, buf, recvlen);
+                } else {
+                    reply_ng(CMD_HF_ISO15693_COMMAND, PM3_SUCCESS, NULL, 0);
+                }
+            }
         }
     }
 
+out:
     if (keep_field_on == false) {
         switch_off(); // disconnect raw
         SpinDelay(20);
@@ -2775,10 +3007,10 @@ void LockPassSlixIso15693(uint32_t pass_id, uint32_t password) {
     LED_A_ON();
 
     uint8_t cmd_inventory[]  = {ISO15693_REQ_DATARATE_HIGH | ISO15693_REQ_INVENTORY | ISO15693_REQINV_SLOT1, 0x01, 0x00, 0x00, 0x00 };
-    uint8_t cmd_get_rnd[]    = {ISO15693_REQ_DATARATE_HIGH, 0xB2, 0x04, 0x00, 0x00 };
-    uint8_t cmd_set_pass[]   = {ISO15693_REQ_DATARATE_HIGH, 0xB3, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    //uint8_t cmd_write_pass[] = {ISO15693_REQ_DATARATE_HIGH | ISO15693_REQ_ADDRESS, 0xB4, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    uint8_t cmd_lock_pass[] = {ISO15693_REQ_DATARATE_HIGH | ISO15693_REQ_ADDRESS, 0xB5, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00 };
+    uint8_t cmd_get_rnd[]    = {ISO15693_REQ_DATARATE_HIGH, ISO15693_GET_RANDOM_NUMBER, 0x04, 0x00, 0x00 };
+    uint8_t cmd_set_pass[]   = {ISO15693_REQ_DATARATE_HIGH, ISO15693_SET_PASSWORD, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    //uint8_t cmd_write_pass[] = {ISO15693_REQ_DATARATE_HIGH | ISO15693_REQ_ADDRESS, ISO15693_WRITE_PASSWORD, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    uint8_t cmd_lock_pass[] = {ISO15693_REQ_DATARATE_HIGH | ISO15693_REQ_ADDRESS, ISO15693_LOCK_PASSWORD, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00 };
     uint16_t crc;
     uint16_t recvlen = 0;
     uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
@@ -2812,7 +3044,7 @@ void LockPassSlixIso15693(uint32_t pass_id, uint32_t password) {
                 continue;
         }
 
-        if (done) [
+        if (done) {
             break;
         }
 
@@ -2890,21 +3122,14 @@ void SetTag15693Uid(const uint8_t *uid) {
     uint8_t cmd[4][9] = {
         {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x3e, 0x00, 0x00, 0x00, 0x00, 0xE9, 0x8F},
         {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x3f, 0x69, 0x96, 0x00, 0x00, 0x8A, 0xBB},
-        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x38},
-        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x39}
+
+        // Command 3 : 02 21 38 u8u7u6u5 (where uX = uid byte X)
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x38, uid[7], uid[6], uid[5], uid[4]},
+
+        // Command 4 : 02 21 39 u4u3u2u1 (where uX = uid byte X)
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x39, uid[3], uid[2], uid[1], uid[0]}
     };
 
-    // Command 3 : 02 21 38 u8u7u6u5 (where uX = uid byte X)
-    cmd[2][3] = uid[7];
-    cmd[2][4] = uid[6];
-    cmd[2][5] = uid[5];
-    cmd[2][6] = uid[4];
-
-    // Command 4 : 02 21 39 u4u3u2u1 (where uX = uid byte X)
-    cmd[3][3] = uid[3];
-    cmd[3][4] = uid[2];
-    cmd[3][5] = uid[1];
-    cmd[3][6] = uid[0];
 
     AddCrc15(cmd[2], 7);
     AddCrc15(cmd[3], 7);
@@ -2937,6 +3162,53 @@ void SetTag15693Uid(const uint8_t *uid) {
     reply_ng(CMD_HF_ISO15693_CSETUID, res, NULL, 0);
     switch_off();
 }
+
+// Set the UID on Magic ISO15693 tag ( Gen2 ?)
+// E0 00 09   - seem to be command
+// 0x41, 0x40 - seem to be block referens
+void SetTag15693Uid_v2(const uint8_t *uid) {
+
+    LED_A_ON();
+    uint8_t cmd[4][10] = {
+        { ISO15_REQ_DATARATE_HIGH, ISO15693_MAGIC_WRITE, 0x09, 0x47, 0x3f, 0x03, 0x8b, 0x00,  0x00, 0x00 },
+        { ISO15_REQ_DATARATE_HIGH, ISO15693_MAGIC_WRITE, 0x09, 0x52, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00 },
+        // hf 15 raw -wac -d 02 e0 09 41 + uid first four bytes
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_MAGIC_WRITE, 0x09, 0x40, uid[7], uid[6], uid[5], uid[4], 0x00, 0x00},
+        // hf 15 raw -wac -d 02 e0 09 40 + uid last four bytes
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_MAGIC_WRITE, 0x09, 0x41, uid[3], uid[2], uid[1], uid[0], 0x00, 0x00}
+    };
+
+    uint8_t buf[ISO15693_MAX_RESPONSE_LENGTH] = {0x00};
+
+    uint32_t start_time = 0;
+    uint32_t eof_time = 0;
+    uint16_t recvlen = 0;
+
+    int res = PM3_SUCCESS;
+
+    for (int i = 0; i < 4; i++) {
+
+        AddCrc15(cmd[i], 8);
+        res = SendDataTag(
+                  cmd[i],
+                  sizeof(cmd[i]),
+                  (i == 0) ? true : false,
+                  true,
+                  buf,
+                  sizeof(buf),
+                  start_time,
+                  ISO15693_READER_TIMEOUT_WRITE,
+                  &eof_time,
+                  &recvlen
+              );
+
+        start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+    }
+
+    reply_ng(CMD_HF_ISO15693_CSETUID_V2, res, NULL, 0);
+    switch_off();
+}
+
 
 static void init_password_15693_Slix(uint8_t *buffer, const uint8_t *pwd, const uint8_t *rnd) {
     memcpy(buffer, pwd, 4);
@@ -2988,14 +3260,7 @@ static uint32_t disable_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_ti
     return PM3_SUCCESS;
 }
 
-static uint32_t set_pass_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t pass_id, const uint8_t *password, uint8_t *uid) {
-
-
-    uint8_t rnd[2];
-    if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
-        return PM3_ETIMEOUT;
-    }
-
+static uint32_t set_pass_15693_SlixRnd(uint32_t start_time, uint32_t *eof_time, uint8_t pass_id, const uint8_t *password, const uint8_t *uid, uint8_t *rnd) {
     // 0x04, == NXP from manufacture id list.
     uint8_t c[] = { (ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS), ISO15693_SET_PASSWORD, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, pass_id, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
@@ -3015,6 +3280,18 @@ static uint32_t set_pass_15693_Slix(uint32_t start_time, uint32_t *eof_time, uin
     return PM3_SUCCESS;
 }
 
+static uint32_t set_pass_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t pass_id, const uint8_t *password, const uint8_t *uid) {
+
+
+    uint8_t rnd[2];
+    if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
+        return PM3_ETIMEOUT;
+    }
+
+    return set_pass_15693_SlixRnd(start_time, eof_time, pass_id, password, uid, rnd);
+}
+
+
 static uint32_t set_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_time, const uint8_t *password) {
     uint8_t rnd[2];
     if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
@@ -3022,7 +3299,7 @@ static uint32_t set_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_time, 
     }
 
     // 0x04, == NXP from manufacture id list.
-    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, 0xBA, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, ISO15693_ENABLE_PRIVACY, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     init_password_15693_Slix(&c[3], password, rnd);
     AddCrc15(c, 7);
 
@@ -3056,7 +3333,7 @@ static uint32_t disable_eas_15693_Slix(uint32_t start_time, uint32_t *eof_time, 
     }
 
     // 0x04, == NXP from manufacture id list.
-    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, 0xA3, 0x04, 0x00, 0x00};
+    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, ISO15693_RESET_EAS, 0x04, 0x00, 0x00};
     AddCrc15(c, 3);
 
     start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
@@ -3087,7 +3364,7 @@ static uint32_t enable_eas_15693_Slix(uint32_t start_time, uint32_t *eof_time, c
         }
     }
     // 0x04, == NXP from manufacture id list.
-    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, 0xA2, 0x04, 0x00, 0x00};
+    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, ISO15693_SET_EAS, 0x04, 0x00, 0x00};
     //init_password_15693_Slix(&c[3], password, rnd);
     AddCrc15(c, 3);
 
@@ -3101,7 +3378,7 @@ static uint32_t enable_eas_15693_Slix(uint32_t start_time, uint32_t *eof_time, c
     return PM3_SUCCESS;
 }
 
-static uint32_t write_password_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t pwd_id, const uint8_t *password, uint8_t *uid) {
+static uint32_t write_password_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t pwd_id, const uint8_t *password, const uint8_t *uid) {
 
     uint8_t new_pwd_cmd[] = { (ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS), ISO15693_WRITE_PASSWORD, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, pwd_id, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
@@ -3122,14 +3399,35 @@ static uint32_t write_password_15693_Slix(uint32_t start_time, uint32_t *eof_tim
     return PM3_SUCCESS;
 }
 
+static uint32_t protect_page_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t divide_ptr, uint8_t prot_status, const uint8_t *uid) {
+
+    uint8_t protect_cmd[] = { (ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS), ISO15693_PROTECT_PAGE, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, divide_ptr, prot_status, 0x00, 0x00};
+
+    memcpy(&protect_cmd[3], uid, 8);
+
+    AddCrc15(protect_cmd, 13);
+
+    start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+    uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
+    uint16_t recvlen = 0;
+
+    int res_wrp = SendDataTag(protect_cmd, sizeof(protect_cmd), false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time, &recvlen);
+    if (res_wrp != PM3_SUCCESS && recvlen != 3) {
+        return PM3_EWRONGANSWER;
+    }
+
+    return PM3_SUCCESS;
+}
+
 static uint32_t pass_protect_EASAFI_15693_Slix(uint32_t start_time, uint32_t *eof_time, bool set_option_flag, const uint8_t *password) {
 
     uint8_t flags;
 
-    if (set_option_flag)
+    if (set_option_flag) {
         flags = ISO15_REQ_DATARATE_HIGH | ISO15_REQ_OPTION;
-    else
+    } else {
         flags = ISO15_REQ_DATARATE_HIGH;
+    }
 
 
     uint8_t uid[8];
@@ -3217,6 +3515,40 @@ void WritePasswordSlixIso15693(const uint8_t *old_password, const uint8_t *new_p
     res = write_password_15693_Slix(start_time, &eof_time, pwd_id, new_password, uid);
 
     reply_ng(CMD_HF_ISO15693_SLIX_WRITE_PWD, res, NULL, 0);
+
+    switch_off();
+
+}
+
+void ProtectPageSlixIso15693(const uint8_t *read_password, const uint8_t *write_password, uint8_t divide_ptr, uint8_t prot_status) {
+    LED_D_ON();
+    Iso15693InitReader();
+    StartCountSspClk();
+    uint32_t start_time = 0, eof_time = 0;
+    int res = PM3_SUCCESS;
+
+    uint8_t uid[8], rnd[2];
+    get_uid_slix(start_time, &eof_time, uid);
+
+    if (get_rnd_15693_Slix(start_time, &eof_time, rnd) == false) {
+        reply_ng(CMD_HF_ISO15693_SLIX_PROTECT_PAGE, PM3_ETIMEOUT, NULL, 0);
+        switch_off();
+        return;
+    }
+
+    if (read_password) {
+        res = set_pass_15693_SlixRnd(start_time, &eof_time, 0x01, read_password, uid, rnd);
+    }
+
+    if (res == PM3_SUCCESS && write_password) {
+        res = set_pass_15693_SlixRnd(start_time, &eof_time, 0x02, write_password, uid, rnd);
+    }
+
+    if (res == PM3_SUCCESS) {
+        res = protect_page_15693_Slix(start_time, &eof_time, divide_ptr, prot_status, uid);
+    }
+
+    reply_ng(CMD_HF_ISO15693_SLIX_PROTECT_PAGE, res, NULL, 0);
 
     switch_off();
 

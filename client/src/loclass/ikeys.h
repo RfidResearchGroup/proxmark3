@@ -49,6 +49,7 @@
  * @return
  */
 void hash0(uint64_t c, uint8_t k[8]);
+void invert_hash0(uint8_t k[8]);
 int doKeyTests(void);
 /**
  * @brief Performs Elite-class key diversification

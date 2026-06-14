@@ -11,9 +11,11 @@ local _ntagpassword = nil
 local _key = '00000000' -- default UMC key
 local err_lock = 'use -k or change cfg0 block'
 local _print = 0
+local _ug4_version = ''
+local _packpage = 'E6'
 copyright = ''
 author = 'Nathan Glaser'
-version = 'v1.0.5'
+version = 'v1.0.6'
 date = 'Created - Jan 2022'
 desc = 'This script enables easy programming of an Ultimate Mifare Magic card'
 example = [[
@@ -21,7 +23,7 @@ example = [[
     ]]..ansicolors.yellow..[[script run hf_mf_ultimatecard -c  ]]..ansicolors.reset..[[
 
     -- set uid
-    ]]..ansicolors.yellow..[[script run hf_mf_ultimatecard -u 04112233445566 ]]..ansicolors.reset..[[
+    ]]..ansicolors.yellow..[[script run hf_mf_ultimatecard -u 04E10CDA993C80 ]]..ansicolors.reset..[[
 
     -- set NTAG pwd / pack
     ]]..ansicolors.yellow..[[script run hf_mf_ultimatecard -p 11223344 -a 8080 ]]..ansicolors.reset..[[
@@ -39,7 +41,7 @@ example = [[
     ]]..ansicolors.yellow..[[script run hf_mf_ultimatecard -k ffffffff -w 1]]..ansicolors.reset..[[
 
     -- Wipe tag, turn into NTAG215, set sig, version, NTAG pwd/pak, and OTP.
-    ]]..ansicolors.yellow..[[script run hf_mf_ultimatecard -w 1 -t 18 -u 04112233445566 -s 112233445566778899001122334455667788990011223344556677 -p FFFFFFFF -a 8080 -o 11111111]]..ansicolors.reset..[[
+    ]]..ansicolors.yellow..[[script run hf_mf_ultimatecard -w 1 -t 18 -u 04E10CDA993C80 -s 8B76052EE42F5567BEB53238B3E3F9950707C0DCC956B5C5EFCFDB709B2D82B3 -p FFFFFFFF -a 8080 -o 11111111]]..ansicolors.reset..[[
 
 ]]
 usage = [[
@@ -50,20 +52,20 @@ arguments = [[
     -c      read magic configuration
     -u      UID (8-20 hexsymbols), set UID on tag
     -t      tag type to impersonate
-                 1 = Mifare Mini S20 4-byte
-                 2 = Mifare Mini S20 7-byte 15 = NTAG 210
-                 3 = Mifare Mini S20 10-byte 16 = NTAG 212
-                 4 = Mifare 1k S50 4-byte   17 = NTAG 213
-                 5 = Mifare 1k S50 7-byte   18 = NTAG 215
-                 6 = Mifare 1k S50 10-byte  19 = NTAG 216
-                 7 = Mifare 4k S70 4-byte   20 = NTAG I2C 1K
-                 8 = Mifare 4k S70 7-byte   21 = NTAG I2C 2K
-                 9 = Mifare 4k S70 10-byte  22 = NTAG I2C 1K PLUS
-            ***  10 = UL -   NOT WORKING FULLY   23 = NTAG I2C 2K PLUS
-            ***  11 = UL-C - NOT WORKING FULLY   24 = NTAG 213F
-                 12 = UL EV1 48b                25 = NTAG 216F
-                 13 = UL EV1 128b
-            ***  14 = UL Plus - NOT WORKING YET
+                 1 = Mifare Mini S20 4-byte     |  15 = NTAG 210
+                 2 = Mifare Mini S20 7-byte     |  16 = NTAG 212
+                 3 = Mifare Mini S20 10-byte    |  17 = NTAG 213
+                 4 = Mifare 1k S50 4-byte       |  18 = NTAG 215
+                 5 = Mifare 1k S50 7-byte       |  19 = NTAG 216
+                 6 = Mifare 1k S50 10-byte      |  20 = NTAG I2C 1K
+                 7 = Mifare 4k S70 4-byte       |  21 = NTAG I2C 2K
+                 8 = Mifare 4k S70 7-byte       |  22 = NTAG I2C 1K PLUS
+                 9 = Mifare 4k S70 10-byte      |  23 = NTAG I2C 2K PLUS
+            ***  10 = UL -   NOT WORKING FULLY  |  24 = NTAG 213F
+            ***  11 = UL-C - NOT WORKING FULLY  |  25 = NTAG 216F
+                 12 = UL EV1 48b                |
+                 13 = UL EV1 128b               |
+            ***  14 = UL Plus - NOT WORKING YET |
 
     -p      NTAG password (8 hexsymbols),  set NTAG password on tag.
     -a      NTAG pack ( 4 hexsymbols), set NTAG pack on tag.
@@ -75,7 +77,11 @@ arguments = [[
     -z      ATS (<1b length><0-16 ATS> hexsymbols), Configure ATS. Length set to 00 will disable ATS.
     -w      Wipe tag. 0 for Mifare or 1 for UL. Fills tag with zeros and put default values for type selected.
     -m      Ultralight mode (00 UL EV1, 01 NTAG, 02 UL-C, 03 UL) Set type of UL.
-    -n      Ultralight protocol (00 MFC, 01 UL), switches between UL and MFC mode
+    -n      Ultralight protocol (00 MFC, 01 UL), switches between UL and MFC mode]]
+-- Need to split because reached maximum string length processed by lua
+arguments2 = [[
+    -b      Set maximum read/write blocks (2 hexsymbols)
+            NOTE: Ultralight EV1 and NTAG Version info and Signature are stored respectively in blocks 250-251 and 242-249
     -k      Ultimate Magic Card Key (IF DIFFERENT THAN DEFAULT 00000000)
 ]]
 ---
@@ -110,6 +116,7 @@ local function help()
     print(usage)
     print(ansicolors.cyan..'Arguments'..ansicolors.reset)
     print(arguments)
+    print(arguments2)
     print(ansicolors.cyan..'Example usage'..ansicolors.reset)
     print(example)
 end
@@ -175,6 +182,30 @@ local function connect()
     return true
 end
 ---
+-- Probe UMC revision robustly. CF<key>CC occasionally returns a truncated
+-- frame (e.g. 3F/7F), so retry until we get a well-formed 5-byte version.
+-- New "UG4" replies 00 00 00 06 A0 -> PACK page 0x13; clean non-06A0 reads
+-- and an unprobeable card fall back to page 0xE6.
+local function detect_packpage()
+    if _ug4_version ~= '' then return end          -- already classified this run
+    for i = 1, 5 do
+        local v = (send("CF".._key.."CC") or ''):sub(1,10)
+        if #v == 10 and v:find('^%x+$') then        -- exactly 5 hex bytes
+            _ug4_version = v:upper()
+            break
+        end
+    end
+    if _ug4_version == '00000006A0' then
+        _packpage = '13'
+    else
+        _packpage = 'E6'
+        if _ug4_version == '' then
+            print('[!] Warning: could not confirm UMC revision (CC probe corrupted); using PACK page 0xE6')
+        end
+    end
+end
+
+---
 -- Read magic configuration
 local function read_config()
     local info = connect()
@@ -186,19 +217,21 @@ local function read_config()
     end
     -- extract data from CONFIG - based on CONFIG in https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/magic_cards_notes.md#gen-4-gtu
     ulprotocol, uidlength, readpass, gtumode, ats, atqa1, atqa2, sak, ulmode = magicconfig:sub(1,2), magicconfig:sub(3,4), magicconfig:sub(5,12), magicconfig:sub(13,14), magicconfig:sub(15,48), magicconfig:sub(51,52), magicconfig:sub(49,50), magicconfig:sub(53,54), magicconfig:sub(55,56)
+    maxRWblk = magicconfig:sub(57, 58)
     atqaf = atqa1..' '..atqa2
     cardtype, cardprotocol, gtustr, atsstr = 'unknown', 'unknown', 'unknown', 'unknown'
     if magicconfig == nil then lib14a.disconnect(); return nil, "can't read configuration, "..err_lock end
+    detect_packpage()
     if #magicconfig ~= 64 and #magicconfig ~= 68 then lib14a.disconnect(); return nil, "partial read of configuration, "..err_lock end
     if gtumode == '00' then gtustr = 'Pre-write/Shadow Mode'
-    elseif gtumode == '01' then gtustr = 'Restore Mode'
+    elseif gtumode == '01' or gtumode == '04' then gtustr = 'Restore Mode'
     elseif gtumode == '02' then gtustr = 'Disabled'
     elseif gtumode == '03' then gtustr = 'Disabled, high speed R/W mode for Ultralight'
     end
     if ats:sub(1,2) == '00' then atsstr = 'Disabled'
     else atsstr = (string.sub(ats, 3))
     end
-    if ulprotocol == '00' then
+    if ulprotocol == '00'  then
     cardprotocol = 'MIFARE Classic Protocol'
     ultype = 'Disabled'
     if uidlength == '00' then
@@ -257,7 +290,7 @@ local function read_config()
     if pwd == '04' then lib14a.disconnect(); return nil, "can't read configuration, "..err_lock end
     -- read PACK
     cpack = send("30F1"):sub(1,4)
-    pack = send("30E6"):sub(1,4)
+    pack = send("30".._packpage):sub(1,4) -- *should* be E6, testing shows 13 on version 006a.
     -- read SIGNATURE
     signature1 = send('30F2'):sub(1,32)
     signature2 = send('30F6'):sub(1,32)
@@ -265,7 +298,7 @@ local function read_config()
     end
     if _print < 1 then
     print(string.rep('=', 88))
-    print('\t\t\tUltimate Magic Card Configuration')
+    print('\t\t\tUltimate Magic Card Configuration ('.._ug4_version..')')
     print(string.rep('=', 88))
     print(' - Raw Config      ', string.sub(magicconfig, 1, -9))
     print(' - Card Protocol    ', cardprotocol)
@@ -287,10 +320,11 @@ local function read_config()
         print(string.rep('=', 88))
         print(' - ATS          ', atsstr)
         print(' - Password     ', '[0xE5] '..pwd, '[0xF0] '..cpwd)
-        print(' - Pack         ', '[0xE6] '..pack, '[0xF1] '..cpack)
+        print(' - Pack         ', '[0x'.._packpage..'] '..pack, '[0xF1] '..cpack)
         print(' - Version      ', cversion)
         print(' - Signature    ', signature1..signature2)
     end
+    print(' - Max R/W Block  ', maxRWblk)
     end
 lib14a.disconnect()
 return true, 'Ok'
@@ -437,7 +471,7 @@ local function write_pack(userpack)
     local info = connect()
     if not info then return false, "Can't select card" end
     print('Writing new PACK', userpack)
-    send('A2E6'..userpack..'0000')
+    send('A2'.._packpage..userpack..'0000')
     send('A2F1'..userpack..'0000')
     lib14a.disconnect()
     return true, 'Ok'
@@ -485,6 +519,8 @@ local function write_version(data)
     local info = connect()
     if not info then return false, "Can't select card" end
     local resp
+    -- set maximum read/write blocks to 251; version is stored in blocks 250-251
+    send("CF".._key.."6B".."FB")
     resp = send('A2FA'..b1)
     resp = send('A2FB'..b2)
     lib14a.disconnect()
@@ -524,6 +560,10 @@ local function write_signature(data)
         local b,c
         local cmd = 'A2F%d%s'
         local j = 2
+        -- set maximum read/write blocks to 251; signature is stored in blocks 242-249
+        send("CF".._key.."6B".."FB")
+        lib14a.disconnect()
+        connect() -- not 100% sure why it's needed, but without this blocks aren't actually written
         for i = 1, #data, 8 do
             b = data:sub(i,i+7)
             c = cmd:format(j,b)
@@ -547,7 +587,7 @@ local function write_gtu(gtu)
     if gtu == '00' then
     print('Enabling GTU Pre-Write')
     send('CF'.._key..'32'..gtu)
-    elseif gtu == '01' then
+    elseif gtu == '01' or gtu == '04' then
     print('Enabling GTU Restore Mode')
     send('CF'.._key..'32'..gtu)
     elseif gtu == '02' then
@@ -631,6 +671,26 @@ local function write_ulm(ulm)
     return true, 'Ok'
 end
 ---
+-- Write maximum read/write block number,
+local function write_maxRWblk(data)
+    -- input number check
+    if data == nil then return nil, 'empty block number' end
+    if #data == 0 then return nil, 'empty block number' end
+    if #data ~= 2 then return nil, 'block number wrong length. Should be 1 hex byte' end
+
+    print('Set max R/W block', data)
+    local info = connect()
+    if not info then return false, "Can't select card" end
+    local resp
+    -- set maximum read/write block
+    resp = send("CF".._key.."6B"..data)
+    lib14a.disconnect()
+    if resp ~= '9000FD07' then return nil, 'Failed to write maximum read/write block'
+    else
+        return true, 'Ok'
+    end
+end
+---
 --  Set type for magic card presets.
 local function set_type(tagtype)
     -- tagtype checks
@@ -643,6 +703,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000000000000002000978009102DABC19101011121314151604000900")
     lib14a.disconnect()
         write_uid('04112233')
+        write_maxRWblk('13')
     -- Setting Mifare mini S20 7-byte
     elseif tagtype == 2 then
         print('Setting: Ultimate Magic card to Mifare mini S20 7-byte')
@@ -650,6 +711,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000010000000002000978009102DABC19101011121314151644000900")
     lib14a.disconnect()
         write_uid('04112233445566')
+        write_maxRWblk('13')
     -- Setting Mifare mini S20 10-byte
     elseif tagtype == 3 then
         print('Setting: Ultimate Magic card to Mifare mini S20 10-byte')
@@ -657,6 +719,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000020000000002000978009102DABC19101011121314151684000900")
     lib14a.disconnect()
         write_uid('04112233445566778899')
+        write_maxRWblk('13')
     -- Setting Mifare 1k S50 4--byte
     elseif tagtype == 4 then
         print('Setting: Ultimate Magic card to Mifare 1k S50 4-byte')
@@ -664,6 +727,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000000000000002000978009102DABC19101011121314151604000800")
     lib14a.disconnect()
         write_uid('04112233')
+        write_maxRWblk('3F')
     -- Setting Mifare 1k S50 7-byte
     elseif tagtype == 5 then
         print('Setting: Ultimate Magic card to Mifare 1k S50 7-byte')
@@ -671,6 +735,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000010000000002000978009102DABC19101011121314151644000800")
     lib14a.disconnect()
         write_uid('04112233445566')
+        write_maxRWblk('3F')
     -- Setting Mifare 1k S50 10-byte
     elseif tagtype == 6 then
         print('Setting: Ultimate Magic card to Mifare 1k S50 10-byte')
@@ -678,6 +743,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000020000000002000978009102DABC19101011121314151684000800")
     lib14a.disconnect()
         write_uid('04112233445566778899')
+        write_maxRWblk('3F')
     -- Setting Mifare 4k S70 4-byte
     elseif tagtype == 7 then
         print('Setting: Ultimate Magic card to Mifare 4k S70 4-byte')
@@ -685,6 +751,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000000000000002000978009102DABC19101011121314151602001800")
     lib14a.disconnect()
         write_uid('04112233')
+        write_maxRWblk('FF')
     -- Setting Mifare 4k S70 7-byte
     elseif tagtype == 8 then
         print('Setting: Ultimate Magic card to Mifare 4k S70 7-byte')
@@ -692,6 +759,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000010000000002000978009102DABC19101011121314151642001800")
     lib14a.disconnect()
         write_uid('04112233445566')
+        write_maxRWblk('FF')
     -- Setting Mifare 4k S70 10-byte
     elseif tagtype == 9 then
         print('Setting: Ultimate Magic card to Mifare 4k S70 10-byte')
@@ -699,6 +767,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000020000000002000978009102DABC19101011121314151682001800")
     lib14a.disconnect()
         write_uid('04112233445566778899')
+        write_maxRWblk('FF')
     -- Setting UL
     elseif tagtype == 10 then
         print('Setting: Ultimate Magic card to UL')
@@ -762,7 +831,7 @@ local function set_type(tagtype)
         send('a210000000FF')
         send('a21100050000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040101000b03')   -- NTAG210 00 04 04 01 01 00 0b 03
     elseif tagtype == 16 then
         print('Setting: Ultimate Magic card to NTAG 212')
@@ -776,7 +845,7 @@ local function set_type(tagtype)
         send('a225000000FF')
         send('a22600050000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040101000E03')   -- NTAG212 00 04 04 01 01 00 0E 03
     elseif tagtype == 17 then
         print('Setting: Ultimate Magic card to NTAG 213')
@@ -790,7 +859,7 @@ local function set_type(tagtype)
         send('a229000000ff')
         send('a22a00050000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040201000F03')       -- NTAG213 00 04 04 02 01 00 0f 03
     elseif tagtype == 18 then
         print('Setting: Ultimate Magic card to NTAG 215')
@@ -804,7 +873,7 @@ local function set_type(tagtype)
         send('a283000000ff')
         send('a28400050000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040201001103')       -- NTAG215 00 04 04 02 01 00 11 03
     elseif tagtype == 19 then
         print('Setting: Ultimate Magic card to NTAG 216')
@@ -818,7 +887,7 @@ local function set_type(tagtype)
         send('a2e3000000ff')
         send('a2e400050000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040201001303')       -- NTAG216 00 04 04 02 01 00 13 03
     elseif tagtype == 20 then
         print('Setting: Ultimate Magic card to NTAG I2C 1K')
@@ -829,7 +898,7 @@ local function set_type(tagtype)
         send('a2040300fe00')
         send('a20500000000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040502011303')       -- NTAG_I2C_1K 00 04 04 05 02 01 13 03
     elseif tagtype == 21 then
         print('Setting: Ultimate Magic card to NTAG I2C 2K')
@@ -840,7 +909,7 @@ local function set_type(tagtype)
         send('a2040300fe00')
         send('a20500000000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040502011503')       -- NTAG_I2C_2K 00 04 04 05 02 01 15 03
     elseif tagtype == 22 then
         print('Setting: Ultimate Magic card to NTAG I2C plus 1K')
@@ -851,7 +920,7 @@ local function set_type(tagtype)
         send('a2040300fe00')
         send('a20500000000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040502021303')       -- NTAG_I2C_1K 00 04 04 05 02 02 13 03
     elseif tagtype == 23 then
         print('Setting: Ultimate Magic card to NTAG I2C plus 2K')
@@ -861,7 +930,7 @@ local function set_type(tagtype)
         send('a203e1106D00')
         send('a2040300fe00')
         send('a20500000000')
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040502021503')       -- NTAG_I2C_2K 00 04 04 05 02 02 15 03
     elseif tagtype == 24 then
         print('Setting: Ultimate Magic card to  NTAG 213F')
@@ -875,7 +944,7 @@ local function set_type(tagtype)
         send('a229000000ff')
         send('a22a00050000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040401000F03')       -- NTAG213F 00 04 04 04 01 00 0f 03
     elseif tagtype == 25 then
         print('Setting: Ultimate Magic card to  NTAG 216F')
@@ -889,7 +958,7 @@ local function set_type(tagtype)
         send('a2e3000000ff')
         send('a2e400050000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040401001303')       -- NTAG216F 00 04 04 04 01 00 13 03
     else
     oops('No matching tag types')
@@ -958,7 +1027,7 @@ local function wipe(wtype)
         print('Wiping tag')
         local info = connect()
         if not info then return false, "Can't select card" end
-        send("CF".._key.."F001010000000003000978009102DABC19101011121314151644000001")
+        send("CF".._key.."F001010000000003000978009102DABC19101011121314151644000001FB")
         for b = 3, 0xFB do
             --configuration block 0
             if b == 0x29 or b == 0x83 or b == 0xe3 then
@@ -982,18 +1051,21 @@ local function wipe(wtype)
         io.write('\r\n')
         lib14a.disconnect()
         print('\n')
-        if err then return nil, "Tag locked down, "..err_lock end
+        if err then return nil, "Tag locked down or misconfigured maximum read/write blocks, "..err_lock end
         -- set NTAG213 default values
         err, msg = set_type(17)
         if err == nil then return err, msg end
         --set UID
-        err, msg = write_uid('04112233445566')
+        err, msg = write_uid('04E10CDA993C80')
         if err == nil then return err, msg end
         --set NTAG pwd
         err, msg = write_ntagpwd('FFFFFFFF')
         if err == nil then return err, msg end
         --set pack
         err, msg = write_pack('0000')
+        if err == nil then return err, msg end
+        --set signature
+        err, msg = write_signature('8B76052EE42F5567BEB53238B3E3F9950707C0DCC956B5C5EFCFDB709B2D82B3')
         if err == nil then return err, msg end
         lib14a.disconnect()
         return true, 'Ok'
@@ -1007,7 +1079,7 @@ function main(args)
     local err, msg
     if #args == 0 then return help() end
     -- Read the parameters
-    for o, a in getopt.getopt(args, 'hck:u:t:p:a:s:o:v:q:g:z:n:m:w:') do
+    for o, a in getopt.getopt(args, 'hck:u:t:p:a:s:o:v:q:g:z:n:m:w:b:') do
         -- help
         if o == "h" then return help() end
         -- set Ultimate Magic Card Key for read write
@@ -1040,6 +1112,8 @@ function main(args)
         if o == "m" then err, msg = write_ulm(a) end
         -- write UL protocol
         if o == "n" then err, msg = write_ulp(a) end
+        -- write max r/w block
+        if o == "b" then err, msg = write_maxRWblk(a) end
         if err == nil then return oops(msg) end
     end
 end

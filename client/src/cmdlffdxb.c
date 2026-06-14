@@ -58,6 +58,9 @@ static int CmdHelp(const char *Cmd);
 
 static int getFDXBBits(uint64_t national_code, uint16_t country_code, uint8_t is_animal, uint8_t is_extended, uint32_t extended, uint8_t *bits) {
 
+    if (bits == NULL) {
+        return PM3_ESOFT;
+    }
     // add preamble ten 0x00 and one 0x01
     memset(bits, 0x00, 10);
     bits[10] = 1;
@@ -566,7 +569,7 @@ int demodFDXB(bool verbose) {
 
     if (verbose == false) {
         PROMPT_CLEARLINE;
-        PrintAndLogEx(SUCCESS, "Animal ID........... " _GREEN_("%04u-%012"PRIu64), countryCode, NationalCode);
+        PrintAndLogEx(SUCCESS, "Animal ID........... " _GREEN_("%03u-%012"PRIu64), countryCode, NationalCode);
         return PM3_SUCCESS;
     }
 
@@ -671,14 +674,14 @@ static int CmdFdxBReader(const char *Cmd) {
 
         if (curr_div == LF_DIVISOR_125) {
             config.divisor = LF_DIVISOR_134;
-            res = lf_config(&config);
+            res = lf_setconfig(&config);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "failed to change to 134 KHz LF configuration");
                 return res;
             }
         } else {
             config.divisor = LF_DIVISOR_125;
-            res = lf_config(&config);
+            res = lf_setconfig(&config);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "failed to change to 125 KHz LF configuration");
                 return res;
@@ -689,12 +692,12 @@ static int CmdFdxBReader(const char *Cmd) {
         lf_read(false, 10000);
         ret = demodFDXB(!cm); // be verbose only if not in continuous mode
 
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
 
     if (old_div != curr_div) {
         config.divisor = old_div;
-        res = lf_config(&config);
+        res = lf_setconfig(&config);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "failed to restore LF configuration");
             return res;
@@ -760,6 +763,11 @@ static int CmdFdxBClone(const char *Cmd) {
     PrintAndLogEx(INFO, "RFU................. 0");
 
     uint8_t *bs = calloc(128, sizeof(uint8_t));
+    if (bs == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
     if (getFDXBBits(national_code, country_code, is_animal, has_extended, extended, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         free(bs);
@@ -802,8 +810,8 @@ static int CmdFdxBClone(const char *Cmd) {
     } else {
         res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     }
-    PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf fdxb reader`") " to verify");
+    PrintAndLogEx(SUCCESS, "Done!");
+    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf fdxb reader`") " to verify");
     return res;
 }
 
@@ -855,6 +863,10 @@ static int CmdFdxBSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Simulating FDX-B animal ID: " _YELLOW_("%04u-%"PRIu64), country_code, national_code);
 
     uint8_t *bs = calloc(128, sizeof(uint8_t));
+    if (bs == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     if (getFDXBBits(national_code, country_code, is_animal, (extended > 0), extended, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         free(bs);
@@ -863,6 +875,11 @@ static int CmdFdxBSim(const char *Cmd) {
 
     // 32, no STT, BIPHASE INVERTED == diphase
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + 128);
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(bs);
+        return PM3_EMALLOC;
+    }
     payload->encoding = 2;
     payload->invert = 1;
     payload->separator = 0;
@@ -889,7 +906,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,      AlwaysAvailable, "this help"},
     {"demod",   CmdFdxBDemod,  AlwaysAvailable, "demodulate a FDX-B ISO11784/85 tag from the GraphBuffer"},
     {"reader",  CmdFdxBReader, IfPm3Lf,         "attempt to read at 134kHz and extract tag data"},
-    {"clone",   CmdFdxBClone,  IfPm3Lf,         "clone animal ID tag to T55x7 or Q5/T5555"},
+    {"clone",   CmdFdxBClone,  IfPm3Lf,         "clone animal ID tag to T55x7, Q5/T5555 or EM4305/4469"},
     {"sim",     CmdFdxBSim,    IfPm3Lf,         "simulate Animal ID tag"},
     {NULL, NULL, NULL, NULL}
 };

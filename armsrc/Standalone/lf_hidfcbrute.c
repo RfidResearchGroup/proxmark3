@@ -37,8 +37,6 @@
  */
 
 #include "standalone.h"
-#include <inttypes.h>
-#include "lf_hidfcbrute.h"
 
 #include "proxmark3_arm.h"
 #include "appmain.h"
@@ -58,6 +56,8 @@
 #define CARD_NUMBER 1
 
 #define LF_HIDCOLLECT_LOGFILE "lf_hid_fcbrute.log"
+
+static void hid_calculate_checksum_and_set(uint32_t *high, uint32_t *low, uint32_t cardnum, uint32_t fc);
 
 static void append(uint8_t *entry, size_t entry_len) {
     LED_B_ON();
@@ -166,7 +166,7 @@ void RunMod(void) {
     LEDsoff();
 }
 
-void hid_calculate_checksum_and_set(uint32_t *high, uint32_t *low, uint32_t cardnum, uint32_t fc) {
+static void hid_calculate_checksum_and_set(uint32_t *high, uint32_t *low, uint32_t cardnum, uint32_t fc) {
     uint32_t newhigh = 0;
     uint32_t newlow = 0;
 
@@ -176,8 +176,7 @@ void hid_calculate_checksum_and_set(uint32_t *high, uint32_t *low, uint32_t card
     newlow |= oddparity32((newlow >> 1) & 0xFFF);
     newlow |= (evenparity32((newlow >> 13) & 0xFFF)) << 25;
 
-    newhigh |= 0x20; // Bit 37; standard header
-    newlow |= 1U << 26; // leading 1: start bit
+    add_HID_preamble(NULL, &newhigh, &newlow, 26);
 
     *low = newlow;
     *high = newhigh;

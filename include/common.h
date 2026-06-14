@@ -92,10 +92,10 @@ extern bool g_tearoff_enabled;
 
 
 //#define RAMFUNC __attribute((long_call, section(".ramfunc")))
-#define RAMFUNC __attribute((long_call, section(".ramfunc"))) __attribute__((target("arm")))
+#define RAMFUNC __attribute((long_call, section(".ramfunc"))) __attribute__((target("arm"))) __attribute__((noinline))
 
-#ifndef ROTR
-# define ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))
+#ifndef PM3_ROTR
+# define PM3_ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))
 #endif
 
 #ifndef PM3_ROTL
@@ -127,6 +127,17 @@ extern bool g_tearoff_enabled;
 #endif
 #endif
 
+// endian change for 48bit
+#ifndef BSWAP_48
+#define BSWAP_48(x) \
+     (((uint64_t)(x) << 40) & 0x0000ff0000000000ULL) | \
+     (((uint64_t)(x) << 24) & 0x000000ff00000000ULL) | \
+     (((uint64_t)(x) << 8)  & 0x00000000ff000000ULL) | \
+     (((uint64_t)(x) >> 8)  & 0x000000000ff0000ULL) | \
+     (((uint64_t)(x) >> 24) & 0x00000000000ff00ULL) | \
+     (((uint64_t)(x) >> 40) & 0x0000000000000ffULL)
+#endif
+
 // endian change for 32bit
 #ifdef __GNUC__
 #ifndef BSWAP_32
@@ -148,16 +159,16 @@ extern bool g_tearoff_enabled;
 
 // convert 2 bytes to U16 in little endian
 #ifndef BYTES2UINT16
-# define BYTES2UINT16(x) ((x[1] << 8) | (x[0]))
+# define BYTES2UINT16(x) (((x)[1] << 8) | ((x)[0]))
 #endif
 // convert 4 bytes to U32 in little endian
 #ifndef BYTES2UINT32
-# define BYTES2UINT32(x) ((x[3] << 24) | (x[2] << 16) | (x[1] << 8) | (x[0]))
+# define BYTES2UINT32(x) (((x)[3] << 24) | ((x)[2] << 16) | ((x)[1] << 8) | ((x)[0]))
 #endif
 
 // convert 4 bytes to U32 in big endian
 #ifndef BYTES2UINT32_BE
-# define BYTES2UINT32_BE(x) ((x[0] << 24) | (x[1] << 16) | (x[2] << 8) | (x[3]))
+# define BYTES2UINT32_BE(x) (((x)[0] << 24) | ((x)[1] << 16) | ((x)[2] << 8) | ((x)[3]))
 #endif
 
 
@@ -174,7 +185,7 @@ extern bool g_tearoff_enabled;
 #endif
 
 #ifndef CRUMB
-# define CRUMB(b,p)    (((b & (0x3 << p) ) >> p ) & 0xF)
+# define CRUMB(b,p)    ((((b) & (0x3 << (p)) ) >> (p) ) & 0xF)
 #endif
 
 #ifndef SWAP_NIBBLE
@@ -183,18 +194,23 @@ extern bool g_tearoff_enabled;
 
 // Binary Encoded Digit
 #ifndef BCD2DEC
-# define BCD2DEC(bcd) HornerScheme(bcd, 0x10, 10)
+# define BCD2DEC(bcd) HornerScheme((bcd), 0x10, 10)
 #endif
 
 #ifndef DEC2BCD
-# define DEC2BCD(dec) HornerScheme(dec, 10, 0x10)
+# define DEC2BCD(dec) HornerScheme((dec), 10, 0x10)
 #endif
 
 // bit stream operations
-#define TEST_BIT(data, i) (*(data + (i / 8)) >> (7 - (i % 8))) & 1
-#define SET_BIT(data, i)   *(data + (i / 8)) |= (1 << (7 - (i % 8)))
-#define CLEAR_BIT(data, i) *(data + (i / 8)) &= ~(1 << (7 - (i % 8)))
-#define FLIP_BIT(data, i)  *(data + (i / 8)) ^= (1 << (7 - (i % 8)))
+#define TEST_BIT_MSB(data, i)  ((*((data) + ((i) / 8)) >> (7 - ((i) % 8))) & 1)
+#define SET_BIT_MSB(data, i)   (*((data) + ((i) / 8)) |= (1 << (7 - ((i) % 8))))
+#define CLEAR_BIT_MSB(data, i) (*((data) + ((i) / 8)) &= ~(1 << (7 - ((i) % 8))))
+#define FLIP_BIT_MSB(data, i)  (*((data) + ((i) / 8)) ^= (1 << (7 - ((i) % 8))))
+
+#define TEST_BIT_LSB(data, i)  ((*((data) + ((i) / 8)) >> ((i) % 8)) & 1)
+#define SET_BIT_LSB(data, i)   (*((data) + ((i) / 8)) |= (1 << ((i) % 8)))
+#define CLEAR_BIT_LSB(data, i) (*((data) + ((i) / 8)) &= ~(1 << ((i) % 8)))
+#define FLIP_BIT_LSB(data, i)  (*((data) + ((i) / 8)) ^= (1 << ((i) % 8)))
 
 // time for decompressing and loading the image to the FPGA
 #define FPGA_LOAD_WAIT_TIME (1500)

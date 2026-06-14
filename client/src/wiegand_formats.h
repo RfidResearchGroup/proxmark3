@@ -36,17 +36,23 @@ typedef struct {
     bool hasIssueLevel;
     bool hasOEMCode;
     bool hasParity;
+    uint32_t MaxFC; // max Facility Code
+    uint64_t MaxCN; // max CardNumber
+    uint32_t MaxIL; // max IssueLevel
+    uint32_t MaxOEM;// max OEM
 } cardformatdescriptor_t;
 
 // Structure for defined Wiegand card formats available for packing/unpacking
 typedef struct {
     const char *Name;
-    bool (*Pack)(wiegand_card_t *card, wiegand_message_t *packed, bool preamble);
+    bool (*Pack)(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble);
     bool (*Unpack)(wiegand_message_t *packed, wiegand_card_t *card);
-    const char *Descrp;
+    const char *Description;
+    uint32_t Bits;  // Number of bits in this format
     cardformatdescriptor_t Fields;
 } cardformat_t;
 
+bool validate_card_limit(int format_idx, wiegand_card_t *card);
 void HIDListFormats(void);
 int HIDFindCardFormat(const char *format);
 cardformat_t HIDGetCardFormat(int idx);
@@ -54,6 +60,8 @@ bool HIDPack(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bo
 bool HIDTryUnpack(wiegand_message_t *packed);
 void HIDPackTryAll(wiegand_card_t *card, bool preamble);
 void HIDUnpack(int idx, wiegand_message_t *packed);
+bool decode_wiegand(uint32_t top, uint32_t mid, uint32_t bot, int n);
+int HIDDumpPACSBits(const uint8_t *const data, const uint8_t length, bool verbose);
 void print_wiegand_code(wiegand_message_t *packed);
 void print_desc_wiegand(cardformat_t *fmt, wiegand_message_t *packed);
 #endif

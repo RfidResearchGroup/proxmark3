@@ -19,6 +19,7 @@
 #include "cmdlfti.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>       // strncpy
 #include <inttypes.h>
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"
@@ -88,7 +89,8 @@ int demodTI(bool verbose) {
         1, 1, 1, 1, 1, 1, 1, 1
     };
 
-    save_restoreGB(GRAPH_SAVE);
+    buffer_savestate_t saveState = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
+    saveState.offset = g_GridOffset;
 
     int lowLen = ARRAYLEN(LowTone);
     int highLen = ARRAYLEN(HighTone);
@@ -168,8 +170,8 @@ int demodTI(bool verbose) {
 
     // place a marker in the buffer to visually aid location
     // of the start of sync
-    g_GraphBuffer[maxPos] = 800;
-    g_GraphBuffer[maxPos + 1] = -800;
+    g_MarkerC.pos = maxPos;
+    strcpy(g_MarkerC.label, "Sync Start");
 
     // advance pointer to start of actual data stream (after 16 pre and 8 start bits)
     maxPos += 17 * lowLen;
@@ -177,8 +179,8 @@ int demodTI(bool verbose) {
 
     // place a marker in the buffer to visually aid location
     // of the end of sync
-    g_GraphBuffer[maxPos] = 800;
-    g_GraphBuffer[maxPos + 1] = -800;
+    g_MarkerD.pos = maxPos;
+    strcpy(g_MarkerD.label, "Sync End");
 
     PrintAndLogEx(DEBUG, "actual data bits start at sample %d", maxPos);
     PrintAndLogEx(DEBUG, "length %d/%d", highLen, lowLen);
@@ -214,8 +216,7 @@ int demodTI(bool verbose) {
         shift3 >>= 1;
 
         // place a marker in the buffer between bits to visually aid location
-        g_GraphBuffer[maxPos] = 800;
-        g_GraphBuffer[maxPos + 1] = -800;
+        add_temporary_marker(maxPos, "");
     }
 
     RepaintGraphWindow();
@@ -276,8 +277,10 @@ int demodTI(bool verbose) {
     }
 
 out:
-    if (retval != PM3_SUCCESS)
-        save_restoreGB(GRAPH_RESTORE);
+    if (retval != PM3_SUCCESS) {
+        restore_bufferS32(saveState, g_GraphBuffer);
+        g_GridOffset = saveState.offset;
+    }
 
     return retval;
 }
@@ -322,7 +325,7 @@ static int CmdTIReader(const char *Cmd) {
     do {
         clearCommandBuffer();
         SendCommandNG(CMD_LF_TI_READ, NULL, 0);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }
@@ -366,8 +369,8 @@ static int CmdTIWrite(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_TI_WRITE, (uint8_t *)&payload, sizeof(payload));
-    PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf ti reader`") " to verify");
+    PrintAndLogEx(SUCCESS, "Done!");
+    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf ti reader`") " to verify");
     return PM3_SUCCESS;
 }
 

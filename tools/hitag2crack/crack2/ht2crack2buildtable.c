@@ -276,7 +276,7 @@ static void jumpnsteps(Hitag_State *hstate, int table) {
 static void *buildtable(void *dd) {
     Hitag_State hstate;
     Hitag_State hstate2;
-    unsigned long maxentries = 1;
+    unsigned long long maxentries = 1ULL;
     int index = (int)(long)dd;
     int tnum = NUM_BUILD_THREADS;
 
@@ -303,7 +303,7 @@ static void *buildtable(void *dd) {
     }
 
     /* make the entries */
-    for (unsigned long i = 0; i < maxentries; i++) {
+    for (unsigned long long i = 0; i < maxentries; i++) {
 
         // copy the current state
         hstate2.shiftreg = hstate.shiftreg;
@@ -354,7 +354,7 @@ static void makedirs(void) {
     }
 }
 
-static int datacmp(const void *p1, const void *p2, void *dummy) {
+static int datacmp(const void *p1, const void *p2) {
     unsigned char *d_1 = (unsigned char *)p1;
     unsigned char *d_2 = (unsigned char *)p2;
 
@@ -420,8 +420,7 @@ static void *sorttable(void *dd) {
             close(fdin);
 
             // sort it
-            void *dummy = NULL; // clang
-            qsort_r(table, numentries, DATASIZE, datacmp, dummy);
+            qsort(table, numentries, DATASIZE, datacmp);
 
             // write to file
             snprintf(outfile, sizeof(outfile), "sorted/%02x/%02x.bin", i, j);
@@ -430,7 +429,7 @@ static void *sorttable(void *dd) {
                 printf("cannot create outfile %s\n", outfile);
                 exit(1);
             }
-            if (write(fdout, table, numentries * DATASIZE)) {
+            if (write(fdout, table, numentries * DATASIZE) != (numentries * DATASIZE)) {
                 printf("writetable cannot write all of the data\n");
                 exit(1);
             }
@@ -453,8 +452,8 @@ int main(int argc, char *argv[]) {
 
     // make the table of tables
     t = (struct table *)calloc(sizeof(struct table) * 65536, sizeof(uint8_t));
-    if (!t) {
-        printf("malloc failed\n");
+    if (t == NULL) {
+        printf("calloc failed\n");
         exit(1);
     }
 
@@ -503,10 +502,7 @@ int main(int argc, char *argv[]) {
     free_tables(t);
     free(t);
 
-
-
     // now for the sorting
-
 
     // start the threads
     for (long i = 0; i < NUM_SORT_THREADS; i++) {

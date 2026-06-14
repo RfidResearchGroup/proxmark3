@@ -33,9 +33,8 @@
 // TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
 // EM4x50 units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
 // T0 = TIMER_CLOCK1 / 125000 = 192
-#ifndef T0
+
 #define T0                                  192
-#endif
 
 // conversions (carrier frequency 125 kHz):
 // 1 us = 1.5 ticks
@@ -130,9 +129,9 @@ static bool extract_parities(uint64_t word, uint32_t *data) {
         }
     }
 
-    if ((row_parities == row_parities_calculated) && (col_parities == col_parities_calculated))
+    if ((row_parities == row_parities_calculated) && (col_parities == col_parities_calculated)) {
         return true;
-
+    }
     return false;
 }
 
@@ -749,7 +748,7 @@ void em4x50_chk(const char *filename, bool ledcontrol) {
     uint16_t pwd_count = 0;
     uint32_t size = size_in_spiffs(filename);
     pwd_count = size / 4;
-    uint8_t *pwds = BigBuf_malloc(size);
+    uint8_t *pwds = BigBuf_calloc(size);
 
     rdv40_spiffs_read_as_filetype(filename, pwds, size, RDV40_SPIFFS_SAFETY_SAFE);
 
@@ -1255,7 +1254,11 @@ static int em4x50_sim_read_bit(void) {
     int cycles = 0;
     int timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
-    while (cycles < EM4X50_T_TAG_FULL_PERIOD) {
+    // wait 16 cycles to make sure there is no field when reading a "0" bit
+    uint32_t waitval = GetTicks();
+    while (GetTicks() - waitval < EM4X50_T_TAG_QUARTER_PERIOD * CYCLES2TICKS);
+
+    while (cycles < EM4X50_T_TAG_THREE_QUARTER_PERIOD) {
 
         // wait until reader field disappears
         while ((timeout--) && !(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));

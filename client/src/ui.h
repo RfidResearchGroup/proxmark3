@@ -63,9 +63,14 @@ typedef struct {
     char *history_path;
     pm3_device_t *current_device;
     uint32_t timeout;
+    uint32_t hf_field_timeout_sec;
+    char *mqtt_server;
+    char *mqtt_port;
+    char *mqtt_topic;
 } session_arg_t;
 
 extern session_arg_t g_session;
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846264338327
 #endif
@@ -74,11 +79,14 @@ extern session_arg_t g_session;
 #define PROMPT_CLEARLINE PrintAndLogEx(INPLACE, "                                          \r")
 void PrintAndLogOptions(const char *str[][2], size_t size, size_t space);
 void PrintAndLogEx(logLevel_t level, const char *fmt, ...);
+void PrintAndLogInfoHeaderWithWidth(const char *title, size_t width);
+void PrintAndLogInfoHeader(const char *title);
 void SetFlushAfterWrite(bool value);
 bool GetFlushAfterWrite(void);
 void memcpy_filter_ansi(void *dest, const void *src, size_t n, bool filter);
 void memcpy_filter_rlmarkers(void *dest, const void *src, size_t n);
 void memcpy_filter_emoji(void *dest, const void *src, size_t n, emojiMode_t mode);
+void free_grabber(void);
 
 int searchHomeFilePath(char **foundpath, const char *subdir, const char *filename, bool create_home);
 
@@ -86,8 +94,6 @@ extern pthread_mutex_t g_print_lock;
 
 void print_progress(uint64_t count, uint64_t max, barMode_t style);
 
-void iceIIR_Butterworth(int *data, const size_t len);
-void iceSimple_Filter(int *data, const size_t len, uint8_t k);
 #ifdef __cplusplus
 }
 #endif

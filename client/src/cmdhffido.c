@@ -202,7 +202,7 @@ static int CmdHFFidoRegister(const char *cmd) {
 
     if (cpplain) {
         memset(cdata, 0x00, 32);
-        chlen = sizeof(cdata);
+        chlen = sizeof(cdata) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
         CLIGetStrWithReturn(ctx, 5, cdata, &chlen);
         if (chlen > 16) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", chlen);
@@ -226,7 +226,7 @@ static int CmdHFFidoRegister(const char *cmd) {
 
     if (applain) {
         memset(adata, 0x00, 32);
-        applen = sizeof(adata);
+        applen = sizeof(adata) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
         CLIGetStrWithReturn(ctx, 6, adata, &applen);
         if (applen > 16) {
             PrintAndLogEx(ERR, "ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", applen);
@@ -245,8 +245,9 @@ static int CmdHFFidoRegister(const char *cmd) {
             return PM3_EINVARG;
         }
     }
-    if (applen)
+    if (applen) {
         memmove(&data[32], adata, 32);
+    }
 
     CLIParserFree(ctx);
 
@@ -398,7 +399,7 @@ static int CmdHFFidoRegister(const char *cmd) {
         JsonSaveBufAsHexCompact(root, "KeyHandle", &buf[67], keyHandleLen);
         JsonSaveBufAsHexCompact(root, "DER", &buf[67 + keyHandleLen], derLen);
 
-        res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
+        res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true, spDump);
         (void)res;
     }
     json_decref(root);
@@ -516,7 +517,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
 
     if (cpplain) {
         memset(hdata, 0x00, 32);
-        hdatalen = sizeof(hdata);
+        hdatalen = sizeof(hdata) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
         CLIGetStrWithReturn(ctx, 9, hdata, &hdatalen);
         if (hdatalen > 16) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
@@ -542,7 +543,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
 
     if (applain) {
         memset(hdata, 0x00, 32);
-        hdatalen = sizeof(hdata);
+        hdatalen = sizeof(hdata) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
         CLIGetStrWithReturn(ctx, 10, hdata, &hdatalen);
         if (hdatalen > 16) {
             PrintAndLogEx(ERR, "ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
@@ -662,7 +663,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
         JsonSaveBufAsHexCompact(root, "KeyHandle", &data[65], keyHandleLen);
         JsonSaveInt(root, "Counter", cntr);
 
-        res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
+        res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true, spDump);
         (void)res;
     }
     json_decref(root);
@@ -783,7 +784,7 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     // parse returned cbor
     FIDO2MakeCredentionalParseRes(root, &buf[1], len - 1, verbose, verbose2, showCBOR, showDERTLV);
 
-    res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
+    res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true, spDump);
     (void)res;
     json_decref(root);
     return res;
@@ -903,7 +904,7 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
     // parse returned cbor
     FIDO2GetAssertionParseRes(root, &buf[1], len - 1, verbose, verbose2, showCBOR);
 
-    res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
+    res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true, spDump);
     (void)res;
     json_decref(root);
     return res;
@@ -912,7 +913,8 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
 static command_t CommandTable[] = {
     {"help",      CmdHelp,                   AlwaysAvailable, "This help."},
     {"list",      CmdHFFidoList,             AlwaysAvailable, "List ISO 14443A history"},
-    {"info",      CmdHFFidoInfo,             IfPm3Iso14443a,  "Info about FIDO tag."},
+    {"-----------", CmdHelp,                   IfPm3Iso14443a,  "------------------- " _CYAN_("Operations") " -------------------"},
+    {"info",        CmdHFFidoInfo,             IfPm3Iso14443a,  "Tag information"},
     {"reg",       CmdHFFidoRegister,         IfPm3Iso14443a,  "FIDO U2F Registration Message."},
     {"auth",      CmdHFFidoAuthenticate,     IfPm3Iso14443a,  "FIDO U2F Authentication Message."},
     {"make",      CmdHFFido2MakeCredential,  IfPm3Iso14443a,  "FIDO2 MakeCredential command."},

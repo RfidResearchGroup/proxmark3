@@ -39,7 +39,7 @@ typedef struct {
 typedef lz4_stream_t *lz4_streamp_t;
 
 // remember which version of the bitstream we have already downloaded to the FPGA
-static int downloaded_bitstream = 0;
+static int downloaded_bitstream = FPGA_BITSTREAM_UNKNOWN;
 
 // this is where the bitstreams are located in memory:
 extern uint32_t _binary_obj_fpga_all_bit_z_start[], _binary_obj_fpga_all_bit_z_end[];
@@ -185,7 +185,9 @@ void FpgaSetupSsc(uint16_t fpga_mode) {
 // ourselves, not to another buffer).
 //-----------------------------------------------------------------------------
 bool FpgaSetupSscDma(uint8_t *buf, uint16_t len) {
-    if (buf == NULL) return false;
+    if (buf == NULL) {
+        return false;
+    }
 
     FpgaDisableSscDma();
     AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) buf;  // transfer to this memory address
@@ -221,14 +223,31 @@ static int get_from_fpga_combined_stream(lz4_streamp_t compressed_fpga_stream, u
     return *fpga_image_ptr++;
 }
 
+static int bitstream_target_to_index(FPGA_config bitstream_target) {
+    static int8_t bitstream_index_map[FPGA_CONFIG_COUNT] = {-1};
+
+    // Initialize
+    if (bitstream_index_map[FPGA_BITSTREAM_UNKNOWN] == -1) {
+        bitstream_index_map[FPGA_BITSTREAM_UNKNOWN] = 0;
+
+        for (size_t i = 0; i < g_fpga_bitstream_num; i++) {
+            FPGA_VERSION_INFORMATION info = g_fpga_version_information[i];
+            bitstream_index_map[info.target_config] = i;
+        }
+    }
+
+    return bitstream_index_map[bitstream_target];
+}
+
 //----------------------------------------------------------------------------
 // Undo the interleaving of several FPGA config files. FPGA config files
 // are combined into one big file:
 // 288 bytes from FPGA file 1, followed by 288 bytes from FGPA file 2, etc.
 //----------------------------------------------------------------------------
-static int get_from_fpga_stream(int bitstream_version, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
-    while ((uncompressed_bytes_cnt / FPGA_INTERLEAVE_SIZE) % g_fpga_bitstream_num != (bitstream_version - 1)) {
-        // skip undesired data belonging to other bitstream_versions
+static int get_from_fpga_stream(int bitstream_target, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
+    int bitstream_index = bitstream_target_to_index(bitstream_target);
+    while ((uncompressed_bytes_cnt / FPGA_INTERLEAVE_SIZE) % g_fpga_bitstream_num != bitstream_index) {
+        // skip undesired data belonging to other bitstream_targets
         get_from_fpga_combined_stream(compressed_fpga_stream, output_buffer);
     }
 
@@ -238,7 +257,7 @@ static int get_from_fpga_stream(int bitstream_version, lz4_streamp_t compressed_
 //----------------------------------------------------------------------------
 // Initialize decompression of the respective (HF or LF) FPGA stream
 //----------------------------------------------------------------------------
-static bool reset_fpga_stream(int bitstream_version, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
+static bool reset_fpga_stream(int bitstream_target, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
     uint8_t header[FPGA_BITSTREAM_FIXED_HEADER_SIZE];
 
     uncompressed_bytes_cnt = 0;
@@ -254,7 +273,7 @@ static bool reset_fpga_stream(int bitstream_version, lz4_streamp_t compressed_fp
     fpga_image_ptr = output_buffer + FPGA_RING_BUFFER_BYTES;
 
     for (uint16_t i = 0; i < FPGA_BITSTREAM_FIXED_HEADER_SIZE; i++)
-        header[i] = get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer);
+        header[i] = get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer);
 
     // Check for a valid .bit file (starts with bitparse_fixed_header)
     if (memcmp(bitparse_fixed_header, header, FPGA_BITSTREAM_FIXED_HEADER_SIZE) == 0)
@@ -276,7 +295,7 @@ static void DownloadFPGA_byte(uint8_t w) {
 }
 
 // Download the fpga image starting at current stream position with length FpgaImageLen bytes
-static void DownloadFPGA(int bitstream_version, int FpgaImageLen, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
+static void DownloadFPGA(int bitstream_target, int FpgaImageLen, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
     int i = 0;
 #if !defined XC3
     AT91C_BASE_PIOA->PIO_OER = GPIO_FPGA_ON;
@@ -354,7 +373,7 @@ static void DownloadFPGA(int bitstream_version, int FpgaImageLen, lz4_streamp_t 
 #endif
 
     for (i = 0; i < FpgaImageLen; i++) {
-        int b = get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer);
+        int b = get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer);
         if (b < 0) {
             Dbprintf("Error %d during FpgaDownload", b);
             break;
@@ -383,14 +402,14 @@ static void DownloadFPGA(int bitstream_version, int FpgaImageLen, lz4_streamp_t 
  * (big endian), <length> bytes content. Except for section 'e' which has 4 bytes
  * length.
  */
-static int bitparse_find_section(int bitstream_version, char section_name, uint32_t *section_length, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
+static int bitparse_find_section(int bitstream_target, char section_name, uint32_t *section_length, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
 
 #define MAX_FPGA_BIT_STREAM_HEADER_SEARCH 100  // maximum number of bytes to search for the requested section
 
     int result = 0;
     uint16_t numbytes = 0;
     while (numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH) {
-        char current_name = get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer);
+        char current_name = get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer);
         numbytes++;
         uint32_t current_length = 0;
         if (current_name < 'a' || current_name > 'e') {
@@ -401,10 +420,10 @@ static int bitparse_find_section(int bitstream_version, char section_name, uint3
         switch (current_name) {
             case 'e':
                 /* Four byte length field */
-                current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 24;
-                current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 16;
-                current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 8;
-                current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 0;
+                current_length += get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer) << 24;
+                current_length += get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer) << 16;
+                current_length += get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer) << 8;
+                current_length += get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer) << 0;
                 numbytes += 4;
                 if (current_length > 300 * 1024) {
                     /* section e should never exceed about 300KB, if the length is too big limit it but still send the bitstream just in case */
@@ -412,8 +431,8 @@ static int bitparse_find_section(int bitstream_version, char section_name, uint3
                 }
                 break;
             default: /* Two byte length field */
-                current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 8;
-                current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 0;
+                current_length += get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer) << 8;
+                current_length += get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer) << 0;
                 numbytes += 2;
                 if (current_length > 64) {
                     /* if text field is too long, keep it but truncate it */
@@ -429,7 +448,7 @@ static int bitparse_find_section(int bitstream_version, char section_name, uint3
         }
 
         for (uint32_t i = 0; i < current_length && numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH; i++) {
-            get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer);
+            get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer);
             numbytes++;
         }
     }
@@ -438,16 +457,16 @@ static int bitparse_find_section(int bitstream_version, char section_name, uint3
 
 //----------------------------------------------------------------------------
 // Change FPGA image status, if image loaded.
-// bitstream_version is your new fpga image version
+// bitstream_target is your new fpga image version
 // return true if can change.
 // return false if image is unloaded.
 //----------------------------------------------------------------------------
 #if defined XC3
-static bool FpgaConfCurrentMode(int bitstream_version) {
+static bool FpgaConfCurrentMode(int bitstream_target) {
     // fpga "XC3S100E" image merge
     // If fpga image is no init
     // We need load hf_lf_allinone.bit
-    if (downloaded_bitstream != 0) {
+    if (downloaded_bitstream != FPGA_BITSTREAM_UNKNOWN) {
         // test start
         // PIO controls the following pins
         AT91C_BASE_PIOA->PIO_PER = GPIO_FPGA_SWITCH;
@@ -457,13 +476,13 @@ static bool FpgaConfCurrentMode(int bitstream_version) {
         // try to turn off antenna
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
-        if (bitstream_version == FPGA_BITSTREAM_LF) {
+        if (bitstream_target == FPGA_BITSTREAM_LF) {
             LOW(GPIO_FPGA_SWITCH);
         } else {
             HIGH(GPIO_FPGA_SWITCH);
         }
         // update downloaded_bitstream
-        downloaded_bitstream = bitstream_version;
+        downloaded_bitstream = bitstream_target;
         // turn off antenna
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         return true;
@@ -476,10 +495,9 @@ static bool FpgaConfCurrentMode(int bitstream_version) {
 // Check which FPGA image is currently loaded (if any). If necessary
 // decompress and load the correct (HF or LF) image to the FPGA
 //----------------------------------------------------------------------------
-void FpgaDownloadAndGo(int bitstream_version) {
-
+static void FpgaDownloadAndGoEx(int bitstream_target, bool keep_em) {
     // check whether or not the bitstream is already loaded
-    if (downloaded_bitstream == bitstream_version) {
+    if (downloaded_bitstream == bitstream_target) {
         FpgaEnableTracing();
         return;
     }
@@ -487,7 +505,7 @@ void FpgaDownloadAndGo(int bitstream_version) {
 #if defined XC3
     // If we can change image version
     // direct return.
-    if (FpgaConfCurrentMode(bitstream_version)) {
+    if (FpgaConfCurrentMode(bitstream_target)) {
         return;
     }
 #endif
@@ -498,35 +516,54 @@ void FpgaDownloadAndGo(int bitstream_version) {
     bool verbose = (g_dbglevel > 3);
 
     // make sure that we have enough memory to decompress
-    BigBuf_free();
-    BigBuf_Clear_ext(verbose);
+    if (keep_em) {
+        BigBuf_free_keep_EM();
+        BigBuf_Clear_keep_EM();
+    } else {
+        BigBuf_free();
+        BigBuf_Clear_ext(verbose);
+    }
 
     lz4_stream_t compressed_fpga_stream;
     LZ4_streamDecode_t lz4StreamDecode_body = {{ 0 }};
     compressed_fpga_stream.lz4StreamDecode = &lz4StreamDecode_body;
-    uint8_t *output_buffer = BigBuf_malloc(FPGA_RING_BUFFER_BYTES);
+    uint8_t *output_buffer = BigBuf_calloc(FPGA_RING_BUFFER_BYTES);
 
-    if (!reset_fpga_stream(bitstream_version, &compressed_fpga_stream, output_buffer))
+    if (reset_fpga_stream(bitstream_target, &compressed_fpga_stream, output_buffer) == false) {
         return;
+    }
 
     uint32_t bitstream_length;
-    if (bitparse_find_section(bitstream_version, 'e', &bitstream_length, &compressed_fpga_stream, output_buffer)) {
-        DownloadFPGA(bitstream_version, bitstream_length, &compressed_fpga_stream, output_buffer);
-        downloaded_bitstream = bitstream_version;
+    if (bitparse_find_section(bitstream_target, 'e', &bitstream_length, &compressed_fpga_stream, output_buffer)) {
+        DownloadFPGA(bitstream_target, bitstream_length, &compressed_fpga_stream, output_buffer);
+        downloaded_bitstream = bitstream_target;
     }
 
 #if defined XC3
     // first download fpga image to hf
     // we need to change fpga status to hf
-    FpgaConfCurrentMode(bitstream_version);
+    FpgaConfCurrentMode(bitstream_target);
 #endif
 
     // turn off antenna
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     // free eventually allocated BigBuf memory
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
+    if (keep_em) {
+        BigBuf_free_keep_EM();
+        BigBuf_Clear_keep_EM();
+    } else {
+        BigBuf_free();
+        BigBuf_Clear_ext(false);
+    }
+}
+
+void FpgaDownloadAndGo(int bitstream_target) {
+    FpgaDownloadAndGoEx(bitstream_target, false);
+}
+
+void FpgaDownloadAndGo_keep_EM(int bitstream_target) {
+    FpgaDownloadAndGoEx(bitstream_target, true);
 }
 
 //-----------------------------------------------------------------------------
@@ -542,12 +579,38 @@ void FpgaSendCommand(uint16_t cmd, uint16_t v) {
     AT91C_BASE_SPI->SPI_TDR = AT91C_SPI_LASTXFER | cmd | v;    // send the data
     while (!(AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF)) {};     // wait till transfer is complete
 }
+
 //-----------------------------------------------------------------------------
 // Write the FPGA setup word (that determines what mode the logic is in, read
 // vs. clone vs. etc.). This is now a special case of FpgaSendCommand() to
 // avoid changing this function's occurrence everywhere in the source code.
 //-----------------------------------------------------------------------------
 void FpgaWriteConfWord(uint16_t v) {
+    const int current = FpgaGetCurrent();
+
+    // Keep track of whether or not we should be monitoring the HF field timeout
+    if (current == FPGA_BITSTREAM_HF || current == FPGA_BITSTREAM_HF_15 || current == FPGA_BITSTREAM_HF_FELICA) {
+        const uint16_t major = v & FPGA_MAJOR_MODE_MASK;
+        const uint16_t minor = v & FPGA_MINOR_MODE_MASK;
+
+        switch (major) {
+            case FPGA_MAJOR_MODE_HF_READER:
+                g_hf_field_timeout_active = true;
+                break;
+            case FPGA_MAJOR_MODE_HF_ISO14443A:
+                g_hf_field_timeout_active = (minor == FPGA_HF_ISO14443A_READER_LISTEN || minor == FPGA_HF_ISO14443A_READER_MOD);
+                break;
+            case FPGA_MAJOR_MODE_HF_ISO18092:
+                g_hf_field_timeout_active = (minor & FPGA_HF_ISO18092_FLAG_READER) != 0;
+                break;
+            default:
+                g_hf_field_timeout_active = false;
+                break;
+        }
+    } else {
+        g_hf_field_timeout_active = false;
+    }
+
     FpgaSendCommand(FPGA_CMD_SET_CONFREG, v);
 }
 
@@ -603,11 +666,15 @@ void SetAdcMuxFor(uint32_t whichGpio) {
 
 void Fpga_print_status(void) {
     DbpString(_CYAN_("Current FPGA image"));
-    Dbprintf("  mode....................%s", g_fpga_version_information[downloaded_bitstream - 1]);
+    Dbprintf("  mode.................... %s", g_fpga_version_information[bitstream_target_to_index(downloaded_bitstream)]);
 }
 
 int FpgaGetCurrent(void) {
     return downloaded_bitstream;
+}
+
+void FpgaResetBitstream(void) {
+    downloaded_bitstream = FPGA_BITSTREAM_UNKNOWN;
 }
 
 // Turns off the antenna,
@@ -615,7 +682,7 @@ int FpgaGetCurrent(void) {
 // if HF,  Disable SSC DMA
 // turn off trace and leds off.
 void switch_off(void) {
-    if (g_dbglevel > 3) {
+    if (g_dbglevel > DBG_DEBUG) {
         Dbprintf("switch_off");
     }
 

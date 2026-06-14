@@ -104,3 +104,12 @@
 |hf_mfdes_sniff.trace                     |Sniff of HID reader reading a MIFARE DESFire SIO card|
 |hf_iclass_sniff.trace                    |Sniff of HID reader reading a Picopass 2k card|
 |hf_mf_hid_sio_sim.trace                  |Simulation of a HID SIO MFC 1K card|
+|hf_14a_mful_aes_defaultkey.trace         |Reading of a UL-AES with AES authentication|
+|hf_14a_mful_aes_defaultkey_secure_message.trace|Reading of a UL-AES with AES authentication, GetVersion with secure message|
+
+## LF demodulated traces
+
+|filename|description|
+|--------|-----------|
+|lf_hitag_crypto_dump.trace              |Execution of `lf hitag dump --crypto` against Hitag2 card in crypto mode|
+

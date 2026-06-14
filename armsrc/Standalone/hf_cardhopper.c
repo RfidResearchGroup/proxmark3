@@ -33,7 +33,10 @@
 #ifdef CARDHOPPER_USB
 #define cardhopper_write usb_write
 #define cardhopper_read usb_read_ng
-#define cardhopper_data_available usb_poll_validate_length
+bool cardhopper_data_available(void);
+bool cardhopper_data_available(void) {
+    return usb_read_ng_has_buffered_data() || usb_poll_validate_length();
+}
 #else
 #define cardhopper_write usart_writebuffer_sync
 #define cardhopper_read usart_read_ng
@@ -56,7 +59,7 @@ static const uint8_t magicCARD[4] = "CARD";
 static const uint8_t magicEND [4] = "\xff" "END";
 static const uint8_t magicRSRT[7] = "RESTART";
 static const uint8_t magicERR [4] = "\xff" "ERR";
-static       uint8_t magicACK [1] = "\xfe"; // is constant, but must be passed to API that doesn't like that
+static const uint8_t magicACK [1] = "\xfe";
 
 // Forward declarations
 static void become_reader(void);
@@ -69,9 +72,9 @@ static bool try_use_canned_response(const uint8_t *, int, tag_response_info_t *)
 static void reply_with_packet(packet_t *);
 
 static void read_packet(packet_t *);
-static void write_packet(packet_t *);
+static void write_packet(const packet_t *);
 
-static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *, uint8_t *, int *);
+static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *, uint16_t, uint8_t *, int *);
 
 
 void RunMod(void) {
@@ -107,14 +110,22 @@ void RunMod(void) {
             break;
         }
 
-        if (memcmp(magicREAD, modeRx.dat, sizeof(magicREAD)) == 0) {
+        if (modeRx.len == 0) {
+            DbpString(_CYAN_("[@]") " Zero length message");
+            continue;
+        }
+
+        if (modeRx.len == sizeof(magicREAD) && memcmp(magicREAD, modeRx.dat, sizeof(magicREAD)) == 0) {
             DbpString(_CYAN_("[@]") " I am a READER. I talk to a CARD.");
             become_reader();
-        } else if (memcmp(magicCARD, modeRx.dat, sizeof(magicCARD)) == 0) {
+        } else if (modeRx.len == sizeof(magicCARD) && memcmp(magicCARD, modeRx.dat, sizeof(magicCARD)) == 0) {
             DbpString(_CYAN_("[@]") " I am a CARD. I talk to a READER.");
             become_card();
-        } else if (memcmp(magicEND, modeRx.dat, sizeof(magicEND)) == 0) {
+        } else if (modeRx.len == sizeof(magicEND) && memcmp(magicEND, modeRx.dat, sizeof(magicEND)) == 0) {
             break;
+        } else if (modeRx.len == sizeof(magicRSRT) && memcmp(magicRSRT, modeRx.dat, sizeof(magicRSRT)) == 0) {
+            DbpString(_CYAN_("[@]") " Got RESET but already reset.");
+            continue;
         } else {
             DbpString(_YELLOW_("[!]") " unknown mode!");
             Dbhexdump(modeRx.len, modeRx.dat, true);
@@ -135,14 +146,19 @@ static void become_reader(void) {
     packet_t packet = { 0 };
     packet_t *rx = &packet;
     packet_t *tx = &packet;
-    uint8_t toCard[256] = { 0 };
+    uint8_t toCard[MAX_FRAME_SIZE] = { 0 };
     uint8_t parity[MAX_PARITY_SIZE] = { 0 };
 
     while (1) {
         WDT_HIT();
 
         read_packet(rx);
-        if (memcmp(magicRSRT, rx->dat, sizeof(magicRSRT)) == 0) break;
+        if (rx->len == sizeof(magicRSRT) && memcmp(magicRSRT, rx->dat, sizeof(magicRSRT)) == 0) break;
+
+        if (BUTTON_PRESS()) {
+            DbpString(_CYAN_("[@]") " Button pressed - Breaking from reader loop");
+            break;
+        }
 
         if (rx->dat[0] == ISO14443A_CMD_RATS && rx->len == 4) {
             // got RATS from reader, reset the card
@@ -162,11 +178,15 @@ static void become_reader(void) {
         AddCrc14A(toCard, rx->len);
         ReaderTransmit(toCard, rx->len + 2, NULL);
 
-        tx->len = ReaderReceive(tx->dat, parity);
-        if (tx->len == 0) {
+        // read to toCard instead of tx->dat directly to allow the extra byte for the CRC
+        uint16_t fromCardLen = ReaderReceive(toCard, sizeof(toCard), parity);
+        if (fromCardLen <= 2) {
             tx->len = sizeof(magicERR);
             memcpy(tx->dat, magicERR, sizeof(magicERR));
-        } else tx->len -= 2; // cut off the CRC
+        } else {
+            tx->len = fromCardLen - 2; // cut off the CRC
+            memcpy(tx->dat, toCard, tx->len);
+        }
 
         write_packet(tx);
     }
@@ -206,21 +226,22 @@ static void become_card(void) {
     iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
     uint8_t tagType;
-    uint16_t flags;
+    uint16_t flags = 0;
     uint8_t data[PM3_CMD_DATA_SIZE] = { 0 };
     packet_t ats = { 0 };
     prepare_emulation(&tagType, &flags, data, &ats);
 
     tag_response_info_t *canned;
     uint32_t cuid;
-    uint32_t counters[3] = { 0 };
-    uint8_t tearings[3] = { 0xbd, 0xbd, 0xbd };
     uint8_t pages;
-    SimulateIso14443aInit(tagType, flags, data, &canned, &cuid, counters, tearings, &pages);
+    if (SimulateIso14443aInit(tagType, flags, data, NULL, 0, &canned, &cuid, &pages, NULL) == false) {
+        DbpString(_RED_("Error initializing the emulation process!"));
+        return;
+    }
 
     DbpString(_CYAN_("[@]") " Setup done - entering emulation loop");
     int fromReaderLen;
-    uint8_t fromReaderDat[256] = { 0 };
+    uint8_t fromReaderDat[MAX_FRAME_SIZE] = { 0 };
     uint8_t parity[MAX_PARITY_SIZE] = { 0 };
     packet_t packet = { 0 };
     packet_t *tx = &packet;
@@ -229,7 +250,7 @@ static void become_card(void) {
     while (1) {
         WDT_HIT();
 
-        if (!GetIso14443aCommandFromReaderInterruptible(fromReaderDat, parity, &fromReaderLen)) {
+        if (GetIso14443aCommandFromReaderInterruptible(fromReaderDat, sizeof(fromReaderDat), parity, &fromReaderLen) == false) {
             if (cardhopper_data_available()) {
                 read_packet(rx);
                 if (memcmp(magicRSRT, rx->dat, sizeof(magicRSRT)) == 0) {
@@ -261,8 +282,14 @@ static void become_card(void) {
         memcpy(tx->dat, fromReaderDat, tx->len);
         write_packet(tx);
 
+        if (no_reply) {
+            // since the RATS reply has already been sent waiting here will can result in missing the next reader command
+            // if we do get a reply later on while waiting for the next reader message it will be safely ignored
+            continue;
+        }
+
         read_packet(rx);
-        if (!no_reply && rx->len > 0) {
+        if (rx->len > 0) {
             reply_with_packet(rx);
         }
     }
@@ -297,7 +324,7 @@ static void prepare_emulation(uint8_t *tagType, uint16_t *flags, uint8_t *data, 
     }
 
     memcpy(data, uidRx.dat, uidRx.len);
-    *flags = (uidRx.len == 10 ? FLAG_10B_UID_IN_DATA : (uidRx.len == 7 ? FLAG_7B_UID_IN_DATA : FLAG_4B_UID_IN_DATA));
+    FLAG_SET_UID_IN_DATA(*flags, uidRx.len);
     DbpString(_CYAN_("[@]") " UID:");
     Dbhexdump(uidRx.len, data, false);
     Dbprintf(_CYAN_("[@]") " Flags: %hu", *flags);
@@ -328,7 +355,13 @@ static void cook_ats(packet_t *ats, uint8_t fwi, uint8_t sfgi) {
 
         uint8_t orig_t0 = ats->dat[1];
         // Update FSCI in T0 from the received ATS
-        t0 |= orig_t0 & 0x0F;
+        uint8_t fsci = orig_t0 & 0x0F;
+        if (fsci > 8) {
+            // our packet length maxes out at 255 bytes, an FSCI of 8 requires 256 bytes
+            // but since we drop the 2 byte CRC16 we're safe capping this at 8
+            fsci = 8;
+        }
+        t0 |= fsci;
 
         uint8_t len = ats->len - 2;
         uint8_t *orig_ats_ptr = &ats->dat[2];
@@ -433,20 +466,12 @@ static bool try_use_canned_response(const uint8_t *dat, int len, tag_response_in
 }
 
 
-static uint8_t g_responseBuffer  [512 ] = { 0 };
-static uint8_t g_modulationBuffer[1024] = { 0 };
+static uint8_t g_responseBuffer  [MAX_FRAME_SIZE] = { 0 };
 
 static void reply_with_packet(packet_t *packet) {
-    tag_response_info_t response = { 0 };
-    response.response = g_responseBuffer;
-    response.modulation = g_modulationBuffer;
-
-    memcpy(response.response, packet->dat, packet->len);
-    AddCrc14A(response.response, packet->len);
-    response.response_n = packet->len + 2;
-
-    prepare_tag_modulation(&response, sizeof(g_modulationBuffer));
-    EmSendPrecompiledCmd(&response);
+    memcpy(g_responseBuffer, packet->dat, packet->len);
+    AddCrc14A(g_responseBuffer, packet->len);
+    EmSendCmd(g_responseBuffer, packet->len + 2);
 }
 
 
@@ -476,31 +501,39 @@ static void read_packet(packet_t *packet) {
 
         if (packet->len == 0x50 && dataReceived >= sizeof(PacketResponseNGPreamble) && packet->dat[0] == 0x4D && packet->dat[1] == 0x33 && packet->dat[2] == 0x61) {
             // PM3 NG packet magic
-            DbpString(_CYAN_("[@]") " PM3 NG packet recieved - ignoring");
+            DbpString(_CYAN_("[@]") " PM3 NG packet received - ignoring");
 
             // clear any remaining buffered data
             while (cardhopper_data_available()) {
-                cardhopper_read(packet->dat, 255);
+                cardhopper_read(packet->dat, sizeof(packet->dat));
             }
 
             packet->len = 0;
             return;
         }
     }
-    cardhopper_write(magicACK, sizeof(magicACK));
+
+    if (packet->len > (MAX_FRAME_SIZE - 2)) {
+        // this will overrun MAX_FRAME_SIZE once we re-add the CRC
+        // in theory this should never happen but better to be defensive
+        packet->len = 0;
+        cardhopper_write(magicERR, sizeof(magicERR));
+    } else {
+        cardhopper_write(magicACK, sizeof(magicACK));
+    }
 }
 
 
-static void write_packet(packet_t *packet) {
-    cardhopper_write((uint8_t *) packet, packet->len + 1);
+static void write_packet(const packet_t *packet) {
+    cardhopper_write((const uint8_t *) packet, packet->len + 1);
 }
 
 
-static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *received, uint8_t *par, int *len) {
+static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *received, uint16_t received_max_len, uint8_t *par, int *len) {
     LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
-    Uart14aInit(received, par);
+    Uart14aInit(received, received_max_len, par);
 
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     (void)b;

@@ -31,9 +31,11 @@ on Windows 11, using WSL2 (and Ubuntu Linux).
       - [Install the udev rules](#install-the-udev-rules-1)
         - [77-pm3-usb-device-blacklist.rules](#77-pm3-usb-device-blacklistrules)
       - [WORKAROUND - Kick udev into action](#workaround---kick-udev-into-action)
+      - [USB device access in WSL2 (tty permissions)](#usb-device-access-in-wsl2-tty-permissions)
   - [Verify Device Exists](#verify-device-exists)
   - [Using the client...](#using-the-client)
   - [Summary of repeated commands](#summary-of-repeated-commands)
+  - [Script to automate environment setup](#script-to-automate-environment-setup)
   - [Done!](#done)
 
 ## Requirements
@@ -188,21 +190,23 @@ sudo apt-get auto-remove -y
 ### Install stuff needed to build proxmark3 binaries
 ^[Top](#top)
 
-For example, on Ubuntu:
+For example, on Ubuntu 24.04 or later:
 
 ```sh
 sudo apt-get install --no-install-recommends \
   git ca-certificates build-essential pkg-config \
   libreadline-dev gcc-arm-none-eabi libnewlib-dev \
-  libbz2-dev liblz4-dev libpython3-dev qtbase5-dev \
+  libbz2-dev liblz4-dev zlib1g-dev libpython3-dev qtbase6-dev \
   libssl-dev libgd-dev
 ```
 
 > [!NOTE]
 > * If you don't need the graphical components of the
->   Proxmark3 client, you can skip the installation of `qtbase5-dev`.  
+>   Proxmark3 client, you can skip the installation of `qtbase6-dev`.
 > * If you don't need support for Python3 scripts in the
 >   Proxmark3 client, you can skip the installation of `libpython3-dev`.
+> * If you don't need support for decompressing compressed Google Smart Tap payloads
+>   in the Proxmark3 client, you can skip the installation of `zlib1g-dev`.
 > * If you don't need support for NFC ePaper devices in the
 >   PM3 device, you can skip the installation of `libgd-dev`.
 
@@ -393,6 +397,26 @@ sudo service udev restart
 sudo udevadm trigger --action=change
 ```
 
+#### USB device access in WSL2 (tty permissions)
+
+When you attach the Proxmark3 to WSL2 via `usbipd`, the Linux device node (for example `/dev/ttyACM0`) is created inside the WSL distro. That device is usually owned by `root:dialout` and is only readable/writable by `root` and members of the `dialout` group.
+
+If you are seeing `Could not find Proxmark3 on /dev/ttyACM0`, it usually means your user doesn't have permission to open the serial device.
+
+Fix:
+```bash
+# add your user to the dialout group (this is persistent)
+sudo usermod -aG dialout $USER
+
+# apply the new group membership in the current shell (no restart)
+newgrp dialout
+
+# verify the changes:
+id            # should show 'dialout' in the groups list
+ls -l /dev/ttyACM*   # device should be group 'dialout' and group-writable
+```
+
+
 ## Verify Device Exists
 ^[Top](#top)
 
@@ -456,6 +480,72 @@ make -j
 ./pm3-flash-all
 ```
 
+## Script to automate environment setup
+
+Use this script if you don't want to enter the above commands every single time you reboot. 
+
+You must have Windows Terminal installed to use this script.
+
+1. Save the following script as a batch file (**pm3_quick_startup_wsl2.bat**).
+2. Use `usbipd list` to get your Proxmark3 hardware ID and replace in the script, as using BUSID is not very reliable since it might change between reboots.
+3. Make sure your Proxmark3 is plugged in, and it is detected in the Device Manager as a COM port.
+4. Run **pm3_quick_startup_wsl2.bat** and accept the UAC prompt. The script auto detects and asks for admin privileges, so you don't have to right-click and select Run As Administrator.
+5. It will open up 2 windows. The first one is Command Prompt where initializing commands will run, and you need to keep this window open. The second one is Windows Terminal, where your pm3 client will run.
+6. On some systems, you will occasionally see this error popping up: `usbipd: error: WSL kernel is not USBIP capable`. Use command `service udev restart` to suppress that error.
+```batch
+@echo off
+
+REM -- Minimize the initial command prompt window
+if not "%Minimized%"=="" goto :Minimized
+set Minimized=True
+start /min cmd /C "%~dpnx0"
+goto :EOF
+
+:Minimized
+REM  -- Check for permissions
+IF "%PROCESSOR_ARCHITECTURE%" EQU "amd64" (
+    >nul 2>&1 "%SYSTEMROOT%\SysWOW64\cacls.exe" "%SYSTEMROOT%\SysWOW64\config\system"
+) ELSE (
+    >nul 2>&1 "%SYSTEMROOT%\system32\cacls.exe" "%SYSTEMROOT%\system32\config\system"
+)
+
+REM -- If error flag set, we do not have admin.
+if '%errorlevel%' NEQ '0' (
+    echo Requesting administrative privileges...
+    goto UACPrompt
+) else ( goto gotAdmin )
+
+:UACPrompt
+    echo Set UAC = CreateObject^("Shell.Application"^) > "%temp%\getadmin.vbs"
+    set params= %*
+    echo UAC.ShellExecute "cmd.exe", "/c ""%~s0"" %params:"=""%", "", "runas", 1 >> "%temp%\getadmin.vbs"
+
+    "%temp%\getadmin.vbs"
+    del "%temp%\getadmin.vbs"
+    exit /B
+
+:gotAdmin
+    pushd "%CD%"
+    CD /D "%~dp0"
+
+REM -- Start Ubuntu in a new Terminal window, change working directory to /home/proxmark3 and run Proxmark3 Client. Adjust your path accordingly.
+start "" wt wsl.exe -d Ubuntu --cd ~/proxmark3 ./pm3
+
+REM -- A trick to make this script sleep for 2 seconds, waiting for the Ubuntu session to fully initialize.
+ping 127.0.0.1 -n 3 > nul
+
+REM -- Replace the following hardware IDs with your actual Proxmark3 ID. You can find it by using "usbipd list"
+usbipd bind --hardware-id 9ac4:4b8f
+usbipd attach --auto-attach --hardware-id 9ac4:4b8f --wsl
+
+REM -- Activate below line by removing the "REM --" prefix if you encounter this error: "usbipd: error: WSL kernel is not USBIP capable"
+REM -- wsl -u root "modprobe vhci_hcd"
+
+wsl -u root "service udev restart"
+wsl -u root "udevadm trigger --action=change"
+
+pause & exit
+```
 
 ## Done!
 ^[Top](#top)

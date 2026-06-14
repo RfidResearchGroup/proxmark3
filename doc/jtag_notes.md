@@ -94,6 +94,7 @@ TCK | 23
 GND |  6
 3.3 |  1
 ```
+To comply with The JTAG/SWD specification, newer OpenOCD releases have changed TMS from PIN 22 (GPIO 25, pulled-down by default) to PIN 24 (GPIO 8, pulled-up by default). Check OpenOCD output for the text "Warn : TMS/SWDIO moved to GPIO 8 (pin 24). Check the wiring please!" to see if you need such change.
 
 # Notes for enabling JTAG port
 ^[Top](#top)

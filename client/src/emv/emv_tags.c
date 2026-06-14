@@ -443,8 +443,8 @@ static int emv_tlv_compare(const void *a, const void *b) {
 }
 
 static const struct emv_tag *emv_get_tag(const struct tlv *tlv) {
-    struct emv_tag *tag = bsearch(tlv, emv_tags, ARRAYLEN(emv_tags),
-                                  sizeof(emv_tags[0]), emv_tlv_compare);
+    const struct emv_tag *tag = bsearch(tlv, emv_tags, ARRAYLEN(emv_tags),
+                                        sizeof(emv_tags[0]), emv_tlv_compare);
 
     return tag ? tag : &emv_tags[0];
 }
@@ -790,7 +790,7 @@ static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, i
 
 bool emv_tag_dump(const struct tlv *tlv, int level) {
     if (tlv == NULL) {
-        PrintAndLogEx(FAILED, "NULL");
+        PrintAndLogEx(WARNING, "tlv is NULL");
         return false;
     }
 

@@ -310,16 +310,16 @@ int exec_crypto_test(bool verbose, bool include_slow_tests) {
     unsigned int extra_keylengths[] = {1152, 1408, 1984, 3072, 4096};
     int ret = test_pk(verbose);
     if (ret) {
-        PrintAndLogEx(WARNING, "Crypto raw test: (%s)", _RED_("failed"));
+        PrintAndLogEx(WARNING, "Crypto raw test ( %s )", _RED_("fail"));
         return ret;
     }
-    PrintAndLogEx(SUCCESS, "Crypto raw test (%s)", _GREEN_("passed"));
+    PrintAndLogEx(SUCCESS, "Crypto raw test ( %s )", _GREEN_("ok"));
 
     for (int i = 0; i < ARRAYLEN(keylengths); i++) {
         unsigned int kl = keylengths[i];
         ret = test_genkey(kl, message, kl / 8, verbose);
         if (ret) {
-            PrintAndLogEx(WARNING, "Crypto generate key[%u] test: (%s)", kl, _RED_("failed"));
+            PrintAndLogEx(WARNING, "Crypto generate key[ %u ] test ( %s )", kl, _RED_("fail"));
             return ret;
         }
     }
@@ -328,7 +328,7 @@ int exec_crypto_test(bool verbose, bool include_slow_tests) {
             unsigned int kl = extra_keylengths[i];
             ret = test_genkey(kl, message, kl / 8, verbose);
             if (ret) {
-                PrintAndLogEx(WARNING, "Crypto generate key[%u] test: (%s)", kl, _RED_("failed"));
+                PrintAndLogEx(WARNING, "Crypto generate key[ %u ] test ( %s )", kl, _RED_("fail"));
                 return ret;
             }
         }

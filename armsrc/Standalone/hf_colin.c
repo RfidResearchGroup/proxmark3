@@ -95,6 +95,11 @@ static iso14a_card_select_t colin_p_card;
 static int colin_currline;
 static int colin_currfline;
 static int colin_curlline;
+static int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, const uint8_t *datain, uint64_t *key);
+static int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype);
+static void saMifareMakeTag(void);
+static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, const uint8_t *datain);
+static void WriteTagToFlash(uint32_t uid, size_t size);
 
 // TODO : Implement fast read of KEYS like in RFIdea
 // also http://ext.delaat.net/rp/2015-2016/p04/report.pdf
@@ -120,7 +125,7 @@ static uint64_t hex2i(const char *s) {
         s += 2;
     else if (*s == 'x')
         s++;
-    while (colin_is_hex[(uint8_t)*s])
+    while (colin_is_hex[(uint8_t) * s])
         val = (val << 4) | (colin_is_hex[(uint8_t) * (s++)] - 1);
     return val;
 }
@@ -245,7 +250,7 @@ static char *ReadSchemasFromSPIFFS(char *filename) {
 
     int changed = rdv40_spiffs_lazy_mount();
     uint32_t size = size_in_spiffs((char *)filename);
-    uint8_t *mem = BigBuf_malloc(size);
+    uint8_t *mem = BigBuf_calloc(size);
     rdv40_spiffs_read_as_filetype((char *)filename, (uint8_t *)mem, size, RDV40_SPIFFS_SAFETY_SAFE);
 
     if (changed) {
@@ -257,7 +262,7 @@ static char *ReadSchemasFromSPIFFS(char *filename) {
 
 static void add_schemas_from_json_in_spiffs(char *filename) {
 
-    char *jsonfile = ReadSchemasFromSPIFFS((char *)filename);
+    const char *jsonfile = ReadSchemasFromSPIFFS((char *)filename);
 
     int i, len = strlen(jsonfile);
     struct json_token t;
@@ -287,7 +292,7 @@ static void ReadLastTagFromFlash(void) {
     DbprintfEx(FLAG_NEWLINE, "Button HELD ! Using LAST Known TAG for Simulation...");
     cjSetCursLeft();
 
-    uint8_t *mem = BigBuf_malloc(size);
+    uint8_t *mem = BigBuf_calloc(size);
 
     // this one will handle filetype (symlink or not) and resolving by itself
     rdv40_spiffs_read_as_filetype((char *)HFCOLIN_LASTTAG_SYMLINK, (uint8_t *)mem, len, RDV40_SPIFFS_SAFETY_SAFE);
@@ -301,7 +306,7 @@ static void ReadLastTagFromFlash(void) {
     return;
 }
 
-void WriteTagToFlash(uint32_t uid, size_t size) {
+static void WriteTagToFlash(uint32_t uid, size_t size) {
     SpinOff(0);
     LED_A_ON();
     LED_B_ON();
@@ -311,7 +316,7 @@ void WriteTagToFlash(uint32_t uid, size_t size) {
     uint32_t len = size;
     uint8_t data[(size * (16 * 64)) / 1024];
 
-    emlGetMem(data, 0, (size * 64) / 1024);
+    emlGetMem_xt(data, 0, (size * 64) / 1024, MIFARE_BLOCK_SIZE);
 
     char dest[SPIFFS_OBJ_NAME_LEN];
     uint8_t buid[4];
@@ -440,11 +445,11 @@ void RunMod(void) {
     };
 
     // Can remember something like that in case of Bigbuf
-    keyBlock = BigBuf_malloc(ARRAYLEN(mfKeys) * 6);
+    keyBlock = BigBuf_calloc(ARRAYLEN(mfKeys) * MF_KEY_LENGTH);
     int mfKeysCnt = ARRAYLEN(mfKeys);
 
     for (int mfKeyCounter = 0; mfKeyCounter < mfKeysCnt; mfKeyCounter++) {
-        num_to_bytes(mfKeys[mfKeyCounter], 6, (uint8_t *)(keyBlock + mfKeyCounter * 6));
+        num_to_bytes(mfKeys[mfKeyCounter], MF_KEY_LENGTH, (uint8_t *)(keyBlock + (mfKeyCounter * MF_KEY_LENGTH)));
     }
 
     // TODO : remember why we actually had need to initialize this array in such specific case
@@ -493,7 +498,7 @@ failtag:
     SpinOff(50);
     LED_A_ON();
 
-    while (!iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true)) {
+    while (iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true) == 0) {
         WDT_HIT();
         if (BUTTON_HELD(10) == BUTTON_HOLD) {
             WDT_HIT();
@@ -646,7 +651,7 @@ failtag:
     emlClearMem();
     uint8_t mblock[16];
     for (uint8_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
-        emlGetMem(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1);
+        emlGetMem_xt(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1, MIFARE_BLOCK_SIZE);
         for (uint8_t t = 0; t < 2; t++) {
             memcpy(mblock + t * 10, foundKey[t][sectorNo], 6);
         }
@@ -717,33 +722,10 @@ readysim:
     SpinOff(100);
     LED_C_ON();
 
-    /*
     uint16_t flags = 0;
-    switch (colin_p_card.uidlen) {
-        case 10:
-            flags = FLAG_10B_UID_IN_DATA;
-            break;
-        case 7:
-            flags = FLAG_7B_UID_IN_DATA;
-            break;
-        case 4:
-            flags = FLAG_4B_UID_IN_DATA;
-            break;
-        default:
-            flags = FLAG_UID_IN_EMUL;
-            break;
-    }
-    // Use UID, SAK, ATQA from EMUL, if uid not defined
-    if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
-       flags |= FLAG_UID_IN_EMUL;
-    }
-    flags |= FLAG_MF_1K;
-    if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
-        flags |= FLAG_UID_IN_EMUL;
-     }
-    flags = 0x10;
-    */
-    uint16_t flags = FLAG_UID_IN_EMUL;
+//    FLAG_SET_UID_IN_DATA(flags, colin_p_card.uidlen);
+    FLAG_SET_UID_IN_EMUL(flags);
+    FLAG_SET_MF_SIZE(flags, MIFARE_1K_MAX_BYTES);
     DbprintfEx(FLAG_NEWLINE, "\n\n\n\n\n\n\n\nn\n\nn\n\n\nflags: %d (0x%02x)", flags, flags);
     cjSetCursLeft();
     SpinOff(1000);
@@ -786,7 +768,7 @@ readysim:
  * - *datain used as error return
  * - tracing is falsed
  */
-int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
+static int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
     uint8_t numSectors = numofsectors;
     uint8_t keyType = keytype;
 
@@ -803,7 +785,7 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
 
     bool isOK = true;
 
-    if (!iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true)) {
+    if (iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true) == 0) {
         isOK = false;
     }
 
@@ -830,7 +812,7 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
                     emlSetMem_xt(dataoutbuf, FirstBlockOfSector(s) + blockNo, 1, 16);
                 } else {
                     // sector trailer, keep the keys, set only the AC
-                    emlGetMem(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1);
+                    emlGetMem_xt(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1, MIFARE_BLOCK_SIZE);
                     memcpy(&dataoutbuf2[6], &dataoutbuf[6], 4);
                     emlSetMem_xt(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1, 16);
                 }
@@ -848,8 +830,8 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
 
 /* the chk function is a piwi'ed(tm) check that will try all keys for
 a particular sector. also no tracing no dbg */
-int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace,
-                           uint8_t keyCount, uint8_t *datain, uint64_t *key) {
+static int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace,
+                                  uint8_t keyCount, const uint8_t *datain, uint64_t *key) {
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     set_tracing(false);
 
@@ -862,8 +844,7 @@ int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace,
     for (uint8_t i = 0; i < keyCount; i++) {
 
         /* no need for anticollision. just verify tag is still here */
-        // if (!iso14443a_fast_select_card(colin_cjuid, 0)) {
-        if (!iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true)) {
+        if (iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true) == 0) {
             cjSetCursLeft();
             DbprintfEx(FLAG_NEWLINE, "%sFATAL%s : E_MF_LOSTTAG", _XRED_, _XWHITE_);
             break;
@@ -886,7 +867,7 @@ int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace,
     return retval;
 }
 
-void saMifareMakeTag(void) {
+static void saMifareMakeTag(void) {
     uint8_t cfail = 0;
     cjSetCursLeft();
     cjTabulize();
@@ -901,7 +882,7 @@ void saMifareMakeTag(void) {
     int flags = 0;
     for (int blockNum = 0; blockNum < 16 * 4; blockNum++) {
         uint8_t mblock[16];
-        emlGetMem(mblock, blockNum, 1);
+        emlGetMem_xt(mblock, blockNum, 1, MIFARE_BLOCK_SIZE);
         // switch on field and send magic sequence
         if (blockNum == 0)
             flags = 0x08 + 0x02;
@@ -946,7 +927,7 @@ void saMifareMakeTag(void) {
 // Matt's StandAlone mod.
 // Work with "magic Chinese" card (email him: ouyangweidaxian@live.cn)
 //-----------------------------------------------------------------------------
-int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
+static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, const uint8_t *datain) {
     // params
     uint8_t needWipe = arg0;
     // bit 0 - need get UID
@@ -981,7 +962,7 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
 
         // get UID from chip
         if (workFlags & 0x01) {
-            if (!iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true)) {
+            if (iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true) == 0) {
                 DbprintfEx(FLAG_NEWLINE, "Can't select card");
                 break;
             };
@@ -995,13 +976,13 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
         // reset chip
         if (needWipe) {
             ReaderTransmitBitsPar(wupC1, 7, 0, NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
                 DbprintfEx(FLAG_NEWLINE, "wupC1 error");
                 break;
             };
 
             ReaderTransmit(wipeC, sizeof(wipeC), NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
                 DbprintfEx(FLAG_NEWLINE, "wipeC error");
                 break;
             };
@@ -1016,19 +997,19 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
         // write block
         if (workFlags & 0x02) {
             ReaderTransmitBitsPar(wupC1, 7, 0, NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
                 DbprintfEx(FLAG_NEWLINE, "wupC1 error");
                 break;
             };
 
             ReaderTransmit(wupC2, sizeof(wupC2), NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
                 DbprintfEx(FLAG_NEWLINE, "wupC2 errorv");
                 break;
             };
         }
 
-        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, 0xA0, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) ||
+        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, 0xA0, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL) != 1) ||
                 (receivedAnswer[0] != 0x0a)) {
             DbprintfEx(FLAG_NEWLINE, "write block send command error");
             break;
@@ -1037,7 +1018,7 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
         memcpy(d_block, datain, 16);
         AddCrc14A(d_block, 16);
         ReaderTransmit(d_block, sizeof(d_block), NULL);
-        if ((ReaderReceive(receivedAnswer, receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a)) {
+        if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a)) {
             DbprintfEx(FLAG_NEWLINE, "write block send data error");
             break;
         };

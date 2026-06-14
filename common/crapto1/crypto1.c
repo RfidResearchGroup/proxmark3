@@ -35,8 +35,9 @@ int filter(uint32_t const x) {
     (x = (x >> 8 & 0xff00ff) | (x & 0xff00ff) << 8, x = x >> 16 | x << 16)
 
 void crypto1_init(struct Crypto1State *state, uint64_t key) {
-    if (state == NULL)
+    if (state == NULL) {
         return;
+    }
     state->odd = 0;
     state->even = 0;
     for (int i = 47; i > 0; i -= 2) {
@@ -53,7 +54,9 @@ void crypto1_deinit(struct Crypto1State *state) {
 #if !defined(__arm__) || defined(__linux__) || defined(_WIN32) || defined(__APPLE__) // bare metal ARM Proxmark lacks calloc()/free()
 struct Crypto1State *crypto1_create(uint64_t key) {
     struct Crypto1State *state = calloc(sizeof(*state), sizeof(uint8_t));
-    if (!state) return NULL;
+    if (state == NULL) {
+        return NULL;
+    }
     crypto1_init(state, key);
     return state;
 }
@@ -145,8 +148,8 @@ uint32_t crypto1_word(struct Crypto1State *s, uint32_t in, int is_encrypted) {
  */
 uint32_t prng_successor(uint32_t x, uint32_t n) {
     SWAPENDIAN(x);
-    while (n--)
+    while (n--) {
         x = x >> 1 | (x >> 16 ^ x >> 18 ^ x >> 19 ^ x >> 21) << 31;
-
+    }
     return SWAPENDIAN(x);
 }

@@ -203,6 +203,10 @@ static void write_bitflips_file(odd_even_t odd_even, uint16_t bitflip, int sum_a
     char filename[80];
     snprintf(filename, sizeof(filename), "bitflip_%d_%03" PRIx16 "_sum%d_states.bin", odd_even, bitflip, sum_a0);
     FILE *outfile = fopen(filename, "wb");
+    if (outfile == NULL) {
+        perror("Error opening file");
+        exit(4);
+    }
     fwrite(&count, 1, sizeof(count), outfile);
     fwrite(bitset, 1, sizeof(uint32_t) * (1 << 19), outfile);
     fclose(outfile);

@@ -11,12 +11,13 @@ assignees: doegox, iceman1001
 
 - [ ] `make style`
 - [ ] `make miscchecks`
-- [ ] `make clean; make client CC=clang CXX=clang++ LD=clang++` on recent Debian or Ubuntu
+- [ ] `make clean; make host CC=clang CXX=clang++ LD=clang++` on recent Debian or Ubuntu
 - [ ] `mymanualchecks.sh`
 - [ ] `mycppcheck.sh` no alarming warning?
 - [ ] `tools/build_all_firmwares.sh` check that the script contains all standalone modes then compile all standalone modes (linux only)
 - [ ] `experimental_lib` compilation & tests
 - [ ] `experimental_client_with_swig` compilation & tests
+- [ ] `make hitag2crack && tools/pm3_tests.sh hitag2crack --long --opencl`
 - [ ] GitHub Actions - green across the board ( MacOS, Ubuntu, Windows)
 
 # OS compilation and tests
@@ -24,30 +25,35 @@ assignees: doegox, iceman1001
 Run `tools/release_tests.sh` on:
 
 - [ ] RPI Zero
-- [ ] Jetson Nano
 - [ ] WSL
-- [ ] PSv3.xx
-- [ ] Archlinux
-- [ ] Kali
-- [ ] Debian Stable
-- [ ] Debian Testing
-- [ ] Ubuntu 22
-- [ ] ParrotOS
-- [ ] Fedora 37
-- [ ] OpenSuse Leap
-- [ ] OpenSuse Tumbleweed
+- [ ] ProxSpace v3.xx
+- via Docker
+  - [ ] Archlinux
+  - [ ] Debian Stable
+  - [ ] Debian Stable arm64
+  - [ ] Debian Stable armhf
+  - [ ] Debian Testing
+  - [ ] Fedora 42 (till 2026-05-13)
+  - [ ] Fedora 43 (till 2026-12-02)
+  - [ ] Kali
+  - [ ] OpenSuse Leap
+  - [ ] OpenSuse Tumbleweed
+  - [ ] ParrotOS
+  - [ ] Ubuntu 24.04 (LTS)
+  - [ ] Ubuntu 25.04
+  - [ ] Ubuntu 25.10
 - [ ] OSX (MacPorts)
 - [ ] OSX (Homebrew)
-- [ ] Android
 - [ ] Termux
+- [ ] Android cmake cross-compilation ?
 
 # creating release
 
-- [ ] CHANGELOG.md: add title: `## [myreleasename][YYYY-MM-DD]`
+- [ ] CHANGELOG.md: add title: `## [myreleasename][YYYY-MM-DD]` and push to repo.
 - [ ] `make release RELEASE_NAME="myreleasename"`
   - last line of output gives you next command to run.
   - Sample:  `git push && git push origin v4.12345`
-- [ ] CHANGELOG.md: edit title to add version info: `## [myreleasename.4.12345][YYYY-MM-DD]`
+- [ ] CHANGELOG.md: edit title to add version info: `## [myreleasename.4.12345][YYYY-MM-DD]` push to repo.
 
 ## Step Github releases
 
@@ -60,6 +66,10 @@ Run `tools/release_tests.sh` on:
 ```
 Release v4.12345
 Nickname "myreleasename"
+
+## CHANGELOG   -  [myreleasename][YYYY-MM-DD]
+
+< paste relevant part from CHANGELOG file here >
 ```
 
 ## Step Homebrew updates

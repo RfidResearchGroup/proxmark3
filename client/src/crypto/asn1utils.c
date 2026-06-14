@@ -36,6 +36,7 @@ int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *r
 
     uint8_t *p = calloc(sizeof(uint8_t), signaturelen);
     if (p == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -105,6 +106,37 @@ int asn1_print(uint8_t *asn1buf, size_t asn1buflen, const char *indent) {
         return PM3_ESOFT;
     }
     return PM3_SUCCESS;
+}
+
+int asn1_get_tag_length(const uint8_t *data, size_t *n, size_t *offset, size_t total_length) {
+
+    if (*offset >= total_length) {
+        return -1;
+    }
+
+    if (data[*offset] & 0x80) {
+
+        // Long form: number of length bytes is indicated by the lower 7 bits
+        size_t len_bytes = data[*offset] & 0x7F;
+
+        *offset += 1;
+
+        if (*offset + len_bytes > total_length) {
+            return -1;
+        }
+
+        *n = 0;
+        for (size_t i = 0; i < len_bytes; i++) {
+            *n = (*n << 8) | data[*offset];
+            *offset += 1;
+        }
+    } else {
+        // Short form: length is directly represented
+        *n = data[*offset];
+        *offset += 1;
+    }
+
+    return 0;
 }
 
 
@@ -222,6 +254,7 @@ int asn1_selftest(void) {
 
         uint8_t *d = calloc(n, sizeof(uint8_t));
         if (d == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
         int len = 0;

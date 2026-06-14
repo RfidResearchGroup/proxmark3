@@ -17,6 +17,10 @@
 //-----------------------------------------------------------------------------
 
 #include "aiddesfire.h"
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "pm3_cmd.h"
 #include "fileutils.h"
 #include "jansson.h"
@@ -94,7 +98,7 @@ typedef enum {
 const char *nxp_cluster_to_text(uint8_t cluster) {
     switch (cluster) {
         case CL_ADMIN:
-            return "card administration";
+            return "Card administration";
         case CL_MISC1:
         case CL_MISC2:
         case CL_MISC3:
@@ -102,40 +106,40 @@ const char *nxp_cluster_to_text(uint8_t cluster) {
         case CL_MISC5:
         case CL_MISC6:
         case CL_MISC7:
-            return "miscellaneous applications";
+            return "Miscellaneous applications";
         case CL_AIRLINES:
-            return "airlines";
+            return "Airlines";
         case CL_FERRY:
-            return "ferry traffic";
+            return "Ferry traffic";
         case CL_RAIL:
-            return "railway services";
+            return "Railway services";
         case CL_MISC:
-            return "miscellaneous applications";
+            return "Miscellaneous applications";
         case CL_TRANSPORT:
-            return "transport";
+            return "Transport";
         case CL_SECURITY:
-            return "security solutions";
+            return "Security solutions";
         case CL_CITYTRAFFIC:
-            return "city traffic";
+            return "City traffic";
         case CL_CZECH_RAIL:
             return "Czech Railways";
         case CL_BUS:
-            return "bus services";
+            return "Bus services";
         case CL_MMT:
-            return "multi modal transit";
+            return "Multi modal transit";
         case CL_TAXI:
-            return "taxi";
+            return "Taxi";
         case CL_TOLL:
-            return "road toll";
+            return "Road toll";
         case CL_GENERIC_TRANS:
-            return "generic transport";
+            return "Generic transport";
         case CL_COMPANY_SERVICES:
-            return "company services";
+            return "Company services";
         case CL_CITYCARD:
-            return "city card services";
+            return "City card services";
         case CL_ACCESS_CONTROL_1:
         case CL_ACCESS_CONTROL_2:
-            return "access control & security";
+            return "Access control & security";
         case CL_VIGIK:
             return "VIGIK";
         case CL_NED_DEFENCE:
@@ -145,63 +149,63 @@ const char *nxp_cluster_to_text(uint8_t cluster) {
         case CL_EU:
             return "European Union Institutions";
         case CL_SKI_TICKET:
-            return "ski ticketing";
+            return "Ski ticketing";
         case CL_SOAA:
             return "SOAA standard for offline access standard";
         case CL_ACCESS2:
-            return "access control & security";
+            return "Access control & security";
         case CL_FOOD:
-            return "food";
+            return "Food";
         case CL_NONFOOD:
-            return "non-food trade";
+            return "Non-food trade";
         case CL_HOTEL:
-            return "hotel";
+            return "Hotel";
         case CL_LOYALTY:
-            return "loyalty";
+            return "Loyalty";
         case CL_AIRPORT:
-            return "airport services";
+            return "Airport services";
         case CL_CAR_RENTAL:
-            return "car rental";
+            return "Car rental";
         case CL_NED_GOV:
             return "Dutch government";
         case CL_ADMIN2:
-            return "administration services";
+            return "Administration services";
         case CL_PURSE:
-            return "electronic purse";
+            return "Electronic purse";
         case CL_TV:
-            return "television";
+            return "Television";
         case CL_CRUISESHIP:
-            return "cruise ship";
+            return "Cruise ship";
         case CL_IOPTA:
             return "IOPTA";
         case CL_METERING:
-            return "metering";
+            return "Metering";
         case CL_TELEPHONE:
-            return "telephone";
+            return "Telephone";
         case CL_HEALTH:
-            return "health services";
+            return "Health services";
         case CL_WAREHOUSE:
-            return "warehouse";
+            return "Warehouse";
         case CL_BANKING:
-            return "banking";
+            return "Banking";
         case CL_ENTERTAIN:
-            return "entertainment & sports";
+            return "Entertainment & sports";
         case CL_PARKING:
-            return "car parking";
+            return "Car parking";
         case CL_FLEET:
-            return "fleet management";
+            return "Fleet management";
         case CL_FUEL:
-            return "fuel, gasoline";
+            return "Fuel, gasoline";
         case CL_INFO:
-            return "info services";
+            return "Info services";
         case CL_PRESS:
-            return "press";
+            return "Press";
         case CL_NFC:
             return "NFC Forum";
         case CL_COMPUTER:
-            return "computer";
+            return "Computer";
         case CL_MAIL:
-            return "mail";
+            return "Mail";
         case CL_AMISC:
         case CL_AMISC1:
         case CL_AMISC2:
@@ -210,14 +214,15 @@ const char *nxp_cluster_to_text(uint8_t cluster) {
         case CL_AMISC5:
         case CL_AMISC6:
         case CL_AMISC7:
-            return "miscellaneous applications";
+            return "Miscellaneous applications";
         default:
             break;
     }
-    return "reserved";
+    return "Reserved";
 }
 
 static json_t *df_known_aids = NULL;
+static bool df_known_aids_load_tried = false;
 
 static int open_aiddf_file(json_t **root, bool verbose) {
 
@@ -230,6 +235,7 @@ static int open_aiddf_file(json_t **root, bool verbose) {
     int retval = PM3_SUCCESS;
     json_error_t error;
 
+    *root = NULL;
     *root = json_load_file(path, 0, &error);
     if (!*root) {
         PrintAndLogEx(ERR, "json (%s) error on line %d: %s", path, error.line, error.text);
@@ -239,30 +245,46 @@ static int open_aiddf_file(json_t **root, bool verbose) {
 
     if (!json_is_array(*root)) {
         PrintAndLogEx(ERR, "Invalid json (%s) format. root must be an array.", path);
+        json_decref(*root);
+        *root = NULL;
         retval = PM3_ESOFT;
         goto out;
     }
 
-    if (verbose)
-        PrintAndLogEx(SUCCESS, "Loaded file " _YELLOW_("`%s`") " (%s) %zu records.", path,  _GREEN_("ok"), json_array_size(*root));
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Loaded file `" _YELLOW_("%s") "` " _GREEN_("%zu") " records ( " _GREEN_("ok") " )"
+                      , path
+                      , json_array_size(*root)
+                     );
+    }
+
 out:
     free(path);
     return retval;
 }
 
-static int close_aiddf_file(json_t *root) {
-    json_decref(root);
-    return PM3_SUCCESS;
+static int ensure_aiddf_file_loaded(void) {
+    if (df_known_aids != NULL) {
+        return PM3_SUCCESS;
+    }
+
+    if (df_known_aids_load_tried) {
+        return PM3_EFILE;
+    }
+
+    df_known_aids_load_tried = true;
+    return open_aiddf_file(&df_known_aids, false);
 }
 
-static const char *aiddf_json_get_str(json_t *data, const char *name) {
+static const char *aiddf_json_get_str_ex(json_t *data, const char *name, bool verbose) {
 
     json_t *jstr = json_object_get(data, name);
     if (jstr == NULL)
         return NULL;
 
     if (!json_is_string(jstr)) {
-        PrintAndLogEx(WARNING, _YELLOW_("`%s`") " is not a string", name);
+        if (verbose)
+            PrintAndLogEx(WARNING, _YELLOW_("`%s`") " is not a string", name);
         return NULL;
     }
 
@@ -273,27 +295,62 @@ static const char *aiddf_json_get_str(json_t *data, const char *name) {
     return cstr;
 }
 
-static int print_aiddf_description(json_t *root, uint8_t aid[3], char *fmt, bool verbose) {
-    char laid[7] = {0};
-    snprintf(laid, sizeof(laid), "%02x%02x%02x", aid[2], aid[1], aid[0]); // must be lowercase
+static const char *aiddf_json_get_str(json_t *data, const char *name) {
+    return aiddf_json_get_str_ex(data, name, true);
+}
 
-    json_t *elm = NULL;
+static const char *aiddf_json_get_str_quiet(json_t *data, const char *name) {
+    return aiddf_json_get_str_ex(data, name, false);
+}
+
+static bool aiddf_parse_aid_str(const char *aid_str, uint32_t *aid) {
+    if (aid_str == NULL || aid == NULL || strlen(aid_str) != 6) {
+        return false;
+    }
+
+    for (int c = 0; c < 6; c++) {
+        if (isxdigit((uint8_t)aid_str[c]) == 0) {
+            return false;
+        }
+    }
+
+    char *end = NULL;
+    unsigned long parsed_aid = strtoul(aid_str, &end, 16);
+    if (end == NULL || *end != '\0' || parsed_aid > 0xFFFFFFUL) {
+        return false;
+    }
+
+    *aid = (uint32_t)parsed_aid;
+    return true;
+}
+
+static json_t *find_aiddf_entry(json_t *root, uint32_t aid) {
+    if (json_is_array(root) == false) {
+        return NULL;
+    }
 
     for (uint32_t idx = 0; idx < json_array_size(root); idx++) {
         json_t *data = json_array_get(root, idx);
         if (!json_is_object(data)) {
-            PrintAndLogEx(ERR, "data [%d] is not an object\n", idx);
             continue;
         }
-        const char *faid = aiddf_json_get_str(data, "AID");
-        char lfaid[strlen(faid) + 1];
-        strcpy(lfaid, faid);
-        str_lower(lfaid);
-        if (strcmp(laid, lfaid) == 0) {
-            elm = data;
-            break;
+
+        uint32_t db_aid = 0;
+        if (aiddf_parse_aid_str(aiddf_json_get_str_quiet(data, "AID"), &db_aid) == false) {
+            continue;
+        }
+
+        if (db_aid == aid) {
+            return data;
         }
     }
+
+    return NULL;
+}
+
+static int print_aiddf_description(json_t *root, uint8_t aid[3], char *fmt, bool verbose) {
+    uint32_t aid_num = aid[0] | ((uint32_t)aid[1] << 8) | ((uint32_t)aid[2] << 16);
+    json_t *elm = find_aiddf_entry(root, aid_num);
 
     if (elm == NULL) {
         PrintAndLogEx(INFO, fmt, " (unknown)");
@@ -329,12 +386,41 @@ static int print_aiddf_description(json_t *root, uint8_t aid[3], char *fmt, bool
     return PM3_SUCCESS;
 }
 
+const char *AIDDFGetCommentStr(uint32_t aid) {
+    static char result[256] = {0};
+    result[0] = '\0';
+
+    if (ensure_aiddf_file_loaded() != PM3_SUCCESS) {
+        return "";
+    }
+
+    json_t *elm = find_aiddf_entry(df_known_aids, aid);
+    if (elm == NULL) {
+        return "";
+    }
+
+    const char *name = aiddf_json_get_str_quiet(elm, "Name");
+    const char *vendor = aiddf_json_get_str_quiet(elm, "Vendor");
+    const char *description = aiddf_json_get_str_quiet(elm, "Description");
+
+    if (name && vendor) {
+        snprintf(result, sizeof(result), "%s [%s]", name, vendor);
+    } else if (name) {
+        snprintf(result, sizeof(result), "%s", name);
+    } else if (description) {
+        snprintf(result, sizeof(result), "%s", description);
+    }
+
+    return result;
+}
+
 int AIDDFDecodeAndPrint(uint8_t aid[3]) {
-    open_aiddf_file(&df_known_aids, false);
+    if (ensure_aiddf_file_loaded() != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
 
     char fmt[80];
     snprintf(fmt, sizeof(fmt), "  DF AID Function... %02X%02X%02X  :" _YELLOW_("%s"), aid[2], aid[1], aid[0], "%s");
     print_aiddf_description(df_known_aids, aid, fmt, false);
-    close_aiddf_file(df_known_aids);
     return PM3_SUCCESS;
 }

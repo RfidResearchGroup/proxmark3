@@ -17,5 +17,6 @@
 #define __SAM_MFC_H
 
 #include "common.h"
+#include "sam_common.h"
 
 #endif

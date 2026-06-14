@@ -227,8 +227,8 @@ static uint64_t packstate(uint64_t s) {
 /* create_guess_table mallocs the tables */
 static void create_guess_table(void) {
     guesses = (struct guess *)calloc(1, sizeof(struct guess) * maxtablesize);
-    if (!guesses) {
-        printf("cannot allocate memory for guess table\n");
+    if (guesses == NULL) {
+        printf("Failed to allocate memory\n");
         exit(1);
     }
 }
@@ -251,9 +251,9 @@ static void init_guess_table(char *filename, char *uidstr) {
 
     // read uid
     if (!strncmp(uidstr, "0x", 2)) {
-        uid = rev32(hexreversetoulong(uidstr + 2));
+        uid = rev32(hexreversetouint32(uidstr + 2));
     } else {
-        uid = rev32(hexreversetoulong(uidstr));
+        uid = rev32(hexreversetouint32(uidstr));
     }
 
 
@@ -266,7 +266,7 @@ static void init_guess_table(char *filename, char *uidstr) {
 
     num_nRaR = 0;
     buf = (char *)calloc(1, lenbuf);
-    if (!buf) {
+    if (buf == NULL) {
         printf("cannot calloc buf\n");
         exit(1);
     }
@@ -286,11 +286,11 @@ static void init_guess_table(char *filename, char *uidstr) {
         }
         *buft2 = 0x00;
         if (!strncmp(buf, "0x", 2)) {
-            nonces[num_nRaR].enc_nR = rev32(hexreversetoulong(buf + 2));
-            nonces[num_nRaR].ks = rev32(hexreversetoulong(buft1 + 2)) ^ 0xffffffff;
+            nonces[num_nRaR].enc_nR = rev32(hexreversetouint32(buf + 2));
+            nonces[num_nRaR].ks = rev32(hexreversetouint32(buft1 + 2)) ^ 0xffffffff;
         } else {
-            nonces[num_nRaR].enc_nR = rev32(hexreversetoulong(buf));
-            nonces[num_nRaR].ks = rev32(hexreversetoulong(buft1)) ^ 0xffffffff;
+            nonces[num_nRaR].enc_nR = rev32(hexreversetouint32(buf));
+            nonces[num_nRaR].ks = rev32(hexreversetouint32(buft1)) ^ 0xffffffff;
         }
         num_nRaR++;
     }
@@ -325,7 +325,7 @@ static double bit_score(uint64_t s, uint64_t size, uint64_t b) {
 
 
     // chop away any bits beyond size
-    chopped = s & ((1l << size) - 1);
+    chopped = s & ((UINT64_C(1) << size) - 1);
     // and pack the remaining bits
     packed = packstate(chopped);
 
@@ -514,7 +514,7 @@ static void score_all_traces(unsigned int size) {
 
     // start the threads
     for (i = 0; i < NUM_THREADS; i++) {
-        if (pthread_create(&(threads[i]), NULL, score_some_traces, (void *)(tdata + i))) {
+        if (pthread_create(&(threads[i]), NULL, score_some_traces, (void *)(uintptr_t)(tdata + i))) {
             printf("cannot start thread %u\n", i);
             exit(1);
         }
@@ -555,7 +555,7 @@ static void expand_guesses(unsigned int halfsize, unsigned int size) {
     unsigned int i, j;
 
     for (i = 0; i < halfsize; i++) {
-        guesses[i + halfsize].key = guesses[i].key | (1l << size);
+        guesses[i + halfsize].key = guesses[i].key | (UINT64_C(1) << size);
         guesses[i + halfsize].score = guesses[i].score;
         for (j = 0; j < num_nRaR; j++) {
             guesses[i + halfsize].b0to31[j] = guesses[i].b0to31[j];
@@ -570,7 +570,7 @@ static void check_supplied_testkey(unsigned int size) {
     uint64_t partkey;
     unsigned int i;
 
-    partkey = supplied_testkey & ((1l << size) - 1);
+    partkey = supplied_testkey & ((UINT64_C(1) << size) - 1);
 
     for (i = 0; i < num_guesses; i++) {
         if (guesses[i].key == partkey) {
@@ -620,7 +620,12 @@ static void crack(void) {
 
         // print some metrics
         uint64_t revkey = rev64(guesses[0].key);
-        uint64_t foundkey = ((revkey >> 40) & 0xff) | ((revkey >> 24) & 0xff00) | ((revkey >> 8) & 0xff0000) | ((revkey << 8) & 0xff000000) | ((revkey << 24) & 0xff00000000) | ((revkey << 40) & 0xff0000000000);
+        uint64_t foundkey = ((revkey >> 40) & UINT64_C(0xff)) |
+                            ((revkey >> 24) & UINT64_C(0xff00)) |
+                            ((revkey >> 8) & UINT64_C(0xff0000)) |
+                            ((revkey << 8) & UINT64_C(0xff000000)) |
+                            ((revkey << 24) & UINT64_C(0xff00000000)) |
+                            ((revkey << 40) & UINT64_C(0xff0000000000));
         fprintf(stderr, " guess=%012" PRIx64 ", num_guesses = %u, top score=%1.10f, min score=%1.10f\n", foundkey, num_guesses, guesses[0].score, guesses[num_guesses - 1].score);
     }
 }
@@ -797,7 +802,7 @@ int main(int argc, char *argv[]) {
                 maxtablesize = atoi(optarg);
                 break;
             case 'T':
-                supplied_testkey = rev64(hexreversetoulonglong(optarg));
+                supplied_testkey = rev64(hexreversetouint64(optarg));
                 break;
             case 'h':
                 usage();
@@ -828,7 +833,12 @@ int main(int argc, char *argv[]) {
                 check_key(guesses[i].key, nonces[1].enc_nR, nonces[1].ks)) {
             printf("WIN!!! :)\n");
             revkey = rev64(guesses[i].key);
-            foundkey = ((revkey >> 40) & 0xff) | ((revkey >> 24) & 0xff00) | ((revkey >> 8) & 0xff0000) | ((revkey << 8) & 0xff000000) | ((revkey << 24) & 0xff00000000) | ((revkey << 40) & 0xff0000000000);
+            foundkey = ((revkey >> 40) & UINT64_C(0xff)) |
+                       ((revkey >> 24) & UINT64_C(0xff00)) |
+                       ((revkey >> 8) & UINT64_C(0xff0000)) |
+                       ((revkey << 8) & UINT64_C(0xff000000)) |
+                       ((revkey << 24) & UINT64_C(0xff00000000)) |
+                       ((revkey << 40) & UINT64_C(0xff0000000000));
             printf("key = %012" PRIX64 "\n", foundkey);
             exit(0);
         }

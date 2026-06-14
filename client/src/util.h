@@ -34,8 +34,16 @@ extern uint8_t g_printAndLog;
 extern bool g_pendingPrompt;
 extern int g_numCPUs;
 
+typedef struct {
+    char *ptr;
+    size_t size;
+    size_t idx;
+} grabbed_output;
+extern grabbed_output g_grabbed_output;
+
 #define PRINTANDLOG_PRINT 1
 #define PRINTANDLOG_LOG   2
+#define PRINTANDLOG_GRAB  4
 
 // Return error
 #define PM3_RET_ERR(err, ...)  { \
@@ -76,6 +84,7 @@ void hex_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len,
 void print_hex(const uint8_t *data, const size_t len);
 void print_hex_break(const uint8_t *data, const size_t len, const uint8_t breaks);
 void print_hex_noascii_break(const uint8_t *data, const size_t len, uint8_t breaks);
+void print_hex_noascii_break_ex(const uint8_t *data, const size_t len, uint8_t breaks, const char *prefix, char separator, const char *suffix);
 
 char *sprint_hex(const uint8_t *data, const size_t len);
 char *sprint_hex_inrow(const uint8_t *data, const size_t len);
@@ -95,6 +104,9 @@ void print_buffer(const uint8_t *data, const size_t len, int level);
 void print_blocks(uint32_t *data, size_t len);
 
 int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValueLen);
+int parse_uint32_hex_or_dec(const char *text, uint32_t *out);
+bool bytes_equal_not_null(const void *a, size_t a_len, const void *b, size_t b_len);
+int buffer_append_bytes_with_offset(uint8_t *buf, size_t buf_len, size_t *offset, const void *data, size_t data_len);
 void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest);
 void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest);
 void bytes_to_bytebits(const void *src, const size_t srclen, void *dest);
@@ -133,9 +145,15 @@ int binstr_2_binarray(uint8_t *target, char *source, int length);
 void bytes_2_binstr(char *target,  const uint8_t *source, size_t sourcelen);
 void binstr_2_bytes(uint8_t *target, size_t *targetlen, const char *src);
 
+void binstr_2_u8(char *src, uint8_t n, uint8_t *dest);
+void binstr_2_u16(char *src, uint8_t n, uint16_t *dest);
+
+void hex_xor(uint8_t *d, const uint8_t *x, int n);
+void hex_xor_token(uint8_t *d, const uint8_t *x, int dn, int xn);
+
 uint8_t GetParity(const uint8_t *bits, uint8_t type, int length);
-void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length);
-void wiegand_add_parity_swapped(uint8_t *target, uint8_t *source, uint8_t length);
+void wiegand_add_parity(uint8_t *target, const uint8_t *source, uint8_t length);
+void wiegand_add_parity_swapped(uint8_t *target, const uint8_t *source, uint8_t length);
 
 //void xor(unsigned char *dst, unsigned char *src, size_t len);
 
@@ -149,18 +167,32 @@ void str_lower(char *s); // converts string to lower case
 void str_upper(char *s); // converts string to UPPER case
 void strn_upper(char *s, size_t n);
 
+bool str_equal_case_insensitive(const char *a, const char *b);
+bool str_startswith_case_insensitive(const char *s, const char *pre);
+bool str_contains_case_insensitive(const char *s, const char *needle);
 bool str_startswith(const char *s,  const char *pre);  // check for prefix in string
 bool str_endswith(const char *s,  const char *suffix);    // check for suffix in string
 void clean_ascii(unsigned char *buf, size_t len);
+bool is_printable_ascii(const uint8_t *data, size_t data_len);
+bool decode_zero_padded_ascii(const uint8_t *data, size_t data_len, char *out, size_t out_len);
 void str_cleanrn(char *buf, size_t len);
 void str_creplace(char *buf, size_t len, char from, char to);
 void str_reverse(char *buf,  size_t len);
 void str_inverse_hex(char *buf, size_t len);
 void str_inverse_bin(char *buf, size_t len);
+void str_trim(char *s);
 
 char *str_dup(const char *src);
 char *str_ndup(const char *src, size_t len);
 size_t str_nlen(const char *src, size_t maxlen);
+size_t str_copy(char *dst, size_t dst_size, const char *src);
+// Lightweight regex subset:
+//  - supported metacharacters: '^' (start), '$' (end), '.' (any char), '*' (zero or more)
+//  - escaping: '\\' to match the following char literally
+//  - all other regex constructs are currently treated as literal characters
+bool str_regex_match(const char *regexp, const char *text);
+bool str_regex_match_case_insensitive(const char *regexp, const char *text);
+
 int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
 int binstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
 int binarray_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const uint8_t *arr, int arrlen);
@@ -179,4 +211,24 @@ struct smartbuf {
     size_t idx;
 } typedef smartbuf;
 void sb_append_char(smartbuf *sb, unsigned char c);
+
+uint8_t get_highest_frequency(const uint8_t *d, uint8_t n);
+
+size_t unduplicate(uint8_t *d, size_t n, const uint8_t item_n);
+
+/**
+ * @brief Trim leading and trailing ASCII whitespace from a mutable string.
+ */
+void str_trim_ascii_inplace(char *s);
+
+/**
+ * @brief Replace escaped \n, \r, and \t sequences with their control characters in-place.
+ */
+void str_unescape_newlines_inplace(char *s);
+
+/**
+ * @brief Copy a string while dropping all ASCII whitespace characters.
+ */
+int str_copy_without_whitespace(const char *src, char *dst, size_t dst_size, size_t *dst_len);
+
 #endif

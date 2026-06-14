@@ -438,12 +438,17 @@ int APDUDecode(uint8_t *data, int len, APDU_t *apdu) {
 }
 
 int APDUEncode(APDU_t *apdu, uint8_t *data, int *len) {
-    if (len)
+    if (len) {
         *len = 0;
-    if (apdu == NULL)
+    }
+
+    if (apdu == NULL) {
         return 1;
-    if (apdu->le > 0x10000)
+    }
+
+    if (apdu->le > 0x10000) {
         return 1;
+    }
 
     size_t dptr = 0;
     data[dptr++] = apdu->cla;

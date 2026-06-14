@@ -73,7 +73,6 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
         PacketResponseNG resp;
         clearCommandBuffer();
         SendCommandNG(CMD_HF_EPA_COLLECT_NONCE, (uint8_t *)&payload, sizeof(payload));
-
         WaitForResponse(CMD_HF_EPA_COLLECT_NONCE, &resp);
 
         // check if command failed
@@ -81,14 +80,15 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
             PrintAndLogEx(FAILED, "Error in step %" PRId64 ", Return code: %" PRId64, resp.oldarg[0], resp.oldarg[1]);
         } else {
             size_t nonce_length = resp.oldarg[1];
-            size_t nonce_length_bytes = 2 * nonce_length + 1;
+
             char *nonce = (char *) calloc(2 * nonce_length + 1, sizeof(uint8_t));
-            for (int j = 0; j < nonce_length; j++) {
-                int nonce_offset = 2 * j;
-                snprintf(nonce + nonce_offset, (nonce_length_bytes * sizeof(uint8_t)) - nonce_offset, "%02X", resp.data.asBytes[j]);
+            if (nonce == NULL) {
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
+                return PM3_EMALLOC;
             }
+
             // print nonce
-            PrintAndLogEx(SUCCESS, "Length: %zu, Nonce: %s", nonce_length, nonce);
+            PrintAndLogEx(SUCCESS, "Length: %zu, Nonce: %s", nonce_length, sprint_hex_inrow(resp.data.asBytes, nonce_length));
             free(nonce);
         }
         if (i < n - 1) {
@@ -241,7 +241,6 @@ static int CmdHFEPAPACESimulate(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_EPA_PACE_SIMULATE, 0, 0, 0, pwd, plen);
-
     PacketResponseNG resp;
     WaitForResponse(CMD_ACK, &resp);
 

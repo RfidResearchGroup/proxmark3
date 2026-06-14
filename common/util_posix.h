@@ -26,9 +26,9 @@
 # define sleep(n) Sleep(1000 *(n))
 # define msleep(n) Sleep((n))
 #else
-void msleep(uint32_t n); // sleep n milliseconds
+void msleep(uint32_t n);    // sleep n milliseconds
 #endif // _WIN32
 
-uint64_t msclock(void);      // a milliseconds clock
-
+uint64_t msclock(void);     // a milliseconds clock
+uint64_t usclock(void);     // a microseconds clock
 #endif

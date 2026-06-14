@@ -1,6 +1,9 @@
 ifeq ($(PLTNAME),)
-    -include ../../Makefile.platform
+    PLATFORM_FILE ?= ../../Makefile.platform
+    -include $(PLATFORM_FILE)
     -include ../../.Makefile.options.cache
+# Default platform if no platform specified
+    PLATFORM?=PM3RDV4
     ifneq ($(PLATFORM), $(CACHED_PLATFORM))
         $(error platform definitions have been changed, please "make clean" at the root of the project)
     endif
@@ -11,6 +14,8 @@ MYINCLUDES = -I../../common_fpga
 MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
 ifeq ($(PLATFORM),PM3ICOPYX)
   MYDEFS = -DXC3
+else ifeq ($(PLATFORM),PM3ULTIMATE)
+  MYDEFS = -DXC2S50
 else
   MYDEFS =
 endif

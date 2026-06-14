@@ -103,9 +103,9 @@ static bool get_input_data_from_file(uint32_t *tag, char *inputfile) {
     if (exists_in_spiffs(inputfile)) {
 
         uint32_t size = size_in_spiffs(inputfile);
-        uint8_t *mem = BigBuf_malloc(size);
+        uint8_t *mem = BigBuf_calloc(size);
 
-        Dbprintf(_YELLOW_("found input file %s"), inputfile);
+        Dbprintf("found input file `" _YELLOW_("%s") "`", inputfile);
 
         rdv40_spiffs_read_as_filetype(inputfile, mem, size, RDV40_SPIFFS_SAFETY_SAFE);
 

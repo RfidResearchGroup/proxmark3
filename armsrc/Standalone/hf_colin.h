@@ -35,12 +35,6 @@
 #define _XWHITE_ "\x1b[0m"
 #define _XORANGE_ _XYELLOW_
 
-int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, uint8_t *datain, uint64_t *key);
-int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype);
-void saMifareMakeTag(void);
-int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
-void WriteTagToFlash(uint32_t uid, size_t size);
-
 const char clearTerm[8] = {0x1b, 0x5b, 0x48, 0x1b, 0x5b, 0x32, 0x4a, '\0'};
 
 //void cjPrintBigArray(const char *bigar, int len, uint8_t newlines, uint8_t debug);

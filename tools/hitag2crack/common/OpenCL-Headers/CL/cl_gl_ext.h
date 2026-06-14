@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2008-2020 The Khronos Group Inc.
+ * Copyright (c) 2008-2021 The Khronos Group Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,5 @@
  * limitations under the License.
  ******************************************************************************/
 
-#ifndef __OPENCL_CL_GL_EXT_H
-#define __OPENCL_CL_GL_EXT_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <CL/cl_gl.h>
-
-/*
- *  cl_khr_gl_event extension
- */
-#define CL_COMMAND_GL_FENCE_SYNC_OBJECT_KHR     0x200D
-
-extern CL_API_ENTRY cl_event CL_API_CALL
-clCreateEventFromGLsyncKHR(cl_context context,
-                           cl_GLsync  sync,
-                           cl_int    *errcode_ret) CL_EXT_SUFFIX__VERSION_1_1;
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif  /* __OPENCL_CL_GL_EXT_H  */
+#pragma message("The extensions in cl_gl_ext.h have been moved into cl_gl.h.  Please include cl_gl.h directly.")

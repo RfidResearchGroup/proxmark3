@@ -35,6 +35,9 @@
 #include "cmdlfem4x05.h"   //
 #include "cliparser.h"
 
+// 8 bytes + null terminator
+#define PAC_ID_LEN  (8 + 1)
+
 static int CmdHelp(const char *Cmd);
 
 // PAC_8byte format: preamble (8 mark/idle bits), ascii STX (02), ascii '2' (32), ascii '0' (30), ascii bytes 0..7 (cardid), then xor checksum of cardid bytes
@@ -160,12 +163,13 @@ int demodPac(bool verbose) {
     uint32_t raw3 = bytebits_to_byte(g_DemodBuffer + 64, 32);
     uint32_t raw4 = bytebits_to_byte(g_DemodBuffer + 96, 32);
 
-    const size_t idLen = 9; // 8 bytes + null terminator
-    uint8_t cardid[idLen];
+    // 8 bytes + null terminator
+    uint8_t cardid[PAC_ID_LEN];
     int retval = pac_buf_to_cardid(g_DemodBuffer, g_DemodBufferLen, cardid, sizeof(cardid));
 
-    if (retval == PM3_SUCCESS)
+    if (retval == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "PAC/Stanley - Card: " _GREEN_("%s") ", Raw: %08X%08X%08X%08X", cardid, raw1, raw2, raw3, raw4);
+    }
 
     return retval;
 }
@@ -210,7 +214,7 @@ static int CmdPacReader(const char *Cmd) {
     do {
         lf_read(false, 4096 * 2 + 20);
         demodPac(!cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }
@@ -236,8 +240,8 @@ static int CmdPacClone(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t cnstr[9];
-    int cnlen = 9;
+    uint8_t cnstr[10] = {0};
+    int cnlen = sizeof(cnstr) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     memset(cnstr, 0x00, sizeof(cnstr));
     CLIGetStrWithReturn(ctx, 1, cnstr, &cnlen);
 
@@ -304,8 +308,8 @@ static int CmdPacClone(const char *Cmd) {
     } else {
         res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     }
-    PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf pac reader`") " to verify");
+    PrintAndLogEx(SUCCESS, "Done!");
+    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf pac reader`") " to verify");
     return res;
 }
 
@@ -329,7 +333,7 @@ static int CmdPacSim(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     uint8_t cnstr[10];
-    int cnlen = 9;
+    int cnlen = sizeof(cnstr) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     memset(cnstr, 0x00, sizeof(cnstr));
     CLIGetStrWithReturn(ctx, 1, cnstr, &cnlen);
 
@@ -368,6 +372,10 @@ static int CmdPacSim(const char *Cmd) {
 
     // NRZ sim.
     lf_nrzsim_t *payload = calloc(1, sizeof(lf_nrzsim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     payload->invert = 0;
     payload->separator = 0;
     payload->clock = 32;
@@ -391,7 +399,7 @@ static command_t CommandTable[] = {
     {"help",  CmdHelp,        AlwaysAvailable, "This help"},
     {"demod", CmdPacDemod,    AlwaysAvailable, "demodulate a PAC tag from the GraphBuffer"},
     {"reader",  CmdPacReader, IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone", CmdPacClone,    IfPm3Lf,         "clone PAC tag to T55x7"},
+    {"clone", CmdPacClone,    IfPm3Lf,         "clone PAC tag to T55x7, Q5/T5555 or EM4305/4469"},
     {"sim",   CmdPacSim,      IfPm3Lf,         "simulate PAC tag"},
     {NULL, NULL, NULL, NULL}
 };

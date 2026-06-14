@@ -29,8 +29,7 @@ local ISO14A_COMMAND = {
     ISO14A_TOPAZMODE = 0x100,
     ISO14A_NO_RATS = 0x200,
     ISO14A_SEND_CHAINING = 0x400,
-    ISO14A_USE_ECP = 0x800,
-    ISO14A_USE_MAGSAFE = 0x1000,
+    ISO14A_CLEARTRACE = 0x20000,
 }
 
 local ISO14443a_TYPES = {}
@@ -90,7 +89,7 @@ local function read14443a(dont_disconnect, no_rats)
 
     command = Command:newMIX{
             cmd = cmds.CMD_HF_ISO14443A_READER,
-            arg1 = ISO14A_COMMAND.ISO14A_CONNECT
+            arg1 = ISO14A_COMMAND.ISO14A_CONNECT + ISO14A_COMMAND.ISO14A_CLEARTRACE
             }
 
     if dont_disconnect then

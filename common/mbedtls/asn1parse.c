@@ -321,11 +321,11 @@ static int asn1_get_sequence_of_cb(void *ctx,
         cb_ctx->cur;
 
     if (cur->buf.p != NULL) {
-        cur->next =
-            mbedtls_calloc(1, sizeof(mbedtls_asn1_sequence));
+        cur->next = mbedtls_calloc(1, sizeof(mbedtls_asn1_sequence));
 
-        if (cur->next == NULL)
+        if (cur->next == NULL) {
             return (MBEDTLS_ERR_ASN1_ALLOC_FAILED);
+        }
 
         cur = cur->next;
     }

@@ -21,6 +21,8 @@
 #define __FLASHMEM_H
 
 #include "common.h"
+#include "pmflash.h"
+
 
 //    Used Command
 #define ID              0x90
@@ -53,11 +55,6 @@
 
 // Flash busy timeout: 20ms is the strict minimum when writing 256kb
 #define BUSY_TIMEOUT    200000L
-
-#define WINBOND_MANID       0xEF
-#define WINBOND_2MB_DEVID   0x11
-#define WINBOND_1MB_DEVID   0x10
-#define WINBOND_512KB_DEVID 0x05
 
 #define PAGESIZE        0x100
 #define WINBOND_WRITE_DELAY 0x02
@@ -129,8 +126,9 @@ bool Flash_Erase64k(uint8_t block);
 typedef struct {
     uint8_t manufacturer_id;
     uint8_t device_id;
-} flash_device_type_90_t; // to differentiate from JDEC ID via cmd 9F
-bool Flash_ReadID_90(flash_device_type_90_t *result);
+    uint8_t device_id2;
+} flash_device_type_t; // extra device_id used for the JEDEC ID read via cmd 9F
+bool Flash_ReadID(flash_device_type_t *result, bool read_jedec);
 
 uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len);
 uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len);
@@ -138,9 +136,17 @@ uint16_t Flash_Write(uint32_t address, uint8_t *in, uint16_t len);
 uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len);
 uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len);
 void Flashmem_print_status(void);
-void Flashmem_print_info(void);
+
+spi_flash_t *flash_get_info(void);
+
+extern uint8_t spi_flash_pages64k;
+
+bool FlashDetect(void);
+
+#ifndef ARRAYLEN
+# define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
+#endif
 
 #endif // #ifndef AS_BOOTROM
-
 
 #endif

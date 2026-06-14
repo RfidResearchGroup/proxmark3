@@ -25,6 +25,7 @@ MYSRCS = \
 	ecdh.c \
 	ecdsa.c \
 	gcm.c \
+	hkdf.c \
 	md.c \
 	md5.c \
 	oid.c \

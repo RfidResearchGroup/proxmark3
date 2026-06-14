@@ -30,7 +30,6 @@
 // main code for LF aka HID corporate brutefore by Federico Dotta & Maurizio Agazzini
 //-----------------------------------------------------------------------------------
 #include "standalone.h" // standalone definitions
-#include "lf_hidbrute.h"
 
 #include "proxmark3_arm.h"
 #include "appmain.h"
@@ -41,6 +40,8 @@
 #include "lfops.h"
 
 #define OPTS 3
+
+static void hid_corporate_1000_calculate_checksum_and_set(uint32_t *high, uint32_t *low, uint32_t cardnum, uint32_t fc);
 
 void ModInfo(void) {
     DbpString("  LF HID corporate 1000 bruteforce - aka Corporatebrute (Federico dotta & Maurizio Agazzini)");
@@ -250,14 +251,14 @@ out:
 }
 
 // Function that calculate next value for the brutforce of HID corporate 1000
-void hid_corporate_1000_calculate_checksum_and_set(uint32_t *high, uint32_t *low, uint32_t cardnum, uint32_t fc) {
+static void hid_corporate_1000_calculate_checksum_and_set(uint32_t *high, uint32_t *low, uint32_t cardnum, uint32_t fc) {
 
     uint32_t new_high = 0;
     uint32_t new_low = 0;
 
     // Calculate new high and low base value from card number and facility code, without parity
     new_low = (fc << 21) | (cardnum << 1);
-    new_high = 0x28 | ((fc >> 11) & 1); // 0x28 is 101000
+    new_high = (fc >> 11) & 1;
 
     int n_ones;
     uint32_t i;
@@ -319,6 +320,7 @@ void hid_corporate_1000_calculate_checksum_and_set(uint32_t *high, uint32_t *low
         new_high = new_high | 0x4;
 
     // Setting new calculated values
+    add_HID_preamble(0, &new_high, &new_low, 35);
     *low = new_low;
     *high = new_high;
 }

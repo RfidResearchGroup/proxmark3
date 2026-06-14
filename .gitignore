@@ -37,13 +37,23 @@ originalitysig.csv
 
 # new build file for add-ons.
 Makefile.platform
+Makefile.platform.*
+!Makefile.platform.sample
+
 # Cache for detecting platform def changes
 .Makefile.options.cache
 
 # cmake
+CMakeFiles/
+client/CMakeFiles/
+client/deps/**
+!client/deps/id48/
+!client/deps/id48/**
 client/build/
 client/android/build/
-client/deps/bzip2/
+CMakeCache.txt
+*.cmake
+.cache
 
 # Coverity
 cov-int/
@@ -54,6 +64,10 @@ cov-int/
 
 !client/resources/hardnested/*.bin
 !client/resources/hardnested_tables/*.z
+!client/resources/felica/
+!client/resources/felica/*.json
+!client/resources/calypso/
+!client/resources/calypso/*.json
 client/src/ui/ui_image.h
 client/src/ui/ui_overlays.h
 client/deps/reveng/bmptst
@@ -66,20 +80,15 @@ flasher
 lua
 luac
 tools/fpga_compress/fpga_compress
-tools/mfkey/mfkey32
-tools/mfkey/mfkey64
-tools/mfkey/staticnested
-tools/nonce2key/nonce2key
 tools/cryptorf/cm
 tools/cryptorf/sm
 tools/cryptorf/sma
 tools/cryptorf/sma_multi
-tools/mf_nonce_brute/mf_nonce_brute
-tools/mf_nonce_brute/mf_trace_brute
 tools/jtag_openocd/openocd_configuration
 tools/mfd_aes_brute/mfd_aes_brute
 tools/mfd_aes_brute/mfd_multi_brute
 tools/mfd_aes_brute/brute_key
+tools/mfulc_des_brute/mfulc_des_brute
 !tools/lena.bmp
 
 fpga/__build*
@@ -119,3 +128,12 @@ fpga_version_info.c
 codeql/
 _codeql_detected_source_root
 
+=======
+# local codeql
+_codeql*
+/codeql
+
+# Pyton venvs
+venv/
+#Claude AI files
+CLAUDE.md

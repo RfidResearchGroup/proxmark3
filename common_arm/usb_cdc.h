@@ -39,6 +39,7 @@ int async_usb_write_start(void);
 void async_usb_write_pushByte(uint8_t data);
 bool async_usb_write_requestWrite(void);
 int async_usb_write_stop(void);
+bool usb_read_ng_has_buffered_data(void);
 uint32_t usb_read_ng(uint8_t *data, size_t len);
 void usb_update_serial(uint64_t newSerialNumber);
 

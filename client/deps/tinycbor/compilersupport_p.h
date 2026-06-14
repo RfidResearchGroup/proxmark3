@@ -179,7 +179,9 @@
 #ifndef unlikely
 #  define unlikely(x)   __builtin_expect(!!(x), 0)
 #endif
+#ifndef unreachable
 #  define unreachable() __builtin_unreachable()
+#endif
 #elif defined(_MSC_VER)
 #  define likely(x)     (x)
 #  define unlikely(x)   (x)

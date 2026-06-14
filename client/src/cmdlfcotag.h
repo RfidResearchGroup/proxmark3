@@ -27,6 +27,6 @@
 #endif
 
 int CmdLFCOTAG(const char *Cmd);
-int demodCOTAG(bool verbose);
+int demodCOTAG(bool verbose, int clock, int threshold);
 int readCOTAGUid(void);
 #endif

@@ -74,7 +74,7 @@ Standard password is normally (for T55xx):  AA55BBBB
 
 ```
 lf t55xx write -b 1 -d E0150A48 --pg1
-If t55xx write -b 2 -d 2D782308 --pg1
+lf t55xx write -b 2 -d 2D782308 --pg1
 ```
 
 # Sniffing the comms

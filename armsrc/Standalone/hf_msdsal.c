@@ -209,7 +209,8 @@ void RunMod(void) {
     bool chktoken = false;
 
     // UID 4 bytes(could be 7 bytes if needed it)
-    uint8_t flags = FLAG_4B_UID_IN_DATA;
+    uint8_t flags = 0;
+    FLAG_SET_UID_IN_DATA(flags, 4);
     // in case there is a read command received we shouldn't break
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
 
@@ -307,7 +308,7 @@ void RunMod(void) {
                     // add loop visa
                     // for (int i = 0; i < ARRAYLEN(AIDlist); i ++) {
 //    hexstr_to_byte_array("a0da02631a440a44000000a012ad10a00e800200048108", sam_apdu, &sam_len);
-                    uint8_t apdulen = iso14_apdu(apdus[i], (uint16_t) apduslen[i], false, apdubuffer, NULL);
+                    uint8_t apdulen = iso14_apdu(apdus[i], (uint16_t) apduslen[i], false, apdubuffer, sizeof(apdubuffer), NULL);
 
                     if (apdulen > 0) {
                         DbpString("[ " _YELLOW_("Proxmark command") " ]");
@@ -378,7 +379,7 @@ void RunMod(void) {
             BigBuf_free_keep_EM();
 
             // tag type: 11 = ISO/IEC 14443-4 - javacard (JCOP)
-            if (SimulateIso14443aInit(11, flags, data, &responses, &cuid, NULL, NULL, NULL) == false) {
+            if (SimulateIso14443aInit(11, flags, data, NULL, 0, &responses, &cuid, NULL, NULL) == false) {
                 BigBuf_free_keep_EM();
                 reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
                 DbpString(_RED_("Error initializing the emulation process!"));
@@ -404,7 +405,7 @@ void RunMod(void) {
             for (;;) {
                 LED_B_OFF();
                 // clean receive command buffer
-                if (GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len) == false) {
+                if (GetIso14443aCommandFromReader(receivedCmd, sizeof(receivedCmd), receivedCmdPar, &len) == false) {
                     DbpString("Emulator stopped");
                     retval = PM3_EOPABORTED;
                     break;
@@ -444,7 +445,7 @@ void RunMod(void) {
                     // received a RATS request
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {
                     prevCmd = 0;
-                    p_response = &responses[RESP_INDEX_RATS];
+                    p_response = &responses[RESP_INDEX_ATS];
 
                 } else {
                     if (g_dbglevel == DBG_DEBUG) {

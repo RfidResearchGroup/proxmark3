@@ -107,7 +107,7 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len, uint
     SpinDelay(100);
 
     *len = BigBuf_max_traceLen();
-    uint8_t *mem = BigBuf_malloc(*len);
+    uint8_t *mem = BigBuf_calloc(*len);
 
     uint32_t trigger_cnt = 0;
     uint16_t r = 0, interval = 0;

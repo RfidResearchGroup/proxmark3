@@ -36,14 +36,15 @@
 #include "cliparser.h"
 #include "generator.h"    // generate nuid
 #include "iso14b.h"       // defines for ETU conversions
+#include "util.h"         // regex utility
 
 static int CmdHelp(const char *Cmd);
 
 static uint8_t calculateLRC(const uint8_t *d, uint8_t n) {
-    uint8_t lcr = 0;
+    uint8_t lrc = 0;
     for (uint8_t i = 0; i < n; i++)
-        lcr ^= d[i];
-    return lcr;
+        lrc ^= d[i];
+    return lrc;
 }
 /*
 static uint16_t matrixadd ( uint8_t* bytes, uint8_t len){
@@ -185,9 +186,7 @@ static uint16_t calcXORchecksum(uint8_t *bytes, uint8_t len, uint32_t mask) {
     return 0xFF - calcSumByteXor(bytes, len, mask);
 }
 
-
 //2148050707DB0A0E000001C4000000
-
 // measuring LFSR maximum length
 static int CmdAnalyseLfsr(const char *Cmd) {
     CLIParserContext *ctx;
@@ -242,17 +241,17 @@ static int CmdAnalyseLfsr(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdAnalyseLCR(const char *Cmd) {
+static int CmdAnalyseLRC(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "analyse lcr",
+    CLIParserInit(&ctx, "analyse lrc",
                   "Specifying the bytes of a UID with a known LRC will find the last byte value\n"
                   "needed to generate that LRC with a rolling XOR. All bytes should be specified in HEX.",
-                  "analyse lcr -d 04008064BA     ->  Target (BA) requires final LRC XOR byte value: 5A"
+                  "analyse lrc -d 04008064BA     ->  Target (BA) requires final LRC XOR byte value: 5A"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("d", "data", "<hex>", "bytes to calc missing XOR in a LCR"),
+        arg_str1("d", "data", "<hex>", "bytes to calc missing XOR in a LRC"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -910,6 +909,7 @@ static int CmdAnalyseDemodBuffer(const char *Cmd) {
     // add 1 for null terminator.
     uint8_t *data = calloc(len + 1,  sizeof(uint8_t));
     if (data == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         CLIParserFree(ctx);
         return PM3_EMALLOC;
     }
@@ -929,7 +929,7 @@ static int CmdAnalyseDemodBuffer(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     g_DemodBufferLen = len;
     free(data);
-    PrintAndLogEx(HINT, "Use `" _YELLOW_("data print") "` to view DemodBuffer");
+    PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data print") "` to view DemodBuffer");
     return PM3_SUCCESS;
 }
 
@@ -1025,8 +1025,8 @@ static int CmdAnalyseFoo(const char *Cmd) {
     uint8_t data[256];
     CLIGetHexWithReturn(ctx, 1, data, &datalen);
 
-    int data3len = 512;
-    uint8_t data3[512];
+    uint8_t data3[512] = {0};
+    int data3len = sizeof(data3) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated;
     CLIGetStrWithReturn(ctx, 1, data3, &data3len);
 
     CLIParserFree(ctx);
@@ -1169,9 +1169,94 @@ static int CmdAnalyseUnits(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdAnalyseRegex(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse regex",
+                  "Regex utility (subset: ^ $ . * with \\\\ escape)",
+                  "analyse regex --pattern '^A000' --text A000000476D0000111\n"
+                  "analyse regex --pattern '.*500A416E64726F6964506179.*9000$' --text 6F8150500A416E64726F69645061799000 --insensitive\n"
+                  "analyse regex --test"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("p", "pattern", "<str>", "regex pattern"),
+        arg_str0("d", "text", "<str>", "text to match"),
+        arg_lit0("i", "insensitive", "case-insensitive match"),
+        arg_lit0("t", "test", "run self tests"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    struct arg_str *arg_pattern = arg_get_str(ctx, 1);
+    struct arg_str *arg_text = arg_get_str(ctx, 2);
+    bool insensitive = arg_get_lit(ctx, 3);
+    bool selftest = arg_get_lit(ctx, 4);
+
+    if (selftest) {
+        CLIParserFree(ctx);
+
+        typedef struct {
+            const char *pattern;
+            const char *text;
+            bool case_insensitive;
+            bool expect_match;
+        } regex_test_case_t;
+
+        const regex_test_case_t tests[] = {
+            {.pattern = "^A000", .text = "A000000476D0000111", .case_insensitive = false, .expect_match = true},
+            {.pattern = "9000$", .text = "6F009000", .case_insensitive = false, .expect_match = true},
+            {.pattern = ".*500A416E64726F6964506179.*9000$", .text = "6F8150500A416E64726F69645061799000", .case_insensitive = true, .expect_match = true},
+            {.pattern = "^a0.*$", .text = "A0000000", .case_insensitive = true, .expect_match = true},
+            {.pattern = "^a0.*$", .text = "B0000000", .case_insensitive = true, .expect_match = false},
+            {.pattern = "A\\*B", .text = "ZZA*BZZ", .case_insensitive = false, .expect_match = true},
+            {.pattern = "A+B", .text = "AAAB", .case_insensitive = false, .expect_match = false},
+            {.pattern = "*ABC", .text = "ABC", .case_insensitive = false, .expect_match = false},
+            {.pattern = "ABC\\", .text = "ABC", .case_insensitive = false, .expect_match = false},
+        };
+
+        bool all_ok = true;
+        for (size_t i = 0; i < ARRAYLEN(tests); i++) {
+            bool matched = tests[i].case_insensitive
+                           ? str_regex_match_case_insensitive(tests[i].pattern, tests[i].text)
+                           : str_regex_match(tests[i].pattern, tests[i].text);
+
+            bool ok = (matched == tests[i].expect_match);
+            PrintAndLogEx(ok ? SUCCESS : FAILED, "%zu. pattern=`%s` valid=%s match=%s ( %s )",
+                          i + 1,
+                          tests[i].pattern,
+                          "true",
+                          matched ? "true" : "false",
+                          ok ? _GREEN_("ok") : _RED_("fail"));
+            if (!ok) {
+                all_ok = false;
+            }
+        }
+
+        PrintAndLogEx(all_ok ? SUCCESS : FAILED, "Tests ( %s )", all_ok ? _GREEN_("ok") : _RED_("fail"));
+        return all_ok ? PM3_SUCCESS : PM3_ESOFT;
+    }
+
+    if (arg_pattern->count == 0 || arg_text->count == 0) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "pattern and text are required unless --test is used");
+        return PM3_EINVARG;
+    }
+
+    const char *pattern = arg_pattern->sval[0];
+    const char *text = arg_text->sval[0];
+
+    bool matched = insensitive
+                   ? str_regex_match_case_insensitive(pattern, text)
+                   : str_regex_match(pattern, text);
+    CLIParserFree(ctx);
+    PrintAndLogEx(matched ? SUCCESS : INFO, "Regex match: %s", matched ? _GREEN_("true") : _YELLOW_("false"));
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",    CmdHelp,            AlwaysAvailable, "This help"},
-    {"lcr",     CmdAnalyseLCR,      AlwaysAvailable, "Generate final byte for XOR LRC"},
+    {"lrc",     CmdAnalyseLRC,      AlwaysAvailable, "Generate final byte for XOR LRC"},
     {"crc",     CmdAnalyseCRC,      AlwaysAvailable, "Stub method for CRC evaluations"},
     {"chksum",  CmdAnalyseCHKSUM,   AlwaysAvailable, "Checksum with adding, masking and one's complement"},
     {"dates",   CmdAnalyseDates,    AlwaysAvailable, "Look for datestamps in a given array of bytes"},
@@ -1181,6 +1266,7 @@ static command_t CommandTable[] = {
     {"demodbuff", CmdAnalyseDemodBuffer, AlwaysAvailable, "Load binary string to DemodBuffer"},
     {"freq",    CmdAnalyseFreq,     AlwaysAvailable, "Calc wave lengths"},
     {"foo",     CmdAnalyseFoo,      AlwaysAvailable, "muxer"},
+    {"regex",   CmdAnalyseRegex,    AlwaysAvailable, "Regex utility (subset: ^ $ . * with \\\\ escape)"},
     {"units",   CmdAnalyseUnits,    AlwaysAvailable, "convert ETU <> US <> SSP_CLK (3.39MHz)"},
     {NULL, NULL, NULL, NULL}
 };

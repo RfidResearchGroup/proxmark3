@@ -34,9 +34,11 @@
 #define  ISO7816_MAX_FRAME 270
 
 // 8051 speaks with smart card.
-// 1000*50*3.07   = 153.5ms
-// 1 byte transfer == 1ms with max frame being 256 bytes
-#define SIM_WAIT_DELAY  88000 // about 270ms delay // 109773 -- about 337.7ms delay
+// 1 byte transfer == 1ms with max frame being 256 bytes.
+// SIM_WAIT_DELAY is the iteration count passed to WaitSCL_H_delay(); each iter
+// is ~3.07us, so 150000 * 3.07us = ~460ms - the upper bound we wait for the
+// SIM module to assert SCL after a SIM-side operation.
+#define SIM_WAIT_DELAY  150000 // ~460ms total wait via WaitSCL_H_delay
 
 
 void I2C_recovery(void);
@@ -68,6 +70,6 @@ void SmartCardUpgrade(uint64_t arg0);
 void SmartCardSetBaud(uint64_t arg0);
 void SmartCardSetClock(uint64_t arg0);
 void I2C_print_status(void);
-int I2C_get_version(uint8_t *maj, uint8_t *min);
+int I2C_get_version(uint8_t *major, uint8_t *minor);
 
 #endif

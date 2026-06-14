@@ -493,7 +493,7 @@ parse_long_options(char *const *nargv, const char *options,
 static int
 getopt_internal(int nargc, char *const *nargv, const char *options,
                 const struct option *long_options, int *idx, int flags) {
-    char *oli; /* option letter list index */
+    const char *oli; /* option letter list index */
     int optchar, short_too;
     static int posixly_correct = -1;
 #ifdef __STDC_WANT_SECURE_LIB__
@@ -3601,16 +3601,35 @@ static const TRexChar *trex_matchnode(TRex *exp, TRexNode *node, const TRexChar 
 /* public api */
 TRex *trex_compile(const TRexChar *pattern, const TRexChar **error, int flags) {
     TRex *exp = (TRex *)malloc(sizeof(TRex));
+    if (exp == NULL) {
+        return NULL;
+    }
+
     exp->_eol = exp->_bol = NULL;
     exp->_p = pattern;
+    exp->_jmpbuf = NULL;
+    exp->_nodes = NULL;
+    exp->_matches = NULL;
     exp->_nallocated = (int)scstrlen(pattern) * sizeof(TRexChar);
+
     exp->_nodes = (TRexNode *)malloc(exp->_nallocated * sizeof(TRexNode));
+    if (exp->_nodes == NULL) {
+        trex_free(exp);
+        return NULL;
+    }
+
     exp->_nsize = 0;
     exp->_matches = 0;
     exp->_nsubexpr = 0;
     exp->_first = trex_newnode(exp, OP_EXPR);
     exp->_error = error;
     exp->_jmpbuf = malloc(sizeof(jmp_buf));
+
+    if (exp->_jmpbuf == NULL) {
+        trex_free(exp);
+        return NULL;
+    }
+
     exp->_flags = flags;
     if (setjmp(*((jmp_buf *)exp->_jmpbuf)) == 0) {
         int res = trex_list(exp);

@@ -137,6 +137,7 @@ typedef struct {
 #define CMD_HF_ISO14443A_SNIFF                                            0x0383
 #define CMD_HF_ISO14443A_SIMULATE                                         0x0384
 #define CMD_HF_ISO14443A_READER                                           0x0385
+#define CMD_HF_ISO14443A_EMV_SIMULATE                                     0x0386
 
 #define CMD_HF_LEGIC_SIMULATE                                             0x0387
 #define CMD_HF_LEGIC_READER                                               0x0388
@@ -180,7 +181,7 @@ typedef struct {
 
 #define CMD_HF_MIFARE_READER                                              0x0611
 #define CMD_HF_MIFARE_NESTED                                              0x0612
-#define    CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES                             0x0613
+#define CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES                                0x0613
 
 
 #define CMD_HF_MIFARE_READBL                                              0x0620
@@ -194,10 +195,11 @@ typedef struct {
 #define CMD_HF_MIFARE_SETMOD                                              0x0624
 
 #define CMD_HF_MIFARE_SNIFF                                               0x0630
-//ultralightC
-#define CMD_HF_MIFAREUC_AUTH                                              0x0724
-//0x0725 and 0x0726 no longer used
-#define CMD_HF_MIFAREUC_SETPWD                                            0x0727
+// ultralight-C & AES
+#define CMD_HF_MIFAREU3P_AUTH                                             0x0724
+// 0x0725 is free
+#define CMD_HF_MIFAREU3P_CHKKEY                                           0x0726
+#define CMD_HF_MIFAREU_SETKEY                                             0x0727
 
 
 // mifare desfire

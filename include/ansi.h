@@ -21,14 +21,29 @@
 
 #define AEND  "\x1b[0m"
 
-#define _BLACK_(s)          "\x1b[30m" s AEND
-#define _RED_(s)            "\x1b[31m" s AEND
-#define _GREEN_(s)          "\x1b[32m" s AEND
-#define _YELLOW_(s)         "\x1b[33m" s AEND
-#define _BLUE_(s)           "\x1b[34m" s AEND
-#define _MAGENTA_(s)        "\x1b[35m" s AEND
-#define _CYAN_(s)           "\x1b[36m" s AEND
-#define _WHITE_(s)          "\x1b[37m" s AEND
+#define _CLEAR_ "\x1b[2J"
+#define _CLEAR_SCROLLBACK_ "\x1b[3J"
+#define _TOP_   "\x1b[1;1f"
+
+#define _CLR_ "\x1b[0K"
+
+#define ANSI_BLACK          "\x1b[30m"
+#define ANSI_RED            "\x1b[31m"
+#define ANSI_GREEN          "\x1b[32m"
+#define ANSI_YELLOW         "\x1b[33m"
+#define ANSI_BLUE           "\x1b[34m"
+#define ANSI_MAGENTA        "\x1b[35m"
+#define ANSI_CYAN           "\x1b[36m"
+#define ANSI_WHITE          "\x1b[37m"
+
+#define _BLACK_(s)          ANSI_BLACK s AEND
+#define _RED_(s)            ANSI_RED s AEND
+#define _GREEN_(s)          ANSI_GREEN s AEND
+#define _YELLOW_(s)         ANSI_YELLOW s AEND
+#define _BLUE_(s)           ANSI_BLUE s AEND
+#define _MAGENTA_(s)        ANSI_MAGENTA s AEND
+#define _CYAN_(s)           ANSI_CYAN s AEND
+#define _WHITE_(s)          ANSI_WHITE s AEND
 
 #define _BRIGHT_BLACK_(s)   "\x1b[30;1m" s AEND
 #define _BRIGHT_RED_(s)     "\x1b[31;1m" s AEND
@@ -57,10 +72,6 @@
 #define _BACK_BRIGHT_CYAN_(s)    "\x1b[46;1m" s AEND
 #define _BACK_BRIGHT_WHITE_(s)   "\x1b[47;1m" s AEND
 
-#define _CLEAR_ "\x1b[2J"
-#define _CLEAR_SCROLLBACK_ "\x1b[3J"
-#define _TOP_   "\x1b[1;1f"
-
 #if defined(HAVE_READLINE)
 // https://wiki.hackzine.org/development/misc/readline-color-prompt.html
 // Applications may indicate that the prompt contains
@@ -76,5 +87,7 @@
 #define _RL_GREEN_(s) RL_ESC("\x1b[32m") s RL_ESC(AEND)
 #define _RL_BOLD_RED_(s) RL_ESC("\x1b[1;31m") s RL_ESC(AEND)
 #define _RL_BOLD_GREEN_(s) RL_ESC("\x1b[1;32m") s RL_ESC(AEND)
+
+#define _URL_(url, text)  "\x1b]8;;" url "\x1b\\" text "\x1b]8;;\x1b\\"
 
 #endif

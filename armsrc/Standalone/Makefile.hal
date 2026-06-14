@@ -98,6 +98,9 @@ define KNOWN_STANDALONE_DEFINITIONS
 | HF_CRAFTBYTE    | UID stealer - Emulates scanned 14a UID |
 |                 | - Anze Jensterle                       |
 +----------------------------------------------------------+
+| HF_DOEGOX_AUTH0 | UL-C / UL-AES unlocker                 |
+|                 | - Philippe Teuwen                      |
++----------------------------------------------------------+
 | HF_ICECLASS     | Simulate HID iCLASS legacy ags         |
 | (RDV4 only)     | storing in flashmem                    |
 +----------------------------------------------------------+
@@ -119,6 +122,9 @@ define KNOWN_STANDALONE_DEFINITIONS
 | HF_REBLAY       | 14A Relay over BT                      |
 | (RDV4 only)     |  - Salvador Mendoza                    |
 +----------------------------------------------------------+
+| HF_ST25_TEAROFF | Store/restore ST25TB tags with         |
+|                 | tear-off for counters - SecLabz        |
++----------------------------------------------------------+
 | HF_TCPRST       | IKEA Rothult read/sim/dump/emul        |
 |                 | - Nick Draffen                         |
 +----------------------------------------------------------+
@@ -134,16 +140,19 @@ define KNOWN_STANDALONE_DEFINITIONS
 | DANKARMULTI     | Load multiple standalone modes.        |
 |                 | - Daniel Karling                       |
 +----------------------------------------------------------+
+| HF_EMVPNG       | Read and emulate EMV Visa cards        |
+|                 | - Davi Mikael (Penegui)                |
++----------------------------------------------------------+
 endef
 
 
 STANDALONE_MODES := LF_SKELETON
 STANDALONE_MODES += LF_EM4100EMUL LF_EM4100RSWB LF_EM4100RSWW LF_EM4100RWC LF_HIDBRUTE LF_HIDFCBRUTE LF_ICEHID LF_MULTIHID LF_NEDAP_SIM LF_NEXID LF_PROXBRUTE LF_PROX2BRUTE LF_SAMYRUN LF_THAREXDE
-STANDALONE_MODES += HF_14ASNIFF HF_14BSNIFF HF_15SNIFF HF_15SIM HF_AVEFUL HF_BOG HF_CARDHOPPER HF_COLIN HF_CRAFTBYTE HF_ICECLASS HF_LEGIC HF_LEGICSIM HF_MATTYRUN HF_MFCSIM HF_MSDSAL HF_REBLAY HF_TCPRST HF_TMUDFORD HF_UNISNIFF HF_YOUNG
+STANDALONE_MODES += HF_14ASNIFF HF_14BSNIFF HF_15SNIFF HF_15SIM HF_AVEFUL HF_BOG HF_CARDHOPPER HF_COLIN HF_CRAFTBYTE HF_DOEGOX_AUTH0 HF_ICECLASS HF_LEGIC HF_LEGICSIM HF_MATTYRUN HF_MFCSIM HF_MSDSAL HF_REBLAY HF_ST25_TEAROFF HF_TCPRST HF_TMUDFORD HF_UNISNIFF HF_YOUNG HF_EMVPNG
 STANDALONE_MODES += DANKARMULTI
 STANDALONE_MODES_REQ_BT := HF_CARDHOPPER HF_REBLAY
 STANDALONE_MODES_REQ_SMARTCARD :=
-STANDALONE_MODES_REQ_FLASH := LF_HIDFCBRUTE LF_ICEHID LF_NEXID LF_THAREXDE HF_BOG HF_COLIN HF_ICECLASS HF_LEGICSIM HF_MFCSIM
+STANDALONE_MODES_REQ_FLASH := LF_HIDFCBRUTE LF_ICEHID LF_NEXID LF_THAREXDE HF_BOG HF_COLIN HF_ICECLASS HF_LEGICSIM HF_MFCSIM HF_ST25_TEAROFF
 ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES)),)
     STANDALONE_PLATFORM_DEFS += -DWITH_STANDALONE_$(STANDALONE)
     ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES_REQ_SMARTCARD)),)

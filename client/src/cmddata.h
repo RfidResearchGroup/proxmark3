@@ -67,7 +67,6 @@ int CmdLtrim(const char *Cmd);                                                  
 int CmdNorm(const char *Cmd);                                                                   // used by cmd lf data (!)
 int CmdPlot(const char *Cmd);                                                                   // used by cmd lf cotag
 int CmdSave(const char *Cmd);                                                                   // used by cmd auto
-int CmdTuneSamples(const char *Cmd);                                                            // used by cmd lf hw
 
 int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose);                 // used by cmd lf em4x, lf fdxb, lf guard, lf jablotron, lf nedap, lf t55xx
 int ASKDemod(int clk, int invert, int maxErr, size_t maxlen, bool amplify, bool verbose, bool emSearch, uint8_t askType);                    // used by cmd lf em4x, lf t55xx, lf viking
@@ -81,7 +80,6 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
 
 void setDemodBuff(const uint8_t *buff, size_t size, size_t start_idx);
 bool getDemodBuff(uint8_t *buff, size_t *size);
-void save_restoreDB(uint8_t saveOpt);// option '1' to save g_DemodBuffer any other to restore
 int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveGrph, bool verbose);
 
 int getSamples(uint32_t n, bool verbose);

@@ -21,7 +21,7 @@ endif
 
 # macOS needs c++14 standard when compiling c++
 ifeq ($(platform),Darwin)
-    MYCXXFLAGS = -std=c++14
+    MYCXXFLAGS += -std=c++14
 endif
 
 ifneq (,$(findstring MINGW,$(platform)))
@@ -30,6 +30,8 @@ ifneq (,$(findstring MINGW,$(platform)))
     MYCFLAGS += -D_ISOC99_SOURCE
 endif
 
+# Ignore historical GCC<7.1 warning on ARM 32-bit
+MYCXXFLAGS += -Wno-psabi
 
 cm : $(OBJDIR)/cm.o $(MYOBJS)
 sm : $(OBJDIR)/sm.o $(MYOBJS)

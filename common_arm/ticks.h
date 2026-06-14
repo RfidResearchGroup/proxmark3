@@ -47,6 +47,7 @@ void SpinDelayUsPrecision(int us);  // precision 0.6us , running for 43ms before
 void StartTickCount(void);
 uint32_t RAMFUNC GetTickCount(void);
 uint32_t RAMFUNC GetTickCountDelta(uint32_t start_ticks);
+uint32_t GetTickCountLabel(void);
 
 void ResetUSClock(void);
 void SpinDelayCountUs(uint32_t us);

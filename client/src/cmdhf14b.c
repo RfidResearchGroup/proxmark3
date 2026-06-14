@@ -34,7 +34,9 @@
 #include "aidsearch.h"
 #include "fileutils.h"          // saveFile
 #include "iclass_cmd.h"         // picopass defines
-#include "cmdhf.h"               // handle HF plot
+#include "cmdhf.h"              // handle HF plot
+#include "atrs.h"               // atqbToEmulatedAtr
+#include "pla.h"                // ECP parsing
 
 #define MAX_14B_TIMEOUT_MS (4949U)
 
@@ -55,6 +57,7 @@
 #define ST25_SIZE_512    3
 #define ST25_SIZE_2K     4
 #define ST25_SIZE_4K     5
+
 
 // iso14b apdu input frame length
 static uint16_t apdu_frame_length = 0;
@@ -112,6 +115,9 @@ static void hf14b_aid_search(bool verbose) {
         if ((AIDGetFromElm(data, vaid, sizeof(vaid), &vaidlen) == false) || (vaidlen == 0)) {
             continue;
         }
+        if (AIDSeenBefore(root, vaid, (size_t)vaidlen, elmindx)) {
+            continue;
+        }
 
 
         // COMPUTE APDU
@@ -162,7 +168,7 @@ static void hf14b_aid_search(bool verbose) {
                 }
             }
 
-            PrintAIDDescriptionBuf(root, vaid, vaidlen, verbose);
+            PrintAIDDescriptionEx(root, sprint_hex_inrow(vaid, vaidlen), result, (size_t)resultlen, verbose);
 
             if (dfnamelen) {
                 if (dfnamelen == vaidlen) {
@@ -379,24 +385,34 @@ static bool get_14b_UID(uint8_t *d, iso14b_type_t *found_type) {
  * filename must match '^hf-14b-[0-9A-F]{16}'
  */
 uint8_t *get_uid_from_filename(const char *filename) {
-    static uint8_t uid[8]  ;
-    memset(uid, 0, 8) ;
-    char uidinhex[17] ;
-    if (strlen(filename) < 23 || strncmp(filename, "hf-14b-", 7)) {
-        PrintAndLogEx(ERR, "can't get uid from filename '%s'. Expected format is hf-14b-<uid>...", filename);
-        return uid ;
+
+    static uint8_t uid[8];
+    memset(uid, 0, 8);
+
+    if (strlen(filename) < 23) {
+        PrintAndLogEx(ERR, "can't get uid from filename `" _YELLOW_("%s") "` expected format is hf-14b-<uid>...", filename);
+        return uid;
     }
+
+    const char *found = strstr(filename, "hf-14b-");
+    if (found == NULL) {
+        PrintAndLogEx(ERR, "can't get uid from filename `" _YELLOW_("%s") "` expected format is hf-14b-<uid>...", filename);
+        return uid;
+    }
+
     // extract uid part from filename
-    strncpy(uidinhex, filename + 7, 16) ;
-    uidinhex[16] = '\0' ;
+    char uidinhex[17] = {0};
+    strncpy(uidinhex, found + 7, 16);
+
+    uidinhex[16] = '\0';
     int len = hex_to_bytes(uidinhex, uid, 8);
-    if (len == 8)
+    if (len == 8) {
         return SwapEndian64(uid, 8, 8);
-    else {
+    } else {
         PrintAndLogEx(ERR, "get_uid_from_filename failed: hex_to_bytes returned %d", len);
         memset(uid, 0, 8);
     }
-    return uid ;
+    return uid;
 }
 
 // print full atqb info
@@ -447,6 +463,37 @@ static int print_atqb_resp(uint8_t *data, uint8_t cid) {
     PrintAndLogEx(SUCCESS, "Tag :");
     PrintAndLogEx(SUCCESS, "  Max Buf Length: %u (MBLI) %s", cid >> 4, (cid & 0xF0) ? "" : "chained frames not supported");
     PrintAndLogEx(SUCCESS, "  CID : %u", cid & 0x0f);
+    PrintAndLogEx(NORMAL, "");
+
+    if (memcmp(data, "\x54\x43\x4F\x53", 4) == 0) {
+        PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint") " -------------------------------");
+
+        int outlen = 0;
+        uint8_t out[PM3_CMD_DATA_SIZE] = {0};
+        uint8_t tcos_version[] = {0x90, 0xB2, 0x90, 0x00, 0x00};
+        if (exchange_14b_apdu(tcos_version, sizeof(tcos_version), true, false, out, PM3_CMD_DATA_SIZE, &outlen, -1) == PM3_SUCCESS) {
+            if (outlen > 2) {
+                PrintAndLogEx(SUCCESS, "Tiananxin TCOS CPU card... " _YELLOW_("%s"), sprint_ascii(out, outlen - 2));
+            } else {
+                PrintAndLogEx(SUCCESS, "Tiananxin TCOS CPU card... " _RED_("n/a"));
+            }
+            PrintAndLogEx(SUCCESS, "Magic capabilities........ most likely");
+        }
+
+    } else {
+        PrintAndLogEx(INFO, "--- " _CYAN_("ATR fingerprint") " ---------------------------");
+        uint8_t atr[256] = {0};
+        int atrLen = 0;
+        atqbToEmulatedAtr(data, cid, atr, &atrLen);
+        char *copy = str_dup(getAtrInfo(sprint_hex_inrow(atr, atrLen)));
+        char *token = strtok(copy, "\n");
+        while (token != NULL) {
+            PrintAndLogEx(SUCCESS, "    %s", token);
+            token = strtok(NULL, "\n");
+        }
+        free(copy);
+    }
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -530,7 +577,7 @@ static const char *get_st_lock_info(uint8_t model, const uint8_t *lockbytes, uin
                 default:
                     return ST_LOCK_INFO_EMPTY;
             }
-            if ((lockbytes[1] & mask) == 0) {
+            if ((lockbytes[3] & mask) == 0) {
                 return _RED_("1");
             }
             return ST_LOCK_INFO_EMPTY;
@@ -539,7 +586,7 @@ static const char *get_st_lock_info(uint8_t model, const uint8_t *lockbytes, uin
         case 0x6:   // SRI512
         case 0xC: { // SRT512
             //need data[2] and data[3]
-            uint8_t b = 1;
+            uint8_t b = 2;
             switch (blk) {
                 case 0:
                     mask = 0x01;
@@ -567,35 +614,35 @@ static const char *get_st_lock_info(uint8_t model, const uint8_t *lockbytes, uin
                     break;
                 case 8:
                     mask = 0x01;
-                    b = 0;
+                    b = 3;
                     break;
                 case 9:
                     mask = 0x02;
-                    b = 0;
+                    b = 3;
                     break;
                 case 10:
                     mask = 0x04;
-                    b = 0;
+                    b = 3;
                     break;
                 case 11:
                     mask = 0x08;
-                    b = 0;
+                    b = 3;
                     break;
                 case 12:
                     mask = 0x10;
-                    b = 0;
+                    b = 3;
                     break;
                 case 13:
                     mask = 0x20;
-                    b = 0;
+                    b = 3;
                     break;
                 case 14:
                     mask = 0x40;
-                    b = 0;
+                    b = 3;
                     break;
                 case 15:
                     mask = 0x80;
-                    b = 0;
+                    b = 3;
                     break;
             }
             if ((lockbytes[b] & mask) == 0) {
@@ -640,7 +687,7 @@ static const char *get_st_lock_info(uint8_t model, const uint8_t *lockbytes, uin
                     break;
             }
             // iceman:  this is opposite!  need sample to test with.
-            if ((lockbytes[0] & mask)) {
+            if ((lockbytes[2] & mask)) {
                 return _RED_("1");
             }
             return ST_LOCK_INFO_EMPTY;
@@ -828,6 +875,120 @@ static void print_sr_blocks(uint8_t *data, size_t len, const uint8_t *uid, bool 
 // 0200a404000ca000000063504b43532d313500 (resp 02 6a 82 [4b 4c])
 // 0200a4040010a000000018300301000000000000000000 (resp 02 6a 82 [4b 4c])
 
+static int hf14b_setconfig(hf14b_config_t *config, bool verbose) {
+    if (!g_session.pm3_present) return PM3_ENOTTY;
+
+    clearCommandBuffer();
+    if (config != NULL) {
+        SendCommandNG(CMD_HF_ISO14443B_SET_CONFIG, (uint8_t *)config, sizeof(hf14b_config_t));
+        if (verbose) {
+            SendCommandNG(CMD_HF_ISO14443B_PRINT_CONFIG, NULL, 0);
+        }
+    } else {
+        SendCommandNG(CMD_HF_ISO14443B_PRINT_CONFIG, NULL, 0);
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int CmdHf14BConfig(const char *Cmd) {
+    if (!g_session.pm3_present) return PM3_ENOTTY;
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b config",
+                  "Configure 14b settings (use with caution)\n",
+                  "hf 14b config                      -> Print current configuration\n"
+                  "hf 14b config --std                -> Reset default configuration\n"
+                  "hf 14b config --pla <hex>          -> Set polling loop annotation (max 22 bytes)\n"
+                  "hf 14b config --pla off            -> Disable polling loop annotation\n"
+                  "hf 14b config --pla ecp.access     -> Set ECP Access (default)\n"
+                  "hf 14b config --pla ecp.transit.emv -> Set ECP Transit for EMV\n");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "pla", "<hex|off>", "Configure polling loop annotation"),
+        arg_lit0(NULL, "std", "Reset default configuration"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool defaults = arg_get_lit(ctx, 2);
+    bool verbose = arg_get_lit(ctx, 3);
+
+    int vlen = 0;
+    char value[64];
+
+    // Handle polling loop annotation parameter
+    iso14b_polling_frame_t pla = {
+        // 0 signals that PLA has to be disabled, -1 signals that no change has to be made
+        .frame_length = defaults ? 0 : -1,
+        .last_byte_bits = 8,
+        .extra_delay = 30
+    };
+
+    // Get main --pla value
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)value, sizeof(value), &vlen);
+    str_lower((char *)value);
+
+    if (vlen > 0) {
+        if (strncmp((char *)value, "std", 3) == 0) pla.frame_length = 0;
+        else if (strncmp((char *)value, "skip", 4) == 0) pla.frame_length = 0;
+        else if (strncmp((char *)value, "disable", 3) == 0) pla.frame_length = 0;
+        else if (strncmp((char *)value, "off", 3) == 0) pla.frame_length = 0;
+        else if (strncmp((char *)value, "ecp", 3) == 0) {
+            // Parse ECP subcommand
+            int length = pla_parse_ecp_subcommand((char *)value, pla.frame, sizeof(pla.frame));
+            if (length < 0) {
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
+            }
+            pla.frame_length = length;
+
+            // Add CRC
+            uint8_t first, second;
+            compute_crc(CRC_14443_B, pla.frame, pla.frame_length, &first, &second);
+            pla.frame[pla.frame_length++] = first;
+            pla.frame[pla.frame_length++] = second;
+            PrintAndLogEx(INFO, "Set polling loop annotation to ECP: %s", sprint_hex(pla.frame, pla.frame_length));
+        } else {
+            // Convert hex string to bytes
+            int length = 0;
+            if (param_gethex_to_eol((char *)value, 0, pla.frame, sizeof(pla.frame), &length) != 0) {
+                PrintAndLogEx(ERR, "Error parsing polling loop annotation bytes");
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
+            }
+            pla.frame_length = length;
+
+            // Validate length before adding CRC
+            if (pla.frame_length < 1 || pla.frame_length > 22) {
+                PrintAndLogEx(ERR, "Polling loop annotation length invalid: min %d; max %d", 1, 22);
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
+            }
+
+            uint8_t first, second;
+            compute_crc(CRC_14443_B, pla.frame, pla.frame_length, &first, &second);
+            pla.frame[pla.frame_length++] = first;
+            pla.frame[pla.frame_length++] = second;
+            PrintAndLogEx(INFO, "Set polling loop annotation to: %s", sprint_hex(pla.frame, pla.frame_length));
+        }
+    }
+
+    CLIParserFree(ctx);
+
+    // Handle empty command
+    if (strlen(Cmd) == 0) {
+        return hf14b_setconfig(NULL, verbose);
+    }
+
+    // Initialize config with all parameters
+    hf14b_config_t config = {
+        .polling_loop_annotation = pla
+    };
+
+    return hf14b_setconfig(&config, verbose);
+}
+
 static int CmdHF14BList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf 14b", "14b -c");
 }
@@ -868,7 +1029,8 @@ static int CmdHF14BSniff(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b sniff",
-                  "Sniff the communication reader and tag",
+                  "Sniff the communication between reader and tag\n"
+                  "Use `hf 14b list` to view collected data.",
                   "hf 14b sniff"
                  );
 
@@ -879,14 +1041,14 @@ static int CmdHF14BSniff(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort sniffing");
+
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_SNIFF, NULL, 0);
-
     WaitForResponse(CMD_HF_ISO14443B_SNIFF, &resp);
-
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 14b list") "` to view captured tracelog");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14b list") "` to view captured tracelog");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
     return PM3_SUCCESS;
 }
 
@@ -1005,7 +1167,7 @@ static int CmdHF14BRaw(const char *Cmd) {
 
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + datalen);
     if (packet == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -1185,7 +1347,7 @@ static int CmdHF14Binfo(const char *Cmd) {
 // #define ISO14443B_READ_BLK     0x08
 // #define ISO14443B_WRITE_BLK    0x09
 
-static int read_sr_block(uint8_t blockno, uint8_t *out) {
+static int read_sr_block(uint8_t blockno, uint8_t *out, uint16_t out_len) {
     struct {
         uint8_t blockno;
     } PACKED payload;
@@ -1200,7 +1362,7 @@ static int read_sr_block(uint8_t blockno, uint8_t *out) {
     }
 
     if (resp.status == PM3_SUCCESS && out) {
-        memcpy(out, resp.data.asBytes, resp.length);
+        memcpy(out, resp.data.asBytes, MIN(out_len, resp.length));
     }
     return resp.status;
 }
@@ -1210,7 +1372,7 @@ static int write_sr_block(uint8_t blockno, uint8_t datalen, uint8_t *data) {
     uint8_t psize = sizeof(iso14b_raw_cmd_t) + datalen + 2;
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, psize);
     if (packet == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -1393,7 +1555,7 @@ static bool HF14B_picopass_reader(bool verbose) {
 
             picopass_hdr_t *card = calloc(1, sizeof(picopass_hdr_t));
             if (card == NULL) {
-                PrintAndLogEx(FAILED, "failed to allocate memory");
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return false;
             }
             memcpy(card, resp.data.asBytes, sizeof(picopass_hdr_t));
@@ -1423,7 +1585,7 @@ static bool HF14B_other_reader(bool verbose) {
 
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + 4);
     if (packet == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return false;
     }
     packet->flags = (ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_RAW | ISO14B_APPEND_CRC);
@@ -1484,13 +1646,15 @@ static int CmdHF14BReader(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0(NULL, "plot", "show anticollision signal trace in plot window"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0("@", NULL, "optional - continuous reader mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool verbose = arg_get_lit(ctx, 1);
-    bool cm = arg_get_lit(ctx, 2);
+    bool read_plot = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool cm = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     if (cm) {
@@ -1499,7 +1663,7 @@ static int CmdHF14BReader(const char *Cmd) {
 
     clear_trace_14b();
 
-    return readHF14B(cm, verbose);
+    return readHF14B(cm, verbose, read_plot);
 }
 
 // Read SRI512|SRIX4K block
@@ -1539,8 +1703,8 @@ static int CmdHF14BSriRdBl(const char *Cmd) {
         uint8_t blocks = (cardtype == 1) ? 0x7F : 0x0F;
     */
 
-    uint8_t out[4] = {0};
-    int status = read_sr_block(blockno, out);
+    uint8_t out[ST25TB_SR_BLOCK_SIZE] = {0};
+    int status = read_sr_block(blockno, out, sizeof(out));
     if (status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "block %02u... " _GREEN_("%s") " | " _GREEN_("%s"), blockno, sprint_hex(out, sizeof(out)), sprint_ascii(out, sizeof(out)));
     }
@@ -1584,7 +1748,7 @@ static int CmdHF14BSriWrbl(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int blockno = arg_get_int_def(ctx, 1, -1);
     int dlen = 0;
-    uint8_t data[4] = {0, 0, 0, 0};
+    uint8_t data[ST25TB_SR_BLOCK_SIZE] = {0, 0, 0, 0};
     int res = CLIParamHexToBuf(arg_get_str(ctx, 2), data, sizeof(data), &dlen);
     if (res) {
         CLIParserFree(ctx);
@@ -1652,8 +1816,8 @@ static int CmdHF14BSriWrbl(const char *Cmd) {
     }
 
     // verify
-    uint8_t out[4] = {0};
-    status = read_sr_block(blockno, out);
+    uint8_t out[ST25TB_SR_BLOCK_SIZE] = {0};
+    status = read_sr_block(blockno, out, sizeof(out));
     if (status == PM3_SUCCESS) {
         if (memcmp(data, out, 4) == 0) {
             PrintAndLogEx(SUCCESS, "SRx write block ( " _GREEN_("ok") " )");
@@ -1751,7 +1915,7 @@ static int CmdHF14BDump(const char *Cmd) {
 
         iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + 2);
         if (packet == NULL) {
-            PrintAndLogEx(FAILED, "failed to allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
         packet->flags = (ISO14B_CONNECT | ISO14B_SELECT_SR);
@@ -1930,7 +2094,7 @@ static int CmdHF14BRestore(const char *Cmd) {
 
         // verify
         uint8_t out[ST25TB_SR_BLOCK_SIZE] = {0};
-        status = read_sr_block(blockno, out);
+        status = read_sr_block(blockno, out, sizeof(out));
         if (status == PM3_SUCCESS) {
             if (memcmp(data + blockno * ST25TB_SR_BLOCK_SIZE, out, ST25TB_SR_BLOCK_SIZE) == 0) {
                 printf("\33[2K\r");
@@ -2191,7 +2355,7 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen,
 
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + datainlen);
     if (packet == NULL) {
-        PrintAndLogEx(FAILED, "APDU: failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     packet->flags = (ISO14B_APDU);
@@ -2461,12 +2625,21 @@ static int CmdHF14BAPDU(const char *Cmd) {
         return res;
     }
 
-    PrintAndLogEx(INFO, "<<<< %s", sprint_hex(data, datalen));
-    PrintAndLogEx(SUCCESS, "APDU response: " _YELLOW_("%02x %02x") " - %s"
-                  , data[datalen - 2]
-                  , data[datalen - 1]
-                  , GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])
-                 );
+    PrintAndLogEx(INFO, "<<<< %s - %s", sprint_hex_inrow(data, datalen), sprint_ascii(data, datalen));
+    uint16_t sw = get_sw(data, datalen);
+    if (sw != ISO7816_OK) {
+        PrintAndLogEx(SUCCESS, "APDU response: " _YELLOW_("%02x %02x") " - %s"
+                      , data[datalen - 2]
+                      , data[datalen - 1]
+                      , GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])
+                     );
+    } else {
+        PrintAndLogEx(SUCCESS, "APDU response: " _GREEN_("%02x %02x") " - %s"
+                      , data[datalen - 2]
+                      , data[datalen - 1]
+                      , GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])
+                     );
+    }
 
     // TLV decoder
     if (decode_TLV && datalen > 4) {
@@ -2506,78 +2679,175 @@ int CmdHF14BNdefRead(const char *Cmd) {
     // ---------------  Select NDEF Tag application ----------------
     uint8_t aSELECT_AID[80];
     int aSELECT_AID_n = 0;
-    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
+    // It's likely safe to ignore the backwards compatibility select that's present in the 14443A part of this code.
+    // Full-fledged 14443B is rare, after all. And if not.. your eMRTD passport doesn't have NDEF for a fact.
+    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n); // Select NDEF application D2760000850101
     int res = exchange_14b_apdu(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
     if (res) {
-        goto out;
+        switch_off_field_14b();
+        return res;
     }
 
     if (resplen < 2) {
         res = PM3_ESOFT;
-        goto out;
+        switch_off_field_14b();
+        return res;
     }
 
     uint16_t sw = get_sw(response, resplen);
     if (sw != ISO7816_OK) {
-        PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        PrintAndLogEx(ERR, "Selecting NDEF AID failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         res = PM3_ESOFT;
-        goto out;
+        switch_off_field_14b();
+        return res;
     }
 
     activate_field = false;
     keep_field_on = true;
-    // ---------------  Send CC select ----------------
-    // ---------------  Read binary ----------------
 
+    // ---------------  CC file reading ----------------
+    uint8_t aSELECT_FILE_CC[30];
+    int aSELECT_FILE_CC_n = 0;
+    param_gethex_to_eol("00a4000c02e103", 0, aSELECT_FILE_CC, sizeof(aSELECT_FILE_CC), &aSELECT_FILE_CC_n); // Select E103 file with payload information
+    res = exchange_14b_apdu(aSELECT_FILE_CC, aSELECT_FILE_CC_n, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
+    if (res) {
+        switch_off_field_14b();
+        return res;
+    }
+
+    sw = get_sw(response, resplen);
+    if (sw != ISO7816_OK) {
+        PrintAndLogEx(ERR, "Selecting CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        res = PM3_ESOFT;
+        switch_off_field_14b();
+        return res;
+    }
+
+    // ---------------  Read binary ----------------
+    uint8_t aREAD_CC[30];
+    int aREAD_CC_n = 0;
+    param_gethex_to_eol("00b000000f", 0, aREAD_CC, sizeof(aREAD_CC), &aREAD_CC_n);
+    res = exchange_14b_apdu(aREAD_CC, aREAD_CC_n, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
+    if (res) {
+        switch_off_field_14b();
+        return res;
+    }
+
+    sw = get_sw(response, resplen);
+    if (sw != ISO7816_OK) {
+        PrintAndLogEx(ERR, "reading CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        res = PM3_ESOFT;
+        switch_off_field_14b();
+        return res;
+    }
+
+    // Parse CC data
+    uint8_t cc_data[resplen - 2];
+    memcpy(cc_data, response, sizeof(cc_data));
+    uint8_t file_id[2] = {cc_data[9], cc_data[10]};
+
+
+    uint16_t max_rapdu_size = (cc_data[3] << 8 | cc_data[4]) - 2;
+
+    max_rapdu_size = max_rapdu_size < sizeof(response) - 2 ? max_rapdu_size : sizeof(response) - 2;
     // ---------------  NDEF file reading ----------------
     uint8_t aSELECT_FILE_NDEF[30];
     int aSELECT_FILE_NDEF_n = 0;
-    param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
-    res = exchange_14b_apdu(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
-    if (res)
-        goto out;
-
+    param_gethex_to_eol("00a4000c02", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
+    memcpy(aSELECT_FILE_NDEF + aSELECT_FILE_NDEF_n, file_id, sizeof(file_id));
+    res = exchange_14b_apdu(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n + sizeof(file_id), activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
+    if (res != PM3_SUCCESS) {
+        switch_off_field_14b();
+        return res;
+    }
     sw = get_sw(response, resplen);
     if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        res = PM3_ESOFT;
-        goto out;
+        switch_off_field_14b();
+        return PM3_ESOFT;
     }
-
-    // ---------------  Read binary ----------------
+    // ---------------  Read binary size ----------------
     uint8_t aREAD_NDEF[30];
     int aREAD_NDEF_n = 0;
+    aREAD_NDEF_n = 0;
     param_gethex_to_eol("00b0000002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
     res = exchange_14b_apdu(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
     if (res) {
-        goto out;
+        switch_off_field_14b();
+        return res;
     }
 
     sw = get_sw(response, resplen);
     if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         res = PM3_ESOFT;
-        goto out;
-    }
-    // take offset from response
-    uint8_t offset = response[1];
-
-    // ---------------  Read binary w offset ----------------
-    keep_field_on = false;
-    aREAD_NDEF_n = 0;
-    param_gethex_to_eol("00b00002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
-    aREAD_NDEF[4] = offset;
-    res = exchange_14b_apdu(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
-    if (res) {
-        goto out;
+        switch_off_field_14b();
+        return res;
     }
 
-    sw = get_sw(response, resplen);
-    if (sw != ISO7816_OK) {
-        PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        res = PM3_ESOFT;
-        goto out;
+    uint16_t ndef_size = (response[0] << 8) + response[1];
+    uint8_t offset = 2;
+
+    uint8_t *ndef_file = calloc(ndef_size, sizeof(uint8_t));
+    if (ndef_file == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        switch_off_field_14b();
+        return PM3_EMALLOC;
     }
+
+    if (ndef_size + offset > 0xFFFF) {
+        PrintAndLogEx(ERR, "NDEF size abnormally large in CmdHF14BNdefRead(). Aborting...\n");
+        free(ndef_file);
+        switch_off_field_14b();
+        return PM3_EOVFLOW;
+    }
+    for (size_t i = offset; i < ndef_size + offset; i += max_rapdu_size) {
+        size_t segment_size = max_rapdu_size < ndef_size + offset - i ? max_rapdu_size : ndef_size + offset - i;
+
+        keep_field_on = i < ndef_size + offset - max_rapdu_size;
+        aREAD_NDEF_n = 0;
+        param_gethex_to_eol("00b00000", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
+        aREAD_NDEF[2] = i >> 8;
+        aREAD_NDEF[3] = i & 0xFF;
+
+        // Segment_size is stuffed into a single-byte field below ... so error out if overflows
+        if (segment_size > 0xFFu) {
+            PrintAndLogEx(ERR, "Segment size too large (0x%zx > 0xFF)", segment_size);
+            switch_off_field_14b();
+            free(ndef_file);
+            return PM3_EOVFLOW;
+        }
+        aREAD_NDEF[4] = segment_size;
+
+        res = exchange_14b_apdu(aREAD_NDEF, aREAD_NDEF_n + 1, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
+        if (res != PM3_SUCCESS) {
+            switch_off_field_14b();
+            free(ndef_file);
+            return res;
+        }
+
+        sw = get_sw(response, resplen);
+        if (sw != ISO7816_OK) {
+            PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+            switch_off_field_14b();
+            free(ndef_file);
+            return PM3_ESOFT;
+        }
+
+        if (resplen != segment_size + 2) {
+            PrintAndLogEx(ERR, "reading NDEF file failed, expected %zu bytes, got %i bytes.", segment_size, resplen - 2);
+            switch_off_field_14b();
+            free(ndef_file);
+            return PM3_ESOFT;
+        }
+
+        memcpy(ndef_file + (i - offset), response, segment_size);
+    }
+
+    if (verbose == false) {
+        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf 14b ndefread -v`") " for more details"); // So far this prints absolutely nothing
+    }
+
 
     // get total NDEF length before save. If fails, we save it all
     size_t n = 0;
@@ -2586,11 +2856,11 @@ int CmdHF14BNdefRead(const char *Cmd) {
 
     pm3_save_dump(filename, response + 2, n, jsfNDEF);
 
-    res = NDEFRecordsDecodeAndPrint(response + 2, resplen - 4, verbose);
-
-out:
+    NDEFRecordsDecodeAndPrint(ndef_file, ndef_size, verbose);
+    free(ndef_file);
+    PrintAndLogEx(NORMAL, "");
     switch_off_field_14b();
-    return res;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14BView(const char *Cmd) {
@@ -2642,24 +2912,236 @@ static int CmdHF14BView(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14BSriTearoff(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b tearoff",
+                  "Use tear-off technique to manipulate ST25TB/SRx monotonic counter blocks.\n"
+                  "This exploits EEPROM tearing to increment counters that normally can only\n"
+                  "be decremented. Based on the near-field-chaos project by SecLabz.\n"
+                  "\n"
+                  "The attack works by sending a write command and cutting the RF field at\n"
+                  "a precise moment, causing a partial write that can raise the counter value.\n"
+                  "The operation usually takes a few seconds to a few minutes.\n"
+                  "\n"
+                  " NOTE: 0xFFFFFFFE values may be unstable due to tag internals.\n"
+                  "       Keep the tag positioned steadily on the antenna.\n",
+                  "hf 14b tearoff -b 5 -d FFFFFFFE\n"
+                  "hf 14b tearoff -b 6 -d FFFFFFFE\n"
+                  "hf 14b tearoff -b 5 -d FFFFFFFE --start 5000 --adj 50\n"
+                  "hf 14b tearoff -b 5 -d FFFFFFFE --safety 1000\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("b", "block",   "<dec>", "block number (typically 5 or 6 for ST25TB counters)"),
+        arg_str1("d", "data",    "<hex>", "target counter value (4 hex bytes, e.g. FFFFFFFE)"),
+        arg_int0(NULL, "adj",    "<dec>", "tear-off timing step in us (default: 25)"),
+        arg_int0(NULL, "safety", "<dec>", "safety threshold value (default: 0x1000)"),
+        arg_int0(NULL, "start",  "<dec>", "initial tear-off delay in us (default: 150)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int blockno = arg_get_int_def(ctx, 1, -1);
+
+    int dlen = 0;
+    uint8_t data[4] = {0};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 2), data, sizeof(data), &dlen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int adj = arg_get_int_def(ctx, 3, 0);
+    int safety = arg_get_int_def(ctx, 4, 0x1000);
+    int start = arg_get_int_def(ctx, 5, 0);
+    CLIParserFree(ctx);
+
+    if (dlen != 4) {
+        PrintAndLogEx(FAILED, "target value must be 4 hex bytes, got %d", dlen);
+        return PM3_EINVARG;
+    }
+
+    if (blockno < 0 || blockno > 255) {
+        PrintAndLogEx(FAILED, "block number must be 0-255, got %d", blockno);
+        return PM3_EINVARG;
+    }
+
+    // Convert data bytes to uint32_t (little-endian as per ST25TB convention)
+    uint32_t target_value = (uint32_t)data[0] << 24 |
+                            (uint32_t)data[1] << 16 |
+                            (uint32_t)data[2] << 8  |
+                            (uint32_t)data[3];
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("ST25TB Tear-off Attack") " ---------");
+    PrintAndLogEx(INFO, " block............. " _YELLOW_("%d"), blockno);
+    PrintAndLogEx(INFO, " target value...... " _YELLOW_("0x%08X"), target_value);
+    PrintAndLogEx(INFO, " start delay....... " _YELLOW_("%d") " us", start > 0 ? start : 150);
+    PrintAndLogEx(INFO, " timing step....... " _YELLOW_("%d") " us", adj > 0 ? adj : 25);
+    PrintAndLogEx(INFO, " safety threshold.. " _YELLOW_("0x%04X"), safety);
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("Enter") " to abort");
+    PrintAndLogEx(INFO, "");
+
+    // Build payload (must match st25tb_tearoff_params_t on ARM side)
+    struct {
+        uint8_t  block_address;
+        uint32_t target_value;
+        uint32_t tear_off_adjustment_us;
+        uint32_t safety_value;
+        uint32_t start_time_us;
+    } PACKED payload;
+
+    payload.block_address = (uint8_t)blockno;
+    payload.target_value = target_value;
+    payload.tear_off_adjustment_us = (uint32_t)adj;
+    payload.safety_value = (uint32_t)safety;
+    payload.start_time_us = (uint32_t)start;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO14443B_ST25TB_TEAROFF, (uint8_t *)&payload, sizeof(payload));
+
+    // Wait for response with generous timeout.
+    // The ARM side sends periodic CMD_WTX keepalive packets to extend
+    // the timeout, so the attack can run as long as needed.
+    // Use -1 for infinite wait (extended via WTX), abort with Enter key.
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_ST25TB_TEAROFF, &resp, -1) == false) {
+        PrintAndLogEx(WARNING, "command failed or connection lost");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status == PM3_SUCCESS) {
+        uint32_t final_value = 0;
+        if (resp.length >= sizeof(uint32_t)) {
+            memcpy(&final_value, resp.data.asBytes, sizeof(uint32_t));
+        }
+        PrintAndLogEx(SUCCESS, "Tear-off attack " _GREEN_("successful"));
+        PrintAndLogEx(SUCCESS, "Final block value: " _GREEN_("0x%08X"), final_value);
+    } else if (resp.status == PM3_EOPABORTED) {
+        uint32_t final_value = 0;
+        if (resp.length >= sizeof(uint32_t)) {
+            memcpy(&final_value, resp.data.asBytes, sizeof(uint32_t));
+        }
+        PrintAndLogEx(WARNING, "Tear-off attack " _YELLOW_("aborted by user"));
+        PrintAndLogEx(INFO, "Last known value: 0x%08X", final_value);
+    } else {
+        PrintAndLogEx(FAILED, "Tear-off attack " _RED_("failed"));
+        if (resp.length >= sizeof(uint32_t)) {
+            uint32_t final_value = 0;
+            memcpy(&final_value, resp.data.asBytes, sizeof(uint32_t));
+            PrintAndLogEx(INFO, "Last known value: 0x%08X", final_value);
+        }
+    }
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(HINT, "Hint: Use " _YELLOW_("`hf 14b rdbl -b %d`") " to verify the block", blockno);
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14BSetUID(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b setuid",
+                  "Set UID for magic card (only works with such cards)\n",
+                  "hf 14b setuid -u 11223344\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("u", "uid", "<hex>", "UID, 4 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint8_t uid[20] = {0};
+    int uidlen = 20;
+    CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+    CLIParserFree(ctx);
+
+    if (uidlen != 4) {
+        PrintAndLogEx(WARNING, "UID len must be 4 bytes, got " _RED_("%i"), uidlen);
+        return PM3_EINVARG;
+    }
+
+    uint8_t select[sizeof(iso14b_card_select_t)] = {0};
+    iso14b_type_t select_cardtype = ISO14B_NONE;
+    if (get_14b_UID(select, &select_cardtype) == false) {
+        PrintAndLogEx(WARNING, "no tag found");
+        return PM3_SUCCESS;
+    }
+
+    if (select_cardtype != ISO14B_STANDARD) {
+        PrintAndLogEx(FAILED, "None supported tag");
+        return switch_off_field_14b();
+    }
+
+    iso14b_card_select_t *card = (iso14b_card_select_t *)select;
+    if (memcmp(card->atqb, "\x54\x43\x4F\x53", 4)) {
+        PrintAndLogEx(FAILED, "None supported tag");
+        PrintAndLogEx(NORMAL, "");
+        return switch_off_field_14b();
+    }
+
+    int outlen = 0;
+    uint8_t out[PM3_CMD_DATA_SIZE] = {0};
+    uint8_t tcos_version[] = {0x90, 0xB2, 0x90, 0x00, 0x00};
+    if (exchange_14b_apdu(tcos_version, sizeof(tcos_version), true, false, out, PM3_CMD_DATA_SIZE, &outlen, -1) != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "None supported tag");
+        return PM3_EFAILED;
+    }
+
+    uint8_t cmd[] = { 0x90, 0xF8, 0xEE, 0xEE, 0x0B, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    memcpy(cmd + 6, uid, uidlen);
+    if (exchange_14b_apdu(cmd, sizeof(cmd), true, false, out, PM3_CMD_DATA_SIZE, &outlen, -1) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_EFAILED;
+    }
+
+    PrintAndLogEx(INFO, "Verifying...");
+
+    // verify
+    if (get_14b_UID(select, &select_cardtype) == false) {
+        PrintAndLogEx(WARNING, "no tag found");
+        return PM3_SUCCESS;
+    }
+
+    if (memcmp(card->uid, uid, uidlen) == 0) {
+        PrintAndLogEx(SUCCESS, "Setting new UID ( " _GREEN_("ok") " )");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14b reader") "` to verify");
+        PrintAndLogEx(NORMAL, "");
+        return PM3_SUCCESS;;
+    }
+
+    PrintAndLogEx(FAILED, "Setting new UID ( " _RED_("fail") " )");
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
-    {"---------", CmdHelp,          AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
-    {"help",      CmdHelp,          AlwaysAvailable, "This help"},
-    {"list",      CmdHF14BList,     AlwaysAvailable, "List ISO-14443-B history"},
-    {"---------", CmdHelp,          AlwaysAvailable, "----------------------- " _CYAN_("Operations") " -----------------------"},
-    {"apdu",      CmdHF14BAPDU,     IfPm3Iso14443b,  "Send ISO 14443-4 APDU to tag"},
-    {"dump",      CmdHF14BDump,     IfPm3Iso14443b,  "Read all memory pages of an ISO-14443-B tag, save to file"},
-    {"info",      CmdHF14Binfo,     IfPm3Iso14443b,  "Tag information"},
-    {"ndefread",  CmdHF14BNdefRead, IfPm3Iso14443b,  "Read NDEF file on tag"},
-    {"raw",       CmdHF14BRaw,      IfPm3Iso14443b,  "Send raw hex data to tag"},
-    {"rdbl",      CmdHF14BSriRdBl,  IfPm3Iso14443b,  "Read SRI512/SRIX4 block"},
-    {"reader",    CmdHF14BReader,   IfPm3Iso14443b,  "Act as a ISO-14443-B reader to identify a tag"},
-    {"restore",   CmdHF14BRestore,  IfPm3Iso14443b,  "Restore from file to all memory pages of an ISO-14443-B tag"},
-    {"sim",       CmdHF14BSim,      IfPm3Iso14443b,  "Fake ISO ISO-14443-B tag"},
-    {"sniff",     CmdHF14BSniff,    IfPm3Iso14443b,  "Eavesdrop ISO-14443-B"},
-    {"wrbl",      CmdHF14BSriWrbl,  IfPm3Iso14443b,  "Write data to a SRI512/SRIX4 tag"},
-    {"view",      CmdHF14BView,     AlwaysAvailable, "Display content from tag dump file"},
-    {"valid",     CmdSRIX4kValid,   AlwaysAvailable, "SRIX4 checksum test"},
+    {"---------", CmdHelp,             AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
+    {"help",      CmdHelp,             AlwaysAvailable, "This help"},
+    {"config",    CmdHf14BConfig,      IfPm3Iso14443b,  "Configure 14b settings (use with caution)"},
+    {"list",      CmdHF14BList,        AlwaysAvailable, "List ISO-14443-B history"},
+    {"---------", CmdHelp,             AlwaysAvailable, "----------------------- " _CYAN_("Operations") " -----------------------"},
+    {"apdu",      CmdHF14BAPDU,        IfPm3Iso14443b,  "Send ISO 14443-4 APDU to tag"},
+    {"dump",      CmdHF14BDump,        IfPm3Iso14443b,  "Read all memory pages of an ISO-14443-B tag, save to file"},
+    {"info",      CmdHF14Binfo,        IfPm3Iso14443b,  "Tag information"},
+    {"ndefread",  CmdHF14BNdefRead,    IfPm3Iso14443b,  "Read NDEF file on tag"},
+    {"raw",       CmdHF14BRaw,         IfPm3Iso14443b,  "Send raw hex data to tag"},
+    {"rdbl",      CmdHF14BSriRdBl,     IfPm3Iso14443b,  "Read SRI512/SRIX4 block"},
+    {"reader",    CmdHF14BReader,      IfPm3Iso14443b,  "Act as a ISO-14443-B reader to identify a tag"},
+    {"restore",   CmdHF14BRestore,     IfPm3Iso14443b,  "Restore from file to all memory pages of an ISO-14443-B tag"},
+    {"sim",       CmdHF14BSim,         IfPm3Iso14443b,  "Fake ISO ISO-14443-B tag"},
+    {"sniff",     CmdHF14BSniff,       IfPm3Iso14443b,  "Eavesdrop ISO-14443-B"},
+    {"wrbl",      CmdHF14BSriWrbl,     IfPm3Iso14443b,  "Write data to a SRI512/SRIX4 tag"},
+    {"tearoff",   CmdHF14BSriTearoff,  IfPm3Iso14443b,  "Tear-off attack on ST25TB/SRx counter blocks"},
+    {"view",      CmdHF14BView,        AlwaysAvailable, "Display content from tag dump file"},
+    {"valid",     CmdSRIX4kValid,      AlwaysAvailable, "SRIX4 checksum test"},
+    {"---------", CmdHelp,             IfPm3Iso14443b,  "------------------------- " _CYAN_("Magic") " -----------------------"},
+    {"setuid",    CmdHF14BSetUID,      IfPm3Iso14443b,   "Set UID for magic card"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -2677,6 +3159,8 @@ int CmdHF14B(const char *Cmd) {
 // get and print all info known about any known 14b tag
 int infoHF14B(bool verbose, bool do_aid_search) {
 
+    clear_trace_14b();
+
     // try std 14b (atqb)
     if (HF14B_Std_Info(verbose, do_aid_search))
         return PM3_SUCCESS;
@@ -2687,12 +3171,14 @@ int infoHF14B(bool verbose, bool do_aid_search) {
 
     // try unknown 14b read commands (to be identified later)
     //   could be read of calypso, CEPAS, moneo, or pico pass.
-    if (verbose) PrintAndLogEx(FAILED, "no 14443-B tag found");
+    if (verbose) {
+        PrintAndLogEx(FAILED, "no 14443-B tag found");
+    }
     return PM3_EOPABORTED;
 }
 
 // get and print general info about all known 14b chips
-int readHF14B(bool loop, bool verbose) {
+int readHF14B(bool loop, bool verbose, bool read_plot) {
     bool found = false;
     int res = PM3_SUCCESS;
     do {
@@ -2724,11 +3210,14 @@ int readHF14B(bool loop, bool verbose) {
         if (found)
             goto plot;
 plot:
-        res = handle_hf_plot();
-        if (res != PM3_SUCCESS)
-            PrintAndLogEx(DEBUG, "plot failed");
+        if (read_plot) {
+            res = handle_hf_plot(verbose);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(DEBUG, "plot failed");
+            }
+        }
 
-    } while (loop && kbd_enter_pressed() == false);
+    } while (loop && (kbd_enter_pressed() == false));
 
     if (verbose && found == false) {
         PrintAndLogEx(FAILED, "no ISO 14443-B tag found");

@@ -287,7 +287,7 @@ static int CmdNexWatchReader(const char *Cmd) {
     do {
         lf_read(false, 20000);
         demodNexWatch(!cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
     return PM3_SUCCESS;
 }
 
@@ -423,7 +423,17 @@ static int CmdNexWatchClone(const char *Cmd) {
         blocks[0] = 0x00042080;
 
         uint8_t *res_shifted = calloc(96, sizeof(uint8_t));
+        if (res_shifted == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return PM3_EMALLOC;
+        }
+
         uint8_t *res = calloc(96, sizeof(uint8_t));
+        if (res == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            free(res_shifted);
+            return PM3_EMALLOC;
+        }
 
         bytes_to_bytebits(raw, 12, res);
         psk1TOpsk2(res, 96);
@@ -447,8 +457,8 @@ static int CmdNexWatchClone(const char *Cmd) {
     } else {
         res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     }
-    PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf nexwatch reader`") " to verify");
+    PrintAndLogEx(SUCCESS, "Done!");
+    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf nexwatch reader`") " to verify");
     return res;
 }
 
@@ -546,6 +556,10 @@ static int CmdNexWatchSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Simulating NexWatch - raw " _YELLOW_("%s"), sprint_hex_inrow(raw, sizeof(raw)));
 
     lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     payload->carrier = 2;
     payload->invert = 0;
     payload->clock = 32;
@@ -569,7 +583,7 @@ static command_t CommandTable[] = {
     {"help",   CmdHelp,           AlwaysAvailable, "This help"},
     {"demod",  CmdNexWatchDemod,  AlwaysAvailable, "demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer"},
     {"reader", CmdNexWatchReader, IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",  CmdNexWatchClone,  IfPm3Lf,         "clone NexWatch tag to T55x7"},
+    {"clone",  CmdNexWatchClone,  IfPm3Lf,         "clone NexWatch tag to T55x7, Q5/T5555 or EM4305/4469"},
     {"sim",    CmdNexWatchSim,    IfPm3Lf,         "simulate NexWatch tag"},
     {NULL, NULL, NULL, NULL}
 };

@@ -97,7 +97,7 @@ local function dumptofile(uid, keys)
         local key_b = ''
 
         for sector = 0, #keys do
-            local keyA, keyB = unpack(keys[sector])
+            local keyA, keyB = table.unpack(keys[sector])
             key_a = key_a .. bin.pack('H', keyA);
             key_b = key_b .. bin.pack('H', keyB);
         end
@@ -115,6 +115,7 @@ end
 -- create key
 local function calckey(uid, xorkey, keytype)
     local p1,p2,p3,p4,p5,p6
+    print("calckey()")
     if keytype == 'A' then
         p1 = bxor( uid[1], xorkey[1])
         p2 = bxor( uid[2], xorkey[2])
@@ -139,7 +140,7 @@ local function printKeys(keys)
     print('|sec|key A           |res|key B           |res|')
     print('|---|----------------|---|----------------|---|')
     for sector = 0, #keys do
-        local keyA, keyB = unpack(keys[sector])
+        local keyA, keyB = table.unpack(keys[sector])
         print(('|%03d|  %s  | %s |  %s  | %s |'):format(sector, keyA, 1, keyB, 1))
     end
     print('|---|----------------|---|----------------|---|')

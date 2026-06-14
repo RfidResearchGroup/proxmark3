@@ -22,6 +22,7 @@
 #include <errno.h>
 
 #include "lauxlib.h"
+#include "lua_bitlib.h"
 #include "cmdmain.h"
 #include "proxmark3.h"
 #include "comms.h"
@@ -49,7 +50,7 @@
 #include "iso7816/iso7816core.h"  // ISODEPSTATE
 
 static int returnToLuaWithError(lua_State *L, const char *fmt, ...) {
-    char buffer[200];
+    char buffer[1024];
     va_list args;
     va_start(args, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, args);
@@ -84,7 +85,7 @@ static int l_fast_push_mode(lua_State *L) {
     // Disable fast mode and send a dummy command to make it effective
     if (enable == false) {
         SendCommandNG(CMD_PING, NULL, 0);
-        if (!WaitForResponseTimeout(CMD_PING, NULL, 1000)) {
+        if (WaitForResponseTimeout(CMD_PING, NULL, 1000) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
             return returnToLuaWithError(L, "command execution time out");
         }
@@ -114,8 +115,9 @@ static int l_SendCommandMIX(lua_State *L) {
 
     // check number of arguments
     int n = lua_gettop(L);
-    if (n != 5)
+    if (n != 5) {
         return returnToLuaWithError(L, "You need to supply five parameters");
+    }
 
     // parse input
     cmd = luaL_checknumber(L, 1);
@@ -281,7 +283,7 @@ static int l_GetFromFlashMemSpiffs(lua_State *L) {
         return returnToLuaWithError(L, "No FLASH MEM support");
     }
 
-    uint32_t start_index = 0, len = 0x40000; //FLASH_MEM_MAX_SIZE
+    uint32_t start_index = 0, len = 0x40000;  // 256KB FLASH_MEM_MAX_SIZE as default value
     char destfilename[32] = {0};
     size_t size;
 
@@ -301,7 +303,7 @@ static int l_GetFromFlashMemSpiffs(lua_State *L) {
     // get size from spiffs itself !
     SendCommandNG(CMD_SPIFFS_STAT, (uint8_t *)destfilename, 32);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_SPIFFS_STAT, &resp, 2000))
+    if (WaitForResponseTimeout(CMD_SPIFFS_STAT, &resp, 2000) == false)
         return returnToLuaWithError(L, "No response from the device");
 
     len = resp.data.asDwords[0];
@@ -319,7 +321,7 @@ static int l_GetFromFlashMemSpiffs(lua_State *L) {
     }
 
     lua_pushlstring(L, (const char *)data, len);
-    lua_pushunsigned(L, len);
+    lua_pushinteger(L, len);
     free(data);
     return 2;
 }
@@ -342,12 +344,14 @@ static int l_WaitForResponseTimeout(lua_State *L) {
         return returnToLuaWithError(L, "You need to supply at least command to wait for");
 
     // extract first param.  cmd byte to look for
-    if (n >= 1)
-        cmd = luaL_checkunsigned(L, 1);
+    if (n >= 1) {
+        cmd = (uint32_t)luaL_checkinteger(L, 1);
+    }
 
     // extract second param. timeout value
-    if (n >= 2)
-        ms_timeout = luaL_checkunsigned(L, 2);
+    if (n >= 2) {
+        ms_timeout = (size_t)luaL_checkinteger(L, 2);
+    }
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(cmd, &resp, ms_timeout) == false) {
@@ -368,6 +372,9 @@ static int l_WaitForResponseTimeout(lua_State *L) {
 
     memcpy(foo + n, &resp.status, sizeof(resp.status));
     n += sizeof(resp.status);
+
+    memcpy(foo + n, &resp.reason, sizeof(resp.reason));
+    n += sizeof(resp.reason);
 
     memcpy(foo + n, &resp.crc, sizeof(resp.crc));
     n += sizeof(resp.crc);
@@ -418,7 +425,7 @@ static int l_mfDarkside(lua_State *L) {
             break;
     }
 
-    int retval = mfDarkside(blockno & 0xFF, keytype & 0xFF, &key);
+    int retval = mf_dark_side(blockno & 0xFF, keytype & 0xFF, &key);
 
     uint8_t dest_key[8];
     num_to_bytes(key, sizeof(dest_key), dest_key);
@@ -509,7 +516,7 @@ static int l_iso14443b_crc(lua_State *L) {
 }
 
 /*
- Simple AES 128 cbc hook up to OpenSSL.
+ Simple AES 128 cbc hook up to mbedtls.
  params:  key, input
 */
 static int l_aes128decrypt_cbc(lua_State *L) {
@@ -642,7 +649,7 @@ static int l_crc8legic(lua_State *L) {
     size_t size;
     const char *p_hexstr = luaL_checklstring(L, 1, &size);
     uint16_t retval = CRC8Legic((uint8_t *)p_hexstr, size);
-    lua_pushunsigned(L, retval);
+    lua_pushinteger(L, retval);
     return 1;
 }
 
@@ -658,7 +665,7 @@ static int l_crc16legic(lua_State *L) {
 
     init_table(CRC_LEGIC_16);
     uint16_t retval = crc16_legic((uint8_t *)p_hexstr, hexsize, uidcrc);
-    lua_pushunsigned(L, retval);
+    lua_pushinteger(L, retval);
     return 1;
 }
 
@@ -668,7 +675,7 @@ static int l_crc16(lua_State *L) {
     const char *p_str = luaL_checklstring(L, 1, &size);
 
     uint16_t checksum = Crc16ex(CRC_CCITT, (uint8_t *) p_str, size);
-    lua_pushunsigned(L, checksum);
+    lua_pushinteger(L, checksum);
     return 1;
 }
 
@@ -734,9 +741,10 @@ static int l_reveng_models(lua_State *L) {
 #define NMODELS 106
 
     int count = 0;
-    uint8_t in_width = luaL_checkunsigned(L, 1);
-    if (in_width > 89)
+    uint8_t in_width = (uint8_t)luaL_checkinteger(L, 1);
+    if (in_width > 89) {
         return returnToLuaWithError(L, "Width cannot exceed 89, got %d", in_width);
+    }
 
     uint8_t width[NMODELS];
     memset(width, 0, sizeof(width));
@@ -744,8 +752,9 @@ static int l_reveng_models(lua_State *L) {
 
     width[0] = in_width;
 
-    if (!GetModels(models, &count, width))
+    if (!GetModels(models, &count, width)) {
         return returnToLuaWithError(L, "didn't find any models");
+    }
 
     lua_newtable(L);
     for (int i = 0; i < count; i++) {
@@ -915,8 +924,8 @@ static int l_keygen_algoB(lua_State *L) {
     uint32_t pwd = ul_ev1_pwdgenB(uid);
     uint16_t pack = ul_ev1_packgenB(uid);
 
-    lua_pushunsigned(L, pwd);
-    lua_pushunsigned(L, pack);
+    lua_pushinteger(L, pwd);
+    lua_pushinteger(L, pack);
     return 2;
 }
 
@@ -948,8 +957,8 @@ static int l_keygen_algoD(lua_State *L) {
     uint32_t pwd = ul_ev1_pwdgenD(uid);
     uint16_t pack = ul_ev1_packgenD(uid);
 
-    lua_pushunsigned(L, pwd);
-    lua_pushunsigned(L, pack);
+    lua_pushinteger(L, pwd);
+    lua_pushinteger(L, pack);
     return 2;
 }
 
@@ -1036,7 +1045,7 @@ static int l_T55xx_readblock(lua_State *L) {
         return returnToLuaWithError(L, "Failed to get actual data");
     }
 
-    lua_pushunsigned(L, blockData);
+    lua_pushinteger(L, blockData);
     return 1;
 }
 
@@ -1376,6 +1385,10 @@ static int setLuaPath(lua_State *L, const char *path) {
     const char *cur_path = lua_tostring(L, -1);   // grab path string from top of stack
     int requiredLength = strlen(cur_path) + strlen(path) + 10; //A few bytes too many, whatever we can afford it
     char *buf = calloc(requiredLength, sizeof(char));
+    if (buf == NULL) {
+        lua_pop(L, 1);   // get rid of package table from top of stack
+        return returnToLuaWithError(L, "Failed to allocate memory");
+    }
     snprintf(buf, requiredLength, "%s;%s", cur_path, path);
     lua_pop(L, 1);   // get rid of the string on the stack we just pushed on line 5
     lua_pushstring(L, buf);   // push the new one
@@ -1435,16 +1448,12 @@ int set_pm3_libraries(lua_State *L) {
     };
 
     lua_pushglobaltable(L);
-    // Core library is in this table. Contains '
-    // this is 'pm3' table
-    lua_newtable(L);
 
-    // put the function into the hash table.
-    for (int i = 0; libs[i].name; i++) {
-        lua_pushcfunction(L, libs[i].func);
-        lua_setfield(L, -2, libs[i].name);//set the name, pop stack
-    }
-    // Name of 'core'
+    // bit32 compatibility shim
+    register_bit32_lib(L);
+
+    // Core module
+    luaL_newlib(L, libs);
     lua_setfield(L, -2, "core");
 
     // remove the global environment table from the stack

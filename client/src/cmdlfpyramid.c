@@ -45,10 +45,10 @@ int demodPyramid(bool verbose) {
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
     if (bits == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
-    size_t size = getFromGraphBuf(bits);
+    size_t size = getFromGraphBuffer(bits);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid not enough samples");
         free(bits);
@@ -231,7 +231,7 @@ static int CmdPyramidReader(const char *Cmd) {
     do {
         lf_read(false, 15000);
         demodPyramid(true);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }
@@ -305,6 +305,7 @@ static int CmdPyramidClone(const char *Cmd) {
 
         uint8_t *bs = calloc(128, sizeof(uint8_t));
         if (bs == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
 
@@ -355,8 +356,8 @@ static int CmdPyramidClone(const char *Cmd) {
     } else {
         res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     }
-    PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf pyramid reader`") " to verify");
+    PrintAndLogEx(SUCCESS, "Done!");
+    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf pyramid reader`") " to verify");
     return res;
 }
 
@@ -427,6 +428,10 @@ static int CmdPyramidSim(const char *Cmd) {
 
     // Pyramid uses:  fcHigh: 10, fcLow: 8, clk: 50, invert: 0
     lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     payload->fchigh = 10;
     payload->fclow =  8;
     payload->separator = 0;
@@ -444,7 +449,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,          AlwaysAvailable, "this help"},
     {"demod",   CmdPyramidDemod,  AlwaysAvailable, "demodulate a Pyramid FSK tag from the GraphBuffer"},
     {"reader",  CmdPyramidReader, IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdPyramidClone,  IfPm3Lf,         "clone pyramid tag to T55x7 or Q5/T5555"},
+    {"clone",   CmdPyramidClone,  IfPm3Lf,         "clone pyramid tag to T55x7, Q5/T5555 or EM4305/4469"},
     {"sim",     CmdPyramidSim,    IfPm3Lf,         "simulate pyramid tag"},
     {NULL, NULL, NULL, NULL}
 };
@@ -493,25 +498,28 @@ int getPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 
 // FSK Demod then try to locate a Farpointe Data (pyramid) ID
 int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx) {
-    //make sure buffer has data
+    // make sure buffer has data
     if (*size < 128 * 50) return -1;
 
-    //test samples are not just noise
+    // test samples are not just noise
     if (getSignalProperties()->isnoise) return -2;
 
     // FSK demodulator RF/50 FSK 10,8
     *size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx);  // pyramid fsk2
 
-    //did we get a good demod?
+    // did we get a good demod?
     if (*size < 128) return -3;
 
     size_t startIdx = 0;
     uint8_t preamble[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1};
-    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
-        return -4; //preamble not found
+    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx)) {
+        return -4; // preamble not found
+    }
 
     // wrong size?  (between to preambles)
-    if (*size < 128) return -5;
+    if (*size < 128) {
+        return -5;
+    }
 
     return (int)startIdx;
 }

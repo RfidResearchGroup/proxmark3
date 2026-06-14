@@ -535,26 +535,61 @@ static s32_t spiffs_page_consistency_check_i(spiffs *fs) {
 
     s32_t res = SPIFFS_OK;
     spiffs_page_ix pix_offset = 0;
+    // Avoid arithmetic in loop conditions (integer promotion rules can cause unintended consequences)
+    uint32_t block_count = fs->block_count;
+    uint32_t total_blocks = SPIFFS_PAGES_PER_BLOCK(fs) * block_count;
+    uint32_t total_blocks_plus_one_page = total_blocks + SPIFFS_PAGES_PER_BLOCK(fs);
+
+//#pragma region    // check for overflow once, before looping
+    // this _should_ never happen, but prefer to see debug message / error
+    // rather than silently entering infinite loop.
+    if (block_count > ((spiffs_block_ix)(-1))) {
+        SPIFFS_DBG("Avoiding infinite loop, block_count "_SPIPRIbl" too large for spiffs_block_ix type\n", block_count);
+        SPIFFS_API_CHECK_RES(fs, SPIFFS_ERR_INTERNAL);
+    }
+    // this checks for overflow of the multiplication of block_count+1 with SPIFFS_PAGES_PER_BLOCK(fs)
+    if (((uint32_t)(-1)) / SPIFFS_PAGES_PER_BLOCK(fs) > (block_count + 1)) {
+        // checking with +1 block count to avoid overflow also in inner loop, which adds one page...
+        // would exceed value storable in uint32_t
+        SPIFFS_DBG("Overflow: pages per block %04x with block count "_SPIPRIbl" results in overflow\n", SPIFFS_PAGES_PER_BLOCK(fs), block_count);
+        SPIFFS_API_CHECK_RES(fs, SPIFFS_ERR_INTERNAL);
+    }
+    // because loop indices are using spiffs_page_ix type,
+    // that type can hold a large enough value
+    if (total_blocks > ((spiffs_page_ix) - 1)) {
+        SPIFFS_DBG("Avoiding infinite loop, total_blocks "_SPIPRIpg" too large for spiffs_page_ix type\n", total_blocks);
+        SPIFFS_CHECK_RES(SPIFFS_ERR_INTERNAL);
+    }
+    // because loop indices are using spiffs_page_ix type,
+    // that type can hold a large enough value
+    if (total_blocks_plus_one_page > ((spiffs_page_ix) - 1) || total_blocks_plus_one_page < total_blocks) {
+        SPIFFS_DBG("Avoiding infinite loop, total_blocks_plus_one_page "_SPIPRIpg" too large for spiffs_page_ix type\n", total_blocks_plus_one_page);
+        SPIFFS_CHECK_RES(SPIFFS_ERR_INTERNAL);
+    }
+    // RESULT: spiffs_page_ix can safely be used for loop index vs. each of
+    //         block_count, total_blocks, and total_blocks_plus_one_page
+//#pragma endregion // check for overflow once, before looping
+
 
     // for each range of pages fitting into work memory
-    while (pix_offset < SPIFFS_PAGES_PER_BLOCK(fs) * fs->block_count) {
+    while (pix_offset < total_blocks) {
         // set this flag to abort all checks and rescan the page range
         u8_t restart = 0;
         memset(fs->work, 0, SPIFFS_CFG_LOG_PAGE_SZ(fs));
 
         spiffs_block_ix cur_block = 0;
         // build consistency bitmap for id range traversing all blocks
-        while (!restart && cur_block < fs->block_count) {
+        while (!restart && cur_block < block_count) {
             CHECK_CB(fs, SPIFFS_CHECK_PAGE, SPIFFS_CHECK_PROGRESS,
-                     (pix_offset * 256) / (SPIFFS_PAGES_PER_BLOCK(fs) * fs->block_count) +
-                     ((((cur_block * pages_per_scan * 256) / (SPIFFS_PAGES_PER_BLOCK(fs) * fs->block_count))) / fs->block_count),
+                     (pix_offset * 256) / total_blocks +
+                     ((((cur_block * pages_per_scan * 256) / total_blocks)) / block_count),
                      0);
             // traverse each page except for lookup pages
             spiffs_page_ix cur_pix = SPIFFS_OBJ_LOOKUP_PAGES(fs) + SPIFFS_PAGES_PER_BLOCK(fs) * cur_block;
             while (!restart && cur_pix < SPIFFS_PAGES_PER_BLOCK(fs) * (cur_block + 1)) {
                 //if ((cur_pix & 0xff) == 0)
                 //  SPIFFS_CHECK_DBG("PA: processing pix "_SPIPRIpg", block "_SPIPRIbl" of pix "_SPIPRIpg", block "_SPIPRIbl"\n",
-                //      cur_pix, cur_block, SPIFFS_PAGES_PER_BLOCK(fs) * fs->block_count, fs->block_count);
+                //      cur_pix, cur_block, total_blocks, block_count);
 
                 // read header
                 spiffs_page_header p_hdr;

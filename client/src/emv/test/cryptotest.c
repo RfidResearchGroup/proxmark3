@@ -111,9 +111,9 @@ int ExecuteCryptoTests(bool verbose, bool ignore_time, bool include_slow_tests) 
     PrintAndLogEx(INFO, "--------------------------");
 
     if (TestFail)
-        PrintAndLogEx(FAILED, "\tTest(s) [ %s ]", _RED_("fail"));
+        PrintAndLogEx(FAILED, "Tests ( %s )", _RED_("fail"));
     else
-        PrintAndLogEx(SUCCESS, "\tTest(s) [ %s ]", _GREEN_("ok"));
+        PrintAndLogEx(SUCCESS, "Tests ( %s )", _GREEN_("ok"));
 
     return TestFail;
 }

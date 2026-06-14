@@ -20,16 +20,24 @@
 
 #include <stdio.h>
 #include <string.h>
-
+#include <pthread.h>      // spinlock
+#include <stdlib.h>       // system
 #include "ui.h"
 #include "comms.h"
 #include "util_posix.h" // msleep
 
+#if defined(__MACH__) && defined(__APPLE__)
+# include "pthread_spin_lock_shim.h"  // spinlock shim for OSX ..
+#endif
 
 #define MAX_PM3_INPUT_ARGS_LENGTH    4096
 
 bool AlwaysAvailable(void) {
     return true;
+}
+
+bool IfClientDebugEnabled(void) {
+    return g_debugMode;
 }
 
 bool IfPm3Present(void) {
@@ -174,6 +182,12 @@ bool IfPm3Iclass(void) {
     return g_pm3_capabilities.compiled_with_iclass;
 }
 
+bool IfPm3Seos(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.compiled_with_seos;
+}
+
 bool IfPm3NfcBarcode(void) {
     if (IfPm3Present() == false)
         return false;
@@ -198,14 +212,26 @@ void CmdsHelp(const command_t Commands[]) {
     PrintAndLogEx(NORMAL, "");
 
     int i = 0;
+    size_t max_name_len = 16; // minimum width for command name column
+    while (Commands[i].Name) {
+        if (Commands[i].IsAvailable()) {
+            size_t name_len = strlen(Commands[i].Name);
+            if (name_len > max_name_len) {
+                max_name_len = name_len;
+            }
+        }
+        ++i;
+    }
+
+    i = 0;
     while (Commands[i].Name) {
         if (Commands[i].IsAvailable()) {
             uint8_t old_printAndLog = g_printAndLog;
             g_printAndLog &= PRINTANDLOG_PRINT;
             if (Commands[i].Name[0] == '-' || Commands[i].Name[0] == ' ') {
-                PrintAndLogEx(NORMAL, "%-16s %s", Commands[i].Name, Commands[i].Help);
+                PrintAndLogEx(NORMAL, "%-*s %s", (int)max_name_len, Commands[i].Name, Commands[i].Help);
             } else {
-                PrintAndLogEx(NORMAL, _GREEN_("%-16s")" %s", Commands[i].Name, Commands[i].Help);
+                PrintAndLogEx(NORMAL, _GREEN_("%-*s") " %s", (int)max_name_len, Commands[i].Name, Commands[i].Help);
             }
             g_printAndLog = old_printAndLog;
         }
@@ -214,6 +240,27 @@ void CmdsHelp(const command_t Commands[]) {
     // empty line needed for the help2json parser
     PrintAndLogEx(NORMAL, "");
 }
+
+static int execute_system_command(const char *command) {
+
+    pthread_spinlock_t sycmd_spinlock;
+    pthread_spin_init(&sycmd_spinlock, 0);
+    pthread_spin_lock(&sycmd_spinlock);
+
+    int ret;
+
+#if defined(_WIN32)
+    char wrapped_command[255];
+    snprintf(wrapped_command, sizeof(wrapped_command), "cmd /C \"%s\"", command);
+    ret = system(wrapped_command);
+#else
+    ret = system(command);
+#endif
+    pthread_spin_unlock(&sycmd_spinlock);
+    pthread_spin_destroy(&sycmd_spinlock);
+    return ret;
+}
+
 
 int CmdsParse(const command_t Commands[], const char *Cmd) {
 
@@ -263,6 +310,9 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
         return PM3_SUCCESS;
     }
 
+    if (Cmd[0] == '!') {
+        return execute_system_command(Cmd + 1);
+    }
 
     char cmd_name[128] = {0};
     memset(cmd_name, 0, sizeof(cmd_name));
@@ -283,8 +333,9 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     }
 
     // Comment
-    if (cmd_name[0] == '#')
+    if (cmd_name[0] == '#') {
         return PM3_SUCCESS;
+    }
 
     // find args, check for -h / --help
     int tmplen = len;

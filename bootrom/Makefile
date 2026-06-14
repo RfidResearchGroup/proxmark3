@@ -34,10 +34,10 @@ VERSIONSRC = version_pm3.c
 # THUMBSRC :=
 
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant
-APP_CFLAGS = -I. -ffunction-sections -fdata-sections -DAS_BOOTROM
+APP_CFLAGS = -I. -DAS_BOOTROM
 
-# stack-protect , no-pie reduces size on Gentoo Hardened 8.2 gcc,  no-common makes sure uninitialized vars don't end up in COMMON area
-APP_CFLAGS += -fno-stack-protector -fno-pie -fno-common
+# no-common makes sure uninitialized vars don't end up in COMMON area
+APP_CFLAGS += -fno-common
 
 ifneq (,$(findstring WITH_FLASH,$(PLATFORM_DEFS)))
 	APP_CFLAGS += -DWITH_FLASH
@@ -69,7 +69,8 @@ tarbin: $(OBJS)
 
 $(OBJDIR)/bootrom.elf: $(VERSIONOBJ) $(ASMOBJ) $(ARMOBJ) $(THUMBOBJ)
 	$(info [=] LD $@)
-	$(Q)$(CROSS_LD) $(CROSS_LDFLAGS) -Wl,-T,ldscript-flash,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
+# Using -T instead of -Wl,-T is needed to prevent the linker from using the default ldscript when using picolibc instead of newlib
+	$(Q)$(CROSS_LD) $(CROSS_LDFLAGS) -T ldscript-flash -Wl,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
 clean:
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.o

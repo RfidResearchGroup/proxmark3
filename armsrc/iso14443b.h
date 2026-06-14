@@ -39,22 +39,29 @@
 #endif
 
 void iso14443b_setup(void);
-int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *res, uint16_t *responselen);
+int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *response_byte, uint16_t *responselen);
 
 int iso14443b_select_card(iso14b_card_select_t *card);
 
 void SimulateIso14443bTag(const uint8_t *pupi);
 void read_14b_st_block(uint8_t blocknr);
+int read_14b_srx_block(uint8_t blocknr, uint8_t *block);
+int iso14443b_select_srx_card(iso14b_card_select_t *card);
 void SniffIso14443b(void);
 void SendRawCommand14443B(iso14b_raw_cmd_t *p);
+void ST25TB_TearOff(const uint8_t *data);
+void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t *start_time, uint32_t *eof_time, bool framing);
+
+// 14b config
+void printHf14bConfig(void);
+void setHf14bConfig(const hf14b_config_t *hc);
+hf14b_config_t *getHf14bConfig(void);
 
 // States for 14B SIM command
-#define SIM_NOFIELD     0
+#define SIM_POWER_OFF   0
 #define SIM_IDLE        1
-#define SIM_HALTED      2
-#define SIM_SELECTING   3
-#define SIM_HALTING     4
-#define SIM_ACKNOWLEDGE 5
-#define SIM_WORK        6
+#define SIM_READY       2
+#define SIM_HALT        3
+#define SIM_ACTIVE      4
 
 #endif /* __ISO14443B_H */

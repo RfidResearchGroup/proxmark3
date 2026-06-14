@@ -1,4 +1,6 @@
-MYSRCS = queue.c threads.c opencl.c hitag2.c
+MYSRCPATHS = ../common
+MYSRCS = queue.c threads.c opencl.c hitag2.c ht2crackutils.c hitagcrypto.c
+MYINCLUDES =-I ../common
 MYCFLAGS =
 MYDEFS = -D TEST_UNIT=0
 

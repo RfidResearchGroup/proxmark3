@@ -29,6 +29,8 @@ Always use the latest repository commits from *master* branch. There are always 
   - [Qt Session management error](#qt-session-management-error)
   - [found architecture 'x86\_64' required architecture 'arm64' error](#found-architecture-x86_64-required-architecture-arm64-error)
   - [wrong permissions on runtime directory /run/user/1000](#wrong-permissions-on-runtime-directory-runuser1000)
+  - [proxspace 'file not found or locked' on Windows 11](#proxspace-file-not-found-or-locked-on-windows-11)
+  - [qt.qpa.plugin: Could not find the Qt platform plugin 'wayland' error](#qtqpaplugin-could-not-find-the-qt-platform-plugin-wayland-error)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
@@ -47,7 +49,6 @@ Refer to the installation guide specific to your OS for details about ports.
 Note that with the Bluetooth adapter, you *have to* use directly the client, and flasher over Bluetooth is not possible.
 
 * [Bluetooth](/doc/bt_manual_v10.md)
-
 
 ## `pm3-flash*` stops and warns about up-to-date firmware images
 ^[Top](#top)
@@ -253,8 +254,8 @@ make: *** [Makefile:177: client/all] Error 2
 The following dependencies are currently needed to make the development environment compile:   
 ```
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
-libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev \
-libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev libssl-dev
+libreadline-dev gcc-arm-none-eabi libnewlib-dev qt6-base-dev \
+libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev libssl-dev libgd-dev
 ```
 
 ## target attribute is not supported on this machine
@@ -336,6 +337,7 @@ make clean && make -j
 ```
 
 ## wrong permissions on runtime directory /run/user/1000
+^[Top](#top)
 
 If you get the message 
 
@@ -361,3 +363,60 @@ or
 
 export XDG_RUNTIME_DIR=/var/run/user/1000
 ```
+
+## proxspace 'file not found or locked' on Windows 11
+^[Top](#top)
+
+if you receive an error "file not found or locked" for any operation that needs to write a file.
+
+The cause is that Windows locks down many folders as 'read only', and you can't easily change this setting.
+
+How to fix (use this at your own risk):
+
+```
+    Open your Windows Settings Control Panel
+    Then select "Privacy and security"
+    Then select "Windows Security"
+    Then select "Virus & threat protection"
+    Then scroll down and select "Manage ransomware protection"
+    Then select "Allow an app through Controlled folder access"
+    Answer "Yes" to allow this app to make changes to your system
+    Then select "Add an allowed app" to select the proper "proxmark3.exe" in the client folder.
+
+Potentially also do:
+    Select "Recently blocked apps"
+    Then select the most recent "proxmark3.exe" by pressing the "+" next to it.
+    Then select "Close".
+
+Side note: 
+You may also be able to choose "Browse all apps" and find your specific proxmark3.exe in the client folder but
+be sure to choose the proper location and specific file in case you have more than one stored on your PC somewhere.
+```
+
+## qt.qpa.plugin: Could not find the Qt platform plugin 'wayland' error
+^[Top](#top)
+
+If you run into this error message when running on modern Ubuntu which is using the wayland display 
+you most likely have not installed these following packages. 
+
+Solution:  Install or reinstall the required Qt Wayland packages.
+
+```
+Debian / Ubuntu based *nix
+    sudo apt install qt5-qtwayland             --< if QT 5
+    sudo apt install qt6-qtwayland             --< if QT 6
+
+Arch *nix
+    pacman -S qt5-wayland
+    pacman -S qt6-wayland
+```
+
+
+Alternatively you could set QT_QPA_PLATFORM environment to either wayland or xcb
+```
+export QT_QPA_PLATFORM=wayland
+
+export QT_QPA_PLATFORM=xcb
+```
+
+

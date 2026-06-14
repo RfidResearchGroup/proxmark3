@@ -223,10 +223,11 @@ static int CLIParseCommandParametersEx(CLIParserContext *ctx, size_t keyid, size
             return PM3_EINVARG;
         }
 
-        if (hdatalen)
+        if (hdatalen) {
             memcpy(key, hdata, CIPURSE_AES_KEY_LENGTH);
-        else
+        } else {
             memcpy(key, defaultKey, sizeof(defaultKey));
+        }
     }
 
     if (useaid) {
@@ -274,17 +275,23 @@ static int CLIParseCommandParametersEx(CLIParserContext *ctx, size_t keyid, size
         *fid = 0;
         if (hdatalen) {
             *fid = (hdata[0] << 8) + hdata[1];
-            if (usefid)
+            if (usefid) {
                 *usefid = true;
+            }
         }
     }
 
-    if (usechfid)
+    if (usechfid) {
         *usechfid = false;
+    }
+
     if (chfidid && chfid) {
+
         hdatalen = sizeof(hdata);
-        if (CLIParamHexToBuf(arg_get_str(ctx, chfidid), hdata, hdatalen, &hdatalen))
+        if (CLIParamHexToBuf(arg_get_str(ctx, chfidid), hdata, hdatalen, &hdatalen)) {
             return PM3_ESOFT;
+        }
+
         if (hdatalen && hdatalen != 2) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " child file id length must be 2 bytes only");
             return PM3_EINVARG;
@@ -293,8 +300,10 @@ static int CLIParseCommandParametersEx(CLIParserContext *ctx, size_t keyid, size
         *chfid = defaultFileId;
         if (hdatalen) {
             *chfid = (hdata[0] << 8) + hdata[1];
-            if (usechfid)
+
+            if (usechfid) {
                 *usechfid = true;
+            }
         }
     }
 
@@ -647,6 +656,17 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
         PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " offset " _YELLOW_("%zu") " key id " _YELLOW_("%d") " key " _YELLOW_("%s"), fileId, offset, keyId, sprint_hex(key, CIPURSE_AES_KEY_LENGTH));
     }
 
+    res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != ISO7816_OK) {
+        if (verbose == false)
+            PrintAndLogEx(ERR, "File select ( " _RED_("error") " ). Card returns 0x%04x", sw);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (verbose)
+        PrintAndLogEx(INFO, "Select file 0x%x ( %s )", fileId, _GREEN_("ok"));
+
     if (noAuth == false) {
         bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
         if (bres == false) {
@@ -659,17 +679,6 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
         // set channel security levels
         CIPURSECSetActChannelSecurityLevels(sreq, sresp);
     }
-
-    res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != ISO7816_OK) {
-        if (verbose == false)
-            PrintAndLogEx(ERR, "File select ( " _RED_("error") " ). Card returns 0x%04x", sw);
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (verbose)
-        PrintAndLogEx(INFO, "Select file 0x%x ( %s )", fileId, _GREEN_("ok"));
 
     res = CIPURSEReadBinary(offset, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != ISO7816_OK) {
@@ -776,6 +785,17 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
         PrintAndLogEx(INFO, "Data [%d]: %s", hdatalen, sprint_hex(hdata, hdatalen));
     }
 
+    res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != ISO7816_OK) {
+        if (verbose == false)
+            PrintAndLogEx(ERR, "File select " _RED_("ERROR") ". Card returns 0x%04x", sw);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (verbose)
+        PrintAndLogEx(INFO, "Select file 0x%x ( %s )", fileId, _GREEN_("ok"));
+
     if (noAuth == false) {
         bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
         if (bres == false) {
@@ -788,17 +808,6 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
         // set channel security levels
         CIPURSECSetActChannelSecurityLevels(sreq, sresp);
     }
-
-    res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != ISO7816_OK) {
-        if (verbose == false)
-            PrintAndLogEx(ERR, "File select " _RED_("ERROR") ". Card returns 0x%04x", sw);
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (verbose)
-        PrintAndLogEx(INFO, "Select file 0x%x ( %s )", fileId, _GREEN_("ok"));
 
     res = CIPURSEUpdateBinary(offset, hdata, hdatalen, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != ISO7816_OK) {
@@ -1888,7 +1897,8 @@ static int CmdHFCipurseDefault(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",      CmdHelp,                   AlwaysAvailable, "This help."},
-    {"info",      CmdHFCipurseInfo,          IfPm3Iso14443a,  "Get info about CIPURSE tag"},
+    {"-----------", CmdHelp,                   IfPm3Iso14443a,  "------------------- " _CYAN_("Operations") " -------------------"},
+    {"info",        CmdHFCipurseInfo,          IfPm3Iso14443a,  "Tag information"},
     {"select",    CmdHFCipurseSelect,        IfPm3Iso14443a,  "Select CIPURSE application or file"},
     {"auth",      CmdHFCipurseAuth,          IfPm3Iso14443a,  "Authenticate CIPURSE tag"},
     {"read",      CmdHFCipurseReadFile,      IfPm3Iso14443a,  "Read binary file"},

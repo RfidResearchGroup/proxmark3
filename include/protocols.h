@@ -205,6 +205,12 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MIFARE_EV1_UIDF1            0x40
 #define MIFARE_EV1_UIDF2            0x20
 #define MIFARE_EV1_UIDF3            0x60
+#define MIFARE_EV1_SELECT_APP       0x5A
+#define MIFARE_EV1_AUTH_AES         0xAA
+#define MIFARE_EV1_AUTH_AES_2       0xAF
+#define MIFARE_EV1_GET_FILE_INFO    0xF5
+#define MIFARE_EV1_READ_DATA        0xBD
+
 
 #define MIFARE_ULC_WRITE            0xA2
 #define MIFARE_ULC_COMP_WRITE       0xA0
@@ -250,6 +256,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 // bit 3 - turn on FPGA
 // bit 4 - turn off FPGA
 // bit 5 - set datain instead of issuing USB reply (called via ARM for StandAloneMode14a)
+// bit 6 - wipe tag.
+// bit 7 - use USCUID/GDM (20/23) magic wakeup
 #define MAGIC_UID                   0x01
 #define MAGIC_WUPC                  0x02
 #define MAGIC_HALT                  0x04
@@ -257,23 +265,25 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MAGIC_OFF                   0x10
 #define MAGIC_DATAIN                0x20
 #define MAGIC_WIPE                  0x40
-#define MAGIC_SINGLE                (MAGIC_WUPC | MAGIC_HALT | MAGIC_INIT | MAGIC_OFF) //0x1E
+#define MAGIC_GDM_ALT_WUPC          0x80
+#define MAGIC_SINGLE                (MAGIC_HALT | MAGIC_INIT | MAGIC_OFF) //0x1E
 
 // by CMD_HF_MIFARE_CIDENT / Flags
-#define MAGIC_FLAG_NONE          0x0000
-#define MAGIC_FLAG_GEN_1A        0x0001
-#define MAGIC_FLAG_GEN_1B        0x0002
-#define MAGIC_FLAG_GEN_2         0x0004
-#define MAGIC_FLAG_GEN_UNFUSED   0x0008
-#define MAGIC_FLAG_SUPER_GEN1    0x0010
-#define MAGIC_FLAG_SUPER_GEN2    0x0020
-#define MAGIC_FLAG_NTAG21X       0x0040
-#define MAGIC_FLAG_GEN_3         0x0080
-#define MAGIC_FLAG_GEN_4GTU      0x0100
-#define MAGIC_FLAG_GDM_AUTH      0x0200
-#define MAGIC_FLAG_QL88          0x0400
-#define MAGIC_FLAG_GDM_WUP_20    0x0800
-#define MAGIC_FLAG_GDM_WUP_40    0x1000
+#define MAGIC_FLAG_NONE            0x0000
+#define MAGIC_FLAG_GEN_1A          0x0001
+#define MAGIC_FLAG_GEN_1B          0x0002
+#define MAGIC_FLAG_GEN_2           0x0004
+#define MAGIC_FLAG_GEN_UNFUSED     0x0008
+#define MAGIC_FLAG_SUPER_GEN1      0x0010
+#define MAGIC_FLAG_SUPER_GEN2      0x0020
+#define MAGIC_FLAG_NTAG21X         0x0040
+#define MAGIC_FLAG_GEN_3           0x0080
+#define MAGIC_FLAG_GEN_4GTU        0x0100
+#define MAGIC_FLAG_GDM_AUTH        0x0200
+#define MAGIC_FLAG_QL88            0x0400
+#define MAGIC_FLAG_GDM_WUP_20      0x0800
+#define MAGIC_FLAG_GDM_WUP_40      0x1000
+#define MAGIC_FLAG_GDM_WUP_40_ZUID 0x2000
 
 
 // Commands for configuration of Gen4 GTU cards.
@@ -369,10 +379,10 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define CRYPTORF_ERR_MEMORY_ACCESS                    0xEE
 #define CRYPTORF_ERR_MEMORY_ACCESS_SEC                0xF9
 
-//First byte is 26
+// First byte is 26
 #define ISO15693_INVENTORY     0x01
 #define ISO15693_STAYQUIET     0x02
-//First byte is 02
+// First byte is 02
 #define ISO15693_READBLOCK                   0x20
 #define ISO15693_WRITEBLOCK                  0x21
 #define ISO15693_LOCKBLOCK                   0x22
@@ -412,6 +422,9 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO15693_STAYQUIET_PERSISTENT        0xBC
 #define ISO15693_READ_SIGNATURE              0xBD
 
+//
+#define ISO15693_MAGIC_WRITE                 0xE0
+
 // Topaz command set:
 #define TOPAZ_REQA                    0x26 // Request
 #define TOPAZ_WUPA                    0x52 // WakeUp
@@ -442,11 +455,15 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define LTO             12
 #define PROTO_HITAG2    13
 #define PROTO_HITAGS    14
-#define PROTO_CRYPTORF  15
-#define SEOS            16
-#define PROTO_MFPLUS    17
-#define PROTO_TEXKOM    18
-#define PROTO_XEROX     19
+#define PROTO_HITAGU    15
+#define PROTO_CRYPTORF  16
+#define SEOS            17
+#define PROTO_MFPLUS    18
+#define PROTO_TEXKOM    19
+#define PROTO_XEROX     20
+#define PROTO_FMCOS20   21
+#define PROTO_CALYPSO   22
+#define COUNT_OF_PROTOCOLS 23
 
 // Picopass fuses
 #define FUSE_FPERS   0x80
@@ -465,24 +482,30 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define PICOPASS_SECURE_PAGEMODE_KEYS_MODIFIABLE    0x03
 
 // ISO 7816-4 Basic interindustry commands. For command APDU's.
-#define ISO7816_READ_BINARY             0xB0
-#define ISO7816_WRITE_BINARY            0xD0
-#define ISO7816_UPDATE_BINARY           0xD6
-#define ISO7816_ERASE_BINARY            0x0E
-#define ISO7816_READ_RECORDS            0xB2
-#define ISO7816_WRITE_RECORDS           0xD2
-#define ISO7816_APPEND_RECORD           0xE2
-#define ISO7816_UPDATE_RECORD           0xDC
-#define ISO7816_GET_DATA                0xCA
-#define ISO7816_PUT_DATA                0xDA
-#define ISO7816_SELECT_FILE             0xA4
-#define ISO7816_VERIFY                  0x20
-#define ISO7816_INTERNAL_AUTHENTICATION 0x88
-#define ISO7816_EXTERNAL_AUTHENTICATION 0x82
-#define ISO7816_GET_CHALLENGE           0x84
-#define ISO7816_MANAGE_CHANNEL          0x70
+#define ISO7816_READ_BINARY                     0xB0
+#define ISO7816_WRITE_BINARY                    0xD0
+#define ISO7816_UPDATE_BINARY                   0xD6
+#define ISO7816_ERASE_BINARY                    0x0E
+#define ISO7816_READ_RECORDS                    0xB2
+#define ISO7816_WRITE_RECORDS                   0xD2
+#define ISO7816_APPEND_RECORD                   0xE2
+#define ISO7816_UPDATE_RECORD                   0xDC
+#define ISO7816_GET_DATA                        0xCA
+#define ISO7816_PUT_DATA                        0xDA
+#define ISO7816_SELECT_FILE                     0xA4
+#define ISO7816_VERIFY                          0x20
+#define ISO7816_INTERNAL_AUTHENTICATION         0x88
+#define ISO7816_EXTERNAL_AUTHENTICATION         0x82
+#define ISO7816_GET_CHALLENGE                   0x84
+#define ISO7816_MANAGE_CHANNEL                  0x70
+#define ISO7816_APPLICATION_BLOCK               0x1E
+#define ISO7816_APPLICATION_UNBLOCK             0x18
+#define ISO7816_CARD_BLOCK                      0x16
+#define ISO7816_GENERATE_APPLICATION_CRYPTOGRAM 0xAE
+#define ISO7816_GET_PROCESSING_OPTIONS          0xA8
+#define ISO7816_PIN_CHANGE                      0x24
 
-#define ISO7816_GET_RESPONSE            0xC0
+#define ISO7816_GET_RESPONSE                    0xC0
 
 // ISO7816-4 For response APDU's
 #define ISO7816_OK                              0x9000
@@ -587,9 +610,11 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_READ_RECORDS2              0xAB
 #define MFDES_READ_DATA2                 0xAD
 #define MFDES_ADDITIONAL_FRAME           0xAF
+#define MFDES_RESTORE_TRANSFER           0xB1
 #define MFDES_UPDATE_RECORD2             0xBA
 #define MFDES_READ_RECORDS               0xBB
 #define MFDES_READ_DATA                  0xBD
+#define MFDES_RESTRICT_MFC_UPDATE        0xBF
 #define MFDES_CREATE_CYCLIC_RECORD_FILE  0xC0
 #define MFDES_CREATE_LINEAR_RECORD_FILE  0xC1
 #define MFDES_CHANGE_KEY                 0xC4
@@ -602,6 +627,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_CREATE_VALUE_FILE          0xCC
 #define MFDES_CREATE_STD_DATA_FILE       0xCD
 #define MFDES_CREATE_TRANS_MAC_FILE      0xCE
+#define MFDES_CREATE_MFC_MAPPING         0xCF
 #define MFDES_DELETE_APPLICATION         0xDA
 #define MFDES_UPDATE_RECORD              0xDB
 #define MFDES_DEBIT                      0xDC
@@ -815,6 +841,9 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FELICA_REQSYSCODE_REQ           0x0c
 #define FELICA_REQSYSCODE_ACK           0x0d
 
+#define FELICA_REQBLKINFO_REQ           0x0e
+#define FELICA_REQBLKINFO_ACK           0x0f
+
 #define FELICA_AUTH1_REQ                0x10
 #define FELICA_AUTH1_ACK                0x11
 
@@ -827,14 +856,41 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FELICA_WRTSEC_REQ               0x16
 #define FELICA_WRTSEC_ACK               0x17
 
+#define FELICA_GET_NODE_LIST_REQ        0x1a
+#define FELICA_GET_NODE_LIST_ACK        0x1b
+
+#define FELICA_REQBLKINFO_EX_REQ        0x1e
+#define FELICA_REQBLKINFO_EX_ACK        0x1f
+
+#define FELICA_SET_PARAMETER_REQ        0x20
+#define FELICA_SET_PARAMETER_ACK        0x21
+
+#define FELICA_GET_CONTAINER_ISSUE_INFO_REQ 0x22
+#define FELICA_GET_CONTAINER_ISSUE_INFO_ACK 0x23
+
+#define FELICA_GET_AREA_INFO_REQ        0x24
+#define FELICA_GET_AREA_INFO_ACK        0x25
+
+#define FELICA_GET_NODE_PROPERTY_REQ    0x28
+#define FELICA_GET_NODE_PROPERTY_ACK    0x29
+
+#define FELICA_GET_CONTAINER_PROPERTY_REQ   0x2e
+#define FELICA_GET_CONTAINER_PROPERTY_ACK   0x2f
+
 #define FELICA_REQSRV2_REQ              0x32
 #define FELICA_REQSRV2_ACK              0x33
+
+#define FELICA_INTERNAL_AUTH_READ_REQ   0x34
+#define FELICA_INTERNAL_AUTH_READ_ACK   0x35
 
 #define FELICA_GETSTATUS_REQ            0x38
 #define FELICA_GETSTATUS_ACK            0x39
 
-#define FELICA_OSVER_REQ                0x3c
-#define FELICA_OSVER_ACK                0x3d
+#define FELICA_GETPLATFORMINFO_REQ      0x3a
+#define FELICA_GETPLATFORMINFO_ACK      0x3b
+
+#define FELICA_REQUEST_SPEC_VERSION_REQ 0x3c
+#define FELICA_REQUEST_SPEC_VERSION_ACK 0x3d
 
 #define FELICA_RESET_MODE_REQ           0x3e
 #define FELICA_RESET_MODE_ACK           0x3f
@@ -853,11 +909,18 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FELICA_UPDATE_RNDID_REQ         0x4C
 #define FELICA_UPDATE_RNDID_ACK         0x4D
 
+#define FELICA_GET_CONTAINER_ID_REQ     0x70
+#define FELICA_GET_CONTAINER_ID_ACK     0x71
+
+// Echo is a two-byte command (F000).
+#define FELICA_ECHO_REQ                 0xF000
+
 // FeliCa SYSTEM list
 #define SYSTEMCODE_ANY                  0xffff // ANY
 #define SYSTEMCODE_FELICA_LITE          0x88b4 // FeliCa Lite
 #define SYSTEMCODE_COMMON               0xfe00 // Common
 #define SYSTEMCODE_EDY                  0xfe00 // Edy
+#define SYSTEMCODE_OSAIFU_KEITAI        0xfe0f // Osaifu Keitai Container
 #define SYSTEMCODE_CYBERNE              0x0003 // Cyberne
 #define SYSTEMCODE_SUICA                0x0003 // Suica
 #define SYSTEMCODE_PASMO                0x0003 // Pasmo
@@ -870,20 +933,28 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 // Calypso protocol
 #define CALYPSO_GET_RESPONSE            0xC0
+#define CALYPSO_GET_DATA                0xCA
 #define CALYPSO_SELECT                  0xA4
 #define CALYPSO_INVALIDATE              0x04
 #define CALYPSO_REHABILITATE            0x44
 #define CALYPSO_APPEND_RECORD           0xE2
 #define CALYPSO_DECREASE                0x30
+#define CALYPSO_DECREASE_MULTIPLE       0x38
 #define CALYPSO_INCREASE                0x32
+#define CALYPSO_INCREASE_MULTIPLE       0x3A
 #define CALYPSO_READ_BINARY             0xB0
+#define CALYPSO_READ_BINARY_EXTENDED    0xB1
 #define CALYPSO_READ_RECORD             0xB2
+#define CALYPSO_READ_RECORD_MULTIPLE    0xB3
+#define CALYPSO_SEARCH_RECORD_MULTIPLE  0xA2
+#define CALYPSO_WRITE_BINARY            0xD0
 #define CALYPSO_UPDATE_BINARY           0xD6
 #define CALYPSO_UPDATE_RECORD           0xDC
 #define CALYPSO_WRITE_RECORD            0xD2
 #define CALYPSO_OPEN_SESSION            0x8A
 #define CALYPSO_CLOSE_SESSION           0x8E
 #define CALYPSO_GET_CHALLENGE           0x84
+#define CALYPSO_RESET_RETRY_COUNTER     0x2C
 #define CALYPSO_CHANGE_PIN              0xD8
 #define CALYPSO_VERIFY_PIN              0x20
 #define CALYPSO_SV_GET                  0x7C
@@ -893,33 +964,59 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define CALYPSO_SAM_SV_DEBIT            0x54
 #define CALYPSO_SAM_SV_RELOAD           0x56
 
-// HITAG1 commands
-#define HITAG1_SET_CCNEW                0xC2    // left 5 bits only
+// HITAG 1 commands
+#define HITAG1_SET_CC                   0x30    // higher 5 bits only
+#define HITAG1_SET_CCNEW                0xC8    // higher 5 bits only
 #define HITAG1_READ_ID                  0x00    // not a real command, consists of 5 bits length, <length> bits partial SN, 8 bits CRC
-#define HITAG1_SELECT                   0x00    // left 5 bits only, followed by 32 bits SN and 8 bits CRC
-#define HITAG1_WRPPAGE                  0x80    // left 4 bits only, followed by 8 bits page and 8 bits CRC
-#define HITAG1_WRPBLK                   0x90    // left 4 bits only, followed by 8 bits block and 8 bits CRC
-#define HITAG1_WRCPAGE                  0xA0    // left 4 bits only, followed by 8 bits page or key information and 8 bits CRC
-#define HITAG1_WRCBLK                   0xB0    // left 4 bits only, followed by 8 bits block and 8 bits CRC
-#define HITAG1_RDPPAGE                  0xC0    // left 4 bits only, followed by 8 bits page and 8 bits CRC
-#define HITAG1_RDPBLK                   0xD0    // left 4 bits only, followed by 8 bits block and 8 bits CRC
-#define HITAG1_RDCPAGE                  0xE0    // left 4 bits only, followed by 8 bits page and 8 bits CRC
-#define HITAG1_RDCBLK                   0xF0    // left 4 bits only, followed by 8 bits block and 8 bits CRC
-#define HITAG1_HALT                     0x70    // left 4 bits only, followed by 8 bits (dummy) page and 8 bits CRC
+#define HITAG1_SELECT                   0x00    // higher 5 bits only, followed by 32 bits SN and 8 bits CRC
+#define HITAG1_WRPPAGE                  0x80    // higher 4 bits only, followed by 8 bits page and 8 bits CRC
+#define HITAG1_WRPBLK                   0x90    // higher 4 bits only, followed by 8 bits block and 8 bits CRC
+#define HITAG1_WRCPAGE                  0xA0    // higher 4 bits only, followed by 8 bits page or key information and 8 bits CRC
+#define HITAG1_WRCBLK                   0xB0    // higher 4 bits only, followed by 8 bits block and 8 bits CRC
+#define HITAG1_RDPPAGE                  0xC0    // higher 4 bits only, followed by 8 bits page and 8 bits CRC
+#define HITAG1_RDPBLK                   0xD0    // higher 4 bits only, followed by 8 bits block and 8 bits CRC
+#define HITAG1_RDCPAGE                  0xE0    // higher 4 bits only, followed by 8 bits page and 8 bits CRC
+#define HITAG1_RDCBLK                   0xF0    // higher 4 bits only, followed by 8 bits block and 8 bits CRC
+#define HITAG1_HALT                     0x70    // higher 4 bits only, followed by 8 bits (dummy) page and 8 bits CRC
 
-// HITAG2 commands
-#define HITAG2_START_AUTH               0x3    // left 5 bits only
-#define HITAG2_HALT                     0x0    // left 5 bits only
-
-#define HITAG2_READ_PAGE                0x3    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
-#define HITAG2_READ_PAGE_INVERTED       0x1    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
-#define HITAG2_WRITE_PAGE               0x2   // page number in bits 5 to 3, page number
+// HITAG 2 commands
+#define HITAG2_START_AUTH               0xC0    // left 5 bits only
+#define HITAG2_READ_PAGE                0xC0    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
+#define HITAG2_READ_PAGE_INVERTED       0x44    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
+#define HITAG2_WRITE_PAGE               0x82    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
+#define HITAG2_HALT                     0x00    // left 5 bits only
 
 
 // HITAG S commands
-#define HITAGS_QUIET                    0x70
-//inverted in bit 0 and following 2 bits
-#define HITAGS_WRITE_BLOCK              0x90
+#define HITAGS_UID_REQ_STD              0x30    // 00110 UID REQUEST Std
+#define HITAGS_UID_REQ_ADV2             0xC0    // 11000 UID REQUEST Adv compatible with HITAG2_START_AUTH
+#define HITAGS_UID_REQ_ADV1             0xC8    // 11001 UID REQUEST Adv compatible with HITAG1_SET_CCNEW
+#define HITAGS_UID_REQ_FADV             0xD0    // 11010 UID REQUEST FAdv
+#define HITAGS_SELECT                   0x00    // 00000 SELECT (UID)
+#define HITAGS_READ_PAGE                0xC0    // 1100 READ PAGE
+#define HITAGS_READ_BLOCK               0xD0    // 1101 READ BLOCK
+#define HITAGS_WRITE_PAGE               0x80    // 1000 WRITE PAGE
+#define HITAGS_WRITE_BLOCK              0x90    // 1001 WRITE BLOCK
+#define HITAGS_QUIET                    0x70    // 0111 QUIET
+
+// Hitag µ flags
+#define HITAGU_FLAG_PEXT                0x01    // 0b00001 - Protocol EXTension flag
+#define HITAGU_FLAG_INV                 0x02    // 0b00010 - INVentory flag
+#define HITAGU_FLAG_CRCT                0x04    // 0b00100 - CRC Transponder flag
+#define HITAGU_FLAG_SEL                 0x08    // 0b01000 - SELect flag (when INV=0)
+#define HITAGU_FLAG_ADR                 0x10    // 0b10000 - ADdRess flag (when INV=0)
+#define HITAGU_FLAG_RFU                 0x08    // 0b01000 - Reserved For Use flag (when INV=1, always 0)
+#define HITAGU_FLAG_NOS                 0x10    // 0b10000 - Number Of Slots flag (when INV=1)
+
+// Hitag µ commands (6-bit)
+#define HITAGU_CMD_LOGIN                   0x28    // 0b101000 - Login command
+#define HITAGU_CMD_INVENTORY               0x00    // 0b000000 - Inventory command
+#define HITAGU_CMD_READ_MULTIPLE_BLOCK     0x12    // 0b010010 - Read multiple block command
+#define HITAGU_CMD_WRITE_SINGLE_BLOCK      0x14    // 0b010100 - Write single block command
+#define HITAGU_CMD_SELECT                  0x18    // 0b011000 - Select command
+#define HITAGU_CMD_SYSINFO                 0x17    // 0b010111 - Get system information command
+#define HITAGU_CMD_READ_UID                0x02    // 0b000010 - Read UID command
+#define HITAGU_CMD_STAY_QUIET              0x01    // 0b000001 - Stay quiet command
 
 // LTO-CM commands
 #define LTO_REQ_STANDARD                0x45
@@ -936,6 +1033,44 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 // 0x0A = ACK
 // 0x05 = NACK
+
+//FMCOS2.0
+#define FMCOS20_CMD_VERIFY_PIN                    0x20
+#define FMCOS20_CMD_EXTERNAL_AUTHENTICATION       0x82
+#define FMCOS20_CMD_GET_CHALLENGE                 0x84
+#define FMCOS20_CMD_INTERNAL_AUTHENTICATION       0x88
+#define FMCOS20_CMD_SELECT                        0xA4
+#define FMCOS20_CMD_READ_BINARY                   0xB0
+#define FMCOS20_CMD_READ_RECORD                   0xB2
+#define FMCOS20_CMD_GET_RESPONSE                  0xC0
+#define FMCOS20_CMD_UPDATE_BINARY                 0xD6
+#define FMCOS20_CMD_UPDATE_RECORD                 0xDC
+#define FMCOS20_CMD_APPEND_RECORD                 0xE2
+#define FMCOS20_CMD_CARD_BLOCK                    0x16
+#define FMCOS20_CMD_APP_UNBLOCK                   0x18
+#define FMCOS20_CMD_APP_BLOCK                     0x1E
+#define FMCOS20_CMD_PIN_UNBLOCK                   0x24
+#define FMCOS20_CMD_UNBLOCK                       0x2C
+#define FMCOS20_CMD_INITIALIZE_TRANSACTION        0x50
+#define FMCOS20_CMD_CREDIT_LOAD                   0x52
+#define FMCOS20_CMD_PURCHASE                      0x54
+#define FMCOS20_CMD_UPDATE_OVERDRAW_LIMIT         0x58
+#define FMCOS20_CMD_GET_TRANSACTION_PROOF         0x5A
+#define FMCOS20_CMD_GET_BALANCE                   0x5C
+#define FMCOS20_CMD_CHANGE_PIN                    0x5E
+#define FMCOS20_CMD_ERASE_DF                      0x0E
+#define FMCOS20_CMD_PULL                          0x30
+#define FMCOS20_CMD_CHARGE                        0x32
+#define FMCOS20_CMD_WRITE_KEY                     0xD4
+#define FMCOS20_CMD_CREATE_FILE                   0xE0
+#define FMCOS20_CMD_WRITE_EEPROM                  0x00
+#define FMCOS20_CMD_READ_EEPROM                   0x04
+#define FMCOS20_CMD_INITIALIZE_EEPROM             0x02
+#define FMCOS20_CMD_READ_ROM                      0x0C
+#define FMCOS20_CMD_INITIALIZE_GREY_LOCK_UNLOCK   0x7A
+#define FMCOS20_CMD_GREY_LOCK_UNLOCK              0x7C
+#define FMCOS20_CMD_DEBIT_UNLOCK                  0x7E
+#define FMCOS20_CMD_CALCULATE_ROM_CRC             0x0A
 
 #endif
 // PROTOCOLS_H

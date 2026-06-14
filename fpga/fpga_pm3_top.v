@@ -28,6 +28,8 @@
 //`define PM3GENERIC
 // iCopy-X with XC3S100E
 //`define PM3ICOPYX
+// Proxmark3 Ultimate with XC2S50
+//`define PM3ULTIMATE
 
 // Pass desired defines to compiler to enable required modules
 // WITH_LF  enables Low Frequency mode when defined else HF is enabled

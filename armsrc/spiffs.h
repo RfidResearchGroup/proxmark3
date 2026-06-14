@@ -296,6 +296,7 @@ typedef struct spiffs_t {
     // file system configuration
     spiffs_config cfg;
     // number of logical blocks
+    // BUGBUG -- Should this be of type spiffs_block_ix?
     u32_t block_count;
 
     // cursor for free blocks, block index

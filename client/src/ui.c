@@ -49,9 +49,10 @@ session_arg_t g_session;
 
 double g_CursorScaleFactor = 1;
 char g_CursorScaleFactorUnit[11] = {0};
-double g_PlotGridX = 0, g_PlotGridY = 0, g_PlotGridXdefault = 64, g_PlotGridYdefault = 64;
-uint32_t g_CursorCPos = 0, g_CursorDPos = 0, g_GraphStop = 0;
+double g_PlotGridX = 0, g_PlotGridY = 0;
+double g_DefaultGridX = 64, g_DefaultGridY = 64;
 uint32_t g_GraphStart = 0; // Starting point/offset for the left side of the graph
+uint32_t g_GraphStop = 0;
 uint32_t g_GraphStart_old = 0;
 double g_GraphPixelsPerPoint = 1.f; // How many visual pixels are between each sample point (x axis)
 static bool flushAfterWrite = false;
@@ -84,6 +85,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
     size_t pathlen = strlen(user_path) + strlen(PM3_USER_DIRECTORY) + 1;
     char *path = calloc(pathlen, sizeof(char));
     if (path == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -119,6 +121,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
         pathlen += strlen(subdir);
         char *tmp = realloc(path, pathlen * sizeof(char));
         if (tmp == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             free(path);
             return PM3_EMALLOC;
         }
@@ -156,6 +159,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
     pathlen += strlen(filename);
     char *tmp = realloc(path, pathlen * sizeof(char));
     if (tmp == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(path);
         return PM3_EMALLOC;
     }
@@ -167,27 +171,101 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
     return PM3_SUCCESS;
 }
 
+void free_grabber(void) {
+    free(g_grabbed_output.ptr);
+    g_grabbed_output.ptr = NULL;
+    g_grabbed_output.size = 0;
+    g_grabbed_output.idx = 0;
+}
+
+static void fill_grabber(const char *string) {
+    if (g_grabbed_output.ptr == NULL || g_grabbed_output.size - g_grabbed_output.idx < MAX_PRINT_BUFFER) {
+        char *tmp = realloc(g_grabbed_output.ptr, g_grabbed_output.size + MAX_PRINT_BUFFER);
+        if (tmp == NULL) {
+            // We leave current g_grabbed_output untouched
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return;
+        }
+        g_grabbed_output.ptr = tmp;
+        g_grabbed_output.size += MAX_PRINT_BUFFER;
+    }
+
+    int len = snprintf(g_grabbed_output.ptr + g_grabbed_output.idx, MAX_PRINT_BUFFER, "%s", string);
+    if (len < 0 || len > MAX_PRINT_BUFFER) {
+        // We leave current g_grabbed_output_len untouched
+        PrintAndLogEx(ERR, "snprintf error in fill_grabber()");
+        return;
+    }
+    g_grabbed_output.idx += len;
+}
+
 void PrintAndLogOptions(const char *str[][2], size_t size, size_t space) {
+
     char buff[2000] = "Options:\n";
     char format[2000] = "";
     size_t counts[2] = {0, 0};
-    for (size_t i = 0; i < size; i++)
-        for (size_t j = 0 ; j < 2 ; j++)
+
+    for (size_t i = 0; i < size; i++) {
+        for (size_t j = 0 ; j < 2 ; j++) {
             if (counts[j] < strlen(str[i][j])) {
                 counts[j] = strlen(str[i][j]);
             }
+        }
+    }
+
     for (size_t i = 0; i < size; i++) {
+
         for (size_t j = 0; j < 2; j++) {
-            if (j == 0)
+            if (j == 0) {
                 snprintf(format, sizeof(format), "%%%zus%%%zus", space, counts[j]);
-            else
+            } else {
                 snprintf(format, sizeof(format), "%%%zus%%-%zus", space, counts[j]);
+            }
+
             snprintf(buff + strlen(buff), sizeof(buff) - strlen(buff), format, " ", str[i][j]);
         }
-        if (i < size - 1)
+
+        if (i < size - 1) {
             strncat(buff, "\n", sizeof(buff) - strlen(buff) - 1);
+        }
     }
     PrintAndLogEx(NORMAL, "%s", buff);
+}
+
+void PrintAndLogInfoHeaderWithWidth(const char *title, size_t width) {
+    if (title == NULL) {
+        return;
+    }
+
+    const size_t title_len = strlen(title);
+    if (width > (MAX_PRINT_BUFFER - 1)) {
+        width = MAX_PRINT_BUFFER - 1;
+    }
+
+    char dashes[MAX_PRINT_BUFFER] = {0};
+    memset(dashes, '-', sizeof(dashes) - 1);
+
+    if (title_len + 2 >= width) {
+        PrintAndLogEx(INFO, _CYAN_("%s"), title);
+        return;
+    }
+
+    size_t dash_count = width - (title_len + 2);
+    size_t left = dash_count / 2;
+    size_t right = dash_count - left;
+    if (left > (sizeof(dashes) - 1)) {
+        left = sizeof(dashes) - 1;
+    }
+    if (right > (sizeof(dashes) - 1)) {
+        right = sizeof(dashes) - 1;
+    }
+
+    PrintAndLogEx(INFO, "%.*s " _CYAN_("%s") " %.*s",
+                  (int)left, dashes, title, (int)right, dashes);
+}
+
+void PrintAndLogInfoHeader(const char *title) {
+    PrintAndLogInfoHeaderWithWidth(title, 82);
 }
 
 static uint8_t PrintAndLogEx_spinidx = 0;
@@ -195,12 +273,14 @@ static uint8_t PrintAndLogEx_spinidx = 0;
 void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
 
     // skip debug messages if client debugging is turned off i.e. 'DATA SETDEBUG -0'
-    if (g_debugMode == 0 && level == DEBUG)
+    if (g_debugMode == 0 && level == DEBUG) {
         return;
+    }
 
     // skip HINT messages if client has hints turned off i.e. 'HINT 0'
-    if (g_session.show_hints == false && level == HINT)
+    if (g_session.show_hints == false && level == HINT) {
         return;
+    }
 
     char prefix[40] = {0};
     char buffer[MAX_PRINT_BUFFER] = {0};
@@ -214,17 +294,19 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
                                   };
     switch (level) {
         case ERR:
-            if (g_session.emoji_mode == EMO_EMOJI)
+            if (g_session.emoji_mode == EMO_EMOJI) {
                 strncpy(prefix,  "[" _RED_("!!") "] :rotating_light: ", sizeof(prefix) - 1);
-            else
+            } else {
                 strncpy(prefix, "[" _RED_("!!") "] ", sizeof(prefix) - 1);
+            }
             stream = stderr;
             break;
         case FAILED:
-            if (g_session.emoji_mode == EMO_EMOJI)
+            if (g_session.emoji_mode == EMO_EMOJI) {
                 strncpy(prefix, "[" _RED_("-") "] :no_entry: ", sizeof(prefix) - 1);
-            else
+            } else {
                 strncpy(prefix, "[" _RED_("-") "] ", sizeof(prefix) - 1);
+            }
             break;
         case DEBUG:
             strncpy(prefix, "[" _BLUE_("#") "] ", sizeof(prefix) - 1);
@@ -236,10 +318,11 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
             strncpy(prefix, "[" _GREEN_("+") "] ", sizeof(prefix) - 1);
             break;
         case WARNING:
-            if (g_session.emoji_mode == EMO_EMOJI)
+            if (g_session.emoji_mode == EMO_EMOJI) {
                 strncpy(prefix, "[" _CYAN_("!") "] :warning:  ", sizeof(prefix) - 1);
-            else
+            } else {
                 strncpy(prefix, "[" _CYAN_("!") "] ", sizeof(prefix) - 1);
+            }
             break;
         case INFO:
             strncpy(prefix, "[" _YELLOW_("=") "] ", sizeof(prefix) - 1);
@@ -248,13 +331,15 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
             if (g_session.emoji_mode == EMO_EMOJI) {
                 strncpy(prefix, spinner_emoji[PrintAndLogEx_spinidx], sizeof(prefix) - 1);
                 PrintAndLogEx_spinidx++;
-                if (PrintAndLogEx_spinidx >= ARRAYLEN(spinner_emoji))
+                if (PrintAndLogEx_spinidx >= ARRAYLEN(spinner_emoji)) {
                     PrintAndLogEx_spinidx = 0;
+                }
             } else {
                 strncpy(prefix, spinner[PrintAndLogEx_spinidx], sizeof(prefix) - 1);
                 PrintAndLogEx_spinidx++;
-                if (PrintAndLogEx_spinidx >= ARRAYLEN(spinner))
+                if (PrintAndLogEx_spinidx >= ARRAYLEN(spinner)) {
                     PrintAndLogEx_spinidx = 0;
+                }
             }
             break;
         case NORMAL:
@@ -278,8 +363,9 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
         const char delim[2] = "\n";
 
         // line starts with newline
-        if (buffer[0] == '\n')
+        if (buffer[0] == '\n') {
             fPrintAndLog(stream, "");
+        }
 
         token = strtok_r(buffer, delim, &tmp_ptr);
 
@@ -287,23 +373,31 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
 
             size_t size = strlen(buffer2);
 
-            if (strlen(token))
+            if (strlen(token)) {
                 snprintf(buffer2 + size, sizeof(buffer2) - size, "%s%s\n", prefix, token);
-            else
+            } else {
                 snprintf(buffer2 + size, sizeof(buffer2) - size, "\n");
+            }
 
             token = strtok_r(NULL, delim, &tmp_ptr);
         }
+
         fPrintAndLog(stream, "%s", buffer2);
+
     } else {
+
         snprintf(buffer2, sizeof(buffer2), "%s%s", prefix, buffer);
+
         if (level == INPLACE) {
-            char buffer3[sizeof(buffer2)] = {0};
-            char buffer4[sizeof(buffer2)] = {0};
-            memcpy_filter_ansi(buffer3, buffer2, sizeof(buffer2), !g_session.supports_colors);
-            memcpy_filter_emoji(buffer4, buffer3, sizeof(buffer3), g_session.emoji_mode);
-            fprintf(stream, "\r%s", buffer4);
-            fflush(stream);
+            // ignore INPLACE if rest of output is grabbed
+            if (!(g_printAndLog & PRINTANDLOG_GRAB)) {
+                char buffer3[sizeof(buffer2)] = {0};
+                char buffer4[sizeof(buffer2)] = {0};
+                memcpy_filter_ansi(buffer3, buffer2, sizeof(buffer2), !g_session.supports_colors);
+                memcpy_filter_emoji(buffer4, buffer3, sizeof(buffer3), g_session.emoji_mode);
+                fprintf(stream, "\r%s", buffer4);
+                fflush(stream);
+            }
         } else {
             fPrintAndLog(stream, "%s", buffer2);
         }
@@ -323,6 +417,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     if (logging && g_session.incognito) {
         logging = 0;
     }
+
     if ((g_printAndLog & PRINTANDLOG_LOG) && logging && !logfile) {
         char *my_logfile_path = NULL;
         char filename[40];
@@ -330,11 +425,15 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
         time_t now = time(NULL);
         timenow = gmtime(&now);
         strftime(filename, sizeof(filename), PROXLOG, timenow);
+
         if (searchHomeFilePath(&my_logfile_path, LOGS_SUBDIR, filename, true) != PM3_SUCCESS) {
+
             printf(_YELLOW_("[-]") " Logging disabled!\n");
             my_logfile_path = NULL;
             logging = 0;
+
         } else {
+
             logfile = fopen(my_logfile_path, "a");
             if (logfile == NULL) {
                 printf(_YELLOW_("[-]") " Can't open logfile %s, logging disabled!\n", my_logfile_path);
@@ -361,18 +460,13 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
 #ifdef RL_STATE_READCMD
     // We are using GNU readline. libedit (OSX) doesn't support this flag.
     int need_hack = (rl_readline_state & RL_STATE_READCMD) > 0;
-    char *saved_line;
-    int saved_point;
+    char *saved_line = NULL;
 
     if (need_hack) {
-        saved_point = rl_point;
         saved_line = rl_copy_text(0, rl_end);
-        rl_save_prompt();
-        rl_replace_line("", 0);
-        rl_redisplay();
+        rl_clear_visible_line();
     }
 #endif
-
     va_start(argptr, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, argptr);
     va_end(argptr);
@@ -380,41 +474,68 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
         linefeed = false;
         buffer[strlen(buffer) - 1] = 0;
     }
+
     bool filter_ansi = !g_session.supports_colors;
     memcpy_filter_ansi(buffer2, buffer, sizeof(buffer), filter_ansi);
-    if (g_printAndLog & PRINTANDLOG_PRINT) {
+
+    if ((g_printAndLog & PRINTANDLOG_PRINT) == PRINTANDLOG_PRINT) {
         memcpy_filter_emoji(buffer3, buffer2, sizeof(buffer2), g_session.emoji_mode);
         fprintf(stream, "%s", buffer3);
-        if (linefeed)
+        if (linefeed) {
             fprintf(stream, "\n");
+        }
+        fflush(stream);
     }
 
 #ifdef RL_STATE_READCMD
-    // We are using GNU readline. libedit (OSX) doesn't support this flag.
     if (need_hack) {
-        rl_restore_prompt();
+        rl_on_new_line();
         rl_replace_line(saved_line, 0);
-        rl_point = saved_point;
         rl_redisplay();
         free(saved_line);
     }
 #endif
 
-    if ((g_printAndLog & PRINTANDLOG_LOG) && logging && logfile) {
+    if (((g_printAndLog & PRINTANDLOG_LOG) && logging && logfile) ||
+            (g_printAndLog & PRINTANDLOG_GRAB)) {
+
         memcpy_filter_emoji(buffer3, buffer2, sizeof(buffer2), EMO_ALTTEXT);
-        if (filter_ansi) { // already done
+
+        if (filter_ansi == false) {
+            memcpy_filter_ansi(buffer, buffer3, sizeof(buffer3), true);
+        }
+    }
+
+    if ((g_printAndLog & PRINTANDLOG_LOG) && logging && logfile) {
+
+        if (filter_ansi) {
             fprintf(logfile, "%s", buffer3);
         } else {
-            memcpy_filter_ansi(buffer, buffer3, sizeof(buffer3), true);
             fprintf(logfile, "%s", buffer);
         }
-        if (linefeed)
+
+        if (linefeed) {
             fprintf(logfile, "\n");
+        }
         fflush(logfile);
     }
 
-    if (flushAfterWrite)
+    if (g_printAndLog & PRINTANDLOG_GRAB) {
+
+        if (filter_ansi) {
+            fill_grabber(buffer3);
+        } else {
+            fill_grabber(buffer);
+        }
+
+        if (linefeed) {
+            fill_grabber("\n");
+        }
+    }
+
+    if (flushAfterWrite) {
         fflush(stdout);
+    }
 
     //release lock
     pthread_mutex_unlock(&g_print_lock);
@@ -433,48 +554,51 @@ void memcpy_filter_rlmarkers(void *dest, const void *src, size_t n) {
     uint8_t *rsrc = (uint8_t *)src;
     uint16_t si = 0;
     for (size_t i = 0; i < n; i++) {
-        if ((rsrc[i] == '\001') || (rsrc[i] == '\002'))
+        if ((rsrc[i] == '\001') || (rsrc[i] == '\002')) {
             // skip readline special markers
             continue;
+        }
         rdest[si++] = rsrc[i];
     }
 }
 
 void memcpy_filter_ansi(void *dest, const void *src, size_t n, bool filter) {
-    if (filter) {
-        // Filter out ANSI sequences on these OS
-        uint8_t *rdest = (uint8_t *)dest;
-        uint8_t *rsrc = (uint8_t *)src;
-        uint16_t si = 0;
-        for (size_t i = 0; i < n; i++) {
-            if ((i < n - 1)
-                    && (rsrc[i] == '\x1b')
-                    && (rsrc[i + 1] >= 0x40)
-                    && (rsrc[i + 1] <= 0x5F)) {  // entering ANSI sequence
-
-                i++;
-                if ((i < n - 1) && (rsrc[i] == '[')) { // entering CSI sequence
-                    i++;
-
-                    while ((i < n - 1) && (rsrc[i] >= 0x30) && (rsrc[i] <= 0x3F)) { // parameter bytes
-                        i++;
-                    }
-
-                    while ((i < n - 1) && (rsrc[i] >= 0x20) && (rsrc[i] <= 0x2F)) { // intermediate bytes
-                        i++;
-                    }
-
-                    if ((rsrc[i] >= 0x40) && (rsrc[i] <= 0x7F)) { // final byte
-                        continue;
-                    }
-                } else {
+    if (!filter) {
+        memcpy(dest, src, n);
+        return;
+    }
+    uint8_t *rdest = (uint8_t *)dest;
+    const uint8_t *rsrc = (const uint8_t *)src;
+    size_t si = 0;
+    for (size_t i = 0; i < n; i++) {
+        if (rsrc[i] == '\x1b' && i < n - 1) {
+            /* ----- CSI sequence ----- */
+            if (rsrc[i + 1] == '[') {
+                i += 2;
+                while (i < n && rsrc[i] >= 0x30 && rsrc[i] <= 0x3F) i++;
+                while (i < n && rsrc[i] >= 0x20 && rsrc[i] <= 0x2F) i++;
+                if (i < n && rsrc[i] >= 0x40 && rsrc[i] <= 0x7F) {
                     continue;
                 }
             }
-            rdest[si++] = rsrc[i];
+
+            /* ----- OSC sequence (used for hyperlinks) ----- */
+            else if (rsrc[i + 1] == ']') {
+                i += 2;
+                /* OSC terminates with BEL or ESC \ */
+                while (i < n) {
+                    if (rsrc[i] == '\x07')  // BEL
+                        break;
+                    if (rsrc[i] == '\x1b' && i + 1 < n && rsrc[i + 1] == '\\') {
+                        i++;                // consume '\'
+                        break;
+                    }
+                    i++;
+                }
+                continue;
+            }
         }
-    } else {
-        memcpy(dest, src, n);
+        rdest[si++] = rsrc[i];
     }
 }
 
@@ -577,88 +701,23 @@ void memcpy_filter_emoji(void *dest, const void *src, size_t n, emojiMode_t mode
     }
 }
 
-/*
-// If reactivated, beware it doesn't compile on Android (DXL)
-void iceIIR_Butterworth(int *data, const size_t len) {
-
-    int *output = (int *) calloc(sizeof(int) * len, sizeof(uint8_t));
-    if (!output) return;
-
-    // clear mem
-    memset(output, 0x00, len);
-
-    size_t adjustedLen = len;
-    float fc = 0.1125f;          // center frequency
-
-    // create very simple low-pass filter to remove images (2nd-order Butterworth)
-    float complex iir_buf[3] = {0, 0, 0};
-    float b[3] = {0.003621681514929,  0.007243363029857, 0.003621681514929};
-    float a[3] = {1.000000000000000, -1.822694925196308, 0.837181651256023};
-
-    for (size_t i = 0; i < adjustedLen; ++i) {
-
-        float sample = data[i];          // input sample read from array
-        float complex x_prime  = 1.0f;   // save sample for estimating frequency
-        float complex x;
-
-        // remove DC offset and mix to complex baseband
-        x = (sample - 127.5f) * cexpf(_Complex_I * 2 * M_PI * fc * i);
-
-        // apply low-pass filter, removing spectral image (IIR using direct-form II)
-        iir_buf[2] = iir_buf[1];
-        iir_buf[1] = iir_buf[0];
-        iir_buf[0] = x - a[1] * iir_buf[1] - a[2] * iir_buf[2];
-        x          = b[0] * iir_buf[0] +
-                     b[1] * iir_buf[1] +
-                     b[2] * iir_buf[2];
-
-        // compute instantaneous frequency by looking at phase difference
-        // between adjacent samples
-        float freq = cargf(x * conjf(x_prime));
-        x_prime = x;    // retain this sample for next iteration
-
-        output[i] = (freq > 0) ? 127 : -127;
-    }
-
-    // show data
-    //memcpy(data, output, adjustedLen);
-    for (size_t j = 0; j < adjustedLen; ++j)
-        data[j] = output[j];
-
-    free(output);
-}
-*/
-
-void iceSimple_Filter(int *data, const size_t len, uint8_t k) {
-// ref: http://www.edn.com/design/systems-design/4320010/A-simple-software-lowpass-filter-suits-embedded-system-applications
-// parameter K
-#define FILTER_SHIFT 4
-
-    int32_t filter_reg = 0;
-    int8_t shift = (k <= 8) ? k : FILTER_SHIFT;
-
-    for (size_t i = 0; i < len; ++i) {
-        // Update filter with current sample
-        filter_reg = filter_reg - (filter_reg >> shift) + data[i];
-
-        // Scale output for unity gain
-        data[i] = filter_reg >> shift;
-    }
-}
-
 void print_progress(uint64_t count, uint64_t max, barMode_t style) {
     int cols = 100 + 35;
     max = (count > max) ? count : max;
 #if defined(HAVE_READLINE)
     static int prev_cols = 0;
-    int rows;
-    rl_reset_screen_size(); // refresh Readline idea of the actual screen width
-    rl_get_screen_size(&rows, &cols);
+    int tmp_cols;
+    rl_get_screen_size(NULL, &tmp_cols);
+    // if cols==0: impossible to get screen size, e.g. when scripted
+    if (tmp_cols != 0) {
+        // don't call it if cols==0, it would segfault
+        rl_reset_screen_size(); // refresh Readline idea of the actual screen width
+        rl_get_screen_size(NULL, &cols);
 
-    if (cols < 36)
-        return;
+        if (cols < 36)
+            return;
+    }
 
-    (void) rows;
     if (prev_cols > cols) {
         PrintAndLogEx(NORMAL, _CLEAR_ _TOP_ "");
     }
@@ -691,6 +750,10 @@ void print_progress(uint64_t count, uint64_t max, barMode_t style) {
     size_t unit = strlen(block[mode]);
     // +1 for \0
     char *bar = (char *)calloc(unit * width + 1, sizeof(uint8_t));
+    if (bar == NULL) {
+        fprintf(stderr, "Failed to allocate memory\n");
+        return;
+    }
 
     uint8_t value = PERCENTAGE(count, max);
 
@@ -715,6 +778,11 @@ void print_progress(uint64_t count, uint64_t max, barMode_t style) {
     // color buffer
     size_t collen = strlen(bar) + 40;
     char *cbar = (char *)calloc(collen, sizeof(uint8_t));
+    if (cbar == NULL) {
+        fprintf(stderr, "Failed to allocate memory\n");
+        free(bar);
+        return;
+    }
 
     // Add colors
     if (g_session.supports_colors) {

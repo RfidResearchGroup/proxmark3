@@ -60,8 +60,8 @@ end
 -- waits for answer from pm3 device
 local function checkCommand(response)
     if not response then
-        print("Timeout while waiting for response. Increase TIMEOUT in hf_mf_keycheck.lua to wait longer")
-        return nil, "Timeout while waiting for device to respond"
+        print("timeout while waiting for reply. Increase TIMEOUT in hf_mf_keycheck.lua to wait longer")
+        return nil, "timeout while waiting for reply"
     end
 
     if response.Status == PM3_SUCCESS then
@@ -119,7 +119,7 @@ local function display_results(keys)
     print('|---|----------------|---|----------------|---|')
 
     for sector = 0, #keys do
-        succA, succB, keyA, keyB = unpack(keys[sector])
+        succA, succB, keyA, keyB = table.unpack(keys[sector])
         print(('|%03d|  %s  | %s |  %s  | %s |'):format(sector, keyA, succA, keyB, succB))
     end
     print('|---|----------------|---|----------------|---|')
@@ -180,7 +180,7 @@ local function dumptofile(uid, keys)
 
         --for sector,_ in pairs(keys) do
         for sector = 0, #keys do
-            local succA, succB, keyA, keyB = unpack(keys[sector])
+            local succA, succB, keyA, keyB = table.unpack(keys[sector])
             key_a = key_a .. bin.pack('H', keyA);
             key_b = key_b .. bin.pack('H', keyB);
         end
@@ -216,13 +216,13 @@ local function perform_check(uid, numsectors)
     for sector = 0, #keys do
         -- Check if user aborted
         if core.kbd_enter_pressed() then
-            print('Aborted by user')
+            print('Aborted via keyboard!')
             break
         end
 
         local targetblock = tonumber(get_blockno(sector), 16)
 
-        local succA, succB, keyA, keyB = unpack(keys[sector])
+        local succA, succB, keyA, keyB = table.unpack(keys[sector])
 
         local keyA = checkBlock(targetblock, keylist, 0)
         if keyA then succA = 1; keylist = placeFirst(keyA, keylist) end

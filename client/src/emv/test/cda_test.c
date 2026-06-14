@@ -182,6 +182,10 @@ static int cda_test_raw(bool verbose) {
 
     size_t ipk_pk_len = ipk_data[13];
     unsigned char *ipk_pk = calloc(1, ipk_pk_len);
+    if (!ipk_pk) {
+        free(ipk_data);
+        return 1;
+    }
     memcpy(ipk_pk, ipk_data + 15, ipk_data_len - 36);
     memcpy(ipk_pk + ipk_data_len - 36, c_issuer_rem, sizeof(c_issuer_rem));
 
@@ -241,6 +245,10 @@ static int cda_test_raw(bool verbose) {
 
     size_t iccpk_pk_len = iccpk_data[19];
     unsigned char *iccpk_pk = calloc(1, iccpk_pk_len);
+    if (!iccpk_pk) {
+        free(iccpk_data);
+        return 1;
+    }
     memcpy(iccpk_pk, iccpk_data + 21, /*iccpk_data_len - 36*/iccpk_pk_len);
     /*memcpy(iccpk_pk + iccpk_data_len - 36, icc_rem, sizeof(icc_rem));*/
 
@@ -427,16 +435,16 @@ static int cda_test_pk(bool verbose) {
 int exec_cda_test(bool verbose) {
     int ret = cda_test_raw(verbose);
     if (ret) {
-        PrintAndLogEx(WARNING, "CDA raw test: (%s)", _RED_("failed"));
+        PrintAndLogEx(WARNING, "CDA raw test ( %s )", _RED_("fail"));
         return ret;
     }
-    PrintAndLogEx(INFO, "CDA raw test: (%s)", _GREEN_("passed"));
+    PrintAndLogEx(INFO, "CDA raw test ( %s )", _GREEN_("ok"));
 
     ret = cda_test_pk(verbose);
     if (ret) {
-        PrintAndLogEx(WARNING, "CDA test pk: (%s)", _RED_("failed"));
+        PrintAndLogEx(WARNING, "CDA test pk ( %s )", _RED_("fail"));
         return ret;
     }
-    PrintAndLogEx(INFO, "CDA test pk: (%s)", _GREEN_("passed"));
+    PrintAndLogEx(INFO, "CDA test pk ( %s )", _GREEN_("ok"));
     return 0;
 }

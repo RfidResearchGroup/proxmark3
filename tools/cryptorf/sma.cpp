@@ -22,6 +22,7 @@
  */
 
 #include <stdio.h>
+#include <time.h>
 #include <string.h>
 #include <inttypes.h>
 #include <iostream>
@@ -705,6 +706,10 @@ void combine_valid_left_right_states(vector<cs_t> *plcstates, vector<cs_t> *prcs
     printf("but only " _GREEN_("%zu")" were valid!\n", pgc_candidates->size());
 }
 
+#if defined(__cplusplus)
+}
+#endif
+
 int main(int argc, const char *argv[]) {
     size_t pos;
     crypto_state_t ostate;
@@ -854,7 +859,3 @@ int main(int argc, const char *argv[]) {
     }
     return 0;
 }
-
-#if defined(__cplusplus)
-}
-#endif

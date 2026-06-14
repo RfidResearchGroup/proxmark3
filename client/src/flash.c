@@ -30,6 +30,7 @@
 #include "util_posix.h"
 #include "comms.h"
 #include "commonutil.h"
+#include "fileutils.h"
 
 #define FLASH_START            0x100000
 
@@ -123,7 +124,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, uint32_t flash_size) {
                       offset);
         if (filesz != memsz) {
             PrintAndLogEx(ERR, "Error: PHDR file size does not equal memory size\n"
-                          "(DATA+BSS PHDRs do not make sense on ROM platforms!)");
+                               "(DATA+BSS PHDRs do not make sense on ROM platforms!)");
             return PM3_EFILE;
         }
         if (paddr < last_end) {
@@ -266,7 +267,7 @@ int flash_load(flash_file_t *ctx, bool force) {
     int res = PM3_EUNDEF;
 
     fd = fopen(ctx->filename, "rb");
-    if (!fd) {
+    if (fd == NULL) {
         PrintAndLogEx(ERR, _RED_("Could not open file") " %s  >>> ", ctx->filename);
         res = PM3_EFILE;
         goto fail;
@@ -287,8 +288,8 @@ int flash_load(flash_file_t *ctx, bool force) {
     }
 
     ctx->elf = calloc(fsize + 1, sizeof(uint8_t));
-    if (!ctx->elf) {
-        PrintAndLogEx(ERR, "Error, cannot allocate memory");
+    if (ctx->elf == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         res = PM3_EMALLOC;
         fclose(fd);
         goto fail;
@@ -428,21 +429,24 @@ static int get_proxmark_state(uint32_t *state) {
 
 // Enter the bootloader to be able to start flashing
 static int enter_bootloader(char *serial_port_name, bool wait_appear) {
-    uint32_t state;
-    int ret;
 
-    if ((ret = get_proxmark_state(&state)) != PM3_SUCCESS)
+    uint32_t state = 0;
+    int ret = get_proxmark_state(&state);
+    if (ret != PM3_SUCCESS) {
         return ret;
+    }
 
     /* Already in flash state, we're done. */
-    if (state & DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM)
+    if ((state & DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM) == DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM) {
         return PM3_SUCCESS;
+    }
 
-    if (state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
+    if ((state & DEVICE_INFO_FLAG_CURRENT_MODE_OS) == DEVICE_INFO_FLAG_CURRENT_MODE_OS) {
         PrintAndLogEx(SUCCESS, _CYAN_("Entering bootloader..."));
 
-        if ((state & DEVICE_INFO_FLAG_BOOTROM_PRESENT)
-                && (state & DEVICE_INFO_FLAG_OSIMAGE_PRESENT)) {
+        if (
+            ((state & DEVICE_INFO_FLAG_BOOTROM_PRESENT) == DEVICE_INFO_FLAG_BOOTROM_PRESENT) &&
+            ((state & DEVICE_INFO_FLAG_OSIMAGE_PRESENT) == DEVICE_INFO_FLAG_OSIMAGE_PRESENT)) {
             // New style handover: Send CMD_START_FLASH, which will reset the board
             // and enter the bootrom on the next boot.
             SendCommandBL(CMD_START_FLASH, 0, 0, 0, NULL, 0);
@@ -452,7 +456,8 @@ static int enter_bootloader(char *serial_port_name, bool wait_appear) {
             SendCommandBL(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
             PrintAndLogEx(SUCCESS, "Press and hold down button NOW if your bootloader requires it.");
         }
-        msleep(200);
+        msleep(500);
+        PrintAndLogEx(SUCCESS, _CYAN_("Trigger restart..."));
         CloseProxmark(g_session.current_device);
         // Let time to OS to make the port disappear
         msleep(1000);
@@ -487,8 +492,9 @@ static int wait_for_ack(PacketResponseNG *ack) {
 
 static bool gs_printed_msg = false;
 static void flash_suggest_update_bootloader(void) {
-    if (gs_printed_msg)
+    if (gs_printed_msg) {
         return;
+    }
 
     PrintAndLogEx(ERR, _RED_("It is recommended that you first" _YELLOW_(" update your bootloader") _RED_(" alone,")));
     PrintAndLogEx(ERR, _RED_("reboot the Proxmark3 then only update the main firmware") "\n");
@@ -510,19 +516,21 @@ static void flash_suggest_update_flasher(void) {
 
 // Go into flashing mode
 int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t *max_allowed) {
+
+    int ret = enter_bootloader(serial_port_name, true);
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+
     uint32_t state;
-    uint32_t chipinfo = 0;
-    int ret;
-
-    ret = enter_bootloader(serial_port_name, true);
-    if (ret != PM3_SUCCESS)
-        return ret;
-
     ret = get_proxmark_state(&state);
-    if (ret != PM3_SUCCESS)
+    if (ret != PM3_SUCCESS) {
         return ret;
+    }
 
-    if (state & DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_INFO) {
+    uint32_t chipinfo = 0;
+
+    if ((state & DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_INFO) == DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_INFO) {
         SendCommandBL(CMD_CHIP_INFO, 0, 0, 0, NULL, 0);
         PacketResponseNG resp;
         WaitForResponse(CMD_CHIP_INFO, &resp);
@@ -530,11 +538,14 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
     }
 
     int version = BL_VERSION_INVALID;
-    if (state & DEVICE_INFO_FLAG_UNDERSTANDS_VERSION) {
+
+    if ((state & DEVICE_INFO_FLAG_UNDERSTANDS_VERSION) == DEVICE_INFO_FLAG_UNDERSTANDS_VERSION) {
+
         SendCommandBL(CMD_BL_VERSION, 0, 0, 0, NULL, 0);
         PacketResponseNG resp;
         WaitForResponse(CMD_BL_VERSION, &resp);
         version = resp.oldarg[0];
+
         if ((BL_VERSION_MAJOR(version) < BL_VERSION_FIRST_MAJOR) || (BL_VERSION_MAJOR(version) > BL_VERSION_LAST_MAJOR)) {
             // version info seems fishy
             version = BL_VERSION_INVALID;
@@ -562,7 +573,9 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
 
     int mem_avail = chipid_to_mem_avail(chipinfo);
     if (mem_avail != 0) {
+
         PrintAndLogEx(INFO, "Available memory on this board: "_YELLOW_("%uK") " bytes\n", mem_avail);
+
         if (mem_avail > 256) {
             if (BL_VERSION_MAJOR(version) < BL_VERSION_MAJOR(BL_VERSION_1_0_0)) {
                 PrintAndLogEx(ERR, _RED_("====================== OBS ! ======================"));
@@ -573,6 +586,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
                 *max_allowed = mem_avail;
             }
         }
+
     } else {
         PrintAndLogEx(INFO, "Available memory on this board: "_RED_("UNKNOWN")"\n");
         PrintAndLogEx(ERR, _RED_("====================== OBS ! ======================================"));
@@ -585,15 +599,17 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
     } else {
         PrintAndLogEx(INFO, "Permitted flash range: 0x%08x-0x%08x", BOOTLOADER_END, flash_end);
     }
-    if (state & DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH) {
-        PacketResponseNG resp;
+
+    if ((state & DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH) == DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH) {
 
         if (enable_bl_writes) {
             SendCommandBL(CMD_START_FLASH, FLASH_START, flash_end, START_FLASH_MAGIC, NULL, 0);
         } else {
             SendCommandBL(CMD_START_FLASH, BOOTLOADER_END, flash_end, 0, NULL, 0);
         }
+        PacketResponseNG resp;
         return wait_for_ack(&resp);
+
     } else {
         PrintAndLogEx(ERR, _RED_("====================== OBS ! ========================================"));
         PrintAndLogEx(ERR, _RED_("Note: Your bootloader does not understand the new" _YELLOW_(" START_FLASH") _RED_(" command")));
@@ -635,19 +651,43 @@ static const char ice[] =
     "...................................................................\n        @@@  @@@@@@@ @@@@@@@@ @@@@@@@@@@   @@@@@@  @@@  @@@\n"
     "        @@! !@@      @@!      @@! @@! @@! @@!  @@@ @@!@!@@@\n        !!@ !@!      @!!!:!   @!! !!@ @!@ @!@!@!@! @!@@!!@!\n"
     "        !!: :!!      !!:      !!:     !!: !!:  !!! !!:  !!!\n        :    :: :: : : :: :::  :      :    :   : : ::    : \n"
-    _RED_("        .    .. .. . . .. ...  .      .    .   . . ..    . ")
-    "\n...................................................................\n"
-    "...................................................................\n"
-    "...................................................................\n"
-    ;
+    _RED_("        .    .. .. . . .. ...  .      .    .   . . ..    . ");
 
+
+#define ICEMAN_LOGO_FN  "iceman.txt"
+#define ICEMAN_LOGO_SIZE (5000)
 // Write a file's segments to Flash
 int flash_write(flash_file_t *ctx) {
-    int len = 0;
+
+    char ice2[ICEMAN_LOGO_SIZE] = {0};
+    char ice3[ICEMAN_LOGO_SIZE] = {0};
+
+    bool is_loaded = false;
+    if (g_session.supports_colors) {
+
+        uint8_t *iraw = NULL;
+        size_t irawlen = 0;
+        int res = loadFile_safeEx(ICEMAN_LOGO_FN, "", (void **)&iraw, &irawlen, false);
+        if (res == PM3_SUCCESS && irawlen > ICEMAN_LOGO_SIZE) {
+            irawlen = ICEMAN_LOGO_SIZE;
+        }
+        if (res == PM3_SUCCESS) {
+            memcpy(ice3, iraw, irawlen);
+            free(iraw);
+            is_loaded = true;
+        }
+    }
+
+    if (is_loaded == false) {
+        memcpy_filter_ansi(ice2, ice, sizeof(ice), !g_session.supports_colors);
+        memcpy_filter_emoji(ice3, ice2, sizeof(ice2), g_session.emoji_mode);
+    }
+
+    size_t ice3len = strlen(ice3);
 
     PrintAndLogEx(SUCCESS, "Writing segments for file: %s", ctx->filename);
 
-    bool filter_ansi = !g_session.supports_colors;
+    int len = 0;
 
     for (int i = 0; i < ctx->num_segs; i++) {
         flash_seg_t *seg = &ctx->segments[i];
@@ -657,6 +697,14 @@ int flash_write(flash_file_t *ctx) {
         uint32_t end = seg->start + length;
 
         PrintAndLogEx(SUCCESS, " 0x%08x..0x%08x [0x%x / %u blocks]", seg->start, end - 1, length, blocks);
+        if (is_loaded) {
+            if (blocks < 50) {
+                PrintAndLogEx(SUCCESS, "" NOLF);
+            } else {
+                fprintf(stdout, "\n\n");
+            }
+        }
+
         fflush(stdout);
         int block = 0;
         uint8_t *data = seg->data;
@@ -664,8 +712,9 @@ int flash_write(flash_file_t *ctx) {
 
         while (length) {
             uint32_t block_size = length;
-            if (block_size > BLOCK_SIZE)
+            if (block_size > BLOCK_SIZE) {
                 block_size = BLOCK_SIZE;
+            }
 
             if (write_block(baddr, data, block_size) < 0) {
                 PrintAndLogEx(ERR, "Error writing block %d of %u", block, blocks);
@@ -676,14 +725,46 @@ int flash_write(flash_file_t *ctx) {
             baddr += block_size;
             length -= block_size;
             block++;
-            if (len < strlen(ice)) {
-                if (filter_ansi && !isalpha(ice[len])) {
-                    len++;
-                } else {
-                    fprintf(stdout, "%c", ice[len++]);
-                }
-            } else {
+
+            // small files, like bootrom
+            if (blocks < 50) {
                 fprintf(stdout, ".");
+                len++;
+                fflush(stdout);
+                continue;
+            }
+
+            // large fullimage write
+            if (is_loaded) {
+                if (len < ice3len) {
+                    fprintf(stdout, "%c", ice3[len++]);
+                    fprintf(stdout, "%c", ice3[len++]);
+                    fprintf(stdout, "%c", ice3[len++]);
+                    fprintf(stdout, "%c", ice3[len++]);
+                    fprintf(stdout, "%c", ice3[len++]);
+                    fprintf(stdout, "%c", ice3[len++]);
+                    fprintf(stdout, "%c", ice3[len++]);
+                    fprintf(stdout, "%c", ice3[len++]);
+                } else {
+
+                    if ((len - ice3len - 1) % 61 == 0) {
+                        fprintf(stdout, "\n");
+                    }
+                    fprintf(stdout, ".");
+                    len++;
+                }
+
+            } else {
+                if (len < ice3len) {
+                    fprintf(stdout, "%c", ice3[len++]);
+                } else {
+
+                    if ((len - ice3len) % 67 == 0) {
+                        fprintf(stdout, "\n");
+                    }
+                    fprintf(stdout, ".");
+                    len++;
+                }
             }
             fflush(stdout);
         }
@@ -695,21 +776,29 @@ int flash_write(flash_file_t *ctx) {
 
 // free a file context
 void flash_free(flash_file_t *ctx) {
-    if (!ctx)
+
+    if (!ctx) {
         return;
+    }
+
     if (ctx->filename != NULL) {
         free(ctx->filename);
         ctx->filename = NULL;
     }
+
     if (ctx->elf) {
         free(ctx->elf);
         ctx->elf = NULL;
         ctx->phdrs = NULL;
         ctx->num_phdrs = 0;
     }
+
     if (ctx->segments) {
-        for (int i = 0; i < ctx->num_segs; i++)
+
+        for (int i = 0; i < ctx->num_segs; i++) {
             free(ctx->segments[i].data);
+        }
+
         free(ctx->segments);
         ctx->segments = NULL;
         ctx->num_segs = 0;

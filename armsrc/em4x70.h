@@ -13,17 +13,16 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// Low frequency EM4x70 commands
+// Low frequency EM4x70 commands -- ARM source only (not client)
 //-----------------------------------------------------------------------------
 
 #ifndef EM4x70_H
 #define EM4x70_H
 
+#include <stdint.h>
+#include <stdbool.h>
+#include <assert.h>
 #include "../include/em4x70.h"
-
-typedef struct {
-    uint8_t data[32];
-} em4x70_tag_t;
 
 typedef enum {
     RISING_EDGE,

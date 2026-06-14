@@ -72,6 +72,8 @@ typedef enum {
     jsfLto,
     jsfCryptorf,
     jsfNDEF,
+    jsfFM11RF08SNonces,
+    jsfFM11RF08SNoncesWithData
 } JSONFileType;
 
 typedef enum {
@@ -81,6 +83,8 @@ typedef enum {
     DICTIONARY,
     MCT,
     FLIPPER,
+    TAGINFO,
+    BRUCE,
 } DumpFileType_t;
 
 typedef enum {
@@ -98,21 +102,78 @@ typedef enum {
     NFC_DF_14_3A,
     NFC_DF_14_3B,
     NFC_DF_14_4A,
+    NFC_DF_15,
     NFC_DF_PICOPASS,
 } nfc_df_e;
 
+typedef enum {
+    ISO15_DF_UNKNOWN,
+    ISO15_DF_V4_BIN,
+    ISO15_DF_V5_BIN
+} iso15_df_e;
+
 int fileExists(const char *filename);
+
+/**
+ * @brief Check whether a path exists and is a directory.
+ */
+bool path_is_directory(const char *path);
+
+/**
+ * @brief Check whether a path exists and is a regular file.
+ */
+bool path_is_regular_file(const char *path);
+
+/**
+ * @brief Return the final path component, or an empty string for NULL input.
+ */
+const char *path_basename(const char *path);
+
+/**
+ * @brief Copy the final path component without its last file extension.
+ */
+void path_basename_without_ext(const char *path, char *out, size_t out_len);
+
+/**
+ * @brief Recursively collect regular file paths under a directory into fixed-size slots.
+ *
+ * A max_depth of 0 scans only dirpath and does not descend into subdirectories.
+ */
+int collect_file_paths_recursive(const char *dirpath, char *paths, size_t path_len,
+                                 size_t max_paths, size_t *count, bool include_hidden, size_t max_depth);
+
+/**
+ * @brief Resolve a resources subdirectory and recursively collect regular file paths from it.
+ *
+ * A max_depth of 0 scans only the resolved resource_dir and does not descend into subdirectories.
+ */
+int collect_resource_file_paths(const char *resource_dir, char *paths, size_t path_len,
+                                size_t max_paths, size_t *count, bool include_hidden, size_t max_depth);
 
 // set a path in the path list g_session.defaultPaths
 bool setDefaultPath(savePaths_t pathIndex, const char *path);
 
 char *newfilenamemcopy(const char *preferredName, const char *suffix);
-char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePaths_t save_path);
-void truncate_filename(char *fn,  uint16_t len);
+char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePaths_t e_save_path);
+void truncate_filename(char *fn,  uint16_t maxlen);
 
 
 /**
  * @brief Utility function to save data to a binary file. This method takes a preferred name, but if that
+ * file already exists, it tries with another name until it finds something suitable.
+ * E.g. dumpdata-15.bin
+ *
+ * @param preferredName
+ * @param suffix the file suffix. Including the ".".
+ * @param data The binary data to write to the file
+ * @param datalen the length of the data
+ * @return 0 for ok, 1 for failz
+ */
+int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen);
+int saveFileEx(const char *preferredName, const char *suffix, const void *data, size_t datalen, savePaths_t e_save_path);
+
+/**
+ * @brief Utility function to save data to a text file. This method takes a preferred name, but if that
  * file already exists, it tries with another name until it finds something suitable.
  * E.g. dumpdata-15.txt
  *
@@ -122,7 +183,7 @@ void truncate_filename(char *fn,  uint16_t len);
  * @param datalen the length of the data
  * @return 0 for ok, 1 for failz
  */
-int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen);
+int saveFileTXT(const char *preferredName, const char *suffix, const void *data, size_t datalen, savePaths_t e_save_path);
 
 /** STUB
  * @brief Utility function to save JSON data to a file. This method takes a preferred name, but if that
@@ -138,7 +199,9 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
 int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, void (*callback)(json_t *));
 int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *), savePaths_t e_save_path);
 int saveFileJSONroot(const char *preferredName, void *root, size_t flags, bool verbose);
-int saveFileJSONrootEx(const char *preferredName, void *root, size_t flags, bool verbose, bool overwrite);
+int saveFileJSONrootEx(const char *preferredName, const void *root, size_t flags, bool verbose, bool overwrite, savePaths_t e_save_path);
+int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *));
+char *sprintJSON(JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *));
 /** STUB
  * @brief Utility function to save WAVE data to a file. This method takes a preferred name, but if that
  * file already exists, it tries with another name until it finds something suitable.
@@ -171,7 +234,7 @@ int saveFilePM3(const char *preferredName, int *data, size_t datalen);
  * @param e_sector the keys in question
  * @return 0 for ok, 1 for failz
  */
-int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_sector);
+int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, const sector_t *e_sector);
 
 /**
  * @brief Utility function to load data from a binary file. This method takes a preferred name.
@@ -185,6 +248,19 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_
 */
 int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen);
 int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata, size_t *datalen, bool verbose);
+
+/**
+ * @brief Utility function to load a text file. This method takes a preferred name.
+ * E.g. dumpdata-15.json,  tries to search for it,  and allocated memory.
+ *
+ * @param preferredName
+ * @param suffix the file suffix. Including the ".".
+ * @param data The data array to store the loaded bytes from file
+ * @param datalen the number of bytes loaded from file
+ * @return PM3_SUCCESS for ok, PM3_E* for failz
+*/
+int loadFile_TXTsafe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen, bool verbose);
+
 /**
  * @brief  Utility function to load data from a textfile (EML). This method takes a preferred name.
  * E.g. dumpdata-15.txt
@@ -277,7 +353,32 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
 */
 int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint32_t *keycnt);
 
-int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen);
+/**
+ * @brief  Utility function to load data safely from a DICTIONARY textfile. This method takes a preferred name.
+ * E.g. mfc_default_keys.dic
+ *
+ * @param preferredName
+ * @param suffix
+  * @param pdata A pointer to a pointer  (for reverencing the loaded dictionary)
+ * @param keylen  the number of bytes a key per row is
+ * @param verbose print messages if true
+ * @return 0 for ok, 1 for failz
+*/
+int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, void **pdata, uint8_t keylen, uint32_t *keycnt, bool verbose);
+
+/**
+ * @brief  Utility function to load data from a XML textfile. This method takes a preferred name.
+ * E.g. dumpdata-15.xml
+ *
+ * @param preferredName
+ * @param data The data array to store the loaded bytes from file
+ * @param maxdatalen maximum size of data array in bytes
+ * @param datalen the number of bytes loaded from file
+ * @return 0 for ok, 1 for failz
+*/
+int loadFileXML_safe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen);
+
+int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen, bool verbose);
 
 /**
  * @brief  Utility function to check and convert plain mfu dump format to new mfu binary format.
@@ -289,7 +390,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
 */
 int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
 mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose);
-nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose);
+int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool verbose);
 
 int searchAndList(const char *pm3dir, const char *ext);
 int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix, bool silent);
@@ -300,7 +401,7 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
  * @param filename
  * @return
  */
-DumpFileType_t getfiletype(const char *filename);
+DumpFileType_t get_filetype(const char *filename);
 
 
 /**
@@ -344,4 +445,26 @@ int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
  * @return PM3_SUCCESS if OK
  */
 int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
+
+/** STUB
+ * @brief Utility function to save FM11RF08S recovery data.
+ *
+ * @param fn
+ * @param d iso14a_fm11rf08s_nonces_with_data_t structure
+ * @param n the length of the structure
+ * @param with_data does the structure contain data blocks?
+ * @return PM3_SUCCESS if OK
+ */
+int pm3_save_fm11rf08s_nonces(const char *fn, iso14a_fm11rf08s_nonces_with_data_t *d, bool with_data);
+
+
+/**
+ * Inserts a line into a text file only if it does not already exist.
+ * Returns PM3_SUCCES or, PM3_EFILE;
+ *
+ * @param filepath Path to the file.
+ * @param keystr     Line to insert (should not contain a trailing newline).
+ */
+int insert_line_if_not_exists(const char *preferredName, const char *keystr);
+
 #endif // FILEUTILS_H

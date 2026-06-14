@@ -39,26 +39,26 @@ void CodeIso15693AsReader(const uint8_t *cmd, int n);
 void CodeIso15693AsTag(const uint8_t *cmd, size_t len);
 
 void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time, uint32_t slot_time, bool slow);
-int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time);
+int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time, bool allow_usb_interrupt);
 void TransmitTo15693Tag(const uint8_t *cmd, int len, uint32_t *start_time, bool shallow_mod);
 int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeout, uint32_t *eof_time, bool fsk, bool recv_speed, uint16_t *resp_len);
 
 //void RecordRawAdcSamplesIso15693(void);
 void AcquireRawAdcSamplesIso15693(void);
 void ReaderIso15693(iso15_card_select_t *p_card); // ISO15693 reader
-void EmlClearIso15693(void);
-void SimTagIso15693(uint8_t *uid, uint8_t block_size); // simulate an ISO15693 tag
+void SimTagIso15693(const uint8_t *uid, uint8_t block_size); // simulate an ISO15693 tag
 void BruteforceIso15693Afi(uint32_t flags); // find an AFI of a tag
 void SendRawCommand15693(iso15_raw_cmd_t *packet); // send arbitrary commands from CLI
 
 void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool iclass);
 
-int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t *recv,
+int SendDataTag(const uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t *recv,
                 uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time, uint16_t *resp_len);
 
 int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time, bool fsk, bool recv_speed, uint16_t *resp_len);
 
 void SetTag15693Uid(const uint8_t *uid);
+void SetTag15693Uid_v2(const uint8_t *uid);
 
 void WritePasswordSlixIso15693(const uint8_t *old_password, const uint8_t *new_password, uint8_t pwd_id);
 void DisablePrivacySlixIso15693(const uint8_t *password);
@@ -67,5 +67,6 @@ void DisableEAS_AFISlixIso15693(const uint8_t *password, bool usepwd);
 void EnableEAS_AFISlixIso15693(const uint8_t *password, bool usepwd);
 void PassProtextEASSlixIso15693(const uint8_t *password);
 void PassProtectAFISlixIso15693(const uint8_t *password);
-void WriteAFIIso15693(const uint8_t *password, bool usepwd, uint8_t *uid, bool use_uid, uint8_t afi);
+void WriteAFIIso15693(const uint8_t *password, bool use_pwd, uint8_t *uid, bool use_uid, uint8_t afi);
+void ProtectPageSlixIso15693(const uint8_t *read_password, const uint8_t *write_password, uint8_t divide_ptr, uint8_t prot_status);
 #endif

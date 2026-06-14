@@ -81,7 +81,8 @@ void RunMod() {
 
 
     // UID 4 bytes(could be 7 bytes if needed it)
-    uint8_t flags = FLAG_4B_UID_IN_DATA;
+    uint8_t flags = 0;
+    FLAG_SET_UID_IN_DATA(flags, 4);
     // in case there is a read command received we shouldn't break
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
 
@@ -224,7 +225,7 @@ void RunMod() {
                                 DbpString(_YELLOW_("[ ") "Bluetooth data:" _YELLOW_(" ]"));
                                 Dbhexdump(lenpacket, rpacket, false);
 
-                                apdulen = iso14_apdu(rpacket, (uint16_t) lenpacket, false, apdubuffer, NULL);
+                                apdulen = iso14_apdu(rpacket, lenpacket, false, apdubuffer, sizeof(apdubuffer), NULL);
 
                                 DbpString(_YELLOW_("[ ") "Card response:" _YELLOW_(" ]"));
                                 Dbhexdump(apdulen - 2, apdubuffer, false);
@@ -267,7 +268,7 @@ void RunMod() {
             BigBuf_free_keep_EM();
 
             // 4 = ISO/IEC 14443-4 - javacard (JCOP)
-            if (SimulateIso14443aInit(4, flags, data, &responses, &cuid, NULL, NULL, NULL) == false) {
+            if (SimulateIso14443aInit(4, flags, data, NULL, 0, &responses, &cuid, NULL, NULL) == false) {
                 BigBuf_free_keep_EM();
                 reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
                 DbpString(_RED_("Error initializing the emulation process!"));
@@ -298,7 +299,7 @@ void RunMod() {
             for (;;) {
                 LED_B_OFF();
                 // Clean receive command buffer
-                if (GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len) == false) {
+                if (GetIso14443aCommandFromReader(receivedCmd, sizeof(receivedCmd), receivedCmdPar, &len) == false) {
                     DbpString("Emulator stopped");
                     retval = PM3_EOPABORTED;
                     break;
@@ -337,7 +338,7 @@ void RunMod() {
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 9) {  // Received a SELECT (cascade 1)
                     p_response = &responses[RESP_INDEX_SAKC1];
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {  // Received a RATS request
-                    p_response = &responses[RESP_INDEX_RATS];
+                    p_response = &responses[RESP_INDEX_ATS];
                     resp = 1;
                 } else if (receivedCmd[0] == 0xf2 && len == 4) {  // ACKed - Time extension
                     DbpString(_YELLOW_("!!") " Reader accepted time extension!");

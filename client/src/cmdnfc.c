@@ -83,6 +83,7 @@ static int CmdNfcDecode(const char *Cmd) {
         arg_param_begin,
         arg_str0("d",  "data", "<hex>", "NDEF data to decode"),
         arg_str0("f", "file", "<fn>", "file to load"),
+        arg_lit0(NULL, "override", "override failed crc check"),
         arg_lit0("v",  "verbose", "verbose output"),
         arg_param_end
     };
@@ -96,7 +97,8 @@ static int CmdNfcDecode(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    bool verbose = arg_get_lit(ctx, 3);
+    bool override = arg_get_lit(ctx, 3);
+    bool verbose = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
     if (((datalen != 0) && (fnlen != 0)) || ((datalen == 0) && (fnlen == 0))) {
         PrintAndLogEx(ERR, "You must provide either data in hex or a filename");
@@ -119,6 +121,7 @@ static int CmdNfcDecode(const char *Cmd) {
         if (bytes_read != MIFARE_4K_MAX_BYTES
                 && bytes_read != MIFARE_2K_MAX_BYTES
                 && bytes_read != MIFARE_1K_MAX_BYTES
+                && bytes_read != MIFARE_1K_EV1_MAX_BYTES
                 && bytes_read != MIFARE_MINI_MAX_BYTES) {
 
             uint8_t **pd = &tmp;
@@ -135,12 +138,18 @@ static int CmdNfcDecode(const char *Cmd) {
         } else  {
 
             // convert from MFC dump file to a pure NDEF byte array
-            if (HasMADKey(tmp)) {
+            if (bytes_read >= sizeof(mad1_sector_t) && HasMADKey((const mad1_sector_t *)tmp)) {
                 PrintAndLogEx(SUCCESS, "MFC dump file detected. Converting...");
                 uint8_t ndef[4096] = {0};
-                uint16_t ndeflen = 0;
+                size_t ndeflen = 0;
 
-                if (convert_mad_to_arr(tmp, bytes_read, ndef, &ndeflen) != PM3_SUCCESS) {
+                const mad1_sector_t *s0 = (const mad1_sector_t *)tmp;
+                const mad2_sector_t *s16 = NULL;
+                size_t mad2_off = mfFirstBlockOfSector(MF_MAD2_SECTOR) * MFBLOCK_SIZE;
+                if (bytes_read >= mad2_off + sizeof(mad2_sector_t))
+                    s16 = (const mad2_sector_t *)(tmp + mad2_off);
+
+                if (convert_mad_to_arr(s0, s16, bytes_read, ndef, sizeof(ndef), &ndeflen, override) != PM3_SUCCESS) {
                     PrintAndLogEx(FAILED, "Failed converting, aborting...");
                     free(dump);
                     return PM3_ESOFT;

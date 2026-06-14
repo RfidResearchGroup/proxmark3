@@ -129,7 +129,7 @@ static int CmdDestronReader(const char *Cmd) {
     do {
         lf_read(false, 16000);
         demodDestron(!cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }
@@ -212,8 +212,8 @@ static int CmdDestronClone(const char *Cmd) {
     } else {
         res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     }
-    PrintAndLogEx(SUCCESS, "Done");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf destron reader`") " to verify");
+    PrintAndLogEx(SUCCESS, "Done!");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf destron reader") "` to verify");
     return res;
 }
 
@@ -238,7 +238,7 @@ static command_t CommandTable[] = {
     {"help",   CmdHelp,          AlwaysAvailable, "This help"},
     {"demod",  CmdDestronDemod,  AlwaysAvailable, "demodulate an Destron tag from the GraphBuffer"},
     {"reader", CmdDestronReader, IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",  CmdDestronClone,  IfPm3Lf,         "clone Destron tag to T55x7"},
+    {"clone",  CmdDestronClone,  IfPm3Lf,         "clone Destron tag to T55x7, Q5/T5555 or EM4305/4469"},
     {"sim",    CmdDestronSim,    IfPm3Lf,         "simulate Destron tag"},
     {NULL, NULL, NULL, NULL}
 };
