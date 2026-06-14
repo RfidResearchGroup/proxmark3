@@ -1021,7 +1021,7 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
             bool received = false;
             current_key = MF_KEY_A;
             uint8_t data_area = (sectorNo < 32) ? blockNo : blockNo / 5;
-            if (rights[sectorNo][data_area] == 0x07) {                                     // no key would work
+            if (!mfIsSectorTrailerBasedOnBlocks(sectorNo, blockNo) && rights[sectorNo][data_area] == 0x07) {                                     // no key would work
                 PrintAndLogEx(WARNING, "Access rights prevent reading sector... " _YELLOW_("%2d") " block... " _YELLOW_("%3d") " ( skip )", sectorNo, blockNo);
                 continue;
             }
