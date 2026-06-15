@@ -44,7 +44,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-static bool demod_cotag(int32_t *samples, int num_samples, int clock, int clock_start, int32_t threshold, bool verbose);
+static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_start, int32_t threshold, bool verbose);
 static int detect_edge(const int32_t *samples, int num_samples,
                        int index_start, int32_t threshold);
 static void find_avg_high_low(const int32_t *samples, int num_samples,
@@ -128,11 +128,11 @@ int demodCOTAG(bool verbose) {
  *                     Use -1 for auto clock-start detection.
  * @param threshold    Amplitude threshold that defines a "high" sample. Use -1 for auto-threshold detection.
  */
-static bool demod_cotag(int32_t *samples, int num_samples, int clock, int clock_start, int32_t threshold, bool verbose) {
+static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_start, int32_t threshold, bool verbose) {
     int       clock_half = clock / 2;
     int32_t   min, max;
     double    avg;
-    bool      rv = false;
+    int       rv = PM3_EFAILED;
     uint8_t  *high_low_demod_01 = NULL;
 
     uint8_t  *manchester_demod = NULL;
@@ -188,6 +188,7 @@ static bool demod_cotag(int32_t *samples, int num_samples, int clock, int clock_
     high_low_demod_01 = calloc(high_low_demod_01_len, sizeof(uint8_t));
     if (!high_low_demod_01) {
         PrintAndLogEx(ERR, "Error: out of memory");
+        rv = PM3_EMALLOC;
         goto end;
     }
     int high_low_demod_01_count = 0;
@@ -220,6 +221,7 @@ static bool demod_cotag(int32_t *samples, int num_samples, int clock, int clock_
     manchester_demod = calloc(manchester_demod_len, sizeof(uint8_t));
     if (!manchester_demod) {
         PrintAndLogEx(ERR, "Error: out of memory");
+        rv = PM3_EMALLOC;
         goto end;
     }
 
@@ -263,6 +265,7 @@ static bool demod_cotag(int32_t *samples, int num_samples, int clock, int clock_
     manchester_demod_reversed = calloc(manchester_demod_len, sizeof(uint8_t));
     if (!manchester_demod_reversed) {
         PrintAndLogEx(ERR, "Error: out of memory");
+        rv = PM3_EMALLOC;
         goto end;
     }
     for (int i = 0; i < manchester_count; i++)
@@ -344,6 +347,7 @@ static bool demod_cotag(int32_t *samples, int num_samples, int clock, int clock_
     /* data_bits: 128 bits starting at preamble */
     if (preamble_index + LF_COTAG_DATA_LEN > manchester_count) {
         PrintAndLogEx(INFO, "  Not enough bits after preamble for full 128-bit data block");
+        rv = PM3_EPARTIAL;
         goto end;
     }
 
@@ -414,7 +418,7 @@ static bool demod_cotag(int32_t *samples, int num_samples, int clock, int clock_
         PrintAndLogEx(INFO, "  Sequence does NOT match at index %d (repeat count = %d)", pos, repeat_count);
     printf("\n");
 
-    rv = true;
+    rv = PM3_SUCCESS;
 end:
     free(manchester_demod_reversed);
     free(manchester_demod);
@@ -424,8 +428,7 @@ end:
 
 int demodCOTAG(bool verbose, int clock, int threshold) {
     int clk = (clock > 0) ? clock : LF_COTAG_CLOCK;
-    demod_cotag(g_GraphBuffer, (int)g_GraphTraceLen, clk, -1, threshold, verbose);
-    return PM3_SUCCESS;
+    return demod_cotag(g_GraphBuffer, (int)g_GraphTraceLen, clk, -1, threshold, verbose);
 }
 
 static int CmdCOTAGDemod(const char *Cmd) {
