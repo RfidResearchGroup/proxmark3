@@ -691,7 +691,8 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
                   "RNG from live card cryptograms (AC/ATC/UN/IAD)",
                   "emv terminal crypto rng -s\n"
                   "emv terminal crypto rng -s --dice\n"
-                  "emv terminal crypto rng -s --stream | head -c 32 | xxd\n"
+                  "emv terminal crypto rng -s --stream | head -c 64\n"
+                  "emv terminal crypto rng -s --stream --stream-raw | head -c 32 | xxd\n"
                   "emv terminal crypto rng -s --samples 5 --max 1000000\n");
 
     void *argtable[] = {
@@ -705,7 +706,8 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
         arg_u64_0(NULL, "max", "<n>", "Integer in [0..n-1]"),
         arg_lit0(NULL, "dice", "Roll a d6"),
         arg_lit0(NULL, "coin", "Coin flip"),
-        arg_lit0(NULL, "stream", "Loop forever — raw bytes to stdout (re-tap card each block)"),
+        arg_lit0(NULL, "stream", "Loop — continuous lowercase hex on stdout (Enter stops)"),
+        arg_lit0(NULL, "stream-raw", "With --stream: raw bytes instead of hex"),
         arg_lit0(NULL, "quiet", "Less per-sample output"),
         arg_param_end
     };
@@ -733,13 +735,18 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
     bool dice = arg_get_lit(ctx, 15);
     bool coin = arg_get_lit(ctx, 16);
     bool stream = arg_get_lit(ctx, 17);
-    bool quiet = arg_get_lit(ctx, 18);
+    bool stream_raw = arg_get_lit(ctx, 18);
+    bool quiet = arg_get_lit(ctx, 19);
     crypto_cli_pin_session(&cli, ctx, 6);
     crypto_cli_pin_forced_aid(&cli, ctx, 8);
     CLIParserFree(ctx);
 
+    if (stream) {
+        cli.quick_afl = true;
+    }
+
     if (stream && (dice || coin || range_max > 0)) {
-        PrintAndLogEx(ERR, "--stream outputs raw bytes only (incompatible with --dice/--coin/--max)");
+        PrintAndLogEx(ERR, "--stream outputs entropy only (incompatible with --dice/--coin/--max)");
         return PM3_EINVARG;
     }
 
@@ -760,6 +767,9 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
     ropts.samples = cli.count;
     ropts.out_bytes = bytes;
     ropts.quiet = quiet || stream;
+    if (stream) {
+        ropts.stream_fmt = stream_raw ? EMV_CRYPTO_STREAM_RAW : EMV_CRYPTO_STREAM_HEX;
+    }
     cli_to_genac_opts(&cli, &ropts.genac);
 
     if (dice) {

@@ -94,6 +94,7 @@ typedef struct {
     bool skip_banner;
     bool crypto_quick_afl;
     bool crypto_aid_fallback;
+    bool crypto_stream_fast;
     uint8_t crypto_forced_aid[APDU_AID_LEN];
     size_t crypto_forced_aid_len;
 } emv_term_cli_opts_t;

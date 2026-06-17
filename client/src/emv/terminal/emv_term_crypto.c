@@ -616,6 +616,22 @@ static bool crypto_rng_collect_weak(emv_term_ctx_t *ctx, uint8_t *pool, size_t *
     return got;
 }
 
+static void crypto_rng_stream_write(const uint8_t *data, size_t len, emv_term_crypto_stream_fmt_t fmt) {
+    if (!data || !len || fmt == EMV_CRYPTO_STREAM_OFF) {
+        return;
+    }
+    if (fmt == EMV_CRYPTO_STREAM_HEX) {
+        static const char hex[] = "0123456789abcdef";
+        for (size_t i = 0; i < len; i++) {
+            fputc(hex[data[i] >> 4], stdout);
+            fputc(hex[data[i] & 0x0f], stdout);
+        }
+    } else {
+        fwrite(data, 1, len, stdout);
+    }
+    fflush(stdout);
+}
+
 static uint64_t crypto_rng_u64_from_hash(const uint8_t hash[32]) {
     uint64_t v = 0;
     for (int i = 0; i < 8; i++) {
@@ -695,7 +711,7 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
     bool has_cdol = tlvdb_get(ctx->card, 0x8c, NULL) != NULL;
     bool can_query = has_cdol || crypto_is_visa_qvsdc(ctx) || crypto_is_qvsdc_gpo_ac(ctx);
 
-    if (!opts->stream && !opts->quiet) {
+    if (opts->stream_fmt == EMV_CRYPTO_STREAM_OFF && !opts->quiet) {
         PrintAndLogEx(INFO, "=== EMV card RNG (lab toy — not a certified TRNG) ===");
     }
 
@@ -775,9 +791,10 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
 
     switch (opts->mode) {
         case EMV_CRYPTO_RNG_RAW:
-            if (opts->stream) {
-                fwrite(hash, 1, (size_t)out_bytes, stdout);
-                fflush(stdout);
+            if (opts->stream_fmt == EMV_CRYPTO_STREAM_HEX) {
+                crypto_rng_stream_write(hash, (size_t)out_bytes, EMV_CRYPTO_STREAM_HEX);
+            } else if (opts->stream_fmt == EMV_CRYPTO_STREAM_RAW) {
+                crypto_rng_stream_write(hash, (size_t)out_bytes, EMV_CRYPTO_STREAM_RAW);
             } else {
                 PrintAndLogEx(SUCCESS, "Card entropy [%d bytes]: %s",
                               out_bytes, sprint_hex(hash, (size_t)out_bytes));
@@ -804,7 +821,7 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
         }
     }
 
-    if (!opts->quiet && !opts->stream) {
+    if (!opts->quiet && opts->stream_fmt == EMV_CRYPTO_STREAM_OFF) {
         if (attempted > got_samples && got_samples > 0) {
             PrintAndLogEx(INFO, "Mixed %u fresh sample(s) of %u attempt(s), pool %zu bytes, sha256 → %s%s",
                           got_samples, attempted, pool_len, sprint_hex(hash, 8), weak ? " (weak)" : "");
@@ -813,7 +830,7 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
                           got_samples, pool_len, sprint_hex(hash, 8), weak ? " (weak)" : "");
         }
     }
-    if (!opts->stream) {
+    if (opts->stream_fmt == EMV_CRYPTO_STREAM_OFF) {
         PrintAndLogEx(HINT, "Re-tap the card for a new value — most cards issue one AC per session");
     }
     return PM3_SUCCESS;
@@ -824,12 +841,20 @@ int emv_term_crypto_rng_stream(emv_term_ctx_t *ctx, const emv_term_crypto_rng_op
     if (!ctx || !opts) {
         return PM3_EINVARG;
     }
+    if (opts->stream_fmt == EMV_CRYPTO_STREAM_OFF) {
+        return PM3_EINVARG;
+    }
 
     emv_term_crypto_rng_opts_t ropts = *opts;
-    ropts.stream = true;
     ropts.quiet = true;
     ropts.samples = 1;
     ropts.mode = EMV_CRYPTO_RNG_RAW;
+    if (ropts.stream_fmt == EMV_CRYPTO_STREAM_OFF) {
+        ropts.stream_fmt = EMV_CRYPTO_STREAM_HEX;
+    }
+
+    ctx->opts.crypto_quick_afl = true;
+    ctx->opts.crypto_stream_fast = true;
 
     char forced_aid_hex[sizeof(ctx->opts.crypto_forced_aid) * 2 + 1] = {0};
     const char *forced_ptr = NULL;
@@ -840,30 +865,39 @@ int emv_term_crypto_rng_stream(emv_term_ctx_t *ctx, const emv_term_crypto_rng_op
     }
 
     emv_term_crypto_prepare_opts_t prep = {
-        .quick_afl = ctx->opts.crypto_quick_afl,
+        .quick_afl = true,
         .aid_fallback = ctx->opts.crypto_aid_fallback,
         .forced_aid_hex = forced_ptr,
     };
 
-    fprintf(stderr, "EMV card RNG stream — present card repeatedly (Enter cancels wait, Ctrl+C quits)\n");
+    bool have_session = false;
+    uint8_t saved_log = g_printAndLog;
 
-    uint64_t blocks = 0;
     while (true) {
         if (kbd_enter_pressed()) {
-            fprintf(stderr, "\nstream stopped\n");
             break;
         }
 
-        uint8_t saved_log = g_printAndLog;
         g_printAndLog = 0;
 
         int res = PM3_SUCCESS;
         if (channel == CC_CONTACTLESS) {
-            res = EMVPrepareContactlessEx(channel, true, true);
+            res = EMVContactlessReselect(channel, 25);
         }
         if (res == PM3_SUCCESS) {
             ctx->opts.activate_field = false;
-            res = emv_term_crypto_prepare_card(ctx, ctx->opts.param_load_json, NULL, &prep);
+            if (have_session) {
+                res = emv_transaction_crypto_fast_init(ctx);
+                if (res) {
+                    have_session = false;
+                }
+            }
+            if (!have_session) {
+                res = emv_term_crypto_prepare_card(ctx, ctx->opts.param_load_json, NULL, &prep);
+                if (res == PM3_SUCCESS && ctx->aid_len) {
+                    have_session = true;
+                }
+            }
         }
 
         if (res == PM3_SUCCESS) {
@@ -871,23 +905,12 @@ int emv_term_crypto_rng_stream(emv_term_ctx_t *ctx, const emv_term_crypto_rng_op
         }
 
         g_printAndLog = saved_log;
-        DropFieldEx(channel);
-        ctx->opts.activate_field = true;
 
-        if (res == PM3_SUCCESS) {
-            blocks++;
-            fprintf(stderr, "\r[stream] %" PRIu64 " block(s), %d bytes each",
-                    blocks, ropts.out_bytes > 0 ? ropts.out_bytes : 8);
-            fflush(stderr);
-        } else if (res == PM3_ERFTRANS && kbd_enter_pressed()) {
-            fprintf(stderr, "\nstream stopped\n");
+        if (res == PM3_ERFTRANS && kbd_enter_pressed()) {
             break;
         }
     }
 
-    if (blocks) {
-        fprintf(stderr, "\n");
-    }
     return PM3_SUCCESS;
 }
 

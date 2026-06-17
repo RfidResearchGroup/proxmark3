@@ -355,6 +355,27 @@ int EMVPrepareContactless(Iso7816CommandChannel channel, bool force_reselect) {
     return EMVPrepareContactlessEx(channel, force_reselect, false);
 }
 
+int EMVContactlessReselect(Iso7816CommandChannel channel, uint32_t poll_ms) {
+    if (channel != CC_CONTACTLESS || !IfPm3Present()) {
+        return PM3_SUCCESS;
+    }
+
+    uint32_t delay = poll_ms ? poll_ms : 25;
+    while (true) {
+        if (kbd_enter_pressed()) {
+            return PM3_ERFTRANS;
+        }
+
+        DropFieldEx(channel);
+
+        if (emv_contactless_poll_once(false) == PM3_SUCCESS) {
+            return PM3_SUCCESS;
+        }
+
+        msleep(delay);
+    }
+}
+
 static int EMVExchangeEx(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, sAPDU_t apdu, bool IncludeLe, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
     int res = Iso7816ExchangeEx(channel, ActivateField, LeaveFieldON, apdu, IncludeLe, 0, Result, MaxResultLen, ResultLen, sw);
     // add to tlv tree

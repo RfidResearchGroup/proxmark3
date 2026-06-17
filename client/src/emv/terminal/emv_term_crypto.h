@@ -79,13 +79,19 @@ typedef enum {
     EMV_CRYPTO_RNG_RANGE,
 } emv_term_crypto_rng_mode_t;
 
+typedef enum {
+    EMV_CRYPTO_STREAM_OFF = 0,
+    EMV_CRYPTO_STREAM_HEX,
+    EMV_CRYPTO_STREAM_RAW,
+} emv_term_crypto_stream_fmt_t;
+
 typedef struct {
     int samples;
     int out_bytes;
     uint64_t range_max;
     emv_term_crypto_rng_mode_t mode;
     bool quiet;
-    bool stream;
+    emv_term_crypto_stream_fmt_t stream_fmt;
     emv_term_crypto_genac_opts_t genac;
 } emv_term_crypto_rng_opts_t;
 

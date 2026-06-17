@@ -362,7 +362,7 @@ static int emv_transaction_read_afl_records(emv_term_ctx_t *ctx, uint8_t *buf, s
     }
 
 afl_done:
-    if (ctx->oda_list_len) {
+    if (!ctx->opts.crypto_stream_fast && ctx->oda_list_len) {
         struct tlvdb *oda = tlvdb_fixed(0x21, ctx->oda_list_len, ctx->oda_list);
         tlvdb_add(ctx->card, oda);
         PrintAndLogEx(INFO, "* Input list for Offline Data Authentication added to TLV. len=%zu \n", ctx->oda_list_len);
@@ -378,7 +378,7 @@ static int emv_transaction_post_aid_select(emv_term_ctx_t *ctx, uint8_t *buf, si
 
     PrintAndLogEx(INFO, "\n* Init transaction parameters.");
     emv_term_init_transaction_params(ctx->terminal, false, NULL, ctx->tr_type, ctx->opts.gen_ac_gpo);
-    if (ctx->opts.param_load_json) {
+    if (!ctx->opts.crypto_stream_fast && ctx->opts.param_load_json) {
         if (ctx->opts.use_terminal_profile) {
             if (!emv_term_profile_load(ctx->terminal, ctx->opts.profile_path)) {
                 PrintAndLogEx(WARNING, "Terminal profile not found, loading emv_defparams.json...");
@@ -421,15 +421,17 @@ static int emv_transaction_post_aid_select(emv_term_ctx_t *ctx, uint8_t *buf, si
 
     emv_transaction_process_gpo_response(ctx->card, buf, len, ctx->opts.decode_tlv);
 
-    const struct tlv *track2 = tlvdb_get(ctx->card, 0x57, NULL);
-    if (!tlvdb_get(ctx->card, 0x5a, NULL) && track2 && track2->len >= 8) {
-        struct tlvdb *pan = GetPANFromTrack2(track2);
-        if (pan) {
-            tlvdb_add(ctx->card, pan);
-            const struct tlv *pantlv = tlvdb_get(ctx->card, 0x5a, NULL);
-            PrintAndLogEx(INFO, "\n* * Extracted PAN from track2: %s", sprint_hex(pantlv->value, pantlv->len));
-        } else {
-            PrintAndLogEx(WARNING, "\n* * WARNING: Can't extract PAN from track2.");
+    if (!ctx->opts.crypto_stream_fast) {
+        const struct tlv *track2 = tlvdb_get(ctx->card, 0x57, NULL);
+        if (!tlvdb_get(ctx->card, 0x5a, NULL) && track2 && track2->len >= 8) {
+            struct tlvdb *pan = GetPANFromTrack2(track2);
+            if (pan) {
+                tlvdb_add(ctx->card, pan);
+                const struct tlv *pantlv = tlvdb_get(ctx->card, 0x5a, NULL);
+                PrintAndLogEx(INFO, "\n* * Extracted PAN from track2: %s", sprint_hex(pantlv->value, pantlv->len));
+            } else {
+                PrintAndLogEx(WARNING, "\n* * WARNING: Can't extract PAN from track2.");
+            }
         }
     }
 
@@ -618,6 +620,29 @@ int emv_transaction_init(emv_term_ctx_t *ctx) {
     }
 
     return PM3_SUCCESS;
+}
+
+int emv_transaction_crypto_fast_init(emv_term_ctx_t *ctx) {
+    if (!ctx || !ctx->aid_len) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+    uint16_t sw = 0;
+
+    emv_term_reset_card_tlv(ctx);
+
+    int res = EMVSelect(ctx->channel, false, true, ctx->aid, ctx->aid_len, buf, sizeof(buf), &len, &sw, ctx->card);
+    if (res) {
+        return PM3_ERFTRANS;
+    }
+
+    bool saved_fast = ctx->opts.crypto_stream_fast;
+    ctx->opts.crypto_stream_fast = true;
+    res = emv_transaction_post_aid_select(ctx, buf, sizeof(buf));
+    ctx->opts.crypto_stream_fast = saved_fast;
+    return res;
 }
 
 int emv_transaction_oda(emv_term_ctx_t *ctx) {

@@ -62,6 +62,7 @@ struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2);
 // Ensure ISO-DEP session is active on contactless (no-op on contact / if already active unless force_reselect).
 int EMVPrepareContactless(Iso7816CommandChannel channel, bool force_reselect);
 int EMVPrepareContactlessEx(Iso7816CommandChannel channel, bool force_reselect, bool wait_for_card);
+int EMVContactlessReselect(Iso7816CommandChannel channel, uint32_t poll_ms);
 size_t EMVSelectAIDCount(struct tlvdb *tlv);
 
 // exchange
