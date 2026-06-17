@@ -18,6 +18,10 @@
 
 // Parser built based on com.bonwal.omamatkakortti mobile application
 
+#if !defined(_WIN32)
+#define _POSIX_C_SOURCE 200112L
+#endif
+
 #include "cmdparser.h"
 #include "cmdparsehrt.h"
 #include "comms.h"
@@ -55,7 +59,7 @@ int hrt_price_to_string(int cents, char *out, size_t out_len) {
     int rem = cents % 100;
     if (rem < 0) rem = -rem;
 
-    return snprintf(out, out_len, "%d.%02d€", euros, rem);
+    return snprintf(out, out_len, "%d.%02d EUR", euros, rem);
 }
 
 char *convert_get_hex_string(const uint8_t *data, size_t length) {
@@ -132,8 +136,13 @@ static time_t hrt_apply_local_offset(time_t time) {
     struct tm local_time = {0};
     struct tm utc_time = {0};
 
+#if defined(_WIN32)
+    if (localtime_s(&local_time, &time) != 0) return time;
+    if (gmtime_s(&utc_time, &time) != 0) return time;
+#else
     if (localtime_r(&time, &local_time) == NULL) return time;
     if (gmtime_r(&time, &utc_time) == NULL) return time;
+#endif
 
     time_t local_as_time = mktime(&local_time);
     time_t utc_as_local = mktime(&utc_time);
