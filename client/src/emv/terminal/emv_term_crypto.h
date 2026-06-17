@@ -45,15 +45,35 @@ typedef struct {
     uint16_t sw;
 } emv_term_crypto_run_entry_t;
 
+typedef struct emv_term_crypto_bench_result {
+    bool genac_attempted;
+    bool genac_ok;
+    uint16_t genac_sw;
+    bool qvsdc_path;
+    bool visa_msd;
+    bool aid_fallback_used;
+    size_t vary_runs;
+} emv_term_crypto_bench_result_t;
+
 typedef struct {
     bool do_challenge;
     bool do_genac;
     bool do_intauth;
     bool do_checksum;
     bool do_vary;
+    bool do_digest;
     int vary_count;
     emv_term_crypto_genac_opts_t genac;
 } emv_term_crypto_bench_opts_t;
+
+typedef struct {
+    bool quick_afl;
+    bool aid_fallback;
+    const char *forced_aid_hex;
+} emv_term_crypto_prepare_opts_t;
+
+int emv_term_crypto_prepare_card(emv_term_ctx_t *ctx, bool jload, const char *session_path,
+                                 const emv_term_crypto_prepare_opts_t *prep);
 
 void emv_term_crypto_genac_opts_defaults(emv_term_crypto_genac_opts_t *opts);
 void emv_term_crypto_set_amount_cents(emv_term_ctx_t *ctx, uint64_t cents);
@@ -72,6 +92,8 @@ int emv_term_crypto_export_json(const emv_term_ctx_t *ctx, const char *path,
                                 const emv_term_crypto_run_entry_t *entries, size_t entry_count);
 int emv_term_crypto_bench(emv_term_ctx_t *ctx, const emv_term_crypto_bench_opts_t *opts,
                           const char *export_path);
+int emv_term_crypto_bench_ex(emv_term_ctx_t *ctx, const emv_term_crypto_bench_opts_t *opts,
+                             const char *export_path, emv_term_crypto_bench_result_t *result_out);
 
 void emv_term_uint_to_bcd(uint64_t val, uint8_t *out, size_t len);
 

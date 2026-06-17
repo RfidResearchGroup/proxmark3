@@ -18,6 +18,7 @@
 
 #include "emvcore.h"
 #include <string.h>
+#include <stdlib.h>
 #include "commonutil.h"     // ARRAYLEN
 #include "comms.h"          // DropField
 #include "cmdparser.h"
@@ -618,43 +619,65 @@ int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveField
     return 0;
 }
 
-int EMVSelectApplication(struct tlvdb *tlv, uint8_t *AID, size_t *AIDlen) {
-    // check priority. 0x00 - highest
-    int prio = 0xffff;
+typedef struct {
+    uint8_t aid[APDU_AID_LEN];
+    size_t aid_len;
+    int priority;
+} emv_ppse_app_t;
 
-    *AIDlen = 0;
+static int emv_ppse_app_cmp(const void *a, const void *b) {
+    const emv_ppse_app_t *aa = a;
+    const emv_ppse_app_t *bb = b;
+    if (aa->priority != bb->priority) {
+        return (aa->priority < bb->priority) ? -1 : 1;
+    }
+    return 0;
+}
 
-    struct tlvdb *ttmp = tlvdb_find(tlv, 0x6f);
-    if (!ttmp)
-        return 1;
-
-    while (ttmp) {
-        const struct tlv *tgAID = tlvdb_get_inchild(ttmp, 0x84, NULL);
-        const struct tlv *tgPrio = tlvdb_get_inchild(ttmp, 0x87, NULL);
-
-        if (!tgAID)
-            break;
-
-        if (tgPrio) {
-            int pt = bytes_to_num((uint8_t *)tgPrio->value, (tgPrio->len < 2) ? tgPrio->len : 2);
-            if (pt < prio) {
-                prio = pt;
-
-                memcpy(AID, tgAID->value, tgAID->len);
-                *AIDlen = tgAID->len;
-            }
-        } else {
-            // takes the first application from list wo priority
-            if (!*AIDlen) {
-                memcpy(AID, tgAID->value, tgAID->len);
-                *AIDlen = tgAID->len;
-            }
-        }
-
-        ttmp = tlvdb_find_next(ttmp, 0x6f);
+static size_t emv_collect_ppse_apps(struct tlvdb *tlv, emv_ppse_app_t *apps, size_t max_apps) {
+    size_t count = 0;
+    if (!tlv || !apps || !max_apps) {
+        return 0;
     }
 
+    for (struct tlvdb *ttmp = tlvdb_find(tlv, 0x6f); ttmp && count < max_apps; ttmp = tlvdb_find_next(ttmp, 0x6f)) {
+        const struct tlv *tgAID = tlvdb_get_inchild(ttmp, 0x84, NULL);
+        if (!tgAID || !tgAID->len || tgAID->len > APDU_AID_LEN) {
+            continue;
+        }
+        const struct tlv *tgPrio = tlvdb_get_inchild(ttmp, 0x87, NULL);
+        int pt = 0xffff;
+        if (tgPrio && tgPrio->len) {
+            pt = (int)bytes_to_num((uint8_t *)tgPrio->value, (tgPrio->len < 2) ? tgPrio->len : 2);
+        }
+        memcpy(apps[count].aid, tgAID->value, tgAID->len);
+        apps[count].aid_len = tgAID->len;
+        apps[count].priority = pt;
+        count++;
+    }
+
+    if (count > 1) {
+        qsort(apps, count, sizeof(emv_ppse_app_t), emv_ppse_app_cmp);
+    }
+    return count;
+}
+
+int EMVSelectApplicationByIndex(struct tlvdb *tlv, size_t index, uint8_t *AID, size_t *AIDlen) {
+    emv_ppse_app_t apps[8] = {0};
+    size_t count = emv_collect_ppse_apps(tlv, apps, ARRAYLEN(apps));
+    if (!AID || !AIDlen || index >= count) {
+        if (AIDlen) {
+            *AIDlen = 0;
+        }
+        return 1;
+    }
+    memcpy(AID, apps[index].aid, apps[index].aid_len);
+    *AIDlen = apps[index].aid_len;
     return 0;
+}
+
+int EMVSelectApplication(struct tlvdb *tlv, uint8_t *AID, size_t *AIDlen) {
+    return EMVSelectApplicationByIndex(tlv, 0, AID, AIDlen);
 }
 
 int EMVGPO(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t *PDOL, size_t PDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {

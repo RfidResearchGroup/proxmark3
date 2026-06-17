@@ -8,9 +8,13 @@
 
 #include "emv_term_crypto_cmd.h"
 #include "emv_term_crypto.h"
+#include "emv_term_crypto_digest.h"
 #include "emv_term_probe.h"
 #include "emv_term_profile.h"
 #include "emv_term_tlv.h"
+#include "../emvcore.h"
+#include "emv_transaction.h"
+#include "emv_term_session.h"
 #include "../emvcore.h"
 #include "cliparser.h"
 #include "cmdparser.h"
@@ -27,6 +31,7 @@ typedef struct {
     bool jload;
     const char *session;
     const char *output;
+    const char *forced_aid;
     uint64_t amount_cents;
     bool amount_set;
     uint8_t un[4];
@@ -40,6 +45,10 @@ typedef struct {
     bool do_checksum;
     bool do_vary;
     bool no_genac;
+    bool quick_afl;
+    bool aid_fallback;
+    bool no_aid_fallback;
+    bool human_digest;
 } emv_term_crypto_cli_t;
 
 static void crypto_cli_defaults(emv_term_crypto_cli_t *c) {
@@ -47,6 +56,8 @@ static void crypto_cli_defaults(emv_term_crypto_cli_t *c) {
     c->ac_type = EMV_CRYPTO_AC_ARQC;
     c->mc_challenge = true;
     c->count = 1;
+    c->aid_fallback = true;
+    c->human_digest = true;
 }
 
 static emv_term_crypto_ac_t parse_decision(const char *s) {
@@ -84,6 +95,15 @@ static int crypto_prepare_live(emv_term_ctx_t *term_ctx, const emv_term_crypto_c
     opts.decode_tlv = cli->decode_tlv;
     opts.channel = cli->wired ? CC_CONTACT : CC_CONTACTLESS;
     opts.param_load_json = cli->jload;
+    opts.crypto_quick_afl = cli->quick_afl;
+    opts.crypto_aid_fallback = cli->aid_fallback && !cli->no_aid_fallback;
+    if (cli->forced_aid && cli->forced_aid[0]) {
+        int buflen = 0;
+        if (!param_gethex_to_eol(cli->forced_aid, 0, opts.crypto_forced_aid,
+                                 sizeof(opts.crypto_forced_aid), &buflen) && buflen > 0) {
+            opts.crypto_forced_aid_len = (size_t)buflen;
+        }
+    }
 
     int res = emv_term_ctx_init(term_ctx, &opts);
     if (res) {
@@ -99,7 +119,12 @@ static int crypto_prepare_live(emv_term_ctx_t *term_ctx, const emv_term_crypto_c
         term_ctx->opts.activate_field = false;
     }
 
-    res = emv_term_prepare_card(term_ctx, cli->jload, cli->session);
+    emv_term_crypto_prepare_opts_t prep = {
+        .quick_afl = cli->quick_afl,
+        .aid_fallback = cli->aid_fallback && !cli->no_aid_fallback,
+        .forced_aid_hex = cli->forced_aid,
+    };
+    res = emv_term_crypto_prepare_card(term_ctx, cli->jload, cli->session, &prep);
     if (res) {
         emv_term_ctx_free(term_ctx);
         return res;
@@ -451,16 +476,23 @@ static int CmdEMVTerminalCryptoExport(const char *Cmd) {
     return res;
 }
 
+#define CRYPTO_PREP_ARGS \
+        arg_lit0("q",  "quick",    "Quick AFL (skip SFI 15/12+, stop when CDOL found)"), \
+        arg_str0(NULL, "aid", "<hex>", "Force application AID (e.g. A0000000042203)"), \
+        arg_lit0(NULL, "no-aid-fallback", "Do not try alternate PPSE apps when CDOL1 missing")
+
 static int CmdEMVTerminalCryptoRun(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv terminal crypto run",
                   "Full crypto lab bench",
-                  "emv terminal crypto run -s -j --decision arqc -m 100 -a\n"
-                  "emv terminal crypto run -s -j --challenge --intauth --vary --count 3 -o bench.json\n");
+                  "emv terminal crypto run -s --quick -o bench.json\n"
+                  "emv terminal crypto run -s --aid A0000000042203\n"
+                  "emv terminal crypto run -s --summary --vary --count 5\n");
 
     void *argtable[] = {
         arg_param_begin,
         CRYPTO_BASE_ARGS,
+        CRYPTO_PREP_ARGS,
         arg_str0("d",  "decision", "<aac|tc|arqc>", "GEN AC decision"),
         arg_lit0("c",  "cda",      "Request CDA"),
         arg_lit0(NULL, "no-mc-challenge", "Skip MC GET CHALLENGE"),
@@ -469,6 +501,8 @@ static int CmdEMVTerminalCryptoRun(const char *Cmd) {
         arg_lit0(NULL, "checksum",  "Run MSC checksum if UDOL present"),
         arg_lit0(NULL, "vary",      "Vary UN across multiple GEN AC"),
         arg_lit0(NULL, "no-genac",  "Skip GEN AC (summary/challenge only)"),
+        arg_lit0(NULL, "summary",   "Human-readable card digest (default on run)"),
+        arg_lit0(NULL, "no-summary", "Skip human-readable digest"),
         arg_u64_0(NULL, "count", "<n>", "Vary iterations (default 3)"),
         arg_str0("m",  "amount", "<cents>", "Override 9F02"),
         arg_str0(NULL, "un", "<hex>", "Override 9F37"),
@@ -485,20 +519,29 @@ static int CmdEMVTerminalCryptoRun(const char *Cmd) {
     cli.wired = arg_get_lit(ctx, 4);
     cli.jload = arg_get_lit(ctx, 5);
     cli.session = arg_get_str(ctx, 6)->sval[0];
-    const char *dec = arg_get_str(ctx, 7)->sval[0];
+    cli.quick_afl = arg_get_lit(ctx, 7);
+    cli.forced_aid = arg_get_str(ctx, 8)->sval[0];
+    cli.no_aid_fallback = arg_get_lit(ctx, 9);
+    const char *dec = arg_get_str(ctx, 10)->sval[0];
     if (dec && dec[0]) {
         cli.ac_type = parse_decision(dec);
     }
-    cli.cda = arg_get_lit(ctx, 8);
-    cli.mc_challenge = !arg_get_lit(ctx, 9);
-    cli.do_challenge = arg_get_lit(ctx, 10);
-    cli.do_intauth = arg_get_lit(ctx, 11);
-    cli.do_checksum = arg_get_lit(ctx, 12);
-    cli.do_vary = arg_get_lit(ctx, 13);
-    cli.no_genac = arg_get_lit(ctx, 14);
-    cli.count = (int)arg_get_u64_def(ctx, 15, 3);
-    parse_amount_un(ctx, 16, 17, &cli);
-    cli.output = arg_get_str(ctx, 18)->sval[0];
+    cli.cda = arg_get_lit(ctx, 11);
+    cli.mc_challenge = !arg_get_lit(ctx, 12);
+    cli.do_challenge = arg_get_lit(ctx, 13);
+    cli.do_intauth = arg_get_lit(ctx, 14);
+    cli.do_checksum = arg_get_lit(ctx, 15);
+    cli.do_vary = arg_get_lit(ctx, 16);
+    cli.no_genac = arg_get_lit(ctx, 17);
+    if (arg_get_lit(ctx, 18)) {
+        cli.human_digest = true;
+    }
+    if (arg_get_lit(ctx, 19)) {
+        cli.human_digest = false;
+    }
+    cli.count = (int)arg_get_u64_def(ctx, 20, 3);
+    parse_amount_un(ctx, 21, 22, &cli);
+    cli.output = arg_get_str(ctx, 23)->sval[0];
     CLIParserFree(ctx);
 
     emv_term_ctx_t term_ctx;
@@ -513,6 +556,7 @@ static int CmdEMVTerminalCryptoRun(const char *Cmd) {
     bench.do_intauth = cli.do_intauth;
     bench.do_checksum = cli.do_checksum;
     bench.do_vary = cli.do_vary;
+    bench.do_digest = cli.human_digest;
     bench.vary_count = cli.count;
     cli_to_genac_opts(&cli, &bench.genac);
 
@@ -522,11 +566,73 @@ static int CmdEMVTerminalCryptoRun(const char *Cmd) {
     return res;
 }
 
+static int CmdEMVTerminalCryptoCompare(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv terminal crypto compare",
+                  "Compare two crypto export JSON files",
+                  "emv terminal crypto compare -a mc.json -b visa.json\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("a", "file-a", "<file>", "First export JSON"),
+        arg_str1("b", "file-b", "<file>", "Second export JSON"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    const char *a = arg_get_str(ctx, 1)->sval[0];
+    const char *b = arg_get_str(ctx, 2)->sval[0];
+    CLIParserFree(ctx);
+
+    return emv_term_crypto_compare_json(a, b);
+}
+
+static int CmdEMVTerminalCryptoDigest(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv terminal crypto digest",
+                  "Human-readable card/crypto digest",
+                  "emv terminal crypto digest -s\n"
+                  "emv terminal crypto digest --session card.json\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        CRYPTO_BASE_ARGS,
+        CRYPTO_PREP_ARGS,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    emv_term_crypto_cli_t cli;
+    crypto_cli_defaults(&cli);
+    cli.activate = arg_get_lit(ctx, 1);
+    cli.show_apdu = arg_get_lit(ctx, 2);
+    cli.decode_tlv = arg_get_lit(ctx, 3);
+    cli.wired = arg_get_lit(ctx, 4);
+    cli.jload = arg_get_lit(ctx, 5);
+    cli.session = arg_get_str(ctx, 6)->sval[0];
+    cli.quick_afl = arg_get_lit(ctx, 7);
+    cli.forced_aid = arg_get_str(ctx, 8)->sval[0];
+    cli.no_aid_fallback = arg_get_lit(ctx, 9);
+    CLIParserFree(ctx);
+
+    emv_term_ctx_t term_ctx;
+    int res = crypto_prepare_live(&term_ctx, &cli);
+    if (res) {
+        return res;
+    }
+    SetAPDULogging(cli.show_apdu);
+    res = emv_term_crypto_print_digest(&term_ctx, NULL);
+    crypto_finish(&term_ctx, cli.wired ? CC_CONTACT : CC_CONTACTLESS);
+    return res;
+}
+
 static int CmdEMVTerminalCryptoHelp(const char *Cmd);
 
 static command_t CryptoCommandTable[] = {
     {"help",     CmdEMVTerminalCryptoHelp,    AlwaysAvailable, "Crypto playground help"},
     {"run",      CmdEMVTerminalCryptoRun,     IfPm3Iso14443,   "Full crypto lab bench"},
+    {"digest",   CmdEMVTerminalCryptoDigest,  IfPm3Iso14443,   "Human-readable card digest"},
+    {"compare",  CmdEMVTerminalCryptoCompare, AlwaysAvailable, "Compare two export JSON files"},
     {"summary",  CmdEMVTerminalCryptoSummary, AlwaysAvailable, "Print CDOL/AIP/crypto summary"},
     {"challenge", CmdEMVTerminalCryptoChallenge, IfPm3Iso14443, "GET CHALLENGE"},
     {"genac",    CmdEMVTerminalCryptoGenac,   IfPm3Iso14443,   "GENERATE AC (CDOL1)"},
