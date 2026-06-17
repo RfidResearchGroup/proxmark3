@@ -11,6 +11,13 @@
 
 #include "emv_term_ctx.h"
 
-int emv_term_probe_card(emv_term_ctx_t *ctx, bool sweep_all);
+typedef struct {
+    bool sweep_all;
+    bool read_records;
+    bool decode_tlv;
+} emv_term_probe_opts_t;
+
+int emv_term_prepare_card(emv_term_ctx_t *ctx, bool jload, const char *session_path);
+int emv_term_probe_card(emv_term_ctx_t *ctx, const emv_term_probe_opts_t *opts);
 
 #endif

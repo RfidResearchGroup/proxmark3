@@ -20,6 +20,7 @@
 #include "emv_term_golden.h"
 #include "emv_term_mock.h"
 #include "emv_term_session_view.h"
+#include "emv_term_scheme.h"
 #include "emv_term_pin_prompt.h"
 #include "emv_term_secure.h"
 #include "emv_term_redact.h"
@@ -77,17 +78,20 @@ static void apply_wave_d_opts(emv_term_cli_opts_t *opts,
 static int CmdEMVTerminalProbe(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv terminal probe",
-                  "Enumerate card data via GET DATA (after select/init)",
+                  "Enumerate card data via GET DATA and AFL records",
                   "emv terminal probe -s\n"
+                  "emv terminal probe -s --records -t    -> READ RECORD sweep from AFL\n"
                   "emv terminal probe -s --session /tmp/s.json\n"
-                  "emv terminal probe --sweep -s    -> extended tag sweep\n");
+                  "emv terminal probe --sweep -s         -> extended GET DATA tag list\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("s",  "select",   "Activate field and select card"),
         arg_lit0("a",  "apdu",     "Show APDU requests and responses"),
+        arg_lit0("t",  "tlv",      "TLV-decode AFL records"),
         arg_lit0("w",  "wired",    "Contact interface"),
         arg_lit0(NULL, "sweep",    "Try extended GET DATA tag list"),
+        arg_lit0(NULL, "records",  "READ RECORD sweep using AFL (94)"),
         arg_str0(NULL, "session", "<file>", "Session JSON (restore AID/TLV, skip init)"),
         arg_lit0("j",  "jload",    "Load terminal profile defaults"),
         arg_param_end
@@ -96,15 +100,18 @@ static int CmdEMVTerminalProbe(const char *Cmd) {
 
     bool activate = arg_get_lit(ctx, 1);
     bool show_apdu = arg_get_lit(ctx, 2);
-    bool wired = arg_get_lit(ctx, 3);
-    bool sweep = arg_get_lit(ctx, 4);
-    const char *session = arg_get_str(ctx, 5)->sval[0];
-    bool jload = arg_get_lit(ctx, 6);
+    bool decode_tlv = arg_get_lit(ctx, 3);
+    bool wired = arg_get_lit(ctx, 4);
+    bool sweep = arg_get_lit(ctx, 5);
+    bool records = arg_get_lit(ctx, 6);
+    const char *session = arg_get_str(ctx, 7)->sval[0];
+    bool jload = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
     emv_term_cli_opts_t opts = {0};
     opts.activate_field = activate;
     opts.show_apdu = show_apdu;
+    opts.decode_tlv = decode_tlv;
     opts.channel = wired ? CC_CONTACT : CC_CONTACTLESS;
     opts.param_load_json = jload;
 
@@ -114,20 +121,30 @@ static int CmdEMVTerminalProbe(const char *Cmd) {
         return res;
     }
 
-    if (session && session[0]) {
-        emv_term_session_load_json(&term_ctx, session);
-        emv_term_init_transaction_params(term_ctx.terminal, jload, NULL, TT_QVSDCMCHIP, false);
-        emv_term_copy_terminal_tags_to_card(&term_ctx);
-    } else {
-        res = emv_transaction_init(&term_ctx);
-        if (res) {
+    if (!session || !session[0]) {
+        int prep = EMVPrepareContactless(opts.channel, activate);
+        if (prep) {
             emv_term_ctx_free(&term_ctx);
-            return res;
+            return prep;
         }
+        term_ctx.opts.activate_field = false;
     }
 
+    res = emv_term_prepare_card(&term_ctx, jload, session);
+    if (res) {
+        DropFieldEx(opts.channel);
+        emv_term_ctx_free(&term_ctx);
+        return res;
+    }
+
+    emv_term_probe_opts_t probe_opts = {
+        .sweep_all = sweep,
+        .read_records = records,
+        .decode_tlv = decode_tlv,
+    };
+
     SetAPDULogging(show_apdu);
-    res = emv_term_probe_card(&term_ctx, sweep);
+    res = emv_term_probe_card(&term_ctx, &probe_opts);
     DropFieldEx(opts.channel);
     SetAPDULogging(false);
     emv_term_ctx_free(&term_ctx);
@@ -618,6 +635,135 @@ static int CmdEMVTerminalPin(const char *Cmd) {
     return res;
 }
 
+static int CmdEMVTerminalCvm(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv terminal cvm",
+                  "Decode CVM capabilities and card rules (no VERIFY by default)",
+                  "emv terminal cvm -s -j\n"
+                  "emv terminal cvm -s --session /tmp/s.json\n"
+                  "emv terminal cvm -s --run --offline 1234   -> walk CVM list + VERIFY\n"
+                  "emv terminal cvm -s --verify --offline 1234 -> diagnostics then single VERIFY\n"
+                  "emv terminal cvm -s -w --verify --offline 1234 -a  -> contact offline PIN test\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("s",  "select",   "Activate field and select card"),
+        arg_lit0("a",  "apdu",     "Show APDU requests and responses"),
+        arg_lit0("w",  "wired",    "Contact interface"),
+        arg_lit0("j",  "jload",    "Load terminal profile defaults"),
+        arg_str0(NULL, "session", "<file>", "Session JSON (restore AID/TLV, skip init)"),
+        arg_lit0(NULL, "run",      "Run full CVM phase (walk 8E list; needs --offline for PIN)"),
+        arg_lit0(NULL, "verify",   "After diagnostics, send standalone VERIFY APDU"),
+        arg_str0(NULL, "offline", "<pin>", "Offline PIN digits (with --verify or --run)"),
+        arg_lit0(NULL, "prompt",   "Interactive PIN prompt"),
+        arg_lit0(NULL, "enciphered", "Enciphered offline PIN for --verify"),
+        arg_str0(NULL, "profile", "<name|file>", "Scheme profile (auto|interac|visa|mc)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool activate = arg_get_lit(ctx, 1);
+    bool show_apdu = arg_get_lit(ctx, 2);
+    bool wired = arg_get_lit(ctx, 3);
+    bool jload = arg_get_lit(ctx, 4);
+    const char *session = arg_get_str(ctx, 5)->sval[0];
+    bool run_phase = arg_get_lit(ctx, 6);
+    bool do_verify = arg_get_lit(ctx, 7);
+    const char *pin = arg_get_str(ctx, 8)->sval[0];
+    bool use_prompt = arg_get_lit(ctx, 9);
+    bool enciphered = arg_get_lit(ctx, 10);
+    const char *profile = arg_get_str(ctx, 11)->sval[0];
+    CLIParserFree(ctx);
+
+    char prompt_pin[16] = {0};
+    if (use_prompt) {
+        if (emv_term_pin_prompt("Enter offline PIN: ", prompt_pin, sizeof(prompt_pin)) != PM3_SUCCESS) {
+            return PM3_EINVARG;
+        }
+        pin = prompt_pin;
+    } else if ((!pin || !pin[0]) && getenv("EMV_TEST_PIN")) {
+        pin = getenv("EMV_TEST_PIN");
+    }
+
+    if (run_phase && (!pin || !pin[0])) {
+        PrintAndLogEx(ERR, "--run requires --offline <pin>, --prompt, or EMV_TEST_PIN");
+        emv_term_secure_zero(prompt_pin, sizeof(prompt_pin));
+        return PM3_EINVARG;
+    }
+    if (do_verify && (!pin || !pin[0])) {
+        PrintAndLogEx(ERR, "--verify requires --offline <pin>, --prompt, or EMV_TEST_PIN");
+        emv_term_secure_zero(prompt_pin, sizeof(prompt_pin));
+        return PM3_EINVARG;
+    }
+
+    emv_term_cli_opts_t opts = {0};
+    opts.activate_field = activate;
+    opts.show_apdu = show_apdu;
+    opts.channel = wired ? CC_CONTACT : CC_CONTACTLESS;
+    opts.param_load_json = jload;
+    opts.pin = pin;
+    apply_profile_arg(&opts, profile);
+
+    print_channel(opts.channel);
+
+    emv_term_ctx_t term_ctx;
+    int res = emv_term_ctx_init(&term_ctx, &opts);
+    if (res) {
+        emv_term_secure_zero(prompt_pin, sizeof(prompt_pin));
+        return res;
+    }
+
+    if (!session || !session[0]) {
+        int prep = EMVPrepareContactless(opts.channel, activate);
+        if (prep) {
+            emv_term_secure_zero(prompt_pin, sizeof(prompt_pin));
+            emv_term_ctx_free(&term_ctx);
+            return prep;
+        }
+        term_ctx.opts.activate_field = false;
+    }
+
+    res = emv_term_prepare_card(&term_ctx, jload, session);
+    if (res) {
+        DropFieldEx(opts.channel);
+        emv_term_secure_zero(prompt_pin, sizeof(prompt_pin));
+        emv_term_ctx_free(&term_ctx);
+        return res;
+    }
+
+    if (opts.scheme_profile && opts.scheme_profile[0]) {
+        emv_term_scheme_info_t sinfo;
+        if (emv_term_scheme_resolve(opts.scheme_profile, term_ctx.aid, term_ctx.aid_len, &sinfo) == PM3_SUCCESS) {
+            emv_term_scheme_apply(&term_ctx, &sinfo);
+        }
+    }
+
+    SetAPDULogging(show_apdu);
+    emv_term_cvm_print_diagnostics(&term_ctx);
+
+    if (run_phase) {
+        res = phase_cvm_run(&term_ctx);
+    } else if (do_verify) {
+        if (term_ctx.aid_len) {
+            uint8_t buf[APDU_RES_LEN] = {0};
+            size_t len = 0;
+            uint16_t sw = 0;
+            int sel = EMVSelect(opts.channel, false, true, term_ctx.aid, term_ctx.aid_len,
+                                buf, sizeof(buf), &len, &sw, term_ctx.card);
+            if (sel) {
+                PrintAndLogEx(WARNING, "AID re-select failed (%d)", sel);
+            }
+        }
+        res = phase_cvm_verify_pin(&term_ctx, pin, enciphered);
+    }
+
+    DropFieldEx(opts.channel);
+    SetAPDULogging(false);
+    emv_term_secure_zero(prompt_pin, sizeof(prompt_pin));
+    emv_term_ctx_free(&term_ctx);
+    return res;
+}
+
 static int CmdEMVTerminalProfile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv terminal profile",
@@ -1036,7 +1182,8 @@ static command_t TerminalCommandTable[] = {
     {"step",    CmdEMVTerminalStep,   IfPm3Iso14443,   "Run single terminal phase"},
     {"online",  CmdEMVTerminalOnline, IfPm3Iso14443,   "Complete online path after ARQC"},
     {"pin",     CmdEMVTerminalPin,    IfPm3Iso14443,   "Standalone VERIFY PIN"},
-    {"probe",   CmdEMVTerminalProbe,  IfPm3Iso14443,   "GET DATA card enumeration"},
+    {"cvm",     CmdEMVTerminalCvm,    IfPm3Iso14443,   "CVM diagnostics (optional --run/--verify)"},
+    {"probe",   CmdEMVTerminalProbe,  IfPm3Iso14443,   "GET DATA + AFL record enumeration"},
     {"profile", CmdEMVTerminalProfile, AlwaysAvailable, "Print or validate terminal profile JSON"},
     {"load",    CmdEMVTerminalLoad,   AlwaysAvailable, "Load card data from scan JSON"},
     {"export-sim", CmdEMVTerminalExportSim, AlwaysAvailable, "Export emv sim card patch from session"},
