@@ -56,7 +56,7 @@ void emv_term_pin_zeroize(uint8_t *buf, size_t len) {
     emv_term_secure_zero(buf, len);
 }
 
-static const char *resolve_pin(emv_term_ctx_t *ctx, char *prompt_buf, size_t prompt_buf_len) {
+static const char *pin_from_opts_or_env(const emv_term_ctx_t *ctx) {
     if (ctx->opts.pin && ctx->opts.pin[0]) {
         return ctx->opts.pin;
     }
@@ -64,10 +64,35 @@ static const char *resolve_pin(emv_term_ctx_t *ctx, char *prompt_buf, size_t pro
     if (env && env[0]) {
         return env;
     }
+    return NULL;
+}
+
+static const char *pin_prompt_interactive(emv_term_ctx_t *ctx, char *prompt_buf, size_t prompt_buf_len) {
     if (emv_term_pin_prompt("Enter offline PIN: ", prompt_buf, prompt_buf_len) == PM3_SUCCESS) {
         return prompt_buf;
     }
     return NULL;
+}
+
+static bool cvm_will_verify_offline_pin(const emv_term_ctx_t *ctx, uint8_t cvm_code) {
+    if (cvm_code != CVM_PLAIN_OFFLINE && cvm_code != CVM_ENCIPHERED_OFFLINE) {
+        return false;
+    }
+    if (ctx->channel == CC_CONTACTLESS) {
+        return false;
+    }
+    if (cvm_code == CVM_ENCIPHERED_OFFLINE && !tlvdb_get(ctx->card, 0x9f2d, NULL)) {
+        return false;
+    }
+    return true;
+}
+
+static bool card_aip_supports_cvm(const emv_term_ctx_t *ctx) {
+    const struct tlv *aip = tlvdb_get(ctx->card, 0x82, NULL);
+    if (!aip || aip->len < 1) {
+        return true;
+    }
+    return (aip->value[0] & 0x10) != 0;
 }
 
 static size_t pin_digits_len(const char *pin) {
@@ -433,6 +458,14 @@ int phase_cvm_run(emv_term_ctx_t *ctx) {
         return PM3_SUCCESS;
     }
 
+    if (!card_aip_supports_cvm(ctx)) {
+        PrintAndLogEx(INFO, "AIP: cardholder verification not supported — skipping CVM");
+        set_cvm_results(ctx, CVM_NO_CVM, CVM_COND_ALWAYS, CVM_RESULT_UNKNOWN);
+        ctx->cvm_performed = false;
+        ctx->cvm_success = true;
+        return PM3_SUCCESS;
+    }
+
     const struct tlv *cvm_list = tlvdb_get(ctx->card, 0x8e, NULL);
     if (!cvm_list || cvm_list->len < 10) {
         PrintAndLogEx(INFO, "No CVM List (8E) — skipping CVM phase");
@@ -449,7 +482,7 @@ int phase_cvm_run(emv_term_ctx_t *ctx) {
     uint32_t amount_y = cvm_get_amount(cvm_list->value + 4);
 
     char prompt_pin[16] = {0};
-    const char *pin = resolve_pin(ctx, prompt_pin, sizeof(prompt_pin));
+    const char *pin = pin_from_opts_or_env(ctx);
 
     for (size_t i = 8; i + 1 < cvm_list->len; i += 2) {
         uint8_t cvm_code = cvm_list->value[i] & 0x3F;
@@ -494,8 +527,13 @@ int phase_cvm_run(emv_term_ctx_t *ctx) {
                 return PM3_SUCCESS;
 
             case CVM_PLAIN_OFFLINE:
-                if (ctx->channel == CC_CONTACTLESS) {
-                    PrintAndLogEx(WARNING, "Plain offline PIN over contactless — card may return 6985/6A81; use -w for chip VERIFY");
+                if (!cvm_will_verify_offline_pin(ctx, cvm_code)) {
+                    PrintAndLogEx(INFO, "CVM: %s not verifiable on this channel — trying next rule",
+                                  cvm_code_name(cvm_code));
+                    continue;
+                }
+                if (!pin) {
+                    pin = pin_prompt_interactive(ctx, prompt_pin, sizeof(prompt_pin));
                 }
                 if (!pin || !pin[0]) {
                     PrintAndLogEx(WARNING, "Plaintext offline PIN required but no PIN provided (--pin or EMV_TEST_PIN)");
@@ -514,8 +552,13 @@ int phase_cvm_run(emv_term_ctx_t *ctx) {
                 break;
 
             case CVM_ENCIPHERED_OFFLINE:
-                if (ctx->channel == CC_CONTACTLESS) {
-                    PrintAndLogEx(WARNING, "Enciphered offline PIN over contactless — card may reject VERIFY; use contact (-w)");
+                if (!cvm_will_verify_offline_pin(ctx, cvm_code)) {
+                    PrintAndLogEx(INFO, "CVM: %s not verifiable on this channel — trying next rule",
+                                  cvm_code_name(cvm_code));
+                    continue;
+                }
+                if (!pin) {
+                    pin = pin_prompt_interactive(ctx, prompt_pin, sizeof(prompt_pin));
                 }
                 if (!pin || !pin[0]) {
                     PrintAndLogEx(WARNING, "Enciphered offline PIN required but no PIN provided");

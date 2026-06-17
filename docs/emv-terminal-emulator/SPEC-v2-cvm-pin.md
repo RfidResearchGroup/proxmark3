@@ -94,6 +94,19 @@ Support CVM codes: `01` plain offline, `04` enciphered offline, `02` online, `1E
 
 Amount-based CVM rules: compare `(X,Y)` against `(9F02)` BCD using profile currency exponent.
 
+### REQ-CVM-040
+
+Interactive PIN prompt during `emv terminal run` / `phase_cvm_run` shall occur **only** when an applicable CVM rule requires offline PIN VERIFY on a **contact** channel and neither `--pin` nor `EMV_TEST_PIN` is set.
+
+Skip PIN entry (no prompt) when:
+
+- AIP byte 1 bit 5 clear (cardholder verification not supported), or
+- CVM list absent or only no-CVM / signature / online rules apply, or
+- Contactless channel and rule is plain or enciphered **offline** PIN (card cannot validate VERIFY over NFC in lab), or
+- Enciphered offline PIN rule but ICC PIN encipherment data (`9F2D`) absent.
+
+Online PIN CVM (`02`) may proceed without interactive prompt (TVR bit only; optional stash if PIN pre-provided).
+
 ---
 
 ## Acceptance Criteria
@@ -105,6 +118,9 @@ Amount-based CVM rules: compare `(X,Y)` against `(9F02)` BCD using profile curre
 | AC-CVM-003 | `-a` + VERIFY | after command | Log shows REDACTED |
 | AC-CVM-004 | After VERIFY | ctx free | PIN buffer all zero |
 | AC-CVM-005 | Enciphered CVM card | VERIFY | SW 9000 or documented fail |
+| AC-CVM-006 | qVSDC / no offline VERIFY | `emv terminal run -s -j` no --pin | No `Enter offline PIN:` prompt |
+| AC-CVM-007 | AIP no CVM bit | `phase_cvm_run` | Skip CVM, no VERIFY |
+| AC-CVM-008 | Contactless + offline PIN in 8E | CVM walk | Skip rule, try next (e.g. 1F) |
 
 ---
 

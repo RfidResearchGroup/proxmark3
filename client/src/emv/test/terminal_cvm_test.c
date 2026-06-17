@@ -158,6 +158,140 @@ static int test_online_pin_stash(bool verbose) {
     return 0;
 }
 
+static int test_no_cvm_without_pin(bool verbose) {
+    emv_term_ctx_t ctx;
+    memset(&ctx, 0, sizeof(ctx));
+
+    const char *alr = "Root terminal TLV tree";
+    ctx.card = tlvdb_fixed(1, strlen(alr), (const unsigned char *)alr);
+    const char *alt = "Terminal TLV tree";
+    ctx.terminal = tlvdb_fixed(1, strlen(alt), (const unsigned char *)alt);
+
+    uint8_t cvm_list[] = {
+        0x00, 0x00, 0x27, 0x10,
+        0x00, 0x00, 0x4E, 0x20,
+        0x1F, 0x00,
+    };
+    uint8_t aip[] = {0x18, 0x00};
+    tlvdb_change_or_add_node(ctx.card, 0x82, sizeof(aip), aip);
+    tlvdb_change_or_add_node(ctx.card, 0x8e, sizeof(cvm_list), cvm_list);
+
+    int res = phase_cvm_run(&ctx);
+    if (res != PM3_SUCCESS) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "no-CVM run failed (%d)", res);
+        }
+        tlvdb_free(ctx.card);
+        tlvdb_free(ctx.terminal);
+        return 1;
+    }
+    if (ctx.cvm_results[0] != 0x1F) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "expected no-CVM result, got %02x", ctx.cvm_results[0]);
+        }
+        tlvdb_free(ctx.card);
+        tlvdb_free(ctx.terminal);
+        return 1;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "no-CVM without PIN prompt OK");
+    }
+    tlvdb_free(ctx.card);
+    tlvdb_free(ctx.terminal);
+    return 0;
+}
+
+static int test_aip_skips_cvm(bool verbose) {
+    emv_term_ctx_t ctx;
+    memset(&ctx, 0, sizeof(ctx));
+
+    const char *alr = "Root terminal TLV tree";
+    ctx.card = tlvdb_fixed(1, strlen(alr), (const unsigned char *)alr);
+    const char *alt = "Terminal TLV tree";
+    ctx.terminal = tlvdb_fixed(1, strlen(alt), (const unsigned char *)alt);
+
+    uint8_t aip[] = {0x80, 0x00};
+    uint8_t cvm_list[] = {
+        0x00, 0x00, 0x27, 0x10,
+        0x00, 0x00, 0x4E, 0x20,
+        0x01, 0x00,
+    };
+    tlvdb_change_or_add_node(ctx.card, 0x82, sizeof(aip), aip);
+    tlvdb_change_or_add_node(ctx.card, 0x8e, sizeof(cvm_list), cvm_list);
+
+    int res = phase_cvm_run(&ctx);
+    if (res != PM3_SUCCESS) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "AIP skip CVM failed (%d)", res);
+        }
+        tlvdb_free(ctx.card);
+        tlvdb_free(ctx.terminal);
+        return 1;
+    }
+    if (ctx.cvm_results[0] != 0x1F) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "expected skipped CVM (1F), got %02x", ctx.cvm_results[0]);
+        }
+        tlvdb_free(ctx.card);
+        tlvdb_free(ctx.terminal);
+        return 1;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "AIP no-CVM-support skip OK");
+    }
+    tlvdb_free(ctx.card);
+    tlvdb_free(ctx.terminal);
+    return 0;
+}
+
+static int test_contactless_offline_pin_skipped(bool verbose) {
+    emv_term_ctx_t ctx;
+    memset(&ctx, 0, sizeof(ctx));
+    ctx.channel = CC_CONTACTLESS;
+
+    const char *alr = "Root terminal TLV tree";
+    ctx.card = tlvdb_fixed(1, strlen(alr), (const unsigned char *)alr);
+    const char *alt = "Terminal TLV tree";
+    ctx.terminal = tlvdb_fixed(1, strlen(alt), (const unsigned char *)alt);
+
+    uint8_t caps[] = {0xE0, 0xF8, 0xC8};
+    uint8_t cvm_list[] = {
+        0x00, 0x00, 0x27, 0x10,
+        0x00, 0x00, 0x4E, 0x20,
+        0x01, 0x00,
+        0x1F, 0x00,
+    };
+    tlvdb_change_or_add_node(ctx.terminal, 0x9f33, sizeof(caps), caps);
+    tlvdb_change_or_add_node(ctx.card, 0x8e, sizeof(cvm_list), cvm_list);
+
+    int res = phase_cvm_run(&ctx);
+    if (res != PM3_SUCCESS) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "contactless offline skip failed (%d)", res);
+        }
+        tlvdb_free(ctx.card);
+        tlvdb_free(ctx.terminal);
+        return 1;
+    }
+    if (ctx.cvm_results[0] != 0x1F) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "expected no-CVM after skip, got %02x", ctx.cvm_results[0]);
+        }
+        tlvdb_free(ctx.card);
+        tlvdb_free(ctx.terminal);
+        return 1;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "contactless offline PIN skip OK");
+    }
+    tlvdb_free(ctx.card);
+    tlvdb_free(ctx.terminal);
+    return 0;
+}
+
 static int test_session_redact(bool verbose) {
     json_t *root = json_object();
     json_t *crypto = json_object();
@@ -218,6 +352,15 @@ int exec_terminal_cvm_test(bool verbose) {
         return 1;
     }
     if (test_online_pin_stash(verbose)) {
+        return 1;
+    }
+    if (test_no_cvm_without_pin(verbose)) {
+        return 1;
+    }
+    if (test_aip_skips_cvm(verbose)) {
+        return 1;
+    }
+    if (test_contactless_offline_pin_skipped(verbose)) {
         return 1;
     }
     if (test_session_redact(verbose)) {

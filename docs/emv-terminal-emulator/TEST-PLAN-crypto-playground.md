@@ -69,6 +69,16 @@ emv terminal run -j -o s.json --full-tlv --stop-after init
 emv terminal crypto summary --session s.json
 ```
 
+## Timing benchmarks
+
+See [SPEC-timing-benchmark.md](./SPEC-timing-benchmark.md) and [TEST-PLAN-timing-benchmark.md](./TEST-PLAN-timing-benchmark.md).
+
+### AC-CRYPTO-M07: RNG stream bench
+
+```
+emv terminal crypto rng -s --bench --seconds 30 -o /tmp/bench.json
+```
+
 ## Regression
 
 - Existing `emv genac`, `emv challenge`, `emv terminal probe` unchanged.
