@@ -692,6 +692,7 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
                   "emv terminal crypto rng -s\n"
                   "emv terminal crypto rng -s --dice\n"
                   "emv terminal crypto rng -s --stream | head -c 64\n"
+                  "./pm3 -c \"emv terminal crypto rng -s --stream\" 2>/dev/null | head -c 64\n"
                   "emv terminal crypto rng -s --stream --stream-raw | head -c 32 | xxd\n"
                   "emv terminal crypto rng -s --samples 5 --max 1000000\n");
 
