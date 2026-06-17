@@ -29,6 +29,8 @@
 #include "emv_tags.h"
 #include "emvjson.h"
 #include "util_posix.h"
+#include "util.h"
+#include "cmdparser.h"
 #include "protocols.h"      // ISO7816 APDU return codes
 
 // Got from here. Thanks!
@@ -276,26 +278,80 @@ struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2) {
     return tlvdb_fixed(0x02, dCVVlen, dCVV);
 }
 
-int EMVPrepareContactless(Iso7816CommandChannel channel, bool force_reselect) {
+size_t EMVSelectAIDCount(struct tlvdb *tlv) {
+    size_t count = 0;
+    if (!tlv) {
+        return 0;
+    }
+    for (struct tlvdb *ttmp = tlvdb_find(tlv, 0x6f); ttmp; ttmp = tlvdb_find_next(ttmp, 0x6f)) {
+        if (tlvdb_get_inchild(ttmp, 0x84, NULL)) {
+            count++;
+        }
+    }
+    return count;
+}
+
+static int emv_contactless_poll_once(bool verbose) {
+    iso14a_card_select_t card;
+    int res = SelectCard14443A_4(false, verbose, &card);
+    if (res == PM3_SUCCESS) {
+        if (verbose) {
+            PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
+        }
+        return PM3_SUCCESS;
+    }
+
+    res = select_card_14443b_4(false, NULL);
+    if (res == PM3_SUCCESS && verbose) {
+        PrintAndLogEx(SUCCESS, "ISO14443-B card selected");
+    }
+    return res;
+}
+
+int EMVPrepareContactlessEx(Iso7816CommandChannel channel, bool force_reselect, bool wait_for_card) {
     if (channel != CC_CONTACTLESS || !IfPm3Present()) {
         return PM3_SUCCESS;
     }
 
-    if (!force_reselect && GetISODEPState() != ISODEP_INACTIVE) {
+    if (!force_reselect && !wait_for_card && GetISODEPState() != ISODEP_INACTIVE) {
         return PM3_SUCCESS;
     }
 
-    DropFieldEx(channel);
+    bool announced = false;
+    do {
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(WARNING, "Card polling aborted");
+            return PM3_ERFTRANS;
+        }
 
-    PrintAndLogEx(INFO, "Activating HF field — present card to antenna...");
-    int res = Iso7816Connect(channel);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "No contactless card detected. Hold the card on the antenna and retry.");
-        PrintAndLogEx(HINT, "Hint: verify with `hf 14a reader` or `emv search -s`");
-        return PM3_ERFTRANS;
-    }
+        DropFieldEx(channel);
 
-    return PM3_SUCCESS;
+        if (!announced) {
+            if (wait_for_card) {
+                PrintAndLogEx(INFO, "Waiting for card — present to antenna (press Enter to cancel)...");
+            } else {
+                PrintAndLogEx(INFO, "Activating HF field — present card to antenna...");
+            }
+            announced = true;
+        }
+
+        int res = emv_contactless_poll_once(!wait_for_card);
+        if (res == PM3_SUCCESS) {
+            return PM3_SUCCESS;
+        }
+
+        if (wait_for_card) {
+            msleep(150);
+        }
+    } while (wait_for_card);
+
+    PrintAndLogEx(WARNING, "No contactless card detected. Hold the card on the antenna and retry.");
+    PrintAndLogEx(HINT, "Hint: verify with `hf 14a reader -w` or `emv search` (waits by default)");
+    return PM3_ERFTRANS;
+}
+
+int EMVPrepareContactless(Iso7816CommandChannel channel, bool force_reselect) {
+    return EMVPrepareContactlessEx(channel, force_reselect, false);
 }
 
 static int EMVExchangeEx(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, sAPDU_t apdu, bool IncludeLe, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
@@ -506,11 +562,6 @@ int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveField
 
     int retrycnt = 0;
     for (int i = 0; i < ARRAYLEN(AIDlist); i ++) {
-
-        if (kbd_enter_pressed()) {
-            PrintAndLogEx(WARNING, "\naborted via keyboard!");
-            break;
-        }
 
         param_gethex_to_eol(AIDlist[i].aid, 0, aidbuf, sizeof(aidbuf), &aidlen);
         int res = EMVSelect(channel, (i == 0) ? ActivateField : false, true, aidbuf, aidlen, data, sizeof(data), &datalen, &sw, tlv);

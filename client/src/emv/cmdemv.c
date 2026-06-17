@@ -728,17 +728,19 @@ static int CmdEMVSearch(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv search",
                   "Tries to select all applets from applet list\n",
-                  "emv search      -> auto-activate field and search\n"
-                  "emv search -st  -> search and show result in TLV\n"
-                  "emv search -s   -> force re-select card before search\n");
+                  "emv search           -> wait for card, search PPSE then AID list\n"
+                  "emv search -st       -> search and show result in TLV\n"
+                  "emv search --nowait  -> fail immediately if no card in field\n"
+                  "emv search -k       -> keep field on for next command");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("s",  "select",  "Activate field and select card"),
+        arg_lit0("s",  "select",  "Force re-select card (always on for search)"),
         arg_lit0("k",  "keep",    "Keep field ON for next command"),
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("t",  "tlv",     "TLV decode results of selected applets"),
         arg_lit0("w",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
+        arg_lit0(NULL, "nowait",  "Do not wait for card — fail if none in field"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -752,28 +754,63 @@ static int CmdEMVSearch(const char *Cmd) {
     if (arg_get_lit(ctx, 5)) {
         channel = CC_CONTACT;
     }
+    bool wait_for_card = !arg_get_lit(ctx, 6);
 
     PrintChannel(channel);
     CLIParserFree(ctx);
 
     SetAPDULogging(show_apdu);
 
-    int prep = EMVPrepareContactless(channel, activateField);
-    if (prep) {
-        SetAPDULogging(false);
-        return prep;
+    if (channel == CC_CONTACTLESS) {
+        int prep = EMVPrepareContactlessEx(channel, true, wait_for_card);
+        if (prep) {
+            SetAPDULogging(false);
+            return prep;
+        }
+    } else if (activateField && IfPm3Smartcard()) {
+        smart_card_atr_t atr;
+        if (!smart_select(show_apdu, &atr)) {
+            PrintAndLogEx(WARNING, "Cannot select smart card");
+            SetAPDULogging(false);
+            return PM3_ERFTRANS;
+        }
     }
 
     const char *al = "Applets list";
     struct tlvdb *t = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
 
-    if (EMVSearch(channel, false, leaveSignalON, decodeTLV, t, false)) {
+    int search_res = PM3_SUCCESS;
+    if (channel == CC_CONTACTLESS) {
+        uint8_t psenum = 2;
+        PrintAndLogEx(INFO, "* PPSE.");
+        if (EMVSearchPSE(channel, false, true, psenum, decodeTLV, t) == 0 && EMVSelectAIDCount(t) > 0) {
+            PrintAndLogEx(INFO, "PPSE directory read OK");
+        } else {
+            PrintAndLogEx(INFO, "* AID list fallback.");
+            if (EMVSearch(channel, false, true, decodeTLV, t, true)) {
+                search_res = PM3_ERFTRANS;
+            }
+        }
+    } else {
+        if (EMVSearch(channel, activateField, leaveSignalON, decodeTLV, t, true)) {
+            search_res = PM3_ERFTRANS;
+        }
+    }
+
+    size_t aid_count = EMVSelectAIDCount(t);
+    if (search_res != PM3_SUCCESS || aid_count == 0) {
+        if (aid_count == 0) {
+            PrintAndLogEx(WARNING, "No EMV applets found on card");
+        }
         tlvdb_free(t);
+        if (!leaveSignalON) {
+            DropFieldEx(channel);
+        }
         SetAPDULogging(false);
         return PM3_ERFTRANS;
     }
 
-    PrintAndLogEx(SUCCESS, "Search completed.");
+    PrintAndLogEx(SUCCESS, "Search completed — %zu applet(s) found.", aid_count);
 
     // print list here
     if (decodeTLV == false) {
@@ -781,6 +818,12 @@ static int CmdEMVSearch(const char *Cmd) {
     }
 
     tlvdb_free(t);
+
+    if (!leaveSignalON) {
+        DropFieldEx(channel);
+    } else {
+        PrintAndLogEx(INFO, "Field kept ON for next command");
+    }
 
     SetAPDULogging(false);
     return PM3_SUCCESS;
