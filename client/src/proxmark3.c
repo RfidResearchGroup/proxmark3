@@ -281,7 +281,8 @@ static void pm3_enable_stdout_pipe(const char *script_cmd) {
     if (!script_cmd) {
         return;
     }
-    if (strstr(script_cmd, "--stream") != NULL || strstr(script_cmd, "--stdio-pipe") != NULL) {
+    if (strstr(script_cmd, "--stream") != NULL || strstr(script_cmd, "--stdio-pipe") != NULL
+            || strstr(script_cmd, "--stream-out") != NULL) {
         g_session.stdout_pipe = true;
         g_session.incognito = true;
         g_session.show_hints = false;

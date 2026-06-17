@@ -617,8 +617,13 @@ static bool crypto_rng_collect_weak(emv_term_ctx_t *ctx, uint8_t *pool, size_t *
     return got;
 }
 
-static void crypto_rng_stream_write(const uint8_t *data, size_t len, emv_term_crypto_stream_fmt_t fmt) {
-    if (!data || !len || fmt == EMV_CRYPTO_STREAM_OFF) {
+static void crypto_rng_stream_configure_stdout(void) {
+    setvbuf(stdout, NULL, _IONBF, 0);
+}
+
+static void crypto_rng_stream_write(const uint8_t *data, size_t len, emv_term_crypto_stream_fmt_t fmt,
+                                    FILE *bin_out) {
+    if (!data || !len) {
         return;
     }
     if (fmt == EMV_CRYPTO_STREAM_HEX) {
@@ -627,10 +632,15 @@ static void crypto_rng_stream_write(const uint8_t *data, size_t len, emv_term_cr
             fputc(hex[data[i] >> 4], stdout);
             fputc(hex[data[i] & 0x0f], stdout);
         }
-    } else {
+        fflush(stdout);
+    } else if (fmt == EMV_CRYPTO_STREAM_RAW) {
         fwrite(data, 1, len, stdout);
+        fflush(stdout);
     }
-    fflush(stdout);
+    if (bin_out) {
+        fwrite(data, 1, len, bin_out);
+        fflush(bin_out);
+    }
 }
 
 static uint64_t crypto_rng_u64_from_hash(const uint8_t hash[32]) {
@@ -796,9 +806,9 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
                 break;
             }
             if (opts->stream_fmt == EMV_CRYPTO_STREAM_HEX) {
-                crypto_rng_stream_write(hash, (size_t)out_bytes, EMV_CRYPTO_STREAM_HEX);
+                crypto_rng_stream_write(hash, (size_t)out_bytes, EMV_CRYPTO_STREAM_HEX, opts->stream_bin_out);
             } else if (opts->stream_fmt == EMV_CRYPTO_STREAM_RAW) {
-                crypto_rng_stream_write(hash, (size_t)out_bytes, EMV_CRYPTO_STREAM_RAW);
+                crypto_rng_stream_write(hash, (size_t)out_bytes, EMV_CRYPTO_STREAM_RAW, opts->stream_bin_out);
             } else {
                 PrintAndLogEx(SUCCESS, "Card entropy [%d bytes]: %s",
                               out_bytes, sprint_hex(hash, (size_t)out_bytes));
@@ -1018,9 +1028,11 @@ int emv_term_crypto_rng_stream(emv_term_ctx_t *ctx, const emv_term_crypto_rng_op
     if (!ctx || !opts) {
         return PM3_EINVARG;
     }
-    if (opts->stream_fmt == EMV_CRYPTO_STREAM_OFF) {
+    if (opts->stream_fmt == EMV_CRYPTO_STREAM_OFF && !opts->stream_bin_out) {
         return PM3_EINVARG;
     }
+
+    crypto_rng_stream_configure_stdout();
 
     emv_term_crypto_rng_opts_t ropts = *opts;
     ropts.quiet = true;

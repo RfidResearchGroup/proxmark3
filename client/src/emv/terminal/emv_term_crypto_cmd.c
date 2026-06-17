@@ -20,6 +20,7 @@
 #include "cmdparser.h"
 #include "ui.h"
 #include "commonutil.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -34,6 +35,8 @@ typedef struct {
     const char *forced_aid;
     char session_buf[FILE_PATH_SIZE];
     char output_buf[FILE_PATH_SIZE];
+    char stream_out_buf[FILE_PATH_SIZE];
+    const char *stream_out;
     char forced_aid_buf[128];
     uint64_t amount_cents;
     bool amount_set;
@@ -696,6 +699,7 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
                   "emv terminal crypto rng -s --bench --seconds 30\n"
                   "emv terminal crypto rng -s --bench -o cibc-visa.json\n"
                   "emv terminal crypto rng -s --stream --stream-raw | head -c 32 | xxd\n"
+                  "emv terminal crypto rng -s --stream --stream-out rng.bin\n"
                   "emv terminal crypto rng -s --samples 5 --max 1000000\n");
 
     void *argtable[] = {
@@ -712,6 +716,7 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
         arg_lit0(NULL, "stream", "Loop — continuous lowercase hex on stdout (Enter stops)"),
         arg_lit0(NULL, "stream-turbo", "Alias for --stream (kept for scripts); same speed path"),
         arg_lit0(NULL, "stream-raw", "With --stream: raw bytes instead of hex"),
+        arg_str0(NULL, "stream-out", "<file>", "With --stream: write flushed raw binary bytes to file"),
         arg_lit0(NULL, "bench", "Time stream cycles for N seconds (hold card on antenna)"),
         arg_u64_0(NULL, "seconds", "<n>", "Bench duration in seconds (default 30, with --bench)"),
         arg_str0("o", "output", "<file>", "Write bench JSON (with --bench)"),
@@ -744,12 +749,14 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
     bool stream = arg_get_lit(ctx, 17);
     bool stream_turbo = arg_get_lit(ctx, 18);
     bool stream_raw = arg_get_lit(ctx, 19);
-    bool bench = arg_get_lit(ctx, 20);
-    uint64_t bench_seconds = arg_get_u64_def(ctx, 21, 30);
-    bool quiet = arg_get_lit(ctx, 23);
+    const char *stream_out_arg = arg_get_str(ctx, 20)->sval[0];
+    bool bench = arg_get_lit(ctx, 21);
+    uint64_t bench_seconds = arg_get_u64_def(ctx, 22, 30);
+    bool quiet = arg_get_lit(ctx, 24);
     crypto_cli_pin_session(&cli, ctx, 6);
     crypto_cli_pin_forced_aid(&cli, ctx, 8);
-    crypto_cli_pin_output(&cli, ctx, 22);
+    crypto_cli_pin_output(&cli, ctx, 23);
+    crypto_cli_pin_str(stream_out_arg, cli.stream_out_buf, sizeof(cli.stream_out_buf), &cli.stream_out);
     CLIParserFree(ctx);
 
     if (stream) {
@@ -761,6 +768,11 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
 
     if (bench && stream) {
         PrintAndLogEx(ERR, "--bench and --stream are incompatible");
+        return PM3_EINVARG;
+    }
+
+    if (cli.stream_out && !stream) {
+        PrintAndLogEx(ERR, "--stream-out requires --stream");
         return PM3_EINVARG;
     }
 
@@ -813,9 +825,27 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
         ropts.range_max = range_max;
     }
 
+    FILE *stream_bin_fp = NULL;
+    if (stream && cli.stream_out && cli.stream_out[0]) {
+        stream_bin_fp = fopen(cli.stream_out, "wb");
+        if (!stream_bin_fp) {
+            PrintAndLogEx(ERR, "Cannot open --stream-out file: %s", cli.stream_out);
+            crypto_finish(&term_ctx, channel);
+            return PM3_ESOFT;
+        }
+        setvbuf(stream_bin_fp, NULL, _IONBF, 0);
+        ropts.stream_bin_out = stream_bin_fp;
+    }
+
     SetAPDULogging(cli.show_apdu && !stream && !bench);
     if (stream) {
         res = emv_term_crypto_rng_stream(&term_ctx, &ropts, channel);
+        if (stream_bin_fp) {
+            fclose(stream_bin_fp);
+            if (res == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "RNG binary stream: %s", cli.stream_out);
+            }
+        }
     } else if (bench) {
         emv_term_crypto_rng_bench_opts_t bopts = {0};
         bopts.duration_sec = (uint32_t)bench_seconds;

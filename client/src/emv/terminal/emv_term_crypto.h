@@ -94,6 +94,7 @@ typedef struct {
     bool no_emit;
     emv_term_crypto_stream_fmt_t stream_fmt;
     bool stream_turbo;
+    FILE *stream_bin_out;
     emv_term_crypto_genac_opts_t genac;
 } emv_term_crypto_rng_opts_t;
 
