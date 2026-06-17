@@ -22,6 +22,7 @@
 #include "commonutil.h"
 #include "protocols.h"
 #include "util.h"
+#include "util_posix.h"
 #include <jansson.h>
 #include <string.h>
 #include <stdlib.h>
@@ -791,6 +792,9 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
 
     switch (opts->mode) {
         case EMV_CRYPTO_RNG_RAW:
+            if (opts->no_emit) {
+                break;
+            }
             if (opts->stream_fmt == EMV_CRYPTO_STREAM_HEX) {
                 crypto_rng_stream_write(hash, (size_t)out_bytes, EMV_CRYPTO_STREAM_HEX);
             } else if (opts->stream_fmt == EMV_CRYPTO_STREAM_RAW) {
@@ -834,6 +838,179 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
         PrintAndLogEx(HINT, "Re-tap the card for a new value — most cards issue one AC per session");
     }
     return PM3_SUCCESS;
+}
+
+typedef struct {
+    int res;
+    bool rng_ok;
+    bool used_fast_init;
+} crypto_rng_cycle_info_t;
+
+static void json_add_tlv_hex(json_t *obj, const char *key, const struct tlv *tlv);
+
+static const char *crypto_rng_vendor_label(const emv_term_ctx_t *ctx) {
+    if (!ctx || !ctx->aid_len) {
+        return "unknown";
+    }
+    switch (GetCardPSVendor((uint8_t *)ctx->aid, ctx->aid_len)) {
+        case CV_NA: return "unknown";
+        case CV_VISA: return "Visa";
+        case CV_MASTERCARD: return "Mastercard";
+        case CV_INTERAC: return "Interac";
+        case CV_AMERICANEXPRESS: return "Amex";
+        case CV_JCB: return "JCB";
+        case CV_CB: return "CB";
+        case CV_DINERS: return "Diners";
+        case CV_SWITCH: return "Switch";
+        case CV_OTHER: return "other";
+    }
+    return "other";
+}
+
+static const char *crypto_rng_path_label(const emv_term_ctx_t *ctx) {
+    if (!ctx || !ctx->aid_len) {
+        return "unknown";
+    }
+    if (crypto_card_tlv(ctx, 0x9f26) && !tlvdb_get(ctx->card, 0x8c, NULL)) {
+        return "qVSDC (AC in GPO)";
+    }
+    if (tlvdb_get(ctx->card, 0x8c, NULL)) {
+        if (GetCardPSVendor((uint8_t *)ctx->aid, ctx->aid_len) == CV_MASTERCARD) {
+            return "M/Chip contactless (CDOL1 + GET CHALLENGE)";
+        }
+        return "EMV contactless (CDOL1 GEN AC)";
+    }
+    if (crypto_card_aip(ctx) == 0x8000) {
+        return "Visa qVSDC MSD";
+    }
+    return "unknown / MSD";
+}
+
+static int crypto_rng_app_label(const emv_term_ctx_t *ctx, char *out, size_t outlen) {
+    if (!out || !outlen) {
+        return PM3_EINVARG;
+    }
+    out[0] = '\0';
+    const struct tlv *label = tlvdb_get(ctx->card, 0x50, NULL);
+    if (!label || !label->len) {
+        label = tlvdb_get(ctx->card, 0x9f12, NULL);
+    }
+    if (!label || !label->len) {
+        return PM3_ESOFT;
+    }
+    size_t n = label->len < outlen - 1 ? label->len : outlen - 1;
+    memcpy(out, label->value, n);
+    out[n] = '\0';
+    return PM3_SUCCESS;
+}
+
+static int crypto_rng_pan_last4(const emv_term_ctx_t *ctx, char *out, size_t outlen) {
+    if (!out || outlen < 5) {
+        return PM3_EINVARG;
+    }
+    out[0] = '\0';
+    const struct tlv *t2 = tlvdb_get(ctx->card, 0x57, NULL);
+    if (!t2 || t2->len < 8) {
+        return PM3_ESOFT;
+    }
+    char digits[32] = {0};
+    size_t di = 0;
+    for (size_t i = 0; i < t2->len && di + 1 < sizeof(digits); i++) {
+        uint8_t hi = (t2->value[i] >> 4) & 0x0f;
+        uint8_t lo = t2->value[i] & 0x0f;
+        if (hi <= 9) {
+            digits[di++] = (char)('0' + hi);
+        }
+        if (lo <= 9) {
+            digits[di++] = (char)('0' + lo);
+        } else if (lo == 0x0f) {
+            break;
+        }
+    }
+    if (di < 4) {
+        return PM3_ESOFT;
+    }
+    snprintf(out, outlen, "%.4s", digits + di - 4);
+    return PM3_SUCCESS;
+}
+
+static int crypto_rng_cycle(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *opts,
+                            Iso7816CommandChannel channel, emv_term_crypto_prepare_opts_t *prep,
+                            bool *have_session, uint32_t poll_ms, crypto_rng_cycle_info_t *info) {
+    if (info) {
+        memset(info, 0, sizeof(*info));
+    }
+
+    int res = PM3_SUCCESS;
+    if (channel == CC_CONTACTLESS) {
+        res = EMVContactlessReselect(channel, poll_ms);
+    }
+    if (res == PM3_SUCCESS) {
+        ctx->opts.activate_field = false;
+        bool used_fast = false;
+        if (have_session && *have_session) {
+            res = emv_transaction_crypto_fast_init(ctx);
+            if (res) {
+                if (have_session) {
+                    *have_session = false;
+                }
+                ctx->crypto_stream_profile_valid = false;
+            } else {
+                used_fast = true;
+            }
+        }
+        if (have_session && !*have_session) {
+            res = emv_term_crypto_prepare_card(ctx, ctx->opts.param_load_json, NULL, prep);
+            if (res == PM3_SUCCESS && ctx->aid_len) {
+                *have_session = true;
+                emv_transaction_stream_cache_update(ctx);
+            }
+        }
+        if (info) {
+            info->used_fast_init = used_fast && res == PM3_SUCCESS;
+        }
+    }
+
+    if (res == PM3_SUCCESS) {
+        res = emv_term_crypto_rng(ctx, opts);
+        if (info) {
+            info->rng_ok = res == PM3_SUCCESS;
+        }
+        if (res != PM3_SUCCESS) {
+            ctx->crypto_stream_profile_valid = false;
+        } else {
+            emv_transaction_stream_cache_update(ctx);
+        }
+    }
+
+    if (info) {
+        info->res = res;
+    }
+    return res;
+}
+
+static int crypto_rng_latency_cmp(const void *a, const void *b) {
+    uint64_t va = *(const uint64_t *)a;
+    uint64_t vb = *(const uint64_t *)b;
+    if (va < vb) {
+        return -1;
+    }
+    if (va > vb) {
+        return 1;
+    }
+    return 0;
+}
+
+static uint64_t crypto_rng_percentile(uint64_t *samples, size_t count, unsigned pct) {
+    if (!samples || !count) {
+        return 0;
+    }
+    qsort(samples, count, sizeof(samples[0]), crypto_rng_latency_cmp);
+    size_t idx = (count * pct) / 100;
+    if (idx >= count) {
+        idx = count - 1;
+    }
+    return samples[idx];
 }
 
 int emv_term_crypto_rng_stream(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *opts,
@@ -881,44 +1058,233 @@ int emv_term_crypto_rng_stream(emv_term_ctx_t *ctx, const emv_term_crypto_rng_op
 
         g_printAndLog = 0;
 
-        int res = PM3_SUCCESS;
-        if (channel == CC_CONTACTLESS) {
-            res = EMVContactlessReselect(channel, poll_ms);
-        }
-        if (res == PM3_SUCCESS) {
-            ctx->opts.activate_field = false;
-            if (have_session) {
-                res = emv_transaction_crypto_fast_init(ctx);
-                if (res) {
-                    have_session = false;
-                    ctx->crypto_stream_profile_valid = false;
-                }
-            }
-            if (!have_session) {
-                res = emv_term_crypto_prepare_card(ctx, ctx->opts.param_load_json, NULL, &prep);
-                if (res == PM3_SUCCESS && ctx->aid_len) {
-                    have_session = true;
-                    emv_transaction_stream_cache_update(ctx);
-                }
-            }
-        }
-
-        if (res == PM3_SUCCESS) {
-            res = emv_term_crypto_rng(ctx, &ropts);
-            if (res != PM3_SUCCESS) {
-                ctx->crypto_stream_profile_valid = false;
-            } else {
-                emv_transaction_stream_cache_update(ctx);
-            }
-        }
+        crypto_rng_cycle(ctx, &ropts, channel, &prep, &have_session, poll_ms, NULL);
 
         g_printAndLog = saved_log;
+    }
 
-        if (res == PM3_ERFTRANS && kbd_enter_pressed()) {
+    return PM3_SUCCESS;
+}
+
+int emv_term_crypto_rng_bench(emv_term_ctx_t *ctx, const emv_term_crypto_rng_bench_opts_t *opts,
+                              Iso7816CommandChannel channel,
+                              emv_term_crypto_rng_bench_result_t *result_out) {
+    if (!ctx || !opts || !result_out) {
+        return PM3_EINVARG;
+    }
+
+    uint32_t duration_sec = opts->duration_sec ? opts->duration_sec : 30;
+    int out_bytes = opts->out_bytes > 0 ? opts->out_bytes : 8;
+    if (out_bytes > 32) {
+        out_bytes = 32;
+    }
+
+    emv_term_crypto_rng_opts_t ropts = {0};
+    ropts.samples = 1;
+    ropts.out_bytes = out_bytes;
+    ropts.quiet = true;
+    ropts.no_emit = true;
+    ropts.mode = EMV_CRYPTO_RNG_RAW;
+    ropts.stream_fmt = EMV_CRYPTO_STREAM_OFF;
+    ropts.genac = opts->genac;
+
+    ctx->opts.crypto_quick_afl = true;
+    ctx->opts.crypto_stream_fast = true;
+
+    char forced_aid_hex[sizeof(ctx->opts.crypto_forced_aid) * 2 + 1] = {0};
+    const char *forced_ptr = NULL;
+    if (ctx->opts.crypto_forced_aid_len) {
+        snprintf(forced_aid_hex, sizeof(forced_aid_hex), "%s",
+                 sprint_hex_inrow(ctx->opts.crypto_forced_aid, ctx->opts.crypto_forced_aid_len));
+        forced_ptr = forced_aid_hex;
+    }
+
+    emv_term_crypto_prepare_opts_t prep = {
+        .quick_afl = true,
+        .aid_fallback = ctx->opts.crypto_aid_fallback,
+        .forced_aid_hex = forced_ptr,
+    };
+
+    memset(result_out, 0, sizeof(*result_out));
+
+    bool have_session = false;
+    uint32_t poll_ms = 0;
+    uint64_t bench_start = msclock();
+    uint64_t bench_end = bench_start + (uint64_t)duration_sec * 1000;
+    uint64_t next_progress = bench_start + 5000;
+    uint64_t latency_sum = 0;
+    uint64_t *latencies = NULL;
+    size_t latency_cap = 0;
+    size_t latency_count = 0;
+
+    PrintAndLogEx(INFO, "=== EMV card RNG speed bench (%u s) ===", duration_sec);
+    PrintAndLogEx(INFO, "Hold the card on the antenna — Enter to stop early");
+
+    while (msclock() < bench_end) {
+        if (kbd_enter_pressed()) {
             break;
+        }
+
+        uint64_t cycle_start = msclock();
+        crypto_rng_cycle_info_t cycle = {0};
+        crypto_rng_cycle(ctx, &ropts, channel, &prep, &have_session, poll_ms, &cycle);
+        uint64_t cycle_ms = msclock() - cycle_start;
+
+        result_out->cycles_total++;
+        if (cycle.rng_ok) {
+            result_out->cycles_ok++;
+            latency_sum += cycle_ms;
+            if (latency_count == latency_cap) {
+                size_t new_cap = latency_cap ? latency_cap * 2 : 64;
+                uint64_t *tmp = realloc(latencies, new_cap * sizeof(*latencies));
+                if (!tmp) {
+                    free(latencies);
+                    latencies = NULL;
+                    PrintAndLogEx(ERR, "Out of memory recording bench latencies");
+                    return PM3_ESOFT;
+                }
+                latencies = tmp;
+                latency_cap = new_cap;
+            }
+            latencies[latency_count++] = cycle_ms;
+
+            if (result_out->cycles_ok == 1 || cycle_ms < result_out->cycle_ms_min) {
+                result_out->cycle_ms_min = cycle_ms;
+            }
+            if (cycle_ms > result_out->cycle_ms_max) {
+                result_out->cycle_ms_max = cycle_ms;
+            }
+
+            if (cycle.used_fast_init) {
+                result_out->fast_init_cycles++;
+            } else {
+                result_out->full_init_cycles++;
+            }
+        } else {
+            result_out->cycles_fail++;
+        }
+
+        uint64_t now = msclock();
+        if (now >= next_progress) {
+            double elapsed_s = (double)(now - bench_start) / 1000.0;
+            double bps = elapsed_s > 0 ? (double)result_out->cycles_ok / elapsed_s : 0.0;
+            PrintAndLogEx(INFO, "  %.1f s — %.2f blocks/s (%u ok, %u fail)",
+                          elapsed_s, bps, result_out->cycles_ok, result_out->cycles_fail);
+            next_progress = now + 5000;
         }
     }
 
+    result_out->elapsed_ms = msclock() - bench_start;
+    double elapsed_s = (double)result_out->elapsed_ms / 1000.0;
+    if (elapsed_s > 0) {
+        result_out->blocks_per_sec = (double)result_out->cycles_ok / elapsed_s;
+        result_out->bytes_per_sec = result_out->blocks_per_sec * (double)out_bytes;
+    }
+    if (result_out->cycles_ok) {
+        result_out->cycle_ms_avg = latency_sum / result_out->cycles_ok;
+        result_out->cycle_ms_p50 = crypto_rng_percentile(latencies, latency_count, 50);
+        result_out->cycle_ms_p95 = crypto_rng_percentile(latencies, latency_count, 95);
+    }
+    free(latencies);
+
+    PrintAndLogEx(INFO, "--- bench result (%.1f s) ---", elapsed_s);
+    if (ctx->aid_len) {
+        PrintAndLogEx(INFO, "Card: %s — AID %s",
+                      crypto_rng_vendor_label(ctx), sprint_hex_inrow(ctx->aid, ctx->aid_len));
+    }
+    PrintAndLogEx(INFO, "Path: %s  AIP=%04x", crypto_rng_path_label(ctx), crypto_card_aip(ctx));
+
+    char app_label[64] = {0};
+    if (crypto_rng_app_label(ctx, app_label, sizeof(app_label)) == PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "Application label: %s", app_label);
+    }
+
+    char pan_last4[8] = {0};
+    if (crypto_rng_pan_last4(ctx, pan_last4, sizeof(pan_last4)) == PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "PAN last 4: %s (from track2)", pan_last4);
+    }
+
+    if (result_out->cycles_total) {
+        double success_pct = 100.0 * (double)result_out->cycles_ok / (double)result_out->cycles_total;
+        PrintAndLogEx(INFO, "Cycles: %u ok / %u fail (%.1f%% success)",
+                      result_out->cycles_ok, result_out->cycles_fail, success_pct);
+    } else {
+        PrintAndLogEx(WARNING, "No cycles completed — was the card on the antenna?");
+    }
+
+    PrintAndLogEx(INFO, "Throughput: %.2f blocks/s  %.1f bytes/s (%d bytes/block)",
+                  result_out->blocks_per_sec, result_out->bytes_per_sec, out_bytes);
+
+    if (result_out->cycles_ok) {
+        PrintAndLogEx(INFO, "Latency (ok cycles): min %" PRIu64 " ms  avg %" PRIu64 " ms  "
+                      "p50 %" PRIu64 " ms  p95 %" PRIu64 " ms  max %" PRIu64 " ms",
+                      result_out->cycle_ms_min, result_out->cycle_ms_avg,
+                      result_out->cycle_ms_p50, result_out->cycle_ms_p95, result_out->cycle_ms_max);
+    }
+
+    PrintAndLogEx(INFO, "Init mix: %u full  %u fast",
+                  result_out->full_init_cycles, result_out->fast_init_cycles);
+    PrintAndLogEx(HINT, "Lab timing only — compare cards with `-o bench.json` for spreadsheets");
+
+    return PM3_SUCCESS;
+}
+
+int emv_term_crypto_rng_bench_export_json(const emv_term_ctx_t *ctx,
+                                          const emv_term_crypto_rng_bench_result_t *result,
+                                          const char *path) {
+    if (!ctx || !result || !path || !path[0]) {
+        return PM3_EINVARG;
+    }
+
+    json_t *root = json_object();
+    json_t *file = json_object();
+    JsonSaveStr(file, "Created", "proxmark3 emv terminal crypto rng bench");
+    JsonSaveStr(file, "Version", "1");
+    json_object_set_new(root, "File", file);
+
+    json_t *card = json_object();
+    if (ctx->aid_len) {
+        JsonSaveBufAsHexCompact(card, "AID", (uint8_t *)ctx->aid, ctx->aid_len);
+        JsonSaveStr(card, "Vendor", crypto_rng_vendor_label(ctx));
+    }
+    JsonSaveStr(card, "CryptoPath", crypto_rng_path_label(ctx));
+    JsonSaveHex(card, "AIP", crypto_card_aip(ctx), 2);
+    json_add_tlv_hex(card, "ATC", tlvdb_get(ctx->card, 0x9f36, NULL));
+
+    char app_label[64] = {0};
+    if (crypto_rng_app_label(ctx, app_label, sizeof(app_label)) == PM3_SUCCESS) {
+        JsonSaveStr(card, "ApplicationLabel", app_label);
+    }
+    char pan_last4[8] = {0};
+    if (crypto_rng_pan_last4(ctx, pan_last4, sizeof(pan_last4)) == PM3_SUCCESS) {
+        JsonSaveStr(card, "PANLast4", pan_last4);
+    }
+    json_object_set_new(root, "Card", card);
+
+    json_t *bench = json_object();
+    json_object_set_new(bench, "DurationMs", json_integer((json_int_t)result->elapsed_ms));
+    json_object_set_new(bench, "CyclesTotal", json_integer(result->cycles_total));
+    json_object_set_new(bench, "CyclesOk", json_integer(result->cycles_ok));
+    json_object_set_new(bench, "CyclesFail", json_integer(result->cycles_fail));
+    json_object_set_new(bench, "FastInitCycles", json_integer(result->fast_init_cycles));
+    json_object_set_new(bench, "FullInitCycles", json_integer(result->full_init_cycles));
+    json_object_set_new(bench, "BlocksPerSec", json_real(result->blocks_per_sec));
+    json_object_set_new(bench, "BytesPerSec", json_real(result->bytes_per_sec));
+    json_object_set_new(bench, "CycleMsMin", json_integer((json_int_t)result->cycle_ms_min));
+    json_object_set_new(bench, "CycleMsAvg", json_integer((json_int_t)result->cycle_ms_avg));
+    json_object_set_new(bench, "CycleMsP50", json_integer((json_int_t)result->cycle_ms_p50));
+    json_object_set_new(bench, "CycleMsP95", json_integer((json_int_t)result->cycle_ms_p95));
+    json_object_set_new(bench, "CycleMsMax", json_integer((json_int_t)result->cycle_ms_max));
+    json_object_set_new(root, "Bench", bench);
+
+    int res = json_dump_file(root, path, JSON_INDENT(2));
+    json_decref(root);
+
+    if (res) {
+        PrintAndLogEx(ERR, "Failed to write %s", path);
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(SUCCESS, "RNG bench export: %s", path);
     return PM3_SUCCESS;
 }
 

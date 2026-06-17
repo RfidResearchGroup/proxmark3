@@ -91,10 +91,33 @@ typedef struct {
     uint64_t range_max;
     emv_term_crypto_rng_mode_t mode;
     bool quiet;
+    bool no_emit;
     emv_term_crypto_stream_fmt_t stream_fmt;
     bool stream_turbo;
     emv_term_crypto_genac_opts_t genac;
 } emv_term_crypto_rng_opts_t;
+
+typedef struct {
+    uint32_t duration_sec;
+    int out_bytes;
+    emv_term_crypto_genac_opts_t genac;
+} emv_term_crypto_rng_bench_opts_t;
+
+typedef struct {
+    uint64_t elapsed_ms;
+    uint32_t cycles_total;
+    uint32_t cycles_ok;
+    uint32_t cycles_fail;
+    uint32_t fast_init_cycles;
+    uint32_t full_init_cycles;
+    double blocks_per_sec;
+    double bytes_per_sec;
+    uint64_t cycle_ms_min;
+    uint64_t cycle_ms_max;
+    uint64_t cycle_ms_avg;
+    uint64_t cycle_ms_p50;
+    uint64_t cycle_ms_p95;
+} emv_term_crypto_rng_bench_result_t;
 
 int emv_term_crypto_prepare_card(emv_term_ctx_t *ctx, bool jload, const char *session_path,
                                  const emv_term_crypto_prepare_opts_t *prep);
@@ -121,6 +144,11 @@ int emv_term_crypto_bench_ex(emv_term_ctx_t *ctx, const emv_term_crypto_bench_op
 int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *opts);
 int emv_term_crypto_rng_stream(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *opts,
                                Iso7816CommandChannel channel);
+int emv_term_crypto_rng_bench(emv_term_ctx_t *ctx, const emv_term_crypto_rng_bench_opts_t *opts,
+                              Iso7816CommandChannel channel, emv_term_crypto_rng_bench_result_t *result_out);
+int emv_term_crypto_rng_bench_export_json(const emv_term_ctx_t *ctx,
+                                          const emv_term_crypto_rng_bench_result_t *result,
+                                          const char *path);
 
 void emv_term_uint_to_bcd(uint64_t val, uint8_t *out, size_t len);
 

@@ -693,6 +693,8 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
                   "emv terminal crypto rng -s --dice\n"
                   "emv terminal crypto rng -s --stream | head -c 64\n"
                   "./pm3 -c \"emv terminal crypto rng -s --stream\" 2>/dev/null | head -c 128\n"
+                  "emv terminal crypto rng -s --bench --seconds 30\n"
+                  "emv terminal crypto rng -s --bench -o cibc-visa.json\n"
                   "emv terminal crypto rng -s --stream --stream-raw | head -c 32 | xxd\n"
                   "emv terminal crypto rng -s --samples 5 --max 1000000\n");
 
@@ -710,6 +712,9 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
         arg_lit0(NULL, "stream", "Loop — continuous lowercase hex on stdout (Enter stops)"),
         arg_lit0(NULL, "stream-turbo", "Alias for --stream (kept for scripts); same speed path"),
         arg_lit0(NULL, "stream-raw", "With --stream: raw bytes instead of hex"),
+        arg_lit0(NULL, "bench", "Time stream cycles for N seconds (hold card on antenna)"),
+        arg_u64_0(NULL, "seconds", "<n>", "Bench duration in seconds (default 30, with --bench)"),
+        arg_str0("o", "output", "<file>", "Write bench JSON (with --bench)"),
         arg_lit0(NULL, "quiet", "Less per-sample output"),
         arg_param_end
     };
@@ -739,17 +744,38 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
     bool stream = arg_get_lit(ctx, 17);
     bool stream_turbo = arg_get_lit(ctx, 18);
     bool stream_raw = arg_get_lit(ctx, 19);
-    bool quiet = arg_get_lit(ctx, 20);
+    bool bench = arg_get_lit(ctx, 20);
+    uint64_t bench_seconds = arg_get_u64_def(ctx, 21, 30);
+    bool quiet = arg_get_lit(ctx, 23);
     crypto_cli_pin_session(&cli, ctx, 6);
     crypto_cli_pin_forced_aid(&cli, ctx, 8);
+    crypto_cli_pin_output(&cli, ctx, 22);
     CLIParserFree(ctx);
 
     if (stream) {
         cli.quick_afl = true;
     }
+    if (bench) {
+        cli.quick_afl = true;
+    }
+
+    if (bench && stream) {
+        PrintAndLogEx(ERR, "--bench and --stream are incompatible");
+        return PM3_EINVARG;
+    }
 
     if (stream && (dice || coin || range_max > 0)) {
         PrintAndLogEx(ERR, "--stream outputs entropy only (incompatible with --dice/--coin/--max)");
+        return PM3_EINVARG;
+    }
+
+    if (bench && (dice || coin || range_max > 0)) {
+        PrintAndLogEx(ERR, "--bench is incompatible with --dice/--coin/--max");
+        return PM3_EINVARG;
+    }
+
+    if (bench && bench_seconds == 0) {
+        PrintAndLogEx(ERR, "--seconds must be > 0");
         return PM3_EINVARG;
     }
 
@@ -758,6 +784,8 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
     Iso7816CommandChannel channel = cli.wired ? CC_CONTACT : CC_CONTACTLESS;
 
     if (stream) {
+        res = crypto_init_live_only(&term_ctx, &cli);
+    } else if (bench) {
         res = crypto_init_live_only(&term_ctx, &cli);
     } else {
         res = crypto_prepare_live(&term_ctx, &cli);
@@ -785,9 +813,22 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
         ropts.range_max = range_max;
     }
 
-    SetAPDULogging(cli.show_apdu && !stream);
+    SetAPDULogging(cli.show_apdu && !stream && !bench);
     if (stream) {
         res = emv_term_crypto_rng_stream(&term_ctx, &ropts, channel);
+    } else if (bench) {
+        emv_term_crypto_rng_bench_opts_t bopts = {0};
+        bopts.duration_sec = (uint32_t)bench_seconds;
+        bopts.out_bytes = bytes;
+        cli_to_genac_opts(&cli, &bopts.genac);
+        emv_term_crypto_rng_bench_result_t bench_result = {0};
+        res = emv_term_crypto_rng_bench(&term_ctx, &bopts, channel, &bench_result);
+        if (res == PM3_SUCCESS && cli.output && cli.output[0]) {
+            int eres = emv_term_crypto_rng_bench_export_json(&term_ctx, &bench_result, cli.output);
+            if (eres) {
+                res = eres;
+            }
+        }
     } else {
         res = emv_term_crypto_rng(&term_ctx, &ropts);
     }
