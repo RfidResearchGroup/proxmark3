@@ -855,6 +855,10 @@ int emv_term_crypto_rng_stream(emv_term_ctx_t *ctx, const emv_term_crypto_rng_op
 
     ctx->opts.crypto_quick_afl = true;
     ctx->opts.crypto_stream_fast = true;
+    if (ropts.stream_turbo) {
+        ctx->opts.crypto_aid_fallback = false;
+        ropts.genac.mc_challenge = false;
+    }
 
     char forced_aid_hex[sizeof(ctx->opts.crypto_forced_aid) * 2 + 1] = {0};
     const char *forced_ptr = NULL;
@@ -866,12 +870,13 @@ int emv_term_crypto_rng_stream(emv_term_ctx_t *ctx, const emv_term_crypto_rng_op
 
     emv_term_crypto_prepare_opts_t prep = {
         .quick_afl = true,
-        .aid_fallback = ctx->opts.crypto_aid_fallback,
+        .aid_fallback = ropts.stream_turbo ? false : ctx->opts.crypto_aid_fallback,
         .forced_aid_hex = forced_ptr,
     };
 
     bool have_session = false;
     uint8_t saved_log = g_printAndLog;
+    uint32_t poll_ms = ropts.stream_turbo ? 4 : 12;
 
     while (true) {
         if (kbd_enter_pressed()) {
@@ -882,26 +887,31 @@ int emv_term_crypto_rng_stream(emv_term_ctx_t *ctx, const emv_term_crypto_rng_op
 
         int res = PM3_SUCCESS;
         if (channel == CC_CONTACTLESS) {
-            res = EMVContactlessReselect(channel, 25);
+            res = EMVContactlessReselect(channel, poll_ms);
         }
         if (res == PM3_SUCCESS) {
             ctx->opts.activate_field = false;
-            if (have_session) {
+            if (have_session && ctx->crypto_stream_profile_valid) {
                 res = emv_transaction_crypto_fast_init(ctx);
                 if (res) {
                     have_session = false;
+                    ctx->crypto_stream_profile_valid = false;
                 }
             }
             if (!have_session) {
                 res = emv_term_crypto_prepare_card(ctx, ctx->opts.param_load_json, NULL, &prep);
                 if (res == PM3_SUCCESS && ctx->aid_len) {
                     have_session = true;
+                    emv_transaction_stream_cache_update(ctx);
                 }
             }
         }
 
         if (res == PM3_SUCCESS) {
             res = emv_term_crypto_rng(ctx, &ropts);
+            if (res == PM3_SUCCESS) {
+                emv_transaction_stream_cache_update(ctx);
+            }
         }
 
         g_printAndLog = saved_log;

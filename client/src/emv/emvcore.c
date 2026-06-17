@@ -361,6 +361,19 @@ int EMVContactlessReselect(Iso7816CommandChannel channel, uint32_t poll_ms) {
     }
 
     uint32_t delay = poll_ms ? poll_ms : 25;
+    for (int burst = 0; burst < 4; burst++) {
+        if (kbd_enter_pressed()) {
+            return PM3_ERFTRANS;
+        }
+        DropFieldEx(channel);
+        if (emv_contactless_poll_once(false) == PM3_SUCCESS) {
+            return PM3_SUCCESS;
+        }
+        if (delay > 1) {
+            msleep(1);
+        }
+    }
+
     while (true) {
         if (kbd_enter_pressed()) {
             return PM3_ERFTRANS;

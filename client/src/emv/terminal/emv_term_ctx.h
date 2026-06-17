@@ -157,6 +157,10 @@ typedef struct emv_term_ctx {
     size_t crypto_ppse_app_count;
     size_t crypto_ppse_app_index;
     bool crypto_aid_fallback_used;
+    bool crypto_stream_profile_valid;
+    bool crypto_stream_qvsdc;
+    uint8_t crypto_stream_cdol1[256];
+    size_t crypto_stream_cdol1_len;
 } emv_term_ctx_t;
 
 const char *emv_term_phase_name(emv_term_phase_t phase);

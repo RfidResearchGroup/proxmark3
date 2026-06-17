@@ -20,6 +20,7 @@ void emv_transaction_process_ac_format1(struct tlvdb *tlvRoot, uint8_t *buf, siz
 
 int emv_transaction_init(emv_term_ctx_t *ctx);
 int emv_transaction_crypto_fast_init(emv_term_ctx_t *ctx);
+void emv_transaction_stream_cache_update(emv_term_ctx_t *ctx);
 int emv_transaction_switch_application(emv_term_ctx_t *ctx, size_t ppse_index);
 int emv_transaction_try_aid_fallback(emv_term_ctx_t *ctx);
 int emv_transaction_visa_request_gpo_ac(emv_term_ctx_t *ctx);

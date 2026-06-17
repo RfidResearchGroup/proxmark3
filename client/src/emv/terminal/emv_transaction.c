@@ -352,9 +352,10 @@ static int emv_transaction_read_afl_records(emv_term_ctx_t *ctx, uint8_t *buf, s
                 }
 
                 have_cdol = emv_transaction_card_has_crypto_dol(ctx->card);
-                if (quick && have_cdol && tlvdb_get(ctx->card, 0x8d, NULL)) {
-                    PrintAndLogEx(INFO, "* Quick AFL: CDOL1+CDOL2 found — stopping record reads");
-                    goto afl_done;
+                if (quick && have_cdol) {
+                    if (ctx->opts.crypto_stream_fast || tlvdb_get(ctx->card, 0x8d, NULL)) {
+                        goto afl_done;
+                    }
                 }
             }
         }
@@ -433,6 +434,14 @@ static int emv_transaction_post_aid_select(emv_term_ctx_t *ctx, uint8_t *buf, si
                 PrintAndLogEx(WARNING, "\n* * WARNING: Can't extract PAN from track2.");
             }
         }
+    }
+
+    if (ctx->opts.crypto_stream_fast && ctx->crypto_stream_profile_valid &&
+            (ctx->crypto_stream_cdol1_len || ctx->crypto_stream_qvsdc)) {
+        if (ctx->crypto_stream_cdol1_len) {
+            tlvdb_change_or_add_node(ctx->card, 0x8c, ctx->crypto_stream_cdol1_len, ctx->crypto_stream_cdol1);
+        }
+        return PM3_SUCCESS;
     }
 
     return emv_transaction_read_afl_records(ctx, buf, buflen);
@@ -643,6 +652,28 @@ int emv_transaction_crypto_fast_init(emv_term_ctx_t *ctx) {
     res = emv_transaction_post_aid_select(ctx, buf, sizeof(buf));
     ctx->opts.crypto_stream_fast = saved_fast;
     return res;
+}
+
+void emv_transaction_stream_cache_update(emv_term_ctx_t *ctx) {
+    if (!ctx || !ctx->aid_len) {
+        return;
+    }
+    const struct tlv *cdol = tlvdb_get(ctx->card, 0x8c, NULL);
+    ctx->crypto_stream_cdol1_len = 0;
+    ctx->crypto_stream_qvsdc = false;
+    if (cdol && cdol->len && cdol->len <= sizeof(ctx->crypto_stream_cdol1)) {
+        memcpy(ctx->crypto_stream_cdol1, cdol->value, cdol->len);
+        ctx->crypto_stream_cdol1_len = cdol->len;
+    }
+    const struct tlv *aip = tlvdb_get(ctx->card, 0x82, NULL);
+    if (aip && aip->len >= 2) {
+        uint16_t aipv = (uint16_t)(aip->value[0] | (aip->value[1] << 8));
+        if (ctx->aid_len >= 5 && GetCardPSVendor(ctx->aid, ctx->aid_len) == CV_VISA && aipv == 0x8000) {
+            ctx->crypto_stream_qvsdc = true;
+        }
+    }
+    ctx->crypto_stream_profile_valid =
+        (ctx->crypto_stream_cdol1_len > 0 || ctx->crypto_stream_qvsdc);
 }
 
 int emv_transaction_oda(emv_term_ctx_t *ctx) {

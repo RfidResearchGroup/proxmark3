@@ -692,7 +692,7 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
                   "emv terminal crypto rng -s\n"
                   "emv terminal crypto rng -s --dice\n"
                   "emv terminal crypto rng -s --stream | head -c 64\n"
-                  "./pm3 -c \"emv terminal crypto rng -s --stream\" 2>/dev/null | head -c 64\n"
+                  "./pm3 -c \"emv terminal crypto rng -s --stream --stream-turbo --bytes 1\" 2>/dev/null\n"
                   "emv terminal crypto rng -s --stream --stream-raw | head -c 32 | xxd\n"
                   "emv terminal crypto rng -s --samples 5 --max 1000000\n");
 
@@ -708,6 +708,7 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
         arg_lit0(NULL, "dice", "Roll a d6"),
         arg_lit0(NULL, "coin", "Coin flip"),
         arg_lit0(NULL, "stream", "Loop — continuous lowercase hex on stdout (Enter stops)"),
+        arg_lit0(NULL, "stream-turbo", "Faster --stream (cached CDOL, skip AFL, 1-byte default)"),
         arg_lit0(NULL, "stream-raw", "With --stream: raw bytes instead of hex"),
         arg_lit0(NULL, "quiet", "Less per-sample output"),
         arg_param_end
@@ -736,14 +737,23 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
     bool dice = arg_get_lit(ctx, 15);
     bool coin = arg_get_lit(ctx, 16);
     bool stream = arg_get_lit(ctx, 17);
-    bool stream_raw = arg_get_lit(ctx, 18);
-    bool quiet = arg_get_lit(ctx, 19);
+    bool stream_turbo = arg_get_lit(ctx, 18);
+    bool stream_raw = arg_get_lit(ctx, 19);
+    bool quiet = arg_get_lit(ctx, 20);
     crypto_cli_pin_session(&cli, ctx, 6);
     crypto_cli_pin_forced_aid(&cli, ctx, 8);
     CLIParserFree(ctx);
 
     if (stream) {
         cli.quick_afl = true;
+        cli.no_aid_fallback = stream_turbo || cli.no_aid_fallback;
+        if (stream_turbo) {
+            cli.mc_challenge = false;
+        }
+    }
+
+    if (stream && stream_turbo && bytes == 8) {
+        bytes = 1;
     }
 
     if (stream && (dice || coin || range_max > 0)) {
@@ -770,6 +780,7 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
     ropts.quiet = quiet || stream;
     if (stream) {
         ropts.stream_fmt = stream_raw ? EMV_CRYPTO_STREAM_RAW : EMV_CRYPTO_STREAM_HEX;
+        ropts.stream_turbo = stream_turbo;
     }
     cli_to_genac_opts(&cli, &ropts.genac);
 
