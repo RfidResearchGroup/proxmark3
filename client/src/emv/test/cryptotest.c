@@ -39,6 +39,7 @@
 #include "terminal_taa_test.h"
 #include "terminal_host_test.h"
 #include "terminal_cvm_test.h"
+#include "terminal_crypto_test.h"
 #include "terminal_exception_test.h"
 #include "terminal_sim_export_test.h"
 #include "terminal_pcap_test.h"
@@ -116,6 +117,9 @@ int ExecuteCryptoTests(bool verbose, bool ignore_time, bool include_slow_tests, 
     if (res) TestFail = true;
 
     res = exec_terminal_cvm_test(verbose);
+    if (res) TestFail = true;
+
+    res = exec_terminal_crypto_test(verbose);
     if (res) TestFail = true;
 
     res = exec_terminal_exception_test(verbose);

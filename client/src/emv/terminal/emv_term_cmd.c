@@ -31,6 +31,7 @@
 #include "emv_term_capabilities.h"
 #include "emv_term_pcap.h"
 #include "emv_term_probe.h"
+#include "emv_term_crypto_cmd.h"
 #include "emv_term_profile.h"
 #include "emv_term_tlv.h"
 #include "emv_transaction.h"
@@ -1183,6 +1184,7 @@ static command_t TerminalCommandTable[] = {
     {"online",  CmdEMVTerminalOnline, IfPm3Iso14443,   "Complete online path after ARQC"},
     {"pin",     CmdEMVTerminalPin,    IfPm3Iso14443,   "Standalone VERIFY PIN"},
     {"cvm",     CmdEMVTerminalCvm,    IfPm3Iso14443,   "CVM diagnostics (optional --run/--verify)"},
+    {"crypto",  CmdEMVTerminalCrypto, AlwaysAvailable, "Crypto playground (genac, challenge, vary)"},
     {"probe",   CmdEMVTerminalProbe,  IfPm3Iso14443,   "GET DATA + AFL record enumeration"},
     {"profile", CmdEMVTerminalProfile, AlwaysAvailable, "Print or validate terminal profile JSON"},
     {"load",    CmdEMVTerminalLoad,   AlwaysAvailable, "Load card data from scan JSON"},

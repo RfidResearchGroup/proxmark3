@@ -43,7 +43,7 @@ void emv_term_copy_terminal_tags_to_card(emv_term_ctx_t *ctx) {
         return;
     }
 
-    for (struct tlvdb *node = ctx->terminal->children; node; node = tlvdb_elm_get_next(node)) {
+    for (struct tlvdb *node = ctx->terminal; node; node = tlvdb_elm_get_next(node)) {
         copy_terminal_node(ctx->card, node);
     }
 }

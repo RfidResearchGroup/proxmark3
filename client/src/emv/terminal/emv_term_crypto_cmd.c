@@ -1,0 +1,550 @@
+//-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
+// EMV terminal emulator — crypto playground CLI
+//-----------------------------------------------------------------------------
+
+#include "emv_term_crypto_cmd.h"
+#include "emv_term_crypto.h"
+#include "emv_term_probe.h"
+#include "emv_term_profile.h"
+#include "emv_term_tlv.h"
+#include "../emvcore.h"
+#include "cliparser.h"
+#include "cmdparser.h"
+#include "ui.h"
+#include "commonutil.h"
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct {
+    bool activate;
+    bool show_apdu;
+    bool decode_tlv;
+    bool wired;
+    bool jload;
+    const char *session;
+    const char *output;
+    uint64_t amount_cents;
+    bool amount_set;
+    uint8_t un[4];
+    bool un_set;
+    emv_term_crypto_ac_t ac_type;
+    bool cda;
+    bool mc_challenge;
+    int count;
+    bool do_challenge;
+    bool do_intauth;
+    bool do_checksum;
+    bool do_vary;
+    bool no_genac;
+} emv_term_crypto_cli_t;
+
+static void crypto_cli_defaults(emv_term_crypto_cli_t *c) {
+    memset(c, 0, sizeof(*c));
+    c->ac_type = EMV_CRYPTO_AC_ARQC;
+    c->mc_challenge = true;
+    c->count = 1;
+}
+
+static emv_term_crypto_ac_t parse_decision(const char *s) {
+    if (!s || !s[0]) {
+        return EMV_CRYPTO_AC_ARQC;
+    }
+    if (strncmp(s, "aac", 3) == 0) {
+        return EMV_CRYPTO_AC_AAC;
+    }
+    if (strncmp(s, "tc", 2) == 0) {
+        return EMV_CRYPTO_AC_TC;
+    }
+    return EMV_CRYPTO_AC_ARQC;
+}
+
+static void cli_to_genac_opts(const emv_term_crypto_cli_t *cli, emv_term_crypto_genac_opts_t *opts) {
+    emv_term_crypto_genac_opts_defaults(opts);
+    opts->ac_type = cli->ac_type;
+    opts->cda = cli->cda;
+    opts->mc_challenge = cli->mc_challenge;
+    if (cli->amount_set) {
+        opts->amount_set = true;
+        emv_term_uint_to_bcd(cli->amount_cents, opts->amount, sizeof(opts->amount));
+    }
+    if (cli->un_set) {
+        opts->un_set = true;
+        memcpy(opts->un, cli->un, 4);
+    }
+}
+
+static int crypto_prepare_live(emv_term_ctx_t *term_ctx, const emv_term_crypto_cli_t *cli) {
+    emv_term_cli_opts_t opts = {0};
+    opts.activate_field = cli->activate;
+    opts.show_apdu = cli->show_apdu;
+    opts.decode_tlv = cli->decode_tlv;
+    opts.channel = cli->wired ? CC_CONTACT : CC_CONTACTLESS;
+    opts.param_load_json = cli->jload;
+
+    int res = emv_term_ctx_init(term_ctx, &opts);
+    if (res) {
+        return res;
+    }
+
+    if (!cli->session || !cli->session[0]) {
+        int prep = EMVPrepareContactless(opts.channel, cli->activate);
+        if (prep) {
+            emv_term_ctx_free(term_ctx);
+            return prep;
+        }
+        term_ctx->opts.activate_field = false;
+    }
+
+    res = emv_term_prepare_card(term_ctx, cli->jload, cli->session);
+    if (res) {
+        emv_term_ctx_free(term_ctx);
+        return res;
+    }
+
+    if (cli->jload) {
+        emv_term_init_transaction_params(term_ctx->terminal, true, NULL, TT_QVSDCMCHIP, false);
+        emv_term_copy_terminal_tags_to_card(term_ctx);
+    }
+
+    if (cli->amount_set) {
+        emv_term_crypto_set_amount_cents(term_ctx, cli->amount_cents);
+    }
+    if (cli->un_set) {
+        emv_term_crypto_set_un_bytes(term_ctx, cli->un);
+    }
+
+    return PM3_SUCCESS;
+}
+
+static void crypto_finish(emv_term_ctx_t *term_ctx, Iso7816CommandChannel channel) {
+    DropFieldEx(channel);
+    SetAPDULogging(false);
+    emv_term_ctx_free(term_ctx);
+}
+
+static void parse_amount_un(CLIParserContext *ctx, int amount_idx, int un_idx, emv_term_crypto_cli_t *cli) {
+    const char *amount = arg_get_str(ctx, amount_idx)->sval[0];
+    if (amount && amount[0]) {
+        cli->amount_cents = strtoull(amount, NULL, 10);
+        cli->amount_set = true;
+    }
+    const char *unhex = arg_get_str(ctx, un_idx)->sval[0];
+    if (unhex && unhex[0]) {
+        int buflen = 0;
+        if (!param_gethex_to_eol(unhex, 0, cli->un, sizeof(cli->un), &buflen) && buflen == 4) {
+            cli->un_set = true;
+        }
+    }
+}
+
+#define CRYPTO_BASE_ARGS \
+        arg_lit0("s",  "select",   "Activate field and init card"), \
+        arg_lit0("a",  "apdu",     "Show APDUs"), \
+        arg_lit0("t",  "tlv",      "TLV decode"), \
+        arg_lit0("w",  "wired",    "Contact"), \
+        arg_lit0("j",  "jload",    "Load terminal profile"), \
+        arg_str0(NULL, "session", "<file>", "Session JSON")
+
+static int CmdEMVTerminalCryptoSummary(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv terminal crypto summary",
+                  "Print CDOL/AIP/crypto TLV summary",
+                  "emv terminal crypto summary --session s.json\n"
+                  "emv terminal crypto summary -s -j\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        CRYPTO_BASE_ARGS,
+        arg_str0("m",  "amount", "<cents>", "Override 9F02"),
+        arg_str0(NULL, "un", "<hex>", "Override 9F37 (4 bytes)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    emv_term_crypto_cli_t cli;
+    crypto_cli_defaults(&cli);
+    cli.activate = arg_get_lit(ctx, 1);
+    cli.show_apdu = arg_get_lit(ctx, 2);
+    cli.decode_tlv = arg_get_lit(ctx, 3);
+    cli.wired = arg_get_lit(ctx, 4);
+    cli.jload = arg_get_lit(ctx, 5);
+    cli.session = arg_get_str(ctx, 6)->sval[0];
+    parse_amount_un(ctx, 7, 8, &cli);
+    CLIParserFree(ctx);
+
+    emv_term_ctx_t term_ctx;
+    int res = crypto_prepare_live(&term_ctx, &cli);
+    if (res) {
+        return res;
+    }
+    SetAPDULogging(cli.show_apdu);
+    res = emv_term_crypto_print_summary(&term_ctx);
+    crypto_finish(&term_ctx, cli.wired ? CC_CONTACT : CC_CONTACTLESS);
+    return res;
+}
+
+static int CmdEMVTerminalCryptoChallenge(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv terminal crypto challenge",
+                  "GET CHALLENGE (00 84)",
+                  "emv terminal crypto challenge -s -j -a\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        CRYPTO_BASE_ARGS,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    emv_term_crypto_cli_t cli;
+    crypto_cli_defaults(&cli);
+    cli.activate = arg_get_lit(ctx, 1);
+    cli.show_apdu = arg_get_lit(ctx, 2);
+    cli.decode_tlv = arg_get_lit(ctx, 3);
+    cli.wired = arg_get_lit(ctx, 4);
+    cli.jload = arg_get_lit(ctx, 5);
+    cli.session = arg_get_str(ctx, 6)->sval[0];
+    CLIParserFree(ctx);
+
+    emv_term_ctx_t term_ctx;
+    int res = crypto_prepare_live(&term_ctx, &cli);
+    if (res) {
+        return res;
+    }
+    SetAPDULogging(cli.show_apdu);
+    res = emv_term_crypto_challenge(&term_ctx, cli.decode_tlv, true);
+    crypto_finish(&term_ctx, cli.wired ? CC_CONTACT : CC_CONTACTLESS);
+    return res;
+}
+
+static int crypto_genac_handler(const char *Cmd, bool ac2) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, ac2 ? "emv terminal crypto genac2" : "emv terminal crypto genac",
+                  ac2 ? "GENERATE AC from CDOL2" : "GENERATE AC from CDOL1 (80 AE)",
+                  "emv terminal crypto genac -s -j --decision arqc -m 100 -a\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        CRYPTO_BASE_ARGS,
+        arg_str0("d",  "decision", "<aac|tc|arqc>", "Terminal decision (default arqc)"),
+        arg_lit0("c",  "cda",      "Request CDA in P1"),
+        arg_lit0(NULL, "no-mc-challenge", "Skip auto GET CHALLENGE for Mastercard"),
+        arg_str0("m",  "amount", "<cents>", "Override 9F02"),
+        arg_str0(NULL, "un", "<hex>", "Override 9F37 (4 bytes)"),
+        arg_str0("o",  "output", "<file>", "Export crypto JSON"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    emv_term_crypto_cli_t cli;
+    crypto_cli_defaults(&cli);
+    cli.activate = arg_get_lit(ctx, 1);
+    cli.show_apdu = arg_get_lit(ctx, 2);
+    cli.decode_tlv = arg_get_lit(ctx, 3);
+    cli.wired = arg_get_lit(ctx, 4);
+    cli.jload = arg_get_lit(ctx, 5);
+    cli.session = arg_get_str(ctx, 6)->sval[0];
+    const char *dec = arg_get_str(ctx, 7)->sval[0];
+    if (dec && dec[0]) {
+        cli.ac_type = parse_decision(dec);
+    }
+    cli.cda = arg_get_lit(ctx, 8);
+    cli.mc_challenge = !arg_get_lit(ctx, 9);
+    parse_amount_un(ctx, 10, 11, &cli);
+    cli.output = arg_get_str(ctx, 12)->sval[0];
+    CLIParserFree(ctx);
+
+    emv_term_ctx_t term_ctx;
+    int res = crypto_prepare_live(&term_ctx, &cli);
+    if (res) {
+        return res;
+    }
+
+    emv_term_crypto_genac_opts_t gopts;
+    cli_to_genac_opts(&cli, &gopts);
+
+    SetAPDULogging(cli.show_apdu);
+    res = emv_term_crypto_genac(&term_ctx, &gopts, ac2);
+    if (res == PM3_SUCCESS && cli.output && cli.output[0]) {
+        emv_term_crypto_export_json(&term_ctx, cli.output, NULL, 0);
+    }
+    crypto_finish(&term_ctx, cli.wired ? CC_CONTACT : CC_CONTACTLESS);
+    return res;
+}
+
+static int CmdEMVTerminalCryptoGenac(const char *Cmd) {
+    return crypto_genac_handler(Cmd, false);
+}
+
+static int CmdEMVTerminalCryptoGenac2(const char *Cmd) {
+    return crypto_genac_handler(Cmd, true);
+}
+
+static int CmdEMVTerminalCryptoVary(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv terminal crypto vary",
+                  "Repeat GEN AC with different 9F37 values",
+                  "emv terminal crypto vary -s -j --count 5 --decision arqc -a\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        CRYPTO_BASE_ARGS,
+        arg_str0("d",  "decision", "<aac|tc|arqc>", "Terminal decision"),
+        arg_lit0("c",  "cda",      "Request CDA"),
+        arg_lit0(NULL, "no-mc-challenge", "Skip MC GET CHALLENGE"),
+        arg_u64_0(NULL, "count", "<n>", "Iterations (default 3)"),
+        arg_str0("m",  "amount", "<cents>", "Override 9F02"),
+        arg_str0(NULL, "un", "<hex>", "Base 9F37 (optional)"),
+        arg_str0("o",  "output", "<file>", "Export JSON with Runs[]"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    emv_term_crypto_cli_t cli;
+    crypto_cli_defaults(&cli);
+    cli.activate = arg_get_lit(ctx, 1);
+    cli.show_apdu = arg_get_lit(ctx, 2);
+    cli.decode_tlv = arg_get_lit(ctx, 3);
+    cli.wired = arg_get_lit(ctx, 4);
+    cli.jload = arg_get_lit(ctx, 5);
+    cli.session = arg_get_str(ctx, 6)->sval[0];
+    const char *dec = arg_get_str(ctx, 7)->sval[0];
+    if (dec && dec[0]) {
+        cli.ac_type = parse_decision(dec);
+    }
+    cli.cda = arg_get_lit(ctx, 8);
+    cli.mc_challenge = !arg_get_lit(ctx, 9);
+    cli.count = (int)arg_get_u64_def(ctx, 10, 3);
+    if (cli.count < 1) {
+        cli.count = 1;
+    }
+    parse_amount_un(ctx, 11, 12, &cli);
+    cli.output = arg_get_str(ctx, 13)->sval[0];
+    CLIParserFree(ctx);
+
+    emv_term_ctx_t term_ctx;
+    int res = crypto_prepare_live(&term_ctx, &cli);
+    if (res) {
+        return res;
+    }
+
+    emv_term_crypto_genac_opts_t gopts;
+    cli_to_genac_opts(&cli, &gopts);
+
+    emv_term_crypto_run_entry_t entries[32] = {0};
+    size_t entry_count = ARRAYLEN(entries);
+
+    SetAPDULogging(cli.show_apdu);
+    res = emv_term_crypto_vary_un(&term_ctx, &gopts, cli.count, entries, &entry_count);
+    if (cli.output && cli.output[0]) {
+        emv_term_crypto_export_json(&term_ctx, cli.output, entries, entry_count);
+    }
+    crypto_finish(&term_ctx, cli.wired ? CC_CONTACT : CC_CONTACTLESS);
+    return res;
+}
+
+static int CmdEMVTerminalCryptoIntauth(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv terminal crypto intauth",
+                  "INTERNAL AUTHENTICATE / DDA (00 88)",
+                  "emv terminal crypto intauth -s -j -t -a\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        CRYPTO_BASE_ARGS,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    emv_term_crypto_cli_t cli;
+    crypto_cli_defaults(&cli);
+    cli.activate = arg_get_lit(ctx, 1);
+    cli.show_apdu = arg_get_lit(ctx, 2);
+    cli.decode_tlv = arg_get_lit(ctx, 3);
+    cli.wired = arg_get_lit(ctx, 4);
+    cli.jload = arg_get_lit(ctx, 5);
+    cli.session = arg_get_str(ctx, 6)->sval[0];
+    CLIParserFree(ctx);
+
+    emv_term_ctx_t term_ctx;
+    int res = crypto_prepare_live(&term_ctx, &cli);
+    if (res) {
+        return res;
+    }
+    SetAPDULogging(cli.show_apdu);
+    res = emv_term_crypto_intauth(&term_ctx, cli.decode_tlv);
+    crypto_finish(&term_ctx, cli.wired ? CC_CONTACT : CC_CONTACTLESS);
+    return res;
+}
+
+static int CmdEMVTerminalCryptoChecksum(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv terminal crypto checksum",
+                  "COMPUTE CRYPTOGRAPHIC CHECKSUM (MSD / UDOL)",
+                  "emv terminal crypto checksum -s -j -a\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        CRYPTO_BASE_ARGS,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    emv_term_crypto_cli_t cli;
+    crypto_cli_defaults(&cli);
+    cli.activate = arg_get_lit(ctx, 1);
+    cli.show_apdu = arg_get_lit(ctx, 2);
+    cli.decode_tlv = arg_get_lit(ctx, 3);
+    cli.wired = arg_get_lit(ctx, 4);
+    cli.jload = arg_get_lit(ctx, 5);
+    cli.session = arg_get_str(ctx, 6)->sval[0];
+    CLIParserFree(ctx);
+
+    emv_term_ctx_t term_ctx;
+    int res = crypto_prepare_live(&term_ctx, &cli);
+    if (res) {
+        return res;
+    }
+    SetAPDULogging(cli.show_apdu);
+    res = emv_term_crypto_msc_checksum(&term_ctx, cli.decode_tlv);
+    crypto_finish(&term_ctx, cli.wired ? CC_CONTACT : CC_CONTACTLESS);
+    return res;
+}
+
+static int CmdEMVTerminalCryptoExport(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv terminal crypto export",
+                  "Export crypto TLV snapshot JSON",
+                  "emv terminal crypto export --session s.json -o out.json\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        CRYPTO_BASE_ARGS,
+        arg_str1("o", "output", "<file>", "Output JSON path"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    emv_term_crypto_cli_t cli;
+    crypto_cli_defaults(&cli);
+    cli.activate = arg_get_lit(ctx, 1);
+    cli.jload = arg_get_lit(ctx, 5);
+    cli.session = arg_get_str(ctx, 6)->sval[0];
+    cli.output = arg_get_str(ctx, 7)->sval[0];
+    CLIParserFree(ctx);
+
+    if (!cli.output || !cli.output[0]) {
+        return PM3_EINVARG;
+    }
+
+    emv_term_ctx_t term_ctx;
+    int res = crypto_prepare_live(&term_ctx, &cli);
+    if (res) {
+        return res;
+    }
+    res = emv_term_crypto_export_json(&term_ctx, cli.output, NULL, 0);
+    crypto_finish(&term_ctx, cli.wired ? CC_CONTACT : CC_CONTACTLESS);
+    return res;
+}
+
+static int CmdEMVTerminalCryptoRun(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv terminal crypto run",
+                  "Full crypto lab bench",
+                  "emv terminal crypto run -s -j --decision arqc -m 100 -a\n"
+                  "emv terminal crypto run -s -j --challenge --intauth --vary --count 3 -o bench.json\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        CRYPTO_BASE_ARGS,
+        arg_str0("d",  "decision", "<aac|tc|arqc>", "GEN AC decision"),
+        arg_lit0("c",  "cda",      "Request CDA"),
+        arg_lit0(NULL, "no-mc-challenge", "Skip MC GET CHALLENGE"),
+        arg_lit0(NULL, "challenge", "Run GET CHALLENGE before GEN AC"),
+        arg_lit0(NULL, "intauth",   "Run INTERNAL AUTHENTICATE after GEN AC"),
+        arg_lit0(NULL, "checksum",  "Run MSC checksum if UDOL present"),
+        arg_lit0(NULL, "vary",      "Vary UN across multiple GEN AC"),
+        arg_lit0(NULL, "no-genac",  "Skip GEN AC (summary/challenge only)"),
+        arg_u64_0(NULL, "count", "<n>", "Vary iterations (default 3)"),
+        arg_str0("m",  "amount", "<cents>", "Override 9F02"),
+        arg_str0(NULL, "un", "<hex>", "Override 9F37"),
+        arg_str0("o",  "output", "<file>", "Export JSON"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    emv_term_crypto_cli_t cli;
+    crypto_cli_defaults(&cli);
+    cli.activate = arg_get_lit(ctx, 1);
+    cli.show_apdu = arg_get_lit(ctx, 2);
+    cli.decode_tlv = arg_get_lit(ctx, 3);
+    cli.wired = arg_get_lit(ctx, 4);
+    cli.jload = arg_get_lit(ctx, 5);
+    cli.session = arg_get_str(ctx, 6)->sval[0];
+    const char *dec = arg_get_str(ctx, 7)->sval[0];
+    if (dec && dec[0]) {
+        cli.ac_type = parse_decision(dec);
+    }
+    cli.cda = arg_get_lit(ctx, 8);
+    cli.mc_challenge = !arg_get_lit(ctx, 9);
+    cli.do_challenge = arg_get_lit(ctx, 10);
+    cli.do_intauth = arg_get_lit(ctx, 11);
+    cli.do_checksum = arg_get_lit(ctx, 12);
+    cli.do_vary = arg_get_lit(ctx, 13);
+    cli.no_genac = arg_get_lit(ctx, 14);
+    cli.count = (int)arg_get_u64_def(ctx, 15, 3);
+    parse_amount_un(ctx, 16, 17, &cli);
+    cli.output = arg_get_str(ctx, 18)->sval[0];
+    CLIParserFree(ctx);
+
+    emv_term_ctx_t term_ctx;
+    int res = crypto_prepare_live(&term_ctx, &cli);
+    if (res) {
+        return res;
+    }
+
+    emv_term_crypto_bench_opts_t bench = {0};
+    bench.do_challenge = cli.do_challenge;
+    bench.do_genac = !cli.no_genac;
+    bench.do_intauth = cli.do_intauth;
+    bench.do_checksum = cli.do_checksum;
+    bench.do_vary = cli.do_vary;
+    bench.vary_count = cli.count;
+    cli_to_genac_opts(&cli, &bench.genac);
+
+    SetAPDULogging(cli.show_apdu);
+    res = emv_term_crypto_bench(&term_ctx, &bench, cli.output);
+    crypto_finish(&term_ctx, cli.wired ? CC_CONTACT : CC_CONTACTLESS);
+    return res;
+}
+
+static int CmdEMVTerminalCryptoHelp(const char *Cmd);
+
+static command_t CryptoCommandTable[] = {
+    {"help",     CmdEMVTerminalCryptoHelp,    AlwaysAvailable, "Crypto playground help"},
+    {"run",      CmdEMVTerminalCryptoRun,     IfPm3Iso14443,   "Full crypto lab bench"},
+    {"summary",  CmdEMVTerminalCryptoSummary, AlwaysAvailable, "Print CDOL/AIP/crypto summary"},
+    {"challenge", CmdEMVTerminalCryptoChallenge, IfPm3Iso14443, "GET CHALLENGE"},
+    {"genac",    CmdEMVTerminalCryptoGenac,   IfPm3Iso14443,   "GENERATE AC (CDOL1)"},
+    {"genac2",   CmdEMVTerminalCryptoGenac2,  IfPm3Iso14443,   "GENERATE AC (CDOL2)"},
+    {"vary",     CmdEMVTerminalCryptoVary,    IfPm3Iso14443,   "Vary UN / repeat GEN AC"},
+    {"intauth",  CmdEMVTerminalCryptoIntauth, IfPm3Iso14443,   "INTERNAL AUTHENTICATE (DDA)"},
+    {"checksum", CmdEMVTerminalCryptoChecksum, IfPm3Iso14443,  "MSC cryptographic checksum"},
+    {"export",   CmdEMVTerminalCryptoExport,    AlwaysAvailable, "Export crypto JSON"},
+    {NULL, NULL, NULL, NULL}
+};
+
+static int CmdEMVTerminalCryptoHelp(const char *Cmd) {
+    (void)Cmd;
+    CmdsHelp(CryptoCommandTable);
+    return PM3_SUCCESS;
+}
+
+int CmdEMVTerminalCrypto(const char *Cmd) {
+    clearCommandBuffer();
+    return CmdsParse(CryptoCommandTable, Cmd);
+}

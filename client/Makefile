@@ -872,6 +872,8 @@ SRCS =  mifare/aiddesfire.c \
         emv/terminal/emv_term_timing.c \
         emv/terminal/emv_term_tlv.c \
         emv/terminal/emv_term_probe.c \
+        emv/terminal/emv_term_crypto.c \
+        emv/terminal/emv_term_crypto_cmd.c \
         emv/terminal/emv_term_capabilities.c \
         emv/test/crypto_test.c\
         emv/test/cryptotest.c\
@@ -879,6 +881,7 @@ SRCS =  mifare/aiddesfire.c \
         emv/test/terminal_taa_test.c\
         emv/test/terminal_host_test.c\
         emv/test/terminal_cvm_test.c\
+        emv/test/terminal_crypto_test.c\
         emv/test/terminal_exception_test.c\
         emv/test/terminal_sim_export_test.c\
         emv/test/terminal_pcap_test.c\
