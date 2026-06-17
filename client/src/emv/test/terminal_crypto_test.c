@@ -6,6 +6,7 @@
 
 #include "terminal_crypto_test.h"
 #include "../terminal/emv_term_crypto.h"
+#include "../terminal/emv_term_crypto_digest.h"
 #include "../terminal/emv_term_load.h"
 #include "../terminal/emv_term_profile.h"
 #include "../terminal/emv_term_tvr.h"
@@ -190,6 +191,76 @@ static int test_param_defaults_currency(bool verbose) {
     return 0;
 }
 
+static int test_digest_fixture(bool verbose) {
+    emv_term_ctx_t ctx;
+    memset(&ctx, 0, sizeof(ctx));
+
+    const char *alr = "card";
+    ctx.card = tlvdb_fixed(1, strlen(alr), (const unsigned char *)alr);
+    ctx.aid_len = 7;
+    memcpy(ctx.aid, "\xA0\x00\x00\x00\x04\x10\x10", 7);
+
+    uint8_t aip[] = {0x19, 0x80};
+    uint8_t cdol1[] = {0x9f, 0x02, 0x06, 0x9f, 0x03, 0x06, 0x9f, 0x1a, 0x02, 0x5f, 0x2a, 0x02,
+                       0x9a, 0x03, 0x9c, 0x01, 0x9f, 0x37, 0x04, 0x9f, 0x7c, 0x14};
+    tlvdb_change_or_add_node(ctx.card, 0x82, sizeof(aip), aip);
+    tlvdb_change_or_add_node(ctx.card, 0x8c, sizeof(cdol1), cdol1);
+
+    int res = emv_term_crypto_print_digest(&ctx, NULL);
+    tlvdb_free(ctx.card);
+    if (res != PM3_SUCCESS) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "digest print failed");
+        }
+        return 1;
+    }
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "digest fixture OK");
+    }
+    return 0;
+}
+
+static int test_compare_json(bool verbose) {
+    const char *path_a = "/tmp/emv_crypto_compare_a.json";
+    const char *path_b = "/tmp/emv_crypto_compare_b.json";
+
+    emv_term_ctx_t ctx;
+    memset(&ctx, 0, sizeof(ctx));
+    ctx.card = tlvdb_fixed(1, 4, (const unsigned char *)"card");
+    ctx.aid_len = 7;
+    memcpy(ctx.aid, "\xA0\x00\x00\x00\x03\x10\x10", 7);
+    uint8_t aip[] = {0x00, 0x80};
+    tlvdb_change_or_add_node(ctx.card, 0x82, sizeof(aip), aip);
+    if (emv_term_crypto_export_json(&ctx, path_a, NULL, 0)) {
+        tlvdb_free(ctx.card);
+        return 1;
+    }
+    tlvdb_free(ctx.card);
+
+    memset(&ctx, 0, sizeof(ctx));
+    ctx.card = tlvdb_fixed(1, 4, (const unsigned char *)"card");
+    ctx.aid_len = 7;
+    memcpy(ctx.aid, "\xA0\x00\x00\x00\x04\x10\x10", 7);
+    uint8_t aip2[] = {0x19, 0x80};
+    tlvdb_change_or_add_node(ctx.card, 0x82, sizeof(aip2), aip2);
+    if (emv_term_crypto_export_json(&ctx, path_b, NULL, 0)) {
+        tlvdb_free(ctx.card);
+        return 1;
+    }
+    tlvdb_free(ctx.card);
+
+    if (emv_term_crypto_compare_json(path_a, path_b)) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "compare failed");
+        }
+        return 1;
+    }
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "compare JSON OK");
+    }
+    return 0;
+}
+
 int exec_terminal_crypto_test(bool verbose) {
     if (test_uint_to_bcd(verbose)) {
         return 1;
@@ -204,6 +275,12 @@ int exec_terminal_crypto_test(bool verbose) {
         return 1;
     }
     if (test_export_json(verbose)) {
+        return 1;
+    }
+    if (test_digest_fixture(verbose)) {
+        return 1;
+    }
+    if (test_compare_json(verbose)) {
         return 1;
     }
     return 0;

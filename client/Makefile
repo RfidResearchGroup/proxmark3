@@ -873,6 +873,7 @@ SRCS =  mifare/aiddesfire.c \
         emv/terminal/emv_term_tlv.c \
         emv/terminal/emv_term_probe.c \
         emv/terminal/emv_term_crypto.c \
+        emv/terminal/emv_term_crypto_digest.c \
         emv/terminal/emv_term_crypto_cmd.c \
         emv/terminal/emv_term_capabilities.c \
         emv/test/crypto_test.c\

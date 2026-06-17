@@ -7,11 +7,14 @@
 //-----------------------------------------------------------------------------
 
 #include "emv_term_crypto.h"
+#include "emv_term_crypto_digest.h"
 #include "emv_term_tlv.h"
 #include "emv_term_tvr.h"
 #include "emv_transaction.h"
 #include "../dol.h"
 #include "../emv_tags.h"
+#include "emv_term_profile.h"
+#include "emv_term_session.h"
 #include "../emvcore.h"
 #include "../emvjson.h"
 #include "ui.h"
@@ -597,6 +600,26 @@ int emv_term_crypto_export_json(const emv_term_ctx_t *ctx, const char *path,
     json_add_tlv_hex(root, "AC", tlvdb_get(ctx->card, 0x9f26, NULL));
     json_add_tlv_hex(root, "CID", tlvdb_get(ctx->card, 0x9f27, NULL));
     json_add_tlv_hex(root, "IAD", tlvdb_get(ctx->card, 0x9f10, NULL));
+    json_add_tlv_hex(root, "AFL", tlvdb_get(ctx->card, 0x94, NULL));
+    json_add_tlv_hex(root, "Track2", crypto_card_tlv(ctx, 0x57));
+
+    if (ctx->aid_len) {
+        enum CardPSVendor v = GetCardPSVendor((uint8_t *)ctx->aid, ctx->aid_len);
+        const char *cp = "unknown";
+        if (v == CV_VISA && !tlvdb_get(ctx->card, 0x8c, NULL)) {
+            cp = "qvsdc";
+        } else if (v == CV_MASTERCARD && tlvdb_get(ctx->card, 0x8c, NULL)) {
+            cp = "mchip";
+        } else if (v == CV_INTERAC) {
+            cp = "interac";
+        }
+        JsonSaveStr(root, "CryptoPath", cp);
+    }
+
+    if (ctx->crypto_ppse_app_count) {
+        JsonSaveInt(root, "PPSEAppCount", (int)ctx->crypto_ppse_app_count);
+    }
+    JsonSaveBoolean(root, "AIDFallbackUsed", ctx->crypto_aid_fallback_used);
 
     const struct tlv *un = emv_term_tlv_lookup(ctx, 0x9f37);
     json_add_tlv_hex(root, "UN", un);
@@ -629,11 +652,51 @@ int emv_term_crypto_export_json(const emv_term_ctx_t *ctx, const char *path,
     return PM3_SUCCESS;
 }
 
+int emv_term_crypto_prepare_card(emv_term_ctx_t *ctx, bool jload, const char *session_path,
+                                 const emv_term_crypto_prepare_opts_t *prep) {
+    if (!ctx) {
+        return PM3_EINVARG;
+    }
+
+    if (prep) {
+        ctx->opts.crypto_quick_afl = prep->quick_afl;
+        ctx->opts.crypto_aid_fallback = prep->aid_fallback;
+        ctx->opts.crypto_forced_aid_len = 0;
+        if (prep->forced_aid_hex && prep->forced_aid_hex[0]) {
+            int buflen = 0;
+            if (!param_gethex_to_eol(prep->forced_aid_hex, 0, ctx->opts.crypto_forced_aid,
+                                     sizeof(ctx->opts.crypto_forced_aid), &buflen) && buflen > 0) {
+                ctx->opts.crypto_forced_aid_len = (size_t)buflen;
+            }
+        }
+    }
+
+    if (session_path && session_path[0]) {
+        int res = emv_term_session_load_json(ctx, session_path);
+        if (res) {
+            return res;
+        }
+        emv_term_init_transaction_params(ctx->terminal, jload, NULL, TT_QVSDCMCHIP, false);
+        emv_term_copy_terminal_tags_to_card(ctx);
+        return PM3_SUCCESS;
+    }
+
+    return emv_transaction_init(ctx);
+}
+
 int emv_term_crypto_bench(emv_term_ctx_t *ctx, const emv_term_crypto_bench_opts_t *opts,
                           const char *export_path) {
+    return emv_term_crypto_bench_ex(ctx, opts, export_path, NULL);
+}
+
+int emv_term_crypto_bench_ex(emv_term_ctx_t *ctx, const emv_term_crypto_bench_opts_t *opts,
+                             const char *export_path, emv_term_crypto_bench_result_t *result_out) {
     if (!ctx || !opts) {
         return PM3_EINVARG;
     }
+
+    emv_term_crypto_bench_result_t result_storage = {0};
+    emv_term_crypto_bench_result_t *result = result_out ? result_out : &result_storage;
 
     PrintAndLogEx(INFO, "=== EMV crypto playground bench ===");
     emv_term_crypto_print_summary(ctx);
@@ -646,17 +709,25 @@ int emv_term_crypto_bench(emv_term_ctx_t *ctx, const emv_term_crypto_bench_opts_
     }
 
     if (opts->do_genac) {
+        result->genac_attempted = true;
         if (!crypto_is_qvsdc_gpo_ac(ctx) && crypto_is_visa_qvsdc(ctx)) {
             emv_transaction_visa_request_gpo_ac(ctx);
         }
         if (crypto_is_qvsdc_gpo_ac(ctx)) {
+            result->qvsdc_path = true;
+            result->genac_ok = true;
             PrintAndLogEx(SUCCESS, "qVSDC: cryptogram from GPO — skipping GEN AC");
             emv_term_crypto_print_summary(ctx);
         } else if (crypto_is_visa_qvsdc(ctx)) {
-            PrintAndLogEx(INFO, "qVSDC: no AC in GPO — card may need online auth or `emv terminal run`");
+            result->visa_msd = true;
+            result->genac_ok = false;
+            PrintAndLogEx(INFO, "qVSDC: no AC in GPO — MSD / online profile");
+            emv_term_crypto_print_msd_summary(ctx);
         } else {
             uint16_t sw = 0;
             int res = crypto_genac_inner(ctx, &opts->genac, false, &sw);
+            result->genac_sw = sw;
+            result->genac_ok = (res == PM3_SUCCESS);
             if (entry_count < ARRAYLEN(entries)) {
                 fill_run_entry(&entries[entry_count], ctx, sw);
                 entry_count++;
@@ -680,9 +751,16 @@ int emv_term_crypto_bench(emv_term_ctx_t *ctx, const emv_term_crypto_bench_opts_
         emv_term_crypto_vary_un(ctx, &opts->genac, opts->vary_count,
                                 entries + entry_count, &cap);
         entry_count += cap;
+        result->vary_runs = cap;
     }
 
+    result->aid_fallback_used = ctx->crypto_aid_fallback_used;
+
     emv_term_crypto_print_summary(ctx);
+
+    if (opts->do_digest) {
+        emv_term_crypto_print_digest(ctx, result);
+    }
 
     if (export_path && export_path[0]) {
         emv_term_crypto_export_json(ctx, export_path, entries, entry_count);

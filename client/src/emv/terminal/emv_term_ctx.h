@@ -92,6 +92,10 @@ typedef struct {
     const char *pcap_meta;
     bool timing_report;
     bool skip_banner;
+    bool crypto_quick_afl;
+    bool crypto_aid_fallback;
+    uint8_t crypto_forced_aid[APDU_AID_LEN];
+    size_t crypto_forced_aid_len;
 } emv_term_cli_opts_t;
 
 typedef struct emv_term_ctx {
@@ -149,6 +153,9 @@ typedef struct emv_term_ctx {
     char host_tcp_arpc[128];
     char host_tcp_arpc_rc[16];
     bool host_tcp_applied;
+    size_t crypto_ppse_app_count;
+    size_t crypto_ppse_app_index;
+    bool crypto_aid_fallback_used;
 } emv_term_ctx_t;
 
 const char *emv_term_phase_name(emv_term_phase_t phase);

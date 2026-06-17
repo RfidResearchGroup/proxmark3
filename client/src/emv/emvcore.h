@@ -74,6 +74,7 @@ int EMVSelectPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFi
 int EMVSelect(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t *AID, size_t AIDLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 // select application
 int EMVSelectApplication(struct tlvdb *tlv, uint8_t *AID, size_t *AIDlen);
+int EMVSelectApplicationByIndex(struct tlvdb *tlv, size_t index, uint8_t *AID, size_t *AIDlen);
 // Get Processing Options
 int EMVGPO(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t *PDOL, size_t PDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 int EMVReadRecord(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t SFI, uint8_t SFIrec, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);

@@ -212,6 +212,274 @@ static int emv_transaction_prepare_reader(emv_term_ctx_t *ctx) {
     return PM3_SUCCESS;
 }
 
+static void emv_term_reset_card_tlv(emv_term_ctx_t *ctx) {
+    if (!ctx) {
+        return;
+    }
+    if (ctx->card) {
+        tlvdb_free(ctx->card);
+    }
+    const char *alr = "Root terminal TLV tree";
+    ctx->card = tlvdb_fixed(1, strlen(alr), (const unsigned char *)alr);
+    ctx->oda_list_len = 0;
+    if (ctx->pdol_data_tlv) {
+        free(ctx->pdol_data_tlv);
+        ctx->pdol_data_tlv = NULL;
+    }
+}
+
+static bool emv_transaction_card_has_crypto_dol(const struct tlvdb *card) {
+    if (!card) {
+        return false;
+    }
+    const struct tlv *cdol1 = tlvdb_get(card, 0x8c, NULL);
+    if (cdol1 && cdol1->len) {
+        return true;
+    }
+    return tlvdb_find_full((struct tlvdb *)card, 0x9f26) != NULL;
+}
+
+static bool emv_transaction_afl_skip_quick(uint8_t sfi, bool have_cdol) {
+    if (sfi == 0 || sfi == 31) {
+        return true;
+    }
+    if (sfi == 15) {
+        return true;
+    }
+    if (sfi >= 11 && have_cdol) {
+        return true;
+    }
+    if (sfi >= 12) {
+        return true;
+    }
+    return false;
+}
+
+static int emv_transaction_read_afl_records(emv_term_ctx_t *ctx, uint8_t *buf, size_t buflen) {
+    if (!ctx || !buf) {
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(INFO, "\n* Read records from AFL.");
+    const struct tlv *AFL = tlvdb_get(ctx->card, 0x94, NULL);
+    if (!AFL || !AFL->len) {
+        PrintAndLogEx(WARNING, "WARNING: AFL not found.");
+        return PM3_SUCCESS;
+    }
+
+    ctx->oda_list_len = 0;
+    bool quick = ctx->opts.crypto_quick_afl;
+
+    while (AFL && AFL->len) {
+        if (AFL->len % 4) {
+            PrintAndLogEx(WARNING, "Warning: Wrong AFL length: %zu", AFL->len);
+            break;
+        }
+
+        bool have_cdol = emv_transaction_card_has_crypto_dol(ctx->card);
+
+        for (int i = 0; i < AFL->len / 4; i++) {
+            uint8_t SFI = AFL->value[i * 4 + 0] >> 3;
+            uint8_t SFIstart = AFL->value[i * 4 + 1];
+            uint8_t SFIend = AFL->value[i * 4 + 2];
+            uint8_t SFIoffline = AFL->value[i * 4 + 3];
+
+            if (quick && emv_transaction_afl_skip_quick(SFI, have_cdol)) {
+                PrintAndLogEx(INFO, "* * SFI[%02x] skipped (quick AFL)", SFI);
+                continue;
+            }
+
+            PrintAndLogEx(INFO, "* * SFI[%02x] start:%02x end:%02x offline count:%02x", SFI, SFIstart, SFIend, SFIoffline);
+            if (SFI == 0 || SFI == 31 || SFIstart == 0 || SFIstart > SFIend) {
+                PrintAndLogEx(WARNING, "SFI ERROR! Skipped...");
+                continue;
+            }
+
+            for (int n = SFIstart; n <= SFIend; n++) {
+                PrintAndLogEx(INFO, "* * * SFI[%02x] %d", SFI, n);
+                size_t len = 0;
+                uint16_t sw = 0;
+                int res = EMVReadRecord(ctx->channel, true, SFI, n, buf, buflen, &len, &sw, ctx->card);
+                if (res) {
+                    PrintAndLogEx(WARNING, "Error SFI[%02x] record %d: transport %d SW %04x - %s",
+                                  SFI, n, res, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+                    continue;
+                }
+                if (sw != 0x9000) {
+                    PrintAndLogEx(WARNING, "Error SFI[%02x] record %d: SW %04x - %s",
+                                  SFI, n, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+                    continue;
+                }
+
+                if (ctx->opts.decode_tlv) {
+                    TLVPrintFromBuffer(buf, len);
+                    PrintAndLogEx(NORMAL, "");
+                }
+
+                if (SFIoffline > 0) {
+                    if (SFI < 11) {
+                        const unsigned char *abuf = buf;
+                        size_t elmlen = len;
+                        struct tlv e;
+                        if (tlv_parse_tl(&abuf, &elmlen, &e)) {
+                            memcpy(&ctx->oda_list[ctx->oda_list_len], &buf[len - elmlen], elmlen);
+                            ctx->oda_list_len += elmlen;
+                        } else {
+                            PrintAndLogEx(WARNING, "Error SFI[%02x]. Creating ODA input list error.", SFI);
+                        }
+                    } else {
+                        memcpy(&ctx->oda_list[ctx->oda_list_len], buf, len);
+                        ctx->oda_list_len += len;
+                    }
+                    SFIoffline--;
+                }
+
+                have_cdol = emv_transaction_card_has_crypto_dol(ctx->card);
+                if (quick && have_cdol && tlvdb_get(ctx->card, 0x8d, NULL)) {
+                    PrintAndLogEx(INFO, "* Quick AFL: CDOL1+CDOL2 found — stopping record reads");
+                    goto afl_done;
+                }
+            }
+        }
+        break;
+    }
+
+afl_done:
+    if (ctx->oda_list_len) {
+        struct tlvdb *oda = tlvdb_fixed(0x21, ctx->oda_list_len, ctx->oda_list);
+        tlvdb_add(ctx->card, oda);
+        PrintAndLogEx(INFO, "* Input list for Offline Data Authentication added to TLV. len=%zu \n", ctx->oda_list_len);
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int emv_transaction_post_aid_select(emv_term_ctx_t *ctx, uint8_t *buf, size_t buflen) {
+    if (!ctx || !buf) {
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(INFO, "\n* Init transaction parameters.");
+    emv_term_init_transaction_params(ctx->terminal, false, NULL, ctx->tr_type, ctx->opts.gen_ac_gpo);
+    if (ctx->opts.param_load_json) {
+        if (ctx->opts.use_terminal_profile) {
+            if (!emv_term_profile_load(ctx->terminal, ctx->opts.profile_path)) {
+                PrintAndLogEx(WARNING, "Terminal profile not found, loading emv_defparams.json...");
+                ParamLoadFromJson(ctx->terminal);
+            }
+        } else {
+            ParamLoadFromJson(ctx->terminal);
+        }
+    }
+    emv_term_copy_terminal_tags_to_card(ctx);
+    if (ctx->opts.decode_tlv) {
+        TLVPrintFromTLV(ctx->terminal);
+    }
+
+    PrintAndLogEx(INFO, "\n* Calc PDOL.");
+    ctx->pdol_data_tlv = dol_process(tlvdb_get(ctx->card, 0x9f38, NULL), ctx->card, 0x83);
+    if (!ctx->pdol_data_tlv) {
+        PrintAndLogEx(ERR, "Error: can't create PDOL TLV.");
+        return PM3_ESOFT;
+    }
+
+    size_t pdol_data_tlv_data_len;
+    unsigned char *pdol_data_tlv_data = tlv_encode(ctx->pdol_data_tlv, &pdol_data_tlv_data_len);
+    if (!pdol_data_tlv_data) {
+        PrintAndLogEx(ERR, "Error: can't create PDOL data.");
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(INFO, "PDOL data[%zu]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
+
+    PrintAndLogEx(INFO, "\n* GPO.");
+    size_t len = 0;
+    uint16_t sw = 0;
+    int res = EMVGPO(ctx->channel, true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, buflen, &len, &sw, ctx->card);
+    free(pdol_data_tlv_data);
+
+    if (res) {
+        PrintAndLogEx(ERR, "GPO error(%d): %4x. Exit...", res, sw);
+        return PM3_ERFTRANS;
+    }
+
+    emv_transaction_process_gpo_response(ctx->card, buf, len, ctx->opts.decode_tlv);
+
+    const struct tlv *track2 = tlvdb_get(ctx->card, 0x57, NULL);
+    if (!tlvdb_get(ctx->card, 0x5a, NULL) && track2 && track2->len >= 8) {
+        struct tlvdb *pan = GetPANFromTrack2(track2);
+        if (pan) {
+            tlvdb_add(ctx->card, pan);
+            const struct tlv *pantlv = tlvdb_get(ctx->card, 0x5a, NULL);
+            PrintAndLogEx(INFO, "\n* * Extracted PAN from track2: %s", sprint_hex(pantlv->value, pantlv->len));
+        } else {
+            PrintAndLogEx(WARNING, "\n* * WARNING: Can't extract PAN from track2.");
+        }
+    }
+
+    return emv_transaction_read_afl_records(ctx, buf, buflen);
+}
+
+int emv_transaction_switch_application(emv_term_ctx_t *ctx, size_t ppse_index) {
+    if (!ctx || !ctx->select) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+    uint16_t sw = 0;
+
+    if (EMVSelectApplicationByIndex(ctx->select, ppse_index, ctx->aid, &ctx->aid_len)) {
+        return PM3_ESOFT;
+    }
+    if (!ctx->aid_len) {
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "\n* Selecting AID (fallback index %zu):%s", ppse_index, sprint_hex_inrow(ctx->aid, ctx->aid_len));
+    emv_term_reset_card_tlv(ctx);
+    int res = EMVSelect(ctx->channel, false, true, ctx->aid, ctx->aid_len, buf, sizeof(buf), &len, &sw, ctx->card);
+    if (res) {
+        PrintAndLogEx(WARNING, "Can't select AID (%d).", res);
+        return PM3_ERFTRANS;
+    }
+    if (ctx->opts.decode_tlv) {
+        TLVPrintFromBuffer(buf, len);
+    }
+    PrintAndLogEx(INFO, "* Selected.");
+
+    ctx->crypto_ppse_app_index = ppse_index;
+    return emv_transaction_post_aid_select(ctx, buf, sizeof(buf));
+}
+
+int emv_transaction_try_aid_fallback(emv_term_ctx_t *ctx) {
+    if (!ctx || !ctx->opts.crypto_aid_fallback || ctx->opts.crypto_forced_aid_len) {
+        return PM3_SUCCESS;
+    }
+    if (emv_transaction_card_has_crypto_dol(ctx->card)) {
+        return PM3_SUCCESS;
+    }
+    if (ctx->crypto_ppse_app_count < 2) {
+        return PM3_SUCCESS;
+    }
+
+    for (size_t i = 1; i < ctx->crypto_ppse_app_count; i++) {
+        PrintAndLogEx(INFO, "\n* PPSE AID fallback: trying application %zu/%zu (no CDOL1 on prior AID)",
+                      i + 1, ctx->crypto_ppse_app_count);
+        if (emv_transaction_switch_application(ctx, i)) {
+            continue;
+        }
+        if (emv_transaction_card_has_crypto_dol(ctx->card)) {
+            ctx->crypto_aid_fallback_used = true;
+            PrintAndLogEx(SUCCESS, "AID fallback OK — CDOL/crypto tags found on %s",
+                          sprint_hex_inrow(ctx->aid, ctx->aid_len));
+            return PM3_SUCCESS;
+        }
+    }
+
+    PrintAndLogEx(WARNING, "AID fallback: no alternate PPSE application exposes CDOL1/AC");
+    return PM3_SUCCESS;
+}
+
 emv_term_outcome_t emv_transaction_outcome_from_cid(uint8_t cid) {
     switch (cid & EMVAC_AC_MASK) {
         case EMVAC_AAC:
@@ -273,7 +541,18 @@ int emv_transaction_init(emv_term_ctx_t *ctx) {
         }
         if (!res) {
             TLVPrintAIDlistFromSelectTLV(ctx->select);
-            EMVSelectApplication(ctx->select, ctx->aid, &ctx->aid_len);
+            ctx->crypto_ppse_app_count = EMVSelectAIDCount(ctx->select);
+            if (ctx->opts.crypto_forced_aid_len) {
+                if (ctx->opts.crypto_forced_aid_len > sizeof(ctx->aid)) {
+                    return PM3_ESOFT;
+                }
+                memcpy(ctx->aid, ctx->opts.crypto_forced_aid, ctx->opts.crypto_forced_aid_len);
+                ctx->aid_len = ctx->opts.crypto_forced_aid_len;
+                PrintAndLogEx(INFO, "Using forced AID: %s", sprint_hex_inrow(ctx->aid, ctx->aid_len));
+            } else {
+                EMVSelectApplicationByIndex(ctx->select, 0, ctx->aid, &ctx->aid_len);
+                ctx->crypto_ppse_app_index = 0;
+            }
         }
     }
 
@@ -284,7 +563,14 @@ int emv_transaction_init(emv_term_ctx_t *ctx) {
             return PM3_ERFTRANS;
         }
         TLVPrintAIDlistFromSelectTLV(ctx->select);
-        EMVSelectApplication(ctx->select, ctx->aid, &ctx->aid_len);
+        ctx->crypto_ppse_app_count = EMVSelectAIDCount(ctx->select);
+        if (ctx->opts.crypto_forced_aid_len) {
+            memcpy(ctx->aid, ctx->opts.crypto_forced_aid, ctx->opts.crypto_forced_aid_len);
+            ctx->aid_len = ctx->opts.crypto_forced_aid_len;
+        } else {
+            EMVSelectApplicationByIndex(ctx->select, 0, ctx->aid, &ctx->aid_len);
+            ctx->crypto_ppse_app_index = 0;
+        }
     }
 
     if (!ctx->aid_len) {
@@ -305,132 +591,13 @@ int emv_transaction_init(emv_term_ctx_t *ctx) {
     }
     PrintAndLogEx(INFO, "* Selected.");
 
-    PrintAndLogEx(INFO, "\n* Init transaction parameters.");
-    emv_term_init_transaction_params(ctx->terminal, false, NULL, ctx->tr_type, ctx->opts.gen_ac_gpo);
-    if (ctx->opts.param_load_json) {
-        if (ctx->opts.use_terminal_profile) {
-            if (!emv_term_profile_load(ctx->terminal, ctx->opts.profile_path)) {
-                PrintAndLogEx(WARNING, "Terminal profile not found, loading emv_defparams.json...");
-                ParamLoadFromJson(ctx->terminal);
-            }
-        } else {
-            ParamLoadFromJson(ctx->terminal);
-        }
-    }
-    emv_term_copy_terminal_tags_to_card(ctx);
-    if (ctx->opts.decode_tlv) {
-        TLVPrintFromTLV(ctx->terminal);
-    }
-
-    PrintAndLogEx(INFO, "\n* Calc PDOL.");
-    ctx->pdol_data_tlv = dol_process(tlvdb_get(ctx->card, 0x9f38, NULL), ctx->card, 0x83);
-    if (!ctx->pdol_data_tlv) {
-        PrintAndLogEx(ERR, "Error: can't create PDOL TLV.");
-        return PM3_ESOFT;
-    }
-
-    size_t pdol_data_tlv_data_len;
-    unsigned char *pdol_data_tlv_data = tlv_encode(ctx->pdol_data_tlv, &pdol_data_tlv_data_len);
-    if (!pdol_data_tlv_data) {
-        PrintAndLogEx(ERR, "Error: can't create PDOL data.");
-        return PM3_ESOFT;
-    }
-    PrintAndLogEx(INFO, "PDOL data[%zu]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
-
-    PrintAndLogEx(INFO, "\n* GPO.");
-    res = EMVGPO(ctx->channel, true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, ctx->card);
-    free(pdol_data_tlv_data);
-
+    res = emv_transaction_post_aid_select(ctx, buf, sizeof(buf));
     if (res) {
-        PrintAndLogEx(ERR, "GPO error(%d): %4x. Exit...", res, sw);
-        return PM3_ERFTRANS;
+        return res;
     }
 
-    emv_transaction_process_gpo_response(ctx->card, buf, len, ctx->opts.decode_tlv);
-
-    const struct tlv *track2 = tlvdb_get(ctx->card, 0x57, NULL);
-    if (!tlvdb_get(ctx->card, 0x5a, NULL) && track2 && track2->len >= 8) {
-        struct tlvdb *pan = GetPANFromTrack2(track2);
-        if (pan) {
-            tlvdb_add(ctx->card, pan);
-            const struct tlv *pantlv = tlvdb_get(ctx->card, 0x5a, NULL);
-            PrintAndLogEx(INFO, "\n* * Extracted PAN from track2: %s", sprint_hex(pantlv->value, pantlv->len));
-        } else {
-            PrintAndLogEx(WARNING, "\n* * WARNING: Can't extract PAN from track2.");
-        }
-    }
-
-    PrintAndLogEx(INFO, "\n* Read records from AFL.");
-    const struct tlv *AFL = tlvdb_get(ctx->card, 0x94, NULL);
-    if (!AFL || !AFL->len) {
-        PrintAndLogEx(WARNING, "WARNING: AFL not found.");
-    }
-
-    ctx->oda_list_len = 0;
-
-    while (AFL && AFL->len) {
-        if (AFL->len % 4) {
-            PrintAndLogEx(WARNING, "Warning: Wrong AFL length: %zu", AFL->len);
-            break;
-        }
-
-        for (int i = 0; i < AFL->len / 4; i++) {
-            uint8_t SFI = AFL->value[i * 4 + 0] >> 3;
-            uint8_t SFIstart = AFL->value[i * 4 + 1];
-            uint8_t SFIend = AFL->value[i * 4 + 2];
-            uint8_t SFIoffline = AFL->value[i * 4 + 3];
-
-            PrintAndLogEx(INFO, "* * SFI[%02x] start:%02x end:%02x offline count:%02x", SFI, SFIstart, SFIend, SFIoffline);
-            if (SFI == 0 || SFI == 31 || SFIstart == 0 || SFIstart > SFIend) {
-                PrintAndLogEx(WARNING, "SFI ERROR! Skipped...");
-                continue;
-            }
-
-            for (int n = SFIstart; n <= SFIend; n++) {
-                PrintAndLogEx(INFO, "* * * SFI[%02x] %d", SFI, n);
-                res = EMVReadRecord(ctx->channel, true, SFI, n, buf, sizeof(buf), &len, &sw, ctx->card);
-                if (res) {
-                    PrintAndLogEx(WARNING, "Error SFI[%02x] record %d: transport %d SW %04x - %s",
-                                  SFI, n, res, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-                    continue;
-                }
-                if (sw != 0x9000) {
-                    PrintAndLogEx(WARNING, "Error SFI[%02x] record %d: SW %04x - %s",
-                                  SFI, n, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-                    continue;
-                }
-
-                if (ctx->opts.decode_tlv) {
-                    TLVPrintFromBuffer(buf, len);
-                    PrintAndLogEx(NORMAL, "");
-                }
-
-                if (SFIoffline > 0) {
-                    if (SFI < 11) {
-                        const unsigned char *abuf = buf;
-                        size_t elmlen = len;
-                        struct tlv e;
-                        if (tlv_parse_tl(&abuf, &elmlen, &e)) {
-                            memcpy(&ctx->oda_list[ctx->oda_list_len], &buf[len - elmlen], elmlen);
-                            ctx->oda_list_len += elmlen;
-                        } else {
-                            PrintAndLogEx(WARNING, "Error SFI[%02x]. Creating ODA input list error.", SFI);
-                        }
-                    } else {
-                        memcpy(&ctx->oda_list[ctx->oda_list_len], buf, len);
-                        ctx->oda_list_len += len;
-                    }
-                    SFIoffline--;
-                }
-            }
-        }
-        break;
-    }
-
-    if (ctx->oda_list_len) {
-        struct tlvdb *oda = tlvdb_fixed(0x21, ctx->oda_list_len, ctx->oda_list);
-        tlvdb_add(ctx->card, oda);
-        PrintAndLogEx(INFO, "* Input list for Offline Data Authentication added to TLV. len=%zu \n", ctx->oda_list_len);
+    if (ctx->opts.crypto_aid_fallback) {
+        emv_transaction_try_aid_fallback(ctx);
     }
 
     return PM3_SUCCESS;
