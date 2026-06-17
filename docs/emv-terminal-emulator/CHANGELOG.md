@@ -4,6 +4,26 @@ All notable changes to the EMV terminal emulator **documentation and implementat
 
 ## Unreleased
 
+### Added — Wave F (crypto playground & card lab)
+
+- **`emv terminal crypto`** — `run`, `digest`, `compare`, `genac`/`genac2`, `vary`, `challenge`, `intauth`, `checksum`, `export`
+- **`--summary`** — human-readable card digest (scheme, AIP, crypto path, AFL map, DOLs, MSD block, next-step hints)
+- **`--quick`** — quick AFL (skip deep SFIs; stop when CDOL1+CDOL2 found)
+- **`--aid`** — force PPSE/application AID; auto PPSE fallback when priority-01 lacks CDOL1
+- Visa qVSDC GPO AC hoisting + TTQ re-GPO; MC GEN AC `6700` Le-retry, auto CDA, `9F7C` CDOL support
+- Export JSON: `Track2`, `AFL`, `CryptoPath`, `PPSEAppCount`, `AIDFallbackUsed`, `Runs[]`
+- Tests: `terminal_crypto_test` digest + compare (offline)
+- Docs: `SPEC-crypto-playground.md`, `TEST-PLAN-crypto-playground.md`
+
+### Added — Wave E (contactless reliability & diagnostics)
+
+- **`EMVPrepareContactlessEx`** — auto HF field + wait-for-card across search/GPO/GEN AC and terminal phases
+- **`emv search`** — PPSE-first, polling, UID on connect, improved error hints
+- **`emv terminal cvm`** — CVM list / terminal capability diagnostics without VERIFY
+- **`emv terminal probe`** — GET DATA sweep; `--records` AFL tag summary
+- Terminal TLV defaults fix (`9F1A`/`5F2A`); bundled `emv_terminal_profile.json` auto-load
+- `emv terminal step` cliparser index segfault fix
+
 ### Added — Wave D (M14) implementation
 
 - **Legal banner** — first-run warning; ack file `~/.proxmark3/emv_terminal_ack`; `EMV_TERMINAL_I_ACK=1` for CI
