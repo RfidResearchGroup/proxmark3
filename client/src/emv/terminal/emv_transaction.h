@@ -15,9 +15,11 @@
 #include "emv_term_ctx.h"
 
 void emv_transaction_process_gpo_format1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, bool decodeTLV);
+void emv_transaction_process_gpo_response(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, bool decodeTLV);
 void emv_transaction_process_ac_format1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, bool decodeTLV);
 
 int emv_transaction_init(emv_term_ctx_t *ctx);
+int emv_transaction_visa_request_gpo_ac(emv_term_ctx_t *ctx);
 int emv_transaction_oda(emv_term_ctx_t *ctx);
 int emv_transaction_genac1(emv_term_ctx_t *ctx);
 

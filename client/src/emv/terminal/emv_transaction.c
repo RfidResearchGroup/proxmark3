@@ -23,6 +23,7 @@
 #include "cmdsmartcard.h"
 #include "cmdparser.h"
 #include "proxmark3.h"
+#include "commonutil.h"
 #include "ui.h"
 #include <string.h>
 
@@ -31,6 +32,17 @@
 #define EMVAC_TC       0x40
 #define EMVAC_ARQC     0x80
 #define EMVAC_CDAREQ   0x10
+
+static void emv_transaction_hoist_gpo_tag(struct tlvdb *tlvRoot, struct tlvdb *parsed, tlv_tag_t tag) {
+    struct tlvdb *found = tlvdb_find_full(parsed, tag);
+    if (!found) {
+        return;
+    }
+    const struct tlv *tlv = tlvdb_get_tlv(found);
+    if (tlv && tlv->len) {
+        tlvdb_change_or_add_node(tlvRoot, tag, tlv->len, tlv->value);
+    }
+}
 
 void emv_transaction_process_gpo_format1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, bool decodeTLV) {
     if (buf[0] == 0x80) {
@@ -58,6 +70,94 @@ void emv_transaction_process_gpo_format1(struct tlvdb *tlvRoot, uint8_t *buf, si
     } else if (decodeTLV) {
         TLVPrintFromBuffer(buf, len);
     }
+}
+
+void emv_transaction_process_gpo_response(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, bool decodeTLV) {
+    emv_transaction_process_gpo_format1(tlvRoot, buf, len, decodeTLV);
+
+    struct tlvdb *parsed = tlvdb_parse_multi(buf, len);
+    if (!parsed) {
+        return;
+    }
+
+    static const tlv_tag_t hoist_tags[] = {
+        0x82, 0x94, 0x57, 0x9f10, 0x9f26, 0x9f27, 0x9f36, 0x9f4b, 0x9f6c, 0x9f6e,
+    };
+    for (size_t i = 0; i < ARRAYLEN(hoist_tags); i++) {
+        emv_transaction_hoist_gpo_tag(tlvRoot, parsed, hoist_tags[i]);
+    }
+
+    if (decodeTLV && buf[0] == 0x77) {
+        PrintAndLogEx(INFO, "\n* * GPO response format 2 (0x77) — cryptogram tags hoisted to card context");
+    }
+
+    tlvdb_free(parsed);
+}
+
+static uint16_t emv_transaction_card_aip(const struct tlvdb *card) {
+    const struct tlv *aip = tlvdb_get(card, 0x82, NULL);
+    if (!aip || aip->len < 2) {
+        return 0;
+    }
+    return (uint16_t)(aip->value[0] | (aip->value[1] << 8));
+}
+
+static int emv_transaction_send_gpo(emv_term_ctx_t *ctx, uint8_t *buf, size_t buflen, size_t *len, uint16_t *sw) {
+    if (!ctx || !buf || !len || !sw) {
+        return PM3_EINVARG;
+    }
+
+    emv_term_copy_terminal_tags_to_card(ctx);
+
+    struct tlv *pdol_data_tlv = dol_process(tlvdb_get(ctx->card, 0x9f38, NULL), ctx->card, 0x83);
+    if (!pdol_data_tlv) {
+        PrintAndLogEx(ERR, "Error: can't create PDOL TLV.");
+        return PM3_ESOFT;
+    }
+
+    size_t pdol_data_tlv_data_len = 0;
+    unsigned char *pdol_data_tlv_data = tlv_encode(pdol_data_tlv, &pdol_data_tlv_data_len);
+    free(pdol_data_tlv);
+    if (!pdol_data_tlv_data) {
+        PrintAndLogEx(ERR, "Error: can't create PDOL data.");
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "PDOL data[%zu]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
+    int res = EMVGPO(ctx->channel, true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, buflen, len, sw, ctx->card);
+    free(pdol_data_tlv_data);
+    if (res) {
+        PrintAndLogEx(ERR, "GPO error(%d): %4x", res, *sw);
+        return PM3_ERFTRANS;
+    }
+
+    emv_transaction_process_gpo_response(ctx->card, buf, *len, ctx->opts.decode_tlv);
+    return PM3_SUCCESS;
+}
+
+int emv_transaction_visa_request_gpo_ac(emv_term_ctx_t *ctx) {
+    if (!ctx || !ctx->aid_len) {
+        return PM3_EINVARG;
+    }
+    if (GetCardPSVendor(ctx->aid, ctx->aid_len) != CV_VISA) {
+        return PM3_ESOFT;
+    }
+    if (emv_transaction_card_aip(ctx->card) != 0x8000) {
+        return PM3_ESOFT;
+    }
+    if (tlvdb_find_full(ctx->card, 0x9f26)) {
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(INFO, "Visa qVSDC: requesting AC in GPO (9F66 26 80 00 00)...");
+    static const uint8_t ttq_ac_gpo[] = {0x26, 0x80, 0x00, 0x00};
+    tlvdb_change_or_add_node(ctx->terminal, 0x9f66, sizeof(ttq_ac_gpo), ttq_ac_gpo);
+    ctx->opts.gen_ac_gpo = true;
+
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+    uint16_t sw = 0;
+    return emv_transaction_send_gpo(ctx, buf, sizeof(buf), &len, &sw);
 }
 
 void emv_transaction_process_ac_format1(struct tlvdb *tlvRoot, uint8_t *buf, size_t len, bool decodeTLV) {
@@ -246,7 +346,7 @@ int emv_transaction_init(emv_term_ctx_t *ctx) {
         return PM3_ERFTRANS;
     }
 
-    emv_transaction_process_gpo_format1(ctx->card, buf, len, ctx->opts.decode_tlv);
+    emv_transaction_process_gpo_response(ctx->card, buf, len, ctx->opts.decode_tlv);
 
     const struct tlv *track2 = tlvdb_get(ctx->card, 0x57, NULL);
     if (!tlvdb_get(ctx->card, 0x5a, NULL) && track2 && track2->len >= 8) {

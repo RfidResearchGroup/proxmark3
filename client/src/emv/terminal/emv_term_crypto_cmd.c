@@ -91,7 +91,7 @@ static int crypto_prepare_live(emv_term_ctx_t *term_ctx, const emv_term_crypto_c
     }
 
     if (!cli->session || !cli->session[0]) {
-        int prep = EMVPrepareContactless(opts.channel, cli->activate);
+        int prep = EMVPrepareContactlessEx(opts.channel, true, true);
         if (prep) {
             emv_term_ctx_free(term_ctx);
             return prep;

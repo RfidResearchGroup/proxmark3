@@ -128,10 +128,35 @@ static bool crypto_card_supports_cda(const emv_term_ctx_t *ctx) {
     return (crypto_card_aip(ctx) & 0x0001) != 0;
 }
 
-static bool crypto_is_qvsdc_gpo_ac(const emv_term_ctx_t *ctx) {
+static const struct tlv *crypto_card_tlv(const emv_term_ctx_t *ctx, tlv_tag_t tag) {
+    if (!ctx || !ctx->card) {
+        return NULL;
+    }
+    struct tlvdb *db = tlvdb_find_full(ctx->card, tag);
+    return db ? tlvdb_get_tlv(db) : NULL;
+}
+
+static bool crypto_is_visa_qvsdc(const emv_term_ctx_t *ctx) {
+    if (!ctx || !ctx->aid_len) {
+        return false;
+    }
+    if (GetCardPSVendor((uint8_t *)ctx->aid, ctx->aid_len) != CV_VISA) {
+        return false;
+    }
     const struct tlv *cdol1 = tlvdb_get(ctx->card, 0x8c, NULL);
-    const struct tlv *ac = tlvdb_get(ctx->card, 0x9f26, NULL);
-    return (!cdol1 || !cdol1->len) && ac && ac->len;
+    if (cdol1 && cdol1->len) {
+        return false;
+    }
+    return crypto_card_aip(ctx) == 0x8000;
+}
+
+static bool crypto_is_qvsdc_gpo_ac(const emv_term_ctx_t *ctx) {
+    const struct tlv *ac = crypto_card_tlv(ctx, 0x9f26);
+    if (!ac || !ac->len) {
+        return false;
+    }
+    const struct tlv *cdol1 = tlvdb_get(ctx->card, 0x8c, NULL);
+    return !cdol1 || !cdol1->len;
 }
 
 static void crypto_apply_genac_defaults(emv_term_ctx_t *ctx, emv_term_crypto_genac_opts_t *opts) {
@@ -185,10 +210,10 @@ int emv_term_crypto_print_summary(const emv_term_ctx_t *ctx) {
         PrintAndLogEx(INFO, "Terminal UN (9F37): %s", sprint_hex(un->value, un->len));
     }
 
-    const struct tlv *cid = tlvdb_get(ctx->card, 0x9f27, NULL);
-    const struct tlv *atc = tlvdb_get(ctx->card, 0x9f36, NULL);
-    const struct tlv *ac = tlvdb_get(ctx->card, 0x9f26, NULL);
-    const struct tlv *iad = tlvdb_get(ctx->card, 0x9f10, NULL);
+    const struct tlv *cid = crypto_card_tlv(ctx, 0x9f27);
+    const struct tlv *atc = crypto_card_tlv(ctx, 0x9f36);
+    const struct tlv *ac = crypto_card_tlv(ctx, 0x9f26);
+    const struct tlv *iad = crypto_card_tlv(ctx, 0x9f10);
 
     if (cid && cid->len) {
         uint8_t c = cid->value[0];
@@ -250,6 +275,17 @@ static int crypto_genac_inner(emv_term_ctx_t *ctx, const emv_term_crypto_genac_o
     tlv_tag_t cdol_tag = ac2 ? 0x8d : 0x8c;
     const struct tlv *cdol_tlv = tlvdb_get(ctx->card, cdol_tag, NULL);
     if (!cdol_tlv || !cdol_tlv->len) {
+        if (!ac2 && crypto_is_visa_qvsdc(ctx)) {
+            int gres = emv_transaction_visa_request_gpo_ac(ctx);
+            if (!gres && crypto_is_qvsdc_gpo_ac(ctx)) {
+                PrintAndLogEx(INFO, "qVSDC: AC obtained from GPO — no GEN AC needed");
+                emv_term_crypto_print_summary(ctx);
+                return PM3_SUCCESS;
+            }
+            PrintAndLogEx(INFO, "qVSDC: no CDOL1 — GEN AC not used; see summary for GPO/AFL data");
+            emv_term_crypto_print_summary(ctx);
+            return PM3_SUCCESS;
+        }
         if (!ac2 && crypto_is_qvsdc_gpo_ac(ctx)) {
             PrintAndLogEx(INFO, "No CDOL1 — qVSDC card (cryptogram returned in GPO, not GEN AC)");
             emv_term_crypto_print_summary(ctx);
@@ -610,9 +646,14 @@ int emv_term_crypto_bench(emv_term_ctx_t *ctx, const emv_term_crypto_bench_opts_
     }
 
     if (opts->do_genac) {
+        if (!crypto_is_qvsdc_gpo_ac(ctx) && crypto_is_visa_qvsdc(ctx)) {
+            emv_transaction_visa_request_gpo_ac(ctx);
+        }
         if (crypto_is_qvsdc_gpo_ac(ctx)) {
-            PrintAndLogEx(INFO, "qVSDC: AC already present from GPO — skipping GEN AC");
+            PrintAndLogEx(SUCCESS, "qVSDC: cryptogram from GPO — skipping GEN AC");
             emv_term_crypto_print_summary(ctx);
+        } else if (crypto_is_visa_qvsdc(ctx)) {
+            PrintAndLogEx(INFO, "qVSDC: no AC in GPO — card may need online auth or `emv terminal run`");
         } else {
             uint16_t sw = 0;
             int res = crypto_genac_inner(ctx, &opts->genac, false, &sw);

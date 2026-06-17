@@ -19,6 +19,7 @@
 #include <jansson.h>
 #include <string.h>
 #include <time.h>
+#include <stdlib.h>
 
 #define TLV_ADD(tag, value)( tlvdb_change_or_add_node(tlvRoot, tag, sizeof(value) - 1, (const unsigned char *)value) )
 
@@ -93,6 +94,13 @@ void emv_term_init_transaction_params(struct tlvdb *tlvRoot, bool paramLoadJSON,
     }
 
     emv_term_set_transaction_datetime(tlvRoot);
+
+    uint8_t un[4] = {0};
+    un[0] = (uint8_t)(rand() & 0xFF);
+    un[1] = (uint8_t)(rand() & 0xFF);
+    un[2] = (uint8_t)(rand() & 0xFF);
+    un[3] = (uint8_t)(rand() & 0xFF);
+    tlvdb_change_or_add_node(tlvRoot, 0x9f37, sizeof(un), un);
 
     switch (TrType) {
         case TT_MSD:
