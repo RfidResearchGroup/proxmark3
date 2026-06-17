@@ -310,22 +310,23 @@ static int CmdEMVTerminalStep(const char *Cmd) {
     }
 
     emv_term_cli_opts_t opts;
-    parse_common_exec_args(ctx, &opts, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12);
-    opts.session_path = arg_get_str(ctx, 13)->sval[0];
-    opts.pin = arg_get_str(ctx, 14)->sval[0];
-    opts.output_session = arg_get_str(ctx, 15)->sval[0];
-    opts.arc = arg_get_str(ctx, 16)->sval[0];
-    opts.arpc = arg_get_str(ctx, 17)->sval[0];
-    opts.arpc_rc = arg_get_str(ctx, 18)->sval[0];
+    parse_common_exec_args(ctx, &opts, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
+    opts.session_path = arg_get_str(ctx, 12)->sval[0];
+    opts.pin = arg_get_str(ctx, 13)->sval[0];
+    opts.output_session = arg_get_str(ctx, 14)->sval[0];
+    opts.arc = arg_get_str(ctx, 15)->sval[0];
+    opts.arpc = arg_get_str(ctx, 16)->sval[0];
+    opts.arpc_rc = arg_get_str(ctx, 17)->sval[0];
     apply_wave_b_opts(&opts,
+                      arg_get_str(ctx, 18)->sval[0],
                       arg_get_str(ctx, 19)->sval[0],
-                      arg_get_str(ctx, 20)->sval[0],
-                      arg_get_lit(ctx, 21),
-                      arg_get_lit(ctx, 22));
+                      arg_get_lit(ctx, 20),
+                      arg_get_lit(ctx, 21));
     apply_wave_d_opts(&opts,
-                      arg_get_str(ctx, 23)->sval[0],
+                      arg_get_str(ctx, 22)->sval[0],
                       NULL,
-                      arg_get_lit(ctx, 24));
+                      arg_get_lit(ctx, 23));
+    opts.use_terminal_profile = opts.param_load_json;
     CLIParserFree(ctx);
 
     print_channel(opts.channel);
