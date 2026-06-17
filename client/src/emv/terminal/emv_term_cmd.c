@@ -29,6 +29,11 @@
 #include "emv_term_replay.h"
 #include "emv_term_capabilities.h"
 #include "emv_term_pcap.h"
+#include "emv_term_probe.h"
+#include "emv_term_profile.h"
+#include "emv_term_tlv.h"
+#include "emv_transaction.h"
+#include "../emvcore.h"
 #include "phase_cvm.h"
 #include "phase_online.h"
 #include "phase_complete.h"
@@ -67,6 +72,66 @@ static void apply_wave_d_opts(emv_term_cli_opts_t *opts,
         opts->pcap_meta = pcap_meta;
     }
     opts->timing_report = timing_report;
+}
+
+static int CmdEMVTerminalProbe(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv terminal probe",
+                  "Enumerate card data via GET DATA (after select/init)",
+                  "emv terminal probe -s\n"
+                  "emv terminal probe -s --session /tmp/s.json\n"
+                  "emv terminal probe --sweep -s    -> extended tag sweep\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("s",  "select",   "Activate field and select card"),
+        arg_lit0("a",  "apdu",     "Show APDU requests and responses"),
+        arg_lit0("w",  "wired",    "Contact interface"),
+        arg_lit0(NULL, "sweep",    "Try extended GET DATA tag list"),
+        arg_str0(NULL, "session", "<file>", "Session JSON (restore AID/TLV, skip init)"),
+        arg_lit0("j",  "jload",    "Load terminal profile defaults"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool activate = arg_get_lit(ctx, 1);
+    bool show_apdu = arg_get_lit(ctx, 2);
+    bool wired = arg_get_lit(ctx, 3);
+    bool sweep = arg_get_lit(ctx, 4);
+    const char *session = arg_get_str(ctx, 5)->sval[0];
+    bool jload = arg_get_lit(ctx, 6);
+    CLIParserFree(ctx);
+
+    emv_term_cli_opts_t opts = {0};
+    opts.activate_field = activate;
+    opts.show_apdu = show_apdu;
+    opts.channel = wired ? CC_CONTACT : CC_CONTACTLESS;
+    opts.param_load_json = jload;
+
+    emv_term_ctx_t term_ctx;
+    int res = emv_term_ctx_init(&term_ctx, &opts);
+    if (res) {
+        return res;
+    }
+
+    if (session && session[0]) {
+        emv_term_session_load_json(&term_ctx, session);
+        emv_term_init_transaction_params(term_ctx.terminal, jload, NULL, TT_QVSDCMCHIP, false);
+        emv_term_copy_terminal_tags_to_card(&term_ctx);
+    } else {
+        res = emv_transaction_init(&term_ctx);
+        if (res) {
+            emv_term_ctx_free(&term_ctx);
+            return res;
+        }
+    }
+
+    SetAPDULogging(show_apdu);
+    res = emv_term_probe_card(&term_ctx, sweep);
+    DropFieldEx(opts.channel);
+    SetAPDULogging(false);
+    emv_term_ctx_free(&term_ctx);
+    return res;
 }
 
 static int CmdEMVTerminalSession(const char *Cmd);
@@ -517,12 +582,32 @@ static int CmdEMVTerminalPin(const char *Cmd) {
         emv_term_session_load_json(&term_ctx, session);
     }
 
+    emv_term_init_transaction_params(term_ctx.terminal, true, NULL, TT_QVSDCMCHIP, false);
+    emv_term_copy_terminal_tags_to_card(&term_ctx);
+
     int prep = EMVPrepareContactless(opts.channel, false);
     if (prep) {
         emv_term_secure_zero(prompt_pin, sizeof(prompt_pin));
         emv_term_ctx_free(&term_ctx);
         return prep;
     }
+
+    if (term_ctx.aid_len) {
+        uint8_t buf[APDU_RES_LEN] = {0};
+        size_t len = 0;
+        uint16_t sw = 0;
+        int sel = EMVSelect(opts.channel, false, true, term_ctx.aid, term_ctx.aid_len,
+                            buf, sizeof(buf), &len, &sw, term_ctx.card);
+        if (sel) {
+            PrintAndLogEx(WARNING, "AID re-select failed (%d) — run emv terminal step init first", sel);
+        } else if (show_apdu) {
+            PrintAndLogEx(INFO, "Re-selected AID: %s", sprint_hex_inrow(term_ctx.aid, term_ctx.aid_len));
+        }
+    } else {
+        PrintAndLogEx(WARNING, "No AID in context — run init or pass --session with --full-tlv session export");
+    }
+
+    emv_term_cvm_print_diagnostics(&term_ctx);
 
     SetAPDULogging(show_apdu);
     res = phase_cvm_verify_pin(&term_ctx, pin, enciphered);
@@ -951,6 +1036,7 @@ static command_t TerminalCommandTable[] = {
     {"step",    CmdEMVTerminalStep,   IfPm3Iso14443,   "Run single terminal phase"},
     {"online",  CmdEMVTerminalOnline, IfPm3Iso14443,   "Complete online path after ARQC"},
     {"pin",     CmdEMVTerminalPin,    IfPm3Iso14443,   "Standalone VERIFY PIN"},
+    {"probe",   CmdEMVTerminalProbe,  IfPm3Iso14443,   "GET DATA card enumeration"},
     {"profile", CmdEMVTerminalProfile, AlwaysAvailable, "Print or validate terminal profile JSON"},
     {"load",    CmdEMVTerminalLoad,   AlwaysAvailable, "Load card data from scan JSON"},
     {"export-sim", CmdEMVTerminalExportSim, AlwaysAvailable, "Export emv sim card patch from session"},

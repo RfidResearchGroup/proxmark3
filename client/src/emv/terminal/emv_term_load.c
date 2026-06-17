@@ -307,3 +307,62 @@ int emv_term_load_card_tlv(emv_term_ctx_t *ctx, const char *path) {
     PrintAndLogEx(INFO, "Loaded card TLV fixture: AID=%s", ctx->aid_len ? sprint_hex_inrow(ctx->aid, ctx->aid_len) : "(none)");
     return PM3_SUCCESS;
 }
+
+static void merge_tlvdb_into_card(struct tlvdb *card, struct tlvdb *src) {
+    if (!card || !src) {
+        return;
+    }
+    if (src->tag.tag > 1) {
+        tlvdb_change_or_add_node(card, src->tag.tag, src->tag.len, src->tag.value);
+    }
+    for (struct tlvdb *child = src->children; child; child = tlvdb_elm_get_next(child)) {
+        merge_tlvdb_into_card(card, child);
+    }
+}
+
+int emv_term_import_session_card(emv_term_ctx_t *ctx, json_t *session_root) {
+    if (!ctx || !session_root) {
+        return PM3_EINVARG;
+    }
+
+    json_t *card = json_object_get(session_root, "Card");
+    if (!json_is_object(card)) {
+        return PM3_SUCCESS;
+    }
+
+    uint8_t aid[APDU_AID_LEN] = {0};
+    json_t *jaid = json_object_get(card, "AID");
+    if (json_is_string(jaid)) {
+        int buflen = 0;
+        if (!param_gethex_to_eol(json_string_value(jaid), 0, aid, sizeof(aid), &buflen) && buflen > 0) {
+            memcpy(ctx->aid, aid, (size_t)buflen);
+            ctx->aid_len = (size_t)buflen;
+        }
+    }
+
+    json_t *tlv_arr = json_object_get(card, "TLV");
+    if (!json_is_array(tlv_arr)) {
+        return PM3_SUCCESS;
+    }
+
+    size_t imported = 0;
+    size_t n = json_array_size(tlv_arr);
+    for (size_t i = 0; i < n; i++) {
+        json_t *snap = json_array_get(tlv_arr, i);
+        json_t *root_tlv = json_object_get(snap, "tlv");
+        if (!json_is_object(root_tlv)) {
+            root_tlv = snap;
+        }
+        struct tlvdb *db = json_tlv_to_tlvdb(root_tlv);
+        if (db) {
+            merge_tlvdb_into_card(ctx->card, db);
+            tlvdb_free(db);
+            imported++;
+        }
+    }
+
+    if (imported) {
+        PrintAndLogEx(INFO, "Restored %zu TLV snapshot(s) from session", imported);
+    }
+    return PM3_SUCCESS;
+}

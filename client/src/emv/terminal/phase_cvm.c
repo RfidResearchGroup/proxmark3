@@ -17,6 +17,7 @@
 #include "emv_term_pin_prompt.h"
 #include "emv_term_secure.h"
 #include "emv_term_tvr.h"
+#include "emv_term_tlv.h"
 #include "ui.h"
 #include "protocols.h"
 #include "commonutil.h"
@@ -137,8 +138,106 @@ static void update_tvr_bit(emv_term_ctx_t *ctx, size_t byte_idx, uint8_t bit_mas
     tlvdb_change_or_add_node(ctx->card, 0x95, 5, tvr);
 }
 
+static const char *cvm_code_name(uint8_t cvm_code) {
+    switch (cvm_code) {
+        case CVM_PLAIN_OFFLINE:       return "plain offline PIN";
+        case CVM_ENCIPHERED_ONLINE:   return "enciphered online PIN";
+        case CVM_ENCIPHERED_OFFLINE:  return "enciphered offline PIN";
+        case CVM_SIGNATURE:           return "signature";
+        case CVM_NO_CVM:              return "no CVM";
+        case CVM_FAIL:                return "fail CVM";
+        case CVM_NOT_ALLOWED:         return "not allowed";
+        default:                      return "other/RFU";
+    }
+}
+
+static const char *cvm_condition_name(uint8_t condition) {
+    switch (condition) {
+        case CVM_COND_ALWAYS:         return "always";
+        case CVM_COND_TERM_SUPPORTS:  return "if terminal supports CVM";
+        case CVM_COND_AMT_LE_X:       return "if amount <= X";
+        case CVM_COND_AMT_GT_X:       return "if amount > X";
+        case CVM_COND_AMT_LE_Y:       return "if amount <= Y";
+        case CVM_COND_AMT_GT_Y:       return "if amount > Y";
+        default:                      return "other";
+    }
+}
+
+void emv_term_cvm_dump_list(const emv_term_ctx_t *ctx) {
+    const struct tlv *cvm_list = tlvdb_get(ctx->card, 0x8e, NULL);
+    if (!cvm_list || cvm_list->len < 10) {
+        PrintAndLogEx(INFO, "CVM List (8E): not present or too short");
+        return;
+    }
+
+    uint32_t amount_x = cvm_get_amount(cvm_list->value);
+    uint32_t amount_y = cvm_get_amount(cvm_list->value + 4);
+    PrintAndLogEx(INFO, "CVM List (8E) [%zu]: X=%08x Y=%08x", cvm_list->len, amount_x, amount_y);
+
+    for (size_t i = 8; i + 1 < cvm_list->len; i += 2) {
+        uint8_t cvm_byte = cvm_list->value[i];
+        uint8_t cvm_code = cvm_byte & 0x3F;
+        uint8_t condition = cvm_list->value[i + 1];
+        const char *apply_next = (cvm_byte & 0x40) ? "apply succeeding rule if this fails" : "stop if this fails";
+        PrintAndLogEx(INFO, "  rule %zu: %02x/%02x — %s, %s (%s)",
+                      (i - 8) / 2 + 1, cvm_code, condition,
+                      cvm_code_name(cvm_code), cvm_condition_name(condition), apply_next);
+    }
+}
+
+void emv_term_cvm_print_diagnostics(const emv_term_ctx_t *ctx) {
+    if (!ctx) {
+        return;
+    }
+
+    PrintAndLogEx(INFO, "--- CVM diagnostics ---");
+    PrintAndLogEx(INFO, "Channel: %s", ctx->channel == CC_CONTACT ? "contact" : "contactless");
+    if (ctx->scheme_name[0]) {
+        PrintAndLogEx(INFO, "Scheme profile: %s", ctx->scheme_name);
+    }
+    if (ctx->flash_skip_offline_pin) {
+        PrintAndLogEx(INFO, "Scheme flag: flash_skip_offline_pin (Interac contactless)");
+    }
+
+    const struct tlv *caps = emv_term_tlv_lookup(ctx, 0x9f33);
+    if (caps && caps->len >= 3) {
+        PrintAndLogEx(INFO, "Terminal Capabilities (9F33): %s", sprint_hex(caps->value, caps->len));
+        PrintAndLogEx(INFO, "  plain offline PIN: %s", (caps->value[1] & 0x40) ? "yes" : "no");
+        PrintAndLogEx(INFO, "  enciphered offline PIN: %s", (caps->value[1] & 0x40) ? "yes" : "no");
+        PrintAndLogEx(INFO, "  enciphered online PIN: %s", (caps->value[0] & 0x80) ? "yes" : "no");
+    } else {
+        PrintAndLogEx(WARNING, "Terminal Capabilities (9F33) missing — use -j or emv terminal run -j");
+    }
+
+    const struct tlv *aip = tlvdb_get(ctx->card, 0x82, NULL);
+    if (aip && aip->len >= 1) {
+        PrintAndLogEx(INFO, "AIP (82): cardholder verification %s",
+                      (aip->value[0] & 0x10) ? "supported" : "not supported");
+    }
+
+    emv_term_cvm_dump_list(ctx);
+
+    if (ctx->channel == CC_CONTACTLESS) {
+        const struct tlv *cvm_list = tlvdb_get(ctx->card, 0x8e, NULL);
+        bool has_offline = false;
+        if (cvm_list && cvm_list->len >= 10) {
+            for (size_t i = 8; i + 1 < cvm_list->len; i += 2) {
+                uint8_t code = cvm_list->value[i] & 0x3F;
+                if (code == CVM_PLAIN_OFFLINE || code == CVM_ENCIPHERED_OFFLINE) {
+                    has_offline = true;
+                    break;
+                }
+            }
+        }
+        if (has_offline) {
+            PrintAndLogEx(WARNING, "Contactless + offline PIN in CVM list: most cards reject VERIFY (00 20) over NFC");
+            PrintAndLogEx(INFO, "Try: emv terminal run -w -j --pin <pin>  OR  emv terminal pin --offline <pin> -w");
+        }
+    }
+}
+
 static bool terminal_supports_cvm(const emv_term_ctx_t *ctx, uint8_t cvm_code) {
-    const struct tlv *caps = tlvdb_get(ctx->card, 0x9f33, NULL);
+    const struct tlv *caps = emv_term_tlv_lookup(ctx, 0x9f33);
     if (!caps || caps->len < 3) {
         return true;
     }
@@ -155,7 +254,7 @@ static bool terminal_supports_cvm(const emv_term_ctx_t *ctx, uint8_t cvm_code) {
 
 static bool cvm_condition_ok(const emv_term_ctx_t *ctx, uint8_t condition, uint32_t amount_x, uint32_t amount_y) {
     uint64_t txn_amt = 0;
-    const struct tlv *amount = tlvdb_get(ctx->card, 0x9f02, NULL);
+    const struct tlv *amount = emv_term_tlv_lookup(ctx, 0x9f02);
     if (amount && amount->len) {
         txn_amt = emv_term_bcd_to_uint(amount->value, amount->len);
     }
@@ -337,9 +436,14 @@ int phase_cvm_run(emv_term_ctx_t *ctx) {
     const struct tlv *cvm_list = tlvdb_get(ctx->card, 0x8e, NULL);
     if (!cvm_list || cvm_list->len < 10) {
         PrintAndLogEx(INFO, "No CVM List (8E) — skipping CVM phase");
+        if (ctx->channel == CC_CONTACTLESS) {
+            PrintAndLogEx(INFO, "Contactless cards often use no-CVM or online PIN only (no 8E in records)");
+        }
         set_cvm_results(ctx, CVM_NO_CVM, CVM_COND_ALWAYS, CVM_RESULT_UNKNOWN);
         return PM3_SUCCESS;
     }
+
+    emv_term_cvm_dump_list(ctx);
 
     uint32_t amount_x = cvm_get_amount(cvm_list->value);
     uint32_t amount_y = cvm_get_amount(cvm_list->value + 4);
@@ -359,10 +463,11 @@ int phase_cvm_run(emv_term_ctx_t *ctx) {
         }
 
         if (!terminal_supports_cvm(ctx, cvm_code)) {
+            PrintAndLogEx(INFO, "CVM rule skipped (terminal 9F33): %s", cvm_code_name(cvm_code));
             continue;
         }
 
-        PrintAndLogEx(INFO, "CVM rule: code=%02x condition=%02x", cvm_code, condition);
+        PrintAndLogEx(INFO, "CVM rule: %s, %s", cvm_code_name(cvm_code), cvm_condition_name(condition));
 
         switch (cvm_code) {
             case CVM_NO_CVM:
@@ -389,6 +494,9 @@ int phase_cvm_run(emv_term_ctx_t *ctx) {
                 return PM3_SUCCESS;
 
             case CVM_PLAIN_OFFLINE:
+                if (ctx->channel == CC_CONTACTLESS) {
+                    PrintAndLogEx(WARNING, "Plain offline PIN over contactless — card may return 6985/6A81; use -w for chip VERIFY");
+                }
                 if (!pin || !pin[0]) {
                     PrintAndLogEx(WARNING, "Plaintext offline PIN required but no PIN provided (--pin or EMV_TEST_PIN)");
                     update_tvr_bit(ctx, 2, 1 << 4, true); // PIN not entered
@@ -406,6 +514,9 @@ int phase_cvm_run(emv_term_ctx_t *ctx) {
                 break;
 
             case CVM_ENCIPHERED_OFFLINE:
+                if (ctx->channel == CC_CONTACTLESS) {
+                    PrintAndLogEx(WARNING, "Enciphered offline PIN over contactless — card may reject VERIFY; use contact (-w)");
+                }
                 if (!pin || !pin[0]) {
                     PrintAndLogEx(WARNING, "Enciphered offline PIN required but no PIN provided");
                     continue;

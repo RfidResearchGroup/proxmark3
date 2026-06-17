@@ -49,12 +49,63 @@ static int test_pin_zeroize(bool verbose) {
     return 0;
 }
 
+static int test_terminal_caps_from_terminal_tree(bool verbose) {
+    emv_term_ctx_t ctx;
+    memset(&ctx, 0, sizeof(ctx));
+
+    const char *alr = "Root terminal TLV tree";
+    ctx.card = tlvdb_fixed(1, strlen(alr), (const unsigned char *)alr);
+    const char *alt = "Terminal TLV tree";
+    ctx.terminal = tlvdb_fixed(1, strlen(alt), (const unsigned char *)alt);
+
+    uint8_t caps_terminal[] = {0xE0, 0x00, 0xC8};
+    uint8_t caps_card[] = {0xE0, 0xF8, 0xC8};
+    tlvdb_change_or_add_node(ctx.terminal, 0x9f33, sizeof(caps_terminal), caps_terminal);
+    tlvdb_change_or_add_node(ctx.card, 0x9f33, sizeof(caps_card), caps_card);
+
+    uint8_t cvm_list[] = {
+        0x00, 0x00, 0x27, 0x10,
+        0x00, 0x00, 0x4E, 0x20,
+        0x01, 0x00,
+        0x1F, 0x00,
+    };
+    tlvdb_change_or_add_node(ctx.card, 0x8e, sizeof(cvm_list), cvm_list);
+    ctx.opts.pin = "1234";
+
+    int res = phase_cvm_run(&ctx);
+    if (res != PM3_SUCCESS) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "CVM run failed (%d)", res);
+        }
+        tlvdb_free(ctx.card);
+        tlvdb_free(ctx.terminal);
+        return 1;
+    }
+    if (ctx.cvm_results[0] == 0x01) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "offline PIN ran despite terminal 9F33 lacking support bit");
+        }
+        tlvdb_free(ctx.card);
+        tlvdb_free(ctx.terminal);
+        return 1;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "terminal 9F33 precedence OK (offline PIN skipped)");
+    }
+    tlvdb_free(ctx.card);
+    tlvdb_free(ctx.terminal);
+    return 0;
+}
+
 static int test_online_pin_stash(bool verbose) {
     emv_term_ctx_t ctx;
     memset(&ctx, 0, sizeof(ctx));
 
     const char *alr = "Root terminal TLV tree";
     ctx.card = tlvdb_fixed(1, strlen(alr), (const unsigned char *)alr);
+    const char *alt = "Terminal TLV tree";
+    ctx.terminal = tlvdb_fixed(1, strlen(alt), (const unsigned char *)alt);
 
     uint8_t cvm_list[] = {
         0x00, 0x00, 0x27, 0x10,
@@ -64,7 +115,7 @@ static int test_online_pin_stash(bool verbose) {
     };
     uint8_t caps[] = {0xE0, 0xF8, 0xC8};
     tlvdb_change_or_add_node(ctx.card, 0x8e, sizeof(cvm_list), cvm_list);
-    tlvdb_change_or_add_node(ctx.card, 0x9f33, sizeof(caps), caps);
+    tlvdb_change_or_add_node(ctx.terminal, 0x9f33, sizeof(caps), caps);
 
     ctx.opts.pin = "1234";
     int res = phase_cvm_run(&ctx);
@@ -73,6 +124,7 @@ static int test_online_pin_stash(bool verbose) {
             PrintAndLogEx(ERR, "online PIN CVM run failed (%d)", res);
         }
         tlvdb_free(ctx.card);
+        tlvdb_free(ctx.terminal);
         return 1;
     }
     if (ctx.online_pin_block_len != 8) {
@@ -80,6 +132,7 @@ static int test_online_pin_stash(bool verbose) {
             PrintAndLogEx(ERR, "online PIN block not stashed (len=%zu)", ctx.online_pin_block_len);
         }
         tlvdb_free(ctx.card);
+        tlvdb_free(ctx.terminal);
         return 1;
     }
 
@@ -90,6 +143,7 @@ static int test_online_pin_stash(bool verbose) {
             PrintAndLogEx(ERR, "TVR online PIN entered bit not set");
         }
         tlvdb_free(ctx.card);
+        tlvdb_free(ctx.terminal);
         return 1;
     }
 
@@ -100,6 +154,7 @@ static int test_online_pin_stash(bool verbose) {
         PrintAndLogEx(SUCCESS, "online PIN stash OK");
     }
     tlvdb_free(ctx.card);
+    tlvdb_free(ctx.terminal);
     return 0;
 }
 
@@ -157,6 +212,9 @@ int exec_terminal_cvm_test(bool verbose) {
         return 1;
     }
     if (test_pin_zeroize(verbose)) {
+        return 1;
+    }
+    if (test_terminal_caps_from_terminal_tree(verbose)) {
         return 1;
     }
     if (test_online_pin_stash(verbose)) {

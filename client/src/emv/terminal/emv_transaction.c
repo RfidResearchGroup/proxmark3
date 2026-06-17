@@ -14,6 +14,7 @@
 #include "emv_transaction.h"
 #include "emv_term_profile.h"
 #include "emv_term_mock.h"
+#include "emv_term_tlv.h"
 #include "phase_caa.h"
 #include "../emvjson.h"
 #include "../dol.h"
@@ -205,20 +206,20 @@ int emv_transaction_init(emv_term_ctx_t *ctx) {
     PrintAndLogEx(INFO, "* Selected.");
 
     PrintAndLogEx(INFO, "\n* Init transaction parameters.");
-    emv_term_init_transaction_params(ctx->card, false, NULL, ctx->tr_type, ctx->opts.gen_ac_gpo);
+    emv_term_init_transaction_params(ctx->terminal, false, NULL, ctx->tr_type, ctx->opts.gen_ac_gpo);
     if (ctx->opts.param_load_json) {
         if (ctx->opts.use_terminal_profile) {
-            if (!emv_term_profile_load(ctx->card, ctx->opts.profile_path)) {
+            if (!emv_term_profile_load(ctx->terminal, ctx->opts.profile_path)) {
                 PrintAndLogEx(WARNING, "Terminal profile not found, loading emv_defparams.json...");
-                ParamLoadFromJson(ctx->card);
+                ParamLoadFromJson(ctx->terminal);
             }
-            emv_term_profile_load(ctx->terminal, ctx->opts.profile_path);
         } else {
-            ParamLoadFromJson(ctx->card);
+            ParamLoadFromJson(ctx->terminal);
         }
     }
+    emv_term_copy_terminal_tags_to_card(ctx);
     if (ctx->opts.decode_tlv) {
-        TLVPrintFromTLV(ctx->card);
+        TLVPrintFromTLV(ctx->terminal);
     }
 
     PrintAndLogEx(INFO, "\n* Calc PDOL.");

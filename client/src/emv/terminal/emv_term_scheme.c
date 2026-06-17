@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------------
 
 #include "emv_term_scheme.h"
+#include "emv_term_tlv.h"
 #include "emv_term_profile.h"
 #include "../emvjson.h"
 #include "fileutils.h"
@@ -164,10 +165,11 @@ int emv_term_scheme_apply(emv_term_ctx_t *ctx, const emv_term_scheme_info_t *inf
 
     if (info->profile_path[0]) {
         PrintAndLogEx(INFO, "Loading scheme profile: %s (%s)", info->name, info->profile_path);
-        if (!ParamLoadFromJsonFile(ctx->card, info->profile_path)) {
+        if (!ParamLoadFromJsonFile(ctx->terminal, info->profile_path)) {
             PrintAndLogEx(WARNING, "Scheme profile load failed: %s", info->profile_path);
             return PM3_ESOFT;
         }
+        emv_term_copy_terminal_tags_to_card(ctx);
     }
 
     PrintAndLogEx(INFO, "Kernel: %s (%s)", info->name,

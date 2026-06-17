@@ -16,6 +16,8 @@
 
 int phase_cvm_run(emv_term_ctx_t *ctx);
 int phase_cvm_verify_pin(emv_term_ctx_t *ctx, const char *pin, bool enciphered);
+void emv_term_cvm_dump_list(const emv_term_ctx_t *ctx);
+void emv_term_cvm_print_diagnostics(const emv_term_ctx_t *ctx);
 
 void emv_term_pin_zeroize(uint8_t *buf, size_t len);
 

@@ -6,6 +6,7 @@
 
 #include "phase_trm.h"
 #include "emv_term_tvr.h"
+#include "emv_term_tlv.h"
 #include "ui.h"
 #include <inttypes.h>
 #include <stdlib.h>
@@ -18,8 +19,8 @@ int phase_trm_run(emv_term_ctx_t *ctx) {
     ctx->floor_limit_exceeded = false;
     PrintAndLogEx(INFO, "\n* Terminal risk management");
 
-    const struct tlv *amount = tlvdb_get(ctx->card, 0x9f02, NULL);
-    const struct tlv *floor = tlvdb_get(ctx->card, 0x9f1b, NULL);
+    const struct tlv *amount = emv_term_tlv_lookup(ctx, 0x9f02);
+    const struct tlv *floor = emv_term_tlv_lookup(ctx, 0x9f1b);
     if (amount && amount->len >= 6 && floor && floor->len >= 6) {
         uint64_t amt = emv_term_bcd_to_uint(amount->value, amount->len);
         uint64_t lim = emv_term_bcd_to_uint(floor->value, floor->len);

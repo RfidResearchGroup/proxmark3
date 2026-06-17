@@ -13,6 +13,7 @@
 
 #include "emv_term_session.h"
 #include "emv_term_tvr.h"
+#include "emv_term_load.h"
 #include "../emvjson.h"
 #include "emv_term_redact.h"
 #include "ui.h"
@@ -250,6 +251,7 @@ int emv_term_session_load_json(emv_term_ctx_t *ctx, const char *path) {
     }
 
     str_copy(ctx->session_file, sizeof(ctx->session_file), path);
+    emv_term_import_session_card(ctx, root);
     json_decref(root);
     PrintAndLogEx(SUCCESS, "Session loaded: %s", path);
     return PM3_SUCCESS;
