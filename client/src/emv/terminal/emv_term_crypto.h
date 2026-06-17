@@ -85,6 +85,7 @@ typedef struct {
     uint64_t range_max;
     emv_term_crypto_rng_mode_t mode;
     bool quiet;
+    bool stream;
     emv_term_crypto_genac_opts_t genac;
 } emv_term_crypto_rng_opts_t;
 
@@ -111,6 +112,8 @@ int emv_term_crypto_bench(emv_term_ctx_t *ctx, const emv_term_crypto_bench_opts_
 int emv_term_crypto_bench_ex(emv_term_ctx_t *ctx, const emv_term_crypto_bench_opts_t *opts,
                              const char *export_path, emv_term_crypto_bench_result_t *result_out);
 int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *opts);
+int emv_term_crypto_rng_stream(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *opts,
+                               Iso7816CommandChannel channel);
 
 void emv_term_uint_to_bcd(uint64_t val, uint8_t *out, size_t len);
 

@@ -21,6 +21,7 @@
 #include "ui.h"
 #include "commonutil.h"
 #include "protocols.h"
+#include "util.h"
 #include <jansson.h>
 #include <string.h>
 #include <stdlib.h>
@@ -694,7 +695,9 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
     bool has_cdol = tlvdb_get(ctx->card, 0x8c, NULL) != NULL;
     bool can_query = has_cdol || crypto_is_visa_qvsdc(ctx) || crypto_is_qvsdc_gpo_ac(ctx);
 
-    PrintAndLogEx(INFO, "=== EMV card RNG (lab toy — not a certified TRNG) ===");
+    if (!opts->stream && !opts->quiet) {
+        PrintAndLogEx(INFO, "=== EMV card RNG (lab toy — not a certified TRNG) ===");
+    }
 
     if (can_query) {
         emv_term_crypto_genac_opts_t genac = opts->genac;
@@ -772,8 +775,13 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
 
     switch (opts->mode) {
         case EMV_CRYPTO_RNG_RAW:
-            PrintAndLogEx(SUCCESS, "Card entropy [%d bytes]: %s",
-                          out_bytes, sprint_hex(hash, (size_t)out_bytes));
+            if (opts->stream) {
+                fwrite(hash, 1, (size_t)out_bytes, stdout);
+                fflush(stdout);
+            } else {
+                PrintAndLogEx(SUCCESS, "Card entropy [%d bytes]: %s",
+                              out_bytes, sprint_hex(hash, (size_t)out_bytes));
+            }
             break;
         case EMV_CRYPTO_RNG_DICE: {
             uint32_t roll = (uint32_t)((crypto_rng_u64_from_hash(hash) % 6) + 1);
@@ -796,7 +804,7 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
         }
     }
 
-    if (!opts->quiet) {
+    if (!opts->quiet && !opts->stream) {
         if (attempted > got_samples && got_samples > 0) {
             PrintAndLogEx(INFO, "Mixed %u fresh sample(s) of %u attempt(s), pool %zu bytes, sha256 → %s%s",
                           got_samples, attempted, pool_len, sprint_hex(hash, 8), weak ? " (weak)" : "");
@@ -805,7 +813,81 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
                           got_samples, pool_len, sprint_hex(hash, 8), weak ? " (weak)" : "");
         }
     }
-    PrintAndLogEx(HINT, "Re-tap the card for a new value — most cards issue one AC per session");
+    if (!opts->stream) {
+        PrintAndLogEx(HINT, "Re-tap the card for a new value — most cards issue one AC per session");
+    }
+    return PM3_SUCCESS;
+}
+
+int emv_term_crypto_rng_stream(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *opts,
+                               Iso7816CommandChannel channel) {
+    if (!ctx || !opts) {
+        return PM3_EINVARG;
+    }
+
+    emv_term_crypto_rng_opts_t ropts = *opts;
+    ropts.stream = true;
+    ropts.quiet = true;
+    ropts.samples = 1;
+    ropts.mode = EMV_CRYPTO_RNG_RAW;
+
+    char forced_aid_hex[sizeof(ctx->opts.crypto_forced_aid) * 2 + 1] = {0};
+    const char *forced_ptr = NULL;
+    if (ctx->opts.crypto_forced_aid_len) {
+        snprintf(forced_aid_hex, sizeof(forced_aid_hex), "%s",
+                 sprint_hex_inrow(ctx->opts.crypto_forced_aid, ctx->opts.crypto_forced_aid_len));
+        forced_ptr = forced_aid_hex;
+    }
+
+    emv_term_crypto_prepare_opts_t prep = {
+        .quick_afl = ctx->opts.crypto_quick_afl,
+        .aid_fallback = ctx->opts.crypto_aid_fallback,
+        .forced_aid_hex = forced_ptr,
+    };
+
+    fprintf(stderr, "EMV card RNG stream — present card repeatedly (Enter cancels wait, Ctrl+C quits)\n");
+
+    uint64_t blocks = 0;
+    while (true) {
+        if (kbd_enter_pressed()) {
+            fprintf(stderr, "\nstream stopped\n");
+            break;
+        }
+
+        uint8_t saved_log = g_printAndLog;
+        g_printAndLog = 0;
+
+        int res = PM3_SUCCESS;
+        if (channel == CC_CONTACTLESS) {
+            res = EMVPrepareContactlessEx(channel, true, true);
+        }
+        if (res == PM3_SUCCESS) {
+            ctx->opts.activate_field = false;
+            res = emv_term_crypto_prepare_card(ctx, ctx->opts.param_load_json, NULL, &prep);
+        }
+
+        if (res == PM3_SUCCESS) {
+            res = emv_term_crypto_rng(ctx, &ropts);
+        }
+
+        g_printAndLog = saved_log;
+        DropFieldEx(channel);
+        ctx->opts.activate_field = true;
+
+        if (res == PM3_SUCCESS) {
+            blocks++;
+            fprintf(stderr, "\r[stream] %" PRIu64 " block(s), %d bytes each",
+                    blocks, ropts.out_bytes > 0 ? ropts.out_bytes : 8);
+            fflush(stderr);
+        } else if (res == PM3_ERFTRANS && kbd_enter_pressed()) {
+            fprintf(stderr, "\nstream stopped\n");
+            break;
+        }
+    }
+
+    if (blocks) {
+        fprintf(stderr, "\n");
+    }
     return PM3_SUCCESS;
 }
 

@@ -91,7 +91,7 @@ static void cli_to_genac_opts(const emv_term_crypto_cli_t *cli, emv_term_crypto_
     }
 }
 
-static int crypto_prepare_live(emv_term_ctx_t *term_ctx, const emv_term_crypto_cli_t *cli) {
+static int crypto_init_live_only(emv_term_ctx_t *term_ctx, const emv_term_crypto_cli_t *cli) {
     emv_term_cli_opts_t opts = {0};
     opts.activate_field = cli->activate;
     opts.show_apdu = cli->show_apdu;
@@ -113,26 +113,6 @@ static int crypto_prepare_live(emv_term_ctx_t *term_ctx, const emv_term_crypto_c
         return res;
     }
 
-    if (!cli->session || !cli->session[0]) {
-        int prep = EMVPrepareContactlessEx(opts.channel, true, true);
-        if (prep) {
-            emv_term_ctx_free(term_ctx);
-            return prep;
-        }
-        term_ctx->opts.activate_field = false;
-    }
-
-    emv_term_crypto_prepare_opts_t prep = {
-        .quick_afl = cli->quick_afl,
-        .aid_fallback = cli->aid_fallback && !cli->no_aid_fallback,
-        .forced_aid_hex = cli->forced_aid,
-    };
-    res = emv_term_crypto_prepare_card(term_ctx, cli->jload, cli->session, &prep);
-    if (res) {
-        emv_term_ctx_free(term_ctx);
-        return res;
-    }
-
     if (cli->jload) {
         emv_term_init_transaction_params(term_ctx->terminal, true, NULL, TT_QVSDCMCHIP, false);
         emv_term_copy_terminal_tags_to_card(term_ctx);
@@ -143,6 +123,35 @@ static int crypto_prepare_live(emv_term_ctx_t *term_ctx, const emv_term_crypto_c
     }
     if (cli->un_set) {
         emv_term_crypto_set_un_bytes(term_ctx, cli->un);
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int crypto_prepare_live(emv_term_ctx_t *term_ctx, const emv_term_crypto_cli_t *cli) {
+    int res = crypto_init_live_only(term_ctx, cli);
+    if (res) {
+        return res;
+    }
+
+    if (!cli->session || !cli->session[0]) {
+        int prep = EMVPrepareContactlessEx(term_ctx->opts.channel, true, true);
+        if (prep) {
+            emv_term_ctx_free(term_ctx);
+            return prep;
+        }
+        term_ctx->opts.activate_field = false;
+    }
+
+    emv_term_crypto_prepare_opts_t prep_opts = {
+        .quick_afl = cli->quick_afl,
+        .aid_fallback = cli->aid_fallback && !cli->no_aid_fallback,
+        .forced_aid_hex = cli->forced_aid,
+    };
+    res = emv_term_crypto_prepare_card(term_ctx, cli->jload, cli->session, &prep_opts);
+    if (res) {
+        emv_term_ctx_free(term_ctx);
+        return res;
     }
 
     return PM3_SUCCESS;
@@ -682,6 +691,7 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
                   "RNG from live card cryptograms (AC/ATC/UN/IAD)",
                   "emv terminal crypto rng -s\n"
                   "emv terminal crypto rng -s --dice\n"
+                  "emv terminal crypto rng -s --stream | head -c 32 | xxd\n"
                   "emv terminal crypto rng -s --samples 5 --max 1000000\n");
 
     void *argtable[] = {
@@ -695,6 +705,7 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
         arg_u64_0(NULL, "max", "<n>", "Integer in [0..n-1]"),
         arg_lit0(NULL, "dice", "Roll a d6"),
         arg_lit0(NULL, "coin", "Coin flip"),
+        arg_lit0(NULL, "stream", "Loop forever — raw bytes to stdout (re-tap card each block)"),
         arg_lit0(NULL, "quiet", "Less per-sample output"),
         arg_param_end
     };
@@ -721,13 +732,26 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
     uint64_t range_max = arg_get_u64_def(ctx, 14, 0);
     bool dice = arg_get_lit(ctx, 15);
     bool coin = arg_get_lit(ctx, 16);
-    bool quiet = arg_get_lit(ctx, 17);
+    bool stream = arg_get_lit(ctx, 17);
+    bool quiet = arg_get_lit(ctx, 18);
     crypto_cli_pin_session(&cli, ctx, 6);
     crypto_cli_pin_forced_aid(&cli, ctx, 8);
     CLIParserFree(ctx);
 
+    if (stream && (dice || coin || range_max > 0)) {
+        PrintAndLogEx(ERR, "--stream outputs raw bytes only (incompatible with --dice/--coin/--max)");
+        return PM3_EINVARG;
+    }
+
     emv_term_ctx_t term_ctx;
-    int res = crypto_prepare_live(&term_ctx, &cli);
+    int res;
+    Iso7816CommandChannel channel = cli.wired ? CC_CONTACT : CC_CONTACTLESS;
+
+    if (stream) {
+        res = crypto_init_live_only(&term_ctx, &cli);
+    } else {
+        res = crypto_prepare_live(&term_ctx, &cli);
+    }
     if (res) {
         return res;
     }
@@ -735,7 +759,7 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
     emv_term_crypto_rng_opts_t ropts = {0};
     ropts.samples = cli.count;
     ropts.out_bytes = bytes;
-    ropts.quiet = quiet;
+    ropts.quiet = quiet || stream;
     cli_to_genac_opts(&cli, &ropts.genac);
 
     if (dice) {
@@ -747,9 +771,13 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
         ropts.range_max = range_max;
     }
 
-    SetAPDULogging(cli.show_apdu);
-    res = emv_term_crypto_rng(&term_ctx, &ropts);
-    crypto_finish(&term_ctx, cli.wired ? CC_CONTACT : CC_CONTACTLESS);
+    SetAPDULogging(cli.show_apdu && !stream);
+    if (stream) {
+        res = emv_term_crypto_rng_stream(&term_ctx, &ropts, channel);
+    } else {
+        res = emv_term_crypto_rng(&term_ctx, &ropts);
+    }
+    crypto_finish(&term_ctx, channel);
     return res;
 }
 
