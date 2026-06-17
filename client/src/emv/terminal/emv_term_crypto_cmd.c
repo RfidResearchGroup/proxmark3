@@ -32,6 +32,9 @@ typedef struct {
     const char *session;
     const char *output;
     const char *forced_aid;
+    char session_buf[FILE_PATH_SIZE];
+    char output_buf[FILE_PATH_SIZE];
+    char forced_aid_buf[128];
     uint64_t amount_cents;
     bool amount_set;
     uint8_t un[4];
@@ -151,6 +154,30 @@ static void crypto_finish(emv_term_ctx_t *term_ctx, Iso7816CommandChannel channe
     emv_term_ctx_free(term_ctx);
 }
 
+static void crypto_cli_pin_str(const char *src, char *dst, size_t dstlen, const char **out) {
+    if (!dst || !dstlen || !out) {
+        return;
+    }
+    dst[0] = '\0';
+    *out = NULL;
+    if (src && src[0]) {
+        str_copy(dst, dstlen, src);
+        *out = dst;
+    }
+}
+
+static void crypto_cli_pin_session(emv_term_crypto_cli_t *cli, CLIParserContext *ctx, int idx) {
+    crypto_cli_pin_str(arg_get_str(ctx, idx)->sval[0], cli->session_buf, sizeof(cli->session_buf), &cli->session);
+}
+
+static void crypto_cli_pin_output(emv_term_crypto_cli_t *cli, CLIParserContext *ctx, int idx) {
+    crypto_cli_pin_str(arg_get_str(ctx, idx)->sval[0], cli->output_buf, sizeof(cli->output_buf), &cli->output);
+}
+
+static void crypto_cli_pin_forced_aid(emv_term_crypto_cli_t *cli, CLIParserContext *ctx, int idx) {
+    crypto_cli_pin_str(arg_get_str(ctx, idx)->sval[0], cli->forced_aid_buf, sizeof(cli->forced_aid_buf), &cli->forced_aid);
+}
+
 static void parse_amount_un(CLIParserContext *ctx, int amount_idx, int un_idx, emv_term_crypto_cli_t *cli) {
     const char *amount = arg_get_str(ctx, amount_idx)->sval[0];
     if (amount && amount[0]) {
@@ -199,6 +226,7 @@ static int CmdEMVTerminalCryptoSummary(const char *Cmd) {
     cli.jload = arg_get_lit(ctx, 5);
     cli.session = arg_get_str(ctx, 6)->sval[0];
     parse_amount_un(ctx, 7, 8, &cli);
+    crypto_cli_pin_session(&cli, ctx, 6);
     CLIParserFree(ctx);
 
     emv_term_ctx_t term_ctx;
@@ -233,6 +261,7 @@ static int CmdEMVTerminalCryptoChallenge(const char *Cmd) {
     cli.wired = arg_get_lit(ctx, 4);
     cli.jload = arg_get_lit(ctx, 5);
     cli.session = arg_get_str(ctx, 6)->sval[0];
+    crypto_cli_pin_session(&cli, ctx, 6);
     CLIParserFree(ctx);
 
     emv_term_ctx_t term_ctx;
@@ -281,6 +310,8 @@ static int crypto_genac_handler(const char *Cmd, bool ac2) {
     cli.mc_challenge = !arg_get_lit(ctx, 9);
     parse_amount_un(ctx, 10, 11, &cli);
     cli.output = arg_get_str(ctx, 12)->sval[0];
+    crypto_cli_pin_session(&cli, ctx, 6);
+    crypto_cli_pin_output(&cli, ctx, 12);
     CLIParserFree(ctx);
 
     emv_term_ctx_t term_ctx;
@@ -349,6 +380,8 @@ static int CmdEMVTerminalCryptoVary(const char *Cmd) {
     }
     parse_amount_un(ctx, 11, 12, &cli);
     cli.output = arg_get_str(ctx, 13)->sval[0];
+    crypto_cli_pin_session(&cli, ctx, 6);
+    crypto_cli_pin_output(&cli, ctx, 13);
     CLIParserFree(ctx);
 
     emv_term_ctx_t term_ctx;
@@ -393,6 +426,7 @@ static int CmdEMVTerminalCryptoIntauth(const char *Cmd) {
     cli.wired = arg_get_lit(ctx, 4);
     cli.jload = arg_get_lit(ctx, 5);
     cli.session = arg_get_str(ctx, 6)->sval[0];
+    crypto_cli_pin_session(&cli, ctx, 6);
     CLIParserFree(ctx);
 
     emv_term_ctx_t term_ctx;
@@ -427,6 +461,7 @@ static int CmdEMVTerminalCryptoChecksum(const char *Cmd) {
     cli.wired = arg_get_lit(ctx, 4);
     cli.jload = arg_get_lit(ctx, 5);
     cli.session = arg_get_str(ctx, 6)->sval[0];
+    crypto_cli_pin_session(&cli, ctx, 6);
     CLIParserFree(ctx);
 
     emv_term_ctx_t term_ctx;
@@ -460,6 +495,8 @@ static int CmdEMVTerminalCryptoExport(const char *Cmd) {
     cli.jload = arg_get_lit(ctx, 5);
     cli.session = arg_get_str(ctx, 6)->sval[0];
     cli.output = arg_get_str(ctx, 7)->sval[0];
+    crypto_cli_pin_session(&cli, ctx, 6);
+    crypto_cli_pin_output(&cli, ctx, 7);
     CLIParserFree(ctx);
 
     if (!cli.output || !cli.output[0]) {
@@ -542,6 +579,9 @@ static int CmdEMVTerminalCryptoRun(const char *Cmd) {
     cli.count = (int)arg_get_u64_def(ctx, 20, 3);
     parse_amount_un(ctx, 21, 22, &cli);
     cli.output = arg_get_str(ctx, 23)->sval[0];
+    crypto_cli_pin_session(&cli, ctx, 6);
+    crypto_cli_pin_forced_aid(&cli, ctx, 8);
+    crypto_cli_pin_output(&cli, ctx, 23);
     CLIParserFree(ctx);
 
     emv_term_ctx_t term_ctx;
@@ -580,11 +620,19 @@ static int CmdEMVTerminalCryptoCompare(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    const char *a = arg_get_str(ctx, 1)->sval[0];
-    const char *b = arg_get_str(ctx, 2)->sval[0];
+    char path_a[FILE_PATH_SIZE] = {0};
+    char path_b[FILE_PATH_SIZE] = {0};
+    const char *pa = arg_get_str(ctx, 1)->sval[0];
+    const char *pb = arg_get_str(ctx, 2)->sval[0];
+    if (pa && pa[0]) {
+        str_copy(path_a, sizeof(path_a), pa);
+    }
+    if (pb && pb[0]) {
+        str_copy(path_b, sizeof(path_b), pb);
+    }
     CLIParserFree(ctx);
 
-    return emv_term_crypto_compare_json(a, b);
+    return emv_term_crypto_compare_json(path_a[0] ? path_a : NULL, path_b[0] ? path_b : NULL);
 }
 
 static int CmdEMVTerminalCryptoDigest(const char *Cmd) {
@@ -613,6 +661,8 @@ static int CmdEMVTerminalCryptoDigest(const char *Cmd) {
     cli.quick_afl = arg_get_lit(ctx, 7);
     cli.forced_aid = arg_get_str(ctx, 8)->sval[0];
     cli.no_aid_fallback = arg_get_lit(ctx, 9);
+    crypto_cli_pin_session(&cli, ctx, 6);
+    crypto_cli_pin_forced_aid(&cli, ctx, 8);
     CLIParserFree(ctx);
 
     emv_term_ctx_t term_ctx;
