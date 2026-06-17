@@ -690,7 +690,7 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
         CRYPTO_PREP_ARGS,
         arg_str0("d",  "decision", "<aac|tc|arqc>", "GEN AC decision"),
         arg_lit0(NULL, "no-mc-challenge", "Skip MC GET CHALLENGE"),
-        arg_u64_0(NULL, "samples", "<n>", "GEN AC samples to mix (default 3)"),
+        arg_u64_0(NULL, "samples", "<n>", "Fresh AC samples to mix (default 1; re-tap between samples)"),
         arg_u64_0(NULL, "bytes", "<n>", "Raw output bytes (default 8)"),
         arg_u64_0(NULL, "max", "<n>", "Integer in [0..n-1]"),
         arg_lit0(NULL, "dice", "Roll a d6"),
@@ -716,7 +716,7 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
         cli.ac_type = parse_decision(dec);
     }
     cli.mc_challenge = !arg_get_lit(ctx, 11);
-    cli.count = (int)arg_get_u64_def(ctx, 12, 3);
+    cli.count = (int)arg_get_u64_def(ctx, 12, 1);
     int bytes = (int)arg_get_u64_def(ctx, 13, 8);
     uint64_t range_max = arg_get_u64_def(ctx, 14, 0);
     bool dice = arg_get_lit(ctx, 15);

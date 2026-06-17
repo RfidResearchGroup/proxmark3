@@ -24,6 +24,7 @@
 #include <jansson.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <inttypes.h>
 
 #define EMVAC_CDAREQ 0x10
@@ -175,7 +176,9 @@ static void crypto_apply_genac_defaults(emv_term_ctx_t *ctx, emv_term_crypto_gen
 
 static void crypto_print_sw_hint(uint16_t sw) {
     if (sw == 0x6985) {
-        PrintAndLogEx(WARNING, "Card declined GEN AC (6985) — run full `emv terminal run` (CVM/TRM/TAA) first, or try `--decision tc`");
+        PrintAndLogEx(WARNING, "Card declined GEN AC (6985) — one cryptogram per tap; re-tap for another sample, or try `--decision tc`");
+    } else if (sw == 0x6a86) {
+        PrintAndLogEx(WARNING, "GEN AC bad P1/P2 (6A86) — card rejected repeat AC in this session; re-tap for another sample");
     } else if (sw == 0x6700) {
         PrintAndLogEx(WARNING, "GEN AC wrong length (6700) — check CDOL1 field sizes (9F7C/9F21/9F03) and terminal profile");
     }
@@ -620,12 +623,63 @@ static uint64_t crypto_rng_u64_from_hash(const uint8_t hash[32]) {
     return v;
 }
 
+static void crypto_rng_clear_cryptogram(emv_term_ctx_t *ctx) {
+    static const tlv_tag_t tags[] = {0x9f26, 0x9f27, 0x9f36, 0x9f10};
+    static const uint8_t empty = 0;
+    for (size_t i = 0; i < ARRAYLEN(tags); i++) {
+        tlvdb_change_or_add_node(ctx->card, tags[i], 0, &empty);
+    }
+}
+
+static bool crypto_rng_tlv_same(const struct tlv *tlv, const uint8_t *prev, size_t prev_len) {
+    return tlv && tlv->len && prev_len && tlv->len == prev_len &&
+           memcmp(tlv->value, prev, prev_len) == 0;
+}
+
+static void crypto_rng_log_sample(int idx, int total, const struct tlv *ac, const struct tlv *atc,
+                                  uint16_t sw, bool accepted) {
+    char ac_hex[32] = "-";
+    char atc_hex[16] = "-";
+    if (ac && ac->len) {
+        snprintf(ac_hex, sizeof(ac_hex), "%s", sprint_hex(ac->value, ac->len));
+    }
+    if (atc && atc->len) {
+        snprintf(atc_hex, sizeof(atc_hex), "%s", sprint_hex(atc->value, atc->len));
+    }
+    if (accepted) {
+        PrintAndLogEx(INFO, "  sample %d/%d: AC=%s ATC=%s", idx, total, ac_hex, atc_hex);
+    } else if (sw != 0x9000) {
+        PrintAndLogEx(WARNING, "  sample %d/%d: declined (sw=%04X)", idx, total, sw);
+    } else if (!ac || !ac->len) {
+        PrintAndLogEx(WARNING, "  sample %d/%d: no AC (sw=%04X)", idx, total, sw);
+    } else {
+        PrintAndLogEx(WARNING, "  sample %d/%d: duplicate AC/ATC (re-tap for a fresh cryptogram)", idx, total);
+    }
+}
+
+static bool crypto_rng_append_sample(emv_term_ctx_t *ctx, uint8_t *pool, size_t *pool_len, size_t pool_max,
+                                   uint8_t sample_idx) {
+    const struct tlv *ac = crypto_card_tlv(ctx, 0x9f26);
+    const struct tlv *atc = crypto_card_tlv(ctx, 0x9f36);
+    if (!ac || !ac->len) {
+        return false;
+    }
+    crypto_rng_pool_append(pool, pool_len, pool_max, 0xFF, &sample_idx, 1);
+    crypto_rng_pool_append_tlv(pool, pool_len, pool_max, 0x37, emv_term_tlv_lookup(ctx, 0x9f37));
+    crypto_rng_pool_append_tlv(pool, pool_len, pool_max, 0x26, ac);
+    crypto_rng_pool_append_tlv(pool, pool_len, pool_max, 0x36, atc);
+    crypto_rng_pool_append_tlv(pool, pool_len, pool_max, 0x27, tlvdb_get(ctx->card, 0x9f27, NULL));
+    crypto_rng_pool_append_tlv(pool, pool_len, pool_max, 0x10, tlvdb_get(ctx->card, 0x9f10, NULL));
+    crypto_rng_pool_append_tlv(pool, pool_len, pool_max, 0x4c, tlvdb_get(ctx->card, 0x9f4c, NULL));
+    return true;
+}
+
 int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *opts) {
     if (!ctx || !opts) {
         return PM3_EINVARG;
     }
 
-    int samples = opts->samples > 0 ? opts->samples : 3;
+    int samples = opts->samples > 0 ? opts->samples : 1;
     int out_bytes = opts->out_bytes > 0 ? opts->out_bytes : 8;
     if (out_bytes > 32) {
         out_bytes = 32;
@@ -635,6 +689,7 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
     size_t pool_len = 0;
     bool weak = false;
     unsigned got_samples = 0;
+    unsigned attempted = 0;
 
     bool has_cdol = tlvdb_get(ctx->card, 0x8c, NULL) != NULL;
     bool can_query = has_cdol || crypto_is_visa_qvsdc(ctx) || crypto_is_qvsdc_gpo_ac(ctx);
@@ -644,9 +699,23 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
     if (can_query) {
         emv_term_crypto_genac_opts_t genac = opts->genac;
         if (!opts->quiet) {
-            PrintAndLogEx(INFO, "Collecting %d card sample(s) (AC/ATC/UN/IAD)...", samples);
+            if (samples == 1) {
+                PrintAndLogEx(INFO, "Collecting 1 card sample (AC/ATC/UN/IAD)...");
+            } else {
+                PrintAndLogEx(INFO, "Collecting up to %d card sample(s) (AC/ATC/UN/IAD)...", samples);
+                PrintAndLogEx(HINT, "Most cards allow one GEN AC per tap — re-tap between samples if declined");
+            }
         }
+
+        uint8_t prev_ac[8] = {0};
+        size_t prev_ac_len = 0;
+        uint8_t prev_atc[2] = {0};
+        size_t prev_atc_len = 0;
+
         for (int i = 0; i < samples; i++) {
+            attempted++;
+            crypto_rng_clear_cryptogram(ctx);
+
             emv_term_crypto_genac_opts_t iter = genac;
             if (!iter.un_set) {
                 emv_term_crypto_randomize_un(ctx);
@@ -656,31 +725,33 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
             if (!has_cdol && crypto_is_visa_qvsdc(ctx)) {
                 emv_term_copy_terminal_tags_to_card(ctx);
                 res = emv_transaction_visa_request_gpo_ac(ctx);
-                sw = res ? 0 : 0x9000;
+                sw = (res == PM3_SUCCESS) ? 0x9000 : 0x0000;
             } else {
                 res = crypto_genac_inner(ctx, &iter, false, &sw);
             }
             (void)res;
+
             const struct tlv *ac = crypto_card_tlv(ctx, 0x9f26);
-            if (ac && ac->len) {
-                uint8_t idx = (uint8_t)i;
-                crypto_rng_pool_append(pool, &pool_len, sizeof(pool), 0xFF, &idx, 1);
-                crypto_rng_pool_append_tlv(pool, &pool_len, sizeof(pool), 0x37, emv_term_tlv_lookup(ctx, 0x9f37));
-                crypto_rng_pool_append_tlv(pool, &pool_len, sizeof(pool), 0x26, ac);
-                crypto_rng_pool_append_tlv(pool, &pool_len, sizeof(pool), 0x36, tlvdb_get(ctx->card, 0x9f36, NULL));
-                crypto_rng_pool_append_tlv(pool, &pool_len, sizeof(pool), 0x27, tlvdb_get(ctx->card, 0x9f27, NULL));
-                crypto_rng_pool_append_tlv(pool, &pool_len, sizeof(pool), 0x10, tlvdb_get(ctx->card, 0x9f10, NULL));
-                crypto_rng_pool_append_tlv(pool, &pool_len, sizeof(pool), 0x4c, tlvdb_get(ctx->card, 0x9f4c, NULL));
+            const struct tlv *atc = crypto_card_tlv(ctx, 0x9f36);
+            bool fresh = sw == 0x9000 && ac && ac->len &&
+                         !crypto_rng_tlv_same(ac, prev_ac, prev_ac_len) &&
+                         !(atc && crypto_rng_tlv_same(atc, prev_atc, prev_atc_len) && prev_ac_len);
+
+            if (fresh && crypto_rng_append_sample(ctx, pool, &pool_len, sizeof(pool), (uint8_t)got_samples)) {
+                if (ac->len <= sizeof(prev_ac)) {
+                    memcpy(prev_ac, ac->value, ac->len);
+                    prev_ac_len = ac->len;
+                }
+                if (atc && atc->len && atc->len <= sizeof(prev_atc)) {
+                    memcpy(prev_atc, atc->value, atc->len);
+                    prev_atc_len = atc->len;
+                }
                 got_samples++;
                 if (!opts->quiet) {
-                    const struct tlv *atc = tlvdb_get(ctx->card, 0x9f36, NULL);
-                    PrintAndLogEx(INFO, "  sample %d/%d: AC=%s ATC=%s",
-                                  i + 1, samples,
-                                  sprint_hex(ac->value, ac->len),
-                                  atc && atc->len ? sprint_hex(atc->value, atc->len) : "-");
+                    crypto_rng_log_sample(i + 1, samples, ac, atc, sw, true);
                 }
             } else if (!opts->quiet) {
-                PrintAndLogEx(WARNING, "  sample %d/%d: no AC (sw=%04X)", i + 1, samples, sw);
+                crypto_rng_log_sample(i + 1, samples, ac, atc, sw, false);
             }
         }
     }
@@ -726,10 +797,15 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
     }
 
     if (!opts->quiet) {
-        PrintAndLogEx(INFO, "Mixed %u sample(s), pool %zu bytes, sha256 → %s%s",
-                      got_samples, pool_len, sprint_hex(hash, 8), weak ? " (weak)" : "");
+        if (attempted > got_samples && got_samples > 0) {
+            PrintAndLogEx(INFO, "Mixed %u fresh sample(s) of %u attempt(s), pool %zu bytes, sha256 → %s%s",
+                          got_samples, attempted, pool_len, sprint_hex(hash, 8), weak ? " (weak)" : "");
+        } else {
+            PrintAndLogEx(INFO, "Mixed %u sample(s), pool %zu bytes, sha256 → %s%s",
+                          got_samples, pool_len, sprint_hex(hash, 8), weak ? " (weak)" : "");
+        }
     }
-    PrintAndLogEx(HINT, "Tap again for a new value — AC/ATC change each GEN AC");
+    PrintAndLogEx(HINT, "Re-tap the card for a new value — most cards issue one AC per session");
     return PM3_SUCCESS;
 }
 

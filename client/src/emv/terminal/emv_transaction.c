@@ -192,6 +192,23 @@ void emv_transaction_process_ac_format1(struct tlvdb *tlvRoot, uint8_t *buf, siz
                 TLVPrintFromTLV(tlvElm);
             }
         }
+    } else if (buf[0] == 0x77) {
+        struct tlvdb *parsed = tlvdb_parse_multi(buf, len);
+        if (!parsed) {
+            PrintAndLogEx(ERR, "AC response format2 (0x77) parse error. length=%zu", len);
+        } else {
+            static const tlv_tag_t hoist_tags[] = {
+                0x9f27, 0x9f36, 0x9f26, 0x9f10, 0x9f4b,
+            };
+            for (size_t i = 0; i < ARRAYLEN(hoist_tags); i++) {
+                emv_transaction_hoist_gpo_tag(tlvRoot, parsed, hoist_tags[i]);
+            }
+            if (decodeTLV) {
+                PrintAndLogEx(INFO, "AC response format 2 (0x77) — cryptogram tags hoisted to card context");
+                TLVPrintFromBuffer(buf, len);
+            }
+            tlvdb_free(parsed);
+        }
     } else if (decodeTLV) {
         TLVPrintFromBuffer(buf, len);
     }

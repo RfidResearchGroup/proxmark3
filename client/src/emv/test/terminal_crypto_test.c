@@ -10,6 +10,7 @@
 #include "../terminal/emv_term_load.h"
 #include "../terminal/emv_term_profile.h"
 #include "../terminal/emv_term_tvr.h"
+#include "../terminal/emv_transaction.h"
 #include "../dol.h"
 #include "ui.h"
 #include <string.h>
@@ -261,6 +262,56 @@ static int test_compare_json(bool verbose) {
     return 0;
 }
 
+static int test_ac_format2_parse(bool verbose) {
+    emv_term_ctx_t ctx;
+    memset(&ctx, 0, sizeof(ctx));
+
+    const char *alr = "card";
+    ctx.card = tlvdb_fixed(1, strlen(alr), (const unsigned char *)alr);
+
+    static const uint8_t ac_f2[] = {
+        0x77, 0x14,
+        0x9f, 0x27, 0x01, 0x80,
+        0x9f, 0x36, 0x02, 0x00, 0xe7,
+        0x9f, 0x26, 0x08, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11,
+    };
+    uint8_t buf[sizeof(ac_f2)];
+    memcpy(buf, ac_f2, sizeof(ac_f2));
+
+    emv_transaction_process_ac_format1(ctx.card, buf, sizeof(buf), false);
+
+    const struct tlv *ac = tlvdb_get(ctx.card, 0x9f26, NULL);
+    const struct tlv *atc = tlvdb_get(ctx.card, 0x9f36, NULL);
+    const struct tlv *cid = tlvdb_get(ctx.card, 0x9f27, NULL);
+    if (!ac || ac->len != 8 || ac->value[0] != 0xaa) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "format2 AC (9F26) not hoisted");
+        }
+        tlvdb_free(ctx.card);
+        return 1;
+    }
+    if (!atc || atc->len != 2 || atc->value[1] != 0xe7) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "format2 ATC (9F36) not hoisted");
+        }
+        tlvdb_free(ctx.card);
+        return 1;
+    }
+    if (!cid || cid->len != 1 || cid->value[0] != 0x80) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "format2 CID (9F27) not hoisted");
+        }
+        tlvdb_free(ctx.card);
+        return 1;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "AC format2 (0x77) parse OK");
+    }
+    tlvdb_free(ctx.card);
+    return 0;
+}
+
 int exec_terminal_crypto_test(bool verbose) {
     if (test_uint_to_bcd(verbose)) {
         return 1;
@@ -281,6 +332,9 @@ int exec_terminal_crypto_test(bool verbose) {
         return 1;
     }
     if (test_compare_json(verbose)) {
+        return 1;
+    }
+    if (test_ac_format2_parse(verbose)) {
         return 1;
     }
     return 0;
