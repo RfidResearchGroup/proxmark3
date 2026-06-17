@@ -138,6 +138,7 @@ int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool l
                 case ISODEP_INACTIVE:
                     if (activate_field == false) {
                         PrintAndLogEx(FAILED, "Field currently inactive, cannot send an APDU");
+                        PrintAndLogEx(HINT, "Hint: use `emv terminal run -s` or `emv search -s` to activate the HF field first");
                         return PM3_EIO;
                     }
                     res = ExchangeAPDU14a(data, datalen, activate_field, leave_field_on, result, (int)max_result_len, (int *)result_len);

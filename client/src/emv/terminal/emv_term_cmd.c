@@ -148,7 +148,8 @@ static int CmdEMVTerminalRun(const char *Cmd) {
                   "emv terminal run -j --pin 1234 -o /tmp/session.json --qvsdc\n"
                   "emv terminal run -j --auto-online --host-sim --profile auto\n"
                   "emv terminal run --mock-apdu-file fixtures/foo/mock_apdu.json\n"
-                  "emv terminal run -j --trace-phases --stop-after taa\n");
+                  "emv terminal run -j --trace-phases --stop-after taa\n"
+                  "\nContactless: HF field is activated automatically at transaction start.");
 
     void *argtable[] = {
         arg_param_begin,
@@ -430,6 +431,12 @@ static int CmdEMVTerminalOnline(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    int prep = EMVPrepareContactless(opts.channel, false);
+    if (prep) {
+        emv_term_ctx_free(&term_ctx);
+        return prep;
+    }
+
     SetAPDULogging(show_apdu);
     res = phase_online_run(&term_ctx);
     if (res == PM3_SUCCESS) {
@@ -507,6 +514,13 @@ static int CmdEMVTerminalPin(const char *Cmd) {
 
     if (session && session[0]) {
         emv_term_session_load_json(&term_ctx, session);
+    }
+
+    int prep = EMVPrepareContactless(opts.channel, false);
+    if (prep) {
+        emv_term_secure_zero(prompt_pin, sizeof(prompt_pin));
+        emv_term_ctx_free(&term_ctx);
+        return prep;
     }
 
     SetAPDULogging(show_apdu);

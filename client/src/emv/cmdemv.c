@@ -615,11 +615,17 @@ static int CmdEMVSelect(const char *Cmd) {
 
     SetAPDULogging(show_apdu);
 
+    int prep = EMVPrepareContactless(channel, activateField);
+    if (prep) {
+        SetAPDULogging(false);
+        return prep;
+    }
+
     // exec
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
     uint16_t sw = 0;
-    int res = EMVSelect(channel, activateField, leaveSignalON, data, datalen, buf, sizeof(buf), &len, &sw, NULL);
+    int res = EMVSelect(channel, false, leaveSignalON, data, datalen, buf, sizeof(buf), &len, &sw, NULL);
 
     if (sw)
         PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
@@ -722,8 +728,9 @@ static int CmdEMVSearch(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv search",
                   "Tries to select all applets from applet list\n",
-                  "emv search -s   -> select card and search\n"
-                  "emv search -st  -> select card, search and show result in TLV\n");
+                  "emv search      -> auto-activate field and search\n"
+                  "emv search -st  -> search and show result in TLV\n"
+                  "emv search -s   -> force re-select card before search\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -751,10 +758,16 @@ static int CmdEMVSearch(const char *Cmd) {
 
     SetAPDULogging(show_apdu);
 
+    int prep = EMVPrepareContactless(channel, activateField);
+    if (prep) {
+        SetAPDULogging(false);
+        return prep;
+    }
+
     const char *al = "Applets list";
     struct tlvdb *t = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
 
-    if (EMVSearch(channel, activateField, leaveSignalON, decodeTLV, t, false)) {
+    if (EMVSearch(channel, false, leaveSignalON, decodeTLV, t, false)) {
         tlvdb_free(t);
         SetAPDULogging(false);
         return PM3_ERFTRANS;
@@ -815,11 +828,17 @@ static int CmdEMVPPSE(const char *Cmd) {
 
     SetAPDULogging(show_apdu);
 
+    int prep = EMVPrepareContactless(channel, activateField);
+    if (prep) {
+        SetAPDULogging(false);
+        return prep;
+    }
+
     // exec
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
     uint16_t sw = 0;
-    int res = EMVSelectPSE(channel, activateField, leaveSignalON, PSENum, buf, sizeof(buf), &len, &sw);
+    int res = EMVSelectPSE(channel, false, leaveSignalON, PSENum, buf, sizeof(buf), &len, &sw);
 
     if (sw)
         PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
@@ -873,6 +892,12 @@ static int CmdEMVGPO(const char *Cmd) {
     CLIParserFree(ctx);
 
     SetAPDULogging(show_apdu);
+
+    int prep = EMVPrepareContactless(channel, false);
+    if (prep) {
+        SetAPDULogging(false);
+        return prep;
+    }
 
     // Init TLV tree
     const char *alr = "Root terminal TLV tree";
@@ -989,6 +1014,12 @@ static int CmdEMVReadRecord(const char *Cmd) {
 
     SetAPDULogging(show_apdu);
 
+    int prep = EMVPrepareContactless(channel, false);
+    if (prep) {
+        SetAPDULogging(false);
+        return prep;
+    }
+
     // exec
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
@@ -1078,6 +1109,12 @@ static int CmdEMVAC(const char *Cmd) {
     CLIParserFree(ctx);
 
     SetAPDULogging(show_apdu);
+
+    int prep = EMVPrepareContactless(channel, false);
+    if (prep) {
+        SetAPDULogging(false);
+        return prep;
+    }
 
     // Init TLV tree
     const char *alr = "Root terminal TLV tree";
@@ -1172,6 +1209,12 @@ static int CmdEMVGenerateChallenge(const char *Cmd) {
 
     SetAPDULogging(show_apdu);
 
+    int prep = EMVPrepareContactless(channel, false);
+    if (prep) {
+        SetAPDULogging(false);
+        return prep;
+    }
+
     // exec
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
@@ -1234,6 +1277,12 @@ static int CmdEMVInternalAuthenticate(const char *Cmd) {
     CLIParserFree(ctx);
 
     SetAPDULogging(show_apdu);
+
+    int prep = EMVPrepareContactless(channel, false);
+    if (prep) {
+        SetAPDULogging(false);
+        return prep;
+    }
 
     // Init TLV tree
     const char *alr = "Root terminal TLV tree";
@@ -1933,6 +1982,12 @@ static int CmdEMVRoca(const char *Cmd) {
     uint8_t psenum = (channel == CC_CONTACT) ? 1 : 2;
 
     SetAPDULogging(show_apdu);
+
+    int prep = EMVPrepareContactless(channel, true);
+    if (prep) {
+        SetAPDULogging(false);
+        return prep;
+    }
 
     uint8_t AID[APDU_AID_LEN] = {0};
     size_t AIDlen = 0;

@@ -13,15 +13,16 @@
 
 #include "emv_transaction.h"
 #include "emv_term_profile.h"
+#include "emv_term_mock.h"
 #include "phase_caa.h"
 #include "../emvjson.h"
 #include "../dol.h"
 #include "../emv_tags.h"
+#include "../emvcore.h"
 #include "cmdsmartcard.h"
 #include "cmdparser.h"
 #include "proxmark3.h"
 #include "ui.h"
-#include "proxmark3.h"
 #include <string.h>
 
 #define EMVAC_AC_MASK  0xC0
@@ -95,6 +96,21 @@ void emv_transaction_process_ac_format1(struct tlvdb *tlvRoot, uint8_t *buf, siz
     }
 }
 
+static int emv_transaction_prepare_reader(emv_term_ctx_t *ctx) {
+    if (!ctx || ctx->channel != CC_CONTACTLESS || emv_term_mock_active()) {
+        return PM3_SUCCESS;
+    }
+
+    int res = EMVPrepareContactless(ctx->channel, ctx->opts.activate_field);
+    if (res) {
+        return res;
+    }
+
+    // Card is selected; avoid re-dropping the field on every subsequent APDU.
+    ctx->opts.activate_field = false;
+    return PM3_SUCCESS;
+}
+
 emv_term_outcome_t emv_transaction_outcome_from_cid(uint8_t cid) {
     switch (cid & EMVAC_AC_MASK) {
         case EMVAC_AAC:
@@ -120,6 +136,13 @@ int emv_transaction_init(emv_term_ctx_t *ctx) {
     uint8_t psenum = (ctx->channel == CC_CONTACT) ? 1 : 2;
 
     SetAPDULogging(ctx->opts.show_apdu);
+
+    if (ctx->channel == CC_CONTACTLESS) {
+        res = emv_transaction_prepare_reader(ctx);
+        if (res) {
+            return res;
+        }
+    }
 
     if (ctx->channel == CC_CONTACT) {
         if (IfPm3Smartcard() == false) {

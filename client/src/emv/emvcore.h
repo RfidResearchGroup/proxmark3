@@ -59,6 +59,9 @@ void TLVPrintAIDlistFromSelectTLV(struct tlvdb *tlv);
 struct tlvdb *GetPANFromTrack2(const struct tlv *track2);
 struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2);
 
+// Ensure ISO-DEP session is active on contactless (no-op on contact / if already active unless force_reselect).
+int EMVPrepareContactless(Iso7816CommandChannel channel, bool force_reselect);
+
 // exchange
 int EMVExchange(Iso7816CommandChannel channel, bool LeaveFieldON, sAPDU_t apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 

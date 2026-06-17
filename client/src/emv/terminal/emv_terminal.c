@@ -26,6 +26,7 @@
 #include "emv_term_sim_export.h"
 #include "emv_term_timing.h"
 #include "emv_term_pcap.h"
+#include "../emvcore.h"
 #include "comms.h"
 #include "ui.h"
 #include "util_posix.h"
@@ -63,9 +64,35 @@ static bool should_run_online(const emv_term_ctx_t *ctx) {
     return false;
 }
 
+static bool terminal_phase_needs_live_card(emv_term_phase_t phase) {
+    switch (phase) {
+        case EMV_PHASE_ODA:
+        case EMV_PHASE_CVM:
+        case EMV_PHASE_CAA:
+        case EMV_PHASE_ONLINE:
+            return true;
+        case EMV_PHASE_INIT:
+        case EMV_PHASE_RESTRICT:
+        case EMV_PHASE_TRM:
+        case EMV_PHASE_TAA:
+        case EMV_PHASE_COMPLETE:
+        case EMV_PHASE_COUNT:
+            return false;
+    }
+    return false;
+}
+
 int emv_terminal_step(emv_term_ctx_t *ctx, emv_term_phase_t phase) {
     if (!ctx) {
         return PM3_EINVARG;
+    }
+
+    if (terminal_phase_needs_live_card(phase) && !emv_term_mock_active()) {
+        int pres = EMVPrepareContactless(ctx->channel, ctx->opts.activate_field);
+        if (pres) {
+            return pres;
+        }
+        ctx->opts.activate_field = false;
     }
 
     int res = PM3_ENOTIMPL;

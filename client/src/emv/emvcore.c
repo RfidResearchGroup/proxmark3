@@ -276,6 +276,28 @@ struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2) {
     return tlvdb_fixed(0x02, dCVVlen, dCVV);
 }
 
+int EMVPrepareContactless(Iso7816CommandChannel channel, bool force_reselect) {
+    if (channel != CC_CONTACTLESS || !IfPm3Present()) {
+        return PM3_SUCCESS;
+    }
+
+    if (!force_reselect && GetISODEPState() != ISODEP_INACTIVE) {
+        return PM3_SUCCESS;
+    }
+
+    DropFieldEx(channel);
+
+    PrintAndLogEx(INFO, "Activating HF field — present card to antenna...");
+    int res = Iso7816Connect(channel);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "No contactless card detected. Hold the card on the antenna and retry.");
+        PrintAndLogEx(HINT, "Hint: verify with `hf 14a reader` or `emv search -s`");
+        return PM3_ERFTRANS;
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int EMVExchangeEx(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, sAPDU_t apdu, bool IncludeLe, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
     int res = Iso7816ExchangeEx(channel, ActivateField, LeaveFieldON, apdu, IncludeLe, 0, Result, MaxResultLen, ResultLen, sw);
     // add to tlv tree
@@ -494,6 +516,15 @@ int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveField
         int res = EMVSelect(channel, (i == 0) ? ActivateField : false, true, aidbuf, aidlen, data, sizeof(data), &datalen, &sw, tlv);
         // retry if error and not returned sw error
         if (res && res != 5) {
+            if (res == PM3_EIO) {
+                if (verbose) {
+                    PrintAndLogEx(WARNING, "HF field inactive — activate field and present a card before searching");
+                }
+                if (LeaveFieldON == false) {
+                    DropFieldEx(channel);
+                }
+                return 1;
+            }
             if (++retrycnt < 3) {
                 i--;
             } else {
