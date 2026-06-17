@@ -638,6 +638,9 @@ while true; do
                                                                 "valid key AEA684A6DAB23278"; then break; fi
       if ! CheckExecute "hf iclass loclass test"         "$CLIENTBIN -c 'hf iclass loclass --test'" "Key diversification \( ok \)"; then break; fi
       if ! CheckExecute "emv test"                       "$CLIENTBIN -c 'emv test'" "Tests \( ok"; then break; fi
+      if ! CheckExecute "emv terminal golden"           "$CLIENTBIN -c 'emv terminal test --golden'" "Golden:.*OK"; then break; fi
+      if ! CheckExecute "emv terminal profile validate" "$CLIENTBIN -c 'emv terminal profile validate docs/emv-terminal-emulator/examples/emv_terminal_profile.json'" "Profile valid"; then break; fi
+      if ! CheckExecute "emv scheme profile interac"    "$CLIENTBIN -c 'emv terminal profile validate client/resources/scheme_profiles/interac.json'" "Profile valid"; then break; fi
       if ! CheckExecute "hf cipurse test"                "$CLIENTBIN -c 'hf cipurse test'" "Tests \( ok"; then break; fi
       if ! CheckExecute "hf mfdes test"                  "$CLIENTBIN -c 'hf mfdes test'"   "Tests \( ok"; then break; fi
       if ! CheckExecute "hf gst test"                    "$CLIENTBIN -c 'hf gst test'"     "Tests \( ok"; then break; fi

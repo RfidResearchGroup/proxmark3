@@ -56,12 +56,13 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 | ------------------- |:-------------------:| -------------------:|
 |[Notes on UART](/doc/uart_notes.md)|[Notes on Termux / Android](/doc/termux_notes.md)|[Notes on paths](/doc/path_notes.md)|
 |[Notes on frame format](/doc/new_frame_format.md)|[Notes on tracelog / wireshark](/doc/trace_notes.md)|[Notes on EMV](/doc/emv_notes.md)|
-|[Notes on external flash](/doc/ext_flash_notes.md)|[Notes on loclass](/doc/loclass_notes.md)|[Notes on Coverity Scan Config & Run](/doc/md/Development/Coverity-Scan-Config-and-Run.md)|
-|[Notes on file formats used with Proxmark3](/doc/extensions_notes.md)|[Notes on MFU binary format](/doc/mfu_binary_format_notes.md)|[Notes on FPGA & ARM](/doc/fpga_arm_notes.md)|
-|[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode)|[Notes on Magic UID cards](/doc/magic_cards_notes.md)|
-|[Notes on Color usage](/doc/colors_notes.md)|[Makefile vs CMake](/doc/md/Development/Makefile-vs-CMake.md)|[Notes on Cloner guns](/doc/cloner_notes.md)|
-|[Notes on cliparser usage](/doc/cliparser.md)|[Notes on clocks](/doc/clocks.md)|[Notes on MIFARE DESFire](/doc/desfire.md)|
-|[Notes on CIPURSE](/doc/cipurse.md)|[Notes on NDEF type4a](/doc/ndef_type4a.md)|[Unofficial MIFARE DESFire bible](/doc/unofficial_desfire_bible.md)|[Notes on iClass legrec-legbrute key recovery](/doc/iclass_legrec_legbrute_key_recovery.md)|[Notes on downgrade attacks](/doc/hid_downgrade.md)|||
+|[EMV Terminal Emulator planning](/docs/emv-terminal-emulator/README.md)|[Notes on external flash](/doc/ext_flash_notes.md)|[Notes on loclass](/doc/loclass_notes.md)|
+|[Notes on Coverity Scan Config & Run](/doc/md/Development/Coverity-Scan-Config-and-Run.md)|[Notes on file formats used with Proxmark3](/doc/extensions_notes.md)|[Notes on MFU binary format](/doc/mfu_binary_format_notes.md)|
+|[Notes on FPGA & ARM](/doc/fpga_arm_notes.md)|[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode)|
+|[Notes on Magic UID cards](/doc/magic_cards_notes.md)|[Notes on Color usage](/doc/colors_notes.md)|[Makefile vs CMake](/doc/md/Development/Makefile-vs-CMake.md)|
+|[Notes on Cloner guns](/doc/cloner_notes.md)|[Notes on cliparser usage](/doc/cliparser.md)|[Notes on clocks](/doc/clocks.md)|
+|[Notes on MIFARE DESFire](/doc/desfire.md)|[Notes on CIPURSE](/doc/cipurse.md)|[Notes on NDEF type4a](/doc/ndef_type4a.md)|
+|[Unofficial MIFARE DESFire bible](/doc/unofficial_desfire_bible.md)|[Notes on iClass legrec-legbrute key recovery](/doc/iclass_legrec_legbrute_key_recovery.md)|[Notes on downgrade attacks](/doc/hid_downgrade.md)|
 
 # How to build?
 

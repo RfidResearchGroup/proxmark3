@@ -46,6 +46,7 @@ enum CardPSVendor {
     CV_CB,
     CV_SWITCH,
     CV_DINERS,
+    CV_INTERAC,
     CV_OTHER,
 };
 enum CardPSVendor GetCardPSVendor(uint8_t *AID, size_t AIDlen);
@@ -79,6 +80,7 @@ int EMVGenerateChallenge(Iso7816CommandChannel channel, bool LeaveFieldON, uint8
 int EMVAC(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t RefControl, uint8_t *CDOL, size_t CDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 // DDA
 int EMVInternalAuthenticate(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t *DDOL, size_t DDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
+int EMVExternalAuthenticate(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t *AuthData, size_t AuthDataLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 // Mastercard
 int MSCComputeCryptoChecksum(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t *UDOL, uint8_t UDOLlen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 // Auth

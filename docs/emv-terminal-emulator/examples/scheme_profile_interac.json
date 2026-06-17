@@ -1,0 +1,45 @@
+{
+  "Name": "interac",
+  "Version": "1",
+  "Description": "Interac Flash + contact terminal defaults",
+  "AIDs": ["A0000002771010", "A000000277"],
+  "ContactlessKernel": "C-1",
+  "HostKeysFile": "docs/emv-terminal-emulator/examples/host_sim_interac.json",
+  "CAPKExtra": "capk_interac_extra.txt",
+  "TransactionDefaults": {
+    "9F1A": "0124",
+    "5F2A": "0124",
+    "9F02": "00000000000100",
+    "9C": "00"
+  },
+  "TerminalCapabilities": {
+    "9F33": "E0F8C8",
+    "9F40": "F000F0A001",
+    "9F35": "22"
+  },
+  "Contactless": {
+    "9F66": "26004000",
+    "FlashSkipOfflinePIN": true
+  },
+  "TAC": {
+    "DF8120": "FC50ACA000",
+    "DF8121": "0000000000",
+    "DF8122": "FC50BCF800"
+  },
+  "InteracContactlessTAC": {
+    "9F6D": "0000000000",
+    "9F6B": "FC50BCF800"
+  },
+  "CVM": {
+    "AllowPlainOffline": true,
+    "AllowEncipheredOffline": true,
+    "OnlinePINDeferToHost": true
+  },
+  "ODA": {
+    "ODARequired": true
+  },
+  "Kernel": {
+    "Type": "interac",
+    "ACFromGPO": false
+  }
+}

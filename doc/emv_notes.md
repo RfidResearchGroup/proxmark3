@@ -30,15 +30,15 @@ Notes on EMV works on Proxmark3
 - Get records from AFL (`emv readrec`)
 - Make SDA (check records from GPO)
 - Make DDA (`emv challenge` `emv intauth`)
-- Check PIN (`not implemented`)
+- Check PIN (`not implemented` in `emv exec`; see `emv terminal pin`)
 - Fill CDOL1 and CDOL2 (look at next part)
-- Execute AC1 (with CDA support) (`emv genac`)
-- Check ARQC (bank part) (`not implemented`)
-- Make ARPC (bank part) (`not implemented`)
-- Execute external authenticate (`not implemented`)
-- Execute AC2 (with CDA support) (`not implemented`)
+- Execute AC1 (with CDA support) (`emv genac`, `emv terminal run`)
+- Check ARQC (bank part) (`emv terminal online` lab stub)
+- Make ARPC (bank part) (`emv terminal online --arpc` lab stub)
+- Execute external authenticate (`emv terminal online` lab stub)
+- Execute AC2 (with CDA support) (`emv terminal online`)
 - Check ARQC cryptogram (`not implemented`)
-- Issuer scripts processing (`not implemented`)
+- Issuer scripts processing (`emv terminal online` — tag 71 before AC2)
 
 ### Working parts of qVSDC
 ^[Top](#top)
@@ -123,6 +123,47 @@ All main commands are parts of EMV specification. Commands than not described th
 
 `emv test` - test all crypto code from emv part of proxmark.
 
+### EMV terminal emulator (`emv terminal`)
+^[Top](#top)
+
+> **FOR RESEARCH AND LAB USE ONLY — NO WARRANTY — PROVIDED AS-IS.**  
+> Not a certified payment terminal. Authorized EMV test cards only.  
+> Docs: [docs/emv-terminal-emulator/README.md](../docs/emv-terminal-emulator/README.md) · [OPERATOR-GUIDE.md](../docs/emv-terminal-emulator/OPERATOR-GUIDE.md) · [SPEC-security-privacy.md](../docs/emv-terminal-emulator/SPEC-security-privacy.md)
+
+Client-side terminal phase engine in `client/src/emv/terminal/`.
+
+```
+terminal run         Full phase loop (init → … → complete)
+terminal step        Single phase
+terminal online      Complete online path after ARQC
+terminal pin         Standalone VERIFY PIN
+terminal profile     print | validate
+terminal load        Import card TLV from prior emv scan JSON
+terminal session     print | merge | export
+terminal host        listen (TCP mock acquirer) | sim
+terminal host-sim    One-shot host-sim on session (alias)
+terminal export-sim  Export emv sim card patch from session
+terminal test        --golden | --fixture <name>  (no USB)
+terminal replay      Mock APDU replay (--from-phase / --to-phase)
+terminal capabilities Device and build capability list
+terminal help        Command help
+```
+
+Common flags on `run` / `step`: `-satj`, `-o session.json`, `--profile auto`, `--host-sim`, `--mock-apdu-file`, `--pcap-out`, `--timing-report`, `--exception-file`, `--no-redact`.
+
+Example:
+
+```
+emv terminal capabilities
+emv terminal run -satj -o /tmp/session.json --qvsdc --profile auto
+emv terminal run -j --host-sim -o /tmp/session.json
+emv terminal run --mock-apdu-file fixtures/foo/mock_apdu.json -j -o /tmp/s.json
+emv terminal replay mock_apdu.json --from-phase cvm --to-phase caa -o /tmp/s.json
+emv terminal online --session /tmp/session.json --host-sim
+emv terminal load card.json -o card_session.json
+emv terminal test --golden
+emv test
+```
 ### Useful links
 ^[Top](#top)
 

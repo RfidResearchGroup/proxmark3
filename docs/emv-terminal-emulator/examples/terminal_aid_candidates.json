@@ -1,0 +1,75 @@
+{
+  "description": "Default terminal candidate AIDs for PM3 EMV terminal emulator (priority order)",
+  "aids": [
+    {
+      "aid": "A0000002771010",
+      "scheme": "interac",
+      "kernel": "C-1",
+      "priority": 1,
+      "notes": "Canadian Interac Flash / debit"
+    },
+    {
+      "aid": "A0000000031010",
+      "scheme": "visa",
+      "kernel": "C-3",
+      "priority": 2,
+      "notes": "Visa credit/debit classic"
+    },
+    {
+      "aid": "A0000000032010",
+      "scheme": "visa_electron",
+      "kernel": "C-3",
+      "priority": 3,
+      "notes": "Visa Electron"
+    },
+    {
+      "aid": "A0000000041010",
+      "scheme": "mastercard",
+      "kernel": "C-2",
+      "priority": 4,
+      "notes": "Mastercard credit/debit"
+    },
+    {
+      "aid": "A0000000043060",
+      "scheme": "maestro",
+      "kernel": "C-2",
+      "priority": 5,
+      "notes": "Maestro debit"
+    },
+    {
+      "aid": "A0000000033010",
+      "scheme": "visa_interlink",
+      "kernel": "C-3",
+      "priority": 6,
+      "notes": "US debit; online PIN typical"
+    },
+    {
+      "aid": "A0000000038010",
+      "scheme": "visa_plus",
+      "kernel": "C-3",
+      "priority": 7,
+      "notes": "ATM Plus network"
+    },
+    {
+      "aid": "A0000000046000",
+      "scheme": "cirrus",
+      "kernel": "C-2",
+      "priority": 8,
+      "notes": "ATM Cirrus; ATM-focused terminal profile"
+    },
+    {
+      "aid": "A0000000980840",
+      "scheme": "visa_us_common_debit",
+      "kernel": "C-3",
+      "priority": 9,
+      "notes": "US regulated debit routing"
+    },
+    {
+      "aid": "A0000000042203",
+      "scheme": "mc_us_common_debit",
+      "kernel": "C-2",
+      "priority": 10,
+      "notes": "US Mastercard common debit"
+    }
+  ]
+}

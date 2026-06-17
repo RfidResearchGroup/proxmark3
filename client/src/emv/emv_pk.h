@@ -50,4 +50,6 @@ bool emv_pk_verify(const struct emv_pk *pk);
 // char *emv_pk_get_ca_pk_file(const char *dirname, const unsigned char *rid, unsigned char idx);
 // char *emv_pk_get_ca_pk_rid_file(const char *dirname, const unsigned char *rid);
 struct emv_pk *emv_pk_get_ca_pk(const unsigned char *rid, unsigned char idx);
+int emv_pk_load_extra_file(const char *path);
+void emv_pk_clear_extra(void);
 #endif
