@@ -7,6 +7,7 @@
 #include "terminal_crypto_test.h"
 #include "../terminal/emv_term_crypto.h"
 #include "../terminal/emv_term_load.h"
+#include "../terminal/emv_term_profile.h"
 #include "../terminal/emv_term_tvr.h"
 #include "../dol.h"
 #include "ui.h"
@@ -151,8 +152,49 @@ static int test_export_json(bool verbose) {
     return 0;
 }
 
+static int test_param_defaults_currency(bool verbose) {
+    struct tlvdb *terminal = NULL;
+    const char *al = "terminal";
+    terminal = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
+    emv_term_param_defaults(terminal);
+
+    const struct tlv *ccy = tlvdb_get(terminal, 0x5f2a, NULL);
+    if (!ccy || ccy->len != 2) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "5F2A missing or wrong len");
+        }
+        tlvdb_free(terminal);
+        return 1;
+    }
+    if (ccy->value[0] == 0x90 && ccy->value[1] == 0x78) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "5F2A still has legacy bad escape value 9078");
+        }
+        tlvdb_free(terminal);
+        return 1;
+    }
+
+    const struct tlv *country = tlvdb_get(terminal, 0x9f1a, NULL);
+    if (!country || country->len != 2 || country->value[0] == 'r') {
+        if (verbose) {
+            PrintAndLogEx(ERR, "9F1A should be numeric country code");
+        }
+        tlvdb_free(terminal);
+        return 1;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "terminal param defaults OK");
+    }
+    tlvdb_free(terminal);
+    return 0;
+}
+
 int exec_terminal_crypto_test(bool verbose) {
     if (test_uint_to_bcd(verbose)) {
+        return 1;
+    }
+    if (test_param_defaults_currency(verbose)) {
         return 1;
     }
     if (test_cdol_un_override(verbose)) {

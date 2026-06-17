@@ -23,16 +23,16 @@
   {
     "name": "Transaction Currency Code",
     "tag": "5F 2A",
-    "value": "09 80",
+    "value": "08 40",
     "length": 2,
-    "hint": "USD 840, EUR 978, RUB 643, RUR 810(old), UAH 980, AZN 031, n/a 999"
+    "hint": "USD 0840, EUR 0978, CAD 0124 — numeric ISO4217 (not ASCII)"
   },
   {
     "name": "Terminal Country Code",
     "tag": "9F 1A",
-    "value": "72 75",
+    "value": "08 40",
     "length": 2,
-    "hint": "ISO3166: de, en (65 6e), uk(75 6b), ru (72 75), us, ua"
+    "hint": "ISO3166 numeric; 0840 = US, 0124 = CA, 0978 = EU test"
   },
   {
     "name": "Terminal Transaction Qualifiers (TTQ)",

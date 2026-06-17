@@ -290,7 +290,13 @@ int emv_transaction_init(emv_term_ctx_t *ctx) {
                 PrintAndLogEx(INFO, "* * * SFI[%02x] %d", SFI, n);
                 res = EMVReadRecord(ctx->channel, true, SFI, n, buf, sizeof(buf), &len, &sw, ctx->card);
                 if (res) {
-                    PrintAndLogEx(WARNING, "Error SFI[%02x]. APDU error %4x", SFI, sw);
+                    PrintAndLogEx(WARNING, "Error SFI[%02x] record %d: transport %d SW %04x - %s",
+                                  SFI, n, res, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+                    continue;
+                }
+                if (sw != 0x9000) {
+                    PrintAndLogEx(WARNING, "Error SFI[%02x] record %d: SW %04x - %s",
+                                  SFI, n, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
                     continue;
                 }
 

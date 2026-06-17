@@ -18,29 +18,67 @@
 #include "proxmark3.h"
 #include <jansson.h>
 #include <string.h>
+#include <time.h>
 
 #define TLV_ADD(tag, value)( tlvdb_change_or_add_node(tlvRoot, tag, sizeof(value) - 1, (const unsigned char *)value) )
 
+static uint8_t bcd_byte(unsigned v) {
+    return (uint8_t)(((v / 10) << 4) | (v % 10));
+}
+
+static void emv_term_set_transaction_datetime(struct tlvdb *tlvRoot) {
+    time_t now = time(NULL);
+    struct tm tm_now;
+    if (!localtime_r(&now, &tm_now)) {
+        return;
+    }
+
+    uint8_t date[3] = {
+        bcd_byte((unsigned)(tm_now.tm_year % 100)),
+        bcd_byte((unsigned)(tm_now.tm_mon + 1)),
+        bcd_byte((unsigned)tm_now.tm_mday),
+    };
+    uint8_t txn_time[3] = {
+        bcd_byte((unsigned)tm_now.tm_hour),
+        bcd_byte((unsigned)tm_now.tm_min),
+        bcd_byte((unsigned)tm_now.tm_sec),
+    };
+
+    tlvdb_change_or_add_node(tlvRoot, 0x9a, sizeof(date), date);
+    tlvdb_change_or_add_node(tlvRoot, 0x9f21, sizeof(txn_time), txn_time);
+}
+
 void emv_term_param_defaults(struct tlvdb *tlvRoot) {
     TLV_ADD(0x9F02, "\x00\x00\x00\x00\x01\x00");
-    TLV_ADD(0x9F1A, "ru");
-    TLV_ADD(0x5F2A, "\x090\x78");
+    TLV_ADD(0x9F03, "\x00\x00\x00\x00\x00\x00");
+    TLV_ADD(0x9F1A, "\x08\x40");
+    TLV_ADD(0x5F2A, "\x08\x40");
     TLV_ADD(0x9A,   "\x00\x00\x00");
     TLV_ADD(0x9C,   "\x00");
     TLV_ADD(0x9F37, "\x01\x02\x03\x04");
     TLV_ADD(0x9F6A, "\x01\x02\x03\x04");
     TLV_ADD(0x9F66, "\x26\x00\x00\x00");
     TLV_ADD(0x95,   "\x00\x00\x00\x00\x00");
+    TLV_ADD(0x9F34, "\x00\x00\x00");
+    TLV_ADD(0x9F45, "\x00\x00");
+    TLV_ADD(0x9F7C, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00");
     TLV_ADD(0x9F4E, "proxmark3rdv4\x00");
     TLV_ADD(0x9F33, "\xE0\xF8\xC8");
     TLV_ADD(0x9F40, "\xF0\x00\xF0\xA0\x01");
     TLV_ADD(0x9F35, "\x22");
     TLV_ADD(0x9F1B, "\x00\x00\x00\x00\x50\x00");
+    emv_term_set_transaction_datetime(tlvRoot);
 }
 
 void emv_term_init_transaction_params(struct tlvdb *tlvRoot, bool paramLoadJSON, const char *profile_path,
                                       TransactionType_t TrType, bool GenACGPO) {
     emv_term_param_defaults(tlvRoot);
+
+    if (profile_path && profile_path[0]) {
+        emv_term_profile_load(tlvRoot, profile_path);
+    } else {
+        emv_term_profile_load(tlvRoot, NULL);
+    }
 
     if (paramLoadJSON) {
         PrintAndLogEx(INFO, "* * Transaction parameters loading from JSON...");
@@ -49,10 +87,12 @@ void emv_term_init_transaction_params(struct tlvdb *tlvRoot, bool paramLoadJSON,
                 PrintAndLogEx(WARNING, "Terminal profile load failed, trying default params...");
                 ParamLoadFromJson(tlvRoot);
             }
-        } else if (!emv_term_profile_load(tlvRoot, NULL)) {
-            ParamLoadFromJson(tlvRoot);
+        } else if (!ParamLoadFromJson(tlvRoot)) {
+            PrintAndLogEx(WARNING, "emv_defparams.json not found — using bundled terminal profile");
         }
     }
+
+    emv_term_set_transaction_datetime(tlvRoot);
 
     switch (TrType) {
         case TT_MSD:

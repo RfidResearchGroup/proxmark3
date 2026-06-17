@@ -116,6 +116,42 @@ static void print_aip_bits(uint16_t aip) {
                   (aip & 0x0001) ? "yes" : "no");
 }
 
+static uint16_t crypto_card_aip(const emv_term_ctx_t *ctx) {
+    const struct tlv *aip = tlvdb_get(ctx->card, 0x82, NULL);
+    if (!aip || aip->len < 2) {
+        return 0;
+    }
+    return (uint16_t)(aip->value[0] | (aip->value[1] << 8));
+}
+
+static bool crypto_card_supports_cda(const emv_term_ctx_t *ctx) {
+    return (crypto_card_aip(ctx) & 0x0001) != 0;
+}
+
+static bool crypto_is_qvsdc_gpo_ac(const emv_term_ctx_t *ctx) {
+    const struct tlv *cdol1 = tlvdb_get(ctx->card, 0x8c, NULL);
+    const struct tlv *ac = tlvdb_get(ctx->card, 0x9f26, NULL);
+    return (!cdol1 || !cdol1->len) && ac && ac->len;
+}
+
+static void crypto_apply_genac_defaults(emv_term_ctx_t *ctx, emv_term_crypto_genac_opts_t *opts) {
+    if (!ctx || !opts || opts->cda) {
+        return;
+    }
+    if (crypto_card_supports_cda(ctx) &&
+            GetCardPSVendor((uint8_t *)ctx->aid, ctx->aid_len) == CV_MASTERCARD) {
+        opts->cda = true;
+    }
+}
+
+static void crypto_print_sw_hint(uint16_t sw) {
+    if (sw == 0x6985) {
+        PrintAndLogEx(WARNING, "Card declined GEN AC (6985) — run full `emv terminal run` (CVM/TRM/TAA) first, or try `--decision tc`");
+    } else if (sw == 0x6700) {
+        PrintAndLogEx(WARNING, "GEN AC wrong length (6700) — check CDOL1 field sizes (9F7C/9F21/9F03) and terminal profile");
+    }
+}
+
 int emv_term_crypto_print_summary(const emv_term_ctx_t *ctx) {
     if (!ctx) {
         return PM3_EINVARG;
@@ -214,11 +250,22 @@ static int crypto_genac_inner(emv_term_ctx_t *ctx, const emv_term_crypto_genac_o
     tlv_tag_t cdol_tag = ac2 ? 0x8d : 0x8c;
     const struct tlv *cdol_tlv = tlvdb_get(ctx->card, cdol_tag, NULL);
     if (!cdol_tlv || !cdol_tlv->len) {
+        if (!ac2 && crypto_is_qvsdc_gpo_ac(ctx)) {
+            PrintAndLogEx(INFO, "No CDOL1 — qVSDC card (cryptogram returned in GPO, not GEN AC)");
+            emv_term_crypto_print_summary(ctx);
+            return PM3_SUCCESS;
+        }
         PrintAndLogEx(ERR, "CDOL%s (%04X) not found — run init first", ac2 ? "2" : "1", cdol_tag);
+        if (!ac2 && crypto_card_aip(ctx) == 0x8000) {
+            PrintAndLogEx(WARNING, "Visa qVSDC (AIP 8000) typically has no CDOL1 — AC is in GPO response");
+        }
         return PM3_ESOFT;
     }
 
-    if (!ac2 && opts->mc_challenge &&
+    emv_term_crypto_genac_opts_t genac = *opts;
+    crypto_apply_genac_defaults(ctx, &genac);
+
+    if (!ac2 && genac.mc_challenge &&
             GetCardPSVendor((uint8_t *)ctx->aid, ctx->aid_len) == CV_MASTERCARD) {
         int cres = emv_term_crypto_challenge(ctx, ctx->opts.decode_tlv, true);
         if (cres) {
@@ -226,7 +273,8 @@ static int crypto_genac_inner(emv_term_ctx_t *ctx, const emv_term_crypto_genac_o
         }
     }
 
-    emv_term_crypto_apply_field_overrides(ctx, opts);
+    emv_term_crypto_apply_field_overrides(ctx, &genac);
+    emv_term_copy_terminal_tags_to_card(ctx);
 
     struct tlv *cdol = dol_process(cdol_tlv, ctx->card, 0x01);
     if (!cdol) {
@@ -234,8 +282,8 @@ static int crypto_genac_inner(emv_term_ctx_t *ctx, const emv_term_crypto_genac_o
         return PM3_ESOFT;
     }
 
-    uint8_t p1 = (uint8_t)opts->ac_type;
-    if (opts->cda) {
+    uint8_t p1 = (uint8_t)genac.ac_type;
+    if (genac.cda) {
         p1 |= EMVAC_CDAREQ;
     }
 
@@ -270,6 +318,7 @@ static int crypto_genac_inner(emv_term_ctx_t *ctx, const emv_term_crypto_genac_o
 
     PrintAndLogEx(INFO, "SW: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
     if (sw != 0x9000) {
+        crypto_print_sw_hint(sw);
         return PM3_ESOFT;
     }
 
@@ -561,14 +610,19 @@ int emv_term_crypto_bench(emv_term_ctx_t *ctx, const emv_term_crypto_bench_opts_
     }
 
     if (opts->do_genac) {
-        uint16_t sw = 0;
-        int res = crypto_genac_inner(ctx, &opts->genac, false, &sw);
-        if (entry_count < ARRAYLEN(entries)) {
-            fill_run_entry(&entries[entry_count], ctx, sw);
-            entry_count++;
-        }
-        if (res) {
-            PrintAndLogEx(WARNING, "GEN AC failed in bench (%d)", res);
+        if (crypto_is_qvsdc_gpo_ac(ctx)) {
+            PrintAndLogEx(INFO, "qVSDC: AC already present from GPO — skipping GEN AC");
+            emv_term_crypto_print_summary(ctx);
+        } else {
+            uint16_t sw = 0;
+            int res = crypto_genac_inner(ctx, &opts->genac, false, &sw);
+            if (entry_count < ARRAYLEN(entries)) {
+                fill_run_entry(&entries[entry_count], ctx, sw);
+                entry_count++;
+            }
+            if (res) {
+                PrintAndLogEx(WARNING, "GEN AC failed in bench (%d)", res);
+            }
         }
     }
 
