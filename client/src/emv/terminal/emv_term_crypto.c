@@ -17,6 +17,7 @@
 #include "emv_term_session.h"
 #include "../emvcore.h"
 #include "../emvjson.h"
+#include "crypto/libpcrypto.h"
 #include "ui.h"
 #include "commonutil.h"
 #include "protocols.h"
@@ -567,6 +568,169 @@ int emv_term_crypto_msc_checksum(emv_term_ctx_t *ctx, bool decode_tlv) {
         }
     }
     return (sw == 0x9000) ? PM3_SUCCESS : PM3_ESOFT;
+}
+
+#define CRYPTO_RNG_POOL_MAX 1024
+
+static void crypto_rng_pool_append(uint8_t *pool, size_t *pool_len, size_t pool_max,
+                                   uint8_t tag, const uint8_t *data, size_t len) {
+    if (!pool || !pool_len || !data || !len || *pool_len + 2 + len > pool_max) {
+        return;
+    }
+    pool[(*pool_len)++] = tag;
+    pool[(*pool_len)++] = (uint8_t)(len > 255 ? 255 : len);
+    size_t copy = len > 255 ? 255 : len;
+    memcpy(pool + *pool_len, data, copy);
+    *pool_len += copy;
+}
+
+static void crypto_rng_pool_append_tlv(uint8_t *pool, size_t *pool_len, size_t pool_max,
+                                       uint8_t tag, const struct tlv *tlv) {
+    if (!tlv || !tlv->len) {
+        return;
+    }
+    crypto_rng_pool_append(pool, pool_len, pool_max, tag, tlv->value, tlv->len);
+}
+
+static bool crypto_rng_collect_weak(emv_term_ctx_t *ctx, uint8_t *pool, size_t *pool_len, size_t pool_max) {
+    bool got = false;
+    const struct tlv *un = emv_term_tlv_lookup(ctx, 0x9f37);
+    const struct tlv *t2 = tlvdb_get(ctx->card, 0x57, NULL);
+    const struct tlv *afl = tlvdb_get(ctx->card, 0x94, NULL);
+    if (un && un->len) {
+        crypto_rng_pool_append_tlv(pool, pool_len, pool_max, 0x37, un);
+        got = true;
+    }
+    if (t2 && t2->len) {
+        crypto_rng_pool_append_tlv(pool, pool_len, pool_max, 0x57, t2);
+        got = true;
+    }
+    if (afl && afl->len) {
+        crypto_rng_pool_append_tlv(pool, pool_len, pool_max, 0x94, afl);
+        got = true;
+    }
+    return got;
+}
+
+static uint64_t crypto_rng_u64_from_hash(const uint8_t hash[32]) {
+    uint64_t v = 0;
+    for (int i = 0; i < 8; i++) {
+        v = (v << 8) | hash[i];
+    }
+    return v;
+}
+
+int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *opts) {
+    if (!ctx || !opts) {
+        return PM3_EINVARG;
+    }
+
+    int samples = opts->samples > 0 ? opts->samples : 3;
+    int out_bytes = opts->out_bytes > 0 ? opts->out_bytes : 8;
+    if (out_bytes > 32) {
+        out_bytes = 32;
+    }
+
+    uint8_t pool[CRYPTO_RNG_POOL_MAX] = {0};
+    size_t pool_len = 0;
+    bool weak = false;
+    unsigned got_samples = 0;
+
+    bool has_cdol = tlvdb_get(ctx->card, 0x8c, NULL) != NULL;
+    bool can_query = has_cdol || crypto_is_visa_qvsdc(ctx) || crypto_is_qvsdc_gpo_ac(ctx);
+
+    PrintAndLogEx(INFO, "=== EMV card RNG (lab toy — not a certified TRNG) ===");
+
+    if (can_query) {
+        emv_term_crypto_genac_opts_t genac = opts->genac;
+        if (!opts->quiet) {
+            PrintAndLogEx(INFO, "Collecting %d card sample(s) (AC/ATC/UN/IAD)...", samples);
+        }
+        for (int i = 0; i < samples; i++) {
+            emv_term_crypto_genac_opts_t iter = genac;
+            if (!iter.un_set) {
+                emv_term_crypto_randomize_un(ctx);
+            }
+            uint16_t sw = 0;
+            int res = PM3_SUCCESS;
+            if (!has_cdol && crypto_is_visa_qvsdc(ctx)) {
+                emv_term_copy_terminal_tags_to_card(ctx);
+                res = emv_transaction_visa_request_gpo_ac(ctx);
+                sw = res ? 0 : 0x9000;
+            } else {
+                res = crypto_genac_inner(ctx, &iter, false, &sw);
+            }
+            (void)res;
+            const struct tlv *ac = crypto_card_tlv(ctx, 0x9f26);
+            if (ac && ac->len) {
+                uint8_t idx = (uint8_t)i;
+                crypto_rng_pool_append(pool, &pool_len, sizeof(pool), 0xFF, &idx, 1);
+                crypto_rng_pool_append_tlv(pool, &pool_len, sizeof(pool), 0x37, emv_term_tlv_lookup(ctx, 0x9f37));
+                crypto_rng_pool_append_tlv(pool, &pool_len, sizeof(pool), 0x26, ac);
+                crypto_rng_pool_append_tlv(pool, &pool_len, sizeof(pool), 0x36, tlvdb_get(ctx->card, 0x9f36, NULL));
+                crypto_rng_pool_append_tlv(pool, &pool_len, sizeof(pool), 0x27, tlvdb_get(ctx->card, 0x9f27, NULL));
+                crypto_rng_pool_append_tlv(pool, &pool_len, sizeof(pool), 0x10, tlvdb_get(ctx->card, 0x9f10, NULL));
+                crypto_rng_pool_append_tlv(pool, &pool_len, sizeof(pool), 0x4c, tlvdb_get(ctx->card, 0x9f4c, NULL));
+                got_samples++;
+                if (!opts->quiet) {
+                    const struct tlv *atc = tlvdb_get(ctx->card, 0x9f36, NULL);
+                    PrintAndLogEx(INFO, "  sample %d/%d: AC=%s ATC=%s",
+                                  i + 1, samples,
+                                  sprint_hex(ac->value, ac->len),
+                                  atc && atc->len ? sprint_hex(atc->value, atc->len) : "-");
+                }
+            } else if (!opts->quiet) {
+                PrintAndLogEx(WARNING, "  sample %d/%d: no AC (sw=%04X)", i + 1, samples, sw);
+            }
+        }
+    }
+
+    if (!got_samples) {
+        weak = true;
+        PrintAndLogEx(WARNING, "No AC from card — using weak MSD/GPO entropy (UN/track2/AFL)");
+        emv_term_crypto_randomize_un(ctx);
+        if (!crypto_rng_collect_weak(ctx, pool, &pool_len, sizeof(pool))) {
+            PrintAndLogEx(ERR, "Card exposes no usable entropy — try MC/Interac with CDOL1");
+            return PM3_ESOFT;
+        }
+        got_samples = 1;
+    }
+
+    uint8_t hash[32] = {0};
+    sha256hash(pool, (int)pool_len, hash);
+
+    switch (opts->mode) {
+        case EMV_CRYPTO_RNG_RAW:
+            PrintAndLogEx(SUCCESS, "Card entropy [%d bytes]: %s",
+                          out_bytes, sprint_hex(hash, (size_t)out_bytes));
+            break;
+        case EMV_CRYPTO_RNG_DICE: {
+            uint32_t roll = (uint32_t)((crypto_rng_u64_from_hash(hash) % 6) + 1);
+            PrintAndLogEx(SUCCESS, "Card d6: %u", roll);
+            break;
+        }
+        case EMV_CRYPTO_RNG_COIN: {
+            bool heads = (hash[0] & 1) == 0;
+            PrintAndLogEx(SUCCESS, "Card coin: %s", heads ? "heads" : "tails");
+            break;
+        }
+        case EMV_CRYPTO_RNG_RANGE: {
+            if (opts->range_max < 2) {
+                return PM3_EINVARG;
+            }
+            uint64_t n = crypto_rng_u64_from_hash(hash) % opts->range_max;
+            PrintAndLogEx(SUCCESS, "Card number [0..%" PRIu64 "]: %" PRIu64,
+                          opts->range_max - 1, n);
+            break;
+        }
+    }
+
+    if (!opts->quiet) {
+        PrintAndLogEx(INFO, "Mixed %u sample(s), pool %zu bytes, sha256 → %s%s",
+                      got_samples, pool_len, sprint_hex(hash, 8), weak ? " (weak)" : "");
+    }
+    PrintAndLogEx(HINT, "Tap again for a new value — AC/ATC change each GEN AC");
+    return PM3_SUCCESS;
 }
 
 static void json_add_tlv_hex(json_t *obj, const char *key, const struct tlv *tlv) {

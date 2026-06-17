@@ -676,6 +676,83 @@ static int CmdEMVTerminalCryptoDigest(const char *Cmd) {
     return res;
 }
 
+static int CmdEMVTerminalCryptoRng(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv terminal crypto rng",
+                  "RNG from live card cryptograms (AC/ATC/UN/IAD)",
+                  "emv terminal crypto rng -s\n"
+                  "emv terminal crypto rng -s --dice\n"
+                  "emv terminal crypto rng -s --samples 5 --max 1000000\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        CRYPTO_BASE_ARGS,
+        CRYPTO_PREP_ARGS,
+        arg_str0("d",  "decision", "<aac|tc|arqc>", "GEN AC decision"),
+        arg_lit0(NULL, "no-mc-challenge", "Skip MC GET CHALLENGE"),
+        arg_u64_0(NULL, "samples", "<n>", "GEN AC samples to mix (default 3)"),
+        arg_u64_0(NULL, "bytes", "<n>", "Raw output bytes (default 8)"),
+        arg_u64_0(NULL, "max", "<n>", "Integer in [0..n-1]"),
+        arg_lit0(NULL, "dice", "Roll a d6"),
+        arg_lit0(NULL, "coin", "Coin flip"),
+        arg_lit0(NULL, "quiet", "Less per-sample output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    emv_term_crypto_cli_t cli;
+    crypto_cli_defaults(&cli);
+    cli.activate = arg_get_lit(ctx, 1);
+    cli.show_apdu = arg_get_lit(ctx, 2);
+    cli.decode_tlv = arg_get_lit(ctx, 3);
+    cli.wired = arg_get_lit(ctx, 4);
+    cli.jload = arg_get_lit(ctx, 5);
+    cli.session = arg_get_str(ctx, 6)->sval[0];
+    cli.quick_afl = arg_get_lit(ctx, 7);
+    cli.forced_aid = arg_get_str(ctx, 8)->sval[0];
+    cli.no_aid_fallback = arg_get_lit(ctx, 9);
+    const char *dec = arg_get_str(ctx, 10)->sval[0];
+    if (dec && dec[0]) {
+        cli.ac_type = parse_decision(dec);
+    }
+    cli.mc_challenge = !arg_get_lit(ctx, 11);
+    cli.count = (int)arg_get_u64_def(ctx, 12, 3);
+    int bytes = (int)arg_get_u64_def(ctx, 13, 8);
+    uint64_t range_max = arg_get_u64_def(ctx, 14, 0);
+    bool dice = arg_get_lit(ctx, 15);
+    bool coin = arg_get_lit(ctx, 16);
+    bool quiet = arg_get_lit(ctx, 17);
+    crypto_cli_pin_session(&cli, ctx, 6);
+    crypto_cli_pin_forced_aid(&cli, ctx, 8);
+    CLIParserFree(ctx);
+
+    emv_term_ctx_t term_ctx;
+    int res = crypto_prepare_live(&term_ctx, &cli);
+    if (res) {
+        return res;
+    }
+
+    emv_term_crypto_rng_opts_t ropts = {0};
+    ropts.samples = cli.count;
+    ropts.out_bytes = bytes;
+    ropts.quiet = quiet;
+    cli_to_genac_opts(&cli, &ropts.genac);
+
+    if (dice) {
+        ropts.mode = EMV_CRYPTO_RNG_DICE;
+    } else if (coin) {
+        ropts.mode = EMV_CRYPTO_RNG_COIN;
+    } else if (range_max > 0) {
+        ropts.mode = EMV_CRYPTO_RNG_RANGE;
+        ropts.range_max = range_max;
+    }
+
+    SetAPDULogging(cli.show_apdu);
+    res = emv_term_crypto_rng(&term_ctx, &ropts);
+    crypto_finish(&term_ctx, cli.wired ? CC_CONTACT : CC_CONTACTLESS);
+    return res;
+}
+
 static int CmdEMVTerminalCryptoHelp(const char *Cmd);
 
 static command_t CryptoCommandTable[] = {
@@ -688,6 +765,7 @@ static command_t CryptoCommandTable[] = {
     {"genac",    CmdEMVTerminalCryptoGenac,   IfPm3Iso14443,   "GENERATE AC (CDOL1)"},
     {"genac2",   CmdEMVTerminalCryptoGenac2,  IfPm3Iso14443,   "GENERATE AC (CDOL2)"},
     {"vary",     CmdEMVTerminalCryptoVary,    IfPm3Iso14443,   "Vary UN / repeat GEN AC"},
+    {"rng",      CmdEMVTerminalCryptoRng,     IfPm3Iso14443,   "Card-sourced RNG from AC/ATC"},
     {"intauth",  CmdEMVTerminalCryptoIntauth, IfPm3Iso14443,   "INTERNAL AUTHENTICATE (DDA)"},
     {"checksum", CmdEMVTerminalCryptoChecksum, IfPm3Iso14443,  "MSC cryptographic checksum"},
     {"export",   CmdEMVTerminalCryptoExport,    AlwaysAvailable, "Export crypto JSON"},

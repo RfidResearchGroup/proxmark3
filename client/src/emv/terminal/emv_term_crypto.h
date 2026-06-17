@@ -72,6 +72,22 @@ typedef struct {
     const char *forced_aid_hex;
 } emv_term_crypto_prepare_opts_t;
 
+typedef enum {
+    EMV_CRYPTO_RNG_RAW = 0,
+    EMV_CRYPTO_RNG_DICE,
+    EMV_CRYPTO_RNG_COIN,
+    EMV_CRYPTO_RNG_RANGE,
+} emv_term_crypto_rng_mode_t;
+
+typedef struct {
+    int samples;
+    int out_bytes;
+    uint64_t range_max;
+    emv_term_crypto_rng_mode_t mode;
+    bool quiet;
+    emv_term_crypto_genac_opts_t genac;
+} emv_term_crypto_rng_opts_t;
+
 int emv_term_crypto_prepare_card(emv_term_ctx_t *ctx, bool jload, const char *session_path,
                                  const emv_term_crypto_prepare_opts_t *prep);
 
@@ -94,6 +110,7 @@ int emv_term_crypto_bench(emv_term_ctx_t *ctx, const emv_term_crypto_bench_opts_
                           const char *export_path);
 int emv_term_crypto_bench_ex(emv_term_ctx_t *ctx, const emv_term_crypto_bench_opts_t *opts,
                              const char *export_path, emv_term_crypto_bench_result_t *result_out);
+int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *opts);
 
 void emv_term_uint_to_bcd(uint64_t val, uint8_t *out, size_t len);
 
