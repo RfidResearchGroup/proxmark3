@@ -128,7 +128,7 @@ All main commands are parts of EMV specification. Commands than not described th
 
 > **FOR RESEARCH AND LAB USE ONLY — NO WARRANTY — PROVIDED AS-IS.**  
 > Not a certified payment terminal. Authorized EMV test cards only.  
-> Docs: [docs/emv-terminal-emulator/README.md](../docs/emv-terminal-emulator/README.md) · [OPERATOR-GUIDE.md](../docs/emv-terminal-emulator/OPERATOR-GUIDE.md) · [SPEC-security-privacy.md](../docs/emv-terminal-emulator/SPEC-security-privacy.md)
+> Docs: [doc/planning/emv-terminal-emulator/README.md](planning/emv-terminal-emulator/README.md) · [OPERATOR-GUIDE.md](planning/emv-terminal-emulator/OPERATOR-GUIDE.md) · [SPEC-security-privacy.md](planning/emv-terminal-emulator/SPEC-security-privacy.md)
 
 Client-side terminal phase engine in `client/src/emv/terminal/`.
 

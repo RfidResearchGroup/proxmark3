@@ -51,9 +51,7 @@ static int load_scheme_index(const char *scheme, emv_term_scheme_info_t *info) {
     json_error_t error;
     char *index_path = NULL;
     if (searchFile(&index_path, RESOURCES_SUBDIR, "scheme_profiles/index", ".json", false) != PM3_SUCCESS) {
-        if (searchFile(&index_path, "docs/emv-terminal-emulator/examples", "scheme_profiles/index", ".json", false) != PM3_SUCCESS) {
-            return PM3_ESOFT;
-        }
+        return PM3_ESOFT;
     }
 
     json_t *root = json_load_file(index_path, 0, &error);
@@ -91,12 +89,6 @@ static int resolve_profile_file(const char *scheme, char *out, size_t outlen) {
     snprintf(base, sizeof(base), "scheme_profiles/%s", scheme);
     char *path = NULL;
     if (searchFile(&path, RESOURCES_SUBDIR, base, ".json", false) == PM3_SUCCESS) {
-        str_copy(out, outlen, path);
-        free(path);
-        return PM3_SUCCESS;
-    }
-    snprintf(base, sizeof(base), "scheme_profiles/%s", scheme);
-    if (searchFile(&path, "docs/emv-terminal-emulator/examples", base, ".json", false) == PM3_SUCCESS) {
         str_copy(out, outlen, path);
         free(path);
         return PM3_SUCCESS;
@@ -141,8 +133,8 @@ int emv_term_scheme_resolve(const char *profile_arg, const uint8_t *aid, size_t 
     if (!info->host_keys_path[0]) {
         if (strcmp(scheme, "interac") == 0) {
             char *hk = NULL;
-            if (searchFile(&hk, "docs/emv-terminal-emulator/examples", "host_sim_interac", ".json", false) == PM3_SUCCESS ||
-                searchFile(&hk, "docs/emv-terminal-emulator/examples", "interac_test_keys", ".json", false) == PM3_SUCCESS) {
+            if (searchFile(&hk, RESOURCES_SUBDIR, "host_sim_interac", ".json", false) == PM3_SUCCESS ||
+                searchFile(&hk, RESOURCES_SUBDIR, "interac_test_keys", ".json", false) == PM3_SUCCESS) {
                 str_copy(info->host_keys_path, sizeof(info->host_keys_path), hk);
                 free(hk);
             }

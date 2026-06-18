@@ -4,7 +4,7 @@
 
 - PM3 with HF 14a; SMARTCARD mod for contact tests
 - Test cards: Interac TC01–04 (or subset), Visa qVSDC, MC M/Chip (minimum one each)
-- Terminal profiles and keys in `docs/emv-terminal-emulator/examples/`
+- Terminal profiles and keys in `client/resources/`
 - Client built with v2 features (see [MILESTONES-v2.md](./MILESTONES-v2.md))
 
 ## Legend

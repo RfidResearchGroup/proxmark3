@@ -43,4 +43,4 @@ See `taa_denial_expired/` template in repo (add when implementing M9).
 
 ## CI
 
-Fixtures run without USB. See [TEST-PLAN-v2-automated.md](../../docs/emv-terminal-emulator/TEST-PLAN-v2-automated.md).
+Fixtures run without USB. See [TEST-PLAN-v2-automated.md](../../../../doc/planning/emv-terminal-emulator/TEST-PLAN-v2-automated.md).

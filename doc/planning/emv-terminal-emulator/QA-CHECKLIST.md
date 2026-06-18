@@ -57,7 +57,7 @@
 
 ## Documentation Completeness
 
-- [ ] `docs/emv-terminal-emulator/README.md` current
+- [ ] `doc/planning/emv-terminal-emulator/README.md` current
 - [ ] `doc/emv_notes.md` links terminal section
 - [ ] IMPLEMENTATION-PLAN phases match merged code
 - [ ] OPEN-QUESTIONS updated for resolved items

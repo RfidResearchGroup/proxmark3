@@ -24,7 +24,7 @@ The system shall provide subcommand `emv terminal host-sim [options]` that loads
 
 ### REQ-HOST-002
 
-The system shall load issuer/session keys from JSON path defaulting to `docs/emv-terminal-emulator/examples/interac_test_keys.json` or profile field `HostKeys`.
+The system shall load issuer/session keys from JSON path defaulting to `client/resources/interac_test_keys.json` or profile field `HostKeys`.
 
 Key record schema:
 

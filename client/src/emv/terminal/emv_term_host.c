@@ -103,9 +103,7 @@ int emv_term_host_keys_default(emv_term_host_keys_t *keys, const emv_term_ctx_t 
     }
 
     if (searchFile(&path, RESOURCES_SUBDIR, "host_sim_interac", ".json", false) == PM3_SUCCESS ||
-        searchFile(&path, "client/resources", "host_sim_interac", ".json", false) == PM3_SUCCESS ||
-        searchFile(&path, "docs/emv-terminal-emulator/examples", "host_sim_interac", ".json", false) == PM3_SUCCESS ||
-        searchFile(&path, "docs/emv-terminal-emulator/examples", "interac_test_keys", ".json", false) == PM3_SUCCESS) {
+        searchFile(&path, RESOURCES_SUBDIR, "interac_test_keys", ".json", false) == PM3_SUCCESS) {
         int res = emv_term_host_keys_load(keys, path);
         free(path);
         return res;

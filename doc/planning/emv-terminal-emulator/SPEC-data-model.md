@@ -40,7 +40,7 @@ REQ-DATA-005: The context shall maintain ordered `phase_events[]` with phase id,
 
 ### Terminal Profile JSON
 
-REQ-DATA-010: The system shall support `client/resources/emv_terminal_profile.json` extending `emv_defparams.json`. Example shipped at `docs/emv-terminal-emulator/examples/emv_terminal_profile.json`.
+REQ-DATA-010: The system shall support `client/resources/emv_terminal_profile.json` extending `emv_defparams.json`. Example shipped at `client/resources/emv_terminal_profile.json`.
 
 REQ-DATA-011: Profile shall include: floor limit (9F1B), terminal capabilities (9F33), additional capabilities (9F40), terminal type (9F35), TAC default/denial/online (DF8120–DF8122), country (9F1A), currency (5F2A).
 

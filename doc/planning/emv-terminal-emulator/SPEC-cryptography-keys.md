@@ -221,7 +221,7 @@ REQ-CRYPT-040: Terminal shall transmit script commands sequentially; set TVR scr
 | File | Source |
 |------|--------|
 | `client/resources/capk.txt` | Bundled CA keys |
-| `docs/emv-terminal-emulator/examples/interac_test_keys.json` | Interac AC/SMI/SMC + PINs |
+| `client/resources/interac_test_keys.json` | Interac AC/SMI/SMC + PINs |
 | lumag `data/visa-test.keys` | Additional Visa test CAPKs |
 | lumag `data/mastercard-test.keys` | Additional MC test CAPKs |
 

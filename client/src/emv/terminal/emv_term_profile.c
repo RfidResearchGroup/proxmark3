@@ -141,13 +141,6 @@ bool emv_term_profile_load(struct tlvdb *terminal, const char *profile_path) {
         return ok;
     }
 
-    char *docpath = NULL;
-    if (searchFile(&docpath, "docs/emv-terminal-emulator/examples", "emv_terminal_profile", ".json", false) == PM3_SUCCESS) {
-        bool ok = ParamLoadFromJsonFile(terminal, docpath);
-        free(docpath);
-        return ok;
-    }
-
     return false;
 }
 
@@ -227,10 +220,8 @@ int emv_term_profile_print(const char *profile_path) {
     if (!path || !path[0]) {
         char *found = NULL;
         if (searchFile(&found, RESOURCES_SUBDIR, "emv_terminal_profile", ".json", false) != PM3_SUCCESS) {
-            if (searchFile(&found, "docs/emv-terminal-emulator/examples", "emv_terminal_profile", ".json", false) != PM3_SUCCESS) {
-                PrintAndLogEx(ERR, "Terminal profile not found");
-                return PM3_ESOFT;
-            }
+            PrintAndLogEx(ERR, "Terminal profile not found");
+            return PM3_ESOFT;
         }
         path = found;
         int res = emv_term_profile_print(path);

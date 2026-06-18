@@ -60,6 +60,6 @@ void emv_term_banner_maybe_show(bool skip_for_mock) {
     }
 
     PrintAndLogEx(WARNING, "[!] EMV terminal emulator - authorized test cards and lab use only.");
-    PrintAndLogEx(WARNING, "    See docs/emv-terminal-emulator/SPEC-security-privacy.md");
+    PrintAndLogEx(WARNING, "    See doc/planning/emv-terminal-emulator/SPEC-security-privacy.md");
     write_ack_file(ud);
 }

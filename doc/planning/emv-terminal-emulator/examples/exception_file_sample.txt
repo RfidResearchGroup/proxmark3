@@ -1,0 +1,8 @@
+# Exception file sample — lab PAN blocklist
+# One SHA-256 hash per line (hex, lowercase)
+# Generate: printf '4111111111111111' | sha256sum
+#
+# panhash:abc...  also accepted in v2 format
+
+# Example (not a real PAN hash — replace in lab):
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855

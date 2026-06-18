@@ -111,7 +111,7 @@ See [IMPLEMENTATION-PLAN-v2.md](./IMPLEMENTATION-PLAN-v2.md) for phased task bre
 ## Document Map (v2 bundle)
 
 ```text
-docs/emv-terminal-emulator/
+doc/planning/emv-terminal-emulator/
 ├── FEATURE-CATALOG-v2.md          ← you are here
 ├── IMPLEMENTATION-PLAN-v2.md
 ├── MILESTONES-v2.md

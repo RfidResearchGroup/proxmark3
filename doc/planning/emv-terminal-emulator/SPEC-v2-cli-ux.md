@@ -63,7 +63,7 @@ First `emv terminal run|step|online|host-sim` per user config dir shall print:
 
 ```
 [!] EMV terminal emulator — authorized test cards and lab use only.
-    See docs/emv-terminal-emulator/SPEC-security-privacy.md
+    See doc/planning/emv-terminal-emulator/SPEC-security-privacy.md
 ```
 
 ### REQ-CLI-031

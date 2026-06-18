@@ -38,7 +38,7 @@ client/src/emv/test/
 ├── terminal_phase_test.c        # NEW
 └── pin_verify_test.c            # NEW
 
-docs/emv-terminal-emulator/      # this bundle
+doc/planning/emv-terminal-emulator/      # this bundle
 
 armsrc/
 └── emvterm.c                    # OPTIONAL later
@@ -54,7 +54,7 @@ armsrc/
 - Add `emv terminal run --help` to command table
 - Add `emv_terminal_profile.json` with TAC/CVM defaults
 - Wire `client/Makefile` sources
-- Add `docs/emv-terminal-emulator/` link in root README
+- Add `doc/planning/emv-terminal-emulator/` link in root README
 
 **Completion criteria:**
 
@@ -198,7 +198,7 @@ armsrc/
 
 **Tasks:**
 
-- Ship example profile: copy `docs/emv-terminal-emulator/examples/emv_terminal_profile.json` to `client/resources/` (alongside `emv_defparams.json`)
+- Ship example profile: copy `client/resources/emv_terminal_profile.json` to `client/resources/` (alongside `emv_defparams.json`)
 - Document `Makefile.platform` example for PM3Easy in `doc/md/Use_of_Proxmark/`
 - Optional: Lua script wrapper for automated regression
 

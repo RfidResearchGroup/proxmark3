@@ -138,7 +138,7 @@ Document deprecation warning in output.
 
 ## Test Card Matrix (Lab Checklist) — REQ-SCH-060
 
-Document-only requirement for operators; file `docs/emv-terminal-emulator/examples/TEST-CARD-MATRIX.md`:
+Document-only requirement for operators; file `client/resources/TEST-CARD-MATRIX.md`:
 
 | Card | AID | Profile | Contact | CL | PIN | Expected outcome |
 |------|-----|---------|---------|----|----|------------------|

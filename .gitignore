@@ -128,8 +128,11 @@ fpga_version_info.c
 !.vscode/tasks.json
 
 # docs
+docs/
 !doc/*.json
-!docs/emv-terminal-emulator/examples/*.json
+!client/resources/interac_test_keys.json
+!client/resources/terminal_aid_candidates.json
+!client/resources/emv_terminal_profile_interac.json
 
 # codeql
 codeql/

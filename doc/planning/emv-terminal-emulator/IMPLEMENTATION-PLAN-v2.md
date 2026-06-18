@@ -43,7 +43,7 @@ client/resources/
 │   └── mc_mchip.json
 └── capk_interac_extra.txt         # F-012
 
-docs/emv-terminal-emulator/examples/
+client/resources/
 ├── host_sim_interac.json          # keys + ARPC-RC defaults
 └── exception_file_sample.txt      # F-014
 ```

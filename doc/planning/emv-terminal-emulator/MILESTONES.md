@@ -7,7 +7,7 @@
 **Included:**
 
 - Phase 0 tasks
-- Documentation bundle in `docs/emv-terminal-emulator/`
+- Documentation bundle in `doc/planning/emv-terminal-emulator/`
 - CI compile verification
 
 **Excluded:**

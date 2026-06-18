@@ -99,7 +99,7 @@ See **[OPERATOR-GUIDE.md](./OPERATOR-GUIDE.md)** for PIN handling, host-sim, moc
 ## Documentation Map
 
 ```text
-docs/emv-terminal-emulator/
+doc/planning/emv-terminal-emulator/
 ├── README.md                 ← you are here (legal + overview)
 ├── OPERATOR-GUIDE.md         ← day-to-day commands and workflows
 ├── UPSTREAM-MERGE.md         ← single upstream PR merge plan
