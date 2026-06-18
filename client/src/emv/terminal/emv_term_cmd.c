@@ -765,12 +765,27 @@ static int CmdEMVTerminalCvm(const char *Cmd) {
     return res;
 }
 
+static const char *emv_term_profile_file_arg(const char *cmd, const char *action) {
+    if (!cmd || !action) {
+        return NULL;
+    }
+    size_t action_len = strlen(action);
+    if (strncmp(cmd, action, action_len) != 0) {
+        return NULL;
+    }
+    const char *rest = cmd + action_len;
+    while (*rest == ' ') {
+        ++rest;
+    }
+    return (*rest != '\0') ? rest : NULL;
+}
+
 static int CmdEMVTerminalProfile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv terminal profile",
                   "Print or validate terminal profile JSON",
                   "emv terminal profile print\n"
-                  "emv terminal profile validate docs/emv-terminal-emulator/examples/emv_terminal_profile.json\n");
+                  "emv terminal profile validate client/resources/emv_terminal_profile.json\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -781,7 +796,10 @@ static int CmdEMVTerminalProfile(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     const char *action = arg_get_str(ctx, 1)->sval[0];
-    const char *file = arg_get_str(ctx, 2)->sval[0];
+    const char *file = emv_term_profile_file_arg(Cmd, action);
+    if (!file) {
+        file = arg_get_str(ctx, 2)->sval[0];
+    }
     CLIParserFree(ctx);
 
     if (strcmp(action, "print") == 0) {

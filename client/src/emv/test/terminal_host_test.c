@@ -104,9 +104,8 @@ static int test_arpc_cvn18(bool verbose) {
 
 static int test_host_keys_load(bool verbose) {
     char *path = NULL;
-    if (searchFile(&path, RESOURCES_SUBDIR, "host_sim_interac", ".json", false) == PM3_SUCCESS ||
-        searchFile(&path, "client/resources", "host_sim_interac", ".json", false) == PM3_SUCCESS ||
-        searchFile(&path, "docs/emv-terminal-emulator/examples", "host_sim_interac", ".json", false) == PM3_SUCCESS) {
+    if (searchFile(&path, RESOURCES_SUBDIR, "host_sim_interac", ".json", true) != PM3_SUCCESS &&
+        searchFile(&path, RESOURCES_SUBDIR, "interac_test_keys", ".json", true) != PM3_SUCCESS) {
         if (verbose) {
             PrintAndLogEx(WARNING, "host_sim_interac.json not found - skip keys load test");
         }
