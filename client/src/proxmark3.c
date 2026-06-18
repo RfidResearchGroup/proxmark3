@@ -277,6 +277,7 @@ static void prompt_compose(char *buf, size_t buflen, const char *promptctx, cons
 
 static bool c_update_reconnect_prompt = false;
 
+#ifndef LIBPM3
 static void pm3_enable_stdout_pipe(const char *script_cmd) {
     if (!script_cmd) {
         return;
@@ -289,6 +290,7 @@ static void pm3_enable_stdout_pipe(const char *script_cmd) {
         setvbuf(stdout, NULL, _IONBF, 0);
     }
 }
+#endif // LIBPM3
 
 // This function is hooked via RL_EVENT_HOOK.
 static int check_comm(void) {
