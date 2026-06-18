@@ -173,7 +173,8 @@ static void mad_print_aid_verbose(json_t *elm) {
 static int mad1CRCCheck(const mad1_t *mad1, bool verbose) {
     uint8_t crc = CRC8Mad((uint8_t *)&mad1->info, sizeof(mad1_t) - 1);
     if (crc != mad1->crc) {
-        PrintAndLogEx(WARNING, _RED_("Wrong MAD 1 CRC") " calculated: 0x%02x != 0x%02x", crc, mad1->crc);
+        if (verbose)
+            PrintAndLogEx(WARNING, _RED_("Wrong MAD 1 CRC") " calculated: 0x%02x != 0x%02x", crc, mad1->crc);
         return PM3_ESOFT;
     }
     return PM3_SUCCESS;
@@ -182,7 +183,8 @@ static int mad1CRCCheck(const mad1_t *mad1, bool verbose) {
 static int mad2CRCCheck(const mad2_t *mad2, bool verbose) {
     uint8_t crc = CRC8Mad((uint8_t *)&mad2->info, sizeof(mad2_t) - 1);
     if (crc != mad2->crc) {
-        PrintAndLogEx(WARNING, _RED_("Wrong MAD 2 CRC") " calculated: 0x%02x != 0x%02x", crc, mad2->crc);
+        if (verbose)
+            PrintAndLogEx(WARNING, _RED_("Wrong MAD 2 CRC") " calculated: 0x%02x != 0x%02x", crc, mad2->crc);
         return PM3_ESOFT;
     }
     return PM3_SUCCESS;
@@ -231,13 +233,13 @@ int MADCheck(const mad1_sector_t *sector0, const mad2_sector_t *mad2, bool verbo
         *haveMAD2 = (mad_ver == 2);
     }
 
-    int res = mad1CRCCheck(&sector0->mad, true);
+    int res = mad1CRCCheck(&sector0->mad, verbose);
     if (verbose && res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( %s )", sector0->mad.crc, _GREEN_("ok"));
     }
 
     if (mad_ver == 2 && mad2) {
-        int res2 = mad2CRCCheck(&mad2->mad, true);
+        int res2 = mad2CRCCheck(&mad2->mad, verbose);
         if (res == PM3_SUCCESS) {
             res = res2;
         }
@@ -570,7 +572,7 @@ int mad_app_read(const mad_ops_t *ops, uint16_t aid, bool swapmad, bool override
             PrintAndLogEx(INFO, "read sector %u, %zu data bytes", sno, nbytes);
     }
 
-    if (*out_len == 0)
+    if (*out_len == 0 && ops->verbose)
         PrintAndLogEx(WARNING, "no sectors found for AID 0x%04X", aid);
 
     return PM3_SUCCESS;
@@ -590,8 +592,9 @@ int mad_app_write(const mad_ops_t *ops, uint16_t aid, bool swapmad, bool overrid
     }
 
     if (data_len > capacity) {
-        PrintAndLogEx(ERR, "data (%zu bytes) exceeds capacity (%zu bytes) for AID 0x%04X",
-                      data_len, capacity, aid);
+        if (ops->verbose)
+            PrintAndLogEx(ERR, "data (%zu bytes) exceeds capacity (%zu bytes) for AID 0x%04X",
+                          data_len, capacity, aid);
         return PM3_EINVARG;
     }
 
@@ -641,12 +644,14 @@ int mad_app_verify(const mad_ops_t *ops, uint16_t aid, bool swapmad, bool overri
 
     size_t cmp_len = readback_len < expected_len ? readback_len : expected_len;
     if (memcmp(expected, readback, cmp_len) != 0) {
-        PrintAndLogEx(ERR, "Verify " _RED_("FAILED") ": data mismatch");
-        for (size_t j = 0; j < cmp_len; j++) {
-            if (expected[j] != readback[j]) {
-                PrintAndLogEx(ERR, "first difference at offset %zu: expected %02X, got %02X",
-                              j, expected[j], readback[j]);
-                break;
+        if (ops->verbose) {
+            PrintAndLogEx(ERR, "Verify " _RED_("FAILED") ": data mismatch");
+            for (size_t j = 0; j < cmp_len; j++) {
+                if (expected[j] != readback[j]) {
+                    PrintAndLogEx(ERR, "first difference at offset %zu: expected %02X, got %02X",
+                                  j, expected[j], readback[j]);
+                    break;
+                }
             }
         }
         return PM3_ESOFT;
