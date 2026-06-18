@@ -6,14 +6,14 @@
 
 #include "terminal_exception_test.h"
 #include "../terminal/emv_term_exception.h"
+#include "terminal_test_util.h"
 #include "ui.h"
 #include "fileutils.h"
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 
 static int write_temp_exception(const char *content, char *path, size_t path_len) {
-    snprintf(path, path_len, "/tmp/emv_exc_test_%d.txt", (int)getpid());
+    emv_term_test_temp_path(path, path_len, "exc_test.txt");
     FILE *f = fopen(path, "w");
     if (!f) {
         return PM3_ESOFT;

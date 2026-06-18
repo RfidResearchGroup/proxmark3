@@ -6,15 +6,15 @@
 
 #include "terminal_sim_export_test.h"
 #include "../terminal/emv_term_sim_export.h"
+#include "terminal_test_util.h"
 #include "ui.h"
 #include "fileutils.h"
 #include <jansson.h>
 #include <stdio.h>
-#include <unistd.h>
 
 static int test_export_session_json(bool verbose) {
     char path[256];
-    snprintf(path, sizeof(path), "/tmp/emv_sim_export_test_%d.json", (int)getpid());
+    emv_term_test_temp_path(path, sizeof(path), "sim_export_test.json");
 
     json_t *sess = json_object();
     json_t *card = json_object();
@@ -35,7 +35,7 @@ static int test_export_session_json(bool verbose) {
     json_decref(sess);
 
     char out[256];
-    snprintf(out, sizeof(out), "/tmp/emv_sim_patch_%d.json", (int)getpid());
+    emv_term_test_temp_path(out, sizeof(out), "sim_patch.json");
     if (emv_term_sim_export_session(path, out) != PM3_SUCCESS) {
         remove(path);
         return 1;

@@ -10,12 +10,12 @@
 #include "../terminal/emv_term_load.h"
 #include "../terminal/emv_terminal.h"
 #include "../terminal/emv_term_timing.h"
+#include "terminal_test_util.h"
 #include "ui.h"
 #include "fileutils.h"
 #include <jansson.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 
 static int fixtures_root(char *out, size_t outlen) {
     const char *paths[] = {
@@ -79,7 +79,7 @@ static int test_replay_outcome(bool verbose) {
     }
 
     char path[256];
-    snprintf(path, sizeof(path), "/tmp/emv_replay_test_%d.json", (int)getpid());
+    emv_term_test_temp_path(path, sizeof(path), "replay_test.json");
     if (emv_term_session_save_json(&ctx, path) != PM3_SUCCESS) {
         emv_term_ctx_free(&ctx);
         return 1;

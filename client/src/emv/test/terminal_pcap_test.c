@@ -6,14 +6,14 @@
 
 #include "terminal_pcap_test.h"
 #include "../terminal/emv_term_pcap.h"
+#include "terminal_test_util.h"
 #include "ui.h"
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 
 static int test_pcap_write_records(bool verbose) {
     char path[256];
-    snprintf(path, sizeof(path), "/tmp/emv_pcap_test_%d.pcap", (int)getpid());
+    emv_term_test_temp_path(path, sizeof(path), "pcap_test.pcap");
 
     if (emv_term_pcap_open(path, true) != PM3_SUCCESS) {
         return 1;

@@ -12,6 +12,7 @@
 #include "../terminal/emv_term_tvr.h"
 #include "../terminal/emv_transaction.h"
 #include "../dol.h"
+#include "terminal_test_util.h"
 #include "ui.h"
 #include <string.h>
 
@@ -137,7 +138,8 @@ static int test_export_json(bool verbose) {
     tlvdb_change_or_add_node(ctx.card, 0x9f26, sizeof(ac), ac);
     tlvdb_change_or_add_node(ctx.card, 0x9f36, sizeof(atc), atc);
 
-    const char *path = "/tmp/emv_crypto_test_export.json";
+    char path[256];
+    emv_term_test_temp_path(path, sizeof(path), "crypto_test_export.json");
     int res = emv_term_crypto_export_json(&ctx, path, NULL, 0);
     tlvdb_free(ctx.card);
 
@@ -222,8 +224,10 @@ static int test_digest_fixture(bool verbose) {
 }
 
 static int test_compare_json(bool verbose) {
-    const char *path_a = "/tmp/emv_crypto_compare_a.json";
-    const char *path_b = "/tmp/emv_crypto_compare_b.json";
+    char path_a[256];
+    char path_b[256];
+    emv_term_test_temp_path(path_a, sizeof(path_a), "crypto_compare_a.json");
+    emv_term_test_temp_path(path_b, sizeof(path_b), "crypto_compare_b.json");
 
     emv_term_ctx_t ctx;
     memset(&ctx, 0, sizeof(ctx));
