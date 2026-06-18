@@ -10,7 +10,16 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+
+#if defined(_WIN32)
+#include <conio.h>
+#include <io.h>
+#ifndef STDIN_FILENO
+#define STDIN_FILENO 0
+#endif
+#else
 #include <unistd.h>
+#endif
 
 bool emv_term_pin_tty_available(void) {
     return isatty(STDIN_FILENO) != 0;
@@ -32,6 +41,44 @@ static bool valid_pin_digits(const char *pin) {
     return true;
 }
 
+#if defined(_WIN32)
+static int read_pin_tty(const char *prompt, char *pin_buf, size_t pin_buf_len) {
+    fputs(prompt, stderr);
+    fflush(stderr);
+    size_t n = 0;
+    while (n + 1 < pin_buf_len) {
+        int c = _getch();
+        if (c == '\r' || c == '\n') {
+            pin_buf[n] = '\0';
+            fputc('\n', stderr);
+            return PM3_SUCCESS;
+        }
+        if (c == '\b' || c == 127) {
+            if (n > 0) {
+                n--;
+            }
+            continue;
+        }
+        if (!isdigit((unsigned char)c)) {
+            continue;
+        }
+        pin_buf[n++] = (char)c;
+    }
+    pin_buf[pin_buf_len - 1] = '\0';
+    return PM3_SUCCESS;
+}
+#else
+static int read_pin_tty(const char *prompt, char *pin_buf, size_t pin_buf_len) {
+    char *got = getpass(prompt);
+    if (!got) {
+        return PM3_EIO;
+    }
+    str_copy(pin_buf, pin_buf_len, got);
+    emv_term_secure_zero(got, strlen(got));
+    return PM3_SUCCESS;
+}
+#endif
+
 int emv_term_pin_prompt(const char *label, char *pin_buf, size_t pin_buf_len) {
     if (!pin_buf || pin_buf_len < 13) {
         return PM3_EINVARG;
@@ -44,19 +91,17 @@ int emv_term_pin_prompt(const char *label, char *pin_buf, size_t pin_buf_len) {
         return PM3_EIO;
     }
 
-    char *got = getpass(prompt);
-    if (!got) {
+    int res = read_pin_tty(prompt, pin_buf, pin_buf_len);
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "PIN prompt failed");
-        return PM3_EIO;
+        return res;
     }
 
-    if (!valid_pin_digits(got)) {
-        emv_term_secure_zero(got, strlen(got));
+    if (!valid_pin_digits(pin_buf)) {
+        emv_term_secure_zero(pin_buf, strlen(pin_buf));
         PrintAndLogEx(ERR, "PIN must be 4-12 decimal digits");
         return PM3_EINVARG;
     }
 
-    str_copy(pin_buf, pin_buf_len, got);
-    emv_term_secure_zero(got, strlen(got));
     return PM3_SUCCESS;
 }
