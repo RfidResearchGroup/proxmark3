@@ -17,11 +17,11 @@
 #include <errno.h>
 
 #ifndef _WIN32
+
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
-#endif
 
 static int parse_hex_field(const char *hex, uint8_t *out, size_t *out_len, size_t max_len) {
     if (!hex || !hex[0] || !out || !out_len) {
@@ -138,8 +138,6 @@ static json_t *handle_auth_request(json_t *req, const emv_term_host_keys_t *keys
 
     return resp;
 }
-
-#ifndef _WIN32
 
 static int set_socket_timeout(int fd, int sec) {
     struct timeval tv = { .tv_sec = sec, .tv_usec = 0 };
