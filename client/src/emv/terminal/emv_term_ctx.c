@@ -8,7 +8,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — session context
+// EMV terminal emulator - session context
 //-----------------------------------------------------------------------------
 
 #include "emv_term_ctx.h"

@@ -49,7 +49,7 @@ int phase_taa_run(emv_term_ctx_t *ctx) {
 
     if (ctx->oda_performed && !ctx->oda_success) {
         emv_term_tvr_set_bit(ctx, 0, 0x08, true);
-        PrintAndLogEx(WARNING, "ODA failed — TVR updated");
+        PrintAndLogEx(WARNING, "ODA failed - TVR updated");
     }
 
     uint8_t tvr[5];
@@ -66,16 +66,16 @@ int phase_taa_run(emv_term_ctx_t *ctx) {
 
     if (emv_term_tac_match(tvr, tac_denial, iac_denial)) {
         requested = EMVAC_AAC_BYTE;
-        PrintAndLogEx(INFO, "TAA: Denial action → AAC");
+        PrintAndLogEx(INFO, "TAA: Denial action -> AAC");
     } else if (emv_term_tac_match(tvr, tac_online, iac_online)) {
         requested = EMVAC_ARQC_BYTE;
-        PrintAndLogEx(INFO, "TAA: Online action → ARQC");
+        PrintAndLogEx(INFO, "TAA: Online action -> ARQC");
     } else if (emv_term_tac_match(tvr, tac_default, iac_default)) {
         requested = EMVAC_TC_BYTE;
-        PrintAndLogEx(INFO, "TAA: Default action → TC");
+        PrintAndLogEx(INFO, "TAA: Default action -> TC");
     } else {
         requested = EMVAC_TC_BYTE;
-        PrintAndLogEx(INFO, "TAA: No match — default TC");
+        PrintAndLogEx(INFO, "TAA: No match - default TC");
     }
 
     ctx->requested_ac = requested;

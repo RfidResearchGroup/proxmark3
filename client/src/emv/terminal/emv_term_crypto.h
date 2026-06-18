@@ -3,7 +3,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — crypto playground
+// EMV terminal emulator - crypto playground
 //-----------------------------------------------------------------------------
 
 #ifndef EMV_TERM_CRYPTO_H__

@@ -108,7 +108,7 @@ static int test_host_keys_load(bool verbose) {
         searchFile(&path, "client/resources", "host_sim_interac", ".json", false) == PM3_SUCCESS ||
         searchFile(&path, "docs/emv-terminal-emulator/examples", "host_sim_interac", ".json", false) == PM3_SUCCESS) {
         if (verbose) {
-            PrintAndLogEx(WARNING, "host_sim_interac.json not found — skip keys load test");
+            PrintAndLogEx(WARNING, "host_sim_interac.json not found - skip keys load test");
         }
         return 0;
     }

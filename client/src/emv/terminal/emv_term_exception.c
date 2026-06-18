@@ -105,7 +105,7 @@ emv_term_exception_file_t *emv_term_exception_load(const char *path) {
             continue;
         }
         if (ef->count >= EMV_EXCEPTION_MAX) {
-            PrintAndLogEx(WARNING, "Exception file full — truncating at %zu entries", ef->count);
+            PrintAndLogEx(WARNING, "Exception file full - truncating at %zu entries", ef->count);
             break;
         }
         memcpy(ef->hashes[ef->count++], hash, 32);

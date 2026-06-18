@@ -3,7 +3,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — TLV lookup across terminal/card trees
+// EMV terminal emulator - TLV lookup across terminal/card trees
 //-----------------------------------------------------------------------------
 
 #ifndef EMV_TERM_TLV_H__

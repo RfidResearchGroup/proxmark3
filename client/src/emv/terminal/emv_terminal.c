@@ -155,10 +155,10 @@ static int run_pipeline_phase(emv_term_ctx_t *ctx, emv_term_phase_t phase, int *
     int res = emv_terminal_step(ctx, phase);
 
     if (res && phase == EMV_PHASE_CVM && res == PM3_ESOFT) {
-        PrintAndLogEx(WARNING, "CVM phase failed — continuing for lab visibility");
+        PrintAndLogEx(WARNING, "CVM phase failed - continuing for lab visibility");
         *last_res = PM3_SUCCESS;
     } else if (res && phase == EMV_PHASE_ONLINE && res == PM3_ESOFT) {
-        PrintAndLogEx(WARNING, "Online phase failed — continuing to completion");
+        PrintAndLogEx(WARNING, "Online phase failed - continuing to completion");
         if (ctx->outcome == EMV_OUTCOME_UNKNOWN) {
             ctx->outcome = EMV_OUTCOME_ONLINE_REQUIRED;
         }

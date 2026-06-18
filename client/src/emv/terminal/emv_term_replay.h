@@ -3,7 +3,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — mock APDU replay driver
+// EMV terminal emulator - mock APDU replay driver
 //-----------------------------------------------------------------------------
 
 #ifndef EMV_TERM_REPLAY_H__

@@ -245,12 +245,12 @@ int emv_term_load_from_scan(emv_term_ctx_t *ctx, const char *path) {
     json_decref(root);
 
     if (!tlvdb_get(ctx->card, 0x82, NULL)) {
-        PrintAndLogEx(ERR, "Loaded card data missing AIP (82) — run emv scan with full TLV");
+        PrintAndLogEx(ERR, "Loaded card data missing AIP (82) - run emv scan with full TLV");
         return PM3_EINVARG;
     }
 
     if (!tlvdb_get(ctx->card, 0x8c, NULL) && !tlvdb_get(ctx->card, 0x9f26, NULL)) {
-        PrintAndLogEx(WARNING, "No CDOL1 (8C) or AC (9F26) — offline GEN AC testing may be limited");
+        PrintAndLogEx(WARNING, "No CDOL1 (8C) or AC (9F26) - offline GEN AC testing may be limited");
     }
 
     PrintAndLogEx(SUCCESS, "Loaded card TLV from scan: AID=%s", sprint_hex_inrow(ctx->aid, ctx->aid_len));

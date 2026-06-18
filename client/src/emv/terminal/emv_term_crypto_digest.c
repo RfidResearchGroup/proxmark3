@@ -3,7 +3,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — crypto playground digest / compare
+// EMV terminal emulator - crypto playground digest / compare
 //-----------------------------------------------------------------------------
 
 #include "emv_term_crypto_digest.h"
@@ -184,9 +184,9 @@ int emv_term_crypto_print_digest(const emv_term_ctx_t *ctx, const emv_term_crypt
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "╔══════════════════════════════════════════════════════════╗");
-    PrintAndLogEx(INFO, "║           EMV crypto card digest                         ║");
-    PrintAndLogEx(INFO, "╚══════════════════════════════════════════════════════════╝");
+    PrintAndLogEx(INFO, "============================================================");
+    PrintAndLogEx(INFO, "           EMV crypto card digest");
+    PrintAndLogEx(INFO, "============================================================");
 
     if (ctx->aid_len) {
         PrintAndLogEx(INFO, "Scheme .............. %s", digest_scheme_label(ctx));
@@ -240,7 +240,7 @@ int emv_term_crypto_print_digest(const emv_term_ctx_t *ctx, const emv_term_crypt
 
     const struct tlv *cvm = tlvdb_get(ctx->card, 0x8e, NULL);
     if (cvm && cvm->len) {
-        PrintAndLogEx(INFO, "CVM list (8E) ....... present [%zu bytes] — run `emv terminal cvm -s`", cvm->len);
+        PrintAndLogEx(INFO, "CVM list (8E) ....... present [%zu bytes] - run `emv terminal cvm -s`", cvm->len);
     }
 
     const struct tlv *ac = digest_card_tlv(ctx, 0x9f26);
@@ -252,7 +252,7 @@ int emv_term_crypto_print_digest(const emv_term_ctx_t *ctx, const emv_term_crypt
         PrintAndLogEx(SUCCESS, "Cryptogram (9F26) ... %s", sprint_hex(ac->value, ac->len));
     }
     if (cid && cid->len) {
-        PrintAndLogEx(INFO, "CID (9F27) .......... %02X — %s", cid->value[0], digest_cid_name(cid->value[0]));
+        PrintAndLogEx(INFO, "CID (9F27) .......... %02X - %s", cid->value[0], digest_cid_name(cid->value[0]));
     }
     if (atc && atc->len == 2) {
         uint16_t atcv = (uint16_t)((atc->value[0] << 8) | atc->value[1]);
@@ -272,13 +272,13 @@ int emv_term_crypto_print_digest(const emv_term_ctx_t *ctx, const emv_term_crypt
     }
 
     if (aip == 0x0000 && GetCardPSVendor((uint8_t *)ctx->aid, ctx->aid_len) == CV_INTERAC) {
-        PrintAndLogEx(INFO, "Neat ................ Interac minimal AIP 0000 — standalone ARQC path");
+        PrintAndLogEx(INFO, "Neat ................ Interac minimal AIP 0000 - standalone ARQC path");
     }
     if (aip == 0x0001 && GetCardPSVendor((uint8_t *)ctx->aid, ctx->aid_len) == CV_INTERAC) {
-        PrintAndLogEx(INFO, "Neat ................ Interac AIP 0001 (CDA) — needs full terminal pipeline");
+        PrintAndLogEx(INFO, "Neat ................ Interac AIP 0001 (CDA) - needs full terminal pipeline");
     }
     if (aip == 0x8019 && GetCardPSVendor((uint8_t *)ctx->aid, ctx->aid_len) == CV_MASTERCARD) {
-        PrintAndLogEx(INFO, "Neat ................ MC AIP 8019 — full M/Chip contactless + CVM");
+        PrintAndLogEx(INFO, "Neat ................ MC AIP 8019 - full M/Chip contactless + CVM");
     }
 
     const struct tlv *label = tlvdb_get(ctx->card, 0x50, NULL);
@@ -306,7 +306,7 @@ int emv_term_crypto_print_digest(const emv_term_ctx_t *ctx, const emv_term_crypt
         PrintAndLogEx(HINT, "  emv terminal run -s                   online / MSD flow");
     }
     if (ctx->opts.crypto_quick_afl) {
-        PrintAndLogEx(HINT, "  (quick AFL was used — omit --quick for full record sweep)");
+        PrintAndLogEx(HINT, "  (quick AFL was used - omit --quick for full record sweep)");
     } else if (cdol1 && GetCardPSVendor((uint8_t *)ctx->aid, ctx->aid_len) == CV_MASTERCARD) {
         PrintAndLogEx(HINT, "  emv terminal crypto run -s --quick    faster, fewer -20 timeouts");
     }

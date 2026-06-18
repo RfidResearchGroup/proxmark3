@@ -25,7 +25,7 @@ static int write_patch_json(json_t *root, const char *out_path) {
         return PM3_ESOFT;
     }
     PrintAndLogEx(SUCCESS, "Sim patch exported: %s", out_path);
-    PrintAndLogEx(WARNING, "Research replay only — modern terminals reject replayed ARQC");
+    PrintAndLogEx(WARNING, "Research replay only - modern terminals reject replayed ARQC");
     return PM3_SUCCESS;
 }
 
@@ -37,7 +37,7 @@ static json_t *build_patch_from_session(json_t *sess) {
     json_object_set_new(out, "File", file);
 
     json_object_set_new(out, "Warning",
-                        json_string("Research replay only — modern terminals reject replayed ARQC"));
+                        json_string("Research replay only - modern terminals reject replayed ARQC"));
 
     json_t *card = json_object_get(sess, "Card");
     if (json_is_object(card)) {
@@ -135,7 +135,7 @@ int emv_term_sim_export_ctx(const emv_term_ctx_t *ctx, const char *out_path) {
     JsonSaveStr(file, "Version", "1");
     json_object_set_new(out, "File", file);
     json_object_set_new(out, "Warning",
-                        json_string("Research replay only — modern terminals reject replayed ARQC"));
+                        json_string("Research replay only - modern terminals reject replayed ARQC"));
 
     if (ctx->aid_len) {
         JsonSaveBufAsHexCompact(out, "AID", (uint8_t *)ctx->aid, ctx->aid_len);

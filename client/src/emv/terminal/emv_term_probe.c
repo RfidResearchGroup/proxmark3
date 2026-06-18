@@ -3,7 +3,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — card GET DATA probe / enumeration
+// EMV terminal emulator - card GET DATA probe / enumeration
 //-----------------------------------------------------------------------------
 
 #include "emv_term_probe.h"
@@ -164,7 +164,7 @@ static void probe_print_highlights(emv_term_ctx_t *ctx) {
 static int emv_term_probe_afl_records(emv_term_ctx_t *ctx, bool decode_tlv) {
     const struct tlv *AFL = tlvdb_get(ctx->card, 0x94, NULL);
     if (!AFL || !AFL->len) {
-        PrintAndLogEx(WARNING, "No AFL (94) in context — use probe -s for live init (not session-only)");
+        PrintAndLogEx(WARNING, "No AFL (94) in context - use probe -s for live init (not session-only)");
         return PM3_ESOFT;
     }
 
@@ -188,7 +188,7 @@ static int emv_term_probe_afl_records(emv_term_ctx_t *ctx, bool decode_tlv) {
         uint8_t SFIend = AFL->value[i * 4 + 2];
 
         if (SFI == 0 || SFI == 31 || SFIstart == 0 || SFIstart > SFIend) {
-            PrintAndLogEx(WARNING, "AFL entry %zu: invalid SFI=%02x start=%02x end=%02x — skipped",
+            PrintAndLogEx(WARNING, "AFL entry %zu: invalid SFI=%02x start=%02x end=%02x - skipped",
                           i + 1, SFI, SFIstart, SFIend);
             continue;
         }
@@ -226,7 +226,7 @@ static int emv_term_probe_afl_records(emv_term_ctx_t *ctx, bool decode_tlv) {
     probe_print_highlights(ctx);
 
     if (records_ok == 0) {
-        PrintAndLogEx(WARNING, "No AFL records returned data — card may need fresh init on reader");
+        PrintAndLogEx(WARNING, "No AFL records returned data - card may need fresh init on reader");
         return PM3_ESOFT;
     }
 
@@ -254,7 +254,7 @@ int emv_term_probe_card(emv_term_ctx_t *ctx, const emv_term_probe_opts_t *opts) 
         PrintAndLogEx(INFO, "CVM List (8E) already in card context:");
         emv_term_cvm_dump_list(ctx);
     } else if (!opts->read_records) {
-        PrintAndLogEx(INFO, "No CVM List (8E) in context — try probe -s --records");
+        PrintAndLogEx(INFO, "No CVM List (8E) in context - try probe -s --records");
     }
 
     const struct tlv *aip = tlvdb_get(ctx->card, 0x82, NULL);
@@ -270,7 +270,7 @@ int emv_term_probe_card(emv_term_ctx_t *ctx, const emv_term_probe_opts_t *opts) 
     }
 
     if (found == 0) {
-        PrintAndLogEx(WARNING, "No GET DATA tags returned data — tags may be record-only (try --records)");
+        PrintAndLogEx(WARNING, "No GET DATA tags returned data - tags may be record-only (try --records)");
     } else {
         PrintAndLogEx(SUCCESS, "GET DATA probe: %d tag(s) returned data", found);
     }

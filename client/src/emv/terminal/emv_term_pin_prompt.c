@@ -40,7 +40,7 @@ int emv_term_pin_prompt(const char *label, char *pin_buf, size_t pin_buf_len) {
 
     const char *prompt = label ? label : "Enter PIN: ";
     if (!emv_term_pin_tty_available()) {
-        PrintAndLogEx(ERR, "Non-interactive terminal — use --pin or EMV_TEST_PIN");
+        PrintAndLogEx(ERR, "Non-interactive terminal - use --pin or EMV_TEST_PIN");
         return PM3_EIO;
     }
 

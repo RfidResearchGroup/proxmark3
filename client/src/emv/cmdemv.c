@@ -740,7 +740,7 @@ static int CmdEMVSearch(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("t",  "tlv",     "TLV decode results of selected applets"),
         arg_lit0("w",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
-        arg_lit0(NULL, "nowait",  "Do not wait for card — fail if none in field"),
+        arg_lit0(NULL, "nowait",  "Do not wait for card - fail if none in field"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -810,7 +810,7 @@ static int CmdEMVSearch(const char *Cmd) {
         return PM3_ERFTRANS;
     }
 
-    PrintAndLogEx(SUCCESS, "Search completed — %zu applet(s) found.", aid_count);
+    PrintAndLogEx(SUCCESS, "Search completed - %zu applet(s) found.", aid_count);
 
     // print list here
     if (decodeTLV == false) {

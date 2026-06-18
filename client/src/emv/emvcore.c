@@ -135,7 +135,7 @@ static const AIDList_t AIDlist [] = {
     { CV_OTHER, "A0000005241010" },              // RuPay - India - RuPay - RuPay (India)
     { CV_OTHER, "A0000006723010" },              // TROY - Turkey - TROY chip credit card - Turkey's Payment Method
     { CV_OTHER, "A0000006723020" },              // TROY - Turkey - TROY chip debit card - Turkey's Payment Method
-    { CV_OTHER, "A0000007705850" },              // Indian Oil Corporation Limited - India - XTRAPOWER Fleet Card Program - Indian Oil’s Pre Paid Program
+    { CV_OTHER, "A0000007705850" },              // Indian Oil Corporation Limited - India - XTRAPOWER Fleet Card Program - Indian Oil's Pre Paid Program
     { CV_OTHER, "D27600002545500100" },          // ZKA - Germany - Girocard - ZKA Girocard (Geldkarte) (Germany)
     { CV_OTHER, "D4100000030001" },              // KS X 6923/6924 (T-Money, South Korea and Snapper+, Wellington, New Zealand)
     { CV_OTHER, "D5280050218002" },              // The Netherlands - ? - (Netherlands)
@@ -329,9 +329,9 @@ int EMVPrepareContactlessEx(Iso7816CommandChannel channel, bool force_reselect, 
 
         if (!announced) {
             if (wait_for_card) {
-                PrintAndLogEx(INFO, "Waiting for card — present to antenna (press Enter to cancel)...");
+                PrintAndLogEx(INFO, "Waiting for card - present to antenna (press Enter to cancel)...");
             } else {
-                PrintAndLogEx(INFO, "Activating HF field — present card to antenna...");
+                PrintAndLogEx(INFO, "Activating HF field - present card to antenna...");
             }
             announced = true;
         }
@@ -594,7 +594,7 @@ int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveField
         if (res && res != 5) {
             if (res == PM3_EIO) {
                 if (verbose) {
-                    PrintAndLogEx(WARNING, "HF field inactive — activate field and present a card before searching");
+                    PrintAndLogEx(WARNING, "HF field inactive - activate field and present a card before searching");
                 }
                 if (LeaveFieldON == false) {
                     DropFieldEx(channel);

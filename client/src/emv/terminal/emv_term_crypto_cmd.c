@@ -3,7 +3,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — crypto playground CLI
+// EMV terminal emulator - crypto playground CLI
 //-----------------------------------------------------------------------------
 
 #include "emv_term_crypto_cmd.h"
@@ -713,7 +713,7 @@ static int CmdEMVTerminalCryptoRng(const char *Cmd) {
         arg_u64_0(NULL, "max", "<n>", "Integer in [0..n-1]"),
         arg_lit0(NULL, "dice", "Roll a d6"),
         arg_lit0(NULL, "coin", "Coin flip"),
-        arg_lit0(NULL, "stream", "Loop — continuous lowercase hex on stdout (Enter stops)"),
+        arg_lit0(NULL, "stream", "Loop - continuous lowercase hex on stdout (Enter stops)"),
         arg_lit0(NULL, "stream-turbo", "Alias for --stream (kept for scripts); same speed path"),
         arg_lit0(NULL, "stream-raw", "With --stream: raw bytes instead of hex"),
         arg_str0(NULL, "stream-out", "<file>", "With --stream: write flushed raw binary bytes to file"),

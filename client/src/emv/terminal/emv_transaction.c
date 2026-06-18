@@ -8,7 +8,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — extracted transaction flow from CmdEMVExec
+// EMV terminal emulator - extracted transaction flow from CmdEMVExec
 //-----------------------------------------------------------------------------
 
 #include "emv_transaction.h"
@@ -88,7 +88,7 @@ void emv_transaction_process_gpo_response(struct tlvdb *tlvRoot, uint8_t *buf, s
     }
 
     if (decodeTLV && buf[0] == 0x77) {
-        PrintAndLogEx(INFO, "\n* * GPO response format 2 (0x77) — cryptogram tags hoisted to card context");
+        PrintAndLogEx(INFO, "\n* * GPO response format 2 (0x77) - cryptogram tags hoisted to card context");
     }
 
     tlvdb_free(parsed);
@@ -204,7 +204,7 @@ void emv_transaction_process_ac_format1(struct tlvdb *tlvRoot, uint8_t *buf, siz
                 emv_transaction_hoist_gpo_tag(tlvRoot, parsed, hoist_tags[i]);
             }
             if (decodeTLV) {
-                PrintAndLogEx(INFO, "AC response format 2 (0x77) — cryptogram tags hoisted to card context");
+                PrintAndLogEx(INFO, "AC response format 2 (0x77) - cryptogram tags hoisted to card context");
                 TLVPrintFromBuffer(buf, len);
             }
             tlvdb_free(parsed);
@@ -498,7 +498,7 @@ int emv_transaction_try_aid_fallback(emv_term_ctx_t *ctx) {
         }
         if (emv_transaction_card_has_crypto_dol(ctx->card)) {
             ctx->crypto_aid_fallback_used = true;
-            PrintAndLogEx(SUCCESS, "AID fallback OK — CDOL/crypto tags found on %s",
+            PrintAndLogEx(SUCCESS, "AID fallback OK - CDOL/crypto tags found on %s",
                           sprint_hex_inrow(ctx->aid, ctx->aid_len));
             return PM3_SUCCESS;
         }
@@ -543,7 +543,7 @@ int emv_transaction_init(emv_term_ctx_t *ctx) {
 
     if (ctx->channel == CC_CONTACT) {
         if (IfPm3Smartcard() == false) {
-            PrintAndLogEx(WARNING, "PM3 does not have SMARTCARD support — use contactless or add smartcard module");
+            PrintAndLogEx(WARNING, "PM3 does not have SMARTCARD support - use contactless or add smartcard module");
             return PM3_EDEVNOTSUPP;
         }
         smart_card_atr_t atr_card;

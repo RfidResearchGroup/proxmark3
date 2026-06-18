@@ -3,7 +3,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — ISO7816 APDU pcap export
+// EMV terminal emulator - ISO7816 APDU pcap export
 //-----------------------------------------------------------------------------
 
 #ifndef EMV_TERM_PCAP_H__

@@ -3,7 +3,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — legal / authorized-use banner
+// EMV terminal emulator - legal / authorized-use banner
 //-----------------------------------------------------------------------------
 
 #ifndef EMV_TERM_BANNER_H__

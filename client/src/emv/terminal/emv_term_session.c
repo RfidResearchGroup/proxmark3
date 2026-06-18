@@ -8,7 +8,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — session JSON export
+// EMV terminal emulator - session JSON export
 //-----------------------------------------------------------------------------
 
 #include "emv_term_session.h"

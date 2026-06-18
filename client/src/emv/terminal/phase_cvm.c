@@ -8,7 +8,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — Cardholder Verification (PIN / CVM)
+// EMV terminal emulator - Cardholder Verification (PIN / CVM)
 //-----------------------------------------------------------------------------
 
 #include "phase_cvm.h"
@@ -204,7 +204,7 @@ void emv_term_cvm_dump_list(const emv_term_ctx_t *ctx) {
         uint8_t cvm_code = cvm_byte & 0x3F;
         uint8_t condition = cvm_list->value[i + 1];
         const char *apply_next = (cvm_byte & 0x40) ? "apply succeeding rule if this fails" : "stop if this fails";
-        PrintAndLogEx(INFO, "  rule %zu: %02x/%02x — %s, %s (%s)",
+        PrintAndLogEx(INFO, "  rule %zu: %02x/%02x - %s, %s (%s)",
                       (i - 8) / 2 + 1, cvm_code, condition,
                       cvm_code_name(cvm_code), cvm_condition_name(condition), apply_next);
     }
@@ -231,7 +231,7 @@ void emv_term_cvm_print_diagnostics(const emv_term_ctx_t *ctx) {
         PrintAndLogEx(INFO, "  enciphered offline PIN: %s", (caps->value[1] & 0x40) ? "yes" : "no");
         PrintAndLogEx(INFO, "  enciphered online PIN: %s", (caps->value[0] & 0x80) ? "yes" : "no");
     } else {
-        PrintAndLogEx(WARNING, "Terminal Capabilities (9F33) missing — use -j or emv terminal run -j");
+        PrintAndLogEx(WARNING, "Terminal Capabilities (9F33) missing - use -j or emv terminal run -j");
     }
 
     const struct tlv *aip = tlvdb_get(ctx->card, 0x82, NULL);
@@ -314,7 +314,7 @@ static bool interac_contactless_skip_cvm(const emv_term_ctx_t *ctx) {
     }
     const struct tlv *cvm_list = tlvdb_get(ctx->card, 0x8e, NULL);
     if (!cvm_list || cvm_list->len <= 8) {
-        PrintAndLogEx(INFO, "Interac contactless Flash: no CVM rules — skipping CVM");
+        PrintAndLogEx(INFO, "Interac contactless Flash: no CVM rules - skipping CVM");
         return true;
     }
     return false;
@@ -459,7 +459,7 @@ int phase_cvm_run(emv_term_ctx_t *ctx) {
     }
 
     if (!card_aip_supports_cvm(ctx)) {
-        PrintAndLogEx(INFO, "AIP: cardholder verification not supported — skipping CVM");
+        PrintAndLogEx(INFO, "AIP: cardholder verification not supported - skipping CVM");
         set_cvm_results(ctx, CVM_NO_CVM, CVM_COND_ALWAYS, CVM_RESULT_UNKNOWN);
         ctx->cvm_performed = false;
         ctx->cvm_success = true;
@@ -468,7 +468,7 @@ int phase_cvm_run(emv_term_ctx_t *ctx) {
 
     const struct tlv *cvm_list = tlvdb_get(ctx->card, 0x8e, NULL);
     if (!cvm_list || cvm_list->len < 10) {
-        PrintAndLogEx(INFO, "No CVM List (8E) — skipping CVM phase");
+        PrintAndLogEx(INFO, "No CVM List (8E) - skipping CVM phase");
         if (ctx->channel == CC_CONTACTLESS) {
             PrintAndLogEx(INFO, "Contactless cards often use no-CVM or online PIN only (no 8E in records)");
         }
@@ -528,7 +528,7 @@ int phase_cvm_run(emv_term_ctx_t *ctx) {
 
             case CVM_PLAIN_OFFLINE:
                 if (!cvm_will_verify_offline_pin(ctx, cvm_code)) {
-                    PrintAndLogEx(INFO, "CVM: %s not verifiable on this channel — trying next rule",
+                    PrintAndLogEx(INFO, "CVM: %s not verifiable on this channel - trying next rule",
                                   cvm_code_name(cvm_code));
                     continue;
                 }
@@ -553,7 +553,7 @@ int phase_cvm_run(emv_term_ctx_t *ctx) {
 
             case CVM_ENCIPHERED_OFFLINE:
                 if (!cvm_will_verify_offline_pin(ctx, cvm_code)) {
-                    PrintAndLogEx(INFO, "CVM: %s not verifiable on this channel — trying next rule",
+                    PrintAndLogEx(INFO, "CVM: %s not verifiable on this channel - trying next rule",
                                   cvm_code_name(cvm_code));
                     continue;
                 }
@@ -594,7 +594,7 @@ int phase_cvm_run(emv_term_ctx_t *ctx) {
                 return PM3_SUCCESS;
 
             default:
-                PrintAndLogEx(INFO, "Unsupported CVM code %02x — trying next rule", cvm_code);
+                PrintAndLogEx(INFO, "Unsupported CVM code %02x - trying next rule", cvm_code);
                 break;
         }
     }

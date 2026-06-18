@@ -8,7 +8,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — CLI commands
+// EMV terminal emulator - CLI commands
 //-----------------------------------------------------------------------------
 
 #include "emv_term_cmd.h"
@@ -261,7 +261,7 @@ static int CmdEMVTerminalRun(const char *Cmd) {
         arg_str0(NULL, "host-keys", "<file>", "Host simulator keys JSON"),
         arg_str0(NULL, "mock-apdu-file", "<file>", "Replay CAPDU trace from JSON (no card)"),
         arg_lit0(NULL, "continue-on-bad-arqc", "Continue online after ARQC verify failure"),
-        arg_lit0(NULL, "record-apdu", "Record APDU trace (stub — use mock fixtures for CI)"),
+        arg_lit0(NULL, "record-apdu", "Record APDU trace (stub - use mock fixtures for CI)"),
         arg_str0(NULL, "exception-file", "<file>", "PAN blocklist (SHA-256 / pan: lines)"),
         arg_str0(NULL, "capk-extra", "<file>", "Extra CAPK file merged at ODA init"),
         arg_lit0(NULL, "no-redact", "Session export without crypto redaction (lab only)"),
@@ -510,7 +510,7 @@ static int CmdEMVTerminalOnline(const char *Cmd) {
     emv_term_session_load_json(&term_ctx, session);
 
     if (!term_ctx.ac1_performed || (term_ctx.ac1_cid & 0xC0) != EMVAC_ARQC_BYTE) {
-        PrintAndLogEx(ERR, "Session does not contain ARQC from AC1 — run caa phase first");
+        PrintAndLogEx(ERR, "Session does not contain ARQC from AC1 - run caa phase first");
         emv_term_ctx_free(&term_ctx);
         return PM3_EINVARG;
     }
@@ -617,12 +617,12 @@ static int CmdEMVTerminalPin(const char *Cmd) {
         int sel = EMVSelect(opts.channel, false, true, term_ctx.aid, term_ctx.aid_len,
                             buf, sizeof(buf), &len, &sw, term_ctx.card);
         if (sel) {
-            PrintAndLogEx(WARNING, "AID re-select failed (%d) — run emv terminal step init first", sel);
+            PrintAndLogEx(WARNING, "AID re-select failed (%d) - run emv terminal step init first", sel);
         } else if (show_apdu) {
             PrintAndLogEx(INFO, "Re-selected AID: %s", sprint_hex_inrow(term_ctx.aid, term_ctx.aid_len));
         }
     } else {
-        PrintAndLogEx(WARNING, "No AID in context — run init or pass --session with --full-tlv session export");
+        PrintAndLogEx(WARNING, "No AID in context - run init or pass --session with --full-tlv session export");
     }
 
     emv_term_cvm_print_diagnostics(&term_ctx);
@@ -791,7 +791,7 @@ static int CmdEMVTerminalProfile(const char *Cmd) {
         return emv_term_profile_validate(file);
     }
 
-    PrintAndLogEx(ERR, "Unknown action '%s' — use print or validate", action);
+    PrintAndLogEx(ERR, "Unknown action '%s' - use print or validate", action);
     return PM3_EINVARG;
 }
 

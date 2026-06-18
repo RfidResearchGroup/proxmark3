@@ -8,7 +8,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — profile loading
+// EMV terminal emulator - profile loading
 //-----------------------------------------------------------------------------
 
 #include "emv_term_profile.h"
@@ -89,7 +89,7 @@ void emv_term_init_transaction_params(struct tlvdb *tlvRoot, bool paramLoadJSON,
                 ParamLoadFromJson(tlvRoot);
             }
         } else if (!ParamLoadFromJson(tlvRoot)) {
-            PrintAndLogEx(WARNING, "emv_defparams.json not found — using bundled terminal profile");
+            PrintAndLogEx(WARNING, "emv_defparams.json not found - using bundled terminal profile");
         }
     }
 

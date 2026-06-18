@@ -3,7 +3,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — device capabilities discovery
+// EMV terminal emulator - device capabilities discovery
 //-----------------------------------------------------------------------------
 
 #ifndef EMV_TERM_CAPABILITIES_H__

@@ -109,7 +109,7 @@ static int build_issuer_auth(emv_term_ctx_t *ctx) {
     }
 
     if (tag91_len == 0) {
-        PrintAndLogEx(WARNING, "No ARPC data — skipping EXTERNAL AUTHENTICATE");
+        PrintAndLogEx(WARNING, "No ARPC data - skipping EXTERNAL AUTHENTICATE");
         return PM3_ESOFT;
     }
 
@@ -125,7 +125,7 @@ int phase_online_run(emv_term_ctx_t *ctx) {
     }
 
     if (!ctx->ac1_performed || (ctx->ac1_cid & 0xC0) != EMVAC_ARQC_BYTE) {
-        PrintAndLogEx(INFO, "Online phase skipped — ARQC not requested");
+        PrintAndLogEx(INFO, "Online phase skipped - ARQC not requested");
         return PM3_SUCCESS;
     }
 

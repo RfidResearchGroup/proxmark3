@@ -163,7 +163,7 @@ int phase_caa_run(emv_term_ctx_t *ctx) {
     }
 
     if (AIP & 0x8000 && ctx->tr_type == TT_MSD) {
-        PrintAndLogEx(INFO, "\n--> MSD transaction (mag-stripe mode — no GEN AC).");
+        PrintAndLogEx(INFO, "\n--> MSD transaction (mag-stripe mode - no GEN AC).");
         ctx->ac1_performed = false;
         ctx->outcome = EMV_OUTCOME_APPROVED_OFFLINE;
         emv_term_tsi_set_bit(ctx, 0, 0x08, true);
@@ -212,7 +212,7 @@ int phase_caa_ac2(emv_term_ctx_t *ctx) {
     }
 
     if (!ctx->ac1_performed) {
-        PrintAndLogEx(WARNING, "AC2 skipped — AC1 not performed");
+        PrintAndLogEx(WARNING, "AC2 skipped - AC1 not performed");
         return PM3_ESOFT;
     }
 
@@ -223,7 +223,7 @@ int phase_caa_ac2(emv_term_ctx_t *ctx) {
 
     const struct tlv *CDOL2 = tlvdb_get(ctx->card, 0x8d, NULL);
     if (!CDOL2) {
-        PrintAndLogEx(WARNING, "CDOL2 (8D) not found — cannot perform AC2");
+        PrintAndLogEx(WARNING, "CDOL2 (8D) not found - cannot perform AC2");
         return PM3_ESOFT;
     }
 

@@ -3,7 +3,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — phase timing report
+// EMV terminal emulator - phase timing report
 //-----------------------------------------------------------------------------
 
 #ifndef EMV_TERM_TIMING_H__

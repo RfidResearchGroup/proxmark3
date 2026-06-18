@@ -8,7 +8,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — session context
+// EMV terminal emulator - session context
 //-----------------------------------------------------------------------------
 
 #ifndef EMV_TERM_CTX_H__

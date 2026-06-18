@@ -3,7 +3,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — crypto playground
+// EMV terminal emulator - crypto playground
 //-----------------------------------------------------------------------------
 
 #include "emv_term_crypto.h"
@@ -178,11 +178,11 @@ static void crypto_apply_genac_defaults(emv_term_ctx_t *ctx, emv_term_crypto_gen
 
 static void crypto_print_sw_hint(uint16_t sw) {
     if (sw == 0x6985) {
-        PrintAndLogEx(WARNING, "Card declined GEN AC (6985) — one cryptogram per tap; re-tap for another sample, or try `--decision tc`");
+        PrintAndLogEx(WARNING, "Card declined GEN AC (6985) - one cryptogram per tap; re-tap for another sample, or try `--decision tc`");
     } else if (sw == 0x6a86) {
-        PrintAndLogEx(WARNING, "GEN AC bad P1/P2 (6A86) — card rejected repeat AC in this session; re-tap for another sample");
+        PrintAndLogEx(WARNING, "GEN AC bad P1/P2 (6A86) - card rejected repeat AC in this session; re-tap for another sample");
     } else if (sw == 0x6700) {
-        PrintAndLogEx(WARNING, "GEN AC wrong length (6700) — check CDOL1 field sizes (9F7C/9F21/9F03) and terminal profile");
+        PrintAndLogEx(WARNING, "GEN AC wrong length (6700) - check CDOL1 field sizes (9F7C/9F21/9F03) and terminal profile");
     }
 }
 
@@ -287,22 +287,22 @@ static int crypto_genac_inner(emv_term_ctx_t *ctx, const emv_term_crypto_genac_o
         if (!ac2 && crypto_is_visa_qvsdc(ctx)) {
             int gres = emv_transaction_visa_request_gpo_ac(ctx);
             if (!gres && crypto_is_qvsdc_gpo_ac(ctx)) {
-                PrintAndLogEx(INFO, "qVSDC: AC obtained from GPO — no GEN AC needed");
+                PrintAndLogEx(INFO, "qVSDC: AC obtained from GPO - no GEN AC needed");
                 emv_term_crypto_print_summary(ctx);
                 return PM3_SUCCESS;
             }
-            PrintAndLogEx(INFO, "qVSDC: no CDOL1 — GEN AC not used; see summary for GPO/AFL data");
+            PrintAndLogEx(INFO, "qVSDC: no CDOL1 - GEN AC not used; see summary for GPO/AFL data");
             emv_term_crypto_print_summary(ctx);
             return PM3_SUCCESS;
         }
         if (!ac2 && crypto_is_qvsdc_gpo_ac(ctx)) {
-            PrintAndLogEx(INFO, "No CDOL1 — qVSDC card (cryptogram returned in GPO, not GEN AC)");
+            PrintAndLogEx(INFO, "No CDOL1 - qVSDC card (cryptogram returned in GPO, not GEN AC)");
             emv_term_crypto_print_summary(ctx);
             return PM3_SUCCESS;
         }
-        PrintAndLogEx(ERR, "CDOL%s (%04X) not found — run init first", ac2 ? "2" : "1", cdol_tag);
+        PrintAndLogEx(ERR, "CDOL%s (%04X) not found - run init first", ac2 ? "2" : "1", cdol_tag);
         if (!ac2 && crypto_card_aip(ctx) == 0x8000) {
-            PrintAndLogEx(WARNING, "Visa qVSDC (AIP 8000) typically has no CDOL1 — AC is in GPO response");
+            PrintAndLogEx(WARNING, "Visa qVSDC (AIP 8000) typically has no CDOL1 - AC is in GPO response");
         }
         return PM3_ESOFT;
     }
@@ -314,7 +314,7 @@ static int crypto_genac_inner(emv_term_ctx_t *ctx, const emv_term_crypto_genac_o
             GetCardPSVendor((uint8_t *)ctx->aid, ctx->aid_len) == CV_MASTERCARD) {
         int cres = emv_term_crypto_challenge(ctx, ctx->opts.decode_tlv, true);
         if (cres) {
-            PrintAndLogEx(WARNING, "MC GET CHALLENGE failed — continuing GEN AC");
+            PrintAndLogEx(WARNING, "MC GET CHALLENGE failed - continuing GEN AC");
         }
     }
 
@@ -540,7 +540,7 @@ int emv_term_crypto_msc_checksum(emv_term_ctx_t *ctx, bool decode_tlv) {
 
     const struct tlv *udol = tlvdb_get(ctx->card, 0x9f6a, NULL);
     if (!udol || !udol->len) {
-        PrintAndLogEx(INFO, "No UDOL (9F6A) — MSC checksum not applicable for this card");
+        PrintAndLogEx(INFO, "No UDOL (9F6A) - MSC checksum not applicable for this card");
         return PM3_SUCCESS;
     }
 
@@ -723,7 +723,7 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
     bool can_query = has_cdol || crypto_is_visa_qvsdc(ctx) || crypto_is_qvsdc_gpo_ac(ctx);
 
     if (opts->stream_fmt == EMV_CRYPTO_STREAM_OFF && !opts->quiet) {
-        PrintAndLogEx(INFO, "=== EMV card RNG (lab toy — not a certified TRNG) ===");
+        PrintAndLogEx(INFO, "=== EMV card RNG (lab toy - not a certified TRNG) ===");
     }
 
     if (can_query) {
@@ -733,7 +733,7 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
                 PrintAndLogEx(INFO, "Collecting 1 card sample (AC/ATC/UN/IAD)...");
             } else {
                 PrintAndLogEx(INFO, "Collecting up to %d card sample(s) (AC/ATC/UN/IAD)...", samples);
-                PrintAndLogEx(HINT, "Most cards allow one GEN AC per tap — re-tap between samples if declined");
+                PrintAndLogEx(HINT, "Most cards allow one GEN AC per tap - re-tap between samples if declined");
             }
         }
 
@@ -788,10 +788,10 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
 
     if (!got_samples) {
         weak = true;
-        PrintAndLogEx(WARNING, "No AC from card — using weak MSD/GPO entropy (UN/track2/AFL)");
+        PrintAndLogEx(WARNING, "No AC from card - using weak MSD/GPO entropy (UN/track2/AFL)");
         emv_term_crypto_randomize_un(ctx);
         if (!crypto_rng_collect_weak(ctx, pool, &pool_len, sizeof(pool))) {
-            PrintAndLogEx(ERR, "Card exposes no usable entropy — try MC/Interac with CDOL1");
+            PrintAndLogEx(ERR, "Card exposes no usable entropy - try MC/Interac with CDOL1");
             return PM3_ESOFT;
         }
         got_samples = 1;
@@ -837,15 +837,15 @@ int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *o
 
     if (!opts->quiet && opts->stream_fmt == EMV_CRYPTO_STREAM_OFF) {
         if (attempted > got_samples && got_samples > 0) {
-            PrintAndLogEx(INFO, "Mixed %u fresh sample(s) of %u attempt(s), pool %zu bytes, sha256 → %s%s",
+            PrintAndLogEx(INFO, "Mixed %u fresh sample(s) of %u attempt(s), pool %zu bytes, sha256 -> %s%s",
                           got_samples, attempted, pool_len, sprint_hex(hash, 8), weak ? " (weak)" : "");
         } else {
-            PrintAndLogEx(INFO, "Mixed %u sample(s), pool %zu bytes, sha256 → %s%s",
+            PrintAndLogEx(INFO, "Mixed %u sample(s), pool %zu bytes, sha256 -> %s%s",
                           got_samples, pool_len, sprint_hex(hash, 8), weak ? " (weak)" : "");
         }
     }
     if (opts->stream_fmt == EMV_CRYPTO_STREAM_OFF) {
-        PrintAndLogEx(HINT, "Re-tap the card for a new value — most cards issue one AC per session");
+        PrintAndLogEx(HINT, "Re-tap the card for a new value - most cards issue one AC per session");
     }
     return PM3_SUCCESS;
 }
@@ -1130,7 +1130,7 @@ int emv_term_crypto_rng_bench(emv_term_ctx_t *ctx, const emv_term_crypto_rng_ben
     size_t latency_count = 0;
 
     PrintAndLogEx(INFO, "=== EMV card RNG speed bench (%u s) ===", duration_sec);
-    PrintAndLogEx(INFO, "Hold the card on the antenna — Enter to stop early");
+    PrintAndLogEx(INFO, "Hold the card on the antenna - Enter to stop early");
 
     while (msclock() < bench_end) {
         if (kbd_enter_pressed()) {
@@ -1180,7 +1180,7 @@ int emv_term_crypto_rng_bench(emv_term_ctx_t *ctx, const emv_term_crypto_rng_ben
         if (now >= next_progress) {
             double elapsed_s = (double)(now - bench_start) / 1000.0;
             double bps = elapsed_s > 0 ? (double)result_out->cycles_ok / elapsed_s : 0.0;
-            PrintAndLogEx(INFO, "  %.1f s — %.2f blocks/s (%u ok, %u fail)",
+            PrintAndLogEx(INFO, "  %.1f s - %.2f blocks/s (%u ok, %u fail)",
                           elapsed_s, bps, result_out->cycles_ok, result_out->cycles_fail);
             next_progress = now + 5000;
         }
@@ -1201,7 +1201,7 @@ int emv_term_crypto_rng_bench(emv_term_ctx_t *ctx, const emv_term_crypto_rng_ben
 
     PrintAndLogEx(INFO, "--- bench result (%.1f s) ---", elapsed_s);
     if (ctx->aid_len) {
-        PrintAndLogEx(INFO, "Card: %s — AID %s",
+        PrintAndLogEx(INFO, "Card: %s - AID %s",
                       crypto_rng_vendor_label(ctx), sprint_hex_inrow(ctx->aid, ctx->aid_len));
     }
     PrintAndLogEx(INFO, "Path: %s  AIP=%04x", crypto_rng_path_label(ctx), crypto_card_aip(ctx));
@@ -1221,7 +1221,7 @@ int emv_term_crypto_rng_bench(emv_term_ctx_t *ctx, const emv_term_crypto_rng_ben
         PrintAndLogEx(INFO, "Cycles: %u ok / %u fail (%.1f%% success)",
                       result_out->cycles_ok, result_out->cycles_fail, success_pct);
     } else {
-        PrintAndLogEx(WARNING, "No cycles completed — was the card on the antenna?");
+        PrintAndLogEx(WARNING, "No cycles completed - was the card on the antenna?");
     }
 
     PrintAndLogEx(INFO, "Throughput: %.2f blocks/s  %.1f bytes/s (%d bytes/block)",
@@ -1236,7 +1236,7 @@ int emv_term_crypto_rng_bench(emv_term_ctx_t *ctx, const emv_term_crypto_rng_ben
 
     PrintAndLogEx(INFO, "Init mix: %u full  %u fast",
                   result_out->full_init_cycles, result_out->fast_init_cycles);
-    PrintAndLogEx(HINT, "Lab timing only — compare cards with `-o bench.json` for spreadsheets");
+    PrintAndLogEx(HINT, "Lab timing only - compare cards with `-o bench.json` for spreadsheets");
 
     return PM3_SUCCESS;
 }
@@ -1447,12 +1447,12 @@ int emv_term_crypto_bench_ex(emv_term_ctx_t *ctx, const emv_term_crypto_bench_op
         if (crypto_is_qvsdc_gpo_ac(ctx)) {
             result->qvsdc_path = true;
             result->genac_ok = true;
-            PrintAndLogEx(SUCCESS, "qVSDC: cryptogram from GPO — skipping GEN AC");
+            PrintAndLogEx(SUCCESS, "qVSDC: cryptogram from GPO - skipping GEN AC");
             emv_term_crypto_print_summary(ctx);
         } else if (crypto_is_visa_qvsdc(ctx)) {
             result->visa_msd = true;
             result->genac_ok = false;
-            PrintAndLogEx(INFO, "qVSDC: no AC in GPO — MSD / online profile");
+            PrintAndLogEx(INFO, "qVSDC: no AC in GPO - MSD / online profile");
             emv_term_crypto_print_msd_summary(ctx);
         } else {
             uint16_t sw = 0;

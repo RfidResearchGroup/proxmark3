@@ -3,7 +3,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// EMV terminal emulator — card GET DATA probe / enumeration
+// EMV terminal emulator - card GET DATA probe / enumeration
 //-----------------------------------------------------------------------------
 
 #ifndef EMV_TERM_PROBE_H__
