@@ -20,6 +20,7 @@
 #define CMDParseHRT_H__
 
 #include "common.h"
+#include <stddef.h>
 #include <stdint.h>
 #include <time.h>
 
@@ -31,15 +32,9 @@
 
 #define MSB(b)  ((b) & 0x80)
 #define LSB7(b) ((b) & 0x7F)
-#define SAFE_FREE(ptr) do { free(ptr); (ptr) = NULL; } while (0)
 
 // TODO: Implement
 typedef struct hrt_eticket_t hrt_eticket_t;
-
-typedef struct {
-    uint8_t *data;
-    size_t length;
-} PACKED bytearray_t;
 
 typedef struct {
     int    group_size;
@@ -55,14 +50,14 @@ typedef struct {
     int error_status;
 
     // ---- Application Information ----
-    bytearray_t application_information_data;
-    bytearray_t application_information_data_v2;
-    char       *application_instance_id;
-    int         application_key_version;
-    int         application_version;
-    int         version;
-    int         security_level;
-    int         platform_type;
+    uint8_t *application_information_data;
+    uint8_t *application_information_data_v2;
+    char    *application_instance_id;
+    int      application_key_version;
+    int      application_version;
+    int      version;
+    int      security_level;
+    int      platform_type;
 
     // ---- Boarding Information ----
     int    boarding_area;
@@ -75,20 +70,20 @@ typedef struct {
     time_t last_boarding_date_time;
 
     // ---- Control / Ticket data ----
-    bytearray_t control_information_data;
-    bytearray_t control_information_data_v2;
-    bytearray_t eticket_data;
-    bytearray_t eticket_data_v2;
+    uint8_t *control_information_data;
+    uint8_t *control_information_data_v2;
+    uint8_t *eticket_data;
+    uint8_t *eticket_data_v2;
 
     // ---- History ----
-    bytearray_t    history_data;
-    bytearray_t    history_data_v2;
+    uint8_t       *history_data;
+    uint8_t       *history_data_v2;
     hrt_history_t *history_fields;
     int            history_len;
 
     // ---- Period Pass data ----
-    bytearray_t period_pass_data;
-    bytearray_t period_pass_data_v2;
+    uint8_t *period_pass_data;
+    uint8_t *period_pass_data_v2;
 
     time_t period_loading_date;
     int    period_loading_device_number;
@@ -116,8 +111,8 @@ typedef struct {
     int loaded_period_product_type;
 
     // ---- Stored Value ----
-    bytearray_t stored_value_data;
-    bytearray_t stored_value_data_v2;
+    uint8_t *stored_value_data;
+    uint8_t *stored_value_data_v2;
     int         stored_value_counter;
 
     // ---- Value Ticket ----
@@ -169,13 +164,13 @@ void hrt_history_set_price(hrt_history_t *history, int price);
 void hrt_history_set_transfer_end_date(hrt_history_t *history, time_t datetime);
 
 // Parsing Functions
-void hrt_read_application_info(hrt_travel_card_t *card, bytearray_t data);
-void hrt_read_control_info(hrt_travel_card_t *card, bytearray_t data);
-void hrt_read_period_pass(hrt_travel_card_t *card, bytearray_t data);
-void hrt_read_period_pass_v2(hrt_travel_card_t *card, bytearray_t data);
-void hrt_read_stored_value(hrt_travel_card_t *card, bytearray_t data);
-void hrt_read_history(bytearray_t data, size_t length);
-void hrt_read_history_v2(bytearray_t data, size_t length);
+void hrt_read_application_info(hrt_travel_card_t *card, const uint8_t *data, size_t data_len);
+void hrt_read_control_info(hrt_travel_card_t *card, const uint8_t *data, size_t data_len);
+void hrt_read_period_pass(hrt_travel_card_t *card, const uint8_t *data, size_t data_len);
+void hrt_read_period_pass_v2(hrt_travel_card_t *card, const uint8_t *data, size_t data_len);
+void hrt_read_stored_value(hrt_travel_card_t *card, const uint8_t *data, size_t data_len);
+void hrt_read_history(const uint8_t *data, size_t length);
+void hrt_read_history_v2(const uint8_t *data, size_t length);
 
 // Getter Functions
 int        hrt_travelcard_get_application_version(const hrt_travel_card_t *card);

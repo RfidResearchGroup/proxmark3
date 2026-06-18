@@ -26,6 +26,7 @@
 #include "cmdparsehrt.h"
 #include "comms.h"
 #include "common.h"
+#include "ui.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -38,20 +39,17 @@ static const int64_t EN1545_ZERO_DATE_MS = 852076800000LL;
 static const int64_t DAY_IN_MS           = 86400000LL;
 static const int64_t MINUTE_IN_MS        = 60000LL;
 
-// Helper Functions
-static bytearray_t bytearray_alloc(size_t length) {
-    bytearray_t arr;
-    arr.data = calloc(length, 1);
-    arr.length = length;
-    return arr;
-}
-
-static void bytearray_free(bytearray_t *arr) {
-    if (!arr) return;
-
-    SAFE_FREE(arr->data);
-    arr->length = 0;
-}
+#define HRT_APPLICATION_INFORMATION_LEN     11
+#define HRT_CONTROL_INFORMATION_LEN          6
+#define HRT_CONTROL_INFORMATION_V2_LEN      10
+#define HRT_PERIOD_PASS_LEN                 32
+#define HRT_PERIOD_PASS_V2_LEN              35
+#define HRT_STORED_VALUE_LEN                12
+#define HRT_STORED_VALUE_V2_LEN             13
+#define HRT_ETICKET_LEN                     26
+#define HRT_ETICKET_V2_LEN                  45
+#define HRT_HISTORY_LEN                     96
+#define HRT_HISTORY_RECORDS                  8
 
 int hrt_price_to_string(int cents, char *out, size_t out_len) {
     if (!out || out_len == 0) return 0;
@@ -66,8 +64,11 @@ char *convert_get_hex_string(const uint8_t *data, size_t length) {
     if (!data || length == 0) return NULL;
 
     size_t out_len = (length * 2) + 1;
-    char *hex = malloc(out_len);
-    if (!hex) return NULL;
+    char *hex = calloc(out_len, sizeof(char));
+    if (!hex) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return NULL;
+    }
 
     char *result_ptr = hex;
 
@@ -172,25 +173,25 @@ time_t en5145_datetime_to_time(int days, int minutes) {
 void hrt_travelcard_free(hrt_travel_card_t *card) {
     if (!card) return;
 
-    bytearray_free(&card->application_information_data);
-    bytearray_free(&card->control_information_data);
-    bytearray_free(&card->period_pass_data);
-    bytearray_free(&card->stored_value_data);
-    bytearray_free(&card->eticket_data);
-    bytearray_free(&card->history_data);
+    free(card->application_information_data);
+    free(card->control_information_data);
+    free(card->period_pass_data);
+    free(card->stored_value_data);
+    free(card->eticket_data);
+    free(card->history_data);
 
-    bytearray_free(&card->application_information_data_v2);
-    bytearray_free(&card->control_information_data_v2);
-    bytearray_free(&card->period_pass_data_v2);
-    bytearray_free(&card->stored_value_data_v2);
-    bytearray_free(&card->eticket_data_v2);
-    bytearray_free(&card->history_data_v2);
+    free(card->application_information_data_v2);
+    free(card->control_information_data_v2);
+    free(card->period_pass_data_v2);
+    free(card->stored_value_data_v2);
+    free(card->eticket_data_v2);
+    free(card->history_data_v2);
 
-    SAFE_FREE(card->application_instance_id);
-    SAFE_FREE(card->history_fields);
+    free(card->application_instance_id);
+    free(card->history_fields);
 
     // TODO: Implement value tickets
-    // if (card->valueticket) {
+    // if (card->value_ticket) {
     //     eticket_free(card->value_ticket);
     //     card->value_ticket = NULL;
     // }
@@ -203,21 +204,42 @@ void hrt_travelcard_init_empty(hrt_travel_card_t *card, int version) {
 
     memset(card, 0, sizeof(*card));
 
-    card->application_information_data = bytearray_alloc(11);
-    card->control_information_data     = bytearray_alloc(6);
-    card->period_pass_data             = bytearray_alloc(32);
-    card->stored_value_data            = bytearray_alloc(12);
-    card->eticket_data                 = bytearray_alloc(26);
-    card->history_data                 = bytearray_alloc(96);
+    card->application_information_data = calloc(HRT_APPLICATION_INFORMATION_LEN, sizeof(uint8_t));
+    card->control_information_data     = calloc(HRT_CONTROL_INFORMATION_LEN, sizeof(uint8_t));
+    card->period_pass_data             = calloc(HRT_PERIOD_PASS_LEN, sizeof(uint8_t));
+    card->stored_value_data            = calloc(HRT_STORED_VALUE_LEN, sizeof(uint8_t));
+    card->eticket_data                 = calloc(HRT_ETICKET_LEN, sizeof(uint8_t));
+    card->history_data                 = calloc(HRT_HISTORY_LEN, sizeof(uint8_t));
 
-    card->history_fields = calloc(8, sizeof(hrt_history_t));
+    card->history_fields = calloc(HRT_HISTORY_RECORDS, sizeof(hrt_history_t));
 
-    card->application_information_data_v2 = bytearray_alloc(11);
-    card->control_information_data_v2     = bytearray_alloc(10);
-    card->period_pass_data_v2             = bytearray_alloc(35);
-    card->stored_value_data_v2            = bytearray_alloc(13);
-    card->eticket_data_v2                 = bytearray_alloc(45);
-    card->history_data_v2                 = bytearray_alloc(96);
+    card->application_information_data_v2 = calloc(HRT_APPLICATION_INFORMATION_LEN, sizeof(uint8_t));
+    card->control_information_data_v2     = calloc(HRT_CONTROL_INFORMATION_V2_LEN, sizeof(uint8_t));
+    card->period_pass_data_v2             = calloc(HRT_PERIOD_PASS_V2_LEN, sizeof(uint8_t));
+    card->stored_value_data_v2            = calloc(HRT_STORED_VALUE_V2_LEN, sizeof(uint8_t));
+    card->eticket_data_v2                 = calloc(HRT_ETICKET_V2_LEN, sizeof(uint8_t));
+    card->history_data_v2                 = calloc(HRT_HISTORY_LEN, sizeof(uint8_t));
+
+    if (
+        !card->application_information_data ||
+        !card->control_information_data ||
+        !card->period_pass_data ||
+        !card->stored_value_data ||
+        !card->eticket_data ||
+        !card->history_data ||
+        !card->history_fields ||
+        !card->application_information_data_v2 ||
+        !card->control_information_data_v2 ||
+        !card->period_pass_data_v2 ||
+        !card->stored_value_data_v2 ||
+        !card->eticket_data_v2 ||
+        !card->history_data_v2
+    ) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        hrt_travelcard_free(card);
+        card->error_status = HRT_TRAVELCARD_HSL_CARD_DATA_FAILURE;
+        return;
+    }
 
     card->version = version;
     card->error_status = 0;
@@ -236,21 +258,22 @@ void hrt_travelcard_init_from_buffers(
 ) {
 
     hrt_travelcard_init_empty(card, version);
+    if (!card || card->error_status != HRT_TRAVELCARD_OK_STATUS) return;
 
     if (version == 2) {
-        hrt_travelcard_set_application_info(card, bArr, 11);
-        hrt_travelcard_set_control_info(card, bArr2, 10);
-        hrt_travelcard_set_period_pass(card, bArr3, 35);
-        hrt_travelcard_set_stored_value(card, bArr4, 13);
-        hrt_travelcard_set_eticket(card, bArr5, 45);
+        hrt_travelcard_set_application_info(card, bArr, HRT_APPLICATION_INFORMATION_LEN);
+        hrt_travelcard_set_control_info(card, bArr2, HRT_CONTROL_INFORMATION_V2_LEN);
+        hrt_travelcard_set_period_pass(card, bArr3, HRT_PERIOD_PASS_V2_LEN);
+        hrt_travelcard_set_stored_value(card, bArr4, HRT_STORED_VALUE_V2_LEN);
+        hrt_travelcard_set_eticket(card, bArr5, HRT_ETICKET_V2_LEN);
         hrt_travelcard_set_history(card, bArr6, history_len);
         return;
     }
-    hrt_travelcard_set_application_info(card, bArr, 11);
-    hrt_travelcard_set_control_info(card, bArr2, 6);
-    hrt_travelcard_set_period_pass(card, bArr3, 32);
-    hrt_travelcard_set_stored_value(card, bArr4, 12);
-    hrt_travelcard_set_eticket(card, bArr5, 26);
+    hrt_travelcard_set_application_info(card, bArr, HRT_APPLICATION_INFORMATION_LEN);
+    hrt_travelcard_set_control_info(card, bArr2, HRT_CONTROL_INFORMATION_LEN);
+    hrt_travelcard_set_period_pass(card, bArr3, HRT_PERIOD_PASS_LEN);
+    hrt_travelcard_set_stored_value(card, bArr4, HRT_STORED_VALUE_LEN);
+    hrt_travelcard_set_eticket(card, bArr5, HRT_ETICKET_LEN);
     hrt_travelcard_set_history(card, bArr6, history_len);
 }
 
@@ -260,32 +283,32 @@ void hrt_travelcard_init_with_error(hrt_travel_card_t *card, int error_status) {
     card->error_status = error_status;
 }
 
-static bool hrt_copy_and_parse(bytearray_t *dst,
+static bool hrt_copy_and_parse(uint8_t *dst,
                                const uint8_t *src,
                                size_t src_len,
                                size_t expected_len,
-                               void (*parse_fn)(hrt_travel_card_t *, bytearray_t),
+                               void (*parse_fn)(hrt_travel_card_t *, const uint8_t *, size_t),
                                hrt_travel_card_t *card) {
-    if (!card || !dst || !dst->data || !src) return false;
-    if (expected_len == 0 || src_len < expected_len || dst->length < expected_len) return false;
+    if (!card || !dst || !src) return false;
+    if (expected_len == 0 || src_len < expected_len) return false;
 
-    memcpy(dst->data, src, expected_len);
+    memcpy(dst, src, expected_len);
     if (parse_fn) {
-        parse_fn(card, *dst);
+        parse_fn(card, dst, expected_len);
     }
     return true;
 }
 
 // Parsing Functions
-void hrt_read_application_info(hrt_travel_card_t *card, bytearray_t data) {
-    if (!card || !data.data || data.length != 11) return;
+void hrt_read_application_info(hrt_travel_card_t *card, const uint8_t *data, size_t data_len) {
+    if (!card || !data || data_len != HRT_APPLICATION_INFORMATION_LEN) return;
 
-    uint8_t first_byte = data.data[0];
+    uint8_t first_byte = data[0];
     card->application_version     = first_byte & 0xF0;
     card->application_key_version = first_byte & 0x0F;
 
     uint8_t tmp[9];
-    memcpy(tmp, &data.data[1], sizeof(tmp));
+    memcpy(tmp, &data[1], sizeof(tmp));
 
     // Free previous value if exists
     if (card->application_instance_id) {
@@ -295,22 +318,22 @@ void hrt_read_application_info(hrt_travel_card_t *card, bytearray_t data) {
 
     card->application_instance_id = convert_get_hex_string(tmp, sizeof(tmp));
 
-    uint8_t last_byte = data.data[10];
+    uint8_t last_byte = data[10];
     card->platform_type  = last_byte & 0xE0;
     card->security_level = last_byte & 0x10;
 }
 
-void hrt_read_control_info(hrt_travel_card_t *card, bytearray_t data) {
-    if (!card || !data.data) return;
-    card->app_status = convert_get_byte_value(data.data, data.length, 14, 1);
+void hrt_read_control_info(hrt_travel_card_t *card, const uint8_t *data, size_t data_len) {
+    if (!card || !data) return;
+    card->app_status = convert_get_byte_value(data, data_len, 14, 1);
 }
 
-void hrt_read_period_pass(hrt_travel_card_t *card, bytearray_t data) {
+void hrt_read_period_pass(hrt_travel_card_t *card, const uint8_t *data, size_t data_len) {
     // TODO: This function contains lots of magic numbers
     // and bad variable names. Refactoring is recommended.
-    if (!card || !data.data || data.length < 32) return;
+    if (!card || !data || data_len < HRT_PERIOD_PASS_LEN) return;
 
-    const uint8_t *bytes = data.data;
+    const uint8_t *bytes = data;
 
     // ---- Product 1 ----
     // TODO: Better var name for i
@@ -439,19 +462,17 @@ void hrt_read_period_pass(hrt_travel_card_t *card, bytearray_t data) {
     card->boarding_area = (bytes[31] & 0xF0) >> 4;
 }
 
-void hrt_read_period_pass_v2(hrt_travel_card_t *card, bytearray_t data) {
-    if (!card || !data.data) return;
-
-    const uint8_t *bytes = data.data;
+void hrt_read_period_pass_v2(hrt_travel_card_t *card, const uint8_t *data, size_t data_len) {
+    if (!card || !data || data_len < HRT_PERIOD_PASS_V2_LEN) return;
 
     // ---- Product 1 ----
-    card->product_code_type1 = convert_get_byte_value(bytes, data.length, 0, 1);
-    card->product_code1 = convert_get_short_value(bytes, data.length, 1, 14);
-    card->validity_area_type1 = convert_get_byte_value(bytes, data.length, 15, 2);
-    card->validity_area1 = convert_get_short_value(bytes, data.length, 17, 6);
+    card->product_code_type1 = convert_get_byte_value(data, data_len, 0, 1);
+    card->product_code1 = convert_get_short_value(data, data_len, 1, 14);
+    card->validity_area_type1 = convert_get_byte_value(data, data_len, 15, 2);
+    card->validity_area1 = convert_get_short_value(data, data_len, 17, 6);
 
-    int start1 = convert_get_short_value(bytes, data.length, 23, 14);
-    int end1 = convert_get_short_value(bytes, data.length, 37, 14);
+    int start1 = convert_get_short_value(data, data_len, 23, 14);
+    int end1 = convert_get_short_value(data, data_len, 37, 14);
 
     card->period_start_date1 = en5145_date_to_time(start1);
     card->period_end_date1 = en5145_date_to_time(end1);
@@ -460,58 +481,56 @@ void hrt_read_period_pass_v2(hrt_travel_card_t *card, bytearray_t data) {
     // ---- Product 2 ----
     // In the original decompiled code, product_code_type1 is reassigned from bit offset 56.
     // This should probably be product_code_type2 instead as below
-    card->product_code_type2 = convert_get_byte_value(bytes, data.length, 56, 1);
-    card->product_code2 = convert_get_short_value(bytes, data.length, 57, 14);
-    card->validity_area_type2 = convert_get_byte_value(bytes, data.length, 71, 2);
-    card->validity_area2 = convert_get_short_value(bytes, data.length, 73, 6);
+    card->product_code_type2 = convert_get_byte_value(data, data_len, 56, 1);
+    card->product_code2 = convert_get_short_value(data, data_len, 57, 14);
+    card->validity_area_type2 = convert_get_byte_value(data, data_len, 71, 2);
+    card->validity_area2 = convert_get_short_value(data, data_len, 73, 6);
 
-    int start2 = convert_get_short_value(bytes, data.length, 79, 14);
-    int end2 = convert_get_short_value(bytes, data.length, 93, 14);
+    int start2 = convert_get_short_value(data, data_len, 79, 14);
+    int end2 = convert_get_short_value(data, data_len, 93, 14);
 
     card->period_start_date2 = en5145_date_to_time(start2);
     card->period_end_date2 = en5145_date_to_time(end2);
     card->period_length2 = (end2 - start2) + 1;
 
     // ---- Loaded period ----
-    card->loaded_period_product_type = convert_get_byte_value(bytes, data.length, 112, 1);
-    card->loaded_period_product = convert_get_short_value(bytes, data.length, 113, 14);
+    card->loaded_period_product_type = convert_get_byte_value(data, data_len, 112, 1);
+    card->loaded_period_product = convert_get_short_value(data, data_len, 113, 14);
     card->period_loading_date =
         en5145_datetime_to_time(
-            convert_get_short_value(bytes, data.length, 127, 14),
-            convert_get_short_value(bytes, data.length, 141, 11)
+            convert_get_short_value(data, data_len, 127, 14),
+            convert_get_short_value(data, data_len, 141, 11)
         );
-    card->loaded_period_length = convert_get_short_value(bytes, data.length, 152, 9);
-    card->loaded_period_price = convert_get_short_value(bytes, data.length, 161, 20);
-    card->period_loading_organization = convert_get_short_value(bytes, data.length, 181, 14);
-    card->period_loading_device_number = convert_get_short_value(bytes, data.length, 195, 13);
+    card->loaded_period_length = convert_get_short_value(data, data_len, 152, 9);
+    card->loaded_period_price = convert_get_short_value(data, data_len, 161, 20);
+    card->period_loading_organization = convert_get_short_value(data, data_len, 181, 14);
+    card->period_loading_device_number = convert_get_short_value(data, data_len, 195, 13);
 
     // ---- Boarding ----
     card->boarding_date =
         en5145_datetime_to_time(
-            convert_get_short_value(bytes, data.length, 208, 14),
-            convert_get_short_value(bytes, data.length, 222, 11)
+            convert_get_short_value(data, data_len, 208, 14),
+            convert_get_short_value(data, data_len, 222, 11)
         );
-    card->boarding_vehicle = convert_get_short_value(bytes, data.length, 233, 14);
-    card->boarding_location_num_type = convert_get_short_value(bytes, data.length, 247, 2);
-    card->boarding_location_num = convert_get_short_value(bytes, data.length, 249, 14);
-    card->boarding_direction = convert_get_byte_value(bytes, data.length, 263, 1);
-    card->boarding_area_type = convert_get_byte_value(bytes, data.length, 264, 2);
-    card->boarding_area = convert_get_byte_value(bytes, data.length, 266, 6);
+    card->boarding_vehicle = convert_get_short_value(data, data_len, 233, 14);
+    card->boarding_location_num_type = convert_get_short_value(data, data_len, 247, 2);
+    card->boarding_location_num = convert_get_short_value(data, data_len, 249, 14);
+    card->boarding_direction = convert_get_byte_value(data, data_len, 263, 1);
+    card->boarding_area_type = convert_get_byte_value(data, data_len, 264, 2);
+    card->boarding_area = convert_get_byte_value(data, data_len, 266, 6);
 }
 
-void hrt_read_stored_value(hrt_travel_card_t *card, bytearray_t data) {
-    if (!card || !data.data || data.length < 3) return;
-
-    const uint8_t *bytes = data.data;
+void hrt_read_stored_value(hrt_travel_card_t *card, const uint8_t *data, size_t data_len) {
+    if (!card || !data || data_len < 3) return;
 
     card->stored_value_counter =
-        ((uint32_t)(bytes[2] & 0xF0) >> 4) |
-        ((uint32_t)bytes[0] << 12) |
-        ((uint32_t)bytes[1] << 4);
+        ((uint32_t)(data[2] & 0xF0) >> 4) |
+        ((uint32_t)data[0] << 12) |
+        ((uint32_t)data[1] << 4);
 }
 
-// void readHistory(bytearray_t data, size_t length);
-// void readHistory_v2(bytearray_t data, size_t length);
+// void readHistory(const uint8_t *data, size_t length);
+// void readHistory_v2(const uint8_t *data, size_t length);
 
 void hrt_history_init(hrt_history_t *history) {
     if (!history) return;
@@ -544,7 +563,7 @@ void hrt_history_set_transfer_end_date(hrt_history_t *history, time_t datetime) 
 }
 
 // TODO: Implement value tickets
-// HRT_eTicket *eticket_create(bytearray_t data, int is_encrypted, int version);
+// HRT_eTicket *eticket_create(const uint8_t *data, size_t data_len, int is_encrypted, int version);
 
 // Getter methods for API simplicity
 int hrt_travelcard_get_application_version(const hrt_travel_card_t *card) {
@@ -703,14 +722,15 @@ int hrt_travelcard_get_version(const hrt_travel_card_t *card) {
     return card ? card->version : 0;
 }
 
+// Setter methods for API simplicity
 bool hrt_travelcard_set_application_info(hrt_travel_card_t *card, const uint8_t *buf, size_t len) {
     if (!card || !buf || len == 0) return false;
 
     if (card->version == 2) {
-        return hrt_copy_and_parse(&card->application_information_data_v2, buf, len, 11,
+        return hrt_copy_and_parse(card->application_information_data_v2, buf, len, HRT_APPLICATION_INFORMATION_LEN,
                                   hrt_read_application_info, card);
     }
-    return hrt_copy_and_parse(&card->application_information_data, buf, len, 11,
+    return hrt_copy_and_parse(card->application_information_data, buf, len, HRT_APPLICATION_INFORMATION_LEN,
                               hrt_read_application_info, card);
 }
 
@@ -718,10 +738,10 @@ bool hrt_travelcard_set_control_info(hrt_travel_card_t *card, const uint8_t *buf
     if (!card || !buf || len == 0) return false;
 
     if (card->version == 2) {
-        return hrt_copy_and_parse(&card->control_information_data_v2, buf, len, 10,
+        return hrt_copy_and_parse(card->control_information_data_v2, buf, len, HRT_CONTROL_INFORMATION_V2_LEN,
                                   hrt_read_control_info, card);
     }
-    return hrt_copy_and_parse(&card->control_information_data, buf, len, 6,
+    return hrt_copy_and_parse(card->control_information_data, buf, len, HRT_CONTROL_INFORMATION_LEN,
                               hrt_read_control_info, card);
 }
 
@@ -729,10 +749,10 @@ bool hrt_travelcard_set_period_pass(hrt_travel_card_t *card, const uint8_t *buf,
     if (!card || !buf || len == 0) return false;
 
     if (card->version == 2) {
-        return hrt_copy_and_parse(&card->period_pass_data_v2, buf, len, 35,
+        return hrt_copy_and_parse(card->period_pass_data_v2, buf, len, HRT_PERIOD_PASS_V2_LEN,
                                   hrt_read_period_pass_v2, card);
     }
-    return hrt_copy_and_parse(&card->period_pass_data, buf, len, 32,
+    return hrt_copy_and_parse(card->period_pass_data, buf, len, HRT_PERIOD_PASS_LEN,
                               hrt_read_period_pass, card);
 }
 
@@ -740,10 +760,10 @@ bool hrt_travelcard_set_stored_value(hrt_travel_card_t *card, const uint8_t *buf
     if (!card || !buf || len == 0) return false;
 
     if (card->version == 2) {
-        return hrt_copy_and_parse(&card->stored_value_data_v2, buf, len, 13,
+        return hrt_copy_and_parse(card->stored_value_data_v2, buf, len, HRT_STORED_VALUE_V2_LEN,
                                   hrt_read_stored_value, card);
     }
-    return hrt_copy_and_parse(&card->stored_value_data, buf, len, 12,
+    return hrt_copy_and_parse(card->stored_value_data, buf, len, HRT_STORED_VALUE_LEN,
                               hrt_read_stored_value, card);
 }
 
@@ -751,13 +771,13 @@ bool hrt_travelcard_set_eticket(hrt_travel_card_t *card, const uint8_t *buf, siz
     if (!card || !buf || len == 0) return false;
 
     if (card->version == 2) {
-        if (len < 45 || card->eticket_data_v2.length < 45) return false;
-        memcpy(card->eticket_data_v2.data, buf, 45);
+        if (!card->eticket_data_v2 || len < HRT_ETICKET_V2_LEN) return false;
+        memcpy(card->eticket_data_v2, buf, HRT_ETICKET_V2_LEN);
         return true;
     }
 
-    if (len < 26 || card->eticket_data.length < 26) return false;
-    memcpy(card->eticket_data.data, buf, 26);
+    if (!card->eticket_data || len < HRT_ETICKET_LEN) return false;
+    memcpy(card->eticket_data, buf, HRT_ETICKET_LEN);
     return true;
 }
 
@@ -765,14 +785,16 @@ bool hrt_travelcard_set_history(hrt_travel_card_t *card, const uint8_t *buf, siz
     if (!card || !buf || len == 0) return false;
 
     if (card->version == 2) {
-        if (len > card->history_data_v2.length) len = card->history_data_v2.length;
-        memcpy(card->history_data_v2.data, buf, len);
+        if (!card->history_data_v2) return false;
+        if (len > HRT_HISTORY_LEN) len = HRT_HISTORY_LEN;
+        memcpy(card->history_data_v2, buf, len);
         // TODO: readHistory_v2(card->historyData_v2, len);
         return true;
     }
 
-    if (len > card->history_data.length) len = card->history_data.length;
-    memcpy(card->history_data.data, buf, len);
+    if (!card->history_data) return false;
+    if (len > HRT_HISTORY_LEN) len = HRT_HISTORY_LEN;
+    memcpy(card->history_data, buf, len);
     // TODO: readHistory(card->historyData, len);
     return true;
 }
