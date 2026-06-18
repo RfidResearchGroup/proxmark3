@@ -328,6 +328,41 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443B_PING         0xBA
 #define ISO14443B_PONG         0xAB
 
+/*
+ * Type B' / Innovatron frame format.
+ *
+ *   Byte 0: V&T address. Public docs and traces label this "V&T Ad".
+ *           0x01 is the default address observed in APGEN, REPGEN,
+ *           ATTRIB, COM_RA, and DISC frames.
+ *           Observed cards respond to any value from 0x00 to 0xFF, and
+ *           echo that same address in the response.
+ *
+ *   Byte 1: payload type / command.
+ *
+ * Primary commands:
+ *   0x0B APGEN  "Appel General"; acts as the wake-up command.
+ *   0x07 REPGEN  response to APGEN.
+ *   0x0F ATTRIB  attribute / activation command.
+ *   0x03 DISC    disconnect.
+ *
+ * COM_RA frames:
+ *   COM_RA uses the even-valued payload type bytes. Bit 0 is clear; bits 1..3
+ *   are the rolling frame counter. The resulting byte advances by 0x02 for
+ *   each exchange and wraps in the low nibble:
+ *
+ *     04 -> 06 -> 08 -> 0A -> 0C -> 0E -> 00 -> 02 -> 04 ...
+ *
+ *   Byte 2 is the COM_RA length byte. The length includes byte 2 itself, so
+ *   the number of bytes after byte 2 is length - 1.
+ */
+#define ISO14443B_PRIME_VT_ADDR_DEFAULT 0x01
+#define ISO14443B_PRIME_CMD_DISC        0x03
+#define ISO14443B_PRIME_CMD_REPGEN      0x07
+#define ISO14443B_PRIME_CMD_APGEN       0x0B
+#define ISO14443B_PRIME_CMD_ATTRIB      0x0F
+// APGEN parameter requesting the extended REPGEN response; also called 'APGEN!'
+#define ISO14443B_PRIME_REQUEST_EXTENDED_REPGEN 0x80
+
 // XEROX Commands
 #define ISO14443B_XEROX_PWD             0x38
 #define ISO14443B_XEROX_WUP1            0x0D
