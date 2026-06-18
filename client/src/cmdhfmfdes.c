@@ -441,7 +441,7 @@ static bool hf_mfdes_try_parse_hrt(DesfireContext_t *dctx) {
 
         // Check that application info parses before reading other files
         const char *application_id = hrt_travelcard_get_application_instance_id(&card);
-        if (application_id == NULL && application_id[0] == '\0') {
+        if (application_id == NULL || application_id[0] == '\0') {
             hrt_travelcard_free(&card);
             return false;
         }
