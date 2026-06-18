@@ -30,9 +30,15 @@ static uint8_t bcd_byte(unsigned v) {
 static void emv_term_set_transaction_datetime(struct tlvdb *tlvRoot) {
     time_t now = time(NULL);
     struct tm tm_now;
+#if defined(_WIN32)
+    if (localtime_s(&tm_now, &now) != 0) {
+        return;
+    }
+#else
     if (!localtime_r(&now, &tm_now)) {
         return;
     }
+#endif
 
     uint8_t date[3] = {
         bcd_byte((unsigned)(tm_now.tm_year % 100)),
