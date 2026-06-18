@@ -61,6 +61,8 @@
 
 // iso14b apdu input frame length
 static uint16_t apdu_frame_length = 0;
+static uint8_t prime_vt_addr = ISO14443B_PRIME_VT_ADDR_DEFAULT;
+static uint8_t prime_com_ra_cmd = ISO14443B_PRIME_COM_RA_START;
 //static uint16_t ats_fsc[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
 static bool apdu_in_framing_enable = true;
 
@@ -1339,17 +1341,17 @@ static bool HF14B_ST_Info(bool verbose, bool do_aid_search) {
     return true;
 }
 
-static bool get_prime_card(iso14b_prime_card_select_t *card, bool verbose) {
-
-    if (card == NULL) {
-        return false;
-    }
+int select_card_14443b_prime(bool disconnect, iso14b_prime_card_select_t *card, bool verbose) {
 
     iso14b_raw_cmd_t packet = {
-        .flags = (ISO14B_CONNECT | ISO14B_SELECT_PRIME | ISO14B_DISCONNECT),
+        .flags = (ISO14B_CONNECT | ISO14B_SELECT_PRIME | ISO14B_CLEARTRACE),
         .timeout = 0,
         .rawlen = 0,
     };
+
+    if (disconnect) {
+        packet.flags |= ISO14B_DISCONNECT;
+    }
 
     clearCommandBuffer();
     PacketResponseNG resp;
@@ -1358,26 +1360,34 @@ static bool get_prime_card(iso14b_prime_card_select_t *card, bool verbose) {
         if (verbose) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
         }
-        return false;
+        return PM3_ETIMEOUT;
     }
 
     switch (resp.status) {
         case PM3_SUCCESS: {
-            if (resp.length < sizeof(*card)) {
+            if (resp.length < sizeof(iso14b_prime_card_select_t)) {
                 if (verbose) {
                     PrintAndLogEx(FAILED, "ISO 14443-B' card select response too short (%u bytes)", resp.length);
                 }
-                return false;
+                return PM3_ELENGTH;
             }
 
-            memcpy(card, resp.data.asBytes, sizeof(*card));
-            if (card->repgen_cmd != ISO14443B_PRIME_CMD_REPGEN || card->atr_len > sizeof(card->atr)) {
+            iso14b_prime_card_select_t selected = {0};
+            memcpy(&selected, resp.data.asBytes, sizeof(selected));
+            if (selected.repgen_cmd != ISO14443B_PRIME_CMD_REPGEN || selected.atr_len > sizeof(selected.atr)) {
                 if (verbose) {
                     PrintAndLogEx(FAILED, "ISO 14443-B' invalid card select response");
                 }
-                return false;
+                return PM3_EWRONGANSWER;
             }
-            return true;
+
+            prime_vt_addr = selected.vt_addr;
+            prime_com_ra_cmd = ISO14443B_PRIME_COM_RA_START;
+            SetISODEPState(disconnect ? ISODEP_INACTIVE : ISODEP_NFCB_PRIME);
+            if (card) {
+                *card = selected;
+            }
+            return PM3_SUCCESS;
         }
         case PM3_ELENGTH:
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-B' REPGEN wrong length");
@@ -1393,7 +1403,7 @@ static bool get_prime_card(iso14b_prime_card_select_t *card, bool verbose) {
             break;
     }
 
-    return false;
+    return resp.status;
 }
 
 // menu command to get and print all info known about any known 14b tag
@@ -1656,7 +1666,7 @@ static bool HF14B_picopass_reader(bool verbose) {
 static bool HF14B_prime_reader(bool verbose) {
 
     iso14b_prime_card_select_t card = {0};
-    if (get_prime_card(&card, verbose) == false) {
+    if (select_card_14443b_prime(true, &card, verbose) != PM3_SUCCESS) {
         return false;
     }
     print_prime_general_info(&card);
@@ -2589,6 +2599,118 @@ int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field,
             return 100;
         }
     }
+
+    if (leave_signal_on == false) {
+        switch_off_field_14b();
+    }
+
+    return PM3_SUCCESS;
+}
+
+static uint8_t next_prime_com_ra_cmd(uint8_t cmd) {
+    return (cmd + 0x02) & 0x0F;
+}
+
+int exchange_14b_prime_apdu(uint8_t *datain, int datainlen, bool activate_field,
+                            bool leave_signal_on, uint8_t *dataout, int maxdataoutlen,
+                            int *dataoutlen, int user_timeout) {
+
+    if (dataoutlen == NULL || dataout == NULL || datainlen < 0 || datainlen > 0xFE || (datain == NULL && datainlen > 0)) {
+        return PM3_EINVARG;
+    }
+    *dataoutlen = 0;
+
+    if (activate_field) {
+        int selres = select_card_14443b_prime(false, NULL, false);
+        if (selres != PM3_SUCCESS) {
+            return selres;
+        }
+    }
+
+    uint8_t frame[PM3_CMD_DATA_SIZE] = {0};
+    const uint16_t frame_len = (uint16_t)datainlen + 3;
+    if (frame_len > sizeof(frame)) {
+        return PM3_EINVARG;
+    }
+
+    frame[0] = prime_vt_addr;
+    frame[1] = prime_com_ra_cmd;
+    frame[2] = (uint8_t)datainlen + 1;
+    if (datainlen > 0) {
+        memcpy(frame + 3, datain, datainlen);
+    }
+
+    uint32_t flags = ISO14B_RAW | ISO14B_APPEND_CRC;
+    uint32_t timeout = 0;
+    if (user_timeout > 0) {
+        flags |= ISO14B_SET_TIMEOUT;
+        if (user_timeout > MAX_14B_TIMEOUT_MS) {
+            user_timeout = MAX_14B_TIMEOUT_MS;
+            PrintAndLogEx(INFO, "set timeout to 4.9 seconds. The max we can wait for response");
+        }
+        timeout = (uint32_t)((13560 / 128) * user_timeout);
+    }
+
+    iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + frame_len);
+    if (packet == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    packet->flags = flags;
+    packet->timeout = timeout;
+    packet->rawlen = frame_len;
+    memcpy(packet->raw, frame, frame_len);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
+    free(packet);
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, MAX(APDU_TIMEOUT, user_timeout)) == false) {
+        if (leave_signal_on == false) {
+            switch_off_field_14b();
+        }
+        PrintAndLogEx(ERR, "APDU: reply timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        if (leave_signal_on == false) {
+            switch_off_field_14b();
+        }
+        PrintAndLogEx(ERR, "APDU: no Type B' APDU response");
+        return resp.status;
+    }
+
+    const uint8_t *rx = resp.data.asBytes;
+    if (resp.length < 5 || check_crc(CRC_14443_B, rx, resp.length) == false) {
+        if (leave_signal_on == false) {
+            switch_off_field_14b();
+        }
+        return PM3_ECRC;
+    }
+
+    const uint8_t rx_len = rx[2];
+    if (rx[0] != prime_vt_addr || (rx[1] & 0x01) || rx_len == 0 || resp.length < (uint16_t)rx_len + 4) {
+        if (leave_signal_on == false) {
+            switch_off_field_14b();
+        }
+        return PM3_EWRONGANSWER;
+    }
+
+    const int apdu_len = rx_len - 1;
+    if (maxdataoutlen && apdu_len > maxdataoutlen) {
+        if (leave_signal_on == false) {
+            switch_off_field_14b();
+        }
+        PrintAndLogEx(ERR, "APDU: buffer too small ( " _RED_("%d") " ), needs " _YELLOW_("%d") " bytes", maxdataoutlen, apdu_len);
+        return PM3_ESOFT;
+    }
+
+    memcpy(dataout, rx + 3, apdu_len);
+    *dataoutlen = apdu_len;
+    prime_com_ra_cmd = next_prime_com_ra_cmd(prime_com_ra_cmd);
 
     if (leave_signal_on == false) {
         switch_off_field_14b();
