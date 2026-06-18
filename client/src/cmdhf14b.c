@@ -767,6 +767,22 @@ static void print_ct_general_info(void *vcard) {
     PrintAndLogEx(NORMAL, "");
 }
 
+static void print_prime_general_info(const iso14b_prime_card_select_t *card) {
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Type B' / Innovatron") " ---------------------");
+    PrintAndLogEx(SUCCESS, " V&T Ad : %02X", card->vt_addr);
+    PrintAndLogEx(SUCCESS, " Cmd    : %02X (REPGEN)", card->repgen_cmd);
+    PrintAndLogEx(SUCCESS, " DIV    : " _GREEN_("%s"), sprint_hex(card->div, sizeof(card->div)));
+    PrintAndLogEx(SUCCESS, " VerLog : %02X", card->verlog);
+    if (card->verlog & 0x80) {
+        PrintAndLogEx(SUCCESS, " Config : %02X", card->config);
+    }
+    if (card->atr_len) {
+        PrintAndLogEx(SUCCESS, " ATR    : %s", sprint_hex(card->atr, card->atr_len));
+    }
+    PrintAndLogEx(NORMAL, "");
+}
+
 static void print_hdr(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, " block#  | data        |lck| ascii");
@@ -1323,6 +1339,63 @@ static bool HF14B_ST_Info(bool verbose, bool do_aid_search) {
     return true;
 }
 
+static bool get_prime_card(iso14b_prime_card_select_t *card, bool verbose) {
+
+    if (card == NULL) {
+        return false;
+    }
+
+    iso14b_raw_cmd_t packet = {
+        .flags = (ISO14B_CONNECT | ISO14B_SELECT_PRIME | ISO14B_DISCONNECT),
+        .timeout = 0,
+        .rawlen = 0,
+    };
+
+    clearCommandBuffer();
+    PacketResponseNG resp;
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
+        if (verbose) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        }
+        return false;
+    }
+
+    switch (resp.status) {
+        case PM3_SUCCESS: {
+            if (resp.length < sizeof(*card)) {
+                if (verbose) {
+                    PrintAndLogEx(FAILED, "ISO 14443-B' card select response too short (%u bytes)", resp.length);
+                }
+                return false;
+            }
+
+            memcpy(card, resp.data.asBytes, sizeof(*card));
+            if (card->repgen_cmd != ISO14443B_PRIME_CMD_REPGEN || card->atr_len > sizeof(card->atr)) {
+                if (verbose) {
+                    PrintAndLogEx(FAILED, "ISO 14443-B' invalid card select response");
+                }
+                return false;
+            }
+            return true;
+        }
+        case PM3_ELENGTH:
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-B' REPGEN wrong length");
+            break;
+        case PM3_ECRC:
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-B' REPGEN CRC fail");
+            break;
+        case PM3_EWRONGANSWER:
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-B' REPGEN wrong answer");
+            break;
+        default:
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-B' APGEN failed");
+            break;
+    }
+
+    return false;
+}
+
 // menu command to get and print all info known about any known 14b tag
 static int CmdHF14Binfo(const char *Cmd) {
     CLIParserContext *ctx;
@@ -1578,6 +1651,16 @@ static bool HF14B_picopass_reader(bool verbose) {
         }
     }
     return false;
+}
+
+static bool HF14B_prime_reader(bool verbose) {
+
+    iso14b_prime_card_select_t card = {0};
+    if (get_prime_card(&card, verbose) == false) {
+        return false;
+    }
+    print_prime_general_info(&card);
+    return true;
 }
 
 // test for other 14b type tags (mimic another reader - don't have tags to identify)
@@ -3169,6 +3252,10 @@ int infoHF14B(bool verbose, bool do_aid_search) {
     if (HF14B_ST_Info(verbose, do_aid_search))
         return PM3_SUCCESS;
 
+    // try Type B' / Innovatron APGEN
+    if (HF14B_prime_reader(verbose))
+        return PM3_SUCCESS;
+
     // try unknown 14b read commands (to be identified later)
     //   could be read of calypso, CEPAS, moneo, or pico pass.
     if (verbose) {
@@ -3201,6 +3288,11 @@ int readHF14B(bool loop, bool verbose, bool read_plot) {
 
         // try ASK CT 14b
         found |= HF14B_ask_ct_reader(verbose);
+        if (found)
+            goto plot;
+
+        // try Type B' / Innovatron APGEN
+        found |= HF14B_prime_reader(verbose);
         if (found)
             goto plot;
 
