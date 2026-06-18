@@ -36,12 +36,15 @@ Stacked fork PRs are superseded by upstream #3385.
 
 ## Recommended upstream pull request
 
+**Superseded:** monolithic PR #3385 should be replaced by **four smaller PRs** — see [UPSTREAM-PR-SPLIT-PLAN.md](./UPSTREAM-PR-SPLIT-PLAN.md) (maintainer request: docs → resources → smaller code).
+
 | Field | Value |
 |-------|--------|
 | **Title** | `feat(emv): add EMV terminal emulator (lab research tool)` |
 | **URL** | https://github.com/RfidResearchGroup/proxmark3/pull/3385 |
 | **Head** | `andrew867:master` |
 | **Base** | upstream `master` |
+| **Status** | Close after split PRs 1–4 are open |
 
 ### PR description update (Wave E + F)
 

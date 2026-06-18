@@ -136,6 +136,8 @@ docs/
 
 # codeql
 codeql/
+!.github/codeql/
+!.github/codeql/**
 _codeql_detected_source_root
 
 =======

@@ -14,6 +14,7 @@
 |------|--------|
 | Proxmark3 client | Built with `make client` (gcc recommended) |
 | PM3 device | Optional for mock/golden tests; required for live cards |
+| HF field voltage | RDV4 sim supplies **3.3 V** on the antenna; **5 V** legacy cards may not activate. Use 3.3 V lab cards or hardware that supports 5 V contactless if needed. |
 | Test cards | EMV lab / personal test cards only |
 | Terminal profile | `client/resources/emv_terminal_profile.json` or scheme profile (`--profile auto`) |
 
