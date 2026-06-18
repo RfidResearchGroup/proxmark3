@@ -211,7 +211,7 @@ static bool test_mad1_crc_corrupt(bool verbose) {
 
     bool haveMAD2 = false;
 
-    int res = MADCheck(&s, NULL, false, &haveMAD2);
+    int res = MADCheck(&s, NULL, verbose, &haveMAD2);
 
     ASSERT_TRUE("MADCheck should fail on corrupt CRC", res != PM3_SUCCESS);
 
@@ -493,6 +493,7 @@ static bool test_verify_mismatch(bool verbose) {
     PrintAndLogEx(INFO, "  verify mismatch...");
     mock_card_init();
     mad_ops_t ops = make_mock_ops();
+    ops.verbose = verbose;
 
     // write known data
     uint8_t wdata[240];
@@ -522,6 +523,7 @@ static bool test_write_overflow(bool verbose) {
     PrintAndLogEx(INFO, "  write overflow...");
     mock_card_init();
     mad_ops_t ops = make_mock_ops();
+    ops.verbose = verbose;
 
     uint8_t wdata[241];
     memset(wdata, 0xAA, sizeof(wdata));
@@ -538,6 +540,7 @@ static bool test_aid_not_found(bool verbose) {
     PrintAndLogEx(INFO, "  AID not found...");
     mock_card_init();
     mad_ops_t ops = make_mock_ops();
+    ops.verbose = verbose;
 
     uint8_t data[256] = {0};
     size_t datalen = 99;
@@ -741,7 +744,7 @@ static bool test_mad2_crc_independent(bool verbose) {
 
     // valid: both CRCs pass
     bool haveMAD2 = false;
-    int res = MADCheck(&s0, &s16, false, &haveMAD2);
+    int res = MADCheck(&s0, &s16, verbose, &haveMAD2);
     ASSERT_EQ("both valid", PM3_SUCCESS, res);
     ASSERT_EQ("MAD2 present", true, haveMAD2);
 
@@ -750,7 +753,7 @@ static bool test_mad2_crc_independent(bool verbose) {
     memcpy(&s16_bad, &s16, sizeof(s16_bad));
     s16_bad.mad.crc ^= 0xFF;
 
-    res = MADCheck(&s0, &s16_bad, false, &haveMAD2);
+    res = MADCheck(&s0, &s16_bad, verbose, &haveMAD2);
     ASSERT_TRUE("should fail with corrupt MAD2 CRC", res != PM3_SUCCESS);
 
     // corrupt MAD1 CRC only, MAD2 stays valid
@@ -758,7 +761,7 @@ static bool test_mad2_crc_independent(bool verbose) {
     memcpy(&s0_bad, &s0, sizeof(s0_bad));
     s0_bad.mad.crc ^= 0xFF;
 
-    res = MADCheck(&s0_bad, &s16, false, &haveMAD2);
+    res = MADCheck(&s0_bad, &s16, verbose, &haveMAD2);
     ASSERT_TRUE("should fail with corrupt MAD1 CRC", res != PM3_SUCCESS);
 
     if (verbose) PrintAndLogEx(SUCCESS, "    " _GREEN_("passed"));
