@@ -1440,7 +1440,13 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
 
         if (Handle14443bSamplesFromTag(ci, cq)) {
 
-            *eof_time = GetCountSspClkDelta(dma_start_time) - DELAY_TAG_TO_ARM;  // end of EOF
+            // Response timing is measured from DMA start, but trace rows use
+            // absolute SSP time like reader frames.
+            uint32_t eof_delta = GetCountSspClkDelta(dma_start_time);
+            if (eof_delta > DELAY_TAG_TO_ARM) {
+                eof_delta -= DELAY_TAG_TO_ARM;
+            }
+            *eof_time = dma_start_time + eof_delta;  // end of EOF
 
             if (Demod.len > Demod.max_len) {
                 ret = PM3_EOVFLOW;
@@ -1982,6 +1988,20 @@ static int iso14443b_select_prime_card(iso14b_prime_card_select_t *card) {
             }
         }
     }
+
+    uint8_t attrib[] = {
+        r_repgen[0],
+        ISO14443B_PRIME_CMD_ATTRIB,
+        r_repgen[2],
+        r_repgen[3],
+        r_repgen[4],
+        r_repgen[5],
+        0x00,
+        0x00,
+    };
+    AddCrc14B(attrib, sizeof(attrib) - 2);
+    start_time = eof_time + ISO14B_TR2;
+    CodeAndTransmit14443bAsReader(attrib, sizeof(attrib), &start_time, &eof_time, true);
 
     s_iso14b_pcb_blocknum = 0;
     return PM3_SUCCESS;

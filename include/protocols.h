@@ -362,6 +362,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443B_PRIME_CMD_ATTRIB      0x0F
 // APGEN parameter requesting the extended REPGEN response; also called 'APGEN!'
 #define ISO14443B_PRIME_REQUEST_EXTENDED_REPGEN 0x80
+#define ISO14443B_PRIME_COM_RA_START    0x02
 
 // XEROX Commands
 #define ISO14443B_XEROX_PWD             0x38
