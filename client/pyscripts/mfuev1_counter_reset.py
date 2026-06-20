@@ -11,8 +11,9 @@
 #-----------------------------------------------------------------------------
 # Bypass Anti-Tearing on MIFARE Ultralight EV1 monotonic counters (tear-off).
 # Script version: 2.0.0
-# Created by M35MAR
-# Based on Quarkslab research and W0rthlessS0ul original script 
+# Created by W0rthlessS0ul (https://github.com/W0rthlessS0ul)
+# Based on Quarkslab research: https://blog.quarkslab.com/rfid-monotonic-counter-anti-tearing-defeated.html
+# Updated by M35MAR (https://github.com/M35mar)
 #-----------------------------------------------------------------------------
 
 import argparse
