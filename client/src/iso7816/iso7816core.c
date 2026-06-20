@@ -44,10 +44,11 @@ static isodep_state_t isodep_state = ISODEP_INACTIVE;
 void SetISODEPState(isodep_state_t state) {
     isodep_state = state;
     if (APDULogging) {
-        PrintAndLogEx(SUCCESS, "Setting ISODEP -> %s%s%s%s"
+        PrintAndLogEx(SUCCESS, "Setting ISODEP -> %s%s%s%s%s"
                       , isodep_state == ISODEP_INACTIVE ? "inactive" : ""
                       , isodep_state == ISODEP_NFCA ? _GREEN_("NFC-A") : ""
                       , isodep_state == ISODEP_NFCB ? _GREEN_("NFC-B") : ""
+                      , isodep_state == ISODEP_NFCB_PRIME ? _GREEN_("NFC-B'") : ""
                       , isodep_state == ISODEP_NFCV ? _GREEN_("NFC-V") : ""
                      );
     }
@@ -124,6 +125,9 @@ int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool l
                     break;
                 case ISODEP_NFCB:
                     res = exchange_14b_apdu(data, datalen, activate_field, leave_field_on, result, (int)max_result_len, (int *)result_len, 4000);
+                    break;
+                case ISODEP_NFCB_PRIME:
+                    res = exchange_14b_prime_apdu(data, datalen, activate_field, leave_field_on, result, (int)max_result_len, (int *)result_len, 4000);
                     break;
                 case ISODEP_NFCV:
                     PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");

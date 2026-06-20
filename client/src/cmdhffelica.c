@@ -4682,8 +4682,6 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
 
     uint8_t data[PM3_CMD_DATA_SIZE];
     memset(data, 0, sizeof(data));
-    data[0] = 0x0C; // Static length
-    data[1] = 0x3E; // Command ID
 
     // Length (1),
     // Command ID (1),
@@ -4759,7 +4757,7 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
 
     PrintAndLogEx(INFO, "Client send AUTH1 frame: %s", sprint_hex(data, datalen));
-    clear_and_send_command(flags, datalen, data, 0);
+    clear_and_send_command(flags, datalen, data, false);
 
     PacketResponseNG resp;
     if (waitCmdFelica(false, &resp, true) == false) {
@@ -4770,40 +4768,40 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     felica_auth1_response_t auth1_response;
     memcpy(&auth1_response, (felica_auth1_response_t *)resp.data.asBytes, sizeof(felica_auth1_response_t));
 
-    if (auth1_response.frame_response.IDm[0]) {
-        PrintAndLogEx(SUCCESS, "Auth1 response:");
-        PrintAndLogEx(SUCCESS, "IDm... %s", sprint_hex(auth1_response.frame_response.IDm, sizeof(auth1_response.frame_response.IDm)));
-        PrintAndLogEx(SUCCESS, "M2C... %s", sprint_hex(auth1_response.m2c, sizeof(auth1_response.m2c)));
-        PrintAndLogEx(SUCCESS, "M3C... %s", sprint_hex(auth1_response.m3c, sizeof(auth1_response.m3c)));
-
-        // Assumption: Key swap method used
-        uint8_t rev_master_key[PM3_CMD_DATA_SIZE];
-        reverse_3des_key(master_key, 16, rev_master_key);
-        mbedtls_des3_set2key_dec(&des3_ctx, rev_master_key);
-
-        bool is_key_correct = false;
-        unsigned char p2c[8];
-        mbedtls_des3_crypt_ecb(&des3_ctx, auth1_response.m2c, p2c);
-
-        for (uint8_t i = 0; i < 8; i++) {
-            if (p2c[i] != nonce[i]) {
-                is_key_correct = false;
-                break;
-            } else {
-                is_key_correct = true;
-            }
-        }
-
-        if (is_key_correct) {
-            PrintAndLogEx(SUCCESS, "Auth1 done with correct key material!");
-            PrintAndLogEx(SUCCESS, "Use Auth2 now with M3C and same key");
-        } else {
-            PrintAndLogEx(INFO, "3DES secret (swapped decryption): %s", sprint_hex(rev_master_key, 16));
-            PrintAndLogEx(INFO, "P2c: %s", sprint_hex(p2c, 8));
-            PrintAndLogEx(ERR, "Can't decrypt M2C with master secret (P1c != P2c)!");
-            PrintAndLogEx(ERR, "Probably wrong keys or wrong decryption method");
-        }
+    if (auth1_response.frame_response.cmd_code[0] != 0x11) {
+        PrintAndLogEx(ERR, "response code does not match");
+        return PM3_ERFTRANS;
     }
+    
+    PrintAndLogEx(SUCCESS, "Auth1 response:");
+    PrintAndLogEx(SUCCESS, "IDm... %s", sprint_hex(auth1_response.frame_response.IDm, sizeof(auth1_response.frame_response.IDm)));
+    PrintAndLogEx(SUCCESS, "M2C... %s", sprint_hex(auth1_response.m2c, sizeof(auth1_response.m2c)));
+    PrintAndLogEx(SUCCESS, "M3C... %s", sprint_hex(auth1_response.m3c, sizeof(auth1_response.m3c)));
+
+
+    mbedtls_des3_init(&des3_ctx);
+
+    // Assumption: Key swap method used
+    uint8_t rev_master_key[16];
+    reverse_3des_key(master_key, 16, rev_master_key);
+    mbedtls_des3_set2key_dec(&des3_ctx, rev_master_key);
+
+    uint8_t p2c[8];
+    mbedtls_des3_crypt_ecb(&des3_ctx, auth1_response.m2c, p2c);
+    mbedtls_des3_free(&des3_ctx);
+
+    bool is_key_correct = memcmp(p2c, nonce, sizeof(nonce)) == 0;
+
+    if (is_key_correct) {
+        PrintAndLogEx(SUCCESS, "Auth1 done with correct key material!");
+        PrintAndLogEx(SUCCESS, "Use Auth2 now with M3C and same key");
+    } else {
+        PrintAndLogEx(INFO, "3DES secret (swapped decryption): %s", sprint_hex(rev_master_key, 16));
+        PrintAndLogEx(INFO, "P2c: %s", sprint_hex(p2c, 8));
+        PrintAndLogEx(ERR, "Can't decrypt M2C with master secret (P1c != P2c)!");
+        PrintAndLogEx(ERR, "Probably wrong keys or wrong decryption method");
+    }
+
     return PM3_SUCCESS;
 }
 

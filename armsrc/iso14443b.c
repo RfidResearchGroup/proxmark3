@@ -1440,7 +1440,13 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
 
         if (Handle14443bSamplesFromTag(ci, cq)) {
 
-            *eof_time = GetCountSspClkDelta(dma_start_time) - DELAY_TAG_TO_ARM;  // end of EOF
+            // Response timing is measured from DMA start, but trace rows use
+            // absolute SSP time like reader frames.
+            uint32_t eof_delta = GetCountSspClkDelta(dma_start_time);
+            if (eof_delta > DELAY_TAG_TO_ARM) {
+                eof_delta -= DELAY_TAG_TO_ARM;
+            }
+            *eof_time = dma_start_time + eof_delta;  // end of EOF
 
             if (Demod.len > Demod.max_len) {
                 ret = PM3_EOVFLOW;
@@ -1916,6 +1922,88 @@ int iso14443b_select_srx_card(iso14b_card_select_t *card) {
         card->uidlen = 8;
         memcpy(card->uid, r_papid, 8);
     }
+    return PM3_SUCCESS;
+}
+
+/**
+ * Type B' / Innovatron APGEN.
+ */
+static int iso14443b_select_prime_card(iso14b_prime_card_select_t *card) {
+    uint8_t apgen[] = {
+        ISO14443B_PRIME_VT_ADDR_DEFAULT,
+        ISO14443B_PRIME_CMD_APGEN,
+        // Seems to affect time slots / response chance:
+        //   0x3f      card responds every time
+        //   0x3e-0x00 reduced success rate
+        //   0x40-0xff card does not respond
+        0x3f,
+        ISO14443B_PRIME_REQUEST_EXTENDED_REPGEN,
+        0x00,
+        0x00
+    };
+    uint8_t r_repgen[PM3_CMD_DATA_SIZE] = { 0x00 };
+
+    AddCrc14B(apgen, sizeof(apgen) - 2);
+
+    uint32_t start_time = 0;
+    uint32_t eof_time = 0;
+    CodeAndTransmit14443bAsReader(apgen, sizeof(apgen), &start_time, &eof_time, true);
+
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+    uint16_t retlen = 0;
+    if (Get14443bAnswerFromTag(r_repgen, sizeof(r_repgen), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    // REPGEN carries V&T address, REPGEN command, DIV, VerLog, then CRC.
+    if (retlen < 9) {
+        return PM3_ELENGTH;
+    }
+
+    if (check_crc(CRC_14443_B, r_repgen, retlen) == false) {
+        return PM3_ECRC;
+    }
+
+    const uint16_t repgen_len = retlen - 2;
+    if (r_repgen[0] != apgen[0] || r_repgen[1] != ISO14443B_PRIME_CMD_REPGEN) {
+        return PM3_EWRONGANSWER;
+    }
+
+    if (card) {
+        card->vt_addr = r_repgen[0];
+        card->repgen_cmd = r_repgen[1];
+        memcpy(card->div, r_repgen + 2, sizeof(card->div));
+        card->verlog = r_repgen[6];
+
+        uint16_t offset = 7;
+        if ((card->verlog & 0x80) && repgen_len > offset) {
+            card->config = r_repgen[offset++];
+            if ((card->config & 0x40) && repgen_len > offset) {
+                uint16_t atr_len = repgen_len - offset;
+                if (atr_len >= 2 && r_repgen[repgen_len - 2] == 0x90 && r_repgen[repgen_len - 1] == 0x00) {
+                    atr_len -= 2;
+                }
+                card->atr_len = (uint8_t)MIN(atr_len, ISO14B_PRIME_ATR_MAX_LEN);
+                memcpy(card->atr, r_repgen + offset, card->atr_len);
+            }
+        }
+    }
+
+    uint8_t attrib[] = {
+        r_repgen[0],
+        ISO14443B_PRIME_CMD_ATTRIB,
+        r_repgen[2],
+        r_repgen[3],
+        r_repgen[4],
+        r_repgen[5],
+        0x00,
+        0x00,
+    };
+    AddCrc14B(attrib, sizeof(attrib) - 2);
+    start_time = eof_time + ISO14B_TR2;
+    CodeAndTransmit14443bAsReader(attrib, sizeof(attrib), &start_time, &eof_time, true);
+
+    s_iso14b_pcb_blocknum = 0;
     return PM3_SUCCESS;
 }
 
@@ -3145,6 +3233,15 @@ void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
         sendlen = sizeof(picopass_hdr_t);
         status = iso14443b_select_picopass_card(hdr);
         reply_ng(CMD_HF_ISO14443B_COMMAND, status, (uint8_t *)hdr, sendlen);
+        if (status != PM3_SUCCESS) goto out;
+    }
+
+    if ((p->flags & ISO14B_SELECT_PRIME) == ISO14B_SELECT_PRIME) {
+        iso14b_prime_card_select_t *prime = (iso14b_prime_card_select_t *)buf;
+        memset(prime, 0, sizeof(iso14b_prime_card_select_t));
+        sendlen = sizeof(iso14b_prime_card_select_t);
+        status = iso14443b_select_prime_card(prime);
+        reply_ng(CMD_HF_ISO14443B_COMMAND, status, (uint8_t *)prime, sendlen);
         if (status != PM3_SUCCESS) goto out;
     }
 

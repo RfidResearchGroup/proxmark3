@@ -131,6 +131,8 @@ typedef struct {
     iso14a_card_select_t card_a;
     bool has_14b;
     iso14b_card_select_t card_b;
+    bool has_prime;
+    iso14b_prime_card_select_t card_prime;
 } calypso_rf_info_t;
 
 typedef struct {
@@ -395,6 +397,9 @@ static const char *calypso_rf_protocol_desc(isodep_state_t protocol) {
     if (protocol == ISODEP_NFCA) {
         return "ISO14443-A";
     }
+    if (protocol == ISODEP_NFCB_PRIME) {
+        return "ISO14443-B' / Innovatron";
+    }
     if (protocol == ISODEP_NFCB) {
         return "ISO14443-B";
     }
@@ -426,6 +431,18 @@ static int calypso_connect_contactless(bool verbose, calypso_rf_info_t *rf) {
             rf->protocol = ISODEP_NFCB;
             rf->has_14b = true;
             rf->card_b = card_b;
+        }
+        return PM3_SUCCESS;
+    }
+
+    iso14b_prime_card_select_t card_prime = {0};
+    res = select_card_14443b_prime(false, &card_prime, verbose);
+    if (res == PM3_SUCCESS) {
+        if (rf != NULL) {
+            rf->present = true;
+            rf->protocol = ISODEP_NFCB_PRIME;
+            rf->has_prime = true;
+            rf->card_prime = card_prime;
         }
         return PM3_SUCCESS;
     }
@@ -2169,6 +2186,10 @@ static void calypso_print_rf_info(const calypso_rf_info_t *rf) {
     } else if (rf->has_14b) {
         calypso_print_rf_hex_line(" PUPI              : ", rf->card_b.uid, rf->card_b.uidlen);
         calypso_print_rf_hex_line(" ATQB              : ", rf->card_b.atqb, sizeof(rf->card_b.atqb));
+    } else if (rf->has_prime) {
+        PrintAndLogEx(SUCCESS, " V&T Ad            : " _GREEN_("%02X"), rf->card_prime.vt_addr);
+        calypso_print_rf_hex_line(" DIV               : ", rf->card_prime.div, sizeof(rf->card_prime.div));
+        calypso_print_rf_hex_line(" ATR               : ", rf->card_prime.atr, rf->card_prime.atr_len);
     }
 }
 
@@ -4494,7 +4515,8 @@ static int calypso_probe_setup(const calypso_select_result_t *selected, bool ver
     uint8_t select_response[APDU_RES_LEN] = {0};
     size_t select_response_len = 0;
     uint16_t select_sw = 0;
-    int res = Iso7816Select(CC_CONTACTLESS, false, true, aid, aid_len, select_response, sizeof(select_response), &select_response_len, &select_sw);
+    sAPDU_t apdu = {0x00, ISO7816_SELECT_FILE, 0x04, 0x00, (uint8_t)aid_len, aid};
+    int res = Iso7816ExchangeEx(CC_CONTACTLESS, false, true, apdu, true, 0, select_response, sizeof(select_response), &select_response_len, &select_sw);
     if (res != PM3_SUCCESS) {
         return res;
     }

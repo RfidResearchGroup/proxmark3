@@ -34,6 +34,18 @@ typedef struct {
     uint8_t fc;
 } PACKED iso14b_cts_card_select_t;
 
+#define ISO14B_PRIME_DIV_LEN 4
+#define ISO14B_PRIME_ATR_MAX_LEN 33
+typedef struct {
+    uint8_t vt_addr;
+    uint8_t repgen_cmd;
+    uint8_t div[ISO14B_PRIME_DIV_LEN];
+    uint8_t verlog;
+    uint8_t config;
+    uint8_t atr_len;
+    uint8_t atr[ISO14B_PRIME_ATR_MAX_LEN];
+} PACKED iso14b_prime_card_select_t;
+
 typedef enum ISO14B_COMMAND {
     ISO14B_CONNECT = (1 << 0),
     ISO14B_DISCONNECT = (1 << 1),
@@ -49,6 +61,7 @@ typedef enum ISO14B_COMMAND {
     ISO14B_CLEARTRACE = (1 << 11),
     ISO14B_SELECT_XRX = (1 << 12),
     ISO14B_SELECT_PICOPASS = (1 << 13),
+    ISO14B_SELECT_PRIME = (1 << 14),
 } iso14b_command_t;
 
 typedef enum ISO14B_TYPE {
@@ -85,4 +98,3 @@ typedef struct {
 #define US_TO_ETU(x)   ( (float)((x) / 9.4396) )
 
 #endif // _ISO14B_H_
-
