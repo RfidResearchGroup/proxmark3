@@ -16,8 +16,8 @@
 // Parse Helsinki Region Transport (HRT) travel cards
 //-----------------------------------------------------------------------------
 
-#ifndef CMDParseHRT_H__
-#define CMDParseHRT_H__
+#ifndef HRTPARSER_H__
+#define HRTPARSER_H__
 
 #include "common.h"
 #include <stddef.h>
@@ -221,7 +221,7 @@ int        hrt_travelcard_get_period_loading_device_number(const hrt_travel_card
 int        hrt_travelcard_get_app_status(const hrt_travel_card_t *card);
 int        hrt_travelcard_get_version(const hrt_travel_card_t *card);
 
-int CmdParseHRT(const char *Cmd);
+int HRTParser(const char *Cmd);
 
 // Setter Functions
 void hrt_travelcard_init_empty(hrt_travel_card_t *card, int version);

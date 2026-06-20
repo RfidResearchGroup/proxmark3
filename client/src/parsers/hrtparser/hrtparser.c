@@ -23,8 +23,8 @@
 #endif
 
 #include "cmdparser.h"
-#include "cmdparsehrt.h"
 #include "comms.h"
+#include "hrtparser.h"
 #include "common.h"
 #include "ui.h"
 #include <stdlib.h>
@@ -812,7 +812,7 @@ static int CmdHelp(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int CmdParseHRT(const char *Cmd) {
+int HRTParser(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }

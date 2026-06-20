@@ -809,7 +809,6 @@ SRCS =  mifare/aiddesfire.c \
         cmdmain.c \
         cmdmqtt.c \
         cmdnfc.c \
-        cmdparsehrt.c \
         cmdparser.c \
         cmdpiv.c \
         cmdscript.c \
@@ -883,6 +882,8 @@ SRCS =  mifare/aiddesfire.c \
         mifare/prime.c \
         mifare/gen4.c \
         nfc/ndef.c \
+        parsers/parsehrt.c \
+        parsers/hrtparser/hrtparser.c \
         pm3.c \
         pm3_binlib.c \
         pm3_bitlib.c \

@@ -388,7 +388,6 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdmain.c
         ${PM3_ROOT}/client/src/cmdmqtt.c
         ${PM3_ROOT}/client/src/cmdnfc.c
-        ${PM3_ROOT}/client/src/cmdparsehrt.c
         ${PM3_ROOT}/client/src/cmdparser.c
         ${PM3_ROOT}/client/src/cmdpiv.c
         ${PM3_ROOT}/client/src/cmdscript.c
@@ -404,6 +403,8 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/iso4217.c
         ${PM3_ROOT}/client/src/jansson_path.c
         ${PM3_ROOT}/client/src/lua_bitlib.c
+        ${PM3_ROOT}/client/src/parsers/parsehrt.c
+        ${PM3_ROOT}/client/src/parsers/hrtparser/hrtparser.c
         ${PM3_ROOT}/client/src/pla.c
         ${PM3_ROOT}/client/src/preferences.c
         ${PM3_ROOT}/client/src/pm3.c
