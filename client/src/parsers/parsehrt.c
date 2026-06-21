@@ -9,10 +9,28 @@
 #include <stdio.h>
 #include <string.h>
 
-#define HRT_NEW_AID             0xEF2014
-#define HRT_OLD_AID             0xEF2011
-#define HRT_APPLICATION_INFO_FILE_ID    0x08
-#define HRT_APPLICATION_INFO_LEN        11
+#define HRT_NEW_AID                   0xEF2014
+#define HRT_OLD_AID                   0xEF2011
+#define HRT_CONTROL_INFO_FILE_ID      0x00
+#define HRT_PERIOD_PASS_FILE_ID       0x01
+#define HRT_STORED_VALUE_FILE_ID      0x02
+#define HRT_ETICKET_FILE_ID           0x03
+#define HRT_HISTORY_FILE_ID           0x04
+#define HRT_APPLICATION_INFO_FILE_ID  0x08
+#define HRT_APPLICATION_INFO_LEN      11
+#define HRT_CONTROL_INFO_LEN          6
+#define HRT_CONTROL_INFO_V2_LEN       10
+#define HRT_PERIOD_PASS_LEN           32
+#define HRT_PERIOD_PASS_V2_LEN        35
+#define HRT_STORED_VALUE_LEN          12
+#define HRT_STORED_VALUE_V2_LEN       13
+#define HRT_ETICKET_LEN               26
+#define HRT_ETICKET_V2_LEN            45
+
+typedef struct {
+    uint32_t aid;
+    int version;
+} hrt_application_t;
 
 typedef enum {
     HRT_AREA_TYPE_CITY = 0,
@@ -122,18 +140,46 @@ static bool hrt_format_card_number(const char *card_number, char *out, size_t ou
     return written > 0 && (size_t)written < out_len;
 }
 
-static bool hrt_aid_list_contains(const uint8_t *aidbuf, size_t aidbuflen) {
+static bool hrt_get_application_from_aid_list(const uint8_t *aidbuf, size_t aidbuflen, hrt_application_t *application) {
     if (aidbuf == NULL || aidbuflen < 3) return false;
 
     for (size_t i = 0; i + 2 < aidbuflen; i += 3) {
-        // TODO: Also add HRT_OLD_AID check. Currently it is not
-        // checked since parsing the older cards is not yet implemented.
-        if (DesfireAIDByteToUint(&aidbuf[i]) == HRT_NEW_AID) {
+        uint32_t aid = DesfireAIDByteToUint(&aidbuf[i]);
+
+        if (aid == HRT_OLD_AID) {
+            if (application != NULL) {
+                application->aid = HRT_OLD_AID;
+                application->version = 1;
+            }
+            return true;
+        }
+
+        if (aid == HRT_NEW_AID) {
+            if (application != NULL) {
+                application->aid = HRT_NEW_AID;
+                application->version = 2;
+            }
             return true;
         }
     }
 
     return false;
+}
+
+static size_t hrt_control_info_len(int version) {
+    return version == 2 ? HRT_CONTROL_INFO_V2_LEN : HRT_CONTROL_INFO_LEN;
+}
+
+static size_t hrt_period_pass_len(int version) {
+    return version == 2 ? HRT_PERIOD_PASS_V2_LEN : HRT_PERIOD_PASS_LEN;
+}
+
+static size_t hrt_stored_value_len(int version) {
+    return version == 2 ? HRT_STORED_VALUE_V2_LEN : HRT_STORED_VALUE_LEN;
+}
+
+static size_t hrt_eticket_len(int version) {
+    return version == 2 ? HRT_ETICKET_V2_LEN : HRT_ETICKET_LEN;
 }
 
 static bool hrt_read_and_parse_application_info(DesfireContext_t *dctx, hrt_travel_card_t *card) {
@@ -367,24 +413,75 @@ static void hrt_print_card(const hrt_travel_card_t *card) {
     hrt_print_history(card);
 }
 
+static bool hrt_select_application(DesfireContext_t *dctx, const hrt_application_t *application) {
+    if (dctx == NULL || application == NULL) return false;
+
+    return DesfireSelectAIDHex(dctx, application->aid, false, 0) == PM3_SUCCESS;
+}
+
+static bool hrt_read_card(DesfireContext_t *dctx, const hrt_application_t *application, hrt_travel_card_t *card) {
+    if (dctx == NULL || application == NULL || card == NULL) return false;
+
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+
+    hrt_travelcard_init_empty(card, application->version);
+
+    // File 0x08: Application info
+    if (hrt_read_and_parse_application_info(dctx, card) == false) {
+        return false;
+    }
+
+    // File 0x00: Control info
+    len = 0;
+    if (DesfireReadFile(dctx, HRT_CONTROL_INFO_FILE_ID, 0, hrt_control_info_len(application->version), buf, &len) == PM3_SUCCESS) {
+        hrt_travelcard_set_control_info(card, buf, len);
+    }
+
+    // File 0x01: Period pass
+    len = 0;
+    if (DesfireReadFile(dctx, HRT_PERIOD_PASS_FILE_ID, 0, hrt_period_pass_len(application->version), buf, &len) == PM3_SUCCESS) {
+        hrt_travelcard_set_period_pass(card, buf, len);
+    }
+
+    // File 0x02: Stored value
+    len = 0;
+    if (DesfireReadFile(dctx, HRT_STORED_VALUE_FILE_ID, 0, hrt_stored_value_len(application->version), buf, &len) == PM3_SUCCESS) {
+        hrt_travelcard_set_stored_value(card, buf, len);
+    }
+
+    // File 0x03: eTicket
+    len = 0;
+    if (DesfireReadFile(dctx, HRT_ETICKET_FILE_ID, 0, hrt_eticket_len(application->version), buf, &len) == PM3_SUCCESS) {
+        hrt_travelcard_set_eticket(card, buf, len);
+    }
+
+    // File 0x04: History records
+    len = 0;
+    if (DesfireReadRecords(dctx, HRT_HISTORY_FILE_ID, 0, 0, buf, &len) == PM3_SUCCESS) {
+        hrt_travelcard_set_history(card, buf, len);
+    }
+
+    return true;
+}
+
 bool is_valid_hrt_card(DesfireContext_t *dctx, const uint8_t *aidbuf, size_t aidbuflen) {
     if (dctx == NULL) return false;
 
-    if (hrt_aid_list_contains(aidbuf, aidbuflen) == false) {
+    hrt_application_t application = {0};
+    if (hrt_get_application_from_aid_list(aidbuf, aidbuflen, &application) == false) {
         return false;
     }
 
     DesfireSetCommMode(dctx, DCMPlain);
     DesfireSetCommandSet(dctx, DCCNative);
 
-    // TODO: Add support for older travelcard (AID EF2011)
-
-    if (DesfireSelectAIDHex(dctx, HRT_NEW_AID, false, 0) != PM3_SUCCESS) {
+    if (hrt_select_application(dctx, &application) == false) {
         return false;
     }
 
     hrt_travel_card_t card;
-    hrt_travelcard_init_empty(&card, 2);
+    hrt_travelcard_init_empty(&card, application.version);
 
     bool is_valid = hrt_read_and_parse_application_info(dctx, &card);
 
@@ -398,50 +495,20 @@ bool hrt_parser_parse(DesfireContext_t *dctx) {
     DesfireSetCommMode(dctx, DCMPlain);
     DesfireSetCommandSet(dctx, DCCNative);
 
-    // TODO: Add support for older travelcard (AID EF2011)
+    hrt_application_t applications[] = {
+        {HRT_OLD_AID, 1},
+        {HRT_NEW_AID, 2},
+    };
 
-    if (DesfireSelectAIDHex(dctx, HRT_NEW_AID, false, 0) == PM3_SUCCESS) {
-        uint8_t buf[APDU_RES_LEN] = {0};
-        size_t len = 0;
+    for (size_t i = 0; i < ARRAYLEN(applications); i++) {
+        if (hrt_select_application(dctx, &applications[i]) == false) {
+            continue;
+        }
 
         hrt_travel_card_t card;
-        hrt_travelcard_init_empty(&card, 2);
-
-        // File 0x08: Application info (11 bytes)
-        // Check that application info parses before reading other files
-        if (hrt_read_and_parse_application_info(dctx, &card) == false) {
+        if (hrt_read_card(dctx, &applications[i], &card) == false) {
             hrt_travelcard_free(&card);
-            return false;
-        }
-
-        // File 0x00: Control info (10 bytes)
-        len = 0;
-        if (DesfireReadFile(dctx, 0x00, 0, 10, buf, &len) == PM3_SUCCESS) {
-            hrt_travelcard_set_control_info(&card, buf, len);
-        }
-
-        // File 0x01: Period pass (35 bytes)
-        len = 0;
-        if (DesfireReadFile(dctx, 0x01, 0, 35, buf, &len) == PM3_SUCCESS) {
-            hrt_travelcard_set_period_pass(&card, buf, len);
-        }
-
-        // File 0x02: Stored value (13 bytes)
-        len = 0;
-        if (DesfireReadFile(dctx, 0x02, 0, 13, buf, &len) == PM3_SUCCESS) {
-            hrt_travelcard_set_stored_value(&card, buf, len);
-        }
-
-        // File 0x03: eTicket (45 bytes)
-        len = 0;
-        if (DesfireReadFile(dctx, 0x03, 0, 45, buf, &len) == PM3_SUCCESS) {
-            hrt_travelcard_set_eticket(&card, buf, len);
-        }
-
-        // File 0x04: History records (all)
-        len = 0;
-        if (DesfireReadRecords(dctx, 0x04, 0, 0, buf, &len) == PM3_SUCCESS) {
-            hrt_travelcard_set_history(&card, buf, len);
+            continue;
         }
 
         hrt_print_card(&card);
