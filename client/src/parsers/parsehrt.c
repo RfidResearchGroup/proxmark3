@@ -1,3 +1,4 @@
+#include "commonutil.h"
 #include "hrtparser/hrtparser.h"
 #include "iso7816/iso7816core.h"
 #include "mifare/desfirecore.h"
@@ -5,11 +6,121 @@
 #include "parsehrt.h"
 #include "pm3_cmd.h"
 #include "ui.h"
+#include <stdio.h>
+#include <string.h>
 
 #define HRT_NEW_AID             0xEF2014
 #define HRT_OLD_AID             0xEF2011
 #define HRT_APPLICATION_INFO_FILE_ID    0x08
 #define HRT_APPLICATION_INFO_LEN        11
+
+typedef enum {
+    HRT_AREA_TYPE_CITY = 0,
+    HRT_AREA_TYPE_VEHICLE = 1,
+    HRT_AREA_TYPE_ZONE_RANGE = 2,
+} hrt_area_type_t;
+
+typedef struct {
+    int code;
+    const char *name;
+    const char *arc_zone;
+} hrt_area_mapping_t;
+
+static const hrt_area_mapping_t hrt_city_areas[] = {
+    {0, "Not defined", NULL},
+    {1, "Helsinki", "AB"},
+    {2, "Espoo", "BC"},
+    {4, "Vantaa", "BC"},
+    {5, "Region", "ABC"},
+    {6, "Kirkkonummi-Siuntio", "D"},
+    {7, "Vihti", NULL},
+    {8, "Nurmijarvi", NULL},
+    {9, "Kerava-Sipoo-Tuusula", "D"},
+    {10, "Sipoo", NULL},
+    {14, "Region zone 2", "BCD"},
+    {15, "Region zone 3", "ABCD"},
+};
+
+static const hrt_area_mapping_t hrt_vehicle_areas[] = {
+    {0, "Not defined", NULL},
+    {1, "Bus", NULL},
+    {5, "Tram", NULL},
+    {6, "Metro", NULL},
+    {7, "Train", NULL},
+    {8, "Ferry", NULL},
+    {9, "U line", NULL},
+};
+
+static const char *hrt_lookup_product_name(int product_code) {
+    if (product_code < 800) return "Not defined";
+    return NULL;
+}
+
+static const hrt_area_mapping_t *hrt_lookup_area_mapping(const hrt_area_mapping_t *mappings, size_t mappings_len, int area) {
+    for (size_t i = 0; i < mappings_len; i++) {
+        if (mappings[i].code == area) {
+            return &mappings[i];
+        }
+    }
+    return NULL;
+}
+
+static bool hrt_format_zone_range(int area, char *out, size_t out_len) {
+    static const char zones[] = "ABCDEFGH";
+    if (out == NULL || out_len == 0) return false;
+
+    int end = area & 0x07;
+    int start = (area >> 3) & 0x07;
+
+    if (start > end || start >= (int)strlen(zones) || end >= (int)strlen(zones)) return false;
+
+    size_t pos = 0;
+    for (int i = start; i <= end; i++) {
+        if (pos + 1 >= out_len) return false;
+        out[pos++] = zones[i];
+    }
+
+    out[pos] = '\0';
+    return true;
+}
+
+static bool hrt_format_area(int area_type, int area, char *out, size_t out_len) {
+    if (out == NULL || out_len == 0) return false;
+
+    const hrt_area_mapping_t *mapping = NULL;
+    switch ((hrt_area_type_t)area_type) {
+        case HRT_AREA_TYPE_CITY:
+            mapping = hrt_lookup_area_mapping(hrt_city_areas, ARRAYLEN(hrt_city_areas), area);
+            if (mapping == NULL) return false;
+            if (mapping->arc_zone != NULL) {
+                return snprintf(out, out_len, "%s (%s)", mapping->name, mapping->arc_zone) > 0;
+            }
+            return snprintf(out, out_len, "%s", mapping->name) > 0;
+        case HRT_AREA_TYPE_VEHICLE:
+            mapping = hrt_lookup_area_mapping(hrt_vehicle_areas, ARRAYLEN(hrt_vehicle_areas), area);
+            if (mapping == NULL) return false;
+            return snprintf(out, out_len, "%s", mapping->name) > 0;
+        case HRT_AREA_TYPE_ZONE_RANGE:
+            return hrt_format_zone_range(area, out, out_len);
+        default:
+            return false;
+    }
+}
+
+static bool hrt_format_card_number(const char *card_number, char *out, size_t out_len) {
+    if (card_number == NULL || out == NULL || out_len == 0) return false;
+
+    // Card number is printed on the physical card in groups of 6 + 4 + 4 + 4.
+    if (strlen(card_number) != 18 || out_len < 22) {
+        return false;
+    }
+
+    int written = snprintf(out, out_len, "%.6s %.4s %.4s %.4s",
+                           card_number, card_number  + 6,
+                           card_number + 10, card_number + 14);
+
+    return written > 0 && (size_t)written < out_len;
+}
 
 static bool hrt_aid_list_contains(const uint8_t *aidbuf, size_t aidbuflen) {
     if (aidbuf == NULL || aidbuflen < 3) return false;
@@ -41,6 +152,73 @@ static bool hrt_read_and_parse_application_info(DesfireContext_t *dctx, hrt_trav
 
     const char *application_id = hrt_travelcard_get_application_instance_id(card);
     return application_id != NULL && application_id[0] != '\0';
+}
+
+static void hrt_print_time(const char *label, time_t value) {
+    if (value == (time_t)0) return;
+
+    char buf[32] = {0};
+    struct tm tm_value = {0};
+
+#if defined(_WIN32)
+    if (localtime_s(&tm_value, &value) != 0) return;
+#else
+    if (localtime_r(&value, &tm_value) == NULL) return;
+#endif
+
+    strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm_value);
+    PrintAndLogEx(SUCCESS, "%s " _GREEN_("%s"), label, buf);
+}
+
+static void hrt_print_card(const hrt_travel_card_t *card) {
+    if (card == NULL) return;
+
+    const char *application_id = hrt_travelcard_get_application_instance_id(card);
+    char price_buf[32] = {0};
+    char area_buf[64] = {0};
+    int product_code = hrt_travelcard_get_product_code1(card);
+    const char *product_name = hrt_lookup_product_name(product_code);
+    int area_type = hrt_travelcard_get_validity_area_type1(card);
+    int area = hrt_travelcard_get_validity_area1(card);
+
+    hrt_price_to_string(
+        hrt_travelcard_get_stored_value_counter(card),
+        price_buf,
+        sizeof(price_buf)
+    );
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "--- " _CYAN_("HRT travel card"));
+
+    if (application_id != NULL && application_id[0] != '\0') {
+        char card_number[22] = {0};
+        if (hrt_format_card_number(application_id, card_number, sizeof(card_number))) {
+            PrintAndLogEx(SUCCESS, "Card number......... " _GREEN_("%s"), card_number);
+        } else {
+            PrintAndLogEx(SUCCESS, "Card number......... " _GREEN_("%s"), application_id);
+        }
+    }
+
+    PrintAndLogEx(SUCCESS, "Value on the card... " _GREEN_("%s"), price_buf);
+
+    PrintAndLogEx(SUCCESS, "");
+    PrintAndLogEx(SUCCESS, "Season ticket information");
+
+    if (product_name != NULL) {
+        PrintAndLogEx(SUCCESS, "   Product code........... " _GREEN_("%d (%s)"), product_code, product_name);
+    } else {
+        PrintAndLogEx(SUCCESS, "   Product code........... " _GREEN_("%d (unknown)"), product_code);
+    }
+    if (hrt_format_area(area_type, area, area_buf, sizeof(area_buf))) {
+        PrintAndLogEx(SUCCESS, "   Area................... " _GREEN_("%s"), area_buf);
+    } else {
+        PrintAndLogEx(SUCCESS, "   Area................... " _GREEN_("%d (type %d)"), area, area_type);
+    }
+    hrt_print_time("   Start date.............", hrt_travelcard_get_period_start_date1(card));
+    hrt_print_time("   End date...............", hrt_travelcard_get_period_end_date1(card));
+    PrintAndLogEx(SUCCESS, "   Season ticket length... " _GREEN_("%d days"), hrt_travelcard_get_period_length1(card));
+
+    // TODO: Print value ticket information
 }
 
 bool is_valid_hrt_card(DesfireContext_t *dctx, const uint8_t *aidbuf, size_t aidbuflen) {
@@ -89,7 +267,6 @@ bool hrt_parser_parse(DesfireContext_t *dctx) {
             hrt_travelcard_free(&card);
             return false;
         }
-        PrintAndLogEx(SUCCESS, "HRT travel card detected (AID %06X)", HRT_NEW_AID);
 
         // File 0x00: Control info (10 bytes)
         len = 0;
@@ -107,12 +284,6 @@ bool hrt_parser_parse(DesfireContext_t *dctx) {
         len = 0;
         if (DesfireReadFile(dctx, 0x02, 0, 13, buf, &len) == PM3_SUCCESS) {
             hrt_travelcard_set_stored_value(&card, buf, len);
-
-            // Demo: Read card stored value
-            int stored_value = hrt_travelcard_get_stored_value_counter(&card);
-            char price_buf[32] = {0};
-            hrt_price_to_string(stored_value, price_buf, sizeof(price_buf));
-            PrintAndLogEx(SUCCESS, "HRT stored value: %s", price_buf);
         }
 
         // File 0x03: eTicket (45 bytes)
@@ -126,6 +297,8 @@ bool hrt_parser_parse(DesfireContext_t *dctx) {
         if (DesfireReadRecords(dctx, 0x04, 0, 0, buf, &len) == PM3_SUCCESS) {
             hrt_travelcard_set_history(&card, buf, len);
         }
+
+        hrt_print_card(&card);
 
         hrt_travelcard_free(&card);
         return true;
