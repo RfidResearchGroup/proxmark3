@@ -329,136 +329,131 @@ void hrt_read_control_info(hrt_travel_card_t *card, const uint8_t *data, size_t 
 }
 
 void hrt_read_period_pass(hrt_travel_card_t *card, const uint8_t *data, size_t data_len) {
-    // TODO: This function contains lots of magic numbers
-    // and bad variable names. Refactoring is recommended.
     if (!card || !data || data_len < HRT_PERIOD_PASS_LEN) return;
 
     const uint8_t *bytes = data;
 
     // ---- Product 1 ----
-    // TODO: Better var name for i
-    uint16_t i = ((uint16_t)bytes[0]) << 6;
-    uint8_t byte1 = bytes[1];
+    uint16_t product1_prefix = ((uint16_t)bytes[0]) << 6;
+    uint8_t product1_area_byte = bytes[1];
 
-    card->product_code1 = (int16_t)(i | ((byte1 & 0xFC) >> 2));
-    card->validity_area_type1 = (byte1 & 0x02) >> 1;
+    card->product_code1 = (int16_t)(product1_prefix | ((product1_area_byte & 0xFC) >> 2));
+    card->validity_area_type1 = (product1_area_byte & 0x02) >> 1;
 
-    uint8_t byte2 = bytes[2];
+    uint8_t product1_start_date_byte = bytes[2];
     card->validity_area1 =
-        (uint8_t)(((byte1 & 0x01) << 3) | ((byte2 & 0xE0) >> 5));
+        (uint8_t)(((product1_area_byte & 0x01) << 3) | ((product1_start_date_byte & 0xE0) >> 5));
 
-    // TODO: Better var name for s
-    int16_t s =
-        (int16_t)(((byte2 & 0x1F) << 9) |
+    int16_t period1_start_days =
+        (int16_t)(((product1_start_date_byte & 0x1F) << 9) |
                   ((uint16_t)bytes[3] << 1) |
                   (MSB(bytes[4]) >> 7));
 
-    card->period_start_date1 = en5145_date_to_time(s);
+    card->period_start_date1 = en5145_date_to_time(period1_start_days);
 
-    // TODO: Better var name for s2
-    int16_t s2 =
+    int16_t period1_end_days =
         (int16_t)((LSB7(bytes[4]) << 7) |
                   ((bytes[5] & 0xFE) >> 1));
 
-    card->period_end_date1 = en5145_date_to_time(s2);
+    card->period_end_date1 = en5145_date_to_time(period1_end_days);
     card->period_end_date1 += 86399;  // + 23:59:59
-    card->period_length1 = (s2 - s) + 1;
+    card->period_length1 = (period1_end_days - period1_start_days) + 1;
 
     // ---- Product 2 ----
-    uint16_t i2 = ((uint16_t)bytes[6]) << 8;
-    uint8_t b3 = bytes[7];
+    uint16_t product2_prefix = ((uint16_t)bytes[6]) << 8;
+    uint8_t product2_area_byte = bytes[7];
 
-    card->product_code2 = (int16_t)((i2 | (b3 & 0xFC)) >> 2);
-    card->validity_area_type2 = b3 & 0x02;
+    card->product_code2 = (int16_t)((product2_prefix | (product2_area_byte & 0xFC)) >> 2);
+    card->validity_area_type2 = product2_area_byte & 0x02;
 
-    uint8_t b4 = bytes[8];
+    uint8_t product2_start_date_byte = bytes[8];
     card->validity_area2 =
-        (uint8_t)(((b3 & 0x01) << 3) | ((b4 & 0xE0) >> 5));
+        (uint8_t)(((product2_area_byte & 0x01) << 3) | ((product2_start_date_byte & 0xE0) >> 5));
 
-    int16_t s3 =
-        (int16_t)(((b4 & 0x1F) << 9) |
+    int16_t period2_start_days =
+        (int16_t)(((product2_start_date_byte & 0x1F) << 9) |
                   ((uint16_t)bytes[9] << 1) |
                   ((bytes[10] & 0x80) >> 7));
 
-    card->period_start_date2 = en5145_date_to_time(s3);
+    card->period_start_date2 = en5145_date_to_time(period2_start_days);
 
-    int16_t s4 =
+    int16_t period2_end_days =
         (int16_t)((LSB7(bytes[10]) << 7) |
                   ((bytes[11] & 0xFE) >> 1));
 
-    card->period_end_date2 = en5145_date_to_time(s4);
+    card->period_end_date2 = en5145_date_to_time(period2_end_days);
     card->period_end_date2 += 86399;  // + 23:59:59
-    card->period_length2 = (s4 - s3) + 1;
+    card->period_length2 = (period2_end_days - period2_start_days) + 1;
 
     // ---- Loaded period ----
-    uint16_t i4 = ((uint16_t)bytes[12]) << 6;
-    uint8_t b5 = bytes[13];
+    uint16_t loaded_product_prefix = ((uint16_t)bytes[12]) << 6;
+    uint8_t loaded_product_date_byte = bytes[13];
 
-    card->loaded_period_product = (int16_t)(i4 | ((b5 & 0xFC) >> 2));
+    card->loaded_period_product = (int16_t)(loaded_product_prefix | ((loaded_product_date_byte & 0xFC) >> 2));
 
-    uint16_t i5 =
-        ((b5 & 0x03) << 12) |
+    uint16_t loading_date_prefix =
+        ((loaded_product_date_byte & 0x03) << 12) |
         ((uint16_t)bytes[14] << 4);
 
-    uint8_t b6 = bytes[15];
+    uint8_t loading_date_time_byte = bytes[15];
 
     card->period_loading_date = en5145_datetime_to_time(
-                                    (int16_t)(i5 | ((b6 & 0xF0) >> 4)),
+                                    (int16_t)(loading_date_prefix | ((loading_date_time_byte & 0xF0) >> 4)),
                                     (int16_t)(((bytes[16] & 0xFE) >> 1) |
-                                              ((b6 & 0x0F) << 7))
+                                              ((loading_date_time_byte & 0x0F) << 7))
                                 );
 
     card->loaded_period_length =
         (int16_t)(((bytes[16] & 0x01) << 8) | bytes[17]);
 
-    uint32_t i6 =
+    uint32_t loaded_price_prefix =
         ((uint32_t)bytes[18] << 12) |
         ((uint32_t)bytes[19] << 4);
 
-    uint8_t b7 = bytes[20];
-    card->loaded_period_price = i6 | ((b7 & 0xF0) >> 4);
+    uint8_t loaded_price_org_byte = bytes[20];
+    card->loaded_period_price = loaded_price_prefix | ((loaded_price_org_byte & 0xF0) >> 4);
 
-    uint8_t i7 =
-        ((b7 & 0x0F) << 10) |
+    uint8_t loading_org_prefix =
+        ((loaded_price_org_byte & 0x0F) << 10) |
         ((uint16_t)bytes[21] << 2);
 
-    uint8_t b8 = bytes[22];
+    uint8_t loading_org_device_byte = bytes[22];
 
     card->period_loading_organization =
-        (int16_t)(i7 | ((b8 & 0xC0) >> 6));
+        (int16_t)(loading_org_prefix | ((loading_org_device_byte & 0xC0) >> 6));
 
     card->period_loading_device_number =
-        (int16_t)(((b8 & 0x3F) << 8) | bytes[23]);
+        (int16_t)(((loading_org_device_byte & 0x3F) << 8) | bytes[23]);
 
     // ---- Boarding ----
-    uint16_t i8 = ((uint16_t)bytes[24]) << 6;
-    uint8_t b9 = bytes[25];
+    uint16_t boarding_date_prefix = ((uint16_t)bytes[24]) << 6;
+    uint8_t boarding_date_time_byte = bytes[25];
 
     card->boarding_date =
         en5145_datetime_to_time(
-            (int16_t)(i8 | ((b9 & 0xFC) >> 2)),
-            (int16_t)(((b9 & 0x03) << 9) |
+            (int16_t)(boarding_date_prefix | ((boarding_date_time_byte & 0xFC) >> 2)),
+            (int16_t)(((boarding_date_time_byte & 0x03) << 9) |
                       ((uint16_t)bytes[26] << 1) |
                       ((bytes[27] & 0x80) >> 7))
         );
 
-    uint16_t i9 = LSB7(bytes[27]) << 7;
-    uint8_t b10 = bytes[28];
+    uint16_t boarding_vehicle_prefix = LSB7(bytes[27]) << 7;
+    uint8_t boarding_vehicle_location_type_byte = bytes[28];
 
     card->boarding_vehicle =
-        (int16_t)(i9 | ((b10 & 0xFE) >> 1));
+        (int16_t)(boarding_vehicle_prefix | ((boarding_vehicle_location_type_byte & 0xFE) >> 1));
 
-    uint8_t b11 = bytes[29];
+    uint8_t boarding_location_type_number_byte = bytes[29];
     card->boarding_location_num_type =
-        (uint8_t)(((b10 & 0x01) << 1) | ((b11 & 0x80) >> 7));
+        (uint8_t)(((boarding_vehicle_location_type_byte & 0x01) << 1) | ((boarding_location_type_number_byte & 0x80) >> 7));
 
-    uint16_t i11 = LSB7(b11) << 7;
-    uint8_t b12 = bytes[30];
+    uint16_t boarding_location_prefix = LSB7(boarding_location_type_number_byte) << 7;
+    uint8_t boarding_location_direction_byte = bytes[30];
 
     card->boarding_location_num =
-        (int16_t)(i11 | ((b12 & 0xFE) >> 1));
+        (int16_t)(boarding_location_prefix | ((boarding_location_direction_byte & 0xFE) >> 1));
 
-    card->boarding_direction = b12 & 0x01;
+    card->boarding_direction = boarding_location_direction_byte & 0x01;
     card->boarding_area = (bytes[31] & 0xF0) >> 4;
 }
 
