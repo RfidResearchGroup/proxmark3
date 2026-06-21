@@ -145,6 +145,10 @@ static time_t hrt_apply_local_offset(time_t time) {
     if (gmtime_r(&time, &utc_time) == NULL) return time;
 #endif
 
+    // EN1545 stores local wall-clock date/time. Match Java TimeZone.getOffset()
+    // by using the DST state that applies at the represented timestamp.
+    utc_time.tm_isdst = local_time.tm_isdst;
+
     time_t local_as_time = mktime(&local_time);
     time_t utc_as_local = mktime(&utc_time);
 
@@ -170,6 +174,125 @@ time_t en5145_datetime_to_time(int days, int minutes) {
     return hrt_apply_local_offset(time);
 }
 
+static void hrt_eticket_parse_v1(hrt_eticket_t *ticket, const uint8_t *data, size_t data_len, bool encrypted) {
+    if (!ticket || !data || data_len < (encrypted ? HRT_ETICKET_LEN + 6 : HRT_ETICKET_LEN)) return;
+
+    ticket->product_code = ((uint16_t)data[0] << 6) | ((data[1] & 0xFC) >> 2);
+    ticket->child = (data[1] & 0x02) >> 1;
+    ticket->language_code = ((data[1] & 0x01) << 1) | ((data[2] & 0x80) >> 7);
+    ticket->validity_length_type = (data[2] & 0x60) >> 5;
+    ticket->validity_length = ((data[2] & 0x1F) << 3) | ((data[3] & 0xE0) >> 5);
+    ticket->validity_area_type = (data[3] & 0x10) >> 4;
+    ticket->validity_area = data[3] & 0x0F;
+    ticket->sale_date = en5145_date_to_time(((uint16_t)data[4] << 6) | ((data[5] & 0xFC) >> 2));
+    ticket->sale_time = ((data[5] & 0x03) << 3) | ((data[6] & 0xE0) >> 5);
+    ticket->ticket_fare = convert_get_short_value(data, data_len, 68, 14);
+    ticket->group_size = (data[10] & 0x3E) >> 1;
+    ticket->sale_status = data[10] & 0x01;
+
+    size_t offset = encrypted ? 6 : 0;
+
+    ticket->validity_start_date = en5145_datetime_to_time(
+                                      ((uint16_t)data[offset + 11] << 6) | ((data[offset + 12] & 0xFC) >> 2),
+                                      ((data[offset + 12] & 0x03) << 9) |
+                                      ((uint16_t)data[offset + 13] << 1) |
+                                      ((data[offset + 14] & 0x80) >> 7)
+                                  );
+
+    ticket->validity_end_date = en5145_datetime_to_time(
+                                    ((data[offset + 14] & 0x7F) << 7) | ((data[offset + 15] & 0xFF) >> 1),
+                                    ((data[offset + 15] & 0x01) << 10) |
+                                    ((uint16_t)data[offset + 16] << 2) |
+                                    ((data[offset + 17] & 0xC0) >> 6)
+                                );
+
+    ticket->validity_status = data[offset + 17] & 0x01;
+
+    ticket->boarding_date = en5145_datetime_to_time(
+                                ((uint16_t)data[offset + 18] << 6) | ((data[offset + 19] & 0xFC) >> 2),
+                                ((data[offset + 19] & 0x03) << 9) |
+                                ((uint16_t)data[offset + 20] << 1) |
+                                ((data[offset + 21] & 0x80) >> 7)
+                            );
+
+    ticket->boarding_vehicle = ((data[offset + 21] & 0x7F) << 7) | ((data[offset + 22] & 0xFE) >> 1);
+    ticket->boarding_location_num_type = ((data[offset + 22] & 0x01) << 1) | ((data[offset + 23] & 0x80) >> 7);
+    ticket->boarding_location_num = ((data[offset + 23] & 0x7F) << 7) | ((data[offset + 24] & 0xFE) >> 1);
+    ticket->boarding_direction = data[offset + 24] & 0x01;
+    ticket->boarding_area = (data[offset + 25] & 0xF0) >> 4;
+}
+
+static void hrt_eticket_parse_v2(hrt_eticket_t *ticket, const uint8_t *data, size_t data_len) {
+    if (!ticket || !data || data_len < HRT_ETICKET_V2_LEN) return;
+
+    ticket->product_code = convert_get_short_value(data, data_len, 1, 14);
+    ticket->product_code_group = convert_get_short_value(data, data_len, 15, 14);
+    ticket->language_code = convert_get_byte_value(data, data_len, 39, 2);
+    ticket->validity_length_type = convert_get_byte_value(data, data_len, 41, 2);
+    ticket->validity_length = convert_get_short_value(data, data_len, 43, 8);
+    ticket->validity_length_type_group = convert_get_byte_value(data, data_len, 51, 2);
+    ticket->validity_length_group = convert_get_short_value(data, data_len, 53, 8);
+    ticket->validity_area_type = convert_get_byte_value(data, data_len, 61, 2);
+    ticket->validity_area = convert_get_byte_value(data, data_len, 63, 6);
+    ticket->sale_date = en5145_date_to_time(convert_get_short_value(data, data_len, 69, 14));
+    ticket->sale_time = convert_get_byte_value(data, data_len, 83, 5);
+    ticket->ticket_fare = convert_get_short_value(data, data_len, 105, 14);
+    ticket->ticket_fare_group = convert_get_short_value(data, data_len, 119, 14);
+    ticket->group_size = convert_get_byte_value(data, data_len, 133, 6);
+    ticket->extra_zone = convert_get_byte_value(data, data_len, 139, 1);
+    ticket->ext_period_pass_validity_area = convert_get_byte_value(data, data_len, 140, 6);
+    ticket->ext_product_code = convert_get_short_value(data, data_len, 146, 14);
+    ticket->ext1_validity_area = convert_get_byte_value(data, data_len, 160, 6);
+    ticket->ext1_fare = convert_get_short_value(data, data_len, 166, 14);
+    ticket->ext2_validity_area = convert_get_byte_value(data, data_len, 180, 6);
+    ticket->ext2_fare = convert_get_short_value(data, data_len, 186, 14);
+    ticket->sale_status = convert_get_byte_value(data, data_len, 200, 1);
+    ticket->validity_start_date = en5145_datetime_to_time(
+                                      convert_get_short_value(data, data_len, 205, 14),
+                                      convert_get_short_value(data, data_len, 219, 11)
+                                  );
+    ticket->validity_end_date = en5145_datetime_to_time(
+                                    convert_get_short_value(data, data_len, 230, 14),
+                                    convert_get_short_value(data, data_len, 244, 11)
+                                );
+
+    int group_end_days = convert_get_short_value(data, data_len, 255, 14);
+    int group_end_minutes = convert_get_short_value(data, data_len, 269, 11);
+    if (group_end_days > 0 && group_end_minutes > 0) {
+        ticket->validity_end_date_group = en5145_datetime_to_time(group_end_days, group_end_minutes);
+        ticket->has_validity_end_date_group = true;
+    }
+
+    ticket->validity_status = convert_get_byte_value(data, data_len, 285, 1);
+    ticket->boarding_date = en5145_datetime_to_time(
+                                convert_get_short_value(data, data_len, 286, 14),
+                                convert_get_short_value(data, data_len, 300, 11)
+                            );
+    ticket->boarding_vehicle = convert_get_short_value(data, data_len, 311, 14);
+    ticket->boarding_location_num_type = convert_get_byte_value(data, data_len, 325, 2);
+    ticket->boarding_location_num = convert_get_short_value(data, data_len, 327, 14);
+    ticket->boarding_direction = convert_get_byte_value(data, data_len, 341, 1);
+    ticket->boarding_area = convert_get_byte_value(data, data_len, 344, 6);
+}
+
+static hrt_eticket_t *hrt_eticket_create(const uint8_t *data, size_t data_len, bool encrypted, int version) {
+    if (!data) return NULL;
+
+    hrt_eticket_t *ticket = calloc(1, sizeof(hrt_eticket_t));
+    if (!ticket) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return NULL;
+    }
+
+    if (version == 2) {
+        hrt_eticket_parse_v2(ticket, data, data_len);
+    } else {
+        hrt_eticket_parse_v1(ticket, data, data_len, encrypted);
+    }
+
+    return ticket;
+}
+
 void hrt_travelcard_free(hrt_travel_card_t *card) {
     if (!card) return;
 
@@ -190,12 +313,7 @@ void hrt_travelcard_free(hrt_travel_card_t *card) {
     free(card->application_instance_id);
     free(card->history_fields);
 
-    // TODO: Implement value tickets
-    // if (card->value_ticket) {
-    //     eticket_free(card->value_ticket);
-    //     card->value_ticket = NULL;
-    // }
-
+    free(card->value_ticket);
     memset(card, 0, sizeof(*card));
 }
 
@@ -557,8 +675,143 @@ void hrt_history_set_transfer_end_date(hrt_history_t *history, time_t datetime) 
     if (history) history->transfer_end_date = datetime;
 }
 
-// TODO: Implement value tickets
-// HRT_eTicket *eticket_create(const uint8_t *data, size_t data_len, int is_encrypted, int version);
+bool hrt_eticket_is_defined(const hrt_eticket_t *ticket) {
+    return ticket &&
+           (ticket->product_code > 0 ||
+            ticket->product_code_group > 0 ||
+            ticket->ticket_fare > 0 ||
+            ticket->ticket_fare_group > 0 ||
+            ticket->group_size > 0 ||
+            ticket->boarding_vehicle > 0);
+}
+
+int hrt_eticket_get_product_code(const hrt_eticket_t *ticket) {
+    if (!ticket) return 0;
+    return ticket->product_code_group > 0 ? ticket->product_code_group : ticket->product_code;
+}
+
+int hrt_eticket_get_validity_length_type(const hrt_eticket_t *ticket) {
+    if (!ticket) return 0;
+    return ticket->validity_length_type_group > 0 ? ticket->validity_length_type_group : ticket->validity_length_type;
+}
+
+int hrt_eticket_get_validity_length(const hrt_eticket_t *ticket) {
+    if (!ticket) return 0;
+    return ticket->validity_length_group > 0 ? ticket->validity_length_group : ticket->validity_length;
+}
+
+int hrt_eticket_get_validity_area_type(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->validity_area_type : 0;
+}
+
+int hrt_eticket_get_validity_area(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->validity_area : 0;
+}
+
+time_t hrt_eticket_get_sale_date(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->sale_date : (time_t)0;
+}
+
+int hrt_eticket_get_sale_time(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->sale_time : 0;
+}
+
+int hrt_eticket_get_ticket_fare(const hrt_eticket_t *ticket) {
+    if (!ticket) return 0;
+    if (ticket->ticket_fare > 0) return ticket->ticket_fare;
+    return ticket->ticket_fare_group > 0 ? ticket->ticket_fare_group : 0;
+}
+
+int hrt_eticket_get_right_fare(const hrt_eticket_t *ticket) {
+    if (!ticket) return 0;
+
+    int fare = ticket->ticket_fare;
+    int group_size = ticket->group_size;
+    if ((ticket->extra_zone == 1 || fare > 0) && group_size > 1) {
+        group_size--;
+    }
+    return fare + (ticket->ticket_fare_group * group_size);
+}
+
+int hrt_eticket_get_total_fare(const hrt_eticket_t *ticket) {
+    if (!ticket) return 0;
+
+    int fare = hrt_eticket_get_right_fare(ticket);
+    return ticket->extra_zone == 1 ? fare + ticket->ext1_fare + ticket->ext2_fare : fare;
+}
+
+int hrt_eticket_get_group_size(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->group_size : 0;
+}
+
+int hrt_eticket_get_sale_status(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->sale_status : 0;
+}
+
+time_t hrt_eticket_get_validity_start_date(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->validity_start_date : (time_t)0;
+}
+
+time_t hrt_eticket_get_validity_end_date(const hrt_eticket_t *ticket) {
+    if (!ticket) return (time_t)0;
+    return ticket->has_validity_end_date_group ? ticket->validity_end_date_group : ticket->validity_end_date;
+}
+
+int hrt_eticket_get_validity_status(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->validity_status : 0;
+}
+
+time_t hrt_eticket_get_boarding_date(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->boarding_date : (time_t)0;
+}
+
+int hrt_eticket_get_boarding_vehicle(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->boarding_vehicle : 0;
+}
+
+int hrt_eticket_get_boarding_location_num_type(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->boarding_location_num_type : 0;
+}
+
+int hrt_eticket_get_boarding_location_num(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->boarding_location_num : 0;
+}
+
+int hrt_eticket_get_boarding_direction(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->boarding_direction : 0;
+}
+
+int hrt_eticket_get_boarding_area(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->boarding_area : 0;
+}
+
+int hrt_eticket_get_extra_zone(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->extra_zone : 0;
+}
+
+int hrt_eticket_get_ext_period_pass_validity_area(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->ext_period_pass_validity_area : 0;
+}
+
+int hrt_eticket_get_ext_product_code(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->ext_product_code : 0;
+}
+
+int hrt_eticket_get_ext1_validity_area(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->ext1_validity_area : 0;
+}
+
+int hrt_eticket_get_ext1_fare(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->ext1_fare : 0;
+}
+
+int hrt_eticket_get_ext2_validity_area(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->ext2_validity_area : 0;
+}
+
+int hrt_eticket_get_ext2_fare(const hrt_eticket_t *ticket) {
+    return ticket ? ticket->ext2_fare : 0;
+}
 
 // Getter methods for API simplicity
 int hrt_travelcard_get_application_version(const hrt_travel_card_t *card) {
@@ -768,12 +1021,18 @@ bool hrt_travelcard_set_eticket(hrt_travel_card_t *card, const uint8_t *buf, siz
     if (card->version == 2) {
         if (!card->eticket_data_v2 || len < HRT_ETICKET_V2_LEN) return false;
         memcpy(card->eticket_data_v2, buf, HRT_ETICKET_V2_LEN);
-        return true;
+
+        free(card->value_ticket);
+        card->value_ticket = hrt_eticket_create(card->eticket_data_v2, HRT_ETICKET_V2_LEN, false, 2);
+        return card->value_ticket != NULL;
     }
 
     if (!card->eticket_data || len < HRT_ETICKET_LEN) return false;
     memcpy(card->eticket_data, buf, HRT_ETICKET_LEN);
-    return true;
+
+    free(card->value_ticket);
+    card->value_ticket = hrt_eticket_create(card->eticket_data, HRT_ETICKET_LEN, false, 1);
+    return card->value_ticket != NULL;
 }
 
 bool hrt_travelcard_set_history(hrt_travel_card_t *card, const uint8_t *buf, size_t len) {

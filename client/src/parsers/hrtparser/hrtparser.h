@@ -33,8 +33,42 @@
 #define MSB(b)  ((b) & 0x80)
 #define LSB7(b) ((b) & 0x7F)
 
-// TODO: Implement
-typedef struct hrt_eticket_t hrt_eticket_t;
+typedef struct {
+    int    boarding_area;
+    time_t boarding_date;
+    int    boarding_direction;
+    int    boarding_location_num;
+    int    boarding_location_num_type;
+    int    boarding_vehicle;
+    int    child;
+    int    ext1_fare;
+    int    ext1_validity_area;
+    int    ext2_fare;
+    int    ext2_validity_area;
+    int    ext_period_pass_validity_area;
+    int    ext_product_code;
+    int    extra_zone;
+    int    group_size;
+    int    language_code;
+    int    product_code;
+    int    product_code_group;
+    time_t sale_date;
+    int    sale_status;
+    int    sale_time;
+    int    ticket_fare;
+    int    ticket_fare_group;
+    int    validity_area;
+    int    validity_area_type;
+    time_t validity_end_date;
+    time_t validity_end_date_group;
+    bool   has_validity_end_date_group;
+    int    validity_length;
+    int    validity_length_group;
+    int    validity_length_type;
+    int    validity_length_type_group;
+    time_t validity_start_date;
+    int    validity_status;
+} hrt_eticket_t;
 
 typedef struct {
     int    group_size;
@@ -162,6 +196,37 @@ void hrt_history_set_transaction_type(hrt_history_t *history, int type);
 void hrt_history_set_group_size(hrt_history_t *history, int group_size);
 void hrt_history_set_price(hrt_history_t *history, int price);
 void hrt_history_set_transfer_end_date(hrt_history_t *history, time_t datetime);
+
+// E-ticket Functions
+bool   hrt_eticket_is_defined(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_product_code(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_validity_length_type(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_validity_length(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_validity_area_type(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_validity_area(const hrt_eticket_t *ticket);
+time_t hrt_eticket_get_sale_date(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_sale_time(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_ticket_fare(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_right_fare(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_total_fare(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_group_size(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_sale_status(const hrt_eticket_t *ticket);
+time_t hrt_eticket_get_validity_start_date(const hrt_eticket_t *ticket);
+time_t hrt_eticket_get_validity_end_date(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_validity_status(const hrt_eticket_t *ticket);
+time_t hrt_eticket_get_boarding_date(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_boarding_vehicle(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_boarding_location_num_type(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_boarding_location_num(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_boarding_direction(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_boarding_area(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_extra_zone(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_ext_period_pass_validity_area(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_ext_product_code(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_ext1_validity_area(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_ext1_fare(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_ext2_validity_area(const hrt_eticket_t *ticket);
+int    hrt_eticket_get_ext2_fare(const hrt_eticket_t *ticket);
 
 // Parsing Functions
 void hrt_read_application_info(hrt_travel_card_t *card, const uint8_t *data, size_t data_len);
