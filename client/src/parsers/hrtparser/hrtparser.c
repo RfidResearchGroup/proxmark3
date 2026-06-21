@@ -133,6 +133,33 @@ int convert_get_short_value(
     return (int)((value >> shift) & mask);
 }
 
+int convert_get_int_value(
+    const uint8_t *data,
+    size_t data_len,
+    int bit_offset,
+    int bit_length
+) {
+    if (!data || bit_length <= 0) return 0;
+
+    if (bit_length > 25) bit_length = 25;
+
+    int byte_idx = bit_offset / 8;
+    int bit_idx  = bit_offset % 8;
+
+    if ((size_t)(byte_idx + 3) >= data_len) return 0;
+
+    uint32_t value =
+        ((uint32_t)data[byte_idx]     << 24) |
+        ((uint32_t)data[byte_idx + 1] << 16) |
+        ((uint32_t)data[byte_idx + 2] <<  8) |
+        ((uint32_t)data[byte_idx + 3]);
+
+    uint32_t mask = (1U << bit_length) - 1U;
+    int shift = (32 - bit_idx) - bit_length;
+
+    return (int)((value >> shift) & mask);
+}
+
 static time_t hrt_apply_local_offset(time_t time) {
     struct tm local_time = {0};
     struct tm utc_time = {0};
@@ -615,7 +642,7 @@ void hrt_read_period_pass_v2(hrt_travel_card_t *card, const uint8_t *data, size_
             convert_get_short_value(data, data_len, 141, 11)
         );
     card->loaded_period_length = convert_get_short_value(data, data_len, 152, 9);
-    card->loaded_period_price = convert_get_short_value(data, data_len, 161, 20);
+    card->loaded_period_price = convert_get_int_value(data, data_len, 161, 20);
     card->period_loading_organization = convert_get_short_value(data, data_len, 181, 14);
     card->period_loading_device_number = convert_get_short_value(data, data_len, 195, 13);
 

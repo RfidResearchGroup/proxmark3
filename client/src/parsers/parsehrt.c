@@ -170,6 +170,17 @@ static void hrt_print_time(const char *label, time_t value) {
     PrintAndLogEx(SUCCESS, "%s " _GREEN_("%s"), label, buf);
 }
 
+static bool hrt_has_loaded_period_info(const hrt_travel_card_t *card) {
+    if (card == NULL) return false;
+
+    return hrt_travelcard_get_loaded_period_product(card) > 0 ||
+           hrt_travelcard_get_loaded_period_length(card) > 0 ||
+           hrt_travelcard_get_loaded_period_price(card) > 0 ||
+           hrt_travelcard_get_period_loading_date(card) != (time_t)0 ||
+           hrt_travelcard_get_period_loading_organization(card) > 0 ||
+           hrt_travelcard_get_period_loading_device_number(card) > 0;
+}
+
 static void hrt_print_card(const hrt_travel_card_t *card) {
     if (card == NULL) return;
 
@@ -217,7 +228,12 @@ static void hrt_print_card(const hrt_travel_card_t *card) {
     }
     hrt_print_time("   Start date.............", hrt_travelcard_get_period_start_date1(card));
     hrt_print_time("   End date...............", hrt_travelcard_get_period_end_date1(card));
-    PrintAndLogEx(SUCCESS, "   Season ticket length... " _GREEN_("%d days"), hrt_travelcard_get_period_length1(card));
+    PrintAndLogEx(SUCCESS, "   Length................. " _GREEN_("%d days"), hrt_travelcard_get_period_length1(card));
+
+    if (hrt_has_loaded_period_info(card)) {
+        PrintAndLogEx(SUCCESS, "   Organization........... " _GREEN_("%d"), hrt_travelcard_get_period_loading_organization(card));
+        PrintAndLogEx(SUCCESS, "   Device number.......... " _GREEN_("%d"), hrt_travelcard_get_period_loading_device_number(card));
+    }
 
     if (hrt_eticket_is_defined(value_ticket)) {
         char fare_buf[32] = {0};

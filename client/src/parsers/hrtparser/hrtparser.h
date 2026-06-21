@@ -161,6 +161,12 @@ int convert_get_byte_value(
     int bit_offset,
     int bit_length
 );
+int convert_get_int_value(
+    const uint8_t *data,
+    size_t data_len,
+    int bit_offset,
+    int bit_length
+);
 int convert_get_short_value(
     const uint8_t *data,
     size_t data_len,
