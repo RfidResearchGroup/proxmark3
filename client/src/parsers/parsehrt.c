@@ -154,19 +154,26 @@ static bool hrt_read_and_parse_application_info(DesfireContext_t *dctx, hrt_trav
     return application_id != NULL && application_id[0] != '\0';
 }
 
-static void hrt_print_time(const char *label, time_t value) {
-    if (value == (time_t)0) return;
+static bool hrt_format_time(time_t value, char *out, size_t out_len) {
+    if (value == (time_t)0 || out == NULL || out_len == 0) return false;
 
     char buf[32] = {0};
     struct tm tm_value = {0};
 
 #if defined(_WIN32)
-    if (localtime_s(&tm_value, &value) != 0) return;
+    if (localtime_s(&tm_value, &value) != 0) return false;
 #else
-    if (localtime_r(&value, &tm_value) == NULL) return;
+    if (localtime_r(&value, &tm_value) == NULL) return false;
 #endif
 
-    strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm_value);
+    if (strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm_value) == 0) return false;
+    return snprintf(out, out_len, "%s", buf) > 0;
+}
+
+static void hrt_print_time(const char *label, time_t value) {
+    char buf[32] = {0};
+    if (hrt_format_time(value, buf, sizeof(buf)) == false) return;
+
     PrintAndLogEx(SUCCESS, "%s " _GREEN_("%s"), label, buf);
 }
 
@@ -181,6 +188,85 @@ static bool hrt_has_loaded_period_info(const hrt_travel_card_t *card) {
            hrt_travelcard_get_period_loading_device_number(card) > 0;
 }
 
+static void hrt_print_boarding_location(int location_type, int location_num) {
+    if (location_num <= 0) return;
+
+    if (location_type == 1) {
+        PrintAndLogEx(SUCCESS, "   Boarding line.......... " _GREEN_("%d"), location_num);
+    } else if (location_type == 2) {
+        PrintAndLogEx(SUCCESS, "   Boarding train......... " _GREEN_("%d"), location_num);
+    }
+}
+
+static bool hrt_format_value_ticket_zone(const hrt_eticket_t *ticket, char *out, size_t out_len) {
+    if (ticket == NULL || out == NULL || out_len == 0) return false;
+
+    if (hrt_eticket_get_extra_zone(ticket) == 1 && hrt_eticket_get_group_size(ticket) <= 1) {
+        char ext1[32] = {0};
+        char ext2[32] = {0};
+        bool has_ext1 = false;
+        bool has_ext2 = false;
+        int ext1_area = hrt_eticket_get_ext1_validity_area(ticket);
+        int ext2_area = hrt_eticket_get_ext2_validity_area(ticket);
+
+        if (ext1_area != 56) {
+            has_ext1 = hrt_format_area(HRT_AREA_TYPE_ZONE_RANGE, ext1_area, ext1, sizeof(ext1));
+        }
+        if (ext2_area != 56) {
+            has_ext2 = hrt_format_area(HRT_AREA_TYPE_ZONE_RANGE, ext2_area, ext2, sizeof(ext2));
+        }
+
+        if (has_ext1 && has_ext2) {
+            return snprintf(out, out_len, "%s+%s", ext1, ext2) > 0;
+        }
+        if (has_ext1) return snprintf(out, out_len, "%s", ext1) > 0;
+        if (has_ext2) return snprintf(out, out_len, "%s", ext2) > 0;
+    }
+
+    return hrt_format_area(hrt_eticket_get_validity_area_type(ticket),
+                           hrt_eticket_get_validity_area(ticket), out, out_len);
+}
+
+static const char *hrt_history_transaction_type_name(int transaction_type) {
+    return transaction_type == 0 ? "Season ticket" : "Value ticket";
+}
+
+static void hrt_print_history(const hrt_travel_card_t *card) {
+    if (card == NULL) return;
+
+    const hrt_history_t *history = hrt_travelcard_get_history(card);
+    int history_len = hrt_travelcard_get_history_len(card);
+    if (history == NULL || history_len <= 0) return;
+
+    PrintAndLogEx(SUCCESS, "");
+    PrintAndLogEx(SUCCESS, "History records");
+
+    for (int i = history_len - 1; i >= 0; i--) {
+        char transaction_time[32] = {0};
+        char price_buf[32] = {0};
+
+        if (hrt_format_time(history[i].transaction_d_time, transaction_time, sizeof(transaction_time)) == false) {
+            continue;
+        }
+
+        PrintAndLogEx(SUCCESS, "   %s  " _GREEN_("%s"), transaction_time,
+                      hrt_history_transaction_type_name(history[i].transaction_type));
+
+        if (history[i].transaction_type != 0 &&
+            (history[i].group_size > 1 || history[i].price > 0)) {
+            if (history[i].group_size > 1) {
+                PrintAndLogEx(SUCCESS, "      Group size.......... " _GREEN_("%d"), history[i].group_size);
+            }
+            if (history[i].price > 0) {
+                hrt_price_to_string(history[i].price, price_buf, sizeof(price_buf));
+                PrintAndLogEx(SUCCESS, "      Price............... " _GREEN_("%s"), price_buf);
+            }
+        }
+
+        hrt_print_time("      Transfer ends.......", history[i].transfer_end_date);
+    }
+}
+
 static void hrt_print_card(const hrt_travel_card_t *card) {
     if (card == NULL) return;
 
@@ -191,6 +277,7 @@ static void hrt_print_card(const hrt_travel_card_t *card) {
     const char *product_name = hrt_lookup_product_name(product_code);
     int area_type = hrt_travelcard_get_validity_area_type1(card);
     int area = hrt_travelcard_get_validity_area1(card);
+    char boarding_area_buf[64] = {0};
     const hrt_eticket_t *value_ticket = hrt_travelcard_get_value_ticket(card);
 
     hrt_price_to_string(
@@ -229,6 +316,15 @@ static void hrt_print_card(const hrt_travel_card_t *card) {
     hrt_print_time("   Start date.............", hrt_travelcard_get_period_start_date1(card));
     hrt_print_time("   End date...............", hrt_travelcard_get_period_end_date1(card));
     PrintAndLogEx(SUCCESS, "   Length................. " _GREEN_("%d days"), hrt_travelcard_get_period_length1(card));
+    hrt_print_time("   Boarding time..........", hrt_travelcard_get_boarding_date(card));
+    hrt_print_boarding_location(hrt_travelcard_get_boarding_location_num_type(card),
+                                hrt_travelcard_get_boarding_location_num(card));
+
+    if (hrt_format_area(hrt_travelcard_get_boarding_area_type(card),
+                        hrt_travelcard_get_boarding_area(card),
+                        boarding_area_buf, sizeof(boarding_area_buf))) {
+        PrintAndLogEx(SUCCESS, "   Boarding zone.......... " _GREEN_("%s"), boarding_area_buf);
+    }
 
     if (hrt_has_loaded_period_info(card)) {
         PrintAndLogEx(SUCCESS, "   Organization........... " _GREEN_("%d"), hrt_travelcard_get_period_loading_organization(card));
@@ -240,8 +336,6 @@ static void hrt_print_card(const hrt_travel_card_t *card) {
         char value_area_buf[64] = {0};
         int value_product_code = hrt_eticket_get_product_code(value_ticket);
         const char *value_product_name = hrt_lookup_product_name(value_product_code);
-        int value_area_type = hrt_eticket_get_validity_area_type(value_ticket);
-        int value_area = hrt_eticket_get_validity_area(value_ticket);
 
         hrt_price_to_string(hrt_eticket_get_total_fare(value_ticket), fare_buf, sizeof(fare_buf));
 
@@ -254,10 +348,10 @@ static void hrt_print_card(const hrt_travel_card_t *card) {
             PrintAndLogEx(SUCCESS, "   Product code........... " _GREEN_("%d (unknown)"), value_product_code);
         }
 
-        if (hrt_format_area(value_area_type, value_area, value_area_buf, sizeof(value_area_buf))) {
-            PrintAndLogEx(SUCCESS, "   Area................... " _GREEN_("%s"), value_area_buf);
+        if (hrt_format_value_ticket_zone(value_ticket, value_area_buf, sizeof(value_area_buf))) {
+            PrintAndLogEx(SUCCESS, "   Zone................... " _GREEN_("%s"), value_area_buf);
         } else {
-            PrintAndLogEx(SUCCESS, "   Area................... " _GREEN_("%d (type %d)"), value_area, value_area_type);
+            PrintAndLogEx(SUCCESS, "   Zone................... " _GREEN_("unknown"));
         }
 
         PrintAndLogEx(SUCCESS, "   Fare................... " _GREEN_("%s"), fare_buf);
@@ -266,7 +360,11 @@ static void hrt_print_card(const hrt_travel_card_t *card) {
         hrt_print_time("   Valid until............", hrt_eticket_get_validity_end_date(value_ticket));
         hrt_print_time("   Boarding time..........", hrt_eticket_get_boarding_date(value_ticket));
         PrintAndLogEx(SUCCESS, "   Boarding vehicle....... " _GREEN_("%d"), hrt_eticket_get_boarding_vehicle(value_ticket));
+        hrt_print_boarding_location(hrt_eticket_get_boarding_location_num_type(value_ticket),
+                                    hrt_eticket_get_boarding_location_num(value_ticket));
     }
+
+    hrt_print_history(card);
 }
 
 bool is_valid_hrt_card(DesfireContext_t *dctx, const uint8_t *aidbuf, size_t aidbuflen) {

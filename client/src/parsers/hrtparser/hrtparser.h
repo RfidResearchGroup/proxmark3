@@ -240,8 +240,8 @@ void hrt_read_control_info(hrt_travel_card_t *card, const uint8_t *data, size_t 
 void hrt_read_period_pass(hrt_travel_card_t *card, const uint8_t *data, size_t data_len);
 void hrt_read_period_pass_v2(hrt_travel_card_t *card, const uint8_t *data, size_t data_len);
 void hrt_read_stored_value(hrt_travel_card_t *card, const uint8_t *data, size_t data_len);
-void hrt_read_history(const uint8_t *data, size_t length);
-void hrt_read_history_v2(const uint8_t *data, size_t length);
+void hrt_read_history(hrt_travel_card_t *card, const uint8_t *data, size_t data_len);
+void hrt_read_history_v2(hrt_travel_card_t *card, const uint8_t *data, size_t data_len);
 
 // Getter Functions
 int        hrt_travelcard_get_application_version(const hrt_travel_card_t *card);

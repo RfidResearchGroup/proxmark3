@@ -49,6 +49,7 @@ static const int64_t MINUTE_IN_MS        = 60000LL;
 #define HRT_ETICKET_LEN                     26
 #define HRT_ETICKET_V2_LEN                  45
 #define HRT_HISTORY_LEN                     96
+#define HRT_HISTORY_RECORD_LEN              12
 #define HRT_HISTORY_RECORDS                  8
 
 int hrt_price_to_string(int cents, char *out, size_t out_len) {
@@ -669,8 +670,95 @@ void hrt_read_stored_value(hrt_travel_card_t *card, const uint8_t *data, size_t 
         ((uint32_t)data[1] << 4);
 }
 
-// void readHistory(const uint8_t *data, size_t length);
-// void readHistory_v2(const uint8_t *data, size_t length);
+void hrt_read_history(hrt_travel_card_t *card, const uint8_t *data, size_t data_len) {
+    if (!card || !data || !card->history_fields) return;
+
+    size_t record_count = data_len / HRT_HISTORY_RECORD_LEN;
+    if (record_count > HRT_HISTORY_RECORDS) {
+        record_count = HRT_HISTORY_RECORDS;
+    }
+
+    memset(card->history_fields, 0, HRT_HISTORY_RECORDS * sizeof(hrt_history_t));
+    card->history_len = 0;
+
+    for (size_t i = 0; i < record_count; i++) {
+        size_t offset = i * HRT_HISTORY_RECORD_LEN;
+
+        if (data[offset + 1] == 0 &&
+            data[offset + 2] == 0 &&
+            data[offset + 3] == 0 &&
+            data[offset + 4] == 0) {
+            continue;
+        }
+
+        hrt_history_t *history = &card->history_fields[card->history_len];
+        hrt_history_init(history);
+
+        history->transaction_type = (data[offset] & 0x80) >> 7;
+
+        uint8_t date_time_byte = data[offset + 3];
+        int days = ((date_time_byte & 0x3F) << 8) | data[offset + 4];
+        int minutes = ((data[offset + 1] & 0x01) << 10) |
+                      ((uint16_t)data[offset + 2] << 2) |
+                      ((date_time_byte & 0xC0) >> 6);
+
+        int transfer_end_minutes = ((uint16_t)data[offset + 5] << 3) |
+                                   ((data[offset + 6] & 0xE0) >> 5);
+
+        if (transfer_end_minutes < minutes) {
+            days--;
+        }
+
+        history->transaction_d_time = en5145_datetime_to_time(days, minutes);
+        history->price = ((uint16_t)data[offset + 7] << 1) |
+                         ((data[offset + 6] & 0x1F) << 9) |
+                         ((data[offset + 8] & 0x80) >> 7);
+        history->group_size = (data[offset + 8] & 0x7C) >> 2;
+
+        card->history_len++;
+    }
+}
+
+void hrt_read_history_v2(hrt_travel_card_t *card, const uint8_t *data, size_t data_len) {
+    if (!card || !data || !card->history_fields) return;
+
+    size_t record_count = data_len / HRT_HISTORY_RECORD_LEN;
+    if (record_count > HRT_HISTORY_RECORDS) {
+        record_count = HRT_HISTORY_RECORDS;
+    }
+
+    memset(card->history_fields, 0, HRT_HISTORY_RECORDS * sizeof(hrt_history_t));
+    card->history_len = 0;
+
+    for (size_t i = 0; i < record_count; i++) {
+        size_t byte_offset = i * HRT_HISTORY_RECORD_LEN;
+
+        if (data[byte_offset + 1] == 0 &&
+            data[byte_offset + 2] == 0 &&
+            data[byte_offset + 3] == 0 &&
+            data[byte_offset + 4] == 0) {
+            continue;
+        }
+
+        int bit_offset = (int)(i * 96);
+        hrt_history_t *history = &card->history_fields[card->history_len];
+        hrt_history_init(history);
+
+        history->transaction_type = convert_get_byte_value(data, data_len, bit_offset, 1);
+        history->transaction_d_time = en5145_datetime_to_time(
+                                          convert_get_short_value(data, data_len, bit_offset + 1, 14),
+                                          convert_get_short_value(data, data_len, bit_offset + 15, 11)
+                                      );
+        history->transfer_end_date = en5145_datetime_to_time(
+                                         convert_get_short_value(data, data_len, bit_offset + 26, 14),
+                                         convert_get_short_value(data, data_len, bit_offset + 40, 11)
+                                     );
+        history->price = convert_get_short_value(data, data_len, bit_offset + 51, 14);
+        history->group_size = convert_get_byte_value(data, data_len, bit_offset + 65, 6);
+
+        card->history_len++;
+    }
+}
 
 void hrt_history_init(hrt_history_t *history) {
     if (!history) return;
@@ -1069,14 +1157,14 @@ bool hrt_travelcard_set_history(hrt_travel_card_t *card, const uint8_t *buf, siz
         if (!card->history_data_v2) return false;
         if (len > HRT_HISTORY_LEN) len = HRT_HISTORY_LEN;
         memcpy(card->history_data_v2, buf, len);
-        // TODO: readHistory_v2(card->historyData_v2, len);
+        hrt_read_history_v2(card, card->history_data_v2, len);
         return true;
     }
 
     if (!card->history_data) return false;
     if (len > HRT_HISTORY_LEN) len = HRT_HISTORY_LEN;
     memcpy(card->history_data, buf, len);
-    // TODO: readHistory(card->historyData, len);
+    hrt_read_history(card, card->history_data, len);
     return true;
 }
 
