@@ -312,7 +312,7 @@ static const felica_sim_node_record_t *felica_sim_find_node(const felica_sim_mod
 }
 
 static const felica_sim_block_record_t *felica_sim_find_block(const felica_sim_model_header_t *hdr, const uint8_t *model,
-                                                              const felica_sim_node_record_t *node, uint16_t block_number) {
+        const felica_sim_node_record_t *node, uint16_t block_number) {
     const felica_sim_block_record_t *blocks = felica_sim_blocks(hdr, model);
     const uint16_t end = node->first_block + node->block_count;
     for (uint16_t i = node->first_block; i < end; i++) {
@@ -467,8 +467,8 @@ static uint16_t felica_sim_process_reset_mode(const uint8_t *req, uint16_t req_l
 }
 
 static uint16_t felica_sim_process_request_specification_version(const felica_sim_model_header_t *hdr, const uint8_t *model,
-                                                                 const uint8_t *req, uint16_t req_len,
-                                                                 const felica_sim_system_record_t *active_system, uint8_t *resp) {
+        const uint8_t *req, uint16_t req_len,
+        const felica_sim_system_record_t *active_system, uint8_t *resp) {
     const uint8_t *specification_version = felica_sim_specification_version_data(hdr, model);
     if (specification_version == NULL ||
             req_len != 12 ||
@@ -508,8 +508,8 @@ static uint16_t felica_sim_process_get_product_information(const felica_sim_mode
 }
 
 static uint16_t felica_sim_process_get_container_issue_information(const felica_sim_model_header_t *hdr, const uint8_t *model,
-                                                                   const uint8_t *req, uint16_t req_len,
-                                                                   const felica_sim_system_record_t *active_system, uint8_t *resp) {
+        const uint8_t *req, uint16_t req_len,
+        const felica_sim_system_record_t *active_system, uint8_t *resp) {
     const uint8_t *container_issue_information = felica_sim_container_issue_information_data(hdr, model);
     if (container_issue_information == NULL ||
             req_len != 12 ||
