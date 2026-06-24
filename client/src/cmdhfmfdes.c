@@ -26,12 +26,15 @@
 #include "commonutil.h"             // ARRAYLEN
 #include "cmdparser.h"              // command_t
 #include "comms.h"
+#include "mifare/desfirecrypto.h"
+#include "pm3_cmd.h"
 #include "ui.h"
 #include "cmdhf14a.h"
 #include "aes.h"
 #include "crypto/libpcrypto.h"
 #include "crypto/duoxcrypto.h"
 #include "protocols.h"
+#include "parsers/parsehrt.h"
 #include "cmdtrace.h"
 #include "cliparser.h"
 #include "iso7816/apduinfo.h"       // APDU manipulation / errorcodes
@@ -1128,6 +1131,10 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         keys 12,13,14,15 R
 
     */
+
+    if (is_valid_hrt_card(&dctx, aidbuf, aidbuflen)) {
+        (void)hrt_parser_parse(&dctx);
+    }
 
     DropField();
     return PM3_SUCCESS;
