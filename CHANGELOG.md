@@ -3,7 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Add support for Innovatron protocol detection to `hf 14b info` (@kormax)
+- Added standalone mode `HF_DOEGOX_COMMIT`: DESFire suspended commit without relay (@doegox)
+- Added support for Innovatron protocol detection to `hf 14b info` (@kormax)
 - Improved `lf cotag reader` and `lf cotag demod`: Reimplementation and enhancement of proxmark3 COTAG support
 - Added `hf felica sim` command (@kormax)
 - Added `mad read`, `mad write`, `mad verify`, `mad decode`, `mad encode` commands with typed struct MAD API (@AlxCzl)

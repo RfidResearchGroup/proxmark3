@@ -117,6 +117,10 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_HF_DOEGOX_AUTH0,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_doegox_auth0.c
 endif
+# WITH_STANDALONE_HF_DOEGOX_COMMIT
+ifneq (,$(findstring WITH_STANDALONE_HF_DOEGOX_COMMIT,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_doegox_commit.c
+endif
 # WITH_STANDALONE_HF_ICECLASS
 ifneq (,$(findstring WITH_STANDALONE_HF_ICECLASS,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_iceclass.c

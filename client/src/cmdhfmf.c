@@ -8564,7 +8564,7 @@ static int CmdHF14AMfView(const char *Cmd) {
     }
 
     const mad1_sector_t *vigik_s0 = (bytes_read >= sizeof(mad1_sector_t))
-                                   ? (const mad1_sector_t *)dump : NULL;
+                                    ? (const mad1_sector_t *)dump : NULL;
 
     int sector = vigik_s0 ? DetectHID(vigik_s0, 0x4910) : -1;
     if (sector > -1) {

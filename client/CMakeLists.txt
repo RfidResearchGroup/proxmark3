@@ -23,8 +23,8 @@
 #  On ProxSpace 3.4:
 #    cmake -G"MSYS Makefiles" ..
 #  On Proxspace 3.3 or less, you need to install cmake:
-#    pacman -S mingw-w64-x86_64-cmake
-#    /mingw64/bin/cmake -G"MSYS Makefiles" ..
+#    pacman -S mingw-w64-ucrt-x86_64-cmake
+#    /ucrt64/bin/cmake -G"MSYS Makefiles" ..
 #
 # Android cross-compilation: (ANDROID_ABI=arm64-v8a for a 64b version)
 # cmake \

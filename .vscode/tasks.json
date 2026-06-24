@@ -6,8 +6,8 @@
         "options": {
             "cwd": "${workspaceFolder}",
             "env": {
-                "PATH": "${workspaceFolder}/../../msys2/mingw64/bin;${workspaceFolder}/../../msys2/usr/local/bin;${workspaceFolder}/../../msys2/usr/bin;${workspaceFolder}/../../msys2/bin",
-                "MSYSTEM": "MINGW64"
+                "PATH": "${workspaceFolder}/../../msys2/ucrt64/bin;${workspaceFolder}/../../msys2/usr/local/bin;${workspaceFolder}/../../msys2/usr/bin;${workspaceFolder}/../../msys2/bin",
+                "MSYSTEM": "UCRT64"
             }
         }
     },

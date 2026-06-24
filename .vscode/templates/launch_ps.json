@@ -6,8 +6,8 @@
 	"options": {
         "cwd": "${workspaceFolder}",
         "env": {
-            "PATH": "${workspaceFolder}/../../msys2/mingw64/bin;${workspaceFolder}/../../msys2/usr/local/bin;${workspaceFolder}/../../msys2/usr/bin;${workspaceFolder}/../../msys2/bin",
-            "MSYSTEM": "MINGW64"
+            "PATH": "${workspaceFolder}/../../msys2/ucrt64/bin;${workspaceFolder}/../../msys2/usr/local/bin;${workspaceFolder}/../../msys2/usr/bin;${workspaceFolder}/../../msys2/bin",
+            "MSYSTEM": "UCRT64"
         }
     },
     "configurations": [
@@ -29,7 +29,7 @@
                 }
             ],
             "preLaunchTask": "client: Debug: clean & make",
-            "miDebuggerPath": "${workspaceFolder}/../../msys2/mingw64/bin/gdb.exe"
+            "miDebuggerPath": "${workspaceFolder}/../../msys2/ucrt64/bin/gdb.exe"
         },{
             "name": "Firmware: (J-Link) Build & Launch",
             "type": "cortex-debug",
@@ -43,7 +43,7 @@
             "interface": "jtag",
             "serialNumber": "", //If you have more than one J-Link probe, add the serial number here.
             "runToMain": false,
-            "armToolchainPath": "${workspaceFolder}/../../msys2/mingw64/bin"
+            "armToolchainPath": "${workspaceFolder}/../../msys2/ucrt64/bin"
         }
     ]
 }

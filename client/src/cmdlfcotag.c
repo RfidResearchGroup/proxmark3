@@ -458,7 +458,7 @@ static int CmdCOTAGReader(const char *Cmd) {
     CLIParserInit(&ctx, "lf cotag reader",
                   "Read a COTAG tag.\n"
                   " - use " _YELLOW_("`lf config`") _CYAN_(" to set parameters except divisor "
-                    "(which is assumed " STR(LF_COTAG_DIVISOR) " for cotag. Use --divisor to override).\n")
+                                                           "(which is assumed " STR(LF_COTAG_DIVISOR) " for cotag. Use --divisor to override).\n")
                   _CYAN_(" - use ") _YELLOW_("`data plot`") _CYAN_(" to look at it.\n")
                   _CYAN_(" - use ") _YELLOW_("`lf cotag demod`") _CYAN_(" to try to demodulate it.\n")
                   _CYAN_("If the number of samples is more than the device memory limit (40000 now), ")

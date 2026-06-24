@@ -98,7 +98,9 @@ static uint8_t g_mock_card[MOCK_CARD_SIZE];
 
 static int mock_read_sector(uint8_t sector_no, uint8_t key_type,
                             const uint8_t *key, uint8_t *buf, bool verbose) {
-    (void)key_type; (void)key; (void)verbose;
+    (void)key_type;
+    (void)key;
+    (void)verbose;
     uint8_t first_block = mfFirstBlockOfSector(sector_no);
     uint8_t nblocks = mfNumBlocksPerSector(sector_no);
     uint32_t offset = first_block * 16;
@@ -111,7 +113,9 @@ static int mock_read_sector(uint8_t sector_no, uint8_t key_type,
 
 static int mock_write_sector_data(uint8_t sector_no, uint8_t key_type,
                                   const uint8_t *key, const uint8_t *data, bool verbose) {
-    (void)key_type; (void)key; (void)verbose;
+    (void)key_type;
+    (void)key;
+    (void)verbose;
     uint8_t first_block = mfFirstBlockOfSector(sector_no);
     uint8_t ndata = mfNumBlocksPerSector(sector_no) - 1;
     uint32_t offset = first_block * 16;
