@@ -211,7 +211,7 @@ static int CmdLegicMigrate(const char *Cmd) {
     int dcf_len = 0;
     uint8_t dcf[2] = {0};
     if (arg_get_str(ctx, 2) != NULL) {
-        CLIParamStrToBuf(arg_get_str(ctx, 2), dcf, sizeof(dcf), &dcf_len);
+        CLIParamHexToBuf(arg_get_str(ctx, 2), dcf, sizeof(dcf), &dcf_len);
         if (dcf_len != 2) {
             PrintAndLogEx(WARNING, "DCF must be exactly two bytes");
             CLIParserFree(ctx);
