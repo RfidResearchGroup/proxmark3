@@ -825,7 +825,7 @@ if ((NOT SKIPQT EQUAL 1) AND Qt6_FOUND)
     target_include_directories(proxmark3 PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
-target_compile_options(proxmark3 PUBLIC -Wall -Werror -O3)
+target_compile_options(proxmark3 PUBLIC -Wall -Werror -Wno-missing-braces -O3)
 if (EMBED_READLINE)
     if (NOT SKIPREADLINE EQUAL 1)
         add_dependencies(proxmark3 ncurses readline)
