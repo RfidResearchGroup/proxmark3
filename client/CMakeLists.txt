@@ -508,6 +508,14 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i.86")
     )
 endif()
 
+# Enable AVX 512 support for x64
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
+	set_source_files_properties(
+        src/loclass/cipher_bs_avx512.c
+        PROPERTIES COMPILE_OPTIONS "-mavx512f"
+    )
+endif()
+
 add_custom_command(
     OUTPUT  ${CMAKE_BINARY_DIR}/version_pm3.c
     COMMAND sh ${PM3_ROOT}/tools/mkversion.sh ${CMAKE_BINARY_DIR}/version_pm3.c || ${CMAKE_COMMAND} -E copy ${PM3_ROOT}/common/default_version_pm3.c ${CMAKE_BINARY_DIR}/version_pm3.c
