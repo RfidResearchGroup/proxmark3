@@ -913,10 +913,14 @@ static int CmdHFTopazDump(const char *Cmd) {
         FillFileNameByUID(filename, topaz_tag.uid, "-dump", sizeof(topaz_tag.uid));
     }
 
-    if (topaz_tag.size)
-        pm3_save_dump(filename, (uint8_t *)&topaz_tag, sizeof(topaz_tag_t) + topaz_tag.size, jsfTopaz);
-    else
+    if (topaz_tag.size > TOPAZ_STATIC_MEMORY) {
+        uint8_t mem[TOPAZ_MAX_SIZE];
+        memcpy(mem, topaz_tag.data_blocks, TOPAZ_STATIC_MEMORY);
+        memcpy(mem + TOPAZ_STATIC_MEMORY, topaz_tag.dynamic_memory, topaz_tag.size - TOPAZ_STATIC_MEMORY);
+        pm3_save_dump(filename, mem, topaz_tag.size, jsfTopaz);
+    } else {
         pm3_save_dump(filename, (uint8_t *)&topaz_tag, sizeof(topaz_tag_t), jsfTopaz);
+    }
 
     if (set_dynamic) {
         free(topaz_tag.dynamic_memory);
