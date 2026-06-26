@@ -62,7 +62,7 @@
 // iso14b apdu input frame length
 static uint16_t apdu_frame_length = 0;
 static uint8_t prime_vt_addr = ISO14443B_PRIME_VT_ADDR_DEFAULT;
-static uint8_t prime_com_ra_cmd = ISO14443B_PRIME_COM_RA_START;
+static uint8_t prime_frame_seq = ISO14443B_PRIME_SEQUENCE_START;
 //static uint16_t ats_fsc[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
 static bool apdu_in_framing_enable = true;
 
@@ -70,6 +70,8 @@ static int CmdHelp(const char *Cmd);
 
 static int switch_off_field_14b(void) {
     SetISODEPState(ISODEP_INACTIVE);
+    prime_vt_addr = ISO14443B_PRIME_VT_ADDR_DEFAULT;
+    prime_frame_seq = ISO14443B_PRIME_SEQUENCE_START;
     iso14b_raw_cmd_t packet = {
         .flags = ISO14B_DISCONNECT,
         .timeout = 0,
@@ -770,14 +772,22 @@ static void print_ct_general_info(void *vcard) {
 }
 
 static void print_prime_general_info(const iso14b_prime_card_select_t *card) {
+    const uint8_t vt_card_addr = (card->vt_addr & ISO14443B_PRIME_VT_CARD_ADDR_MASK) >> ISO14443B_PRIME_VT_CARD_ADDR_SHIFT;
+    const uint8_t vt_coupler_addr = card->vt_addr & ISO14443B_PRIME_VT_COUPLER_ADDR_MASK;
+    const bool long_repgen = (card->verlog & ISO14443B_PRIME_VERLOG_LONG_REPGEN) == ISO14443B_PRIME_VERLOG_LONG_REPGEN;
+    const uint8_t software_version = (card->verlog & ISO14443B_PRIME_VERLOG_VERSION_MASK) >> ISO14443B_PRIME_VERLOG_VERSION_SHIFT;
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Type B' / Innovatron") " ---------------------");
-    PrintAndLogEx(SUCCESS, " V&T Ad : %02X", card->vt_addr);
-    PrintAndLogEx(SUCCESS, " Cmd    : %02X (REPGEN)", card->repgen_cmd);
+    PrintAndLogEx(SUCCESS, " V&T Ad : %02X (card %u, coupler %u)", card->vt_addr, vt_card_addr, vt_coupler_addr);
     PrintAndLogEx(SUCCESS, " DIV    : " _GREEN_("%s"), sprint_hex(card->div, sizeof(card->div)));
-    PrintAndLogEx(SUCCESS, " VerLog : %02X", card->verlog);
-    if (card->verlog & 0x80) {
-        PrintAndLogEx(SUCCESS, " Config : %02X", card->config);
+    PrintAndLogEx(SUCCESS, " VerLog : %02X (%s REPGEN, software version %u)",
+                  card->verlog, long_repgen ? "long" : "short", software_version);
+    if (long_repgen) {
+        PrintAndLogEx(SUCCESS, " Config : %02X (WAIT %s, ATR %s)",
+                      card->config,
+                      (card->config & ISO14443B_PRIME_CONFIG_WAIT_SUPPORTED) ? "supported" : "not indicated",
+                      (card->config & ISO14443B_PRIME_CONFIG_ATR_PRESENT) ? "present" : "absent");
     }
     if (card->atr_len) {
         PrintAndLogEx(SUCCESS, " ATR    : %s", sprint_hex(card->atr, card->atr_len));
@@ -1382,7 +1392,7 @@ int select_card_14443b_prime(bool disconnect, iso14b_prime_card_select_t *card, 
             }
 
             prime_vt_addr = selected.vt_addr;
-            prime_com_ra_cmd = ISO14443B_PRIME_COM_RA_START;
+            prime_frame_seq = ISO14443B_PRIME_SEQUENCE_START;
             SetISODEPState(disconnect ? ISODEP_INACTIVE : ISODEP_NFCB_PRIME);
             if (card) {
                 *card = selected;
@@ -2607,8 +2617,8 @@ int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field,
     return PM3_SUCCESS;
 }
 
-static uint8_t next_prime_com_ra_cmd(uint8_t cmd) {
-    return (cmd + 0x02) & 0x0F;
+static uint8_t next_prime_frame_seq(uint8_t seq) {
+    return seq >= ISO14443B_PRIME_SEQUENCE_END ? ISO14443B_PRIME_SEQUENCE_START : seq + 1;
 }
 
 int exchange_14b_prime_apdu(uint8_t *datain, int datainlen, bool activate_field,
@@ -2634,7 +2644,7 @@ int exchange_14b_prime_apdu(uint8_t *datain, int datainlen, bool activate_field,
     }
 
     frame[0] = prime_vt_addr;
-    frame[1] = prime_com_ra_cmd;
+    frame[1] = ISO14443B_PRIME_CMD_COM_R(prime_frame_seq);
     frame[2] = (uint8_t)datainlen + 1;
     if (datainlen > 0) {
         memcpy(frame + 3, datain, datainlen);
@@ -2692,7 +2702,7 @@ int exchange_14b_prime_apdu(uint8_t *datain, int datainlen, bool activate_field,
     }
 
     const uint8_t rx_len = rx[2];
-    if (rx[0] != prime_vt_addr || (rx[1] & 0x01) || rx_len == 0 || resp.length < (uint16_t)rx_len + 4) {
+    if (rx[0] != prime_vt_addr || rx[1] != ISO14443B_PRIME_CMD_REC(prime_frame_seq) || rx_len == 0 || resp.length < (uint16_t)rx_len + 4) {
         if (leave_signal_on == false) {
             switch_off_field_14b();
         }
@@ -2710,7 +2720,7 @@ int exchange_14b_prime_apdu(uint8_t *datain, int datainlen, bool activate_field,
 
     memcpy(dataout, rx + 3, apdu_len);
     *dataoutlen = apdu_len;
-    prime_com_ra_cmd = next_prime_com_ra_cmd(prime_com_ra_cmd);
+    prime_frame_seq = next_prime_frame_seq(prime_frame_seq);
 
     if (leave_signal_on == false) {
         switch_off_field_14b();

@@ -1925,19 +1925,14 @@ int iso14443b_select_srx_card(iso14b_card_select_t *card) {
     return PM3_SUCCESS;
 }
 
-/**
- * Type B' / Innovatron APGEN.
- */
 static int iso14443b_select_prime_card(iso14b_prime_card_select_t *card) {
     uint8_t apgen[] = {
         ISO14443B_PRIME_VT_ADDR_DEFAULT,
         ISO14443B_PRIME_CMD_APGEN,
-        // Seems to affect time slots / response chance:
-        //   0x3f      card responds every time
-        //   0x3e-0x00 reduced success rate
-        //   0x40-0xff card does not respond
-        0x3f,
-        ISO14443B_PRIME_REQUEST_EXTENDED_REPGEN,
+        // OccuPar 0x3F is the default value used by most readers in real installations.
+        ISO14443B_PRIME_OCCUPAR_DEFAULT,
+        // APGEN Config bit 7 requests the long REPGEN form with CONFIG/ATR.
+        ISO14443B_PRIME_APGEN_CONFIG_REQUEST_ATR,
         0x00,
         0x00
     };
@@ -1976,9 +1971,9 @@ static int iso14443b_select_prime_card(iso14b_prime_card_select_t *card) {
         card->verlog = r_repgen[6];
 
         uint16_t offset = 7;
-        if ((card->verlog & 0x80) && repgen_len > offset) {
+        if ((card->verlog & ISO14443B_PRIME_VERLOG_LONG_REPGEN) && repgen_len > offset) {
             card->config = r_repgen[offset++];
-            if ((card->config & 0x40) && repgen_len > offset) {
+            if ((card->config & ISO14443B_PRIME_CONFIG_ATR_PRESENT) && repgen_len > offset) {
                 uint16_t atr_len = repgen_len - offset;
                 if (atr_len >= 2 && r_repgen[repgen_len - 2] == 0x90 && r_repgen[repgen_len - 1] == 0x00) {
                     atr_len -= 2;
