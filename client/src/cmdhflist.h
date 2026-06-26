@@ -57,7 +57,7 @@ void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
 void annotateCalypso(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
-void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
 void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
 void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 const char *mfpGetAnnotationForCode(uint8_t code);
