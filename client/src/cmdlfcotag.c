@@ -428,6 +428,10 @@ end:
 
 int demodCOTAG(bool verbose, int clock, int threshold) {
     int clk = (clock > 0) ? clock : LF_COTAG_CLOCK;
+    if (clk < 32) {
+        PrintAndLogEx(FAILED, "custom clock must be >= 32, got " _RED_("%d"), clk);
+        return PM3_EINVARG;
+    }
     return demod_cotag(g_GraphBuffer, (int)g_GraphTraceLen, clk, -1, threshold, verbose);
 }
 
