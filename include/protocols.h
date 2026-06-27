@@ -331,38 +331,77 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 /*
  * Type B' / Innovatron frame format.
  *
- *   Byte 0: V&T address. Public docs and traces label this "V&T Ad".
- *           0x01 is the default address observed in APGEN, REPGEN,
- *           ATTRIB, COM_RA, and DISC frames.
- *           Observed cards respond to any value from 0x00 to 0xFF, and
- *           echo that same address in the response.
+ * Byte 0 is V&T Ad. The high nibble is the card/tag address and the low
+ * nibble is the coupler/validator address. APGEN uses card address 0;
  *
- *   Byte 1: payload type / command.
+ * APGEN:  [V&T Ad, 0B, OccuPar] or [V&T Ad, 0B, OccuPar, Config]
+ * REPGEN: [V&T Ad, 07, DIV(4), VERLOG] or
+ *         [V&T Ad, 07, DIV(4), VERLOG, CONFIG, ATR/application bytes...]
+ * ATTRIB: [V&T Ad, 0F, DIV(4)] -> RR
+ * DISC:   [V&T Ad, 03] -> RR
+ * RR:     [V&T Ad, 01]
  *
- * Primary commands:
- *   0x0B APGEN  "Appel General"; acts as the wake-up command.
- *   0x07 REPGEN  response to APGEN.
- *   0x0F ATTRIB  attribute / activation command.
- *   0x03 DISC    disconnect.
+ * Data exchange commands:
+ *   family | (seq << 1), with bit 0 clear and seq carried in bits 1..3.
+ *   COM_RA C2..CE allows assigning card address and performing APDU exchange by DIV.
+ *   COM_R  02..0E is the normal APDU exchange command, relying on card address only.
+ *   REC    42..4E is the card response to COM_RA/COM_R.
+ *   Public PICS rows list seq 1..7.
  *
- * COM_RA frames:
- *   COM_RA uses the even-valued payload type bytes. Bit 0 is clear; bits 1..3
- *   are the rolling frame counter. The resulting byte advances by 0x02 for
- *   each exchange and wraps in the low nibble:
+ * Byte 2 in data frames is LNG. LNG includes byte 2 itself, so the APDU/R-APDU
+ * byte count is LNG - 1. In COM_RA the trailing DIV is outside LNG.
  *
- *     04 -> 06 -> 08 -> 0A -> 0C -> 0E -> 00 -> 02 -> 04 ...
- *
- *   Byte 2 is the COM_RA length byte. The length includes byte 2 itself, so
- *   the number of bytes after byte 2 is length - 1.
  */
-#define ISO14443B_PRIME_VT_ADDR_DEFAULT 0x01
-#define ISO14443B_PRIME_CMD_DISC        0x03
-#define ISO14443B_PRIME_CMD_REPGEN      0x07
-#define ISO14443B_PRIME_CMD_APGEN       0x0B
-#define ISO14443B_PRIME_CMD_ATTRIB      0x0F
-// APGEN parameter requesting the extended REPGEN response; also called 'APGEN!'
-#define ISO14443B_PRIME_REQUEST_EXTENDED_REPGEN 0x80
-#define ISO14443B_PRIME_COM_RA_START    0x02
+#define ISO14443B_PRIME_VT_ADDR_DEFAULT          0x01
+#define ISO14443B_PRIME_VT_CARD_ADDR_MASK        0xF0
+#define ISO14443B_PRIME_VT_CARD_ADDR_SHIFT       4
+#define ISO14443B_PRIME_VT_COUPLER_ADDR_MASK     0x0F
+#define ISO14443B_PRIME_VT_CARD_ADDR_FIRST       1
+#define ISO14443B_PRIME_VT_ADDR(card, coupler)   ((((card) << ISO14443B_PRIME_VT_CARD_ADDR_SHIFT) & ISO14443B_PRIME_VT_CARD_ADDR_MASK) | ((coupler) & ISO14443B_PRIME_VT_COUPLER_ADDR_MASK))
+
+#define ISO14443B_PRIME_CMD_RR                   0x01
+#define ISO14443B_PRIME_CMD_DISC                 0x03
+#define ISO14443B_PRIME_CMD_REPGEN               0x07
+#define ISO14443B_PRIME_CMD_APGEN                0x0B
+#define ISO14443B_PRIME_CMD_ATTRIB               0x0F
+
+#define ISO14443B_PRIME_OCCUPAR_VALUE_MASK       0x3F
+// Public documents and sources identify bit 6 as short APGEN;
+// it's not proven to work yet
+#define ISO14443B_PRIME_OCCUPAR_SHORT_APGEN      0x40
+#define ISO14443B_PRIME_OCCUPAR_HIGH_BITS_MASK   0xC0
+#define ISO14443B_PRIME_OCCUPAR_BPSK_FLAG        0x80
+// OccuPar controls APGEN response chance:
+//   0x3F      card answers every poll attempt
+//   0x3E-0x00 lower values reduce the response chance
+#define ISO14443B_PRIME_OCCUPAR_DEFAULT          0x3F
+
+#define ISO14443B_PRIME_APGEN_CONFIG_REQUEST_ATR 0x80
+#define ISO14443B_PRIME_APGEN_CONFIG_RFU_MASK    0x7F
+
+#define ISO14443B_PRIME_VERLOG_LONG_REPGEN       0x80
+#define ISO14443B_PRIME_VERLOG_FIXED_BITS_MASK   0x61
+#define ISO14443B_PRIME_VERLOG_FIXED_BITS_VALUE  0x61
+#define ISO14443B_PRIME_VERLOG_VERSION_MASK      0x1E
+#define ISO14443B_PRIME_VERLOG_VERSION_SHIFT     1
+
+#define ISO14443B_PRIME_CONFIG_WAIT_SUPPORTED    0x80
+#define ISO14443B_PRIME_CONFIG_ATR_PRESENT       0x40
+#define ISO14443B_PRIME_CONFIG_RFU_MASK          0x3F
+
+#define ISO14443B_PRIME_CMD_COM_DATA_FAMILY_MASK 0xC0
+#define ISO14443B_PRIME_CMD_COM_DATA_SEQ_MASK    0x0E
+#define ISO14443B_PRIME_CMD_COM_DATA_SEQ_SHIFT   1
+#define ISO14443B_PRIME_CMD_COM_DATA_FAMILY_COM_R  0x00
+#define ISO14443B_PRIME_CMD_COM_DATA_FAMILY_REC    0x40
+#define ISO14443B_PRIME_CMD_COM_DATA_FAMILY_COM_RA 0xC0
+#define ISO14443B_PRIME_SEQUENCE_START           1
+#define ISO14443B_PRIME_SEQUENCE_END             7
+#define ISO14443B_PRIME_CMD_COM_DATA_SEQ(cmd)    (((cmd) & ISO14443B_PRIME_CMD_COM_DATA_SEQ_MASK) >> ISO14443B_PRIME_CMD_COM_DATA_SEQ_SHIFT)
+#define ISO14443B_PRIME_CMD_COM_R(seq)           (ISO14443B_PRIME_CMD_COM_DATA_FAMILY_COM_R | (((seq) << ISO14443B_PRIME_CMD_COM_DATA_SEQ_SHIFT) & ISO14443B_PRIME_CMD_COM_DATA_SEQ_MASK))
+#define ISO14443B_PRIME_CMD_REC(seq)             (ISO14443B_PRIME_CMD_COM_DATA_FAMILY_REC | (((seq) << ISO14443B_PRIME_CMD_COM_DATA_SEQ_SHIFT) & ISO14443B_PRIME_CMD_COM_DATA_SEQ_MASK))
+#define ISO14443B_PRIME_CMD_COM_RA(seq)          (ISO14443B_PRIME_CMD_COM_DATA_FAMILY_COM_RA | (((seq) << ISO14443B_PRIME_CMD_COM_DATA_SEQ_SHIFT) & ISO14443B_PRIME_CMD_COM_DATA_SEQ_MASK))
+#define ISO14443B_PRIME_COM_RA_START             ISO14443B_PRIME_CMD_COM_RA(ISO14443B_PRIME_SEQUENCE_START)
 
 // XEROX Commands
 #define ISO14443B_XEROX_PWD             0x38

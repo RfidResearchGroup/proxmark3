@@ -820,6 +820,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         case PROTO_FMCOS20:
             annotateIso14443a(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
             break;
+        case ISO_14443B:
+            annotateIso14443b(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+            break;
         case PROTO_CALYPSO:
             annotateCalypso(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
             break;
@@ -859,9 +862,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 break;
             case PROTO_MFPLUS:
                 annotateMfPlus(explanation, sizeof(explanation), frame, data_len);
-                break;
-            case ISO_14443B:
-                annotateIso14443b(explanation, sizeof(explanation), frame, data_len);
                 break;
             case TOPAZ:
                 annotateTopaz(explanation, sizeof(explanation), frame, data_len);
