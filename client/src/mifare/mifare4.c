@@ -18,12 +18,13 @@
 
 #include "mifare4.h"
 #include <string.h>
-#include "commonutil.h"  // ARRAYLEN
-#include "comms.h" // DropField
+#include "commonutil.h"         // ARRAYLEN
+#include "comms.h"              // DropField
 #include "cmdhf14a.h"
-#include "cmdhfmfp.h" // mfp_data_crypt
+#include "cmdhfmfp.h"           // mfp_data_crypt
 #include "ui.h"
 #include "crypto/libpcrypto.h"
+#include "mifaredefault.h"      // MFBLOCK_SIZE
 
 static bool g_verbose_mode = false;
 void mfpSetVerboseMode(bool verbose) {
@@ -45,9 +46,11 @@ static const PlusErrorsElm_t PlusErrors[] = {
 };
 
 const char *mfpGetErrorDescription(uint8_t errorCode) {
-    for (int i = 0; i < ARRAYLEN(PlusErrors); i++)
-        if (errorCode == PlusErrors[i].Code)
+    for (int i = 0; i < ARRAYLEN(PlusErrors); i++) {
+        if (errorCode == PlusErrors[i].Code) {
             return PlusErrors[i].Description;
+        }
+    }
 
     return PlusErrors[0].Description;
 }
@@ -93,9 +96,13 @@ bool mfReadOnlyAccessConditions(uint8_t blockn, const uint8_t *data) {
     uint8_t cond = (d1 & 0x01) << 2 | (d2 & 0x01) << 1 | (d3 & 0x01);
 
     if (blockn == 3) {
-        if ((cond == 0x02) || (cond == 0x06) || (cond == 0x07)) return true;
+        if ((cond == 0x02) || (cond == 0x06) || (cond == 0x07)) {
+            return true;
+        }
     } else {
-        if ((cond == 0x02) || (cond == 0x05)) return true;
+        if ((cond == 0x02) || (cond == 0x05)) {
+            return true;
+        }
     }
     return false;
 }
@@ -108,16 +115,18 @@ const char *mfGetAccessConditionsDesc(uint8_t blockn, const uint8_t *data) {
     uint8_t cond = (d1 & 0x01) << 2 | (d2 & 0x01) << 1 | (d3 & 0x01);
 
     if (blockn == 3) {
-        for (int i = 0; i < ARRAYLEN(MFAccessConditionsTrailer); i++)
+        for (int i = 0; i < ARRAYLEN(MFAccessConditionsTrailer); i++) {
             if (MFAccessConditionsTrailer[i].cond == cond) {
                 return MFAccessConditionsTrailer[i].description;
             }
+        }
     } else {
-        for (int i = 0; i < ARRAYLEN(MFAccessConditions); i++)
+        for (int i = 0; i < ARRAYLEN(MFAccessConditions); i++) {
             if (MFAccessConditions[i].cond == cond) {
                 return MFAccessConditions[i].description;
             }
-    };
+        }
+    }
 
     static char none[] = "none";
     return none;
@@ -157,20 +166,23 @@ static int CalculateEncIVResponse(mf4Session *mf4session, uint8_t *iv, bool verb
 */
 
 int CalculateMAC(mf4Session_t *mf4session, MACType_t mtype, uint8_t blockNum, uint8_t blockCount, uint8_t *data, int datalen, uint8_t *mac, bool verbose) {
-    if (!mf4session || !mf4session->Authenticated || !mac || !data || !datalen)
+    if (!mf4session || !mf4session->Authenticated || !mac || !data || !datalen) {
         return 1;
+    }
 
     memset(mac, 0x00, 8);
 
     uint16_t ctr = mf4session->R_Ctr;
     switch (mtype) {
         case mtypWriteCmd:
-        case mtypWriteResp:
+        case mtypWriteResp: {
             ctr = mf4session->W_Ctr;
             break;
+        }
         case mtypReadCmd:
-        case mtypReadResp:
+        case mtypReadResp: {
             break;
+        }
     }
 
     uint8_t macdata[2049] = {data[0], (ctr & 0xFF), (ctr >> 8), 0};
@@ -178,40 +190,48 @@ int CalculateMAC(mf4Session_t *mf4session, MACType_t mtype, uint8_t blockNum, ui
     memcpy(&macdata[3], mf4session->TI, 4);
 
     switch (mtype) {
-        case mtypReadCmd:
+        case mtypReadCmd: {
             memcpy(&macdata[7], &data[1], datalen - 1);
             macdatalen = datalen + 6;
             break;
-        case mtypReadResp:
+        }
+        case mtypReadResp: {
             macdata[7] = blockNum;
             macdata[8] = 0;
             macdata[9] = blockCount;
             memcpy(&macdata[10], &data[1], datalen - 1);
             macdatalen = datalen + 9;
             break;
-        case mtypWriteCmd:
+        }
+        case mtypWriteCmd: {
             memcpy(&macdata[7], &data[1], datalen - 1);
             macdatalen = datalen + 6;
             break;
-        case mtypWriteResp:
+        }
+        case mtypWriteResp: {
             macdatalen = 1 + 6;
             break;
+        }
     }
 
-    if (verbose)
+    if (verbose) {
         PrintAndLogEx(INFO, "MAC data[%d]: %s", macdatalen, sprint_hex(macdata, macdatalen));
+    }
 
     return aes_cmac8(NULL, mf4session->Kmac, macdata, mac, macdatalen);
 }
 
 int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, bool nonfirst, bool activateField, bool leaveSignalON, bool dropFieldIfError, bool verbose, bool silentMode) {
+
     uint8_t data[257] = {0};
     int datalen = 0;
+
     if (nonfirst && memcmp(mf4session->Kmac, data, 16) == 0) { // compiler abuse
         PrintAndLogEx(WARNING, "Function invocation error: cannot do non-first authentication yet");
         PrintAndLogEx(HINT, "Try to do first authentication");
         return PM3_EINVARG;
     } // While TI maybe could be rolled as a zero, MACing key absolutely won't be. Don't tell me it'll happen, it won't, the chances are effectively zero.
+
     uint8_t RndA[17] = {0x50, 0x4D, 0x33, 0x20, 0x52, 0x52, 0x47, 0x20, 0x32, 0x30, 0x32, 0x36, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t RndB[17] = {0};
 
@@ -224,8 +244,17 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
     }
 
     uint8_t cmd1[4];
-    if (nonfirst) { cmd1[0] = 0x76; cmd1[1] = keyn[1]; cmd1[2] = keyn[0]; }
-    else { cmd1[0] = 0x70; cmd1[1] = keyn[1]; cmd1[2] = keyn[0]; cmd1[3] = 0x00; }
+    if (nonfirst) { 
+        cmd1[0] = 0x76;
+        cmd1[1] = keyn[1];
+        cmd1[2] = keyn[0]; 
+    } else { 
+        cmd1[0] = 0x70; 
+        cmd1[1] = keyn[1]; 
+        cmd1[2] = keyn[0]; 
+        cmd1[3] = 0x00;
+    }
+
     int res = ExchangeRAW14a(cmd1, nonfirst ? 3 : 4, activateField, true, data, sizeof(data), &datalen, silentMode);
     if (res != PM3_SUCCESS) {
 
@@ -322,6 +351,7 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
         if (verbose) {
             PrintAndLogEx(INFO, ">phase2: %s", sprint_hex(cmd2, 33));
         }
+
     } else {
         aes_decode(NULL, key, &data[1], RndB, 16);
         RndB[16] = RndB[0];
@@ -365,8 +395,11 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
         return PM3_EWRONGANSWER;
     }
 
-    if (nonfirst) { aes_decode(IVR, key, &data[1], raw, 16); }
-    else { aes_decode(NULL, key, &data[1], raw, 32); }
+    if (nonfirst) { 
+        aes_decode(IVR, key, &data[1], raw, 16);
+    } else { 
+        aes_decode(NULL, key, &data[1], raw, 32);
+    }
 
     if (verbose) {
         if (nonfirst) {
@@ -428,7 +461,8 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
         memmove(mf4session->Key, key, 16);
         memmove(mf4session->Kenc, kenc, 16);
         memmove(mf4session->Kmac, kmac, 16);
-        if (!nonfirst) {
+
+        if (nonfirst == false) {
             mf4session->R_Ctr = 0;
             mf4session->W_Ctr = 0;
             memmove(mf4session->TI, raw, 4);
@@ -458,20 +492,23 @@ static int intExchangeRAW14aPlus(uint8_t *datain, int datainlen, bool activateFi
 }
 
 int MFPWritePerso(const uint8_t *keyNum, const uint8_t *key, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
-    uint8_t rcmd[3 + 16] = {0xa8, keyNum[1], keyNum[0], 0x00};
+    // iceman:  defines?  A8
+    uint8_t rcmd[3 + 16] = {0xA8, keyNum[1], keyNum[0], 0x00};
     memmove(&rcmd[3], key, 16);
 
     return intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
 }
 
 int MFPCommitPerso(bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
-    uint8_t rcmd[1] = {0xaa};
+    // iceman:  defines? AA
+    uint8_t rcmd[1] = {0xAA};
 
     return intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
 }
 
 int MFPReadBlock(mf4Session_t *mf4session, bool plain, bool nomaccmd, bool nomacres, uint8_t blockNum, uint8_t blockCount, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
 
+    // iceman:  defines? 31
     int cmdb = 0x31;
     if (nomacres) {
         cmdb = cmdb ^ 0x01;  // If we do not want MAC in reply, remove 0x01
@@ -515,6 +552,8 @@ int MFPReadBlock(mf4Session_t *mf4session, bool plain, bool nomaccmd, bool nomac
 }
 
 int MFPWriteBlock(mf4Session_t *mf4session, bool plain, bool nomacres, uint8_t blockNum, uint8_t blockHdr, const uint8_t *data, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
+
+    // iceman:  defines? A1
     int cmdb = 0xA1;
     if (nomacres) {
         cmdb = cmdb ^ 0x01; // If we do not want MAC in reply, remove 0x01
@@ -547,43 +586,50 @@ int MFPWriteBlock(mf4Session_t *mf4session, bool plain, bool nomacres, uint8_t b
 }
 
 int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *dataout, bool verbose) {
-    uint8_t keyn[2] = {0};
-    bool plain = false;
 
+    // 0x4000 is the base for MFP KEY ID's.  See datasheet
     uint16_t uKeyNum = 0x4000 + sectorNo * 2 + (keyType ? 1 : 0);
+    uint8_t keyn[2] = {0};
     keyn[0] = uKeyNum >> 8;
     keyn[1] = uKeyNum & 0xff;
+
     if (verbose) {
         PrintAndLogEx(INFO, "--sector[%u]:%02x key:%04x", mfNumBlocksPerSector(sectorNo), sectorNo, uKeyNum);
     }
 
     mf4Session_t _session;
     int res = MifareAuth4(&_session, keyn, key, false, true, true, true, verbose, false);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Sector %u authentication error: %d", sectorNo, res);
         return res;
     }
 
+    bool plain = false;
     uint8_t data[250] = {0};
     int datalen = 0;
     uint8_t mac[8] = {0};
     uint8_t firstBlockNo = mfFirstBlockOfSector(sectorNo);
+
     for (int n = firstBlockNo; n < firstBlockNo + mfNumBlocksPerSector(sectorNo); n++) {
+
         res = MFPReadBlock(&_session, plain, false, false, n & 0xff, 1, false, true, data, sizeof(data), &datalen, mac);
         if (res) {
-            PrintAndLogEx(ERR, "Sector %u read error: %d", sectorNo, res);
+            PrintAndLogEx(ERR, "Sector "_YELLOW_("%u") " read error: %d", sectorNo, res);
             DropField();
             return res;
         }
 
         if (datalen && data[0] != 0x90) {
-            PrintAndLogEx(ERR, "Sector %u card read error: %02x %s", sectorNo, data[0], mfpGetErrorDescription(data[0]));
+            PrintAndLogEx(ERR, "Sector " _YELLOW_("%u")" card read error: %02x %s", sectorNo, data[0], mfpGetErrorDescription(data[0]));
             DropField();
+            // iceman:  these custom return codes should use the PM3_E* defines
             return 5;
         }
+
         if (datalen != 1 + 16 + 8 + 2) {
-            PrintAndLogEx(ERR, "Sector %u error returned data length:%d", sectorNo, datalen);
+            PrintAndLogEx(ERR, "Sector " _YELLOW_("%u") " error returned data length:%d", sectorNo, datalen);
             DropField();
+            // iceman:  these custom return codes should use the PM3_E* defines
             return 6;
         }
 
@@ -592,8 +638,9 @@ int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data
 
         memcpy(&dataout[(n - firstBlockNo) * 16], &data[1], 16);
 
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, "data[%03d]: %s", n, sprint_hex(&data[1], 16));
+        }
 
         if (memcmp(&data[1 + 16], mac, 8)) {
             PrintAndLogEx(WARNING, "WARNING: mac on block %d not equal...", n);
@@ -601,6 +648,7 @@ int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data
             PrintAndLogEx(WARNING, "MAC reader: %s", sprint_hex(mac, 8));
 
             if (verbose == false) {
+                // iceman:  these custom return codes should use the PM3_E* defines
                 return 7;
             }
         } else {
@@ -615,18 +663,19 @@ int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data
 }
 
 int mfpWriteSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, const uint8_t *datain, bool verbose) {
-    uint8_t keyn[2] = {0};
 
     uint16_t uKeyNum = 0x4000 + sectorNo * 2 + (keyType ? 1 : 0);
+    uint8_t keyn[2] = {0};
     keyn[0] = uKeyNum >> 8;
     keyn[1] = uKeyNum & 0xff;
+
     if (verbose) {
         PrintAndLogEx(INFO, "--sector[%u]:%02x key:%04x", mfNumBlocksPerSector(sectorNo), sectorNo, uKeyNum);
     }
 
     mf4Session_t _session;
     int res = MifareAuth4(&_session, keyn, key, false, true, true, true, verbose, false);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Sector %u authentication error: %d", sectorNo, res);
         return res;
     }
@@ -637,30 +686,31 @@ int mfpWriteSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, const uint8_
     for (int n = 0; n < numDataBlocks; n++) {
         uint8_t blockNo = firstBlockNo + n;
 
-        uint8_t block[16];
-        memcpy(block, datain + (n * 16), 16);
+        uint8_t block[MFBLOCK_SIZE];
+        memcpy(block, datain + (n * 16), sizeof(block));
+       
         mfp_data_crypt(&_session, block, block, false, 1);
 
         uint8_t data[250] = {0};
         int datalen = 0;
         uint8_t mac[8] = {0};
-        res = MFPWriteBlock(&_session, false, false, blockNo & 0xff, 0x00, block,
-                            false, true, data, sizeof(data), &datalen, mac);
-        if (res) {
+
+        res = MFPWriteBlock(&_session, false, false, blockNo & 0xff, 0x00, block, false, true, data, sizeof(data), &datalen, mac);
+        if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Sector %u block %d write error: %d", sectorNo, blockNo, res);
             DropField();
             return res;
         }
 
         if (datalen && data[0] != 0x90) {
-            PrintAndLogEx(ERR, "Sector %u block %d card write error: %02x %s",
-                          sectorNo, blockNo, data[0], mfpGetErrorDescription(data[0]));
+            PrintAndLogEx(ERR, "Sector %u block %d card write error: %02x %s", sectorNo, blockNo, data[0], mfpGetErrorDescription(data[0]));
             DropField();
             return PM3_ESOFT;
         }
 
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, "wrote block %d: %s", blockNo, sprint_hex(datain + (n * 16), 16));
+        }
     }
 
     DropField();
@@ -668,15 +718,21 @@ int mfpWriteSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, const uint8_
 }
 
 int MFPGetSignature(bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+
+    // iceman:  use define?  3C
     uint8_t c[] = {0x3c, 0x00};
     return intExchangeRAW14aPlus(c, sizeof(c), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
 }
 
 int MFPGetVersion(bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+
     uint8_t tmp[20] = {0};
+
+    // iceman: use defines? 60
     uint8_t c[] = {0x60};
+
     int res = intExchangeRAW14aPlus(c, sizeof(c), activateField, true, tmp, maxdataoutlen, dataoutlen);
-    if (res != 0) {
+    if (res != PM3_SUCCESS) {
         DropField();
         *dataoutlen = 0;
         return res;
@@ -687,7 +743,9 @@ int MFPGetVersion(bool activateField, bool leaveSignalON, uint8_t *dataout, int 
     *dataoutlen = 0;
     // MFDES_ADDITIONAL_FRAME
     if (tmp[0] == 0xAF) {
+
         c[0] = 0xAF;
+
         res = intExchangeRAW14aPlus(c, sizeof(c), false, true, tmp, maxdataoutlen, dataoutlen);
         if (res == PM3_SUCCESS) {
 
@@ -751,11 +809,11 @@ bool mfIsSectorTrailer(uint16_t blockNo) {
 
 // assumes blockno is 0-255..
 uint8_t mfSectorNum(uint16_t blockNo) {
-    if (blockNo < 32 * 4)
+    if (blockNo < 32 * 4) {
         return (blockNo / 4);
-    else
+    } else {
         return (32 + (blockNo - 32 * 4) / 16);
-
+    }
 }
 
 bool mfIsSectorTrailerBasedOnBlocks(uint8_t sectorno, uint16_t blockno) {
