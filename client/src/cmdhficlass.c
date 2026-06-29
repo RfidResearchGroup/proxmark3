@@ -1598,8 +1598,11 @@ static int CmdHFiClassTagSim(const char *Cmd) {
     PrintAndLogEx(INFO, "Starting iCLASS full simulation");
     if (bin_len == 0) {
         PrintAndLogEx(INFO, _GREEN_("Arrow keys") ": "_CYAN_("up/down")" = FC+/-  "_CYAN_("right/left")" = CN+/-  |  " _GREEN_("Enter") " or " _GREEN_("`pm3 button`") " to stop");
-        PrintAndLogEx(INFO, "FC: " _YELLOW_("%u") "  CN: " _YELLOW_("%u") "  CSN: " _YELLOW_("%s"),
-                      card.FacilityCode, card.CardNumber, sprint_hex(csn, 8));
+        PrintAndLogEx(INFO, "FC: " _YELLOW_("%u") "  CN: " _YELLOW_("%"PRIu64) "  CSN: " _YELLOW_("%s"),
+                      card.FacilityCode,
+                      card.CardNumber,
+                      sprint_hex(csn, 8)
+                    );
     } else {
         PrintAndLogEx(INFO, "Press " _GREEN_("`pm3 button`") " to abort");
     }
@@ -1718,8 +1721,11 @@ static int CmdHFiClassTagSim(const char *Cmd) {
             }
             iclass_emul_set_reload_flag();  // signal ARM to reload on next ACTALL
 
-            PrintAndLogEx(INFO, "FC: " _YELLOW_("%u") "  CN: " _YELLOW_("%u") "  CSN: " _YELLOW_("%s"),
-                          card.FacilityCode, card.CardNumber, sprint_hex(csn, 8));
+            PrintAndLogEx(INFO, "FC: " _YELLOW_("%u") "  CN: " _YELLOW_("%"PRIu64) "  CSN: " _YELLOW_("%s"),
+                          card.FacilityCode,
+                          card.CardNumber,
+                          sprint_hex(csn, 8)
+                        );
         }
 
         tagsim_rawmode_exit();

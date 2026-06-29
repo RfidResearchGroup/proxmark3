@@ -7256,10 +7256,11 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     int res = MADCheck(&sector0, pmad2, verbose, &haveMAD2);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "MAD error %d", res);
-        if (override)
+        if (override) {
             PrintAndLogEx(INFO, "overriding CRC check");
-        else
+        } else {
             return res;
+        }
     }
 
     mad_entry_list_t mad_list = {0};
@@ -7282,7 +7283,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
             memcpy(&data[datalen], vsector, MFBLOCK_SIZE * 3);
             datalen += MFBLOCK_SIZE * 3;
 
-            PrintAndLogEx(INPLACE, "%d", i);
+            PrintAndLogEx(INPLACE, "%zu", i);
         }
     }
     PrintAndLogEx(NORMAL, "");

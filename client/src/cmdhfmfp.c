@@ -2843,7 +2843,7 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
             memcpy(&data[datalen], vsector, 16 * 3);
             datalen += 16 * 3;
 
-            PrintAndLogEx(INPLACE, "%d", i);
+            PrintAndLogEx(INPLACE, "%zu", i);
         }
     }
     PrintAndLogEx(NORMAL, "");
