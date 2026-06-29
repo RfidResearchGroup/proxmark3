@@ -225,7 +225,7 @@ static int mad_cmd_write(const char *Cmd, const char *cmd_name, bool force_class
         arg_str1(NULL, "aid",      "<hex>", "application ID (2 hex bytes)"),
         arg_str0("k",  "key",      "<hex>", "key for data sectors"),
         arg_lit0("b",  "keyb",     "use key B (def: key A)"),
-        arg_str0(NULL, "mad-key",  "<hex>", "key for MAD sectors"),
+        arg_str0(NULL, "madkey",  "<hex>", "key for MAD sectors"),
         arg_lit0(NULL, "be",       "big-endian AID byte swap"),
         arg_lit0(NULL, "override", "override failed CRC check"),
         arg_str0("d",  "data",     "<hex>", "data to write"),
@@ -321,7 +321,7 @@ static int mad_cmd_verify(const char *Cmd, const char *cmd_name, bool force_clas
         arg_str1(NULL, "aid",      "<hex>", "application ID (2 hex bytes)"),
         arg_str0("k",  "key",      "<hex>", "key for data sectors"),
         arg_lit0("b",  "keyb",     "use key B (def: key A)"),
-        arg_str0(NULL, "mad-key",  "<hex>", "key for MAD sectors"),
+        arg_str0(NULL, "madkey",   "<hex>", "key for MAD sectors"),
         arg_lit0(NULL, "be",       "big-endian AID byte swap"),
         arg_lit0(NULL, "override", "override failed CRC check"),
         arg_str0("d",  "data",     "<hex>", "expected data"),
@@ -616,8 +616,12 @@ static int CmdMADEncode(const char *Cmd) {
                 CLIParserFree(ctx);
                 return PM3_EINVARG;
             }
+
             sector_aids[sno] = aid_val;
-            if (sno > 15) have_mad2 = true;
+
+            if (sno > 15) {
+                have_mad2 = true;
+            }
         }
     }
 
