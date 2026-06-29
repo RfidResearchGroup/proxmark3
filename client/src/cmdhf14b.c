@@ -140,7 +140,7 @@ static void hf14b_aid_search(bool verbose) {
         uint8_t result[1024] = {0};
         int res = exchange_14b_apdu(apdu_data, apdu_len, activate_field, leave_signal_on, result, sizeof(result), &resultlen, -1);
         activate_field = false;
-        if (res) {
+        if (res != PM3_SUCCESS) {
             continue;
         }
 
@@ -430,7 +430,7 @@ static int print_atqb_resp(uint8_t *data, uint8_t cid) {
     PrintAndLogEx(SUCCESS, "      App Data: %s", sprint_hex(data, 4));
     PrintAndLogEx(SUCCESS, "      Protocol: %s", sprint_hex(data + 4, 3));
     uint8_t BitRate = data[4];
-    if (!BitRate) PrintAndLogEx(SUCCESS, "      Bit Rate: 106 kbit/s only PICC <-> PCD");
+    if (BitRate == 0) PrintAndLogEx(SUCCESS, "      Bit Rate: 106 kbit/s only PICC <-> PCD");
     if (BitRate & 0x10) PrintAndLogEx(SUCCESS, "      Bit Rate: 212 kbit/s PICC -> PCD supported");
     if (BitRate & 0x20) PrintAndLogEx(SUCCESS, "      Bit Rate: 424 kbit/s PICC -> PCD supported");
     if (BitRate & 0x40) PrintAndLogEx(SUCCESS, "      Bit Rate: 847 kbit/s PICC -> PCD supported");
@@ -781,14 +781,15 @@ static void print_prime_general_info(const iso14b_prime_card_select_t *card) {
     PrintAndLogEx(INFO, "--- " _CYAN_("Type B' / Innovatron") " ---------------------");
     PrintAndLogEx(SUCCESS, " V&T Ad : %02X (card %u, coupler %u)", card->vt_addr, vt_card_addr, vt_coupler_addr);
     PrintAndLogEx(SUCCESS, " DIV    : " _GREEN_("%s"), sprint_hex(card->div, sizeof(card->div)));
-    PrintAndLogEx(SUCCESS, " VerLog : %02X (%s REPGEN, software version %u)",
-                  card->verlog, long_repgen ? "long" : "short", software_version);
+    PrintAndLogEx(SUCCESS, " VerLog : %02X (%s REPGEN, software version %u)", card->verlog, long_repgen ? "long" : "short", software_version);
+
     if (long_repgen) {
         PrintAndLogEx(SUCCESS, " Config : %02X (WAIT %s, ATR %s)",
                       card->config,
                       (card->config & ISO14443B_PRIME_CONFIG_WAIT_SUPPORTED) ? "supported" : "not indicated",
                       (card->config & ISO14443B_PRIME_CONFIG_ATR_PRESENT) ? "present" : "absent");
     }
+
     if (card->atr_len) {
         PrintAndLogEx(SUCCESS, " ATR    : %s", sprint_hex(card->atr, card->atr_len));
     }
@@ -904,7 +905,9 @@ static void print_sr_blocks(uint8_t *data, size_t len, const uint8_t *uid, bool 
 // 0200a4040010a000000018300301000000000000000000 (resp 02 6a 82 [4b 4c])
 
 static int hf14b_setconfig(hf14b_config_t *config, bool verbose) {
-    if (!g_session.pm3_present) return PM3_ENOTTY;
+    if (g_session.pm3_present == false) {
+        return PM3_ENOTTY;
+    }
 
     clearCommandBuffer();
     if (config != NULL) {
@@ -920,7 +923,9 @@ static int hf14b_setconfig(hf14b_config_t *config, bool verbose) {
 }
 
 static int CmdHf14BConfig(const char *Cmd) {
-    if (!g_session.pm3_present) return PM3_ENOTTY;
+    if (g_session.pm3_present == false) {
+        return PM3_ENOTTY;
+    }
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b config",
@@ -1178,8 +1183,9 @@ static int CmdHF14BRaw(const char *Cmd) {
 
         // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
         time_wait = (uint32_t)((13560 / 128) * user_timeout);
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, " new raw timeout :  %u ETU  ( %u ms )", time_wait, user_timeout);
+        }
     }
 
     if (keep_field_on == false) {
@@ -1999,15 +2005,17 @@ static int CmdHF14BDump(const char *Cmd) {
         uint16_t cardsize = 0;
 
         switch (cardtype) {
-            case SR_SIZE_512:
+            case SR_SIZE_512: {
                 cardsize = (512 / 8) + ST25TB_SR_BLOCK_SIZE;
                 lastblock = 0x0F;
                 break;
+            }
             case SR_SIZE_4K:
-            default:
+            default: {
                 cardsize = (4096 / 8) + ST25TB_SR_BLOCK_SIZE;
                 lastblock = 0x7F;
                 break;
+            }
         }
 
         uint8_t chipid = get_st_chipid(card.uid);
@@ -2618,7 +2626,7 @@ int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field,
 }
 
 static uint8_t next_prime_frame_seq(uint8_t seq) {
-    return seq >= ISO14443B_PRIME_SEQUENCE_END ? ISO14443B_PRIME_SEQUENCE_START : seq + 1;
+    return (seq >= ISO14443B_PRIME_SEQUENCE_END) ? ISO14443B_PRIME_SEQUENCE_START : seq + 1;
 }
 
 int exchange_14b_prime_apdu(uint8_t *datain, int datainlen, bool activate_field,
