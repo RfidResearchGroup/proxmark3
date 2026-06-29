@@ -1975,9 +1975,6 @@ static int iso14443b_select_prime_card(iso14b_prime_card_select_t *card) {
             card->config = r_repgen[offset++];
             if ((card->config & ISO14443B_PRIME_CONFIG_ATR_PRESENT) && repgen_len > offset) {
                 uint16_t atr_len = repgen_len - offset;
-                if (atr_len >= 2 && r_repgen[repgen_len - 2] == 0x90 && r_repgen[repgen_len - 1] == 0x00) {
-                    atr_len -= 2;
-                }
                 card->atr_len = (uint8_t)MIN(atr_len, ISO14B_PRIME_ATR_MAX_LEN);
                 memcpy(card->atr, r_repgen + offset, card->atr_len);
             }
