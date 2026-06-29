@@ -3384,6 +3384,10 @@ int infoHF14B(bool verbose, bool do_aid_search) {
     if (HF14B_ST_Info(verbose, do_aid_search))
         return PM3_SUCCESS;
 
+    // try ASK CT 14b
+    if (HF14B_ask_ct_reader(verbose))
+        return PM3_SUCCESS;
+
     // try Type B' / Innovatron APGEN
     if (HF14B_prime_reader(verbose))
         return PM3_SUCCESS;
