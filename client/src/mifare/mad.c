@@ -688,7 +688,9 @@ int mad_app_write(const mad_ops_t *ops, uint16_t aid, bool swapmad, bool overrid
         offset += sector_data_size;
     }
 
-    PrintAndLogEx(SUCCESS, "Wrote %zu bytes to AID 0x%04X ( %s )", data_len, aid,  _GREEN_("ok"));
+    if (ops->verbose) {
+        PrintAndLogEx(SUCCESS, "Wrote %zu bytes to AID 0x%04X ( %s )", data_len, aid,  _GREEN_("ok"));
+    }
     return PM3_SUCCESS;
 }
 
@@ -723,6 +725,8 @@ int mad_app_verify(const mad_ops_t *ops, uint16_t aid, bool swapmad, bool overri
         PrintAndLogEx(WARNING, "length mismatch: expected %zu, read %zu (data matches up to shorter)", expected_len, readback_len);
     }
 
-    PrintAndLogEx(SUCCESS, "Verified %zu bytes ( %s )", cmp_len, _GREEN_("ok"));
+    if (ops->verbose) {
+        PrintAndLogEx(SUCCESS, "Verified %zu bytes ( %s )", cmp_len, _GREEN_("ok"));
+    }
     return PM3_SUCCESS;
 }
