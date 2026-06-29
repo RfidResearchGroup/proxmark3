@@ -1998,6 +1998,25 @@ static int iso14443b_select_prime_card(iso14b_prime_card_select_t *card) {
     start_time = eof_time + ISO14B_TR2;
     CodeAndTransmit14443bAsReader(attrib, sizeof(attrib), &start_time, &eof_time, true);
 
+    uint8_t r_rr[4] = { 0x00 };
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+    retlen = 0;
+    if (Get14443bAnswerFromTag(r_rr, sizeof(r_rr), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    if (retlen != sizeof(r_rr)) {
+        return PM3_ELENGTH;
+    }
+
+    if (check_crc(CRC_14443_B, r_rr, retlen) == false) {
+        return PM3_ECRC;
+    }
+
+    if (r_rr[0] != r_repgen[0] || r_rr[1] != ISO14443B_PRIME_CMD_RR) {
+        return PM3_EWRONGANSWER;
+    }
+
     s_iso14b_pcb_blocknum = 0;
     return PM3_SUCCESS;
 }

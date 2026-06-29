@@ -1400,16 +1400,16 @@ int select_card_14443b_prime(bool disconnect, iso14b_prime_card_select_t *card, 
             return PM3_SUCCESS;
         }
         case PM3_ELENGTH:
-            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-B' REPGEN wrong length");
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-B' activation response wrong length");
             break;
         case PM3_ECRC:
-            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-B' REPGEN CRC fail");
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-B' activation response CRC fail");
             break;
         case PM3_EWRONGANSWER:
-            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-B' REPGEN wrong answer");
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-B' activation response wrong answer");
             break;
         default:
-            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-B' APGEN failed");
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-B' activation failed");
             break;
     }
 
