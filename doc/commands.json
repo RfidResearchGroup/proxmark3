@@ -596,10 +596,11 @@
         },
         "data num": {
             "command": "data num",
-            "description": "Function takes a decimal or hexdecimal number and print it in decimal/hex/binary Will print message if number is a prime number",
+            "description": "Function takes a decimal or hexdecimal number and print it in decimal/hex/binary Includes Manchester encoding and decoding of the value Will print message if number is a prime number",
             "notes": [
                 "data num --dec 2023",
-                "data num --hex 2A"
+                "data num --hex 2A",
+                "data num --hex 556555476555695559695555"
             ],
             "offline": true,
             "options": [
@@ -6347,46 +6348,46 @@
             "command": "hf mf madread",
             "description": "Read application data from sectors matching a MAD AID",
             "notes": [
-                "mad read --aid e103 -> read NDEF data (auto-detect card)",
+                "mad read --aid e103 -> read NDEF data",
                 "mad read --aid e103 -k ffffffffffff -b -> Classic, key B",
                 "mad read --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> Plus",
-                "mad read --aid e103 -v -f mydata.bin -> verbose, save to file"
+                "mad read --aid e103 -v -f mydata.bin"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose verbose output",
                 "--aid <hex> application ID (2 hex bytes)",
                 "-k, --key <hex> key for data sectors",
-                "-b, --keyb use key B (def: key A)",
-                "--mad-key <hex> key for MAD sectors",
+                "-b, --keyb use key B",
+                "--madkey <hex> key for MAD sectors",
                 "--be big-endian AID byte swap",
                 "--override override failed CRC check",
-                "-f, --file <fn> save raw data to file"
+                "-f, --file <fn> save raw data to file",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf mf madread [-hvb] --aid <hex> [-k <hex>] [--mad-key <hex>] [--be] [--override] [-f <fn>]"
+            "usage": "hf mf madread [-hbv] --aid <hex> [-k <hex>] [--madkey <hex>] [--be] [--override] [-f <fn>]"
         },
         "hf mf madverify": {
             "command": "hf mf madverify",
             "description": "Read back and verify application data against expected content",
             "notes": [
-                "mad verify --aid e103 -d 0102030405060708 -> verify data",
-                "mad verify --aid e103 -f mydata.bin -> verify against file"
+                "mad verify --aid e103 -d 0102030405060708",
+                "mad verify --aid e103 -f mydata.bin"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose verbose output",
                 "--aid <hex> application ID (2 hex bytes)",
                 "-k, --key <hex> key for data sectors",
                 "-b, --keyb use key B (def: key A)",
-                "--mad-key <hex> key for MAD sectors",
+                "--madkey <hex> key for MAD sectors",
                 "--be big-endian AID byte swap",
                 "--override override failed CRC check",
                 "-d, --data <hex> expected data",
-                "-f, --file <fn> load expected data from file"
+                "-f, --file <fn> load expected data from file",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf mf madverify [-hvb] --aid <hex> [-k <hex>] [--mad-key <hex>] [--be] [--override] [-d <hex>] [-f <fn>]"
+            "usage": "hf mf madverify [-hbv] --aid <hex> [-k <hex>] [--madkey <hex>] [--be] [--override] [-d <hex>] [-f <fn>]"
         },
         "hf mf madwrite": {
             "command": "hf mf madwrite",
@@ -6399,17 +6400,17 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose verbose output",
                 "--aid <hex> application ID (2 hex bytes)",
                 "-k, --key <hex> key for data sectors",
                 "-b, --keyb use key B (def: key A)",
-                "--mad-key <hex> key for MAD sectors",
+                "--madkey <hex> key for MAD sectors",
                 "--be big-endian AID byte swap",
                 "--override override failed CRC check",
                 "-d, --data <hex> data to write",
-                "-f, --file <fn> load data from file"
+                "-f, --file <fn> load data from file",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf mf madwrite [-hvb] --aid <hex> [-k <hex>] [--mad-key <hex>] [--be] [--override] [-d <hex>] [-f <fn>]"
+            "usage": "hf mf madwrite [-hbv] --aid <hex> [-k <hex>] [--madkey <hex>] [--be] [--override] [-d <hex>] [-f <fn>]"
         },
         "hf mf nack": {
             "command": "hf mf nack",
@@ -8495,46 +8496,46 @@
             "command": "hf mfp madread",
             "description": "Read application data from sectors matching a MAD AID",
             "notes": [
-                "mad read --aid e103 -> read NDEF data (auto-detect card)",
+                "mad read --aid e103 -> read NDEF data",
                 "mad read --aid e103 -k ffffffffffff -b -> Classic, key B",
                 "mad read --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> Plus",
-                "mad read --aid e103 -v -f mydata.bin -> verbose, save to file"
+                "mad read --aid e103 -v -f mydata.bin"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose verbose output",
                 "--aid <hex> application ID (2 hex bytes)",
                 "-k, --key <hex> key for data sectors",
-                "-b, --keyb use key B (def: key A)",
-                "--mad-key <hex> key for MAD sectors",
+                "-b, --keyb use key B",
+                "--madkey <hex> key for MAD sectors",
                 "--be big-endian AID byte swap",
                 "--override override failed CRC check",
-                "-f, --file <fn> save raw data to file"
+                "-f, --file <fn> save raw data to file",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf mfp madread [-hvb] --aid <hex> [-k <hex>] [--mad-key <hex>] [--be] [--override] [-f <fn>]"
+            "usage": "hf mfp madread [-hbv] --aid <hex> [-k <hex>] [--madkey <hex>] [--be] [--override] [-f <fn>]"
         },
         "hf mfp madverify": {
             "command": "hf mfp madverify",
             "description": "Read back and verify application data against expected content",
             "notes": [
-                "mad verify --aid e103 -d 0102030405060708 -> verify data",
-                "mad verify --aid e103 -f mydata.bin -> verify against file"
+                "mad verify --aid e103 -d 0102030405060708",
+                "mad verify --aid e103 -f mydata.bin"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose verbose output",
                 "--aid <hex> application ID (2 hex bytes)",
                 "-k, --key <hex> key for data sectors",
                 "-b, --keyb use key B (def: key A)",
-                "--mad-key <hex> key for MAD sectors",
+                "--madkey <hex> key for MAD sectors",
                 "--be big-endian AID byte swap",
                 "--override override failed CRC check",
                 "-d, --data <hex> expected data",
-                "-f, --file <fn> load expected data from file"
+                "-f, --file <fn> load expected data from file",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf mfp madverify [-hvb] --aid <hex> [-k <hex>] [--mad-key <hex>] [--be] [--override] [-d <hex>] [-f <fn>]"
+            "usage": "hf mfp madverify [-hbv] --aid <hex> [-k <hex>] [--madkey <hex>] [--be] [--override] [-d <hex>] [-f <fn>]"
         },
         "hf mfp madwrite": {
             "command": "hf mfp madwrite",
@@ -8547,17 +8548,17 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose verbose output",
                 "--aid <hex> application ID (2 hex bytes)",
                 "-k, --key <hex> key for data sectors",
                 "-b, --keyb use key B (def: key A)",
-                "--mad-key <hex> key for MAD sectors",
+                "--madkey <hex> key for MAD sectors",
                 "--be big-endian AID byte swap",
                 "--override override failed CRC check",
                 "-d, --data <hex> data to write",
-                "-f, --file <fn> load data from file"
+                "-f, --file <fn> load data from file",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf mfp madwrite [-hvb] --aid <hex> [-k <hex>] [--mad-key <hex>] [--be] [--override] [-d <hex>] [-f <fn>]"
+            "usage": "hf mfp madwrite [-hbv] --aid <hex> [-k <hex>] [--madkey <hex>] [--be] [--override] [-d <hex>] [-f <fn>]"
         },
         "hf mfp ndefformat": {
             "command": "hf mfp ndefformat",
@@ -11045,7 +11046,7 @@
             "options": [
                 "-h, --help This help",
                 "-p, --pwd <hex> password (00000000)",
-                "-f, --file <fn> override filename prefix (optional). Default is based on UID",
+                "-f, --file <fn> override filename prefix (optional). Default is based on UID/Serial",
                 "--ns no save to file"
             ],
             "usage": "lf em 4x05 dump [-h] [-p <hex>] [-f <fn>] [--ns]"
@@ -14136,13 +14137,29 @@
             ],
             "usage": "lf visa2000 sim [-h] --cn <dec>"
         },
+        "mad decode": {
+            "command": "mad decode",
+            "description": "Decode a MAD byte array and print the directory. Use Sector 0 == MAD 1 Sector 16 == MAD 2",
+            "notes": [
+                "mad decode --mad1 <hex>"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose verbose output",
+                "-1, --mad1 <hex> MAD 1 Sector 0 data (64 bytes)",
+                "-2, --mad2 <hex> MAD 2 Sector 16 data (64 bytes)",
+                "--be big-endian AID byte swap"
+            ],
+            "usage": "mad decode [-hv] -1 <hex> [-2 <hex>] [--be]"
+        },
         "mad encode": {
             "command": "mad encode",
             "description": "Encode a MAD byte array from AID-to-sector mappings",
             "notes": [
                 "mad encode --aid E103:1-3 --aid 484D:4 -> MAD1 with NDEF + HID",
                 "mad encode --aid E103:1-3,5 -> non-contiguous sectors",
-                "mad encode --aid E103:1-3,17-18 --aid 484D:4 -> MAD1 + MAD2",
+                "mad encode --aid E103:1-3,17-18 --aid 484D:4 -> MAD1 + MAD2 + HID",
                 "mad encode --aid E103:1-3 -q -> quiet, hex only"
             ],
             "offline": true,
@@ -14156,50 +14173,32 @@
         },
         "mad help": {
             "command": "mad help",
-            "description": "-------- --------------- MAD ----------------- -------- ------------- General --------------- help This help decode Decode MAD byte array encode Encode MAD byte array from AID mappings test Run MAD regression tests --------------------------------------------------------------------------------------- mad decode available offline: yes Decode a MAD byte array and print the directory",
+            "description": "help This help -------- --------------- MAD ----------------- -------- ------------- General --------------- decode Decode MAD byte array encode Encode MAD byte array from AID mappings test Run MAD regression tests --------------------------------------------------------------------------------------- mad read available offline: no Read application data from sectors matching a MAD AID",
             "notes": [
-                "mad decode -d <sector0 hex> -> decode MAD1",
-                "mad decode -d <sector0 hex> --mad2 <sector16 hex> -> decode MAD1 + MAD2"
+                "mad read --aid e103 -> read NDEF data",
+                "mad read --aid e103 -k ffffffffffff -b -> Classic, key B",
+                "mad read --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> Plus",
+                "mad read --aid e103 -v -f mydata.bin"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose verbose output",
-                "-d, --data <hex> MAD1 sector 0 data (64 bytes)",
-                "--mad2 <hex> MAD2 sector 16 data (64 bytes)",
-                "--be big-endian AID byte swap"
-            ],
-            "usage": "mad decode [-hv] -d <hex> [--mad2 <hex>] [--be]"
-        },
-        "mad read": {
-            "command": "mad read",
-            "description": "Read application data from sectors matching a MAD AID",
-            "notes": [
-                "mad read --aid e103 -> read NDEF data (auto-detect card)",
-                "mad read --aid e103 -k ffffffffffff -b -> Classic, key B",
-                "mad read --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> Plus",
-                "mad read --aid e103 -v -f mydata.bin -> verbose, save to file"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-v, --verbose verbose output",
                 "--aid <hex> application ID (2 hex bytes)",
                 "-k, --key <hex> key for data sectors",
-                "-b, --keyb use key B (def: key A)",
-                "--mad-key <hex> key for MAD sectors",
+                "-b, --keyb use key B",
+                "--madkey <hex> key for MAD sectors",
                 "--be big-endian AID byte swap",
                 "--override override failed CRC check",
-                "-f, --file <fn> save raw data to file"
+                "-f, --file <fn> save raw data to file",
+                "-v, --verbose verbose output"
             ],
-            "usage": "mad read [-hvb] --aid <hex> [-k <hex>] [--mad-key <hex>] [--be] [--override] [-f <fn>]"
+            "usage": "mad read [-hbv] --aid <hex> [-k <hex>] [--madkey <hex>] [--be] [--override] [-f <fn>]"
         },
         "mad test": {
             "command": "mad test",
-            "description": "Run MAD regression tests (offline, no card needed)",
+            "description": "Run MAD regression tests. Runs offline with no card needed",
             "notes": [
-                "mad test",
-                "mad test -v -> verbose output"
+                "mad test"
             ],
             "offline": true,
             "options": [
@@ -14212,23 +14211,23 @@
             "command": "mad verify",
             "description": "Read back and verify application data against expected content",
             "notes": [
-                "mad verify --aid e103 -d 0102030405060708 -> verify data",
-                "mad verify --aid e103 -f mydata.bin -> verify against file"
+                "mad verify --aid e103 -d 0102030405060708",
+                "mad verify --aid e103 -f mydata.bin"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose verbose output",
                 "--aid <hex> application ID (2 hex bytes)",
                 "-k, --key <hex> key for data sectors",
                 "-b, --keyb use key B (def: key A)",
-                "--mad-key <hex> key for MAD sectors",
+                "--madkey <hex> key for MAD sectors",
                 "--be big-endian AID byte swap",
                 "--override override failed CRC check",
                 "-d, --data <hex> expected data",
-                "-f, --file <fn> load expected data from file"
+                "-f, --file <fn> load expected data from file",
+                "-v, --verbose verbose output"
             ],
-            "usage": "mad verify [-hvb] --aid <hex> [-k <hex>] [--mad-key <hex>] [--be] [--override] [-d <hex>] [-f <fn>]"
+            "usage": "mad verify [-hbv] --aid <hex> [-k <hex>] [--madkey <hex>] [--be] [--override] [-d <hex>] [-f <fn>]"
         },
         "mad write": {
             "command": "mad write",
@@ -14241,17 +14240,17 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose verbose output",
                 "--aid <hex> application ID (2 hex bytes)",
                 "-k, --key <hex> key for data sectors",
                 "-b, --keyb use key B (def: key A)",
-                "--mad-key <hex> key for MAD sectors",
+                "--madkey <hex> key for MAD sectors",
                 "--be big-endian AID byte swap",
                 "--override override failed CRC check",
                 "-d, --data <hex> data to write",
-                "-f, --file <fn> load data from file"
+                "-f, --file <fn> load data from file",
+                "-v, --verbose verbose output"
             ],
-            "usage": "mad write [-hvb] --aid <hex> [-k <hex>] [--mad-key <hex>] [--be] [--override] [-d <hex>] [-f <fn>]"
+            "usage": "mad write [-hbv] --aid <hex> [-k <hex>] [--madkey <hex>] [--be] [--override] [-d <hex>] [-f <fn>]"
         },
         "mem dump": {
             "command": "mem dump",
@@ -15661,6 +15660,6 @@
     "metadata": {
         "commands_extracted": 878,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-06-22T22:01:12+00:00"
+        "extracted_on": "2026-06-29T21:47:47+00:00"
     }
 }

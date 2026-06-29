@@ -849,6 +849,7 @@ SRCS =  mifare/aiddesfire.c \
         cipurse/cipursetest.c \
         fileutils.c \
         flash.c \
+        frame_progress.c \
         generator.c \
         graph.c \
         hidsio.c \

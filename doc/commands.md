@@ -1542,10 +1542,10 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
+|`mad help               `|Y       |`This help`
 |`mad read               `|N       |`Read data from MAD AID sectors`
 |`mad write              `|N       |`Write data to MAD AID sectors`
 |`mad verify             `|N       |`Verify data in MAD AID sectors`
-|`mad help               `|Y       |`This help`
 |`mad decode             `|Y       |`Decode MAD byte array`
 |`mad encode             `|Y       |`Encode MAD byte array from AID mappings`
 |`mad test               `|Y       |`Run MAD regression tests`
