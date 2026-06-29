@@ -1975,9 +1975,6 @@ static int iso14443b_select_prime_card(iso14b_prime_card_select_t *card) {
             card->config = r_repgen[offset++];
             if ((card->config & ISO14443B_PRIME_CONFIG_ATR_PRESENT) && repgen_len > offset) {
                 uint16_t atr_len = repgen_len - offset;
-                if (atr_len >= 2 && r_repgen[repgen_len - 2] == 0x90 && r_repgen[repgen_len - 1] == 0x00) {
-                    atr_len -= 2;
-                }
                 card->atr_len = (uint8_t)MIN(atr_len, ISO14B_PRIME_ATR_MAX_LEN);
                 memcpy(card->atr, r_repgen + offset, card->atr_len);
             }
@@ -1997,6 +1994,25 @@ static int iso14443b_select_prime_card(iso14b_prime_card_select_t *card) {
     AddCrc14B(attrib, sizeof(attrib) - 2);
     start_time = eof_time + ISO14B_TR2;
     CodeAndTransmit14443bAsReader(attrib, sizeof(attrib), &start_time, &eof_time, true);
+
+    uint8_t r_rr[4] = { 0x00 };
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+    retlen = 0;
+    if (Get14443bAnswerFromTag(r_rr, sizeof(r_rr), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    if (retlen != sizeof(r_rr)) {
+        return PM3_ELENGTH;
+    }
+
+    if (check_crc(CRC_14443_B, r_rr, retlen) == false) {
+        return PM3_ECRC;
+    }
+
+    if (r_rr[0] != r_repgen[0] || r_rr[1] != ISO14443B_PRIME_CMD_RR) {
+        return PM3_EWRONGANSWER;
+    }
 
     s_iso14b_pcb_blocknum = 0;
     return PM3_SUCCESS;
