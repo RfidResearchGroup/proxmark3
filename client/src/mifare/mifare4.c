@@ -221,7 +221,7 @@ int CalculateMAC(mf4Session_t *mf4session, MACType_t mtype, uint8_t blockNum, ui
     return aes_cmac8(NULL, mf4session->Kmac, macdata, mac, macdatalen);
 }
 
-int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, bool nonfirst, bool activateField, bool leaveSignalON, bool dropFieldIfError, bool verbose, bool silentMode) {
+int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, const uint8_t *key, bool nonfirst, bool activateField, bool leaveSignalON, bool dropFieldIfError, bool verbose, bool silentMode) {
 
     uint8_t data[257] = {0};
     int datalen = 0;
@@ -585,7 +585,7 @@ int MFPWriteBlock(mf4Session_t *mf4session, bool plain, bool nomacres, uint8_t b
     return PM3_SUCCESS;
 }
 
-int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *dataout, bool verbose) {
+int mfpReadSector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t *dataout, bool verbose) {
 
     // 0x4000 is the base for MFP KEY ID's.  See datasheet
     uint16_t uKeyNum = 0x4000 + sectorNo * 2 + (keyType ? 1 : 0);
@@ -662,7 +662,7 @@ int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data
     return PM3_SUCCESS;
 }
 
-int mfpWriteSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, const uint8_t *datain, bool verbose) {
+int mfpWriteSector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, const uint8_t *datain, bool verbose) {
 
     uint16_t uKeyNum = 0x4000 + sectorNo * 2 + (keyType ? 1 : 0);
     uint8_t keyn[2] = {0};
