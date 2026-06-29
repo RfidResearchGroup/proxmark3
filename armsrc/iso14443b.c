@@ -185,6 +185,8 @@
 # define ISO14B_BLOCK_SIZE  4
 #endif
 
+#define CTS512B_POWER_ON_DELAY_US 500
+
 // 4sample
 #define SEND4STUFFBIT(x) tosend_stuffbit(!(x));tosend_stuffbit(!(x));tosend_stuffbit(!(x));tosend_stuffbit(!(x));
 
@@ -534,6 +536,7 @@ static struct {
     uint16_t len;
     int      sumI;
     int      sumQ;
+    bool     saw_sof;
 } Demod;
 
 // Clear out the state of the "UART" that receives from the tag.
@@ -546,6 +549,7 @@ static void Demod14bReset(void) {
     Demod.len = 0;
     Demod.sumI = 0;
     Demod.sumQ = 0;
+    Demod.saw_sof = false;
 }
 
 static void Demod14bInit(uint8_t *data, uint16_t max_len) {
@@ -1240,6 +1244,13 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
             break;
         }
         case DEMOD_AWAITING_START_BIT: {
+            // CTS tag responses have no SOF/EOF; the frame ends when the tag
+            // stops load-modulating after the data bytes.
+            if (Demod.saw_sof == false && Demod.len > 0 && AMPLITUDE(ci, cq) < SUBCARRIER_DETECT_THRESHOLD) {
+                LED_C_OFF();
+                return true;
+            }
+
             Demod.posCount++;
             MAKE_SOFT_DECISION();
             if (v > 0) {
@@ -1271,6 +1282,7 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
                     Demod.posCount = 0;
                     Demod.bitCount = 0;
                     Demod.len = 0;
+                    Demod.saw_sof = true;
                     Demod.state = DEMOD_AWAITING_START_BIT;
                 }
             } else {
@@ -1557,6 +1569,10 @@ static void TransmitFor14443b_AsReader(uint32_t *start_time) {
     while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY)) {};
 }
 
+static uint32_t ToSendBitCount(const tosend_t *ts) {
+    return (ts->max < 0) ? 0 : ((uint32_t)ts->max * 8U) + ts->bit;
+}
+
 //-----------------------------------------------------------------------------
 // Code a layer 2 command (string of octets, including CRC) into ToSend[],
 // so that it is ready to transmit to the tag using TransmitFor14443b().
@@ -1639,7 +1655,7 @@ void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t *start_
 // eof_time in ssp clocks, but bits was added here!
 //    *eof_time = *start_time + (10 * ts->max) + 10 + 2 + 10;
 
-    *eof_time = *start_time + HF14_ETU_TO_SSP(8 * ts->max);
+    *eof_time = *start_time + HF14_ETU_TO_SSP(ToSendBitCount(ts));
 
     LogTrace(cmd, len, *start_time, *eof_time, NULL, true);
 }
@@ -1783,7 +1799,8 @@ static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
 
     uint8_t r[8] = { 0x00 };
 
-    uint32_t start_time = 0;
+    // CTS512B accepts the first reader frame 500 us after RF power-on.
+    uint32_t start_time = US_TO_SSP(CTS512B_POWER_ON_DELAY_US);
     uint32_t eof_time = 0;
     CodeAndTransmit14443bAsReader(cmdINIT, sizeof(cmdINIT), &start_time, &eof_time, true);
 
