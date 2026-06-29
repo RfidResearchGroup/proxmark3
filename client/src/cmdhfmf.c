@@ -7389,8 +7389,9 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
     }
 
 
-    if (g_session.pm3_present == false)
+    if (g_session.pm3_present == false) {
         return PM3_ENOTTY;
+    }
 
     // Select card to get UID/UIDLEN/ATQA/SAK information
     clearCommandBuffer();
@@ -7482,17 +7483,19 @@ skipfile:
             uint8_t block[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
             switch (b) {
-                case 0:
+                case 0: {
                     continue;
+                }
                 case 1:
                 case 2:
                 case 3:
                 case 4:
                 case 5:
                 case 6:
-                case 7:
+                case 7: {
                     memcpy(block, firstblocks[b], MFBLOCK_SIZE);
                     break;
+                }
                 default: {
                     if (mfIsSectorTrailerBasedOnBlocks(i, j)) {
                         // ST NDEF
@@ -7631,8 +7634,9 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
         case 0x02:
         case 0x03:
         case 0xFD:
-        case 0xFE:
+        case 0xFE: {
             break;
+        }
         default: {
             if (fix_msg == false) {
                 PrintAndLogEx(WARNING, "raw NDEF message doesn't have a proper header,  continuing...");
@@ -7832,6 +7836,7 @@ static int CmdHFMFPersonalize(const char *Cmd) {
         PrintAndLogEx(WARNING, "select only one key type");
         return PM3_EINVARG;
     }
+
     if (tmp == 0) {
         PrintAndLogEx(WARNING, "select one key type");
         return PM3_EINVARG;
@@ -7945,7 +7950,7 @@ static int CmdHf14AGen3Block(const char *Cmd) {
 
     uint8_t new_block[MFBLOCK_SIZE] = {0x00};
     int res = mf_chinese_gen_3_block(data, datalen, new_block);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't change manufacturer block data. error %d", res);
         return PM3_ESOFT;
     }
@@ -7970,6 +7975,7 @@ static int CmdHf14AGen3Freeze(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     bool confirm = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
+
     if (confirm == false) {
         PrintAndLogEx(INFO, "please confirm that you want to perma lock the card");
         return PM3_SUCCESS;
@@ -8432,10 +8438,11 @@ static int CmdHF14AMfWipe(const char *Cmd) {
         }
     }
 
-    if (gen2)
+    if (gen2) {
         PrintAndLogEx(INFO, "Forcing overwrite of sector 0 / block 0 ");
-    else
+    } else {
         PrintAndLogEx(INFO, "Skipping sector 0 / block 0");
+    }
 
     PrintAndLogEx(NORMAL, "");
 
@@ -8476,10 +8483,11 @@ static int CmdHF14AMfWipe(const char *Cmd) {
             // try both A/B keys, start with B key first
             for (int8_t kt = MF_KEY_B; kt > -1; kt--) {
 
-                if (kt == MF_KEY_A)
+                if (kt == MF_KEY_A) {
                     memcpy(data, keyA + (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
-                else
+                } else {
                     memcpy(data, keyB + (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
+                }
 
                 PrintAndLogEx(INFO, " %3d | %s" NOLF, mfFirstBlockOfSector(s) + b, sprint_hex(data + 10, MFBLOCK_SIZE));
                 clearCommandBuffer();
@@ -8539,14 +8547,15 @@ static int CmdHF14AMfView(const char *Cmd) {
     }
 
     uint16_t block_cnt = MIN(MIFARE_1K_MAXBLOCK, (bytes_read / MFBLOCK_SIZE));
-    if (bytes_read == MIFARE_MINI_MAX_BYTES)
+    if (bytes_read == MIFARE_MINI_MAX_BYTES) {
         block_cnt = MIFARE_MINI_MAXBLOCK;
-    else if (bytes_read == MIFARE_1K_EV1_MAX_BYTES)
+    } else if (bytes_read == MIFARE_1K_EV1_MAX_BYTES) {
         block_cnt = MIFARE_1K_EV1_MAXBLOCK;
-    else if (bytes_read == MIFARE_2K_MAX_BYTES)
+    } else if (bytes_read == MIFARE_2K_MAX_BYTES) {
         block_cnt = MIFARE_2K_MAXBLOCK;
-    else if (bytes_read == MIFARE_4K_MAX_BYTES)
+    } else if (bytes_read == MIFARE_4K_MAX_BYTES) {
         block_cnt = MIFARE_4K_MAXBLOCK;
+    } 
 
     if (verbose) {
         PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
@@ -8563,8 +8572,7 @@ static int CmdHF14AMfView(const char *Cmd) {
         mf_save_keys_from_arr(block_cnt, dump);
     }
 
-    const mad1_sector_t *vigik_s0 = (bytes_read >= sizeof(mad1_sector_t))
-                                    ? (const mad1_sector_t *)dump : NULL;
+    const mad1_sector_t *vigik_s0 = (bytes_read >= sizeof(mad1_sector_t)) ? (const mad1_sector_t *)dump : NULL;
 
     int sector = vigik_s0 ? DetectHID(vigik_s0, 0x4910) : -1;
     if (sector > -1) {
@@ -8632,15 +8640,18 @@ static int parse_gtu_cfg(uint8_t *d, size_t n) {
     PrintAndLogEx(INFO, "%02X.............. " NOLF, d[0]);
     bool is_ul_enabled = (d[0] == 1);
     switch (d[0]) {
-        case 0x00:
+        case 0x00: {
             PrintAndLogEx(NORMAL, "MIFARE Classic mode");
             break;
-        case 0x01:
+        }
+        case 0x01: {
             PrintAndLogEx(NORMAL, "MIFARE Ultralight/NTAG mode");
             break;
-        default:
+        }
+        default: {
             PrintAndLogEx(NORMAL, _RED_("unknown"));
             break;
+        }
     }
 
     PrintAndLogEx(INFO, "..%02X............ UID " NOLF, d[1]);
@@ -8786,18 +8797,22 @@ static int CmdHF14AGen4Info(const char *cmd) {
 
     if (dlen == 0) {
         if (IfPm3Iso14443a()) {
+
             res = mfG4GetConfig(pwd, resp, &resplen, verbose);
             if (res != PM3_SUCCESS || resplen == 0) {
-                if (res == PM3_ETIMEOUT)
+                if (res == PM3_ETIMEOUT) {
                     PrintAndLogEx(ERR, "No card in the field or card command timeout.");
-                else
+                } else {
                     PrintAndLogEx(ERR, "Error get config. Maybe not a Gen4 card?. error=%d rlen=%zu", res, resplen);
+                }
                 return PM3_ESOFT;
             }
+
         } else {
             PrintAndLogEx(ERR, "Offline mode, please provide data");
             return PM3_ESOFT;
         }
+
     } else if (dlen != 32) {
         PrintAndLogEx(FAILED, "Data must be 32 bytes length, got " _YELLOW_("%u"), dlen);
         return PM3_EINVARG;
@@ -8807,7 +8822,7 @@ static int CmdHF14AGen4Info(const char *cmd) {
     }
 
     parse_gtu_cfg(resp, resplen);
-    if (! IfPm3Iso14443a()) {
+    if (IfPm3Iso14443a() == false) {
         return PM3_SUCCESS;
     }
 
@@ -8815,6 +8830,7 @@ static int CmdHF14AGen4Info(const char *cmd) {
 
     res = mfG4GetFactoryTest(pwd, resp, &resplen, false);
     if (res == PM3_SUCCESS && resplen > 2) {
+
         PrintAndLogEx(INFO, "");
         PrintAndLogEx(INFO, _CYAN_("Factory test"));
         if (verbose) {
@@ -9177,7 +9193,7 @@ static int CmdHF14AGen4SetBlk(const char *cmd) {
 
     uint8_t blockno = (uint8_t)b;
     int res = mfG4SetBlock(pwd, blockno, data, MAGIC_INIT | MAGIC_OFF);
-    if (res) {
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't write block. error=%d", res);
         return PM3_ESOFT;
     }
@@ -9261,8 +9277,13 @@ static int CmdHF14AGen4View(const char *Cmd) {
     for (uint16_t i = 0; i < block_cnt; i++) {
 
         uint8_t flags = 0 ;
-        if (i == 0)            flags |= MAGIC_INIT ;
-        if (i + 1 == block_cnt)  flags |= MAGIC_OFF ;
+        if (i == 0) {
+            flags |= MAGIC_INIT;
+        }
+
+        if (i + 1 == block_cnt) {
+            flags |= MAGIC_OFF;
+        }
 
         int res = mfG4GetBlock(pwd, i, dump + (i * MFBLOCK_SIZE), flags);
         if (res !=  PM3_SUCCESS) {
@@ -9426,7 +9447,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
         // 4k READs can be long, so we split status each 64 blocks.
-        if (i % 64 == 0 && i != 0) {
+        if (((i % 64) == 0) && (i != 0)) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(INFO, "" NOLF) ;
         }
@@ -9700,9 +9721,11 @@ static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
     uint8_t block[MFBLOCK_SIZE] = {0x00};
     int blen = 0;
     CLIGetHexWithReturn(ctx, 1, block, &blen);
+
     int keylen = 0;
     uint8_t key[6] = {0};
     CLIGetHexWithReturn(ctx, 2, key, &keylen);
+
     bool gen1a = arg_get_lit(ctx, 3);
     bool gdm = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
@@ -10019,8 +10042,9 @@ static int CmdHF14AMfValue(const char *Cmd) {
     if (action < 4) {
 
         uint8_t isok = true;
-        if (g_session.pm3_present == false)
+        if (g_session.pm3_present == false) {
             return PM3_ENOTTY;
+        }
 
         // 0 Increment, 1 - Decrement, 2 - Restore, 3 - Set, 4 - Get, 5 - Decode from data
         if (action <= 2) {
@@ -10122,10 +10146,11 @@ static int CmdHF14AMfValue(const char *Cmd) {
             if (trnval == -1) {
                 res = mf_read_block(blockno, keytype, key, data);
             } else {
-                if (mfSectorNum(trnval) != mfSectorNum(blockno))
+                if (mfSectorNum(trnval) != mfSectorNum(blockno)) {
                     res = mf_read_block(trnval, transferkeytype, transferkey, data);
-                else
+                } else {
                     res = mf_read_block(trnval, keytype, key, data);
+                }
             }
         }
 
@@ -10280,6 +10305,7 @@ static int CmdHFMFHidEncode(const char *Cmd) {
         }
         res = wiegand_pack_from_formatted(format_idx, &card, false, &input);
     }
+
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed to encode HID input");
         return res;
