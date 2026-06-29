@@ -886,7 +886,7 @@ int exec_mad_test(bool verbose) {
     ok |= test_write_overflow(verbose);
     ok |= test_aid_not_found(verbose);
     ok |= test_write_does_not_touch_trailer();
-    ok |= test_mad_sector_untouched_after_write(verbose);
+    ok |= test_mad_sector_untouched_after_write();
     ok |= test_encode_decode_roundtrip();
     ok |= test_encode_decode_mad2_roundtrip();
     ok |= test_mad2_crc_independent(verbose);
