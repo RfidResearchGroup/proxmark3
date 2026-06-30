@@ -48,6 +48,9 @@
 
 // for static arrays
 #define ST25TB_SR_BLOCK_SIZE 4
+#define CTS_BLOCK_SIZE 2
+#define CTS256_BLOCK_COUNT 16
+#define CTS512_BLOCK_COUNT 32
 
 
 // SR memory sizes
@@ -757,17 +760,44 @@ static void print_st_general_info(uint8_t *data, uint8_t len) {
     PrintAndLogEx(SUCCESS, "Chip: %02X, " _YELLOW_("%s"), chipid, get_st_chip_model(chipid));
 }
 
+typedef struct {
+    uint8_t product_code;
+    const char *name;
+    uint8_t block_count;
+} cts_product_info_t;
+
+static const cts_product_info_t cts_products[] = {
+    {ASK_CTS_PRODUCT_CODE_CTS256B, "CTS256B", CTS256_BLOCK_COUNT},
+    {ASK_CTS_PRODUCT_CODE_CTS512B, "CTS512B", CTS512_BLOCK_COUNT},
+};
+
+static const cts_product_info_t cts_unknown_product = {
+    0x00,
+    "unknown",
+    CTS256_BLOCK_COUNT,
+};
+
+static const cts_product_info_t *get_cts_product_info(uint8_t product_code) {
+    for (size_t i = 0; i < ARRAYLEN(cts_products); i++) {
+        if (cts_products[i].product_code == product_code) {
+            return &cts_products[i];
+        }
+    }
+    return &cts_unknown_product;
+}
+
 // print UID info from ASK CT chips
 static void print_ct_general_info(void *vcard) {
     iso14b_cts_card_select_t card;
     memcpy(&card, (iso14b_cts_card_select_t *)vcard, sizeof(iso14b_cts_card_select_t));
 
     uint32_t uid32 = MemLeToUint4byte(card.uid);
+    const cts_product_info_t *product_info = get_cts_product_info(card.pc);
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "ASK C-Ticket");
-    PrintAndLogEx(SUCCESS, "           UID: " _GREEN_("%s") " ( " _YELLOW_("%010u") " )", sprint_hex(card.uid, sizeof(card.uid)), uid32);
-    PrintAndLogEx(SUCCESS, "  Product Code: %02X", card.pc);
-    PrintAndLogEx(SUCCESS, " Facility Code: %02X", card.fc);
+    PrintAndLogEx(INFO, "--- " _CYAN_("ASK CTS / C-ticket") " -----------------------");
+    PrintAndLogEx(SUCCESS, " UID          : " _GREEN_("%s") " ( " _YELLOW_("%010u") " )", sprint_hex(card.uid, sizeof(card.uid)), uid32);
+    PrintAndLogEx(SUCCESS, " Product Code : %02X ( " _YELLOW_("%s") " )", card.pc, product_info->name);
+    PrintAndLogEx(SUCCESS, " Fab Code     : %02X", card.fc);
     PrintAndLogEx(NORMAL, "");
 }
 
