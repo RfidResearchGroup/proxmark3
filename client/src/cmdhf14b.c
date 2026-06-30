@@ -837,26 +837,26 @@ static void print_footer(void) {
     PrintAndLogEx(NORMAL, "");
 }
 
-/*
 static void print_ct_blocks(uint8_t *data, size_t len) {
 
-    size_t blocks = len / ST25TB_SR_BLOCK_SIZE;
+    size_t blocks = len / CTS_BLOCK_SIZE;
 
-    print_hdr();
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, " block#  | data  | ascii");
+    PrintAndLogEx(INFO, "---------+-------+------");
 
-    for (int i = 0; i <= blocks; i++) {
+    for (int i = 0; i < blocks; i++) {
         PrintAndLogEx(INFO,
-                      "%3d/0x%02X | %s | %s | %s",
+                      "%3d/0x%02X | %s| %s",
                       i,
                       i,
-                      sprint_hex(data + (i * 4), 4),
-                      " ",
-                      sprint_ascii(data + (i * 4), 4)
+                      sprint_hex(data + (i * CTS_BLOCK_SIZE), CTS_BLOCK_SIZE),
+                      sprint_ascii(data + (i * CTS_BLOCK_SIZE), CTS_BLOCK_SIZE)
                      );
     }
-    print_footer();
+    PrintAndLogEx(INFO, "---------+-------+------");
+    PrintAndLogEx(NORMAL, "");
 }
-*/
 
 static void print_sr_blocks(uint8_t *data, size_t len, const uint8_t *uid, bool dense_output) {
 
@@ -1476,6 +1476,85 @@ static int CmdHF14Binfo(const char *Cmd) {
 // #define ISO14443B_READ_BLK     0x08
 // #define ISO14443B_WRITE_BLK    0x09
 
+static int select_cts_card_14443b(bool disconnect, iso14b_cts_card_select_t *card, bool verbose) {
+    iso14b_raw_cmd_t packet = {
+        .flags = (ISO14B_CONNECT | ISO14B_SELECT_CTS | ISO14B_CLEARTRACE),
+        .timeout = 0,
+        .rawlen = 0,
+    };
+
+    if (disconnect) {
+        packet.flags |= ISO14B_DISCONNECT;
+    }
+
+    clearCommandBuffer();
+    PacketResponseNG resp;
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
+        if (verbose) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        }
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        if (verbose) {
+            PrintAndLogEx(FAILED, "ISO 14443-b CTS select failed");
+        }
+        return resp.status;
+    }
+
+    if (resp.length < sizeof(iso14b_cts_card_select_t)) {
+        if (verbose) {
+            PrintAndLogEx(FAILED, "ISO 14443-3 CTS wrong length");
+        }
+        return PM3_ELENGTH;
+    }
+
+    if (card) {
+        memcpy(card, resp.data.asBytes, sizeof(iso14b_cts_card_select_t));
+    }
+    return PM3_SUCCESS;
+}
+
+static int read_cts_block(uint8_t blockno, uint8_t *out, uint16_t out_len) {
+    uint8_t psize = sizeof(iso14b_raw_cmd_t) + 1;
+    iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, psize);
+    if (packet == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    packet->flags = (ISO14B_APPEND_CRC | ISO14B_RAW);
+    packet->timeout = 0;
+    packet->rawlen = 1;
+    packet->raw[0] = ASK_READ | (blockno & ASK_BLOCK_ADDRESS_MASK);
+
+    clearCommandBuffer();
+    PacketResponseNG resp;
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, psize);
+    free(packet);
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        return resp.status;
+    }
+
+    if (resp.length != CTS_BLOCK_SIZE + 2) {
+        return PM3_ELENGTH;
+    }
+
+    if (check_crc(CRC_14443_B, resp.data.asBytes, resp.length) == false) {
+        return PM3_ECRC;
+    }
+
+    if (out) {
+        memcpy(out, resp.data.asBytes, MIN(out_len, CTS_BLOCK_SIZE));
+    }
+    return PM3_SUCCESS;
+}
+
 static int read_sr_block(uint8_t blockno, uint8_t *out, uint16_t out_len) {
     struct {
         uint8_t blockno;
@@ -1805,6 +1884,119 @@ static int CmdHF14BReader(const char *Cmd) {
     clear_trace_14b();
 
     return readHF14B(cm, verbose, read_plot);
+}
+
+static int CmdHF14BCtsDump(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b ctdump",
+                  "Read and print ASK CTS / C-ticket memory blocks",
+                  "hf 14b ctdump\n"
+                  "hf 14b ctdump -v"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool verbose = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    iso14b_cts_card_select_t card = {0};
+    int status = select_cts_card_14443b(false, &card, verbose);
+    if (status != PM3_SUCCESS) {
+        switch_off_field_14b();
+        PrintAndLogEx(WARNING, "no ASK CTS / C-ticket tag found");
+        return status;
+    }
+
+    print_ct_general_info(&card);
+
+    const cts_product_info_t *product_info = get_cts_product_info(card.pc);
+    uint8_t block_count = product_info->block_count;
+    uint8_t data[CTS512_BLOCK_COUNT * CTS_BLOCK_SIZE] = {0};
+
+    PrintAndLogEx(INFO, "Reading %u blocks", block_count);
+
+    for (uint8_t blockno = 0; blockno < block_count; blockno++) {
+        status = PM3_ESOFT;
+        for (uint8_t retry = 0; retry < 3; retry++) {
+            status = read_cts_block(blockno, data + (blockno * CTS_BLOCK_SIZE), CTS_BLOCK_SIZE);
+            if (status == PM3_SUCCESS) {
+                break;
+            }
+            if (verbose) {
+                PrintAndLogEx(DEBUG, "block %u read failed, status %d, retry %u", blockno, status, retry + 1);
+            }
+        }
+
+        if (status != PM3_SUCCESS) {
+            switch_off_field_14b();
+            PrintAndLogEx(FAILED, "failed to read block %u (status %d)", blockno, status);
+            return status;
+        }
+    }
+
+    switch_off_field_14b();
+    print_ct_blocks(data, block_count * CTS_BLOCK_SIZE);
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14BCtRdBl(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b ctrdbl",
+                  "Read an ASK CTS / C-ticket block",
+                  "hf 14b ctrdbl -b 6\n"
+                  "hf 14b ctrdbl --block 15 -v"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("b", "block", "<dec>", "block number"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int blockno = arg_get_int_def(ctx, 1, -1);
+    bool verbose = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    if (blockno < 0 || blockno > ASK_BLOCK_ADDRESS_MASK) {
+        PrintAndLogEx(FAILED, "block number out of range, max %u (0x%02X), got " _RED_("%d"),
+                      ASK_BLOCK_ADDRESS_MASK, ASK_BLOCK_ADDRESS_MASK, blockno);
+        return PM3_EINVARG;
+    }
+
+    iso14b_cts_card_select_t card = {0};
+    int status = select_cts_card_14443b(false, &card, verbose);
+    if (status != PM3_SUCCESS) {
+        switch_off_field_14b();
+        PrintAndLogEx(WARNING, "no ASK CTS / C-ticket tag found");
+        return status;
+    }
+
+    const cts_product_info_t *product_info = get_cts_product_info(card.pc);
+    if (blockno >= product_info->block_count) {
+        switch_off_field_14b();
+        PrintAndLogEx(FAILED, "block number out of range for %s, max %u (0x%02X), got " _RED_("%d"),
+                      product_info->name, product_info->block_count - 1, product_info->block_count - 1, blockno);
+        return PM3_EINVARG;
+    }
+
+    if (verbose) {
+        print_ct_general_info(&card);
+    }
+
+    uint8_t out[CTS_BLOCK_SIZE] = {0};
+    status = read_cts_block((uint8_t)blockno, out, sizeof(out));
+    switch_off_field_14b();
+
+    if (status == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "block %02u... " _GREEN_("%s") " | " _GREEN_("%s"),
+                      blockno, sprint_hex(out, sizeof(out)), sprint_ascii(out, sizeof(out)));
+    }
+    return status;
 }
 
 // Read SRI512|SRIX4K block
@@ -3395,6 +3587,9 @@ static command_t CommandTable[] = {
     {"tearoff",   CmdHF14BSriTearoff,  IfPm3Iso14443b,  "Tear-off attack on ST25TB/SRx counter blocks"},
     {"view",      CmdHF14BView,        AlwaysAvailable, "Display content from tag dump file"},
     {"valid",     CmdSRIX4kValid,      AlwaysAvailable, "SRIX4 checksum test"},
+    {"---------", CmdHelp,             IfPm3Iso14443b,  "------------------ " _CYAN_("ASK CTS / C-ticket") " ------------------"},
+    {"ctdump",    CmdHF14BCtsDump,     IfPm3Iso14443b,  "Dump ASK CTS/C-ticket"},
+    {"ctrdbl",    CmdHF14BCtRdBl,      IfPm3Iso14443b,  "Read ASK CTS/C-ticket block"},
     {"---------", CmdHelp,             IfPm3Iso14443b,  "------------------------- " _CYAN_("Magic") " -----------------------"},
     {"setuid",    CmdHF14BSetUID,      IfPm3Iso14443b,   "Set UID for magic card"},
     {NULL, NULL, NULL, NULL}
