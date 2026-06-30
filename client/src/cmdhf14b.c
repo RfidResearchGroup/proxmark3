@@ -1644,6 +1644,7 @@ static bool HF14B_ask_ct_reader(bool verbose) {
     switch (resp.status) {
         case PM3_SUCCESS: {
             print_ct_general_info(resp.data.asBytes);
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14b ct") "`");
             return true;
         }
         case PM3_ELENGTH: {
@@ -1716,6 +1717,7 @@ static bool HF14B_prime_reader(bool verbose) {
         return false;
     }
     print_prime_general_info(&card);
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf calypso") "`");
     return true;
 }
 
