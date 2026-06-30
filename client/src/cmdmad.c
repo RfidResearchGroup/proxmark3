@@ -710,15 +710,16 @@ static int CmdMADTest(const char *Cmd) {
 static int CmdHelp(const char *Cmd);
 
 static command_t CommandTable[] = {
+    {"--------", CmdHelp,      AlwaysAvailable, "------------- " _CYAN_("General") " ---------------"},
     {"help",     CmdHelp,      AlwaysAvailable, "This help"},
     {"--------", CmdHelp,      AlwaysAvailable, "--------------- " _CYAN_("MAD") " -----------------"},
     {"read",     CmdMADRead,   IfPm3Iso14443a,  "Read data from MAD AID sectors"},
     {"write",    CmdMADWrite,  IfPm3Iso14443a,  "Write data to MAD AID sectors"},
     {"verify",   CmdMADVerify, IfPm3Iso14443a,  "Verify data in MAD AID sectors"},
-    {"--------", CmdHelp,      AlwaysAvailable, "------------- " _CYAN_("General") " ---------------"},
+    {"--------", CmdHelp,      AlwaysAvailable, "------------- " _CYAN_("Operations") " ---------------"},
     {"decode",   CmdMADDecode, AlwaysAvailable, "Decode MAD byte array"},
     {"encode",   CmdMADEncode, AlwaysAvailable, "Encode MAD byte array from AID mappings"},
-    {"test",     CmdMADTest,   AlwaysAvailable, "Run MAD regression tests"},
+    {"test",     CmdMADTest,   AlwaysAvailable, "Perform MAD regression self-tests"},
     {NULL, NULL, NULL, NULL}
 };
 

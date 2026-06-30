@@ -1896,22 +1896,23 @@ static int CmdHFCipurseDefault(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",      CmdHelp,                   AlwaysAvailable, "This help."},
-    {"-----------", CmdHelp,                   IfPm3Iso14443a,  "------------------- " _CYAN_("Operations") " -------------------"},
-    {"info",        CmdHFCipurseInfo,          IfPm3Iso14443a,  "Tag information"},
-    {"select",    CmdHFCipurseSelect,        IfPm3Iso14443a,  "Select CIPURSE application or file"},
+    {"-----------", CmdHelp,                 IfPm3Iso14443a,  "------------------- " _CYAN_("General") " -------------------"},
+    {"help",        CmdHelp,                 AlwaysAvailable, "This help."},
+    {"test",      CmdHFCipurseTest,          AlwaysAvailable, "Regression self tests"},
+    {"-----------", CmdHelp,                 IfPm3Iso14443a,  "------------------- " _CYAN_("Operations") " -------------------"},
     {"auth",      CmdHFCipurseAuth,          IfPm3Iso14443a,  "Authenticate CIPURSE tag"},
-    {"read",      CmdHFCipurseReadFile,      IfPm3Iso14443a,  "Read binary file"},
-    {"write",     CmdHFCipurseWriteFile,     IfPm3Iso14443a,  "Write binary file"},
     {"aread",     CmdHFCipurseReadFileAttr,  IfPm3Iso14443a,  "Read file attributes"},
     {"awrite",    CmdHFCipurseWriteFileAttr, IfPm3Iso14443a,  "Write file attributes"},
-    {"formatall", CmdHFCipurseFormatAll,     IfPm3Iso14443a,  "Erase all the data from chip"},
     {"create",    CmdHFCipurseCreateDGI,     IfPm3Iso14443a,  "Create file, application, key via DGI record"},
     {"delete",    CmdHFCipurseDeleteFile,    IfPm3Iso14443a,  "Delete file"},
+    {"default",   CmdHFCipurseDefault,       IfPm3Iso14443a,  "Set default key and file id for all the other commands"},
+    {"formatall", CmdHFCipurseFormatAll,     IfPm3Iso14443a,  "Erase all the data from chip"},
+    {"info",        CmdHFCipurseInfo,        IfPm3Iso14443a,  "Tag information"},
+    {"read",      CmdHFCipurseReadFile,      IfPm3Iso14443a,  "Read binary file"},
+    {"select",    CmdHFCipurseSelect,        IfPm3Iso14443a,  "Select CIPURSE application or file"},
     {"updkey",    CmdHFCipurseUpdateKey,     IfPm3Iso14443a,  "Update key"},
     {"updakey",   CmdHFCipurseUpdateKeyAttr, IfPm3Iso14443a,  "Update key attributes"},
-    {"default",   CmdHFCipurseDefault,       IfPm3Iso14443a,  "Set default key and file id for all the other commands"},
-    {"test",      CmdHFCipurseTest,          AlwaysAvailable, "Regression tests"},
+    {"write",     CmdHFCipurseWriteFile,     IfPm3Iso14443a,  "Write binary file"},
     {NULL, NULL, 0, NULL}
 };
 
