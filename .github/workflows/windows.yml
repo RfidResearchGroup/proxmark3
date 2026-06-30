@@ -155,7 +155,7 @@ jobs:
 
     steps:
       - name: WSL setup
-        uses: Vampire/setup-wsl@v5
+        uses: Vampire/setup-wsl@v7
         with:
           distribution: Ubuntu-24.04
           update: "true"
