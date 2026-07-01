@@ -1350,11 +1350,14 @@ static int CmdLegicClone(const char *Cmd) {
     int mcc_len = 0;
     uint8_t mcc_buf[1] = {0};
     bool has_mcc = false;
-    if (!write_to_tag && arg_get_str(ctx, 2) != NULL) {
+
+    if (write_to_tag == false && arg_get_str(ctx, 2) != NULL) {
+
         CLIParamStrToBuf(arg_get_str(ctx, 2), mcc_buf, sizeof(mcc_buf), &mcc_len);
         has_mcc = (mcc_len == 1);
-        if (!has_mcc) {
+        if (has_mcc == false) {
             PrintAndLogEx(WARNING, "Target MCC must be exactly one byte");
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     }
