@@ -1431,6 +1431,7 @@ static int CmdHFSaflokModify(const char *Cmd) {
 
     if (dlen != 17) {
         PrintAndLogEx(WARNING, "block data must include 17 HEX bytes. Got %i", dlen);
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
