@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf 14b ctrdbl` and `hf 14b ctdump` commands for interacting with ASK CTS tags (@kormax)
 - Fixed `hf legic migrate` failing to parse the optional DCF argument as hex (@IdanHo)
 - Add support for parsing Finnish Helsinki Regional Transport (HRT) travel cards (@sanduuz)
 - Added standalone mode `HF_DOEGOX_COMMIT`: DESFire suspended commit without relay (@doegox)
