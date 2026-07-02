@@ -78,13 +78,11 @@ typedef struct {
 typedef struct {
     // Read a full sector (all blocks including trailer) into buf.
     // buf must hold mfNumBlocksPerSector(sector_no) * MFBLOCK_SIZE bytes.
-    int (*read_sector)(uint8_t sector_no, uint8_t key_type,
-                       const uint8_t *key, uint8_t *buf, bool verbose);
+    int (*read_sector)(uint8_t sector_no, uint8_t key_type, const uint8_t *key, uint8_t *buf, bool verbose);
 
     // Write the data blocks (non-trailer) of a sector.
     // data points to (mfNumBlocksPerSector(sector_no) - 1) * MFBLOCK_SIZE bytes.
-    int (*write_sector_data)(uint8_t sector_no, uint8_t key_type,
-                             const uint8_t *key, const uint8_t *data, bool verbose);
+    int (*write_sector_data)(uint8_t sector_no, uint8_t key_type, const uint8_t *key, const uint8_t *data, bool verbose);
 
     const uint8_t *mad_key;
     uint8_t mad_key_type;

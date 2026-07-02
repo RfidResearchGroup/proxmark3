@@ -61,12 +61,15 @@ static inline uint8_t get_days_in_month(uint16_t year, uint8_t month) {
 typedef struct _saflok_mfc_data_t {
     uint8_t raw[17];
 } saflok_mfc_data_t;
+
 typedef struct _saflok_mfc_uid_t {
     uint8_t uid[4];
 } saflok_mfc_uid_t;
+
 typedef struct _saflok_mfc_key_t {
     uint8_t key[6];
 } saflok_mfc_key_t;
+
 typedef struct _saflok_mfc_datetime_t {
     uint16_t year;  // full year, e.g., 2024
     uint8_t month;  // Month in range [1..12]
@@ -74,6 +77,7 @@ typedef struct _saflok_mfc_datetime_t {
     uint8_t hour;   // hour of day, range [0..23]
     uint8_t minute; // minute of hour, range [0..59]
 } saflok_mfc_datetime_t;
+
 typedef struct _saflok_mfc_datetime_offset_t {
     uint8_t years;   // range [0..15]
     uint8_t months;  // range [0..11]
@@ -179,135 +183,148 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
 static inline uint8_t get_saflok_mfc_card_level(const saflok_mfc_data_t *data) {
     return (uint8_t)get_bitfield(data, 0, 4);
 }
+
 static inline bool set_saflok_mfc_card_level(saflok_mfc_data_t *data, uint32_t card_level) {
     if (card_level > 0xFu) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " card_level out of range (%08x)", card_level);
         return false;
     }
-    bool success = set_bitfield(data, 0, 4, card_level);
-    return success;
+    return set_bitfield(data, 0, 4, card_level);
 }
+
 static inline uint8_t get_saflok_mfc_card_type(const saflok_mfc_data_t *data) {
     return (uint8_t)get_bitfield(data, 4, 4);
 }
+
 static inline bool set_saflok_mfc_card_type(saflok_mfc_data_t *data, uint32_t card_type) {
     if (card_type > 0xFu) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " card_type out of range (%08x)", card_type);
         return false;
     }
-    bool success = set_bitfield(data, 4, 4, card_type);
-    return success;
+    return set_bitfield(data, 4, 4, card_type);
 }
+
 static inline uint8_t get_saflok_mfc_card_id(const saflok_mfc_data_t *data) {
     return (uint8_t)get_bitfield(data, 8, 8);
 }
+
 static inline bool set_saflok_mfc_card_id(saflok_mfc_data_t *data, uint32_t card_id) {
     if (card_id > 0xFFu) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " card_id out of range (%08x)", card_id);
         return false;
     }
-    bool success = set_bitfield(data, 8, 8, card_id);
-    return success;
+    return set_bitfield(data, 8, 8, card_id);
 }
+
 static inline uint8_t get_saflok_mfc_opening_key(const saflok_mfc_data_t *data) {
     return (uint8_t)get_bitfield(data, 16, 2);
 }
+
 static inline bool set_saflok_mfc_opening_key(saflok_mfc_data_t *data, uint32_t opening_key) {
     if (opening_key > 0x3u) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " opening_key out of range (%08x)", opening_key);
         return false;
     }
-    bool success = set_bitfield(data, 16, 2, opening_key);
-    return success;
+    return set_bitfield(data, 16, 2, opening_key);
 }
+
 static inline uint16_t get_saflok_mfc_lock_id(const saflok_mfc_data_t *data) {
     return (uint16_t)get_bitfield(data, 18, 14);
 }
+
 static inline bool set_saflok_mfc_lock_id(saflok_mfc_data_t *data, uint32_t lock_id) {
     if (lock_id > 0x3FFFu) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " lock_id out of range (%08x)", lock_id);
         return false;
     }
-    bool success = set_bitfield(data, 18, 14, lock_id);
-    return success;
+    return set_bitfield(data, 18, 14, lock_id);
 }
+
 static inline uint16_t get_saflok_mfc_pass_number(const saflok_mfc_data_t *data) {
     return (uint16_t)get_bitfield(data, 32, 12);
 }
+
 static inline bool set_saflok_mfc_pass_number(saflok_mfc_data_t *data, uint32_t pass_number) {
     if (pass_number > 0xFFFu) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " pass_number out of range (%08x)", pass_number);
         return false;
     }
-    bool success = set_bitfield(data, 32, 12, pass_number);
-    return success;
+    return set_bitfield(data, 32, 12, pass_number);
 }
+
 static inline uint16_t get_saflok_mfc_sequence_and_combination(const saflok_mfc_data_t *data) {
     return (uint16_t)get_bitfield(data, 44, 12);
 }
+
 static inline bool set_saflok_mfc_sequence_and_combination(saflok_mfc_data_t *data, uint32_t sequence_and_combination) {
     if (sequence_and_combination > 0xFFFu) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " sequence_and_combination out of range (%08x)", sequence_and_combination);
         return false;
     }
-    bool success = set_bitfield(data, 44, 12, sequence_and_combination);
-    return success;
+    return set_bitfield(data, 44, 12, sequence_and_combination);
 }
+
 static inline bool get_saflok_mfc_deadbolt_override(const saflok_mfc_data_t *data) {
     uint32_t result = get_bitfield(data, 56, 1);
     return (result != 0);
 }
+
 static inline bool set_saflok_mfc_deadbolt_override(saflok_mfc_data_t *data, uint32_t deadbolt_override) {
-    bool success = set_bitfield(data, 56, 1, deadbolt_override ? 0x1 : 0x0);
-    return success;
+    return set_bitfield(data, 56, 1, deadbolt_override ? 0x1 : 0x0);
 }
+
 static inline uint8_t get_saflok_mfc_restricted_days(const saflok_mfc_data_t *data) {
     return (uint8_t)get_bitfield(data, 57, 7);
 }
+
 static inline bool set_saflok_mfc_restricted_days(saflok_mfc_data_t *data, uint32_t restricted_days) {
     if (restricted_days > 0x7Fu) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " restricted_days out of range (%08x)", restricted_days);
         return false;
     }
-    bool success = set_bitfield(data, 57, 7, restricted_days);
-    return success;
+    return set_bitfield(data, 57, 7, restricted_days);
 }
+
 static inline uint32_t get_saflok_mfc_raw_interval(const saflok_mfc_data_t *data) {
     return get_bitfield(data, 64, 24);
 }
+
 static inline bool set_saflok_mfc_raw_interval(saflok_mfc_data_t *data, uint32_t raw_interval) {
     if (raw_interval > 0xFFFFFFu) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " raw_interval out of range (%08x)", raw_interval);
         return false;
     }
-    bool success = set_bitfield(data, 64, 24, raw_interval);
-    return success;
+    return set_bitfield(data, 64, 24, raw_interval);
 }
+
 static inline uint32_t get_saflok_mfc_raw_card_creation_date(const saflok_mfc_data_t *data) {
     return get_bitfield(data, 88, 28);
 }
+
 static inline bool set_saflok_mfc_raw_card_creation_date(saflok_mfc_data_t *data, uint32_t raw_card_creation_date) {
     if (raw_card_creation_date > 0x0FFFFFFFu) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " raw_card_creation_date out of range (%08x)", raw_card_creation_date);
         return false;
     }
-    bool success = set_bitfield(data, 88, 28, raw_card_creation_date);
-    return success;
+    return set_bitfield(data, 88, 28, raw_card_creation_date);
 }
+
 static inline uint16_t get_saflok_mfc_property_id(const saflok_mfc_data_t *data) {
     return get_bitfield(data, 116, 12);
 }
+
 static inline bool set_saflok_mfc_property_id(saflok_mfc_data_t *data, uint32_t property_id) {
     if (property_id > 0xFFFu) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " property_id out of range (%08x)", property_id);
         return false;
     }
-    bool success = set_bitfield(data, 116, 12, property_id);
-    return success;
+    return set_bitfield(data, 116, 12, property_id);
 }
+
 static inline uint8_t get_saflok_mfc_checksum(const saflok_mfc_data_t *data) {
     return data->raw[16];
 }
+
 static inline bool set_saflok_mfc_checksum(saflok_mfc_data_t *data, uint8_t checksum) {
     data->raw[16] = checksum;
     return true;
@@ -322,6 +339,7 @@ static inline uint16_t _get_saflok_mfc_card_creation_year_impl(const saflok_mfc_
     uint16_t creation_year = 1980u + creation_year_bits; // automatically extends to uint16_t
     return creation_year;
 }
+
 static inline bool _set_saflok_mfc_card_creation_year_impl(saflok_mfc_data_t *data, uint16_t year) {
     if (year < 1980u || year > (1980u + 0x7Fu)) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " year out of range (%u)", year);
@@ -334,10 +352,12 @@ static inline bool _set_saflok_mfc_card_creation_year_impl(saflok_mfc_data_t *da
     data->raw[11] = (data->raw[11] & 0x0Fu) | creation_year_bits_low;
     return true;
 }
+
 static inline uint8_t _get_saflok_mfc_card_creation_month_impl(const saflok_mfc_data_t *data) {
     // should be in range [1..12] ... value of zero is invalid
     return (data->raw[11] & 0x0Fu);
 }
+
 static inline bool _set_saflok_mfc_card_creation_month_impl(saflok_mfc_data_t *data, uint8_t month) {
     if (month < 1 || month > 12) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " month out of range (%u)", month);
@@ -346,30 +366,37 @@ static inline bool _set_saflok_mfc_card_creation_month_impl(saflok_mfc_data_t *d
     data->raw[11] = (data->raw[11] & 0xF0u) | (month & 0x0Fu);
     return true;
 }
+
 static inline uint8_t _get_saflok_mfc_card_creation_day_impl(const saflok_mfc_data_t *data) {
     return ((data->raw[12] >> 3) & 0x1Fu);
 }
+
 static inline bool _set_saflok_mfc_card_creation_day_impl(saflok_mfc_data_t *data, uint8_t day) {
     data->raw[12] = (data->raw[12] & 0x07u) | ((day & 0x1Fu) << 3);
     return true;
 }
+
 static inline uint8_t _get_saflok_mfc_card_creation_hour_impl(const saflok_mfc_data_t *data) {
     // low three bits from raw[12]
     // high two bits from raw[13]
     return (((data->raw[12] & 0x07u) << 2) | (data->raw[13] >> 6));
 }
+
 static inline bool _set_saflok_mfc_card_creation_hour_impl(saflok_mfc_data_t *data, uint8_t hour) {
     data->raw[12] = (data->raw[12] & 0xF8u) | ((hour >> 2) & 0x07u);
     data->raw[13] = (data->raw[13] & 0x3Fu) | ((hour & 0x03u) << 6);
     return true;
 }
+
 static inline uint8_t _get_saflok_mfc_card_creation_minute_impl(const saflok_mfc_data_t *data) {
     return (data->raw[13] & 0x3Fu);
 }
+
 static inline bool _set_saflok_mfc_card_creation_minute_impl(saflok_mfc_data_t *data, uint8_t minute) {
     data->raw[13] = (data->raw[13] & 0xC0u) | (minute & 0x3Fu);
     return true;
 }
+
 #endif // // helpers for get/set_saflok_mfc_card_creation_date() ... do not call these directly as does not validate...
 #if 1 // getters and setters for creation date
 
@@ -379,28 +406,32 @@ static inline bool is_saflok_mfc_datetime_valid(const saflok_mfc_datetime_t *dat
         PrintAndLogEx(WARNING, "year out of range (%d)", date->year);
         result = false;
     }
+
     if ((date->month < 1) || (date->month > 12)) {
         PrintAndLogEx(WARNING, "month out of range (%d)", date->month);
         result = false;
     }
+
     uint8_t max_days = get_days_in_month(date->year, date->month);
     if ((date->day < 1u) || (date->day > max_days)) {
         PrintAndLogEx(WARNING, "day out of range (%d) for month %d year %d", date->day, date->month, date->year);
         result = false;
     }
+
     if (date->hour > 23) {
         PrintAndLogEx(WARNING, "hour out of range (%d)", date->hour);
         result = false;
     }
+
     if (date->minute > 59) {
         PrintAndLogEx(WARNING, "minute out of range (%d)", date->minute);
         result = false;
     }
+
     return result;
 }
-static inline saflok_mfc_datetime_t get_saflok_mfc_card_creation_datetime(
-    const saflok_mfc_data_t *data
-) {
+
+static inline saflok_mfc_datetime_t get_saflok_mfc_card_creation_datetime(const saflok_mfc_data_t *data) {
     saflok_mfc_datetime_t date = {
         .year = _get_saflok_mfc_card_creation_year_impl(data),
         .month = _get_saflok_mfc_card_creation_month_impl(data),
@@ -408,37 +439,51 @@ static inline saflok_mfc_datetime_t get_saflok_mfc_card_creation_datetime(
         .hour = _get_saflok_mfc_card_creation_hour_impl(data),
         .minute = _get_saflok_mfc_card_creation_minute_impl(data)
     };
-    if (!is_saflok_mfc_datetime_valid(&date)) {
+
+    if (is_saflok_mfc_datetime_valid(&date) == false) {
         PrintAndLogEx(WARNING, "Warning: creation date appears invalid: %04d-%02d-%02dT%02d:%02d",
-                      date.year, date.month, date.day, date.hour, date.minute
+                      date.year, 
+                      date.month, 
+                      date.day, 
+                      date.hour, 
+                      date.minute
                      );
     }
     return date;
 }
+
 static inline bool set_saflok_mfc_card_creation_datetime(saflok_mfc_data_t *data, const saflok_mfc_datetime_t *date) {
-    if (!is_saflok_mfc_datetime_valid(date)) {
+    if (is_saflok_mfc_datetime_valid(date) == false) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " creation date is invalid");
         return false;
     }
+
     bool result =
         _set_saflok_mfc_card_creation_year_impl(data, date->year) &&
         _set_saflok_mfc_card_creation_month_impl(data, date->month) &&
         _set_saflok_mfc_card_creation_day_impl(data, date->day) &&
         _set_saflok_mfc_card_creation_hour_impl(data, date->hour) &&
         _set_saflok_mfc_card_creation_minute_impl(data, date->minute);
-    if (!result) {
+
+    if (result == false) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " failed to set creation date of %04d-%02d-%02dT%02d:%02d",
-                      date->year, date->month, date->day, date->hour, date->minute
-                     );
+                date->year,
+                date->month,
+                date->day,
+                date->hour,
+                date->minute
+            );
     }
     return result;
 }
 #endif // getters and setters for creation date components
+
 #if 1 // helpers for get/set_saflok_mfc_expiration_date()
 static inline uint8_t _get_saflok_mfc_interval_years_impl(const saflok_mfc_data_t *data) {
     // supports up to 15 year intervals(!)
     return (data->raw[8] >> 4);
 }
+
 static inline bool _set_saflok_mfc_interval_years_impl(saflok_mfc_data_t *data, uint32_t years) {
     if (years > 0xFu) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " interval years out of range (%u)", years);
@@ -447,6 +492,7 @@ static inline bool _set_saflok_mfc_interval_years_impl(saflok_mfc_data_t *data, 
     data->raw[8] = (data->raw[8] & 0x0Fu) | ((years & 0xFFu) << 4);
     return true;
 }
+
 static inline uint8_t _get_saflok_mfc_interval_months_impl(const saflok_mfc_data_t *data) {
     uint8_t months = data->raw[8] & 0x0Fu;
     if (months >= 12u) {
@@ -454,6 +500,7 @@ static inline uint8_t _get_saflok_mfc_interval_months_impl(const saflok_mfc_data
     }
     return months;
 }
+
 static inline bool _set_saflok_mfc_interval_months_impl(saflok_mfc_data_t *data, uint8_t months) {
     if (months >= 12u) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " interval months out of range (%u)", months);
@@ -462,6 +509,7 @@ static inline bool _set_saflok_mfc_interval_months_impl(saflok_mfc_data_t *data,
     data->raw[8] = (data->raw[8] & 0xF0u) | (months & 0x0Fu);
     return true;
 }
+
 static inline uint8_t _get_saflok_mfc_interval_days_impl(const saflok_mfc_data_t *data) {
     uint8_t days = (data->raw[9] >> 3) & 0x1Fu;
     if (days > 31u) {
@@ -469,6 +517,7 @@ static inline uint8_t _get_saflok_mfc_interval_days_impl(const saflok_mfc_data_t
     }
     return days;
 }
+
 static inline bool _set_saflok_mfc_interval_days_impl(saflok_mfc_data_t *data, uint8_t days) {
     if (days > 31u) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " interval days out of range (%u)", days);
@@ -477,6 +526,7 @@ static inline bool _set_saflok_mfc_interval_days_impl(saflok_mfc_data_t *data, u
     data->raw[9] = (data->raw[9] & 0x07u) | ((days & 0x1Fu) << 3);
     return true;
 }
+
 static inline uint8_t _get_saflok_mfc_interval_hours_impl(const saflok_mfc_data_t *data) {
     // low three bits from raw[9]
     // top two bits from raw[10]
@@ -486,6 +536,7 @@ static inline uint8_t _get_saflok_mfc_interval_hours_impl(const saflok_mfc_data_
     }
     return hours;
 }
+
 static inline bool _set_saflok_mfc_interval_hours_impl(saflok_mfc_data_t *data, uint8_t hours) {
     if (hours > 23u) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " interval hours out of range (%u)", hours);
@@ -498,6 +549,7 @@ static inline bool _set_saflok_mfc_interval_hours_impl(saflok_mfc_data_t *data, 
     data->raw[10] = (data->raw[10] & 0x3Fu) | ((hours & 0x03u) << 6);
     return true;
 }
+
 static inline uint8_t _get_saflok_mfc_interval_minutes_impl(const saflok_mfc_data_t *data) {
     uint8_t minutes = (data->raw[10] & 0x3Fu);
     if (minutes > 59u) {
@@ -505,6 +557,7 @@ static inline uint8_t _get_saflok_mfc_interval_minutes_impl(const saflok_mfc_dat
     }
     return minutes;
 }
+
 static inline bool _set_saflok_mfc_interval_minutes_impl(saflok_mfc_data_t *data, uint8_t minutes) {
     if (minutes > 59u) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " interval minutes out of range (%u)", minutes);
@@ -513,12 +566,12 @@ static inline bool _set_saflok_mfc_interval_minutes_impl(saflok_mfc_data_t *data
     data->raw[10] = (data->raw[10] & 0xC0u) | (minutes & 0x3Fu);
     return true;
 }
+
 #endif // getters for interval (expiration) components
+
 #if 1 // Setting the interval date is based on the creation date.
 
-static saflok_mfc_datetime_offset_t get_saflok_mfc_interval(
-    const saflok_mfc_data_t *data
-) {
+static saflok_mfc_datetime_offset_t get_saflok_mfc_interval(const saflok_mfc_data_t *data) {
     saflok_mfc_datetime_offset_t offset = {
         .years   = _get_saflok_mfc_interval_years_impl(data),
         .months  = _get_saflok_mfc_interval_months_impl(data),
@@ -528,10 +581,8 @@ static saflok_mfc_datetime_offset_t get_saflok_mfc_interval(
     };
     return offset;
 }
-static bool set_saflok_mfc_interval(
-    saflok_mfc_data_t *data,
-    saflok_mfc_datetime_offset_t offset
-) {
+
+static bool set_saflok_mfc_interval(saflok_mfc_data_t *data, saflok_mfc_datetime_offset_t offset) {
     bool result =
         _set_saflok_mfc_interval_years_impl(data, offset.years) &&
         _set_saflok_mfc_interval_months_impl(data, offset.months) &&
@@ -540,10 +591,8 @@ static bool set_saflok_mfc_interval(
         _set_saflok_mfc_interval_minutes_impl(data, offset.minutes);
     return result;
 }
-static saflok_mfc_datetime_t add_offset(
-    const saflok_mfc_datetime_t *base,
-    const saflok_mfc_datetime_offset_t offset
-) {
+
+static saflok_mfc_datetime_t add_offset(const saflok_mfc_datetime_t *base, const saflok_mfc_datetime_offset_t offset) {
 
     static const int MY_DEBUG_LEVEL = DEBUG;
     // adding dates is non-trivial.
@@ -559,17 +608,28 @@ static saflok_mfc_datetime_t add_offset(
     };
 
     PrintAndLogEx(MY_DEBUG_LEVEL, "Base date: %04u-%02u-%02uT%02u:%02u",
-                  base->year, base->month, base->day,
-                  base->hour, base->minute
-                 );
+                  base->year,
+                  base->month,
+                  base->day,
+                  base->hour,
+                  base->minute
+                );
+
     PrintAndLogEx(MY_DEBUG_LEVEL, "As struct tm: %04d-%02d-%02dT%02d:%02d",
-                  tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                  tm.tm_hour, tm.tm_min
-                 );
+                  tm.tm_year + 1900,
+                  tm.tm_mon + 1,
+                  tm.tm_mday,
+                  tm.tm_hour,
+                  tm.tm_min
+                );
+
     PrintAndLogEx(MY_DEBUG_LEVEL, "Offset to add: %u years, %u months, %u days, %u hours, %u minutes",
-                  offset.years, offset.months, offset.days,
-                  offset.hours, offset.minutes
-                 );
+                  offset.years,
+                  offset.months,
+                  offset.days,
+                  offset.hours,
+                  offset.minutes
+                );
 
     // add the offsets ... and it's OK for them to be out of range
     tm.tm_year += offset.years;
@@ -579,55 +639,79 @@ static saflok_mfc_datetime_t add_offset(
     tm.tm_min  += offset.minutes;
 
     PrintAndLogEx(MY_DEBUG_LEVEL, "With Offset (pre-normalization): %04d-%02d-%02dT%02d:%02d",
-                  tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                  tm.tm_hour, tm.tm_min
-                 );
+                  tm.tm_year + 1900,
+                  tm.tm_mon + 1,
+                  tm.tm_mday,
+                  tm.tm_hour,
+                  tm.tm_min
+                );
 
     if (tm.tm_min >= 60) {
         tm.tm_hour += tm.tm_min / 60;
         tm.tm_min = tm.tm_min % 60;
         PrintAndLogEx(MY_DEBUG_LEVEL, "Normalized minutes: %04d-%02d-%02dT%02d:%02d",
-                      tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                      tm.tm_hour, tm.tm_min
-                     );
+                      tm.tm_year + 1900,
+                      tm.tm_mon + 1,
+                      tm.tm_mday,
+                      tm.tm_hour,
+                      tm.tm_min
+                    );
 
     }
+
     if (tm.tm_hour >= 24) {
         tm.tm_mday += tm.tm_hour / 24;
         tm.tm_hour = tm.tm_hour % 24;
         PrintAndLogEx(MY_DEBUG_LEVEL, "Normalized hours: %04d-%02d-%02dT%02d:%02d",
-                      tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                      tm.tm_hour, tm.tm_min
-                     );
+                      tm.tm_year + 1900,
+                      tm.tm_mon + 1,
+                      tm.tm_mday,
+                      tm.tm_hour,
+                      tm.tm_min
+                    );
     }
+
     // variable days per month ... loop is simplest option
-    for (uint8_t current_days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1);
-            tm.tm_mday > current_days_in_month;
-            current_days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1)
-        ) {
+    uint8_t curr_days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1);
+    for ( ; ((tm.tm_mday & 0xFF) > curr_days_in_month); curr_days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1)) {
+
         tm.tm_mon  ++;
-        tm.tm_mday -= current_days_in_month;
+        tm.tm_mday -= curr_days_in_month;
+
         if (tm.tm_mon >= 12) {
             tm.tm_year ++;
             tm.tm_mon -= 12;
         }
+
         PrintAndLogEx(MY_DEBUG_LEVEL, "Normalized days: %04d-%02d-%02dT%02d:%02d",
-                      tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                      tm.tm_hour, tm.tm_min
-                     );
+                      tm.tm_year + 1900,
+                      tm.tm_mon + 1,
+                      tm.tm_mday,
+                      tm.tm_hour,
+                      tm.tm_min
+                    );
     }
+
     if (tm.tm_mon >= 12) {
+
         tm.tm_year += tm.tm_mon / 12;
         tm.tm_mon = tm.tm_mon % 12;
         PrintAndLogEx(MY_DEBUG_LEVEL, "Normalized months: %04d-%02d-%02dT%02d:%02d",
-                      tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                      tm.tm_hour, tm.tm_min
-                     );
+                      tm.tm_year + 1900,
+                      tm.tm_mon + 1,
+                      tm.tm_mday,
+                      tm.tm_hour,
+                      tm.tm_min
+                    );
     }
+
     PrintAndLogEx(MY_DEBUG_LEVEL, "Final normalized date: %04d-%02d-%02dT%02d:%02d",
-                  tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                  tm.tm_hour, tm.tm_min
-                 );
+                  tm.tm_year + 1900,
+                  tm.tm_mon + 1,
+                  tm.tm_mday,
+                  tm.tm_hour,
+                  tm.tm_min
+                );
 
     // and finally convert back into saflok_mfc_datetime_t
     saflok_mfc_datetime_t result = {
@@ -638,24 +722,26 @@ static saflok_mfc_datetime_t add_offset(
         .minute = tm.tm_min
     };
     PrintAndLogEx(MY_DEBUG_LEVEL, "Converted back to saflok_mfc_datetime_t: %04d-%02d-%02dT%02d:%02d",
-                  result.year, result.month, result.day,
-                  result.hour, result.minute
-                 );
+                  result.year,
+                  result.month,
+                  result.day,
+                  result.hour,
+                  result.minute
+                );
     return result;
 }
-static saflok_mfc_datetime_offset_t get_datetime_offset(
-    const saflok_mfc_datetime_t *start,
-    const saflok_mfc_datetime_t *end
-) {
+
+static saflok_mfc_datetime_offset_t get_datetime_offset(const saflok_mfc_datetime_t *start, const saflok_mfc_datetime_t *end) {
 
     enum logLevel MYDBG = DEBUG;
     saflok_mfc_datetime_offset_t result = {0};
 
-    if (!is_saflok_mfc_datetime_valid(start)) {
+    if (is_saflok_mfc_datetime_valid(start) == false) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " start date is invalid");
         return result;
     }
-    if (!is_saflok_mfc_datetime_valid(end)) {
+
+    if (is_saflok_mfc_datetime_valid(end) == false) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " end date is invalid");
         return result;
     }
@@ -674,29 +760,35 @@ static saflok_mfc_datetime_offset_t get_datetime_offset(
         .tm_min  = end->minute - start->minute,
     };
     PrintAndLogEx(MYDBG, "Initial diff: %d years, %d months, %d days, %d hours, %d minutes",
-                  diff.tm_year, diff.tm_mon, diff.tm_mday, diff.tm_hour, diff.tm_min
-                 );
+                  diff.tm_year,
+                  diff.tm_mon,
+                  diff.tm_mday,
+                  diff.tm_hour,
+                  diff.tm_min
+                );
+
     if (diff.tm_min < 0) {
         diff.tm_min += 60;
         diff.tm_hour -= 1;
     }
+
     if (diff.tm_hour < 0) {
         diff.tm_hour += 24;
         diff.tm_mday -= 1;
     }
+
     if (diff.tm_mday < 0) {
         // determine days in previous month
         uint16_t tgt_year = end->year - (end->month == 1 ? 1 : 0);
         uint8_t tgt_month = (end->month == 1 ? 12 : (end->month - 1));
         uint8_t days_in_prev_month = get_days_in_month(tgt_year, tgt_month);
-        PrintAndLogEx(MYDBG, "Borrowing days from month %02u of year %04u which has %02u days",
-                      tgt_month, tgt_year, days_in_prev_month
-                     );
+        PrintAndLogEx(MYDBG, "Borrowing days from month %02u of year %04u which has %02u days", tgt_month, tgt_year, days_in_prev_month);
 
         // borrow from previous month
         diff.tm_mon -= 1;
         diff.tm_mday += days_in_prev_month;
     }
+
     if (diff.tm_mon < 0) {
         diff.tm_mon += 12;
         diff.tm_year -= 1;
@@ -708,24 +800,31 @@ static saflok_mfc_datetime_offset_t get_datetime_offset(
     result.hours   = diff.tm_hour;
     result.minutes = diff.tm_min;
     PrintAndLogEx(MYDBG, "Final offset: %d years, %d months, %d days, %d hours, %d minutes",
-                  result.years, result.months, result.days, result.hours, result.minutes
-                 );
+                  result.years,
+                  result.months,
+                  result.days,
+                  result.hours,
+                  result.minutes
+                );
     return result;
 }
-static saflok_mfc_datetime_t get_saflok_mfc_card_expiration_datetime(
-    const saflok_mfc_data_t *data
-) {
+
+static saflok_mfc_datetime_t get_saflok_mfc_card_expiration_datetime(const saflok_mfc_data_t *data) {
+
     static const int MY_DEBUG_LEVEL = DEBUG;
+
     saflok_mfc_datetime_t creation_date = get_saflok_mfc_card_creation_datetime(data);
     saflok_mfc_datetime_offset_t offset = get_saflok_mfc_interval(data);
     PrintAndLogEx(MY_DEBUG_LEVEL, "Card Creation Date: %04u-%02u-%02uT%02u:%02u",
                   creation_date.year, creation_date.month, creation_date.day,
                   creation_date.hour, creation_date.minute
                  );
+
     PrintAndLogEx(MY_DEBUG_LEVEL, "Card Interval Offset: %u years, %u months, %u days, %u hours, %u minutes",
                   offset.years, offset.months, offset.days,
                   offset.hours, offset.minutes
                  );
+
     saflok_mfc_datetime_t expiration = add_offset(&creation_date, offset);
     PrintAndLogEx(MY_DEBUG_LEVEL, "Calculated Expiration Date: %04u-%02u-%02uT%02u:%02u",
                   expiration.year, expiration.month, expiration.day,
@@ -733,19 +832,18 @@ static saflok_mfc_datetime_t get_saflok_mfc_card_expiration_datetime(
                  );
     return expiration;
 }
-static bool set_saflok_mfc_card_expiration_datetime(
-    saflok_mfc_data_t *data,
-    const saflok_mfc_datetime_t *expiration
-) {
-    if (!is_saflok_mfc_datetime_valid(expiration)) {
+
+static bool set_saflok_mfc_card_expiration_datetime(saflok_mfc_data_t *data, const saflok_mfc_datetime_t *expiration) {
+
+    if (is_saflok_mfc_datetime_valid(expiration) == false) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " expiration date is invalid");
         return false;
     }
     saflok_mfc_datetime_t creation_datetime = get_saflok_mfc_card_creation_datetime(data);
     saflok_mfc_datetime_offset_t offset = get_datetime_offset(&creation_datetime, expiration);
-    bool result = set_saflok_mfc_interval(data, offset);
-    return result;
+    return set_saflok_mfc_interval(data, offset);
 }
+
 #endif // Setting the interval date is based on the creation date.
 
 static const uint8_t c_aDecode[] = {
@@ -887,18 +985,23 @@ static void saflok_decrypt(const saflok_mfc_data_t *encryptedCard, saflok_mfc_da
         decryptedCard->raw[num2 - 1] = b;
     }
 }
+
 static void saflok_encrypt(const saflok_mfc_data_t *plaintext, saflok_mfc_data_t *encryptedCard) {
+
     static const size_t length = ARRAYLEN(plaintext->raw);
     int b = 0;
     memcpy(encryptedCard->raw, plaintext->raw, length);
+
     for (int i = 0; i < length; i++) {
         int b2 = encryptedCard->raw[i];
         int num2 = i;
+
         for (int j = 0; j < 8; j++) {
             num2 += 1;
             if (num2 >= length) {
                 num2 -= length;
             }
+
             int b3 = encryptedCard->raw[num2];
             int b4 = b2 & 1;
             b2 = (b2 >> 1) | (b << 7);
@@ -908,11 +1011,13 @@ static void saflok_encrypt(const saflok_mfc_data_t *plaintext, saflok_mfc_data_t
         }
         encryptedCard->raw[i] = b2;
     }
+
     if (length == 17) {
         int b2 = encryptedCard->raw[10];
         b2 |= b;
         encryptedCard->raw[10] = b2;
     }
+
     for (int i = 0; i < length; i++) {
         int j = encryptedCard->raw[i] + (i + 1);
         if (j > 255) {
@@ -921,18 +1026,23 @@ static void saflok_encrypt(const saflok_mfc_data_t *plaintext, saflok_mfc_data_t
         encryptedCard->raw[i] = c_aEncode[j];
     }
 }
+
 static uint32_t get_bitfield(const saflok_mfc_data_t *data, size_t start_bit, size_t num_bits) {
+
     static const size_t total_available_bits = ARRAYLEN(data->raw) * 8;
+
     if (start_bit >= total_available_bits) {
         // Out of bounds access
         PrintAndLogEx(ERR, "get_bitfield: out of bounds access (start_bit=%zu, total_available_bits=%zu)", start_bit, total_available_bits);
         return 0;
     }
+
     if (num_bits > 32) {
         // Exceeds maximum supported bit extraction
         PrintAndLogEx(ERR, "get_bitfield: out of bounds access (num_bits=%zu, max=32)", num_bits);
         return 0;
     }
+
     if (total_available_bits - start_bit < num_bits) {
         // Out of bounds access
         PrintAndLogEx(ERR, "get_bitfield: out of bounds access (start_bit=%zu + num_bits=%zu > total_available_bits=%zu)", start_bit, num_bits, total_available_bits);
@@ -941,38 +1051,44 @@ static uint32_t get_bitfield(const saflok_mfc_data_t *data, size_t start_bit, si
 
     uint32_t result = 0;
     for (size_t i = 0; i < num_bits; i++) {
+
         size_t byte_index = (start_bit + i) / 8;
         size_t bit_index = (start_bit + i) % 8;
+
         if (data->raw[byte_index] & (1 << (7 - bit_index))) {
             result |= (1ULL << (num_bits - 1 - i));
         }
+
     }
     return result;
 }
 
 static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_bits, uint32_t value) {
+
     static const size_t total_available_bits = ARRAYLEN(data->raw) * 8;
     if (start_bit >= total_available_bits) {
         // Out of bounds access
         PrintAndLogEx(ERR, "set_bitfield: out of bounds access (start_bit=%zu, total_available_bits=%zu)", start_bit, total_available_bits);
         return false;
     }
+
     if (num_bits > 32) {
         // Exceeds maximum supported bit extraction
         PrintAndLogEx(ERR, "set_bitfield: num_bits exceeds 32");
         return false;
     }
+
     if (total_available_bits - start_bit < num_bits) {
         // Out of bounds access
         PrintAndLogEx(ERR, "set_bitfield: out of bounds access (start_bit=%zu + num_bits=%zu > total_available_bits=%zu)", start_bit, num_bits, total_available_bits);
         return false;
     }
+
     if ((num_bits < 32) && ((value >> num_bits) != 0)) {
         // Value exceeds the size of the specified bit field
         PrintAndLogEx(ERR, "set_bitfield: value exceeds bit field size (value=%u (0x%08x), num_bits=%zu)", value, value, num_bits);
         return false;
     }
-
 
     for (size_t i = 0; i < num_bits; i++) {
         size_t current_bit = start_bit + i;
@@ -1030,31 +1146,30 @@ static void saflok_decode(const saflok_mfc_data_t *data) {
     uint32_t checksum = get_saflok_mfc_checksum(data);
 
     PrintAndLogEx(SUCCESS, "---- NEW routines ----");
-    PrintAndLogEx(SUCCESS, "Card Level: " _GREEN_("%u (%s)"), card_level, level_names[card_level]);
-    PrintAndLogEx(SUCCESS, "Card Type: " _GREEN_("%u"), card_type);
-    PrintAndLogEx(SUCCESS, "Card ID: " _GREEN_("%u"), card_id);
-    PrintAndLogEx(SUCCESS, "Opening Key: " _GREEN_("%u"), opening_key);
-    PrintAndLogEx(SUCCESS, "Lock ID: " _GREEN_("%u"), lock_id);
-    PrintAndLogEx(SUCCESS, "Pass Number: " _GREEN_("%u"), pass_number);
-    PrintAndLogEx(SUCCESS, "Sequence and Combination: " _GREEN_("%u"), sequence_and_combination);
-    PrintAndLogEx(SUCCESS, "Deadbolt Override: " _GREEN_("%u"), deadbolt_override);
-    PrintAndLogEx(SUCCESS, "Restricted Days: " _GREEN_("%u"), restricted_days);
-    PrintAndLogEx(SUCCESS, "Card Creation Date: " _GREEN_("%u-%02d-%02d %02d:%02d"),
+    PrintAndLogEx(SUCCESS, "Card Level........... " _GREEN_("%u (%s)"), card_level, level_names[card_level]);
+    PrintAndLogEx(SUCCESS, "Card Type............ " _GREEN_("%u"), card_type);
+    PrintAndLogEx(SUCCESS, "Card ID.............. " _GREEN_("%u"), card_id);
+    PrintAndLogEx(SUCCESS, "Opening Key.......... " _GREEN_("%u"), opening_key);
+    PrintAndLogEx(SUCCESS, "Lock ID.............. " _GREEN_("%u"), lock_id);
+    PrintAndLogEx(SUCCESS, "Pass Number.......... " _GREEN_("%u"), pass_number);
+    PrintAndLogEx(SUCCESS, "Sequence and Combi... " _GREEN_("%u"), sequence_and_combination);
+    PrintAndLogEx(SUCCESS, "Deadbolt Override.... " _GREEN_("%u"), deadbolt_override);
+    PrintAndLogEx(SUCCESS, "Restricted Days...... " _GREEN_("%u"), restricted_days);
+    PrintAndLogEx(SUCCESS, "Card Creation Date... " _GREEN_("%u-%02d-%02d %02d:%02d"),
                   creation_date.year,
                   creation_date.month,
                   creation_date.day,
                   creation_date.hour,
                   creation_date.minute);
-    PrintAndLogEx(SUCCESS, "Expire Date: " _GREEN_("%u-%02d-%02d %02d:%02d"),
+    PrintAndLogEx(SUCCESS, "Expire Date.......... " _GREEN_("%u-%02d-%02d %02d:%02d"),
                   expiration_date.year,
                   expiration_date.month,
                   expiration_date.day,
                   expiration_date.hour,
                   expiration_date.minute);
-    PrintAndLogEx(SUCCESS, "Property ID: " _GREEN_("%u"), property_id);
-    PrintAndLogEx(SUCCESS, "Checksum: " _GREEN_("0x%X") " (%s)", checksum, (checksum == calculated_saflok_checksum(data)) ? _GREEN_("ok") : _RED_("bad"));
+    PrintAndLogEx(SUCCESS, "Property ID.......... " _GREEN_("%u"), property_id);
+    PrintAndLogEx(SUCCESS, "Checksum............. " _GREEN_("0x%X") " (%s)", checksum, (checksum == calculated_saflok_checksum(data)) ? _GREEN_("ok") : _RED_("bad"));
     PrintAndLogEx(NORMAL, "");
-
 }
 
 static void saflok_encode(
@@ -1090,38 +1205,36 @@ static void saflok_encode(
     // Parsing date time string from "YYYY-MM-DDTHH:mm" into `saflok_mfc_datetime_t`
     static const char *fmt = "%4u-%2u-%2uT%2u:%2u";
 
-    if (true) {
-        saflok_mfc_datetime_t creation_dt = {0};
-        unsigned int year, month, day, hour, minute;
-        if (sscanf(dt, fmt, &year, &month, &day, &hour, &minute) == 5) {
-            if (month >= 1 && month <= 12 && day >= 1 && day <= 31 && hour <= 23 && minute <= 59) {
-                creation_dt.year = year;
-                creation_dt.month = (uint8_t)month;
-                creation_dt.day = (uint8_t)day;
-                creation_dt.hour = (uint8_t)hour;
-                creation_dt.minute = (uint8_t)minute;
-                set_saflok_mfc_card_creation_datetime(data, &creation_dt);
-            }
+    saflok_mfc_datetime_t creation_dt = {0};
+    unsigned int year, month, day, hour, minute;
+
+    if (sscanf(dt, fmt, &year, &month, &day, &hour, &minute) == 5) {
+        if (month >= 1 && month <= 12 && day >= 1 && day <= 31 && hour <= 23 && minute <= 59) {
+            creation_dt.year = year;
+            creation_dt.month = (uint8_t)month;
+            creation_dt.day = (uint8_t)day;
+            creation_dt.hour = (uint8_t)hour;
+            creation_dt.minute = (uint8_t)minute;
+            set_saflok_mfc_card_creation_datetime(data, &creation_dt);
         }
     }
-    if (true) {
-        saflok_mfc_datetime_t expiration_dt = {0};
-        unsigned int exp_year, exp_month, exp_day, exp_hour, exp_minute;
-        if (sscanf(dt_expiration, fmt, &exp_year, &exp_month, &exp_day, &exp_hour, &exp_minute) == 5) {
-            if (exp_month >= 1 && exp_month <= 12 && exp_day >= 1 && exp_day <= 31 && exp_hour <= 23 && exp_minute <= 59) {
-                expiration_dt.year = (uint16_t)exp_year;
-                expiration_dt.month = (uint8_t)exp_month;
-                expiration_dt.day = (uint8_t)exp_day;
-                expiration_dt.hour = (uint8_t)exp_hour;
-                expiration_dt.minute = (uint8_t)exp_minute;
-                set_saflok_mfc_card_expiration_datetime(data, &expiration_dt);
-            }
+
+    saflok_mfc_datetime_t expiration_dt = {0};
+    unsigned int exp_year, exp_month, exp_day, exp_hour, exp_minute;
+
+    if (sscanf(dt_expiration, fmt, &exp_year, &exp_month, &exp_day, &exp_hour, &exp_minute) == 5) {
+        if (exp_month >= 1 && exp_month <= 12 && exp_day >= 1 && exp_day <= 31 && exp_hour <= 23 && exp_minute <= 59) {
+            expiration_dt.year = (uint16_t)exp_year;
+            expiration_dt.month = (uint8_t)exp_month;
+            expiration_dt.day = (uint8_t)exp_day;
+            expiration_dt.hour = (uint8_t)exp_hour;
+            expiration_dt.minute = (uint8_t)exp_minute;
+            set_saflok_mfc_card_expiration_datetime(data, &expiration_dt);
         }
     }
 
     uint8_t checksum = calculated_saflok_checksum(data);
     set_bitfield(data, 128, 8, checksum);
-
 }
 
 // TODO: make clearer how many bytes secdata must minimally point to,
@@ -1147,7 +1260,6 @@ static int saflok_read_sector(int sector, uint8_t *secdata) {
     return mf_read_sector(sector, MF_KEY_A, key, secdata);
 }
 
-
 static int CmdHFSaflokRead(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf saflok read",
@@ -1162,14 +1274,14 @@ static int CmdHFSaflokRead(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint8_t secdata[64];
-    int res = saflok_read_sector(1, secdata);
 
-    if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Valid Saflok card found!");
-    } else {
+    int res = saflok_read_sector(1, secdata);
+    if (res != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Not a valid Saflok card");
-        return PM3_EFAILED;
+        return res;
     }
+
+    PrintAndLogEx(SUCCESS, "Valid Saflok card found!");
 
     saflok_read_sector(0, secdata); // 64 bytes
 
@@ -1178,15 +1290,14 @@ static int CmdHFSaflokRead(const char *Cmd) {
     saflok_decrypt(encrypted, &decrypted);
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Card Information"));
-    PrintAndLogEx(INFO,    "Plaintext Data: %s", sprint_hex_inrow(decrypted.raw, sizeof(saflok_mfc_data_t)));
-    PrintAndLogEx(SUCCESS, "Encrypted Data: " _GREEN_("%s"), sprint_hex_inrow(encrypted->raw, sizeof(saflok_mfc_data_t)));
+    PrintAndLogEx(INFO, "--- " _CYAN_("Card Information") " -----------------------------");
+    PrintAndLogEx(INFO,    "Plaintext data... %s", sprint_hex_inrow(decrypted.raw, sizeof(saflok_mfc_data_t)));
+    PrintAndLogEx(SUCCESS, "Encrypted data... " _GREEN_("%s"), sprint_hex_inrow(encrypted->raw, sizeof(saflok_mfc_data_t)));
 
     saflok_decode(&decrypted);
 
     return PM3_SUCCESS;
 }
-
 
 static int CmdHFSaflokEncode(const char *Cmd) {
     CLIParserContext *ctx;
@@ -1213,7 +1324,6 @@ static int CmdHFSaflokEncode(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-
     saflok_mfc_data_t decrypted = {0};
     saflok_mfc_data_t encrypted = {0};
 
@@ -1223,7 +1333,6 @@ static int CmdHFSaflokEncode(const char *Cmd) {
 
     char dt_e[100];
     CLIParamStrToBuf(arg_get_str(ctx, 10), (uint8_t *)dt_e, 100, &slen);
-
 
     saflok_encode(&decrypted,
                   arg_get_u32_def(ctx, 1, 0),  // card_level
@@ -1239,16 +1348,17 @@ static int CmdHFSaflokEncode(const char *Cmd) {
                   0,
                   arg_get_u32_def(ctx, 12, 0), // property_id
                   dt_e,
-                  dt);
+                  dt
+            );
+    
+    CLIParserFree(ctx);
+
     saflok_encrypt(&decrypted, &encrypted);
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Encoded Card Data"));
-    PrintAndLogEx(INFO,    "Plaintext Data: %s", sprint_hex_inrow(decrypted.raw, sizeof(saflok_mfc_data_t)));
-    PrintAndLogEx(SUCCESS, "Encrypted Data: " _GREEN_("%s"), sprint_hex_inrow(encrypted.raw, sizeof(saflok_mfc_data_t)));
-
-
-    CLIParserFree(ctx);
+    PrintAndLogEx(INFO, "--- " _CYAN_("Encoded Card Data") " -----------------------------");
+    PrintAndLogEx(INFO,    "Plaintext data... %s", sprint_hex_inrow(decrypted.raw, sizeof(saflok_mfc_data_t)));
+    PrintAndLogEx(SUCCESS, "Encrypted data... " _GREEN_("%s"), sprint_hex_inrow(encrypted.raw, sizeof(saflok_mfc_data_t)));
     return PM3_SUCCESS;
 }
 
@@ -1271,23 +1381,20 @@ static int CmdHFSaflokDecode(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, encrypted.raw, &dlen);
     CLIParserFree(ctx);
 
-
     if (dlen != 17) {
-        PrintAndLogEx(WARNING, "saflok data must include 17 HEX bytes. Got %i", dlen);
+        PrintAndLogEx(WARNING, "saflok data must include 17 HEX bytes. Got " _YELLOW_("%i"), dlen);
         return PM3_EINVARG;
     }
 
     saflok_decrypt(&encrypted, &decrypted);
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Decoded Card Data"));
-    PrintAndLogEx(INFO,    "Plaintext Data: %s", sprint_hex_inrow(decrypted.raw, sizeof(saflok_mfc_data_t)));
-    PrintAndLogEx(INFO,    "Encrypted Data: %s", sprint_hex_inrow(encrypted.raw, sizeof(saflok_mfc_data_t)));
+    PrintAndLogEx(INFO, "--- " _CYAN_("Decoded Card Data") " -----------------------------");
+    PrintAndLogEx(INFO,    "Plaintext data... %s", sprint_hex_inrow(decrypted.raw, sizeof(saflok_mfc_data_t)));
+    PrintAndLogEx(INFO,    "Encrypted data... %s", sprint_hex_inrow(encrypted.raw, sizeof(saflok_mfc_data_t)));
     saflok_decode(&decrypted);
 
     return PM3_SUCCESS;
 }
-
-
 
 static int CmdHFSaflokModify(const char *Cmd) {
     CLIParserContext *ctx;
@@ -1315,7 +1422,6 @@ static int CmdHFSaflokModify(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-
     saflok_mfc_data_t encrypted;
     saflok_mfc_data_t decrypted;
     saflok_mfc_data_t reencrypted = {0};
@@ -1325,6 +1431,7 @@ static int CmdHFSaflokModify(const char *Cmd) {
 
     if (dlen != 17) {
         PrintAndLogEx(WARNING, "block data must include 17 HEX bytes. Got %i", dlen);
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -1391,17 +1498,14 @@ static int CmdHFSaflokModify(const char *Cmd) {
                   dt_e,
                   dt);
     saflok_encrypt(&decrypted, &reencrypted);
+    CLIParserFree(ctx);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Modified Card Data"));
     PrintAndLogEx(INFO,    "Plaintext Data: %s", sprint_hex_inrow(decrypted.raw, sizeof(saflok_mfc_data_t)));
     PrintAndLogEx(SUCCESS, "Encrypted Data: " _GREEN_("%s"), sprint_hex_inrow(reencrypted.raw, sizeof(saflok_mfc_data_t)));
-
-
-    CLIParserFree(ctx);
     return PM3_SUCCESS;
 }
-
 
 static int CmdHFSaflokEncrypt(const char *Cmd) {
     CLIParserContext *ctx;
@@ -1418,20 +1522,19 @@ static int CmdHFSaflokEncrypt(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     saflok_mfc_data_t raw = {0};
-    saflok_mfc_data_t encrypted = {0};
+
     int len;
     CLIGetHexWithReturn(ctx, 1, raw.raw, &len);
+    CLIParserFree(ctx);
 
     if (len != 17) {
         PrintAndLogEx(WARNING, "Expected 17 bytes. Got %d.", len);
-        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
+    saflok_mfc_data_t encrypted = {0};
     saflok_encrypt(&raw, &encrypted);
-    PrintAndLogEx(SUCCESS, "Encrypted: " _GREEN_("%s"), sprint_hex_inrow(encrypted.raw, 17));
-
-    CLIParserFree(ctx);
+    PrintAndLogEx(SUCCESS, "Encrypted... " _GREEN_("%s"), sprint_hex_inrow(encrypted.raw, 17));
     return PM3_SUCCESS;
 }
 
@@ -1450,28 +1553,27 @@ static int CmdHFSaflokDecrypt(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     saflok_mfc_data_t encrypted = {0};
-    saflok_mfc_data_t decrypted = {0};
+    
     int len;
     CLIGetHexWithReturn(ctx, 1, encrypted.raw, &len);
+    CLIParserFree(ctx);
 
     if (len != 17) {
         PrintAndLogEx(WARNING, "Expected 17 bytes. Got %d.", len);
-        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
+    saflok_mfc_data_t decrypted = {0};
     saflok_decrypt(&encrypted, &decrypted);
-    PrintAndLogEx(SUCCESS, "Decrypted: " _GREEN_("%s"), sprint_hex_inrow(decrypted.raw, 17));
-
-    CLIParserFree(ctx);
+    PrintAndLogEx(SUCCESS, "Decrypted... " _GREEN_("%s"), sprint_hex_inrow(decrypted.raw, 17));
     return PM3_SUCCESS;
 }
 
 static int CmdHFSaflokSelfTest(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf saflok selftest",
+    CLIParserInit(&ctx, "hf saflok test",
                   "Validate internal functionality of Saflok routines",
-                  "hf saflok selftest");
+                  "hf saflok test");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1483,11 +1585,11 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
     int result = PM3_SUCCESS;
 
     PrintAndLogEx(WARNING, "Saflok self-test is non-exhaustive, 4-byte MFC only.");
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "------------ " _CYAN_("SAFLOK tests") " ---------------------");
     // TODO: encode some sample cards using prior versions of the code.
     //       verify the resulting decoded data matches expectations,
     //       or investigate which one results in correct data.
-
-
 
     // get/set bitfield tests
     if (true) {
@@ -1514,11 +1616,12 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             }
         }
         if (result_bitfield == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "get/set_bitfield passed");
+            PrintAndLogEx(SUCCESS, "get/set_bitfield........................ ( %s )", _GREEN_("ok"));
         } else {
             result = PM3_EFAILED;
         }
     }
+
     // card_level               field is  4 bits
     if (true) {
         int result_card_level = PM3_SUCCESS;
@@ -1537,19 +1640,20 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             }
         }
         if (result_card_level == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_card_level passed");
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_card_level........... ( %s )", _GREEN_("ok"));
         } else {
             result = PM3_EFAILED;
         }
 
     }
+
     // card_type                field is  4 bits
     if (true) {
         int result_card_type = PM3_SUCCESS;
         saflok_mfc_data_t testdata = {0};
         for (uint8_t i = 0; i < 16; ++i) {
             bool success = set_saflok_mfc_card_type(&testdata, i);
-            if (!success) {
+            if (success == false) {
                 PrintAndLogEx(FAILED, "set_saflok_mfc_card_type failed for value %u", i);
                 result_card_type = PM3_EFAILED;
             } else {
@@ -1561,18 +1665,19 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             }
         }
         if (result_card_type == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_card_type passed");
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_card_type............ ( %s )", _GREEN_("ok"));
         } else {
             result = PM3_EFAILED;
         }
     }
+
     // card_id                  field is  8 bits
     if (true) {
         int result_card_id = PM3_SUCCESS;
         saflok_mfc_data_t testdata = {0};
         for (uint16_t i = 0; i < 256; ++i) {
             bool success = set_saflok_mfc_card_id(&testdata, i);
-            if (!success) {
+            if (success == false) {
                 PrintAndLogEx(FAILED, "set_saflok_mfc_card_type failed for value %u", i);
                 result_card_id = PM3_EFAILED;
             } else {
@@ -1584,18 +1689,19 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             }
         }
         if (result_card_id == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_card_id passed");
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_card_id.............. ( %s )", _GREEN_("ok"));
         } else {
             result = PM3_EFAILED;
         }
     }
+
     // opening_key              field is  2 bits
     if (true) {
         int result_opening_key = PM3_SUCCESS;
         saflok_mfc_data_t testdata = {0};
         for (uint8_t i = 0; i < 4; ++i) {
             bool success = set_saflok_mfc_opening_key(&testdata, i);
-            if (!success) {
+            if (success == false) {
                 PrintAndLogEx(FAILED, "set_saflok_mfc_opening_key failed for value %u", i);
                 result_opening_key = PM3_EFAILED;
             } else {
@@ -1607,18 +1713,19 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             }
         }
         if (result_opening_key == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_opening_key passed");
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_opening_key.......... ( %s )", _GREEN_("ok"));
         } else {
             result = PM3_EFAILED;
         }
     }
+    
     // lock_id                  field is 14 bits
     if (true) {
         int result_lock_id = PM3_SUCCESS;
         saflok_mfc_data_t testdata = {0};
         for (uint16_t i = 0; i < 16384; i += 11) { // step by prime to test various bits
             bool success = set_saflok_mfc_lock_id(&testdata, i);
-            if (!success) {
+            if (success == false) {
                 PrintAndLogEx(FAILED, "set_saflok_mfc_lock_id failed for value %u", i);
                 result_lock_id = PM3_EFAILED;
             } else {
@@ -1630,18 +1737,19 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             }
         }
         if (result_lock_id == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_lock_id passed");
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_lock_id.............. ( %s )", _GREEN_("ok"));
         } else {
             result = PM3_EFAILED;
         }
     }
+
     // pass_number              field is 12 bits
     if (true) {
         int result_pass_number = PM3_SUCCESS;
         saflok_mfc_data_t testdata = {0};
         for (uint16_t i = 0; i < 4096; i += 7) { // step by prime to test various bits
             bool success = set_saflok_mfc_pass_number(&testdata, i);
-            if (!success) {
+            if (success == false) {
                 PrintAndLogEx(FAILED, "set_saflok_mfc_pass_number failed for value %u", i);
                 result_pass_number = PM3_EFAILED;
             } else {
@@ -1653,18 +1761,19 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             }
         }
         if (result_pass_number == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_pass_number passed");
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_pass_numner.......... ( %s )", _GREEN_("ok"));
         } else {
             result = PM3_EFAILED;
         }
     }
+
     // sequence_and_combination field is 12 bits
     if (true) {
         int result_seq_combo = PM3_SUCCESS;
         saflok_mfc_data_t testdata = {0};
         for (uint16_t i = 0; i < 4096; i += 5) { // step by prime to test various bits
             bool success = set_saflok_mfc_sequence_and_combination(&testdata, i);
-            if (!success) {
+            if (success == false) {
                 PrintAndLogEx(FAILED, "set_saflok_mfc_sequence_and_combination failed for value %u", i);
                 result_seq_combo = PM3_EFAILED;
             } else {
@@ -1676,18 +1785,19 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             }
         }
         if (result_seq_combo == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_sequence_and_combination passed");
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_sequence_and_combi... ( %s )", _GREEN_("ok"));
         } else {
             result = PM3_EFAILED;
         }
     }
+
     // deadbolt_override        field is  1 bits
     if (true) {
         int result_deadbolt = PM3_SUCCESS;
         saflok_mfc_data_t testdata = {0};
         for (uint8_t i = 0; i < 2; ++i) {
             bool success = set_saflok_mfc_deadbolt_override(&testdata, i);
-            if (!success) {
+            if (success == false) {
                 PrintAndLogEx(FAILED, "set_saflok_mfc_deadbolt_override failed for value %u", i);
                 result_deadbolt = PM3_EFAILED;
             } else {
@@ -1699,18 +1809,19 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             }
         }
         if (result_deadbolt == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_deadbolt_override passed");
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_deadbolt_override.... ( %s )", _GREEN_("ok"));
         } else {
             result = PM3_EFAILED;
         }
     }
+
     // restricted_days          field is  7 bits
     if (true) {
         int result_restricted_days = PM3_SUCCESS;
         saflok_mfc_data_t testdata = {0};
         for (uint8_t i = 0; i < 128; ++i) {
             bool success = set_saflok_mfc_restricted_days(&testdata, i);
-            if (!success) {
+            if (success == false) {
                 PrintAndLogEx(FAILED, "set_saflok_mfc_restricted_days failed for value %u", i);
                 result_restricted_days = PM3_EFAILED;
             } else {
@@ -1722,18 +1833,19 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             }
         }
         if (result_restricted_days == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_restricted_days passed");
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_restricted_days...... ( %s )", _GREEN_("ok"));
         } else {
             result = PM3_EFAILED;
         }
     }
+
     // property_id              field is 12 bits
     if (true) {
         int result_property_id = PM3_SUCCESS;
         saflok_mfc_data_t testdata = {0};
         for (uint16_t i = 0; i < 4096; i += 13) { // step by prime to test various bits
             bool success = set_saflok_mfc_property_id(&testdata, i);
-            if (!success) {
+            if (success == false) {
                 PrintAndLogEx(FAILED, "set_saflok_mfc_property_id failed for value %u", i);
                 result_property_id = PM3_EFAILED;
             } else {
@@ -1745,18 +1857,19 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             }
         }
         if (result_property_id == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_property_id passed");
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_property_id.......... ( %s )", _GREEN_("ok"));
         } else {
             result = PM3_EFAILED;
         }
     }
+
     if (true) {
         int result_checksum = PM3_SUCCESS;
         saflok_mfc_data_t testdata = {0};
         for (size_t i = 0; i < 0x100; ++i) {
             uint8_t value = (uint8_t)i;
             bool success = set_saflok_mfc_checksum(&testdata, value);
-            if (!success) {
+            if (success == false) {
                 PrintAndLogEx(FAILED, "set_saflok_mfc_checksum failed for value %02x", value);
                 result_checksum = PM3_EFAILED;
             } else {
@@ -1768,7 +1881,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             }
         }
         if (result_checksum == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_checksum passed");
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_checksum............. ( %s )", _GREEN_("ok"));
         } else {
             result = PM3_EFAILED;
         }
@@ -1839,6 +1952,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
+
             saflok_decrypt(&tc->encoded, &tmp);
             if (memcmp(tmp.raw, tc->decoded.raw, sizeof(saflok_mfc_data_t)) != 0) {
                 PrintAndLogEx(FAILED, "Test case %zu: decryption did not match expected data.", i);
@@ -1847,6 +1961,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
+
             saflok_mfc_datetime_t tmp_dt = get_saflok_mfc_card_creation_datetime(&tc->decoded);
             if (memcmp(&tmp_dt, &tc->card_creation_datetime, sizeof(saflok_mfc_datetime_t)) != 0) {
                 PrintAndLogEx(FAILED, "Test case %zu: card creation datetime did not match expected data.", i);
@@ -1859,6 +1974,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
+
             tmp_dt = get_saflok_mfc_card_expiration_datetime(&tc->decoded);
             if (memcmp(&tmp_dt, &tc->card_expiration_datetime, sizeof(saflok_mfc_datetime_t)) != 0) {
                 PrintAndLogEx(FAILED, "Test case %zu: card expiration datetime did not match expected data.", i);
@@ -1871,6 +1987,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
+
             saflok_mfc_datetime_offset_t tmp_offset = get_saflok_mfc_interval(&tc->decoded);
             if (memcmp(&tmp_offset, &tc->card_interval, sizeof(saflok_mfc_datetime_offset_t)) != 0) {
                 PrintAndLogEx(FAILED, "Test case %zu: card interval did not match expected data.", i);
@@ -1883,6 +2000,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
+
             if (get_saflok_mfc_lock_id(&tc->decoded) != tc->lock_id) {
                 PrintAndLogEx(FAILED, "Test case %zu: lock_id did not match expected data.", i);
                 PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_lock_id(&tc->decoded));
@@ -1890,6 +2008,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
+
             if (get_saflok_mfc_pass_number(&tc->decoded) != tc->pass_number) {
                 PrintAndLogEx(FAILED, "Test case %zu: pass_number did not match expected data.", i);
                 PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_pass_number(&tc->decoded));
@@ -1897,6 +2016,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
+
             if (get_saflok_mfc_sequence_and_combination(&tc->decoded) != tc->sequence_and_combination) {
                 PrintAndLogEx(FAILED, "Test case %zu: sequence_and_combination did not match expected data.", i);
                 PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_sequence_and_combination(&tc->decoded));
@@ -1904,6 +2024,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
+
             if (get_saflok_mfc_property_id(&tc->decoded) != tc->property_id) {
                 PrintAndLogEx(FAILED, "Test case %zu: property_id did not match expected data.", i);
                 PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_property_id(&tc->decoded));
@@ -1911,6 +2032,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
+
             if (get_saflok_mfc_card_level(&tc->decoded) != tc->card_level) {
                 PrintAndLogEx(FAILED, "Test case %zu: card_level did not match expected data.", i);
                 PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_card_level(&tc->decoded));
@@ -1918,6 +2040,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
+
             if (get_saflok_mfc_card_type(&tc->decoded) != tc->card_type) {
                 PrintAndLogEx(FAILED, "Test case %zu: card_type did not match expected data.", i);
                 PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_card_type(&tc->decoded));
@@ -1925,6 +2048,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
+
             if (get_saflok_mfc_card_id(&tc->decoded) != tc->card_id) {
                 PrintAndLogEx(FAILED, "Test case %zu: card_id did not match expected data.", i);
                 PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_card_id(&tc->decoded));
@@ -1932,6 +2056,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
+            
             if (get_saflok_mfc_opening_key(&tc->decoded) != tc->opening_key) {
                 PrintAndLogEx(FAILED, "Test case %zu: opening_key did not match expected data.", i);
                 PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_opening_key(&tc->decoded));
@@ -1939,6 +2064,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
+
             if (get_saflok_mfc_restricted_days(&tc->decoded) != tc->restricted_days) {
                 PrintAndLogEx(FAILED, "Test case %zu: restricted_days did not match expected data.", i);
                 PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_restricted_days(&tc->decoded));
@@ -1946,6 +2072,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
+
             if (get_saflok_mfc_deadbolt_override(&tc->decoded) != tc->deadbolt_override) {
                 PrintAndLogEx(FAILED, "Test case %zu: deadbolt_override did not match expected data.", i);
                 PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_deadbolt_override(&tc->decoded));
@@ -1953,6 +2080,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
+
             if (get_saflok_mfc_checksum(&tc->decoded) != tc->checksum) {
                 PrintAndLogEx(FAILED, "Test case %zu: stored checksum did not match expected data.", i);
                 PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_checksum(&tc->decoded));
@@ -1960,6 +2088,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
+
             uint8_t checksum = calculated_saflok_checksum(&tc->decoded);
             if (checksum != tc->checksum) {
                 PrintAndLogEx(FAILED, "Test case %zu: calculated checksum did not match expected data.", i);
@@ -1969,16 +2098,19 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 continue;
             }
         }
+
+        PrintAndLogEx(INFO, "-----------------------------------------------");
         if (result_test_cases == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "All predefined test cases passed.");
+            PrintAndLogEx(SUCCESS, "Tests ( %s )", _GREEN_("ok"));
         } else {
+            PrintAndLogEx(SUCCESS, "Tests ( %s )", _RED_("fail"));
             result = PM3_EFAILED;
         }
+        PrintAndLogEx(NORMAL, "");
     }
 
     return result;
 }
-
 
 static int CmdHFSaflokChecksum(const char *Cmd) {
     CLIParserContext *ctx;
@@ -1997,19 +2129,17 @@ static int CmdHFSaflokChecksum(const char *Cmd) {
     saflok_mfc_data_t data = {0};
     int len;
     CLIGetHexWithReturn(ctx, 1, data.raw, &len);
+    CLIParserFree(ctx);
 
     if (len != 16) {
         PrintAndLogEx(WARNING, "Expected 16 bytes. Got %d.", len);
-        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     data.raw[16] = calculated_saflok_checksum(&data);
 
-    PrintAndLogEx(SUCCESS, "Block + checksum: " _GREEN_("%s"), sprint_hex_inrow(data.raw, 17));
-    PrintAndLogEx(SUCCESS, "Checksum byte: " _GREEN_("0x%02X"), data.raw[16]);
-
-    CLIParserFree(ctx);
+    PrintAndLogEx(SUCCESS, "Block + checksum... " _GREEN_("%s"), sprint_hex_inrow(data.raw, 17));
+    PrintAndLogEx(SUCCESS, "Checksum byte...... " _GREEN_("0x%02X"), data.raw[16]);
     return PM3_SUCCESS;
 }
 
@@ -2030,10 +2160,10 @@ static int CmdHFSaflokProvision(const char *Cmd) {
     saflok_mfc_data_t data = {0};
     int len;
     CLIGetHexWithReturn(ctx, 1, data.raw, &len);
+    CLIParserFree(ctx);
 
     if (len != 17) {
         PrintAndLogEx(WARNING, "Expected 17 bytes, got %d", len);
-        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -2042,7 +2172,6 @@ static int CmdHFSaflokProvision(const char *Cmd) {
     int uid_len;
     if (mf_read_uid(uid, &uid_len, NULL) != PM3_SUCCESS || uid_len < 4) {
         PrintAndLogEx(WARNING, "Failed to read UID from card.");
-        CLIParserFree(ctx);
         return PM3_ESOFT;
     }
 
@@ -2051,7 +2180,7 @@ static int CmdHFSaflokProvision(const char *Cmd) {
     saflok_mfc_key_t keyA = {0};
 
     saflok_kdf(saflok_uid, &keyA);
-    PrintAndLogEx(INFO, "Generated UID-derived key: " _GREEN_("%s"), sprint_hex_inrow(keyA.key, ARRAYLEN(keyA.key)));
+    PrintAndLogEx(INFO, "Generated UID-derived key... " _GREEN_("%s"), sprint_hex_inrow(keyA.key, ARRAYLEN(keyA.key)));
 
     uint8_t all_F[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     uint8_t block1[16];
@@ -2068,10 +2197,12 @@ static int CmdHFSaflokProvision(const char *Cmd) {
 
     uint8_t trailer0[16] = {0};
     uint8_t set_keys = 0;
-    if (!write_success) {
+
+    if (write_success == false) {
         PrintAndLogEx(WARNING, "Initial write failed. Attempting to set sector 0 keys...");
 
-        _Static_assert(sizeof(saflok_mfc_key_t) == 6u, "saflok_mfc_key_t size changed?");
+        _Static_assert(sizeof(saflok_mfc_key_t) == MIFARE_KEY_SIZE, "saflok_mfc_key_t size changed?");
+
         memcpy(trailer0, &keyA, sizeof(saflok_mfc_key_t));
         trailer0[6] = 0xFF;
         trailer0[7] = 0x07;
@@ -2081,26 +2212,27 @@ static int CmdHFSaflokProvision(const char *Cmd) {
 
         if (mf_write_block(3, 1, all_F, trailer0) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Failed to set key in sector 0. Try wiping the card first.");
-            CLIParserFree(ctx);
             return PM3_ESOFT;
         }
 
         write_success = mf_write_block(1, 0, keyA.key, block1) == PM3_SUCCESS &&
                         mf_write_block(2, 0, keyA.key, block2) == PM3_SUCCESS;
-        if (!write_success) {
+        if (write_success == false) {
             PrintAndLogEx(WARNING, "Write still failed after setting keys.");
-            CLIParserFree(ctx);
             return PM3_ESOFT;
         }
+
         set_keys = 1;
     }
 
     if (set_keys) {
+
         uint8_t trailer7[16] = {
             0x2A, 0x2C, 0x13, 0xCC, 0x24, 0x2A,
             0xFF, 0x07, 0x80, 0x69,
             0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
         };
+
         if (mf_write_block(7, 0, all_F, trailer7) != PM3_SUCCESS) {
             //PrintAndLogEx(WARNING, "Failed to write trailer block 7.");
         }
@@ -2111,8 +2243,8 @@ static int CmdHFSaflokProvision(const char *Cmd) {
             }
         }
     }
-    PrintAndLogEx(SUCCESS, "Saflok card provisioned successfully.");
-    CLIParserFree(ctx);
+
+    PrintAndLogEx(SUCCESS, "Saflok card provisioned successfully ( %s )", _GREEN_("ok"));
     return PM3_SUCCESS;
 }
 
@@ -2178,7 +2310,6 @@ static int CmdHFSaflokInterrogate(const char *Cmd) {
 
         total_bytes += 16;
         current_block++;
-
     }
 
     if (subblock_stop % 2 != 0) {
@@ -2190,6 +2321,7 @@ static int CmdHFSaflokInterrogate(const char *Cmd) {
     } else {
         PrintAndLogEx(SUCCESS, "Card has no variable keys");
     }
+
     int cursor = 0;
 
     while (cursor + 6 <= total_bytes) {
@@ -2204,17 +2336,19 @@ static int CmdHFSaflokInterrogate(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,            AlwaysAvailable, "This help"},
-    {"read",  CmdHFSaflokRead,  IfPm3NfcBarcode, "Read Saflok card"},
-    {"provision",  CmdHFSaflokProvision,  IfPm3NfcBarcode, "Provision Saflok card"},
-    {"encode",  CmdHFSaflokEncode,  AlwaysAvailable, "Encode Saflok card data"},
-    {"decode",  CmdHFSaflokDecode,  AlwaysAvailable, "Decode Saflok card data"},
-    {"modify",  CmdHFSaflokModify,  AlwaysAvailable, "Modify Saflok card data"},
-    {"encrypt", CmdHFSaflokEncrypt, AlwaysAvailable, "Encrypt 17-byte decrypted block"},
-    {"decrypt", CmdHFSaflokDecrypt, AlwaysAvailable, "Decrypt 17-byte encrypted block"},
+    {"help",        CmdHelp,              AlwaysAvailable, "This help"},
+    {"--------",    CmdHelp,              AlwaysAvailable, "------------- " _CYAN_("General") " ---------------"},
+    {"test",        CmdHFSaflokSelfTest,  AlwaysAvailable, "Perform self-test"},
+    {"cksum",       CmdHFSaflokChecksum,  IfPm3NfcBarcode, "Generate checksum for data block"},
+    {"--------",    CmdHelp,              AlwaysAvailable, "------------- " _CYAN_("Operations") " ---------------"},    
+    {"encode",      CmdHFSaflokEncode,    AlwaysAvailable, "Encode Saflok card data"},
+    {"encrypt",     CmdHFSaflokEncrypt,   AlwaysAvailable, "Encrypt 17-byte decrypted block"},
+    {"decode",      CmdHFSaflokDecode,    AlwaysAvailable, "Decode Saflok card data"},
+    {"decrypt",     CmdHFSaflokDecrypt,   AlwaysAvailable, "Decrypt 17-byte encrypted block"},
     {"interrogate", CmdHFSaflokInterrogate, IfPm3NfcBarcode, "Interrogate saflok card"},
-    {"cksum",   CmdHFSaflokChecksum, IfPm3NfcBarcode, "Generate checksum for data block"},
-    {"selftest", CmdHFSaflokSelfTest, AlwaysAvailable, "Run self-test"},
+    {"provision",   CmdHFSaflokProvision, IfPm3NfcBarcode, "Provision Saflok card"},
+    {"modify",      CmdHFSaflokModify,    AlwaysAvailable, "Modify Saflok card data"},
+    {"read",        CmdHFSaflokRead,      IfPm3NfcBarcode, "Read Saflok card"},
     {NULL, NULL, NULL, NULL}
 };
 

@@ -365,6 +365,7 @@ Check column "offline" for their availability.
 |`hf felica wrbl         `|N       |`write block data to an authentication-not-required Service.`
 |`hf felica dump         `|N       |`Wait for and try dumping FeliCa`
 |`hf felica discnodes    `|N       |`discover Area Code and Service Code nodes.`
+|`hf felica sim          `|N       |`Emulate FeliCa Standard from dump file`
 |`hf felica rqservice    `|N       |`verify the existence of Area and Service, and to acquire Key Version.`
 |`hf felica rqresponse   `|N       |`verify the existence of a card and its Mode.`
 |`hf felica scsvcode     `|N       |`acquire Area Code and Service Code.`
@@ -641,6 +642,9 @@ Check column "offline" for their availability.
 |`hf mf info             `|N       |`Tag information`
 |`hf mf isen             `|N       |`Information Static Encrypted Nonces`
 |`hf mf mad              `|Y       |`Checks and prints MAD`
+|`hf mf madread          `|N       |`Read data from MAD AID sectors`
+|`hf mf madwrite         `|N       |`Write data to MAD AID sectors`
+|`hf mf madverify        `|N       |`Verify data in MAD AID sectors`
 |`hf mf personalize      `|N       |`Personalize UID (MIFARE Classic EV1 only)`
 |`hf mf rdbl             `|N       |`Read MIFARE Classic block`
 |`hf mf rdsc             `|N       |`Read MIFARE Classic sector`
@@ -702,6 +706,9 @@ Check column "offline" for their availability.
 |`hf mfp dump            `|N       |`Dump MIFARE Plus tag to file`
 |`hf mfp info            `|N       |`Tag information`
 |`hf mfp mad             `|N       |`Check and print MAD`
+|`hf mfp madread         `|N       |`Read data from MAD AID sectors`
+|`hf mfp madwrite        `|N       |`Write data to MAD AID sectors`
+|`hf mfp madverify       `|N       |`Verify data in MAD AID sectors`
 |`hf mfp rdbl            `|N       |`Read blocks from card`
 |`hf mfp rdsc            `|N       |`Read sectors from card`
 |`hf mfp wrbl            `|N       |`Write block to card`
@@ -1044,7 +1051,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf cotag help          `|Y       |`This help`
-|`lf cotag demod         `|Y       |`demodulate an COTAG tag`
+|`lf cotag demod         `|Y       |`demodulate a COTAG tag`
 |`lf cotag reader        `|N       |`attempt to read and extract tag data`
 
 
@@ -1527,6 +1534,21 @@ Check column "offline" for their availability.
 |`lf visa2000 reader     `|N       |`attempt to read and extract tag data`
 |`lf visa2000 clone      `|N       |`clone Visa2000 tag to T55x7, Q5/T5555 or EM4305/4469`
 |`lf visa2000 sim        `|N       |`simulate Visa2000 tag`
+
+
+### mad
+
+ { MAD commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`mad help               `|Y       |`This help`
+|`mad read               `|N       |`Read data from MAD AID sectors`
+|`mad write              `|N       |`Write data to MAD AID sectors`
+|`mad verify             `|N       |`Verify data in MAD AID sectors`
+|`mad decode             `|Y       |`Decode MAD byte array`
+|`mad encode             `|Y       |`Encode MAD byte array from AID mappings`
+|`mad test               `|Y       |`Run MAD regression tests`
 
 
 ### mem

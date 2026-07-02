@@ -65,8 +65,9 @@ static int lf_hid_validate_packed_transport(const wiegand_input_t *input, const 
     // The shared Wiegand layer can normalize credentials that are wider than the LF HID
     // transport. Reject only when this specific command needs a packed HID frame.
     if (input->packed_valid == false) {
-        PrintAndLogEx(ERR, "Credential encoded successfully, but %" PRIuMAX "-bit Wiegand data cannot be represented as a packed HID credential", (uintmax_t)input->bin_len);
-        PrintAndLogEx(ERR, "Packed HID encoding supports up to 84 Wiegand bits");
+        PrintAndLogEx(INFO, "Credential encoded successfully");
+        PrintAndLogEx(ERR, _RED_("%" PRIuMAX)"-bit Wiegand data cannot be represented as a packed HID credential", (uintmax_t)input->bin_len);
+        PrintAndLogEx(ERR, "Packed HID encoding supports up to " _YELLOW_("84") " wiegand bits");
         return PM3_EINVARG;
     }
 
@@ -77,7 +78,7 @@ static int lf_hid_validate_packed_transport(const wiegand_input_t *input, const 
     }
 
     if (input->packed.Length > 48) {
-        PrintAndLogEx(ERR, "%s supports only packed credentials up to 48 bits", command_name);
+        PrintAndLogEx(ERR, _RED_("%s") " supports only packed credentials up to " _YELLOW_("48") " bits", command_name);
         return PM3_EINVARG;
     }
 
@@ -103,7 +104,7 @@ static int lf_hid_resolve_input(const lf_hid_cli_input_t *cli, wiegand_input_t *
     }
 
     if (*format_idx == -1 && cli->raw_len == 0 && cli->bin_len == 0 && cli->new_pacs_len == 0) {
-        PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), cli->format);
+        PrintAndLogEx(WARNING, "Unknown format... " _YELLOW_("%s"), cli->format);
         return PM3_EINVARG;
     }
 
@@ -449,7 +450,7 @@ static int CmdHIDClone(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (q5 && em) {
-        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        PrintAndLogEx(FAILED, "Can't specify both " _YELLOW_("Q5") " and " _YELLOW_("EM4305") " at the same time");
         return PM3_EINVARG;
     }
 
@@ -467,7 +468,7 @@ static int CmdHIDClone(const char *Cmd) {
         return res;
     }
 
-    res = lf_hid_validate_packed_transport(&input, "LF HID clone");
+    res = lf_hid_validate_packed_transport(&input, "lf hid clone");
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -515,7 +516,7 @@ static int CmdHIDClone(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Done!");
         PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf hid reader`") " to verify");
     } else {
-        PrintAndLogEx(FAILED, "cloning ( " _RED_("fail") " )");
+        PrintAndLogEx(FAILED, "Cloning ( " _RED_("fail") " )");
     }
     return resp.status;
 }

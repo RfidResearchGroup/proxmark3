@@ -26,12 +26,15 @@
 #include "commonutil.h"             // ARRAYLEN
 #include "cmdparser.h"              // command_t
 #include "comms.h"
+#include "mifare/desfirecrypto.h"
+#include "pm3_cmd.h"
 #include "ui.h"
 #include "cmdhf14a.h"
 #include "aes.h"
 #include "crypto/libpcrypto.h"
 #include "crypto/duoxcrypto.h"
 #include "protocols.h"
+#include "parsers/parsehrt.h"
 #include "cmdtrace.h"
 #include "cliparser.h"
 #include "iso7816/apduinfo.h"       // APDU manipulation / errorcodes
@@ -1128,6 +1131,10 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         keys 12,13,14,15 R
 
     */
+
+    if (is_valid_hrt_card(&dctx, aidbuf, aidbuflen)) {
+        (void)hrt_parser_parse(&dctx);
+    }
 
     DropField();
     return PM3_SUCCESS;
@@ -8109,8 +8116,8 @@ static mfd_app_select MfdSelectionInitDFName(const uint8_t *dfname, size_t dfnam
     return select;
 }
 
-static int MfdSelectionApplyCmdParameters(CLIParserContext *ctx, uint8_t aidid, uint8_t isoidid, uint8_t dfnameid,
-                                          mfd_app_select *select) {
+static int MfdSelectionApplyCmdParameters(CLIParserContext *ctx, uint8_t aidid, uint8_t isoidid, uint8_t dfnameid, mfd_app_select *select) {
+
     if (ctx == NULL || select == NULL) {
         return PM3_EINVARG;
     }
@@ -8123,11 +8130,14 @@ static int MfdSelectionApplyCmdParameters(CLIParserContext *ctx, uint8_t aidid, 
         if (CLIParamHexToBuf(arg_get_str(ctx, dfnameid), dfname, sizeof(dfname), &dfname_len)) {
             return PM3_EINVARG;
         }
+
         if (dfname_len > 0) {
+
             if (dfname_len > (int)sizeof(cmd_select.dfname)) {
                 PrintAndLogEx(ERR, "DF name must be 1-16 bytes, got %d", dfname_len);
                 return PM3_EINVARG;
             }
+            
             cmd_select.dfname_present = true;
             cmd_select.dfname_len = dfname_len;
             memcpy(cmd_select.dfname, dfname, dfname_len);
@@ -8140,6 +8150,7 @@ static int MfdSelectionApplyCmdParameters(CLIParserContext *ctx, uint8_t aidid, 
         if (CLIGetUint32Hex(ctx, isoidid, 0x0000, &isoid, &isoid_present, 2, "Application ISO ID (ISO DF FID) must have 2 bytes length") != PM3_SUCCESS) {
             return PM3_EINVARG;
         }
+
         if (isoid_present) {
             cmd_select.isoid_present = true;
             cmd_select.isoid = isoid & 0xFFFFU;
@@ -8150,11 +8161,17 @@ static int MfdSelectionApplyCmdParameters(CLIParserContext *ctx, uint8_t aidid, 
         uint8_t aid_bytes[3] = {0};
         int aid_len = 0;
         CLIGetHexWithReturn(ctx, aidid, aid_bytes, &aid_len);
+        if (CLIParamHexToBuf(arg_get_str(ctx, aidid), aid_bytes, sizeof(aid_bytes), &aid_len)) {
+            return PM3_EINVARG;
+        }
+        
         if (aid_len > 0) {
+        
             if (aid_len != (int)sizeof(aid_bytes)) {
                 PrintAndLogEx(ERR, "AID must be exactly 3 bytes, got %d", aid_len);
                 return PM3_EINVARG;
             }
+        
             cmd_select.aid_present = true;
             cmd_select.aid = DesfireAIDByteToUint(aid_bytes);
         }
@@ -8445,6 +8462,7 @@ static int CmdHF14ADesIntAuth(const char *Cmd) {
     char pubkey_input[DUOX_MAX_KEY_INPUT] = {0};
     int pubkey_input_len = 0;
     CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)pubkey_input, sizeof(pubkey_input) - 1, &pubkey_input_len);
+
     bool pubkey_provided = (pubkey_input_len > 0);
 
     int keynum = arg_get_int_def(ctx, 6, 0);

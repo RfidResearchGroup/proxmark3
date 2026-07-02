@@ -3,7 +3,13 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Added `emv terminal` — EMV payment **terminal emulator** for lab/research use (contactless + contact paths): full phase engine (`run`/`step`), host simulator (ARQC/ARPC), scheme profiles (`--profile auto|interac|visa|mc`), golden CI fixtures (`emv terminal test --golden`), session export/redaction, mock APDU replay, TCP mock acquirer, Lua bindings, PCAP trace export, legal-use banner, and **`emv terminal crypto`** playground with human-readable card digest (`--summary`), quick AFL, PPSE AID fallback, and export compare. **Not a certified payment terminal — no warranty — authorized test cards only.** Planning docs: `doc/planning/emv-terminal-emulator/` (see OPERATOR-GUIDE.md and SPEC-security-privacy.md).
+- Added `emv terminal` — EMV payment **terminal emulator** for both contactless + contact pathsRQC/ARPC) (@andrew867)
+- Added `hf 14b dump` support for Standard ISO14443-B tags (@thisiscamk)
+- Added `hf 14b ctrdbl`, `hf 14b ctdump` command for interacting with ASK CTS tags (@kormax) 
+- Fixed `hf legic migrate` failing to parse the optional DCF argument as hex (@IdanHo)
+- Add support for parsing Finnish Helsinki Regional Transport (HRT) travel cards (@sanduuz)
+- Added standalone mode `HF_DOEGOX_COMMIT`: DESFire suspended commit without relay (@doegox)
+- Added support for Innovatron protocol detection to `hf 14b info` (@kormax)
 - Improved `lf cotag reader` and `lf cotag demod`: Reimplementation and enhancement of proxmark3 COTAG support
 - Added `hf felica sim` command (@kormax)
 - Added `mad read`, `mad write`, `mad verify`, `mad decode`, `mad encode` commands with typed struct MAD API (@AlxCzl)

@@ -23,8 +23,8 @@
 #  On ProxSpace 3.4:
 #    cmake -G"MSYS Makefiles" ..
 #  On Proxspace 3.3 or less, you need to install cmake:
-#    pacman -S mingw-w64-x86_64-cmake
-#    /mingw64/bin/cmake -G"MSYS Makefiles" ..
+#    pacman -S mingw-w64-ucrt-x86_64-cmake
+#    /ucrt64/bin/cmake -G"MSYS Makefiles" ..
 #
 # Android cross-compilation: (ANDROID_ABI=arm64-v8a for a 64b version)
 # cmake \
@@ -528,11 +528,14 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/comms.c
         ${PM3_ROOT}/client/src/fileutils.c
         ${PM3_ROOT}/client/src/flash.c
+        ${PM3_ROOT}/client/src/frame_progress.c
         ${PM3_ROOT}/client/src/graph.c
         ${PM3_ROOT}/client/src/hidsio.c
         ${PM3_ROOT}/client/src/iso4217.c
         ${PM3_ROOT}/client/src/jansson_path.c
         ${PM3_ROOT}/client/src/lua_bitlib.c
+        ${PM3_ROOT}/client/src/parsers/parsehrt.c
+        ${PM3_ROOT}/client/src/parsers/hrtparser/hrtparser.c
         ${PM3_ROOT}/client/src/pla.c
         ${PM3_ROOT}/client/src/preferences.c
         ${PM3_ROOT}/client/src/pm3.c

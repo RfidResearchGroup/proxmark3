@@ -27,7 +27,9 @@ int CmdHF14BNdefRead(const char *Cmd);
 
 uint8_t *get_uid_from_filename(const char *filename);
 int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field, bool leave_signal_on, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, int user_timeout);
+int exchange_14b_prime_apdu(uint8_t *datain, int datainlen, bool activate_field, bool leave_signal_on, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, int user_timeout);
 int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card);
+int select_card_14443b_prime(bool disconnect, iso14b_prime_card_select_t *card, bool verbose);
 
 int infoHF14B(bool verbose, bool do_aid_search);
 int readHF14B(bool loop, bool verbose, bool read_plot);

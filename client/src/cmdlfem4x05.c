@@ -53,8 +53,8 @@ typedef struct {
 } em4x05_unlock_item_t;
 
 
-static const char *em4x05_annotation[] = {"Info/User", "UID", "Password", "User", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "Lock", "Lock"};
-static const char *em4x69_annotation [] = {"Info", "UID", "Password", "Lock", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User"};
+static const char *em4x05_annotation[] = {"Info/User", "UID/Serial", "Password", "User", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "Lock", "Lock"};
+static const char *em4x69_annotation [] = {"Info", "UID/Serial", "Password", "Lock", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User"};
 
 static int CmdHelp(const char *Cmd);
 
@@ -976,31 +976,47 @@ static void em4x05_print_blocks(em_tech_type_t cardtype, uint8_t *data, uint8_t 
             // hack: since sprint_ascii doesnt handle MSB/LSB swaps
             reverse_array_copy(data + (i * EM4X05_BLOCK_SIZE), EM4X05_BLOCK_SIZE, rev);
 
-            if (i == EM_SERIAL_BLOCK) {
-                PrintAndLogEx(INFO, "  %02u | " _GREEN_("%08X") " | %s  | %s | " _GREEN_("%s")
-                              , i
-                              , d[i]
-                              , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
-                              , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
-                              , em4x05_annotation[i]
-                             );
-            } else if (i == EM_CONFIG_BLOCK) {
-                PrintAndLogEx(INFO, "  %02u | " _YELLOW_("%08X") " | %s  | %s | " _YELLOW_("%s")
-                              , i
-                              , d[i]
-                              , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
-                              , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
-                              , em4x05_annotation[i]
-                             );
-            } else {
-
-                PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %s"
-                              , i
-                              , d[i]
-                              , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
-                              , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
-                              , em4x05_annotation[i]
-                             );
+            switch(i) {
+                case EM_SERIAL_BLOCK: {
+                    PrintAndLogEx(INFO, "  %02u | " _GREEN_("%08X") " | " _GREEN_("%s") "  | %s | " _GREEN_("%s")
+                        , i
+                        , d[i]
+                        , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
+                        , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
+                        , em4x05_annotation[i]
+                        );                
+                    break;
+                }
+                case EM_PWD_BLOCK: {
+                    PrintAndLogEx(INFO, "  %02u | " _CYAN_("%08X") " | " _CYAN_("%s") "  | %s | " _CYAN_("%s")
+                        , i
+                        , d[i]
+                        , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
+                        , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
+                        , em4x05_annotation[i]
+                        );                     
+                    break;
+                }
+                case EM_CONFIG_BLOCK: {
+                    PrintAndLogEx(INFO, "  %02u | " _YELLOW_("%08X") " | " _YELLOW_("%s") "  | %s | " _YELLOW_("%s")
+                        , i
+                        , d[i]
+                        , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
+                        , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
+                        , em4x05_annotation[i]
+                        );                    
+                    break;
+                }
+                default: {
+                    PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %s"
+                        , i
+                        , d[i]
+                        , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
+                        , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
+                        , em4x05_annotation[i]
+                    );
+                    break;
+                }
             }
         }
 
@@ -1021,7 +1037,7 @@ static void em4x05_print_blocks(em_tech_type_t cardtype, uint8_t *data, uint8_t 
                           , ""
                          );
         } else {
-            PrintAndLogEx(INFO, "  %02u | " _GREEN_("%08X") " | %s  | %s | %-10s %s"
+            PrintAndLogEx(INFO, "  %02u | " _GREEN_("%08X") " | %s  | %s | " _GREEN_("%-10s") " %s"
                           , i
                           , d[i]
                           , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
@@ -1126,7 +1142,7 @@ int CmdEM4x05Dump(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("p", "pwd", "<hex>", "password (00000000)"),
-        arg_str0("f", "file", "<fn>", "override filename prefix (optional).  Default is based on UID"),
+        arg_str0("f", "file", "<fn>", "override filename prefix (optional).  Default is based on UID/Serial"),
         arg_lit0(NULL, "ns", "no save to file"),
         arg_param_end
     };
@@ -1165,107 +1181,68 @@ int CmdEM4x05Dump(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Found a " _GREEN_("%s") " tag", em_get_card_str(block0));
 
+    int res = 0;
+
     if (usePwd) {
         // Test first if the password is correct
-        int status = em4x05_login_ext(pwd);
-        if (status == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "password ( " _GREEN_("ok") " )");
-        } else if (status == PM3_EFAILED) {
-            PrintAndLogEx(WARNING, "password ( " _RED_("fail") ") , will try without password");
+        res = em4x05_login_ext(pwd);
+        if (res == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Password ( " _GREEN_("ok") " )");
+        } else if (res == PM3_EFAILED) {
+            PrintAndLogEx(WARNING, "Password ( " _RED_("fail") "), will try without password");
             usePwd = false;
         } else {
             PrintAndLogEx(WARNING, "Login attempt: no answer from tag");
-            return status;
+            return res;
         }
     }
 
-    em4x05_print_hdr();
-
-    uint8_t bytes[4] = {0};
     uint32_t data[16] = {0};
 
-    uint32_t lock_bits = 0x00; // no blocks locked
-    bool gotLockBits = false;
     uint8_t addr = 0;
     uint32_t word = 0;
     int success = PM3_SUCCESS;
 
     if (card_type == EM_4205 || card_type == EM_4305 || card_type == EM_UNKNOWN) {
-        bool lockInPW2 = false;
+
         // To flag any blocks locked we need to read blocks 14 and 15 first
         // don't swap endian until we get block lock flags.
-        int status14 = em4x05_read_word_ext(EM4305_PROT1_BLOCK, pwd, usePwd, &word);
-        if (status14 == PM3_SUCCESS) {
-            if ((word & 0x00008000) != 0x00) {
-                lock_bits = word;
-                gotLockBits = true;
-            }
+        res = em4x05_read_word_ext(EM4305_PROT1_BLOCK, pwd, usePwd, &word);
+        if (res == PM3_SUCCESS) {
             data[EM4305_PROT1_BLOCK] = word;
         } else {
             success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
         }
 
-        int status15 = em4x05_read_word_ext(EM4305_PROT2_BLOCK, pwd, usePwd, &word);
-        if (status15 == PM3_SUCCESS) {
-            if ((word & 0x00008000) != 0x00) { // assume block 15 is the current lock block
-                lock_bits = word;
-                gotLockBits = true;
-                lockInPW2 = true;
-            }
+        res = em4x05_read_word_ext(EM4305_PROT2_BLOCK, pwd, usePwd, &word);
+        if (res == PM3_SUCCESS) {
             data[EM4305_PROT2_BLOCK] = word;
         } else {
             success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
         }
 
-        uint32_t lockbit;
-        // Now read blocks 0 - 13 as we have 14 and 15
+        // maiin reading loop, blocks 0 - 13 as we have 14 and 15
         for (; addr < 14; addr++) {
 
-            lockbit = (lock_bits >> addr) & 1;
+            if (addr == EM_PWD_BLOCK) {
 
-            if (addr == 2) {
                 if (usePwd) {
                     data[addr] = BSWAP_32(pwd);
-                    num_to_bytes(pwd, 4, bytes);
-                    PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %s", addr, pwd, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), em4x05_annotation[addr]);
                 } else {
                     data[addr] = 0x00; // Unknown password, but not used to set to zeros
-                    PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s " _YELLOW_("write only"), addr, em4x05_annotation[addr]);
-                }
-            } else {
-                // success &= em4x05_read_word_ext(addr, pwd, usePwd, &word);
-                int status = em4x05_read_word_ext(addr, pwd, usePwd, &word); // Get status for single read
-                if (status != PM3_SUCCESS) {
-                    success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
                 }
 
+            } else {
+                // success &= em4x05_read_word_ext(addr, pwd, usePwd, &word);
+                res = em4x05_read_word_ext(addr, pwd, usePwd, &word); // Get status for single read
                 data[addr] = BSWAP_32(word);
-                if (status == PM3_SUCCESS) {
-                    num_to_bytes(word, 4, bytes);
-                    PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %s", addr, word, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), em4x05_annotation[addr]);
-                } else
-                    PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s %s", addr, em4x05_annotation[addr], status == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
+
+                if (res != PM3_SUCCESS) {
+                    success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
+                }
             }
         }
 
-        // Print blocks 14 and 15
-        // Both lock bits are protected with bit idx 14 (special case)
-
-        addr = 14;
-        if (status14 == PM3_SUCCESS) {
-            lockbit = (lock_bits >> addr) & 1;
-            PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %-10s %s", addr, data[addr], sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), em4x05_annotation[addr], lockInPW2 ? "" : _GREEN_("active"));
-        } else {
-            PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s %s", addr, em4x05_annotation[addr], status14 == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
-        }
-
-        addr = 15;
-        if (status15 == PM3_SUCCESS) {
-            lockbit = (lock_bits >> 14) & 1; // beware lock bit of word15 is pr14
-            PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %-10s %s", addr, data[addr], sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), em4x05_annotation[addr], lockInPW2 ? _GREEN_("active") : "");
-        } else {
-            PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s %s", addr, em4x05_annotation[addr], status15 == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
-        }
         // Update endian for files
         data[14] = BSWAP_32(data[14]);
         data[15] = BSWAP_32(data[15]);
@@ -1274,75 +1251,72 @@ int CmdEM4x05Dump(const char *Cmd) {
 
         // To flag any blocks locked we need to read block 3 first
         // don't swap endian until we get block lock flags.
-        int status14 = em4x05_read_word_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word);
-        if (status14 == PM3_SUCCESS) {
-            lock_bits = word;
-            gotLockBits = true;
+        res = em4x05_read_word_ext(EM4469_PROT_BLOCK, pwd, usePwd, &word);
+        if (res == PM3_SUCCESS) {
             data[EM4469_PROT_BLOCK] = word;
         } else {
-            success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
+            // If any error ensure fail is set so not to save invalid data
+            success = PM3_ESOFT; 
         }
 
+        // main reading loop
         for (; addr < 16; addr++) {
 
-            uint32_t lockbit = (lock_bits >> (addr * 2)) & 3;
-            if (addr == 2) {
+            if (addr == EM_PWD_BLOCK) {
                 if (usePwd) {
                     data[addr] = BSWAP_32(pwd);
-                    num_to_bytes(pwd, 4, bytes);
-                    PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %s", addr, pwd, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), em4x69_annotation[addr]);
                 } else {
-                    data[addr] = 0x00; // Unknown password, but not used to set to zeros
-                    PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s " _YELLOW_("write only"), addr, em4x69_annotation[addr]);
+                     // Unknown password, but not used to set to zeros
+                    data[addr] = 0x00;
                 }
             } else {
 
-                int status = em4x05_read_word_ext(addr, pwd, usePwd, &word);
-                if (status != PM3_SUCCESS) {
-                    success = PM3_ESOFT; // If any error ensure fail is set so not to save invalid data
-                }
-
+                res = em4x05_read_word_ext(addr, pwd, usePwd, &word);
                 data[addr] = BSWAP_32(word);
-                if (status == PM3_SUCCESS) {
-                    num_to_bytes(word, 4, bytes);
-                    PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %s", addr, word, sprint_ascii(bytes, 4), gotLockBits ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?"), em4x69_annotation[addr]);
-                } else {
-                    PrintAndLogEx(INFO, "  %02u |          |       |   | %-10s %s", addr, em4x69_annotation[addr], status == PM3_EFAILED ? _RED_("read denied") : _RED_("read failed"));
+
+                 // If any error ensure fail is set so not to save invalid data
+                if (res != PM3_SUCCESS) {
+                    success = PM3_ESOFT;
                 }
             }
         }
-
-    } else {
     }
 
+    em4x05_print_hdr();
+    em4x05_print_blocks(card_type, (uint8_t *)data, sizeof(data));
     em4x05_print_footer();
 
-    if (nosave) {
+    if (success != PM3_SUCCESS) {
+        PrintAndLogEx(INFO, _RED_("Partial reads") ", exiting");
+        PrintAndLogEx(HINT, "Try use a password?");
         PrintAndLogEx(NORMAL, "");
+        return success;
+    }
+
+    if (nosave) {
         PrintAndLogEx(INFO, "Called with no save option");
         PrintAndLogEx(NORMAL, "");
         return PM3_SUCCESS;
     }
 
-    // all ok save dump to file
-    if (success == PM3_SUCCESS) {
+    // generate filename if not supplied
+    if (fnlen == 0) {
 
-        if (strcmp(filename, "") == 0) {
-
-            if (card_type == EM_4369) {
-                snprintf(filename, sizeof(filename), "lf-4369-%08X-dump", BSWAP_32(data[1]));
-            } else if (card_type == EM_4469) {
-                snprintf(filename, sizeof(filename), "lf-4469-%08X-dump", BSWAP_32(data[1]));
-            } else {
-                snprintf(filename, sizeof(filename), "lf-4x05-%08X-dump", BSWAP_32(data[1]));
-            }
-
+        if (card_type == EM_4369) {
+            snprintf(filename, sizeof(filename), "lf-4369-%08X-dump", BSWAP_32(data[1]));
+        } else if (card_type == EM_4469) {
+            snprintf(filename, sizeof(filename), "lf-4469-%08X-dump", BSWAP_32(data[1]));
+        } else {
+            snprintf(filename, sizeof(filename), "lf-4x05-%08X-dump", BSWAP_32(data[1]));
         }
-        PrintAndLogEx(NORMAL, "");
-        if (card_type == EM_4369 || card_type == EM_4469)
-            pm3_save_dump(filename, (uint8_t *)data, sizeof(data), jsfEM4x69);
-        else
-            pm3_save_dump(filename, (uint8_t *)data, sizeof(data), jsfEM4x05);
+    }
+
+    // save dump to file
+    PrintAndLogEx(NORMAL, "");
+    if (card_type == EM_4369 || card_type == EM_4469) {
+        pm3_save_dump(filename, (uint8_t *)data, sizeof(data), jsfEM4x69);
+    } else {
+        pm3_save_dump(filename, (uint8_t *)data, sizeof(data), jsfEM4x05);
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -1556,7 +1530,7 @@ int CmdEM4x05Wipe(const char *Cmd) {
     // block 1 : UID - this should be read only for EM4205 and EM4305 not sure about others
     res = em4x05_write_word_ext(1, pwd, use_pwd, chip_UID);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "UID block write failed");
+        PrintAndLogEx(INFO, "UID/Serial block write failed");
     }
 
     // block 2 : password
@@ -2585,6 +2559,12 @@ static int CmdEM4x05View(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Note:");
     PrintAndLogEx(INFO, "All ZEROS password block might be filler data");
+    if (verbose == false && verbose2 == false) {
+        PrintAndLogEx(HINT, "try adding `" _YELLOW_("-v")  "` or `" _YELLOW_("-vv")  "` for more details");
+    }
+    if (verbose && verbose2 == false) {
+        PrintAndLogEx(HINT, "try adding `" _YELLOW_("-vv")  "` for more details");
+    }    
     return PM3_SUCCESS;
 }
 

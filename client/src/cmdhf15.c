@@ -1302,9 +1302,9 @@ static int reader_single_tag(bool fast, bool loop, uint8_t *afi_buf, int afi_len
         uint16_t raw_len = 0;
 
         raw_cmd[raw_len] = ISO15_REQ_SUBCARRIER_SINGLE
-                         | ISO15_REQ_DATARATE_HIGH
-                         | ISO15_REQ_INVENTORY
-                         | ISO15_REQINV_SLOT1;
+                           | ISO15_REQ_DATARATE_HIGH
+                           | ISO15_REQ_INVENTORY
+                           | ISO15_REQINV_SLOT1;
         if (afi_len > 0)
             raw_cmd[raw_len] |= ISO15_REQINV_AFI;
         raw_len++;
@@ -1374,9 +1374,12 @@ static void iso15_render_presence_table(const iso15_seen_tag_t *seen, int n,
     const char *c_off = g_session.supports_colors ? "\x1b[0m"  : "";
 
     int lines = 0;
-    printf("hf 15 --all   present %d / %d   " _GREEN_("<Enter>") " to exit", present, n);    lines++;
-    printf("\n%3s   %-25s    %-5s    %s", "#", "UID", "DSFID", "status");                      lines++;
-    printf("\n%3s   %-25s    %-5s    %s", "---", "-------------------------", "-----", "----------------"); lines++;
+    printf("hf 15 --all   present %d / %d   " _GREEN_("<Enter>") " to exit", present, n);
+    lines++;
+    printf("\n%3s   %-25s    %-5s    %s", "#", "UID", "DSFID", "status");
+    lines++;
+    printf("\n%3s   %-25s    %-5s    %s", "---", "-------------------------", "-----", "----------------");
+    lines++;
     for (int i = 0; i < n; i++) {
         if (seen[i].present) {
             printf("\n%3d   %-25s    %02X       %spresent%s",
@@ -1400,9 +1403,9 @@ static int reader_inventory_all(bool fast, bool loop, uint8_t *afi_buf, int afi_
         uint8_t mask_len; // in bits
     } inventory_work_item_t;
 
-    #define MAX_WORK_ITEMS 256
-    #define MAX_FOUND_TAGS 64
-    #define MAX_SEEN_TAGS  128
+#define MAX_WORK_ITEMS 256
+#define MAX_FOUND_TAGS 64
+#define MAX_SEEN_TAGS  128
 
     // Persistent across scans in continuous (-@) mode: every UID seen this session.
     iso15_seen_tag_t seen[MAX_SEEN_TAGS];
@@ -1433,8 +1436,8 @@ static int reader_inventory_all(bool fast, bool loop, uint8_t *afi_buf, int afi_
             uint16_t raw_len = 0;
 
             raw_cmd[raw_len] = ISO15_REQ_SUBCARRIER_SINGLE
-                             | ISO15_REQ_DATARATE_HIGH
-                             | ISO15_REQ_INVENTORY;
+                               | ISO15_REQ_DATARATE_HIGH
+                               | ISO15_REQ_INVENTORY;
             // 16-slot: do NOT set ISO15_REQINV_SLOT1
             if (afi_len > 0)
                 raw_cmd[raw_len] |= ISO15_REQINV_AFI;

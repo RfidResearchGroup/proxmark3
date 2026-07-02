@@ -899,6 +899,7 @@ SRCS =  mifare/aiddesfire.c \
         cipurse/cipursetest.c \
         fileutils.c \
         flash.c \
+        frame_progress.c \
         generator.c \
         graph.c \
         hidsio.c \
@@ -932,6 +933,8 @@ SRCS =  mifare/aiddesfire.c \
         mifare/prime.c \
         mifare/gen4.c \
         nfc/ndef.c \
+        parsers/parsehrt.c \
+        parsers/hrtparser/hrtparser.c \
         pm3.c \
         pm3_binlib.c \
         pm3_bitlib.c \

@@ -185,6 +185,8 @@
 # define ISO14B_BLOCK_SIZE  4
 #endif
 
+#define CTS512B_POWER_ON_DELAY_US 500
+
 // 4sample
 #define SEND4STUFFBIT(x) tosend_stuffbit(!(x));tosend_stuffbit(!(x));tosend_stuffbit(!(x));tosend_stuffbit(!(x));
 
@@ -534,6 +536,7 @@ static struct {
     uint16_t len;
     int      sumI;
     int      sumQ;
+    bool     saw_sof;
 } Demod;
 
 // Clear out the state of the "UART" that receives from the tag.
@@ -546,6 +549,7 @@ static void Demod14bReset(void) {
     Demod.len = 0;
     Demod.sumI = 0;
     Demod.sumQ = 0;
+    Demod.saw_sof = false;
 }
 
 static void Demod14bInit(uint8_t *data, uint16_t max_len) {
@@ -1240,6 +1244,13 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
             break;
         }
         case DEMOD_AWAITING_START_BIT: {
+            // CTS tag responses have no SOF/EOF; the frame ends when the tag
+            // stops load-modulating after the data bytes.
+            if (Demod.saw_sof == false && Demod.len > 0 && AMPLITUDE(ci, cq) < SUBCARRIER_DETECT_THRESHOLD) {
+                LED_C_OFF();
+                return true;
+            }
+
             Demod.posCount++;
             MAKE_SOFT_DECISION();
             if (v > 0) {
@@ -1271,6 +1282,7 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
                     Demod.posCount = 0;
                     Demod.bitCount = 0;
                     Demod.len = 0;
+                    Demod.saw_sof = true;
                     Demod.state = DEMOD_AWAITING_START_BIT;
                 }
             } else {
@@ -1440,7 +1452,13 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
 
         if (Handle14443bSamplesFromTag(ci, cq)) {
 
-            *eof_time = GetCountSspClkDelta(dma_start_time) - DELAY_TAG_TO_ARM;  // end of EOF
+            // Response timing is measured from DMA start, but trace rows use
+            // absolute SSP time like reader frames.
+            uint32_t eof_delta = GetCountSspClkDelta(dma_start_time);
+            if (eof_delta > DELAY_TAG_TO_ARM) {
+                eof_delta -= DELAY_TAG_TO_ARM;
+            }
+            *eof_time = dma_start_time + eof_delta;  // end of EOF
 
             if (Demod.len > Demod.max_len) {
                 ret = PM3_EOVFLOW;
@@ -1551,6 +1569,10 @@ static void TransmitFor14443b_AsReader(uint32_t *start_time) {
     while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY)) {};
 }
 
+static uint32_t ToSendBitCount(const tosend_t *ts) {
+    return (ts->max < 0) ? 0 : ((uint32_t)ts->max * 8U) + ts->bit;
+}
+
 //-----------------------------------------------------------------------------
 // Code a layer 2 command (string of octets, including CRC) into ToSend[],
 // so that it is ready to transmit to the tag using TransmitFor14443b().
@@ -1633,7 +1655,7 @@ void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t *start_
 // eof_time in ssp clocks, but bits was added here!
 //    *eof_time = *start_time + (10 * ts->max) + 10 + 2 + 10;
 
-    *eof_time = *start_time + HF14_ETU_TO_SSP(8 * ts->max);
+    *eof_time = *start_time + HF14_ETU_TO_SSP(ToSendBitCount(ts));
 
     LogTrace(cmd, len, *start_time, *eof_time, NULL, true);
 }
@@ -1777,7 +1799,8 @@ static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
 
     uint8_t r[8] = { 0x00 };
 
-    uint32_t start_time = 0;
+    // CTS512B accepts the first reader frame 500 us after RF power-on.
+    uint32_t start_time = US_TO_SSP(CTS512B_POWER_ON_DELAY_US);
     uint32_t eof_time = 0;
     CodeAndTransmit14443bAsReader(cmdINIT, sizeof(cmdINIT), &start_time, &eof_time, true);
 
@@ -1795,7 +1818,7 @@ static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
     }
 
     if (card) {
-        // pc. fc  Product code, Facility code
+        // REQT response payload: Product code, FAB code
         card->pc = r[0];
         card->fc = r[1];
     }
@@ -1916,6 +1939,99 @@ int iso14443b_select_srx_card(iso14b_card_select_t *card) {
         card->uidlen = 8;
         memcpy(card->uid, r_papid, 8);
     }
+    return PM3_SUCCESS;
+}
+
+static int iso14443b_select_prime_card(iso14b_prime_card_select_t *card) {
+    uint8_t apgen[] = {
+        ISO14443B_PRIME_VT_ADDR_DEFAULT,
+        ISO14443B_PRIME_CMD_APGEN,
+        // OccuPar 0x3F is the default value used by most readers in real installations.
+        ISO14443B_PRIME_OCCUPAR_DEFAULT,
+        // APGEN Config bit 7 requests the long REPGEN form with CONFIG/ATR.
+        ISO14443B_PRIME_APGEN_CONFIG_REQUEST_ATR,
+        0x00,
+        0x00
+    };
+    uint8_t r_repgen[PM3_CMD_DATA_SIZE] = { 0x00 };
+
+    AddCrc14B(apgen, sizeof(apgen) - 2);
+
+    uint32_t start_time = 0;
+    uint32_t eof_time = 0;
+    CodeAndTransmit14443bAsReader(apgen, sizeof(apgen), &start_time, &eof_time, true);
+
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+    uint16_t retlen = 0;
+    if (Get14443bAnswerFromTag(r_repgen, sizeof(r_repgen), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    // REPGEN carries V&T address, REPGEN command, DIV, VerLog, then CRC.
+    if (retlen < 9) {
+        return PM3_ELENGTH;
+    }
+
+    if (check_crc(CRC_14443_B, r_repgen, retlen) == false) {
+        return PM3_ECRC;
+    }
+
+    const uint16_t repgen_len = retlen - 2;
+    if (r_repgen[0] != apgen[0] || r_repgen[1] != ISO14443B_PRIME_CMD_REPGEN) {
+        return PM3_EWRONGANSWER;
+    }
+
+    if (card) {
+        card->vt_addr = r_repgen[0];
+        card->repgen_cmd = r_repgen[1];
+        memcpy(card->div, r_repgen + 2, sizeof(card->div));
+        card->verlog = r_repgen[6];
+
+        uint16_t offset = 7;
+        if ((card->verlog & ISO14443B_PRIME_VERLOG_LONG_REPGEN) && repgen_len > offset) {
+            card->config = r_repgen[offset++];
+            if ((card->config & ISO14443B_PRIME_CONFIG_ATR_PRESENT) && repgen_len > offset) {
+                uint16_t atr_len = repgen_len - offset;
+                card->atr_len = (uint8_t)MIN(atr_len, ISO14B_PRIME_ATR_MAX_LEN);
+                memcpy(card->atr, r_repgen + offset, card->atr_len);
+            }
+        }
+    }
+
+    uint8_t attrib[] = {
+        r_repgen[0],
+        ISO14443B_PRIME_CMD_ATTRIB,
+        r_repgen[2],
+        r_repgen[3],
+        r_repgen[4],
+        r_repgen[5],
+        0x00,
+        0x00,
+    };
+    AddCrc14B(attrib, sizeof(attrib) - 2);
+    start_time = eof_time + ISO14B_TR2;
+    CodeAndTransmit14443bAsReader(attrib, sizeof(attrib), &start_time, &eof_time, true);
+
+    uint8_t r_rr[4] = { 0x00 };
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+    retlen = 0;
+    if (Get14443bAnswerFromTag(r_rr, sizeof(r_rr), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    if (retlen != sizeof(r_rr)) {
+        return PM3_ELENGTH;
+    }
+
+    if (check_crc(CRC_14443_B, r_rr, retlen) == false) {
+        return PM3_ECRC;
+    }
+
+    if (r_rr[0] != r_repgen[0] || r_rr[1] != ISO14443B_PRIME_CMD_RR) {
+        return PM3_EWRONGANSWER;
+    }
+
+    s_iso14b_pcb_blocknum = 0;
     return PM3_SUCCESS;
 }
 
@@ -3145,6 +3261,15 @@ void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
         sendlen = sizeof(picopass_hdr_t);
         status = iso14443b_select_picopass_card(hdr);
         reply_ng(CMD_HF_ISO14443B_COMMAND, status, (uint8_t *)hdr, sendlen);
+        if (status != PM3_SUCCESS) goto out;
+    }
+
+    if ((p->flags & ISO14B_SELECT_PRIME) == ISO14B_SELECT_PRIME) {
+        iso14b_prime_card_select_t *prime = (iso14b_prime_card_select_t *)buf;
+        memset(prime, 0, sizeof(iso14b_prime_card_select_t));
+        sendlen = sizeof(iso14b_prime_card_select_t);
+        status = iso14443b_select_prime_card(prime);
+        reply_ng(CMD_HF_ISO14443B_COMMAND, status, (uint8_t *)prime, sendlen);
         if (status != PM3_SUCCESS) goto out;
     }
 

@@ -2322,14 +2322,14 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
     // load chip config block
     data[0] = T55x7_BITRATE_RF_50 | T55x7_MODULATION_FSK2a | last_block << T55x7_MAXBLOCK_SHIFT;
 
-    //TODO add selection of chip for Q5 or T55x7
+    // TODO add selection of chip for Q5 or T55x7
     if (q5) {
         data[0] = T5555_SET_BITRATE(50) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | last_block << T5555_MAXBLOCK_SHIFT;
     } else if (em) {
         data[0] = (EM4x05_SET_BITRATE(50) | EM4x05_MODULATION_FSK2 | EM4x05_SET_NUM_BLOCKS(last_block));
         // EM4x05_INVERT not available on EM4305, so let's invert manually
         for (uint8_t i = 1; i <= last_block ; i++) {
-            data[i] = data[i] ^ 0xFFFFFFFF;
+            data[i] ^=  0xFFFFFFFF;
         }
     }
 

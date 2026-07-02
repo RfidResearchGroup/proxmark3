@@ -1251,7 +1251,7 @@ static int felica_request_service_key_versions(uint8_t flags, const uint8_t *idm
     uint8_t data[1 + 1 + 8 + 1 + (FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE * 2)] = {0};
     uint16_t datalen = 0;
     int ret = felica_build_request_service_payload(FELICA_REQSRV_REQ, idm, node_codes_le, node_count,
-              data, sizeof(data), &datalen);
+                                                   data, sizeof(data), &datalen);
     if (ret != PM3_SUCCESS) {
         return ret;
     }
@@ -1306,7 +1306,7 @@ static int felica_request_service_v2_key_versions(uint8_t flags, const uint8_t *
     uint8_t data[1 + 1 + 8 + 1 + (FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE * 2)] = {0};
     uint16_t datalen = 0;
     int ret = felica_build_request_service_payload(FELICA_REQSRV2_REQ, idm, node_codes_le, node_count,
-              data, sizeof(data), &datalen);
+                                                   data, sizeof(data), &datalen);
     if (ret != PM3_SUCCESS) {
         return ret;
     }
@@ -1357,14 +1357,14 @@ static int felica_request_service_v2_key_versions(uint8_t flags, const uint8_t *
 
     for (size_t i = 0; i < returned_nodes; i++) {
         key_versions_out->aes_key_versions_le[i] = (uint16_t)resp.data.asBytes[offset + i * 2] |
-                ((uint16_t)resp.data.asBytes[offset + i * 2 + 1] << 8);
+                                                   ((uint16_t)resp.data.asBytes[offset + i * 2 + 1] << 8);
     }
     offset += aes_bytes;
 
     if (has_des_key_versions) {
         for (size_t i = 0; i < returned_nodes; i++) {
             key_versions_out->des_key_versions_le[i] = (uint16_t)resp.data.asBytes[offset + i * 2] |
-                    ((uint16_t)resp.data.asBytes[offset + i * 2 + 1] << 8);
+                                                       ((uint16_t)resp.data.asBytes[offset + i * 2 + 1] << 8);
         }
     }
 
@@ -3564,7 +3564,7 @@ static bool felica_discover_nodes_with_read_without_encryption(uint8_t *flags,
         uint32_t *discovered_count,
         int *stop_status) {
     return felica_discover_nodes_with_read_without_encryption_ex(flags, idm, retry_count, NULL,
-                                                                 visitor, ctx, discovered_count, stop_status);
+            visitor, ctx, discovered_count, stop_status);
 }
 
 static const char *felica_node_discovery_method_cli_name(felica_node_discovery_method_t method) {
@@ -3629,7 +3629,7 @@ static int felica_discover_nodes(const uint8_t *idm,
         bool discovered = false;
         if (info->method == FELICA_NODE_DISCOVERY_READ_WITHOUT_ENCRYPTION) {
             discovered = felica_discover_nodes_with_read_without_encryption_ex(flags, idm, retry_count, pmm,
-                                                                               visitor, ctx, &discovered_count, &stop_status);
+                         visitor, ctx, &discovered_count, &stop_status);
         } else {
             discovered = info->run(flags, idm, retry_count, visitor, ctx, &discovered_count, &stop_status);
         }
@@ -4291,7 +4291,7 @@ static int felica_dump_collect_key_versions_v2(felica_dump_system_t *system, uin
 
         felica_request_service_v2_key_versions_t versions;
         int ret = felica_request_service_v2_key_versions(flags, system->idm, batch_codes, batch_count,
-                  retry_count, &versions);
+                                                         retry_count, &versions);
         if (ret != PM3_SUCCESS) {
             return ret;
         }
@@ -4336,7 +4336,7 @@ static int felica_dump_collect_key_versions_v1(felica_dump_system_t *system, uin
 
         size_t returned_nodes = 0;
         int ret = felica_request_service_key_versions(flags, system->idm, batch_codes, batch_count,
-                  retry_count, key_versions, &returned_nodes);
+                                                      retry_count, key_versions, &returned_nodes);
         if (ret != PM3_SUCCESS) {
             return ret;
         }
@@ -4682,8 +4682,6 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
 
     uint8_t data[PM3_CMD_DATA_SIZE];
     memset(data, 0, sizeof(data));
-    data[0] = 0x0C; // Static length
-    data[1] = 0x3E; // Command ID
 
     // Length (1),
     // Command ID (1),
@@ -4759,7 +4757,7 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
 
     PrintAndLogEx(INFO, "Client send AUTH1 frame: %s", sprint_hex(data, datalen));
-    clear_and_send_command(flags, datalen, data, 0);
+    clear_and_send_command(flags, datalen, data, false);
 
     PacketResponseNG resp;
     if (waitCmdFelica(false, &resp, true) == false) {
@@ -4770,40 +4768,40 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     felica_auth1_response_t auth1_response;
     memcpy(&auth1_response, (felica_auth1_response_t *)resp.data.asBytes, sizeof(felica_auth1_response_t));
 
-    if (auth1_response.frame_response.IDm[0]) {
-        PrintAndLogEx(SUCCESS, "Auth1 response:");
-        PrintAndLogEx(SUCCESS, "IDm... %s", sprint_hex(auth1_response.frame_response.IDm, sizeof(auth1_response.frame_response.IDm)));
-        PrintAndLogEx(SUCCESS, "M2C... %s", sprint_hex(auth1_response.m2c, sizeof(auth1_response.m2c)));
-        PrintAndLogEx(SUCCESS, "M3C... %s", sprint_hex(auth1_response.m3c, sizeof(auth1_response.m3c)));
-
-        // Assumption: Key swap method used
-        uint8_t rev_master_key[PM3_CMD_DATA_SIZE];
-        reverse_3des_key(master_key, 16, rev_master_key);
-        mbedtls_des3_set2key_dec(&des3_ctx, rev_master_key);
-
-        bool is_key_correct = false;
-        unsigned char p2c[8];
-        mbedtls_des3_crypt_ecb(&des3_ctx, auth1_response.m2c, p2c);
-
-        for (uint8_t i = 0; i < 8; i++) {
-            if (p2c[i] != nonce[i]) {
-                is_key_correct = false;
-                break;
-            } else {
-                is_key_correct = true;
-            }
-        }
-
-        if (is_key_correct) {
-            PrintAndLogEx(SUCCESS, "Auth1 done with correct key material!");
-            PrintAndLogEx(SUCCESS, "Use Auth2 now with M3C and same key");
-        } else {
-            PrintAndLogEx(INFO, "3DES secret (swapped decryption): %s", sprint_hex(rev_master_key, 16));
-            PrintAndLogEx(INFO, "P2c: %s", sprint_hex(p2c, 8));
-            PrintAndLogEx(ERR, "Can't decrypt M2C with master secret (P1c != P2c)!");
-            PrintAndLogEx(ERR, "Probably wrong keys or wrong decryption method");
-        }
+    if (auth1_response.frame_response.cmd_code[0] != 0x11) {
+        PrintAndLogEx(ERR, "response code does not match");
+        return PM3_ERFTRANS;
     }
+
+    PrintAndLogEx(SUCCESS, "Auth1 response:");
+    PrintAndLogEx(SUCCESS, "IDm... %s", sprint_hex(auth1_response.frame_response.IDm, sizeof(auth1_response.frame_response.IDm)));
+    PrintAndLogEx(SUCCESS, "M2C... %s", sprint_hex(auth1_response.m2c, sizeof(auth1_response.m2c)));
+    PrintAndLogEx(SUCCESS, "M3C... %s", sprint_hex(auth1_response.m3c, sizeof(auth1_response.m3c)));
+
+
+    mbedtls_des3_init(&des3_ctx);
+
+    // Assumption: Key swap method used
+    uint8_t rev_master_key[16];
+    reverse_3des_key(master_key, 16, rev_master_key);
+    mbedtls_des3_set2key_dec(&des3_ctx, rev_master_key);
+
+    uint8_t p2c[8];
+    mbedtls_des3_crypt_ecb(&des3_ctx, auth1_response.m2c, p2c);
+    mbedtls_des3_free(&des3_ctx);
+
+    bool is_key_correct = memcmp(p2c, nonce, sizeof(nonce)) == 0;
+
+    if (is_key_correct) {
+        PrintAndLogEx(SUCCESS, "Auth1 done with correct key material!");
+        PrintAndLogEx(SUCCESS, "Use Auth2 now with M3C and same key");
+    } else {
+        PrintAndLogEx(INFO, "3DES secret (swapped decryption): %s", sprint_hex(rev_master_key, 16));
+        PrintAndLogEx(INFO, "P2c: %s", sprint_hex(p2c, 8));
+        PrintAndLogEx(ERR, "Can't decrypt M2C with master secret (P1c != P2c)!");
+        PrintAndLogEx(ERR, "Probably wrong keys or wrong decryption method");
+    }
+
     return PM3_SUCCESS;
 }
 
@@ -5648,7 +5646,7 @@ static int CmdHFFelicaDump(const char *Cmd) {
         uint32_t public_service_count = 0;
         felica_dump_system_t *dump_system = &dump_systems[dump_system_count];
         const int ret = felica_dump_single_system(&discovered_systems.systems[i], dump_system,
-                        retry_count, &discovered_nodes, &service_count, &public_service_count);
+                                                  retry_count, &discovered_nodes, &service_count, &public_service_count);
 
         if (ret == PM3_EOPABORTED) {
             DropField();
@@ -6842,7 +6840,7 @@ static int CmdHFFelicaSim(const char *Cmd) {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "JSON dump file"),
         arg_str0(NULL, "read-without-encryption-error-location-indication",
-                 "<mask|index|flag>", "Read Without Encryption error location indication (default: mask)"),
+        "<mask|index|flag>", "Read Without Encryption error location indication (default: mask)"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };

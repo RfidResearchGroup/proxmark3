@@ -1133,8 +1133,9 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         }
 
         const char *aid = json_string_value(jaid);
-        if (aid == false)
+        if (aid == false) {
             continue;
+        }
 
         size_t aidlen = strlen(aid);
         caid = calloc(8 + 2 + aidlen + 1, sizeof(uint8_t));
@@ -1149,16 +1150,19 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         int hexlen = 0;
         uint8_t cmddata[PM3_CMD_DATA_SIZE];
         int res = param_gethex_to_eol(caid, 0, cmddata, sizeof(cmddata), &hexlen);
-        if (res)
+        if (res) {
             continue;
+        }
 
         smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + hexlen);
         if (payload == NULL) {
             PrintAndLogEx(WARNING, "Failed to allocate memory");
             json_decref(root);
             free(buf);
+            free(caid);
             return PM3_EMALLOC;
         }
+
         payload->flags = SC_RAW_T0;
         payload->len = hexlen;
         payload->wait_delay = 0;
@@ -1168,8 +1172,9 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         free(payload);
 
         int len = smart_responseEx(buf, PM3_CMD_DATA_SIZE, false);
-        if (len < 3)
+        if (len < 3) {
             continue;
+        }
 
         json_t *jvendor, *jname;
         jvendor = json_object_get(data, "Vendor");
@@ -1179,17 +1184,20 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         }
 
         const char *vendor = json_string_value(jvendor);
-        if (!vendor)
+        if (vendor == NULL) {
             continue;
+        }
 
         jname = json_object_get(data, "Name");
         if (json_is_string(jname) == false) {
             PrintAndLogEx(ERR, "Name data [%d] is not a string", i + 1);
             continue;
         }
+
         const char *name = json_string_value(jname);
-        if (!name)
+        if (name == NULL) {
             continue;
+        }
 
         PrintAndLogEx(SUCCESS, "\nAID %s | %s | %s", aid, vendor, name);
 
@@ -1202,8 +1210,9 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "\nSFI brute force done\n");
     }
 
-    if (caid)
+    if (caid) {
         free(caid);
+    }
 
     free(buf);
     json_decref(root);

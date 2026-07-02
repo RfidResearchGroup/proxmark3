@@ -13,27 +13,21 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// MAD commands
+// Flashing progress functions
 //-----------------------------------------------------------------------------
 
-#ifndef CMDMAD_H__
-#define CMDMAD_H__
+#ifndef __FRAME_PROGRESS_H__
+#define __FRAME_PROGRESS_H__
 
 #include "common.h"
+#include "elf.h"
 
+void hadouken_start(double fps, int glyph_mode, int wave_mode);
+void hadouken_set_progress(int pct);
+void hadouken_stop(void);
 
-typedef enum {
-    MAD_CARD_CLASSIC,
-    MAD_CARD_PLUS,
-} mad_card_type_t;
-
-int CmdMAD(const char *Cmd);
-
-int CmdMADMFRead(const char *Cmd);
-int CmdMADMFWrite(const char *Cmd);
-int CmdMADMFVerify(const char *Cmd);
-int CmdMADMFPRead(const char *Cmd);
-int CmdMADMFPWrite(const char *Cmd);
-int CmdMADMFPVerify(const char *Cmd);
+void hadouken_on_sigint(int s);
+void hadouken_on_sigwinch(int s);
 
 #endif
+

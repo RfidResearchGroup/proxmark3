@@ -21,134 +21,137 @@ STANDALONE?=$(DEFAULT_STANDALONE)
 STANDALONE_REQ_DEFS=
 
 define KNOWN_STANDALONE_DEFINITIONS
-+==========================================================+
-| STANDALONE      | DESCRIPTION                            |
-+==========================================================+
-| (empty)         | No standalone mode                     |
-+----------------------------------------------------------+
-| LF_SKELETON     | standalone mode skeleton               |
-|                 | - iceman                               |
-+----------------------------------------------------------+
-| LF_EM4100EMUL   | Simulate predefined em4100 tags only   |
-|                 |                                        |
-+----------------------------------------------------------+
-| LF_EM4100RSWB   | Read/simulate/brute em4100 tags &      |
-|                 | clone it to T555x tags                 |
-+----------------------------------------------------------+
-| LF_EM4100RSWW   | Read/simulate/validate em4100 tags &   |
-|                 | clone it to T55xx tags, wipe T55xx tags|
-+----------------------------------------------------------+
-| LF_EM4100RWC    | Read/simulate em4100 tags & clone it   |
-|                 | to T555x tags                          |
-+----------------------------------------------------------+
-| LF_HIDBRUTE     | HID corporate 1000 bruteforce          |
-|                 | - Federico dotta & Maurizio Agazzini   |
-+----------------------------------------------------------+
-| LF_HIDFCBRUTE   | HID Facility Code bruteforce           |
-| (RDV4 only)     |                                        |
-+----------------------------------------------------------+
-| LF_ICEHID       | LF HID collector to flashmem           |
-| (RDV4 only)     |                                        |
-+----------------------------------------------------------+
-| LF_MULTIHID     | LF HID 26 Bit (H1031) multi simulator  |
-|                 | - Shain Lakin                          |
-+----------------------------------------------------------+
-| LF_NEDAP_SIM    | LF Nedap ID simple simulator           |
-|                 |                                        |
-+----------------------------------------------------------+
-| LF_NEXID        | LF Nexwatch collector to flashmem      |
-| (RDV4 only)     |                                        |
-+----------------------------------------------------------+
-| LF_PROXBRUTE    | HID ProxII bruteforce                  |
-|                 | - Brad Antoniewicz                     |
-+----------------------------------------------------------+
-| LF_PROX2BRUTE   | HID ProxII bruteforce v2               |
-|                 |                                        |
-+----------------------------------------------------------+
-| LF_SAMYRUN      | HID26 read/clone/sim                   |
-| (default)       | - Samy Kamkar                          |
-+----------------------------------------------------------+
-| LF_THAREXDE     | Simulate/read EM4x50 tags              |
-| (RDV4 only)     | storing in flashmem                    |
-+----------------------------------------------------------+
-| HF_14ASNIFF     | 14a sniff to flashmem (rdv4) or ram    |
-|                 |                                        |
-+----------------------------------------------------------+
-| HF_14BSNIFF     | 14b sniff to flashmem (rdv4) or ram    |
-|                 |                                        |
-+----------------------------------------------------------+
-| HF_15SNIFF      | 15693 sniff to flashmem (rdv4) or ram  |
-|                 |                                        |
-+----------------------------------------------------------+
-| HF_15SIM        | 15693 tag simulator                    |
-|                 |                                        |
-+----------------------------------------------------------+
-| HF_AVEFUL       | Mifare ultralight read/simulation      |
-|                 | - Ave Ozkal                            |
-+----------------------------------------------------------+
-| HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth     |
-| (RDV4 only)     | storing in flashmem - Bogito           |
-+----------------------------------------------------------+
-| HF_CARDHOPPER   | Relay 14a protocols over long distances|
-| (RDV4 only)     | (w/ IP backbone) - Sam Haskins         |
-+----------------------------------------------------------+
-| HF_COLIN        | Mifare ultra fast sniff/sim/clone      |
-| (RDV4 only)     | - Colin Brigato                        |
-+----------------------------------------------------------+
-| HF_CRAFTBYTE    | UID stealer - Emulates scanned 14a UID |
-|                 | - Anze Jensterle                       |
-+----------------------------------------------------------+
-| HF_DOEGOX_AUTH0 | UL-C / UL-AES unlocker                 |
-|                 | - Philippe Teuwen                      |
-+----------------------------------------------------------+
-| HF_ICECLASS     | Simulate HID iCLASS legacy ags         |
-| (RDV4 only)     | storing in flashmem                    |
-+----------------------------------------------------------+
-| HF_LEGIC        | Read/simulate Legic Prime tags         |
-|                 | storing in flashmem                    |
-+----------------------------------------------------------+
-| HF_LEGICSIM     | Simulate Legic Prime tags              |
-| (RDV4 only)     | stored on flashmem                     |
-+----------------------------------------------------------+
-| HF_MATTYRUN     | Mifare sniff/clone                     |
-|                 | - Matías A. Ré Medina                  |
-+----------------------------------------------------------+
-| HF_MFCSIM       | Simulate Mifare Classic 1k card        |
-| (RDV4 only)     | storing in flashmem - Ray Lee          |
-+----------------------------------------------------------+
-| HF_MSDSAL       | Read and emulate MSD Visa cards        |
-|                 | - Salvador Mendoza                     |
-+----------------------------------------------------------+
-| HF_REBLAY       | 14A Relay over BT                      |
-| (RDV4 only)     |  - Salvador Mendoza                    |
-+----------------------------------------------------------+
-| HF_ST25_TEAROFF | Store/restore ST25TB tags with         |
-|                 | tear-off for counters - SecLabz        |
-+----------------------------------------------------------+
-| HF_TCPRST       | IKEA Rothult read/sim/dump/emul        |
-|                 | - Nick Draffen                         |
-+----------------------------------------------------------+
-| HF_TMUDFORD     | Read and emulate 15 tags               |
-|                 | - Tim Mudford                          |
-+----------------------------------------------------------+
-| HF_UNISNIFF     | Sniff 14a/14b/15 (optionally to flash) |
-|                 | - hazardousvoltage                     |
-+----------------------------------------------------------+
-| HF_YOUNG        | Mifare sniff/simulation                |
-|                 | - Craig Young                          |
-+----------------------------------------------------------+
-| DANKARMULTI     | Load multiple standalone modes.        |
-|                 | - Daniel Karling                       |
-+----------------------------------------------------------+
-| HF_EMVPNG       | Read and emulate EMV Visa cards        |
-|                 | - Davi Mikael (Penegui)                |
-+----------------------------------------------------------+
++===========================================================+
+| STANDALONE       | DESCRIPTION                            |
++===========================================================+
+| (empty)          | No standalone mode                     |
++-----------------------------------------------------------+
+| LF_SKELETON      | standalone mode skeleton               |
+|                  | - iceman                               |
++-----------------------------------------------------------+
+| LF_EM4100EMUL    | Simulate predefined em4100 tags only   |
+|                  |                                        |
++-----------------------------------------------------------+
+| LF_EM4100RSWB    | Read/simulate/brute em4100 tags &      |
+|                  | clone it to T555x tags                 |
++-----------------------------------------------------------+
+| LF_EM4100RSWW    | Read/simulate/validate em4100 tags &   |
+|                  | clone it to T55xx tags, wipe T55xx tags|
++-----------------------------------------------------------+
+| LF_EM4100RWC     | Read/simulate em4100 tags & clone it   |
+|                  | to T555x tags                          |
++-----------------------------------------------------------+
+| LF_HIDBRUTE      | HID corporate 1000 bruteforce          |
+|                  | - Federico dotta & Maurizio Agazzini   |
++-----------------------------------------------------------+
+| LF_HIDFCBRUTE    | HID Facility Code bruteforce           |
+| (RDV4 only)      |                                        |
++-----------------------------------------------------------+
+| LF_ICEHID        | LF HID collector to flashmem           |
+| (RDV4 only)      |                                        |
++-----------------------------------------------------------+
+| LF_MULTIHID      | LF HID 26 Bit (H1031) multi simulator  |
+|                  | - Shain Lakin                          |
++-----------------------------------------------------------+
+| LF_NEDAP_SIM     | LF Nedap ID simple simulator           |
+|                  |                                        |
++-----------------------------------------------------------+
+| LF_NEXID         | LF Nexwatch collector to flashmem      |
+| (RDV4 only)      |                                        |
++-----------------------------------------------------------+
+| LF_PROXBRUTE     | HID ProxII bruteforce                  |
+|                  | - Brad Antoniewicz                     |
++-----------------------------------------------------------+
+| LF_PROX2BRUTE    | HID ProxII bruteforce v2               |
+|                  |                                        |
++-----------------------------------------------------------+
+| LF_SAMYRUN       | HID26 read/clone/sim                   |
+| (default)        | - Samy Kamkar                          |
++-----------------------------------------------------------+
+| LF_THAREXDE      | Simulate/read EM4x50 tags              |
+| (RDV4 only)      | storing in flashmem                    |
++-----------------------------------------------------------+
+| HF_14ASNIFF      | 14a sniff to flashmem (rdv4) or ram    |
+|                  |                                        |
++-----------------------------------------------------------+
+| HF_14BSNIFF      | 14b sniff to flashmem (rdv4) or ram    |
+|                  |                                        |
++-----------------------------------------------------------+
+| HF_15SNIFF       | 15693 sniff to flashmem (rdv4) or ram  |
+|                  |                                        |
++-----------------------------------------------------------+
+| HF_15SIM         | 15693 tag simulator                    |
+|                  |                                        |
++-----------------------------------------------------------+
+| HF_AVEFUL        | Mifare ultralight read/simulation      |
+|                  | - Ave Ozkal                            |
++-----------------------------------------------------------+
+| HF_BOG           | 14a sniff with ULC/ULEV1/NTAG auth     |
+| (RDV4 only)      | storing in flashmem - Bogito           |
++-----------------------------------------------------------+
+| HF_CARDHOPPER    | Relay 14a protocols over long distances|
+| (RDV4 only)      | (w/ IP backbone) - Sam Haskins         |
++-----------------------------------------------------------+
+| HF_COLIN         | Mifare ultra fast sniff/sim/clone      |
+| (RDV4 only)      | - Colin Brigato                        |
++-----------------------------------------------------------+
+| HF_CRAFTBYTE     | UID stealer - Emulates scanned 14a UID |
+|                  | - Anze Jensterle                       |
++-----------------------------------------------------------+
+| HF_DOEGOX_AUTH0  | UL-C / UL-AES unlocker                 |
+|                  | - Philippe Teuwen                      |
++-----------------------------------------------------------+
+| HF_DOEGOX_COMMIT | DESFire suspended commit               |
+|                  | - Philippe Teuwen                      |
++-----------------------------------------------------------+
+| HF_ICECLASS      | Simulate HID iCLASS legacy ags         |
+| (RDV4 only)      | storing in flashmem                    |
++-----------------------------------------------------------+
+| HF_LEGIC         | Read/simulate Legic Prime tags         |
+|                  | storing in flashmem                    |
++-----------------------------------------------------------+
+| HF_LEGICSIM      | Simulate Legic Prime tags              |
+| (RDV4 only)      | stored on flashmem                     |
++-----------------------------------------------------------+
+| HF_MATTYRUN      | Mifare sniff/clone                     |
+|                  | - Matías A. Ré Medina                  |
++-----------------------------------------------------------+
+| HF_MFCSIM        | Simulate Mifare Classic 1k card        |
+| (RDV4 only)      | storing in flashmem - Ray Lee          |
++-----------------------------------------------------------+
+| HF_MSDSAL        | Read and emulate MSD Visa cards        |
+|                  | - Salvador Mendoza                     |
++-----------------------------------------------------------+
+| HF_REBLAY        | 14A Relay over BT                      |
+| (RDV4 only)      |  - Salvador Mendoza                    |
++-----------------------------------------------------------+
+| HF_ST25_TEAROFF  | Store/restore ST25TB tags with         |
+|                  | tear-off for counters - SecLabz        |
++-----------------------------------------------------------+
+| HF_TCPRST        | IKEA Rothult read/sim/dump/emul        |
+|                  | - Nick Draffen                         |
++-----------------------------------------------------------+
+| HF_TMUDFORD      | Read and emulate 15 tags               |
+|                  | - Tim Mudford                          |
++-----------------------------------------------------------+
+| HF_UNISNIFF      | Sniff 14a/14b/15 (optionally to flash) |
+|                  | - hazardousvoltage                     |
++-----------------------------------------------------------+
+| HF_YOUNG         | Mifare sniff/simulation                |
+|                  | - Craig Young                          |
++-----------------------------------------------------------+
+| DANKARMULTI      | Load multiple standalone modes.        |
+|                  | - Daniel Karling                       |
++-----------------------------------------------------------+
+| HF_EMVPNG        | Read and emulate EMV Visa cards        |
+|                  | - Davi Mikael (Penegui)                |
++-----------------------------------------------------------+
 endef
 
 
 STANDALONE_MODES := LF_SKELETON
 STANDALONE_MODES += LF_EM4100EMUL LF_EM4100RSWB LF_EM4100RSWW LF_EM4100RWC LF_HIDBRUTE LF_HIDFCBRUTE LF_ICEHID LF_MULTIHID LF_NEDAP_SIM LF_NEXID LF_PROXBRUTE LF_PROX2BRUTE LF_SAMYRUN LF_THAREXDE
-STANDALONE_MODES += HF_14ASNIFF HF_14BSNIFF HF_15SNIFF HF_15SIM HF_AVEFUL HF_BOG HF_CARDHOPPER HF_COLIN HF_CRAFTBYTE HF_DOEGOX_AUTH0 HF_ICECLASS HF_LEGIC HF_LEGICSIM HF_MATTYRUN HF_MFCSIM HF_MSDSAL HF_REBLAY HF_ST25_TEAROFF HF_TCPRST HF_TMUDFORD HF_UNISNIFF HF_YOUNG HF_EMVPNG
+STANDALONE_MODES += HF_14ASNIFF HF_14BSNIFF HF_15SNIFF HF_15SIM HF_AVEFUL HF_BOG HF_CARDHOPPER HF_COLIN HF_CRAFTBYTE HF_DOEGOX_AUTH0 HF_DOEGOX_COMMIT HF_ICECLASS HF_LEGIC HF_LEGICSIM HF_MATTYRUN HF_MFCSIM HF_MSDSAL HF_REBLAY HF_ST25_TEAROFF HF_TCPRST HF_TMUDFORD HF_UNISNIFF HF_YOUNG HF_EMVPNG
 STANDALONE_MODES += DANKARMULTI
 STANDALONE_MODES_REQ_BT := HF_CARDHOPPER HF_REBLAY
 STANDALONE_MODES_REQ_SMARTCARD :=

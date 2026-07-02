@@ -1287,6 +1287,9 @@ static int l_set_iso_dep_state(lua_State *L) {
         case 3:
             SetISODEPState(ISODEP_NFCV);
             break;
+        case 4:
+            SetISODEPState(ISODEP_NFCB_PRIME);
+            break;
         default:
             return returnToLuaWithError(L, "Wrong ISODEP STATE value");
     }

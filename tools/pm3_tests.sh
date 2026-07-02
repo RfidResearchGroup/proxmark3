@@ -644,6 +644,7 @@ while true; do
       if ! CheckExecute "hf cipurse test"                "$CLIENTBIN -c 'hf cipurse test'" "Tests \( ok"; then break; fi
       if ! CheckExecute "hf mfdes test"                  "$CLIENTBIN -c 'hf mfdes test'"   "Tests \( ok"; then break; fi
       if ! CheckExecute "hf gst test"                    "$CLIENTBIN -c 'hf gst test'"     "Tests \( ok"; then break; fi
+      if ! CheckExecute "hf saflok test"                 "$CLIENTBIN -c 'hf saflok test'"  "Tests \( ok"; then break; fi
       if ! CheckExecute "mad test"                       "$CLIENTBIN -c 'mad test'"        "Tests \( ok"; then break; fi
       if ! CheckExecute "hf waveshare load"              "$CLIENTBIN -c 'hf waveshare load -m 6 -f tools/lena.bmp -s dither.bmp' && echo '34ff55fe7257876acf30dae00eb0e439 dither.bmp' | md5sum -c -" "dither.bmp: OK"; then break; fi
     fi

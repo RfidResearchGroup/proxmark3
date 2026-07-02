@@ -37,7 +37,7 @@ json_t *pla_load_ecplist(void) {
     json_t *root = json_load_file(path, 0, &error);
     free(path);
 
-    if (!root) {
+    if (root == false) {
         PrintAndLogEx(ERR, "json error on line %d: %s", error.line, error.text);
         return NULL;
     }
@@ -60,19 +60,22 @@ json_t *pla_search_ecplist_by_key(json_t *root, const char *type, const char *su
         // If type filter is specified, check if entry has matching type
         if (type != NULL) {
             json_t *type_obj = json_object_get(entry, "type");
-            if (!type_obj) {
+            if (type_obj == NULL) {
                 continue; // Skip entries without type field
             }
 
             bool type_matched = false;
+
             if (json_is_string(type_obj)) {
                 const char *type_str = json_string_value(type_obj);
                 if (type_str && strcmp(type_str, type) == 0) {
                     type_matched = true;
                 }
+
             } else if (json_is_array(type_obj)) {
                 size_t type_index;
                 json_t *type_value;
+
                 json_array_foreach(type_obj, type_index, type_value) {
                     const char *type_str = json_string_value(type_value);
                     if (type_str && strcmp(type_str, type) == 0) {
@@ -82,9 +85,10 @@ json_t *pla_search_ecplist_by_key(json_t *root, const char *type, const char *su
                 }
             }
 
-            if (!type_matched) {
+            if (type_matched == false) {
                 continue; // Type doesn't match
             }
+
         } else {
             // If no type filter, skip entries that have a type field
             if (json_object_get(entry, "type")) {
@@ -97,16 +101,21 @@ json_t *pla_search_ecplist_by_key(json_t *root, const char *type, const char *su
 
         // Check if the subtype matches the "subtype" field (string or array)
         if (subtype != NULL) {
+
             json_t *subtype_obj = json_object_get(entry, "subtype");
             if (subtype_obj) {
+
                 if (json_is_string(subtype_obj)) {
+
                     const char *subtype_str = json_string_value(subtype_obj);
                     if (subtype_str && strcmp(subtype_str, subtype) == 0) {
                         subtype_matched = true;
                     }
+
                 } else if (json_is_array(subtype_obj)) {
                     size_t subtype_index;
                     json_t *subtype_value;
+
                     json_array_foreach(subtype_obj, subtype_index, subtype_value) {
                         const char *subtype_str = json_string_value(subtype_value);
                         if (subtype_str && strcmp(subtype_str, subtype) == 0) {
@@ -120,16 +129,21 @@ json_t *pla_search_ecplist_by_key(json_t *root, const char *type, const char *su
 
         // Check if the key matches the "key" field (string or array)
         if (key != NULL) {
+
             json_t *key_obj = json_object_get(entry, "key");
             if (key_obj) {
+
                 if (json_is_string(key_obj)) {
+
                     const char *key_str = json_string_value(key_obj);
                     if (key_str && strcmp(key_str, key) == 0) {
                         key_matched = true;
                     }
+
                 } else if (json_is_array(key_obj)) {
                     size_t key_index;
                     json_t *key_value;
+
                     json_array_foreach(key_obj, key_index, key_value) {
                         const char *key_str = json_string_value(key_value);
                         if (key_str && strcmp(key_str, key) == 0) {
@@ -159,7 +173,7 @@ int pla_parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_size)
 
     // Make a mutable copy of the command and replace dots/colons with spaces
     char *cmd_copy = strdup(cmd);
-    if (!cmd_copy) {
+    if (cmd_copy == NULL) {
         return -1;
     }
 
@@ -171,7 +185,7 @@ int pla_parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_size)
 
     // Load ecplist.json
     json_t *ecplist = pla_load_ecplist();
-    if (!ecplist) {
+    if (ecplist == NULL) {
         PrintAndLogEx(ERR, "Failed to load ecplist.json");
         free(cmd_copy);
         return -1;
@@ -182,6 +196,7 @@ int pla_parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_size)
     if (strncmp(p, "ecp", 3) == 0) {
         p += 3;
     }
+
     while (*p == ' ' || *p == '\t') {
         p++;
     }
@@ -192,24 +207,31 @@ int pla_parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_size)
 
     // Check if first term is a type ("transit" or "access")
     if (strncmp(p, "transit", 7) == 0) {
+
         type = "transit";
         p += 7;
+
         while (*p == ' ' || *p == '\t') {
             p++;
         }
+
         search_term = p;
 
         // If second term provided, search by key in transit entries
         if (*p != '\0') {
+
             json_t *entry = pla_search_ecplist_by_key(ecplist, type, NULL, search_term);
             if (entry) {
                 // Found matching entry, use its value
                 json_t *value_obj = json_object_get(entry, "value");
                 if (value_obj) {
+
                     const char *hex_str = json_string_value(value_obj);
                     if (hex_str) {
+
                         size_t hex_len = strlen(hex_str);
                         if (hex_len % 2 == 0 && hex_len <= frame_size * 2) {
+
                             for (size_t i = 0; i < hex_len / 2; i++) {
                                 sscanf(hex_str + i * 2, "%2hhx", &frame[i]);
                             }
@@ -221,6 +243,7 @@ int pla_parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_size)
 
             // If not found, try interpreting as hex TCI
             if (result == -1) {
+
                 char *endptr;
                 uint32_t tci = strtoul(search_term, &endptr, 16);
                 if (search_term != endptr) {
@@ -248,8 +271,10 @@ int pla_parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_size)
         }
 
     } else if (strncmp(p, "access", 6) == 0) {
+
         type = "access";
         p += 6;
+
         while (*p == ' ' || *p == '\t') {
             p++;
         }
@@ -282,6 +307,7 @@ int pla_parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_size)
             while (*p != '\0' && *p != ' ' && *p != '\t') {
                 p++;
             }
+
             size_t third_term_len = p - third_term;
             if (third_term_len > 0) {
                 third = str_ndup(third_term, third_term_len);
@@ -302,7 +328,7 @@ int pla_parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_size)
                 // One term: try as subtype first, then as key
                 entry = pla_search_ecplist_by_key(ecplist, type, second, NULL);
 
-                if (!entry) {
+                if (entry == NULL) {
                     entry = pla_search_ecplist_by_key(ecplist, type, NULL, second);
                 }
             }
@@ -311,10 +337,13 @@ int pla_parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_size)
                 // Found matching entry, use its value
                 json_t *value_obj = json_object_get(entry, "value");
                 if (value_obj) {
+
                     const char *hex_str = json_string_value(value_obj);
                     if (hex_str) {
+
                         size_t hex_len = strlen(hex_str);
                         if (hex_len % 2 == 0 && hex_len <= frame_size * 2) {
+
                             for (size_t i = 0; i < hex_len / 2; i++) {
                                 sscanf(hex_str + i * 2, "%2hhx", &frame[i]);
                             }
@@ -326,16 +355,23 @@ int pla_parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_size)
 
             // If not found and no third term, try interpreting second term as hex TCI
             if (result == -1 && third == NULL) {
+
                 char *endptr;
                 tci = strtoul(second, &endptr, 16);
+
                 if (second == endptr) {
                     PrintAndLogEx(ERR, "Unknown access subtype/key or invalid TCI: %s", second);
                     free(second);
-                    if (third) free(third);
+
+                    if (third) {
+                        free(third);
+                    }
+
                     json_decref(ecplist);
                     free(cmd_copy);
                     return -1;
                 }
+
             } else if (result == -1 && third != NULL) {
                 PrintAndLogEx(ERR, "No matching access entry for subtype '%s' and key '%s'", second, third);
                 free(second);
@@ -371,12 +407,16 @@ int pla_parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_size)
         // No type specified, search for entries without type field by key
         json_t *entry = pla_search_ecplist_by_key(ecplist, search_term, NULL, NULL);
         if (entry) {
+
             json_t *value_obj = json_object_get(entry, "value");
             if (value_obj) {
+
                 const char *hex_str = json_string_value(value_obj);
                 if (hex_str) {
+
                     size_t hex_len = strlen(hex_str);
                     if (hex_len % 2 == 0 && hex_len <= frame_size * 2) {
+
                         for (size_t i = 0; i < hex_len / 2; i++) {
                             sscanf(hex_str + i * 2, "%2hhx", &frame[i]);
                         }

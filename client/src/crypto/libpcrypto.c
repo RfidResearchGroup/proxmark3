@@ -844,7 +844,7 @@ void des3_decrypt(void *out, const void *in, const void *key, uint8_t keycount) 
 }
 
 // NIST Special Publication 800-38A — Recommendation for block cipher modes of operation: methods and techniques, 2001.
-int aes_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length) {
+int aes_encode(uint8_t *iv, const uint8_t *key, uint8_t *input, uint8_t *output, int length) {
     uint8_t iiv[16] = {0};
     if (iv) {
         memcpy(iiv, iv, sizeof(iiv));
@@ -862,7 +862,7 @@ int aes_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int l
     return PM3_SUCCESS;
 }
 
-int aes_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length) {
+int aes_decode(uint8_t *iv, const uint8_t *key, uint8_t *input, uint8_t *output, int length) {
     uint8_t iiv[16] = {0};
     if (iv) {
         memcpy(iiv, iv, 16);
@@ -881,7 +881,7 @@ int aes_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int l
 }
 
 // NIST Special Publication 800-38A — Recommendation for block cipher modes of operation: methods and techniques, 2001.
-int aes256_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length) {
+int aes256_encode(uint8_t *iv, const uint8_t *key, uint8_t *input, uint8_t *output, int length) {
     uint8_t iiv[16] = {0};
     if (iv) {
         memcpy(iiv, iv, sizeof(iiv));
@@ -900,7 +900,7 @@ int aes256_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, in
 }
 
 
-int aes256_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length) {
+int aes256_decode(uint8_t *iv, const uint8_t *key, uint8_t *input, uint8_t *output, int length) {
     uint8_t iiv[16] = {0};
     if (iv) {
         memcpy(iiv, iv, 16);
@@ -921,14 +921,14 @@ int aes256_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, in
 
 // NIST Special Publication 800-38B — Recommendation for block cipher modes of operation: The CMAC mode for authentication.
 // https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/AES_CMAC.pdf
-int aes_cmac(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int length) {
+int aes_cmac(uint8_t *iv, const uint8_t *key, uint8_t *input, uint8_t *mac, int length) {
     memset(mac, 0x00, 16);
 
     //  NIST 800-38B
     return mbedtls_aes_cmac_prf_128(key, MBEDTLS_AES_BLOCK_SIZE, input, length, mac);
 }
 
-int aes_cmac8(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int length) {
+int aes_cmac8(uint8_t *iv, const uint8_t *key, uint8_t *input, uint8_t *mac, int length) {
     uint8_t cmac_tmp[16] = {0};
     memset(mac, 0x00, 8);
 

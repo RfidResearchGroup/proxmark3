@@ -1772,14 +1772,16 @@ static int CmdGallagherTest(const char *cmd) {
 
 
 static command_t CommandTable[] = {
+    {"-----------",  CmdHelp,               AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
     {"help",         CmdHelp,               AlwaysAvailable, "This help"},
-    {"reader",       CmdGallagherReader,    IfPm3Iso14443,   "Read & decode all Gallagher credentials on a DESFire or Classic card"},
+    {"test",         CmdGallagherTest,      AlwaysAvailable, "Test the function of Gallagher Mifare Core"},
+    {"-----------",  CmdHelp,               AlwaysAvailable, "----------------------- " _CYAN_("Operations") " -----------------------"},
     {"clone",        CmdGallagherClone,     IfPm3Iso14443,   "Clone Gallagher credentials to a DESFire or Classic card"},
     {"delete",       CmdGallagherDelete,    IfPm3Iso14443,   "Delete Gallagher credentials from a DESFire card"},
     {"diversifykey", CmdGallagherDiversify, AlwaysAvailable, "Diversify Gallagher key"},
     {"decode",       CmdGallagherDecode,    AlwaysAvailable, "Decode Gallagher credential block"},
     {"encode",       CmdGallagherEncode,    AlwaysAvailable, "Encode Gallagher credential block"},
-    {"test",         CmdGallagherTest,      AlwaysAvailable, "Test the function of Gallagher Mifare Core"},
+    {"reader",       CmdGallagherReader,    IfPm3Iso14443,   "Read & decode all Gallagher credentials on a DESFire or Classic card"},
     {NULL, NULL, NULL, NULL}
 };
 

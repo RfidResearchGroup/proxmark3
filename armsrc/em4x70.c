@@ -50,7 +50,7 @@ static em4x70_tag_t g_tag = { 0 };
 
 
 
-#if 1 // Calculation of ticks for timing functions
+// Calculation of ticks for timing functions
 // Nearly every calculation is done in terms of Field Codes (FC) aka RF periods
 // 1 us = 1.5 ticks
 // 1RF Period = 8us = 12 Ticks
@@ -80,9 +80,9 @@ static em4x70_tag_t g_tag = { 0 };
 #define EM4X70_COMMAND_LIW_SEARCH_RETRIES    5 // Attempts to send/read command
 #define EM4X70_MAX_SEND_BITCOUNT            96u // Authentication == CMD(4) + NONCE(56) + DIVERGENCY(7) + FRND(28) == 6 + 56 + 35 == 56 + 41 == 95 bits (NOTE: RM(2) is handled as part of LIW detection)
 #define EM4X70_MAX_RECEIVE_BITCOUNT         64u // Maximum bits to receive in response to any command (NOTE: This is EXCLUDING the 16-bit header of 0b1111'1111'1111'0000)
-#endif // Calculation of ticks for timing functions
 
-#if 1 // EM4x70 Command IDs and notes
+
+// EM4x70 Command IDs and notes
 /**
  * These IDs are from the EM4170 datasheet.
  * Some versions of the chip require a
@@ -198,7 +198,7 @@ static em4x70_tag_t g_tag = { 0 };
 // 3. Elif ID  w/o  parity -- If successful, command parity is NOT required, Type is EM4070/V4070
 // 4. Elif ID  with parity -- If successful, command parity IS     required, Type is EM4070/V4070
 // 5. Else                 -- Error ... no tag or other error?
-#endif // EM4x70 Command IDs
+
 
 // Constants used to determine high/low state of signal
 #define EM4X70_NOISE_THRESHOLD  13  // May depend on noise in environment
@@ -345,7 +345,7 @@ static bool check_pulse_length(uint32_t pulse_tick_length, uint32_t target_tick_
             (pulse_tick_length <= (target_tick_length + EM4X70_T_TAG_TOLERANCE)));
 }
 
-#if 1 // brute force logging of sent buffer
+// brute force logging of sent buffer
 
 // e.g., authenticate sends 93 bits (2x RM, 56x rnd, 7x div, 28x frnd) == 2+56+35 = 58+35 = 93
 // NOTE: unlike the bitstream functions, the logs include sending of the two `RM` bits
@@ -437,7 +437,6 @@ static void log_received_bits(uint8_t *byte_per_bit_array, size_t array_element_
         g_Log->receive.bits_used += array_element_count;
     }
 }
-#endif // brute force logging of sent buffer
 
 // This is the only function that actually toggles modulation for sending bits
 static void em4x70_send_bit(bool bit) {
@@ -487,7 +486,7 @@ static bool check_ack(void) {
     return false;
 }
 
-#if  1 // #pragma region    // Bitstream structures / enumerations
+// Bitstream structures / enumerations
 #define EM4X70_MAX_BITSTREAM_BITS MAX(EM4X70_MAX_SEND_BITCOUNT, EM4X70_MAX_RECEIVE_BITCOUNT)
 
 // _Static_assert(EM4X70_MAX_SEND_BITCOUNT    <= 255, "EM4X70_MAX_SEND_BITCOUNT    must fit in uint8_t");
@@ -535,8 +534,7 @@ typedef struct _em4x70_command_generators_t {
     bitstream_command_generator_write_t write;
 } em4x70_command_generators_t;
 
-#endif // #pragma endregion // Bitstream structures / enumerations
-#if  1 // #pragma region    // Functions to dump bitstreams to debug output
+// Functions to dump bitstreams to debug output
 static void bitstream_dump_helper(const em4x70_bitstream_t *bitstream, bool is_transmit) {
     // mimic the log's output format to make comparisons easier
     char const *const  direction = is_transmit ? "sent >>>" : "recv <<<";
@@ -544,7 +542,7 @@ static void bitstream_dump_helper(const em4x70_bitstream_t *bitstream, bool is_t
         if (g_dbglevel >= DBG_INFO || true) {
             DPRINTF_EXTENDED(("%s: no data", direction));
         }
-    } else if (bitstream->bitcount > 0xFEu) {
+    } else if (bitstream->bitcount > EM4X70_MAX_BITSTREAM_BITS) {
         DPRINTF_ERROR(("INTERNAL ERROR: Too many bits to dump: %d", bitstream->bitcount));
     } else {
         char bitstring[EM4X70_MAX_BITSTREAM_BITS + 1];
@@ -566,8 +564,8 @@ static void bitstream_dump(const em4x70_command_bitstream_t *cmd_bitstream) {
     bitstream_dump_helper(&cmd_bitstream->to_send,    true);
     bitstream_dump_helper(&cmd_bitstream->to_receive, false);
 }
-#endif // #pragma region    // Functions to dump bitstreams to debug output
-#if  1 // #pragma region    // Functions to send bitstreams, with options to receive data
+
+// Functions to send bitstreams, with options to receive data
 
 /// @brief Internal function to send a bitstream to the tag.
 /// @details This function presumes a validated structure, and sends the bitstream without delays, to support timing-sensitive operations.
@@ -835,8 +833,8 @@ static bool send_bitstream_wait_ack_wait_ack(em4x70_command_bitstream_t *command
     bitstream_dump(command_bitstream);
     return result;
 }
-#endif // #pragma region    // Functions to send bitstreams, with options to receive data
-#if  1 // #pragma region    // Create bitstreams for each type of EM4x70 command
+
+// Create bitstreams for each type of EM4x70 command
 
 static bool add_bit_to_bitstream(em4x70_bitstream_t *s, bool b) {
     uint8_t i = s->bitcount;
@@ -1082,7 +1080,6 @@ const em4x70_command_generators_t legacy_em4x70_command_generators = {
     .pin   = create_legacy_em4x70_bitstream_for_cmd_pin,
     .write = create_legacy_em4x70_bitstream_for_cmd_write
 };
-#endif // #pragma endregion // Create bitstreams for each type of EM4x70 command
 
 // TODO: define and use structs for rnd, frnd, response
 //       Or, just use the structs defined by IDLIB48?

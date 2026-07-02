@@ -28,6 +28,7 @@
 #include "ui.h"
 #include "crc16.h"
 #include "crapto1/crapto1.h"
+#include "iso14b.h"
 #include "protocols.h"
 #include "cmdhficlass.h"
 #include "cmdhfcalypso.h"
@@ -1227,8 +1228,76 @@ static bool annotateCalypsoApdu(char *exp, size_t size, const uint8_t *apdu, siz
     }
 }
 
+static bool annotateIso14443bPrime(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+    if (cmdsize < 2) {
+        return false;
+    }
+
+    const uint8_t command = cmd[1];
+
+    if (is_response) {
+        switch (command) {
+            case ISO14443B_PRIME_CMD_RR:
+                if (cmdsize == 2 || cmdsize == 4) {
+                    snprintf(exp, size, "RR");
+                    return true;
+                }
+                return false;
+            case ISO14443B_PRIME_CMD_REPGEN:
+                if (cmdsize < 7) {
+                    return false;
+                }
+                if ((cmd[6] & ISO14443B_PRIME_VERLOG_LONG_REPGEN) && cmdsize >= 8) {
+                    snprintf(exp, size, "REPGEN(DIV=%s, VERLOG=%02X, CONFIG=%02X)",
+                             sprint_hex_inrow(cmd + 2, ISO14B_PRIME_DIV_LEN), cmd[6], cmd[7]);
+                } else {
+                    snprintf(exp, size, "REPGEN(DIV=%s, VERLOG=%02X)",
+                             sprint_hex_inrow(cmd + 2, ISO14B_PRIME_DIV_LEN), cmd[6]);
+                }
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    switch (command) {
+        case ISO14443B_PRIME_CMD_APGEN:
+            if (cmdsize < 3 || cmdsize > 6) {
+                return false;
+            }
+            if (cmdsize == 4 || cmdsize == 6) {
+                snprintf(exp, size, "APGEN(OccuPar=%02X, Config=%02X)", cmd[2], cmd[3]);
+            } else {
+                snprintf(exp, size, "APGEN(OccuPar=%02X)", cmd[2]);
+            }
+            return true;
+        case ISO14443B_PRIME_CMD_ATTRIB:
+            if (cmdsize != 6 && cmdsize != 8) {
+                return false;
+            }
+            snprintf(exp, size, "ATTRIB(DIV=%s)", sprint_hex_inrow(cmd + 2, ISO14B_PRIME_DIV_LEN));
+            return true;
+        case ISO14443B_PRIME_CMD_DISC:
+            if (cmdsize == 2 || cmdsize == 4) {
+                snprintf(exp, size, "DISC");
+                return true;
+            }
+            return false;
+        default:
+            return false;
+    }
+}
+
 void annotateCalypso(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
-    if (cmdsize < 1 || is_response) {
+    if (cmdsize < 1) {
+        return;
+    }
+
+    if (annotateIso14443bPrime(exp, size, cmd, cmdsize, is_response)) {
+        return;
+    }
+
+    if (is_response) {
         return;
     }
 
@@ -1237,7 +1306,7 @@ void annotateCalypso(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool
     }
 
     if (cmd[0] == ISO14443B_REQB || cmd[0] == ISO14443B_ATTRIB || cmd[0] == ISO14443B_HALT) {
-        annotateIso14443b(exp, size, cmd, cmdsize);
+        annotateIso14443b(exp, size, cmd, cmdsize, false);
         return;
     }
 
@@ -1925,7 +1994,15 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 0F = Completion
 0A 11 22 33 44 55 66 = Authenticate (11 22 33 44 55 66 = data to authenticate)
 **/
-void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+
+    if (annotateIso14443bPrime(exp, size, cmd, cmdsize, is_response)) {
+        return;
+    }
+
+    if (is_response) {
+        return;
+    }
 
     // xerox anti collison loop / slot select for uid bytes...
     if (cmdsize == 1) {
