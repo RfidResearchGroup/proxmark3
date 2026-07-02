@@ -1,0 +1,22 @@
+{
+  "description": "Interac Flash interoperability test card lab keys (public test pack). DO NOT use for live cards.",
+  "source": "https://b2ps.com/fileadmin/pdf/cardsetdocs/Interac_Flash_Interoperability_Test_Card_Set.pdf Section 3.2",
+  "aid": "A0000002771010",
+  "bin": "0012",
+  "ac_master_key": "0123456789ABCDEFFEDCBA9876543210",
+  "smi_key": "0123456789ABCDEFFEDCBA9876543210",
+  "smc_key": "0123456789ABCDEFFEDCBA9876543210",
+  "arpc_rc_contact_recommended": "8840",
+  "test_cards": [
+    { "id": "TC01", "pan": "0012010000000005", "pin": "1111", "capk_index": "07" },
+    { "id": "TC02", "pan": "0012030000000003", "pin": "2222", "capk_index": "03" },
+    { "id": "TC03", "pan": "0012040000000002", "pin": "3333", "capk_index": "03" },
+    { "id": "TC04", "pan": "0012050000000001", "pin": "4444", "capk_index": "03" }
+  ],
+  "cvm_lists_contact": {
+    "TC01": "440301030203",
+    "TC02": "040301030203",
+    "TC03": "020344030103",
+    "TC04": "440301030203"
+  }
+}

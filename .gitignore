@@ -68,6 +68,12 @@ cov-int/
 !client/resources/felica/*.json
 !client/resources/calypso/
 !client/resources/calypso/*.json
+!client/resources/emv_terminal_profile.json
+!client/resources/scheme_profiles/
+!client/resources/scheme_profiles/*.json
+!client/resources/host_sim_interac.json
+!client/src/emv/test/fixtures/
+!client/src/emv/test/fixtures/**/*.json
 client/src/ui/ui_image.h
 client/src/ui/ui_overlays.h
 client/deps/reveng/bmptst
@@ -122,10 +128,16 @@ fpga_version_info.c
 !.vscode/tasks.json
 
 # docs
+docs/
 !doc/*.json
+!client/resources/interac_test_keys.json
+!client/resources/terminal_aid_candidates.json
+!client/resources/emv_terminal_profile_interac.json
 
 # codeql
 codeql/
+!.github/codeql/
+!.github/codeql/**
 _codeql_detected_source_root
 
 =======

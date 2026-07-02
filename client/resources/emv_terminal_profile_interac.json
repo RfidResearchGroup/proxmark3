@@ -1,0 +1,58 @@
+[
+  {
+    "name": "Terminal Country Code",
+    "tag": "9F1A",
+    "value": "01 24",
+    "length": 2,
+    "hint": "Canada ISO3166 numeric 124"
+  },
+  {
+    "name": "Transaction Currency Code",
+    "tag": "5F2A",
+    "value": "01 24",
+    "length": 2,
+    "hint": "CAD"
+  },
+  {
+    "name": "Terminal Transaction Qualifiers (TTQ)",
+    "tag": "9F66",
+    "value": "26 00 00 00",
+    "length": 4,
+    "hint": "Contactless capable; adjust for Interac Flash"
+  },
+  {
+    "name": "Terminal Capabilities",
+    "tag": "9F33",
+    "value": "E0 F8 C8",
+    "length": 3,
+    "hint": "SDA, DDA, enciphered PIN, online PIN"
+  },
+  {
+    "name": "Terminal Floor Limit",
+    "tag": "9F1B",
+    "value": "00 00 00 10 00",
+    "length": 6,
+    "hint": "1000 CAD cents example"
+  },
+  {
+    "name": "Terminal Action Code - Default",
+    "tag": "DF8120",
+    "value": "FC 50 A8 00 00",
+    "length": 5,
+    "hint": "Lab default; Interac contactless also uses CIAC tags from card"
+  },
+  {
+    "name": "Terminal Action Code - Denial",
+    "tag": "DF8121",
+    "value": "00 00 00 00 00",
+    "length": 5,
+    "hint": "Lab default"
+  },
+  {
+    "name": "Terminal Action Code - Online",
+    "tag": "DF8122",
+    "value": "F8 50 A8 F8 00",
+    "length": 5,
+    "hint": "Lab default"
+  }
+]

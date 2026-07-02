@@ -135,6 +135,8 @@ jobs:
           ln -s ../luascripts client/build/
           ln -s ../pyscripts client/build/
           ln -s ../lualibs client/build/
+          ln -s ../resources client/build/
+          ln -s ../dictionaries client/build/
 
       - name: Initiate cmake environment
         run: cmake -G"MSYS Makefiles" ..
@@ -215,6 +217,8 @@ jobs:
           ln -s ../luascripts client/build/
           ln -s ../pyscripts client/build/
           ln -s ../lualibs client/build/
+          ln -s ../resources client/build/
+          ln -s ../dictionaries client/build/
 
       - name: Initiate cmake environment
         run: cmake ..

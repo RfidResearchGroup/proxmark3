@@ -1,0 +1,17 @@
+{
+  "interac": {
+    "profile": "scheme_profiles/interac.json",
+    "host_keys": "host_sim_interac.json",
+    "flash_skip_offline_pin": true
+  },
+  "visa": {
+    "profile": "scheme_profiles/visa.json",
+    "host_keys": "",
+    "flash_skip_offline_pin": false
+  },
+  "mc": {
+    "profile": "scheme_profiles/mc.json",
+    "host_keys": "",
+    "flash_skip_offline_pin": false
+  }
+}

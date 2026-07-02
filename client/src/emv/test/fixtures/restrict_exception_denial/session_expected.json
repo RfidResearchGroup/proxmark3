@@ -1,0 +1,8 @@
+{
+  "Outcome": "unknown",
+  "RequestedAC": "aac",
+  "Phases": [
+    { "name": "restrict", "result": 0 },
+    { "name": "taa", "result": 0 }
+  ]
+}

@@ -1,0 +1,156 @@
+//-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
+// EMV terminal emulator - crypto playground
+//-----------------------------------------------------------------------------
+
+#ifndef EMV_TERM_CRYPTO_H__
+#define EMV_TERM_CRYPTO_H__
+
+#include "emv_term_ctx.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+typedef enum {
+    EMV_CRYPTO_AC_AAC  = 0x00,
+    EMV_CRYPTO_AC_TC   = 0x40,
+    EMV_CRYPTO_AC_ARQC = 0x80,
+} emv_term_crypto_ac_t;
+
+typedef struct {
+    bool amount_set;
+    uint8_t amount[6];
+    bool un_set;
+    uint8_t un[4];
+    bool date_set;
+    uint8_t date[3];
+    bool country_set;
+    uint8_t country[2];
+    bool currency_set;
+    uint8_t currency[2];
+    emv_term_crypto_ac_t ac_type;
+    bool cda;
+    bool mc_challenge;
+} emv_term_crypto_genac_opts_t;
+
+typedef struct {
+    uint8_t un[4];
+    uint8_t ac[8];
+    size_t ac_len;
+    uint8_t atc[2];
+    size_t atc_len;
+    uint16_t sw;
+} emv_term_crypto_run_entry_t;
+
+typedef struct emv_term_crypto_bench_result {
+    bool genac_attempted;
+    bool genac_ok;
+    uint16_t genac_sw;
+    bool qvsdc_path;
+    bool visa_msd;
+    bool aid_fallback_used;
+    size_t vary_runs;
+} emv_term_crypto_bench_result_t;
+
+typedef struct {
+    bool do_challenge;
+    bool do_genac;
+    bool do_intauth;
+    bool do_checksum;
+    bool do_vary;
+    bool do_digest;
+    int vary_count;
+    emv_term_crypto_genac_opts_t genac;
+} emv_term_crypto_bench_opts_t;
+
+typedef struct {
+    bool quick_afl;
+    bool aid_fallback;
+    const char *forced_aid_hex;
+} emv_term_crypto_prepare_opts_t;
+
+typedef enum {
+    EMV_CRYPTO_RNG_RAW = 0,
+    EMV_CRYPTO_RNG_DICE,
+    EMV_CRYPTO_RNG_COIN,
+    EMV_CRYPTO_RNG_RANGE,
+} emv_term_crypto_rng_mode_t;
+
+typedef enum {
+    EMV_CRYPTO_STREAM_OFF = 0,
+    EMV_CRYPTO_STREAM_HEX,
+    EMV_CRYPTO_STREAM_RAW,
+} emv_term_crypto_stream_fmt_t;
+
+typedef struct {
+    int samples;
+    int out_bytes;
+    uint64_t range_max;
+    emv_term_crypto_rng_mode_t mode;
+    bool quiet;
+    bool no_emit;
+    emv_term_crypto_stream_fmt_t stream_fmt;
+    bool stream_turbo;
+    FILE *stream_bin_out;
+    emv_term_crypto_genac_opts_t genac;
+} emv_term_crypto_rng_opts_t;
+
+typedef struct {
+    uint32_t duration_sec;
+    int out_bytes;
+    emv_term_crypto_genac_opts_t genac;
+} emv_term_crypto_rng_bench_opts_t;
+
+typedef struct {
+    uint64_t elapsed_ms;
+    uint32_t cycles_total;
+    uint32_t cycles_ok;
+    uint32_t cycles_fail;
+    uint32_t fast_init_cycles;
+    uint32_t full_init_cycles;
+    double blocks_per_sec;
+    double bytes_per_sec;
+    uint64_t cycle_ms_min;
+    uint64_t cycle_ms_max;
+    uint64_t cycle_ms_avg;
+    uint64_t cycle_ms_p50;
+    uint64_t cycle_ms_p95;
+} emv_term_crypto_rng_bench_result_t;
+
+int emv_term_crypto_prepare_card(emv_term_ctx_t *ctx, bool jload, const char *session_path,
+                                 const emv_term_crypto_prepare_opts_t *prep);
+
+void emv_term_crypto_genac_opts_defaults(emv_term_crypto_genac_opts_t *opts);
+void emv_term_crypto_set_amount_cents(emv_term_ctx_t *ctx, uint64_t cents);
+void emv_term_crypto_set_un_bytes(emv_term_ctx_t *ctx, const uint8_t un[4]);
+void emv_term_crypto_randomize_un(emv_term_ctx_t *ctx);
+void emv_term_crypto_apply_field_overrides(emv_term_ctx_t *ctx, const emv_term_crypto_genac_opts_t *opts);
+
+int emv_term_crypto_print_summary(const emv_term_ctx_t *ctx);
+int emv_term_crypto_challenge(emv_term_ctx_t *ctx, bool decode_tlv, bool store_9f4c);
+int emv_term_crypto_genac(emv_term_ctx_t *ctx, const emv_term_crypto_genac_opts_t *opts, bool ac2);
+int emv_term_crypto_vary_un(emv_term_ctx_t *ctx, const emv_term_crypto_genac_opts_t *opts,
+                            int count, emv_term_crypto_run_entry_t *entries, size_t *entry_count);
+int emv_term_crypto_intauth(emv_term_ctx_t *ctx, bool decode_tlv);
+int emv_term_crypto_msc_checksum(emv_term_ctx_t *ctx, bool decode_tlv);
+int emv_term_crypto_export_json(const emv_term_ctx_t *ctx, const char *path,
+                                const emv_term_crypto_run_entry_t *entries, size_t entry_count);
+int emv_term_crypto_bench(emv_term_ctx_t *ctx, const emv_term_crypto_bench_opts_t *opts,
+                          const char *export_path);
+int emv_term_crypto_bench_ex(emv_term_ctx_t *ctx, const emv_term_crypto_bench_opts_t *opts,
+                             const char *export_path, emv_term_crypto_bench_result_t *result_out);
+int emv_term_crypto_rng(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *opts);
+int emv_term_crypto_rng_stream(emv_term_ctx_t *ctx, const emv_term_crypto_rng_opts_t *opts,
+                               Iso7816CommandChannel channel);
+int emv_term_crypto_rng_bench(emv_term_ctx_t *ctx, const emv_term_crypto_rng_bench_opts_t *opts,
+                              Iso7816CommandChannel channel, emv_term_crypto_rng_bench_result_t *result_out);
+int emv_term_crypto_rng_bench_export_json(const emv_term_ctx_t *ctx,
+                                          const emv_term_crypto_rng_bench_result_t *result,
+                                          const char *path);
+
+void emv_term_uint_to_bcd(uint64_t val, uint8_t *out, size_t len);
+
+#endif

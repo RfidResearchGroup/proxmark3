@@ -347,6 +347,10 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
             break;
     }
 
+    if (g_session.stdout_pipe) {
+        stream = stderr;
+    }
+
     va_list args;
     va_start(args, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, args);
@@ -414,7 +418,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
 
     bool linefeed = true;
 
-    if (logging && g_session.incognito) {
+    if (logging && (g_session.incognito || g_session.stdout_pipe)) {
         logging = 0;
     }
 
