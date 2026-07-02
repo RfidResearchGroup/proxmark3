@@ -8099,6 +8099,14 @@ static int CmdHF14AMfUeSetBlk(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    // one esetblk is a single CMD_HF_MIFARE_EML_MEMSET; its payload (data + a 4-byte
+    // header) must fit the command buffer. Larger sets should use `hf mfu eload`.
+    if (datalen > (int)(PM3_CMD_DATA_SIZE - 4)) {
+        PrintAndLogEx(WARNING, "too many pages for one command: max %d pages (%d bytes). Use " _YELLOW_("`hf mfu eload`") " for larger sets",
+                      (int)((PM3_CMD_DATA_SIZE - 4) / MFU_BLOCK_SIZE), (int)(PM3_CMD_DATA_SIZE - 4));
+        return PM3_EINVARG;
+    }
+
     // MFU emulator page data starts after the 56-byte mfu_dump_t prefix, so shift the
     // page index by MFU_DUMP_PREFIX_LENGTH/MFU_BLOCK_SIZE (=14), width = MFU_BLOCK_SIZE (4).
     res = mf_eml_set_mem_xt(data, blk + (MFU_DUMP_PREFIX_LENGTH / MFU_BLOCK_SIZE), count, MFU_BLOCK_SIZE);
