@@ -1818,7 +1818,7 @@ static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
     }
 
     if (card) {
-        // pc. fc  Product code, Facility code
+        // REQT response payload: Product code, FAB code
         card->pc = r[0];
         card->fc = r[1];
     }
