@@ -702,14 +702,14 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
 
     uint8_t rx[HITAG_FRAME_LEN] = { 0x00 };
     uint8_t tx[HITAG_FRAME_LEN] = { 0x00 };
+    lf_hts_read_response_t card = {0};
 
-    int status = PM3_SUCCESS, reason = -1;
-    reason = hts_select_tag(payload, tx, ARRAYLEN(tx), rx, ARRAYLEN(rx), HITAG_T_WAIT_FIRST, ledcontrol);
+    int status = PM3_SUCCESS;
+    int reason = hts_select_tag(payload, tx, ARRAYLEN(tx), rx, ARRAYLEN(rx), HITAG_T_WAIT_FIRST, ledcontrol);
     if (reason != 0) {
         status = PM3_ERFTRANS;
         goto read_end;
     }
-
 
     if (payload->page >= tag.max_page) {
         DBG Dbprintf("Warning, read page "_YELLOW_("%d") " > max page("_YELLOW_("%d") ") ", payload->page, tag.max_page);
@@ -717,7 +717,6 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
 
     int page_addr = payload->page;
     int page_index = 0;
-    lf_hts_read_response_t card = {0};
 
     memcpy(card.config_page.asBytes, tag.data.pages[HITAGS_CONFIG_PADR], HITAGS_PAGE_SIZE);
 

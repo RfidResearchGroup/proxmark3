@@ -1663,8 +1663,9 @@ void iClass_Authentication_fast(iclass_chk_t *p) {
     uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
     uint8_t readcheck_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };
 
-    if (p->use_credit_key)
+    if (p->use_credit_key) {
         readcheck_cc[0] = 0x10 | ICLASS_CMD_READCHECK;
+    }
 
     // select card / e-purse
     picopass_hdr_t hdr = {0};
@@ -1678,10 +1679,13 @@ void iClass_Authentication_fast(iclass_chk_t *p) {
     Iso15693InitReader();
 
     bool isOK = false;
+    uint8_t i = 0;
+    uint32_t start_time = 0;
+    uint32_t eof_time = 0;
 
-    uint32_t start_time = 0, eof_time = 0;
-    if (select_iclass_tag(&hdr, p->use_credit_key, &eof_time, shallow_mod) == false)
+    if (select_iclass_tag(&hdr, p->use_credit_key, &eof_time, shallow_mod) == false) {
         goto out;
+    }
 
     start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
 
@@ -1689,12 +1693,13 @@ void iClass_Authentication_fast(iclass_chk_t *p) {
     uint16_t checked = 0;
 
     // Keychunk loop
-    uint8_t i = 0;
     for (i = 0; i < p->count; i++) {
 
         // Allow button press / usb cmd to interrupt device
         if (checked == 1000) {
-            if (BUTTON_PRESS() || data_available()) goto out;
+            if (BUTTON_PRESS() || data_available()) {
+                goto out;
+            }
             checked = 0;
         }
         ++checked;
@@ -1710,8 +1715,9 @@ void iClass_Authentication_fast(iclass_chk_t *p) {
 
         // expect 4bytes, 3 retries times..
         isOK = iclass_send_cmd_with_retries(check, sizeof(check), resp, sizeof(resp), 4, 2, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time, shallow_mod);
-        if (isOK)
+        if (isOK) {
             goto out;
+        }
 
         start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
         // Auth Sequence MUST begin with reading e-purse. (block2)
