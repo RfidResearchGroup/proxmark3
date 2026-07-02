@@ -3083,10 +3083,9 @@ hf 14a raw -s -c -t 1000 CF000000006B3F
 
 ^[Top](#top) ^^[Gen4](#g4top)
 
-**For UMC 06A0**
+**For UMC 06A0 and 6666**
 
-Despite varying memory structures on their specs, the UMC derives things like the
-PWD and PACK from fixed pages. The PWD is stored at E5 which matches the NTAG216/I2C transponders while the PACK is stored at 13 like an NTAG210.
+Despite varying memory structures on their specs, the UMC derives things like the PWD and PACK from fixed pages. The PWD is stored at E5 which matches the NTAG216/I2C transponders while the PACK is stored at 13 like an NTAG210 or an Ultralight EV1.
 
 #### Set NTAG PWD
 
@@ -3103,11 +3102,15 @@ script run hf_mf_ultimatecard -p <new 4-byte PWD>
 ```
 #### Set NTAG PACK
 ```
-hf mfu wrbl -b 13 -d <2-byte PACK>00
+hf mfu wrbl -b 13 -d <2-byte PACK>0000
 ```
 or
 ```
 hf 14a -s -c -t 1000 a213<2-byte PACK>0000
+```
+or
+```
+script run hf_mf_ultimatecard -a <2-byte PACK>
 ```
 
 ### Set shadow mode (GTU)
