@@ -2832,7 +2832,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t *base = NULL;
 
             bool raw_address_mode = ((flags & READ_MEM_DOWNLOAD_FLAG_RAW) == READ_MEM_DOWNLOAD_FLAG_RAW);
-            if (!raw_address_mode) {
+            if (raw_address_mode == false) {
 
                 base = (uint8_t *) _flash_start;
 
@@ -2851,15 +2851,16 @@ static void PacketReceived(PacketCommandNG *packet) {
                 // Allow reading from any memory address and length in special 'raw' mode.
                 base = NULL;
                 // Boundary check against end of addressable space.
-                if (offset > 0)
+                if (offset > 0) {
                     count = MIN(count, -offset);
+                }
             }
 
             if (isok) {
                 for (size_t pos = 0; pos < count; pos += PM3_CMD_DATA_SIZE) {
                     size_t len = MIN((count - pos), PM3_CMD_DATA_SIZE);
-                    isok = 0 == reply_old(CMD_READ_MEM_DOWNLOADED, pos, len, 0, &base[offset + pos], len);
-                    if (!isok) {
+                    isok = (reply_old(CMD_READ_MEM_DOWNLOADED, pos, len, 0, &base[offset + pos], len) == PM3_SUCCESS);
+                    if (isok == false) {
                         Dbprintf("transfer to client failed ::  | pos %u len %u", pos, len);
                         break;
                     }

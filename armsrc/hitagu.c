@@ -362,7 +362,7 @@ void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
 
     uint8_t rx[HITAG_FRAME_LEN] = {0};
     size_t rxlen = 0;
-    uint8_t tx[HITAG_FRAME_LEN];
+    uint8_t tx[HITAG_FRAME_LEN] = {0};
     size_t txlen = 0;
 
     // Free any allocated BigBuf memory

@@ -1249,7 +1249,7 @@ void SniffHitag2(bool ledcontrol) {
 
 //    bool exit_due_to_overflow;
     // HACK -- add one byte to avoid rewriting manchester decoder for edge case
-    uint8_t rx[HITAG_FRAME_LEN + 1];
+    uint8_t rx[HITAG_FRAME_LEN + 1] = {0};
     size_t rxlen = 0;
 
     auth_table_len = 0;
