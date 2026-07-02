@@ -2354,7 +2354,32 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
             if (memcmp(receivedCmd + 1, pwd, 4) == 0) {
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Password match, responding with PACK.");
-                p_response = &responses[RESP_INDEX_PACK];
+
+                // Serve PACK live from the PACK page (page `pages`) so a running-sim esetblk/eload
+                // of the PACK page takes effect without restarting the sim (page reads & PWD are
+                // already served live). Falls back to the same bytes as before for a static sim.
+                uint8_t pack_live[4] = {0, 0, 0, 0};
+                emlGet(pack_live, pages * 4 + MFU_DUMP_PREFIX_LENGTH, 2);
+
+                // Preserve init-time Amiibo behavior: if the stored PWD is the Amiibo-generated
+                // password, PACK is 0x8080. Keep in sync with the sim-init override (~L1650).
+                // NOTE: Be encoding here intentionally matches init; the pwd substitution above
+                // (Uint4byteToMemLe) is a separate pre-existing path and must stay Le.
+                uint8_t stored_pwd[4] = {0, 0, 0, 0};
+                uint8_t gen_pwd[4] = {0, 0, 0, 0};
+                emlGet(stored_pwd, (pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(stored_pwd));
+                Uint4byteToMemBe(gen_pwd, ul_ev1_pwdgenB(useruid));
+                if (memcmp(stored_pwd, gen_pwd, sizeof(stored_pwd)) == 0) {
+                    pack_live[0] = 0x80;
+                    pack_live[1] = 0x80;
+                }
+
+                dynamic_response_info.response[0] = pack_live[0];
+                dynamic_response_info.response[1] = pack_live[1];
+                AddCrc14A(dynamic_response_info.response, 2);
+                dynamic_response_info.response_n = 4; // 2 PACK + 2 CRC
+                prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+                p_response = &dynamic_response_info;
             } else {
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Password did not match, NACK_IV.");
                 p_response = NULL;
