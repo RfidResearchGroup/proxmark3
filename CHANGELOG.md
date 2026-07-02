@@ -3,7 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Added `hf 14b dump` support for Standard ISO14443-B tags: two-phase READ BINARY sweep (transparent EF, then SFI scan per ISO7816-4 §7.2.3) with a new `print_std_blocks` display (@thisiscamk)
+
+- Added `hf 14b dump` support for Standard ISO14443-B tags (@thisiscamk)
+- Added `hf 14b ctrdbl` and `hf 14b ctdump` commands for interacting with ASK CTS tags (@kormax)
 - Fixed `hf legic migrate` failing to parse the optional DCF argument as hex (@IdanHo)
 - Add support for parsing Finnish Helsinki Regional Transport (HRT) travel cards (@sanduuz)
 - Added standalone mode `HF_DOEGOX_COMMIT`: DESFire suspended commit without relay (@doegox)
