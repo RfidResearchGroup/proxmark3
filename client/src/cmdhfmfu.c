@@ -24,6 +24,7 @@
 #include "aes.h"
 #include "cmdhfmf.h"
 #include "cmdhf14a.h"
+#include "mifare/mifarehost.h"  // mf_eml_set_mem_xt
 #include "comms.h"
 #include "protocols.h"
 #include "generator.h"
@@ -8053,6 +8054,63 @@ static int CmdHF14AMfUIncr(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfUeSetBlk(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu esetblk",
+                  "Set emulator memory page(s). One page = 4 bytes; pass multiple\n"
+                  "whole pages of data to set consecutive pages from --blk.",
+                  "hf mfu esetblk --blk 4 -d 04E10CDA\n"
+                  "hf mfu esetblk --blk 4 -d 04E10CDA993C8048   -> sets pages 4-5\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("b", "blk", "<dec>", "page number to start at"),
+        arg_str0("d", "data", "<hex>", "bytes to write, whole pages (multiple of 4 bytes)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int blk = arg_get_int_def(ctx, 1, 0);
+
+    uint8_t data[MFU_MAX_BYTES] = {0x00};
+    int datalen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 2), data, sizeof(data), &datalen);
+    CLIParserFree(ctx);
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
+    }
+
+    if (blk < 0) {
+        PrintAndLogEx(WARNING, "page number must be positive");
+        return PM3_EINVARG;
+    }
+
+    if (datalen == 0 || (datalen % MFU_BLOCK_SIZE) != 0) {
+        PrintAndLogEx(WARNING, "data must be whole pages (multiples of %d bytes). Got %i", MFU_BLOCK_SIZE, datalen);
+        return PM3_EINVARG;
+    }
+
+    int count = datalen / MFU_BLOCK_SIZE;
+
+    // live MFU emulator data region is MFU_MAX_BYTES (pages 0..254); page 255 is not round-trippable
+    if ((blk + count) * MFU_BLOCK_SIZE > MFU_MAX_BYTES) {
+        PrintAndLogEx(WARNING, "page range exceeds emulator memory (max page %u)", (MFU_MAX_BYTES / MFU_BLOCK_SIZE) - 1);
+        return PM3_EINVARG;
+    }
+
+    // MFU emulator page data starts after the 56-byte mfu_dump_t prefix, so shift the
+    // page index by MFU_DUMP_PREFIX_LENGTH/MFU_BLOCK_SIZE (=14), width = MFU_BLOCK_SIZE (4).
+    res = mf_eml_set_mem_xt(data, blk + (MFU_DUMP_PREFIX_LENGTH / MFU_BLOCK_SIZE), count, MFU_BLOCK_SIZE);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Failed to set emulator memory");
+        return res;
+    }
+
+    PrintAndLogEx(SUCCESS, "Set " _YELLOW_("%d") " page(s) from page " _YELLOW_("%d"), count, blk);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",     CmdHelp,                   AlwaysAvailable, "This help"},
     {"list",     CmdHF14AMfuList,           AlwaysAvailable, "List MIFARE Ultralight / NTAG history"},
@@ -8082,6 +8140,7 @@ static command_t CommandTable[] = {
     {"eload",    CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "Upload file into emulator memory"},
     {"esave",    CmdHF14AMfuESave,          IfPm3Iso14443a,  "Save emulator memory to file"},
     {"eview",    CmdHF14AMfuEView,          IfPm3Iso14443a,  "View emulator memory"},
+    {"esetblk",  CmdHF14AMfUeSetBlk,        IfPm3Iso14443a,  "Set emulator memory block"},
     {"sim",      CmdHF14AMfUSim,            IfPm3Iso14443a,  "Simulate MIFARE Ultralight from emulator memory"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " ----------------------------"},
     {"setuid",   CmdHF14AMfUCSetUid,        IfPm3Iso14443a,  "Set UID - MAGIC tags only"},
