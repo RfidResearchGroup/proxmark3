@@ -922,6 +922,48 @@ static void print_sr_blocks(uint8_t *data, size_t len, const uint8_t *uid, bool 
     print_footer();
 }
 
+static void print_std_blocks(uint8_t *data, size_t len, const uint8_t *uid, uint8_t uidlen, bool dense_output) {
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------- " _CYAN_("ISO14443-B Standard tag memory") " ---------");
+    PrintAndLogEx(INFO, "PUPI..... " _GREEN_("%s"), sprint_hex(uid, uidlen));
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, " offset  | data                                             | ascii");
+    PrintAndLogEx(INFO, "---------+--------------------------------------------------+------------------");
+
+    const size_t ROW = 16;
+    bool in_repeat = false;
+
+    for (size_t off = 0; off < len; off += ROW) {
+        size_t row_len = MIN(ROW, len - off);
+        uint8_t *row = data + off;
+
+        if (dense_output
+                && off >= ROW
+                && off + ROW < len
+                && !in_repeat
+                && row_len == ROW
+                && memcmp(row, row - ROW, ROW) == 0
+                && off + 2 * ROW <= len
+                && memcmp(row, row + ROW, ROW) == 0) {
+            in_repeat = true;
+            PrintAndLogEx(INFO, "  ......");
+        } else if (in_repeat
+                   && (off + ROW >= len || memcmp(row, row + ROW, ROW) != 0)) {
+            in_repeat = false;
+        }
+
+        if (!in_repeat) {
+            PrintAndLogEx(INFO, "%5u/0x%04X | %-48s| %s",
+                          (uint32_t)off, (uint32_t)off,
+                          sprint_hex(row, row_len),
+                          sprint_ascii(row, row_len));
+        }
+    }
+
+    PrintAndLogEx(INFO, "---------+--------------------------------------------------+------------------");
+    PrintAndLogEx(NORMAL, "");
+}
+
 // iceman, calypso?
 // 05 00 00 = find one tag in field
 // 1d xx xx xx xx 00 08 01 00 = attrib xx=UID (resp 10 [f9 e0])
@@ -2211,10 +2253,121 @@ static int CmdHF14BDump(const char *Cmd) {
     }
 
     if (select_cardtype == ISO14B_STANDARD) {
-        // Have to figure out how large one of these are..
-        PrintAndLogEx(FAILED, "Dumping Standard ISO14443-B tags is not implemented yet.");
-        // print_std_blocks(data, cardsize);
-        return switch_off_field_14b();
+        iso14b_card_select_t card;
+        memcpy(&card, (iso14b_card_select_t *)&select, sizeof(iso14b_card_select_t));
+
+        PrintAndLogEx(INFO, "Found standard ISO14443-B tag");
+        PrintAndLogEx(INFO, "PUPI: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
+        PrintAndLogEx(INFO, "reading tag memory...");
+
+        // 58-byte chunks are safe for all ISO14443-B frame sizes
+        const uint8_t CHUNK = 0x3A;
+        // 16 KB total ceiling; SFI scan covers 30 EFs * 256 bytes = 7680 bytes max
+        const uint16_t MAX_TOT = 0x4000;
+
+        uint8_t *data = calloc(MAX_TOT, 1);
+        if (data == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return PM3_EMALLOC;
+        }
+
+        uint16_t total = 0;
+        uint8_t resp_buf[PM3_CMD_DATA_SIZE];
+        int resplen = 0;
+        // Field is off after get_14b_UID (ISO14B_DISCONNECT); track so we only
+        // pay the WUPB+ATTRIB reconnect cost once across both phases.
+        bool need_activate = true;
+
+        PrintAndLogEx(INFO, "." NOLF);
+
+        // ---- Phase A: transparent READ BINARY ----
+        // Works for simple memory cards that have an implicit current EF.
+        // ISO7816-4 READ BINARY: P1[6:0] = offset[14:8], P2 = offset[7:0]
+        for (uint16_t off = 0; off < MAX_TOT;) {
+            uint8_t le = (uint8_t)MIN((int)CHUNK, (int)(MAX_TOT - off));
+            uint8_t rb[5] = {0x00, 0xB0, (uint8_t)((off >> 8) & 0x7F),
+                             (uint8_t)(off & 0xFF), le
+                            };
+            int res = exchange_14b_apdu(rb, sizeof(rb), need_activate, true,
+                                        resp_buf, sizeof(resp_buf), &resplen, -1);
+            need_activate = (res != PM3_SUCCESS);
+            if (res != PM3_SUCCESS || resplen < 2) break;
+
+            uint16_t sw = get_sw(resp_buf, resplen);
+            if (sw != ISO7816_OK) break;
+
+            uint16_t got = (uint16_t)(resplen - 2);
+            memcpy(data + total, resp_buf, got);
+            total += got;
+            off   += got;
+            PrintAndLogEx(NORMAL, "." NOLF);
+            fflush(stdout);
+        }
+
+        // ---- Phase B: SFI scan ----
+        // ISO7816-4 §7.2.3: when P1 bit 7 is set, bits 4-0 carry a short file
+        // identifier (SFI 1-30). The card reads the addressed EF directly without
+        // requiring a prior SELECT EF, so SW=6986 ("no current EF") is avoided.
+        // P2 is the byte offset within the EF (0-255; SFI form is limited to 256
+        // bytes per EF — use standard SELECT+READ BINARY for longer files).
+        if (total == 0) {
+            bool transport_ok = true;
+            for (uint8_t sfi = 1; sfi <= 30 && transport_ok && total < MAX_TOT; sfi++) {
+                for (uint8_t ef_off = 0; ;) {
+                    uint8_t le = (uint8_t)MIN((int)CHUNK, (int)(MAX_TOT - total));
+                    uint8_t rb[5] = {0x00, 0xB0, (uint8_t)(0x80 | sfi), ef_off, le};
+                    int res = exchange_14b_apdu(rb, sizeof(rb), need_activate, true,
+                                                resp_buf, sizeof(resp_buf), &resplen, -1);
+                    if (res != PM3_SUCCESS) { need_activate = true; transport_ok = false; break; }
+                    need_activate = false;
+
+                    uint16_t sw = get_sw(resp_buf, resplen);
+                    if (sw != ISO7816_OK) break;  // 6A82=not found, 6282=EOF, etc.
+
+                    uint16_t got = (uint16_t)(resplen - 2);
+                    memcpy(data + total, resp_buf, got);
+                    total += got;
+                    PrintAndLogEx(NORMAL, "." NOLF);
+                    fflush(stdout);
+
+                    // Guard uint8_t ef_off against overflow before advancing
+                    if ((uint16_t)ef_off + got > 0xFF || got < le || total >= MAX_TOT) break;
+                    ef_off += (uint8_t)got;
+                }
+            }
+        }
+
+        PrintAndLogEx(NORMAL, "");
+        switch_off_field_14b();
+
+        if (total == 0) {
+            PrintAndLogEx(WARNING, "No data could be read directly or via SFI.");
+            PrintAndLogEx(HINT, "Hint: tag requires application-specific APDUs.");
+            PrintAndLogEx(HINT, "      Try `hf 14b apdu -d 00A4040007D2760000850101 00` to select NDEF,");
+            PrintAndLogEx(HINT, "      or `hf 14b ndefread` if the tag holds NFC content.");
+            free(data);
+            return PM3_ESOFT;
+        }
+
+        PrintAndLogEx(SUCCESS, "read " _GREEN_("%u") " bytes", (uint32_t)total);
+        print_std_blocks(data, total, card.uid, card.uidlen, dense_output);
+
+        if (nosave) {
+            PrintAndLogEx(INFO, "Called with no save option");
+            PrintAndLogEx(NORMAL, "");
+            free(data);
+            return PM3_SUCCESS;
+        }
+
+        if (fnlen < 1) {
+            PrintAndLogEx(INFO, "using PUPI as filename");
+            char *fptr = filename + snprintf(filename, sizeof(filename), "hf-14b-");
+            FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
+        }
+
+        pm3_save_dump(filename, data, total, jsf14b_v2);
+        free(data);
+        return PM3_SUCCESS;
     }
 
     if (select_cardtype == ISO14B_SR) {
@@ -2979,7 +3132,7 @@ static int CmdHF14BAPDU(const char *Cmd) {
         arg_lit0("t",  "tlv",      "executes TLV decoder if it possible"),
         arg_lit0(NULL,  "decode",   "decode apdu request if it possible"),
         arg_str0("m",  "make",     "<hex>", "make apdu with head from this field and data from data field.\n"
-                 "                                   must be 4 bytes: <CLA INS P1 P2>"),
+        "                                   must be 4 bytes: <CLA INS P1 P2>"),
         arg_lit0("e",  "extended", "make extended length apdu if `m` parameter included"),
         arg_int0("l",  "le",       "<int>", "Le apdu parameter if `m` parameter included"),
         arg_str1("d", "data",     "<hex>", "<APDU | data> if `m` parameter included"),
