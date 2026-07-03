@@ -3502,7 +3502,9 @@ static int CmdHF14AMfUDump(const char *Cmd) {
                   "hf mfu dump -k AABBCCDD      -> dump whole tag using pwd AABBCCDD\n"
                   "hf mfu dump -p 10            -> start at page 10 and dump rest of blocks\n"
                   "hf mfu dump -p 10 -q 2       -> start at page 10 and dump two blocks\n"
-                  "hf mfu dump --key 00112233445566778899AABBCCDDEEFF"
+                  "hf mfu dump --key 00112233445566778899AABBCCDDEEFF\n"
+                  "\n"
+                  "Note: Dumping a NTAG/UL tag to a UMC will likely result in incorrect PWD and PACK\n"
                  );
 
     void *argtable[] = {
@@ -4006,7 +4008,9 @@ static int CmdHF14AMfURestore(const char *Cmd) {
                   "Restore MIFARE Ultralight/NTAG dump file (bin/eml/json) to tag.\n",
                   "hf mfu restore -f myfile -s                 -> special write\n"
                   "hf mfu restore -f myfile -k AABBCCDD -s     -> special write, use key\n"
-                  "hf mfu restore -f myfile -k AABBCCDD -ser   -> special write, use key, write dump pwd, ..."
+                  "hf mfu restore -f myfile -k AABBCCDD -ser   -> special write, use key, write dump pwd, ...\n"
+                  "\n"
+                  "Note: Restoring a NTAG/UL dump to a UMC will likely result in incorrect PWD and PACK\n"
                  );
 
     void *argtable[] = {
