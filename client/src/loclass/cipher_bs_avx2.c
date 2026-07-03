@@ -18,7 +18,7 @@
 
 #include <immintrin.h>
 
-#if defined(__GNUC__) || defined(__clang__)
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(__ANDROID__)
 #pragma GCC push_options
 #pragma GCC target("avx2")
 #endif
@@ -263,14 +263,14 @@ void doMAC_brute_match256(const uint64_t y_bits_bs[96 * BS256_WORDS],
     _mm256_storeu_si256((__m256i *)match_out, mac_match);
 }
 
-#if defined(__GNUC__) || defined(__clang__)
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(__ANDROID__)
 #pragma GCC pop_options
 #endif
 
 bool bs_avx2_supported(void) {
     static int cached = -1;
     if (cached < 0) {
-#if defined(__GNUC__) || defined(__clang__)
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(__ANDROID__)
         __builtin_cpu_init();
         cached = __builtin_cpu_supports("avx2") ? 1 : 0;
 #else

@@ -30,6 +30,24 @@
 # include "pthread_spin_lock_shim.h"  // spinlock shim for OSX ..
 #endif
 
+#ifdef __ANDROID__
+//Spinlock patch for building with Android NDK
+
+typedef pthread_mutex_t pthread_spinlock_t;
+
+#define pthread_spin_init(lock, pshared) \
+    pthread_mutex_init(lock, NULL)
+
+#define pthread_spin_lock(lock) \
+    pthread_mutex_lock(lock)
+
+#define pthread_spin_unlock(lock) \
+    pthread_mutex_unlock(lock)
+
+#define pthread_spin_destroy(lock) \
+    pthread_mutex_destroy(lock)
+#endif
+
 #define MAX_PM3_INPUT_ARGS_LENGTH    4096
 
 bool AlwaysAvailable(void) {
