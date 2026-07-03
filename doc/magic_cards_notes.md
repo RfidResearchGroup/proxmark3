@@ -2837,6 +2837,8 @@ The CF..CC command is commonly considered to be a way of determining UMC version
 - 6666 "Card type generic"
 - 02AA "Card type limited functionality"
 
+**NOTE**: Some versions (eg, 6666) return just the version + crc (4-bytes) others (eg, 06A0) return a zero padded version + crc (7-bytes).
+
 ### Proxmark3 commands
 
 ^[Top](#top) ^^[Gen4](#g4top)

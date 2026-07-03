@@ -8830,7 +8830,7 @@ static int CmdHF14AGen4Info(const char *cmd) {
     uint8_t uid_len = resp[1];
 
     res = mfG4GetFactoryTest(pwd, resp, &resplen, false);
-    if (res == PM3_SUCCESS && resplen > 2) {
+    if (res == PM3_SUCCESS && resplen >= 2) {
 
         PrintAndLogEx(INFO, "");
         PrintAndLogEx(INFO, _CYAN_("Factory test"));
@@ -8839,19 +8839,19 @@ static int CmdHF14AGen4Info(const char *cmd) {
         }
 
         if (memcmp(resp + resplen - 2, "\x66\x66", 2) == 0) {
-            PrintAndLogEx(INFO, "Card type... Generic");
+            PrintAndLogEx(INFO, "Card type... Generic (%02X%02X)", resp[resplen - 2], resp[resplen - 1]);
 
         } else if (memcmp(resp + resplen - 2, "\x02\xAA", 2) == 0) {
-            PrintAndLogEx(INFO, "Card type... " _RED_("Limited functionality"));
+            PrintAndLogEx(INFO, "Card type... " _RED_("Limited functionality (%02X%02X)"), resp[resplen - 2], resp[resplen - 1]);
 
         } else if (memcmp(resp + resplen - 2, "\x03\xA0", 2) == 0) {
-            PrintAndLogEx(INFO, "Card type... Old card version");
+            PrintAndLogEx(INFO, "Card type... Old card version (%02X%02X)", resp[resplen - 2], resp[resplen - 1]);
 
         } else if (memcmp(resp + resplen - 2, "\x06\xA0", 2) == 0) {
-            PrintAndLogEx(INFO, "Card type... " _GREEN_("New card version"));
+            PrintAndLogEx(INFO, "Card type... " _GREEN_("New card version (%02X%02X)"), resp[resplen - 2], resp[resplen - 1]);
 
         } else {
-            PrintAndLogEx(INFO, "Card type... " _RED_("unknown %02X%02X"), resp[resplen - 2], resp[resplen - 1]);
+            PrintAndLogEx(INFO, "Card type... " _RED_("unknown (%02X%02X)"), resp[resplen - 2], resp[resplen - 1]);
         }
     }
 
