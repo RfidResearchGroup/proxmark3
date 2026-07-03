@@ -1644,18 +1644,21 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
 
     AddCrc14A(rPPS, sizeof(rPPS) - 2);
 
-    // EV1/NTAG,  set PWD w AMIIBO algo if all zero.
+    // EV1/NTAG Amiibo: if no PWD is set, populate emulator memory with the UID-derived
+    // password and its PACK (0x8080) at the PWD/PACK pages, so the sim serves them from
+    // emulator memory like any other value. Auth and PACK are then read straight from
+    // memory, keeping eset/eview authoritative (what you set is what the sim serves).
     if (tagType == 7) {
         uint8_t pwd[4] = {0, 0, 0, 0};
-        uint8_t gen_pwd[4] = {0, 0, 0, 0};
         emlGet(pwd, (*pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(pwd));
-        emlGet(rPACK, (*pages) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(rPACK));
-
-        Uint4byteToMemBe(gen_pwd, ul_ev1_pwdgenB(data));
-        if (memcmp(pwd, gen_pwd, sizeof(pwd)) == 0) {
-            rPACK[0] = 0x80;
-            rPACK[1] = 0x80;
+        if (memcmp(pwd, "\x00\x00\x00\x00", 4) == 0) {
+            uint8_t amiibo_pwd[4] = {0, 0, 0, 0};
+            Uint4byteToMemLe(amiibo_pwd, ul_ev1_pwdgenB(data));
+            emlSet(amiibo_pwd, (*pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(amiibo_pwd));
+            uint8_t amiibo_pack[4] = {0x80, 0x80, 0x00, 0x00};
+            emlSet(amiibo_pack, (*pages) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(amiibo_pack));
         }
+        emlGet(rPACK, (*pages) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(rPACK));
     }
 
     AddCrc14A(rPACK, sizeof(rPACK) - 2);
@@ -2347,14 +2350,24 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                 Dbhexdump(4, pwd, 0);
             }
 
-            if (memcmp(pwd, "\x00\x00\x00\x00", 4) == 0) {
-                Uint4byteToMemLe(pwd, ul_ev1_pwdgenB(useruid));
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Calc pwd... %02X %02X %02X %02X", pwd[0], pwd[1], pwd[2], pwd[3]);
-            }
-
+            // PWD comes straight from emulator memory (read above). For an unset (all-zero)
+            // PWD, the Amiibo password is populated into memory at sim init, so there's no
+            // substitution here -- eset/eview stay authoritative.
             if (memcmp(receivedCmd + 1, pwd, 4) == 0) {
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Password match, responding with PACK.");
-                p_response = &responses[RESP_INDEX_PACK];
+
+                // Serve PACK straight from the PACK page (page `pages`) in emulator memory, so
+                // eset/eload of the PACK page is honored live. The Amiibo PACK (0x8080) for an
+                // unset PWD is populated into memory at sim init, so nothing special-cases here.
+                uint8_t pack_live[4] = {0, 0, 0, 0};
+                emlGet(pack_live, pages * 4 + MFU_DUMP_PREFIX_LENGTH, 2);
+
+                dynamic_response_info.response[0] = pack_live[0];
+                dynamic_response_info.response[1] = pack_live[1];
+                AddCrc14A(dynamic_response_info.response, 2);
+                dynamic_response_info.response_n = 4; // 2 PACK + 2 CRC
+                prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+                p_response = &dynamic_response_info;
             } else {
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Password did not match, NACK_IV.");
                 p_response = NULL;
