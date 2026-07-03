@@ -363,10 +363,6 @@ int sam_get_serial_number(void) {
             goto error;
         }
         uint8_t *sam_serial_an = sam_response_an + 2;
-        if (sam_serial_an == NULL) {
-            if (g_dbglevel >= DBG_ERROR) DbpString(_RED_("SAM get serial number failed"));
-            goto error;
-        }
 
         Dbprintf(_YELLOW_("Serial Number: "));
         Dbhexdump(sam_response_an[1], sam_serial_an, false);
