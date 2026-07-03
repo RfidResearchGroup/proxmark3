@@ -494,8 +494,6 @@ int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t 
         return 0;
     }
 
-//    uint8_t *pd = data;
-
     // extra wait  500us (514us measured)
     // 200us  (xx measured)
     WaitUS(600);
@@ -591,13 +589,6 @@ int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t 
     }
 
     I2C_Stop();
-
-//    Dbprintf("rec len...  %u  readcount... %u", recv_len, readcount);
-//    Dbhexdump(readcount, pd, false);
-
-    if (readcount < 2) {
-        return 0;
-    }
 
     // return bytecount - bytes encoding length
     return readcount - 2;
@@ -767,10 +758,6 @@ bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait) {
         } else {
             return false;
         }
-    }
-
-    if (len < 1) {
-        return false;
     }
 
     *destlen = len;

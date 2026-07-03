@@ -55,12 +55,15 @@ typedef struct {
 
 // Converts a hex string to bytes. The hex string must be exactly 2*len hex digits long.
 static int hex_to_bytes(const char *hex, unsigned char *buf, size_t len) {
-    if (strlen(hex) != len * 2)
+    if (strlen(hex) != len * 2) {
         return 0;
+    }
+
     for (size_t i = 0; i < len; i++) {
         unsigned int byte;
-        if (sscanf(hex + 2 * i, "%2x", &byte) != 1)
+        if (sscanf(hex + 2 * i, "%2x", &byte) != 1) {
             return 0;
+        }
         buf[i] = (unsigned char) byte;
     }
     return 1;
@@ -68,45 +71,77 @@ static int hex_to_bytes(const char *hex, unsigned char *buf, size_t len) {
 
 // Print a byte array as hex.
 static void print_hex(const unsigned char *buf, size_t len) {
-    for (size_t i = 0; i < len; i++)
+    for (size_t i = 0; i < len; i++) {
         printf("%02X", buf[i]);
+    }
     printf("\n");
 }
 
 static bool valid_lfsr_ulcg(uint64_t x64) {
+    
     x64 = __builtin_bswap64(x64);
+    
     uint16_t x16 = x64 >> 48;
+    
     x16 = x16 << 15 | ((x16 >> 1) ^ ((x16 >> 3 ^ x16 >> 4 ^ x16 >> 6) & 1));
-    if (x16 != ((x64 >> 32) & 0xFFFF)) return false;
+    if (x16 != ((x64 >> 32) & 0xFFFF)) {
+        return false;
+    }
+
     x16 = x16 << 15 | ((x16 >> 1) ^ ((x16 >> 3 ^ x16 >> 4 ^ x16 >> 6) & 1));
-    if (x16 != ((x64 >> 16) & 0xFFFF)) return false;
+    if (x16 != ((x64 >> 16) & 0xFFFF)) {
+        return false;
+    }
+
     x16 = x16 << 15 | ((x16 >> 1) ^ ((x16 >> 3 ^ x16 >> 4 ^ x16 >> 6) & 1));
-    if (x16 != (x64 & 0xFFFF)) return false;
+    if (x16 != (x64 & 0xFFFF)) {
+        return false;
+    }
     return true;
 }
 
 static bool valid_LFSR_MFC(uint64_t x64) {
     x64 = __builtin_bswap64(x64);
     uint16_t x16 = x64 & 0xFFFF;
-    for (int i = 0; i < 16; i++) x16 = x16 >> 1 | (x16 ^ x16 >> 2 ^ x16 >> 3 ^ x16 >> 5) << 15;
-    if (x16 != ((x64 >> 16) & 0xFFFF)) return false;
-    for (int i = 0; i < 16; i++) x16 = x16 >> 1 | (x16 ^ x16 >> 2 ^ x16 >> 3 ^ x16 >> 5) << 15;
-    if (x16 != ((x64 >> 32) & 0xFFFF)) return false;
-    for (int i = 0; i < 16; i++) x16 = x16 >> 1 | (x16 ^ x16 >> 2 ^ x16 >> 3 ^ x16 >> 5) << 15;
-    if (x16 != ((x64 >> 48) & 0xFFFF)) return false;
+    for (int i = 0; i < 16; i++) {
+        x16 = x16 >> 1 | (x16 ^ x16 >> 2 ^ x16 >> 3 ^ x16 >> 5) << 15;
+    }
+
+    if (x16 != ((x64 >> 16) & 0xFFFF)) {
+        return false;
+    }
+
+    for (int i = 0; i < 16; i++) {
+        x16 = x16 >> 1 | (x16 ^ x16 >> 2 ^ x16 >> 3 ^ x16 >> 5) << 15;
+    }
+
+    if (x16 != ((x64 >> 32) & 0xFFFF)) {
+        return false;
+    }
+
+    for (int i = 0; i < 16; i++) {
+        x16 = x16 >> 1 | (x16 ^ x16 >> 2 ^ x16 >> 3 ^ x16 >> 5) << 15;
+    }
+
+    if (x16 != ((x64 >> 48) & 0xFFFF)) {
+        return false;
+    }
     return true;
 }
 
 
 static bool valid_lfsr(uint64_t x64, lfsr_t lfsr_type) {
     switch (lfsr_type) {
-        case LFSR_ULCG:
+        case LFSR_ULCG: {
             return valid_lfsr_ulcg(x64);
-        case LFSR_MFC:
+        }
+        case LFSR_MFC: {
             return valid_LFSR_MFC(x64);
+        }
         case LFSR_UNDEF:
-        default:
-            return false;
+        default: {
+           return false;
+        }
     }
 }
 
@@ -114,21 +149,24 @@ static lfsr_t detect_lfsr_type(unsigned char *init_ciphertext) {
     DES_cblock fixed_key = {0};
     DES_key_schedule fixed_schedule;
     DES_set_key_unchecked(&fixed_key, &fixed_schedule);
-    uint64_t out;
+    uint64_t out = 0;
+
     DES_ecb_encrypt((DES_cblock *)init_ciphertext, (DES_cblock *)&out, &fixed_schedule, DES_DECRYPT);
+
     if (valid_lfsr_ulcg(out)) {
         return LFSR_ULCG;
     } else if (valid_LFSR_MFC(out)) {
         return LFSR_MFC;
     }
+
     return LFSR_UNDEF;
 }
 
 // Worker thread function using low-level DES functions.
 static void *worker(void *arg) {
     thread_args_t *targs = (thread_args_t *) arg;
-    work_pool_t   *pool  = targs->pool;
-    int key_mode         = targs->key_mode;
+    work_pool_t *pool = targs->pool;
+    int key_mode = targs->key_mode;
 
     // Determine which half is being brute forced.
     // For key_mode 0 or 1 the candidate is in K1; for key_mode 2 or 3 the candidate is in K2.
@@ -149,6 +187,7 @@ static void *worker(void *arg) {
         // Candidate in K2; fixed half is K1: bytes 0..7 of base_key.
         memcpy(fixed_key, targs->base_key, 8);
     }
+
     DES_key_schedule fixed_schedule;
     DES_set_key_unchecked(&fixed_key, &fixed_schedule);
     uint64_t out;
@@ -156,34 +195,43 @@ static void *worker(void *arg) {
 
     // For the candidate half, start with the corresponding half from the base key.
     unsigned char base_half[8];
-    if (candidate_in_K1)
+    if (candidate_in_K1) {
         memcpy(base_half, targs->base_key, 8);
-    else
+    } else {
         memcpy(base_half, targs->base_key + 8, 8);
+    }
 
     // Pull slots from the shared pool until exhausted.
     for (;;) {
-        if (key_found && !BENCHMARK_FULL_KEYSPACE)
+
+        if (key_found && (BENCHMARK_FULL_KEYSPACE == 0)) {
             break;
+        }
 
         uint32_t slot = atomic_fetch_add(&pool->next_slot, 1);
-        if (slot >= pool->num_slots)
+        if (slot >= pool->num_slots) {
             break;
+        }
 
         uint32_t start = slot * pool->slot_size;
         uint32_t end   = start + pool->slot_size;
-        if (end > pool->total)
+        if (end > pool->total) {
             end = pool->total;
+        }
 
         for (uint32_t idx = start; idx < end; idx++) {
-            if (key_found && !BENCHMARK_FULL_KEYSPACE)
+
+            if (key_found && (BENCHMARK_FULL_KEYSPACE == 0)) {
                 break;  // Some other thread already found the key.
+            }
+
             // Convert the candidate index (28 bits) into 4 bytes.
             // Each candidate byte is constructed from a 7-bit chunk shifted left by 1 so that the LSB is zero.
             uint8_t b0 = ((idx) & 0x7F) << 1;
             uint8_t b1 = ((idx >> 7) & 0x7F) << 1;
             uint8_t b2 = ((idx >> 14) & 0x7F) << 1;
             uint8_t b3 = ((idx >> 21) & 0x7F) << 1;
+
             // Build the candidate half key by starting with the fixed base half and substituting candidate bytes.
             DES_cblock candidate_half = {0};
             memcpy(candidate_half, base_half, 8);
@@ -200,23 +248,20 @@ static void *worker(void *arg) {
             // If candidate is in K1: decryption = DES_ecb3_encrypt(cipher, out, candidate, fixed, candidate, DES_DECRYPT)
             // If candidate is in K2: decryption = DES_ecb3_encrypt(cipher, out, fixed, candidate, fixed, DES_DECRYPT)
             if (candidate_in_K1) {
-                DES_ecb3_encrypt((DES_cblock *)targs->ciphertext, (DES_cblock *)&out,
-                                 &candidate_schedule, &fixed_schedule, &candidate_schedule, DES_DECRYPT);
+                DES_ecb3_encrypt((DES_cblock *)targs->ciphertext, (DES_cblock *)&out, &candidate_schedule, &fixed_schedule, &candidate_schedule, DES_DECRYPT);
             } else {
-                DES_ecb3_encrypt((DES_cblock *)targs->ciphertext, (DES_cblock *)&out,
-                                 &fixed_schedule, &candidate_schedule, &fixed_schedule, DES_DECRYPT);
+                DES_ecb3_encrypt((DES_cblock *)targs->ciphertext, (DES_cblock *)&out, &fixed_schedule, &candidate_schedule, &fixed_schedule, DES_DECRYPT);
             }
 
             bool match = false;
+
             if (targs->is_reader_mode) {
                 // In reader mode, also decrypt init_ciphertext and check for rotation relationship
                 // Apply XOR block to the second decrypted block (for CBC mode)
                 if (candidate_in_K1) {
-                    DES_ecb3_encrypt((DES_cblock *)targs->init_ciphertext, (DES_cblock *)&init_out,
-                                     &candidate_schedule, &fixed_schedule, &candidate_schedule, DES_DECRYPT);
+                    DES_ecb3_encrypt((DES_cblock *)targs->init_ciphertext, (DES_cblock *)&init_out, &candidate_schedule, &fixed_schedule, &candidate_schedule, DES_DECRYPT);
                 } else {
-                    DES_ecb3_encrypt((DES_cblock *)targs->init_ciphertext, (DES_cblock *)&init_out,
-                                     &fixed_schedule, &candidate_schedule, &fixed_schedule, DES_DECRYPT);
+                    DES_ecb3_encrypt((DES_cblock *)targs->init_ciphertext, (DES_cblock *)&init_out, &fixed_schedule, &candidate_schedule, &fixed_schedule, DES_DECRYPT);
                 }
                 // Apply XOR block to the second decrypted block (for CBC mode)
                 out ^= targs->prev_ciphertext_u64;
@@ -227,13 +272,16 @@ static void *worker(void *arg) {
                 uint64_t rotated_be = (init_be << 8) | (init_be >> 56);
                 uint64_t rotated = __builtin_bswap64(rotated_be);
                 match = (out == rotated);
+
             } else {
                 // In counterfeit mode, check the resulting plaintext against LFSR
                 match = valid_lfsr(out, targs->lfsr_type);
             }
 
             if (match) {
-                key_found = 1;  // signal to other threads
+
+                // signal to other threads
+                key_found = 1;
 
                 // Build the full 16-byte key: start with the base key and substitute the candidate 4 bytes.
                 unsigned char full_key[KEY_SIZE];
@@ -246,8 +294,9 @@ static void *worker(void *arg) {
                 printf("Thread %d: Found key index: %u\n", targs->thread_id, idx);
                 printf("Full key (hex): ");
                 print_hex(full_key, KEY_SIZE);
-                if (!BENCHMARK_FULL_KEYSPACE)
+                if (BENCHMARK_FULL_KEYSPACE == 0) {
                     break;
+                }
             }
         }  // end slot inner loop
     }  // end pool slot loop
@@ -271,6 +320,7 @@ int main(int argc, char **argv) {
     if (argc < 2) {
         print_help_and_exit(argv[0]);
     }
+
     bool is_reader_mode = false;
     if (strcmp(argv[1], "-c") == 0) {
         is_reader_mode = false;
@@ -300,21 +350,26 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Error: invalid ERndB hex string.\n");
             return 1;
         }
+
         if (!hex_to_bytes(argv[3], tmp_blocks, 2 * BLOCK_SIZE)) {
             fprintf(stderr, "Error: invalid ERndARndB' hex string.\n");
             return 1;
         }
+
     } else {
         // In counterfeit mode, both ciphertexts are just ciphertext blocks
         if (!hex_to_bytes(argv[2], init_ciphertext, BLOCK_SIZE)) {
             fprintf(stderr, "Error: invalid null key ERndB hex string.\n");
             return 1;
         }
+
         if (!hex_to_bytes(argv[3], ciphertext, BLOCK_SIZE)) {
             fprintf(stderr, "Error: invalid target key ERndB hex string.\n");
             return 1;
         }
+
     }
+
     if (!hex_to_bytes(argv[4], base_key, KEY_SIZE)) {
         fprintf(stderr, "Error: invalid 3DES base key hex string.\n");
         return 1;
@@ -325,6 +380,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Error: key segment must be between 1 and 4.\n");
         return 1;
     }
+
     int num_threads = atoi(argv[6]);
     if (num_threads < 1) {
         fprintf(stderr, "Error: number of threads must be at least 1.\n");
@@ -332,20 +388,23 @@ int main(int argc, char **argv) {
     }
 
     lfsr_t lfsr_type = LFSR_UNDEF;
-    if (!is_reader_mode) {
+    if (is_reader_mode == false) {
         // Only detect LFSR type in counterfeit mode
         lfsr_type = detect_lfsr_type(init_ciphertext);
         switch (lfsr_type) {
-            case LFSR_ULCG:
+            case LFSR_ULCG: {
                 printf("LFSR detection: ULCG\n");
                 break;
-            case LFSR_MFC:
+            }
+            case LFSR_MFC: {
                 printf("LFSR detection: MFC (USCUID-UL and FJ8010)\n");
                 break;
+            }
             case LFSR_UNDEF:
-            default:
+            default: {
                 fprintf(stderr, "LFSR detection: Could not detect LFSR!!\n");
                 return 1;
+            }
         }
     }
 
@@ -358,15 +417,16 @@ int main(int argc, char **argv) {
     // Build a work pool: split the keyspace into 20*num_threads slots so that
     // threads keep running at full utilisation until the very end.
     work_pool_t pool;
-    pool.total     = total;
+    pool.total = total;
     pool.num_slots = (uint32_t)num_threads * 20;
     pool.slot_size = (total + pool.num_slots - 1) / pool.num_slots;  // ceiling division
     atomic_init(&pool.next_slot, 0);
 
-    pthread_t *threads = malloc(num_threads * sizeof(pthread_t));
-    thread_args_t *targs = malloc(num_threads * sizeof(thread_args_t));
-    if (!threads || !targs) {
-        fprintf(stderr, "Allocation error.\n");
+    pthread_t *threads = calloc(num_threads * sizeof(pthread_t), sizeof(uint8_t));
+    thread_args_t *targs = calloc(num_threads * sizeof(thread_args_t), sizeof(uint8_t));
+
+    if ((threads == NULL) || (targs == NULL)) {
+        fprintf(stderr, "Failed to allocate memory\n");
         return 1;
     }
 
@@ -382,16 +442,19 @@ int main(int argc, char **argv) {
         } else {
             memcpy(targs[i].ciphertext, ciphertext, BLOCK_SIZE);
         }
+
         memcpy(targs[i].base_key, base_key, KEY_SIZE);
         targs[i].thread_id = i;
         pthread_create(&threads[i], NULL, worker, &targs[i]);
     }
 
-    for (int i = 0; i < num_threads; i++)
+    for (int i = 0; i < num_threads; i++) {
         pthread_join(threads[i], NULL);
+    }
 
-    if (!key_found)
+    if (!key_found) {
         printf("No matching key was found.\n");
+    }
 
     free(threads);
     free(targs);

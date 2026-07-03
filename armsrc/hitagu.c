@@ -362,7 +362,7 @@ void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
 
     uint8_t rx[HITAG_FRAME_LEN] = {0};
     size_t rxlen = 0;
-    uint8_t tx[HITAG_FRAME_LEN];
+    uint8_t tx[HITAG_FRAME_LEN] = {0};
     size_t txlen = 0;
 
     // Free any allocated BigBuf memory
@@ -693,10 +693,15 @@ exit:
  * Reads a Hitag µ tag
  */
 void htu_read(const lf_hitag_data_t *payload, bool ledcontrol) {
+
     size_t rxlen = 0;
     uint8_t rx[HITAG_FRAME_LEN] = {0x00};
+
     size_t txlen = 0;
     uint8_t tx[HITAG_FRAME_LEN] = {0x00};
+
+    lf_htu_read_response_t card = {0};
+
     int status = PM3_SUCCESS;
 
     // DBG {
@@ -719,9 +724,7 @@ void htu_read(const lf_hitag_data_t *payload, bool ledcontrol) {
         goto exit;
     }
 
-    lf_htu_read_response_t card = {
-        .icr = tag.icr,
-    };
+    card.icr = tag.icr;
     memcpy(card.uid, tag.uid, HITAGU_UID_SIZE);
     memcpy(card.config_page.asBytes, tag.config.asBytes, HITAGU_BLOCK_SIZE);
 

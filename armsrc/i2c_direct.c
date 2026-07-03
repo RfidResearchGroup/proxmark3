@@ -201,31 +201,19 @@ int CmdSmartRaw(const uint8_t prepend, const uint8_t *data, int dlen, uint8_t *o
     payload->len = dlen;
     memcpy(payload->data, data, dlen);
 
-    payload->flags = SC_LOG;
-    bool active = true;
-    bool active_select = false;
     int timeout = 600;
-    bool use_t0 = true;
 
-    if (active || active_select) {
-        payload->flags |= (SC_CONNECT | SC_CLEARLOG);
-        if (active_select)
-            payload->flags |= SC_SELECT;
-    }
-
+    payload->flags = ( SC_LOG | SC_CONNECT | SC_CLEARLOG );
     payload->wait_delay = 0;
+
     if (timeout > -1) {
         payload->flags |= SC_WAIT;
         payload->wait_delay = timeout;
     }
 
     if (dlen > 0) {
-        if (use_t0)
-            payload->flags |= SC_RAW_T0;
-        else
-            payload->flags |= SC_RAW;
+        payload->flags |= SC_RAW_T0;
     }
-
     SmartCardDirectSend(prepend, payload, output, olen, 0);
 
     return PM3_SUCCESS;
