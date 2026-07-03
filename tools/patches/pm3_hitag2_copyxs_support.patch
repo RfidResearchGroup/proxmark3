@@ -1,0 +1,66 @@
+diff --git a/armsrc/hitag2.c b/armsrc/hitag2.c
+index f64620108..1ab382e19 100644
+--- a/armsrc/hitag2.c
++++ b/armsrc/hitag2.c
+@@ -12,6 +12,7 @@
+ // GNU General Public License for more details.
+ //
+ // See LICENSE.txt for the text of the license.
++// Code modification for iCopy‑XS, authored by Jarek Barwinski (jareckib)
+ //-----------------------------------------------------------------------------
+ 
+ #include "hitag2.h"
+@@ -119,7 +120,7 @@ static void hitag2_init(void) {
+ #define HITAG_FRAME_LEN  20
+ #define HITAG_FRAME_BIT_COUNT   (8 * HITAG_FRAME_LEN)
+ #define HITAG_T_STOP     36 /* T_EOF should be > 36 */
+-#define HITAG_T_LOW      6  /* T_LOW should be 4..10 */
++#define HITAG_T_LOW      16  /* T_LOW should be 4..10 */
+ #define HITAG_T_0_MIN    15 /* T[0] should be 18..22 */
+ #define HITAG_T_0        20 /* T[0] should be 18..22 */
+ #define HITAG_T_1_MIN    25 /* T[1] should be 26..30 */
+@@ -1096,7 +1097,7 @@ void SniffHitag2(bool ledcontrol) {
+             uint8_t mod_state = lf_get_reader_modulation();
+ 
+             while (rxlen < sizeof(rx)) {
+-                periods = lf_count_edge_periods(64);
++                periods = lf_count_edge_periods(128);
+                 // Evaluate the number of periods before the next edge
+                 if (periods >= 24 && periods < 64) {
+                     // Detected two sequential equal bits and a modulation switch
+@@ -1656,7 +1657,7 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
+     size_t txlen = 0;
+ 
+     int t_wait_1 = 204;
+-    int t_wait_1_guard = 8;
++    int t_wait_1_guard = 3;
+     int t_wait_2 = 128;
+     size_t tag_size = 48;
+     bool bStop = false;
+@@ -2068,7 +2069,7 @@ void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
+     size_t txlen = 0;
+ 
+     int t_wait_1 = 204;
+-    int t_wait_1_guard = 8;
++    int t_wait_1_guard = 3;
+     int t_wait_2 = 128;
+     size_t tag_size = 48;
+ 
+@@ -2420,7 +2421,7 @@ static void ht2_send(bool turn_on, uint32_t *cmd_start
+                      , uint8_t *tx, size_t txlen, bool send_bits) {
+ 
+     // Tag specific configuration settings (sof, timings, etc.)  HITAG2 Settings
+-#define T_WAIT_1_GUARD  7
++#define T_WAIT_1_GUARD  3
+ 
+     if (turn_on) {
+         // Wait 50ms with field off to be sure the transponder gets reset
+@@ -2614,7 +2615,7 @@ int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_fiel
+ 
+     uint8_t nrz_samples[HT2_MAX_NRSZ];
+ 
+-    uint8_t attempt_count = 3;
++    uint8_t attempt_count = 5;
+ 
+     int res = PM3_EFAILED;
+     bool turn_on = true;
