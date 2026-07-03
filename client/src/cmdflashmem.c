@@ -570,6 +570,7 @@ static int CmdFlashMemDump(const char *Cmd) {
     int res = pm3_get_flash_pages64k(&spi_flash_pages);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "failed to get flash pages count (%x)", res);
+        CLIParserFree(ctx);
         return res;
     }
 

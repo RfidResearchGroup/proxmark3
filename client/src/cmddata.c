@@ -924,6 +924,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
         }
     } else {
         PrintAndLogEx(HINT, "Hint: No repeating pattern found, try increasing window size");
+        free(correl_buf);
         // return value -1, indication to increase window size
         return -1;
     }
