@@ -414,6 +414,9 @@ void MifareU3PassChkKeys(mful_3passchk_t *packet) {
         uint32_t ticks;
         uint8_t key[16];
     } PACKED rpayload;
+
+    memset(&rpayload, 0, sizeof(rpayload));
+
     uint32_t auths = 0;
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
@@ -476,7 +479,9 @@ void MifareU3PassChkKeys(mful_3passchk_t *packet) {
 out:
     rpayload.auths = auths;
     rpayload.ticks = GetTickCountDelta(ti);
+
     reply_ng(CMD_HF_MIFAREU3P_CHKKEY, res, (uint8_t *)&rpayload, sizeof(rpayload));
+
     LEDsoff();
     if (foundkeys || packet->lastchunk) {
         set_tracing(false);
