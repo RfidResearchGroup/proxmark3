@@ -2556,7 +2556,7 @@ static int CmdHF15Raw(const char *Cmd) {
     bool wait = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
-    datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
+    datalen = (datalen >= PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
 
     if (crc) {
 
