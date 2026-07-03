@@ -501,6 +501,22 @@ set (TARGET_SOURCES
         ${CMAKE_BINARY_DIR}/version_pm3.c
         )
 
+# Enable AVX2 support for x86/x64
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i.86")
+    set_source_files_properties(
+        src/loclass/cipher_bs_avx2.c
+        PROPERTIES COMPILE_OPTIONS "-mavx2"
+    )
+endif()
+
+# Enable AVX 512 support for x64
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
+	set_source_files_properties(
+        src/loclass/cipher_bs_avx512.c
+        PROPERTIES COMPILE_OPTIONS "-mavx512f"
+    )
+endif()
+
 add_custom_command(
     OUTPUT  ${CMAKE_BINARY_DIR}/version_pm3.c
     COMMAND sh ${PM3_ROOT}/tools/mkversion.sh ${CMAKE_BINARY_DIR}/version_pm3.c || ${CMAKE_COMMAND} -E copy ${PM3_ROOT}/common/default_version_pm3.c ${CMAKE_BINARY_DIR}/version_pm3.c
@@ -826,7 +842,7 @@ if ((NOT SKIPQT EQUAL 1) AND Qt6_FOUND)
     target_include_directories(proxmark3 PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
-target_compile_options(proxmark3 PUBLIC -Wall -Werror -O3)
+target_compile_options(proxmark3 PUBLIC -Wall -Werror -Wno-missing-braces -O3)
 if (EMBED_READLINE)
     if (NOT SKIPREADLINE EQUAL 1)
         add_dependencies(proxmark3 ncurses readline)
