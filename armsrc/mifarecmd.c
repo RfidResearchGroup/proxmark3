@@ -2562,7 +2562,9 @@ void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem) {
             iso14a_card_select_t card_info;
             if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == false) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("ChkKeys: Can't select card (ALL)");
-                --i; // try same key once again
+                if (i) {
+                    --i; // try same key once again
+                }
                 continue;
             }
             switch (card_info.uidlen) {
@@ -2582,7 +2584,9 @@ void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem) {
         } else { // no need for anticollision. We can directly select the card
             if (iso14443a_select_card(uid, NULL, NULL, false, cascade_levels, true) == false) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("ChkKeys: Can't select card (UID)");
-                --i; // try same key once again
+                if (i) {
+                    --i; // try same key once again
+                }
                 continue;
             }
         }

@@ -167,8 +167,13 @@ static int saMifareChkKeys(uint8_t const blockNo, uint8_t const keyType, bool co
         mfKey &= MATTYRUN_MFC_KEY_BITS;
 
         if (mattyrun_card.uidlen == 0) {
-            if (!saMifareDiscover()) {
-                --i; // try same key once again
+
+            if (saMifareDiscover() == false) {
+
+                if (i) {
+                    --i; // try same key once again
+                }                
+
                 --selectRetries;
                 if (selectRetries > 0) {
                     continue;
@@ -177,26 +182,35 @@ static int saMifareChkKeys(uint8_t const blockNo, uint8_t const keyType, bool co
                     break;
                 }
             }
+
         } else {
+
             if (cascade_levels == 0) {
                 switch (mattyrun_card.uidlen) {
-                    case 4:
+                    case 4: {
                         cascade_levels = 1;
                         break;
-                    case 7:
+                    }
+                    case 7: {
                         cascade_levels = 2;
                         break;
-                    case 10:
+                    }
+                    case 10: {
                         cascade_levels = 3;
                         break;
-                    default:
+                    }
+                    default: {
                         break;
+                    }
                 }
             }
             // No need for anticollision. Since we sucessfully selected the card before,
             // we can directly select the card again
             if (iso14443a_fast_select_card(mattyrun_uid, cascade_levels) == 0) {
-                --i; // try same key once again
+                if (i) {
+                    --i; // try same key once again
+                }
+                
                 --selectRetries;
                 if (selectRetries > 0) {
                     continue;
@@ -211,10 +225,12 @@ static int saMifareChkKeys(uint8_t const blockNo, uint8_t const keyType, bool co
 
         authres = mifare_classic_auth(pcs, mattyrun_cuid, blockNo, keyType, mfKey, AUTH_FIRST);
         if (authres) {
+
             uint8_t dummy_answer = 0;
             ReaderTransmit(&dummy_answer, 1, NULL);
             // wait for the card to become ready again
             SpinDelayUs(AUTHENTICATION_TIMEOUT);
+
             if (authres == 1) {
                 retval = -3;
                 break;
@@ -222,6 +238,7 @@ static int saMifareChkKeys(uint8_t const blockNo, uint8_t const keyType, bool co
                 continue;
             }
         }
+
         *key = mfKey;
         retval = i;
         break;
