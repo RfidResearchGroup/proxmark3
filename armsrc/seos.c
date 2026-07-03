@@ -313,6 +313,7 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                 case 0x0B: // IBlock with CID
                 case 0x0A: {
                     offset = 1;
+                    break;
                 }
                 case 0x02: // IBlock without CID
                 case 0x03: {

@@ -211,7 +211,9 @@ void hitag_reader_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uin
             next_edge_event = next_edge_event ^ (AT91C_TC_LDRAS | AT91C_TC_LDRBS);
 
             // only use AT91C_TC_LDRBS falling edge for now
-            if (next_edge_event == AT91C_TC_LDRBS) continue;
+            if (next_edge_event == AT91C_TC_LDRBS) {
+                continue;
+            }
 
             // Retrieve the new timing values
             uint32_t rb = AT91C_BASE_TC1->TC_RB / T0;
@@ -248,7 +250,9 @@ void hitag_reader_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uin
                     } else if (rb >= HITAG_T_TAG_CAPTURE_THREE_HALF / double_speed) {
                         // Anticollision Coding example |-_-_|--__| (10) or |--__|-_-_| (01)
                         lastbit = !lastbit;
-                        if (lastbit) SET_BIT_MSB(rx, *rxlen);
+                        if (lastbit) {
+                            SET_BIT_MSB(rx, *rxlen);
+                        }
                         (*rxlen)++;
 
                         bSkip = !!lastbit;
@@ -290,7 +294,9 @@ void hitag_reader_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uin
                     } else if (rb >= HITAG_T_TAG_CAPTURE_TWO_HALF / double_speed) {
                         // Manchester coding example |_-|_-| (00) or |-_|-_| (11)
                         // bit is same as last bit
-                        if (lastbit) SET_BIT_MSB(rx, *rxlen);
+                        if (lastbit) {
+                            SET_BIT_MSB(rx, *rxlen);
+                        }
                         (*rxlen)++;
                     } else {
                         // Ignore weird value, is to small to mean anything
@@ -317,7 +323,9 @@ void hitag_reader_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uin
                     uint8_t tmp = rx[0];
                     rx[0] = 0x00;
                     for (size_t i = 0; i < *rxlen; i++) {
-                        if (TEST_BIT_MSB(&tmp, sof_bits + i)) SET_BIT_MSB(rx, i);
+                        if (TEST_BIT_MSB(&tmp, sof_bits + i)) {
+                            SET_BIT_MSB(rx, i);
+                        }
                     }
                     // DBG Dbprintf("after sof_bits rxlen: %d rx[0]: 0x%02X", *rxlen, rx[0]);
                     sof_received = true;

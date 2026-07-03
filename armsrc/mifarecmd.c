@@ -3278,13 +3278,14 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
             // not available after RATS, reset card before executing
             mf_reset_card();
 
-            iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-            ReaderTransmit(rdbl00, sizeof(rdbl00), NULL);
-            res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
-            if (res == 18) {
-                isGen = MAGIC_FLAG_SUPER_GEN2;
+            res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+            if (res) {
+                ReaderTransmit(rdbl00, sizeof(rdbl00), NULL);
+                res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
+                if (res == 18) {
+                    isGen = MAGIC_FLAG_SUPER_GEN2;
+                }
             }
-
             flag |= isGen;
         }
     }
