@@ -64,8 +64,9 @@ static uint8_t round_to_next(uint8_t value, uint8_t step) {
 }
 
 static uint8_t cryptogram_iv[16] = {0x00};
+
 static bool generate_cryptogram(const uint8_t *key, bool use_iv, const uint8_t *input, size_t length, uint8_t *output, uint8_t algorithm) {
-    if (!use_iv) {
+    if (use_iv == false) {
         memset(cryptogram_iv, 0x00, 16);
     }
 
@@ -85,6 +86,7 @@ static bool generate_cryptogram(const uint8_t *key, bool use_iv, const uint8_t *
 }
 
 static bool decrypt_cryptogram(const uint8_t *key, const uint8_t *input, size_t length, uint8_t *output, uint8_t algorithm) {
+
     memset(cryptogram_iv, 0x00, 16);
 
     if (algorithm == SEOS_ENCRYPTION_AES) {
@@ -99,7 +101,7 @@ static bool decrypt_cryptogram(const uint8_t *key, const uint8_t *input, size_t 
         mbedtls_des3_crypt_cbc(&ctx, MBEDTLS_DES_DECRYPT, length, cryptogram_iv, input, output);
         mbedtls_des3_free(&ctx);
     } else {
-        Dbprintf(_RED_("Unknown Encryption Algorithm"));
+        Dbprintf(_RED_("Unknown encryption algorithm"));
         return false;
     }
 
@@ -108,6 +110,7 @@ static bool decrypt_cryptogram(const uint8_t *key, const uint8_t *input, size_t 
 
 // Returns length of generated CMAC
 static bool generate_cmac(const uint8_t *key, const uint8_t *input, size_t length, uint8_t *output, uint8_t encryption_algorithm) {
+
     if (encryption_algorithm == SEOS_ENCRYPTION_AES) {
         ulaes_cmac(key, 16, input, length, output);
     } else if (encryption_algorithm == SEOS_ENCRYPTION_2K3DES || encryption_algorithm == SEOS_ENCRYPTION_3K3DES) {
@@ -115,7 +118,7 @@ static bool generate_cmac(const uint8_t *key, const uint8_t *input, size_t lengt
         if (encryption_algorithm == SEOS_ENCRYPTION_3K3DES) keylen = 24;
         des3_cmac(key, keylen, input, length, output);
     } else {
-        Dbprintf(_RED_("Unknown Encryption Algorithm"));
+        Dbprintf(_RED_("Unknown encryption algorithm"));
         return false;
     }
 
@@ -146,7 +149,8 @@ static void seos_kdf(bool forEncryption, uint8_t *masterKey, uint8_t keyslot, ui
     memcpy(work_buffer + 19 + adfoid_len, diversifier, diversifier_len);
 
     // This CMAC always uses AES, regardless of the main encryption algorithm in use.
-    generate_cmac(masterKey, work_buffer, 19 + adfoid_len + diversifier_len, out, SEOS_ENCRYPTION_AES);
+    bool res = generate_cmac(masterKey, work_buffer, 19 + adfoid_len + diversifier_len, out, SEOS_ENCRYPTION_AES);
+    (void)res;
 }
 
 // turn off afterwards
@@ -160,15 +164,15 @@ void SimulateSeos(seos_emulate_req_t *msg) {
 
     // These values are determined at runtime
     uint8_t RND_ICC[8] = { 0x00 };
-    uint8_t RND_IFD[8];
+    uint8_t RND_IFD[8] = { 0x00 };
     uint8_t KEY_ICC[16] = { 0x00 };
-    uint8_t KEY_IFD[16];
-    uint8_t diver_encr_key[16];
-    uint8_t diver_cmac_key[16];
+    uint8_t KEY_IFD[16] = { 0x00 };
+    uint8_t diver_encr_key[16] = { 0x00 };
+    uint8_t diver_cmac_key[16] = { 0x00 };
 
     // Calculated block size
     const uint8_t bs = block_size(msg->encr_alg);
-    const uint8_t half_bs = bs >> 1;
+    const uint8_t half_bs = (bs >> 1);
     if (bs == 0) {
         // Can't continue, invalid encryption algorithm
         reply_ng(CMD_HF_SEOS_SIMULATE, PM3_EINVARG, NULL, 0);
@@ -189,12 +193,14 @@ void SimulateSeos(seos_emulate_req_t *msg) {
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
         return;
     }
+
     uint8_t *dynamic_modulation_buffer = BigBuf_calloc(DYNAMIC_MODULATION_BUFFER_SIZE);
     if (dynamic_modulation_buffer == NULL) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
         return;
     }
+
     tag_response_info_t dynamic_response_info = {
         .response = dynamic_response_buffer,
         .response_n = 0,
@@ -210,6 +216,7 @@ void SimulateSeos(seos_emulate_req_t *msg) {
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
         return;
     }
+
     uint8_t *work_buffer_b = BigBuf_calloc(WORK_BUFFER_SIZE);
     if (work_buffer_b == NULL) {
         BigBuf_free_keep_EM();
