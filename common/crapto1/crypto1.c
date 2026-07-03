@@ -47,8 +47,10 @@ void crypto1_init(struct Crypto1State *state, uint64_t key) {
 }
 
 void crypto1_deinit(struct Crypto1State *state) {
-    state->odd = 0;
-    state->even = 0;
+    if (state) {
+        state->odd = 0;
+        state->even = 0;
+    }
 }
 
 #if !defined(__arm__) || defined(__linux__) || defined(_WIN32) || defined(__APPLE__) // bare metal ARM Proxmark lacks calloc()/free()
