@@ -6347,12 +6347,17 @@ static void *brute_thread(void *args_void) {
             // prebit matcher.
             bool done = false;
             for (int w = 0; w < bs->words && !done; w++) {
+
                 uint64_t m = match[w];
+
                 while (m != 0) {
+
                     const int L = __builtin_ctzll(m);
                     m &= m - 1;
                     const uint64_t cand = index + (uint64_t)(w * 64 + L);
+
                     generate_key_block_inverted(args->startingKey, cand, div_key);
+
                     if (doMAC_brute_match_prebit(y_bits2, div_key, args->MAC_TAG2)) {
                         legbrute_announce(args, div_key);
                         done = true;
