@@ -3692,8 +3692,7 @@ static int CmdHF15SlixWritePassword(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(INFO, "Trying to write " _YELLOW_("%s") " as " _YELLOW_("%s") " password"
-                  , sprint_hex_inrow(payload.new_pwd, sizeof(payload.new_pwd)), value);
+    PrintAndLogEx(INFO, "Trying to write " _YELLOW_("%s") " as " _YELLOW_("%s") " password", sprint_hex_inrow(payload.new_pwd, sizeof(payload.new_pwd)), value);
 
     PacketResponseNG resp;
     clearCommandBuffer();
@@ -3765,43 +3764,42 @@ static int CmdHF15SlixProtectPage(const char *Cmd) {
 
     payload.divide_ptr = (uint8_t)arg_get_int_def(ctx, 3, 0);
     if (payload.divide_ptr > 78) {
-        PrintAndLogEx(WARNING, "protection pointer page is invalid (is %d but should be <=78).", payload.divide_ptr);
+        PrintAndLogEx(WARNING, "protection pointer page is invalid, got " _YELLOW_("%d") " expected <= 78", payload.divide_ptr);
         CLIParserFree(ctx);
         return PM3_ESOFT;
     }
 
-    pwdlen = arg_get_int_def(ctx, 4, 0);
-    if (pwdlen > 3) {
-        PrintAndLogEx(WARNING, "page protection flags must be between 0 and 3");
-        CLIParserFree(ctx);
-        return PM3_ESOFT;
-    }
-    payload.prot_status = (uint8_t)pwdlen;
+    int lo = arg_get_int_def(ctx, 4, 0);
+    int hi = arg_get_int_def(ctx, 5, 0);
+    CLIParserFree(ctx);
 
-    pwdlen = arg_get_int_def(ctx, 5, 0);
-    if (pwdlen > 3) {
+    if (lo > 3 || hi > 3) {
         PrintAndLogEx(WARNING, "page protection flags must be between 0 and 3");
-        CLIParserFree(ctx);
         return PM3_ESOFT;
     }
-    payload.prot_status |= (uint8_t)pwdlen << 4;
+    payload.prot_status = (uint8_t)(hi << 4) | (uint8_t)lo;
 
     PrintAndLogEx(INFO, "Trying to set page protection pointer to " _YELLOW_("%d"), payload.divide_ptr);
-    PrintAndLogEx(INFO, _YELLOW_("LO") " page access %s%s", (payload.prot_status & 0x01) ? _RED_("R") : _GREEN_("r"), (payload.prot_status & 0x02) ? _RED_("W") : _GREEN_("w"));
-    PrintAndLogEx(INFO, _YELLOW_("HI") " page access %s%s", (payload.prot_status & 0x10) ? _RED_("R") : _GREEN_("r"), (payload.prot_status & 0x20) ? _RED_("W") : _GREEN_("w"));
+    PrintAndLogEx(INFO, _YELLOW_("LO") " page access %s%s"
+        , (payload.prot_status & 0x01) ? _RED_("r") : _GREEN_("r")
+        , (payload.prot_status & 0x02) ? _RED_("w") : _GREEN_("w")
+    );
+    PrintAndLogEx(INFO, _YELLOW_("HI") " page access %s%s"
+        , (payload.prot_status & 0x10) ? _RED_("r") : _GREEN_("r")
+        , (payload.prot_status & 0x20) ? _RED_("w") : _GREEN_("w"));
 
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_SLIX_PROTECT_PAGE, (uint8_t *)&payload, sizeof(payload));
     if (WaitForResponseTimeout(CMD_HF_ISO15693_SLIX_PROTECT_PAGE, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply");
         DropField();
         return PM3_ESOFT;
     }
 
     switch (resp.status) {
         case PM3_ETIMEOUT: {
-            PrintAndLogEx(WARNING, "no tag found");
+            PrintAndLogEx(WARNING, "No tag found");
             break;
         }
         case PM3_EWRONGANSWER: {
@@ -3844,7 +3842,7 @@ static int CmdHF15AFIPassProtect(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (pwdlen != 4) {
-        PrintAndLogEx(WARNING, "password must be 4 hex bytes");
+        PrintAndLogEx(WARNING, "Password must be 4 hex bytes");
         return PM3_ESOFT;
     }
 
@@ -3859,14 +3857,14 @@ static int CmdHF15AFIPassProtect(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI, (uint8_t *)&payload, sizeof(payload));
     if (WaitForResponseTimeout(CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply");
         DropField();
         return PM3_ESOFT;
     }
 
     switch (resp.status) {
         case PM3_ETIMEOUT: {
-            PrintAndLogEx(WARNING, "no tag found");
+            PrintAndLogEx(WARNING, "No tag found");
             break;
         }
         case PM3_EWRONGANSWER: {
