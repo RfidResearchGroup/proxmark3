@@ -15,7 +15,7 @@ local _ug4_version = ''
 local _packpage = 'E6'
 copyright = ''
 author = 'Nathan Glaser'
-version = 'v1.0.6'
+version = 'v1.0.7'
 date = 'Created - Jan 2022'
 desc = 'This script enables easy programming of an Ultimate Mifare Magic card'
 example = [[
@@ -184,23 +184,24 @@ end
 ---
 -- Probe UMC revision robustly. CF<key>CC occasionally returns a truncated
 -- frame (e.g. 3F/7F), so retry until we get a well-formed 5-byte version.
--- New "UG4" replies 00 00 00 06 A0 -> PACK page 0x13; clean non-06A0 reads
+-- Some (06A0, 6666) UMC versions -> PACK page 0x13; others are assumed fine
 -- and an unprobeable card fall back to page 0xE6.
 local function detect_packpage()
     if _ug4_version ~= '' then return end          -- already classified this run
     for i = 1, 5 do
-        local v = (send("CF".._key.."CC") or ''):sub(1,10)
-        if #v == 10 and v:find('^%x+$') then        -- exactly 5 hex bytes
+        local v = (send("CF".._key.."CC") or ''):sub(1,-5):sub(-4)
+        if v:find('^%x+$') then        -- exactly 5 hex bytes
             _ug4_version = v:upper()
+            print("Detected UMC version: ".._ug4_version)
             break
         end
     end
-    if _ug4_version == '00000006A0' then
+    if _ug4_version == '06A0' or _ug4_version == '6666' then
         _packpage = '13'
     else
         _packpage = 'E6'
         if _ug4_version == '' then
-            print('[!] Warning: could not confirm UMC revision (CC probe corrupted); using PACK page 0xE6')
+            print("[!] Warning: unable to confirm config (".._ug4_version .."); using PACK page 0xE6")
         end
     end
 end
