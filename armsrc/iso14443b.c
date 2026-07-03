@@ -2603,7 +2603,7 @@ void SniffIso14443b(void) {
     dmabuf16_t *dma = get_dma16();
 
     // Setup and start DMA.
-    if (!FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE)) {
+    if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
         if (g_dbglevel > DBG_ERROR) DbpString("FpgaSetupSscDma failed. Exiting");
         switch_off();
         return;

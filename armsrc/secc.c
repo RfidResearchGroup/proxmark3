@@ -403,7 +403,11 @@ bool hid_config_card_jam(const uint8_t *cmd, int len, uint8_t *dma_buf) {
 
     // Restore sniffer FPGA mode and re-arm DMA
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_SNIFFER);
-    FpgaSetupSscDma(dma_buf, DMA_BUFFER_SIZE);
+
+    if (FpgaSetupSscDma(dma_buf, DMA_BUFFER_SIZE) == false) {
+        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
+        return false;
+    }
 
     return true;
 }

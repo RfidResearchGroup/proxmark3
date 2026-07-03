@@ -89,7 +89,7 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
     Uart14aInit(receivedCmd, MAX_FRAME_SIZE, receivedCmdPar);
 
     // Setup and start DMA.
-    if (!FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE)) {
+    if (FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE) == false) {
         if (g_dbglevel > DBG_ERROR) {
             Dbprintf("FpgaSetupSscDma failed. Exiting");
         }
