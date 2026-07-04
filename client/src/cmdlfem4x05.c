@@ -934,14 +934,20 @@ static void em4x05_print_footer(void) {
     PrintAndLogEx(NORMAL, "");
 }
 
-static void em4x05_print_blocks(em_tech_type_t cardtype, uint8_t *data, uint8_t dlen) {
+static void em4x05_print_blocks(em_tech_type_t cardtype, const uint8_t *src, uint8_t dlen) {
 
     // must have 4 byte alignment
-    if ((data == NULL) || (dlen % EM4X05_BLOCK_SIZE) != 0) {
+    if ((src == NULL) || (dlen % EM4X05_BLOCK_SIZE) != 0) {
         return;
     }
 
-    uint32_t *d = (void *)data;
+    // Work on a private copy. This routine byte-swaps the buffer for display,
+    // and callers such as CmdEM4x05Dump() still need the original bytes
+    // afterwards to save an uncorrupted dump to file (issue #3403).
+    // dlen is a uint8_t, so 64 words is enough to hold any valid input.
+    uint32_t d[64] = {0};
+    memcpy(d, src, dlen);
+    uint8_t *data = (uint8_t *)d;
 
     uint8_t i;
     for (i = 0; i < (dlen >> 2); i++) {

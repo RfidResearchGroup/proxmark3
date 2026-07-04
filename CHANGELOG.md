@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 
+- Fixed `lf em 4x05 dump` writing byte-swapped (corrupted) block data to the saved dump file (@munzzyy)
 - Added `hf 14b dump` support for Standard ISO14443-B tags (@thisiscamk)
 - Added `hf 14b ctrdbl` and `hf 14b ctdump` commands for interacting with ASK CTS tags (@kormax)
 - Fixed `hf legic migrate` failing to parse the optional DCF argument as hex (@IdanHo)
