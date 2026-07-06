@@ -173,15 +173,16 @@ static void UsbPacketReceived(uint8_t *packet) {
             uint8_t *base = NULL;
 
             bool raw_address_mode = ((flags & READ_MEM_DOWNLOAD_FLAG_RAW) == READ_MEM_DOWNLOAD_FLAG_RAW);
-            if (!raw_address_mode) {
+            if (raw_address_mode == false) {
 
                 base = (uint8_t *) _flash_start;
 
                 size_t flash_size = get_flash_size();
 
                 // Boundary check the offset.
-                if (offset > flash_size)
+                if (offset > flash_size) {
                     isok = false;
+                }
 
                 // Clip the length if it goes past the end of the flash memory.
                 count = MIN(count, flash_size - offset);
@@ -190,23 +191,26 @@ static void UsbPacketReceived(uint8_t *packet) {
                 // Allow reading from any memory address and length in special 'raw' mode.
                 base = NULL;
                 // Boundary check against end of addressable space.
-                if (offset > 0)
+                if (offset > 0) {
                     count = MIN(count, -offset);
+                }
             }
 
             if (isok) {
                 for (size_t pos = 0; pos < count; pos += PM3_CMD_DATA_SIZE) {
                     size_t len = MIN((count - pos), PM3_CMD_DATA_SIZE);
-                    isok = 0 == reply_old(CMD_READ_MEM_DOWNLOADED, pos, len, 0, &base[offset + pos], len);
-                    if (!isok)
+                    isok = (0 == reply_old(CMD_READ_MEM_DOWNLOADED, pos, len, 0, &base[offset + pos], len));
+                    if (!isok) {
                         break;
+                    }
                 }
             }
 
-            if (isok)
+            if (isok) {
                 reply_old(CMD_ACK, 1, 0, 0, 0, 0);
-            else
+            } else {
                 reply_old(CMD_NACK, 0, 0, 0, 0, 0);
+            }
 
             LED_B_OFF();
             break;
