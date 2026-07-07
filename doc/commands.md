@@ -234,6 +234,8 @@ Check column "offline" for their availability.
 |`hf 14b tearoff         `|N       |`Tear-off attack on ST25TB/SRx counter blocks`
 |`hf 14b view            `|Y       |`Display content from tag dump file`
 |`hf 14b valid           `|Y       |`SRIX4 checksum test`
+|`hf 14b ctdump          `|N       |`Dump ASK CTS/C-ticket`
+|`hf 14b ctrdbl          `|N       |`Read ASK CTS/C-ticket block`
 |`hf 14b setuid          `|N       |`Set UID for magic card`
 
 
@@ -308,20 +310,20 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf cipurse help        `|Y       |`This help.`
-|`hf cipurse info        `|N       |`Tag information`
-|`hf cipurse select      `|N       |`Select CIPURSE application or file`
+|`hf cipurse test        `|Y       |`Regression self tests`
 |`hf cipurse auth        `|N       |`Authenticate CIPURSE tag`
-|`hf cipurse read        `|N       |`Read binary file`
-|`hf cipurse write       `|N       |`Write binary file`
 |`hf cipurse aread       `|N       |`Read file attributes`
 |`hf cipurse awrite      `|N       |`Write file attributes`
-|`hf cipurse formatall   `|N       |`Erase all the data from chip`
 |`hf cipurse create      `|N       |`Create file, application, key via DGI record`
 |`hf cipurse delete      `|N       |`Delete file`
+|`hf cipurse default     `|N       |`Set default key and file id for all the other commands`
+|`hf cipurse formatall   `|N       |`Erase all the data from chip`
+|`hf cipurse info        `|N       |`Tag information`
+|`hf cipurse read        `|N       |`Read binary file`
+|`hf cipurse select      `|N       |`Select CIPURSE application or file`
 |`hf cipurse updkey      `|N       |`Update key`
 |`hf cipurse updakey     `|N       |`Update key attributes`
-|`hf cipurse default     `|N       |`Set default key and file id for all the other commands`
-|`hf cipurse test        `|Y       |`Regression tests`
+|`hf cipurse write       `|N       |`Write binary file`
 
 
 ### hf epa
@@ -457,13 +459,13 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf gallagher help      `|Y       |`This help`
-|`hf gallagher reader    `|N       |`Read & decode all Gallagher credentials on a DESFire or Classic card`
+|`hf gallagher test      `|Y       |`Test the function of Gallagher Mifare Core`
 |`hf gallagher clone     `|N       |`Clone Gallagher credentials to a DESFire or Classic card`
 |`hf gallagher delete    `|N       |`Delete Gallagher credentials from a DESFire card`
 |`hf gallagher diversifykey`|Y       |`Diversify Gallagher key`
 |`hf gallagher decode    `|Y       |`Decode Gallagher credential block`
 |`hf gallagher encode    `|Y       |`Encode Gallagher credential block`
-|`hf gallagher test      `|Y       |`Test the function of Gallagher Mifare Core`
+|`hf gallagher reader    `|N       |`Read & decode all Gallagher credentials on a DESFire or Classic card`
 
 
 ### hf gst
@@ -753,6 +755,7 @@ Check column "offline" for their availability.
 |`hf mfu eload           `|N       |`Upload file into emulator memory`
 |`hf mfu esave           `|N       |`Save emulator memory to file`
 |`hf mfu eview           `|N       |`View emulator memory`
+|`hf mfu esetblk         `|N       |`Set emulator memory block`
 |`hf mfu sim             `|N       |`Simulate MIFARE Ultralight from emulator memory`
 |`hf mfu setuid          `|N       |`Set UID - MAGIC tags only`
 |`hf mfu amiibo          `|N       |`Amiibo tag operations`
@@ -841,16 +844,16 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf saflok help         `|Y       |`This help`
-|`hf saflok read         `|N       |`Read Saflok card`
-|`hf saflok provision    `|N       |`Provision Saflok card`
+|`hf saflok test         `|Y       |`Perform self-test`
+|`hf saflok cksum        `|N       |`Generate checksum for data block`
 |`hf saflok encode       `|Y       |`Encode Saflok card data`
-|`hf saflok decode       `|Y       |`Decode Saflok card data`
-|`hf saflok modify       `|Y       |`Modify Saflok card data`
 |`hf saflok encrypt      `|Y       |`Encrypt 17-byte decrypted block`
+|`hf saflok decode       `|Y       |`Decode Saflok card data`
 |`hf saflok decrypt      `|Y       |`Decrypt 17-byte encrypted block`
 |`hf saflok interrogate  `|N       |`Interrogate saflok card`
-|`hf saflok cksum        `|N       |`Generate checksum for data block`
-|`hf saflok selftest     `|Y       |`Run self-test`
+|`hf saflok provision    `|N       |`Provision Saflok card`
+|`hf saflok modify       `|Y       |`Modify Saflok card data`
+|`hf saflok read         `|N       |`Read Saflok card`
 
 
 ### hf seos
@@ -1548,7 +1551,7 @@ Check column "offline" for their availability.
 |`mad verify             `|N       |`Verify data in MAD AID sectors`
 |`mad decode             `|Y       |`Decode MAD byte array`
 |`mad encode             `|Y       |`Encode MAD byte array from AID mappings`
-|`mad test               `|Y       |`Run MAD regression tests`
+|`mad test               `|Y       |`Perform MAD regression self-tests`
 
 
 ### mem
@@ -1572,6 +1575,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`mem spiffs help        `|Y       |`This help`
+|`mem spiffs test        `|N       |`Perform SPIFFS Operations tests`
 |`mem spiffs copy        `|N       |`Copy a file to another (destructively) in SPIFFS file system`
 |`mem spiffs check       `|N       |`Check/try to defrag faulty/fragmented file system`
 |`mem spiffs dump        `|N       |`Dump a file from SPIFFS file system`
@@ -1579,7 +1583,6 @@ Check column "offline" for their availability.
 |`mem spiffs mount       `|N       |`Mount the SPIFFS file system if not already mounted`
 |`mem spiffs remove      `|N       |`Remove a file from SPIFFS file system`
 |`mem spiffs rename      `|N       |`Rename/move a file in SPIFFS file system`
-|`mem spiffs test        `|N       |`Test SPIFFS Operations`
 |`mem spiffs tree        `|N       |`Print the Flash memory file system tree`
 |`mem spiffs unmount     `|N       |`Un-mount the SPIFFS file system`
 |`mem spiffs upload      `|N       |`Upload file into SPIFFS file system`

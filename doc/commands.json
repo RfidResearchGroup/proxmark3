@@ -1503,6 +1503,35 @@
             ],
             "usage": "hf 14b apdu [-hskte] [--decode] [-m <hex>] [-l <int>] -d <hex> [--timeout <dec>]"
         },
+        "hf 14b ctdump": {
+            "command": "hf 14b ctdump",
+            "description": "Read and print ASK CTS / C-ticket memory blocks",
+            "notes": [
+                "hf 14b ctdump",
+                "hf 14b ctdump -v"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf 14b ctdump [-hv]"
+        },
+        "hf 14b ctrdbl": {
+            "command": "hf 14b ctrdbl",
+            "description": "Read an ASK CTS / C-ticket block",
+            "notes": [
+                "hf 14b ctrdbl -b 6",
+                "hf 14b ctrdbl --block 15 -v"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-b, --block <dec> block number",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf 14b ctrdbl [-hv] -b <dec>"
+        },
         "hf 14b dump": {
             "command": "hf 14b dump",
             "description": "This command dumps the contents of a ISO-14443-B tag and save it to file Tries to autodetect cardtype, memory size defaults to SRI4K",
@@ -2539,11 +2568,23 @@
         },
         "hf cipurse help": {
             "command": "hf cipurse help",
-            "description": "help This help. test Regression tests --------------------------------------------------------------------------------------- hf cipurse info available offline: no Get info from CIPURSE tags",
+            "description": "help This help. test Regression self tests --------------------------------------------------------------------------------------- hf cipurse test available offline: yes Regression tests",
+            "notes": [
+                "hf cipurse test"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hf cipurse test [-h]"
+        },
+        "hf cipurse info": {
+            "command": "hf cipurse info",
+            "description": "Get info from CIPURSE tags",
             "notes": [
                 "hf cipurse info"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help This help"
             ],
@@ -2594,18 +2635,6 @@
                 "--chfid <hex> Child file ID (EF under application/master file) 2 bytes"
             ],
             "usage": "hf cipurse select [-havt] [--aid <hex>] [--fid <hex>] [--mfd] [--chfid <hex>]"
-        },
-        "hf cipurse test": {
-            "command": "hf cipurse test",
-            "description": "Regression tests",
-            "notes": [
-                "hf cipurse test"
-            ],
-            "offline": true,
-            "options": [
-                "-h, --help This help"
-            ],
-            "usage": "hf cipurse test [-h]"
         },
         "hf cipurse updakey": {
             "command": "hf cipurse updakey",
@@ -4067,13 +4096,25 @@
         },
         "hf gallagher help": {
             "command": "hf gallagher help",
-            "description": "help This help diversifykey Diversify Gallagher key decode Decode Gallagher credential block encode Encode Gallagher credential block test Test the function of Gallagher Mifare Core --------------------------------------------------------------------------------------- hf gallagher reader available offline: no Read a Gallagher tag from the Card Application Directory, CAD Specify site key is required if using non-default key",
+            "description": "----------- ----------------------- General ----------------------- help This help test Test the function of Gallagher Mifare Core ----------- ----------------------- Operations ----------------------- diversifykey Diversify Gallagher key decode Decode Gallagher credential block encode Encode Gallagher credential block --------------------------------------------------------------------------------------- hf gallagher test available offline: yes Test the function of Gallagher Mifare Core",
+            "notes": [
+                "hf gallagher test"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hf gallagher test [-h]"
+        },
+        "hf gallagher reader": {
+            "command": "hf gallagher reader",
+            "description": "Read a Gallagher tag from the Card Application Directory, CAD Specify site key is required if using non-default key",
             "notes": [
                 "hf gallagher reader -@ -> DESFIRE(default): continuous reader mode",
                 "hf gallagher reader -c -@ -> CLASSIC: continuous reader mode",
                 "hf gallagher reader --aid 2081f4 --sitekey 00112233445566778899aabbccddeeff -> DESFIRE: skip CAD"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help This help",
                 "--aid <hex> Application ID to read (3 bytes). If specified, the CAD is not used",
@@ -4084,18 +4125,6 @@
                 "-c, --classic Read Gallagher mifare Classic card"
             ],
             "usage": "hf gallagher reader [-h@vc] [--aid <hex>] [--sitekey <hex>] [--apdu]"
-        },
-        "hf gallagher test": {
-            "command": "hf gallagher test",
-            "description": "Test the function of Gallagher Mifare Core",
-            "notes": [
-                "hf gallagher test"
-            ],
-            "offline": true,
-            "options": [
-                "-h, --help This help"
-            ],
-            "usage": "hf gallagher test [-h]"
         },
         "hf gst help": {
             "command": "hf gst help",
@@ -8695,9 +8724,9 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose Verbose output",
                 "-a, --adr <hex> Address, 2 hex bytes",
-                "-d, --data <hex> Data, 16 hex bytes"
+                "-d, --data <hex> Data, 16 hex bytes",
+                "-v, --verbose Verbose output"
             ],
             "usage": "hf mfp wrp [-hv] -a <hex> [-d <hex>]"
         },
@@ -8854,7 +8883,9 @@
                 "hf mfu dump -k AABBCCDD -> dump whole tag using pwd AABBCCDD",
                 "hf mfu dump -p 10 -> start at page 10 and dump rest of blocks",
                 "hf mfu dump -p 10 -q 2 -> start at page 10 and dump two blocks",
-                "hf mfu dump --key 00112233445566778899AABBCCDDEEFF"
+                "hf mfu dump --key 00112233445566778899AABBCCDDEEFF",
+                "",
+                "Note: Dumping a NTAG/UL tag to a UMC will likely result in incorrect PWD and PACK"
             ],
             "offline": false,
             "options": [
@@ -8901,6 +8932,21 @@
                 "-f, --file <fn> Specify a filename for dump file"
             ],
             "usage": "hf mfu esave [-h] [-e <dec>] [-f <fn>]"
+        },
+        "hf mfu esetblk": {
+            "command": "hf mfu esetblk",
+            "description": "Set emulator memory page(s). One page = 4 bytes; pass multiple whole pages of data to set consecutive pages from --blk.",
+            "notes": [
+                "hf mfu esetblk --blk 4 -d 04E10CDA",
+                "hf mfu esetblk --blk 4 -d 04E10CDA993C8048 -> sets pages 4-5"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-b, --blk <dec> page number to start at",
+                "-d, --data <hex> bytes to write, whole pages (multiple of 4 bytes)"
+            ],
+            "usage": "hf mfu esetblk [-h] -b <dec> [-d <hex>]"
         },
         "hf mfu eview": {
             "command": "hf mfu eview",
@@ -9074,7 +9120,9 @@
             "notes": [
                 "hf mfu restore -f myfile -s -> special write",
                 "hf mfu restore -f myfile -k AABBCCDD -s -> special write, use key",
-                "hf mfu restore -f myfile -k AABBCCDD -ser -> special write, use key, write dump pwd, ..."
+                "hf mfu restore -f myfile -k AABBCCDD -ser -> special write, use key, write dump pwd, ...",
+                "",
+                "Note: Restoring a NTAG/UL dump to a UMC will likely result in incorrect PWD and PACK"
             ],
             "offline": false,
             "options": [
@@ -9445,15 +9493,15 @@
         },
         "hf saflok help": {
             "command": "hf saflok help",
-            "description": "help This help encode Encode Saflok card data decode Decode Saflok card data modify Modify Saflok card data encrypt Encrypt 17-byte decrypted block decrypt Decrypt 17-byte encrypted block selftest Run self-test --------------------------------------------------------------------------------------- hf saflok read available offline: no Read Saflok card (MIFARE Classic only)",
+            "description": "help This help -------- ------------- General --------------- test Perform self-test -------- ------------- Operations --------------- encode Encode Saflok card data encrypt Encrypt 17-byte decrypted block decode Decode Saflok card data decrypt Decrypt 17-byte encrypted block modify Modify Saflok card data --------------------------------------------------------------------------------------- hf saflok test available offline: yes Validate internal functionality of Saflok routines",
             "notes": [
-                "hf saflok read"
+                "hf saflok test"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help"
             ],
-            "usage": "hf saflok read [-h]"
+            "usage": "hf saflok test [-h]"
         },
         "hf saflok interrogate": {
             "command": "hf saflok interrogate",
@@ -9505,17 +9553,17 @@
             ],
             "usage": "hf saflok provision [-h] -d data"
         },
-        "hf saflok selftest": {
-            "command": "hf saflok selftest",
-            "description": "Validate internal functionality of Saflok routines",
+        "hf saflok read": {
+            "command": "hf saflok read",
+            "description": "Read Saflok card (MIFARE Classic only)",
             "notes": [
-                "hf saflok selftest"
+                "hf saflok read"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help This help"
             ],
-            "usage": "hf saflok selftest [-h]"
+            "usage": "hf saflok read [-h]"
         },
         "hf search": {
             "command": "hf search",
@@ -14173,7 +14221,7 @@
         },
         "mad help": {
             "command": "mad help",
-            "description": "help This help -------- --------------- MAD ----------------- -------- ------------- General --------------- decode Decode MAD byte array encode Encode MAD byte array from AID mappings test Run MAD regression tests --------------------------------------------------------------------------------------- mad read available offline: no Read application data from sectors matching a MAD AID",
+            "description": "-------- ------------- General --------------- help This help -------- --------------- MAD ----------------- -------- ------------- Operations --------------- decode Decode MAD byte array encode Encode MAD byte array from AID mappings test Perform MAD regression self-tests --------------------------------------------------------------------------------------- mad read available offline: no Read application data from sectors matching a MAD AID",
             "notes": [
                 "mad read --aid e103 -> read NDEF data",
                 "mad read --aid e103 -k ffffffffffff -b -> Classic, key B",
@@ -14340,6 +14388,20 @@
             ],
             "usage": "mem spiffs check [-h]"
         },
+        "mem spiffs copy": {
+            "command": "mem spiffs copy",
+            "description": "Copy a file to another (destructively) in SPIFFS file system",
+            "notes": [
+                "mem spiffs copy -s aaa.bin -d aaa_cpy.bin"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-s, --src <fn> source file name",
+                "-d, --dest <fn> destination file name"
+            ],
+            "usage": "mem spiffs copy [-h] -s <fn> -d <fn>"
+        },
         "mem spiffs dump": {
             "command": "mem spiffs dump",
             "description": "Dumps device SPIFFS file to a local file Size is handled by first sending a STAT command against file to verify existence",
@@ -14359,17 +14421,15 @@
         },
         "mem spiffs help": {
             "command": "mem spiffs help",
-            "description": "help This help --------------------------------------------------------------------------------------- mem spiffs copy available offline: no Copy a file to another (destructively) in SPIFFS file system",
+            "description": "help This help --------------------------------------------------------------------------------------- mem spiffs test available offline: no Test SPIFFS Operations, require wiping pages 0 and 1",
             "notes": [
-                "mem spiffs copy -s aaa.bin -d aaa_cpy.bin"
+                "mem spiffs test"
             ],
             "offline": true,
             "options": [
-                "-h, --help This help",
-                "-s, --src <fn> source file name",
-                "-d, --dest <fn> destination file name"
+                "-h, --help This help"
             ],
-            "usage": "mem spiffs copy [-h] -s <fn> -d <fn>"
+            "usage": "mem spiffs test [-h]"
         },
         "mem spiffs info": {
             "command": "mem spiffs info",
@@ -14421,18 +14481,6 @@
                 "-d, --dest <fn> destination file name"
             ],
             "usage": "mem spiffs rename [-h] -s <fn> -d <fn>"
-        },
-        "mem spiffs test": {
-            "command": "mem spiffs test",
-            "description": "Test SPIFFS Operations, require wiping pages 0 and 1",
-            "notes": [
-                "mem spiffs test"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help"
-            ],
-            "usage": "mem spiffs test [-h]"
         },
         "mem spiffs tree": {
             "command": "mem spiffs tree",
@@ -15658,8 +15706,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 878,
+        "commands_extracted": 881,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-06-29T21:47:47+00:00"
+        "extracted_on": "2026-07-07T20:45:30+00:00"
     }
 }
