@@ -18,10 +18,12 @@
 #include "cmdlfcotag.h"  // COTAG function declarations
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <inttypes.h>
 #include <math.h>
+#include <float.h>
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "lfdemod.h"
@@ -44,12 +46,13 @@
 
 static int CmdHelp(const char *Cmd);
 
-static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_start, int32_t threshold, bool verbose);
+static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_start, double threshold, bool verbose);
 static int detect_edge(const int32_t *samples, int num_samples,
-                       int index_start, int32_t threshold);
+                       int index_start, double threshold);
 static void find_avg_high_low(const int32_t *samples, int num_samples,
                               int clock,
-                              double *out_avg_high, double *out_avg_low);
+                              double *out_high_level, double *out_low_level);
+static double trimmed_mean_abs(const int32_t *samples, int start, int count);
 
 #if 0
 // TODO: With the new cotag implementation shall we remove this old version
@@ -128,7 +131,7 @@ int demodCOTAG(bool verbose) {
  *                     Use -1 for auto clock-start detection.
  * @param threshold    Amplitude threshold that defines a "high" sample. Use -1 for auto-threshold detection.
  */
-static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_start, int32_t threshold, bool verbose) {
+static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_start, double threshold, bool verbose) {
     int       clock_half = clock / 2;
     int32_t   min, max;
     double    avg;
@@ -150,10 +153,10 @@ static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_s
 
     if (verbose) {
         PrintAndLogEx(INFO, "  Clock: %d", clock);
-        if (threshold == -1)
+        if (threshold < 0)
             PrintAndLogEx(INFO, "  Threshold: auto");
         else
-            PrintAndLogEx(INFO, "  Threshold: %d", threshold);
+            PrintAndLogEx(INFO, "  Threshold: %.2f", threshold);
         PrintAndLogEx(INFO, "  Min : %" PRId32, min);
         PrintAndLogEx(INFO, "  Max : %" PRId32, max);
         PrintAndLogEx(INFO, "  Avg : %.2f\n", avg);
@@ -166,14 +169,13 @@ static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_s
         samples[i] = (int32_t)v;
     }
 
-    /* Auto threshold detection */
-    if (threshold == -1) {
-        double avg_high, avg_low;
-        find_avg_high_low(samples, num_samples, clock, &avg_high, &avg_low);
-        double thr = floor(0.9 * avg_high);
-        threshold = (int32_t)thr;
+    /* Auto threshold estimation: */
+    if (threshold < 0) {
+        double high_level, low_level;
+        find_avg_high_low(samples, num_samples, clock, &high_level, &low_level);
+        threshold = (low_level + high_level) * 0.5;
         if (verbose)
-            PrintAndLogEx(INFO, "  Auto threshold: avg_low=%.2f, avg_high=%.2f --> threshold=%d", avg_low, avg_high, (int)threshold);
+            PrintAndLogEx(INFO, "  Auto threshold: low_level=%.2f, high_level=%.2f --> threshold=%.2f", low_level, high_level, threshold);
     }
 
     /* Auto clock-start detection (first edge detection) */
@@ -194,22 +196,13 @@ static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_s
     int high_low_demod_01_count = 0;
 
     for (int idx = clock_start; idx + clock <= num_samples; idx += clock) {
-        /* Average absolute values of first half */
-        int32_t clock_half1_val_avg = 0;
-        for (int k = 0; k < clock_half; k++)
-            clock_half1_val_avg += abs(samples[idx + k]);
-        double h1v = round((double)clock_half1_val_avg / clock_half);
-        clock_half1_val_avg = (int32_t)h1v;
+        /* Trimmed mean of absolute values of first half: */
+        double clock_half1_val = trimmed_mean_abs(samples, idx, clock_half);
+        /* Trimmed mean of absolute values of second half: */
+        double clock_half2_val = trimmed_mean_abs(samples, idx + clock_half, clock_half);
 
-        /* Average absolute values of second half */
-        int32_t clock_half2_val_avg = 0;
-        for (int k = 0; k < clock_half; k++)
-            clock_half2_val_avg += abs(samples[idx + clock_half + k]);
-        double h2v = round((double)clock_half2_val_avg / clock_half);
-        clock_half2_val_avg = (int32_t)h2v;
-
-        uint8_t half1 = (clock_half1_val_avg >= threshold) ? 1 : 0;
-        uint8_t half2 = (clock_half2_val_avg >= threshold) ? 1 : 0;
+        uint8_t half1 = (clock_half1_val >= threshold) ? 1 : 0;
+        uint8_t half2 = (clock_half2_val >= threshold) ? 1 : 0;
 
         high_low_demod_01[high_low_demod_01_count]     = half1;
         high_low_demod_01[high_low_demod_01_count + 1] = half2;
@@ -428,8 +421,8 @@ end:
 
 int demodCOTAG(bool verbose, int clock, int threshold) {
     int clk = (clock > 0) ? clock : LF_COTAG_CLOCK;
-    if (clk < 32) {
-        PrintAndLogEx(FAILED, "custom clock must be >= 32, got " _RED_("%d"), clk);
+    if (clk < 32 || clk > LF_COTAG_CLOCK) {
+        PrintAndLogEx(FAILED, "custom clock must be between 32 and " STR(LF_COTAG_CLOCK) ", got " _RED_("%d"), clk);
         return PM3_EINVARG;
     }
     return demod_cotag(g_GraphBuffer, (int)g_GraphTraceLen, clk, -1, threshold, verbose);
@@ -655,41 +648,71 @@ int readCOTAGUid(void) {
     return (CmdCOTAGReader("") == PM3_SUCCESS && CmdCOTAGDemod("") == PM3_SUCCESS);
 }
 
+static int cmp_int32_asc(const void *a, const void *b) {
+    int32_t x = *(const int32_t *)a;
+    int32_t y = *(const int32_t *)b;
+
+    return (x > y) - (x < y);
+}
+
 /**
- * Find average high and average low amplitude by sliding a 256-sample window
- * over the first 8*clock samples (DC-removed values).
+ * Calculate trimmed mean of the absolute values of samples[start .. start+count).
  *
- * @param samples       DC-removed samples array.
- * @param num_samples   Total number of samples.
- * @param clock         Samples per clock cycle.
- * @param out_avg_high  the highest window average seen
- * @param out_avg_low   the lowest window average seen
+ * Spikes/outliers resistant, and mean/averaging gives sub-integer
+ * resolution for very low amplitude captures.
+ */
+static double trimmed_mean_abs(const int32_t *samples, int start, int count) {
+    /* The values are sorted and the top 1/TRIM_DROP_DEN are discarded before averaging */
+    const int TRIM_DROP_DEN = 4;   // trimmed mean denominator
+    int32_t buf[count];
+
+    for (int k = 0; k < count; k++)
+        buf[k] = abs(samples[start + k]);
+
+    qsort(buf, count, sizeof(int32_t), cmp_int32_asc);
+
+    int keep = count - count / TRIM_DROP_DEN;
+    if (keep < 1)
+        keep = 1;
+
+    int64_t sum = 0;
+    for (int k = 0; k < keep; k++)
+        sum += buf[k];
+
+    return (double)sum / (double)keep;
+}
+
+/**
+ * Determine the typical high and low amplitude levels in the samples capture.
+ *
+ * @param samples        DC-removed samples array.
+ * @param num_samples    Total number of samples.
+ * @param clock          Samples per clock cycle.
+ * @param out_high_level the highest window trimmed mean seen
+ * @param out_low_level  the lowest window trimmed mean seen
  */
 static void find_avg_high_low(const int32_t *samples, int num_samples,
                               int clock,
-                              double *out_avg_high, double *out_avg_low) {
+                              double *out_high_level, double *out_low_level) {
     const int WINDOW = 256;
-    double avg_high = -127.0;
-    double avg_low  = 127.0;
+    double high_level = -DBL_MAX;
+    double low_level  =  DBL_MAX;
 
     int scan_end = 8 * clock;
     if (scan_end > num_samples)
         scan_end = num_samples;
 
     for (int i = 0; i + WINDOW <= scan_end; i++) {
-        double window_avg = 0.0;
-        for (int k = 0; k < WINDOW; k++)
-            window_avg += abs(samples[i + k]);
-        window_avg /= WINDOW;
+        double window_val = trimmed_mean_abs(samples, i, WINDOW);
 
-        if (window_avg < avg_low)
-            avg_low = window_avg;
-        if (window_avg > avg_high)
-            avg_high = window_avg;
+        if (window_val < low_level)
+            low_level = window_val;
+        if (window_val > high_level)
+            high_level = window_val;
     }
 
-    *out_avg_high = avg_high;
-    *out_avg_low  = avg_low;
+    *out_high_level = high_level;
+    *out_low_level  = low_level;
 }
 
 /**
@@ -704,7 +727,7 @@ static void find_avg_high_low(const int32_t *samples, int num_samples,
  * @return Index of the detected edge, or 0 if none found.
  */
 static int detect_edge(const int32_t *samples, int num_samples,
-                       int index_start, int32_t threshold) {
+                       int index_start, double threshold) {
     const int GLITCH_WINDOW = 10;
 
     if (num_samples <= 0 || index_start < 0 || index_start >= num_samples)
@@ -732,8 +755,8 @@ static int detect_edge(const int32_t *samples, int num_samples,
             for (int k = 0; k < GLITCH_WINDOW; k++)
                 after_sum += abs(samples[i + k]);
 
-            bool before_high = before_sum >= (int64_t)threshold * GLITCH_WINDOW;
-            bool after_high  = after_sum  >= (int64_t)threshold * GLITCH_WINDOW;
+            bool before_high = (double)before_sum >= threshold * GLITCH_WINDOW;
+            bool after_high  = (double)after_sum  >= threshold * GLITCH_WINDOW;
 
             if (before_high != after_high)
                 return (int)i;
