@@ -1472,7 +1472,9 @@ static bool Unpack_IR56(wiegand_message_t *packed, wiegand_card_t *card) {
 
     if (packed->Length != 56) return false;
 
-    card->FacilityCode = packed->Mid;
+    // Mask off the header/sentinel bit that add_HID_header sets at position 56
+    // (Mid |= 1 << 24) so it doesn't leak into the 24-bit facility code.
+    card->FacilityCode = packed->Mid & 0x00FFFFFF;
     card->CardNumber = packed->Bot;
     return true;
 }
