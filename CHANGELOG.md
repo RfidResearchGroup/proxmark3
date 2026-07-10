@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 
+- Fixed `wiegand decode` returning facility code 16777339 instead of the encoded value for the IR56 (Inner Range 56-bit) format by masking the header sentinel bit off the facility code (@munzzyy)
 - Fixed `lf em 4x05 dump` writing byte-swapped (corrupted) block data to the saved dump file (@munzzyy)
 - Added `hf 14b dump` support for Standard ISO14443-B tags (@thisiscamk)
 - Added `hf 14b ctrdbl` and `hf 14b ctdump` commands for interacting with ASK CTS tags (@kormax)
