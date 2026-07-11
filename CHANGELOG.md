@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 
+- Fixed `hf iclass view` reading past the end of dump files smaller than a picopass header, causing a heap out-of-bounds read and garbage/leaked heap data being printed as tag content (@munzzyy)
 - Fixed `wiegand decode` returning facility code 16777339 instead of the encoded value for the IR56 (Inner Range 56-bit) format by masking the header sentinel bit off the facility code (@munzzyy)
 - Fixed `lf em 4x05 dump` writing byte-swapped (corrupted) block data to the saved dump file (@munzzyy)
 - Added `hf 14b dump` support for Standard ISO14443-B tags (@thisiscamk)

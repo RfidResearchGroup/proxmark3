@@ -5306,7 +5306,10 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
         endblock = maxmemcount;
 
     // remember endblock needs to relate to zero-index arrays.
-    if (endblock > filemaxblock - 1)
+    // filemaxblock is 0 when filesize < 8, so filemaxblock - 1 would underflow.
+    if (filemaxblock == 0)
+        endblock = 0;
+    else if (endblock > filemaxblock - 1)
         endblock = filemaxblock - 1;
 
     /*
@@ -5513,6 +5516,12 @@ static int CmdHFiClassView(const char *Cmd) {
     int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, 2048);
     if (res != PM3_SUCCESS) {
         return res;
+    }
+
+    if (bytes_read < sizeof(picopass_hdr_t)) {
+        PrintAndLogEx(FAILED, "Error, dump file is too small to be a valid iCLASS dump - bytes: %zu, expected at least: %zu", bytes_read, sizeof(picopass_hdr_t));
+        free(dump);
+        return PM3_EFILE;
     }
 
     if (verbose) {
