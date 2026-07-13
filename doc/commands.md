@@ -684,10 +684,16 @@ Check column "offline" for their availability.
 |`hf mf gsetblk          `|N       |`Write block to card`
 |`hf mf gview            `|N       |`View card`
 |`hf mf gchpwd           `|N       |`Change card access password. Warning!`
-|`hf mf gdmcfg           `|N       |`Read config block from card`
-|`hf mf gdmsetcfg        `|N       |`Write config block to card`
-|`hf mf gdmparsecfg      `|Y       |`Parse config block to card`
-|`hf mf gdmsetblk        `|N       |`Write block to card`
+|`hf mf gdmgetcfg        `|N       |`Get configuration data from GDM card`
+|`hf mf gdmsetcfg        `|N       |`Set configuration data on GDM card`
+|`hf mf gdmparsecfg      `|Y       |`Parse configuration data for GDM card`
+|`hf mf gdmgetblk        `|N       |`Read public block from GDM card`
+|`hf mf gdmsetblk        `|N       |`Write public block to GDM card`
+|`hf mf gdmgethidblk     `|N       |`Read hidden block from GDM card`
+|`hf mf gdmsethidblk     `|N       |`Write hidden block to GDM card`
+|`hf mf gdmsetuid        `|N       |`Set UID on GDM card`
+|`hf mf gdmwipe          `|N       |`Wipe GDM card to factory defaults`
+|`hf mf gdmsetsig        `|N       |`Set MFC EV1 signature on GDM card`
 |`hf mf ndefformat       `|N       |`Format MIFARE Classic Tag as NFC Tag`
 |`hf mf ndefread         `|N       |`Read and print NDEF records from card`
 |`hf mf ndefwrite        `|N       |`Write NDEF records to card`
