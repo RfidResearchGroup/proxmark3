@@ -151,10 +151,10 @@ function Command:sendMIX( ignore_response, timeout, use_cmd_ack)
     arg1 = nil
     arg2 = nil
     arg3 = nil
-    local count, length, magic, status, crc, ng
+    local count, length, magic, status, reason, crc, ng
 
---         S    S       I      s       S    L     L     L
-    count, cmd, length, magic, status, crc, arg1, arg2, arg3 = bin.unpack('SSIsSLLL', response)
+--         S    S       I      c       c        S    L     L     L
+    count, cmd, length, magic, status, reason, crc, arg1, arg2, arg3 = bin.unpack('SSIccSLLL', response)
     count, data, ng = bin.unpack('H'..length..'C', response, count)
 
     local packed = bin.pack("LLLLH", cmd, arg1, arg2, arg3, data)
@@ -175,9 +175,9 @@ function Command:sendNG( ignore_response, timeout )
 
     data = nil
     cmd = nil
-    local count, length, magic, status, crc, arg0, arg1, arg2
+    local count, length, magic, status, reason, crc, arg0, arg1, arg2
 
-    count, cmd, length, magic, status, crc, arg0, arg1, arg2 = bin.unpack('SSIsSLLL', response)
+    count, cmd, length, magic, status, reason, crc, arg0, arg1, arg2 = bin.unpack('SSIccSLLL', response)
     count, data, ng = bin.unpack('H'..length..'C', response, count)
 
 --[[  uncomment if you want to debug
@@ -198,6 +198,7 @@ function Command:sendNG( ignore_response, timeout )
             Length = length,
             Magic = magic,
             Status = status,
+            Reason = reason,
             Crc = crc,
             Oldarg0 = arg0,
             Oldarg1 = arg1,
