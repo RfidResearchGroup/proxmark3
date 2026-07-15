@@ -35,10 +35,10 @@ static int terminal_width(void) {
         return csbi.srWindow.Right - csbi.srWindow.Left + 1;
     }
     const char *c = getenv("COLUMNS");
-    if (c) { 
-        int w = atoi(c); 
+    if (c) {
+        int w = atoi(c);
         if (w > 0) {
-            return w; 
+            return w;
         }
     }
     return 80;
@@ -52,7 +52,7 @@ static int terminal_width(void) {
         return (int)ws.ws_col;
     }
     const char *c = getenv("COLUMNS");
-    if (c) { 
+    if (c) {
         int w = atoi(c);
         if (w > 0) {
             return w;
@@ -62,7 +62,7 @@ static int terminal_width(void) {
 }
 #endif
 
-// --- wave parameters (unchanged from hadouken_wave.c) ------------------- 
+// --- wave parameters (unchanged from hadouken_wave.c) -------------------
 #define ORIGIN_X 64.0
 #define ORIGIN_Y 8.0
 #define ASPECT   2.0
@@ -105,7 +105,7 @@ static const char *GLYPHS = " .:;+xX#";
 // --- shared state --------------------------------------------------------
 static volatile sig_atomic_t g_resize = 0;   // set by SIGWINCH
 static volatile int g_running  = 0;
-static volatile int g_progress = 0;   // 0..100 
+static volatile int g_progress = 0;   // 0..100
 static pthread_t g_thread;
 
 // animation config – written once before hadouken_start()
@@ -113,9 +113,9 @@ static double g_fps        = 30.0;
 static int    g_glyph_mode = 0;
 static int    g_wave_mode  = 0;   // 0 = radial, 1 = beam
 
-void hadouken_on_sigint(int s)  { 
-    (void)s; 
-    g_running = 0; 
+void hadouken_on_sigint(int s)  {
+    (void)s;
+    g_running = 0;
 }
 
 #ifndef _WIN32
@@ -125,9 +125,9 @@ void hadouken_on_sigwinch(int s) {
 }
 #endif
 
-/* 
+/*
  * Compute the inner fill width for the progress bar from the current terminal
- * width, clamped to [BAR_MIN, BAR_MAX]. 
+ * width, clamped to [BAR_MIN, BAR_MAX].
  */
 static int bar_inner_width(void) {
     int w = terminal_width() - BAR_OVERHEAD;
@@ -140,7 +140,7 @@ static int bar_inner_width(void) {
     return w;
 }
 
-// --- colour helpers ------------------------------------------------------ 
+// --- colour helpers ------------------------------------------------------
 static inline int clamp8(double v) {
     if (v < 0)   {
         return 0;
@@ -189,11 +189,11 @@ static int render_anim_line(char *dst, int y, double t, int glyph_mode, int mode
         int ch = c->ch;
         int has = c->has;
         int r = 0;
-        int g = 0; 
+        int g = 0;
         int b = 0;
 
-        if (ch == ' ' && !has) { 
-            pending_blanks++; 
+        if (ch == ' ' && !has) {
+            pending_blanks++;
             continue;
         }
 
@@ -206,7 +206,7 @@ static int render_anim_line(char *dst, int y, double t, int glyph_mode, int mode
 
                 double lum = (r + g + b) / 765.0;
 
-                int idx = (int)(lum * 8); 
+                int idx = (int)(lum * 8);
                 if (idx > 7) {
                     idx = 7;
                 }
@@ -217,8 +217,8 @@ static int render_anim_line(char *dst, int y, double t, int glyph_mode, int mode
                 }
             }
         } else if (has) {
-            r = c->r; 
-            g = c->g; 
+            r = c->r;
+            g = c->g;
             b = c->b;
         }
 
@@ -233,10 +233,10 @@ static int render_anim_line(char *dst, int y, double t, int glyph_mode, int mode
                 len += sprintf(dst + len, "\x1b[38;2;%d;%d;%dm", r, g, b);
             } else {
                 len += sprintf(dst + len, ANSI_RESET);
-            } 
-            last_has = has; 
-            last_r = r; 
-            last_g = g; 
+            }
+            last_has = has;
+            last_r = r;
+            last_g = g;
             last_b = b;
         }
         dst[len++] = (char)ch;
@@ -299,7 +299,7 @@ static void *anim_thread(void *arg) {
     static char prev[FH][FW * 24 + 16];
     static char out [FH * (FW * 24 + 32) + 512];
 
-    // bar buf: BAR_MAX fill chars + ANSI escapes per char + fixed overhead 
+    // bar buf: BAR_MAX fill chars + ANSI escapes per char + fixed overhead
     static char bar [BAR_MAX + 256];
 
     int have_prev = 0;
@@ -317,7 +317,7 @@ static void *anim_thread(void *arg) {
             have_prev  = 0;
         }
 
-        // dynamic: re-queried every frame 
+        // dynamic: re-queried every frame
         int bw = bar_inner_width();
 
         int n = 0;

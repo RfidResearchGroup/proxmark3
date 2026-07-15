@@ -1602,7 +1602,7 @@ static int CmdHFiClassTagSim(const char *Cmd) {
                       card.FacilityCode,
                       card.CardNumber,
                       sprint_hex(csn, 8)
-                    );
+                     );
     } else {
         PrintAndLogEx(INFO, "Press " _GREEN_("`pm3 button`") " to abort");
     }
@@ -1725,7 +1725,7 @@ static int CmdHFiClassTagSim(const char *Cmd) {
                           card.FacilityCode,
                           card.CardNumber,
                           sprint_hex(csn, 8)
-                        );
+                         );
         }
 
         tagsim_rawmode_exit();

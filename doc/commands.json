@@ -596,11 +596,10 @@
         },
         "data num": {
             "command": "data num",
-            "description": "Function takes a decimal or hexdecimal number and print it in decimal/hex/binary Includes Manchester encoding and decoding of the value Will print message if number is a prime number",
+            "description": "Function takes a decimal or hexdecimal number and print it in decimal/hex/binary Will print message if number is a prime number",
             "notes": [
                 "data num --dec 2023",
-                "data num --hex 2A",
-                "data num --hex 556555476555695559695555"
+                "data num --hex 2A"
             ],
             "offline": true,
             "options": [
@@ -1775,20 +1774,35 @@
             ],
             "usage": "hf 14b wrbl [-h] [-b <dec>] -d <hex> [--512] [--4k] [--sb] [--force]"
         },
+        "hf 15 cfinalize": {
+            "command": "hf 15 cfinalize",
+            "description": "Finalize a magic ISO15693 'V3' tag. This operation is irreversible. After finalize the configuration area is erased and the UID can no longer be changed. Set the UID with `hf 15 csetuid --v3` first, then lock it in with this command.",
+            "notes": [
+                "hf 15 cfinalize -y"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-y, --yes Confirm the irreversible finalize operation"
+            ],
+            "usage": "hf 15 cfinalize [-hy]"
+        },
         "hf 15 csetuid": {
             "command": "hf 15 csetuid",
-            "description": "Set UID for magic Chinese card (only works with such cards)",
+            "description": "Set UID for magic Chinese card (only works with such cards) For magic 'V3' tags this writes the UID configuration only and is repeatable; run `hf 15 cfinalize` afterwards to lock the UID permanently.",
             "notes": [
                 "hf 15 csetuid -u E011223344556677 -> use gen1 command",
-                "hf 15 csetuid -u E011223344556677 --v2 -> use gen2 command"
+                "hf 15 csetuid -u E011223344556677 --v2 -> use gen2 command",
+                "hf 15 csetuid -u E011223344556677 --v3 -> use gen3 (V3) magic tag"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-u, --uid <hex> UID, 8 hex bytes",
-                "-2, --v2 Use gen2 magic command"
+                "-2, --v2 Use gen2 magic command",
+                "-3, --v3 Use gen3 (V3) magic tag (repeatable, needs cfinalize)"
             ],
-            "usage": "hf 15 csetuid [-h2] -u <hex>"
+            "usage": "hf 15 csetuid [-h23] -u <hex>"
         },
         "hf 15 demod": {
             "command": "hf 15 demod",
@@ -6015,7 +6029,7 @@
         },
         "hf mf gdmgetcfg": {
             "command": "hf mf gdmgetcfg",
-            "description": "Get configuration data from GDM card. By default uses GDM alt wakeup (20/23). Use `--gen1a` or `--wupa` to override.",
+            "description": "Get configuration data from a GDM card. By default uses GDM alt wakeup (20/23). Use `--gen1a` or `--wupa` to override.",
             "notes": [
                 "hf mf gdmgetcfg",
                 "hf mf gdmgetcfg --gen1a",
@@ -8902,6 +8916,26 @@
                 "-0, --read0 Use fast READ0 (skip anticol)"
             ],
             "usage": "hf mfu aeschk [-hxn0] [-f <fn>] [-i <0..2>] [-s <0..3>] [-r <0..255>] [-k <hex>]"
+        },
+        "hf mfu aesgetuid": {
+            "command": "hf mfu aesgetuid",
+            "description": "Retreives real UID on Mifare Ultralight AES tags when random ID is enabled. Uses key index 1 (UIDRetrKey). If no key is specified, null key will be tried.",
+            "notes": [
+                "hf mfu aesgetuid",
+                "hf mfu aesgetuid --key <16 hex bytes>",
+                "hf mfu aesgetuid --key <16 hex bytes> --schann"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--key <hex> AES key (16 hex bytes)",
+                "-l Swap entered key's endianness",
+                "--schann use secure channel. Must have key",
+                "-r, --retries <n> Number of retries (def: 0)",
+                "-n, --nocheck Skip checking tag answer correctness",
+                "-0, --read0 Use fast READ0 (skip anticol)"
+            ],
+            "usage": "hf mfu aesgetuid [-hln0] [--key <hex>] [--schann] [-r <n>]"
         },
         "hf mfu amiibo": {
             "command": "hf mfu amiibo",
@@ -15837,8 +15871,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 887,
+        "commands_extracted": 889,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-07-13T12:31:24+00:00"
+        "extracted_on": "2026-07-15T14:38:35+00:00"
     }
 }

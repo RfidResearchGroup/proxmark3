@@ -685,9 +685,9 @@ void hrt_read_history(hrt_travel_card_t *card, const uint8_t *data, size_t data_
         size_t offset = i * HRT_HISTORY_RECORD_LEN;
 
         if (data[offset + 1] == 0 &&
-            data[offset + 2] == 0 &&
-            data[offset + 3] == 0 &&
-            data[offset + 4] == 0) {
+                data[offset + 2] == 0 &&
+                data[offset + 3] == 0 &&
+                data[offset + 4] == 0) {
             continue;
         }
 
@@ -734,9 +734,9 @@ void hrt_read_history_v2(hrt_travel_card_t *card, const uint8_t *data, size_t da
         size_t byte_offset = i * HRT_HISTORY_RECORD_LEN;
 
         if (data[byte_offset + 1] == 0 &&
-            data[byte_offset + 2] == 0 &&
-            data[byte_offset + 3] == 0 &&
-            data[byte_offset + 4] == 0) {
+                data[byte_offset + 2] == 0 &&
+                data[byte_offset + 3] == 0 &&
+                data[byte_offset + 4] == 0) {
             continue;
         }
 

@@ -380,7 +380,7 @@ out:
             Dbprintf("Authentication failed");
         }
     }
-    reply_ng(CMD_HF_MIFAREU3P_AUTH, res, (uint8_t *)&rpayload, packet->get_nonces ? sizeof(uint32_t) * 2 + nonce_size * auths : sizeof(uint32_t) * 2);
+    reply_ng(CMD_HF_MIFAREU3P_AUTH, res, (uint8_t *)&rpayload, packet->get_nonces ? sizeof(uint32_t) * 2 + nonce_size *auths : sizeof(uint32_t) * 2);
     if (packet->turn_off_field) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         LEDsoff();

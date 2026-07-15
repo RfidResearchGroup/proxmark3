@@ -58,7 +58,7 @@ int open_nb_socket(const char *addr, const char *port) {
 
     // make non-blocking
     if (sockfd != -1) {
-        if(fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFL) | O_NONBLOCK) < 0) {
+        if (fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFL) | O_NONBLOCK) < 0) {
             fprintf(stderr, "fcntl failed in open_nb_socket");
             return -1;
         }

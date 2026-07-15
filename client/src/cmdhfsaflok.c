@@ -442,10 +442,10 @@ static inline saflok_mfc_datetime_t get_saflok_mfc_card_creation_datetime(const 
 
     if (is_saflok_mfc_datetime_valid(&date) == false) {
         PrintAndLogEx(WARNING, "Warning: creation date appears invalid: %04d-%02d-%02dT%02d:%02d",
-                      date.year, 
-                      date.month, 
-                      date.day, 
-                      date.hour, 
+                      date.year,
+                      date.month,
+                      date.day,
+                      date.hour,
                       date.minute
                      );
     }
@@ -467,12 +467,12 @@ static inline bool set_saflok_mfc_card_creation_datetime(saflok_mfc_data_t *data
 
     if (result == false) {
         PrintAndLogEx(ERR, _RED_("ERROR:") " failed to set creation date of %04d-%02d-%02dT%02d:%02d",
-                date->year,
-                date->month,
-                date->day,
-                date->hour,
-                date->minute
-            );
+                      date->year,
+                      date->month,
+                      date->day,
+                      date->hour,
+                      date->minute
+                     );
     }
     return result;
 }
@@ -613,7 +613,7 @@ static saflok_mfc_datetime_t add_offset(const saflok_mfc_datetime_t *base, const
                   base->day,
                   base->hour,
                   base->minute
-                );
+                 );
 
     PrintAndLogEx(MY_DEBUG_LEVEL, "As struct tm: %04d-%02d-%02dT%02d:%02d",
                   tm.tm_year + 1900,
@@ -621,7 +621,7 @@ static saflok_mfc_datetime_t add_offset(const saflok_mfc_datetime_t *base, const
                   tm.tm_mday,
                   tm.tm_hour,
                   tm.tm_min
-                );
+                 );
 
     PrintAndLogEx(MY_DEBUG_LEVEL, "Offset to add: %u years, %u months, %u days, %u hours, %u minutes",
                   offset.years,
@@ -629,7 +629,7 @@ static saflok_mfc_datetime_t add_offset(const saflok_mfc_datetime_t *base, const
                   offset.days,
                   offset.hours,
                   offset.minutes
-                );
+                 );
 
     // add the offsets ... and it's OK for them to be out of range
     tm.tm_year += offset.years;
@@ -644,7 +644,7 @@ static saflok_mfc_datetime_t add_offset(const saflok_mfc_datetime_t *base, const
                   tm.tm_mday,
                   tm.tm_hour,
                   tm.tm_min
-                );
+                 );
 
     if (tm.tm_min >= 60) {
         tm.tm_hour += tm.tm_min / 60;
@@ -655,7 +655,7 @@ static saflok_mfc_datetime_t add_offset(const saflok_mfc_datetime_t *base, const
                       tm.tm_mday,
                       tm.tm_hour,
                       tm.tm_min
-                    );
+                     );
 
     }
 
@@ -668,12 +668,12 @@ static saflok_mfc_datetime_t add_offset(const saflok_mfc_datetime_t *base, const
                       tm.tm_mday,
                       tm.tm_hour,
                       tm.tm_min
-                    );
+                     );
     }
 
     // variable days per month ... loop is simplest option
     uint8_t curr_days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1);
-    for ( ; ((tm.tm_mday & 0xFF) > curr_days_in_month); curr_days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1)) {
+    for (; ((tm.tm_mday & 0xFF) > curr_days_in_month); curr_days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1)) {
 
         tm.tm_mon  ++;
         tm.tm_mday -= curr_days_in_month;
@@ -689,7 +689,7 @@ static saflok_mfc_datetime_t add_offset(const saflok_mfc_datetime_t *base, const
                       tm.tm_mday,
                       tm.tm_hour,
                       tm.tm_min
-                    );
+                     );
     }
 
     if (tm.tm_mon >= 12) {
@@ -702,7 +702,7 @@ static saflok_mfc_datetime_t add_offset(const saflok_mfc_datetime_t *base, const
                       tm.tm_mday,
                       tm.tm_hour,
                       tm.tm_min
-                    );
+                     );
     }
 
     PrintAndLogEx(MY_DEBUG_LEVEL, "Final normalized date: %04d-%02d-%02dT%02d:%02d",
@@ -711,7 +711,7 @@ static saflok_mfc_datetime_t add_offset(const saflok_mfc_datetime_t *base, const
                   tm.tm_mday,
                   tm.tm_hour,
                   tm.tm_min
-                );
+                 );
 
     // and finally convert back into saflok_mfc_datetime_t
     saflok_mfc_datetime_t result = {
@@ -727,7 +727,7 @@ static saflok_mfc_datetime_t add_offset(const saflok_mfc_datetime_t *base, const
                   result.day,
                   result.hour,
                   result.minute
-                );
+                 );
     return result;
 }
 
@@ -765,7 +765,7 @@ static saflok_mfc_datetime_offset_t get_datetime_offset(const saflok_mfc_datetim
                   diff.tm_mday,
                   diff.tm_hour,
                   diff.tm_min
-                );
+                 );
 
     if (diff.tm_min < 0) {
         diff.tm_min += 60;
@@ -805,7 +805,7 @@ static saflok_mfc_datetime_offset_t get_datetime_offset(const saflok_mfc_datetim
                   result.days,
                   result.hours,
                   result.minutes
-                );
+                 );
     return result;
 }
 
@@ -1349,8 +1349,8 @@ static int CmdHFSaflokEncode(const char *Cmd) {
                   arg_get_u32_def(ctx, 12, 0), // property_id
                   dt_e,
                   dt
-            );
-    
+                 );
+
     CLIParserFree(ctx);
 
     saflok_encrypt(&decrypted, &encrypted);
@@ -1553,7 +1553,7 @@ static int CmdHFSaflokDecrypt(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     saflok_mfc_data_t encrypted = {0};
-    
+
     int len;
     CLIGetHexWithReturn(ctx, 1, encrypted.raw, &len);
     CLIParserFree(ctx);
@@ -1718,7 +1718,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             result = PM3_EFAILED;
         }
     }
-    
+
     // lock_id                  field is 14 bits
     if (true) {
         int result_lock_id = PM3_SUCCESS;
@@ -2056,7 +2056,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
-            
+
             if (get_saflok_mfc_opening_key(&tc->decoded) != tc->opening_key) {
                 PrintAndLogEx(FAILED, "Test case %zu: opening_key did not match expected data.", i);
                 PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_opening_key(&tc->decoded));
@@ -2340,7 +2340,7 @@ static command_t CommandTable[] = {
     {"--------",    CmdHelp,              AlwaysAvailable, "------------- " _CYAN_("General") " ---------------"},
     {"test",        CmdHFSaflokSelfTest,  AlwaysAvailable, "Perform self-test"},
     {"cksum",       CmdHFSaflokChecksum,  IfPm3NfcBarcode, "Generate checksum for data block"},
-    {"--------",    CmdHelp,              AlwaysAvailable, "------------- " _CYAN_("Operations") " ---------------"},    
+    {"--------",    CmdHelp,              AlwaysAvailable, "------------- " _CYAN_("Operations") " ---------------"},
     {"encode",      CmdHFSaflokEncode,    AlwaysAvailable, "Encode Saflok card data"},
     {"encrypt",     CmdHFSaflokEncrypt,   AlwaysAvailable, "Encrypt 17-byte decrypted block"},
     {"decode",      CmdHFSaflokDecode,    AlwaysAvailable, "Decode Saflok card data"},

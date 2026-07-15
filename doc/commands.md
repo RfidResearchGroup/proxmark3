@@ -276,6 +276,7 @@ Check column "offline" for their availability.
 |`hf 15 writeafi         `|N       |`Writes the AFI on an ISO-15693 tag`
 |`hf 15 writedsfid       `|N       |`Writes the DSFID on an ISO-15693 tag`
 |`hf 15 csetuid          `|N       |`Set UID for magic card`
+|`hf 15 cfinalize        `|N       |`Finalize a magic V3 tag (irreversible)`
 
 
 ### hf aliro
@@ -747,6 +748,7 @@ Check column "offline" for their availability.
 |`hf mfu desbrute        `|Y       |`Ultralight-C - 3DES key segment brute force`
 |`hf mfu aesauth         `|N       |`Ultralight-AES - Authentication`
 |`hf mfu aeschk          `|N       |`Ultralight-AES - Authentication dictionary check`
+|`hf mfu aesgetuid       `|N       |`Ultralight-AES - Get UID when RID in use`
 |`hf mfu setkey          `|N       |`Ultralight C/AES - Set 3DES/AES keys`
 |`hf mfu dump            `|N       |`Dump MIFARE Ultralight family tag to binary file`
 |`hf mfu incr            `|N       |`Increments Ev1/NTAG counter`

@@ -244,14 +244,14 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, const uint8_t *ke
     }
 
     uint8_t cmd1[4];
-    if (nonfirst) { 
+    if (nonfirst) {
         cmd1[0] = 0x76;
         cmd1[1] = keyn[1];
-        cmd1[2] = keyn[0]; 
-    } else { 
-        cmd1[0] = 0x70; 
-        cmd1[1] = keyn[1]; 
-        cmd1[2] = keyn[0]; 
+        cmd1[2] = keyn[0];
+    } else {
+        cmd1[0] = 0x70;
+        cmd1[1] = keyn[1];
+        cmd1[2] = keyn[0];
         cmd1[3] = 0x00;
     }
 
@@ -395,9 +395,9 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, const uint8_t *ke
         return PM3_EWRONGANSWER;
     }
 
-    if (nonfirst) { 
+    if (nonfirst) {
         aes_decode(IVR, key, &data[1], raw, 16);
-    } else { 
+    } else {
         aes_decode(NULL, key, &data[1], raw, 32);
     }
 
@@ -688,7 +688,7 @@ int mfpWriteSector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, const 
 
         uint8_t block[MFBLOCK_SIZE];
         memcpy(block, datain + (n * 16), sizeof(block));
-       
+
         mfp_data_crypt(&_session, block, block, false, 1);
 
         uint8_t data[250] = {0};

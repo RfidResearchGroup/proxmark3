@@ -4826,7 +4826,7 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                             // Respond Not Found
                             dynamic_response_info.response[1 + offset] = 0x6A;
                             dynamic_response_info.response[2 + offset] = 0x82;
-                            dynamic_response_info.response_n = 3 + offset;                            
+                            dynamic_response_info.response_n = 3 + offset;
                         }
                     }
                 }

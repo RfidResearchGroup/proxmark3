@@ -299,7 +299,7 @@ static void hrt_print_history(const hrt_travel_card_t *card) {
                       hrt_history_transaction_type_name(history[i].transaction_type));
 
         if (history[i].transaction_type != 0 &&
-            (history[i].group_size > 1 || history[i].price > 0)) {
+                (history[i].group_size > 1 || history[i].price > 0)) {
             if (history[i].group_size > 1) {
                 PrintAndLogEx(SUCCESS, "      Group size.......... " _GREEN_("%d"), history[i].group_size);
             }

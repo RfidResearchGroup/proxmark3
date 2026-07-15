@@ -172,7 +172,7 @@ static int saMifareChkKeys(uint8_t const blockNo, uint8_t const keyType, bool co
 
                 if (i) {
                     --i; // try same key once again
-                }                
+                }
 
                 --selectRetries;
                 if (selectRetries > 0) {
@@ -210,7 +210,7 @@ static int saMifareChkKeys(uint8_t const blockNo, uint8_t const keyType, bool co
                 if (i) {
                     --i; // try same key once again
                 }
-                
+
                 --selectRetries;
                 if (selectRetries > 0) {
                     continue;

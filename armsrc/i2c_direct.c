@@ -203,7 +203,7 @@ int CmdSmartRaw(const uint8_t prepend, const uint8_t *data, int dlen, uint8_t *o
 
     int timeout = 600;
 
-    payload->flags = ( SC_LOG | SC_CONNECT | SC_CLEARLOG );
+    payload->flags = (SC_LOG | SC_CONNECT | SC_CLEARLOG);
     payload->wait_delay = 0;
 
     if (timeout > -1) {

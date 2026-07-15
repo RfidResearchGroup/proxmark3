@@ -2268,7 +2268,7 @@ chunkCycle:
         // Multiblock reads do not allow reading out STs, as such this is the time to save them into the final dump
         memcpy(carddata + ((3 + 4 * sl3Count) * MFBLOCK_SIZE), &STBuffer[1], 1 * MFBLOCK_SIZE);
         // Check if any block is encrypted only
-        ki_pB[1] = 0x01+sl3Count * 2;
+        ki_pB[1] = 0x01 + sl3Count * 2;
         MifareAuth4(&_session, ki_pB, &aesFoundKeys[MF_KEY_B][sl3Count][1], true, false, true, true, verbose, false);
         if (STBuffer[6] & 0xF0) { // At least one bit is set to force enc. only
             MFPReadBlock(&_session, false, false, true, sl3Count * 4, 3, false, true, STBuffer, sizeof(STBuffer), &STRead, mac);
@@ -2336,7 +2336,7 @@ chunkCycle2:
             memcpy(carddata + ((128 + (sl3Count - 31) * 16 - 1) * MFBLOCK_SIZE), &STBuffer[1], 1 * MFBLOCK_SIZE);
             int c = 0;
             // Check if any block is encrypted only
-            ki_pB[1] = 0x01+sl3Count * 2;
+            ki_pB[1] = 0x01 + sl3Count * 2;
             MifareAuth4(&_session, ki_pB, &aesFoundKeys[MF_KEY_B][sl3Count][1], true, false, true, true, verbose, false);
             if (STBuffer[6] & 0xF0) { // At least one bit is set to force enc. only
 chunkBlank2: // Jumping here will start the cycle which will blank out the remaining 5 chunks anyway

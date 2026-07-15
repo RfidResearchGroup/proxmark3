@@ -5092,7 +5092,7 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
                       _YELLOW_("H") ":Hardnested / "
                       _YELLOW_("C") ":statiCnested / "
                       _YELLOW_("A") ":keyA "
-                            " )"
+                      " )"
                      );
         if (sectorscnt == 18) {
             PrintAndLogEx(INFO, "( " _MAGENTA_("*") " ) These sectors used for signature. Lays outside of user memory");
@@ -8556,7 +8556,7 @@ static int CmdHF14AMfView(const char *Cmd) {
         block_cnt = MIFARE_2K_MAXBLOCK;
     } else if (bytes_read == MIFARE_4K_MAX_BYTES) {
         block_cnt = MIFARE_4K_MAXBLOCK;
-    } 
+    }
 
     if (verbose) {
         PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
@@ -9899,8 +9899,8 @@ static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
             PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
         }
         return PM3_SUCCESS;
-    } 
-    
+    }
+
     // Config flag mode
     if (any_flag == false) {
         PrintAndLogEx(FAILED, "Must specify at least one configuration flag, or provide raw data using -d");
@@ -9914,7 +9914,7 @@ static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
     }
     bool changed = false;
 
-    #define APPLY_CONFIG_FLAG(flag, idx, on_val, off_val, name) \
+#define APPLY_CONFIG_FLAG(flag, idx, on_val, off_val, name) \
         if (flag != -1) { \
             uint8_t val = (flag == 1) ? on_val : off_val; \
             if (config[idx] != val) { \
@@ -9927,12 +9927,16 @@ static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
     if (gen1_flag != -1) {
         if (gen1_flag == 1) {
             if (config[0] != 0x7A || config[1] != 0xFF) {
-                config[0] = 0x7A; config[1] = 0xFF; changed = true;
+                config[0] = 0x7A;
+                config[1] = 0xFF;
+                changed = true;
                 PrintAndLogEx(INFO, "Set Gen1 mode to on");
             }
         } else {
             if (config[0] != 0x85 || config[1] != 0x00) {
-                config[0] = 0x85; config[1] = 0x00; changed = true;
+                config[0] = 0x85;
+                config[1] = 0x00;
+                changed = true;
                 PrintAndLogEx(INFO, "Set Gen1 mode to off");
             }
         }
@@ -9944,7 +9948,7 @@ static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
     APPLY_CONFIG_FLAG(magicauth_flag, 11, 0x5A, 0x00, "Magic auth");
     APPLY_CONFIG_FLAG(statenc_flag, 12, 0x5A, 0x00, "Static encrypted nonce");
     APPLY_CONFIG_FLAG(sigsec_flag, 13, 0x5A, 0x00, "Signature sector");
-    #undef APPLY_CONFIG_FLAG
+#undef APPLY_CONFIG_FLAG
 
     if (cl2_flag == 1) {
         PrintAndLogEx(WARNING, "CL2 (7-byte UID) perso enabled via config flag only - this does NOT set a valid 7-byte UID");
@@ -10565,7 +10569,7 @@ static int CmdHF14AGen4_GDM_Wipe(const char *Cmd) {
             } else {
                 memcpy(write_payload.block_data, data_to_write, MFBLOCK_SIZE);
             }
-            
+
             clearCommandBuffer();
             SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&write_payload, sizeof(write_payload));
             WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500);
@@ -10575,14 +10579,14 @@ static int CmdHF14AGen4_GDM_Wipe(const char *Cmd) {
             if (blk == 7) {
                 memcpy(write_payload.block_data, MF_SIGNATURE_KEYS, MFBLOCK_SIZE);
             }
-            
+
             clearCommandBuffer();
             SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&write_payload, sizeof(write_payload));
             WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500);
         }
         PrintAndLogEx(INFO, "Wiping sector %d...", sec);
     }
-    
+
     PrintAndLogEx(SUCCESS, "Wipe completed!");
     return PM3_SUCCESS;
 }

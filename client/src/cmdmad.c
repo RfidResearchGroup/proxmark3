@@ -186,12 +186,12 @@ static int mad_cmd_read(const char *Cmd, const char *cmd_name, bool force_classi
 
     mad_ops_t ops = {0};
     mad_fill_ops(&ops,
-            card_type,
-            madkeylen > 0 ? madkey : NULL,
-            keylen > 0 ? userkey : NULL,
-            keyB ? MF_KEY_B : MF_KEY_A,
-            verbose
-        );
+                 card_type,
+                 madkeylen > 0 ? madkey : NULL,
+                 keylen > 0 ? userkey : NULL,
+                 keyB ? MF_KEY_B : MF_KEY_A,
+                 verbose
+                );
 
     size_t datalen = 0;
     uint16_t aaid = MemBeToUint2byte(aid);
@@ -234,32 +234,32 @@ static int mad_cmd_write(const char *Cmd, const char *cmd_name, bool force_class
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    
+
     uint8_t aid[2] = {0};
     int aidlen = 0;
     CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
-    
+
     uint8_t userkey[AES_KEY_LEN] = {0};
     int keylen = 0;
     CLIGetHexWithReturn(ctx, 3, userkey, &keylen);
-    
+
     bool keyB = arg_get_lit(ctx, 3);
-    
+
     uint8_t madkey[AES_KEY_LEN] = {0};
     int madkeylen = 0;
     CLIGetHexWithReturn(ctx, 4, madkey, &madkeylen);
-    
+
     bool swapmad = arg_get_lit(ctx, 5);
     bool override = arg_get_lit(ctx, 6);
-    
+
     uint8_t hexdata[MIFARE_4K_MAX_BYTES] = {0};
     int hexdatalen = 0;
     CLIGetHexWithReturn(ctx, 7, hexdata, &hexdatalen);
-    
+
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 8), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    
+
     bool verbose = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
 
@@ -296,12 +296,12 @@ static int mad_cmd_write(const char *Cmd, const char *cmd_name, bool force_class
 
     mad_ops_t ops = {0};
     mad_fill_ops(&ops,
-            card_type,
-            madkeylen > 0 ? madkey : NULL,
-            keylen > 0 ? userkey : NULL,
-            keyB ? MF_KEY_B : MF_KEY_A,
-            verbose
-        );
+                 card_type,
+                 madkeylen > 0 ? madkey : NULL,
+                 keylen > 0 ? userkey : NULL,
+                 keyB ? MF_KEY_B : MF_KEY_A,
+                 verbose
+                );
 
     uint16_t aaid = MemBeToUint2byte(aid);
     res = mad_app_write(&ops, aaid, swapmad, override, wdata, wdata_len);
@@ -340,11 +340,11 @@ static int mad_cmd_verify(const char *Cmd, const char *cmd_name, bool force_clas
     CLIGetHexWithReturn(ctx, 2, userkey, &keylen);
 
     bool keyB = arg_get_lit(ctx, 3);
-    
+
     uint8_t madkey[AES_KEY_LEN] = {0};
     int madkeylen = 0;
     CLIGetHexWithReturn(ctx, 4, madkey, &madkeylen);
-    
+
     bool swapmad = arg_get_lit(ctx, 5);
     bool override = arg_get_lit(ctx, 6);
 
@@ -369,7 +369,7 @@ static int mad_cmd_verify(const char *Cmd, const char *cmd_name, bool force_clas
         if (res != PM3_SUCCESS) {
             return res;
         }
-        
+
         edata = dump;
         edata_len = bytes_read;
     }
@@ -393,11 +393,11 @@ static int mad_cmd_verify(const char *Cmd, const char *cmd_name, bool force_clas
 
     mad_ops_t ops = {0};
     mad_fill_ops(&ops, card_type,
-            madkeylen > 0 ? madkey : NULL,
-            keylen > 0 ? userkey : NULL,
-            keyB ? MF_KEY_B : MF_KEY_A,
-            verbose
-        );
+                 madkeylen > 0 ? madkey : NULL,
+                 keylen > 0 ? userkey : NULL,
+                 keyB ? MF_KEY_B : MF_KEY_A,
+                 verbose
+                );
 
     uint16_t aaid = MemBeToUint2byte(aid);
     res = mad_app_verify(&ops, aaid, swapmad, override, edata, edata_len);
@@ -419,10 +419,10 @@ static int CmdMADVerify(const char *Cmd) {
 
 // --- Card-specific wrappers (for hf mf / hf mfp aliases) ---
 
-int CmdMADMFRead(const char *Cmd)    { 
-    return mad_cmd_read(Cmd, "hf mf madread", true, false); 
+int CmdMADMFRead(const char *Cmd)    {
+    return mad_cmd_read(Cmd, "hf mf madread", true, false);
 }
-int CmdMADMFWrite(const char *Cmd)   { 
+int CmdMADMFWrite(const char *Cmd)   {
     return mad_cmd_write(Cmd, "hf mf madwrite", true, false);
 }
 int CmdMADMFVerify(const char *Cmd)  {
@@ -447,7 +447,7 @@ static int CmdMADDecode(const char *Cmd) {
                   "Use Sector  0 == MAD 1\n"
                   "    Sector 16 == MAD 2\n",
                   "mad decode --mad1 <hex>\n"
-            );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -573,7 +573,7 @@ static int CmdMADEncode(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-   
+
     struct arg_str *aid_arg = arg_get_str(ctx, 1);
     int aid_count = aid_arg->count;
 
@@ -639,7 +639,7 @@ static int CmdMADEncode(const char *Cmd) {
     }
 
     s0.mad.info = 0x00;
-    s0.mad.crc = CRC8Mad((uint8_t *)&s0.mad.info, sizeof(mad1_t) - 1);  
+    s0.mad.crc = CRC8Mad((uint8_t *)&s0.mad.info, sizeof(mad1_t) - 1);
     memcpy(s0.trailer.key_a, g_mifare_mad_key, MIFARE_KEY_SIZE);
     memcpy(s0.trailer.access, "\x78\x77\x88", 3);
     s0.trailer.gpb = (have_mad2) ? 0xC2 : 0xC1; // DA=1, MA=1, version
@@ -693,7 +693,7 @@ static int CmdMADTest(const char *Cmd) {
     CLIParserInit(&ctx, "mad test",
                   "Run MAD regression tests. Runs offline with no card needed",
                   "mad test\n"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,

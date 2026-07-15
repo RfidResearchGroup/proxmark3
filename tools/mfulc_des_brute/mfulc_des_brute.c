@@ -78,11 +78,11 @@ static void print_hex(const unsigned char *buf, size_t len) {
 }
 
 static bool valid_lfsr_ulcg(uint64_t x64) {
-    
+
     x64 = __builtin_bswap64(x64);
-    
+
     uint16_t x16 = x64 >> 48;
-    
+
     x16 = x16 << 15 | ((x16 >> 1) ^ ((x16 >> 3 ^ x16 >> 4 ^ x16 >> 6) & 1));
     if (x16 != ((x64 >> 32) & 0xFFFF)) {
         return false;
@@ -140,7 +140,7 @@ static bool valid_lfsr(uint64_t x64, lfsr_t lfsr_type) {
         }
         case LFSR_UNDEF:
         default: {
-           return false;
+            return false;
         }
     }
 }

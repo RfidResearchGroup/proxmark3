@@ -541,7 +541,7 @@ static int b64dec(const char *src, int n, char *dst) {
     int len = 0;
     while (src + 3 < end) {
         int a = b64rev(src[0]), b = b64rev(src[1]), c = b64rev(src[2]),
-                                                    d = b64rev(src[3]);
+            d = b64rev(src[3]);
         dst[len++] = (a << 2) | (b >> 4);
         if (src[2] != '=') {
             dst[len++] = (b << 4) | (c >> 2);

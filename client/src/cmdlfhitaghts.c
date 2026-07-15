@@ -910,7 +910,7 @@ static int CmdLFHitagSWrite(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    
+
 
     int page = arg_get_int_def(ctx, 6, 0);
 

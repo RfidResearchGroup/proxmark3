@@ -525,7 +525,7 @@ Default AES key is 00-00h. Both the data and UID one.
 Data key is 00, UID is 01. Authenticity is 02h
 Auth is 1A[Key ID][CRC] - AF[RndB] - AF[RndA][RndB'] - 00[RndA']
 */
-static int ul3pass_authentication(const uint8_t *key, uint8_t keyno, bool switch_off_field, int retries, uint32_t *auths, uint32_t *ms, bool schann, bool try_auth, bool check_answer, bool use_fastread0, bool get_nonces, uint8_t* nonces, bool reset_field, uint8_t available_pairs, uint8_t* pairs) {
+static int ul3pass_authentication(const uint8_t *key, uint8_t keyno, bool switch_off_field, int retries, uint32_t *auths, uint32_t *ms, bool schann, bool try_auth, bool check_answer, bool use_fastread0, bool get_nonces, uint8_t *nonces, bool reset_field, uint8_t available_pairs, uint8_t *pairs) {
     // keyno < 3: ULAES
     // keyno = 3: ULC
     mful_3passauth_t payload = {
@@ -4488,7 +4488,7 @@ static int mfu_3pass_check_keys(uint8_t key_index, uint8_t firstChunk, uint8_t l
 // Ultralight C Methods
 //-------------------------------------------------------------------------------
 
-static int stat_ulc_nonces(uint16_t num_sampled_nonces, uint64_t* nonces) {
+static int stat_ulc_nonces(uint16_t num_sampled_nonces, uint64_t *nonces) {
     for (uint16_t i = 0; i < num_sampled_nonces; i++) {
         PrintAndLogEx(DEBUG, "Encrypted nonce: %016" PRIx64 "\n", nonces[i]);
     }
@@ -6795,7 +6795,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
             clearCommandBuffer();
             PacketResponseNG resp;
-            SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t*)&payload, sizeof(payload));
+            SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t *)&payload, sizeof(payload));
             if (WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000) == false) {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(WARNING, "\nTear off command failed");
@@ -6917,7 +6917,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
         clearCommandBuffer();
         PacketResponseNG resp;
-        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t*)&payload, sizeof(payload));
+        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t *)&payload, sizeof(payload));
         if (WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000) == false) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "\nTear off command failed");
@@ -7006,7 +7006,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
         clearCommandBuffer();
         PacketResponseNG resp;
-        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t*)&payload, sizeof(payload));
+        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t *)&payload, sizeof(payload));
         if (WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000) == false) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "\nTear off command failed");
@@ -7028,7 +7028,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
         memcpy(payload.value, (uint8_t[]) {0x00, 0x00, 0x00}, sizeof(payload.value));
 
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t*)&payload, sizeof(payload));
+        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t *)&payload, sizeof(payload));
         if (WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000) == false) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "\nTear off command failed");

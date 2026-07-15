@@ -6904,7 +6904,7 @@ static int CmdHF14ADesCreateMFCMapping(const char *Cmd) {
         license_len = saved_mfclicense_len;
         memcpy(license_mac, saved_mfclicense_mac, 8);
     } else {
-        if (CLIParamHexToBuf(mfc_license_arg, license, sizeof (license), &license_len) != 0) {
+        if (CLIParamHexToBuf(mfc_license_arg, license, sizeof(license), &license_len) != 0) {
             goto createmfcmapping_parsing_error;
         }
         int license_mac_len = 0;
@@ -8137,7 +8137,7 @@ static int MfdSelectionApplyCmdParameters(CLIParserContext *ctx, uint8_t aidid, 
                 PrintAndLogEx(ERR, "DF name must be 1-16 bytes, got %d", dfname_len);
                 return PM3_EINVARG;
             }
-            
+
             cmd_select.dfname_present = true;
             cmd_select.dfname_len = dfname_len;
             memcpy(cmd_select.dfname, dfname, dfname_len);
@@ -8164,14 +8164,14 @@ static int MfdSelectionApplyCmdParameters(CLIParserContext *ctx, uint8_t aidid, 
         if (CLIParamHexToBuf(arg_get_str(ctx, aidid), aid_bytes, sizeof(aid_bytes), &aid_len)) {
             return PM3_EINVARG;
         }
-        
+
         if (aid_len > 0) {
-        
+
             if (aid_len != (int)sizeof(aid_bytes)) {
                 PrintAndLogEx(ERR, "AID must be exactly 3 bytes, got %d", aid_len);
                 return PM3_EINVARG;
             }
-        
+
             cmd_select.aid_present = true;
             cmd_select.aid = DesfireAIDByteToUint(aid_bytes);
         }
@@ -9362,7 +9362,7 @@ static int CmdHF14ADesVerifyCert(const char *Cmd) {
         arg_str0(NULL, "fid",       "<hex>", "Certificate file ID (1 byte)"), // 15
         arg_lit0(NULL, "no-auth",   "Read certificate file without authentication"), // 16
         arg_strn(NULL, "ca", "<name|cert|pubkey|path|skip>", 0, MFDES_VERIFYCERT_MAX_CAS,
-        "CA input, or `skip` to skip certificate signature validation. Repeat --ca for multiple entries"), // 17
+                 "CA input, or `skip` to skip certificate signature validation. Repeat --ca for multiple entries"), // 17
         arg_str0(NULL, "keyaid",    "<hex>", "Key application ID (default: cert app)"), // 18
         arg_str0(NULL, "keyisoid",  "<hex>", "Key application ISO DF ID (2 bytes)"), // 19
         arg_str0(NULL, "keydfname", "<hex>", "Key application DF name (default: cert app)"), // 20

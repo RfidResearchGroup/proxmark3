@@ -2335,7 +2335,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
         }
 
         // remove the CRC from the cmd
-        cmd_len -= 2; 
+        cmd_len -= 2;
         recvLen = 0;
 
         tag->expectFast = ((cmd[0] & ISO15_REQ_DATARATE_HIGH) == ISO15_REQ_DATARATE_HIGH);
@@ -2372,7 +2372,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
             if ((cmd[0] & ISO15_REQINV_AFI) == ISO15_REQINV_AFI) {
                 if (cmd[cmdCpt] != tag->afi && cmd[cmdCpt] != 0) {
                     // bad AFI : drop request
-                    continue; 
+                    continue;
                 }
                 cmdCpt++;
             }
@@ -2380,7 +2380,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
             // Check mask
             if (cmdCpt >= cmd_len) {
                 // mask is not present : drop request
-                continue;                
+                continue;
             }
 
             mask_len = cmd[cmdCpt++];
@@ -2388,10 +2388,10 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
             maskCpt = 0;
 
             // Byte comparison
-            while (mask_len >= 8 && cmdCpt < (uint8_t)cmd_len && maskCpt < 8) { 
+            while (mask_len >= 8 && cmdCpt < (uint8_t)cmd_len && maskCpt < 8) {
                 if (cmd[cmdCpt++] != tag->uid[maskCpt++]) {
                     // mask don't match : drop request
-                    error++; 
+                    error++;
                     break;
                 }
                 mask_len -= 8;
@@ -2399,15 +2399,15 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
 
             if (mask_len > 0 && cmdCpt >= cmd_len) {
                 // mask is shorter than declared mask lenght: drop request
-                continue; 
+                continue;
             }
 
             // Bit comparison
-            while (mask_len > 0) { 
+            while (mask_len > 0) {
                 mask_len--;
                 if (((cmd[cmdCpt] >> mask_len) & 1) != ((tag->uid[maskCpt] >> mask_len) & 1)) {
                     // mask don't match : drop request
-                    error++; 
+                    error++;
                     break;
                 }
             }
@@ -2456,7 +2456,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
                         }
 
                         if (cmd[1] == ISO15693_SELECT) {
-                             // we are not anymore the selected TAG
+                            // we are not anymore the selected TAG
                             tag->state = TAG_STATE_READY;
                         }
 
@@ -2478,7 +2478,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
                     Dbprintf("Unaddressed request in quiet state: drop");
                 }
 
-                 // drop unadressed request in quiet state
+                // drop unadressed request in quiet state
                 continue;
             }
 
@@ -2514,7 +2514,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
                         recv[0] = ISO15_NOERROR;
                         recvLen = 1;
                         // ask for lock status
-                        if ((cmd[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION) { 
+                        if ((cmd[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION) {
                             recv[1] = tag->locks[pageNum];
                             recvLen++;
                         }
@@ -2605,7 +2605,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
                     }
                     break;
                 }
-                case ISO15693_LOCK_AFI:{
+                case ISO15693_LOCK_AFI: {
 
                     if (g_dbglevel >= DBG_DEBUG) {
                         Dbprintf("LockAFI cmd");
@@ -2716,8 +2716,8 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
                     recvLen = 3;
                     break;
                 }
-                case ISO15693_SET_PASSWORD:{
-                
+                case ISO15693_SET_PASSWORD: {
+
                     if (g_dbglevel >= DBG_DEBUG) {
                         Dbprintf("SetPassword cmd");
                     }
@@ -2727,9 +2727,9 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
                     }
 
                     if (cmd_len > cmdCpt + 4) {
-                    
+
                         pwdId = cmd[cmdCpt++];
-                    
+
                         if (pwdId == 4) { // Privacy password
                             tag->privacyPasswd[0] = cmd[cmdCpt] ^ tag->random[0];
                             tag->privacyPasswd[1] = cmd[cmdCpt + 1] ^ tag->random[1];
@@ -2737,7 +2737,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
                             tag->privacyPasswd[3] = cmd[cmdCpt + 3] ^ tag->random[1];
                         }
                     }
-                    
+
                     recv[0] = ISO15_NOERROR;
                     recvLen = 1;
                     break;
@@ -2763,7 +2763,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
             }
 
             // Error happened
-            if (error != 0) { 
+            if (error != 0) {
                 recv[0] = ISO15_RES_ERROR;
                 recv[1] = error;
                 recvLen = 2;
@@ -2775,7 +2775,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
         }
 
         // We need to answer
-        if (recvLen > 0) { 
+        if (recvLen > 0) {
             AddCrc15(recv, recvLen);
             recvLen += 2;
             CodeIso15693AsTag(recv, recvLen);
@@ -2783,7 +2783,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
 
             // Not suppoted yet
-            if (tag->expectFsk) { 
+            if (tag->expectFsk) {
                 if (g_dbglevel >= DBG_DEBUG) {
                     Dbprintf("%ERROR: FSK answers are not supported yet");
                 }
