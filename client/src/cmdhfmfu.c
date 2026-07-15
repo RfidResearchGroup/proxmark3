@@ -4899,6 +4899,8 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
     return result;
 }
 
+
+
 static int CmdHF14AMfUAESAuthChk(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu aeschk",
@@ -5021,6 +5023,97 @@ out:
 
     free(keyBlock);
     PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14AMfUAESGetUID(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu aesgetuid",
+                  "Retreives real UID on Mifare Ultralight AES tags when random ID is enabled.\n"
+                  "Uses key index 1 (UIDRetrKey).\n"
+                  "If no key is specified, null key will be tried.\n",
+                  "hf mfu aesgetuid\n"
+                  "hf mfu aesgetuid --key <16 hex bytes>\n"
+                  "hf mfu aesgetuid --key <16 hex bytes> --schann"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "key", "<hex>",   "AES key (16 hex bytes)"),
+        arg_lit0("l", NULL, "Swap entered key's endianness"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have key"),
+        arg_int0("r", "retries", "<n>", "Number of retries (def: 0)"),
+        arg_lit0("n", "nocheck", "Skip checking tag answer correctness"),
+        arg_lit0("0", "read0", "Use fast READ0 (skip anticol)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int ak_len = 0;
+    uint8_t authentication_key[16] = {0};
+    uint8_t *auth_key_ptr = authentication_key;
+    CLIGetHexWithReturn(ctx, 1, authentication_key, &ak_len);
+    int key_index = 1;
+    bool swap_endian = arg_get_lit(ctx, 2);
+    bool keep_field_on = true;
+    bool use_schann = arg_get_lit(ctx, 3);
+    int retries = arg_get_int_def(ctx, 4, 0);
+    bool check_answer = !arg_get_lit(ctx, 5);
+    bool use_fastread0 = arg_get_lit(ctx, 6);
+    CLIParserFree(ctx);
+
+    if (ak_len == 0) {
+        // default to null key
+        ak_len = 16;
+    }
+    if (ak_len != 16) {
+        PrintAndLogEx(WARNING, "Invalid key length");
+        return PM3_EINVARG;
+    }
+
+    if (key_index < 0 || key_index > 2) {
+        PrintAndLogEx(WARNING, "Invalid key index");
+        return PM3_EINVARG;
+    }
+
+    // Swap endianness
+    if (swap_endian && ak_len) {
+        auth_key_ptr = SwapEndian64(authentication_key, ak_len, 16);
+    }
+
+    if (retries < 0 || retries > 10000) {
+        PrintAndLogEx(ERR, "Invalid retries (must be 0..10000)");
+        return PM3_EINVARG;
+    }
+    uint32_t auths = 0;
+    uint32_t ms = 0;
+
+    int result = ul3pass_authentication(auth_key_ptr, key_index, !keep_field_on, retries, &auths, &ms, use_schann, true, check_answer, use_fastread0, false, NULL, false, 0, NULL);
+    if (result == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Authentication with " _YELLOW_("%s") " " _GREEN_("%s") " ( " _GREEN_("ok")" )"
+                      , key_type[key_index]
+                      , sprint_hex_inrow(auth_key_ptr, ak_len)
+                     );
+    } else {
+        PrintAndLogEx(WARNING, "Authentication with " _YELLOW_("%s") " ( " _RED_("fail") " )", key_type[key_index]);
+        return PM3_ESOFT;
+    }
+    if (retries > 0) {
+        PrintAndLogEx(INFO, "Time spent " _YELLOW_("%.1fs"), (float)(ms / 1000.0));
+        PrintAndLogEx(INFO, "Authentication attempts: %u", auths);
+        PrintAndLogEx(INFO, "Speed: %.1f auths/s", (float)(auths * 1000.0 / ms));
+    }
+
+    uint8_t data[8] = {0x00};
+    int status = ul_read(0, data, sizeof(data), use_schann);
+    if (status <= 0) {
+        DropField();
+        PrintAndLogEx(ERR, "Error: tag didn't answer to READ %i", status);
+        return PM3_ESOFT;
+    }
+    uint8_t uid[7] = {data[0], data[1], data[2], data[4], data[5], data[6], data[7]};
+    PrintAndLogEx(SUCCESS, "UID: " _GREEN_("%s"), sprint_hex(uid, 7));
+
     return PM3_SUCCESS;
 }
 
@@ -8137,6 +8230,7 @@ static command_t CommandTable[] = {
     {"desbrute", CmdHF14AMfUCDesBrute,      AlwaysAvailable, "Ultralight-C - 3DES key segment brute force"},
     {"aesauth",  CmdHF14AMfUAESAuth,        IfPm3Iso14443a,  "Ultralight-AES - Authentication"},
     {"aeschk",   CmdHF14AMfUAESAuthChk,     IfPm3Iso14443a,  "Ultralight-AES - Authentication dictionary check"},
+    {"aesgetuid",  CmdHF14AMfUAESGetUID,    IfPm3Iso14443a,  "Ultralight-AES - Get UID when RID in use"},
     {"setkey",   CmdHF14AMfUSetKey,         IfPm3Iso14443a,  "Ultralight C/AES - Set 3DES/AES keys"},
     {"dump",     CmdHF14AMfUDump,           IfPm3Iso14443a,  "Dump MIFARE Ultralight family tag to binary file"},
     {"incr",     CmdHF14AMfUIncr,           IfPm3Iso14443a,  "Increments Ev1/NTAG counter"},
