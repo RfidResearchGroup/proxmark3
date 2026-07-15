@@ -5994,24 +5994,65 @@
             ],
             "usage": "hf mf gchpwd [-hv] [-p <hex>] [-n <hex>]"
         },
-        "hf mf gdmcfg": {
-            "command": "hf mf gdmcfg",
-            "description": "Get configuration data from magic gen4 GDM card.",
+        "hf mf gdmgetblk": {
+            "command": "hf mf gdmgetblk",
+            "description": "Read public block(s) from a GDM card",
             "notes": [
-                "hf mf gdmcfg"
+                "hf mf gdmgetblk --blk 0",
+                "hf mf gdmgetblk --sec 1 --gdm"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, --key <hex> key 6 bytes (only for regular wakeup)",
+                "--blk <dec> block to read",
+                "--sec <dec> sector to read",
+                "-k, --key <hex> key 6 bytes (only for --wupa mode)",
+                "--gdm use gdm alt (20/23) magic wakeup (default)",
                 "--gen1a use gen1a (40/43) magic wakeup",
-                "--gdm use gdm alt (20/23) magic wakeup"
+                "--wupa use regular wakeup (WUPA + magic auth with key)"
             ],
-            "usage": "hf mf gdmcfg [-h] [-k <hex>] [--gen1a] [--gdm]"
+            "usage": "hf mf gdmgetblk [-h] [--blk <dec>] [--sec <dec>] [-k <hex>] [--gdm] [--gen1a] [--wupa]"
+        },
+        "hf mf gdmgetcfg": {
+            "command": "hf mf gdmgetcfg",
+            "description": "Get configuration data from GDM card. By default uses GDM alt wakeup (20/23). Use `--gen1a` or `--wupa` to override.",
+            "notes": [
+                "hf mf gdmgetcfg",
+                "hf mf gdmgetcfg --gen1a",
+                "hf mf gdmgetcfg --wupa -k FFFFFFFFFFFF"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --key <hex> key 6 bytes (only for --wupa mode)",
+                "--gdm use gdm alt (20/23) magic wakeup (default)",
+                "--gen1a use gen1a (40/43) magic wakeup",
+                "--wupa use regular wakeup (WUPA + magic auth with key)"
+            ],
+            "usage": "hf mf gdmgetcfg [-h] [-k <hex>] [--gdm] [--gen1a] [--wupa]"
+        },
+        "hf mf gdmgethidblk": {
+            "command": "hf mf gdmgethidblk",
+            "description": "Read hidden block(s) from a GDM card",
+            "notes": [
+                "hf mf gdmgethidblk --blk 0",
+                "hf mf gdmgethidblk --sec 1 --gdm"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--blk <dec> block to read",
+                "--sec <dec> sector to read",
+                "-k, --key <hex> key 6 bytes (only for --wupa mode)",
+                "--gdm use gdm alt (20/23) magic wakeup (default)",
+                "--gen1a use gen1a (40/43) magic wakeup",
+                "--wupa use regular wakeup (WUPA + magic auth with key)"
+            ],
+            "usage": "hf mf gdmgethidblk [-h] [--blk <dec>] [--sec <dec>] [-k <hex>] [--gdm] [--gen1a] [--wupa]"
         },
         "hf mf gdmparsecfg": {
             "command": "hf mf gdmparsecfg",
-            "description": "Parse configuration data on a magic gen4 GDM card",
+            "description": "Parse configuration data on a GDM card",
             "notes": [
                 "hf mf gdmparsecfg -d 850000000000000000005A5A00000008"
             ],
@@ -6024,35 +6065,125 @@
         },
         "hf mf gdmsetblk": {
             "command": "hf mf gdmsetblk",
-            "description": "Set block data on a magic gen4 GDM card `--force` param is used to override warnings like bad ACL writes. if not specified, it will exit if detected",
+            "description": "Set public block data on a GDM card By default uses GDM alt wakeup (20/23). Use `--gen1a` or `--wupa` to override. `--force` param is used to override warnings like bad ACL writes. if not specified, it will exit if detected",
             "notes": [
-                "hf mf gdmsetblk --blk 1 -d 000102030405060708090a0b0c0d0e0f"
+                "hf mf gdmsetblk --blk 1 -d 000102030405060708090a0b0c0d0e0f",
+                "hf mf gdmsetblk --blk 1 -d 000102030405060708090a0b0c0d0e0f --gen1a",
+                "hf mf gdmsetblk --blk 1 -d 000102030405060708090a0b0c0d0e0f --wupa -k FFFFFFFFFFFF"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--blk <dec> block number",
+                "--blk <dec> public block number",
                 "-d, --data <hex> bytes to write, 16 hex bytes",
-                "-k, --key <hex> key, 6 hex bytes",
+                "-k, --key <hex> key, 6 hex bytes (only for --wupa mode)",
+                "--gdm use gdm alt (20/23) magic wakeup (default)",
+                "--gen1a use gen1a (40/43) magic wakeup",
+                "--wupa use regular wakeup (WUPA + magic auth with key)",
                 "--force override warnings"
             ],
-            "usage": "hf mf gdmsetblk [-h] --blk <dec> [-d <hex>] [-k <hex>] [--force]"
+            "usage": "hf mf gdmsetblk [-h] --blk <dec> -d <hex> [-k <hex>] [--gdm] [--gen1a] [--wupa] [--force]"
         },
         "hf mf gdmsetcfg": {
             "command": "hf mf gdmsetcfg",
-            "description": "Set configuration data on a magic gen4 GDM card",
+            "description": "Set configuration data on a GDM card Can either write raw 16 bytes (-d) or configure specific flags. If flags are provided, it will read the config, update flags, and write it back.",
             "notes": [
-                "hf mf gdmsetcfg -d 850000000000000000005A5A00000008"
+                "hf mf gdmsetcfg -d 850000000000000000005A5A00000008",
+                "hf mf gdmsetcfg --cuid on --gen1 on",
+                "hf mf gdmsetcfg --shadow off --sigsec off --wupa -k FFFFFFFFFFFF"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-d, --data <hex> bytes to write, 16 hex bytes",
+                "-d, --data <hex> raw bytes to write, 16 hex bytes",
                 "-k, --key <hex> key 6 bytes (only for regular wakeup)",
+                "--gdm use gdm alt (20/23) magic wakeup (default)",
                 "--gen1a use gen1a (40/43) magic wakeup",
-                "--gdm use gdm alt (20/23) magic wakeup"
+                "--wupa use regular wakeup (WUPA + magic auth with key)",
+                "--gen1 <on|off> Gen1 mode (7A FF)",
+                "--cuid <on|off> Gen2/CUID mode",
+                "--cl2 <on|off> CL2 mode (7-byte UID) - pair with `hf mf gdmsetuid -u <7-byte>` to set a valid UID",
+                "--shadow <on|off> Shadow mode",
+                "--magicauth <on|off> Magic auth",
+                "--statenc <on|off> Static encrypted nonce",
+                "--sigsec <on|off> Signature sector"
             ],
-            "usage": "hf mf gdmsetcfg [-h] -d <hex> [-k <hex>] [--gen1a] [--gdm]"
+            "usage": "hf mf gdmsetcfg [-h] [-d <hex>] [-k <hex>] [--gdm] [--gen1a] [--wupa] [--gen1 <on|off>] [--cuid <on|off>] [--cl2 <on|off>] [--shadow <on|off>] [--magicauth <on|off>] [--statenc <on|off>] [--sigsec <on|off>]"
+        },
+        "hf mf gdmsethidblk": {
+            "command": "hf mf gdmsethidblk",
+            "description": "Write hidden block data on a GDM card. Hidden blocks 0-7 map to the card's hidden sector area. By default uses GDM alt wakeup (20/23). Use `--gen1a` or `--wupa` to override. `--force` param is used to override warnings like bad BCC or ACL writes. if not specified, it will exit if detected",
+            "notes": [
+                "hf mf gdmsethidblk --blk 0 -d 880494716904EA0C2394510800000000",
+                "hf mf gdmsethidblk --blk 0 -d 880494716904EA0C2394510800000000 --gen1a",
+                "hf mf gdmsethidblk --blk 7 -d FFFFFFFFFFFF07808069FFFFFFFFFFFF --force",
+                "hf mf gdmsethidblk --blk 0 -d 880494716904EA0C2394510800000000 --wupa -k FFFFFFFFFFFF"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--blk <dec> hidden block number (0-7)",
+                "-d, --data <hex> bytes to write, 16 hex bytes",
+                "-k, --key <hex> key 6 bytes (only for --wupa mode)",
+                "--gdm use gdm alt (20/23) magic wakeup (default)",
+                "--gen1a use gen1a (40/43) magic wakeup",
+                "--wupa use regular wakeup (WUPA + magic auth with key)",
+                "--force override warnings"
+            ],
+            "usage": "hf mf gdmsethidblk [-h] --blk <dec> -d <hex> [-k <hex>] [--gdm] [--gen1a] [--wupa] [--force]"
+        },
+        "hf mf gdmsetsig": {
+            "command": "hf mf gdmsetsig",
+            "description": "Set MFC EV1 signature on a GDM card",
+            "notes": [
+                "hf mf gdmsetsig -s <64 hex chars>"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-s, --sig <hex> 32-byte signature (64 hex characters)",
+                "-k, --key <hex> key 6 bytes (only for --wupa mode)",
+                "--gdm use gdm alt (20/23) magic wakeup (default)",
+                "--gen1a use gen1a (40/43) magic wakeup",
+                "--wupa use regular wakeup (WUPA + magic auth with key)"
+            ],
+            "usage": "hf mf gdmsetsig [-h] -s <hex> [-k <hex>] [--gdm] [--gen1a] [--wupa]"
+        },
+        "hf mf gdmsetuid": {
+            "command": "hf mf gdmsetuid",
+            "description": "Set UID on a GDM card",
+            "notes": [
+                "hf mf gdmsetuid -u 01020304",
+                "hf mf gdmsetuid -u 01020304050607 --gen1a"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-u, --uid <hex> UID to set (4 or 7 hex bytes)",
+                "-k, --key <hex> key 6 bytes (only for --wupa mode)",
+                "--gdm use gdm alt (20/23) magic wakeup (default)",
+                "--gen1a use gen1a (40/43) magic wakeup",
+                "--wupa use regular wakeup (WUPA + magic auth with key)",
+                "--f3d use F3 perso mode (writes to hidden block 1 instead of 0)"
+            ],
+            "usage": "hf mf gdmsetuid [-h] -u <hex> [-k <hex>] [--gdm] [--gen1a] [--wupa] [--f3d]"
+        },
+        "hf mf gdmwipe": {
+            "command": "hf mf gdmwipe",
+            "description": "Wipe a GDM card to factory defaults",
+            "notes": [
+                "hf mf gdmwipe --gdm"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --key <hex> key 6 bytes (only for --wupa mode)",
+                "--gdm use gdm alt (20/23) magic wakeup (default)",
+                "--gen1a use gen1a (40/43) magic wakeup",
+                "--wupa use regular wakeup (WUPA + magic auth with key)",
+                "-a, --all wipe 4K card (40 sectors) instead of 1K card (16 sectors)"
+            ],
+            "usage": "hf mf gdmwipe [-ha] [-k <hex>] [--gdm] [--gen1a] [--wupa]"
         },
         "hf mf gen3blk": {
             "command": "hf mf gen3blk",
@@ -6254,7 +6385,7 @@
         },
         "hf mf help": {
             "command": "hf mf help",
-            "description": "help This help list List MIFARE history hardnested Nested attack for hardened MIFARE Classic cards decrypt Decrypt Crypto1 data from sniff or trace keygen Generate key table for some known KDFs acl Decode and print MIFARE Classic access rights bytes mad Checks and prints MAD value Value blocks view Display content from tag dump file ginfo Info about configuration of the card gdmparsecfg Parse config block to card --------------------------------------------------------------------------------------- hf mf list available offline: yes Alias of `trace list -t mf -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List MIFARE history hardnested Nested attack for hardened MIFARE Classic cards decrypt Decrypt Crypto1 data from sniff or trace keygen Generate key table for some known KDFs acl Decode and print MIFARE Classic access rights bytes mad Checks and prints MAD value Value blocks view Display content from tag dump file ginfo Info about configuration of the card gdmparsecfg Parse configuration data for GDM card --------------------------------------------------------------------------------------- hf mf list available offline: yes Alias of `trace list -t mf -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf mf list --frame -> show frame delay times",
                 "hf mf list -1 -> use trace buffer"
@@ -15706,8 +15837,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 881,
+        "commands_extracted": 887,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-07-07T20:45:30+00:00"
+        "extracted_on": "2026-07-13T12:31:24+00:00"
     }
 }
