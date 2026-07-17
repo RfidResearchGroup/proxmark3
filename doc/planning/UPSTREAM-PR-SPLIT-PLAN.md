@@ -20,11 +20,11 @@ Fork `andrew867/proxmark3` `master` integrates all internal cmake/docs/cli fixes
 
 | PR | Branch | Base (local stack) |
 |----|--------|-------------------|
-| 1 | `upstream-pr/1-docs-emv-planning` | `upstream/master` |
-| 2 | `upstream-pr/2-emv-terminal-resources` | PR 1 |
-| 3a | `upstream-pr/3a-emv-terminal-phases` | PR 2 |
-| 3b | `upstream-pr/3b-emv-terminal-host-crypto` | PR 3a |
-| 4 | `upstream-pr/4-emv-terminal-cli` | PR 3b |
+| 1 | `cursor/upstream-pr-1-docs-e836` | `upstream/master` |
+| 2 | `cursor/upstream-pr-2-resources-e836` | PR 1 |
+| 3a | `cursor/upstream-pr-3a-phases-e836` | PR 2 |
+| 3b | `cursor/upstream-pr-3b-host-crypto-e836` | PR 3a |
+| 4 | `cursor/upstream-pr-4-cli-e836` | PR 3b |
 
 Regenerate with:
 

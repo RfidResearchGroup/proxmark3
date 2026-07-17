@@ -239,7 +239,7 @@ PY
 }
 
 echo "=== PR1: docs/emv-terminal-planning ==="
-git checkout -B upstream-pr/1-docs-emv-planning "$UP"
+git checkout -B cursor/upstream-pr-1-docs-e836 "$UP"
 git checkout "$INTEGRATED" -- doc/planning doc/emv_pcap_format.md
 rm -f doc/planning/emv-terminal-emulator/OPERATOR-GUIDE.md
 git checkout "$INTEGRATED" -- README.md
@@ -254,14 +254,14 @@ if insert.strip() not in text:
     text = text.replace(needle, needle + insert, 1)
     cl.write_text(text)
 PY
-git add -A
+git add doc/planning doc/emv_pcap_format.md README.md CHANGELOG.md
 git commit -m "docs(emv): add EMV terminal emulator planning bundle
 
 Planning specs, milestones, and architecture for the lab terminal emulator.
 No executable code. Operator guide and CLI docs land in a follow-up PR."
 
 echo "=== PR2: chore/emv-terminal-resources ==="
-git checkout -B upstream-pr/2-emv-terminal-resources upstream-pr/1-docs-emv-planning
+git checkout -B cursor/upstream-pr-2-resources-e836 cursor/upstream-pr-1-docs-e836
 git checkout "$INTEGRATED" -- \
     client/resources/emv_terminal_profile.json \
     client/resources/host_sim_interac.json \
@@ -278,7 +278,7 @@ Public interoperability test keys and synthetic fixtures only.
 No C source changes."
 
 echo "=== PR3a: feat/emv-terminal-core-phases ==="
-git checkout -B upstream-pr/3a-emv-terminal-phases upstream-pr/2-emv-terminal-resources
+git checkout -B cursor/upstream-pr-3a-phases-e836 cursor/upstream-pr-2-resources-e836
 checkout_terminal_files "${TERMINAL_3A[@]}"
 git checkout "$INTEGRATED" -- \
     client/src/emv/emvcore.c \
@@ -291,6 +291,7 @@ git checkout "$INTEGRATED" -- \
     client/Makefile
 strip_makefile_terminal_3b
 write_cryptotest_terminal 3a
+git checkout "$INTEGRATED" -- client/src/emv/test/terminal_test_util.h
 git add -A
 git commit -m "feat(emv): terminal emulator phase engine and offline unit tests
 
@@ -300,7 +301,7 @@ Full terminal orchestrator, online host path, and crypto lab land in
 follow-up PRs 3b and 4."
 
 echo "=== PR3b: feat/emv-terminal-core-host-crypto ==="
-git checkout -B upstream-pr/3b-emv-terminal-host-crypto upstream-pr/3a-emv-terminal-phases
+git checkout -B cursor/upstream-pr-3b-host-crypto-e836 cursor/upstream-pr-3a-phases-e836
 checkout_terminal_files "${TERMINAL_3B[@]}"
 git checkout "$INTEGRATED" -- \
     client/src/scripting.c \
@@ -318,7 +319,7 @@ crypto lab internals, Lua hooks, and remaining terminal self-tests.
 User-facing emv terminal CLI commands land in PR 4."
 
 echo "=== PR4: feat/emv-terminal-cli ==="
-git checkout -B upstream-pr/4-emv-terminal-cli upstream-pr/3b-emv-terminal-host-crypto
+git checkout -B cursor/upstream-pr-4-cli-e836 cursor/upstream-pr-3b-host-crypto-e836
 git checkout "$INTEGRATED" -- \
     client/src/emv/terminal/emv_term_cmd.c \
     client/src/emv/terminal/emv_term_cmd.h \
@@ -355,4 +356,4 @@ guide, offline test hooks, MinGW-safe strings, cmake source sync, and
 CodeQL tuning for historic EMV interop algorithms."
 
 echo "=== Done. Branches:"
-git branch --list 'upstream-pr/*'
+git branch --list 'cursor/upstream-pr-*'
