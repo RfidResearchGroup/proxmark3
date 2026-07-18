@@ -37,8 +37,13 @@
 #include "dda_test.h"
 #include "cda_test.h"
 #include "terminal_taa_test.h"
+#include "terminal_host_test.h"
 #include "terminal_cvm_test.h"
+#include "terminal_crypto_test.h"
 #include "terminal_exception_test.h"
+#include "terminal_sim_export_test.h"
+#include "terminal_pcap_test.h"
+#include "terminal_replay_test.h"
 #include "crypto/libpcrypto.h"
 #include "emv/emv_roca.h"
 
@@ -108,10 +113,25 @@ int ExecuteCryptoTests(bool verbose, bool ignore_time, bool include_slow_tests) 
     res = exec_terminal_taa_test(verbose);
     if (res) TestFail = true;
 
+    res = exec_terminal_host_test(verbose);
+    if (res) TestFail = true;
+
     res = exec_terminal_cvm_test(verbose);
     if (res) TestFail = true;
 
+    res = exec_terminal_crypto_test(verbose);
+    if (res) TestFail = true;
+
     res = exec_terminal_exception_test(verbose);
+    if (res) TestFail = true;
+
+    res = exec_terminal_sim_export_test(verbose);
+    if (res) TestFail = true;
+
+    res = exec_terminal_pcap_test(verbose);
+    if (res) TestFail = true;
+
+    res = exec_terminal_replay_test(verbose);
     if (res) TestFail = true;
 
     res = exec_crypto_test(verbose, include_slow_tests);

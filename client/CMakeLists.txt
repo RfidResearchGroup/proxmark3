@@ -321,6 +321,14 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/emv/test/cryptotest.c
         ${PM3_ROOT}/client/src/emv/test/dda_test.c
         ${PM3_ROOT}/client/src/emv/test/sda_test.c
+        ${PM3_ROOT}/client/src/emv/test/terminal_cvm_test.c
+        ${PM3_ROOT}/client/src/emv/test/terminal_crypto_test.c
+        ${PM3_ROOT}/client/src/emv/test/terminal_exception_test.c
+        ${PM3_ROOT}/client/src/emv/test/terminal_host_test.c
+        ${PM3_ROOT}/client/src/emv/test/terminal_pcap_test.c
+        ${PM3_ROOT}/client/src/emv/test/terminal_replay_test.c
+        ${PM3_ROOT}/client/src/emv/test/terminal_sim_export_test.c
+        ${PM3_ROOT}/client/src/emv/test/terminal_taa_test.c
         ${PM3_ROOT}/client/src/emv/cmdemv.c
         ${PM3_ROOT}/client/src/emv/crypto.c
         ${PM3_ROOT}/client/src/emv/crypto_polarssl.c
@@ -333,6 +341,46 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/emv/emvcore.c
         ${PM3_ROOT}/client/src/emv/emvjson.c
         ${PM3_ROOT}/client/src/emv/tlv.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_arqc.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_banner.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_capabilities.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_crypto.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_crypto_digest.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_ctx.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_exception.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_golden.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_host.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_host_tcp.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_load.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_lua.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_mock.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_pcap.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_pin_prompt.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_probe.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_profile.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_reader_session.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_redact.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_replay.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_scheme.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_secure.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_session.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_session_view.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_sim_export.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_timing.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_tlv.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_tvr.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_terminal.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_transaction.c
+        ${PM3_ROOT}/client/src/emv/terminal/phase_caa.c
+        ${PM3_ROOT}/client/src/emv/terminal/phase_complete.c
+        ${PM3_ROOT}/client/src/emv/terminal/phase_cvm.c
+        ${PM3_ROOT}/client/src/emv/terminal/phase_init.c
+        ${PM3_ROOT}/client/src/emv/terminal/phase_oda.c
+        ${PM3_ROOT}/client/src/emv/terminal/phase_online.c
+        ${PM3_ROOT}/client/src/emv/terminal/phase_restrict.c
+        ${PM3_ROOT}/client/src/emv/terminal/phase_scripts.c
+        ${PM3_ROOT}/client/src/emv/terminal/phase_taa.c
+        ${PM3_ROOT}/client/src/emv/terminal/phase_trm.c
         ${PM3_ROOT}/client/src/fido/additional_ca.c
         ${PM3_ROOT}/client/src/fido/cbortools.c
         ${PM3_ROOT}/client/src/fido/cose.c
@@ -500,22 +548,6 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/wiegand_formatutils.c
         ${CMAKE_BINARY_DIR}/version_pm3.c
         )
-
-# Enable AVX2 support for x86/x64
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i.86")
-    set_source_files_properties(
-        src/loclass/cipher_bs_avx2.c
-        PROPERTIES COMPILE_OPTIONS "-mavx2"
-    )
-endif()
-
-# Enable AVX 512 support for x64
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
-	set_source_files_properties(
-        src/loclass/cipher_bs_avx512.c
-        PROPERTIES COMPILE_OPTIONS "-mavx512f"
-    )
-endif()
 
 add_custom_command(
     OUTPUT  ${CMAKE_BINARY_DIR}/version_pm3.c
@@ -842,7 +874,7 @@ if ((NOT SKIPQT EQUAL 1) AND Qt6_FOUND)
     target_include_directories(proxmark3 PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
-target_compile_options(proxmark3 PUBLIC -Wall -Werror -Wno-missing-braces -O3)
+target_compile_options(proxmark3 PUBLIC -Wall -Werror -O3)
 if (EMBED_READLINE)
     if (NOT SKIPREADLINE EQUAL 1)
         add_dependencies(proxmark3 ncurses readline)
