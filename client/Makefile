@@ -834,9 +834,37 @@ SRCS =  mifare/aiddesfire.c \
         emv/emvcore.c \
         emv/emvjson.c\
         emv/tlv.c \
+        emv/terminal/emv_term_ctx.c \
+        emv/terminal/emv_term_profile.c \
+        emv/terminal/emv_term_session.c \
+        emv/terminal/emv_term_tvr.c \
+        emv/terminal/emv_term_load.c \
+        emv/terminal/emv_transaction.c \
+        emv/terminal/phase_init.c \
+        emv/terminal/phase_oda.c \
+        emv/terminal/phase_restrict.c \
+        emv/terminal/phase_cvm.c \
+        emv/terminal/phase_trm.c \
+        emv/terminal/phase_taa.c \
+        emv/terminal/phase_caa.c \
+        emv/terminal/phase_complete.c \
+        emv/terminal/emv_term_scheme.c \
+        emv/terminal/emv_term_mock.c \
+        emv/terminal/emv_term_secure.c \
+        emv/terminal/emv_term_pin_prompt.c \
+        emv/terminal/emv_term_exception.c \
+        emv/terminal/emv_term_redact.c \
+        emv/terminal/emv_term_session_view.c \
+        emv/terminal/phase_scripts.c \
+        emv/terminal/emv_term_reader_session.c \
+        emv/terminal/emv_term_pcap.c \
+        emv/terminal/emv_term_tlv.c \
         emv/test/crypto_test.c\
         emv/test/cryptotest.c\
         emv/test/cda_test.c\
+        emv/test/terminal_taa_test.c\
+        emv/test/terminal_cvm_test.c\
+        emv/test/terminal_exception_test.c\
         emv/test/dda_test.c\
         emv/test/sda_test.c\
         fido/additional_ca.c \

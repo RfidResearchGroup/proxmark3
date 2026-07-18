@@ -512,8 +512,65 @@ char *emv_pk_get_ca_pk_rid_file(const char *dirname, const unsigned char *rid) {
 }
 */
 
+#define EMV_PK_EXTRA_MAX 64
+static struct emv_pk *g_extra_capks[EMV_PK_EXTRA_MAX];
+static size_t g_extra_capk_count = 0;
+
+void emv_pk_clear_extra(void) {
+    for (size_t i = 0; i < g_extra_capk_count; i++) {
+        emv_pk_free(g_extra_capks[i]);
+        g_extra_capks[i] = NULL;
+    }
+    g_extra_capk_count = 0;
+}
+
+int emv_pk_load_extra_file(const char *path) {
+    if (!path || !path[0]) {
+        return PM3_EINVARG;
+    }
+    FILE *f = fopen(path, "r");
+    if (!f) {
+        PrintAndLogEx(ERR, "Cannot open CAPK extra file: %s", path);
+        return PM3_ESOFT;
+    }
+
+    int loaded = 0;
+    while (!feof(f)) {
+        char buf[2048];
+        if (fgets(buf, sizeof(buf), f) == NULL) {
+            break;
+        }
+        if (buf[0] == '#' || buf[0] == '\n') {
+            continue;
+        }
+        struct emv_pk *pk = emv_pk_parse_pk(buf, sizeof(buf));
+        if (!pk) {
+            continue;
+        }
+        if (g_extra_capk_count >= EMV_PK_EXTRA_MAX) {
+            emv_pk_free(pk);
+            PrintAndLogEx(WARNING, "CAPK extra table full");
+            break;
+        }
+        g_extra_capks[g_extra_capk_count++] = pk;
+        loaded++;
+    }
+    fclose(f);
+    PrintAndLogEx(INFO, "Loaded %d extra CAPK entries from %s", loaded, path);
+    return loaded > 0 ? PM3_SUCCESS : PM3_ESOFT;
+}
+
 struct emv_pk *emv_pk_get_ca_pk(const unsigned char *rid, unsigned char idx) {
     struct emv_pk *pk = NULL;
+
+    for (size_t i = 0; i < g_extra_capk_count; i++) {
+        struct emv_pk *ep = g_extra_capks[i];
+        if (ep && memcmp(ep->rid, rid, 5) == 0 && ep->index == idx) {
+            if (emv_pk_verify(ep)) {
+                return ep;
+            }
+        }
+    }
 
     /*  if (!pk) {
             char *fname = emv_pk_get_ca_pk_file(NULL, rid, idx);

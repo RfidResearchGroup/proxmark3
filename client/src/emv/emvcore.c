@@ -18,6 +18,7 @@
 
 #include "emvcore.h"
 #include <string.h>
+#include <stdlib.h>
 #include "commonutil.h"     // ARRAYLEN
 #include "comms.h"          // DropField
 #include "cmdparser.h"
@@ -29,6 +30,8 @@
 #include "emv_tags.h"
 #include "emvjson.h"
 #include "util_posix.h"
+#include "util.h"
+#include "cmdparser.h"
 #include "protocols.h"      // ISO7816 APDU return codes
 
 // Got from here. Thanks!
@@ -68,7 +71,8 @@ static const AIDList_t AIDlist [] = {
     { CV_VISA, "A0000000039010" },               // VISA Loyalty
     { CV_VISA, "A000000003999910" },             // VISA Proprietary ATM
     // Visa USA
-    { CV_VISA, "A000000098" },                   // Debit Card
+    { CV_VISA, "A000000098" },                   // Debit Card (partial)
+    { CV_VISA, "A0000000980840" },               // Visa U.S. Common Debit
     { CV_VISA, "A0000000980848" },               // Debit Card
     // Mastercard International
     { CV_MASTERCARD, "A00000000401" },           // MasterCard PayPass
@@ -84,6 +88,7 @@ static const AIDList_t AIDlist [] = {
     { CV_MASTERCARD, "A0000000046000" },         // Cirrus
     { CV_MASTERCARD, "A0000000048002" },         // SecureCode Auth EMV-CAP
     { CV_MASTERCARD, "A0000000049999" },         // MasterCard PayPass
+    { CV_MASTERCARD, "A0000000042203" },         // Mastercard U.S. Common Debit
     { CV_MASTERCARD, "B012345678" },             // Maestro TEST Used for development
     // American Express
     { CV_AMERICANEXPRESS, "A000000025" },
@@ -119,7 +124,7 @@ static const AIDList_t AIDlist [] = {
     { CV_OTHER, "A0000001850002" },              // Post Office Limited - United Kingdom - UK Post Office Account card
     { CV_OTHER, "A0000002281010" },              // Saudi Arabian Monetary Agency (SAMA) - Kingdom of Saudi Arabia - SPAN (M/Chip) - SPAN2 (Saudi Payments Network) - Saudi Arabia domestic credit/debit card (Saudi Arabia Monetary Agency)
     { CV_OTHER, "A0000002282010" },              // Saudi Arabian Monetary Agency (SAMA) - Kingdom of Saudi Arabia - SPAN (VIS) - SPAN2 (Saudi Payments Network) - Saudi Arabia domestic credit/debit card (Saudi Arabia Monetary Agency)
-    { CV_OTHER, "A0000002771010" },              // Interac Association - Canada - INTERAC - Canadian domestic credit/debit card
+    { CV_INTERAC, "A0000002771010" },            // Interac Association - Canada - INTERAC - Canadian domestic debit (Flash)
     { CV_OTHER, "A00000031510100528" },          // Currence Holding/PIN BV - The Netherlands- Currence PuC
     { CV_OTHER, "A0000003156020" },              // Currence Holding/PIN BV - The Netherlands - Chipknip
     { CV_OTHER, "A0000003591010028001" },        // Euro Alliance of Payment Schemes s.c.r.l. (EAPS) - Belgium - Girocard EAPS - ZKA (Germany)
@@ -130,7 +135,7 @@ static const AIDList_t AIDlist [] = {
     { CV_OTHER, "A0000005241010" },              // RuPay - India - RuPay - RuPay (India)
     { CV_OTHER, "A0000006723010" },              // TROY - Turkey - TROY chip credit card - Turkey's Payment Method
     { CV_OTHER, "A0000006723020" },              // TROY - Turkey - TROY chip debit card - Turkey's Payment Method
-    { CV_OTHER, "A0000007705850" },              // Indian Oil Corporation Limited - India - XTRAPOWER Fleet Card Program - Indian Oil’s Pre Paid Program
+    { CV_OTHER, "A0000007705850" },              // Indian Oil Corporation Limited - India - XTRAPOWER Fleet Card Program - Indian Oil's Pre Paid Program
     { CV_OTHER, "D27600002545500100" },          // ZKA - Germany - Girocard - ZKA Girocard (Geldkarte) (Germany)
     { CV_OTHER, "D4100000030001" },              // KS X 6923/6924 (T-Money, South Korea and Snapper+, Wellington, New Zealand)
     { CV_OTHER, "D5280050218002" },              // The Netherlands - ? - (Netherlands)
@@ -272,6 +277,106 @@ struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2) {
     param_gethex_to_eol(dCVVHex, 0, dCVV, sizeof(dCVV), &dCVVlen);
 
     return tlvdb_fixed(0x02, dCVVlen, dCVV);
+}
+
+size_t EMVSelectAIDCount(struct tlvdb *tlv) {
+    size_t count = 0;
+    if (!tlv) {
+        return 0;
+    }
+    for (struct tlvdb *ttmp = tlvdb_find(tlv, 0x6f); ttmp; ttmp = tlvdb_find_next(ttmp, 0x6f)) {
+        if (tlvdb_get_inchild(ttmp, 0x84, NULL)) {
+            count++;
+        }
+    }
+    return count;
+}
+
+static int emv_contactless_poll_once(bool verbose) {
+    iso14a_card_select_t card;
+    int res = SelectCard14443A_4(false, verbose, &card);
+    if (res == PM3_SUCCESS) {
+        if (verbose) {
+            PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
+        }
+        return PM3_SUCCESS;
+    }
+
+    res = select_card_14443b_4(false, NULL);
+    if (res == PM3_SUCCESS && verbose) {
+        PrintAndLogEx(SUCCESS, "ISO14443-B card selected");
+    }
+    return res;
+}
+
+int EMVPrepareContactlessEx(Iso7816CommandChannel channel, bool force_reselect, bool wait_for_card) {
+    if (channel != CC_CONTACTLESS || !IfPm3Present()) {
+        return PM3_SUCCESS;
+    }
+
+    if (!force_reselect && !wait_for_card && GetISODEPState() != ISODEP_INACTIVE) {
+        return PM3_SUCCESS;
+    }
+
+    bool announced = false;
+    do {
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(WARNING, "Card polling aborted");
+            return PM3_ERFTRANS;
+        }
+
+        DropFieldEx(channel);
+
+        if (!announced) {
+            if (wait_for_card) {
+                PrintAndLogEx(INFO, "Waiting for card - present to antenna (press Enter to cancel)...");
+            } else {
+                PrintAndLogEx(INFO, "Activating HF field - present card to antenna...");
+            }
+            announced = true;
+        }
+
+        int res = emv_contactless_poll_once(!wait_for_card);
+        if (res == PM3_SUCCESS) {
+            return PM3_SUCCESS;
+        }
+
+        if (wait_for_card) {
+            msleep(150);
+        }
+    } while (wait_for_card);
+
+    PrintAndLogEx(WARNING, "No contactless card detected. Hold the card on the antenna and retry.");
+    PrintAndLogEx(HINT, "Hint: verify with `hf 14a reader -w` or `emv search` (waits by default)");
+    return PM3_ERFTRANS;
+}
+
+int EMVPrepareContactless(Iso7816CommandChannel channel, bool force_reselect) {
+    return EMVPrepareContactlessEx(channel, force_reselect, false);
+}
+
+int EMVContactlessReselect(Iso7816CommandChannel channel, uint32_t poll_ms) {
+    if (channel != CC_CONTACTLESS || !IfPm3Present()) {
+        return PM3_SUCCESS;
+    }
+
+    while (true) {
+        if (kbd_enter_pressed()) {
+            return PM3_ERFTRANS;
+        }
+
+        DropFieldEx(channel);
+
+        if (emv_contactless_poll_once(false) == PM3_SUCCESS) {
+            return PM3_SUCCESS;
+        }
+
+        if (poll_ms) {
+            msleep(poll_ms);
+        } else {
+            msleep(1);
+        }
+    }
 }
 
 static int EMVExchangeEx(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, sAPDU_t apdu, bool IncludeLe, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
@@ -483,15 +588,19 @@ int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveField
     int retrycnt = 0;
     for (int i = 0; i < ARRAYLEN(AIDlist); i ++) {
 
-        if (kbd_enter_pressed()) {
-            PrintAndLogEx(WARNING, "\naborted via keyboard!");
-            break;
-        }
-
         param_gethex_to_eol(AIDlist[i].aid, 0, aidbuf, sizeof(aidbuf), &aidlen);
         int res = EMVSelect(channel, (i == 0) ? ActivateField : false, true, aidbuf, aidlen, data, sizeof(data), &datalen, &sw, tlv);
         // retry if error and not returned sw error
         if (res && res != 5) {
+            if (res == PM3_EIO) {
+                if (verbose) {
+                    PrintAndLogEx(WARNING, "HF field inactive - activate field and present a card before searching");
+                }
+                if (LeaveFieldON == false) {
+                    DropFieldEx(channel);
+                }
+                return 1;
+            }
             if (++retrycnt < 3) {
                 i--;
             } else {
@@ -534,43 +643,65 @@ int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveField
     return 0;
 }
 
-int EMVSelectApplication(struct tlvdb *tlv, uint8_t *AID, size_t *AIDlen) {
-    // check priority. 0x00 - highest
-    int prio = 0xffff;
+typedef struct {
+    uint8_t aid[APDU_AID_LEN];
+    size_t aid_len;
+    int priority;
+} emv_ppse_app_t;
 
-    *AIDlen = 0;
+static int emv_ppse_app_cmp(const void *a, const void *b) {
+    const emv_ppse_app_t *aa = a;
+    const emv_ppse_app_t *bb = b;
+    if (aa->priority != bb->priority) {
+        return (aa->priority < bb->priority) ? -1 : 1;
+    }
+    return 0;
+}
 
-    struct tlvdb *ttmp = tlvdb_find(tlv, 0x6f);
-    if (!ttmp)
-        return 1;
-
-    while (ttmp) {
-        const struct tlv *tgAID = tlvdb_get_inchild(ttmp, 0x84, NULL);
-        const struct tlv *tgPrio = tlvdb_get_inchild(ttmp, 0x87, NULL);
-
-        if (!tgAID)
-            break;
-
-        if (tgPrio) {
-            int pt = bytes_to_num((uint8_t *)tgPrio->value, (tgPrio->len < 2) ? tgPrio->len : 2);
-            if (pt < prio) {
-                prio = pt;
-
-                memcpy(AID, tgAID->value, tgAID->len);
-                *AIDlen = tgAID->len;
-            }
-        } else {
-            // takes the first application from list wo priority
-            if (!*AIDlen) {
-                memcpy(AID, tgAID->value, tgAID->len);
-                *AIDlen = tgAID->len;
-            }
-        }
-
-        ttmp = tlvdb_find_next(ttmp, 0x6f);
+static size_t emv_collect_ppse_apps(struct tlvdb *tlv, emv_ppse_app_t *apps, size_t max_apps) {
+    size_t count = 0;
+    if (!tlv || !apps || !max_apps) {
+        return 0;
     }
 
+    for (struct tlvdb *ttmp = tlvdb_find(tlv, 0x6f); ttmp && count < max_apps; ttmp = tlvdb_find_next(ttmp, 0x6f)) {
+        const struct tlv *tgAID = tlvdb_get_inchild(ttmp, 0x84, NULL);
+        if (!tgAID || !tgAID->len || tgAID->len > APDU_AID_LEN) {
+            continue;
+        }
+        const struct tlv *tgPrio = tlvdb_get_inchild(ttmp, 0x87, NULL);
+        int pt = 0xffff;
+        if (tgPrio && tgPrio->len) {
+            pt = (int)bytes_to_num((uint8_t *)tgPrio->value, (tgPrio->len < 2) ? tgPrio->len : 2);
+        }
+        memcpy(apps[count].aid, tgAID->value, tgAID->len);
+        apps[count].aid_len = tgAID->len;
+        apps[count].priority = pt;
+        count++;
+    }
+
+    if (count > 1) {
+        qsort(apps, count, sizeof(emv_ppse_app_t), emv_ppse_app_cmp);
+    }
+    return count;
+}
+
+int EMVSelectApplicationByIndex(struct tlvdb *tlv, size_t index, uint8_t *AID, size_t *AIDlen) {
+    emv_ppse_app_t apps[8] = {0};
+    size_t count = emv_collect_ppse_apps(tlv, apps, ARRAYLEN(apps));
+    if (!AID || !AIDlen || index >= count) {
+        if (AIDlen) {
+            *AIDlen = 0;
+        }
+        return 1;
+    }
+    memcpy(AID, apps[index].aid, apps[index].aid_len);
+    *AIDlen = apps[index].aid_len;
     return 0;
+}
+
+int EMVSelectApplication(struct tlvdb *tlv, uint8_t *AID, size_t *AIDlen) {
+    return EMVSelectApplicationByIndex(tlv, 0, AID, AIDlen);
 }
 
 int EMVGPO(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t *PDOL, size_t PDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
@@ -591,7 +722,12 @@ int EMVGetData(Iso7816CommandChannel channel, bool LeaveFieldON, uint16_t foo, u
 }
 
 int EMVAC(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t RefControl, uint8_t *CDOL, size_t CDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
-    return EMVExchange(channel, LeaveFieldON, (sAPDU_t) {0x80, 0xae, RefControl, 0x00, CDOLLen, CDOL}, Result, MaxResultLen, ResultLen, sw, tlv);
+    int res = EMVExchangeEx(channel, false, LeaveFieldON, (sAPDU_t) {0x80, 0xae, RefControl, 0x00, CDOLLen, CDOL}, true, Result, MaxResultLen, ResultLen, sw, tlv);
+    if (*sw == 0x6700 || *sw == 0x6f00) {
+        PrintAndLogEx(INFO, ">>> trying to reissue GEN AC without Le...");
+        res = EMVExchangeEx(channel, false, LeaveFieldON, (sAPDU_t) {0x80, 0xae, RefControl, 0x00, CDOLLen, CDOL}, false, Result, MaxResultLen, ResultLen, sw, tlv);
+    }
+    return res;
 }
 
 int EMVGenerateChallenge(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
@@ -605,6 +741,10 @@ int EMVGenerateChallenge(Iso7816CommandChannel channel, bool LeaveFieldON, uint8
 
 int EMVInternalAuthenticate(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t *DDOL, size_t DDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
     return EMVExchangeEx(channel, false, LeaveFieldON, (sAPDU_t) {0x00, 0x88, 0x00, 0x00, DDOLLen, DDOL}, true, Result, MaxResultLen, ResultLen, sw, tlv);
+}
+
+int EMVExternalAuthenticate(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t *AuthData, size_t AuthDataLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
+    return EMVExchange(channel, LeaveFieldON, (sAPDU_t) {0x00, 0x82, 0x00, 0x00, (uint8_t)AuthDataLen, AuthData}, Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
 int MSCComputeCryptoChecksum(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t *UDOL, uint8_t UDOLlen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {

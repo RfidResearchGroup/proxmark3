@@ -46,6 +46,7 @@ enum CardPSVendor {
     CV_CB,
     CV_SWITCH,
     CV_DINERS,
+    CV_INTERAC,
     CV_OTHER,
 };
 enum CardPSVendor GetCardPSVendor(uint8_t *AID, size_t AIDlen);
@@ -58,6 +59,12 @@ void TLVPrintAIDlistFromSelectTLV(struct tlvdb *tlv);
 struct tlvdb *GetPANFromTrack2(const struct tlv *track2);
 struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2);
 
+// Ensure ISO-DEP session is active on contactless (no-op on contact / if already active unless force_reselect).
+int EMVPrepareContactless(Iso7816CommandChannel channel, bool force_reselect);
+int EMVPrepareContactlessEx(Iso7816CommandChannel channel, bool force_reselect, bool wait_for_card);
+int EMVContactlessReselect(Iso7816CommandChannel channel, uint32_t poll_ms);
+size_t EMVSelectAIDCount(struct tlvdb *tlv);
+
 // exchange
 int EMVExchange(Iso7816CommandChannel channel, bool LeaveFieldON, sAPDU_t apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 
@@ -68,6 +75,7 @@ int EMVSelectPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFi
 int EMVSelect(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t *AID, size_t AIDLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 // select application
 int EMVSelectApplication(struct tlvdb *tlv, uint8_t *AID, size_t *AIDlen);
+int EMVSelectApplicationByIndex(struct tlvdb *tlv, size_t index, uint8_t *AID, size_t *AIDlen);
 // Get Processing Options
 int EMVGPO(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t *PDOL, size_t PDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 int EMVReadRecord(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t SFI, uint8_t SFIrec, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
@@ -79,6 +87,7 @@ int EMVGenerateChallenge(Iso7816CommandChannel channel, bool LeaveFieldON, uint8
 int EMVAC(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t RefControl, uint8_t *CDOL, size_t CDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 // DDA
 int EMVInternalAuthenticate(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t *DDOL, size_t DDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
+int EMVExternalAuthenticate(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t *AuthData, size_t AuthDataLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 // Mastercard
 int MSCComputeCryptoChecksum(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t *UDOL, uint8_t UDOLlen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 // Auth

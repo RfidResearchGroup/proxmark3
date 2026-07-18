@@ -49,5 +49,8 @@ int JsonLoadStr(json_t *root, const char *path, char *value);
 int JsonLoadBufAsHex(json_t *elm, const char *path, uint8_t *data, size_t maxbufferlen, size_t *datalen);
 
 bool ParamLoadFromJson(struct tlvdb *tlv);
+bool ParamLoadFromJsonFile(struct tlvdb *tlv, const char *filename);
+
+int JsonLoadApplicationData(json_t *root, struct tlvdb *tlv);
 
 #endif
