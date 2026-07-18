@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "channel": "contactless",
+  "aid": "A0000002771010",
+  "description": "TEMPLATE — replace with recorded trace; do not commit real card data",
+  "steps": [
+    {
+      "name": "SELECT",
+      "capdu": "00A4040007A0000002771010",
+      "rapdu": "6F000000",
+      "sw": "9000",
+      "comment": "Replace rapdu with anonymized FCI"
+    }
+  ]
+}

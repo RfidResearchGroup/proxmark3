@@ -1,0 +1,14 @@
+{
+  "File": { "Created": "proxmark3 emv terminal golden", "Version": "1" },
+  "Outcome": "online_required",
+  "Phases": [
+    { "id": 0, "name": "init", "result": 0 },
+    { "id": 1, "name": "oda", "result": 0 },
+    { "id": 6, "name": "caa", "result": 0 }
+  ],
+  "Cryptogram": {
+    "Type": "ARQC",
+    "ATC": "0042"
+  },
+  "_comment": "TEMPLATE — expand when implementing golden runner"
+}

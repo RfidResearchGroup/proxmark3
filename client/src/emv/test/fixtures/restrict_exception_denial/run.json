@@ -1,0 +1,5 @@
+{
+  "mode": "phases",
+  "phases": ["restrict", "taa"],
+  "exception_file": "exception.txt"
+}
