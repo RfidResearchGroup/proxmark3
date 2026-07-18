@@ -57,42 +57,45 @@ graph LR
 
 | # | Title (suggested) | Build impact | Reviewer focus |
 |---|-------------------|--------------|----------------|
-| **1** | `docs(emv): EMV terminal emulator planning bundle` | None (markdown only) | Specs, legal disclaimer, no code |
+| **1** | `docs(emv): terminal operator guide and usage notes` | None (markdown only) | **How to use**, legal disclaimer, RDV4 3.3 V — not implementation plans |
 | **2** | `chore(emv): terminal profiles, scheme JSON, golden fixtures` | None (data + `.gitignore`) | Public test keys only, no real PANs |
 | **3a** | `feat(emv): terminal emulator phase engine and offline unit tests` | Phase pipeline, session/profile, mock; `make client` + `emv test` (taa/cvm/exception) | ISO EMV offline logic |
 | **3b** | `feat(emv): host simulator, golden runner, crypto playground core` | Orchestrator, online phase, host/TCP, crypto lab internals, Lua, remaining self-tests | Host sim + crypto internals |
-| **4** | `feat(emv): terminal CLI, operator docs, and CI fixes` | `emv terminal` tree, `pm3_tests.sh`, workflows, CodeQL | User-facing commands + CI |
+| **4** | `feat(emv): terminal CLI and CI fixes` | `emv terminal` tree, `pm3_tests.sh`, workflows, CodeQL | User-facing commands + CI |
 
 Map to buckets:
 
 | Bucket | Upstream PR |
 |--------|-------------|
-| Planning specs | **PR 1** |
+| **How-to-use / operator docs** | **PR 1** (`OPERATOR-GUIDE.md`, `emv_notes` terminal section) |
 | Resources / fixtures JSON | **PR 2** |
 | Phase engine + offline phases | **PR 3a** |
 | Host sim, golden, crypto internals, orchestrator | **PR 3b** |
-| CLI, operator guide, CI, cp850 strings | **PR 4** |
+| CLI + CI | **PR 4** |
+
+**Do not** put `IMPLEMENTATION-PLAN*`, `SPEC-*`, `MILESTONES*`, feature catalogs, or other internal planning specs in PR 1 — those stay on the fork (or a later optional docs PR if maintainers want them).
 
 ---
 
-## PR 1 — Documentation only
+## PR 1 — Usage documentation only
 
-**Branch:** `upstream-pr/1-docs-emv-planning` (upstream name: `docs/emv-terminal-planning`)
+**Branch:** `cursor/upstream-pr-1-docs-e836`  
+**Upstream:** [RRG #3417](https://github.com/RfidResearchGroup/proxmark3/pull/3417)
 
 ### Include
 
 ```
-doc/planning/emv-terminal-emulator/   (all planning specs; no OPERATOR-GUIDE.md)
-doc/planning/PR-SPLIT-PLAN.md
-doc/planning/UPSTREAM-PR-SPLIT-PLAN.md
+doc/planning/emv-terminal-emulator/OPERATOR-GUIDE.md
+doc/planning/emv-terminal-emulator/README.md   # short usage pointer only
+doc/emv_notes.md                               # emv terminal command overview
 doc/emv_pcap_format.md
-tools/create_upstream_pr_branches.sh
+README.md / CHANGELOG.md                       # one-line links
 ```
 
-### Exclude (defer to PR 4)
+### Exclude
 
-- `OPERATOR-GUIDE.md`
-- `doc/emv_notes.md` terminal sections
+- All planning/implementation specs (`SPEC-*`, `IMPLEMENTATION-PLAN*`, `MILESTONES*`, …)
+- Any `.c` / `.h` / resources JSON
 
 ### Exclude (fork-only)
 

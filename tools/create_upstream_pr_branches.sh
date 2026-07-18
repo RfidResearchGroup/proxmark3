@@ -238,27 +238,71 @@ p.write_text(text)
 PY
 }
 
-echo "=== PR1: docs/emv-terminal-planning ==="
+echo "=== PR1: docs usage (operator guide) ==="
 git checkout -B cursor/upstream-pr-1-docs-e836 "$UP"
-git checkout "$INTEGRATED" -- doc/planning doc/emv_pcap_format.md
-rm -f doc/planning/emv-terminal-emulator/OPERATOR-GUIDE.md
-git checkout "$INTEGRATED" -- README.md
-# Docs-only CHANGELOG line
+git checkout "$INTEGRATED" -- \
+    doc/planning/emv-terminal-emulator/OPERATOR-GUIDE.md \
+    doc/emv_pcap_format.md \
+    doc/emv_notes.md
+mkdir -p doc/planning/emv-terminal-emulator
 python3 <<'PY'
 from pathlib import Path
-cl = Path("CHANGELOG.md")
-text = cl.read_text()
-needle = "## [unreleased][unreleased]\n"
-insert = "- Added EMV terminal emulator planning documentation under `doc/planning/emv-terminal-emulator/` (lab/research use only; not a certified payment terminal).\n"
-if insert.strip() not in text:
-    text = text.replace(needle, needle + insert, 1)
-    cl.write_text(text)
-PY
-git add doc/planning doc/emv_pcap_format.md README.md CHANGELOG.md
-git commit -m "docs(emv): add EMV terminal emulator planning bundle
+# Slim usage README — not the implementation planning bundle
+Path("doc/planning/emv-terminal-emulator/README.md").write_text(
+    """# EMV terminal emulator (lab use)
 
-Planning specs, milestones, and architecture for the lab terminal emulator.
-No executable code. Operator guide and CLI docs land in a follow-up PR."
+> **FOR RESEARCH AND LAB USE ONLY — NO WARRANTY — PROVIDED AS-IS**
+>
+> This is **not** a certified payment terminal. Use only with authorized EMV test cards.
+
+## How to use
+
+See **[OPERATOR-GUIDE.md](./OPERATOR-GUIDE.md)** for day-to-day commands, workflows, RDV4 3.3 V notes, and safety acknowledgments.
+
+Also:
+
+- Command overview: [doc/emv_notes.md](../../emv_notes.md) (`emv terminal` section)
+- PCAP export notes: [doc/emv_pcap_format.md](../../emv_pcap_format.md)
+
+```bash
+./pm3 --offline -c 'emv terminal capabilities'
+./pm3 --offline -c 'emv terminal help'
+```
+"""
+)
+# Drop planning-spec cross-links that are not in this PR
+op = Path("doc/planning/emv-terminal-emulator/OPERATOR-GUIDE.md")
+text = op.read_text()
+text = text.replace(
+    "See [SPEC-security-privacy.md](./SPEC-security-privacy.md) for PIN handling, redaction, and threat model.",
+    "PIN handling: use `--pin` / `EMV_TEST_PIN` for automation; interactive prompt on TTY only. "
+    "Session export redacts PAN/crypto by default (`--no-redact` is lab-only).",
+)
+op.write_text(text)
+readme = Path("README.md")
+rt = readme.read_text()
+if "OPERATOR-GUIDE" not in rt and "Notes on EMV" in rt:
+    rt = rt.replace(
+        "[Notes on EMV](/doc/emv_notes.md)",
+        "[Notes on EMV](/doc/emv_notes.md) · [EMV terminal operator guide](/doc/planning/emv-terminal-emulator/OPERATOR-GUIDE.md)",
+        1,
+    )
+    readme.write_text(rt)
+cl = Path("CHANGELOG.md")
+ct = cl.read_text()
+needle = "## [unreleased][unreleased]\n"
+insert = "- Added EMV terminal emulator operator guide (lab/research use only; not a certified payment terminal).\n"
+if "EMV terminal emulator operator guide" not in ct:
+    cl.write_text(ct.replace(needle, needle + insert, 1))
+PY
+git add doc/planning/emv-terminal-emulator/OPERATOR-GUIDE.md \
+    doc/planning/emv-terminal-emulator/README.md \
+    doc/emv_pcap_format.md doc/emv_notes.md README.md CHANGELOG.md
+git commit -m "docs(emv): add terminal operator guide and usage notes
+
+How-to-use documentation for the lab EMV terminal emulator:
+operator workflows, command overview, PCAP notes, and RDV4 3.3 V
+hardware caveat. No implementation planning specs in this PR."
 
 echo "=== PR2: chore/emv-terminal-resources ==="
 git checkout -B cursor/upstream-pr-2-resources-e836 cursor/upstream-pr-1-docs-e836
@@ -327,8 +371,6 @@ git checkout "$INTEGRATED" -- \
     client/src/emv/terminal/emv_term_crypto_cmd.h \
     client/src/emv/cmdemv.c \
     client/src/proxmark3.c \
-    doc/planning/emv-terminal-emulator/OPERATOR-GUIDE.md \
-    doc/emv_notes.md \
     CHANGELOG.md \
     README.md \
     tools/pm3_tests.sh \
