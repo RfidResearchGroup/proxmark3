@@ -196,9 +196,9 @@ make client/check CC=gcc CXX=g++ LD=g++
 
 ---
 
-## PR 4 — CLI, user docs, CI, bugfixes
+## PR 4 — CLI + CI (usage docs already in PR 1)
 
-**Branch:** `upstream-pr/4-emv-terminal-cli`
+**Branch:** `cursor/upstream-pr-4-cli-e836`
 
 ### Include
 
@@ -208,8 +208,7 @@ client/src/emv/cmdemv.c
 client/src/proxmark3.c, client/src/ui.h          # --stream / stdout_pipe
 client/Makefile, client/CMakeLists.txt, client/experimental_lib/CMakeLists.txt
 
-doc/planning/emv-terminal-emulator/OPERATOR-GUIDE.md
-doc/emv_notes.md, README.md, CHANGELOG.md
+README.md, CHANGELOG.md                         # feature bullets (operator guide is PR 1)
 tools/pm3_tests.sh
 
 .github/workflows/{ubuntu,macos,windows}.yml
