@@ -55,6 +55,7 @@ typedef struct {
     qtWindow_t overlay;
     bool overlay_sliders;
     bool incognito;
+    bool stdout_pipe;
     char *defaultPaths[spItemCount]; // Array should allow loop searching for files
     clientdebugLevel_t client_debug_level;
     barMode_t bar_mode;

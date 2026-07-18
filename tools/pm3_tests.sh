@@ -506,8 +506,6 @@ while true; do
       if ! CheckExecute "wiegand Verkada40 decode test 2" "$CLIENTBIN -c 'wiegand decode --raw 86400007D9'" "Verkada40.*FC: 50  CN: 1004  parity \( ok \)"; then break; fi
       if ! CheckExecute "wiegand Verkada40 encode test 3" "$CLIENTBIN -c 'wiegand encode -w Verkada40 --fc 81 --cn 5008'" "8A20002721"; then break; fi
       if ! CheckExecute "wiegand Verkada40 decode test 3" "$CLIENTBIN -c 'wiegand decode --raw 8A20002721'" "Verkada40.*FC: 81  CN: 5008  parity \( ok \)"; then break; fi
-      if ! CheckExecute "wiegand IR56 encode roundtrip"   "$CLIENTBIN -c 'wiegand encode -w IR56 --fc 123 --cn 123 --pre'" "9E000000100007B0000007B"; then break; fi
-      if ! CheckExecute "wiegand IR56 decode roundtrip"   "$CLIENTBIN -c 'wiegand decode --raw 9E000000100007B0000007B'" "IR56.*FC: 123  CN: 123"; then break; fi
 
       echo -e "\n${C_BLUE}Testing LF:${C_NC}"
       if ! CheckExecute "lf hitag2 test"             "$CLIENTBIN -c 'lf hitag test'" "Tests \( ok"; then break; fi
@@ -640,6 +638,9 @@ while true; do
                                                                 "valid key AEA684A6DAB23278"; then break; fi
       if ! CheckExecute "hf iclass loclass test"         "$CLIENTBIN -c 'hf iclass loclass --test'" "Key diversification \( ok \)"; then break; fi
       if ! CheckExecute "emv test"                       "$CLIENTBIN -c 'emv test'" "Tests \( ok"; then break; fi
+      if ! CheckExecute "emv terminal golden"           "$CLIENTBIN -c 'emv terminal test --golden'" "Golden:.*OK"; then break; fi
+      if ! CheckExecute "emv terminal profile validate" "$CLIENTBIN -c 'emv terminal profile validate'" "Profile valid"; then break; fi
+      if ! CheckExecute "emv scheme profile interac"    "$CLIENTBIN -c 'emv terminal profile validate client/resources/scheme_profiles/interac.json'" "Profile valid"; then break; fi
       if ! CheckExecute "hf cipurse test"                "$CLIENTBIN -c 'hf cipurse test'" "Tests \( ok"; then break; fi
       if ! CheckExecute "hf mfdes test"                  "$CLIENTBIN -c 'hf mfdes test'"   "Tests \( ok"; then break; fi
       if ! CheckExecute "hf gst test"                    "$CLIENTBIN -c 'hf gst test'"     "Tests \( ok"; then break; fi

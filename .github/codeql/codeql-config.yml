@@ -1,0 +1,33 @@
+# CodeQL configuration for Proxmark3 (Iceman fork)
+#
+# EMV terminal emulator code intentionally implements ISO 8583 / EMV retail
+# cryptography (3DES retail MAC, PIN blocks, etc.) for lab interoperability with
+# test cards — not for production payment processing. Planning docs and lab key
+# JSON are excluded from analysis to reduce false positives.
+
+name: "Proxmark3 CodeQL"
+
+paths-ignore:
+  # Planning / spec markdown (no executable code)
+  - doc/planning
+  # Lab test keys and profiles (public interoperability test pack, not live secrets)
+  - client/resources/interac_test_keys.json
+  - client/resources/host_sim_interac.json
+  - client/resources/emv_terminal_profile_interac.json
+  - client/resources/terminal_aid_candidates.json
+  - client/resources/exception_file_sample.txt
+  # Golden fixtures (synthetic / template JSON)
+  - client/src/emv/test/fixtures
+
+query-filters:
+  # Historic EMV / ISO 9797-1 Alg 3 retail MAC and related interop crypto
+  - exclude:
+      id: cpp/weak-cryptographic-algorithm
+    paths:
+      - client/src/emv
+  # Test harness keys in offline unit tests
+  - exclude:
+      id: cpp/hardcoded-credentials
+    paths:
+      - client/src/emv/test
+      - client/src/emv/terminal

@@ -344,7 +344,9 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/emv/terminal/emv_term_arqc.c
         ${PM3_ROOT}/client/src/emv/terminal/emv_term_banner.c
         ${PM3_ROOT}/client/src/emv/terminal/emv_term_capabilities.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_cmd.c
         ${PM3_ROOT}/client/src/emv/terminal/emv_term_crypto.c
+        ${PM3_ROOT}/client/src/emv/terminal/emv_term_crypto_cmd.c
         ${PM3_ROOT}/client/src/emv/terminal/emv_term_crypto_digest.c
         ${PM3_ROOT}/client/src/emv/terminal/emv_term_ctx.c
         ${PM3_ROOT}/client/src/emv/terminal/emv_term_exception.c

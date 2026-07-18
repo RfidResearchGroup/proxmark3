@@ -18,6 +18,7 @@
 
 #include "proxmark3.h"
 #include <stdlib.h>
+#include <string.h>
 #include <limits.h>
 #include <unistd.h>
 #include <ctype.h>
@@ -276,6 +277,21 @@ static void prompt_compose(char *buf, size_t buflen, const char *promptctx, cons
 
 static bool c_update_reconnect_prompt = false;
 
+#ifndef LIBPM3
+static void pm3_enable_stdout_pipe(const char *script_cmd) {
+    if (!script_cmd) {
+        return;
+    }
+    if (strstr(script_cmd, "--stream") != NULL || strstr(script_cmd, "--stdio-pipe") != NULL
+            || strstr(script_cmd, "--stream-out") != NULL) {
+        g_session.stdout_pipe = true;
+        g_session.incognito = true;
+        g_session.show_hints = false;
+        setvbuf(stdout, NULL, _IONBF, 0);
+    }
+}
+#endif // LIBPM3
+
 // This function is hooked via RL_EVENT_HOOK.
 static int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
@@ -469,7 +485,7 @@ check_script:
                 prompt_ctx = stdinOnPipe ? PROXPROMPT_CTX_STDIN : PROXPROMPT_CTX_SCRIPTCMD;
 
                 cmd = str_dup(script_cmd);
-                if ((cmd != NULL) && (! fromInteractive)) {
+                if ((cmd != NULL) && (!fromInteractive) && !g_session.stdout_pipe) {
                     printprompt = true;
                 }
 
@@ -858,7 +874,7 @@ static int dumpmem_pm3(char *serial_port_name, const char *filename, uint32_t ad
             PrintAndLogEx(INFO, "Device is running the bootloader.");
         } else {
             PrintAndLogEx(ERR, "Device is running the bootloader, but the bootloader"
-                          " doesn't understand the READ MEM command.");
+                               " doesn't understand the READ MEM command.");
             goto finish2;
         }
     }
@@ -1020,6 +1036,7 @@ void pm3_init(void) {
     g_session.pm3_present = false;
     g_session.help_dump_mode = false;
     g_session.incognito = false;
+    g_session.stdout_pipe = false;
     g_session.supports_colors = false;
     g_session.emoji_mode = EMO_ALTTEXT;
     g_session.stdinOnTTY = false;
@@ -1204,6 +1221,7 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
             script_cmd = argv[++i];
+            pm3_enable_stdout_pipe(script_cmd);
             continue;
         }
 
@@ -1281,6 +1299,13 @@ int main(int argc, char *argv[]) {
         // do not use history nor log files
         if (strcmp(argv[i], "--incognito") == 0) {
             g_session.incognito = true;
+            continue;
+        }
+
+        if (strcmp(argv[i], "--stdio-pipe") == 0) {
+            g_session.stdout_pipe = true;
+            g_session.incognito = true;
+            g_session.show_hints = false;
             continue;
         }
 
@@ -1442,13 +1467,27 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            PrintAndLogEx(SUCCESS, "execute command from commandline: " _YELLOW_("%s") "\n", script_cmd);
+            pm3_enable_stdout_pipe(script_cmd);
+            if (!g_session.stdout_pipe) {
+                PrintAndLogEx(SUCCESS, "execute command from commandline: " _YELLOW_("%s") "\n", script_cmd);
+            }
         }
+    }
+
+    if (g_session.stdout_pipe) {
+        setvbuf(stdout, NULL, _IONBF, 0);
     }
 
     // try to open USB connection to Proxmark
     if (port != NULL) {
-        OpenProxmark(&g_session.current_device, port, waitCOMPort, 20, false, speed);
+        if (g_session.stdout_pipe) {
+            if (!OpenProxmarkSilent(&g_session.current_device, port, speed ? speed : USART_BAUD_RATE)) {
+                PrintAndLogEx(ERR, _RED_("ERROR:") " cannot open " _YELLOW_("%s") "\n", port);
+                CloseProxmark(g_session.current_device);
+            }
+        } else {
+            OpenProxmark(&g_session.current_device, port, waitCOMPort, 20, false, speed);
+        }
     }
 
     if (g_session.pm3_present && (TestProxmark(g_session.current_device) != PM3_SUCCESS)) {
@@ -1460,7 +1499,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    if (g_session.pm3_present == false) {
+    if (g_session.pm3_present == false && !g_session.stdout_pipe) {
         PrintAndLogEx(INFO, _YELLOW_("OFFLINE") " mode. Check " _YELLOW_("\"%s -h\"") " if it's not what you want.\n", exec_name);
     }
 
@@ -1472,7 +1511,7 @@ int main(int argc, char *argv[]) {
     // Save settings if not loaded from settings json file.
     // Doing this here will ensure other checks and updates are saved to over rule default
     // e.g. Linux color use check
-    if ((g_session.preferences_loaded == false) && (g_session.incognito == false)) {
+    if ((g_session.preferences_loaded == false) && (g_session.incognito == false) && !g_session.stdout_pipe) {
         PrintAndLogEx(INFO, "Creating initial preferences file");  // json save reports file name, so just info msg here
         preferences_save();  // Save defaults
         g_session.preferences_loaded = true;

@@ -850,6 +850,7 @@ SRCS =  mifare/aiddesfire.c \
         emv/terminal/phase_online.c \
         emv/terminal/phase_complete.c \
         emv/terminal/emv_terminal.c \
+        emv/terminal/emv_term_cmd.c \
         emv/terminal/emv_term_arqc.c \
         emv/terminal/emv_term_host.c \
         emv/terminal/emv_term_scheme.c \
@@ -873,6 +874,7 @@ SRCS =  mifare/aiddesfire.c \
         emv/terminal/emv_term_probe.c \
         emv/terminal/emv_term_crypto.c \
         emv/terminal/emv_term_crypto_digest.c \
+        emv/terminal/emv_term_crypto_cmd.c \
         emv/terminal/emv_term_capabilities.c \
         emv/test/crypto_test.c\
         emv/test/cryptotest.c\

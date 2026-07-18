@@ -47,7 +47,7 @@
 #include "crypto/libpcrypto.h"
 #include "emv/emv_roca.h"
 
-int ExecuteCryptoTests(bool verbose, bool ignore_time, bool include_slow_tests) {
+int ExecuteCryptoTests(bool verbose, bool ignore_time, bool include_slow_tests, bool pin_audit) {
     int res;
     bool TestFail = false;
 
@@ -133,6 +133,11 @@ int ExecuteCryptoTests(bool verbose, bool ignore_time, bool include_slow_tests) 
 
     res = exec_terminal_replay_test(verbose);
     if (res) TestFail = true;
+
+    if (pin_audit) {
+        res = exec_terminal_pin_audit_test(verbose);
+        if (res) TestFail = true;
+    }
 
     res = exec_crypto_test(verbose, include_slow_tests);
     if (res) TestFail = true;

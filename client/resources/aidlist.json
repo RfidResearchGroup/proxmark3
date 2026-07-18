@@ -1253,8 +1253,11 @@
         "Vendor": "Interac Association",
         "Country": "Canada",
         "Name": "INTERAC",
-        "Description": "Canadian domestic credit/debit card",
-        "Type": "EMV"
+        "Description": "Canadian domestic debit (Interac Flash contactless kernel C-1). AID A0000002771010. Test CAPK indices 03/07. Contactless: no CVM on Flash test cards; contact: offline enciphered/plain/online PIN.",
+        "Type": "EMV",
+        "Sources": [
+            "https://b2ps.com/fileadmin/pdf/cardsetdocs/Interac_Flash_Interoperability_Test_Card_Set.pdf"
+        ]
     },
     {
         "AID": "A00000030600000000000000",

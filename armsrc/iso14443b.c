@@ -2070,10 +2070,7 @@ static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
 
             // next slot after 24 ETU  (786)
             start_time = eof_time + HF14_ETU_TO_SSP(30);
-            if (Get14443bAnswerFromTag(x_atqb, sizeof(x_atqb), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
-                return PM3_ECARDEXCHANGE;
-            }
-
+            Get14443bAnswerFromTag(x_atqb, sizeof(x_atqb), s_iso14b_timeout, &eof_time, &retlen);
             if (retlen > 0) {
                 Dbprintf("unexpected data %d", retlen);
                 return PM3_ECARDEXCHANGE;
@@ -2603,7 +2600,7 @@ void SniffIso14443b(void) {
     dmabuf16_t *dma = get_dma16();
 
     // Setup and start DMA.
-    if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
+    if (!FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE)) {
         if (g_dbglevel > DBG_ERROR) DbpString("FpgaSetupSscDma failed. Exiting");
         switch_off();
         return;
@@ -2898,17 +2895,10 @@ static int8_t tearoff_retry_write_verify(uint8_t block_address, uint32_t target_
     *read_back_value = ~target_value;
 
     while (*read_back_value != target_value && i < max_try_count) {
-
         tearoff_write_block(block_address, target_value, 6000); // Long delay = reliable write
-        if (sleep_time_ms > 0) {
-            SpinDelayUsPrecision(sleep_time_ms * 1000);
-        }
-
+        if (sleep_time_ms > 0) SpinDelayUsPrecision(sleep_time_ms * 1000);
         tearoff_read_block(block_address, read_back_value);
-        if (sleep_time_ms > 0) {
-            SpinDelayUsPrecision(sleep_time_ms * 1000);
-        }
-
+        if (sleep_time_ms > 0) SpinDelayUsPrecision(sleep_time_ms * 1000);
         i++;
     }
 

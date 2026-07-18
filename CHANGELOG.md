@@ -3,17 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Added EMV terminal emulator operator guide (lab/research use only; not a certified payment terminal).
-
-- Added `hf mf gdmgetblk/gdmgethidblk/gdmsethidblk/gdmsetuid/gdmwipe/gdmsetsig` (@0x6r1an0y)
-- Changed `hf mf gdmparsecfg/gdmsetblk` (@0x6r1an0y)
-- Renamed `hf mf gdmcfg` (@0x6r1an0y)
-- Added `hf mfu aesgetuid` for retrieving the real UID when random ID is enabled, using the UIDRetrKey. (@lolbird123)
-- Fixed `hf iclass view` reading past the end of dump files smaller than a picopass header, causing a heap out-of-bounds read and garbage/leaked heap data being printed as tag content (@munzzyy)
-- Fixed `wiegand decode` returning facility code 16777339 instead of the encoded value for the IR56 (Inner Range 56-bit) format by masking the header sentinel bit off the facility code (@munzzyy)
-- Fixed `lf em 4x05 dump` writing byte-swapped (corrupted) block data to the saved dump file (@munzzyy)
+- Added `emv terminal` — EMV payment **terminal emulator** for both contactless + contact pathsRQC/ARPC) (@andrew867)
 - Added `hf 14b dump` support for Standard ISO14443-B tags (@thisiscamk)
-- Added `hf 14b ctrdbl` and `hf 14b ctdump` commands for interacting with ASK CTS tags (@kormax)
+- Added `hf 14b ctrdbl`, `hf 14b ctdump` command for interacting with ASK CTS tags (@kormax) 
 - Fixed `hf legic migrate` failing to parse the optional DCF argument as hex (@IdanHo)
 - Add support for parsing Finnish Helsinki Regional Transport (HRT) travel cards (@sanduuz)
 - Added standalone mode `HF_DOEGOX_COMMIT`: DESFire suspended commit without relay (@doegox)
