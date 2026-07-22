@@ -2594,6 +2594,12 @@ void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case FELICA_INTERNAL_AUTH_READ_ACK:
             snprintf(exp, size, "INTERNAL AUTHENTICATE AND READ ACK");
             break;
+        case FELICA_EXTERNAL_AUTH_WRITE_REQ:
+            snprintf(exp, size, "EXTERNAL AUTHENTICATE AND WRITE");
+            break;
+        case FELICA_EXTERNAL_AUTH_WRITE_ACK:
+            snprintf(exp, size, "EXTERNAL AUTHENTICATE AND WRITE ACK");
+            break;
         case FELICA_GETSTATUS_REQ:
             snprintf(exp, size, "GET STATUS");
             break;
@@ -2648,11 +2654,89 @@ void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case FELICA_UPDATE_RNDID_ACK:
             snprintf(exp, size, "UPDATE RANDOM ID ACK");
             break;
+        case FELICA_REGISTER_AREA_V2_REQ:
+            snprintf(exp, size, "REGISTER AREA V2");
+            break;
+        case FELICA_REGISTER_AREA_V2_ACK:
+            snprintf(exp, size, "REGISTER AREA V2 ACK");
+            break;
+        case FELICA_REGISTER_SERVICE_V2_REQ:
+            snprintf(exp, size, "REGISTER SERVICE V2");
+            break;
+        case FELICA_REGISTER_SERVICE_V2_ACK:
+            snprintf(exp, size, "REGISTER SERVICE V2 ACK");
+            break;
+        case FELICA_REGISTER_ISSUE_ID_EX_V2_REQ:
+            snprintf(exp, size, "REGISTER ISSUE ID EX V2");
+            break;
+        case FELICA_REGISTER_ISSUE_ID_EX_V2_ACK:
+            snprintf(exp, size, "REGISTER ISSUE ID EX V2 ACK");
+            break;
+        case FELICA_SEPARATE_SYSTEM_V2_REQ:
+            snprintf(exp, size, "SEPARATE SYSTEM V2");
+            break;
+        case FELICA_SEPARATE_SYSTEM_V2_ACK:
+            snprintf(exp, size, "SEPARATE SYSTEM V2 ACK");
+            break;
+        case FELICA_CHANGE_SYSTEM_BLOCK_V2_REQ:
+            snprintf(exp, size, "CHANGE SYSTEM BLOCK V2");
+            break;
+        case FELICA_CHANGE_SYSTEM_BLOCK_V2_ACK:
+            snprintf(exp, size, "CHANGE SYSTEM BLOCK V2 ACK");
+            break;
         case FELICA_GET_CONTAINER_ID_REQ:
             snprintf(exp, size, "GET CONTAINER ID");
             break;
         case FELICA_GET_CONTAINER_ID_ACK:
             snprintf(exp, size, "GET CONTAINER ID ACK");
+            break;
+        case FELICA_SET_NODE_PROPERTY_REQ:
+            snprintf(exp, size, "SET NODE PROPERTY");
+            break;
+        case FELICA_SET_NODE_PROPERTY_ACK:
+            snprintf(exp, size, "SET NODE PROPERTY ACK");
+            break;
+        case FELICA_REGISTER_ISSUE_ID_REQ:
+            snprintf(exp, size, "REGISTER ISSUE ID");
+            break;
+        case FELICA_REGISTER_ISSUE_ID_ACK:
+            snprintf(exp, size, "REGISTER ISSUE ID ACK");
+            break;
+        case FELICA_REGISTER_AREA_REQ:
+            snprintf(exp, size, "REGISTER AREA");
+            break;
+        case FELICA_REGISTER_AREA_ACK:
+            snprintf(exp, size, "REGISTER AREA ACK");
+            break;
+        case FELICA_REGISTER_SERVICE_REQ:
+            snprintf(exp, size, "REGISTER SERVICE");
+            break;
+        case FELICA_REGISTER_SERVICE_ACK:
+            snprintf(exp, size, "REGISTER SERVICE ACK");
+            break;
+        case FELICA_SEPARATE_SYSTEM_REQ:
+            snprintf(exp, size, "SEPARATE SYSTEM");
+            break;
+        case FELICA_SEPARATE_SYSTEM_ACK:
+            snprintf(exp, size, "SEPARATE SYSTEM ACK");
+            break;
+        case FELICA_CHANGE_SYSTEM_BLOCK_REQ:
+            snprintf(exp, size, "CHANGE SYSTEM BLOCK");
+            break;
+        case FELICA_CHANGE_SYSTEM_BLOCK_ACK:
+            snprintf(exp, size, "CHANGE SYSTEM BLOCK ACK");
+            break;
+        case FELICA_REGISTER_MANUFACTURE_ID_REQ:
+            snprintf(exp, size, "REGISTER MANUFACTURE ID");
+            break;
+        case FELICA_REGISTER_MANUFACTURE_ID_ACK:
+            snprintf(exp, size, "REGISTER MANUFACTURE ID ACK");
+            break;
+        case FELICA_SELF_DIAGNOSIS_REQ:
+            snprintf(exp, size, "SELF DIAGNOSIS");
+            break;
+        case FELICA_SELF_DIAGNOSIS_ACK:
+            snprintf(exp, size, "SELF DIAGNOSIS ACK");
             break;
         case FELICA_ECHO_REQ:
             snprintf(exp, size, "ECHO");
