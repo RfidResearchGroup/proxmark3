@@ -147,6 +147,9 @@ static const uint8_t var_list[] = {0x1c, 0x1e, 0x20, 0x26, 0x28, 0x2a, 0x2c, 0x2
 static uint8_t info_blocks[] = { 0x15, 0x16, 0x17, 0x18, 0x22 }; //Used for partnumber
 static const char *xerox_c_type[] = { "drum", "yellow", "magenta", "cyan", "black" };
 
+// Factory equivalent, used in generator
+static const uint8_t FACTORY_SOLD[]    = { 0xDB, 0x3A, 0xDB, 0x3A };
+static const uint8_t FACTORY_METERED[] = { 0xD8, 0x3A, 0xD8, 0x3A };
 
 static int CmdHelp(const char *Cmd);
 void RC2_set_key(RC2_KEY *key, int len, const unsigned char *data, int bits);
@@ -373,6 +376,35 @@ void RC2_cbc_encrypt(const unsigned char *in, unsigned char *out, long length,
     tin[0] = tin[1] = 0;
 }
 
+static void xerox_derive_key(const uint8_t *data, RC2_KEY *out_key) {
+    uint8_t k1[8], iv[8], k2[8];
+
+    k1[0] = data[8];
+    k1[1] = data[5];
+    k1[2] = data[6];
+    k1[3] = data[7];
+    k1[4] = data[(0x18 * XEROX_BLOCK_SIZE) + 0];
+    k1[5] = data[(0x18 * XEROX_BLOCK_SIZE) + 1];
+    k1[6] = data[(0x22 * XEROX_BLOCK_SIZE) + 0];
+    k1[7] = 0;
+
+    RC2_set_key(out_key, 8, k1, 64);
+
+    memset(iv, 0, sizeof(iv));
+    iv[0] = k1[6];
+    iv[1] = k1[7];
+    iv[2] = 1;
+
+    RC2_cbc_encrypt(k1, k2, 8, out_key, iv, RC2_ENCRYPT);
+
+    memcpy(k1, k2, sizeof(k1));
+    k1[2] = k2[3] ^ data[(0x22 * XEROX_BLOCK_SIZE) + 0];
+    k1[3] = k2[4] ^ data[(0x22 * XEROX_BLOCK_SIZE) + 1];
+    k1[5] = k2[1] ^ 0x01;
+
+    RC2_set_key(out_key, 8, k1, 64);
+}
+
 static int switch_off_field(void) {
     SetISODEPState(ISODEP_INACTIVE);
     iso14b_raw_cmd_t packet = {
@@ -442,6 +474,18 @@ static void xerox_generate_partno(const uint8_t *data, char *pn) {
     pn[12] = 0;
 }
 
+static void xerox_encode_partno(const char *pn, uint8_t *out) {
+    if (!pn || strlen(pn) < 9) return;
+    out[0] = ((pn[0] - '0') << 4) | (pn[1] - '0');
+    out[1] = ((pn[2] - '0') << 4) | (pn[3] >> 4);        // '6' in high nibble, upper nibble of 'R' (0x52 >> 4 = 0x5) in low nibble
+    out[2] = ((pn[3] << 4) & 0xF0) | (pn[4] - '0');      // lower nibble of 'R' (0x52 & 0xF = 0x2) in high nibble, next digit in low nibble
+    out[3] = ((pn[5] - '0') << 4) | (pn[6] - '0');
+    out[4] = ((pn[7] - '0') << 4) | (pn[8] - '0');
+    if (strlen(pn) >= 12) {
+        out[5] = ((pn[10] - '0') << 4) | (pn[11] - '0');
+    }
+}
+
 static void xerox_print_hdr(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-------- " _CYAN_("tag memory") " ---------");
@@ -497,6 +541,42 @@ static void xerox_print_footer(void) {
     PrintAndLogEx(NORMAL, "");
 }
 
+static void models_print(json_t *models) {
+    for (size_t k = 0; k < json_array_size(models); k++)
+        PrintAndLogEx(NORMAL, "  %zu.  %s", k + 1, json_string_value(json_array_get(models, k)));
+}
+
+static void consumables_print(json_t *consumables) {
+    for (size_t k = 0; k < json_array_size(consumables); k++) {
+        json_t *cons = json_array_get(consumables, k);
+
+        const char *type  = json_string_value(json_object_get(cons, "consumable_type"));
+        const char *color = json_string_value(json_object_get(cons, "color"));
+        const char *part  = json_string_value(json_object_get(cons, "part_number"));
+        const char *yield = json_string_value(json_object_get(cons, "yield"));
+        const char *zone  = json_string_value(json_object_get(cons, "region_zone"));
+        const char *ms    = json_string_value(json_object_get(cons, "metered_sold"));
+
+        if (zone == NULL || strlen(zone) == 0) zone = "-";
+        if (ms   == NULL || strlen(ms)   == 0) ms   = "-";
+
+        PrintAndLogEx(NORMAL, "  %zu.  %-6s  %-8s  %-14s  %6s pages  %-7s  %-7s",
+                      k + 1, type, color, part, yield, zone, ms);
+    }
+}
+
+static void consumable_print(json_t *consumable) {
+    PrintAndLogEx(NORMAL, "    Model....  %s", json_string_value(json_object_get(consumable, "printer_model")));
+    PrintAndLogEx(NORMAL, "    Consumable  %s", json_string_value(json_object_get(consumable, "consumable_type")));
+    PrintAndLogEx(NORMAL, "    Color....  %s", json_string_value(json_object_get(consumable, "color")));
+    PrintAndLogEx(NORMAL, "    PartNo...  %s", json_string_value(json_object_get(consumable, "part_number")));
+    PrintAndLogEx(NORMAL, "    Zone.....  %s", json_string_value(json_object_get(consumable, "region_zone")));
+    PrintAndLogEx(NORMAL, "    M/s......  %s", json_string_value(json_object_get(consumable, "metered_sold")));
+    PrintAndLogEx(NORMAL, "    Yield....  %s pages", json_string_value(json_object_get(consumable, "yield")));
+    PrintAndLogEx(NORMAL, "    IOT......  %s", json_string_value(json_object_get(consumable, "iot_codename")));
+    PrintAndLogEx(NORMAL, "    Chip.....  %s", json_string_value(json_object_get(consumable, "chip_type")));
+    PrintAndLogEx(NORMAL, "");
+}
 
 // structure and database for uid -> tagtype lookups
 typedef struct {
@@ -692,6 +772,87 @@ static int read_xerox_block(iso14b_card_select_t *card, uint8_t blockno, uint8_t
     return res;
 }
 
+static int write_xerox_block(iso14b_card_select_t *card, uint8_t blockno, uint8_t *data) {
+    // printf("Block %u data: ", blockno);
+    // for (int i = 0; i < XEROX_BLOCK_SIZE; i++) {
+    //    printf("%02X ", data[i]);
+    //}
+    //printf("\n");
+    return 0;
+
+    if (card == NULL || data == NULL) {
+        return PM3_EINVARG;
+    }
+    
+    // Command structure: 0x02 + write_cmd + UID + blockno + data (4 bytes)
+    uint8_t approx_len = (2 + card->uidlen + 1 + 4);
+    iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + approx_len);
+    
+    if (packet == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    
+    // Set up the write command
+    packet->flags = (ISO14B_APPEND_CRC | ISO14B_RAW);
+    packet->raw[packet->rawlen++] = 0x02;
+    packet->raw[packet->rawlen++] = ISO14443B_XEROX_WRITE_BLK;  // 0x31
+    
+    // UID
+    memcpy(packet->raw + packet->rawlen, card->uid, card->uidlen);
+    packet->rawlen += card->uidlen;
+    
+    // Block to write
+    packet->raw[packet->rawlen++] = blockno;
+    
+    // Data to write (4 bytes)
+    memcpy(packet->raw + packet->rawlen, data, 4);
+    packet->rawlen += 4;
+    
+    int res = PM3_ESOFT;
+    
+    // Write loop with retry
+    for (int retry = 0; retry < 2; retry++) {
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
+        
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000) == false) {
+            continue;
+        }
+        
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Write failed, trying one more time");
+            continue;
+        }
+        
+        if (resp.length < 3) {
+            PrintAndLogEx(FAILED, "Response too short, trying one more time");
+            continue;
+        }
+        
+        uint8_t *d = resp.data.asBytes;
+        
+        if (check_crc(CRC_14443_B, d, resp.length - 2) == false) {
+            PrintAndLogEx(FAILED, "Write CRC " _RED_("fail") ", trying one more time");
+            continue;
+        }
+        
+        if (d[0] != 0x02 || d[1] != 0x00) {
+            PrintAndLogEx(FAILED, "Tag returned error: %02x %02x", d[0], d[1]);
+            res = PM3_ERFTRANS;
+            break;
+        }
+        
+        PrintAndLogEx(SUCCESS, "Successfully wrote block %d", blockno);
+        res = PM3_SUCCESS;
+        break;
+    }
+    
+    free(packet);
+    return res;
+}
+
 static int CmdHFXeroxReader(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -833,33 +994,9 @@ static int CmdHFXeroxDump(const char *Cmd) {
         PrintAndLogEx(INFO, "Decrypting secret blocks...");
 
         RC2_KEY exp_key;
-        uint8_t k1[8], iv[8], k2[8], decr[8];
+        uint8_t iv[8], decr[8];
 
-        k1[0] = data[8];
-        k1[1] = data[5];
-        k1[2] = data[6];
-        k1[3] = data[7];
-        k1[4] = data[(0x18 * XEROX_BLOCK_SIZE) + 0];
-        k1[5] = data[(0x18 * XEROX_BLOCK_SIZE) + 1];
-        k1[6] = data[(0x22 * XEROX_BLOCK_SIZE) + 0];
-        k1[7] = 0;
-
-        RC2_set_key(&exp_key, 8, k1, 64);
-
-        memset(iv, 0, sizeof(iv));
-        iv[0] = k1[6];
-        iv[1] = k1[7];
-        iv[2] = 1;
-
-        RC2_cbc_encrypt(k1, k2, 8, &exp_key, iv, RC2_ENCRYPT);
-
-        memcpy(k1, k2, sizeof(k1));
-
-        k1[2] = k2[3] ^ data[(0x22 * XEROX_BLOCK_SIZE) + 0];
-        k1[3] = k2[4] ^ data[(0x22 * XEROX_BLOCK_SIZE) + 1]; // first_key[7];
-        k1[5] = k2[1] ^ 0x01;       // 01 = crypto method? rfid[23][2]
-
-        RC2_set_key(&exp_key, 8, k1, 64);
+        xerox_derive_key(data, &exp_key);
 
         for (int n = 0; n < sizeof(var_list); n++) {
 
@@ -1010,6 +1147,576 @@ static int CmdHFXeroxRdBl(const char *Cmd) {
     return status;
 }
 
+static int CmdHFXeroxWrBl(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf xerox wrbl",
+                  "Write a Fuji/Xerox tag block\n",
+                  "hf xerox wrbl -b 131 -d DB3ADB3A");
+ 
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("b", "blk",  "<dec>", "block number (0-255)"),
+        arg_str1("d", "data", "<hex>", "block data (4 bytes as hex, e.g. DB3ADB3A)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+ 
+    int blockno  = arg_get_int_def(ctx, 1, -1);
+    int dlen     = 0;
+    uint8_t block[4] = {0};
+    int status   = CLIParamHexToBuf(arg_get_str(ctx, 2), block, sizeof(block), &dlen);
+    CLIParserFree(ctx);
+ 
+    if (status != 0) {
+        return PM3_EINVARG;
+    }
+ 
+    if (blockno < 0 || blockno > 255) {
+        PrintAndLogEx(FAILED, "block number must be 0-255, got %d", blockno);
+        return PM3_EINVARG;
+    }
+ 
+    if (dlen != 4) {
+        PrintAndLogEx(FAILED, "data must be 4 bytes, got %d", dlen);
+        return PM3_EINVARG;
+    }
+ 
+    iso14b_card_select_t card;
+    status = xerox_select_card(&card, false);
+    if (status != PM3_SUCCESS) {
+        switch_off_field();
+        return status;
+    }
+ 
+    status = write_xerox_block(&card, (uint8_t)blockno, block);
+    switch_off_field();
+ 
+    if (status == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Wrote block %d: %s", blockno, sprint_hex(block, sizeof(block)));
+    } else {
+        PrintAndLogEx(FAILED, "Fuji/Xerox tag write failed");
+    }
+ 
+    return status;
+}
+
+static json_t* load_xerox_database(void) {
+    char *path = NULL;
+    if (searchFile(&path, RESOURCES_SUBDIR, "xerox", ".json", false) != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Failed to find " _YELLOW_("xerox.json"));
+        return NULL;
+    }
+
+    json_error_t error;
+    json_t *root = json_load_file(path, 0, &error);
+    if (root == NULL) {
+        PrintAndLogEx(ERR, "json (%s) error on line %d: %s", path, error.line, error.text);
+        free(path);
+        return NULL;
+    }
+    
+    if (json_is_array(root) == false) {
+        PrintAndLogEx(ERR, "Invalid json (%s) format. root must be an array.", path);
+        json_decref(root);
+        free(path);
+        return NULL;
+    }
+    
+    PrintAndLogEx(DEBUG, "Loaded file " _YELLOW_("%s") " " _GREEN_("%zu") " records", path, json_array_size(root));
+    free(path);
+    return root;
+}
+
+static json_t* filter_xerox_database(json_t *db, const char *filter_values[9]) {
+    if (db == NULL || !json_is_array(db)) return NULL;
+    
+    const char *filter_keys[9] = {
+        "printer_model", "color", "consumable_type", "part_number",
+        "region_zone", "metered_sold", "yield", "iot_codename", "chip_type"
+    };
+    
+    json_t *matches = json_array();
+    if (matches == NULL) return NULL;
+    
+    size_t db_idx;
+    json_t *entry;
+    json_array_foreach(db, db_idx, entry) {
+        bool ok = true;
+        
+        for (int f = 0; f < 9 && ok; f++) {
+            if (filter_values[f] == NULL) continue;
+            if (strlen(filter_values[f]) == 0) continue;
+            
+            const char *field_val = json_string_value(json_object_get(entry, filter_keys[f]));
+            if (field_val == NULL) {
+                ok = false;
+                continue;
+            }
+            
+            const char *needle = filter_values[f];
+            size_t field_len = strlen(field_val);
+            size_t needle_len = strlen(needle);
+            bool hit = false;
+            
+            // Manual search (works on all platforms)
+            for (size_t pos = 0; pos + needle_len <= field_len && !hit; pos++) {
+                if (strncasecmp(field_val + pos, needle, needle_len) == 0) {
+                    hit = true;
+                }
+            }
+            
+            if (!hit) ok = false;
+        }
+        
+        if (ok) {
+            json_array_append(matches, entry);
+        }
+    }
+    
+    return matches;
+}
+
+// Helper function for user selection of Printermodel or Consumable
+static int get_user_selection(size_t max_value, const char *prompt) {
+    if (max_value <= 1) {
+        return 0;  // Auto-select the only item
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "%s (1-%zu, 0 to cancel): ", prompt, max_value);
+
+    int selection = 0;
+    if (scanf(" %d", &selection) != 1) {
+        PrintAndLogEx(FAILED, "Invalid input - not a number");
+        return -1;
+    }
+
+    if (selection == 0) {
+        PrintAndLogEx(INFO, "Cancelled");
+        return -1;
+    }
+
+    if (selection < 1 || selection > (int)max_value) {
+        PrintAndLogEx(FAILED, "Invalid selection - must be between 0 and %zu", max_value);
+        return -1;
+    }
+
+    return selection - 1;
+}
+
+static uint8_t xerox_color_code(const char *color) {
+    if (color == NULL)            return 0x04;
+    if (strcmp(color, "DRUM")    == 0) return 0x00;
+    if (strcmp(color, "Y")  == 0) return 0x01;
+    if (strcmp(color, "M") == 0) return 0x02;
+    if (strcmp(color, "C")    == 0) return 0x03;
+    if (strcmp(color, "K")   == 0) return 0x04;
+    return 0x04;
+}
+
+static const uint8_t *xerox_factory_pattern(const char *metered_sold) {
+    if (metered_sold && strcmp(metered_sold, "metered") == 0)
+        return FACTORY_METERED;
+    return FACTORY_SOLD;
+}
+
+// Interactively filter the Xerox database and let the user pick a consumable entry
+// filter_values: Array of 9 nullable filter strings: model, color, type, part, zone, contract, yield, iot, chip
+// return json_t* reference to selected consumable (caller must json_decref() it), or NULL on failure / user abort
+static json_t *map_selector(const char *filter_values[9]) {
+ 
+    json_t *db          = NULL;
+    json_t *matches     = NULL;
+    json_t *models      = NULL;
+    json_t *consumables = NULL;
+    json_t *result      = NULL;
+ 
+    db = load_xerox_database();
+    if (!db) return NULL;
+ 
+    matches = filter_xerox_database(db, filter_values);
+    if (!matches || json_array_size(matches) == 0) {
+        PrintAndLogEx(FAILED, "No consumables matched filters");
+        goto cleanup;
+    }
+ 
+    // Build unique model list
+    models = json_array();
+    if (!models) goto cleanup;
+ 
+    size_t i;
+    json_t *entry;
+ 
+    json_array_foreach(matches, i, entry) {
+        const char *model = json_string_value(json_object_get(entry, "printer_model"));
+        if (!model) continue;
+ 
+        bool exists = false;
+        size_t k;
+        for (k = 0; k < json_array_size(models); k++) {
+            const char *m = json_string_value(json_array_get(models, k));
+            if (m && strcmp(m, model) == 0) {
+                exists = true;
+                break;
+            }
+        }
+ 
+        if (!exists) {
+            json_array_append_new(models, json_string(model));
+        }
+    }
+ 
+    PrintAndLogEx(INFO, "Matching printer models:");
+    models_print(models);
+ 
+    int model_idx = get_user_selection(json_array_size(models), "Select model");
+    if (model_idx < 0) goto cleanup;
+ 
+    const char *selected_model = json_string_value(json_array_get(models, model_idx));
+    if (!selected_model) goto cleanup;
+ 
+    // Filter consumables for the chosen model
+    consumables = json_array();
+    if (!consumables) goto cleanup;
+ 
+    json_array_foreach(matches, i, entry) {
+        const char *m = json_string_value(json_object_get(entry, "printer_model"));
+        if (m && strcmp(m, selected_model) == 0) {
+            json_array_append(consumables, entry);
+        }
+    }
+ 
+    PrintAndLogEx(INFO, "Consumables for %s:", selected_model);
+    consumables_print(consumables);
+ 
+    int cons_idx = get_user_selection(json_array_size(consumables), "Select consumable");
+    if (cons_idx < 0) goto cleanup;
+ 
+    json_t *candidate = json_array_get(consumables, cons_idx);
+    if (!candidate) goto cleanup;
+ 
+    PrintAndLogEx(INFO, "Selected consumable:");
+    consumable_print(candidate);
+ 
+    // Confirm before handing off to the generator
+    PrintAndLogEx(INFO, "Press 'y' to continue writing, anything else to abort");
+ 
+    char confirm_char = 0;
+    if (scanf(" %c", &confirm_char) != 1 || confirm_char != 'y') {
+        PrintAndLogEx(INFO, "Aborted");
+        goto cleanup;
+    }
+ 
+    // Increment refcount so the entry survives the consumables array being freed
+    result = json_incref(candidate);
+ 
+cleanup:
+    if (consumables) json_decref(consumables);
+    if (models)      json_decref(models);
+    if (matches)     json_decref(matches);
+    if (db)          json_decref(db);
+    return result;
+}
+
+typedef struct {
+    uint8_t     blk;
+    uint8_t    *target;
+    const char *desc;
+} block_entry_t;
+
+static int sort_by_block_ascending(const void *a, const void *b) {
+    return (int)((const block_entry_t *)a)->blk - (int)((const block_entry_t *)b)->blk;
+}
+
+static int map_generator(const json_t *selected) {
+
+    if (!selected) return PM3_EINVARG;
+
+    const char *part_number  = json_string_value(json_object_get(selected, "part_number"));
+    const char *color        = json_string_value(json_object_get(selected, "color"));
+    const char *metered_sold = json_string_value(json_object_get(selected, "metered_sold"));
+
+    if (!part_number) {
+        PrintAndLogEx(FAILED, "Selected consumable has no part_number");
+        return PM3_EINVARG;
+    }
+
+    iso14b_card_select_t card;
+    int status = xerox_select_card(&card, false);
+    if (status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Fuji/Xerox tag select failed");
+        return status;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, " UID..... %s", sprint_hex(card.uid, card.uidlen));
+    PrintAndLogEx(SUCCESS, " ATQB.... %s", sprint_hex(card.atqb, sizeof(card.atqb)));
+
+    uint8_t *data = (uint8_t *)calloc(256 * XEROX_BLOCK_SIZE, sizeof(uint8_t));
+    if (data == NULL)
+        return PM3_EMALLOC;
+
+    for (uint16_t blockno = 0; blockno < 0x100; blockno++) {
+        int res = read_xerox_block(&card, blockno, data + (blockno * XEROX_BLOCK_SIZE));
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Fuji/Xerox tag read failed at block 0x%02X", blockno);
+            free(data);
+            return res;
+        }
+        PrintAndLogEx(INPLACE, "blk %3d", blockno);
+    }
+
+    RC2_KEY enc_key;
+    xerox_derive_key(data, &enc_key);
+
+    typedef struct {
+        uint8_t  dadr;
+        uint8_t  plain[8];
+        uint8_t  cipher[8];
+    } xerox_secret_plain_t;
+
+    // Secret plain/decrypted patterns from the var_list
+    xerox_secret_plain_t secret_plains[] = {
+        { 0x1C, {0x11,0x0A,0x21,0x00, 0x28,0x00,0xA5,0xF5}, {0} }, // Block 28+29
+        { 0x1E, {0x00,0x00,0x00,0x00, 0x00,0x00,0xFF,0xFF}, {0} }, // Block 30+31
+        { 0x20, {0xC0,0x00,0x00,0x02, 0x00,0x00,0x3F,0xFD}, {0} }, // Block 32+33
+        { 0x26, {0x00,0x00,0xE7,0x03, 0x00,0x00,0x18,0xFC}, {0} }, // Block 38+39
+        { 0x28, {0x00,0x00,0x00,0x00, 0x00,0x00,0xFF,0xFF}, {0} }, // Block 40+41
+        { 0x2A, {0x00,0x00,0x00,0x00, 0x00,0x00,0xFF,0xFF}, {0} }, // Block 42+43
+        { 0x2C, {0x00,0x00,0x00,0x00, 0x00,0x00,0xFF,0xFF}, {0} }, // Block 44+45
+        { 0x2E, {0x00,0x00,0x00,0x00, 0x00,0x00,0xFF,0xFF}, {0} }, // Block 46+47
+    };
+
+    for (int s = 0; s < ARRAYLEN(secret_plains); s++) {
+        xerox_secret_plain_t *sp = &secret_plains[s];
+
+        uint8_t iv[8] = {0};
+        iv[0] = sp->dadr;
+
+        RC2_cbc_encrypt(sp->plain, sp->cipher, 8, &enc_key, iv, RC2_ENCRYPT);
+    }
+
+    // Partnumber
+    uint8_t pbytes[6] = {0};
+    xerox_encode_partno(part_number, pbytes);
+    uint8_t *blk16 = data + (0x16 * XEROX_BLOCK_SIZE);
+    uint8_t target_15[4] = { pbytes[0], pbytes[1], pbytes[2], pbytes[3] };
+    uint8_t target_16[4] = { pbytes[4], blk16[1], blk16[2], blk16[3] };
+
+    // Color
+    uint8_t *blk12 = data + (0x0C * XEROX_BLOCK_SIZE);
+    uint8_t target_12[4] = { xerox_color_code(color), blk12[1], blk12[2], blk12[3] };
+
+    uint8_t *blk22 = data + (0x22 * XEROX_BLOCK_SIZE);
+    uint8_t target_22[4] = { blk22[0], blk22[1], xerox_color_code(color), blk22[3] };
+
+    // Factory pattern
+    uint8_t target_83[4];
+    memcpy(target_83, xerox_factory_pattern(metered_sold), 4);
+
+    uint8_t zero[4] = {0};
+
+    block_entry_t named[] = {
+        { 0x15, target_15,                    "Part# (1/2)"     },
+        { 0x16, target_16,                    "Part# (2/2)"     },
+        { 0x0C, target_12,                    "Type/Color"      },
+        { 0x22, target_22,                    "Type/Color"      },
+        { 0x83, target_83,                    "Factory pattern" },
+
+        { 0x1C, secret_plains[0].cipher,     "Secret (enc)" }, // Block 28
+        { 0x1D, secret_plains[0].cipher + 4, "Secret (enc)" }, // Block 29
+        { 0x1E, secret_plains[1].cipher,     "Secret (enc)" }, // Block 30
+        { 0x1F, secret_plains[1].cipher + 4, "Secret (enc)" }, // Block 31
+        { 0x20, secret_plains[2].cipher,     "Secret (enc)" }, // Block 32
+        { 0x21, secret_plains[2].cipher + 4, "Secret (enc)" }, // Block 33
+        { 0x26, secret_plains[3].cipher,     "Secret (enc)" }, // Block 38
+        { 0x27, secret_plains[3].cipher + 4, "Secret (enc)" }, // Block 39
+        { 0x28, secret_plains[4].cipher,     "Secret (enc)" }, // Block 40
+        { 0x29, secret_plains[4].cipher + 4, "Secret (enc)" }, // Block 41
+        { 0x2A, secret_plains[5].cipher,     "Secret (enc)" }, // Block 42
+        { 0x2B, secret_plains[5].cipher + 4, "Secret (enc)" }, // Block 43
+        { 0x2C, secret_plains[6].cipher,     "Secret (enc)" }, // Block 44
+        { 0x2D, secret_plains[6].cipher + 4, "Secret (enc)" }, // Block 45
+        { 0x2E, secret_plains[7].cipher,     "Secret (enc)" }, // Block 46
+        { 0x2F, secret_plains[7].cipher + 4, "Secret (enc)" }, // Block 47
+    };
+
+    // Blocks to zero out
+    static const uint8_t zero_blks[] = {
+        0x05, 0x06, 0x07, 0x08, 0x0A, 0x0F, 0x10, 0x11, 0x13, 0x1B,
+        0x24, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+        0x38, 0x39, 0x3B, 0x3C, 0x3E, 0x3F, 0x40, 0x41, 0x42, 0x43,
+        0x44, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E,
+        0x4F, 0x50, 0x52, 0x54, 0x56, 0x57, 0x58, 0x59, 0x5B, 0x5D,
+        0x5E, 0x5F, 0x60, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67,
+        0x68, 0x6A, 0x6B, 0x6C, 0x6D, 0x6F, 0x70, 0x71, 0x72, 0x73,
+        0x74, 0x75, 0x77, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E,
+        0x7F, 0x80, 0x81, 0x82, 0x84, 0x86, 0x88, 0x89, 0x8A,
+        0x8B, 0x8D, 0x8F, 0x90, 0x91, 0x92, 0x93, 0x94, 0x95,
+        0x96, 0x97, 0x98, 0x99, 0x9A, 0x9B, 0x9D, 0x9F, 0xA1,
+        0xA3, 0xA5, 0xA7, 0xA8, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE,
+        0xAF, 0xB0, 0xB1, 0xB3, 0xB5, 0xB6, 0xB7, 0xB8, 0xBA,
+        0xBC, 0xBD, 0xBE, 0xBF, 0xC0, 0xC1, 0xC2, 0xC3, 0xC4,
+        0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD,
+        0xCF, 0xD1, 0xD3, 0xD5, 0xD7, 0xD8, 0xD9, 0xDA, 0xDB,
+        0xDC, 0xDD, 0xDE, 0xDF, 0xE0, 0xE2, 0xE3, 0xE4, 0xE5,
+        0xE7, 0xE9, 0xEA, 0xEB, 0xEC, 0xEE, 0xEF, 0xF0, 0xF1,
+        0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xFA, 0xFC,
+        0xFE, 0xFF
+    };
+
+    int num_named = ARRAYLEN(named);
+    int num_zero  = ARRAYLEN(zero_blks);
+    int total     = num_named + num_zero;
+
+    block_entry_t *all = (block_entry_t *)calloc(total, sizeof(block_entry_t));
+    if (all == NULL) {
+        free(data);
+        return PM3_EMALLOC;
+    }
+
+    for (int i = 0; i < num_named; i++)
+        all[i] = named[i];
+
+    for (int i = 0; i < num_zero; i++) {
+        uint8_t b = zero_blks[i];
+        bool is_fw = (b == 0x80 || b == 0x81 || b == 0x82);
+        all[num_named + i] = (block_entry_t){
+            .blk    = b,
+            .target = zero,
+            .desc   = is_fw ? "Firmware (zeroed)" : "Zero",
+        };
+    }
+
+    qsort(all, total, sizeof(block_entry_t), sort_by_block_ascending);
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "block | data       | ascii | description");
+    PrintAndLogEx(INFO, "------+------------+-------+-------------");
+
+    int retval = PM3_SUCCESS;
+
+    for (int i = 0; i < total; i++) {
+        uint8_t  blk     = all[i].blk;
+        uint8_t *target  = all[i].target;
+        uint8_t *current = data + (blk * XEROX_BLOCK_SIZE);
+
+        uint8_t *display = memcmp(current, target, 4) == 0 ? current : target;
+        char ascii[5] = {0};
+        for (int j = 0; j < 4; j++)
+            ascii[j] = (display[j] >= 0x20 && display[j] < 0x7F) ? (char)display[j] : '.';
+
+        char display_hex[12];
+        snprintf(display_hex, sizeof(display_hex), "%02X %02X %02X %02X",
+                 display[0], display[1], display[2], display[3]);
+
+        if (memcmp(current, target, 4) == 0) {
+            PrintAndLogEx(INFO, " %-3d  | %s | %s | %s (already correct)",
+                          blk, display_hex, ascii, all[i].desc);
+            continue;
+        }
+
+        char was_hex[12];
+        snprintf(was_hex, sizeof(was_hex), "%02X %02X %02X %02X",
+                 current[0], current[1], current[2], current[3]);
+
+        PrintAndLogEx(INFO, " %-3d  | %s | %s | %s (was: %s)",
+                      blk, display_hex, ascii, all[i].desc, was_hex);
+
+        status = write_xerox_block(&card, blk, target);
+        if (status != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Write failed at block %d", blk);
+            retval = status;
+            goto cleanup;
+        }
+
+        memcpy(current, target, 4);
+    }
+
+    PrintAndLogEx(SUCCESS, "Tag remapped successfully");
+
+cleanup:
+    switch_off_field();
+    free(all);
+    free(data);
+    return retval;
+}
+
+static int CmdHFXeroxMap(const char *Cmd) {
+ 
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf xerox remap",
+                  "Remap a Xerox tag by selecting a consumable from the database\n",
+                  "hf xerox remap -m 4110 -t toner");
+ 
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("m",   "model",   "<str>", "Printer model substring (e.g. \"C60\", \"4110\")"),
+        arg_str0("c",   "color",   "<str>", "Color filter (Black | Cyan | Magenta | Yellow)"),
+        arg_str0("t",   "type",    "<str>", "Consumable type (toner | drum)"),
+        arg_str0("p",   "partno",  "<str>", "Part number substring (e.g. \"01529\", \"R015\")"),
+        arg_str0("z",   "zone",    "<str>", "Region zone (DMO | NA/ESG | WW | global)"),
+        arg_str0(NULL,  "ms",      "<str>", "Contract/sale type (sold | metered)"),
+        arg_str0("y",   "yield",   "<str>", "Page yield (exact: \"30000\" or range: \"20000-35000\")"),
+        arg_str0(NULL,  "iot",     "<str>", "IOT codename substring (e.g. \"Hera\")"),
+        arg_str0(NULL,  "chip",    "<str>", "Chip type filter (e.g. \"HFD1\")"),
+        arg_param_end
+    };
+ 
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+ 
+    char model_filter[64]    = {0};
+    char color_filter[64]    = {0};
+    char type_filter[64]     = {0};
+    char part_filter[64]     = {0};
+    char zone_filter[64]     = {0};
+    char contract_filter[64] = {0};
+    char yield_filter[64]    = {0};
+    char iot_filter[64]      = {0};
+    char chip_filter[64]     = {0};
+ 
+    struct arg_str *arg = NULL;
+ 
+    #define SAFE_COPY(i, dst) do { \
+        arg = arg_get_str(ctx, i); \
+        if (arg && arg->count) { \
+            int _len = 0; \
+            CLIParamStrToBuf(arg, (uint8_t *)dst, sizeof(dst) - 1, &_len); \
+        } \
+    } while(0)
+ 
+    SAFE_COPY(1, model_filter);
+    SAFE_COPY(2, color_filter);
+    SAFE_COPY(3, type_filter);
+    SAFE_COPY(4, part_filter);
+    SAFE_COPY(5, zone_filter);
+    SAFE_COPY(6, contract_filter);
+    SAFE_COPY(7, yield_filter);
+    SAFE_COPY(8, iot_filter);
+    SAFE_COPY(9, chip_filter);
+ 
+    CLIParserFree(ctx);
+ 
+    const char *filter_values[9] = {
+        model_filter[0]    ? model_filter    : NULL,
+        color_filter[0]    ? color_filter    : NULL,
+        type_filter[0]     ? type_filter     : NULL,
+        part_filter[0]     ? part_filter     : NULL,
+        zone_filter[0]     ? zone_filter     : NULL,
+        contract_filter[0] ? contract_filter : NULL,
+        yield_filter[0]    ? yield_filter    : NULL,
+        iot_filter[0]      ? iot_filter      : NULL,
+        chip_filter[0]     ? chip_filter     : NULL,
+    };
+ 
+    json_t *selected = map_selector(filter_values);
+    if (!selected) return PM3_EINVARG;
+ 
+    int retval = map_generator(selected);
+    json_decref(selected);
+    return retval;
+}
+
 static command_t CommandTable[] = {
     {"help",      CmdHelp,           AlwaysAvailable, "This help"},
     {"list",      CmdHFXeroxList,    AlwaysAvailable, "List ISO-14443B history"},
@@ -1019,7 +1726,8 @@ static command_t CommandTable[] = {
     {"reader",    CmdHFXeroxReader,  IfPm3Iso14443b,  "Act like a Fuji/Xerox reader"},
     {"view",      CmdHFXeroxView,    AlwaysAvailable, "Display content from tag dump file"},
     {"rdbl",      CmdHFXeroxRdBl,    IfPm3Iso14443b,  "Read Fuji/Xerox block"},
-//    {"wrbl",    CmdHFXeroxWrBl,  IfPm3Iso14443b,  "Write Fuji/Xerox block"},
+    {"wrbl",      CmdHFXeroxWrBl,  IfPm3Iso14443b,    "Write Fuji/Xerox block"},
+    {"remap",     CmdHFXeroxMap,  IfPm3Iso14443b,     "Remap tag from consumable library selection"},
     {NULL, NULL, NULL, NULL}
 };
 
