@@ -2738,8 +2738,104 @@ void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case FELICA_SELF_DIAGNOSIS_ACK:
             snprintf(exp, size, "SELF DIAGNOSIS ACK");
             break;
+        case FELICA_CHANGE_ACTIVE_INTERFACE_REQ:
+            snprintf(exp, size, "CHANGE ACTIVE INTERFACE");
+            break;
+        case FELICA_CHANGE_ACTIVE_INTERFACE_RES:
+            snprintf(exp, size, "CHANGE ACTIVE INTERFACE RES");
+            break;
+        case FELICA_RESET_INTERFACE_REQ:
+            snprintf(exp, size, "RESET INTERFACE");
+            break;
+        case FELICA_RESET_INTERFACE_RES:
+            snprintf(exp, size, "RESET INTERFACE RES");
+            break;
+        case FELICA_PROPOSE_ADHOC_REQ:
+            snprintf(exp, size, "PROPOSE ADHOC");
+            break;
+        case FELICA_PROPOSE_ADHOC_RES:
+            snprintf(exp, size, "PROPOSE ADHOC RES");
+            break;
+        case FELICA_START_ADHOC_MODE_REQ:
+            snprintf(exp, size, "START ADHOC MODE");
+            break;
+        case FELICA_START_ADHOC_MODE_RES:
+            snprintf(exp, size, "START ADHOC MODE RES");
+            break;
+        case FELICA_FALP_TERMINATE_ADHOC:
+            snprintf(exp, size, "FALP TERMINATE ADHOC");
+            break;
+        case FELICA_PUSH_REQ:
+            snprintf(exp, size, "PUSH");
+            break;
+        case FELICA_PUSH_RES:
+            snprintf(exp, size, "PUSH RES");
+            break;
+        case FELICA_FALP_TRANSMIT_DATA:
+            snprintf(exp, size, "FALP TRANSMIT DATA");
+            break;
+        case FELICA_DCK_ENCAPSULATION_CAPDU_DATA:
+            snprintf(exp, size, "DCK ENCAPSULATION CAPDU DATA");
+            break;
+        case FELICA_DCK_ENCAPSULATION_CAPDU_DATA_CHAINED:
+            snprintf(exp, size, "DCK ENCAPSULATION CAPDU DATA CHAINED");
+            break;
+        case FELICA_DCK_ENCAPSULATION_RW_ACK:
+            snprintf(exp, size, "DCK ENCAPSULATION R/W ACK");
+            break;
+        case FELICA_DCK_ENCAPSULATION_NACK:
+            snprintf(exp, size, "DCK ENCAPSULATION NACK");
+            break;
+        case FELICA_DCK_ENCAPSULATION_RAPDU_DATA_RES:
+            snprintf(exp, size, "DCK ENCAPSULATION RAPDU DATA RES");
+            break;
+        case FELICA_DCK_ENCAPSULATION_RAPDU_DATA_CHAINED_RES:
+            snprintf(exp, size, "DCK ENCAPSULATION RAPDU DATA CHAINED RES");
+            break;
+        case FELICA_DCK_ENCAPSULATION_DEVICE_ACK_RES:
+            snprintf(exp, size, "DCK ENCAPSULATION DEVICE ACK RES");
+            break;
+        case FELICA_DCK_ENCAPSULATION_NACK_RES:
+            snprintf(exp, size, "DCK ENCAPSULATION NACK RES");
+            break;
+        case FELICA_SET_PRIVACY_FLAG_REQ:
+            snprintf(exp, size, "SET PRIVACY FLAG");
+            break;
+        case FELICA_SET_PRIVACY_FLAG_RES:
+            snprintf(exp, size, "SET PRIVACY FLAG RES");
+            break;
+        case FELICA_REQUEST_MASKED_CODE_LIST_REQ:
+            snprintf(exp, size, "REQUEST MASKED CODE LIST");
+            break;
+        case FELICA_REQUEST_MASKED_CODE_LIST_RES:
+            snprintf(exp, size, "REQUEST MASKED CODE LIST RES");
+            break;
+        case FELICA_TURN_OFF_RF_POWER_CMD:
+            snprintf(exp, size, "TURN OFF RF POWER CMD");
+            break;
+        case FELICA_TURN_OFF_RF_POWER_RES:
+            snprintf(exp, size, "TURN OFF RF POWER RES");
+            break;
+        case FELICA_SET_BAUD_RATE_CMD:
+            snprintf(exp, size, "SET BAUD RATE CMD");
+            break;
+        case FELICA_SET_BAUD_RATE_RES:
+            snprintf(exp, size, "SET BAUD RATE RES");
+            break;
         case FELICA_ECHO_REQ:
             snprintf(exp, size, "ECHO");
+            break;
+        case FELICA_SET_RF_CHIP_REGISTER_CMD:
+            snprintf(exp, size, "SET RF CHIP REGISTER CMD");
+            break;
+        case FELICA_SET_RF_CHIP_REGISTER_RES:
+            snprintf(exp, size, "SET RF CHIP REGISTER RES");
+            break;
+        case FELICA_GET_RF_CHIP_REGISTER_CMD:
+            snprintf(exp, size, "GET RF CHIP REGISTER CMD");
+            break;
+        case FELICA_GET_RF_CHIP_REGISTER_RES:
+            snprintf(exp, size, "GET RF CHIP REGISTER RES");
             break;
         default                     :
             snprintf(exp, size, "?");

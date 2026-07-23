@@ -1002,6 +1002,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FELICA_SEPARATE_SYSTEM_V2_REQ   0x58
 #define FELICA_SEPARATE_SYSTEM_V2_ACK   0x59
 
+// Also called COMMIT_REGISTRATION in some sources.
 #define FELICA_CHANGE_SYSTEM_BLOCK_V2_REQ 0x5E
 #define FELICA_CHANGE_SYSTEM_BLOCK_V2_ACK 0x5F
 
@@ -1023,6 +1024,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FELICA_SEPARATE_SYSTEM_REQ      0x88
 #define FELICA_SEPARATE_SYSTEM_ACK      0x89
 
+// Also called COMMIT_REGISTRATION in some sources.
 #define FELICA_CHANGE_SYSTEM_BLOCK_REQ  0x8E
 #define FELICA_CHANGE_SYSTEM_BLOCK_ACK  0x8F
 
@@ -1032,8 +1034,68 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FELICA_SELF_DIAGNOSIS_REQ       0x92
 #define FELICA_SELF_DIAGNOSIS_ACK       0x93
 
-// Echo is a two-byte command (F000).
+// FeliCa interface commands for mobile devices
+#define FELICA_CHANGE_ACTIVE_INTERFACE_REQ 0xA4
+#define FELICA_CHANGE_ACTIVE_INTERFACE_RES 0xA5
+
+#define FELICA_RESET_INTERFACE_REQ      0xA8
+#define FELICA_RESET_INTERFACE_RES      0xA9
+
+// FeliCa Ad-hoc Link Protocol (FALP) commands
+#define FELICA_PROPOSE_ADHOC_REQ        0xAA
+#define FELICA_PROPOSE_ADHOC_RES        0xAB
+
+#define FELICA_START_ADHOC_MODE_REQ     0xAC
+#define FELICA_START_ADHOC_MODE_RES     0xAD
+
+// FALP tunnel command; does not have a corresponding response code
+#define FELICA_FALP_TERMINATE_ADHOC     0xAE
+
+#define FELICA_PUSH_REQ                 0xB0
+#define FELICA_PUSH_RES                 0xB1
+
+// FALP tunnel command; does not have a corresponding response code
+#define FELICA_FALP_TRANSMIT_DATA       0xBC
+
+// Command codes >= 0xC0 consist of two bytes; the second byte is the function code.
+// Payload data, including the IDM, if present, is hence shifted by one byte to the right
+
+// DCK encapsulation commands mentioned in the CCC specification
+#define FELICA_DCK_ENCAPSULATION_CAPDU_DATA         0xC200
+#define FELICA_DCK_ENCAPSULATION_CAPDU_DATA_CHAINED 0xC201
+#define FELICA_DCK_ENCAPSULATION_RW_ACK             0xC210
+#define FELICA_DCK_ENCAPSULATION_NACK               0xC220
+
+// DCK encapsulation responses mentioned in the CCC specification
+#define FELICA_DCK_ENCAPSULATION_RAPDU_DATA_RES         0xC300
+#define FELICA_DCK_ENCAPSULATION_RAPDU_DATA_CHAINED_RES 0xC301
+#define FELICA_DCK_ENCAPSULATION_DEVICE_ACK_RES         0xC310
+// 0xC320 is RFU; retained as a NACK response stub.
+#define FELICA_DCK_ENCAPSULATION_NACK_RES               0xC320
+
+// FeliCa internal RF commands used on the wired interface
+#define FELICA_SET_PRIVACY_FLAG_REQ     0xCC01
+#define FELICA_SET_PRIVACY_FLAG_RES     0xCD01
+
+#define FELICA_REQUEST_MASKED_CODE_LIST_REQ 0xCC02
+#define FELICA_REQUEST_MASKED_CODE_LIST_RES 0xCD02
+
+// Legacy mobile FeliCa client commands
+#define FELICA_TURN_OFF_RF_POWER_CMD    0xCC12
+#define FELICA_TURN_OFF_RF_POWER_RES    0xCD12
+
+#define FELICA_SET_BAUD_RATE_CMD        0xCC13
+#define FELICA_SET_BAUD_RATE_RES        0xCD13
+
+// Unlike most two-byte commands, works on all FeliCa targets; response code matches the command code
 #define FELICA_ECHO_REQ                 0xF000
+
+// Legacy mobile FeliCa client RF chip register commands
+#define FELICA_SET_RF_CHIP_REGISTER_CMD 0xF803
+#define FELICA_SET_RF_CHIP_REGISTER_RES 0xF903
+
+#define FELICA_GET_RF_CHIP_REGISTER_CMD 0xF804
+#define FELICA_GET_RF_CHIP_REGISTER_RES 0xF904
 
 // FeliCa SYSTEM list
 #define SYSTEMCODE_ANY                  0xffff // ANY
