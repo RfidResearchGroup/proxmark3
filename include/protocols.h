@@ -1058,7 +1058,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FELICA_FALP_TRANSMIT_DATA       0xBC
 
 // Command codes >= 0xC0 consist of two bytes; the second byte is the function code.
-// Payload data, including the IDM, if present, is hence shifted by one byte to the right
+// Payload data, including the IDM, if present, is hence shifted by one byte to the right.
 
 // DCK encapsulation commands mentioned in the CCC specification
 #define FELICA_DCK_ENCAPSULATION_CAPDU_DATA         0xC200
@@ -1086,6 +1086,27 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 #define FELICA_SET_BAUD_RATE_CMD        0xCC13
 #define FELICA_SET_BAUD_RATE_RES        0xCD13
+
+// NFC-DEP PDUs over NFC-F: the first byte specifies the direction and the second the PDU type.
+// Unlike other extended commands, both the command code and function code is incremented on response.
+#define FELICA_NFC_DEP_ATR_REQ          0xD400
+#define FELICA_NFC_DEP_ATR_RES          0xD501
+#define FELICA_NFC_DEP_PSL_REQ          0xD404
+#define FELICA_NFC_DEP_PSL_RES          0xD505
+#define FELICA_NFC_DEP_DEP_REQ          0xD406
+#define FELICA_NFC_DEP_DEP_RES          0xD507
+#define FELICA_NFC_DEP_DSL_REQ          0xD408
+#define FELICA_NFC_DEP_DSL_RES          0xD509
+#define FELICA_NFC_DEP_RLS_REQ          0xD40A
+#define FELICA_NFC_DEP_RLS_RES          0xD50B
+
+// These commands are defined by JIS X 6319-4 but have not been observed on any real targets.
+#define FELICA_ATTR_REQ                 0xD600
+#define FELICA_ATTR_RES                 0xD701
+#define FELICA_HLT_REQ                  0xD602
+#define FELICA_HLT_RES                  0xD703
+#define FELICA_WUP_REQ                  0xD604
+#define FELICA_WUP_RES                  0xD705
 
 // Unlike most two-byte commands, works on all FeliCa targets; response code matches the command code
 #define FELICA_ECHO_REQ                 0xF000
