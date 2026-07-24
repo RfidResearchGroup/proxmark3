@@ -26,6 +26,7 @@
 #include "cliparser.h"
 #include "crc16.h"
 #include "cmdhf14a.h"
+#include "pm3_cmd.h"
 #include "protocols.h"         // definitions of ISO14A/7816 protocol
 #include "iso7816/apduinfo.h"  // GetAPDUCodeDescription
 #include "nfc/ndef.h"          // NDEFRecordsDecodeAndPrint
@@ -34,6 +35,8 @@
 #include "protocols.h"         // ISO7816 APDU return codes
 #include "crypto/libpcrypto.h" // ecdsa
 #include "crypto/originality.h"
+#include "ui.h"
+#include "util.h"              // kbd_enter_pressed
 
 #define TIMEOUT 2000
 
@@ -335,27 +338,164 @@ static int CmdHFST25TAInfo(const char *Cmd) {
     return infoHFST25TA();
 }
 
+static int st25ta_normalize_sim_ndef(const uint8_t *src, size_t src_len, uint8_t *dst, uint16_t *dst_len) {
+    if (src == NULL || src_len == 0 || dst == NULL || dst_len == NULL) {
+        return PM3_EINVARG;
+    }
+
+    if (src_len >= 4 && src[src_len - 2] == 0x90 && src[src_len - 1] == 0x00) {
+        if (src_len > ST25TA_SIM_NDEF_MAX) {
+            PrintAndLogEx(ERR, "NDEF response too large. Max %u bytes", ST25TA_SIM_NDEF_MAX);
+            return PM3_EINVARG;
+        }
+        memcpy(dst, src, src_len);
+        *dst_len = src_len;
+        return PM3_SUCCESS;
+    }
+
+    if (src_len >= 2) {
+        uint16_t nlen = (src[0] << 8) | src[1];
+        if (nlen + 2 == src_len) {
+            if (src_len + 2 > ST25TA_SIM_NDEF_MAX) {
+                PrintAndLogEx(ERR, "NDEF response too large. Max %u bytes", ST25TA_SIM_NDEF_MAX);
+                return PM3_EINVARG;
+            }
+            memcpy(dst, src, src_len);
+            dst[src_len] = 0x90;
+            dst[src_len + 1] = 0x00;
+            *dst_len = src_len + 2;
+            return PM3_SUCCESS;
+        }
+    }
+
+    if (src_len + 4 > ST25TA_SIM_NDEF_MAX) {
+        PrintAndLogEx(ERR, "NDEF response too large. Max %u bytes", ST25TA_SIM_NDEF_MAX);
+        return PM3_EINVARG;
+    }
+
+    dst[0] = (src_len >> 8) & 0xff;
+    dst[1] = src_len & 0xff;
+    memcpy(dst + 2, src, src_len);
+    dst[src_len + 2] = 0x90;
+    dst[src_len + 3] = 0x00;
+    *dst_len = src_len + 4;
+    return PM3_SUCCESS;
+}
+
+static int st25ta_simulate_with_ndef(const uint8_t *uid, const uint8_t *ndef, uint16_t ndef_len) {
+    struct {
+        uint8_t tagtype;
+        uint16_t flags;
+        uint8_t uid[10];
+        uint8_t exitAfter;
+        uint8_t rats[20];
+        uint8_t ulauth_1a1_len;
+        uint8_t ulauth_1a2_len;
+        uint8_t ulauth_1a1[16];
+        uint8_t ulauth_1a2[16];
+        bool ulauth_1a2_mirror;
+        uint16_t st25ta_ndef_len;
+        uint8_t st25ta_ndef[ST25TA_SIM_NDEF_MAX];
+    } PACKED payload;
+
+    memset(&payload, 0x00, sizeof(payload));
+    payload.tagtype = 10;
+    payload.flags = 0;
+    FLAG_SET_UID_IN_DATA(payload.flags, 7);
+    memcpy(payload.uid, uid, 7);
+
+    if (ndef != NULL && ndef_len > 0) {
+        payload.st25ta_ndef_len = ndef_len;
+        memcpy(payload.st25ta_ndef, ndef, ndef_len);
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO14443A_SIMULATE, (uint8_t *)&payload, sizeof(payload));
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
+    PacketResponseNG resp = {0};
+    bool keypress = kbd_enter_pressed();
+    while (keypress == false) {
+        keypress = kbd_enter_pressed();
+
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == false) {
+            continue;
+        }
+
+        break;
+    }
+
+    return resp.status;
+}
+
 static int CmdHFST25TASim(const char *Cmd) {
     int uidlen = 0;
     uint8_t uid[7] = {0};
+    int ndef_hex_len = 0;
+    uint8_t ndef_hex[ST25TA_SIM_NDEF_MAX] = {0};
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf st25ta sim",
                   "Emulating ST25TA512B tag with 7 byte UID",
-                  "hf st25ta sim -u 02E2007D0FCA4C\n");
+                  "hf st25ta sim -u 02E2007D0FCA4C\n"
+                  "hf st25ta sim -u 02E2007D0FCA4C --ndef 001BD1011754027A68A234CBD0E203C73E620BE8C63C852CC5313131329000\n"
+                  "hf st25ta sim -u 02E2007D0FCA4C -f my-ndef.bin\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("u", "uid", "<hex>", "7 byte UID"),
+        arg_str0(NULL, "ndef", "<hex>", "NDEF data or full READ BINARY response"),
+        arg_str0("f", "file", "<fn>", "load NDEF data or full READ BINARY response from file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+    int ndef_res = CLIParamHexToBuf(arg_get_str(ctx, 2), ndef_hex, sizeof(ndef_hex), &ndef_hex_len);
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
     if (uidlen != 7) {
         PrintAndLogEx(ERR, "UID must be 7 hex bytes");
         return PM3_EINVARG;
+    }
+
+    if (ndef_res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Invalid NDEF hex");
+        return ndef_res;
+    }
+
+    if (ndef_hex_len > 0 && fnlen > 0) {
+        PrintAndLogEx(ERR, "Use either --ndef or -f, not both");
+        return PM3_EINVARG;
+    }
+
+    uint8_t ndef[ST25TA_SIM_NDEF_MAX] = {0};
+    uint16_t ndef_len = 0;
+
+    if (ndef_hex_len > 0) {
+        int res = st25ta_normalize_sim_ndef(ndef_hex, ndef_hex_len, ndef, &ndef_len);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+    } else if (fnlen > 0) {
+        uint8_t *file_data = NULL;
+        size_t file_len = 0;
+        int res = loadFile_safe(filename, "", (void **)&file_data, &file_len);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        res = st25ta_normalize_sim_ndef(file_data, file_len, ndef, &ndef_len);
+        free(file_data);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+    }
+
+    if (ndef_len > 0) {
+        PrintAndLogEx(SUCCESS, "Emulating ST25TA512B with supplied NDEF response (%u bytes)", ndef_len);
+        return st25ta_simulate_with_ndef(uid, ndef, ndef_len);
     }
 
     char param[40];
