@@ -2648,6 +2648,54 @@ void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case FELICA_WRTSECV2_ACK:
             snprintf(exp, size, "WRITE v2 ACK");
             break;
+        case FELICA_NFC_DEP_ATR_REQ:
+            snprintf(exp, size, "NFC-DEP ATR REQ");
+            break;
+        case FELICA_NFC_DEP_ATR_RES:
+            snprintf(exp, size, "NFC-DEP ATR RES");
+            break;
+        case FELICA_NFC_DEP_PSL_REQ:
+            snprintf(exp, size, "NFC-DEP PSL REQ");
+            break;
+        case FELICA_NFC_DEP_PSL_RES:
+            snprintf(exp, size, "NFC-DEP PSL RES");
+            break;
+        case FELICA_NFC_DEP_DEP_REQ:
+            snprintf(exp, size, "NFC-DEP DEP REQ");
+            break;
+        case FELICA_NFC_DEP_DEP_RES:
+            snprintf(exp, size, "NFC-DEP DEP RES");
+            break;
+        case FELICA_NFC_DEP_DSL_REQ:
+            snprintf(exp, size, "NFC-DEP DSL REQ");
+            break;
+        case FELICA_NFC_DEP_DSL_RES:
+            snprintf(exp, size, "NFC-DEP DSL RES");
+            break;
+        case FELICA_NFC_DEP_RLS_REQ:
+            snprintf(exp, size, "NFC-DEP RLS REQ");
+            break;
+        case FELICA_NFC_DEP_RLS_RES:
+            snprintf(exp, size, "NFC-DEP RLS RES");
+            break;
+        case FELICA_ATTR_REQ:
+            snprintf(exp, size, "ATTR");
+            break;
+        case FELICA_ATTR_RES:
+            snprintf(exp, size, "ATTR RES");
+            break;
+        case FELICA_HLT_REQ:
+            snprintf(exp, size, "HLT");
+            break;
+        case FELICA_HLT_RES:
+            snprintf(exp, size, "HLT RES");
+            break;
+        case FELICA_WUP_REQ:
+            snprintf(exp, size, "WUP");
+            break;
+        case FELICA_WUP_RES:
+            snprintf(exp, size, "WUP RES");
+            break;
         case FELICA_UPDATE_RNDID_REQ:
             snprintf(exp, size, "UPDATE RANDOM ID");
             break;
