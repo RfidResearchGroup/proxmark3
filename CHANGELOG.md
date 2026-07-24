@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 
+- Added support for emulating ST25TA tag (IKEA Rothult) with custom NDEF response (@sanduuz)
 - Added `hf mf gdmgetblk/gdmgethidblk/gdmsethidblk/gdmsetuid/gdmwipe/gdmsetsig` (@0x6r1an0y)
 - Changed `hf mf gdmparsecfg/gdmsetblk` (@0x6r1an0y)
 - Renamed `hf mf gdmcfg` (@0x6r1an0y)
