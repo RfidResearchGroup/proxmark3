@@ -35,8 +35,8 @@
 #include "protocols.h"         // ISO7816 APDU return codes
 #include "crypto/libpcrypto.h" // ecdsa
 #include "crypto/originality.h"
+#include "mifare/mifarehost.h" // mf_eml_set_mem_xt / mf_eml_get_mem_xt
 #include "ui.h"
-#include "util.h"              // kbd_enter_pressed
 
 #define TIMEOUT 2000
 
@@ -344,8 +344,8 @@ static int st25ta_normalize_sim_ndef(const uint8_t *src, size_t src_len, uint8_t
     }
 
     if (src_len >= 4 && src[src_len - 2] == 0x90 && src[src_len - 1] == 0x00) {
-        if (src_len > ST25TA_SIM_NDEF_MAX) {
-            PrintAndLogEx(ERR, "NDEF response too large. Max %u bytes", ST25TA_SIM_NDEF_MAX);
+        if (src_len > ST25TA_EML_NDEF_MAX) {
+            PrintAndLogEx(ERR, "NDEF response too large. Max %u bytes", ST25TA_EML_NDEF_MAX);
             return PM3_EINVARG;
         }
         memcpy(dst, src, src_len);
@@ -356,8 +356,8 @@ static int st25ta_normalize_sim_ndef(const uint8_t *src, size_t src_len, uint8_t
     if (src_len >= 2) {
         uint16_t nlen = (src[0] << 8) | src[1];
         if (nlen + 2 == src_len) {
-            if (src_len + 2 > ST25TA_SIM_NDEF_MAX) {
-                PrintAndLogEx(ERR, "NDEF response too large. Max %u bytes", ST25TA_SIM_NDEF_MAX);
+            if (src_len + 2 > ST25TA_EML_NDEF_MAX) {
+                PrintAndLogEx(ERR, "NDEF response too large. Max %u bytes", ST25TA_EML_NDEF_MAX);
                 return PM3_EINVARG;
             }
             memcpy(dst, src, src_len);
@@ -368,8 +368,8 @@ static int st25ta_normalize_sim_ndef(const uint8_t *src, size_t src_len, uint8_t
         }
     }
 
-    if (src_len + 4 > ST25TA_SIM_NDEF_MAX) {
-        PrintAndLogEx(ERR, "NDEF response too large. Max %u bytes", ST25TA_SIM_NDEF_MAX);
+    if (src_len + 4 > ST25TA_EML_NDEF_MAX) {
+        PrintAndLogEx(ERR, "NDEF response too large. Max %u bytes", ST25TA_EML_NDEF_MAX);
         return PM3_EINVARG;
     }
 
@@ -382,68 +382,46 @@ static int st25ta_normalize_sim_ndef(const uint8_t *src, size_t src_len, uint8_t
     return PM3_SUCCESS;
 }
 
-static int st25ta_simulate_with_ndef(const uint8_t *uid, const uint8_t *ndef, uint16_t ndef_len) {
-    struct {
-        uint8_t tagtype;
-        uint16_t flags;
-        uint8_t uid[10];
-        uint8_t exitAfter;
-        uint8_t rats[20];
-        uint8_t ulauth_1a1_len;
-        uint8_t ulauth_1a2_len;
-        uint8_t ulauth_1a1[16];
-        uint8_t ulauth_1a2[16];
-        bool ulauth_1a2_mirror;
-        uint16_t st25ta_ndef_len;
-        uint8_t st25ta_ndef[ST25TA_SIM_NDEF_MAX];
-    } PACKED payload;
-
-    memset(&payload, 0x00, sizeof(payload));
-    payload.tagtype = 10;
-    payload.flags = 0;
-    FLAG_SET_UID_IN_DATA(payload.flags, 7);
-    memcpy(payload.uid, uid, 7);
-
-    if (ndef != NULL && ndef_len > 0) {
-        payload.st25ta_ndef_len = ndef_len;
-        memcpy(payload.st25ta_ndef, ndef, ndef_len);
+static int st25ta_upload_sim_data(const uint8_t *uid, uint8_t uid_len, const uint8_t *ndef, uint16_t ndef_len) {
+    uint8_t data[ST25TA_EML_DATA_OFFSET + ST25TA_EML_NDEF_MAX] = {0};
+    uint16_t data_len = ST25TA_EML_DATA_OFFSET + ndef_len;
+    memcpy(data + ST25TA_EML_MAGIC_OFFSET, ST25TA_EML_MAGIC, 4);
+    data[ST25TA_EML_LEN_OFFSET] = ndef_len & 0xff;
+    data[ST25TA_EML_LEN_OFFSET + 1] = (ndef_len >> 8) & 0xff;
+    data[ST25TA_EML_UIDLEN_OFFSET] = uid_len;
+    if (uid_len == 7) {
+        memcpy(data + ST25TA_EML_UID_OFFSET, uid, uid_len);
     }
+    memcpy(data + ST25TA_EML_DATA_OFFSET, ndef, ndef_len);
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO14443A_SIMULATE, (uint8_t *)&payload, sizeof(payload));
-
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
-    PacketResponseNG resp = {0};
-    bool keypress = kbd_enter_pressed();
-    while (keypress == false) {
-        keypress = kbd_enter_pressed();
-
-        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == false) {
-            continue;
+    for (uint16_t offset = 0; offset < data_len;) {
+        uint8_t chunk_len = MIN(data_len - offset, UINT8_MAX);
+        int res = mf_eml_set_mem_xt(data + offset, offset, chunk_len, 1);
+        if (res != PM3_SUCCESS) {
+            return res;
         }
-
-        break;
+        offset += chunk_len;
     }
 
-    return resp.status;
+    return PM3_SUCCESS;
 }
 
-static int CmdHFST25TASim(const char *Cmd) {
+static int CmdHFST25TAELoad(const char *Cmd) {
     int uidlen = 0;
     uint8_t uid[7] = {0};
     int ndef_hex_len = 0;
-    uint8_t ndef_hex[ST25TA_SIM_NDEF_MAX] = {0};
+    uint8_t ndef_hex[ST25TA_EML_NDEF_MAX] = {0};
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf st25ta sim",
-                  "Emulating ST25TA512B tag with 7 byte UID",
-                  "hf st25ta sim -u 02E2007D0FCA4C\n"
-                  "hf st25ta sim -u 02E2007D0FCA4C --ndef 001BD1011754027A68A234CBD0E203C73E620BE8C63C852CC5313131329000\n"
-                  "hf st25ta sim -u 02E2007D0FCA4C -f my-ndef.bin\n");
+    CLIParserInit(&ctx, "hf st25ta eload",
+                  "Load ST25TA NDEF response into emulator memory",
+                  "hf st25ta eload --ndef 001BD1011754027A68A234CBD0E203C73E620BE8C63C852CC5313131329000\n"
+                  "hf st25ta eload -f my-ndef.bin\n"
+                  "hf st25ta eload -u 02E2007D0FCA4C -f my-ndef.bin\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("u", "uid", "<hex>", "7 byte UID"),
+        arg_str0("u", "uid", "<hex>", "optional 7 byte UID to store for simulation"),
         arg_str0(NULL, "ndef", "<hex>", "NDEF data or full READ BINARY response"),
         arg_str0("f", "file", "<fn>", "load NDEF data or full READ BINARY response from file"),
         arg_param_end
@@ -456,7 +434,7 @@ static int CmdHFST25TASim(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
-    if (uidlen != 7) {
+    if (uidlen != 0 && uidlen != 7) {
         PrintAndLogEx(ERR, "UID must be 7 hex bytes");
         return PM3_EINVARG;
     }
@@ -466,20 +444,19 @@ static int CmdHFST25TASim(const char *Cmd) {
         return ndef_res;
     }
 
-    if (ndef_hex_len > 0 && fnlen > 0) {
-        PrintAndLogEx(ERR, "Use either --ndef or -f, not both");
+    if ((ndef_hex_len > 0) == (fnlen > 0)) {
+        PrintAndLogEx(ERR, "Use exactly one of --ndef or -f");
         return PM3_EINVARG;
     }
 
-    uint8_t ndef[ST25TA_SIM_NDEF_MAX] = {0};
+    uint8_t ndef[ST25TA_EML_NDEF_MAX] = {0};
     uint16_t ndef_len = 0;
-
     if (ndef_hex_len > 0) {
         int res = st25ta_normalize_sim_ndef(ndef_hex, ndef_hex_len, ndef, &ndef_len);
         if (res != PM3_SUCCESS) {
             return res;
         }
-    } else if (fnlen > 0) {
+    } else {
         uint8_t *file_data = NULL;
         size_t file_len = 0;
         int res = loadFile_safe(filename, "", (void **)&file_data, &file_len);
@@ -493,9 +470,58 @@ static int CmdHFST25TASim(const char *Cmd) {
         }
     }
 
-    if (ndef_len > 0) {
-        PrintAndLogEx(SUCCESS, "Emulating ST25TA512B with supplied NDEF response (%u bytes)", ndef_len);
-        return st25ta_simulate_with_ndef(uid, ndef, ndef_len);
+    int res = st25ta_upload_sim_data(uid, uidlen, ndef, ndef_len);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Failed uploading ST25TA data to emulator memory");
+        return res;
+    }
+
+    PrintAndLogEx(SUCCESS, "Uploaded ST25TA NDEF response to emulator memory (" _YELLOW_("%u") " bytes)", ndef_len);
+    if (uidlen == 7) {
+        PrintAndLogEx(SUCCESS, "Stored UID " _YELLOW_("%s"), sprint_hex_inrow(uid, uidlen));
+    }
+    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf st25ta sim`"));
+    return PM3_SUCCESS;
+}
+
+static int CmdHFST25TASim(const char *Cmd) {
+    int uidlen = 0;
+    uint8_t uid[7] = {0};
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf st25ta sim",
+                  "Emulating ST25TA512B tag. Uses NDEF data from `hf st25ta eload` if loaded.",
+                  "hf st25ta sim -u 02E2007D0FCA4C\n"
+                  "hf st25ta sim\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("u", "uid", "<hex>", "7 byte UID"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+    CLIParserFree(ctx);
+
+    if (uidlen != 0 && uidlen != 7) {
+        PrintAndLogEx(ERR, "UID must be 7 hex bytes");
+        return PM3_EINVARG;
+    }
+
+    if (uidlen == 0) {
+        uint8_t header[ST25TA_EML_DATA_OFFSET] = {0};
+        int res = mf_eml_get_mem_xt(header, 0, sizeof(header), 1);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        if (memcmp(header + ST25TA_EML_MAGIC_OFFSET, ST25TA_EML_MAGIC, 4) == 0 &&
+                header[ST25TA_EML_UIDLEN_OFFSET] == 7) {
+            memcpy(uid, header + ST25TA_EML_UID_OFFSET, sizeof(uid));
+            uidlen = sizeof(uid);
+        } else {
+            PrintAndLogEx(ERR, "No UID supplied and no UID loaded. Use " _YELLOW_("`hf st25ta sim -u <uid>`") " or " _YELLOW_("`hf st25ta eload -u <uid> ...`"));
+            return PM3_EINVARG;
+        }
     }
 
     char param[40];
@@ -951,6 +977,7 @@ static int CmdHFST25TAList(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",     CmdHelp,               AlwaysAvailable, "This help"},
+    {"eload",    CmdHFST25TAELoad,      IfPm3Iso14443a,  "Upload NDEF response into emulator memory"},
     {"info",     CmdHFST25TAInfo,       IfPm3Iso14443a,  "Tag information"},
     {"list",     CmdHFST25TAList,       AlwaysAvailable, "List ISO 14443A/7816 history"},
     {"ndefread", CmdHFST25TANdefRead,   AlwaysAvailable, "read NDEF file on tag"},
