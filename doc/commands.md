@@ -889,6 +889,9 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf st25ta help         `|Y       |`This help`
+|`hf st25ta eload        `|N       |`Upload NDEF response into emulator memory`
+|`hf st25ta esave        `|N       |`Save emulator memory to file`
+|`hf st25ta eview        `|N       |`View emulator memory`
 |`hf st25ta info         `|N       |`Tag information`
 |`hf st25ta list         `|Y       |`List ISO 14443A/7816 history`
 |`hf st25ta ndefread     `|Y       |`read NDEF file on tag`
