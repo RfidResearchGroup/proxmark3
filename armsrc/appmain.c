@@ -21,6 +21,7 @@
 #include "appmain.h"
 
 #include "clocks.h"
+#include "pm3_cmd.h"
 #include "usb_cdc.h"
 #include "proxmark3_arm.h"
 #include "dbprint.h"
@@ -1902,13 +1903,16 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t ulauth_1a1[16];
                 uint8_t ulauth_1a2[16];
                 bool ulauth_1a2_mirror;
+                uint16_t st25ta_ndef_len;
+                uint8_t st25ta_ndef[ST25TA_SIM_NDEF_MAX];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
             SimulateIso14443aTagEx(payload->tagtype, payload->flags, payload->uid,
                                    payload->exitAfter, payload->rats, sizeof(payload->rats),
                                    payload->ulauth_1a1, payload->ulauth_1a1_len,
                                    payload->ulauth_1a2, payload->ulauth_1a2_len,
-                                   payload->ulauth_1a2_mirror
+                                   payload->ulauth_1a2_mirror,
+                                   payload->st25ta_ndef, payload->st25ta_ndef_len
                                   );  // ## Simulate iso14443a tag - pass tag type & UID
             break;
         }

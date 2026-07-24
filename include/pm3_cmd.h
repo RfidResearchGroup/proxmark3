@@ -907,6 +907,9 @@ typedef struct {
 
 #define CMD_UNKNOWN 0xFFFF
 
+// Max NDEF record length for ST25TA simulation
+#define ST25TA_SIM_NDEF_MAX 256
+
 // Mifare simulation flags
 //  In interactive mode, we are expected to finish the operation with an ACK
 #define FLAG_INTERACTIVE 0x0001
