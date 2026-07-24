@@ -1720,15 +1720,14 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
 // 'hf 14a sim'
 //-----------------------------------------------------------------------------
 void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uint8_t exitAfterNReads) {
-    SimulateIso14443aTagEx(tagType, flags, useruid, exitAfterNReads, NULL, 0, NULL, 0, NULL, 0, false, NULL, 0);
+    SimulateIso14443aTagEx(tagType, flags, useruid, exitAfterNReads, NULL, 0, NULL, 0, NULL, 0, false);
 }
 
 void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, uint8_t exitAfterNReads,
                             uint8_t *ats, size_t ats_len,
                             uint8_t *ulauth_1a1, uint8_t ulauth_1a1_len,
                             uint8_t *ulauth_1a2, uint8_t ulauth_1a2_len,
-                            bool ulauth_1a2_mirror,
-                            const uint8_t *st25ta_ndef, uint16_t st25ta_ndef_len) {
+                            bool ulauth_1a2_mirror) {
 #define ATTACK_KEY_COUNT 16
 #define ULC_TAG_NONCE       "\x01\x02\x03\x04\x05\x06\x07\x08"
 
@@ -1761,16 +1760,23 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
     // Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
     // Such a response is less time critical, so we can prepare them on the fly
-#define DYNAMIC_RESPONSE_BUFFER_SIZE (ST25TA_SIM_NDEF_MAX + 4)
-#define DYNAMIC_MODULATION_BUFFER_SIZE 4096
+#define DYNAMIC_RESPONSE_BUFFER_SIZE 64
+#define DYNAMIC_MODULATION_BUFFER_SIZE 512
 
-    uint8_t *dynamic_response_buffer = BigBuf_calloc(DYNAMIC_RESPONSE_BUFFER_SIZE);
+    uint16_t dynamic_response_buffer_size = DYNAMIC_RESPONSE_BUFFER_SIZE;
+    uint16_t dynamic_modulation_buffer_size = DYNAMIC_MODULATION_BUFFER_SIZE;
+    if (tagType == 10) {
+        dynamic_response_buffer_size = ST25TA_EML_NDEF_MAX + 4;
+        dynamic_modulation_buffer_size = 4096;
+    }
+
+    uint8_t *dynamic_response_buffer = BigBuf_calloc(dynamic_response_buffer_size);
     if (dynamic_response_buffer == NULL) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
         return;
     }
-    uint8_t *dynamic_modulation_buffer = BigBuf_calloc(DYNAMIC_MODULATION_BUFFER_SIZE);
+    uint8_t *dynamic_modulation_buffer = BigBuf_calloc(dynamic_modulation_buffer_size);
     if (dynamic_modulation_buffer == NULL) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
@@ -1789,6 +1795,22 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
         return;
+    }
+
+    uint8_t st25ta_ndef[ST25TA_EML_NDEF_MAX] = {0};
+    uint16_t st25ta_ndef_len = 0;
+    if (tagType == 10) {
+        uint8_t st25ta_header[ST25TA_EML_DATA_OFFSET] = {0};
+        emlGet(st25ta_header, 0, sizeof(st25ta_header));
+        if (memcmp(st25ta_header + ST25TA_EML_MAGIC_OFFSET, ST25TA_EML_MAGIC, 4) == 0) {
+            st25ta_ndef_len = st25ta_header[ST25TA_EML_LEN_OFFSET] |
+                              (st25ta_header[ST25TA_EML_LEN_OFFSET + 1] << 8);
+            if (st25ta_ndef_len <= ST25TA_EML_NDEF_MAX) {
+                emlGet(st25ta_ndef, ST25TA_EML_DATA_OFFSET, st25ta_ndef_len);
+            } else {
+                st25ta_ndef_len = 0;
+            }
+        }
     }
 
     mfu_dump_t *mfu_em_dump = NULL;
@@ -2445,7 +2467,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                 const uint8_t *ndef = default_st25ta_ndef;
                 uint16_t ndef_len = sizeof(default_st25ta_ndef);
 
-                if (st25ta_ndef != NULL && st25ta_ndef_len > 0 && st25ta_ndef_len <= ST25TA_SIM_NDEF_MAX) {
+                if (st25ta_ndef_len > 0) {
                     ndef = st25ta_ndef;
                     ndef_len = st25ta_ndef_len;
                 }
@@ -2548,7 +2570,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                 AddCrc14A(dynamic_response_info.response, dynamic_response_info.response_n);
                 dynamic_response_info.response_n += 2;
 
-                if (prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE) == false) {
+                if (prepare_tag_modulation(&dynamic_response_info, dynamic_modulation_buffer_size) == false) {
                     if (g_dbglevel >= DBG_DEBUG) DbpString("Error preparing tag response");
                     LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
                     break;

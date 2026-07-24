@@ -628,6 +628,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf st25ta protect" },
     { 0, "hf st25ta pwd" },
     { 0, "hf st25ta sim" },
+    { 0, "hf st25ta eload" },
     { 1, "hf tesla help" },
     { 0, "hf tesla info" },
     { 1, "hf tesla list" },
