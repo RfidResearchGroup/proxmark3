@@ -1030,8 +1030,11 @@ int CmdHF14ASim(const char *Cmd) {
         uint8_t ulauth_1a1[16];
         uint8_t ulauth_1a2[16];
         bool ulauth_1a2_mirror;
+        uint16_t st25ta_ndef_len;
+        uint8_t st25ta_ndef[ST25TA_SIM_NDEF_MAX];
     } PACKED payload;
 
+    memset(&payload, 0x00, sizeof(payload));
     payload.tagtype = tagtype;
     payload.flags = flags;
     payload.exitAfter = exitAfterNReads;

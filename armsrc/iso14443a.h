@@ -148,7 +148,8 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                             uint8_t *ats, size_t ats_len,
                             uint8_t *ulauth_1a1, uint8_t ulauth_1a1_len,
                             uint8_t *ulauth_1a2, uint8_t ulauth_1a2_len,
-                            bool ulauth_1a2_mirror);
+                            bool ulauth_1a2_mirror,
+                            const uint8_t *st25ta_ndef, uint16_t st25ta_ndef_len);
 
 void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                              uint8_t *ats, size_t ats_len,  uint8_t *aid, size_t aid_len,

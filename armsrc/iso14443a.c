@@ -19,6 +19,7 @@
 //-----------------------------------------------------------------------------
 #include "iso14443a.h"
 
+#include "pm3_cmd.h"
 #include "string.h"
 #include "proxmark3_arm.h"
 #include "cmd.h"
@@ -1719,14 +1720,15 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
 // 'hf 14a sim'
 //-----------------------------------------------------------------------------
 void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uint8_t exitAfterNReads) {
-    SimulateIso14443aTagEx(tagType, flags, useruid, exitAfterNReads, NULL, 0, NULL, 0, NULL, 0, false);
+    SimulateIso14443aTagEx(tagType, flags, useruid, exitAfterNReads, NULL, 0, NULL, 0, NULL, 0, false, NULL, 0);
 }
 
 void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, uint8_t exitAfterNReads,
                             uint8_t *ats, size_t ats_len,
                             uint8_t *ulauth_1a1, uint8_t ulauth_1a1_len,
                             uint8_t *ulauth_1a2, uint8_t ulauth_1a2_len,
-                            bool ulauth_1a2_mirror) {
+                            bool ulauth_1a2_mirror,
+                            const uint8_t *st25ta_ndef, uint16_t st25ta_ndef_len) {
 #define ATTACK_KEY_COUNT 16
 #define ULC_TAG_NONCE       "\x01\x02\x03\x04\x05\x06\x07\x08"
 
@@ -1759,8 +1761,8 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
     // Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
     // Such a response is less time critical, so we can prepare them on the fly
-#define DYNAMIC_RESPONSE_BUFFER_SIZE 64
-#define DYNAMIC_MODULATION_BUFFER_SIZE 512
+#define DYNAMIC_RESPONSE_BUFFER_SIZE (ST25TA_SIM_NDEF_MAX + 4)
+#define DYNAMIC_MODULATION_BUFFER_SIZE 4096
 
     uint8_t *dynamic_response_buffer = BigBuf_calloc(DYNAMIC_RESPONSE_BUFFER_SIZE);
     if (dynamic_response_buffer == NULL) {
@@ -2434,10 +2436,24 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             if (tagType == 10)  {
                 // we replay 90 00 for all commands but the read bin and we deny the verify cmd.
 
+                static const uint8_t default_st25ta_ndef[] = {
+                    0x00, 0x1b, 0xd1, 0x01, 0x17, 0x54, 0x02, 0x7a,
+                    0x68, 0xa2, 0x34, 0xcb, 0xd0, 0xe2, 0x03, 0xc7,
+                    0x3e, 0x62, 0x0b, 0xe8, 0xc6, 0x3c, 0x85, 0x2c,
+                    0xc5, 0x31, 0x31, 0x31, 0x32, 0x90, 0x00
+                };
+                const uint8_t *ndef = default_st25ta_ndef;
+                uint16_t ndef_len = sizeof(default_st25ta_ndef);
+
+                if (st25ta_ndef != NULL && st25ta_ndef_len > 0 && st25ta_ndef_len <= ST25TA_SIM_NDEF_MAX) {
+                    ndef = st25ta_ndef;
+                    ndef_len = st25ta_ndef_len;
+                }
+
                 if (memcmp("\x02\xa2\xb0\x00\x00\x1d\x51\x69", receivedCmd, 8) == 0) {
                     dynamic_response_info.response[0] = receivedCmd[0];
-                    memcpy(dynamic_response_info.response + 1, "\x00\x1b\xd1\x01\x17\x54\x02\x7a\x68\xa2\x34\xcb\xd0\xe2\x03\xc7\x3e\x62\x0b\xe8\xc6\x3c\x85\x2c\xc5\x31\x31\x31\x32\x90\x00", 31);
-                    dynamic_response_info.response_n = 32;
+                    memcpy(dynamic_response_info.response + 1, ndef, ndef_len);
+                    dynamic_response_info.response_n = ndef_len + 1;
                 } else if (memcmp("\x02\x00\x20\x00\x01\x00\x6e\xa9", receivedCmd, 8) == 0) {
                     dynamic_response_info.response[0] = receivedCmd[0];
                     dynamic_response_info.response[1] = 0x63;
