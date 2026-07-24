@@ -37,6 +37,7 @@
 #include "desfire_crypto.h"  // UL-C authentication helpers
 #include "mifare.h"  // for iso14a_polling_frame_t structure
 #include "cmac_calc.h"
+#include "usb_cdc.h"
 
 // Forward declaration: HID Config Card jam support (implemented in secc.c).
 // Called from SniffIso14443a when param bit 0x04 is set.
@@ -2788,6 +2789,11 @@ int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_
             if (BUTTON_PRESS()) {
                 Dbprintf("----------- " _GREEN_("Button pressed, user aborted") " ----------");
                 return 1;
+            }
+
+            // Keep USB enumeration alive while this real-time loop waits for RF.
+            if (Uart.state == STATE_14A_UNSYNCD) {
+                usb_check();
             }
 
             flip++;
