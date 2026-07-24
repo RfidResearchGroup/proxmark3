@@ -19,6 +19,7 @@
 //-----------------------------------------------------------------------------
 #include "iso14443a.h"
 
+#include "pm3_cmd.h"
 #include "string.h"
 #include "proxmark3_arm.h"
 #include "cmd.h"
@@ -1762,13 +1763,20 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 #define DYNAMIC_RESPONSE_BUFFER_SIZE 64
 #define DYNAMIC_MODULATION_BUFFER_SIZE 512
 
-    uint8_t *dynamic_response_buffer = BigBuf_calloc(DYNAMIC_RESPONSE_BUFFER_SIZE);
+    uint16_t dynamic_response_buffer_size = DYNAMIC_RESPONSE_BUFFER_SIZE;
+    uint16_t dynamic_modulation_buffer_size = DYNAMIC_MODULATION_BUFFER_SIZE;
+    if (tagType == 10) {
+        dynamic_response_buffer_size = ST25TA_EML_NDEF_MAX + 4;
+        dynamic_modulation_buffer_size = 4096;
+    }
+
+    uint8_t *dynamic_response_buffer = BigBuf_calloc(dynamic_response_buffer_size);
     if (dynamic_response_buffer == NULL) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
         return;
     }
-    uint8_t *dynamic_modulation_buffer = BigBuf_calloc(DYNAMIC_MODULATION_BUFFER_SIZE);
+    uint8_t *dynamic_modulation_buffer = BigBuf_calloc(dynamic_modulation_buffer_size);
     if (dynamic_modulation_buffer == NULL) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
@@ -1787,6 +1795,22 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
         return;
+    }
+
+    uint8_t st25ta_ndef[ST25TA_EML_NDEF_MAX] = {0};
+    uint16_t st25ta_ndef_len = 0;
+    if (tagType == 10) {
+        uint8_t st25ta_header[ST25TA_EML_DATA_OFFSET] = {0};
+        emlGet(st25ta_header, 0, sizeof(st25ta_header));
+        if (memcmp(st25ta_header + ST25TA_EML_MAGIC_OFFSET, ST25TA_EML_MAGIC, 4) == 0) {
+            st25ta_ndef_len = st25ta_header[ST25TA_EML_LEN_OFFSET] |
+                              (st25ta_header[ST25TA_EML_LEN_OFFSET + 1] << 8);
+            if (st25ta_ndef_len <= ST25TA_EML_NDEF_MAX) {
+                emlGet(st25ta_ndef, ST25TA_EML_DATA_OFFSET, st25ta_ndef_len);
+            } else {
+                st25ta_ndef_len = 0;
+            }
+        }
     }
 
     mfu_dump_t *mfu_em_dump = NULL;
@@ -2434,10 +2458,24 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             if (tagType == 10)  {
                 // we replay 90 00 for all commands but the read bin and we deny the verify cmd.
 
+                static const uint8_t default_st25ta_ndef[] = {
+                    0x00, 0x1b, 0xd1, 0x01, 0x17, 0x54, 0x02, 0x7a,
+                    0x68, 0xa2, 0x34, 0xcb, 0xd0, 0xe2, 0x03, 0xc7,
+                    0x3e, 0x62, 0x0b, 0xe8, 0xc6, 0x3c, 0x85, 0x2c,
+                    0xc5, 0x31, 0x31, 0x31, 0x32, 0x90, 0x00
+                };
+                const uint8_t *ndef = default_st25ta_ndef;
+                uint16_t ndef_len = sizeof(default_st25ta_ndef);
+
+                if (st25ta_ndef_len > 0) {
+                    ndef = st25ta_ndef;
+                    ndef_len = st25ta_ndef_len;
+                }
+
                 if (memcmp("\x02\xa2\xb0\x00\x00\x1d\x51\x69", receivedCmd, 8) == 0) {
                     dynamic_response_info.response[0] = receivedCmd[0];
-                    memcpy(dynamic_response_info.response + 1, "\x00\x1b\xd1\x01\x17\x54\x02\x7a\x68\xa2\x34\xcb\xd0\xe2\x03\xc7\x3e\x62\x0b\xe8\xc6\x3c\x85\x2c\xc5\x31\x31\x31\x32\x90\x00", 31);
-                    dynamic_response_info.response_n = 32;
+                    memcpy(dynamic_response_info.response + 1, ndef, ndef_len);
+                    dynamic_response_info.response_n = ndef_len + 1;
                 } else if (memcmp("\x02\x00\x20\x00\x01\x00\x6e\xa9", receivedCmd, 8) == 0) {
                     dynamic_response_info.response[0] = receivedCmd[0];
                     dynamic_response_info.response[1] = 0x63;
@@ -2532,7 +2570,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                 AddCrc14A(dynamic_response_info.response, dynamic_response_info.response_n);
                 dynamic_response_info.response_n += 2;
 
-                if (prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE) == false) {
+                if (prepare_tag_modulation(&dynamic_response_info, dynamic_modulation_buffer_size) == false) {
                     if (g_dbglevel >= DBG_DEBUG) DbpString("Error preparing tag response");
                     LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
                     break;

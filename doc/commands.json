@@ -9987,13 +9987,58 @@
             ],
             "usage": "hf sniff [-h] [--sp <dec>] [--st <dec>] [--smode [none|drop|min|max|avg]] [--sratio <dec, ms>]"
         },
+        "hf st25ta esave": {
+            "command": "hf st25ta esave",
+            "description": "Save ST25TA emulator memory NDEF response to file",
+            "notes": [
+                "hf st25ta esave",
+                "hf st25ta esave -f hf-st25ta-ndef"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> Specify a filename for dump file"
+            ],
+            "usage": "hf st25ta esave [-h] [-f <fn>]"
+        },
+        "hf st25ta eview": {
+            "command": "hf st25ta eview",
+            "description": "Display ST25TA emulator memory",
+            "notes": [
+                "hf st25ta eview",
+                "hf st25ta eview -v"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose verbose NDEF output"
+            ],
+            "usage": "hf st25ta eview [-hv]"
+        },
         "hf st25ta help": {
             "command": "hf st25ta help",
-            "description": "help This help list List ISO 14443A/7816 history ndefread read NDEF file on tag --------------------------------------------------------------------------------------- hf st25ta info available offline: no Get info about ST25TA tag",
+            "description": "help This help list List ISO 14443A/7816 history ndefread read NDEF file on tag --------------------------------------------------------------------------------------- hf st25ta eload available offline: no Load ST25TA NDEF response into emulator memory",
+            "notes": [
+                "hf st25ta eload --ndef 001BD1011754027A68A234CBD0E203C73E620BE8C63C852CC5313131329000",
+                "hf st25ta eload -f my-ndef.bin",
+                "hf st25ta eload -u 02E2007D0FCA4C -f my-ndef.bin"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-u, --uid <hex> optional 7 byte UID to store for simulation",
+                "--ndef <hex> NDEF data or full READ BINARY response",
+                "-f, --file <fn> load NDEF data or full READ BINARY response from file"
+            ],
+            "usage": "hf st25ta eload [-h] [-u <hex>] [--ndef <hex>] [-f <fn>]"
+        },
+        "hf st25ta info": {
+            "command": "hf st25ta info",
+            "description": "Get info about ST25TA tag",
             "notes": [
                 "hf st25ta info"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help This help"
             ],
@@ -10073,16 +10118,17 @@
         },
         "hf st25ta sim": {
             "command": "hf st25ta sim",
-            "description": "Emulating ST25TA512B tag with 7 byte UID",
+            "description": "Emulating ST25TA512B tag. Uses NDEF data from `hf st25ta eload` if loaded.",
             "notes": [
-                "hf st25ta sim -u 02E2007D0FCA4C"
+                "hf st25ta sim -u 02E2007D0FCA4C",
+                "hf st25ta sim"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-u, --uid <hex> 7 byte UID"
             ],
-            "usage": "hf st25ta sim [-h] -u <hex>"
+            "usage": "hf st25ta sim [-h] [-u <hex>]"
         },
         "hf tesla help": {
             "command": "hf tesla help",
@@ -15871,8 +15917,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 889,
+        "commands_extracted": 892,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-07-15T14:38:35+00:00"
+        "extracted_on": "2026-07-24T14:01:02+00:00"
     }
 }
