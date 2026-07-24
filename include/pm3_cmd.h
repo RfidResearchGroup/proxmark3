@@ -907,8 +907,15 @@ typedef struct {
 
 #define CMD_UNKNOWN 0xFFFF
 
-// Max NDEF record length for ST25TA simulation
-#define ST25TA_SIM_NDEF_MAX 256
+// ST25TA simulation data in emulator memory:
+// magic[4] || len_le[2] || uid_len[1] || uid[7] || READ BINARY response bytes
+#define ST25TA_EML_MAGIC_OFFSET 0
+#define ST25TA_EML_LEN_OFFSET 4
+#define ST25TA_EML_UIDLEN_OFFSET 6
+#define ST25TA_EML_UID_OFFSET 7
+#define ST25TA_EML_DATA_OFFSET 14
+#define ST25TA_EML_NDEF_MAX 256
+#define ST25TA_EML_MAGIC "ST25"
 
 // Mifare simulation flags
 //  In interactive mode, we are expected to finish the operation with an ACK
