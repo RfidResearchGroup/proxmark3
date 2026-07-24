@@ -338,17 +338,80 @@ static int CmdHFST25TAInfo(const char *Cmd) {
     return infoHFST25TA();
 }
 
+static int st25ta_ndef_records_len(const uint8_t *data, size_t data_len, size_t *records_len) {
+    if (data == NULL || records_len == NULL || data_len < 3) {
+        return PM3_EINVARG;
+    }
+
+    size_t offset = 0;
+    for (;;) {
+        if (offset + 3 > data_len) {
+            return PM3_ESOFT;
+        }
+
+        uint8_t flags = data[offset];
+        uint8_t type_len = data[offset + 1];
+        bool short_record = (flags & 0x10) != 0;
+        bool id_length_present = (flags & 0x08) != 0;
+        bool message_end = (flags & 0x40) != 0;
+        size_t header_len = short_record ? 3 : 6;
+        uint32_t payload_len = 0;
+
+        if (short_record) {
+            payload_len = data[offset + 2];
+        } else {
+            if (offset + 6 > data_len) {
+                return PM3_ESOFT;
+            }
+            payload_len = (data[offset + 2] << 24) |
+                          (data[offset + 3] << 16) |
+                          (data[offset + 4] << 8) |
+                          data[offset + 5];
+        }
+
+        uint8_t id_len = 0;
+        if (id_length_present) {
+            if (offset + header_len >= data_len) {
+                return PM3_ESOFT;
+            }
+            id_len = data[offset + header_len];
+            header_len++;
+        }
+
+        size_t record_len = header_len + type_len + id_len + payload_len;
+        if (record_len == 0 || offset + record_len > data_len) {
+            return PM3_ESOFT;
+        }
+
+        offset += record_len;
+        if (message_end) {
+            *records_len = offset;
+            return PM3_SUCCESS;
+        }
+    }
+}
+
 static int st25ta_normalize_sim_ndef(const uint8_t *src, size_t src_len, uint8_t *dst, uint16_t *dst_len) {
     if (src == NULL || src_len == 0 || dst == NULL || dst_len == NULL) {
         return PM3_EINVARG;
     }
 
     if (src_len >= 4 && src[src_len - 2] == 0x90 && src[src_len - 1] == 0x00) {
+        uint16_t nlen = (src[0] << 8) | src[1];
+        if (nlen + 4 != src_len) {
+            nlen = src_len - 4;
+        }
+
         if (src_len > ST25TA_EML_NDEF_MAX) {
             PrintAndLogEx(ERR, "NDEF response too large. Max %u bytes", ST25TA_EML_NDEF_MAX);
             return PM3_EINVARG;
         }
-        memcpy(dst, src, src_len);
+
+        dst[0] = (nlen >> 8) & 0xff;
+        dst[1] = nlen & 0xff;
+        memcpy(dst + 2, src + 2, src_len - 4);
+        dst[src_len - 2] = 0x90;
+        dst[src_len - 1] = 0x00;
         *dst_len = src_len;
         return PM3_SUCCESS;
     }
@@ -360,7 +423,10 @@ static int st25ta_normalize_sim_ndef(const uint8_t *src, size_t src_len, uint8_t
                 PrintAndLogEx(ERR, "NDEF response too large. Max %u bytes", ST25TA_EML_NDEF_MAX);
                 return PM3_EINVARG;
             }
-            memcpy(dst, src, src_len);
+
+            dst[0] = (nlen >> 8) & 0xff;
+            dst[1] = nlen & 0xff;
+            memcpy(dst + 2, src + 2, nlen);
             dst[src_len] = 0x90;
             dst[src_len + 1] = 0x00;
             *dst_len = src_len + 2;
@@ -403,6 +469,45 @@ static int st25ta_upload_sim_data(const uint8_t *uid, uint8_t uid_len, const uin
         offset += chunk_len;
     }
 
+    return PM3_SUCCESS;
+}
+
+static int st25ta_download_sim_data(uint8_t *uid, uint8_t *uid_len, uint8_t *ndef, uint16_t *ndef_len) {
+    uint8_t header[ST25TA_EML_DATA_OFFSET] = {0};
+    int res = mf_eml_get_mem_xt(header, 0, sizeof(header), 1);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (memcmp(header + ST25TA_EML_MAGIC_OFFSET, ST25TA_EML_MAGIC, 4) != 0) {
+        PrintAndLogEx(ERR, "No ST25TA data loaded in emulator memory");
+        return PM3_ESOFT;
+    }
+
+    uint16_t len = header[ST25TA_EML_LEN_OFFSET] |
+                   (header[ST25TA_EML_LEN_OFFSET + 1] << 8);
+    if (len == 0 || len > ST25TA_EML_NDEF_MAX) {
+        PrintAndLogEx(ERR, "Invalid ST25TA NDEF response length in emulator memory: %u", len);
+        return PM3_ESOFT;
+    }
+
+    if (uid_len != NULL) {
+        *uid_len = header[ST25TA_EML_UIDLEN_OFFSET];
+    }
+    if (uid != NULL && header[ST25TA_EML_UIDLEN_OFFSET] == 7) {
+        memcpy(uid, header + ST25TA_EML_UID_OFFSET, 7);
+    }
+
+    for (uint16_t offset = 0; offset < len;) {
+        uint8_t chunk_len = MIN(len - offset, UINT8_MAX);
+        res = mf_eml_get_mem_xt(ndef + offset, ST25TA_EML_DATA_OFFSET + offset, chunk_len, 1);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        offset += chunk_len;
+    }
+
+    *ndef_len = len;
     return PM3_SUCCESS;
 }
 
@@ -482,6 +587,106 @@ static int CmdHFST25TAELoad(const char *Cmd) {
     }
     PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf st25ta sim`"));
     return PM3_SUCCESS;
+}
+
+static int CmdHFST25TAEView(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf st25ta eview",
+                  "Display ST25TA emulator memory",
+                  "hf st25ta eview\n"
+                  "hf st25ta eview -v\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v", "verbose", "verbose NDEF output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool verbose = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    uint8_t uid[7] = {0};
+    uint8_t uid_len = 0;
+    uint8_t ndef[ST25TA_EML_NDEF_MAX] = {0};
+    uint16_t ndef_len = 0;
+    int res = st25ta_download_sim_data(uid, &uid_len, ndef, &ndef_len);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("ST25TA emulator memory") " ----------------");
+    if (uid_len == 7) {
+        PrintAndLogEx(INFO, "UID................ " _YELLOW_("%s"), sprint_hex_inrow(uid, uid_len));
+    } else {
+        PrintAndLogEx(INFO, "UID................ " _YELLOW_("not loaded"));
+    }
+    PrintAndLogEx(INFO, "NDEF response len.. " _YELLOW_("%u") " bytes", ndef_len);
+    PrintAndLogEx(INFO, "NDEF response raw:");
+    print_buffer(ndef, ndef_len, 1);
+
+    if (ndef_len >= 4 && ndef[ndef_len - 2] == 0x90 && ndef[ndef_len - 1] == 0x00) {
+        uint16_t nlen = (ndef[0] << 8) | ndef[1];
+        size_t records_len = ndef_len - 4;
+        if (nlen <= records_len) {
+            records_len = nlen;
+        }
+
+        size_t calculated_len = 0;
+        if (st25ta_ndef_records_len(ndef + 2, records_len, &calculated_len) == PM3_SUCCESS &&
+                calculated_len < records_len) {
+            records_len = calculated_len;
+        }
+
+        PrintAndLogEx(INFO, "--- " _CYAN_("NDEF records") " --------------------------");
+        NDEFRecordsDecodeAndPrint(ndef + 2, records_len, verbose);
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int CmdHFST25TAESave(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf st25ta esave",
+                  "Save ST25TA emulator memory NDEF response to file",
+                  "hf st25ta esave\n"
+                  "hf st25ta esave -f hf-st25ta-ndef\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    char filename[FILE_PATH_SIZE] = {0};
+    int fnlen = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParserFree(ctx);
+
+    if (fnlen == 0) {
+        snprintf(filename, sizeof(filename), "hf-st25ta-ndef");
+    }
+
+    uint8_t ndef[ST25TA_EML_NDEF_MAX] = {0};
+    uint16_t ndef_len = 0;
+    int res = st25ta_download_sim_data(NULL, NULL, ndef, &ndef_len);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (ndef_len < 4 || ndef[ndef_len - 2] != 0x90 || ndef[ndef_len - 1] != 0x00) {
+        PrintAndLogEx(ERR, "Loaded ST25TA data is not a READ BINARY response ending in 9000");
+        return PM3_ESOFT;
+    }
+
+    uint16_t nlen = (ndef[0] << 8) | ndef[1];
+    if (nlen == 0 || nlen + 4 > ndef_len) {
+        PrintAndLogEx(ERR, "Invalid ST25TA NLEN in emulator memory: %u", nlen);
+        return PM3_ESOFT;
+    }
+
+    return pm3_save_dump(filename, ndef + 2, nlen, jsfNDEF);
 }
 
 static int CmdHFST25TASim(const char *Cmd) {
@@ -978,6 +1183,8 @@ static int CmdHFST25TAList(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",     CmdHelp,               AlwaysAvailable, "This help"},
     {"eload",    CmdHFST25TAELoad,      IfPm3Iso14443a,  "Upload NDEF response into emulator memory"},
+    {"esave",    CmdHFST25TAESave,      IfPm3Iso14443a,  "Save emulator memory to file"},
+    {"eview",    CmdHFST25TAEView,      IfPm3Iso14443a,  "View emulator memory"},
     {"info",     CmdHFST25TAInfo,       IfPm3Iso14443a,  "Tag information"},
     {"list",     CmdHFST25TAList,       AlwaysAvailable, "List ISO 14443A/7816 history"},
     {"ndefread", CmdHFST25TANdefRead,   AlwaysAvailable, "read NDEF file on tag"},
