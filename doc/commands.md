@@ -592,7 +592,7 @@ Check column "offline" for their availability.
 |`hf legic clone         `|N       |`Clone a LEGIC Prime dump to a new MCC or different tag`
 |`hf legic migrate       `|N       |`Clone a LEGIC Prime dump to a tag; DCF stays opt-in`
 |`hf legic wipe          `|N       |`Wipe a LEGIC Prime tag`
-|`hf legic wrbl          `|N       |`Write data to a LEGIC Prime tag`
+|`hf legic wrbl          `|N       |`Write data to a LEGIC Prime tag (supports --fill)`
 |`hf legic sim           `|N       |`Start tag simulator`
 |`hf legic eload         `|N       |`Upload file into emulator memory`
 |`hf legic esave         `|N       |`Save emulator memory to file`
