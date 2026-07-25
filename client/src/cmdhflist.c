@@ -2648,6 +2648,12 @@ void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case FELICA_WRITE_SECURE_V2_RES:
             snprintf(exp, size, "WRITE v2 RES");
             break;
+        case FELICA_DELETE_KEY_REQ:
+            snprintf(exp, size, "DELETE KEY");
+            break;
+        case FELICA_DELETE_KEY_RES:
+            snprintf(exp, size, "DELETE KEY RES");
+            break;
         case FELICA_NFC_DEP_ATR_REQ:
             snprintf(exp, size, "NFC-DEP ATR REQ");
             break;
@@ -2719,6 +2725,12 @@ void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             break;
         case FELICA_REGISTER_ISSUE_ID_EX_V2_RES:
             snprintf(exp, size, "REGISTER ISSUE ID EX v2 RES");
+            break;
+        case FELICA_REGISTER_ISSUE_ID_EX_REQ:
+            snprintf(exp, size, "REGISTER ISSUE ID EX");
+            break;
+        case FELICA_REGISTER_ISSUE_ID_EX_RES:
+            snprintf(exp, size, "REGISTER ISSUE ID EX RES");
             break;
         case FELICA_SEPARATE_SYSTEM_V2_REQ:
             snprintf(exp, size, "SEPARATE SYSTEM v2");

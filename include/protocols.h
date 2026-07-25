@@ -988,6 +988,9 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FELICA_WRITE_SECURE_V2_REQ                      0x46
 #define FELICA_WRITE_SECURE_V2_RES                      0x47
 
+#define FELICA_DELETE_KEY_REQ                           0x48
+#define FELICA_DELETE_KEY_RES                           0x49
+
 #define FELICA_UPDATE_RANDOM_ID_REQ                     0x4C
 #define FELICA_UPDATE_RANDOM_ID_RES                     0x4D
 
@@ -1021,6 +1024,9 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 #define FELICA_REGISTER_SERVICE_REQ                     0x84
 #define FELICA_REGISTER_SERVICE_RES                     0x85
+
+#define FELICA_REGISTER_ISSUE_ID_EX_REQ                 0x86
+#define FELICA_REGISTER_ISSUE_ID_EX_RES                 0x87
 
 #define FELICA_SEPARATE_SYSTEM_REQ                      0x88
 #define FELICA_SEPARATE_SYSTEM_RES                      0x89
