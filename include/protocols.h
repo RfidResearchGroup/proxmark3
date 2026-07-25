@@ -1118,19 +1118,10 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FELICA_GET_RF_CHIP_REGISTER_CMD 0xF804
 #define FELICA_GET_RF_CHIP_REGISTER_RES 0xF904
 
-// FeliCa SYSTEM list
-#define SYSTEMCODE_ANY                  0xffff // ANY
-#define SYSTEMCODE_FELICA_LITE          0x88b4 // FeliCa Lite
-#define SYSTEMCODE_COMMON               0xfe00 // Common
-#define SYSTEMCODE_EDY                  0xfe00 // Edy
-#define SYSTEMCODE_OSAIFU_KEITAI        0xfe0f // Osaifu Keitai Container
-#define SYSTEMCODE_CYBERNE              0x0003 // Cyberne
-#define SYSTEMCODE_SUICA                0x0003 // Suica
-#define SYSTEMCODE_PASMO                0x0003 // Pasmo
+// Other FeliCa constants
+#define SYSTEMCODE_WILDCARD             0xffff // ANY
+#define SYSTEMCODE_OSAIFU_KEITAI        0xfe0f // Osaifu-Keitai
 
-//FeliCa Service list Suica/pasmo (little endian)
-#define SERVICE_SUICA_INOUT             0x108f // SUICA/PASMO
-#define SERVICE_SUICA_HISTORY           0x090f // SUICA/PASMO
 #define SERVICE_FELICA_LITE_READONLY    0x0b00 // FeliCa Lite RO
 #define SERVICE_FELICA_LITE_READWRITE   0x0900 // FeliCa Lite RW
 
