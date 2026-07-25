@@ -818,13 +818,13 @@ static int CmdLegicWrbl(const char *Cmd) {
                   "Write data to a LEGIC Prime tag. It autodetects tagsize to ensure proper write",
                   "hf legic wrbl -o 0 -d 11223344    -> Write 0x11223344 starting from offset 0)\n"
                   "hf legic wrbl -o 10 -d DEADBEEF   -> Write 0xdeadbeef starting from offset 10\n"
-                  "hf legic wrbl -o 35 --repeat 00   -> Repeat 0x00 from offset 35 to end");
+                  "hf legic wrbl -o 35 --fill 00     -> Fill 0x00 from offset 35 to end");
 
     void *argtable[] = {
         arg_param_begin,
         arg_int1("o", "offset", "<dec>", "offset in data array to start writing"),
         arg_str0("d", "data", "<hex>", "data to write"),
-        arg_str0("r", "repeat", "<hex>", "repeat byte to write from offset to end of card"),
+        arg_str0(NULL, "fill", "<hex>", "fill byte to write from offset to end of card"),
         arg_lit0(NULL, "danger", "Auto-confirm dangerous operations"),
         arg_param_end
     };
@@ -858,12 +858,12 @@ static int CmdLegicWrbl(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (has_data && has_fill) {
-        PrintAndLogEx(WARNING, "Use either --data or --repeat, not both");
+        PrintAndLogEx(WARNING, "Use either --data or --fill, not both");
         return PM3_EINVARG;
     }
 
     if (!has_data && !has_fill) {
-        PrintAndLogEx(WARNING, "Either --data or --repeat is required");
+        PrintAndLogEx(WARNING, "Either --data or --fill is required");
         return PM3_EINVARG;
     }
 
