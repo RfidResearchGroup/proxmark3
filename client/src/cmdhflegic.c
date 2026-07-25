@@ -65,12 +65,12 @@ static void legic_xor_with_crc(uint8_t *data, uint16_t cardsize, uint8_t crc) {
 }
 
 static bool legic_clone_update_segment_crcs(uint8_t *data, size_t bytes_read, const uint8_t uid[4]) {
-    // Decoded segmented payload starts at byte 22.
+    // Segment headers are parsed from offset 22 everywhere else in LEGIC decoding.
     size_t start = 22;
     bool found_segment = false;
 
     while (start + 5 <= bytes_read) {
-        uint16_t seg_len = (((uint16_t)data[start + 1] & 0x07) << 8) | data[start];
+        uint16_t seg_len = (((uint16_t)data[start + 1] & 0x0F) << 8) | data[start];
         if (seg_len < 5 || start + seg_len > bytes_read) {
             break;
         }
@@ -96,53 +96,14 @@ static bool legic_clone_update_segment_crcs(uint8_t *data, size_t bytes_read, co
     return true;
 }
 
-static int legic_write_bytes_to_tag(uint16_t offset, const uint8_t *data, size_t dlen) {
-    uint32_t IV = 0x55;
-    legic_chk_iv(&IV);
-
-    legic_packet_t *payload = calloc(1, sizeof(legic_packet_t) + dlen);
-    if (payload == NULL) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        return PM3_EMALLOC;
-    }
-
-    payload->offset = (offset & 0xFFFF);
-    payload->iv = (IV & 0x7F);
-    payload->len = dlen;
-    memcpy(payload->data, data, dlen);
-
-    PacketResponseNG resp;
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_LEGIC_WRITER, (uint8_t *)payload, sizeof(legic_packet_t) + dlen);
-    free(payload);
-
-    uint8_t timeout = 0;
-    while (WaitForResponseTimeout(CMD_HF_LEGIC_WRITER, &resp, 2000) == false) {
-        ++timeout;
-        PrintAndLogEx(NORMAL, "." NOLF);
-        if (timeout > 10) {
-            PrintAndLogEx(WARNING, "\ncommand execution time out");
-            return PM3_ETIMEOUT;
-        }
-    }
-    PrintAndLogEx(NORMAL, "");
-
-    if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Failed writing tag");
-        return PM3_ERFTRANS;
-    }
-
-    return PM3_SUCCESS;
-}
-
-static int legic_write_dump_to_tag(uint8_t *dump, size_t bytes_read) {
-    PrintAndLogEx(SUCCESS, "Restoring to card");
+static int legic_write_bytes_to_tag(uint16_t offset, uint8_t iv, const uint8_t *data, size_t bytes_read, const char *verb) {
+    PrintAndLogEx(SUCCESS, "%s", verb);
 
     // fast push mode
     g_conn.block_after_ACK = true;
 
     PacketResponseNG resp;
-    for (size_t i = 7; i < bytes_read; i += LEGIC_PACKET_SIZE) {
+    for (size_t i = offset; i < bytes_read; i += LEGIC_PACKET_SIZE) {
         size_t len = MIN((bytes_read - i), LEGIC_PACKET_SIZE);
         if (len == bytes_read - i) {
             g_conn.block_after_ACK = false;
@@ -155,9 +116,9 @@ static int legic_write_dump_to_tag(uint8_t *dump, size_t bytes_read) {
             return PM3_EMALLOC;
         }
         payload->offset = i;
-        payload->iv = 0x55;
+        payload->iv = iv;
         payload->len = len;
-        memcpy(payload->data, dump + i, len);
+        memcpy(payload->data, data + i, len);
 
         clearCommandBuffer();
         SendCommandNG(CMD_HF_LEGIC_WRITER, (uint8_t *)payload, sizeof(legic_packet_t) + len);
@@ -185,6 +146,10 @@ static int legic_write_dump_to_tag(uint8_t *dump, size_t bytes_read) {
 
     g_conn.block_after_ACK = false;
     return PM3_SUCCESS;
+}
+
+static int legic_write_dump_to_tag(uint8_t *dump, size_t bytes_read) {
+    return legic_write_bytes_to_tag(7, 0x55, dump, bytes_read, "Restoring to card");
 }
 
 static int CmdLegicMigrate(const char *Cmd) {
@@ -283,7 +248,9 @@ static int CmdLegicMigrate(const char *Cmd) {
 
     if (dcf_len > 0) {
         PrintAndLogEx(SUCCESS, "Applying explicit DCF update");
-        int dcf_res = legic_write_bytes_to_tag(5, dcf, sizeof(dcf));
+        uint8_t dcf_dump[7] = {0};
+        memcpy(dcf_dump + 5, dcf, sizeof(dcf));
+        int dcf_res = legic_write_bytes_to_tag(5, 0x55, dcf_dump, sizeof(dcf_dump), "Applying explicit DCF update");
         if (dcf_res != PM3_SUCCESS) {
             free(dump);
             return dcf_res;
@@ -850,12 +817,14 @@ static int CmdLegicWrbl(const char *Cmd) {
     CLIParserInit(&ctx, "hf legic wrbl",
                   "Write data to a LEGIC Prime tag. It autodetects tagsize to ensure proper write",
                   "hf legic wrbl -o 0 -d 11223344    -> Write 0x11223344 starting from offset 0)\n"
-                  "hf legic wrbl -o 10 -d DEADBEEF   -> Write 0xdeadbeef starting from offset 10");
+                  "hf legic wrbl -o 10 -d DEADBEEF   -> Write 0xdeadbeef starting from offset 10\n"
+                  "hf legic wrbl -o 35 --repeat 00   -> Repeat 0x00 from offset 35 to end");
 
     void *argtable[] = {
         arg_param_begin,
         arg_int1("o", "offset", "<dec>", "offset in data array to start writing"),
-        arg_str1("d", "data", "<hex>", "data to write"),
+        arg_str0("d", "data", "<hex>", "data to write"),
+        arg_str0("r", "repeat", "<hex>", "repeat byte to write from offset to end of card"),
         arg_lit0(NULL, "danger", "Auto-confirm dangerous operations"),
         arg_param_end
     };
@@ -865,11 +834,38 @@ static int CmdLegicWrbl(const char *Cmd) {
 
     int dlen = 0;
     uint8_t data[LEGIC_PRIME_MIM1024] = {0};
-    CLIGetHexWithReturn(ctx, 2, data, &dlen);
+    bool has_data = false;
+    if (arg_get_str(ctx, 2)->count > 0) {
+        CLIGetHexWithReturn(ctx, 2, data, &dlen);
+        has_data = (dlen > 0);
+    }
 
-    bool autoconfirm = arg_get_lit(ctx, 3);
+    int fill_len = 0;
+    uint8_t fill_buf[1] = {0};
+    bool has_fill = false;
+    if (arg_get_str(ctx, 3)->count > 0) {
+        CLIParamHexToBuf(arg_get_str(ctx, 3), fill_buf, sizeof(fill_buf), &fill_len);
+        has_fill = (fill_len == 1);
+        if (!has_fill) {
+            PrintAndLogEx(WARNING, "Repeat byte must be exactly one byte");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    bool autoconfirm = arg_get_lit(ctx, 4);
 
     CLIParserFree(ctx);
+
+    if (has_data && has_fill) {
+        PrintAndLogEx(WARNING, "Use either --data or --repeat, not both");
+        return PM3_EINVARG;
+    }
+
+    if (!has_data && !has_fill) {
+        PrintAndLogEx(WARNING, "Either --data or --repeat is required");
+        return PM3_EINVARG;
+    }
 
     // OUT-OF-BOUNDS checks
     // UID 4+1 bytes can't be written to.
@@ -910,40 +906,21 @@ static int CmdLegicWrbl(const char *Cmd) {
     uint32_t IV = 0x55;
     legic_chk_iv(&IV);
 
-    PrintAndLogEx(SUCCESS, "Writing to tag to offset %i", offset);
-
-    legic_packet_t *payload = calloc(1, sizeof(legic_packet_t) + dlen);
-    if (payload == NULL) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        return PM3_EMALLOC;
-    }
-    payload->offset = (offset & 0xFFFF);
-    payload->iv = (IV & 0x7F);
-    payload->len = dlen;
-    memcpy(payload->data, data, dlen);
-
-    PacketResponseNG resp;
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_LEGIC_WRITER, (uint8_t *)payload, sizeof(legic_packet_t) + dlen);
-    free(payload);
-
-    uint8_t timeout = 0;
-    while (WaitForResponseTimeout(CMD_HF_LEGIC_WRITER, &resp, 2000) == false) {
-        ++timeout;
-        PrintAndLogEx(NORMAL, "." NOLF);
-        if (timeout > 10) {
-            PrintAndLogEx(WARNING, "\ncommand execution time out");
-            return PM3_ETIMEOUT;
+    if (has_fill) {
+        if (offset >= card.cardsize) {
+            PrintAndLogEx(WARNING, "Out-of-bounds, Offset = %d, Cardsize = %d", offset, card.cardsize);
+            return PM3_EOUTOFBOUND;
         }
-    }
-    PrintAndLogEx(NORMAL, "");
 
-    if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Failed writing tag");
-        return PM3_ERFTRANS;
+        dlen = card.cardsize - offset;
+        memset(data + offset, fill_buf[0], dlen);
+        PrintAndLogEx(SUCCESS, "Filling from offset %d to end with %02X (%d bytes)", offset, fill_buf[0], dlen);
+    } else {
+        memmove(data + offset, data, dlen);
     }
 
-    return PM3_SUCCESS;
+    PrintAndLogEx(SUCCESS, "Writing to tag to offset %i", offset);
+    return legic_write_bytes_to_tag((uint16_t)offset, (uint8_t)(IV & 0x7F), data, (size_t)(offset + dlen), "Writing to card");
 }
 
 static int CmdLegicCalcCrc(const char *Cmd) {
