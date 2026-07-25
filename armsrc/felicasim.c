@@ -266,7 +266,7 @@ static void felica_sim_append_idm(uint8_t *resp, uint16_t *pos, const felica_sim
 }
 
 static uint16_t felica_sim_rwe_error_response(uint8_t *resp, const felica_sim_system_record_t *system, uint8_t status1, uint8_t status2) {
-    uint16_t pos = felica_sim_response_begin(resp, FELICA_RDBLK_ACK);
+    uint16_t pos = felica_sim_response_begin(resp, FELICA_READ_WITHOUT_ENCRYPTION_RES);
     felica_sim_append_idm(resp, &pos, system);
     resp[pos++] = status1;
     resp[pos++] = status2;
@@ -383,7 +383,7 @@ static uint16_t felica_sim_process_polling(const felica_sim_model_header_t *hdr,
                               (512 + timeslot * 256) + 1;
     timeslot++;
 
-    uint16_t pos = felica_sim_response_begin(resp, FELICA_POLL_ACK);
+    uint16_t pos = felica_sim_response_begin(resp, FELICA_POLLING_RES);
     memcpy(resp + pos, selected->idm, sizeof(selected->idm));
     pos += sizeof(selected->idm);
     memcpy(resp + pos, selected->pmm, sizeof(selected->pmm));
@@ -407,7 +407,7 @@ static uint16_t felica_sim_process_request_system_code(const felica_sim_model_he
         return 0;
     }
 
-    uint16_t pos = felica_sim_response_begin(resp, FELICA_REQSYSCODE_ACK);
+    uint16_t pos = felica_sim_response_begin(resp, FELICA_REQUEST_SYSTEM_CODE_RES);
     felica_sim_append_idm(resp, &pos, active_system);
     resp[pos++] = (uint8_t)hdr->system_count;
     const felica_sim_system_record_t *systems = felica_sim_systems(hdr, model);
@@ -431,7 +431,7 @@ static uint16_t felica_sim_process_get_container_id(const felica_sim_model_heade
         return 0;
     }
 
-    uint16_t pos = felica_sim_response_begin(resp, FELICA_GET_CONTAINER_ID_ACK);
+    uint16_t pos = felica_sim_response_begin(resp, FELICA_GET_CONTAINER_ID_RES);
     memcpy(resp + pos, system->idm, sizeof(system->idm));
     pos += sizeof(system->idm);
     return felica_sim_response_finish(resp, pos);
@@ -443,7 +443,7 @@ static uint16_t felica_sim_process_request_response(const uint8_t *req, uint16_t
         return 0;
     }
 
-    uint16_t pos = felica_sim_response_begin(resp, FELICA_REQRESP_ACK);
+    uint16_t pos = felica_sim_response_begin(resp, FELICA_REQUEST_RESPONSE_RES);
     felica_sim_append_idm(resp, &pos, active_system);
     resp[pos++] = 0x00;
     return felica_sim_response_finish(resp, pos);
@@ -459,7 +459,7 @@ static uint16_t felica_sim_process_reset_mode(const uint8_t *req, uint16_t req_l
     }
 
     // If authentication handling is added, reset the tracked card mode to Mode0 here.
-    uint16_t pos = felica_sim_response_begin(resp, FELICA_RESET_MODE_ACK);
+    uint16_t pos = felica_sim_response_begin(resp, FELICA_RESET_MODE_RES);
     felica_sim_append_idm(resp, &pos, active_system);
     resp[pos++] = 0x00;
     resp[pos++] = 0x00;
@@ -478,7 +478,7 @@ static uint16_t felica_sim_process_request_specification_version(const felica_si
         return 0;
     }
 
-    uint16_t pos = felica_sim_response_begin(resp, FELICA_REQUEST_SPEC_VERSION_ACK);
+    uint16_t pos = felica_sim_response_begin(resp, FELICA_REQUEST_SPECIFICATION_VERSION_RES);
     felica_sim_append_idm(resp, &pos, active_system);
     resp[pos++] = 0x00;
     resp[pos++] = 0x00;
@@ -497,7 +497,7 @@ static uint16_t felica_sim_process_get_product_information(const felica_sim_mode
         return 0;
     }
 
-    uint16_t pos = felica_sim_response_begin(resp, FELICA_GETPLATFORMINFO_ACK);
+    uint16_t pos = felica_sim_response_begin(resp, FELICA_REQUEST_PRODUCT_INFORMATION_RES);
     felica_sim_append_idm(resp, &pos, active_system);
     resp[pos++] = 0x00;
     resp[pos++] = 0x00;
@@ -519,7 +519,7 @@ static uint16_t felica_sim_process_get_container_issue_information(const felica_
         return 0;
     }
 
-    uint16_t pos = felica_sim_response_begin(resp, FELICA_GET_CONTAINER_ISSUE_INFO_ACK);
+    uint16_t pos = felica_sim_response_begin(resp, FELICA_GET_CONTAINER_ISSUE_INFORMATION_RES);
     felica_sim_append_idm(resp, &pos, active_system);
     memcpy(resp + pos, container_issue_information, hdr->container_issue_information_len);
     pos += hdr->container_issue_information_len;
@@ -539,7 +539,7 @@ static uint16_t felica_sim_process_request_service(const felica_sim_model_header
         return 0;
     }
 
-    uint16_t pos = felica_sim_response_begin(resp, FELICA_REQSRV_ACK);
+    uint16_t pos = felica_sim_response_begin(resp, FELICA_REQUEST_SERVICE_RES);
     felica_sim_append_idm(resp, &pos, active_system);
     resp[pos++] = node_count;
     for (uint8_t i = 0; i < node_count; i++) {
@@ -576,7 +576,7 @@ static uint16_t felica_sim_process_request_service_v2(const felica_sim_model_hea
         return 0;
     }
 
-    uint16_t pos = felica_sim_response_begin(resp, FELICA_REQSRV2_ACK);
+    uint16_t pos = felica_sim_response_begin(resp, FELICA_REQUEST_SERVICE_V2_RES);
     felica_sim_append_idm(resp, &pos, active_system);
     resp[pos++] = 0x00;
     resp[pos++] = 0x00;
@@ -615,7 +615,7 @@ static uint16_t felica_sim_process_search_service_code(const felica_sim_model_he
     }
 
     const uint16_t iterator = req[12] | ((uint16_t)req[13] << 8);
-    uint16_t pos = felica_sim_response_begin(resp, FELICA_SRCHSYSCODE_ACK);
+    uint16_t pos = felica_sim_response_begin(resp, FELICA_SEARCH_SERVICE_CODE_RES);
     felica_sim_append_idm(resp, &pos, active_system);
 
     const felica_sim_node_record_t *nodes = felica_sim_nodes(hdr, model);
@@ -727,7 +727,7 @@ static uint16_t felica_sim_process_read_without_encryption(const felica_sim_mode
         return 0;
     }
 
-    pos = felica_sim_response_begin(resp, FELICA_RDBLK_ACK);
+    pos = felica_sim_response_begin(resp, FELICA_READ_WITHOUT_ENCRYPTION_RES);
     felica_sim_append_idm(resp, &pos, active_system);
     resp[pos++] = 0x00;
     resp[pos++] = 0x00;
@@ -767,31 +767,31 @@ static uint16_t felica_sim_process_request(const felica_sim_model_header_t *hdr,
     }
 
     switch (req_command) {
-        case FELICA_POLL_REQ:
+        case FELICA_POLLING_REQ:
             return felica_sim_process_polling(hdr, model, req, req_len, active_system_index, resp);
         case FELICA_ECHO_REQ:
             return felica_sim_process_echo(req, req_len, resp);
         case FELICA_GET_CONTAINER_ID_REQ:
             return felica_sim_process_get_container_id(hdr, model, req, req_len, resp);
-        case FELICA_REQSYSCODE_REQ:
+        case FELICA_REQUEST_SYSTEM_CODE_REQ:
             return felica_sim_process_request_system_code(hdr, model, req, req_len, active_system, resp);
-        case FELICA_REQRESP_REQ:
+        case FELICA_REQUEST_RESPONSE_REQ:
             return felica_sim_process_request_response(req, req_len, active_system, resp);
         case FELICA_RESET_MODE_REQ:
             return felica_sim_process_reset_mode(req, req_len, active_system, resp);
-        case FELICA_REQUEST_SPEC_VERSION_REQ:
+        case FELICA_REQUEST_SPECIFICATION_VERSION_REQ:
             return felica_sim_process_request_specification_version(hdr, model, req, req_len, active_system, resp);
-        case FELICA_GETPLATFORMINFO_REQ:
+        case FELICA_REQUEST_PRODUCT_INFORMATION_REQ:
             return felica_sim_process_get_product_information(hdr, model, req, req_len, active_system, resp);
-        case FELICA_GET_CONTAINER_ISSUE_INFO_REQ:
+        case FELICA_GET_CONTAINER_ISSUE_INFORMATION_REQ:
             return felica_sim_process_get_container_issue_information(hdr, model, req, req_len, active_system, resp);
-        case FELICA_REQSRV_REQ:
+        case FELICA_REQUEST_SERVICE_REQ:
             return felica_sim_process_request_service(hdr, model, req, req_len, active_system, resp);
-        case FELICA_REQSRV2_REQ:
+        case FELICA_REQUEST_SERVICE_V2_REQ:
             return felica_sim_process_request_service_v2(hdr, model, req, req_len, active_system, resp);
-        case FELICA_SRCHSYSCODE_REQ:
+        case FELICA_SEARCH_SERVICE_CODE_REQ:
             return felica_sim_process_search_service_code(hdr, model, req, req_len, active_system, resp);
-        case FELICA_RDBLK_REQ:
+        case FELICA_READ_WITHOUT_ENCRYPTION_REQ:
             return felica_sim_process_read_without_encryption(hdr, model, req, req_len, active_system, resp);
         default:
             return 0;
