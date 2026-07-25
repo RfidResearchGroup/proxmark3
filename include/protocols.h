@@ -898,6 +898,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 
 // FeliCa protocol
+
 #define FELICA_POLLING_REQ                              0x00
 #define FELICA_POLLING_RES                              0x01
 
@@ -1126,11 +1127,15 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FELICA_GET_RF_CHIP_REGISTER_RES                 0xF904
 
 // Other FeliCa constants
-#define SYSTEMCODE_WILDCARD                             0xffff // ANY
-#define SYSTEMCODE_OSAIFU_KEITAI                        0xfe0f // Osaifu-Keitai
+#define FELICA_SYSTEM_CODE_WILDCARD                     0xFFFFU
+#define FELICA_SYSTEM_CODE_NFC_TYPE3                    0x12FCU
+#define FELICA_SYSTEM_CODE_FELICA_LITE                  0x88B4U
+#define FELICA_SYSTEM_CODE_FELICA_SECURE_ID             0x957AU
+#define FELICA_SYSTEM_CODE_OSAIFU_KEITAI                0xFE0FU
+#define FELICA_SYSTEM_CODE_FELICA_NETWORKS_COMMON_AREA  0xFE00U
 
-#define SERVICE_FELICA_LITE_READONLY                    0x0b00 // FeliCa Lite RO
-#define SERVICE_FELICA_LITE_READWRITE                   0x0900 // FeliCa Lite RW
+#define FELICA_SERVICE_LITE_READONLY                     0x0b00 // FeliCa Lite RO
+#define FELICA_SERVICE_LITE_READWRITE                    0x0900 // FeliCa Lite RW
 
 // Calypso protocol
 #define CALYPSO_GET_RESPONSE            0xC0

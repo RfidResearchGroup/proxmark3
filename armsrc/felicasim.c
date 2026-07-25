@@ -426,7 +426,7 @@ static uint16_t felica_sim_process_get_container_id(const felica_sim_model_heade
         return 0;
     }
 
-    const felica_sim_system_record_t *system = felica_sim_find_system_by_code(hdr, model, SYSTEMCODE_OSAIFU_KEITAI, NULL);
+    const felica_sim_system_record_t *system = felica_sim_find_system_by_code(hdr, model, FELICA_SYSTEM_CODE_OSAIFU_KEITAI, NULL);
     if (system == NULL) {
         return 0;
     }
