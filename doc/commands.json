@@ -5353,16 +5353,18 @@
             "description": "Write data to a LEGIC Prime tag. It autodetects tagsize to ensure proper write",
             "notes": [
                 "hf legic wrbl -o 0 -d 11223344 -> Write 0x11223344 starting from offset 0)",
-                "hf legic wrbl -o 10 -d DEADBEEF -> Write 0xdeadbeef starting from offset 10"
+                "hf legic wrbl -o 10 -d DEADBEEF -> Write 0xdeadbeef starting from offset 10",
+                "hf legic wrbl -o 35 --fill 00 -> Fill 0x00 from offset 35 to end"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-o, --offset <dec> offset in data array to start writing",
                 "-d, --data <hex> data to write",
+                "--fill <hex> fill byte to write from offset to end of card",
                 "--danger Auto-confirm dangerous operations"
             ],
-            "usage": "hf legic wrbl [-h] -o <dec> -d <hex> [--danger]"
+            "usage": "hf legic wrbl [-h] -o <dec> [-d <hex>] [--fill <hex>] [--danger]"
         },
         "hf lto help": {
             "command": "hf lto help",
@@ -15873,6 +15875,6 @@
     "metadata": {
         "commands_extracted": 889,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-07-15T14:38:35+00:00"
+        "extracted_on": "2026-07-26T21:37:31+00:00"
     }
 }
