@@ -440,6 +440,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "F51CDA",
+        "Vendor": "LEAF",
+        "Country": "N/A",
+        "Name": "LEAF Cc Enterprise",
+        "Description": "LEAF Cc Enterprise",
+        "Type": "pacs"
+    },
+    {
         "AID": "F51CDB",
         "Vendor": "LEAF",
         "Country": "N/A",

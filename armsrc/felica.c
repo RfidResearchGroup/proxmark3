@@ -252,7 +252,7 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
     // b0    = fc/64 (212kbps)
     // 0x00 = timeslot
     // 0x09 0x21 = crc
-    static uint8_t poll[10] = {0xb2, 0x4d, 0x06, FELICA_POLL_REQ, 0xFF, 0xFF, 0x00, 0x00, 0x09, 0x21};
+    static uint8_t poll[10] = {0xb2, 0x4d, 0x06, FELICA_POLLING_REQ, 0xFF, 0xFF, 0x00, 0x00, 0x09, 0x21};
 
 
     // We try 10 times, or if answer was received.
@@ -264,7 +264,7 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
         TransmitFor18092_AsReader(poll, sizeof(poll), NULL, 1, 0);
 
         // polling card, break if success
-        if (WaitForFelicaReply(1024) && FelicaFrame.framebytes[3] == FELICA_POLL_ACK) {
+        if (WaitForFelicaReply(1024) && FelicaFrame.framebytes[3] == FELICA_POLLING_RES) {
             break;
         }
 
@@ -278,7 +278,7 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
     }
 
     // 2. wrong answer
-    if (FelicaFrame.framebytes[3] != FELICA_POLL_ACK) {
+    if (FelicaFrame.framebytes[3] != FELICA_POLLING_RES) {
         return 2;
     }
 
@@ -327,7 +327,7 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
 // page-req: 0x06, IDm(8), ServiceNum(1),Slist(2*num) BLocknum (1) BLockids(2-3*num)
 // page-resp: 0xb2,0x4d,0x1d,0x07,  0xXX,0xXX,0xXX,0xXX,0xXX,0xXX,0xXX,0xXX,  0x00,  0x00,  0x01,  0x10,0x04,0x01,0x00,0x0d,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00,0x23,   0xcb,0x6e,
 
-// builds a readblock frame for felica lite(s).  Using SERVICE:  SERVICE_FELICA_LITE_READONLY
+// builds a readblock frame for felica lite(s).  Using SERVICE:  FELICA_SERVICE_LITE_READONLY
 // Felica standard has a different file system, AFAIK,
 // 8-byte IDm, number of blocks, blocks numbers
 // number of blocks limited to 4 for FelicaLite(S)
@@ -345,7 +345,7 @@ static void BuildFliteRdblk(const uint8_t *idm, uint8_t blocknum, const uint16_t
 
     c++; // set length later
 
-    frameSpace[c++] = FELICA_RDBLK_REQ; // command number
+    frameSpace[c++] = FELICA_READ_WITHOUT_ENCRYPTION_REQ; // command number
 
     // card IDm, from poll
     frameSpace[c++] = idm[0];
@@ -361,8 +361,8 @@ static void BuildFliteRdblk(const uint8_t *idm, uint8_t blocknum, const uint16_t
     frameSpace[c++] = 0x01;
 
     // service code
-    frameSpace[c++] = (SERVICE_FELICA_LITE_READONLY >> 8);
-    frameSpace[c++] = SERVICE_FELICA_LITE_READONLY & 0xFF;
+    frameSpace[c++] = (FELICA_SERVICE_LITE_READONLY >> 8);
+    frameSpace[c++] = FELICA_SERVICE_LITE_READONLY & 0xFF;
 
     // number of blocks
     frameSpace[c++] = blocknum;
@@ -826,9 +826,9 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
 void felica_sim_lite(const uint8_t *uid) {
 
     // prepare our 3 responses...
-    uint8_t resp_poll0[R_POLL0_LEN] = { 0xb2, 0x4d, 0x12, FELICA_POLL_ACK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf1, 0x00, 0x00, 0x00, 0x01, 0x43, 0x00, 0xb3, 0x7f};
-    uint8_t resp_poll1[R_POLL1_LEN] = { 0xb2, 0x4d, 0x14, FELICA_POLL_ACK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf1, 0x00, 0x00, 0x00, 0x01, 0x43, 0x00, 0x88, 0xb4, 0xb3, 0x7f};
-    uint8_t resp_readblk[R_READBLK_LEN] = { 0xb2, 0x4d, 0x1d, FELICA_RDBLK_ACK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x10, 0x04, 0x01, 0x00, 0x0d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x23, 0xcb, 0x6e};
+    uint8_t resp_poll0[R_POLL0_LEN] = { 0xb2, 0x4d, 0x12, FELICA_POLLING_RES, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf1, 0x00, 0x00, 0x00, 0x01, 0x43, 0x00, 0xb3, 0x7f};
+    uint8_t resp_poll1[R_POLL1_LEN] = { 0xb2, 0x4d, 0x14, FELICA_POLLING_RES, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf1, 0x00, 0x00, 0x00, 0x01, 0x43, 0x00, 0x88, 0xb4, 0xb3, 0x7f};
+    uint8_t resp_readblk[R_READBLK_LEN] = { 0xb2, 0x4d, 0x1d, FELICA_READ_WITHOUT_ENCRYPTION_RES, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x10, 0x04, 0x01, 0x00, 0x0d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x23, 0xcb, 0x6e};
 
     // NFC tag 3/ ISo technically. Many overlapping standards
     DbpString("Felica Lite-S simulation start");
@@ -965,7 +965,7 @@ void felica_sim_lite(const uint8_t *uid) {
 
 void felica_dump_lite_s(void) {
     uint8_t ndef[8];
-    uint8_t poll[10] = { 0xb2, 0x4d, 0x06, FELICA_POLL_REQ, 0xff, 0xff, 0x00, 0x00, 0x09, 0x21};
+    uint8_t poll[10] = { 0xb2, 0x4d, 0x06, FELICA_POLLING_REQ, 0xff, 0xff, 0x00, 0x00, 0x09, 0x21};
     uint16_t liteblks[28] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x90, 0x91, 0x92, 0xa0};
 
     // setup device.
@@ -983,7 +983,7 @@ void felica_dump_lite_s(void) {
         //TransmitFor18092_AsReader(poll, 10, GetCountSspClk()+512, 1, 0);
         TransmitFor18092_AsReader(poll, 10, NULL, 1, 0);
 
-        if (WaitForFelicaReply(512) && FelicaFrame.framebytes[3] == FELICA_POLL_ACK) {
+        if (WaitForFelicaReply(512) && FelicaFrame.framebytes[3] == FELICA_POLLING_RES) {
             // copy 8bytes to ndef.
             memcpy(ndef, FelicaFrame.framebytes + 4, 8);
             // for (c=0; c < 8; c++)
@@ -997,7 +997,7 @@ void felica_dump_lite_s(void) {
 
                 TransmitFor18092_AsReader(frameSpace, frameSpace[2] + 4, NULL, 1, 0);
                 // read block
-                if (WaitForFelicaReply(1024) && FelicaFrame.framebytes[3] == FELICA_RDBLK_ACK) {
+                if (WaitForFelicaReply(1024) && FelicaFrame.framebytes[3] == FELICA_READ_WITHOUT_ENCRYPTION_RES) {
 
                     dest[cnt++] = liteblks[blknum];
 

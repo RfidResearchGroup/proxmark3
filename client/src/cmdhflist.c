@@ -2456,7 +2456,7 @@ void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     }
 
     switch (cmd_code) {
-        case FELICA_POLL_REQ: {
+        case FELICA_POLLING_REQ: {
             // Polling request code is byte 6 of the trace frame.
             if (cmdsize > 6) {
                 if (cmd[6] == 0x01) {
@@ -2471,272 +2471,332 @@ void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             snprintf(exp, size, "POLLING");
             break;
         }
-        case FELICA_POLL_ACK:
-            snprintf(exp, size, "POLLING ACK");
+        case FELICA_POLLING_RES:
+            snprintf(exp, size, "POLLING RES");
             break;
-        case FELICA_REQSRV_REQ:
+        case FELICA_REQUEST_SERVICE_REQ:
             snprintf(exp, size, "REQUEST SERVICE");
             break;
-        case FELICA_REQSRV_ACK:
-            snprintf(exp, size, "REQUEST SERVICE ACK");
+        case FELICA_REQUEST_SERVICE_RES:
+            snprintf(exp, size, "REQUEST SERVICE RES");
             break;
-        case FELICA_REQRESP_REQ:
+        case FELICA_REQUEST_RESPONSE_REQ:
             snprintf(exp, size, "REQUEST RESPONSE");
             break;
-        case FELICA_REQRESP_ACK:
-            snprintf(exp, size, "REQUEST RESPONSE ACK");
+        case FELICA_REQUEST_RESPONSE_RES:
+            snprintf(exp, size, "REQUEST RESPONSE RES");
             break;
-        case FELICA_RDBLK_REQ:
+        case FELICA_READ_WITHOUT_ENCRYPTION_REQ:
             snprintf(exp, size, "READ WITHOUT ENCRYPTION");
             break;
-        case FELICA_RDBLK_ACK:
-            snprintf(exp, size, "READ WITHOUT ENCRYPTION ACK");
+        case FELICA_READ_WITHOUT_ENCRYPTION_RES:
+            snprintf(exp, size, "READ WITHOUT ENCRYPTION RES");
             break;
-        case FELICA_WRTBLK_REQ:
+        case FELICA_WRITE_WITHOUT_ENCRYPTION_REQ:
             snprintf(exp, size, "WRITE WITHOUT ENCRYPTION");
             break;
-        case FELICA_WRTBLK_ACK:
-            snprintf(exp, size, "WRITE WITHOUT ENCRYPTION ACK");
+        case FELICA_WRITE_WITHOUT_ENCRYPTION_RES:
+            snprintf(exp, size, "WRITE WITHOUT ENCRYPTION RES");
             break;
-        case FELICA_SRCHSYSCODE_REQ:
+        case FELICA_SEARCH_SERVICE_CODE_REQ:
             snprintf(exp, size, "SEARCH SERVICE CODE");
             break;
-        case FELICA_SRCHSYSCODE_ACK:
-            snprintf(exp, size, "SEARCH SERVICE CODE ACK");
+        case FELICA_SEARCH_SERVICE_CODE_RES:
+            snprintf(exp, size, "SEARCH SERVICE CODE RES");
             break;
-        case FELICA_REQSYSCODE_REQ:
+        case FELICA_REQUEST_SYSTEM_CODE_REQ:
             snprintf(exp, size, "REQUEST SYSTEM CODE");
             break;
-        case FELICA_REQSYSCODE_ACK:
-            snprintf(exp, size, "REQUEST SYSTEM CODE ACK");
+        case FELICA_REQUEST_SYSTEM_CODE_RES:
+            snprintf(exp, size, "REQUEST SYSTEM CODE RES");
             break;
-        case FELICA_REQBLKINFO_REQ:
+        case FELICA_REQUEST_BLOCK_INFORMATION_REQ:
             snprintf(exp, size, "REQUEST BLOCK INFORMATION");
             break;
-        case FELICA_REQBLKINFO_ACK:
-            snprintf(exp, size, "REQUEST BLOCK INFORMATION ACK");
+        case FELICA_REQUEST_BLOCK_INFORMATION_RES:
+            snprintf(exp, size, "REQUEST BLOCK INFORMATION RES");
             break;
-        case FELICA_AUTH1_REQ:
-            snprintf(exp, size, "AUTH 1");
+        case FELICA_AUTHENTICATION1_REQ:
+            snprintf(exp, size, "AUTHENTICATION1");
             break;
-        case FELICA_AUTH1_ACK:
-            snprintf(exp, size, "AUTH 1 ACK");
+        case FELICA_AUTHENTICATION1_RES:
+            snprintf(exp, size, "AUTHENTICATION1 RES");
             break;
-        case FELICA_AUTH2_REQ:
-            snprintf(exp, size, "AUTH 2");
+        case FELICA_AUTHENTICATION2_REQ:
+            snprintf(exp, size, "AUTHENTICATION2");
             break;
-        case FELICA_AUTH2_ACK:
-            snprintf(exp, size, "AUTH 2 ACK");
+        case FELICA_AUTHENTICATION2_RES:
+            snprintf(exp, size, "AUTHENTICATION2 RES");
             break;
-        case FELICA_RDSEC_REQ:
+        case FELICA_READ_SECURE_REQ:
             snprintf(exp, size, "READ");
             break;
-        case FELICA_RDSEC_ACK:
-            snprintf(exp, size, "READ ACK");
+        case FELICA_READ_SECURE_RES:
+            snprintf(exp, size, "READ RES");
             break;
-        case FELICA_WRTSEC_REQ:
+        case FELICA_WRITE_SECURE_REQ:
             snprintf(exp, size, "WRITE");
             break;
-        case FELICA_WRTSEC_ACK:
-            snprintf(exp, size, "WRITE ACK");
+        case FELICA_WRITE_SECURE_RES:
+            snprintf(exp, size, "WRITE RES");
             break;
-        case FELICA_GET_NODE_LIST_REQ:
+        case FELICA_REQUEST_CODE_LIST_REQ:
             snprintf(exp, size, "REQUEST CODE LIST");
             break;
-        case FELICA_GET_NODE_LIST_ACK:
-            snprintf(exp, size, "REQUEST CODE LIST ACK");
+        case FELICA_REQUEST_CODE_LIST_RES:
+            snprintf(exp, size, "REQUEST CODE LIST RES");
             break;
-        case FELICA_REQBLKINFO_EX_REQ:
+        case FELICA_REQUEST_BLOCK_INFORMATION_EX_REQ:
             snprintf(exp, size, "REQUEST BLOCK INFORMATION EX");
             break;
-        case FELICA_REQBLKINFO_EX_ACK:
-            snprintf(exp, size, "REQUEST BLOCK INFORMATION EX ACK");
+        case FELICA_REQUEST_BLOCK_INFORMATION_EX_RES:
+            snprintf(exp, size, "REQUEST BLOCK INFORMATION EX RES");
             break;
         case FELICA_SET_PARAMETER_REQ:
             snprintf(exp, size, "SET PARAMETER");
             break;
-        case FELICA_SET_PARAMETER_ACK:
-            snprintf(exp, size, "SET PARAMETER ACK");
+        case FELICA_SET_PARAMETER_RES:
+            snprintf(exp, size, "SET PARAMETER RES");
             break;
-        case FELICA_GET_CONTAINER_ISSUE_INFO_REQ:
-            snprintf(exp, size, "GET CONTAINER ISSUE INFO");
+        case FELICA_GET_CONTAINER_ISSUE_INFORMATION_REQ:
+            snprintf(exp, size, "GET CONTAINER ISSUE INFORMATION");
             break;
-        case FELICA_GET_CONTAINER_ISSUE_INFO_ACK:
-            snprintf(exp, size, "GET CONTAINER ISSUE INFO ACK");
+        case FELICA_GET_CONTAINER_ISSUE_INFORMATION_RES:
+            snprintf(exp, size, "GET CONTAINER ISSUE INFORMATION RES");
             break;
-        case FELICA_GET_AREA_INFO_REQ:
-            snprintf(exp, size, "GET AREA INFO");
+        case FELICA_GET_AREA_INFORMATION_REQ:
+            snprintf(exp, size, "GET AREA INFORMATION");
             break;
-        case FELICA_GET_AREA_INFO_ACK:
-            snprintf(exp, size, "GET AREA INFO ACK");
+        case FELICA_GET_AREA_INFORMATION_RES:
+            snprintf(exp, size, "GET AREA INFORMATION RES");
             break;
         case FELICA_GET_NODE_PROPERTY_REQ:
             snprintf(exp, size, "GET NODE PROPERTY");
             break;
-        case FELICA_GET_NODE_PROPERTY_ACK:
-            snprintf(exp, size, "GET NODE PROPERTY ACK");
+        case FELICA_GET_NODE_PROPERTY_RES:
+            snprintf(exp, size, "GET NODE PROPERTY RES");
             break;
         case FELICA_GET_CONTAINER_PROPERTY_REQ:
             snprintf(exp, size, "GET CONTAINER PROPERTY");
             break;
-        case FELICA_GET_CONTAINER_PROPERTY_ACK:
-            snprintf(exp, size, "GET CONTAINER PROPERTY ACK");
+        case FELICA_GET_CONTAINER_PROPERTY_RES:
+            snprintf(exp, size, "GET CONTAINER PROPERTY RES");
             break;
-        case FELICA_REQSRV2_REQ:
+        case FELICA_REQUEST_SERVICE_V2_REQ:
             snprintf(exp, size, "REQUEST SERVICE v2");
             break;
-        case FELICA_REQSRV2_ACK:
-            snprintf(exp, size, "REQUEST SERVICE v2 ACK");
+        case FELICA_REQUEST_SERVICE_V2_RES:
+            snprintf(exp, size, "REQUEST SERVICE v2 RES");
             break;
-        case FELICA_INTERNAL_AUTH_READ_REQ:
+        case FELICA_INTERNAL_AUTHENTICATE_AND_READ_REQ:
             snprintf(exp, size, "INTERNAL AUTHENTICATE AND READ");
             break;
-        case FELICA_INTERNAL_AUTH_READ_ACK:
-            snprintf(exp, size, "INTERNAL AUTHENTICATE AND READ ACK");
+        case FELICA_INTERNAL_AUTHENTICATE_AND_READ_RES:
+            snprintf(exp, size, "INTERNAL AUTHENTICATE AND READ RES");
             break;
-        case FELICA_EXTERNAL_AUTH_WRITE_REQ:
+        case FELICA_EXTERNAL_AUTHENTICATE_AND_WRITE_REQ:
             snprintf(exp, size, "EXTERNAL AUTHENTICATE AND WRITE");
             break;
-        case FELICA_EXTERNAL_AUTH_WRITE_ACK:
-            snprintf(exp, size, "EXTERNAL AUTHENTICATE AND WRITE ACK");
+        case FELICA_EXTERNAL_AUTHENTICATE_AND_WRITE_RES:
+            snprintf(exp, size, "EXTERNAL AUTHENTICATE AND WRITE RES");
             break;
-        case FELICA_GETSTATUS_REQ:
-            snprintf(exp, size, "GET STATUS");
+        case FELICA_GET_SYSTEM_STATUS_REQ:
+            snprintf(exp, size, "GET SYSTEM STATUS");
             break;
-        case FELICA_GETSTATUS_ACK:
-            snprintf(exp, size, "GET STATUS ACK");
+        case FELICA_GET_SYSTEM_STATUS_RES:
+            snprintf(exp, size, "GET SYSTEM STATUS RES");
             break;
-        case FELICA_GETPLATFORMINFO_REQ:
-            snprintf(exp, size, "GET PLATFORM INFO");
+        case FELICA_REQUEST_PRODUCT_INFORMATION_REQ:
+            snprintf(exp, size, "REQUEST PRODUCT INFORMATION");
             break;
-        case FELICA_GETPLATFORMINFO_ACK:
-            snprintf(exp, size, "GET PLATFORM INFO ACK");
+        case FELICA_REQUEST_PRODUCT_INFORMATION_RES:
+            snprintf(exp, size, "REQUEST PRODUCT INFORMATION RES");
             break;
-        case FELICA_REQUEST_SPEC_VERSION_REQ:
-            snprintf(exp, size, "REQUEST SPEC VERSION");
+        case FELICA_REQUEST_SPECIFICATION_VERSION_REQ:
+            snprintf(exp, size, "REQUEST SPECIFICATION VERSION");
             break;
-        case FELICA_REQUEST_SPEC_VERSION_ACK:
-            snprintf(exp, size, "REQUEST SPEC VERSION ACK");
+        case FELICA_REQUEST_SPECIFICATION_VERSION_RES:
+            snprintf(exp, size, "REQUEST SPECIFICATION VERSION RES");
             break;
         case FELICA_RESET_MODE_REQ:
             snprintf(exp, size, "RESET MODE");
             break;
-        case FELICA_RESET_MODE_ACK:
-            snprintf(exp, size, "RESET MODE ACK");
+        case FELICA_RESET_MODE_RES:
+            snprintf(exp, size, "RESET MODE RES");
             break;
-        case FELICA_AUTH1V2_REQ:
-            snprintf(exp, size, "AUTH 1 v2");
+        case FELICA_AUTHENTICATION1_V2_REQ:
+            snprintf(exp, size, "AUTHENTICATION1 v2");
             break;
-        case FELICA_AUTH1V2_ACK:
-            snprintf(exp, size, "AUTH 1 v2 ACK");
+        case FELICA_AUTHENTICATION1_V2_RES:
+            snprintf(exp, size, "AUTHENTICATION1 v2 RES");
             break;
-        case FELICA_AUTH2V2_REQ:
-            snprintf(exp, size, "AUTH 2 v2");
+        case FELICA_AUTHENTICATION2_V2_REQ:
+            snprintf(exp, size, "AUTHENTICATION2 v2");
             break;
-        case FELICA_AUTH2V2_ACK:
-            snprintf(exp, size, "AUTH 2 v2 ACK");
+        case FELICA_AUTHENTICATION2_V2_RES:
+            snprintf(exp, size, "AUTHENTICATION2 v2 RES");
             break;
-        case FELICA_RDSECV2_REQ:
+        case FELICA_READ_SECURE_V2_REQ:
             snprintf(exp, size, "READ v2");
             break;
-        case FELICA_RDSECV2_ACK:
-            snprintf(exp, size, "READ v2 ACK");
+        case FELICA_READ_SECURE_V2_RES:
+            snprintf(exp, size, "READ v2 RES");
             break;
-        case FELICA_WRTSECV2_REQ:
+        case FELICA_WRITE_SECURE_V2_REQ:
             snprintf(exp, size, "WRITE v2");
             break;
-        case FELICA_WRTSECV2_ACK:
-            snprintf(exp, size, "WRITE v2 ACK");
+        case FELICA_WRITE_SECURE_V2_RES:
+            snprintf(exp, size, "WRITE v2 RES");
             break;
-        case FELICA_UPDATE_RNDID_REQ:
+        case FELICA_DELETE_KEY_REQ:
+            snprintf(exp, size, "DELETE KEY");
+            break;
+        case FELICA_DELETE_KEY_RES:
+            snprintf(exp, size, "DELETE KEY RES");
+            break;
+        case FELICA_NFC_DEP_ATR_REQ:
+            snprintf(exp, size, "NFC-DEP ATR REQ");
+            break;
+        case FELICA_NFC_DEP_ATR_RES:
+            snprintf(exp, size, "NFC-DEP ATR RES");
+            break;
+        case FELICA_NFC_DEP_PSL_REQ:
+            snprintf(exp, size, "NFC-DEP PSL REQ");
+            break;
+        case FELICA_NFC_DEP_PSL_RES:
+            snprintf(exp, size, "NFC-DEP PSL RES");
+            break;
+        case FELICA_NFC_DEP_DEP_REQ:
+            snprintf(exp, size, "NFC-DEP DEP REQ");
+            break;
+        case FELICA_NFC_DEP_DEP_RES:
+            snprintf(exp, size, "NFC-DEP DEP RES");
+            break;
+        case FELICA_NFC_DEP_DSL_REQ:
+            snprintf(exp, size, "NFC-DEP DSL REQ");
+            break;
+        case FELICA_NFC_DEP_DSL_RES:
+            snprintf(exp, size, "NFC-DEP DSL RES");
+            break;
+        case FELICA_NFC_DEP_RLS_REQ:
+            snprintf(exp, size, "NFC-DEP RLS REQ");
+            break;
+        case FELICA_NFC_DEP_RLS_RES:
+            snprintf(exp, size, "NFC-DEP RLS RES");
+            break;
+        case FELICA_ATTR_REQ:
+            snprintf(exp, size, "ATTR");
+            break;
+        case FELICA_ATTR_RES:
+            snprintf(exp, size, "ATTR RES");
+            break;
+        case FELICA_HLT_REQ:
+            snprintf(exp, size, "HLT");
+            break;
+        case FELICA_HLT_RES:
+            snprintf(exp, size, "HLT RES");
+            break;
+        case FELICA_WUP_REQ:
+            snprintf(exp, size, "WUP");
+            break;
+        case FELICA_WUP_RES:
+            snprintf(exp, size, "WUP RES");
+            break;
+        case FELICA_UPDATE_RANDOM_ID_REQ:
             snprintf(exp, size, "UPDATE RANDOM ID");
             break;
-        case FELICA_UPDATE_RNDID_ACK:
-            snprintf(exp, size, "UPDATE RANDOM ID ACK");
+        case FELICA_UPDATE_RANDOM_ID_RES:
+            snprintf(exp, size, "UPDATE RANDOM ID RES");
             break;
         case FELICA_REGISTER_AREA_V2_REQ:
-            snprintf(exp, size, "REGISTER AREA V2");
+            snprintf(exp, size, "REGISTER AREA v2");
             break;
-        case FELICA_REGISTER_AREA_V2_ACK:
-            snprintf(exp, size, "REGISTER AREA V2 ACK");
+        case FELICA_REGISTER_AREA_V2_RES:
+            snprintf(exp, size, "REGISTER AREA v2 RES");
             break;
         case FELICA_REGISTER_SERVICE_V2_REQ:
-            snprintf(exp, size, "REGISTER SERVICE V2");
+            snprintf(exp, size, "REGISTER SERVICE v2");
             break;
-        case FELICA_REGISTER_SERVICE_V2_ACK:
-            snprintf(exp, size, "REGISTER SERVICE V2 ACK");
+        case FELICA_REGISTER_SERVICE_V2_RES:
+            snprintf(exp, size, "REGISTER SERVICE v2 RES");
             break;
         case FELICA_REGISTER_ISSUE_ID_EX_V2_REQ:
-            snprintf(exp, size, "REGISTER ISSUE ID EX V2");
+            snprintf(exp, size, "REGISTER ISSUE ID EX v2");
             break;
-        case FELICA_REGISTER_ISSUE_ID_EX_V2_ACK:
-            snprintf(exp, size, "REGISTER ISSUE ID EX V2 ACK");
+        case FELICA_REGISTER_ISSUE_ID_EX_V2_RES:
+            snprintf(exp, size, "REGISTER ISSUE ID EX v2 RES");
+            break;
+        case FELICA_REGISTER_ISSUE_ID_EX_REQ:
+            snprintf(exp, size, "REGISTER ISSUE ID EX");
+            break;
+        case FELICA_REGISTER_ISSUE_ID_EX_RES:
+            snprintf(exp, size, "REGISTER ISSUE ID EX RES");
             break;
         case FELICA_SEPARATE_SYSTEM_V2_REQ:
-            snprintf(exp, size, "SEPARATE SYSTEM V2");
+            snprintf(exp, size, "SEPARATE SYSTEM v2");
             break;
-        case FELICA_SEPARATE_SYSTEM_V2_ACK:
-            snprintf(exp, size, "SEPARATE SYSTEM V2 ACK");
+        case FELICA_SEPARATE_SYSTEM_V2_RES:
+            snprintf(exp, size, "SEPARATE SYSTEM v2 RES");
             break;
         case FELICA_CHANGE_SYSTEM_BLOCK_V2_REQ:
-            snprintf(exp, size, "CHANGE SYSTEM BLOCK V2");
+            snprintf(exp, size, "CHANGE SYSTEM BLOCK v2");
             break;
-        case FELICA_CHANGE_SYSTEM_BLOCK_V2_ACK:
-            snprintf(exp, size, "CHANGE SYSTEM BLOCK V2 ACK");
+        case FELICA_CHANGE_SYSTEM_BLOCK_V2_RES:
+            snprintf(exp, size, "CHANGE SYSTEM BLOCK v2 RES");
             break;
         case FELICA_GET_CONTAINER_ID_REQ:
             snprintf(exp, size, "GET CONTAINER ID");
             break;
-        case FELICA_GET_CONTAINER_ID_ACK:
-            snprintf(exp, size, "GET CONTAINER ID ACK");
+        case FELICA_GET_CONTAINER_ID_RES:
+            snprintf(exp, size, "GET CONTAINER ID RES");
             break;
         case FELICA_SET_NODE_PROPERTY_REQ:
             snprintf(exp, size, "SET NODE PROPERTY");
             break;
-        case FELICA_SET_NODE_PROPERTY_ACK:
-            snprintf(exp, size, "SET NODE PROPERTY ACK");
+        case FELICA_SET_NODE_PROPERTY_RES:
+            snprintf(exp, size, "SET NODE PROPERTY RES");
             break;
         case FELICA_REGISTER_ISSUE_ID_REQ:
             snprintf(exp, size, "REGISTER ISSUE ID");
             break;
-        case FELICA_REGISTER_ISSUE_ID_ACK:
-            snprintf(exp, size, "REGISTER ISSUE ID ACK");
+        case FELICA_REGISTER_ISSUE_ID_RES:
+            snprintf(exp, size, "REGISTER ISSUE ID RES");
             break;
         case FELICA_REGISTER_AREA_REQ:
             snprintf(exp, size, "REGISTER AREA");
             break;
-        case FELICA_REGISTER_AREA_ACK:
-            snprintf(exp, size, "REGISTER AREA ACK");
+        case FELICA_REGISTER_AREA_RES:
+            snprintf(exp, size, "REGISTER AREA RES");
             break;
         case FELICA_REGISTER_SERVICE_REQ:
             snprintf(exp, size, "REGISTER SERVICE");
             break;
-        case FELICA_REGISTER_SERVICE_ACK:
-            snprintf(exp, size, "REGISTER SERVICE ACK");
+        case FELICA_REGISTER_SERVICE_RES:
+            snprintf(exp, size, "REGISTER SERVICE RES");
             break;
         case FELICA_SEPARATE_SYSTEM_REQ:
             snprintf(exp, size, "SEPARATE SYSTEM");
             break;
-        case FELICA_SEPARATE_SYSTEM_ACK:
-            snprintf(exp, size, "SEPARATE SYSTEM ACK");
+        case FELICA_SEPARATE_SYSTEM_RES:
+            snprintf(exp, size, "SEPARATE SYSTEM RES");
             break;
         case FELICA_CHANGE_SYSTEM_BLOCK_REQ:
             snprintf(exp, size, "CHANGE SYSTEM BLOCK");
             break;
-        case FELICA_CHANGE_SYSTEM_BLOCK_ACK:
-            snprintf(exp, size, "CHANGE SYSTEM BLOCK ACK");
+        case FELICA_CHANGE_SYSTEM_BLOCK_RES:
+            snprintf(exp, size, "CHANGE SYSTEM BLOCK RES");
             break;
         case FELICA_REGISTER_MANUFACTURE_ID_REQ:
             snprintf(exp, size, "REGISTER MANUFACTURE ID");
             break;
-        case FELICA_REGISTER_MANUFACTURE_ID_ACK:
-            snprintf(exp, size, "REGISTER MANUFACTURE ID ACK");
+        case FELICA_REGISTER_MANUFACTURE_ID_RES:
+            snprintf(exp, size, "REGISTER MANUFACTURE ID RES");
             break;
         case FELICA_SELF_DIAGNOSIS_REQ:
             snprintf(exp, size, "SELF DIAGNOSIS");
             break;
-        case FELICA_SELF_DIAGNOSIS_ACK:
-            snprintf(exp, size, "SELF DIAGNOSIS ACK");
+        case FELICA_SELF_DIAGNOSIS_RES:
+            snprintf(exp, size, "SELF DIAGNOSIS RES");
             break;
         case FELICA_CHANGE_ACTIVE_INTERFACE_REQ:
             snprintf(exp, size, "CHANGE ACTIVE INTERFACE");

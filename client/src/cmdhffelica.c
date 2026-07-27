@@ -62,22 +62,17 @@
 #define FELICA_OPTIONAL_CMD_TIMEOUT_MS 250U
 #define FELICA_OPTIONAL_CMD_RETRIES 3U
 // Per FeliCa spec, Polling max response at 16 timeslots is ~25ms; keep extra margin.
-#define FELICA_POLL_TIMEOUT_MS 100U
+#define FELICA_POLLING_TIMEOUT_MS 100U
 #define FELICA_SEAC_POLL_TIMEOUT_MS 200U
 #define FELICA_SEAC_POLL_RETRY_COUNT 5U
 #define FELICA_SEAC_POLL_FRAME_LEN 5U
 #define FELICA_REQUEST_SYSTEM_CODE_ATTEMPTS 5U
 #define FELICA_SYSTEM_CODE_MAX_COUNT 16U
 #define FELICA_DISCOVERED_SYSTEM_MAX_COUNT FELICA_SYSTEM_CODE_MAX_COUNT
-#define FELICA_SYSTEM_CODE_WILDCARD 0xFFFFU
-#define FELICA_SYSTEM_CODE_NFC_TYPE3 0x12FCU
-#define FELICA_SYSTEM_CODE_FELICA_LITE 0x88B4U
-#define FELICA_SYSTEM_CODE_FELICA_SECURE_ID 0x957AU
-#define FELICA_SYSTEM_CODE_FELICA_NETWORKS_COMMON_AREA 0xFE00U
 #define FELICA_DUMP_DEFAULT_NODE_CAPACITY 128U
 #define FELICA_DUMP_COMMON_AREA_NODE_CAPACITY 256U
-#define FELICA_POLL_REQUEST_NO_DATA 0x00U
-#define FELICA_POLL_REQUEST_SYSTEM_CODE 0x01U
+#define FELICA_POLLING_REQUEST_NO_DATA 0x00U
+#define FELICA_POLLING_REQUEST_SYSTEM_CODE 0x01U
 #define FELICA_SYSTEM_LIST_JSON "felica/felica_system_code_list"
 #define FELICA_IC_CODE_LIST_JSON "felica/felica_ic_code_list"
 
@@ -1059,7 +1054,7 @@ static int felica_read_service_block_for_node(uint8_t flags, const uint8_t *idm,
     const uint16_t datalen = (uint16_t)(1 + 1 + 8 + 1 + 2 + 1 + block_list_element_len);
     uint8_t data[1 + 1 + 8 + 1 + 2 + 1 + FELICA_SYSTEM_SERVICE_BLOCK_LIST_ELEMENT_MAX_LEN] = {0};
     data[0] = (uint8_t)datalen;
-    data[1] = FELICA_RDBLK_REQ;
+    data[1] = FELICA_READ_WITHOUT_ENCRYPTION_REQ;
     memcpy(data + 2, idm, 8);
     data[10] = 0x01;
     data[11] = node_code_le & 0xFF;
@@ -1250,7 +1245,7 @@ static int felica_request_service_key_versions(uint8_t flags, const uint8_t *idm
 
     uint8_t data[1 + 1 + 8 + 1 + (FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE * 2)] = {0};
     uint16_t datalen = 0;
-    int ret = felica_build_request_service_payload(FELICA_REQSRV_REQ, idm, node_codes_le, node_count,
+    int ret = felica_build_request_service_payload(FELICA_REQUEST_SERVICE_REQ, idm, node_codes_le, node_count,
                                                    data, sizeof(data), &datalen);
     if (ret != PM3_SUCCESS) {
         return ret;
@@ -1258,7 +1253,7 @@ static int felica_request_service_key_versions(uint8_t flags, const uint8_t *idm
 
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, datalen, data, false,
-                                         FELICA_REQSRV_ACK,
+                                         FELICA_REQUEST_SERVICE_RES,
                                          FELICA_OPTIONAL_CMD_TIMEOUT_MS, retries,
                                          0, false, &resp, "request service") != PM3_SUCCESS) {
         return PM3_ERFTRANS;
@@ -1305,7 +1300,7 @@ static int felica_request_service_v2_key_versions(uint8_t flags, const uint8_t *
 
     uint8_t data[1 + 1 + 8 + 1 + (FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE * 2)] = {0};
     uint16_t datalen = 0;
-    int ret = felica_build_request_service_payload(FELICA_REQSRV2_REQ, idm, node_codes_le, node_count,
+    int ret = felica_build_request_service_payload(FELICA_REQUEST_SERVICE_V2_REQ, idm, node_codes_le, node_count,
                                                    data, sizeof(data), &datalen);
     if (ret != PM3_SUCCESS) {
         return ret;
@@ -1313,7 +1308,7 @@ static int felica_request_service_v2_key_versions(uint8_t flags, const uint8_t *
 
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, datalen, data, false,
-                                         FELICA_REQSRV2_ACK,
+                                         FELICA_REQUEST_SERVICE_V2_RES,
                                          FELICA_OPTIONAL_CMD_TIMEOUT_MS, retries,
                                          0, false, &resp, "request service v2") != PM3_SUCCESS) {
         return PM3_ERFTRANS;
@@ -1618,7 +1613,7 @@ static int send_request_system_code(uint8_t flags, uint16_t datalen, uint8_t *da
 
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, datalen, data, verbose,
-                                         FELICA_REQSYSCODE_ACK,
+                                         FELICA_REQUEST_SYSTEM_CODE_RES,
                                          timeout_ms, retries,
                                          0, logging, &resp, "request system code") != PM3_SUCCESS) {
         return PM3_ERFTRANS;
@@ -1722,14 +1717,14 @@ static int send_polling(uint8_t flags, uint16_t system_code, uint8_t request_cod
 
     uint8_t polling_request[6] = {0};
     polling_request[0] = sizeof(polling_request);
-    polling_request[1] = FELICA_POLL_REQ;
+    polling_request[1] = FELICA_POLLING_REQ;
     felica_system_code_to_bytes(system_code, polling_request + 2);
     polling_request[4] = request_code;
     polling_request[5] = 0x00; // one target at a time
 
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, sizeof(polling_request), polling_request, false,
-                                         FELICA_POLL_ACK,
+                                         FELICA_POLLING_RES,
                                          timeout_ms, retries,
                                          0, logging, &resp, "polling") != PM3_SUCCESS) {
         return PM3_ERFTRANS;
@@ -1750,7 +1745,7 @@ static int send_polling(uint8_t flags, uint16_t system_code, uint8_t request_cod
     }
 
     if (returned_system_code) {
-        if (request_code == FELICA_POLL_REQUEST_SYSTEM_CODE) {
+        if (request_code == FELICA_POLLING_REQUEST_SYSTEM_CODE) {
             if (resp.length < (poll_response_min_len + 2U)) {
                 return PM3_ESOFT;
             }
@@ -1776,7 +1771,7 @@ static int discover_systems(uint8_t flags, const uint8_t *primary_idm, bool requ
         felica_request_system_code_request_t request_system_code_request;
         memset(&request_system_code_request, 0, sizeof(request_system_code_request));
         request_system_code_request.length[0] = sizeof(request_system_code_request);
-        request_system_code_request.command_code[0] = FELICA_REQSYSCODE_REQ;
+        request_system_code_request.command_code[0] = FELICA_REQUEST_SYSTEM_CODE_REQ;
         memcpy(request_system_code_request.IDm, primary_idm, sizeof(request_system_code_request.IDm));
 
         for (uint32_t attempt = 0; attempt < FELICA_REQUEST_SYSTEM_CODE_ATTEMPTS; attempt++) {
@@ -1804,8 +1799,8 @@ static int discover_systems(uint8_t flags, const uint8_t *primary_idm, bool requ
     uint16_t primary_system_code = 0;
     uint8_t primary_idm_polled[8] = {0};
     uint8_t primary_pmm_polled[8] = {0};
-    if (send_polling(flags, FELICA_SYSTEM_CODE_WILDCARD, FELICA_POLL_REQUEST_SYSTEM_CODE,
-                     FELICA_POLL_TIMEOUT_MS, polling_retries, false,
+    if (send_polling(flags, FELICA_SYSTEM_CODE_WILDCARD, FELICA_POLLING_REQUEST_SYSTEM_CODE,
+                     FELICA_POLLING_TIMEOUT_MS, polling_retries, false,
                      primary_idm_polled, primary_pmm_polled, &primary_system_code) == PM3_SUCCESS) {
         felica_add_unique_discovered_system(discovered_systems->systems, &discovered_systems->count,
                                             primary_system_code, primary_idm_polled, primary_pmm_polled);
@@ -1815,8 +1810,8 @@ static int discover_systems(uint8_t flags, const uint8_t *primary_idm, bool requ
         uint8_t probed_idm[8] = {0};
         uint8_t probed_pmm[8] = {0};
         const uint16_t system_code = FELICA_MANUAL_SYSTEM_PROBE_TARGETS[i].system_code;
-        if (send_polling(flags, system_code, FELICA_POLL_REQUEST_NO_DATA,
-                         FELICA_POLL_TIMEOUT_MS, polling_retries, false,
+        if (send_polling(flags, system_code, FELICA_POLLING_REQUEST_NO_DATA,
+                         FELICA_POLLING_TIMEOUT_MS, polling_retries, false,
                          probed_idm, probed_pmm, NULL) != PM3_SUCCESS) {
             continue;
         }
@@ -1834,8 +1829,8 @@ static int discover_systems(uint8_t flags, const uint8_t *primary_idm, bool requ
         uint8_t resolved_pmm[8] = {0};
         if (send_polling(flags,
                          discovered_systems->systems[i].system_code,
-                         FELICA_POLL_REQUEST_NO_DATA,
-                         FELICA_POLL_TIMEOUT_MS,
+                         FELICA_POLLING_REQUEST_NO_DATA,
+                         FELICA_POLLING_TIMEOUT_MS,
                          polling_retries,
                          false,
                          resolved_idm, resolved_pmm, NULL) != PM3_SUCCESS) {
@@ -1987,8 +1982,8 @@ static bool get_seac_response_data(const PacketResponseNG *resp, const uint8_t *
 
 static int info_seac(void) {
     static const uint8_t seac_poll_frames[][FELICA_SEAC_POLL_FRAME_LEN] = {
-        // {0x05, FELICA_POLL_REQ, 0x01, 0x01, 0x0F},
-        {0x05, FELICA_POLL_REQ, 0x01, 0x01, 0x01},
+        // {0x05, FELICA_POLLING_REQ, 0x01, 0x01, 0x0F},
+        {0x05, FELICA_POLLING_REQ, 0x01, 0x01, 0x01},
     };
     const uint8_t seac_flags = FELICA_CONNECT | FELICA_CLEARTRACE | FELICA_RAW | FELICA_APPEND_CRC | FELICA_NO_SELECT;
 
@@ -2105,7 +2100,7 @@ static int send_get_container_id(uint8_t flags, uint16_t datalen, uint8_t *data,
     (void)verbose;
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, datalen, data, false,
-                                         FELICA_GET_CONTAINER_ID_ACK,
+                                         FELICA_GET_CONTAINER_ID_RES,
                                          FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
                                          0, false, &resp, "get container id") != PM3_SUCCESS) {
         return PM3_ERFTRANS;
@@ -2131,7 +2126,7 @@ static int send_get_container_property(uint8_t flags, uint16_t datalen, uint8_t 
 
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, datalen, data, false,
-                                         FELICA_GET_CONTAINER_PROPERTY_ACK,
+                                         FELICA_GET_CONTAINER_PROPERTY_RES,
                                          FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
                                          0, false, &resp, "get container property") != PM3_SUCCESS) {
         return PM3_ERFTRANS;
@@ -2171,7 +2166,7 @@ static int send_get_container_issue_information(uint8_t flags, uint16_t datalen,
     (void)verbose;
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, datalen, data, false,
-                                         FELICA_GET_CONTAINER_ISSUE_INFO_ACK,
+                                         FELICA_GET_CONTAINER_ISSUE_INFORMATION_RES,
                                          FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
                                          0, false, &resp, "get container issue info") != PM3_SUCCESS) {
         return PM3_ERFTRANS;
@@ -2197,7 +2192,7 @@ static int send_get_platform_information(uint8_t flags, uint16_t datalen, uint8_
 
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, datalen, data, false,
-                                         FELICA_GETPLATFORMINFO_ACK,
+                                         FELICA_REQUEST_PRODUCT_INFORMATION_RES,
                                          FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
                                          0, false, &resp, "get platform info") != PM3_SUCCESS) {
         return PM3_ERFTRANS;
@@ -2249,7 +2244,7 @@ static int send_request_specification_version(uint8_t flags, uint16_t datalen, u
 
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, datalen, data, verbose,
-                                         FELICA_REQUEST_SPEC_VERSION_ACK,
+                                         FELICA_REQUEST_SPECIFICATION_VERSION_RES,
                                          timeout_ms, retries,
                                          0, logging, &resp, "request specification version") != PM3_SUCCESS) {
         return PM3_ERFTRANS;
@@ -2370,7 +2365,7 @@ static int info_felica(bool verbose) {
         felica_get_platform_info_request_t platform_info_request;
         memset(&platform_info_request, 0, sizeof(platform_info_request));
         platform_info_request.length[0] = sizeof(platform_info_request);
-        platform_info_request.command_code[0] = FELICA_GETPLATFORMINFO_REQ;
+        platform_info_request.command_code[0] = FELICA_REQUEST_PRODUCT_INFORMATION_REQ;
         memcpy(platform_info_request.IDm, card.IDm, sizeof(platform_info_request.IDm));
 
         felica_status_flags_t platform_status_flags;
@@ -2388,7 +2383,7 @@ static int info_felica(bool verbose) {
         felica_request_specification_version_request_t request_specification_version_request;
         memset(&request_specification_version_request, 0, sizeof(request_specification_version_request));
         request_specification_version_request.length[0] = sizeof(request_specification_version_request);
-        request_specification_version_request.command_code[0] = FELICA_REQUEST_SPEC_VERSION_REQ;
+        request_specification_version_request.command_code[0] = FELICA_REQUEST_SPECIFICATION_VERSION_REQ;
         memcpy(request_specification_version_request.IDm, card.IDm, sizeof(request_specification_version_request.IDm));
 
         felica_request_specification_version_info_t specification_version_info;
@@ -2416,7 +2411,7 @@ static int info_felica(bool verbose) {
         felica_get_container_issue_info_request_t container_issue_info_request;
         memset(&container_issue_info_request, 0, sizeof(container_issue_info_request));
         container_issue_info_request.length[0] = sizeof(container_issue_info_request);
-        container_issue_info_request.command_code[0] = FELICA_GET_CONTAINER_ISSUE_INFO_REQ;
+        container_issue_info_request.command_code[0] = FELICA_GET_CONTAINER_ISSUE_INFORMATION_REQ;
         memcpy(container_issue_info_request.IDm, card.IDm, sizeof(container_issue_info_request.IDm));
 
         felica_get_container_issue_info_response_t container_issue_info_response;
@@ -2854,7 +2849,7 @@ static int felica_presence_check_idm(const uint8_t *idm) {
 
     uint8_t data[16] = {0};
     data[0] = sizeof(data);
-    data[1] = FELICA_RDBLK_REQ;
+    data[1] = FELICA_READ_WITHOUT_ENCRYPTION_REQ;
     memcpy(data + 2, idm, 8);
     data[10] = 0x01;
     data[11] = FELICA_PRESENCE_SERVICE_CODE_LE & 0xFF;
@@ -2866,7 +2861,7 @@ static int felica_presence_check_idm(const uint8_t *idm) {
     PacketResponseNG resp;
     const uint8_t flags = FELICA_CONNECT | FELICA_CLEARTRACE | FELICA_NO_SELECT | FELICA_APPEND_CRC | FELICA_RAW;
     const int ret = send_felica_payload_with_retries(flags, sizeof(data), data, false,
-                                                     FELICA_RDBLK_ACK,
+                                                     FELICA_READ_WITHOUT_ENCRYPTION_RES,
                                                      FELICA_DEFAULT_TIMEOUT_MS, FELICA_TARGET_PRESENCE_ATTEMPTS - 1U,
                                                      0, false,
                                                      &resp, "presence check");
@@ -2962,7 +2957,7 @@ static int send_request_code_list(uint8_t flags, uint16_t datalen, uint8_t *data
                                   uint32_t timeout_ms, uint32_t retries, uint32_t backoff_ms,
                                   bool logging, PacketResponseNG *resp) {
     return send_felica_payload_with_retries(flags, datalen, data, verbose,
-                                            FELICA_GET_NODE_LIST_ACK,
+                                            FELICA_REQUEST_CODE_LIST_RES,
                                             timeout_ms, retries, backoff_ms,
                                             logging, resp, "request code list");
 }
@@ -3116,7 +3111,7 @@ static bool felica_discover_nodes_with_request_code_list(uint8_t *flags,
 
     uint8_t data[14] = {0};
     data[0] = sizeof(data);
-    data[1] = FELICA_GET_NODE_LIST_REQ;
+    data[1] = FELICA_REQUEST_CODE_LIST_REQ;
     memcpy(data + 2, idm, 8);
     data[10] = 0x00;
     data[11] = 0x00;
@@ -3253,7 +3248,7 @@ static bool felica_discover_nodes_with_search_service_code(uint8_t *flags,
 
     uint8_t data[12] = {0};
     data[0] = sizeof(data);
-    data[1] = FELICA_SRCHSYSCODE_REQ;
+    data[1] = FELICA_SEARCH_SERVICE_CODE_REQ;
     memcpy(data + 2, idm, 8);
 
     bool supported = false;
@@ -3329,7 +3324,7 @@ static bool felica_request_service_send_probe_batch(uint8_t *flags,
 
     uint8_t data[1 + 1 + 8 + 1 + (FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE * 2)] = {0};
     uint16_t datalen = 0;
-    if (felica_build_request_service_payload(FELICA_REQSRV_REQ, idm, node_codes_le, node_count,
+    if (felica_build_request_service_payload(FELICA_REQUEST_SERVICE_REQ, idm, node_codes_le, node_count,
                                              data, sizeof(data), &datalen) != PM3_SUCCESS) {
         return false;
     }
@@ -3338,7 +3333,7 @@ static bool felica_request_service_send_probe_batch(uint8_t *flags,
     const bool logging = (supported != NULL) && (*supported);
     const uint32_t backoff_ms = logging ? FELICA_DISCOVERY_RETRY_BACKOFF_MS : 0;
     if (send_felica_payload_with_retries(*flags, datalen, data, false,
-                                         FELICA_REQSRV_ACK,
+                                         FELICA_REQUEST_SERVICE_RES,
                                          FELICA_DEFAULT_TIMEOUT_MS, retry_count,
                                          backoff_ms, logging, &resp, "request service") != PM3_SUCCESS) {
         return false;
@@ -3476,7 +3471,7 @@ static bool felica_discover_nodes_with_read_without_encryption_ex(uint8_t *flags
         int *stop_status) {
     uint8_t data[16] = {0};
     data[0] = sizeof(data);
-    data[1] = FELICA_RDBLK_REQ;
+    data[1] = FELICA_READ_WITHOUT_ENCRYPTION_REQ;
     memcpy(data + 2, idm, 8);
     data[10] = 0x01;
     data[13] = 0x01;
@@ -4225,7 +4220,7 @@ static void felica_dump_collect_metadata(const uint8_t *idm, felica_dump_metadat
     felica_request_specification_version_request_t spec_request;
     memset(&spec_request, 0, sizeof(spec_request));
     spec_request.length[0] = sizeof(spec_request);
-    spec_request.command_code[0] = FELICA_REQUEST_SPEC_VERSION_REQ;
+    spec_request.command_code[0] = FELICA_REQUEST_SPECIFICATION_VERSION_REQ;
     memcpy(spec_request.IDm, idm, sizeof(spec_request.IDm));
 
     felica_request_specification_version_info_t spec_info;
@@ -4243,7 +4238,7 @@ static void felica_dump_collect_metadata(const uint8_t *idm, felica_dump_metadat
     felica_get_platform_info_request_t product_request;
     memset(&product_request, 0, sizeof(product_request));
     product_request.length[0] = sizeof(product_request);
-    product_request.command_code[0] = FELICA_GETPLATFORMINFO_REQ;
+    product_request.command_code[0] = FELICA_REQUEST_PRODUCT_INFORMATION_REQ;
     memcpy(product_request.IDm, idm, sizeof(product_request.IDm));
 
     felica_status_flags_t product_status_flags;
@@ -4260,7 +4255,7 @@ static void felica_dump_collect_metadata(const uint8_t *idm, felica_dump_metadat
     felica_get_container_issue_info_request_t container_issue_request;
     memset(&container_issue_request, 0, sizeof(container_issue_request));
     container_issue_request.length[0] = sizeof(container_issue_request);
-    container_issue_request.command_code[0] = FELICA_GET_CONTAINER_ISSUE_INFO_REQ;
+    container_issue_request.command_code[0] = FELICA_GET_CONTAINER_ISSUE_INFORMATION_REQ;
     memcpy(container_issue_request.IDm, idm, sizeof(container_issue_request.IDm));
 
     felica_get_container_issue_info_response_t container_issue_response;
@@ -4367,8 +4362,8 @@ static int felica_dump_collect_key_versions(felica_dump_system_t *system, uint32
     }
 
     uint8_t flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
-    int ret = send_polling(flags, system->system_code, FELICA_POLL_REQUEST_NO_DATA,
-                           FELICA_POLL_TIMEOUT_MS, retry_count, false,
+    int ret = send_polling(flags, system->system_code, FELICA_POLLING_REQUEST_NO_DATA,
+                           FELICA_POLLING_TIMEOUT_MS, retry_count, false,
                            system->idm, system->pmm, NULL);
     if (ret != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Unable to poll system " _YELLOW_("%04X") " for key versions.", system->system_code);
@@ -4503,8 +4498,8 @@ static int felica_dump_single_system(const felica_discovered_system_t *system,
     uint8_t flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
     uint8_t idm[8] = {0};
     uint8_t pmm[8] = {0};
-    if (send_polling(flags, system->system_code, FELICA_POLL_REQUEST_NO_DATA,
-                     FELICA_POLL_TIMEOUT_MS, retry_count, false,
+    if (send_polling(flags, system->system_code, FELICA_POLLING_REQUEST_NO_DATA,
+                     FELICA_POLLING_TIMEOUT_MS, retry_count, false,
                      idm, pmm, NULL) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Unable to poll system " _YELLOW_("%04X") ".", system->system_code);
         return PM3_ERFTRANS;
@@ -4522,7 +4517,7 @@ static int felica_dump_single_system(const felica_discovered_system_t *system,
     dump_ctx.retry_count = retry_count;
     dump_ctx.block_datalen = 16;
     dump_ctx.block_frame[0] = dump_ctx.block_datalen;
-    dump_ctx.block_frame[1] = FELICA_RDBLK_REQ;
+    dump_ctx.block_frame[1] = FELICA_READ_WITHOUT_ENCRYPTION_REQ;
     memcpy(dump_ctx.block_frame + 2, idm, sizeof(idm));
     dump_ctx.block_frame[10] = 0x01;
     dump_ctx.block_frame[13] = 0x01;
@@ -5380,7 +5375,7 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
     felica_request_specification_version_request_t request_specification_version_request;
     memset(&request_specification_version_request, 0, sizeof(request_specification_version_request));
     request_specification_version_request.length[0] = sizeof(request_specification_version_request);
-    request_specification_version_request.command_code[0] = FELICA_REQUEST_SPEC_VERSION_REQ;
+    request_specification_version_request.command_code[0] = FELICA_REQUEST_SPECIFICATION_VERSION_REQ;
 
     if (rlen) {
         memcpy(request_specification_version_request.reserved, reserved, sizeof(reserved));
@@ -5545,7 +5540,7 @@ static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
     felica_request_system_code_request_t request_system_code_request;
     memset(&request_system_code_request, 0, sizeof(request_system_code_request));
     request_system_code_request.length[0] = sizeof(request_system_code_request);
-    request_system_code_request.command_code[0] = FELICA_REQSYSCODE_REQ;
+    request_system_code_request.command_code[0] = FELICA_REQUEST_SYSTEM_CODE_REQ;
 
     res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, request_system_code_request.IDm);
     if (res != PM3_SUCCESS) {
