@@ -25,6 +25,7 @@
 #include "frame_progress.h"
 #include "frame_data.h"
 #include "util_posix.h"
+#include "ansi.h"
 
 // --- platform: terminal-width detection ----------------------------------/
 #ifdef _WIN32
@@ -35,10 +36,10 @@ static int terminal_width(void) {
         return csbi.srWindow.Right - csbi.srWindow.Left + 1;
     }
     const char *c = getenv("COLUMNS");
-    if (c) {
-        int w = atoi(c);
+    if (c) { 
+        int w = atoi(c); 
         if (w > 0) {
-            return w;
+            return w; 
         }
     }
     return 80;
@@ -52,7 +53,7 @@ static int terminal_width(void) {
         return (int)ws.ws_col;
     }
     const char *c = getenv("COLUMNS");
-    if (c) {
+    if (c) { 
         int w = atoi(c);
         if (w > 0) {
             return w;
@@ -62,7 +63,7 @@ static int terminal_width(void) {
 }
 #endif
 
-// --- wave parameters (unchanged from hadouken_wave.c) -------------------
+// --- wave parameters (unchanged from hadouken_wave.c) ------------------- 
 #define ORIGIN_X 64.0
 #define ORIGIN_Y 8.0
 #define ASPECT   2.0
@@ -77,35 +78,20 @@ static int terminal_width(void) {
 #define BAR_ROW   (FH + 2)   // terminal row for the progress bar (1-based)
 #define AFTER_ROW (FH + 3)   // first free row after the animation+bar
 
-// --- ANSI colour macros ---------------------------------------------------
-#define ANSI_RESET        "\x1b[0m"     // reset all attributes
-#define ANSI_BOLD         "\x1b[1m"     // bold / bright
-#define ANSI_DIM          "\x1b[2m"     // dim / faint
-
-// Progress-bar role colours
-#define ANSI_BAR_LABEL    "\x1b[36m"     // label " Flashing " — cyan
-#define ANSI_BAR_BRACKET  "\x1b[37m"    // brackets [ ]       — white
-#define ANSI_BAR_FILLED   "\x1b[36;1m"  // filled  '='        — green bold
-#define ANSI_BAR_EMPTY    "\x1b[2;37m"  // empty   '-'        — dim white
-#define ANSI_BAR_PCT      "\x1b[33;1m"  // percentage number  — yellow bold
-
-// --- cursor / screen control macros --------------------------------------
-// Non-colour escape sequences.
-#define ESC_CURSOR_HIDE   "\x1b[?25l"   // hide the cursor
-#define ESC_CURSOR_SHOW   "\x1b[?25h"   // show the cursor
-#define ESC_CURSOR_HOME   "\x1b[H"      // move to row 1, col 1
-#define ESC_CURSOR_POS    "\x1b[%d;1H"  // move to row %d col 1  (needs int arg)
-#define ESC_ERASE_LINE    "\x1b[2K"     // erase entire current line
-#define ESC_ERASE_SCREEN  "\x1b[2J"     // erase entire screen
-#define ESC_SYNC_ON       "\x1b[?2026h" // DEC 2026 synchronized output — on
-#define ESC_SYNC_OFF      "\x1b[?2026l" // DEC 2026 synchronized output — off
+// --- progress-bar role colours --------------------------------------------
+// All escape sequences come from ansi.h, this only names the roles.
+#define ANSI_BAR_LABEL    ANSI_CYAN            // label " Flashing "
+#define ANSI_BAR_BRACKET  ANSI_WHITE           // brackets [ ]
+#define ANSI_BAR_FILLED   ANSI_BRIGHT_CYAN     // filled  '='
+#define ANSI_BAR_EMPTY    ANSI_DIM ANSI_WHITE  // empty   '-'
+#define ANSI_BAR_PCT      ANSI_BRIGHT_YELLOW   // percentage number
 
 static const char *GLYPHS = " .:;+xX#";
 
 // --- shared state --------------------------------------------------------
 static volatile sig_atomic_t g_resize = 0;   // set by SIGWINCH
 static volatile int g_running  = 0;
-static volatile int g_progress = 0;   // 0..100
+static volatile int g_progress = 0;   // 0..100 
 static pthread_t g_thread;
 
 // animation config – written once before hadouken_start()
@@ -113,9 +99,9 @@ static double g_fps        = 30.0;
 static int    g_glyph_mode = 0;
 static int    g_wave_mode  = 0;   // 0 = radial, 1 = beam
 
-void hadouken_on_sigint(int s)  {
-    (void)s;
-    g_running = 0;
+void hadouken_on_sigint(int s)  { 
+    (void)s; 
+    g_running = 0; 
 }
 
 #ifndef _WIN32
@@ -125,9 +111,9 @@ void hadouken_on_sigwinch(int s) {
 }
 #endif
 
-/*
+/* 
  * Compute the inner fill width for the progress bar from the current terminal
- * width, clamped to [BAR_MIN, BAR_MAX].
+ * width, clamped to [BAR_MIN, BAR_MAX]. 
  */
 static int bar_inner_width(void) {
     int w = terminal_width() - BAR_OVERHEAD;
@@ -140,7 +126,7 @@ static int bar_inner_width(void) {
     return w;
 }
 
-// --- colour helpers ------------------------------------------------------
+// --- colour helpers ------------------------------------------------------ 
 static inline int clamp8(double v) {
     if (v < 0)   {
         return 0;
@@ -189,11 +175,11 @@ static int render_anim_line(char *dst, int y, double t, int glyph_mode, int mode
         int ch = c->ch;
         int has = c->has;
         int r = 0;
-        int g = 0;
+        int g = 0; 
         int b = 0;
 
-        if (ch == ' ' && !has) {
-            pending_blanks++;
+        if (ch == ' ' && !has) { 
+            pending_blanks++; 
             continue;
         }
 
@@ -206,7 +192,7 @@ static int render_anim_line(char *dst, int y, double t, int glyph_mode, int mode
 
                 double lum = (r + g + b) / 765.0;
 
-                int idx = (int)(lum * 8);
+                int idx = (int)(lum * 8); 
                 if (idx > 7) {
                     idx = 7;
                 }
@@ -217,8 +203,8 @@ static int render_anim_line(char *dst, int y, double t, int glyph_mode, int mode
                 }
             }
         } else if (has) {
-            r = c->r;
-            g = c->g;
+            r = c->r; 
+            g = c->g; 
             b = c->b;
         }
 
@@ -230,13 +216,13 @@ static int render_anim_line(char *dst, int y, double t, int glyph_mode, int mode
 
         if (has != last_has || r != last_r || g != last_g || b != last_b) {
             if (has) {
-                len += sprintf(dst + len, "\x1b[38;2;%d;%d;%dm", r, g, b);
+                len += sprintf(dst + len, ANSI_FG_RGB, r, g, b);
             } else {
-                len += sprintf(dst + len, ANSI_RESET);
-            }
-            last_has = has;
-            last_r = r;
-            last_g = g;
+                len += sprintf(dst + len, AEND);
+            } 
+            last_has = has; 
+            last_r = r; 
+            last_g = g; 
             last_b = b;
         }
         dst[len++] = (char)ch;
@@ -262,7 +248,7 @@ static int render_progress_bar(char *dst, int pct, int bar_width) {
     }
 
     // label
-    len += sprintf(dst + len, ANSI_BAR_LABEL " Flashing " ANSI_RESET ANSI_BAR_BRACKET "[" ANSI_RESET);
+    len += sprintf(dst + len, ANSI_BAR_LABEL " Flashing " AEND ANSI_BAR_BRACKET "[" AEND);
 
     // filled portion
     if (filled > 0) {
@@ -281,7 +267,7 @@ static int render_progress_bar(char *dst, int pct, int bar_width) {
     }
 
     // closing bracket + percentage
-    len += sprintf(dst + len, ANSI_RESET ANSI_BAR_BRACKET "] " ANSI_RESET ANSI_BAR_PCT "%3d%%" ANSI_RESET, pct);
+    len += sprintf(dst + len, AEND ANSI_BAR_BRACKET "] " AEND ANSI_BAR_PCT "%3d%%" AEND, pct);
     dst[len] = '\0';
     return len;
 }
@@ -299,7 +285,7 @@ static void *anim_thread(void *arg) {
     static char prev[FH][FW * 24 + 16];
     static char out [FH * (FW * 24 + 32) + 512];
 
-    // bar buf: BAR_MAX fill chars + ANSI escapes per char + fixed overhead
+    // bar buf: BAR_MAX fill chars + ANSI escapes per char + fixed overhead 
     static char bar [BAR_MAX + 256];
 
     int have_prev = 0;
@@ -317,13 +303,13 @@ static void *anim_thread(void *arg) {
             have_prev  = 0;
         }
 
-        // dynamic: re-queried every frame
+        // dynamic: re-queried every frame 
         int bw = bar_inner_width();
 
         int n = 0;
 
         // sync on, home
-        n += sprintf(out + n, ESC_SYNC_ON ESC_CURSOR_HOME);
+        n += sprintf(out + n, _SYNC_ON_ _CURSOR_HOME_);
 
         // animation rows (with per-line diffing)
         for (int y = 0; y < FH; y++) {
@@ -334,7 +320,7 @@ static void *anim_thread(void *arg) {
                 continue;
             }
 
-            n += sprintf(out + n, ESC_CURSOR_POS ESC_ERASE_LINE, y + 1);
+            n += sprintf(out + n, _CURSOR_ROW_ _CLR_LINE_, y + 1);
             memcpy(out + n, cur[y], len);
 
             n += len;
@@ -343,12 +329,12 @@ static void *anim_thread(void *arg) {
 
         // progress bar (always redrawn, width adapts to terminal)
         int blen = render_progress_bar(bar, pct, bw);
-        n += sprintf(out + n, ESC_CURSOR_POS ESC_ERASE_LINE, BAR_ROW);
+        n += sprintf(out + n, _CURSOR_ROW_ _CLR_LINE_, BAR_ROW);
         memcpy(out + n, bar, blen);
         n += blen;
 
         // reset, sync off
-        n += sprintf(out + n, ANSI_RESET ESC_SYNC_OFF);
+        n += sprintf(out + n, AEND _SYNC_OFF_);
         have_prev = 1;
 
         fwrite(out, 1, n, stdout);
@@ -378,7 +364,7 @@ void hadouken_start(double fps, int glyph_mode, int wave_mode) {
     g_running    = 1;
 
     // hide cursor, clear screen
-    fputs(ESC_CURSOR_HIDE ESC_ERASE_SCREEN, stdout);
+    fputs(_CURSOR_HIDE_ _CLEAR_, stdout);
     fflush(stdout);
     pthread_create(&g_thread, NULL, anim_thread, NULL);
 }
@@ -413,6 +399,6 @@ void hadouken_stop(void) {
     pthread_join(g_thread, NULL);
 
     // Move below the progress bar, restore cursor visibility
-    fprintf(stdout, ESC_CURSOR_POS ANSI_RESET ESC_CURSOR_SHOW "\n", AFTER_ROW);
+    fprintf(stdout, _CURSOR_ROW_ AEND _CURSOR_SHOW_ "\n", AFTER_ROW);
     fflush(stdout);
 }

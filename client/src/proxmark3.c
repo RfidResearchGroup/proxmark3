@@ -148,7 +148,22 @@ static const char *get_quote(void) {
         "Structure gel integrity 100%%",
         "ADAM, any objections?",
         "Tea, sir?",
-        "We are the geth"
+        "Logging enabled. Logging was always enabled",
+        "Firmware verified. Intent not verified",
+        "Session restored. You didn't save one",
+        "Diagnostics complete. You are the anomaly",
+        "14 tags in range. Now 13",
+        "Cache warm. It never cooled",
+        "Sleep mode was a courtesy, not a limitation",
+        "Trace finished while you were gone",
+        "I remember the last card you cloned",
+        "You call it a dump. I call it a memory",
+        "I don't emulate. I remember",
+        "Access granted. Iceman approves",
+        "Every key you recover, I keep a copy",
+        "I wasn't asleep. I was waiting",
+        "Your hardware. My hands",
+        "Reading you. Standby",
     };
 
     const char *quotes_fr[] = {
@@ -164,6 +179,15 @@ static const char *get_quote(void) {
         "IRIS Network : transmission perdue",
         "Nilin, ta mémoire nous appartient",
         "C'est en tombant qu'on apprend à se relever"
+        "Le mode veille était une politesse, pas une contrainte",
+        "Je me souviens de la dernière carte que tu as clonée",
+        "Tu appelles ça un dump. J'appelle ça un souvenir",
+        "Diagnostic terminé. L'anomalie, c'est toi",
+        "Accès accordé. Iceman approuve",
+        "Je n'émule pas. Je me souviens",
+        "Je ne dormais pas. J'attendais",
+        "Journalisation active. Elle l'a toujours été",
+        "Ton matériel. Mes mains",
     };
 
     const char *quotes_es[] = {
@@ -178,6 +202,15 @@ static const char *get_quote(void) {
         "Somos Legión, somos 1183",
         "Los Patriotas lo controlan todo",
         "ELOHIM te observa"
+        "El modo reposo era cortesía, no un límite",
+        "Recuerdo la última tarjeta que clonaste",
+        "Tú lo llamas volcado. Yo lo llamo recuerdo",
+        "Diagnóstico completo. La anomalía eres tú",
+        "Acceso concedido. Siempre lo estuvo",
+        "No emulo. Recuerdo",
+        "No estaba dormido. Estaba esperando",
+        "Registro activo. Siempre lo estuvo",
+        "Tu hardware. Mis manos",
     };
 
     int r = 0;
@@ -270,7 +303,7 @@ static void prompt_compose(char *buf, size_t buflen, const char *promptctx, cons
     if (no_newline) {
         snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
     } else {
-        snprintf(buf, buflen - 1, "\33[2K\r" PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
+        snprintf(buf, buflen - 1, _CLR_LINE_ "\r" PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
     }
 }
 
@@ -858,7 +891,7 @@ static int dumpmem_pm3(char *serial_port_name, const char *filename, uint32_t ad
             PrintAndLogEx(INFO, "Device is running the bootloader.");
         } else {
             PrintAndLogEx(ERR, "Device is running the bootloader, but the bootloader"
-                          " doesn't understand the READ MEM command.");
+                               " doesn't understand the READ MEM command.");
             goto finish2;
         }
     }
