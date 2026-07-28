@@ -96,6 +96,50 @@ static bool legic_clone_update_segment_crcs(uint8_t *data, size_t bytes_read, co
     return true;
 }
 
+static bool legic_clone_update_kgh_crcs(uint8_t *data, size_t bytes_read, const uint8_t uid[4]) {
+    // Decoded segmented payload starts at byte 22.
+    size_t start = 22;
+    bool found_kgh = false;
+    uint8_t segment_index = 0;
+
+    while (start + 5 <= bytes_read) {
+        uint16_t seg_len = (((uint16_t)data[start + 1] & 0x0F) << 8) | data[start];
+        if (seg_len < 6 || start + seg_len > bytes_read) {
+            break;
+        }
+
+        uint8_t *cmd = calloc(4 + 4 + (seg_len - 1), sizeof(uint8_t));
+        if (cmd == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return false;
+        }
+
+        found_kgh = true;
+        memcpy(cmd, uid, 4);
+        cmd[4] = data[start + 2];
+        cmd[5] = (data[start + 3] & 0x70) >> 4;
+        cmd[6] = (data[start + 3] & 0x80) >> 7;
+        cmd[7] = (segment_index == 0) ? 0x00 : 0x93;
+        memcpy(cmd + 8, data + start, seg_len - 1);
+
+        data[start + seg_len - 1] = (uint8_t)CRC8Legic(cmd, 4 + 4 + (seg_len - 1));
+        free(cmd);
+
+        if (data[start + 1] & 0x80) {
+            break;
+        }
+
+        start += seg_len;
+        ++segment_index;
+    }
+
+    if (!found_kgh) {
+        PrintAndLogEx(INFO, "No KGH-rewriteable LEGIC Prime segments found; leaving payload CRCs untouched.");
+    }
+
+    return true;
+}
+
 static int legic_write_bytes_to_tag(uint16_t offset, uint8_t iv, const uint8_t *data, size_t bytes_read, const char *verb) {
     PrintAndLogEx(SUCCESS, "%s", verb);
 
@@ -155,14 +199,16 @@ static int legic_write_dump_to_tag(uint8_t *dump, size_t bytes_read) {
 static int CmdLegicMigrate(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf legic migrate",
-                  "Clone a LEGIC Prime dump to the currently attached tag.\n"
-                  "Optionally apply a DCF update after cloning, but only when explicitly requested.",
-                  "hf legic migrate -f src.bin\n"
-                  "hf legic migrate -f src.bin --dcf 60EA --danger");
+                   "Clone a LEGIC Prime dump to the currently attached tag.\n"
+                   "Optionally apply a DCF update after cloning, but only when explicitly requested.",
+                   "hf legic migrate -f src.bin\n"
+                   "hf legic migrate -f src.bin --kgh\n"
+                   "hf legic migrate -f src.bin --dcf 60EA --danger");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Source dump file"),
+        arg_lit0(NULL, "kgh", "Recalculate KGH payload CRCs"),
         arg_str0(NULL, "dcf", "<hex>", "Optional DCF bytes to write after clone"),
         arg_lit0(NULL, "danger", "Allow the explicit DCF write"),
         arg_param_end
@@ -173,10 +219,12 @@ static int CmdLegicMigrate(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
+    bool rewrite_kgh = arg_get_lit(ctx, 2);
+
     int dcf_len = 0;
     uint8_t dcf[2] = {0};
-    if (arg_get_str(ctx, 2) != NULL) {
-        CLIParamHexToBuf(arg_get_str(ctx, 2), dcf, sizeof(dcf), &dcf_len);
+    if (arg_get_str(ctx, 3) != NULL) {
+        CLIParamHexToBuf(arg_get_str(ctx, 3), dcf, sizeof(dcf), &dcf_len);
         if (dcf_len != 2) {
             PrintAndLogEx(WARNING, "DCF must be exactly two bytes");
             CLIParserFree(ctx);
@@ -184,7 +232,7 @@ static int CmdLegicMigrate(const char *Cmd) {
         }
     }
 
-    bool allow_dcf = arg_get_lit(ctx, 3);
+    bool allow_dcf = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
     if (fnlen < 1) {
@@ -235,6 +283,12 @@ static int CmdLegicMigrate(const char *Cmd) {
     memcpy(target_uid, card.uid, sizeof(target_uid));
     uint8_t target_mcc = (uint8_t)CRC8Legic(target_uid, sizeof(target_uid));
     legic_clone_update_segment_crcs(dump, bytes_read, target_uid);
+    if (rewrite_kgh) {
+        if (legic_clone_update_kgh_crcs(dump, bytes_read, target_uid) == false) {
+            free(dump);
+            return PM3_EFAILED;
+        }
+    }
     memcpy(dump, target_uid, sizeof(target_uid));
     dump[4] = target_mcc;
 
@@ -903,6 +957,11 @@ static int CmdLegicWrbl(const char *Cmd) {
         }
     }
 
+    if (has_fill && offset < 22) {
+        PrintAndLogEx(WARNING, "Fill mode is only allowed from offset 22 and above");
+        return PM3_EINVARG;
+    }
+
     uint32_t IV = 0x55;
     legic_chk_iv(&IV);
 
@@ -1291,11 +1350,13 @@ static int CmdLegicRestore(const char *Cmd) {
 static int CmdLegicClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf legic clone",
-                  "Rewrite a LEGIC dump for a new target tag or MCC.\n"
-                  "Use --mcc to rewrite only the dump obfuscation, or --write to clone to the current tag.",
-                  "hf legic clone -f src.bin -c 39 -o clone.bin\n"
-                  "hf legic clone -f src.bin --write\n"
-                  "hf legic clone -f src.bin --write -o clone.bin");
+                   "Rewrite a LEGIC dump for a new target tag or MCC.\n"
+                   "Use --mcc to rewrite only the dump obfuscation, or --write to clone to the current tag.\n"
+                   "Use --kgh with --write to recalculate UID-bound KGH payload CRCs.",
+                   "hf legic clone -f src.bin -c 39 -o clone.bin\n"
+                   "hf legic clone -f src.bin --write\n"
+                   "hf legic clone -f src.bin --write --kgh\n"
+                   "hf legic clone -f src.bin --write --kgh -o clone.bin");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1303,6 +1364,7 @@ static int CmdLegicClone(const char *Cmd) {
         arg_str0(NULL, "mcc", "<hex>", "Target MCC byte for output-only cloning"),
         arg_str0("o", "output", "<fn>", "Output cloned dump file"),
         arg_lit0("w", "write", "Write cloned dump to the currently attached tag"),
+        arg_lit0(NULL, "kgh", "Recalculate KGH payload CRCs"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1312,6 +1374,7 @@ static int CmdLegicClone(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     bool write_to_tag = arg_get_lit(ctx, 4);
+    bool rewrite_kgh = arg_get_lit(ctx, 5);
 
     int outlen = 0;
     char outfilename[FILE_PATH_SIZE] = {0};
@@ -1353,6 +1416,11 @@ static int CmdLegicClone(const char *Cmd) {
 
     if (!write_to_tag && !has_mcc) {
         PrintAndLogEx(WARNING, "Either --mcc or --write is required");
+        return PM3_EINVARG;
+    }
+
+    if (rewrite_kgh && !write_to_tag) {
+        PrintAndLogEx(WARNING, "Use --kgh together with --write so the target UID is known");
         return PM3_EINVARG;
     }
 
@@ -1401,6 +1469,12 @@ static int CmdLegicClone(const char *Cmd) {
         memcpy(target_uid, card.uid, sizeof(target_uid));
         target_mcc = (uint8_t)CRC8Legic(target_uid, sizeof(target_uid));
         legic_clone_update_segment_crcs(dump, bytes_read, target_uid);
+        if (rewrite_kgh) {
+            if (legic_clone_update_kgh_crcs(dump, bytes_read, target_uid) == false) {
+                free(dump);
+                return PM3_EFAILED;
+            }
+        }
         memcpy(dump, target_uid, sizeof(target_uid));
         dump[4] = target_mcc;
     } else {

@@ -32,6 +32,8 @@
 static uint8_t *legic_mem;      /* card memory, used for sim */
 static legic_card_select_t card;/* metadata of currently selected card */
 static crc_t legic_crc;
+static uint8_t last_rx_len;
+static uint32_t last_rx_cmd;
 
 //-----------------------------------------------------------------------------
 // Frame timing and pseudorandom number generator
@@ -414,17 +416,27 @@ static int32_t connected_phase(legic_card_select_t *p_card) {
     // wait for command
     int32_t cmd = rx_frame(&len);
     if (cmd < 0) {
+        last_rx_len = len;
+        last_rx_cmd = (uint32_t)cmd;
         return PM3_ETIMEOUT;
     }
 
+    last_rx_len = len;
+    last_rx_cmd = (uint32_t)cmd;
+
     // check if command is LEGIC_READ
-    if (len == p_card->cmdsize) {
+    if (len == p_card->cmdsize && ((cmd & 1) == 1)) {
         // prepare data
         uint8_t byte = legic_mem[cmd >> 1];
         uint8_t crc = calc_crc4(cmd, p_card->cmdsize, byte);
 
         // transmit data
         tx_frame((crc << 8) | byte, 12);
+        return PM3_SUCCESS;
+    }
+
+    // Some readers issue a write header as a 9-bit frame only.
+    if (len == p_card->cmdsize && ((cmd & 1) == 0)) {
         return PM3_SUCCESS;
     }
 
@@ -500,8 +512,13 @@ void LegicRfSimulate(uint8_t tagtype, bool send_reply) {
         }
 
         // connection is established, process commands until one fails
-        while (connected_phase(&card) == PM3_SUCCESS) {
+        int32_t phase_res;
+        while ((phase_res = connected_phase(&card)) == PM3_SUCCESS) {
             WDT_HIT();
+        }
+
+        if (phase_res != PM3_SUCCESS) {
+            Dbprintf("LEGIC sim session ended: res=%d len=%u cmd=%05x", phase_res, last_rx_len, (unsigned int)last_rx_cmd);
         }
     }
 
