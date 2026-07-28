@@ -2601,6 +2601,9 @@ static int fm11_verify_candidates(uint8_t real_sec, uint8_t key_type, const fm11
     uint32_t last_progress = 0;
     fm11_sen_candidate_progress(real_sec, key_type, 0, list->count);
     while (idx < list->count) {
+        if (kbd_enter_pressed()) {
+            return PM3_EOPABORTED;
+        }
         uint8_t key_block[KEYBLOCK_SIZE] = {0};
         uint8_t chunk = MIN(KEYS_IN_BLOCK, list->count - idx);
         for (uint8_t i = 0; i < chunk; i++) {
