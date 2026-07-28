@@ -2277,13 +2277,6 @@ static int fm11_check_default_keys(uint32_t uid,
         return PM3_EMALLOC;
     }
 
-    bool was_found[FM11RF08S_SECTORS][2] = {{false}};
-    for (uint8_t sec = 0; sec < FM11RF08S_SECTORS; sec++) {
-        for (uint8_t kt = 0; kt < 2; kt++) {
-            was_found[sec][kt] = found_key[sec][kt];
-        }
-    }
-
     for (uint8_t sec = 0; sec < FM11RF08S_NORMAL_SECTORS; sec++) {
         for (uint8_t kt = 0; kt < 2; kt++) {
             if (found_key[sec][kt]) {
@@ -2360,8 +2353,9 @@ normal_out:
             fm11_sen_keycheck_progress("def", real_sec32, kt, sec32_done, sec32_total, matches.count);
             progress_shown = true;
             if (res == PM3_SUCCESS) {
-                keys_found[sec32][kt] = out_key & 0xFFFFFFFFFFFFULL;
+                keys_found[sec32][kt] = out_key;
                 found_key[sec32][kt] = true;
+                fm11_print_key_hit_row(nonce_count, sec32, kt, keys_found[sec32][kt], found_key);
                 break;
             }
             if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
@@ -2376,18 +2370,14 @@ normal_out:
 
     for (uint8_t sec = 0; sec < FM11RF08S_NORMAL_SECTORS; sec++) {
         for (uint8_t kt = 0; kt < 2; kt++) {
-            if (e_sector[sec].foundKey[kt]) {
-                keys_found[sec][kt] = e_sector[sec].Key[kt] & 0xFFFFFFFFFFFFULL;
-                found_key[sec][kt] = true;
-                if (was_found[sec][kt] == false) {
-                    fm11_print_key_hit_row(nonce_count, sec, kt, keys_found[sec][kt], found_key);
-                }
+            if (found_key[sec][kt]) {
+                continue;
             }
-        }
-    }
-    for (uint8_t kt = 0; kt < 2; kt++) {
-        if (found_key[sec32][kt] && was_found[sec32][kt] == false) {
-            fm11_print_key_hit_row(nonce_count, sec32, kt, keys_found[sec32][kt], found_key);
+            if (e_sector[sec].foundKey[kt]) {
+                keys_found[sec][kt] = e_sector[sec].Key[kt];
+                found_key[sec][kt] = true;
+                fm11_print_key_hit_row(nonce_count, sec, kt, keys_found[sec][kt], found_key);
+            }
         }
     }
     free(e_sector);
@@ -2449,11 +2439,11 @@ static uint32_t fm11_propagate_key_reuse_online(uint32_t nonce_count, uint64_t k
         int res = mf_check_keys(mfFirstBlockOfSector(real_sec32), kt, false, 1, key_block, &out_key);
         fm11_sen_keycheck_progress("use", real_sec32, kt, (pass_total * 2) + kt + 1, (pass_total * 2) + 2, pass_total + 2);
         progress_shown = true;
-        if (res == PM3_SUCCESS && ((out_key & 0xFFFFFFFFFFFFULL) == key)) {
+        if (res == PM3_SUCCESS && out_key == key) {
             keys_found[sec32][kt] = key;
             found_key[sec32][kt] = true;
             newly_found++;
-            fm11_print_key_hit_row(nonce_count, sec32, kt, key, found_key);
+            fm11_print_key_hit_row(nonce_count, sec32, kt, keys_found[sec32][kt], found_key);
         }
     }
     if (progress_shown) {
@@ -2462,11 +2452,14 @@ static uint32_t fm11_propagate_key_reuse_online(uint32_t nonce_count, uint64_t k
 
     for (uint8_t sec = 0; sec < FM11RF08S_NORMAL_SECTORS; sec++) {
         for (uint8_t kt = 0; kt < 2; kt++) {
-            if (e_sector[sec].foundKey[kt] && found_key[sec][kt] == false) {
+            if (found_key[sec][kt]) {
+                continue;
+            }
+            if (e_sector[sec].foundKey[kt] && e_sector[sec].Key[kt] == key) {
                 keys_found[sec][kt] = key;
                 found_key[sec][kt] = true;
                 newly_found++;
-                fm11_print_key_hit_row(nonce_count, sec, kt, key, found_key);
+                fm11_print_key_hit_row(nonce_count, sec, kt, keys_found[sec][kt], found_key);
             }
         }
     }
