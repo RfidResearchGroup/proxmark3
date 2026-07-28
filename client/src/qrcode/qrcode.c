@@ -178,17 +178,6 @@ typedef struct BitBucket {
     uint8_t *data;
 } BitBucket;
 
-/*
-void bb_dump(BitBucket *bitBuffer) {
-    printf("Buffer: ");
-    for (uint32_t i = 0; i < bitBuffer->capacityBytes; i++) {
-        printf("%02x", bitBuffer->data[i]);
-        if ((i % 4) == 3) { printf(" "); }
-    }
-    printf("\n");
-}
-*/
-
 static uint16_t bb_getGridSizeBytes(uint8_t size) {
     return (((size * size) + 7) / 8);
 }
