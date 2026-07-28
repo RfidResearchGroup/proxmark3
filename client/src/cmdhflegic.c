@@ -108,7 +108,9 @@ static bool legic_clone_update_kgh_crcs(uint8_t *data, size_t bytes_read, const 
             break;
         }
 
-        uint8_t *cmd = calloc(4 + 4 + (seg_len - 1), sizeof(uint8_t));
+        // KGH CRC input is UID + WRP/WRC/RD/segment-marker + payload bytes, excluding the KGH byte itself.
+        uint16_t payload_len = seg_len - 6;
+        uint8_t *cmd = calloc(4 + 4 + payload_len, sizeof(uint8_t));
         if (cmd == NULL) {
             PrintAndLogEx(WARNING, "Failed to allocate memory");
             return false;
@@ -120,9 +122,9 @@ static bool legic_clone_update_kgh_crcs(uint8_t *data, size_t bytes_read, const 
         cmd[5] = (data[start + 3] & 0x70) >> 4;
         cmd[6] = (data[start + 3] & 0x80) >> 7;
         cmd[7] = (segment_index == 0) ? 0x00 : 0x93;
-        memcpy(cmd + 8, data + start, seg_len - 1);
+        memcpy(cmd + 8, data + start + 5, payload_len);
 
-        data[start + seg_len - 1] = (uint8_t)CRC8Legic(cmd, 4 + 4 + (seg_len - 1));
+        data[start + seg_len - 1] = (uint8_t)CRC8Legic(cmd, 4 + 4 + payload_len);
         free(cmd);
 
         if (data[start + 1] & 0x80) {
