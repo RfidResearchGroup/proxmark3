@@ -539,9 +539,7 @@ void SimulateHIDConfigCard(const hid_sim_payload_t *payload) {
     uint32_t cuid;
     uint8_t  pages;
 
-    if (SimulateIso14443aInit(4, flags, uid,
-                              (uint8_t *)payload->ats, payload->ats_len,
-                              &responses, &cuid, &pages, NULL) == false) {
+    if (SimulateIso14443aInit(4, flags, uid, (uint8_t *)payload->ats, payload->ats_len, &responses, &cuid, &pages, NULL) == false) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_HIDCONFIG_SIM, PM3_EINIT, NULL, 0);
         return;
@@ -589,19 +587,28 @@ void SimulateHIDConfigCard(const hid_sim_payload_t *payload) {
                 case 0x03:
                 case 0x0A:
                 case 0x0B: {
+
                     hid_config_card_handle_iblock(receivedCmd, len, &dynamic_response_info);
+
                     if (dynamic_response_info.response_n > 0) {
                         // Mirror CID from reader frame when CID bit is set in PCB
-                        if (receivedCmd[0] & 0x08)
+                        if (receivedCmd[0] & 0x08) {
                             dynamic_response_info.response[1] = receivedCmd[1];
+                        }
+
                         AddCrc14A(dynamic_response_info.response, dynamic_response_info.response_n);
                         dynamic_response_info.response_n += 2;
-                        if (prepare_tag_modulation(&dynamic_response_info, HID_SIM_DYNAMIC_MODULATION_SIZE))
+
+                        if (prepare_tag_modulation(&dynamic_response_info, HID_SIM_DYNAMIC_MODULATION_SIZE)) {
                             p_response = &dynamic_response_info;
+                        }
                     }
+
                     cardINTERACTIONS++;
-                    if (payload->exitAfter > 0 && cardINTERACTIONS >= payload->exitAfter)
+
+                    if (payload->exitAfter > 0 && cardINTERACTIONS >= payload->exitAfter) {
                         finished = true;
+                    }
                     break;
                 }
                 default:
@@ -609,8 +616,9 @@ void SimulateHIDConfigCard(const hid_sim_payload_t *payload) {
             }
         }
 
-        if (p_response != NULL)
+        if (p_response != NULL) {
             EmSendPrecompiledCmd(p_response);
+        }
     }
 
     set_tracing(false);
