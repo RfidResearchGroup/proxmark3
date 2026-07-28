@@ -1,82 +1,43 @@
-local cmds = require('commands')
 local getopt = require('getopt')
-local bin = require('bin')
-local utils = require('utils')
 local ansicolors = require('ansicolors')
+local t55 = require('t55xx_config')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.2'
+version = 'v1.1.1'
 desc = [[
-This script will program a T55x7 TAG with the configuration: block 0x00 data 0x000100
-The outlined procedure is as following:
+Testsuite for the FSK demodulation.
 
---ASK
-    00 00 80 40
---           max 2 blocks
---        FSK1
---     bit rate
+Writes block 0 with each of the four FSK variants selected and sweeps the bit
+rate, reads the configuration back with `lf t55xx detect` and reports, per
+configuration, whether what came back is what went in.
 
-"lf t55xx write -b 0 -d 00007040"
-"lf t55xx detect"
-"lf t55xx info"
+    00 xx y0 40
+    --       -- max 2 blocks
+          -- FSK1 4, FSK2 5, FSK1a 6, FSK2a 7
+       -- bit rate, 00 04 08 0C 10 14 18 1C = RF/8 16 32 40 50 64 100 128
 
-Loop:
-    change the configuretion block 0 with:
-    -xx 00 xxxx = RF/8
-    -xx 04 xxxx = RF/16
-    -xx 08 xxxx = RF/32
-    -xx 0C xxxx = RF/40
-    -xx 10 xxxx = RF/50
-    -xx 14 xxxx = RF/64
-    -xx 18 xxxx = RF/100
-    -xx 1C xxxx = RF/128
-
-testsuit for the ASK/MANCHESTER demod
+Needs a T5577 in the field.
 ]]
 example = [[
-    1. script run lf_t55xx_defaultfsk
+    1. script run tests/lf_t55xx_defaultfsk
+    2. script run tests/lf_t55xx_defaultfsk -v
 ]]
 usage = [[
-script run lf_t55xx_defaultfsk [-h]
+script run tests/lf_t55xx_defaultfsk [-h] [-v]
 ]]
 arguments = [[
     -h             : this help
+    -v             : also run `lf t55xx info` for each configuration
 ]]
 
-local DEBUG = true -- the debug flag
-local TIMEOUT = 1500
-
---BLOCK 0 = 00008040 FSK
-local config1 = '00'
-local config2 = '040'
-
-local procedurecmds = {
-    [1] = '%s%02X%X%s',
-    [2] = 'lf t55xx detect',
-    [3] = 'lf t55xx info',
+local MODULATIONS = {
+    [4] = 'FSK1',
+    [5] = 'FSK2',
+    [6] = 'FSK1a',
+    [7] = 'FSK2a',
 }
----
--- A debug printout-function
-local function dbg(args)
-    if not DEBUG then return end
-    if type(args) == 'table' then
-        local i = 1
-        while args[i] do
-            dbg(args[i])
-            i = i+1
-        end
-    else
-        print('###', args)
-    end
-end
----
--- This is only meant to be used when errors occur
-local function oops(err)
-    print('ERROR:', err)
-    core.clearCommandBuffer()
-    return nil, err
-end
+
 ---
 -- Usage help
 local function help()
@@ -91,60 +52,36 @@ local function help()
     print(ansicolors.cyan..'Example usage'..ansicolors.reset)
     print(example)
 end
---
--- Exit message
-local function ExitMsg(msg)
-    print( string.rep('--',20) )
-    print( string.rep('--',20) )
-    print(msg)
-    print()
-end
-
-local function test(modulation)
-    local y
-    local password = '00000000'
-    local block = '00'
-    local flags = '00'
-    for y = 0x0, 0x1d, 0x4 do
-        for _ = 1, #procedurecmds do
-            local pcmd = procedurecmds[_]
-
-            if #pcmd == 0 then
-
-            elseif _ == 1 then
-
-                local config = pcmd:format(config1, y, modulation, config2)
-                dbg(('lf t55xx write -b 0 -d %s'):format(config))
-                local data = ('%s%s%s%s'):format(utils.SwapEndiannessStr(config, 32), password, block, flags)
-
-                local wc = Command:newNG{cmd = cmds.CMD_LF_T55XX_WRITEBL, data = data}
-                local response, err = wc:sendNG(false, TIMEOUT)
-                if not response then return oops(err) end
-            else
-                dbg(pcmd)
-                core.console( pcmd )
-            end
-        end
-        core.clearCommandBuffer()
-    end
-    print( string.rep('--',20) )
-end
 
 local function main(args)
 
-    print( string.rep('--',20) )
-    print( string.rep('--',20) )
+    local opts = {}
 
-    -- Arguments for the script
-    for o, arg in getopt.getopt(args, 'h') do
+    for o, _ in getopt.getopt(args, 'hv') do
         if o == 'h' then return help() end
+        if o == 'v' then opts.verbose = true end
     end
 
     core.clearCommandBuffer()
-    test(4)
-    test(5)
-    test(6)
-    test(7)
-    print( string.rep('--',20) )
+
+    local report = t55.report('T55x7 FSK,  four variants x bit rate sweep')
+    local aborted = false
+
+    for modulation = 4, 7 do
+        for bitrate = 0x0, 0x1d, 0x4 do
+
+            t55.check(report, ('00%02X%X040'):format(bitrate, modulation), opts)
+
+            if core.kbd_enter_pressed() then
+                print('aborted by user')
+                aborted = true
+                break
+            end
+        end
+        if aborted then break end
+    end
+
+    return report:summary()
 end
+
 main(args)
