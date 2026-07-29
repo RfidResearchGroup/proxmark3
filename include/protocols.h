@@ -1007,6 +1007,12 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FELICA_SEPARATE_SYSTEM_V2_REQ                   0x58
 #define FELICA_SEPARATE_SYSTEM_V2_RES                   0x59
 
+// Observed through secure element communication traffic when deleting a common area service
+// Does not require commiting changes, area deletion cascades to all children nodes
+// Exact name unknown
+#define FELICA_DELETE_NODE_V2_REQ                       0x5C
+#define FELICA_DELETE_NODE_V2_RES                       0x5D
+
 // Also called COMMIT_REGISTRATION in some sources.
 #define FELICA_CHANGE_SYSTEM_BLOCK_V2_REQ               0x5E
 #define FELICA_CHANGE_SYSTEM_BLOCK_V2_RES               0x5F
@@ -1081,7 +1087,23 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 // 0xC320 is RFU; retained as a NACK response stub.
 #define FELICA_DCK_ENCAPSULATION_NACK_RES               0xC320
 
+// Mobile FeliCa secure-session commands
+// Observed in secure element traffic during card deletion
+// Exact command names are unknown.
+#define FELICA_MOBILE_SECURE_SESSION_CONFIGURE_REQ      0xC811
+#define FELICA_MOBILE_SECURE_SESSION_CONFIGURE_RES      0xC911
+
+#define FELICA_MOBILE_SECURE_SESSION_READ_REQ           0xC812
+#define FELICA_MOBILE_SECURE_SESSION_READ_RES           0xC912
+
+#define FELICA_MOBILE_SECURE_SESSION_GET_STATUS_REQ     0xC817
+#define FELICA_MOBILE_SECURE_SESSION_GET_STATUS_RES     0xC917
+
+#define FELICA_MOBILE_SECURE_SESSION_START_REQ          0xC819
+#define FELICA_MOBILE_SECURE_SESSION_START_RES          0xC919
+
 // FeliCa internal RF commands used on the wired interface
+// Observed in Mobile FeliCa Client
 #define FELICA_SET_PRIVACY_FLAG_REQ                     0xCC01
 #define FELICA_SET_PRIVACY_FLAG_RES                     0xCD01
 
@@ -1125,6 +1147,12 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 #define FELICA_GET_RF_CHIP_REGISTER_CMD                 0xF804
 #define FELICA_GET_RF_CHIP_REGISTER_RES                 0xF904
+
+// Observed in Apple Wallet implementation, reads block data of any service present on the file system
+// Request consists of service code and little-endian block number
+#define FELICA_GET_FILESYSTEM_DATA_REQ                  0xFE05
+// Response consists of status bytes, and block data
+#define FELICA_GET_FILESYSTEM_DATA_RES                  0xFF05
 
 // Other FeliCa constants
 #define FELICA_SYSTEM_CODE_WILDCARD                     0xFFFFU
