@@ -22,6 +22,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <signal.h>
 
 #include "ui.h"
 #include "elf.h"
@@ -31,6 +32,7 @@
 #include "comms.h"
 #include "commonutil.h"
 #include "fileutils.h"
+#include "frame_progress.h"
 
 #define FLASH_START            0x100000
 
@@ -363,15 +365,19 @@ int flash_load(flash_file_t *ctx, bool force) {
             break;
         }
     }
-    if (res == PM3_SUCCESS)
+
+    if (res == PM3_SUCCESS) {
         return res;
+    }
 
     // We could not find proper version_information
-    if (res == PM3_EUNDEF)
+    if (res == PM3_EUNDEF) {
         PrintAndLogEx(WARNING, "Unable to check version_information");
+    }
 
-    if (force)
+    if (force) {
         return PM3_SUCCESS;
+    }
 
     PrintAndLogEx(INFO,  "Make sure to flash a correct and up-to-date version");
     PrintAndLogEx(INFO,  "You can force flashing this firmware by using the option '--force'");
@@ -385,11 +391,14 @@ int flash_prepare(flash_file_t *ctx, int can_write_bl, int flash_size) {
     int res = PM3_EUNDEF;
 
     res = build_segs_from_phdrs(ctx, flash_size);
-    if (res != PM3_SUCCESS)
+    if (res != PM3_SUCCESS) {
         goto fail;
+    }
+
     res = check_segs(ctx, can_write_bl, flash_size);
-    if (res != PM3_SUCCESS)
+    if (res != PM3_SUCCESS) {
         goto fail;
+    }
 
     return PM3_SUCCESS;
 
@@ -410,19 +419,22 @@ static int get_proxmark_state(uint32_t *state) {
     // 3. The new bootrom and os codes will respond with CMD_DEVICE_INFO and flags
 
     switch (resp.cmd) {
-        case CMD_ACK:
+        case CMD_ACK: {
             *state = DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM;
             break;
-        case CMD_DEBUG_PRINT_STRING:
+        }
+        case CMD_DEBUG_PRINT_STRING: {
             *state = DEVICE_INFO_FLAG_CURRENT_MODE_OS;
             break;
-        case CMD_DEVICE_INFO:
+        }
+        case CMD_DEVICE_INFO: {
             *state = resp.oldarg[0];
             break;
-        default:
+        }
+        default: {
             PrintAndLogEx(ERR, _RED_("Error:") " Couldn't get Proxmark3 state, bad response type: 0x%04x", resp.cmd);
             return PM3_EFATAL;
-            break;
+        }
     }
     return PM3_SUCCESS;
 }
@@ -522,7 +534,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
         return ret;
     }
 
-    uint32_t state;
+    uint32_t state = 0;
     ret = get_proxmark_state(&state);
     if (ret != PM3_SUCCESS) {
         return ret;
@@ -629,7 +641,7 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
     memcpy(block_buf, data, length);
     PacketResponseNG resp;
 #if defined ICOPYX
-    SendCommandBL(CMD_FINISH_WRITE, address, 0xff, 0x1fd, block_buf, length);
+    SendCommandBL(CMD_FINISH_WRITE, address, 0xFF, 0x1FD, block_buf, length);
 #else
     SendCommandBL(CMD_FINISH_WRITE, address, 0, 0, block_buf, length);
 #endif
@@ -647,47 +659,10 @@ static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
     return ret;
 }
 
-static const char ice[] =
-    "...................................................................\n        @@@  @@@@@@@ @@@@@@@@ @@@@@@@@@@   @@@@@@  @@@  @@@\n"
-    "        @@! !@@      @@!      @@! @@! @@! @@!  @@@ @@!@!@@@\n        !!@ !@!      @!!!:!   @!! !!@ @!@ @!@!@!@! @!@@!!@!\n"
-    "        !!: :!!      !!:      !!:     !!: !!:  !!! !!:  !!!\n        :    :: :: : : :: :::  :      :    :   : : ::    : \n"
-    _RED_("        .    .. .. . . .. ...  .      .    .   . . ..    . ");
-
-
-#define ICEMAN_LOGO_FN  "iceman.txt"
-#define ICEMAN_LOGO_SIZE (5000)
 // Write a file's segments to Flash
 int flash_write(flash_file_t *ctx) {
 
-    char ice2[ICEMAN_LOGO_SIZE] = {0};
-    char ice3[ICEMAN_LOGO_SIZE] = {0};
-
-    bool is_loaded = false;
-    if (g_session.supports_colors) {
-
-        uint8_t *iraw = NULL;
-        size_t irawlen = 0;
-        int res = loadFile_safeEx(ICEMAN_LOGO_FN, "", (void **)&iraw, &irawlen, false);
-        if (res == PM3_SUCCESS && irawlen > ICEMAN_LOGO_SIZE) {
-            irawlen = ICEMAN_LOGO_SIZE;
-        }
-        if (res == PM3_SUCCESS) {
-            memcpy(ice3, iraw, irawlen);
-            free(iraw);
-            is_loaded = true;
-        }
-    }
-
-    if (is_loaded == false) {
-        memcpy_filter_ansi(ice2, ice, sizeof(ice), !g_session.supports_colors);
-        memcpy_filter_emoji(ice3, ice2, sizeof(ice2), g_session.emoji_mode);
-    }
-
-    size_t ice3len = strlen(ice3);
-
     PrintAndLogEx(SUCCESS, "Writing segments for file: %s", ctx->filename);
-
-    int len = 0;
 
     for (int i = 0; i < ctx->num_segs; i++) {
         flash_seg_t *seg = &ctx->segments[i];
@@ -697,26 +672,35 @@ int flash_write(flash_file_t *ctx) {
         uint32_t end = seg->start + length;
 
         PrintAndLogEx(SUCCESS, " 0x%08x..0x%08x [0x%x / %u blocks]", seg->start, end - 1, length, blocks);
-        if (is_loaded) {
-            if (blocks < 50) {
-                PrintAndLogEx(SUCCESS, "" NOLF);
-            } else {
-                fprintf(stdout, "\n\n");
-            }
-        }
 
         fflush(stdout);
-        int block = 0;
+        uint32_t block = 0;
         uint8_t *data = seg->data;
         uint32_t baddr = seg->start;
 
+        int pct = 0;
+        if (blocks > 50) {
+                
+            signal(SIGINT, hadouken_on_sigint);
+#ifndef _WIN32
+            signal(SIGWINCH, hadouken_on_sigwinch);
+#endif
+
+            hadouken_start(30.0, 0, 1);
+        }
+
         while (length) {
+           
             uint32_t block_size = length;
             if (block_size > BLOCK_SIZE) {
                 block_size = BLOCK_SIZE;
             }
 
             if (write_block(baddr, data, block_size) < 0) {
+
+                if (blocks > 50) {
+                    hadouken_stop();
+                }
                 PrintAndLogEx(ERR, "Error writing block %d of %u", block, blocks);
                 return PM3_EFATAL;
             }
@@ -726,49 +710,15 @@ int flash_write(flash_file_t *ctx) {
             length -= block_size;
             block++;
 
-            // small files, like bootrom
-            if (blocks < 50) {
-                fprintf(stdout, ".");
-                len++;
-                fflush(stdout);
-                continue;
+            if (blocks > 50) {
+                pct = (int)(block * 100) / blocks;
+                hadouken_set_progress(pct);
             }
-
-            // large fullimage write
-            if (is_loaded) {
-                if (len < ice3len) {
-                    fprintf(stdout, "%c", ice3[len++]);
-                    fprintf(stdout, "%c", ice3[len++]);
-                    fprintf(stdout, "%c", ice3[len++]);
-                    fprintf(stdout, "%c", ice3[len++]);
-                    fprintf(stdout, "%c", ice3[len++]);
-                    fprintf(stdout, "%c", ice3[len++]);
-                    fprintf(stdout, "%c", ice3[len++]);
-                    fprintf(stdout, "%c", ice3[len++]);
-                } else {
-
-                    if ((len - ice3len - 1) % 61 == 0) {
-                        fprintf(stdout, "\n");
-                    }
-                    fprintf(stdout, ".");
-                    len++;
-                }
-
-            } else {
-                if (len < ice3len) {
-                    fprintf(stdout, "%c", ice3[len++]);
-                } else {
-
-                    if ((len - ice3len) % 67 == 0) {
-                        fprintf(stdout, "\n");
-                    }
-                    fprintf(stdout, ".");
-                    len++;
-                }
-            }
-            fflush(stdout);
         }
-        PrintAndLogEx(NORMAL, " " _GREEN_("ok"));
+
+        if (blocks > 50) {
+            hadouken_stop();
+        }
         fflush(stdout);
     }
     return PM3_SUCCESS;
@@ -777,7 +727,7 @@ int flash_write(flash_file_t *ctx) {
 // free a file context
 void flash_free(flash_file_t *ctx) {
 
-    if (!ctx) {
+    if (ctx == NULL) {
         return;
     }
 
