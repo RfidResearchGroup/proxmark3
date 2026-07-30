@@ -201,11 +201,11 @@ static int legic_write_dump_to_tag(uint8_t *dump, size_t bytes_read) {
 static int CmdLegicMigrate(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf legic migrate",
-                   "Clone a LEGIC Prime dump to the currently attached tag.\n"
-                   "Optionally apply a DCF update after cloning, but only when explicitly requested.",
-                   "hf legic migrate -f src.bin\n"
-                   "hf legic migrate -f src.bin --kgh\n"
-                   "hf legic migrate -f src.bin --dcf 60EA --danger");
+                  "Clone a LEGIC Prime dump to the currently attached tag.\n"
+                  "Optionally apply a DCF update after cloning, but only when explicitly requested.",
+                  "hf legic migrate -f src.bin\n"
+                  "hf legic migrate -f src.bin --kgh\n"
+                  "hf legic migrate -f src.bin --dcf 60EA --danger");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1352,13 +1352,13 @@ static int CmdLegicRestore(const char *Cmd) {
 static int CmdLegicClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf legic clone",
-                   "Rewrite a LEGIC dump for a new target tag or MCC.\n"
-                   "Use --mcc to rewrite only the dump obfuscation, or --write to clone to the current tag.\n"
-                   "Use --kgh with --write to recalculate UID-bound KGH payload CRCs.",
-                   "hf legic clone -f src.bin -c 39 -o clone.bin\n"
-                   "hf legic clone -f src.bin --write\n"
-                   "hf legic clone -f src.bin --write --kgh\n"
-                   "hf legic clone -f src.bin --write --kgh -o clone.bin");
+                  "Rewrite a LEGIC dump for a new target tag or MCC.\n"
+                  "Use --mcc to rewrite only the dump obfuscation, or --write to clone to the current tag.\n"
+                  "Use --kgh with --write to recalculate UID-bound KGH payload CRCs.",
+                  "hf legic clone -f src.bin -c 39 -o clone.bin\n"
+                  "hf legic clone -f src.bin --write\n"
+                  "hf legic clone -f src.bin --write --kgh\n"
+                  "hf legic clone -f src.bin --write --kgh -o clone.bin");
 
     void *argtable[] = {
         arg_param_begin,

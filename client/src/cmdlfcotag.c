@@ -192,7 +192,7 @@ static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_s
                               , i
                               , (int32_t)(clock_start + i * clock_half)
                               , (unsigned)half1, (unsigned)half2
-                            );
+                             );
             }
 
             // re-align by one half-clock forward
@@ -284,7 +284,7 @@ static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_s
 
     for (int i = 0; i < manchester_count && preamble_index < 0; i++) {
         for (int p = 0; preamble_patterns[p].pat != NULL; p++) {
-            if ( ((i + preamble_patterns[p].len) <= manchester_count)
+            if (((i + preamble_patterns[p].len) <= manchester_count)
                     && (memcmp(&manchester_demod_reversed[i], preamble_patterns[p].pat, preamble_patterns[p].len) == 0)) {
                 preamble_index = i;
                 preamble_type  = preamble_patterns[p].name;
@@ -348,9 +348,9 @@ static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_s
         for (int i = 0; i < LF_COTAG_DATA_LEN; i += 4) {
 
             int nibble = (data_bits[i] << 3)
-                       | (data_bits[i + 1] << 2)
-                       | (data_bits[i + 2] << 1)
-                       |  data_bits[i + 3];
+                         | (data_bits[i + 1] << 2)
+                         | (data_bits[i + 2] << 1)
+                         |  data_bits[i + 3];
 
             str[p++] = ' ';
             str[p++] = ' ';
@@ -573,7 +573,7 @@ static int cmp_int32_asc(const void *a, const void *b) {
  * resolution for very low amplitude captures.
  */
 static double trimmed_mean_abs(const int32_t *samples, int start, int count) {
-    /// The values are sorted and the top 1/TRIM_DROP_DEN are discarded before averaging 
+    /// The values are sorted and the top 1/TRIM_DROP_DEN are discarded before averaging
     const int TRIM_DROP_DEN = 4;   // trimmed mean denominator
     int32_t buf[count];
 

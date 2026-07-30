@@ -244,7 +244,7 @@ void pm3_apply_window(double *data, size_t len, pm3_window_t win) {
                 w = 0.54 - 0.46 * cos(phase);
                 break;
             }
-            case PM3_WIN_BLACKMAN:{
+            case PM3_WIN_BLACKMAN: {
                 w = 0.42 - 0.5 * cos(phase) + 0.08 * cos(2.0 * phase);
                 break;
             }
@@ -765,8 +765,8 @@ static bool find_fsk_pair(const pm3_peak_t *peaks, size_t n, double *lo, double 
 // Find the spacing of the harmonic comb that best explains a set of peaks.
 //
 // Squaring a symbol stream produces energy at every integer multiple of the symbol rate.
-// Picking the tallest line therefore lands on a harmonic as often as not. 
-// Try each peak and each peak divided by a small integer as a candidate spacing 
+// Picking the tallest line therefore lands on a harmonic as often as not.
+// Try each peak and each peak divided by a small integer as a candidate spacing
 // and keep whichever one places the most peaks on a multiple of itself
 static double comb_fundamental(const pm3_peak_t *peaks, size_t npeaks, size_t n, double min_clk) {
 
@@ -1101,7 +1101,7 @@ bool pm3_is_switched_carrier(const double *sig, size_t len) {
         mean += sig[i];
     }
     mean /= (double)len;
-    
+
     size_t flips = 0, pairs = 0;
     int prev = 0;
 
@@ -1189,7 +1189,7 @@ static int analyse_once(const double *sig, size_t len, size_t n, pm3_window_t wi
     }
     free(work);
 
-    // low frequency energy relative to the strongest line. 
+    // low frequency energy relative to the strongest line.
     // NRZ piles up at DC,
     // Manchester and biphase have null.
     double dc_sum = 0.0;
@@ -1247,8 +1247,8 @@ static int analyse_once(const double *sig, size_t len, size_t n, pm3_window_t wi
 
         out->family = PM3_FAM_FSK;
         out->confidence = confidence_from_db(
-            0.5 * (prominence_at(&plain, 1.0 / out->fsk_clk_lo) + prominence_at(&plain, 1.0 / out->fsk_clk_hi))
-        );
+                              0.5 * (prominence_at(&plain, 1.0 / out->fsk_clk_lo) + prominence_at(&plain, 1.0 / out->fsk_clk_hi))
+                          );
 
     } else if (out->have_carrier) {
 

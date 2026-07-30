@@ -1280,9 +1280,9 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
 
     if (mod == PM3_MOD_FSK) {
 
-         static const uint8_t rates[] = { 32, 40, 50, 64, 100, 128 };
+        static const uint8_t rates[] = { 32, 40, 50, 64, 100, 128 };
 
-          const uint8_t pairs[3][2] = {
+        const uint8_t pairs[3][2] = {
             { (uint8_t)fc_hi, (uint8_t)fc_lo }, { 8, 5 }, { 10, 8 }
         };
 
@@ -1549,14 +1549,14 @@ static void t55xx_detect_fallback(t55xx_conf_block_t *tests, uint8_t *hits, uint
             nseen++;
 
             if (t55xx_fallback_try(fit.items[i].mod
-                    , fit.items[i].enc
-                    , fit.items[i].fc_hi
-                    , fit.items[i].fc_lo
-                    , fitclk
-                    , tests
-                    , hits
-                    , downlink_mode
-                    , (round == 2))) {
+                                   , fit.items[i].enc
+                                   , fit.items[i].fc_hi
+                                   , fit.items[i].fc_lo
+                                   , fitclk
+                                   , tests
+                                   , hits
+                                   , downlink_mode
+                                   , (round == 2))) {
                 done = true;
                 break;
             }

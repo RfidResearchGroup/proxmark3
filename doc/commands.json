@@ -5197,11 +5197,12 @@
         },
         "hf legic clone": {
             "command": "hf legic clone",
-            "description": "Rewrite a LEGIC dump for a new target tag or MCC. Use --mcc to rewrite only the dump obfuscation, or --write to clone to the current tag.",
+            "description": "Rewrite a LEGIC dump for a new target tag or MCC. Use --mcc to rewrite only the dump obfuscation, or --write to clone to the current tag. Use --kgh with --write to recalculate UID-bound KGH payload CRCs.",
             "notes": [
                 "hf legic clone -f src.bin -c 39 -o clone.bin",
                 "hf legic clone -f src.bin --write",
-                "hf legic clone -f src.bin --write -o clone.bin"
+                "hf legic clone -f src.bin --write --kgh",
+                "hf legic clone -f src.bin --write --kgh -o clone.bin"
             ],
             "offline": false,
             "options": [
@@ -5209,9 +5210,10 @@
                 "-f, --file <fn> Source dump file",
                 "--mcc <hex> Target MCC byte for output-only cloning",
                 "-o, --output <fn> Output cloned dump file",
-                "-w, --write Write cloned dump to the currently attached tag"
+                "-w, --write Write cloned dump to the currently attached tag",
+                "--kgh Recalculate KGH payload CRCs"
             ],
-            "usage": "hf legic clone [-hw] -f <fn> [--mcc <hex>] [-o <fn>]"
+            "usage": "hf legic clone [-hw] -f <fn> [--mcc <hex>] [-o <fn>] [--kgh]"
         },
         "hf legic crc": {
             "command": "hf legic crc",
@@ -5351,16 +5353,18 @@
             "description": "Clone a LEGIC Prime dump to the currently attached tag. Optionally apply a DCF update after cloning, but only when explicitly requested.",
             "notes": [
                 "hf legic migrate -f src.bin",
+                "hf legic migrate -f src.bin --kgh",
                 "hf legic migrate -f src.bin --dcf 60EA --danger"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> Source dump file",
+                "--kgh Recalculate KGH payload CRCs",
                 "--dcf <hex> Optional DCF bytes to write after clone",
                 "--danger Allow the explicit DCF write"
             ],
-            "usage": "hf legic migrate [-h] -f <fn> [--dcf <hex>] [--danger]"
+            "usage": "hf legic migrate [-h] -f <fn> [--kgh] [--dcf <hex>] [--danger]"
         },
         "hf legic rdbl": {
             "command": "hf legic rdbl",
@@ -14012,7 +14016,7 @@
         },
         "lf t55xx help": {
             "command": "lf t55xx help",
-            "description": "----------- ---------------------------- notice ----------------------------- Remember to run `lf t55xx detect` first whenever a new card is placed on the Proxmark3 or the config block changed. help This help ----------- --------------------- operations --------------------- config Set/Get T55XX configuration (modulation, inverted, offset, rate) detect Try detecting the tag modulation from reading the configuration block info Show T55x7 configuration data (page 0/ blk 0) trace Show T55x7 traceability data (page 1/ blk 0-1) view Display content from tag dump file ----------- --------------------- recovery --------------------- sniff Attempt to recover T55xx commands from sample buffer --------------------------------------------------------------------------------------- lf t55xx clonehelp available offline: no Display a list of available commands for cloning specific techs on T5xx tags",
+            "description": "----------- ------------------------------- notice --------------------------------- Always run `lf t55xx detect` first whenever a new card is placed on the Proxmark3 or the config block changed. help This help ----------- ----------------------------- operations ------------------------------- config Set/Get T55XX configuration (modulation, inverted, offset, rate) detect Try detecting the tag modulation from reading the configuration block info Show T55x7 configuration data (page 0/ blk 0) trace Show T55x7 traceability data (page 1/ blk 0-1) view Display content from tag dump file ----------- ------------------------------ recovery -------------------------------- sniff Attempt to recover T55xx commands from sample buffer --------------------------------------------------------------------------------------- lf t55xx clonehelp available offline: no Display a list of available commands for cloning specific techs on T5xx tags",
             "notes": [
                 "lf t55xx clonehelp"
             ],
@@ -16021,6 +16025,6 @@
     "metadata": {
         "commands_extracted": 896,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-07-28T11:00:12+00:00"
+        "extracted_on": "2026-07-30T14:44:57+00:00"
     }
 }

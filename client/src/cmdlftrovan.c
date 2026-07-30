@@ -17,7 +17,7 @@
 //
 // Trovan is not ISO 11784/11785
 //
-// Differential biphase phase shift keying on an Fc/2 subcarrier, 16 carrier cycles to the bit.  
+// Differential biphase phase shift keying on an Fc/2 subcarrier, 16 carrier cycles to the bit.
 // A telegram is 64 bits:
 //
 //   8 bits   sync, 01111111.  Cannot occur anywhere in the body without
@@ -103,7 +103,7 @@ static bool trovan_check(const uint8_t *bits, uint64_t *id) {
     return true;
 }
 
-// Hunt for a sync word and validate the telegram that follows it.  
+// Hunt for a sync word and validate the telegram that follows it.
 // Returns the bit offset the telegram started at, or -1.
 static int trovan_find(const uint8_t *bits, size_t size, uint64_t *id) {
 
@@ -135,7 +135,7 @@ static void trovan_print(uint64_t id) {
                  );
 }
 
-int demodTrovan(bool verbose) {    
+int demodTrovan(bool verbose) {
 
     if (PSKDemod(TROVAN_CLOCK, 0, 100, false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Trovan: PSK demod failed");

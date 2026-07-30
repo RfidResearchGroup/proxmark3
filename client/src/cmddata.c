@@ -4874,7 +4874,7 @@ static int CmdSpectrum(const char *Cmd) {
             return PM3_EMALLOC;
         }
 
-        // anchor the ridge tracker on the symbol rate the full length analysis found, 
+        // anchor the ridge tracker on the symbol rate the full length analysis found,
         // so drift is measured against the clock we care about rather than against whichever bin peaked in each frame
         const double anchor = an.have_symbol_clk ? (1.0 / an.symbol_clk) : 0.0;
 
@@ -5153,7 +5153,7 @@ static int CmdFitScore(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// Developer helper.  
+// Developer helper.
 // Fills the GraphBuffer with a synthetic waveform whose modulation, encoding and clock are known
 static int CmdGenSignal(const char *Cmd) {
 
