@@ -114,6 +114,10 @@ Check column "offline" for their availability.
 |`data manrawdecode      `|Y       |`Manchester decode binary stream in DemodBuffer`
 |`data modulation        `|Y       |`Identify LF signal for clock and modulation`
 |`data rawdemod          `|Y       |`Demodulate the data in the GraphBuffer and output binary`
+|`data autodemod         `|Y       |`Detect modulation, encoding and clock, then demodulate`
+|`data fft               `|Y       |`Fourier transform of the GraphBuffer`
+|`data fitscore          `|Y       |`Rank matched filter hypotheses for modulation, encoding and clock`
+|`data spectrum          `|Y       |`Spectral peaks, symbol rate and modulation family hint`
 |`data askedgedetect     `|Y       |`Adjust Graph for manual ASK demod`
 |`data autocorr          `|Y       |`Autocorrelation over window`
 |`data convertbitstream  `|Y       |`Convert GraphBuffer's 0/1 values to 127 / -127`
@@ -143,6 +147,7 @@ Check column "offline" for their availability.
 |`data hexsamples        `|N       |`Dump big buffer as hex bytes`
 |`data samples           `|N       |`Get raw samples for graph window ( GraphBuffer )`
 |`data qrcode            `|Y       |`Create a QR code`
+|`data gensignal         `|N       |`Generate a synthetic LF waveform into the GraphBuffer`
 |`data test_ss8          `|N       |`Test the implementation of Buffer Save States (8-bit buffer)`
 |`data test_ss32         `|N       |`Test the implementation of Buffer Save States (32-bit buffer)`
 |`data test_ss32s        `|N       |`Test the implementation of Buffer Save States (32-bit signed buffer)`
@@ -276,7 +281,6 @@ Check column "offline" for their availability.
 |`hf 15 writeafi         `|N       |`Writes the AFI on an ISO-15693 tag`
 |`hf 15 writedsfid       `|N       |`Writes the DSFID on an ISO-15693 tag`
 |`hf 15 csetuid          `|N       |`Set UID for magic card`
-|`hf 15 cfinalize        `|N       |`Finalize a magic V3 tag (irreversible)`
 
 
 ### hf aliro
@@ -1519,6 +1523,18 @@ Check column "offline" for their availability.
 |`lf t55xx sniff         `|Y       |`Attempt to recover T55xx commands from sample buffer`
 |`lf t55xx special       `|N       |`Show block changes with 64 different offsets`
 |`lf t55xx wipe          `|N       |`Wipe a T55xx tag and set defaults (will destroy any data on tag)`
+
+
+### lf trovan
+
+ { Trovan animal IDs...       }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf trovan help         `|Y       |`This help`
+|`lf trovan demod        `|Y       |`demodulate a Trovan tag from the GraphBuffer`
+|`lf trovan reader       `|N       |`attempt to read and extract tag data`
+|`lf trovan clone        `|N       |`clone Trovan tag to T55x7 or Q5/T5555`
 
 
 ### lf viking

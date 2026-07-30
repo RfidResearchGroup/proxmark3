@@ -20,12 +20,12 @@
 #define CMDLFEM4X70_H__
 
 #include "common.h"
+#include <stdbool.h>
 
 #define TIMEOUT                     2000
 
 int CmdLFEM4X70(const char *Cmd);
 
-// for `lf search`:
 bool detect_4x70_block(void);
 
 #endif

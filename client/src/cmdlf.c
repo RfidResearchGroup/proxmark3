@@ -49,6 +49,7 @@
 #include "cmdlfidteck.h"    // for idteck menu
 #include "cmdlfio.h"        // for ioprox menu
 #include "cmdlfcotag.h"     // for COTAG menu
+#include "pm3_dsp.h"        // pm3_extract, pm3_is_switched_carrier
 #include "cmdlfdestron.h"   // for FDX-A FECAVA Destron menu
 #include "cmdlffdxb.h"      // for FDX-B menu
 #include "cmdlfgallagher.h" // for GALLAGHER menu
@@ -68,6 +69,7 @@
 #include "cmdlfsecurakey.h" // for securakey menu
 #include "cmdlft55xx.h"     // for t55xx menu
 #include "cmdlfti.h"        // for ti menu
+#include "cmdlftrovan.h"    // for trovan menu
 #include "cmdlfviking.h"    // for viking menu
 #include "cmdlfvisa2000.h"  // for VISA2000 menu
 #include "cmdlfzx8211.h"    // for ZX8211 menu
@@ -239,7 +241,7 @@ static int CmdLFTune(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    PrintAndLogEx(NORMAL, "\x1b%c[2K\r", 30);
+    PrintAndLogEx(NORMAL, _CLR_LINE_ "\r");
     if (verbose) {
         PrintAndLogEx(INFO, "Min....... %u mV", v_min);
         PrintAndLogEx(INFO, "Max....... %u mV", v_max);
@@ -1834,11 +1836,11 @@ int CmdLFRelay(const char *Cmd) {
                   "  --rdr  : Reading device, act as IP client and reads LF tag and sends data\n"
                   "  --tag  : Simulation device, act as IP server and simulates relayed data\n",
                   _WHITE_("Device A, reading LF tag, client") "\n"
-                  "lf relay --rdr --ip 192.168.1.141           -> Client, connect to IP 192.168.1.141:8000\n"
-                  "lf relay --rdr --ip 192.168.1.141 -p 18111  -> Client, connect to IP 192.168.1.141:18111 \n\n"
+            "lf relay --rdr --ip 192.168.1.141           -> Client, connect to IP 192.168.1.141:8000\n"
+            "lf relay --rdr --ip 192.168.1.141 -p 18111  -> Client, connect to IP 192.168.1.141:18111 \n\n"
                   _WHITE_("Device B, simulate LF tag, server") "\n"
-                  "lf relay --tag -p 8111                     -> Server listening port 8111, recv 40000 samples\n"
-                  "lf relay --tag -s 10000                    -> Server listening port 8000, recv 10000 samples\n"
+            "lf relay --tag -p 8111                     -> Server listening port 8111, recv 40000 samples\n"
+            "lf relay --tag -s 10000                    -> Server listening port 8000, recv 10000 samples\n"
                  );
 
     void *argtable[] = {
@@ -2211,6 +2213,35 @@ int CmdLFfind(const char *Cmd) {
         }
     }
     */
+    if (demodTrovan(false) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Trovan ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+
+    // COTAG last, and only when the capture actually looks like one.
+    if (found == 0) {
+
+        double *sig = pm3_extract(g_GraphBuffer, g_GraphTraceLen, 0, g_GraphTraceLen);
+        if (sig != NULL) {
+
+            const bool switched = pm3_is_switched_carrier(sig, g_GraphTraceLen);
+            free(sig);
+
+            if (switched && demodCOTAG(false, -1, -1) == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") " found!");
+                if (search_cont) {
+                    found++;
+                } else {
+                    goto out;
+                }
+            }
+        }
+    }
+
     if (found == 0) {
         PrintAndLogEx(FAILED, _RED_("No known 125/134 kHz tags found!"));
     }
@@ -2351,6 +2382,7 @@ static command_t CommandTable[] = {
     {"securakey",   CmdLFSecurakey,     AlwaysAvailable, "{ Securakey RFIDs...         }"},
     {"ti",          CmdLFTI,            AlwaysAvailable, "{ TI CHIPs...                }"},
     {"t55xx",       CmdLFT55XX,         AlwaysAvailable, "{ T55xx CHIPs...             }"},
+    {"trovan",      CmdLFTrovan,        AlwaysAvailable, "{ Trovan animal IDs...       }"},
     {"viking",      CmdLFViking,        AlwaysAvailable, "{ Viking RFIDs...            }"},
     {"visa2000",    CmdLFVisa2k,        AlwaysAvailable, "{ Visa2000 RFIDs...          }"},
 //    {"zx",          CmdLFZx8211,        AlwaysAvailable, "{ ZX8211 RFIDs...            }"},

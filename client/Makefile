@@ -802,6 +802,7 @@ SRCS =  mifare/aiddesfire.c \
         cmdlfsecurakey.c \
         cmdlft55xx.c \
         cmdlfti.c \
+        cmdlftrovan.c \
         cmdlfviking.c \
         cmdlfvisa2000.c \
         cmdlfzx8211.c \
@@ -888,6 +889,8 @@ SRCS =  mifare/aiddesfire.c \
         pm3.c \
         pm3_binlib.c \
         pm3_bitlib.c \
+        pm3_dsp.c \
+        pm3_fit.c \
         preferences.c \
         pm3line.c \
         proxmark3.c \

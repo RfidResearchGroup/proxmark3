@@ -54,75 +54,6 @@ static void find_avg_high_low(const int32_t *samples, int num_samples,
                               double *out_high_level, double *out_low_level);
 static double trimmed_mean_abs(const int32_t *samples, int start, int count);
 
-#if 0
-// TODO: With the new cotag implementation shall we remove this old version
-// or is there anything we could use from it?
-// COTAG demod should be able to use g_GraphBuffer,
-// when data load samples
-int demodCOTAG(bool verbose) {
-    (void) verbose; // unused so far
-
-    uint8_t bits[COTAG_BITS] = {0};
-    size_t bitlen = COTAG_BITS;
-    memcpy(bits, g_DemodBuffer, COTAG_BITS);
-
-    uint8_t inv_bits[COTAG_BITS] = {0};
-    memcpy(inv_bits, g_DemodBuffer, COTAG_BITS);
-
-    uint8_t alignPos = 0;
-    uint16_t err = manrawdecode(bits, &bitlen, 1, &alignPos);
-    if (err > 50) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - COTAG too many errors: %d", err);
-        return PM3_ESOFT;
-    }
-
-    setDemodBuff(bits, bitlen, 0);
-
-    //got a good demod
-    uint16_t cn = bytebits_to_byteLSBF(bits + 1, 16);
-    uint32_t fc = bytebits_to_byteLSBF(bits + 1 + 16, 8);
-
-    uint32_t raw1 = bytebits_to_byteLSBF(bits, 32);
-    uint32_t raw2 = bytebits_to_byteLSBF(bits + 32, 32);
-    uint32_t raw3 = bytebits_to_byteLSBF(bits + 64, 32);
-    uint32_t raw4 = bytebits_to_byteLSBF(bits + 96, 32);
-
-
-    /*
-    fc 161:   1010 0001 -> LSB 1000 0101
-    cn 33593  1000 0011 0011 1001 -> LSB 1001 1100 1100 0001
-        cccc cccc cccc cccc                     ffffffff
-      0 1001 1100 1100 0001 1000 0101 0000 0000 100001010000000001111011100000011010000010000000000000000000000000000000000000000000000000000000100111001100000110000101000
-        1001 1100 1100 0001                     10000101
-
-    COTAG FC/272
-    1    7    7    D    E    2    0    0    8    0    0    0    3    9    2    0    D    0    4    0000000000000
-    0001 0111 0111 1101 1110 0010 0000 0000 1000 0000 0000 0000 0011 1001 0010 0000 1101 0000 0100 0000000000000000000000000000000000000000000000000000000
-    0001 0111 0111 1101 1110 001                                0010 1001 0011      1000 0110 0100
-
-    */
-    PrintAndLogEx(SUCCESS, "COTAG Found: FC " _GREEN_("%u")", CN: " _GREEN_("%u")" Raw: %08X%08X%08X%08X", fc, cn, raw1, raw2, raw3, raw4);
-
-    bitlen = COTAG_BITS;
-    err = manrawdecode(inv_bits, &bitlen, 0, &alignPos);
-    if (err < 50) {
-        uint32_t cn_large = bytebits_to_byte(inv_bits + 1, 23);
-        cn_large = reflect32(cn_large) >> 9;
-        uint8_t a = bytebits_to_byte(inv_bits + 48, 4);
-        uint8_t b = bytebits_to_byte(inv_bits + 52, 4);
-        uint8_t c = bytebits_to_byte(inv_bits + 56, 4);
-        uint16_t fc_large = NIBBLE_LOW(c) << 8 | NIBBLE_LOW(b) << 4 | NIBBLE_LOW(a);
-
-        raw1 = bytebits_to_byte(inv_bits, 32);
-        raw2 = bytebits_to_byte(inv_bits + 32, 32);
-        raw3 = bytebits_to_byte(inv_bits + 64, 32);
-        raw4 = bytebits_to_byte(inv_bits + 96, 32);
-        PrintAndLogEx(SUCCESS, "             FC " _GREEN_("%u")", CN: " _GREEN_("%u")" Raw: %08X%08X%08X%08X", fc_large, cn_large, raw1, raw2, raw3, raw4);
-    }
-    return PM3_SUCCESS;
-}
-#endif
-
 /**
  * Demodulate COTAG samples.
  *
@@ -141,64 +72,80 @@ static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_s
     uint8_t  *manchester_demod = NULL;
     uint8_t  *manchester_demod_reversed = NULL;
 
-    /* Calculate min, max, average */
+    int manchester_count = 0;
+    const char *fail = NULL;
+
     int64_t sum = 0;
     min = max = samples[0];
+
     for (int i = 0; i < num_samples; i++) {
         sum += samples[i];
-        if (samples[i] < min) min = samples[i];
-        if (samples[i] > max) max = samples[i];
+        if (samples[i] < min) {
+            min = samples[i];
+        }
+
+        if (samples[i] > max) {
+            max = samples[i];
+        }
     }
+
     avg = (double)sum / (double)num_samples;
 
     if (verbose) {
         PrintAndLogEx(INFO, "  Clock: %d", clock);
-        if (threshold < 0)
+        if (threshold < 0) {
             PrintAndLogEx(INFO, "  Threshold: auto");
-        else
+        } else {
             PrintAndLogEx(INFO, "  Threshold: %.2f", threshold);
+        }
         PrintAndLogEx(INFO, "  Min : %" PRId32, min);
         PrintAndLogEx(INFO, "  Max : %" PRId32, max);
-        PrintAndLogEx(INFO, "  Avg : %.2f\n", avg);
-        printf("\n");
+        PrintAndLogEx(INFO, "  Avg : %.2f", avg);
+        PrintAndLogEx(NORMAL, "");
     }
 
-    /* DC offset removal: subtract average from every sample */
+    // DC offset removal: subtract average from every sample
     for (int i = 0; i < num_samples; i++) {
         double v = round((double)samples[i] - avg);
         samples[i] = (int32_t)v;
     }
 
-    /* Auto threshold estimation: */
+    // Auto threshold estimation
     if (threshold < 0) {
         double high_level, low_level;
         find_avg_high_low(samples, num_samples, clock, &high_level, &low_level);
         threshold = (low_level + high_level) * 0.5;
-        if (verbose)
-            PrintAndLogEx(INFO, "  Auto threshold: low_level=%.2f, high_level=%.2f --> threshold=%.2f", low_level, high_level, threshold);
+        if (verbose) {
+            PrintAndLogEx(INFO, "  Auto threshold: low_level = %.2f, high_level = %.2f --> threshold = %.2f", low_level, high_level, threshold);
+        }
     }
 
-    /* Auto clock-start detection (first edge detection) */
+    // Auto clock-start detection (first edge detection)
     if (clock_start == -1) {
         clock_start = detect_edge(samples, num_samples, 0, threshold);
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, "  Detected clock start candidate: sample #%d", clock_start);
+        }
     }
 
-    /* High/low raw demodulation of clock-half cycles */
+    // High/low raw demodulation of clock-half cycles
     int high_low_demod_01_len = (num_samples - clock_start) / clock_half + 16;
+
     high_low_demod_01 = calloc(high_low_demod_01_len, sizeof(uint8_t));
-    if (!high_low_demod_01) {
+    if (high_low_demod_01 == NULL) {
         PrintAndLogEx(ERR, "Error: out of memory");
         rv = PM3_EMALLOC;
         goto end;
     }
+
     int high_low_demod_01_count = 0;
 
     for (int idx = clock_start; idx + clock <= num_samples; idx += clock) {
-        /* Trimmed mean of absolute values of first half: */
+
+        // Trimmed mean of absolute values of first half
         double clock_half1_val = trimmed_mean_abs(samples, idx, clock_half);
-        /* Trimmed mean of absolute values of second half: */
+
+        // Trimmed mean of absolute values of second half
         double clock_half2_val = trimmed_mean_abs(samples, idx + clock_half, clock_half);
 
         uint8_t half1 = (clock_half1_val >= threshold) ? 1 : 0;
@@ -209,38 +156,52 @@ static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_s
         high_low_demod_01_count += 2;
     }
 
-    /* Manchester demodulation buffer: */
+    // Manchester demodulation buffer
     int manchester_demod_len = high_low_demod_01_count / 2;
     manchester_demod = calloc(manchester_demod_len, sizeof(uint8_t));
-    if (!manchester_demod) {
+    if (manchester_demod == NULL) {
         PrintAndLogEx(ERR, "Error: out of memory");
         rv = PM3_EMALLOC;
         goto end;
     }
 
-    /* Manchester demodulation (Thomas) from raw high/low demod (high_low_demod_01) */
+    // Manchester demodulation (Thomas) from raw high/low demod (high_low_demod_01)
     const int MAX_MANDEMOD_ERRORS = 64;
     bool demod_success = true;
-    int manchester_count = 0;
     int mandemod_err_count = 0;
+
     for (int i = 0; i + 1 < high_low_demod_01_count;) {
+
         uint8_t half1 = high_low_demod_01[i];
         uint8_t half2 = high_low_demod_01[i + 1];
 
         if (half1 == 0 && half2 == 1) {
+
             manchester_demod[manchester_count++] = 0;
             i += 2;
+
         } else if (half1 == 1 && half2 == 0) {
+
             manchester_demod[manchester_count++] = 1;
             i += 2;
+
         } else {
-            if (verbose)
-                PrintAndLogEx(INFO, "  Manchester demod error: index %d (sample #%" PRId32 "): half1=%u, half2=%u --> clock align by half cycle",
-                              i, (int32_t)(clock_start + i * clock_half), (unsigned)half1, (unsigned)half2);
-            i += 1; /* re-align by one half-clock forward */
+
+            if (verbose) {
+                PrintAndLogEx(INFO, "  Manchester demod error: index %d (sample #%" PRId32 "): half1=%u, half2=%u --> clock align by half cycle"
+                              , i
+                              , (int32_t)(clock_start + i * clock_half)
+                              , (unsigned)half1, (unsigned)half2
+                            );
+            }
+
+            // re-align by one half-clock forward
+            i += 1;
+
             mandemod_err_count++;
+
             if (mandemod_err_count >= MAX_MANDEMOD_ERRORS) {
-                PrintAndLogEx(ERR, "  Manchester demod: too many errors (%d), giving up", mandemod_err_count);
+                fail = "too many Manchester errors";
                 demod_success = false;
                 break;
             }
@@ -248,31 +209,34 @@ static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_s
     }
 
     if (demod_success) {
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, "  Manchester demod: %d bits", manchester_count);
-    } else
+        }
+    } else {
         goto end;
-    printf("\n");
+    }
 
-    /* Reverse order of bits */
+    // Reverse order of bits
     manchester_demod_reversed = calloc(manchester_demod_len, sizeof(uint8_t));
-    if (!manchester_demod_reversed) {
+    if (manchester_demod_reversed == NULL) {
         PrintAndLogEx(ERR, "Error: out of memory");
         rv = PM3_EMALLOC;
         goto end;
     }
-    for (int i = 0; i < manchester_count; i++)
-        manchester_demod_reversed[i] = manchester_demod[manchester_count - 1 - i];
 
-    {
+    for (int i = 0; i < manchester_count; i++) {
+        manchester_demod_reversed[i] = manchester_demod[manchester_count - 1 - i];
+    }
+
+    if (verbose) {
         char manchester_demod_reversed_str[manchester_count + 1];
-        for (int i = 0; i < manchester_count; i++)
+        for (int i = 0; i < manchester_count; i++) {
             manchester_demod_reversed_str[i] = '0' + manchester_demod_reversed[i];
+        }
         manchester_demod_reversed_str[manchester_count] = '\0';
-        PrintAndLogEx(SUCCESS, "  Manchester demod reversed:");
-        PrintAndLogEx(SUCCESS, "  %s", manchester_demod_reversed_str);
-        printf("\n");
-        printf("\n");
+        PrintAndLogEx(INFO, "  Manchester demod reversed:");
+        PrintAndLogEx(INFO, "  %s", manchester_demod_reversed_str);
+        PrintAndLogEx(NORMAL, "");
     }
 
     /*
@@ -284,21 +248,21 @@ static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_s
      * Card number: 0x24A88F
      */
 
-    /* Find preamble. */
+    // Find preamble.
     static const uint8_t preamble_a[] = {
-        /* type A: 62 zeros followed by 1,0,1,0,0,0 */
+        // type A: 62 zeros followed by 1,0,1,0,0,0
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
         1, 0, 0, 0
     };
     static const uint8_t preamble_p[] = {
-        /* type P: 55 zeros followed by 1,0,0,0,0,0,1 */
+        // type P: 55 zeros followed by 1,0,0,0,0,0,1
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         1, 0, 0, 0, 0, 0, 1
     };
     static const uint8_t preamble_p0[] = {
-        /* type P-0: 61 zeros followed by 1 */
+        // type P-0: 61 zeros followed by 1
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         1
@@ -320,8 +284,8 @@ static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_s
 
     for (int i = 0; i < manchester_count && preamble_index < 0; i++) {
         for (int p = 0; preamble_patterns[p].pat != NULL; p++) {
-            if (i + preamble_patterns[p].len <= manchester_count &&
-                    memcmp(&manchester_demod_reversed[i], preamble_patterns[p].pat, preamble_patterns[p].len) == 0) {
+            if ( ((i + preamble_patterns[p].len) <= manchester_count)
+                    && (memcmp(&manchester_demod_reversed[i], preamble_patterns[p].pat, preamble_patterns[p].len) == 0)) {
                 preamble_index = i;
                 preamble_type  = preamble_patterns[p].name;
                 break;
@@ -330,51 +294,64 @@ static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_s
     }
 
     if (preamble_index < 0) {
-        PrintAndLogEx(INFO, "  Preamble not found in manchester_demod_reversed");
+        fail = "no preamble found";
         goto end;
     }
 
-    PrintAndLogEx(SUCCESS, "  Preamble found (type %s) in manchester_demod_reversed at index %d",
-                  preamble_type, preamble_index);
+    if (verbose) {
+        PrintAndLogEx(INFO, "  Preamble found (type %s) in manchester_demod_reversed at index %d", preamble_type, preamble_index);
+    }
 
-    /* data_bits: 128 bits starting at preamble */
+    // data_bits: 128 bits starting at preamble
     if (preamble_index + LF_COTAG_DATA_LEN > manchester_count) {
-        PrintAndLogEx(INFO, "  Not enough bits after preamble for full 128-bit data block");
+        fail = "preamble found but the capture ends before a full 128 bit block";
         rv = PM3_EPARTIAL;
         goto end;
     }
 
     const uint8_t *data_bits = &manchester_demod_reversed[preamble_index];
 
-    /* Print raw 128 bits */
-    {
+    // Print raw 128 bits
+    if (verbose) {
         char str[LF_COTAG_DATA_LEN + 1];
-        for (int i = 0; i < LF_COTAG_DATA_LEN; i++)
+        for (int i = 0; i < LF_COTAG_DATA_LEN; i++) {
             str[i] = '0' + data_bits[i];
+        }
         str[LF_COTAG_DATA_LEN] = '\0';
         PrintAndLogEx(SUCCESS, "  data bits: %s", str);
     }
-    /* Print bits grouped by 4, space-separated */
-    {
+
+    // Print bits grouped by 4, space-separated
+    if (verbose) {
         char str[LF_COTAG_DATA_LEN + LF_COTAG_DATA_LEN / 4];
+
         int p = 0;
         for (int i = 0; i < LF_COTAG_DATA_LEN; i += 4) {
-            if (i > 0) str[p++] = ' ';
-            for (int j = 0; j < 4; j++)
+
+            if (i > 0) {
+                str[p++] = ' ';
+            }
+
+            for (int j = 0; j < 4; j++) {
                 str[p++] = '0' + data_bits[i + j];
+            }
         }
+
         str[p] = '\0';
         PrintAndLogEx(SUCCESS, "  data bits: %s", str);
     }
-    /* Print bits as hex nibbles */
-    {
+
+    // Print bits as hex nibbles
+    if (verbose) {
         char str[LF_COTAG_DATA_LEN / 4 * 5 + 1];
         int p = 0;
         for (int i = 0; i < LF_COTAG_DATA_LEN; i += 4) {
-            int nibble = (data_bits[i]     << 3)
-                         | (data_bits[i + 1] << 2)
-                         | (data_bits[i + 2] << 1)
-                         |  data_bits[i + 3];
+
+            int nibble = (data_bits[i] << 3)
+                       | (data_bits[i + 1] << 2)
+                       | (data_bits[i + 2] << 1)
+                       |  data_bits[i + 3];
+
             str[p++] = ' ';
             str[p++] = ' ';
             str[p++] = ' ';
@@ -385,17 +362,19 @@ static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_s
         PrintAndLogEx(SUCCESS, "  data hex: %s", str);
     }
 
-    /* Card number: last 24 bits of data_bits as an integer */
+    // Card number: last 24 bits of data_bits as an integer
     uint32_t c_num = 0;
-    for (int i = LF_COTAG_DATA_LEN - 24; i < LF_COTAG_DATA_LEN; i++)
+    for (int i = LF_COTAG_DATA_LEN - 24; i < LF_COTAG_DATA_LEN; i++) {
         c_num = (c_num << 1) | data_bits[i];
-    PrintAndLogEx(SUCCESS, "  card number: 0x%X == %u", c_num, c_num);
+    }
 
-    /* Count how many subsequent 128-bit blocks equal data_bits */
+    // Count how many subsequent 128-bit blocks equal data_bits
     int repeat_count = 0;
     bool fully_repeats = true;
     int pos = preamble_index + LF_COTAG_DATA_LEN;
+
     while (pos + LF_COTAG_DATA_LEN <= manchester_count) {
+
         if (memcmp(&manchester_demod_reversed[pos], data_bits, LF_COTAG_DATA_LEN) == 0) {
             repeat_count++;
         } else {
@@ -405,14 +384,28 @@ static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_s
         pos += LF_COTAG_DATA_LEN;
     }
 
-    if (fully_repeats && repeat_count > 0)
-        PrintAndLogEx(INFO, "  Sequence fully repeats until the end %d time(s)", repeat_count);
-    else
-        PrintAndLogEx(INFO, "  Sequence does NOT match at index %d (repeat count = %d)", pos, repeat_count);
-    printf("\n");
+    if (verbose) {
+        if (fully_repeats && repeat_count > 0) {
+            PrintAndLogEx(INFO, "  Sequence fully repeats until the end %d time(s)", repeat_count);
+        } else {
+            PrintAndLogEx(INFO, "  Sequence does NOT match at index %d (repeat count = %d)", pos, repeat_count);
+        }
+    }
+
+    PrintAndLogEx(SUCCESS, "COTAG - Card number " _GREEN_("%u") "  ( 0x%06X )", c_num, c_num);
 
     rv = PM3_SUCCESS;
 end:
+    // One line when there is no card number to show, so a failed demod says
+    // how far it got rather than either going silent or dumping every stage.
+    if (rv != PM3_SUCCESS && fail != NULL) {
+        PrintAndLogEx(FAILED, "COTAG demod failed - %s  ( %d Manchester bits at rf/%d )"
+                      , fail
+                      , manchester_count
+                      , clock
+                     );
+    }
+
     free(manchester_demod_reversed);
     free(manchester_demod);
     free(high_low_demod_01);
@@ -431,7 +424,8 @@ int demodCOTAG(bool verbose, int clock, int threshold) {
 static int CmdCOTAGDemod(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf cotag demod",
-                  "Demodulate COTAG samples from g_GraphBuffer. Try to find COTAG preamble, if found decode / descramble data.",
+                  "Demodulate COTAG samples from g_GraphBuffer.\n"
+                  "Try to find COTAG preamble, if found decode / descramble data.",
                   "lf cotag demod"
                  );
 
@@ -490,8 +484,9 @@ static int CmdCOTAGReader(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (g_session.pm3_present == false)
+    if (g_session.pm3_present == false) {
         return PM3_ENOTTY;
+    }
 
     uint8_t effective_divisor = (divisor > -1) ? (uint8_t)divisor : LF_COTAG_DIVISOR;
 
@@ -542,97 +537,13 @@ static int CmdCOTAGReader(const char *Cmd) {
     return ret;
 }
 
-#if 0 // TODO: Remove this implementation?
-// When reading a COTAG.
-// 0 = HIGH/LOW signal - maxlength bigbuff
-// 1 = translation for HI/LO into bytes with manchester 0,1 - length 300
-// 2 = raw signal -  maxlength bigbuff
-int CmdCOTAGReader_old(const char *Cmd) {
-
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf cotag reader",
-                  "read a COTAG tag,  the current support for COTAG is limited. ",
-                  "lf cotag reader -2"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_lit0("1", NULL, "HIGH/LOW signal; maxlength bigbuff"),
-        arg_lit0("2", NULL, "translation of HIGH/LOW into bytes with manchester 0,1"),
-        arg_lit0("3", NULL, "raw signal; maxlength bigbuff"),
-        arg_param_end
-    };
-
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-    bool mode0 = arg_get_lit(ctx, 1);
-    bool mode1 = arg_get_lit(ctx, 2);
-    bool mode2 = arg_get_lit(ctx, 3);
-    CLIParserFree(ctx);
-
-    if ((mode0 + mode1 + mode2) > 1) {
-        PrintAndLogEx(ERR, "You can only use one option at a time");
-        return PM3_EINVARG;
-    }
-    uint8_t mode = 0xFF;
-    if (mode0)
-        mode = 0;
-    if (mode1)
-        mode = 1;
-    if (mode2)
-        mode = 2;
-
-    struct p {
-        uint8_t mode;
-    } PACKED payload;
-    payload.mode = mode;
-
-    PacketResponseNG resp;
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_COTAG_READ, (uint8_t *)&payload, sizeof(payload));
-
-    uint8_t timeout = 3;
-    int res = PM3_SUCCESS;
-    while (WaitForResponseTimeout(CMD_LF_COTAG_READ, &resp, 1000) == false) {
-        timeout--;
-        if (timeout == 0) {
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(WARNING, "command execution time out");
-            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            res = PM3_ETIMEOUT;
-        }
-    }
-
-    if (res != PM3_SUCCESS) {
-        return res;
-    }
-
-    if (timeout != 3)
-        PrintAndLogEx(NORMAL, "");
-
-    switch (payload.mode) {
-        case 0:
-        case 2: {
-            CmdPlot("");
-            CmdGrid("-x 384");
-            getSamples(0, false);
-            break;
-        }
-        case 1: {
-            memcpy(g_DemodBuffer, resp.data.asBytes, resp.length);
-            g_DemodBufferLen = resp.length;
-            return demodCOTAG(true);
-        }
-    }
-    return PM3_SUCCESS;
-}
-#endif
-
 static command_t CommandTable[] = {
     {"help",    CmdHelp,         AlwaysAvailable, "This help"},
     {"demod",   CmdCOTAGDemod,   AlwaysAvailable, "demodulate a COTAG tag"},
     {"reader",  CmdCOTAGReader,  IfPm3Lf,         "attempt to read and extract tag data"},
     {NULL, NULL, NULL, NULL}
 };
+
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
@@ -662,22 +573,25 @@ static int cmp_int32_asc(const void *a, const void *b) {
  * resolution for very low amplitude captures.
  */
 static double trimmed_mean_abs(const int32_t *samples, int start, int count) {
-    /* The values are sorted and the top 1/TRIM_DROP_DEN are discarded before averaging */
+    /// The values are sorted and the top 1/TRIM_DROP_DEN are discarded before averaging 
     const int TRIM_DROP_DEN = 4;   // trimmed mean denominator
     int32_t buf[count];
 
-    for (int k = 0; k < count; k++)
+    for (int k = 0; k < count; k++) {
         buf[k] = abs(samples[start + k]);
+    }
 
     qsort(buf, count, sizeof(int32_t), cmp_int32_asc);
 
     int keep = count - count / TRIM_DROP_DEN;
-    if (keep < 1)
+    if (keep < 1) {
         keep = 1;
+    }
 
     int64_t sum = 0;
-    for (int k = 0; k < keep; k++)
+    for (int k = 0; k < keep; k++) {
         sum += buf[k];
+    }
 
     return (double)sum / (double)keep;
 }
@@ -691,24 +605,26 @@ static double trimmed_mean_abs(const int32_t *samples, int start, int count) {
  * @param out_high_level the highest window trimmed mean seen
  * @param out_low_level  the lowest window trimmed mean seen
  */
-static void find_avg_high_low(const int32_t *samples, int num_samples,
-                              int clock,
-                              double *out_high_level, double *out_low_level) {
+static void find_avg_high_low(const int32_t *samples, int num_samples, int clock, double *out_high_level, double *out_low_level) {
     const int WINDOW = 256;
     double high_level = -DBL_MAX;
     double low_level  =  DBL_MAX;
 
     int scan_end = 8 * clock;
-    if (scan_end > num_samples)
+    if (scan_end > num_samples) {
         scan_end = num_samples;
+    }
 
     for (int i = 0; i + WINDOW <= scan_end; i++) {
         double window_val = trimmed_mean_abs(samples, i, WINDOW);
 
-        if (window_val < low_level)
+        if (window_val < low_level) {
             low_level = window_val;
-        if (window_val > high_level)
+        }
+
+        if (window_val > high_level) {
             high_level = window_val;
+        }
     }
 
     *out_high_level = high_level;
@@ -726,12 +642,13 @@ static void find_avg_high_low(const int32_t *samples, int num_samples,
  *
  * @return Index of the detected edge, or 0 if none found.
  */
-static int detect_edge(const int32_t *samples, int num_samples,
-                       int index_start, double threshold) {
+static int detect_edge(const int32_t *samples, int num_samples, int index_start, double threshold) {
+
     const int GLITCH_WINDOW = 10;
 
-    if (num_samples <= 0 || index_start < 0 || index_start >= num_samples)
+    if (num_samples <= 0 || index_start < 0 || index_start >= num_samples) {
         return 0;
+    }
 
     bool prev_high = abs(samples[index_start]) >= threshold;
 
@@ -739,18 +656,18 @@ static int detect_edge(const int32_t *samples, int num_samples,
         bool curr_high = abs(samples[i]) >= threshold;
 
         if (curr_high != prev_high) {
-            /* Need enough samples on both sides for glitch check */
+            // Need enough samples on both sides for glitch check
             if ((int)i < GLITCH_WINDOW || i + GLITCH_WINDOW > num_samples) {
                 prev_high = curr_high;
                 continue;
             }
 
-            /* Sum of GLITCH_WINDOW absolute values before the crossing */
+            // Sum of GLITCH_WINDOW absolute values before the crossing
             int64_t before_sum = 0;
             for (int k = 0; k < GLITCH_WINDOW; k++)
                 before_sum += abs(samples[i - GLITCH_WINDOW + k]);
 
-            /* Sum of GLITCH_WINDOW absolute values after the crossing */
+            // Sum of GLITCH_WINDOW absolute values after the crossing
             int64_t after_sum = 0;
             for (int k = 0; k < GLITCH_WINDOW; k++)
                 after_sum += abs(samples[i + k]);
@@ -758,8 +675,9 @@ static int detect_edge(const int32_t *samples, int num_samples,
             bool before_high = (double)before_sum >= threshold * GLITCH_WINDOW;
             bool after_high  = (double)after_sum  >= threshold * GLITCH_WINDOW;
 
-            if (before_high != after_high)
+            if (before_high != after_high) {
                 return (int)i;
+            }
         }
 
         prev_high = curr_high;

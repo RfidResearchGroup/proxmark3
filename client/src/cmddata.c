@@ -43,7 +43,11 @@
 #include "atrs.h"                // ATR lookup
 #include "crypto/libpcrypto.h"   // Cryptography
 #include "qrcode/qrcode.h"       // QR Code lib
+#include "pm3_dsp.h"             // FFT, windows, spectra
+#include "pm3_fit.h"             // matched filter hypothesis bank
 
+#define FITSCORE_DEFAULT_WINDOW  16384
+#define FITSCORE_MIN_SYMBOLS     128
 
 uint8_t g_DemodBuffer[MAX_DEMOD_BUF_LEN] = { 0x00 };
 size_t g_DemodBufferLen = 0;
@@ -51,47 +55,6 @@ int32_t g_DemodStartIdx = 0;
 int g_DemodClock = 0;
 
 static int CmdHelp(const char *Cmd);
-
-
-// https://www.eskimo.com/~scs/c-faq.com/stdio/commaprint.html
-static char *commaprint(size_t n) {
-
-    static int comma = '\0';
-    static char retbuf[30];
-
-    char *p = &retbuf[sizeof(retbuf) - 1];
-    int i = 0;
-
-    if (comma == '\0') {
-
-        struct lconv *lcp = localeconv();
-        if (lcp != NULL) {
-
-            if (lcp->thousands_sep != NULL && *lcp->thousands_sep != '\0') {
-                comma = *lcp->thousands_sep;
-            } else {
-                comma = ',';
-            }
-        }
-    }
-
-    *p = '\0';
-
-    do {
-        if (i % 3 == 0 && i != 0) {
-            *--p = comma;
-        }
-
-        *--p = '0' + n % 10;
-
-        n /= 10;
-
-        i++;
-
-    } while (n != 0);
-
-    return p;
-}
 
 // set the g_DemodBuffer with given array ofq binary (one bit per byte)
 void setDemodBuff(const uint8_t *buff, size_t size, size_t start_idx) {
@@ -121,39 +84,6 @@ bool getDemodBuff(uint8_t *buff, size_t *size) {
     return true;
 }
 
-// include <math.h>
-// Root mean square
-/*
-static double rms(double *v, size_t n) {
-    double sum = 0.0;
-    for (size_t i = 0; i < n; i++)
-        sum += v[i] * v[i];
-    return sqrt(sum / n);
-}
-
-static int cmp_int(const void *a, const void *b) {
-    if (*(const int *)a < * (const int *)b)
-        return -1;
-    else
-        return *(const int *)a > *(const int *)b;
-}
-static int cmp_uint8(const void *a, const void *b) {
-    if (*(const uint8_t *)a < * (const uint8_t *)b)
-        return -1;
-    else
-        return *(const uint8_t *)a > *(const uint8_t *)b;
-}
-// Median of a array of values
-
-static double median_int(int *src, size_t size) {
-    qsort(src, size, sizeof(int), cmp_int);
-    return 0.5 * (src[size / 2] + src[(size - 1) / 2]);
-}
-static double median_uint8(uint8_t *src, size_t size) {
-    qsort(src, size, sizeof(uint8_t), cmp_uint8);
-    return 0.5 * (src[size / 2] + src[(size - 1) / 2]);
-}
-*/
 // function to compute mean for a series
 static double compute_mean(const int *data, size_t n) {
     double mean = 0.0;
@@ -163,7 +93,7 @@ static double compute_mean(const int *data, size_t n) {
     return mean;
 }
 
-//  function to compute variance for a series
+// function to compute variance for a series
 static double compute_variance(const int *data, size_t n) {
     double variance = 0.0;
     double mean = compute_mean(data, n);
@@ -174,30 +104,6 @@ static double compute_variance(const int *data, size_t n) {
     variance /= n;
     return variance;
 }
-
-// Function to compute autocorrelation for a series
-//  Author: Kenneth J. Christensen
-//  - Corrected divide by n to divide (n - lag) from Tobias Mueller
-/*
-static double compute_autoc(const int *data, size_t n, int lag) {
-    double autocv = 0.0;    // Autocovariance value
-    double ac_value;        // Computed autocorrelation value to be returned
-    double variance;        // Computed variance
-    double mean;
-
-    mean = compute_mean(data, n);
-    variance = compute_variance(data, n);
-
-    for (size_t i=0; i < (n - lag); i++)
-        autocv += (data[i] - mean) * (data[i+lag] - mean);
-
-    autocv = (1.0 / (n - lag)) * autocv;
-
-    // Autocorrelation is autocovariance divided by variance
-    ac_value = autocv / variance;
-    return ac_value;
-}
-*/
 
 static int CmdSetDebugMode(const char *Cmd) {
     CLIParserContext *ctx;
@@ -1176,9 +1082,68 @@ static int CmdAskEdgeDetect(const char *Cmd) {
     return res;
 }
 
-// Print our clock rate
-// uses data from graphbuffer
-// adjusted to take char parameter for type of modulation to find the clock - by marshmellow.
+// Clock detection for `data detectclock`.
+static int detectclock_fit(int mod_mask, pm3_hyp_t *hyp) {
+
+    if (g_GraphTraceLen < 2048) {
+        return PM3_ESOFT;
+    }
+
+    const size_t count = (g_GraphTraceLen < FITSCORE_DEFAULT_WINDOW)
+                         ? g_GraphTraceLen
+                         : FITSCORE_DEFAULT_WINDOW;
+
+    double *sig = pm3_extract(g_GraphBuffer, g_GraphTraceLen, 0, count);
+    if (sig == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    pm3_fit_opts_t opts = {0};
+    opts.mod_mask = mod_mask;
+
+    pm3_fit_t fit;
+    int res = pm3_fit_run(sig, count, &opts, &fit);
+    free(sig);
+
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    *hyp = fit.items[0];
+    pm3_fit_free(&fit);
+    return PM3_SUCCESS;
+}
+
+static int detectclock_print(int mod_mask, bool verbose) {
+
+    pm3_hyp_t hyp;
+    if (detectclock_fit(mod_mask, &hyp) != PM3_SUCCESS) {
+        return 0;
+    }
+
+    const int clk = (int)(hyp.clk_fine + 0.5);
+    if (clk <= 0) {
+        return 0;
+    }
+
+    if (verbose) {
+        if (hyp.mod == PM3_MOD_FSK) {
+            PrintAndLogEx(SUCCESS, "Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d"
+                          , hyp.fc_hi
+                          , hyp.fc_lo
+                          , clk
+                         );
+        } else if (hyp.mod == PM3_MOD_ASK) {
+            PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d, Best Starting Position: %d", clk, hyp.phase);
+        } else {
+            PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d", clk);
+        }
+    }
+
+    setClockGrid(clk, hyp.phase);
+    return clk;
+}
+
 static int CmdDetectClockRate(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data detectclock",
@@ -1207,6 +1172,18 @@ static int CmdDetectClockRate(const char *Cmd) {
         return PM3_EINVARG;
     } else if (tmp == 0) {
 
+        // no modulation asked for, so report whichever one the signal is
+        pm3_hyp_t hyp;
+        if (detectclock_fit(0, &hyp) == PM3_SUCCESS) {
+            const int clk = (int)(hyp.clk_fine + 0.5);
+            if (clk > 0) {
+                PrintAndLogEx(SUCCESS, "%s Clock... %d", pm3_mod_name(hyp.mod), clk);
+                setClockGrid(clk, hyp.phase);
+                return PM3_SUCCESS;
+            }
+        }
+
+        // nothing fit, fall back to what the old heuristics can offer
         int clock = GetFskClock("", false);
         if (clock > 0) {
             PrintAndLogEx(SUCCESS, "FSK Clock... %d", clock);
@@ -1226,17 +1203,21 @@ static int CmdDetectClockRate(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
-    if (a)
+    if (a && detectclock_print(1 << PM3_MOD_ASK, true) == 0) {
         GetAskClock("", true);
+    }
 
-    if (f)
+    if (f && detectclock_print(1 << PM3_MOD_FSK, true) == 0) {
         GetFskClock("", true);
+    }
 
-    if (n)
+    if (n && detectclock_print(1 << PM3_MOD_NRZ, true) == 0) {
         GetNrzClock("", true);
+    }
 
-    if (p)
+    if (p && detectclock_print(1 << PM3_MOD_PSK, true) == 0) {
         GetPskClock("", true);
+    }
 
     RepaintGraphWindow();
     return PM3_SUCCESS;
@@ -2031,7 +2012,7 @@ static int CmdLoad(const char *Cmd) {
     }
     fclose(f);
 
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%s") " samples", commaprint(g_GraphTraceLen));
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " samples", g_GraphTraceLen);
 
     if (nofix == false) {
         uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
@@ -4107,9 +4088,1642 @@ static int CmdQRcode(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+//-----------------------------------------------------------------------------
+// Frequency domain analysis
+//
+// These commands all read the graph buffer, never write to it unless asked,
+// The transforms themselves live in pm3_dsp.c
+//-----------------------------------------------------------------------------
+
+static size_t largest_pow2_le(size_t v) {
+    size_t p = 1;
+    while ((p << 1) <= v && (p << 1) <= PM3_DSP_MAX_FFT) {
+        p <<= 1;
+    }
+    return p;
+}
+
+// Shared front end for the host side DSP commands.  Validates the requested
+// window against the graph buffer, rejects degenerate input, and hands back a
+// mean removed, unit variance copy of the samples.  Caller frees *sig.
+//
+// `size` == 0 means "the largest power of two that fits from start".  When a
+// size is given it is rounded up to a power of two for the transform length,
+// which is returned in *n, while *count stays at the number of real samples.
+static int dsp_prepare(int start, int size, double **sig, size_t *count, size_t *n) {
+
+    *sig = NULL;
+    *count = 0;
+    *n = 0;
+
+    if (g_GraphTraceLen == 0) {
+        PrintAndLogEx(WARNING, "GraphBuffer is empty");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("data load -f <file>") "` or `" _YELLOW_("lf read") "` to get samples");
+        return PM3_EINVARG;
+    }
+
+    if (start < 0) {
+        PrintAndLogEx(WARNING, "start must not be negative");
+        return PM3_EINVARG;
+    }
+
+    if ((size_t)start >= g_GraphTraceLen) {
+        PrintAndLogEx(WARNING, "start ( " _YELLOW_("%d") " ) is past the end of the trace ( " _YELLOW_("%zu") " samples )"
+                      , start
+                      , g_GraphTraceLen
+                     );
+        return PM3_EINVARG;
+    }
+
+    if (size < 0) {
+        PrintAndLogEx(WARNING, "size must not be negative");
+        return PM3_EINVARG;
+    }
+
+    const size_t avail = g_GraphTraceLen - (size_t)start;
+
+    if (avail < 4) {
+        PrintAndLogEx(WARNING, "not enough samples from start ( " _YELLOW_("%zu") " ), need at least 4", avail);
+        return PM3_EINVARG;
+    }
+
+    if (size == 0) {
+        *n = largest_pow2_le(avail);
+        *count = *n;
+    } else {
+        if ((size_t)size > avail) {
+            PrintAndLogEx(WARNING, "size ( " _YELLOW_("%d") " ) is larger than the %zu samples available from start", size, avail);
+            return PM3_EINVARG;
+        }
+        if ((size_t)size > PM3_DSP_MAX_FFT) {
+            PrintAndLogEx(WARNING, "size ( " _YELLOW_("%d") " ) exceeds the maximum transform length of %d", size, PM3_DSP_MAX_FFT);
+            return PM3_EINVARG;
+        }
+        *count = (size_t)size;
+        *n = pm3_next_pow2(*count);
+    }
+
+    if (*n < 4) {
+        PrintAndLogEx(WARNING, "transform length ( " _YELLOW_("%zu") " ) is too short to be useful", *n);
+        return PM3_EINVARG;
+    }
+
+    // a flat window carries no information and every downstream statistic
+    // would divide by zero.  Catch it here rather than printing NaN tables.
+    bool flat = true;
+    for (size_t i = 1; i < *count; i++) {
+        if (g_GraphBuffer[start + i] != g_GraphBuffer[start]) {
+            flat = false;
+            break;
+        }
+    }
+    if (flat) {
+        PrintAndLogEx(WARNING, "all %zu samples in the window are identical, nothing to analyse", *count);
+        return PM3_EINVARG;
+    }
+
+    *sig = pm3_extract(g_GraphBuffer, g_GraphTraceLen, (size_t)start, *count);
+    if (*sig == NULL) {
+        PrintAndLogEx(WARNING, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    return PM3_SUCCESS;
+}
+
+// Frequencies are reported in cycles/sample as the primary unit.  Hz is only
+// printed when the user tells us the sample rate with --fs: the client keeps no
+// record of the divisor a trace was captured with, and assuming 125 kHz would
+// silently mislabel every HF and every non default LF capture.
+static int CmdFFT(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data fft",
+                  "Fourier transform of the samples in the GraphBuffer.\n"
+                  "Reports the magnitude spectrum of the first N/2+1 bins, the input being real.\n"
+                  "The DC component is removed and the window is normalised to unit variance\n"
+                  "before the transform, so magnitudes are comparable between captures.",
+                  "data fft                                    --> transform the whole buffer\n"
+                  "data fft --size 4096 --win blackman         --> 4096 point transform, blackman window\n"
+                  "data fft --start 1000 --size 8192 --db      --> magnitudes in dB relative to the peak\n"
+                  "data fft --size 4096 --graph                --> put the spectrum in the graph window\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "start", "<int>", "first sample of the GraphBuffer to use (def 0)"),
+        arg_int0(NULL, "size", "<int>", "transform length, rounded up to a power of two (def largest that fits)"),
+        arg_str0(NULL, "win", "<hann|hamming|blackman|rect>", "window function (def hann)"),
+        arg_lit0(NULL, "db", "report magnitude in dB relative to the peak bin instead of linear"),
+        arg_lit0(NULL, "graph", "write the magnitude spectrum into the GraphBuffer and repaint"),
+        arg_int0(NULL, "fs", "<int>", "sample rate in Hz, adds a frequency column in Hz"),
+        arg_int0(NULL, "bins", "<int>", "how many bins to print (def 32, 0 for all)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int start = arg_get_int_def(ctx, 1, 0);
+    int size = arg_get_int_def(ctx, 2, 0);
+
+    char win_str[16] = {0};
+    int win_len = sizeof(win_str) - 1;
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)win_str, win_len, &win_len);
+
+    bool use_db = arg_get_lit(ctx, 4);
+    bool to_graph = arg_get_lit(ctx, 5);
+    int fs = arg_get_int_def(ctx, 6, 0);
+    int want_bins = arg_get_int_def(ctx, 7, 32);
+    CLIParserFree(ctx);
+
+    pm3_window_t win = PM3_WIN_HANN;
+    if (win_len > 0 && pm3_window_from_str(win_str, &win) == false) {
+        PrintAndLogEx(WARNING, "unknown window `%s`, expected hann, hamming, blackman or rect", win_str);
+        return PM3_EINVARG;
+    }
+
+    if (want_bins < 0) {
+        PrintAndLogEx(WARNING, "bins must not be negative");
+        return PM3_EINVARG;
+    }
+
+    double *sig = NULL;
+    size_t count = 0, n = 0;
+    int res = dsp_prepare(start, size, &sig, &count, &n);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    pm3_spectrum_t spec;
+    res = pm3_spectrum(sig, count, n, win, &spec);
+    free(sig);
+
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "failed to compute the spectrum");
+        return res;
+    }
+
+    const double bin_width = 1.0 / (double)n;
+    const double peak_freq = (double)spec.peak_bin * bin_width;
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Fourier transform") " ---------------------------------");
+    PrintAndLogEx(INFO, "  samples....... " _YELLOW_("%zu") " from offset " _YELLOW_("%d"), count, start);
+    PrintAndLogEx(INFO, "  transform..... " _YELLOW_("%zu") " point, %zu bins reported", n, spec.nbins);
+    PrintAndLogEx(INFO, "  window........ " _YELLOW_("%s"), pm3_window_name(win));
+    PrintAndLogEx(INFO, "  bin width..... " _YELLOW_("%.6f") " cycles/sample", bin_width);
+
+    if (fs > 0) {
+        PrintAndLogEx(INFO, "  sample rate... " _YELLOW_("%d") " Hz  ( %.2f Hz per bin )", fs, bin_width * (double)fs);
+    } else {
+        PrintAndLogEx(INFO, "  sample rate... " _YELLOW_("unknown") ", use `--fs` to add a Hz column");
+    }
+
+    PrintAndLogEx(INFO, "  peak bin...... " _GREEN_("%zu") "  ( %.6f cycles/sample, clock %.2f samples/symbol )"
+                  , spec.peak_bin
+                  , peak_freq
+                  , (peak_freq > 0.0) ? 1.0 / peak_freq : 0.0
+                 );
+    if (fs > 0) {
+        PrintAndLogEx(INFO, "  peak.......... " _GREEN_("%.1f") " Hz", peak_freq * (double)fs);
+    }
+
+    size_t print_bins = (want_bins == 0) ? spec.nbins : (size_t)want_bins;
+    if (print_bins > spec.nbins) {
+        print_bins = spec.nbins;
+    }
+
+    if (print_bins) {
+
+        PrintAndLogEx(NORMAL, "");
+        if (fs > 0) {
+            PrintAndLogEx(INFO, "  bin   cycles/sample        Hz   %s", use_db ? "  mag (dB)" : " magnitude");
+            PrintAndLogEx(INFO, "------+--------------+-----------+-----------");
+        } else {
+            PrintAndLogEx(INFO, "  bin   cycles/sample   %s", use_db ? "  mag (dB)" : " magnitude");
+            PrintAndLogEx(INFO, "------+--------------+-----------");
+        }
+
+        for (size_t i = 0; i < print_bins; i++) {
+
+            const double f = (double)i * bin_width;
+            char val[32];
+
+            if (use_db) {
+                snprintf(val, sizeof(val), "%9.2f", 20.0 * log10((spec.mag[i] / (spec.peak + 1e-30)) + 1e-30));
+            } else {
+                snprintf(val, sizeof(val), "%9.3f", spec.mag[i]);
+            }
+
+            if (fs > 0) {
+                PrintAndLogEx(INFO, "%5zu | %12.6f | %9.1f | %s", i, f, f * (double)fs, val);
+            } else {
+                PrintAndLogEx(INFO, "%5zu | %12.6f | %s", i, f, val);
+            }
+        }
+
+        if (print_bins < spec.nbins) {
+            PrintAndLogEx(INFO, "( %zu of %zu bins shown, use `--bins 0` for all )", print_bins, spec.nbins);
+        }
+    }
+
+    if (to_graph) {
+
+        // dB against the peak keeps the low level structure visible, a linear
+        // plot of an LF spectrum is one spike and a flat line
+        for (size_t i = 0; i < spec.nbins; i++) {
+            double db = 20.0 * log10((spec.mag[i] / (spec.peak + 1e-30)) + 1e-30);
+            if (db < -96.0) {
+                db = -96.0;
+            }
+            g_GraphBuffer[i] = (int32_t)((db + 96.0) * (255.0 / 96.0)) - 128;
+        }
+        g_GraphTraceLen = spec.nbins;
+
+        // the x axis is now bins, not samples.  Drive the existing cursor
+        // scale so a marker delta reads out directly in cycles/sample.
+        setClockGrid(0, 0);
+        g_CursorScaleFactor = (double)n;
+        snprintf(g_CursorScaleFactorUnit, sizeof(g_CursorScaleFactorUnit), "c/sample");
+        RepaintGraphWindow();
+
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(WARNING, "GraphBuffer now holds a " _YELLOW_("magnitude spectrum"));
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("data load -f <file>") "` to get the original samples back");
+    }
+
+    pm3_spectrum_free(&spec);
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
+static void print_peak_table(const char *title, const pm3_peak_t *peaks, size_t n, int fs) {
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "%s", title);
+
+    if (n == 0) {
+        PrintAndLogEx(INFO, "  no peaks found above the noise floor");
+        return;
+    }
+
+    if (fs > 0) {
+        PrintAndLogEx(INFO, " bin   cycles/sample         Hz     clock    mag(dB)   prom(dB)");
+        PrintAndLogEx(INFO, "------+--------------+-----------+---------+----------+----------");
+    } else {
+        PrintAndLogEx(INFO, " bin   cycles/sample     clock    mag(dB)   prom(dB)");
+        PrintAndLogEx(INFO, "------+--------------+---------+----------+----------");
+    }
+
+    for (size_t i = 0; i < n; i++) {
+        if (fs > 0) {
+            PrintAndLogEx(INFO, "%5zu | %12.6f | %9.1f | %7.2f | %8.2f | %8.2f"
+                          , peaks[i].bin
+                          , peaks[i].freq
+                          , peaks[i].freq * (double)fs
+                          , peaks[i].clk
+                          , peaks[i].mag_db
+                          , peaks[i].prominence
+                         );
+        } else {
+            PrintAndLogEx(INFO, "%5zu | %12.6f | %7.2f | %8.2f | %8.2f"
+                          , peaks[i].bin
+                          , peaks[i].freq
+                          , peaks[i].clk
+                          , peaks[i].mag_db
+                          , peaks[i].prominence
+                         );
+        }
+    }
+}
+
+// Pick the analysis window when the user did not.  A capture long enough to
+// have a choice gets one cheap look at its spectrum first, because the right
+// window depends on the symbol rate and nothing knows that yet.  The spectral
+// estimate can land on a harmonic of the true rate, so size for twice what it
+// reports rather than for exactly it.
+static int autodemod_window(int start, size_t avail) {
+
+    size_t want = MIN(avail, (size_t)FITSCORE_DEFAULT_WINDOW);
+
+    if (avail <= (size_t)FITSCORE_DEFAULT_WINDOW) {
+        return (int)want;
+    }
+
+    double *probe = NULL;
+    size_t count = 0, n = 0;
+    if (dsp_prepare(start, (int)want, &probe, &count, &n) != PM3_SUCCESS) {
+        return (int)want;
+    }
+
+    pm3_spec_analysis_t an;
+    const int res = pm3_analyse(probe, count, n, PM3_WIN_HANN, &an);
+    free(probe);
+
+    if (res != PM3_SUCCESS || an.have_symbol_clk == false) {
+        return (int)want;
+    }
+
+    const double need = an.symbol_clk * 2.0 * (double)FITSCORE_MIN_SYMBOLS;
+    if (need > (double)want) {
+        want = MIN(avail, (size_t)need);
+        want = MIN(want, (size_t)PM3_DSP_MAX_FFT);
+    }
+
+    return (int)want;
+}
+
+// Keep a copy of the graph buffer the first time something is about to
+// overwrite it.  `data autodemod` rectifies and resamples in place so the
+// demodulators see what it decided on, and both have to be undoable.
+static void autodemod_backup(int32_t **backup, size_t len) {
+
+    if (*backup != NULL || len == 0) {
+        return;
+    }
+
+    *backup = calloc(len, sizeof(int32_t));
+    if (*backup != NULL) {
+        memcpy(*backup, g_GraphBuffer, len * sizeof(int32_t));
+    }
+}
+
+// Write `len` doubles into the graph buffer, scaled to the +/-100 the
+// demodulators expect from a loaded trace.
+static void autodemod_store(const double *src, size_t len) {
+
+    double peak = 0.0;
+    for (size_t i = 0; i < len; i++) {
+        if (fabs(src[i]) > peak) {
+            peak = fabs(src[i]);
+        }
+    }
+
+    if (peak <= 0.0) {
+        peak = 1.0;
+    }
+
+    for (size_t i = 0; i < len; i++) {
+        g_GraphBuffer[i] = (int32_t)((src[i] / peak) * 100.0);
+    }
+    g_GraphTraceLen = len;
+}
+
+static void print_family_hint(const pm3_spec_analysis_t *an) {
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Modulation family") " ---------------------------------");
+
+    if (an->needs_envelope) {
+        PrintAndLogEx(INFO, "  carrier....... rf/" _YELLOW_("%.2f") ", switched on and off ( depth " _YELLOW_("%.2f") " )"
+                      , an->carrier_clk
+                      , an->envelope_depth
+                     );
+        PrintAndLogEx(INFO, "  two samples per carrier period, so the data is in the envelope, not the phase");
+        PrintAndLogEx(INFO, "  everything below was measured on the rectified envelope");
+    }
+
+    if (an->family == PM3_FAM_UNKNOWN) {
+        PrintAndLogEx(WARNING, "no clear spectral signature, confidence " _RED_("none"));
+        PrintAndLogEx(INFO, "the capture may be noise, or the symbol rate may be outside the search range");
+        return;
+    }
+
+    if (an->confidence >= PM3_CONF_MEDIUM) {
+        PrintAndLogEx(SUCCESS, "looks like " _GREEN_("%s") ", confidence " _GREEN_("%s")
+                      , pm3_family_name(an->family)
+                      , pm3_confidence_name(an->confidence)
+                     );
+    } else {
+        PrintAndLogEx(WARNING, "looks like " _YELLOW_("%s") ", confidence " _YELLOW_("%s")
+                      , pm3_family_name(an->family)
+                      , pm3_confidence_name(an->confidence)
+                     );
+    }
+
+    switch (an->family) {
+        case PM3_FAM_FSK:
+            PrintAndLogEx(INFO, "  field clocks.. rf/" _YELLOW_("%.2f") " and rf/" _YELLOW_("%.2f") "  ( ratio %.3f )"
+                          , an->fsk_clk_hi
+                          , an->fsk_clk_lo
+                          , an->fsk_ratio
+                         );
+            PrintAndLogEx(INFO, "  two strong lines at a stable ratio is the FSK signature");
+            break;
+        case PM3_FAM_PSK:
+            PrintAndLogEx(INFO, "  subcarrier.... rf/" _YELLOW_("%.2f"), an->carrier_clk);
+            PrintAndLogEx(INFO, "  carrier is suppressed at the symbol rate, the line only appears after squaring");
+            break;
+        case PM3_FAM_MANCHESTER:
+            PrintAndLogEx(INFO, "  null at DC, energy concentrated at the symbol rate");
+            break;
+        case PM3_FAM_ASK:
+            PrintAndLogEx(INFO, "  a line at the symbol rate survives in the plain spectrum");
+            break;
+        case PM3_FAM_NRZ:
+            PrintAndLogEx(INFO, "  maximum at DC with a sinc squared skirt");
+            break;
+        case PM3_FAM_UNKNOWN:
+            break;
+    }
+
+    if (an->have_symbol_clk) {
+        PrintAndLogEx(INFO, "  symbol clock.. " _GREEN_("%.2f") " samples/symbol", an->symbol_clk);
+        const double frac = fabs(an->symbol_clk - floor(an->symbol_clk + 0.5));
+        if (frac > 0.05) {
+            PrintAndLogEx(WARNING, "  clock is " _YELLOW_("%.2f") " samples off the nearest integer", frac);
+            PrintAndLogEx(INFO, "  a fractional clock decodes cleanly at the start of a capture and drifts out later");
+        }
+    }
+
+    PrintAndLogEx(INFO, "  this is a hint from spectral shape alone, no bits have been decoded");
+}
+
+// Renders the spectrogram as a character ramp.  Rows are frequency bands,
+// columns are time.  Both are folded to fit a terminal.
+static void print_heatmap(const pm3_stft_t *st) {
+
+    static const char ramp[] = " .:-=+*#%@";
+    const size_t nramp = sizeof(ramp) - 2;
+
+    const size_t cols = (st->nframes < 96) ? st->nframes : 96;
+    const size_t rows = 20;
+
+    // only the lower part of the spectrum carries the symbol rate, the top
+    // octave is almost always empty on an LF capture
+    const size_t band_hi = st->nbins;
+
+    double peak = 0.0;
+    for (size_t i = 0; i < st->nframes * st->nbins; i++) {
+        if (st->ridge[i] > peak) {
+            peak = st->ridge[i];
+        }
+    }
+    if (peak <= 0.0) {
+        return;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Spectrogram") " ---------------------------------------");
+    PrintAndLogEx(INFO, "rows are frequency ( top = Nyquist ), columns are time, `%c` is the peak", ramp[nramp]);
+
+    char line[128];
+
+    for (size_t r = 0; r < rows; r++) {
+
+        // row 0 is the top of the spectrum
+        const size_t b_lo = ((rows - 1 - r) * band_hi) / rows;
+        size_t b_hi = ((rows - r) * band_hi) / rows;
+        if (b_hi <= b_lo) {
+            b_hi = b_lo + 1;
+        }
+
+        for (size_t c = 0; c < cols; c++) {
+
+            const size_t f_lo = (c * st->nframes) / cols;
+            size_t f_hi = ((c + 1) * st->nframes) / cols;
+            if (f_hi <= f_lo) {
+                f_hi = f_lo + 1;
+            }
+
+            double best = 0.0;
+            for (size_t f = f_lo; f < f_hi && f < st->nframes; f++) {
+                for (size_t b = b_lo; b < b_hi && b < st->nbins; b++) {
+                    const double v = st->ridge[(f * st->nbins) + b];
+                    if (v > best) {
+                        best = v;
+                    }
+                }
+            }
+
+            size_t idx = (size_t)((best / peak) * (double)nramp);
+            if (idx > nramp) {
+                idx = nramp;
+            }
+            line[c] = ramp[idx];
+        }
+        line[cols] = '\0';
+
+        const double f_top = (double)b_hi / (double)st->n;
+        PrintAndLogEx(INFO, "%8.4f |%s|", f_top, line);
+    }
+
+    PrintAndLogEx(INFO, "         +%.*s+", (int)cols, "--------------------------------------------------------------------------------------------------");
+    PrintAndLogEx(INFO, "  sample   %-*zu%zu", (int)(cols - 8), st->frame_start[0], st->frame_start[st->nframes - 1] + st->n);
+}
+
+static void report_stft(const pm3_stft_t *st, int start) {
+
+    print_heatmap(st);
+
+    // median of the dominant rate, used as the reference the ridge must stay close to
+    double *sorted = calloc(st->nframes, sizeof(double));
+    if (sorted == NULL) {
+        PrintAndLogEx(WARNING, "failed to allocate memory");
+        return;
+    }
+    memcpy(sorted, st->peak_freq, st->nframes * sizeof(double));
+    for (size_t i = 1; i < st->nframes; i++) {
+        const double v = sorted[i];
+        size_t j = i;
+        while (j > 0 && sorted[j - 1] > v) {
+            sorted[j] = sorted[j - 1];
+            j--;
+        }
+        sorted[j] = v;
+    }
+    const double median = sorted[st->nframes / 2];
+
+    memcpy(sorted, st->peak_mag, st->nframes * sizeof(double));
+    for (size_t i = 1; i < st->nframes; i++) {
+        const double v = sorted[i];
+        size_t j = i;
+        while (j > 0 && sorted[j - 1] > v) {
+            sorted[j] = sorted[j - 1];
+            j--;
+        }
+        sorted[j] = v;
+    }
+    const double median_mag = sorted[st->nframes / 2];
+    free(sorted);
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Ridge") " ---------------------------------------------");
+
+    if (median <= 0.0) {
+        PrintAndLogEx(WARNING, "no coherent rate found in any frame");
+        return;
+    }
+
+    // longest run of frames whose dominant rate stays within 5% of the median
+    size_t best_lo = 0, best_len = 0, run_lo = 0, run_len = 0;
+    for (size_t f = 0; f < st->nframes; f++) {
+
+        // a frame counts as coherent when the clock is where we expect it and
+        // there is actually something there.  Frames before the tag enters the
+        // field pass the first test on noise alone, hence the second.
+        const bool ok = ((fabs(st->peak_freq[f] - median) / median) < 0.10)
+                        && (st->peak_mag[f] > (0.25 * median_mag));
+        if (ok) {
+            if (run_len == 0) {
+                run_lo = f;
+            }
+            run_len++;
+            if (run_len > best_len) {
+                best_len = run_len;
+                best_lo = run_lo;
+            }
+        } else {
+            run_len = 0;
+        }
+    }
+
+    if (best_len == 0) {
+        PrintAndLogEx(WARNING, "the dominant rate never settles, the capture may be all noise");
+        return;
+    }
+
+    const size_t s_lo = start + st->frame_start[best_lo];
+    const size_t s_hi = start + st->frame_start[best_lo + best_len - 1] + st->n;
+
+    PrintAndLogEx(INFO, "  coherent...... samples " _GREEN_("%zu") " .. " _GREEN_("%zu") "  ( %zu of %zu frames )"
+                  , s_lo
+                  , s_hi
+                  , best_len
+                  , st->nframes
+                 );
+
+    if (best_len < st->nframes) {
+        if (s_hi < g_GraphTraceLen) {
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("data rtrim -i %zu") "` to drop the incoherent tail", s_hi);
+        }
+        if (s_lo > 0) {
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("data ltrim -i %zu") "` to drop the incoherent head", s_lo);
+        }
+    } else {
+        PrintAndLogEx(INFO, "  the whole capture holds a coherent clock, no trimming needed");
+    }
+
+    // drift, measured over the coherent span only
+    const size_t edge = (best_len / 10) ? (best_len / 10) : 1;
+
+    double f_start = 0.0, f_end = 0.0;
+    for (size_t i = 0; i < edge; i++) {
+        f_start += st->peak_freq[best_lo + i];
+        f_end += st->peak_freq[best_lo + best_len - 1 - i];
+    }
+
+    f_start /= (double)edge;
+    f_end /= (double)edge;
+
+    if (f_start > 0.0 && f_end > 0.0) {
+
+        const double clk_start = 1.0 / f_start;
+        const double clk_end = 1.0 / f_end;
+        const double pct = ((clk_end - clk_start) / clk_start) * 100.0;
+
+        PrintAndLogEx(INFO, "  clock drift... " _YELLOW_("%.2f") " -> " _YELLOW_("%.2f") " samples/symbol  ( %+.2f %% )"
+                      , clk_start
+                      , clk_end
+                      , pct
+                     );
+
+        if (fabs(pct) > 1.0) {
+            PrintAndLogEx(WARNING, "  the clock moves across the capture, a single integer clock will not fit all of it");
+        }
+    }
+
+    // discontinuities
+    size_t jumps = 0;
+    for (size_t f = 1; f < st->nframes; f++) {
+        const double d = fabs(st->peak_freq[f] - st->peak_freq[f - 1]);
+        if ((d / median) > 0.15) {
+            if (jumps < 8) {
+                PrintAndLogEx(INFO, "  rate jump..... at sample " _YELLOW_("%zu") "  ( %.2f -> %.2f samples/symbol )"
+                              , (size_t)start + st->frame_start[f]
+                              , (st->peak_freq[f - 1] > 0.0) ? 1.0 / st->peak_freq[f - 1] : 0.0
+                              , (st->peak_freq[f] > 0.0) ? 1.0 / st->peak_freq[f] : 0.0
+                             );
+            }
+            jumps++;
+        }
+    }
+    if (jumps > 8) {
+        PrintAndLogEx(INFO, "  ( %zu more jumps not shown )", jumps - 8);
+    }
+    if (jumps == 0) {
+        PrintAndLogEx(INFO, "  rate jumps.... " _GREEN_("none"));
+    }
+}
+
+static int CmdSpectrum(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data spectrum",
+                  "Spectral analysis of the GraphBuffer.\n"
+                  "Reports the strongest spectral peaks with a sub bin estimate of the symbol clock,\n"
+                  "the squaring and delay-and-multiply spectra which expose rates the plain spectrum\n"
+                  "nulls out, and a modulation family hint derived from spectral shape alone.\n"
+                  "Run this on a trace that will not decode.",
+                  "data spectrum                               --> peak table and family hint\n"
+                  "data spectrum --top 8 --sq                  --> more peaks, plus the squaring spectrum\n"
+                  "data spectrum --stft --size 2048            --> spectrogram over the whole capture\n"
+                  "data spectrum --stft --size 2048 --hop 256  --> finer time resolution\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "start", "<int>", "first sample of the GraphBuffer to use (def 0)"),
+        arg_int0(NULL, "size", "<int>", "transform length, rounded up to a power of two (def largest that fits)"),
+        arg_str0(NULL, "win", "<hann|hamming|blackman|rect>", "window function (def hann)"),
+        arg_int0(NULL, "top", "<int>", "number of peaks to report (def 5)"),
+        arg_lit0(NULL, "sq", "also show the squaring and delay-and-multiply spectra"),
+        arg_lit0(NULL, "stft", "sliding window spectrogram, ridge tracking and drift"),
+        arg_int0(NULL, "hop", "<int>", "STFT hop in samples (def size/4)"),
+        arg_int0(NULL, "fs", "<int>", "sample rate in Hz, adds a frequency column in Hz"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int start = arg_get_int_def(ctx, 1, 0);
+    int size = arg_get_int_def(ctx, 2, 0);
+
+    char win_str[16] = {0};
+    int win_len = sizeof(win_str) - 1;
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)win_str, win_len, &win_len);
+
+    int top = arg_get_int_def(ctx, 4, 5);
+    bool show_sq = arg_get_lit(ctx, 5);
+    bool do_stft = arg_get_lit(ctx, 6);
+    int hop = arg_get_int_def(ctx, 7, 0);
+    int fs = arg_get_int_def(ctx, 8, 0);
+    CLIParserFree(ctx);
+
+    pm3_window_t win = PM3_WIN_HANN;
+    if (win_len > 0 && pm3_window_from_str(win_str, &win) == false) {
+        PrintAndLogEx(WARNING, "unknown window `%s`, expected hann, hamming, blackman or rect", win_str);
+        return PM3_EINVARG;
+    }
+
+    if (top < 1 || top > PM3_DSP_MAX_PEAKS) {
+        PrintAndLogEx(WARNING, "top must be between 1 and %d", PM3_DSP_MAX_PEAKS);
+        return PM3_EINVARG;
+    }
+
+    if (hop < 0) {
+        PrintAndLogEx(WARNING, "hop must not be negative");
+        return PM3_EINVARG;
+    }
+
+    double *sig = NULL;
+    size_t count = 0, n = 0;
+    int res = dsp_prepare(start, size, &sig, &count, &n);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    pm3_spec_analysis_t an;
+    res = pm3_analyse(sig, count, n, win, &an);
+    if (res != PM3_SUCCESS) {
+        free(sig);
+        PrintAndLogEx(WARNING, "spectral analysis failed");
+        return res;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Spectrum") " ------------------------------------------");
+    PrintAndLogEx(INFO, "  samples..... " _YELLOW_("%zu") " from offset " _YELLOW_("%d"), count, start);
+    PrintAndLogEx(INFO, "  transform... " _YELLOW_("%zu") " point, %s window", n, pm3_window_name(win));
+    PrintAndLogEx(INFO, "  bin width... " _YELLOW_("%.6f") " cycles/sample", 1.0 / (double)n);
+
+    print_peak_table("--- " _CYAN_("Peaks") " ---------------------------------------------", an.peaks, MIN(an.npeaks, (size_t)top), fs);
+    PrintAndLogEx(INFO, "clock is the reciprocal of the frequency");
+
+    if (show_sq) {
+
+        print_peak_table("--- " _CYAN_("Squaring spectrum") " ( y = x * x ) -------------", an.sq_peaks, MIN(an.nsq_peaks, (size_t)top), fs);
+
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("Delay and multiply") " ( y[i] = x[i] * x[i-d] ) ---");
+        PrintAndLogEx(INFO, "  lag    clock    prom(dB)");
+        PrintAndLogEx(INFO, "------+---------+----------");
+        for (size_t i = 0; i < an.ndelay; i++) {
+            if (an.delay_valid[i] == false) {
+                continue;
+            }
+            PrintAndLogEx(INFO, "%5zu | %7.2f | %8.2f", an.delay[i], an.delay_peak[i].clk, an.delay_peak[i].prominence);
+        }
+        PrintAndLogEx(INFO, "squaring a BPSK subcarrier collapses the +/-180 modulation into a tone at twice the carrier");
+    }
+
+    print_family_hint(&an);
+
+    if (do_stft) {
+
+        size_t stft_hop = (hop > 0) ? (size_t)hop : (n / 4);
+        if (stft_hop == 0) {
+            stft_hop = 1;
+        }
+
+        // the spectrogram wants the whole trace from start
+        const size_t avail = g_GraphTraceLen - (size_t)start;
+        double *full = pm3_extract(g_GraphBuffer, g_GraphTraceLen, (size_t)start, avail);
+
+        if (full == NULL) {
+            PrintAndLogEx(WARNING, "failed to allocate memory");
+            free(sig);
+            return PM3_EMALLOC;
+        }
+
+        // anchor the ridge tracker on the symbol rate the full length analysis found, 
+        // so drift is measured against the clock we care about rather than against whichever bin peaked in each frame
+        const double anchor = an.have_symbol_clk ? (1.0 / an.symbol_clk) : 0.0;
+
+        pm3_stft_t st;
+        res = pm3_stft(full, avail, n, stft_hop, win, anchor, &st);
+        free(full);
+
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "cannot build a spectrogram: need at least one full %zu sample window from offset %d", n, start);
+            PrintAndLogEx(HINT, "Hint: Try a smaller `" _YELLOW_("--size") "`");
+        } else {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "  frames........ " _YELLOW_("%zu") " of %zu samples, hop " _YELLOW_("%zu"), st.nframes, st.n, st.hop);
+            report_stft(&st, start);
+            pm3_stft_free(&st);
+        }
+    }
+
+    free(sig);
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
+static int parse_mod_mask(const char *str, int *mask) {
+
+    *mask = 0;
+    if (str == NULL || str[0] == '\0') {
+        return PM3_SUCCESS;
+    }
+
+    if (strcmp(str, "ask") == 0) {
+        *mask = 1 << PM3_MOD_ASK;
+    } else if (strcmp(str, "fsk") == 0) {
+        *mask = 1 << PM3_MOD_FSK;
+    } else if (strcmp(str, "psk") == 0) {
+        *mask = 1 << PM3_MOD_PSK;
+    } else if (strcmp(str, "nrz") == 0) {
+        *mask = 1 << PM3_MOD_NRZ;
+    } else {
+        return PM3_EINVARG;
+    }
+    return PM3_SUCCESS;
+}
+
+static void print_fit_table(const pm3_fit_t *fit, size_t rows) {
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "rank  mod   encoding      clk   clk fine    Q   phase    SNR_dd     eye    mid    margin");
+    PrintAndLogEx(INFO, "-----+-----+------------+-----+----------+----+-------+---------+-------+------+--------");
+
+    for (size_t i = 0; i < rows; i++) {
+
+        const pm3_hyp_t *h = &fit->items[i];
+
+        char extra[24] = {0};
+        if (h->tpl == PM3_TPL_FSK) {
+            snprintf(extra, sizeof(extra), " fc %d/%d", h->fc_hi, h->fc_lo);
+        } else if (h->tpl == PM3_TPL_PSK) {
+            snprintf(extra, sizeof(extra), " fc %d", h->fc);
+        }
+
+        PrintAndLogEx(INFO, "%4zu | %-3s | %-10s | %3d | %8.2f | %2d | %5d | %7.2f | %5.3f | %4.2f | %6.2f%s"
+                      , i + 1
+                      , pm3_mod_name(h->mod)
+                      , pm3_enc_name(h->enc)
+                      , h->clk
+                      , h->clk_fine
+                      , h->q
+                      , h->phase
+                      , h->snr_dd
+                      , h->eye
+                      , h->mid_ratio
+                      , h->margin
+                      , extra
+                     );
+    }
+}
+
+static int CmdFitScore(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data fitscore",
+                  "Rank matched filter hypotheses against the GraphBuffer.\n"
+                  "A hypothesis is a modulation, a symbol shape and a clock. Each one is scored by\n"
+                  "correlating the trace against a single symbol template and measuring how tightly\n"
+                  "the correlator output clusters at the decision instants. Phase is not searched:\n"
+                  "the correlation is done with an FFT, which yields every phase offset at once.\n"
+                  "Templates are shaped by an assumed antenna Q, because correlating a bandlimited\n"
+                  "signal against square edges biases the ranking toward short clocks.",
+                  "data fitscore                        --> rank the whole bank\n"
+                  "data fitscore --mod ask --top 5      --> ASK hypotheses only\n"
+                  "data fitscore --clk 64 --all         --> everything at clock 64\n"
+                  "data fitscore --verbose              --> also put the rank 1 correlator output in the graph\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "start", "<int>", "first sample of the GraphBuffer to use (def 0)"),
+        arg_int0(NULL, "size", "<int>", "samples to analyse, rounded up to a power of two (def 16384)"),
+        arg_str0(NULL, "mod", "<ask|fsk|psk|nrz>", "restrict to one modulation (def all)"),
+        arg_int0(NULL, "clk", "<int>", "restrict to one clock (def all candidates)"),
+        arg_int0(NULL, "top", "<int>", "rows to print (def 10)"),
+        arg_lit0(NULL, "all", "print every scored hypothesis"),
+        arg_lit0("v", "verbose", "write the rank 1 correlator output into the GraphBuffer"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int start = arg_get_int_def(ctx, 1, 0);
+    int size = arg_get_int_def(ctx, 2, 0);
+
+    char mod_str[8] = {0};
+    int mod_len = sizeof(mod_str) - 1;
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)mod_str, mod_len, &mod_len);
+
+    int clk_only = arg_get_int_def(ctx, 4, 0);
+    int top = arg_get_int_def(ctx, 5, 10);
+    bool show_all = arg_get_lit(ctx, 6);
+    bool verbose = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
+
+    pm3_fit_opts_t opts = {0};
+
+    if (parse_mod_mask(mod_str, &opts.mod_mask) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "unknown modulation `%s`, expected ask, fsk, psk or nrz", mod_str);
+        return PM3_EINVARG;
+    }
+
+    if (clk_only < 0) {
+        PrintAndLogEx(WARNING, "clk must not be negative");
+        return PM3_EINVARG;
+    }
+    if (clk_only > 0) {
+        const int *clocks = NULL;
+        const size_t nclk = pm3_fit_clocks(&clocks);
+        bool known = false;
+        for (size_t i = 0; i < nclk; i++) {
+            if (clocks[i] == clk_only) {
+                known = true;
+                break;
+            }
+        }
+        if (known == false) {
+            PrintAndLogEx(WARNING, "clock " _YELLOW_("%d") " is not one of the candidates the detectors search", clk_only);
+            PrintAndLogEx(INFO, "candidates are:");
+            char buf[128] = {0};
+            for (size_t i = 0; i < nclk; i++) {
+                snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%s%d", i ? ", " : "  ", clocks[i]);
+            }
+            PrintAndLogEx(INFO, "%s", buf);
+            return PM3_EINVARG;
+        }
+    }
+    opts.clk_only = clk_only;
+    opts.keep_corr = verbose;
+
+    if (top < 1) {
+        PrintAndLogEx(WARNING, "top must be at least 1");
+        return PM3_EINVARG;
+    }
+
+    if (size == 0) {
+        const size_t avail = (g_GraphTraceLen > (size_t)MAX(start, 0)) ? g_GraphTraceLen - (size_t)MAX(start, 0) : 0;
+        size = autodemod_window(start, avail);
+        if (size <= 0) {
+            size = 0;
+        }
+    }
+
+    double *sig = NULL;
+    size_t count = 0, n = 0;
+    int res = dsp_prepare(start, size, &sig, &count, &n);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    pm3_fit_t fit;
+    res = pm3_fit_run(sig, count, &opts, &fit);
+    free(sig);
+
+    if (res == PM3_ESOFT) {
+        PrintAndLogEx(WARNING, "no hypothesis had enough symbols to score");
+        PrintAndLogEx(INFO, "a hypothesis needs at least %d decision instants, so a clock of C needs %d*C samples"
+                      , PM3_FIT_MIN_SYMBOLS
+                      , PM3_FIT_MIN_SYMBOLS
+                     );
+        return res;
+    }
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "failed to score the hypothesis bank");
+        return res;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Matched filter bank") " -------------------------------");
+    PrintAndLogEx(INFO, "  samples....... " _YELLOW_("%zu") " from offset " _YELLOW_("%d"), count, start);
+    PrintAndLogEx(INFO, "  hypotheses.... " _YELLOW_("%zu") " scored", fit.count);
+
+    if (fit.stats.valid) {
+        PrintAndLogEx(INFO, "  short runs.... " _YELLOW_("%.3f") " of runs are under 2.5 chips", fit.stats.short_fraction);
+        PrintAndLogEx(INFO, "  chip.......... " _YELLOW_("%.1f") " samples, longest run " _YELLOW_("%.1f") " ( ratio %.2f, %s )"
+                      , fit.stats.chip
+                      , fit.stats.long_run
+                      , fit.stats.run_ratio
+                      , fit.stats.transition_coded ? "transition coded" : "raw levels"
+                     );
+        if (fit.stats.period > 0.0) {
+            PrintAndLogEx(INFO, "  repeats every. " _YELLOW_("%.1f") " samples ( autocorrelation %.2f )"
+                          , fit.stats.period
+                          , fit.stats.period_strength
+                         );
+        } else {
+            PrintAndLogEx(INFO, "  repeats every. " _YELLOW_("no clear period"));
+        }
+    }
+
+    size_t rows = show_all ? fit.count : MIN((size_t)top, fit.count);
+    print_fit_table(&fit, rows);
+
+    if (rows < fit.count) {
+        PrintAndLogEx(INFO, "( %zu of %zu rows shown, use `--all` for everything )", rows, fit.count);
+    }
+
+    const pm3_hyp_t *best = &fit.items[0];
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "best fit... " _GREEN_("%s / %s") " at clock " _GREEN_("%.2f") ", phase %d, Q %d"
+                  , pm3_mod_name(best->mod)
+                  , pm3_enc_name(best->enc)
+                  , best->clk_fine
+                  , best->phase
+                  , best->q
+                 );
+    PrintAndLogEx(INFO, "  SNR_dd........ " _YELLOW_("%.2f") " dB over %zu decision instants", best->snr_dd, best->nsym);
+    PrintAndLogEx(INFO, "  eye opening... " _YELLOW_("%.3f") "  ( min / mean at the decision instants )", best->eye);
+    PrintAndLogEx(INFO, "  mid symbol.... " _YELLOW_("%.2f") "  ( relative to the decision instants )", best->mid_ratio);
+
+    if (best->margin >= 6.0) {
+        PrintAndLogEx(SUCCESS, "  confidence.... " _GREEN_("%.2f") " dB ahead of the next different decode", best->margin);
+    } else if (best->margin >= 3.0) {
+        PrintAndLogEx(INFO, "  confidence.... " _YELLOW_("%.2f") " dB ahead of the next different decode", best->margin);
+    } else {
+        PrintAndLogEx(WARNING, "  confidence.... " _RED_("%.2f") " dB ahead of the next different decode, this is ambiguous", best->margin);
+    }
+
+    PrintAndLogEx(INFO, "");
+
+    if (verbose && fit.corr != NULL) {
+
+        size_t len = MIN(fit.corr_len, (size_t)MAX_GRAPH_TRACE_LEN);
+
+        double peak = 0.0;
+        for (size_t i = 0; i < len; i++) {
+            if (fit.corr[i] > peak) {
+                peak = fit.corr[i];
+            }
+        }
+
+        if (peak > 0.0) {
+            for (size_t i = 0; i < len; i++) {
+                g_GraphBuffer[i] = (int32_t)((fit.corr[i] / peak) * 127.0);
+            }
+            g_GraphTraceLen = len;
+            setClockGrid(best->clk, best->phase);
+            RepaintGraphWindow();
+
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "GraphBuffer now holds the " _YELLOW_("rank 1 correlator output") ", not the original samples");
+            PrintAndLogEx(INFO, "the grid is set to the winning clock and phase");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("data plot") "`");
+        }
+    }
+
+    pm3_fit_free(&fit);
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
+// Developer helper.  
+// Fills the GraphBuffer with a synthetic waveform whose modulation, encoding and clock are known
+static int CmdGenSignal(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data gensignal",
+                  "Developer tool. Fill the GraphBuffer with a synthetic LF waveform.\n"
+                  "Used with `data fitscore` and `data autodemod`",
+                  "data gensignal --mod ask --enc manchester --clk 64\n"
+                  "data gensignal --mod ask --enc manchester --clk 64.25 --noise 0.4 --len 20000\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "mod", "<ask|fsk|psk|nrz>", "modulation (def ask)"),
+        arg_str0(NULL, "enc", "<raw|manchester|biphase>", "encoding (def raw)"),
+        arg_dbl0(NULL, "clk", "<dbl>", "clock in samples/symbol, may be fractional (def 64)"),
+        arg_int0(NULL, "len", "<int>", "samples to generate (def 16384)"),
+        arg_dbl0(NULL, "noise", "<dbl>", "gaussian noise standard deviation (def 0)"),
+        arg_dbl0(NULL, "drift", "<dbl>", "linear DC ramp across the capture (def 0)"),
+        arg_dbl0(NULL, "env", "<dbl>", "amplitude envelope swing (def 0)"),
+        arg_dbl0(NULL, "jitter", "<dbl>", "per symbol edge jitter, samples (def 0)"),
+        arg_dbl0(NULL, "clip", "<dbl>", "hard clip level, 0 for none (def 0)"),
+        arg_int0(NULL, "fc", "<int>", "PSK subcarrier period (def 4)"),
+        arg_int0(NULL, "fchigh", "<int>", "FSK long field clock (def 10)"),
+        arg_int0(NULL, "fclow", "<int>", "FSK short field clock (def 8)"),
+        arg_int0(NULL, "q", "<int>", "antenna Q to shape the waveform with (def 8)"),
+        arg_int0(NULL, "repeat", "<int>", "loop a message of this many bits, like a real tag (def 0, random)"),
+        arg_int0(NULL, "seed", "<int>", "RNG seed, for reproducible runs (def 1)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    char mod_str[8] = {0};
+    int mod_len = sizeof(mod_str) - 1;
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)mod_str, mod_len, &mod_len);
+
+    char enc_str[16] = {0};
+    int enc_len = sizeof(enc_str) - 1;
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)enc_str, enc_len, &enc_len);
+
+    pm3_gen_opts_t opts = {0};
+    opts.mod = PM3_MOD_ASK;
+    opts.enc = PM3_ENC_RAW;
+    opts.clk = arg_get_dbl_def(ctx, 3, 64.0);
+    int len = arg_get_int_def(ctx, 4, 16384);
+    opts.noise = arg_get_dbl_def(ctx, 5, 0.0);
+    opts.drift = arg_get_dbl_def(ctx, 6, 0.0);
+    opts.envelope = arg_get_dbl_def(ctx, 7, 0.0);
+    opts.jitter = arg_get_dbl_def(ctx, 8, 0.0);
+    opts.clip = arg_get_dbl_def(ctx, 9, 0.0);
+    opts.fc = arg_get_int_def(ctx, 10, 4);
+    opts.fc_hi = arg_get_int_def(ctx, 11, 10);
+    opts.fc_lo = arg_get_int_def(ctx, 12, 8);
+    opts.q = arg_get_int_def(ctx, 13, 8);
+    opts.repeat = arg_get_int_def(ctx, 14, 0);
+    opts.seed = (uint32_t)arg_get_int_def(ctx, 15, 1);
+    CLIParserFree(ctx);
+
+    if (mod_len > 0) {
+        if (strcmp(mod_str, "ask") == 0) {
+            opts.mod = PM3_MOD_ASK;
+        } else if (strcmp(mod_str, "fsk") == 0) {
+            opts.mod = PM3_MOD_FSK;
+        } else if (strcmp(mod_str, "psk") == 0) {
+            opts.mod = PM3_MOD_PSK;
+        } else if (strcmp(mod_str, "nrz") == 0) {
+            opts.mod = PM3_MOD_NRZ;
+        } else {
+            PrintAndLogEx(WARNING, "unknown modulation `%s`", mod_str);
+            return PM3_EINVARG;
+        }
+    }
+
+    if (enc_len > 0) {
+        if (strcmp(enc_str, "raw") == 0) {
+            opts.enc = PM3_ENC_RAW;
+        } else if (strcmp(enc_str, "manchester") == 0) {
+            opts.enc = PM3_ENC_MANCHESTER;
+        } else if (strcmp(enc_str, "biphase") == 0) {
+            opts.enc = PM3_ENC_BIPHASE;
+        } else {
+            PrintAndLogEx(WARNING, "unknown encoding `%s`", enc_str);
+            return PM3_EINVARG;
+        }
+    }
+
+    if (len < 256 || len > MAX_GRAPH_TRACE_LEN) {
+        PrintAndLogEx(WARNING, "len must be between 256 and %d", MAX_GRAPH_TRACE_LEN);
+        return PM3_EINVARG;
+    }
+    if (opts.clk < 4.0 || opts.clk > 1024.0) {
+        PrintAndLogEx(WARNING, "clk must be between 4 and 1024");
+        return PM3_EINVARG;
+    }
+
+    double *buf = calloc((size_t)len, sizeof(double));
+    if (buf == NULL) {
+        PrintAndLogEx(WARNING, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    int res = pm3_fit_generate(&opts, buf, (size_t)len);
+    if (res != PM3_SUCCESS) {
+        free(buf);
+        PrintAndLogEx(WARNING, "failed to generate the signal");
+        return res;
+    }
+
+    double peak = 0.0;
+    for (int i = 0; i < len; i++) {
+        if (fabs(buf[i]) > peak) {
+            peak = fabs(buf[i]);
+        }
+    }
+    if (peak <= 0.0) {
+        peak = 1.0;
+    }
+
+    for (int i = 0; i < len; i++) {
+        g_GraphBuffer[i] = (int32_t)((buf[i] / peak) * 100.0);
+    }
+    g_GraphTraceLen = (size_t)len;
+    free(buf);
+
+    setClockGrid(0, 0);
+    RepaintGraphWindow();
+
+    PrintAndLogEx(SUCCESS, "generated " _GREEN_("%d") " samples, %s / %s at clock " _GREEN_("%.2f")
+                  , len
+                  , pm3_mod_name(opts.mod)
+                  , pm3_enc_name(opts.enc)
+                  , opts.clk
+                 );
+    return PM3_SUCCESS;
+}
+
+
+// Run whichever of the existing demodulators the hypothesis names.  This
+// command is a parameter suggester, not a decoder - the bit producing path
+// stays exactly the one `data rawdemod` uses, so anything it outputs is as
+// auditable as before.
+static int autodemod_dispatch(const pm3_hyp_t *hyp, int clk, bool invert, bool amp, bool verbose) {
+
+    const int max_err = 100;
+
+    switch (hyp->mod) {
+
+        case PM3_MOD_ASK:
+            if (hyp->enc == PM3_ENC_BIPHASE) {
+                return ASKbiphaseDemod(0, clk, invert ? 1 : 0, max_err, verbose);
+            }
+            if (hyp->enc == PM3_ENC_MANCHESTER) {
+                return ASKDemod(clk, invert ? 1 : 0, max_err, 0, amp, verbose, false, 1);
+            }
+            // askdemod_ext() halves the clock again for askType 0, so the raw
+            // path wants the half symbol rate, not the bit rate.  See the note
+            // on detectclock_fit().
+            return ASKDemod(clk * 2, invert ? 1 : 0, max_err, 0, amp, verbose, false, 0);
+
+        case PM3_MOD_FSK:
+            return FSKrawDemod((uint8_t)clk, invert ? 1 : 0, (uint8_t)hyp->fc_hi, (uint8_t)hyp->fc_lo, verbose);
+
+        case PM3_MOD_PSK:
+            return PSKDemod(clk, invert ? 1 : 0, max_err, verbose);
+
+        case PM3_MOD_NRZ:
+            return NRZrawDemod(clk, invert ? 1 : 0, max_err, verbose);
+    }
+    return PM3_ESOFT;
+}
+
+// Count the chips the demodulator could not call.
+static size_t autodemod_markers(void) {
+
+    size_t markers = 0;
+    for (size_t i = 0; i < g_DemodBufferLen; i++) {
+        if (g_DemodBuffer[i] > 1) {
+            markers++;
+        }
+    }
+    return markers;
+}
+
+// Second opinion on an ASK/raw decode, taken at the chip centres.
+//
+// The shared demodulator recovers its phase from edge positions, which is the
+// only option while the clock is unknown.  It does mean any asymmetry in the
+// waveform lands directly on that phase: an LF tank rings down slower than it
+// charges, so on a COTAG capture every falling edge arrives 10 samples late
+// and every rising edge 10 samples early against a chip of 384.  The chip
+// centres are the furthest points from either edge, so once the clock is
+// settled they are the better place to decide.
+//
+// Only ASK/raw, because only there does the demod buffer hold chips at the
+// hypothesis clock.  The Manchester and biphase paths pair and decode inside
+// the shared demodulator, and raw chips are not interchangeable with that.
+static bool autodemod_reslice(const pm3_hyp_t *hyp, size_t before) {
+
+    if (hyp->mod != PM3_MOD_ASK || hyp->enc != PM3_ENC_RAW || before == 0) {
+        return false;
+    }
+
+    double *sig = pm3_extract(g_GraphBuffer, g_GraphTraceLen, 0, g_GraphTraceLen);
+    if (sig == NULL) {
+        return false;
+    }
+
+    pm3_slice_t sl;
+    const int res = pm3_ask_slice(sig, g_GraphTraceLen, hyp->clk_fine, &sl);
+    free(sig);
+
+    if (res != PM3_SUCCESS) {
+        return false;
+    }
+
+    // Keep whichever demodulation had to guess less often.  Both ran at the
+    // same clock, so the bit counts are comparable and a lower marker count
+    // cannot be bought by decoding fewer chips.
+    if (sl.nbits == 0 || sl.nerrors >= before) {
+        pm3_slice_free(&sl);
+        return false;
+    }
+
+    const size_t n = MIN(sl.nbits, (size_t)MAX_DEMOD_BUF_LEN);
+    setDemodBuff(sl.bits, n, 0);
+    setClockGrid((uint32_t)(hyp->clk_fine + 0.5), (int)sl.phase);
+
+    PrintAndLogEx(INFO, "  resliced...... at the chip centres, %zu demod errors instead of %zu ( eye %.3f )"
+                  , sl.nerrors
+                  , before
+                  , sl.eye
+                 );
+
+    pm3_slice_free(&sl);
+    return true;
+}
+
+// The equivalent hand typed command, so the tool teaches rather than replaces
+// and the result can go in a script.
+static void autodemod_hint(const pm3_hyp_t *hyp, int clk, bool invert, bool amp) {
+
+    const char *flag = "--ar";
+
+    switch (hyp->mod) {
+        case PM3_MOD_ASK:
+            flag = (hyp->enc == PM3_ENC_BIPHASE) ? "--ab"
+                   : (hyp->enc == PM3_ENC_MANCHESTER) ? "--am" : "--ar";
+            break;
+        case PM3_MOD_FSK:
+            flag = "--fs";
+            break;
+        case PM3_MOD_PSK:
+            flag = "--p1";
+            break;
+        case PM3_MOD_NRZ:
+            flag = "--nr";
+            break;
+    }
+
+    const int shown = (hyp->mod == PM3_MOD_ASK && hyp->enc == PM3_ENC_RAW) ? (clk * 2) : clk;
+
+    PrintAndLogEx(HINT, "Hint: the same thing by hand is `" _YELLOW_("data rawdemod %s -c %d%s%s") "`"
+                  , flag
+                  , shown
+                  , invert ? " -i" : ""
+                  , amp ? " -a" : ""
+                 );
+}
+
+// How clean the demodulation came out.  This is about the demodulation, not
+// about what the bits mean - putting a format to them is `lf search`'s job and
+// this command deliberately stops short of it.
+static void autodemod_quality(void) {
+
+    if (g_DemodBufferLen == 0) {
+        return;
+    }
+
+    size_t markers = 0;
+    for (size_t i = 0; i < g_DemodBufferLen; i++) {
+        if (g_DemodBuffer[i] > 1) {
+            markers++;
+        }
+    }
+
+    if (markers) {
+        PrintAndLogEx(WARNING, "  quality....... %zu of %zu bits are demod errors", markers, g_DemodBufferLen);
+    } else {
+        PrintAndLogEx(SUCCESS, "  quality....... no demod errors in %zu bits", g_DemodBufferLen);
+    }
+}
+
+static int CmdAutoDemod(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data autodemod",
+                  "Tries to work out the modulation, encoding and clock of the wave in the GraphBuffer then run the matching demodulator\n"
+                  "Adds no signal processing of its own, the analysis is `data spectrum` and `data fitscore`\n"
+                  "A fractional clock is resampled onto an integer grid first",
+                  "data autodemod                     --> analyse and demodulate\n"
+                  "data autodemod --dry-run           --> decide and print, demodulate nothing\n"
+                  "data autodemod --thres 6           --> insist on a 6 dB margin before trusting rank 1\n"
+                  "data autodemod --invert --amp      --> pass invert and amplify through to the demod\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "start", "<int>", "first sample of the GraphBuffer to use (def 0)"),
+        arg_int0(NULL, "size", "<int>", "samples to analyse (def 16384)"),
+        arg_dbl0(NULL, "thres", "<dB>", "margin below which rank 1 is called ambiguous (def 3.0)"),
+        arg_lit0(NULL, "dry-run", "analyse and decide, but do not demodulate"),
+        arg_lit0("a", "amp", "amplify the signal before ASK demodulation"),
+        arg_lit0("i", "invert", "invert the demodulated output"),
+        arg_lit0("v", "verbose", "show the demodulator's own output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int start = arg_get_int_def(ctx, 1, 0);
+    int size = arg_get_int_def(ctx, 2, 0);
+    double thres = arg_get_dbl_def(ctx, 3, 3.0);
+    bool dry_run = arg_get_lit(ctx, 4);
+    bool amp = arg_get_lit(ctx, 5);
+    bool invert = arg_get_lit(ctx, 6);
+    bool verbose = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
+
+    if (size == 0) {
+        const size_t avail = (g_GraphTraceLen > (size_t)MAX(start, 0)) ? g_GraphTraceLen - (size_t)MAX(start, 0) : 0;
+        size = autodemod_window(start, avail);
+    }
+
+    double *sig = NULL;
+    size_t count = 0, n = 0;
+    int res = dsp_prepare(start, size, &sig, &count, &n);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Auto demodulate") " -----------------------------------");
+
+    // the graph buffer is put back the way we found it unless we get bits out
+    int32_t *backup = NULL;
+    size_t backup_len = g_GraphTraceLen;
+
+    // 1 - spectral analysis, to prune the bank.  Zeroed up front because the
+    // steps below read it whether or not the analysis had anything to say.
+    pm3_spec_analysis_t an = {0};
+    int mod_mask = 0;
+
+    if (pm3_analyse(sig, count, n, PM3_WIN_HANN, &an) == PM3_SUCCESS) {
+
+        PrintAndLogEx(INFO, "  spectrum...... %s, confidence %s"
+                      , pm3_family_name(an.family)
+                      , pm3_confidence_name(an.confidence)
+                     );
+
+        // only prune on a hint worth trusting, otherwise search everything
+        if (an.confidence >= PM3_CONF_MEDIUM) {
+            switch (an.family) {
+                case PM3_FAM_FSK:
+                    mod_mask = 1 << PM3_MOD_FSK;
+                    break;
+                case PM3_FAM_PSK:
+                    mod_mask = 1 << PM3_MOD_PSK;
+                    break;
+                case PM3_FAM_ASK:
+                case PM3_FAM_MANCHESTER:
+                    mod_mask = (1 << PM3_MOD_ASK) | (1 << PM3_MOD_NRZ);
+                    break;
+                case PM3_FAM_NRZ:
+                    mod_mask = (1 << PM3_MOD_NRZ) | (1 << PM3_MOD_ASK);
+                    break;
+                case PM3_FAM_UNKNOWN:
+                    break;
+            }
+        }
+    }
+
+    // 1b - a switched carrier has to be rectified before anything downstream
+    // will work.  The demodulators threshold the samples as they stand, and a
+    // capture with two samples per carrier period alternates sign on every
+    // one of them, so every symbol averages to zero and no demodulator can
+    // ever produce a bit.  Replace the buffer with its envelope and carry on.
+    if (an.needs_envelope) {
+
+        PrintAndLogEx(INFO, "  carrier....... rf/%.2f switched on and off ( envelope depth %.2f )"
+                      , an.carrier_clk
+                      , an.envelope_depth
+                     );
+
+        double *whole = pm3_extract(g_GraphBuffer, g_GraphTraceLen, 0, g_GraphTraceLen);
+        double *env = (whole != NULL) ? pm3_envelope(whole, g_GraphTraceLen, 0) : NULL;
+        free(whole);
+
+        if (env != NULL) {
+
+            autodemod_backup(&backup, backup_len);
+            autodemod_store(env, g_GraphTraceLen);
+            free(env);
+
+            double *re = pm3_extract(g_GraphBuffer, g_GraphTraceLen, (size_t)start, count);
+            if (re != NULL) {
+                free(sig);
+                sig = re;
+            }
+
+            PrintAndLogEx(INFO, "  rectified..... the data is in the envelope, demodulating that instead");
+
+        } else {
+            PrintAndLogEx(WARNING, "  rectified..... failed to allocate, carrying on with the raw samples");
+        }
+    }
+
+    if (mod_mask) {
+        PrintAndLogEx(INFO, "  bank.......... pruned to %s", pm3_family_name(an.family));
+    } else {
+        PrintAndLogEx(INFO, "  bank.......... full, the spectral hint was not strong enough to prune on");
+    }
+
+    // 2 - rank the hypotheses
+    pm3_fit_opts_t opts = {0};
+    opts.mod_mask = mod_mask;
+
+    pm3_fit_t fit;
+    res = pm3_fit_run(sig, count, &opts, &fit);
+
+    // a pruned bank that finds nothing is worse than no pruning
+    if (res != PM3_SUCCESS && mod_mask != 0) {
+        PrintAndLogEx(INFO, "  bank.......... pruned search came up empty, retrying with everything");
+        opts.mod_mask = 0;
+        res = pm3_fit_run(sig, count, &opts, &fit);
+    }
+    free(sig);
+
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "no hypothesis fit the signal");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("data spectrum --sq") "` to see what is actually there");
+        return res;
+    }
+
+    const pm3_hyp_t *best = &fit.items[0];
+
+    PrintAndLogEx(SUCCESS, "  decision...... " _GREEN_("%s / %s") " at clock " _GREEN_("%.2f")
+                  , pm3_mod_name(best->mod)
+                  , pm3_enc_name(best->enc)
+                  , best->clk_fine
+                 );
+    PrintAndLogEx(INFO, "  margin........ %.2f dB, SNR %.2f dB, eye %.3f", best->margin, best->snr_dd, best->eye);
+
+    // 3 - an ambiguous choice is reported, not refused.
+    //
+    // A structural promotion is not a score race, so a negative margin there
+    // is expected and says nothing about confidence - the run lengths settled
+    // it, and they are not a matter of degree.
+    if (fit.promoted) {
+        PrintAndLogEx(INFO, "  chosen on..... run length evidence, not on score");
+    } else if (best->margin < thres) {
+        PrintAndLogEx(WARNING, "margin %.2f dB is below the %.2f dB threshold, this choice is ambiguous"
+                      , best->margin
+                      , thres
+                     );
+        const size_t show = MIN((size_t)3, fit.count);
+        for (size_t i = 0; i < show; i++) {
+            PrintAndLogEx(INFO, "    %zu. %s / %s at clock %.2f  ( SNR %.2f dB )"
+                          , i + 1
+                          , pm3_mod_name(fit.items[i].mod)
+                          , pm3_enc_name(fit.items[i].enc)
+                          , fit.items[i].clk_fine
+                          , fit.items[i].snr_dd
+                         );
+        }
+    }
+
+    if (dry_run) {
+        autodemod_hint(best, (int)(best->clk_fine + 0.5), invert, amp);
+        PrintAndLogEx(INFO, "dry run, nothing was demodulated and the DemodBuffer is untouched");
+        pm3_fit_free(&fit);
+        PrintAndLogEx(NORMAL, "");
+        return PM3_SUCCESS;
+    }
+
+    // 4 - put a fractional clock onto an integer grid before dispatching.
+    //
+    // This is the whole point of the exercise.  A clock of 64.19 walks a full
+    // symbol out of step after 340 symbols, so the demodulator gets the start
+    // of the capture right and turns the rest to mush - which presents to the
+    // user as a noisy tag rather than as a wrong clock.
+    const double frac = fabs(best->clk_fine - floor(best->clk_fine + 0.5));
+
+    if (frac > 0.05) {
+
+        const double target = floor(best->clk_fine + 0.5);
+        const double ratio = target / best->clk_fine;
+
+        double *whole = pm3_extract(g_GraphBuffer, g_GraphTraceLen, 0, g_GraphTraceLen);
+        if (whole != NULL) {
+
+            size_t out_len = 0;
+            double *rs = pm3_resample(whole, g_GraphTraceLen, ratio, &out_len);
+            free(whole);
+
+            if (rs != NULL) {
+
+                const size_t was = g_GraphTraceLen;
+
+                autodemod_backup(&backup, g_GraphTraceLen);
+                autodemod_store(rs, out_len);
+                free(rs);
+
+                PrintAndLogEx(INFO, "  resampled..... clock %.2f -> %.0f, buffer %zu -> %zu samples"
+                              , best->clk_fine
+                              , target
+                              , was
+                              , out_len
+                             );
+                PrintAndLogEx(INFO, "  a fractional clock drifts out of step across a long capture, this fixes that");
+            }
+        }
+    }
+
+    // 5..7 - dispatch, and fall through to the next ranked hypothesis on failure
+    const size_t tries = MIN((size_t)3, fit.count);
+    bool ok = false;
+
+    for (size_t i = 0; i < tries; i++) {
+
+        const pm3_hyp_t *h = &fit.items[i];
+        const int clk = (int)(h->clk_fine + 0.5);
+
+        PrintAndLogEx(INFO, "  attempt %zu..... %s / %s at clock %d", i + 1, pm3_mod_name(h->mod), pm3_enc_name(h->enc), clk);
+
+        if (autodemod_dispatch(h, clk, invert, amp, verbose) == PM3_SUCCESS && g_DemodBufferLen > 0) {
+
+            autodemod_reslice(h, autodemod_markers());
+
+            PrintAndLogEx(SUCCESS, "  demodulated... " _GREEN_("%zu") " bits into the DemodBuffer", g_DemodBufferLen);
+            autodemod_quality();
+            autodemod_hint(h, clk, invert, amp);
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf search -1") "` to identify what the bits are");
+            ok = true;
+            break;
+        }
+
+        PrintAndLogEx(INFO, "                 no bits, moving on");
+    }
+
+    if (ok == false) {
+
+        PrintAndLogEx(WARNING, "none of the top %zu hypotheses produced bits", tries);
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("data fitscore --all") "` to see the whole ranking");
+
+        // leave the user's buffer as we found it if we changed it for nothing
+        if (backup != NULL) {
+            memcpy(g_GraphBuffer, backup, backup_len * sizeof(int32_t));
+            g_GraphTraceLen = backup_len;
+            PrintAndLogEx(INFO, "the graph buffer has been put back the way it was");
+        }
+    }
+
+    free(backup);
+    pm3_fit_free(&fit);
+    PrintAndLogEx(NORMAL, "");
+    return ok ? PM3_SUCCESS : PM3_ESOFT;
+}
+
 static command_t CommandTable[] = {
     {"help",             CmdHelp,                 AlwaysAvailable,  "This help"},
-    {"-----------",      CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("General") "-------------------------"},
+    {"-----------",      CmdHelp,                 AlwaysAvailable, "------------------------------ " _CYAN_("General") " -------------------------------"},
     {"clear",            CmdBuffClear,            AlwaysAvailable,  "Clears various buffers used by the graph window"},
     {"hide",             CmdHide,                 AlwaysAvailable,  "Hide the graph window"},
     {"load",             CmdLoad,                 AlwaysAvailable,  "Load contents of file into graph window"},
@@ -4120,7 +5734,7 @@ static command_t CommandTable[] = {
     {"setdebugmode",     CmdSetDebugMode,         AlwaysAvailable,  "Set Debugging Level on client side"},
     {"xor",              CmdXor,                  AlwaysAvailable,  "Xor a input string"},
 
-    {"-----------",      CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Modulation") "-------------------------"},
+    {"-----------",      CmdHelp,                 AlwaysAvailable, "----------------------------- " _CYAN_("Modulation") " -----------------------------"},
     {"biphaserawdecode", CmdBiphaseDecodeRaw,     AlwaysAvailable,  "Biphase decode bin stream in DemodBuffer"},
     {"detectclock",      CmdDetectClockRate,      AlwaysAvailable,  "Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer"},
     {"fsktonrz",         CmdFSKToNRZ,             AlwaysAvailable,  "Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)"},
@@ -4128,7 +5742,13 @@ static command_t CommandTable[] = {
     {"modulation",       CmdDataModulationSearch, AlwaysAvailable,  "Identify LF signal for clock and modulation"},
     {"rawdemod",         CmdRawDemod,             AlwaysAvailable,  "Demodulate the data in the GraphBuffer and output binary"},
 
-    {"-----------",      CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Graph") "-------------------------"},
+    {"-----------",      CmdHelp,                 AlwaysAvailable, "-------------------------- " _CYAN_("Frequency domain") " --------------------------"},
+    {"autodemod",        CmdAutoDemod,            AlwaysAvailable,  "Detect modulation, encoding and clock, then demodulate"},
+    {"fft",              CmdFFT,                  AlwaysAvailable,  "Fourier transform of the GraphBuffer"},
+    {"fitscore",         CmdFitScore,             AlwaysAvailable,  "Rank matched filter hypotheses for modulation, encoding and clock"},
+    {"spectrum",         CmdSpectrum,             AlwaysAvailable,  "Spectral peaks, symbol rate and modulation family hint"},
+
+    {"-----------",      CmdHelp,                 AlwaysAvailable, "------------------------------- " _CYAN_("Graph") " --------------------------------"},
     {"askedgedetect",    CmdAskEdgeDetect,        AlwaysAvailable,  "Adjust Graph for manual ASK demod"},
     {"autocorr",         CmdAutoCorr,             AlwaysAvailable,  "Autocorrelation over window"},
     {"convertbitstream", CmdConvertBitStream,     AlwaysAvailable,  "Convert GraphBuffer's 0/1 values to 127 / -127"},
@@ -4150,7 +5770,7 @@ static command_t CommandTable[] = {
     {"undecimate",       CmdUndecimate,           AlwaysAvailable,  "Un-decimate samples"},
     {"zerocrossings",    CmdZerocrossings,        AlwaysAvailable,  "Count time between zero-crossings"},
 
-    {"-----------",      CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Operations") "-------------------------"},
+    {"-----------",      CmdHelp,                 AlwaysAvailable,      "---------------------------- " _CYAN_("Operations") " ------------------------------"},
     {"asn1",             CmdAsn1Decoder,          AlwaysAvailable,  "ASN1 decoder"},
     {"atr",              CmdAtrLookup,            AlwaysAvailable,  "ATR lookup"},
     {"bitsamples",       CmdBitsamples,           IfPm3Present,     "Get raw samples as bitstring"},
@@ -4161,7 +5781,8 @@ static command_t CommandTable[] = {
     {"samples",          CmdSamples,              IfPm3Present,     "Get raw samples for graph window ( GraphBuffer )"},
     {"qrcode",           CmdQRcode,               AlwaysAvailable,  "Create a QR code"},
 
-    {"-----------",      CmdHelp,                 IfClientDebugEnabled, "------------------------- " _CYAN_("Debug") "-------------------------"},
+    {"-----------",      CmdHelp,                 IfClientDebugEnabled, "------------------------------- " _CYAN_("Debug") " --------------------------------"},
+    {"gensignal",        CmdGenSignal,            IfClientDebugEnabled, "Generate a synthetic LF waveform into the GraphBuffer"},
     {"test_ss8",         CmdTestSaveState8,       IfClientDebugEnabled, "Test the implementation of Buffer Save States (8-bit buffer)"},
     {"test_ss32",        CmdTestSaveState32,      IfClientDebugEnabled, "Test the implementation of Buffer Save States (32-bit buffer)"},
     {"test_ss32s",       CmdTestSaveState32S,     IfClientDebugEnabled, "Test the implementation of Buffer Save States (32-bit signed buffer)"},
