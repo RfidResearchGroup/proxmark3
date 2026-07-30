@@ -1,12 +1,15 @@
 [
     {
         "AID": "0000000000000001",
-        "Vendor": "",
-        "Country": "",
-        "Name": "Livin' card",
-        "Description": "",
-        "Type": "",
-        "Protocol": "mifare_plus"
+        "Vendor": "Bank Mandiri",
+        "Country": "Indonesia",
+        "Name": "Mandiri e-money / Livin' card",
+        "Description": "Mandiri e-money stored-value and transit card",
+        "Type": "transport",
+        "Protocol": "mifare_plus",
+        "Sources": [
+            "android://com.jaklingkoindonesia.app"
+        ]
     },
     {
         "AID": "315041592E5359532E4444463031",
@@ -198,7 +201,8 @@
         "Country": "China",
         "Name": "China City Union",
         "Description": "China City Union transit card",
-        "Type": "transport"
+        "Type": "transport",
+        "Protocol": "fm_cos"
     },
     {
         "AID": "A0000000039010",
@@ -391,6 +395,17 @@
         "Name": "Gemplus ",
         "Description": "",
         "Type": ""
+    },
+    {
+        "AID": "A0000000180F0000018001",
+        "Vendor": "Bank Central Asia (BCA)",
+        "Country": "Indonesia",
+        "Name": "BCA Flazz",
+        "Description": "BCA Flazz stored-value card",
+        "Type": "transport",
+        "Sources": [
+            "android://com.jaklingkoindonesia.app"
+        ]
     },
     {
         "AID": "A0000000181001",
@@ -1715,6 +1730,17 @@
         "Type": ""
     },
     {
+        "AID": "A0000005714E4A43",
+        "Vendor": "Bank DKI",
+        "Country": "Indonesia",
+        "Name": "Bank DKI JakCard",
+        "Description": "Bank DKI JakCard stored-value and transit card",
+        "Type": "transport",
+        "Sources": [
+            "android://com.jaklingkoindonesia.app"
+        ]
+    },
+    {
         "AID": "A00000061700",
         "Vendor": "Fidesmo",
         "Country": "Sweden",
@@ -1804,12 +1830,41 @@
         "Type": ""
     },
     {
+        "AID": "A000424E49100001",
+        "Vendor": "Bank Negara Indonesia (BNI)",
+        "Country": "Indonesia",
+        "Name": "BNI TapCash",
+        "Description": "BNI TapCash stored-value and transit card",
+        "Type": "transport",
+        "Sources": [
+            "android://com.jaklingkoindonesia.app"
+        ]
+    },
+    {
         "AID": "B012345678",
         "Vendor": "MasterCard International",
         "Country": "United States",
         "Name": "Maestro TEST",
         "Description": "Used for development",
         "Type": "EMV"
+    },
+    {
+        "AID": "B0C4C3C5CDA8C7AEB0FC",
+        "Vendor": "Macau Pass",
+        "Country": "Macau",
+        "Name": "Macau mCard",
+        "Description": "GB2312/GBK bytes decode to \u6fb3\u95e8\u901a\u94b1\u5305 (Macau Pass Wallet)",
+        "Type": "transport",
+        "Protocol": "fm_cos"
+    },
+    {
+        "AID": "B0C4C3C5CDA8BBFDB7D6",
+        "Vendor": "Macau Pass",
+        "Country": "Macau",
+        "Name": "Macau Pass Points",
+        "Description": "GB2312/GBK bytes decode to \u6fb3\u95e8\u901a\u79ef\u5206 (Macau Pass Points)",
+        "Type": "transport",
+        "Protocol": "fm_cos"
     },
     {
         "AID": "D040000001000002",
@@ -3740,5 +3795,14 @@
             "android://com.ui.uid.standard",
             "android://com.ui.uid.client"
         ]
+    },
+    {
+        "AID": "A00000000385922751",
+        "Vendor": "HOP",
+        "Country": "Thailand",
+        "Name": "HOP Bangkok",
+        "Description": "Bangkok transit application",
+        "Type": "transport",
+        "Protocol": "fm_cos"
     }
 ]
