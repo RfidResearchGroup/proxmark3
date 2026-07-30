@@ -511,13 +511,13 @@ while true; do
 
       echo -e "\n${C_BLUE}Testing LF:${C_NC}"
       if ! CheckExecute "lf hitag2 test"             "$CLIENTBIN -c 'lf hitag test'" "Tests \( ok"; then break; fi
-      if ! CheckExecute "lf cotag demod test 1/4"    "$CLIENTBIN -c 'data load -f traces/lf_cotag_220_8331.pm3; lf cotag demod -c 272'" \
+      if ! CheckExecute "lf cotag demod test 1/4"    "$CLIENTBIN -c 'data load -f traces/lf_cotag_220_8331.pm3; lf cotag demod -c 272 -v'" \
                                                                      "data hex:     0    0    0    0    0    0    0    0    0    0    0    0    0    1    0    5    8    2    4    E    0    0    0    0    8    0    2    3    D    F    7    7"; then break; fi
-      if ! CheckExecute "lf cotag demod test 2/4"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_passive_02402447_700000.pm3; lf cotag demod'" \
+      if ! CheckExecute "lf cotag demod test 2/4"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_passive_02402447_700000.pm3; lf cotag demod -v'" \
                                                                      "data hex:     0    0    0    0    0    0    0    0    0    0    0    0    0    1    0    5    8    2    4    E    0    0    0    0    8    0    2    4    A    8    8    F"; then break; fi
-      if ! CheckExecute "lf cotag demod test 3/4"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_passive_bewator_01576814_700000.pm3; lf cotag demod'" \
+      if ! CheckExecute "lf cotag demod test 3/4"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_passive_bewator_01576814_700000.pm3; lf cotag demod -v'" \
                                                                      "data hex:     0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    7    C    B    B    7    0    0    0    0    8    0    1    8    0    F    6    E"; then break; fi
-      if ! CheckExecute "lf cotag demod test 4/4"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_active_00001577_700000.pm3; lf cotag demod'" \
+      if ! CheckExecute "lf cotag demod test 4/4"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_active_00001577_700000.pm3; lf cotag demod -v'" \
                                                                      "data hex:     0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    2    8    2    7    B    0    4    8    E    0    0    0    0    0    6    2    9"; then break; fi
       if ! CheckExecute "lf AWID test"               "$CLIENTBIN -c 'data load -f traces/lf_AWID-15-259.pm3;lf search -1'" "AWID ID found"; then break; fi
       if ! CheckExecute "lf EM410x test"             "$CLIENTBIN -c 'data load -f traces/lf_EM4102-1.pm3;lf search -1'" "EM410x ID found"; then break; fi
