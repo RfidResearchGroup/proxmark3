@@ -680,7 +680,7 @@ int flash_write(flash_file_t *ctx) {
 
         int pct = 0;
         if (blocks > 50) {
-                
+
             signal(SIGINT, hadouken_on_sigint);
 #ifndef _WIN32
             signal(SIGWINCH, hadouken_on_sigwinch);
@@ -690,7 +690,7 @@ int flash_write(flash_file_t *ctx) {
         }
 
         while (length) {
-           
+
             uint32_t block_size = length;
             if (block_size > BLOCK_SIZE) {
                 block_size = BLOCK_SIZE;

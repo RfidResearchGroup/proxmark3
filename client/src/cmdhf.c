@@ -395,7 +395,7 @@ int CmdHFTune(const char *Cmd) {
         PrintAndLogEx(WARNING, "timeout while waiting for Proxmark HF shutdown, aborting");
         return PM3_ETIMEOUT;
     }
-    PrintAndLogEx(NORMAL, "\x1b%c[2K\r", 30);
+    PrintAndLogEx(NORMAL, _CLR_LINE_ "\r");
 
     if (verbose) {
         PrintAndLogEx(INFO, "Min....... %u mV", v_min);

@@ -1383,22 +1383,22 @@ static void iso15_render_presence_table(const iso15_seen_tag_t *seen, int n,
     for (int i = 0; i < n; i++) {
         if (seen[i].present) {
             PrintAndLogEx(INFO, "%3d   %-25s    %02X       %spresent%s"
-                    , i + 1
-                    , iso15693_sprintUID(NULL, (uint8_t *)seen[i].uid)
-                    , seen[i].dsfid
-                    , c_grn
-                    , c_off
-                );
+                          , i + 1
+                          , iso15693_sprintUID(NULL, (uint8_t *)seen[i].uid)
+                          , seen[i].dsfid
+                          , c_grn
+                          , c_off
+                         );
         } else {
             uint32_t secs = (uint32_t)((now - seen[i].last_seen_ms) / 1000);
             PrintAndLogEx(INFO, "%3d   %-25s    %02X       %sgone%s (%us ago)"
-                    , i + 1
-                    , iso15693_sprintUID(NULL, (uint8_t *)seen[i].uid)
-                    , seen[i].dsfid
-                    , c_yel
-                    , c_off
-                    , secs
-                );
+                          , i + 1
+                          , iso15693_sprintUID(NULL, (uint8_t *)seen[i].uid)
+                          , seen[i].dsfid
+                          , c_yel
+                          , c_off
+                          , secs
+                         );
         }
         lines++;
     }
@@ -3791,12 +3791,12 @@ static int CmdHF15SlixProtectPage(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Trying to set page protection pointer to " _YELLOW_("%d"), payload.divide_ptr);
     PrintAndLogEx(INFO, _YELLOW_("LO") " page access %s%s"
-        , (payload.prot_status & 0x01) ? _RED_("r") : _GREEN_("r")
-        , (payload.prot_status & 0x02) ? _RED_("w") : _GREEN_("w")
-    );
+                  , (payload.prot_status & 0x01) ? _RED_("r") : _GREEN_("r")
+                  , (payload.prot_status & 0x02) ? _RED_("w") : _GREEN_("w")
+                 );
     PrintAndLogEx(INFO, _YELLOW_("HI") " page access %s%s"
-        , (payload.prot_status & 0x10) ? _RED_("r") : _GREEN_("r")
-        , (payload.prot_status & 0x20) ? _RED_("w") : _GREEN_("w"));
+                  , (payload.prot_status & 0x10) ? _RED_("r") : _GREEN_("r")
+                  , (payload.prot_status & 0x20) ? _RED_("w") : _GREEN_("w"));
 
     PacketResponseNG resp;
     clearCommandBuffer();

@@ -239,6 +239,28 @@
             ],
             "usage": "data autocorr [-hg] [-w <dec>]"
         },
+        "data autodemod": {
+            "command": "data autodemod",
+            "description": "Tries to work out the modulation, encoding and clock of the wave in the GraphBuffer then run the matching demodulator Adds no signal processing of its own, the analysis is `data spectrum` and `data fitscore` A fractional clock is resampled onto an integer grid first",
+            "notes": [
+                "data autodemod -> analyse and demodulate",
+                "data autodemod --dry-run -> decide and print, demodulate nothing",
+                "data autodemod --thres 6 -> insist on a 6 dB margin before trusting rank 1",
+                "data autodemod --invert --amp -> pass invert and amplify through to the demod"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--start <int> first sample of the GraphBuffer to use (def 0)",
+                "--size <int> samples to analyse (def 16384)",
+                "--thres <dB> margin below which rank 1 is called ambiguous (def 3.0)",
+                "--dry-run analyse and decide, but do not demodulate",
+                "-a, --amp amplify the signal before ASK demodulation",
+                "-i, --invert invert the demodulated output",
+                "-v, --verbose show the demodulator's own output"
+            ],
+            "usage": "data autodemod [-haiv] [--start <int>] [--size <int>] [--thres <dB>] [--dry-run]"
+        },
         "data biphaserawdecode": {
             "command": "data biphaserawdecode",
             "description": "Biphase decode binary stream in DemodBuffer Converts 10 or 01 -> 1 and 11 or 00 -> 0 - must have binary sequence in DemodBuffer (run `data rawdemod --ar` before) - invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester",
@@ -407,6 +429,50 @@
             ],
             "usage": "data envelope [-h]"
         },
+        "data fft": {
+            "command": "data fft",
+            "description": "Fourier transform of the samples in the GraphBuffer. Reports the magnitude spectrum of the first N/2+1 bins, the input being real. The DC component is removed and the window is normalised to unit variance before the transform, so magnitudes are comparable between captures.",
+            "notes": [
+                "data fft -> transform the whole buffer",
+                "data fft --size 4096 --win blackman -> 4096 point transform, blackman window",
+                "data fft --start 1000 --size 8192 --db -> magnitudes in dB relative to the peak",
+                "data fft --size 4096 --graph -> put the spectrum in the graph window"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--start <int> first sample of the GraphBuffer to use (def 0)",
+                "--size <int> transform length, rounded up to a power of two (def largest that fits)",
+                "--win <hann|hamming|blackman|rect> window function (def hann)",
+                "--db report magnitude in dB relative to the peak bin instead of linear",
+                "--graph write the magnitude spectrum into the GraphBuffer and repaint",
+                "--fs <int> sample rate in Hz, adds a frequency column in Hz",
+                "--bins <int> how many bins to print (def 32, 0 for all)"
+            ],
+            "usage": "data fft [-h] [--start <int>] [--size <int>] [--win <hann|hamming|blackman|rect>] [--db] [--graph] [--fs <int>] [--bins <int>]"
+        },
+        "data fitscore": {
+            "command": "data fitscore",
+            "description": "Rank matched filter hypotheses against the GraphBuffer. A hypothesis is a modulation, a symbol shape and a clock. Each one is scored by correlating the trace against a single symbol template and measuring how tightly the correlator output clusters at the decision instants. Phase is not searched: the correlation is done with an FFT, which yields every phase offset at once. Templates are shaped by an assumed antenna Q, because correlating a bandlimited signal against square edges biases the ranking toward short clocks.",
+            "notes": [
+                "data fitscore -> rank the whole bank",
+                "data fitscore --mod ask --top 5 -> ASK hypotheses only",
+                "data fitscore --clk 64 --all -> everything at clock 64",
+                "data fitscore --verbose -> also put the rank 1 correlator output in the graph"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--start <int> first sample of the GraphBuffer to use (def 0)",
+                "--size <int> samples to analyse, rounded up to a power of two (def 16384)",
+                "--mod <ask|fsk|psk|nrz> restrict to one modulation (def all)",
+                "--clk <int> restrict to one clock (def all candidates)",
+                "--top <int> rows to print (def 10)",
+                "--all print every scored hypothesis",
+                "-v, --verbose write the rank 1 correlator output into the GraphBuffer"
+            ],
+            "usage": "data fitscore [-hv] [--start <int>] [--size <int>] [--mod <ask|fsk|psk|nrz>] [--clk <int>] [--top <int>] [--all]"
+        },
         "data fsktonrz": {
             "command": "data fsktonrz",
             "description": "Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk) Omitted values are autodetect instead",
@@ -422,6 +488,34 @@
                 "--hi <dec> high field clock"
             ],
             "usage": "data fsktonrz [-h] [-c <dec>] [--low <dec>] [--hi <dec>]"
+        },
+        "data gensignal": {
+            "command": "data gensignal",
+            "description": "Developer tool. Fill the GraphBuffer with a synthetic LF waveform. Used with `data fitscore` and `data autodemod`",
+            "notes": [
+                "data gensignal --mod ask --enc manchester --clk 64",
+                "data gensignal --mod ask --enc manchester --clk 64.25 --noise 0.4 --len 20000"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--mod <ask|fsk|psk|nrz> modulation (def ask)",
+                "--enc <raw|manchester|biphase> encoding (def raw)",
+                "--clk <dbl> clock in samples/symbol, may be fractional (def 64)",
+                "--len <int> samples to generate (def 16384)",
+                "--noise <dbl> gaussian noise standard deviation (def 0)",
+                "--drift <dbl> linear DC ramp across the capture (def 0)",
+                "--env <dbl> amplitude envelope swing (def 0)",
+                "--jitter <dbl> per symbol edge jitter, samples (def 0)",
+                "--clip <dbl> hard clip level, 0 for none (def 0)",
+                "--fc <int> PSK subcarrier period (def 4)",
+                "--fchigh <int> FSK long field clock (def 10)",
+                "--fclow <int> FSK short field clock (def 8)",
+                "--q <int> antenna Q to shape the waveform with (def 8)",
+                "--repeat <int> loop a message of this many bits, like a real tag (def 0, random)",
+                "--seed <int> RNG seed, for reproducible runs (def 1)"
+            ],
+            "usage": "data gensignal [-h] [--mod <ask|fsk|psk|nrz>] [--enc <raw|manchester|biphase>] [--clk <dbl>] [--len <int>] [--noise <dbl>] [--drift <dbl>] [--env <dbl>] [--jitter <dbl>] [--clip <dbl>] [--fc <int>] [--fchigh <int>] [--fclow <int>] [--q <int>] [--repeat <int>] [--seed <int>]"
         },
         "data getbitstream": {
             "command": "data getbitstream",
@@ -452,7 +546,7 @@
         },
         "data help": {
             "command": "data help",
-            "description": "help This help ----------- ------------------------- General------------------------- clear Clears various buffers used by the graph window hide Hide the graph window load Load contents of file into graph window num Converts dec/hex/bin plot Show the graph window print Print the data in the DemodBuffer save Save signal trace data setdebugmode Set Debugging Level on client side xor Xor a input string ----------- ------------------------- Modulation------------------------- biphaserawdecode Biphase decode bin stream in DemodBuffer detectclock Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer fsktonrz Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk) manrawdecode Manchester decode binary stream in DemodBuffer modulation Identify LF signal for clock and modulation rawdemod Demodulate the data in the GraphBuffer and output binary ----------- ------------------------- Graph------------------------- askedgedetect Adjust Graph for manual ASK demod autocorr Autocorrelation over window convertbitstream Convert GraphBuffer's 0/1 values to 127 / -127 cthreshold Average out all values between dirthreshold Max rising higher up-thres/ Min falling lower down-thres decimate Decimate samples envelope Generate square envelope of samples grid overlay grid on graph window getbitstream Convert GraphBuffer's >=1 values to 1 and <1 to 0 hpf Remove DC offset from trace iir Apply IIR buttersworth filter on plot data ltrim Trim samples from left of trace mtrim Trim out samples from the specified start to the specified stop norm Normalize max/min to +/-128 rtrim Trim samples from right of trace setgraphmarkers Set the markers in the graph window shiftgraphzero Shift 0 for Graphed wave + or - shift value timescale Set cursor display timescale undecimate Un-decimate samples zerocrossings Count time between zero-crossings ----------- ------------------------- Operations------------------------- asn1 ASN1 decoder atr ATR lookup bmap Convert hex value according a binary template crypto Encrypt and decrypt data diff Diff of input files qrcode Create a QR code --------------------------------------------------------------------------------------- data clear available offline: yes This function clears the BigBuf on device side and graph window ( graphbuffer )",
+            "description": "help This help ----------- ------------------------------ General ------------------------------- clear Clears various buffers used by the graph window hide Hide the graph window load Load contents of file into graph window num Converts dec/hex/bin plot Show the graph window print Print the data in the DemodBuffer save Save signal trace data setdebugmode Set Debugging Level on client side xor Xor a input string ----------- ----------------------------- Modulation ----------------------------- biphaserawdecode Biphase decode bin stream in DemodBuffer detectclock Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer fsktonrz Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk) manrawdecode Manchester decode binary stream in DemodBuffer modulation Identify LF signal for clock and modulation rawdemod Demodulate the data in the GraphBuffer and output binary ----------- -------------------------- Frequency domain -------------------------- autodemod Detect modulation, encoding and clock, then demodulate fft Fourier transform of the GraphBuffer fitscore Rank matched filter hypotheses for modulation, encoding and clock spectrum Spectral peaks, symbol rate and modulation family hint ----------- ------------------------------- Graph -------------------------------- askedgedetect Adjust Graph for manual ASK demod autocorr Autocorrelation over window convertbitstream Convert GraphBuffer's 0/1 values to 127 / -127 cthreshold Average out all values between dirthreshold Max rising higher up-thres/ Min falling lower down-thres decimate Decimate samples envelope Generate square envelope of samples grid overlay grid on graph window getbitstream Convert GraphBuffer's >=1 values to 1 and <1 to 0 hpf Remove DC offset from trace iir Apply IIR buttersworth filter on plot data ltrim Trim samples from left of trace mtrim Trim out samples from the specified start to the specified stop norm Normalize max/min to +/-128 rtrim Trim samples from right of trace setgraphmarkers Set the markers in the graph window shiftgraphzero Shift 0 for Graphed wave + or - shift value timescale Set cursor display timescale undecimate Un-decimate samples zerocrossings Count time between zero-crossings ----------- ---------------------------- Operations ------------------------------ asn1 ASN1 decoder atr ATR lookup bmap Convert hex value according a binary template crypto Encrypt and decrypt data diff Diff of input files qrcode Create a QR code --------------------------------------------------------------------------------------- data clear available offline: yes This function clears the BigBuf on device side and graph window ( graphbuffer )",
             "notes": [
                 "data clear"
             ],
@@ -773,6 +867,29 @@
                 "-n <dec> shift + or -"
             ],
             "usage": "data shiftgraphzero [-h] -n <dec>"
+        },
+        "data spectrum": {
+            "command": "data spectrum",
+            "description": "Spectral analysis of the GraphBuffer. Reports the strongest spectral peaks with a sub bin estimate of the symbol clock, the squaring and delay-and-multiply spectra which expose rates the plain spectrum nulls out, and a modulation family hint derived from spectral shape alone. Run this on a trace that will not decode.",
+            "notes": [
+                "data spectrum -> peak table and family hint",
+                "data spectrum --top 8 --sq -> more peaks, plus the squaring spectrum",
+                "data spectrum --stft --size 2048 -> spectrogram over the whole capture",
+                "data spectrum --stft --size 2048 --hop 256 -> finer time resolution"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--start <int> first sample of the GraphBuffer to use (def 0)",
+                "--size <int> transform length, rounded up to a power of two (def largest that fits)",
+                "--win <hann|hamming|blackman|rect> window function (def hann)",
+                "--top <int> number of peaks to report (def 5)",
+                "--sq also show the squaring and delay-and-multiply spectra",
+                "--stft sliding window spectrogram, ridge tracking and drift",
+                "--hop <int> STFT hop in samples (def size/4)",
+                "--fs <int> sample rate in Hz, adds a frequency column in Hz"
+            ],
+            "usage": "data spectrum [-h] [--start <int>] [--size <int>] [--win <hann|hamming|blackman|rect>] [--top <int>] [--sq] [--stft] [--hop <int>] [--fs <int>]"
         },
         "data test_ss32": {
             "command": "data test_ss32",
@@ -1774,35 +1891,20 @@
             ],
             "usage": "hf 14b wrbl [-h] [-b <dec>] -d <hex> [--512] [--4k] [--sb] [--force]"
         },
-        "hf 15 cfinalize": {
-            "command": "hf 15 cfinalize",
-            "description": "Finalize a magic ISO15693 'V3' tag. This operation is irreversible. After finalize the configuration area is erased and the UID can no longer be changed. Set the UID with `hf 15 csetuid --v3` first, then lock it in with this command.",
-            "notes": [
-                "hf 15 cfinalize -y"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-y, --yes Confirm the irreversible finalize operation"
-            ],
-            "usage": "hf 15 cfinalize [-hy]"
-        },
         "hf 15 csetuid": {
             "command": "hf 15 csetuid",
-            "description": "Set UID for magic Chinese card (only works with such cards) For magic 'V3' tags this writes the UID configuration only and is repeatable; run `hf 15 cfinalize` afterwards to lock the UID permanently.",
+            "description": "Set UID for magic Chinese card (only works with such cards)",
             "notes": [
                 "hf 15 csetuid -u E011223344556677 -> use gen1 command",
-                "hf 15 csetuid -u E011223344556677 --v2 -> use gen2 command",
-                "hf 15 csetuid -u E011223344556677 --v3 -> use gen3 (V3) magic tag"
+                "hf 15 csetuid -u E011223344556677 --v2 -> use gen2 command"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-u, --uid <hex> UID, 8 hex bytes",
-                "-2, --v2 Use gen2 magic command",
-                "-3, --v3 Use gen3 (V3) magic tag (repeatable, needs cfinalize)"
+                "-2, --v2 Use gen2 magic command"
             ],
-            "usage": "hf 15 csetuid [-h23] -u <hex>"
+            "usage": "hf 15 csetuid [-h2] -u <hex>"
         },
         "hf 15 demod": {
             "command": "hf 15 demod",
@@ -5095,11 +5197,12 @@
         },
         "hf legic clone": {
             "command": "hf legic clone",
-            "description": "Rewrite a LEGIC dump for a new target tag or MCC. Use --mcc to rewrite only the dump obfuscation, or --write to clone to the current tag.",
+            "description": "Rewrite a LEGIC dump for a new target tag or MCC. Use --mcc to rewrite only the dump obfuscation, or --write to clone to the current tag. Use --kgh with --write to recalculate UID-bound KGH payload CRCs.",
             "notes": [
                 "hf legic clone -f src.bin -c 39 -o clone.bin",
                 "hf legic clone -f src.bin --write",
-                "hf legic clone -f src.bin --write -o clone.bin"
+                "hf legic clone -f src.bin --write --kgh",
+                "hf legic clone -f src.bin --write --kgh -o clone.bin"
             ],
             "offline": false,
             "options": [
@@ -5107,9 +5210,10 @@
                 "-f, --file <fn> Source dump file",
                 "--mcc <hex> Target MCC byte for output-only cloning",
                 "-o, --output <fn> Output cloned dump file",
-                "-w, --write Write cloned dump to the currently attached tag"
+                "-w, --write Write cloned dump to the currently attached tag",
+                "--kgh Recalculate KGH payload CRCs"
             ],
-            "usage": "hf legic clone [-hw] -f <fn> [--mcc <hex>] [-o <fn>]"
+            "usage": "hf legic clone [-hw] -f <fn> [--mcc <hex>] [-o <fn>] [--kgh]"
         },
         "hf legic crc": {
             "command": "hf legic crc",
@@ -5249,16 +5353,18 @@
             "description": "Clone a LEGIC Prime dump to the currently attached tag. Optionally apply a DCF update after cloning, but only when explicitly requested.",
             "notes": [
                 "hf legic migrate -f src.bin",
+                "hf legic migrate -f src.bin --kgh",
                 "hf legic migrate -f src.bin --dcf 60EA --danger"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> Source dump file",
+                "--kgh Recalculate KGH payload CRCs",
                 "--dcf <hex> Optional DCF bytes to write after clone",
                 "--danger Allow the explicit DCF write"
             ],
-            "usage": "hf legic migrate [-h] -f <fn> [--dcf <hex>] [--danger]"
+            "usage": "hf legic migrate [-h] -f <fn> [--kgh] [--dcf <hex>] [--danger]"
         },
         "hf legic rdbl": {
             "command": "hf legic rdbl",
@@ -11997,7 +12103,7 @@
         },
         "lf help": {
             "command": "lf help",
-            "description": "help This help ----------- -------------- Low Frequency -------------- awid { AWID RFIDs... } cotag { COTAG CHIPs... } destron { FDX-A Destron RFIDs... } em { EM CHIPs & RFIDs... } fdxb { FDX-B RFIDs... } gallagher { GALLAGHER RFIDs... } gproxii { Guardall Prox II RFIDs... } hid { HID Prox RFIDs... } hitag { Hitag CHIPs... } idteck { Idteck RFIDs... } indala { Indala RFIDs... } io { ioProx RFIDs... } jablotron { Jablotron RFIDs... } keri { KERI RFIDs... } motorola { Motorola Flexpass RFIDs... } nedap { Nedap RFIDs... } nexwatch { NexWatch RFIDs... } noralsy { Noralsy RFIDs... } pac { PAC/Stanley RFIDs... } paradox { Paradox RFIDs... } pcf7931 { PCF7931 CHIPs... } presco { Presco RFIDs... } pyramid { Farpointe/Pyramid RFIDs... } securakey { Securakey RFIDs... } ti { TI CHIPs... } t55xx { T55xx CHIPs... } viking { Viking RFIDs... } visa2000 { Visa2000 RFIDs... } ----------- --------------------- General --------------------- search Read and Search for valid known tag --------------------------------------------------------------------------------------- lf config available offline: no Get/Set config for LF sampling, bit/sample, decimation, frequency These changes are temporary, will be reset after a power cycle. - use `lf read` performs a read (active field) - use `lf sniff` performs a sniff (no active field)",
+            "description": "help This help ----------- -------------- Low Frequency -------------- awid { AWID RFIDs... } cotag { COTAG CHIPs... } destron { FDX-A Destron RFIDs... } em { EM CHIPs & RFIDs... } fdxb { FDX-B RFIDs... } gallagher { GALLAGHER RFIDs... } gproxii { Guardall Prox II RFIDs... } hid { HID Prox RFIDs... } hitag { Hitag CHIPs... } idteck { Idteck RFIDs... } indala { Indala RFIDs... } io { ioProx RFIDs... } jablotron { Jablotron RFIDs... } keri { KERI RFIDs... } motorola { Motorola Flexpass RFIDs... } nedap { Nedap RFIDs... } nexwatch { NexWatch RFIDs... } noralsy { Noralsy RFIDs... } pac { PAC/Stanley RFIDs... } paradox { Paradox RFIDs... } pcf7931 { PCF7931 CHIPs... } presco { Presco RFIDs... } pyramid { Farpointe/Pyramid RFIDs... } securakey { Securakey RFIDs... } ti { TI CHIPs... } t55xx { T55xx CHIPs... } trovan { Trovan animal IDs... } viking { Viking RFIDs... } visa2000 { Visa2000 RFIDs... } ----------- --------------------- General --------------------- search Read and Search for valid known tag --------------------------------------------------------------------------------------- lf config available offline: no Get/Set config for LF sampling, bit/sample, decimation, frequency These changes are temporary, will be reset after a power cycle. - use `lf read` performs a read (active field) - use `lf sniff` performs a sniff (no active field)",
             "notes": [
                 "lf config -> shows current config",
                 "lf config -b 8 --125 -> samples at 125 kHz, 8 bps",
@@ -13910,7 +14016,7 @@
         },
         "lf t55xx help": {
             "command": "lf t55xx help",
-            "description": "----------- ---------------------------- notice ----------------------------- Remember to run `lf t55xx detect` first whenever a new card is placed on the Proxmark3 or the config block changed. help This help ----------- --------------------- operations --------------------- config Set/Get T55XX configuration (modulation, inverted, offset, rate) detect Try detecting the tag modulation from reading the configuration block info Show T55x7 configuration data (page 0/ blk 0) trace Show T55x7 traceability data (page 1/ blk 0-1) view Display content from tag dump file ----------- --------------------- recovery --------------------- sniff Attempt to recover T55xx commands from sample buffer --------------------------------------------------------------------------------------- lf t55xx clonehelp available offline: no Display a list of available commands for cloning specific techs on T5xx tags",
+            "description": "----------- ------------------------------- notice --------------------------------- Always run `lf t55xx detect` first whenever a new card is placed on the Proxmark3 or the config block changed. help This help ----------- ----------------------------- operations ------------------------------- config Set/Get T55XX configuration (modulation, inverted, offset, rate) detect Try detecting the tag modulation from reading the configuration block info Show T55x7 configuration data (page 0/ blk 0) trace Show T55x7 traceability data (page 1/ blk 0-1) view Display content from tag dump file ----------- ------------------------------ recovery -------------------------------- sniff Attempt to recover T55xx commands from sample buffer --------------------------------------------------------------------------------------- lf t55xx clonehelp available offline: no Display a list of available commands for cloning specific techs on T5xx tags",
             "notes": [
                 "lf t55xx clonehelp"
             ],
@@ -14221,6 +14327,50 @@
                 "--crc <hex> optional - crc"
             ],
             "usage": "lf ti write [-h] -r <hex> [--crc <hex>]"
+        },
+        "lf trovan clone": {
+            "command": "lf trovan clone",
+            "description": "clone a Trovan animal ID to a T55x7, Q5/T5555 or EM4305/4469 tag The ID is the 10 hex digits printed on the tag, with or without dashes.",
+            "notes": [
+                "lf trovan clone --id 0007F9043A",
+                "lf trovan clone --id 00-07F9-043A",
+                "lf trovan clone --id 0007F9043A --q5"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--id <hex> Trovan animal ID, 10 hex digits",
+                "--q5 specify writing to Q5/T5555 tag",
+                "--em specify writing to EM4305/4469 tag"
+            ],
+            "usage": "lf trovan clone [-h] --id <hex> [--q5] [--em]"
+        },
+        "lf trovan help": {
+            "command": "lf trovan help",
+            "description": "help This help demod demodulate a Trovan tag from the GraphBuffer --------------------------------------------------------------------------------------- lf trovan demod available offline: yes Demodulate a Trovan animal ID tag from the GraphBuffer",
+            "notes": [
+                "lf trovan demod"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "lf trovan demod [-hv]"
+        },
+        "lf trovan reader": {
+            "command": "lf trovan reader",
+            "description": "read a Trovan animal ID tag",
+            "notes": [
+                "lf trovan reader -@ -> continuous reader mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-@ optional - continuous reader mode",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "lf trovan reader [-h@v]"
         },
         "lf tune": {
             "command": "lf tune",
@@ -15873,8 +16023,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 889,
+        "commands_extracted": 896,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-07-26T21:37:31+00:00"
+        "extracted_on": "2026-07-30T14:44:57+00:00"
     }
 }
