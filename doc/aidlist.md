@@ -30,6 +30,7 @@ Each entry in `client/resources/aidlist.json` must contain all of the fields bel
   - `ccc_digital_car_key`
   - `cna_calypso`
   - `csa_aliro`
+  - `fm_cos`
   - `google_smart_tap`
   - `hid_seos`
   - `ict_protege_mobile`
