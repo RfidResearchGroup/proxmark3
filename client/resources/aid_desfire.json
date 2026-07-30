@@ -24,14 +24,6 @@
         "Type": "pacs"
     },
     {
-        "AID": "1010F6",
-        "Vendor": "VDE",
-        "Country": "DE",
-        "Name": "VDE EV charging",
-        "Description": "Found on a DESFire card.",
-        "Type": "payment system"
-    },
-    {
         "AID": "1023F5",
         "Vendor": "Integrated Control Technology Limited (ICT)",
         "Country": "NZ",
@@ -168,6 +160,22 @@
         "Type": "pacs"
     },
     {
+        "AID": "416343",
+        "Vendor": "Ubiquiti Inc",
+        "Country": "US",
+        "Name": "UniFi Access ACC App",
+        "Description": "Application created after enrollment into the system, containins unique authentication info",
+        "Type": "pacs"
+    },
+    {
+        "AID": "454955",
+        "Vendor": "Ubiquiti Inc",
+        "Country": "US",
+        "Name": "UniFi Access Touch Pass Apple Wallet Express",
+        "Description": "AID value is 'UIE' (UniFi Express) reversed. This app is selectable with or without auth",
+        "Type": "pacs"
+    },
+    {
         "AID": "4791DA",
         "Vendor": "Prima Systems",
         "Country": "SI",
@@ -184,6 +192,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "534955",
+        "Vendor": "Ubiquiti Inc",
+        "Country": "US",
+        "Name": "UniFi Access Touch Pass Apple Wallet Secure",
+        "Description": "AID value is 'UIS' (UniFi Secure) reversed. This app is selectable only after manual auth",
+        "Type": "pacs"
+    },
+    {
         "AID": "6F706C",
         "Vendor": "Openpath",
         "Country": "US",
@@ -197,6 +213,22 @@
         "Country": "CA",
         "Name": "BlueLINE EV1 PACS Credential",
         "Description": "Access Control",
+        "Type": "pacs"
+    },
+    {
+        "AID": "764970",
+        "Vendor": "Ubiquiti Inc",
+        "Country": "US",
+        "Name": "UniFi Access VID App",
+        "Description": "Contains issuer-signed static credential information used for KDF & other authentication operations",
+        "Type": "pacs"
+    },
+    {
+        "AID": "84D3FC",
+        "Vendor": "Ubiquiti Inc",
+        "Country": "US",
+        "Name": "UniFi Access FCD App",
+        "Description": "Contains static credential information used for KDF & other authentication operations",
         "Type": "pacs"
     },
     {
@@ -322,7 +354,7 @@
     {
         "AID": "F52100",
         "Vendor": "Lucid Group / dormakaba",
-        "Country": "US",
+        "Country": "US / CH",
         "Name": "Lucid Motors Valet Card / Kaba evolo - Access",
         "Description": "Used by both Lucid Motors valet card and Kaba evolo - KabaApplication.Access",
         "Type": "pacs"
@@ -418,7 +450,7 @@
     {
         "AID": "F51CD6",
         "Vendor": "LEAF",
-        "Country": "N/A",
+        "Country": "US",
         "Name": "LEAF Verified Open Application",
         "Description": "LEAF Verified Open Application",
         "Type": "pacs"
@@ -426,7 +458,7 @@
     {
         "AID": "F51CD8",
         "Vendor": "LEAF",
-        "Country": "N/A",
+        "Country": "US",
         "Name": "LEAF Si Universal",
         "Description": "LEAF Si Universal",
         "Type": "pacs"
@@ -434,7 +466,7 @@
     {
         "AID": "F51CD9",
         "Vendor": "LEAF",
-        "Country": "N/A",
+        "Country": "US",
         "Name": "LEAF Si Universal",
         "Description": "LEAF Si Universal",
         "Type": "pacs"
@@ -442,7 +474,7 @@
     {
         "AID": "F51CDA",
         "Vendor": "LEAF",
-        "Country": "N/A",
+        "Country": "US",
         "Name": "LEAF Cc Enterprise",
         "Description": "LEAF Cc Enterprise",
         "Type": "pacs"
@@ -450,7 +482,7 @@
     {
         "AID": "F51CDB",
         "Vendor": "LEAF",
-        "Country": "N/A",
+        "Country": "US",
         "Name": "LEAF Cc Enterprise",
         "Description": "LEAF Cc Enterprise",
         "Type": "pacs"
@@ -458,7 +490,7 @@
     {
         "AID": "F51CDE",
         "Vendor": "LEAF",
-        "Country": "N/A",
+        "Country": "US",
         "Name": "LEAF Cc Enterprise (Old)",
         "Description": "LEAF Cc Enterprise (Old)",
         "Type": "pacs"
@@ -466,7 +498,7 @@
     {
         "AID": "F51CDF",
         "Vendor": "LEAF",
-        "Country": "N/A",
+        "Country": "US",
         "Name": "LEAF Cc Enterprise (Apple Wallet)",
         "Description": "LEAF Cc Enterprise app found on Apple Wallet credentials",
         "Type": "pacs"
@@ -474,7 +506,7 @@
     {
         "AID": "F532F0",
         "Vendor": "LEAF",
-        "Country": "N/A",
+        "Country": "US",
         "Name": "LEAF Backwards Compat",
         "Description": "LEAF Backwards Compat",
         "Type": "pacs"
@@ -482,7 +514,7 @@
     {
         "AID": "F51CDC",
         "Vendor": "LEAF",
-        "Country": "N/A",
+        "Country": "US",
         "Name": "LEAF Campus",
         "Description": "LEAF Campus",
         "Type": "pacs"
@@ -490,7 +522,7 @@
     {
         "AID": "42494F",
         "Vendor": "LEAF",
-        "Country": "N/A",
+        "Country": "US",
         "Name": "LEAF Biometrics",
         "Description": "LEAF Biometrics",
         "Type": "pacs"
@@ -498,7 +530,7 @@
     {
         "AID": "F532F1",
         "Vendor": "LEAF",
-        "Country": "N/A",
+        "Country": "US",
         "Name": "LEAF User Privileges",
         "Description": "LEAF User Privileges",
         "Type": "pacs"
@@ -598,46 +630,6 @@
         "Name": "European Student Card (ESC)",
         "Description": "Multiservice Student Card",
         "Type": "student"
-    },
-    {
-        "AID": "764970",
-        "Vendor": "Ubiquiti Inc",
-        "Country": "N/A",
-        "Name": "UniFi Access VID App",
-        "Description": "Contains issuer-signed static credential information used for KDF & other authentication operations",
-        "Type": "pacs"
-    },
-    {
-        "AID": "84D3FC",
-        "Vendor": "Ubiquiti Inc",
-        "Country": "N/A",
-        "Name": "UniFi Access FCD App",
-        "Description": "Contains static credential information used for KDF & other authentication operations",
-        "Type": "pacs"
-    },
-    {
-        "AID": "416343",
-        "Vendor": "Ubiquiti Inc",
-        "Country": "N/A",
-        "Name": "UniFi Access ACC App",
-        "Description": "Application created after enrollment into the system, containins unique authentication info",
-        "Type": "pacs"
-    },
-    {
-        "AID": "454955",
-        "Vendor": "Ubiquiti Inc",
-        "Country": "N/A",
-        "Name": "UniFi Access Touch Pass Apple Wallet Express",
-        "Description": "AID value is 'UIE' (UniFi Express) reversed. This app is selectable with or without auth",
-        "Type": "pacs"
-    },
-    {
-        "AID": "534955",
-        "Vendor": "Ubiquiti Inc",
-        "Country": "N/A",
-        "Name": "UniFi Access Touch Pass Apple Wallet Secure",
-        "Description": "AID value is 'UIS' (UniFi Secure) reversed. This app is selectable only after manual auth",
-        "Type": "pacs"
     },
     {
         "AID": "535501",
@@ -872,6 +864,14 @@
         "Type": "student"
     },
     {
+        "AID": "1010F6",
+        "Vendor": "VDE",
+        "Country": "DE",
+        "Name": "VDE EV charging",
+        "Description": "Found on a DESFire card",
+        "Type": "payment system"
+    },
+    {
         "AID": "27E178",
         "Vendor": "Disney",
         "Country": "US",
@@ -964,7 +964,7 @@
         "Vendor": "Invalid / Reserved",
         "Country": "",
         "Name": "Invalid / Reserved",
-        "Description": "Used by ATL Breeze, EWR SmartLink, LJU Urbana, MIA Easy, PHL FREEDOM, and YVR Compass",
+        "Description": "Used by ATL Breeze, EWR SmartLink, IAD Smart Trip (Mobile), LJU Urbana, MIA Easy, PHL FREEDOM, and YVR Compass",
         "Type": "transport"
     },
     {
@@ -997,14 +997,6 @@
         "Country": "CA",
         "Name": "PRESTO Card (YYZ/YHM/YOW)",
         "Description": "FIDs 00,0F: Backup Data; 08-0E,10-14: Standard Data",
-        "Type": "transport"
-    },
-    {
-        "AID": "818000",
-        "Vendor": "Cairo Metro",
-        "Country": "EG",
-        "Name": "Cairo Metro Card (CAI)",
-        "Description": "Cairo Metro Card",
         "Type": "transport"
     },
     {
@@ -1408,6 +1400,14 @@
         "Type": "transport"
     },
     {
+        "AID": "530053",
+        "Vendor": "Metro via Masabi Ltd",
+        "Country": "US",
+        "Name": "Ride On (STL)",
+        "Description": "STL Ride On; Masabi Justride Tap and Ride DESFire Smartcard",
+        "Type": "transport"
+    },
+    {
         "AID": "534531",
         "Vendor": "Transport for New South Wales (TfNSW) via Pearl Consortium",
         "Country": "AU",
@@ -1491,8 +1491,16 @@
         "AID": "7D0005",
         "Vendor": "Rejsekort & Rejseplan A/S",
         "Country": "DK",
-        "Name": "Rejsekort (DNK)",
-        "Description": "DNK Rejsekort",
+        "Name": "Rejsekort (CPH)",
+        "Description": "CPH Rejsekort",
+        "Type": "transport"
+    },
+    {
+        "AID": "818000",
+        "Vendor": "Cairo Metro",
+        "Country": "EG",
+        "Name": "Cairo Metro Card (CAI)",
+        "Description": "CAI Cairo Metro Card",
         "Type": "transport"
     },
     {
@@ -1611,7 +1619,7 @@
         "AID": "F121A0",
         "Vendor": "Urban Mobility Center",
         "Country": "BG",
-        "Name": "Sofia Mobile Transit Card",
+        "Name": "Sofia Mobile Transit Card (SOF)",
         "Description": "DESFire-based mobile transit card",
         "Type": "transport"
     },
@@ -1659,7 +1667,7 @@
         "AID": "F210C0",
         "Vendor": "Ubian",
         "Country": "SK",
-        "Name": "Ubian digital transit card",
+        "Name": "Ubian digital transit card (BTS)",
         "Description": "DESFire-based virtual transit card",
         "Type": "transport"
     },
@@ -1707,8 +1715,8 @@
         "AID": "F21191",
         "Vendor": "Metropolitan Transportation Commission via Cubic",
         "Country": "US",
-        "Name": "Clipper Card (Mobile)",
-        "Description": "",
+        "Name": "Clipper Card (SFO)",
+        "Description": "Mobile",
         "Type": "transport"
     },
     {
@@ -1839,7 +1847,6 @@
         "Description": "UK National Smartcard Project // Provision of Citizen Services #4",
         "Type": "transport"
     },
-
     {
         "AID": "F40114",
         "Vendor": "ITSO Ltd",
@@ -1852,7 +1859,7 @@
         "AID": "F88522",
         "Vendor": "Ubian",
         "Country": "SK",
-        "Name": "Ubian digital transit card (Secondary)",
+        "Name": "Ubian digital transit card (BTS)",
         "Description": "DESFire-based virtual transit card secondary application",
         "Type": "transport"
     },
