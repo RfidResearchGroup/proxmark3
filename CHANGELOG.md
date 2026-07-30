@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-
+- Added `lf trovan` commands to support Trovan Animal ID (@iceman1001)
 - Added `hf mf gdmgetblk/gdmgethidblk/gdmsethidblk/gdmsetuid/gdmwipe/gdmsetsig` (@0x6r1an0y)
 - Changed `hf mf gdmparsecfg/gdmsetblk` (@0x6r1an0y)
 - Renamed `hf mf gdmcfg` (@0x6r1an0y)
