@@ -36,11 +36,59 @@
         "Type": ""
     },
     {
+        "AID": "5041592E41505059",
+        "Vendor": "Lingnan Pass",
+        "Country": "China",
+        "Name": "Lingnan Pass PAY.APPY",
+        "Description": "Lingnan Pass basic application, DF-ID DDF1 (ASCII PAY.APPY)",
+        "Type": "transport"
+    },
+    {
+        "AID": "5041592E45585431",
+        "Vendor": "Lingnan Pass",
+        "Country": "China",
+        "Name": "Lingnan Pass PAY.EXT1",
+        "Description": "Lingnan Pass unknown/extension application (ASCII PAY.EXT1)",
+        "Type": "transport"
+    },
+    {
+        "AID": "5041592E45585432",
+        "Vendor": "Lingnan Pass",
+        "Country": "China",
+        "Name": "Lingnan Pass PAY.EXT2",
+        "Description": "Lingnan Pass unknown/extension application (ASCII PAY.EXT2)",
+        "Type": "transport"
+    },
+    {
+        "AID": "5041592E4D463158",
+        "Vendor": "Lingnan Pass",
+        "Country": "China",
+        "Name": "Lingnan Pass PAY.MF1X",
+        "Description": "Lingnan Pass unknown application, DF-ID ADF1 (ASCII PAY.MF1X)",
+        "Type": "transport"
+    },
+    {
+        "AID": "5041592E50415344",
+        "Vendor": "Lingnan Pass",
+        "Country": "China",
+        "Name": "Lingnan Pass PAY.PASD",
+        "Description": "Lingnan Pass unknown application, DF-ID ADF2 (ASCII PAY.PASD)",
+        "Type": "transport"
+    },
+    {
         "AID": "5041592E535A54",
         "Vendor": "Shenzhen Tong",
         "Country": "China",
         "Name": "Shenzhen Tong",
         "Description": "Shenzhen Tong transit card (ASCII PAY.SZT)",
+        "Type": "transport"
+    },
+    {
+        "AID": "5041592E5449434C",
+        "Vendor": "Lingnan Pass",
+        "Country": "China",
+        "Name": "Lingnan Pass PAY.TICL",
+        "Description": "Lingnan Pass wallet application, DF-ID ADF3 (ASCII PAY.TICL)",
         "Type": "transport"
     },
     {
@@ -2836,8 +2884,18 @@
         "Vendor": "CTTIC",
         "Country": "China",
         "Name": "China T-Union",
-        "Description": "Universal transit card used by many big public transit operators",
-        "Type": "transport"
+        "Description": "Electronic purse application (MOT_T_EP)",
+        "Type": "transport",
+        "Protocol": "cttic_t_union"
+    },
+    {
+        "AID": "A000000632010106",
+        "Vendor": "CTTIC",
+        "Country": "China",
+        "Name": "China T-Union (Cash)",
+        "Description": "Electronic cash application (MOT_T_CASH)",
+        "Type": "transport",
+        "Protocol": "cttic_t_union"
     },
     {
         "AID": "A00000000491",
