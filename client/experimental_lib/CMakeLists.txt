@@ -381,6 +381,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfsecurakey.c
         ${PM3_ROOT}/client/src/cmdlft55xx.c
         ${PM3_ROOT}/client/src/cmdlfti.c
+        ${PM3_ROOT}/client/src/cmdlftrovan.c
         ${PM3_ROOT}/client/src/cmdlfviking.c
         ${PM3_ROOT}/client/src/cmdlfvisa2000.c
         ${PM3_ROOT}/client/src/cmdlfzx8211.c
@@ -411,6 +412,8 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/pm3.c
         ${PM3_ROOT}/client/src/pm3_binlib.c
         ${PM3_ROOT}/client/src/pm3_bitlib.c
+        ${PM3_ROOT}/client/src/pm3_dsp.c
+        ${PM3_ROOT}/client/src/pm3_fit.c
         ${PM3_ROOT}/client/src/pm3line.c
         ${PM3_ROOT}/client/src/scandir.c
         ${PM3_ROOT}/client/src/scripting.c
