@@ -897,6 +897,33 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define EM4x05_PIGEON                   (1 << 26)
 
 
+// FeliCa SEAC protocol
+
+// Request:  CMD | 01 01 | Selector [| TIMESLOT]
+//           TIMESLOT masks the card's random response slot.
+//           Higher set bits may delay the response beyond the reader timeout.
+//           Observed: omitted~=38%, 00/01=100%, 0F=97%, 4F=50%, 64/65~=10%, FF=0%.
+// Response: CMD | 01 01 | Selector | IDm[8] | CTX[2]
+#define FELICA_SEAC_POLLING_CMD                         0x00
+
+// Request:  CMD | 01 01 | Selector | IDm[8] | Challenge1a[8]
+// Response: CMD | 01 01 | Selector | Challenge1b[8] | Challenge2a[8] | Trailer[1]
+#define FELICA_SEAC_AUTHENTICATION1_CMD                 0x01
+
+// Request:  CMD | 01 01 | Selector | Challenge2b[8]
+// Response: CMD | 01 01 | Selector | ProtectedIDi[8]
+#define FELICA_SEAC_AUTHENTICATION2_CMD                 0x02
+
+// Request/response: CMD | ProtectedBody[N]
+#define FELICA_SEAC_WRITE_CMD                           0x03
+
+// Request/response: CMD | ProtectedBody[N]
+#define FELICA_SEAC_READ_CMD                            0x04
+
+// Request/response: CMD | ProtectedBody[N]
+#define FELICA_SEAC_EXTENDED_CMD                        0xFF
+
+
 // FeliCa protocol
 
 #define FELICA_POLLING_REQ                              0x00
