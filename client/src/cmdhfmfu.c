@@ -68,6 +68,11 @@
 #define MIFAREU3P_KEY_SIZE 16
 #define MIFAREULC_KEY_INDEX 3
 
+// NDEF data area starts at block 4 and READ takes a one byte block number,
+// so block 255 is the last one reachable.
+#define MFU_NDEF_FIRST_BLOCK 4
+#define MFU_NDEF_MAX_BYTES   ((0xFF - MFU_NDEF_FIRST_BLOCK + 1) * MFU_BLOCK_SIZE)
+
 static int CmdHelp(const char *Cmd);
 
 static const char *key_type[] = { "DataProtKey", "UIDRetrKey", "OriginalityKey" };
@@ -906,20 +911,23 @@ static bool ndef_detect_message(const uint8_t *d, uint16_t n) {
     return false;
 }
 
-static int ndef_get_maxsize(const uint8_t *data) {
-    // no NDEF message
-    if (data[0] != 0xE1)
-        return 0;
+// Size of the NDEF data area, as announced by the Capability Container in block 3.
+//
+//   CC[0]  magic number, 0xE1  (0xF1 also accepted for NTAG I2C compatability)
+//   CC[1]  mapping version and read/write access
+//   CC[2]  MLEN, size of the data area expressed in units of 8 bytes
+//   CC[3]  additional access conditions
+//
+// NFC Forum Type 2 Tag Operation defines the data area as 8 * MLEN bytes
+// Returns the size in bytes, 0 when the CC announces no NDEF data area.
+static uint16_t ndef_get_maxsize(const uint8_t *data) {
 
-    if (data[2] == 0x06)
-        return 48;
-    else if (data[2] == 0x12)
-        return 144;
-    else if (data[2] == 0x3E)
-        return 496;
-    else if (data[2] == 0x6D)
-        return 872;
-    return 0;
+    // no NDEF capability container
+    if (data[0] != 0xE1 && data[0] != 0xF1) {
+        return 0;
+    }
+
+    return (uint16_t)data[2] * 8;
 }
 
 static int ndef_print_CC(uint8_t *data) {
@@ -7178,7 +7186,8 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 int CmdHF14MfuNDEFRead(const char *Cmd) {
 
     int ak_len;
-    int maxsize = 16, status;
+    int status;
+    uint16_t ndef_size = 0;
     bool has_auth_key = false;
     bool swap_endian = false;
 
@@ -7263,45 +7272,70 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
         DropField();
         PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
         return PM3_ESOFT;
-    } else if (status == 16) {
-
-        status = ndef_print_CC(data + 12);
-        if (status == PM3_ESOFT) {
-            DropField();
-            PrintAndLogEx(ERR, "Error: tag didn't contain a NDEF Container");
-            return PM3_ESOFT;
-        }
-
-        // max datasize;
-        maxsize = ndef_get_maxsize(data + 12);
     }
 
-    // iceman: maybe always take MIN of tag identified size vs NDEF reported size?
-    // fix: UL_EV1 48bytes != NDEF reported size
+    if (status != 16) {
+        DropField();
+        PrintAndLogEx(ERR, "Error: tag returned %d bytes, need 16 to read the NDEF Container", status);
+        return PM3_ESOFT;
+    }
+
+    if (ndef_print_CC(data + 12) == PM3_ESOFT) {
+        DropField();
+        PrintAndLogEx(ERR, "Error: tag didn't contain a NDEF Container");
+        return PM3_ESOFT;
+    }
+
+    // size of the NDEF data area
+    ndef_size = ndef_get_maxsize(data + 12);
+    if (ndef_size == 0) {
+        DropField();
+        PrintAndLogEx(ERR, "Error: tag announces an empty NDEF data area");
+        return PM3_ESOFT;
+    }
+
+    // The data area starts at block 4, so cap the announced size to what the
+    // identified tag can physically hold. UL_MEMORY_ARRAY holds the last valid
+    // block number, hence the +1.
     for (uint8_t idx = 1; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
         if ((tagtype & UL_TYPES_ARRAY[idx]) == UL_TYPES_ARRAY[idx]) {
 
-            if (maxsize != (UL_MEMORY_ARRAY[idx] * 4)) {
-                PrintAndLogEx(INFO, "Tag reported size vs NDEF reported size mismatch. Using smallest value");
+            int avail = (UL_MEMORY_ARRAY[idx] + 1 - MFU_NDEF_FIRST_BLOCK) * MFU_BLOCK_SIZE;
+            if (avail > 0 && ndef_size > avail) {
+                PrintAndLogEx(INFO, "NDEF data area (%u bytes) is larger than the tag (%d bytes), using tag size"
+                              , ndef_size
+                              , avail
+                             );
+                ndef_size = avail;
             }
-            maxsize = MIN(maxsize, (UL_MEMORY_ARRAY[idx] * 4));
             break;
         }
     }
 
-    // The following read will read in blocks of 16 bytes.
-    // ensure maxsize is rounded up to a multiple of 16
-    maxsize = maxsize + (16 - (maxsize % 16));
-    // allocate mem
-    uint8_t *records = calloc(maxsize, sizeof(uint8_t));
+    // MLEN can announce up to 2040 bytes but the READ command addresses blocks
+    // with a single byte, so block 255 is the last one we can ask for.
+    if (ndef_size > MFU_NDEF_MAX_BYTES) {
+        PrintAndLogEx(INFO, "NDEF data area (%u bytes) exceeds the addressable range, using %d bytes"
+                      , ndef_size
+                      , MFU_NDEF_MAX_BYTES
+                     );
+        ndef_size = MFU_NDEF_MAX_BYTES;
+    }
+
+    // The following read returns 4 blocks (16 bytes) at a time,
+    // round the buffer up to a multiple of 16.
+    uint16_t readsize = (ndef_size + 15) & ~15U;
+
+    // allocate mem, one extra byte so the buffer is always NUL terminated
+    uint8_t *records = calloc(readsize + 1, sizeof(uint8_t));
     if (records == NULL) {
         DropField();
         return PM3_EMALLOC;
     }
 
     // read NDEF records.
-    for (uint32_t i = 0, j = 0; i < maxsize; i += 16, j += 4) {
-        status = ul_read(4 + j, records + i, 16, use_schann);
+    for (uint16_t i = 0, j = 0; i < readsize; i += 16, j += 4) {
+        status = ul_read(MFU_NDEF_FIRST_BLOCK + j, records + i, 16, use_schann);
         if (status <= 0) {
             DropField();
             PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
@@ -7312,15 +7346,15 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
 
     DropField();
 
-    status = NDEFRecordsDecodeAndPrint(records, (size_t)maxsize, verbose);
+    status = NDEFRecordsDecodeAndPrint(records, (size_t)ndef_size, verbose);
     if (status != PM3_SUCCESS) {
-        status = NDEFDecodeAndPrint(records, (size_t)maxsize, verbose);
+        status = NDEFDecodeAndPrint(records, (size_t)ndef_size, verbose);
     }
 
     // get total NDEF length before save. If fails, we save it all
     size_t n = 0;
-    if (NDEFGetTotalLength(records, maxsize, &n) != PM3_SUCCESS)
-        n = maxsize;
+    if (NDEFGetTotalLength(records, ndef_size, &n) != PM3_SUCCESS)
+        n = ndef_size;
 
     pm3_save_dump(filename, records, n, jsfNDEF);
 
