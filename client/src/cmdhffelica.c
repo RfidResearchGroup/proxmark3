@@ -66,6 +66,9 @@
 #define FELICA_SEAC_POLL_TIMEOUT_MS 200U
 #define FELICA_SEAC_POLL_RETRY_COUNT 5U
 #define FELICA_SEAC_POLL_FRAME_LEN 5U
+#define FELICA_SEAC_IDM_LEN 8U
+#define FELICA_SEAC_CTX_LEN 2U
+#define FELICA_SEAC_POLL_RESPONSE_DATA_LEN (FELICA_SEAC_IDM_LEN + FELICA_SEAC_CTX_LEN)
 #define FELICA_REQUEST_SYSTEM_CODE_ATTEMPTS 5U
 #define FELICA_SYSTEM_CODE_MAX_COUNT 16U
 #define FELICA_DISCOVERED_SYSTEM_MAX_COUNT FELICA_SYSTEM_CODE_MAX_COUNT
@@ -1926,10 +1929,10 @@ static bool waitCmdFelica(bool iSelect, PacketResponseNG *resp, bool verbose) {
     return waitCmdFelicaEx(iSelect, resp, verbose, true, FELICA_DEFAULT_TIMEOUT_MS);
 }
 
-// SEAC responses appear to echo the full command payload before card-specific bytes.
-static bool get_seac_response_data(const PacketResponseNG *resp, const uint8_t *cmd_frame,
-                                   size_t cmd_frame_len, const uint8_t **response_data,
-                                   size_t *response_data_len) {
+// Poll response: 00 01 01 Selector IDm[8] CTX[2]
+static bool get_seac_poll_response_data(const PacketResponseNG *resp, const uint8_t *cmd_frame,
+                                        size_t cmd_frame_len, const uint8_t **response_data,
+                                        size_t *response_data_len) {
     if (resp == NULL || cmd_frame == NULL || response_data == NULL || response_data_len == NULL) {
         return false;
     }
@@ -1982,8 +1985,8 @@ static bool get_seac_response_data(const PacketResponseNG *resp, const uint8_t *
 
 static int info_seac(void) {
     static const uint8_t seac_poll_frames[][FELICA_SEAC_POLL_FRAME_LEN] = {
-        // {0x05, FELICA_POLLING_REQ, 0x01, 0x01, 0x0F},
-        {0x05, FELICA_POLLING_REQ, 0x01, 0x01, 0x01},
+        // LEN CMD  fixed  selector
+        {0x05, FELICA_SEAC_POLLING_CMD, 0x01, 0x01, 0x01},
     };
     const uint8_t seac_flags = FELICA_CONNECT | FELICA_CLEARTRACE | FELICA_RAW | FELICA_APPEND_CRC | FELICA_NO_SELECT;
 
@@ -1998,16 +2001,22 @@ static int info_seac(void) {
 
         const uint8_t *response_data = NULL;
         size_t response_data_len = 0;
-        if (get_seac_response_data(&resp, seac_poll_frames[i], sizeof(seac_poll_frames[i]),
-                                   &response_data, &response_data_len) == false) {
+        if (get_seac_poll_response_data(&resp, seac_poll_frames[i], sizeof(seac_poll_frames[i]),
+                                        &response_data, &response_data_len) == false ||
+                response_data_len != FELICA_SEAC_POLL_RESPONSE_DATA_LEN) {
             continue;
         }
+
+        const uint8_t *idm = response_data;
+        const uint8_t *ctx = response_data + FELICA_SEAC_IDM_LEN;
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
         PrintAndLogEx(INFO, "Type........... " _YELLOW_("FeliCa SEAC"));
-        PrintAndLogEx(INFO, "IDSEAC......... " _YELLOW_("%s"),
-                      sprint_hex_inrow(response_data, response_data_len));
+        PrintAndLogEx(INFO, "IDm............ " _YELLOW_("%s"),
+                      sprint_hex_inrow(idm, FELICA_SEAC_IDM_LEN));
+        PrintAndLogEx(INFO, "CTX............ " _YELLOW_("%s"),
+                      sprint_hex_inrow(ctx, FELICA_SEAC_CTX_LEN));
         PrintAndLogEx(NORMAL, "");
         return PM3_SUCCESS;
     }
@@ -7928,12 +7937,13 @@ static command_t CommandTable[] = {
     {"list",            CmdHFFelicaList,                  AlwaysAvailable, "List ISO 18092/FeliCa history"},
     {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("Operations") " -----------------------"},
     {"info",            CmdHFFelicaInfo,                  IfPm3Felica,     "Tag information"},
-    {"seacinfo",        CmdHFFelicaSeacInfo,              IfPm3Felica,     "FeliCa SEAC tag information"},
     {"raw",             CmdHFFelicaCmdRaw,                IfPm3Felica,     "Send raw hex data to tag"},
     {"rdbl",            CmdHFFelicaReadPlain,             IfPm3Felica,     "read block data from authentication-not-required Service."},
     {"reader",          CmdHFFelicaReader,                IfPm3Felica,     "Act like an ISO18092/FeliCa reader"},
     {"sniff",           CmdHFFelicaSniff,                 IfPm3Felica,     "Sniff ISO 18092/FeliCa traffic"},
     {"wrbl",            CmdHFFelicaWritePlain,            IfPm3Felica,     "write block data to an authentication-not-required Service."},
+    {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa SEAC") " -----------------------"},
+    {"seacinfo",        CmdHFFelicaSeacInfo,              IfPm3Felica,     "FeliCa SEAC tag information"},
     {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Standard") " -----------------------"},
     {"dump",            CmdHFFelicaDump,                  IfPm3Felica,     "Wait for and try dumping FeliCa"},
     {"discnodes",       CmdHFFelicaDiscoverNodes,         IfPm3Felica,     "discover Area Code and Service Code nodes."},
