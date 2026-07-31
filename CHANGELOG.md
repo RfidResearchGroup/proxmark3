@@ -50,6 +50,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Improved `hf iclass legbrute` throughput: added a 64-wide bitsliced MAC1 sweep that tests 64 key candidates in parallel per cipher tick. Thanks @chick3nman (@antiklesys)
 - Improved `hf iclass legbrute` throughput further: added wider SIMD backends (128-lane NEON, 256-lane AVX2, 512-lane AVX-512F) with a runtime dispatcher that picks the widest one the CPU supports. Thanks @chick3nman (@antiklesys)
 - Added `hf mfdes pc` command (@kormax)
+- Fixed `hf mfu ndefread` NDEF data area size handling (@mjaksn)
 
 ## [BREAKMEIFYOUCAN!.4.21611][2026-04-14]
 - Fixed `hf mf wrbl` and `hf mfp wrbl` the ACL RO checks on 16-block sectors correct  (@team-orangeBlue)
