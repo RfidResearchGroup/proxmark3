@@ -255,6 +255,14 @@
         ]
     },
     {
+        "name": "UNKNOWN_EF_2061",
+        "sfi": "11",
+        "path": [
+            "2000",
+            "2061"
+        ]
+    },
+    {
         "name": "TICKETING_COUNTERS_8",
         "sfi": null,
         "path": [
@@ -502,6 +510,20 @@
         "path": [
             "2100",
             "21F0"
+        ]
+    },
+    {
+        "name": "UNKNOWN_EF_2F00",
+        "sfi": null,
+        "path": [
+            "2F00"
+        ]
+    },
+    {
+        "name": "UNKNOWN_EF_2F02",
+        "sfi": null,
+        "path": [
+            "2F02"
         ]
     },
     {
@@ -1180,6 +1202,13 @@
         "sfi": null,
         "path": [
             "3F1C"
+        ]
+    },
+    {
+        "name": "UNKNOWN_EF_3FFF",
+        "sfi": "18",
+        "path": [
+            "3FFF"
         ]
     },
     {
