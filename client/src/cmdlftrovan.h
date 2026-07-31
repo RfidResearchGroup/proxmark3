@@ -13,19 +13,17 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// Low frequency EM4x70 commands
+// Low frequency Trovan animal ID commands
 //-----------------------------------------------------------------------------
 
-#ifndef CMDLFEM4X70_H__
-#define CMDLFEM4X70_H__
+#ifndef CMDLFTROVAN_H__
+#define CMDLFTROVAN_H__
 
 #include "common.h"
 #include <stdbool.h>
 
-#define TIMEOUT                     2000
-
-int CmdLFEM4X70(const char *Cmd);
-
-bool detect_4x70_block(void);
+int CmdLFTrovan(const char *Cmd);
+int demodTrovan(bool verbose);
+int readTrovanUid(void);
 
 #endif

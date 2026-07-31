@@ -310,7 +310,6 @@ static int brute_em4x70(const em4x70_cmd_input_brute_t *opts, em4x70_cmd_output_
     //       Lowers the cognitive load AND makes it easier to understand.
     // opts structure stored value in BIG ENDIAN
     // Note that the FIRMWARE side will swap the byte order back to BIG ENDIAN.
-    // (yes, this is a bit of a mess, but it is what it is for now...)
     uint16_t start_key_be = (opts->partial_key_start[0] << 8) | opts->partial_key_start[1];
     etd.start_key = start_key_be;
 
@@ -994,7 +993,7 @@ static int CmdEM4x70Recover(const char *Cmd) {
                       alt_grn.grn[2]
                      );
     }
-    printf("\n");
+    PrintAndLogEx(NORMAL, "");
 
     // which of those keys actually validates?
     if (recover_ctx.opts.verify) {

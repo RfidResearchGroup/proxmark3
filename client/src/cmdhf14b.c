@@ -2585,14 +2585,14 @@ static int CmdHF14BRestore(const char *Cmd) {
         status = read_sr_block(blockno, out, sizeof(out));
         if (status == PM3_SUCCESS) {
             if (memcmp(data + blockno * ST25TB_SR_BLOCK_SIZE, out, ST25TB_SR_BLOCK_SIZE) == 0) {
-                printf("\33[2K\r");
+                PrintAndLogEx(NORMAL, _CLR_LINE_ "\r");
                 PrintAndLogEx(INFO, "SRx write block %d/%d ( " _GREEN_("ok") " )" NOLF, blockno, block_cnt - 1);
             } else {
-                printf("\n");
+                PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(INFO, "SRx write block %d/%d ( " _RED_("different") " )", blockno, block_cnt - 1);
             }
         } else {
-            printf("\n");
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(INFO, "Verifying block %d/%d ( " _RED_("failed") " )", blockno, block_cnt - 1);
         }
 

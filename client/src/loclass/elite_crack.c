@@ -391,8 +391,6 @@ static void *bf_thread(void *thread_arg) {
 
         brute += loclass_tc;
 
-#define _CLR_ "\x1b[0K"
-
         if (numbytes_to_recover == 3) {
 
             if ((brute > 0) && ((brute & 0xFFFF) == 0)) {

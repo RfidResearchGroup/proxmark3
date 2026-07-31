@@ -28,7 +28,7 @@ Seg   = Segment Header
 SegC  =  Crc8 over the Segment Header
 Stp   = Stamp (could be more as 4 - up to 7)
 UID   = dec User-ID for online-Mapping
-kghC  = crc8 over MCD + MSN0..MSN2 + UID
+kghC  = crc8 over MCD + MSN0..MSN2 + WRP + WRC + RD + segment marker + segment data excluding CRC
 
 
 (example)   Legic-Cash on MIM256/1024 tag' (37 bytes)

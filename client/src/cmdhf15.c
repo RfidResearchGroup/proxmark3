@@ -1355,12 +1355,12 @@ static void iso15_render_presence_table(const iso15_seen_tag_t *seen, int n,
                                         bool inplace, bool *first_draw, int *table_lines) {
     if (inplace && (*first_draw == false)) {
         if (*table_lines > 1) {
-            printf("\r\x1b[%dA\x1b[J", *table_lines - 1);
+            PrintAndLogEx(NORMAL, "\r" _CURSOR_UP_ _CLR_EOS_, *table_lines - 1);
         } else {
-            printf("\r\x1b[J");
+            PrintAndLogEx(NORMAL, "\r" _CLR_EOS_);
         }
     } else if ((inplace == false) && (*first_draw == false)) {
-        printf("\n"); // piped/non-TTY: separate snapshots
+        PrintAndLogEx(NORMAL, ""); // piped/non-TTY: separate snapshots
     }
 
     int present = 0;
@@ -1369,31 +1369,41 @@ static void iso15_render_presence_table(const iso15_seen_tag_t *seen, int n,
     }
     uint64_t now = msclock();
 
-    const char *c_grn = g_session.supports_colors ? "\x1b[32m" : "";
-    const char *c_yel = g_session.supports_colors ? "\x1b[33m" : "";
-    const char *c_off = g_session.supports_colors ? "\x1b[0m"  : "";
+    const char *c_grn = g_session.supports_colors ? ANSI_GREEN : "";
+    const char *c_yel = g_session.supports_colors ? ANSI_YELLOW : "";
+    const char *c_off = g_session.supports_colors ? AEND : "";
 
     int lines = 0;
-    printf("hf 15 --all   present %d / %d   " _GREEN_("<Enter>") " to exit", present, n);
+    PrintAndLogEx(INFO, "hf 15 --all   present %d / %d   " _GREEN_("<Enter>") " to exit", present, n);
     lines++;
-    printf("\n%3s   %-25s    %-5s    %s", "#", "UID", "DSFID", "status");
+    PrintAndLogEx(INFO, "%3s   %-25s    %-5s    %s", "#", "UID", "DSFID", "status");
     lines++;
-    printf("\n%3s   %-25s    %-5s    %s", "---", "-------------------------", "-----", "----------------");
+    PrintAndLogEx(INFO, "%3s   %-25s    %-5s    %s", "---", "-------------------------", "-----", "----------------");
     lines++;
     for (int i = 0; i < n; i++) {
         if (seen[i].present) {
-            printf("\n%3d   %-25s    %02X       %spresent%s",
-                   i + 1, iso15693_sprintUID(NULL, (uint8_t *)seen[i].uid), seen[i].dsfid, c_grn, c_off);
+            PrintAndLogEx(INFO, "%3d   %-25s    %02X       %spresent%s"
+                          , i + 1
+                          , iso15693_sprintUID(NULL, (uint8_t *)seen[i].uid)
+                          , seen[i].dsfid
+                          , c_grn
+                          , c_off
+                         );
         } else {
             uint32_t secs = (uint32_t)((now - seen[i].last_seen_ms) / 1000);
-            printf("\n%3d   %-25s    %02X       %sgone%s (%us ago)",
-                   i + 1, iso15693_sprintUID(NULL, (uint8_t *)seen[i].uid), seen[i].dsfid, c_yel, c_off, secs);
+            PrintAndLogEx(INFO, "%3d   %-25s    %02X       %sgone%s (%us ago)"
+                          , i + 1
+                          , iso15693_sprintUID(NULL, (uint8_t *)seen[i].uid)
+                          , seen[i].dsfid
+                          , c_yel
+                          , c_off
+                          , secs
+                         );
         }
         lines++;
     }
     *table_lines = lines;
     *first_draw = false;
-    fflush(stdout);
 }
 
 static int reader_inventory_all(bool fast, bool loop, uint8_t *afi_buf, int afi_len) {
@@ -3299,79 +3309,6 @@ static int CmdHF15Restore(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// ISO15693 magic "V3" tag support
-#define ISO15_MAGIC_V3_BLK_UID_LO   0x10
-#define ISO15_MAGIC_V3_BLK_UID_HI   0x11
-#define ISO15_MAGIC_V3_BLK_SIG_A    0x14
-#define ISO15_MAGIC_V3_BLK_SIG_B    0x15
-
-// signature check in block 0x14/0x15
-static const uint8_t iso15_magic_v3_sig_a[4] = {0xA5, 0x2B, 0x44, 0x2C};
-static const uint8_t iso15_magic_v3_sig_b[4] = {0x21, 0xAE, 0x93, 0x00};
-
-// finalize command write in block 0x14/0x15
-// hf 15 raw -wac -d 022114A52B442C
-// hf 15 raw -wac -d 02211569E25D00
-static const uint8_t iso15_magic_v3_fin_a[4] = {0xA5, 0x2B, 0x44, 0x2C};
-static const uint8_t iso15_magic_v3_fin_b[4] = {0x69, 0xE2, 0x5D, 0x00};
-
-// Read one 4-byte block from a magic V3 tag in unaddressed mode.
-static int hf15_magic_v3_read_blk(uint8_t blockno, uint8_t out[4]) {
-
-    uint16_t approxlen = 2 + 1 + 2;
-    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
-    if (packet == NULL) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        return PM3_EMALLOC;
-    }
-
-    // enforce OPTION flag so we get the lock byte, keeping data at offset 2
-    packet->raw[packet->rawlen++] = arg_get_raw_flag(0, true, false, true);
-    packet->raw[packet->rawlen++] = ISO15693_READBLOCK;
-    packet->raw[packet->rawlen++] = blockno;
-    AddCrc15(packet->raw, packet->rawlen);
-    packet->rawlen += 2;
-    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE);
-
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
-    free(packet);
-
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
-        PrintAndLogEx(DEBUG, "iso15693 timeout");
-        return PM3_ETIMEOUT;
-    }
-
-    ISO15_ERROR_HANDLING_RESPONSE
-
-    uint8_t *d = resp.data.asBytes;
-
-    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
-
-    memcpy(out, d + 2, 4);
-    return PM3_SUCCESS;
-}
-
-// Write one 4-byte block to a magic V3 tag in unaddressed mode.
-static int hf15_magic_v3_write_blk(uint8_t blockno, const uint8_t *data) {
-    uint16_t flags = arg_get_raw_flag(0, true, false, false);
-    return hf_15_write_blk(NULL, flags, NULL, true, blockno, data, 4);
-}
-
-// Detect an un-finalized magic V3 tag by its configuration-mode signature.
-static bool hf15_magic_v3_is_config_mode(void) {
-    uint8_t a[4] = {0};
-    uint8_t b[4] = {0};
-    if (hf15_magic_v3_read_blk(ISO15_MAGIC_V3_BLK_SIG_A, a) != PM3_SUCCESS) {
-        return false;
-    }
-    if (hf15_magic_v3_read_blk(ISO15_MAGIC_V3_BLK_SIG_B, b) != PM3_SUCCESS) {
-        return false;
-    }
-    return (memcmp(a, iso15_magic_v3_sig_a, 4) == 0) && (memcmp(b, iso15_magic_v3_sig_b, 4) == 0);
-}
-
 /**
  * Commandline handling: HF15 CMD CSETUID
  * Set UID for magic Chinese card
@@ -3380,19 +3317,15 @@ static int CmdHF15CSetUID(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 csetuid",
-                  "Set UID for magic Chinese card (only works with such cards)\n"
-                  "For magic 'V3' tags this writes the UID configuration only and is repeatable;\n"
-                  "run `" _YELLOW_("hf 15 cfinalize") "` afterwards to lock the UID permanently.",
+                  "Set UID for magic Chinese card (only works with such cards)\n",
                   "hf 15 csetuid -u E011223344556677       -> use gen1 command\n"
-                  "hf 15 csetuid -u E011223344556677 --v2  -> use gen2 command\n"
-                  "hf 15 csetuid -u E011223344556677 --v3  -> use gen3 (V3) magic tag"
+                  "hf 15 csetuid -u E011223344556677 --v2  -> use gen2 command"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("u", "uid", "<hex>", "UID, 8 hex bytes"),
         arg_lit0("2", "v2", "Use gen2 magic command"),
-        arg_lit0("3", "v3", "Use gen3 (V3) magic tag (repeatable, needs cfinalize)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3404,13 +3337,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, payload.uid, &uidlen);
     bool use_v2 = arg_get_lit(ctx, 2);
-    bool use_v3 = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
-
-    if (use_v2 && use_v3) {
-        PrintAndLogEx(WARNING, "Select only one of " _YELLOW_("--v2") " / " _YELLOW_("--v3"));
-        return PM3_EINVARG;
-    }
 
     if (uidlen != ISO15693_UID_LENGTH) {
         PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got " _RED_("%i"), uidlen);
@@ -3433,40 +3360,19 @@ static int CmdHF15CSetUID(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Writing...");
+    PacketResponseNG resp;
+    clearCommandBuffer();
 
-    if (use_v3) {
-        /*
-        for example id: E011223344556677
-        [=]   16 | 77 66 55 44 | 0 | wfUD
-        [=]   17 | 33 22 11 E0 | 0 | 3"..
-        */
-        uint8_t blk_lo[4] = {0};
-        uint8_t blk_hi[4] = {0};
-        reverse_array_copy(payload.uid + 4, 4, blk_lo);
-        reverse_array_copy(payload.uid, 4, blk_hi);
+    uint16_t cmd = CMD_HF_ISO15693_CSETUID;
+    if (use_v2) {
+        cmd = CMD_HF_ISO15693_CSETUID_V2;
+    }
 
-        if (hf15_magic_v3_write_blk(ISO15_MAGIC_V3_BLK_UID_LO, blk_lo) != PM3_SUCCESS ||
-                hf15_magic_v3_write_blk(ISO15_MAGIC_V3_BLK_UID_HI, blk_hi) != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "Setting new UID ( " _RED_("fail") " )");
-            PrintAndLogEx(NORMAL, "");
-            return PM3_ESOFT;
-        }
-
-    } else {
-        PacketResponseNG resp;
-        clearCommandBuffer();
-
-        uint16_t cmd = CMD_HF_ISO15693_CSETUID;
-        if (use_v2) {
-            cmd = CMD_HF_ISO15693_CSETUID_V2;
-        }
-
-        SendCommandNG(cmd, (uint8_t *)&payload, sizeof(payload));
-        if (WaitForResponseTimeout(cmd, &resp, 2000) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply");
-            DropField();
-            return PM3_ESOFT;
-        }
+    SendCommandNG(cmd, (uint8_t *)&payload, sizeof(payload));
+    if (WaitForResponseTimeout(cmd, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        DropField();
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(INFO, "Verifying...");
@@ -3489,69 +3395,6 @@ static int CmdHF15CSetUID(const char *Cmd) {
     PrintAndLogEx(FAILED, "Setting new UID ( " _RED_("fail") " )");
     PrintAndLogEx(NORMAL, "");
     return PM3_ESOFT;
-}
-
-/**
- * Commandline handling: HF15 CMD CFINALIZE
- * Finalize a magic 'V3' tag - irreversible
- */
-static int CmdHF15CFinalize(const char *Cmd) {
-
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf 15 cfinalize",
-                  "Finalize a magic ISO15693 'V3' tag.\n"
-                  _RED_("This operation is irreversible.") " After finalize the configuration\n"
-                  "area is erased and the UID can no longer be changed. Set the UID with\n"
-                  "`" _YELLOW_("hf 15 csetuid --v3") "` first, then lock it in with this command.",
-                  "hf 15 cfinalize -y"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_lit0("y", "yes", "Confirm the irreversible finalize operation"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool confirmed = arg_get_lit(ctx, 1);
-    CLIParserFree(ctx);
-
-    PrintAndLogEx(INFO, "Get current tag");
-
-    uint8_t carduid[ISO15693_UID_LENGTH] = {0x00};
-    if (getUID(true, false, carduid) != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "no tag found");
-        return PM3_ESOFT;
-    }
-
-    // Safety: only proceed on a tag that is actually an un-finalized magic V3.
-    // Writing the finalize values to any other tag may permanently brick it.
-    if (hf15_magic_v3_is_config_mode() == false) {
-        PrintAndLogEx(FAILED, "tag is not an un-finalized magic " _YELLOW_("V3") " tag");
-        PrintAndLogEx(HINT, "Hint: signature in blocks 0x14/0x15 not found - already finalized or not a V3 tag");
-        return PM3_ESOFT;
-    }
-
-    PrintAndLogEx(SUCCESS, "Magic " _GREEN_("V3") " tag in configuration mode ( " _GREEN_("ok") " )");
-
-    if (confirmed == false) {
-        PrintAndLogEx(WARNING, _RED_("This operation is irreversible!") " The UID will be locked permanently.");
-        PrintAndLogEx(WARNING, "Add " _YELLOW_("-y") " to confirm and proceed.");
-        return PM3_EINVARG;
-    }
-
-    PrintAndLogEx(INFO, "Finalizing...");
-
-    if (hf15_magic_v3_write_blk(ISO15_MAGIC_V3_BLK_SIG_A, iso15_magic_v3_fin_a) != PM3_SUCCESS ||
-            hf15_magic_v3_write_blk(ISO15_MAGIC_V3_BLK_SIG_B, iso15_magic_v3_fin_b) != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "Finalize ( " _RED_("fail") " )");
-        PrintAndLogEx(NORMAL, "");
-        return PM3_ESOFT;
-    }
-
-    PrintAndLogEx(SUCCESS, "Finalize ( " _GREEN_("ok") " )");
-    PrintAndLogEx(HINT, "Hint: UID is now locked; the tag behaves like a normal ISO15693 tag");
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
 }
 
 static int CmdHF15SlixEASEnable(const char *Cmd) {
@@ -4303,7 +4146,6 @@ static command_t CommandTable[] = {
     {"writedsfid",          CmdHF15WriteDsfid,        IfPm3Iso15693,   "Writes the DSFID on an ISO-15693 tag"},
     {"-----------",         CmdHF15Help,              IfPm3Iso15693,  "------------------------- " _CYAN_("Magic") " -----------------------"},
     {"csetuid",             CmdHF15CSetUID,           IfPm3Iso15693,   "Set UID for magic card"},
-    {"cfinalize",           CmdHF15CFinalize,         IfPm3Iso15693,   "Finalize a magic V3 tag (irreversible)"},
     {NULL, NULL, NULL, NULL}
 };
 
