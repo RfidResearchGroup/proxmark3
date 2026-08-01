@@ -16,13 +16,38 @@
 //-----------------------------------------------------------------------------
 // Timers, Clocks functions used in LF or Legic where you would need detailed time.
 //-----------------------------------------------------------------------------
-#include "ticks.h"
-
+#include "ticks_apis.h"
 #include "proxmark3_arm.h"
-#ifndef AS_BOOTROM
-#include "dbprint.h"
-#endif
 
+
+// timer counts in 21.3us increments (1024/48MHz), rounding applies
+// WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
+void SpinDelayUs(int us) {
+    int ticks = ((MCK / 1000000) * us + 512) >> 10;
+
+    // Borrow a PWM unit for my real-time clock
+    AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
+
+    // 48 MHz / 1024 gives 46.875 kHz
+    AT91C_BASE_PWMC_CH0->PWMC_CMR = PWM_CH_MODE_PRESCALER(10);      // Channel Mode Register
+    AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;                            // Channel Duty Cycle Register
+    AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xffff;                       // Channel Period Register
+
+    uint16_t end = AT91C_BASE_PWMC_CH0->PWMC_CCNTR + ticks;
+    if (end == 0) { // AT91C_BASE_PWMC_CH0->PWMC_CCNTR is never == 0
+        end++;      // so we have to end++ to avoid inivity loop
+    }
+
+    for (;;) {
+        uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+
+        if (now == end) {
+            return;
+        }
+
+        WDT_HIT();
+    }
+}
 
 #ifndef AS_BOOTROM
 
@@ -41,7 +66,7 @@ void SpinDelayUsPrecision(int us) {
 
     uint16_t end = AT91C_BASE_PWMC_CH0->PWMC_CCNTR + ticks;
     if (end == 0) { // AT91C_BASE_PWMC_CH0->PWMC_CCNTR is never == 0
-        end++;    // so we have to end++ to avoid inivity loop
+        end++;      // so we have to end++ to avoid inivity loop
     }
 
     for (;;) {
@@ -55,59 +80,17 @@ void SpinDelayUsPrecision(int us) {
     }
 }
 
-// timer counts in 21.3us increments (1024/48MHz), rounding applies
-// WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
-void SpinDelayUs(int us) {
-    int ticks = ((MCK / 1000000) * us + 512) >> 10;
-
-    // Borrow a PWM unit for my real-time clock
-    AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
-
-    // 48 MHz / 1024 gives 46.875 kHz
-    AT91C_BASE_PWMC_CH0->PWMC_CMR = PWM_CH_MODE_PRESCALER(10);      // Channel Mode Register
-    AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;                            // Channel Duty Cycle Register
-    AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xffff;                       // Channel Period Register
-
-    uint16_t end = AT91C_BASE_PWMC_CH0->PWMC_CCNTR + ticks;
-    if (end == 0) { // AT91C_BASE_PWMC_CH0->PWMC_CCNTR is never == 0
-        end++;    // so we have to end++ to avoid inivity loop
-    }
-
-    for (;;) {
-        uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
-
-        if (now == end) {
-            return;
-        }
-        WDT_HIT();
-    }
-}
-
-// WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
-void SpinDelay(int ms) {
-    if (ms > 1390) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf(_RED_("Error, SpinDelay called with %i > 1390"), ms);
-        ms = 1390;
-    }
-    // convert to us and call microsecond delay function
-    SpinDelayUs(ms * 1000);
-}
 //  -------------------------------------------------------------------------
-//  timer lib
-//  -------------------------------------------------------------------------
-//  test procedure:
+//  Timer lib: 1 kHz: TickCount functions
 //
+//  Precision Test Procedure:
 //    ti = GetTickCount();
 //    SpinDelay(1000);
 //    ti = GetTickCount() - ti;
 //    Dbprintf("timer(1s): %d t=%d", ti, GetTickCount());
-// Increments whenever StartTickCount() reconfigures/resets RTTC.
-// Callers can use this to detect that previously saved tick deltas are no longer valid.
-static uint32_t g_tickcount_label = 0;
-
+//  -------------------------------------------------------------------------
 void StartTickCount(void) {
-    g_tickcount_label++;
-
+    UpdateTickCountLabel();
     // This timer is based on the slow clock. The slow clock frequency is between 22kHz and 40kHz.
     // We can determine the actual slow clock frequency by looking at the Main Clock Frequency Register.
     while ((AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINRDY) == 0);       // Wait for MAINF value to become available...
@@ -117,27 +100,9 @@ void StartTickCount(void) {
     // note: worst case precision is approx 2.5%
 }
 
-/*
-* Get the current count.
-*/
+// Get the current count.
 uint32_t RAMFUNC GetTickCount(void) {
     return AT91C_BASE_RTTC->RTTC_RTVR;
-}
-
-uint32_t RAMFUNC GetTickCountDelta(uint32_t start_ticks) {
-    uint32_t stop_ticks = AT91C_BASE_RTTC->RTTC_RTVR;
-    if (stop_ticks >= start_ticks) {
-        return stop_ticks - start_ticks;
-    }
-    return (UINT32_MAX - start_ticks) + stop_ticks;
-}
-
-/*
-* Get current RTTC counter label.
-* If counter config changes between calls, the value is incremented.
-*/
-uint32_t GetTickCountLabel(void) {
-    return g_tickcount_label;
 }
 
 //  -------------------------------------------------------------------------
@@ -187,20 +152,20 @@ void StartCountSspClk(void) {
     // synchronize the counter with the ssp_frame signal.
     // Note: FPGA must be in a FPGA mode with SSC transfer, otherwise SSC_FRAME and SSC_CLK signals would not be present
     //
-    while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME);     // wait for ssp_frame to be low
-    while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME));  // wait for ssp_frame to go high (start of frame)
-    while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));    // wait for ssp_clk to go high; 1st ssp_clk after start of frame
-    while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);       // wait for ssp_clk to go low;
-    while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));    // wait for ssp_clk to go high; 2nd ssp_clk after start of frame
+    while (Gpio_SSC_FRAME_Read());     // wait for ssp_frame to be low
+    while (!(Gpio_SSC_FRAME_Read()));  // wait for ssp_frame to go high (start of frame)
+    while (!(Gpio_SSC_CLK_Read()));    // wait for ssp_clk to go high; 1st ssp_clk after start of frame
+    while (Gpio_SSC_CLK_Read());       // wait for ssp_clk to go low;
+    while (!(Gpio_SSC_CLK_Read()));    // wait for ssp_clk to go high; 2nd ssp_clk after start of frame
     if ((AT91C_BASE_SSC->SSC_RFMR & SSC_FRAME_MODE_BITS_IN_WORD(32)) == SSC_FRAME_MODE_BITS_IN_WORD(16)) { // 16bit frame
-        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);   // wait for ssp_clk to go low;
-        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); // wait for ssp_clk to go high; 3rd ssp_clk after start of frame
-        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);   // wait for ssp_clk to go low;
-        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); // wait for ssp_clk to go high; 4th ssp_clk after start of frame
-        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);   // wait for ssp_clk to go low;
-        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); // wait for ssp_clk to go high; 5th ssp_clk after start of frame
-        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK);   // wait for ssp_clk to go low;
-        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)); // wait for ssp_clk to go high; 6th ssp_clk after start of frame
+        while (Gpio_SSC_CLK_Read());   // wait for ssp_clk to go low;
+        while (!(Gpio_SSC_CLK_Read())); // wait for ssp_clk to go high; 3rd ssp_clk after start of frame
+        while (Gpio_SSC_CLK_Read());   // wait for ssp_clk to go low;
+        while (!(Gpio_SSC_CLK_Read())); // wait for ssp_clk to go high; 4th ssp_clk after start of frame
+        while (Gpio_SSC_CLK_Read());   // wait for ssp_clk to go low;
+        while (!(Gpio_SSC_CLK_Read())); // wait for ssp_clk to go high; 5th ssp_clk after start of frame
+        while (Gpio_SSC_CLK_Read());   // wait for ssp_clk to go low;
+        while (!(Gpio_SSC_CLK_Read())); // wait for ssp_clk to go high; 6th ssp_clk after start of frame
     }
 
     // note: up to now two ssp_clk rising edges have passed since the rising edge of ssp_frame
@@ -215,6 +180,7 @@ void StartCountSspClk(void) {
     // Therefore may need to wait a little bit before we can use the counter.
     while (AT91C_BASE_TC2->TC_CV > 0);
 }
+
 void ResetSspClk(void) {
     //enable clock of timer and software trigger
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
@@ -233,22 +199,129 @@ uint32_t RAMFUNC GetCountSspClk(void) {
     return tmp_count;
 }
 
-uint32_t RAMFUNC GetCountSspClkDelta(uint32_t start) {
-    uint32_t stop = GetCountSspClk();
-    if (stop >= start) {
-        return stop - start;
-    }
-    return (UINT32_MAX - start) + stop;
+//  -------------------------------------------------------------------------
+//  Precision counter (TC0), input capture (TC1) and timestamp (TC2).
+//  These are used by the LF protocols (e.g. Hitag) and are configured at
+//  1.5 MHz (MCK/32), so 12 counts = 1 T0 = 8 us.
+//  -------------------------------------------------------------------------
+
+// TC2 overflow count, combined with the TC2 counter for ~47 min timing.
+static uint16_t timestamp_high = 0;
+
+void StartPrecisionCounter(void) {
+    // Enable peripheral clock for TC0 (precision counter).
+    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0);
+
+    // Disable TC0 before reconfiguration.
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+
+    // TC0: capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers (free-running).
+    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    while (AT91C_BASE_TC0->TC_CV != 0) {};  // wait until the reset takes effect
 }
 
-void WaitMS(uint32_t ms) {
-    WaitTicks((ms & 0x1FFFFF) * 1500);
+void StopPrecisionCounter(void) {
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+}
+
+void ResetPrecisionCounter(void) {
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+    while (AT91C_BASE_TC0->TC_CV != 0) {};
+}
+
+uint16_t RAMFUNC GetPrecisionCounter(void) {
+    return (uint16_t)AT91C_BASE_TC0->TC_CV;
+}
+
+void StartLoEdgeCapture(void) {
+    // Enable peripheral clock for TC1 (input capture).
+    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC1);
+
+    // Route SSC_FRAME to the timer input (TIOA) so its edges can be captured by TC1.
+    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
+
+    // Disable TC1 before reconfiguration.
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+
+    // TC1: capture mode, default timer source = MCK/32 (TIMER_CLOCK3),
+    // TIOA is external trigger, load RA on rising edge, load RB on falling edge.
+    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK  // use MCK/32 (TIMER_CLOCK3)
+                             | AT91C_TC_ABETRG               // TIOA is used as an external trigger
+                             | AT91C_TC_ETRGEDG_FALLING      // external trigger on falling edge
+                             | AT91C_TC_LDRA_RISING          // load RA on rising edge of TIOA
+                             | AT91C_TC_LDRB_FALLING;        // load RB on falling edge of TIOA
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    while (AT91C_BASE_TC1->TC_CV != 0) {};  // wait until the reset takes effect
+}
+
+void StopLoEdgeCapture(void) {
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+}
+
+void EnableLoEdgeCapture(void) {
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+}
+
+void ResetLoEdgeCapture(void) {
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
+}
+
+uint16_t RAMFUNC GetLoEdgeCaptureCount(void) {
+    return (uint16_t)AT91C_BASE_TC1->TC_CV;
+}
+
+lo_edge_t RAMFUNC GetLoEdgeCaptureStatus(void) {
+    if (AT91C_BASE_TC1->TC_SR & INPUT_CAPTURE_EVT_RISING_EDGE) {
+        return LO_EDGE_RISING;
+    }
+    if (AT91C_BASE_TC1->TC_SR & INPUT_CAPTURE_EVT_FALLING_EDGE) {
+        return LO_EDGE_FALLING;
+    }
+    return LO_EDGE_NO;
+}
+
+uint16_t RAMFUNC GetLoEdgeCaptureFalling(void) {
+    return (uint16_t)AT91C_BASE_TC1->TC_RB;
+}
+
+uint16_t RAMFUNC GetLoEdgeCaptureRising(void) {
+    return (uint16_t)AT91C_BASE_TC1->TC_RA;
+}
+
+void StartTimestamp(void) {
+    // Enable peripheral clock for TC2 (timestamp).
+    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC2);
+
+    // Disable TC2 before reconfiguration.
+    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS;
+
+    // TC2: capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers (free-running).
+    AT91C_BASE_TC2->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
+    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    while (AT91C_BASE_TC2->TC_CV != 0) {};  // wait until the reset takes effect
+
+    // Reset the overflow accumulator.
+    timestamp_high = 0;
+}
+
+void StopTimestamp(void) {
+    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS;
+}
+
+uint32_t RAMFUNC GetTimestamp(void) {
+    // Reading TC_SR clears the COVFS overflow flag.
+    if (AT91C_BASE_TC2->TC_SR & AT91C_TC_COVFS) {
+        timestamp_high++;
+    }
+    return (((uint32_t)timestamp_high << 16) + AT91C_BASE_TC2->TC_CV) / TICKS_PER_CARRIER_PERIOD;
 }
 
 #endif // #ifndef AS_BOOTROM
 
 //  -------------------------------------------------------------------------
 //  microseconds timer
+//  1us = 1tick
 //  -------------------------------------------------------------------------
 void StartCountUS(void) {
     AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1);
@@ -281,9 +354,20 @@ uint32_t RAMFUNC GetCountUS(void) {
     return ((uint32_t)AT91C_BASE_TC1->TC_CV) * 0x8000 + (((uint32_t)AT91C_BASE_TC0->TC_CV) * 2) / 3;
 }
 
+// Maybe we can make it a static inline function, but to avoid possible compiler quirks,
+// it's best not to do so, otherwise it may increase the time wasted on stack entry and exit due to not expanding the inline function,
+// leading to synchronization zeroing failure!
+#define WaitSyncTicks()                                                                             \
+    /* synchronized startup procedure */                                                            \
+    while (AT91C_BASE_TC0->TC_CV > 0); /* wait until TC0 returned to zero */                        \
+    while (AT91C_BASE_TC0->TC_CV < 2); /* and has started (TC_CV > TC_RA, now TC1 is cleared) */    \
+    /* return to zero */                                                                            \
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;                                                        \
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;                                                        \
+    while (AT91C_BASE_TC0->TC_CV > 0);
 
 //  -------------------------------------------------------------------------
-//  Timer for bitbanging, or LF stuff when you need a very precis timer
+//  Timer for bitbanging, or LF stuff when you need a very precise timer
 //  1us = 1.5ticks
 //  -------------------------------------------------------------------------
 void StartTicks(void) {
@@ -309,15 +393,27 @@ void StartTicks(void) {
     AT91C_BASE_TC0->TC_RA  = 1; // clear carry bit on next clock cycle
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG; // reset and re-enable timer
 
-    // synchronized startup procedure
-    while (AT91C_BASE_TC0->TC_CV > 0); // wait until TC0 returned to zero
-    while (AT91C_BASE_TC0->TC_CV < 2); // and has started (TC_CV > TC_RA, now TC1 is cleared)
-
-    // return to zero
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC0->TC_CV > 0);
+    WaitSyncTicks();
 }
+
+// Reset the count value to 0 for TC0 & TC1
+void ResetTicks(void) {
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+
+    WaitSyncTicks();
+}
+
+// stop clock
+void StopTicks(void) {
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS; // TODO StartTicks() did not use TC2, is this code worthless?
+}
+
 uint32_t GetTicks(void) {
     uint32_t hi, lo;
 
@@ -327,33 +423,4 @@ uint32_t GetTicks(void) {
     } while (hi != AT91C_BASE_TC1->TC_CV);
 
     return (hi << 16) | lo;
-}
-
-uint32_t RAMFUNC GetTicksDelta(uint32_t start) {
-    uint32_t stop = GetTicks();
-    if (stop >= start) {
-        return stop - start;
-    }
-    return (UINT32_MAX - start) + stop;
-}
-
-// Wait - Spindelay in ticks.
-// if called with a high number, this will trigger the WDT...
-void WaitTicks(uint32_t ticks) {
-    if (ticks == 0) return;
-    ticks += GetTicks();
-    while (GetTicks() < ticks);
-}
-
-// Wait / Spindelay in us (microseconds)
-// 1us = 1.5ticks.
-void WaitUS(uint32_t us) {
-    WaitTicks((us & 0x3FFFFFFF) * 3 / 2);
-}
-
-// stop clock
-void StopTicks(void) {
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS;
 }

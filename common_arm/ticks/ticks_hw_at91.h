@@ -13,13 +13,17 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-#ifndef _CLOCKS_H_
-#define _CLOCKS_H_
+// Timers / Clocks HAL: AT91 (SAM7S) hardware definitions.
+//-----------------------------------------------------------------------------
 
-#include "common.h"
+#ifndef TICKS_HW_AT91_H
+#define TICKS_HW_AT91_H
+
 #include "at91sam7s512.h"
 
-void mck_from_pll_to_slck(void);
-void mck_from_slck_to_pll(void);
+// Input capture edge-event flags (single-bit masks in the TC1 status register).
+// On AT91, reading TC_SR clears these flags automatically.
+#define INPUT_CAPTURE_EVT_RISING_EDGE    AT91C_TC_LDRAS   // rising-edge load (RA) event
+#define INPUT_CAPTURE_EVT_FALLING_EDGE   AT91C_TC_LDRBS   // falling-edge load (RB) event
 
-#endif // _CLOCKS_H_
+#endif // TICKS_HW_AT91_H
