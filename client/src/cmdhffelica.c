@@ -65,7 +65,8 @@
 #define FELICA_POLLING_TIMEOUT_MS 100U
 #define FELICA_SEAC_POLL_TIMEOUT_MS 200U
 #define FELICA_SEAC_POLL_RETRY_COUNT 5U
-#define FELICA_SEAC_POLL_FRAME_LEN 5U
+#define FELICA_SEAC_POLL_FRAME_LEN 6U
+#define FELICA_SEAC_POLL_TIME_SLOT 0x01U
 #define FELICA_SEAC_IDM_LEN 8U
 #define FELICA_SEAC_CTX_LEN 2U
 #define FELICA_SEAC_POLL_RESPONSE_DATA_LEN (FELICA_SEAC_IDM_LEN + FELICA_SEAC_CTX_LEN)
@@ -1930,17 +1931,18 @@ static bool waitCmdFelica(bool iSelect, PacketResponseNG *resp, bool verbose) {
 }
 
 // Poll response: 00 01 01 Selector IDm[8] CTX[2]
-static bool get_seac_poll_response_data(const PacketResponseNG *resp, const uint8_t *cmd_frame,
-                                        size_t cmd_frame_len, const uint8_t **response_data,
+static bool get_seac_poll_response_data(const PacketResponseNG *resp, uint8_t selector,
+                                        const uint8_t **response_data,
                                         size_t *response_data_len) {
-    if (resp == NULL || cmd_frame == NULL || response_data == NULL || response_data_len == NULL) {
+    if (resp == NULL || response_data == NULL || response_data_len == NULL) {
         return false;
     }
 
     *response_data = NULL;
     *response_data_len = 0;
 
-    if (cmd_frame_len < 2 || resp->length < (3U + (cmd_frame_len - 1U) + 2U)) {
+    static const size_t response_header_len = 4U;
+    if (resp->length < (3U + response_header_len + 2U)) {
         return false;
     }
 
@@ -1953,8 +1955,7 @@ static bool get_seac_poll_response_data(const PacketResponseNG *resp, const uint
     }
 
     const size_t frame_len = resp->data.asBytes[2];
-    const size_t echoed_payload_len = cmd_frame_len - 1U;
-    if (frame_len <= (1U + echoed_payload_len)) {
+    if (frame_len <= (1U + response_header_len)) {
         return false;
     }
 
@@ -1963,17 +1964,14 @@ static bool get_seac_poll_response_data(const PacketResponseNG *resp, const uint
         return false;
     }
 
-    // Unlike standard FeliCa, SEAC keeps the response code equal to the request code.
-    if (resp->data.asBytes[3] != cmd_frame[1]) {
+    // The response echoes CMD, System Code, and selector, but not the request's Time Slot.
+    const uint8_t expected_header[] = {FELICA_SEAC_POLLING_CMD, 0x01, 0x01, selector};
+    if (memcmp(resp->data.asBytes + 3, expected_header, sizeof(expected_header)) != 0) {
         return false;
     }
 
-    if (memcmp(resp->data.asBytes + 3, cmd_frame + 1, echoed_payload_len) != 0) {
-        return false;
-    }
-
-    const size_t response_offset = 3U + echoed_payload_len;
-    const size_t response_len = frame_len - 1U - echoed_payload_len;
+    const size_t response_offset = 3U + response_header_len;
+    const size_t response_len = frame_len - 1U - response_header_len;
     if ((response_offset + response_len + 2U) > decoded_frame_len) {
         return false;
     }
@@ -1985,8 +1983,8 @@ static bool get_seac_poll_response_data(const PacketResponseNG *resp, const uint
 
 static int info_seac(void) {
     static const uint8_t seac_poll_frames[][FELICA_SEAC_POLL_FRAME_LEN] = {
-        // LEN CMD  fixed  selector
-        {0x05, FELICA_SEAC_POLLING_CMD, 0x01, 0x01, 0x01},
+        // LEN CMD  System Code  selector  Time Slot
+        {0x06, FELICA_SEAC_POLLING_CMD, 0x01, 0x01, 0x01, FELICA_SEAC_POLL_TIME_SLOT},
     };
     const uint8_t seac_flags = FELICA_CONNECT | FELICA_CLEARTRACE | FELICA_RAW | FELICA_APPEND_CRC | FELICA_NO_SELECT;
 
@@ -2001,7 +1999,7 @@ static int info_seac(void) {
 
         const uint8_t *response_data = NULL;
         size_t response_data_len = 0;
-        if (get_seac_poll_response_data(&resp, seac_poll_frames[i], sizeof(seac_poll_frames[i]),
+        if (get_seac_poll_response_data(&resp, seac_poll_frames[i][4],
                                         &response_data, &response_data_len) == false ||
                 response_data_len != FELICA_SEAC_POLL_RESPONSE_DATA_LEN) {
             continue;
@@ -2507,22 +2505,8 @@ static int CmdHFFelicaInfo(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
-    return info_felica(false);
-}
-
-static int CmdHFFelicaSeacInfo(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf felica seacinfo",
-                  "Get info about FeliCa SEAC cards",
-                  "hf felica seacinfo");
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-    return info_seac();
+    int ret = info_felica(false);
+    return ret == PM3_SUCCESS ? ret : info_seac();
 }
 
 /**
@@ -7942,8 +7926,6 @@ static command_t CommandTable[] = {
     {"reader",          CmdHFFelicaReader,                IfPm3Felica,     "Act like an ISO18092/FeliCa reader"},
     {"sniff",           CmdHFFelicaSniff,                 IfPm3Felica,     "Sniff ISO 18092/FeliCa traffic"},
     {"wrbl",            CmdHFFelicaWritePlain,            IfPm3Felica,     "write block data to an authentication-not-required Service."},
-    {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa SEAC") " -----------------------"},
-    {"seacinfo",        CmdHFFelicaSeacInfo,              IfPm3Felica,     "FeliCa SEAC tag information"},
     {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Standard") " -----------------------"},
     {"dump",            CmdHFFelicaDump,                  IfPm3Felica,     "Wait for and try dumping FeliCa"},
     {"discnodes",       CmdHFFelicaDiscoverNodes,         IfPm3Felica,     "discover Area Code and Service Code nodes."},

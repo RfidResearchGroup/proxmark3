@@ -257,7 +257,6 @@ const static vocabulary_t vocabulary[] = {
     { 1, "hf felica help" },
     { 1, "hf felica list" },
     { 0, "hf felica info" },
-    { 0, "hf felica seacinfo" },
     { 0, "hf felica raw" },
     { 0, "hf felica rdbl" },
     { 0, "hf felica reader" },
