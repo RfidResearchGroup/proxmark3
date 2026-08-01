@@ -48,9 +48,6 @@ void send_wtx(uint16_t wtx);
 void ReadMem(int addr);
 void __attribute__((noreturn)) AppMain(void);
 
-uint16_t AvgAdc(uint8_t ch);
-uint16_t SumAdc(uint8_t ch, uint8_t NbSamples);
-
 //void PrintToSendBuffer(void);
 void ToSendStuffBit(int b);
 void ToSendReset(void);
