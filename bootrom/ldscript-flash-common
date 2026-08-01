@@ -15,11 +15,9 @@
 
  See LICENSE.txt for the text of the license.
 -----------------------------------------------------------------------------
- Bootrom linker script
+ Bootrom linker script common to all flash-based targets.
 -----------------------------------------------------------------------------
 */
-
-INCLUDE ../common_arm/ldscript.common
 
 PHDRS
 {
@@ -43,7 +41,7 @@ SECTIONS
     } >bootphase1 :phase1
 
     .bootphase2 : {
-        *(.startphase2)
+        KEEP(*(.startphase2))
         *(.text)
         *(.text.*)
         *(.eh_frame)
