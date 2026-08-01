@@ -80,6 +80,8 @@ void add_hours(Date_t *d, int hours_to_add);
 void add_days(Date_t *d, int days_to_add);
 uint8_t days_in_month(int year, int month);
 
+bool CheckValidInformationMagic(const void *version_info);
+bool CheckInformationMagicAndChipType(const void *version_info, uint32_t chiptype);
 
 extern struct version_information_t g_version_information;
 void FormatVersionInformation(char *dst, int len, const char *prefix, const void *version_info);
