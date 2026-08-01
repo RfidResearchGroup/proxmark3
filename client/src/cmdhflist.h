@@ -54,7 +54,7 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
 void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
-void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
 void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
 void annotateCalypso(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
 void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);

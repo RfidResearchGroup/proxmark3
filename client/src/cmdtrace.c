@@ -839,6 +839,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         case PROTO_HITAGS:
             annotateHitagS(explanation, sizeof(explanation), frame, (data_len * 8) - ((8 - parityBytes[0]) % 8), hdr->isResponse);
             break;
+        case FELICA:
+            annotateFelica(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+            break;
         case PROTO_HITAGU:
             annotateHitagU(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
             break;
@@ -871,9 +874,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 break;
             case ISO_15693:
                 annotateIso15693(explanation, sizeof(explanation), frame, data_len);
-                break;
-            case FELICA:
-                annotateFelica(explanation, sizeof(explanation), frame, data_len);
                 break;
             case LTO:
                 annotateLTO(explanation, sizeof(explanation), frame, data_len);
