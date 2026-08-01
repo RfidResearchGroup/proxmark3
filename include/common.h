@@ -92,7 +92,14 @@ extern bool g_tearoff_enabled;
 
 
 //#define RAMFUNC __attribute((long_call, section(".ramfunc")))
+// PM5 is at32f435 of CM4 kernal, not at91sam7s arm7, so PM5 unsupported 'arm' old instruction sets.
+// about diff see: https://community.arm.com/support-forums/f/architectures-and-processors-forum/5814/what-is-difference-between-arm7-and-arm-cortex-m-series
+// if you use '__attribute__((target("arm")))' for CM4 kernal, will error when compile(error: target CPU does not support ARM mode)
+#ifdef PM5
+#define RAMFUNC __attribute((section(".ramfunc"))) __attribute__((noinline))
+#else
 #define RAMFUNC __attribute((long_call, section(".ramfunc"))) __attribute__((target("arm"))) __attribute__((noinline))
+#endif
 
 #ifndef PM3_ROTR
 # define PM3_ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))
