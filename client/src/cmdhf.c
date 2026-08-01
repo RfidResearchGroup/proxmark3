@@ -222,6 +222,10 @@ int CmdHFSearch(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 18092 / FeliCa tag") " found\n");
             success[FELICA] = true;
             res = PM3_SUCCESS;
+        } else if (info_felica_seac() == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Valid " _GREEN_("FeliCa SEAC tag") " found\n");
+            success[FELICA] = true;
+            res = PM3_SUCCESS;
         }
     }
 

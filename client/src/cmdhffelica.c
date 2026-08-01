@@ -65,7 +65,14 @@
 #define FELICA_POLLING_TIMEOUT_MS 100U
 #define FELICA_SEAC_POLL_TIMEOUT_MS 200U
 #define FELICA_SEAC_POLL_RETRY_COUNT 5U
-#define FELICA_SEAC_POLL_FRAME_LEN 5U
+#define FELICA_SEAC_POLL_FRAME_LEN 6U
+#define FELICA_SEAC_POLL_TIME_SLOT 0x01U
+#define FELICA_SEAC_IDM_LEN 8U
+#define FELICA_SEAC_CTX_LEN 2U
+#define FELICA_SEAC_CHALLENGE_LEN 8U
+#define FELICA_SEAC_AUTH1_FRAME_LEN 21U
+#define FELICA_SEAC_POLL_RESPONSE_DATA_LEN (FELICA_SEAC_IDM_LEN + FELICA_SEAC_CTX_LEN)
+#define FELICA_SEAC_AUTH1_RESPONSE_DATA_LEN ((2U * FELICA_SEAC_CHALLENGE_LEN) + 1U)
 #define FELICA_REQUEST_SYSTEM_CODE_ATTEMPTS 5U
 #define FELICA_SYSTEM_CODE_MAX_COUNT 16U
 #define FELICA_DISCOVERED_SYSTEM_MAX_COUNT FELICA_SYSTEM_CODE_MAX_COUNT
@@ -1926,18 +1933,17 @@ static bool waitCmdFelica(bool iSelect, PacketResponseNG *resp, bool verbose) {
     return waitCmdFelicaEx(iSelect, resp, verbose, true, FELICA_DEFAULT_TIMEOUT_MS);
 }
 
-// SEAC responses appear to echo the full command payload before card-specific bytes.
-static bool get_seac_response_data(const PacketResponseNG *resp, const uint8_t *cmd_frame,
-                                   size_t cmd_frame_len, const uint8_t **response_data,
-                                   size_t *response_data_len) {
-    if (resp == NULL || cmd_frame == NULL || response_data == NULL || response_data_len == NULL) {
+static bool get_seac_response_data(const PacketResponseNG *resp, uint8_t command, uint8_t selector,
+                                   const uint8_t **response_data, size_t *response_data_len) {
+    if (resp == NULL || response_data == NULL || response_data_len == NULL) {
         return false;
     }
 
     *response_data = NULL;
     *response_data_len = 0;
 
-    if (cmd_frame_len < 2 || resp->length < (3U + (cmd_frame_len - 1U) + 2U)) {
+    static const size_t response_header_len = 4U;
+    if (resp->length < (3U + response_header_len + 2U)) {
         return false;
     }
 
@@ -1950,8 +1956,7 @@ static bool get_seac_response_data(const PacketResponseNG *resp, const uint8_t *
     }
 
     const size_t frame_len = resp->data.asBytes[2];
-    const size_t echoed_payload_len = cmd_frame_len - 1U;
-    if (frame_len <= (1U + echoed_payload_len)) {
+    if (frame_len <= (1U + response_header_len)) {
         return false;
     }
 
@@ -1960,17 +1965,14 @@ static bool get_seac_response_data(const PacketResponseNG *resp, const uint8_t *
         return false;
     }
 
-    // Unlike standard FeliCa, SEAC keeps the response code equal to the request code.
-    if (resp->data.asBytes[3] != cmd_frame[1]) {
+    // The response echoes CMD, System Code, and selector.
+    const uint8_t expected_header[] = {command, 0x01, 0x01, selector};
+    if (memcmp(resp->data.asBytes + 3, expected_header, sizeof(expected_header)) != 0) {
         return false;
     }
 
-    if (memcmp(resp->data.asBytes + 3, cmd_frame + 1, echoed_payload_len) != 0) {
-        return false;
-    }
-
-    const size_t response_offset = 3U + echoed_payload_len;
-    const size_t response_len = frame_len - 1U - echoed_payload_len;
+    const size_t response_offset = 3U + response_header_len;
+    const size_t response_len = frame_len - 1U - response_header_len;
     if ((response_offset + response_len + 2U) > decoded_frame_len) {
         return false;
     }
@@ -1980,39 +1982,82 @@ static bool get_seac_response_data(const PacketResponseNG *resp, const uint8_t *
     return true;
 }
 
-static int info_seac(void) {
-    static const uint8_t seac_poll_frames[][FELICA_SEAC_POLL_FRAME_LEN] = {
-        // {0x05, FELICA_POLLING_REQ, 0x01, 0x01, 0x0F},
-        {0x05, FELICA_POLLING_REQ, 0x01, 0x01, 0x01},
+static int poll_seac(uint8_t selector, uint8_t *idm, uint8_t *ctx) {
+    uint8_t poll_frame[FELICA_SEAC_POLL_FRAME_LEN] = {
+        FELICA_SEAC_POLL_FRAME_LEN, FELICA_SEAC_POLLING_CMD, 0x01, 0x01, selector, FELICA_SEAC_POLL_TIME_SLOT,
     };
     const uint8_t seac_flags = FELICA_CONNECT | FELICA_CLEARTRACE | FELICA_RAW | FELICA_APPEND_CRC | FELICA_NO_SELECT;
 
-    for (size_t i = 0; i < ARRAYLEN(seac_poll_frames); i++) {
-        PacketResponseNG resp;
-        if (send_felica_payload_with_retries(seac_flags, sizeof(seac_poll_frames[i]),
-                                             (uint8_t *)seac_poll_frames[i], false,
-                                             -1, FELICA_SEAC_POLL_TIMEOUT_MS, FELICA_SEAC_POLL_RETRY_COUNT,
-                                             0, false, &resp, NULL) != PM3_SUCCESS) {
-            continue;
-        }
-
-        const uint8_t *response_data = NULL;
-        size_t response_data_len = 0;
-        if (get_seac_response_data(&resp, seac_poll_frames[i], sizeof(seac_poll_frames[i]),
-                                   &response_data, &response_data_len) == false) {
-            continue;
-        }
-
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-        PrintAndLogEx(INFO, "Type........... " _YELLOW_("FeliCa SEAC"));
-        PrintAndLogEx(INFO, "IDSEAC......... " _YELLOW_("%s"),
-                      sprint_hex_inrow(response_data, response_data_len));
-        PrintAndLogEx(NORMAL, "");
-        return PM3_SUCCESS;
+    PacketResponseNG resp;
+    int ret = send_felica_payload_with_retries(seac_flags, sizeof(poll_frame), poll_frame, false,
+                                               -1, FELICA_SEAC_POLL_TIMEOUT_MS, FELICA_SEAC_POLL_RETRY_COUNT,
+                                               0, false, &resp, NULL);
+    if (ret != PM3_SUCCESS) {
+        return ret;
     }
 
-    return PM3_ETIMEOUT;
+    const uint8_t *response_data = NULL;
+    size_t response_data_len = 0;
+    if (get_seac_response_data(&resp, FELICA_SEAC_POLLING_CMD, selector,
+                               &response_data, &response_data_len) == false ||
+            response_data_len != FELICA_SEAC_POLL_RESPONSE_DATA_LEN) {
+        return PM3_ESOFT;
+    }
+
+    memcpy(idm, response_data, FELICA_SEAC_IDM_LEN);
+    memcpy(ctx, response_data + FELICA_SEAC_IDM_LEN, FELICA_SEAC_CTX_LEN);
+    return PM3_SUCCESS;
+}
+
+static int auth1_seac(uint8_t selector, const uint8_t *idm, const uint8_t *challenge1a,
+                      uint8_t *challenge1b, uint8_t *challenge2a, uint8_t *trailer) {
+    uint8_t auth1_frame[FELICA_SEAC_AUTH1_FRAME_LEN] = {0};
+    auth1_frame[0] = (uint8_t)sizeof(auth1_frame);
+    auth1_frame[1] = FELICA_SEAC_AUTHENTICATION1_CMD;
+    auth1_frame[2] = 0x01;
+    auth1_frame[3] = 0x01;
+    auth1_frame[4] = selector;
+    memcpy(auth1_frame + 5, idm, FELICA_SEAC_IDM_LEN);
+    memcpy(auth1_frame + 5 + FELICA_SEAC_IDM_LEN, challenge1a, FELICA_SEAC_CHALLENGE_LEN);
+
+    const uint8_t seac_flags = FELICA_CONNECT | FELICA_CLEARTRACE | FELICA_RAW | FELICA_APPEND_CRC | FELICA_NO_SELECT;
+    PacketResponseNG resp;
+    int ret = send_felica_payload_with_retries(seac_flags, sizeof(auth1_frame), auth1_frame, false,
+                                               -1, FELICA_SEAC_POLL_TIMEOUT_MS, FELICA_SEAC_POLL_RETRY_COUNT,
+                                               0, false, &resp, NULL);
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+
+    const uint8_t *response_data = NULL;
+    size_t response_data_len = 0;
+    if (get_seac_response_data(&resp, FELICA_SEAC_AUTHENTICATION1_CMD, selector,
+                               &response_data, &response_data_len) == false ||
+            response_data_len != FELICA_SEAC_AUTH1_RESPONSE_DATA_LEN) {
+        return PM3_ESOFT;
+    }
+
+    memcpy(challenge1b, response_data, FELICA_SEAC_CHALLENGE_LEN);
+    memcpy(challenge2a, response_data + FELICA_SEAC_CHALLENGE_LEN, FELICA_SEAC_CHALLENGE_LEN);
+    *trailer = response_data[FELICA_SEAC_AUTH1_RESPONSE_DATA_LEN - 1U];
+    return PM3_SUCCESS;
+}
+
+int info_felica_seac(void) {
+    uint8_t idm[FELICA_SEAC_IDM_LEN] = {0};
+    uint8_t ctx[FELICA_SEAC_CTX_LEN] = {0};
+    int ret = poll_seac(0x01, idm, ctx);
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
+    PrintAndLogEx(INFO, "Type........... " _YELLOW_("FeliCa SEAC"));
+    PrintAndLogEx(INFO, "IDm............ " _YELLOW_("%s"), sprint_hex_inrow(idm, sizeof(idm)));
+    PrintAndLogEx(INFO, "CTX............ " _YELLOW_("%s"), sprint_hex_inrow(ctx, sizeof(ctx)));
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
 }
 
 
@@ -2498,22 +2543,74 @@ static int CmdHFFelicaInfo(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
-    return info_felica(false);
+    int ret = info_felica(false);
+    return ret == PM3_SUCCESS ? ret : info_felica_seac();
 }
 
-static int CmdHFFelicaSeacInfo(const char *Cmd) {
+static int CmdHFFelicaSeacAuth1(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf felica seacinfo",
-                  "Get info about FeliCa SEAC cards",
-                  "hf felica seacinfo");
+    CLIParserInit(&ctx, "hf felica seacauth1",
+                  "Send FeliCa SEAC Authentication1",
+                  "hf felica seacauth1\n"
+                  "hf felica seacauth1 --selector 0F\n"
+                  "hf felica seacauth1 --challenge 0001020304050607\n"
+                  "hf felica seacauth1 -s 0F -c FFFFFFFFFFFFFFFF");
 
     void *argtable[] = {
         arg_param_begin,
+        arg_str0("s", "selector", "<hex>", "selector, 1 byte (default 01)"),
+        arg_str0("c", "challenge", "<hex>", "Challenge1a, 8 bytes (default all zero)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t selector_data[1] = {0};
+    int selector_len = 0;
+    int ret = CLIParamHexToBuf(arg_get_str(ctx, 1), selector_data, sizeof(selector_data), &selector_len);
+    if (ret != PM3_SUCCESS || (selector_len != 0 && selector_len != (int)sizeof(selector_data))) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "Selector must be exactly 1 byte");
+        return PM3_EINVARG;
+    }
+
+    uint8_t challenge1a[FELICA_SEAC_CHALLENGE_LEN] = {0};
+    int challenge_len = 0;
+    ret = CLIParamHexToBuf(arg_get_str(ctx, 2), challenge1a, sizeof(challenge1a), &challenge_len);
     CLIParserFree(ctx);
-    return info_seac();
+    if (ret != PM3_SUCCESS || (challenge_len != 0 && challenge_len != (int)sizeof(challenge1a))) {
+        PrintAndLogEx(ERR, "Challenge1a must be exactly 8 bytes");
+        return PM3_EINVARG;
+    }
+
+    const uint8_t selector = selector_len == 0 ? 0x01 : selector_data[0];
+    uint8_t idm[FELICA_SEAC_IDM_LEN] = {0};
+    uint8_t seac_ctx[FELICA_SEAC_CTX_LEN] = {0};
+    ret = poll_seac(selector, idm, seac_ctx);
+    if (ret != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "No SEAC card response for selector %02X", selector);
+        return ret;
+    }
+
+    uint8_t challenge1b[FELICA_SEAC_CHALLENGE_LEN] = {0};
+    uint8_t challenge2a[FELICA_SEAC_CHALLENGE_LEN] = {0};
+    uint8_t trailer = 0;
+    ret = auth1_seac(selector, idm, challenge1a, challenge1b, challenge2a, &trailer);
+    if (ret != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "No valid SEAC Authentication1 response");
+        return ret;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("SEAC Authentication1") " ----------------------");
+    PrintAndLogEx(INFO, "Selector....... " _YELLOW_("%02X"), selector);
+    PrintAndLogEx(INFO, "IDm............ " _YELLOW_("%s"), sprint_hex_inrow(idm, sizeof(idm)));
+    PrintAndLogEx(INFO, "CTX............ " _YELLOW_("%s"), sprint_hex_inrow(seac_ctx, sizeof(seac_ctx)));
+    PrintAndLogEx(INFO, "Challenge1a.... " _YELLOW_("%s"), sprint_hex_inrow(challenge1a, sizeof(challenge1a)));
+    PrintAndLogEx(INFO, "Challenge1b.... " _YELLOW_("%s"), sprint_hex_inrow(challenge1b, sizeof(challenge1b)));
+    PrintAndLogEx(INFO, "Challenge2a.... " _YELLOW_("%s"), sprint_hex_inrow(challenge2a, sizeof(challenge2a)));
+    PrintAndLogEx(INFO, "Trailer........ " _YELLOW_("%02X"), trailer);
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
 }
 
 /**
@@ -7928,12 +8025,13 @@ static command_t CommandTable[] = {
     {"list",            CmdHFFelicaList,                  AlwaysAvailable, "List ISO 18092/FeliCa history"},
     {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("Operations") " -----------------------"},
     {"info",            CmdHFFelicaInfo,                  IfPm3Felica,     "Tag information"},
-    {"seacinfo",        CmdHFFelicaSeacInfo,              IfPm3Felica,     "FeliCa SEAC tag information"},
     {"raw",             CmdHFFelicaCmdRaw,                IfPm3Felica,     "Send raw hex data to tag"},
     {"rdbl",            CmdHFFelicaReadPlain,             IfPm3Felica,     "read block data from authentication-not-required Service."},
     {"reader",          CmdHFFelicaReader,                IfPm3Felica,     "Act like an ISO18092/FeliCa reader"},
     {"sniff",           CmdHFFelicaSniff,                 IfPm3Felica,     "Sniff ISO 18092/FeliCa traffic"},
     {"wrbl",            CmdHFFelicaWritePlain,            IfPm3Felica,     "write block data to an authentication-not-required Service."},
+    {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa SEAC") " -----------------------"},
+    {"seacauth1",       CmdHFFelicaSeacAuth1,             IfPm3Felica,     "FeliCa SEAC Authentication1"},
     {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Standard") " -----------------------"},
     {"dump",            CmdHFFelicaDump,                  IfPm3Felica,     "Wait for and try dumping FeliCa"},
     {"discnodes",       CmdHFFelicaDiscoverNodes,         IfPm3Felica,     "discover Area Code and Service Code nodes."},

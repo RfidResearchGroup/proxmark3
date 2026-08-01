@@ -2443,9 +2443,47 @@ void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     }
 }
 
-void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+static bool annotateFelicaSeac(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+    if (cmdsize < 7 || cmd[4] != 0x01 || cmd[5] != 0x01 ||
+            (cmd[6] != 0x01 && cmd[6] < 0x0F)) {
+        return false;
+    }
+
+    const char *operation = NULL;
+    switch (cmd[3]) {
+        case FELICA_SEAC_POLLING_CMD:
+            operation = "POLLING";
+            break;
+        case FELICA_SEAC_AUTHENTICATION1_CMD:
+            operation = "AUTHENTICATION1";
+            break;
+        case FELICA_SEAC_AUTHENTICATION2_CMD:
+            operation = "AUTHENTICATION2";
+            break;
+        case FELICA_SEAC_WRITE_CMD:
+            operation = "WRITE";
+            break;
+        case FELICA_SEAC_READ_CMD:
+            operation = "READ";
+            break;
+        case FELICA_SEAC_EXTENDED_CMD:
+            operation = "EXTENDED";
+            break;
+        default:
+            return false;
+    }
+
+    snprintf(exp, size, "SEAC %s %s (SELECTOR %02X)", operation, is_response ? "RES" : "REQ", cmd[6]);
+    return true;
+}
+
+void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
     if (cmdsize < 4) {
         snprintf(exp, size, "?");
+        return;
+    }
+
+    if (annotateFelicaSeac(exp, size, cmd, cmdsize, is_response)) {
         return;
     }
 
