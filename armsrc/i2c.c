@@ -20,38 +20,37 @@
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "BigBuf.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "dbprint.h"
 #include "util.h"
 #include "string.h"
 
-#define GPIO_RST AT91C_PIO_PA1
-#define GPIO_SCL AT91C_PIO_PA5
-#define GPIO_SDA AT91C_PIO_PA7
+#define SCL_H    Gpio_I2C_SCL_High()
+#define SCL_L    Gpio_I2C_SCL_Low()
+#define SDA_H    Gpio_I2C_SDA_High()
+#define SDA_L    Gpio_I2C_SDA_Low()
+#define RST_H    Gpio_I2C_RST_High()
+#define RST_L    Gpio_I2C_RST_Low()
 
-#define SCL_H    HIGH(GPIO_SCL)
-#define SCL_L    LOW(GPIO_SCL)
-#define SDA_H    HIGH(GPIO_SDA)
-#define SDA_L    LOW(GPIO_SDA)
-
-#define SCL_read ((AT91C_BASE_PIOA->PIO_PDSR & GPIO_SCL) == GPIO_SCL)
-#define SDA_read ((AT91C_BASE_PIOA->PIO_PDSR & GPIO_SDA) == GPIO_SDA)
+#define SCL_read Gpio_I2C_SCL_Read()
+#define SDA_read Gpio_I2C_SDA_Read()
 
 #define I2C_ERROR  "I2C_WaitAck Error"
 
-// Direct use the loop to delay. 6 instructions loop, Masterclock 48MHz,
 // delay=1 is about 200kbps
-// timer.
-// I2CSpinDelayClk(4) = 12.31us
-// I2CSpinDelayClk(1) = 3.07us
-static volatile uint32_t c;
-static void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
-    for (c = delay * 2; c; c--) {};
-}
+// I2CSpinDelayClk(4) about 12us
+// I2CSpinDelayClk(1) about 3us
+// static void I2CSpinDelayClk(const uint16_t delay) {
+//     for (uint16_t i = 0; i < delay; i++) {
+//         SpinDelayUsPrecision(2);
+//     }
+// }
 
-#define I2C_DELAY_1CLK    I2CSpinDelayClk(1)
-#define I2C_DELAY_2CLK    I2CSpinDelayClk(2)
-#define I2C_DELAY_XCLK(x) I2CSpinDelayClk((x))
+// TODO DXL 修改了速度到比较慢的情况，测完需要改回来，原先是2和4
+
+#define I2C_DELAY_1CLK    SpinDelayUsPrecision(20)
+#define I2C_DELAY_2CLK    SpinDelayUsPrecision(22)
+// #define I2C_DELAY_XCLK(x) I2CSpinDelayClk((x))
 
 // try i2c bus recovery at 100kHz = 5us high, 5us low
 void I2C_recovery(void) {
@@ -89,19 +88,7 @@ void I2C_recovery(void) {
 }
 
 void I2C_init(bool has_ticks) {
-    // Configure reset pin, close up pull up, push-pull output, default high
-    AT91C_BASE_PIOA->PIO_PPUDR = GPIO_RST;
-    AT91C_BASE_PIOA->PIO_MDDR = GPIO_RST;
-
-    // Configure I2C pin, open up, open leakage
-    AT91C_BASE_PIOA->PIO_PPUER |= (GPIO_SCL | GPIO_SDA);
-    AT91C_BASE_PIOA->PIO_MDER |= (GPIO_SCL | GPIO_SDA);
-
-    // default three lines all pull up
-    AT91C_BASE_PIOA->PIO_SODR |= (GPIO_SCL | GPIO_SDA | GPIO_RST);
-
-    AT91C_BASE_PIOA->PIO_OER |= (GPIO_SCL | GPIO_SDA | GPIO_RST);
-    AT91C_BASE_PIOA->PIO_PER |= (GPIO_SCL | GPIO_SDA | GPIO_RST);
+    gpio_sw_i2c_rst_setup();
 
     if (has_ticks) {
         WaitMS(2);
@@ -115,19 +102,19 @@ void I2C_init(bool has_ticks) {
 // set the reset state
 void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA) {
     if (LineRST)
-        HIGH(GPIO_RST);
+        RST_H;
     else
-        LOW(GPIO_RST);
+        RST_L;
 
     if (LineSCK)
-        HIGH(GPIO_SCL);
+        SCL_H;
     else
-        LOW(GPIO_SCL);
+        SCL_L;
 
     if (LineSDA)
-        HIGH(GPIO_SDA);
+        SDA_H;
     else
-        LOW(GPIO_SDA);
+        SDA_L;
 }
 
 // Reset the SIM_Adapter, then  enter the main program
