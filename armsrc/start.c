@@ -80,6 +80,13 @@ void Vector(void) {
     uint32_t *bss_dst = __bss_start__;
     while (bss_dst < __bss_end__) *bss_dst++ = 0;
 
+    // For some platforms (such as AT32), it is best to init the system clock after jump to app,
+    // otherwise the USB may not work.
+    // Because after jumping from boot to app, some variables in RAM will be lost.
+    ConfigSystemClocks();
+    // Run the unit test(If enable)
+    UnitTestMain();
+    // Run App main loop
     AppMain();
 }
 #endif
