@@ -24,11 +24,12 @@
 #include "protocols.h"
 #include "proxmark3_arm.h"
 #include "standalone.h"
-#include "ticks.h"
+#include "ticks_apis.h"
+#include "fpga_apis.h"
 #include "util.h"
 #include "usart.h"
 #include "cmd.h"
-#include "usb_cdc.h"
+#include "usb_cdc_apis.h"
 
 #ifdef CARDHOPPER_USB
 #define cardhopper_write usb_write
@@ -535,7 +536,7 @@ static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *received, uint16
 
     Uart14aInit(received, received_max_len, par);
 
-    uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
     (void)b;
 
     uint8_t flip = 0;
@@ -555,8 +556,8 @@ static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *received, uint16
             checker = 4000;
         }
 
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            b = (uint8_t)FPGA_SSC_RX_Value();
             if (MillerDecoding(b, 0)) {
                 *len = GetUart14a()->len;
                 return true;

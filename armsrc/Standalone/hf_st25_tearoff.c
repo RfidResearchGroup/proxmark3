@@ -368,7 +368,7 @@ static void iso14443b_setup_light(void) {
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
 
     // Signal field is on with the appropriate LED
-#ifdef RDV4
+#if defined RDV4 || defined PM5
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4);
 #else
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);
