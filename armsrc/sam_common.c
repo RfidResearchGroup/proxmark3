@@ -23,7 +23,7 @@
 #include "proxmark3_arm.h"
 #include "BigBuf.h"
 #include "commonutil.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "dbprint.h"
 #include "i2c.h"
 #include "iso15693.h"
