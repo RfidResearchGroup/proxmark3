@@ -43,7 +43,7 @@
 
 void I2C_recovery(void);
 void I2C_init(bool has_ticks);
-void I2C_Reset(void);
+void I2C_Reset(void); // TODO DXL: Not implemented but defined?
 void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA);
 
 void I2C_Reset_EnterMainProgram(void);

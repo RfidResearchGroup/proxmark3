@@ -24,7 +24,7 @@
 #include "string.h"
 #include "BigBuf.h"
 #include "iso14443a.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "dbprint.h"
 #include "parity.h"
 #include "commonutil.h"

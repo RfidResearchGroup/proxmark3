@@ -14,6 +14,10 @@
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Low frequency HITAG µ (micro) functions
+// HitagU. There are two frequency models, of which the 125kHz model has been discontinued.
+// 125k clock: https://www.nxp.com/products/no-longer-manufactured/hitag-%CE%BC-iso18000-2-transponder-ic:HTMS8301FTK
+// 134k clock: https://www.nxp.com/products/rfid-nfc/hitag-lf/hitag-%C2%B5-advanced-advanced-plus:HTMS1X01_HTMS8X01
+//-----------------------------------------------------------------------------
 
 #include "hitagu.h"
 #include "hitag_common.h"
@@ -24,19 +28,19 @@
 #include "commonutil.h"
 #include "crc16.h"
 #include "dbprint.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
 #include "hitag2/hitag2_crypto.h"
-#include "lfadc.h"
 #include "protocols.h"
 #include "proxmark3_arm.h"
 #include "string.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "util.h"
 
 // Hitag µ specific definitions
 #define HTU_SOF_BITS 4     // Start of frame bits is always 3 for Hitag µ (110) plus 1 bit error flag
 
-MOD M = MC4K;  // Modulation type
+hitag_mod_t M = MC4K;  // Modulation type
 
 // Structure to hold the state of the Hitag µ tag
 static struct hitagU_tag tag = {
@@ -414,7 +418,7 @@ void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             LogTraceBits(rx, rxlen, start_time, TIMESTAMP, true);
 
             // Disable timer 1 with external trigger to avoid triggers during our own modulation
-            AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+            StopInputCapture();
 
             // Prepare tag response (tx)
             memset(tx, 0x00, sizeof(tx));
@@ -428,7 +432,7 @@ void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             // with respect to the falling edge, we need to wait actually (T_Wait1 - T_Low)
             // periods. The gap time T_Low varies (4..10). All timer values are in
             // terms of T0 units
-            while (AT91C_BASE_TC0->TC_CV < T0 * (HITAG_T_WAIT_RESP - HITAG_T_LOW)) {
+            while (GetPrecisionCounter() < T0 * (HITAG_T_WAIT_RESP - HITAG_T_LOW)) {
             };
 
             // Send and store the tag answer (if there is any)
@@ -440,7 +444,7 @@ void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             }
 
             // Enable and reset external trigger in timer for capturing future frames
-            AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+            EnableInputCapture();
 
             // Reset the received frame and response timing info
             memset(rx, 0x00, sizeof(rx));
@@ -449,9 +453,9 @@ void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
         // Reset the frame length
         rxlen = 0;
         // Save the timer overflow, will be 0 when frame was received
-        overflow += (AT91C_BASE_TC1->TC_CV / T0);
+        overflow += (GetInputCaptureCount() / T0);
         // Reset the timer to restart while-loop that receives frames
-        AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
+        ResetInputCapture();
     }
 
     hitag_cleanup(ledcontrol);
@@ -470,14 +474,13 @@ static int htu_reader_send_receive(uint8_t *tx, size_t txlen, uint8_t *rx, size_
     memset(rx, 0x00, sizeofrx);
 
     // Disable timer 1 with external trigger to avoid triggers during our own modulation
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+    StopInputCapture();
 
     DBG Dbprintf("tx %d bits:", txlen);
     DBG Dbhexdump((txlen + 7) / 8, tx, false);
 
     // Wait until we can send the command
-    while (AT91C_BASE_TC0->TC_CV < T0 * t_wait) {
-    };
+    while (GetPrecisionCounter() < T0 * t_wait) {};
 
     // Set up tracing
     uint32_t start_time = TIMESTAMP;
@@ -492,7 +495,7 @@ static int htu_reader_send_receive(uint8_t *tx, size_t txlen, uint8_t *rx, size_
     LogTraceBits(tx, txlen, start_time, TIMESTAMP, true);
 
     // Enable and reset external trigger in timer for capturing future frames
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    EnableInputCapture();
 
     // Capture response - SOF is automatically stripped by hitag_reader_receive_frame
     hitag_reader_receive_frame(rx, sizeofrx, rxlen, &start_time, ledcontrol, modulation, sof_bits);

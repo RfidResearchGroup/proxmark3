@@ -23,13 +23,14 @@
 #include "BigBuf.h"
 #include "cmd.h"
 #include "commonutil.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "dbprint.h"
 #include "i2c.h"
 #include "iso15693.h"
 #include "protocols.h"
 #include "optimized_cipher.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
 #include "pm3_cmd.h"
 
 /**

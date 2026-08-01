@@ -20,8 +20,9 @@
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
+#include "ticks_apis.h"
 #include "dbprint.h"
 #include "util.h"
 #include "lfadc.h"
@@ -159,15 +160,15 @@ static void hitag_send_bit(int bit, bool ledcontrol) {
     // check datasheet if reader uses BiPhase?
     if (bit == 0) {
         // Manchester: Unloaded, then loaded |__--|
-        LOW(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_Low();
         while (AT91C_BASE_TC0->TC_CV < HITAG_T0 * HITAG_T_TAG_HALF_PERIOD);
-        HIGH(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_High();
         while (AT91C_BASE_TC0->TC_CV < HITAG_T0 * HITAG_T_TAG_FULL_PERIOD);
     } else {
         // Manchester: Loaded, then unloaded |--__|
-        HIGH(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_High();
         while (AT91C_BASE_TC0->TC_CV < HITAG_T0 * HITAG_T_TAG_HALF_PERIOD);
-        LOW(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_Low();
         while (AT91C_BASE_TC0->TC_CV < HITAG_T0 * HITAG_T_TAG_FULL_PERIOD);
     }
     if (ledcontrol) LED_A_OFF();
@@ -188,7 +189,7 @@ static void hitag_send_frame(const uint8_t *frame, size_t frame_len) {
     }
 
     // Drop the modulation
-    LOW(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_Low();
 }
 */
 
@@ -1053,7 +1054,7 @@ void hitag_sniff(void) {
     // and analog mux selection.
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT  | FPGA_LF_EDGE_DETECT_TOGGLE_MODE);
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); // 125Khz
-    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+    SetAdcMuxFor(ADC_MUXSEL_LOPKD);
     RELAY_OFF();
 
 }
@@ -1074,7 +1075,7 @@ void SniffHitag2(bool ledcontrol) {
     set_tracing(true);
 
     /*
-        lf_init(false, false, ledcontrol);
+        lf_init(LF_ADC_SNIFF, LF_ADC_WAV_REVERSED, ledcontrol);
 
         // no logging of the raw signal
     g_logging = true;
@@ -1216,7 +1217,7 @@ void SniffHitag2(bool ledcontrol) {
     // and analog mux selection.
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT  | FPGA_LF_EDGE_DETECT_TOGGLE_MODE);
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); // 125Khz
-    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+    SetAdcMuxFor(ADC_MUXSEL_LOPKD);
     RELAY_OFF();
 
     // Configure output pin that is connected to the FPGA (for modulating)
@@ -1224,7 +1225,7 @@ void SniffHitag2(bool ledcontrol) {
 //    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
 
     // Disable modulation, we are going to eavesdrop, not modulate ;)
-//    LOW(GPIO_SSC_DOUT);
+//    Gpio_SSC_DOUT_Low();
 
     // Enable Peripheral Clock for TIMER_CLOCK1, used to capture edges of the reader frames
     AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
@@ -1274,7 +1275,7 @@ void SniffHitag2(bool ledcontrol) {
                 overflow = 0;
 
                 // Find out if we are dealing with a rising or falling edge
-                rising_edge = (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_FRAME) > 0;
+                rising_edge = (Gpio_SSC_FRAME_Read()) > 0;
 
                 // Shorter periods will only happen with reader frames
                 if (reader_frame == false && rising_edge && ra < HITAG_T_TAG_CAPTURE_ONE_HALF) {
@@ -1430,7 +1431,7 @@ void SimulateHitag2(bool ledcontrol) {
     set_tracing(true);
 
     // empties bigbuff etc
-    lf_init(false, true, ledcontrol);
+    lf_init(LF_ADC_TAG_SIM, LF_ADC_WAV_REVERSED, ledcontrol);
 
     int response = 0;
     uint8_t rx[HITAG_FRAME_LEN] = {0};
@@ -1788,7 +1789,7 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
     }
 
     // init as reader
-    lf_init(true, false, ledcontrol);
+    lf_init(LF_ADC_READER, LF_ADC_WAV_REVERSED, ledcontrol);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     uint8_t tag_modulation;
@@ -2127,7 +2128,7 @@ void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
     hitag2_init();
 
     // init as reader
-    lf_init(true, false, ledcontrol);
+    lf_init(LF_ADC_READER, LF_ADC_WAV_REVERSED, ledcontrol);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     // Tag specific configuration settings (sof, timings, etc.)
@@ -2591,6 +2592,7 @@ bool ht2_packbits(uint8_t *nrz_samples, size_t nrzs, uint8_t *rx, size_t *rxlen)
     }
     return true;
 }
+
 int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_field_up) {
 
     g_logging = false;
@@ -2600,12 +2602,11 @@ int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_fiel
         clear_trace();
     }
 
-
     // hitag 2 state machine?
     hitag2_init();
 
     // init as reader
-    lf_init(true, false, true);
+    lf_init(LF_ADC_READER, LF_ADC_WAV_REVERSED, true);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
@@ -2642,7 +2643,7 @@ int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_fiel
 
         // receive raw samples
         if (ht2_receive(&response_start, &response_duration, nrz_samples, &nrzs) == false) {
-            continue;;
+            continue;
         }
 
         // Store the transmit frame ( TX ), we do this now at this point, to avoid delay in processing

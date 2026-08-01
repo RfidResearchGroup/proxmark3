@@ -29,12 +29,13 @@
 
 #include "appmain.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
 #include "string.h"
 #include "util.h"
 #include "dbprint.h"
 #include "protocols.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "iso15693.h"
 #include "iclass_cmd.h"              // iclass_card_select_t struct
 #include "i2c.h"                     // i2c defines (SIM module access)

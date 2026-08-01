@@ -24,8 +24,9 @@
 #include "cmd.h"
 #include "proxmark3_arm.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
+#include "ticks_apis.h"
 #include "dbprint.h"
 #include "util.h"
 
@@ -75,7 +76,7 @@ static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 // Returns true if a pulse/pause is received within timeout
 // Note: inlining this function would fail with -Os
 static bool wait_for(bool value, const uint32_t timeout) {
-    while ((bool)(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN) != value) {
+    while (Gpio_SSC_DIN_Read() != value) {
         WDT_HIT();
         if (GetCountSspClk() > timeout) {
             return false;
@@ -142,10 +143,10 @@ static void tx_bit(bool bit) {
 
     if (bit) {
         // modulate subcarrier
-        HIGH(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_High();
     } else {
         // do not modulate subcarrier
-        LOW(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_Low();
     }
 
     // wait for tx timeslot to end
@@ -181,7 +182,7 @@ static void tx_frame(uint32_t frame, uint8_t len) {
     };
 
     // disable subcarrier
-    LOW(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_Low();
 
     // log
     uint8_t cmdbytes[] = {len, BYTEx(frame, 0), BYTEx(frame, 1)};
@@ -202,7 +203,7 @@ static void tx_ack(void) {
     legic_prng_forward(1);
 
     // disable subcarrier
-    LOW(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_Low();
 
     // log
     uint8_t cmdbytes[] = {1, 1};
@@ -313,15 +314,14 @@ static void init_tag(void) {
     // configure FPGA
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_212K);
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
 
     // configure SSC with defaults
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
 
     // first pull output to low to prevent glitches then re-claim GPIO_SSC_DOUT
-    LOW(GPIO_SSC_DOUT);
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
+    Gpio_SSC_DOUT_Low();
+    gpio_fpga_mod_only_setup();
 
     // reserve a cardmem, meaning we can use the tracelog function in bigbuff easier.
     legic_mem = BigBuf_get_EM_addr();

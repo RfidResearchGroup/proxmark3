@@ -25,7 +25,8 @@
 #include "dbprint.h"
 #include "BigBuf.h"            // DMA_BUFFER_SIZE, MAX_PARITY_SIZE
 #include "crc16.h"             // AddCrc14A, CheckCrc14A
-#include "fpgaloader.h"        // FpgaWriteConfWord, FpgaSetupSscDma
+#include "fpga_loader.h"       // FpgaWriteConfWord, FpgaSetupSscDma
+#include "fpga_apis.h"         // FPGA_MAJOR_MODE_HF_ISO14443A
 #include "desfire_crypto.h"    // tdes_nxp_send
 #include "mbedtls/des.h"       // mbedtls_des_*, mbedtls_des3_*
 #include "iso14443a.h"         // ReaderTransmit, ReaderReceive, iso14a_get/set_timeout, iso14a_get/toggle_pcb_blocknum, MAX_ISO14A_TIMEOUT
@@ -34,7 +35,7 @@
 #include "cmd.h"               // reply_ng
 #include "pm3_cmd.h"           // CMD_HF_HIDCONFIG_SIM, CMD_HF_HIDCONFIG_SNIFF
 #include "dbprint.h"           // Dbprintf, LED_*
-#include "ticks.h"             // WDT_HIT
+#include "ticks_apis.h"        // WDT_HIT
 #include "protocols.h"         // ISO14443A_CMD_* constants
 
 // ---------------------------------------------------------------------------
@@ -404,8 +405,8 @@ bool hid_config_card_jam(const uint8_t *cmd, int len, uint8_t *dma_buf) {
     // Restore sniffer FPGA mode and re-arm DMA
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_SNIFFER);
 
-    if (FpgaSetupSscDma(dma_buf, DMA_BUFFER_SIZE) == false) {
-        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
+    if (FpgaSetupSscRxDmaRepeat(dma_buf, DMA_BUFFER_SIZE) == false) {
+        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscRxDmaRepeat failed. Exiting");
         return false;
     }
 

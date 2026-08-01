@@ -18,9 +18,6 @@
 // with the linker script.
 //-----------------------------------------------------------------------------
 
-#ifndef __START_H
-#define __START_H
-
 #include "proxmark3_arm.h"
 #include "appmain.h"
 #ifdef WITH_COMPRESSION
@@ -28,19 +25,32 @@
 #endif
 #include "BigBuf.h"
 #include "string.h"
-#include "ticks.h"
+#include "ticks_apis.h"
+#include "gpio_apis.h"
+#include "sys_apis.h"
 
 extern common_area_t g_common_area;
+// export by ldscript, is a fixed space in ram, the data from rom will copy and decompress(optional) to ram.
 extern uint32_t __data_src_start__[], __data_start__[], __data_end__[], __bss_start__[], __bss_end__[];
+
+// Define an empty unit test main program entry,
+// and if the developer compiles the source file that implements the UnitTestMain function,
+// this empty function will be automatically overwritten.
+void __attribute__((weak)) UnitTestMain(void);
+void UnitTestMain(void) {
+    // Nothing to do...
+    // In general, this function will be overridden.
+}
 
 #ifdef WITH_COMPRESSION
 static void uncompress_data_section(void) {
     int avail_in;
     memcpy(&avail_in, __data_src_start__, sizeof(int));
-    int avail_out = (uint32_t)__data_end__ - (uint32_t)__data_start__;  // uncompressed size. Correct.
+    // if compressed, the head 4byte of '.data' section will be uncompressed size.
+    int avail_out = (uint32_t) __data_end__ - (uint32_t) __data_start__; // uncompressed size. Correct.
     // uncompress data segment to RAM
-    char *p = (char *)__data_src_start__;
-    int res = LZ4_decompress_safe(p + 4, (char *)__data_start__, avail_in, avail_out);
+    char *p = (char *) __data_src_start__;
+    int res = LZ4_decompress_safe(p + 4, (char *) __data_start__, avail_in, avail_out);
     if (res < 0) {
         while (true) {
             LED_A_INV();
@@ -89,4 +99,3 @@ void Vector(void) {
     // Run App main loop
     AppMain();
 }
-#endif
