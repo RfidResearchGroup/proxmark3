@@ -16,8 +16,46 @@
 // Utility functions used in many places, not specific to any piece of code.
 //-----------------------------------------------------------------------------
 #include "commonutil.h"
+#include "pm3_cmd.h"
 #include <string.h>
 #include "stdbool.h"
+
+// Specific firmware versions correspond to specific main chip types.
+struct version_info_map_chip_type {
+    int magic;
+    uint32_t chiptype;
+} map[] = {
+    {VERSION_INFORMATION_MAGIC_PM5V, MAIN_CHIP_TYPE_AT32},
+    {VERSION_INFORMATION_MAGIC_PM3V, MAIN_CHIP_TYPE_AT91},
+};
+
+/**
+ * Check version information is valid
+ * @param version_info pointer to the struct version_information_t
+ * @return true is valid, false is invalid.
+ */
+bool CheckValidInformationMagic(const void *version_info) {
+    const struct version_information_t *v = (const struct version_information_t *)version_info;
+    for (int i = 0; i < ARRAYLEN(map); ++i) {
+        if (v->magic == map[i].magic) {
+            return true; // Valid magic found.
+        }
+    }
+    return false;
+}
+
+bool CheckInformationMagicAndChipType(const void *version_info, uint32_t chiptype) {
+    const struct version_information_t *v = (const struct version_information_t *) version_info;
+    for (int i = 0; i < ARRAYLEN(map); ++i) {
+        if (v->magic == map[i].magic) {
+            if (chiptype == map[i].chiptype) {
+                return true;
+            }
+            return false; // Magic matches but chip type does not match.
+        }
+    }
+    return false; // No valid magic found.
+}
 
 /* Similar to FpgaGatherVersion this formats stored version information
  * into a string representation. It takes a pointer to the struct version_information_t,
@@ -28,7 +66,8 @@ void FormatVersionInformation(char *dst, int len, const char *prefix, const void
     const struct version_information_t *v = (const struct version_information_t *)version_info;
     dst[0] = 0;
     strncat(dst, prefix, len - 1);
-    if (v->magic != VERSION_INFORMATION_MAGIC) {
+
+    if (!CheckValidInformationMagic(version_info)) {
         strncat(dst, "Missing/Invalid version information", len - strlen(dst) - 1);
         return;
     }
@@ -57,7 +96,8 @@ void FormatVersionInformation(char *dst, int len, const char *prefix, const void
 void format_version_information_short(char *dst, int len, const void *version_info) {
     const struct version_information_t *v = (const struct version_information_t *)version_info;
     dst[0] = 0;
-    if (v->magic != VERSION_INFORMATION_MAGIC) {
+
+    if (!CheckValidInformationMagic(version_info)) {
         strncat(dst, "Missing/Invalid version information", len - strlen(dst) - 1);
         return;
     }
