@@ -29,10 +29,12 @@
 #include "appmain.h"
 #include "BigBuf.h"
 #include "cmd.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
 #include "commonutil.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
+#include "fpga_apis.h"
+#include "rssi_apis.h"
 #include "iso14b.h"       // defines for ETU conversions
 #include "iclass.h"       // picopass buffer defines
 
@@ -714,8 +716,8 @@ static bool GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len) {
     while (BUTTON_PRESS() == false) {
         WDT_HIT();
 
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
             for (uint8_t mask = 0x80; mask != 0x00; mask >>= 1) {
                 if (Handle14443bSampleFromReader(b & mask)) {
                     *len = Uart.byteCnt;
@@ -742,8 +744,8 @@ static void TransmitFor14443b_AsTag(const uint8_t *response, uint16_t len) {
     for (uint16_t i = 0; i < len;) {
 
         // Put byte into tx holding register as soon as it is ready
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-            AT91C_BASE_SSC->SSC_THR = response[i++];
+        if (FPGA_SSC_TX_Ready()) {
+            FPGA_SSC_TX_Value(response[i++]);
 
             // Start-up SSC once first byte is in SSC_THR
             if (i == 1) {
@@ -774,7 +776,7 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     // connect Demodulated Signal to ADC:
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
 
     // Set up the synchronous serial port
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
@@ -837,7 +839,7 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
         }
 
         // find reader field
-        vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
+        vHf = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_HF);
         if (vHf > MF_MINFIELDV) {
             if (cardSTATE == SIM_POWER_OFF) {
                 cardSTATE = SIM_IDLE;
@@ -1002,7 +1004,7 @@ void Simulate_iso14443b_srx_tag(uint8_t *uid) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     // connect Demodulated Signal to ADC:
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
 
     // Set up the synchronous serial port
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
@@ -1045,7 +1047,7 @@ void Simulate_iso14443b_srx_tag(uint8_t *uid) {
         // find reader field
         if (cardSTATE == SIM_NOFIELD) {
 
-            vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
+            vHf = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_HF);
             if (vHf > MF_MINFIELDV) {
                 cardSTATE = SIM_IDLE;
                 LED_A_ON();
@@ -1378,8 +1380,8 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
         return PM3_EMALLOC;
     }
 
-    if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
+    if (FpgaSetupSscRxDmaRepeat((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
+        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscRxDmaRepeat failed. Exiting");
         return PM3_EMALLOC;
     }
 
@@ -1395,7 +1397,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
 
     for (;;) {
 
-        volatile uint16_t behindBy = ((uint16_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
+        volatile uint16_t behindBy = ((uint16_t *)FPGA_SSC_DMA_RX_Current_Address() - upTo) & (DMA_BUFFER_SIZE - 1);
         if (behindBy == 0) {
             WDT_HIT();
             if (BUTTON_PRESS()) {
@@ -1429,18 +1431,9 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
             upTo = dma->buf;
 
             // DMA Counter Register had reached 0, already rotated.
-            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
+            if (FPGA_SSC_DMA_RX_Done()) {
 
-                // primary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
-                    AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
-                    AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-                }
-                // secondary buffer sets as primary, secondary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
-                    AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
-                    AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
-                }
+                FPGA_SSC_DMA_RX_Refresh_Repeat(dma->buf, DMA_BUFFER_SIZE);
 
                 WDT_HIT();
                 if (BUTTON_PRESS()) {
@@ -1452,6 +1445,13 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
 
         if (Handle14443bSamplesFromTag(ci, cq)) {
 
+            // TODO DXL
+            // 这是在PM5上能工作的老代码：*eof_time = GetCountSspClkDelta(dma_start_time) - DELAY_TAG_TO_ARM;  // end of EOF
+            // 如果以下新代码带来了任何兼容性问题，可以参照以上代码进行排查。
+            // 需要测试对于常规14V与ST25的兼容性，如果都没有问题，则可以删除此TODO
+
+            // --- 最新代码
+
             // Response timing is measured from DMA start, but trace rows use
             // absolute SSP time like reader frames.
             uint32_t eof_delta = GetCountSspClkDelta(dma_start_time);
@@ -1459,6 +1459,8 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
                 eof_delta -= DELAY_TAG_TO_ARM;
             }
             *eof_time = dma_start_time + eof_delta;  // end of EOF
+
+            // ---
 
             if (Demod.len > Demod.max_len) {
                 ret = PM3_EOVFLOW;
@@ -1472,7 +1474,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
         }
     }
 
-    FpgaDisableSscDma();
+    FPGA_SSC_DMA_RX_Disable();
     if (ret < 0) {
         return ret;
     }
@@ -1492,6 +1494,30 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
     if (retlen) {
         *retlen = Demod.len;
     }
+
+    /*
+     * DXL:
+     * Before sending data from PCD to PICC,
+     * it is necessary to ensure that there are at least 14 ETUs delay between last tag response.
+     * However, the determination of this delay time distance depends heavily on eof_time,
+     * but the calculation of the value of eof_time seems to be not nice.
+     * I used an oscilloscope to measure the time interval from the end of the Get14443bAnswerFromTag function
+     * to switching to READER sending mode and starting to send data to the tag through SSP,
+     * which is only 20us, far from meeting the time requirement of 14 ETUs (132us).
+     * ---
+     * start_time is always set to the expected effective sending time, but this time is not the current value of sspclk.
+     * So the waiting time before sending always exceeds this time, because the current sspclk is constantly increasing,
+     * but eof_time is only the time distance for the card response to be completed.
+     * ---
+     * Due to the poor performance and slow processing speed of AT91, there is no bug of inter frame delay waiting.
+     * However, AT32 has good performance, processing data very quickly and issuing the next command.
+     * At this time, this bug will appear.
+     * ---
+     * My solution is to update the value of eof_time by the current sspclk value after receiving and before starting to send,
+     * so that it can effectively wait for 14 ETUs.
+     */
+    // *eof_time = GetCountSspClk(); TODO DXL 参考上面的描述，如果上面的描述解决了兼容性问题，则这段代码就不再需要了
+
     return PM3_SUCCESS;
 }
 
@@ -1503,27 +1529,32 @@ static void TransmitFor14443b_AsReader(uint32_t *start_time) {
 
     tosend_t *ts = get_tosend();
 
-#ifdef RDV4
+    // TODO DXL 可能此函数会被 Get14443bAnswerFromTag 的改动所影响，需要进行测试。
+
+    // TR2 minimum 14 ETUs
+    if (*start_time < ISO14B_TR0) {
+        //        *start_time = DELAY_ARM_TO_TAG;
+        *start_time = ISO14B_TR0;
+    }
+    //    *start_time = (*start_time - DELAY_ARM_TO_TAG) & 0xfffffff0;
+    *start_time = (*start_time & 0xfffffff0);
+    if (GetCountSspClk() > *start_time) { // we may miss the intended time
+        *start_time = (GetCountSspClk() + 32) & 0xfffffff0; // next possible time
+    }
+    // waiting for T2(minimum delay between two frames)
+    while (GetCountSspClk() < *start_time) {}
+
+    // DXL: It is best to perform a clearance once.
+    FPGA_SSC_TX_Clear();
+
+    // DXL:
+    // We only switch to the transmission modulation mode before starting the transmission, and before that,
+    // we may still be delaying and waiting for T2 (14 ETUs) between two frames
+#if defined RDV4 || defined PM5
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4);
 #else
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);
 #endif
-
-    // TR2 minimum 14 ETUs
-    if (*start_time < ISO14B_TR0) {
-//        *start_time = DELAY_ARM_TO_TAG;
-        *start_time = ISO14B_TR0;
-    }
-
-//    *start_time = (*start_time - DELAY_ARM_TO_TAG) & 0xfffffff0;
-    *start_time = (*start_time & 0xfffffff0);
-
-    if (GetCountSspClk() > *start_time) { // we may miss the intended time
-        *start_time = (GetCountSspClk() + 32) & 0xfffffff0; // next possible time
-    }
-
-    // wait
-    while (GetCountSspClk() < *start_time);
 
     LED_B_ON();
     for (int c = 0; c < ts->max; c++) {
@@ -1532,11 +1563,11 @@ static void TransmitFor14443b_AsReader(uint32_t *start_time) {
         for (uint8_t i = 0; i < 8; i++) {
             volatile uint16_t send_word = (data & 0x80) ? 0x0000 : 0xFFFF;
 
-            while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))) ;
-            AT91C_BASE_SSC->SSC_THR = send_word;
+            while (!FPGA_SSC_TX_Ready()) ;
+            FPGA_SSC_TX_Value(send_word);
 
-            while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))) ;
-            AT91C_BASE_SSC->SSC_THR = send_word;
+            while (!FPGA_SSC_TX_Ready()) ;
+            FPGA_SSC_TX_Value(send_word);
 
             data <<= 1;
         }
@@ -1550,23 +1581,25 @@ static void TransmitFor14443b_AsReader(uint32_t *start_time) {
     for (uint8_t i = 0; i < last_bits; i++) {
         volatile uint16_t send_word = (data & 0x80) ? 0x0000 : 0xFFFF;
 
-        while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))) ;
-        AT91C_BASE_SSC->SSC_THR = send_word;
+        while (!FPGA_SSC_TX_Ready()) ;
+        FPGA_SSC_TX_Value(send_word);
 
-        while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))) ;
-        AT91C_BASE_SSC->SSC_THR = send_word;
+        while (!FPGA_SSC_TX_Ready()) ;
+        FPGA_SSC_TX_Value(send_word);
 
         data <<= 1;
     }
+
+    // DXL: Very important!!! If not cleared, ST25 will always fail communication on at32 platform.
+    FPGA_SSC_TX_Clear();
+
     WDT_HIT();
-
-
     LED_B_OFF();
 
 //    *start_time += DELAY_ARM_TO_TAG;
 
     // wait for last transfer to complete
-    while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY)) {};
+    while (!FPGA_SSC_TX_Done()) {};
 }
 
 static uint32_t ToSendBitCount(const tosend_t *ts) {
@@ -2457,13 +2490,13 @@ void iso14443b_setup(void) {
     Uart14bInit(BigBuf_calloc(MAX_FRAME_SIZE));
 
     // connect Demodulated Signal to ADC:
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
 
     // Set up the synchronous serial port
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
 
     // Signal field is on with the appropriate LED
-#ifdef RDV4
+#if defined RDV4 || defined PM5
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4);
 #else
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);
@@ -2594,7 +2627,7 @@ void SniffIso14443b(void) {
 //    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_848_KHZ | FPGA_HF_READER_MODE_SNIFF_AMPLITUDE);
 
     // connect Demodulated Signal to ADC:
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
 
     StartCountSspClk();
@@ -2603,8 +2636,8 @@ void SniffIso14443b(void) {
     dmabuf16_t *dma = get_dma16();
 
     // Setup and start DMA.
-    if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (g_dbglevel > DBG_ERROR) DbpString("FpgaSetupSscDma failed. Exiting");
+    if (FpgaSetupSscRxDmaRepeat((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
+        if (g_dbglevel > DBG_ERROR) DbpString("FpgaSetupSscRxDmaRepeat failed. Exiting");
         switch_off();
         return;
     }
@@ -2615,7 +2648,7 @@ void SniffIso14443b(void) {
     bool tag_is_active = false;
     bool reader_is_active = false;
     bool expect_tag_answer = false;
-    int dma_start_time = 0;
+    uint32_t dma_start_time = 0;
 
     // Count of samples received so far, so that we can include timing
     int samples = 0;
@@ -2624,7 +2657,7 @@ void SniffIso14443b(void) {
 
     for (;;) {
 
-        volatile int behind_by = ((uint16_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
+        volatile int behind_by = ((uint16_t *)FPGA_SSC_DMA_RX_Current_Address() - upTo) & (DMA_BUFFER_SIZE - 1);
         if (behind_by < 1) continue;
 
         samples++;
@@ -2644,18 +2677,9 @@ void SniffIso14443b(void) {
             upTo = dma->buf;
 
             // DMA Counter Register had reached 0, already rotated.
-            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
+            if (FPGA_SSC_DMA_RX_Done()) {
 
-                // primary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
-                    AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
-                    AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-                }
-                // secondary buffer sets as primary, secondary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
-                    AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
-                    AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
-                }
+                FPGA_SSC_DMA_RX_Refresh_Repeat(dma->buf, DMA_BUFFER_SIZE);
 
                 WDT_HIT();
                 if (BUTTON_PRESS()) {
@@ -2782,7 +2806,7 @@ static void tearoff_field_on(void) {
     Demod14bInit(BigBuf_calloc(MAX_FRAME_SIZE), MAX_FRAME_SIZE);
     Uart14bInit(BigBuf_calloc(MAX_FRAME_SIZE));
 
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER); // programs PDC with fresh BigBuf address
 #ifdef RDV4
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4);
