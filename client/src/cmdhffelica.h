@@ -24,6 +24,7 @@
 
 int CmdHFFelica(const char *Cmd);
 int read_felica_uid(bool loop, bool verbose);
+int info_felica_seac(void);
 int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose);
 
 #endif

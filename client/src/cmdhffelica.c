@@ -1981,7 +1981,7 @@ static bool get_seac_poll_response_data(const PacketResponseNG *resp, uint8_t se
     return true;
 }
 
-static int info_seac(void) {
+int info_felica_seac(void) {
     static const uint8_t seac_poll_frames[][FELICA_SEAC_POLL_FRAME_LEN] = {
         // LEN CMD  System Code  selector  Time Slot
         {0x06, FELICA_SEAC_POLLING_CMD, 0x01, 0x01, 0x01, FELICA_SEAC_POLL_TIME_SLOT},
@@ -2506,7 +2506,7 @@ static int CmdHFFelicaInfo(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
     int ret = info_felica(false);
-    return ret == PM3_SUCCESS ? ret : info_seac();
+    return ret == PM3_SUCCESS ? ret : info_felica_seac();
 }
 
 /**
