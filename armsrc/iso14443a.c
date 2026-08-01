@@ -3277,6 +3277,11 @@ int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, const iso14a_po
         // Receive the ATQA
         len = ReaderReceive(resp, resp_len, resp_par);
 
+        // DXL: Check response length is not 2 and no collision, set len to 0 for skip this data
+        if (len != 2 && !Demod.collisionPos) {
+            len = 0; // maybe an incorrect data, discard it.
+        }
+
         // We set the start_time here otherwise in some cases we miss the window and only ever try once
         if (first_try) {
             start_time = GetTickCount();
@@ -3324,6 +3329,21 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
         p_card->ats_len = 0;
     }
 
+    /*
+     * DXL:
+     * If the specifications of manual 14443-3 are strictly followed, ATQA should also participate in the anti-collision process.
+     * When encountering conflicts, it should directly enter the card selection stage of anti-collision.
+     * However, at present, all operations rely on the first ATQA request and do not follow ATQA's anti-collision standards.
+     * ---
+     * After testing, in some cases, the device may decode an incorrect/collision ATQA,
+     * and using this ATQA data for subsequent logical operations may result in unexpected things.
+     * Note: It is easier to reproduce this problem when placing the card from high to low for card reading.
+     * Invalid AQTA infos: length = 1, data = 0000, collision = 0
+     * ---
+     * Therefore, I think the best solution is to consider ATQA invalid if there are no conflicts and the data length of ATQA is less than two bytes.
+     * In order to improve the stability of card reading as much as possible,
+     * I implemented this logic inside the GetATQA function.
+     */
     if (GetATQA(resp, sizeof(resp), parity_array, polling_parameters) == 0) {
         return 0;
     }
