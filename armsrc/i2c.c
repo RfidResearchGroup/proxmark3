@@ -594,6 +594,84 @@ int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t 
     return readcount - 2;
 }
 
+// read one array of data (Data array, Readout length, command to be written , SlaveDevice address  ).
+// len = uint16 because we need to read up to 256bytes
+// No data process logic, only raw rx.
+int16_t I2C_BufferReadRaw(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address) {
+
+    // sanity check
+    if (data == NULL || len == 0) {
+        return 0;
+    }
+
+//    uint8_t *pd = data;
+
+    // extra wait  500us (514us measured)
+    // 200us  (xx measured)
+    WaitUS(600);
+
+    bool _break = true;
+
+    do {
+        if (I2C_Start() == false) {
+            return 0;
+        }
+
+        // 0xB0 / 0xC0  == i2c write
+        I2C_SendByte(device_address & 0xFE);
+        if (I2C_WaitAck() == false) {
+            break;
+        }
+
+        I2C_SendByte(device_cmd);
+        if (I2C_WaitAck() == false) {
+            break;
+        }
+
+        // 0xB1 / 0xC1 == i2c read
+        I2C_Start();
+        I2C_SendByte(device_address | 1);
+        if (I2C_WaitAck() == false) {
+            break;
+        }
+
+        _break = false;
+    } while (false);
+
+    if (_break) {
+        I2C_Stop();
+        if (g_dbglevel > DBG_DEBUG) DbpString(I2C_ERROR);
+        return 0;
+    }
+
+    int16_t count = 0;
+
+    while (len) {
+        int16_t tmp = I2C_ReadByte();
+        if (tmp < 0) {
+            return tmp;
+        }
+
+        data[count] = (uint8_t)tmp & 0xFF;
+        len--;
+        count++;
+
+        // acknowledgements. After last byte send NACK.
+        if (len == 0) {
+            I2C_NoAck();
+        } else {
+            I2C_Ack();
+        }
+    }
+
+    I2C_Stop();
+
+//    Dbprintf("rec len...  %u  count... %u", recv_len, count);
+//    Dbhexdump(count, data, false);
+
+    return count;
+}
+
 int16_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
     //START, 0xB0, 0x00, 0x00, START, 0xB1, xx, yy, zz, ......, STOP
     bool _break = true;
