@@ -51,6 +51,8 @@
 #define FULLIMAGE_SUBDIR     "armsrc" PATHSEP "obj" PATHSEP
 
 #define PACKED __attribute__((packed))
+#define FORCE_INLINE inline __attribute__((always_inline))
+#define STATIC_FORCE_INLINE static inline __attribute__((always_inline))
 
 typedef enum {
     MAIN_CHIP_TYPE_AT91 = 0, // -> PM3V
