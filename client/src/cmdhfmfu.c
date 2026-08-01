@@ -547,7 +547,11 @@ static int ul3pass_authentication(const uint8_t *key, uint8_t keyno, bool switch
     };
     memcpy(payload.key, key, sizeof(payload.key));
     int pairs_bytecount = (keyno == 3 ? 8 + 16 : 16 + 32) * MIN(available_pairs, keyno == 3 ? 10 : 5);
-    memcpy(payload.pairs, pairs, pairs_bytecount);
+
+    if (pairs_bytecount && pairs) {
+        memcpy(payload.pairs, pairs, pairs_bytecount);
+    }
+
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFAREU3P_AUTH, (uint8_t *)&payload, sizeof(payload) - sizeof(payload.pairs) + pairs_bytecount);
     PacketResponseNG resp;
