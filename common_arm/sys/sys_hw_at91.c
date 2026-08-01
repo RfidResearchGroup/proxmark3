@@ -1,20 +1,9 @@
-//-----------------------------------------------------------------------------
-// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Created by dxl on 2026/5/23.
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// See LICENSE.txt for the text of the license.
-//-----------------------------------------------------------------------------
-#include "clocks.h"
+#include "sys_apis.h"
 #include "proxmark3_arm.h"
+#include "at91sam7s512.h"
 
 void mck_from_pll_to_slck(void) {
     // switch main clk to slow clk, first CSS then PRES
@@ -73,4 +62,32 @@ void mck_from_slck_to_pll(void) {
 
     // wait for main clock ready signal
     while (!(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY)) {};
+}
+
+void ConfigSystemClocks(void) {
+    // we are using a 16 MHz crystal as the basis for everything
+    // slow clock runs at 32kHz typical regardless of crystal
+
+    // enable system clock and USB clock
+    AT91C_BASE_PMC->PMC_SCER |= AT91C_PMC_PCK | AT91C_PMC_UDP;
+
+    // enable the clock to the following peripherals
+    AT91C_BASE_PMC->PMC_PCER =
+        (1 << AT91C_ID_PIOA)   |
+        (1 << AT91C_ID_ADC)    |
+        (1 << AT91C_ID_SPI)    |
+        (1 << AT91C_ID_SSC)    |
+        (1 << AT91C_ID_PWMC)   |
+        (1 << AT91C_ID_UDP);
+
+    mck_from_slck_to_pll();
+}
+
+void __attribute__((noreturn)) JumpToAnyImage(uint32_t stack_top, uint32_t entry_point) {
+    // Set stack top pointer
+    __asm("mov sp, %0\n" : : "r"(stack_top));
+    // jump to Flash address of the osimage(any image) entry point (LSBit set for thumb mode)
+    __asm("bx %0\n" : : "r"(((uint32_t)entry_point) | 0x1));
+
+    while (1); // No warning.
 }

@@ -13,13 +13,20 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-#ifndef _CLOCKS_H_
-#define _CLOCKS_H_
+// Routines to load the FPGA image, and then to configure the FPGA's major
+// mode once it is configured.
+//-----------------------------------------------------------------------------
+#ifndef __FPGALOADER_H
+#define __FPGALOADER_H
 
 #include "common.h"
-#include "at91sam7s512.h"
+#include "fpga.h"
 
-void mck_from_pll_to_slck(void);
-void mck_from_slck_to_pll(void);
+int FpgaGetCurrent(void);
+const char* FpgaGetCurrentVersionString(void);
+void FpgaDownloadAndGo(int bitstream_target);
+void FpgaDownloadAndGo_keep_EM(int bitstream_target);
+void FpgaResetBitstream(void);
+// void FpgaGatherVersion(int bitstream_target, char *dst, int len);
 
-#endif // _CLOCKS_H_
+#endif

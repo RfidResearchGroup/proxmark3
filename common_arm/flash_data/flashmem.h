@@ -17,12 +17,11 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //                      Common Instructions                           //
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-#ifndef __FLASHMEM_H
-#define __FLASHMEM_H
+#ifndef FLASHMEM_H_
+#define FLASHMEM_H_
 
 #include "common.h"
 #include "pmflash.h"
-
 
 //    Used Command
 #define ID              0x90
@@ -38,6 +37,7 @@
 
 #define READDATA        0x03
 #define FASTREAD        0x0B
+#define FASTREAD_QO     0x6B // Fast Read Quad Output, qspi, some platform unsupported(at91, haha).
 #define PAGEPROG        0x02
 
 #define SECTORERASE     0x20
@@ -59,8 +59,6 @@
 #define PAGESIZE        0x100
 #define WINBOND_WRITE_DELAY 0x02
 
-#define SPI_CLK         48000000
-
 #define BUSY            0x01
 #define WRTEN           0x02
 #define SUS             0x40
@@ -71,58 +69,38 @@
 #define NO_CONTINUE     0x00
 #define PASS            0x01
 #define FAIL            0x00
-#define maxAddress      capacity
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-//                            List of Error codes                          //
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-#define SUCCESS         0x00
-#define CALLBEGIN       0x01
-#define UNKNOWNCHIP     0x02
-#define UNKNOWNCAP      0x03
-#define CHIPBUSY        0x04
-#define OUTOFBOUNDS     0x05
-#define CANTENWRITE     0x06
-#define PREVWRITTEN     0x07
-#define LOWRAM          0x08
-#define NOSUSPEND       0x09
-#define UNKNOWNERROR    0xFF
 
 // List of blocks
 #define MAX_BLOCKS      4
 #define MAX_SECTORS     16
 
-//#define FLASH_BAUD 24000000
-#define FLASH_MINFAST 24000000 //33000000
-#define FLASH_BAUD MCK/2
-#define FLASH_FASTBAUD MCK
-#define FLASH_MINBAUD FLASH_FASTBAUD
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
+// The default values returned by different platforms are different.
+// This function is implemented by the platform.
+uint32_t Flash_DefaultBaudrate(void);
+
 bool FlashInit(void);
-void Flash_UniqueID(uint8_t *uid);
+bool FlashSetup(uint32_t baudrate);
 void FlashStop(void);
 
-void FlashSetup(uint32_t baudrate);
+bool Flash_UniqueID(uint8_t *uid);
 bool Flash_CheckBusy(uint32_t timeout);
-uint8_t Flash_ReadStat1(void);
-uint16_t FlashSendByte(uint32_t data);
-uint16_t FlashSendLastByte(uint32_t data);
-
+bool Flash_ReadStat1(uint8_t *status);
+bool Flash_ReadStat2(uint8_t *status);
 
 #ifndef AS_BOOTROM
-void FlashmemSetSpiBaudrate(uint32_t baudrate);
-bool Flash_WaitIdle(void);
-void Flash_TransferAdresse(uint32_t address);
 
-void Flash_WriteEnable(void);
+uint32_t Flash_GetSpiBaudrate(void);
+void Flash_SetSpiBaudrate(uint32_t baudrate);
+bool Flash_WriteEnable(void);
 bool Flash_WipeMemoryPage(uint8_t page);
 bool Flash_WipeMemory(void);
 bool Flash_Erase4k(uint8_t block, uint8_t sector);
 //bool Flash_Erase32k(uint32_t address);
 bool Flash_Erase64k(uint8_t block);
 
+// defs see: https://chromium.googlesource.com/chromiumos/third_party/flashrom/+/798d2adc9527f724bc5096a646cf99efdbb6b59e/flashchips.h
 typedef struct {
     uint8_t manufacturer_id;
     uint8_t device_id;
@@ -149,4 +127,4 @@ bool FlashDetect(void);
 
 #endif // #ifndef AS_BOOTROM
 
-#endif
+#endif // FLASHMEM_H_
