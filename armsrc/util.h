@@ -30,11 +30,11 @@
 // Basic macros
 
 #ifndef SHORT_COIL
-#define SHORT_COIL()     LOW(GPIO_SSC_DOUT)
+#define SHORT_COIL()     Gpio_SSC_DOUT_Low()
 #endif
 
 #ifndef OPEN_COIL
-#define OPEN_COIL()      HIGH(GPIO_SSC_DOUT)
+#define OPEN_COIL()      Gpio_SSC_DOUT_High()
 #endif
 
 #ifndef BYTEx
