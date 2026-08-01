@@ -52,7 +52,19 @@
 
 #define PACKED __attribute__((packed))
 
-#define VERSION_INFORMATION_MAGIC 0x56334d50 // "PM3V"
+typedef enum {
+    MAIN_CHIP_TYPE_AT91 = 0, // -> PM3V
+    MAIN_CHIP_TYPE_AT32 = 1, // -> PM5V
+    MAIN_CHIP_TYPE_NONE = INT32_MAX,
+} main_chip_type_t;
+
+#define VERSION_INFORMATION_MAGIC_PM5V 0x56354d50 // "PM5V"
+#define VERSION_INFORMATION_MAGIC_PM3V 0x56334d50 // "PM3V
+#ifdef PM5
+#define VERSION_INFORMATION_MAGIC VERSION_INFORMATION_MAGIC_PM5V
+#else
+#define VERSION_INFORMATION_MAGIC VERSION_INFORMATION_MAGIC_PM3V
+#endif
 struct version_information_t {
     int magic; /* Magic sequence to identify this as a correct version information structure. Must be VERSION_INFORMATION_MAGIC */
     char versionversion; /* Must be 1 */
