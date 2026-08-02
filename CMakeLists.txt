@@ -16,7 +16,7 @@ project(Proxmark3 C CXX ASM)
 # add subdirectories, which will contain their own CMakeLists.txt files
 if (BUILD_FIRMWARE)
     add_subdirectory(armsrc)
-    add_subdirectory(bootrom)
+    # add_subdirectory(bootrom) TODO DXL: The bootrom depends on version_pm3.c, but currently only armsrc generates this file.
 else ()
     add_subdirectory(client)
 endif ()
