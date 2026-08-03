@@ -59,11 +59,11 @@ elseif (PLATFORM STREQUAL "PM3ICOPYX")
     set(PLTNAME "iCopy-X with XC3S100E")
     set(PLATFORM_FPGA "xc3s100e")
 elseif (PLATFORM STREQUAL "PM5")
-    # TODO 我们暂时不需要指定FPGA比特流文件，因为实际上我们大概率要做FPGA的静态烧录，而不是附加到ARM固件中动态下载
-    set(FPGA_BITSTREAMS ../fpga/fpga_pm3_hf.bit) # TODO 虽然可以不把打包比特流，但是还是得把FPGA的版本信息给生成，让EXE依赖。
+    # TODO DXL 我们暂时不需要指定FPGA比特流文件，因为实际上我们大概率要做FPGA的静态烧录，而不是附加到ARM固件中动态下载
+    set(FPGA_BITSTREAMS ../fpga/fpga_pm3_hf.bit) # TODO DXL 虽然可以不把打包比特流，但是还是得把FPGA的版本信息给生成，让EXE依赖。
     set(SKIP_FPGA_EMBED TRUE) # important!!! disable the fpga bit files pack to arm!
     set(SKIP_COMPRESSION TRUE) # Skip data section compress. The new mcu has enough flash space.
-    set(PLATFORM_DEFS -DWITH_FLASH -DPM5 -DCHIP_AT32F435_37) # TODO 暂时不要编译i2c -DWITH_SMARTCARD
+    set(PLATFORM_DEFS -DWITH_FLASH -DPM5 -DCHIP_AT32F435_37) # TODO DXL 暂时不要编译i2c -DWITH_SMARTCARD
     set(PLTNAME "Proxmark5")
     set(PLATFORM_FPGA "GW1NR-LV2MG49GC6/i5")
     set(PM5 TRUE)
