@@ -21,12 +21,14 @@
 #include "stdbool.h"
 
 // Specific firmware versions correspond to specific main chip types.
-struct version_info_map_chip_type {
+typedef struct {
     int magic;
     uint32_t chiptype;
-} map[] = {
-    {VERSION_INFORMATION_MAGIC_PM5V, MAIN_CHIP_TYPE_AT32},
-    {VERSION_INFORMATION_MAGIC_PM3V, MAIN_CHIP_TYPE_AT91},
+} version_info_map_chip_type_t;
+
+static version_info_map_chip_type_t g_version_info_map[] = {
+    {.magic = VERSION_INFORMATION_MAGIC_PM5V, .chiptype = MAIN_CHIP_TYPE_AT32},
+    {.magic = VERSION_INFORMATION_MAGIC_PM3V, .chiptype = MAIN_CHIP_TYPE_AT91},
 };
 
 /**
@@ -36,8 +38,8 @@ struct version_info_map_chip_type {
  */
 bool CheckValidInformationMagic(const void *version_info) {
     const struct version_information_t *v = (const struct version_information_t *)version_info;
-    for (int i = 0; i < ARRAYLEN(map); ++i) {
-        if (v->magic == map[i].magic) {
+    for (int i = 0; i < ARRAYLEN(g_version_info_map); ++i) {
+        if (v->magic == g_version_info_map[i].magic) {
             return true; // Valid magic found.
         }
     }
@@ -46,9 +48,9 @@ bool CheckValidInformationMagic(const void *version_info) {
 
 bool CheckInformationMagicAndChipType(const void *version_info, uint32_t chiptype) {
     const struct version_information_t *v = (const struct version_information_t *) version_info;
-    for (int i = 0; i < ARRAYLEN(map); ++i) {
-        if (v->magic == map[i].magic) {
-            if (chiptype == map[i].chiptype) {
+    for (int i = 0; i < ARRAYLEN(g_version_info_map); ++i) {
+        if (v->magic == g_version_info_map[i].magic) {
+            if (chiptype == g_version_info_map[i].chiptype) {
                 return true;
             }
             return false; // Magic matches but chip type does not match.
