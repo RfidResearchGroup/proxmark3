@@ -250,7 +250,7 @@ static void MeasureAntennaTuningHfDecay(const hf_decay_params_t *params) {
     SpinDelay(stabilize_ms);
 
     // Baseline measurement (averaged)
-    payload.baseline_mv = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
+    payload.baseline_mv = (MAX_ADC_HF_VOLTAGE * AdcRssiSum(ADC_RSSI_CH_HF, 32)) >> 15;
 
     // Configure ADC for fast burst mode.
     // Faster ADC clock + shorter S&H trades absolute accuracy for speed.
@@ -3583,12 +3583,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_MAIN_CHIP_UNIQUEID, PM3_SUCCESS, uid, size);
             break;
         }
+#ifdef PM5
         case CMD_PM5_QC_TEST: {
             uint8_t failed_item = 0;
             reply_ng(CMD_PM5_QC_TEST, QCTestPM5(&failed_item) ? PM3_SUCCESS : PM3_EFAILED, &failed_item, 1);
             break;
         }
-
+#endif
         default: {
             Dbprintf("%s: 0x%04x", "unknown command:", packet->cmd);
             break;

@@ -25,7 +25,7 @@ STATIC_FORCE_INLINE bool AdcRssiDataReady(adc_rssi_ch_t ch) {
     return AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ADC_CHAN_LF);
 }
 
-STATIC_FORCE_INLINE uint16_t AdcRssiDataRead(adc_rssi_ch_t ch) {
+STATIC_FORCE_INLINE uint32_t AdcRssiDataRead(adc_rssi_ch_t ch) {
     if (ch == ADC_RSSI_CH_HF) {
         return AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF] & 0x3FF;
     }

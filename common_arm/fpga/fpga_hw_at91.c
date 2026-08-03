@@ -197,3 +197,25 @@ void Fpga_print_status(void) {
     DbpString(_CYAN_("Current FPGA image"));
     Dbprintf("  mode.................... %s", FpgaGetCurrentVersionString());
 }
+
+// -------------------------------------------------------------------
+//                  Config bitstream for FPGA
+// Waiting for impl...
+
+int FpgaStartConfig(bool configSram, uint32_t fileLength) {
+    // TODO DXL: Not implemented
+    return PM3_ENOTIMPL;
+}
+
+int FpgaConfigWrite(uint8_t *data, uint32_t data_length) {
+    return PM3_ENOTIMPL;
+}
+int FpgaStopConfig(void) {
+    return PM3_ENOTIMPL;
+}
+
+uint32_t FpgaConfigPlatformStatus(void) {
+    return 0;
+}
+
+// -------------------------------------------------------------------

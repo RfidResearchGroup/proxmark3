@@ -31,21 +31,21 @@ include(../tools/FpgaCompress.cmake)
 set(APP_CFLAGS ${PLATFORM_DEFS} -ffunction-sections -fdata-sections)
 
 set(INC_DIRS
-    ../include
-    ../common_arm
-    ../common_arm/rssi
-    ../common_arm/ticks
-    ../common_arm/usb
-    ../common_arm/flash_data
-    ../common_arm/flash_code
-    ../common_arm/gpio
-    ../common_arm/sys
-    ../common_arm/fpga
-    ../common_arm/wdt
-    ../common_fpga
-    ../common
-    ../common/lz4
-    .
+        ../include
+        ../common_arm
+        ../common_arm/rssi
+        ../common_arm/ticks
+        ../common_arm/usb
+        ../common_arm/flash_data
+        ../common_arm/flash_code
+        ../common_arm/gpio
+        ../common_arm/sys
+        ../common_arm/fpga
+        ../common_arm/wdt
+        ../common_fpga
+        ../common
+        ../common/lz4
+        .
 )
 
 # Hal for platform
@@ -65,30 +65,30 @@ endif ()
 
 
 set(SRC_LF
-    lfops.c
-    lfsampling.c
-    pcf7931.c
-    ../common/lfdemod.c
-    lfadc.c
+        lfops.c
+        lfsampling.c
+        pcf7931.c
+        ../common/lfdemod.c
+        lfadc.c
 )
 
 set(SRC_HF hfops.c)
 
 set(SRC_ISO15693
-    iso15693.c
-    ../common/iso15693tools.c)
+        iso15693.c
+        ../common/iso15693tools.c)
 
 set(SRC_ISO14443a
-    iso14443a.c
-    secc.c
-    mifareutil.c
-    mifarecmd.c
-    epa.c
-    mifaresim.c
-    sam_common.c
-    sam_mfc.c
-    sam_seos.c
-    sam_sc.c
+        iso14443a.c
+        secc.c
+        mifareutil.c
+        mifarecmd.c
+        epa.c
+        mifaresim.c
+        sam_common.c
+        sam_mfc.c
+        sam_seos.c
+        sam_sc.c
 )
 
 #UNUSED: mifaresniff.c
@@ -98,26 +98,26 @@ set(SRC_ISO14443b iso14443b.c)
 set(SRC_FELICA felica.c felicasim.c)
 
 set(SRC_CRAPTO1
-    ../common/crapto1/crypto1.c
-    desfire_crypto.c
-    mifaredesfire.c
-    ../common/mbedtls/des.c
-    ../common/mbedtls/aes.c
-    ../common/mbedtls/platform_util.c
+        ../common/crapto1/crypto1.c
+        desfire_crypto.c
+        mifaredesfire.c
+        ../common/mbedtls/des.c
+        ../common/mbedtls/aes.c
+        ../common/mbedtls/platform_util.c
 )
 
 set(SRC_CRC
-    ../common/crc.c
-    ../common/crc16.c
-    ../common/crc32.c)
+        ../common/crc.c
+        ../common/crc16.c
+        ../common/crc32.c)
 
 set(SRC_ICLASS
-    iclass.c
-    optimized_cipherutils.c
-    optimized_ikeys.c
-    optimized_elite.c
-    optimized_cipher.c
-    sam_picopass.c
+        iclass.c
+        optimized_cipherutils.c
+        optimized_ikeys.c
+        optimized_elite.c
+        optimized_cipher.c
+        sam_picopass.c
 )
 
 set(SRC_SEOS
@@ -126,9 +126,9 @@ set(SRC_SEOS
         ../common/mbedtls/sha256.c)
 
 set(SRC_LEGIC
-    legicrf.c
-    legicrfsim.c
-    ../common/legic_prng.c)
+        legicrf.c
+        legicrfsim.c
+        ../common/legic_prng.c)
 
 set(SRC_NFCBARCODE thinfilm.c)
 
@@ -146,12 +146,12 @@ if ("${APP_CFLAGS}" MATCHES "WITH_FLASH")
     endif ()
     set(SRC_FLASH ${SRC_FLASH} ../common_arm/flash_data/flashmem_core.c)
     set(SRC_SPIFFS
-        spiffs.c
-        spiffs_cache.c
-        spiffs_check.c
-        spiffs_gc.c
-        spiffs_nucleus.c
-        spiffs_hydrogen.c
+            spiffs.c
+            spiffs_cache.c
+            spiffs_check.c
+            spiffs_gc.c
+            spiffs_nucleus.c
+            spiffs_hydrogen.c
     )
 else ()
     set(SRC_FLASH)
@@ -172,12 +172,12 @@ endif ()
 
 if ("${APP_CFLAGS}" MATCHES "WITH_HITAG")
     set(SRC_HITAG
-        ../common/hitag2/hitag2_crypto.c
-        hitag_common.c
-        hitag2.c
-        hitagS.c
-        hitagu.c
-        hitag2_crack.c
+            ../common/hitag2/hitag2_crypto.c
+            hitag_common.c
+            hitag2.c
+            hitagS.c
+            hitagu.c
+            hitag2_crack.c
     )
     list(APPEND INC_DIRS ../common/hitag2)
 else ()
@@ -186,8 +186,8 @@ endif ()
 
 if ("${APP_CFLAGS}" MATCHES "WITH_EM4x50")
     set(SRC_EM4x50
-        em4x50.c
-        ../common/bruteforce.c)
+            em4x50.c
+            ../common/bruteforce.c)
 else ()
     set(SRC_EM4x50)
 endif ()
@@ -230,61 +230,62 @@ list(APPEND APP_CFLAGS -I. -fno-stack-protector -fno-pie)
 
 # Compile these in thumb mode (small size)
 set(THUMBSRC
-    start.c
-    ${SRC_LCD}
-    ${SRC_ISO15693}
-    ${SRC_NFCBARCODE}
-    ${SRC_LF}
-    ${SRC_LZ4}
-    ${SRC_LEGIC}
-    ${SRC_FLASH}
-    ${SRC_SMARTCARD}
-    ${SRC_FPC}
-    ${SRC_HITAG}
-    ${SRC_EM4x50}
-    ${SRC_EM4x70}
-    ${SRC_SPIFFS}
-    ${SRC_HF}
-    ${SRC_ISO14443a}
-    ${SRC_ISO14443b}
-    ${SRC_CRAPTO1}
-    ${SRC_ICLASS}
-    ${SRC_SEOS}
-    ${SRC_EMV}
-    ${SRC_CRC}
-    ${SRC_FELICA}
-    ${SRC_STANDALONE}
-    ${SRC_ZX}
-    appmain.c
-    printf.c
-    dbprint.c
-    ../common/commonutil.c
-    util.c
-    string.c
-    BigBuf.c
-    ${SRC_RSSI_PLAT}
-    ${SRC_TICKS_PLAT}
-    ${SRC_GPIO_PLAT}
-    ${SRC_WDT_PLAT}
-    ${SRC_SYS_PLAT}
-    ../common_arm/rssi/rssi_core.c
-    ../common_arm/ticks/ticks_core.c
-    ../common_arm/usb/usb_read_ng.c
-    ../common_arm/usb/usb_cdc_desc.c
-    hfsnoop.c
-    ../common/generator.c
-    cmac_calc.c
-    cmac_3des.c
-    at32_unit_test.c # TODO DXL: 临时加入AT32单元测试代码，如果需要运行 AppMain，则需要注释此行
+        start.c
+        ${SRC_LCD}
+        ${SRC_ISO15693}
+        ${SRC_NFCBARCODE}
+        ${SRC_LF}
+        ${SRC_LZ4}
+        ${SRC_LEGIC}
+        ${SRC_FLASH}
+        ${SRC_SMARTCARD}
+        ${SRC_FPC}
+        ${SRC_HITAG}
+        ${SRC_EM4x50}
+        ${SRC_EM4x70}
+        ${SRC_SPIFFS}
+        ${SRC_HF}
+        ${SRC_ISO14443a}
+        ${SRC_ISO14443b}
+        ${SRC_CRAPTO1}
+        ${SRC_ICLASS}
+        ${SRC_SEOS}
+        ${SRC_EMV}
+        ${SRC_CRC}
+        ${SRC_FELICA}
+        ${SRC_STANDALONE}
+        ${SRC_ZX}
+        appmain.c
+        printf.c
+        dbprint.c
+        ../common/commonutil.c
+        util.c
+        string.c
+        BigBuf.c
+        ${SRC_RSSI_PLAT}
+        ${SRC_TICKS_PLAT}
+        ${SRC_GPIO_PLAT}
+        ${SRC_WDT_PLAT}
+        ${SRC_SYS_PLAT}
+        ../common_arm/rssi/rssi_core.c
+        ../common_arm/ticks/ticks_core.c
+        ../common_arm/usb/usb_read_ng.c
+        ../common_arm/usb/usb_cdc_desc.c
+        hfsnoop.c
+        ../common/generator.c
+        cmac_calc.c
+        cmac_3des.c
 )
 
 if (PM5)
     list(APPEND THUMBSRC ../armlib/at32_sys/cmsis/cm4/device_support/startup/gcc/startup_at32f435_437.s)
     list(APPEND THUMBSRC i2c.c)
+    list(APPEND THUMBSRC at32_unit_test.c) # TODO DXL: AT32单元测试代码
+
     set(SRC_USB_CDC ../common_arm/usb/usb_cdc_at32.c)
     set(SRC_FPGA_PLAT
-        ../common_arm/fpga/fpga_hw_at32.c
-        ../common_arm/fpga/fpga_gw_jtag.c
+            ../common_arm/fpga/fpga_hw_at32.c
+            ../common_arm/fpga/fpga_gw_jtag.c
     )
 else ()
     set(SRC_USB_CDC ../common_arm/usb/usb_cdc_at91.c)
@@ -293,11 +294,11 @@ endif ()
 
 # These are to be compiled in ARM mode
 set(ARMSRC
-    ../common_arm/fpga/fpga_loader.c
-    ../common_arm/fpga/fpga_core.c
-    ${SRC_FPGA_PLAT}
-    ${SRC_USB_CDC} # AT32 or AT91 usb module, api defs all in usb_cdc.h
-    cmd.c
+        ../common_arm/fpga/fpga_loader.c
+        ../common_arm/fpga/fpga_core.c
+        ${SRC_FPGA_PLAT}
+        ${SRC_USB_CDC} # AT32 or AT91 usb module, api defs all in usb_cdc.h
+        cmd.c
 )
 
 set(VERSIONSRC version_pm3.c fpga_version_info.c)
@@ -403,26 +404,26 @@ foreach (bitFile ${FPGA_BITSTREAMS})
     list(APPEND FPGA_BITSTREAMS_ABSOLUTE_PATH ${bitFileAbPath}) # append to list
 endforeach ()
 add_custom_command(
-    OUTPUT ${FPGA_VERSION_C}
-    # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(1) fpga_version_info.c"
-    COMMAND ${FPGA_COMPRESS_EXE} -v ${FPGA_BITSTREAMS_ABSOLUTE_PATH} ${FPGA_VERSION_C}
-    DEPENDS ${FPGA_BITSTREAMS_ABSOLUTE_PATH}
-    DEPENDS ${FPGA_COMPRESS_EXE} # Before this step run, we need to build 'fpga_compress' executable
-    COMMAND_EXPAND_LISTS
-    COMMENT "Call the 'fpga_compress' to generate 'fpga_version_info.c' for armsrc"
-    VERBATIM
+        OUTPUT ${FPGA_VERSION_C}
+        # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(1) fpga_version_info.c"
+        COMMAND ${FPGA_COMPRESS_EXE} -v ${FPGA_BITSTREAMS_ABSOLUTE_PATH} ${FPGA_VERSION_C}
+        DEPENDS ${FPGA_BITSTREAMS_ABSOLUTE_PATH}
+        DEPENDS ${FPGA_COMPRESS_EXE} # Before this step run, we need to build 'fpga_compress' executable
+        COMMAND_EXPAND_LISTS
+        COMMENT "Call the 'fpga_compress' to generate 'fpga_version_info.c' for armsrc"
+        VERBATIM
 )
 
 # ---------------- 2. Create fpga_all.bit.z ----------------
 #  If no fpga pack to arm fw required, skip this.
 add_custom_command(
-    OUTPUT ${FPGA_BIT_Z}
-    # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(2) fpga_all.bit.z"
-    COMMAND ${FPGA_COMPRESS_EXE} ${FPGA_BITSTREAMS_ABSOLUTE_PATH} ${FPGA_BIT_Z}
-    DEPENDS ${FPGA_BITSTREAMS_ABSOLUTE_PATH}
-    COMMAND_EXPAND_LISTS
-    COMMENT "Call the 'fpga_compress' to compress fpga bit files, output 'fpga_all.bit.z'"
-    VERBATIM
+        OUTPUT ${FPGA_BIT_Z}
+        # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(2) fpga_all.bit.z"
+        COMMAND ${FPGA_COMPRESS_EXE} ${FPGA_BITSTREAMS_ABSOLUTE_PATH} ${FPGA_BIT_Z}
+        DEPENDS ${FPGA_BITSTREAMS_ABSOLUTE_PATH}
+        COMMAND_EXPAND_LISTS
+        COMMENT "Call the 'fpga_compress' to compress fpga bit files, output 'fpga_all.bit.z'"
+        VERBATIM
 )
 
 # ---------------- 3. Create fpga_all.o ----------------
@@ -432,15 +433,15 @@ add_custom_command(
 #  More info view: https://stackoverflow.com/questions/60295013/is-it-possible-to-make-a-hardcoding-with-the-help-of-the-command-objcopy
 #  Tips: the binary file put in '.data' section.
 add_custom_command(
-    OUTPUT ${FPGA_ALL_O}
-    # !!! Important !!! Must enter parent dir of obj output dir, to create fpga_all.o
-    #  The objcopy command needs to generate object file for 'fpga_all.bit.z' outside the obj directory.
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(3) fpga_all.o"
-    COMMAND ${CMAKE_OBJCOPY} -O elf32-littlearm -I binary -B arm --prefix-sections=fpga_all_bit ${OBJDIR_NAME}/${FPGA_BIT_Z_NAME} ${FPGA_ALL_O}
-    DEPENDS ${FPGA_BIT_Z}
-    COMMENT "Call the objcopy to convert binary to elf file."
-    VERBATIM
+        OUTPUT ${FPGA_ALL_O}
+        # !!! Important !!! Must enter parent dir of obj output dir, to create fpga_all.o
+        #  The objcopy command needs to generate object file for 'fpga_all.bit.z' outside the obj directory.
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(3) fpga_all.o"
+        COMMAND ${CMAKE_OBJCOPY} -O elf32-littlearm -I binary -B arm --prefix-sections=fpga_all_bit ${OBJDIR_NAME}/${FPGA_BIT_Z_NAME} ${FPGA_ALL_O}
+        DEPENDS ${FPGA_BIT_Z}
+        COMMENT "Call the objcopy to convert binary to elf file."
+        VERBATIM
 )
 
 # ---------------- 4. Create version_pm3.c ----------------
@@ -451,12 +452,12 @@ else ()
 endif ()
 
 add_custom_command(
-    OUTPUT ${VERSION_PM3_C}
-    # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(4) version_pm3.c"
-    DEPENDS ${DEFAULT_VERSION_C} ${FPGA_VERSION_C} ${FPGA_ALL_O_MKVERSION_DEP}
-    COMMAND ${MKVERSION_CMD} ${VERSION_PM3_C} || ${CMAKE_COMMAND} -E copy ${DEFAULT_VERSION_C} ${VERSION_PM3_C}
-    COMMENT "Call mkversion.xx script to generate 'version_pm3.c', if mkversion return fail, fallback is default_version_pm3.c"
-    VERBATIM
+        OUTPUT ${VERSION_PM3_C}
+        # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(4) version_pm3.c"
+        DEPENDS ${DEFAULT_VERSION_C} ${FPGA_VERSION_C} ${FPGA_ALL_O_MKVERSION_DEP}
+        COMMAND ${MKVERSION_CMD} ${VERSION_PM3_C} || ${CMAKE_COMMAND} -E copy ${DEFAULT_VERSION_C} ${VERSION_PM3_C}
+        COMMENT "Call mkversion.xx script to generate 'version_pm3.c', if mkversion return fail, fallback is default_version_pm3.c"
+        VERBATIM
 )
 
 # ---------------- 5. Build fulliamge elf but stage1, not '.data' section compressed ----------------
@@ -464,9 +465,9 @@ set(ALL_SRCS ${THUMBSRC} ${ARMSRC} ${ASMSRC} ${VERSIONSRC})
 
 add_executable(fullimage.stage1.elf ${ALL_SRCS})
 set_target_properties(fullimage.stage1.elf PROPERTIES # The 'fullimage.stage1.elf' output to ${OBJDIR}
-    RUNTIME_OUTPUT_DIRECTORY "${OBJDIR}"
-    OUTPUT_NAME "fullimage.stage1"
-    SUFFIX ".elf" # OK, OBJDIR + OUTPUT_NAME + SUFFIX = /xxx/obj/fullimage.stage1.elf
+        RUNTIME_OUTPUT_DIRECTORY "${OBJDIR}"
+        OUTPUT_NAME "fullimage.stage1"
+        SUFFIX ".elf" # OK, OBJDIR + OUTPUT_NAME + SUFFIX = /xxx/obj/fullimage.stage1.elf
 )
 target_link_options(fullimage.stage1.elf PRIVATE -Wl,-Map=${PROJECT_BINARY_DIR}/${PROJECT_NAME}.map) # output map file
 target_link_options(fullimage.stage1.elf PRIVATE -L ${CMAKE_CURRENT_SOURCE_DIR} -T ${LDSCRIPT} ${CROSS_LDFLAGS})
@@ -480,75 +481,75 @@ endif ()
 
 # Generate HEX and BIN files for stage 1 for easy downloading to device and debugging device.
 add_custom_command(TARGET ${PROJECT_NAME}.stage1.elf POST_BUILD
-    # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(5) ${PROJECT_NAME}.stage1.(HEX,BIN)"
-    COMMAND ${CMAKE_OBJCOPY} -Oihex $<TARGET_FILE:${PROJECT_NAME}.stage1.elf> ${OUTPUT_STAGE1_HEX}
-    COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${PROJECT_NAME}.stage1.elf> ${OUTPUT_STAGE1_BIN}
-    COMMENT "Build ${PROJECT_NAME}.stage1.hex & ${PROJECT_NAME}.stage1.bin"
+        # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(5) ${PROJECT_NAME}.stage1.(HEX,BIN)"
+        COMMAND ${CMAKE_OBJCOPY} -Oihex $<TARGET_FILE:${PROJECT_NAME}.stage1.elf> ${OUTPUT_STAGE1_HEX}
+        COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${PROJECT_NAME}.stage1.elf> ${OUTPUT_STAGE1_BIN}
+        COMMENT "Build ${PROJECT_NAME}.stage1.hex & ${PROJECT_NAME}.stage1.bin"
 )
 
 # ---------------- 6. Pull '.data' section from 'fullimage.stage1.elf' ----------------
 #  Tips: fpga_all.o maybe pack to elf on stage1, is uncompress data binary, next step will compress(all '.data' section).
 #    When this step is reached, the linker has allocated a specific vma for the data segment. Compression is only to reduce the firmware volume.
 add_custom_command(
-    OUTPUT ${DATA_BIN}
-    # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(6) pull '.data'(uncompressed)"
-    COMMAND ${CMAKE_OBJCOPY} -O binary --only-section .data ${STAGE1_ELF} ${DATA_BIN}
-    DEPENDS fullimage.stage1.elf
-    COMMENT "Call the 'objcopy' to pull the '.data' section from 'fullimage.stage1.elf'"
-    VERBATIM
+        OUTPUT ${DATA_BIN}
+        # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(6) pull '.data'(uncompressed)"
+        COMMAND ${CMAKE_OBJCOPY} -O binary --only-section .data ${STAGE1_ELF} ${DATA_BIN}
+        DEPENDS fullimage.stage1.elf
+        COMMENT "Call the 'objcopy' to pull the '.data' section from 'fullimage.stage1.elf'"
+        VERBATIM
 )
 
 # ---------------- 7. Compress '.data' section binary to 'fullimage.data.bin.z' ----------------
 # About '.data' section compress: https://www.eevblog.com/forum/microcontrollers/compression-of-data-(initialized-variables)-section/
 add_custom_command(
-    OUTPUT ${DATA_BIN_Z}
-    # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(7) fullimage.data.bin.z"
-    COMMAND ${FPGA_COMPRESS_EXE} ${DATA_BIN} ${DATA_BIN_Z}
-    DEPENDS ${DATA_BIN}
-    COMMENT "Call the 'fpga_compress' to compress '.data' section from 'fullimage.stage1.elf'"
-    VERBATIM
+        OUTPUT ${DATA_BIN_Z}
+        # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(7) fullimage.data.bin.z"
+        COMMAND ${FPGA_COMPRESS_EXE} ${DATA_BIN} ${DATA_BIN_Z}
+        DEPENDS ${DATA_BIN}
+        COMMENT "Call the 'fpga_compress' to compress '.data' section from 'fullimage.stage1.elf'"
+        VERBATIM
 )
 
 # ---------------- 8. Pack data bin and gen fullimage.elf ----------------
 if ("${APP_CFLAGS}" MATCHES "WITH_COMPRESSION|WITH_COMPRESSION=1")
     add_custom_command(
-        OUTPUT ${FINAL_ELF}
-        # COMMAND ${CMAKE_COMMAND} -E echo "[=] LD(8) fullimage.elf (with compression)"
-        COMMAND ${CMAKE_OBJCOPY} -O elf32-littlearm --strip-all --update-section .data=${DATA_BIN_Z} ${STAGE1_ELF} ${FINAL_ELF}
-        DEPENDS ${STAGE1_ELF} ${DATA_BIN_Z}
-        COMMENT "Put the compressed '.data' section to 'fullimage.stage1.elf' for build 'fullimage.elf'"
-        VERBATIM
+            OUTPUT ${FINAL_ELF}
+            # COMMAND ${CMAKE_COMMAND} -E echo "[=] LD(8) fullimage.elf (with compression)"
+            COMMAND ${CMAKE_OBJCOPY} -O elf32-littlearm --strip-all --update-section .data=${DATA_BIN_Z} ${STAGE1_ELF} ${FINAL_ELF}
+            DEPENDS ${STAGE1_ELF} ${DATA_BIN_Z}
+            COMMENT "Put the compressed '.data' section to 'fullimage.stage1.elf' for build 'fullimage.elf'"
+            VERBATIM
     )
 else ()
     add_custom_command(
-        OUTPUT ${FINAL_ELF}
-        # COMMAND ${CMAKE_COMMAND} -E echo "[=] MIN(8) fullimage.elf (without compression) "
-        COMMAND ${CMAKE_OBJCOPY} -O elf32-littlearm --strip-all ${STAGE1_ELF} ${FINAL_ELF}
-        DEPENDS ${STAGE1_ELF}
-        COMMENT "Copy 'fullimage.stage1.elf' to 'fullimage.elf' if no compress required"
-        VERBATIM
+            OUTPUT ${FINAL_ELF}
+            # COMMAND ${CMAKE_COMMAND} -E echo "[=] MIN(8) fullimage.elf (without compression) "
+            COMMAND ${CMAKE_OBJCOPY} -O elf32-littlearm --strip-all ${STAGE1_ELF} ${FINAL_ELF}
+            DEPENDS ${STAGE1_ELF}
+            COMMENT "Copy 'fullimage.stage1.elf' to 'fullimage.elf' if no compress required"
+            VERBATIM
     )
 endif ()
 
 # ---------------- 9. Generate S19 format file ----------------
 add_custom_command(
-    OUTPUT ${OUTPUT_S19}
-    # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(9) S19 file"
-    COMMAND ${CMAKE_OBJCOPY}
-    -Osrec
-    --srec-forceS3
-    --strip-debug
-    --no-change-warnings
-    --change-addresses=-0x100000
-    --change-start=0
-    --change-section-address=.bss+0
-    --change-section-address=.data-0x100000
-    --change-section-address=.commonarea+0
-    ${FINAL_ELF}
-    ${OUTPUT_S19}
-    DEPENDS ${FINAL_ELF}
-    COMMENT "Call the objcopy to convert ELF to S19 format"
-    VERBATIM
+        OUTPUT ${OUTPUT_S19}
+        # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(9) S19 file"
+        COMMAND ${CMAKE_OBJCOPY}
+        -Osrec
+        --srec-forceS3
+        --strip-debug
+        --no-change-warnings
+        --change-addresses=-0x100000
+        --change-start=0
+        --change-section-address=.bss+0
+        --change-section-address=.data-0x100000
+        --change-section-address=.commonarea+0
+        ${FINAL_ELF}
+        ${OUTPUT_S19}
+        DEPENDS ${FINAL_ELF}
+        COMMENT "Call the objcopy to convert ELF to S19 format"
+        VERBATIM
 )
 
 # ---------------- 10. Finally, start build the fullimage, the 'All' build will from here start ----------------
@@ -556,8 +557,8 @@ add_custom_target(fullimage ALL DEPENDS ${OUTPUT_S19} COMMENT "Build fullimage")
 add_dependencies(fullimage fullimage.stage1.elf) # fullimage dependencies tree start, 9 -> 1 -> 9
 # Generate HEX and BIN files for fullimage finally
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(10) ${PROJECT_NAME}(HEX,BIN)"
-    COMMAND ${CMAKE_OBJCOPY} -Oihex ${FINAL_ELF} ${OUTPUT_FINAL_HEX}
-    COMMAND ${CMAKE_OBJCOPY} -Obinary ${FINAL_ELF} ${OUTPUT_FINAL_BIN}
-    COMMENT "Build ${PROJECT_NAME}.hex & ${PROJECT_NAME}.bin"
+        # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(10) ${PROJECT_NAME}(HEX,BIN)"
+        COMMAND ${CMAKE_OBJCOPY} -Oihex ${FINAL_ELF} ${OUTPUT_FINAL_HEX}
+        COMMAND ${CMAKE_OBJCOPY} -Obinary ${FINAL_ELF} ${OUTPUT_FINAL_BIN}
+        COMMENT "Build ${PROJECT_NAME}.hex & ${PROJECT_NAME}.bin"
 )
