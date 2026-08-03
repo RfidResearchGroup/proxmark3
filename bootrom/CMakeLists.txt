@@ -8,40 +8,46 @@ project(bootrom C ASM) # Set variables needs before the project defining.
 # Hardware abstraction layer for ARM platform.
 include(../common_arm/Hal.cmake)
 
+# Include the MKVersion script for generating version_pm3.c
+include(${CMAKE_CURRENT_SOURCE_DIR}/../tools/MKVersionScript.cmake)
+
 # ---
 
+set(DEFAULT_VERSION_C ${CMAKE_CURRENT_SOURCE_DIR}/../common/default_version_pm3.c)
+set(VERSION_PM3_C ${CMAKE_CURRENT_BINARY_DIR}/version_pm3.c)
+
 set(INC_DIRS
-    ${CMAKE_CURRENT_LIST_DIR}/../include
-    ${CMAKE_CURRENT_LIST_DIR}/../common
-    ${CMAKE_CURRENT_LIST_DIR}/../common_arm/sys
-    ${CMAKE_CURRENT_LIST_DIR}/../common_arm/wdt
-    ${CMAKE_CURRENT_LIST_DIR}/../common_arm/flash_code
-    ${CMAKE_CURRENT_LIST_DIR}/../common_arm/gpio
-    ${CMAKE_CURRENT_LIST_DIR}/../common_arm/usb
-    ${CMAKE_CURRENT_LIST_DIR}/../common_arm/ticks
+        ${CMAKE_CURRENT_LIST_DIR}/../include
+        ${CMAKE_CURRENT_LIST_DIR}/../common
+        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/sys
+        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/wdt
+        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/flash_code
+        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/gpio
+        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/usb
+        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/ticks
 )
 
 set(THUMBSRC
-    ${CMAKE_CURRENT_LIST_DIR}/bootrom.c
-    ${CMAKE_CURRENT_LIST_DIR}/version_pm3.c
-    ../common_arm/usb/usb_cdc_desc.c)
+        ${CMAKE_CURRENT_LIST_DIR}/bootrom.c
+        ${VERSION_PM3_C}
+        ../common_arm/usb/usb_cdc_desc.c)
 
 if (PM5)
     set(THUMBSRC ${THUMBSRC}
-        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/sys/sys_hw_at32.c
-        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/ticks/ticks_hw_at32.c
-        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/gpio/gpio_hw_at32.c
-        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/usb/usb_cdc_at32.c
-        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/flash_code/flash_code_hw_at32.c
+            ${CMAKE_CURRENT_LIST_DIR}/../common_arm/sys/sys_hw_at32.c
+            ${CMAKE_CURRENT_LIST_DIR}/../common_arm/ticks/ticks_hw_at32.c
+            ${CMAKE_CURRENT_LIST_DIR}/../common_arm/gpio/gpio_hw_at32.c
+            ${CMAKE_CURRENT_LIST_DIR}/../common_arm/usb/usb_cdc_at32.c
+            ${CMAKE_CURRENT_LIST_DIR}/../common_arm/flash_code/flash_code_hw_at32.c
     )
     set(ASMSRC flash-reset-at32.s ram-reset-at32.s)
 else ()
     set(THUMBSRC ${THUMBSRC}
-        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/sys/sys_hw_at91.c
-        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/ticks/ticks_hw_at91.c
-        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/gpio/gpio_hw_at91.c
-        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/usb/usb_cdc_at91.c
-        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/flash_code/flash_code_hw_at91.c
+            ${CMAKE_CURRENT_LIST_DIR}/../common_arm/sys/sys_hw_at91.c
+            ${CMAKE_CURRENT_LIST_DIR}/../common_arm/ticks/ticks_hw_at91.c
+            ${CMAKE_CURRENT_LIST_DIR}/../common_arm/gpio/gpio_hw_at91.c
+            ${CMAKE_CURRENT_LIST_DIR}/../common_arm/usb/usb_cdc_at91.c
+            ${CMAKE_CURRENT_LIST_DIR}/../common_arm/flash_code/flash_code_hw_at91.c
     )
     set(ASMSRC flash-reset-at91.s ram-reset-at91.s)
 endif ()
@@ -79,16 +85,26 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../common_arm/Common.cmake)
 
 if (PM5)
     include(${CMAKE_CURRENT_SOURCE_DIR}/../armlib/pm5_at32_armlib.cmake)
+    set(LIBS ${LIBS} pm5_at32_armlib)
 endif ()
 
 # Fix: warning: bootrom\bootrom.elf has a LOAD segment with RWX permissions
 set(CROSS_LDFLAGS ${CROSS_LDFLAGS} -Wl,--no-warn-rwx-segments)
 
+# Create version_pm3.c before bootrom build.
+add_custom_command(
+        OUTPUT ${VERSION_PM3_C}
+        DEPENDS ${DEFAULT_VERSION_C}
+        COMMAND ${MKVERSION_CMD} ${VERSION_PM3_C} || ${CMAKE_COMMAND} -E copy ${DEFAULT_VERSION_C} ${VERSION_PM3_C}
+        COMMENT "Call mkversion.xx script to generate 'version_pm3.c', if mkversion return fail, fallback is default_version_pm3.c"
+        VERBATIM
+)
+
 add_executable(bootrom.elf ${THUMBSRC} ${ASMSRC})
 set_target_properties(bootrom.elf PROPERTIES # The 'bootrom.elf' output to ${OBJDIR}
-    RUNTIME_OUTPUT_DIRECTORY "${OBJDIR}"
-    OUTPUT_NAME "bootrom"
-    SUFFIX ".elf" # OK, OBJDIR + OUTPUT_NAME + SUFFIX = /xxx/obj/bootrom.elf
+        RUNTIME_OUTPUT_DIRECTORY "${OBJDIR}"
+        OUTPUT_NAME "bootrom"
+        SUFFIX ".elf" # OK, OBJDIR + OUTPUT_NAME + SUFFIX = /xxx/obj/bootrom.elf
 )
 target_link_options(bootrom.elf PRIVATE -Wl,-Map=${PROJECT_BINARY_DIR}/${PROJECT_NAME}.map) # output map file
 target_link_options(bootrom.elf PRIVATE -L ${CMAKE_CURRENT_SOURCE_DIR} -T ${LDSCRIPT} ${CROSS_LDFLAGS})
@@ -96,14 +112,11 @@ target_compile_options(bootrom.elf PRIVATE ${CROSS_CFLAGS}) # !!!! WARN !!!! No 
 set_source_files_properties(${THUMBSRC} PROPERTIES COMPILE_OPTIONS "-mthumb") # THUMBSRC is '-mthumb' flag required.
 target_include_directories(bootrom.elf PRIVATE ${INC_DIRS})
 target_link_libraries(bootrom.elf ${LIBS})
-if (PM5)
-    target_link_libraries(bootrom.elf PRIVATE pm5_at32_armlib)
-endif ()
 
 # Generate HEX and BIN files for fullimage finally
 add_custom_command(TARGET bootrom.elf POST_BUILD
-    # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(10) bootrom.elf(HEX,BIN)"
-    COMMAND ${CMAKE_OBJCOPY} -Oihex bootrom.elf bootrom.hex
-    COMMAND ${CMAKE_OBJCOPY} -Obinary bootrom.elf bootrom.bin
-    COMMENT "Build bootrom.hex & bootrom.bin"
+        # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(10) bootrom.elf(HEX,BIN)"
+        COMMAND ${CMAKE_OBJCOPY} -Oihex bootrom.elf bootrom.hex
+        COMMAND ${CMAKE_OBJCOPY} -Obinary bootrom.elf bootrom.bin
+        COMMENT "Build bootrom.hex & bootrom.bin"
 )

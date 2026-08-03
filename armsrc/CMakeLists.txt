@@ -13,9 +13,8 @@ if (NOT C_COMPILER_HOST)
     message(FATAL_ERROR "GCC for tools build on host is no found, Plz give the cmake arg like 'cmake -DC_COMPILER_HOST=/your path/'")
 endif ()
 
-# The path for mkversion script to run, and output version info file.
-set(MKVERSION_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR})
-include(../tools/MKVersionScript.cmake) # Genarate version info by mkversion script
+# Genarate version info by mkversion script
+include(../tools/MKVersionScript.cmake)
 
 # Import options for standalone mode
 #  Used 'STANDALONE_REQ_DEFS' & 'STANDALONE_PLATFORM_DEFS' variables.
@@ -337,7 +336,6 @@ message(STATUS "CROSS_CFLAGS = ${CROSS_CFLAGS}")
 # CROSS_LDFLAGS       -> 链接标志（如 -nostartfiles）
 # CMAKE_OBJCOPY       -> objcopy 工具路径
 # LDSCRIPT            -> 链接脚本路径
-# MKVERSION_SH        -> mkversion.sh 路径
 # DEFAULT_VERSION_C   -> 默认 version 模板文件
 # =====================================================
 
@@ -377,7 +375,6 @@ message(STATUS "CROSS_CFLAGS = ${CROSS_CFLAGS}")
 
 set(OBJDIR ${CMAKE_BINARY_DIR}/obj)
 set(DEFAULT_VERSION_C ../common/default_version_pm3.c)
-set(MKVERSION_SH ${MKVERSION_SCRIPT})
 
 # ---------------- Output dir ----------------
 file(MAKE_DIRECTORY ${OBJDIR})
@@ -447,13 +444,6 @@ add_custom_command(
 )
 
 # ---------------- 4. Create version_pm3.c ----------------
-if (MKVERSION_SCRIPT_TYPE STREQUAL "sh")  # What's shell type we are?
-    set(MKVERSION_CMD ${CMAKE_COMMAND} -E env bash ${MKVERSION_SH}) # Unix/Linux/macOS: call sh
-elseif (MKVERSION_SCRIPT_TYPE STREQUAL "bat")
-    set(MKVERSION_CMD cmd /c ${MKVERSION_SH}) # Windows: call bat
-else ()
-    message(FATAL_ERROR "MKVERSION_SCRIPT_TYPE must be 'sh' or 'bat', but got '${MKVERSION_SCRIPT_TYPE}'")
-endif ()
 if (SKIP_FPGA_EMBED)  # If pack fpga bit files to arm, we need from step1,2,3 start build, otherwise skip step2,3.
     set(FPGA_ALL_O_MKVERSION_DEP)  # <-- Important, unset it will let this step(4) no DEPENDS with 'FPGA_ALL_O'.
 else ()
