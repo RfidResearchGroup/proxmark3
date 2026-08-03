@@ -2,6 +2,7 @@
 #include "ticks_apis.h"
 #include "usb_cdc_apis.h"
 #include "usb_read_ng.h"
+#include "usb_cdc_desc.h"
 
 #include "at32f435_437_crm.h"
 #include "at32f435_437_acc.h"
@@ -14,10 +15,145 @@
 
 static otg_core_type otg_core_struct;
 static usbd_core_type *udev = &(otg_core_struct.dev);
-extern usbd_desc_handler cdc_desc_handler;
+static usbd_desc_t vp_desc;
 
-// predefine, resolve compiler warning.
-void OTG_IRQ_HANDLER(void);
+/**
+  * @brief  get device descriptor
+  * @retval usbd_desc
+  */
+static usbd_desc_t *get_device_descriptor(void) {
+    // Must be static !!!!!!
+    static usbd_desc_t device_descriptor = {
+        .length = sizeof(devDescriptor),
+        .descriptor = (uint8_t *) devDescriptor
+    };
+    return &device_descriptor;
+}
+
+/**
+  * @brief  get device qualifier
+  * @retval usbd_desc
+  */
+static usbd_desc_t *get_device_qualifier(void) {
+    return NULL;
+}
+
+/**
+  * @brief  get config descriptor
+  * @retval usbd_desc
+  */
+static usbd_desc_t *get_device_configuration(void) {
+    // Must be static !!!!!!
+    static usbd_desc_t config_descriptor = {
+        .length = sizeof(cfgDescriptor),
+        .descriptor = (uint8_t *) cfgDescriptor
+    };
+    return &config_descriptor;
+}
+
+/**
+  * @brief  get other speed descriptor
+  * @retval usbd_desc
+  */
+static usbd_desc_t *get_device_other_speed(void) {
+    return NULL;
+}
+
+/**
+  * @brief  get lang id descriptor
+  * @retval usbd_desc
+  */
+static usbd_desc_t *get_device_lang_id(void) {
+    // Must be static !!!!!!
+    static usbd_desc_t langid_descriptor = {
+        .length = sizeof(StrLanguageCodes),
+        .descriptor = (uint8_t *) StrLanguageCodes
+    };
+    return &langid_descriptor;
+}
+
+
+/**
+  * @brief  get manufacturer descriptor
+  * @retval usbd_desc
+  */
+static usbd_desc_t *get_device_manufacturer_string(void) {
+    vp_desc.length = StrManufacturer[0];
+    vp_desc.descriptor = (uint8_t *) StrManufacturer;
+    return &vp_desc;
+}
+
+/**
+  * @brief  get product descriptor
+  * @retval usbd_desc
+  */
+static usbd_desc_t *get_device_product_string(void) {
+    vp_desc.length = StrProduct[0];
+    vp_desc.descriptor = (uint8_t *) StrProduct;
+    return &vp_desc;
+}
+
+/**
+  * @brief  get serial descriptor
+  * @retval usbd_desc
+  */
+static usbd_desc_t *get_device_serial_string(void) {
+    // Must be static !!!!!!
+    static usbd_desc_t serial_descriptor = {
+        .length = sizeof(StrSerialNumber),
+        .descriptor = (uint8_t *) StrSerialNumber
+    };
+    return &serial_descriptor;
+}
+
+/**
+  * @brief  get interface descriptor
+  * @retval usbd_desc
+  */
+static usbd_desc_t *get_device_interface_string(void) {
+    return NULL;
+}
+
+/**
+  * @brief  get device config descriptor
+  * @retval usbd_desc
+  */
+static usbd_desc_t *get_device_config_string(void) {
+    return NULL;
+}
+
+/**
+  * @brief  get device config descriptor
+  * @retval usbd_desc
+  */
+static usbd_desc_t *get_winusb_os_string(void) {
+    vp_desc.length = StrMS_OSDescriptor[0];
+    vp_desc.descriptor = (uint8_t *) StrMS_OSDescriptor;
+    return &vp_desc;
+}
+
+/**
+  * @brief device descriptor handler structure
+  */
+static usbd_desc_handler cdc_desc_handler =
+{
+    .get_device_descriptor = get_device_descriptor,
+    .get_device_qualifier = get_device_qualifier,
+    .get_device_configuration = get_device_configuration,
+    .get_device_other_speed = get_device_other_speed,
+    .get_device_lang_id = get_device_lang_id,
+    // ---
+    .get_device_manufacturer_string = get_device_manufacturer_string,
+    .get_device_product_string = get_device_product_string,
+    .get_device_serial_string = get_device_serial_string,
+    .get_device_interface_string = get_device_interface_string,
+    .get_device_config_string = get_device_config_string,
+    // ---
+    .get_device_winusb_os_string = get_winusb_os_string,
+    .get_device_winusb_os_feature = NULL,
+    .get_device_winusb_os_property = NULL
+};
+
 
 /**
   * @brief  usb 48M clock select
@@ -26,7 +162,6 @@ void OTG_IRQ_HANDLER(void);
   */
 static void usb_clock48m_select(usb_clk48_s clk_s) {
     if (clk_s == USB_CLK_HICK) {
-
         /* UNUSED!!!
 
         crm_usb_clock_source_select(CRM_USB_CLOCK_SOURCE_HICK);
@@ -148,6 +283,9 @@ static void usb_gpio_config(void) {
 #endif
 }
 
+// predefine, resolve compiler warning.
+void OTG_IRQ_HANDLER(void);
+
 /**
   * @brief  this function handles otgfs interrupt.
   * @retval none
@@ -188,7 +326,7 @@ static bool usb_read_ng_link_ready(void) {
 
 // Implemented for read_ng
 static bool usb_read_ng_data_ready(void) {
-    cdc_struct_type *pcdc = (cdc_struct_type *)(udev->class_handler->pdata);
+    cdc_struct_type *pcdc = (cdc_struct_type *) (udev->class_handler->pdata);
     return pcdc->g_rx_completed;
 }
 
@@ -199,13 +337,13 @@ static uint16_t usb_read_ng_data_available(void) {
 
 // Implemented for read_ng
 static uint8_t usb_read_ng_data_read(void) {
-    cdc_struct_type *pcdc = (cdc_struct_type *)(udev->class_handler->pdata);
+    cdc_struct_type *pcdc = (cdc_struct_type *) (udev->class_handler->pdata);
     return pcdc->g_rx_buff[usb_read_ng_fifo_pos++];
 }
 
 // Implemented for read_ng
 static void usb_read_ng_clear(void) {
-    cdc_struct_type *pcdc = (cdc_struct_type *)(udev->class_handler->pdata);
+    cdc_struct_type *pcdc = (cdc_struct_type *) (udev->class_handler->pdata);
     // When receiving data from USB device is completed, the flag bit of receiving completion must be cleared,
     //  otherwise, it will enter the endless cycle of receiving completion and may repeatedly execute an instruction.
     pcdc->g_rx_completed = 0;
@@ -218,14 +356,14 @@ static void usb_read_ng_clear(void) {
 
 // Instance for 'read_ng' apis
 static const usb_read_ng_config_t g_usb_read_ng_config = {
-    .is_link_ready    = usb_read_ng_link_ready,
-    .is_data_ready    = usb_read_ng_data_ready,
-    .get_byte_count   = usb_read_ng_data_available,
-    .read_fifo        = usb_read_ng_data_read,
-    .clear_ready      = usb_read_ng_clear,
-    .buffer           = usb_read_ng_buffer,
-    .buffer_size      = sizeof(usb_read_ng_buffer),
-    .timeout          = 0x1FFF
+    .is_link_ready = usb_read_ng_link_ready,
+    .is_data_ready = usb_read_ng_data_ready,
+    .get_byte_count = usb_read_ng_data_available,
+    .read_fifo = usb_read_ng_data_read,
+    .clear_ready = usb_read_ng_clear,
+    .buffer = usb_read_ng_buffer,
+    .buffer_size = sizeof(usb_read_ng_buffer),
+    .timeout = 0x1FFF
 };
 #endif
 
@@ -271,7 +409,7 @@ bool usb_poll(void) {
         return false;
     }
     // g_rx_completed will set to 1 when irq event: USB_OTG_DOEPINT_XFERC_FLAG
-    cdc_struct_type *pcdc = (cdc_struct_type *)(udev->class_handler->pdata);
+    cdc_struct_type *pcdc = (cdc_struct_type *) (udev->class_handler->pdata);
     return pcdc->g_rx_completed;
 }
 
@@ -280,7 +418,7 @@ bool usb_poll(void) {
  * @return data length, if no data received, return 0.
  */
 uint16_t usb_available_length(void) {
-    cdc_struct_type *pcdc = (cdc_struct_type *)(udev->class_handler->pdata);
+    cdc_struct_type *pcdc = (cdc_struct_type *) (udev->class_handler->pdata);
     return pcdc->g_rxlen;
 }
 
@@ -309,7 +447,7 @@ uint32_t usb_read(uint8_t *data, size_t len) {
     uint16_t time_out = 0;
     uint16_t packetSize = 0;
 
-    while (len)  {
+    while (len) {
         if (usb_check() == false) {
             break;
         }
@@ -353,12 +491,12 @@ int usb_write(const uint8_t *data, const size_t len) {
     }
 
     // 'usb_vcp_send_data()' will auto split packet.
-    if (usb_vcp_send_data(udev, (uint8_t*)data, len) != SUCCESS) {
+    if (usb_vcp_send_data(udev, (uint8_t *) data, len) != SUCCESS) {
         return PM3_EIO;
     }
 
     // wait for send complete
-    cdc_struct_type *pcdc = (cdc_struct_type *)(udev->class_handler->pdata);
+    cdc_struct_type *pcdc = (cdc_struct_type *) (udev->class_handler->pdata);
     while (pcdc->g_tx_completed != 1) {
         if (usb_check() == false) {
             return PM3_EIO;
@@ -375,7 +513,6 @@ int usb_write(const uint8_t *data, const size_t len) {
 static uint8_t async_write_buffer[2][USBD_CDC_IN_MAXPACKET_SIZE]; // double buffer, like at91 double bank.
 static uint8_t async_write_buf_select = 0;
 static uint8_t async_write_index = 0;
-static uint8_t async_write_working = 0;
 
 /**
  * Check is write data finished.
@@ -410,7 +547,6 @@ int async_usb_write_start(void) {
     // reset flag
     async_write_buf_select = 0;
     async_write_index = 0;
-    async_write_working = 1;
 
     // AT32 和 CH32 的USB功能区别挺大，注意不要陷入惯性思维的陷阱。
     //  对于AT32，需要先设置端点控制寄存器中的传输长度和包数目位，并使能端点来传输数据。最后然后再去写FIFO
@@ -443,7 +579,8 @@ bool async_usb_write_requestWrite(void) {
 
     // set transfer length and packet count.
     ept_in->dieptsiz_bit.xfersize = async_write_index;
-    ept_in->dieptsiz_bit.pktcnt = 1; // dieptsiz_bit register must set before 'eptena' set. it will lock after 'eptena' = TRUE
+    ept_in->dieptsiz_bit.pktcnt = 1;
+    // dieptsiz_bit register must set before 'eptena' set. it will lock after 'eptena' = TRUE
     // clear endpoint nak
     ept_in->diepctl_bit.cnak = TRUE;
     // IN endpoint enable
@@ -481,9 +618,6 @@ int async_usb_write_stop(void) {
 
     // Wait for the end of fifo flush transfer.
     while (!is_write_completed(ept_in)) if (!usb_check()) return PM3_EIO;
-
-    // must reset async write working flag.
-    async_write_working = 0;
 
     return PM3_SUCCESS;
 }
