@@ -42,7 +42,6 @@ if (PM5 AND NOT TARGET pm5_at32_armlib)
         PUBLIC -mcpu=cortex-m4 -Wno-missing-prototypes -Wno-missing-declarations
     )
     target_compile_definitions(pm5_at32_armlib PUBLIC
-        PM5
         AT32F435RGT7
         USE_STDPERIPH_DRIVER
         AT_START_F435_V1
