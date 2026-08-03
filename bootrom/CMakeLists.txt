@@ -52,55 +52,6 @@ set(APP_CFLAGS -I. -ffunction-sections -fdata-sections -DAS_BOOTROM)
 # stack-protect , no-pie reduces size on Gentoo Hardened 8.2 gcc,  no-common makes sure uninitialized vars don't end up in COMMON area
 set(APP_CFLAGS ${APP_CFLAGS} -fno-stack-protector -fno-pie -fno-common)
 
-# PM5 related
-if (PM5)
-    set(SRC_PM5_HARDWARE
-        # cmsis
-        ../armlib/at32_sys/cmsis/cm4/device_support/system_at32f435_437.c
-        # driver
-        ../armlib/at32_sys/drivers/src/at32f435_437_crm.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_misc.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_gpio.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_usb.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_qspi.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_tmr.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_flash.c
-        # usb middlewares
-        ../armlib/at32_usb/usb_drivers/src/usb_core.c
-        ../armlib/at32_usb/usb_drivers/src/usbd_core.c
-        ../armlib/at32_usb/usb_drivers/src/usbd_int.c
-        ../armlib/at32_usb/usb_drivers/src/usbd_sdr.c
-        ../armlib/at32_usb/usbd_class/cdc/cdc_class.c
-        ../armlib/at32_usb/usbd_class/cdc/cdc_desc.c
-    )
-    list(APPEND APP_CFLAGS
-        -DCRM_MODULE_ENABLED
-        -DMISC_MODULE_ENABLED
-        -DGPIO_MODULE_ENABLED
-        -DUSB_MODULE_ENABLED
-        -DQSPI_MODULE_ENABLED
-        -DTMR_MODULE_ENABLED
-        -DFLASH_MODULE_ENABLED
-    )
-    list(APPEND INC_DIRS
-        ../armlib/at32_sys
-        ../armlib/at32_sys/cmsis/cm4/core_support
-        ../armlib/at32_sys/cmsis/cm4/device_support
-        ../armlib/at32_sys/drivers/inc
-        ../armlib/at32_usb
-        ../armlib/at32_usb/usb_drivers/inc
-        ../armlib/at32_usb/usbd_class/cdc
-    )
-    list(APPEND APP_CFLAGS
-        -DUSBD_SUPPORT_WINUSB=1
-        -mcpu=cortex-m4  # Kernel Type
-        -DAT32F435RGT7   # Chip Type
-        -DUSE_STDPERIPH_DRIVER
-        -DAT_START_F435_V1
-        -DPM5 # !!! IMPORTANT !!!
-    )
-endif ()
-
 if ("${PLATFORM_DEFS}" MATCHES "WITH_FLASH")
     set(INC_DIRS ${INC_DIRS} ${CMAKE_CURRENT_LIST_DIR}/../common_arm/flash_data)
     if (PM5)
@@ -116,7 +67,6 @@ if ("${PLATFORM_DEFS}" MATCHES "WITH_FLASH")
 endif ()
 
 if (PM5)
-    set(THUMBSRC ${THUMBSRC} ${SRC_PM5_HARDWARE}) # Hardware related to PM5.
     set(LDSCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/ldscript-flash-at32)
 else ()
     set(LDSCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/ldscript-flash-at91)
@@ -126,6 +76,10 @@ set(APP_CFLAGS ${APP_CFLAGS} ${PLATFORM_DEFS})
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include(${CMAKE_CURRENT_SOURCE_DIR}/../common_arm/Common.cmake)
+
+if (PM5)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../armlib/pm5_at32_armlib.cmake)
+endif ()
 
 # Fix: warning: bootrom\bootrom.elf has a LOAD segment with RWX permissions
 set(CROSS_LDFLAGS ${CROSS_LDFLAGS} -Wl,--no-warn-rwx-segments)
@@ -142,6 +96,9 @@ target_compile_options(bootrom.elf PRIVATE ${CROSS_CFLAGS}) # !!!! WARN !!!! No 
 set_source_files_properties(${THUMBSRC} PROPERTIES COMPILE_OPTIONS "-mthumb") # THUMBSRC is '-mthumb' flag required.
 target_include_directories(bootrom.elf PRIVATE ${INC_DIRS})
 target_link_libraries(bootrom.elf ${LIBS})
+if (PM5)
+    target_link_libraries(bootrom.elf PRIVATE pm5_at32_armlib)
+endif ()
 
 # Generate HEX and BIN files for fullimage finally
 add_custom_command(TARGET bootrom.elf POST_BUILD

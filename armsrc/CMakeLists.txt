@@ -49,89 +49,6 @@ set(INC_DIRS
     .
 )
 
-# PM5 related
-if (PM5)
-    set(SRC_PM5_HARDWARE
-        # cmsis
-        ../armlib/at32_sys/cmsis/cm4/device_support/system_at32f435_437.c
-        ../armlib/at32_sys/cmsis/cm4/device_support/startup/gcc/startup_at32f435_437.s
-        # driver
-        ../armlib/at32_sys/drivers/src/at32f435_437_crm.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_misc.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_gpio.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_usb.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_tmr.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_ertc.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_pwc.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_qspi.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_spi.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_i2c.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_dma.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_adc.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_usart.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_exint.c
-        ../armlib/at32_sys/drivers/src/at32f435_437_scfg.c
-        # ../armlib/at32_sys/drivers/src/at32f435_437_acc.c
-        # usb middlewares
-        ../armlib/at32_usb/usb_drivers/src/usb_core.c
-        ../armlib/at32_usb/usb_drivers/src/usbd_core.c
-        ../armlib/at32_usb/usb_drivers/src/usbd_int.c
-        ../armlib/at32_usb/usb_drivers/src/usbd_sdr.c
-        ../armlib/at32_usb/usbd_class/cdc/cdc_class.c
-        ../armlib/at32_usb/usbd_class/cdc/cdc_desc.c
-        # i2c middlewares
-        ../armlib/at32_i2c/at32f435_437_i2c_app.c
-
-        # TODO dxl 临时加入i2c的软件实现库，后期需要根据编译目标和编译参数自动包含，然后把此处引入删除
-        i2c.c
-    )
-    list(APPEND APP_CFLAGS
-        -DCRM_MODULE_ENABLED
-        -DMISC_MODULE_ENABLED
-        -DGPIO_MODULE_ENABLED
-        -DUSB_MODULE_ENABLED
-        -DTMR_MODULE_ENABLED
-        -DERTC_MODULE_ENABLED
-        -DPWC_MODULE_ENABLED
-        -DQSPI_MODULE_ENABLED
-        -DSPI_MODULE_ENABLED
-        -DI2C_MODULE_ENABLED
-        -DDMA_MODULE_ENABLED
-        -DADC_MODULE_ENABLED
-        -DUSART_MODULE_ENABLED
-        -DEXINT_MODULE_ENABLED
-        -DSCFG_MODULE_ENABLED
-        # -DACC_MODULE_ENABLED
-    )
-    list(APPEND INC_DIRS
-        ../armlib/at32_sys
-        ../armlib/at32_sys/cmsis/cm4/core_support
-        ../armlib/at32_sys/cmsis/cm4/device_support
-        ../armlib/at32_sys/drivers/inc
-        ../armlib/at32_usb
-        ../armlib/at32_usb/usb_drivers/inc
-        ../armlib/at32_usb/usbd_class/cdc
-        ../armlib/at32_i2c
-    )
-    list(APPEND APP_CFLAGS
-        -DUSBD_SUPPORT_WINUSB=1
-        -mcpu=cortex-m4  # Kernel Type
-        -DAT32F435RGT7   # Chip Type
-        -DUSE_STDPERIPH_DRIVER
-        -DAT_START_F435_V1)
-    # Uncomment for hardware floating point
-    #[[list(APPEND APP_CFLAGS
-            -DARM_MATH_CM4
-            -DARM_MATH_MATRIX_CHECK
-            -DARM_MATH_ROUNDING)
-    list(APPEND APP_CFLAGS
-            -mfloat-abi=hard
-            -mfpu=fpv4-sp-d16)
-    ]]
-    # Uncomment for software floating point
-    # list(APPEND APP_CFLAGS -mfloat-abi=soft)
-endif ()
-
 # Hal for platform
 if (PM5)
     set(SRC_TICKS_PLAT ../common_arm/ticks/ticks_hw_at32.c)
@@ -363,6 +280,8 @@ set(THUMBSRC
 )
 
 if (PM5)
+    list(APPEND THUMBSRC ../armlib/at32_sys/cmsis/cm4/device_support/startup/gcc/startup_at32f435_437.s)
+    list(APPEND THUMBSRC i2c.c)
     set(SRC_USB_CDC ../common_arm/usb/usb_cdc_at32.c)
     set(SRC_FPGA_PLAT
         ../common_arm/fpga/fpga_hw_at32.c
@@ -389,9 +308,13 @@ set(VERSIONSRC version_pm3.c fpga_version_info.c)
 include(../common_arm/Common.cmake)
 
 if (PM5)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../armlib/pm5_at32_armlib.cmake)
+    set(LIBS ${LIBS} pm5_at32_armlib)
+endif ()
+
+if (PM5)
     # set(CROSS_LDFLAGS ${CROSS_LDFLAGS} -mfloat-abi=hard -mfpu=fpv4-sp-d16) # TODO DXL: Hardware float core enable?
     set(CROSS_LDFLAGS ${CROSS_LDFLAGS} -mcpu=cortex-m4)
-    list(APPEND THUMBSRC ${SRC_PM5_HARDWARE})
     set(LDSCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/ldscript.osimage.at32)
 else ()
     set(LDSCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/ldscript.osimage.at91)
