@@ -29,10 +29,14 @@ ifeq ($(PLTNAME),)
     endif
 endif
 
+# Proxmark5 requires armlib.
+include ../armlib/Exports.mk
+
 #remove one of the following defines and comment out the relevant line
 #in the next section to remove that particular feature from compilation.
 # NO space,TABs after the "\" sign.
 APP_CFLAGS = $(PLATFORM_DEFS)
+APP_CFLAGS += $(ARMLIB_EXPORT_CFLAGS)
 
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
 SRC_HF = hfops.c
@@ -211,7 +215,12 @@ $(FPGA_COMPRESSOR):
 	$(error [!] MISSING $@ => To build it, go the root of the repo and do "make $(notdir $@)")
 	$(error [!] MISSING $@)
 
-$(OBJDIR)/fullimage.stage1.elf: $(VERSIONOBJ) $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
+$(OBJDIR)/$(ARMLIB_EXPORT_LIBNAME):
+	$(info [=] MAKE $(notdir $@))
+	@$(MAKE) --no-print-directory -f ../armlib/Makefile
+
+# TODO DXL: Do not depend on armlib if you are not compiling for PM5.
+$(OBJDIR)/fullimage.stage1.elf: $(OBJDIR)/$(ARMLIB_EXPORT_LIBNAME) $(VERSIONOBJ) $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
 	$(info [=] LD $@)
 # Using -T instead of -Wl,-T is needed to prevent the linker from using the default ldscript when using picolibc instead of newlib
 	$(Q)$(CROSS_LD) $(CROSS_LDFLAGS) -T ldscript -Wl,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
@@ -243,6 +252,7 @@ tarbin: $(OBJS)
 clean:
 	$(Q)$(RM) $(DEPENDENCY_FILES)
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.o
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.a
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.elf
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.s19
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.map
@@ -266,4 +276,3 @@ help:
 	@echo Possible targets:
 	@echo +	all    - Build the full image $(OBJDIR)/fullimage.s19
 	@echo +	clean             - Clean $(OBJDIR)
-
