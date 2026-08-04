@@ -421,6 +421,7 @@ add_custom_command(
         # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(2) fpga_all.bit.z"
         COMMAND ${FPGA_COMPRESS_EXE} ${FPGA_BITSTREAMS_ABSOLUTE_PATH} ${FPGA_BIT_Z}
         DEPENDS ${FPGA_BITSTREAMS_ABSOLUTE_PATH}
+        DEPENDS ${FPGA_COMPRESS_EXE} # Ensure host tool is built before running it.
         COMMAND_EXPAND_LISTS
         COMMENT "Call the 'fpga_compress' to compress fpga bit files, output 'fpga_all.bit.z'"
         VERBATIM
@@ -506,6 +507,7 @@ add_custom_command(
         # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(7) fullimage.data.bin.z"
         COMMAND ${FPGA_COMPRESS_EXE} ${DATA_BIN} ${DATA_BIN_Z}
         DEPENDS ${DATA_BIN}
+        DEPENDS ${FPGA_COMPRESS_EXE} # Ensure host tool is built before running it.
         COMMENT "Call the 'fpga_compress' to compress '.data' section from 'fullimage.stage1.elf'"
         VERBATIM
 )
