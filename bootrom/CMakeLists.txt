@@ -13,6 +13,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../tools/MKVersionScript.cmake)
 
 # ---
 
+set(OBJDIR ${CMAKE_BINARY_DIR}/obj)
 set(DEFAULT_VERSION_C ${CMAKE_CURRENT_SOURCE_DIR}/../common/default_version_pm3.c)
 set(VERSION_PM3_C ${CMAKE_CURRENT_BINARY_DIR}/version_pm3.c)
 
@@ -100,6 +101,11 @@ add_custom_command(
         VERBATIM
 )
 
+# ---------------- Output dir ----------------
+file(MAKE_DIRECTORY ${OBJDIR})
+get_filename_component(OUTPUT_BOOTROM_HEX ${OBJDIR}/${PROJECT_NAME}.hex ABSOLUTE)
+get_filename_component(OUTPUT_BOOTROM_BIN ${OBJDIR}/${PROJECT_NAME}.bin ABSOLUTE)
+
 add_executable(bootrom.elf ${THUMBSRC} ${ASMSRC})
 set_target_properties(bootrom.elf PROPERTIES # The 'bootrom.elf' output to ${OBJDIR}
         RUNTIME_OUTPUT_DIRECTORY "${OBJDIR}"
@@ -116,7 +122,7 @@ target_link_libraries(bootrom.elf ${LIBS})
 # Generate HEX and BIN files for fullimage finally
 add_custom_command(TARGET bootrom.elf POST_BUILD
         # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(10) bootrom.elf(HEX,BIN)"
-        COMMAND ${CMAKE_OBJCOPY} -Oihex bootrom.elf bootrom.hex
-        COMMAND ${CMAKE_OBJCOPY} -Obinary bootrom.elf bootrom.bin
+        COMMAND ${CMAKE_OBJCOPY} -Oihex $<TARGET_FILE:${PROJECT_NAME}.elf> ${OUTPUT_BOOTROM_HEX}
+        COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${PROJECT_NAME}.elf> ${OUTPUT_BOOTROM_BIN}
         COMMENT "Build bootrom.hex & bootrom.bin"
 )
