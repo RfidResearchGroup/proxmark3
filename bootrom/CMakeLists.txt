@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.20)
 
 # Fix error when 'compile a simple test program.'
-include(${CMAKE_CURRENT_SOURCE_DIR}/../tools/FixCompileTest.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../tools/FixCompileTest.cmake)
 
 project(bootrom C ASM) # Set variables needs before the project defining.
 
 # Hardware abstraction layer for ARM platform.
-include(../common_arm/Hal.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../common_arm/Hal.cmake)
 
 # Include the MKVersion script for generating version_pm3.c
-include(${CMAKE_CURRENT_SOURCE_DIR}/../tools/MKVersionScript.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../tools/MKVersionScript.cmake)
 
 # ---
 
@@ -82,10 +82,10 @@ endif ()
 set(APP_CFLAGS ${APP_CFLAGS} ${PLATFORM_DEFS})
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
-include(${CMAKE_CURRENT_SOURCE_DIR}/../common_arm/Common.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../common_arm/Common.cmake)
 
 if (PM5)
-    include(${CMAKE_CURRENT_SOURCE_DIR}/../armlib/pm5_at32_armlib.cmake)
+    include(${CMAKE_CURRENT_LIST_DIR}/../armlib/pm5_at32_armlib.cmake)
     set(LIBS ${LIBS} pm5_at32_armlib)
 endif ()
 

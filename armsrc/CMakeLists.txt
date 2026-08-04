@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 # Fix error when 'compile a simple test program.'
-include(${CMAKE_CURRENT_SOURCE_DIR}/../tools/FixCompileTest.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../tools/FixCompileTest.cmake)
 
 # Set variables needs before the project defining.
 project(fullimage C CXX ASM)
@@ -14,17 +14,17 @@ if (NOT C_COMPILER_HOST)
 endif ()
 
 # Genarate version info by mkversion script
-include(../tools/MKVersionScript.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../tools/MKVersionScript.cmake)
 
 # Import options for standalone mode
 #  Used 'STANDALONE_REQ_DEFS' & 'STANDALONE_PLATFORM_DEFS' variables.
-include(Standalone/StandAloneOption.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/Standalone/StandAloneOption.cmake)
 
 # Hardware abstraction layer for ARM platform.
-include(../common_arm/Hal.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../common_arm/Hal.cmake)
 
 # Setup FPGA Compress.
-include(../tools/FpgaCompress.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../tools/FpgaCompress.cmake)
 
 # ---------------------------------------------------------------------------------
 
@@ -214,7 +214,7 @@ else ()
 endif ()
 
 # Generic standalone Mode injection of source code
-include(Standalone/StandaloneSource.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/Standalone/StandAloneSource.cmake)
 
 # The lz4 source files required for decompressing the fpga config at run time
 set(SRC_LZ4 ../common/lz4/lz4.c)
@@ -305,10 +305,10 @@ set(VERSIONSRC version_pm3.c fpga_version_info.c)
 
 # Import common settings for arm build, such as common cflags, etc.
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
-include(../common_arm/Common.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../common_arm/Common.cmake)
 
 if (PM5)
-    include(${CMAKE_CURRENT_SOURCE_DIR}/../armlib/pm5_at32_armlib.cmake)
+    include(${CMAKE_CURRENT_LIST_DIR}/../armlib/pm5_at32_armlib.cmake)
     set(LIBS ${LIBS} pm5_at32_armlib)
 endif ()
 
