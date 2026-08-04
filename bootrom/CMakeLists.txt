@@ -14,7 +14,7 @@ include(${CMAKE_CURRENT_LIST_DIR}/../tools/MKVersionScript.cmake)
 # ---
 
 set(OBJDIR ${CMAKE_BINARY_DIR}/obj)
-set(DEFAULT_VERSION_C ${CMAKE_CURRENT_SOURCE_DIR}/../common/default_version_pm3.c)
+set(DEFAULT_VERSION_C ${CMAKE_CURRENT_LIST_DIR}/../common/default_version_pm3.c)
 set(VERSION_PM3_C ${CMAKE_CURRENT_BINARY_DIR}/version_pm3.c)
 
 set(INC_DIRS
@@ -74,9 +74,9 @@ if ("${PLATFORM_DEFS}" MATCHES "WITH_FLASH")
 endif ()
 
 if (PM5)
-    set(LDSCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/ldscript-flash-at32)
+    set(LDSCRIPT ${CMAKE_CURRENT_LIST_DIR}/ldscript-flash-at32)
 else ()
-    set(LDSCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/ldscript-flash-at91)
+    set(LDSCRIPT ${CMAKE_CURRENT_LIST_DIR}/ldscript-flash-at91)
 endif ()
 
 set(APP_CFLAGS ${APP_CFLAGS} ${PLATFORM_DEFS})
@@ -113,7 +113,7 @@ set_target_properties(bootrom.elf PROPERTIES # The 'bootrom.elf' output to ${OBJ
         SUFFIX ".elf" # OK, OBJDIR + OUTPUT_NAME + SUFFIX = /xxx/obj/bootrom.elf
 )
 target_link_options(bootrom.elf PRIVATE -Wl,-Map=${PROJECT_BINARY_DIR}/${PROJECT_NAME}.map) # output map file
-target_link_options(bootrom.elf PRIVATE -L ${CMAKE_CURRENT_SOURCE_DIR} -T ${LDSCRIPT} ${CROSS_LDFLAGS})
+target_link_options(bootrom.elf PRIVATE -L ${CMAKE_CURRENT_LIST_DIR} -T ${LDSCRIPT} ${CROSS_LDFLAGS})
 target_compile_options(bootrom.elf PRIVATE ${CROSS_CFLAGS}) # !!!! WARN !!!! No -mthumb on here
 set_source_files_properties(${THUMBSRC} PROPERTIES COMPILE_OPTIONS "-mthumb") # THUMBSRC is '-mthumb' flag required.
 target_include_directories(bootrom.elf PRIVATE ${INC_DIRS})

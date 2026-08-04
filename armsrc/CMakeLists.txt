@@ -315,9 +315,9 @@ endif ()
 if (PM5)
     # set(CROSS_LDFLAGS ${CROSS_LDFLAGS} -mfloat-abi=hard -mfpu=fpv4-sp-d16) # TODO DXL: Hardware float core enable?
     set(CROSS_LDFLAGS ${CROSS_LDFLAGS} -mcpu=cortex-m4)
-    set(LDSCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/ldscript.osimage.at32)
+    set(LDSCRIPT ${CMAKE_CURRENT_LIST_DIR}/ldscript.osimage.at32)
 else ()
-    set(LDSCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/ldscript.osimage.at91)
+    set(LDSCRIPT ${CMAKE_CURRENT_LIST_DIR}/ldscript.osimage.at91)
 endif ()
 
 message(STATUS "LDSCRIPT = ${LDSCRIPT}")
@@ -375,18 +375,18 @@ message(STATUS "CROSS_CFLAGS = ${CROSS_CFLAGS}")
 ]]
 
 set(OBJDIR ${CMAKE_BINARY_DIR}/obj)
-set(DEFAULT_VERSION_C ../common/default_version_pm3.c)
+set(DEFAULT_VERSION_C ${CMAKE_CURRENT_LIST_DIR}/../common/default_version_pm3.c)
 
 # ---------------- Output dir ----------------
 file(MAKE_DIRECTORY ${OBJDIR})
 get_filename_component(OBJDIR_NAME ${OBJDIR} NAME)
 
 # ---------------- Output files ----------------
-get_filename_component(FPGA_VERSION_C ${CMAKE_CURRENT_SOURCE_DIR}/fpga_version_info.c ABSOLUTE)
+get_filename_component(FPGA_VERSION_C ${CMAKE_CURRENT_LIST_DIR}/fpga_version_info.c ABSOLUTE)
 get_filename_component(FPGA_BIT_Z ${OBJDIR}/fpga_all.bit.z ABSOLUTE)
 get_filename_component(FPGA_BIT_Z_NAME ${FPGA_BIT_Z} NAME)
 get_filename_component(FPGA_ALL_O ${OBJDIR}/fpga_all.o ABSOLUTE)
-get_filename_component(VERSION_PM3_C ${CMAKE_CURRENT_SOURCE_DIR}/version_pm3.c ABSOLUTE)
+get_filename_component(VERSION_PM3_C ${CMAKE_CURRENT_LIST_DIR}/version_pm3.c ABSOLUTE)
 get_filename_component(STAGE1_ELF ${OBJDIR}/fullimage.stage1.elf ABSOLUTE)
 get_filename_component(DATA_BIN ${OBJDIR}/fullimage.data.bin ABSOLUTE)
 get_filename_component(DATA_BIN_Z ${OBJDIR}/fullimage.data.bin.z ABSOLUTE)
@@ -471,7 +471,7 @@ set_target_properties(fullimage.stage1.elf PROPERTIES # The 'fullimage.stage1.el
         SUFFIX ".elf" # OK, OBJDIR + OUTPUT_NAME + SUFFIX = /xxx/obj/fullimage.stage1.elf
 )
 target_link_options(fullimage.stage1.elf PRIVATE -Wl,-Map=${PROJECT_BINARY_DIR}/${PROJECT_NAME}.map) # output map file
-target_link_options(fullimage.stage1.elf PRIVATE -L ${CMAKE_CURRENT_SOURCE_DIR} -T ${LDSCRIPT} ${CROSS_LDFLAGS})
+target_link_options(fullimage.stage1.elf PRIVATE -L ${CMAKE_CURRENT_LIST_DIR} -T ${LDSCRIPT} ${CROSS_LDFLAGS})
 target_compile_options(fullimage.stage1.elf PRIVATE ${CROSS_CFLAGS}) # !!!! WARN !!!! No -mthumb on here
 set_source_files_properties(${THUMBSRC} PROPERTIES COMPILE_OPTIONS "-mthumb") # THUMBSRC is '-mthumb' flag required.
 target_include_directories(fullimage.stage1.elf PRIVATE ${INC_DIRS})

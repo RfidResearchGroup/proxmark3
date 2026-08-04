@@ -7,8 +7,8 @@ option(BUILD_FIRMWARE "Build the firmware for the Proxmark3/5" ON)
 # This is a workaround to prevent CMake from trying to compile the test program,
 # which will fail because the compiler is not for the host system.
 if (BUILD_FIRMWARE)
-    include(${CMAKE_CURRENT_SOURCE_DIR}/tools/FixCompileTest.cmake)
-    include(${CMAKE_CURRENT_SOURCE_DIR}/tools/ToolchainForArm.cmake)
+    include(${CMAKE_CURRENT_LIST_DIR}/tools/FixCompileTest.cmake)
+    include(${CMAKE_CURRENT_LIST_DIR}/tools/ToolchainForArm.cmake)
 endif ()
 
 # Project name and languages
