@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 3.20)
 # Fix error when 'compile a simple test program.'
 include(${CMAKE_CURRENT_LIST_DIR}/../tools/FixCompileTest.cmake)
 
+# Ensure direct armsrc builds also select ARM cross-compilers.
+include(${CMAKE_CURRENT_LIST_DIR}/../tools/ToolchainForArm.cmake)
+
 # Set variables needs before the project defining.
 project(fullimage C CXX ASM)
 
