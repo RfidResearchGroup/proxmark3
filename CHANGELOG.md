@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `hf iclass unhash` omitting valid hash0 pre-images, which could make the subsequent hashcat DES crack unable to find the master key (@trichimtrich)
+- Fixed `hf iclass unhash` returning no pre-images at all for some keys, caused by `check()` not being invertible in a single reading (@trichimtrich)
 - Added `hf felica seacauth1` command
 - Added `lf trovan` commands to support Trovan Animal ID (@iceman1001)
 - Added `hf mf gdmgetblk/gdmgethidblk/gdmsethidblk/gdmsetuid/gdmwipe/gdmsetsig` (@0x6r1an0y)
