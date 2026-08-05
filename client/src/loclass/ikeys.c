@@ -545,8 +545,15 @@ void invert_hash0(uint8_t k[8]) {
             pushbackSixBitByte(&c, zn4, n + 4);
         }
 
-        // The Hydra: depending on their positions, values 0x00, 0x01, 0x02, 0x03, 0x3c, 0x3d, 0x3e, 0x3f can lead to additional pre-images.
-        // When these values are present we need to generate additional pre-images if they have the same modulo as other values
+        // The Hydra: hash0() reduces every six-bit z chunk modulo a value that
+        // depends on the chunk position:
+        //
+        //     _zn  = (zn  % (63 - n)) + n         for n = 0..3
+        //     _zn4 = (zn4 % (64 - n)) + n         for n = 0..3  (chunks 4..7)
+        //
+        // Since the modulus is smaller than 0x40 the reduction is lossy, so a
+        // recovered residue r has a second pre-image at r + modulus whenever
+        // that value still fits in six bits. Each such chunk forks the search.
 
         // Initialize an array of pointers to uint64_t (start with one value, initialized to 0)
         uint64_t *hydra_heads = (uint64_t *)calloc(sizeof(uint64_t), 1); // Start with one uint64_t
@@ -557,12 +564,17 @@ void invert_hash0(uint8_t k[8]) {
         hydra_heads[0] = 0;  // Initialize first value to 0
         int heads_count = 1;  // Track number of forks
 
-        // Iterate 4 times as per the original loop
         for (int n = 0; n < 8; n++) {
 
             uint8_t hydra_head = getSixBitByte(c, n);
 
-            if (hydra_head <= (n % 4) || hydra_head >= 63 - (n % 4)) {
+            // the modulus hash0() applied to this chunk, mirroring the loop there
+            uint8_t modulus = (n < 4) ? (63 - n) : (64 - (n - 4));
+
+            // the only other value that reduces to the same residue
+            uint8_t alt_head = hydra_head + modulus;
+
+            if (alt_head <= 0x3F) {
 
                 // Create new forks by duplicating existing uint64_t values
                 int new_head = heads_count * 2;
@@ -576,46 +588,18 @@ void invert_hash0(uint8_t k[8]) {
                 }
                 hydra_heads = ptmp;
 
-                // Duplicate all current values and add the value to both original and new ones
+                // keep the residue in the existing branch, the alternative in the copy
                 for (int i = 0; i < heads_count; i++) {
-
-                    // Duplicate current value
                     hydra_heads[heads_count + i] = hydra_heads[i];
-                    uint8_t small_hydra_head = 0;
-                    uint8_t big_hydra_head = 0;
-                    uint8_t hydra_lil_spawns[4] = {0x00, 0x01, 0x02, 0x03};
-                    uint8_t hydra_big_spawns[4] = {0x3f, 0x3e, 0x3d, 0x3c};
-
-                    if (hydra_head <= n % 4) { // check if is in the lower range
-
-                        // replace with big spawn in one hydra and keep small in another
-                        small_hydra_head = hydra_head;
-                        for (int fh = 0; fh < 4; fh++) {
-                            if (hydra_lil_spawns[fh] == hydra_head) {
-                                big_hydra_head = hydra_big_spawns[fh];
-                            }
-                        }
-
-                    } else if (hydra_head >= 63 - (n % 4)) { // or the higher range
-
-                        // replace with small in one hydra and keep big in another
-                        big_hydra_head = hydra_head;
-                        for (int fh = 0; fh < 4; fh++) {
-                            if (hydra_big_spawns[fh] == hydra_head) {
-                                small_hydra_head = hydra_lil_spawns[fh];
-                            }
-                        }
-                    }
-                    // Add to both original and duplicate values
-                    pushbackSixBitByte(&hydra_heads[i], big_hydra_head, n);
-                    pushbackSixBitByte(&hydra_heads[heads_count + i], small_hydra_head, n);
+                    pushbackSixBitByte(&hydra_heads[i], hydra_head, n);
+                    pushbackSixBitByte(&hydra_heads[heads_count + i], alt_head, n);
                 }
                 // Update the count of total values
                 heads_count = new_head;
             } else {
                 // no hydra head spawns
                 for (int i = 0; i < heads_count; i++) {
-                    pushbackSixBitByte(&hydra_heads[i], hydra_head, n);;
+                    pushbackSixBitByte(&hydra_heads[i], hydra_head, n);
                 }
             }
         }
