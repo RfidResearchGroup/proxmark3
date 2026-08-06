@@ -37,10 +37,10 @@ from the client to view the stored quadlets.
 #include "util.h"
 #include "spiffs.h"
 #include "appmain.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "dbprint.h"
 #include "ticks_apis.h"
-#include "fpga_apis.h"
 #include "BigBuf.h"
 #include "string.h"
 
@@ -119,7 +119,7 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
         LED_A_ON();
 
         int register readBufDataP = data - dmaBuf;
-        int register dmaBufDataP = DMA_BUFFER_SIZE - FPGA_SSC_DMA_RX_Remaining_Length();
+        int register dmaBufDataP = DMA_BUFFER_SIZE - FPGA_SSC_DMA_RX_Remaining_Count();
         if (readBufDataP <= dmaBufDataP)
             dataLen = dmaBufDataP - readBufDataP;
         else
