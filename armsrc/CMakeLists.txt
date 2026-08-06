@@ -53,19 +53,26 @@ set(INC_DIRS
 
 # Hal for platform
 if (PM5)
-    set(SRC_TICKS_PLAT ../common_arm/ticks/ticks_hw_at32.c)
-    set(SRC_GPIO_PLAT ../common_arm/gpio/gpio_hw_at32.c)
-    set(SRC_WDT_PLAT ../common_arm/wdt/wdt_hw_at32.c)
-    set(SRC_RSSI_PLAT ../common_arm/rssi/rssi_hw_at32.c)
-    set(SRC_SYS_PLAT ../common_arm/sys/sys_hw_at32.c)
+    set(SRC_TICKS ../common_arm/ticks/ticks_hw_at32.c)
+    set(SRC_GPIO ../common_arm/gpio/gpio_hw_at32.c)
+    set(SRC_WDT ../common_arm/wdt/wdt_hw_at32.c)
+    set(SRC_RSSI ../common_arm/rssi/rssi_hw_at32.c)
+    set(SRC_SYS ../common_arm/sys/sys_hw_at32.c)
+    set(SRC_FLASH_DATA ../common_arm/flash_data/flashmem_hw_at32.c)
+    set(SRC_USB_CDC ../common_arm/usb/usb_cdc_at32.c)
+    set(SRC_FPGA ../common_arm/fpga/fpga_hw_at32.c ../common_arm/fpga/fpga_gw_jtag.c)
+    set(LDSCRIPT ${CMAKE_CURRENT_LIST_DIR}/ldscript.osimage.at32)
 else ()
-    set(SRC_TICKS_PLAT ../common_arm/ticks/ticks_hw_at91.c)
-    set(SRC_GPIO_PLAT ../common_arm/gpio/gpio_hw_at91.c)
-    set(SRC_WDT_PLAT ../common_arm/wdt/wdt_hw_at91.c)
-    set(SRC_RSSI_PLAT ../common_arm/rssi/rssi_hw_at91.c)
-    set(SRC_SYS_PLAT ../common_arm/sys/sys_hw_at91.c)
+    set(SRC_TICKS ../common_arm/ticks/ticks_hw_at91.c)
+    set(SRC_GPIO ../common_arm/gpio/gpio_hw_at91.c)
+    set(SRC_WDT ../common_arm/wdt/wdt_hw_at91.c)
+    set(SRC_RSSI ../common_arm/rssi/rssi_hw_at91.c)
+    set(SRC_SYS ../common_arm/sys/sys_hw_at91.c)
+    set(SRC_FLASH_DATA ../common_arm/flash_data/flashmem_hw_at91.c)
+    set(SRC_USB_CDC ../common_arm/usb/usb_cdc_at91.c)
+    set(SRC_FPGA ../common_arm/fpga/fpga_hw_at91.c)
+    set(LDSCRIPT ${CMAKE_CURRENT_LIST_DIR}/ldscript.osimage.at91)
 endif ()
-
 
 set(SRC_LF
         lfops.c
@@ -142,12 +149,7 @@ message(STATUS "APP_CFLAGS = ${APP_CFLAGS}")
 
 # RDV4 or PM5 related hardware support
 if ("${APP_CFLAGS}" MATCHES "WITH_FLASH")
-    if (PM5)
-        set(SRC_FLASH ../common_arm/flash_data/flashmem_hw_at32.c)
-    else ()
-        set(SRC_FLASH ../common_arm/flash_data/flashmem_hw_at91.c)
-    endif ()
-    set(SRC_FLASH ${SRC_FLASH} ../common_arm/flash_data/flashmem_core.c)
+    set(SRC_FLASH ${SRC_FLASH_DATA} ../common_arm/flash_data/flashmem_core.c)
     set(SRC_SPIFFS
             spiffs.c
             spiffs_cache.c
@@ -265,15 +267,13 @@ set(THUMBSRC
         util.c
         string.c
         BigBuf.c
-        ${SRC_RSSI_PLAT}
-        ${SRC_TICKS_PLAT}
-        ${SRC_GPIO_PLAT}
-        ${SRC_WDT_PLAT}
-        ${SRC_SYS_PLAT}
+        ${SRC_RSSI}
+        ${SRC_TICKS}
+        ${SRC_GPIO}
+        ${SRC_WDT}
+        ${SRC_SYS}
         ../common_arm/rssi/rssi_core.c
         ../common_arm/ticks/ticks_core.c
-        ../common_arm/usb/usb_read_ng.c
-        ../common_arm/usb/usb_cdc_desc.c
         hfsnoop.c
         ../common/generator.c
         cmac_calc.c
@@ -281,25 +281,18 @@ set(THUMBSRC
 )
 
 if (PM5)
-    list(APPEND THUMBSRC ../armlib/at32_sys/cmsis/cm4/device_support/startup/gcc/startup_at32f435_437.s)
+    list(APPEND THUMBSRC startup_at32f435_437.s)
     list(APPEND THUMBSRC i2c.c)
     list(APPEND THUMBSRC at32_unit_test.c) # TODO DXL: AT32单元测试代码
-
-    set(SRC_USB_CDC ../common_arm/usb/usb_cdc_at32.c)
-    set(SRC_FPGA_PLAT
-            ../common_arm/fpga/fpga_hw_at32.c
-            ../common_arm/fpga/fpga_gw_jtag.c
-    )
-else ()
-    set(SRC_USB_CDC ../common_arm/usb/usb_cdc_at91.c)
-    set(SRC_FPGA_PLAT ../common_arm/fpga/fpga_hw_at91.c)
 endif ()
 
 # These are to be compiled in ARM mode
 set(ARMSRC
         ../common_arm/fpga/fpga_loader.c
         ../common_arm/fpga/fpga_core.c
-        ${SRC_FPGA_PLAT}
+        ${SRC_FPGA}
+        ../common_arm/usb/usb_read_ng.c
+        ../common_arm/usb/usb_cdc_desc.c
         ${SRC_USB_CDC} # AT32 or AT91 usb module, api defs all in usb_cdc.h
         cmd.c
 )
@@ -313,14 +306,8 @@ include(${CMAKE_CURRENT_LIST_DIR}/../common_arm/Common.cmake)
 if (PM5)
     include(${CMAKE_CURRENT_LIST_DIR}/../armlib/pm5_at32_armlib.cmake)
     set(LIBS ${LIBS} pm5_at32_armlib)
-endif ()
-
-if (PM5)
     # set(CROSS_LDFLAGS ${CROSS_LDFLAGS} -mfloat-abi=hard -mfpu=fpv4-sp-d16) # TODO DXL: Hardware float core enable?
     set(CROSS_LDFLAGS ${CROSS_LDFLAGS} -mcpu=cortex-m4)
-    set(LDSCRIPT ${CMAKE_CURRENT_LIST_DIR}/ldscript.osimage.at32)
-else ()
-    set(LDSCRIPT ${CMAKE_CURRENT_LIST_DIR}/ldscript.osimage.at91)
 endif ()
 
 message(STATUS "LDSCRIPT = ${LDSCRIPT}")
