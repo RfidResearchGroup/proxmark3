@@ -3499,6 +3499,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
             break;
         }
+#ifdef PM5
         case CMD_ANT_CONTROL_WRITE: {
             struct p {
                 uint8_t data;
@@ -3566,6 +3567,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_EEPROM_FACTORY_INFO_WRITE, PM3_SUCCESS, NULL, 0);
             break;
         }
+#endif
         case CMD_FPGA_CMD_SET_PWR_PWM_LOW_COUNT: {
             struct p {
                 uint8_t is_lf;
