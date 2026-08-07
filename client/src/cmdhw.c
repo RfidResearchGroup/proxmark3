@@ -1830,8 +1830,8 @@ static int CmdDeviceFactoryData(const char *Cmd) {
         }
 
         if (datalen != resp.length) {
-            PrintAndLogEx(WARNING, _RED_("The length of the data to write (%d) does not match the length "
-                                   "of the factory data read from device (%d)."), datalen, resp.length);
+            PrintAndLogEx(WARNING, _RED_("The length of the data to write (%zu) does not match the length "
+                                   "of the factory data read from device (%u)."), datalen, (unsigned int)resp.length);
             free(data);
             return PM3_EINVARG;
         }
