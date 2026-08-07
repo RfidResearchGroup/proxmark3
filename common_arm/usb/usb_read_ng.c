@@ -70,7 +70,7 @@ uint32_t usb_read_ng(uint8_t *data, size_t len)
             len -= packetSize;
 
             size_t to_buffer = (available < g_config->buffer_size) ? available : g_config->buffer_size;
-            for (uint16_t i = 0; i < to_buffer; i++) {
+            for (size_t i = 0; i < to_buffer; i++) {
                 g_config->buffer[i] = g_config->read_fifo();
             }
             g_buf_len = to_buffer;
