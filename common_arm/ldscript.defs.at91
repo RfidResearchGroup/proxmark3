@@ -1,0 +1,15 @@
+/* AT91SAM7S256 has 256k Flash and 64k RAM */
+/* AT91SAM7S512 has 512k Flash and 64k RAM */
+mcu_flash_size      = 512K;
+mcu_sram_size       = 64K;
+
+mcu_flash_base_addr = 0x00100000;
+mcu_sram_base_addr  = 0x00200000;
+
+boot_image_size     = 0x2000;      /* boot space = 8192bytes (0x2000) */
+bootphase1_size     = 0x200;
+bootphase2_size     = boot_image_size - bootphase1_size;
+
+/* osimage space:   (512k - 0x2000 == 524288 - 8192 == 516096bytes == 0x7E000 ) */
+os_image_size       = mcu_flash_size - boot_image_size;
+os_image_origin     = mcu_flash_base_addr + boot_image_size;

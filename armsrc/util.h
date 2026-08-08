@@ -30,11 +30,11 @@
 // Basic macros
 
 #ifndef SHORT_COIL
-#define SHORT_COIL()     LOW(GPIO_SSC_DOUT)
+#define SHORT_COIL()     Gpio_SSC_DOUT_Low()
 #endif
 
 #ifndef OPEN_COIL
-#define OPEN_COIL()      HIGH(GPIO_SSC_DOUT)
+#define OPEN_COIL()      Gpio_SSC_DOUT_High()
 #endif
 
 #ifndef BYTEx
@@ -101,8 +101,5 @@ int BUTTON_CLICKED(int ms);
 int BUTTON_HELD(int ms);
 bool data_available(void);
 bool data_available_fast(void);
-
-uint32_t flash_size_from_cidr(uint32_t cidr);
-uint32_t get_flash_size(void);
 
 #endif

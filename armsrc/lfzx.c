@@ -20,13 +20,14 @@
 
 #include "BigBuf.h"
 #include "crc.h"        // CRC-8 / Hitag1 / ZX8211
-#include "fpgaloader.h"
+#include "fpga_loader.h"
 #include "dbprint.h"
 #include "lfops.h"      // turn_read_lf_on / off
 #include "lfadc.h"
 #include "lfsampling.h" // getSamplingConfig
 #include "pm3_cmd.h"    // struct
-#include "ticks.h"
+#include "ticks_apis.h"
+#include "fpga_apis.h"
 
 /*
 ZX8211
@@ -106,7 +107,7 @@ static void zx8211_setup_read(void) {
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
 
     // Connect the A/D to the peak-detected low-frequency path.
-    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+    SetAdcMuxFor(ADC_MUXSEL_LOPKD);
 
     // Start the timer
     StartTicks();
@@ -145,12 +146,12 @@ static void zx_get(bool ledcontrol) {
 
         WDT_HIT();
 
-        if (ledcontrol && (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY)) {
+        if (ledcontrol && FPGA_SSC_TX_Ready()) {
             LED_D_ON();
         }
 
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-            volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            volatile uint8_t sample = (uint8_t)FPGA_SSC_RX_Value();
             (void)sample;
 
             // (RDV4) Test point 8 (TP8) can be used to trigger oscilloscope

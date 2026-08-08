@@ -373,12 +373,18 @@ int CmdHFTune(const char *Cmd) {
             break;
         }
 
-        if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint16_t))) {
+        if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint16_t) && resp.length != sizeof(uint32_t))) {
             PrintAndLogEx(NORMAL, "");
             break;
         }
 
-        uint16_t volt = resp.data.asDwords[0] & 0xFFFF;
+        uint32_t volt;
+        if (resp.length == sizeof(uint16_t)) {
+            volt = resp.data.asDwords[0] & 0xFFFF;
+        } else {
+            volt = resp.data.asDwords[0]; // U32. It can exceed 65.535V.
+        }
+
         if (first) {
             v_max = volt;
             v_min = volt;

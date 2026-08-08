@@ -26,15 +26,16 @@
 #include "BigBuf.h"
 #include "cmd.h"
 #include "flashmem.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
 #include "iso14443a.h"
 #include "mifaredesfire.h"
 #include "util.h"
 #include "commonutil.h"
 #include "crc16.h"
 #include "dbprint.h"
-#include "ticks.h"
-#include "usb_cdc.h"  // usb_poll_validate_length
+#include "ticks_apis.h"
+#include "usb_cdc_apis.h"
 #include "spiffs.h"   // spiffs
 #include "appmain.h"  // print_stack_usage
 #include "cmac_calc.h"
@@ -3431,7 +3432,7 @@ void MifareHasStaticNonce(void) {
         nt = bytes_to_num(rec, 4);
 
         // some cards with static nonce need to be reset before next query
-        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF); // TODO DXL Can we use mf_reset_card(); ?
         LEDsoff();
         CHK_TIMEOUT();
 

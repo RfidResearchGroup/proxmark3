@@ -23,12 +23,13 @@
 #include "lfops.h"
 #include "lfsampling.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "util.h"
 #include "dbprint.h"
 #include "printf.h"
 #include "spiffs.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "lfdemod.h"
 /*
  * `lf_hidcollect` sniffs after LF HID credentials, and stores them in internal

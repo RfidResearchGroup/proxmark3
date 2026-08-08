@@ -23,13 +23,14 @@
 #include "desfire_crypto.h"
 #include "cmd.h"
 #include "dbprint.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
 #include "iso14443a.h"
 #include "crc16.h"
 #include "commonutil.h"
 #include "util.h"
 #include "mifare.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "protocols.h"
 
 #define MAX_APPLICATION_COUNT 28

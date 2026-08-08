@@ -18,8 +18,9 @@
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
+#include "ticks_apis.h"
 #include "dbprint.h"
 #include "util.h"
 #include "lfsampling.h"
@@ -564,10 +565,8 @@ void SendCmdPCF7931(uint32_t *tab, bool ledcontrol) {
             break;
         }
 
-
     // steal this pin from the SSP and use it to control the modulation
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+    gpio_fpga_mod_only_setup();
 
     //initialization of the timer
     AT91C_BASE_PMC->PMC_PCER |= (0x1 << AT91C_ID_TC0);
@@ -582,19 +581,19 @@ void SendCmdPCF7931(uint32_t *tab, bool ledcontrol) {
     tempo = AT91C_BASE_TC0->TC_CV;
     for (u = 0; tab[u] != 0; u += 3) {
         // modulate antenna
-        HIGH(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_High();
         while ((uint32_t)tempo < tab[u]) {
             tempo = AT91C_BASE_TC0->TC_CV;
         }
 
         // stop modulating antenna
-        LOW(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_Low();
         while ((uint32_t)tempo < tab[u + 1]) {
             tempo = AT91C_BASE_TC0->TC_CV;
         }
 
         // modulate antenna
-        HIGH(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_High();
         while ((uint32_t)tempo < tab[u + 2]) {
             tempo = AT91C_BASE_TC0->TC_CV;
         }

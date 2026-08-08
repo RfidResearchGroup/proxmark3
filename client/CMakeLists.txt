@@ -386,6 +386,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmddata.c
         ${PM3_ROOT}/client/src/cmdflashmem.c
         ${PM3_ROOT}/client/src/cmdflashmemspiffs.c
+        ${PM3_ROOT}/client/src/cmdfpga.c
         ${PM3_ROOT}/client/src/cmdhf.c
         ${PM3_ROOT}/client/src/cmdhf14a.c
         ${PM3_ROOT}/client/src/cmdhf14b.c

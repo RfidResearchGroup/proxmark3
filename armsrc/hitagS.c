@@ -24,8 +24,9 @@
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
+#include "ticks_apis.h"
 #include "dbprint.h"
 #include "util.h"
 #include "string.h"
@@ -56,7 +57,7 @@ static int block_data_left = 0;
 static bool enable_page_tearoff = false;
 
 static uint8_t protocol_mode = HITAGS_UID_REQ_ADV1;
-static MOD m = AC2K;                                // used modulation
+static hitag_mod_t m = AC2K; // used modulation
 static uint32_t reader_selected_uid;
 static int rotate_uid = 0;
 static int sof_bits;                                // number of start-of-frame bits
@@ -102,9 +103,8 @@ static void update_tag_max_page(void) {
  * to check if the right uid was selected
  */
 static int check_select(const uint8_t *rx, uint32_t uid) {
-
     // global var?
-    concatbits((uint8_t *)&reader_selected_uid, 0, rx, 5, 32, false);
+    concatbits((uint8_t *) &reader_selected_uid, 0, rx, 5, 32, false);
     reader_selected_uid = BSWAP_32(reader_selected_uid);
 
     if (reader_selected_uid == uid) {
@@ -269,7 +269,6 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 *txlen = 2;
                 tx[0] = 0x40;
                 page_to_be_written = 0;
-
             } else if (tag.tstate == HT_WRITING_BLOCK_DATA) {
                 memcpy(tag.data.pages[page_to_be_written], rx, HITAGS_PAGE_SIZE);
                 // send ack
@@ -457,7 +456,6 @@ void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
         overflow += (AT91C_BASE_TC1->TC_CV / T0);
         // Reset the timer to restart while-loop that receives frames
         AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
-
     }
 
     hitag_cleanup(ledcontrol);

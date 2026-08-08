@@ -24,8 +24,9 @@
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "ticks_apis.h"
+#include "fpga_apis.h"
 #include "dbprint.h"
 #include "util.h"
 #include "commonutil.h"
@@ -36,7 +37,7 @@
 #include "lfsampling.h"
 #include "protocols.h"
 #include "pmflash.h"
-#include "flashmem.h" // persistence on flash
+#include "flashmem.h"
 #include "spiffs.h"   // spiffs
 #include "appmain.h"  // print stack
 
@@ -517,6 +518,12 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint
 101010101010101[0]000...
 
 [5555fe852c5555555555555555fe0000]
+
+
+The current read-write implementation is based on the discontinued model RI-TRP-WR2B-30.
+The old model is single page, while the new model is multi page, with different operation instructions and communication formats.
+https://e2e.ti.com/support/wireless-connectivity/other-wireless-group/other-wireless/f/other-wireless-technologies-forum/863988/ri-trp-wr2b-30-replacement-part?tisearch=e2e-sitesearch&keymatch=RI-TRP-WR2B#
+
 */
 void ReadTItag(bool ledcontrol) {
     StartTicks();
@@ -553,6 +560,19 @@ void ReadTItag(bool ledcontrol) {
     AcquireTiType(ledcontrol);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
+    // 周期的判断，就是实际上固定的频率采集到的数据，计算实际上所需的过零点的数量，在整个频率内所占用的采集点的数量
+    // 比如123khz的数据调制，从0跨越到1需要更多的时间，那实际上所耗费的在固定频率下所采集的数据的数量更多。
+    //  模拟固定频率采集的 CROSS_LO 数据（123）：000001111100000
+    //  模拟固定频率采集的 CROSS_LO 数据（134）：000011110000111
+    // 以上例子可以描述出大概的数据变化在采集到的数据中的特征
+    // 采样点数量所需的计算实际易于理解的公式
+    // 123.2khz 一个周期需要 8.116us
+    // 123.2khz 16个周期需要 129.856us
+    // 2mhz 采样一个周期需要 0.0000005s = 500ns
+    // 129.856us / 500ns（0.5us） 就是所需的采样点数量。
+    // 所以看16个fsk的过零点所需要的采样点数量，就基本上能猜测出来当前调制的频率是多少。
+    // HDX调制16个周期的134khz或者123khz，所以这个判断的方法可以这么工作起来。
 
     for (i = 0; i < n - 1; i++) {
         // count cycles by looking for lo to hi zero crossings
@@ -655,17 +675,17 @@ static void WriteTIbyte(uint8_t b) {
     for (i = 0; i < 8; i++) {
         if (b & (1 << i)) {
             // stop modulating antenna 1ms
-            LOW(GPIO_SSC_DOUT);
+            Gpio_SSC_DOUT_Low();
             WaitUS(1000);
             // modulate antenna 1ms
-            HIGH(GPIO_SSC_DOUT);
+            Gpio_SSC_DOUT_High();
             WaitUS(1000);
         } else {
             // stop modulating antenna 0.3ms
-            LOW(GPIO_SSC_DOUT);
+            Gpio_SSC_DOUT_Low();
             WaitUS(300);
             // modulate antenna 1.7ms
-            HIGH(GPIO_SSC_DOUT);
+            Gpio_SSC_DOUT_High();
             WaitUS(1700);
         }
     }
@@ -683,13 +703,11 @@ void AcquireTiType(bool ledcontrol) {
     //clear buffer now so it does not interfere with timing later
     BigBuf_Clear_ext(false);
 
+    // TODO DXL Waiting for cross-platform implementation.
+
     // Set up the synchronous serial port
     AT91C_BASE_PIOA->PIO_PDR = GPIO_SSC_DIN;
     AT91C_BASE_PIOA->PIO_ASR = GPIO_SSC_DIN;
-
-    // steal this pin from the SSP and use it to control the modulation
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
 
     AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
     AT91C_BASE_SSC->SSC_CR = AT91C_SSC_RXEN | AT91C_SSC_TXEN;
@@ -704,24 +722,29 @@ void AcquireTiType(bool ledcontrol) {
     AT91C_BASE_SSC->SSC_TCMR = 0;
     // Transmit Frame Mode Register
     AT91C_BASE_SSC->SSC_TFMR = 0;
+
     // iceman, FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER) ?? the code above? can it be replaced?
+
+    // steal this pin from the SSP and use it to control the modulation
+    gpio_fpga_mod_only_setup();
+
     if (ledcontrol) LED_D_ON();
 
-    // modulate antenna
-    HIGH(GPIO_SSC_DOUT);
+    // start modulate antenna
+    Gpio_SSC_DOUT_High();
 
     // Charge TI tag for 50ms.
     WaitMS(50);
 
     // stop modulating antenna and listen
-    LOW(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_Low();
 
     if (ledcontrol) LED_D_OFF();
 
     i = 0;
     for (;;) {
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-            buf[i] = AT91C_BASE_SSC->SSC_RHR; // store 32 bit values in buffer
+        if (FPGA_SSC_RX_Ready()) {
+            buf[i] = FPGA_SSC_RX_Value(); // store 32 bit values in buffer
             i++;
             if (i >= TIBUFLEN) break;
         }
@@ -779,8 +802,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc, bool ledcontrol) {
     if (ledcontrol) LED_A_ON();
 
     // steal this pin from the SSP and use it to control the modulation
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+    gpio_fpga_mod_only_setup();
 
     // writing algorithm:
     // a high bit consists of a field off for 1ms and field on for 1ms
@@ -793,7 +815,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc, bool ledcontrol) {
     // finish with 50ms programming time
 
     // modulate antenna
-    HIGH(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_High();
     WaitMS(50); // charge time
 
     WriteTIbyte(0xbb); // keyword
@@ -810,7 +832,7 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc, bool ledcontrol) {
     WriteTIbyte((crc >> 8) & 0xff); // crc hi
     WriteTIbyte(0x00); // write frame lo
     WriteTIbyte(0x03); // write frame hi
-    HIGH(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_High();
     WaitMS(50); // programming time
 
     if (ledcontrol) LED_A_OFF();
@@ -826,7 +848,6 @@ void WriteTItag(uint32_t idhi, uint32_t idlo, uint16_t crc, bool ledcontrol) {
 // note:   a call to FpgaDownloadAndGo(FPGA_BITSTREAM_LF) must be done before, but
 //  this may destroy the bigbuf so be sure this is called before calling SimulateTagLowFrequencyEx
 void SimulateTagLowFrequencyEx(int period, int gap, bool ledcontrol, int numcycles) {
-
     // start us timer
     StartTicks();
 
@@ -847,9 +868,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, bool ledcontrol, int numcycl
     else
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
 
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
+    gpio_fpga_mod_feedback_setup();
 
     uint16_t check = 0;
 
@@ -868,7 +887,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, bool ledcontrol, int numcycl
 
         // wait until SSC_CLK goes HIGH
         // used as a simple detection of a reader field?
-        while (!(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
+        while (!(Gpio_SSC_CLK_Read())) {
             WDT_HIT();
             if (check == 1000) {
                 if (data_available() || BUTTON_PRESS())
@@ -888,7 +907,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, bool ledcontrol, int numcycl
         check = 0;
 
         //wait until SSC_CLK goes LOW
-        while (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK) {
+        while (Gpio_SSC_CLK_Read()) {
             WDT_HIT();
             if (check == 2000) {
                 if (BUTTON_PRESS() || data_available())
@@ -1665,7 +1684,7 @@ void turn_read_lf_on(uint32_t delay) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
 
     // measure antenna strength.
-    //int adcval = ((MAX_ADC_LF_VOLTAGE * (SumAdc(ADC_CHAN_LF, 32) >> 1)) >> 14);
+    //int adcval = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_LF);
     WaitUS(delay);
 }
 
