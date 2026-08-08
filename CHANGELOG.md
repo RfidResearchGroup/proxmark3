@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `magic_cards_notes.md` - documented the USCUID-UL helper scripts (`hf_mfu_uscuid` / `hf_mf_uscuid_prog`) and how to set the tag signature, replacing the outdated "No implemented commands" note (@c-barron)
+- Fixed `hf_mf_uscuid_prog.lua` - corrected the script name shown in its usage text (@c-barron)
 - Added `hf felica seacauth1` command
 - Added `lf trovan` commands to support Trovan Animal ID (@iceman1001)
 - Added `hf mf gdmgetblk/gdmgethidblk/gdmsethidblk/gdmsetuid/gdmwipe/gdmsetsig` (@0x6r1an0y)
