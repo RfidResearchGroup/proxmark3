@@ -783,6 +783,7 @@ Here is how the IC can be configured:
   * MF-8 (RU)
   * MF-3 (RU) - not susceptible to "field reset bug", a way to detect [OTP](#fuid) chips.
   * MF-3.2 (RU) - static nonce `01200145`, potentially fixed chip which can bypass Iron Logic's filters.
+  * M+ (CopyKEY) - chips presented as a universal alternative to more advanced Chinese ICs; only real difference is presence of rewritable sectors 16+17 and block 255 (readable after any auth)
 `
 ### Identify
 
