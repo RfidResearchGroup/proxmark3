@@ -32,3 +32,5 @@
     > For example, this [BUG](https://github.com/RfidResearchGroup/proxmark3/pull/3449/commits/8f550a8c0f6ccd1b345eedb72c12af11bae17ebe)
       caused all data blocks in the `hf mfu dump` to be empty because an index overflow caused access to the wrong memory address.
       BUG found: [mifarecmd.c#L660](https://github.com/RfidResearchGroup/proxmark3/blob/master/armsrc/mifarecmd.c#L660)
+22. The speed of I2C has been modified, and hardware abstraction of I2C is not yet complete. This is also a TODO.
+    > Ideally, I2C should also perform HAL in common_arm.
