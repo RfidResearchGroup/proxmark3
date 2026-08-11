@@ -826,7 +826,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     uint8_t *receivedRespPar = BigBuf_calloc(MAX_PARITY_SIZE);
 
     uint8_t previous_data = 0;
-    int maxDataLen = 0, dataLen;
+    int dataLen;
     bool TagIsActive = false;
     bool ReaderIsActive = false;
 
@@ -859,7 +859,6 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     uint32_t rx_samples = 0;
     uint32_t overrun_skips = 0;
     uint32_t dma_stalls = 0;
-
     uint16_t checker = 12000;
 
     // loop and listen
@@ -880,10 +879,6 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
             dataLen = dmaBufDataP - readBufDataP;
         } else {
             dataLen = DMA_BUFFER_SIZE - readBufDataP + dmaBufDataP;
-        }
-
-        if (dataLen > maxDataLen) {
-            maxDataLen = dataLen;
         }
 
         // TODO DXL This cross platform issue needs to be addressed
@@ -919,6 +914,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
             continue;
         }
 
+        // The MCU is processing data fast enough that the DMA has not yet received any new data.
         if (dataLen < 1) {
             continue;
         }
