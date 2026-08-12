@@ -34,3 +34,5 @@
       BUG found: [mifarecmd.c#L660](https://github.com/RfidResearchGroup/proxmark3/blob/master/armsrc/mifarecmd.c#L660)
 22. The speed of I2C has been modified, and hardware abstraction of I2C is not yet complete. This is also a TODO.
     > Ideally, I2C should also perform HAL in common_arm.
+23. The communication driver between BWM and PM5_ARM is currently on the TODO list, therefore, operating PM5 via BWM is not supported at this time. (Communication between ARM and BWM is protocol-based, unlike RDV4 which is transparent.)
+    > Having a protocol allows for better flow control, preventing packet loss caused by UART being too 'fast' and BLE being too 'slow'.
