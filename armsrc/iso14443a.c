@@ -881,18 +881,10 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
             dataLen = DMA_BUFFER_SIZE - readBufDataP + dmaBufDataP;
         }
 
-        // TODO DXL This cross platform issue needs to be addressed
-        //  When the current buffer address is zeroed, it usually means the next buffer hasn't been assigned a value in time,
-        //  indicating that the MCU's processing speed is slow.
-        //  The logic here is to reset the state machine to receive data again.
-
         // DMA fully stalled: both buffers exhausted. Re-arm primary + secondary,
         // resync the read pointer, and drop the in-flight frame.
-        if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
-            AT91C_BASE_PDC_SSC->PDC_RPR  = (uint32_t) dma->buf;
-            AT91C_BASE_PDC_SSC->PDC_RCR  = DMA_BUFFER_SIZE;
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+        if (FPGA_SSC_DMA_RX_Primary_Done()) {
+            FPGA_SSC_DMA_RX_Refresh_Both(dma->buf, DMA_BUFFER_SIZE);
             data = dma->buf;
             rx_samples += DMA_BUFFER_SIZE;
             Uart14aReset();
@@ -919,17 +911,9 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
             continue;
         }
 
-        /**
-         * TODO DXL This problem needs to be addressed.
-         *  if (FPGA_SSC_DMA_RX_Done()) {
-         *      FPGA_SSC_DMA_RX_Refresh_Repeat(dma->buf, DMA_BUFFER_SIZE);
-         *  }
-         */
-
         // secondary buffer exhausted, primary still running — refill secondary
-        if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+        if (FPGA_SSC_DMA_RX_Secondary_Done()) {
+            FPGA_SSC_DMA_RX_Refresh_Secondary(dma->buf, DMA_BUFFER_SIZE);
         }
 
         LED_A_OFF();

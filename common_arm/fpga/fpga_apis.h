@@ -220,6 +220,27 @@ STATIC_FORCE_INLINE void FPGA_SSC_DMA_RX_Refresh_Repeat(void *buf, uint16_t len)
 STATIC_FORCE_INLINE void FPGA_SSC_DMA_RX_Refresh_Single(void *buf, uint16_t len);
 
 //-----------------------------------------------------------------------------
+// DMA RX double-buffer status & refresh (primary + "next").
+// The AT91 PDC exposes a primary buffer (RPR/RCR) and a "next" buffer
+// (RNPR/RNCR); when the primary drains, the "next" buffer is swapped in
+// automatically. Platforms without a "next" buffer (AT32) implement these
+// so the primary operations degrade to no-ops and all (re)arming is done
+// through the secondary buffer.
+//-----------------------------------------------------------------------------
+
+// Has the primary RX buffer fully drained (its remaining count reached 0)?
+STATIC_FORCE_INLINE bool FPGA_SSC_DMA_RX_Primary_Done(void);
+
+// Has the "next" RX buffer also been consumed (nothing left to swap in)?
+STATIC_FORCE_INLINE bool FPGA_SSC_DMA_RX_Secondary_Done(void);
+
+// Re-arm both the primary and the "next" RX buffer (restart continuous RX).
+STATIC_FORCE_INLINE void FPGA_SSC_DMA_RX_Refresh_Both(void *buf, uint16_t len);
+
+// Re-arm only the "next" RX buffer.
+STATIC_FORCE_INLINE void FPGA_SSC_DMA_RX_Refresh_Secondary(void *buf, uint16_t len);
+
+//-----------------------------------------------------------------------------
 // Provide a 24MHz clock from ARM to FPGA
 // This is the most important main clock for FPGA, so it must be implemented!
 //-----------------------------------------------------------------------------
