@@ -1444,14 +1444,6 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
         }
 
         if (Handle14443bSamplesFromTag(ci, cq)) {
-
-            // TODO DXL
-            // 这是在PM5上能工作的老代码：*eof_time = GetCountSspClkDelta(dma_start_time) - DELAY_TAG_TO_ARM;  // end of EOF
-            // 如果以下新代码带来了任何兼容性问题，可以参照以上代码进行排查。
-            // 需要测试对于常规14V与ST25的兼容性，如果都没有问题，则可以删除此TODO
-
-            // --- 最新代码
-
             // Response timing is measured from DMA start, but trace rows use
             // absolute SSP time like reader frames.
             uint32_t eof_delta = GetCountSspClkDelta(dma_start_time);
@@ -1459,8 +1451,6 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
                 eof_delta -= DELAY_TAG_TO_ARM;
             }
             *eof_time = dma_start_time + eof_delta;  // end of EOF
-
-            // ---
 
             if (Demod.len > Demod.max_len) {
                 ret = PM3_EOVFLOW;
@@ -1494,29 +1484,6 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
     if (retlen) {
         *retlen = Demod.len;
     }
-
-    /*
-     * DXL:
-     * Before sending data from PCD to PICC,
-     * it is necessary to ensure that there are at least 14 ETUs delay between last tag response.
-     * However, the determination of this delay time distance depends heavily on eof_time,
-     * but the calculation of the value of eof_time seems to be not nice.
-     * I used an oscilloscope to measure the time interval from the end of the Get14443bAnswerFromTag function
-     * to switching to READER sending mode and starting to send data to the tag through SSP,
-     * which is only 20us, far from meeting the time requirement of 14 ETUs (132us).
-     * ---
-     * start_time is always set to the expected effective sending time, but this time is not the current value of sspclk.
-     * So the waiting time before sending always exceeds this time, because the current sspclk is constantly increasing,
-     * but eof_time is only the time distance for the card response to be completed.
-     * ---
-     * Due to the poor performance and slow processing speed of AT91, there is no bug of inter frame delay waiting.
-     * However, AT32 has good performance, processing data very quickly and issuing the next command.
-     * At this time, this bug will appear.
-     * ---
-     * My solution is to update the value of eof_time by the current sspclk value after receiving and before starting to send,
-     * so that it can effectively wait for 14 ETUs.
-     */
-    // *eof_time = GetCountSspClk(); TODO DXL 参考上面的描述，如果上面的描述解决了兼容性问题，则这段代码就不再需要了
 
     return PM3_SUCCESS;
 }
