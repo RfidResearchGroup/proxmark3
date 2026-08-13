@@ -83,4 +83,24 @@ STATIC_FORCE_INLINE void FPGA_SSC_DMA_RX_Refresh_Single(void *buf, uint16_t len)
     AT91C_BASE_PDC_SSC->PDC_RCR = len;                 // transfer this many samples
 }
 
+STATIC_FORCE_INLINE bool FPGA_SSC_DMA_RX_Primary_Done(void) {
+    return AT91C_BASE_PDC_SSC->PDC_RCR == 0;
+}
+
+STATIC_FORCE_INLINE bool FPGA_SSC_DMA_RX_Secondary_Done(void) {
+    return AT91C_BASE_PDC_SSC->PDC_RNCR == 0;
+}
+
+STATIC_FORCE_INLINE void FPGA_SSC_DMA_RX_Refresh_Both(void *buf, uint16_t len) {
+    AT91C_BASE_PDC_SSC->PDC_RPR  = (uint32_t) buf;     // primary buffer address
+    AT91C_BASE_PDC_SSC->PDC_RCR  = len;                // primary buffer count
+    AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) buf;     // next buffer address
+    AT91C_BASE_PDC_SSC->PDC_RNCR = len;                // next buffer count
+}
+
+STATIC_FORCE_INLINE void FPGA_SSC_DMA_RX_Refresh_Secondary(void *buf, uint16_t len) {
+    AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) buf;     // next buffer address
+    AT91C_BASE_PDC_SSC->PDC_RNCR = len;                // next buffer count
+}
+
 #endif

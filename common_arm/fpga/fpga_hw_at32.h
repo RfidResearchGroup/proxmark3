@@ -138,4 +138,32 @@ STATIC_FORCE_INLINE void FPGA_SSC_DMA_RX_Refresh_Single(void *buf, uint16_t len)
     FPGA_SSC_DMA_RX_Enable();
 }
 
+STATIC_FORCE_INLINE bool FPGA_SSC_DMA_RX_Primary_Done(void) {
+    // AT32 has no "primary + next" double buffer. The single-shot DMA simply
+    // stops when the buffer is full, and that is the normal end of one
+    // reception cycle (the data is still valid), not the "both buffers
+    // exhausted" hard stall this hook describes. So it never applies here.
+    return false;
+}
+
+STATIC_FORCE_INLINE bool FPGA_SSC_DMA_RX_Secondary_Done(void) {
+    // The single-shot DMA counter reaching 0 means the buffer is full and the
+    // next reception must be re-armed — this is the "secondary buffer" role on
+    // AT32 (the buffer that comes after the current one finishes).
+    return FPGA_SSC_DMA_RX_Done();
+}
+
+STATIC_FORCE_INLINE void FPGA_SSC_DMA_RX_Refresh_Both(void *buf, uint16_t len) {
+    // AT32 does not support a primary-buffer refresh (there is no double
+    // buffer), so this is intentionally a no-op. Primary_Done() is always
+    // false, so the caller never reaches this path anyway.
+    (void)buf;
+    (void)len;
+}
+
+STATIC_FORCE_INLINE void FPGA_SSC_DMA_RX_Refresh_Secondary(void *buf, uint16_t len) {
+    // Re-arm the single buffer to start the next reception.
+    FPGA_SSC_DMA_RX_Refresh_Single(buf, len);
+}
+
 #endif
