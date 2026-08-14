@@ -1404,8 +1404,8 @@ static int DesfireAuthenticateEV1(DesfireContext_t *dctx, DesfireSecureChannel s
     DesfireCryptoEncDecEx(dctx, DCOMainKey, encRndB, rndlen, RndB, false, false, IV);
 
     if (g_debugMode > 1) {
-        PrintAndLogEx(DEBUG, "encRndB: %s", sprint_hex(encRndB, 8));
-        PrintAndLogEx(DEBUG, "RndB: %s", sprint_hex(RndB, 8));
+        PrintAndLogEx(DEBUG, "encRndB: %s", sprint_hex(encRndB, rndlen));
+        PrintAndLogEx(DEBUG, "RndB: %s", sprint_hex(RndB, rndlen));
     }
 
     // - Rotate RndB by 8 bits
