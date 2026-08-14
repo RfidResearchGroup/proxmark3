@@ -1435,7 +1435,7 @@ static int DesfireAuthenticateEV1(DesfireContext_t *dctx, DesfireSecureChannel s
         memcpy(tmp + rndlen, rotRndB, rndlen);
         if (g_debugMode > 1) {
             PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
-            PrintAndLogEx(DEBUG, "Both   : %s", sprint_hex(tmp, 32));
+            PrintAndLogEx(DEBUG, "Both   : %s", sprint_hex(tmp, rndlen * 2));
         }
         DesfireCryptoEncDecEx(dctx, DCOMainKey, tmp, rndlen * 2, both, true, true, IV);
     }
