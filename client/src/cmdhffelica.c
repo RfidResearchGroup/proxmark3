@@ -82,6 +82,7 @@
 #define FELICA_POLLING_REQUEST_SYSTEM_CODE 0x01U
 #define FELICA_SYSTEM_LIST_JSON "felica/felica_system_code_list"
 #define FELICA_IC_CODE_LIST_JSON "felica/felica_ic_code_list"
+#define FELICA_CONTAINER_ISSUE_LIST_JSON "felica/felica_container_issue_information_list"
 
 #define FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE 32U
 #define FELICA_MAX_NODE_NUMBER 0x03FFU
@@ -457,6 +458,8 @@ static json_t *felica_system_list = NULL;
 static bool felica_system_list_loaded = false;
 static json_t *felica_ic_code_list = NULL;
 static bool felica_ic_code_list_loaded = false;
+static json_t *felica_container_issue_list = NULL;
+static bool felica_container_issue_list_loaded = false;
 
 static void set_last_known_card(felica_card_select_t card) {
     last_known_card = card;
@@ -769,6 +772,100 @@ static json_t *felica_get_ic_code_list(void) {
     felica_ic_code_list = root;
     free(path);
     return felica_ic_code_list;
+}
+
+static json_t *felica_get_container_issue_list(void) {
+    if (felica_container_issue_list_loaded) {
+        return felica_container_issue_list;
+    }
+
+    felica_container_issue_list_loaded = true;
+
+    char *path = NULL;
+    if (searchFile(&path, RESOURCES_SUBDIR, FELICA_CONTAINER_ISSUE_LIST_JSON, ".json", true) != PM3_SUCCESS) {
+        return NULL;
+    }
+
+    json_error_t error;
+    json_t *root = json_load_file(path, 0, &error);
+    if (root == NULL) {
+        PrintAndLogEx(WARNING, "Failed to parse `%s` line %d: %s", path, error.line, error.text);
+        free(path);
+        return NULL;
+    }
+
+    if (json_is_array(root) == false) {
+        PrintAndLogEx(WARNING, "Invalid `%s` format, expected array root", path);
+        json_decref(root);
+        free(path);
+        return NULL;
+    }
+
+    felica_container_issue_list = root;
+    free(path);
+    return felica_container_issue_list;
+}
+
+static bool felica_container_issue_matches(const felica_get_container_issue_info_response_t *response,
+        const json_t *entry) {
+    if (response == NULL || json_is_object(entry) == false) {
+        return false;
+    }
+
+    const char *format_hex = felica_get_json_string(entry, "format_version_carrier_info");
+    const char *model = felica_get_json_string(entry, "mobile_phone_model_info");
+    if (format_hex == NULL || model == NULL ||
+            strlen(format_hex) != (sizeof(response->format_version_carrier_information) * 2U)) {
+        return false;
+    }
+
+    uint8_t expected_format[sizeof(response->format_version_carrier_information)] = {0};
+    size_t expected_format_len = 0;
+    if (hexstr_to_byte_array(format_hex, expected_format, &expected_format_len) == false ||
+            expected_format_len != sizeof(expected_format) ||
+            memcmp(response->format_version_carrier_information, expected_format, sizeof(expected_format)) != 0) {
+        return false;
+    }
+
+    const size_t model_len = strlen(model);
+    if (model_len == 0 || model_len > sizeof(response->mobile_phone_model_information) ||
+            memcmp(response->mobile_phone_model_information, model, model_len) != 0) {
+        return false;
+    }
+
+    for (size_t i = model_len; i < sizeof(response->mobile_phone_model_information); i++) {
+        if (response->mobile_phone_model_information[i] != 0x00) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static void felica_print_container_issue_annotations(const felica_get_container_issue_info_response_t *response) {
+    json_t *list = felica_get_container_issue_list();
+    if (response == NULL || list == NULL) {
+        return;
+    }
+
+    size_t index = 0;
+    json_t *entry = NULL;
+    json_array_foreach(list, index, entry) {
+        if (felica_container_issue_matches(response, entry) == false) {
+            continue;
+        }
+
+        const char *name = felica_get_json_string(entry, "name");
+        if (name == NULL) {
+            continue;
+        }
+
+        const char *carrier = felica_get_json_string(entry, "carrier");
+        PrintAndLogEx(INFO, "  Device Model.......... " _GREEN_("%s"), name);
+        if (carrier) {
+            PrintAndLogEx(INFO, "  Carrier............... " _GREEN_("%s"), carrier);
+        }
+    }
 }
 
 static const json_t *felica_find_ic_annotation(uint8_t rom_type, uint8_t ic_type) {
@@ -2469,18 +2566,19 @@ static int info_felica(bool verbose) {
                                       sizeof(container_issue_info_response.mobile_phone_model_information),
                                       model_ascii,
                                       sizeof(model_ascii)
-                                  );
+            );
             PrintAndLogEx(INFO, "Container issue info:");
-            PrintAndLogEx(INFO, "  Format/Carrier... " _YELLOW_("%s"),
+            PrintAndLogEx(INFO, "  Format/Carrier info... " _YELLOW_("%s"),
                           sprint_hex_inrow(container_issue_info_response.format_version_carrier_information,
                                            sizeof(container_issue_info_response.format_version_carrier_information)));
             if (model_is_ascii) {
-                PrintAndLogEx(INFO, "  Model............ " _GREEN_("%s") " (ASCII)", model_ascii);
+                PrintAndLogEx(INFO, "  Model info............ " _GREEN_("%s") " (ASCII)", model_ascii);
             } else {
-                PrintAndLogEx(INFO, "  Model............ " _YELLOW_("%s") " (HEX)",
+                PrintAndLogEx(INFO, "  Model info............ " _YELLOW_("%s") " (HEX)",
                               sprint_hex_inrow(container_issue_info_response.mobile_phone_model_information,
                                                sizeof(container_issue_info_response.mobile_phone_model_information)));
             }
+            felica_print_container_issue_annotations(&container_issue_info_response);
         }
 
         const uint16_t container_properties[] = {0x0000, 0x0001};
