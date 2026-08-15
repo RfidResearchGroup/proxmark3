@@ -1816,6 +1816,17 @@ void test_bwm_uart(void) {
     }
 }
 
+void test_config_uart_tx2_to_dbgio(void) {
+    // 配置uart tx2 为推挽输出
+    gpio_init_type gpio_init_struct;
+    gpio_default_para_init(&gpio_init_struct);
+    crm_periph_clock_enable(CRM_GPIOA_PERIPH_CLOCK, TRUE);
+    gpio_init_struct.gpio_mode = GPIO_MODE_OUTPUT;
+    gpio_init_struct.gpio_pull = GPIO_PULL_NONE;
+    gpio_init_struct.gpio_pins = GPIO_PINS_2;
+    gpio_init(GPIOA, &gpio_init_struct); // PA2_TX
+}
+
 // 覆盖 UnitTestMain 实现单元测试
 void UnitTestMain(void);
 
@@ -1840,6 +1851,9 @@ void UnitTestMain(void) {
     // 不然的话调试的时候也会很发热
     SpinDelay(500);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
+    // ------------------------------- 测试 配置UART TX2为DBGIO输出 -------------------------------
+    test_config_uart_tx2_to_dbgio();
 
     // ------------------------------- 测试 蓝牙电池套件UART通信 -------------------------------
     // test_bwm_uart();
