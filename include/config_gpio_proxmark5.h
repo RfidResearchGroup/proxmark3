@@ -91,6 +91,12 @@
 #define CRM_GPIO_COUNT_SSP_CLK_SOURCE       GPIO_PINS_SOURCE3
 #define CRM_GPIO_COUNT_SSP_CLK_MUX          GPIO_MUX_1
 #define CRM_GPIO_COUNT_SSP_CLK_PIN          GPIO_PINS_3
+// fpga ssc frame input capture (LF tag modulation edges), PB4 = TMR3_CH1
+#define CRM_GPIO_PERIPH_INPUT_CAPTURE       CRM_GPIOB_PERIPH_CLOCK
+#define CRM_GPIO_INPUT_CAPTURE              GPIOB
+#define CRM_GPIO_INPUT_CAPTURE_SOURCE       GPIO_PINS_SOURCE4
+#define CRM_GPIO_INPUT_CAPTURE_MUX          GPIO_MUX_2
+#define CRM_GPIO_INPUT_CAPTURE_PIN          GPIO_PINS_4
 // fpga spi(for cmd)
 #define AT32_GPIO_PERIPH_SPI_CLK            CRM_GPIOC_PERIPH_CLOCK,CRM_GPIOA_PERIPH_CLOCK
 #define AT32_GPIO_SPI_CS                    GPIOA // <--
