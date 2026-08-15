@@ -1639,56 +1639,6 @@ static int CmdHF14aDesChk(const char *Cmd) {
         k3kkeyListLen = 0x100;
     }
 
-    // 2-byte pattern search mode
-    if (pattern2b) {
-        DesFill2bPattern(deskeyList, &deskeyListLen, aeskeyList, &aeskeyListLen, k3kkeyList, &k3kkeyListLen, &startPattern);
-    }
-
-    // dictionary mode
-    size_t endFilePosition = 0;
-    if (dict_filenamelen) {
-
-        res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 8, &deskeyListLen, 0, &endFilePosition, true);
-        if (res == PM3_SUCCESS && endFilePosition) {
-            PrintAndLogEx(SUCCESS, "First part of des dictionary successfully loaded.");
-        }
-
-        endFilePosition = 0;
-        res = loadFileDICTIONARYEx((char *)dict_filename, aeskeyList, sizeof(aeskeyList), NULL, 16, &aeskeyListLen, 0, &endFilePosition, true);
-        if (res == PM3_SUCCESS && endFilePosition) {
-            PrintAndLogEx(SUCCESS, "First part of aes dictionary successfully loaded.");
-        }
-
-        endFilePosition = 0;
-        res = loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 24, &k3kkeyListLen, 0, &endFilePosition, true);
-        if (res == PM3_SUCCESS && endFilePosition) {
-            PrintAndLogEx(SUCCESS, "First part of k3kdes dictionary successfully loaded.");
-        }
-
-        endFilePosition = 0;
-    }
-
-    if (aeskeyListLen == 0 && deskeyListLen == 0 && k3kkeyListLen == 0) {
-        PrintAndLogEx(ERR, "No keys provided. Nothing to check.");
-        return PM3_EINVARG;
-    }
-
-    if (aeskeyListLen != 0) {
-        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " aes keys", aeskeyListLen);
-    }
-
-    if (deskeyListLen != 0) {
-        PrintAndLogEx(INFO, "Loaded "  _YELLOW_("%"PRIu32) " des keys", deskeyListLen);
-    }
-
-    if (k3kkeyListLen != 0) {
-        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " k3kdes keys", k3kkeyListLen);
-    }
-
-    if (verbose == false) {
-        PrintAndLogEx(INFO, "Search keys:");
-    }
-
     bool result = false;
     uint8_t app_ids[78] = {0};
     size_t app_ids_len = 0;
@@ -1729,48 +1679,78 @@ static int CmdHF14aDesChk(const char *Cmd) {
         uint32_t curaid = (app_ids[x * 3] & 0xFF) + ((app_ids[(x * 3) + 1] & 0xFF) << 8) + ((app_ids[(x * 3) + 2] & 0xFF) << 16);
         PrintAndLogEx(ERR, "Checking aid 0x%06X...", curaid);
 
-        res = AuthCheckDesfire(&dctx, secureChannel, &app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, cmdKDFAlgo, kdfInputLen, kdfInput, foundKeys, &result, (verbose == false));
-        if (res == PM3_EOPABORTED) {
-            break;
-        }
+		bool tested_all_keys = false;
+		size_t desReadStart = 0;
+		size_t desReadEnd = 1;
+		size_t aesReadStart = 0;
+		size_t aesReadEnd = 1;
+		size_t k3kReadStart = 0;
+		size_t k3kReadEnd = 1;
+		uint32_t pattern2bOffset = startPattern;
 
-        if (pattern2b && startPattern < 0x10000) {
-            if (verbose == false) {
-                PrintAndLogEx(NORMAL, "p" NOLF);
-            }
+		while (!tested_all_keys) {
 
-            aeskeyListLen = 0;
-            deskeyListLen = 0;
-            k3kkeyListLen = 0;
-            DesFill2bPattern(deskeyList, &deskeyListLen, aeskeyList, &aeskeyListLen, k3kkeyList, &k3kkeyListLen, &startPattern);
-            continue;
-        }
+			if (pattern1b) {
+				tested_all_keys = true;
+			} else if (pattern2b) {
+				if (verbose == false) {
+					PrintAndLogEx(NORMAL, "p" NOLF);
+				}
 
-        if (dict_filenamelen) {
-            if (verbose == false) {
-                PrintAndLogEx(NORMAL, "d" NOLF);
-            }
+				if (pattern2bOffset < 0x10000) {
+					aeskeyListLen = 0;
+					deskeyListLen = 0;
+					k3kkeyListLen = 0;
+					DesFill2bPattern(deskeyList, &deskeyListLen, aeskeyList, &aeskeyListLen, k3kkeyList, &k3kkeyListLen, &pattern2bOffset);
+				} else {
+					tested_all_keys = true;
+				}
+			} else if (dict_filenamelen) {
+				if (verbose == false) {
+					PrintAndLogEx(NORMAL, "d" NOLF);
+				}
 
-            uint32_t keycnt = 0;
-            res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
-            if (res == PM3_SUCCESS && endFilePosition) {
-                deskeyListLen = keycnt;
-            }
+				uint32_t keycnt = 0;
 
-            keycnt = 0;
-            res = loadFileDICTIONARYEx((char *)dict_filename, aeskeyList, sizeof(aeskeyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
-            if (res == PM3_SUCCESS && endFilePosition) {
-                aeskeyListLen = keycnt;
-            }
+				if (desReadEnd != 0) {
+					res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 8, &keycnt, desReadStart, &desReadEnd, false);
+					if (res == 1) {
+						deskeyListLen = keycnt;
+						desReadStart = desReadEnd;
+					}
+				} else {
+					// Every 16 byte or 24 byte key also gets read as a valid des key (whether that is good or not is up for debate)
+					// but this has as a consequence that when desReadEnd == 0 there are absolutely no more keys of any kind left in the dictionary
+					tested_all_keys = true;
+				}
 
-            keycnt = 0;
-            res = loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
-            if (res == PM3_SUCCESS && endFilePosition) {
-                k3kkeyListLen = keycnt;
-            }
+				keycnt = 0;
+				if (aesReadEnd != 0) {
+					res = loadFileDICTIONARYEx((char *)dict_filename, aeskeyList, sizeof(aeskeyList), NULL, 16, &keycnt, aesReadStart, &aesReadEnd, false);
+					if (res == 1) {
+						aeskeyListLen = keycnt;
+						aesReadStart = aesReadEnd;
+					}
+				}
 
-            continue;
-        }
+				keycnt = 0;
+				if (k3kReadEnd != 0) {
+					res = loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 24, &keycnt, k3kReadStart, &k3kReadEnd, false);
+					if (res == 1) {
+						k3kkeyListLen = keycnt;
+						k3kReadStart = k3kReadEnd;
+					}
+				}
+			}
+
+			res = AuthCheckDesfire(&dctx, secureChannel, &app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, cmdKDFAlgo, kdfInputLen, kdfInput, foundKeys, &result, (verbose == false));
+			if (res == PM3_EOPABORTED) {
+				break;
+			}
+		}
+
+		if (!tested_all_keys)
+			break;
     }
     if (verbose == false) {
         PrintAndLogEx(NORMAL, "");
