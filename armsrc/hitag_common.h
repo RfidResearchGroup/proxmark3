@@ -26,9 +26,8 @@
 
 #define HITAG_T_WAIT_RESP 200  /* T_wresp should be 204..212 */
 #define HITAG_T_WAIT_SC 200    /* T_wsc should be 90..5000 */
-// Read/Write Device waiting time before sending the first command
-#define HITAG_T_WAIT_FIRST 300 /* T_wfc should be 280..565 (T_ttf) */
-// HITAG S Transponder programming time
+// hitagU requires at least 312.5 cycles; if it is less than or equal to 300, hitagU may not work properly on pm5.
+#define HITAG_T_WAIT_FIRST 350 /* T_wfc should be 280..565 (T_ttf) */
 #define HITAG_T_PROG_MAX 750   /* T_prog should be 716..726 */
 
 #define HITAG_T_TAG_ONE_HALF_PERIOD 10
