@@ -1714,10 +1714,10 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
 				if (desReadEnd != 0) {
 					res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 8, &keycnt, desReadStart, &desReadEnd, false);
-					if (res == 1) {
+					if (res == PM3_SUCCESS)
 						deskeyListLen = keycnt;
+					else
 						desReadStart = desReadEnd;
-					}
 				} else {
 					// Every 16 byte or 24 byte key also gets read as a valid des key (whether that is good or not is up for debate)
 					// but this has as a consequence that when desReadEnd == 0 there are absolutely no more keys of any kind left in the dictionary
@@ -1727,19 +1727,19 @@ static int CmdHF14aDesChk(const char *Cmd) {
 				keycnt = 0;
 				if (aesReadEnd != 0) {
 					res = loadFileDICTIONARYEx((char *)dict_filename, aeskeyList, sizeof(aeskeyList), NULL, 16, &keycnt, aesReadStart, &aesReadEnd, false);
-					if (res == 1) {
+					if (res == PM3_SUCCESS)
 						aeskeyListLen = keycnt;
+					else
 						aesReadStart = aesReadEnd;
-					}
 				}
 
 				keycnt = 0;
 				if (k3kReadEnd != 0) {
 					res = loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 24, &keycnt, k3kReadStart, &k3kReadEnd, false);
-					if (res == 1) {
+					if (res == PM3_SUCCESS)
 						k3kkeyListLen = keycnt;
+					else
 						k3kReadStart = k3kReadEnd;
-					}
 				}
 			}
 
