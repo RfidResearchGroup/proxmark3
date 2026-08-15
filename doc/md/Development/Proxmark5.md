@@ -36,3 +36,4 @@
     > Ideally, I2C should also perform HAL in common_arm.
 23. The communication driver between BWM and PM5_ARM is currently on the TODO list, therefore, operating PM5 via BWM is not supported at this time. (Communication between ARM and BWM is protocol-based, unlike RDV4 which is transparent.)
     > Having a protocol allows for better flow control, preventing packet loss caused by UART being too 'fast' and BLE being too 'slow'.
+24. The HAL work related to HITAG has been completed. For details, see: [HitagS & HitagU](https://github.com/RfidResearchGroup/proxmark3/pull/3449#issuecomment-5303520489)
