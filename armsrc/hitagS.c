@@ -424,7 +424,7 @@ void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             LogTraceBits(rx, rxlen, start_time, TIMESTAMP, true);
 
             // Disable timer 1 with external trigger to avoid triggers during our own modulation
-            StopInputCapture();
+            StopLoEdgeCapture();
 
             // Process the incoming frame (rx) and prepare the outgoing frame (tx)
             hts_handle_reader_command(rx, rxlen, tx, &txlen);
@@ -445,7 +445,7 @@ void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             }
 
             // Enable and reset external trigger in timer for capturing future frames
-            EnableInputCapture();
+            EnableLoEdgeCapture();
 
             // Reset the received frame and response timing info
             memset(rx, 0x00, sizeof(rx));
@@ -455,9 +455,9 @@ void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
         // Reset the frame length
         rxlen = 0;
         // Save the timer overflow, will be 0 when frame was received
-        overflow += (GetInputCaptureCount() / T0);
+        overflow += (GetLoEdgeCaptureCount() / T0);
         // Reset the timer to restart while-loop that receives frames
-        ResetInputCapture();
+        ResetLoEdgeCapture();
 
     }
 
@@ -473,7 +473,7 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
 
     // Send and store the reader command
     // Disable timer 1 with external trigger to avoid triggers during our own modulation
-    StopInputCapture();
+    StopLoEdgeCapture();
 
     DBG Dbprintf("tx %d bits:", txlen);
     DBG Dbhexdump((txlen + 7) / 8, tx, false);
@@ -497,7 +497,7 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
     LogTraceBits(tx, txlen, start_time, TIMESTAMP, true);
 
     // Enable and reset external trigger in timer for capturing future frames
-    EnableInputCapture();
+    EnableLoEdgeCapture();
 
     hts_set_frame_modulation(protocol_mode, ac_seq);
 
