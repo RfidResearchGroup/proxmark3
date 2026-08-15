@@ -57,7 +57,7 @@ static int block_data_left = 0;
 static bool enable_page_tearoff = false;
 
 static uint8_t protocol_mode = HITAGS_UID_REQ_ADV1;
-static hitag_mod_t m = AC2K; // used modulation
+static hitag_mod_t m = AC2K;                                // used modulation
 static uint32_t reader_selected_uid;
 static int rotate_uid = 0;
 static int sof_bits;                                // number of start-of-frame bits
@@ -103,8 +103,9 @@ static void update_tag_max_page(void) {
  * to check if the right uid was selected
  */
 static int check_select(const uint8_t *rx, uint32_t uid) {
+
     // global var?
-    concatbits((uint8_t *) &reader_selected_uid, 0, rx, 5, 32, false);
+    concatbits((uint8_t *)&reader_selected_uid, 0, rx, 5, 32, false);
     reader_selected_uid = BSWAP_32(reader_selected_uid);
 
     if (reader_selected_uid == uid) {
@@ -269,6 +270,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 *txlen = 2;
                 tx[0] = 0x40;
                 page_to_be_written = 0;
+
             } else if (tag.tstate == HT_WRITING_BLOCK_DATA) {
                 memcpy(tag.data.pages[page_to_be_written], rx, HITAGS_PAGE_SIZE);
                 // send ack
@@ -422,7 +424,7 @@ void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             LogTraceBits(rx, rxlen, start_time, TIMESTAMP, true);
 
             // Disable timer 1 with external trigger to avoid triggers during our own modulation
-            AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+            StopInputCapture();
 
             // Process the incoming frame (rx) and prepare the outgoing frame (tx)
             hts_handle_reader_command(rx, rxlen, tx, &txlen);
@@ -432,7 +434,7 @@ void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             // with respect to the falling edge, we need to wait actually (T_Wait1 - T_Low)
             // periods. The gap time T_Low varies (4..10). All timer values are in
             // terms of T0 units
-            while (AT91C_BASE_TC0->TC_CV < T0 * (HITAG_T_WAIT_RESP - HITAG_T_LOW)) {};
+            while (GetPrecisionCounter() < T0 * (HITAG_T_WAIT_RESP - HITAG_T_LOW)) {};
 
             // Send and store the tag answer (if there is any)
             if (txlen > 0) {
@@ -443,7 +445,7 @@ void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             }
 
             // Enable and reset external trigger in timer for capturing future frames
-            AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+            EnableInputCapture();
 
             // Reset the received frame and response timing info
             memset(rx, 0x00, sizeof(rx));
@@ -453,9 +455,10 @@ void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
         // Reset the frame length
         rxlen = 0;
         // Save the timer overflow, will be 0 when frame was received
-        overflow += (AT91C_BASE_TC1->TC_CV / T0);
+        overflow += (GetInputCaptureCount() / T0);
         // Reset the timer to restart while-loop that receives frames
-        AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
+        ResetInputCapture();
+
     }
 
     hitag_cleanup(ledcontrol);
@@ -470,7 +473,7 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
 
     // Send and store the reader command
     // Disable timer 1 with external trigger to avoid triggers during our own modulation
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+    StopInputCapture();
 
     DBG Dbprintf("tx %d bits:", txlen);
     DBG Dbhexdump((txlen + 7) / 8, tx, false);
@@ -480,7 +483,7 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
     // falling edge occurred halfway the period. with respect to this falling edge,
     // we need to wait (T_Wait2 + half_tag_period) when the last was a 'one'.
     // All timer values are in terms of T0 units
-    while (AT91C_BASE_TC0->TC_CV < T0 * t_wait) {};
+    while (GetPrecisionCounter() < T0 * t_wait) {};
 
     start_time = TIMESTAMP;
 
@@ -494,7 +497,7 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
     LogTraceBits(tx, txlen, start_time, TIMESTAMP, true);
 
     // Enable and reset external trigger in timer for capturing future frames
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    EnableInputCapture();
 
     hts_set_frame_modulation(protocol_mode, ac_seq);
 
