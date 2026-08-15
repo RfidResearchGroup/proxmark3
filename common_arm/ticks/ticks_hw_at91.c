@@ -199,6 +199,105 @@ uint32_t RAMFUNC GetCountSspClk(void) {
     return tmp_count;
 }
 
+//  -------------------------------------------------------------------------
+//  Precision counter (TC0), input capture (TC1) and timestamp (TC2).
+//  These are used by the LF protocols (e.g. Hitag) and are configured at
+//  1.5 MHz (MCK/32), so 12 counts = 1 T0 = 8 us.
+//  -------------------------------------------------------------------------
+
+// TC2 overflow count, combined with the TC2 counter for ~47 min timing.
+static uint16_t timestamp_high = 0;
+
+void StartPrecisionCounter(void) {
+    // Enable peripheral clock for TC0/TC1/TC2 (TC1 = input capture, TC2 = timestamp).
+    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1) | (1 << AT91C_ID_TC2);
+    // Route SSC_FRAME to the timer input (TIOA) so its edges can be captured by TC1.
+    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
+
+    // Disable all timers before reconfiguration.
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS;
+
+    // TC0: capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers (free-running).
+    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+}
+
+void StopPrecisionCounter(void) {
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+}
+
+void ResetPrecisionCounter(void) {
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+    while (AT91C_BASE_TC0->TC_CV != 0) {};
+}
+
+uint16_t RAMFUNC GetPrecisionCounter(void) {
+    return (uint16_t)AT91C_BASE_TC0->TC_CV;
+}
+
+void StartInputCapture(void) {
+    // TC1: capture mode, default timer source = MCK/32 (TIMER_CLOCK3),
+    // TIOA is external trigger, load RA on rising edge, load RB on falling edge.
+    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK  // use MCK/32 (TIMER_CLOCK3)
+                             | AT91C_TC_ABETRG               // TIOA is used as an external trigger
+                             | AT91C_TC_ETRGEDG_FALLING      // external trigger on falling edge
+                             | AT91C_TC_LDRA_RISING          // load RA on rising edge of TIOA
+                             | AT91C_TC_LDRB_FALLING;        // load RB on falling edge of TIOA
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+}
+
+void StopInputCapture(void) {
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+}
+
+void EnableInputCapture(void) {
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+}
+
+void ResetInputCapture(void) {
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
+}
+
+uint16_t RAMFUNC GetInputCaptureCount(void) {
+    return (uint16_t)AT91C_BASE_TC1->TC_CV;
+}
+
+uint32_t RAMFUNC GetInputCaptureStatus(void) {
+    return AT91C_BASE_TC1->TC_SR;
+}
+
+uint16_t RAMFUNC GetInputCaptureValue(void) {
+    return (uint16_t)AT91C_BASE_TC1->TC_RB;
+}
+
+void StartTimestamp(void) {
+    // TC2: capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers (free-running).
+    AT91C_BASE_TC2->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
+    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+
+    // Assert a sync signal. This sets all timers to 0 on next active clock edge.
+    AT91C_BASE_TCB->TCB_BCR = 1;
+    while (AT91C_BASE_TC0->TC_CV != 0) {
+    }; // wait until TC0 returned to zero
+
+    // Reset the overflow accumulator.
+    timestamp_high = 0;
+}
+
+void StopTimestamp(void) {
+    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS;
+}
+
+uint32_t RAMFUNC GetTimestamp(void) {
+    // Reading TC_SR clears the COVFS overflow flag.
+    if (AT91C_BASE_TC2->TC_SR & AT91C_TC_COVFS) {
+        timestamp_high++;
+    }
+    return (((uint32_t)timestamp_high << 16) + AT91C_BASE_TC2->TC_CV) / TICKS_PER_CARRIER_PERIOD;
+}
+
 #endif // #ifndef AS_BOOTROM
 
 //  -------------------------------------------------------------------------

@@ -62,6 +62,43 @@ uint32_t RAMFUNC GetCountSspClkDelta(uint32_t start);
 
 void WaitMS(uint32_t ms);
 
+// -------------------------------------------------------------------------
+// Generic precision timer counter, input capture and timestamp counter.
+// These primitives back the precise timing / edge-capture needs of the LF
+// protocols (e.g. Hitag). They are intentionally generic and platform-agnostic.
+//
+// The precision counter and timestamp counter both run at 1.5 MHz
+// (12 counts = 1 T0 = 8 us, see hitag_common.h for the T0 definition).
+// -------------------------------------------------------------------------
+
+// Free-running precision counter @ 1.5 MHz (12 counts = 1 T0 = 8 us).
+void     StartPrecisionCounter(void);   // configure + start + reset
+void     StopPrecisionCounter(void);
+void     ResetPrecisionCounter(void);   // software reset to 0
+uint16_t RAMFUNC GetPrecisionCounter(void); // current count (16-bit)
+
+// Input capture: timestamp rising/falling edges of an external signal.
+void     StartInputCapture(void);       // configure + start + reset
+void     StopInputCapture(void);        // disable capture
+void     EnableInputCapture(void);      // re-enable + reset (no reconfiguration)
+void     ResetInputCapture(void);       // software reset
+uint16_t RAMFUNC GetInputCaptureCount(void);   // current free-running count
+uint32_t RAMFUNC GetInputCaptureStatus(void);  // edge-event flags (reading clears them)
+uint16_t RAMFUNC GetInputCaptureValue(void);   // value captured on the falling edge
+
+// Monotonic timestamp counter (free-running + overflow accumulation).
+// One 125 kHz carrier period (8 us) equals this many counter ticks at 1.5 MHz.
+#define TICKS_PER_CARRIER_PERIOD 12
+void     StartTimestamp(void);    // configure + start + clear (counter and overflow)
+void     StopTimestamp(void);
+uint32_t RAMFUNC GetTimestamp(void); // monotonic timestamp in 125 kHz carrier periods
+
 #endif // #ifndef AS_BOOTROM
+
+#ifdef PM5
+#include "ticks_hw_at32.h"
+#else
+#include "ticks_hw_at91.h"
+#endif
 
 #endif // TICKS_H_

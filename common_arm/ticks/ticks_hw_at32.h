@@ -21,4 +21,24 @@
 #define AT32_CRM_TMR_PERIPH_32B_TIMER_CLK   CRM_TMR5_PERIPH_CLOCK
 #define AT32_TMR_32B_TIMER                  TMR5
 
+// Input capture edge-event flags (single-bit masks in the TMR status register).
+// PWM input mode: CH1 = falling edge, CH2 = rising edge (see StartInputCapture).
+#define INPUT_CAPTURE_EVT_RA   TMR_C2_FLAG   // CH2 rising-edge capture event
+#define INPUT_CAPTURE_EVT_RB   TMR_C1_FLAG   // CH1 falling-edge capture event
+
+// Precision free-running counter @ 1.5MHz.
+// Reuses the 32-bit timer (same source as StartTicks / StartCountUS).
+#define AT32_CRM_TMR_PERIPH_PRECISE_COUNTER   AT32_CRM_TMR_PERIPH_32B_TIMER_CLK
+#define AT32_TMR_PRECISE_COUNTER              AT32_TMR_32B_TIMER
+
+// Monotonic timestamp counter @ 1.5MHz (16-bit + software overflow tracking).
+// Uses TMR6 (a basic 16-bit timer, unused elsewhere in the project).
+#define AT32_CRM_TMR_PERIPH_TIMESTAMP         CRM_TMR6_PERIPH_CLOCK
+#define AT32_TMR_TIMESTAMP                    TMR6
+
+// Input capture (CH1 rising + CH2 falling on the same input pin).
+// Input pin is PB4 = TMR3_CH1 (the LF SSC frame signal).
+#define AT32_CRM_TMR_PERIPH_INPUT_CAPTURE     CRM_TMR3_PERIPH_CLOCK
+#define AT32_TMR_INPUT_CAPTURE                TMR3
+
 #endif //TICKS_HW_AT32_H

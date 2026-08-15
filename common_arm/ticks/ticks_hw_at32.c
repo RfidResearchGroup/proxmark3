@@ -60,6 +60,10 @@ void SpinDelayUs(int us) {
     }
 }
 
+// configCounter() is defined below (outside AS_BOOTROM); forward-declare it so the
+// precision/timestamp counters inside the AS_BOOTROM block can reuse it.
+static void configCounter(const uint32_t frequency);
+
 #ifndef AS_BOOTROM
 
 // timer counts in 27.7ns increments (16777215/36MHz), rounding applies
@@ -200,6 +204,133 @@ void ResetSspClk(void) {
 uint32_t RAMFUNC GetCountSspClk(void) {
     // return tmr_counter_value_get(CRM_TMR_COUNT_SSP_CLK);
     return AT32_TMR_COUNT_SSP_CLK->cval;
+}
+
+//  -------------------------------------------------------------------------
+//  Precision counter, input capture and timestamp counter.
+//  See ticks_apis.h for the generic contract. Both the precision counter and
+//  the timestamp counter run at 1.5 MHz (12 counts = 1 T0 = 8 us).
+//  -------------------------------------------------------------------------
+
+// Timestamp counter overflow count, combined for ~47 min timing.
+static uint16_t timestamp_high = 0;
+
+void StartPrecisionCounter(void) {
+    // Reuses the 32-bit timer @ 1.5 MHz (same source as StartTicks).
+    configCounter(1500000);
+}
+
+void StopPrecisionCounter(void) {
+    tmr_counter_enable(AT32_TMR_PRECISE_COUNTER, FALSE);
+}
+
+void ResetPrecisionCounter(void) {
+    tmr_counter_value_set(AT32_TMR_PRECISE_COUNTER, 0);
+}
+
+uint16_t RAMFUNC GetPrecisionCounter(void) {
+    return (uint16_t)tmr_counter_value_get(AT32_TMR_PRECISE_COUNTER);
+}
+
+void StartInputCapture(void) {
+    crm_periph_clock_enable(CRM_GPIO_PERIPH_INPUT_CAPTURE, TRUE);
+    crm_periph_clock_enable(AT32_CRM_TMR_PERIPH_INPUT_CAPTURE, TRUE);
+
+    // GPIO: PB4 -> TMR3_CH1 (input capture on the LF SSC frame signal).
+    gpio_init_type gpio_init_struct = {0};
+    gpio_init_struct.gpio_mode = GPIO_MODE_MUX;
+    gpio_init_struct.gpio_out_type = GPIO_OUTPUT_PUSH_PULL;
+    gpio_init_struct.gpio_pull = GPIO_PULL_NONE;
+    gpio_init_struct.gpio_drive_strength = GPIO_DRIVE_STRENGTH_STRONGER;
+    gpio_init_struct.gpio_pins = CRM_GPIO_INPUT_CAPTURE_PIN;
+    gpio_init(CRM_GPIO_INPUT_CAPTURE, &gpio_init_struct); // gpio setup
+    gpio_pin_mux_config(CRM_GPIO_INPUT_CAPTURE, CRM_GPIO_INPUT_CAPTURE_SOURCE, CRM_GPIO_INPUT_CAPTURE_MUX); // remap gpio to TMR3_CH1
+
+    // Time base: 16-bit counter @ 1.5 MHz (TIMER_CLK / (191 + 1) = 288MHz / 192),
+    // matching the AT91 TC1 (MCK/32) so that 12 counts = 1 T0 = 8 us.
+    tmr_reset(AT32_TMR_INPUT_CAPTURE);
+    tmr_base_init(AT32_TMR_INPUT_CAPTURE, UINT16_MAX, 191);
+    tmr_cnt_dir_set(AT32_TMR_INPUT_CAPTURE, TMR_COUNT_UP);
+
+    // PWM input mode (dual-edge capture) on CH1 (TI1 = PB4):
+    // CH1 = direct + falling edge, CH2 = indirect (chained from TI1) + rising edge.
+    tmr_input_config_type ic = {0};
+    ic.input_channel_select = TMR_SELECT_CHANNEL_1;
+    ic.input_mapped_select = TMR_CC_CHANNEL_MAPPED_DIRECT;
+    ic.input_polarity_select = TMR_INPUT_FALLING_EDGE;
+    tmr_pwm_input_config(AT32_TMR_INPUT_CAPTURE, &ic, TMR_CHANNEL_INPUT_DIV_1);
+
+    // Slave reset mode: reset the counter on the CH1 (falling) edge, so C1DT holds
+    // the period since the previous falling edge (matches AT91 ABETRG + ETRGEDG_FALLING).
+    tmr_trigger_input_select(AT32_TMR_INPUT_CAPTURE, TMR_SUB_INPUT_SEL_C1DF1);
+    tmr_sub_mode_select(AT32_TMR_INPUT_CAPTURE, TMR_SUB_RESET_MODE);
+    tmr_sub_sync_mode_set(AT32_TMR_INPUT_CAPTURE, TRUE);
+
+    tmr_counter_value_set(AT32_TMR_INPUT_CAPTURE, 0);
+    tmr_counter_enable(AT32_TMR_INPUT_CAPTURE, TRUE);
+}
+
+void StopInputCapture(void) {
+    tmr_counter_enable(AT32_TMR_INPUT_CAPTURE, FALSE);
+}
+
+void EnableInputCapture(void) {
+    tmr_counter_value_set(AT32_TMR_INPUT_CAPTURE, 0);
+    tmr_counter_enable(AT32_TMR_INPUT_CAPTURE, TRUE);
+}
+
+void ResetInputCapture(void) {
+    tmr_counter_value_set(AT32_TMR_INPUT_CAPTURE, 0);
+}
+
+uint16_t RAMFUNC GetInputCaptureCount(void) {
+    return (uint16_t)tmr_counter_value_get(AT32_TMR_INPUT_CAPTURE);
+}
+
+uint16_t RAMFUNC GetInputCaptureValue(void) {
+    // The falling-edge value is captured on CH1 (C1DT).
+    return (uint16_t)tmr_channel_value_get(AT32_TMR_INPUT_CAPTURE, TMR_SELECT_CHANNEL_1);
+}
+
+uint32_t RAMFUNC GetInputCaptureStatus(void) {
+    // Reading the status clears the edge-event flags (matches AT91 TC_SR semantics).
+    uint32_t ists = AT32_TMR_INPUT_CAPTURE->ists;
+    // Only clear the overflow flag if it is set, to avoid clearing the edge-event flags.
+    if (ists & TMR_OVF_FLAG) {
+        // Clear the overflow flag to avoid repeated interrupts.
+        AT32_TMR_INPUT_CAPTURE->ists = ~TMR_OVF_FLAG;
+    }
+    if (ists & INPUT_CAPTURE_EVT_RA) {
+        AT32_TMR_INPUT_CAPTURE->ists = ~INPUT_CAPTURE_EVT_RA;
+    }
+    if (ists & INPUT_CAPTURE_EVT_RB) {
+        AT32_TMR_INPUT_CAPTURE->ists = ~INPUT_CAPTURE_EVT_RB;
+    }
+    return ists;
+}
+
+void StartTimestamp(void) {
+    // TMR6: basic 16-bit timer, free-running @ 1.5 MHz.
+    crm_periph_clock_enable(AT32_CRM_TMR_PERIPH_TIMESTAMP, TRUE);
+    // APB1 = 144 MHz, divX = (144 MHz / 1.5 MHz) * 2 - 1 = 191 (see configCounter()).
+    tmr_base_init(AT32_TMR_TIMESTAMP, UINT16_MAX, 191);
+    tmr_cnt_dir_set(AT32_TMR_TIMESTAMP, TMR_COUNT_UP);
+    tmr_counter_value_set(AT32_TMR_TIMESTAMP, 0);
+    tmr_counter_enable(AT32_TMR_TIMESTAMP, TRUE);
+    timestamp_high = 0;
+}
+
+void StopTimestamp(void) {
+    tmr_counter_enable(AT32_TMR_TIMESTAMP, FALSE);
+}
+
+uint32_t RAMFUNC GetTimestamp(void) {
+    if (tmr_flag_get(AT32_TMR_TIMESTAMP, TMR_OVF_FLAG)) {
+        tmr_flag_clear(AT32_TMR_TIMESTAMP, TMR_OVF_FLAG);
+        timestamp_high++;
+    }
+    uint16_t cv = (uint16_t)tmr_counter_value_get(AT32_TMR_TIMESTAMP);
+    return (((uint32_t)timestamp_high << 16) + cv) / TICKS_PER_CARRIER_PERIOD;
 }
 
 #endif // #ifndef AS_BOOTROM
