@@ -880,8 +880,8 @@ static int felica_sim_standard_loop(const felica_sim_model_header_t *hdr, const 
         }
         ++checker;
 
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-            uint8_t dist = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
+        if (FPGA_SSC_RX_Ready()) {
+            uint8_t dist = (uint8_t)FPGA_SSC_RX_Value();
             Process18092Byte(&FelicaFrame, dist, felica_get_rx_byte_start_time());
 
             if (FelicaFrame.state == STATE_FULL) {
