@@ -26,7 +26,7 @@ include ../common_arm/Makefile.common
 CROSS ?= arm-none-eabi-
 CROSS_CC ?= $(CROSS)gcc
 CROSS_CFLAGS ?=
-AR ?= ar rcs
+CROSS_AR ?= $(CROSS)ar
 OBJDIR ?= obj
 
 ARMLIBSRC = \
@@ -89,7 +89,7 @@ $(OBJDIR):
 
 $(ARMLIB): $(ARMLIB_OBJ) | $(OBJDIR)
 	$(info [-] AR $@)
-	$(Q)$(AR) $@ $^
+	$(Q)$(CROSS_AR) rcs $@ $^
 
 $(call ARMLIB_REGISTER_RULES)
 -include $(ARMLIB_DEP)
