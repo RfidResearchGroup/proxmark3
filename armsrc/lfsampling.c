@@ -470,8 +470,9 @@ int ReadLF_realtime(bool reader_field, bool cotag) {
     uint8_t curr_byte = 0;
     int return_value = PM3_SUCCESS;
 
-    uint32_t usb_buffer_len, sample_buffer_len;
+    uint32_t usb_buffer_len = 0, sample_buffer_len;
     usb_get_ep_size(NULL, &usb_buffer_len, NULL);
+    sample_buffer_len = usb_buffer_len; // If sample_buffer_len is not specified, a buffer of random length may be requested.
     initSampleBuffer(&sample_buffer_len);
     if (sample_buffer_len != usb_buffer_len) {
         return PM3_EFAILED;
