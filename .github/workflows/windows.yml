@@ -58,10 +58,7 @@ jobs:
           mingw-w64-ucrt-x86_64-gcc
           mingw-w64-ucrt-x86_64-arm-none-eabi-gcc
           mingw-w64-ucrt-x86_64-arm-none-eabi-gdb
-          # TODO workaround: "error: linker script file 'xxxx' appears multiple times"
-          # This should be reverted once MSYS2 ships a non-broken version of the linker.
-          # mingw-w64-ucrt-x86_64-arm-none-eabi-binutils
-          https://repo.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-arm-none-eabi-binutils-2.46.1-1-any.pkg.tar.zst
+          mingw-w64-ucrt-x86_64-arm-none-eabi-binutils
           mingw-w64-ucrt-x86_64-arm-none-eabi-newlib
           mingw-w64-ucrt-x86_64-readline
           mingw-w64-ucrt-x86_64-libsndfile
@@ -109,6 +106,11 @@ jobs:
             exit 1
 
       - uses: actions/checkout@v6
+
+      # TODO workaround: "error: linker script file 'xxxx' appears multiple times"
+      # This should be reverted once MSYS2 ships a non-broken version of the linker.
+      - name: Downgrade ARM linker (Windows, temporary)
+        run: pacman -U --noconfirm https://repo.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-arm-none-eabi-binutils-2.46.1-1-any.pkg.tar.zst
 
       - name: make clean
         run: make clean
