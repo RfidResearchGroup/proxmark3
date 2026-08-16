@@ -58,7 +58,9 @@ jobs:
           mingw-w64-ucrt-x86_64-gcc
           mingw-w64-ucrt-x86_64-arm-none-eabi-gcc
           mingw-w64-ucrt-x86_64-arm-none-eabi-gdb
-          mingw-w64-ucrt-x86_64-arm-none-eabi-binutils
+          # TODO workaround: "error: linker script file 'xxxx' appears multiple times"
+          # This should be reverted once MSYS2 ships a non-broken version of the linker.
+          mingw-w64-ucrt-x86_64-arm-none-eabi-binutils=2.46.1-1
           mingw-w64-ucrt-x86_64-arm-none-eabi-newlib
           mingw-w64-ucrt-x86_64-readline
           mingw-w64-ucrt-x86_64-libsndfile
