@@ -419,7 +419,11 @@ bool usb_poll(void) {
  */
 uint16_t usb_available_length(void) {
     cdc_struct_type *pcdc = (cdc_struct_type *) (udev->class_handler->pdata);
-    return pcdc->g_rxlen;
+    // Only when g_rx_completed is set, the g_rxlen is valid, otherwise, it may be 0 or invalid.
+    if (pcdc->g_rx_completed) {
+        return pcdc->g_rxlen;
+    }
+    return 0;
 }
 
 /**
