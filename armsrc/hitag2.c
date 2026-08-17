@@ -97,7 +97,6 @@ static uint8_t key_no;
 static uint64_t cipher_state;
 
 static int16_t blocknr;
-static size_t flipped_bit = 0;
 static uint32_t byte_value = 0;
 
 static void hitag2_reset(void) {
@@ -1778,7 +1777,6 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
         t_wait_1 = 204;
         t_wait_2 = 128;
         tag_size = 256;
-        flipped_bit = 0;
         DBG DbpString("Configured for " _YELLOW_("Hitag 1") " reader");
     } else if (payload->cmd <= HT2_LAST_CMD) {
         // hitag 2 settings
@@ -2148,7 +2146,6 @@ void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
         t_wait_1 = 204;
         t_wait_2 = 128;
         tag_size = 256;
-        flipped_bit = 0;
         DBG DbpString("Configured for " _YELLOW_("Hitag 1") " writer");
     } else if (payload->cmd <= HT2_LAST_CMD) {
         // hitag 2 settings
