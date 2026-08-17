@@ -237,7 +237,7 @@ uint16_t RAMFUNC GetPrecisionCounter(void) {
     return (uint16_t)AT91C_BASE_TC0->TC_CV;
 }
 
-void StartInputCapture(void) {
+void StartLoEdgeCapture(void) {
     // TC1: capture mode, default timer source = MCK/32 (TIMER_CLOCK3),
     // TIOA is external trigger, load RA on rising edge, load RB on falling edge.
     AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK  // use MCK/32 (TIMER_CLOCK3)
@@ -248,28 +248,38 @@ void StartInputCapture(void) {
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 }
 
-void StopInputCapture(void) {
+void StopLoEdgeCapture(void) {
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 }
 
-void EnableInputCapture(void) {
+void EnableLoEdgeCapture(void) {
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 }
 
-void ResetInputCapture(void) {
+void ResetLoEdgeCapture(void) {
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
 }
 
-uint16_t RAMFUNC GetInputCaptureCount(void) {
+uint16_t RAMFUNC GetLoEdgeCaptureCount(void) {
     return (uint16_t)AT91C_BASE_TC1->TC_CV;
 }
 
-uint32_t RAMFUNC GetInputCaptureStatus(void) {
-    return AT91C_BASE_TC1->TC_SR;
+lo_edge_t RAMFUNC GetLoEdgeCaptureStatus(void) {
+    if (AT91C_BASE_TC1->TC_SR & INPUT_CAPTURE_EVT_RISING_EDGE) {
+        return LO_EDGE_RISING;
+    }
+    if (AT91C_BASE_TC1->TC_SR & INPUT_CAPTURE_EVT_FALLING_EDGE) {
+        return LO_EDGE_FALLING;
+    }
+    return LO_EDGE_NO;
 }
 
-uint16_t RAMFUNC GetInputCaptureValue(void) {
+uint16_t RAMFUNC GetLoEdgeCaptureFalling(void) {
     return (uint16_t)AT91C_BASE_TC1->TC_RB;
+}
+
+uint16_t RAMFUNC GetLoEdgeCaptureRising(void) {
+    return (uint16_t)AT91C_BASE_TC1->TC_RA;
 }
 
 void StartTimestamp(void) {

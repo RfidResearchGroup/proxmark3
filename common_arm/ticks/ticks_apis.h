@@ -77,14 +77,16 @@ void     StopPrecisionCounter(void);
 void     ResetPrecisionCounter(void);   // software reset to 0
 uint16_t RAMFUNC GetPrecisionCounter(void); // current count (16-bit)
 
-// Input capture: timestamp rising/falling edges of an external signal.
-void     StartInputCapture(void);       // configure + start + reset
-void     StopInputCapture(void);        // disable capture
-void     EnableInputCapture(void);      // re-enable + reset (no reconfiguration)
-void     ResetInputCapture(void);       // software reset
-uint16_t RAMFUNC GetInputCaptureCount(void);   // current free-running count
-uint32_t RAMFUNC GetInputCaptureStatus(void);  // edge-event flags (reading clears them)
-uint16_t RAMFUNC GetInputCaptureValue(void);   // value captured on the falling edge
+// Input capture(LF_EDGE_DETECT): rising/falling edges of an external signal.
+void      StartLoEdgeCapture(void);       // configure + start + reset
+void      StopLoEdgeCapture(void);        // disable capture
+void      EnableLoEdgeCapture(void);      // re-enable + reset (no reconfiguration)
+void      ResetLoEdgeCapture(void);       // software reset
+typedef   enum { LO_EDGE_NO = 0, LO_EDGE_RISING = 1, LO_EDGE_FALLING = 2 } lo_edge_t;
+lo_edge_t RAMFUNC GetLoEdgeCaptureStatus(void);  // edge-event flags (reading clears them)
+uint16_t  RAMFUNC GetLoEdgeCaptureCount(void);   // current free-running count
+uint16_t  RAMFUNC GetLoEdgeCaptureFalling(void); // value captured on the falling edge
+uint16_t  RAMFUNC GetLoEdgeCaptureRising(void);  // value captured on the rising edge
 
 // Monotonic timestamp counter (free-running + overflow accumulation).
 // One 125 kHz carrier period (8 us) equals this many counter ticks at 1.5 MHz.

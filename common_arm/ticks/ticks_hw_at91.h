@@ -23,7 +23,7 @@
 
 // Input capture edge-event flags (single-bit masks in the TC1 status register).
 // On AT91, reading TC_SR clears these flags automatically.
-#define INPUT_CAPTURE_EVT_RA   AT91C_TC_LDRAS   // rising-edge load (RA) event
-#define INPUT_CAPTURE_EVT_RB   AT91C_TC_LDRBS   // falling-edge load (RB) event
+#define INPUT_CAPTURE_EVT_RISING_EDGE    AT91C_TC_LDRAS   // rising-edge load (RA) event
+#define INPUT_CAPTURE_EVT_FALLING_EDGE   AT91C_TC_LDRBS   // falling-edge load (RB) event
 
 #endif // TICKS_HW_AT91_H

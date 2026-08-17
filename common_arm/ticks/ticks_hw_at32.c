@@ -232,7 +232,7 @@ uint16_t RAMFUNC GetPrecisionCounter(void) {
     return (uint16_t)tmr_counter_value_get(AT32_TMR_PRECISE_COUNTER);
 }
 
-void StartInputCapture(void) {
+void StartLoEdgeCapture(void) {
     crm_periph_clock_enable(CRM_GPIO_PERIPH_INPUT_CAPTURE, TRUE);
     crm_periph_clock_enable(AT32_CRM_TMR_PERIPH_INPUT_CAPTURE, TRUE);
 
@@ -270,29 +270,34 @@ void StartInputCapture(void) {
     tmr_counter_enable(AT32_TMR_INPUT_CAPTURE, TRUE);
 }
 
-void StopInputCapture(void) {
+void StopLoEdgeCapture(void) {
     tmr_counter_enable(AT32_TMR_INPUT_CAPTURE, FALSE);
 }
 
-void EnableInputCapture(void) {
+void EnableLoEdgeCapture(void) {
     tmr_counter_value_set(AT32_TMR_INPUT_CAPTURE, 0);
     tmr_counter_enable(AT32_TMR_INPUT_CAPTURE, TRUE);
 }
 
-void ResetInputCapture(void) {
+void ResetLoEdgeCapture(void) {
     tmr_counter_value_set(AT32_TMR_INPUT_CAPTURE, 0);
 }
 
-uint16_t RAMFUNC GetInputCaptureCount(void) {
+uint16_t RAMFUNC GetLoEdgeCaptureCount(void) {
     return (uint16_t)tmr_counter_value_get(AT32_TMR_INPUT_CAPTURE);
 }
 
-uint16_t RAMFUNC GetInputCaptureValue(void) {
+uint16_t RAMFUNC GetLoEdgeCaptureFalling(void) {
     // The falling-edge value is captured on CH1 (C1DT).
     return (uint16_t)tmr_channel_value_get(AT32_TMR_INPUT_CAPTURE, TMR_SELECT_CHANNEL_1);
 }
 
-uint32_t RAMFUNC GetInputCaptureStatus(void) {
+uint16_t RAMFUNC GetLoEdgeCaptureRising(void) {
+    // The rising-edge value is captured on CH2 (C2DT).
+    return (uint16_t)tmr_channel_value_get(AT32_TMR_INPUT_CAPTURE, TMR_SELECT_CHANNEL_2);
+}
+
+lo_edge_t RAMFUNC GetLoEdgeCaptureStatus(void) {
     // Reading the status clears the edge-event flags (matches AT91 TC_SR semantics).
     uint32_t ists = AT32_TMR_INPUT_CAPTURE->ists;
     // Only clear the overflow flag if it is set, to avoid clearing the edge-event flags.
@@ -300,13 +305,15 @@ uint32_t RAMFUNC GetInputCaptureStatus(void) {
         // Clear the overflow flag to avoid repeated interrupts.
         AT32_TMR_INPUT_CAPTURE->ists = ~TMR_OVF_FLAG;
     }
-    if (ists & INPUT_CAPTURE_EVT_RA) {
-        AT32_TMR_INPUT_CAPTURE->ists = ~INPUT_CAPTURE_EVT_RA;
+    if (ists & INPUT_CAPTURE_EVT_RISING_EDGE) {
+        AT32_TMR_INPUT_CAPTURE->ists = ~INPUT_CAPTURE_EVT_RISING_EDGE;
+        return LO_EDGE_RISING;
     }
-    if (ists & INPUT_CAPTURE_EVT_RB) {
-        AT32_TMR_INPUT_CAPTURE->ists = ~INPUT_CAPTURE_EVT_RB;
+    if (ists & INPUT_CAPTURE_EVT_FALLING_EDGE) {
+        AT32_TMR_INPUT_CAPTURE->ists = ~INPUT_CAPTURE_EVT_FALLING_EDGE;
+        return LO_EDGE_FALLING;
     }
-    return ists;
+    return LO_EDGE_NO;
 }
 
 void StartTimestamp(void) {

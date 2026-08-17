@@ -23,8 +23,8 @@
 
 // Input capture edge-event flags (single-bit masks in the TMR status register).
 // PWM input mode: CH1 = falling edge, CH2 = rising edge (see StartInputCapture).
-#define INPUT_CAPTURE_EVT_RA   TMR_C2_FLAG   // CH2 rising-edge capture event
-#define INPUT_CAPTURE_EVT_RB   TMR_C1_FLAG   // CH1 falling-edge capture event
+#define INPUT_CAPTURE_EVT_RISING_EDGE    TMR_C2_FLAG   // CH2 rising-edge capture event
+#define INPUT_CAPTURE_EVT_FALLING_EDGE   TMR_C1_FLAG   // CH1 falling-edge capture event
 
 // Precision free-running counter @ 1.5MHz.
 // Reuses the 32-bit timer (same source as StartTicks / StartCountUS).
