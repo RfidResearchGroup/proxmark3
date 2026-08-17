@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `pm3_grabbed_output_get` - heap overflow (@jonyen)
 - Fixed `hf iclass sam` - removed the old implementation (@iceman1001)
 - Fixed Proxmark5 (PM5/AT32) failing to re-enter the bootloader (@nemanjan00)
 - Fixed `hw fpga config` on Proxmark5 (PM5/AT32) now powers on the FPGA 24MHz clock (@nemanjan00)

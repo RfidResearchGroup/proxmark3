@@ -80,7 +80,7 @@ const char *pm3_name_get(pm3_device_t *dev) {
 const char *pm3_grabbed_output_get(pm3_device_t *dev) {
     if (g_grabbed_output.ptr != NULL) {
         char *tmp = g_grabbed_output.ptr;
-        tmp[g_grabbed_output.size] = 0;
+        tmp[g_grabbed_output.idx] = 0;
         g_grabbed_output.idx = 0;
         g_grabbed_output.size = 0;
         return tmp;
