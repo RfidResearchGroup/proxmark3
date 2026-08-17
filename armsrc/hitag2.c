@@ -108,12 +108,11 @@ static void hitag2_init(void) {
     hitag2_reset();
 }
 
-// Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
-// TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
-// Hitag units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
-// T0 = TIMER_CLOCK1 / 125000 = 192
+// The input-capture timer (StartInputCapture, see common_arm/ticks) runs at
+// TIMER_CLOCK3 = MCK/32 = 1.5 MHz. Hitag units (T0) have a duration of 8 us
+// (1/125000 s, the carrier period), so T0 = 1.5 MHz / 125 kHz = 12 counter ticks.
 #ifndef HITAG_T0
-#define HITAG_T0               192
+#define HITAG_T0               12
 #endif
 
 #define HITAG_FRAME_LEN  20
@@ -1182,28 +1181,14 @@ void SniffHitag2(bool ledcontrol) {
     // Disable modulation, we are going to eavesdrop, not modulate ;)
 //    Gpio_SSC_DOUT_Low();
 
-    // Enable Peripheral Clock for TIMER_CLOCK1, used to capture edges of the reader frames
-    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
-    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
-
-    // Disable timer during configuration
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
-
-    // Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
-    // external trigger rising edge, load RA on rising edge of TIOA.
-    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_ETRGEDG_BOTH | AT91C_TC_ABETRG | AT91C_TC_LDRA_BOTH;
-
-    // Enable and reset counter
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-
-    // Assert a sync signal. This sets all timers to 0 on next active clock edge
-    AT91C_BASE_TCB->TCB_BCR = 1;
+    // Configure the input capture (TC1) via the HAL: it enables the TC1 clock, routes
+    // SSC_FRAME to the timer input, resets on each falling edge and captures RB
+    // (falling->falling) / RA (falling->rising).
+    StartLoEdgeCapture();
 
     int frame_count = 0, response = 0, lastbit = 1, tag_sof = 4;
-    int overflow = 0;
-    bool rising_edge, reader_frame = false, bSkip = true;
+    bool reader_frame = false, bSkip = true;
 
-//    bool exit_due_to_overflow;
     // HACK -- add one byte to avoid rewriting manchester decoder for edge case
     uint8_t rx[HITAG_FRAME_LEN + 1] = {0};
     size_t rxlen = 0;
@@ -1217,57 +1202,45 @@ void SniffHitag2(bool ledcontrol) {
 
         WDT_HIT();
 
-//        bool exit_due_to_overflow = false;
+        // Receive frame, watch for at most HITAG_T0 * HITAG_T_EOF periods since the last edge
+        while (GetLoEdgeCaptureCount() < (HITAG_T0 * HITAG_T_EOF)) {
 
-        // Receive frame, watch for at most T0 * EOF periods
-        while (AT91C_BASE_TC1->TC_CV < (HITAG_T0 * HITAG_T_EOF)) {
+            // Read (and clear) the input-capture edge-event flags.
+            lo_edge_t lo_edge = GetLoEdgeCaptureStatus();
 
-            // Check if rising edge in modulation is detected
-            if (AT91C_BASE_TC1->TC_SR & AT91C_TC_LDRAS) {
+            // Rising edge: RA holds the falling->rising sub-period (the reader's tlow).
+            if (lo_edge == LO_EDGE_RISING) {
+                int ra = GetLoEdgeCaptureRising() / HITAG_T0;
 
-                // Retrieve the new timing values
-                int ra = (AT91C_BASE_TC1->TC_RA / HITAG_T0) + overflow;
-                overflow = 0;
-
-                // Find out if we are dealing with a rising or falling edge
-                rising_edge = (Gpio_SSC_FRAME_Read()) > 0;
-
-                // Shorter periods will only happen with reader frames
-                if (reader_frame == false && rising_edge && ra < HITAG_T_TAG_CAPTURE_ONE_HALF) {
+                // Shorter periods only happen with reader frames (reader tlow is 4..10 T0,
+                // while the shortest tag Manchester half-period is 16 T0).
+                if (reader_frame == false && ra < HITAG_T_TAG_CAPTURE_ONE_HALF) {
                     // Switch from tag to reader capture
                     if (ledcontrol) LED_C_OFF();
                     reader_frame = true;
                     rxlen = 0;
                 }
+            }
 
-                // Only handle if reader frame and rising edge, or tag frame and falling edge
-                if (reader_frame != rising_edge) {
-                    overflow += ra;
-                    continue;
-                }
-
-                // Add the buffered timing values of earlier captured edges which were skipped
-                ra += overflow;
-                overflow = 0;
+            // Falling edge: RB holds the falling->falling full period (the bit timing).
+            if (lo_edge == LO_EDGE_FALLING) {
+                int rb = GetLoEdgeCaptureFalling() / HITAG_T0;
 
                 if (reader_frame) {
 
                     if (ledcontrol) LED_B_ON();
                     // Capture reader frame
-                    if (ra >= HITAG_T_STOP) {
-//                      if (rxlen != 0) {
-                        //DbpString("wierd0?");
-//                      }
+                    if (rb >= HITAG_T_STOP) {
                         // Capture the T0 periods that have passed since last communication or field drop (reset)
-                        response = (ra - HITAG_T_LOW);
-                        if (rxlen != 0) { Dbprintf("ra - HITAG_T_LOW... %i", response); }
+                        response = (rb - HITAG_T_LOW);
+                        if (rxlen != 0) { Dbprintf("rb - HITAG_T_LOW... %i", response); }
 
-                    } else if (ra >= HITAG_T_1_MIN) {
+                    } else if (rb >= HITAG_T_1_MIN) {
                         // '1' bit
                         rx[rxlen / 8] |= 1 << (7 - (rxlen % 8));
                         rxlen++;
 
-                    } else if (ra >= HITAG_T_0_MIN) {
+                    } else if (rb >= HITAG_T_0_MIN) {
                         // '0' bit
                         rx[rxlen / 8] |= 0 << (7 - (rxlen % 8));
                         rxlen++;
@@ -1276,22 +1249,19 @@ void SniffHitag2(bool ledcontrol) {
                 } else {
                     if (ledcontrol) LED_C_ON();
                     // Capture tag frame (manchester decoding using only falling edges)
-                    if (ra >= HITAG_T_EOF) {
-//                      if (rxlen != 0) {
-                        //DbpString("wierd1?");
-//                      }
+                    if (rb >= HITAG_T_EOF) {
                         // Capture the T0 periods that have passed since last communication or field drop (reset)
                         // We always receive a 'one' first, which has the falling edge after a half period |-_|
-                        response = ra - HITAG_T_TAG_HALF_PERIOD;
+                        response = rb - HITAG_T_TAG_HALF_PERIOD;
 
-                    } else if (ra >= HITAG_T_TAG_CAPTURE_FOUR_HALF) {
+                    } else if (rb >= HITAG_T_TAG_CAPTURE_FOUR_HALF) {
                         // Manchester coding example |-_|_-|-_| (101)
                         rx[rxlen / 8] |= 0 << (7 - (rxlen % 8));
                         rxlen++;
                         rx[rxlen / 8] |= 1 << (7 - (rxlen % 8));
                         rxlen++;
 
-                    } else if (ra >= HITAG_T_TAG_CAPTURE_THREE_HALF) {
+                    } else if (rb >= HITAG_T_TAG_CAPTURE_THREE_HALF) {
                         // Manchester coding example |_-|...|_-|-_| (0...01)
                         rx[rxlen / 8] |= 0 << (7 - (rxlen % 8));
                         rxlen++;
@@ -1303,7 +1273,7 @@ void SniffHitag2(bool ledcontrol) {
                         lastbit = !lastbit;
                         bSkip = !bSkip;
 
-                    } else if (ra >= HITAG_T_TAG_CAPTURE_TWO_HALF) {
+                    } else if (rb >= HITAG_T_TAG_CAPTURE_TWO_HALF) {
                         // Manchester coding example |_-|_-| (00) or |-_|-_| (11)
                         if (tag_sof) {
                             // Ignore bits that are transmitted during SOF
@@ -1343,32 +1313,24 @@ void SniffHitag2(bool ledcontrol) {
             lastbit = 1;
             bSkip = true;
             tag_sof = 4;
-            overflow = 0;
 
             if (ledcontrol) {
                 LED_B_OFF();
                 LED_C_OFF();
             }
 
-        } else {
-            // Save the timer overflow, will be 0 when frame was received
-            overflow += (AT91C_BASE_TC1->TC_CV / HITAG_T0);
         }
 
         // Reset the frame length
         rxlen = 0;
 
-        // Reset the timer to restart while-loop that receives frames
-        AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
-
-        // Assert a sync signal. This sets all timers to 0 on next active clock edge
-        AT91C_BASE_TCB->TCB_BCR = 1;
+        // Reset the capture counter to restart the while-loop that receives frames.
+        ResetLoEdgeCapture();
     }
 
     if (ledcontrol) LEDsoff();
 
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+    StopLoEdgeCapture();
 
     DBG Dbprintf("frames.......... %d", frame_count);
     Dbprintf("Auth attempts... %d", (auth_table_len / 8));
