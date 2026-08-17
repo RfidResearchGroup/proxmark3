@@ -30,7 +30,7 @@ set(MKVERSION_CANDIDATES_SH "${CMAKE_CURRENT_LIST_DIR}/mkversion.sh")
 # We are running on the Windows?
 set(MKVERSION_RUN_NATIVE_WINDOWS FALSE)
 execute_process(COMMAND uname OUTPUT_VARIABLE uname)
-if (uname MATCHES "^MSYS" OR uname MATCHES "^MINGW" OR uname MATCHES "^Lin")
+if (uname MATCHES "^MSYS" OR uname MATCHES "^MINGW" OR uname MATCHES "^Lin" OR uname MATCHES "^Darwin")
     message(STATUS "Not running on native Windows (uname is ${uname}).")
 else ()
     set(MKVERSION_RUN_NATIVE_WINDOWS TRUE)
