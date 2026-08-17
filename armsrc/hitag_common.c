@@ -49,7 +49,7 @@ void hitag_setup_fpga(uint16_t conf, uint8_t threshold, bool ledcontrol) {
     // Configure the timers via the HAL: a precision counter (T0 timing), an
     // input capture (tag frame edges) and a timestamp counter (trace timing).
     StartPrecisionCounter();
-    StartInputCapture();
+    StartLoEdgeCapture();
     StartTimestamp();
 
     // Set fpga in edge detect with/without reader field, we can modulate as reader/tag now
@@ -68,7 +68,7 @@ void hitag_setup_fpga(uint16_t conf, uint8_t threshold, bool ledcontrol) {
 // Clean up and finalize Hitag operations
 void hitag_cleanup(bool ledcontrol) {
     StopPrecisionCounter();
-    StopInputCapture();
+    StopLoEdgeCapture();
     StopTimestamp();
     set_tracing(false);
     lf_finalize(ledcontrol);
@@ -148,7 +148,7 @@ void hitag_reader_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uin
     bool bSkip = true;
     uint32_t errorCount = 0;
     bool bStarted = false;
-    uint16_t next_edge_event = INPUT_CAPTURE_EVT_RB;
+    lo_edge_t next_edge = LO_EDGE_FALLING;
     int double_speed = (modulation == AC4K || modulation == MC8K) ? 2 : 1;
 
     uint32_t rb_i = 0;
@@ -160,16 +160,16 @@ void hitag_reader_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uin
     // Receive tag frame, watch for at most T0*HITAG_T_PROG_MAX periods
     while (GetPrecisionCounter() < (T0 * HITAG_T_PROG_MAX)) {
         // Check if edge in tag modulation is detected
-        if (GetInputCaptureStatus() & next_edge_event) {
-            next_edge_event = next_edge_event ^ (INPUT_CAPTURE_EVT_RA | INPUT_CAPTURE_EVT_RB);
+        if (GetLoEdgeCaptureStatus() == next_edge) {
+            next_edge = next_edge == LO_EDGE_RISING ? LO_EDGE_FALLING : LO_EDGE_RISING;
 
             // only use INPUT_CAPTURE_EVT_RB falling edge for now
-            if (next_edge_event == INPUT_CAPTURE_EVT_RB) {
+            if (next_edge == LO_EDGE_FALLING) {
                 continue;
             }
 
             // Retrieve the new timing values
-            uint32_t rb = GetInputCaptureValue() / T0;
+            uint32_t rb = GetLoEdgeCaptureFalling() / T0;
 
             // For debug, save the edges for decoding manual
             if (rb_i < sizeof(edges)) {
@@ -299,7 +299,7 @@ void hitag_reader_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uin
         // max periods between 2 falling edge
         // RTF AC64 |--__|--__| (00) 64 * T0
         // RTF MC32 |_-|-_|_-| (010) 48 * T0
-        if (GetInputCaptureCount() > (T0 * 80)) {
+        if (GetLoEdgeCaptureCount() > (T0 * 80)) {
             if (bStarted) {
                 break;
             }
@@ -322,7 +322,7 @@ int hitag_reader_transfer(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t s
     DBG Dbhexdump((txlen + 7) / 8, tx, false);
 
     // Disable input capture to avoid triggers during our own modulation.
-    StopInputCapture();
+    StopLoEdgeCapture();
 
     // Wait for HITAG_T_WAIT_SC carrier periods after the last tag bit before transmitting,
     // Since the clock counts since the last falling edge, a 'one' means that the
@@ -344,7 +344,7 @@ int hitag_reader_transfer(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t s
     LogTraceBits(tx, txlen, start_time, TIMESTAMP, true);
 
     // Enable and reset input capture for capturing the tag response.
-    EnableInputCapture();
+    EnableLoEdgeCapture();
 
     hitag_reader_receive_frame(rx, sizeofrx, rxlen, &start_time, ledcontrol, modulation, sof_bits);
 
@@ -470,22 +470,24 @@ static void hitag_tag_send_bit(int bit, hitag_mod_t modulation, bool ledcontrol)
 }
 
 void hitag_tag_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint32_t *start_time, bool ledcontrol, int *overflow) {
-    uint16_t next_edge_event = INPUT_CAPTURE_EVT_RB;
+    lo_edge_t next_edge = LO_EDGE_FALLING;
     uint8_t edges[160] = {0};
     uint32_t rb_i = 0;
 
     // Receive frame, watch for at most T0*EOF periods
-    while (GetInputCaptureCount() < T0 * HITAG_T_EOF) {
+    while (GetLoEdgeCaptureCount() < T0 * HITAG_T_EOF) {
 
         // Check if edge in modulation is detected
-        if (GetInputCaptureStatus() & next_edge_event) {
-            next_edge_event = next_edge_event ^ (INPUT_CAPTURE_EVT_RA | INPUT_CAPTURE_EVT_RB);
+        if (GetLoEdgeCaptureStatus() == next_edge) {
+            next_edge = next_edge == LO_EDGE_RISING ? LO_EDGE_FALLING : LO_EDGE_RISING;
 
             // only use INPUT_CAPTURE_EVT_RB falling edge for now
-            if (next_edge_event == INPUT_CAPTURE_EVT_RB) continue;
+            if (next_edge == LO_EDGE_FALLING) {
+                continue;
+            }
 
             // Retrieve the new timing values
-            uint32_t rb = GetInputCaptureValue() / T0 + *overflow;
+            uint32_t rb = GetLoEdgeCaptureFalling() / T0 + *overflow;
             *overflow = 0;
 
             edges[rb_i++] = rb;

@@ -418,7 +418,7 @@ void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             LogTraceBits(rx, rxlen, start_time, TIMESTAMP, true);
 
             // Disable timer 1 with external trigger to avoid triggers during our own modulation
-            StopInputCapture();
+            StopLoEdgeCapture();
 
             // Prepare tag response (tx)
             memset(tx, 0x00, sizeof(tx));
@@ -444,7 +444,7 @@ void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             }
 
             // Enable and reset external trigger in timer for capturing future frames
-            EnableInputCapture();
+            EnableLoEdgeCapture();
 
             // Reset the received frame and response timing info
             memset(rx, 0x00, sizeof(rx));
@@ -453,9 +453,9 @@ void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
         // Reset the frame length
         rxlen = 0;
         // Save the timer overflow, will be 0 when frame was received
-        overflow += (GetInputCaptureCount() / T0);
+        overflow += (GetLoEdgeCaptureCount() / T0);
         // Reset the timer to restart while-loop that receives frames
-        ResetInputCapture();
+        ResetLoEdgeCapture();
     }
 
     hitag_cleanup(ledcontrol);
@@ -474,7 +474,7 @@ static int htu_reader_send_receive(uint8_t *tx, size_t txlen, uint8_t *rx, size_
     memset(rx, 0x00, sizeofrx);
 
     // Disable timer 1 with external trigger to avoid triggers during our own modulation
-    StopInputCapture();
+    StopLoEdgeCapture();
 
     DBG Dbprintf("tx %d bits:", txlen);
     DBG Dbhexdump((txlen + 7) / 8, tx, false);
@@ -495,7 +495,7 @@ static int htu_reader_send_receive(uint8_t *tx, size_t txlen, uint8_t *rx, size_
     LogTraceBits(tx, txlen, start_time, TIMESTAMP, true);
 
     // Enable and reset external trigger in timer for capturing future frames
-    EnableInputCapture();
+    EnableLoEdgeCapture();
 
     // Capture response - SOF is automatically stripped by hitag_reader_receive_frame
     hitag_reader_receive_frame(rx, sizeofrx, rxlen, &start_time, ledcontrol, modulation, sof_bits);
