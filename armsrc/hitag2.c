@@ -147,50 +147,6 @@ static void hitag2_init(void) {
 
 #define HT2_MAX_NRSZ  ((8 * HITAG_FRAME_LEN + 5) * 2)
 
-/*
-// sim
-static void hitag_send_bit(int bit, bool ledcontrol) {
-    if (ledcontrol) LED_A_ON();
-
-    // Reset clock for the next bit
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-
-    // Fixed modulation, earlier proxmark version used inverted signal
-    // check datasheet if reader uses BiPhase?
-    if (bit == 0) {
-        // Manchester: Unloaded, then loaded |__--|
-        Gpio_SSC_DOUT_Low();
-        while (AT91C_BASE_TC0->TC_CV < HITAG_T0 * HITAG_T_TAG_HALF_PERIOD);
-        Gpio_SSC_DOUT_High();
-        while (AT91C_BASE_TC0->TC_CV < HITAG_T0 * HITAG_T_TAG_FULL_PERIOD);
-    } else {
-        // Manchester: Loaded, then unloaded |--__|
-        Gpio_SSC_DOUT_High();
-        while (AT91C_BASE_TC0->TC_CV < HITAG_T0 * HITAG_T_TAG_HALF_PERIOD);
-        Gpio_SSC_DOUT_Low();
-        while (AT91C_BASE_TC0->TC_CV < HITAG_T0 * HITAG_T_TAG_FULL_PERIOD);
-    }
-    if (ledcontrol) LED_A_OFF();
-}
-
-// sim
-static void hitag_send_frame(const uint8_t *frame, size_t frame_len) {
-    // SOF - send start of frame
-    hitag_send_bit(1);
-    hitag_send_bit(1);
-    hitag_send_bit(1);
-    hitag_send_bit(1);
-    hitag_send_bit(1);
-
-    // Send the content of the frame
-    for (size_t i = 0; i < frame_len; i++) {
-        hitag_send_bit((frame[i / 8] >> (7 - (i % 8))) & 1);
-    }
-
-    // Drop the modulation
-    Gpio_SSC_DOUT_Low();
-}
-*/
 
 // sim
 static void hitag2_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen) {
@@ -1619,7 +1575,6 @@ void SimulateHitag2(bool ledcontrol) {
             // Send and store the tag answer (if there is any)
             if (txlen) {
                 // Transmit the tag frame
-                //hitag_send_frame(tx, txlen);
                 lf_manchester_send_bytes(tx, txlen, ledcontrol);
 
                 // Store the frame in the trace
