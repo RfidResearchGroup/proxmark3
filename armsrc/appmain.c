@@ -3306,6 +3306,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_old(CMD_DEVICE_INFO, dev_info, 0, 0, 0, 0);
             break;
         }
+        case CMD_MAIN_CHIP_UNIQUEID: {
+            // PM3 placeholder, to be replaced when correct commit gets merged
+            uint8_t size = 0;
+            uint8_t* uid = NULL;
+            reply_ng(CMD_MAIN_CHIP_UNIQUEID, PM3_SUCCESS, uid, size);
+            break;
+        }
         default: {
             Dbprintf("%s: 0x%04x", "unknown command:", packet->cmd);
             break;
