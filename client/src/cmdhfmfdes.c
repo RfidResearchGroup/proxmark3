@@ -639,7 +639,7 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext_t *d
     return PM3_SUCCESS;
 }
 
-static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDES_PC_KEY_LEN], uint8_t rounds, bool verbose) {
+static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDES_PC_KEY_LEN], uint8_t rounds, bool activate_field, bool verbose) {
     if (dctx == NULL || proximity_key == NULL || rounds < 1 || rounds > MFDES_PC_MAX_ROUNDS) {
         return PM3_EINVARG;
     }
@@ -655,7 +655,7 @@ static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDE
     uint8_t prepare_resp[APDU_RES_LEN] = {0};
     size_t prepare_resp_len = 0;
     uint8_t respcode = 0xFF;
-    res = DesfireExchangeEx(true, dctx, MFDES_PREPARE_PC, NULL, 0, &respcode, prepare_resp, &prepare_resp_len, true, 0);
+    res = DesfireExchangeEx(activate_field, dctx, MFDES_PREPARE_PC, NULL, 0, &respcode, prepare_resp, &prepare_resp_len, true, 0);
     if (res != PM3_SUCCESS) {
         uint16_t sw = status(respcode);
         PrintAndLogEx(ERR, "Prepare proximity check command failed. Result: %d %s", res, DesfireGetErrorString(res, &sw));
@@ -4591,6 +4591,7 @@ static int CmdHF14ADesPC(const char *Cmd) {
                   "This command uses plain communication with a dedicated 16-byte AES proximity key.",
                   "hf mfdes pc --key 00000000000000000000000000000000\n"
                   "hf mfdes pc --key 00112233445566778899aabbccddeeff --rounds 4\n"
+                  "hf mfdes pc --aid 123456 --key 00112233445566778899aabbccddeeff\n"
                   "hf mfdes pc --key 00112233445566778899aabbccddeeff -c native -a");
 
     void *argtable[] = {
@@ -4600,6 +4601,7 @@ static int CmdHF14ADesPC(const char *Cmd) {
         arg_str1("k",  "key",    "<hex>", "Key (AES-128, exactly 16 bytes)"),
         arg_int0("r",  "rounds", "<dec>", "Number of rounds (1..8), default 8"),
         arg_str0("c",  "ccset",  "<native|niso>", "Communication command set (default from `hf mfdes default`)"),
+        arg_str0(NULL, "aid",     "<hex>", "Application ID (3 hex bytes, big endian)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4635,6 +4637,13 @@ static int CmdHF14ADesPC(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    uint32_t appid = 0;
+    bool appid_present = false;
+    if (CLIGetUint32Hex(ctx, 6, 0, &appid, &appid_present, 3, "AID must have 3 bytes length")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
@@ -4643,7 +4652,16 @@ static int CmdHF14ADesPC(const char *Cmd) {
     DesfireSetCommMode(&dctx, DCMPlain);
     DesfireSetSecureChannel(&dctx, DACNone);
 
-    int res = DesfirePCRun(&dctx, proximity_key, rounds, verbose);
+    int res = PM3_SUCCESS;
+    if (appid_present) {
+        res = DesfireSelectAndAuthenticateAppW(&dctx, DACNone, ISW6bAID, appid, true, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+    }
+
+    res = DesfirePCRun(&dctx, proximity_key, rounds, !appid_present, verbose);
     DropField();
     return res;
 }
