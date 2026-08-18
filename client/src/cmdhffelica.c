@@ -21,6 +21,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <inttypes.h>
+#include <time.h>
 #include "cmdparser.h"   // command_t
 #include "comms.h"
 #include "cmdtrace.h"
@@ -2397,6 +2398,18 @@ static int info_felica(bool verbose) {
         PrintAndLogEx(INFO, "  Code......... " _GREEN_("%s"), sprint_hex_inrow(card.code, sizeof(card.code)));
     }
     PrintAndLogEx(INFO, "  NFCID2.......     " _GREEN_("%s"), sprint_hex_inrow(card.uid, sizeof(card.uid)));
+    const int16_t days_since_2000 = (int16_t)(((uint16_t)card.IDm[5] << 8) | card.IDm[4]);
+    const time_t felica_epoch = (time_t)946684800; // 2000-01-01 UTC
+    const time_t now = time(NULL);
+    if (days_since_2000 >= 0 && now != (time_t)-1 && now >= felica_epoch &&
+            (time_t)days_since_2000 <= (now - felica_epoch) / 86400) {
+        const time_t manufacturing_time = felica_epoch + ((time_t)days_since_2000 * 86400);
+        const struct tm *date = gmtime(&manufacturing_time);
+        char date_string[11] = {0};
+        if (date != NULL && strftime(date_string, sizeof(date_string), "%Y-%m-%d", date) != 0) {
+            PrintAndLogEx(INFO, "  Mfg date.....     " _GREEN_("%s"), date_string);
+        }
+    }
     PrintAndLogEx(INFO, "PMM............ " _YELLOW_("%s"), sprint_hex_inrow(card.PMm, sizeof(card.PMm)));
     PrintAndLogEx(INFO, "  IC code...... " _GREEN_("%s") " ( %s )",
                   sprint_hex_inrow(card.iccode, sizeof(card.iccode)),
