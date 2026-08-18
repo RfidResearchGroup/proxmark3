@@ -448,17 +448,16 @@ void BootROM(void) {
     // USB_D_PLUS_PULLUP_OFF();
     usb_disable();
 
-    // First, check whether to enter the FLASH mode.
-    const bool to_flash_mode = check_goto_flash_mode();
-
-    LED_C_ON();
-
     // Initialize the FLASH area for firmware/code.
     FlashCodeInit();
 
     // Initialize all system clocks
     ConfigSystemClocks();
 
+    // Check whether to enter the FLASH mode.
+    const bool to_flash_mode = check_goto_flash_mode();
+
+    LED_C_ON();
     LED_A_ON();
 
     // Keep running in BOOT or jump to App image?
