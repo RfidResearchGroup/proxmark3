@@ -21,14 +21,15 @@
 #include "epa.h"
 
 #include "cmd.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
 #include "iso14443a.h"
 #include "iso14443b.h"
 #include "string.h"
 #include "util.h"
 #include "dbprint.h"
 #include "commonutil.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 
 #ifdef WITH_ISO14443a
 // Protocol and Parameter Selection Request for ISO 14443 type A cards

@@ -43,7 +43,7 @@
 
 void I2C_recovery(void);
 void I2C_init(bool has_ticks);
-void I2C_Reset(void);
+void I2C_Reset(void); // TODO DXL: Not implemented but defined?
 void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA);
 
 void I2C_Reset_EnterMainProgram(void);
@@ -53,6 +53,7 @@ bool I2C_WriteCmd(uint8_t device_cmd, uint8_t device_address);
 
 bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address);
 bool I2C_BufferWrite(const uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address);
+int16_t I2C_BufferReadRaw(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address);
 int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address);
 
 // for firmware

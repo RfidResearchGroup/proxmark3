@@ -33,11 +33,12 @@
 #include "standalone.h" // standalone definitions
 #include "proxmark3_arm.h"
 #include "appmain.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "util.h"
 #include "dbprint.h"
 
-#include "ticks.h"  // SpinDelay
+#include "ticks_apis.h"  // SpinDelay
 #include "protocols.h"  // MIFARE_ULEV1_VERSION, MIFARE_ULEV1_READSIG, MIFARE_ULEV1_READ_CNT, MIFARE_ULEV1_CHECKTEAR
 #include <string.h>  // memcmp
 #include "mifareutil.h"

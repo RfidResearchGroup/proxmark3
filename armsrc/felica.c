@@ -19,11 +19,12 @@
 #include "util.h"
 #include "protocols.h"
 #include "crc16.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
 #include "string.h"
 #include "commonutil.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
+#include "fpga_apis.h"
 #include "iso18.h"
 
 #define AddCrc(data, len) compute_crc(CRC_FELICA, (data), (len), (data)+(len)+1, (data)+(len))
@@ -416,8 +417,8 @@ void TransmitFor18092_AsReaderEx(const uint8_t *frame, uint16_t len, const uint3
     uint16_t c = 0;
     while (c < 6) {
         // keep tx buffer in a defined state anyway.
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-            AT91C_BASE_SSC->SSC_THR = 0x00;
+        if (FPGA_SSC_TX_Ready()) {
+            FPGA_SSC_TX_Value(0x00);
             c++;
         }
     }
@@ -426,17 +427,17 @@ void TransmitFor18092_AsReaderEx(const uint8_t *frame, uint16_t len, const uint3
 
     while (c < len) {
         // Put byte into tx holding register as soon as it is ready
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-            AT91C_BASE_SSC->SSC_THR = frame[c++];
+        if (FPGA_SSC_TX_Ready()) {
+            FPGA_SSC_TX_Value(frame[c++]);
         }
     }
 
     /**/
-    while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))) {};
-    AT91C_BASE_SSC->SSC_THR = 0x00; //minimum delay
+    while (!FPGA_SSC_TX_Ready()) {};
+    FPGA_SSC_TX_Value(0x00); //minimum delay
 
-    while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))) {};
-    AT91C_BASE_SSC->SSC_THR = 0x00; //spin
+    while (!FPGA_SSC_TX_Ready()) {};
+    FPGA_SSC_TX_Value(0x00); //spin
     /**/
 
     const uint32_t frame_start = felica_lasttime_prox2air_start + (FELICA_PREAMBLE_BYTES * FELICA_BITS_PER_BYTE);
@@ -475,7 +476,7 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
     FelicaFrameReset(&FelicaFrame);
 
     // clear RXRDY:
-    uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
     (void)b;
 
     uint32_t timeout = iso18092_get_timeout();
@@ -484,9 +485,9 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
 
         WDT_HIT();
 
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+        if (FPGA_SSC_RX_Ready()) {
 
-            b = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
+            b = (uint8_t)(FPGA_SSC_RX_Value());
 
             Process18092Byte(&FelicaFrame, b, felica_get_rx_byte_start_time());
             felica_frame_t *received = NULL;
@@ -552,7 +553,7 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
 bool iso18092_setup_ex(uint8_t fpga_minor_mode, uint32_t preserve_low_bytes) {
 
     LEDsoff();
-#if defined XC3
+#if defined XC3 || defined PM5
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 #else
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF_FELICA);
@@ -576,13 +577,13 @@ bool iso18092_setup_ex(uint8_t fpga_minor_mode, uint32_t preserve_low_bytes) {
     init_table(CRC_FELICA);
 
     // connect Demodulated Signal to ADC:
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
 
     // Set up the synchronous serial port
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_ISO18092);
 
-    // LSB transfer.  Remember to set it back to MSB with
-    AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
+    // RX LSB transfer. TX MSB transfer, Remember to set it(RX) back to MSB with
+    FpgaUpdateFrameMode(8, false, true);
 
     // Signal field is on with the appropriate LED
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO18092 | fpga_minor_mode);
@@ -605,8 +606,8 @@ void iso18092_setup(uint8_t fpga_minor_mode) {
 void felica_reset_frame_mode(void) {
     switch_off();
     felica_field_active = false;
-    //Resetting Frame mode (First set in fpgaloader.c)
-    AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
+    // Resetting Frame mode (First set in FpgaSetupSsc() function)
+    FpgaUpdateFrameMode(8, true, true);
 }
 
 //-----------------------------------------------------------------------------
@@ -780,9 +781,9 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
         }
         ++checker;
 
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+        if (FPGA_SSC_RX_Ready()) {
 
-            uint8_t dist = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
+            uint8_t dist = (uint8_t)FPGA_SSC_RX_Value();
             Process18092Byte(&FelicaFrame, dist, felica_get_rx_byte_start_time());
 
             if ((dist >= 178) && (++trigger_cnt > triggersToSkip)) {
@@ -888,9 +889,9 @@ void felica_sim_lite(const uint8_t *uid) {
 
         if (listenmode) {
             // waiting for request...
-            if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+            if (FPGA_SSC_RX_Ready()) {
 
-                uint8_t dist = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
+                uint8_t dist = (uint8_t)(FPGA_SSC_RX_Value());
                 // frtm = GetCountSspClk();
                 Process18092Byte(&FelicaFrame, dist, felica_get_rx_byte_start_time());
 

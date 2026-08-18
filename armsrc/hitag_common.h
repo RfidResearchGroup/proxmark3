@@ -26,7 +26,9 @@
 
 #define HITAG_T_WAIT_RESP 200  /* T_wresp should be 204..212 */
 #define HITAG_T_WAIT_SC 200    /* T_wsc should be 90..5000 */
+// Read/Write Device waiting time before sending the first command
 #define HITAG_T_WAIT_FIRST 300 /* T_wfc should be 280..565 (T_ttf) */
+// HITAG S Transponder programming time
 #define HITAG_T_PROG_MAX 750   /* T_prog should be 716..726 */
 
 #define HITAG_T_TAG_ONE_HALF_PERIOD 10
@@ -42,16 +44,18 @@
 #define HITAG_T_TAG_CAPTURE_THREE_HALF 41
 #define HITAG_T_TAG_CAPTURE_FOUR_HALF 57
 
-extern uint16_t timestamp_high;
-#define TIMESTAMP ( (AT91C_BASE_TC2->TC_SR & AT91C_TC_COVFS) ? timestamp_high += 1 : 0, ((timestamp_high << 16) + AT91C_BASE_TC2->TC_CV) / T0)
+// Trace timestamp in T0 units, provided by the timers HAL (GetTimestamp).
+#define TIMESTAMP GetTimestamp()
 
 // Common hitag functions
 void hitag_setup_fpga(uint16_t conf, uint8_t threshold, bool ledcontrol);
 void hitag_cleanup(bool ledcontrol);
 void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len, bool ledcontrol, bool send_sof);
-void hitag_reader_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint32_t *resptime, bool ledcontrol, MOD modulation,
+void hitag_reader_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint32_t *resptime, bool ledcontrol, hitag_mod_t modulation,
                                 int sof_bits);
+int hitag_reader_transfer(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t sizeofrx, size_t *rxlen, int t_wait,
+                          bool ledcontrol, hitag_mod_t modulation, uint8_t sof_bits, uint8_t send_sof);
 void hitag_tag_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint32_t *start_time, bool ledcontrol, int *overflow);
-void hitag_tag_send_frame(const uint8_t *frame, size_t frame_len, int sof_bits, MOD modulation, bool ledcontrol);
+void hitag_tag_send_frame(const uint8_t *frame, size_t frame_len, int sof_bits, hitag_mod_t modulation, bool ledcontrol);
 
 #endif

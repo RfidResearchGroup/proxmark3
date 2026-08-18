@@ -42,9 +42,13 @@ CROSS_OBJCOPY = $(CROSS)objcopy
 OBJDIR = obj
 
 INCLUDE = -I../include -I../common_arm -I../common_fpga -I../common -I.
+INCLUDE += -I../common_arm/flash_code -I../common_arm/flash_data -I../common_arm/fpga -I../common_arm/gpio
+INCLUDE += -I../common_arm/rssi -I../common_arm/sys -I../common_arm/ticks -I../common_arm/usb -I../common_arm/wdt
 
 # Also search prerequisites in the common directory (for usb.c), the fpga directory (for fpga.bit), and the lz4 directory
 VPATH = . ../common_arm ../common ../common/crapto1 ../common/mbedtls ../common/lz4 ../fpga ../armsrc/Standalone ../common/hitag2
+VPATH += ../common_arm/flash_code ../common_arm/flash_data ../common_arm/fpga ../common_arm/gpio
+VPATH += ../common_arm/rssi ../common_arm/sys ../common_arm/ticks ../common_arm/usb ../common_arm/wdt
 
 INCLUDES = ../include/proxmark3_arm.h ../include/at91sam7s512.h ../include/config_gpio.h ../include/pm3_cmd.h
 
@@ -106,7 +110,7 @@ CROSS_CFLAGS += -DON_DEVICE $(INCLUDE) $(APP_CFLAGS)
 CROSS_LDFLAGS += -nostartfiles -nodefaultlibs -Wl,--gc-sections -Wl,--build-id=none -Wl,--nmagic
 #CROSS_LDFLAGS += -Wl,--print-gc-sections
 
-LIBS = -lgcc
+LIBS += -lgcc
 
 # Flags to generate temporary dependency files
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td

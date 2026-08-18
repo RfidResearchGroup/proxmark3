@@ -21,8 +21,9 @@
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
+#include "ticks_apis.h"
 #include "dbprint.h"
 #include "util.h"
 #include "string.h"
@@ -32,56 +33,6 @@
 #include "crc.h"
 #include "protocols.h"
 #include "appmain.h"    // tearoff_hook()
-
-uint16_t timestamp_high = 0;  // Timer Counter 2 overflow count, combined with TC2 counter for ~47min timing
-
-static void hitag_stop_clock(void) {
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS;
-}
-
-static void hitag_init_clock(void) {
-    // Enable Peripheral Clock for
-    //   Timer Counter 0, used to measure exact timing before answering
-    //   Timer Counter 1, used to capture edges of the tag frames
-    //   Timer Counter 2, used to log trace time
-    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1) | (1 << AT91C_ID_TC2);
-
-    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
-
-    // Disable timer during configuration
-    hitag_stop_clock();
-
-    // TC0: Capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers
-    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
-
-    // TC1: Capture mode, default timer source = MCK/32 (TIMER_CLOCK3), TIOA is external trigger,
-    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK  // use MCK/32 (TIMER_CLOCK3)
-                             | AT91C_TC_ABETRG               // TIOA is used as an external trigger
-                             | AT91C_TC_ETRGEDG_FALLING      // external trigger on falling edge
-                             | AT91C_TC_LDRA_RISING          // load RA on on rising edge of TIOA
-                             | AT91C_TC_LDRB_FALLING;        // load RB on on falling edge of TIOA
-
-    // TC2: Capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers
-    AT91C_BASE_TC2->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
-
-    // Enable and reset counters
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-
-    // Assert a sync signal. This sets all timers to 0 on next active clock edge
-    AT91C_BASE_TCB->TCB_BCR = 1;
-
-    // synchronized startup procedure
-    // In theory, with MCK/32, we shouldn't be waiting longer than 32 instruction statements, right?
-    while (AT91C_BASE_TC0->TC_CV != 0) {
-    };  // wait until TC0 returned to zero
-
-    // reset timestamp
-    timestamp_high = 0;
-}
 
 // Initialize FPGA and timer for Hitag operations
 void hitag_setup_fpga(uint16_t conf, uint8_t threshold, bool ledcontrol) {
@@ -95,25 +46,30 @@ void hitag_setup_fpga(uint16_t conf, uint8_t threshold, bool ledcontrol) {
 
     if (ledcontrol) LED_D_ON();
 
-    hitag_init_clock();
+    // Configure the timers via the HAL: a precision counter (T0 timing), an
+    // input capture (tag frame edges) and a timestamp counter (trace timing).
+    StartPrecisionCounter();
+    StartLoEdgeCapture();
+    StartTimestamp();
 
     // Set fpga in edge detect with/without reader field, we can modulate as reader/tag now
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | conf);
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);  //125kHz
     if (threshold != 127) FpgaSendCommand(FPGA_CMD_SET_EDGE_DETECT_THRESHOLD, threshold);
-    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+    SetAdcMuxFor(ADC_MUXSEL_LOPKD);
 
     // Configure output and enable pin that is connected to the FPGA (for modulating)
-    AT91C_BASE_PIOA->PIO_OER |= GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_PER |= GPIO_SSC_DOUT;
+    gpio_fpga_mod_only_setup();
 
     // Disable modulation at default, which means enable the field
-    LOW(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_Low();
 }
 
 // Clean up and finalize Hitag operations
 void hitag_cleanup(bool ledcontrol) {
-    hitag_stop_clock();
+    StopPrecisionCounter();
+    StopLoEdgeCapture();
+    StopTimestamp();
     set_tracing(false);
     lf_finalize(ledcontrol);
 }
@@ -121,26 +77,25 @@ void hitag_cleanup(bool ledcontrol) {
 // Reader functions
 static void hitag_reader_send_bit(int bit, bool ledcontrol) {
     // Reset clock for the next bit
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC0->TC_CV != 0) {};
+    ResetPrecisionCounter();
 
     if (ledcontrol) LED_A_ON();
 
     // Binary puls length modulation (BPLM) is used to encode the data stream
     // This means that a transmission of a one takes longer than that of a zero
-    HIGH(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_High();
 
     // Wait for 4-10 times the carrier period
-    while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_LOW) {};
+    while (GetPrecisionCounter() < T0 * HITAG_T_LOW) {};
 
-    LOW(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_Low();
 
     if (bit == 0) {
         // Zero bit: |_-|
-        while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_0) {};
+        while (GetPrecisionCounter() < T0 * HITAG_T_0) {};
     } else {
         // One bit: |_--|
-        while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_1) {};
+        while (GetPrecisionCounter() < T0 * HITAG_T_1) {};
     }
 
     if (ledcontrol) LED_A_OFF();
@@ -152,18 +107,17 @@ void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len, bool ledcon
         hitag_reader_send_bit(0, ledcontrol);
 
         // Reset clock for the code violation
-        AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-        while (AT91C_BASE_TC0->TC_CV != 0) {};
+        ResetPrecisionCounter();
 
         if (ledcontrol) LED_A_ON();
 
         // SOF is HIGH for HITAG_T_LOW
-        HIGH(GPIO_SSC_DOUT);
-        while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_LOW) {};
+        Gpio_SSC_DOUT_High();
+        while (GetPrecisionCounter() < T0 * HITAG_T_LOW) {};
 
         // Then LOW for HITAG_T_CODE_VIOLATION
-        LOW(GPIO_SSC_DOUT);
-        while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_CODE_VIOLATION) {};
+        Gpio_SSC_DOUT_Low();
+        while (GetPrecisionCounter() < T0 * HITAG_T_CODE_VIOLATION) {};
 
         if (ledcontrol) LED_A_OFF();
     }
@@ -174,19 +128,18 @@ void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len, bool ledcon
     }
 
     // Send EOF
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC0->TC_CV != 0) {};
+    ResetPrecisionCounter();
 
-    HIGH(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_High();
 
     // Wait for 4-10 times the carrier period
-    while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_LOW) {};
+    while (GetPrecisionCounter() < T0 * HITAG_T_LOW) {};
 
-    LOW(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_Low();
 }
 
 void hitag_reader_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint32_t *resptime, bool ledcontrol,
-                                MOD modulation, int sof_bits) {
+                                hitag_mod_t modulation, int sof_bits) {
     // Reset values for receiving frames
     memset(rx, 0x00, sizeofrx);
     *rxlen = 0;
@@ -195,7 +148,7 @@ void hitag_reader_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uin
     bool bSkip = true;
     uint32_t errorCount = 0;
     bool bStarted = false;
-    uint16_t next_edge_event = AT91C_TC_LDRBS;
+    lo_edge_t next_edge = LO_EDGE_FALLING;
     int double_speed = (modulation == AC4K || modulation == MC8K) ? 2 : 1;
 
     uint32_t rb_i = 0;
@@ -205,22 +158,26 @@ void hitag_reader_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uin
     bool sof_received = false;
 
     // Receive tag frame, watch for at most T0*HITAG_T_PROG_MAX periods
-    while (AT91C_BASE_TC0->TC_CV < (T0 * HITAG_T_PROG_MAX)) {
+    while (GetPrecisionCounter() < (T0 * HITAG_T_PROG_MAX)) {
         // Check if edge in tag modulation is detected
-        if (AT91C_BASE_TC1->TC_SR & next_edge_event) {
-            next_edge_event = next_edge_event ^ (AT91C_TC_LDRAS | AT91C_TC_LDRBS);
+        if (GetLoEdgeCaptureStatus() == next_edge) {
+            next_edge = next_edge == LO_EDGE_RISING ? LO_EDGE_FALLING : LO_EDGE_RISING;
 
-            // only use AT91C_TC_LDRBS falling edge for now
-            if (next_edge_event == AT91C_TC_LDRBS) {
+            // only use INPUT_CAPTURE_EVT_RB falling edge for now
+            if (next_edge == LO_EDGE_FALLING) {
                 continue;
             }
 
             // Retrieve the new timing values
-            uint32_t rb = AT91C_BASE_TC1->TC_RB / T0;
-            edges[rb_i++] = rb;
+            uint32_t rb = GetLoEdgeCaptureFalling() / T0;
+
+            // For debug, save the edges for decoding manual
+            if (rb_i < sizeof(edges)) {
+                edges[rb_i++] = rb;
+            }
 
             // Reset timer every frame, we have to capture the last edge for timing
-            AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+            ResetPrecisionCounter();
 
             if (ledcontrol) LED_B_INV();
 
@@ -342,7 +299,7 @@ void hitag_reader_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uin
         // max periods between 2 falling edge
         // RTF AC64 |--__|--__| (00) 64 * T0
         // RTF MC32 |_-|-_|_-| (010) 48 * T0
-        if (AT91C_BASE_TC1->TC_CV > (T0 * 80)) {
+        if (GetLoEdgeCaptureCount() > (T0 * 80)) {
             if (bStarted) {
                 break;
             }
@@ -350,15 +307,75 @@ void hitag_reader_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uin
     }
 
     DBG {
-        Dbprintf("RX %i:%02X.. resptime:%i edges:", *rxlen, rx[0], *resptime);
+        Dbprintf("bStarted:%d bSkip:%d lastbit:%d sof_received:%d", bStarted, bSkip, lastbit, sof_received);
+        Dbprintf("RX %i:%02X.. resptime:%i", *rxlen, rx[0], *resptime);
+        Dbprintf("Edges count: %d, hex: ", rb_i);
         Dbhexdump(rb_i, edges, false);
     }
 }
 
+int hitag_reader_transfer(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t sizeofrx, size_t *rxlen, int t_wait,
+                          bool ledcontrol, hitag_mod_t modulation, uint8_t sof_bits, uint8_t send_sof) {
+    uint32_t start_time = 0;
+
+    DBG Dbprintf("tx %d bits:", txlen);
+    DBG Dbhexdump((txlen + 7) / 8, tx, false);
+
+    // Disable input capture to avoid triggers during our own modulation.
+    StopLoEdgeCapture();
+
+    // Wait for HITAG_T_WAIT_SC carrier periods after the last tag bit before transmitting,
+    // Since the clock counts since the last falling edge, a 'one' means that the
+    // falling edge occurred halfway the period. with respect to this falling edge,
+    // we need to wait (T_Wait2 + half_tag_period) when the last was a 'one'.
+    // All timer values are in terms of T0 units
+    while (GetPrecisionCounter() < T0 * t_wait) {};
+
+    start_time = TIMESTAMP;
+
+    // Transmit the reader frame
+    hitag_reader_send_frame(tx, txlen, ledcontrol, send_sof);
+
+    // tearoff
+    if (g_tearoff_enabled && tearoff_hook() == PM3_ETEAROFF) {
+        return PM3_ETEAROFF;
+    }
+
+    LogTraceBits(tx, txlen, start_time, TIMESTAMP, true);
+
+    // Enable and reset input capture for capturing the tag response.
+    EnableLoEdgeCapture();
+
+    hitag_reader_receive_frame(rx, sizeofrx, rxlen, &start_time, ledcontrol, modulation, sof_bits);
+
+    DBG Dbprintf("rx %d bits:", *rxlen);
+    DBG Dbhexdump((int)(*rxlen + 7) / 8, rx, false);
+
+    // Check if frame was captured and store it
+    if (*rxlen > 0) {
+        DBG {
+            uint8_t response_bit[sizeofrx * 8];
+
+            for (size_t i = 0; i < *rxlen; i++) {
+                response_bit[i] = (rx[i / 8] >> (7 - (i % 8))) & 1;
+            }
+
+            Dbprintf("ht?: rxlen...... %zu", *rxlen);
+            Dbprintf("ht?: sizeofrx... %zu", sizeofrx);
+            DbpString("ht?: response_bit:");
+            Dbhexdump((int) *rxlen, response_bit, false);
+        }
+
+        LogTraceBits(rx, *rxlen, start_time, TIMESTAMP, false);
+    }
+
+    return PM3_SUCCESS;
+}
+
 // Tag functions - depends on modulation type
-static void hitag_tag_send_bit(int bit, MOD modulation, bool ledcontrol) {
+static void hitag_tag_send_bit(int bit, hitag_mod_t modulation, bool ledcontrol) {
     // Reset clock for the next bit
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+    ResetPrecisionCounter();
 
     if (ledcontrol) LED_A_ON();
 
@@ -366,84 +383,84 @@ static void hitag_tag_send_bit(int bit, MOD modulation, bool ledcontrol) {
         case AC2K: {
             if (bit == 0) {
                 // AC Coding --__
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
+                Gpio_SSC_DOUT_High();
+                while (GetPrecisionCounter() < T0 * 32) {};
 
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 64) {};
+                Gpio_SSC_DOUT_Low();
+                while (GetPrecisionCounter() < T0 * 64) {};
             } else {
                 // AC coding -_-_
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
+                Gpio_SSC_DOUT_High();
+                while (GetPrecisionCounter() < T0 * 16) {};
 
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
+                Gpio_SSC_DOUT_Low();
+                while (GetPrecisionCounter() < T0 * 32) {};
 
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 48) {};
+                Gpio_SSC_DOUT_High();
+                while (GetPrecisionCounter() < T0 * 48) {};
 
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 64) {};
+                Gpio_SSC_DOUT_Low();
+                while (GetPrecisionCounter() < T0 * 64) {};
             }
             break;
         }
         case AC4K: {
             if (bit == 0) {
                 // AC Coding --__
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_TAG_HALF_PERIOD) {};
+                Gpio_SSC_DOUT_High();
+                while (GetPrecisionCounter() < T0 * HITAG_T_TAG_HALF_PERIOD) {};
 
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_TAG_FULL_PERIOD) {};
+                Gpio_SSC_DOUT_Low();
+                while (GetPrecisionCounter() < T0 * HITAG_T_TAG_FULL_PERIOD) {};
             } else {
                 // AC coding -_-_
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 8) {};
+                Gpio_SSC_DOUT_High();
+                while (GetPrecisionCounter() < T0 * 8) {};
 
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
+                Gpio_SSC_DOUT_Low();
+                while (GetPrecisionCounter() < T0 * 16) {};
 
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 24) {};
+                Gpio_SSC_DOUT_High();
+                while (GetPrecisionCounter() < T0 * 24) {};
 
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
+                Gpio_SSC_DOUT_Low();
+                while (GetPrecisionCounter() < T0 * 32) {};
             }
             break;
         }
         case MC4K: {
             if (bit == 0) {
                 // Manchester: Unloaded, then loaded |__--|
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
+                Gpio_SSC_DOUT_Low();
+                while (GetPrecisionCounter() < T0 * 16) {};
 
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
+                Gpio_SSC_DOUT_High();
+                while (GetPrecisionCounter() < T0 * 32) {};
             } else {
                 // Manchester: Loaded, then unloaded |--__|
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
+                Gpio_SSC_DOUT_High();
+                while (GetPrecisionCounter() < T0 * 16) {};
 
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
+                Gpio_SSC_DOUT_Low();
+                while (GetPrecisionCounter() < T0 * 32) {};
             }
             break;
         }
         case MC8K: {
             if (bit == 0) {
                 // Manchester: Unloaded, then loaded |__--|
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 8) {};
+                Gpio_SSC_DOUT_Low();
+                while (GetPrecisionCounter() < T0 * 8) {};
 
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
+                Gpio_SSC_DOUT_High();
+                while (GetPrecisionCounter() < T0 * 16) {};
             } else {
                 // Manchester: Loaded, then unloaded |--__|
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 8) {};
+                Gpio_SSC_DOUT_High();
+                while (GetPrecisionCounter() < T0 * 8) {};
 
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
+                Gpio_SSC_DOUT_Low();
+                while (GetPrecisionCounter() < T0 * 16) {};
             }
             break;
         }
@@ -453,22 +470,24 @@ static void hitag_tag_send_bit(int bit, MOD modulation, bool ledcontrol) {
 }
 
 void hitag_tag_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint32_t *start_time, bool ledcontrol, int *overflow) {
-    uint16_t next_edge_event = AT91C_TC_LDRBS;
+    lo_edge_t next_edge = LO_EDGE_FALLING;
     uint8_t edges[160] = {0};
     uint32_t rb_i = 0;
 
     // Receive frame, watch for at most T0*EOF periods
-    while (AT91C_BASE_TC1->TC_CV < T0 * HITAG_T_EOF) {
+    while (GetLoEdgeCaptureCount() < T0 * HITAG_T_EOF) {
 
         // Check if edge in modulation is detected
-        if (AT91C_BASE_TC1->TC_SR & next_edge_event) {
-            next_edge_event = next_edge_event ^ (AT91C_TC_LDRAS | AT91C_TC_LDRBS);
+        if (GetLoEdgeCaptureStatus() == next_edge) {
+            next_edge = next_edge == LO_EDGE_RISING ? LO_EDGE_FALLING : LO_EDGE_RISING;
 
-            // only use AT91C_TC_LDRBS falling edge for now
-            if (next_edge_event == AT91C_TC_LDRBS) continue;
+            // only use INPUT_CAPTURE_EVT_RB falling edge for now
+            if (next_edge == LO_EDGE_FALLING) {
+                continue;
+            }
 
             // Retrieve the new timing values
-            uint32_t rb = AT91C_BASE_TC1->TC_RB / T0 + *overflow;
+            uint32_t rb = GetLoEdgeCaptureFalling() / T0 + *overflow;
             *overflow = 0;
 
             edges[rb_i++] = rb;
@@ -510,20 +529,20 @@ void hitag_tag_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint32
     }
 }
 
-void hitag_tag_send_frame(const uint8_t *frame, size_t frame_len, int sof_bits, MOD modulation, bool ledcontrol) {
+void hitag_tag_send_frame(const uint8_t *frame, size_t frame_len, int sof_bits, hitag_mod_t modulation, bool ledcontrol) {
     // The beginning of the frame is hidden in some high level; pause until our bits will have an effect
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    HIGH(GPIO_SSC_DOUT);
+    ResetPrecisionCounter();
+    Gpio_SSC_DOUT_High();
 
     switch (modulation) {
         case AC4K:
         case MC8K: {
-            while (AT91C_BASE_TC0->TC_CV < T0 * 40) {}; // FADV
+            while (GetPrecisionCounter() < T0 * 40) {}; // FADV
             break;
         }
         case AC2K:
         case MC4K: {
-            while (AT91C_BASE_TC0->TC_CV < T0 * 20) {}; // STD + ADV
+            while (GetPrecisionCounter() < T0 * 20) {}; // STD + ADV
             break;
         }
     }
@@ -543,5 +562,5 @@ void hitag_tag_send_frame(const uint8_t *frame, size_t frame_len, int sof_bits, 
         hitag_tag_send_bit(TEST_BIT_MSB(frame, i), modulation, ledcontrol);
     }
 
-    LOW(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_Low();
 }

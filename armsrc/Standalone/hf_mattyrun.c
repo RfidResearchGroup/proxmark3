@@ -27,7 +27,8 @@
 #include "commonutil.h"
 #include "crc16.h"
 #include "dbprint.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "iso14443a.h"
 #include "mifarecmd.h"
 #include "mifaresim.h"  // mifare1ksim
@@ -36,7 +37,7 @@
 #include "spiffs.h"
 #include "standalone.h" // standalone definitions
 #include "string.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "util.h"
 
 /*

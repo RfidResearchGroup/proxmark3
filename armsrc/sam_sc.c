@@ -25,7 +25,7 @@
 #include "i2c.h"          // ISO7816_MAX_FRAME, I2C_Reset_EnterMainProgram
 #include "proxmark3_arm.h"
 #include "sam_common.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "util.h"         // LED_D_ON, LEDsoff
 
 // Tracks whether the SIM module has been initialised since the last reset.

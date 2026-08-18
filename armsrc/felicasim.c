@@ -21,11 +21,12 @@
 #include "util.h"
 #include "protocols.h"
 #include "crc16.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
 #include "string.h"
 #include "commonutil.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "iso18.h"
 
 #define AddCrc(data, len) compute_crc(CRC_FELICA, (data), (len), (data)+(len)+1, (data)+(len))
@@ -879,8 +880,8 @@ static int felica_sim_standard_loop(const felica_sim_model_header_t *hdr, const 
         }
         ++checker;
 
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-            uint8_t dist = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
+        if (FPGA_SSC_RX_Ready()) {
+            uint8_t dist = (uint8_t)FPGA_SSC_RX_Value();
             Process18092Byte(&FelicaFrame, dist, felica_get_rx_byte_start_time());
 
             if (FelicaFrame.state == STATE_FULL) {

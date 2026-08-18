@@ -122,7 +122,7 @@
 #include "spiffs.h"
 #include "appmain.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "BigBuf.h"
 #include "string.h"
 

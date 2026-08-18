@@ -14,7 +14,8 @@
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 #include "cmd.h"
-#include "usb_cdc.h"
+#include "usb_cdc_apis.h"
+#include "usb_read_ng.h"
 #include "usart.h"
 #include "crc16.h"
 #include "string.h"
@@ -73,6 +74,9 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const v
     return PM3_SUCCESS;
 }
 
+// TODO DXL 测试阶段，暂时通过SPI应答
+extern int cep_spi_write_sync(uint8_t *data, size_t len);
+
 static int reply_ng_internal(uint16_t cmd, int8_t status, uint8_t reason, const uint8_t *data, size_t len, bool ng) {
     PacketResponseNGRaw txBufferNG;
     size_t txBufferNGLen;
@@ -119,6 +123,10 @@ static int reply_ng_internal(uint16_t cmd, int8_t status, uint8_t reason, const 
         resultusb = usb_write((uint8_t *)&txBufferNG, txBufferNGLen);
     }
     if (g_reply_via_fpc) {
+
+        // TODO DXL 测试阶段，暂时通过SPI应答
+        // resultusb = cep_spi_write_sync((uint8_t *)&txBufferNG, txBufferNGLen);
+
 #ifdef WITH_FPC_USART_HOST
         resultfpc = usart_writebuffer_sync((uint8_t *)&txBufferNG, txBufferNGLen);
 #else
@@ -251,12 +259,20 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
     return PM3_SUCCESS;
 }
 
+// TODO DXL 临时在此处定义外部实现的CEP端口的SPI通信实现，做视频通信测试用的，后期需要重构设计
+// extern uint32_t cep_spi_read_ng(uint8_t *data, size_t len);
+// extern bool cep_spi_data_available(void);
+
 int receive_ng(PacketCommandNG *rx) {
 
     // Check if there is a packet available
     if (usb_poll_validate_length()) {
         return receive_ng_internal(rx, usb_read_ng, true, false);
     }
+
+    // if (cep_spi_data_available()) {
+    //     return receive_ng_internal(rx, cep_spi_read_ng, false, true); // TODO DXL 临时用fpc这种标志
+    // }
 
 #ifdef WITH_FPC_USART_HOST
     // Check if there is a FPC packet available

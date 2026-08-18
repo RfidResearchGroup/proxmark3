@@ -29,10 +29,43 @@ ifeq ($(PLTNAME),)
     endif
 endif
 
+# Proxmark5 requires armlib.
+include ../armlib/Exports.mk
+
 #remove one of the following defines and comment out the relevant line
 #in the next section to remove that particular feature from compilation.
 # NO space,TABs after the "\" sign.
 APP_CFLAGS = $(PLATFORM_DEFS)
+APP_CFLAGS += $(ARMLIB_EXPORT_CFLAGS)
+
+# HAL for platform
+ifeq ($(PLATFORM),PM5)
+	SRC_STARTUP    = startup_at32f435_437.s
+    SRC_TICKS      = ../common_arm/ticks/ticks_hw_at32.c i2c.c # TODO DXL: It always depends on I2C, so the compilation location of this source file needs to be optimized.
+    SRC_GPIO       = ../common_arm/gpio/gpio_hw_at32.c
+    SRC_WDT        = ../common_arm/wdt/wdt_hw_at32.c
+    SRC_RSSI       = ../common_arm/rssi/rssi_hw_at32.c
+    SRC_SYS        = ../common_arm/sys/sys_hw_at32.c
+    SRC_FPGA       = ../common_arm/fpga/fpga_hw_at32.c ../common_arm/fpga/fpga_gw_jtag.c
+    SRC_USB_CDC    = ../common_arm/usb/usb_cdc_at32.c
+    SRC_FLASH_DATA = ../common_arm/flash_data/flashmem_hw_at32.c
+    APP_CFLAGS     += -mcpu=cortex-m4
+    CROSS_LDFLAGS  += -mcpu=cortex-m4
+    LD_SCRIPT      = ldscript.osimage.at32
+    ARMLIB_OBJ     = $(OBJDIR)/$(ARMLIB_EXPORT_LIBNAME)
+    LIBS           += $(ARMLIB_OBJ)
+else
+	SRC_STARTUP    =
+    SRC_TICKS      = ../common_arm/ticks/ticks_hw_at91.c
+    SRC_GPIO       = ../common_arm/gpio/gpio_hw_at91.c
+    SRC_WDT        = ../common_arm/wdt/wdt_hw_at91.c
+    SRC_RSSI       = ../common_arm/rssi/rssi_hw_at91.c
+    SRC_SYS        = ../common_arm/sys/sys_hw_at91.c
+    SRC_FPGA       = ../common_arm/fpga/fpga_hw_at91.c
+    SRC_USB_CDC    = ../common_arm/usb/usb_cdc_at91.c
+    SRC_FLASH_DATA = ../common_arm/flash_data/flashmem_hw_at91.c
+	LD_SCRIPT      = ldscript.osimage.at91
+endif
 
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
 SRC_HF = hfops.c
@@ -51,9 +84,9 @@ SRC_NFCBARCODE = thinfilm.c
 
 #   SRC_BEE = bee.c
 
-# RDV40 related hardware support
+# RDV40 or PM5 related hardware support
 ifneq (,$(findstring WITH_FLASH,$(APP_CFLAGS)))
-    SRC_FLASH = flashmem.c
+    SRC_FLASH = flashmem_core.c $(SRC_FLASH_DATA)
     SRC_SPIFFS = spiffs.c spiffs_cache.c spiffs_check.c spiffs_gc.c spiffs_nucleus.c spiffs_hydrogen.c
 else
     SRC_FLASH =
@@ -143,6 +176,11 @@ THUMBSRC = start.c \
     $(SRC_FELICA) \
     $(SRC_STANDALONE) \
     $(SRC_ZX) \
+    $(SRC_RSSI) \
+	$(SRC_TICKS) \
+	$(SRC_GPIO) \
+	$(SRC_WDT) \
+	$(SRC_SYS) \
     appmain.c \
     printf.c \
     dbprint.c \
@@ -150,8 +188,8 @@ THUMBSRC = start.c \
     util.c \
     string.c \
     BigBuf.c \
-    ticks.c \
-    clocks.c \
+    ticks_core.c \
+	rssi_core.c \
     hfsnoop.c \
     generator.c \
     cmac_calc.c \
@@ -159,9 +197,15 @@ THUMBSRC = start.c \
 
 
 # These are to be compiled in ARM mode
-ARMSRC = fpgaloader.c \
-    usb_cdc.c \
+ARMSRC = fpga_loader.c \
+	fpga_core.c \
+	$(SRC_FPGA) \
+	usb_cdc_desc.c \
+	usb_read_ng.c \
+	$(SRC_USB_CDC) \
     cmd.c
+
+ASMSRC = $(SRC_STARTUP)
 
 VERSIONSRC = version_pm3.c \
     fpga_version_info.c
@@ -176,6 +220,11 @@ else
     INSTALLFWTAG = $(notdir $(INSTALLFW))
 endif
 
+# On some platforms, the FPGA firmware does not need to be packaged into the ARM, because the FPGA has its own flash.
+ifneq ($(strip $(SKIP_FPGA_EMBED)),true)
+	FPGA_ALL_O_DEP = $(OBJDIR)/fpga_all.o
+endif
+
 OBJS = $(OBJDIR)/fullimage.s19
 FPGA_COMPRESSOR = ../tools/fpga_compress/fpga_compress
 
@@ -187,7 +236,7 @@ showinfo:
 .DELETE_ON_ERROR:
 
 # version_pm3.c should be checked on every time fullimage.stage1.elf should be remade
-version_pm3.c: default_version_pm3.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ) .FORCE
+version_pm3.c: default_version_pm3.c $(OBJDIR)/fpga_version_info.o $(FPGA_ALL_O_DEP) $(THUMBOBJ) $(ARMOBJ) $(ASMOBJ) .FORCE
 	$(info [-] CHECK $@)
 	$(Q)$(SH) ../tools/mkversion.sh $@ || $(CP) $< $@
 
@@ -211,10 +260,16 @@ $(FPGA_COMPRESSOR):
 	$(error [!] MISSING $@ => To build it, go the root of the repo and do "make $(notdir $@)")
 	$(error [!] MISSING $@)
 
-$(OBJDIR)/fullimage.stage1.elf: $(VERSIONOBJ) $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
+ifeq ($(PLATFORM),PM5)
+$(ARMLIB_OBJ):
+	$(info [=] MAKE $(notdir $@))
+	@$(MAKE) --no-print-directory -f ../armlib/Makefile
+endif
+
+$(OBJDIR)/fullimage.stage1.elf: $(VERSIONOBJ) $(FPGA_ALL_O_DEP) $(THUMBOBJ) $(ARMOBJ) $(ASMOBJ) $(ARMLIB_OBJ)
 	$(info [=] LD $@)
 # Using -T instead of -Wl,-T is needed to prevent the linker from using the default ldscript when using picolibc instead of newlib
-	$(Q)$(CROSS_LD) $(CROSS_LDFLAGS) -T ldscript -Wl,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
+	$(Q)$(CROSS_LD) $(CROSS_LDFLAGS) -T $(LD_SCRIPT) -Wl,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
 $(OBJDIR)/fullimage.data.bin: $(OBJDIR)/fullimage.stage1.elf
 	$(info [-] GEN $@)
@@ -243,6 +298,7 @@ tarbin: $(OBJS)
 clean:
 	$(Q)$(RM) $(DEPENDENCY_FILES)
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.o
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.a
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.elf
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.s19
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.map
@@ -266,4 +322,3 @@ help:
 	@echo Possible targets:
 	@echo +	all    - Build the full image $(OBJDIR)/fullimage.s19
 	@echo +	clean             - Clean $(OBJDIR)
-

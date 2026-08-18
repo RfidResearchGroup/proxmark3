@@ -1,0 +1,161 @@
+# --------------------- Standalone Source Files  ---------------------
+
+set(DIR_STANDALONE ${CMAKE_CURRENT_LIST_DIR})
+set(SRC_STANDALONE "${DIR_STANDALONE}/placeholder.c")
+
+# Check which standalone mode is selected, and set the corresponding source file.
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_LF_SKELETON")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/lf_skeleton.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_LF_EM4100EMUL")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/lf_em4100emul.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_LF_EM4100RSWB")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/lf_em4100rswb.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_LF_EM4100RSWW")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/lf_em4100rsww.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_LF_EM4100RWC")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/lf_em4100rwc.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_LF_HIDBRUTE")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/lf_hidbrute.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_LF_HIDFCBRUTE")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/lf_hidfcbrute.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_LF_ICEHID")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/lf_icehid.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_LF_MULTIHID")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/lf_multihid.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_LF_NEDAP_SIM")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/lf_nedap_sim.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_LF_NEXID")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/lf_nexid.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_LF_SAMYRUN")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/lf_samyrun.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_LF_PROXBRUTE")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/lf_proxbrute.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_LF_PROX2BRUTE")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/lf_prox2brute.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_LF_THAREXDE")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/lf_tharexde.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_14ASNIFF")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_14asniff.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_14BSNIFF")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_14bsniff.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_15SNIFF")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_15sniff.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_15SIM")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_15sim.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_AVEFUL")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_aveful.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_BOG")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_bog.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_CARDHOPPER")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_cardhopper.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_COLIN")
+    set(SRC_STANDALONE
+        "${DIR_STANDALONE}/vtsend.c"
+        "${DIR_STANDALONE}/hf_colin.c"
+        "${DIR_STANDALONE}/frozen.c"
+        "${DIR_STANDALONE}/nprintf.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_CRAFTBYTE")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_craftbyte.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_ICECLASS")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_iceclass.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_LEGIC")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_legic.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_LEGICSIM")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_legicsim.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_MATTYRUN")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_mattyrun.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_MFCSIM")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_mfcsim.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_MSDSAL")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_msdsal.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_REBLAY")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_reblay.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_TCPRST")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_tcprst.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_TMUDFORD")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_tmudford.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_UNISNIFF")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_unisniff.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_YOUNG")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_young.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_ST25_TEAROFF")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_st25_tearoff.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_HF_EMVPNG")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/hf_emvpng.c")
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_STANDALONE_DANKARMULTI")
+    set(SRC_STANDALONE "${DIR_STANDALONE}/dankarmulti.c")
+endif ()

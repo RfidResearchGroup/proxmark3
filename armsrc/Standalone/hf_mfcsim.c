@@ -17,11 +17,12 @@
 // main code for mifare classic simulator aka MFCSIM
 //-----------------------------------------------------------------------------
 #include <inttypes.h>
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "proxmark3_arm.h"
 #include "BigBuf.h"
 #include "commonutil.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "util.h"
 #include "dbprint.h"
 #include "spiffs.h"

@@ -20,7 +20,8 @@
 #include "iso14443a.h"
 #include "BigBuf.h"
 
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
 #include "string.h"
 #include "dbprint.h"
 #include "protocols.h"

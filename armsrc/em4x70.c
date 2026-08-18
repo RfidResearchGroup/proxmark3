@@ -16,8 +16,9 @@
 // Low frequency EM4x70 commands
 //-----------------------------------------------------------------------------
 
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "ticks_apis.h"
+#include "fpga_apis.h"
 #include "dbprint.h"
 #include "lfadc.h"
 #include "commonutil.h"
@@ -222,7 +223,6 @@ static void init_tag(void) {
 }
 
 static void em4x70_setup_read(void) {
-
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
@@ -235,15 +235,14 @@ static void em4x70_setup_read(void) {
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
 
     // Connect the A/D to the peak-detected low-frequency path.
-    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+    SetAdcMuxFor(ADC_MUXSEL_LOPKD);
 
     // Steal this pin from the SSP (SPI communication channel with fpga) and
     // use it to control the modulation
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+    gpio_fpga_mod_only_setup();
 
     // Disable modulation at default, which means enable the field
-    LOW(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_Low();
 
     // Start the timer
     StartTicks();
@@ -263,7 +262,9 @@ static bool get_signalproperties(void) {
         // about 2 samples per bit period
         WaitTicks(EM4X70_T_TAG_HALF_PERIOD);
 
-        if (AT91C_BASE_SSC->SSC_RHR > HIGH_SIGNAL_THRESHOLD) {
+        FPGA_SSC_RX_READY_WAIT();
+
+        if (FPGA_SSC_RX_Value() > HIGH_SIGNAL_THRESHOLD) {
             return true;
         }
     }
@@ -279,19 +280,35 @@ static uint32_t get_falling_pulse_length(void) {
 
     uint32_t timeout = GetTicks() + EM4X70_T_TAG_TIMEOUT;
 
-    while (IS_HIGH(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
+    FPGA_SSC_RX_READY_WAIT();
+
+    uint32_t sample = FPGA_SSC_RX_Value();
+
+    while (IS_HIGH(sample) && !IS_TIMEOUT(timeout)) {
+        if (FPGA_SSC_RX_Ready()) {
+            sample = FPGA_SSC_RX_Value();
+        }
+    }
 
     if (IS_TIMEOUT(timeout))
         return 0;
 
     uint32_t start_ticks = GetTicks();
 
-    while (IS_LOW(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
+    while (IS_LOW(sample) && !IS_TIMEOUT(timeout)) {
+        if (FPGA_SSC_RX_Ready()) {
+            sample = FPGA_SSC_RX_Value();
+        }
+    }
 
     if (IS_TIMEOUT(timeout))
         return 0;
 
-    while (IS_HIGH(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
+    while (IS_HIGH(sample) && !IS_TIMEOUT(timeout)) {
+        if (FPGA_SSC_RX_Ready()) {
+            sample = FPGA_SSC_RX_Value();
+        }
+    }
 
     if (IS_TIMEOUT(timeout))
         return 0;
@@ -308,19 +325,35 @@ static uint32_t get_rising_pulse_length(void) {
 
     uint32_t timeout = GetTicks() + EM4X70_T_TAG_TIMEOUT;
 
-    while (IS_LOW(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
+    FPGA_SSC_RX_READY_WAIT();
+
+    uint32_t sample = FPGA_SSC_RX_Value();
+
+    while (IS_LOW(sample) && !IS_TIMEOUT(timeout)) {
+        if (FPGA_SSC_RX_Ready()) {
+            sample = FPGA_SSC_RX_Value();
+        }
+    }
 
     if (IS_TIMEOUT(timeout))
         return 0;
 
     uint32_t start_ticks = GetTicks();
 
-    while (IS_HIGH(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
+    while (IS_HIGH(sample) && !IS_TIMEOUT(timeout)) {
+        if (FPGA_SSC_RX_Ready()) {
+            sample = FPGA_SSC_RX_Value();
+        }
+    }
 
     if (IS_TIMEOUT(timeout))
         return 0;
 
-    while (IS_LOW(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
+    while (IS_LOW(sample) && !IS_TIMEOUT(timeout)) {
+        if (FPGA_SSC_RX_Ready()) {
+            sample = FPGA_SSC_RX_Value();
+        }
+    }
 
     if (IS_TIMEOUT(timeout))
         return 0;
@@ -448,22 +481,22 @@ static void em4x70_send_bit(bool bit) {
     if (bit == 0) {
 
         // disable modulation (drop the field) n cycles of carrier
-        LOW(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_Low();
         while (TICKS_ELAPSED(start_ticks) <= EM4X70_T_TAG_BITMOD);
 
         // enable modulation (activates the field) for remaining first
         // half of bit period
-        HIGH(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_High();
         while (TICKS_ELAPSED(start_ticks) <= EM4X70_T_TAG_HALF_PERIOD);
 
         // disable modulation for second half of bit period
-        LOW(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_Low();
         while (TICKS_ELAPSED(start_ticks) <= EM4X70_T_TAG_FULL_PERIOD);
 
     } else {
 
         // bit = "1" means disable modulation for full bit period
-        LOW(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_Low();
         while (TICKS_ELAPSED(start_ticks) <= EM4X70_T_TAG_FULL_PERIOD);
     }
     log_sent_bit_end(GetTicks());

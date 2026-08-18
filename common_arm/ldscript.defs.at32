@@ -1,0 +1,20 @@
+mcu_flash_size      = 1024K;
+
+/*
+ * AT32F435RGT7 supports SRAM configuration of 512K at most, but after modifying mcu_sram_size,
+ * you must remember to modify USD->eopb0, and make sure to modify USD->eopb0 configuration
+ * before accessing a larger memory area in the startup script (.s assembly file),
+ * otherwise it will lead to Hard Fault Handler.
+ */
+mcu_sram_size       = 512K; /* 384K or 512K ? */
+
+mcu_flash_base_addr = 0x08000000;
+mcu_sram_base_addr  = 0x20000000;
+
+boot_image_size     = 0x4000;    /* boot space = 16384bytes (0x4000) */
+bootphase1_size     = 0x200;
+bootphase2_size     = boot_image_size - bootphase1_size;
+
+os_image_size       = mcu_flash_size - boot_image_size;
+os_image_origin     = mcu_flash_base_addr + boot_image_size;
+/* os_image_origin     = mcu_flash_base_addr; /* TODO 还在调试，没有实现BOOT，所以暂时设置为OS而不是BOOT的启动地址  */
