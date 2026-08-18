@@ -2902,8 +2902,8 @@ static int CmdDiff(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanity check
-    if (IfPm3Rdv4Fw() == false && (splenA > 0 || splenB > 0)) {
-        PrintAndLogEx(WARNING, "No RDV4 Flashmemory available");
+    if (IfPm3Flash() == false && (splenA > 0 || splenB > 0)) {
+        PrintAndLogEx(WARNING, "No Flashmemory available");
         return PM3_EINVARG;
     }
 
