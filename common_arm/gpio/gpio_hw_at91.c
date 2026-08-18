@@ -148,6 +148,8 @@ void gpio_sysboot_setup(void) {
         GPIO_LED_B          |
         GPIO_LED_C          |
         GPIO_LED_D;
+
+    gpio_button_setup();
 }
 
 void gpio_vusb_setup(void) {
