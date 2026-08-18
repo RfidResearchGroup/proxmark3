@@ -44,7 +44,7 @@ example = [[
     3. script run hf_mf_uscuid_prog -S 0
 ]]
 usage = [[
-script run hf_mf_uscuid_uid_prog [-h] [-u <uid>] [-t] [-3] [-s <signature>] [-w 1] [-R -B <blk>] [-S -E <sec>] [-g -c -b -2 -7 -d -a -n -r <0/1>]
+script run hf_mf_uscuid_prog [-h] [-u <uid>] [-t] [-3] [-s <signature>] [-w 1] [-R -B <blk>] [-S -E <sec>] [-g -c -b -2 -7 -d -a -n -r <0/1>]
 ]]
 arguments = [[
     -h      this help
