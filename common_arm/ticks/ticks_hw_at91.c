@@ -209,19 +209,16 @@ uint32_t RAMFUNC GetCountSspClk(void) {
 static uint16_t timestamp_high = 0;
 
 void StartPrecisionCounter(void) {
-    // Enable peripheral clock for TC0/TC1/TC2 (TC1 = input capture, TC2 = timestamp).
-    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1) | (1 << AT91C_ID_TC2);
-    // Route SSC_FRAME to the timer input (TIOA) so its edges can be captured by TC1.
-    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
+    // Enable peripheral clock for TC0 (precision counter).
+    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0);
 
-    // Disable all timers before reconfiguration.
+    // Disable TC0 before reconfiguration.
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS;
 
     // TC0: capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers (free-running).
     AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    while (AT91C_BASE_TC0->TC_CV != 0) {};  // wait until the reset takes effect
 }
 
 void StopPrecisionCounter(void) {
@@ -238,6 +235,15 @@ uint16_t RAMFUNC GetPrecisionCounter(void) {
 }
 
 void StartLoEdgeCapture(void) {
+    // Enable peripheral clock for TC1 (input capture).
+    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC1);
+
+    // Route SSC_FRAME to the timer input (TIOA) so its edges can be captured by TC1.
+    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
+
+    // Disable TC1 before reconfiguration.
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+
     // TC1: capture mode, default timer source = MCK/32 (TIMER_CLOCK3),
     // TIOA is external trigger, load RA on rising edge, load RB on falling edge.
     AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK  // use MCK/32 (TIMER_CLOCK3)
@@ -246,6 +252,7 @@ void StartLoEdgeCapture(void) {
                              | AT91C_TC_LDRA_RISING          // load RA on rising edge of TIOA
                              | AT91C_TC_LDRB_FALLING;        // load RB on falling edge of TIOA
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    while (AT91C_BASE_TC1->TC_CV != 0) {};  // wait until the reset takes effect
 }
 
 void StopLoEdgeCapture(void) {
@@ -283,14 +290,16 @@ uint16_t RAMFUNC GetLoEdgeCaptureRising(void) {
 }
 
 void StartTimestamp(void) {
+    // Enable peripheral clock for TC2 (timestamp).
+    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC2);
+
+    // Disable TC2 before reconfiguration.
+    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS;
+
     // TC2: capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers (free-running).
     AT91C_BASE_TC2->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
     AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-
-    // Assert a sync signal. This sets all timers to 0 on next active clock edge.
-    AT91C_BASE_TCB->TCB_BCR = 1;
-    while (AT91C_BASE_TC0->TC_CV != 0) {
-    }; // wait until TC0 returned to zero
+    while (AT91C_BASE_TC2->TC_CV != 0) {};  // wait until the reset takes effect
 
     // Reset the overflow accumulator.
     timestamp_high = 0;
