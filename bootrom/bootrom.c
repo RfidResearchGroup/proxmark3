@@ -236,26 +236,23 @@ static void UsbPacketReceived(uint8_t *packet) {
             const uint16_t flash_ew_unit_u32 = flash_ew_unit / sizeof(uint32_t); // count of min erase/write unit(u32)
             // The fixed data payload is 512 bytes, which is 128 u32.
             const uint16_t usb_payload_u32_len = sizeof(c->d) / sizeof(uint32_t);
-            // Copy data from usb to flash_min_unit_data buffer until it reaches the flash erase/write unit.
-            if (flash_min_unit_data.count + usb_payload_u32_len <= flash_ew_unit_u32) {
-                bool copy_overflow = false;
-                for (int i = 0; i < usb_payload_u32_len; i++) {
-                    flash_min_unit_data.data[flash_min_unit_data.count++] =  c->d.asDwords[i];
-                    // Check data buffer is no overflow.
-                    if (flash_min_unit_data.count + 1 > sizeof(flash_min_unit_data.data) / sizeof(uint32_t)) {
-                        copy_overflow = true;
-                        break;
-                    }
-                }
-                if (copy_overflow) {
-                    ack = false;
-                    flash_min_unit_data.count = 0;
-                    reply_old(CMD_NACK, 0, PM3_EOVFLOW, 0, 0, 0);
+            // Copy data from usb to flash_min_unit_data buffer. A single usb payload may hold more
+            // than one erase/write unit (e.g. AT91 pages of 256 bytes), so always copy it in and flush
+            // the whole units below instead of assuming the payload is no larger than one unit.
+            bool copy_overflow = false;
+            for (int i = 0; i < usb_payload_u32_len; i++) {
+                // Check data buffer is no overflow.
+                if (flash_min_unit_data.count >= ARRAYLEN(flash_min_unit_data.data)) {
+                    copy_overflow = true;
                     break;
                 }
-                if (flash_min_unit_data.count < flash_ew_unit_u32) {
-                    break; // The minimum erase/write unit size has not been reached, waiting for next time transfer.
-                }
+                flash_min_unit_data.data[flash_min_unit_data.count++] = c->d.asDwords[i];
+            }
+            if (copy_overflow) {
+                ack = false;
+                flash_min_unit_data.count = 0;
+                reply_old(CMD_NACK, 0, PM3_EOVFLOW, 0, 0, 0);
+                break;
             }
             // How many min unit are stored in the data buffer?
             const uint16_t flash_unit_num_u32 = flash_min_unit_data.count / flash_ew_unit_u32;
@@ -278,7 +275,12 @@ static void UsbPacketReceived(uint8_t *packet) {
                     break;
                 }
             }
-            flash_min_unit_data.count = 0; // After writing to flash, clear count.
+            if (ack) {
+                // After flushing whole units, keep the remaining partial unit for the next transfer.
+                flash_min_unit_data.count %= flash_ew_unit_u32;
+            } else {
+                flash_min_unit_data.count = 0; // Discard buffered data after a failed write.
+            }
         }
         break;
 
