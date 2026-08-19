@@ -2302,7 +2302,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
             break;
         }
 
-        if (cmd_len <= 3 && cmd_len > sizeof(cmd) - 1) {
+        if ((cmd_len <= 3) || (cmd_len > sizeof(cmd) - 1)) {
             continue;
         }
 
