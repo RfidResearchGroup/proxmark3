@@ -1073,7 +1073,6 @@ int main(int argc, char *argv[]) {
     char *port = NULL;
     uint32_t speed = 0;
 
-    pm3line_init();
 
     char exec_name[100] = {0};
     strncpy(exec_name, basename(argv[0]), sizeof(exec_name) - 1);
@@ -1521,6 +1520,8 @@ int main(int argc, char *argv[]) {
             PrintAndLogEx(WARNING,"Proxmark3 not ready to set debug level");
     }
     */
+
+    pm3line_init();
 
 #ifdef HAVE_GUI
 

@@ -577,6 +577,13 @@ static void flash_suggest_update_bootloader(void) {
     PrintAndLogEx(INFO, "---------------------------------------------------");
     PrintAndLogEx(NORMAL, "");
     gs_printed_msg = true;
+    if (g_session.stdinOnTTY) {
+        PrintAndLogEx(INFO, "Press ENTER to continue or CTRL-C to cancel...");
+        fflush(stdout);
+        while (kbd_enter_pressed() == false) {
+            msleep(100);
+        }
+    }
 }
 
 // If the device's boot is newer than the current flasher, we can suggest the user update the flasher.
