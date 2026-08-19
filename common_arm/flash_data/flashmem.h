@@ -121,10 +121,6 @@ extern uint8_t spi_flash_pages64k;
 
 bool FlashDetect(void);
 
-#ifndef ARRAYLEN
-# define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
-#endif
-
 #endif // #ifndef AS_BOOTROM
 
 #endif // FLASHMEM_H_

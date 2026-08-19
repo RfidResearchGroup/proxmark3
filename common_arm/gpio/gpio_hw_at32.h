@@ -2,6 +2,7 @@
 #define GPIO_HW_AT32_H_
 
 #include "common.h"
+#include "commonutil.h"
 #include "config_gpio.h"
 
 
@@ -11,7 +12,7 @@
 #define AT32_GPIO_PERIPH_CLKS_ENABLE(...)                              \
     do {                                                               \
         const crm_periph_clock_type args[] = { __VA_ARGS__ };          \
-        for (size_t i = 0; i < sizeof(args) / sizeof(args[0]); ++i) {  \
+        for (size_t i = 0; i < ARRAYLEN(args); ++i) {  \
             crm_periph_clock_enable(args[i], TRUE);                    \
         }                                                              \
     } while(0)

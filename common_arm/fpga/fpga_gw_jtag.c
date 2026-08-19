@@ -6,6 +6,7 @@
  */
 
 #include <string.h>
+#include "commonutil.h"
 #include "fpga_gw_jtag.h"
 
 #define INST_BYPASS             0xFF
@@ -105,12 +106,9 @@ static const device_map_t device_map[] = {
     // #define ID_GW1NS_2C 0x0300181B
 };
 
-// 计算当前设备映射表中的设备型号数量
-#define DEVICE_SIZE (sizeof(device_map) / sizeof(device_map[0]))
-
 // 根据ID索引到具体的设备信息映射表上，如果没有发现对应的设备存在，则返回NULL
 static const device_map_t *get_device_map_by_idcode(void) {
-    for (size_t i = 0; i < DEVICE_SIZE; i++) {
+    for (size_t i = 0; i < ARRAYLEN(device_map); i++) {
         if (device_map[i].idcode == cached_idcode) {
             return &device_map[i];
         }

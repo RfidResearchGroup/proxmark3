@@ -2,6 +2,7 @@
 // Created by dxl on 2026/5/23.
 //
 
+#include "commonutil.h"
 #include "sys_apis.h"
 #include "config_gpio_proxmark5.h"
 
@@ -419,7 +420,7 @@ void system_simple_reset(void) {
 void __NO_RETURN JumpToAnyImage(uint32_t stack_top, uint32_t entry_point) {
     // Disable and clear all pending interrupts in the Bootloader
     __disable_irq();
-    for (int i = 0; i < sizeof(NVIC->ICER) / sizeof(NVIC->ICER[0]); i++) {
+    for (int i = 0; i < ARRAYLEN(NVIC->ICER); i++) {
         NVIC->ICER[i] = 0xFFFFFFFF;
         NVIC->ICPR[i] = 0xFFFFFFFF;
     }
