@@ -634,6 +634,18 @@ static void SendCapabilities(void) {
     capabilities.is_rdv4 = false;
 #endif
 
+#ifdef PM5
+    capabilities.is_pm5 = true;
+    capabilities.is_pm5_std_ant = true;
+    capabilities.hw_available_fpga_flash = true;
+    capabilities.hw_available_i2c_eeprom = true;
+#else
+    capabilities.is_pm5 = false;
+    capabilities.is_pm5_std_ant = false;
+    capabilities.hw_available_fpga_flash = false;
+    capabilities.hw_available_i2c_eeprom = false;
+#endif
+
 #ifdef WITH_FLASH
     capabilities.compiled_with_flash = true;
     capabilities.hw_available_flash = FlashInit();
@@ -3304,6 +3316,13 @@ static void PacketReceived(PacketCommandNG *packet) {
                 dev_info |= DEVICE_INFO_FLAG_BOOTROM_PRESENT;
             }
             reply_old(CMD_DEVICE_INFO, dev_info, 0, 0, 0, 0);
+            break;
+        }
+        case CMD_MAIN_CHIP_UNIQUEID: {
+            // PM3 placeholder, to be replaced when correct commit gets merged
+            uint8_t size = 0;
+            uint8_t* uid = NULL;
+            reply_ng(CMD_MAIN_CHIP_UNIQUEID, PM3_SUCCESS, uid, size);
             break;
         }
         default: {

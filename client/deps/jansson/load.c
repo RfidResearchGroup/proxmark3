@@ -188,6 +188,9 @@ static int stream_get(stream_t *stream, json_error_t *error) {
             assert(count >= 2);
             assert(count <= 4);
 
+            if (count >= sizeof(stream->buffer))
+                goto out;
+
             // if count == 4 ,   i will become 5 and overflow.
             for (i = 1; i < count; i++)
                 stream->buffer[i] = stream->get(stream->data);

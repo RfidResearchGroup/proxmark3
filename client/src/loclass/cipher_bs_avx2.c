@@ -18,9 +18,13 @@
 
 #include <immintrin.h>
 
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(__ANDROID__)
+#if !defined(__ANDROID__)
+#if defined(__clang__)
+#pragma clang attribute push(__attribute__((target("avx2"))), apply_to = function)
+#elif defined(__GNUC__)
 #pragma GCC push_options
 #pragma GCC target("avx2")
+#endif
 #endif
 
 #define BS_ZERO    _mm256_setzero_si256()
@@ -121,7 +125,7 @@ static const uint64_t LANE_BITS_256_RAW[8][BS256_WORDS] = {
 };
 
 static inline __m256i lane_bits_256(int k) {
-    return _mm256_loadu_si256((const __m256i *)LANE_BITS_256_RAW[k]);
+    return _mm256_loadu_si256((const __m256i *)(const void *)LANE_BITS_256_RAW[k]);
 }
 
 static inline void bs_init_state(const __m256i kb[64], __m256i l[8], __m256i r[8], __m256i b[8], __m256i t[16]) {
@@ -174,7 +178,7 @@ static inline void bs_init_state(const __m256i kb[64], __m256i l[8], __m256i r[8
 }
 
 void prepare_ccnr_bits_bs256(const uint8_t *cc_nr, uint64_t y_bits_bs[96 * BS256_WORDS]) {
-    __m256i *y = (__m256i *)y_bits_bs;
+    __m256i *y = (__m256i *)(void *)y_bits_bs;
     for (int i = 0; i < 12; i++) {
         const uint8_t byte = cc_nr[i];
         for (int bit = 0; bit < 8; bit++) {
@@ -184,7 +188,7 @@ void prepare_ccnr_bits_bs256(const uint8_t *cc_nr, uint64_t y_bits_bs[96 * BS256
 }
 
 void prepare_target_mac_bs256(const uint8_t target_mac[4], uint64_t target_mac_bs[32 * BS256_WORDS]) {
-    __m256i *tm = (__m256i *)target_mac_bs;
+    __m256i *tm = (__m256i *)(void *)target_mac_bs;
     for (int i = 0; i < 4; i++) {
         const uint8_t byte = target_mac[i];
         for (int bit = 0; bit < 8; bit++) {
@@ -194,7 +198,7 @@ void prepare_target_mac_bs256(const uint8_t target_mac[4], uint64_t target_mac_b
 }
 
 void build_bitslice_key_256(const uint8_t partial_key[8], uint64_t index_start, uint64_t kb[64 * BS256_WORDS]) {
-    __m256i *k = (__m256i *)kb;
+    __m256i *k = (__m256i *)(void *)kb;
 
     for (int j = 0; j < 8; j++) {
         _mm256_storeu_si256(&k[j * 8 + 0], (partial_key[j] & 0x01) ? BS_ONES : BS_ZERO);
@@ -226,7 +230,7 @@ void doMAC_brute_match256(const uint64_t y_bits_bs[96 * BS256_WORDS],
 
     // Load key into local __m256i array for fast access.
     __m256i k[64];
-    const __m256i *kb_m = (const __m256i *)kb;
+    const __m256i *kb_m = (const __m256i *)(const void *)kb;
     for (int i = 0; i < 64; i++) {
         k[i] = _mm256_loadu_si256(&kb_m[i]);
     }
@@ -234,8 +238,8 @@ void doMAC_brute_match256(const uint64_t y_bits_bs[96 * BS256_WORDS],
     __m256i l[8], r[8], b[8], t[16];
     bs_init_state(k, l, r, b, t);
 
-    const __m256i *y = (const __m256i *)y_bits_bs;
-    const __m256i *tm = (const __m256i *)target_mac_bs;
+    const __m256i *y = (const __m256i *)(const void *)y_bits_bs;
+    const __m256i *tm = (const __m256i *)(const void *)target_mac_bs;
 
     for (int i = 0; i < 96; i++) {
         bs_tick(t, b, l, r, k, _mm256_loadu_si256(&y[i]));
@@ -260,11 +264,15 @@ void doMAC_brute_match256(const uint64_t y_bits_bs[96 * BS256_WORDS],
         }
     }
 
-    _mm256_storeu_si256((__m256i *)match_out, mac_match);
+    _mm256_storeu_si256((__m256i *)(void *)match_out, mac_match);
 }
 
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(__ANDROID__)
+#if !defined(__ANDROID__)
+#if defined(__clang__)
+#pragma clang attribute pop
+#elif defined(__GNUC__)
 #pragma GCC pop_options
+#endif
 #endif
 
 bool bs_avx2_supported(void) {
