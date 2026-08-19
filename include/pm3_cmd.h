@@ -243,8 +243,14 @@ typedef struct {
     bool hw_available_flash : 1;
     bool hw_available_smartcard : 1;
     bool is_rdv4 : 1;
+
+    // pm5
+    bool hw_available_fpga_flash : 1;
+    bool hw_available_i2c_eeprom : 1;
+    bool is_pm5 : 1;
+    bool is_pm5_std_ant : 1;
 } PACKED capabilities_t;
-#define CAPABILITIES_VERSION 7
+#define CAPABILITIES_VERSION 8
 extern capabilities_t g_pm3_capabilities;
 
 typedef struct {

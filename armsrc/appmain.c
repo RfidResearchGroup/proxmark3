@@ -634,6 +634,18 @@ static void SendCapabilities(void) {
     capabilities.is_rdv4 = false;
 #endif
 
+#ifdef PM5
+    capabilities.is_pm5 = true;
+    capabilities.is_pm5_std_ant = true;
+    capabilities.hw_available_fpga_flash = true;
+    capabilities.hw_available_i2c_eeprom = true;
+#else
+    capabilities.is_pm5 = false;
+    capabilities.is_pm5_std_ant = false;
+    capabilities.hw_available_fpga_flash = false;
+    capabilities.hw_available_i2c_eeprom = false;
+#endif
+
 #ifdef WITH_FLASH
     capabilities.compiled_with_flash = true;
     capabilities.hw_available_flash = FlashInit();

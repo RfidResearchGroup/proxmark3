@@ -122,6 +122,30 @@ bool IfPm3FpcUsartFromUsb(void) {
     return IfPm3FpcUsartHostFromUsb() || IfPm3FpcUsartDevFromUsb();
 }
 
+bool IfPm5(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.is_pm5;
+}
+
+bool IfPm5StdAnt(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.is_pm5_std_ant;
+}
+
+bool IfFpgaFlash(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.hw_available_fpga_flash;
+}
+
+bool IfI2cEeprom(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.hw_available_i2c_eeprom;
+}
+
 bool IfPm3Lf(void) {
     if (IfPm3Present() == false)
         return false;
