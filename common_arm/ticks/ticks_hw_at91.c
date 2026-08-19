@@ -272,10 +272,12 @@ uint16_t RAMFUNC GetLoEdgeCaptureCount(void) {
 }
 
 lo_edge_t RAMFUNC GetLoEdgeCaptureStatus(void) {
-    if (AT91C_BASE_TC1->TC_SR & INPUT_CAPTURE_EVT_RISING_EDGE) {
+    // Read Once Only: Reading TC_SR will simultaneously clear status bits such as LDRAS/LDRBS.
+    uint32_t sr = AT91C_BASE_TC1->TC_SR;
+    if (sr & INPUT_CAPTURE_EVT_RISING_EDGE) {
         return LO_EDGE_RISING;
     }
-    if (AT91C_BASE_TC1->TC_SR & INPUT_CAPTURE_EVT_FALLING_EDGE) {
+    if (sr & INPUT_CAPTURE_EVT_FALLING_EDGE) {
         return LO_EDGE_FALLING;
     }
     return LO_EDGE_NO;
