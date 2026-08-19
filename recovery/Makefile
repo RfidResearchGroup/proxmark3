@@ -27,7 +27,7 @@ bootrom.bin: ../bootrom/obj/bootrom.elf
 ifeq ($(PLATFORM),PM5)
 	$(info [=] GENA $@)
 	$(Q)$(CROSS_OBJCOPY) --gap-fill=0xff --pad-to 0x08004000 -O binary $^ $@
-else:
+else
 	$(info [=] GENB $@)
 	$(Q)$(CROSS_OBJCOPY) --gap-fill=0xff --pad-to 0x00104000 -O binary $^ $@
 endif
