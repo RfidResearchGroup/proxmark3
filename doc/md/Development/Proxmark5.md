@@ -20,3 +20,12 @@ Read first the [Proxmark5 Instructions](../Installation_Instructions/Proxmark5-I
     > Having a protocol allows for better flow control, preventing packet loss caused by UART being too 'fast' and BLE being too 'slow'.
 - The HAL work related to HITAG has been completed. For details, see: [HitagS & HitagU](https://github.com/RfidResearchGroup/proxmark3/pull/3449#issuecomment-5303520489)
 - The code of the BWM Battery Wireless Module is [hosted here](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32)
+
+The ARM code is primarily compiled with the Makefiles, but it also supports Cmake.
+```
+mkdir build && cd build
+cmake -DPLATFORM:STRING=PM5 ..
+cmake --build .
+cd ..
+client/proxmark3 --port /dev/ttyACM0 --flash --unlock-bootloader --image build/obj/bootrom.elf --image build/obj/fullimage.elf
+```
