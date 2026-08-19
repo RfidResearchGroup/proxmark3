@@ -63,7 +63,7 @@ typedef struct {
 #define CMD_FLASHMEM_WIPE                                                 0x0122
 #define CMD_FLASHMEM_DOWNLOAD                                             0x0123
 #define CMD_FLASHMEM_DOWNLOADED                                           0x0124
-#define CMD_FLASHMEM_INFO                                                 0x0125
+#define CMD_FLASHMEM_GET_ID                                               0x0125
 
 // For low-frequency tags
 #define CMD_LF_TI_READ                                                    0x0202

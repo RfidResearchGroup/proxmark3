@@ -3351,14 +3351,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_B_OFF();
             break;
         }
-        case CMD_FLASHMEM_INFO: {
+        case CMD_FLASHMEM_GET_ID: {
             uint64_t flash_uniqueID = 0;
             bool isok = FlashInit();
             if (isok) {
                 isok = Flash_UniqueID((uint8_t *)(&flash_uniqueID));
                 FlashStop();
             }
-            reply_ng(CMD_FLASHMEM_INFO, (isok) ? PM3_SUCCESS : PM3_EFLASH, (uint8_t *)&flash_uniqueID, sizeof(flash_uniqueID));
+            reply_ng(CMD_FLASHMEM_GET_ID, (isok) ? PM3_SUCCESS : PM3_EFLASH, (uint8_t *)&flash_uniqueID, sizeof(flash_uniqueID));
             break;
         }
 #endif
@@ -3579,7 +3579,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_EEPROM_FACTORY_INFO_WRITE, PM3_SUCCESS, NULL, 0);
             break;
         }
-        case CMD_FPGA_CMD_SET_PWR_PWM_LOW_COUNT: {
+        case CMD_PM5_FPGA_SET_PWR_PWM_LOW_COUNT: {
             struct p {
                 uint8_t is_lf;
                 uint16_t count;
@@ -3587,7 +3587,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p *payload = (struct p *) packet->data.asBytes;
             FpgaDownloadAndGo(payload->is_lf ? FPGA_BITSTREAM_LF : FPGA_BITSTREAM_HF);
             FpgaSendCommand(FPGA_CMD_SET_PWR_PWM_LOW_COUNT, payload->count & 0xFFF);
-            reply_ng(CMD_FPGA_CMD_SET_PWR_PWM_LOW_COUNT, PM3_SUCCESS, NULL, 0);
+            reply_ng(CMD_PM5_FPGA_SET_PWR_PWM_LOW_COUNT, PM3_SUCCESS, NULL, 0);
             break;
         }
 #endif

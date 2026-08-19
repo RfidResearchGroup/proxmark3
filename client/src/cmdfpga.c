@@ -169,11 +169,11 @@ static int CmdFpgaSetPowerPWM(const char *Cmd) {
 
     // Start fpga config by mode
     PacketResponseNG resp;
-    SendCommandNG(CMD_FPGA_CMD_SET_PWR_PWM_LOW_COUNT, (uint8_t *)&params, sizeof(params));
+    SendCommandNG(CMD_PM5_FPGA_SET_PWR_PWM_LOW_COUNT, (uint8_t *)&params, sizeof(params));
     PrintAndLogEx(INFO, "PWM value: " _YELLOW_("%d") ", for %s", count, is_lf ? "LF driver" : "HF driver");
 
     // Wait for response before sending data
-    if (WaitForResponseTimeout(CMD_FPGA_CMD_SET_PWR_PWM_LOW_COUNT, &resp, 15000) == false) {
+    if (WaitForResponseTimeout(CMD_PM5_FPGA_SET_PWR_PWM_LOW_COUNT, &resp, 15000) == false) {
         PrintAndLogEx(WARNING, "set power pwm for fpga timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }

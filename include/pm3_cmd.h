@@ -568,7 +568,7 @@ typedef struct {
 #define CMD_FLASHMEM_DOWNLOAD 0x0123
 #define CMD_FLASHMEM_DOWNLOADED 0x0124
 // DXL: I found that this command did not seem to have been used before, so it can be used to obtain the unique ID of FLASH MEM.
-#define CMD_FLASHMEM_INFO 0x0125
+#define CMD_FLASHMEM_GET_ID 0x0125
 #define CMD_FLASHMEM_SET_SPIBAUDRATE 0x0126
 #define CMD_FLASHMEM_PAGES64K 0x0127
 
@@ -835,7 +835,7 @@ typedef struct {
 #define CMD_FPGA_BITSTREAM_CONFIG_FINISH 0x0503
 
 // For fpga set pwm output for driver voltage adjust
-#define CMD_FPGA_CMD_SET_PWR_PWM_LOW_COUNT                                0x0504
+#define CMD_PM5_FPGA_SET_PWR_PWM_LOW_COUNT                                0x0504
 
 // For mifare commands
 #define CMD_HF_MIFARE_EML_MEMCLR 0x0601
