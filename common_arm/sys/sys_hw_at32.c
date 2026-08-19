@@ -41,10 +41,34 @@ EMPTY_CALL(_fini)
 /**
  * Write data to BPR(Battery powered domain data) register 1
  * @param data The data to write to the BPR register 1
+ *
+ * The ERTC write-protection register (ERTC->wp) lives in the ERTC's own clock
+ * domain. This code enabled the ERTC (ertcen) but never selected an ERTC clock
+ * source (ertcsel stays NOCLK), so writing ERTC->wp stalled the APB once the CPU
+ * ran at the full PLL clock (288MHz, 144MHz APB) -- it only "worked" at the slow
+ * HICK clock. In the bootrom this runs after ConfigSystemClocks() (the button
+ * path in check_goto_flash_mode() needs SpinDelayUs()/the timer clock, so the
+ * clock must be up first), i.e. at 288MHz, which hung the "enter flash mode"
+ * magic handling on the warm software-reset path: USB never re-enumerated into
+ * the bootloader until a physical replug.
+ *
+ * Fix: give the ERTC a clock source before touching its registers, the same one
+ * the tick HAL uses (HEXT/20). HEXT is running by the time the bootrom reaches
+ * this (after ConfigSystemClocks), so the ERTC clock is live and the wp write no
+ * longer stalls. We do NOT reset the battery-powered domain -- that would wipe
+ * the BPR magic itself -- and we do NOT wait on the calendar-update flag (that
+ * would spin to its timeout on paths where HEXT is off, e.g. system_simple_reset,
+ * which still write correctly because they run on the slow HICK clock). ertcsel
+ * is write-once until a domain reset, so if it is already selected this is a
+ * no-op.
  */
 static void at32_bpr_write_dt1(uint32_t data) {
     CRM->apb1en_bit.pwcen = TRUE;
     PWC->ctrl_bit.bpwen = TRUE;
+
+    // Select and enable an ERTC clock so the write-protection register is
+    // writable at the full APB frequency.
+    crm_ertc_clock_select(CRM_ERTC_CLOCK_HEXT_DIV_20);
     CRM->bpdc_bit.ertcen = TRUE;
 
     ERTC->wp = SYS_SIMPLE_RESET_BPR_UNLOCK_KEY1;

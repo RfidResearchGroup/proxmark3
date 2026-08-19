@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed Proxmark5 (PM5/AT32) failing to re-enter the bootloader on the software-reset flash path: the ERTC had no clock source selected, so the battery-domain (BPR) write-protection register write stalled the APB at the full clock and left USB dead until a physical replug; the ERTC is now given a clock before the BPR write (@nemanjan00)
 - Fixed `hf mf dump` preserving readable sector trailer Key B data instead of overwriting it with values from the supplied key file (@oSPANNERo)
 - Changed `magic_cards_notes.md` - documented the USCUID-UL helper scripts (`hf_mfu_uscuid` / `hf_mf_uscuid_prog`) and how to set the tag signature, replacing the outdated "No implemented commands" note (@c-barron)
 - Fixed `hf_mf_uscuid_prog.lua` - corrected the script name shown in its usage text (@c-barron)
