@@ -45,6 +45,7 @@ ifeq ($(PLATFORM),PM5)
     SRC_GPIO       = ../common_arm/gpio/gpio_hw_at32.c
     SRC_WDT        = ../common_arm/wdt/wdt_hw_at32.c
     SRC_RSSI       = ../common_arm/rssi/rssi_hw_at32.c
+    SRC_RGB        = ../common_arm/rgb/rgb_hw_at32.c
     SRC_SYS        = ../common_arm/sys/sys_hw_at32.c
     SRC_FPGA       = ../common_arm/fpga/fpga_hw_at32.c ../common_arm/fpga/fpga_gw_jtag.c
     SRC_USB_CDC    = ../common_arm/usb/usb_cdc_at32.c
@@ -60,6 +61,7 @@ else
     SRC_GPIO       = ../common_arm/gpio/gpio_hw_at91.c
     SRC_WDT        = ../common_arm/wdt/wdt_hw_at91.c
     SRC_RSSI       = ../common_arm/rssi/rssi_hw_at91.c
+    SRC_RGB        =
     SRC_SYS        = ../common_arm/sys/sys_hw_at91.c
     SRC_FPGA       = ../common_arm/fpga/fpga_hw_at91.c
     SRC_USB_CDC    = ../common_arm/usb/usb_cdc_at91.c
@@ -177,6 +179,7 @@ THUMBSRC = start.c \
     $(SRC_STANDALONE) \
     $(SRC_ZX) \
     $(SRC_RSSI) \
+    $(SRC_RGB) \
 	$(SRC_TICKS) \
 	$(SRC_GPIO) \
 	$(SRC_WDT) \

@@ -37,6 +37,7 @@ set(INC_DIRS
         ../include
         ../common_arm
         ../common_arm/rssi
+        ../common_arm/rgb
         ../common_arm/ticks
         ../common_arm/usb
         ../common_arm/flash_data
@@ -57,6 +58,7 @@ if (PM5)
     set(SRC_GPIO ../common_arm/gpio/gpio_hw_at32.c)
     set(SRC_WDT ../common_arm/wdt/wdt_hw_at32.c)
     set(SRC_RSSI ../common_arm/rssi/rssi_hw_at32.c)
+    set(SRC_RGB ../common_arm/rgb/rgb_hw_at32.c)
     set(SRC_SYS ../common_arm/sys/sys_hw_at32.c)
     set(SRC_FLASH_DATA ../common_arm/flash_data/flashmem_hw_at32.c)
     set(SRC_USB_CDC ../common_arm/usb/usb_cdc_at32.c)
@@ -67,6 +69,7 @@ else ()
     set(SRC_GPIO ../common_arm/gpio/gpio_hw_at91.c)
     set(SRC_WDT ../common_arm/wdt/wdt_hw_at91.c)
     set(SRC_RSSI ../common_arm/rssi/rssi_hw_at91.c)
+    set(SRC_RGB "")
     set(SRC_SYS ../common_arm/sys/sys_hw_at91.c)
     set(SRC_FLASH_DATA ../common_arm/flash_data/flashmem_hw_at91.c)
     set(SRC_USB_CDC ../common_arm/usb/usb_cdc_at91.c)
@@ -268,6 +271,7 @@ set(THUMBSRC
         string.c
         BigBuf.c
         ${SRC_RSSI}
+        ${SRC_RGB}
         ${SRC_TICKS}
         ${SRC_GPIO}
         ${SRC_WDT}

@@ -29,6 +29,7 @@
 #include "fpga_loader.h"
 #include "fpga_apis.h"
 #include "rssi_apis.h"
+#include "rgb_apis.h"
 #include "string.h"
 #include "printf.h"
 #include "legicrf.h"
@@ -3621,6 +3622,18 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_PM5_QC_TEST: {
             uint8_t failed_item = 0;
             reply_ng(CMD_PM5_QC_TEST, QCTestPM5(&failed_item) ? PM3_SUCCESS : PM3_EFAILED, &failed_item, 1);
+            break;
+        }
+        case CMD_PM5_RGB_SET: {
+            // Set the antenna RGB LED colour (used by `hf/lf tune --rgb`).
+            struct p {
+                uint8_t r;
+                uint8_t g;
+                uint8_t b;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            RgbLedSet(payload->r, payload->g, payload->b);
+            reply_ng(CMD_PM5_RGB_SET, PM3_SUCCESS, NULL, 0);
             break;
         }
 #endif
