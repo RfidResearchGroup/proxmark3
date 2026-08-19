@@ -336,7 +336,9 @@ bool FlashSetup(uint32_t baudrate) {
 // read unique id for chip.
 bool Flash_UniqueID(uint8_t *uid) {
 
-    if (Flash_CheckBusy(BUSY_TIMEOUT)) false;
+    if (Flash_CheckBusy(BUSY_TIMEOUT)) {
+        return false;
+    }
 
     // reading unique serial number
     FlashSendByte(UNIQUE_ID);
