@@ -3579,7 +3579,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_EEPROM_FACTORY_INFO_WRITE, PM3_SUCCESS, NULL, 0);
             break;
         }
-#endif
         case CMD_FPGA_CMD_SET_PWR_PWM_LOW_COUNT: {
             struct p {
                 uint8_t is_lf;
@@ -3591,6 +3590,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_FPGA_CMD_SET_PWR_PWM_LOW_COUNT, PM3_SUCCESS, NULL, 0);
             break;
         }
+#endif
         case CMD_MAIN_CHIP_UNIQUEID: {
             uint8_t size = 0;
             uint8_t* uid = GetChipUniqueId(&size);
