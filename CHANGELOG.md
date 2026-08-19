@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hw version` / `hw status` showing a bogus FPGA image (`fpga_pm3_hf.ncd image 2s30vq100`) on Proxmark5 (PM5/AT32): PM5's Gowin FPGA bitstream is loaded externally and not compiled in, so the built-in Xilinx version info is meaningless there; the `[ FPGA ]` section (and the client FPGA "chip mismatch" check) are now suppressed for PM5 (@nemanjan00)
 - Fixed `hw status` [Model] section reporting "PM3 GENERIC" firmware on Proxmark5 (PM5/AT32); it now reports `PM5` (@nemanjan00)
 - Added Proxmark5 (PM5/AT32) reporting in `hw version` / `hw status`: correct MCU (AT32F437), flash size and `PM5` target, instead of the AT91-decoded "Unknown / 32 KB / PM3 GENERIC". The device now also reports its on-chip flash size, appended to the `CMD_VERSION` reply in a backward-compatible way (@nemanjan00)
 - Fixed `hf mf dump` preserving readable sector trailer Key B data instead of overwriting it with values from the supplied key file (@oSPANNERo)

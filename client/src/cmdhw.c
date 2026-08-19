@@ -2268,7 +2268,9 @@ void pm3_version(bool verbose, bool oneliner) {
                 }
             }
             PrintAndLogEx(NORMAL, payload->versionstr);
-            if (strstr(payload->versionstr, FPGA_TYPE) == NULL) {
+            // PM5 doesn't report a built-in FPGA version (Gowin bitstream is loaded
+            // externally), so skip the Xilinx FPGA_TYPE match check for it.
+            if (!IfPm5() && strstr(payload->versionstr, FPGA_TYPE) == NULL) {
                 PrintAndLogEx(NORMAL, "  FPGA firmware... %s", _RED_("chip mismatch"));
             }
 
