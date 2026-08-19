@@ -28,6 +28,7 @@
 
 #include "cmdparser.h"      // command_t
 #include "comms.h"
+#include "util.h"           // set_rgb
 #include "commonutil.h"     // ARRAYLEN
 #include "lfdemod.h"        // device/client demods of LF signals
 #include "ui.h"             // for show graph controls
@@ -107,6 +108,22 @@ int lfsim_wait_check(uint32_t cmd) {
     return PM3_SUCCESS;
 }
 
+// Mirror an antenna tuning level on the PM5 antenna RGB LED. `volt` is scaled
+// relative to the running peak (`v_max`), so the colour tracks the on-screen bar:
+// blue = low, green = mid, red = high.
+static void tune_rgb_update(uint32_t volt, uint32_t v_max) {
+    uint32_t t = (v_max > 0) ? (volt * 510 / v_max) : 0;
+    if (t > 510) {
+        t = 510;
+    }
+    if (t < 255) {          // blue -> green
+        set_rgb(0, (uint8_t)t, (uint8_t)(255 - t));
+    } else {                // green -> red
+        t -= 255;
+        set_rgb((uint8_t)t, (uint8_t)(255 - t), 0);
+    }
+}
+
 static int CmdLFTune(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -128,6 +145,7 @@ static int CmdLFTune(const char *Cmd) {
         arg_lit0(NULL, "mix", "mixed style"),
         arg_lit0(NULL, "value", "values style"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "rgb", "(PM5) mirror the tuning level on the antenna RGB LED"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -139,7 +157,13 @@ static int CmdLFTune(const char *Cmd) {
     bool is_mix = arg_get_lit(ctx, 5);
     bool is_value = arg_get_lit(ctx, 6);
     bool verbose = arg_get_lit(ctx, 7);
+    bool use_rgb = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
+
+    if (use_rgb && (IfPm5() == false)) {
+        PrintAndLogEx(WARNING, "`--rgb` is only supported on Proxmark5; ignoring");
+        use_rgb = false;
+    }
 
     if (divisor < 19) {
         PrintAndLogEx(ERR, "divisor must be between 19 and 255");
@@ -232,6 +256,12 @@ static int CmdLFTune(const char *Cmd) {
             v_count++;
         }
         print_progress(volt, v_max, style);
+        if (use_rgb) {
+            tune_rgb_update(volt, v_max);
+        }
+    }
+    if (use_rgb) {
+        set_rgb(0, 0, 0); // turn the LED off on exit
     }
 
     params[0] = 3;
