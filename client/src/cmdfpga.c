@@ -181,7 +181,7 @@ static command_t CommandTable[] = {
     {"help",          CmdHelp,               AlwaysAvailable,  "This help"},
     {"-------------", CmdHelp,               AlwaysAvailable,  "----------------------- " _CYAN_("Operation") " -----------------------"},
     {"config",        CmdConfigFpga,         IfPm3Present,     "Configure FPGA for sram or flash"},
-    {"pwrpwm",        CmdFpgaSetPowerPWM,    IfPm3Present,     "Adjust the input voltage of the driver through FPGA."},
+    {"pwrpwm",        CmdFpgaSetPowerPWM,    IfPm5,            "Adjust the input voltage of the driver through FPGA."},
     {NULL, NULL, NULL, NULL}
 };
 
