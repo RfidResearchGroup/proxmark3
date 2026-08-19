@@ -23,6 +23,8 @@
   */
 
 #include "at32f435_437_conf.h"
+#include "at32f435_437_can.h"
+#include "at32f435_437_crm.h"
 
 /** @addtogroup AT32F435_437_periph_driver
   * @{
