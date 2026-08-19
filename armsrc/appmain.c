@@ -396,7 +396,21 @@ static void SendVersion(void) {
     payload.versionstr_len = strlen(VersionString) + 1;
     memcpy(payload.versionstr, VersionString, payload.versionstr_len);
 
-    reply_ng(CMD_VERSION, PM3_SUCCESS, (uint8_t *)&payload, 12 + payload.versionstr_len);
+    uint32_t reply_len = 12 + payload.versionstr_len;
+
+    // Append the total on-chip flash size (bytes) AFTER the version string. This is
+    // backward compatible: older clients stop at versionstr and ignore the trailing
+    // bytes, and this stays valid when talking to older firmware that omits it. It
+    // lets the client report memory usage on MCUs whose size can't be derived from
+    // the chip id (e.g. AT32). Keep the header layout unchanged (do not break the
+    // CMD_VERSION protocol).
+    if (reply_len + sizeof(uint32_t) <= sizeof(payload)) {
+        uint32_t flash_size = GetChipFlashSize();
+        memcpy(payload.versionstr + payload.versionstr_len, &flash_size, sizeof(flash_size));
+        reply_len += sizeof(flash_size);
+    }
+
+    reply_ng(CMD_VERSION, PM3_SUCCESS, (uint8_t *)&payload, reply_len);
 }
 
 #ifdef CHIP_AT91SAM7S // Only AT91SAM7S chip series need calibration.
