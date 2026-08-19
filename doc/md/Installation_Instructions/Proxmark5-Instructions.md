@@ -73,6 +73,7 @@ Do not use them unless you fully understand what you're doing.
 * `hw ant_pm5 -m --set <8bit data>` command can be used to modify the frequency and Q value. Note: High Q is only allowed at 125kHz/134kHz to prevent excessive resonant voltage from damaging the device.
     > 8bit map: 125 134 250 375 500 HFLED LFLED Q (lsb)
 * `hw qc_pm5`: factory quality check command, will activate the RBG, the buzzer and the antenna LEDs.
+* `hw factorydata`: read/write the factory data (originality signature etc)
 
 ## Standalone Modes
 
