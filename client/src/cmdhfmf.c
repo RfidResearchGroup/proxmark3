@@ -1085,9 +1085,12 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
                     uint8_t *data  = resp.data.asBytes;
 
                     if (mfIsSectorTrailerBasedOnBlocks(sectorNo, blockNo)) {
-                        // sector trailer. Fill in the keys.
+                        // sector trailer. Key A is never readable; preserve Key B when ACL allows it.
                         memcpy(data, keyA + (sectorNo * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
-                        memcpy(data + 10, keyB + (sectorNo * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
+                        uint8_t trailer_acl = mf_get_accesscondition(3, &data[6]);
+                        if (trailer_acl != 0 && trailer_acl != 1 && trailer_acl != 2) {
+                            memcpy(data + 10, keyB + (sectorNo * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
+                        }
                     }
 
                     memcpy(carddata + (MFBLOCK_SIZE * (mfFirstBlockOfSector(sectorNo) + blockNo)), data, MFBLOCK_SIZE);
