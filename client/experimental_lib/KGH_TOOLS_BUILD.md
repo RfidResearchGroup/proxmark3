@@ -5,7 +5,7 @@
 Do this in ProxSpace:
 
 ```bash
-cd ~/proxmark3_rfrg/client/experimental_lib
+cd ~/proxmark3/client/experimental_lib
 rm -rf build-lite
 cmake -G "MSYS Makefiles" -S . -B build-lite \
   -DSKIPPYTHON=1 \
