@@ -1675,9 +1675,9 @@ static int CmdHF14aDesChk(const char *Cmd) {
     }
 
 	{
-		size_t deskeyCountTotal = 0;
-		size_t aeskeyCountTotal = 0;
-		size_t k3kkeyCountTotal = 0;
+		uint32_t deskeyCountTotal = 0;
+		uint32_t aeskeyCountTotal = 0;
+		uint32_t k3kkeyCountTotal = 0;
 
 		if (pattern1b) {
 			deskeyCountTotal = deskeyListLen;
