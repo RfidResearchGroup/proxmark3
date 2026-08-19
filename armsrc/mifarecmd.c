@@ -2008,6 +2008,25 @@ static uint8_t chkKey_readb(struct chk_t *c, uint8_t *keyb) {
         }
         mifare_classic_halt(c->pcs);
     }
+    if (res != 0) {
+        return res;
+    }
+
+    // A readable Key B field may contain data rather than a usable key.
+    // Verify the extracted value as Key B and require subsequent memory access.
+    if (iso14443a_fast_select_card(c->uid, c->cl) == 0) {
+        return 2;
+    }
+
+    uint64_t key = bytes_to_num(keyb, 6);
+    res = mifare_classic_authex(c->pcs, c->cuid, c->block, MF_KEY_B, key, AUTH_FIRST, NULL, NULL);
+    if (res != 0) {
+        return res;
+    }
+
+    res = mifare_classic_readblock(c->pcs, c->block, data);
+    mifare_classic_halt(c->pcs);
+
     return res;
 }
 

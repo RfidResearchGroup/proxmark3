@@ -4597,11 +4597,18 @@ static int CmdHF14AMfChk(const char *Cmd) {
                 }
 
                 uint8_t *data = resp.data.asBytes;
-                key64 = bytes_to_num(data + 10, MIFARE_KEY_SIZE);
+                uint8_t keyB[MIFARE_KEY_SIZE] = {0};
+                memcpy(keyB, data + 10, MIFARE_KEY_SIZE);
+
+                key64 = bytes_to_num(keyB, MIFARE_KEY_SIZE);
                 if (key64) {
-                    PrintAndLogEx(NORMAL, "Data:%s", sprint_hex(data + 10, MIFARE_KEY_SIZE));
-                    e_sector[i].foundKey[1] = 1;
-                    e_sector[i].Key[1] = key64;
+                    PrintAndLogEx(NORMAL, "Data:%s", sprint_hex(keyB, MIFARE_KEY_SIZE));
+
+                    uint8_t verify[MFBLOCK_SIZE] = {0};
+                    if (mf_read_block(sectrail, MF_KEY_B, keyB, verify) == PM3_SUCCESS) {
+                        e_sector[i].foundKey[1] = 1;
+                        e_sector[i].Key[1] = key64;
+                    }
                 }
             }
             if (singleSector)

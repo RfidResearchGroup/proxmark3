@@ -5,6 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Added Proxmark5 (PM5/AT32) reporting in `hw version` / `hw status`: correct MCU (AT32F437), flash size and `PM5` target, instead of the AT91-decoded "Unknown / 32 KB / PM3 GENERIC". The device now also reports its on-chip flash size, appended to the `CMD_VERSION` reply in a backward-compatible way (@nemanjan00)
 - Fixed `hf mf dump` preserving readable sector trailer Key B data instead of overwriting it with values from the supplied key file (@oSPANNERo)
+- Fixed `hf mf chk` validating readable sector trailer Key B data before reporting it as a found key (@oSPANNERo)
 - Changed `magic_cards_notes.md` - documented the USCUID-UL helper scripts (`hf_mfu_uscuid` / `hf_mf_uscuid_prog`) and how to set the tag signature, replacing the outdated "No implemented commands" note (@c-barron)
 - Fixed `hf_mf_uscuid_prog.lua` - corrected the script name shown in its usage text (@c-barron)
 - Added `hf felica seacauth1` command
