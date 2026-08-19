@@ -1721,6 +1721,11 @@ static int CmdHF14aDesChk(const char *Cmd) {
 			PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " aes keys", aeskeyCountTotal);
 		if (k3kkeyCountTotal > 0)
 			PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " k3kdes keys", k3kkeyCountTotal);
+
+		if (deskeyCountTotal + aeskeyCountTotal + k3kkeyCountTotal == 0) {
+			PrintAndLogEx(ERR, "No keys provided. Nothing to check.");
+			return PM3_EINVARG;
+		}
 	}
 
     for (uint32_t x = 0; x < app_ids_len / 3; x++) {
