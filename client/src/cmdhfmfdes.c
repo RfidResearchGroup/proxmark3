@@ -1679,7 +1679,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         uint32_t curaid = (app_ids[x * 3] & 0xFF) + ((app_ids[(x * 3) + 1] & 0xFF) << 8) + ((app_ids[(x * 3) + 2] & 0xFF) << 16);
         PrintAndLogEx(ERR, "Checking aid 0x%06X...", curaid);
 
-		bool tested_all_keys = false;
+		bool loadedAllKeys = false;
 		size_t desReadStart = 0;
 		size_t desReadEnd = 1;
 		size_t aesReadStart = 0;
@@ -1688,68 +1688,62 @@ static int CmdHF14aDesChk(const char *Cmd) {
 		size_t k3kReadEnd = 1;
 		uint32_t pattern2bOffset = startPattern;
 
-		while (!tested_all_keys) {
+		while (!loadedAllKeys) {
+			bool foundKeyThisRound = false;
 
 			if (pattern1b) {
-				tested_all_keys = true;
+				loadedAllKeys = true;
 			} else if (pattern2b) {
-				if (verbose == false) {
-					PrintAndLogEx(NORMAL, "p" NOLF);
-				}
-
 				if (pattern2bOffset < 0x10000) {
 					aeskeyListLen = 0;
 					deskeyListLen = 0;
 					k3kkeyListLen = 0;
 					DesFill2bPattern(deskeyList, &deskeyListLen, aeskeyList, &aeskeyListLen, k3kkeyList, &k3kkeyListLen, &pattern2bOffset);
 				} else {
-					tested_all_keys = true;
+					loadedAllKeys = true;
 				}
 			} else if (dict_filenamelen) {
-				if (verbose == false) {
-					PrintAndLogEx(NORMAL, "d" NOLF);
-				}
-
-				uint32_t keycnt = 0;
-
+				deskeyListLen = 0;
 				if (desReadEnd != 0) {
-					res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 8, &keycnt, desReadStart, &desReadEnd, false);
-					if (res == PM3_SUCCESS)
-						deskeyListLen = keycnt;
-					else
+					res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 8, &deskeyListLen, desReadStart, &desReadEnd, false);
+					if (res != PM3_SUCCESS)
 						desReadStart = desReadEnd;
 				} else {
-					// Every 16 byte or 24 byte key also gets read as a valid des key (whether that is good or not is up for debate)
-					// but this has as a consequence that when desReadEnd == 0 there are absolutely no more keys of any kind left in the dictionary
-					tested_all_keys = true;
+					// Every 16 byte or 24 byte key also gets read as a valid des key, so when desReadEnd == 0 there are absolutely no more keys of any kind left in the dictionary
+					loadedAllKeys = true;
 				}
 
-				keycnt = 0;
+				aeskeyListLen = 0;
 				if (aesReadEnd != 0) {
-					res = loadFileDICTIONARYEx((char *)dict_filename, aeskeyList, sizeof(aeskeyList), NULL, 16, &keycnt, aesReadStart, &aesReadEnd, false);
-					if (res == PM3_SUCCESS)
-						aeskeyListLen = keycnt;
-					else
+					res = loadFileDICTIONARYEx((char *)dict_filename, aeskeyList, sizeof(aeskeyList), NULL, 16, &aeskeyListLen, aesReadStart, &aesReadEnd, false);
+					if (res != PM3_SUCCESS)
 						aesReadStart = aesReadEnd;
 				}
 
-				keycnt = 0;
+				k3kkeyListLen = 0;
 				if (k3kReadEnd != 0) {
-					res = loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 24, &keycnt, k3kReadStart, &k3kReadEnd, false);
-					if (res == PM3_SUCCESS)
-						k3kkeyListLen = keycnt;
-					else
+					res = loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 24, &k3kkeyListLen, k3kReadStart, &k3kReadEnd, false);
+					if (res != PM3_SUCCESS)
 						k3kReadStart = k3kReadEnd;
 				}
 			}
 
-			res = AuthCheckDesfire(&dctx, secureChannel, &app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, cmdKDFAlgo, kdfInputLen, kdfInput, foundKeys, &result, (verbose == false));
+			res = AuthCheckDesfire(&dctx, secureChannel, &app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, cmdKDFAlgo, kdfInputLen, kdfInput, foundKeys, &foundKeyThisRound, (verbose == false));
 			if (res == PM3_EOPABORTED) {
 				break;
 			}
+
+			result = result || foundKeyThisRound;
+
+			if (foundKeyThisRound == true && verbose == false) {
+				if (pattern1b || pattern2b)
+					PrintAndLogEx(NORMAL, "p" NOLF);
+				else if (dict_filenamelen)
+					PrintAndLogEx(NORMAL, "d" NOLF);
+			}
 		}
 
-		if (!tested_all_keys)
+		if (!loadedAllKeys)
 			break;
     }
     if (verbose == false) {
