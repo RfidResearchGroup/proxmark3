@@ -33,6 +33,11 @@ static int CmdConfigFpga(const char *Cmd) {
 
     CLIParserFree(ctx);
 
+    if ((! sram_mode) && (! IfFpgaFlash())) {
+        PrintAndLogEx(WARNING, "This device does not support FPGA flash configuration");
+        return PM3_ENOTIMPL;
+    }
+
     // Check if file name is provided
     if (fnlen == 0) {
         PrintAndLogEx(WARNING, "No file specified");
