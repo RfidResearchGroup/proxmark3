@@ -57,7 +57,7 @@ if (NOT SKIPPYTHON EQUAL 1)
 endif (NOT SKIPPYTHON EQUAL 1)
 
 if (MINGW)
-    # Prefer static archives for kiosk-style single-exe deployments.
+    # Prefer static archives for single-exe deployments.
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
     set(ZLIB_USE_STATIC_LIBS ON)
     set(BZIP2_USE_STATIC_LIBS ON)
