@@ -1674,6 +1674,55 @@ static int CmdHF14aDesChk(const char *Cmd) {
         app_ids_len = 3;
     }
 
+	{
+		size_t deskeyCountTotal = 0;
+		size_t aeskeyCountTotal = 0;
+		size_t k3kkeyCountTotal = 0;
+
+		if (pattern1b) {
+			deskeyCountTotal = deskeyListLen;
+			aeskeyCountTotal = aeskeyListLen;
+			k3kkeyCountTotal = k3kkeyListLen;
+		} else if (pattern2b) {
+			deskeyCountTotal = 0x10000 - startPattern;
+			aeskeyCountTotal = 0x10000 - startPattern;
+			k3kkeyCountTotal = 0x10000 - startPattern;
+		} else if (dict_filenamelen) {
+			size_t readStart = 0;
+			size_t readEnd = 1;
+			uint32_t n = 0;
+
+			while (readEnd != 0) {
+				loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 8, &n, readStart, &readEnd, false);
+				readStart = readEnd;
+				deskeyCountTotal += n;
+			}
+
+			readStart = 0;
+			readEnd = 1;
+			while (readEnd != 0) {
+				loadFileDICTIONARYEx((char *)dict_filename, aeskeyList, sizeof(aeskeyList), NULL, 16, &n, readStart, &readEnd, false);
+				readStart = readEnd;
+				aeskeyCountTotal += n;
+			}
+
+			readStart = 0;
+			readEnd = 1;
+			while (readEnd != 0) {
+				loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 24, &n, readStart, &readEnd, false);
+				readStart = readEnd;
+				k3kkeyCountTotal += n;
+			}
+		}
+
+		if (deskeyCountTotal > 0)
+			PrintAndLogEx(INFO, "Loaded "  _YELLOW_("%"PRIu32) " des keys", deskeyCountTotal);
+		if (aeskeyCountTotal > 0)
+			PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " aes keys", aeskeyCountTotal);
+		if (k3kkeyCountTotal > 0)
+			PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " k3kdes keys", k3kkeyCountTotal);
+	}
+
     for (uint32_t x = 0; x < app_ids_len / 3; x++) {
 
         uint32_t curaid = (app_ids[x * 3] & 0xFF) + ((app_ids[(x * 3) + 1] & 0xFF) << 8) + ((app_ids[(x * 3) + 2] & 0xFF) << 16);
