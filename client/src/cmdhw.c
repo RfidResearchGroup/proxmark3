@@ -2203,7 +2203,10 @@ void pm3_version(bool verbose, bool oneliner) {
         SendCommandNG(CMD_VERSION, NULL, 0);
 
         if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
-            if (IfPm3Rdv4Fw()) {
+            if (IfPm5()) {
+                PrintAndLogEx(NORMAL, "  Firmware.................. " _GREEN_("PM5"));
+                PrintAndLogEx(NORMAL, "  External flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
+            } else if (IfPm3Rdv4Fw()) {
 
                 // validate signature data
                 rdv40_validation_t mem;

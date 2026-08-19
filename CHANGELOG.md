@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hw status` [Model] section reporting "PM3 GENERIC" firmware on Proxmark5 (PM5/AT32); it now reports `PM5` (@nemanjan00)
 - Added Proxmark5 (PM5/AT32) reporting in `hw version` / `hw status`: correct MCU (AT32F437), flash size and `PM5` target, instead of the AT91-decoded "Unknown / 32 KB / PM3 GENERIC". The device now also reports its on-chip flash size, appended to the `CMD_VERSION` reply in a backward-compatible way (@nemanjan00)
 - Fixed `hf mf dump` preserving readable sector trailer Key B data instead of overwriting it with values from the supplied key file (@oSPANNERo)
 - Changed `magic_cards_notes.md` - documented the USCUID-UL helper scripts (`hf_mfu_uscuid` / `hf_mf_uscuid_prog`) and how to set the tag signature, replacing the outdated "No implemented commands" note (@c-barron)
