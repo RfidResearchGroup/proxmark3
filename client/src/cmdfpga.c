@@ -71,6 +71,11 @@ static int CmdConfigFpga(const char *Cmd) {
         free(data);
         return PM3_ETIMEOUT;
     }
+    if (resp.status == PM3_ENOTIMPL) {
+        PrintAndLogEx(ERR, "Feature not implemented");
+        free(data);
+        return resp.status;
+    }
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed to start FPGA configuration: %d", resp.status);
         free(data);
