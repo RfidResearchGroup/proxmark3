@@ -251,7 +251,7 @@
         "AID": "F47300",
         "Vendor": "Inner Range Pty Ltd",
         "Country": "AU",
-        "Name": "SIFER-P / SIFER-U Credential",
+        "Name": "SIFER-P / SIFER-U / SIFER-C Credential",
         "Description": "Inner Range Access Control",
         "Type": "pacs"
     },

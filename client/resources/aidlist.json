@@ -3716,6 +3716,17 @@
         ]
     },
     {
+        "AID": "A0000007800007",
+        "Vendor": "Translink systems",
+        "Country": "The Netherlands",
+        "Name": "OV Pas",
+        "Description": "New card for Dutch transit system, closed-loop EMV replacement of the MIFARE Classic 4K OV-Chipkaart",
+        "Type": "transport",
+        "Sources": [
+            "https://blog.mobielstraat.nl/quick-look-at-the-new-ov-pas"
+        ]
+    },
+    {
         "AID": "A0000000791000",
         "Vendor": "HID Global",
         "Country": "",

@@ -200,7 +200,8 @@ static int doPreambleSearch(size_t *startIdx) {
     size_t size = (11 > g_DemodBufferLen) ? g_DemodBufferLen : 11;
     *startIdx = 0;
 
-    // skip first two 0 bits as they might have been missed in the demod
+    // A long time ago, the first two zeros of the preamble were skipped
+    // because previous decoders had a probability of missing the first part of the data.
     uint8_t preamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 1, 0, 1, 0};
     if (!preambleSearchEx(g_DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
 

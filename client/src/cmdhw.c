@@ -36,6 +36,7 @@
 #include "ui.h"
 #include "fpga.h"
 #include "cmdhw.h"
+#include "cmdfpga.h"
 #include "cmddata.h"
 #include "commonutil.h"
 #include "preferences.h"
@@ -52,7 +53,20 @@
 
 static int CmdHelp(const char *Cmd);
 
-static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used) {
+static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used, uint32_t flash_size) {
+    // AT32 (PM5): the chip id is an ARM DBGMCU IDCODE, not an Atmel CIDR, so the
+    // AT91 decode below does not apply (it would print "Unknown" and a bogus flash
+    // size). Report the MCU and use the real flash size the device reported.
+    if (IfPm5()) {
+        PrintAndLogEx(NORMAL, "    MCU....... " _YELLOW_("%s"), "AT32F437");
+        uint32_t mem_kb = flash_size / 1024;
+        PrintAndLogEx(NORMAL, "    Memory.... " _YELLOW_("%u") " KB ( " _YELLOW_("%2.0f%%") " used )"
+                      , mem_kb
+                      , mem_kb == 0 ? 0.0f : (float)mem_used / (mem_kb * 1024) * 100
+                     );
+        return;
+    }
+
     const char *asBuff;
     switch (iChipID) {
         case 0x270B0A40:
@@ -156,10 +170,23 @@ static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used) {
                  );
 }
 
-static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
+static void lookupChipID(uint32_t iChipID, uint32_t mem_used, uint32_t flash_size) {
     const char *asBuff;
     uint32_t mem_avail = 0;
     PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Hardware") " ]");
+
+    // AT32 (PM5): the chip id is an ARM DBGMCU IDCODE, not an Atmel CIDR, so the
+    // verbose AT91 decode below does not apply. Print a short AT32 summary instead.
+    if (IfPm5()) {
+        PrintAndLogEx(NORMAL, "  --= uC: AT32F437");
+        uint32_t mem_kb = flash_size / 1024;
+        PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Size: %u KB, Used: %u bytes (%2.0f%%)"
+                      , mem_kb
+                      , mem_used
+                      , mem_kb == 0 ? 0.0f : (float)mem_used / (mem_kb * 1024) * 100
+                     );
+        return;
+    }
 
     switch (iChipID) {
         case 0x270B0A40:
@@ -1701,6 +1728,215 @@ int set_fpga_mode(uint8_t mode) {
     return resp.status;
 }
 
+static int CmdPM5Ant(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw ant_pm5",
+                  "Control the antennal of pm5",
+                  "hw ant_pm5 --set <u8_data>         -> Write the data of IO data register\n"
+                  "hw ant_pm5 -m --set <u8_data>      -> Write the data of IO map register\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("m", "map", "Write the IO map register"),
+        arg_u64_0("s", "set", "<u8_data>", "Set PM5 antenna"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool rw_map = arg_get_lit(ctx, 1);
+    uint64_t io = arg_get_u64_def(ctx, 2, -1);
+    CLIParserFree(ctx);
+
+    PacketResponseNG resp;
+
+    // Read the current value of the register before writing
+    struct {
+        uint8_t reg_type; // 0 is io reg, 1 is map reg.
+    } PACKED payload_read = {
+        .reg_type = rw_map ? 1 : 0,
+    };
+    clearCommandBuffer();
+    SendCommandNG(CMD_ANT_CONTROL_READ, (uint8_t*)&payload_read, sizeof(payload_read));
+    if (WaitForResponseTimeout(CMD_ANT_CONTROL_READ, &resp, 1000) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to read PM5 antenna register");
+        return resp.status;
+    }
+    PrintAndLogEx(INFO, "PM5 antenna register read: 0x%02X", resp.data.asBytes[0]);
+
+    // Write the new value to the register(If need)
+    if (io != (uint64_t)-1) {
+        struct {
+            uint8_t data;
+            uint8_t reg_type; // 0 is io reg, 1 is map reg.
+        } PACKED payload_write = {
+            .reg_type = rw_map ? 1 : 0,
+            .data = io & 0xFF,
+        };
+        clearCommandBuffer();
+        SendCommandNG(CMD_ANT_CONTROL_WRITE, (uint8_t*)&payload_write, sizeof(payload_write));
+        if (WaitForResponseTimeout(CMD_ANT_CONTROL_WRITE, &resp, 1000) == false) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
+        }
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "failed to write PM5 antenna register");
+            return resp.status;
+        }
+        PrintAndLogEx(INFO, "PM5 antenna register written: 0x%02X", payload_write.data);
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int CmdDeviceFactoryData(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw factorydata",
+                  "Get/Set the factory data for Device",
+                  "hw factorydata --load <file>           -> Write the factory data to device from file\n"
+                  "hw factorydata                         -> Read and parse the factory data from device\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "load", "<fn>", "Load factory data from file to device"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    CLIParserFree(ctx);
+
+    // Read the factory data from device
+    clearCommandBuffer();
+    SendCommandNG(CMD_EEPROM_FACTORY_INFO_READ, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_EEPROM_FACTORY_INFO_READ, &resp, 1000) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to read factory data, maybe eeprom unavailable.");
+        return resp.status;
+    }
+    // Parse the factory data
+    if (resp.length) {
+        proxmark5_factory_info_v1_t *factory = (proxmark5_factory_info_v1_t *)resp.data.asBytes;
+        PrintAndLogEx(INFO, "Factory data read from device:");
+        PrintAndLogEx(INFO, " - Data raw(hex)     : 0x%s", sprint_hex_inrow(resp.data.asBytes, resp.length));
+        PrintAndLogEx(INFO, " - Version           : %d", factory->factory_info_version);
+        PrintAndLogEx(INFO, " - Signature         : %s",
+            sprint_hex_inrow(factory->ecdsa_secp256k1_signature, sizeof(factory->ecdsa_secp256k1_signature)));
+        PrintAndLogEx(INFO, " - Timestamp         : %" PRIu64, factory->info.unix_timestamp);
+        PrintAndLogEx(INFO, " - Chip Unique ID    : %s",
+            sprint_hex_inrow(factory->info.chip_unique_id, sizeof(factory->info.chip_unique_id)));
+        PrintAndLogEx(INFO, " - Production ID     : %" PRIu32, factory->info.production_id);
+        PrintAndLogEx(INFO, " - Hardware Version  : %" PRIu32, factory->info.hardware_version);
+        PrintAndLogEx(INFO, " - AES key           : %s",
+            sprint_hex_inrow(factory->info.aes_key, sizeof(factory->info.aes_key)));
+    }
+
+    // If data is provided, it needs to be written
+    if (fnlen) {
+        // Load the file content into data buffer
+        uint8_t *data = NULL;
+        size_t datalen = 0;
+        int res = loadFile_safe(filename, ".bin", (void **)&data, &datalen);
+        if (res != PM3_SUCCESS) {
+            free(data);
+            return PM3_EFILE;
+        }
+
+        if (datalen != resp.length) {
+            PrintAndLogEx(WARNING, _RED_("The length of the data to write (%zu) does not match the length "
+                                   "of the factory data read from device (%u)."), datalen, (unsigned int)resp.length);
+            free(data);
+            return PM3_EINVARG;
+        }
+        // Write the data to the device
+        clearCommandBuffer();
+        SendCommandNG(CMD_EEPROM_FACTORY_INFO_WRITE, data, datalen);
+        PacketResponseNG resp_write;
+        if (WaitForResponseTimeout(CMD_EEPROM_FACTORY_INFO_WRITE, &resp_write, 1000) == false) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            free(data);
+            return PM3_ETIMEOUT;
+        }
+        if (resp_write.status != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "failed to write factory data, maybe eeprom unavailable.");
+            free(data);
+            return resp_write.status;
+        }
+        // Verify the data write
+        clearCommandBuffer();
+        SendCommandNG(CMD_EEPROM_FACTORY_INFO_READ, NULL, 0);
+        if (WaitForResponseTimeout(CMD_EEPROM_FACTORY_INFO_READ, &resp, 1000) == false) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            free(data);
+            return PM3_ETIMEOUT;
+        }
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "failed to read factory data after write, maybe eeprom unavailable.");
+            free(data);
+            return resp.status;
+        }
+        bool verify_result = false;
+        if (resp.length == datalen) {
+            verify_result = memcmp(resp.data.asBytes, data, datalen) == 0;
+        }
+        if (verify_result) {
+            PrintAndLogEx(SUCCESS, "Factory data written and verified successfully.");
+        } else {
+            PrintAndLogEx(ERR, "Factory data verification failed after write.");
+            free(data);
+            return PM3_EFAILED;
+        }
+        free(data);
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int CmdPM5QCTest(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw qcpm5", "QC Test for the PM5", "hf qcpm5");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(INFO, "Performing QC test for the PM5...");
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_QC_TEST, NULL, 0);
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_PM5_QC_TEST, &resp, 20 * 1000) == false) {
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to perform QC test on PM5, failed item: %d", resp.data.asBytes[0]);
+        return resp.status;
+    }
+    PrintAndLogEx(INFO, "PM5 QC test successful.");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help", CmdHelp, AlwaysAvailable, "This help"},
     {"-------------", CmdHelp, AlwaysAvailable, "----------------------- " _CYAN_("Operation") " -----------------------"},
@@ -1714,7 +1950,11 @@ static command_t CommandTable[] = {
     {"bootloader", CmdBootloader, IfPm3Present, "Reboot into bootloader mode"},
     {"connect", CmdConnect, AlwaysAvailable, "Connect to the device via serial port"},
     {"dbg", CmdDbg, IfPm3Present, "Set device side debug level"},
+    {"fpga", CmdFPGA, IfPm3Present, "Fpga commands"},
     {"fpgaoff", CmdFPGAOff, IfPm3Present, "Turn off FPGA on device"},
+    {"ant_pm5", CmdPM5Ant, IfPm5StdAnt, "Control the antennal of pm5"},
+    {"qc_pm5", CmdPM5QCTest, IfPm5, "Perform QC test for the PM5"},
+    {"factorydata", CmdDeviceFactoryData, IfI2cEeprom, "Get/Set the factory data for Device"},
     {"lcd", CmdLCD, IfPm3Lcd, "Send command/data to LCD"},
     {"lcdreset", CmdLCDReset, IfPm3Lcd, "Hardware reset LCD"},
     {"ping", CmdPing, IfPm3Present, "Test if the Proxmark3 is responsive"},
@@ -1815,9 +2055,18 @@ void pm3_version_short(void) {
 
             struct p *payload = (struct p *)&resp.data.asBytes;
 
-            lookup_chipid_short(payload->id, payload->section_size);
+            // Flash size (bytes) is appended after the version string by newer
+            // firmware; 0 if the device didn't send it (older firmware).
+            uint32_t flash_size = 0;
+            if (resp.length >= 12 + payload->versionstr_len + sizeof(uint32_t)) {
+                memcpy(&flash_size, payload->versionstr + payload->versionstr_len, sizeof(flash_size));
+            }
 
-            if (IfPm3Rdv4Fw()) {
+            lookup_chipid_short(payload->id, payload->section_size, flash_size);
+
+            if (IfPm5()) {
+                PrintAndLogEx(NORMAL, "    Target.... %s", _YELLOW_("PM5"));
+            } else if (IfPm3Rdv4Fw()) {
 
                 // validate signature data
                 rdv40_validation_t mem;
@@ -1954,7 +2203,10 @@ void pm3_version(bool verbose, bool oneliner) {
         SendCommandNG(CMD_VERSION, NULL, 0);
 
         if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
-            if (IfPm3Rdv4Fw()) {
+            if (IfPm5()) {
+                PrintAndLogEx(NORMAL, "  Firmware.................. " _GREEN_("PM5"));
+                PrintAndLogEx(NORMAL, "  External flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
+            } else if (IfPm3Rdv4Fw()) {
 
                 // validate signature data
                 rdv40_validation_t mem;
@@ -2016,11 +2268,31 @@ void pm3_version(bool verbose, bool oneliner) {
                 }
             }
             PrintAndLogEx(NORMAL, payload->versionstr);
-            if (strstr(payload->versionstr, FPGA_TYPE) == NULL) {
+            // PM5 doesn't report a built-in FPGA version (Gowin bitstream is loaded
+            // externally), so skip the Xilinx FPGA_TYPE match check for it.
+            if (!IfPm5() && strstr(payload->versionstr, FPGA_TYPE) == NULL) {
                 PrintAndLogEx(NORMAL, "  FPGA firmware... %s", _RED_("chip mismatch"));
             }
 
-            lookupChipID(payload->id, payload->section_size);
+            // Flash size (bytes) is appended after the version string by newer
+            // firmware; 0 if the device didn't send it (older firmware).
+            uint32_t flash_size = 0;
+            if (resp.length >= 12 + payload->versionstr_len + sizeof(uint32_t)) {
+                memcpy(&flash_size, payload->versionstr + payload->versionstr_len, sizeof(flash_size));
+            }
+
+            lookupChipID(payload->id, payload->section_size, flash_size);
+
+            // Get unique id of mainchip
+            clearCommandBuffer();
+            SendCommandNG(CMD_MAIN_CHIP_UNIQUEID, NULL, 0);
+            if (WaitForResponseTimeout(CMD_MAIN_CHIP_UNIQUEID, &resp, 1000)) {
+                if (resp.length) { // Some processor maybe no unique id.
+                    char* uniqueid_hex = sprint_hex_inrow(resp.data.asBytes, resp.length);
+                    PrintAndLogEx(NORMAL, "  --= Processor Unique ID: " _YELLOW_("0x%s"), uniqueid_hex);
+                }
+            }
+
             if (armsrc_mismatch) {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(WARNING, _RED_("ARM firmware does not match the source at the time the client was compiled"));

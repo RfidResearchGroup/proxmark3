@@ -107,6 +107,11 @@ jobs:
 
       - uses: actions/checkout@v6
 
+      # TODO workaround: "error: linker script file 'xxxx' appears multiple times"
+      # This should be reverted once MSYS2 ships a non-broken version of the linker.
+      - name: Downgrade ARM linker (Windows, temporary)
+        run: pacman -U --noconfirm https://repo.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-arm-none-eabi-binutils-2.46.1-1-any.pkg.tar.zst
+
       - name: make clean
         run: make clean
 

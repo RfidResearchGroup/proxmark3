@@ -51,8 +51,22 @@
 #define FULLIMAGE_SUBDIR     "armsrc" PATHSEP "obj" PATHSEP
 
 #define PACKED __attribute__((packed))
+#define FORCE_INLINE inline __attribute__((always_inline))
+#define STATIC_FORCE_INLINE static inline __attribute__((always_inline))
 
-#define VERSION_INFORMATION_MAGIC 0x56334d50 // "PM3V"
+typedef enum {
+    MAIN_CHIP_TYPE_AT91 = 0, // -> PM3V
+    MAIN_CHIP_TYPE_AT32 = 1, // -> PM5V
+    MAIN_CHIP_TYPE_NONE = INT32_MAX,
+} main_chip_type_t;
+
+#define VERSION_INFORMATION_MAGIC_PM5V 0x56354d50 // "PM5V"
+#define VERSION_INFORMATION_MAGIC_PM3V 0x56334d50 // "PM3V
+#ifdef PM5
+#define VERSION_INFORMATION_MAGIC VERSION_INFORMATION_MAGIC_PM5V
+#else
+#define VERSION_INFORMATION_MAGIC VERSION_INFORMATION_MAGIC_PM3V
+#endif
 struct version_information_t {
     int magic; /* Magic sequence to identify this as a correct version information structure. Must be VERSION_INFORMATION_MAGIC */
     char versionversion; /* Must be 1 */
@@ -92,7 +106,14 @@ extern bool g_tearoff_enabled;
 
 
 //#define RAMFUNC __attribute((long_call, section(".ramfunc")))
+// PM5 is at32f435 of CM4 kernal, not at91sam7s arm7, so PM5 unsupported 'arm' old instruction sets.
+// about diff see: https://community.arm.com/support-forums/f/architectures-and-processors-forum/5814/what-is-difference-between-arm7-and-arm-cortex-m-series
+// if you use '__attribute__((target("arm")))' for CM4 kernal, will error when compile(error: target CPU does not support ARM mode)
+#ifdef PM5
+#define RAMFUNC __attribute((section(".ramfunc"))) __attribute__((noinline))
+#else
 #define RAMFUNC __attribute((long_call, section(".ramfunc"))) __attribute__((target("arm"))) __attribute__((noinline))
+#endif
 
 #ifndef PM3_ROTR
 # define PM3_ROTR(x,n) (((uintmax_t)(x) >> (n)) | ((uintmax_t)(x) << ((sizeof(x) * 8) - (n))))

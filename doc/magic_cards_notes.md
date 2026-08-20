@@ -783,6 +783,7 @@ Here is how the IC can be configured:
   * MF-8 (RU)
   * MF-3 (RU) - not susceptible to "field reset bug", a way to detect [OTP](#fuid) chips.
   * MF-3.2 (RU) - static nonce `01200145`, potentially fixed chip which can bypass Iron Logic's filters.
+  * M+ (CopyKEY) - chips presented as a universal alternative to more advanced Chinese ICs; only real difference is presence of rewritable sectors 16+17 and block 255 (readable after any auth)
 `
 ### Identify
 
@@ -2233,7 +2234,26 @@ hf 14a raw -akb 7 40; hf 14a raw -k 43; hf 14a raw -ck A2F2000000BD; hf 14a raw 
 
 ^[Top](#top)
 
-No implemented commands at time of writing
+Two helper scripts drive USCUID-UL cards:
+
+* `script run hf_mfu_uscuid` (Python) - read/parse config, change emulated type, set UID, set signature, and raw backdoor read/write.
+* `script run hf_mf_uscuid_prog` (Lua) - equivalent functionality. See `-h` for its options.
+
+Backdoor operations (set UID, set signature, raw hidden-block read/write) require the gen1a backdoor to be enabled - a config block starting with `7AFF`, see the [USCUID-UL configuration guide](#uscuid-ul-configuration-guide) - and a magic wakeup to be selected: for the Python script, `--gen1a` (`40`/`43`) or `--gdm` (`20`/`23`).
+
+Example - write the tag signature (32 bytes / 64 hexsymbols) using the `40:43` wakeup:
+
+```
+script run hf_mfu_uscuid -s <signature, 64 hexsymbols> --gen1a
+```
+
+Verify with `hf mfu info` and look for `Signature verification: successful`.
+
+The same result can be achieved manually with raw commands (magic wakeup, then write the eight signature pages `F8`-`FF`):
+
+```
+hf 14a raw -akb 7 40; hf 14a raw -k 43; hf 14a raw -ck A2F8<4 bytes>; ...; hf 14a raw -c A2FF<4 bytes>
+```
 
 ### libnfc commands
 

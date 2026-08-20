@@ -23,7 +23,8 @@
 #include "BigBuf.h"
 #include "string.h"
 #include "mifareutil.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "protocols.h"
@@ -32,7 +33,7 @@
 #include "commonutil.h"
 #include "crc16.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "i2c.h"
 #include "i2c_direct.h"
 

@@ -69,9 +69,11 @@
 #include "cmd.h"
 #include "appmain.h"
 #include "dbprint.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
 #include "commonutil.h"
-#include "ticks.h"
+#include "ticks_apis.h"
+#include "fpga_apis.h"
+#include "rssi_apis.h"
 #include "BigBuf.h"
 #include "crc16.h"
 
@@ -300,7 +302,7 @@ void CodeIso15693AsTag(const uint8_t *cmd, size_t len) {
 // Transmit the command (to the tag) that was placed in cmd[].
 void TransmitTo15693Tag(const uint8_t *cmd, int len, uint32_t *start_time, bool shallow_mod) {
 
-#ifdef RDV4
+#if defined RDV4 || defined PM5
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | (shallow_mod ? FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4 : FPGA_HF_READER_MODE_SEND_FULL_MOD));
 #else
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | (shallow_mod ? FPGA_HF_READER_MODE_SEND_SHALLOW_MOD : FPGA_HF_READER_MODE_SEND_FULL_MOD));
@@ -328,11 +330,11 @@ void TransmitTo15693Tag(const uint8_t *cmd, int len, uint32_t *start_time, bool 
         for (uint8_t i = 0; i < 8; i++) {
             uint16_t send_word = (data & 0x80) ? 0xffff : 0x0000;
 
-            while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))) ;
-            AT91C_BASE_SSC->SSC_THR = send_word;
+            while (!FPGA_SSC_TX_Ready()) ;
+            FPGA_SSC_TX_Value(send_word);
 
-            while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY))) ;
-            AT91C_BASE_SSC->SSC_THR = send_word;
+            while (!FPGA_SSC_TX_Ready()) ;
+            FPGA_SSC_TX_Value(send_word);
 
             data <<= 1;
         }
@@ -379,9 +381,9 @@ void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time,
             uint8_t cmd_bits = ((cmd[c] >> i) & 0x01) ? 0xff : 0x00;
 
             for (int j = 0; j < (slow ? 4 : 1);) {
-                if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+                if (FPGA_SSC_TX_Ready()) {
                     bits_to_send = bits_to_shift << (8 - shift_delay) | cmd_bits >> shift_delay;
-                    AT91C_BASE_SSC->SSC_THR = bits_to_send;
+                    FPGA_SSC_TX_Value(bits_to_send);
                     bits_to_shift = cmd_bits;
                     j++;
                 }
@@ -394,8 +396,8 @@ void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time,
     bits_to_send = bits_to_shift << (8 - shift_delay);
     if (bits_to_send) {
         for (; ;) {
-            if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-                AT91C_BASE_SSC->SSC_THR = bits_to_send;
+            if (FPGA_SSC_TX_Ready()) {
+                FPGA_SSC_TX_Value(bits_to_send);
                 break;
             }
         }
@@ -1018,7 +1020,7 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
     }
 
     // wait for last transfer to complete
-    while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY));
+    while (!FPGA_SSC_TX_Done());
 
     // And put the FPGA in the appropriate mode
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_2SUBCARRIERS_424_484_KHZ | FPGA_HF_READER_MODE_RECEIVE_AMPLITUDE);
@@ -1030,10 +1032,8 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
     dmabuf16_t *dma = get_dma16();
 
     // Setup and start DMA.
-    if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (g_dbglevel > DBG_ERROR) {
-            Dbprintf("FpgaSetupSscDma failed. Exiting");
-        }
+    if (FpgaSetupSscRxDmaRepeat((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
+        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscRxDmaRepeat failed. Exiting");
         return PM3_EINIT;
     }
 
@@ -1042,7 +1042,7 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
 
     for (;;) {
 
-        volatile uint16_t behindBy = ((uint16_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
+        volatile uint16_t behindBy = ((uint16_t *)FPGA_SSC_DMA_RX_Current_Address() - upTo) & (DMA_BUFFER_SIZE - 1);
         if (behindBy == 0) {
             continue;
         }
@@ -1059,18 +1059,9 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
             upTo = dma->buf;                                     // start reading the circular buffer from the beginning
 
             // DMA Counter Register had reached 0, already rotated.
-            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
+            if (FPGA_SSC_DMA_RX_Done()) {
 
-                // primary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
-                    AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
-                    AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-                }
-                // secondary buffer sets as primary, secondary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
-                    AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
-                    AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
-                }
+                FPGA_SSC_DMA_RX_Refresh_Repeat(dma->buf, DMA_BUFFER_SIZE);
 
                 WDT_HIT();
                 if (BUTTON_PRESS()) {
@@ -1137,7 +1128,7 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
         }
     }
 
-    FpgaDisableSscDma();
+    FPGA_SSC_DMA_RX_Disable();
     FpgaDisableTracing();
 
     uint32_t sof_time = *eof_time - (32 * 16);  // time for SOF transfer
@@ -1530,22 +1521,20 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
     DecodeReaderInit(dr, received, max_len, 0, NULL);
 
     // wait for last transfer to complete
-    while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY));
+    while (!FPGA_SSC_TX_Done());
 
     LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_NO_MODULATION);
 
     // clear receive register and wait for next transfer
-    uint32_t temp = AT91C_BASE_SSC->SSC_RHR;
+    uint32_t temp = FPGA_SSC_RX_Value();
     (void) temp;
-    while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY)) ;
+    FPGA_SSC_RX_READY_WAIT();
 
     // Setup and start DMA.
     dmabuf8_t *dma = get_dma8();
-    if (FpgaSetupSscDma(dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (g_dbglevel > DBG_ERROR) {
-            Dbprintf("FpgaSetupSscDma failed. Exiting");
-        }
+    if (FpgaSetupSscRxDmaRepeat(dma->buf, DMA_BUFFER_SIZE) == false) {
+        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscRxDmaRepeat failed. Exiting");
         return -4;
     }
     const uint8_t *upTo = dma->buf;
@@ -1553,7 +1542,7 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
     uint32_t dma_start_time = GetCountSspClk() & 0xfffffff8;
 
     for (;;) {
-        volatile uint16_t behindBy = ((uint8_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
+        volatile uint16_t behindBy = ((uint8_t *)FPGA_SSC_DMA_RX_Current_Address() - upTo) & (DMA_BUFFER_SIZE - 1);
         if (behindBy == 0) {
             continue;
         }
@@ -1571,9 +1560,9 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
                 break;
             }
         }
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {       // DMA Counter Register had reached 0, already rotated.
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf; // refresh the DMA Next Buffer and
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;     // DMA Next Counter registers
+
+        if (FPGA_SSC_DMA_RX_Done()) {       // DMA Counter Register had reached 0, already rotated.
+            FPGA_SSC_DMA_RX_Refresh_Single(dma->buf, DMA_BUFFER_SIZE);
         }
 
         for (int i = 7; i >= 0; i--) {
@@ -1605,7 +1594,7 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
         WDT_HIT();
     }
 
-    FpgaDisableSscDma();
+    FPGA_SSC_DMA_RX_Disable();
 
     if (dr->byteCount >= 0) {
         uint32_t sof_time = *eof_time
@@ -1651,7 +1640,7 @@ void AcquireRawAdcSamplesIso15693(void) {
 
     // initialize SSC and select proper AD input
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
 
     StartCountSspClk();
 
@@ -1665,19 +1654,19 @@ void AcquireRawAdcSamplesIso15693(void) {
     TransmitTo15693Tag(ts->buf, ts->max, &start_time, false);
 
     // wait for last transfer to complete
-    while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY)) ;
+    while (!FPGA_SSC_TX_Done()) ;
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_424_KHZ | FPGA_HF_READER_MODE_RECEIVE_AMPLITUDE);
 
     for (int c = 0; c < 4000;) {
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            uint16_t r = AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            uint16_t r = FPGA_SSC_RX_Value();
             dest[c++] = r >> 5;
         }
     }
 
 
-    FpgaDisableSscDma();
+    FPGA_SSC_DMA_RX_Disable();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
 }
@@ -1712,7 +1701,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
 
     LED_D_OFF();
 
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
 
     StartCountSspClk();
@@ -1721,10 +1710,8 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
     dmabuf16_t *dma = get_dma16();
 
     // Setup and start DMA.
-    if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (g_dbglevel > DBG_ERROR) {
-            DbpString("FpgaSetupSscDma failed. Exiting");
-        }
+    if (FpgaSetupSscRxDmaRepeat((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
+        if (g_dbglevel > DBG_ERROR) DbpString("FpgaSetupSscRxDmaRepeat failed. Exiting");
         switch_off();
         return;
     }
@@ -1743,7 +1730,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
 
     for (;;) {
 
-        volatile int behind_by = ((uint16_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
+        volatile int behind_by = ((uint16_t *)FPGA_SSC_DMA_RX_Current_Address() - upTo) & (DMA_BUFFER_SIZE - 1);
         if (behind_by < 1) {
             continue;
         }
@@ -1765,18 +1752,9 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
             upTo = dma->buf;
 
             // DMA Counter Register had reached 0, already rotated.
-            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
+            if (FPGA_SSC_DMA_RX_Done()) {
 
-                // primary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
-                    AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
-                    AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-                }
-                // secondary buffer sets as primary, secondary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
-                    AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
-                    AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
-                }
+                FPGA_SSC_DMA_RX_Refresh_Repeat(dma->buf, DMA_BUFFER_SIZE);
 
                 WDT_HIT();
                 if (BUTTON_PRESS()) {
@@ -1925,7 +1903,7 @@ void Iso15693InitReader(void) {
 
     // initialize SSC and select proper AD input
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
 
     set_tracing(true);
 
@@ -2173,7 +2151,7 @@ void Iso15693InitTag(void) {
 
     // initialize SSC and select proper AD input
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
 
     clear_trace();
     set_tracing(true);
@@ -2285,7 +2263,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
         // find reader field
         if (tag->state == TAG_STATE_NO_FIELD) {
 
-            vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
+            vHf = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_HF);
             if (vHf > MF_MINFIELDV) {
                 tag->state = TAG_STATE_READY;
                 LED_A_ON();
@@ -2302,7 +2280,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
             break;
         }
 
-        if (cmd_len <= 3 && cmd_len > sizeof(cmd) - 1) {
+        if ((cmd_len <= 3) || (cmd_len > sizeof(cmd) - 1)) {
             continue;
         }
 

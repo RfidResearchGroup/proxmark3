@@ -243,8 +243,14 @@ typedef struct {
     bool hw_available_flash : 1;
     bool hw_available_smartcard : 1;
     bool is_rdv4 : 1;
+
+    // pm5
+    bool hw_available_fpga_flash : 1;
+    bool hw_available_i2c_eeprom : 1;
+    bool is_pm5 : 1;
+    bool is_pm5_std_ant : 1;
 } PACKED capabilities_t;
-#define CAPABILITIES_VERSION 7
+#define CAPABILITIES_VERSION 8
 extern capabilities_t g_pm3_capabilities;
 
 typedef struct {
@@ -421,7 +427,7 @@ typedef struct {
 
 typedef struct {
     uint16_t bytelen;
-    uint16_t startidx;
+    uint32_t startidx;
 } PACKED mful_readblock_resp_t;
 
 typedef struct {
@@ -504,6 +510,19 @@ typedef struct {
     uint8_t data[];
 } PACKED smart_card_raw_t;
 
+typedef struct {
+    uint8_t factory_info_version;
+    uint8_t ecdsa_secp256k1_signature[64];
+    struct {
+        uint64_t unix_timestamp;
+        uint8_t chip_unique_id[12];
+        uint32_t production_id;
+        uint32_t hardware_version;
+        uint8_t aes_key[16];
+        uint8_t reserved[147];
+    } PACKED info;
+} PACKED proxmark5_factory_info_v1_t;
+
 // For the bootloader
 #define CMD_DEVICE_INFO 0x0000
 // #define CMD_SETUP_WRITE                                                   0x0001
@@ -512,6 +531,7 @@ typedef struct {
 #define CMD_START_FLASH 0x0005
 #define CMD_CHIP_INFO 0x0006
 #define CMD_BL_VERSION 0x0007
+#define CMD_CHIP_TYPE 0x0008
 #define CMD_NACK 0x00fe
 #define CMD_ACK 0x00ff
 
@@ -525,6 +545,7 @@ typedef struct {
 #define CMD_READ_MEM 0x0106 // legacy
 #define CMD_READ_MEM_DOWNLOAD 0x010A
 #define CMD_READ_MEM_DOWNLOADED 0x010B
+#define CMD_MAIN_CHIP_UNIQUEID 0x010C
 #define CMD_VERSION 0x0107
 #define CMD_STATUS 0x0108
 #define CMD_PING 0x0109
@@ -546,7 +567,8 @@ typedef struct {
 #define CMD_FLASHMEM_WIPE 0x0122
 #define CMD_FLASHMEM_DOWNLOAD 0x0123
 #define CMD_FLASHMEM_DOWNLOADED 0x0124
-#define CMD_FLASHMEM_INFO 0x0125
+// DXL: I found that this command did not seem to have been used before, so it can be used to obtain the unique ID of FLASH MEM.
+#define CMD_FLASHMEM_GET_ID 0x0125
 #define CMD_FLASHMEM_SET_SPIBAUDRATE 0x0126
 #define CMD_FLASHMEM_PAGES64K 0x0127
 
@@ -606,6 +628,17 @@ typedef struct {
 #define CMD_USART_TX 0x0161
 #define CMD_USART_TXRX 0x0162
 #define CMD_USART_CONFIG 0x0163
+
+// PM5, Dual frequency antenna control.
+#define CMD_ANT_CONTROL_WRITE 0x0170
+#define CMD_ANT_CONTROL_READ 0x0171
+// PM5, EPPROM of factory info store
+#define CMD_EEPROM_FACTORY_INFO_READ 0x0172
+#define CMD_EEPROM_FACTORY_INFO_WRITE 0x0173
+// PM5, QC test for the hardware
+#define CMD_PM5_QC_TEST 0x0177
+// PM5, set the antenna RGB LED colour (payload: r,g,b). Used by `hf/lf tune --rgb`.
+#define CMD_PM5_RGB_SET 0x0178
 
 // For low-frequency tags
 #define CMD_LF_TI_READ 0x0202
@@ -797,6 +830,14 @@ typedef struct {
 
 // For direct FPGA control
 #define CMD_FPGA_MAJOR_MODE_OFF 0x0500
+
+// For fpga config bitstream
+#define CMD_FPGA_BITSTREAM_CONFIG_START 0x0501
+#define CMD_FPGA_BITSTREAM_CONFIG_WRITE 0x0502
+#define CMD_FPGA_BITSTREAM_CONFIG_FINISH 0x0503
+
+// For fpga set pwm output for driver voltage adjust
+#define CMD_PM5_FPGA_SET_PWR_PWM_LOW_COUNT                                0x0504
 
 // For mifare commands
 #define CMD_HF_MIFARE_EML_MEMCLR 0x0601
@@ -1120,6 +1161,9 @@ typedef struct {
 
 /* Set if this device understands the read memory command */
 #define DEVICE_INFO_FLAG_UNDERSTANDS_READ_MEM (1 << 7)
+
+/* Set if this device understands the chip type command */
+#define DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_TYPE (1<<8)
 
 #define BL_VERSION_MAJOR(version) ((uint32_t)(version) >> 22)
 #define BL_VERSION_MINOR(version) (((uint32_t)(version) >> 12) & 0x3ff)

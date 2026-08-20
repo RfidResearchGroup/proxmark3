@@ -35,7 +35,7 @@
 #include "BigBuf.h"
 #include "string.h"
 #include "mifareutil.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "protocols.h"
@@ -44,7 +44,7 @@
 #include "commonutil.h"
 #include "crc16.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "parity.h"
 
 static bool IsKeyBReadable(uint8_t blockNo) {

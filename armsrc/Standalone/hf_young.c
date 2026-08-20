@@ -21,10 +21,11 @@
 #include <inttypes.h>
 #include "proxmark3_arm.h"
 #include "appmain.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "util.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "string.h"
 #include "commonutil.h"
 #include "mifarecmd.h"

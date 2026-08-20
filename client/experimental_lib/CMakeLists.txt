@@ -212,6 +212,21 @@ if (NOT SKIPWHEREAMISYSTEM EQUAL 1)
     endif (WHEREAMI_INCLUDE_DIRS AND WHEREAMI_LIBRARIES)
 endif (NOT SKIPWHEREAMISYSTEM EQUAL 1)
 
+# These must be set BEFORE add_subdirectory(deps): CMake copies the
+# current variable scope into a subdirectory at that point, so flags set
+# further down never reach the bundled deps and jansson fails the
+# -Werror=stringop-overflow false positive on its own.
+# GCC 10 has issues with false positives on stringop-overflow,
+# let's disable them for now (cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92955, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94335)
+# beware these flags didn't exist for GCC < 7
+if(CMAKE_COMPILER_IS_GNUCXX)
+    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
+    if (GCC_VERSION VERSION_GREATER 10.0 OR GCC_VERSION VERSION_EQUAL 10.0)
+        set(CMAKE_C_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_C_FLAGS}")
+        set(CMAKE_CXX_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_CXX_FLAGS}")
+    endif()
+endif(CMAKE_COMPILER_IS_GNUCXX)
+
 add_subdirectory(${PM3_ROOT}/client/deps deps)
 
 set (TARGET_SOURCES
@@ -306,6 +321,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmddata.c
         ${PM3_ROOT}/client/src/cmdflashmem.c
         ${PM3_ROOT}/client/src/cmdflashmemspiffs.c
+        ${PM3_ROOT}/client/src/cmdfpga.c
         ${PM3_ROOT}/client/src/cmdhf.c
         ${PM3_ROOT}/client/src/cmdhf14a.c
         ${PM3_ROOT}/client/src/cmdhf14b.c
@@ -705,17 +721,6 @@ if (MINGW)
     # link Winsock2
     set(ADDITIONAL_LNK ws2_32 ${ADDITIONAL_LNK})
 endif (MINGW)
-
-# GCC 10 has issues with false positives on stringop-overflow,
-# let's disable them for now (cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92955, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94335)
-# beware these flags didn't exist for GCC < 7
-if(CMAKE_COMPILER_IS_GNUCXX)
-    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
-    if (GCC_VERSION VERSION_GREATER 10.0 OR GCC_VERSION VERSION_EQUAL 10.0)
-        set(CMAKE_C_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_C_FLAGS}")
-        set(CMAKE_CXX_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_CXX_FLAGS}")
-    endif()
-endif(CMAKE_COMPILER_IS_GNUCXX)
 
 target_include_directories(pm3rrg_rdv4 PRIVATE
         ${PM3_ROOT}/common

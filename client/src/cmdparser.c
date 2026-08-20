@@ -30,7 +30,7 @@
 # include "pthread_spin_lock_shim.h"  // spinlock shim for OSX ..
 #endif
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) && __ANDROID_API__ < 24
 //Spinlock patch for building with Android NDK
 
 typedef pthread_mutex_t pthread_spinlock_t;
@@ -120,6 +120,30 @@ bool IfPm3FpcUsartDevFromUsb(void) {
 bool IfPm3FpcUsartFromUsb(void) {
     // true if FPC USART Host or developer support and if talking from USB-CDC interface
     return IfPm3FpcUsartHostFromUsb() || IfPm3FpcUsartDevFromUsb();
+}
+
+bool IfPm5(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.is_pm5;
+}
+
+bool IfPm5StdAnt(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.is_pm5_std_ant;
+}
+
+bool IfFpgaFlash(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.hw_available_fpga_flash;
+}
+
+bool IfI2cEeprom(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.hw_available_i2c_eeprom;
 }
 
 bool IfPm3Lf(void) {

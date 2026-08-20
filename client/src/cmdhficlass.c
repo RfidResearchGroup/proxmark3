@@ -1937,8 +1937,12 @@ static int CmdHFiClassELoad(const char *Cmd) {
     }
 
     if (verbose) {
-        print_picopass_header((picopass_hdr_t *) dump);
-        print_picopass_info((picopass_hdr_t *) dump);
+        if (bytes_read < sizeof(picopass_hdr_t)) {
+            PrintAndLogEx(FAILED, "Error, dump file is too small to be a valid iCLASS dump - bytes: %zu, expected at least: %zu", bytes_read, sizeof(picopass_hdr_t));
+        } else {
+            print_picopass_header((picopass_hdr_t *) dump);
+            print_picopass_info((picopass_hdr_t *) dump);
+        }
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -2059,8 +2063,12 @@ static int CmdHFiClassEView(const char *Cmd) {
     }
 
     if (verbose) {
-        print_picopass_header((picopass_hdr_t *) dump);
-        print_picopass_info((picopass_hdr_t *) dump);
+        if (bytes < sizeof(picopass_hdr_t)) {
+            PrintAndLogEx(FAILED, "Error, only %u bytes downloaded, too small to be a valid iCLASS dump - expected at least: %zu", bytes, sizeof(picopass_hdr_t));
+        } else {
+            print_picopass_header((picopass_hdr_t *) dump);
+            print_picopass_info((picopass_hdr_t *) dump);
+        }
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -2324,6 +2332,18 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         res = pm3_load_dump(filename, (void **)&decrypted, &decryptedlen, 2048);
         if (res != PM3_SUCCESS) {
             return res;
+        }
+
+        // Below (and in iclass_decode_credentials()) we unconditionally probe
+        // fixed offsets up through block 9 -- app_issuer_area (block 5), the
+        // aa1_encryption flag and block 7 in iclass_decode_credentials(), and
+        // the block 9 PACS/PIN check here -- regardless of what applimit or
+        // decryptedlen/8 say the "real" block count is. All 10 blocks (0-9)
+        // must actually be present in the loaded file before any of that runs.
+        if (decryptedlen < 10 * PICOPASS_BLOCK_SIZE) {
+            PrintAndLogEx(FAILED, "Error, dump file is too small - bytes: %zu, expected at least: %d", decryptedlen, 10 * PICOPASS_BLOCK_SIZE);
+            free(decrypted);
+            return PM3_EFILE;
         }
 
         have_file = true;

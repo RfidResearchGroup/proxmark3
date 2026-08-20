@@ -20,13 +20,16 @@
 //-----------------------------------------------------------------------------
 #include "appmain.h"
 
-#include "clocks.h"
-#include "usb_cdc.h"
+#include "sys_apis.h"
+#include "usb_cdc_apis.h"
 #include "proxmark3_arm.h"
 #include "dbprint.h"
 #include "pmflash.h"
 #include "fpga.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
+#include "rssi_apis.h"
+#include "rgb_apis.h"
 #include "string.h"
 #include "printf.h"
 #include "legicrf.h"
@@ -62,7 +65,7 @@
 #include "pcf7931.h"
 #include "Standalone/standalone.h"
 #include "util.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "commonutil.h"
 #include "crc16.h"
 #include "protocols.h"
@@ -72,6 +75,7 @@
 #include "sam_mfc.h"
 #include "sam_sc.h"
 #include "cmac_calc.h"
+#include "i2c.h"
 
 #ifdef WITH_LCD
 #include "LCD_disabled.h"
@@ -146,47 +150,6 @@ void send_wtx(uint16_t wtx) {
     }
 }
 
-//-----------------------------------------------------------------------------
-// Read an ADC channel and block till it completes, then return the result
-// in ADC units (0 to 1023). Also a routine to sum up a number of samples and
-// return that.
-//-----------------------------------------------------------------------------
-static uint16_t ReadAdc(uint8_t ch) {
-
-    // Note: ADC_MODE_PRESCALE and ADC_MODE_SAMPLE_HOLD_TIME are set to the maximum allowed value.
-    // AMPL_HI is are high impedance (10MOhm || 1MOhm) output, the input capacitance of the ADC is 12pF (typical). This results in a time constant
-    // of RC = (0.91MOhm) * 12pF = 10.9us. Even after the maximum configurable sample&hold time of 40us the input capacitor will not be fully charged.
-    //
-    // The maths are:
-    // If there is a voltage v_in at the input, the voltage v_cap at the capacitor (this is what we are measuring) will be
-    //
-    //       v_cap = v_in * (1 - exp(-SHTIM/RC))  =   v_in * (1 - exp(-40us/10.9us))  =  v_in * 0,97                   (i.e. an error of 3%)
-
-    AT91C_BASE_ADC->ADC_CR = AT91C_ADC_SWRST;
-    AT91C_BASE_ADC->ADC_MR =
-        ADC_MODE_PRESCALE(63)          // ADC_CLK = MCK / ((63+1) * 2) = 48MHz / 128 = 375kHz
-        | ADC_MODE_STARTUP_TIME(1)       // Startup Time = (1+1) * 8 / ADC_CLK = 16 / 375kHz = 42,7us   Note: must be > 20us
-        | ADC_MODE_SAMPLE_HOLD_TIME(15); // Sample & Hold Time SHTIM = 15 / ADC_CLK = 15 / 375kHz = 40us
-
-    AT91C_BASE_ADC->ADC_CHER = ADC_CHANNEL(ch);
-    AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
-
-    while (!(AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ch))) {};
-
-    return (AT91C_BASE_ADC->ADC_CDR[ch] & 0x3FF);
-}
-
-// was static - merlok
-uint16_t AvgAdc(uint8_t ch) {
-    return SumAdc(ch, 32) >> 5;
-}
-
-uint16_t SumAdc(uint8_t ch, uint8_t NbSamples) {
-    uint16_t a = 0;
-    for (uint8_t i = 0; i < NbSamples; i++)
-        a += ReadAdc(ch);
-    return (a + (NbSamples >> 1) - 1);
-}
 #ifdef WITH_LF
 static void MeasureAntennaTuning(void) {
 
@@ -230,7 +193,7 @@ static void MeasureAntennaTuning(void) {
         WDT_HIT();
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, i);
         SpinDelay(20);
-        uint32_t adcval = ((MAX_ADC_LF_VOLTAGE * (SumAdc(ADC_CHAN_LF, 32) >> 1)) >> 14);
+        uint32_t adcval = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_LF);
         if (i == LF_DIVISOR_125)
             payload.v_lf125 = adcval; // voltage at 125kHz
 
@@ -255,24 +218,15 @@ static void MeasureAntennaTuning(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
     SpinDelay(50);
 
-    payload.v_hf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
+    payload.v_hf = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_HF);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     reply_ng(CMD_MEASURE_ANTENNA_TUNING, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
     LEDsoff();
 }
 #endif
-// Measure HF in milliVolt
-static uint16_t MeasureAntennaTuningHfData(void) {
 
-    return (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
-
-}
-
-// Measure LF in milliVolt
-static uint32_t MeasureAntennaTuningLfData(void) {
-    return (MAX_ADC_LF_VOLTAGE * (SumAdc(ADC_CHAN_LF, 32) >> 1)) >> 14;
-}
+#ifndef PM5 // TODO DXL: PM5 is temporarily incompatible.
 
 // Measure HF antenna decay after field-off.
 // Captures peak-detect capacitor discharge curve via burst ADC sampling.
@@ -297,7 +251,7 @@ static void MeasureAntennaTuningHfDecay(const hf_decay_params_t *params) {
     SpinDelay(stabilize_ms);
 
     // Baseline measurement (averaged)
-    payload.baseline_mv = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
+    payload.baseline_mv = (MAX_ADC_HF_VOLTAGE * AdcRssiSum(ADC_RSSI_CH_HF, 32)) >> 15;
 
     // Configure ADC for fast burst mode.
     // Faster ADC clock + shorter S&H trades absolute accuracy for speed.
@@ -354,6 +308,8 @@ static void MeasureAntennaTuningHfDecay(const hf_decay_params_t *params) {
     LEDsoff();
 }
 
+#endif
+
 void print_stack_usage(void) {
     for (uint32_t *p = _stack_start; ; ++p) {
         if (*p != 0xdeadbeef) {
@@ -407,6 +363,11 @@ static void SendVersion(void) {
     strncat(VersionString, "  Compiler... GCC "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);
 #endif
 
+#ifndef PM5
+    // PM5's FPGA (Gowin) bitstream is loaded at runtime via `hw fpga config` and is
+    // not compiled into the firmware, so there is no meaningful built-in FPGA
+    // version to report here. g_fpga_version_information[] describes the Xilinx
+    // bitstream that PM5 does not run, so omit the section entirely on PM5.
     strncat(VersionString, "\n [ "_YELLOW_("FPGA")" ] \n ", sizeof(VersionString) - strlen(VersionString) - 1);
 
     for (int i = 0; i < g_fpga_bitstream_num; i++) {
@@ -415,6 +376,7 @@ static void SendVersion(void) {
             strncat(VersionString, "\n ", sizeof(VersionString) - strlen(VersionString) - 1);
         }
     }
+#endif
 #ifdef WITH_COMPRESSION
     // Send Chip ID and used flash memory
     uint32_t text_and_rodata_section_size = (uint32_t)__data_src_start__ - (uint32_t)_flash_start;
@@ -429,7 +391,10 @@ static void SendVersion(void) {
     } PACKED;
 
     struct p payload;
-    payload.id = *(AT91C_DBGU_CIDR);
+
+    // Set a CHIP ID(not unique id)
+    payload.id = GetChipId();
+
 #ifndef WITH_COMPRESSION
     payload.section_size = (uint32_t)_bootrom_end - (uint32_t)_bootrom_start + (uint32_t)__os_size__;
 #else
@@ -438,8 +403,24 @@ static void SendVersion(void) {
     payload.versionstr_len = strlen(VersionString) + 1;
     memcpy(payload.versionstr, VersionString, payload.versionstr_len);
 
-    reply_ng(CMD_VERSION, PM3_SUCCESS, (uint8_t *)&payload, 12 + payload.versionstr_len);
+    uint32_t reply_len = 12 + payload.versionstr_len;
+
+    // Append the total on-chip flash size (bytes) AFTER the version string. This is
+    // backward compatible: older clients stop at versionstr and ignore the trailing
+    // bytes, and this stays valid when talking to older firmware that omits it. It
+    // lets the client report memory usage on MCUs whose size can't be derived from
+    // the chip id (e.g. AT32). Keep the header layout unchanged (do not break the
+    // CMD_VERSION protocol).
+    if (reply_len + sizeof(uint32_t) <= sizeof(payload)) {
+        uint32_t flash_size = GetChipFlashSize();
+        memcpy(payload.versionstr + payload.versionstr_len, &flash_size, sizeof(flash_size));
+        reply_len += sizeof(flash_size);
+    }
+
+    reply_ng(CMD_VERSION, PM3_SUCCESS, (uint8_t *)&payload, reply_len);
 }
+
+#ifdef CHIP_AT91SAM7S // Only AT91SAM7S chip series need calibration.
 
 static void TimingIntervalAcquisition(void) {
     // trigger new acquisition by turning main oscillator off and on
@@ -448,6 +429,8 @@ static void TimingIntervalAcquisition(void) {
     // wait for MCFR and recompute RTMR scaler
     StartTickCount();
 }
+
+#endif
 
 static void print_debug_level(void) {
     char dbglvlstr[20] = {0};
@@ -529,6 +512,9 @@ static void SendStatus(uint32_t wait) {
     tosend_t *ts = get_tosend();
     Dbprintf("  ToSendMax........... %d", ts->max);
     Dbprintf("  ToSend BUFFERSIZE... %d", TOSEND_BUFFER_SIZE);
+
+#ifdef CHIP_AT91SAM7S
+
     while ((AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINRDY) == 0);       // Wait for MAINF value to become available...
     uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINF;       // Get # main clocks within 16 slow clocks
     Dbprintf("  Slow clock.......... %d Hz", (16 * MAINCK) / mainf);
@@ -543,6 +529,9 @@ static void SendStatus(uint32_t wait) {
         Dbprintf(_YELLOW_("  Slow Clock actual speed seems closer to %d kHz"),
                  (16 * MAINCK / 1000) / mainf * delta_time / SLCK_CHECK_MS);
     }
+
+#endif
+
     DbpString(_CYAN_("Installed StandAlone Mode"));
     ModInfo();
 
@@ -632,6 +621,18 @@ static void SendCapabilities(void) {
     capabilities.is_rdv4 = true;
 #else
     capabilities.is_rdv4 = false;
+#endif
+
+#ifdef PM5
+    capabilities.is_pm5 = true;
+    capabilities.is_pm5_std_ant = true;
+    capabilities.hw_available_fpga_flash = true;
+    capabilities.hw_available_i2c_eeprom = true;
+#else
+    capabilities.is_pm5 = false;
+    capabilities.is_pm5_std_ant = false;
+    capabilities.hw_available_fpga_flash = false;
+    capabilities.hw_available_i2c_eeprom = false;
 #endif
 
 #ifdef WITH_FLASH
@@ -804,7 +805,7 @@ void ListenReaderField(uint8_t limit) {
     LEDsoff();
 
     if (limit == LF_ONLY || limit == LF_HF_BOTH) {
-        lf_av = lf_max = (MAX_ADC_LF_VOLTAGE * SumAdc(ADC_CHAN_LF, 32)) >> 15;
+        lf_av = lf_max = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_LF);
         Dbprintf("LF 125/134kHz Baseline: %dmV", lf_av);
         lf_baseline = lf_av;
     }
@@ -812,7 +813,7 @@ void ListenReaderField(uint8_t limit) {
     if (limit == HF_ONLY || limit == LF_HF_BOTH) {
 
         // iceman,  useless,  since we are measuring readerfield,  not our field.  My tests shows a max of 20v from a reader.
-        hf_av = hf_max = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
+        hf_av = hf_max = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_HF);;
         Dbprintf("HF 13.56MHz Baseline: %dmV", hf_av);
         hf_baseline = hf_av;
     }
@@ -852,7 +853,7 @@ void ListenReaderField(uint8_t limit) {
                     LED_D_OFF();
             }
 
-            lf_av_new = (MAX_ADC_LF_VOLTAGE * SumAdc(ADC_CHAN_LF, 32)) >> 15;
+            lf_av_new = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_LF);
             // see if there's a significant change
             if (ABS(lf_av - lf_av_new) > REPORT_CHANGE) {
                 Dbprintf("LF 125/134kHz Field Change: %5dmV", lf_av_new);
@@ -870,7 +871,7 @@ void ListenReaderField(uint8_t limit) {
                     LED_B_OFF();
             }
 
-            hf_av_new = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
+            hf_av_new = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_HF);
             // see if there's a significant change
             if (ABS(hf_av - hf_av_new) > REPORT_CHANGE) {
                 Dbprintf("HF 13.56MHz Field Change: %5dmV", hf_av_new);
@@ -953,6 +954,188 @@ void ListenReaderField(uint8_t limit) {
         }
     }
 }
+
+#ifdef PM5
+
+#include "at32f435_437_crm.h"
+#include "at32f435_437_tmr.h"
+
+// TODO DXL: 一部分QC逻辑可以放在PM5设备端实现，这个函数后面记得复用代码，并且不要放在 appmain.c 中（考虑移动到平台专属的模块）
+// failed_item == 0: BLUE LED in Antenna
+// failed_item == 1: RGB in mainboard
+// failed_item == 2: LEDs * 4 or Buzzer or Button in mainboard
+static bool QCTestPM5(uint8_t *failed_item) {
+    // 天线蓝灯、主板RGB、主板四颗LED、蜂鸣器、按钮
+    StartTicks();
+    I2C_init(true);
+
+    uint8_t addr_ant = 0x51; // TODO DXL define move to header?
+    uint8_t addr_rgb = 0x48;
+    uint8_t data_u8;
+    bool isok = false;
+
+    // 读取天线当前MAP配置，如果读取不到，则认为天线的控制芯片可能有问题
+    isok = I2C_BufferReadRaw(&data_u8, 1, 0x02, addr_ant << 1);
+    if (!isok) {
+        *failed_item = 0;
+        return false;
+    }
+    // 重新写入天线的MAP配置，去开灯
+    data_u8 |= 0x06; // 0000 0110 // 125 134 250 375 500 HFLED LFLED Q
+    isok = I2C_BufferWrite(&data_u8, 1, 0x02, addr_ant << 1);
+
+    // 开启RGB灯自动闪烁
+    uint8_t buf_rgb[3] = {0, 0, 128};
+    uint8_t buf_flash_time[] = {50, 50}; // 1s on, 500ms off.
+    isok = I2C_WriteByte(0, 0x02, addr_rgb << 1); // 写索引寄存器，设置后续操作的RGB索引
+    if (!isok) {
+        *failed_item = 1;
+        return false;
+    }
+    isok = I2C_WriteByte(1, 0x01, addr_rgb << 1); // 写数量寄存器，设置硬件挂1个灯,很重要！！！，不然无法闪灯
+    if (!isok) {
+        *failed_item = 1;
+        return false;
+    }
+    isok = I2C_BufferWrite(buf_rgb, sizeof(buf_rgb), 0x03, addr_rgb << 1); // 写数据寄存器，每三个字节就是对应的RGB888值
+    if (!isok) {
+        *failed_item = 1;
+        return false;
+    }
+    isok = I2C_WriteByte(1, 0x06, addr_rgb << 1); // 写闪灯使能寄存器，使能 0 号灯珠的可控闪烁
+    if (!isok) {
+        *failed_item = 1;
+        return false;
+    }
+    isok = I2C_BufferWrite(buf_flash_time, sizeof(buf_flash_time), 0x07, addr_rgb << 1); // 写闪灯使能寄存器，使能 0 号灯珠的可控闪烁
+    if (!isok) {
+        *failed_item = 1;
+        return false;
+    }
+
+    // 在循环中测试LED、蜂鸣器、按钮
+
+#define BEEPER_EN_GPIO       GPIOB
+#define BEEPER_EN_GPIO_PIN   GPIO_PINS_13
+#define BEEPER_MOD_GPIO      GPIOC
+#define BEEPER_MOD_GPIO_PIN  GPIO_PINS_9
+#define BEEPER_MOD_GPIO_SRC  GPIO_PINS_SOURCE9
+#define BEEPER_MOD_GPIO_MUX  GPIO_MUX_3
+#define BEEPER_MOD_TMR       TMR8
+#define BEEPER_MOD_TMR_CH    TMR_SELECT_CHANNEL_4
+
+    // PB13 使能，PC9 调制，使用 TMR8_CH4 输出调制
+    crm_periph_clock_enable(CRM_GPIOB_PERIPH_CLOCK, TRUE);
+    crm_periph_clock_enable(CRM_GPIOC_PERIPH_CLOCK, TRUE);
+    crm_periph_clock_enable(CRM_TMR8_PERIPH_CLOCK, TRUE);
+
+    gpio_init_type gpio_init_struct;
+    gpio_default_para_init(&gpio_init_struct);
+    // 蜂鸣器使能脚
+    gpio_init_struct.gpio_drive_strength = GPIO_DRIVE_STRENGTH_STRONGER;
+    gpio_init_struct.gpio_out_type = GPIO_OUTPUT_PUSH_PULL;
+    gpio_init_struct.gpio_mode = GPIO_MODE_OUTPUT;
+    gpio_init_struct.gpio_pins = BEEPER_EN_GPIO_PIN;
+    gpio_init_struct.gpio_pull = GPIO_PULL_NONE;
+    gpio_init(BEEPER_EN_GPIO, &gpio_init_struct);
+    gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, FALSE);
+    // 蜂鸣器调制脚
+    gpio_init_struct.gpio_mode = GPIO_MODE_MUX;
+    gpio_init_struct.gpio_pins = BEEPER_MOD_GPIO_PIN;
+    gpio_init(BEEPER_MOD_GPIO, &gpio_init_struct);
+    gpio_pin_mux_config(BEEPER_MOD_GPIO, BEEPER_MOD_GPIO_SRC, BEEPER_MOD_GPIO_MUX);
+
+    tmr_internal_clock_set(BEEPER_MOD_TMR);
+    tmr_reset(BEEPER_MOD_TMR);
+    tmr_base_init(BEEPER_MOD_TMR, 999, 95); // 192M出2k
+    tmr_output_config_type tmr_output_struct;
+    tmr_output_default_para_init(&tmr_output_struct);
+    tmr_output_struct.oc_mode = TMR_OUTPUT_CONTROL_PWM_MODE_A;
+    tmr_output_struct.oc_polarity = TMR_OUTPUT_ACTIVE_HIGH;
+    tmr_output_struct.oc_output_state = TRUE;
+    tmr_output_channel_config(BEEPER_MOD_TMR, BEEPER_MOD_TMR_CH, &tmr_output_struct);
+    tmr_channel_value_set(BEEPER_MOD_TMR, BEEPER_MOD_TMR_CH, 500); // 比较值=500 (50%占空比)
+    tmr_counter_enable(BEEPER_MOD_TMR, TRUE);
+    tmr_output_enable(BEEPER_MOD_TMR, TRUE);
+
+    LEDsoff(); // 在开始测试之前线关闭所有LED
+
+    *failed_item = 2;
+    // 在开始测试之前，如果按钮是按下的，则认为失败，有可能按钮不良卡住了
+    if (BUTTON_PRESS()) {
+        return false;
+    }
+
+    while (1) {
+        if (BUTTON_PRESS()) {
+            return true;
+        }
+        if (data_available()) {
+            return false;
+        }
+
+        LED_A_ON();
+        BEEPER_MOD_TMR->pr = 999;
+        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, TRUE);
+        SpinDelay(20);
+        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, FALSE);
+        SpinDelay(200);
+        LED_A_OFF();
+
+        if (BUTTON_PRESS()) {
+            return true;
+        }
+        if (data_available()) {
+            return false;
+        }
+
+        LED_B_ON();
+        BEEPER_MOD_TMR->pr = 1100;
+        tmr_channel_value_set(BEEPER_MOD_TMR, BEEPER_MOD_TMR_CH, 550);
+        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, TRUE);
+        SpinDelay(20);
+        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, FALSE);
+        SpinDelay(200);
+        LED_B_OFF();
+
+        if (BUTTON_PRESS()) {
+            return true;
+        }
+        if (data_available()) {
+            return false;
+        }
+
+        LED_C_ON();
+        BEEPER_MOD_TMR->pr = 1200;
+        tmr_channel_value_set(BEEPER_MOD_TMR, BEEPER_MOD_TMR_CH, 600);
+        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, TRUE);
+        SpinDelay(20);
+        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, FALSE);
+        SpinDelay(200);
+        LED_C_OFF();
+
+        if (BUTTON_PRESS()) {
+            return true;
+        }
+        if (data_available()) {
+            return false;
+        }
+
+        LED_D_ON();
+        BEEPER_MOD_TMR->pr = 1300;
+        tmr_channel_value_set(BEEPER_MOD_TMR, BEEPER_MOD_TMR_CH, 650);
+        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, TRUE);
+        SpinDelay(20);
+        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, FALSE);
+        SpinDelay(200);
+        LED_D_OFF();
+    }
+
+    return true;
+}
+
+#endif
+
 static void PacketReceived(PacketCommandNG *packet) {
     /*
     if (packet->ng) {
@@ -2672,7 +2855,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                     if (button_status == BUTTON_SINGLE_CLICK) {
                         reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EOPABORTED, NULL, 0);
                     }
-                    uint16_t volt = MeasureAntennaTuningHfData();
+                    uint32_t volt = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_HF);
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_SUCCESS, (uint8_t *)&volt, sizeof(volt));
                     break;
                 case 3:
@@ -2685,10 +2868,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
             break;
         }
+#ifndef PM5
         case CMD_HF_DECAY: {
             MeasureAntennaTuningHfDecay((const hf_decay_params_t *)packet->data.asBytes);
             break;
         }
+#endif
         case CMD_MEASURE_ANTENNA_TUNING_LF: {
             if (packet->length != 2)
                 reply_ng(CMD_MEASURE_ANTENNA_TUNING_LF, PM3_EINVARG, NULL, 0);
@@ -2706,7 +2891,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                         reply_ng(CMD_MEASURE_ANTENNA_TUNING_LF, PM3_EOPABORTED, NULL, 0);
                     }
 
-                    uint32_t volt = MeasureAntennaTuningLfData();
+                    uint32_t volt = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_LF);
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_LF, PM3_SUCCESS, (uint8_t *)&volt, sizeof(volt));
                     break;
                 case 3:
@@ -2836,7 +3021,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
                 base = (uint8_t *) _flash_start;
 
-                size_t flash_size = get_flash_size();
+                size_t flash_size = GetChipFlashSize();
 
                 // Boundary check the offset.
                 if (offset > flash_size) {
@@ -3060,7 +3245,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_FLASHMEM_SET_SPIBAUDRATE: {
             if (packet->length != sizeof(uint32_t))
                 break;
-            FlashmemSetSpiBaudrate(packet->data.asDwords[0]);
+            Flash_SetSpiBaudrate(packet->data.asDwords[0]);
             break;
         }
         case CMD_FLASHMEM_WRITE: {
@@ -3187,6 +3372,16 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_B_OFF();
             break;
         }
+        case CMD_FLASHMEM_GET_ID: {
+            uint64_t flash_uniqueID = 0;
+            bool isok = FlashInit();
+            if (isok) {
+                isok = Flash_UniqueID((uint8_t *)(&flash_uniqueID));
+                FlashStop();
+            }
+            reply_ng(CMD_FLASHMEM_GET_ID, (isok) ? PM3_SUCCESS : PM3_EFLASH, (uint8_t *)&flash_uniqueID, sizeof(flash_uniqueID));
+            break;
+        }
 #endif
 #ifdef WITH_LF
         case CMD_LF_SET_DIVISOR: {
@@ -3198,17 +3393,17 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_SET_ADC_MUX: {
             switch (packet->data.asBytes[0]) {
                 case 0:
-                    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+                    SetAdcMuxFor(ADC_MUXSEL_LOPKD);
                     break;
                 case 2:
-                    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+                    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
                     break;
 #ifndef WITH_FPC_USART
                 case 1:
-                    SetAdcMuxFor(GPIO_MUXSEL_LORAW);
+                    SetAdcMuxFor(ADC_MUXSEL_LORAW);
                     break;
                 case 3:
-                    SetAdcMuxFor(GPIO_MUXSEL_HIRAW);
+                    SetAdcMuxFor(ADC_MUXSEL_HIRAW);
                     break;
 #endif
             }
@@ -3226,7 +3421,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_TIA: {
-
+#ifdef CHIP_AT91SAM7S
             while ((AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINRDY) == 0);       // Wait for MAINF value to become available...
             uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINF;
             Dbprintf("  Slow clock old measured value:.........%d Hz", (16 * MAINCK) / mainf);
@@ -3237,6 +3432,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             Dbprintf(""); // first message gets lost
             Dbprintf("  Slow clock new measured value:.........%d Hz", (16 * MAINCK) / mainf);
             reply_ng(CMD_TIA, PM3_SUCCESS, NULL, 0);
+#else
+            Dbprintf("Chip is not AT91SAM7S, TIA is " _RED_("unsupported"));
+            reply_ng(CMD_TIA, PM3_EDEVNOTSUPP, NULL, 0);
+#endif
             break;
         }
         case CMD_STANDALONE: {
@@ -3282,8 +3481,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             usb_disable();
 
             // (iceman) why this wait?
-            SpinDelay(1000);
-            AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
+            SpinDelay(1000); // Go wait for the USB to completely go offline on the host side.
+            ResetChip();
             // We're going to reset, and the bootrom will take control.
             for (;;) {}
             break;
@@ -3293,7 +3492,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 g_common_area.command = COMMON_AREA_COMMAND_ENTER_FLASH_MODE;
             }
             usb_disable();
-            AT91C_BASE_RSTC->RSTC_RCR = RST_CONTROL_KEY | AT91C_RSTC_PROCRST;
+            ResetChip();
             // We're going to flash, and the bootrom will take control.
             for (;;) {}
             break;
@@ -3306,6 +3505,138 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_old(CMD_DEVICE_INFO, dev_info, 0, 0, 0, 0);
             break;
         }
+        case CMD_FPGA_BITSTREAM_CONFIG_START: // Merge 3 cmds to reuse some code.
+        case CMD_FPGA_BITSTREAM_CONFIG_WRITE:
+        case CMD_FPGA_BITSTREAM_CONFIG_FINISH: {
+            // Dbprintf("Received FPGA config command 0x%04x", packet->cmd);
+            int res;
+            // Process
+            if (packet->cmd == CMD_FPGA_BITSTREAM_CONFIG_START) {
+                struct p {
+                    uint8_t sram_mode;
+                    uint32_t file_length;
+                } PACKED;
+                struct p *payload = (struct p *) packet->data.asBytes;
+                res = FpgaStartConfig(payload->sram_mode, payload->file_length);
+            } else if (packet->cmd == CMD_FPGA_BITSTREAM_CONFIG_WRITE) {
+                res = FpgaConfigWrite(packet->data.asBytes, packet->length);
+            } else {
+                res = FpgaStopConfig();
+            }
+            // Response
+            if (res == PM3_EFAILED) {
+                uint32_t plat_status = FpgaConfigPlatformStatus(); // Return status code of platform when res is PM3_EFAILED
+                reply_ng(packet->cmd, res, (uint8_t*)&plat_status, sizeof(plat_status));
+            } else {
+                reply_ng(packet->cmd, res, NULL, 0);
+            }
+            break;
+        }
+#ifdef PM5
+        case CMD_ANT_CONTROL_WRITE: {
+            struct p {
+                uint8_t data;
+                uint8_t reg_type; // 0 is io reg, 1 is map reg.
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+
+            StartTicks();
+            I2C_init(true);
+
+            uint8_t addr = 0x51; // TODO DXL define move to header?
+            uint8_t cmd = payload->reg_type == 0 ? 0x01 : 0x02;
+
+            bool isok = I2C_BufferWrite(&payload->data, 1, cmd, addr << 1);
+            reply_ng(CMD_ANT_CONTROL_WRITE, isok ? PM3_SUCCESS : PM3_EFAILED, NULL, 0);
+            break;
+        }
+        case CMD_ANT_CONTROL_READ: {
+            struct p {
+                uint8_t reg_type; // 0 is io reg, 1 is map reg.
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+
+            StartTicks();
+            I2C_init(true);
+
+            uint8_t addr = 0x51; // TODO DXL define move to header?
+            uint8_t cmd = payload->reg_type == 0 ? 0x01 : 0x02;
+            uint8_t data;
+
+            bool isok = I2C_BufferReadRaw(&data, 1, cmd, addr << 1);
+            reply_ng(CMD_ANT_CONTROL_READ, isok ? PM3_SUCCESS : PM3_EFAILED, &data, sizeof(data));
+            break;
+        }
+        case CMD_EEPROM_FACTORY_INFO_READ: {
+            StartTicks();
+            I2C_init(true);
+
+            uint8_t addr = 0x50; // TODO DXL define move to header?
+            uint8_t data[256]; // 24c02: 256byte
+            bool isok = I2C_BufferReadRaw(data, sizeof(data), 0x00, addr << 1);
+            reply_ng(CMD_EEPROM_FACTORY_INFO_READ, isok ? PM3_SUCCESS : PM3_EFAILED, data, sizeof(data));
+            break;
+        }
+        case CMD_EEPROM_FACTORY_INFO_WRITE: {
+            StartTicks();
+            I2C_init(true);
+
+            uint8_t addr = 0x50; // TODO DXL define move to header?
+            uint16_t len = packet->length;
+            while (len) {
+                uint16_t write_len = MIN(len, 16);
+                uint16_t write_pos = packet->length - len;
+                bool isok = I2C_BufferWrite(packet->data.asBytes + write_pos, write_len, write_pos, addr << 1);
+                if (!isok) {
+                    reply_ng(CMD_EEPROM_FACTORY_INFO_WRITE, PM3_EFAILED, NULL, 0);
+                    return;
+                }
+                len -= write_len;
+                // 24C02 writes to a page write buffer of only 16 bytes.
+                // If the write speed is too fast, it may cause data write failure.
+                // Therefore, a delay or ACK judgment is required between page writes
+                SpinDelay(5); // 24C02 write cycle time is about 5ms
+            }
+            reply_ng(CMD_EEPROM_FACTORY_INFO_WRITE, PM3_SUCCESS, NULL, 0);
+            break;
+        }
+        case CMD_PM5_FPGA_SET_PWR_PWM_LOW_COUNT: {
+            struct p {
+                uint8_t is_lf;
+                uint16_t count;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            FpgaDownloadAndGo(payload->is_lf ? FPGA_BITSTREAM_LF : FPGA_BITSTREAM_HF);
+            FpgaSendCommand(FPGA_CMD_SET_PWR_PWM_LOW_COUNT, payload->count & 0xFFF);
+            reply_ng(CMD_PM5_FPGA_SET_PWR_PWM_LOW_COUNT, PM3_SUCCESS, NULL, 0);
+            break;
+        }
+#endif
+        case CMD_MAIN_CHIP_UNIQUEID: {
+            uint8_t size = 0;
+            uint8_t* uid = GetChipUniqueId(&size);
+            reply_ng(CMD_MAIN_CHIP_UNIQUEID, PM3_SUCCESS, uid, size);
+            break;
+        }
+#ifdef PM5
+        case CMD_PM5_QC_TEST: {
+            uint8_t failed_item = 0;
+            reply_ng(CMD_PM5_QC_TEST, QCTestPM5(&failed_item) ? PM3_SUCCESS : PM3_EFAILED, &failed_item, 1);
+            break;
+        }
+        case CMD_PM5_RGB_SET: {
+            // Set the antenna RGB LED colour (used by `hf/lf tune --rgb`).
+            struct p {
+                uint8_t r;
+                uint8_t g;
+                uint8_t b;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            RgbLedSet(payload->r, payload->g, payload->b);
+            reply_ng(CMD_PM5_RGB_SET, PM3_SUCCESS, NULL, 0);
+            break;
+        }
+#endif
         default: {
             Dbprintf("%s: 0x%04x", "unknown command:", packet->cmd);
             break;
@@ -3313,7 +3644,7 @@ static void PacketReceived(PacketCommandNG *packet) {
     }
 }
 
-void  __attribute__((noreturn)) AppMain(void) {
+void __attribute__((noreturn)) AppMain(void) {
 
     SpinDelay(100);
     BigBuf_initialize();
@@ -3325,23 +3656,12 @@ void  __attribute__((noreturn)) AppMain(void) {
 
     LEDsoff();
 
-    // The FPGA gets its clock from us from PCK0 output, so set that up.
-    AT91C_BASE_PIOA->PIO_BSR = GPIO_PCK0;
-    AT91C_BASE_PIOA->PIO_PDR = GPIO_PCK0;
-    AT91C_BASE_PMC->PMC_SCER |= AT91C_PMC_PCK0;
-    // PCK0 is PLL clock / 4 = 96MHz / 4 = 24MHz
-    AT91C_BASE_PMC->PMC_PCKR[0] = AT91C_PMC_CSS_PLL_CLK | AT91C_PMC_PRES_CLK_4; //  4 for 24MHz pck0, 2 for 48 MHZ pck0
-    AT91C_BASE_PIOA->PIO_OER = GPIO_PCK0;
-
-    // Reset SPI
-    AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SWRST;
-    AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SWRST; // errata says it needs twice to be correctly set.
-
-    // Reset SSC
-    AT91C_BASE_SSC->SSC_CR = AT91C_SSC_SWRST;
+    // Setup FPGA clock & Reset COM
+    FpgaSetup24MHzClk();
+    FpgaResetComInterface();
 
     // Configure MUX
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
 
     // Load the FPGA image, which we have stored in our flash.
     // (the HF version by default)
@@ -3370,12 +3690,10 @@ void  __attribute__((noreturn)) AppMain(void) {
     }
 #endif
 
-
 #ifdef WITH_FLASH
     // If flash is not present, BUSY_TIMEOUT kicks in, let's do it after USB
     loadT55xxConfig();
 
-    //
     // Enforce a spiffs check/garbage collection at boot so we are likely to never
     // fall under the 2 contigous free blocks availables
     // This is a time-consuming process on large flash.
@@ -3438,9 +3756,68 @@ void  __attribute__((noreturn)) AppMain(void) {
             * So this is the trigger to execute a standalone mod.  Generic entrypoint by following the standalone/standalone.h headerfile
             * All standalone mod "main loop" should be the RunMod() function.
             */
-            allow_send_wtx = false;
-            RunMod();
-            allow_send_wtx = true;
+            // allow_send_wtx = false;
+            // RunMod();
+            // allow_send_wtx = true;
+
+#ifdef PM5 // TODO DXL Test long press to device shutdown, temporarily blocking standalone mod
+
+            /*
+            StartTicks();
+            I2C_init(true);
+            uint8_t addr = 0x51;
+            // 125 134 250 375 500 HFLED LFLED Q
+            // 1 0 0 0 0 1 1 1
+            uint8_t data = 0x87;
+            I2C_BufferWrite(&data, 1, 0x02, addr << 1);
+            FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+            FpgaSendCommand(FPGA_CMD_SET_PWR_PWM_LOW_COUNT, 4095);
+
+            static bool b = 0;
+            if (b) {
+                FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+                b = 0;
+            } else {
+                FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+                FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
+                FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
+                b = 1;
+            }
+            */
+
+            LEDsoff();
+            while (BUTTON_PRESS()) {
+                SpinDelay(50);
+                LED_A_INV();
+                SpinDelay(50);
+                LED_B_INV();
+                SpinDelay(50);
+                LED_C_INV();
+                SpinDelay(50);
+                LED_D_INV();
+            }
+            // Release for more than 100ms before truly shutting down, anti shake
+            uint8_t idx = 0;
+            while (!BUTTON_PRESS()) {
+                SpinDelay(10);
+                idx += 1;
+                if (idx == 10) {
+                    break;
+                }
+            }
+            LEDsoff();
+            if (idx == 10) {
+                SpinDelay(100);
+                LED_A_INV();
+                SpinDelay(100);
+                LED_A_INV();
+                SpinDelay(100);
+                LED_A_INV();
+                Gpio_ARM_Power_ON_Low();
+                while (1); // Wait for system power off.
+            }
+
+#endif
         }
     }
 }

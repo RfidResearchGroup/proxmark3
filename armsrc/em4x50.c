@@ -16,10 +16,10 @@
 // Low frequency EM4x50 commands
 //-----------------------------------------------------------------------------
 
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "ticks_apis.h"
+#include "fpga_apis.h"
 #include "dbprint.h"
-#include "lfsampling.h"
 #include "lfadc.h"
 #include "lfdemod.h"
 #include "commonutil.h"
@@ -29,15 +29,8 @@
 #include "appmain.h" // tear
 #include "bruteforce.h"
 
-// Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
-// TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
-// EM4x50 units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
-// T0 = TIMER_CLOCK1 / 125000 = 192
-
-#define T0                                  192
-
 // conversions (carrier frequency 125 kHz):
-// 1 us = 1.5 ticks
+// 1 us = 1.5 ticks for GetTicks()
 // 1 cycle = 1 period = 8 us = 12 ticks
 // 1 bit = 64 cycles = 768 ticks = 512 us (for Opt64)
 #define CYCLES2TICKS                        12
@@ -59,8 +52,8 @@
 #define EM4X50_T_ZERO_DETECTION             3
 
 // timeout values (empirical) for simulation mode (may vary with regard to reader)
-#define EM4X50_T_SIMULATION_TIMEOUT_READ    600
-#define EM4X50_T_SIMULATION_TIMEOUT_WAIT    50
+#define EM4X50_T_SIMULATION_TIMEOUT_READ    318 // only for em4x50_sim_read_bit()
+#define EM4X50_T_SIMULATION_TIMEOUT_EDGE    24
 
 // the following value (pulses) seems to be critical; if it's too low
 //(e.g. < 120) some cards are no longer readable although they're ok
@@ -69,7 +62,7 @@
 // div
 #define EM4X50_TAG_WORD                     45
 #define EM4X50_TAG_MAX_NO_BYTES             136
-#define EM4X50_TIMEOUT_PULSE_EVAL           2500
+#define EM4X50_TIMEOUT_PULSE_EVAL           (4 * EM4X50_T_TAG_FULL_PERIOD * CYCLES2TICKS) // 4bit data periods
 
 uint8_t g_High = 190;
 uint8_t g_Low = 60;
@@ -136,7 +129,6 @@ static bool extract_parities(uint64_t word, uint32_t *data) {
 }
 
 void em4x50_setup_read(void) {
-
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
@@ -151,15 +143,14 @@ void em4x50_setup_read(void) {
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
 
     // Connect the A/D to the peak-detected low-frequency path.
-    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+    SetAdcMuxFor(ADC_MUXSEL_LOPKD);
 
     // Steal this pin from the SSP (SPI communication channel with fpga) and
     // use it to control the modulation
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+    gpio_fpga_mod_only_setup();
 
     // Disable modulation at default, which means enable the field
-    LOW(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_Low();
 
     // Watchdog hit
     WDT_HIT();
@@ -170,9 +161,7 @@ void em4x50_setup_sim(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
 
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT | GPIO_SSC_CLK;
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_ODR = GPIO_SSC_CLK;
+    gpio_fpga_mod_feedback_setup();
 
     StartTicks();
 
@@ -200,8 +189,10 @@ static bool get_signalproperties(void) {
         // about 2 samples per bit period
         WaitUS(EM4X50_T_TAG_HALF_PERIOD * CYCLES2MUSEC);
 
+        FPGA_SSC_RX_READY_WAIT();
+
         // ignore first samples
-        if ((i > SIGNAL_IGNORE_FIRST_SAMPLES) && (AT91C_BASE_SSC->SSC_RHR > noise)) {
+        if ((i > SIGNAL_IGNORE_FIRST_SAMPLES) && (FPGA_SSC_RX_Value() > noise)) {
             signal_found = true;
             break;
         }
@@ -220,7 +211,9 @@ static bool get_signalproperties(void) {
 
             if (BUTTON_PRESS()) return false;
 
-            volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+            FPGA_SSC_RX_READY_WAIT();
+
+            volatile uint8_t sample = (uint8_t)FPGA_SSC_RX_Value();
             if (sample > sample_max[i])
                 sample_max[i] = sample;
 
@@ -247,7 +240,9 @@ static bool invalid_bit(void) {
     // get sample at 3/4 of bit period
     WaitUS(EM4X50_T_TAG_THREE_QUARTER_PERIOD * CYCLES2MUSEC);
 
-    uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    FPGA_SSC_RX_READY_WAIT();
+
+    uint8_t sample = (uint8_t)FPGA_SSC_RX_Value();
 
     // wait until end of bit period
     WaitUS(EM4X50_T_TAG_QUARTER_PERIOD * CYCLES2MUSEC);
@@ -261,36 +256,46 @@ static bool invalid_bit(void) {
 
 static uint32_t get_pulse_length(void) {
 
-    int32_t timeout = EM4X50_TIMEOUT_PULSE_EVAL, tval = 0;
+    uint64_t timeout = GetTicks() + EM4X50_TIMEOUT_PULSE_EVAL;
 
     // iterates pulse lengths (low -> high -> low)
 
-    volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    FPGA_SSC_RX_READY_WAIT(); // Wait for valid data received.
+    volatile uint8_t sample = (uint8_t)FPGA_SSC_RX_Value();
 
-    while (sample > g_Low && (timeout--))
-        sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    while (sample > g_Low && (GetTicks() < timeout)) {
+        if (FPGA_SSC_RX_Ready()) {
+            sample = (uint8_t)FPGA_SSC_RX_Value();
+        }
+    }
 
-    if (timeout <= 0)
+    if (GetTicks() >= timeout) {
         return 0;
+    }
 
-    tval = GetTicks();
-    timeout = EM4X50_TIMEOUT_PULSE_EVAL;
+    uint32_t start_ticks = GetTicks();
 
-    while (sample < g_High && (timeout--))
-        sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    while (sample < g_High && (GetTicks() < timeout)) {
+        if (FPGA_SSC_RX_Ready()) {
+            sample = (uint8_t)FPGA_SSC_RX_Value();
+        }
+    }
 
-    if (timeout <= 0)
+    if (GetTicks() >= timeout) {
         return 0;
+    }
 
-    timeout = EM4X50_TIMEOUT_PULSE_EVAL;
-    while (sample > g_Low && (timeout--))
-        sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    while (sample > g_Low && (GetTicks() < timeout)) {
+        if (FPGA_SSC_RX_Ready()) {
+            sample = (uint8_t)FPGA_SSC_RX_Value();
+        }
+    }
 
-    if (timeout <= 0)
+    if (GetTicks() >= timeout) {
         return 0;
+    }
 
-    return GetTicks() - tval;
-
+    return GetTicks() - start_ticks;
 }
 
 // check if pulse length <pl> corresponds to given length <length>
@@ -309,22 +314,22 @@ static void em4x50_reader_send_bit(int bit) {
 
         // disable modulation (activate the field) for 7 cycles of carrier
         // period (Opt64)
-        LOW(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_Low();
         while (GetTicks() - tval < 7 * CYCLES2TICKS);
 
         // enable modulation (drop the field) for remaining first
         // half of bit period
-        HIGH(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_High();
         while (GetTicks() - tval < EM4X50_T_TAG_HALF_PERIOD * CYCLES2TICKS);
 
         // disable modulation for second half of bit period
-        LOW(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_Low();
         while (GetTicks() - tval < EM4X50_T_TAG_FULL_PERIOD * CYCLES2TICKS);
 
     } else {
 
         // bit = "1" means disable modulation for full bit period
-        LOW(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_Low();
         while (GetTicks() - tval < EM4X50_T_TAG_FULL_PERIOD * CYCLES2TICKS);
     }
 }
@@ -903,7 +908,7 @@ void em4x50_read(const em4x50_data_t *etd, bool ledcontrol) {
     }
 
     if (ledcontrol) LEDsoff();
-    LOW(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_Low();
     lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X50_READ, status, (uint8_t *)words, EM4X50_TAG_MAX_NO_BYTES);
 }
@@ -956,7 +961,7 @@ void em4x50_reader(bool ledcontrol) {
     }
 
     if (ledcontrol) LEDsoff();
-    LOW(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_Low();
     lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X50_READER, now, (uint8_t *)words, 4 * now);
 }
@@ -1145,37 +1150,50 @@ void em4x50_writepwd(const em4x50_data_t *etd, bool ledcontrol) {
     reply_ng(CMD_LF_EM4X50_WRITEPWD, status, NULL, 0);
 }
 
+// wait for ssc clk edge change to high, clk is from cross_lo
+// mode:
+//  1: wait to high
+//  2: wait to low
+//  3: wait to high & low
+static void em4x50_sim_wait_edge(const int mode) {
+    uint32_t ticks_start;
+    if (mode & 0x01) {
+        ticks_start = GET_TICKS; // reset start time value
+        do {
+            if (GetTicksDelta(ticks_start) > EM4X50_T_SIMULATION_TIMEOUT_EDGE) {
+                // Dbprintf("timeout wait clk(1)");
+                return;
+            }
+        }
+        while (!Gpio_SSC_CLK_Read()); // wait to high
+    }
+    if (mode & 0x02) {
+        ticks_start = GET_TICKS; // reset start time value
+        do {
+            if (GetTicksDelta(ticks_start) > EM4X50_T_SIMULATION_TIMEOUT_EDGE) {
+                // Dbprintf("timeout wait clk(2)");
+                return;
+            }
+        } while (Gpio_SSC_CLK_Read()); // wait to low
+    }
+}
+
 // send bit in receive mode by counting carrier cycles
 static void em4x50_sim_send_bit(uint8_t bit) {
 
-    uint16_t timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
-
     for (int t = 0; t < EM4X50_T_TAG_FULL_PERIOD; t++) {
 
-        // wait until SSC_CLK goes HIGH
-        // used as a simple detection of a reader field?
-        while ((timeout--) && !(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
-
-        if (timeout == 0) {
-            return;
-        }
-        timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
+        em4x50_sim_wait_edge(1);
 
         if (bit)
             OPEN_COIL();
         else
             SHORT_COIL();
 
-        //wait until SSC_CLK goes LOW
-        while ((timeout--) && (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
-        if (timeout == 0) {
-            return;
-        }
-        timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
+        em4x50_sim_wait_edge(2);
 
         if (t == EM4X50_T_TAG_HALF_PERIOD)
             bit ^= 1;
-
     }
 }
 
@@ -1227,23 +1245,9 @@ static void em4x50_sim_send_word(uint32_t word) {
 
 // wait for <maxperiods> pulses of carrier frequency
 static void wait_cycles(int maxperiods) {
-
-    int period = 0, timeout = EM4X50_T_SIMULATION_TIMEOUT_WAIT;
-
+    int period = 0;
     while (period < maxperiods) {
-
-        while ((timeout--) && !(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
-        if (timeout <= 0) {
-            return;
-        }
-        timeout = EM4X50_T_SIMULATION_TIMEOUT_WAIT;
-
-        while ((timeout--) && (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
-        if (timeout <= 0) {
-            return;
-        }
-        timeout = EM4X50_T_SIMULATION_TIMEOUT_WAIT;
-
+        em4x50_sim_wait_edge(3);
         period++;
     }
 }
@@ -1252,7 +1256,6 @@ static void wait_cycles(int maxperiods) {
 static int em4x50_sim_read_bit(void) {
 
     int cycles = 0;
-    int timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
     // wait 16 cycles to make sure there is no field when reading a "0" bit
     uint32_t waitval = GetTicks();
@@ -1260,18 +1263,24 @@ static int em4x50_sim_read_bit(void) {
 
     while (cycles < EM4X50_T_TAG_THREE_QUARTER_PERIOD) {
 
+        uint32_t timeout_start = GET_TICKS;
+
         // wait until reader field disappears
-        while ((timeout--) && !(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
-        if (timeout <= 0) {
-            return PM3_ETIMEOUT;
-        }
-        timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
+        do {
+            if (GetTicksDelta(timeout_start) >= EM4X50_T_SIMULATION_TIMEOUT_READ) {
+                DBG Dbprintf("read bit timeout(1): %d", GetTicksDelta(timeout_start));
+                return PM3_ETIMEOUT;
+            }
+        } while (!Gpio_SSC_CLK_Read());
+
+        timeout_start = GET_TICKS;
 
         // now check until reader switches on carrier field
         uint32_t tval = GetTicks();
-        while ((timeout--) && (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK)) {
+        while (Gpio_SSC_CLK_Read()) {
 
-            if (timeout <= 0) {
+            if (GetTicksDelta(timeout_start) >= EM4X50_T_SIMULATION_TIMEOUT_READ) {
+                DBG Dbprintf("read bit timeout(2): %d", GetTicksDelta(timeout_start));
                 return PM3_ETIMEOUT;
             }
 
@@ -1279,11 +1288,12 @@ static int em4x50_sim_read_bit(void) {
             if (GetTicks() - tval > EM4X50_T_ZERO_DETECTION * CYCLES2TICKS) {
 
                 // gap detected; wait until reader field is switched on again
-                while ((timeout--) && (AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));
-
-                if (timeout <= 0) {
-                    return PM3_ETIMEOUT;
-                }
+                do {
+                    if (GetTicksDelta(timeout_start) >= EM4X50_T_SIMULATION_TIMEOUT_READ) {
+                        DBG Dbprintf("read bit timeout(3): %d", GetTicksDelta(timeout_start));
+                        return PM3_ETIMEOUT;
+                    }
+                } while (Gpio_SSC_CLK_Read());
 
                 // now we have a reference "position", from here it will take
                 // slightly less than 32 cycles until the end of the bit period
@@ -1294,7 +1304,6 @@ static int em4x50_sim_read_bit(void) {
                 return 0;
             }
         }
-        timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
         // no gap detected, i.e. reader field is still up;
         // continue with counting cycles

@@ -23,8 +23,10 @@
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "ticks_apis.h"
+#include "fpga_apis.h"
+#include "rssi_apis.h"
 #include "dbprint.h"
 #include "util.h"
 #include "commonutil.h"
@@ -35,7 +37,7 @@ int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
 
     BigBuf_Clear_ext(false);
     // connect Demodulated Signal to ADC:
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     // And put the FPGA in the appropriate mode
@@ -55,8 +57,8 @@ int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
             break;
         }
 
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            volatile uint16_t sample =  AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            volatile uint16_t sample =  FPGA_SSC_RX_Value();
 
             // FPGA side:
             // corr_i_out <= {2'b00, corr_amplitude[13:8]};
@@ -216,7 +218,7 @@ int HfSimulateTkm(const uint8_t *uid, uint8_t modulation, uint32_t timeout) {
 
     LED_C_ON();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_212K);
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
 
@@ -238,7 +240,7 @@ int HfSimulateTkm(const uint8_t *uid, uint8_t modulation, uint32_t timeout) {
             break;
 
         // in mV
-        int vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
+        uint32_t vHf = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_HF);
         if (vHf > MF_MINFIELDV) {
             if (field_on == false) {
                 LED_A_ON();
@@ -256,8 +258,8 @@ int HfSimulateTkm(const uint8_t *uid, uint8_t modulation, uint32_t timeout) {
         SpinDelay(3);
 
         for (int i = 0; i < elen;) {
-            if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-                AT91C_BASE_SSC->SSC_THR = data[i++];
+            if (FPGA_SSC_TX_Ready()) {
+                FPGA_SSC_TX_Value(data[i++]);
             }
         }
     }

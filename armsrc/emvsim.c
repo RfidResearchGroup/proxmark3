@@ -43,13 +43,14 @@
 #include "string.h"
 #include "mifareutil.h"
 #include "mifaresim.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
 #include "proxmark3_arm.h"
 #include "protocols.h"
 #include "util.h"
 #include "commonutil.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "i2c_direct.h"
 
 // Hardcoded response to the reader for file not found, plus the checksum
