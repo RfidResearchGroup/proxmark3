@@ -201,50 +201,110 @@ static uint64_t check(uint64_t z) {
 }
 
 // Reverse ck (scramble-1)
-static uint64_t reverse_ck(int i, int j, uint64_t z) {
-    if (i == 1 && j == -1) {
-        return z;
-    } else if (j == -1) {
-        return reverse_ck(i - 1, i - 2, z);
-    }
+//
+// ck() rewrites a repeated value as the *index* it matched, so a stored value in
+// 0..3 is ambiguous: it may be such a marker, or a genuine value that happens to
+// be small. The inverse therefore has to enumerate, not pick one reading.
+//
+// ck() reduces to: for i = 3, 2, 1 (in that order)
+//
+//     v = z[i];  for j = i-1 down to 0:  if (v == z[j]) v = j;   out[i] = v;
+//
+// where every z[j] on the right is still the *original* value, because z[j] is
+// only ever rewritten once j becomes the outer index, which happens later. So
+// out[i] depends solely on the original z[i] and z[0..i-1], and the halves can
+// be inverted index by index, resolving z[0], then z[1], and so on.
 
-    uint64_t newz = 0;
-    if (getSixBitByte(z, i) == j) { // Reverse the swap logic based on condition in scramble^{-1}
-        // Perform reverse swap
-        for (int c = 0; c < 4; c++) {
-            uint8_t val = getSixBitByte(z, c);
-            if (c == i) {
-                pushbackSixBitByte(&newz, getSixBitByte(z, j), c);
-            } else {
-                pushbackSixBitByte(&newz, val, c);
+#define CK_MAX_PREIMAGES  64
+
+// All v with:  v0 = v; for j = i-1 down to 0: if (v0 == zs[j]) v0 = j;  giving t.
+// Undoes the steps in reverse order, branching wherever both readings are possible.
+static int invert_ck_index(uint8_t t, const uint8_t *zs, int i, uint8_t *out, int max) {
+    uint8_t cur[CK_MAX_PREIMAGES], nxt[CK_MAX_PREIMAGES];
+    int n = 0, m;
+    cur[n++] = t;
+
+    for (int j = 0; j < i; j++) {
+        m = 0;
+        for (int a = 0; a < n; a++) {
+            uint8_t va = cur[a];
+            if (va == j) {                             // the substitution happened
+                uint8_t v = zs[j];
+                bool dup = false;
+                for (int d = 0; d < m; d++) if (nxt[d] == v) dup = true;
+                if (!dup && m < CK_MAX_PREIMAGES) nxt[m++] = v;
+            }
+            if (va != zs[j]) {                         // no substitution at this step
+                bool dup = false;
+                for (int d = 0; d < m; d++) if (nxt[d] == va) dup = true;
+                if (!dup && m < CK_MAX_PREIMAGES) nxt[m++] = va;
             }
         }
-        return reverse_ck(i, j - 1, newz);
-    } else {
-        // Continue recursion
-        return reverse_ck(i, j - 1, z);
+        memcpy(cur, nxt, m);
+        n = m;
+        if (n == 0) break;
     }
+
+    int count = 0;
+    for (int a = 0; a < n && count < max; a++)
+        if (cur[a] < 0x40) out[count++] = cur[a];
+    return count;
 }
 
-static uint64_t reverse_check(uint64_t z) {
+// Every four-value half that ck(3, 2, .) maps to o[]. Returns how many were written.
+static int invert_ck_half(const uint8_t o[4], uint8_t (*out)[4], int max) {
+    uint8_t c1[CK_MAX_PREIMAGES], c2[CK_MAX_PREIMAGES], c3[CK_MAX_PREIMAGES];
+    uint8_t zs[4];
+    int count = 0;
 
-    //retrieve ck1 and ck2 from the hash
+    zs[0] = o[0];                                      // ck() never rewrites z[0]
+    int n1 = invert_ck_index(o[1], zs, 1, c1, CK_MAX_PREIMAGES);
 
-    // Step 1: Extract ck2 shifted part from result
-    // Assuming ck2 shifted part is from bits 0-23 of the result
-    uint64_t shifted_ck2_part = z & 0x0000000000FFFFFF; // Mask the lower 24 bits
+    for (int a = 0; a < n1 && count < max; a++) {
+        zs[1] = c1[a];
+        int n2 = invert_ck_index(o[2], zs, 2, c2, CK_MAX_PREIMAGES);
 
-    // Step 2: Reconstruct ck2
-    uint64_t ck2 = shifted_ck2_part << 24; // Shift back to get original ck2 value
-    // Step 3: Recover ck1
-    uint64_t ck1 = z & ~(ck2 >> 24); // Clear the bits where ck2 affected the result
-    // Now ck1 and ck2 have their original values before (after ck function took place)
+        for (int b = 0; b < n2 && count < max; b++) {
+            zs[2] = c2[b];
+            int n3 = invert_ck_index(o[3], zs, 3, c3, CK_MAX_PREIMAGES);
 
-    ck1 = reverse_ck(3, 2, ck1);
-    ck2 = reverse_ck(3, 2, ck2);
+            for (int d = 0; d < n3 && count < max; d++) {
+                out[count][0] = zs[0];
+                out[count][1] = zs[1];
+                out[count][2] = zs[2];
+                out[count][3] = c3[d];
+                count++;
+            }
+        }
+    }
+    return count;
+}
 
-    return ck1 | ck2 >> 24; //This is now zP
+// Every zP that check() maps to z. The two halves are independent, so the result
+// is their cross product. Returns how many were written to out[].
+static int reverse_check_all(uint64_t z, uint64_t *out, int max) {
+    uint8_t h1[4], h2[4];
+    for (int n = 0; n < 4; n++) {
+        h1[n] = getSixBitByte(z, n);
+        h2[n] = getSixBitByte(z, n + 4);
+    }
 
+    uint8_t p1[CK_MAX_PREIMAGES][4], p2[CK_MAX_PREIMAGES][4];
+    int n1 = invert_ck_half(h1, p1, CK_MAX_PREIMAGES);
+    int n2 = invert_ck_half(h2, p2, CK_MAX_PREIMAGES);
+
+    int count = 0;
+    for (int a = 0; a < n1 && count < max; a++) {
+        for (int b = 0; b < n2 && count < max; b++) {
+            uint64_t zP = 0;
+            for (int n = 0; n < 4; n++) {
+                pushbackSixBitByte(&zP, p1[a][n], n);
+                pushbackSixBitByte(&zP, p2[b][n], n + 4);
+            }
+            out[count++] = zP;
+        }
+    }
+    return count;
 }
 
 static void printState(const char *desc, uint64_t c) {
@@ -527,7 +587,14 @@ void invert_hash0(uint8_t k[8]) {
         uint64_t zCaret_fixed = zCaret_fixed1 | zCaret_fixed2;
         if (g_debugMode > 0) printState("0|0|z^", zCaret_fixed);
 
-        uint64_t zP = reverse_check(zCaret_fixed);
+        // check() is not injective either -- see reverse_check_all() -- so this
+        // yields every zP that maps to zCaret_fixed, and each is followed through.
+        uint64_t zP_list[CK_MAX_PREIMAGES];
+        int zP_count = reverse_check_all(zCaret_fixed, zP_list, CK_MAX_PREIMAGES);
+
+        for (int zp_i = 0; zp_i < zP_count; zp_i++) {
+
+        uint64_t zP = zP_list[zp_i];
         if (g_debugMode > 0) printState("0|0|z'", zP);
 
         // reverse the modulo transformation in the hash0 function for the six-bit chunks
@@ -545,8 +612,15 @@ void invert_hash0(uint8_t k[8]) {
             pushbackSixBitByte(&c, zn4, n + 4);
         }
 
-        // The Hydra: depending on their positions, values 0x00, 0x01, 0x02, 0x03, 0x3c, 0x3d, 0x3e, 0x3f can lead to additional pre-images.
-        // When these values are present we need to generate additional pre-images if they have the same modulo as other values
+        // The Hydra: hash0() reduces every six-bit z chunk modulo a value that
+        // depends on the chunk position:
+        //
+        //     _zn  = (zn  % (63 - n)) + n         for n = 0..3
+        //     _zn4 = (zn4 % (64 - n)) + n         for n = 0..3  (chunks 4..7)
+        //
+        // Since the modulus is smaller than 0x40 the reduction is lossy, so a
+        // recovered residue r has a second pre-image at r + modulus whenever
+        // that value still fits in six bits. Each such chunk forks the search.
 
         // Initialize an array of pointers to uint64_t (start with one value, initialized to 0)
         uint64_t *hydra_heads = (uint64_t *)calloc(sizeof(uint64_t), 1); // Start with one uint64_t
@@ -557,12 +631,17 @@ void invert_hash0(uint8_t k[8]) {
         hydra_heads[0] = 0;  // Initialize first value to 0
         int heads_count = 1;  // Track number of forks
 
-        // Iterate 4 times as per the original loop
         for (int n = 0; n < 8; n++) {
 
             uint8_t hydra_head = getSixBitByte(c, n);
 
-            if (hydra_head <= (n % 4) || hydra_head >= 63 - (n % 4)) {
+            // the modulus hash0() applied to this chunk, mirroring the loop there
+            uint8_t modulus = (n < 4) ? (63 - n) : (64 - (n - 4));
+
+            // the only other value that reduces to the same residue
+            uint8_t alt_head = hydra_head + modulus;
+
+            if (alt_head <= 0x3F) {
 
                 // Create new forks by duplicating existing uint64_t values
                 int new_head = heads_count * 2;
@@ -576,46 +655,18 @@ void invert_hash0(uint8_t k[8]) {
                 }
                 hydra_heads = ptmp;
 
-                // Duplicate all current values and add the value to both original and new ones
+                // keep the residue in the existing branch, the alternative in the copy
                 for (int i = 0; i < heads_count; i++) {
-
-                    // Duplicate current value
                     hydra_heads[heads_count + i] = hydra_heads[i];
-                    uint8_t small_hydra_head = 0;
-                    uint8_t big_hydra_head = 0;
-                    uint8_t hydra_lil_spawns[4] = {0x00, 0x01, 0x02, 0x03};
-                    uint8_t hydra_big_spawns[4] = {0x3f, 0x3e, 0x3d, 0x3c};
-
-                    if (hydra_head <= n % 4) { // check if is in the lower range
-
-                        // replace with big spawn in one hydra and keep small in another
-                        small_hydra_head = hydra_head;
-                        for (int fh = 0; fh < 4; fh++) {
-                            if (hydra_lil_spawns[fh] == hydra_head) {
-                                big_hydra_head = hydra_big_spawns[fh];
-                            }
-                        }
-
-                    } else if (hydra_head >= 63 - (n % 4)) { // or the higher range
-
-                        // replace with small in one hydra and keep big in another
-                        big_hydra_head = hydra_head;
-                        for (int fh = 0; fh < 4; fh++) {
-                            if (hydra_big_spawns[fh] == hydra_head) {
-                                small_hydra_head = hydra_lil_spawns[fh];
-                            }
-                        }
-                    }
-                    // Add to both original and duplicate values
-                    pushbackSixBitByte(&hydra_heads[i], big_hydra_head, n);
-                    pushbackSixBitByte(&hydra_heads[heads_count + i], small_hydra_head, n);
+                    pushbackSixBitByte(&hydra_heads[i], hydra_head, n);
+                    pushbackSixBitByte(&hydra_heads[heads_count + i], alt_head, n);
                 }
                 // Update the count of total values
                 heads_count = new_head;
             } else {
                 // no hydra head spawns
                 for (int i = 0; i < heads_count; i++) {
-                    pushbackSixBitByte(&hydra_heads[i], hydra_head, n);;
+                    pushbackSixBitByte(&hydra_heads[i], hydra_head, n);
                 }
             }
         }
@@ -667,6 +718,8 @@ void invert_hash0(uint8_t k[8]) {
         }
         // Free allocated memory
         free(hydra_heads);
+
+        } // for each zP candidate
     }
 }
 
