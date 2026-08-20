@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed Proxmark5 (PM5/AT32) failing to re-enter the bootloader on the software-reset flash path: the ERTC had no clock source selected, so the battery-domain (BPR) write-protection register write stalled the APB at the full clock and left USB dead until a physical replug; the ERTC is now given a clock before the BPR write (@nemanjan00)
 - Fixed `hw fpga config` on Proxmark5 (PM5/AT32) needing a prior reader command (e.g. `hf 14a read`) to work: it now powers on the FPGA (24MHz clock) itself at the start of the config, before driving the JTAG upload (@nemanjan00)
 - Fixed `hf mfdes chk` to correctly check all provided keys instead of only checking a small portion (@corollary-de).
 - Fixed `hf iclass unhash` omitting valid hash0 pre-images, which could make the subsequent hashcat DES crack unable to find the master key (@trichimtrich)
