@@ -18,8 +18,9 @@
 #include "hfsnoop.h"
 #include "proxmark3_arm.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "ticks_apis.h"
+#include "fpga_apis.h"
 #include "dbprint.h"
 #include "util.h"
 #include "fpga.h"
@@ -28,8 +29,8 @@
 
 static void RAMFUNC optimizedSniff(uint16_t *dest, uint16_t dsize) {
     while (dsize > 0) {
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-            *dest = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
+        if (FPGA_SSC_RX_Ready()) {
+            *dest = (uint16_t)(FPGA_SSC_RX_Value());
             dest++;
             dsize -= sizeof(dsize);
         }
@@ -40,8 +41,8 @@ static void RAMFUNC skipSniff(uint8_t *dest, uint16_t dsize, uint8_t skipMode, u
     uint32_t accum = (skipMode == HF_SNOOP_SKIP_MIN) ? 0xffffffff : 0;
     uint8_t ratioindx = 0;
     while (dsize > 0) {
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-            volatile uint16_t val = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
+        if (FPGA_SSC_RX_Ready()) {
+            volatile uint16_t val = (uint16_t)(FPGA_SSC_RX_Value());
             switch (skipMode) {
                 case HF_SNOOP_SKIP_MAX:
                     if (accum < (val & 0xff))
@@ -95,13 +96,13 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len, uint
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
 
     // Set up the synchronous serial port
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SNIFF);
 
     // Setting Frame Mode For better performance on high speed data transfer.
-    AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(16);
+    FpgaUpdateFrameMode(16, false, false);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SNIFF);
     SpinDelay(100);
@@ -127,8 +128,8 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len, uint
         }
 
         // check if trigger is reached
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            r = (uint16_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            r = (uint16_t)FPGA_SSC_RX_Value();
 
             r = MAX(r & 0xFF, r >> 8);
 
@@ -149,7 +150,7 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len, uint
         // skip samples loop
         while (samplesToSkip != 0) {
 
-            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+            if (FPGA_SSC_RX_Ready()) {
                 samplesToSkip--;
             }
         }
@@ -165,8 +166,8 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len, uint
         }
     }
 
-    //Resetting Frame mode (First set in fpgaloader.c)
-    AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
+    // Resetting Frame mode (First set in FpgaSetupSsc() function)
+    FpgaUpdateFrameMode(8, true, true);
     LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     BigBuf_free();
@@ -182,25 +183,20 @@ void HfPlotDownload(void) {
 
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_GET_TRACE);
 
-    AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;   // Disable DMA Transfer
-    AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) this_buf; // start transfer to this memory address
-    AT91C_BASE_PDC_SSC->PDC_RCR = PM3_CMD_DATA_SIZE;   // transfer this many samples
-    ts->buf[0] = (uint8_t)AT91C_BASE_SSC->SSC_RHR;         // clear receive register
-    AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;    // Start DMA transfer
+    FpgaSetupSscRxDmaSingle(this_buf, PM3_CMD_DATA_SIZE);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_GET_TRACE);   // let FPGA transfer its internal Block-RAM
 
     LED_B_ON();
     for (size_t i = 0; i < FPGA_TRACE_SIZE; i += PM3_CMD_DATA_SIZE) {
+        size_t len = MIN(FPGA_TRACE_SIZE - i, PM3_CMD_DATA_SIZE);
         // prepare next DMA transfer:
         uint8_t *next_buf = ts->buf + ((i + PM3_CMD_DATA_SIZE) % (2 * PM3_CMD_DATA_SIZE));
 
-        AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t)next_buf;
-        AT91C_BASE_PDC_SSC->PDC_RNCR = PM3_CMD_DATA_SIZE;
+        while (!FPGA_SSC_DMA_RX_Done()) {}; // wait for DMA transfer to complete
 
-        size_t len = MIN(FPGA_TRACE_SIZE - i, PM3_CMD_DATA_SIZE);
-
-        while (!(AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX))) {}; // wait for DMA transfer to complete
+        // The main buf has stopped receiving, so it needs to be refreshed.
+        FPGA_SSC_DMA_RX_Refresh_Single(next_buf, PM3_CMD_DATA_SIZE);
 
         reply_old(CMD_FPGAMEM_DOWNLOADED, i, len, FPGA_TRACE_SIZE, this_buf, len);
         this_buf = next_buf;

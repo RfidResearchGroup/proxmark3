@@ -19,11 +19,11 @@
 #include "util.h"
 
 #include "proxmark3_arm.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "commonutil.h"
 #include "dbprint.h"
 #include "string.h"
-#include "usb_cdc.h"
+#include "usb_cdc_apis.h"
 #include "usart.h"
 
 size_t nbytes(size_t nbits) {
@@ -231,37 +231,25 @@ void SpinUp(uint32_t speed) {
     LED_D_OFF();
 }
 
-
 // Determine if a button is double clicked, single clicked,
 // not clicked, or held down (for ms || 1sec)
 // In general, don't use this function unless you expect a
 // double click, otherwise it will waste 500ms -- use BUTTON_HELD instead
+// Note: StartTickCount required.
 int BUTTON_CLICKED(int ms) {
-    // Up to 500ms in between clicks to mean a double click
-    // timer counts in 21.3us increments (1024/48MHz)
-    // WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
-    if (ms > 1390) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf(_RED_("Error, BUTTON_CLICKED called with %i > 1390"), ms);
-        ms = 1390;
-    }
-    int ticks = ((MCK / 1000) * (ms ? ms : 1000)) >> 10;
-
     // If we're not even pressed, forget about it!
     if (BUTTON_PRESS() == false)
         return BUTTON_NO_CLICK;
 
-    // Borrow a PWM unit for my real-time clock
-    AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
-    // 48 MHz / 1024 gives 46.875 kHz
-    AT91C_BASE_PWMC_CH0->PWMC_CMR = PWM_CH_MODE_PRESCALER(10);
-    AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;
-    AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xffff;
-
-    uint16_t start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+    ms = ms ? ms : 1000; // use ms param if valid.
 
     int letoff = 0;
     for (;;) {
-        uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+
+        // Using a very short delay period to count how long has passed is much safer than using other methods,
+        // as other timers may be stopped/reset
+        SpinDelay(1);
+        --ms;
 
         // We haven't let off the button yet
         if (!letoff) {
@@ -269,15 +257,14 @@ int BUTTON_CLICKED(int ms) {
             if (BUTTON_PRESS() == false) {
                 letoff = 1;
 
-                // reset our timer for 500ms
-                start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
-                ticks = ((MCK / 1000) * (500)) >> 10;
+                // reset our timer for 500ms next press waiting
+                ms = 500;
             }
 
             // Still haven't let it off
             else
                 // Have we held down a full second?
-                if (now == (uint16_t)(start + ticks))
+                if (ms <= 0)
                     return BUTTON_HOLD;
         }
 
@@ -287,8 +274,8 @@ int BUTTON_CLICKED(int ms) {
             if (BUTTON_PRESS())
                 return BUTTON_DOUBLE_CLICK;
 
-        // Have we ran out of time to double click?
-            else if (now == (uint16_t)(start + ticks))
+            // Have we ran out of time to double click?
+            else if (ms <= 0)
                 // At least we did a single click
                 return BUTTON_SINGLE_CLICK;
 
@@ -300,40 +287,29 @@ int BUTTON_CLICKED(int ms) {
 }
 
 // Determine if a button is held down
+// Note: StartTickCount required.
 int BUTTON_HELD(int ms) {
-    // timer counts in 21.3us increments (1024/48MHz)
-    // WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
-    if (ms > 1390) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf(_RED_("Error, BUTTON_HELD called with %i > 1390"), ms);
-        ms = 1390;
-    }
-    // If button is held for one second
-    int ticks = (48000 * (ms ? ms : 1000)) >> 10;
-
     // If we're not even pressed, forget about it!
     if (BUTTON_PRESS() == false) {
         return BUTTON_NO_CLICK;
     }
 
-    // Borrow a PWM unit for my real-time clock
-    AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
-    // 48 MHz / 1024 gives 46.875 kHz
-    AT91C_BASE_PWMC_CH0->PWMC_CMR = PWM_CH_MODE_PRESCALER(10);
-    AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;
-    AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xffff;
-
-    uint16_t start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+    ms = ms ? ms : 1000; // use ms param if valid.
 
     for (;;) {
-        uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
         // As soon as our button let go, we didn't hold long enough
         if (BUTTON_PRESS() == false) {
             return BUTTON_SINGLE_CLICK;
         }
 
+        // Using a very short delay period to count how long has passed is much safer than using other methods,
+        // as other timers may be stopped/reset
+        SpinDelay(1);
+        --ms;
+
         // Have we waited the full second?
-        else if (now == (uint16_t)(start + ticks)) {
+        if (ms <= 0) {
             return BUTTON_HOLD;
         }
 
@@ -363,37 +339,6 @@ bool data_available_fast(void) {
 #else
     return usb_available_length();
 #endif
-}
-
-uint32_t flash_size_from_cidr(uint32_t cidr) {
-    uint8_t nvpsiz = (cidr & 0xF00) >> 8;
-    switch (nvpsiz) {
-        case 0:
-            return 0;
-        case 1:
-            return 8 * 1024;
-        case 2:
-            return 16 * 1024;
-        case 3:
-            return 32 * 1024;
-        case 5:
-            return 64 * 1024;
-        case 7:
-            return 128 * 1024;
-        case 9:
-            return 256 * 1024;
-        case 10:
-            return 512 * 1024;
-        case 12:
-            return 1024 * 1024;
-        case 14:
-        default: // for 'reserved' values, guess 2MB
-            return 2048 * 1024;
-    }
-}
-
-uint32_t get_flash_size(void) {
-    return flash_size_from_cidr(*AT91C_DBGU_CIDR);
 }
 
 // Combined function to convert an unsigned int to an array of hex values corresponding to the last three bits of k1

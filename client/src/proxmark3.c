@@ -931,8 +931,8 @@ finish:
 static int flash_pm3(char *serial_port_name, uint8_t num_files, const char *filenames[FLASH_MAX_FILES], bool can_write_bl, bool force) {
 
     int ret = PM3_EUNDEF;
-    flash_file_t files[FLASH_MAX_FILES];
-    memset(files, 0, sizeof(files));
+    flash_file_t files[FLASH_MAX_FILES] = {0};
+    flash_dev_t flash_dev = {0};
 
     if (serial_port_name == NULL) {
         PrintAndLogEx(ERR, "You must specify a port.\n");
@@ -977,8 +977,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, const char *file
         goto finish2;
     }
 
-    uint32_t max_allowed = 0;
-    ret = flash_start_flashing(can_write_bl, serial_port_name, &max_allowed);
+    ret = flash_start_flashing(can_write_bl, serial_port_name, &flash_dev);
     if (ret != PM3_SUCCESS) {
         goto finish;
     }
@@ -988,7 +987,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, const char *file
     }
 
     for (int i = 0 ; i < num_files; ++i) {
-        ret = flash_prepare(&files[i], can_write_bl, max_allowed * ONE_KB);
+        ret = flash_prepare(&files[i], can_write_bl, &flash_dev);
         if (ret != PM3_SUCCESS) {
             goto finish;
         }
@@ -998,7 +997,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, const char *file
     PrintAndLogEx(SUCCESS, _CYAN_("Flashing..."));
 
     for (int i = 0; i < num_files; i++) {
-        ret = flash_write(&files[i]);
+        ret = flash_write(&files[i], &flash_dev);
         if (ret != PM3_SUCCESS) {
             goto finish;
         }
@@ -1074,7 +1073,6 @@ int main(int argc, char *argv[]) {
     char *port = NULL;
     uint32_t speed = 0;
 
-    pm3line_init();
 
     char exec_name[100] = {0};
     strncpy(exec_name, basename(argv[0]), sizeof(exec_name) - 1);
@@ -1522,6 +1520,8 @@ int main(int argc, char *argv[]) {
             PrintAndLogEx(WARNING,"Proxmark3 not ready to set debug level");
     }
     */
+
+    pm3line_init();
 
 #ifdef HAVE_GUI
 

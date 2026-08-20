@@ -231,4 +231,10 @@ void str_unescape_newlines_inplace(char *s);
  */
 int str_copy_without_whitespace(const char *src, char *dst, size_t dst_size, size_t *dst_len);
 
+/**
+ * @brief Set the antenna RGB LED colour (Proxmark5). No-op reply on devices
+ * without an RGB LED. Sends CMD_PM5_RGB_SET and waits briefly for the ack.
+ */
+void set_rgb(uint8_t r, uint8_t g, uint8_t b);
+
 #endif

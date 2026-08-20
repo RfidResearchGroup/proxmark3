@@ -171,7 +171,7 @@ If you own a Proxmark3 Easy with only 256KB, you can use a few definitions to he
 First thing is of course to use the `PLATFORM=PM3GENERIC`.
 Adding `PLATFORM_SIZE=256` will provoke an error during compilation of the recovery image if your image is too big, so you can detect the problem before trying to flash the Proxmark3, e.g.
 ```
-[=] GEN proxmark3_recovery.bin
+[=] GEN recovery.bin
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ERROR: Firmware image too large for your platform! 262768 > 262144
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

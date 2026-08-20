@@ -2337,7 +2337,7 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is
             return ;
         }
 
-        //	CLA	0x90    Proprietary class - DESFire's "ISO 7816 wrap of native commands" indicator.
+        //  CLA 0x90    Proprietary class - DESFire's "ISO 7816 wrap of native commands" indicator.
         //  Tells the card "the next byte is a DESFire native opcode, not an ISO 7816 standard INS."
         //  INS 0x5A    DESFire native opcode SelectApplication (3-byte AID).
 

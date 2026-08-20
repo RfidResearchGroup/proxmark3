@@ -568,7 +568,7 @@ typedef struct {
 #define CMD_FLASHMEM_DOWNLOAD 0x0123
 #define CMD_FLASHMEM_DOWNLOADED 0x0124
 // DXL: I found that this command did not seem to have been used before, so it can be used to obtain the unique ID of FLASH MEM.
-#define CMD_FLASHMEM_INFO 0x0125
+#define CMD_FLASHMEM_GET_ID 0x0125
 #define CMD_FLASHMEM_SET_SPIBAUDRATE 0x0126
 #define CMD_FLASHMEM_PAGES64K 0x0127
 
@@ -637,6 +637,8 @@ typedef struct {
 #define CMD_EEPROM_FACTORY_INFO_WRITE 0x0173
 // PM5, QC test for the hardware
 #define CMD_PM5_QC_TEST 0x0177
+// PM5, set the antenna RGB LED colour (payload: r,g,b). Used by `hf/lf tune --rgb`.
+#define CMD_PM5_RGB_SET 0x0178
 
 // For low-frequency tags
 #define CMD_LF_TI_READ 0x0202
@@ -835,7 +837,7 @@ typedef struct {
 #define CMD_FPGA_BITSTREAM_CONFIG_FINISH 0x0503
 
 // For fpga set pwm output for driver voltage adjust
-#define CMD_FPGA_CMD_SET_PWR_PWM_LOW_COUNT                                0x0504
+#define CMD_PM5_FPGA_SET_PWR_PWM_LOW_COUNT                                0x0504
 
 // For mifare commands
 #define CMD_HF_MIFARE_EML_MEMCLR 0x0601

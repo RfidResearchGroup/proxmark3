@@ -24,8 +24,10 @@
 #include "cmd.h"
 #include "appmain.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "ticks_apis.h"
+#include "fpga_apis.h"
+#include "rssi_apis.h"
 #include "dbprint.h"
 #include "util.h"
 #include "parity.h"
@@ -37,15 +39,13 @@
 #include "desfire_crypto.h"  // UL-C authentication helpers
 #include "mifare.h"  // for iso14a_polling_frame_t structure
 #include "cmac_calc.h"
-#include "usb_cdc.h"
+#include "usb_cdc_apis.h"
 
 // Forward declaration: HID Config Card jam support (implemented in secc.c).
 // Called from SniffIso14443a when param bit 0x04 is set.
 bool hid_config_card_jam(const uint8_t *cmd, int len, uint8_t *dma_buf);
 
 static uint32_t iso14a_timeout;
-
-static uint8_t colpos = 0;
 
 // the block number for the ISO14443-4 PCB
 static uint8_t iso14_pcb_blocknum = 0;
@@ -826,7 +826,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     uint8_t *receivedRespPar = BigBuf_calloc(MAX_PARITY_SIZE);
 
     uint8_t previous_data = 0;
-    int maxDataLen = 0, dataLen;
+    int dataLen;
     bool TagIsActive = false;
     bool ReaderIsActive = false;
 
@@ -845,8 +845,8 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     uint8_t *data = dma->buf;
 
     // Setup and start DMA.
-    if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
+    if (FpgaSetupSscRxDmaRepeat((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
+        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscRxDmaRepeat failed. Exiting");
         return;
     }
 
@@ -859,7 +859,6 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     uint32_t rx_samples = 0;
     uint32_t overrun_skips = 0;
     uint32_t dma_stalls = 0;
-
     uint16_t checker = 12000;
 
     // loop and listen
@@ -875,24 +874,17 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
         }
 
         register int readBufDataP = data - dma->buf;
-        register int dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
+        register int dmaBufDataP = DMA_BUFFER_SIZE - FPGA_SSC_DMA_RX_Remaining_Count();
         if (readBufDataP <= dmaBufDataP) {
             dataLen = dmaBufDataP - readBufDataP;
         } else {
             dataLen = DMA_BUFFER_SIZE - readBufDataP + dmaBufDataP;
         }
 
-        if (dataLen > maxDataLen) {
-            maxDataLen = dataLen;
-        }
-
         // DMA fully stalled: both buffers exhausted. Re-arm primary + secondary,
         // resync the read pointer, and drop the in-flight frame.
-        if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
-            AT91C_BASE_PDC_SSC->PDC_RPR  = (uint32_t) dma->buf;
-            AT91C_BASE_PDC_SSC->PDC_RCR  = DMA_BUFFER_SIZE;
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+        if (FPGA_SSC_DMA_RX_Primary_Done()) {
+            FPGA_SSC_DMA_RX_Refresh_Both(dma->buf, DMA_BUFFER_SIZE);
             data = dma->buf;
             rx_samples += DMA_BUFFER_SIZE;
             Uart14aReset();
@@ -914,14 +906,14 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
             continue;
         }
 
+        // The MCU is processing data fast enough that the DMA has not yet received any new data.
         if (dataLen < 1) {
             continue;
         }
 
         // secondary buffer exhausted, primary still running — refill secondary
-        if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+        if (FPGA_SSC_DMA_RX_Secondary_Done()) {
+            FPGA_SSC_DMA_RX_Refresh_Secondary(dma->buf, DMA_BUFFER_SIZE);
         }
 
         LED_A_OFF();
@@ -929,6 +921,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
         // Need two samples to feed Miller and Manchester-Decoder
         if (rx_samples & 0x01) {
 
+            // Reader -> Tag
             // no need to try decoding reader data if the tag is sending
             if (TagIsActive == false) {
 
@@ -967,6 +960,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
                 ReaderIsActive = (Uart.state != STATE_14A_UNSYNCD);
             }
 
+            // Tag -> Reader
             // no need to try decoding tag data if the reader is sending - and we cannot afford the time
             if (ReaderIsActive == false) {
 
@@ -1151,7 +1145,7 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint16_t received_maxlen, 
     Uart14aInit(received, received_maxlen, par);
 
     // clear RXRDY:
-    uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
     (void)b;
 
     uint8_t flip = 0;
@@ -1180,8 +1174,8 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint16_t received_maxlen, 
             checker = 4000;
         }
 
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            b = (uint8_t)FPGA_SSC_RX_Value();
             if (MillerDecoding(b, 0)) {
                 *len = Uart.len;
                 return true;
@@ -2597,7 +2591,6 @@ static void PrepareDelayedTransfer(uint16_t delay) {
     }
 }
 
-
 //-------------------------------------------------------------------------------------
 // Transmit the command (to the tag) that was placed in ToSend[].
 // Parameter timing:
@@ -2613,7 +2606,10 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
         return;
     }
 
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+    // DXL: If the mode is set to FPGA_MAJOR_MODE_OFF before transmission, the timing wait will freeze.
+    //  If you need to handle this situation, you can uncomment the code below(SPEED is affected).
+    //  And do not use the FPGA_HF_ISO14443A_READER_MOD!!!
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_LISTEN);
 
     if (timing) {
 
@@ -2632,14 +2628,28 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
         ThisTransferTime = ((MAX(NextTransferTime, GetCountSspClk()) & 0xfffffff8) + 8);
 
         while (GetCountSspClk() < ThisTransferTime) {};
-
         LastTimeProxToAirStart = ThisTransferTime;
+
     }
+
+    // DXL: Switch to this mode before actually starting to send. Otherwise, it may cause delays between frames to fail.
+    //  14b also has this problem, which requires waiting for the frame delay to complete
+    //  before switching to modulation transmission mode to send data.
+    //  If we don't do this, there is a possibility of randomly encountering communication exception bugs
+    //  on high-performance processors such as AT32, which is very fatal!
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+
+    // If the transmission is not cleared, there is a high probability of communication abnormalities.
+    // I suspect that the wrong DOUT level may have modulated data that should not have been modulated.
+    // If further research is needed, an oscilloscope needs to be used to observe the specific DOUT modulation status.
+    // ---
+    // Clear TXRDY:
+    FPGA_SSC_TX_Value(SEC_Y);
 
     uint16_t c = 0;
     while (c < len) {
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-            AT91C_BASE_SSC->SSC_THR = cmd[c];
+        if (FPGA_SSC_TX_Ready()) {
+            FPGA_SSC_TX_Value(cmd[c]);
             c++;
         }
     }
@@ -2750,23 +2760,13 @@ int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_
     LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
-    // Set ADC to read field strength
-    AT91C_BASE_ADC->ADC_CR = AT91C_ADC_SWRST;
-    AT91C_BASE_ADC->ADC_MR =
-        ADC_MODE_PRESCALE(63) |
-        ADC_MODE_STARTUP_TIME(1) |
-        ADC_MODE_SAMPLE_HOLD_TIME(15);
-
-    AT91C_BASE_ADC->ADC_CHER = ADC_CHANNEL(ADC_CHAN_HF);
-
-    // start ADC
-    AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
+    AdcSetupRssiChannel(ADC_RSSI_CH_HF);
 
     // Now run a 'software UART' on the stream of incoming samples.
     Uart14aInit(received, received_max_len, par);
 
     // Clear RXRDY:
-    uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
     (void)b;
 
     uint8_t flip = 0;
@@ -2802,17 +2802,17 @@ int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_
 
 
         // test if the field exists
-        if (AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ADC_CHAN_HF)) {
+        if (AdcRssiDataReady(ADC_RSSI_CH_HF)) {
 
             analogCnt++;
 
-            analogAVG += (AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF] & 0x3FF);
+            analogAVG += AdcRssiDataRead(ADC_RSSI_CH_HF);
 
-            AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
+            AdcRssiConversionStart();
 
             if (analogCnt >= 32) {
 
-                if ((MAX_ADC_HF_VOLTAGE * (analogAVG / analogCnt) >> 10) < MF_MINFIELDV) {
+                if (AdcRssiDataToMilliVolt(analogAVG / analogCnt, ADC_RSSI_CH_HF) < MF_MINFIELDV) {
 
                     if (timer == 0) {
                         timer = GetTickCount();
@@ -2831,8 +2831,8 @@ int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_
         }
 
         // receive and test the miller decoding
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            b = (uint8_t)FPGA_SSC_RX_Value();
             if (MillerDecoding(b, 0)) {
                 *len = Uart.len;
                 return 0;
@@ -2862,14 +2862,14 @@ int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
     i = (correction_needed) ? 0 : 1;
 
     // clear receiving shift register and holding register
-    while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
-    b = AT91C_BASE_SSC->SSC_RHR;
+    FPGA_SSC_RX_READY_WAIT();
+    b = FPGA_SSC_RX_Value();
     (void) b;
 
     // wait for the FPGA to signal fdt_indicator == 1 (the FPGA is ready to queue new data in its delay line)
     for (uint8_t j = 0; j < 5; j++) {    // allow timeout - better late than never
-        while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
-        if (AT91C_BASE_SSC->SSC_RHR) {
+        FPGA_SSC_RX_READY_WAIT();
+        if (FPGA_SSC_RX_Value()) {
             break;
         }
     }
@@ -2877,22 +2877,24 @@ int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
     while ((ThisTransferTime = GetCountSspClk()) & 0x00000007);
 
     // Clear TXRDY:
-    AT91C_BASE_SSC->SSC_THR = SEC_F;
+    FPGA_SSC_TX_Value(SEC_F);
 
     // send cycle
     for (; i < respLen;) {
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-            AT91C_BASE_SSC->SSC_THR = resp[i++];
-            FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_TX_Ready()) {
+            FPGA_SSC_TX_Value(resp[i++]);
+            FPGA_SSC_RX_READY_WAIT();
+            FpgaSendQueueDelay = (uint8_t)FPGA_SSC_RX_Value();
         }
     }
 
     // Ensure that the FPGA Delay Queue is empty before we switch to TAGSIM_LISTEN again:
     uint8_t fpga_queued_bits = FpgaSendQueueDelay >> 3;
     for (i = 0; i <= (fpga_queued_bits >> 3) + 1;) {
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-            AT91C_BASE_SSC->SSC_THR = SEC_F;
-            FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_TX_Ready()) {
+            FPGA_SSC_TX_Value(SEC_F);
+            FPGA_SSC_RX_READY_WAIT();
+            FpgaSendQueueDelay = (uint8_t)FPGA_SSC_RX_Value();
             i++;
         }
     }
@@ -3014,7 +3016,7 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_
     Demod14aInit(receivedResponse, rec_maxlen, NULL);
 
     // clear RXRDY:
-    uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
     (void)b;
 
     uint32_t timeout = iso14a_get_timeout();
@@ -3023,8 +3025,8 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_
     for (;;) {
         WDT_HIT();
 
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            b = (uint8_t)FPGA_SSC_RX_Value();
             if (ManchesterDecoding_Thinfilm(b)) {
                 *received_len = Demod.len;
                 LogTrace(receivedResponse, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, NULL, false);
@@ -3064,7 +3066,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint16_t rec_max
     Demod14aInit(receivedResponse, rec_maxlen, receivedResponsePar);
 
     // clear RXRDY:
-    uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
     (void)b;
 
     volatile uint32_t c = 0;
@@ -3073,8 +3075,8 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint16_t rec_max
     for (;;) {
         WDT_HIT();
 
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            b = (uint8_t)FPGA_SSC_RX_Value();
             if (ManchesterDecoding(b, offset, 0)) {
                 NextTransferTime = MAX(NextTransferTime, Demod.endTime - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 16 + FRAME_DELAY_TIME_PICC_TO_PCD);
                 return true;
@@ -3186,11 +3188,9 @@ void iso14443a_antifuzz(uint32_t flags) {
             resp[2] = 0xFF;
             resp[3] = 0xFF;
             resp[4] =  resp[0] ^ resp[1] ^ resp[2] ^ resp[3];
-            colpos = 0;
 
             if (IS_FLAG_UID_IN_DATA(flags, 7)) {
                 resp[0] = MIFARE_SELECT_CT;
-                colpos = 8;
             }
 
             // trigger a faulty/collision response
@@ -3635,7 +3635,7 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
     // Set up the synchronous serial port
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_ISO14443A);
     // connect Demodulated Signal to ADC:
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
 
     LED_D_OFF();
     // Signal field is on with the appropriate LED

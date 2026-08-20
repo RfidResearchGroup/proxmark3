@@ -53,7 +53,20 @@
 
 static int CmdHelp(const char *Cmd);
 
-static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used) {
+static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used, uint32_t flash_size) {
+    // AT32 (PM5): the chip id is an ARM DBGMCU IDCODE, not an Atmel CIDR, so the
+    // AT91 decode below does not apply (it would print "Unknown" and a bogus flash
+    // size). Report the MCU and use the real flash size the device reported.
+    if (IfPm5()) {
+        PrintAndLogEx(NORMAL, "    MCU....... " _YELLOW_("%s"), "AT32F437");
+        uint32_t mem_kb = flash_size / 1024;
+        PrintAndLogEx(NORMAL, "    Memory.... " _YELLOW_("%u") " KB ( " _YELLOW_("%2.0f%%") " used )"
+                      , mem_kb
+                      , mem_kb == 0 ? 0.0f : (float)mem_used / (mem_kb * 1024) * 100
+                     );
+        return;
+    }
+
     const char *asBuff;
     switch (iChipID) {
         case 0x270B0A40:
@@ -157,10 +170,23 @@ static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used) {
                  );
 }
 
-static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
+static void lookupChipID(uint32_t iChipID, uint32_t mem_used, uint32_t flash_size) {
     const char *asBuff;
     uint32_t mem_avail = 0;
     PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Hardware") " ]");
+
+    // AT32 (PM5): the chip id is an ARM DBGMCU IDCODE, not an Atmel CIDR, so the
+    // verbose AT91 decode below does not apply. Print a short AT32 summary instead.
+    if (IfPm5()) {
+        PrintAndLogEx(NORMAL, "  --= uC: AT32F437");
+        uint32_t mem_kb = flash_size / 1024;
+        PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Size: %u KB, Used: %u bytes (%2.0f%%)"
+                      , mem_kb
+                      , mem_used
+                      , mem_kb == 0 ? 0.0f : (float)mem_used / (mem_kb * 1024) * 100
+                     );
+        return;
+    }
 
     switch (iChipID) {
         case 0x270B0A40:
@@ -2029,9 +2055,18 @@ void pm3_version_short(void) {
 
             struct p *payload = (struct p *)&resp.data.asBytes;
 
-            lookup_chipid_short(payload->id, payload->section_size);
+            // Flash size (bytes) is appended after the version string by newer
+            // firmware; 0 if the device didn't send it (older firmware).
+            uint32_t flash_size = 0;
+            if (resp.length >= 12 + payload->versionstr_len + sizeof(uint32_t)) {
+                memcpy(&flash_size, payload->versionstr + payload->versionstr_len, sizeof(flash_size));
+            }
 
-            if (IfPm3Rdv4Fw()) {
+            lookup_chipid_short(payload->id, payload->section_size, flash_size);
+
+            if (IfPm5()) {
+                PrintAndLogEx(NORMAL, "    Target.... %s", _YELLOW_("PM5"));
+            } else if (IfPm3Rdv4Fw()) {
 
                 // validate signature data
                 rdv40_validation_t mem;
@@ -2168,7 +2203,10 @@ void pm3_version(bool verbose, bool oneliner) {
         SendCommandNG(CMD_VERSION, NULL, 0);
 
         if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
-            if (IfPm3Rdv4Fw()) {
+            if (IfPm5()) {
+                PrintAndLogEx(NORMAL, "  Firmware.................. " _GREEN_("PM5"));
+                PrintAndLogEx(NORMAL, "  External flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
+            } else if (IfPm3Rdv4Fw()) {
 
                 // validate signature data
                 rdv40_validation_t mem;
@@ -2230,11 +2268,20 @@ void pm3_version(bool verbose, bool oneliner) {
                 }
             }
             PrintAndLogEx(NORMAL, payload->versionstr);
-            if (strstr(payload->versionstr, FPGA_TYPE) == NULL) {
+            // PM5 doesn't report a built-in FPGA version (Gowin bitstream is loaded
+            // externally), so skip the Xilinx FPGA_TYPE match check for it.
+            if (!IfPm5() && strstr(payload->versionstr, FPGA_TYPE) == NULL) {
                 PrintAndLogEx(NORMAL, "  FPGA firmware... %s", _RED_("chip mismatch"));
             }
 
-            lookupChipID(payload->id, payload->section_size);
+            // Flash size (bytes) is appended after the version string by newer
+            // firmware; 0 if the device didn't send it (older firmware).
+            uint32_t flash_size = 0;
+            if (resp.length >= 12 + payload->versionstr_len + sizeof(uint32_t)) {
+                memcpy(&flash_size, payload->versionstr + payload->versionstr_len, sizeof(flash_size));
+            }
+
+            lookupChipID(payload->id, payload->section_size, flash_size);
 
             // Get unique id of mainchip
             clearCommandBuffer();

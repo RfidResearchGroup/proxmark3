@@ -67,12 +67,13 @@
 
 #include "standalone.h" // standalone definitions
 #include "proxmark3_arm.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "iso14443a.h"
 #include "util.h"
 #include "appmain.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "protocols.h"
 #include "mifareutil.h"
 #include "string.h"
@@ -208,8 +209,8 @@ static bool RAMFUNC sniff_wait_for_rnda_reply(tag_t type) {
     uint8_t *data = dma->buf;
 
     // Setup and start DMA.
-    if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
+    if (FpgaSetupSscRxDmaRepeat((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
+        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscRxDmaRepeat failed. Exiting");
         goto out;
     }
 
@@ -222,7 +223,7 @@ static bool RAMFUNC sniff_wait_for_rnda_reply(tag_t type) {
     uint32_t ledb_counter = 0;
     while (BUTTON_PRESS() == false) {
         register int readBufDataP = data - dma->buf;
-        register int dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
+        register int dmaBufDataP = DMA_BUFFER_SIZE - FPGA_SSC_DMA_RX_Remaining_Count();
         if (readBufDataP <= dmaBufDataP) {
             dataLen = dmaBufDataP - readBufDataP;
         } else {
@@ -246,17 +247,7 @@ static bool RAMFUNC sniff_wait_for_rnda_reply(tag_t type) {
             ledb_counter = 0;
         }
 
-        // primary buffer was stopped( <-- we lost data!
-        if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
-            AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
-            AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-            // Dbprintf("[-] RxEmpty ERROR | data length %d", dataLen); // temporary
-        }
-        // secondary buffer sets as primary, secondary buffer was stopped
-        if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
-        }
+        FPGA_SSC_DMA_RX_Refresh_Repeat(dma->buf, DMA_BUFFER_SIZE);
 
         // Need two samples to feed Miller and Manchester-Decoder
         if (rx_samples & 0x01) {
@@ -328,7 +319,7 @@ out:
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     }
     FpgaDisableTracing();
-    FpgaDisableSscDma();
+    FPGA_SSC_DMA_RX_Disable();
     return found_rnda_reply;
 }
 

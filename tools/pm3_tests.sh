@@ -311,7 +311,7 @@ while true; do
     fi
     if $TESTALL || $TESTRECOVERY; then
       echo -e "\n${C_BLUE}Testing recovery:${C_NC}"
-      if ! CheckFileExist "recovery image exists"          "./recovery/proxmark3_recovery.bin"; then break; fi
+      if ! CheckFileExist "recovery image exists"          "./recovery/recovery.bin"; then break; fi
 
     fi
     if $TESTALL || $TESTFPGACOMPRESS; then

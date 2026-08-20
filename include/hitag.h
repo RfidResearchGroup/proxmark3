@@ -71,7 +71,7 @@ typedef enum modulation {
     AC4K,      // Amplitude modulation 4000 bits/s
     MC4K,      // Manchester modulation 4000 bits/s
     MC8K       // Manchester modulation 8000 bits/s
-} MOD;
+} hitag_mod_t;
 
 typedef enum {
     HTSF_PLAIN,

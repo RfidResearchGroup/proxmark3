@@ -23,6 +23,7 @@
   */
 
 #include "at32f435_437_conf.h"
+#include "at32f435_437_sdio.h"
 
 /** @addtogroup AT32F435_437_periph_driver
   * @{

@@ -4,6 +4,10 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `hf mfdes chk` to correctly check all provided keys instead of only checking a small portion (@corollary-de).
+- Added `--rgb` option to `hf tune` / `lf tune` (Proxmark5/PM5): mirrors the antenna tuning level on the antenna RGB LED (blue=low, green=mid, red=high, tracking the on-screen bar), for locating tags/implants by feel without watching the screen. Colour is computed client-side; the device gets a new `CMD_PM5_RGB_SET` handled by a dedicated AT32 RGB HAL module (`common_arm/rgb`), so other platforms are unaffected (@nemanjan00)
+- Fixed `hw version` / `hw status` showing a bogus FPGA image (`fpga_pm3_hf.ncd image 2s30vq100`) on Proxmark5 (PM5/AT32): PM5's Gowin FPGA bitstream is loaded externally and not compiled in, so the built-in Xilinx version info is meaningless there; the `[ FPGA ]` section (and the client FPGA "chip mismatch" check) are now suppressed for PM5 (@nemanjan00)
+- Fixed `hw status` [Model] section reporting "PM3 GENERIC" firmware on Proxmark5 (PM5/AT32); it now reports `PM5` (@nemanjan00)
+- Added Proxmark5 (PM5/AT32) reporting in `hw version` / `hw status`: correct MCU (AT32F437), flash size and `PM5` target, instead of the AT91-decoded "Unknown / 32 KB / PM3 GENERIC". The device now also reports its on-chip flash size, appended to the `CMD_VERSION` reply in a backward-compatible way (@nemanjan00)
 - Fixed `hf mf dump` preserving readable sector trailer Key B data instead of overwriting it with values from the supplied key file (@oSPANNERo)
 - Changed `magic_cards_notes.md` - documented the USCUID-UL helper scripts (`hf_mfu_uscuid` / `hf_mf_uscuid_prog`) and how to set the tag signature, replacing the outdated "No implemented commands" note (@c-barron)
 - Fixed `hf_mf_uscuid_prog.lua` - corrected the script name shown in its usage text (@c-barron)

@@ -18,6 +18,10 @@ PLATFORM=PM3RDV4
 # uncomment the line below
 #PLATFORM=PM3ULTIMATE
 
+# For Proxmark5 (PM5, Artery AT32F435/437):
+# uncomment the line below
+#PLATFORM=PM5
+
 # If you want more than one PLATFORM_EXTRAS option, separate them by spaces:
 #PLATFORM_EXTRAS=BTADDON
 #PLATFORM_EXTRAS=FLASH

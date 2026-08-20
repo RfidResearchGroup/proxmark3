@@ -59,12 +59,13 @@
 #include "standalone.h"
 #include "proxmark3_arm.h"
 #include "appmain.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "iso14443b.h"  // ISO14443B operations
 #include "util.h"
 #include "spiffs.h"     // Flash memory filesystem access
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "BigBuf.h"
 #include "protocols.h"
 #include "crc16.h"      // compute_crc
@@ -368,7 +369,7 @@ static void iso14443b_setup_light(void) {
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
 
     // Signal field is on with the appropriate LED
-#ifdef RDV4
+#if defined RDV4 || defined PM5
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4);
 #else
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);

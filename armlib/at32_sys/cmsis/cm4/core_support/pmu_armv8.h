@@ -285,7 +285,7 @@ __STATIC_INLINE uint32_t ARM_PMU_Get_EVCNTR(uint32_t num)
 */
 __STATIC_INLINE uint32_t ARM_PMU_Get_CNTR_OVS(void)
 {
-  return PMU->OVSSET;	
+  return PMU->OVSSET;   
 }
 
 /** 
