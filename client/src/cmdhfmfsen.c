@@ -2893,7 +2893,13 @@ int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline
         active_key = active_key_bytes;
     }
 
-    uint32_t uid = bytes_to_num(card.uid + card.uidlen - 4, 4);
+    uint32_t uid;
+    if (card.uidlen == 7) {
+        uid = bytes_to_num(card.uid + 3, 4);
+    } else {
+        uid = bytes_to_num(card.uid, 4);
+    }
+
     uint32_t nonce_count = FM11RF08S_SECTORS * 2;
     char activity[80];
     snprintf(activity, sizeof(activity), "Loaded card UID %08X using %s key %s", uid,
