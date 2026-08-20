@@ -32,6 +32,9 @@
 #include "usb_cdc_apis.h"
 #include "usb_read_ng.h"
 
+// To enable CARDHOPPER_USB, add the following line in your Makefile.platform
+// STANDALONE_PLATFORM_DEFS+=-DCARDHOPPER_USB
+
 #ifdef CARDHOPPER_USB
 #define cardhopper_write usb_write
 #define cardhopper_read usb_read_ng
