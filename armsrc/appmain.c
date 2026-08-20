@@ -26,9 +26,7 @@
 #include "bwm_uart_at32.h"
 #include "bwm_wifi.h"
 #endif
-#include "clocks.h"
 #include "pm3_cmd.h"
-#include "usb_cdc.h"
 #include "proxmark3_arm.h"
 #include "dbprint.h"
 #include "pmflash.h"
