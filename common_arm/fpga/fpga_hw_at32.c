@@ -374,6 +374,11 @@ int FpgaStartConfig(bool configSram, uint32_t fileLength) {
     // TODO DXL: Check the file length is valid in this platform?
     //  if not, return the PM3_EOVFLOW
 
+    // Make sure the FPGA is clocked/powered before we drive its JTAG. Previously
+    // a reader command (e.g. `hf 14a read`) had to be run first to bring the FPGA
+    // up, otherwise `hw fpga config` had nothing to talk to. Do it here instead.
+    FpgaSetup24MHzClk();
+
     // Init jtag hardware link.
     gpio_fpga_download_setup();
 
