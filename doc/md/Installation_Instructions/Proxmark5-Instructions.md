@@ -9,12 +9,15 @@ You have several options:
 * If you have both Proxmark3 and Proxmark5, you can maintain a separate file like `Makefile.pm5.platform` and specify it when compiling, with `make -j PLATFORM_FILE=Makefile.pm5.platform`.
 * ⚠️ Make sure to not have any conflicting `PLATFORM_EXTRAS` such as `BTADDON` or `FPC_USART_DEV` which are specific to the RDV4.
 
+
 💡 The same client can handle both Proxmark3 and Proxmark5, no need to compile separate clients if you own both hardwares.
 
 ## Flashing instructions
 
 ⚠️ Disconnect the BWM (Battery Wireless Module), it's not supported yet, and creates issues flashing.
+
 ⚠️ As usual, make sure [ModemManager won't interfere](ModemManager-Must-Be-Discarded.md).
+
 ⚠️ Make sure no other Proxmark (3 or 5) is plugged into your PC.
 
 
@@ -30,6 +33,7 @@ Later, you don't need to reflash the bootrom and you can just run `./pm3-flash-f
 If you see "🚨 The elf file is not applicable to the currently connected device.", you probably forgot to add the `PLATFORM=PM5` when compiling.
 
 The FPGA code for the Proxmark5 has not yet been pushed to the repository. To flash the FGPA with the latest image:
+
 ```
 wget https://github.com/user-attachments/files/31105593/PM5_FPGA_fix_loedge_bug.zip
 unzip PM5_FPGA_fix_loedge_bug.zip
@@ -42,19 +46,26 @@ hf 14a read --drop
 
 If the device seems unresponsive and unable to enter boot mode when the button is pressed when plugged, you can reflash the bootrom over DFU. The Proxmark5 does not require J-Link or similar tools for unbricking.
 
-`sudo apt install dfu-util`
+```sudo apt install dfu-util```
 
 Enter DFU mode: Plug in your Proxmark5 while holding the button for about 8 seconds until you see 2 LEDs (B and D) going on then off.
 
 Backup current flash content, if needed:
-`sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:1048576 -U pm5-full-flash-backup.bin`
+
+```sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:1048576 -U pm5-full-flash-backup.bin```
+
 Flash bootrom:
-`sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000       -D recovery/bootrom.bin`
+
+```sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000       -D recovery/bootrom.bin```
+
 Flash fullimage:
-`sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08004000:leave -D recovery/fullimage.bin`
+
+```sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08004000:leave -D recovery/fullimage.bin```
 
 You can also flash bootrom and fullimage in one go:
-`sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:leave -D recovery/recovery.bin`
+
+```sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:leave -D recovery/recovery.bin```
+
 
 On Windows, you can try the following:
 - Download and extract the [AT32 ISP Programmer](https://www.arterychip.com/file/download/1764)
