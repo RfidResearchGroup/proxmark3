@@ -22,9 +22,7 @@
 
 #include "sys_apis.h"
 #include "usb_cdc_apis.h"
-#include "clocks.h"
 #include "pm3_cmd.h"
-#include "usb_cdc.h"
 #include "proxmark3_arm.h"
 #include "dbprint.h"
 #include "pmflash.h"
