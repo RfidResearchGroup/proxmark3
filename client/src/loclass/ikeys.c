@@ -220,34 +220,62 @@ static uint64_t check(uint64_t z) {
 // All v with:  v0 = v; for j = i-1 down to 0: if (v0 == zs[j]) v0 = j;  giving t.
 // Undoes the steps in reverse order, branching wherever both readings are possible.
 static int invert_ck_index(uint8_t t, const uint8_t *zs, int i, uint8_t *out, int max) {
-    uint8_t cur[CK_MAX_PREIMAGES], nxt[CK_MAX_PREIMAGES];
-    int n = 0, m;
+
+    uint8_t cur[CK_MAX_PREIMAGES] = {0};
+    uint8_t nxt[CK_MAX_PREIMAGES] = {0};
+
+    int n = 0;
+    int m;
     cur[n++] = t;
 
     for (int j = 0; j < i; j++) {
         m = 0;
         for (int a = 0; a < n; a++) {
+
             uint8_t va = cur[a];
+
             if (va == j) {                             // the substitution happened
+
                 uint8_t v = zs[j];
                 bool dup = false;
-                for (int d = 0; d < m; d++) if (nxt[d] == v) dup = true;
-                if (!dup && m < CK_MAX_PREIMAGES) nxt[m++] = v;
+
+                for (int d = 0; d < m; d++) {
+                    if (nxt[d] == v) {
+                        dup = true;
+                    }
+                }
+
+                if ((dup == false) && (m < CK_MAX_PREIMAGES)) {
+                    nxt[m++] = v;
+                }
             }
+
             if (va != zs[j]) {                         // no substitution at this step
                 bool dup = false;
-                for (int d = 0; d < m; d++) if (nxt[d] == va) dup = true;
-                if (!dup && m < CK_MAX_PREIMAGES) nxt[m++] = va;
+                for (int d = 0; d < m; d++) {
+                    if (nxt[d] == va) {
+                        dup = true;
+                    }
+                }
+
+                if ((dup == false) && (m < CK_MAX_PREIMAGES)) {
+                    nxt[m++] = va;
+                }
             }
         }
         memcpy(cur, nxt, m);
         n = m;
-        if (n == 0) break;
+        if (n == 0) {
+            break;
+        }
     }
 
     int count = 0;
-    for (int a = 0; a < n && count < max; a++)
-        if (cur[a] < 0x40) out[count++] = cur[a];
+    for (int a = 0; a < n && count < max; a++) {
+        if (cur[a] < 0x40) {
+            out[count++] = cur[a];
+        }
+    }
     return count;
 }
 
