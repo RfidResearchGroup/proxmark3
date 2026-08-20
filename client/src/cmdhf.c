@@ -21,6 +21,7 @@
 #include "cmdparser.h"      // command_t
 #include "cliparser.h"      // parse
 #include "comms.h"          // clearCommandBuffer
+#include "util.h"           // set_rgb
 #include "lfdemod.h"        // computeSignalProperties
 #include "cmdhf14a.h"       // ISO14443-A
 #include "cmdhf14b.h"       // ISO14443-B
@@ -298,6 +299,22 @@ int CmdHFSearch(const char *Cmd) {
     return res;
 }
 
+// Mirror an antenna tuning level on the PM5 antenna RGB LED. `volt` is scaled
+// relative to the running peak (`v_max`), so the colour tracks the on-screen bar:
+// blue = low, green = mid, red = high.
+static void tune_rgb_update(uint32_t volt, uint32_t v_max) {
+    uint32_t t = (v_max > 0) ? (volt * 510 / v_max) : 0;
+    if (t > 510) {
+        t = 510;
+    }
+    if (t < 255) {          // blue -> green
+        set_rgb(0, (uint8_t)t, (uint8_t)(255 - t));
+    } else {                // green -> red
+        t -= 255;
+        set_rgb((uint8_t)t, (uint8_t)(255 - t), 0);
+    }
+}
+
 int CmdHFTune(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -315,6 +332,7 @@ int CmdHFTune(const char *Cmd) {
         arg_lit0(NULL, "mix", "mixed style"),
         arg_lit0(NULL, "value", "values style"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "rgb", "(PM5) mirror the tuning level on the antenna RGB LED"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -323,7 +341,13 @@ int CmdHFTune(const char *Cmd) {
     bool is_mix = arg_get_lit(ctx, 3);
     bool is_value = arg_get_lit(ctx, 4);
     bool verbose = arg_get_lit(ctx, 5);
+    bool use_rgb = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
+
+    if (use_rgb && (IfPm5() == false)) {
+        PrintAndLogEx(WARNING, "`--rgb` is only supported on Proxmark5; ignoring");
+        use_rgb = false;
+    }
 
     if ((is_bar + is_mix + is_value) > 1) {
         PrintAndLogEx(ERR, "Select only one output style");
@@ -397,6 +421,12 @@ int CmdHFTune(const char *Cmd) {
             v_count++;
         }
         print_progress(volt, v_max, style);
+        if (use_rgb) {
+            tune_rgb_update(volt, v_max);
+        }
+    }
+    if (use_rgb) {
+        set_rgb(0, 0, 0); // turn the LED off on exit
     }
     mode[0] = 3;
 

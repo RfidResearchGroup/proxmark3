@@ -196,10 +196,16 @@ ifneq (,$(findstring FLASH,$(PLATFORM_EXTRAS_TMP)))
     PLATFORM_EXTRAS_TMP := $(strip $(filter-out FLASH,$(PLATFORM_EXTRAS_TMP)))
 endif
 ifneq (,$(findstring BTADDON,$(PLATFORM_EXTRAS_TMP)))
+    ifeq ($(PLATFORM),PM5)
+        $(error Incompatible PLATFORM_EXTRAS token BTADDON)
+    endif
     PLATFORM_DEFS += -DWITH_FPC_USART_HOST
     PLATFORM_EXTRAS_TMP := $(strip $(filter-out BTADDON,$(PLATFORM_EXTRAS_TMP)))
 endif
 ifneq (,$(findstring FPC_USART_DEV,$(PLATFORM_EXTRAS_TMP)))
+    ifeq ($(PLATFORM),PM5)
+        $(error Incompatible PLATFORM_EXTRAS token FPC_USART_DEV)
+    endif
     PLATFORM_DEFS += -DWITH_FPC_USART_DEV
     PLATFORM_EXTRAS_TMP := $(strip $(filter-out FPC_USART_DEV,$(PLATFORM_EXTRAS_TMP)))
 endif

@@ -943,42 +943,24 @@ static int fm11_generate_1nt_candidates(uint32_t uid, uint32_t nt, uint32_t nt_e
     return PM3_SUCCESS;
 }
 
-static uint16_t fm11_i_lfsr16[1 << 16] = {0};
-static uint16_t fm11_s_lfsr16[1 << 16] = {0};
-static uint16_t fm11_prev8_lfsr16[1 << 16] = {0};
-static uint16_t fm11_prev14_lfsr16[1 << 16] = {0};
+static uint16_t fm11_prev8_lfsr16[1 << 16];
+static uint16_t fm11_prev14_lfsr16[1 << 16];
 static bool fm11_lfsr16_ready = false;
-
-static uint16_t fm11_prev_lfsr16(uint16_t nonce);
 
 static void fm11_init_lfsr16_table(void) {
     if (fm11_lfsr16_ready) {
         return;
     }
+    uint16_t buffer[16] = { 0 };
     uint16_t x = 1;
-    for (uint16_t i = 1; i; ++i) {
-        fm11_i_lfsr16[(x & 0xff) << 8 | x >> 8] = i;
-        fm11_s_lfsr16[i] = (x & 0xff) << 8 | x >> 8;
+    for (uint32_t i = 0; i < 65536 + 16; ++i) {
+        fm11_prev8_lfsr16[buffer[(i + 8) % 16]] = buffer[i % 16];
+        fm11_prev14_lfsr16[buffer[(i + 14) % 16]] = buffer[i % 16];
+
         x = x >> 1 | (x ^ x >> 2 ^ x >> 3 ^ x >> 5) << 15;
-    }
-    for (uint32_t nonce = 0; nonce <= UINT16_MAX; nonce++) {
-        uint16_t p = nonce;
-        for (uint8_t i = 0; i < 8; i++) {
-            p = fm11_prev_lfsr16(p);
-        }
-        fm11_prev8_lfsr16[nonce] = p;
-        for (uint8_t i = 8; i < 14; i++) {
-            p = fm11_prev_lfsr16(p);
-        }
-        fm11_prev14_lfsr16[nonce] = p;
+        buffer[i % 16] = (x & 0xFF) << 8 | x >> 8;
     }
     fm11_lfsr16_ready = true;
-}
-
-static uint16_t fm11_prev_lfsr16(uint16_t nonce) {
-    uint16_t i = fm11_i_lfsr16[nonce];
-    i = (i == 1) ? 0xffff : i - 1;
-    return fm11_s_lfsr16[i];
 }
 
 static uint16_t fm11_compute_seednt16_nt32(uint32_t nt32, uint64_t key) {
@@ -2295,13 +2277,6 @@ static int fm11_check_default_keys(uint32_t uid,
         return PM3_EMALLOC;
     }
 
-    bool was_found[FM11RF08S_SECTORS][2] = {{false}};
-    for (uint8_t sec = 0; sec < FM11RF08S_SECTORS; sec++) {
-        for (uint8_t kt = 0; kt < 2; kt++) {
-            was_found[sec][kt] = found_key[sec][kt];
-        }
-    }
-
     for (uint8_t sec = 0; sec < FM11RF08S_NORMAL_SECTORS; sec++) {
         for (uint8_t kt = 0; kt < 2; kt++) {
             if (found_key[sec][kt]) {
@@ -2378,8 +2353,9 @@ normal_out:
             fm11_sen_keycheck_progress("def", real_sec32, kt, sec32_done, sec32_total, matches.count);
             progress_shown = true;
             if (res == PM3_SUCCESS) {
-                keys_found[sec32][kt] = out_key & 0xFFFFFFFFFFFFULL;
+                keys_found[sec32][kt] = out_key;
                 found_key[sec32][kt] = true;
+                fm11_print_key_hit_row(nonce_count, sec32, kt, keys_found[sec32][kt], found_key);
                 break;
             }
             if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
@@ -2394,18 +2370,14 @@ normal_out:
 
     for (uint8_t sec = 0; sec < FM11RF08S_NORMAL_SECTORS; sec++) {
         for (uint8_t kt = 0; kt < 2; kt++) {
-            if (e_sector[sec].foundKey[kt]) {
-                keys_found[sec][kt] = e_sector[sec].Key[kt] & 0xFFFFFFFFFFFFULL;
-                found_key[sec][kt] = true;
-                if (was_found[sec][kt] == false) {
-                    fm11_print_key_hit_row(nonce_count, sec, kt, keys_found[sec][kt], found_key);
-                }
+            if (found_key[sec][kt]) {
+                continue;
             }
-        }
-    }
-    for (uint8_t kt = 0; kt < 2; kt++) {
-        if (found_key[sec32][kt] && was_found[sec32][kt] == false) {
-            fm11_print_key_hit_row(nonce_count, sec32, kt, keys_found[sec32][kt], found_key);
+            if (e_sector[sec].foundKey[kt]) {
+                keys_found[sec][kt] = e_sector[sec].Key[kt];
+                found_key[sec][kt] = true;
+                fm11_print_key_hit_row(nonce_count, sec, kt, keys_found[sec][kt], found_key);
+            }
         }
     }
     free(e_sector);
@@ -2467,11 +2439,11 @@ static uint32_t fm11_propagate_key_reuse_online(uint32_t nonce_count, uint64_t k
         int res = mf_check_keys(mfFirstBlockOfSector(real_sec32), kt, false, 1, key_block, &out_key);
         fm11_sen_keycheck_progress("use", real_sec32, kt, (pass_total * 2) + kt + 1, (pass_total * 2) + 2, pass_total + 2);
         progress_shown = true;
-        if (res == PM3_SUCCESS && ((out_key & 0xFFFFFFFFFFFFULL) == key)) {
+        if (res == PM3_SUCCESS && out_key == key) {
             keys_found[sec32][kt] = key;
             found_key[sec32][kt] = true;
             newly_found++;
-            fm11_print_key_hit_row(nonce_count, sec32, kt, key, found_key);
+            fm11_print_key_hit_row(nonce_count, sec32, kt, keys_found[sec32][kt], found_key);
         }
     }
     if (progress_shown) {
@@ -2480,11 +2452,14 @@ static uint32_t fm11_propagate_key_reuse_online(uint32_t nonce_count, uint64_t k
 
     for (uint8_t sec = 0; sec < FM11RF08S_NORMAL_SECTORS; sec++) {
         for (uint8_t kt = 0; kt < 2; kt++) {
-            if (e_sector[sec].foundKey[kt] && found_key[sec][kt] == false) {
+            if (found_key[sec][kt]) {
+                continue;
+            }
+            if (e_sector[sec].foundKey[kt] && e_sector[sec].Key[kt] == key) {
                 keys_found[sec][kt] = key;
                 found_key[sec][kt] = true;
                 newly_found++;
-                fm11_print_key_hit_row(nonce_count, sec, kt, key, found_key);
+                fm11_print_key_hit_row(nonce_count, sec, kt, keys_found[sec][kt], found_key);
             }
         }
     }
@@ -2626,6 +2601,9 @@ static int fm11_verify_candidates(uint8_t real_sec, uint8_t key_type, const fm11
     uint32_t last_progress = 0;
     fm11_sen_candidate_progress(real_sec, key_type, 0, list->count);
     while (idx < list->count) {
+        if (kbd_enter_pressed()) {
+            return PM3_EOPABORTED;
+        }
         uint8_t key_block[KEYBLOCK_SIZE] = {0};
         uint8_t chunk = MIN(KEYS_IN_BLOCK, list->count - idx);
         for (uint8_t i = 0; i < chunk; i++) {
@@ -3070,8 +3048,6 @@ int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline
                 fm11_sen_progress(nonce_count, activity, derived, 0);
             }
         }
-    }
-    {
     }
 
     uint32_t total_candidates = 0;

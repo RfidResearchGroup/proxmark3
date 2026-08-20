@@ -29,6 +29,7 @@
 #include "fpga_loader.h"
 #include "fpga_apis.h"
 #include "rssi_apis.h"
+#include "rgb_apis.h"
 #include "string.h"
 #include "printf.h"
 #include "legicrf.h"
@@ -362,6 +363,11 @@ static void SendVersion(void) {
     strncat(VersionString, "  Compiler... GCC "__VERSION__"\n", sizeof(VersionString) - strlen(VersionString) - 1);
 #endif
 
+#ifndef PM5
+    // PM5's FPGA (Gowin) bitstream is loaded at runtime via `hw fpga config` and is
+    // not compiled into the firmware, so there is no meaningful built-in FPGA
+    // version to report here. g_fpga_version_information[] describes the Xilinx
+    // bitstream that PM5 does not run, so omit the section entirely on PM5.
     strncat(VersionString, "\n [ "_YELLOW_("FPGA")" ] \n ", sizeof(VersionString) - strlen(VersionString) - 1);
 
     for (int i = 0; i < g_fpga_bitstream_num; i++) {
@@ -370,6 +376,7 @@ static void SendVersion(void) {
             strncat(VersionString, "\n ", sizeof(VersionString) - strlen(VersionString) - 1);
         }
     }
+#endif
 #ifdef WITH_COMPRESSION
     // Send Chip ID and used flash memory
     uint32_t text_and_rodata_section_size = (uint32_t)__data_src_start__ - (uint32_t)_flash_start;
@@ -396,7 +403,21 @@ static void SendVersion(void) {
     payload.versionstr_len = strlen(VersionString) + 1;
     memcpy(payload.versionstr, VersionString, payload.versionstr_len);
 
-    reply_ng(CMD_VERSION, PM3_SUCCESS, (uint8_t *)&payload, 12 + payload.versionstr_len);
+    uint32_t reply_len = 12 + payload.versionstr_len;
+
+    // Append the total on-chip flash size (bytes) AFTER the version string. This is
+    // backward compatible: older clients stop at versionstr and ignore the trailing
+    // bytes, and this stays valid when talking to older firmware that omits it. It
+    // lets the client report memory usage on MCUs whose size can't be derived from
+    // the chip id (e.g. AT32). Keep the header layout unchanged (do not break the
+    // CMD_VERSION protocol).
+    if (reply_len + sizeof(uint32_t) <= sizeof(payload)) {
+        uint32_t flash_size = GetChipFlashSize();
+        memcpy(payload.versionstr + payload.versionstr_len, &flash_size, sizeof(flash_size));
+        reply_len += sizeof(flash_size);
+    }
+
+    reply_ng(CMD_VERSION, PM3_SUCCESS, (uint8_t *)&payload, reply_len);
 }
 
 #ifdef CHIP_AT91SAM7S // Only AT91SAM7S chip series need calibration.
@@ -3601,6 +3622,18 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_PM5_QC_TEST: {
             uint8_t failed_item = 0;
             reply_ng(CMD_PM5_QC_TEST, QCTestPM5(&failed_item) ? PM3_SUCCESS : PM3_EFAILED, &failed_item, 1);
+            break;
+        }
+        case CMD_PM5_RGB_SET: {
+            // Set the antenna RGB LED colour (used by `hf/lf tune --rgb`).
+            struct p {
+                uint8_t r;
+                uint8_t g;
+                uint8_t b;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            RgbLedSet(payload->r, payload->g, payload->b);
+            reply_ng(CMD_PM5_RGB_SET, PM3_SUCCESS, NULL, 0);
             break;
         }
 #endif
