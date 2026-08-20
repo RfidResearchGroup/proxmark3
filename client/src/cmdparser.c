@@ -30,7 +30,7 @@
 # include "pthread_spin_lock_shim.h"  // spinlock shim for OSX ..
 #endif
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) && __ANDROID_API__ < 24
 //Spinlock patch for building with Android NDK
 
 typedef pthread_mutex_t pthread_spinlock_t;
