@@ -73,4 +73,17 @@ void sam_send_ack(void);
 uint16_t sam_copy_payload_nfc2sam(uint8_t *sam_tx, uint8_t *nfc_rx, uint8_t nfc_len);
 uint16_t sam_copy_payload_sam2nfc(uint8_t *nfc_tx_buf, uint8_t *sam_rx_buf);
 
+// NOTE: derived from sam_picopass.c::sam_send_request_iso15's relay loop.
+int sam_relay_iso15_loop(
+    uint8_t *sam_tx_buf,
+    uint8_t *sam_rx_buf,
+    uint16_t *sam_rx_len,
+    bool shallow_mod,
+    bool break_on_nr_mac,
+    bool prevent_epurse_update,
+    uint8_t *nr_mac_out,
+    uint16_t *nr_mac_len_out,
+    bool *got_nr_mac
+);
+
 #endif

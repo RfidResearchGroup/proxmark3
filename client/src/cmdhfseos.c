@@ -16,6 +16,7 @@
 // SEOS commands
 //-----------------------------------------------------------------------------
 #include "cmdhfseos.h"
+#include "cmdhficlass.h"         // shared Artemis SCP02 SEOS read implementation
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

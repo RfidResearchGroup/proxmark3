@@ -28,6 +28,7 @@
 #include "i2c.h"
 #include "iso15693.h"
 #include "protocols.h"
+#include "crc16.h"
 
 
 /**
@@ -51,6 +52,20 @@ int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) 
     *resplen = ISO7816_MAX_FRAME;
 
     res = sc_rx_bytes(resp, resplen, SIM_WAIT_DELAY);
+
+    if (res == false) {
+        for (uint8_t attempt = 1; attempt <= 15; attempt++) {
+            SpinDelay(200);
+            *resplen = ISO7816_MAX_FRAME;
+            res = sc_rx_bytes(resp, resplen, SIM_WAIT_DELAY);
+            if (res) {
+                if (g_dbglevel >= DBG_INFO)
+                    Dbprintf("SAM slow first-reply recovered after %u re-poll(s)", attempt);
+                break;
+            }
+        }
+    }
+
     if (res == false) {
         DbpString("failed to receive from SIM CARD");
         goto out;
@@ -506,6 +521,179 @@ uint16_t sam_copy_payload_nfc2sam(uint8_t *sam_tx, uint8_t *nfc_rx, uint8_t nfc_
  * @param sam_rx_buf Pointer to the buffer containing the data received from the SAM.
  * @return Length of NFC APDU to be sent.
  */
+int sam_relay_iso15_loop(
+    uint8_t *sam_tx_buf,
+    uint8_t *sam_rx_buf,
+    uint16_t *sam_rx_len,
+    bool shallow_mod,
+    bool break_on_nr_mac,
+    bool prevent_epurse_update,
+    uint8_t *nr_mac_out,
+    uint16_t *nr_mac_len_out,
+    bool *got_nr_mac
+) {
+    int res = PM3_SUCCESS;
+
+    if (got_nr_mac != NULL) {
+        *got_nr_mac = false;
+    }
+
+    // Nothing to relay - the SAM answered directly (final response already in
+    // sam_rx_buf). This is the normal case for SAM-internal commands.
+    if (sam_rx_buf[1] != 0x61) {
+        return PM3_SUCCESS;
+    }
+
+    // The two scratch buffers double as the NFC tx/rx buffers, exactly as
+    // sam_send_request_iso15 does.
+    uint8_t *nfc_tx_buf = sam_tx_buf;
+    uint8_t *nfc_rx_buf = sam_rx_buf;
+    uint16_t nfc_tx_len;
+    uint16_t nfc_rx_len;
+    uint16_t sam_tx_len;
+
+    switch_clock_to_countsspclk();
+
+    // tag <-> SAM exchange starts here
+    while (sam_rx_buf[1] == 0x61) {
+        uint32_t start_time = GetCountSspClk();
+        uint32_t eof_time = start_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+
+        nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf);
+
+        // PAGESEL (0x84) substitution for 2K PicoPass cards. A 2K card has a
+        // single book/page and does not answer PAGESEL, but the encode-side SAM
+        // emits it to select the page before writing. PAGESEL returns the page
+        // config block (block 1), so we send a READ of block 1 instead: the 2K
+        // card answers that, and the SAM gets the config it expects and moves on
+        // to auth/write. (16K cards answer PAGESEL natively; substituting a
+        // block-1 read for PAGESEL-page-0 is equivalent there too.)
+        if (nfc_tx_len >= 2 && (nfc_tx_buf[0] & 0x0F) == ICLASS_CMD_PAGESEL) {
+            if (g_dbglevel >= DBG_INFO) {
+                DbpString("PAGESEL on 2K card - substituting READ block 1");
+            }
+            nfc_tx_buf[0] = ICLASS_CMD_READ_OR_IDENTIFY;   // 0x0C
+            nfc_tx_buf[1] = 0x01;                          // block 1 = config
+            // iCLASS command CRC covers the block byte only, not the opcode
+            // (see iclass.c: read_conf = 0C 01 FA 22, AddCrc(c + 1, 1)).
+            AddCrc(nfc_tx_buf + 1, 1);
+            nfc_tx_len = 4;
+        }
+
+        bool is_cmd_check = ((nfc_tx_buf[0] & 0x0F) == ICLASS_CMD_CHECK);
+
+        if (is_cmd_check && break_on_nr_mac) {
+            if (nr_mac_out != NULL && nr_mac_len_out != NULL) {
+                memcpy(nr_mac_out, nfc_tx_buf, nfc_tx_len);
+                *nr_mac_len_out = nfc_tx_len;
+            }
+            if (got_nr_mac != NULL) {
+                *got_nr_mac = true;
+            }
+            if (g_dbglevel >= DBG_INFO) {
+                DbpString("NR-MAC: ");
+                Dbhexdump(nfc_tx_len - 1, nfc_tx_buf + 1, false);
+            }
+            return PM3_SUCCESS;
+        }
+
+        bool is_cmd_update = ((nfc_tx_buf[0] & 0x0F) == ICLASS_CMD_UPDATE);
+
+        if (is_cmd_update && prevent_epurse_update && nfc_tx_buf[0] == 0x87 && nfc_tx_buf[1] == 0x02) {
+            // block update(2) command and fake the response to prevent update of epurse
+            memcpy(nfc_rx_buf + 0, nfc_tx_buf + 6, 4);
+            memcpy(nfc_rx_buf + 4, nfc_tx_buf + 0, 4);
+            AddCrc(nfc_rx_buf, 8);
+            nfc_rx_len = 10;
+
+            if (g_dbglevel >= DBG_INFO) {
+                DbpString("FAKE EPURSE UPDATE RESPONSE: ");
+                Dbhexdump(nfc_rx_len, nfc_rx_buf, false);
+            }
+        } else {
+            if (g_dbglevel >= DBG_INFO) {
+                DbpString("ISO15 TAG REQUEST: ");
+                Dbhexdump(nfc_tx_len, nfc_tx_buf, false);
+            }
+
+            int tries = 3;
+            nfc_rx_len = 0;
+            while (tries-- > 0) {
+                iclass_send_as_reader(nfc_tx_buf, nfc_tx_len, &start_time, &eof_time, shallow_mod);
+                uint16_t timeout = is_cmd_update ? ICLASS_READER_TIMEOUT_UPDATE : ICLASS_READER_TIMEOUT_ACTALL;
+
+                res = GetIso15693AnswerFromTag(nfc_rx_buf, ISO7816_MAX_FRAME, timeout, &eof_time, false, true, &nfc_rx_len);
+                if (res == PM3_SUCCESS && nfc_rx_len > 0) {
+                    break;
+                }
+
+                start_time = eof_time + ((DELAY_ICLASS_VICC_TO_VCD_READER + DELAY_ISO15693_VCD_TO_VICC_READER + (8 * 8 * 8 * 16)) * 2);
+            }
+
+            if (res != PM3_SUCCESS) {
+                return PM3_ECARDEXCHANGE;
+            }
+
+            if (g_dbglevel >= DBG_INFO) {
+                DbpString("ISO15 TAG RESPONSE: ");
+                Dbhexdump(nfc_rx_len, nfc_rx_buf, false);
+            }
+        }
+
+        switch_clock_to_ticks();
+        sam_tx_len = sam_copy_payload_nfc2sam(sam_tx_buf, nfc_rx_buf, nfc_rx_len);
+
+        sam_send_payload(
+            0x14, 0x0a, 0x14,
+            sam_tx_buf, &sam_tx_len,
+            sam_rx_buf, sam_rx_len
+        );
+
+        // last SAM->TAG
+        // c1 61 c1 00 00 a1 02 >>82<< 00 90 00
+        if (sam_rx_buf[7] == 0x82) {
+            // tag <-> SAM exchange ends here
+            break;
+        }
+
+        switch_clock_to_countsspclk();
+    }
+
+    // The loop can exit two ways:
+    //   (a) it broke on the a1 02 82 00 (TurnRfFieldOff) marker - which is
+    //       itself a 0x61 frame, so sam_rx_buf[1] is still 0x61 here. The SAM is
+    //       waiting for an ack; the SAM's reply to that ack is the final
+    //       application response, left in sam_rx_buf. (PACS-read pattern.)
+    //   (b) the while condition went false because the SAM already returned a
+    //       non-0x61 final response (e.g. a Path B bd/b3 result to an
+    //       interpreter command). That response is ALREADY in sam_rx_buf -
+    //       sending the ack now would overwrite it with a bare 90 00.
+    // So only ack in case (a).
+    if (sam_rx_buf[1] == 0x61) {
+        static const uint8_t hfack[] = {
+            0xbd, 0x04, 0xa0, 0x02, 0x82, 0x00
+        };
+
+        sam_tx_len = sizeof(hfack);
+        memcpy(sam_tx_buf, hfack, sam_tx_len);
+
+        sam_send_payload(
+            0x14, 0x0a, 0x00,
+            sam_tx_buf, &sam_tx_len,
+            sam_rx_buf, sam_rx_len
+        );
+    }
+
+    // When the loop exits on a non-0x61 final response, its last statement was
+    // switch_clock_to_countsspclk() (end of the iteration, before the while
+    // re-check) - so the clock is left in CountSspClk mode. Restore Ticks so the
+    // caller's next SAM I2C exchange (e.g. the Terminate in scclose) has the
+    // timer the SIM link needs for its receive timeout; otherwise it hangs.
+    switch_clock_to_ticks();
+
+    return PM3_SUCCESS;
+}
+
 uint16_t sam_copy_payload_sam2nfc(uint8_t *nfc_tx_buf, uint8_t *sam_rx_buf) {
     // SAM resp:
     // c1 61 c1 00 00
