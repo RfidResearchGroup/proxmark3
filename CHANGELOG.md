@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mfdes chk` to correctly check all provided keys instead of only checking a small portion (@corollary-de).
 - Fixed `hf iclass unhash` omitting valid hash0 pre-images, which could make the subsequent hashcat DES crack unable to find the master key (@trichimtrich)
 - Fixed `hf iclass unhash` returning no pre-images at all for some keys, caused by `check()` not being invertible in a single reading (@trichimtrich)
 - Added `--rgb` option to `hf tune` / `lf tune` (Proxmark5/PM5): mirrors the antenna tuning level on the antenna RGB LED (blue=low, green=mid, red=high, tracking the on-screen bar), for locating tags/implants by feel without watching the screen. Colour is computed client-side; the device gets a new `CMD_PM5_RGB_SET` handled by a dedicated AT32 RGB HAL module (`common_arm/rgb`), so other platforms are unaffected (@nemanjan00)
