@@ -22,25 +22,20 @@ You have several options:
 
 
 Use the yellow USB-C on the same side as the button.
+
+You'll first need to update the bootrom with the latest code available on the repository.
+The bootrom in your device is not yet able to enter automatically the boot mode properly, so you will have to enter boot mode manually as follows, a procedure slightly different from the Proxmark3.
+
 * Plug in your Proxmark5 while holding the button for about 4 seconds until you see 2 LEDs illuminated (B and D). Don't wait too long. If the LEDs are now off again, you entered DFU mode. Unplug and try again.
+
 * Run `./pm3-flash-bootrom`
 * Unplug.
 * Plug in your Proxmark5 while holding the button for about 4 seconds until you see 2 LEDs illuminated (B and D).
 * Run `./pm3-flash-fullimage`
 
-Later, you don't need to reflash the bootrom and you can just run `./pm3-flash-fullimage`
+With the new bootrom, you don't need to enter manually the boot mode by pressing the button anymore and the flashing experience will be as smooth as on the Proxmark3: just run `./pm3-flash-fullimage` to update the main image, and occasionally `./pm3-flash-bootrom` if needed. If the main image gets seriously buggy and can't jump to boot mode automatically, you can enter boot mode using the button as explained above.
 
 If you see "🚨 The elf file is not applicable to the currently connected device.", you probably forgot to add the `PLATFORM=PM5` when compiling.
-
-The FPGA code for the Proxmark5 has not yet been pushed to the repository. To flash the FGPA with the latest image:
-
-```
-wget https://github.com/user-attachments/files/31105593/PM5_FPGA_fix_loedge_bug.zip
-unzip PM5_FPGA_fix_loedge_bug.zip
-./pm3
-hw fpga config -f PM5_FPGA_fix_loedge_bug.bin
-hf 14a read --drop
-```
 
 ## Recovery flashing via DFU
 
@@ -74,6 +69,18 @@ On Windows, you can try the following:
 - Open the `Artery ISP Programmer` , select `HEX` file to flash, and use the bootrom & fullimage is required.
 - When flash done, disconnect usb and reconnect for restart device to exit ISP mode.
 - Open the proxmark client to try to connect to verify your device is re-working.
+
+## FPGA flashing instructions
+
+The FPGA code for the Proxmark5 has not yet been pushed to the repository. To flash the FGPA with the latest image:
+
+```
+wget https://github.com/user-attachments/files/31105593/PM5_FPGA_fix_loedge_bug.zip
+unzip PM5_FPGA_fix_loedge_bug.zip
+./pm3
+hw fpga config -f PM5_FPGA_fix_loedge_bug.bin
+hf 14a read --drop
+```
 
 ## Specific commands
 
