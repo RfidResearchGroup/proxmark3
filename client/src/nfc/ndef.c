@@ -998,6 +998,17 @@ static int ndefDecodeExternal_record(NDEFHeader_t *ndef) {
         return PM3_SUCCESS;
     }
 
+    // Android Application Record
+    if ((ndef->TypeLen == strlen(NDEF_ANDROID_AAR)) &&
+            (strncmp((char *)ndef->Type, NDEF_ANDROID_AAR, ndef->TypeLen) == 0)) {
+        PrintAndLogEx(INFO
+                      , "    Android app... " _GREEN_("%.*s")
+                      , (int)ndef->PayloadLen
+                      , ndef->Payload
+                     );
+        return PM3_SUCCESS;
+    }
+
     PrintAndLogEx(INFO
                   , "    URN... " _GREEN_("urn:nfc:ext:%.*s")
                   , (int)ndef->TypeLen
@@ -1391,5 +1402,259 @@ int NDEFGetTotalLength(uint8_t *ndef, size_t ndeflen, size_t *outlen) {
     }
 
     *outlen = idx;
+    return PM3_SUCCESS;
+}
+
+//-----------------------------------------------------------------------------
+// NDEF encoding
+//-----------------------------------------------------------------------------
+
+// Find the longest matching abbreviation from URI_s[].
+// Returns the prefix code and sets prefixLen to how many bytes of uri it covers.
+// Code 0x00 means "no abbreviation", the whole string gets stored verbatim.
+static uint8_t ndefEncodeURIPrefix(const char *uri, size_t *prefixLen) {
+
+    uint8_t code = 0;
+    size_t best = 0;
+
+    for (uint8_t i = 1; i < ARRAYLEN(URI_s); i++) {
+        size_t n = strlen(URI_s[i]);
+        if ((n > best) && (strncmp(uri, URI_s[i], n) == 0)) {
+            best = n;
+            code = i;
+        }
+    }
+
+    *prefixLen = best;
+    return code;
+}
+
+int NDEFEncodePayloadURI(const char *uri, uint8_t *buf, size_t bufLen, size_t *outLen) {
+
+    if ((uri == NULL) || (buf == NULL) || (outLen == NULL)) {
+        return PM3_EINVARG;
+    }
+
+    size_t uri_len = strlen(uri);
+    if (uri_len == 0) {
+        return PM3_EINVARG;
+    }
+
+    size_t prefix_len = 0;
+    uint8_t code = ndefEncodeURIPrefix(uri, &prefix_len);
+
+    size_t n = 1 + (uri_len - prefix_len);
+    if (n > bufLen) {
+        return PM3_EOVFLOW;
+    }
+
+    buf[0] = code;
+    memcpy(buf + 1, uri + prefix_len, uri_len - prefix_len);
+
+    *outLen = n;
+    return PM3_SUCCESS;
+}
+
+int NDEFEncodePayloadText(const char *text, const char *lang, uint8_t *buf, size_t bufLen, size_t *outLen) {
+
+    if ((text == NULL) || (buf == NULL) || (outLen == NULL)) {
+        return PM3_EINVARG;
+    }
+
+    if ((lang == NULL) || (strlen(lang) == 0)) {
+        lang = "en";
+    }
+
+    size_t lang_len = strlen(lang);
+    size_t text_len = strlen(text);
+
+    // the status byte carries the language code length in its lower 6 bits
+    if (lang_len > 0x3F) {
+        return PM3_EINVARG;
+    }
+
+    size_t n = 1 + lang_len + text_len;
+    if (n > bufLen) {
+        return PM3_EOVFLOW;
+    }
+
+    // bit 7 clear == UTF-8
+    buf[0] = (uint8_t)(lang_len & 0x3F);
+    memcpy(buf + 1, lang, lang_len);
+    memcpy(buf + 1 + lang_len, text, text_len);
+
+    *outLen = n;
+    return PM3_SUCCESS;
+}
+
+int NDEFEncodePayloadAAR(const char *pkg, uint8_t *buf, size_t bufLen, size_t *outLen) {
+
+    if ((pkg == NULL) || (buf == NULL) || (outLen == NULL)) {
+        return PM3_EINVARG;
+    }
+
+    size_t n = strlen(pkg);
+    if (n == 0) {
+        return PM3_EINVARG;
+    }
+
+    if (n > bufLen) {
+        return PM3_EOVFLOW;
+    }
+
+    memcpy(buf, pkg, n);
+
+    *outLen = n;
+    return PM3_SUCCESS;
+}
+
+int NDEFEncodeRecord(const NDEFRecordDesc_t *rec, bool mb, bool me, uint8_t *buf, size_t bufLen, size_t *outLen) {
+
+    if ((rec == NULL) || (buf == NULL) || (outLen == NULL)) {
+        return PM3_EINVARG;
+    }
+
+    if ((rec->typeLen > 255) || (rec->idLen > 255)) {
+        return PM3_EINVARG;
+    }
+
+#if SIZE_MAX > 0xFFFFFFFF
+    // the long form payload length field is only four bytes wide, a larger payload
+    // cannot be expressed.  unreachable where size_t is no wider than the field.
+    if (rec->payloadLen > 0xFFFFFFFF) {
+        return PM3_EINVARG;
+    }
+#endif
+
+    if ((rec->typeLen && (rec->type == NULL)) ||
+            (rec->idLen && (rec->id == NULL)) ||
+            (rec->payloadLen && (rec->payload == NULL))) {
+        return PM3_EINVARG;
+    }
+
+    bool sr = (rec->payloadLen < 256);
+    bool il = (rec->idLen > 0);
+
+    size_t head = 1 + 1 + (sr ? 1 : 4) + (il ? 1 : 0) + rec->typeLen + rec->idLen;
+
+    // keep the total from wrapping before it reaches the bufLen check below
+    if (rec->payloadLen > SIZE_MAX - head) {
+        return PM3_EINVARG;
+    }
+
+    size_t n = head + rec->payloadLen;
+    if (n > bufLen) {
+        return PM3_EOVFLOW;
+    }
+
+    size_t idx = 0;
+
+    // MB | ME | CF | SR | IL | TNF.   chunked records are never emitted
+    buf[idx] = (uint8_t)(rec->tnf & 0x07);
+    if (mb) {
+        buf[idx] |= 0x80;
+    }
+    if (me) {
+        buf[idx] |= 0x40;
+    }
+    if (sr) {
+        buf[idx] |= 0x10;
+    }
+    if (il) {
+        buf[idx] |= 0x08;
+    }
+    idx++;
+
+    buf[idx++] = (uint8_t)rec->typeLen;
+
+    if (sr) {
+        buf[idx++] = (uint8_t)rec->payloadLen;
+    } else {
+        buf[idx++] = (uint8_t)(rec->payloadLen >> 24);
+        buf[idx++] = (uint8_t)(rec->payloadLen >> 16);
+        buf[idx++] = (uint8_t)(rec->payloadLen >> 8);
+        buf[idx++] = (uint8_t)(rec->payloadLen);
+    }
+
+    if (il) {
+        buf[idx++] = (uint8_t)rec->idLen;
+    }
+
+    if (rec->typeLen) {
+        memcpy(buf + idx, rec->type, rec->typeLen);
+        idx += rec->typeLen;
+    }
+
+    if (rec->idLen) {
+        memcpy(buf + idx, rec->id, rec->idLen);
+        idx += rec->idLen;
+    }
+
+    if (rec->payloadLen) {
+        memcpy(buf + idx, rec->payload, rec->payloadLen);
+        idx += rec->payloadLen;
+    }
+
+    *outLen = idx;
+    return PM3_SUCCESS;
+}
+
+int NDEFEncodeMessage(const NDEFRecordDesc_t *recs, size_t count, uint8_t *buf, size_t bufLen, size_t *outLen) {
+
+    if ((recs == NULL) || (buf == NULL) || (outLen == NULL) || (count == 0)) {
+        return PM3_EINVARG;
+    }
+
+    size_t idx = 0;
+    for (size_t i = 0; i < count; i++) {
+
+        size_t n = 0;
+        int res = NDEFEncodeRecord(&recs[i], (i == 0), (i == (count - 1)), buf + idx, bufLen - idx, &n);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        idx += n;
+    }
+
+    *outLen = idx;
+    return PM3_SUCCESS;
+}
+
+int NDEFEncodeTLV(const uint8_t *msg, size_t msgLen, uint8_t *buf, size_t bufLen, size_t *outLen) {
+
+    if ((msg == NULL) || (buf == NULL) || (outLen == NULL) || (msgLen == 0)) {
+        return PM3_EINVARG;
+    }
+
+    // 0xFFFF is reserved,  and the terminator has to fit as well
+    if (msgLen > 0xFFFE) {
+        return PM3_EINVARG;
+    }
+
+    // one byte length form up to 254,  three byte form above that
+    size_t hdr = (msgLen < 0xFF) ? 2 : 4;
+
+    size_t n = hdr + msgLen + 1;
+    if (n > bufLen) {
+        return PM3_EOVFLOW;
+    }
+
+    size_t idx = 0;
+    buf[idx++] = 0x03;
+
+    if (msgLen < 0xFF) {
+        buf[idx++] = (uint8_t)msgLen;
+    } else {
+        buf[idx++] = 0xFF;
+        buf[idx++] = (uint8_t)(msgLen >> 8);
+        buf[idx++] = (uint8_t)(msgLen);
+    }
+
+    memcpy(buf + idx, msg, msgLen);
+    idx += msgLen;
+
+    buf[idx++] = 0xFE;
+
+    *outLen = idx;
     return PM3_SUCCESS;
 }

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `nfc encode` and `hf mfu ndefwrite` - build NDEF URI/Text/AAR records and write them to MIFARE Ultralight / NTAG tags, plus a reusable NDEF encoder in `nfc/ndef.c` (@0x6r1an0y)
 - Changed `hf emrtd info` - now shows EF_DG2 portraits for JPREG2000 via new dependecy lib (@iceman1001)
 - Changed `hf emrtd info`- now shows portrait, signature and other biometrics at the same time (@iceman1001)
 - Fixed `pm3_grabbed_output_get` - heap overflow (@jonyen)
