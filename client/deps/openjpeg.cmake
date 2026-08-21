@@ -28,6 +28,8 @@ add_library(pm3rrg_rdv4_openjpeg STATIC
 
 target_include_directories(pm3rrg_rdv4_openjpeg INTERFACE openjpeg)
 target_include_directories(pm3rrg_rdv4_openjpeg PRIVATE openjpeg)
+# openjpeg.a is a static lib, avoid __declspec(dllimport) on its Windows API decls
+target_compile_definitions(pm3rrg_rdv4_openjpeg PUBLIC OPJ_STATIC)
 # Third party code, don't hold it to our warning settings
 target_compile_options(pm3rrg_rdv4_openjpeg PRIVATE -w -O3)
 set_property(TARGET pm3rrg_rdv4_openjpeg PROPERTY POSITION_INDEPENDENT_CODE ON)
