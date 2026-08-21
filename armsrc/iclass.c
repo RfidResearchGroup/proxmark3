@@ -1601,6 +1601,43 @@ out:
     switch_off();
 }
 
+// Raw iCLASS reader exchange that leaves the field ON
+// The field is only dropped by CMD_HF_DROPFIELD (or a failed select).
+void iClass_Raw(uint8_t *msg) {
+    uint8_t flags = msg[0];
+    uint16_t rawlen = (uint16_t)msg[1] | ((uint16_t)msg[2] << 8);
+    uint8_t *raw = msg + 3;
+
+    uint32_t start_time = 0, eof_time = 0;
+
+    if (flags & 0x01) {                         // INIT: energize + select
+        Iso15693InitReader();
+        picopass_hdr_t hdr = {0};
+        if (select_iclass_tag(&hdr, false, &eof_time, false) == false) {
+            switch_off();
+            reply_ng(CMD_HF_ICLASS_RAW, PM3_ERFTRANS, NULL, 0);
+            return;
+        }
+        if (rawlen == 0) {                      // scan: return the header, keep field ON
+            reply_ng(CMD_HF_ICLASS_RAW, PM3_SUCCESS, (uint8_t *)&hdr, sizeof(picopass_hdr_t));
+            return;
+        }
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+    }
+
+    uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
+    uint16_t resp_len = 0;
+    iclass_send_as_reader(raw, rawlen, &start_time, &eof_time, false);
+    int res = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS,
+                                       &eof_time, false, true, &resp_len);
+    if (res == PM3_SUCCESS && resp_len > 0) {
+        reply_ng(CMD_HF_ICLASS_RAW, PM3_SUCCESS, resp, resp_len);
+    } else {
+        reply_ng(CMD_HF_ICLASS_RAW, PM3_ECARDEXCHANGE, NULL, 0);
+    }
+    // field left ON; the host drops it via CMD_HF_DROPFIELD
+}
+
 bool authenticate_iclass_tag(iclass_auth_req_t *payload, picopass_hdr_t *hdr, uint32_t *start_time, uint32_t *eof_time, uint8_t *mac_out) {
 
     uint8_t cmd_check[9] = { ICLASS_CMD_CHECK };
