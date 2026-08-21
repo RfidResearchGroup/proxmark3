@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf emrtd info` - now shows EF_DG2 portraits for JPREG2000 via new dependecy lib (@iceman1001)
 - Changed `hf emrtd info`- now shows portrait, signature and other biometrics at the same time (@iceman1001)
 - Fixed `pm3_grabbed_output_get` - heap overflow (@jonyen)
 - Fixed `hf iclass sam` - removed the old implementation (@iceman1001)

@@ -21,7 +21,8 @@
 #include <string.h>
 #include "proxguiqt.h"
 #include "proxmark3.h"
-#include "ui.h"  // for prints
+#include "ui.h"        // for prints
+#include "imgjp2.h"    // JPEG2000
 
 static ProxGuiQT *gui = NULL;
 static WorkerThread *main_loop_thread = NULL;
@@ -77,11 +78,33 @@ static void show_no_gui_notice(void) {
 
 // hook up picture viewer
 extern "C" void ShowPictureWindow(const char *title, uint8_t *data, int len) {
+
+    if (data == NULL || len <= 0) {
+        return;
+    }
+
+    QImage img;
+
     // No support for jpeg2000 in Qt Image since a while...
     // https://doc.qt.io/qt-5/qtimageformats-index.html
-    QImage img = QImage::fromData(data, len);
+    // and the distros ship no replacement plugin,  so decode it ourselves with
+    // the vendored openjpeg.  Most eMRTD EF_DG2 portraits are jpeg2000.
+    if (jp2_is_jpeg2000(data, (size_t)len)) {
+
+        int w = 0, h = 0;
+        uint8_t *rgb = jp2_decode_rgb(data, (size_t)len, &w, &h);
+        if (rgb) {
+            // QImage doesn't take ownership of the buffer,  copy() detaches it
+            img = QImage(rgb, w, h, w * 3, QImage::Format_RGB888).copy();
+            free(rgb);
+        }
+
+    } else {
+        img = QImage::fromData(data, len);
+    }
+
     if (img.isNull()) {
-        PrintAndLogEx(WARNING, "Failed to decode image ( %s ), Qt lacks support for this format (jpeg2000?)", (title) ? title : "n/a");
+        PrintAndLogEx(WARNING, "Failed to decode image ( %s )", (title) ? title : "n/a");
         return;
     }
 

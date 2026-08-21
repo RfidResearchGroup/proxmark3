@@ -1531,8 +1531,21 @@ static int emrtd_print_image(const char *title, uint8_t *data, size_t datalen) {
     bool found = false;
     size_t offset = 0;
     for (offset = 0; offset < datalen - 6; offset++) {
-        if ((data[offset] == 0xFF && memcmp(jpeg_header, data + offset, 4) == 0) ||
-                (data[offset] == 0x00 && memcmp(jpeg2k_header, data + offset, 6) == 0)) {
+
+        if (data[offset] == 0xFF) {
+            // JPEG SOI + any APPn marker,  JFIF (FFE0) is the common one but
+            // Exif (FFE1) / raw DQT (FFDB) show up as well
+            if (memcmp(jpeg_header, data + offset, 3) == 0) {
+                found = true;
+                break;
+            }
+            // JPEG2000 raw codestream, no JP2 container
+            if (memcmp(jpeg2k_cs_header, data + offset, 4) == 0) {
+                found = true;
+                break;
+            }
+        } else if (data[offset] == 0x00 && memcmp(jpeg2k_header, data + offset, 6) == 0) {
+            // JPEG2000 in a JP2 container
             found = true;
             break;
         }
