@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `nfc encode` and `hf mfu ndefwrite` - build NDEF URI/Text/AAR records and write them to MIFARE Ultralight / NTAG tags, plus a reusable NDEF encoder in `nfc/ndef.c` (@0x6r1an0y)
 - Fixed `hf iclass sam` - removed the old implementation (@iceman1001)
 - Fixed Proxmark5 (PM5/AT32) failing to re-enter the bootloader (@nemanjan00)
 - Fixed `hw fpga config` on Proxmark5 (PM5/AT32) now powers on the FPGA 24MHz clock (@nemanjan00)
