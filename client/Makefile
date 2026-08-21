@@ -123,6 +123,12 @@ REVENGLIBINC = -I$(REVENGLIBPATH)
 REVENGLIB = $(REVENGLIBPATH)/libreveng.a
 REVENGLIBLD =
 
+## OpenJPEG  (JPEG2000 decoding for the picture viewer)
+OPENJPEGLIBPATH = ./deps/openjpeg
+OPENJPEGLIBINC = -I$(OPENJPEGLIBPATH)
+OPENJPEGLIB = $(OPENJPEGLIBPATH)/openjpeg.a
+OPENJPEGLIBLD =
+
 ## Tinycbor
 TINYCBORLIBPATH = ./deps/tinycbor
 TINYCBORLIBINC = -I$(TINYCBORLIBPATH)
@@ -233,6 +239,11 @@ PM3INCLUDES += $(MBEDTLSLIBINC)
 STATICLIBS += $(REVENGLIB)
 LDLIBS += $(REVENGLIBLD)
 PM3INCLUDES += $(REVENGLIBINC)
+
+## OpenJPEG
+# vendored, Qt has no JPEG2000 image handler.
+# Only linked in when the Qt GUI is built, see the "gui" section below
+PM3INCLUDES += $(OPENJPEGLIBINC)
 
 ## Tinycbor
 # not distributed as system library
@@ -946,6 +957,10 @@ endif
 # gui
 ifeq ($(QT_FOUND),1)
     CXXSRCS = proxgui.cpp proxguiqt.cpp proxguiqt.moc.cpp
+    # Qt has no JPEG2000 image handler, so we decode EF_DG2 & friends ourselves
+    SRCS += imgjp2.c
+    STATICLIBS += $(OPENJPEGLIB)
+    LDLIBS += $(OPENJPEGLIBLD)
 else
     CXXSRCS = guidummy.cpp
 endif
@@ -1026,6 +1041,7 @@ ifeq ($(LINENOISE_LOCAL_FOUND), 1)
 endif
 	$(Q)$(MAKE) --no-print-directory -C $(LUALIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(REVENGLIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(OPENJPEGLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(TINYCBORLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(WHEREAMILIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(MQTTLIBPATH) clean
@@ -1115,6 +1131,10 @@ $(MBEDTLSLIB): .FORCE
 $(REVENGLIB): .FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(REVENGLIBPATH) all
+
+$(OPENJPEGLIB): .FORCE
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C $(OPENJPEGLIBPATH) all
 
 $(TINYCBORLIB): .FORCE
 	$(info [*] MAKE $@)

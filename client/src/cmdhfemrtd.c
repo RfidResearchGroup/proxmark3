@@ -1515,79 +1515,62 @@ static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen) {
     return PM3_SUCCESS;
 }
 
-static int emrtd_print_ef_dg2_info(uint8_t *data, size_t datalen) {
+// Extract an image out of a data group and hand it to the picture viewer.
+// The viewer keeps an array of images, so DG2 / DG5 / DG7 all end up
+// side by side, each in its own tab named by "title"
+static int emrtd_print_image(const char *title, uint8_t *data, size_t datalen) {
 
-    int offset = 0;
+    if (data == NULL || datalen < 6) {
+        return PM3_ESOFT;
+    }
 
     // This is a hacky impl that just looks for the image header. I'll improve it eventually.
     // based on mrpkey.py
     // Note: Doing datalen - 6 to account for the longest data we're checking.
     // Checks first byte before the rest to reduce overhead
+    bool found = false;
+    size_t offset = 0;
     for (offset = 0; offset < datalen - 6; offset++) {
-        if ((data[offset] == 0xFF && memcmp(jpeg_header, data + offset, 4) == 0) ||
-                (data[offset] == 0x00 && memcmp(jpeg2k_header, data + offset, 6) == 0)) {
-            datalen = datalen - offset;
+
+        if (data[offset] == 0xFF) {
+            // JPEG SOI + any APPn marker,  JFIF (FFE0) is the common one but
+            // Exif (FFE1) / raw DQT (FFDB) show up as well
+            if (memcmp(jpeg_header, data + offset, 3) == 0) {
+                found = true;
+                break;
+            }
+            // JPEG2000 raw codestream, no JP2 container
+            if (memcmp(jpeg2k_cs_header, data + offset, 4) == 0) {
+                found = true;
+                break;
+            }
+        } else if (data[offset] == 0x00 && memcmp(jpeg2k_header, data + offset, 6) == 0) {
+            // JPEG2000 in a JP2 container
+            found = true;
             break;
         }
     }
 
-    // If we didn't get any data, return false.
-    if (datalen == 0) {
+    // If we didn't find any image, return false.
+    if (found == false) {
+        PrintAndLogEx(DEBUG, "No image header found in %s", title);
         return PM3_ESOFT;
     }
 
-    ShowPictureWindow(data + offset, datalen);
+    ShowPictureWindow(title, data + offset, (int)(datalen - offset));
     return PM3_SUCCESS;
+}
+
+static int emrtd_print_ef_dg2_info(uint8_t *data, size_t datalen) {
+    return emrtd_print_image("DG2 - Encoded Face", data, datalen);
 }
 
 static int emrtd_print_ef_dg5_info(uint8_t *data, size_t datalen) {
-
-    int offset = 0;
-
-    // This is a hacky impl that just looks for the image header. I'll improve it eventually.
-    // based on mrpkey.py
-    // Note: Doing datalen - 6 to account for the longest data we're checking.
-    // Checks first byte before the rest to reduce overhead
-    for (offset = 0; offset < datalen - 6; offset++) {
-        if ((data[offset] == 0xFF && memcmp(jpeg_header, data + offset, 4) == 0) ||
-                (data[offset] == 0x00 && memcmp(jpeg2k_header, data + offset, 6) == 0)) {
-            datalen = datalen - offset;
-            break;
-        }
-    }
-
-    // If we didn't get any data, return false.
-    if (datalen == 0) {
-        return PM3_ESOFT;
-    }
-
-    ShowPictureWindow(data + offset, datalen);
-    return PM3_SUCCESS;
+    return emrtd_print_image("DG5 - Displayed Portrait", data, datalen);
 }
 
 static int emrtd_print_ef_dg7_info(uint8_t *data, size_t datalen) {
-
-    int offset = 0;
-
-    // This is a hacky impl that just looks for the image header. I'll improve it eventually.
-    // based on mrpkey.py
-    // Note: Doing datalen - 6 to account for the longest data we're checking.
-    // Checks first byte before the rest to reduce overhead
-    for (offset = 0; offset < datalen - 6; offset++) {
-        if ((data[offset] == 0xFF && memcmp(jpeg_header, data + offset, 4) == 0) ||
-                (data[offset] == 0x00 && memcmp(jpeg2k_header, data + offset, 6) == 0)) {
-            datalen = datalen - offset;
-            break;
-        }
-    }
-
-    // If we didn't get any data, return false.
-    if (datalen == 0) {
-        return PM3_ESOFT;
-    }
-
-    ShowPictureWindow(data + offset, datalen);
-    return PM3_SUCCESS;
+    return emrtd_print_image("DG7 - Signature", data, datalen);
 }
 
 static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen) {
@@ -2066,6 +2049,9 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD. Hash checks will fail");
     }
 
+    // start with an empty picture viewer,  the data groups below fill it up
+    ClearPictureWindow();
+
     // Dump all files in the file list
     for (int i = 0; i < filelistlen; i++) {
 
@@ -2173,6 +2159,9 @@ int infoHF_EMRTD_offline(const char *path) {
         PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD. Hash checks will fail");
     }
     free(data);
+
+    // start with an empty picture viewer,  the data groups below fill it up
+    ClearPictureWindow();
 
     // Read files in the file list
     for (int i = 0; i < filelistlen; i++) {

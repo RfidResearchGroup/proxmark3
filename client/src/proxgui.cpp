@@ -21,7 +21,8 @@
 #include <string.h>
 #include "proxguiqt.h"
 #include "proxmark3.h"
-#include "ui.h"  // for prints
+#include "ui.h"        // for prints
+#include "imgjp2.h"    // JPEG2000
 
 static ProxGuiQT *gui = NULL;
 static WorkerThread *main_loop_thread = NULL;
@@ -66,39 +67,82 @@ extern "C" void RepaintGraphWindow(void) {
 }
 
 
-// hook up picture viewer
-extern "C" void ShowPictureWindow(uint8_t *data, int len) {
-    // No support for jpeg2000 in Qt Image since a while...
-    // https://doc.qt.io/qt-5/qtimageformats-index.html
-    QImage img = QImage::fromData(data, len);
-    if (img.isNull()) {
-        return;
-    }
-    if (!gui) {
-        // Show a notice if X11/XQuartz isn't available
+// Show a notice if X11/XQuartz isn't available
+static void show_no_gui_notice(void) {
 #if defined(__MACH__) && defined(__APPLE__)
-        PrintAndLogEx(WARNING, "You appear to be on a MacOS device without XQuartz.\nYou may need to install XQuartz (https://www.xquartz.org/) to make the plot work.");
+    PrintAndLogEx(WARNING, "You appear to be on a MacOS device without XQuartz.\nYou may need to install XQuartz (https://www.xquartz.org/) to make the plot work.");
 #else
-        PrintAndLogEx(WARNING, "You appear to be on an environment without an X11 server or without DISPLAY environment variable set.\nPicture display may not work until you resolve these issues.");
+    PrintAndLogEx(WARNING, "You appear to be on an environment without an X11 server or without DISPLAY environment variable set.\nPicture display may not work until you resolve these issues.");
 #endif
-        return;
-    }
-
-    gui->ShowPictureWindow(img);
 }
 
-extern "C" void ShowBase64PictureWindow(char *b64) {
-    if (!gui) {
-        // Show a notice if X11/XQuartz isn't available
-#if defined(__MACH__) && defined(__APPLE__)
-        PrintAndLogEx(WARNING, "You appear to be on a MacOS device without XQuartz.\nYou may need to install XQuartz (https://www.xquartz.org/) to make the plot work.");
-#else
-        PrintAndLogEx(WARNING, "You appear to be on an environment without an X11 server or without DISPLAY environment variable set.\nPlot may not work until you resolve these issues.");
-#endif
+// hook up picture viewer
+extern "C" void ShowPictureWindow(const char *title, uint8_t *data, int len) {
+
+    if (data == NULL || len <= 0) {
         return;
     }
 
-    gui->ShowBase64PictureWindow(b64);
+    QImage img;
+
+    // No support for jpeg2000 in Qt Image since a while...
+    // https://doc.qt.io/qt-5/qtimageformats-index.html
+    // and the distros ship no replacement plugin,  so decode it ourselves with
+    // the vendored openjpeg.  Most eMRTD EF_DG2 portraits are jpeg2000.
+    if (jp2_is_jpeg2000(data, (size_t)len)) {
+
+        int w = 0, h = 0;
+        uint8_t *rgb = jp2_decode_rgb(data, (size_t)len, &w, &h);
+        if (rgb) {
+            // QImage doesn't take ownership of the buffer,  copy() detaches it
+            img = QImage(rgb, w, h, w * 3, QImage::Format_RGB888).copy();
+            free(rgb);
+        }
+
+    } else {
+        img = QImage::fromData(data, len);
+    }
+
+    if (img.isNull()) {
+        PrintAndLogEx(WARNING, "Failed to decode image ( %s )", (title) ? title : "n/a");
+        return;
+    }
+
+    if (!gui) {
+        show_no_gui_notice();
+        return;
+    }
+
+    gui->ShowPictureWindow(QString::fromUtf8((title) ? title : ""), img);
+}
+
+extern "C" void ShowBase64PictureWindow(const char *title, char *b64) {
+
+    if (b64 == NULL) {
+        return;
+    }
+
+    // decode here,  in the caller thread,  since the b64 pointer isn't
+    // guaranteed to be alive once the GUI thread picks up the queued signal
+    QImage img;
+    if (img.loadFromData(QByteArray::fromBase64(QByteArray(b64))) == false) {
+        PrintAndLogEx(WARNING, "Failed to decode base64 image ( %s )", (title) ? title : "n/a");
+        return;
+    }
+
+    if (!gui) {
+        show_no_gui_notice();
+        return;
+    }
+
+    gui->ShowPictureWindow(QString::fromUtf8((title) ? title : ""), img);
+}
+
+extern "C" void ClearPictureWindow(void) {
+    if (!gui)
+        return;
+
+    gui->ClearPictureWindow();
 }
 
 extern "C" void HidePictureWindow(void) {

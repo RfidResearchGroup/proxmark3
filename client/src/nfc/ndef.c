@@ -867,7 +867,7 @@ static int ndefDecodeMime_vcard(NDEFHeader_t *ndef) {
                     } else if (strncmp(part, "VCARD", 5) == 0) {
                     } else  {
                         // should be in the BASE64 data part now.
-                        ShowBase64PictureWindow(part);
+                        ShowBase64PictureWindow("VCARD photo", part);
                     }
                     part = strtok(NULL, ":");
                 }
@@ -981,7 +981,7 @@ static int ndefDecodeMime_image(NDEFHeader_t *ndef) {
     PrintAndLogEx(INFO, "Type............ " _YELLOW_("%.*s"), (int)ndef->TypeLen, ndef->Type);
     PrintAndLogEx(INFO, "Size............ " _YELLOW_("%zu"), ndef->PayloadLen);
     PrintAndLogEx(INFO, "");
-    ShowPictureWindow(ndef->Payload, (int)ndef->PayloadLen);
+    ShowPictureWindow("NDEF image", ndef->Payload, (int)ndef->PayloadLen);
     return PM3_SUCCESS;
 }
 

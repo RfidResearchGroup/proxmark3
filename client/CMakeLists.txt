@@ -579,7 +579,11 @@ if ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND OR Qt6_FOUND))
     set (TARGET_SOURCES
             ${PM3_ROOT}/client/src/proxgui.cpp
             ${PM3_ROOT}/client/src/proxguiqt.cpp
+            ${PM3_ROOT}/client/src/imgjp2.c
             ${TARGET_SOURCES})
+
+    # Qt has no JPEG2000 image handler, so we decode EF_DG2 & friends ourselves
+    set(ADDITIONAL_LNK pm3rrg_rdv4_openjpeg ${ADDITIONAL_LNK})
 
     add_definitions("-DHAVE_GUI")
     if (Qt6_FOUND)

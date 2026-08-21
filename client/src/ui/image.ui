@@ -15,13 +15,12 @@
     </property>
     <layout class="QVBoxLayout" name="verticalLayout_1">
         <item>
-            <widget class="QLabel" name="lbl_pm">
-            </widget>
-        </item>
-        <item>
-            <widget class="QLabel" name="lbl_sz">
-            <property name="text">
-                <string>Image size</string>
+            <widget class="QTabWidget" name="tabs">
+            <property name="tabPosition">
+                <enum>QTabWidget::North</enum>
+            </property>
+            <property name="documentMode">
+                <bool>true</bool>
             </property>
             </widget>
         </item>
@@ -30,4 +29,3 @@
     <resources/>
     <connections/>
 </ui>
-
