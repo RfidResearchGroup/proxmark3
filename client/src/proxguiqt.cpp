@@ -270,6 +270,40 @@ const PictureItem *PictureWidget::pictureAt(int i) const {
     return &m_images.at(i);
 }
 
+ScaledPictureLabel::ScaledPictureLabel(const QImage &img, QWidget *parent)
+    : QLabel(parent), m_image(img) {
+
+    setAlignment(Qt::AlignCenter);
+    setMinimumSize(1, 1);
+    // let the layout hand us whatever is going, we adapt to it
+    setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+    rescale();
+}
+
+QSize ScaledPictureLabel::sizeHint(void) const {
+    return m_image.size();
+}
+
+void ScaledPictureLabel::resizeEvent(QResizeEvent *event) {
+    QLabel::resizeEvent(event);
+    rescale();
+}
+
+void ScaledPictureLabel::rescale(void) {
+
+    if (m_image.isNull())
+        return;
+
+    QSize room = size();
+    if (room.width() < 1 || room.height() < 1)
+        return;
+
+    // Qt::KeepAspectRatio fits the image inside the box without distorting it.
+    // Scaling up is wanted here, a 240x320 portrait in a 400x400 window should
+    // fill the window rather than sit in the middle of it.
+    setPixmap(QPixmap::fromImage(m_image.scaled(room, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+}
+
 // Append one image to the array and give it its own tab
 void PictureWidget::addPicture(const QString &title, const QImage &img) {
 
@@ -281,17 +315,8 @@ void PictureWidget::addPicture(const QString &title, const QImage &img) {
     QWidget *page = new QWidget();
     QVBoxLayout *layout = new QVBoxLayout(page);
 
-    QLabel *lbl_pm = new QLabel();
-    lbl_pm->setPixmap(QPixmap::fromImage(img));
-    lbl_pm->setScaledContents(false);
-    lbl_pm->setAlignment(Qt::AlignCenter);
-
-    // large images (fingerprints, high res portraits) shouldn't blow up the window
-    QScrollArea *scroll = new QScrollArea(page);
-    scroll->setWidget(lbl_pm);
-    scroll->setWidgetResizable(true);
-    scroll->setAlignment(Qt::AlignCenter);
-    layout->addWidget(scroll);
+    ScaledPictureLabel *lbl_pm = new ScaledPictureLabel(img, page);
+    layout->addWidget(lbl_pm, 1);
 
     QLabel *lbl_sz = new QLabel(page);
     lbl_sz->setText(QString("w: %1  h: %2")

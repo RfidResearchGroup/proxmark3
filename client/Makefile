@@ -860,6 +860,8 @@ SRCS =  mifare/aiddesfire.c \
         cipurse/cipursecore.c \
         cipurse/cipursecrypto.c \
         cipurse/cipursetest.c \
+        emrtd/emrtd_pace.c \
+        emrtd/emrtd_pacetest.c \
         fileutils.c \
         flash.c \
         frame_progress.c \

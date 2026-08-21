@@ -1891,20 +1891,35 @@
             ],
             "usage": "hf 14b wrbl [-h] [-b <dec>] -d <hex> [--512] [--4k] [--sb] [--force]"
         },
+        "hf 15 cfinalize": {
+            "command": "hf 15 cfinalize",
+            "description": "Finalize a magic ISO15693 'V3' tag. This operation is irreversible. After finalize the configuration area is erased and the UID can no longer be changed. Set the UID with `hf 15 csetuid --v3` first, then lock it in with this command.",
+            "notes": [
+                "hf 15 cfinalize -y"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-y, --yes Confirm the irreversible finalize operation"
+            ],
+            "usage": "hf 15 cfinalize [-hy]"
+        },
         "hf 15 csetuid": {
             "command": "hf 15 csetuid",
-            "description": "Set UID for magic Chinese card (only works with such cards)",
+            "description": "Set UID for magic Chinese card (only works with such cards) For magic 'V3' tags this writes the UID configuration only and is repeatable; run `hf 15 cfinalize` afterwards to lock the UID permanently.",
             "notes": [
                 "hf 15 csetuid -u E011223344556677 -> use gen1 command",
-                "hf 15 csetuid -u E011223344556677 --v2 -> use gen2 command"
+                "hf 15 csetuid -u E011223344556677 --v2 -> use gen2 command",
+                "hf 15 csetuid -u E011223344556677 --v3 -> use gen3 (V3) magic tag"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-u, --uid <hex> UID, 8 hex bytes",
-                "-2, --v2 Use gen2 magic command"
+                "-2, --v2 Use gen2 magic command",
+                "-3, --v3 Use gen3 (V3) magic tag (repeatable, needs cfinalize)"
             ],
-            "usage": "hf 15 csetuid [-h2] -u <hex>"
+            "usage": "hf 15 csetuid [-h23] -u <hex>"
         },
         "hf 15 demod": {
             "command": "hf 15 demod",
@@ -2836,11 +2851,14 @@
         },
         "hf emrtd help": {
             "command": "hf emrtd help",
-            "description": "help This help info Tag information list List ISO 14443A/7816 history --------------------------------------------------------------------------------------- hf emrtd dump available offline: no Dump all files on an eMRTD",
+            "description": "help This help info Tag information list List ISO 14443A/7816 history test Regression tests --------------------------------------------------------------------------------------- hf emrtd dump available offline: no Dump all files on an eMRTD",
             "notes": [
                 "hf emrtd dump",
                 "hf emrtd dump --dir ../dump",
-                "hf emrtd dump -n 123456789 -d 890101 -e 250401"
+                "hf emrtd dump -n 123456789 -d 890101 -e 250401",
+                "hf emrtd dump --can 123456 -> PACE with the Card Access Number",
+                "hf emrtd dump --can 123456 --pace -> PACE only, no BAC fallback",
+                "hf emrtd dump -n 123456789 -d 890101 -e 250401 --bac -> force BAC"
             ],
             "offline": true,
             "options": [
@@ -2849,9 +2867,12 @@
                 "-d, --date <YYMMDD> date of birth in YYMMDD format",
                 "-e, --expiry <YYMMDD> expiry in YYMMDD format",
                 "-m, --mrz <[0-9A-Z<]> 2nd line of MRZ, 44 chars",
+                "--can <digits> Card Access Number, PACE password instead of the MRZ",
+                "--pace force PACE, fail instead of falling back to BAC",
+                "--bac force BAC, skip PACE",
                 "--dir <str> save dump to the given dirpath"
             ],
-            "usage": "hf emrtd dump [-h] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--dir <str>]"
+            "usage": "hf emrtd dump [-h] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--can <digits>] [--pace] [--bac] [--dir <str>]"
         },
         "hf emrtd info": {
             "command": "hf emrtd info",
@@ -2860,7 +2881,9 @@
                 "hf emrtd info",
                 "hf emrtd info --dir ../dumps",
                 "hf emrtd info -n 123456789 -d 890101 -e 250401",
-                "hf emrtd info -n 123456789 -d 890101 -e 250401 -i"
+                "hf emrtd info -n 123456789 -d 890101 -e 250401 -i",
+                "hf emrtd info --can 123456 -> PACE with the Card Access Number",
+                "hf emrtd info --can 123456 --pace -> PACE only, no BAC fallback"
             ],
             "offline": true,
             "options": [
@@ -2869,10 +2892,13 @@
                 "-d, --date <YYMMDD> date of birth in YYMMDD format",
                 "-e, --expiry <YYMMDD> expiry in YYMMDD format",
                 "-m, --mrz <[0-9A-Z<]> 2nd line of MRZ, 44 chars (passports only)",
+                "--can <digits> Card Access Number, PACE password instead of the MRZ",
+                "--pace force PACE, fail instead of falling back to BAC",
+                "--bac force BAC, skip PACE",
                 "--dir <str> display info from offline dump stored in dirpath",
                 "-i, --images show images"
             ],
-            "usage": "hf emrtd info [-hi] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--dir <str>]"
+            "usage": "hf emrtd info [-hi] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--can <digits>] [--pace] [--bac] [--dir <str>]"
         },
         "hf emrtd list": {
             "command": "hf emrtd list",
@@ -2894,6 +2920,18 @@
                 "-f, --file <fn> filename of dictionary"
             ],
             "usage": "hf emrtd list [-h1crux] [--frame] [-f <fn>]"
+        },
+        "hf emrtd test": {
+            "command": "hf emrtd test",
+            "description": "Regression tests for the PACE and secure messaging primitives",
+            "notes": [
+                "hf emrtd test"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hf emrtd test [-h]"
         },
         "hf epa help": {
             "command": "hf epa help",
@@ -3020,7 +3058,7 @@
         },
         "hf felica help": {
             "command": "hf felica help",
-            "description": "----------- ----------------------- General ----------------------- help This help list List ISO 18092/FeliCa history ----------- ----------------------- Operations ----------------------- ----------- ----------------------- FeliCa Standard ----------------------- ----------- ----------------------- FeliCa Light ----------------------- --------------------------------------------------------------------------------------- hf felica list available offline: yes Alias of `trace list -t felica` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "----------- ----------------------- General ----------------------- help This help list List ISO 18092/FeliCa history ----------- ----------------------- Operations ----------------------- ----------- ----------------------- FeliCa SEAC ----------------------- ----------- ----------------------- FeliCa Standard ----------------------- ----------- ----------------------- FeliCa Light ----------------------- --------------------------------------------------------------------------------------- hf felica list available offline: yes Alias of `trace list -t felica` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf felica list --frame -> show frame delay times",
                 "hf felica list -1 -> use trace buffer"
@@ -3248,17 +3286,22 @@
             ],
             "usage": "hf felica scsvcode [-h] [-r <dec>] [--idm <hex>]"
         },
-        "hf felica seacinfo": {
-            "command": "hf felica seacinfo",
-            "description": "Get info about FeliCa SEAC cards",
+        "hf felica seacauth1": {
+            "command": "hf felica seacauth1",
+            "description": "Send FeliCa SEAC Authentication1",
             "notes": [
-                "hf felica seacinfo"
+                "hf felica seacauth1",
+                "hf felica seacauth1 --selector 0F",
+                "hf felica seacauth1 --challenge 0001020304050607",
+                "hf felica seacauth1 -s 0F -c FFFFFFFFFFFFFFFF"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-s, --selector <hex> selector, 1 byte (default 01)",
+                "-c, --challenge <hex> Challenge1a, 8 bytes (default all zero)"
             ],
-            "usage": "hf felica seacinfo [-h]"
+            "usage": "hf felica seacauth1 [-h] [-s <hex>] [-c <hex>]"
         },
         "hf felica sim": {
             "command": "hf felica sim",
@@ -4835,16 +4878,30 @@
         },
         "hf iclass sam": {
             "command": "hf iclass sam",
-            "description": "hf iclass sam - HID SAM operations Secure-channel subcommands: Legacy PACS-extraction flags (no subcommand, applied to hf iclass sam directly): --info get SAM version + serial number (also warms up the SAM) -d, --data <hex> DER-encoded SAMCommand to send (raw, no SC) -s, --snmp --data is in SNMP format without the A0/94 headers -p, --prevent fake the e-purse update during PACS extraction --break stop tag interaction at nr-mac (for SIO extract) -f, --file <fn> emulate from a dump file instead of a real card -n, --nodetect skip card detect + SetDetectedCardInfo -k, --keep keep the field active after the command -t, --tlv decode the response as TLV --shallow shallow modulation -v, --verbose verbose output Examples: hf iclass sam extract PACS via SAM (defaults) hf iclass sam --info get SAM version + serial (warmup ping) hf iclass sam scopen open Artemis secure channel hf iclass sam scsend --payload 8200 send wrapped SAMCommand hf iclass sam scclose terminate the SC session ======================================================================================= hf ict { ICT MFC/DESfire RFIDs... } --------------------------------------------------------------------------------------- hf ict help available offline: yes help This help list List ICT history reader Act like an IS14443-a reader --------------------------------------------------------------------------------------- hf ict credential available offline: no Read ICT sector from tag and decode",
+            "description": "Extract PACS via a HID SAM",
             "notes": [
-                "hf ict credential"
+                "hf iclass sam",
+                "hf iclass sam -p -d a005a103800104 -> get PACS data, prevent epurse update",
+                "hf iclass sam --break -> get Nr-MAC for extracting encrypted SIO",
+                "hf iclass sam -f hf-iclass-dump.bin -> emulate card from dump file to SAM",
+                "hf iclass sam --info -> get SAM version + serial (also warms up the SAM)"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "-k, --keep keep the field active after command executed",
+                "-n, --nodetect skip selecting the card and sending card details to SAM",
+                "-t, --tlv decode TLV",
+                "--break stop tag interaction on nr-mac",
+                "-p, --prevent fake epurse update",
+                "--shallow shallow mod",
+                "-d, --data <hex> DER encoded command to send to SAM",
+                "-s, --snmp data is in snmp format without headers",
+                "--info get SAM infos (version, serial number)",
+                "-f, --file <fn> dump file to emulate to SAM instead of a real card"
             ],
-            "usage": "hf ict credential [-hv]"
+            "usage": "hf iclass sam [-hvkntps] [--break] [--shallow] [-d <hex>]... [--info] [-f <fn>]"
         },
         "hf iclass sim": {
             "command": "hf iclass sim",
@@ -5002,6 +5059,19 @@
                 "-@ optional - continuous mode"
             ],
             "usage": "hf iclass wrbl [-hv@] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow]"
+        },
+        "hf ict help": {
+            "command": "hf ict help",
+            "description": "help This help list List ICT history reader Act like an IS14443-a reader --------------------------------------------------------------------------------------- hf ict credential available offline: no Read ICT sector from tag and decode",
+            "notes": [
+                "hf ict credential"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf ict credential [-hv]"
         },
         "hf ict info": {
             "command": "hf ict info",
@@ -8252,6 +8322,7 @@
             "notes": [
                 "hf mfdes pc --key 00000000000000000000000000000000",
                 "hf mfdes pc --key 00112233445566778899aabbccddeeff --rounds 4",
+                "hf mfdes pc --aid 123456 --key 00112233445566778899aabbccddeeff",
                 "hf mfdes pc --key 00112233445566778899aabbccddeeff -c native -a"
             ],
             "offline": false,
@@ -8261,9 +8332,10 @@
                 "-v, --verbose Verbose output",
                 "-k, --key <hex> Key (AES-128, exactly 16 bytes)",
                 "-r, --rounds <dec> Number of rounds (1..8), default 8",
-                "-c, --ccset <native|niso> Communication command set (default from `hf mfdes default`)"
+                "-c, --ccset <native|niso> Communication command set (default from `hf mfdes default`)",
+                "--aid <hex> Application ID (3 hex bytes, big endian)"
             ],
-            "usage": "hf mfdes pc [-hav] -k <hex> [-r <dec>] [-c <native|niso>]"
+            "usage": "hf mfdes pc [-hav] -k <hex> [-r <dec>] [-c <native|niso>] [--aid <hex>]"
         },
         "hf mfdes read": {
             "command": "hf mfdes read",
@@ -10465,9 +10537,10 @@
                 "--bar bar style",
                 "--mix mixed style",
                 "--value values style",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--rgb (PM5) mirror the tuning level on the antenna RGB LED"
             ],
-            "usage": "hf tune [-hv] [-n <dec>] [--bar] [--mix] [--value]"
+            "usage": "hf tune [-hv] [-n <dec>] [--bar] [--mix] [--value] [--rgb]"
         },
         "hf vas decrypt": {
             "command": "hf vas decrypt",
@@ -10652,6 +10725,21 @@
             ],
             "usage": "hints [-h10]"
         },
+        "hw ant_pm5": {
+            "command": "hw ant_pm5",
+            "description": "Control the antennal of pm5",
+            "notes": [
+                "hw ant_pm5 --set <u8_data> -> Write the data of IO data register",
+                "hw ant_pm5 -m --set <u8_data> -> Write the data of IO map register"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-m, --map Write the IO map register",
+                "-s, --set <u8_data> Set PM5 antenna"
+            ],
+            "usage": "hw ant_pm5 [-hm] [-s <u8_data>]"
+        },
         "hw bootloader": {
             "command": "hw bootloader",
             "description": "Reboot Proxmark3 into bootloader mode",
@@ -10725,9 +10813,23 @@
             ],
             "usage": "hw decay [-h] [--ms <dec>] [--us <dec>]"
         },
-        "hw fpgaoff": {
-            "command": "hw fpgaoff",
-            "description": "Turn of fpga and antenna field",
+        "hw factorydata": {
+            "command": "hw factorydata",
+            "description": "Get/Set the factory data for Device",
+            "notes": [
+                "hw factorydata --load <file> -> Write the factory data to device from file",
+                "hw factorydata -> Read and parse the factory data from device"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--load <fn> Load factory data from file to device"
+            ],
+            "usage": "hw factorydata [-h] [--load <fn>]"
+        },
+        "hw fpga": {
+            "command": "hw fpga",
+            "description": "help This help ------------- ----------------------- Operation ----------------------- --------------------------------------------------------------------------------------- hw fpgaoff available offline: no Turn of fpga and antenna field",
             "notes": [
                 "hw fpgaoff"
             ],
@@ -10791,6 +10893,18 @@
                 "-l, --len <dec> length of payload to send"
             ],
             "usage": "hw ping [-h] [-l <dec>]"
+        },
+        "hw qc_pm5": {
+            "command": "hw qc_pm5",
+            "description": "QC Test for the PM5",
+            "notes": [
+                "hf qcpm5"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hw qcpm5 [-h]"
         },
         "hw readmem": {
             "command": "hw readmem",
@@ -14388,9 +14502,10 @@
                 "--bar bar style",
                 "--mix mixed style",
                 "--value values style",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--rgb (PM5) mirror the tuning level on the antenna RGB LED"
             ],
-            "usage": "lf tune [-hv] [-n <dec>] [-q <dec>] [-f <float>] [--bar] [--mix] [--value]"
+            "usage": "lf tune [-hv] [-n <dec>] [-q <dec>] [-f <float>] [--bar] [--mix] [--value] [--rgb]"
         },
         "lf viking clone": {
             "command": "lf viking clone",
@@ -16023,8 +16138,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 896,
+        "commands_extracted": 902,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-07-30T14:44:57+00:00"
+        "extracted_on": "2026-08-21T18:43:14+00:00"
     }
 }

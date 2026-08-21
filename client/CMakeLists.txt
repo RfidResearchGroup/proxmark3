@@ -358,6 +358,8 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cipurse/cipursecrypto.c
         ${PM3_ROOT}/client/src/cipurse/cipursecore.c
         ${PM3_ROOT}/client/src/cipurse/cipursetest.c
+        ${PM3_ROOT}/client/src/emrtd/emrtd_pace.c
+        ${PM3_ROOT}/client/src/emrtd/emrtd_pacetest.c
         ${PM3_ROOT}/client/src/loclass/cipher.c
         ${PM3_ROOT}/client/src/loclass/cipher_bs.c
         ${PM3_ROOT}/client/src/loclass/cipher_bs_avx2.c
