@@ -39,6 +39,7 @@
 #include "iso15693.h"
 #include "iclass_cmd.h"              // iclass_card_select_t struct
 #include "i2c.h"                     // i2c defines (SIM module access)
+#include "sam_common.h"              
 #include "printf.h"
 
 uint8_t get_pagemap(const picopass_hdr_t *hdr) {
@@ -1619,17 +1620,36 @@ void iClass_Raw(uint8_t *msg) {
             return;
         }
         if (rawlen == 0) {                      // scan: return the header, keep field ON
+            switch_clock_to_ticks();
             reply_ng(CMD_HF_ICLASS_RAW, PM3_SUCCESS, (uint8_t *)&hdr, sizeof(picopass_hdr_t));
             return;
         }
         start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+    } else {
+        switch_clock_to_countsspclk();
     }
 
     uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
     uint16_t resp_len = 0;
-    iclass_send_as_reader(raw, rawlen, &start_time, &eof_time, false);
-    int res = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS,
-                                       &eof_time, false, true, &resp_len);
+
+    start_time = GetCountSspClk();
+    bool is_update = rawlen > 0 && ((raw[0] & 0x0F) == ICLASS_CMD_UPDATE);
+    uint8_t tries = is_update ? 1 : 3;
+    uint16_t timeout = is_update ? ICLASS_READER_TIMEOUT_UPDATE : ICLASS_READER_TIMEOUT_ACTALL;
+    int res = PM3_ECARDEXCHANGE;
+    while (tries-- > 0) {
+        iclass_send_as_reader(raw, rawlen, &start_time, &eof_time, false);
+        resp_len = 0;
+        res = GetIso15693AnswerFromTag(resp, sizeof(resp), timeout, &eof_time,
+                                       false, true, &resp_len);
+        if (res == PM3_SUCCESS && resp_len > 0) {
+            break;
+        }
+        start_time = eof_time + ((DELAY_ICLASS_VICC_TO_VCD_READER +
+                                  DELAY_ISO15693_VCD_TO_VICC_READER +
+                                  (8 * 8 * 8 * 16)) * 2);
+    }
+    switch_clock_to_ticks();
     if (res == PM3_SUCCESS && resp_len > 0) {
         reply_ng(CMD_HF_ICLASS_RAW, PM3_SUCCESS, resp, resp_len);
     } else {
