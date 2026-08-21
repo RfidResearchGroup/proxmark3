@@ -91,12 +91,35 @@ class SliderWidget : public QWidget {
     SliderWidget();
 };
 
-// Added class for SliderWidget to allow move/resize event override
+/**
+ * @brief One decoded image together with the label it is shown under
+ */
+class PictureItem {
+  public:
+    PictureItem(const QString &t, const QImage &i) : title(t), image(i) {}
+    QString title;
+    QImage image;
+};
+
+// Picture viewer window.  Holds an array of images, one tab per image, so that
+// several pictures of the same document (portrait, signature, other biometrics)
+// can be shown side by side
 class PictureWidget : public QWidget {
   protected:
     void closeEvent(QCloseEvent *event);
   public:
     PictureWidget();
+    ~PictureWidget(void);
+
+    void addPicture(const QString &title, const QImage &img);
+    void clearPictures(void);
+    int pictureCount(void) const { return m_images.size(); }
+    const PictureItem *pictureAt(int i) const;
+
+  private:
+    Ui::PictureForm *m_ui;
+    QVector<PictureItem> m_images;
+    void updateTitle(void);
 };
 
 /**
@@ -156,7 +179,6 @@ class ProxGuiQT : public QObject {
   private:
     QApplication *plotapp;
     ProxWidget *plotwidget;
-    Ui::PictureForm *pictureController;
     PictureWidget *pictureWidget;
 
     int argc;
@@ -172,8 +194,8 @@ class ProxGuiQT : public QObject {
     void HideGraphWindow(void);
 
     // hook up picture viewer
-    void ShowPictureWindow(const QImage &img);
-    void ShowBase64PictureWindow(char *b64);
+    void ShowPictureWindow(const QString &title, const QImage &img);
+    void ClearPictureWindow(void);
     void HidePictureWindow(void);
     void RepaintPictureWindow(void);
 
@@ -186,8 +208,8 @@ class ProxGuiQT : public QObject {
     void _HideGraphWindow(void);
 
     // hook up picture viewer
-    void _ShowPictureWindow(const QImage &img);
-    void _ShowBase64PictureWindow(char *b64);
+    void _ShowPictureWindow(const QString &title, const QImage &img);
+    void _ClearPictureWindow(void);
     void _HidePictureWindow(void);
     void _RepaintPictureWindow(void);
 
@@ -201,8 +223,8 @@ class ProxGuiQT : public QObject {
     void ExitSignal(void);
 
     // hook up picture viewer signals
-    void ShowPictureWindowSignal(const QImage &img);
-    void ShowBase64PictureWindowSignal(char *b64);
+    void ShowPictureWindowSignal(const QString &title, const QImage &img);
+    void ClearPictureWindowSignal(void);
     void HidePictureWindowSignal(void);
     void RepaintPictureWindowSignal(void);
 };

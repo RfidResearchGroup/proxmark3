@@ -3,21 +3,22 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf emrtd info`- now shows portrait, signature and other biometrics at the same time (@iceman1001)
 - Fixed `pm3_grabbed_output_get` - heap overflow (@jonyen)
 - Fixed `hf iclass sam` - removed the old implementation (@iceman1001)
-- Fixed Proxmark5 (PM5/AT32) failing to re-enter the bootloader (@nemanjan00)
-- Fixed `hw fpga config` on Proxmark5 (PM5/AT32) now powers on the FPGA 24MHz clock (@nemanjan00)
-- Fixed `hf mfdes chk` to correctly check all provided keys instead of only checking a small portion (@corollary-de).
-- Fixed `hf iclass unhash` omitting valid hash0 pre-images, which could make the subsequent hashcat DES crack unable to find the master key (@trichimtrich)
-- Fixed `hf iclass unhash` returning no pre-images at all for some keys, caused by `check()` not being invertible in a single reading (@trichimtrich)
-- Added `--rgb` option to `hf tune` / `lf tune` (Proxmark5/PM5): mirrors the antenna tuning level on the antenna RGB LED (@nemanjan00)
-- Fixed `hw version` / `hw status` showing a bogus FPGA image (`fpga_pm3_hf.ncd image 2s30vq100`) on Proxmark5 (PM5/AT32) (@nemanjan00)
+- Fixed (PM5) failing to re-enter the bootloader (@nemanjan00)
+- Fixed `hw fpga config` (PM5) - now powers on the FPGA 24MHz clock (@nemanjan00)
+- Fixed `hf mfdes chk` - now correctly check all provided keys instead of only checking a small portion (@corollary-de).
+- Fixed `hf iclass unhash` - now omitting valid hash0 pre-images (@trichimtrich)
+- Fixed `hf iclass unhash` - returning no pre-images at all for some keys, caused by `check()` not being invertible in a single reading (@trichimtrich)
+- Added `--rgb` option to `hf tune` / `lf tune` (PM5) - mirrors the antenna tuning level on the antenna RGB LED (@nemanjan00)
+- Fixed `hw version` / `hw status` (PM5) - now showing correct information for fpga images (@nemanjan00)
 - Fixed `hw status` [Model] section reporting "PM3 GENERIC" firmware on Proxmark5 (PM5/AT32); it now reports `PM5` (@nemanjan00)
 - Added `hw version` / `hw status` - now reports Proxmark5 (PM5/AT32) correct MCU (AT32F437) (@nemanjan00)
-- Fixed `hf mf dump` preserving readable sector trailer Key B data (@oSPANNERo)
+- Fixed `hf mf dump` - preserving readable sector trailer Key B data (@oSPANNERo)
 - Changed `magic_cards_notes.md` - documented the USCUID-UL helper scripts (`hf_mfu_uscuid` / `hf_mf_uscuid_prog`) (@c-barron)
 - Fixed `hf_mf_uscuid_prog.lua` - corrected the script name shown in its usage text (@c-barron)
-- Added `hf felica seacauth1` command
+- Added `hf felica seacauth1` command (@kormax)
 - Added `lf trovan` commands to support Trovan Animal ID (@iceman1001)
 - Added `hf mf gdmgetblk/gdmgethidblk/gdmsethidblk/gdmsetuid/gdmwipe/gdmsetsig` (@0x6r1an0y)
 - Changed `hf mf gdmparsecfg/gdmsetblk` (@0x6r1an0y)
@@ -30,9 +31,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added `hf 14b ctrdbl` and `hf 14b ctdump` commands for interacting with ASK CTS tags (@kormax)
 - Fixed `hf legic migrate` failing to parse the optional DCF argument as hex (@IdanHo)
 - Add support for parsing Finnish Helsinki Regional Transport (HRT) travel cards (@sanduuz)
-- Added standalone mode `HF_DOEGOX_COMMIT`: DESFire suspended commit without relay (@doegox)
-- Added support for Innovatron protocol detection to `hf 14b info` (@kormax)
-- Improved `lf cotag reader` and `lf cotag demod`: Reimplementation and enhancement of proxmark3 COTAG support
+- Added standalone mode `HF_DOEGOX_COMMIT` - DESFire suspended commit without relay (@doegox)
+- Changed `hf 14b info`- now support Innovatron protocol detection (@kormax)
+- Improved `lf cotag reader` and `lf cotag demod` - Reimplementation and enhancement of proxmark3 COTAG support
 - Added `hf felica sim` command (@kormax)
 - Added `mad read`, `mad write`, `mad verify`, `mad decode`, `mad encode` commands with typed struct MAD API (@AlxCzl)
 - Added `hf mfdes getversion` command (@kormax)
