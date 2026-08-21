@@ -2549,6 +2549,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             ReaderIClass(packet->data.asBytes);
             break;
         }
+        case CMD_HF_ICLASS_RAW: {
+            iClass_Raw(packet->data.asBytes);
+            break;
+        }
         case CMD_HF_ICLASS_EML_MEMSET: {
             FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF_15);
             struct p {

@@ -48,6 +48,7 @@
 
 void SniffIClass(uint8_t jam_search_len, uint8_t *jam_search_string);
 void ReaderIClass(uint8_t *flags);
+void iClass_Raw(uint8_t *msg);
 
 void iClass_WriteBlock(uint8_t *msg);
 void iclass_credit_epurse(iclass_credit_epurse_t *payload);
