@@ -251,6 +251,8 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/crypto/duoxcrypto.c
         ${PM3_ROOT}/client/src/crypto/libpcrypto.c
         ${PM3_ROOT}/client/src/crypto/originality.c
+        ${PM3_ROOT}/client/src/emrtd/emrtd_pace.c
+        ${PM3_ROOT}/client/src/emrtd/emrtd_pacetest.c
         ${PM3_ROOT}/client/src/emv/test/cda_test.c
         ${PM3_ROOT}/client/src/emv/test/crypto_test.c
         ${PM3_ROOT}/client/src/emv/test/cryptotest.c
