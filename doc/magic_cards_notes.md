@@ -1017,7 +1017,7 @@ hf 14a raw -s -c 90FD111100
 
 ^[Top](#top)
 
-TLDR: These magic cards have a 16 byte long configuration page, which usually starts with 0x85.
+TLDR: These magic cards have a 16 byte long configuration page, which usually starts with 0x85 or 0x7A.
 All of the known tags are using this, except for Ultralight tags, are listed here.
 
 You cannot turn a Classic tag into an Ultralight and vice-versa!
@@ -1028,7 +1028,7 @@ You cannot turn a Classic tag into an Ultralight and vice-versa!
 
 * UID: 4/7 bytes
 * ATQA: always read from block 0
-* SAK: read from backdoor or configuration
+* SAK: read from hidden block or configuration
 * BCC: read from memory, beware!
 * ATS: no/unknown
 
@@ -1039,40 +1039,44 @@ You cannot turn a Classic tag into an Ultralight and vice-versa!
 ```
 hf mf info
 ...
-[+] Magic capabilities... Gen 4 GDM / USCUID ( Magic Auth/Gen1 Magic Wakeup/Alt Magic Wakeup )
+
+[+] Magic capabilities... Gen 1a
+[+] Magic capabilities... Gen 4 GDM / USCUID ( Magic Auth )
+[+] Magic capabilities... Gen 4 GDM / USCUID ( Gen1 Magic Wakeup / Gen4 Magic Wakeup)
+
 ```
 
 Possible tag wakeup mechanisms are:
 
-* Magic Auth
-* Gen1 Magic Wakeup
-* Alt Magic Wakeup
+* Gen1 Magic Wakeup (--gen1a)
+* Gen4 Magic Wakeup (--gdm)
+* Magic Auth (--wupa)
 
 ### Magic commands
 
 ^[Top](#top)
 
-* Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
-  * Backdoor read: `38xx+crc`
-  * Backdoor write: `A8xx+crc`, `[16 bytes data]+crc`
-  * Read configuration: `E000+crc`
-  * Write configuration: `E100+crc`; `[16 bytes data]+crc`
-* Magic wakeup (A: 00): `40(7)`, `43`
-* Magic wakeup (B: 85): `20(7)`, `23`
+* Magic wakeup (Gen1a): `40(7)`, `43`
+* Magic wakeup (GDM): `20(7)`, `23`
   * Backdoor read main block: `30xx+crc`
   * Backdoor write main block: `A0xx+crc`, `[16 bytes data]+crc`
   * Read hidden block: `38xx+crc`
   * Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
   * Read configuration: `E000+crc`
   * Write configuration: `E100+crc`
+* Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
+  * Read hidden block: `38xx+crc`
+  * Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
+  * Read configuration: `E000+crc`
+  * Write configuration: `E100+crc`; `[16 bytes data]+crc`
 
 * **DANGER**
   * Set main memory and config to 00 `F000+crc`
   * Set main memory and config to FF `F100+crc`
   * Set main memory and config to 55 (no 0A response) `F600+crc`
-  * Set backdoor memory to 00 `F800+crc`
-  * Set backdoor memory to FF `F900+crc`
-  * Set backdoor memory to 55 (no 0A response) `FE00+crc`
+  * Set hidden memory to 00 `F800+crc`
+  * Set hidden memory to FF `F900+crc`
+  * Set hidden memory to 55 (no 0A response) `FE00+crc`
 
 ### USCUID configuration guide
 
@@ -1083,8 +1087,8 @@ Possible tag wakeup mechanisms are:
 ```
 85000000000000000000000000000008
       ^^^^^^    ^^          ^^   >> ??? Mystery ???
-^^^^                             >> Gen1a mode (works with bitflip)
-    ^^                           >> Magic wakeup command (00 for 40-43; 85 for 20-23)
+^^^^                             >> backdoor enable: 7AFF on, 8500 off
+    ^^                           >> backdoor style (00 for 40(7)/43; 85 for 20(7)/23)
             ^^                   >> Block use of Key B if readable by ACL
               ^^                 >> CUID mode
                   ^^             >> MFC EV1 CL2 Perso config*
@@ -1095,23 +1099,39 @@ Possible tag wakeup mechanisms are:
                               ^^ >> SAK***
 
 To enable an option, set it to 5A.
-* 5A - unfused F0. C3 - F0: CL2 UID; A5 - F1: CL2 UID with anticollision shortcut; 87 - F2: CL1 Random UID; 69 - F3: CL1 non-UID. Anything else is going to be ignored, and set as 4 bytes.
-** Do not change the real ACL! Backdoor commands only acknowledge FF0780. To recover, disable this byte and issue regular write to sector trailer.
-*** If perso byte is enabled, this SAK is ignored, and hidden SAK is used instead.
+
+*   MFC EV1 CL2 Perso config - one value per personalization state:
+      5A  Unfused (not personalized yet)
+      C3  UIDF0 - double size (7 byte) UID, CL2
+      A5  UIDF1 - double size (7 byte) UID, CL2, with anticollision shortcut
+      87  UIDF2 - single size (4 byte) random UID, CL1
+      69  UIDF3 - single size (4 byte) NUID, CL1
+    Any other value is ignored, and the tag uses a 4 byte UID read from block 0.
+**  Shadow mode - do not change the real ACL! Backdoor commands only acknowledge FF0780.
+    To recover, disable this byte and issue a regular write to the sector trailer.
+*** SAK - if the perso byte is enabled, this SAK is ignored, and the SAK in the hidden block is used instead.
 ```
 
-* Gen1a mode:                            Allow using custom wakeup commands, like real gen1a chip, to run backdoor commands, as well as some extras.
-* Magic wakeup command:                  Use different wakeup commands for entering Gen1a mode. A) 00 - 40(7), 43; B) 85 - 20(7), 23.
+* backdoor enable:                       The master on/off switch for the magic wakeup backdoor. Bytes 0-1 = `7AFF` enable it (with access to the config block), `8500` disable it. When disabled the tag has no wakeup backdoor, and only the Magic Auth command (if enabled, see below) can reach the backdoor commands. This is byte 0-1 in the parsed `gdmgetcfg` output ("Magic wakeup enabled/disabled"). Note the guide's default example above (`8500...`) has it disabled. Works with bitflip (`hint: 8500 XOR FFFF = 7AFF`).
+* backdoor style:                        Selects *which* wakeup command sequence enters the backdoor. A tag uses exactly one style, chosen by byte 2:
+
+  | Byte 2 | Style            | Wakeup sequence               | Client flag |
+  | ------ | ---------------- | ----------------------------- | ----------- |
+  | `00`   | Gen1a            | `40` (7 bit frame), then `43` | `--gen1a`   |
+  | `85`   | GDM / alt / Gen4 | `20` (7 bit frame), then `23` | `--gdm`     |
+
+  Using the wrong style for a tag returns a `wupC1` / `wupGDM1` error - that means style mismatch, not a broken command.
+
 * Block use of Key B if readable by ACL: Per the MF1ICS50 datasheet, if Key B is readable by the ACL, using it shall give a Cmd Error 04. This option controls whether it happens or not.
 * CUID mode:                             Allow direct write to block 0, instead of giving Cmd Error 04.
-* MFC EV1 CL2 Perso config:              When configured, the tag behaves like a real Mifare Classic EV1 7B UID tag, and reads UID from backdoor blocks. Otherwise, the tag acts like a 4 byte tag.
+* MFC EV1 CL2 Perso config:              When configured, the tag behaves like a real Mifare Classic EV1 7B UID tag, and reads UID from hidden blocks. Otherwise, the tag acts like a 4 byte tag.
 * Shadow mode:                           Writes to memory persisting in tag RAM. As soon as no power is left, the contents are restored to saved data.
 * Magic Auth Command:                    Acknowledge command `8000` after selection, and call for Crypto1 auth with key `000000000000`.
 * Static encrypted nonce mode:           Use static encrypted nonces for authentication, making key recovery impossible.
-* Signature sector:                      Acknowledge auth commands to sector 17, which is stored in backdoor sector 1.
+* Signature sector:                      Acknowledge auth commands to sector 17, which is stored in hidden sector 1.
 * SAK:                                   If perso byte is not set, after UID select, send this value.
 
-2. Backdoor blocks
+2. Hidden blocks
 
 ```
 
@@ -1141,19 +1161,18 @@ Sectors 2-15
 
 ^[Top](#top)
 
-```
-# Read config block from card
-hf mf gdmcfg
-
-# Write config block to card
-hf mf gdmsetcfg
-
-# Parse config block to card
-hf mf gdmparsecfg
-
-# Write block to card
-hf mf gdmsetblk
-```
+| Command | Purpose |
+|---|---|
+| `gdmgetcfg` | Read + parse the config block |
+| `gdmsetcfg` | Write raw 16 bytes (`-d`) or individual flags (`--wakestyle/--cuid/--cl2/--shadow/--magicauth/--statenc/--sigsec`) for the config block |
+| `gdmparsecfg` | Offline decode of a config block |
+| `gdmgetblk` | Read public block |
+| `gdmsetblk` | Write a public block |
+| `gdmgethidblk` | Read hidden block |
+| `gdmsethidblk` | Write a hidden block |
+| `gdmsetuid` | Set 4-byte / 7-byte UID, or F3 perso (`--f3d`) |
+| `gdmwipe` | Restore card to factory defaults (`-a` for 4K) |
+| `gdmsetsig` | Write EV1 signature (hidden blocks 5/6), enable sigsec, write default signature key sector |
 
 ### libnfc commands
 
@@ -1175,9 +1194,7 @@ No implemented commands today
 | 7AFF000000000000BAFA000000000008 | UFUID         |
 | 7AFF0000000000000000000000000008 | ZUID          |
 
-*Not all tags are the same!* UFUID, ZUID and PFUID* are not full implementations of USCUID - they only acknowledge the first 8 (except wakeup command) and last config byte(s).
-
-*Read and write config commands are flipped
+*Not all tags are the same!* UFUID, ZUID and PFUID are not full implementations of USCUID - they only acknowledge the first 8 (except wakeup command) and last config byte(s). Read and write config commands in PFUID are flipped.
 
 Well-known variations are described below.
 
@@ -1224,7 +1241,7 @@ Unlocked tag type:
 ```
 hf mf info
 ...
-[+] Magic capabilities... Gen 4 GDM / USCUID ( Alt Magic Wakeup )
+[+] Magic capabilities... Gen 4 GDM / USCUID ( Gen4 Magic Wakeup )
 [+] Magic capabilities... Write Once / FUID
 
 ```
@@ -1243,7 +1260,7 @@ hf mf info
 ^[Top](#top)
 
 ```
-[usb] pm3 --> hf mf gdmcfg --gdm
+[usb] pm3 --> hf mf gdmgetcfg --gdm
 [+] Config... 7A FF 85 00 00 00 00 00 00 FF 00 00 00 00 00 08
 [+]           7A FF .........................................  Magic wakeup enabled with GDM config block access
 [+]                 85 ......................................  Magic wakeup style GDM 20(7)/23
@@ -1295,7 +1312,7 @@ hf mf info
 
 ^[Top](#top)
 
-* `hf mf gdmcfg --gdm`
+* `hf mf gdmgetcfg --gdm`
 * `hf mf gdmsetcfg --gdm`
 * `hf mf gdmsetblk --gdm`
 
@@ -1336,7 +1353,7 @@ Before the sealing could be detected from the config block value.
 ^[Top](#top)
 
 ```
-[usb] pm3 --> hf mf gdmcfg --gen1a
+[usb] pm3 --> hf mf gdmgetcfg --gen1a
 [+] Config... 7A FF 00 00 00 00 00 00 BA FA 00 00 00 00 00 08
 [+]           7A FF .........................................  Magic wakeup enabled with GDM config block access
 [+]                 00 ......................................  Magic wakeup style Gen1a 40(7)/43
@@ -1379,7 +1396,7 @@ hf 14a raw       -c   85000000000000000000000000000008
 
 All commands are available before sealing.
 
-* `hf mf gdmcfg --gen1a`
+* `hf mf gdmgetcfg --gen1a`
 * `hf mf gdmsetcfg --gen1a`
 * `hf mf gdmsetblk --gen1a`
 * `hf mf csetuid`
@@ -1429,7 +1446,7 @@ hf mf info
 ^[Top](#top)
 
 ```
-[usb] pm3 --> hf mf gdmcfg --gen1a
+[usb] pm3 --> hf mf gdmgetcfg --gen1a
 [+] Config... 7A FF 00 00 00 00 00 00 00 00 00 00 00 00 00 08
 [+]           7A FF .........................................  Magic wakeup enabled with GDM config block access
 [+]                 00 ......................................  Magic wakeup style Gen1a 40(7)/43
@@ -1460,7 +1477,7 @@ hf mf info
 
 ^[Top](#top)
 
-* `hf mf gdmcfg --gen1a`
+* `hf mf gdmgetcfg --gen1a`
 * `hf mf gdmsetcfg --gen1a`
 * `hf mf gdmsetblk --gen1a`
 * `hf mf csetuid`
@@ -1507,7 +1524,7 @@ Could be manually validated with the configuration block value.
 ^[Top](#top)
 
 ```
-[usb] pm3 --> hf mf gdmcfg
+[usb] pm3 --> hf mf gdmgetcfg
 [+] Config... 85 00 00 00 00 00 00 00 00 00 5A 5A 00 00 00 08
 [+]           85 00 .........................................  Magic wakeup disabled
 [+]                 00 ......................................  Magic wakeup style Gen1a 40(7)/43
@@ -1529,8 +1546,8 @@ Could be manually validated with the configuration block value.
 ^[Top](#top)
 
 * Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
-  * Backdoor read: `38xx+crc`
-  * Backdoor write: `A8xx+crc`, `[16 bytes data]+crc`
+  * Read hidden block: `38xx+crc`
+  * Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
   * Read configuration: `E000+crc`
   * Write configuration: `E100+crc`; `[16 bytes data]+crc`
 
@@ -1539,7 +1556,7 @@ Could be manually validated with the configuration block value.
 ^[Top](#top)
 
 * Backdoor write: `gdmsetcfg`
-* Read configuration: `gdmcfg`
+* Read configuration: `gdmgetcfg`
 * Write configuration: `gdmsetcfg`
 
 ## GDCUID
@@ -1576,7 +1593,7 @@ Could be manually validated with the configuration block value.
 ^[Top](#top)
 
 ```
-[usb] pm3 --> hf mf gdmcfg
+[usb] pm3 --> hf mf gdmgetcfg
 [+] Config... 85 00 00 00 00 00 00 5A 00 FF 00 5A 00 00 00 08
 [+]           85 00 .........................................  Magic wakeup disabled
 [+]                 00 ......................................  Magic wakeup style Gen1a 40(7)/43
@@ -1598,8 +1615,8 @@ Could be manually validated with the configuration block value.
 ^[Top](#top)
 
 * Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
-  * Backdoor read: `38xx+crc`
-  * Backdoor write: `A8xx+crc`, `[16 bytes data]+crc`
+  * Read hidden block: `38xx+crc`
+  * Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
   * Read configuration: `E000+crc`
   * Write configuration: `E100+crc`; `[16 bytes data]+crc`
 
@@ -1608,7 +1625,7 @@ Could be manually validated with the configuration block value.
 ^[Top](#top)
 
 * Backdoor write: `gdmsetcfg`
-* Read configuration: `gdmcfg`
+* Read configuration: `gdmgetcfg`
 * Write configuration: `gdmsetcfg`
 
 ## MIFARE Classic, other versions
@@ -2125,7 +2142,7 @@ hf 14a raw -c e100
 Possible tag wakeup mechanisms are:
 
 * Gen1 Magic Wakeup
-* Alt Magic Wakeup
+* Gen4 Magic Wakeup
 
 ### Magic commands
 
