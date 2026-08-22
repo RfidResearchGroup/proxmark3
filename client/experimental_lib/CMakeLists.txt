@@ -56,6 +56,13 @@ if (NOT SKIPPYTHON EQUAL 1)
     pkg_search_module(PYTHON3EMBED QUIET ${PYTHON3_PKGCONFIG}-embed)
 endif (NOT SKIPPYTHON EQUAL 1)
 
+if (MINGW)
+    # Prefer static archives for single-exe deployments.
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    set(ZLIB_USE_STATIC_LIBS ON)
+    set(BZIP2_USE_STATIC_LIBS ON)
+endif()
+
 # If cross-compiled, we need to init source and build.
 if (CMAKE_TOOLCHAIN_FILE)
     if (ANDROID)
@@ -513,17 +520,26 @@ endif(NOT SKIPREADLINE EQUAL 1)
 
 if (BZIP2_FOUND)
     set(ADDITIONAL_DIRS ${BZIP2_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    if (MINGW)
+        set(BZIP2_LIBRARIES /mingw64/lib/libbz2.a)
+    endif()
     set(ADDITIONAL_LNK ${BZIP2_LIBRARIES} ${ADDITIONAL_LNK})
 endif (BZIP2_FOUND)
 
 if (LZ4_FOUND)
     set(ADDITIONAL_DIRS ${LZ4_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    if (MINGW)
+        set(LZ4_LIBRARIES /mingw64/lib/liblz4.a)
+    endif()
     set(ADDITIONAL_LNK ${LZ4_LIBRARIES} ${ADDITIONAL_LNK})
 endif (LZ4_FOUND)
 
 if (ZLIB_FOUND)
     add_definitions("-DHAVE_ZLIB")
     set(ADDITIONAL_DIRS ${ZLIB_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    if (MINGW)
+        set(ZLIB_LIBRARIES /mingw64/lib/libz.a)
+    endif()
     set(ADDITIONAL_LNK ${ZLIB_LIBRARIES} ${ADDITIONAL_LNK})
 endif (ZLIB_FOUND)
 
@@ -689,7 +705,32 @@ add_library(pm3rrg_rdv4 SHARED
         ${ADDITIONAL_SRC}
 )
 
+add_library(pm3rrg_rdv4_static STATIC
+        ${PM3_ROOT}/client/src/proxmark3.c
+        ${PM3_ROOT}/client/src/guidummy.cpp
+        ${TARGET_SOURCES}
+        ${ADDITIONAL_SRC}
+)
+
+add_executable(kgh_tools
+        ${PM3_ROOT}/client/experimental_lib/example_c/legic_migrate_tool.c
+)
+
+set_target_properties(kgh_tools PROPERTIES OUTPUT_NAME "kgh_tools")
+if (MINGW)
+    target_link_options(kgh_tools PRIVATE -static -static-libgcc)
+endif()
+
+target_link_libraries(kgh_tools PRIVATE pm3rrg_rdv4_static)
+target_include_directories(kgh_tools PRIVATE
+        ${PM3_ROOT}/common
+        ${PM3_ROOT}/client/include
+        ${PM3_ROOT}/client/src
+        ${PM3_ROOT}/include
+)
+
 target_compile_definitions(pm3rrg_rdv4 PRIVATE LIBPM3)
+target_compile_definitions(pm3rrg_rdv4_static PRIVATE LIBPM3)
 
 if (UNIX AND NOT APPLE)
     # Fail the build if a client source file is missing from TARGET_SOURCES.
@@ -698,6 +739,7 @@ if (UNIX AND NOT APPLE)
 endif()
 
 target_compile_options(pm3rrg_rdv4 PUBLIC -Wall -Werror -O3)
+target_compile_options(pm3rrg_rdv4_static PUBLIC -Wall -Werror -O3)
 if (EMBED_READLINE)
     if (NOT SKIPREADLINE EQUAL 1)
         add_dependencies(pm3rrg_rdv4 ncurses readline)
@@ -725,6 +767,15 @@ if (MINGW)
 endif (MINGW)
 
 target_include_directories(pm3rrg_rdv4 PRIVATE
+        ${PM3_ROOT}/common
+        ${PM3_ROOT}/common_fpga
+        ${PM3_ROOT}/include
+        ${PM3_ROOT}/client/src
+        ${PM3_ROOT}/client/include
+        ${ADDITIONAL_DIRS}
+)
+
+target_include_directories(pm3rrg_rdv4_static PRIVATE
         ${PM3_ROOT}/common
         ${PM3_ROOT}/common_fpga
         ${PM3_ROOT}/include
@@ -770,8 +821,23 @@ target_link_libraries(pm3rrg_rdv4 PRIVATE
         pm3rrg_rdv4_vec
         ${ADDITIONAL_LNK})
 
+target_link_libraries(pm3rrg_rdv4_static PRIVATE
+        m
+        pm3rrg_rdv4_mbedtls
+        pm3rrg_rdv4_cliparser
+        pm3rrg_rdv4_lua
+        pm3rrg_rdv4_tinycbor
+        pm3rrg_rdv4_amiibo
+        pm3rrg_rdv4_reveng
+        pm3rrg_rdv4_hardnested
+        pm3rrg_rdv4_id48
+        pm3rrg_rdv4_mqtt
+        pm3rrg_rdv4_vec
+        ${ADDITIONAL_LNK})
+
 if (NOT SKIPPTHREAD EQUAL 1)
     target_link_libraries(pm3rrg_rdv4 PRIVATE pthread)
+    target_link_libraries(pm3rrg_rdv4_static PRIVATE pthread)
 endif (NOT SKIPPTHREAD EQUAL 1)
 
 if (NOT SKIPPYTHON EQUAL 1)
