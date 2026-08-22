@@ -568,34 +568,27 @@ void SendCmdPCF7931(uint32_t *tab, bool ledcontrol) {
     // steal this pin from the SSP and use it to control the modulation
     gpio_fpga_mod_only_setup();
 
-    //initialization of the timer
-    AT91C_BASE_PMC->PMC_PCER |= (0x1 << AT91C_ID_TC0);
-    AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_NONE | AT91C_TCB_TC1XC1S_TIOA0 | AT91C_TCB_TC2XC2S_NONE;
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;                 // timer disable
-    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;  // clock at 48/32 MHz (48Mhz clock, 32 = prescaler (div3))
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN;
+    //initialization of the timer (free-running 1.5 MHz precision counter on TC0)
+    StartPrecisionCounter();
 
-    // Assert a sync signal. This sets all timers to 0 on next active clock edge
-    AT91C_BASE_TCB->TCB_BCR = 1;
-
-    tempo = AT91C_BASE_TC0->TC_CV;
+    tempo = GetPrecisionCounter();
     for (u = 0; tab[u] != 0; u += 3) {
         // modulate antenna
         Gpio_SSC_DOUT_High();
         while ((uint32_t)tempo < tab[u]) {
-            tempo = AT91C_BASE_TC0->TC_CV;
+            tempo = GetPrecisionCounter();
         }
 
         // stop modulating antenna
         Gpio_SSC_DOUT_Low();
         while ((uint32_t)tempo < tab[u + 1]) {
-            tempo = AT91C_BASE_TC0->TC_CV;
+            tempo = GetPrecisionCounter();
         }
 
         // modulate antenna
         Gpio_SSC_DOUT_High();
         while ((uint32_t)tempo < tab[u + 2]) {
-            tempo = AT91C_BASE_TC0->TC_CV;
+            tempo = GetPrecisionCounter();
         }
     }
 
@@ -603,7 +596,7 @@ void SendCmdPCF7931(uint32_t *tab, bool ledcontrol) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     SpinDelay(200);
 
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS; // timer disable
+    StopPrecisionCounter();
 }
 
 
