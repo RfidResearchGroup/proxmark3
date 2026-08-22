@@ -1992,22 +1992,33 @@ static int CmdDeviceFactoryData(const char *Cmd) {
 static int CmdPM5QCTest(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hw qcpm5", "QC Test for the PM5", "hf qcpm5");
+    CLIParserInit(&ctx, "hw qc_pm5", "QC Test for the PM5",
+                  "hw qc_pm5             -> run QC test with default 20 second timeout\n"
+                  "hw qc_pm5 -t 3        -> run QC test with a 3 second timeout");
 
     void *argtable[] = {
         arg_param_begin,
+        arg_u64_0("t", "timeout", "<s>", "test sequence timeout in seconds (default 20)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t timeout_ms = arg_get_u32_def(ctx, 1, 20);
+    timeout_ms *= 1000;
     CLIParserFree(ctx);
+
+    if (timeout_ms == 0) {
+        PrintAndLogEx(ERR, "timeout must be greater than zero");
+        return PM3_EINVARG;
+    }
 
     PrintAndLogEx(INFO, "Performing QC test for the PM5...");
 
     clearCommandBuffer();
-    SendCommandNG(CMD_PM5_QC_TEST, NULL, 0);
+    SendCommandNG(CMD_PM5_QC_TEST, (uint8_t *)&timeout_ms, sizeof(timeout_ms));
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_PM5_QC_TEST, &resp, 20 * 1000) == false) {
+    // wait a bit longer than the device side sequence timeout, with headroom for RTC drift
+    if (WaitForResponseTimeout(CMD_PM5_QC_TEST, &resp, timeout_ms + (timeout_ms / 5) + 1000) == false) {
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
