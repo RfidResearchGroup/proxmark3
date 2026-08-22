@@ -9823,6 +9823,78 @@ static int gdm_pick_wakeup(uint8_t read_cmd, int probe_blk, const gdm_wakeup_t *
     return -1;
 }
 
+// Resolve which wakeup a WRITE command should use, by probing with a matching READ.
+//   probe_read_cmd/probe_blk : the read used to test reachability - config (0xE0),
+//                              public block (0x30), or hidden block (0x38). Use the
+//                              read that matches what the command actually writes, so
+//                              a wakeup that cannot reach the write target is rejected
+//                              during the (read-only) probe instead of half-writing.
+//   needs_backdoor           : true for hidden/mixed writes a WUPA-only card cannot do.
+//                              On probe failure it prints a "enable a backdoor" hint and
+//                              returns an error WITHOUT touching the card.
+//   out_probe_data/out_have_probe (nullable) : receive the block read during a successful
+//                              auto-probe, letting the caller reuse it (e.g. setcfg reusing
+//                              the config it just read). *out_have_probe is false when the
+//                              wakeup was given explicitly (no probe was performed).
+// With an explicit wakeup (--gdm/--gen1a/--wupa or a key) there is no probe and behaviour
+// is unchanged: exactly the chosen wakeup is returned.
+static int gdm_resolve_for_write(bool gdm, bool gen1a, bool wupa,
+                                 const uint8_t *key, int keylen,
+                                 uint8_t probe_read_cmd, int probe_blk,
+                                 bool needs_backdoor, const char *cmd_name,
+                                 gdm_wakeup_t *out_w,
+                                 uint8_t *out_probe_data, bool *out_have_probe) {
+    if (out_have_probe != NULL) {
+        *out_have_probe = false;
+    }
+
+    bool explicit_mode = (gdm || gen1a || wupa || keylen > 0);
+    // config reads can use magic auth, so try WUPA first there; for data/hidden reads try
+    // the backdoors first (magic auth usually cannot reach normal/hidden blocks).
+    bool prefer_auth = (probe_read_cmd == MIFARE_MAGIC_GDM_READ_CFG);
+
+    gdm_wakeup_t attempts[3];
+    int n_attempts = 0;
+    if (gdm_wakeup_attempts(gdm, gen1a, wupa, key, keylen, prefer_auth, attempts, &n_attempts) != PM3_SUCCESS) {
+        return PM3_EINVARG;
+    }
+
+    // Explicit wakeup: do not probe, keep legacy behaviour (single attempt, may fail at write).
+    if (explicit_mode) {
+        *out_w = attempts[0];
+        return PM3_SUCCESS;
+    }
+
+    uint8_t buf[MFBLOCK_SIZE] = {0};
+    int idx = gdm_pick_wakeup(probe_read_cmd, probe_blk, attempts, n_attempts, buf);
+    if (idx < 0) {
+        if (needs_backdoor) {
+            // Distinguish a WUPA-only (sealed) card from an unreachable one: can WUPA magic
+            // auth still read the config block? If so, the card is fine but lacks a backdoor.
+            gdm_wakeup_t w = { .wakeup_type = MF_WAKE_WUPA, .auth_cmd = MIFARE_MAGIC_GDM_AUTH_KEY };
+            memset(w.key, 0, sizeof(w.key));
+            if (gdm_try_read(MIFARE_MAGIC_GDM_READ_CFG, 0, &w, buf) == PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "This card only responds to WUPA magic auth; " _YELLOW_("%s") " needs a gen1a/gdm backdoor", cmd_name);
+                PrintAndLogEx(HINT, "Hint: enable one first:  " _YELLOW_("hf mf gdmsetcfg --wakestyle gen1a --wupa -k <key>"));
+                return PM3_EFAILED;
+            }
+        }
+        PrintAndLogEx(FAILED, "Could not find a working wakeup for " _YELLOW_("%s"), cmd_name);
+        PrintAndLogEx(HINT, "Hint: tried gen1a/gdm/wupa; card may be sealed or use a non-default magic auth key");
+        return PM3_EFAILED;
+    }
+
+    *out_w = attempts[idx];
+    if (out_probe_data != NULL) {
+        memcpy(out_probe_data, buf, MFBLOCK_SIZE);
+    }
+    if (out_have_probe != NULL) {
+        *out_have_probe = true;
+    }
+    PrintAndLogEx(INFO, "Auto-detected wakeup: " _YELLOW_("%s"), gdm_wakeup_name(out_w));
+    return PM3_SUCCESS;
+}
+
 // Read an <on|off> string option into a tri-state: 1 = on, 0 = off, -1 = not provided.
 static int gdm_arg_onoff(CLIParserContext *ctx, int idx) {
     struct arg_str *a = arg_get_str(ctx, idx);
@@ -9850,8 +9922,8 @@ static int CmdHF14AGen4_GDM_Cfg(const char *Cmd) {
         arg_param_begin,
         arg_str0("k", "key", "<hex>", "key 6 bytes (only for --wupa mode)"),
         arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup"),
-        arg_lit0(NULL, "gen1a", "use gen1a (40/43) magic wakeup"),
-        arg_lit0(NULL, "wupa", "use regular wakeup (WUPA + magic auth with key)"),
+        arg_lit0(NULL, "gen1a", "access: force gen1a (40/43) magic wakeup"),
+        arg_lit0(NULL, "wupa", "access: force regular wakeup (WUPA + magic auth with key)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -9893,25 +9965,31 @@ static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf gdmsetcfg",
                   "Set configuration data on a GDM card\n"
                   "Can either write raw 16 bytes (-d) or configure specific flags.\n"
-                  "If flags are provided, it will read the config, update flags, and write it back.",
+                  "If flags are provided, it will read the config, update flags, and write it back.\n"
+                  "With no wakeup flag it auto-detects the card's access mode (WUPA magic auth, gen1a, or gdm alt).\n"
+                  "\n"
+                  "Note the two groups below are different things:\n"
+                  "  --gdm / --gen1a / --wupa   how THIS command talks to the card (access, not stored)\n"
+                  "  --wakestyle / --cuid / ... what gets STORED in the card's config block",
                   "hf mf gdmsetcfg -d 850000000000000000005A5A00000008\n"
-                  "hf mf gdmsetcfg --cuid on --gen1 on\n"
+                  "hf mf gdmsetcfg --cuid on --wakestyle gen1a\n"
+                  "hf mf gdmsetcfg --wakestyle off\n"
                   "hf mf gdmsetcfg --shadow off --sigsec off --wupa -k FFFFFFFFFFFF"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_str0("d", "data", "<hex>", "raw bytes to write, 16 hex bytes"),
         arg_str0("k", "key", "<hex>", "key 6 bytes (only for regular wakeup)"),
-        arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup (default)"),
-        arg_lit0(NULL, "gen1a", "use gen1a (40/43) magic wakeup"),
-        arg_lit0(NULL, "wupa", "use regular wakeup (WUPA + magic auth with key)"),
-        arg_str0(NULL, "gen1", "<on|off>", "Gen1 mode (7A FF)"),
-        arg_str0(NULL, "cuid", "<on|off>", "Gen2/CUID mode"),
-        arg_str0(NULL, "cl2", "<on|off>", "CL2 mode (7-byte UID) - pair with `hf mf gdmsetuid -u <7-byte>` to set a valid UID"),
-        arg_str0(NULL, "shadow", "<on|off>", "Shadow mode"),
-        arg_str0(NULL, "magicauth", "<on|off>", "Magic auth"),
-        arg_str0(NULL, "statenc", "<on|off>", "Static encrypted nonce"),
-        arg_str0(NULL, "sigsec", "<on|off>", "Signature sector"),
+        arg_lit0(NULL, "gdm", "access: force gdm alt (20/23) magic wakeup"),
+        arg_lit0(NULL, "gen1a", "access: force gen1a (40/43) magic wakeup"),
+        arg_lit0(NULL, "wupa", "access: force regular wakeup (WUPA + magic auth with key)"),
+        arg_str0(NULL, "cuid", "<on|off>", "config: Gen2/CUID mode"),
+        arg_str0(NULL, "cl2", "<on|off>", "config: CL2 mode (7-byte UID) - pair with `hf mf gdmsetuid -u <7-byte>`"),
+        arg_str0(NULL, "shadow", "<on|off>", "config: Shadow mode"),
+        arg_str0(NULL, "magicauth", "<on|off>", "config: Magic auth (what --wupa uses)"),
+        arg_str0(NULL, "statenc", "<on|off>", "config: Static encrypted nonce"),
+        arg_str0(NULL, "sigsec", "<on|off>", "config: Signature sector"),
+        arg_str0(NULL, "wakestyle", "<gdm|gen1a|off>", "config: backdoor - gdm (7AFF85), gen1a (7AFF00), or off (8500, seal)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -9929,13 +10007,32 @@ static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
     bool wupa = arg_get_lit(ctx, 5);
 
     // read <on|off> flags into tri-states (1/0/-1) before freeing ctx
-    int gen1_flag = gdm_arg_onoff(ctx, 6);
-    int cuid_flag = gdm_arg_onoff(ctx, 7);
-    int cl2_flag = gdm_arg_onoff(ctx, 8);
-    int shadow_flag = gdm_arg_onoff(ctx, 9);
-    int magicauth_flag = gdm_arg_onoff(ctx, 10);
-    int statenc_flag = gdm_arg_onoff(ctx, 11);
-    int sigsec_flag = gdm_arg_onoff(ctx, 12);
+    int cuid_flag = gdm_arg_onoff(ctx, 6);
+    int cl2_flag = gdm_arg_onoff(ctx, 7);
+    int shadow_flag = gdm_arg_onoff(ctx, 8);
+    int magicauth_flag = gdm_arg_onoff(ctx, 9);
+    int statenc_flag = gdm_arg_onoff(ctx, 10);
+    int sigsec_flag = gdm_arg_onoff(ctx, 11);
+
+    // Backdoor selector. Sets config byte 0-1 (backdoor on 7AFF / off 8500) and, when
+    // enabling, byte 2 (style: 85 = GDM 20/23, 00 = gen1a 40/43). This is the only way to
+    // toggle the backdoor - there is no separate on/off flag.
+    //   gdm -> 7AFF85   gen1a -> 7AFF00   off -> 8500 (byte 2 left as-is)
+    enum { WS_NONE, WS_GDM, WS_GEN1A, WS_OFF } wakestyle = WS_NONE;
+    struct arg_str *ws = arg_get_str(ctx, 12);
+    if (ws->count > 0) {
+        if (strcasecmp(ws->sval[0], "gdm") == 0) {
+            wakestyle = WS_GDM;
+        } else if (strcasecmp(ws->sval[0], "gen1a") == 0) {
+            wakestyle = WS_GEN1A;
+        } else if (strcasecmp(ws->sval[0], "off") == 0) {
+            wakestyle = WS_OFF;
+        } else {
+            PrintAndLogEx(FAILED, "--wakestyle must be " _YELLOW_("gdm") ", " _YELLOW_("gen1a") " or " _YELLOW_("off") ", got `%s`", ws->sval[0]);
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
 
     CLIParserFree(ctx);
 
@@ -9944,14 +10041,24 @@ static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t wakeup_type = 0;
-    uint8_t auth_cmd = 0;
-    if (gdm_resolve_wakeup(gdm, gen1a, wupa, keylen, &wakeup_type, &auth_cmd) != PM3_SUCCESS) {
-        return PM3_EINVARG;
+    // Auto-detect wakeup by probing a config read; the config block is reachable via WUPA
+    // magic auth as well as either backdoor, so no backdoor is required here.
+    gdm_wakeup_t gw;
+    uint8_t probe_cfg[MFBLOCK_SIZE] = {0};
+    bool have_probe = false;
+    int wres = gdm_resolve_for_write(gdm, gen1a, wupa, key, keylen,
+                                     MIFARE_MAGIC_GDM_READ_CFG, 0, false, "hf mf gdmsetcfg",
+                                     &gw, probe_cfg, &have_probe);
+    if (wres != PM3_SUCCESS) {
+        return wres;
     }
+    uint8_t wakeup_type = gw.wakeup_type;
+    uint8_t auth_cmd = gw.auth_cmd;
+    memcpy(key, gw.key, sizeof(key));
 
-    bool any_flag = (gen1_flag != -1 || cuid_flag != -1 || cl2_flag != -1 || shadow_flag != -1 ||
-                     magicauth_flag != -1 || statenc_flag != -1 || sigsec_flag != -1);
+    bool any_flag = (cuid_flag != -1 || cl2_flag != -1 || shadow_flag != -1 ||
+                     magicauth_flag != -1 || statenc_flag != -1 || sigsec_flag != -1 ||
+                     wakestyle != WS_NONE);
 
     // Logic: if -d is specified, write raw block.
     // Else, read config, update flags, write block.
@@ -9992,9 +10099,11 @@ static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    // Step 1: Read config
+    // Step 1: Read config - reuse the block already read while auto-probing the wakeup.
     uint8_t config[MFBLOCK_SIZE];
-    if (gdm_read_config(wakeup_type, auth_cmd, key, config) != PM3_SUCCESS) {
+    if (have_probe) {
+        memcpy(config, probe_cfg, MFBLOCK_SIZE);
+    } else if (gdm_read_config(wakeup_type, auth_cmd, key, config) != PM3_SUCCESS) {
         return PM3_EFAILED;
     }
     bool changed = false;
@@ -10009,21 +10118,28 @@ static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
             } \
         }
 
-    if (gen1_flag != -1) {
-        if (gen1_flag == 1) {
-            if (config[0] != 0x7A || config[1] != 0xFF) {
-                config[0] = 0x7A;
-                config[1] = 0xFF;
-                changed = true;
-                PrintAndLogEx(INFO, "Set Gen1 mode to on");
-            }
-        } else {
-            if (config[0] != 0x85 || config[1] != 0x00) {
-                config[0] = 0x85;
-                config[1] = 0x00;
-                changed = true;
-                PrintAndLogEx(INFO, "Set Gen1 mode to off");
-            }
+    if (wakestyle == WS_OFF) {
+        if (config[0] != 0x85 || config[1] != 0x00) {
+            config[0] = 0x85;
+            config[1] = 0x00;
+            changed = true;
+            PrintAndLogEx(INFO, "Set magic wakeup to off (backdoor sealed)");
+            PrintAndLogEx(WARNING, "Both gdm and gen1a wakeups are now disabled; only WUPA magic auth remains");
+        }
+    } else if (wakestyle == WS_GDM || wakestyle == WS_GEN1A) {
+        if (config[0] != 0x7A || config[1] != 0xFF) {
+            config[0] = 0x7A;
+            config[1] = 0xFF;
+            changed = true;
+            PrintAndLogEx(INFO, "Set magic wakeup to on");
+        }
+        uint8_t style_byte = (wakestyle == WS_GDM) ? 0x85 : 0x00;
+        if (config[2] != style_byte) {
+            config[2] = style_byte;
+            changed = true;
+            PrintAndLogEx(INFO, "Set wakeup style to %s", (wakestyle == WS_GDM) ? "gdm alt (20/23)" : "gen1a (40/43)");
+            PrintAndLogEx(WARNING, "After this write the card answers " _YELLOW_("--%s") " only, not the other one",
+                          (wakestyle == WS_GDM) ? "gdm" : "gen1a");
         }
     }
 
@@ -10060,7 +10176,7 @@ static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf gdmsetblk",
                   "Set public block data on a GDM card\n"
-                  "By default uses GDM alt wakeup (20/23). Use `--gen1a` or `--wupa` to override.\n"
+                  "With no wakeup flag it auto-detects the card's access mode (gen1a, gdm alt, or WUPA magic auth).\n"
                   "`--force` param is used to override warnings like bad ACL writes.\n"
                   "          if not specified, it will exit if detected",
                   "hf mf gdmsetblk --blk 1 -d 000102030405060708090a0b0c0d0e0f\n"
@@ -10072,9 +10188,9 @@ static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
         arg_int1(NULL, "blk", "<dec>", "public block number"),
         arg_str1("d", "data", "<hex>", "bytes to write, 16 hex bytes"),
         arg_str0("k", "key", "<hex>", "key, 6 hex bytes (only for --wupa mode)"),
-        arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup (default)"),
-        arg_lit0(NULL, "gen1a", "use gen1a (40/43) magic wakeup"),
-        arg_lit0(NULL, "wupa", "use regular wakeup (WUPA + magic auth with key)"),
+        arg_lit0(NULL, "gdm", "access: force gdm alt (20/23) magic wakeup"),
+        arg_lit0(NULL, "gen1a", "access: force gen1a (40/43) magic wakeup"),
+        arg_lit0(NULL, "wupa", "access: force regular wakeup (WUPA + magic auth with key)"),
         arg_lit0(NULL, "force", "override warnings"),
         arg_param_end
     };
@@ -10106,11 +10222,17 @@ static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t wakeup_type = 0;
-    uint8_t auth_cmd = 0;
-    if (gdm_resolve_wakeup(gdm, gen1a, wupa, keylen, &wakeup_type, &auth_cmd) != PM3_SUCCESS) {
-        return PM3_EINVARG;
+    // Auto-detect wakeup by probing a public-block read of the target block.
+    gdm_wakeup_t gw;
+    int wres = gdm_resolve_for_write(gdm, gen1a, wupa, key, keylen,
+                                     ISO14443A_CMD_READBLOCK, b, false, "hf mf gdmsetblk",
+                                     &gw, NULL, NULL);
+    if (wres != PM3_SUCCESS) {
+        return wres;
     }
+    uint8_t wakeup_type = gw.wakeup_type;
+    uint8_t auth_cmd = gw.auth_cmd;
+    memcpy(key, gw.key, sizeof(key));
 
     uint8_t blockno = (uint8_t)b;
 
@@ -10156,7 +10278,7 @@ static int CmdHF14AGen4_GDM_SetHidBlk(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf gdmsethidblk",
                   "Write hidden block data on a GDM card.\n"
                   "Hidden blocks 0-7 map to the card's hidden sector area.\n"
-                  "By default uses GDM alt wakeup (20/23). Use `--gen1a` or `--wupa` to override.\n"
+                  "With no wakeup flag it auto-detects a backdoor (gen1a or gdm alt); a WUPA-only card is rejected.\n"
                   "`--force` param is used to override warnings like bad BCC or ACL writes.\n"
                   "          if not specified, it will exit if detected",
                   "hf mf gdmsethidblk --blk 0 -d 880494716904EA0C2394510800000000\n"
@@ -10169,9 +10291,9 @@ static int CmdHF14AGen4_GDM_SetHidBlk(const char *Cmd) {
         arg_int1(NULL, "blk", "<dec>", "hidden block number (0-7)"),
         arg_str1("d", "data", "<hex>", "bytes to write, 16 hex bytes"),
         arg_str0("k", "key", "<hex>", "key 6 bytes (only for --wupa mode)"),
-        arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup (default)"),
-        arg_lit0(NULL, "gen1a", "use gen1a (40/43) magic wakeup"),
-        arg_lit0(NULL, "wupa", "use regular wakeup (WUPA + magic auth with key)"),
+        arg_lit0(NULL, "gdm", "access: force gdm alt (20/23) magic wakeup"),
+        arg_lit0(NULL, "gen1a", "access: force gen1a (40/43) magic wakeup"),
+        arg_lit0(NULL, "wupa", "access: force regular wakeup (WUPA + magic auth with key)"),
         arg_lit0(NULL, "force", "override warnings"),
         arg_param_end
     };
@@ -10206,11 +10328,18 @@ static int CmdHF14AGen4_GDM_SetHidBlk(const char *Cmd) {
     }
 
     // --- validate key length + resolve wakeup mode ---
-    uint8_t wakeup_type = 0;
-    uint8_t auth_cmd = 0;
-    if (gdm_resolve_wakeup(gdm, gen1a, wupa, keylen, &wakeup_type, &auth_cmd) != PM3_SUCCESS) {
-        return PM3_EINVARG;
+    // Auto-detect wakeup by probing a hidden-block read of the target block; hidden
+    // writes require a gen1a/gdm backdoor, which the 0x38 probe naturally selects for.
+    gdm_wakeup_t gw;
+    int wres = gdm_resolve_for_write(gdm, gen1a, wupa, key, keylen,
+                                     MIFARE_MAGIC_GDM_READBLOCK, b, true, "hf mf gdmsethidblk",
+                                     &gw, NULL, NULL);
+    if (wres != PM3_SUCCESS) {
+        return wres;
     }
+    uint8_t wakeup_type = gw.wakeup_type;
+    uint8_t auth_cmd = gw.auth_cmd;
+    memcpy(key, gw.key, sizeof(key));
 
     uint8_t blockno = (uint8_t)b;
 
@@ -10358,8 +10487,8 @@ static int CmdHF14AGen4_GDM_GetHidBlk(const char *Cmd) {
         arg_int0(NULL, "sec", "<dec>", "sector to read"),
         arg_str0("k", "key", "<hex>", "key 6 bytes (only for --wupa mode)"),
         arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup"),
-        arg_lit0(NULL, "gen1a", "use gen1a (40/43) magic wakeup"),
-        arg_lit0(NULL, "wupa", "use regular wakeup (WUPA + magic auth with key)"),
+        arg_lit0(NULL, "gen1a", "access: force gen1a (40/43) magic wakeup"),
+        arg_lit0(NULL, "wupa", "access: force regular wakeup (WUPA + magic auth with key)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -10391,8 +10520,8 @@ static int CmdHF14AGen4_GDM_GetBlk(const char *Cmd) {
         arg_int0(NULL, "sec", "<dec>", "sector to read"),
         arg_str0("k", "key", "<hex>", "key 6 bytes (only for --wupa mode)"),
         arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup"),
-        arg_lit0(NULL, "gen1a", "use gen1a (40/43) magic wakeup"),
-        arg_lit0(NULL, "wupa", "use regular wakeup (WUPA + magic auth with key)"),
+        arg_lit0(NULL, "gen1a", "access: force gen1a (40/43) magic wakeup"),
+        arg_lit0(NULL, "wupa", "access: force regular wakeup (WUPA + magic auth with key)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -10413,7 +10542,8 @@ static int CmdHF14AGen4_GDM_GetBlk(const char *Cmd) {
 static int CmdHF14AGen4_GDM_SetUid(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf gdmsetuid",
-                  "Set UID on a GDM card",
+                  "Set UID on a GDM card.\n"
+                  "With no wakeup flag it auto-detects a backdoor (gen1a or gdm alt); a WUPA-only card is rejected.",
                   "hf mf gdmsetuid -u 01020304\n"
                   "hf mf gdmsetuid -u 01020304050607 --gen1a"
                  );
@@ -10421,9 +10551,9 @@ static int CmdHF14AGen4_GDM_SetUid(const char *Cmd) {
         arg_param_begin,
         arg_str1("u", "uid", "<hex>", "UID to set (4 or 7 hex bytes)"),
         arg_str0("k", "key", "<hex>", "key 6 bytes (only for --wupa mode)"),
-        arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup (default)"),
-        arg_lit0(NULL, "gen1a", "use gen1a (40/43) magic wakeup"),
-        arg_lit0(NULL, "wupa", "use regular wakeup (WUPA + magic auth with key)"),
+        arg_lit0(NULL, "gdm", "access: force gdm alt (20/23) magic wakeup"),
+        arg_lit0(NULL, "gen1a", "access: force gen1a (40/43) magic wakeup"),
+        arg_lit0(NULL, "wupa", "access: force regular wakeup (WUPA + magic auth with key)"),
         arg_lit0(NULL, "f3d", "use F3 perso mode (writes to hidden block 1 instead of 0)"),
         arg_param_end
     };
@@ -10448,11 +10578,19 @@ static int CmdHF14AGen4_GDM_SetUid(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t wakeup_type = 0;
-    uint8_t auth_cmd = 0;
-    if (gdm_resolve_wakeup(gdm, gen1a, wupa, keylen, &wakeup_type, &auth_cmd) != PM3_SUCCESS) {
-        return PM3_EINVARG;
+    // Auto-detect wakeup by probing a hidden-block read; gdmsetuid writes hidden data,
+    // so it always requires a gen1a/gdm backdoor (a WUPA-only card is rejected here
+    // before any write, avoiding the config-written/data-not-written half-brick).
+    gdm_wakeup_t gw;
+    int wres = gdm_resolve_for_write(gdm, gen1a, wupa, key, keylen,
+                                     MIFARE_MAGIC_GDM_READBLOCK, 0, true, "hf mf gdmsetuid",
+                                     &gw, NULL, NULL);
+    if (wres != PM3_SUCCESS) {
+        return wres;
     }
+    uint8_t wakeup_type = gw.wakeup_type;
+    uint8_t auth_cmd = gw.auth_cmd;
+    memcpy(key, gw.key, sizeof(key));
 
     // Step 1: Read Config
     uint8_t config[MFBLOCK_SIZE];
@@ -10571,19 +10709,22 @@ static int CmdHF14AGen4_GDM_SetUid(const char *Cmd) {
 static int CmdHF14AGen4_GDM_Wipe(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf gdmwipe",
-                  "Wipe a GDM card to factory defaults",
+                  "Wipe a GDM card to factory defaults.\n"
+                  "With no wakeup flag it auto-detects a backdoor (gen1a or gdm alt); a WUPA-only card is rejected.",
                   "hf mf gdmwipe --gdm"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_str0("k", "key", "<hex>", "key 6 bytes (only for --wupa mode)"),
-        arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup (default)"),
-        arg_lit0(NULL, "gen1a", "use gen1a (40/43) magic wakeup"),
-        arg_lit0(NULL, "wupa", "use regular wakeup (WUPA + magic auth with key)"),
+        arg_lit0(NULL, "gdm", "access: force gdm alt (20/23) magic wakeup"),
+        arg_lit0(NULL, "gen1a", "access: force gen1a (40/43) magic wakeup"),
+        arg_lit0(NULL, "wupa", "access: force regular wakeup (WUPA + magic auth with key)"),
         arg_lit0("a", "all", "wipe 4K card (40 sectors) instead of 1K card (16 sectors)"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    // every arg is optional here, so allow a bare `hf mf gdmwipe` - otherwise the
+    // no-flag auto-detect path is unreachable and the command just prints help.
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int keylen = 0;
     uint8_t key[6] = {0};
@@ -10595,14 +10736,34 @@ static int CmdHF14AGen4_GDM_Wipe(const char *Cmd) {
     bool wipe_4k = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
-    uint8_t wakeup_type = 0;
-    uint8_t auth_cmd = 0;
-    if (gdm_resolve_wakeup(gdm, gen1a, wupa, keylen, &wakeup_type, &auth_cmd) != PM3_SUCCESS) {
-        return PM3_EINVARG;
+    // Auto-detect wakeup by probing a hidden-block read; gdmwipe rewrites hidden blocks,
+    // so it always requires a gen1a/gdm backdoor (WUPA-only cards are rejected before any
+    // write).
+    gdm_wakeup_t gw;
+    int wres = gdm_resolve_for_write(gdm, gen1a, wupa, key, keylen,
+                                     MIFARE_MAGIC_GDM_READBLOCK, 0, true, "hf mf gdmwipe",
+                                     &gw, NULL, NULL);
+    if (wres != PM3_SUCCESS) {
+        return wres;
     }
+    uint8_t wakeup_type = gw.wakeup_type;
+    uint8_t auth_cmd = gw.auth_cmd;
+    memcpy(key, gw.key, sizeof(key));
 
     // Step 1: Write Config
     uint8_t standard_config[MFBLOCK_SIZE] = {0x7A, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5A, 0x00, 0x00, 0x00, 0x08};
+
+    // Keep the card's existing backdoor wakeup style (config byte 2: 0x85 = GDM 20/23,
+    // anything else = gen1a 40/43). The standard config hardcodes gen1a style, so on a
+    // GDM-style card writing it here would switch the card out from under us and every
+    // block write below would fail with `wupGDM1 error` - config wiped, data untouched.
+    uint8_t cur_config[MFBLOCK_SIZE] = {0};
+    if (gdm_read_config(wakeup_type, auth_cmd, key, cur_config) == PM3_SUCCESS) {
+        standard_config[2] = cur_config[2];
+    } else {
+        PrintAndLogEx(WARNING, "Could not read current config, keeping the default wakeup style");
+    }
+
     mf_writeblock_ex_t config_payload = {
         .wakeup = wakeup_type,
         .auth_cmd = auth_cmd,
@@ -10633,6 +10794,9 @@ static int CmdHF14AGen4_GDM_Wipe(const char *Cmd) {
     };
     memcpy(write_payload.key, key, 6);
 
+    int failed_blocks = 0;
+    int total_blocks = 0;
+
     for (int sec = 0; sec < max_sector; sec++) {
         int first_blk = mfFirstBlockOfSector(sec);
         int num_blks = mfNumBlocksPerSector(sec);
@@ -10653,7 +10817,9 @@ static int CmdHF14AGen4_GDM_Wipe(const char *Cmd) {
 
             clearCommandBuffer();
             SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&write_payload, sizeof(write_payload));
-            WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500);
+            if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false || resp.status != PM3_SUCCESS) {
+                failed_blocks++;
+            }
 
             // Hidden block writes
             write_payload.write_cmd = MIFARE_MAGIC_GDM_WRITEBLOCK; // 0xA8
@@ -10663,28 +10829,43 @@ static int CmdHF14AGen4_GDM_Wipe(const char *Cmd) {
 
             clearCommandBuffer();
             SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&write_payload, sizeof(write_payload));
-            WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500);
+            if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false || resp.status != PM3_SUCCESS) {
+                failed_blocks++;
+            }
+            total_blocks += 2;
         }
         PrintAndLogEx(INFO, "Wiping sector %d...", sec);
     }
 
-    PrintAndLogEx(SUCCESS, "Wipe completed!");
-    return PM3_SUCCESS;
+    // Don't claim success when the card NAKed every write - that hid a wiped config with
+    // completely untouched data blocks.
+    if (failed_blocks == 0) {
+        PrintAndLogEx(SUCCESS, "Wipe completed!");
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(FAILED, "Wipe incomplete - " _RED_("%d") " of %d block writes failed", failed_blocks, total_blocks);
+    if (failed_blocks == total_blocks) {
+        PrintAndLogEx(HINT, "Hint: the card did not accept any data write. Check that the wakeup still matches");
+        PrintAndLogEx(HINT, "      the card's config (`" _YELLOW_("hf mf gdmgetcfg") "`), then retry");
+    }
+    return PM3_EFAILED;
 }
 
 static int CmdHF14AGen4_GDM_SetSig(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf gdmsetsig",
-                  "Set MFC EV1 signature on a GDM card",
+                  "Set MFC EV1 signature on a GDM card.\n"
+                  "With no wakeup flag it auto-detects a backdoor (gen1a or gdm alt); a WUPA-only card is rejected.",
                   "hf mf gdmsetsig -s <64 hex chars>"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_str1("s", "sig", "<hex>", "32-byte signature (64 hex characters)"),
         arg_str0("k", "key", "<hex>", "key 6 bytes (only for --wupa mode)"),
-        arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup (default)"),
-        arg_lit0(NULL, "gen1a", "use gen1a (40/43) magic wakeup"),
-        arg_lit0(NULL, "wupa", "use regular wakeup (WUPA + magic auth with key)"),
+        arg_lit0(NULL, "gdm", "access: force gdm alt (20/23) magic wakeup"),
+        arg_lit0(NULL, "gen1a", "access: force gen1a (40/43) magic wakeup"),
+        arg_lit0(NULL, "wupa", "access: force regular wakeup (WUPA + magic auth with key)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -10707,11 +10888,18 @@ static int CmdHF14AGen4_GDM_SetSig(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t wakeup_type = 0;
-    uint8_t auth_cmd = 0;
-    if (gdm_resolve_wakeup(gdm, gen1a, wupa, keylen, &wakeup_type, &auth_cmd) != PM3_SUCCESS) {
-        return PM3_EINVARG;
+    // Auto-detect wakeup by probing a hidden-block read (block 5, where the signature
+    // lands); gdmsetsig writes hidden blocks, so it always requires a gen1a/gdm backdoor.
+    gdm_wakeup_t gw;
+    int wres = gdm_resolve_for_write(gdm, gen1a, wupa, key, keylen,
+                                     MIFARE_MAGIC_GDM_READBLOCK, 5, true, "hf mf gdmsetsig",
+                                     &gw, NULL, NULL);
+    if (wres != PM3_SUCCESS) {
+        return wres;
     }
+    uint8_t wakeup_type = gw.wakeup_type;
+    uint8_t auth_cmd = gw.auth_cmd;
+    memcpy(key, gw.key, sizeof(key));
 
     // Step 1: Write signature part 1 (block 5)
     mf_writeblock_ex_t write_payload = {

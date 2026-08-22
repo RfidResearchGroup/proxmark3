@@ -1891,20 +1891,35 @@
             ],
             "usage": "hf 14b wrbl [-h] [-b <dec>] -d <hex> [--512] [--4k] [--sb] [--force]"
         },
+        "hf 15 cfinalize": {
+            "command": "hf 15 cfinalize",
+            "description": "Finalize a magic ISO15693 'V3' tag. This operation is irreversible. After finalize the configuration area is erased and the UID can no longer be changed. Set the UID with `hf 15 csetuid --v3` first, then lock it in with this command.",
+            "notes": [
+                "hf 15 cfinalize -y"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-y, --yes Confirm the irreversible finalize operation"
+            ],
+            "usage": "hf 15 cfinalize [-hy]"
+        },
         "hf 15 csetuid": {
             "command": "hf 15 csetuid",
-            "description": "Set UID for magic Chinese card (only works with such cards)",
+            "description": "Set UID for magic Chinese card (only works with such cards) For magic 'V3' tags this writes the UID configuration only and is repeatable; run `hf 15 cfinalize` afterwards to lock the UID permanently.",
             "notes": [
                 "hf 15 csetuid -u E011223344556677 -> use gen1 command",
-                "hf 15 csetuid -u E011223344556677 --v2 -> use gen2 command"
+                "hf 15 csetuid -u E011223344556677 --v2 -> use gen2 command",
+                "hf 15 csetuid -u E011223344556677 --v3 -> use gen3 (V3) magic tag"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-u, --uid <hex> UID, 8 hex bytes",
-                "-2, --v2 Use gen2 magic command"
+                "-2, --v2 Use gen2 magic command",
+                "-3, --v3 Use gen3 (V3) magic tag (repeatable, needs cfinalize)"
             ],
-            "usage": "hf 15 csetuid [-h2] -u <hex>"
+            "usage": "hf 15 csetuid [-h23] -u <hex>"
         },
         "hf 15 demod": {
             "command": "hf 15 demod",
@@ -3020,7 +3035,7 @@
         },
         "hf felica help": {
             "command": "hf felica help",
-            "description": "----------- ----------------------- General ----------------------- help This help list List ISO 18092/FeliCa history ----------- ----------------------- Operations ----------------------- ----------- ----------------------- FeliCa Standard ----------------------- ----------- ----------------------- FeliCa Light ----------------------- --------------------------------------------------------------------------------------- hf felica list available offline: yes Alias of `trace list -t felica` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "----------- ----------------------- General ----------------------- help This help list List ISO 18092/FeliCa history ----------- ----------------------- Operations ----------------------- ----------- ----------------------- FeliCa SEAC ----------------------- ----------- ----------------------- FeliCa Standard ----------------------- ----------- ----------------------- FeliCa Light ----------------------- --------------------------------------------------------------------------------------- hf felica list available offline: yes Alias of `trace list -t felica` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf felica list --frame -> show frame delay times",
                 "hf felica list -1 -> use trace buffer"
@@ -3248,17 +3263,22 @@
             ],
             "usage": "hf felica scsvcode [-h] [-r <dec>] [--idm <hex>]"
         },
-        "hf felica seacinfo": {
-            "command": "hf felica seacinfo",
-            "description": "Get info about FeliCa SEAC cards",
+        "hf felica seacauth1": {
+            "command": "hf felica seacauth1",
+            "description": "Send FeliCa SEAC Authentication1",
             "notes": [
-                "hf felica seacinfo"
+                "hf felica seacauth1",
+                "hf felica seacauth1 --selector 0F",
+                "hf felica seacauth1 --challenge 0001020304050607",
+                "hf felica seacauth1 -s 0F -c FFFFFFFFFFFFFFFF"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-s, --selector <hex> selector, 1 byte (default 01)",
+                "-c, --challenge <hex> Challenge1a, 8 bytes (default all zero)"
             ],
-            "usage": "hf felica seacinfo [-h]"
+            "usage": "hf felica seacauth1 [-h] [-s <hex>] [-c <hex>]"
         },
         "hf felica sim": {
             "command": "hf felica sim",
@@ -4835,16 +4855,30 @@
         },
         "hf iclass sam": {
             "command": "hf iclass sam",
-            "description": "hf iclass sam - HID SAM operations Secure-channel subcommands: Legacy PACS-extraction flags (no subcommand, applied to hf iclass sam directly): --info get SAM version + serial number (also warms up the SAM) -d, --data <hex> DER-encoded SAMCommand to send (raw, no SC) -s, --snmp --data is in SNMP format without the A0/94 headers -p, --prevent fake the e-purse update during PACS extraction --break stop tag interaction at nr-mac (for SIO extract) -f, --file <fn> emulate from a dump file instead of a real card -n, --nodetect skip card detect + SetDetectedCardInfo -k, --keep keep the field active after the command -t, --tlv decode the response as TLV --shallow shallow modulation -v, --verbose verbose output Examples: hf iclass sam extract PACS via SAM (defaults) hf iclass sam --info get SAM version + serial (warmup ping) hf iclass sam scopen open Artemis secure channel hf iclass sam scsend --payload 8200 send wrapped SAMCommand hf iclass sam scclose terminate the SC session ======================================================================================= hf ict { ICT MFC/DESfire RFIDs... } --------------------------------------------------------------------------------------- hf ict help available offline: yes help This help list List ICT history reader Act like an IS14443-a reader --------------------------------------------------------------------------------------- hf ict credential available offline: no Read ICT sector from tag and decode",
+            "description": "Extract PACS via a HID SAM",
             "notes": [
-                "hf ict credential"
+                "hf iclass sam",
+                "hf iclass sam -p -d a005a103800104 -> get PACS data, prevent epurse update",
+                "hf iclass sam --break -> get Nr-MAC for extracting encrypted SIO",
+                "hf iclass sam -f hf-iclass-dump.bin -> emulate card from dump file to SAM",
+                "hf iclass sam --info -> get SAM version + serial (also warms up the SAM)"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "-k, --keep keep the field active after command executed",
+                "-n, --nodetect skip selecting the card and sending card details to SAM",
+                "-t, --tlv decode TLV",
+                "--break stop tag interaction on nr-mac",
+                "-p, --prevent fake epurse update",
+                "--shallow shallow mod",
+                "-d, --data <hex> DER encoded command to send to SAM",
+                "-s, --snmp data is in snmp format without headers",
+                "--info get SAM infos (version, serial number)",
+                "-f, --file <fn> dump file to emulate to SAM instead of a real card"
             ],
-            "usage": "hf ict credential [-hv]"
+            "usage": "hf iclass sam [-hvkntps] [--break] [--shallow] [-d <hex>]... [--info] [-f <fn>]"
         },
         "hf iclass sim": {
             "command": "hf iclass sim",
@@ -5002,6 +5036,19 @@
                 "-@ optional - continuous mode"
             ],
             "usage": "hf iclass wrbl [-hv@] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow]"
+        },
+        "hf ict help": {
+            "command": "hf ict help",
+            "description": "help This help list List ICT history reader Act like an IS14443-a reader --------------------------------------------------------------------------------------- hf ict credential available offline: no Read ICT sector from tag and decode",
+            "notes": [
+                "hf ict credential"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf ict credential [-hv]"
         },
         "hf ict info": {
             "command": "hf ict info",
@@ -6118,7 +6165,7 @@
         },
         "hf mf gdmgetblk": {
             "command": "hf mf gdmgetblk",
-            "description": "Read public block(s) from a GDM card",
+            "description": "Read public block(s) from a GDM card. With no wakeup flag it auto-detects the card's access mode (WUPA magic auth, gen1a, or gdm alt).",
             "notes": [
                 "hf mf gdmgetblk --blk 0",
                 "hf mf gdmgetblk --sec 1 --gdm"
@@ -6129,15 +6176,15 @@
                 "--blk <dec> block to read",
                 "--sec <dec> sector to read",
                 "-k, --key <hex> key 6 bytes (only for --wupa mode)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)"
+                "--gdm use gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)"
             ],
             "usage": "hf mf gdmgetblk [-h] [--blk <dec>] [--sec <dec>] [-k <hex>] [--gdm] [--gen1a] [--wupa]"
         },
         "hf mf gdmgetcfg": {
             "command": "hf mf gdmgetcfg",
-            "description": "Get configuration data from a GDM card. By default uses GDM alt wakeup (20/23). Use `--gen1a` or `--wupa` to override.",
+            "description": "Get configuration data from a GDM card. With no wakeup flag it auto-detects the card's access mode (tries WUPA magic auth, then gen1a, then gdm alt). Use `--gdm`/`--gen1a`/`--wupa` to force one.",
             "notes": [
                 "hf mf gdmgetcfg",
                 "hf mf gdmgetcfg --gen1a",
@@ -6147,15 +6194,15 @@
             "options": [
                 "-h, --help This help",
                 "-k, --key <hex> key 6 bytes (only for --wupa mode)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)"
+                "--gdm use gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)"
             ],
             "usage": "hf mf gdmgetcfg [-h] [-k <hex>] [--gdm] [--gen1a] [--wupa]"
         },
         "hf mf gdmgethidblk": {
             "command": "hf mf gdmgethidblk",
-            "description": "Read hidden block(s) from a GDM card",
+            "description": "Read hidden block(s) from a GDM card. With no wakeup flag it auto-detects the card's access mode (WUPA magic auth, gen1a, or gdm alt).",
             "notes": [
                 "hf mf gdmgethidblk --blk 0",
                 "hf mf gdmgethidblk --sec 1 --gdm"
@@ -6166,9 +6213,9 @@
                 "--blk <dec> block to read",
                 "--sec <dec> sector to read",
                 "-k, --key <hex> key 6 bytes (only for --wupa mode)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)"
+                "--gdm use gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)"
             ],
             "usage": "hf mf gdmgethidblk [-h] [--blk <dec>] [--sec <dec>] [-k <hex>] [--gdm] [--gen1a] [--wupa]"
         },
@@ -6187,7 +6234,7 @@
         },
         "hf mf gdmsetblk": {
             "command": "hf mf gdmsetblk",
-            "description": "Set public block data on a GDM card By default uses GDM alt wakeup (20/23). Use `--gen1a` or `--wupa` to override. `--force` param is used to override warnings like bad ACL writes. if not specified, it will exit if detected",
+            "description": "Set public block data on a GDM card With no wakeup flag it auto-detects the card's access mode (gen1a, gdm alt, or WUPA magic auth). `--force` param is used to override warnings like bad ACL writes. if not specified, it will exit if detected",
             "notes": [
                 "hf mf gdmsetblk --blk 1 -d 000102030405060708090a0b0c0d0e0f",
                 "hf mf gdmsetblk --blk 1 -d 000102030405060708090a0b0c0d0e0f --gen1a",
@@ -6199,19 +6246,20 @@
                 "--blk <dec> public block number",
                 "-d, --data <hex> bytes to write, 16 hex bytes",
                 "-k, --key <hex> key, 6 hex bytes (only for --wupa mode)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)",
+                "--gdm access: force gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)",
                 "--force override warnings"
             ],
             "usage": "hf mf gdmsetblk [-h] --blk <dec> -d <hex> [-k <hex>] [--gdm] [--gen1a] [--wupa] [--force]"
         },
         "hf mf gdmsetcfg": {
             "command": "hf mf gdmsetcfg",
-            "description": "Set configuration data on a GDM card Can either write raw 16 bytes (-d) or configure specific flags. If flags are provided, it will read the config, update flags, and write it back.",
+            "description": "Set configuration data on a GDM card Can either write raw 16 bytes (-d) or configure specific flags. If flags are provided, it will read the config, update flags, and write it back. With no wakeup flag it auto-detects the card's access mode (WUPA magic auth, gen1a, or gdm alt). Note the two groups below are different things: --gdm / --gen1a / --wupa how THIS command talks to the card (access, not stored) --wakestyle / --cuid / ... what gets STORED in the card's config block",
             "notes": [
                 "hf mf gdmsetcfg -d 850000000000000000005A5A00000008",
-                "hf mf gdmsetcfg --cuid on --gen1 on",
+                "hf mf gdmsetcfg --cuid on --wakestyle gen1a",
+                "hf mf gdmsetcfg --wakestyle off",
                 "hf mf gdmsetcfg --shadow off --sigsec off --wupa -k FFFFFFFFFFFF"
             ],
             "offline": false,
@@ -6219,22 +6267,22 @@
                 "-h, --help This help",
                 "-d, --data <hex> raw bytes to write, 16 hex bytes",
                 "-k, --key <hex> key 6 bytes (only for regular wakeup)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)",
-                "--gen1 <on|off> Gen1 mode (7A FF)",
-                "--cuid <on|off> Gen2/CUID mode",
-                "--cl2 <on|off> CL2 mode (7-byte UID) - pair with `hf mf gdmsetuid -u <7-byte>` to set a valid UID",
-                "--shadow <on|off> Shadow mode",
-                "--magicauth <on|off> Magic auth",
-                "--statenc <on|off> Static encrypted nonce",
-                "--sigsec <on|off> Signature sector"
+                "--gdm access: force gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)",
+                "--cuid <on|off> config: Gen2/CUID mode",
+                "--cl2 <on|off> config: CL2 mode (7-byte UID) - pair with `hf mf gdmsetuid -u <7-byte>`",
+                "--shadow <on|off> config: Shadow mode",
+                "--magicauth <on|off> config: Magic auth (what --wupa uses)",
+                "--statenc <on|off> config: Static encrypted nonce",
+                "--sigsec <on|off> config: Signature sector",
+                "--wakestyle <gdm|gen1a|off> config: backdoor - gdm (7AFF85), gen1a (7AFF00), or off (8500, seal)"
             ],
-            "usage": "hf mf gdmsetcfg [-h] [-d <hex>] [-k <hex>] [--gdm] [--gen1a] [--wupa] [--gen1 <on|off>] [--cuid <on|off>] [--cl2 <on|off>] [--shadow <on|off>] [--magicauth <on|off>] [--statenc <on|off>] [--sigsec <on|off>]"
+            "usage": "hf mf gdmsetcfg [-h] [-d <hex>] [-k <hex>] [--gdm] [--gen1a] [--wupa] [--cuid <on|off>] [--cl2 <on|off>] [--shadow <on|off>] [--magicauth <on|off>] [--statenc <on|off>] [--sigsec <on|off>] [--wakestyle <gdm|gen1a|off>]"
         },
         "hf mf gdmsethidblk": {
             "command": "hf mf gdmsethidblk",
-            "description": "Write hidden block data on a GDM card. Hidden blocks 0-7 map to the card's hidden sector area. By default uses GDM alt wakeup (20/23). Use `--gen1a` or `--wupa` to override. `--force` param is used to override warnings like bad BCC or ACL writes. if not specified, it will exit if detected",
+            "description": "Write hidden block data on a GDM card. Hidden blocks 0-7 map to the card's hidden sector area. With no wakeup flag it auto-detects a backdoor (gen1a or gdm alt); a WUPA-only card is rejected. `--force` param is used to override warnings like bad BCC or ACL writes. if not specified, it will exit if detected",
             "notes": [
                 "hf mf gdmsethidblk --blk 0 -d 880494716904EA0C2394510800000000",
                 "hf mf gdmsethidblk --blk 0 -d 880494716904EA0C2394510800000000 --gen1a",
@@ -6247,16 +6295,16 @@
                 "--blk <dec> hidden block number (0-7)",
                 "-d, --data <hex> bytes to write, 16 hex bytes",
                 "-k, --key <hex> key 6 bytes (only for --wupa mode)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)",
+                "--gdm access: force gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)",
                 "--force override warnings"
             ],
             "usage": "hf mf gdmsethidblk [-h] --blk <dec> -d <hex> [-k <hex>] [--gdm] [--gen1a] [--wupa] [--force]"
         },
         "hf mf gdmsetsig": {
             "command": "hf mf gdmsetsig",
-            "description": "Set MFC EV1 signature on a GDM card",
+            "description": "Set MFC EV1 signature on a GDM card. With no wakeup flag it auto-detects a backdoor (gen1a or gdm alt); a WUPA-only card is rejected.",
             "notes": [
                 "hf mf gdmsetsig -s <64 hex chars>"
             ],
@@ -6265,15 +6313,15 @@
                 "-h, --help This help",
                 "-s, --sig <hex> 32-byte signature (64 hex characters)",
                 "-k, --key <hex> key 6 bytes (only for --wupa mode)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)"
+                "--gdm access: force gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)"
             ],
             "usage": "hf mf gdmsetsig [-h] -s <hex> [-k <hex>] [--gdm] [--gen1a] [--wupa]"
         },
         "hf mf gdmsetuid": {
             "command": "hf mf gdmsetuid",
-            "description": "Set UID on a GDM card",
+            "description": "Set UID on a GDM card. With no wakeup flag it auto-detects a backdoor (gen1a or gdm alt); a WUPA-only card is rejected.",
             "notes": [
                 "hf mf gdmsetuid -u 01020304",
                 "hf mf gdmsetuid -u 01020304050607 --gen1a"
@@ -6283,16 +6331,16 @@
                 "-h, --help This help",
                 "-u, --uid <hex> UID to set (4 or 7 hex bytes)",
                 "-k, --key <hex> key 6 bytes (only for --wupa mode)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)",
+                "--gdm access: force gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)",
                 "--f3d use F3 perso mode (writes to hidden block 1 instead of 0)"
             ],
             "usage": "hf mf gdmsetuid [-h] -u <hex> [-k <hex>] [--gdm] [--gen1a] [--wupa] [--f3d]"
         },
         "hf mf gdmwipe": {
             "command": "hf mf gdmwipe",
-            "description": "Wipe a GDM card to factory defaults",
+            "description": "Wipe a GDM card to factory defaults. With no wakeup flag it auto-detects a backdoor (gen1a or gdm alt); a WUPA-only card is rejected.",
             "notes": [
                 "hf mf gdmwipe --gdm"
             ],
@@ -6300,9 +6348,9 @@
             "options": [
                 "-h, --help This help",
                 "-k, --key <hex> key 6 bytes (only for --wupa mode)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)",
+                "--gdm access: force gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)",
                 "-a, --all wipe 4K card (40 sectors) instead of 1K card (16 sectors)"
             ],
             "usage": "hf mf gdmwipe [-ha] [-k <hex>] [--gdm] [--gen1a] [--wupa]"
@@ -8252,6 +8300,7 @@
             "notes": [
                 "hf mfdes pc --key 00000000000000000000000000000000",
                 "hf mfdes pc --key 00112233445566778899aabbccddeeff --rounds 4",
+                "hf mfdes pc --aid 123456 --key 00112233445566778899aabbccddeeff",
                 "hf mfdes pc --key 00112233445566778899aabbccddeeff -c native -a"
             ],
             "offline": false,
@@ -8261,9 +8310,10 @@
                 "-v, --verbose Verbose output",
                 "-k, --key <hex> Key (AES-128, exactly 16 bytes)",
                 "-r, --rounds <dec> Number of rounds (1..8), default 8",
-                "-c, --ccset <native|niso> Communication command set (default from `hf mfdes default`)"
+                "-c, --ccset <native|niso> Communication command set (default from `hf mfdes default`)",
+                "--aid <hex> Application ID (3 hex bytes, big endian)"
             ],
-            "usage": "hf mfdes pc [-hav] -k <hex> [-r <dec>] [-c <native|niso>]"
+            "usage": "hf mfdes pc [-hav] -k <hex> [-r <dec>] [-c <native|niso>] [--aid <hex>]"
         },
         "hf mfdes read": {
             "command": "hf mfdes read",
@@ -10465,9 +10515,10 @@
                 "--bar bar style",
                 "--mix mixed style",
                 "--value values style",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--rgb (PM5) mirror the tuning level on the antenna RGB LED"
             ],
-            "usage": "hf tune [-hv] [-n <dec>] [--bar] [--mix] [--value]"
+            "usage": "hf tune [-hv] [-n <dec>] [--bar] [--mix] [--value] [--rgb]"
         },
         "hf vas decrypt": {
             "command": "hf vas decrypt",
@@ -10652,6 +10703,21 @@
             ],
             "usage": "hints [-h10]"
         },
+        "hw ant_pm5": {
+            "command": "hw ant_pm5",
+            "description": "Control the antennal of pm5",
+            "notes": [
+                "hw ant_pm5 --set <u8_data> -> Write the data of IO data register",
+                "hw ant_pm5 -m --set <u8_data> -> Write the data of IO map register"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-m, --map Write the IO map register",
+                "-s, --set <u8_data> Set PM5 antenna"
+            ],
+            "usage": "hw ant_pm5 [-hm] [-s <u8_data>]"
+        },
         "hw bootloader": {
             "command": "hw bootloader",
             "description": "Reboot Proxmark3 into bootloader mode",
@@ -10725,9 +10791,23 @@
             ],
             "usage": "hw decay [-h] [--ms <dec>] [--us <dec>]"
         },
-        "hw fpgaoff": {
-            "command": "hw fpgaoff",
-            "description": "Turn of fpga and antenna field",
+        "hw factorydata": {
+            "command": "hw factorydata",
+            "description": "Get/Set the factory data for Device",
+            "notes": [
+                "hw factorydata --load <file> -> Write the factory data to device from file",
+                "hw factorydata -> Read and parse the factory data from device"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--load <fn> Load factory data from file to device"
+            ],
+            "usage": "hw factorydata [-h] [--load <fn>]"
+        },
+        "hw fpga": {
+            "command": "hw fpga",
+            "description": "help This help ------------- ----------------------- Operation ----------------------- --------------------------------------------------------------------------------------- hw fpgaoff available offline: no Turn of fpga and antenna field",
             "notes": [
                 "hw fpgaoff"
             ],
@@ -10791,6 +10871,18 @@
                 "-l, --len <dec> length of payload to send"
             ],
             "usage": "hw ping [-h] [-l <dec>]"
+        },
+        "hw qc_pm5": {
+            "command": "hw qc_pm5",
+            "description": "QC Test for the PM5",
+            "notes": [
+                "hf qcpm5"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hw qcpm5 [-h]"
         },
         "hw readmem": {
             "command": "hw readmem",
@@ -14388,9 +14480,10 @@
                 "--bar bar style",
                 "--mix mixed style",
                 "--value values style",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--rgb (PM5) mirror the tuning level on the antenna RGB LED"
             ],
-            "usage": "lf tune [-hv] [-n <dec>] [-q <dec>] [-f <float>] [--bar] [--mix] [--value]"
+            "usage": "lf tune [-hv] [-n <dec>] [-q <dec>] [-f <float>] [--bar] [--mix] [--value] [--rgb]"
         },
         "lf viking clone": {
             "command": "lf viking clone",
@@ -16023,8 +16116,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 896,
+        "commands_extracted": 901,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-07-30T14:44:57+00:00"
+        "extracted_on": "2026-08-22T14:19:35+00:00"
     }
 }

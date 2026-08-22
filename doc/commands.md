@@ -281,6 +281,7 @@ Check column "offline" for their availability.
 |`hf 15 writeafi         `|N       |`Writes the AFI on an ISO-15693 tag`
 |`hf 15 writedsfid       `|N       |`Writes the DSFID on an ISO-15693 tag`
 |`hf 15 csetuid          `|N       |`Set UID for magic card`
+|`hf 15 cfinalize        `|N       |`Finalize a magic V3 tag (irreversible)`
 
 
 ### hf aliro
@@ -364,12 +365,12 @@ Check column "offline" for their availability.
 |`hf felica help         `|Y       |`This help`
 |`hf felica list         `|Y       |`List ISO 18092/FeliCa history`
 |`hf felica info         `|N       |`Tag information`
-|`hf felica seacinfo     `|N       |`FeliCa SEAC tag information`
 |`hf felica raw          `|N       |`Send raw hex data to tag`
 |`hf felica rdbl         `|N       |`read block data from authentication-not-required Service.`
 |`hf felica reader       `|N       |`Act like an ISO18092/FeliCa reader`
 |`hf felica sniff        `|N       |`Sniff ISO 18092/FeliCa traffic`
 |`hf felica wrbl         `|N       |`write block data to an authentication-not-required Service.`
+|`hf felica seacauth1    `|N       |`FeliCa SEAC Authentication1`
 |`hf felica dump         `|N       |`Wait for and try dumping FeliCa`
 |`hf felica discnodes    `|N       |`discover Area Code and Service Code nodes.`
 |`hf felica sim          `|N       |`Emulate FeliCa Standard from dump file`
@@ -537,7 +538,7 @@ Check column "offline" for their availability.
 |`hf iclass decrypt      `|Y       |`Decrypt given block data or tag dump file`
 |`hf iclass managekeys   `|Y       |`Manage keys to use with iclass commands`
 |`hf iclass permutekey   `|Y       |`Permute function from 'heart of darkness' paper`
-|`hf iclass sam          `|N       |`SAM ops: PACS extract + secure channel (scopen/scsend/scclose)`
+|`hf iclass sam          `|N       |`Extract PACS from a HID SAM`
 
 
 ### hf ict
@@ -1007,7 +1008,11 @@ Check column "offline" for their availability.
 |`hw bootloader          `|N       |`Reboot into bootloader mode`
 |`hw connect             `|Y       |`Connect to the device via serial port`
 |`hw dbg                 `|N       |`Set device side debug level`
+|`hw fpga                `|N       |`Fpga commands`
 |`hw fpgaoff             `|N       |`Turn off FPGA on device`
+|`hw ant_pm5             `|N       |`Control the antennal of pm5`
+|`hw qc_pm5              `|N       |`Perform QC test for the PM5`
+|`hw factorydata         `|N       |`Get/Set the factory data for Device`
 |`hw lcd                 `|N       |`Send command/data to LCD`
 |`hw lcdreset            `|N       |`Hardware reset LCD`
 |`hw ping                `|N       |`Test if the Proxmark3 is responsive`
