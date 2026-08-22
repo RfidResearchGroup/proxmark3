@@ -964,22 +964,27 @@ void ListenReaderField(uint8_t limit) {
 // failed_item == 0: BLUE LED in Antenna
 // failed_item == 1: RGB in mainboard
 // failed_item == 2: LEDs * 4 or Buzzer or Button in mainboard
-static bool QCTestPM5(uint8_t *failed_item) {
+// timeout_ms == 0: run until button press or new usb data
+static bool QCTestPM5(uint8_t *failed_item, uint32_t timeout_ms) {
     // 天线蓝灯、主板RGB、主板四颗LED、蜂鸣器、按钮
     StartTicks();
     I2C_init(true);
 
     uint8_t addr_ant = 0x51; // TODO DXL define move to header?
     uint8_t addr_rgb = 0x48;
-    uint8_t data_u8;
+    uint8_t data_u8 = 0;
     bool isok = false;
+    bool result = false;
+    bool data_u8_valid = false;
 
     // 读取天线当前MAP配置，如果读取不到，则认为天线的控制芯片可能有问题
     isok = I2C_BufferReadRaw(&data_u8, 1, 0x02, addr_ant << 1);
     if (!isok) {
         *failed_item = 0;
-        return false;
+        result = false;
+        goto out;
     }
+    data_u8_valid = true;
     // 重新写入天线的MAP配置，去开灯
     data_u8 |= 0x06; // 0000 0110 // 125 134 250 375 500 HFLED LFLED Q
     isok = I2C_BufferWrite(&data_u8, 1, 0x02, addr_ant << 1);
@@ -990,27 +995,32 @@ static bool QCTestPM5(uint8_t *failed_item) {
     isok = I2C_WriteByte(0, 0x02, addr_rgb << 1); // 写索引寄存器，设置后续操作的RGB索引
     if (!isok) {
         *failed_item = 1;
-        return false;
+        result = false;
+        goto out;
     }
     isok = I2C_WriteByte(1, 0x01, addr_rgb << 1); // 写数量寄存器，设置硬件挂1个灯,很重要！！！，不然无法闪灯
     if (!isok) {
         *failed_item = 1;
-        return false;
+        result = false;
+        goto out;
     }
     isok = I2C_BufferWrite(buf_rgb, sizeof(buf_rgb), 0x03, addr_rgb << 1); // 写数据寄存器，每三个字节就是对应的RGB888值
     if (!isok) {
         *failed_item = 1;
-        return false;
+        result = false;
+        goto out;
     }
     isok = I2C_WriteByte(1, 0x06, addr_rgb << 1); // 写闪灯使能寄存器，使能 0 号灯珠的可控闪烁
     if (!isok) {
         *failed_item = 1;
-        return false;
+        result = false;
+        goto out;
     }
     isok = I2C_BufferWrite(buf_flash_time, sizeof(buf_flash_time), 0x07, addr_rgb << 1); // 写闪灯使能寄存器，使能 0 号灯珠的可控闪烁
     if (!isok) {
         *failed_item = 1;
-        return false;
+        result = false;
+        goto out;
     }
 
     // 在循环中测试LED、蜂鸣器、按钮
@@ -1063,15 +1073,20 @@ static bool QCTestPM5(uint8_t *failed_item) {
     *failed_item = 2;
     // 在开始测试之前，如果按钮是按下的，则认为失败，有可能按钮不良卡住了
     if (BUTTON_PRESS()) {
-        return false;
+        result = false;
+        goto out;
     }
+
+    uint32_t start_time = GetTickCount();
 
     while (1) {
         if (BUTTON_PRESS()) {
-            return true;
+            result = true;
+            goto out;
         }
-        if (data_available()) {
-            return false;
+        if (data_available() || (timeout_ms > 0 && (GetTickCount() - start_time) >= timeout_ms)) {
+            result = false;
+            goto out;
         }
 
         LED_A_ON();
@@ -1083,10 +1098,12 @@ static bool QCTestPM5(uint8_t *failed_item) {
         LED_A_OFF();
 
         if (BUTTON_PRESS()) {
-            return true;
+            result = true;
+            goto out;
         }
-        if (data_available()) {
-            return false;
+        if (data_available() || (timeout_ms > 0 && (GetTickCount() - start_time) >= timeout_ms)) {
+            result = false;
+            goto out;
         }
 
         LED_B_ON();
@@ -1099,10 +1116,12 @@ static bool QCTestPM5(uint8_t *failed_item) {
         LED_B_OFF();
 
         if (BUTTON_PRESS()) {
-            return true;
+            result = true;
+            goto out;
         }
-        if (data_available()) {
-            return false;
+        if (data_available() || (timeout_ms > 0 && (GetTickCount() - start_time) >= timeout_ms)) {
+            result = false;
+            goto out;
         }
 
         LED_C_ON();
@@ -1115,10 +1134,12 @@ static bool QCTestPM5(uint8_t *failed_item) {
         LED_C_OFF();
 
         if (BUTTON_PRESS()) {
-            return true;
+            result = true;
+            goto out;
         }
-        if (data_available()) {
-            return false;
+        if (data_available() || (timeout_ms > 0 && (GetTickCount() - start_time) >= timeout_ms)) {
+            result = false;
+            goto out;
         }
 
         LED_D_ON();
@@ -1131,7 +1152,16 @@ static bool QCTestPM5(uint8_t *failed_item) {
         LED_D_OFF();
     }
 
-    return true;
+out:
+    // Turn off the test LEDs (antenna + RGB flash) before returning
+    LEDsoff();
+    RgbLedSet(0, 0, 0);
+    I2C_WriteByte(0, 0x06, addr_rgb << 1);
+    if (data_u8_valid) {
+        data_u8 &= ~0x06;
+        I2C_BufferWrite(&data_u8, 1, 0x02, addr_ant << 1);
+    }
+    return result;
 }
 
 #endif
@@ -3625,7 +3655,11 @@ static void PacketReceived(PacketCommandNG *packet) {
 #ifdef PM5
         case CMD_PM5_QC_TEST: {
             uint8_t failed_item = 0;
-            reply_ng(CMD_PM5_QC_TEST, QCTestPM5(&failed_item) ? PM3_SUCCESS : PM3_EFAILED, &failed_item, 1);
+            uint32_t timeout_ms = 0;
+            if (packet->length >= sizeof(timeout_ms)) {
+                memcpy(&timeout_ms, packet->data.asBytes, sizeof(timeout_ms));
+            }
+            reply_ng(CMD_PM5_QC_TEST, QCTestPM5(&failed_item, timeout_ms) ? PM3_SUCCESS : PM3_EFAILED, &failed_item, 1);
             break;
         }
         case CMD_PM5_RGB_SET: {
