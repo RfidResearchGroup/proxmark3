@@ -75,6 +75,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Improved `hf iclass legbrute` throughput further: added wider SIMD backends (128-lane NEON, 256-lane AVX2, 512-lane AVX-512F) Thanks @chick3nman (@antiklesys)
 - Added `hf mfdes pc` command (@kormax)
 - Fixed `hf mfu ndefread` NDEF data area size handling (@mjaksn)
+- Fixed `hw qc_pm5` command to ensure the RGB LED is off at the conclusion of the test (@barefootdeveloper)
+- Improved`hw qc_pm5` command to support specifying a timeout (@barefootdeveloper)
 
 ## [BREAKMEIFYOUCAN!.4.21611][2026-04-14]
 - Fixed `hf mf wrbl` and `hf mfp wrbl` the ACL RO checks on 16-block sectors correct  (@team-orangeBlue)
