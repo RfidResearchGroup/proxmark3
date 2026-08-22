@@ -2814,10 +2814,10 @@ static void emrtd_fill_auth(emrtd_auth_t *auth, const char *docnum, const char *
                             const char *can, bool mrz_available, bool can_available,
                             bool force_pace, bool force_bac) {
     memset(auth, 0, sizeof(emrtd_auth_t));
-    strncpy(auth->documentnumber, docnum, sizeof(auth->documentnumber) - 1);
-    strncpy(auth->dob, dob, sizeof(auth->dob) - 1);
-    strncpy(auth->expiry, expiry, sizeof(auth->expiry) - 1);
-    strncpy(auth->can, can, sizeof(auth->can) - 1);
+    snprintf(auth->documentnumber, sizeof(auth->documentnumber), "%s", docnum);
+    snprintf(auth->dob, sizeof(auth->dob), "%s", dob);
+    snprintf(auth->expiry, sizeof(auth->expiry), "%s", expiry);
+    snprintf(auth->can, sizeof(auth->can), "%s", can);
     auth->mrz_available = mrz_available;
     auth->can_available = can_available;
     auth->force_pace = force_pace;
