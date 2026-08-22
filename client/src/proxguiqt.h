@@ -27,6 +27,7 @@
 #include <QObject>
 #include <QWidget>
 #include <QPainter>
+#include <QLabel>
 #include <QtGui>
 
 #include "proxgui.h"
@@ -99,6 +100,27 @@ class PictureItem {
     PictureItem(const QString &t, const QImage &i) : title(t), image(i) {}
     QString title;
     QImage image;
+};
+
+/**
+ * @brief A label that keeps its image scaled to whatever room it is given
+ *
+ * Portraits in EF_DG2 are small (often 240x320) and signatures in EF_DG7 are
+ * wide and short.  Painting either one at native size in a fixed window leaves
+ * it stranded in a corner, so the pixmap is rebuilt from the original image on
+ * every resize, fitted to the widget and keeping the aspect ratio.
+ */
+class ScaledPictureLabel : public QLabel {
+  public:
+    explicit ScaledPictureLabel(const QImage &img, QWidget *parent = nullptr);
+    QSize sizeHint(void) const override;
+
+  protected:
+    void resizeEvent(QResizeEvent *event) override;
+
+  private:
+    void rescale(void);
+    QImage m_image;
 };
 
 // Picture viewer window.  Holds an array of images, one tab per image, so that

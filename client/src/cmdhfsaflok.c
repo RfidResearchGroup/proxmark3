@@ -673,7 +673,7 @@ static saflok_mfc_datetime_t add_offset(const saflok_mfc_datetime_t *base, const
 
     // variable days per month ... loop is simplest option
     uint8_t curr_days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1);
-    for (; ((tm.tm_mday & 0xFF) > curr_days_in_month); curr_days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1)) {
+    for (; (tm.tm_mday > (int)curr_days_in_month); curr_days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1)) {
 
         tm.tm_mon  ++;
         tm.tm_mday -= curr_days_in_month;

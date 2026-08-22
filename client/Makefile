@@ -860,6 +860,8 @@ SRCS =  mifare/aiddesfire.c \
         cipurse/cipursecore.c \
         cipurse/cipursecrypto.c \
         cipurse/cipursetest.c \
+        emrtd/emrtd_pace.c \
+        emrtd/emrtd_pacetest.c \
         fileutils.c \
         flash.c \
         frame_progress.c \
@@ -959,6 +961,8 @@ ifeq ($(QT_FOUND),1)
     CXXSRCS = proxgui.cpp proxguiqt.cpp proxguiqt.moc.cpp
     # Qt has no JPEG2000 image handler, so we decode EF_DG2 & friends ourselves
     SRCS += imgjp2.c
+    # openjpeg.a is a static lib, avoid __declspec(dllimport) on its Windows API decls
+    PM3CFLAGS += -DOPJ_STATIC
     STATICLIBS += $(OPENJPEGLIB)
     LDLIBS += $(OPENJPEGLIBLD)
 else

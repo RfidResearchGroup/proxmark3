@@ -354,6 +354,7 @@ Check column "offline" for their availability.
 |`hf emrtd dump          `|N       |`Dump eMRTD files to binary files`
 |`hf emrtd info          `|Y       |`Tag information`
 |`hf emrtd list          `|Y       |`List ISO 14443A/7816 history`
+|`hf emrtd test          `|Y       |`Regression tests`
 
 
 ### hf felica

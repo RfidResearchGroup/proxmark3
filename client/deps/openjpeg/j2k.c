@@ -8129,14 +8129,15 @@ OPJ_BOOL opj_j2k_setup_encoder(opj_j2k_t *p_j2k,
 
     /* initialize the multiple tiles */
     /* ---------------------------- */
-    cp->tcps = (opj_tcp_t*) opj_calloc(cp->tw * cp->th, sizeof(opj_tcp_t));
+    const size_t num_tiles = (size_t)cp->tw * (size_t)cp->th;
+    cp->tcps = (opj_tcp_t*) opj_calloc(num_tiles, sizeof(opj_tcp_t));
     if (!cp->tcps) {
         opj_event_msg(p_manager, EVT_ERROR,
                       "Not enough memory to allocate tile coding parameters\n");
         return OPJ_FALSE;
     }
 
-    for (tileno = 0; tileno < cp->tw * cp->th; tileno++) {
+    for (tileno = 0; tileno < num_tiles; tileno++) {
         opj_tcp_t *tcp = &cp->tcps[tileno];
         const OPJ_BOOL fixed_distoratio =
             cp->m_specific_param.m_enc.m_quality_layer_alloc_strategy ==

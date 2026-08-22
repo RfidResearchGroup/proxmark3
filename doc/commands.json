@@ -2851,11 +2851,14 @@
         },
         "hf emrtd help": {
             "command": "hf emrtd help",
-            "description": "help This help info Tag information list List ISO 14443A/7816 history --------------------------------------------------------------------------------------- hf emrtd dump available offline: no Dump all files on an eMRTD",
+            "description": "help This help info Tag information list List ISO 14443A/7816 history test Regression tests --------------------------------------------------------------------------------------- hf emrtd dump available offline: no Dump all files on an eMRTD",
             "notes": [
                 "hf emrtd dump",
                 "hf emrtd dump --dir ../dump",
-                "hf emrtd dump -n 123456789 -d 890101 -e 250401"
+                "hf emrtd dump -n 123456789 -d 890101 -e 250401",
+                "hf emrtd dump --can 123456 -> PACE with the Card Access Number",
+                "hf emrtd dump --can 123456 --pace -> PACE only, no BAC fallback",
+                "hf emrtd dump -n 123456789 -d 890101 -e 250401 --bac -> force BAC"
             ],
             "offline": true,
             "options": [
@@ -2864,9 +2867,12 @@
                 "-d, --date <YYMMDD> date of birth in YYMMDD format",
                 "-e, --expiry <YYMMDD> expiry in YYMMDD format",
                 "-m, --mrz <[0-9A-Z<]> 2nd line of MRZ, 44 chars",
+                "--can <digits> Card Access Number, PACE password instead of the MRZ",
+                "--pace force PACE, fail instead of falling back to BAC",
+                "--bac force BAC, skip PACE",
                 "--dir <str> save dump to the given dirpath"
             ],
-            "usage": "hf emrtd dump [-h] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--dir <str>]"
+            "usage": "hf emrtd dump [-h] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--can <digits>] [--pace] [--bac] [--dir <str>]"
         },
         "hf emrtd info": {
             "command": "hf emrtd info",
@@ -2875,7 +2881,9 @@
                 "hf emrtd info",
                 "hf emrtd info --dir ../dumps",
                 "hf emrtd info -n 123456789 -d 890101 -e 250401",
-                "hf emrtd info -n 123456789 -d 890101 -e 250401 -i"
+                "hf emrtd info -n 123456789 -d 890101 -e 250401 -i",
+                "hf emrtd info --can 123456 -> PACE with the Card Access Number",
+                "hf emrtd info --can 123456 --pace -> PACE only, no BAC fallback"
             ],
             "offline": true,
             "options": [
@@ -2884,10 +2892,13 @@
                 "-d, --date <YYMMDD> date of birth in YYMMDD format",
                 "-e, --expiry <YYMMDD> expiry in YYMMDD format",
                 "-m, --mrz <[0-9A-Z<]> 2nd line of MRZ, 44 chars (passports only)",
+                "--can <digits> Card Access Number, PACE password instead of the MRZ",
+                "--pace force PACE, fail instead of falling back to BAC",
+                "--bac force BAC, skip PACE",
                 "--dir <str> display info from offline dump stored in dirpath",
                 "-i, --images show images"
             ],
-            "usage": "hf emrtd info [-hi] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--dir <str>]"
+            "usage": "hf emrtd info [-hi] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--can <digits>] [--pace] [--bac] [--dir <str>]"
         },
         "hf emrtd list": {
             "command": "hf emrtd list",
@@ -2909,6 +2920,18 @@
                 "-f, --file <fn> filename of dictionary"
             ],
             "usage": "hf emrtd list [-h1crux] [--frame] [-f <fn>]"
+        },
+        "hf emrtd test": {
+            "command": "hf emrtd test",
+            "description": "Regression tests for the PACE and secure messaging primitives",
+            "notes": [
+                "hf emrtd test"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hf emrtd test [-h]"
         },
         "hf epa help": {
             "command": "hf epa help",
@@ -16116,8 +16139,14 @@
         }
     },
     "metadata": {
+<<<<<<< HEAD
         "commands_extracted": 901,
         "extracted_by": "PM3Help2JSON v1.00",
         "extracted_on": "2026-08-22T14:19:35+00:00"
+=======
+        "commands_extracted": 902,
+        "extracted_by": "PM3Help2JSON v1.00",
+        "extracted_on": "2026-08-21T18:43:14+00:00"
+>>>>>>> b4c4edd7c94a989108cacaaaf73805a28a6c217c
     }
 }

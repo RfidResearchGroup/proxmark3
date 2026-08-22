@@ -2,7 +2,8 @@ MYSRCPATHS =
 MYINCLUDES =
 # Third party code, don't fail the build on upstream's warnings
 MYCFLAGS = -w -O3
-MYDEFS =
+# Avoid __declspec(dllimport/dllexport) on Windows, we always link this in statically
+MYDEFS = -DOPJ_STATIC
 MYSRCS = \
     bio.c \
     cio.c \

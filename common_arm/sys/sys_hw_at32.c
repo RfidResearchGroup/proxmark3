@@ -68,7 +68,8 @@ static void at32_bpr_write_dt1(uint32_t data) {
 
     // Select and enable an ERTC clock so the write-protection register is
     // writable at the full APB frequency.
-    crm_ertc_clock_select(CRM_ERTC_CLOCK_HEXT_DIV_20);
+    CRM->cfg_bit.ertcdiv = ((CRM_ERTC_CLOCK_HEXT_DIV_20 & 0x1F0) >> 4);
+    CRM->bpdc_bit.ertcsel = (CRM_ERTC_CLOCK_HEXT_DIV_20 & 0xF);
     CRM->bpdc_bit.ertcen = TRUE;
 
     ERTC->wp = SYS_SIMPLE_RESET_BPR_UNLOCK_KEY1;

@@ -255,6 +255,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf emrtd dump" },
     { 1, "hf emrtd info" },
     { 1, "hf emrtd list" },
+    { 1, "hf emrtd test" },
     { 1, "hf felica help" },
     { 1, "hf felica list" },
     { 0, "hf felica info" },

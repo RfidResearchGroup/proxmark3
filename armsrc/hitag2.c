@@ -1007,10 +1007,8 @@ void hitag_sniff(void) {
     // Set up eavesdropping mode, frequency divisor which will drive the FPGA
     // and analog mux selection.
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT  | FPGA_LF_EDGE_DETECT_TOGGLE_MODE);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); // 125Khz
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125); // 125Khz
     SetAdcMuxFor(ADC_MUXSEL_LOPKD);
-    RELAY_OFF();
-
 }
 
 
@@ -1167,19 +1165,15 @@ void SniffHitag2(bool ledcontrol) {
     }
         */
 
+    // Dont use the FPGA modulation output, we only want to capture the tag/reader comms
+    gpio_fpga_mod_only_setup();
+    Gpio_SSC_DOUT_Low();
+
     // Set up eavesdropping mode, frequency divisor which will drive the FPGA
     // and analog mux selection.
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT  | FPGA_LF_EDGE_DETECT_TOGGLE_MODE);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, 95); // 125Khz
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
+    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125); // 125Khz
     SetAdcMuxFor(ADC_MUXSEL_LOPKD);
-    RELAY_OFF();
-
-    // Configure output pin that is connected to the FPGA (for modulating)
-//    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-//    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-
-    // Disable modulation, we are going to eavesdrop, not modulate ;)
-//    Gpio_SSC_DOUT_Low();
 
     // Configure the input capture (TC1) via the HAL: it enables the TC1 clock, routes
     // SSC_FRAME to the timer input, resets on each falling edge and captures RB
@@ -1197,6 +1191,10 @@ void SniffHitag2(bool ledcontrol) {
     auth_table_pos = 0;
 
     auth_table = (uint8_t *)BigBuf_calloc(AUTH_TABLE_LENGTH);
+
+    // Only for debug, if we want to see the edge timing of the captured frames
+    uint8_t edges[100];
+    uint8_t e_count = 0;
 
     while (BUTTON_PRESS() == false) {
 
@@ -1219,12 +1217,17 @@ void SniffHitag2(bool ledcontrol) {
                     if (ledcontrol) LED_C_OFF();
                     reader_frame = true;
                     rxlen = 0;
+                    memset(rx, 0x00, sizeof(rx));
                 }
             }
 
             // Falling edge: RB holds the falling->falling full period (the bit timing).
             if (lo_edge == LO_EDGE_FALLING) {
                 int rb = GetLoEdgeCaptureFalling() / HITAG_T0;
+
+                if (e_count < sizeof(edges)) {
+                    edges[e_count++] = rb; // Store the edge timing for debug purposes
+                }
 
                 if (reader_frame) {
 
@@ -1233,7 +1236,9 @@ void SniffHitag2(bool ledcontrol) {
                     if (rb >= HITAG_T_STOP) {
                         // Capture the T0 periods that have passed since last communication or field drop (reset)
                         response = (rb - HITAG_T_LOW);
-                        if (rxlen != 0) { Dbprintf("rb - HITAG_T_LOW... %i", response); }
+                        if (rxlen != 0) {
+                            DBG Dbprintf("rb - HITAG_T_LOW... %i", response);
+                        }
 
                     } else if (rb >= HITAG_T_1_MIN) {
                         // '1' bit
@@ -1294,6 +1299,15 @@ void SniffHitag2(bool ledcontrol) {
             frame_count++;
             LogTraceBits(rx, rxlen, response, 0, reader_frame);
 
+            // Print only from tag response(No auth cmd from reader)
+            DBG {
+                if (rxlen >= 8) {
+                    for (size_t i = 0; i < e_count; i++) {
+                        Dbprintf("edges[%zu] = %u", i, edges[i]);
+                    }
+                }
+            }
+
             // Check if we recognize a valid authentication attempt
             if (rxlen == 64) {
                 // Store the authentication attempt
@@ -1313,28 +1327,21 @@ void SniffHitag2(bool ledcontrol) {
             lastbit = 1;
             bSkip = true;
             tag_sof = 4;
-
-            if (ledcontrol) {
-                LED_B_OFF();
-                LED_C_OFF();
-            }
-
+            e_count = 0;
         }
 
-        // Reset the frame length
+        // Reset the frame length and clear the buffer so that '0' bits written
+        // by the next frame don't inherit stale '1' bits from this one.
         rxlen = 0;
-
-        // Reset the capture counter to restart the while-loop that receives frames.
-        ResetLoEdgeCapture();
+        memset(rx, 0x00, sizeof(rx));
     }
 
     if (ledcontrol) LEDsoff();
 
-    StopLoEdgeCapture();
-
     DBG Dbprintf("frames.......... %d", frame_count);
     Dbprintf("Auth attempts... %d", (auth_table_len / 8));
 
+    StopLoEdgeCapture();
     switch_off();
     BigBuf_free();
 }
