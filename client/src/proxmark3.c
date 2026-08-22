@@ -977,7 +977,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, const char *file
         goto finish2;
     }
 
-    ret = flash_start_flashing(can_write_bl, serial_port_name, &flash_dev);
+    ret = flash_start_flashing(can_write_bl, serial_port_name, &flash_dev, files, num_files);
     if (ret != PM3_SUCCESS) {
         goto finish;
     }

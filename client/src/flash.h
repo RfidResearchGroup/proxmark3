@@ -53,7 +53,7 @@ typedef struct {
 int flash_reboot_bootloader(char *serial_port_name, bool wait_appear);
 int flash_load(flash_file_t *ctx, bool force);
 int flash_prepare(flash_file_t *ctx, int can_write_bl, flash_dev_t *flash_dev);
-int flash_start_flashing(int enable_bl_writes, char *serial_port_name, flash_dev_t *flash_dev);
+int flash_start_flashing(int enable_bl_writes, char *serial_port_name, flash_dev_t *flash_dev, flash_file_t *files, uint8_t num_files);
 int flash_write(flash_file_t *ctx, flash_dev_t *flash_dev);
 void flash_free(flash_file_t *ctx);
 int flash_stop_flashing(void);
