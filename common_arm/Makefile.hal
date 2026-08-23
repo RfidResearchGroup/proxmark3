@@ -178,7 +178,7 @@ else ifeq ($(PLATFORM),PM5)
     FPGA_BITSTREAMS = fpga_pm3_hf.bit # TODO DXL 虽然可以不把打包比特流，但是还是得把FPGA的版本信息给生成，让EXE依赖。
     SKIP_FPGA_EMBED = true # important!!! disable the fpga bit files pack to arm!
     SKIP_COMPRESSION = true # Skip data section compress. The new mcu has enough flash space.
-    PLATFORM_DEFS = -DWITH_FLASH -DPM5 -DCHIP_AT32F435_37 # TODO 暂时不要编译i2c -DWITH_SMARTCARD
+    PLATFORM_DEFS = -DWITH_FLASH -DPM5 -DCHIP_AT32F435_37 -DWITH_BWM_STATUS # TODO 暂时不要编译i2c -DWITH_SMARTCARD
     PLTNAME = Proxmark5
     PLATFORM_FPGA = GW1NR-LV2MG49GC6/i5
 else
