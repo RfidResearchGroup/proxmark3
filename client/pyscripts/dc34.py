@@ -27,11 +27,11 @@ except ImportError:
 PROXMARK3_FULLY_QUALIFIED_PATH = "/home/henrygab/src/proxmark3/pm3"
 
 
-required_version = (3, 8)
+required_version = (3, 10)
 if sys.version_info < required_version:
     print(f"Python version: {sys.version}")
     print(f"The script needs at least Python v{required_version[0]}.{required_version[1]}. Abort.")
-    exit()
+    sys.exit(1)
 
 
 
