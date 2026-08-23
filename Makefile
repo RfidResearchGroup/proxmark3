@@ -195,10 +195,13 @@ hitag2crack/%: FORCE
 hitag2crack/clean: FORCE hitag2crack/_clean_pycache
 hitag2crack/_clean_pycache:
 	find . -type d -name __pycache__ -exec rm -rfv \{\} +
+ePassport/%: FORCE
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C tools/ePassport $(patsubst ePassport/%,%,$@) DESTDIR=$(MYDESTDIR)
 
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all host clean install uninstall help _test bootrom fullimage recovery client mfc_card_only mfc_card_reader mfulc_des_brute mfd_aes_brute hitag2crack style miscchecks release FORCE udev accessrights cleanifplatformchanged
+.PHONY: all host clean install uninstall help _test bootrom fullimage recovery client mfc_card_only mfc_card_reader mfulc_des_brute mfd_aes_brute hitag2crack ePassport style miscchecks release FORCE udev accessrights cleanifplatformchanged
 
 help:
 	@echo "Multi-OS Makefile"
