@@ -77,6 +77,151 @@
 #include "cmac_calc.h"
 #include "i2c.h"
 
+#ifdef WITH_BWM_CHARGERKICK
+// AW32001 charger on the BWM, I2C addr 0x93 (see test_bat_charger).
+#define BWM_CHG_ADDR         0x93
+#define BWM_CHG_REG_MAINCTL  0x06   // bit5 = FET_DIS: shipping mode -> VMIX/charge path off
+#define BWM_CHG_REG_PONCFG   0x01   // PowerOnConfig: charge-enable/current bits
+#define BWM_CHG_FET_DIS      (1u << 5)
+
+// Emergency charge-enable. Normal PM5 firmware never touches the charger, so a BWM
+// left in shipping/FET-disabled mode won't take charge even with USB present. This
+// wakes the power path at boot so the AW32001 can charge autonomously.
+//
+// SCOPE: runs from AppMain(), i.e. only once the PM5 has actually booted. It cannot
+// help a cell too flat to boot (that needs USB reaching VUSBIN in hardware), and it
+// cannot reroute VBUS to the charger input. It only ensures that when the charger
+// HAS input, its path is enabled.
+static void BWM_ChargerKick(void) {
+    I2C_init(true);
+    WaitMS(2);   // let the bus settle
+
+    uint8_t v = 0;
+    // No ACK -> BWM absent or charger dead. Nothing to do; leave the bus and return.
+    if (I2C_BufferReadRaw(&v, 1, BWM_CHG_REG_MAINCTL, BWM_CHG_ADDR) <= 0) {
+        return;
+    }
+
+    // Shipping / FET-disabled -> clear it so the power/charge path comes alive.
+    if (v & BWM_CHG_FET_DIS) {
+        uint8_t nv = v & ~BWM_CHG_FET_DIS;
+        if (I2C_BufferWrite(&nv, 1, BWM_CHG_REG_MAINCTL, BWM_CHG_ADDR)) {
+            Dbprintf("[BWM] charger was FET-disabled (0x%02x) - path re-enabled", v);
+        } else {
+            Dbprintf(_RED_("[BWM] charger FET-disabled; re-enable write failed"));
+        }
+    }
+}
+#endif // WITH_BWM_CHARGERKICK
+
+#ifdef WITH_BWM_STATUS
+// BWM battery telemetry for `hw status`.
+// Charger: AW32001 @ 0x93. Fuel gauge: BQ27427 @ 7-bit 0x55 (0xAA 8-bit).
+// Shared charger defines are #ifndef-guarded so this coexists with WITH_BWM_CHARGERKICK.
+// The BQ27427 address/commands and the current-sign convention are the TI standard set -
+// confirm against a known-charging module before trusting absolute values. If the gauge
+// or charger doesn't ACK, the corresponding lines print "not responding" rather than
+// reporting garbage, so this is safe to ship even if an address is wrong on a given board.
+#ifndef BWM_CHG_ADDR
+#define BWM_CHG_ADDR         0x93
+#endif
+#ifndef BWM_CHG_REG_MAINCTL
+#define BWM_CHG_REG_MAINCTL  0x06
+#endif
+#ifndef BWM_CHG_FET_DIS
+#define BWM_CHG_FET_DIS      (1u << 5)
+#endif
+#define BWM_CHG_REG_FAULT    0x09   // AW32001 fault register (latched, read-on-clear)
+#define BWM_CHG_REG_SYSSTAT  0x08   // AW32001 system status (CHG_STAT / PG_STAT / THERM_STAT)
+#define BWM_GAUGE_ADDR       0xAA   // BQ27427, 7-bit 0x55 << 1
+
+// BQ27427 standard commands (16-bit, little-endian)
+#define BWM_GAUGE_TEMP       0x02   // 0.1 K
+#define BWM_GAUGE_VOLTAGE    0x04   // mV
+#define BWM_GAUGE_REMCAP     0x0C   // mAh
+#define BWM_GAUGE_CURRENT    0x10   // signed mA
+#define BWM_GAUGE_SOC        0x1C   // %
+
+static bool bwm_gauge_read16(uint8_t cmd, uint16_t *out) {
+    uint8_t d[2] = {0};
+    if (I2C_BufferReadRaw(d, 2, cmd, BWM_GAUGE_ADDR) <= 0) {
+        return false;
+    }
+    *out = (uint16_t)(d[0] | (d[1] << 8)); // little-endian
+    return true;
+}
+
+// Reads the BWM charger + fuel gauge and prints a battery section. Called from
+// SendStatus() under #ifdef PM5, so it only runs on a booted PM5 with I2C available.
+static void print_pm5_battery_status(void) {
+    DbpString(_CYAN_("Battery / BWM"));
+
+    I2C_init(true);
+    WaitMS(2);   // let the bus settle
+
+    // --- charger (AW32001) ---
+    // REG09 (Fault) latches faults and is read-on-clear: read it TWICE - the 1st read
+    // returns the latched history, the 2nd returns the live state (datasheet: "read
+    // REG09 two times consecutively"). Bits [7:6] are the EN_SHIPPING_DGL config field,
+    // not faults, so mask to 0x3F. Fault bit map (AW32001E REG09H):
+    //   b5 VIN_FAULT  b4 THERM_SD  b3 BAT_OVP  b2 SAFETY_TMR  b1 NTC_HOT  b0 NTC_COLD
+    uint8_t mainctl = 0, f1 = 0, fault = 0, sysstat = 0;
+    if (I2C_BufferReadRaw(&mainctl, 1, BWM_CHG_REG_MAINCTL, BWM_CHG_ADDR) <= 0) {
+        Dbprintf("  Charger............. " _YELLOW_("not responding") " (BWM absent or I2C down)");
+    } else {
+        Dbprintf("  Charger MainCtl..... 0x%02x  %s", mainctl,
+                 (mainctl & BWM_CHG_FET_DIS) ? _RED_("FET_DIS (VMIX off / shipping)")
+                                             : _GREEN_("power path enabled"));
+
+        I2C_BufferReadRaw(&f1,    1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR); // 1st = latched history
+        I2C_BufferReadRaw(&fault, 1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR); // 2nd = current state
+        fault &= 0x3F;
+
+        if (fault == 0) {
+            Dbprintf("  Charger fault....... 0x00 (none)");
+        } else {
+            Dbprintf("  Charger fault....... " _RED_("0x%02x") "%s%s%s%s%s%s", fault,
+                     (fault & 0x20) ? " VIN_FAULT"  : "",
+                     (fault & 0x10) ? " THERM_SD"   : "",
+                     (fault & 0x08) ? " BAT_OVP"    : "",
+                     (fault & 0x04) ? " SAFETY_TMR" : "",
+                     (fault & 0x02) ? " NTC_HOT"    : "",
+                     (fault & 0x01) ? " NTC_COLD"   : "");
+        }
+
+        // Live charge state from REG08 (System Status): CHG_STAT[4:3], PG_STAT[1], THERM_STAT[0]
+        if (I2C_BufferReadRaw(&sysstat, 1, BWM_CHG_REG_SYSSTAT, BWM_CHG_ADDR) > 0) {
+            static const char *cs[] = { "not charging", "pre-charge", "charging", "charge done" };
+            Dbprintf("  Charge status....... %s%s%s", cs[(sysstat >> 3) & 0x03],
+                     (sysstat & 0x02) ? ", power good" : ", power fail",
+                     (sysstat & 0x01) ? ", thermal-reg" : "");
+        }
+    }
+
+    // --- fuel gauge (BQ27427) ---
+    uint16_t soc = 0, mv = 0, rem = 0, temp = 0, raw_i = 0;
+    if (bwm_gauge_read16(BWM_GAUGE_SOC, &soc) && bwm_gauge_read16(BWM_GAUGE_VOLTAGE, &mv)) {
+        bwm_gauge_read16(BWM_GAUGE_REMCAP, &rem);
+        bwm_gauge_read16(BWM_GAUGE_TEMP, &temp);
+        bwm_gauge_read16(BWM_GAUGE_CURRENT, &raw_i);
+
+        int16_t cur = (int16_t)raw_i;      // +charge / -discharge (verify polarity on hw)
+        int tempC10 = (int)temp - 2732;    // 0.1 K -> 0.1 C
+        int tabs = (tempC10 < 0) ? -tempC10 : tempC10;
+
+        Dbprintf("  Battery SoC......... %u %%", soc);
+        Dbprintf("  Battery voltage..... %u mV", mv);
+        Dbprintf("  Battery current..... %d mA %s", cur,
+                 (cur > 5)  ? _GREEN_("(charging)") :
+                 (cur < -5) ? _YELLOW_("(discharging)") : "(idle)");
+        Dbprintf("  Remaining capacity.. %u mAh", rem);
+        Dbprintf("  Battery temp........ %d.%d C", tempC10 / 10, tabs % 10);
+    } else {
+        Dbprintf("  Fuel gauge.......... " _YELLOW_("not responding") " (BQ27427 absent or I2C down)");
+    }
+}
+#endif // WITH_BWM_STATUS
+
 #ifdef WITH_LCD
 #include "LCD_disabled.h"
 #endif
@@ -502,6 +647,9 @@ static void SendStatus(uint32_t wait) {
 #endif
 #ifdef WITH_ISO14443b
     printHf14bConfig();   // HF 14b config
+#endif
+#if defined(PM5) && defined(WITH_BWM_STATUS)
+    print_pm5_battery_status();
 #endif
     printConnSpeed(wait);
     DbpString(_CYAN_("Various"));
@@ -3716,6 +3864,10 @@ void __attribute__((noreturn)) AppMain(void) {
     // (AT91F_CDC_Enumerate() will be called in the main loop)
     usb_disable();
     usb_enable();
+
+#ifdef WITH_BWM_CHARGERKICK
+    BWM_ChargerKick();
+#endif
 
     for (;;) {
         WDT_HIT();
