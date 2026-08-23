@@ -1500,6 +1500,49 @@ static int CmdTearoff(const char *Cmd) {
     return handle_tearoff(&params, !silent);
 }
 
+static int CmdBwmSetCap(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwmsetcap",
+                  "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell.\n"
+                  "Run ONCE after fitting or replacing the battery. This triggers a gauge\n"
+                  "config-update; do not run it repeatedly, as that disrupts the Impedance\n"
+                  "Track learning cycle. PM5 only.",
+                  "hw bwmsetcap             --> set design capacity to default 500 mAh\n"
+                  "hw bwmsetcap --cap 500   --> set design capacity to 500 mAh");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "cap", "<mAh>", "design capacity in mAh (default 500)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int cap = arg_get_int_def(ctx, 1, 500);
+    CLIParserFree(ctx);
+
+    if (cap <= 0 || cap > 32000) {
+        PrintAndLogEx(WARNING, "capacity out of range: %d mAh", cap);
+        return PM3_EINVARG;
+    }
+
+    uint8_t payload[2] = { (uint8_t)(cap & 0xFF), (uint8_t)((cap >> 8) & 0xFF) };
+    PrintAndLogEx(INFO, "Programming BWM gauge design capacity to " _YELLOW_("%d mAh") "...", cap);
+    PrintAndLogEx(INFO, "Run this " _YELLOW_("once") "; then perform a full charge/discharge learning cycle.");
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_SET_CAP, payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_PM5_BWM_SET_CAP, &resp, 5000) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "gauge provisioning failed - check BWM present and gauge unsealed");
+        return resp.status;
+    }
+    PrintAndLogEx(SUCCESS, "Design capacity programmed. `hw status` should now report sane capacity.");
+    return PM3_SUCCESS;
+}
+
 static int CmdTia(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw tia",
@@ -1965,6 +2008,7 @@ static command_t CommandTable[] = {
     {"setmux", CmdSetMux, IfPm3Present, "Set the ADC mux to a specific value"},
     {"standalone", CmdStandalone, IfPm3Present, "Start installed standalone mode on device"},
     {"tia", CmdTia, IfPm3Present, "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
+    {"bwmsetcap", CmdBwmSetCap, IfPm3Present, "Set BWM fuel-gauge design capacity (PM5, run once after battery change)"},
     {"tune", CmdTune, IfPm3Lf, "Measure tuning of device antenna"},
     {"decay", CmdDecay, IfPm3Present, "Measure HF antenna decay after field-off"},
     {NULL, NULL, NULL, NULL}
