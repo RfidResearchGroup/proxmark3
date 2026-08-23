@@ -7,8 +7,7 @@ import time
 import sys
 import os
 import re
-import types
-from enum import Enum, IntFlag
+from enum import Enum
 from dataclasses import dataclass
 import struct
 from collections.abc import Sequence
@@ -24,8 +23,6 @@ try:
     p = pm3.pm3()
 except ImportError:
     PM3_AVAILABLE = False  # Use subprocess instead
-PROXMARK3_FULLY_QUALIFIED_PATH = "/home/henrygab/src/proxmark3/pm3"
-
 
 required_version = (3, 10)
 if sys.version_info < required_version:
@@ -324,7 +321,7 @@ if True:  # Data classes
         def pack(self) -> bytes:
             return struct.pack(
                 self._FORMAT,
-                self.wordmask,
+                self.wordmask.encode("ascii"),
                 self.wrong_guess_count,
                 self.guessed_letter_bitmask,
                 self.game_status.value
@@ -387,7 +384,7 @@ if True:  # Data classes
             return struct.pack(
                 self._FORMAT,
                 self.was_guess_correct,
-                self.wordmask,
+                self.wordmask.encode("ascii"),
                 self.wrong_guess_count,
                 self.guessed_letter_bitmask,
                 self.game_status.value
@@ -684,10 +681,11 @@ if True:  # Proxmark3 abstraction layer
                 return dev
 
         # Default to TCP mode for Android Termux
+        TCP_PORT = 4444
         LOG_PM_DEVICE.info(f"⚠️ No USB or Bluetooth device found, defaulting to TCP (localhost:{TCP_PORT})")
         return f"tcp:localhost:{TCP_PORT}"
 
-    CACHED_PROXMARK_DEVICE = detect_proxmark_device()
+    CACHED_PROXMARK_DEVICE : Optional[str] = None
 
     def send_proxmark_command(command : str) -> Sequence[str]:
 
@@ -699,9 +697,12 @@ if True:  # Proxmark3 abstraction layer
             lines = multiline_response.splitlines()
         else:
             full_command = f"{command}\n"
+            global CACHED_PROXMARK_DEVICE
+            if CACHED_PROXMARK_DEVICE is None:
+                CACHED_PROXMARK_DEVICE = detect_proxmark_device()
             host_device = CACHED_PROXMARK_DEVICE
             process = subprocess.Popen(
-                [PROXMARK3_FULLY_QUALIFIED_PATH, "-p", host_device],
+                ["./pm3", "-p", host_device],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -828,7 +829,7 @@ if True:  # TicTacToe interactive UI
             board = dc34_PlayTicTacToe_play_move(move_index)
 
         # End of while loop ... don't think this should ever be reached.
-        LOG.critical("Unexpectedly existing the while loop in dc34_PlayTicTacToe().  This should never happen.")
+        LOG.critical("Unexpectedly exiting the while loop in dc34_PlayTicTacToe().  This should never happen.")
 
 if True:  # Hangman interactive UI
 
@@ -904,7 +905,7 @@ if True:  # Hangman interactive UI
                 print("Invalid input. Please enter a single letter that you haven't guessed yet.")
 
         # End of while loop ... don't think this should ever be reached.
-        LOG.critical("Unexpectedly existing the while loop in dc34_PlayHangman().  This should never happen.")
+        LOG.critical("Unexpectedly exiting the while loop in dc34_PlayHangman().  This should never happen.")
 
 if True:  # GuessKey interactive UI
 
