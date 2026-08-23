@@ -220,6 +220,80 @@ static void print_pm5_battery_status(void) {
         Dbprintf("  Fuel gauge.......... " _YELLOW_("not responding") " (BQ27427 absent or I2C down)");
     }
 }
+
+// --- BQ27427 provisioning: set Design Capacity for the fitted cell -------------
+// One-time. The gauge ships with a ~1000+ mAh default profile, so RemainingCapacity
+// reads wrong for the fitted pack until Design Capacity is programmed. Invoked by the
+// `hw bwmsetcap` client command (CMD_PM5_BWM_SET_CAP) - deliberately NOT run at boot,
+// because a config-update cycle disrupts the Impedance Track learning cycle.
+// Per BQ27427 TRM (SLUUCD5): State subclass 82 (0x52), Design Capacity at offset 6
+// -> block addr 0x46 (MSB)/0x47 (LSB), big-endian. Assumes gauge UNSEALED (factory default).
+#define BWM_DEFAULT_DESIGN_CAP_MAH   500   // VXE 502540 on the reference BWM
+
+static bool bq_control(uint16_t sub) {
+    uint8_t d[2] = { (uint8_t)(sub & 0xFF), (uint8_t)(sub >> 8) };
+    return I2C_BufferWrite(d, 2, 0x00, BWM_GAUGE_ADDR);       // Control() 0x00
+}
+static bool bq_flags(uint16_t *f) {
+    uint8_t d[2] = {0};
+    if (I2C_BufferReadRaw(d, 2, 0x06, BWM_GAUGE_ADDR) <= 0) return false;
+    *f = (uint16_t)(d[0] | (d[1] << 8));                      // Flags() 0x06
+    return true;
+}
+static bool bq_select_state_block(void) {
+    uint8_t v;
+    v = 0x00; if (!I2C_BufferWrite(&v, 1, 0x61, BWM_GAUGE_ADDR)) return false; // BlockDataControl
+    v = 0x52; if (!I2C_BufferWrite(&v, 1, 0x3E, BWM_GAUGE_ADDR)) return false; // DataClass = 82 (State)
+    v = 0x00; if (!I2C_BufferWrite(&v, 1, 0x3F, BWM_GAUGE_ADDR)) return false; // DataBlock = 0
+    WaitMS(5);
+    return true;
+}
+static bool bq_read_design_cap(uint16_t *cap) {
+    if (!bq_select_state_block()) return false;
+    uint8_t d[2] = {0};
+    if (I2C_BufferReadRaw(d, 2, 0x46, BWM_GAUGE_ADDR) <= 0) return false;
+    *cap = (uint16_t)((d[0] << 8) | d[1]);                    // big-endian
+    return true;
+}
+
+// Program Design Capacity (and matching Design Energy). Idempotent: returns true
+// without a config-update cycle if the value is already correct.
+static bool bwm_gauge_provision_capacity(uint16_t cap_mah) {
+    uint16_t cur = 0;
+    if (bq_read_design_cap(&cur) && cur == cap_mah) {
+        return true;    // already correct - do NOT run another CFGUPDATE cycle
+    }
+
+    uint16_t energy_mwh = (uint16_t)(((uint32_t)cap_mah * 37) / 10);   // ~3.7 V nominal
+
+    if (!bq_control(0x0013)) return false;                    // SET_CFGUPDATE
+    uint16_t flags = 0; int tries = 0;
+    do { WaitMS(50); if (!bq_flags(&flags)) return false; }
+    while (((flags & 0x0010) == 0) && (++tries < 40));        // wait CFGUPDATE (Flags bit4), ~2s
+    if ((flags & 0x0010) == 0) return false;
+
+    if (!bq_select_state_block()) return false;
+
+    uint8_t blk[32] = {0};
+    if (I2C_BufferReadRaw(blk, 32, 0x40, BWM_GAUGE_ADDR) <= 0) return false;
+
+    blk[6] = (uint8_t)(cap_mah >> 8);    blk[7] = (uint8_t)(cap_mah & 0xFF);      // DesignCapacity
+    blk[8] = (uint8_t)(energy_mwh >> 8); blk[9] = (uint8_t)(energy_mwh & 0xFF);   // DesignEnergy
+    I2C_BufferWrite(&blk[6], 2, 0x46, BWM_GAUGE_ADDR);
+    I2C_BufferWrite(&blk[8], 2, 0x48, BWM_GAUGE_ADDR);
+
+    uint16_t sum = 0;                                         // block checksum = 255 - (sum mod 256)
+    for (int i = 0; i < 32; i++) sum += blk[i];
+    uint8_t csum = (uint8_t)(0xFF - (uint8_t)(sum & 0xFF));
+    I2C_BufferWrite(&csum, 1, 0x60, BWM_GAUGE_ADDR);          // commit block
+    WaitMS(10);
+
+    if (!bq_control(0x0042)) return false;                    // SOFT_RESET (exit CFGUPDATE)
+    tries = 0;
+    do { WaitMS(50); if (!bq_flags(&flags)) return false; }
+    while (((flags & 0x0010) != 0) && (++tries < 40));
+    return ((flags & 0x0010) == 0);
+}
 #endif // WITH_BWM_STATUS
 
 #ifdef WITH_LCD
@@ -3788,6 +3862,19 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_PM5_RGB_SET, PM3_SUCCESS, NULL, 0);
             break;
         }
+#ifdef WITH_BWM_STATUS
+        case CMD_PM5_BWM_SET_CAP: {
+            // One-time BWM fuel-gauge (BQ27427) Design Capacity provisioning.
+            // Payload: optional uint16 mAh (LE); absent -> reference default.
+            uint16_t cap = (packet->length >= 2)
+                           ? (uint16_t)(packet->data.asBytes[0] | (packet->data.asBytes[1] << 8))
+                           : BWM_DEFAULT_DESIGN_CAP_MAH;
+            I2C_init(true);
+            bool ok = bwm_gauge_provision_capacity(cap);
+            reply_ng(CMD_PM5_BWM_SET_CAP, ok ? PM3_SUCCESS : PM3_EFAILED, (uint8_t *)&cap, sizeof(cap));
+            break;
+        }
+#endif
 #endif
         default: {
             Dbprintf("%s: 0x%04x", "unknown command:", packet->cmd);
