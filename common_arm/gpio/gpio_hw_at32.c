@@ -109,18 +109,23 @@ void gpio_fpga_download_setup(void) {
     gpio_init(GPIOB, &gpio_init_struct);
 
     gpio_init_struct.gpio_pins = GPIO_PINS_10; // PC10_SPI3_SCK -> TCK
+    gpio_init_struct.gpio_pull = GPIO_PULL_DOWN;
     gpio_init(GPIOC, &gpio_init_struct);
 
     gpio_init_struct.gpio_pins = GPIO_PINS_15; // PA15_SPI3_CS -> TMS
+    gpio_init_struct.gpio_pull = GPIO_PULL_UP;
     gpio_init(GPIOA, &gpio_init_struct);
 
     gpio_init_struct.gpio_pins = GPIO_PINS_12; // PC12_SPI3_MOSI -> TDI
+    gpio_init_struct.gpio_pull = GPIO_PULL_UP;
     gpio_init(GPIOC, &gpio_init_struct);
 
     gpio_init_struct.gpio_pins = GPIO_PINS_2; // PD2 -> FPGA_JTAGSEL
+    gpio_init_struct.gpio_pull = GPIO_PULL_UP;
     gpio_init(GPIOD, &gpio_init_struct);
 
     gpio_init_struct.gpio_mode = GPIO_MODE_INPUT;
+    gpio_init_struct.gpio_pull = GPIO_PULL_NONE;
     gpio_init_struct.gpio_pins = GPIO_PINS_11; // PC11_SPI3_MISO -> TDO
     gpio_init(GPIOC, &gpio_init_struct);
 }
