@@ -42,7 +42,8 @@ if True:  # Logging helper
     LOG_PROXMARK.parent = LOG
     LOG_PM_DEVICE.parent = LOG
 
-    LOG.addHandler(logging.StreamHandler(sys.stdout))
+    if len(LOG.handlers) < 1:
+        LOG.addHandler(logging.StreamHandler(sys.stdout))
     # LOG_HF14.addHandler(logging.StreamHandler(sys.stdout))
     # LOG_PROXMARK.addHandler(logging.StreamHandler(sys.stdout))
     # LOG_PM_DEVICE.addHandler(logging.StreamHandler(sys.stdout))
@@ -149,10 +150,7 @@ if True:  # Data classes
 
         def __init__(self, guess_count: int, is_solved: bool):
             self.guess_count = self._validate_uint16(guess_count)
-            if is_solved:
-                self.is_solved = True
-            else:
-                self.is_solved = False
+            self.is_solved = self._validate_bool(is_solved)
 
         def pack(self) -> bytes:
             return struct.pack(
@@ -282,13 +280,13 @@ if True:  # Data classes
         @classmethod
         def _validate_guessed_letter_bitmask(cls, value: bytes | bytearray | int) -> int:
             if not isinstance(value, (bytes, bytearray, int)):
-                raise ValueError("guessed letter bitmask must be bytes or bytearray.")
+                raise ValueError("guessed letter bitmask must be int, bytes or bytearray.")
             if isinstance(value, int):
                 result = value
             else:            
                 if len(value) != 4:
                     raise ValueError(f"guessed letter bitmask must be an int or exactly 4 bytes, got {len(value)} bytes.")
-                result = int.from_bytes(value, byteorder="big")
+                result = int.from_bytes(value, byteorder="little")
             if (result & cls._GUESSED_LETTER_MASK) != result:
                 raise ValueError(f"guessed letter bitmask must only have bits 0-25 set, got 0x{result:08x}.")
             return result
@@ -861,9 +859,9 @@ if True:  # Hangman interactive UI
         print(f"{Hangman_State.guessed_letter_bitmask_to_remaining_letters(state.guessed_letter_bitmask)}")
 
     def dc34_PlayHangman_validate_user_input(user_input : str, state : Hangman_State) -> Optional[str]:
+        user_input = user_input.strip().upper()
         if len(user_input) != 1:
             return None
-        user_input = user_input.strip().upper()
         if not re.match(r"^[A-Z]$", user_input):
             return None
         letter_index = ord(user_input) - ord('A')
