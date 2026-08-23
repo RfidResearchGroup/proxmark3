@@ -1500,6 +1500,47 @@ static int CmdTearoff(const char *Cmd) {
     return handle_tearoff(&params, !silent);
 }
 
+static int CmdBwmCharge(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwmcharge",
+                  "Enable or disable BWM battery charging by clearing/setting the\n"
+                  "AW32001E charge-enable bit (CEB, REG01[3]). PM5 only.\n"
+                  _RED_("One-shot:") " the charger watchdog reverts this after ~160 s unless\n"
+                  "serviced, so charging may stop on its own. Use to nudge a top-up.",
+                  "hw bwmcharge          --> enable charging\n"
+                  "hw bwmcharge --off    --> disable charging");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "off", "disable charging (default is enable)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool disable = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    uint8_t payload = disable ? 0 : 1;
+    PrintAndLogEx(INFO, "%s BWM battery charging...", disable ? "Disabling" : "Enabling");
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_CHARGE_EN, &payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_PM5_BWM_CHARGE_EN, &resp, 2500) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "charger did not respond (check BWM present)");
+        return resp.status;
+    }
+    PrintAndLogEx(SUCCESS, "Charging %s. Verify with " _YELLOW_("hw status") ".",
+                  disable ? "disabled" : "enabled");
+    if (disable == false) {
+        PrintAndLogEx(HINT, "Reverts on the charger watchdog (~160 s) if not serviced.");
+    }
+    return PM3_SUCCESS;
+}
+
 static int CmdBwmSetCap(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw bwmsetcap",
@@ -2009,6 +2050,7 @@ static command_t CommandTable[] = {
     {"standalone", CmdStandalone, IfPm3Present, "Start installed standalone mode on device"},
     {"tia", CmdTia, IfPm3Present, "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
     {"bwmsetcap", CmdBwmSetCap, IfPm5, "Set BWM fuel-gauge design capacity (PM5, run once after battery change)"},
+    {"bwmcharge", CmdBwmCharge, IfPm5, "Enable/disable BWM battery charging (PM5, one-shot)"},
     {"tune", CmdTune, IfPm3Lf, "Measure tuning of device antenna"},
     {"decay", CmdDecay, IfPm3Present, "Measure HF antenna decay after field-off"},
     {NULL, NULL, NULL, NULL}

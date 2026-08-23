@@ -196,6 +196,27 @@ static void print_pm5_battery_status(void) {
                      (sysstat & 0x02) ? ", power good" : ", power fail",
                      (sysstat & 0x01) ? ", thermal-reg" : "");
         }
+
+        // Configured charge profile (read-only). Decode tables from AW32001E datasheet V1.4:
+        //   IIN_LIM (REG00[3:0]): 0000=50mA, else 80mA + 30mA*(code-1)  [1111=500mA]
+        //   VIN_DPM (REG00[7:4]): 3880mV + 80mV*code                    [1000=4.52V default]
+        //   ICHG    (REG02[5:0]): 8mA * (code+1)                        [63=512mA]
+        uint8_t reg00 = 0, reg01 = 0, reg02 = 0;
+        if (I2C_BufferReadRaw(&reg00, 1, 0x00, BWM_CHG_ADDR) > 0) {
+            uint8_t iin = reg00 & 0x0F;
+            uint8_t vdpm = (reg00 >> 4) & 0x0F;
+            uint16_t iin_ma = (iin == 0) ? 50 : (80 + 30 * (iin - 1));
+            uint16_t vdpm_mv = 3880 + 80 * vdpm;
+            Dbprintf("  Input limit......... %u mA, VIN_DPM %u.%02u V",
+                     iin_ma, vdpm_mv / 1000, (vdpm_mv % 1000) / 10);
+        }
+        if (I2C_BufferReadRaw(&reg01, 1, 0x01, BWM_CHG_ADDR) > 0) {
+            Dbprintf("  Charge enable....... %s", (reg01 & (1u << 3)) ? _YELLOW_("disabled") : _GREEN_("enabled"));
+        }
+        if (I2C_BufferReadRaw(&reg02, 1, 0x02, BWM_CHG_ADDR) > 0) {
+            uint16_t ichg_ma = 8 * ((reg02 & 0x3F) + 1);
+            Dbprintf("  Charge current...... %u mA", ichg_ma);
+        }
     }
 
     // --- fuel gauge (BQ27427) ---
@@ -259,6 +280,24 @@ static bool bq_read_design_cap(uint16_t *cap) {
     return true;
 }
 
+// Enable or disable battery charging by clearing/setting CEB (REG01[3]:
+// 0 = charge enabled, 1 = charge disabled). Read-modify-write to preserve the
+// other REG01 fields. NOTE: REG01 is watchdog-affected on the AW32001E - this
+// reverts to its default on watchdog expiry (~160 s) unless the watchdog is
+// serviced (REG02[6]=1) or disabled (REG05[6:5]=00), so treat it as a one-shot.
+static bool bwm_charger_set_charge(bool enable) {
+    uint8_t reg01 = 0;
+    if (I2C_BufferReadRaw(&reg01, 1, 0x01, BWM_CHG_ADDR) <= 0) {
+        return false;
+    }
+    if (enable) {
+        reg01 &= ~(1u << 3);   // CEB = 0 -> charge enabled
+    } else {
+        reg01 |= (1u << 3);    // CEB = 1 -> charge disabled
+    }
+    return I2C_BufferWrite(&reg01, 1, 0x01, BWM_CHG_ADDR);
+}
+
 // Program Design Capacity (and matching Design Energy). Idempotent: returns true
 // without a config-update cycle if the value is already correct.
 static bool bwm_gauge_provision_capacity(uint16_t cap_mah) {
@@ -310,6 +349,41 @@ static bool bwm_gauge_provision_capacity(uint16_t cap_mah) {
     do { WaitMS(50); if (!bq_flags(&flags)) return false; }
     while (((flags & 0x0010) != 0) && (++tries < 40));
     return ((flags & 0x0010) == 0);
+}
+
+// Strong override of the weak UnitTestMain() in start.c. Vector() calls UnitTestMain()
+// after ConfigSystemClocks() and before AppMain(); the weak default is empty, so a
+// strong definition here runs at boot and then returns into AppMain() normally.
+//
+// This enables battery charging on the BWM by replicating the charger register writes
+// from at32_unit_test.c:test_bat_charger_only_settings() (upstream RRG values), WITHOUT
+// pulling in that file's unrelated UART-debug / RGB test routines. AW32001E @ 0x93:
+//   REG01[3] CEB      -> 0 : charge enabled
+//   REG02    ICHG     = 0x1F : 256 mA charge current
+//   REG05             = 0x1A : safety timer disabled (matches upstream; note the charger
+//                              watchdog is thus relied upon off - see REG05 handling)
+//   REG03             = 0xE1 : 3 A discharge current
+//   REG0B            = 0x6B : 11 mA pre-charge current
+void UnitTestMain(void); // strong override of the weak stub in start.c
+void UnitTestMain(void) {
+    StartTicks();
+    I2C_init(true);
+    uint8_t v = 0;
+    if (I2C_BufferReadRaw(&v, 1, 0x01, BWM_CHG_ADDR) > 0) {
+        if (v & (1u << 3)) { v &= ~(1u << 3); I2C_BufferWrite(&v, 1, 0x01, BWM_CHG_ADDR); }
+    }
+    // REG02: charge current = 256 mA
+    v = 0x1F;
+    I2C_BufferWrite(&v, 1, 0x02, BWM_CHG_ADDR);
+    // REG03: discharge current = 3 A
+    v = 0xE1;
+    I2C_BufferWrite(&v, 1, 0x03, BWM_CHG_ADDR);
+    // REG05: disable safety timer (upstream behaviour)
+    // v = 0x1A;
+    // I2C_BufferWrite(&v, 1, 0x05, BWM_CHG_ADDR);
+    // REG0B: pre-charge current = 11 mA
+    v = 0x6B;
+    I2C_BufferWrite(&v, 1, 0x0B, BWM_CHG_ADDR);
 }
 #endif // WITH_BWM_STATUS
 
@@ -3889,6 +3963,16 @@ static void PacketReceived(PacketCommandNG *packet) {
             I2C_init(true);
             bool ok = bwm_gauge_provision_capacity(cap);
             reply_ng(CMD_PM5_BWM_SET_CAP, ok ? PM3_SUCCESS : PM3_EFAILED, (uint8_t *)&cap, sizeof(cap));
+            break;
+        }
+        case CMD_PM5_BWM_CHARGE_EN: {
+            // Enable/disable battery charging (clear/set AW32001E CEB, REG01[3]).
+            // Payload: 1 byte, non-zero = enable (default), zero = disable.
+            // One-shot: reverts on the charger watchdog timeout (~160 s).
+            bool enable = (packet->length >= 1) ? (packet->data.asBytes[0] != 0) : true;
+            I2C_init(true);
+            bool ok = bwm_charger_set_charge(enable);
+            reply_ng(CMD_PM5_BWM_CHARGE_EN, ok ? PM3_SUCCESS : PM3_EFAILED, NULL, 0);
             break;
         }
 #endif
