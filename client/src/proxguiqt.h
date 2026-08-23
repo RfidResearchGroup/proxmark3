@@ -97,6 +97,7 @@ class SliderWidget : public QWidget {
  */
 class PictureItem {
   public:
+    PictureItem() = default;
     PictureItem(const QString &t, const QImage &i) : title(t), image(i) {}
     QString title;
     QImage image;
