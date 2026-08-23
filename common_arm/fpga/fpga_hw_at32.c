@@ -276,97 +276,11 @@ void Fpga_print_status(void) {
     Dbprintf("  mode.................... All-In-One");
 }
 
-static void set_tck(bool level) {
-    if (level) {
-        GPIOC->scr = GPIO_PINS_10;
-    } else {
-        GPIOC->clr = GPIO_PINS_10;
-    }
-}
-
-static void set_tms(bool level) {
-    if (level) {
-        GPIOA->scr = GPIO_PINS_15;
-    } else {
-        GPIOA->clr = GPIO_PINS_15;
-    }
-}
-
-static void set_tdi(bool level) {
-    if (level) {
-        GPIOC->scr = GPIO_PINS_12;
-    } else {
-        GPIOC->clr = GPIO_PINS_12;
-    }
-}
-
-static bool get_tdo(void) {
-    return GpioInputStatus(GPIOC, GPIO_PINS_11);
-}
-
-static void set_jtagsel(bool level) {
-    if (level) {
-        GPIOD->scr = GPIO_PINS_2;
-    } else {
-        GPIOD->clr = GPIO_PINS_2;
-    }
-}
-
-// tck输出2mhz的时钟，实测2.01mhz左右，理论上可以稳定使用此方法，只要最终实现的误差在 ±200khz 都没问题
-// 一般只会更慢，不会更快，因为考虑到MCU的架构，主频，编译优化等级之类的，因此最终量产使用前还是得通过示波器测量实际输出频率
-static void tck_2mhz(uint32_t us) {
-    // 2MHz => period = 500ns, half = 250ns
-    // SysTick = 36MHz => 1 tick = 27.78ns
-    // 250ns / 27.78ns ≈ 9 ticks => LOAD = 8 (because 8+1=9)
-    // 8 - 1 = 7, because reserve one SysTick cycle (27.78ns) for loop, IO register operations, and SysTick operations.
-    const uint32_t HALF_PERIOD_TICKS = 7; // for 250ns at 36MHz
-    uint32_t cycles = us * 2; // each us has 2 half-cycles at 2MHz
-
-    // If 'us' is zero, the cycles will also be 0. So we need pulse only one time.
-    if (cycles == 0) {
-        cycles = 1;
-    }
-
-    // Configure SysTick: use AHB/8 = 36MHz
-    SysTick->CTRL = 0; // CLKSOURCE=0 => AHB/8 (if available), no interrupt, disable
-    SysTick->LOAD = HALF_PERIOD_TICKS;
-    SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
-
-    // 等待N个周期，因为我们是2mhz左右的频率，所以最终一次tck脉冲就是500ns，脉冲时间*2就差不多是实际要等待的us时长
-    // 实际上，考虑到如果说执行速度比较慢的情况下，那么可能最终输出的频率达不到2mhz，此时等待的时间只会更长，对于gowin的要求来说，是允许的
-    // 因为高云要求的是持续产生tck时钟多少毫秒，是为了正常驱动flash的擦除过程，一般来说只能长，不能短。
-    while (cycles--) {
-        GPIOC->clr = GPIO_PINS_10; // low
-
-        SysTick->VAL = HALF_PERIOD_TICKS;
-        while ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0) {}
-
-        GPIOC->scr = GPIO_PINS_10; // high
-
-        SysTick->VAL = HALF_PERIOD_TICKS;
-        while ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0) {}
-    }
-}
-
-// 定义fpga的jtag实现
-static gowin_jtag_ops_t gjo = {
-    .delay_ms = SpinDelay,
-    .delay_us = SpinDelayUs,
-    .get_tdo = get_tdo,
-    .set_tck = set_tck,
-    .set_tms = set_tms,
-    .set_tdi = set_tdi,
-    .tck_2m = tck_2mhz,
-    // .dbg_print = Dbprintf, // For debug to print some msg.
-    .set_jtagsel = set_jtagsel,
-};
-
 // 定义fpga的jtag配置信息
 static gowin_config_ctx_t gci = {
     .tx_pos = 0,
     .tx_total = 0,
     .is_cfg_sram = false,
-    .jtag_ops = &gjo,
 };
 
 int FpgaStartConfig(bool configSram, uint32_t fileLength) {
@@ -374,15 +288,8 @@ int FpgaStartConfig(bool configSram, uint32_t fileLength) {
     // TODO DXL: Check the file length is valid in this platform?
     //  if not, return the PM3_EOVFLOW
 
-    // Make sure the FPGA is clocked/powered before we drive its JTAG. Previously
-    // a reader command (e.g. `hf 14a read`) had to be run first to bring the FPGA
-    // up, otherwise `hw fpga config` had nothing to talk to. Do it here instead.
-    FpgaSetup24MHzClk();
-
     // Init jtag hardware link.
     gpio_fpga_download_setup();
-
-    gjo.dbg_printf = Dbprintf; // Debug start
 
     // Reset for restart a new transfer
     gci.tx_pos = 0;
@@ -393,8 +300,6 @@ int FpgaStartConfig(bool configSram, uint32_t fileLength) {
     if (gci.status != GOWIN_JTAG_OK) {
         return PM3_EFAILED;
     }
-
-    gjo.dbg_printf = NULL; // Debug stop
 
     return PM3_SUCCESS;
 }
@@ -433,12 +338,12 @@ void FpgaResetComInterface(void) {
     // Init JTAG link of FPGA to waiting for fpga work status check.
     gpio_fpga_download_setup();
     while (1) {
-        gowin_jtag_status_t status = gowin_jtag_init(&gjo);
+        gowin_jtag_status_t status = gowin_jtag_init();
         if (status == GOWIN_JTAG_OK) {
             break;
         }
         SpinDelay(100); // Wait for 100ms before retrying
         Gpio_LED_B_Inv(); // Show some indication that we are retrying to init JTAG link, which means waiting for FPGA to be ready.
     }
-    gowin_jtag_deinit(&gjo);
+    gowin_jtag_deinit();
 }

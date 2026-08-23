@@ -10,8 +10,80 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "gpio_apis.h"  // GpioInputStatus (via gpio_hw_at32.h under PM5) + GPIOA/GPIOC/GPIOD/GPIO_PINS_*
+#include "ticks_apis.h" // SpinDelay
+#include "dbprint.h"    // Dbprintf
+
 // 是否将调试打印信息编译进当前模块中
 #define DEBUG_GW_JTAG   1
+
+// 毫秒延迟，不要求太高精度
+#define delay_ms(ms)    SpinDelay(ms)
+
+// TODO DXL Move GPIO definitions to a common header file, e.g., config_gpio_proxmark5.h,
+//  and include it here. This will make the code more maintainable and easier to read.
+
+// TCK 电平设置（PC10）
+#define set_tck_high()  (GPIOC->scr = GPIO_PINS_10)
+#define set_tck_low()   (GPIOC->clr = GPIO_PINS_10)
+
+// TMS 电平设置（PA15）
+#define set_tms_high()  (GPIOA->scr = GPIO_PINS_15)
+#define set_tms_low()   (GPIOA->clr = GPIO_PINS_15)
+
+// TDI 电平设置（PC12）
+#define set_tdi_high()  (GPIOC->scr = GPIO_PINS_12)
+#define set_tdi_low()   (GPIOC->clr = GPIO_PINS_12)
+
+// 获取 TDO 电平状态，true 为高，false 为低（PC11）
+#define get_tdo()       GpioInputStatus(GPIOC, GPIO_PINS_11)
+
+// JTAGSEL 引脚电平设置（PD2），若 JTAG 脚复用为普通 IO，则烧录前需拉低 JTAGSEL_N
+#define set_jtagsel_high()  (GPIOD->scr = GPIO_PINS_2)
+#define set_jtagsel_low()   (GPIOD->clr = GPIO_PINS_2)
+
+// 调试打印，受 DEBUG_GW_JTAG 编译开关控制，不再支持运行时开关
+#if DEBUG_GW_JTAG
+#define dbg_printf(...) Dbprintf(__VA_ARGS__)
+#else
+#define dbg_printf(...) ((void)0)
+#endif
+
+// 产生一个时钟周期的 tck 波形（先低后高），半周期约 250ns，即约 2MHz
+#define tck_pulse() \
+    do { \
+        SysTick->LOAD = GW_JTAG_TCK_HALF_PERIOD_TICKS; \
+        SysTick->CTRL = SysTick_CTRL_ENABLE_Msk; \
+        set_tck_low(); \
+        SysTick->VAL = GW_JTAG_TCK_HALF_PERIOD_TICKS; \
+        while ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0) {} \
+        set_tck_high(); \
+        SysTick->VAL = GW_JTAG_TCK_HALF_PERIOD_TICKS; \
+        while ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0) {} \
+    } while (0)
+
+// tck 输出 2mhz 的时钟，持续指定的 us 时长，仅适用于 us > 0 的场景（单脉冲请使用 tck_pulse()）。
+// 实测 2.01mhz 左右，理论上可以稳定使用，误差在 ±200khz 内都可接受。
+// 注意：一般只会更慢不会更快，最终量产使用前仍需用示波器测量实际输出频率。
+#define GW_JTAG_TCK_HALF_PERIOD_TICKS   6 // 250ns @ 36MHz（AHB/8）
+
+#define tck_2m(us) \
+    do { \
+        uint32_t _cycles = (uint32_t)(us) * 2; /* each us has 2 half-cycles at 2MHz */ \
+        SysTick->LOAD = GW_JTAG_TCK_HALF_PERIOD_TICKS; \
+        SysTick->CTRL = SysTick_CTRL_ENABLE_Msk; \
+        while (_cycles) { \
+            set_tck_low(); \
+            (void)SysTick->CTRL; /* Clear COUNTFLAG by reading it */ \
+            SysTick->VAL = GW_JTAG_TCK_HALF_PERIOD_TICKS; \
+            while ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0) {} \
+            set_tck_high(); \
+            (void)SysTick->CTRL; /* Clear COUNTFLAG by reading it */ \
+            SysTick->VAL = GW_JTAG_TCK_HALF_PERIOD_TICKS; \
+            _cycles--; \
+            while ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0) {} \
+        } \
+    } while (0)
 
 typedef enum {
     GOWIN_JTAG_OK = 0U,
@@ -49,48 +121,6 @@ typedef enum {
     GW_FLASH_TYPE_SMIC,         // SMIC 工艺有 ID_GW1NS_2 和 ID_GW1NS_2C，但是我们暂时不打算对接
     GW_FLASH_TYPE_SPI_FLASH,    // 核封了一颗SPI-FLASH或者是只支持外部FLASH
 } gowin_flash_type_t;
-
-typedef struct {
-    /**
-     * 设置TCK电平状态，true为高，false为低。
-     */
-    void (*set_tck)(bool level);
-    /**
-     * 设置TMS电平状态，true为高，false为低。
-     */
-    void (*set_tms)(bool level);
-    /**
-     * 设置TDI电平状态，true为高，false为低。
-     */
-    void (*set_tdi)(bool level);
-    /**
-     * 获取TDO电平状态，true为高，false为低。
-     */
-    bool (*get_tdo)(void);
-    /**
-     * 微秒延迟，不要求太高精度,在 tck_pulse 未实现时，此延时接口作为一个后备方案提供大概500kHZ的TCK时钟输出
-     */
-    void (*delay_us)(int us);
-    /**
-     * 毫秒延迟，不要求太高精度
-     */
-    void (*delay_ms)(int ms);
-    /**
-     * 产生 2mhz 的tck时钟，持续指定的us时长，如果传入参数为0，则只产生一个时钟周期的tck波形
-     * 也就是拉低tck持续半周期 250ns，然后拉高tck持续半周期 250ns
-     * 注意：实际精度不能低于 1.8mhz 和高于 2.2mhz,也就是正负200K的精度都在可接受范围内
-     */
-    void (*tck_2m)(uint32_t us);
-    /**
-     * 可选的实现，如果不实现，则不会输出任何调试信息，并且你可选将当前模块的所有打印信息编译进模块中
-     * 如果你是在资源紧张的平台，则可以通过 DEBUG_GW_JTAG 去除当前模块的所有调试信息
-     */
-    void (*dbg_printf)(const char *fmt, ...);
-    /**
-     * 可选的实现，如果复用了JTAG脚为普通IO，则需要在烧录之前，拉低 JTAGSEL_N 引脚
-     */
-    void (*set_jtagsel)(bool level);
-} gowin_jtag_ops_t;
 
 /**
  * @brief Gowin FPGA Device Status Register (32-bit)
@@ -161,47 +191,43 @@ typedef struct {
     uint32_t tx_pos;            // Current position of data to be sent, in bytes
     uint32_t tx_total;          // Total size of the data to be sent, in bytes
     bool is_cfg_sram;           // true: config sram, false: config flash
-    gowin_jtag_ops_t *jtag_ops; // Pointer to the JTAG operations structure, used for functions during configuration
     gowin_jtag_status_t status; // Status of the current configuration process, used to track errors of platform
 } gowin_config_ctx_t;
 
-gowin_jtag_status_t gowin_jtag_init(gowin_jtag_ops_t *ops);
-void gowin_jtag_deinit(gowin_jtag_ops_t *jtag_ops);
+gowin_jtag_status_t gowin_jtag_init(void);
+void gowin_jtag_deinit(void);
 
 gowin_device_t gowin_jtag_get_device_type(void);
 const char *gowin_jtag_get_device_name(void);
 gowin_flash_type_t gowin_get_flash_type(void);
 uint32_t gowin_jtag_get_idcode(void);
 
-void gowin_jtag_reset(gowin_jtag_ops_t *jtag_ops);
-uint32_t gowin_jtag_read_status(gowin_jtag_ops_t *jtag_ops);
-uint32_t gowin_jtag_read_usercode(gowin_jtag_ops_t *jtag_ops);
-void gowin_jtag_reprogram(gowin_jtag_ops_t *jtag_ops);
-gowin_jtag_status_t gowin_jtag_read_status_reg(gowin_status_reg_t *reg_out, gowin_jtag_ops_t *jtag_ops);
+void gowin_jtag_reset(void);
+uint32_t gowin_jtag_read_status(void);
+uint32_t gowin_jtag_read_usercode(void);
+void gowin_jtag_reprogram(void);
+gowin_jtag_status_t gowin_jtag_read_status_reg(gowin_status_reg_t *reg_out);
 
-gowin_jtag_status_t gowin_jtag_sram_erase(gowin_jtag_ops_t *jtag_ops);
-gowin_jtag_status_t gowin_jtag_sram_config_start(uint32_t *tx_bits_pos, gowin_jtag_ops_t *jtag_ops);
+gowin_jtag_status_t gowin_jtag_sram_erase(void);
+gowin_jtag_status_t gowin_jtag_sram_config_start(uint32_t *tx_bits_pos);
 gowin_jtag_status_t gowin_jtag_sram_config_write(
     uint8_t *data,
     uint32_t data_length,
     uint32_t *tx_bytes_pos,
-    uint32_t tx_bytes_total,
-    gowin_jtag_ops_t *jtag_ops);
-gowin_jtag_status_t gowin_jtag_sram_config_finish(gowin_jtag_ops_t *jtag_ops);
+    uint32_t tx_bytes_total);
+gowin_jtag_status_t gowin_jtag_sram_config_finish(void);
 
-gowin_jtag_status_t gowin_jtag_flash_erase(gowin_jtag_ops_t *jtag_ops);
+gowin_jtag_status_t gowin_jtag_flash_erase(void);
 gowin_jtag_status_t gowin_jtag_flash_config_start(
     uint8_t *xbuf_256,
     uint32_t *tx_bits_pos,
-    bool bg_update,
-    gowin_jtag_ops_t *jtag_ops);
+    bool bg_update);
 gowin_jtag_status_t gowin_jtag_flash_config_write(
     uint8_t *data,
     uint32_t data_length,
     uint32_t *tx_bytes_pos,
-    uint32_t tx_bytes_total,
-    gowin_jtag_ops_t *jtag_ops);
-gowin_jtag_status_t gowin_jtag_flash_config_finish(gowin_jtag_ops_t *jtag_ops);
+    uint32_t tx_bytes_total);
+gowin_jtag_status_t gowin_jtag_flash_config_finish(void);
 
 void gowin_jtag_start_config(gowin_config_ctx_t *cctx);
 void gowin_jtag_config_write(uint8_t *data, uint32_t data_length, gowin_config_ctx_t *cctx);

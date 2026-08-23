@@ -116,80 +116,69 @@ static const device_map_t *get_device_map_by_idcode(void) {
     return NULL;
 }
 
-// 适用于只需要考虑JTAG的时钟速率上限的情况，不可以用于擦除和编程
-static void jtag_pulse_tck(gowin_jtag_ops_t *jtag_ops) {
-    if (!jtag_ops) {
-        return;
+// 设置tap状态机并且产生一次驱动时钟，驱动时钟的速度取决于 tck_pulse() 函数
+static RAMFUNC void jtag_tap_clock(bool tms) {
+    if (tms) {
+        set_tms_high();
+    } else {
+        set_tms_low();
     }
-    if (jtag_ops->tck_2m) {
-        // 如果实现了tck脉冲接口，则优先调用
-        jtag_ops->tck_2m(0);
-        return;
-    }
-    if (!jtag_ops->delay_us) {
-        // delay_us 作为后备方案，如果未实现此后备接口，则通信无法正常执行。
-        return;
-    }
-    // 理想情况下，是 500kHZ
-    jtag_ops->set_tck(0);
-    jtag_ops->delay_us(1);
-    jtag_ops->set_tck(1);
-    jtag_ops->delay_us(1);
-}
-
-// 设置tap状态机并且产生一次驱动时钟，驱动时钟的速度取决于 jtag_pulse_tck() 函数
-static void jtag_tap_clock(bool tms, gowin_jtag_ops_t *jtag_ops) {
-    jtag_ops->set_tms(tms);
-    jtag_pulse_tck(jtag_ops);
+    tck_pulse();
 }
 
 // 从 Run-Test/Idle 进入 Shift-IR（标准 IEEE 1149.1 路径）
-static void jtag_goto_shift_ir(gowin_jtag_ops_t *jtag_ops) {
-    if (!jtag_ops) return;
-    jtag_tap_clock(1, jtag_ops); // -> Select-DR-Scan
-    jtag_tap_clock(1, jtag_ops); // -> Select-IR-Scan
-    jtag_tap_clock(0, jtag_ops); // -> Capture-IR
-    jtag_tap_clock(0, jtag_ops); // -> Shift-IR
+static void jtag_goto_shift_ir(void) {
+    jtag_tap_clock(1); // -> Select-DR-Scan
+    jtag_tap_clock(1); // -> Select-IR-Scan
+    jtag_tap_clock(0); // -> Capture-IR
+    jtag_tap_clock(0); // -> Shift-IR
 }
 
-static void jtag_shift_ir_safe(uint8_t inst, gowin_jtag_ops_t *jtag_ops) {
-    jtag_goto_shift_ir(jtag_ops);
+static void jtag_shift_ir_safe(uint8_t inst) {
+    jtag_goto_shift_ir();
     for (int i = 0; i < 8; i++) {
-        jtag_ops->set_tdi((inst >> i) & 1);
-        jtag_tap_clock(i == 7, jtag_ops); // -> Exit1-IR if is last bit
+        if ((inst >> i) & 1) {
+            set_tdi_high();
+        } else {
+            set_tdi_low();
+        }
+        jtag_tap_clock(i == 7); // -> Exit1-IR if is last bit
     }
     // Exit1-IR -> Update-IR -> Run-Test/Idle
-    jtag_tap_clock(1, jtag_ops); // -> Update-IR
-    jtag_tap_clock(0, jtag_ops); // -> Run-Test/Idle
+    jtag_tap_clock(1); // -> Update-IR
+    jtag_tap_clock(0); // -> Run-Test/Idle
     // Per Gowin spec: ≥3 TCK cycles in Run-Test/Idle after IR load
-    for (int i = 0; i < 6; i++) {
-        jtag_pulse_tck(jtag_ops);
+    for (int i = 0; i < 3; i++) {
+        tck_pulse();
     }
 }
 
 // 从 Run-Test/Idle 进入 Shift-DR（标准 IEEE 1149.1 路径）
-static void jtag_goto_shift_dr(gowin_jtag_ops_t *jtag_ops) {
-    if (!jtag_ops) return;
-    jtag_tap_clock(1, jtag_ops); // -> Select-DR
-    jtag_tap_clock(0, jtag_ops); // -> Capture-DR
-    jtag_tap_clock(0, jtag_ops); // -> Shift-DR
+static void jtag_goto_shift_dr(void) {
+    jtag_tap_clock(1); // -> Select-DR
+    jtag_tap_clock(0); // -> Capture-DR
+    jtag_tap_clock(0); // -> Shift-DR
 }
 
 // 仅用于从LSB开始发送的数据
-static void jtag_shift_dr_safe(const uint8_t *tx, uint8_t *rx, uint32_t bits, gowin_jtag_ops_t *jtag_ops) {
+static void jtag_shift_dr_safe(const uint8_t *tx, uint8_t *rx, uint32_t bits) {
     // From Run-Test/Idle -> Select-DR-Scan -> Capture-DR -> Shift-DR
-    jtag_goto_shift_dr(jtag_ops);
+    jtag_goto_shift_dr();
 
     uint8_t byte = 0;
     for (uint32_t i = 0; i < bits; i++) {
         int byte_idx = i / 8;
         int bit_idx = i % 8;
         bool tdi = tx ? ((tx[byte_idx] >> bit_idx) & 1) : false;
-        jtag_ops->set_tdi(tdi);
-        jtag_tap_clock(i == bits - 1, jtag_ops); // -> Exit1-DR if is last bit
+        if (tdi) {
+            set_tdi_high();
+        } else {
+            set_tdi_low();
+        }
+        jtag_tap_clock(i == bits - 1); // -> Exit1-DR if is last bit
 
         if (rx) {
-            bool tdo = jtag_ops->get_tdo();
+            bool tdo = get_tdo();
             byte |= (tdo << bit_idx);
             if (bit_idx == 7 || i == bits - 1) {
                 rx[byte_idx] = byte;
@@ -199,15 +188,32 @@ static void jtag_shift_dr_safe(const uint8_t *tx, uint8_t *rx, uint32_t bits, go
     }
 
     // Exit1-DR -> Update-DR -> Run-Test/Idle
-    jtag_tap_clock(1, jtag_ops); // -> Update-DR
-    jtag_tap_clock(0, jtag_ops); // -> Run-Test/Idle
+    jtag_tap_clock(1); // -> Update-DR
+    jtag_tap_clock(0); // -> Run-Test/Idle
 }
 
+#define jtag_shift_dr_fast() \
+    do { \
+        set_tdi_low(); \
+        set_tms_high(); \
+        tck_pulse(); /* -> Select-DR */ \
+        set_tms_low(); \
+        tck_pulse(); /* -> Capture-DR */ \
+        tck_pulse(); /* -> Shift-DR */ \
+        for (uint8_t _i = 0; _i < 31; _i++) { \
+            tck_pulse(); \
+        } \
+        set_tms_high(); \
+        tck_pulse(); /* 32 */ \
+        /* Exit1-DR -> Update-DR -> Run-Test/Idle */ \
+        tck_pulse(); /* -> Update-DR */ \
+        set_tms_low(); \
+        tck_pulse(); /* -> Run-Test/Idle */ \
+    } while (0)
+
 #if DEBUG_GW_JTAG
-static void print_gowin_status(gowin_status_reg_t *status, gowin_jtag_ops_t *jtag_ops) {
-    if (!jtag_ops) return;
-    if (!jtag_ops->dbg_printf) return;
-    jtag_ops->dbg_printf("Gowin Status Register (raw = 0x%08X):", status->raw);
+static void print_gowin_status(gowin_status_reg_t *status) {
+    dbg_printf("Gowin Status Register (raw = 0x%08X):", status->raw);
     /*
     jtag_ops->dbg_print("  crc_error            : %u  // CRC Error Flag",            status->bits.crc_error);
     jtag_ops->dbg_print("  bad_command_error    : %u  // Bad Command Error Flag",    status->bits.bad_command_error);
@@ -219,7 +225,7 @@ static void print_gowin_status(gowin_status_reg_t *status, gowin_jtag_ops_t *jta
 
     */
 
-    jtag_ops->dbg_printf("  edit_mode            : %u  // Edit Mode Flag", status->bits.edit_mode);
+    dbg_printf("  edit_mode            : %u  // Edit Mode Flag", status->bits.edit_mode);
 
     /*
 
@@ -231,10 +237,10 @@ static void print_gowin_status(gowin_status_reg_t *status, gowin_jtag_ops_t *jta
 
     */
 
-    jtag_ops->dbg_printf("  done_final           : %u  // Done Final (1=success)", status->bits.done_final);
-    jtag_ops->dbg_printf("  security_final       : %u  // Security Final (1=secured)", status->bits.security_final);
-    jtag_ops->dbg_printf("  ready                : %u  // Ready (1=normal)", status->bits.ready);
-    jtag_ops->dbg_printf("  por                  : %u  // POR (1=normal)", status->bits.por);
+    dbg_printf("  done_final           : %u  // Done Final (1=success)", status->bits.done_final);
+    dbg_printf("  security_final       : %u  // Security Final (1=secured)", status->bits.security_final);
+    dbg_printf("  ready                : %u  // Ready (1=normal)", status->bits.ready);
+    dbg_printf("  por                  : %u  // POR (1=normal)", status->bits.por);
     /*
     jtag_ops->dbg_print("  flash_lock           : %u  // Flash Lock (1=locked)",     status->bits.flash_lock);
     jtag_ops->dbg_print("  reserved_18_31       : %u  // Reserved bits [31:18] (should be 0)", status->bits.reserved_18_31);
@@ -242,41 +248,33 @@ static void print_gowin_status(gowin_status_reg_t *status, gowin_jtag_ops_t *jta
 }
 #endif
 
-static uint32_t gowin_jtag_read_idcode_u32(gowin_jtag_ops_t *jtag_ops) {
+static uint32_t gowin_jtag_read_idcode_u32(void) {
     uint8_t buf[4] = {0};
-    jtag_shift_ir_safe(INST_IDCODE, jtag_ops);
-    jtag_shift_dr_safe(NULL, buf, 32, jtag_ops);
+    jtag_shift_ir_safe(INST_IDCODE);
+    jtag_shift_dr_safe(NULL, buf, 32);
     return (buf[3] << 24) | (buf[2] << 16) | (buf[1] << 8) | buf[0];
 }
 
 /**
- * 根据传入的JTAG硬件实现初始化jtag接口
+ * 初始化 jtag 接口
  *
- * @param ops 此库会保存此引用，因此不可以在函数栈内进行非static定义，否则此init函数退出后，ops将会变为野指针导致后续操作随机跑飞
  * @return 初始化成功时，返回 GOWIN_JTAG_OK
  */
-gowin_jtag_status_t gowin_jtag_init(gowin_jtag_ops_t *ops) {
-    if (!ops || !ops->tck_2m) {
-        return GOWIN_JTAG_ERROR_NULL_POINTER;
-    }
-    // 如果实现了 JTAGSEL 引脚的设置函数，则需要在启动JTAG操作之前，拉低 JTAGSEL 引脚，确保取消FPGA的JTAG复用
-    if (ops->set_jtagsel) {
-        ops->set_jtagsel(false);
-    }
+gowin_jtag_status_t gowin_jtag_init(void) {
+    // 启动JTAG操作之前，拉低 JTAGSEL 引脚，确保取消FPGA的JTAG复用
+    set_jtagsel_low();
     // 重置TAP状态机，确保和设备从 Run-Test/Idle 位置开始通信
-    gowin_jtag_reset(ops);
+    gowin_jtag_reset();
     // 读取IDCODE，并且缓存到全局域
-    cached_idcode = gowin_jtag_read_idcode_u32(ops);
+    cached_idcode = gowin_jtag_read_idcode_u32();
     const device_map_t *dm = get_device_map_by_idcode();
     detected_device = dm ? dm->device : GW_DEVICE_UNKNOWN;
     return detected_device == GW_DEVICE_UNKNOWN ? GOWIN_JTAG_ERROR_INVALID_IDCODE : GOWIN_JTAG_OK;
 }
 
-void gowin_jtag_deinit(gowin_jtag_ops_t *jtag_ops) {
+void gowin_jtag_deinit(void) {
     // 拉高JTAGSEL脚，恢复JTAG脚复用为GPIO
-    if (jtag_ops->set_jtagsel) {
-        jtag_ops->set_jtagsel(true);
-    }
+    set_jtagsel_high();
 }
 
 gowin_device_t gowin_jtag_get_device_type(void) {
@@ -297,70 +295,65 @@ uint32_t gowin_jtag_get_idcode(void) {
     return cached_idcode;
 }
 
-void gowin_jtag_reset(gowin_jtag_ops_t *jtag_ops) {
-    if (!jtag_ops) return;
-    jtag_ops->set_tms(1);
+void gowin_jtag_reset(void) {
+    set_tms_high();
     for (int i = 0; i < 6; i++) {
-        jtag_pulse_tck(jtag_ops); // 替代原来的 set_tck toggle
+        tck_pulse(); // 替代原来的 set_tck toggle
     }
     // Enter Run-Test/Idle explicitly
-    jtag_tap_clock(0, jtag_ops);
+    jtag_tap_clock(0);
 }
 
-static uint32_t gowin_jtag_read_status_u32(gowin_jtag_ops_t *jtag_ops) {
-    jtag_shift_ir_safe(INST_STATUS, jtag_ops);
+static uint32_t gowin_jtag_read_status_u32(void) {
+    jtag_shift_ir_safe(INST_STATUS);
     uint8_t buf[4] = {0};
-    jtag_shift_dr_safe(NULL, buf, 32, jtag_ops);
+    jtag_shift_dr_safe(NULL, buf, 32);
     return (buf[3] << 24) | (buf[2] << 16) | (buf[1] << 8) | buf[0];
 }
 
-uint32_t gowin_jtag_read_status(gowin_jtag_ops_t *jtag_ops) {
-    if (!jtag_ops) return 0;
-    return gowin_jtag_read_status_u32(jtag_ops);
+uint32_t gowin_jtag_read_status(void) {
+    return gowin_jtag_read_status_u32();
 }
 
-uint32_t gowin_jtag_read_usercode(gowin_jtag_ops_t *jtag_ops) {
-    if (!jtag_ops) return 0;
-    jtag_shift_ir_safe(INST_USERCODE, jtag_ops);
+uint32_t gowin_jtag_read_usercode(void) {
+    jtag_shift_ir_safe(INST_USERCODE);
     uint8_t buf[4] = {0};
-    jtag_shift_dr_safe(NULL, buf, 32, jtag_ops);
+    jtag_shift_dr_safe(NULL, buf, 32);
     return (buf[3] << 24) | (buf[2] << 16) | (buf[1] << 8) | buf[0];
 }
 
-void gowin_jtag_reprogram(gowin_jtag_ops_t *jtag_ops) {
-    if (!jtag_ops) return;
-    jtag_shift_ir_safe(INST_REPROGRAM, jtag_ops);
-    jtag_shift_ir_safe(INST_NOOP, jtag_ops);
-    jtag_ops->delay_ms(200);
+void gowin_jtag_reprogram(void) {
+    jtag_shift_ir_safe(INST_REPROGRAM);
+    jtag_shift_ir_safe(INST_NOOP);
+    delay_ms(200);
 }
 
-gowin_jtag_status_t gowin_jtag_read_status_reg(gowin_status_reg_t *reg_out, gowin_jtag_ops_t *jtag_ops) {
-    if (!jtag_ops) return GOWIN_JTAG_ERROR_NULL_POINTER;
+gowin_jtag_status_t gowin_jtag_read_status_reg(gowin_status_reg_t *reg_out) {
     if (reg_out) {
-        reg_out->raw = gowin_jtag_read_status_u32(jtag_ops);
+        reg_out->raw = gowin_jtag_read_status_u32();
     }
 #if DEBUG_GW_JTAG
-    print_gowin_status(reg_out, jtag_ops);
+    print_gowin_status(reg_out);
 #endif
     return GOWIN_JTAG_OK;
 }
 
-static gowin_jtag_status_t gowin_jtag_cfg_enable(bool enable, gowin_jtag_ops_t *jtag_ops) {
+static gowin_jtag_status_t gowin_jtag_cfg_enable(bool enable) {
     gowin_jtag_status_t status;
     gowin_status_reg_t status_reg;
 
     // send command
     if (enable) {
-        jtag_shift_ir_safe(INST_CONFIG_ENABLE, jtag_ops);
+        jtag_shift_ir_safe(INST_CONFIG_ENABLE);
     } else {
-        jtag_shift_ir_safe(INST_CONFIG_DISABLE, jtag_ops);
-        jtag_shift_ir_safe(INST_NOOP, jtag_ops);
+        jtag_shift_ir_safe(INST_CONFIG_DISABLE);
+        jtag_shift_ir_safe(INST_NOOP);
     }
 
     // check status and waiting for edit mode enter.
     uint32_t retry = 100000; // timeout
     while (retry--) {
-        status = gowin_jtag_read_status_reg(&status_reg, jtag_ops);
+        status = gowin_jtag_read_status_reg(&status_reg);
         if (status != GOWIN_JTAG_OK) {
             return status;
         }
@@ -375,20 +368,19 @@ static gowin_jtag_status_t gowin_jtag_cfg_enable(bool enable, gowin_jtag_ops_t *
     return GOWIN_JTAG_ERROR_ENABLE_CFG;
 }
 
-gowin_jtag_status_t gowin_jtag_sram_config_start(uint32_t *tx_bits_pos, gowin_jtag_ops_t *jtag_ops) {
-    if (!jtag_ops) return GOWIN_JTAG_ERROR_NULL_POINTER;
+gowin_jtag_status_t gowin_jtag_sram_config_start(uint32_t *tx_bits_pos) {
     if (detected_device == GW_DEVICE_UNKNOWN) return GOWIN_JTAG_ERROR_INVALID_IDCODE;
     // TAP 复位，非常重要，让FPGA的TAP的状态机回到 Run-Test-Idle 状态
-    gowin_jtag_reset(jtag_ops);
+    gowin_jtag_reset();
     // 无论如何，总是在启动配置SRAM的时候，首先擦除SRAM
-    gowin_jtag_status_t status = gowin_jtag_sram_erase(jtag_ops);
+    gowin_jtag_status_t status = gowin_jtag_sram_erase();
     if (status != GOWIN_JTAG_OK) {
         return status;
     }
-    jtag_shift_ir_safe(INST_CONFIG_ENABLE, jtag_ops); // 发送 ConfigEnable 指令 0x15
-    jtag_shift_ir_safe(INST_ADDR_INIT, jtag_ops); // 发送 Address Initialize 指令 0x12
-    jtag_shift_ir_safe(INST_TRANSFER_CFG, jtag_ops); // 发送 Transfer Configuration Data 指令 0x17
-    jtag_goto_shift_dr(jtag_ops); // 移动状态到 Shift-DR（数据寄存器）
+    jtag_shift_ir_safe(INST_CONFIG_ENABLE); // 发送 ConfigEnable 指令 0x15
+    jtag_shift_ir_safe(INST_ADDR_INIT); // 发送 Address Initialize 指令 0x12
+    jtag_shift_ir_safe(INST_TRANSFER_CFG); // 发送 Transfer Configuration Data 指令 0x17
+    jtag_goto_shift_dr(); // 移动状态到 Shift-DR（数据寄存器）
 
     // 将 Bitstream Data 从最高位开始（MSB），逐位发送，发送全部数据流文件内容，并回到 Run-Test-Idle状态
     // 注：在配置接口中进行此操作，对于配置接口来说，此操作可以分多步执行，一点点发送文件知道全部发送完毕
@@ -398,8 +390,8 @@ gowin_jtag_status_t gowin_jtag_sram_config_start(uint32_t *tx_bits_pos, gowin_jt
 }
 
 gowin_jtag_status_t gowin_jtag_sram_config_write(uint8_t *data, uint32_t data_length, uint32_t *tx_bytes_pos,
-                                                 uint32_t tx_bytes_total, gowin_jtag_ops_t *jtag_ops) {
-    if (!jtag_ops || !data) return GOWIN_JTAG_ERROR_NULL_POINTER;
+                                                 uint32_t tx_bytes_total) {
+    if (!data) return GOWIN_JTAG_ERROR_NULL_POINTER;
     if (detected_device == GW_DEVICE_UNKNOWN) return GOWIN_JTAG_ERROR_INVALID_IDCODE;
 
     // 将 Bitstream Data 从最高位开始（MSB），逐位发送，发送全部数据流文件内容，并回到 Run-Test-Idle状态
@@ -407,14 +399,18 @@ gowin_jtag_status_t gowin_jtag_sram_config_write(uint8_t *data, uint32_t data_le
         // Send byte
         for (uint8_t j = 0; j < 8; j++) {
             // Send bits
-            jtag_ops->set_tdi(data[i] >> (7 - j) & 0x01); // MSB first
+            if ((data[i] >> (7 - j)) & 0x01) {
+                set_tdi_high();
+            } else {
+                set_tdi_low();
+            }
             if (j == 7) {
                 // Increment tx_bytes_pos if one byte transfer finish.
                 (*tx_bytes_pos)++;
                 // -> Exit1-DR if is last bit and is last byte
-                jtag_tap_clock(*tx_bytes_pos == tx_bytes_total, jtag_ops);
+                jtag_tap_clock(*tx_bytes_pos == tx_bytes_total);
             } else {
-                jtag_tap_clock(0, jtag_ops); // One clock, no Exit1-DR
+                jtag_tap_clock(0); // One clock, no Exit1-DR
             }
         }
     }
@@ -422,44 +418,42 @@ gowin_jtag_status_t gowin_jtag_sram_config_write(uint8_t *data, uint32_t data_le
     return GOWIN_JTAG_OK;
 }
 
-gowin_jtag_status_t gowin_jtag_sram_config_finish(gowin_jtag_ops_t *jtag_ops) {
-    if (!jtag_ops) return GOWIN_JTAG_ERROR_NULL_POINTER;
-    jtag_shift_ir_safe(INST_CONFIG_DISABLE, jtag_ops);
-    jtag_shift_ir_safe(INST_NOOP, jtag_ops);
+gowin_jtag_status_t gowin_jtag_sram_config_finish(void) {
+    jtag_shift_ir_safe(INST_CONFIG_DISABLE);
+    jtag_shift_ir_safe(INST_NOOP);
 
     // SRAM 写完后等待 60ms, 以待 status code 刷新
-    jtag_ops->delay_ms(60);
+    delay_ms(60);
 
     // 记得，一定要重置状态机，让fpga回到 Run-Test/Idle 的状态，不然新固件不启动
-    gowin_jtag_reset(jtag_ops);
+    gowin_jtag_reset();
 
     return GOWIN_JTAG_OK;
 }
 
-gowin_jtag_status_t gowin_jtag_sram_erase(gowin_jtag_ops_t *jtag_ops) {
+gowin_jtag_status_t gowin_jtag_sram_erase(void) {
     const device_map_t *dm = get_device_map_by_idcode();
 
     if (!dm) return GOWIN_JTAG_ERROR_NULL_POINTER;
-    if (!jtag_ops) return GOWIN_JTAG_ERROR_NULL_POINTER;
 
-    jtag_shift_ir_safe(INST_CONFIG_ENABLE, jtag_ops);
-    jtag_shift_ir_safe(INST_SRAM_ERASE, jtag_ops);
-    jtag_shift_ir_safe(INST_NOOP, jtag_ops);
+    jtag_shift_ir_safe(INST_CONFIG_ENABLE);
+    jtag_shift_ir_safe(INST_SRAM_ERASE);
+    jtag_shift_ir_safe(INST_NOOP);
 
-    jtag_ops->tck_2m(dm->timing.sram_erase_ms * 1000);
-    // jtag_ops->delay_ms(dm->timing.sram_erase_ms);
+    tck_2m(dm->timing.sram_erase_ms * 1000);
+    // delay_ms(dm->timing.sram_erase_ms);
 
-    jtag_shift_ir_safe(INST_SRAM_ERASE_DONE, jtag_ops);
-    jtag_shift_ir_safe(INST_NOOP, jtag_ops);
-    jtag_shift_ir_safe(INST_CONFIG_DISABLE, jtag_ops);
-    jtag_shift_ir_safe(INST_NOOP, jtag_ops);
+    jtag_shift_ir_safe(INST_SRAM_ERASE_DONE);
+    jtag_shift_ir_safe(INST_NOOP);
+    jtag_shift_ir_safe(INST_CONFIG_DISABLE);
+    jtag_shift_ir_safe(INST_NOOP);
 
     return GOWIN_JTAG_OK;
 }
 
 // readout status and check POR & VLD
-static gowin_jtag_status_t gowin_check_status_gw1n(gowin_status_reg_t *reg_out, gowin_jtag_ops_t *jtag_ops) {
-    gowin_jtag_read_status_reg(reg_out, jtag_ops);
+static gowin_jtag_status_t gowin_check_status_gw1n(gowin_status_reg_t *reg_out) {
+    gowin_jtag_read_status_reg(reg_out);
     if (!reg_out->bits.vld) {
         return GOWIN_JTAG_ERROR_VLD_STATUS;
     }
@@ -470,8 +464,8 @@ static gowin_jtag_status_t gowin_check_status_gw1n(gowin_status_reg_t *reg_out, 
 }
 
 // 读出并且检查是否擦除成功，此函数仅用于gw1n系列
-static gowin_jtag_status_t gowin_check_erase_gw1n(gowin_status_reg_t *reg_out, gowin_jtag_ops_t *jtag_ops) {
-    gowin_jtag_read_status_reg(reg_out, jtag_ops);
+static gowin_jtag_status_t gowin_check_erase_gw1n(gowin_status_reg_t *reg_out) {
+    gowin_jtag_read_status_reg(reg_out);
     // 不检查 Security Final 位
     if (reg_out->bits.vld && reg_out->bits.por && reg_out->bits.ready && reg_out->bits.done_final) {
         return GOWIN_JTAG_ERROR_ERASE_FAIL;
@@ -479,10 +473,9 @@ static gowin_jtag_status_t gowin_check_erase_gw1n(gowin_status_reg_t *reg_out, g
     return GOWIN_JTAG_OK;
 }
 
-gowin_jtag_status_t gowin_jtag_flash_erase(gowin_jtag_ops_t *jtag_ops) {
+gowin_jtag_status_t gowin_jtag_flash_erase(void) {
     gowin_status_reg_t status_reg;
 
-    if (!jtag_ops) return GOWIN_JTAG_ERROR_NULL_POINTER;
     if (detected_device == GW_DEVICE_UNKNOWN) return GOWIN_JTAG_ERROR_INVALID_IDCODE;
 
     const device_map_t *dm = get_device_map_by_idcode();
@@ -490,57 +483,70 @@ gowin_jtag_status_t gowin_jtag_flash_erase(gowin_jtag_ops_t *jtag_ops) {
         return GOWIN_JTAG_ERROR_INVALID_IDCODE;
     }
 
+    GPIOA->scr = GPIO_PINS_2; // TODO DXL
+
     // 读一下状态值，确认当前没问题
-    gowin_jtag_status_t api_status = gowin_check_status_gw1n(&status_reg, jtag_ops);
+    gowin_jtag_status_t api_status = gowin_check_status_gw1n(&status_reg);
     if (api_status != GOWIN_JTAG_OK) {
         return api_status;
     }
 
-    // if (jtag_ops->dbg_print) jtag_ops->dbg_print("m_flash_bg_update = %d", m_flash_bg_update);
+    // if (dbg_printf) dbg_printf("m_flash_bg_update = %d", m_flash_bg_update);
 
     // 如果不是背景烧录的话，就得关注 done_final 位，如果 done_final位是高的，就得清除SRAM，否则不需要清除
     //  因为在背景烧录的情况下，我们仍需要保留SRAM中的FPGA固件，使其正常运行，更新操作只会操作FLASH，不会导致SRAM被覆盖，因此不会中断服务
     if (m_flash_bg_update == false && status_reg.bits.done_final) {
         // Do sram erase
-        api_status = gowin_jtag_sram_erase(jtag_ops);
+        api_status = gowin_jtag_sram_erase();
         if (api_status != GOWIN_JTAG_OK) {
             return api_status;
         }
         // Verify for erase sram result
-        api_status = gowin_check_erase_gw1n(&status_reg, jtag_ops);
+        api_status = gowin_check_erase_gw1n(&status_reg);
         if (api_status != GOWIN_JTAG_OK) {
             return api_status;
         }
-        if (jtag_ops->dbg_printf) jtag_ops->dbg_printf("erase the SRAM is finish, next step erase the FLASH");
+        dbg_printf("erase the SRAM is finish, next step erase the FLASH");
     }
 
     // 擦除过程，FLASH工艺不同，所进行的操作也不同
-    gowin_jtag_cfg_enable(true, jtag_ops);
+    api_status = gowin_jtag_cfg_enable(true);
+    if (api_status != GOWIN_JTAG_OK) {
+        return api_status;
+    }
 
-    jtag_shift_ir_safe(INST_EFLASH_ERASE, jtag_ops); // 发送内嵌FLASH的擦除指令 0x75
+    jtag_shift_ir_safe(INST_EFLASH_ERASE); // 发送内嵌FLASH的擦除指令 0x75
+
+    GPIOA->clr = GPIO_PINS_2; // TODO DXL
+
     if (dm->flash_type == GW_FLASH_TYPE_HL) {
         for (int i = 0; i < 65; i++) {
             // H工艺要求重复此步骤65次，这是手册要求的
             // 移动状态到 Shift-DR（数据寄存器），并且产生32个时钟（TDI保持低电平）
-            jtag_shift_dr_safe(NULL, NULL, 32, jtag_ops);
+            jtag_shift_dr_fast();
         }
-        jtag_ops->tck_2m(95 * 1000); // H 工艺要求后续在 Run-Test-Idle 状态下持续产生时钟95ms
-        // if (jtag_ops->dbg_print) jtag_ops->dbg_print("erase for GW_FLASH_TYPE_HL");
+        tck_2m(95 * 1000); // H 工艺要求后续在 Run-Test-Idle 状态下持续产生时钟95ms
+        dbg_printf("erase for GW_FLASH_TYPE_HL");
     }
     if (dm->flash_type == GW_FLASH_TYPE_TSMC) {
-        jtag_shift_dr_safe(NULL, NULL, 32, jtag_ops); // T 工艺只要求产生一次32bit的输出传输时钟
-        jtag_ops->tck_2m(150 * 1000); // T 工艺要求后续在 Run-Test-Idle 状态下持续产生时钟 120-150 ms
-        // if (jtag_ops->dbg_print) jtag_ops->dbg_print("erase for GW_FLASH_TYPE_TSMC");
+        jtag_shift_dr_fast(); // T 工艺只要求产生一次32bit的输出传输时钟
+        tck_2m(150 * 1000); // T 工艺要求后续在 Run-Test-Idle 状态下持续产生时钟 120-150 ms
+        dbg_printf("erase for GW_FLASH_TYPE_TSMC");
     }
 
-    gowin_jtag_cfg_enable(false, jtag_ops);
+    GPIOA->scr = GPIO_PINS_2; // TODO DXL
+
+    api_status = gowin_jtag_cfg_enable(false);
+    if (api_status != GOWIN_JTAG_OK) {
+        return api_status;
+    }
 
     // 官方的代码里，H工艺在发送了 0x02 之后延迟了 500ms才继续干活，T工艺则是200ms
     if (dm->flash_type == GW_FLASH_TYPE_HL) {
-        jtag_ops->delay_ms(500);
+        delay_ms(500);
         if (m_flash_bg_update == false) {
             // 如果背景烧录使能，则不需要检查任何状态码相关的异常，因为这个时候固件是在正常运行的
-            api_status = gowin_check_erase_gw1n(&status_reg, jtag_ops);
+            api_status = gowin_check_erase_gw1n(&status_reg);
             if (api_status != GOWIN_JTAG_OK) {
                 // 擦除失败了，直接报错
                 return api_status;
@@ -548,12 +554,12 @@ gowin_jtag_status_t gowin_jtag_flash_erase(gowin_jtag_ops_t *jtag_ops) {
         }
     }
     if (dm->flash_type == GW_FLASH_TYPE_TSMC) {
-        jtag_ops->delay_ms(200);
+        delay_ms(200);
         if (m_flash_bg_update == false) {
             // 如果背景烧录使能，则不可以触发重新配置，否则会导致被清空的FLASH的数据加载到SRAM覆盖正在运行的固件
-            gowin_jtag_reprogram(jtag_ops);
+            gowin_jtag_reprogram();
             // 读取固件重新配置的结果，理论上应当是要停止运行的，非done和ready状态
-            api_status = gowin_check_erase_gw1n(&status_reg, jtag_ops);
+            api_status = gowin_check_erase_gw1n(&status_reg);
             if (api_status != GOWIN_JTAG_OK) {
                 // 擦除失败了，直接报错
                 return api_status;
@@ -565,8 +571,7 @@ gowin_jtag_status_t gowin_jtag_flash_erase(gowin_jtag_ops_t *jtag_ops) {
 }
 
 gowin_jtag_status_t gowin_jtag_flash_config_start(uint8_t *xbuf_256, uint32_t *tx_bits_pos,
-                                                  bool bg_update, gowin_jtag_ops_t *jtag_ops) {
-    if (!jtag_ops) return GOWIN_JTAG_ERROR_NULL_POINTER;
+                                                  bool bg_update) {
     if (detected_device == GW_DEVICE_UNKNOWN) return GOWIN_JTAG_ERROR_INVALID_IDCODE;
 
     *tx_bits_pos = 0; // 在此处进行传输的比特流位置的重置
@@ -575,9 +580,9 @@ gowin_jtag_status_t gowin_jtag_flash_config_start(uint8_t *xbuf_256, uint32_t *t
     m_flash_xpage_pos = 0; // 重置xpage的缓存位置，也就是将当前xpage的buf的有效字节数量归零
 
     // TAP 复位，非常重要，让FPGA的TAP的状态机回到 Run-Test-Idle 状态
-    gowin_jtag_reset(jtag_ops);
+    gowin_jtag_reset();
     // 无论如何，总是在启动配置FLASH的时候，首先擦除FLASH
-    gowin_jtag_status_t status = gowin_jtag_flash_erase(jtag_ops);
+    gowin_jtag_status_t status = gowin_jtag_flash_erase();
     if (status != GOWIN_JTAG_OK) {
         return status;
     }
@@ -585,38 +590,40 @@ gowin_jtag_status_t gowin_jtag_flash_config_start(uint8_t *xbuf_256, uint32_t *t
     return GOWIN_JTAG_OK;
 }
 
-static void gowin_jtag_flash_config_xpage(const uint8_t data[256], uint32_t page_index, gowin_jtag_ops_t *jtag_ops) {
+static void gowin_jtag_flash_config_xpage(const uint8_t data[256], uint32_t page_index) {
     const device_map_t *dm = get_device_map_by_idcode();
 
-    jtag_shift_ir_safe(INST_CONFIG_ENABLE, jtag_ops); // 发送配置使能指令 0x15
-    jtag_shift_ir_safe(INST_EF_PROGRAM, jtag_ops); // 发送写内部FLASH指令 0x71
+    jtag_shift_ir_safe(INST_CONFIG_ENABLE); // 发送配置使能指令 0x15
+    jtag_shift_ir_safe(INST_EF_PROGRAM); // 发送写内部FLASH指令 0x71
 
     // 根据手册描述，在编程的页面地址大于0时，需要等待16us
     if (page_index > 0) {
-        jtag_ops->tck_2m(16);
+        tck_2m(16);
     }
 
     // 地址数据格式共 32bits，其中低 6 位保留，例如地址为 b’00010011(0x13)时，写入的地
     // 址为 b’ 00000000000000000000010011000000，该地址数据遵循 LSB 方式写入，最后一个 bit 跳出 Shift-DR。
     uint32_t addr = (page_index << 6) & 0xFFFFFFC0;
     uint8_t addr_bytes[4] = {addr >> 0, addr >> 8, addr >> 16, addr >> 24};
-    jtag_shift_dr_safe(addr_bytes, NULL, 32, jtag_ops);
+    jtag_shift_dr_safe(addr_bytes, NULL, 32);
     // 在地址传输完毕之后，也需要保持TCK时钟并且等待一段时间
-    jtag_ops->tck_2m(16);
+    tck_2m(16);
 
     // 开始编程Y-PAGE，固定64个，总数据字节长度为 256 也就是一个 X-PAGE 的大小
     for (int y = 0; y < 64; y++) {
         const uint8_t *ypage = &data[y * 4];
         // 数据从 Configuration Data 取高位 4Bytes，在 Shift-DR 写数据时要从最低位开始写入（LSB）。
         uint8_t tx[4] = {ypage[3], ypage[2], ypage[1], ypage[0]};
-        jtag_shift_dr_safe(tx, NULL, 32, jtag_ops);
+        jtag_shift_dr_safe(tx, NULL, 32);
         // 每次写完一个 Y-page, GW1N(Z)-2/4/6/9 系列要求 Run-Test 13-15μs，GW1N-2(C)系列要求 Run-Test 30-35μs，其他系列器件不需要
-        jtag_ops->tck_2m(dm->timing.y_page_w_wait_us);
+        if (dm->timing.y_page_w_wait_us) {
+            tck_2m(dm->timing.y_page_w_wait_us);
+        }
     }
 
     // 整个 X-PAGE 编程完成了，按照手册描述：
     //  GW1N-1(S)器件需要执行 2400μs 时长的时钟，GW1N(Z)-2/4/6/9 系列器件需要执行 6μs 时长的时钟，其他系列器件不需要额外时钟。
-    jtag_ops->tck_2m(dm->timing.x_page_w_wait_us);
+    tck_2m(dm->timing.x_page_w_wait_us);
 }
 
 // 给数据源的头部替换为指定的保留数据，根据官方FAE的描述，可以放心替换，头部有预留字节是给某些配置用的
@@ -652,8 +659,8 @@ static void gowin_pattern_replace(uint8_t *data, const uint8_t type) {
 }
 
 gowin_jtag_status_t gowin_jtag_flash_config_write(uint8_t *data, uint32_t data_length, uint32_t *tx_bytes_pos,
-                                                  uint32_t tx_bytes_total, gowin_jtag_ops_t *jtag_ops) {
-    if (!jtag_ops || !data) return GOWIN_JTAG_ERROR_NULL_POINTER;
+                                                  uint32_t tx_bytes_total) {
+    if (!data) return GOWIN_JTAG_ERROR_NULL_POINTER;
     if (detected_device == GW_DEVICE_UNKNOWN) return GOWIN_JTAG_ERROR_INVALID_IDCODE;
     if (m_flash_xpage_buf == NULL) return GOWIN_JTAG_ERROR_NULL_POINTER;
 
@@ -689,14 +696,14 @@ gowin_jtag_status_t gowin_jtag_flash_config_write(uint8_t *data, uint32_t data_l
     // 完事儿了开始写X-PAGE，我们有两个BUF，一个是256大小的xbuf暂存区，一个是外部传入的数据源，
     // 我们优先把xbuf暂存区给发出去（如果里面有数据的话）
     if (m_flash_xpage_pos > 0) {
-        gowin_jtag_flash_config_xpage(m_flash_xpage_buf, page_index, jtag_ops);
+        gowin_jtag_flash_config_xpage(m_flash_xpage_buf, page_index);
         *tx_bytes_pos += m_flash_xpage_pos; // 一个x-page传完了就记到总传输的字节数量里，记住，我们此处要加实际有效的字节数量
         page_index++;
         m_flash_xpage_pos = 0; // 传完了记得归零xbuf的字节计数
     }
     // xbuf传完了以后，还得继续看看外部数据源里有没有完整的x-page的数据，如果有的话，就继续传
     for (uint32_t p = 0; p < data_length / 256; p++) {
-        gowin_jtag_flash_config_xpage(&data[p * 256], page_index, jtag_ops);
+        gowin_jtag_flash_config_xpage(&data[p * 256], page_index);
         *tx_bytes_pos += 256; // 同上描述
         page_index++;
     }
@@ -708,7 +715,7 @@ gowin_jtag_status_t gowin_jtag_flash_config_write(uint8_t *data, uint32_t data_l
         m_flash_xpage_pos += remain_bytes; // 记录本次传输剩余的字节数
         // 如果是最后一包了的话，那就直接传过去，不要再缓存了
         if (*tx_bytes_pos + remain_bytes >= tx_bytes_total) {
-            gowin_jtag_flash_config_xpage(m_flash_xpage_buf, page_index, jtag_ops);
+            gowin_jtag_flash_config_xpage(m_flash_xpage_buf, page_index);
             m_flash_xpage_pos = 0;
             *tx_bytes_pos += remain_bytes;
         }
@@ -717,72 +724,69 @@ gowin_jtag_status_t gowin_jtag_flash_config_write(uint8_t *data, uint32_t data_l
     return GOWIN_JTAG_OK;
 }
 
-gowin_jtag_status_t gowin_jtag_flash_config_finish(gowin_jtag_ops_t *jtag_ops) {
-    if (!jtag_ops) return GOWIN_JTAG_ERROR_NULL_POINTER;
+gowin_jtag_status_t gowin_jtag_flash_config_finish(void) {
     if (detected_device == GW_DEVICE_UNKNOWN) return GOWIN_JTAG_ERROR_INVALID_IDCODE;
 
-    jtag_shift_ir_safe(INST_CONFIG_DISABLE, jtag_ops); // 发送配置禁用指令 0x3A
-    gowin_jtag_reprogram(jtag_ops); // 经测试，flash的烧录只要执行 reprogram 就可以让程序开始执行，不需要重置JTAG端口
+    jtag_shift_ir_safe(INST_CONFIG_DISABLE); // 发送配置禁用指令 0x3A
+    gowin_jtag_reprogram(); // 经测试，flash的烧录只要执行 reprogram 就可以让程序开始执行，不需要重置JTAG端口
 
     return GOWIN_JTAG_OK;
 }
 
 void gowin_jtag_start_config(gowin_config_ctx_t *cctx) {
     // 发起jtag初始化和读取ID
-    cctx->status = gowin_jtag_init(cctx->jtag_ops);
+    cctx->status = gowin_jtag_init();
     if (cctx->status == GOWIN_JTAG_OK) {
         uint32_t idcode = gowin_jtag_get_idcode();
         const char* name = gowin_jtag_get_device_name();
-        if (cctx->jtag_ops->dbg_printf) cctx->jtag_ops->dbg_printf("gowin_jtag OK: idcode = 0x%04lX, name = %s", idcode, name);
+        dbg_printf("gowin_jtag OK: idcode = 0x%04lX, name = %s", idcode, name);
         // 读取和打印详细的状态表
         gowin_status_reg_t status_reg;
-        gowin_jtag_read_status_reg(&status_reg, cctx->jtag_ops);
+        gowin_jtag_read_status_reg(&status_reg);
     } else {
-        if (cctx->jtag_ops->dbg_printf) cctx->jtag_ops->dbg_printf("gowin_jtag NOT OK");
+        dbg_printf("gowin_jtag NOT OK");
         return;
     }
 
     // 初始化启动配置
     if (cctx->is_cfg_sram) {
-        if (cctx->jtag_ops->dbg_printf) cctx->jtag_ops->dbg_printf("Erase sram started");
-        cctx->status = gowin_jtag_sram_config_start(&cctx->tx_pos, cctx->jtag_ops);
+        dbg_printf("Erase sram started");
+        cctx->status = gowin_jtag_sram_config_start(&cctx->tx_pos);
         if (cctx->status != GOWIN_JTAG_OK) {
-            if (cctx->jtag_ops->dbg_printf) cctx->jtag_ops->dbg_printf("Failed to start sram config: %d", cctx->status);
+            dbg_printf("Failed to start sram config: %d", cctx->status);
             return;
         }
-        if (cctx->jtag_ops->dbg_printf) cctx->jtag_ops->dbg_printf("Erase sram done");
+        dbg_printf("Erase sram done");
     } else {
-        if (cctx->jtag_ops->dbg_printf) cctx->jtag_ops->dbg_printf("Erase flash started");
+        dbg_printf("Erase flash started");
         // 暂时只进行非背景升级（会终止FPGA的执行）
-        cctx->status = gowin_jtag_flash_config_start(cctx->x_page_buf, &cctx->tx_pos, false, cctx->jtag_ops);
+        cctx->status = gowin_jtag_flash_config_start(cctx->x_page_buf, &cctx->tx_pos, false);
         if (cctx->status != GOWIN_JTAG_OK) {
-            if (cctx->jtag_ops->dbg_printf) cctx->jtag_ops->dbg_printf("Failed to start flash config: %d", cctx->status);
+            dbg_printf("Failed to start flash config: %d", cctx->status);
             return;
         }
-        if (cctx->jtag_ops->dbg_printf) cctx->jtag_ops->dbg_printf("Erase flash done");
+        dbg_printf("Erase flash done");
     }
 
     // 打印个消息告知一下启动完成了
-    if (cctx->jtag_ops->dbg_printf) {
-        cctx->jtag_ops->dbg_printf("gowin_jtag %s config started: %d", cctx->is_cfg_sram ? "sram" : "flash" , cctx->status);
-    }
+    dbg_printf("gowin_jtag %s config started: %d", cctx->is_cfg_sram ? "sram" : "flash" , cctx->status);
 }
 
 void gowin_jtag_config_write(uint8_t *data, uint32_t data_length, gowin_config_ctx_t *cctx) {
     // 根据当前的配置类型，选择性调用对应的逻辑
     if (cctx->is_cfg_sram) {
-        cctx->status = gowin_jtag_sram_config_write(data, data_length, &cctx->tx_pos, cctx->tx_total, cctx->jtag_ops);
+        cctx->status = gowin_jtag_sram_config_write(data, data_length, &cctx->tx_pos, cctx->tx_total);
     } else {
-        cctx->status = gowin_jtag_flash_config_write(data, data_length, &cctx->tx_pos, cctx->tx_total, cctx->jtag_ops);
+        cctx->status = gowin_jtag_flash_config_write(data, data_length, &cctx->tx_pos, cctx->tx_total);
     }
 }
 
 void gowin_jtag_stop_config(gowin_config_ctx_t *cctx) {
     // 根据当前烧录模式的不同选择不同的收尾
     if (cctx->is_cfg_sram) {
-        cctx->status = gowin_jtag_sram_config_finish(cctx->jtag_ops);
+        cctx->status = gowin_jtag_sram_config_finish();
     } else {
-        cctx->status = gowin_jtag_flash_config_finish(cctx->jtag_ops);
+        cctx->status = gowin_jtag_flash_config_finish();
     }
-    gowin_jtag_deinit(cctx->jtag_ops); // 反初始化gowinjtag库，退出某些状态并且释放某些资源
+    gowin_jtag_deinit(); // 反初始化gowinjtag库，退出某些状态并且释放某些资源
 }
