@@ -3013,7 +3013,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
         }
 
         // Write signature blocks using GDM write command
-        if (blockNo >= MIFARE_1K_MAXBLOCK && blockNo < MIFARE_1K_EV1_MAXBLOCK) {
+        if (workFlags & MAGIC_GDM_ALT_WUPC && blockNo >= MIFARE_1K_MAXBLOCK && blockNo < MIFARE_1K_EV1_MAXBLOCK) {
 
             blockNo %= 0x40;
             if ((mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_MAGIC_GDM_WRITEBLOCK, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
