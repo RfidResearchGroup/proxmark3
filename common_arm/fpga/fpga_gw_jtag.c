@@ -483,8 +483,6 @@ gowin_jtag_status_t gowin_jtag_flash_erase(void) {
         return GOWIN_JTAG_ERROR_INVALID_IDCODE;
     }
 
-    GPIOA->scr = GPIO_PINS_2; // TODO DXL
-
     // 读一下状态值，确认当前没问题
     gowin_jtag_status_t api_status = gowin_check_status_gw1n(&status_reg);
     if (api_status != GOWIN_JTAG_OK) {
@@ -517,8 +515,6 @@ gowin_jtag_status_t gowin_jtag_flash_erase(void) {
 
     jtag_shift_ir_safe(INST_EFLASH_ERASE); // 发送内嵌FLASH的擦除指令 0x75
 
-    GPIOA->clr = GPIO_PINS_2; // TODO DXL
-
     if (dm->flash_type == GW_FLASH_TYPE_HL) {
         for (int i = 0; i < 65; i++) {
             // H工艺要求重复此步骤65次，这是手册要求的
@@ -533,8 +529,6 @@ gowin_jtag_status_t gowin_jtag_flash_erase(void) {
         tck_2m(150 * 1000); // T 工艺要求后续在 Run-Test-Idle 状态下持续产生时钟 120-150 ms
         dbg_printf("erase for GW_FLASH_TYPE_TSMC");
     }
-
-    GPIOA->scr = GPIO_PINS_2; // TODO DXL
 
     api_status = gowin_jtag_cfg_enable(false);
     if (api_status != GOWIN_JTAG_OK) {
