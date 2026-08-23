@@ -171,7 +171,7 @@ static void print_pm5_battery_status(void) {
     } else {
         Dbprintf("  Charger MainCtl..... 0x%02x  %s", mainctl,
                  (mainctl & BWM_CHG_FET_DIS) ? _RED_("FET_DIS (VMIX off / shipping)")
-                                             : _GREEN_("power path enabled"));
+                 : _GREEN_("power path enabled"));
 
         I2C_BufferReadRaw(&f1,    1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR); // 1st = latched history
         I2C_BufferReadRaw(&fault, 1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR); // 2nd = current state
@@ -219,6 +219,97 @@ static void print_pm5_battery_status(void) {
     } else {
         Dbprintf("  Fuel gauge.......... " _YELLOW_("not responding") " (BQ27427 absent or I2C down)");
     }
+}
+
+// --- BQ27427 provisioning: set Design Capacity for the fitted cell -------------
+// One-time. The gauge ships with a ~1000+ mAh default profile, so RemainingCapacity
+// reads wrong for the fitted pack until Design Capacity is programmed. Invoked by the
+// `hw bwmsetcap` client command (CMD_PM5_BWM_SET_CAP) - deliberately NOT run at boot,
+// because a config-update cycle disrupts the Impedance Track learning cycle.
+// Per BQ27427 TRM (SLUUCD5): State subclass 82 (0x52), Design Capacity at offset 6
+// -> block addr 0x46 (MSB)/0x47 (LSB), big-endian. Assumes gauge UNSEALED (factory default).
+#define BWM_DEFAULT_DESIGN_CAP_MAH   500   // VXE 502540 on the reference BWM
+
+static bool bq_control(uint16_t sub) {
+    uint8_t d[2] = { (uint8_t)(sub & 0xFF), (uint8_t)(sub >> 8) };
+    return I2C_BufferWrite(d, 2, 0x00, BWM_GAUGE_ADDR);       // Control() 0x00
+}
+static bool bq_flags(uint16_t *f) {
+    uint8_t d[2] = {0};
+    if (I2C_BufferReadRaw(d, 2, 0x06, BWM_GAUGE_ADDR) <= 0) return false;
+    *f = (uint16_t)(d[0] | (d[1] << 8));                      // Flags() 0x06
+    return true;
+}
+static bool bq_select_state_block(void) {
+    uint8_t v;
+    v = 0x00;
+    if (!I2C_BufferWrite(&v, 1, 0x61, BWM_GAUGE_ADDR)) return false; // BlockDataControl
+    v = 0x52;
+    if (!I2C_BufferWrite(&v, 1, 0x3E, BWM_GAUGE_ADDR)) return false; // DataClass = 82 (State)
+    v = 0x00;
+    if (!I2C_BufferWrite(&v, 1, 0x3F, BWM_GAUGE_ADDR)) return false; // DataBlock = 0
+    WaitMS(5);
+    return true;
+}
+static bool bq_read_design_cap(uint16_t *cap) {
+    if (!bq_select_state_block()) return false;
+    uint8_t d[2] = {0};
+    if (I2C_BufferReadRaw(d, 2, 0x46, BWM_GAUGE_ADDR) <= 0) return false;
+    *cap = (uint16_t)((d[0] << 8) | d[1]);                    // big-endian
+    return true;
+}
+
+// Program Design Capacity (and matching Design Energy). Idempotent: returns true
+// without a config-update cycle if the value is already correct.
+static bool bwm_gauge_provision_capacity(uint16_t cap_mah) {
+    uint16_t cur = 0;
+    if (bq_read_design_cap(&cur) && cur == cap_mah) {
+        return true;    // already correct - do NOT run another CFGUPDATE cycle
+    }
+
+    uint16_t energy_mwh = (uint16_t)(((uint32_t)cap_mah * 37) / 10);   // ~3.7 V nominal
+
+    // Enter CONFIG_UPDATE and wait for the gauge to acknowledge it.
+    if (bq_control(0x0013) == false) {   // SET_CFGUPDATE
+        return false;
+    }
+
+    uint16_t flags = 0;
+    int tries = 0;
+    do {
+        WaitMS(50);
+        if (bq_flags(&flags) == false) {
+            return false;
+        }
+    } while (((flags & 0x0010) == 0) && (++tries < 40));   // wait for CFGUPDATE (Flags bit 4), ~2 s
+
+    if ((flags & 0x0010) == 0) {
+        return false;
+    }
+
+    if (!bq_select_state_block()) return false;
+
+    uint8_t blk[32] = {0};
+    if (I2C_BufferReadRaw(blk, 32, 0x40, BWM_GAUGE_ADDR) <= 0) return false;
+
+    blk[6] = (uint8_t)(cap_mah >> 8);
+    blk[7] = (uint8_t)(cap_mah & 0xFF);      // DesignCapacity
+    blk[8] = (uint8_t)(energy_mwh >> 8);
+    blk[9] = (uint8_t)(energy_mwh & 0xFF);   // DesignEnergy
+    I2C_BufferWrite(&blk[6], 2, 0x46, BWM_GAUGE_ADDR);
+    I2C_BufferWrite(&blk[8], 2, 0x48, BWM_GAUGE_ADDR);
+
+    uint16_t sum = 0;                                         // block checksum = 255 - (sum mod 256)
+    for (int i = 0; i < 32; i++) sum += blk[i];
+    uint8_t csum = (uint8_t)(0xFF - (uint8_t)(sum & 0xFF));
+    I2C_BufferWrite(&csum, 1, 0x60, BWM_GAUGE_ADDR);          // commit block
+    WaitMS(10);
+
+    if (!bq_control(0x0042)) return false;                    // SOFT_RESET (exit CFGUPDATE)
+    tries = 0;
+    do { WaitMS(50); if (!bq_flags(&flags)) return false; }
+    while (((flags & 0x0010) != 0) && (++tries < 40));
+    return ((flags & 0x0010) == 0);
 }
 #endif // WITH_BWM_STATUS
 
@@ -1186,7 +1277,7 @@ static bool QCTestPM5(uint8_t *failed_item) {
     gpio_init_struct.gpio_pins = BEEPER_EN_GPIO_PIN;
     gpio_init_struct.gpio_pull = GPIO_PULL_NONE;
     gpio_init(BEEPER_EN_GPIO, &gpio_init_struct);
-    gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, FALSE);
+    gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, FALSE);
     // 蜂鸣器调制脚
     gpio_init_struct.gpio_mode = GPIO_MODE_MUX;
     gpio_init_struct.gpio_pins = BEEPER_MOD_GPIO_PIN;
@@ -1224,9 +1315,9 @@ static bool QCTestPM5(uint8_t *failed_item) {
 
         LED_A_ON();
         BEEPER_MOD_TMR->pr = 999;
-        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, TRUE);
+        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, TRUE);
         SpinDelay(20);
-        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, FALSE);
+        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, FALSE);
         SpinDelay(200);
         LED_A_OFF();
 
@@ -1240,9 +1331,9 @@ static bool QCTestPM5(uint8_t *failed_item) {
         LED_B_ON();
         BEEPER_MOD_TMR->pr = 1100;
         tmr_channel_value_set(BEEPER_MOD_TMR, BEEPER_MOD_TMR_CH, 550);
-        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, TRUE);
+        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, TRUE);
         SpinDelay(20);
-        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, FALSE);
+        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, FALSE);
         SpinDelay(200);
         LED_B_OFF();
 
@@ -1256,9 +1347,9 @@ static bool QCTestPM5(uint8_t *failed_item) {
         LED_C_ON();
         BEEPER_MOD_TMR->pr = 1200;
         tmr_channel_value_set(BEEPER_MOD_TMR, BEEPER_MOD_TMR_CH, 600);
-        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, TRUE);
+        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, TRUE);
         SpinDelay(20);
-        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, FALSE);
+        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, FALSE);
         SpinDelay(200);
         LED_C_OFF();
 
@@ -1272,9 +1363,9 @@ static bool QCTestPM5(uint8_t *failed_item) {
         LED_D_ON();
         BEEPER_MOD_TMR->pr = 1300;
         tmr_channel_value_set(BEEPER_MOD_TMR, BEEPER_MOD_TMR_CH, 650);
-        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, TRUE);
+        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, TRUE);
         SpinDelay(20);
-        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, FALSE);
+        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, FALSE);
         SpinDelay(200);
         LED_D_OFF();
     }
@@ -3678,7 +3769,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             // Response
             if (res == PM3_EFAILED) {
                 uint32_t plat_status = FpgaConfigPlatformStatus(); // Return status code of platform when res is PM3_EFAILED
-                reply_ng(packet->cmd, res, (uint8_t*)&plat_status, sizeof(plat_status));
+                reply_ng(packet->cmd, res, (uint8_t *)&plat_status, sizeof(plat_status));
             } else {
                 reply_ng(packet->cmd, res, NULL, 0);
             }
@@ -3766,7 +3857,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 #endif
         case CMD_MAIN_CHIP_UNIQUEID: {
             uint8_t size = 0;
-            uint8_t* uid = GetChipUniqueId(&size);
+            uint8_t *uid = GetChipUniqueId(&size);
             reply_ng(CMD_MAIN_CHIP_UNIQUEID, PM3_SUCCESS, uid, size);
             break;
         }
@@ -3788,6 +3879,19 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_PM5_RGB_SET, PM3_SUCCESS, NULL, 0);
             break;
         }
+#ifdef WITH_BWM_STATUS
+        case CMD_PM5_BWM_SET_CAP: {
+            // One-time BWM fuel-gauge (BQ27427) Design Capacity provisioning.
+            // Payload: optional uint16 mAh (LE); absent -> reference default.
+            uint16_t cap = (packet->length >= 2)
+                           ? (uint16_t)(packet->data.asBytes[0] | (packet->data.asBytes[1] << 8))
+                           : BWM_DEFAULT_DESIGN_CAP_MAH;
+            I2C_init(true);
+            bool ok = bwm_gauge_provision_capacity(cap);
+            reply_ng(CMD_PM5_BWM_SET_CAP, ok ? PM3_SUCCESS : PM3_EFAILED, (uint8_t *)&cap, sizeof(cap));
+            break;
+        }
+#endif
 #endif
         default: {
             Dbprintf("%s: 0x%04x", "unknown command:", packet->cmd);
