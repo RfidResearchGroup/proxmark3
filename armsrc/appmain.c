@@ -122,6 +122,8 @@ static void BWM_ChargerKick(void) {
 // confirm against a known-charging module before trusting absolute values. If the gauge
 // or charger doesn't ACK, the corresponding lines print "not responding" rather than
 // reporting garbage, so this is safe to ship even if an address is wrong on a given board.
+static bool g_bwm_present = false;
+
 #ifndef BWM_CHG_ADDR
 #define BWM_CHG_ADDR         0x93
 #endif
@@ -154,6 +156,9 @@ static bool bwm_gauge_read16(uint8_t cmd, uint16_t *out) {
 // Reads the BWM charger + fuel gauge and prints a battery section. Called from
 // SendStatus() under #ifdef PM5, so it only runs on a booted PM5 with I2C available.
 static void print_pm5_battery_status(void) {
+    if (g_bwm_present == false) {
+        return;   // no BWM detected at boot; nothing to report
+    }
     DbpString(_CYAN_("Battery / BWM"));
 
     I2C_init(true);
@@ -364,27 +369,32 @@ static bool bwm_gauge_provision_capacity(uint16_t cap_mah) {
 //                              watchdog is thus relied upon off - see REG05 handling)
 //   REG03             = 0xE1 : 3 A discharge current
 //   REG0B            = 0x6B : 11 mA pre-charge current
-void UnitTestMain(void); // strong override of the weak stub in start.c
-void UnitTestMain(void) {
-    StartTicks();
+
+// Probe for the BWM charger over I2C and, if found, apply the charge configuration.
+static void bwm_detect_and_init(void) {
     I2C_init(true);
+
+    // Single bounded probe. Any non-ACK => no BWM fitted; skip everything.
     uint8_t v = 0;
-    if (I2C_BufferReadRaw(&v, 1, 0x01, BWM_CHG_ADDR) > 0) {
-        if (v & (1u << 3)) { v &= ~(1u << 3); I2C_BufferWrite(&v, 1, 0x01, BWM_CHG_ADDR); }
+    if (I2C_BufferReadRaw(&v, 1, 0x01, BWM_CHG_ADDR) <= 0) {
+        g_bwm_present = false;
+        return;
     }
-    // REG02: charge current = 256 mA
-    v = 0x1F;
-    I2C_BufferWrite(&v, 1, 0x02, BWM_CHG_ADDR);
-    // REG03: discharge current = 3 A
-    v = 0xE1;
-    I2C_BufferWrite(&v, 1, 0x03, BWM_CHG_ADDR);
-    // REG05: disable safety timer (upstream behaviour)
-    // v = 0x1A;
-    // I2C_BufferWrite(&v, 1, 0x05, BWM_CHG_ADDR);
-    // REG0B: pre-charge current = 11 mA
-    v = 0x6B;
-    I2C_BufferWrite(&v, 1, 0x0B, BWM_CHG_ADDR);
+    g_bwm_present = true;
+
+    // Enable charging (clear CEB, REG01[3]) + upstream charge profile
+    // (matches at32_unit_test.c:test_bat_charger_only_settings(), AW32001ECSR).
+    if (v & (1u << 3)) {
+        v &= ~(1u << 3);
+        I2C_BufferWrite(&v, 1, 0x01, BWM_CHG_ADDR);
+    }
+    uint8_t w;
+    w = 0x1F; I2C_BufferWrite(&w, 1, 0x02, BWM_CHG_ADDR); // charge current 256 mA
+    w = 0xE1; I2C_BufferWrite(&w, 1, 0x03, BWM_CHG_ADDR); // discharge current 3 A
+    w = 0x1A; I2C_BufferWrite(&w, 1, 0x05, BWM_CHG_ADDR); // safety timer disabled (upstream)
+    w = 0x6B; I2C_BufferWrite(&w, 1, 0x0B, BWM_CHG_ADDR); // pre-charge 11 mA
 }
+
 #endif // WITH_BWM_STATUS
 
 #ifdef WITH_LCD
@@ -4052,6 +4062,9 @@ void __attribute__((noreturn)) AppMain(void) {
     // (AT91F_CDC_Enumerate() will be called in the main loop)
     usb_disable();
     usb_enable();
+#ifdef WITH_BWM_STATUS
+    bwm_detect_and_init();   // probe BWM + apply charge config, off the pre-USB path
+#endif
 
 #ifdef WITH_BWM_CHARGERKICK
     BWM_ChargerKick();
