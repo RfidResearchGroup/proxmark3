@@ -3,7 +3,7 @@
 
 # By default PM3 RDV4 image is generated.
 # Comment the line below and uncomment further down according to which device you have
-PLATFORM=PM5
+PLATFORM=PM3RDV4
 
 # For PM3 RDV1, RDV2, Easy or rysccorps etc
 # uncomment the line below
