@@ -96,33 +96,31 @@ void gpio_adc_mux_setup(void) {
 void gpio_fpga_download_setup(void) {
     gpio_init_type gpio_init_struct;
 
-    // TODO DXL: Move IO & CLK definition to 'config_gpio_proxmark5.h'
-
-    GPIO_CLK_EN(CRM_GPIOA_PERIPH_CLOCK);
-    GPIO_CLK_EN(CRM_GPIOC_PERIPH_CLOCK);
-    GPIO_CLK_EN(CRM_GPIOD_PERIPH_CLOCK);
+    AT32_GPIO_PERIPH_CLKS_ENABLE(AT32_GPIO_PERIPH_FPGA_JTAG_CLK);
 
     gpio_default_para_init(&gpio_init_struct);
     gpio_init_struct.gpio_mode = GPIO_MODE_OUTPUT;
 
-    gpio_init_struct.gpio_pins = GPIO_PINS_4;
-    gpio_init(GPIOB, &gpio_init_struct);
+    gpio_init_struct.gpio_pins = AT32_GPIO_FPGA_JTAG_TCK_PIN;
+    gpio_init_struct.gpio_pull = GPIO_PULL_DOWN;
+    gpio_init(AT32_GPIO_FPGA_JTAG_TCK, &gpio_init_struct);
 
-    gpio_init_struct.gpio_pins = GPIO_PINS_10; // PC10_SPI3_SCK -> TCK
-    gpio_init(GPIOC, &gpio_init_struct);
+    gpio_init_struct.gpio_pins = AT32_GPIO_FPGA_JTAG_TMS_PIN;
+    gpio_init_struct.gpio_pull = GPIO_PULL_UP;
+    gpio_init(AT32_GPIO_FPGA_JTAG_TMS, &gpio_init_struct);
 
-    gpio_init_struct.gpio_pins = GPIO_PINS_15; // PA15_SPI3_CS -> TMS
-    gpio_init(GPIOA, &gpio_init_struct);
+    gpio_init_struct.gpio_pins = AT32_GPIO_FPGA_JTAG_TDI_PIN;
+    gpio_init_struct.gpio_pull = GPIO_PULL_UP;
+    gpio_init(AT32_GPIO_FPGA_JTAG_TDI, &gpio_init_struct);
 
-    gpio_init_struct.gpio_pins = GPIO_PINS_12; // PC12_SPI3_MOSI -> TDI
-    gpio_init(GPIOC, &gpio_init_struct);
-
-    gpio_init_struct.gpio_pins = GPIO_PINS_2; // PD2 -> FPGA_JTAGSEL
-    gpio_init(GPIOD, &gpio_init_struct);
+    gpio_init_struct.gpio_pins = AT32_GPIO_FPGA_JTAG_SEL_PIN;
+    gpio_init_struct.gpio_pull = GPIO_PULL_UP;
+    gpio_init(AT32_GPIO_FPGA_JTAG_SEL, &gpio_init_struct);
 
     gpio_init_struct.gpio_mode = GPIO_MODE_INPUT;
-    gpio_init_struct.gpio_pins = GPIO_PINS_11; // PC11_SPI3_MISO -> TDO
-    gpio_init(GPIOC, &gpio_init_struct);
+    gpio_init_struct.gpio_pull = GPIO_PULL_NONE;
+    gpio_init_struct.gpio_pins = AT32_GPIO_FPGA_JTAG_TDO_PIN;
+    gpio_init(AT32_GPIO_FPGA_JTAG_TDO, &gpio_init_struct);
 }
 
 void gpio_fpga_on_setup(void) {
