@@ -3012,10 +3012,12 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
             }
         }
 
-        // Write signature blocks using GDM write command
-        if (workFlags & MAGIC_GDM_ALT_WUPC && blockNo >= MIFARE_1K_MAXBLOCK && blockNo < MIFARE_1K_EV1_MAXBLOCK) {
+        // When blockNo is between 64 and 71 and GDM wakeup is enabled,
+        // write the EV1 signature blocks using the GDM hidden block command
+        // with the GDM wakeup style (20(7)/23).
+        if (((workFlags & MAGIC_GDM_ALT_WUPC) == MAGIC_GDM_ALT_WUPC) && blockNo >= MIFARE_1K_MAXBLOCK && blockNo < MIFARE_1K_EV1_MAXBLOCK) {
 
-            blockNo %= 0x40;
+            blockNo %= 0x40;  // Map block 64-71 to hidden blocks 0-7.
             if ((mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_MAGIC_GDM_WRITEBLOCK, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
                 if (g_dbglevel >= DBG_INFO) Dbprintf("Magic write block send command error");
                 errormsg = 4;
