@@ -1496,6 +1496,14 @@
         "Type": "transport"
     },
     {
+        "AID": "8013F2",
+        "Vendor": "The Port Authority of New York & New Jersey via Cubic Transportation Systems",
+        "Country": "US",
+        "Name": "Total Access PATH Payment (TAPP) Card (EWR)",
+        "Description": "EWR Total Access PATH Payment (TAPP) Card; ISO-FID: 3821; ISO DF-Name: 637001FF4F5454205631",
+        "Type": "transport"
+    }, 
+    {
         "AID": "818000",
         "Vendor": "Cairo Metro",
         "Country": "EG",
@@ -1749,6 +1757,14 @@
         "Country": "US",
         "Name": "Go CT Card (BDL)",
         "Description": "BDL Go CT Card",
+        "Type": "transport"
+    },
+    {
+        "AID": "F212D0",
+        "Vendor": "Grand River Transit",
+        "Country": "CA",
+        "Name": "EasyGO Card (YKF)",
+        "Description": "YKF EasyGO Card",
         "Type": "transport"
     },
     {
