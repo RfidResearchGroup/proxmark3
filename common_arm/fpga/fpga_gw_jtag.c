@@ -325,7 +325,7 @@ uint32_t gowin_jtag_read_usercode(void) {
 void gowin_jtag_reprogram(void) {
     jtag_shift_ir_safe(INST_REPROGRAM);
     jtag_shift_ir_safe(INST_NOOP);
-    delay_ms(200);
+    delay_ms_gowin(200);
 }
 
 gowin_jtag_status_t gowin_jtag_read_status_reg(gowin_status_reg_t *reg_out) {
@@ -423,7 +423,7 @@ gowin_jtag_status_t gowin_jtag_sram_config_finish(void) {
     jtag_shift_ir_safe(INST_NOOP);
 
     // SRAM 写完后等待 60ms, 以待 status code 刷新
-    delay_ms(60);
+    delay_ms_gowin(60);
 
     // 记得，一定要重置状态机，让fpga回到 Run-Test/Idle 的状态，不然新固件不启动
     gowin_jtag_reset();
@@ -537,7 +537,7 @@ gowin_jtag_status_t gowin_jtag_flash_erase(void) {
 
     // 官方的代码里，H工艺在发送了 0x02 之后延迟了 500ms才继续干活，T工艺则是200ms
     if (dm->flash_type == GW_FLASH_TYPE_HL) {
-        delay_ms(500);
+        delay_ms_gowin(500);
         if (m_flash_bg_update == false) {
             // 如果背景烧录使能，则不需要检查任何状态码相关的异常，因为这个时候固件是在正常运行的
             api_status = gowin_check_erase_gw1n(&status_reg);
@@ -548,7 +548,7 @@ gowin_jtag_status_t gowin_jtag_flash_erase(void) {
         }
     }
     if (dm->flash_type == GW_FLASH_TYPE_TSMC) {
-        delay_ms(200);
+        delay_ms_gowin(200);
         if (m_flash_bg_update == false) {
             // 如果背景烧录使能，则不可以触发重新配置，否则会导致被清空的FLASH的数据加载到SRAM覆盖正在运行的固件
             gowin_jtag_reprogram();
