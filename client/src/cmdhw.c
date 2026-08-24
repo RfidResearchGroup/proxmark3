@@ -2121,7 +2121,11 @@ int CmdHW(const char *Cmd) {
 
 void pm3_version_short(void) {
     //    PrintAndLogEx(NORMAL, "  [ " _CYAN_("Proxmark3 RFID instrument") " ]");
-    PrintAndLogEx(NORMAL, "  [ " _CYAN_(_URL_("https://github.com/RfidResearchGroup/proxmark3", "Proxmark3")) " ]");
+    if (IfPm5()) {
+        PrintAndLogEx(NORMAL, "  [ " _CYAN_(_URL_("https://github.com/RfidResearchGroup/proxmark3", "Proxmark5")) " ]");
+    } else {
+        PrintAndLogEx(NORMAL, "  [ " _CYAN_(_URL_("https://github.com/RfidResearchGroup/proxmark3", "Proxmark3")) " ]");
+    }
     PrintAndLogEx(NORMAL, "");
 
     if (g_session.pm3_present) {
@@ -2237,7 +2241,7 @@ void pm3_version(bool verbose, bool oneliner) {
         return;
     }
 
-    PrintAndLogEx(NORMAL, "\n [ " _CYAN_("Proxmark3") " ]");
+    PrintAndLogEx(NORMAL, "\n [ " _CYAN_("%s") " ]", IfPm5() ? "Proxmark5" : "Proxmark3");
     PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Client") " ]");
     FormatVersionInformation(temp, sizeof(temp), "  ", &g_version_information);
     PrintAndLogEx(NORMAL, "%s", temp);
