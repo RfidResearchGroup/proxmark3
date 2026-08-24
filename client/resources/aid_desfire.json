@@ -1665,9 +1665,9 @@
     },
     {
         "AID": "F21050",
-        "Vendor": "Metro Christchurch via INIT / Arc via Vix Technologies",
-        "Country": "NZ / CA",
-        "Name": "Metrocard (CHC) / Arc (YEG)",
+        "Vendor": "Metro Christchurch via INIT / Arc via Vix Technologies / Valley Metro via Vix Technologies",
+        "Country": "NZ / CA / US",
+        "Name": "Metrocard (CHC) / Arc (YEG) / Copper Card (PHX)",
         "Description": "CHC FIDs: 00: Backup Data; 01/02: Trip History; 03: Card Balance",
         "Type": "transport"
     },
@@ -1729,10 +1729,10 @@
     },
     {
         "AID": "F21201",
-        "Vendor": "Green Bay Metro Transit via Genfare / Winnipeg Transit via Genfare",
-        "Country": "US / CA",
-        "Name": "Tap-N-Go Card (GRB) / peggo card (YWG)",
-        "Description": "GRB Tap-N-Go Card / YWG peggo card",
+        "Vendor": "Green Bay Metro Transit via Genfare / Winnipeg Transit via Genfare / Palm Tran via Genfare",
+        "Country": "US / CA / US",
+        "Name": "Tap-N-Go Card (GRB) / peggo card (YWG) / Paradise Pass (PBI)",
+        "Description": "GRB Tap-N-Go Card / YWG peggo card / PBI Paradise Pass",
         "Type": "transport"
     },
     {
