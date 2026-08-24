@@ -102,5 +102,7 @@ Standalone modes are disabled for now, to ease debugging.
 ⚠️ the BWM is not yet fully supported, it's better not to plug it for now.
 
 * [Installation instructions](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
-* Pressing the button will wake the device
+* Pressing briefly the button will wake the device
 * When the device is powered on, pressing and holding the button for a few seconds will start displaying a running light, and then releasing the button will power off the device
+
+⚠️ After using the device over USB and disconnecting it, the Proxmark5 is still powered by the battery. To remind it to you, the RGB will turn green. Press the button a few seconds to turn it off.
