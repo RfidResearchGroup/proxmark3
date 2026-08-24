@@ -276,7 +276,7 @@ void Fpga_print_status(void) {
     Dbprintf("  mode.................... All-In-One");
 }
 
-// 定义fpga的jtag配置信息
+// Define a static configuration context for the Gowin JTAG configuration process
 static gowin_config_ctx_t gci = {
     .tx_pos = 0,
     .tx_total = 0,
@@ -294,7 +294,7 @@ int FpgaStartConfig(bool configSram, uint32_t fileLength) {
     // Reset for restart a new transfer
     gci.tx_pos = 0;
     gci.tx_total = fileLength;
-    gci.is_cfg_sram = configSram; // 标记当前正在配置sram而非flash
+    gci.is_cfg_sram = configSram; // Is it SRAM or Flash configuration?
 
     gowin_jtag_start_config(&gci);
     if (gci.status != GOWIN_JTAG_OK) {
