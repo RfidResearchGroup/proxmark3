@@ -18,7 +18,7 @@
 #define DEBUG_GW_JTAG   1
 
 // 毫秒延迟，不要求太高精度
-#define delay_ms(ms)    SpinDelay(ms)
+#define delay_ms_gowin(ms)    SpinDelay(ms)
 
 // TODO DXL Move GPIO definitions to a common header file, e.g., config_gpio_proxmark5.h,
 //  and include it here. This will make the code more maintainable and easier to read.
