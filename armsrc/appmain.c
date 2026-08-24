@@ -30,6 +30,7 @@
 #include "fpga_apis.h"
 #include "rssi_apis.h"
 #include "rgb_apis.h"
+#include "gpio_apis.h"    // gpio_vusb_setup / Gpio_VUSB_Read (USB-present detection)
 #include "string.h"
 #include "printf.h"
 #include "legicrf.h"
@@ -396,6 +397,56 @@ static void bwm_detect_and_init(void) {
 }
 
 #endif // WITH_BWM_STATUS
+
+#ifdef WITH_PM5_PWR_LED
+// "Alive on battery" indicator. When the PM5 runs on battery (USB unplugged) it
+// otherwise gives no sign it is on, so users leave it draining. This lights the
+// antenna RGB a dim green while on battery, and turns it off when on USB (where the
+// cable already signals power). Throttled + edge-triggered to avoid I2C spam and to
+// yield the RGB to hf/lf tune (which sets g_rgb_external while it owns the LED).
+#ifndef PM5_PWR_LED_PERIOD_MS
+#define PM5_PWR_LED_PERIOD_MS  1000   // re-evaluate at most once a second
+#endif
+
+// Set by CMD_PM5_RGB_SET so the indicator backs off while tune controls the RGB.
+volatile bool g_rgb_external = false;
+
+static bool s_pwr_led_setup = false;
+
+static void bwm_power_led_check(void) {
+    static uint32_t last_tick = 0;
+    static int last_state = -1;   // -1 unknown, 0 = off/USB, 1 = green/battery
+
+    if ((last_tick != 0) && (GetTickCountDelta(last_tick) < PM5_PWR_LED_PERIOD_MS)) {
+        return;
+    }
+    last_tick = GetTickCount();
+
+    // While tune (or any external RGB user) owns the LED, do nothing and force a
+    // refresh next time it is released.
+    if (g_rgb_external) {
+        last_state = -1;
+        return;
+    }
+
+    if (s_pwr_led_setup == false) {
+        gpio_vusb_setup();
+        s_pwr_led_setup = true;
+    }
+
+    int on_battery = (Gpio_VUSB_Read() == false) ? 1 : 0;
+    if (on_battery == last_state) {
+        return;   // edge-triggered: only write RGB when the state changes
+    }
+    last_state = on_battery;
+
+    if (on_battery) {
+        RgbLedSet(0, 8, 0);   // dim green: alive, on battery
+    } else {
+        RgbLedSet(0, 0, 0);   // on USB: off (cable already signals power)
+    }
+}
+#endif // WITH_PM5_PWR_LED
 
 #ifdef WITH_LCD
 #include "LCD_disabled.h"
@@ -3960,6 +4011,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
             RgbLedSet(payload->r, payload->g, payload->b);
+#ifdef WITH_PM5_PWR_LED
+            // tune (or any external RGB user) now owns the LED; back the power
+            // indicator off. A non-zero colour claims it; all-zero releases it.
+            g_rgb_external = (payload->r || payload->g || payload->b);
+#endif
             reply_ng(CMD_PM5_RGB_SET, PM3_SUCCESS, NULL, 0);
             break;
         }
@@ -4072,6 +4128,10 @@ void __attribute__((noreturn)) AppMain(void) {
 
     for (;;) {
         WDT_HIT();
+
+#ifdef WITH_PM5_PWR_LED
+        bwm_power_led_check();
+#endif
 
         if (*_stack_start != 0xdeadbeef) {
             Dbprintf("DEBUG: increase stack size, currently " _YELLOW_("%d") " bytes", (uint32_t)_stack_end - (uint32_t)_stack_start);
