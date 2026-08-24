@@ -241,7 +241,7 @@ static void print_pm5_battery_status(void) {
                  (cur > 5)  ? _GREEN_("(charging)") :
                  (cur < -5) ? _YELLOW_("(discharging)") : "(idle)");
         Dbprintf("  Remaining capacity.. %u mAh", rem);
-        Dbprintf("  Battery temp........ %d.%d C", tempC10 / 10, tabs % 10);
+        Dbprintf("  Temp (gauge)........ %d.%d C", tempC10 / 10, tabs % 10);
     } else {
         Dbprintf("  Fuel gauge.......... " _YELLOW_("not responding") " (BQ27427 absent or I2C down)");
     }
