@@ -30,6 +30,7 @@
 #include "cmdmain.h"
 #include "ui.h"
 #include "cmdhw.h"
+#include "cmdparser.h"    // IfPm5 (PM5 banner selection)
 #include "whereami.h"
 #include "comms.h"
 #include "fileutils.h"
@@ -49,7 +50,7 @@ static int mainret = PM3_SUCCESS;
 #define BANNERMSG2 ""
 #define BANNERMSG3 ""
 
-typedef enum LogoMode { UTF8, ANSI, ASCII } LogoMode;
+typedef enum LogoMode { UTF8, ANSI, ASCII, UTF8_PM5, ANSI_PM5, ASCII_PM5 } LogoMode;
 
 static void showBanner_logo(LogoMode mode) {
     switch (mode) {
@@ -99,6 +100,55 @@ static void showBanner_logo(LogoMode mode) {
             PrintAndLogEx(NORMAL, "  888        888  Y8P  888 888    888    ");
             PrintAndLogEx(NORMAL, "  888        888   \"   888 Y88b  d88P " BANNERMSG1);
             PrintAndLogEx(NORMAL, "  888        888       888  \"Y8888P\"");
+            PrintAndLogEx(NORMAL, "  " BANNERMSG2);
+            break;
+        }
+        case UTF8_PM5: {
+            const char *sq = "\xE2\x96\x88"; // square block
+            const char *tr = "\xE2\x95\x97"; // top right corner
+            const char *tl = "\xE2\x95\x94"; // top left corner
+            const char *br = "\xE2\x95\x9D"; // bottom right corner
+            const char *bl = "\xE2\x95\x9A"; // bottom left corner
+            const char *hl = "\xE2\x95\x90"; // horiz line
+            const char *vl = "\xE2\x95\x91"; // vert line
+            const char *__ = " ";
+
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"),
+                          sq, sq, sq, sq, sq, sq, tr, __, sq, sq, sq, tr, __, __, __, sq, sq, sq, tr, sq, sq, sq, sq, sq, sq, tr);
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"),
+                          sq, sq, tl, hl, hl, sq, sq, tr, sq, sq, sq, sq, tr, __, sq, sq, sq, sq, vl, sq, sq, tl, hl, hl, hl, br);
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"),
+                          sq, sq, sq, sq, sq, sq, tl, br, sq, sq, tl, sq, sq, sq, sq, tl, sq, sq, vl, sq, sq, sq, sq, sq, tr, __);
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"),
+                          sq, sq, tl, hl, hl, hl, br, __, sq, sq, vl, bl, sq, sq, tl, br, sq, sq, vl, bl, hl, hl, hl, sq, sq, tr);
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s")" " BANNERMSG1,
+                          sq, sq, vl, __, __, __, __, __, sq, sq, vl, __, bl, hl, br, __, sq, sq, vl, sq, sq, sq, sq, sq, sq, vl);
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"),
+                          bl, hl, br, __, __, __, __, __, bl, hl, br, __, __, __, __, __, bl, hl, br, bl, hl, hl, hl, hl, hl, br);
+            PrintAndLogEx(NORMAL, "  " BANNERMSG2);
+            break;
+        }
+        case ANSI_PM5: {
+            PrintAndLogEx(NORMAL, "  " _CYAN_("8888888b.  888b     d888 888888888 "));
+            PrintAndLogEx(NORMAL, "  " _CYAN_("888   Y88b 8888b   d8888 888       "));
+            PrintAndLogEx(NORMAL, "  " _CYAN_("888    888 88888b.d88888 888       "));
+            PrintAndLogEx(NORMAL, "  " _CYAN_("888   d88P 888Y88888P888 8888888b. "));
+            PrintAndLogEx(NORMAL, "  " _CYAN_("8888888P\"  888 Y888P 888      \"Y88b"));
+            PrintAndLogEx(NORMAL, "  " _CYAN_("888        888  Y8P  888        888"));
+            PrintAndLogEx(NORMAL, "  " _CYAN_("888        888   \"   888 Y88b  d88P") " " BANNERMSG1);
+            PrintAndLogEx(NORMAL, "  " _CYAN_("888        888       888  \"Y8888P\" "));
+            PrintAndLogEx(NORMAL, "  " BANNERMSG2);
+            break;
+        }
+        case ASCII_PM5: {
+            PrintAndLogEx(NORMAL, "  8888888b.  888b     d888 888888888 ");
+            PrintAndLogEx(NORMAL, "  888   Y88b 8888b   d8888 888       ");
+            PrintAndLogEx(NORMAL, "  888    888 88888b.d88888 888       ");
+            PrintAndLogEx(NORMAL, "  888   d88P 888Y88888P888 8888888b. ");
+            PrintAndLogEx(NORMAL, "  8888888P\"  888 Y888P 888      \"Y88b");
+            PrintAndLogEx(NORMAL, "  888        888  Y8P  888        888");
+            PrintAndLogEx(NORMAL, "  888        888   \"   888 Y88b  d88P " BANNERMSG1);
+            PrintAndLogEx(NORMAL, "  888        888       888  \"Y8888P\" ");
             PrintAndLogEx(NORMAL, "  " BANNERMSG2);
             break;
         }
@@ -241,14 +291,14 @@ static void showBanner(void) {
 #if defined(_WIN32)
     if (GetConsoleCP() == 65001) {
         // If on Windows and using UTF-8 then we need utf-8 ascii art for banner.
-        showBanner_logo(UTF8);
+        showBanner_logo(IfPm5() ? UTF8_PM5 : UTF8);
     } else {
-        showBanner_logo(ANSI);
+        showBanner_logo(IfPm5() ? ANSI_PM5 : ANSI);
     }
 #elif defined(__linux__) || defined(__APPLE__)
-    showBanner_logo(ANSI);
+    showBanner_logo(IfPm5() ? ANSI_PM5 : ANSI);
 #else
-    showBanner_logo(ASCII);
+    showBanner_logo(IfPm5() ? ASCII_PM5 : ASCII);
 #endif
 
     PrintAndLogEx(NORMAL, "  [ " _YELLOW_("%s!")" :coffee: ]", get_quote());
