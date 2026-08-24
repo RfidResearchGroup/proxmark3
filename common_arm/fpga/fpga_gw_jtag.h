@@ -20,27 +20,24 @@
 // 毫秒延迟，不要求太高精度
 #define delay_ms_gowin(ms)    SpinDelay(ms)
 
-// TODO DXL Move GPIO definitions to a common header file, e.g., config_gpio_proxmark5.h,
-//  and include it here. This will make the code more maintainable and easier to read.
-
 // TCK 电平设置（PC10）
-#define set_tck_high()  (GPIOC->scr = GPIO_PINS_10)
-#define set_tck_low()   (GPIOC->clr = GPIO_PINS_10)
+#define set_tck_high()  (AT32_GPIO_FPGA_JTAG_TCK->scr = AT32_GPIO_FPGA_JTAG_TCK_PIN)
+#define set_tck_low()   (AT32_GPIO_FPGA_JTAG_TCK->clr = AT32_GPIO_FPGA_JTAG_TCK_PIN)
 
 // TMS 电平设置（PA15）
-#define set_tms_high()  (GPIOA->scr = GPIO_PINS_15)
-#define set_tms_low()   (GPIOA->clr = GPIO_PINS_15)
+#define set_tms_high()  (AT32_GPIO_FPGA_JTAG_TMS->scr = AT32_GPIO_FPGA_JTAG_TMS_PIN)
+#define set_tms_low()   (AT32_GPIO_FPGA_JTAG_TMS->clr = AT32_GPIO_FPGA_JTAG_TMS_PIN)
 
 // TDI 电平设置（PC12）
-#define set_tdi_high()  (GPIOC->scr = GPIO_PINS_12)
-#define set_tdi_low()   (GPIOC->clr = GPIO_PINS_12)
+#define set_tdi_high()  (AT32_GPIO_FPGA_JTAG_TDI->scr = AT32_GPIO_FPGA_JTAG_TDI_PIN)
+#define set_tdi_low()   (AT32_GPIO_FPGA_JTAG_TDI->clr = AT32_GPIO_FPGA_JTAG_TDI_PIN)
 
 // 获取 TDO 电平状态，true 为高，false 为低（PC11）
-#define get_tdo()       GpioInputStatus(GPIOC, GPIO_PINS_11)
+#define get_tdo()       GpioInputStatus(AT32_GPIO_FPGA_JTAG_TDO, AT32_GPIO_FPGA_JTAG_TDO_PIN)
 
 // JTAGSEL 引脚电平设置（PD2），若 JTAG 脚复用为普通 IO，则烧录前需拉低 JTAGSEL_N
-#define set_jtagsel_high()  (GPIOD->scr = GPIO_PINS_2)
-#define set_jtagsel_low()   (GPIOD->clr = GPIO_PINS_2)
+#define set_jtagsel_high()  (AT32_GPIO_FPGA_JTAG_SEL->scr = AT32_GPIO_FPGA_JTAG_SEL_PIN)
+#define set_jtagsel_low()   (AT32_GPIO_FPGA_JTAG_SEL->clr = AT32_GPIO_FPGA_JTAG_SEL_PIN)
 
 // 调试打印，受 DEBUG_GW_JTAG 编译开关控制，不再支持运行时开关
 #if DEBUG_GW_JTAG
