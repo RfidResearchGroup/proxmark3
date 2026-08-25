@@ -30,6 +30,10 @@ ifeq ($(PLATFORM),PM3ICOPYX)
   INCLUDES += -DICOPYX
 endif
 
+ifeq ($(PLATFORM),PM5)
+  INCLUDES += -DDEFAULT_PM5
+endif
+
 INSTALLBIN = proxmark3
 INSTALLSHARE = cmdscripts lualibs luascripts pyscripts resources dictionaries
 
