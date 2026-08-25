@@ -1,5 +1,8 @@
 These notes are mostly intended for developers.
-Read first the [Proxmark5 Instructions](../Installation_Instructions/Proxmark5-Instructions.md).
+ - Read first the [Proxmark5 Instructions](../Installation_Instructions/Proxmark5-Instructions.md). IMPORTANT !!!
+ - Read the technical manual to develop new features for PM5: [Proxmark5 Technical Manual](./PM5_VERE_Hardware_RM.md)
+
+---
 
 - Some hardware abstractions are still incomplete; all 'TODO DXL' items need to be addressed.
 - Certain timeout mechanisms (`timeout--`) are not cross-platform compatible. If `timeout--` is not used with additional clock conditions, please replace it with a timeout mechanism tied to a specific clock source, as the main clock frequency varies across different platforms.
