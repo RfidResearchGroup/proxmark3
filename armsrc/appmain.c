@@ -465,8 +465,15 @@ bool g_autooff_enabled = true;   // default on; toggled by CMD_PM5_BWM_AUTOOFF
 
 static bool s_autooff_setup = false;
 
+// Auto power-off on USB unplug. CRITICAL: only powers off on a USB-present -> absent
+// TRANSITION - i.e. the board was running on USB and the cable was pulled. A board that
+// booted on battery (button press, no USB) must NOT auto-off, or it could never be used
+// unplugged at all (and the hw bwmautooff toggle would be unreachable, since setting it
+// needs a client/USB). So we require having seen USB present at least once this session
+// before an absent reading triggers shutdown.
 static void bwm_autooff_check(void) {
     static uint32_t last_tick = 0;
+    static bool usb_was_present = false;   // have we seen USB present since boot?
 
     if (g_autooff_enabled == false) {
         return;
@@ -481,12 +488,15 @@ static void bwm_autooff_check(void) {
         s_autooff_setup = true;
     }
 
-    // Gpio_VUSB_Read() == true means USB power present. Once it reads absent, power
-    // off immediately: an idle board on battery serves no purpose, and hardware
-    // USB-insert wake brings it back on replug. No grace period - it would only keep
-    // the board pointlessly powered. Standalone/battery use is opted into via
-    // hw bwmautooff --off.
+    // Gpio_VUSB_Read() == true means USB power present.
     if (Gpio_VUSB_Read()) {
+        usb_was_present = true;   // latch: USB has been present this session
+        return;
+    }
+
+    // USB absent. Only power off if USB had previously been present (a real unplug).
+    // If it booted on battery and never saw USB, leave it running.
+    if (usb_was_present == false) {
         return;
     }
 
