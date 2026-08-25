@@ -869,6 +869,7 @@ SRCS =  mifare/aiddesfire.c \
         graph.c \
         hidsio.c \
         jansson_path.c \
+        jsonutils.c \
         iso4217.c \
         iso7816/apduinfo.c \
         iso7816/iso7816core.c \
