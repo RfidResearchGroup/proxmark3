@@ -34,7 +34,7 @@ Overview of PM5's core hardware features:
 |------|------|
 | Main processor | AT32F435 (ARM Cortex-M4F, 288 MHz) |
 | FPGA | GOWIN GW1N-UV4 (4608 LUTs, built-in flash) |
-| Power control | No dedicated SOC; relies on the main MCU to maintain power |
+| Power control | No dedicated SoC; relies on the main MCU to maintain power |
 | Communication bus | `system I2C bus` (connecting multiple peripherals) |
 | External interfaces | Main board 10P Connect header, dual TYPEC (USB / CEP), FPGA debug port |
 | Antenna | Dual-band (HF / LF) antenna, supporting I2C parameter configuration |
@@ -62,8 +62,8 @@ At the same time, the new GOWIN FPGA has **internal flash** and can boot directl
 
 | Scenario | Approach |
 |------|------|
-| During development and debugging | Use the ARM to load SRAM data into the FPGA via **emulated JTAG**, for debugging and testing |
-| Releasing firmware (for non-developer users) | Use the ARM to write firmware to the FPGA's flash via **emulated JTAG** |
+| During development and debugging | Use the ARM to load SRAM data into the FPGA via **emulated JTAG**, for debugging and testing, cf `hw fpga config --sram` |
+| Releasing firmware (for non-developer users) | Use the ARM to write firmware to the FPGA's flash via **emulated JTAG**, cf `hw fpga config` |
 
 This way there is no longer a 2–4 s FPGA programming wait at each boot; and since high/low-frequency firmware no longer needs to be distinguished, we no longer need to wait for FPGA programming while switching high/low-frequency card commands.
 
@@ -93,9 +93,9 @@ The figure below is a **simplified functional description** of PM5's power on/of
 
 In normal applications, the power on/off control circuit is controlled jointly by the external button and the MCU: after a button press powers on the system, the MCU must pull `POWER_ON_IO` (`PB0`) high at the appropriate moment to keep the system powered on and running.
 
-**② Charger and coulomb counter**
+**② Charger and Coulomb counter**
 
-A charger and a coulomb counter are designed on the external battery wireless module. Communication with these two chips is carried out over the `system I2C bus` (addresses in [Section 9](#9-system-i2c-bus-peripheral-address-table)).
+A charger and a Coulomb counter are designed on the external battery wireless module. Communication with these two chips is carried out over the `system I2C bus` (addresses in [Section 9](#9-system-i2c-bus-peripheral-address-table)).
 
 **③ Controllable antenna drive voltage (BOOST)**
 
@@ -126,7 +126,7 @@ PM5 has an additional hardware circuit that, after a USB insertion (with or with
 
 **⑦ Reset precautions (avoid accidental shutdown)**
 
-Because the power circuit does not use a dedicated SOC, PM5 relies on the main MCU to keep the power on. Therefore, PM5 does **not recommend** that the main MCU perform any behavior that causes the GPIO registers to reset (such an operation would cause the I/O that controls the main power switch to float, which would then cause the intended RESET to power down the system, manifesting as an accidental shutdown), for example:
+Because the power circuit does not use a dedicated SoC, PM5 relies on the main MCU to keep the power on. Therefore, we **do not recommend** that the main MCU performs any behavior that causes the GPIO registers to reset (such an operation would cause the I/O that controls the main power switch to float, which would then cause the intended RESET to power down the system, manifesting as an accidental shutdown), for example:
 
 - `NVIC_RESET`
 - `WDT` triggering, etc.
@@ -205,7 +205,7 @@ The buzzer-related circuit is shown below (simplified schematic):
 
 On PM5's **main board** there is a **2x5P 2.54 mm Connect header** as a communication interface. This interface provides multiple breakout functions (used by peripherals such as the antenna), and its interface definition is as follows.
 
-> The picture's orientation is the order as seen "directly viewing the 10P connector with the machine's decorative side facing up" (with the antenna's yellow ICX301 connector on the right side of the visible area).
+> The picture's orientation is the order as seen "directly viewing the 10P connector with the machine's decorative side facing up" (with the antenna's yellow ICX301 connectors on the right side of the visible area).
 
 ![Main board 10P Connect header interface definition](../../img/pm5/board-10p-header.png)
 
@@ -226,7 +226,7 @@ PM5 has two TYPE-C ports located in different positions:
 
 | Port | Tongue color | Position | Function | USB connection |
 |------|----------|------|------|----------|
-| USB port | Orange | Same side as the button | The familiar USB port on the traditional PM3, powering (charging) the whole device | MCU USB2 (`PB14` / `PB15`) |
+| USB port | Orange | Same side as the button | The familiar USB port on the traditional PM3, powering (charging) and communicating with the whole device | MCU USB2 (`PB14` / `PB15`) |
 | CEP interface | Black | Side | Can power (charge) the whole device, and can also output power externally | MCU USB1 (`PA11` / `PA12`) |
 
 > For more information on the CEP interface, see [Section 5.3](#53-cep-interface-typec_external_port).
@@ -389,16 +389,14 @@ Changes of the standard dual-band (HF, LF) antenna relative to RDV4:
 
 The peripherals connected to the `system I2C bus` and their 7-bit slave addresses are as follows:
 
-| Peripheral name | Peripheral address (7-bit) |
-|----------|:----------------:|
-| RGB controller | `0x48` |
-| Antenna controller | `0x51` |
-| BQ27427 | `0x55` |
-| AW32001 | `0x49` |
-| 24C02 | `0x50` |
-| TUSB320 | `0x47` |
-
-> **Supplementary note**: `BQ27427` is the battery coulomb counter (fuel gauge), and `AW32001` is the battery charger; both are located on the external battery wireless module. `TUSB320` is the Type-C configuration channel (CC) chip for the CEP interface. `24C02` is the read-only EEPROM (see [Section 6.1](#61-memory)).
+| Peripheral name | Peripheral address (7-bit) | Description |
+|----------|:----------------:|:----------------:|
+| RGB controller | `0x48` | [RGB Controller Technical Manual](../PM5_Controllers/PM5_RGB_Controller_RM.md)|
+| Antenna controller | `0x51` |[Antenna Controller Technical Manual](../PM5_Controllers/PM5_ANT_Controller_RM.md)|
+| BQ27427 | `0x55` |battery Coulomb counter / fuel gauge (on the optional BWM)|
+| AW32001 | `0x49` |battery charger (on the optional BWM)
+| 24C02 | `0x50` | read-only EEPROM (see [Section 6.1](#61-memory))|
+| TUSB320 | `0x47` |Type-C configuration channel (CC) chip for the CEP interface|
 
 ---
 
