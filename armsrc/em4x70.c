@@ -1472,8 +1472,8 @@ void em4x70_info(const em4x70_data_t *etd, bool ledcontrol) {
         success_with_UM2 = em4x70_read_um2();
     }
 
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
-    lf_finalize(ledcontrol);
     int status = success ? PM3_SUCCESS : PM3_ESOFT;
     size_t data_size =
         success && success_with_UM2 ? 32 :
@@ -1514,8 +1514,9 @@ void em4x70_write(const em4x70_data_t *etd, bool ledcontrol) {
         }
     }
 
+    if (ledcontrol) LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
-    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_WRITE, status, g_tag.data, sizeof(g_tag.data));
 }
 
@@ -1547,8 +1548,9 @@ void em4x70_unlock(const em4x70_data_t *etd, bool ledcontrol) {
         }
     }
 
+    if (ledcontrol) LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
-    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_UNLOCK, status, g_tag.data, sizeof(g_tag.data));
 }
 
@@ -1577,8 +1579,9 @@ void em4x70_auth(const em4x70_data_t *etd, bool ledcontrol) {
         status = authenticate(etd->rnd, etd->frnd, response);
     }
 
+    if (ledcontrol) LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
-    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_AUTH, status, response, sizeof(response));
 }
 
@@ -1605,8 +1608,9 @@ void em4x70_brute(const em4x70_data_t *etd, bool ledcontrol) {
         status = bruteforce(etd->address, etd->rnd, etd->frnd, etd->start_key, response);
     }
 
+    if (ledcontrol) LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
-    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_BRUTE, status, response, sizeof(response));
 }
 
@@ -1654,8 +1658,9 @@ void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol) {
         }
     }
 
+    if (ledcontrol) LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
-    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_SETPIN, status, g_tag.data, sizeof(g_tag.data));
 }
 
@@ -1701,7 +1706,8 @@ void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
         }
     }
 
+    if (ledcontrol) LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
-    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_SETKEY, status, g_tag.data, sizeof(g_tag.data));
 }

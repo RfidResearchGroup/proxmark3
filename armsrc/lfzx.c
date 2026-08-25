@@ -99,7 +99,7 @@ static void zx8211_setup_read(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
 
     // 50ms for the resonant antenna to settle.
-    WaitMS(50);
+    SpinDelay(50);
 
     // Now set up the SSC to get the ADC samples that are now streaming at us.
     FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER);
@@ -108,9 +108,6 @@ static void zx8211_setup_read(void) {
 
     // Connect the A/D to the peak-detected low-frequency path.
     SetAdcMuxFor(ADC_MUXSEL_LOPKD);
-
-    // Start the timer
-    StartTicks();
 
     // Watchdog hit
     WDT_HIT();
@@ -179,9 +176,7 @@ int zx8211_read(zx8211_data_t *zxd, bool ledcontrol) {
     //uint32_t cs = CRC8Hitag1(uint8_t *buff, size_t size);
 
     if (ledcontrol) LEDsoff();
-
-    StopTicks();
-    lf_finalize(ledcontrol);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     reply_ng(CMD_LF_ZX_READ, PM3_SUCCESS, NULL, 0);
     return PM3_SUCCESS;
@@ -190,8 +185,8 @@ int zx8211_read(zx8211_data_t *zxd, bool ledcontrol) {
 int zx8211_write(zx8211_data_t *zxd, bool ledcontrol) {
     zx8211_setup_read();
 
-    StopTicks();
-    lf_finalize(ledcontrol);
+    if (ledcontrol) LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     //reply_ng(CMD_LF_ZX_WRITE, status, tag.data, sizeof(tag.data));
     return PM3_SUCCESS;
 }

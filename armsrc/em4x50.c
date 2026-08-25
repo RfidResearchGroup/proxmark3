@@ -716,7 +716,8 @@ void em4x50_login(const uint32_t *password, bool ledcontrol) {
     }
 
     if (ledcontrol) LEDsoff();
-    lf_finalize(ledcontrol);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    StopTicks();
     reply_ng(CMD_LF_EM4X50_LOGIN, status, NULL, 0);
 }
 
@@ -736,7 +737,8 @@ void em4x50_brute(const em4x50_data_t *etd, bool ledcontrol) {
     }
 
     if (ledcontrol) LEDsoff();
-    lf_finalize(ledcontrol);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    StopTicks();
     reply_ng(CMD_LF_EM4X50_BRUTE, bsuccess ? PM3_SUCCESS : PM3_EFAILED, (uint8_t *)(&pwd), sizeof(pwd));
 }
 
@@ -798,7 +800,8 @@ void em4x50_chk(const char *filename, bool ledcontrol) {
 #endif
 
     if (ledcontrol) LEDsoff();
-    lf_finalize(ledcontrol);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    StopTicks();
     reply_ng(CMD_LF_EM4X50_CHK, status, (uint8_t *)&pwd, sizeof(pwd));
 }
 
@@ -909,7 +912,8 @@ void em4x50_read(const em4x50_data_t *etd, bool ledcontrol) {
 
     if (ledcontrol) LEDsoff();
     Gpio_SSC_DOUT_Low();
-    lf_finalize(ledcontrol);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    StopTicks();
     reply_ng(CMD_LF_EM4X50_READ, status, (uint8_t *)words, EM4X50_TAG_MAX_NO_BYTES);
 }
 
@@ -939,7 +943,8 @@ void em4x50_info(const em4x50_data_t *etd, bool ledcontrol) {
     }
 
     if (ledcontrol) LEDsoff();
-    lf_finalize(ledcontrol);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    StopTicks();
     reply_ng(CMD_LF_EM4X50_INFO, status, (uint8_t *)words, EM4X50_TAG_MAX_NO_BYTES);
 }
 
@@ -962,7 +967,8 @@ void em4x50_reader(bool ledcontrol) {
 
     if (ledcontrol) LEDsoff();
     Gpio_SSC_DOUT_Low();
-    lf_finalize(ledcontrol);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    StopTicks();
     reply_ng(CMD_LF_EM4X50_READER, now, (uint8_t *)words, 4 * now);
 }
 
@@ -1085,7 +1091,9 @@ void em4x50_write(const em4x50_data_t *etd, bool ledcontrol) {
             // write word to given address
             status = write(etd->word, etd->addresses);
             if (status == PM3_ETEAROFF) {
-                lf_finalize(ledcontrol);
+                if (ledcontrol) LEDsoff();
+                FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+                StopTicks();
                 return;
             }
 
@@ -1116,7 +1124,8 @@ void em4x50_write(const em4x50_data_t *etd, bool ledcontrol) {
     }
 
     if (ledcontrol) LEDsoff();
-    lf_finalize(ledcontrol);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    StopTicks();
     reply_ng(CMD_LF_EM4X50_WRITE, status, (uint8_t *)words, EM4X50_TAG_MAX_NO_BYTES);
 }
 
@@ -1139,14 +1148,17 @@ void em4x50_writepwd(const em4x50_data_t *etd, bool ledcontrol) {
 
             status = write_password(etd->password1, etd->password2);
             if (status == PM3_ETEAROFF) {
-                lf_finalize(ledcontrol);
+                if (ledcontrol) LEDsoff();
+                FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+                StopTicks();
                 return;
             }
         }
     }
 
     if (ledcontrol) LEDsoff();
-    lf_finalize(ledcontrol);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    StopTicks();
     reply_ng(CMD_LF_EM4X50_WRITEPWD, status, NULL, 0);
 }
 
@@ -1869,6 +1881,8 @@ void em4x50_sim(const uint32_t *password, bool ledcontrol) {
     }
 
     BigBuf_free();
-    lf_finalize(ledcontrol);
+    if (ledcontrol) LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    StopTicks();
     reply_ng(CMD_LF_EM4X50_SIM, command, NULL, 0);
 }
