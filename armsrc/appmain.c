@@ -245,6 +245,17 @@ static void print_pm5_battery_status(void) {
                  (cur > 5)  ? _GREEN_("(charging)") :
                  (cur < -5) ? _YELLOW_("(discharging)") : "(idle)");
         Dbprintf("  Remaining capacity.. %u mAh", rem);
+        // Measured drain / projected runtime: when running on battery the gauge
+        // Current is negative (discharging); |cur| is the real system draw, so
+        // remaining runtime ~= RemainingCapacity / draw. Only meaningful while
+        // discharging - on charge or idle there is no drain figure to report.
+        // (Projection is only as good as RemCap - provision Design Capacity first.)
+        if (cur < -5) {
+            uint16_t draw = (uint16_t)(-cur);            // mA drawn from the battery
+            uint32_t mins = ((uint32_t)rem * 60) / draw; // RemCap/draw -> hours, *60 -> mins
+            Dbprintf("  Battery drain....... %u mA (approx %u h %u min left)",
+                     draw, (unsigned)(mins / 60), (unsigned)(mins % 60));
+        }
         Dbprintf("  Temp (gauge)........ %d.%d C", tempC10 / 10, tabs % 10);
 
         // Battery health: FullChargeCapacity (0x0E) vs the gauge's programmed Design
