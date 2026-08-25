@@ -142,6 +142,8 @@ static bool g_bwm_present = false;
 #define BWM_GAUGE_TEMP       0x02   // 0.1 K
 #define BWM_GAUGE_VOLTAGE    0x04   // mV
 #define BWM_GAUGE_REMCAP     0x0C   // mAh
+#define BWM_GAUGE_FCC        0x0E   // mAh, FullChargeCapacity (health: FCC/design cap)
+#define BWM_DEFAULT_DESIGN_CAP_MAH   500   // VXE 502540 fitted cell (500 mAh, 3.7 V)
 #define BWM_GAUGE_CURRENT    0x10   // signed mA
 #define BWM_GAUGE_SOC        0x1C   // %
 
@@ -156,6 +158,7 @@ static bool bwm_gauge_read16(uint8_t cmd, uint16_t *out) {
 
 // Reads the BWM charger + fuel gauge and prints a battery section. Called from
 // SendStatus() under #ifdef PM5, so it only runs on a booted PM5 with I2C available.
+static bool bq_read_design_cap(uint16_t *cap);   // fwd decl (defined with the provisioning code below)
 static void print_pm5_battery_status(void) {
     if (g_bwm_present == false) {
         return;   // no BWM detected at boot; nothing to report
@@ -243,6 +246,22 @@ static void print_pm5_battery_status(void) {
                  (cur < -5) ? _YELLOW_("(discharging)") : "(idle)");
         Dbprintf("  Remaining capacity.. %u mAh", rem);
         Dbprintf("  Temp (gauge)........ %d.%d C", tempC10 / 10, tabs % 10);
+
+        // Battery health: FullChargeCapacity (0x0E) vs the gauge's programmed Design
+        // Capacity. FCC is the gauge's learned present full capacity; health = FCC/design.
+        // NOTE: only meaningful once the gauge has run an Impedance Track learning cycle
+        // (a full charge/discharge). Before that it is an unconverged estimate. If Design
+        // Capacity was never provisioned (hw bwmsetcap), the ratio is against the gauge
+        // default, not the fitted cell - so it can read wildly wrong.
+        uint16_t fcc = 0, design = 0;
+        if (bwm_gauge_read16(BWM_GAUGE_FCC, &fcc) && fcc > 0) {
+            if (bq_read_design_cap(&design) == false || design == 0) {
+                design = BWM_DEFAULT_DESIGN_CAP_MAH;   // fall back to the fitted-cell rating
+            }
+            unsigned health = (unsigned)(((uint32_t)fcc * 100) / design);
+            Dbprintf("  Full charge cap..... %u mAh (design %u)", fcc, design);
+            Dbprintf("  Battery health...... %u %% " _YELLOW_("(needs a full cycle to be accurate)"), health);
+        }
     } else {
         Dbprintf("  Fuel gauge.......... " _YELLOW_("not responding") " (BQ27427 absent or I2C down)");
     }
@@ -255,7 +274,6 @@ static void print_pm5_battery_status(void) {
 // because a config-update cycle disrupts the Impedance Track learning cycle.
 // Per BQ27427 TRM (SLUUCD5): State subclass 82 (0x52), Design Capacity at offset 6
 // -> block addr 0x46 (MSB)/0x47 (LSB), big-endian. Assumes gauge UNSEALED (factory default).
-#define BWM_DEFAULT_DESIGN_CAP_MAH   500   // VXE 502540 on the reference BWM
 
 static bool bq_control(uint16_t sub) {
     uint8_t d[2] = { (uint8_t)(sub & 0xFF), (uint8_t)(sub >> 8) };
