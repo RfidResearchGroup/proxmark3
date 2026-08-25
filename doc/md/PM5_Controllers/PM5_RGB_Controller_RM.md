@@ -67,7 +67,7 @@ Step 2 (read data)  : START → 7-bit address + R(1) → ACK → [data bytes…]
 
 ### 2.4 Recommended Communication Rate
 
-It is recommended to use a communication clock rate of **around 10K**; an excessively high rate may cause communication failures.
+It is recommended to use a communication clock rate of **around 10 kHz**; an excessively high rate may cause communication failures.
 
 ### 2.5 Abnormal Acknowledge (NACK) Behavior
 
@@ -346,5 +346,5 @@ flowchart TD
 2. After executing lights-off (`0x04`), allow about 10ms; do not write the data/index register during this period.
 3. After setting the count (`0x01`), the legal range of the index (`0x02`) changes accordingly; be careful to avoid out-of-range writes.
 4. Before using the blink function, confirm that the current index points to the target LED; index/data/lights-off operations disable blink.
-5. It is recommended to keep the communication rate at around 10K; an excessively high rate may cause communication failures.
+5. It is recommended to keep the communication rate at around 10 kHz; an excessively high rate may cause communication failures.
 6. The current slave address supports only two static selections, `0x48` (high level) and `0x49` (low level); `0x68`/`0x69` are reserved.

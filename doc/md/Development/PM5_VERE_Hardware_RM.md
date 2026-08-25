@@ -390,7 +390,7 @@ Changes of the standard dual-band (HF, LF) antenna relative to RDV4:
 The peripherals connected to the `system I2C bus` and their 7-bit slave addresses are as follows:
 
 | Peripheral name | Peripheral address (7-bit) | Description |
-|----------|:----------------:|:----------------:|
+|----------|:----------------:|----------------|
 | RGB controller | `0x48` | [RGB Controller Technical Manual](../PM5_Controllers/PM5_RGB_Controller_RM.md)|
 | Antenna controller | `0x51` |[Antenna Controller Technical Manual](../PM5_Controllers/PM5_ANT_Controller_RM.md)|
 | BQ27427 | `0x55` |battery Coulomb counter / fuel gauge (on the optional BWM)|
