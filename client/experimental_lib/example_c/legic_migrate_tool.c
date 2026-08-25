@@ -302,6 +302,7 @@ static bool has_extra_segments(const uint8_t *dump, uint16_t len) {
 
     while (start + 5 <= len) {
         uint16_t seg_len = (((uint16_t)dump[start + 1] & 0x0F) << 8) | dump[start];
+        bool is_last = ((dump[start + 1] & 0x08) != 0);
         if (seg_len < 5 || start + seg_len > len) {
             break;
         }
@@ -311,7 +312,7 @@ static bool has_extra_segments(const uint8_t *dump, uint16_t len) {
         }
 
         saw_first = true;
-        if (start + seg_len >= len) {
+        if (is_last) {
             break;
         }
 
