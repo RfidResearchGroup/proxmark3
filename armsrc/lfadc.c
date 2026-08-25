@@ -214,8 +214,6 @@ void lf_wait_periods(size_t periods) {
 }
 
 void lf_init(lf_adc_init_mode_t init_mode, lf_adc_edge_mode_t edge_mode, bool ledcontrol) {
-    StopTicks();
-
     g_init_mode = init_mode;
     g_edge_mode = edge_mode;
 
@@ -254,42 +252,14 @@ void lf_init(lf_adc_init_mode_t init_mode, lf_adc_edge_mode_t edge_mode, bool le
     // maximum: 545T0 = 545 * 8us = 4360us = 4.36ms - Hitag2 command waiting time before it starts transmitting in public mode (if configured so)
     //          565T0 = 565 * 8us = 4520us = 4.52ms - HitagS waiting time before entering TTF mode (if configured so)
     // Thus (2.50 ms + 4.36 ms) / 2 ~= 3 ms (rounded down to integer), should be a good timing for both tag models
-    SpinDelay(2); // TODO DXL 之前是 3ms，改成2ms测试hitagU
-    // TODO DXL 经测试，3ms时hitag2工作的很好，但是hitagu会进入TTF模式导致无法寻卡
-    //  hitagu用2ms延时比较靠谱
-    // lf_wait_periods(200); // TODO DXL zx8268 用这个时长才能正常寻卡，3ms的话，8268直接开始广播了，没办法通信上了
+    SpinDelay(3);
 
     // Steal this pin from the SSP (SPI communication channel with fpga) and use it to control the modulation
     gpio_fpga_mod_only_setup();
     Gpio_SSC_DOUT_Low();
 
-    /* TODO DXL 暂时注释，看看哪里没用到这些定时器的，如果都没用到，则可以删掉
-
-    // Enable peripheral Clock for TIMER_CLOCK 0
-    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC0);
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV4_CLOCK;
-
-    // Enable peripheral Clock for TIMER_CLOCK 1
-    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_TC1);
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV4_CLOCK;
-
-    */
-
     // Clear all leds
     if (ledcontrol) LEDsoff();
-
-    /* TODO DXL 暂时注释，看看哪里没用到这些定时器的，如果都没用到，则可以删掉
-
-    // Reset and enable timers
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-
-    // Assert a sync signal. This sets all timers to 0 on next active clock edge
-    AT91C_BASE_TCB->TCB_BCR = 1;
-
-    */
 
     // Prepare data trace
     uint32_t bufsize = 10000;
@@ -303,23 +273,8 @@ void lf_init(lf_adc_init_mode_t init_mode, lf_adc_edge_mode_t edge_mode, bool le
 }
 
 void lf_finalize(bool ledcontrol) {
-    /* TODO DXL 暂时注释，看看哪里没用到这些定时器的，如果都没用到，则可以删掉
-
-    // Disable timers
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
-
-    // return stolen pin to SSP
-    AT91C_BASE_PIOA->PIO_PDR = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_ASR = GPIO_SSC_DIN | GPIO_SSC_DOUT;
-
-    */
-
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-
     if (ledcontrol) LEDsoff();
-
-    StartTicks();
 }
 
 size_t lf_detect_field_drop(size_t max) {
