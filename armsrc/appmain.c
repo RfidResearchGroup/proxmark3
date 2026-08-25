@@ -457,11 +457,8 @@ static void bwm_power_led_check(void) {
 //
 // Runtime toggle (default ON) via CMD_PM5_BWM_AUTOOFF; resets to default each boot.
 // Standalone / BLE-relay users who run unplugged on purpose can disable it.
-#ifndef PM5_AUTOOFF_GRACE_MS
-#define PM5_AUTOOFF_GRACE_MS   10000   // USB must be absent this long before power-off
-#endif
 #ifndef PM5_AUTOOFF_POLL_MS
-#define PM5_AUTOOFF_POLL_MS    500     // how often to sample VUSB
+#define PM5_AUTOOFF_POLL_MS    250     // how often to sample VUSB
 #endif
 
 bool g_autooff_enabled = true;   // default on; toggled by CMD_PM5_BWM_AUTOOFF
@@ -470,10 +467,8 @@ static bool s_autooff_setup = false;
 
 static void bwm_autooff_check(void) {
     static uint32_t last_tick = 0;
-    static uint32_t usb_gone_since = 0;   // tick when USB first read absent; 0 = present
 
     if (g_autooff_enabled == false) {
-        usb_gone_since = 0;
         return;
     }
     if ((last_tick != 0) && (GetTickCountDelta(last_tick) < PM5_AUTOOFF_POLL_MS)) {
@@ -486,22 +481,15 @@ static void bwm_autooff_check(void) {
         s_autooff_setup = true;
     }
 
-    // Gpio_VUSB_Read() == true means USB power present.
+    // Gpio_VUSB_Read() == true means USB power present. Once it reads absent, power
+    // off immediately: an idle board on battery serves no purpose, and hardware
+    // USB-insert wake brings it back on replug. No grace period - it would only keep
+    // the board pointlessly powered. Standalone/battery use is opted into via
+    // hw bwmautooff --off.
     if (Gpio_VUSB_Read()) {
-        usb_gone_since = 0;   // present (or came back) -> reset the grace timer
         return;
     }
 
-    // USB absent. Start / continue the debounce window.
-    if (usb_gone_since == 0) {
-        usb_gone_since = GetTickCount();
-        return;
-    }
-    if (GetTickCountDelta(usb_gone_since) < PM5_AUTOOFF_GRACE_MS) {
-        return;   // not gone long enough yet; a replug resets it above
-    }
-
-    // USB confirmed absent for the full grace period: power off via the latch.
     LEDsoff();
     Gpio_ARM_Power_ON_Low();
     while (1); // wait for hardware power-off (button press powers back on, in hardware)
