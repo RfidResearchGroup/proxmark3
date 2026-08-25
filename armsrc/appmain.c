@@ -242,7 +242,7 @@ static void print_pm5_battery_status(void) {
                  (cur > 5)  ? _GREEN_("(charging)") :
                  (cur < -5) ? _YELLOW_("(discharging)") : "(idle)");
         Dbprintf("  Remaining capacity.. %u mAh", rem);
-        Dbprintf("  Temp (gauge)........ %d.%d C", tempC10 / 10, tabs % 10);
+        Dbprintf("  Battery temp........ %d.%d C", tempC10 / 10, tabs % 10);
     } else {
         Dbprintf("  Fuel gauge.......... " _YELLOW_("not responding") " (BQ27427 absent or I2C down)");
     }
@@ -447,6 +447,66 @@ static void bwm_power_led_check(void) {
     }
 }
 #endif // WITH_PM5_PWR_LED
+
+#ifdef WITH_PM5_AUTOOFF
+// Automatic power-off on USB unplug. When the BWM keeps the PM5 alive on battery,
+// users leave it draining. This powers the board down after USB has been absent
+// continuously for a grace period, using the SAME latch release as the long-press
+// shutdown (Gpio_ARM_Power_ON_Low). Button power-ON is a hardware function and is
+// unaffected - once powered off there is no firmware running to interfere with it.
+//
+// Runtime toggle (default ON) via CMD_PM5_BWM_AUTOOFF; resets to default each boot.
+// Standalone / BLE-relay users who run unplugged on purpose can disable it.
+#ifndef PM5_AUTOOFF_GRACE_MS
+#define PM5_AUTOOFF_GRACE_MS   10000   // USB must be absent this long before power-off
+#endif
+#ifndef PM5_AUTOOFF_POLL_MS
+#define PM5_AUTOOFF_POLL_MS    500     // how often to sample VUSB
+#endif
+
+bool g_autooff_enabled = true;   // default on; toggled by CMD_PM5_BWM_AUTOOFF
+
+static bool s_autooff_setup = false;
+
+static void bwm_autooff_check(void) {
+    static uint32_t last_tick = 0;
+    static uint32_t usb_gone_since = 0;   // tick when USB first read absent; 0 = present
+
+    if (g_autooff_enabled == false) {
+        usb_gone_since = 0;
+        return;
+    }
+    if ((last_tick != 0) && (GetTickCountDelta(last_tick) < PM5_AUTOOFF_POLL_MS)) {
+        return;
+    }
+    last_tick = GetTickCount();
+
+    if (s_autooff_setup == false) {
+        gpio_vusb_setup();
+        s_autooff_setup = true;
+    }
+
+    // Gpio_VUSB_Read() == true means USB power present.
+    if (Gpio_VUSB_Read()) {
+        usb_gone_since = 0;   // present (or came back) -> reset the grace timer
+        return;
+    }
+
+    // USB absent. Start / continue the debounce window.
+    if (usb_gone_since == 0) {
+        usb_gone_since = GetTickCount();
+        return;
+    }
+    if (GetTickCountDelta(usb_gone_since) < PM5_AUTOOFF_GRACE_MS) {
+        return;   // not gone long enough yet; a replug resets it above
+    }
+
+    // USB confirmed absent for the full grace period: power off via the latch.
+    LEDsoff();
+    Gpio_ARM_Power_ON_Low();
+    while (1); // wait for hardware power-off (button press powers back on, in hardware)
+}
+#endif // WITH_PM5_AUTOOFF
 
 #ifdef WITH_LCD
 #include "LCD_disabled.h"
@@ -4075,6 +4135,17 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_PM5_BWM_CHARGE_EN, ok ? PM3_SUCCESS : PM3_EFAILED, NULL, 0);
             break;
         }
+        case CMD_PM5_BWM_AUTOOFF: {
+            // Toggle automatic power-off on USB unplug (runtime, default on).
+            // Payload: 1 byte, non-zero = enable (default), zero = disable.
+#ifdef WITH_PM5_AUTOOFF
+            g_autooff_enabled = (packet->length >= 1) ? (packet->data.asBytes[0] != 0) : true;
+            reply_ng(CMD_PM5_BWM_AUTOOFF, PM3_SUCCESS, (uint8_t *)&g_autooff_enabled, 1);
+#else
+            reply_ng(CMD_PM5_BWM_AUTOOFF, PM3_ENOTIMPL, NULL, 0);
+#endif
+            break;
+        }
 #endif
 #endif
         default: {
@@ -4165,6 +4236,9 @@ void __attribute__((noreturn)) AppMain(void) {
 
 #ifdef WITH_PM5_PWR_LED
         bwm_power_led_check();
+#endif
+#ifdef WITH_PM5_AUTOOFF
+        bwm_autooff_check();
 #endif
 
         if (*_stack_start != 0xdeadbeef) {
