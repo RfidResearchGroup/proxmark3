@@ -544,6 +544,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "FE137A",
+        "Vendor": "Fermax Australia Pty Ltd",
+        "Country": "AU",
+        "Name": "Fermax High Security DESFire Credential",
+        "Description": "Fermax Australia PACS Access Control",
+        "Type": "pacs"
+    },
+    {
         "AID": "F518F0",
         "Vendor": "Telenot Electronic GmbH",
         "Country": "DE",
@@ -1887,7 +1895,7 @@
         "Description": "FID 08: Standard Data",
         "Type": "transport"
     },
-    {
+        {
         "AID": "FFFFFF",
         "Vendor": "Reserved for Future Use",
         "Country": "",
