@@ -1,6 +1,6 @@
 """Support ``python3 -m epassport``.
 
-The real entry point is the ``ePassport`` script in the project root; this
+The real entry point is the ``ePassport.py`` script in the project root; this
 shim only exists so the module form keeps working.
 """
 

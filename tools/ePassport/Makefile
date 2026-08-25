@@ -21,7 +21,7 @@ help:
 	@echo "  PYTHON=$(PYTHON)  (override if your dependencies live in a venv)"
 
 run:
-	$(PYTHON) ./ePassport
+	$(PYTHON) ./ePassport.py
 
 test:
 	$(PYTHON) -m pytest tests/ -q
