@@ -123,8 +123,13 @@ bool IfPm3FpcUsartFromUsb(void) {
 }
 
 bool IfPm5(void) {
-    if (IfPm3Present() == false)
+    if (IfPm3Present() == false) {
+#ifdef DEFAULT_PM5
+        return true;    // client built for PM5 -> assume PM5 when offline
+#else
         return false;
+#endif
+    }
     return g_pm3_capabilities.is_pm5;
 }
 
