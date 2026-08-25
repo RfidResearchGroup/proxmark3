@@ -1500,6 +1500,53 @@ static int CmdTearoff(const char *Cmd) {
     return handle_tearoff(&params, !silent);
 }
 
+static int CmdBwmAutoOff(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwmautooff",
+        "Toggle automatic power-off when the PM5 is unplugged from USB (BWM only).\n"
+        "Default is " _GREEN_("on") ". When on, the board powers itself down ~10s after\n"
+        "USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery.\n"
+         "Button power-on is unaffected. Disable for standalone/BLE use on battery.\n"
+        _YELLOW_("Runtime only:") " resets to on at each boot.",
+        "hw bwmautooff --off   --> disable auto power-off\n"
+        "hw bwmautooff --on    --> re-enable auto power-off");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "on",  "enable auto power-off (default)"),
+        arg_lit0(NULL, "off", "disable auto power-off"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool on  = arg_get_lit(ctx, 1);
+    bool off = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    if (on && off) {
+        PrintAndLogEx(WARNING, "pick one of --on / --off");
+        return PM3_EINVARG;
+    }
+    uint8_t payload = off ? 0 : 1;   // default (neither flag) = enable
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_AUTOOFF, &payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_PM5_BWM_AUTOOFF, &resp, 2500) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5?)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status == PM3_ENOTIMPL) {
+        PrintAndLogEx(WARNING, "firmware built without auto power-off support");
+        return resp.status;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "failed to set auto power-off");
+        return resp.status;
+    }
+    PrintAndLogEx(SUCCESS, "Auto power-off %s.", payload ? _GREEN_("enabled") : _YELLOW_("disabled"));
+    return PM3_SUCCESS;
+}
+
 static int CmdBwmCharge(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw bwmcharge",
@@ -2062,6 +2109,7 @@ static command_t CommandTable[] = {
     {"tia", CmdTia, IfPm3Present, "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
     {"bwmsetcap", CmdBwmSetCap, IfPm5, "Set BWM fuel-gauge design capacity (PM5, run once after battery change)"},
     {"bwmcharge", CmdBwmCharge, IfPm5, "Enable/disable BWM battery charging (PM5, one-shot)"},
+    {"bwmautooff", CmdBwmAutoOff, IfPm5, "Toggle auto power-off on USB unplug (PM5, BWM)"},
     {"tune", CmdTune, IfPm3Lf, "Measure tuning of device antenna"},
     {"decay", CmdDecay, IfPm3Present, "Measure HF antenna decay after field-off"},
     {NULL, NULL, NULL, NULL}
