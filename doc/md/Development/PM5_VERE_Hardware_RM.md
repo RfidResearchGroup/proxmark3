@@ -203,7 +203,10 @@ The buzzer-related circuit is shown below (simplified schematic):
 
 ### 5.1 Main Board 10P Connect Header & ICX301 Antenna Interface
 
-On PM5's **main board** there is a **2x5P 2.54 mm Connect header** as a communication interface. This interface provides multiple breakout functions (used by peripherals such as the antenna)
+On PM5's **main board** there is a **2x5P 2.54 mm Connect header** as a communication interface. This interface provides multiple IO functions (used by peripherals such as the antenna),
+and have a ICX301 as the antenna interface.
+
+About ICX301: [ICX301 Datasheet](../../datasheets/AMASS_ICX301PT_SPEC.pdf)
 
 The following image shows the positional relationship between the 10P HEADER and ICX301 in detail.
 And shows the signal definition of the 10P HEADER and the ICX301 interface.
