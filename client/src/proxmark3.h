@@ -24,7 +24,7 @@
 
 #define PROXPROMPT_MAX_SIZE 255
 
-#define PROXPROMPT_COMPOSE "[" "%s%s%s" "] pm3 --> "
+#define PROXPROMPT_COMPOSE "[" "%s%s%s" "] %s --> "
 
 #define PROXPROMPT_CTX_SCRIPTFILE  "|" _RL_GREEN_("script")
 #define PROXPROMPT_CTX_SCRIPTCMD   "|" _RL_GREEN_("script")

@@ -350,10 +350,11 @@ static void prompt_set(void) {
 }
 
 static void prompt_compose(char *buf, size_t buflen, const char *promptctx, const char *promptdev, const char *promptnet, bool no_newline) {
+    const char *dev_name = IfPm5() ? "pm5" : "pm3";
     if (no_newline) {
-        snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
+        snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx, dev_name);
     } else {
-        snprintf(buf, buflen - 1, _CLR_LINE_ "\r" PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
+        snprintf(buf, buflen - 1, _CLR_LINE_ "\r" PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx, dev_name);
     }
 }
 
