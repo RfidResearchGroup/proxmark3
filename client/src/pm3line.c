@@ -186,22 +186,15 @@ char *pm3line_read(const char *s) {
     return linenoise(s);
 #else
     printf("%s", s);
-    char input[1024] = {0};
-    if (fgets(input, sizeof(input), stdin) == NULL) {
-        return NULL;
+    char *answer = NULL;
+    size_t anslen = 0;
+    int ret;
+    if ((ret = getline(&answer, &anslen, stdin)) < 0) {
+        // TODO this happens also when kbd_enter_pressed() is used, with a key pressed or not
+        printf("DEBUG: getline returned %i", ret);
+        free(answer);
+        answer = NULL;
     }
-
-    size_t len = strlen(input);
-    while (len > 0 && (input[len - 1] == '\n' || input[len - 1] == '\r')) {
-        input[--len] = '\0';
-    }
-
-    char *answer = calloc(len + 1, sizeof(char));
-    if (answer == NULL) {
-        return NULL;
-    }
-
-    memcpy(answer, input, len);
     return answer;
 #endif
 }
