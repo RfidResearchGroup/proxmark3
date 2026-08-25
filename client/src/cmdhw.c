@@ -1175,21 +1175,24 @@ static int CmdTune(const char *Cmd) {
         double lfq2 = (double)package->peak_v * 3.14 / 2 / vdd;
         PrintAndLogEx(SUCCESS, "Peak voltage.......... " _YELLOW_("%.1lf"), lfq2);
         // cross-check results
-        if (lfq1 > 3) {
-            double approx_vdd = (double)package->peak_v * 3.14 / 2 / lfq1;
-            // Got 8858 on a RDV4 with large antenna 134/14
-            // Got 8761 on a non-RDV4
-            const double approx_vdd_other_max = 8840;
+        // TODO DXL pm5 to be covered
+        if (IfPm5() == false) {
+            if (lfq1 > 3) {
+                double approx_vdd = (double)package->peak_v * 3.14 / 2 / lfq1;
+                // Got 8858 on a RDV4 with large antenna 134/14
+                // Got 8761 on a non-RDV4
+                const double approx_vdd_other_max = 8840;
 
-            // 1% over threshold and supposedly non-RDV4
-            if ((approx_vdd > approx_vdd_other_max * 1.01) && (!IfPm3Rdv4Fw())) {
-                PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3GENERIC firmware on a RDV4"));
-                PrintAndLogEx(WARNING, "False positives is possible but please check your setup");
-            }
-            // 1% below threshold and supposedly RDV4
-            if ((approx_vdd < approx_vdd_other_max * 0.99) && (IfPm3Rdv4Fw())) {
-                PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_RDV4 firmware on a generic device"));
-                PrintAndLogEx(WARNING, "False positives is possible but please check your setup");
+                // 1% over threshold and supposedly non-RDV4
+                if ((approx_vdd > approx_vdd_other_max * 1.01) && (!IfPm3Rdv4Fw())) {
+                    PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3GENERIC firmware on a RDV4"));
+                    PrintAndLogEx(WARNING, "False positives is possible but please check your setup");
+                }
+                // 1% below threshold and supposedly RDV4
+                if ((approx_vdd < approx_vdd_other_max * 0.99) && (IfPm3Rdv4Fw())) {
+                    PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_RDV4 firmware on a generic device"));
+                    PrintAndLogEx(WARNING, "False positives is possible but please check your setup");
+                }
             }
         }
     }
