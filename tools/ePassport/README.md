@@ -7,13 +7,13 @@ Everything runs **offline**. No telemetry, no cloud OCR, no network calls of
 any kind — every font and asset is bundled.
 
 ```
-./ePassport                                   # normal use
-./ePassport --dump DIR                       # open a saved dump, no hardware
-./ePassport --dry-run pm3.log --dump DIR     # replay a session you recorded
-./ePassport --help
+./ePassport.py                                   # normal use
+./ePassport.py --dump DIR                       # open a saved dump, no hardware
+./ePassport.py --dry-run pm3.log --dump DIR     # replay a session you recorded
+./ePassport.py --help
 ```
 
-`ePassport` is a plain executable script — run it from anywhere, by path or
+`ePassport.py` is a plain launcher script — run it directly (it has a shebang) or with `python3`, from anywhere, by path or
 from a symlink; there is nothing to install and no `PYTHONPATH` to set. If a
 dependency is missing it says which one, which interpreter it used, and the
 exact command to fix it.
@@ -22,7 +22,7 @@ It needs an interpreter that has the requirements. With a virtualenv, either
 activate it first or point at it directly:
 
 ```bash
-/path/to/venv/bin/python ./ePassport
+/path/to/venv/bin/python ./ePassport.py
 ```
 
 ---
@@ -410,7 +410,7 @@ pm3 -c "hf emrtd dump -n ... -d ... -e ..." | tee pm3.log
 
 ```
 Makefile             run / test / format / clean
-ePassport            the executable; everything below is the implementation
+ePassport.py         the launcher; everything below is the implementation
 epassport/
   app.py               app, screens, worker threads
   __main__.py          shim so `python3 -m epassport` still works
