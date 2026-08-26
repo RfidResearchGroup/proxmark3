@@ -3320,7 +3320,7 @@ DFD0D1D2D3D4
 AFF7F1CE3387
 411BDB5C9AF0
 45B163DAD06F
-# Found on an NS OV-ChipKaart, but should be unique per card. The card was vulnerable to Hardnested attacks
+# Found on an OV-ChipKaart, but should be unique per card. The card was vulnerable to Hardnested attacks
 0974879C37DB
 179A7FF22BBE
 1B273BD502C5
