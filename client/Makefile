@@ -919,6 +919,7 @@ SRCS =  mifare/aiddesfire.c \
         uart/ringbuffer.c \
         uart/uart_common.c \
         uart/uart_posix.c \
+        uart/ble_posix.c \
         uart/uart_win32.c \
         scripting.c \
         ui.c \
