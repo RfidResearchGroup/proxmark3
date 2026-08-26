@@ -577,6 +577,16 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 crcStatus = seos_CRC_check(hdr->isResponse, frame, data_len);
                 break;
             case ISO_7816_4:
+                // A contact ISO 7816-3 frame carries no trailing CRC.  T=0 has
+                // no frame checksum at all, and T=1 keeps its EDC inside the
+                // block - so running the ISO 14443 A/B CRC checks over one only
+                // ever produced a red "!!" on every line.
+                //
+                // The T=1 LRC is not verified here either: TRACE_CRC_OK/FAIL
+                // make the renderer below highlight the last *two* bytes as the
+                // checksum, which would be wrong for a one byte LRC.
+                crcStatus = TRACE_CRC_NONE;
+                break;
             case PROTO_CALYPSO: {
                 uint8_t crcA = iso14443A_CRC_check(hdr->isResponse, frame, data_len);
                 uint8_t crcB = iso14443B_CRC_check(frame, data_len);
@@ -870,7 +880,8 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 annotateTopaz(explanation, sizeof(explanation), frame, data_len);
                 break;
             case ISO_7816_4:
-                annotateIso7816(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+                // trace type "7816" is the contact reader, i.e. `smart list`
+                annotateIso7816(explanation, sizeof(explanation), frame, data_len, hdr->isResponse, true);
                 break;
             case ISO_15693:
                 annotateIso15693(explanation, sizeof(explanation), frame, data_len);

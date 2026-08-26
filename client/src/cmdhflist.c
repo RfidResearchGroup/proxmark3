@@ -817,7 +817,19 @@ void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 }
 
 // iso 7816-3
-void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+//
+// `contact` tells the two framings that reach this decoder apart:
+//
+//   - contactless (ISO 14443-4 / T=CL): every frame is a block, its type is in
+//     the first byte, and the length comes from the transport layer.
+//   - contact (the SIM module): a T=0 frame is a bare APDU with no block layer
+//     at all, and a T=1 frame is NAD PCB LEN INF[LEN] EDC, so its length is
+//     fixed by LEN.
+//
+// Without that distinction a GSM APDU beginning with CLA 'A0' satisfies the
+// T=CL R-block test - 0xA0 & 0xD0 == 0x80 - and "A0 A4 00 00 02 3F 00" gets
+// annotated as "R-block ACK".
+void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response, bool contact) {
 
     if (cmdsize < 2) {
         return;
@@ -827,8 +839,51 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool
         return;
     }
 
-    // S-block
-    if ((cmd[0] & 0xC0) && ((cmdsize == 3) || (cmdsize == 4))) {
+    // A contact frame is either a bare T=0 APDU or a T=1 block, and the two
+    // framings put things in different places: T=1 is NAD PCB LEN INF[LEN] EDC,
+    // so the block type is in cmd[1], not cmd[0] the way T=CL has it.
+    //
+    // Only the one byte LRC is considered when matching the length.  A five
+    // byte APDU whose P1 is zero - "A0 C0 00 00 22" - is indistinguishable from
+    // a LEN=0 block with a two byte CRC, and CRC EDC is vanishingly rare.
+    // Requiring NAD 0x00 rules out the rest; every card and this SIM module use
+    // it exclusively.
+    if (contact) {
+
+        if ((cmdsize >= 4) && (cmd[0] == 0x00) && ((int)cmdsize == (int)cmd[2] + 4)) {
+
+            uint8_t pcb = cmd[1];
+
+            if ((pcb & 0x80) == 0x00) {
+                snprintf(exp, size, "I-block N(S)=%u%s", (pcb >> 6) & 1,
+                         (pcb & 0x20) ? " chained" : "");
+            } else if ((pcb & 0xC0) == 0x80) {
+                snprintf(exp, size, "R-block N(R)=%u%s", (pcb >> 4) & 1,
+                         (pcb & 0x0F) ? " error" : "");
+            } else {
+                switch (pcb & 0x3F) {
+                    case 0x00: snprintf(exp, size, "S-block RESYNCH req");  break;
+                    case 0x20: snprintf(exp, size, "S-block RESYNCH resp"); break;
+                    case 0x01: snprintf(exp, size, "S-block IFS req");      break;
+                    case 0x21: snprintf(exp, size, "S-block IFS resp");     break;
+                    case 0x02: snprintf(exp, size, "S-block ABORT req");    break;
+                    case 0x22: snprintf(exp, size, "S-block ABORT resp");   break;
+                    case 0x03: snprintf(exp, size, "S-block WTX req");      break;
+                    case 0x23: snprintf(exp, size, "S-block WTX resp");     break;
+                    default:   snprintf(exp, size, "S-block");              break;
+                }
+            }
+            return;
+        }
+        // not a block, so it is a bare APDU - decoded below with pos = 1
+    }
+
+    bool blocks = (contact == false);
+
+    // S-block.  The test used to be a plain truthiness check on cmd[0] & 0xC0,
+    // so any first byte from 0x40 up landed here - an R-block 0xA2 in a 3 byte
+    // frame was reported as an S-block.
+    if (blocks && ((cmd[0] & 0xC0) == 0xC0) && ((cmdsize == 3) || (cmdsize == 4))) {
 
         switch ((cmd[0] & 0x3F)) {
             case 0x00   :
@@ -864,27 +919,36 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool
         }
     }
     // R-block (ack)
-    else if (((cmd[0] & 0xD0) == 0x80) && (cmdsize > 2)) {
+    else if (blocks && ((cmd[0] & 0xD0) == 0x80) && (cmdsize > 2)) {
         if ((cmd[0] & 0x10) == 0)
             snprintf(exp, size, "R-block ACK");
         else
             snprintf(exp, size, "R-block NACK");
     }
-    // I-block
+    // I-block, or a bare APDU when there is no block layer
     else {
 
         int pos = 0;
-        switch (cmd[0]) {
-            case 2:
-            case 3:
-                pos = 2;
-                break;
-            case 0:
-                pos = 1;
-                break;
-            default:
-                pos = 3;
-                break;
+        if (blocks == false) {
+            // CLA INS P1 P2 ...
+            pos = 1;
+        } else {
+            switch (cmd[0]) {
+                case 2:
+                case 3:
+                    pos = 2;
+                    break;
+                case 0:
+                    pos = 1;
+                    break;
+                default:
+                    pos = 3;
+                    break;
+            }
+        }
+
+        if (pos >= cmdsize) {
+            return;
         }
 
         switch (cmd[pos]) {
@@ -2223,7 +2287,7 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is
     // it's basically a ISO14443a tag, so try annotation from there
     if (applyIso14443a(exp, size, cmd, cmdsize, false) != PM3_SUCCESS) {
 
-        annotateIso7816(exp, size, cmd, cmdsize, isResponse);
+        annotateIso7816(exp, size, cmd, cmdsize, isResponse, false);
 
         int pos = 0;
         switch (cmd[0]) {
