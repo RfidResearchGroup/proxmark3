@@ -77,6 +77,8 @@
 #define FELICA_SEAC_POLL_RESPONSE_DATA_LEN (FELICA_SEAC_IDM_LEN + FELICA_SEAC_CTX_LEN)
 #define FELICA_SEAC_AUTH1_RESPONSE_DATA_LEN ((2U * FELICA_SEAC_CHALLENGE_LEN) + 1U)
 #define FELICA_REQUEST_SYSTEM_CODE_ATTEMPTS 5U
+#define FELICA_CMD_ATTEMPTS_UNKNOWN 3U
+#define FELICA_CMD_ATTEMPTS_SUPPORTED 5U
 #define FELICA_SYSTEM_CODE_MAX_COUNT 16U
 #define FELICA_DISCOVERED_SYSTEM_MAX_COUNT FELICA_SYSTEM_CODE_MAX_COUNT
 #define FELICA_DUMP_DEFAULT_NODE_CAPACITY 128U
@@ -84,7 +86,7 @@
 #define FELICA_POLLING_REQUEST_NO_DATA 0x00U
 #define FELICA_POLLING_REQUEST_SYSTEM_CODE 0x01U
 #define FELICA_SYSTEM_LIST_JSON "felica/felica_system_code_list"
-#define FELICA_IC_CODE_LIST_JSON "felica/felica_ic_code_list"
+#define FELICA_IC_CODE_LIST_JSON "felica/ic_code_list"
 #define FELICA_CONTAINER_ISSUE_LIST_JSON "felica/felica_container_issue_information_list"
 #define FELICA_AUTH_KEY_FILE_VERSION 1
 
@@ -373,6 +375,13 @@ typedef enum {
 typedef struct {
     felica_capability_state_t supports_request_service_v2;
     felica_capability_state_t supports_request_system_code;
+    felica_capability_state_t supports_search_service_code;
+    felica_capability_state_t supports_request_product_information;
+    felica_capability_state_t supports_request_specification_version;
+    felica_capability_state_t supports_get_container_id;
+    felica_capability_state_t supports_get_container_issue_information;
+    felica_capability_state_t supports_get_container_property;
+    felica_capability_state_t supports_echo;
 } felica_card_capabilities_t;
 
 typedef struct {
@@ -922,7 +931,7 @@ static void felica_print_container_issue_annotations(const felica_get_container_
     }
 }
 
-static const json_t *felica_find_ic_annotation(uint8_t rom_type, uint8_t ic_type) {
+static const json_t *felica_find_ic_annotation(uint8_t rom_type, uint8_t ic_type, bool strict_rom) {
     json_t *ic_code_list = felica_get_ic_code_list();
     if (ic_code_list == NULL) {
         return NULL;
@@ -946,13 +955,13 @@ static const json_t *felica_find_ic_annotation(uint8_t rom_type, uint8_t ic_type
             continue;
         }
 
-        if (ic_fallback == NULL) {
-            ic_fallback = entry;
-        }
-
         const char *entry_rom = felica_get_json_string(entry, "rom");
         if (entry_rom != NULL && strcmp(entry_rom, rom_hex) == 0) {
             return entry;
+        }
+
+        if (ic_fallback == NULL && (strict_rom == false || entry_rom == NULL)) {
+            ic_fallback = entry;
         }
     }
 
@@ -964,9 +973,63 @@ static const char *felica_ic_code_name(uint8_t rom_type, uint8_t ic_type) {
         return "Unknown IC Type";
     }
 
-    const json_t *entry = felica_find_ic_annotation(rom_type, ic_type);
+    const json_t *entry = felica_find_ic_annotation(rom_type, ic_type, false);
     const char *name = felica_get_json_string(entry, "name");
     return name ? name : "Unknown IC Type";
+}
+
+static uint32_t felica_capability_attempts(felica_capability_state_t state) {
+    switch (state) {
+        case FELICA_CAP_SUPPORTED:
+            return FELICA_CMD_ATTEMPTS_SUPPORTED;
+        case FELICA_CAP_UNSUPPORTED:
+            return 0;
+        case FELICA_CAP_UNKNOWN:
+            return FELICA_CMD_ATTEMPTS_UNKNOWN;
+    }
+    return FELICA_CMD_ATTEMPTS_UNKNOWN;
+}
+
+static felica_capability_state_t felica_command_support_from_json(const json_t *commands, const char *name) {
+    json_t *command = json_object_get_ci(commands, name);
+    if (json_is_object(command) == false) {
+        return FELICA_CAP_UNKNOWN;
+    }
+    json_t *supported = json_object_get_ci(command, "supported");
+    if (json_is_boolean(supported) == false) {
+        return FELICA_CAP_UNKNOWN;
+    }
+    return json_is_true(supported) ? FELICA_CAP_SUPPORTED : FELICA_CAP_UNSUPPORTED;
+}
+
+static void felica_capabilities_apply_ic_annotation(felica_card_capabilities_t *caps, uint8_t rom_type, uint8_t ic_type) {
+    const json_t *entry = felica_find_ic_annotation(rom_type, ic_type, true);
+    json_t *commands = json_object_get_ci(entry, "commands");
+    if (json_is_object(commands) == false) {
+        return;
+    }
+
+    const struct {
+        const char *name;
+        felica_capability_state_t *field;
+    } command_fields[] = {
+        {"request_service_v2", &caps->supports_request_service_v2},
+        {"request_system_code", &caps->supports_request_system_code},
+        {"search_service_code", &caps->supports_search_service_code},
+        {"request_product_information", &caps->supports_request_product_information},
+        {"request_specification_version", &caps->supports_request_specification_version},
+        {"get_container_id", &caps->supports_get_container_id},
+        {"get_container_issue_information", &caps->supports_get_container_issue_information},
+        {"get_container_property", &caps->supports_get_container_property},
+        {"echo", &caps->supports_echo},
+    };
+
+    for (size_t i = 0; i < ARRAYLEN(command_fields); i++) {
+        felica_capability_state_t state = felica_command_support_from_json(commands, command_fields[i].name);
+        if (state != FELICA_CAP_UNKNOWN) {
+            *command_fields[i].field = state;
+        }
+    }
 }
 
 static const char *felica_idm_prefix_name(const uint8_t *idm, char *buf, size_t buf_len) {
@@ -1988,15 +2051,16 @@ static int discover_systems(uint8_t flags, const uint8_t *primary_idm,
 
     memset(discovered_systems, 0, sizeof(*discovered_systems));
 
-    if (caps->supports_request_system_code == FELICA_CAP_UNKNOWN) {
-        bool request_system_code_confirmed = false;
+    bool got_system_code_list = false;
+    if (caps->supports_request_system_code != FELICA_CAP_UNSUPPORTED) {
         felica_request_system_code_request_t request_system_code_request;
         memset(&request_system_code_request, 0, sizeof(request_system_code_request));
         request_system_code_request.length[0] = sizeof(request_system_code_request);
         request_system_code_request.command_code[0] = FELICA_REQUEST_SYSTEM_CODE_REQ;
         memcpy(request_system_code_request.IDm, primary_idm, sizeof(request_system_code_request.IDm));
 
-        for (uint32_t attempt = 0; attempt < FELICA_REQUEST_SYSTEM_CODE_ATTEMPTS; attempt++) {
+        const uint32_t attempts = felica_capability_attempts(caps->supports_request_system_code);
+        for (uint32_t attempt = 0; attempt < attempts; attempt++) {
             felica_syscode_response_t system_code_response;
             const int request_system_code_status = send_request_system_code(flags,
                                                    sizeof(request_system_code_request), (uint8_t *)&request_system_code_request,
@@ -2007,7 +2071,7 @@ static int discover_systems(uint8_t flags, const uint8_t *primary_idm,
                 continue;
             }
 
-            request_system_code_confirmed = true;
+            got_system_code_list = true;
             const size_t reported_systems = system_code_response.number_of_systems[0];
             for (size_t i = 0; i < reported_systems; i++) {
                 const uint16_t system_code = felica_system_code_from_bytes(system_code_response.system_code_list + (i * 2U));
@@ -2018,8 +2082,10 @@ static int discover_systems(uint8_t flags, const uint8_t *primary_idm,
             }
             break;
         }
-        caps->supports_request_system_code =
-            request_system_code_confirmed ? FELICA_CAP_SUPPORTED : FELICA_CAP_UNSUPPORTED;
+        if (caps->supports_request_system_code == FELICA_CAP_UNKNOWN) {
+            caps->supports_request_system_code =
+                got_system_code_list ? FELICA_CAP_SUPPORTED : FELICA_CAP_UNSUPPORTED;
+        }
     }
 
     uint16_t primary_system_code = 0;
@@ -2032,7 +2098,7 @@ static int discover_systems(uint8_t flags, const uint8_t *primary_idm,
                                             primary_system_code, primary_idm_polled, primary_pmm_polled);
     }
 
-    if (caps->supports_request_system_code != FELICA_CAP_SUPPORTED) {
+    if (got_system_code_list == false) {
         for (size_t i = 0; i < ARRAYLEN(FELICA_MANUAL_SYSTEM_PROBE_TARGETS); i++) {
             uint8_t probed_idm[8] = {0};
             uint8_t probed_pmm[8] = {0};
@@ -2559,7 +2625,7 @@ static int send_request_specification_version(uint8_t flags, uint16_t datalen, u
     return PM3_SUCCESS;
 }
 
-static int info_felica(bool verbose) {
+static int info_felica(bool verbose, bool no_ic_optimizations) {
 
     clear_and_send_command(FELICA_CONNECT | FELICA_CLEARTRACE | FELICA_NO_DISCONNECT, 0, NULL, false);
     PacketResponseNG resp;
@@ -2644,9 +2710,8 @@ static int info_felica(bool verbose) {
     const uint8_t optional_flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
     const bool is_felica_lite = felica_is_lite_ic_type(card.iccode[1]);
     felica_card_capabilities_t caps = {0};
-    if (is_felica_lite) {
-        caps.supports_request_service_v2 = FELICA_CAP_UNSUPPORTED;
-        caps.supports_request_system_code = FELICA_CAP_UNSUPPORTED;
+    if (no_ic_optimizations == false) {
+        felica_capabilities_apply_ic_annotation(&caps, card.iccode[0], card.iccode[1]);
     }
 
     if (is_felica_lite == false) {
@@ -2659,7 +2724,8 @@ static int info_felica(bool verbose) {
         felica_status_flags_t platform_status_flags;
         uint8_t platform_information_data[FELICA_PLATFORM_INFO_MAX_LEN] = {0};
         size_t platform_information_data_len = 0;
-        if (send_get_platform_information(optional_flags,
+        if (caps.supports_request_product_information != FELICA_CAP_UNSUPPORTED &&
+                send_get_platform_information(optional_flags,
                                           sizeof(platform_info_request), (uint8_t *)&platform_info_request,
                                           false, &platform_status_flags, platform_information_data,
                                           sizeof(platform_information_data),
@@ -2675,9 +2741,11 @@ static int info_felica(bool verbose) {
         memcpy(request_specification_version_request.IDm, card.IDm, sizeof(request_specification_version_request.IDm));
 
         felica_request_specification_version_info_t specification_version_info;
-        if (send_request_specification_version(optional_flags, sizeof(request_specification_version_request),
+        if (caps.supports_request_specification_version != FELICA_CAP_UNSUPPORTED &&
+                send_request_specification_version(optional_flags, sizeof(request_specification_version_request),
                                                (uint8_t *)&request_specification_version_request, false,
-                                               false, FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
+                                               false, FELICA_OPTIONAL_CMD_TIMEOUT_MS,
+                                               felica_capability_attempts(caps.supports_request_specification_version) - 1U,
                                                &specification_version_info) == PM3_SUCCESS &&
                 specification_version_info.has_specification_version) {
             print_specification_versions(INFO, &specification_version_info, true);
@@ -2689,7 +2757,8 @@ static int info_felica(bool verbose) {
         container_id_request.command_code[0] = FELICA_GET_CONTAINER_ID_REQ;
 
         felica_get_container_id_response_t container_id_response;
-        if (send_get_container_id(optional_flags, sizeof(container_id_request),
+        if (caps.supports_get_container_id != FELICA_CAP_UNSUPPORTED &&
+                send_get_container_id(optional_flags, sizeof(container_id_request),
                                   (uint8_t *)&container_id_request, false,
                                   &container_id_response) == PM3_SUCCESS) {
             PrintAndLogEx(INFO, "Container IDm.. " _YELLOW_("%s"),
@@ -2703,7 +2772,8 @@ static int info_felica(bool verbose) {
         memcpy(container_issue_info_request.IDm, card.IDm, sizeof(container_issue_info_request.IDm));
 
         felica_get_container_issue_info_response_t container_issue_info_response;
-        if (send_get_container_issue_information(optional_flags,
+        if (caps.supports_get_container_issue_information != FELICA_CAP_UNSUPPORTED &&
+                send_get_container_issue_information(optional_flags,
                                                  sizeof(container_issue_info_request), (uint8_t *)&container_issue_info_request, false,
                                                  &container_issue_info_response) == PM3_SUCCESS) {
             char model_ascii[sizeof(container_issue_info_response.mobile_phone_model_information) + 1] = {0};
@@ -2730,7 +2800,8 @@ static int info_felica(bool verbose) {
         const uint16_t container_properties[] = {0x0000, 0x0001};
         uint8_t container_property_data[FELICA_CONTAINER_PROPERTY_MAX_LEN] = {0};
         bool has_container_properties = false;
-        for (size_t i = 0; i < ARRAYLEN(container_properties); i++) {
+        const bool try_container_property = (caps.supports_get_container_property != FELICA_CAP_UNSUPPORTED);
+        for (size_t i = 0; try_container_property && i < ARRAYLEN(container_properties); i++) {
             felica_get_container_property_request_t container_property_request;
             memset(&container_property_request, 0, sizeof(container_property_request));
             container_property_request.length[0] = sizeof(container_property_request);
@@ -2781,17 +2852,20 @@ static int CmdHFFelicaInfo(const char *Cmd) {
     CLIParserInit(&ctx, "hf felica info",
                   "Reader for FeliCa based tags",
                   "hf felica info\n"
-                  "hf felica info -v    -> show authentication trace");
+                  "hf felica info -v    -> show authentication trace\n"
+                  "hf felica info --no-ic-optimizations    -> probe all commands, ignoring known IC support");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v", "verbose", "verbose output (authentication trace)"),
+        arg_lit0(NULL, "no-ic-optimizations", "attempt all commands even if the IC is known not to support them"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool verbose = arg_get_lit(ctx, 1);
+    bool no_ic_optimizations = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
-    int ret = info_felica(verbose);
+    int ret = info_felica(verbose, no_ic_optimizations);
     return ret == PM3_SUCCESS ? ret : info_felica_seac();
 }
 
@@ -3599,7 +3673,7 @@ static void felica_auth_collect_codes(const felica_auth_key_store_t *store, uint
 
 static int felica_collect_key_versions_v2(uint8_t flags, const uint8_t *idm,
                                            const uint16_t *codes_be, size_t code_count,
-                                           felica_node_t *versions) {
+                                           felica_node_t *versions, uint32_t retries) {
     bool encryption_identifier_set = false;
     uint8_t encryption_identifier = 0;
 
@@ -3612,7 +3686,7 @@ static int felica_collect_key_versions_v2(uint8_t flags, const uint8_t *idm,
 
         felica_request_service_v2_key_versions_t response;
         int result = felica_request_service_v2_key_versions(flags, idm, batch_codes_le, batch_count,
-                                                             FELICA_OPTIONAL_CMD_RETRIES, &response);
+                                                             retries, &response);
         if (result != PM3_SUCCESS || felica_encryption_identifier_get_info(response.encryption_identifier) == NULL) {
             return PM3_ERFTRANS;
         }
@@ -3684,9 +3758,11 @@ static int felica_collect_key_versions(uint8_t flags, const uint8_t *idm,
                                        const uint16_t *codes_be, size_t code_count,
                                        felica_node_t *versions_out,
                                        felica_card_capabilities_t *caps) {
+    const felica_capability_state_t v2_state = (caps != NULL) ? caps->supports_request_service_v2 : FELICA_CAP_UNKNOWN;
     int result = PM3_ERFTRANS;
-    if (caps == NULL || caps->supports_request_service_v2 != FELICA_CAP_UNSUPPORTED) {
-        result = felica_collect_key_versions_v2(flags, idm, codes_be, code_count, versions_out);
+    if (v2_state != FELICA_CAP_UNSUPPORTED) {
+        result = felica_collect_key_versions_v2(flags, idm, codes_be, code_count, versions_out,
+                                                felica_capability_attempts(v2_state) - 1U);
         if (caps != NULL && caps->supports_request_service_v2 == FELICA_CAP_UNKNOWN) {
             caps->supports_request_service_v2 =
                 (result == PM3_SUCCESS) ? FELICA_CAP_SUPPORTED : FELICA_CAP_UNSUPPORTED;
@@ -6759,6 +6835,7 @@ static int CmdHFFelicaDump(const char *Cmd) {
         arg_u64_0("r", "retry", "<dec>", "number of retries"),
         arg_str0(NULL, "idm", "<hex>", "use custom IDm"),
         arg_str0("f", "file", "<fn>", "Specify a filename for JSON dump file"),
+        arg_lit0(NULL, "no-ic-optimizations", "attempt all commands even if the IC is known not to support them"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -6769,6 +6846,7 @@ static int CmdHFFelicaDump(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     int fnlen = 0;
     CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool no_ic_optimizations = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
     if (res) {
         return PM3_EINVARG;
@@ -6790,6 +6868,9 @@ static int CmdHFFelicaDump(const char *Cmd) {
     uint8_t system_flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
     felica_discovered_system_list_t discovered_systems;
     felica_card_capabilities_t caps = {0};
+    if (no_ic_optimizations == false) {
+        felica_capabilities_apply_ic_annotation(&caps, last_known_card.iccode[0], last_known_card.iccode[1]);
+    }
     res = discover_systems(system_flags, idm, &caps, retry_count, &discovered_systems);
     if (res != PM3_SUCCESS || discovered_systems.count == 0) {
         DropField();
