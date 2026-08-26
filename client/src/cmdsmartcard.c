@@ -327,18 +327,9 @@ static int smart_wait(uint8_t *out, int maxoutlen, bool verbose) {
     return -1;
 }
 
-// Which class byte a GET RESPONSE following a 61xx / 9Fxx should carry.
-//
-// There is no rule that can be derived from the command's own class, because
-// two cards that both use CLA 'A0' disagree:
-//
-//   - a GSM 11.11 / TS 51.011 SIM answers 6D00 to '00 C0 ...' and needs 'A0 C0'
-//   - a HID iCLASS SE SAM answers 6D00 to 'A0 C0 ...' and needs '00 C0'
-//
-// and EMV (Book 1, 9.3.1) fixes GET RESPONSE at '00' even after a proprietary
-// '80' command.  So '00' is tried first - the historical behaviour, right for
-// EMV and for the SAM - and a card that rejects the class gets one retry with
-// the class of the command that produced the status word.
+// Class byte for a GET RESPONSE after 61xx / 9Fxx. No single rule works: a GSM
+// SIM needs 'A0 C0' and rejects '00 C0', a HID iCLASS SE SAM is the other way
+// round, and EMV fixes it at '00'. Try '00' first, then the command's own.
 #define GETRESP_TRY_FIRST   0
 #define GETRESP_TRY_RETRY   1
 
@@ -400,8 +391,7 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose, uint8_t c
 
         if (verbose) PrintAndLogEx(INFO, "Requesting " _YELLOW_("0x%02X") " bytes response", len);
 
-        // '00' first, then one retry with the command's own class if the card
-        // rejects it - see get_response_cla() for why neither works everywhere.
+        // '00' first, then the command's own class if the card rejects it
         for (int attempt = GETRESP_TRY_FIRST; attempt <= GETRESP_TRY_RETRY; attempt++) {
 
             uint8_t cmd_getresp[] = {
@@ -442,20 +432,9 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose, uint8_t c
             goto out;
         }
 
-        /*
-         * Two shapes are valid here, depending on how the GET RESPONSE went out:
-         *
-         *   len + 2      the data and its status word.  This is what SEND_T0
-         *                gives, because the module runs the procedure byte
-         *                exchange itself and strips the echoed INS.
-         *   len + 2 + 1  the same with that procedure byte still in front,
-         *                which is what the raw pass through leaves behind.
-         *
-         * Only the second needs unwrapping - but the first used to fall through
-         * both branches without ever adding to totallen, so the caller got zero
-         * bytes and reported "result length = 0" while the card had answered
-         * perfectly.  It went unnoticed while GET RESPONSE was always sent raw.
-         */
+        // Two valid shapes: len+2 is data plus SW, which SEND_T0 gives since
+        // the module strips the procedure byte; len+2+1 still has it in front,
+        // as the raw pass through leaves it.
         if (datalen == len + 2) {
             totallen += datalen;
         } else {
@@ -823,15 +802,14 @@ static int CmdSmartInfo(const char *Cmd) {
     SendCommandNG(CMD_SMART_ATR, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_SMART_ATR, &resp, 2500) == false) {
-        if (verbose) {
-            PrintAndLogEx(WARNING, "smart card timeout");
-        }
+        PrintAndLogEx(WARNING, "smart card timeout");
         return PM3_ETIMEOUT;
     }
 
     if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "no ATR - check the card is present and seated");
         if (verbose) {
-            PrintAndLogEx(WARNING, "smart card select failed");
+            PrintAndLogEx(INFO, "module returned status %d", resp.status);
         }
         return PM3_ESOFT;
     }
@@ -1653,14 +1631,8 @@ int CmdSmartcard(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-/*
- * Which protocol the contact exchanges below ask for.
- *
- * T=0 by default, which is what this has always sent.  The ARM side already
- * redirects a T=0 request to T=1 when the card's ATR offers no T=0 at all - a
- * request that could not have worked as asked.  This is for the other case: a
- * card that offers both, where T=0 would work but you want T=1 anyway.
- */
+// Protocol the contact exchanges ask for. T=0 by default; the ARM redirects a
+// card offering no T=0 by itself, so this is for one that offers both.
 static smartcard_command_t s_sc_protocol = SC_RAW_T0;
 
 void SetSmartcardProtocolT1(bool use_t1) {

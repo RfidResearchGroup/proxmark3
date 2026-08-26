@@ -575,16 +575,8 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen, bool verbose
     return PM3_SUCCESS;
 }
 
-/*
- * Resolve --t0 / --t1 for the contact interface.
- *
- * The ARM already switches a card whose ATR offers no T=0 over to T=1 by
- * itself, since a T=0 request to it could never have worked.  This is for the
- * other case: a card offering both, where T=0 is a legitimate choice and the
- * caller wants T=1 anyway.
- *
- * Reports the problem and returns non-success if the flags make no sense.
- */
+// Resolve --t0 / --t1 for the contact interface. The ARM switches a card
+// offering no T=0 over by itself; this is for one that offers both.
 static int emv_set_protocol(bool use_t0, bool use_t1, Iso7816CommandChannel channel) {
 
     if (use_t0 && use_t1) {
@@ -660,8 +652,6 @@ static int CmdEMVSelect(const char *Cmd) {
         if (sw == 0) {
             PrintAndLogEx(FAILED, "No answer from card ( %d )", res);
             if (channel == CC_CONTACT) {
-                // Point the other way when T=1 was forced - suggesting the flag
-                // that is already in use is worse than saying nothing.
                 if (GetSmartcardProtocolT1()) {
                     PrintAndLogEx(HINT, "Hint: card was driven as T=1, drop `" _YELLOW_("--t1") "` to use T=0");
                 } else {
@@ -2961,19 +2951,9 @@ static int CmdEMVReader(const char *Cmd) {
         const char *al = "Applets";
         struct tlvdb *tlvSelect = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
 
-        /*
-         * Search the directory this channel expects first, then the other one.
-         *
-         * A contact card may carry either: 1PAY was the norm and 2PAY is what
-         * modern cards use, and plenty carry only one of them.  This used to
-         * select 2PAY, throw the answer away, and then search whichever psenum
-         * says - 1PAY on contact - so a card with only a PPSE fell through to
-         * the AID list sweep with its directory already read and discarded.
-         * The sweep then cannot find anything the built-in list does not carry,
-         * which is most non-Visa/Mastercard applets.
-         *
-         * The first call activates the field; the fallback reuses it.
-         */
+        // Search the expected directory then the other - a contact card may
+        // carry 1PAY or 2PAY and plenty carry only one. First call activates
+        // the field, the fallback reuses it.
         res = EMVSearchPSE(channel, true, true, psenum, false, tlvSelect, true);
         if (res) {
             res = EMVSearchPSE(channel, false, true, (psenum == 1) ? 2 : 1, false, tlvSelect, false);

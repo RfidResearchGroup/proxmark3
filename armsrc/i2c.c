@@ -45,13 +45,9 @@
 #define SC_PROTO_T0     (1 << 0)
 #define SC_PROTO_T1     (1 << 1)
 
-// Protocols the last ATR offered, as a bit mask of (1 << T).  Zero means we do
-// not know - no ATR has been read since the module was last reset.
+// protocols the last ATR offered, (1 << T). 0 = no ATR read since reset
 static uint8_t s_card_protocols = 0;
-
-// Whether the protocol choice has already been reported this session.  These
-// messages are worth seeing once; sc_raw_device_cmd() runs per APDU, and an
-// EMV AID sweep is 150 of them.
+// sc_raw_device_cmd() runs per APDU, so report the choice once per card
 static bool s_proto_announced = false;
 
 // try i2c bus recovery at 100kHz = 5us high, 5us low
@@ -848,11 +844,8 @@ bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait) {
     return true;
 }
 
-/*
- * ISO/IEC 7816-3 clause 8: the protocols on offer are the low nibbles of the
- * TDi bytes.  With no TD1 at all, only T=0 is offered.  T=15 carries global
- * interface bytes rather than a transmission protocol and is ignored here.
- */
+// ISO 7816-3 clause 8: offered protocols are the low nibbles of the TDi bytes.
+// No TD1 means T=0 only. T=15 is global interface bytes, not a protocol.
 static uint8_t atr_protocols(const uint8_t *atr, uint8_t len) {
 
     if (len < 2) {
@@ -892,10 +885,7 @@ static uint8_t atr_protocols(const uint8_t *atr, uint8_t len) {
 
 uint8_t sc_raw_device_cmd(smartcard_command_t flags) {
 
-    // An explicit T=1 request is always honoured as asked - it is an override,
-    // and a card that supports T=1 without advertising it is a real thing.  But
-    // say so when the ATR disagrees, because the alternative is silence from
-    // the card and no clue why.
+    // an explicit T=1 request is an override, honoured even if the ATR disagrees
     if ((flags & SC_RAW_T1) == SC_RAW_T1) {
 
         if ((s_card_protocols != 0) && ((s_card_protocols & SC_PROTO_T1) == 0)) {
@@ -909,21 +899,10 @@ uint8_t sc_raw_device_cmd(smartcard_command_t flags) {
 
     if ((flags & SC_RAW_T0) == SC_RAW_T0) {
 
-        /*
-         * A T=0 request to a card whose ATR offers no T=0 cannot work - the
-         * card will not hear it at all, which shows up as silence rather than
-         * an error.  Most modern EMV and JCOP cards are T=1 only, and callers
-         * like ExchangeAPDUSC() ask for T=0 unconditionally.
-         *
-         * Only this one case is redirected, and only once an ATR has actually
-         * been read.  A card that does offer T=0 is left alone even if it also
-         * offers T=1, because there the caller's choice is a real one - use
-         * SC_RAW_T1 to say otherwise.
-         *
-         * Note this cannot make anything worse even against a SIM module too
-         * old to know SEND_T1: in the exact case it fires, the request as given
-         * was already guaranteed to fail.
-         */
+        // A T=0 request to a card offering no T=0 cannot work - it simply will
+        // not hear it. Most modern EMV/JCOP cards are T=1 only and callers like
+        // ExchangeAPDUSC() ask for T=0 unconditionally. Redirect only that case;
+        // a card offering both keeps the caller's choice.
         if ((s_card_protocols != 0) &&
                 ((s_card_protocols & SC_PROTO_T0) == 0) &&
                 ((s_card_protocols & SC_PROTO_T1) == SC_PROTO_T1)) {

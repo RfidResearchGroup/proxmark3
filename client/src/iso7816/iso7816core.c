@@ -80,9 +80,11 @@ int Iso7816Connect(Iso7816CommandChannel channel) {
     return res;
 }
 
-int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool leave_field_on,
-                      sAPDU_t apdu, bool include_le, uint16_t le, uint8_t *result,
-                      size_t max_result_len, size_t *result_len, uint16_t *sw) {
+// allow_le_retry gates the 6Cxx reissue below; the retry itself passes false
+static int iso7816_exchange_core(Iso7816CommandChannel channel, bool activate_field, bool leave_field_on,
+                                 sAPDU_t apdu, bool include_le, uint16_t le, uint8_t *result,
+                                 size_t max_result_len, size_t *result_len, uint16_t *sw,
+                                 bool allow_le_retry) {
 
     *result_len = 0;
     if (sw) {
@@ -178,6 +180,29 @@ int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool l
         *sw = isw;
     }
 
+    // 6Cxx is "wrong length, ask again for xx". Handled here rather than per
+    // command since any case 2/4 APDU can get it - READ RECORD and GET DATA
+    // both do. Once only; the card has named the length.
+    if (allow_le_retry && ((isw >> 8) == 0x6C)) {
+
+        if (APDULogging) {
+            PrintAndLogEx(INFO, ">>> wrong length, reissuing with Le=%02X...", isw & 0xFF);
+        }
+
+        return iso7816_exchange_core(channel
+                                     , false
+                                     , leave_field_on
+                                     , apdu
+                                     , true
+                                     , (uint16_t)(isw & 0xFF)
+                                     , result
+                                     , max_result_len
+                                     , result_len
+                                     , sw
+                                     , false
+                                    );
+    }
+
     if (isw != ISO7816_OK) {
         if (APDULogging) {
             if (*sw >> 8 == 0x61) {
@@ -189,6 +214,14 @@ int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool l
         }
     }
     return PM3_SUCCESS;
+}
+
+int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool leave_field_on,
+                      sAPDU_t apdu, bool include_le, uint16_t le, uint8_t *result,
+                      size_t max_result_len, size_t *result_len, uint16_t *sw) {
+
+    return iso7816_exchange_core(channel, activate_field, leave_field_on, apdu, include_le, le,
+                                 result, max_result_len, result_len, sw, true);
 }
 
 int Iso7816Exchange(Iso7816CommandChannel channel, bool leave_field_on, sAPDU_t apdu, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
@@ -220,22 +253,10 @@ int Iso7816Select(Iso7816CommandChannel channel, bool activate_field, bool leave
     , sw
                                );
 
-    /*
-     * A contact card running T=1 needs the Le that a T=0 card must not be
-     * given.  T=0 answers a case 4 command with 61xx and hands the data over
-     * through GET RESPONSE, so the Le is left off; T=1 carries the whole APDU
-     * in one block and has no such step, so the command has to ask for its
-     * length up front.  Send one without and a strict card answers 6700.
-     *
-     * Rather than work out which protocol the link ended up on - the ARM may
-     * have switched to T=1 on its own, off the ATR, without the client being
-     * told - let the card say so and reissue.  EMVReadRecord() and
-     * EMVGenerateChallenge() already do the mirror image of this.
-     *
-     * Only on 6700/6F00, and only on contact: a T=0 card has no reason to
-     * answer a SELECT that way, and if one did the retry costs a single extra
-     * APDU that it will reject just as it rejected the first.
-     */
+    // T=1 carries the whole APDU in one block, so a case 4 command must include
+    // Le - unlike T=0, which answers 61xx and hands the data over via GET
+    // RESPONSE. A strict card answers 6700 without it. Reissue rather than work
+    // out which protocol the link ended up on.
     if ((channel == CC_CONTACT) && (sw != NULL) && ((*sw == 0x6700) || (*sw == 0x6F00))) {
 
         if (APDULogging) {

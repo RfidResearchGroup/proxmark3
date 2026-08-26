@@ -475,6 +475,17 @@ int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFi
         }
     } else if (quiet == false) {
         PrintAndLogEx(ERR, "%s ERROR: Can't select PPSE AID. Error: %d", PSE_or_PPSE, res);
+
+        // an empty slot and a card that is simply not an EMV card both land
+        // here, so ask the module which one it is
+        if ((res < 0) && (channel == CC_CONTACT)) {
+            smart_card_atr_t atr;
+            if (smart_select(false, &atr)) {
+                PrintAndLogEx(HINT, "Hint: card answered its ATR but not the APDU - is this an EMV card? try `" _YELLOW_("smart info") "`");
+            } else {
+                PrintAndLogEx(HINT, "Hint: no answer at all - is a card in the slot? try `" _YELLOW_("smart info") "`");
+            }
+        }
     }
 
     if (!LeaveFieldON)
@@ -503,12 +514,9 @@ int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveField
         // retry if error and not returned sw error
         if (res && res != 5) {
 
-            // A negative result is a PM3_E* transport failure rather than
-            // anything the card said - PM3_EIO when the field has gone
-            // inactive, for instance.  Retrying the same AID cannot fix that,
-            // and neither can the ~150 AIDs still to come: without this it
-            // retries each of them three times and prints a failure for every
-            // attempt.
+            // A negative result is a PM3_E* transport failure, not something
+            // the card said. Retrying cannot fix it, nor can the ~150 AIDs
+            // still to come.
             if (res < 0) {
                 if (LeaveFieldON == false) {
                     DropFieldEx(channel);
