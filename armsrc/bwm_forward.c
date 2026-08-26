@@ -89,7 +89,7 @@ static uint8_t  s_fifo[BWM_DEFIFO_SZ];
 static volatile uint16_t s_fifo_head = 0;
 static volatile uint16_t s_fifo_tail = 0;
 
-static inline uint16_t fifo_count(void) {
+static uint16_t fifo_count(void) {
     return (uint16_t)((s_fifo_head - s_fifo_tail) & (BWM_DEFIFO_SZ - 1));
 }
 static inline void fifo_push(uint8_t b) {
@@ -109,7 +109,7 @@ static void bwm_reset_frame(bwm_parser_t *p) {
     p->state = S_IDLE;
 }
 
-static inline void crc_step(bwm_parser_t *p, uint8_t byte) {
+static void crc_step(bwm_parser_t *p, uint8_t byte) {
     p->crc_calc = bwm_crc16(&byte, 1, p->crc_calc);
 }
 
