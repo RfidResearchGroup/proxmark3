@@ -115,39 +115,15 @@ out:
     return res;
 }
 
-
-static inline void swap_clock_counters(volatile unsigned int *a, unsigned int *b) {
-    unsigned int c = *a;
-    *a = *b;
-    *b = c;
-}
-
-/**
- * @brief Swaps the timer counter values.
- *
- * AT91SAM7S512 has a single Timer-Counter, that is reused in clocks Ticks
- * and CountSspClk. This function stops the current clock and restores previous
- * values. It is used to switch between different clock sources.
- * It probably makes communication timing off, but at least makes it work.
- */
-static void swap_clocks(void) {
-    static unsigned int tc0, tc1, tc2 = 0;
-    StopTicks();
-    swap_clock_counters(&(AT91C_BASE_TC0->TC_CV), &tc0);
-    swap_clock_counters(&(AT91C_BASE_TC1->TC_CV), &tc1);
-    swap_clock_counters(&(AT91C_BASE_TC2->TC_CV), &tc2);
-}
-
 void switch_clock_to_ticks(void) {
-    swap_clocks();
+    StopTicks();
     StartTicks();
 }
 
 void switch_clock_to_countsspclk(void) {
-    swap_clocks();
+    StopTicks();
     StartCountSspClk();
 }
-
 
 /**
  * @brief Sends a payload to the SAM
