@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added the MiFare Classic keys I found during years (@ajabep)
 - Added tools script `tools/ePassport/ePassport` - kivy python3 script that dumps a passport with BAC/CAN and a nice viewer (@iceman1001)
 - Added tools script `external_sam_read.py` enabling PM3 3 Easy and Proxmark 5 to use an external SIM/SAM reader for `hf iclass sam` and `hf seos sam` commands (@antiklesys)
 - Added `nfc encode` and `hf mfu ndefwrite` - build NDEF URI/Text/AAR records and write them to Ultralight tags (@0x6r1an0y)
