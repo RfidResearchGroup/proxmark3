@@ -2776,11 +2776,15 @@ static int CmdEMVReader(const char *Cmd) {
                   "In `verbose` mode it will also try to extract and decode the transaction logs stored on card in either channel.\n",
                   "emv reader\n"
                   "emv reader -v\n"
-                  "emv reader -@     -> Continuous mode\n"
+                  "emv reader -w      -> contact interface\n"
+                  "emv reader -w -1   -> contact interface, protocol T=1\n"
+                  "emv reader -@      -> Continuous mode\n"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("w", "wired", "Send data via contact (iso7816) interface. (def: Contactless interface)"),
+        arg_lit0("0", NULL, "use protocol T=0 (default)"),
+        arg_lit0("1", NULL, "use protocol T=1"),
         arg_lit0("v", "verbose", "Verbose output"),
         arg_lit0("@",  NULL,   "continuous reader mode"),
         arg_param_end
@@ -2792,10 +2796,26 @@ static int CmdEMVReader(const char *Cmd) {
         channel = CC_CONTACT;
     }
 
+    bool use_t0 = arg_get_lit(ctx, 2);
+    bool use_t1 = arg_get_lit(ctx, 3);
     uint8_t psenum = (channel == CC_CONTACT) ? 1 : 2;
-    bool verbose = arg_get_lit(ctx, 2);
-    bool continuous = arg_get_lit(ctx, 3);
+    bool verbose = arg_get_lit(ctx, 4);
+    bool continuous = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
+
+    if (use_t0 && use_t1) {
+        PrintAndLogEx(FAILED, "Choose either -0 or -1, not both");
+        return PM3_EINVARG;
+    }
+
+    if ((use_t0 || use_t1) && channel != CC_CONTACT) {
+        PrintAndLogEx(FAILED, "-0 and -1 only apply to the contact interface, add -w");
+        return PM3_EINVARG;
+    }
+
+    // A card whose ATR offers no T=0 is switched over by the ARM on its own;
+    // this is for one that offers both and would otherwise be driven as T=0.
+    SetSmartcardProtocolT1(use_t1);
 
     if (continuous) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");

@@ -208,9 +208,9 @@ int Iso7816Exchange(Iso7816CommandChannel channel, bool leave_field_on, sAPDU_t 
 int Iso7816Select(Iso7816CommandChannel channel, bool activate_field, bool leave_field_on, uint8_t *aid, size_t aid_len,
                   uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
 
-    return Iso7816ExchangeEx(channel
-                             , activate_field
-                             , leave_field_on
+    int res = Iso7816ExchangeEx(channel
+                                , activate_field
+                                , leave_field_on
     , (sAPDU_t) {0x00, 0xa4, 0x04, 0x00, aid_len, aid}
     , (channel == CC_CONTACTLESS)
     , 0
@@ -218,5 +218,42 @@ int Iso7816Select(Iso7816CommandChannel channel, bool activate_field, bool leave
     , max_result_len
     , result_len
     , sw
-                            );
+                               );
+
+    /*
+     * A contact card running T=1 needs the Le that a T=0 card must not be
+     * given.  T=0 answers a case 4 command with 61xx and hands the data over
+     * through GET RESPONSE, so the Le is left off; T=1 carries the whole APDU
+     * in one block and has no such step, so the command has to ask for its
+     * length up front.  Send one without and a strict card answers 6700.
+     *
+     * Rather than work out which protocol the link ended up on - the ARM may
+     * have switched to T=1 on its own, off the ATR, without the client being
+     * told - let the card say so and reissue.  EMVReadRecord() and
+     * EMVGenerateChallenge() already do the mirror image of this.
+     *
+     * Only on 6700/6F00, and only on contact: a T=0 card has no reason to
+     * answer a SELECT that way, and if one did the retry costs a single extra
+     * APDU that it will reject just as it rejected the first.
+     */
+    if ((channel == CC_CONTACT) && (sw != NULL) && ((*sw == 0x6700) || (*sw == 0x6F00))) {
+
+        if (APDULogging) {
+            PrintAndLogEx(INFO, ">>> wrong length, reissuing SELECT with Le...");
+        }
+
+        res = Iso7816ExchangeEx(channel
+                                , false
+                                , leave_field_on
+        , (sAPDU_t) {0x00, 0xa4, 0x04, 0x00, aid_len, aid}
+        , true
+        , 0
+        , result
+        , max_result_len
+        , result_len
+        , sw
+                               );
+    }
+
+    return res;
 }

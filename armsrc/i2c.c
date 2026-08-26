@@ -37,20 +37,22 @@
 
 #define I2C_ERROR  "I2C_WaitAck Error"
 
-// delay=1 is about 200kbps
-// I2CSpinDelayClk(4) about 12us
-// I2CSpinDelayClk(1) about 3us
-// static void I2CSpinDelayClk(const uint16_t delay) {
-//     for (uint16_t i = 0; i < delay; i++) {
-//         SpinDelayUsPrecision(2);
-//     }
-// }
+// Bus timing lives in i2c.h alongside the timeouts derived from it, so the two
+// cannot drift apart.
+#define I2C_DELAY_1CLK    SpinDelayUsPrecision(I2C_DELAY_1CLK_US)
+#define I2C_DELAY_2CLK    SpinDelayUsPrecision(I2C_DELAY_2CLK_US)
 
-// TODO DXL 修改了速度到比较慢的情况，测完需要改回来，原先是2和4
+#define SC_PROTO_T0     (1 << 0)
+#define SC_PROTO_T1     (1 << 1)
 
-#define I2C_DELAY_1CLK    SpinDelayUsPrecision(20)
-#define I2C_DELAY_2CLK    SpinDelayUsPrecision(22)
-// #define I2C_DELAY_XCLK(x) I2CSpinDelayClk((x))
+// Protocols the last ATR offered, as a bit mask of (1 << T).  Zero means we do
+// not know - no ATR has been read since the module was last reset.
+static uint8_t s_card_protocols = 0;
+
+// Whether the protocol choice has already been reported this session.  These
+// messages are worth seeing once; sc_raw_device_cmd() runs per APDU, and an
+// EMV AID sweep is 150 of them.
+static bool s_proto_announced = false;
 
 // try i2c bus recovery at 100kHz = 5us high, 5us low
 void I2C_recovery(void) {
@@ -120,6 +122,9 @@ void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA) {
 // Reset the SIM_Adapter, then  enter the main program
 // Note: the SIM_Adapter will not enter the main program after power up. Please run this function before use SIM_Adapter.
 void I2C_Reset_EnterMainProgram(void) {
+    // whatever we knew about the card is no longer trustworthy
+    s_card_protocols = 0;
+    s_proto_announced = false;
     StartTicks();
     I2C_init(true);
     I2C_SetResetStatus(0, 0, 0);
@@ -152,10 +157,8 @@ static bool WaitSCL_H_delay(uint32_t delay) {
     return false;
 }
 
-// 5000 * 3.07us = 15350 us = 15.35 ms
-// 15000 * 3.07us = 46050 us = 46.05 ms
 static bool WaitSCL_H(void) {
-    return WaitSCL_H_delay(5000);
+    return WaitSCL_H_delay(I2C_ITERS_FOR_MS(I2C_STRETCH_TIMEOUT_MS));
 }
 
 static bool WaitSCL_L_delay(uint32_t delay) {
@@ -168,10 +171,8 @@ static bool WaitSCL_L_delay(uint32_t delay) {
     return false;
 }
 
-// 5000 * 3.07us = 15350us. 15.35ms
-// 15000 * 3.07us = 46050us. 46.05ms
 static bool WaitSCL_L(void) {
-    return WaitSCL_L_delay(5000);
+    return WaitSCL_L_delay(I2C_ITERS_FOR_MS(I2C_STRETCH_TIMEOUT_MS));
 }
 
 // How long to allow the SIM module to *start* an operation, i.e. to pull SCL
@@ -235,14 +236,7 @@ static bool I2C_WaitForSim(uint32_t wait) {
         return false;
     }
 
-    // 8051 speaks with smart card.
-    // 1000*50*3.07   = 153.5ms
-    // 1000*110*3.07  = 337.7ms  (337700)
-    // 4 560 000 * 3.07 = 13999,2ms (13999200)
-    // 1byte transfer == 1ms with max frame being 256bytes
-
-    // fct WaitSCL_H_delay uses a I2C_DELAY_1CLK in the loop with "wait" as number of iterations.
-    // I2C_DELAY_1CLK == I2CSpinDelayClk(1) = 3.07us
+    // wait is an iteration count; build it with I2C_ITERS_FOR_MS().
     return WaitSCL_H_delay(wait);
 }
 
@@ -854,13 +848,97 @@ bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait) {
     return true;
 }
 
+/*
+ * ISO/IEC 7816-3 clause 8: the protocols on offer are the low nibbles of the
+ * TDi bytes.  With no TD1 at all, only T=0 is offered.  T=15 carries global
+ * interface bytes rather than a transmission protocol and is ignored here.
+ */
+static uint8_t atr_protocols(const uint8_t *atr, uint8_t len) {
+
+    if (len < 2) {
+        return 0;
+    }
+
+    uint8_t y = (uint8_t)(atr[1] >> 4);      // T0
+    uint8_t i = 2;
+    uint8_t mask = 0;
+
+    while (y) {
+
+        if (y & 0x01) i++;                   // TA(i)
+        if (y & 0x02) i++;                   // TB(i)
+        if (y & 0x04) i++;                   // TC(i)
+
+        if ((y & 0x08) == 0) {
+            break;                           // no TD(i), nothing further named
+        }
+        if (i >= len) {
+            break;                           // truncated ATR
+        }
+
+        uint8_t td = atr[i++];
+        uint8_t t = (uint8_t)(td & 0x0F);
+        if (t < 8) {
+            mask |= (uint8_t)(1u << t);
+        }
+        y = (uint8_t)(td >> 4);
+    }
+
+    if (mask == 0) {
+        mask = SC_PROTO_T0;                  // clause 8.2.3
+    }
+    return mask;
+}
+
 uint8_t sc_raw_device_cmd(smartcard_command_t flags) {
+
+    // An explicit T=1 request is always honoured as asked - it is an override,
+    // and a card that supports T=1 without advertising it is a real thing.  But
+    // say so when the ATR disagrees, because the alternative is silence from
+    // the card and no clue why.
     if ((flags & SC_RAW_T1) == SC_RAW_T1) {
+
+        if ((s_card_protocols != 0) && ((s_card_protocols & SC_PROTO_T1) == 0)) {
+            if ((g_dbglevel >= DBG_ERROR) && (s_proto_announced == false)) {
+                s_proto_announced = true;
+                DbpString("SC: " _YELLOW_("card offers no T=1") ", sending it anyway");
+            }
+        }
         return I2C_DEVICE_CMD_SEND_T1;
     }
+
     if ((flags & SC_RAW_T0) == SC_RAW_T0) {
+
+        /*
+         * A T=0 request to a card whose ATR offers no T=0 cannot work - the
+         * card will not hear it at all, which shows up as silence rather than
+         * an error.  Most modern EMV and JCOP cards are T=1 only, and callers
+         * like ExchangeAPDUSC() ask for T=0 unconditionally.
+         *
+         * Only this one case is redirected, and only once an ATR has actually
+         * been read.  A card that does offer T=0 is left alone even if it also
+         * offers T=1, because there the caller's choice is a real one - use
+         * SC_RAW_T1 to say otherwise.
+         *
+         * Note this cannot make anything worse even against a SIM module too
+         * old to know SEND_T1: in the exact case it fires, the request as given
+         * was already guaranteed to fail.
+         */
+        if ((s_card_protocols != 0) &&
+                ((s_card_protocols & SC_PROTO_T0) == 0) &&
+                ((s_card_protocols & SC_PROTO_T1) == SC_PROTO_T1)) {
+
+            if ((g_dbglevel >= DBG_INFO) && (s_proto_announced == false)) {
+                s_proto_announced = true;
+                DbpString("SC: card offers no T=0, sending as T=1");
+            }
+            return I2C_DEVICE_CMD_SEND_T1;
+        }
+
         return I2C_DEVICE_CMD_SEND_T0;
     }
+
+    // Raw pass through: the host owns the framing, so never second guess it.
     return I2C_DEVICE_CMD_SEND;
 }
 
@@ -918,6 +996,16 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
     }
 
     card_ptr->atr_len = (uint8_t)(len & 0xff);
+
+    s_card_protocols = atr_protocols(card_ptr->atr, card_ptr->atr_len);
+    s_proto_announced = false;
+    if (g_dbglevel >= DBG_INFO) {
+        Dbprintf("SC: card offers%s%s"
+                 , (s_card_protocols & SC_PROTO_T0) ? " T=0" : ""
+                 , (s_card_protocols & SC_PROTO_T1) ? " T=1" : ""
+                );
+    }
+
     if (verbose) {
         LogTrace(card_ptr->atr, card_ptr->atr_len, 0, 0, NULL, false);
     }
@@ -981,10 +1069,14 @@ void SmartCardRaw(const smart_card_raw_t *p) {
 
         uint32_t wait = SIM_WAIT_DELAY;
         if ((flags & SC_WAIT) == SC_WAIT) {
-            // wait_delay is in ms; one WaitSCL_H_delay iteration is ~3.07us.
-            // Integer-only conversion via uint64_t to avoid soft-float and avoid
-            // overflow at large wait_delay values: (ms * 100000 + 153) / 307.
-            wait = (uint32_t)(((uint64_t)p->wait_delay * 100000U + 153U) / 307U);
+            // Asking for N ms now actually waits N ms.  The old conversion
+            // assumed 3.07 us per iteration while the delay had been changed to
+            // 20 us, so `--timeout 1000` sat there for six and a half seconds.
+            uint32_t ms = p->wait_delay;
+            if (ms > I2C_WAIT_MAX_MS) {
+                ms = I2C_WAIT_MAX_MS;
+            }
+            wait = I2C_ITERS_FOR_MS(ms);
         }
 
         LogTrace(p->data, p->len, 0, 0, NULL, true);

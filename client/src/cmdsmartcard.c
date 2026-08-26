@@ -442,8 +442,23 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose, uint8_t c
             goto out;
         }
 
-        // data wo ACK
-        if (datalen != len + 2) {
+        /*
+         * Two shapes are valid here, depending on how the GET RESPONSE went out:
+         *
+         *   len + 2      the data and its status word.  This is what SEND_T0
+         *                gives, because the module runs the procedure byte
+         *                exchange itself and strips the echoed INS.
+         *   len + 2 + 1  the same with that procedure byte still in front,
+         *                which is what the raw pass through leaves behind.
+         *
+         * Only the second needs unwrapping - but the first used to fall through
+         * both branches without ever adding to totallen, so the caller got zero
+         * bytes and reported "result length = 0" while the card had answered
+         * perfectly.  It went unnoticed while GET RESPONSE was always sent raw.
+         */
+        if (datalen == len + 2) {
+            totallen += datalen;
+        } else {
             // data with ACK
             if (datalen == len + 2 + 1) { // 2 - response, 1 - ACK
                 if (out[ofs] != ISO7816_GET_RESPONSE) {
@@ -1638,6 +1653,24 @@ int CmdSmartcard(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
+/*
+ * Which protocol the contact exchanges below ask for.
+ *
+ * T=0 by default, which is what this has always sent.  The ARM side already
+ * redirects a T=0 request to T=1 when the card's ATR offers no T=0 at all - a
+ * request that could not have worked as asked.  This is for the other case: a
+ * card that offers both, where T=0 would work but you want T=1 anyway.
+ */
+static smartcard_command_t s_sc_protocol = SC_RAW_T0;
+
+void SetSmartcardProtocolT1(bool use_t1) {
+    s_sc_protocol = use_t1 ? SC_RAW_T1 : SC_RAW_T0;
+}
+
+bool GetSmartcardProtocolT1(void) {
+    return (s_sc_protocol == SC_RAW_T1);
+}
+
 int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
 
     *dataoutlen = 0;
@@ -1647,7 +1680,7 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
-    payload->flags = (SC_RAW_T0 | SC_LOG);
+    payload->flags = (s_sc_protocol | SC_LOG);
     if (activateCard) {
         payload->flags |= (SC_SELECT | SC_CONNECT);
     }
@@ -1658,7 +1691,7 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
     clearCommandBuffer();
     SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + datainlen);
 
-    int len = smart_responseEx(dataout, maxdataoutlen, verbose, (datainlen > 0) ? datain[0] : 0x00, SC_RAW);
+    int len = smart_responseEx(dataout, maxdataoutlen, verbose, (datainlen > 0) ? datain[0] : 0x00, s_sc_protocol);
     if (len < 0) {
         free(payload);
         return PM3_ESOFT;
@@ -1667,7 +1700,7 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
     // retry
     if (len > 1 && dataout[len - 2] == 0x6c && datainlen > 4) {
 
-        payload->flags = SC_RAW_T0;
+        payload->flags = s_sc_protocol;
         payload->len = 5;
         // transfer length via T=0
         datain[4] = dataout[len - 1];
@@ -1675,7 +1708,7 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
         clearCommandBuffer();
         SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + 5);
         datain[4] = 0;
-        len = smart_responseEx(dataout, maxdataoutlen, verbose, datain[0], SC_RAW);
+        len = smart_responseEx(dataout, maxdataoutlen, verbose, datain[0], s_sc_protocol);
         if (len < 0) {
             free(payload);
             return PM3_ESOFT;

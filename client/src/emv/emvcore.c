@@ -329,6 +329,12 @@ static int EMVSelectWithRetry(Iso7816CommandChannel channel, bool ActivateField,
 
         // retry if error and not returned sw error
         if (res && res != 5) {
+
+            // a PM3_E* transport failure will not be fixed by asking again
+            if (res < 0) {
+                return res;
+            }
+
             if (++retrycnt < 3) {
                 continue;
             } else {
@@ -379,7 +385,9 @@ static int EMVCheckAID(Iso7816CommandChannel channel, bool decodeTLV, struct tlv
     return res;
 }
 
-int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, bool decodeTLV, struct tlvdb *tlv) {
+// quiet: the caller has a fallback lined up, so a failure here is a probe
+// rather than a problem and should not be reported as one.
+int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, bool decodeTLV, struct tlvdb *tlv, bool quiet) {
     uint8_t data[APDU_RES_LEN] = {0};
     size_t datalen = 0;
     uint16_t sw = 0;
@@ -391,7 +399,9 @@ int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFi
 
     if (!res) {
         if (sw != ISO7816_OK) {
-            PrintAndLogEx(FAILED, "Select PSE error. APDU error: %04x.", sw);
+            if (quiet == false) {
+                PrintAndLogEx(FAILED, "Select PSE error. APDU error: %04x.", sw);
+            }
             return 1;
         }
 
@@ -463,7 +473,7 @@ int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFi
         } else {
             PrintAndLogEx(WARNING, "%s ERROR: Can't get TLV from response.", PSE_or_PPSE);
         }
-    } else {
+    } else if (quiet == false) {
         PrintAndLogEx(ERR, "%s ERROR: Can't select PPSE AID. Error: %d", PSE_or_PPSE, res);
     }
 
@@ -492,6 +502,23 @@ int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveField
         int res = EMVSelect(channel, (i == 0) ? ActivateField : false, true, aidbuf, aidlen, data, sizeof(data), &datalen, &sw, tlv);
         // retry if error and not returned sw error
         if (res && res != 5) {
+
+            // A negative result is a PM3_E* transport failure rather than
+            // anything the card said - PM3_EIO when the field has gone
+            // inactive, for instance.  Retrying the same AID cannot fix that,
+            // and neither can the ~150 AIDs still to come: without this it
+            // retries each of them three times and prints a failure for every
+            // attempt.
+            if (res < 0) {
+                if (LeaveFieldON == false) {
+                    DropFieldEx(channel);
+                }
+                if (verbose) {
+                    PrintAndLogEx(WARNING, "exiting...");
+                }
+                return 1;
+            }
+
             if (++retrycnt < 3) {
                 i--;
             } else {

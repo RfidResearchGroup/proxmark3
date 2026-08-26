@@ -85,10 +85,12 @@ static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint
             ((flags & SC_RAW_T1) == SC_RAW_T1)) {
 
         if ((flags & SC_WAIT) == SC_WAIT) {
-            // wait_delay is in ms; one WaitSCL_H_delay iteration is ~3.07us.
-            // Integer-only conversion via uint64_t to avoid soft-float and
-            // avoid overflow at large wait_delay values.
-            wait = (uint32_t)(((uint64_t)p->wait_delay * 100000U + 153U) / 307U);
+            // see the same conversion in SmartCardRaw()
+            uint32_t ms = p->wait_delay;
+            if (ms > I2C_WAIT_MAX_MS) {
+                ms = I2C_WAIT_MAX_MS;
+            }
+            wait = I2C_ITERS_FOR_MS(ms);
         }
 
         LogTrace(p->data, p->len, 0, 0, NULL, true);
