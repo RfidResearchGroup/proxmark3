@@ -180,10 +180,6 @@ else ifeq ($(PLATFORM),PM5)
     SKIP_COMPRESSION = true # Skip data section compress. The new mcu has enough flash space.
     PLATFORM_DEFS = -DWITH_FLASH -DPM5 -DCHIP_AT32F435_37 -DWITH_BWM_STATUS -DWITH_PM5_PWR_LED -DWITH_PM5_AUTOOFF # TODO 暂时不要编译i2c -DWITH_SMARTCARD
                     # -DWITH_BWM_LOWBATT_BEEP ===== if you want audible alert ====
-    # BLE via BWM: AT32 UART4 (PA0/PA1, 460800 8N1) carries framed app_com to the
-    # ESP32. WITH_BWM_FORWARD builds the AT32 UART4 driver + framing shim. Do NOT
-    # enable WITH_FPC_USART_HOST here - that pulls in the AT91 usart.c and bricks USB.
-    PLATFORM_DEFS += -DWITH_BWM_FORWARD
     PLTNAME = Proxmark5
     PLATFORM_FPGA = GW1NR-LV2MG49GC6/i5
 else
@@ -213,6 +209,13 @@ ifneq (,$(findstring FPC_USART_DEV,$(PLATFORM_EXTRAS_TMP)))
     endif
     PLATFORM_DEFS += -DWITH_FPC_USART_DEV
     PLATFORM_EXTRAS_TMP := $(strip $(filter-out FPC_USART_DEV,$(PLATFORM_EXTRAS_TMP)))
+endif
+ifneq (,$(findstring BWM,$(PLATFORM_EXTRAS_TMP)))
+    ifneq ($(PLATFORM),PM5)
+        $(error PLATFORM_EXTRAS token BWM is only valid on PLATFORM=PM5)
+    endif
+    PLATFORM_DEFS += -DWITH_BWM_FORWARD
+    PLATFORM_EXTRAS_TMP := $(strip $(filter-out BWM,$(PLATFORM_EXTRAS_TMP)))
 endif
 ifneq (,$(PLATFORM_EXTRAS_TMP))
     $(error Unknown PLATFORM_EXTRAS token(s): $(PLATFORM_EXTRAS_TMP))
