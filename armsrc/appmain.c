@@ -1737,7 +1737,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_LF_ACQ_RAW_ADC: {
             lf_sample_payload_t *payload = (lf_sample_payload_t *)packet->data.asBytes;
             if (payload->realtime) {
-                ReadLF_realtime(true, payload->cotag);
+                ReadLF_realtime(true, payload->cotag, payload->samples);
             } else {
                 uint32_t bits = SampleLF(payload->verbose, payload->samples, true, payload->cotag);
                 reply_ng(CMD_LF_ACQ_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
@@ -1766,7 +1766,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_LF_SNIFF_RAW_ADC: {
             lf_sample_payload_t *payload = (lf_sample_payload_t *)packet->data.asBytes;
             if (payload->realtime) {
-                ReadLF_realtime(false, false);
+                ReadLF_realtime(false, false, payload->samples);
             } else {
                 uint32_t bits = SniffLF(payload->verbose, payload->samples, true);
                 reply_ng(CMD_LF_SNIFF_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));

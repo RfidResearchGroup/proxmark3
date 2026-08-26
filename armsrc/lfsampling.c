@@ -455,7 +455,7 @@ uint32_t SampleLF(bool verbose, uint32_t sample_size, bool ledcontrol, bool cota
  * @param reader_field - true for reading tags, false for sniffing
  * @return sampling result
 **/
-int ReadLF_realtime(bool reader_field, bool cotag) {
+int ReadLF_realtime(bool reader_field, bool cotag, uint32_t sample_limit) {
     // parameters from config and constants
     const uint8_t bits_per_sample = config.bits_per_sample;
     const int16_t trigger_threshold = config.trigger_threshold;
@@ -469,6 +469,8 @@ int ReadLF_realtime(bool reader_field, bool cotag) {
     uint8_t last_byte = 0;
     uint8_t curr_byte = 0;
     int return_value = PM3_SUCCESS;
+    // Total samples streamed so far
+    uint32_t total_logged = 0;
 
     uint32_t usb_buffer_len = 0, sample_buffer_len;
     usb_get_ep_size(NULL, &usb_buffer_len, NULL);
@@ -536,6 +538,7 @@ int ReadLF_realtime(bool reader_field, bool cotag) {
             curr_byte = data.numbits >> 3;
             if (curr_byte > last_byte) {
                 async_usb_write_pushByte(data.buffer[last_byte]);
+                total_logged++;
             }
             last_byte = curr_byte;
 
@@ -557,6 +560,10 @@ int ReadLF_realtime(bool reader_field, bool cotag) {
                 if (data_available_fast()) {
                     break;
                 }
+            }
+
+            if (sample_limit > 0 && total_logged >= sample_limit) {
+                break;
             }
         }
     }

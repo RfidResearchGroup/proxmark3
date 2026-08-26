@@ -787,6 +787,7 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples, bool 
     payload.realtime = realtime;
     payload.verbose = verbose;
     payload.cotag = cotag;
+    payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
 
     sample_config current_config;
     int retval = lf_getconfig(&current_config);
@@ -820,12 +821,14 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples, bool 
         SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
         if (is_trigger_threshold_set) {
             size_t first_receive_len = 32;
-            // Wait until a bunch of data arrives
-            first_receive_len = WaitForRawDataTimeout(realtimeBuf, first_receive_len, -1, false);
-            sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000, true);
+            // Wait until a bunch of data arrives. Keep raw mode on across both
+            // calls so the comm thread doesn't briefly fall back to parsing
+            // framed packets out of the still-arriving sample stream.
+            first_receive_len = WaitForRawDataTimeout(realtimeBuf, first_receive_len, -1, false, true);
+            sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000, true, false);
             sample_bytes += first_receive_len;
         } else {
-            sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true);
+            sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true, false);
         }
         samples = sample_bytes * 8 / bits_per_sample;
         PrintAndLogEx(INFO, "Done: %" PRIu64 " samples (%zu bytes)", samples, sample_bytes);
@@ -835,7 +838,6 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples, bool 
 
         free(realtimeBuf);
     } else {
-        payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
         SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
         PacketResponseNG resp;
 
@@ -920,6 +922,7 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
     lf_sample_payload_t payload = {0};
     payload.realtime = realtime;
     payload.verbose = verbose;
+    payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
 
     sample_config current_config;
     int retval = lf_getconfig(&current_config);
@@ -953,12 +956,14 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
         SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
         if (is_trigger_threshold_set) {
             size_t first_receive_len = 32;
-            // Wait until a bunch of data arrives
-            first_receive_len = WaitForRawDataTimeout(realtimeBuf, first_receive_len, -1, false);
-            sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000, true);
+            // Wait until a bunch of data arrives. Keep raw mode on across both
+            // calls so the comm thread doesn't briefly fall back to parsing
+            // framed packets out of the still-arriving sample stream.
+            first_receive_len = WaitForRawDataTimeout(realtimeBuf, first_receive_len, -1, false, true);
+            sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000, true, false);
             sample_bytes += first_receive_len;
         } else {
-            sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true);
+            sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true, false);
         }
         samples = sample_bytes * 8 / bits_per_sample;
         PrintAndLogEx(INFO, "Done: %" PRIu64 " samples (%zu bytes)", samples, sample_bytes);
@@ -968,7 +973,6 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
 
         free(realtimeBuf);
     } else {
-        payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
         SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
         PacketResponseNG resp;
         if (is_trigger_threshold_set) {

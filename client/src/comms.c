@@ -1010,7 +1010,7 @@ static size_t communication_delay(void) {
  * @param show_process print how many bytes are received
  * @return the number of received bytes
  */
-size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, bool show_process) {
+size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, bool show_process, bool keep_raw_mode) {
     uint8_t print_counter = 0;
     size_t last_pos = 0;
 
@@ -1058,7 +1058,7 @@ size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, boo
         last_pos = pos;
         msleep(10);
     }
-    if (pos == len && (ms_timeout != (size_t) - 1)) {
+    if (pos == len && (ms_timeout != (size_t) - 1) && (keep_raw_mode == false)) {
         // If ms_timeout != -1, when the desired data is received, tell the arm side
         // to stop the current process, and wait for some time to make sure the process
         // has been stopped.
@@ -1067,7 +1067,14 @@ size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, boo
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         msleep(ms_timeout);
     }
-    SetCommunicationReceiveMode(false);
+    // Caller is about to chain another raw read: keep raw-receive mode
+    // on so the comm thread never drops back into normal framed-packet
+    // parsing in between the two reads. Doing so - even briefly - lets it
+    // misparse in-flight sample bytes as a PacketResponseNG preamble and
+    // corrupts every USB exchange that follows.
+    if (keep_raw_mode == false) {
+        SetCommunicationReceiveMode(false);
+    }
     pos = __atomic_load_n(&comm_raw_pos, __ATOMIC_SEQ_CST);
     return pos;
 }
