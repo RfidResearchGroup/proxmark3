@@ -34,9 +34,11 @@
 #include "protocols.h"
 #include "des.h"
 #include "platform_util.h"
+#include "crypto/libpcrypto.h"
 #include "cliparser.h"   // cliparser
 #include "util_posix.h"  // msleep, msclock
 #include "jansson.h"
+#include "jsonutils.h"
 
 
 #define FELICA_BLK_SIZE 16
@@ -84,6 +86,15 @@
 #define FELICA_SYSTEM_LIST_JSON "felica/felica_system_code_list"
 #define FELICA_IC_CODE_LIST_JSON "felica/felica_ic_code_list"
 #define FELICA_CONTAINER_ISSUE_LIST_JSON "felica/felica_container_issue_information_list"
+#define FELICA_AUTH_KEY_FILE_VERSION 1
+
+#define FELICA_AUTH_DES_KEY_LEN 8U
+#define FELICA_AUTH_CHALLENGE_LEN 8U
+#define FELICA_AUTH2_CIPHERTEXT_LEN 32U
+#define FELICA_AUTH_MAX_CODES 64U
+#define FELICA_AUTH_MAX_NODES 256U
+#define FELICA_AUTH_SYSTEM_NODE_BE 0xFFFFU
+#define FELICA_AUTH_ROOT_AREA_BE 0x0000U
 
 #define FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE 32U
 #define FELICA_MAX_NODE_NUMBER 0x03FFU
@@ -228,8 +239,8 @@ typedef struct {
 
 typedef struct {
     bool has_value;
-    uint16_t value_le;
-} felica_dump_key_version_t;
+    uint16_t value;
+} felica_key_version_t;
 
 typedef struct {
     bool has_value;
@@ -241,8 +252,8 @@ typedef struct {
     uint16_t node_code_le;
     bool has_end_code;
     uint16_t end_code_le;
-    felica_dump_key_version_t des_key_version;
-    felica_dump_key_version_t aes_key_version;
+    felica_key_version_t des_key_version;
+    felica_key_version_t aes_key_version;
     felica_dump_block_t *blocks;
     size_t block_count;
     size_t block_capacity;
@@ -343,7 +354,49 @@ typedef struct {
     bool has_idm;
     uint8_t pmm[8];
     bool has_pmm;
+    bool has_auth;
+    uint8_t idi[8];
+    uint8_t pmi[8];
 } felica_discovered_system_t;
+
+typedef struct {
+    json_t *node_root;
+    json_t *group_user_root;
+} felica_auth_key_store_t;
+
+typedef enum {
+    FELICA_CAP_UNKNOWN = 0,
+    FELICA_CAP_SUPPORTED,
+    FELICA_CAP_UNSUPPORTED,
+} felica_capability_state_t;
+
+typedef struct {
+    felica_capability_state_t supports_request_service_v2;
+    felica_capability_state_t supports_request_system_code;
+} felica_card_capabilities_t;
+
+typedef struct {
+    uint16_t code_be;
+    felica_key_version_t aes_key_version;
+    felica_key_version_t des_key_version;
+} felica_node_t;
+
+static void felica_auth_key_store_load(felica_auth_key_store_t *store, bool verbose);
+static void felica_auth_key_store_free(felica_auth_key_store_t *store);
+static void felica_collect_service_node_codes(const json_t *system_entry, uint16_t *codes, size_t *count);
+static void felica_auth_collect_codes(const felica_auth_key_store_t *store, uint16_t system_code,
+                                      uint16_t *codes, size_t *count);
+static void felica_auth_add_unique_code(uint16_t *codes, size_t *count, uint16_t code);
+static const felica_node_t *felica_find_node(const felica_node_t *versions,
+                                                           size_t version_count, uint16_t code_be);
+static bool felica_node_present(const felica_node_t *node);
+static int felica_collect_key_versions(uint8_t flags, const uint8_t *idm,
+                                       const uint16_t *codes_be, size_t code_count,
+                                       felica_node_t *versions_out,
+                                       felica_card_capabilities_t *caps);
+static void felica_authenticate_system(const felica_auth_key_store_t *store, uint8_t flags,
+                                       felica_discovered_system_t *system,
+                                       const felica_node_t *versions, size_t version_count, bool verbose);
 
 typedef struct {
     size_t count;
@@ -1471,9 +1524,39 @@ static int felica_request_service_v2_key_versions(uint8_t flags, const uint8_t *
     return PM3_SUCCESS;
 }
 
+static void felica_collect_service_node_codes(const json_t *system_entry, uint16_t *codes, size_t *count) {
+    json_t *services_json = json_object_get(system_entry, "services");
+    if (json_is_array(services_json) == false) {
+        return;
+    }
+
+    size_t service_index_json = 0;
+    json_t *service_json = NULL;
+    json_array_foreach(services_json, service_index_json, service_json) {
+        if (json_is_object(service_json) == false) {
+            continue;
+        }
+        json_t *nodes_json = json_object_get(service_json, "nodes");
+        if (json_is_array(nodes_json) == false) {
+            continue;
+        }
+
+        size_t node_index_json = 0;
+        json_t *node_json = NULL;
+        json_array_foreach(nodes_json, node_index_json, node_json) {
+            uint16_t node_code_le = 0;
+            if (json_is_object(node_json) &&
+                    felica_parse_service_node_code(felica_get_json_string(node_json, "code"), &node_code_le)) {
+                felica_auth_add_unique_code(codes, count, BSWAP_16(node_code_le));
+            }
+        }
+    }
+}
+
 static void felica_info_process_system_services(int level, uint8_t flags,
                                                 uint16_t system_code, const uint8_t *idm, const json_t *system_entry,
-                                                felica_service_block_data_cache_t *block_data_cache) {
+                                                felica_service_block_data_cache_t *block_data_cache,
+                                                const felica_node_t *versions, size_t version_count) {
     if (idm == NULL || system_entry == NULL) {
         return;
     }
@@ -1575,42 +1658,24 @@ static void felica_info_process_system_services(int level, uint8_t flags,
             }
         }
     } else {
-        size_t processed_nodes = 0;
-        while (processed_nodes < node_count) {
-            const size_t batch_count = MIN(FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE, node_count - processed_nodes);
-            uint16_t batch_codes[FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE] = {0};
-            uint16_t key_versions[FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE] = {0};
-
-            for (size_t i = 0; i < batch_count; i++) {
-                batch_codes[i] = nodes[processed_nodes + i].node_code_le;
+        for (size_t i = 0; i < node_count; i++) {
+            const felica_system_service_node_t *node = &nodes[i];
+            const felica_node_t *card_node =
+                felica_find_node(versions, version_count, BSWAP_16(node->node_code_le));
+            if (card_node == NULL || felica_node_present(card_node) == false) {
+                continue;
             }
 
-            size_t returned_nodes = 0;
-            if (felica_request_service_key_versions(flags, idm, batch_codes, batch_count,
-                                                    FELICA_OPTIONAL_CMD_RETRIES,
-                                                    key_versions, &returned_nodes) != PM3_SUCCESS) {
-                return;
+            if (node->matcher_count > 0 &&
+                    felica_match_service_node_data(flags, idm, node->node_code_le,
+                                                   node->matchers, node->matcher_count, block_data_cache) == false) {
+                continue;
             }
 
-            for (size_t i = 0; i < returned_nodes; i++) {
-                if (key_versions[i] == 0xFFFFU) {
-                    continue;
-                }
-
-                const felica_system_service_node_t *node = &nodes[processed_nodes + i];
-                if (node->matcher_count > 0 &&
-                        felica_match_service_node_data(flags, idm, node->node_code_le,
-                                                       node->matchers, node->matcher_count, block_data_cache) == false) {
-                    continue;
-                }
-
-                const size_t service_index = node->service_index;
-                if (service_index < service_count) {
-                    services[service_index].present_node_count++;
-                }
+            const size_t service_index = node->service_index;
+            if (service_index < service_count) {
+                services[service_index].present_node_count++;
             }
-
-            processed_nodes += batch_count;
         }
     }
 
@@ -1639,7 +1704,9 @@ static void felica_info_process_system_services(int level, uint8_t flags,
     }
 }
 
-static void felica_info_process_system(int level, uint8_t flags, const felica_discovered_system_t *system) {
+static void felica_info_process_system(int level, uint8_t flags, felica_discovered_system_t *system,
+                                       const felica_auth_key_store_t *auth_keys,
+                                       felica_card_capabilities_t *caps, bool verbose) {
     if (system == NULL) {
         return;
     }
@@ -1668,9 +1735,57 @@ static void felica_info_process_system(int level, uint8_t flags, const felica_di
     }
 
     PrintAndLogEx(level, "    System Code.... " _YELLOW_("%04X"), system->system_code);
+
+    uint16_t combined_codes[FELICA_AUTH_MAX_NODES];
+    size_t combined_code_count = 0;
+    felica_node_t versions[FELICA_AUTH_MAX_NODES] = {0};
+    bool have_versions = false;
+    bool has_auth_codes = false;
+
+    if (system->has_idm) {
+        felica_auth_collect_codes(auth_keys, system->system_code, combined_codes, &combined_code_count);
+        has_auth_codes = (combined_code_count > 0);
+        if (system->system_code != FELICA_SYSTEM_CODE_FELICA_LITE) {
+            felica_collect_service_node_codes(entry, combined_codes, &combined_code_count);
+        }
+
+        if (verbose) PrintAndLogEx(INFO, "[auth] system %04X: %zu code(s) to query", system->system_code, combined_code_count);
+
+        if (combined_code_count > 0) {
+            uint8_t poll_idm[8] = {0};
+            uint8_t poll_pmm[8] = {0};
+            if (send_polling(flags, system->system_code, FELICA_POLLING_REQUEST_NO_DATA,
+                             FELICA_POLLING_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES, false,
+                             poll_idm, poll_pmm, NULL) != PM3_SUCCESS) {
+                if (verbose) PrintAndLogEx(INFO, "[auth]   polling system %04X failed", system->system_code);
+            } else if (felica_collect_key_versions(flags, system->idm, combined_codes,
+                                                   combined_code_count, versions, caps) != PM3_SUCCESS) {
+                if (verbose) PrintAndLogEx(INFO, "[auth]   key version query FAILED for all %zu code(s)", combined_code_count);
+            } else {
+                have_versions = true;
+                for (size_t i = 0; i < combined_code_count; i++) {
+                    if (verbose) PrintAndLogEx(INFO, "[auth]   card: node %04X -> DES %u AES %u%s",
+                                               versions[i].code_be,
+                                               versions[i].des_key_version.value, versions[i].aes_key_version.value,
+                                               felica_node_present(&versions[i]) ? "" : " (absent)");
+                }
+            }
+        }
+
+        if (have_versions && has_auth_codes) {
+            felica_authenticate_system(auth_keys, flags, system, versions, combined_code_count, verbose);
+        }
+    }
+
     if (system->has_idm) {
         PrintAndLogEx(level, "    IDM............ " _GREEN_("%s"),
                       sprint_hex_inrow(system->idm, sizeof(system->idm)));
+        if (system->has_auth) {
+            PrintAndLogEx(level, "    IDi............ " _GREEN_("%s"),
+                          sprint_hex_inrow(system->idi, sizeof(system->idi)));
+            PrintAndLogEx(level, "    PMi............ " _GREEN_("%s"),
+                          sprint_hex_inrow(system->pmi, sizeof(system->pmi)));
+        }
     } else {
         PrintAndLogEx(level, "    IDM............ " _RED_("N/A"));
     }
@@ -1703,7 +1818,8 @@ static void felica_info_process_system(int level, uint8_t flags, const felica_di
             }
         }
 
-        felica_info_process_system_services(level, flags, system->system_code, system->idm, entry, &block_data_cache);
+        felica_info_process_system_services(level, flags, system->system_code, system->idm, entry, &block_data_cache,
+                                            versions, have_versions ? combined_code_count : 0);
     }
 }
 
@@ -1863,16 +1979,17 @@ static int send_polling(uint8_t flags, uint16_t system_code, uint8_t request_cod
     return PM3_SUCCESS;
 }
 
-static int discover_systems(uint8_t flags, const uint8_t *primary_idm, bool request_system_code_supported,
-                            uint32_t polling_retries,
+static int discover_systems(uint8_t flags, const uint8_t *primary_idm,
+                            felica_card_capabilities_t *caps, uint32_t polling_retries,
                             felica_discovered_system_list_t *discovered_systems) {
-    if (primary_idm == NULL || discovered_systems == NULL) {
+    if (primary_idm == NULL || caps == NULL || discovered_systems == NULL) {
         return PM3_EINVARG;
     }
 
     memset(discovered_systems, 0, sizeof(*discovered_systems));
 
-    if (request_system_code_supported) {
+    if (caps->supports_request_system_code == FELICA_CAP_UNKNOWN) {
+        bool request_system_code_confirmed = false;
         felica_request_system_code_request_t request_system_code_request;
         memset(&request_system_code_request, 0, sizeof(request_system_code_request));
         request_system_code_request.length[0] = sizeof(request_system_code_request);
@@ -1890,6 +2007,7 @@ static int discover_systems(uint8_t flags, const uint8_t *primary_idm, bool requ
                 continue;
             }
 
+            request_system_code_confirmed = true;
             const size_t reported_systems = system_code_response.number_of_systems[0];
             for (size_t i = 0; i < reported_systems; i++) {
                 const uint16_t system_code = felica_system_code_from_bytes(system_code_response.system_code_list + (i * 2U));
@@ -1898,7 +2016,10 @@ static int discover_systems(uint8_t flags, const uint8_t *primary_idm, bool requ
                     break;
                 }
             }
+            break;
         }
+        caps->supports_request_system_code =
+            request_system_code_confirmed ? FELICA_CAP_SUPPORTED : FELICA_CAP_UNSUPPORTED;
     }
 
     uint16_t primary_system_code = 0;
@@ -1911,18 +2032,20 @@ static int discover_systems(uint8_t flags, const uint8_t *primary_idm, bool requ
                                             primary_system_code, primary_idm_polled, primary_pmm_polled);
     }
 
-    for (size_t i = 0; i < ARRAYLEN(FELICA_MANUAL_SYSTEM_PROBE_TARGETS); i++) {
-        uint8_t probed_idm[8] = {0};
-        uint8_t probed_pmm[8] = {0};
-        const uint16_t system_code = FELICA_MANUAL_SYSTEM_PROBE_TARGETS[i].system_code;
-        if (send_polling(flags, system_code, FELICA_POLLING_REQUEST_NO_DATA,
-                         FELICA_POLLING_TIMEOUT_MS, polling_retries, false,
-                         probed_idm, probed_pmm, NULL) != PM3_SUCCESS) {
-            continue;
-        }
+    if (caps->supports_request_system_code != FELICA_CAP_SUPPORTED) {
+        for (size_t i = 0; i < ARRAYLEN(FELICA_MANUAL_SYSTEM_PROBE_TARGETS); i++) {
+            uint8_t probed_idm[8] = {0};
+            uint8_t probed_pmm[8] = {0};
+            const uint16_t system_code = FELICA_MANUAL_SYSTEM_PROBE_TARGETS[i].system_code;
+            if (send_polling(flags, system_code, FELICA_POLLING_REQUEST_NO_DATA,
+                             FELICA_POLLING_TIMEOUT_MS, polling_retries, false,
+                             probed_idm, probed_pmm, NULL) != PM3_SUCCESS) {
+                continue;
+            }
 
-        felica_add_unique_discovered_system(discovered_systems->systems, &discovered_systems->count,
-                                            system_code, probed_idm, probed_pmm);
+            felica_add_unique_discovered_system(discovered_systems->systems, &discovered_systems->count,
+                                                system_code, probed_idm, probed_pmm);
+        }
     }
 
     if (discovered_systems->count == 0) {
@@ -2483,6 +2606,11 @@ static int info_felica(bool verbose) {
 
     felica_card_select_t card;
     memcpy(&card, (felica_card_select_t *)resp.data.asBytes, sizeof(felica_card_select_t));
+    felica_auth_key_store_t auth_keys = {0};
+    felica_auth_key_store_load(&auth_keys, verbose);
+    if (verbose) PrintAndLogEx(INFO, "[auth] loaded " _YELLOW_("%zu") " node key(s), " _YELLOW_("%zu") " group/user keyset(s)",
+                               json_array_size(json_object_get_ci(auth_keys.node_root, "keys")),
+                               json_array_size(json_object_get_ci(auth_keys.group_user_root, "keysets")));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(INFO, "Primary IDm.... " _YELLOW_("%s"), sprint_hex_inrow(card.IDm, sizeof(card.IDm)));
@@ -2515,6 +2643,11 @@ static int info_felica(bool verbose) {
     set_last_known_card(card);
     const uint8_t optional_flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
     const bool is_felica_lite = felica_is_lite_ic_type(card.iccode[1]);
+    felica_card_capabilities_t caps = {0};
+    if (is_felica_lite) {
+        caps.supports_request_service_v2 = FELICA_CAP_UNSUPPORTED;
+        caps.supports_request_system_code = FELICA_CAP_UNSUPPORTED;
+    }
 
     if (is_felica_lite == false) {
         felica_get_platform_info_request_t platform_info_request;
@@ -2629,14 +2762,15 @@ static int info_felica(bool verbose) {
     }
 
     felica_discovered_system_list_t discovered_systems;
-    if (discover_systems(optional_flags, card.IDm, is_felica_lite == false, FELICA_OPTIONAL_CMD_RETRIES, &discovered_systems) == PM3_SUCCESS &&
+    if (discover_systems(optional_flags, card.IDm, &caps, FELICA_OPTIONAL_CMD_RETRIES, &discovered_systems) == PM3_SUCCESS &&
             discovered_systems.count > 0) {
         PrintAndLogEx(INFO, "Systems........ " _GREEN_("%u:"), (unsigned int)discovered_systems.count);
         for (size_t i = 0; i < discovered_systems.count; i++) {
-            felica_info_process_system(INFO, optional_flags, &discovered_systems.systems[i]);
+            felica_info_process_system(INFO, optional_flags, &discovered_systems.systems[i], &auth_keys, &caps, verbose);
         }
     }
 
+    felica_auth_key_store_free(&auth_keys);
     DropField();
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
@@ -2646,15 +2780,18 @@ static int CmdHFFelicaInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica info",
                   "Reader for FeliCa based tags",
-                  "hf felica info");
+                  "hf felica info\n"
+                  "hf felica info -v    -> show authentication trace");
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("v", "verbose", "verbose output (authentication trace)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool verbose = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
-    int ret = info_felica(false);
+    int ret = info_felica(verbose);
     return ret == PM3_SUCCESS ? ret : info_felica_seac();
 }
 
@@ -3200,8 +3337,833 @@ static int send_search_service_code(uint8_t flags, uint16_t datalen, uint8_t *da
     return PM3_SUCCESS;
 }
 
-static uint16_t felica_to_network_order(uint16_t value) {
-    return (uint16_t)(((value & 0xFF00U) >> 8) | ((value & 0x00FFU) << 8));
+typedef struct {
+    uint16_t code_be;
+    uint8_t key[FELICA_AUTH_DES_KEY_LEN];
+} felica_auth_node_key_t;
+
+typedef enum {
+    FELICA_AUTH_CREDENTIAL_MISS = 0,
+    FELICA_AUTH_SUCCESS,
+    FELICA_AUTH_HARD_FAILURE,
+} felica_auth_candidate_result_t;
+
+static bool felica_code_from_hex(const char *hex, uint16_t *out) {
+    uint8_t bytes[2] = {0};
+    size_t parsed = 0;
+    if (hex == NULL || out == NULL || strlen(hex) != 4U ||
+            hexstr_to_byte_array(hex, bytes, &parsed) == false || parsed != 2U) {
+        return false;
+    }
+    *out = ((uint16_t)bytes[0] << 8) | bytes[1];
+    return true;
+}
+
+static bool felica_auth_parse_key_version(const json_t *value, uint16_t *out) {
+    if (json_is_integer(value) == false || out == NULL) {
+        return false;
+    }
+    const json_int_t version = json_integer_value(value);
+    if (version < 0 || version > 0xFFFF) {
+        return false;
+    }
+    *out = (uint16_t)version;
+    return true;
+}
+
+static bool felica_auth_versions_has_code(const json_t *versions, uint16_t wanted_code) {
+    if (json_is_object(versions) == false) {
+        return false;
+    }
+
+    const char *code_hex = NULL;
+    json_t *version_json = NULL;
+    json_object_foreach((json_t *)versions, code_hex, version_json) {
+        uint16_t code = 0;
+        if (felica_code_from_hex(code_hex, &code) && code == wanted_code) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool felica_auth_validate_node_record(const json_t *record) {
+    uint8_t key[FELICA_AUTH_DES_KEY_LEN] = {0};
+    uint16_t ignored = 0;
+    const bool valid = json_is_object(record) &&
+                       felica_code_from_hex(json_string_value(json_object_get_ci(record, "system")), &ignored) &&
+                       felica_code_from_hex(json_string_value(json_object_get_ci(record, "node")), &ignored) &&
+                       felica_auth_parse_key_version(json_object_get_ci(record, "version"), &ignored) &&
+                       json_string_hex(json_object_get_ci(record, "key"), key, sizeof(key));
+    mbedtls_platform_zeroize(key, sizeof(key));
+    return valid;
+}
+
+static bool felica_auth_parse_code_array(const json_t *array, uint16_t *codes, size_t capacity, size_t *count_out) {
+    if (json_is_array(array) == false || codes == NULL || count_out == NULL || json_array_size(array) > capacity) {
+        return false;
+    }
+    const size_t count = json_array_size(array);
+    for (size_t i = 0; i < count; i++) {
+        if (felica_code_from_hex(json_string_value(json_array_get(array, i)), &codes[i]) == false) {
+            return false;
+        }
+    }
+    *count_out = count;
+    return true;
+}
+
+static bool felica_auth_validate_code_array(const json_t *array) {
+    uint16_t codes[FELICA_AUTH_MAX_CODES] = {0};
+    size_t count = 0;
+    return felica_auth_parse_code_array(array, codes, ARRAYLEN(codes), &count) && count > 0;
+}
+
+static bool felica_auth_versions_cover_codes(const json_t *versions, const json_t *codes) {
+    for (size_t i = 0; i < json_array_size(codes); i++) {
+        uint16_t code = 0;
+        if (felica_code_from_hex(json_string_value(json_array_get(codes, i)), &code) == false ||
+                felica_auth_versions_has_code(versions, code) == false) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool felica_auth_validate_group_user_record(const json_t *record) {
+    uint16_t ignored = 0;
+    uint8_t group_key[FELICA_AUTH_DES_KEY_LEN] = {0};
+    uint8_t user_key[FELICA_AUTH_DES_KEY_LEN] = {0};
+    json_t *versions = json_is_object(record) ? json_object_get_ci(record, "versions") : NULL;
+    json_t *areas = json_is_object(record) ? json_object_get_ci(record, "areas") : NULL;
+    json_t *nodes = json_is_object(record) ? json_object_get_ci(record, "nodes") : NULL;
+
+    bool valid = json_is_object(record) &&
+                 felica_code_from_hex(json_string_value(json_object_get_ci(record, "system")), &ignored) &&
+                 json_is_object(versions) && json_object_size(versions) > 0 &&
+                 felica_auth_validate_code_array(areas) && felica_auth_validate_code_array(nodes) &&
+                 json_array_size(areas) + json_array_size(nodes) <= FELICA_AUTH_MAX_CODES &&
+                 json_string_hex(json_object_get_ci(record, "group_key"), group_key, sizeof(group_key)) &&
+                 json_string_hex(json_object_get_ci(record, "user_key"), user_key, sizeof(user_key));
+
+    if (valid) {
+        const char *code_hex = NULL;
+        json_t *version_json = NULL;
+        json_object_foreach(versions, code_hex, version_json) {
+            uint16_t code = 0;
+            uint16_t key_version = 0;
+            if (felica_code_from_hex(code_hex, &code) == false ||
+                    felica_auth_parse_key_version(version_json, &key_version) == false) {
+                valid = false;
+                break;
+            }
+        }
+    }
+
+    valid = valid &&
+            felica_auth_versions_has_code(versions, FELICA_AUTH_SYSTEM_NODE_BE) &&
+            felica_auth_versions_cover_codes(versions, areas) &&
+            felica_auth_versions_cover_codes(versions, nodes);
+
+    mbedtls_platform_zeroize(group_key, sizeof(group_key));
+    mbedtls_platform_zeroize(user_key, sizeof(user_key));
+    return valid;
+}
+
+typedef struct {
+    const char *resource;
+    const char *file_type;
+    const char *records_key;
+    bool (*validate_record)(const json_t *record);
+} felica_auth_key_file_t;
+
+static const felica_auth_key_file_t FELICA_AUTH_NODE_KEY_FILE = {
+    "felica/node_keys", "felicanodekeys", "keys", felica_auth_validate_node_record
+};
+
+static const felica_auth_key_file_t FELICA_AUTH_GROUP_USER_KEY_FILE = {
+    "felica/group_user_keys", "felicagroupuserkeys", "keysets", felica_auth_validate_group_user_record
+};
+
+static json_t *felica_auth_load_key_file(const felica_auth_key_file_t *spec, bool verbose) {
+    char *path = NULL;
+    if (searchFile(&path, RESOURCES_SUBDIR, spec->resource, ".json", true) != PM3_SUCCESS) {
+        if (verbose) PrintAndLogEx(INFO, "[auth] `%s.json` not found on any search path", spec->resource);
+        return NULL;
+    }
+    if (verbose) PrintAndLogEx(INFO, "[auth] loading `%s`", path);
+
+    json_error_t error;
+    json_t *root = json_load_file(path, 0, &error);
+    if (root == NULL) {
+        PrintAndLogEx(WARNING, "Failed to parse `%s` line %d: %s", path, error.line, error.text);
+        free(path);
+        return NULL;
+    }
+
+    json_t *file_type = json_object_get_ci(root, "file_type");
+    json_t *version = json_object_get_ci(root, "version");
+    json_t *records = json_object_get_ci(root, spec->records_key);
+
+    if (json_is_string(file_type) == false ||
+            strcasecmp(json_string_value(file_type), spec->file_type) != 0 ||
+            json_is_integer(version) == false || json_integer_value(version) != FELICA_AUTH_KEY_FILE_VERSION ||
+            json_is_array(records) == false) {
+        PrintAndLogEx(WARNING, "Invalid FeliCa authentication key file `%s` (bad header)", path);
+        json_decref(root);
+        free(path);
+        return NULL;
+    }
+
+    const size_t original_count = json_array_size(records);
+    for (size_t i = original_count; i-- > 0;) {
+        if (spec->validate_record(json_array_get(records, i)) == false) {
+            PrintAndLogEx(WARNING, "Skipping invalid record #%zu in `%s`", i, path);
+            json_array_remove(records, i);
+        }
+    }
+
+    if (verbose) PrintAndLogEx(INFO, "[auth]   loaded %zu of %zu `%s` record(s)", json_array_size(records), original_count, spec->records_key);
+    free(path);
+    return root;
+}
+
+static void felica_auth_key_store_load(felica_auth_key_store_t *store, bool verbose) {
+    if (store == NULL) {
+        return;
+    }
+
+    memset(store, 0, sizeof(*store));
+    store->node_root = felica_auth_load_key_file(&FELICA_AUTH_NODE_KEY_FILE, verbose);
+    store->group_user_root = felica_auth_load_key_file(&FELICA_AUTH_GROUP_USER_KEY_FILE, verbose);
+}
+
+static void felica_auth_key_store_free(felica_auth_key_store_t *store) {
+    if (store == NULL) {
+        return;
+    }
+    json_decref(store->node_root);
+    json_decref(store->group_user_root);
+    memset(store, 0, sizeof(*store));
+}
+
+static bool felica_auth_record_matches_system(const json_t *record, uint16_t system_code) {
+    uint16_t record_system = 0;
+    return json_is_object(record) &&
+           felica_code_from_hex(json_string_value(json_object_get_ci(record, "system")), &record_system) &&
+           record_system == system_code;
+}
+
+static void felica_auth_add_unique_code(uint16_t *codes, size_t *count, uint16_t code) {
+    for (size_t i = 0; i < *count; i++) {
+        if (codes[i] == code) {
+            return;
+        }
+    }
+    if (*count < FELICA_AUTH_MAX_NODES) {
+        codes[(*count)++] = code;
+    }
+}
+
+static void felica_auth_collect_codes(const felica_auth_key_store_t *store, uint16_t system_code,
+                                      uint16_t *codes, size_t *count) {
+    *count = 0;
+
+    size_t index = 0;
+    json_t *record = NULL;
+    json_t *keys = json_object_get_ci(store->node_root, FELICA_AUTH_NODE_KEY_FILE.records_key);
+    json_array_foreach(keys, index, record) {
+        if (felica_auth_record_matches_system(record, system_code) == false) {
+            continue;
+        }
+        uint16_t code = 0;
+        felica_code_from_hex(json_string_value(json_object_get_ci(record, "node")), &code);
+        felica_auth_add_unique_code(codes, count, code);
+    }
+
+    json_t *keysets = json_object_get_ci(store->group_user_root, FELICA_AUTH_GROUP_USER_KEY_FILE.records_key);
+    json_array_foreach(keysets, index, record) {
+        if (felica_auth_record_matches_system(record, system_code) == false) {
+            continue;
+        }
+        const char *code_hex = NULL;
+        json_t *version_json = NULL;
+        json_object_foreach(json_object_get_ci(record, "versions"), code_hex, version_json) {
+            uint16_t code = 0;
+            if (felica_code_from_hex(code_hex, &code)) {
+                felica_auth_add_unique_code(codes, count, code);
+            }
+        }
+    }
+}
+
+static int felica_collect_key_versions_v2(uint8_t flags, const uint8_t *idm,
+                                           const uint16_t *codes_be, size_t code_count,
+                                           felica_node_t *versions) {
+    bool encryption_identifier_set = false;
+    uint8_t encryption_identifier = 0;
+
+    for (size_t processed = 0; processed < code_count;) {
+        const size_t batch_count = MIN(FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE, code_count - processed);
+        uint16_t batch_codes_le[FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE] = {0};
+        for (size_t i = 0; i < batch_count; i++) {
+            batch_codes_le[i] = BSWAP_16(codes_be[processed + i]);
+        }
+
+        felica_request_service_v2_key_versions_t response;
+        int result = felica_request_service_v2_key_versions(flags, idm, batch_codes_le, batch_count,
+                                                             FELICA_OPTIONAL_CMD_RETRIES, &response);
+        if (result != PM3_SUCCESS || felica_encryption_identifier_get_info(response.encryption_identifier) == NULL) {
+            return PM3_ERFTRANS;
+        }
+        if (encryption_identifier_set && encryption_identifier != response.encryption_identifier) {
+            return PM3_ESOFT;
+        }
+        encryption_identifier_set = true;
+        encryption_identifier = response.encryption_identifier;
+
+        for (size_t i = 0; i < batch_count; i++) {
+            felica_node_t *entry = &versions[processed + i];
+            entry->code_be = codes_be[processed + i];
+            entry->des_key_version.has_value = response.has_des_key_versions && response.des_key_versions_le[i] != 0xFFFFU;
+            entry->des_key_version.value = response.des_key_versions_le[i];
+            entry->aes_key_version.has_value = response.has_aes_key_versions && response.aes_key_versions_le[i] != 0xFFFFU;
+            entry->aes_key_version.value = response.aes_key_versions_le[i];
+        }
+        processed += batch_count;
+    }
+    return PM3_SUCCESS;
+}
+
+static int felica_collect_key_versions_v1(uint8_t flags, const uint8_t *idm,
+                                           const uint16_t *codes_be, size_t code_count,
+                                           felica_node_t *versions) {
+    for (size_t processed = 0; processed < code_count;) {
+        const size_t batch_count = MIN(FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE, code_count - processed);
+        uint16_t batch_codes_le[FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE] = {0};
+        uint16_t key_versions[FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE] = {0};
+        for (size_t i = 0; i < batch_count; i++) {
+            batch_codes_le[i] = BSWAP_16(codes_be[processed + i]);
+        }
+
+        size_t returned_nodes = 0;
+        int result = felica_request_service_key_versions(flags, idm, batch_codes_le, batch_count,
+                                                          FELICA_OPTIONAL_CMD_RETRIES, key_versions, &returned_nodes);
+        if (result != PM3_SUCCESS || returned_nodes != batch_count) {
+            return PM3_ERFTRANS;
+        }
+
+        for (size_t i = 0; i < batch_count; i++) {
+            felica_node_t *entry = &versions[processed + i];
+            entry->code_be = codes_be[processed + i];
+            // RequestService V1 reports one key version and does not distinguish ciphers.
+            entry->des_key_version.has_value = key_versions[i] != 0xFFFFU;
+            entry->des_key_version.value = key_versions[i];
+            entry->aes_key_version.has_value = false;
+        }
+        processed += batch_count;
+    }
+    return PM3_SUCCESS;
+}
+
+// A node is present on the card if either cipher reports a valid key version.
+static bool felica_node_present(const felica_node_t *node) {
+    return node->des_key_version.has_value || node->aes_key_version.has_value;
+}
+
+static const felica_node_t *felica_find_node(const felica_node_t *nodes, size_t node_count, uint16_t code_be) {
+    for (size_t i = 0; i < node_count; i++) {
+        if (nodes[i].code_be == code_be) {
+            return &nodes[i];
+        }
+    }
+    return NULL;
+}
+
+static int felica_collect_key_versions(uint8_t flags, const uint8_t *idm,
+                                       const uint16_t *codes_be, size_t code_count,
+                                       felica_node_t *versions_out,
+                                       felica_card_capabilities_t *caps) {
+    int result = PM3_ERFTRANS;
+    if (caps == NULL || caps->supports_request_service_v2 != FELICA_CAP_UNSUPPORTED) {
+        result = felica_collect_key_versions_v2(flags, idm, codes_be, code_count, versions_out);
+        if (caps != NULL && caps->supports_request_service_v2 == FELICA_CAP_UNKNOWN) {
+            caps->supports_request_service_v2 =
+                (result == PM3_SUCCESS) ? FELICA_CAP_SUPPORTED : FELICA_CAP_UNSUPPORTED;
+        }
+    }
+    if (result != PM3_SUCCESS) {
+        memset(versions_out, 0, code_count * sizeof(*versions_out));
+        result = felica_collect_key_versions_v1(flags, idm, codes_be, code_count, versions_out);
+    }
+    return result;
+}
+
+static void felica_auth_des3_encrypt(const uint8_t first_key[8], const uint8_t second_key[8],
+                                     const uint8_t input[8], uint8_t output[8]) {
+    uint8_t key[16] = {0};
+    memcpy(key, first_key, 8);
+    memcpy(key + 8, second_key, 8);
+    des3_encrypt(output, input, key, 2);
+    mbedtls_platform_zeroize(key, sizeof(key));
+}
+
+static void felica_auth_des3_decrypt(const uint8_t first_key[8], const uint8_t second_key[8],
+                                     const uint8_t input[8], uint8_t output[8]) {
+    uint8_t key[16] = {0};
+    memcpy(key, first_key, 8);
+    memcpy(key + 8, second_key, 8);
+    des3_decrypt(output, input, key, 2);
+    mbedtls_platform_zeroize(key, sizeof(key));
+}
+
+static int felica_auth_send_authentication1(uint8_t flags, const uint8_t idm[8],
+                                            const uint16_t *areas_be, size_t area_count,
+                                            const uint16_t *nodes_be, size_t node_count,
+                                            const uint8_t challenge1a[8], felica_auth1_response_t *response) {
+    if (idm == NULL || areas_be == NULL || nodes_be == NULL || challenge1a == NULL || response == NULL ||
+            area_count == 0 || node_count == 0 || area_count + node_count > FELICA_AUTH_MAX_CODES) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t frame[1 + 1 + 8 + 1 + (FELICA_AUTH_MAX_CODES * 2U) + 1 + 8] = {0};
+    size_t offset = 0;
+    const size_t frame_length = 1U + 1U + 8U + 1U + (area_count * 2U) + 1U + (node_count * 2U) + 8U;
+    frame[offset++] = (uint8_t)frame_length;
+    frame[offset++] = FELICA_AUTHENTICATION1_REQ;
+    memcpy(frame + offset, idm, 8);
+    offset += 8;
+    frame[offset++] = (uint8_t)area_count;
+    for (size_t i = 0; i < area_count; i++) {
+        frame[offset++] = (uint8_t)(areas_be[i] >> 8);
+        frame[offset++] = (uint8_t)areas_be[i];
+    }
+    frame[offset++] = (uint8_t)node_count;
+    for (size_t i = 0; i < node_count; i++) {
+        frame[offset++] = (uint8_t)(nodes_be[i] >> 8);
+        frame[offset++] = (uint8_t)nodes_be[i];
+    }
+    memcpy(frame + offset, challenge1a, 8);
+
+    PacketResponseNG packet;
+    int result = send_felica_payload_with_retries(flags, (uint16_t)frame_length, frame, false,
+                                                   FELICA_AUTHENTICATION1_RES,
+                                                   FELICA_DEFAULT_TIMEOUT_MS, 2U, 0, false,
+                                                   &packet, "authentication1");
+    mbedtls_platform_zeroize(frame, sizeof(frame));
+    if (result != PM3_SUCCESS || packet.length < sizeof(*response)) {
+        return PM3_ERFTRANS;
+    }
+
+    memcpy(response, packet.data.asBytes, sizeof(*response));
+    if (memcmp(response->frame_response.IDm, idm, 8) != 0) {
+        mbedtls_platform_zeroize(response, sizeof(*response));
+        return PM3_ESOFT;
+    }
+    return PM3_SUCCESS;
+}
+
+static int felica_auth_send_authentication2_once(uint8_t flags, const uint8_t idm[8],
+                                                 const uint8_t challenge2b[8], uint8_t ciphertext[32]) {
+    uint8_t frame[18] = {0};
+    frame[0] = sizeof(frame);
+    frame[1] = FELICA_AUTHENTICATION2_REQ;
+    memcpy(frame + 2, idm, 8);
+    memcpy(frame + 10, challenge2b, 8);
+
+    PacketResponseNG packet;
+    int result = send_felica_payload_with_retries(flags, sizeof(frame), frame, false,
+                                                   FELICA_AUTHENTICATION2_RES,
+                                                   FELICA_DEFAULT_TIMEOUT_MS, 2U, 0, false,
+                                                   &packet, "authentication2");
+    mbedtls_platform_zeroize(frame, sizeof(frame));
+    const size_t ciphertext_offset = sizeof(felica_frame_response_noidm_t);
+    if (result != PM3_SUCCESS || packet.length < ciphertext_offset + FELICA_AUTH2_CIPHERTEXT_LEN) {
+        return PM3_ERFTRANS;
+    }
+
+    memcpy(ciphertext, packet.data.asBytes + ciphertext_offset, FELICA_AUTH2_CIPHERTEXT_LEN);
+    return PM3_SUCCESS;
+}
+
+static bool felica_auth_validate_authentication2(const uint8_t ciphertext[32], const uint8_t session_key[8],
+                                                 const uint8_t expected_transaction_id[6],
+                                                 uint8_t idi[8], uint8_t pmi[8]) {
+    uint8_t plaintext[FELICA_AUTH2_CIPHERTEXT_LEN] = {0};
+    uint8_t iv[8] = {0};
+    mbedtls_des_context context;
+    mbedtls_des_init(&context);
+    bool valid = false;
+
+    if (mbedtls_des_setkey_dec(&context, session_key) != 0 ||
+            mbedtls_des_crypt_cbc(&context, MBEDTLS_DES_DECRYPT, sizeof(plaintext), iv, ciphertext, plaintext) != 0) {
+        goto cleanup;
+    }
+
+    uint8_t current[8] = {0};
+    memcpy(current, plaintext + 24, sizeof(current));
+    for (int offset = 16; offset >= 0; offset -= 8) {
+        uint8_t next[8] = {0};
+        des_decrypt(next, current, plaintext + offset);
+        memcpy(current, next, sizeof(current));
+        mbedtls_platform_zeroize(next, sizeof(next));
+    }
+
+    uint8_t expected_mac_state[8] = {0};
+    expected_mac_state[0] = (uint8_t)(sizeof(plaintext) + 2U);
+    expected_mac_state[1] = FELICA_AUTHENTICATION2_RES;
+    valid = memcmp(current, expected_mac_state, sizeof(current)) == 0 &&
+            memcmp(plaintext + 2, expected_transaction_id, 6) == 0;
+    if (valid) {
+        memcpy(idi, plaintext + 8, 8);
+        memcpy(pmi, plaintext + 16, 8);
+    }
+
+    mbedtls_platform_zeroize(current, sizeof(current));
+    mbedtls_platform_zeroize(expected_mac_state, sizeof(expected_mac_state));
+
+cleanup:
+    mbedtls_des_free(&context);
+    mbedtls_platform_zeroize(iv, sizeof(iv));
+    mbedtls_platform_zeroize(plaintext, sizeof(plaintext));
+    return valid;
+}
+
+static felica_auth_candidate_result_t felica_auth_try_candidate(uint8_t flags, const uint8_t idm[8],
+                                                                const uint16_t *areas_be, size_t area_count,
+                                                                const uint16_t *nodes_be, size_t node_count,
+                                                                const uint8_t group_key[8], const uint8_t user_key[8],
+                                                                uint8_t idi[8], uint8_t pmi[8], bool verbose) {
+    uint8_t random1[8] = {0};
+    uint8_t l[8] = {0};
+    uint8_t alpha[8] = {0};
+    uint8_t beta[8] = {0};
+    uint8_t challenge1a[8] = {0};
+    uint8_t expected_challenge1b[8] = {0};
+    uint8_t random2[8] = {0};
+    uint8_t challenge2b[8] = {0};
+    uint8_t ciphertext[32] = {0};
+    felica_auth1_response_t auth1_response = {0};
+    felica_auth_candidate_result_t result = FELICA_AUTH_CREDENTIAL_MISS;
+
+    if (pcrypto_rng_fill_oneshot(random1, sizeof(random1), "hf_felica_info_auth") != PM3_SUCCESS) {
+        result = FELICA_AUTH_HARD_FAILURE;
+        goto cleanup;
+    }
+
+    for (size_t i = 0; i < sizeof(l); i++) {
+        l[i] = group_key[i] ^ idm[i];
+    }
+    des_encrypt(alpha, user_key, l);
+    des_encrypt(beta, l, alpha);
+    felica_auth_des3_encrypt(alpha, l, random1, challenge1a);
+
+    if (felica_auth_send_authentication1(flags, idm, areas_be, area_count, nodes_be, node_count,
+                                         challenge1a, &auth1_response) != PM3_SUCCESS) {
+        if (verbose) PrintAndLogEx(INFO, "[auth]     auth1: no/!bad response from card (card may have rejected the scope)");
+        goto cleanup;
+    }
+
+    felica_auth_des3_encrypt(l, beta, random1, expected_challenge1b);
+    if (memcmp(expected_challenge1b, auth1_response.m2c, 8) != 0) {
+        if (verbose) PrintAndLogEx(INFO, "[auth]     auth1: challenge1B mismatch -> wrong credential, trying next");
+        goto cleanup;
+    }
+    if (verbose) PrintAndLogEx(INFO, "[auth]     auth1: " _GREEN_("challenge1B OK") ", credential is correct");
+
+    felica_auth_des3_decrypt(l, beta, auth1_response.m3c, random2);
+    felica_auth_des3_encrypt(alpha, l, random2, challenge2b);
+
+    for (size_t validation_attempt = 0; validation_attempt < 2U; validation_attempt++) {
+        mbedtls_platform_zeroize(ciphertext, sizeof(ciphertext));
+        if (felica_auth_send_authentication2_once(flags, idm, challenge2b, ciphertext) != PM3_SUCCESS) {
+            if (verbose) PrintAndLogEx(INFO, "[auth]     auth2: no response (attempt %zu)", validation_attempt + 1);
+            result = FELICA_AUTH_HARD_FAILURE;
+            goto cleanup;
+        }
+        if (felica_auth_validate_authentication2(ciphertext, random2, random1 + 2, idi, pmi)) {
+            if (verbose) PrintAndLogEx(INFO, "[auth]     auth2: " _GREEN_("SUCCESS"));
+            result = FELICA_AUTH_SUCCESS;
+            goto cleanup;
+        }
+        if (verbose) PrintAndLogEx(INFO, "[auth]     auth2: MAC/transaction-id validation failed (attempt %zu)", validation_attempt + 1);
+    }
+    result = FELICA_AUTH_HARD_FAILURE;
+
+cleanup:
+    mbedtls_platform_zeroize(random1, sizeof(random1));
+    mbedtls_platform_zeroize(l, sizeof(l));
+    mbedtls_platform_zeroize(alpha, sizeof(alpha));
+    mbedtls_platform_zeroize(beta, sizeof(beta));
+    mbedtls_platform_zeroize(challenge1a, sizeof(challenge1a));
+    mbedtls_platform_zeroize(expected_challenge1b, sizeof(expected_challenge1b));
+    mbedtls_platform_zeroize(random2, sizeof(random2));
+    mbedtls_platform_zeroize(challenge2b, sizeof(challenge2b));
+    mbedtls_platform_zeroize(ciphertext, sizeof(ciphertext));
+    mbedtls_platform_zeroize(&auth1_response, sizeof(auth1_response));
+    return result;
+}
+
+static void felica_auth_collect_matching_node_keys(const felica_auth_key_store_t *store, uint16_t system_code,
+                                                   const felica_node_t *versions, size_t version_count,
+                                                   felica_auth_node_key_t *keys, size_t *key_count_out) {
+    size_t key_count = 0;
+
+    json_t *records = json_object_get_ci(store->node_root, FELICA_AUTH_NODE_KEY_FILE.records_key);
+    size_t index = 0;
+    json_t *record = NULL;
+    json_array_foreach(records, index, record) {
+        if (felica_auth_record_matches_system(record, system_code) == false || key_count >= FELICA_AUTH_MAX_NODES) {
+            continue;
+        }
+
+        uint16_t code = 0;
+        uint16_t wanted_version = 0;
+        felica_code_from_hex(json_string_value(json_object_get_ci(record, "node")), &code);
+        felica_auth_parse_key_version(json_object_get_ci(record, "version"), &wanted_version);
+        const felica_node_t *card_node = felica_find_node(versions, version_count, code);
+        if (card_node == NULL || card_node->des_key_version.has_value == false ||
+                card_node->des_key_version.value != wanted_version) {
+            continue;
+        }
+
+        keys[key_count].code_be = code;
+        json_string_hex(json_object_get_ci(record, "key"), keys[key_count].key, sizeof(keys[key_count].key));
+        key_count++;
+    }
+
+    *key_count_out = key_count;
+}
+
+static felica_auth_candidate_result_t felica_auth_try_node_pair(uint8_t flags, const uint8_t idm[8],
+                                                                const felica_auth_node_key_t *keys, size_t key_count,
+                                                                uint16_t left_code, uint16_t right_code,
+                                                                bool *attempted, uint8_t idi[8], uint8_t pmi[8], bool verbose) {
+    const uint16_t areas[] = {left_code};
+    const uint16_t nodes[] = {right_code};
+
+    for (size_t system_index = 0; system_index < key_count; system_index++) {
+        if (keys[system_index].code_be != FELICA_AUTH_SYSTEM_NODE_BE) {
+            continue;
+        }
+        for (size_t left_index = 0; left_index < key_count; left_index++) {
+            if (keys[left_index].code_be != left_code) {
+                continue;
+            }
+            for (size_t right_index = 0; right_index < key_count; right_index++) {
+                if (keys[right_index].code_be != right_code ||
+                        (left_code == right_code && left_index != right_index)) {
+                    continue;
+                }
+
+                uint8_t group_key[8] = {0};
+                uint8_t user_key[8] = {0};
+                des_encrypt(group_key, keys[system_index].key, keys[left_index].key);
+                des_encrypt(user_key, group_key, keys[right_index].key);
+                if (verbose) PrintAndLogEx(INFO, "[auth]   ATTEMPTING node-derived auth, scope %04X / %04X", left_code, right_code);
+                *attempted = true;
+                const felica_auth_candidate_result_t result =
+                    felica_auth_try_candidate(flags, idm, areas, ARRAYLEN(areas), nodes, ARRAYLEN(nodes),
+                                              group_key, user_key, idi, pmi, verbose);
+                mbedtls_platform_zeroize(group_key, sizeof(group_key));
+                mbedtls_platform_zeroize(user_key, sizeof(user_key));
+                if (result != FELICA_AUTH_CREDENTIAL_MISS) {
+                    return result;
+                }
+            }
+        }
+    }
+    return FELICA_AUTH_CREDENTIAL_MISS;
+}
+
+static felica_auth_candidate_result_t felica_auth_try_node_keys(uint8_t flags, const uint8_t idm[8],
+                                                                const felica_auth_node_key_t *keys, size_t key_count,
+                                                                bool *attempted, uint8_t idi[8], uint8_t pmi[8], bool verbose) {
+    bool has_system_key = false;
+    uint16_t areas[FELICA_AUTH_MAX_NODES];
+    size_t area_count = 0;
+
+    for (size_t i = 0; i < key_count; i++) {
+        if (keys[i].code_be == FELICA_AUTH_SYSTEM_NODE_BE) {
+            has_system_key = true;
+        } else if (felica_node_type_from_code(BSWAP_16(keys[i].code_be)) == FELICA_NODE_TYPE_AREA) {
+            felica_auth_add_unique_code(areas, &area_count, keys[i].code_be);
+        }
+    }
+
+    if (has_system_key == false || area_count == 0) {
+        return FELICA_AUTH_CREDENTIAL_MISS;
+    }
+    bool has_root = false;
+    for (size_t i = 0; i < area_count; i++) {
+        if (areas[i] == FELICA_AUTH_ROOT_AREA_BE) {
+            has_root = true;
+            break;
+        }
+    }
+
+    felica_auth_candidate_result_t result = FELICA_AUTH_CREDENTIAL_MISS;
+    if (has_root) {
+        result = felica_auth_try_node_pair(flags, idm, keys, key_count,
+                                           FELICA_AUTH_ROOT_AREA_BE, FELICA_AUTH_ROOT_AREA_BE,
+                                           attempted, idi, pmi, verbose);
+        for (size_t i = 0; i < area_count && result == FELICA_AUTH_CREDENTIAL_MISS; i++) {
+            if (areas[i] != FELICA_AUTH_ROOT_AREA_BE) {
+                result = felica_auth_try_node_pair(flags, idm, keys, key_count,
+                                                   FELICA_AUTH_ROOT_AREA_BE, areas[i], attempted, idi, pmi, verbose);
+            }
+        }
+    }
+
+    for (size_t i = 0; i < area_count && result == FELICA_AUTH_CREDENTIAL_MISS; i++) {
+        if (areas[i] != FELICA_AUTH_ROOT_AREA_BE) {
+            result = felica_auth_try_node_pair(flags, idm, keys, key_count,
+                                               areas[i], areas[i], attempted, idi, pmi, verbose);
+        }
+    }
+    return result;
+}
+
+static bool felica_auth_group_versions_match(const json_t *versions_json,
+                                             const felica_node_t *versions, size_t version_count, bool verbose) {
+    const char *code_hex = NULL;
+    json_t *wanted_version_json = NULL;
+    json_object_foreach((json_t *)versions_json, code_hex, wanted_version_json) {
+        uint16_t code = 0;
+        uint16_t wanted_version = 0;
+        if (felica_code_from_hex(code_hex, &code) == false ||
+                felica_auth_parse_key_version(wanted_version_json, &wanted_version) == false) {
+            if (verbose) PrintAndLogEx(INFO, "[auth]     versions entry `%s` unparsable (code must be 4 hex chars, version a number)",
+                                       code_hex ? code_hex : "(null)");
+            return false;
+        }
+        const felica_node_t *card_node = felica_find_node(versions, version_count, code);
+        if (card_node == NULL) {
+            if (verbose) PrintAndLogEx(INFO, "[auth]     node %04X: card never queried this node", code);
+            return false;
+        }
+        if (card_node->des_key_version.has_value == false) {
+            if (verbose) PrintAndLogEx(INFO, "[auth]     node %04X: no DES key version on card", code);
+            return false;
+        }
+        if (card_node->des_key_version.value != wanted_version) {
+            if (verbose) PrintAndLogEx(INFO, "[auth]     node %04X: version mismatch, file %u vs card %u",
+                                       code, wanted_version, card_node->des_key_version.value);
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool felica_auth_json_code_array_contains(const json_t *array, uint16_t wanted_code) {
+    size_t index = 0;
+    json_t *value = NULL;
+    json_array_foreach((json_t *)array, index, value) {
+        uint16_t code = 0;
+        if (felica_code_from_hex(json_string_value(value), &code) && code == wanted_code) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static felica_auth_candidate_result_t felica_auth_try_group_user_keys(const felica_auth_key_store_t *store,
+                                                                      uint8_t flags, uint16_t system_code,
+                                                                      const uint8_t idm[8],
+                                                                      const felica_node_t *versions,
+                                                                      size_t version_count, bool *attempted,
+                                                                      uint8_t idi[8], uint8_t pmi[8], bool verbose) {
+    json_t *keysets = json_object_get_ci(store->group_user_root, FELICA_AUTH_GROUP_USER_KEY_FILE.records_key);
+    for (int root_preference = 1; root_preference >= 0; root_preference--) {
+        size_t index = 0;
+        json_t *record = NULL;
+        json_array_foreach(keysets, index, record) {
+            if (felica_auth_record_matches_system(record, system_code) == false) {
+                if (verbose) PrintAndLogEx(INFO, "[auth]   keyset #%zu: different system, skipped", index);
+                continue;
+            }
+            json_t *areas_json = json_object_get_ci(record, "areas");
+            const bool contains_root = felica_auth_json_code_array_contains(areas_json, FELICA_AUTH_ROOT_AREA_BE);
+            if (contains_root != (root_preference != 0)) {
+                continue;
+            }
+            if (verbose) PrintAndLogEx(INFO, "[auth]   keyset #%zu (%s root): checking versions",
+                                       index, contains_root ? "contains" : "no");
+            json_t *versions_json = json_object_get_ci(record, "versions");
+            if (felica_auth_group_versions_match(versions_json, versions, version_count, verbose) == false) {
+                if (verbose) PrintAndLogEx(INFO, "[auth]   keyset #%zu: version check FAILED, skipped", index);
+                continue;
+            }
+
+            uint16_t areas[FELICA_AUTH_MAX_CODES] = {0};
+            uint16_t nodes[FELICA_AUTH_MAX_CODES] = {0};
+            size_t area_count = 0;
+            size_t node_count = 0;
+            uint8_t group_key[8] = {0};
+            uint8_t user_key[8] = {0};
+            if (felica_auth_parse_code_array(areas_json, areas, ARRAYLEN(areas), &area_count) == false ||
+                    felica_auth_parse_code_array(json_object_get_ci(record, "nodes"), nodes, ARRAYLEN(nodes), &node_count) == false ||
+                    json_string_hex(json_object_get_ci(record, "group_key"), group_key, sizeof(group_key)) == false ||
+                    json_string_hex(json_object_get_ci(record, "user_key"), user_key, sizeof(user_key)) == false) {
+                if (verbose) PrintAndLogEx(INFO, "[auth]   keyset #%zu: areas/nodes/group_key/user_key unparsable, skipped", index);
+                mbedtls_platform_zeroize(group_key, sizeof(group_key));
+                mbedtls_platform_zeroize(user_key, sizeof(user_key));
+                continue;
+            }
+
+            if (verbose) PrintAndLogEx(INFO, "[auth]   keyset #%zu: ATTEMPTING auth, %zu area(s) + %zu node(s)",
+                                       index, area_count, node_count);
+            *attempted = true;
+            const felica_auth_candidate_result_t result =
+                felica_auth_try_candidate(flags, idm, areas, area_count, nodes, node_count,
+                                          group_key, user_key, idi, pmi, verbose);
+            mbedtls_platform_zeroize(group_key, sizeof(group_key));
+            mbedtls_platform_zeroize(user_key, sizeof(user_key));
+            mbedtls_platform_zeroize(areas, sizeof(areas));
+            mbedtls_platform_zeroize(nodes, sizeof(nodes));
+            if (result != FELICA_AUTH_CREDENTIAL_MISS) {
+                return result;
+            }
+        }
+    }
+    return FELICA_AUTH_CREDENTIAL_MISS;
+}
+
+static void felica_authenticate_system(const felica_auth_key_store_t *store, uint8_t flags,
+                                       felica_discovered_system_t *system,
+                                       const felica_node_t *versions, size_t version_count, bool verbose) {
+    if (store == NULL || system == NULL || version_count == 0) {
+        return;
+    }
+
+    felica_auth_node_key_t node_keys[FELICA_AUTH_MAX_NODES];
+    size_t node_key_count = 0;
+    felica_auth_collect_matching_node_keys(store, system->system_code, versions, version_count,
+                                           node_keys, &node_key_count);
+
+    bool attempted = false;
+    felica_auth_candidate_result_t auth_result =
+        felica_auth_try_node_keys(flags, system->idm, node_keys, node_key_count, &attempted,
+                                  system->idi, system->pmi, verbose);
+    if (auth_result == FELICA_AUTH_CREDENTIAL_MISS) {
+        auth_result = felica_auth_try_group_user_keys(store, flags, system->system_code, system->idm,
+                                                      versions, version_count, &attempted,
+                                                      system->idi, system->pmi, verbose);
+    }
+    system->has_auth = (auth_result == FELICA_AUTH_SUCCESS);
+
+    mbedtls_platform_zeroize(node_keys, sizeof(node_keys));
+
+    if (attempted) {
+        DropField();
+        uint8_t recovery_idm[8] = {0};
+        uint8_t recovery_pmm[8] = {0};
+        (void)send_polling(flags, system->system_code, FELICA_POLLING_REQUEST_NO_DATA,
+                           FELICA_POLLING_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES, false,
+                           recovery_idm, recovery_pmm, NULL);
+        mbedtls_platform_zeroize(recovery_idm, sizeof(recovery_idm));
+        mbedtls_platform_zeroize(recovery_pmm, sizeof(recovery_pmm));
+    }
 }
 
 static void felica_drop_connect_flag(uint8_t *flags) {
@@ -3960,7 +4922,7 @@ static int felica_scsvcode_discovery_visitor(const felica_discovered_node_t *nod
     }
     strcat(prefix, "├── ");
 
-    const uint16_t node_code_be = felica_to_network_order(node->node_code_le);
+    const uint16_t node_code_be = BSWAP_16(node->node_code_le);
     const uint16_t node_number = node->node_code_le >> 6;
 
     if (node->type == FELICA_NODE_TYPE_SYSTEM) {
@@ -3968,7 +4930,7 @@ static int felica_scsvcode_discovery_visitor(const felica_discovered_node_t *nod
     } else if (node->type == FELICA_NODE_TYPE_AREA) {
         scsv_ctx->area_count++;
         if (node->has_end_code) {
-            const uint16_t end_code_be = felica_to_network_order(node->end_code_le);
+            const uint16_t end_code_be = BSWAP_16(node->end_code_le);
             const uint16_t end_number = node->end_code_le >> 6;
             PrintAndLogEx(INFO, "%sAREA_%04X%04X (%u-%u)", prefix,
                           node_code_be, end_code_be,
@@ -4156,9 +5118,9 @@ static void felica_dump_reset_key_versions(felica_dump_system_t *system) {
     system->encryption_identifier.value = 0;
     for (size_t i = 0; i < system->node_count; i++) {
         system->nodes[i].des_key_version.has_value = false;
-        system->nodes[i].des_key_version.value_le = 0;
+        system->nodes[i].des_key_version.value = 0;
         system->nodes[i].aes_key_version.has_value = false;
-        system->nodes[i].aes_key_version.value_le = 0;
+        system->nodes[i].aes_key_version.value = 0;
     }
 }
 
@@ -4220,9 +5182,9 @@ static json_t *felica_dump_node_json(const felica_dump_node_t *node) {
     }
 
     char node_code_hex[9] = {0};
-    const uint16_t node_code_be = felica_to_network_order(node->node_code_le);
+    const uint16_t node_code_be = BSWAP_16(node->node_code_le);
     if (node->type == FELICA_NODE_TYPE_AREA && node->has_end_code) {
-        const uint16_t end_code_be = felica_to_network_order(node->end_code_le);
+        const uint16_t end_code_be = BSWAP_16(node->end_code_le);
         snprintf(node_code_hex, sizeof(node_code_hex), "%04X%04X", node_code_be, end_code_be);
     } else {
         snprintf(node_code_hex, sizeof(node_code_hex), "%04X", node_code_be);
@@ -4237,8 +5199,8 @@ static json_t *felica_dump_node_json(const felica_dump_node_t *node) {
 
     if (felica_dump_json_set_new(node_json, "type", json_string(node_type)) != PM3_SUCCESS ||
             felica_dump_json_set_new(node_json, "code", json_string(node_code_hex)) != PM3_SUCCESS ||
-            felica_dump_json_set_new(node_json, "des_key_version", node->des_key_version.has_value ? felica_dump_key_version_json(node->des_key_version.value_le) : json_null()) != PM3_SUCCESS ||
-            felica_dump_json_set_new(node_json, "aes_key_version", node->aes_key_version.has_value ? felica_dump_key_version_json(node->aes_key_version.value_le) : json_null()) != PM3_SUCCESS) {
+            felica_dump_json_set_new(node_json, "des_key_version", node->des_key_version.has_value ? felica_dump_key_version_json(node->des_key_version.value) : json_null()) != PM3_SUCCESS ||
+            felica_dump_json_set_new(node_json, "aes_key_version", node->aes_key_version.has_value ? felica_dump_key_version_json(node->aes_key_version.value) : json_null()) != PM3_SUCCESS) {
         json_decref(data_json);
         json_decref(node_json);
         return NULL;
@@ -4510,11 +5472,11 @@ static int felica_dump_collect_key_versions_v2(felica_dump_system_t *system, uin
             felica_dump_node_t *node = &system->nodes[processed + i];
             if (versions.has_aes_key_versions) {
                 node->aes_key_version.has_value = true;
-                node->aes_key_version.value_le = versions.aes_key_versions_le[i];
+                node->aes_key_version.value = versions.aes_key_versions_le[i];
             }
             if (versions.has_des_key_versions) {
                 node->des_key_version.has_value = true;
-                node->des_key_version.value_le = versions.des_key_versions_le[i];
+                node->des_key_version.value = versions.des_key_versions_le[i];
             }
         }
 
@@ -4551,7 +5513,7 @@ static int felica_dump_collect_key_versions_v1(felica_dump_system_t *system, uin
         for (size_t i = 0; i < batch_count; i++) {
             felica_dump_node_t *node = &system->nodes[processed + i];
             node->des_key_version.has_value = true;
-            node->des_key_version.value_le = key_versions[i];
+            node->des_key_version.value = key_versions[i];
         }
 
         processed += batch_count;
@@ -4624,7 +5586,7 @@ static int felica_dump_discovery_visitor(const felica_discovered_node_t *node, v
 
     char attrib_str[64] = {0};
     const bool is_public = felica_format_service_attribute(node->node_code_le, attrib_str, sizeof(attrib_str));
-    PrintAndLogEx(INFO, "Service %04X %s", felica_to_network_order(node->node_code_le), attrib_str);
+    PrintAndLogEx(INFO, "Service %04X %s", BSWAP_16(node->node_code_le), attrib_str);
 
     if (is_public == false) {
         return PM3_SUCCESS;
@@ -5827,7 +6789,8 @@ static int CmdHFFelicaDump(const char *Cmd) {
 
     uint8_t system_flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
     felica_discovered_system_list_t discovered_systems;
-    res = discover_systems(system_flags, idm, true, retry_count, &discovered_systems);
+    felica_card_capabilities_t caps = {0};
+    res = discover_systems(system_flags, idm, &caps, retry_count, &discovered_systems);
     if (res != PM3_SUCCESS || discovered_systems.count == 0) {
         DropField();
         PrintAndLogEx(FAILED, "Unable to discover FeliCa systems.");
