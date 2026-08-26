@@ -660,6 +660,7 @@ gowin_jtag_status_t gowin_jtag_flash_config_write(uint8_t *data, uint32_t data_l
     if (!data) return GOWIN_JTAG_ERROR_NULL_POINTER;
     if (detected_device == GW_DEVICE_UNKNOWN) return GOWIN_JTAG_ERROR_INVALID_IDCODE;
     if (m_flash_xpage_buf == NULL) return GOWIN_JTAG_ERROR_NULL_POINTER;
+    if (*tx_bytes_pos + data_length + m_flash_xpage_pos > tx_bytes_total) return GOWIN_JTAG_ERROR_OUT_OF_RANGE;
 
     // When xbuf already holds buffered data, we must first accumulate a full x-page before writing the data in xbuf
     if (data_length < 256 || m_flash_xpage_pos > 0) {

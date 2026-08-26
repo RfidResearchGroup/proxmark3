@@ -285,8 +285,10 @@ static gowin_config_ctx_t gci = {
 
 int FpgaStartConfig(bool configSram, uint32_t fileLength) {
 
-    // TODO DXL: Check the file length is valid in this platform?
-    //  if not, return the PM3_EOVFLOW
+    // Check if the file length exceeds the maximum allowed size for FPGA bitstream files
+    if (fileLength > FPGA_BITSTREAM_FILE_SIZE_MAX) {
+        return PM3_ELENGTH;
+    }
 
     // Init jtag hardware link.
     gpio_fpga_download_setup();
@@ -306,8 +308,11 @@ int FpgaStartConfig(bool configSram, uint32_t fileLength) {
 
 int FpgaConfigWrite(uint8_t *data, uint32_t data_length) {
 
-    // TODO DXL: Check the data_length length is valid in this platform?
-    //  if not, return the PM3_EOVFLOW
+    // Check if the data length exceeds the remaining space in the configuration context
+    // When writing flash, the internal system will also check whether the number of caches plus the current number will overflow.
+    if (gci.tx_pos + data_length > gci.tx_total) {
+        return PM3_ELENGTH;
+    }
 
     gowin_jtag_config_write(data, data_length, &gci);
     if (gci.status != GOWIN_JTAG_OK) {
