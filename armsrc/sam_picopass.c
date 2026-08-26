@@ -227,10 +227,13 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
     //           82 01
     //              07
     // 90 00
+    uint16_t plen = 0;
+    uint16_t ofs = sam_response_payload(sam_rx_buf, sam_rx_len, &plen);
+
     if (request_len == 0) {
 
-        if (!(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0x8a && sam_rx_buf[5 + 4] == 0x03) &&
-                !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0xb3 && sam_rx_buf[5 + 4] == 0xa0)) {
+        if (!(sam_rx_buf[ofs] == 0xbd && sam_rx_buf[ofs + 2] == 0x8a && sam_rx_buf[ofs + 4] == 0x03) &&
+                !(sam_rx_buf[ofs] == 0xbd && sam_rx_buf[ofs + 2] == 0xb3 && sam_rx_buf[ofs + 4] == 0xa0)) {
 
             if (g_dbglevel >= DBG_ERROR) {
                 Dbprintf("No PACS data in SAM response");
@@ -239,17 +242,13 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
         }
     }
 
-    if (sam_rx_buf[6] == 0x81 && sam_rx_buf[8] == 0x8a && sam_rx_buf[9] == 0x81) { //check if the response is an SNMP message
-        *response_len = sam_rx_buf[5 + 2] + 3;
-    } else { //if not, use the old logic
-        *response_len = sam_rx_buf[5 + 1] + 2;
+    *response_len = (uint8_t)plen;
+
+    if (sam_rx_buf[ofs] == 0xBD && sam_rx_buf[ofs - 1] != 0x00) { //secure channel flag is not 0x00
+        Dbprintf(_YELLOW_("Secure channel flag set to: ")"%02x", sam_rx_buf[ofs - 1]);
     }
 
-    if (sam_rx_buf[5] == 0xBD && sam_rx_buf[4] != 0x00) { //secure channel flag is not 0x00
-        Dbprintf(_YELLOW_("Secure channel flag set to: ")"%02x", sam_rx_buf[4]);
-    }
-
-    memcpy(response, sam_rx_buf + 5, *response_len);
+    memcpy(response, sam_rx_buf + ofs, *response_len);
 
     goto out;
 
@@ -498,9 +497,12 @@ static int sam_send_request_emulated(const uint8_t *const request, const uint8_t
         Dbhexdump(sam_rx_len, sam_rx_buf, false);
     }
 
+    uint16_t plen = 0;
+    uint16_t ofs = sam_response_payload(sam_rx_buf, sam_rx_len, &plen);
+
     if (request_len == 0) {
-        if (!(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0x8a && sam_rx_buf[5 + 4] == 0x03) &&
-                !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0xb3 && sam_rx_buf[5 + 4] == 0xa0)) {
+        if (!(sam_rx_buf[ofs] == 0xbd && sam_rx_buf[ofs + 2] == 0x8a && sam_rx_buf[ofs + 4] == 0x03) &&
+                !(sam_rx_buf[ofs] == 0xbd && sam_rx_buf[ofs + 2] == 0xb3 && sam_rx_buf[ofs + 4] == 0xa0)) {
 
             if (g_dbglevel >= DBG_ERROR) {
                 Dbprintf("No PACS data in SAM response");
@@ -512,17 +514,13 @@ static int sam_send_request_emulated(const uint8_t *const request, const uint8_t
         }
     }
 
-    if (sam_rx_buf[6] == 0x81 && sam_rx_buf[8] == 0x8a && sam_rx_buf[9] == 0x81) {
-        *response_len = sam_rx_buf[5 + 2] + 3;
-    } else {
-        *response_len = sam_rx_buf[5 + 1] + 2;
+    *response_len = (uint8_t)plen;
+
+    if (sam_rx_buf[ofs] == 0xBD && sam_rx_buf[ofs - 1] != 0x00) {
+        Dbprintf(_YELLOW_("Secure channel flag set to: ")"%02x", sam_rx_buf[ofs - 1]);
     }
 
-    if (sam_rx_buf[5] == 0xBD && sam_rx_buf[4] != 0x00) {
-        Dbprintf(_YELLOW_("Secure channel flag set to: ")"%02x", sam_rx_buf[4]);
-    }
-
-    memcpy(response, sam_rx_buf + 5, *response_len);
+    memcpy(response, sam_rx_buf + ofs, *response_len);
 
     goto out;
 
@@ -583,7 +581,7 @@ static int sam_set_card_detected_picopass(const picopass_hdr_t *card_select) {
     //     8a 00 <- empty response (accepted)
     // 90 00
 
-    if (response[5] != 0xbd) {
+    if (sam_bd_offset(response, response_len) == 0) {
         if (g_dbglevel >= DBG_ERROR)
             Dbprintf("Invalid SAM response");
         goto error;

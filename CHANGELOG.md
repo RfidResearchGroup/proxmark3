@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `smart pps` - ISO 7816-3 protocol and parameter selection exchange (@iceman1001)
 - Added `sim015.bin` - sim modul firmware now supports T=0 and T=1 (@iceman1001)
 - Added tools script `tools/ePassport/ePassport` - kivy python3 script that dumps a passport with BAC/CAN and a nice viewer (@iceman1001)
 - Added tools script `external_sam_read.py` enabling PM3 3 Easy and Proxmark 5 to use an external SIM/SAM reader for `hf iclass sam` and `hf seos sam` commands (@antiklesys)

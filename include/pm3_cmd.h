@@ -501,14 +501,23 @@ typedef enum SMARTCARD_COMMAND {
     SC_CLEARLOG = (1 << 5),
     SC_LOG = (1 << 6),
     SC_WAIT = (1 << 7),
+    SC_RAW_T1 = (1 << 8),
 } smartcard_command_t;
 
 typedef struct {
-    uint8_t flags;
+    // 16 bit since SC_RAW_T1 took the ninth flag.  Note this is a wire struct:
+    // client and ARM image have to be built and flashed together.
+    uint16_t flags;
     uint32_t wait_delay;
     uint16_t len;
     uint8_t data[];
 } PACKED smart_card_raw_t;
+
+typedef struct {
+    uint8_t protocol;   // T to select, 0 or 1
+    uint8_t ta1;        // FI << 4 | DI, only read when use_ta1 is set
+    uint8_t use_ta1;
+} PACKED smart_card_pps_t;
 
 typedef struct {
     uint8_t factory_info_version;
@@ -622,6 +631,7 @@ typedef struct {
 #define CMD_SMART_ATR 0x0143
 #define CMD_SMART_SETBAUD 0x0144
 #define CMD_SMART_SETCLOCK 0x0145
+#define CMD_SMART_PPS 0x0146
 
 // RDV40,  FPC USART
 #define CMD_USART_RX 0x0160

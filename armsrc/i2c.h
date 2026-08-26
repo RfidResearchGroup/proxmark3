@@ -29,6 +29,23 @@
 #define I2C_DEVICE_CMD_SIM_CLC      0x05
 #define I2C_DEVICE_CMD_GETVERSION   0x06
 #define I2C_DEVICE_CMD_SEND_T0      0x07
+// SIM module firmware v4.51 and up.  SEND_T1 takes a plain APDU and runs the
+// whole T=1 block layer on the module - chaining, R block recovery, S(WTX),
+// LRC/CRC - the same way SEND_T0 handles the T=0 procedure bytes.
+#define I2C_DEVICE_CMD_SEND_T1      0x08
+#define I2C_DEVICE_CMD_PPS          0x09
+
+// SIM module firmware versions this build knows about.
+//
+//   v4.42 - the stock firmware, T=0 only
+//   v4.51 - adds SEND_T1 (0x08) and PPS (0x09)
+//
+// Anything at or above the baseline is reported as ok, so a module does not go
+// red every time its firmware moves on.
+#define SIM_MODULE_VERS_MIN_HI      4
+#define SIM_MODULE_VERS_MIN_LO      42
+#define SIM_MODULE_VERS_T1_HI       4
+#define SIM_MODULE_VERS_T1_LO       51
 
 // The SIM module v4 supports up to 384 bytes for the length.
 #define  ISO7816_MAX_FRAME 270
@@ -60,6 +77,9 @@ int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t 
 int16_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
 bool I2C_WriteFW(const uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
 
+// Which SIM module opcode a set of SC_RAW* flags asks for.
+uint8_t sc_raw_device_cmd(smartcard_command_t flags);
+
 bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait);
 //
 bool GetATR(smart_card_atr_t *card_ptr, bool verbose);
@@ -70,6 +90,7 @@ void SmartCardRaw(const smart_card_raw_t *p);
 void SmartCardUpgrade(uint64_t arg0);
 void SmartCardSetBaud(uint64_t arg0);
 void SmartCardSetClock(uint64_t arg0);
+void SmartCardPPS(const smart_card_pps_t *p);
 void I2C_print_status(void);
 int I2C_get_version(uint8_t *major, uint8_t *minor);
 

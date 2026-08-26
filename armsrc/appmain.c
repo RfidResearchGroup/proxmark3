@@ -3142,6 +3142,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             SmartCardSetBaud(packet->oldarg[0]);
             break;
         }
+        case CMD_SMART_PPS: {
+            SmartCardPPS((const smart_card_pps_t *)packet->data.asBytes);
+            break;
+        }
         case CMD_SMART_SETCLOCK: {
             struct p {
                 uint32_t new_clk;

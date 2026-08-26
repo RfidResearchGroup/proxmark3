@@ -90,7 +90,7 @@ static int sam_set_card_detected_seos(iso14a_card_select_t *card_select) {
     //     8a 00 <- empty response (accepted)
     // 90 00
 
-    if (response[5] != 0xbd) {
+    if (sam_bd_offset(response, response_len) == 0) {
         if (g_dbglevel >= DBG_ERROR)
             Dbprintf("Invalid SAM response");
         goto error;
@@ -234,11 +234,14 @@ static int sam_send_request_iso14a(const uint8_t *const request, const uint8_t r
     //           82 01
     //              07
     // 90 00
+    uint16_t plen = 0;
+    uint16_t ofs = sam_response_payload(sam_rx_buf, sam_rx_len, &plen);
+
     if (request_len == 0) {
 
         if (
-            !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0x8a && sam_rx_buf[5 + 4] == 0x03) &&
-            !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0xb3 && sam_rx_buf[5 + 4] == 0xa0)
+            !(sam_rx_buf[ofs] == 0xbd && sam_rx_buf[ofs + 2] == 0x8a && sam_rx_buf[ofs + 4] == 0x03) &&
+            !(sam_rx_buf[ofs] == 0xbd && sam_rx_buf[ofs + 2] == 0xb3 && sam_rx_buf[ofs + 4] == 0xa0)
         ) {
 
             if (g_dbglevel >= DBG_ERROR) {
@@ -248,8 +251,8 @@ static int sam_send_request_iso14a(const uint8_t *const request, const uint8_t r
         }
     }
 
-    *response_len = sam_rx_buf[5 + 1] + 2;
-    memcpy(response, sam_rx_buf + 5, *response_len);
+    *response_len = (uint8_t)plen;
+    memcpy(response, sam_rx_buf + ofs, *response_len);
 
 out:
     BigBuf_free();

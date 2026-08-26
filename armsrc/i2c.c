@@ -174,10 +174,24 @@ static bool WaitSCL_L(void) {
     return WaitSCL_L_delay(5000);
 }
 
-// Wait up to 1200ms or until SCL goes LOW, whichever comes first.
-// Used to bound the timeout while reading a response from the card.
+// How long to allow the SIM module to *start* an operation, i.e. to pull SCL
+// low after it has taken a command.
+//
+// This used to be 1200 ms, which is three orders of magnitude more than the
+// module needs - its interrupt hands the command to the main loop and SCL goes
+// low within microseconds of the STOP.  The only thing that long allowance ever
+// bought was dead time: every caller that arrives when the module has *already*
+// finished (SCL back high, and it is never going to go low again) sat here for
+// the full 1200 ms before doing the read.  sc_rx_bytes() does exactly that on
+// every call that follows a completed operation, which is why an ordinary
+// `smart info` took about one and a half seconds.
+//
+// The result is ignored by sc_rx_bytes() anyway - reaching the end of this
+// simply means the module is idle and the data is ready to read.
+#define SIM_START_TIMEOUT_MS  50
+
 static bool WaitSCL_L_timeout(void) {
-    volatile uint32_t delay = 1200;
+    volatile uint32_t delay = SIM_START_TIMEOUT_MS;
     while (delay--) {
         // exit on SCL LOW
         if (SCL_read == false)
@@ -775,16 +789,27 @@ bool I2C_WriteFW(const uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uin
     return true;
 }
 
+static bool sim_module_at_least(uint8_t major, uint8_t minor, uint8_t want_major, uint8_t want_minor) {
+    return ((major > want_major) || ((major == want_major) && (minor >= want_minor)));
+}
+
 void I2C_print_status(void) {
     DbpString(_CYAN_("Smart card module (ISO 7816)"));
 
     uint8_t major, minor;
     if (I2C_get_version(&major, &minor) == PM3_SUCCESS) {
 
+        bool ok = sim_module_at_least(major, minor, SIM_MODULE_VERS_MIN_HI, SIM_MODULE_VERS_MIN_LO);
+        bool t1 = sim_module_at_least(major, minor, SIM_MODULE_VERS_T1_HI, SIM_MODULE_VERS_T1_LO);
+
         Dbprintf("  version................. v%d.%02d ( %s )"
                  , major
                  , minor
-                 , ((major == 4) && (minor == 42)) ? _GREEN_("ok") : _RED_("Outdated")
+                 , ok ? _GREEN_("ok") : _RED_("Outdated")
+                );
+
+        Dbprintf("  T=1, PPS................ ( %s )"
+                 , t1 ? _GREEN_("supported") : _YELLOW_("not in this firmware")
                 );
     } else {
         DbpString("  version................. ( " _RED_("fail") " )");
@@ -827,6 +852,16 @@ bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait) {
 
     *destlen = len;
     return true;
+}
+
+uint8_t sc_raw_device_cmd(smartcard_command_t flags) {
+    if ((flags & SC_RAW_T1) == SC_RAW_T1) {
+        return I2C_DEVICE_CMD_SEND_T1;
+    }
+    if ((flags & SC_RAW_T0) == SC_RAW_T0) {
+        return I2C_DEVICE_CMD_SEND_T0;
+    }
+    return I2C_DEVICE_CMD_SEND;
 }
 
 bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
@@ -940,7 +975,9 @@ void SmartCardRaw(const smart_card_raw_t *p) {
         }
     }
 
-    if (((flags & SC_RAW) == SC_RAW) || ((flags & SC_RAW_T0) == SC_RAW_T0)) {
+    if (((flags & SC_RAW) == SC_RAW) ||
+            ((flags & SC_RAW_T0) == SC_RAW_T0) ||
+            ((flags & SC_RAW_T1) == SC_RAW_T1)) {
 
         uint32_t wait = SIM_WAIT_DELAY;
         if ((flags & SC_WAIT) == SC_WAIT) {
@@ -955,7 +992,7 @@ void SmartCardRaw(const smart_card_raw_t *p) {
         bool res = I2C_BufferWrite(
                        p->data,
                        p->len,
-                       (((flags & SC_RAW_T0) == SC_RAW_T0) ? I2C_DEVICE_CMD_SEND_T0 : I2C_DEVICE_CMD_SEND),
+                       sc_raw_device_cmd(flags),
                        I2C_DEVICE_ADDRESS_MAIN
                    );
 
@@ -1062,6 +1099,62 @@ void SmartCardSetBaud(uint64_t arg0) {
                             I2C_DEVICE_CMD_SETBAUD,
                             I2C_DEVICE_ADDRESS_MAIN);
     reply_ng(CMD_SMART_SETBAUD, ok ? PM3_SUCCESS : PM3_ESOFT, NULL, 0);
+    LEDsoff();
+}
+
+/*
+ * ISO/IEC 7816-3 clause 9 protocol and parameter selection.
+ *
+ * PPS is only legal in the window straight after the ATR, so the card is reset
+ * and its ATR collected first - that also gives the SIM module the interface
+ * bytes it needs to time the exchange.  The module answers with
+ *
+ *      [0] 1 when the card confirmed the request
+ *      [1] the protocol now in force
+ *      [2] the TA1 (FI/DI) now in force
+ *
+ * Note that SEND_T1 already runs a PPS on its own when the ATR offers T=1 but
+ * names T=0 first, so this is only needed to negotiate Fi/Di explicitly.
+ */
+void SmartCardPPS(const smart_card_pps_t *p) {
+
+    LED_D_ON();
+    set_tracing(true);
+    I2C_Reset_EnterMainProgram();
+
+    smart_card_atr_t card;
+    if (GetATR(&card, true) == false) {
+        reply_ng(CMD_SMART_PPS, PM3_ETIMEOUT, NULL, 0);
+        goto out;
+    }
+
+    uint8_t req[2];
+    uint16_t reqlen = 1;
+    req[0] = (uint8_t)(p->protocol & 0x0F);
+    if (p->use_ta1) {
+        req[1] = p->ta1;
+        reqlen = 2;
+    }
+
+    if (I2C_BufferWrite(req, reqlen, I2C_DEVICE_CMD_PPS, I2C_DEVICE_ADDRESS_MAIN) == false) {
+        if (g_dbglevel > DBG_DEBUG) {
+            DbpString(I2C_ERROR);
+        }
+        reply_ng(CMD_SMART_PPS, PM3_ESOFT, NULL, 0);
+        goto out;
+    }
+
+    uint8_t resp[8] = {0};
+    uint16_t len = sizeof(resp);
+    if ((sc_rx_bytes(resp, &len, SIM_WAIT_DELAY) == false) || (len < 3)) {
+        reply_ng(CMD_SMART_PPS, PM3_ETIMEOUT, NULL, 0);
+        goto out;
+    }
+
+    reply_ng(CMD_SMART_PPS, PM3_SUCCESS, resp, 3);
+
+out:
+    set_tracing(false);
     LEDsoff();
 }
 

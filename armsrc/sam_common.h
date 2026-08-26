@@ -22,6 +22,12 @@ static const uint8_t SAM_TX_APDU_PREFIX_LENGTH = 5;
 static const uint8_t SAM_TX_ASN1_PREFIX_LENGTH = 6;
 static const uint8_t SAM_RX_ASN1_PREFIX_LENGTH = 5;
 
+// Offset of the 0xBD response node - 5 or 6 depending on the SAM.  0 if absent.
+uint16_t sam_bd_offset(const uint8_t *response, uint16_t response_len);
+
+// Offset of the response node plus how much of it to forward.  See the .c file.
+uint16_t sam_response_payload(const uint8_t *rx, uint16_t rx_len, uint16_t *payload_len);
+
 int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen);
 
 void switch_clock_to_ticks(void);

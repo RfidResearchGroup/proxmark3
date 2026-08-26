@@ -42,6 +42,97 @@
  * @param resplen Pointer to the variable where the length of the response will be stored.
  * @return Status code indicating success or failure of the operation.
  */
+/*
+ * Offset of the 0xBD response node inside a SAM reply.
+ *
+ * Ahead of it sits a routing tail that is either 5 or 6 bytes long: the request
+ * header we build is always 6 (FROM, TO, REPLY-TO, 0x00, 0x00, scFlag), and
+ * some SAMs mirror all of it while others drop a byte.  A HID iCLASS SE "Grace"
+ * part answers
+ *
+ *     0a 44 00 00 00 00 | bd 11 8a 0f 80 02 01 29 ...
+ *
+ * where SAM_RX_ASN1_PREFIX_LENGTH on its own lands one byte short and every
+ * caller then rejects a perfectly good response.
+ *
+ * Only those two offsets are ever considered, deliberately: 0xBD occurs inside
+ * SAM payloads as well, so an open ended search would eventually latch onto the
+ * wrong one.  Returns 0 when neither holds it, which is never a valid offset.
+ */
+uint16_t sam_bd_offset(const uint8_t *response, uint16_t response_len) {
+
+    uint16_t fallback = 0;
+
+    for (uint16_t ofs = SAM_RX_ASN1_PREFIX_LENGTH;
+            ofs <= (uint16_t)(SAM_RX_ASN1_PREFIX_LENGTH + 1);
+            ofs++) {
+
+        if ((uint16_t)(ofs + 1) >= response_len) {
+            break;
+        }
+        if (response[ofs] != 0xBD) {
+            continue;
+        }
+
+        // A 0xBD in the right place accounts for the rest of the frame exactly:
+        // tag, length byte, that many bytes of contents, then SW1 SW2.  This is
+        // what tells a real response node apart from a 0xBD that happens to sit
+        // in the routing tail - without it a SAM whose scFlag were 0xBD would
+        // resolve to the wrong offset.
+        if ((uint16_t)(ofs + 2 + response[ofs + 1] + 2) == response_len) {
+            return ofs;
+        }
+        if (fallback == 0) {
+            fallback = ofs;
+        }
+    }
+
+    // Nothing accounted for the whole frame; hand back a plain 0xBD match if
+    // there was one, so a caller that only wants the tag still works.
+    return fallback;
+}
+
+/*
+ * Locate the SAM's response node and work out how many bytes from there make up
+ * the reply to forward.
+ *
+ * This arithmetic used to be written out three times - twice in sam_picopass.c,
+ * once in sam_seos.c - each with a hardcoded 5 byte routing tail and no bounds
+ * checks at all, so a short or truncated frame walked off the end of the
+ * buffer.  One copy, one place to be wrong.
+ *
+ * Returns the offset of the response node.  *payload_len gets the length from
+ * that offset, clamped to what actually arrived, or 0 if the frame is too short
+ * to hold anything.
+ */
+uint16_t sam_response_payload(const uint8_t *rx, uint16_t rx_len, uint16_t *payload_len) {
+
+    uint16_t ofs = sam_bd_offset(rx, rx_len);
+    if (ofs == 0) {
+        ofs = SAM_RX_ASN1_PREFIX_LENGTH;
+    }
+
+    *payload_len = 0;
+
+    // SNMP shaped reply carries a long form length: bd 81 <len> 8a 81 ...
+    if (((uint16_t)(ofs + 4) < rx_len) &&
+            (rx[ofs + 1] == 0x81) && (rx[ofs + 3] == 0x8a) && (rx[ofs + 4] == 0x81)) {
+
+        *payload_len = (uint16_t)(rx[ofs + 2] + 3);
+
+    } else if ((uint16_t)(ofs + 1) < rx_len) {
+
+        *payload_len = (uint16_t)(rx[ofs + 1] + 2);
+    }
+
+    // never hand back more than arrived
+    if ((uint16_t)(ofs + *payload_len) > rx_len) {
+        *payload_len = (rx_len > ofs) ? (uint16_t)(rx_len - ofs) : 0;
+    }
+
+    return ofs;
+}
+
 int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) {
     bool res = I2C_BufferWrite(data, n, I2C_DEVICE_CMD_SEND_T0, I2C_DEVICE_ADDRESS_MAIN);
     if (res == false) {
@@ -267,11 +358,12 @@ int sam_get_version(bool info) {
         DbpString("end sam_get_version");
     }
 
-    if (response[5] != 0xbd) {
+    uint16_t bd = sam_bd_offset(response, response_len);
+    if (bd == 0) {
         Dbprintf("Invalid SAM response");
         goto error;
     } else {
-        uint8_t *sam_response_an = sam_find_asn1_node(response + 5, 0x8a);
+        uint8_t *sam_response_an = sam_find_asn1_node(response + bd, 0x8a);
         if (sam_response_an == NULL) {
             if (g_dbglevel >= DBG_ERROR) DbpString("SAM get response failed");
             goto error;
@@ -344,11 +436,12 @@ int sam_get_serial_number(void) {
         DbpString("end sam_get_serial_number");
     }
 
-    if (response[5] != 0xbd) {
+    uint16_t bd = sam_bd_offset(response, response_len);
+    if (bd == 0) {
         Dbprintf("Invalid SAM response");
         goto error;
     } else {
-        uint8_t *sam_response_an = sam_find_asn1_node(response + 5, 0x8a);
+        uint8_t *sam_response_an = sam_find_asn1_node(response + bd, 0x8a);
         if (sam_response_an == NULL) {
             if (g_dbglevel >= DBG_ERROR) DbpString(_RED_("SAM: get response failed"));
             goto error;

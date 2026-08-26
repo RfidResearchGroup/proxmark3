@@ -80,7 +80,9 @@ static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint
 
     uint32_t wait = SIM_WAIT_DELAY;
 
-    if (((flags & SC_RAW) == SC_RAW) || ((flags & SC_RAW_T0) == SC_RAW_T0)) {
+    if (((flags & SC_RAW) == SC_RAW) ||
+            ((flags & SC_RAW_T0) == SC_RAW_T0) ||
+            ((flags & SC_RAW_T1) == SC_RAW_T1)) {
 
         if ((flags & SC_WAIT) == SC_WAIT) {
             // wait_delay is in ms; one WaitSCL_H_delay iteration is ~3.07us.
@@ -94,7 +96,7 @@ static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint
         bool res = I2C_BufferWrite(
                        p->data,
                        p->len,
-                       (((flags & SC_RAW_T0) == SC_RAW_T0) ? I2C_DEVICE_CMD_SEND_T0 : I2C_DEVICE_CMD_SEND),
+                       sc_raw_device_cmd(flags),
                        I2C_DEVICE_ADDRESS_MAIN
                    );
 
