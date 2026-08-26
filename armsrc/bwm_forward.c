@@ -14,15 +14,13 @@
 #include "bwm_forward.h"
 
 #include "bwm_uart_at32.h"
-#include "pm3_cmd.h"    // PM3_CMD_DATA_SIZE, PM3_* return codes
+#include "pm3_cmd.h"
 #include "string.h"
 
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
-// CRC-16/CCITT-FALSE, byte-identical to the BWM firmware's crc16_ccitt()
-// (poly 0x1021, init 0xFFFF, MSB-first, no reflection, no xorout).
 static uint16_t bwm_crc16(const uint8_t *data, size_t len, uint16_t crc) {
     for (size_t i = 0; i < len; i++) {
         crc ^= (uint16_t)data[i] << 8;
@@ -37,20 +35,15 @@ static uint16_t bwm_crc16(const uint8_t *data, size_t len, uint16_t crc) {
     return crc;
 }
 
-// ---------------------------------------------------------------------------
-// TX: wrap one reply frame into a SEND_FORWARD_DATA app_com frame.
-// A full NG/OLD frame is <= PM3_CMD_DATA_SIZE + a small header/postamble, well
-// under the BWM 4096-byte payload cap, so a single frame always suffices.
-// ---------------------------------------------------------------------------
-#define BWM_TX_OVERHEAD   (2 + 2 + 2 + 2)   // hdr + cmd + len + crc
-#define BWM_TX_MAX_PAYLOAD (PM3_CMD_DATA_SIZE + 64)   // NG/OLD frame ceiling
+#define BWM_TX_OVERHEAD   (2 + 2 + 2 + 2)
+#define BWM_TX_MAX_PAYLOAD (PM3_CMD_DATA_SIZE + 64)
 #define BWM_TX_BUFSZ      (BWM_TX_OVERHEAD + BWM_TX_MAX_PAYLOAD)
 
 int bwm_fwd_writebuffer_sync(const uint8_t *data, size_t len) {
-    static uint8_t frame[BWM_TX_BUFSZ];   // single-threaded bare-metal: static OK
+    static uint8_t frame[BWM_TX_BUFSZ];
 
     if (len > BWM_TX_MAX_PAYLOAD) {
-        len = BWM_TX_MAX_PAYLOAD;         // defensive; should never trigger
+        len = BWM_TX_MAX_PAYLOAD;
     }
 
     size_t idx = 0;
@@ -71,13 +64,7 @@ int bwm_fwd_writebuffer_sync(const uint8_t *data, size_t len) {
     return bwm_uart_write(frame, idx);
 }
 
-// ---------------------------------------------------------------------------
-// RX: persistent app_com de-framer. Feeds raw FPC bytes through a state machine
-// and pushes the payloads of valid DATA_FORWARD (0xD2 0xD3 / cmd 8089) frames
-// into a byte FIFO that bwm_read_ng() drains. Non-DATA_FORWARD frames (slave
-// responses, forwarded logs, cmd-error reports) are validated and discarded.
-// ---------------------------------------------------------------------------
-#define BWM_DEFIFO_SZ     2048            // >= one full NG frame's payload
+#define BWM_DEFIFO_SZ     2048
 #define BWM_RXFRAME_MAX   (PM3_CMD_DATA_SIZE + 64)
 
 typedef enum {
@@ -87,28 +74,27 @@ typedef enum {
 typedef struct {
     bwm_state_t state;
     uint8_t     hdr1;
-    bool        is_bcast;     // header pair is 0xD2 0xD3
+    bool        is_bcast;
     uint16_t    cmd;
     uint16_t    len;
-    uint16_t    got;          // payload bytes received
-    uint16_t    crc_calc;     // running CRC over hdr..payload
+    uint16_t    got;
+    uint16_t    crc_calc;
     uint16_t    crc_recv;
     uint8_t     payload[BWM_RXFRAME_MAX];
 } bwm_parser_t;
 
 static bwm_parser_t s_p = { .state = S_IDLE };
 
-// De-framed payload ring
 static uint8_t  s_fifo[BWM_DEFIFO_SZ];
-static volatile uint16_t s_fifo_head = 0;   // write
-static volatile uint16_t s_fifo_tail = 0;   // read
+static volatile uint16_t s_fifo_head = 0;
+static volatile uint16_t s_fifo_tail = 0;
 
 static inline uint16_t fifo_count(void) {
     return (uint16_t)((s_fifo_head - s_fifo_tail) & (BWM_DEFIFO_SZ - 1));
 }
 static inline void fifo_push(uint8_t b) {
     uint16_t next = (uint16_t)((s_fifo_head + 1) & (BWM_DEFIFO_SZ - 1));
-    if (next != s_fifo_tail) {              // drop on overflow rather than corrupt
+    if (next != s_fifo_tail) {
         s_fifo[s_fifo_head] = b;
         s_fifo_head = next;
     }
@@ -123,8 +109,6 @@ static void bwm_reset_frame(bwm_parser_t *p) {
     p->state = S_IDLE;
 }
 
-// Update running CRC one byte at a time (mirrors the streaming update in the
-// BWM firmware parser).
 static inline void crc_step(bwm_parser_t *p, uint8_t byte) {
     p->crc_calc = bwm_crc16(&byte, 1, p->crc_calc);
 }
@@ -137,14 +121,12 @@ static void bwm_feed_byte(bwm_parser_t *p, uint8_t byte) {
             } else if (byte == BWM_HDR_SLAVE_RESP_1) {
                 p->hdr1 = byte; p->is_bcast = false; p->state = S_HDR2;
             }
-            // any other byte: stay idle (resync)
             break;
 
         case S_HDR2: {
             bool ok = (p->is_bcast  && byte == BWM_HDR_SLAVE_BCAST_2) ||
                       (!p->is_bcast && byte == BWM_HDR_SLAVE_RESP_2);
             if (!ok) {
-                // header mismatch: reset and re-examine this byte as a potential SOF
                 p->state = S_IDLE;
                 bwm_feed_byte(p, byte);
                 return;
@@ -162,7 +144,7 @@ static void bwm_feed_byte(bwm_parser_t *p, uint8_t byte) {
             p->len |= (uint16_t)byte << 8;
             crc_step(p, byte);
             p->got = 0;
-            if (p->len > BWM_RXFRAME_MAX) {            // oversized -> drop frame
+            if (p->len > BWM_RXFRAME_MAX) {
                 bwm_reset_frame(p);
             } else {
                 p->state = (p->len == 0) ? S_CRC_LO : S_PAYLOAD;
@@ -186,7 +168,6 @@ static void bwm_feed_byte(bwm_parser_t *p, uint8_t byte) {
                     fifo_push(p->payload[i]);
                 }
             }
-            // valid non-DATA_FORWARD frames and CRC failures alike: just resync
             bwm_reset_frame(p);
             break;
 
@@ -196,7 +177,6 @@ static void bwm_feed_byte(bwm_parser_t *p, uint8_t byte) {
     }
 }
 
-// Pull whatever raw framed bytes are waiting and run them through the parser.
 static void bwm_pump(void) {
     uint8_t scratch[64];
     uint16_t avail = bwm_uart_rx_available();
@@ -216,8 +196,6 @@ uint16_t bwm_fwd_rxdata_available(void) {
     if (fifo_count() > 0) {
         return fifo_count();
     }
-    // No de-framed payload yet, but raw frame bytes may be waiting; pump once so
-    // receive_ng()'s gate reflects real forward data.
     bwm_pump();
     return fifo_count();
 }
@@ -226,9 +204,6 @@ uint32_t bwm_read_ng(uint8_t *data, size_t len) {
     if (len == 0) {
         return 0;
     }
-
-    // Same bounded-retry budget shape as bwm_uart_read(); USART_SLOW_LINK (set
-    // for the BWM/BLE link) widens it so a slow round-trip doesn't time out.
     uint32_t tryconstant = 0;
 #ifdef USART_SLOW_LINK
     tryconstant = 50000;
