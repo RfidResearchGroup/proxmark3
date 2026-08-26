@@ -103,6 +103,8 @@ We define generic Proxmark3 platforms as following devices.
   - Proxmark3 X
     - **Note**: Community tested
     - **Note**: unknown device hw
+  - iCopy-X
+    - **Note** Compatible after installation of [iCopy-X Open Source firmware](https://github.com/lab-401/icopy-x)
 
 **Not supported**
  - ⚠  Proxmark Evolution (EVO) 
@@ -112,10 +114,6 @@ We define generic Proxmark3 platforms as following devices.
    - **Note**: Company have disappeared, leaving their customers in the dark.
 
 **Experimental support**
- - ⚠  iCopy-X
-   - **Note**: currently incompatible with iCopy-X GUI as Proxmark client commands using different syntax
-   - **Note**: see also [icopyx-community repos](https://github.com/iCopy-X-Community/) for upstream sources, reversed hw etc.
-   - **Note**: Uses DRM to lock down tags, ignores the open source licences. Use on your own risk. 
 -  ⚠ Proxmark3 Ultimate
    - **Note**: unknown device hw
    - **Note**: FPGA images is building for it.  Use on your own risk.
