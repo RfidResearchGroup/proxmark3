@@ -66,7 +66,7 @@ This chip is used to assist the host MCU. It is primarily responsible for:
 | ③ Idle auto-exit ISP (ISP mode) | No button operation for more than **5 minutes** | Automatically exit ISP, host MCU resets |
 
 > The business logic of this chip currently only handles **long-press events**, not short-press events.  
-> The timing may have **errors** and is not entirely accurate; this is caused by the precision of this chip's internal oscillator.
+> The timings are **estimations** and are not entirely accurate; this is caused by the limited precision of this chip's internal oscillator.
 
 ### 3.2 USB Branch of Action ①
 
