@@ -57,15 +57,10 @@ DEFCFLAGS = -Wall -Werror -Os -pedantic -fstrict-aliasing -pipe
 # Some more warnings we want as errors:
 DEFCFLAGS += -Wbad-function-cast -Wchar-subscripts -Wundef -Wunused -Wuninitialized -Wpointer-arith -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wempty-body -Wignored-qualifiers -Wmissing-field-initializers -Wtype-limits
 
-# Some more warnings we need first to eliminate, so temporarely tolerated:
-DEFCFLAGS += -Wshadow -Wno-error=shadow
-DEFCFLAGS += -Winline -Wno-error=inline
-DEFCFLAGS += -Wmissing-prototypes -Wno-error=missing-prototypes
-DEFCFLAGS += -Wmissing-declarations  -Wno-error=missing-declarations
-DEFCFLAGS += -Wstrict-prototypes -Wno-error=strict-prototypes
-# still vsnprintf etc to sort out...
-#DEFCFLAGS += -Wredundant-decls -Wno-error=redundant-decls
-#DEFCFLAGS += -Wcast-align -Wno-error=cast-align
+# Warnings temporarily tolerated (kept as howto examples)
+#DEFCFLAGS += -Wshadow -Wno-error=shadow
+#DEFCFLAGS += -Winline -Wno-error=inline
+#DEFCFLAGS += -Wmissing-prototypes -Wno-error=missing-prototypes
 
 # Next ones are activated only if GCCEXTRA=1
 EXTRACFLAGS =
