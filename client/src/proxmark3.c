@@ -829,7 +829,8 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      -h/--help                           this help");
         PrintAndLogEx(NORMAL, "      -v/--version                        print client version");
         PrintAndLogEx(NORMAL, "      -p/--port                           serial port to connect to");
-        PrintAndLogEx(NORMAL, "      -w/--wait                           20sec waiting the serial port to appear in the OS");
+        PrintAndLogEx(NORMAL, "      -w/--wait                           20sec waiting the serial port to appear in the OS\n"
+                      "                                          with a tcp: port, listen and wait for an incoming connection instead");
         PrintAndLogEx(NORMAL, "      -f/--flush                          output will be flushed after every print");
         PrintAndLogEx(NORMAL, "      -d/--debug <0|1|2>                  set debugmode");
         PrintAndLogEx(NORMAL, "\nOptions in client mode:");
@@ -1530,6 +1531,9 @@ int main(int argc, char *argv[]) {
 
     // try to open USB connection to Proxmark
     if (port != NULL) {
+        // --wait on a tcp: port means "listen and accept an incoming connection"
+        // rather than the usual "retry connecting until the endpoint appears".
+        g_conn.listen_for_incoming = waitCOMPort && (strncmp(port, "tcp:", 4) == 0);
         OpenProxmark(&g_session.current_device, port, waitCOMPort, 20, false, speed);
     }
 
