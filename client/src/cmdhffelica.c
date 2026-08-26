@@ -87,6 +87,7 @@
 #define FELICA_POLLING_REQUEST_SYSTEM_CODE 0x01U
 #define FELICA_SYSTEM_LIST_JSON "felica/felica_system_code_list"
 #define FELICA_IC_CODE_LIST_JSON "felica/ic_code_list"
+#define FELICA_ISSUERS_JSON "felica/issuers"
 #define FELICA_CONTAINER_ISSUE_LIST_JSON "felica/felica_container_issue_information_list"
 #define FELICA_AUTH_KEY_FILE_VERSION 1
 
@@ -523,6 +524,8 @@ static json_t *felica_ic_code_list = NULL;
 static bool felica_ic_code_list_loaded = false;
 static json_t *felica_container_issue_list = NULL;
 static bool felica_container_issue_list_loaded = false;
+static json_t *felica_issuers_list = NULL;
+static bool felica_issuers_list_loaded = false;
 
 static void set_last_known_card(felica_card_select_t card) {
     last_known_card = card;
@@ -835,6 +838,264 @@ static json_t *felica_get_ic_code_list(void) {
     felica_ic_code_list = root;
     free(path);
     return felica_ic_code_list;
+}
+
+static json_t *felica_get_issuers_list(void) {
+    if (felica_issuers_list_loaded) {
+        return felica_issuers_list;
+    }
+
+    felica_issuers_list_loaded = true;
+
+    char *path = NULL;
+    if (searchFile(&path, RESOURCES_SUBDIR, FELICA_ISSUERS_JSON, ".json", true) != PM3_SUCCESS) {
+        return NULL;
+    }
+
+    json_error_t error;
+    json_t *root = json_load_file(path, 0, &error);
+    if (root == NULL) {
+        PrintAndLogEx(WARNING, "Failed to parse `%s` line %d: %s", path, error.line, error.text);
+        free(path);
+        return NULL;
+    }
+
+    if (json_is_array(root) == false) {
+        PrintAndLogEx(WARNING, "Invalid `%s` format, expected array root", path);
+        json_decref(root);
+        free(path);
+        return NULL;
+    }
+
+    felica_issuers_list = root;
+    free(path);
+    return felica_issuers_list;
+}
+
+// First issuers.json entry whose `system` matches and whose `prefix` is absent (a per-system
+// date-only fallback) or equals idi[0..1]. Entries are scanned in file order, so specific
+// prefixes precede the fallback for the same system.
+static const json_t *felica_find_issuer_entry(uint16_t system_code, const uint8_t idi[8]) {
+    json_t *list = felica_get_issuers_list();
+    if (list == NULL) {
+        return NULL;
+    }
+
+    char system_hex[5] = {0};
+    char prefix_hex[5] = {0};
+    snprintf(system_hex, sizeof(system_hex), "%04X", system_code);
+    snprintf(prefix_hex, sizeof(prefix_hex), "%02X%02X", idi[0], idi[1]);
+
+    size_t index = 0;
+    json_t *entry = NULL;
+    json_array_foreach(list, index, entry) {
+        if (json_is_object(entry) == false) {
+            continue;
+        }
+        const char *entry_system = felica_get_json_string(entry, "system");
+        if (entry_system == NULL || strcasecmp(entry_system, system_hex) != 0) {
+            continue;
+        }
+        const char *entry_prefix = felica_get_json_string(entry, "prefix");
+        if (entry_prefix == NULL || strcasecmp(entry_prefix, prefix_hex) == 0) {
+            return entry;
+        }
+    }
+    return NULL;
+}
+
+static bool felica_date_is_acceptable(int year, int month, int day) {
+    if (month < 1 || month > 12 || day < 1 || day > 31) {
+        return false;
+    }
+    static const int days_in_month[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    int max_day = days_in_month[month - 1];
+    if (month == 2 && ((year % 4 == 0 && year % 100 != 0) || year % 400 == 0)) {
+        max_day = 29;
+    }
+    if (day > max_day) {
+        return false;
+    }
+
+    int current_year = 9999;
+    const time_t now = time(NULL);
+    if (now != (time_t)-1) {
+        const struct tm *tm_now = gmtime(&now);
+        if (tm_now != NULL) {
+            current_year = tm_now->tm_year + 1900;
+        }
+    }
+    return year >= 2000 && year <= current_year + 1;
+}
+
+static bool felica_epoch_offset_date(uint16_t offset_days, int *year, int *month, int *day) {
+    // Days since 1970-01-01 (2000-01-01 is 10957 days after the Unix epoch). Converted to a civil
+    // date with a pure integer algorithm (Howard Hinnant's civil_from_days) so there is no time_t
+    // width/overflow dependency; offset_days is a uint16_t, so all intermediates stay small.
+    const long z = (long)offset_days + 10957 + 719468; // shift to the internal era epoch (0000-03-01)
+    const long era = z / 146097;
+    const long doe = z - era * 146097;                                        // [0, 146096]
+    const long yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;   // [0, 399]
+    const long y = yoe + era * 400;
+    const long doy = doe - (365 * yoe + yoe / 4 - yoe / 100);                 // [0, 365]
+    const long mp = (5 * doy + 2) / 153;                                      // [0, 11]
+    *day = (int)(doy - (153 * mp + 2) / 5 + 1);                               // [1, 31]
+    *month = (int)(mp < 10 ? mp + 3 : mp - 9);                                // [1, 12]
+    *year = (int)(y + (*month <= 2));
+    return true;
+}
+
+// Default IDi byte offset for each encoding, overridable per entry via `date_offset`.
+static int felica_default_date_offset(const char *encoding) {
+    if (encoding != NULL && strcmp(encoding, "bcd") == 0) {
+        return 0;
+    }
+    return 4;   // packed, epoch
+}
+
+// Resolve an entry's date `format` (encoding) and its byte `offset` (default per encoding,
+// overridden by the optional `date_offset` field). Returns the encoding, or NULL if absent.
+static const char *felica_entry_format(const json_t *entry, int *offset) {
+    const char *encoding = felica_get_json_string(entry, "format");
+    if (encoding == NULL) {
+        return NULL;
+    }
+    *offset = felica_default_date_offset(encoding);
+    json_t *offset_json = json_object_get_ci(entry, "date_offset");
+    if (json_is_integer(offset_json)) {
+        *offset = (int)json_integer_value(offset_json);
+    }
+    return encoding;
+}
+
+// Decode the date at `offset` in the IDi per `encoding`: packed (big-endian Y/M/D bit-field),
+// epoch (little-endian days since 2000-01-01), bcd (4-byte BCD century/year/month/day). Returns
+// the raw y/m/d (not calendar-validated).
+static bool felica_idi_decode(const char *encoding, int offset, const uint8_t idi[8], int *year, int *month, int *day) {
+    if (encoding == NULL) {
+        return false;
+    }
+    if (strcmp(encoding, "packed") == 0) {
+        if (offset < 0 || offset + 1 >= 8) {
+            return false;
+        }
+        const uint16_t p = ((uint16_t)idi[offset] << 8) | idi[offset + 1];
+        *year = 2000 + ((p >> 9) & 0x3F);
+        *month = (p >> 5) & 0x0F;
+        *day = p & 0x1F;
+        return true;
+    }
+    if (strcmp(encoding, "epoch") == 0) {
+        if (offset < 0 || offset + 1 >= 8) {
+            return false;
+        }
+        const uint16_t n = (uint16_t)idi[offset] | ((uint16_t)idi[offset + 1] << 8);
+        return felica_epoch_offset_date(n, year, month, day);
+    }
+    if (strcmp(encoding, "bcd") == 0) {
+        if (offset < 0 || offset + 3 >= 8) {
+            return false;
+        }
+        int digits[4];
+        for (int i = 0; i < 4; i++) {
+            const int hi = idi[offset + i] >> 4;
+            const int lo = idi[offset + i] & 0x0F;
+            if (hi > 9 || lo > 9) {
+                return false;
+            }
+            digits[i] = hi * 10 + lo;
+        }
+        *year = digits[0] * 100 + digits[1];
+        *month = digits[2];
+        *day = digits[3];
+        return true;
+    }
+    return false;
+}
+
+// Issuance date for display: line is suppressed unless it decodes to a sane calendar date.
+static bool felica_idi_decode_date(const json_t *entry, const uint8_t idi[8], int *year, int *month, int *day) {
+    int offset = 0;
+    const char *encoding = felica_entry_format(entry, &offset);
+    return felica_idi_decode(encoding, offset, idi, year, month, day) &&
+           felica_date_is_acceptable(*year, *month, *day);
+}
+
+// Date embedded in the serial: raw values (an identifier, not calendar-validated). BCD systems
+// carry no serial.
+static bool felica_idi_serial_date(const json_t *entry, const uint8_t idi[8], int *year, int *month, int *day) {
+    int offset = 0;
+    const char *encoding = felica_entry_format(entry, &offset);
+    if (encoding == NULL || strcmp(encoding, "bcd") == 0) {
+        return false;
+    }
+    return felica_idi_decode(encoding, offset, idi, year, month, day);
+}
+
+// Regroup a serial for display: first `first` chars, then space-separated 4-char chunks.
+static void felica_group_serial(const char *raw, int first, char *out, size_t out_sz) {
+    size_t len = strlen(raw);
+    size_t pos = 0;
+    size_t o = 0;
+    size_t head = ((size_t)first < len) ? (size_t)first : len;
+    for (size_t i = 0; i < head && o + 1 < out_sz; i++) {
+        out[o++] = raw[pos++];
+    }
+    while (pos < len && o + 1 < out_sz) {
+        out[o++] = ' ';
+        for (int k = 0; k < 4 && pos < len && o + 1 < out_sz; k++) {
+            out[o++] = raw[pos++];
+        }
+    }
+    out[o] = '\0';
+}
+
+static bool felica_idi_format_serial(const json_t *entry, const uint8_t idi[8], char *out, size_t out_sz) {
+    // A serial exists only when the row names an issuer `code` (date-only fallback rows omit it)
+    // and its date format carries one (bcd does not).
+    const char *encoding = felica_get_json_string(entry, "format");
+    const char *code = felica_get_json_string(entry, "code");
+    if (encoding == NULL || code == NULL) {
+        return false;
+    }
+
+    int year = 0, month = 0, day = 0;
+    if (felica_idi_serial_date(entry, idi, &year, &month, &day) == false) {
+        return false;
+    }
+
+    // epoch defaults to LE/width 4, packed to BE/width 5; either is overridable per entry.
+    bool little_endian = (strcmp(encoding, "epoch") == 0);
+    const char *endian = felica_get_json_string(entry, "counter_endian");
+    if (endian != NULL) {
+        little_endian = (strcasecmp(endian, "le") == 0);
+    }
+    int counter_width = (strcmp(encoding, "epoch") == 0) ? 4 : 5;
+    json_t *width_json = json_object_get_ci(entry, "counter_width");
+    if (json_is_integer(width_json)) {
+        const long w = (long)json_integer_value(width_json);
+        if (w >= 1 && w <= 16) {
+            counter_width = (int)w;
+        }
+    }
+    const uint16_t counter = little_endian
+                             ? (uint16_t)((uint16_t)idi[6] | ((uint16_t)idi[7] << 8))
+                             : (uint16_t)(((uint16_t)idi[6] << 8) | idi[7]);
+
+    char raw[64] = {0};
+    if (snprintf(raw, sizeof(raw), "%s%02X%02X%02d%02d%02d%0*u",
+                 code, idi[2], idi[3], year % 100, month, day,
+                 counter_width, (unsigned int)counter) < 0) {
+        return false;
+    }
+
+    json_t *group_json = json_object_get_ci(entry, "serial_group");
+    if (json_is_integer(group_json)) {
+        felica_group_serial(raw, (int)json_integer_value(group_json), out, out_sz);
+    } else {
+        snprintf(out, out_sz, "%s", raw);
+    }
+    return true;
 }
 
 static json_t *felica_get_container_issue_list(void) {
@@ -1848,6 +2109,27 @@ static void felica_info_process_system(int level, uint8_t flags, felica_discover
                           sprint_hex_inrow(system->idi, sizeof(system->idi)));
             PrintAndLogEx(level, "    PMi............ " _GREEN_("%s"),
                           sprint_hex_inrow(system->pmi, sizeof(system->pmi)));
+
+            static const uint8_t zero_idi[8] = {0};
+            const json_t *issuer_entry = (memcmp(system->idi, zero_idi, sizeof(zero_idi)) != 0)
+                                         ? felica_find_issuer_entry(system->system_code, system->idi)
+                                         : NULL;
+            if (issuer_entry != NULL) {
+                int year = 0, month = 0, day = 0;
+                const bool has_issuance_date = felica_idi_decode_date(issuer_entry, system->idi, &year, &month, &day);
+                char serial[96] = {0};
+                const bool has_serial = felica_idi_format_serial(issuer_entry, system->idi, serial, sizeof(serial));
+
+                if (has_issuance_date || has_serial) {
+                    PrintAndLogEx(level, "    Details:");
+                    if (has_issuance_date) {
+                        PrintAndLogEx(level, "      Issuance Date.. " _GREEN_("%04d-%02d-%02d"), year, month, day);
+                    }
+                    if (has_serial) {
+                        PrintAndLogEx(level, "      Serial......... " _GREEN_("%s"), serial);
+                    }
+                }
+            }
         }
     } else {
         PrintAndLogEx(level, "    IDM............ " _RED_("N/A"));
