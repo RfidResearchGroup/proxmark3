@@ -17,6 +17,9 @@
 #include "usb_cdc_apis.h"
 #include "usb_read_ng.h"
 #include "usart.h"
+#ifdef WITH_BWM_FORWARD
+#include "bwm_forward.h"
+#endif
 #include "crc16.h"
 #include "string.h"
 #include "BigBuf.h"
@@ -49,7 +52,7 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const v
         }
     }
 
-#ifdef WITH_FPC_USART_HOST
+#if defined(WITH_FPC_USART_HOST) || defined(WITH_BWM_FORWARD)
     int resultfpc = PM3_EUNDEF;
 #endif
     int resultusb = PM3_EUNDEF;
@@ -60,7 +63,9 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const v
     }
 
     if (g_reply_via_fpc) {
-#ifdef WITH_FPC_USART_HOST
+#if defined(WITH_BWM_FORWARD)
+        resultfpc = bwm_fwd_writebuffer_sync((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
+#elif defined(WITH_FPC_USART_HOST)
         resultfpc = usart_writebuffer_sync((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
 #else
         return PM3_EDEVNOTSUPP;
@@ -68,7 +73,7 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const v
     }
     // we got two results, let's prioritize the faulty one and USB over FPC.
     if (g_reply_via_usb && (resultusb != PM3_SUCCESS)) return resultusb;
-#ifdef WITH_FPC_USART_HOST
+#if defined(WITH_FPC_USART_HOST) || defined(WITH_BWM_FORWARD)
     if (g_reply_via_fpc && (resultfpc != PM3_SUCCESS)) return resultfpc;
 #endif
     return PM3_SUCCESS;
@@ -113,7 +118,7 @@ static int reply_ng_internal(uint16_t cmd, int8_t status, uint8_t reason, const 
     }
     txBufferNGLen = sizeof(PacketResponseNGPreamble) + len + sizeof(PacketResponseNGPostamble);
 
-#ifdef WITH_FPC_USART_HOST
+#if defined(WITH_FPC_USART_HOST) || defined(WITH_BWM_FORWARD)
     int resultfpc = PM3_EUNDEF;
 #endif
     int resultusb = PM3_EUNDEF;
@@ -127,7 +132,9 @@ static int reply_ng_internal(uint16_t cmd, int8_t status, uint8_t reason, const 
         // TODO DXL 测试阶段，暂时通过SPI应答
         // resultusb = cep_spi_write_sync((uint8_t *)&txBufferNG, txBufferNGLen);
 
-#ifdef WITH_FPC_USART_HOST
+#if defined(WITH_BWM_FORWARD)
+        resultfpc = bwm_fwd_writebuffer_sync((uint8_t *)&txBufferNG, txBufferNGLen);
+#elif defined(WITH_FPC_USART_HOST)
         resultfpc = usart_writebuffer_sync((uint8_t *)&txBufferNG, txBufferNGLen);
 #else
         return PM3_EDEVNOTSUPP;
@@ -138,7 +145,7 @@ static int reply_ng_internal(uint16_t cmd, int8_t status, uint8_t reason, const 
         return resultusb;
     }
 
-#ifdef WITH_FPC_USART_HOST
+#if defined(WITH_FPC_USART_HOST) || defined(WITH_BWM_FORWARD)
     if (g_reply_via_fpc && (resultfpc != PM3_SUCCESS)) {
         return resultfpc;
     }
@@ -274,7 +281,11 @@ int receive_ng(PacketCommandNG *rx) {
     //     return receive_ng_internal(rx, cep_spi_read_ng, false, true); // TODO DXL 临时用fpc这种标志
     // }
 
-#ifdef WITH_FPC_USART_HOST
+#if defined(WITH_BWM_FORWARD)
+    // De-frame inbound BWM app_com DATA_FORWARD packets into a raw NG stream.
+    if (bwm_fwd_rxdata_available() > 0)
+        return receive_ng_internal(rx, bwm_read_ng, false, true);
+#elif defined(WITH_FPC_USART_HOST)
     // Check if there is a FPC packet available
     if (usart_rxdata_available() > 0)
         return receive_ng_internal(rx, usart_read_ng, false, true);
