@@ -193,6 +193,11 @@ int ble_connect(const char *mac, uint16_t chr_uuid16, ble_conn_t *conn) {
         return -1;
     }
 
+    // Enlarge the kernel RX buffer so bursts of notifications queue instead of
+    // being dropped while the comms thread drains them.
+    int rcvbuf = 256 * 1024;
+    setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
+
     struct sockaddr_l2 src = {0};
     src.l2_family = AF_BLUETOOTH;
     src.l2_bdaddr_type = BDADDR_LE_PUBLIC;
@@ -278,12 +283,18 @@ int ble_recv(ble_conn_t *conn, uint8_t *buf, size_t maxlen, size_t *out_len, int
         if (got == maxlen) { *out_len = got; return 0; }
     }
 
-    // 2) pull notifications until buffer full or timeout
+    // 2) pull notifications until buffer full or a real timeout.
+    // NOTE: the client's comms parser requires uart_receive() to return exactly
+    // the requested length in one call (it checks rxlen != length). A single NG
+    // frame can span several notifications (payload > ATT_MTU-3), so we must keep
+    // waiting up to timeout_ms for the in-flight tail, not bail after the first
+    // burst. Waiting stops as soon as we reach maxlen, so small single-notification
+    // frames still return immediately.
     uint8_t pdu[3 + 517];
     for (;;) {
-        int n = att_read_pdu(conn->fd, pdu, sizeof(pdu), (got == 0) ? timeout_ms : 0);
+        int n = att_read_pdu(conn->fd, pdu, sizeof(pdu), timeout_ms);
         if (n < 0) { *out_len = got; return (got > 0) ? 0 : -1; }
-        if (n == 0) break;                                  // timeout / no more
+        if (n == 0) break;                                  // real timeout / no more
         if ((pdu[0] != ATT_OP_HANDLE_NOTIFY && pdu[0] != ATT_OP_HANDLE_INDICATE) || n < 3)
             continue;                                       // ignore non-notifications
         if (get16(&pdu[1]) != conn->val_handle) continue;   // not our char
