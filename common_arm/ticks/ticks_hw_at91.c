@@ -413,7 +413,23 @@ void ResetTicks(void) {
 void StopTicks(void) {
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS; // TODO StartTicks() did not use TC2, is this code worthless?
+    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS;
+
+    // TODO DXL StartTicks() did not use TC2, is this code worthless?
+    //  In some places, StartCountSspClk() is called after StopTicks(), so it seems necessary to disable timers completely.
+    //  In that case, the role of StopTicks() is not limited to being paired with StartTicks(),
+    //  but is a general release function for all ticks modules.
+    //  ---
+    //  Do we need to provide a StopXXX for each StartXXXX?
+    //  Such as:
+    //    * StartTicks -> StopTicks
+    //    * StartCountSspClk -> StopCountSspClk
+    //    * StartTickCount -> StopTickCount
+    //    * StartCountUS -> StopCountUS
+    //    * StartPrecisionCounter -> StopPrecisionCounter
+    //    * StartLoEdgeCapture -> StopLoEdgeCapture
+    //    * StartTimestamp -> StopTimestamp
+    //  It seems best for everyone(api) to do their own job.
 }
 
 uint32_t GetTicks(void) {
