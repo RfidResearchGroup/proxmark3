@@ -40,6 +40,7 @@
 #ifdef HAVE_BLUEZ
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/rfcomm.h>
+#include "ble_posix.h"
 #endif
 
 #include "comms.h"
@@ -60,6 +61,7 @@ typedef struct {
     term_info tiOld;  // Terminal info before using the port
     term_info tiNew;  // Terminal info during the transaction
     RingBuffer *udpBuffer;
+    void *ble;        // ble_conn_t* when connected via ble: (HAVE_BLUEZ), else NULL
 } serial_port_unix_t_t;
 
 // see pm3_cmd.h
@@ -108,6 +110,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
     bool isTCP = false;
     bool isUDP = false;
     bool isBluetooth = false;
+    bool isBLE = false;
     bool isUnixSocket = false;
     if (strlen(prefix) > 4) {
         isTCP = (memcmp(prefix, "tcp:", 4) == 0);
@@ -115,6 +118,9 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
     }
     if (strlen(prefix) > 3) {
         isBluetooth = (memcmp(prefix, "bt:", 3) == 0);
+    }
+    if (strlen(prefix) > 4) {
+        isBLE = (memcmp(prefix, "ble:", 4) == 0);
     }
     if (strlen(prefix) > 7) {
         isUnixSocket = (memcmp(prefix, "socket:", 7) == 0);
@@ -367,6 +373,34 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
         return INVALID_SERIAL_PORT;
 #endif // HAVE_BLUEZ
     }
+
+    if (isBLE) {
+#ifdef HAVE_BLUEZ
+        free(prefix);
+        // we must use max timeout for the BLE link
+        timeout.tv_usec = UART_NET_CLIENT_RX_TIMEOUT_MS * 1000;
+
+        ble_conn_t *bc = calloc(1, sizeof(ble_conn_t));
+        if (bc == NULL) {
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+        // pcPortName is "ble:<MAC>"
+        if (ble_connect(pcPortName + 4, BLE_SPP_CHR_UUID16, bc) != 0) {
+            free(bc);
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+        sp->ble = bc;
+        sp->fd = bc->fd;      // real fd; receive/send branch on sp->ble
+        g_conn.send_via_ip = PM3_NONE;
+        return sp;
+#else
+        PrintAndLogEx(ERR, "Sorry, this client was built without BLE (bluez) support");
+        free(sp);
+        return INVALID_SERIAL_PORT;
+#endif // HAVE_BLUEZ
+    }
     // The socket for abstract namespace implement.
     // Is local socket buffer, not a TCP or any net connection!
     // so, you can't connect with address like: 127.0.0.1, or any IP
@@ -505,6 +539,15 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
 
 void uart_close(const serial_port sp) {
     serial_port_unix_t_t *spu = (serial_port_unix_t_t *)sp;
+#ifdef HAVE_BLUEZ
+    if (spu->ble) {
+        ble_close((ble_conn_t *)spu->ble);
+        free(spu->ble);
+        spu->ble = NULL;
+        free(sp);
+        return;
+    }
+#endif
     msleep(100);
     tcflush(spu->fd, TCIOFLUSH);
     tcsetattr(spu->fd, TCSANOW, &(spu->tiOld));
@@ -537,6 +580,19 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
     }
     // Reset the output count
     *pszRxLen = 0;
+
+#ifdef HAVE_BLUEZ
+    if (spu->ble) {
+        size_t got = 0;
+        int ms = (int)(timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
+        int r = ble_recv((ble_conn_t *)spu->ble, pbtRx, pszMaxRxLen, &got, ms);
+        *pszRxLen = (uint32_t)got;
+        if (r < 0)
+            return PM3_ENOTTY;
+        return (got > 0) ? PM3_SUCCESS : PM3_ENODATA;
+    }
+#endif
+
     do {
         int res;
         if (spu->udpBuffer != NULL) {
@@ -650,6 +706,12 @@ int uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
     struct timeval tv;
     const serial_port_unix_t_t *spu = (serial_port_unix_t_t *)sp;
 
+#ifdef HAVE_BLUEZ
+    if (spu->ble) {
+        return (ble_send((ble_conn_t *)spu->ble, pbtTx, len) == 0) ? PM3_SUCCESS : PM3_EIO;
+    }
+#endif
+
     while (pos < len) {
         // Reset file descriptor
         FD_ZERO(&rfds);
@@ -683,6 +745,12 @@ int uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
 
 bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
     const serial_port_unix_t_t *spu = (serial_port_unix_t_t *)sp;
+#ifdef HAVE_BLUEZ
+    if (spu->ble) {
+        // no termios baud on a BLE socket; accept silently
+        return true;
+    }
+#endif
     speed_t stPortSpeed;
     switch (uiPortSpeed) {
         case 0:
@@ -789,6 +857,14 @@ uint32_t uart_get_speed(const serial_port sp) {
     struct termios ti;
     uint32_t uiPortSpeed;
     const serial_port_unix_t_t *spu = (serial_port_unix_t_t *)sp;
+
+#ifdef HAVE_BLUEZ
+    if (spu->ble) {
+        // BLE has no termios baud; report the BWM link rate so the client's
+        // timeout math (12000000 / uart_speed) never divides by zero.
+        return 460800;
+    }
+#endif
 
     if (tcgetattr(spu->fd, &ti) == -1)
         return 0;
