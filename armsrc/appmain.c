@@ -22,6 +22,9 @@
 
 #include "sys_apis.h"
 #include "usb_cdc_apis.h"
+#ifdef WITH_BWM_FORWARD
+#include "bwm_uart_at32.h"
+#endif
 #include "proxmark3_arm.h"
 #include "dbprint.h"
 #include "pmflash.h"
@@ -1076,6 +1079,12 @@ static void SendCapabilities(void) {
 #ifdef WITH_FPC_USART
     if (g_reply_via_fpc)
         capabilities.baudrate = g_usart_baudrate;
+#endif
+#ifdef WITH_BWM_FORWARD
+    // BWM link runs at a fixed baud; report it so the client's timeout math
+    // (communication_delay: 12000000 / uart_speed) doesn't divide by zero.
+    if (g_reply_via_fpc)
+        capabilities.baudrate = BWM_UART_BAUD;
 #endif
 
 #ifdef RDV4
@@ -4252,6 +4261,10 @@ void __attribute__((noreturn)) AppMain(void) {
     usb_enable();
 #ifdef WITH_BWM_STATUS
     bwm_detect_and_init();   // probe BWM + apply charge config, off the pre-USB path
+#endif
+
+#ifdef WITH_BWM_FORWARD
+    bwm_uart_init();         // AT32 UART4 <-> BWM app_com link; AFTER usb_enable()
 #endif
 
 #ifdef WITH_BWM_CHARGERKICK

@@ -107,6 +107,12 @@ else
     SRC_FPC =
 endif
 
+ifneq (,$(findstring WITH_BWM_FORWARD,$(APP_CFLAGS)))
+    SRC_BWM = bwm_uart_at32.c bwm_forward.c
+else
+    SRC_BWM =
+endif
+
 ifneq (,$(findstring WITH_HITAG,$(APP_CFLAGS)))
     SRC_HITAG = hitag2_crypto.c hitag_common.c hitag2.c hitagS.c hitagu.c hitag2_crack.c
     APP_CFLAGS += -I../common/hitag2
@@ -163,6 +169,7 @@ THUMBSRC = start.c \
     $(SRC_FLASH) \
     $(SRC_SMARTCARD) \
     $(SRC_FPC) \
+    $(SRC_BWM) \
     $(SRC_HITAG) \
     $(SRC_EM4x50) \
     $(SRC_EM4x70) \
