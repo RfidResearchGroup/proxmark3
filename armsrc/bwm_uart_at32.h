@@ -18,6 +18,8 @@
 
 void bwm_uart_init(void);
 
+void UART4_IRQHandler(void);
+
 int bwm_uart_write(const uint8_t *data, size_t len);
 
 uint16_t bwm_uart_rx_available(void);
