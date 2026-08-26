@@ -208,6 +208,60 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
         }
 
         int sfd;
+
+        // --wait on a tcp: port -> act as a server: bind, listen, accept one client.
+        if (isTCP && g_conn.listen_for_incoming) {
+            int lfd = -1;
+            for (rp = addr; rp != NULL; rp = rp->ai_next) {
+                lfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+                if (lfd == -1) {
+                    continue;
+                }
+                int one = 1;
+                setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+                if (bind(lfd, rp->ai_addr, rp->ai_addrlen) == 0) {
+                    break;  // bound
+                }
+                close(lfd);
+                lfd = -1;
+            }
+
+            freeaddrinfo(addr);
+            free(addrPortStr);
+
+            if (lfd == -1) {
+                PrintAndLogEx(ERR, "error: could not bind for --wait listen");
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+            if (listen(lfd, 1) != 0) {
+                PrintAndLogEx(ERR, "error: listen() failed. errno: %d", errno);
+                close(lfd);
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+
+            // blocking accept; interruptible with Ctrl-C
+            int cfd = accept(lfd, NULL, NULL);
+            close(lfd);
+            if (cfd == -1) {
+                if (slient == false) {
+                    PrintAndLogEx(ERR, "error: accept() failed. errno: %d", errno);
+                }
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+
+            sp->fd = cfd;
+            int one = 1;
+            if (setsockopt(sp->fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one)) != 0) {
+                close(cfd);
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+            return sp;
+        }
+
         for (rp = addr; rp != NULL; rp = rp->ai_next) {
             sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 

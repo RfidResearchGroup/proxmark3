@@ -214,6 +214,63 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
         }
 
         SOCKET hSocket = INVALID_SOCKET;
+
+        // --wait on a tcp: port -> act as a server: bind, listen, accept one client.
+        if (isTCP && g_conn.listen_for_incoming) {
+            SOCKET lsock = INVALID_SOCKET;
+            for (rp = addr; rp != NULL; rp = rp->ai_next) {
+                lsock = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+                if (lsock == INVALID_SOCKET) {
+                    continue;
+                }
+                int one = 1;
+                setsockopt(lsock, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+                if (bind(lsock, rp->ai_addr, (int)rp->ai_addrlen) == 0) {
+                    break;  // bound
+                }
+                closesocket(lsock);
+                lsock = INVALID_SOCKET;
+            }
+
+            freeaddrinfo(addr);
+            free(addrPortStr);
+
+            if (lsock == INVALID_SOCKET) {
+                PrintAndLogEx(ERR, "error: could not bind for --wait listen. error: %u", WSAGetLastError());
+                WSACleanup();
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+            if (listen(lsock, 1) != 0) {
+                PrintAndLogEx(ERR, "error: listen() failed. error: %u", WSAGetLastError());
+                closesocket(lsock);
+                WSACleanup();
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+
+            SOCKET csock = accept(lsock, NULL, NULL);
+            closesocket(lsock);
+            if (csock == INVALID_SOCKET) {
+                if (slient == false) {
+                    PrintAndLogEx(ERR, "error: accept() failed. error: %u", WSAGetLastError());
+                }
+                WSACleanup();
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+
+            sp->hSocket = csock;
+            int one = 1;
+            if (setsockopt(sp->hSocket, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one)) != 0) {
+                closesocket(csock);
+                WSACleanup();
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+            return sp;
+        }
+
         for (rp = addr; rp != NULL; rp = rp->ai_next) {
             hSocket = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 
