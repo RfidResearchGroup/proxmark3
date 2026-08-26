@@ -8131,14 +8131,31 @@ static int CmdHFiClassSAMExtract(const char *Cmd) {
             return res;
         }
 
-        const uint8_t *oid = pacs + 2 + pacs_length;
-        const uint8_t oid_length = oid[1];
-        const uint8_t *oid_data = oid + 2;
-        PrintAndLogEx(SUCCESS, "SIO OID.......... " _GREEN_("%s"), sprint_hex_inrow(oid_data, oid_length));
+        // The a0 element holds 80 (PACS) and optionally 81 (SIO OID) and 82
+        // (media type). An iCLASS SE credential often omits 81, so walk the
+        // nodes rather than assuming all three are present in order.
+        const uint8_t *p = pacs + 2 + pacs_length;
+        const uint8_t *end = d + 6 + d[5];
+        if (end > d + resp.length) {
+            end = d + resp.length;
+        }
 
-        const uint8_t *mediaType = oid + 2 + oid_length;
-        const uint8_t mediaType_data = mediaType[2];
-        PrintAndLogEx(SUCCESS, "SIO Media Type... " _GREEN_("%s"), getSioMediaTypeInfo(mediaType_data));
+        while (p + 1 < end) {
+
+            uint8_t tag = p[0];
+            uint8_t len = p[1];
+            if (p + 2 + len > end) {
+                break;
+            }
+
+            if (tag == 0x81) {
+                PrintAndLogEx(SUCCESS, "SIO OID.......... " _GREEN_("%s"), sprint_hex_inrow(p + 2, len));
+            } else if ((tag == 0x82) && (len >= 1)) {
+                PrintAndLogEx(SUCCESS, "SIO Media Type... " _GREEN_("%s"), getSioMediaTypeInfo(p[2]));
+            }
+
+            p += 2 + len;
+        }
     } else if (break_nrmac && d[0] == 0x05) {
         PrintAndLogEx(SUCCESS, "Nr-MAC........... " _GREEN_("%s"), sprint_hex_inrow(d + 1, 8));
         if (verbose) {

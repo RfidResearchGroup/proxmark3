@@ -94,15 +94,15 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
         sam_rx_buf, &sam_rx_len
     );
 
-    if (sam_rx_buf[1] == 0x61) { // commands to be relayed to card starts with 0x61
+    if (sam_relay_pending(sam_rx_buf, sam_rx_len)) { // commands to be relayed to card starts with 0x61
         switch_clock_to_countsspclk();
         // tag <-> SAM exchange starts here
 
-        while (sam_rx_buf[1] == 0x61) {
+        while (sam_relay_pending(sam_rx_buf, sam_rx_len)) {
             uint32_t start_time = GetCountSspClk();
             uint32_t eof_time = start_time + DELAY_ICLASS_VICC_TO_VCD_READER;
 
-            nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf);
+            nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf, sam_rx_len);
 
             bool is_cmd_check = ((nfc_tx_buf[0] & 0x0F) == ICLASS_CMD_CHECK);
 
@@ -184,7 +184,7 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
 
             // last SAM->TAG
             // c1 61 c1 00 00 a1 02 >>82<< 00 90 00
-            if (sam_rx_buf[7] == 0x82) {
+            if (sam_relay_complete(sam_rx_buf, sam_rx_len)) {
                 // tag <-> SAM exchange ends here
                 break;
             }
@@ -344,9 +344,9 @@ static int sam_send_request_emulated(const uint8_t *const request, const uint8_t
         Dbprintf("Emulate: initial SAM resp[1]=%02x rx_len=%u", sam_rx_buf[1], sam_rx_len);
     }
 
-    if (sam_rx_buf[1] == 0x61) {
-        while (sam_rx_buf[1] == 0x61) {
-            nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf);
+    if (sam_relay_pending(sam_rx_buf, sam_rx_len)) {
+        while (sam_relay_pending(sam_rx_buf, sam_rx_len)) {
+            nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf, sam_rx_len);
 
             if (g_dbglevel >= DBG_INFO) {
                 Dbprintf("Emulate: SAM NFC cmd [%u]: %02x %02x ...", nfc_tx_len,
@@ -473,7 +473,7 @@ static int sam_send_request_emulated(const uint8_t *const request, const uint8_t
                 Dbprintf("Emulate: SAM rx[1]=%02x rx[7]=%02x", sam_rx_buf[1], sam_rx_buf[7]);
             }
 
-            if (sam_rx_buf[7] == 0x82) {
+            if (sam_relay_complete(sam_rx_buf, sam_rx_len)) {
                 break;
             }
         }

@@ -105,6 +105,60 @@ uint16_t sam_bd_offset(const uint8_t *response, uint16_t response_len) {
  * that offset, clamped to what actually arrived, or 0 if the frame is too short
  * to hold anything.
  */
+// How many bytes of routing tail this SAM puts in front of the ASN.1 payload.
+// A Grace SAM uses 6 where SAM_RX_ASN1_PREFIX_LENGTH says 5, so pick the one
+// whose node length accounts for the frame exactly: tag, length, contents,
+// SW1 SW2.
+uint16_t sam_rx_prefix_len(const uint8_t *rx, uint16_t rx_len) {
+
+    uint16_t fallback = 0;
+
+    for (uint16_t ofs = SAM_RX_ASN1_PREFIX_LENGTH;
+            ofs <= (uint16_t)(SAM_RX_ASN1_PREFIX_LENGTH + 1);
+            ofs++) {
+
+        if ((uint16_t)(ofs + 1) >= rx_len) {
+            break;
+        }
+        if ((rx[ofs] != 0xa1) && (rx[ofs] != 0xbd)) {
+            continue;
+        }
+        if ((uint16_t)(ofs + 2 + rx[ofs + 1] + 2) == rx_len) {
+            return ofs;
+        }
+        if (fallback == 0) {
+            fallback = ofs;
+        }
+    }
+
+    return (fallback != 0) ? fallback : (uint16_t)SAM_RX_ASN1_PREFIX_LENGTH;
+}
+
+// The SAM asks for a card exchange with an a1 node holding an 80 <len> APDU.
+// Older SAMs flagged it with 0x61 in the routing tail, which is where the
+// fixed sam_rx_buf[1] test came from - a Grace SAM puts 0x14 there instead, so
+// key off the ASN.1 node, which both generations agree on.
+bool sam_relay_pending(const uint8_t *rx, uint16_t rx_len) {
+
+    uint16_t p = sam_rx_prefix_len(rx, rx_len);
+    if ((uint16_t)(p + 4) >= rx_len) {
+        return false;
+    }
+    return ((rx[p] == 0xa1) && (rx[p + 2] == 0xa1) && (rx[p + 4] == 0x80));
+}
+
+// The tag <-> SAM relay ends on an a1 02 82 00 node. The routing tail is 5 or
+// 6 bytes depending on the SAM - the same reason sam_bd_offset() searches - so
+// anchor on the node rather than indexing a fixed offset 7.
+bool sam_relay_complete(const uint8_t *rx, uint16_t rx_len) {
+
+    uint16_t ofs = sam_rx_prefix_len(rx, rx_len);
+    if ((uint16_t)(ofs + 2) >= rx_len) {
+        return false;
+    }
+    return ((rx[ofs] == 0xa1) && (rx[ofs + 2] == 0x82));
+}
+
 uint16_t sam_response_payload(const uint8_t *rx, uint16_t rx_len, uint16_t *payload_len) {
 
     uint16_t ofs = sam_bd_offset(rx, rx_len);
@@ -609,7 +663,7 @@ int sam_relay_iso15_loop(
 
     // Nothing to relay - the SAM answered directly (final response already in
     // sam_rx_buf). This is the normal case for SAM-internal commands.
-    if (sam_rx_buf[1] != 0x61) {
+    if (sam_relay_pending(sam_rx_buf, *sam_rx_len) == false) {
         return PM3_SUCCESS;
     }
 
@@ -624,11 +678,11 @@ int sam_relay_iso15_loop(
     switch_clock_to_countsspclk();
 
     // tag <-> SAM exchange starts here
-    while (sam_rx_buf[1] == 0x61) {
+    while (sam_relay_pending(sam_rx_buf, *sam_rx_len)) {
         uint32_t start_time = GetCountSspClk();
         uint32_t eof_time = start_time + DELAY_ICLASS_VICC_TO_VCD_READER;
 
-        nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf);
+        nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf, *sam_rx_len);
 
         // PAGESEL (0x84) substitution for 2K PicoPass cards. A 2K card has a
         // single book/page and does not answer PAGESEL, but the encode-side SAM
@@ -720,7 +774,7 @@ int sam_relay_iso15_loop(
 
         // last SAM->TAG
         // c1 61 c1 00 00 a1 02 >>82<< 00 90 00
-        if (sam_rx_buf[7] == 0x82) {
+        if (sam_relay_complete(sam_rx_buf, *sam_rx_len)) {
             // tag <-> SAM exchange ends here
             break;
         }
@@ -738,7 +792,7 @@ int sam_relay_iso15_loop(
     //       interpreter command). That response is ALREADY in sam_rx_buf -
     //       sending the ack now would overwrite it with a bare 90 00.
     // So only ack in case (a).
-    if (sam_rx_buf[1] == 0x61) {
+    if (sam_relay_pending(sam_rx_buf, *sam_rx_len)) {
         static const uint8_t hfack[] = {
             0xbd, 0x04, 0xa0, 0x02, 0x82, 0x00
         };
@@ -763,7 +817,7 @@ int sam_relay_iso15_loop(
     return PM3_SUCCESS;
 }
 
-uint16_t sam_copy_payload_sam2nfc(uint8_t *nfc_tx_buf, uint8_t *sam_rx_buf) {
+uint16_t sam_copy_payload_sam2nfc(uint8_t *nfc_tx_buf, uint8_t *sam_rx_buf, uint16_t sam_rx_len) {
     // SAM resp:
     // c1 61 c1 00 00
     //  a1 10 <- nfc command
@@ -779,8 +833,18 @@ uint16_t sam_copy_payload_sam2nfc(uint8_t *nfc_tx_buf, uint8_t *sam_rx_buf) {
     // NFC req:
     // 0C  05  DE  64
 
-    // copy data out of c1->a1>->a1->80 node
-    uint16_t nfc_tx_len = (uint8_t) * (sam_rx_buf + 10);
-    memcpy(nfc_tx_buf, sam_rx_buf + 11, nfc_tx_len);
+    // copy data out of the a1->a1->80 node, which sits after a routing tail
+    // that is 5 bytes on some SAMs and 6 on others
+    uint16_t p = sam_rx_prefix_len(sam_rx_buf, sam_rx_len);
+    if ((uint16_t)(p + 5) >= sam_rx_len) {
+        return 0;
+    }
+
+    uint16_t nfc_tx_len = sam_rx_buf[p + 5];
+    if ((uint16_t)(p + 6 + nfc_tx_len) > sam_rx_len) {
+        return 0;
+    }
+
+    memcpy(nfc_tx_buf, sam_rx_buf + p + 6, nfc_tx_len);
     return nfc_tx_len;
 }

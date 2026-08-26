@@ -177,23 +177,34 @@ static int sam_send_request_iso14a(const uint8_t *const request, const uint8_t r
         sam_rx_buf, &sam_rx_len
     );
 
-    if (sam_rx_buf[1] == 0x61) { // commands to be relayed to card starts with 0x61
+    if (sam_relay_pending(sam_rx_buf, sam_rx_len)) { // commands to be relayed to card starts with 0x61
         // tag <-> SAM exchange starts here
-        while (sam_rx_buf[1] == 0x61) {
+        while (sam_relay_pending(sam_rx_buf, sam_rx_len)) {
             switch_clock_to_countsspclk();
-            nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf);
+            nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf, sam_rx_len);
 
-            nfc_rx_len = iso14_apdu(nfc_tx_buf, nfc_tx_len, false, nfc_rx_buf, ISO7816_MAX_FRAME, NULL);
-            // iceman:  should check nfc_rx_len ,  if negative something went wrong...
+            int nfc_res = iso14_apdu(nfc_tx_buf, nfc_tx_len, false, nfc_rx_buf, ISO7816_MAX_FRAME, NULL);
 
             switch_clock_to_ticks();
+
+            // A card that went away returns negative, which wrapped through
+            // uint16_t and was relayed on as a 253 byte answer.
+            if (nfc_res < 2) {
+                if (g_dbglevel >= DBG_ERROR) {
+                    Dbprintf("SEOS relay: card exchange failed (%d)", nfc_res);
+                }
+                res = PM3_ECARDEXCHANGE;
+                goto out;
+            }
+
+            nfc_rx_len = (uint16_t)nfc_res;
             sam_tx_len = sam_copy_payload_nfc2sam(sam_tx_buf, nfc_rx_buf, nfc_rx_len - 2);
 
             sam_send_payload(0x14, 0x0a, 0x14, sam_tx_buf, &sam_tx_len, sam_rx_buf, &sam_rx_len);
 
             // last SAM->TAG
             // c1 61 c1 00 00 a1 02 >>82<< 00 90 00
-            if (sam_rx_buf[7] == 0x82) {
+            if (sam_relay_complete(sam_rx_buf, sam_rx_len)) {
                 // tag <-> SAM exchange ends here
                 break;
             }
