@@ -6,6 +6,8 @@
 #include "at32f435_437_dma.h"
 #include "fpga_gw_jtag.h"
 
+#define FPGA_BITSTREAM_FILE_SIZE_MAX  (217 * 1024) // 217KB, the max size of bitstream file for GW1N-4(UV4) of PM5
+
 // The DMA memory address of AT32 does not self increment,
 // and there are no useful registers to know the initial set count value,
 // so we can only use one variable to store the set count value.
