@@ -36,6 +36,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <errno.h>
+#include <pthread.h>
 
 #ifdef HAVE_BLUEZ
 #include <bluetooth/bluetooth.h>
@@ -73,6 +74,36 @@ struct timeval timeout = {
 static uint32_t newtimeout_value = 0;
 static bool newtimeout_pending = false;
 static uint8_t rx_empty_counter = 0;
+
+// Self pipe used to interrupt the select() in uart_receive(). Created once, on
+// first use, and never closed - two descriptors for the life of the process,
+// and both ends have to stay valid for whichever thread touches them.
+static int wakeup_pipe[2] = { -1, -1 };
+static pthread_once_t wakeup_once = PTHREAD_ONCE_INIT;
+
+static void uart_wakeup_create(void) {
+    if (pipe(wakeup_pipe) != 0) {
+        wakeup_pipe[0] = -1;
+        wakeup_pipe[1] = -1;
+        return;
+    }
+    // Neither end may ever block: a full pipe already means a wakeup is
+    // pending, which is all the reader needs to know.
+    fcntl(wakeup_pipe[0], F_SETFL, O_NONBLOCK);
+    fcntl(wakeup_pipe[1], F_SETFL, O_NONBLOCK);
+}
+
+void uart_wakeup(void) {
+    pthread_once(&wakeup_once, uart_wakeup_create);
+
+    if (wakeup_pipe[1] < 0) {
+        return;
+    }
+
+    const uint8_t b = 1;
+    ssize_t res = write(wakeup_pipe[1], &b, 1);
+    (void)res;   // EAGAIN just means a wakeup is already queued
+}
 
 int uart_reconfigure_timeouts(uint32_t value) {
     newtimeout_value = value;
@@ -616,18 +647,22 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
         // Reset file descriptor
         FD_ZERO(&rfds);
         FD_SET(spu->fd, &rfds);
-        tv = timeout;
-        if ((*pszRxLen == 0) &&
-                (spu->udpBuffer == NULL) &&
-                (timeout.tv_sec == 0) &&
-                (timeout.tv_usec <= UART_FPC_CLIENT_RX_TIMEOUT_MS * 1000)) {
-            // Nothing of a frame in hand yet - see the header note. Local links
-            // only: a network link keeps its own longer timeout, where polling
-            // this fast would cost more than it saves.
-            tv.tv_sec  = 0;
-            tv.tv_usec = UART_USB_CLIENT_RX_IDLE_TIMEOUT_MS * 1000;
+        int maxfd = spu->fd;
+
+        // Only watch the wakeup while no part of a frame is in hand. Cutting a
+        // frame short would hand the caller a partial packet, and leaving the
+        // pipe readable while mid frame would spin.
+        pthread_once(&wakeup_once, uart_wakeup_create);
+        bool watch_wakeup = ((*pszRxLen == 0) && (wakeup_pipe[0] >= 0));
+        if (watch_wakeup) {
+            FD_SET(wakeup_pipe[0], &rfds);
+            if (wakeup_pipe[0] > maxfd) {
+                maxfd = wakeup_pipe[0];
+            }
         }
-        res = select(spu->fd + 1, &rfds, NULL, NULL, &tv);
+
+        tv = timeout;
+        res = select(maxfd + 1, &rfds, NULL, NULL, &tv);
 
         // Read error
         if (res < 0) {
@@ -642,6 +677,19 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
             } else {
                 // We received some data, but nothing more is available
                 return PM3_SUCCESS;
+            }
+        }
+
+        if (watch_wakeup && FD_ISSET(wakeup_pipe[0], &rfds)) {
+
+            uint8_t drain[64];
+            while (read(wakeup_pipe[0], drain, sizeof(drain)) > 0) { };
+
+            // Nothing on the wire, only a send waiting. Return before the
+            // FIONREAD below, which counts empty reads towards declaring the
+            // device gone.
+            if (FD_ISSET(spu->fd, &rfds) == false) {
+                return PM3_ENODATA;
             }
         }
 

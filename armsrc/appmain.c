@@ -1116,7 +1116,19 @@ static void SendCapabilities(void) {
 #ifdef WITH_SMARTCARD
     capabilities.compiled_with_smartcard = true;
     uint8_t maj, min;
-    capabilities.hw_available_smartcard = I2C_get_version(&maj, &min) == PM3_SUCCESS;
+
+    // The module may still be finishing a card exchange from a previous
+    // session when this runs, and a single missed answer used to report the
+    // hardware as absent for the whole of the next one - every smartcard
+    // command then said it was not available in this mode.
+    capabilities.hw_available_smartcard = false;
+    for (uint8_t i = 0; i < 3; i++) {
+        if (I2C_get_version(&maj, &min) == PM3_SUCCESS) {
+            capabilities.hw_available_smartcard = true;
+            break;
+        }
+        SpinDelay(50);
+    }
 #else
     capabilities.compiled_with_smartcard = false;
     capabilities.hw_available_smartcard = false;

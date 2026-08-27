@@ -1151,13 +1151,6 @@ typedef struct {
 // uart_win32.c & uart_posix.c
 #define UART_FPC_CLIENT_RX_TIMEOUT_MS 200
 #define UART_USB_CLIENT_RX_TIMEOUT_MS 20
-// Idle poll, used only while no part of a frame is in hand. The comm thread
-// transmits a queued command only after its receive phase returns, so a long
-// idle wait here delays every single command by up to one full timeout.
-// Returning "no data" promptly costs nothing; once part of a frame IS in hand
-// the full timeout above applies, so a frame split across USB frames is never
-// truncated.
-#define UART_USB_CLIENT_RX_IDLE_TIMEOUT_MS 1
 #define UART_NET_CLIENT_RX_TIMEOUT_MS 500
 #define UART_TCP_LOCAL_CLIENT_RX_TIMEOUT_MS 40
 #define UART_UDP_LOCAL_CLIENT_RX_TIMEOUT_MS 20

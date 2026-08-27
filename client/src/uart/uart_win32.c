@@ -51,6 +51,10 @@ uint32_t newtimeout_value = 0;
 bool newtimeout_pending = false;
 uint8_t rx_empty_counter = 0;
 
+// Not implemented here: the win32 receive path would need an event object in
+// its wait instead of a pipe. Leaving it a no-op keeps that platform as it was.
+void uart_wakeup(void) { }
+
 int uart_reconfigure_timeouts(uint32_t value) {
     newtimeout_value = value;
     newtimeout_pending = true;

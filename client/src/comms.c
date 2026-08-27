@@ -138,6 +138,10 @@ void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, c
 
     pthread_mutex_unlock(&txBufferMutex);
 
+    // and interrupt its receive, which it would otherwise sit out in full
+    // before looking at the send buffer at all
+    uart_wakeup();
+
 //__atomic_test_and_set(&txcmd_pending, __ATOMIC_SEQ_CST);
 }
 
@@ -201,6 +205,10 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
     pthread_cond_signal(&txBufferSig);
 
     pthread_mutex_unlock(&txBufferMutex);
+
+    // and interrupt its receive, which it would otherwise sit out in full
+    // before looking at the send buffer at all
+    uart_wakeup();
 
 //__atomic_test_and_set(&txcmd_pending, __ATOMIC_SEQ_CST);
 }
