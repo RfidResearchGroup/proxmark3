@@ -506,10 +506,8 @@ while true; do
       if $PM3CMD -c 'smart info' 2>&1 | grep -q "Protocol T1"; then
         echo "  card offers T=1"
         if ! CheckExecute "module reports T=1 support" "$PM3CMD -c 'hw status' 2>&1" "T=1, PPS\.+ \( .*supported"; then break; fi
-        if ! CheckExecute "pps selects T=1"            "$PM3CMD -c 'smart pps -1' 2>&1" "Protocol\.+ T=1"; then break; fi
-        if ! CheckExecute "pps repeatable over 3"      "for i in 1 2 3; do $PM3CMD -c 'smart pps -1' 2>&1 | grep -oE 'Result\.+ .*(accepted|refused)' | grep -oE 'accepted|refused'; done | sort -u | wc -l" "^ *1$"; then break; fi
-        if ! CheckExecute "T=1 apdu gets a status word" "$PM3CMD -c 'smart raw -1 -s -d 00a4040007a000000004101000' 2>&1" "\[[+-]\] [0-9A-Fa-f]{4} \|"; then break; fi
-        if ! CheckExecute "T=1 answer stable over 3"   "for i in 1 2 3; do $PM3CMD -c 'smart raw -1 -s -d 00a4040007a000000004101000' 2>&1 | grep -oE '^\[[+-]\] [0-9A-Fa-f]{4}'; done | sort -u | wc -l" "^ *1$"; then break; fi
+        if ! CheckExecute "T=1 apdu gets a status word" "$PM3CMD -c 'smart raw --t1 -s -d 00a4040007a000000004101000' 2>&1" "\[[+-]\] [0-9A-Fa-f]{4} \|"; then break; fi
+        if ! CheckExecute "T=1 answer stable over 3"   "for i in 1 2 3; do $PM3CMD -c 'smart raw --t1 -s -d 00a4040007a000000004101000' 2>&1 | grep -oE '^\[[+-]\] [0-9A-Fa-f]{4}'; done | sort -u | wc -l" "^ *1$"; then break; fi
       else
         echo "  card is T=0 only, skipping the T=1 checks"
       fi

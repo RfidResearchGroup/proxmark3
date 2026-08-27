@@ -760,6 +760,7 @@ Check column "offline" for their availability.
 |`hf mfu incr            `|N       |`Increments Ev1/NTAG counter`
 |`hf mfu info            `|N       |`Tag information`
 |`hf mfu ndefread        `|N       |`Prints NDEF records from card`
+|`hf mfu ndefwrite       `|N       |`Write NDEF records to card`
 |`hf mfu rdbl            `|N       |`Read block`
 |`hf mfu restore         `|N       |`Restore a dump file onto a tag`
 |`hf mfu tamper          `|N       |`NTAG 213TT - Configure the tamper feature`
@@ -1024,6 +1025,10 @@ Check column "offline" for their availability.
 |`hw setmux              `|N       |`Set the ADC mux to a specific value`
 |`hw standalone          `|N       |`Start installed standalone mode on device`
 |`hw tia                 `|N       |`Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider`
+|`hw bwmsetcap           `|N       |`Set BWM fuel-gauge design capacity (PM5, run once after battery change)`
+|`hw bwmcharge           `|N       |`Enable/disable BWM battery charging (PM5, one-shot)`
+|`hw bwmautooff          `|N       |`Toggle auto power-off on USB unplug (PM5, BWM)`
+|`hw bwmwifi             `|N       |`Bring up BWM WiFi (STA + TCP server) for a tcp: connection (PM5)`
 |`hw tune                `|N       |`Measure tuning of device antenna`
 |`hw decay               `|N       |`Measure HF antenna decay after field-off`
 
@@ -1639,6 +1644,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`nfc help               `|Y       |`This help`
 |`nfc decode             `|Y       |`Decode NDEF records`
+|`nfc encode             `|Y       |`Encode NDEF records`
 
 
 ### nfc type1
@@ -1658,6 +1664,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`nfc type2 read         `|N       |`read NFC Forum Tag Type 2`
+|`nfc type2 write        `|N       |`write NFC Forum Tag Type 2`
 |`nfc type2 help         `|Y       |`This help`
 
 
@@ -1739,6 +1746,7 @@ Check column "offline" for their availability.
 |`smart brute            `|N       |`Bruteforce SFI`
 |`smart info             `|N       |`Tag information`
 |`smart pcsc             `|Y       |`Turn pm3 into pcsc reader and relay to host OS via vpcd`
+|`smart pps              `|N       |`Run an ISO 7816-3 PPS exchange`
 |`smart reader           `|N       |`Act like an IS07816 reader`
 |`smart raw              `|N       |`Send raw hex data to tag`
 |`smart upgrade          `|Y       |`Upgrade sim module firmware`

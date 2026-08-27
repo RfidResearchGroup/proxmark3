@@ -996,9 +996,11 @@
                 "-h, --help This help",
                 "-k, --keep Keep field ON for next command",
                 "-a, --apdu Show APDU requests and responses",
-                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv challenge [-hkaw]"
+            "usage": "emv challenge [-hkaw] [--t0] [--t1]"
         },
         "emv exec": {
             "command": "emv exec",
@@ -1020,9 +1022,11 @@
                 "-c, --qvsdccda Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)",
                 "-x, --vsdc Transaction type - VSDC. For test only. Not a standard behavior",
                 "-g, --acgpo VISA. generate AC from GPO",
-                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv exec [-hsatjcxgw] [--force] By default: [--qvsdc]"
+            "usage": "emv exec [-hsatjcxgw] [--force] By default: [--qvsdc] [--t0] [--t1]"
         },
         "emv genac": {
             "command": "emv genac",
@@ -1044,9 +1048,11 @@
                 "-a, --apdu Show APDU requests and responses",
                 "-t, --tlv TLV decode results of selected applets",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
-                "<hex> CDOLdata/CDOL"
+                "<hex> CDOLdata/CDOL",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv genac [-hkcpmatw] [-d <aac|tc|arqc>] <hex> [<hex>]..."
+            "usage": "emv genac [-hkcpmatw] [-d <aac|tc|arqc>] <hex> [<hex>]... [--t0] [--t1]"
         },
         "emv gpo": {
             "command": "emv gpo",
@@ -1065,9 +1071,11 @@
                 "-a, --apdu Show APDU requests and responses",
                 "-t, --tlv TLV decode results of selected applets",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
-                "<hex> PDOLdata/PDOL"
+                "<hex> PDOLdata/PDOL",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv gpo [-hkpmatw] [<hex>]..."
+            "usage": "emv gpo [-hkpmatw] [<hex>]... [--t0] [--t1]"
         },
         "emv help": {
             "command": "emv help",
@@ -1107,9 +1115,11 @@
                 "-a, --apdu Show APDU requests and responses",
                 "-t, --tlv TLV decode results of selected applets",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
-                "<hex> DDOLdata/DDOL"
+                "<hex> DDOLdata/DDOL",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv intauth [-hkpmatw] <hex> [<hex>]..."
+            "usage": "emv intauth [-hkpmatw] <hex> [<hex>]... [--t0] [--t1]"
         },
         "emv pse": {
             "command": "emv pse",
@@ -1127,9 +1137,11 @@
                 "-2, --ppse PPSE (2PAY.SYS.DDF01) mode (def)",
                 "-a, --apdu Show APDU requests and responses",
                 "-t, --tlv TLV decode results of selected applets",
-                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv pse [-hsk12atw]"
+            "usage": "emv pse [-hsk12atw] [--t0] [--t1]"
         },
         "emv reader": {
             "command": "emv reader",
@@ -1137,6 +1149,8 @@
             "notes": [
                 "emv reader",
                 "emv reader -v",
+                "emv reader -w -> contact interface",
+                "emv reader -w --t1 -> contact interface, protocol T=1",
                 "emv reader -@ -> Continuous mode"
             ],
             "offline": false,
@@ -1144,9 +1158,11 @@
                 "-h, --help This help",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
                 "-v, --verbose Verbose output",
-                "-@ continuous reader mode"
+                "-@ continuous reader mode",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv reader [-hwv@]"
+            "usage": "emv reader [-hwv@] [--t0] [--t1]"
         },
         "emv readrec": {
             "command": "emv readrec",
@@ -1162,9 +1178,11 @@
                 "-a, --apdu Show APDU requests and responses",
                 "-t, --tlv TLV decode results of selected applets",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
-                "<hex> <SFI 1 byte><SFIrecord 1 byte"
+                "<hex> <SFI 1 byte><SFIrecord 1 byte",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv readrec [-hkatw] <hex> [<hex>]..."
+            "usage": "emv readrec [-hkatw] <hex> [<hex>]... [--t0] [--t1]"
         },
         "emv roca": {
             "command": "emv roca",
@@ -1178,9 +1196,11 @@
                 "-h, --help This help",
                 "--test Perform self tests",
                 "-a, --apdu Show APDU requests and responses",
-                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv roca [-haw] [--test]"
+            "usage": "emv roca [-haw] [--test] [--t0] [--t1]"
         },
         "emv scan": {
             "command": "emv scan",
@@ -1203,9 +1223,11 @@
                 "-g, --acgpo VISA. generate AC from GPO",
                 "-m, --merge Merge output file with card's data. (warning: the file may be corrupted!)",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
-                "<fn> JSON output file name"
+                "<fn> JSON output file name",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv scan [-hatejcxgmw] By default: [--qvsdc] <fn>"
+            "usage": "emv scan [-hatejcxgmw] By default: [--qvsdc] <fn> [--t0] [--t1]"
         },
         "emv search": {
             "command": "emv search",
@@ -1221,9 +1243,11 @@
                 "-k, --keep Keep field ON for next command",
                 "-a, --apdu Show APDU requests and responses",
                 "-t, --tlv TLV decode results of selected applets",
-                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv search [-hskatw]"
+            "usage": "emv search [-hskatw] [--t0] [--t1]"
         },
         "emv select": {
             "command": "emv select",
@@ -1240,9 +1264,11 @@
                 "-a, --apdu Show APDU requests and responses",
                 "-t, --tlv TLV decode results",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
-                "<hex> Applet AID"
+                "<hex> Applet AID",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv select [-hskatw] <hex>"
+            "usage": "emv select [-hskatw] <hex> [--t0] [--t1]"
         },
         "emv smart2nfc": {
             "command": "emv smart2nfc",
@@ -3052,9 +3078,10 @@
                 "--no-auth read public services",
                 "-r, --retry <dec> number of retries",
                 "--idm <hex> use custom IDm",
-                "-f, --file <fn> Specify a filename for JSON dump file"
+                "-f, --file <fn> Specify a filename for JSON dump file",
+                "--no-ic-optimizations attempt all commands even if the IC is known not to support them"
             ],
-            "usage": "hf felica dump [-h] [--no-auth] [-r <dec>] [--idm <hex>] [-f <fn>]"
+            "usage": "hf felica dump [-h] [--no-auth] [-r <dec>] [--idm <hex>] [-f <fn>] [--no-ic-optimizations]"
         },
         "hf felica help": {
             "command": "hf felica help",
@@ -3081,13 +3108,17 @@
             "command": "hf felica info",
             "description": "Reader for FeliCa based tags",
             "notes": [
-                "hf felica info"
+                "hf felica info",
+                "hf felica info -v -> show authentication trace",
+                "hf felica info --no-ic-optimizations -> probe all commands, ignoring known IC support"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-v, --verbose verbose output (authentication trace)",
+                "--no-ic-optimizations attempt all commands even if the IC is known not to support them"
             ],
-            "usage": "hf felica info [-h]"
+            "usage": "hf felica info [-hv] [--no-ic-optimizations]"
         },
         "hf felica liteauth": {
             "command": "hf felica liteauth",
@@ -3102,9 +3133,9 @@
             "options": [
                 "-h, --help This help",
                 "--key <hex> set card key, 16 bytes",
-                "-c, <hex> set random challenge, 16 bytes",
+                "-c <hex> set random challenge, 16 bytes",
                 "--idm <hex> set custom IDm",
-                "-k, keep signal field ON after receive"
+                "-k keep signal field ON after receive"
             ],
             "usage": "hf felica liteauth [-hk] [--key <hex>] [-c <hex>] [--idm <hex>]"
         },
@@ -9399,6 +9430,35 @@
             ],
             "usage": "hf mfu ndefread [-hlv] [-k Replace default key for NDEF] [-f <fn>] [--schann]"
         },
+        "hf mfu ndefwrite": {
+            "command": "hf mfu ndefwrite",
+            "description": "Write NFC Data Exchange Format (NDEF) records to a MIFARE Ultralight / NTAG tag. The tag must already be NDEF formatted, ie carry a Capability Container in block 3. Combine several of --uri, --text and --aar to build a multi record message, records are added in that order. Alternatively supply raw NDEF bytes with -d or -f, those get wrapped in a TLV container automatically when they are not already. Use `nfc encode` to build such raw bytes offline. Note: the tag is re-selected and re-authenticated for every block written, so a large message takes a while.",
+            "notes": [
+                "hf mfu ndefwrite --uri https://proxmark.com",
+                "hf mfu ndefwrite --uri tel:+123456789",
+                "hf mfu ndefwrite --text \"hello world\"",
+                "hf mfu ndefwrite --aar com.example.app",
+                "hf mfu ndefwrite --uri https://proxmark.com --aar com.example.app",
+                "hf mfu ndefwrite --uri https://proxmark.com -k ffffffff",
+                "hf mfu ndefwrite -d 0311D1010D550270726F786D61726B2E636F6DFE",
+                "hf mfu ndefwrite -f myfilename"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --key <hex> Authentication key (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)",
+                "-l Swap entered key endianness",
+                "--uri <str> URI record. URL, tel:, mailto:, ...",
+                "--text <str> Text record",
+                "--lang <str> language code for the text record (default: en)",
+                "--aar <str> Android Application Record, ie an app package name",
+                "-d, --data <hex> Raw NDEF bytes to write",
+                "-f, --file <fn> Raw NDEF file to write",
+                "-v, --verbose Verbose output",
+                "--schann use secure channel. Must have key"
+            ],
+            "usage": "hf mfu ndefwrite [-hlv] [-k <hex>] [--uri <str>] [--text <str>] [--lang <str>] [--aar <str>] [-d <hex>] [-f <fn>] [--schann]"
+        },
         "hf mfu otptear": {
             "command": "hf mfu otptear",
             "description": "Tear-off test against OTP block",
@@ -10764,6 +10824,66 @@
             ],
             "usage": "hw break [-h]"
         },
+        "hw bwmautooff": {
+            "command": "hw bwmautooff",
+            "description": "Toggle automatic power-off when the PM5 is unplugged from USB (BWM only). Default is on. When on, the board powers itself down ~10s after USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery. Button power-on is unaffected. Disable for standalone/BLE use on battery. Runtime only: resets to on at each boot.",
+            "notes": [
+                "hw bwmautooff --off -> disable auto power-off",
+                "hw bwmautooff --on -> re-enable auto power-off"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--on enable auto power-off (default)",
+                "--off disable auto power-off"
+            ],
+            "usage": "hw bwmautooff [-h] [--on] [--off]"
+        },
+        "hw bwmcharge": {
+            "command": "hw bwmcharge",
+            "description": "Enable or disable BWM battery charging by clearing/setting the AW32001E charge-enable bit (CEB, REG01[3]). PM5 only. One-shot: the charger watchdog reverts this after ~160 s unless serviced, so charging may stop on its own. Use to nudge a top-up.",
+            "notes": [
+                "hw bwmcharge -> enable charging",
+                "hw bwmcharge --off -> disable charging"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--off disable charging (default is enable)"
+            ],
+            "usage": "hw bwmcharge [-h] [--off]"
+        },
+        "hw bwmsetcap": {
+            "command": "hw bwmsetcap",
+            "description": "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell. Run ONCE after fitting or replacing the battery. This triggers a gauge config-update; do not run it repeatedly, as that disrupts the Impedance Track learning cycle. PM5 only.",
+            "notes": [
+                "hw bwmsetcap -> set design capacity to default 500 mAh",
+                "hw bwmsetcap --cap 500 -> set design capacity to 500 mAh"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--cap <mAh> design capacity in mAh (default 500)"
+            ],
+            "usage": "hw bwmsetcap [-h] [--cap <mAh>]"
+        },
+        "hw bwmwifi": {
+            "command": "hw bwmwifi",
+            "description": "Bring up the BWM in STA + TCP-server mode: join a WiFi network and start a TCP server so the client can connect over WiFi. PM5 only.",
+            "notes": [
+                "hw bwmwifi --ssid Home --pwd secret -> port 7777",
+                "hw bwmwifi --ssid Home --pwd secret --port 9000"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--ssid <ssid> WiFi SSID to join",
+                "--pwd <pwd> WiFi password (omit for open network)",
+                "--port <dec> TCP server listen port (default 7777)",
+                "--hostname <name> DHCP hostname (default Proxmark5)"
+            ],
+            "usage": "hw bwmwifi [-h] --ssid <ssid> [--pwd <pwd>] [--port <dec>] [--hostname <name>]"
+        },
         "hw connect": {
             "command": "hw connect",
             "description": "Connects to a Proxmark3 device via specified serial port. Baudrate here is only for physical UART or UART-BT, NOT for USB-CDC or blue shark add-on",
@@ -10898,13 +11018,15 @@
             "command": "hw qc_pm5",
             "description": "QC Test for the PM5",
             "notes": [
-                "hf qcpm5"
+                "hw qc_pm5 -> run QC test with default 20 second timeout",
+                "hw qc_pm5 -t 3 -> run QC test with a 3 second timeout"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-t, --timeout <s> test sequence timeout in seconds (default 20)"
             ],
-            "usage": "hw qcpm5 [-h]"
+            "usage": "hw qc_pm5 [-h] [-t <s>]"
         },
         "hw readmem": {
             "command": "hw readmem",
@@ -15073,9 +15195,33 @@
             ],
             "usage": "hf thinfilm sim [-h] -d <hex> [--raw]"
         },
+        "nfc encode": {
+            "command": "nfc encode",
+            "description": "Encode NFC Data Exchange Format (NDEF) records. Combine several options to build a multi record message, records are added in the order listed below. By default a bare NDEF message is emitted. Use `--tlv` to wrap it in a NFC Forum Type 2 tag container ( 03 <len> ... FE ), which is what the `-d` parameter of `hf mf ndefwrite` and `hf 14a ndefwrite` expects. `hf mfu ndefwrite` adds the container itself, so it does not need `--tlv`",
+            "notes": [
+                "nfc encode --uri https://proxmark.com",
+                "nfc encode --uri tel:+123456789",
+                "nfc encode --text \"hello world\"",
+                "nfc encode --aar com.example.app",
+                "nfc encode --uri https://proxmark.com --aar com.example.app",
+                "nfc encode --uri https://proxmark.com --tlv -f myfilename"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--uri <str> URI record. URL, tel:, mailto:, ...",
+                "--text <str> Text record",
+                "--lang <str> language code for the text record (default: en)",
+                "--aar <str> Android Application Record, ie an app package name",
+                "--tlv wrap message in a NFC Forum Type 2 tag TLV container",
+                "-f, --file <fn> save raw bytes to file",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "nfc encode [-hv] [--uri <str>] [--text <str>] [--lang <str>] [--aar <str>] [--tlv] [-f <fn>]"
+        },
         "nfc help": {
             "command": "nfc help",
-            "description": "-------- --------------------- NFC Tags -------------------- type1 { NFC Forum Tag Type 1... } type2 { NFC Forum Tag Type 2... } type4a { NFC Forum Tag Type 4 ISO14443A... } type4b { NFC Forum Tag Type 4 ISO14443B... } mf { NFC Type MIFARE Classic/Plus Tag... } barcode { NFC Barcode Tag... } -------- --------------------- General --------------------- help This help decode Decode NDEF records --------------------------------------------------------------------------------------- nfc decode available offline: yes Decode and print NFC Data Exchange Format (NDEF) You must provide either data in hex or a filename, but not both",
+            "description": "-------- --------------------- NFC Tags -------------------- type1 { NFC Forum Tag Type 1... } type2 { NFC Forum Tag Type 2... } type4a { NFC Forum Tag Type 4 ISO14443A... } type4b { NFC Forum Tag Type 4 ISO14443B... } mf { NFC Type MIFARE Classic/Plus Tag... } barcode { NFC Barcode Tag... } -------- --------------------- General --------------------- help This help decode Decode NDEF records encode Encode NDEF records --------------------------------------------------------------------------------------- nfc decode available offline: yes Decode and print NFC Data Exchange Format (NDEF) You must provide either data in hex or a filename, but not both",
             "notes": [
                 "nfc decode -d 9101085402656e48656c6c6f5101085402656e576f726c64",
                 "nfc decode -d 0103d020240203e02c040300fe",
@@ -15212,6 +15358,35 @@
                 "-v, --verbose verbose output"
             ],
             "usage": "hf 14a ndefformat [-hv]"
+        },
+        "nfc type2 write": {
+            "command": "nfc type2 write",
+            "description": "Write NFC Data Exchange Format (NDEF) records to a MIFARE Ultralight / NTAG tag. The tag must already be NDEF formatted, ie carry a Capability Container in block 3. Combine several of --uri, --text and --aar to build a multi record message, records are added in that order. Alternatively supply raw NDEF bytes with -d or -f, those get wrapped in a TLV container automatically when they are not already. Use `nfc encode` to build such raw bytes offline. Note: the tag is re-selected and re-authenticated for every block written, so a large message takes a while.",
+            "notes": [
+                "hf mfu ndefwrite --uri https://proxmark.com",
+                "hf mfu ndefwrite --uri tel:+123456789",
+                "hf mfu ndefwrite --text \"hello world\"",
+                "hf mfu ndefwrite --aar com.example.app",
+                "hf mfu ndefwrite --uri https://proxmark.com --aar com.example.app",
+                "hf mfu ndefwrite --uri https://proxmark.com -k ffffffff",
+                "hf mfu ndefwrite -d 0311D1010D550270726F786D61726B2E636F6DFE",
+                "hf mfu ndefwrite -f myfilename"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --key <hex> Authentication key (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)",
+                "-l Swap entered key endianness",
+                "--uri <str> URI record. URL, tel:, mailto:, ...",
+                "--text <str> Text record",
+                "--lang <str> language code for the text record (default: en)",
+                "--aar <str> Android Application Record, ie an app package name",
+                "-d, --data <hex> Raw NDEF bytes to write",
+                "-f, --file <fn> Raw NDEF file to write",
+                "-v, --verbose Verbose output",
+                "--schann use secure channel. Must have key"
+            ],
+            "usage": "hf mfu ndefwrite [-hlv] [-k <hex>] [--uri <str>] [--text <str>] [--lang <str>] [--aar <str>] [-d <hex>] [-f <fn>] [--schann]"
         },
         "nfc type4a help": {
             "command": "nfc type4a help",
@@ -15834,14 +16009,35 @@
             ],
             "usage": "smart pcsc [-hvabc] [--host <str>] [-p <int>]"
         },
+        "smart pps": {
+            "command": "smart pps",
+            "description": "Run an ISO 7816-3 protocol and parameter selection exchange. With neither --t0 nor --t1 the card keeps the protocol its ATR says it runs, so --ta1 on its own changes the rate and nothing else. The card is reset and its ATR read first, because PPS is only legal in the window straight after the ATR. Note `smart raw --t1` already switches a card to T=1 by itself when the ATR offers it; this is for negotiating Fi/Di explicitly. Needs SIM module firmware v4.51 or newer. A negotiated rate is remembered against this card's ATR and put back after every later ATR, so it survives resets and reconnects. A different card drops it, and `--ta1 11` forgets it. A protocol change is not remembered: it applies until the next reset only, so it cannot silently break commands that build for the other protocol.",
+            "notes": [
+                "smart pps --ta1 93 -> rate only, framing left alone",
+                "smart pps --ta1 11 -> back to the default rate",
+                "smart pps --t1 -> select T=1",
+                "smart pps --t0 -> select T=0",
+                "smart pps --t1 --ta1 96 -> select T=1 and F=512 / D=32"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--t0 select protocol T=0",
+                "--t1 select protocol T=1",
+                "--ta1 <hex> also negotiate this TA1 (FI << 4 | DI)"
+            ],
+            "usage": "smart pps [-h] [--t0] [--t1] [--ta1 <hex>]"
+        },
         "smart raw": {
             "command": "smart raw",
             "description": "Sends raw bytes to card",
             "notes": [
                 "smart raw -s -0 -d 00a404000e315041592e5359532e4444463031 -> `1PAY.SYS.DDF01` PPSE directory with get ATR",
-                "smart raw -0 -d 00a404000e325041592e5359532e4444463031 -> `2PAY.SYS.DDF01` PPSE directory",
-                "smart raw -0 -t -d 00a4040007a0000000041010 -> Mastercard",
-                "smart raw -0 -t -d 00a4040007a0000000031010 -> Visa"
+                "smart raw --t0 -d 00a404000e325041592e5359532e4444463031 -> `2PAY.SYS.DDF01` PPSE directory",
+                "smart raw --t0 -t -d 00a4040007a0000000041010 -> Mastercard",
+                "smart raw --t0 -t -d 00a4040007a0000000031010 -> Visa",
+                "smart raw --t1 -s -d 00a404000e325041592e5359532e444446303100 -> PPSE over T=1",
+                "(T=1 carries the whole APDU, so case 4 needs its Le)"
             ],
             "offline": false,
             "options": [
@@ -15850,11 +16046,12 @@
                 "-a active smartcard without select (reset sc module)",
                 "-s active smartcard with select (get ATR)",
                 "-t, --tlv executes TLV decoder if it possible",
-                "-0 use protocol T=0",
+                "--t0 use protocol T=0",
+                "--t1 use protocol T=1 (needs SIM module fw v4.51+)",
                 "--timeout <ms> Timeout in MS waiting for SIM to respond. (def 337ms)",
                 "-d, --data <hex> bytes to send"
             ],
-            "usage": "smart raw [-hrast0] [--timeout <ms>] -d <hex>"
+            "usage": "smart raw [-hrast] [--t0] [--t1] [--timeout <ms>] -d <hex>"
         },
         "smart reader": {
             "command": "smart reader",
@@ -16138,8 +16335,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 902,
+        "commands_extracted": 910,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-08-21T18:43:14+00:00"
+        "extracted_on": "2026-08-27T23:06:33+00:00"
     }
 }
