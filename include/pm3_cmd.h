@@ -656,6 +656,7 @@ typedef struct {
 #define CMD_PM5_BWM_CHARGE_EN 0x017A
 // PM5, toggle automatic power-off on USB unplug. Used by `hw bwmautooff`.
 #define CMD_PM5_BWM_AUTOOFF 0x017B
+#define CMD_PM5_BWM_WIFI    0x017C
 // For low-frequency tags
 #define CMD_LF_TI_READ 0x0202
 #define CMD_LF_TI_WRITE 0x0203
