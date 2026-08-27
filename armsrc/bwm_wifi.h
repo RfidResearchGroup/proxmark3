@@ -16,6 +16,7 @@
 #define BWM_CMD_GET_WIFI_CFG_IP_ADDR       2020   // resp: 3x uint32 LE {ip, netmask, gw}
 #define BWM_CMD_SET_WIFI_CONNECT_CFG_SSID  2023   // payload: SSID bytes
 #define BWM_CMD_SET_WIFI_CONNECT_CFG_PWD   2025   // payload: password bytes
+#define BWM_CMD_SET_WIFI_CFG_HOST_NAME     2021   // payload: hostname bytes (no NUL)
 #define BWM_CMD_START_WIFI_CONNECT_TASK    2048   // no payload
 #define BWM_CMD_GET_WIFI_CONNECT_STATUS    2050   // resp: 1 byte status
 #define BWM_CMD_WAIT_FOR_WIFI_CONNECT_TASK 2051   // payload: 1 byte timeout(s); resp: {result, err_reason}
@@ -35,6 +36,6 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
 // High-level: full STA-join + TCP-server bring-up. On success writes the
 // BWM's IPv4 (host byte order, a in low byte) to *ip_out.
 int bwm_wifi_forward_up(const char *ssid, const char *password,
-                        uint16_t tcp_port, uint32_t *ip_out);
+                        const char *hostname, uint16_t tcp_port, uint32_t *ip_out);
 
 #endif
