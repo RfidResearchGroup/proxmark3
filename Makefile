@@ -45,7 +45,7 @@ host/all host/clean host/install host/uninstall host/check: %:
 	$(foreach target,$(HOST_TARGETS),$(call submake,$(target),$(notdir $*)))
 
 INSTALLTOOLS=mfc/pm3_eml2lower.sh mfc/pm3_eml2upper.sh mfc/pm3_mfdread.py mfc/pm3_mfd2eml.py mfc/pm3_eml2mfd.py pm3_amii_bin2eml.pl pm3_reblay-emulating.py pm3_reblay-reading.py
-INSTALLSIMFW=sim011.bin sim011.sha512.txt sim013.bin sim013.sha512.txt sim014.bin sim014.sha512.txt
+INSTALLSIMFW=sim011.bin sim011.sha512.txt sim013.bin sim013.sha512.txt sim020.bin sim020.sha512.txt
 INSTALLSCRIPTS=pm3 pm3-flash pm3-flash-all pm3-flash-bootrom pm3-flash-fullimage
 INSTALLSHARES=tools/jtag_openocd traces
 INSTALLDOCS=doc/*.md doc/md
