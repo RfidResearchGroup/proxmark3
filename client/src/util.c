@@ -272,7 +272,10 @@ void hex_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, 
         m = hex_max_len;
     }
 
-    while (m--) {
+    // Pad up to m, the way ascii_to_buffer() above does. This used to write m
+    // spaces from wherever it had got to, so a padded field came out i
+    // characters too wide - a 7 byte AID asked to fill 16 produced 30.
+    for (; i < m; i++) {
         *(tmp++) = ' ';
     }
 
