@@ -41,6 +41,8 @@
 // by SAM_SC_FLAG_FORCE_RESET / SAM_SC_FLAG_RELEASE.
 static bool s_sam_sc_session_active = false;
 
+#define SAM_SC_CARD_API_MAX_ITERATIONS 128
+
 void sam_sc_session_invalidate(void) {
     s_sam_sc_session_active = false;
 }
@@ -126,6 +128,23 @@ static int sam_sc_read_tlv(const uint8_t *buf, uint16_t buf_len,
     return PM3_SUCCESS;
 }
 
+// A completed Grace request can carry either a BD success envelope or a BE
+// error envelope.  Both follow the five- or six-byte routing tail and must be
+// forwarded to the host unchanged; treating BE as an invalid transport reply
+// hides the SAM's actual error from the secure-channel client.
+static uint16_t sam_sc_reply_offset(const uint8_t *response, uint16_t response_len) {
+    uint16_t bd = sam_bd_offset(response, response_len);
+    if (bd != 0) return bd;
+
+    for (uint16_t ofs = SAM_RX_ASN1_PREFIX_LENGTH;
+            ofs <= (uint16_t)(SAM_RX_ASN1_PREFIX_LENGTH + 1);
+            ofs++) {
+        if (ofs < response_len && response[ofs] == 0xbe)
+            return ofs;
+    }
+    return 0;
+}
+
 // Build/send one continuation to a ProcessCardApi request.  Card API
 // traffic is routed through the external-app endpoint (0x14), not the normal
 // host endpoint (0x44) used for SC wrapped commands.
@@ -198,12 +217,16 @@ static int sam_sc_card_api_loop(uint8_t *response, uint16_t *response_len,
 
     int res = PM3_SUCCESS;
     int card_transport = -1;
-    for (uint8_t iteration = 0; iteration < 32; iteration++) {
-        if (*response_len < 6 || response[1] != 0x61) break;
+    for (uint8_t iteration = 0; iteration < SAM_SC_CARD_API_MAX_ITERATIONS; iteration++) {
+        // Grace SAMs mirror either a five- or six-byte routing tail before
+        // their Card API A1 node.  Do not use the legacy 0x61 flag at a fixed
+        // offset to detect it: newer Grace replies place a routing byte there.
+        uint16_t api_offset = sam_rx_prefix_len(response, *response_len);
+        if (*response_len <= api_offset || response[api_offset] != 0xa1) break;
 
-        const uint8_t sc_flag = response[4];
-        const uint8_t *api = response + 5;
-        const uint16_t api_len = (uint16_t)(*response_len - 5);
+        const uint8_t sc_flag = response[api_offset - 1];
+        const uint8_t *api = response + api_offset;
+        const uint16_t api_len = (uint16_t)(*response_len - api_offset);
         uint8_t root_tag, child_tag, op_tag;
         const uint8_t *root, *child, *op_value;
         uint16_t root_len, root_used, child_len, child_used, op_len, op_used;
@@ -216,10 +239,14 @@ static int sam_sc_card_api_loop(uint8_t *response, uint16_t *response_len,
         }
 
         uint16_t continuation_len = 0;
-        if (child_tag == 0x82 && child_len == 0) {
-            // samCommandTurnRfFieldOff: acknowledge after dropping the PM3
-            // field.  The capture uses the same empty samResponse envelope.
-            switch_off();
+        if ((child_tag == 0x82 || child_tag == 0x83) && child_len == 0) {
+            // samCommandTurnRfFieldOff / samCommandTurnRfFieldOn.  The SAM
+            // expects the same empty samResponse acknowledgement for each.
+            // An RF-on request only arms the field for a later scan/transceive;
+            // that operation selects the card and configures the appropriate
+            // reader mode, so there is no PM3 field transition to make here.
+            if (child_tag == 0x82)
+                switch_off();
             static const uint8_t rf_off_ack[] = {0xbd, 0x02, 0x8a, 0x00};
             memcpy(continuation, rf_off_ack, sizeof(rf_off_ack));
             continuation_len = sizeof(rf_off_ack);
@@ -414,8 +441,12 @@ static int sam_sc_card_api_loop(uint8_t *response, uint16_t *response_len,
 
     // A Card API request that remains outstanding after the bounded loop would
     // otherwise be returned to the host as though it were a final SC response.
-    if (res == PM3_SUCCESS && *response_len >= 2 && response[1] == 0x61)
-        res = PM3_ECARDEXCHANGE;
+    if (res == PM3_SUCCESS) {
+        uint16_t api_offset = sam_rx_prefix_len(response, *response_len);
+        if (*response_len > api_offset && response[api_offset] == 0xa1) {
+            res = PM3_ECARDEXCHANGE;
+        }
+    }
 
     return res;
 }
@@ -584,7 +615,7 @@ void sam_sc_handler(const PacketCommandNG *c) {
 
         if (res == PM3_SUCCESS && card_api) {
             res = sam_sc_card_api_loop(response, &response_len, prevent_epurse_update);
-        } else if (res == PM3_SUCCESS && hf_relay && response_len >= 2 && response[1] == 0x61) {
+        } else if (res == PM3_SUCCESS && hf_relay && sam_relay_pending(response, response_len)) {
             uint8_t *sam_tx = BigBuf_calloc(ISO7816_MAX_FRAME);
             if (sam_tx == NULL) {
                 res = PM3_EMALLOC;
@@ -615,22 +646,26 @@ void sam_sc_handler(const PacketCommandNG *c) {
 
         if (snmp_loader && res == PM3_SUCCESS) {
             reply_ng(CMD_HF_SAM_SC, PM3_SUCCESS, response, response_len);
-        // Reformat the buffer for the host: prepend the SAM-assigned scFlag
-        // (firmware-side index 4 of the routing tail), then the SAM payload
-        // (firmware-side index 5 onward). See sam_sc.h for the wire layout.
-        // memmove is safe across the overlapping ranges (dst < src by 4).
-        } else if (res == PM3_SUCCESS && response_len >= 6) {
-            uint8_t sc_flag = response[4];
-            uint16_t sam_payload_len = (uint16_t)(response_len - 5);
-            memmove(response + 1, response + 5, sam_payload_len);
-            response[0] = sc_flag;
-            response_len = (uint16_t)(1 + sam_payload_len);
-            reply_ng(CMD_HF_SAM_SC, PM3_SUCCESS, response, response_len);
+        // Reformat the buffer for the host: prepend the SAM-assigned scFlag,
+        // then the SAM payload.  Grace SAMs mirror either a five- or six-byte
+        // routing tail; deriving both positions from the BD success or BE
+        // error response node avoids exposing the final routing byte as part
+        // of the payload.
+        // memmove is safe across the overlapping ranges.
         } else if (res == PM3_SUCCESS) {
-            // sam_send_payload_ex succeeded but the response is too short
-            // to contain a routing tail + SAM payload. Treat as exchange
-            // error so the host knows the result is unusable.
-            reply_ng(CMD_HF_SAM_SC, PM3_ECARDEXCHANGE, NULL, 0);
+            uint16_t reply_offset = sam_sc_reply_offset(response, response_len);
+            if (reply_offset == 0) {
+                // sam_send_payload_ex succeeded but the response has no valid
+                // routing tail plus SAM response node.
+                reply_ng(CMD_HF_SAM_SC, PM3_ECARDEXCHANGE, NULL, 0);
+            } else {
+                uint8_t sc_flag = response[reply_offset - 1];
+                uint16_t sam_payload_len = (uint16_t)(response_len - reply_offset);
+                memmove(response + 1, response + reply_offset, sam_payload_len);
+                response[0] = sc_flag;
+                response_len = (uint16_t)(1 + sam_payload_len);
+                reply_ng(CMD_HF_SAM_SC, PM3_SUCCESS, response, response_len);
+            }
         } else {
             // sam_send_payload_ex failed. Propagate the error; no payload.
             reply_ng(CMD_HF_SAM_SC, res, NULL, 0);
