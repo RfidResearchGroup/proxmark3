@@ -2313,10 +2313,9 @@ static int CmdHfSeosSAM(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    // The ARM pings the SAM itself before anything else, so this costs a card
-    // reset and an ATR to learn what it is about to learn again. Only pay for
-    // it when the detail was asked for.
-    if (verbose && (IsHIDSamPresent(verbose) == false)) {
+    // We need to ALWAYS ping the SAM itself before anything else!
+    //Or it doesn't initialize properly and will not respond to commands.
+    if (IsHIDSamPresent(verbose) == false) {
         return PM3_ESOFT;
     }
 
