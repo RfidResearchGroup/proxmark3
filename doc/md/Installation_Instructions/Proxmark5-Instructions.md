@@ -22,7 +22,7 @@ You have several options:
 
 The factory firmware has some limitations, therefore the flashing procedure is slightly more complex.
 
-⚠️ If you have a BWM (Battery Wireless Module), and if it came already plugged, disconnect it. The reason it came connected when delivered to some countries is customs regulations. But hte factory firmware does not support it and this creates issues when flashing, so just remove it.
+⚠️ If you have a BWM (Battery Wireless Module), and if it came already plugged, disconnect it. See [here](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md) to understand how it's installed. The reason it came connected when delivered to some countries is customs regulations. But hte factory firmware does not support it and this creates issues when flashing, so just remove it.
 
 Use the yellow USB-C on the same side as the button.
 
@@ -86,10 +86,8 @@ Standalone modes are disabled for now, to ease debugging.
 ⚠️ the BWM is not yet fully supported, it's better not to plug it for now.
 
 * [Installation instructions](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
-* Pressing briefly the button will wake the device
+* Pressing briefly the button will wake the device. The RGB will turn green
 * When the device is powered on, pressing and holding the button for a few seconds will start displaying a running light, and then releasing the button will power off the device
-
-⚠️ After using the device over USB and disconnecting it, the Proxmark5 is still powered by the battery. To remind it to you, the RGB will turn green. Press the button a few seconds to turn it off.
 
 ## Recovery flashing via DFU
 
