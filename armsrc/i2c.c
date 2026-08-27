@@ -41,6 +41,9 @@
 // cannot drift apart.
 #define I2C_DELAY_1CLK    SpinDelayUsPrecision(I2C_DELAY_1CLK_US)
 #define I2C_DELAY_2CLK    SpinDelayUsPrecision(I2C_DELAY_2CLK_US)
+#define I2C_DELAY_SDA     SpinDelayUsPrecision(I2C_DELAY_SDA_US)
+#define I2C_DELAY_HOLD    SpinDelayUsPrecision(I2C_DELAY_HOLD_US)
+#define I2C_DELAY_HIGH    SpinDelayUsPrecision(I2C_DELAY_HIGH_US)
 
 #define SC_PROTO_T0     (1 << 0)
 #define SC_PROTO_T1     (1 << 1)
@@ -188,15 +191,11 @@ static bool WaitSCL_L(void) {
 #define SIM_START_TIMEOUT_MS  50
 
 static bool WaitSCL_L_timeout(void) {
-    volatile uint32_t delay = SIM_START_TIMEOUT_MS;
-    while (delay--) {
-        // exit on SCL LOW
-        if (SCL_read == false)
-            return true;
-
-        WaitMS(1);
-    }
-    return false;
+    // How long the module may take to *start* stretching, not how long it may
+    // hold. Polled at bus granularity: a command the module already finished
+    // never shows SCL low at all, and at 1 ms a step that cost the full
+    // timeout on every fast exchange.
+    return WaitSCL_L_delay(I2C_ITERS_FOR_MS(SIM_START_TIMEOUT_MS));
 }
 
 static bool I2C_Start(void) {
@@ -318,7 +317,7 @@ static void I2C_SendByte(uint8_t data) {
     while (bits--) {
         SCL_L;
 
-        I2C_DELAY_1CLK;
+        I2C_DELAY_HOLD;
 
         if (data & 0x80)
             SDA_H;
@@ -327,14 +326,14 @@ static void I2C_SendByte(uint8_t data) {
 
         data <<= 1;
 
-        I2C_DELAY_1CLK;
+        I2C_DELAY_SDA;
 
         SCL_H;
         if (WaitSCL_H() == false) {
             return;
         }
 
-        I2C_DELAY_2CLK;
+        I2C_DELAY_HIGH;
     }
     SCL_L;
 }
@@ -351,13 +350,13 @@ static int16_t I2C_ReadByte(void) {
             return -2;
         }
 
-        I2C_DELAY_1CLK;
+        I2C_DELAY_SDA;
         SCL_H;
         if (WaitSCL_H() == false) {
             return -1;
         }
 
-        I2C_DELAY_1CLK;
+        I2C_DELAY_HIGH;
         if (SDA_read) {
             b |= 0x01;
         }

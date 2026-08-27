@@ -60,6 +60,16 @@
 #define I2C_DELAY_1CLK_US       20
 #define I2C_DELAY_2CLK_US       22
 
+// Only one delay per bit is rise time critical: the one bracketing an SDA
+// transition, where a released line has to charge through the pull-up before
+// it reads as a 1. Sampling before that is what corrupted the bus every time
+// these were simply scaled down together. The others are padding - hold after
+// SCL falls (spec 0.3 us) and SCL high width (spec 4 us) - so they get the
+// standard mode minimum with margin instead of a full clock.
+#define I2C_DELAY_SDA_US        I2C_DELAY_1CLK_US
+#define I2C_DELAY_HOLD_US       2
+#define I2C_DELAY_HIGH_US       6
+
 // The SCL wait loops spend one 1CLK per iteration, so their timeouts are
 // iteration counts. Written in ms and converted here so the two cannot drift.
 #define I2C_ITERS_PER_MS        (1000U / I2C_DELAY_1CLK_US)

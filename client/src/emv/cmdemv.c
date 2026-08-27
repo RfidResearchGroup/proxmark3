@@ -2951,18 +2951,27 @@ static int CmdEMVReader(const char *Cmd) {
         const char *al = "Applets";
         struct tlvdb *tlvSelect = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
 
-        // Search the expected directory then the other - a contact card may
-        // carry 1PAY or 2PAY and plenty carry only one. First call activates
-        // the field, the fallback reuses it.
+        // Search the expected directory then the other - a card may carry 1PAY
+        // or 2PAY and plenty carry only one. First call activates the field,
+        // the fallback reuses it. Both stay quiet: a card without the
+        // directory we guessed at is ordinary, and the AID sweep below is the
+        // real fallback, so its failure is the one worth reporting.
         res = EMVSearchPSE(channel, true, true, psenum, false, tlvSelect, true);
         if (res) {
-            res = EMVSearchPSE(channel, false, true, (psenum == 1) ? 2 : 1, false, tlvSelect, false);
+            res = EMVSearchPSE(channel, false, true, (psenum == 1) ? 2 : 1, false, tlvSelect, true);
         }
 
         if (res) {
             // EMV SEARCH with AID list
             DropFieldEx(channel);
             if (EMVSearch(channel, true, true, false, tlvSelect, false)) {
+                PrintAndLogEx(FAILED, "No EMV application found (no PSE, no PPSE, no known AID)");
+                if (channel == CC_CONTACT) {
+                    smart_card_atr_t atr;
+                    if (smart_select(false, &atr) == false) {
+                        PrintAndLogEx(HINT, "Hint: no answer at all - is a card in the slot? try `" _YELLOW_("smart info") "`");
+                    }
+                }
                 tlvdb_free(tlvSelect);
                 DropFieldEx(channel);
                 continue;
