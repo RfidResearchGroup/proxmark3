@@ -9,6 +9,25 @@
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Proxmark5 Battery Wireless Module (BWM) transport shim.
+//
+// The BWM (ESP32-C2, RfidResearchGroup/Proxmark5_BWM_esp32) bridges the AT32
+// host <-> BLE/WiFi. Its ESP<->AT32 UART link does NOT carry raw PacketCommandNG;
+// it uses a framed "app_com" protocol. Transparent host<->wireless traffic rides
+// inside that framing:
+//
+//   AT32 -> ESP (our reply, toward wireless host):
+//       [0x7C 0xC7] cmd=APP_CMD_SEND_FORWARD_DATA(5000) len(LE) payload CRC16(LE)
+//   ESP -> AT32 (command from wireless host):
+//       [0xD2 0xD3] cmd=APP_BROADCAST_DATA_FORWARD(8089) len(LE) payload CRC16(LE)
+//
+//   Frame = HDR1 HDR2 | CMD(LE16) | LEN(LE16) | PAYLOAD[LEN] | CRC(LE16)
+//   CRC   = CRC-16/CCITT-FALSE (poly 0x1021, init 0xFFFF, MSB-first, no xorout)
+//           over HDR..PAYLOAD. (NOT compute_crc(CRC_14443_A) - different CRC.)
+//
+// This shim wraps outgoing NG/OLD reply bytes into a SEND_FORWARD_DATA frame and
+// de-frames incoming DATA_FORWARD frames back into a raw NG byte stream, so the
+// stock reply_ng()/receive_ng() paths work unchanged over the BWM link.
+//
 // Enabled by -DWITH_BWM_FORWARD (implies WITH_FPC_USART_HOST).
 //-----------------------------------------------------------------------------
 
@@ -17,27 +36,45 @@
 
 #include "common.h"
 
-#define BWM_HDR_HOST_CMD_1     0x7C
+// app_com framing constants (verified against BWM firmware app_cmd_uart.[ch] /
+// app_com_defs.h).
+#define BWM_HDR_HOST_CMD_1     0x7C   // AT32 -> ESP  (host command)
 #define BWM_HDR_HOST_CMD_2     0xC7
-#define BWM_HDR_SLAVE_BCAST_1  0xD2
+#define BWM_HDR_SLAVE_BCAST_1  0xD2   // ESP  -> AT32 (slave broadcast)
 #define BWM_HDR_SLAVE_BCAST_2  0xD3
-#define BWM_HDR_SLAVE_RESP_1   0x2D
+#define BWM_HDR_SLAVE_RESP_1   0x2D   // ESP  -> AT32 (slave response; forward-frame ack)
 #define BWM_HDR_SLAVE_RESP_2   0x3D
 
-#define BWM_CMD_SEND_FORWARD_DATA   5000
-#define BWM_CMD_DATA_FORWARD        8089
-#define BWM_FC_WINDOW               4
+#define BWM_CMD_SEND_FORWARD_DATA   5000   // host cmd: payload -> BLE/WiFi endpoint
+#define BWM_CMD_DATA_FORWARD        8089   // slave bcast: payload came from endpoint
+// Flow control (ack window) - ARM-side only, no BWM firmware change required.
+// The ESP already replies to every forward frame with a SLAVE_RESP echoing
+// cmd=SEND_FORWARD_DATA, and it sends that ack only *after* app_ble_send() has
+// drained the frame to BLE. So the un-acked count is a live measure of how far
+// ahead of the wireless link we are. We allow up to BWM_FC_WINDOW frames in
+// flight, then block for an ack before sending more - which paces us to the real
+// BLE/WiFi rate and prevents the ESP UART-RX overrun that dropped bulk downloads.
+// WINDOW frames must fit the ESP UART RX FIFO + wireless send buffer.
+#define BWM_FC_WINDOW               4      // max un-acked forward frames in flight
 #ifndef BWM_FC_ACK_TIMEOUT_SPINS
-#define BWM_FC_ACK_TIMEOUT_SPINS    200000
-#endif
+#define BWM_FC_ACK_TIMEOUT_SPINS    200000 // safety valve: proceed if an ack is lost (avoid hard hang)
+#endif // safety valve: give up waiting for credit (avoid hard hang)
 
 #define BWM_CRC16_POLY  0x1021
 #define BWM_CRC16_INIT  0xFFFF
 
+// Wrap `len` raw reply bytes (a whole PacketResponseNG/OLD frame) into one
+// SEND_FORWARD_DATA app_com frame and write it synchronously to the FPC USART.
+// Returns PM3_SUCCESS or the underlying usart error. Drop-in for the FPC
+// usart_writebuffer_sync() call in reply_ng_internal()/reply_old().
 int bwm_fwd_writebuffer_sync(const uint8_t *data, size_t len);
 
+// De-framed read: returns up to `len` raw NG bytes recovered from inbound
+// DATA_FORWARD frames, blocking-with-timeout exactly like usart_read_ng().
+// Drop-in for usart_read_ng() as the receive_ng() read callback.
 uint32_t bwm_read_ng(uint8_t *data, size_t len);
 
+// >0 when raw bytes are waiting on the FPC USART (gate for receive_ng()).
 uint16_t bwm_fwd_rxdata_available(void);
 
-#endif
+#endif // __BWM_FORWARD_H
