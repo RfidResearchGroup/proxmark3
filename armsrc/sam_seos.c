@@ -296,6 +296,19 @@ int sam_seos_get_pacs(PacketCommandNG *c) {
     set_tracing(true);
     StartTicks();
 
+    // Resetting the module resets the card, which then sends an ATR nobody
+    // asked for. Read it here rather than letting the first SAM APDU collide
+    // with it, and take the chance to say plainly when the slot holds
+    // something that is not a SAM.
+    smart_card_atr_t card;
+    if (GetATR(&card, false) == false) {
+        if (g_dbglevel >= DBG_ERROR) {
+            DbpString("SAM: no ATR - is a SAM in the slot?");
+        }
+        res = PM3_ECARDEXCHANGE;
+        goto err;
+    }
+
     // step 1: ping SAM
     sam_get_version(false);
 
