@@ -974,11 +974,17 @@ static uint8_t atr_first_proto(const uint8_t *atr, uint8_t len) {
 //     rejected every Fi=768/1024/1536/2048 offer.
 //   - R = Fi / (16 * Di) is the module's UART reload. It has to be a whole
 //     number or the sampling point drifts - that is the +3.2% which makes
-//     Fi=372 unusable beyond Di=1 - and it must not fall below the floor: R=8
-//     (31250 bit/s) transfers cleanly here, R=4 does not.
+//     Fi=372 unusable beyond Di=1 - and it must not fall below the floor.
+//
+// The floor is measured, not guessed. It was 8 while the module still waited
+// out a turnaround guard before listening, which cost it the second byte of
+// every answer above 31250 bit/s. With that guard applied only before
+// transmitting (module v4.62), R=2 (125000 bit/s) is clean over repeated runs
+// and R=1 still is not: at 16 clocks per etu a character is 192 instruction
+// cycles, and the receive loop does not fit in that.
 //
 // A card with no TA1 offers nothing but the default, so nothing is proposed.
-#define SC_PPS_MIN_RELOAD  8
+#define SC_PPS_MIN_RELOAD  2
 
 static uint8_t sc_pps_best_ta1(const uint8_t *atr, uint8_t len) {
 
@@ -1112,9 +1118,13 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
     s_card_protocols = atr_protocols(card_ptr->atr, card_ptr->atr_len);
     s_proto_announced = false;
     if (g_dbglevel >= DBG_INFO) {
-        Dbprintf("SC: card offers%s%s"
+        // What the ATR advertises, and which of them the card actually runs
+        // until something negotiates otherwise. Saying only "offers T=0 T=1"
+        // reads like a state report when it is a capability list.
+        Dbprintf("SC: ATR offers%s%s, card runs T=%u"
                  , (s_card_protocols & SC_PROTO_T0) ? " T=0" : ""
                  , (s_card_protocols & SC_PROTO_T1) ? " T=1" : ""
+                 , atr_first_proto(card_ptr->atr, card_ptr->atr_len)
                 );
     }
 
@@ -1385,7 +1395,12 @@ void SmartCardPPS(const smart_card_pps_t *p) {
 
     uint8_t req[2];
     uint16_t reqlen = 1;
-    req[0] = (uint8_t)(p->protocol & 0x0F);
+    uint8_t want_proto = p->protocol;
+    if (want_proto == SC_PPS_PROTO_CARD_DEFAULT) {
+        want_proto = atr_first_proto(card.atr, card.atr_len);
+    }
+
+    req[0] = (uint8_t)(want_proto & 0x0F);
     if (p->use_ta1) {
         req[1] = p->ta1;
         reqlen = 2;
@@ -1406,14 +1421,31 @@ void SmartCardPPS(const smart_card_pps_t *p) {
         goto out;
     }
 
-    // resp is [ok][active protocol][ta1 in force]. Remember a rate that is
-    // actually faster than the default so later ATRs can put it back; 0x11 is
-    // the default and means "forget what we had".
+    // resp is [ok][active protocol][ta1 in force].
+    //
+    // Only a rate is worth remembering. A protocol override is a deliberate
+    // one-off - `smart pps` defaults to T=1, so asking for a rate alone
+    // switches the card's framing - and making that stick across every later
+    // ATR breaks anything that builds T=0 APDUs, the SAM commands included.
+    // Leave it to this session and do not cache it.
     if (resp[0] == 1) {
-        if (resp[2] != 0x11) {
+
+        uint8_t card_proto = atr_first_proto(card.atr, card.atr_len);
+
+        if (resp[2] == 0x11) {
+            sc_pps_forget();                    // back to the default rate
+
+        } else if (resp[1] == card_proto) {
             sc_pps_remember(card.atr, card.atr_len, resp[1], resp[2]);
+
         } else {
+            // rate negotiated alongside a protocol change: honour it now, but
+            // do not restore it later behind the user's back
             sc_pps_forget();
+            if (g_dbglevel >= DBG_ERROR) {
+                Dbprintf("SC: T=%u selected, rate not remembered (card offers T=%u first)",
+                         resp[1], card_proto);
+            }
         }
     }
 

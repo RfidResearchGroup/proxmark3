@@ -513,8 +513,13 @@ typedef struct {
     uint8_t data[];
 } PACKED smart_card_raw_t;
 
+// A PPS has to name a protocol - PPS0 has no "leave it alone" encoding - so
+// when the caller only wants a rate, ask for the one the card already runs and
+// the exchange changes nothing but Fi/Di.
+#define SC_PPS_PROTO_CARD_DEFAULT  0xFF
+
 typedef struct {
-    uint8_t protocol;   // T to select, 0 or 1
+    uint8_t protocol;   // T to select, 0 or 1, or SC_PPS_PROTO_CARD_DEFAULT
     uint8_t ta1;        // FI << 4 | DI, only read when use_ta1 is set
     uint8_t use_ta1;
 } PACKED smart_card_pps_t;

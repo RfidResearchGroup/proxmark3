@@ -476,10 +476,10 @@ static int CmdSmartRaw(const char *Cmd) {
     CLIParserInit(&ctx, "smart raw",
                   "Sends raw bytes to card",
                   "smart raw -s -0 -d 00a404000e315041592e5359532e4444463031  -> `1PAY.SYS.DDF01` PPSE directory with get ATR\n"
-                  "smart raw -0 -d 00a404000e325041592e5359532e4444463031     -> `2PAY.SYS.DDF01` PPSE directory\n"
-                  "smart raw -0 -t -d 00a4040007a0000000041010                -> Mastercard\n"
-                  "smart raw -0 -t -d 00a4040007a0000000031010                -> Visa\n"
-                  "smart raw -1 -s -d 00a404000e325041592e5359532e444446303100 -> PPSE over T=1\n"
+                  "smart raw --t0 -d 00a404000e325041592e5359532e4444463031   -> `2PAY.SYS.DDF01` PPSE directory\n"
+                  "smart raw --t0 -t -d 00a4040007a0000000041010              -> Mastercard\n"
+                  "smart raw --t0 -t -d 00a4040007a0000000031010              -> Visa\n"
+                  "smart raw --t1 -s -d 00a404000e325041592e5359532e444446303100 -> PPSE over T=1\n"
                   "                                                              (T=1 carries the whole APDU, so case 4 needs its Le)"
                  );
 
@@ -489,8 +489,8 @@ static int CmdSmartRaw(const char *Cmd) {
         arg_lit0("a", NULL, "active smartcard without select (reset sc module)"),
         arg_lit0("s", NULL, "active smartcard with select (get ATR)"),
         arg_lit0("t", "tlv", "executes TLV decoder if it possible"),
-        arg_lit0("0", NULL, "use protocol T=0"),
-        arg_lit0("1", NULL, "use protocol T=1 (needs SIM module fw v4.51+)"),
+        arg_lit0(NULL, "t0", "use protocol T=0"),
+        arg_lit0(NULL, "t1", "use protocol T=1 (needs SIM module fw v4.51+)"),
         arg_int0(NULL, "timeout", "<ms>", "Timeout in MS waiting for SIM to respond. (def 337ms)"),
         arg_str1("d", "data", "<hex>", "bytes to send"),
         arg_param_end
@@ -921,29 +921,34 @@ static int CmdSmartPPS(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "smart pps",
-                  "Run an ISO 7816-3 protocol and parameter selection exchange.\n"
+                  "Run an ISO 7816-3 protocol and parameter selection exchange.\n""\n"
+                  "With neither --t0 nor --t1 the card keeps the protocol its ATR\n"
+                  "says it runs, so --ta1 on its own changes the rate and nothing else.\n"
                   "The card is reset and its ATR read first, because PPS is only\n"
                   "legal in the window straight after the ATR.\n"
                   "\n"
-                  "Note `smart raw -1` already switches a card to T=1 by itself when\n"
+                  "Note `smart raw --t1` already switches a card to T=1 by itself when\n"
                   "the ATR offers it; this is for negotiating Fi/Di explicitly.\n"
                   "Needs SIM module firmware v4.51 or newer.\n"
                   "\n"
-                  "The negotiated rate only holds for the rest of this session, and\n"
-                  "only for commands that do not reset the card. Connecting a client\n"
-                  "reads the module version, which reboots the module back to the\n"
-                  "default rate while the card stays at the negotiated one - the next\n"
-                  "command then fails until something resets the card. `smart info`,\n"
-                  "or any `smart raw -s`, puts both back to the default.",
-                  "smart pps -1                 -> select T=1\n"
-                  "smart pps -0                 -> select T=0\n"
-                  "smart pps -1 --ta1 96        -> select T=1 and F=512 / D=32"
+                  "A negotiated rate is remembered against this card's ATR and put\n"
+                  "back after every later ATR, so it survives resets and reconnects.\n"
+                  "A different card drops it, and `--ta1 11` forgets it.\n"
+                  "\n"
+                  "A protocol change is not remembered: it applies until the next\n"
+                  "reset only, so it cannot silently break commands that build for\n"
+                  "the other protocol.",
+                  "smart pps --ta1 93           -> rate only, framing left alone\n"
+                  "smart pps --ta1 11           -> back to the default rate\n"
+                  "smart pps --t1               -> select T=1\n"
+                  "smart pps --t0               -> select T=0\n"
+                  "smart pps --t1 --ta1 96      -> select T=1 and F=512 / D=32"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("0", NULL, "select protocol T=0"),
-        arg_lit0("1", NULL, "select protocol T=1 (default)"),
+        arg_lit0(NULL, "t0", "select protocol T=0"),
+        arg_lit0(NULL, "t1", "select protocol T=1"),
         arg_str0(NULL, "ta1", "<hex>", "also negotiate this TA1 (FI << 4 | DI)"),
         arg_param_end
     };
@@ -968,7 +973,9 @@ static int CmdSmartPPS(const char *Cmd) {
     }
 
     smart_card_pps_t payload = {
-        .protocol = use_t0 ? 0 : 1,
+        // Neither flag: negotiate the rate and leave the framing alone. The
+        // device resolves this to whatever the card's ATR says it runs.
+        .protocol = use_t0 ? 0 : (use_t1 ? 1 : SC_PPS_PROTO_CARD_DEFAULT),
         .ta1 = (ta1len > 0) ? ta1[0] : 0x11,
         .use_ta1 = (ta1len > 0) ? 1 : 0,
     };
