@@ -12,6 +12,7 @@ TESTDESFIREVALUE=false
 TESTHIDWIEGAND=false
 TESTMFHIDENCODE=false
 TESTICLASSREADER=false
+TESTSMARTCARD=false
 TESTICLASSEMU=false
 NEED_MF_HID_ENCODE_WIPE=false
 TESTMANUAL=false
@@ -31,6 +32,7 @@ Usage: $0 [--pm3bin /path/to/pm3] [--pm3port /dev/tty...] [desfire_value|hid_wie
     mf_hid_encode:   Test MIFARE Classic HID encoding flows
     iclass_emu:      Test iCLASS emulator memory load/write/read flows
     iclass_reader:   Load iCLASS HID credentials into emulator memory for external reader verification
+    smartcard:       Test the RDV4 SIM module and an ISO 7816 contact card
     You must specify a test target - no default 'all' for online tests
 """
       exit 0
@@ -75,6 +77,11 @@ Usage: $0 [--pm3bin /path/to/pm3] [--pm3port /dev/tty...] [desfire_value|hid_wie
     iclass_reader)
       TESTALL=false
       TESTICLASSREADER=true
+      shift
+      ;;
+    smartcard)
+      TESTALL=false
+      TESTSMARTCARD=true
       shift
       ;;
     iclass_emu)
@@ -365,7 +372,7 @@ if command -v git >/dev/null && git rev-parse --is-inside-work-tree >/dev/null 2
 fi
 
 # Check that user specified a test
-if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHIDWIEGAND" = false ] && [ "$TESTMFHIDENCODE" = false ] && [ "$TESTICLASSEMU" = false ] && [ "$TESTICLASSREADER" = false ]; then
+if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHIDWIEGAND" = false ] && [ "$TESTMFHIDENCODE" = false ] && [ "$TESTICLASSEMU" = false ] && [ "$TESTICLASSREADER" = false ] && [ "$TESTSMARTCARD" = false ]; then
   echo "Error: You must specify a test target. Use -h for help."
   exit 1
 fi
@@ -457,6 +464,58 @@ while true; do
       if ! CheckExecute "hf iclass emu reader 2k3des" "$PM3CMD -c 'hf iclass tagsim -w H10301 --fc 31 --cn 337 --enc 2k3des' 2>&1" "Uploaded .* bytes to emulator memory"; then break; fi
       if ! CheckExecute "hf iclass sim preserves emu" "$PM3CMD -c 'hf iclass eview -s 80' 2>&1 | LC_ALL=C tr -cd '\11\12\15\40-\176' | tr '\n' ' '" "0/0x00.*BD 0C 60 10 F7 FF 12 E0.*6/0x06.*03 03 03 03 00 03 E0 17.*7/0x07.*10 A1 45 91 9E D1 6F 50"; then break; fi
     fi
+
+    # SIM module / ISO 7816 contact card tests.
+    #
+    # Card agnostic: asserts that answers come back and are stable, never what
+    # they contain. Several checks repeat an exchange and require every answer
+    # to match - a bus driven too fast returns the occasional corrupted frame
+    # rather than failing outright, which a single shot would not catch.
+    if $TESTSMARTCARD; then
+      echo -e "\n${C_BLUE}Testing SIM module and contact smartcard${C_NC} ${PM3BIN:=./pm3}"
+      if ! CheckFileExist "pm3 exists"                "$PM3BIN"; then break; fi
+      PM3CMD="$PM3BIN"
+      if [ -n "${PM3PORT:-}" ]; then
+        echo "Using PM3 port: $PM3PORT"
+        PM3CMD="$PM3CMD -p $PM3PORT"
+      fi
+
+      WaitForEnter "INSERT AN ISO 7816 CONTACT CARD INTO THE RDV4 SIM SLOT"
+
+      # --- the module itself answers over I2C ---
+      if ! CheckExecute "sim module present"          "$PM3CMD -c 'hw status' 2>&1" "Smart card module"; then break; fi
+      if ! CheckExecute "sim module version ok"       "$PM3CMD -c 'hw status' 2>&1" "version\.+ v[0-9]+\.[0-9]+ \( .*ok"; then break; fi
+
+      # --- the card answers, and answers the same way every time ---
+      if ! CheckExecute "smart info returns an ATR"   "$PM3CMD -c 'smart info' 2>&1" "ISO7816-3 ATR\.+ 3[BF]"; then break; fi
+      if ! CheckExecute "ATR stable over 5 reads"     "for i in 1 2 3 4 5; do $PM3CMD -c 'smart info' 2>&1 | grep -oE 'ISO7816-3 ATR\.+ [0-9A-F ]+'; done | sort -u | wc -l" "^ *1$"; then break; fi
+
+      # any status word will do - the point is that the exchange completed
+      if ! CheckExecute "T=0 apdu gets a status word" "$PM3CMD -c 'smart raw -a -s -0 -d 00a4040007a0000000041010' 2>&1" "\[[+-]\] [0-9A-Fa-f]{4} \|"; then break; fi
+      if ! CheckExecute "T=0 answer stable over 3"    "for i in 1 2 3; do $PM3CMD -c 'smart raw -a -s -0 -d 00a4040007a0000000041010' 2>&1 | grep -oE '^\[[+-]\] [0-9A-Fa-f]{4}'; done | sort -u | wc -l" "^ *1$"; then break; fi
+
+      # loose guard against the 1200 ms per-read wait coming back
+      echo -n "  timing three exchanges... "
+      SMART_T0=$(date +%s)
+      $PM3CMD -c 'smart info; smart info; smart info' >/dev/null 2>&1
+      SMART_DT=$(( $(date +%s) - SMART_T0 ))
+      echo "${SMART_DT}s"
+      if ! CheckExecute "three exchanges under 5s"    "echo $SMART_DT" "^[0-5]$"; then break; fi
+
+      # --- T=1, only if this card offers it ---
+      if $PM3CMD -c 'smart info' 2>&1 | grep -q "Protocol T1"; then
+        echo "  card offers T=1"
+        if ! CheckExecute "module reports T=1 support" "$PM3CMD -c 'hw status' 2>&1" "T=1, PPS\.+ \( .*supported"; then break; fi
+        if ! CheckExecute "pps selects T=1"            "$PM3CMD -c 'smart pps -1' 2>&1" "Protocol\.+ T=1"; then break; fi
+        if ! CheckExecute "pps repeatable over 3"      "for i in 1 2 3; do $PM3CMD -c 'smart pps -1' 2>&1 | grep -oE 'Result\.+ .*(accepted|refused)' | grep -oE 'accepted|refused'; done | sort -u | wc -l" "^ *1$"; then break; fi
+        if ! CheckExecute "T=1 apdu gets a status word" "$PM3CMD -c 'smart raw -1 -s -d 00a4040007a000000004101000' 2>&1" "\[[+-]\] [0-9A-Fa-f]{4} \|"; then break; fi
+        if ! CheckExecute "T=1 answer stable over 3"   "for i in 1 2 3; do $PM3CMD -c 'smart raw -1 -s -d 00a4040007a000000004101000' 2>&1 | grep -oE '^\[[+-]\] [0-9A-Fa-f]{4}'; done | sort -u | wc -l" "^ *1$"; then break; fi
+      else
+        echo "  card is T=0 only, skipping the T=1 checks"
+      fi
+
+    fi
+
   
   echo -e "\n------------------------------------------------------------"
   echo -e "Tests [ ${C_GREEN}OK${C_NC} ] ${C_OK}\n"
