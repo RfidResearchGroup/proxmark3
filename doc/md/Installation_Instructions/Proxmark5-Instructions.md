@@ -14,12 +14,15 @@ You have several options:
 
 ## Flashing instructions
 
-⚠️ Disconnect the BWM (Battery Wireless Module), it's not supported yet, and creates issues flashing.
-
 ⚠️ As usual, make sure [ModemManager won't interfere](ModemManager-Must-Be-Discarded.md).
 
 ⚠️ Make sure no other Proxmark (3 or 5) is plugged into your PC.
 
+### New devices with factory firmware
+
+The factory firmware has some limitations, therefore the flashing procedure is slightly more complex.
+
+⚠️ If you have a BWM (Battery Wireless Module), and if it came already plugged, disconnect it. The reason it came connected when delivered to some countries is customs regulations. But hte factory firmware does not support it and this creates issues when flashing, so just remove it.
 
 Use the yellow USB-C on the same side as the button.
 
@@ -33,42 +36,23 @@ The bootrom in your device is not yet able to enter automatically the boot mode 
 * Plug in your Proxmark5 while holding the button for about 4 seconds until you see 2 LEDs illuminated (B and D).
 * Run `./pm3-flash-fullimage`
 
-With the new bootrom, you don't need to enter manually the boot mode by pressing the button anymore and the flashing experience will be as smooth as on the Proxmark3: just run `./pm3-flash-fullimage` to update the main image, and occasionally `./pm3-flash-bootrom` if needed. If the main image gets seriously buggy and can't jump to boot mode automatically, you can enter boot mode using the button as explained above.
+⚠️ In case your battery came pre-installed, we recommend to plug it back, connect the client, run `hw status` and check the charge level (line `Battery SoC`). If very low, let it charge for a while. Then shut the Proxmark5 off and remove the BWM.
+
+Next, follow [FPGA flashing instuctions](#fpga-flashing-instructions).
+
+### Devices with a firmware > 2026-08-20
+
+With the new bootrom, you don't need to enter manually the boot mode by pressing the button anymore and the flashing experience will be as smooth as on the Proxmark3.
+
+* Use the yellow USB-C on the same side as the button.
+
+* Run `./pm3-flash-fullimage` to update the main image, and occasionally `./pm3-flash-bootrom` if needed.
 
 If you see "🚨 The elf file is not applicable to the currently connected device.", you probably forgot to add the `PLATFORM=PM5` when compiling.
 
-## Recovery flashing via DFU
+If the main image gets seriously buggy and can't jump to boot mode automatically, you can enter boot mode using the button as explained in [the previous section](#new-devices-with-factory-firmware).
 
-If the device seems unresponsive and unable to enter boot mode when the button is pressed when plugged, you can reflash the bootrom over DFU. The Proxmark5 does not require J-Link or similar tools for unbricking.
-
-```sudo apt install dfu-util```
-
-Enter DFU mode: Plug in your Proxmark5 while holding the button for about 8 seconds until you see 2 LEDs (B and D) going on then off.
-
-Backup current flash content, if needed:
-
-```sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:1048576 -U pm5-full-flash-backup.bin```
-
-Flash bootrom:
-
-```sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000       -D recovery/bootrom.bin```
-
-Flash fullimage:
-
-```sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08004000:leave -D recovery/fullimage.bin```
-
-You can also flash bootrom and fullimage in one go:
-
-```sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:leave -D recovery/recovery.bin```
-
-
-On Windows, you can try the following:
-- Download and extract the [AT32 ISP Programmer](https://www.arterychip.com/file/download/1764)
-- Install the USB driver present in `Artery_DFU_DriverInstall/`
-- Enter DFU mode as explained above
-- Open the `Artery ISP Programmer` , select `HEX` file to flash, and use the bootrom & fullimage is required.
-- When flash done, disconnect usb and reconnect for restart device to exit ISP mode.
-- Open the proxmark client to try to connect to verify your device is re-working.
+If the device seems unresponsive and unable to enter boot mode when the button is pressed when plugged, you can [reflash the bootrom over DFU](#recovery-flashing-via-dfu).
 
 ## FPGA flashing instructions
 
@@ -106,3 +90,36 @@ Standalone modes are disabled for now, to ease debugging.
 * When the device is powered on, pressing and holding the button for a few seconds will start displaying a running light, and then releasing the button will power off the device
 
 ⚠️ After using the device over USB and disconnecting it, the Proxmark5 is still powered by the battery. To remind it to you, the RGB will turn green. Press the button a few seconds to turn it off.
+
+## Recovery flashing via DFU
+
+If the device seems unresponsive and unable to enter boot mode when the button is pressed when plugged, you can reflash the bootrom over DFU. The Proxmark5 does not require J-Link or similar tools for unbricking.
+
+```sudo apt install dfu-util```
+
+Enter DFU mode: Plug in your Proxmark5 while holding the button for about 8 seconds until you see 2 LEDs (B and D) going on then off.
+
+Backup current flash content, if needed:
+
+```sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:1048576 -U pm5-full-flash-backup.bin```
+
+Flash bootrom:
+
+```sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000       -D recovery/bootrom.bin```
+
+Flash fullimage:
+
+```sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08004000:leave -D recovery/fullimage.bin```
+
+You can also flash bootrom and fullimage in one go:
+
+```sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:leave -D recovery/recovery.bin```
+
+
+On Windows, you can try the following:
+- Download and extract the [AT32 ISP Programmer](https://www.arterychip.com/file/download/1764)
+- Install the USB driver present in `Artery_DFU_DriverInstall/`
+- Enter DFU mode as explained above
+- Open the `Artery ISP Programmer` , select `HEX` file to flash, and use the bootrom & fullimage is required.
+- When flash done, disconnect usb and reconnect for restart device to exit ISP mode.
+- Open the proxmark client to try to connect to verify your device is re-working.
