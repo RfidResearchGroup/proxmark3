@@ -89,7 +89,7 @@ hw bwmcharge --off    # disable charging
 ### `hw bwmautooff` — auto power-off on USB unplug
 
 Toggles automatic power-off when the PM5 is unplugged from USB. **Default is `on`:**
-the board powers down ~10 s after USB is removed so a BWM-equipped PM5 doesn't
+the board powers down after USB is removed so a BWM-equipped PM5 doesn't
 silently drain the battery. Button power-on is unaffected.
 
 | Argument | Description |
