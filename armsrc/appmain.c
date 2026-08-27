@@ -4175,6 +4175,19 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_PM5_BWM_CHARGE_EN, ok ? PM3_SUCCESS : PM3_EFAILED, NULL, 0);
             break;
         }
+        case CMD_PM5_BWM_WIFI: {
+            #if defined(WITH_BWM_FORWARD)
+                uint16_t port = packet->data.asBytes[0] | (packet->data.asBytes[1] << 8);
+                char *ssid = (char *)&packet->data.asBytes[2];
+                char *pwd  = ssid + strlen(ssid) + 1;
+                uint32_t ip = 0;
+                int res = bwm_wifi_forward_up(ssid, pwd, port, &ip);
+                reply_ng (CMD_PM5_BWM_WIFI, res, (uint8_t *)&ip, sizeof(ip));
+            #else
+                reply_ng(CMD_PM5_BWM_WIFI, PM3_ENOTIMPL, NULL, 0);
+            #endif
+            break;
+        }
         case CMD_PM5_BWM_AUTOOFF: {
             // Toggle automatic power-off on USB unplug (runtime, default on).
             // Payload: 1 byte, non-zero = enable (default), zero = disable.
