@@ -1551,10 +1551,70 @@ static int CmdBwmAutoOff(const char *Cmd) {
 }
 
 static int CmdBWMWifi(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwmwifi",
+                  "Bring up the BWM in STA + TCP-server mode: join a WiFi network and\n"
+                  "start a TCP server so the client can connect over WiFi. PM5 only.",
+                  "hw bwmwifi --ssid Home --pwd secret            --> port 7777\n"
+                  "hw bwmwifi --ssid Home --pwd secret --port 9000");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "ssid", "<ssid>", "WiFi SSID to join"),
+        arg_str0(NULL, "pwd",  "<pwd>",  "WiFi password (omit for open network)"),
+        arg_int0(NULL, "port", "<dec>",  "TCP server listen port (default 7777)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t ssid[64] = {0};
+    int ssid_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 1), ssid, sizeof(ssid) - 1, &ssid_len);
+
+    uint8_t pwd[64] = {0};
+    int pwd_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 2), pwd, sizeof(pwd) - 1, &pwd_len);
+
+    int port = arg_get_int_def(ctx, 3, 7777);
+    CLIParserFree(ctx);
+
+    if (ssid_len == 0) {
+        PrintAndLogEx(FAILED, "an SSID is required");
+        return PM3_EINVARG;
+    }
+    if (port < 1 || port > 65535) {
+        PrintAndLogEx(FAILED, "port must be 1..65535");
+        return PM3_EINVARG;
+    }
+
+    // payload: [port:u16 LE][ssid\0][pwd\0]
+    uint8_t data[140] = {0};
+    int n = 0;
+    data[n++] = (uint8_t)(port & 0xFF);
+    data[n++] = (uint8_t)((port >> 8) & 0xFF);
+    memcpy(&data[n], ssid, ssid_len); n += ssid_len; data[n++] = 0;
+    memcpy(&data[n], pwd,  pwd_len);  n += pwd_len;  data[n++] = 0;
+
+    PrintAndLogEx(INFO, "Bringing up BWM WiFi (SSID \"%s\", port %d)... this can take ~15s", ssid, port);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_WIFI, data, n);
+    PacketResponseNG resp;
+    // ARM blocks during the join (WAIT is up to ~15s), so allow a long client timeout
+    if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &resp, 25000) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "BWM WiFi bring-up failed (check SSID/password and signal)");
+        return resp.status;
+    }
+
+    uint32_t ip = resp.data.asDwords[0];
     PrintAndLogEx(SUCCESS, "BWM on WiFi at %u.%u.%u.%u",
-                  ip & 0xFF, (ip>>8)&0xFF, (ip>>16)&0xFF, (ip>>24)&0xFF);
-    PrintAndLogEx(HINT, "Connect with: " _YELLOW_("pm3 -p tcp:%u.%u.%u.%u:%u"),
-                  ip & 0xFF, (ip>>8)&0xFF, (ip>>16)&0xFF, (ip>>24)&0xFF, port);
+                  ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
+    PrintAndLogEx(HINT, "Connect with: " _YELLOW_("pm3 -p tcp:%u.%u.%u.%u:%d"),
+                  ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF, port);
     return PM3_SUCCESS;
 }
 
@@ -2121,6 +2181,7 @@ static command_t CommandTable[] = {
     {"bwmsetcap", CmdBwmSetCap, IfPm5, "Set BWM fuel-gauge design capacity (PM5, run once after battery change)"},
     {"bwmcharge", CmdBwmCharge, IfPm5, "Enable/disable BWM battery charging (PM5, one-shot)"},
     {"bwmautooff", CmdBwmAutoOff, IfPm5, "Toggle auto power-off on USB unplug (PM5, BWM)"},
+    {"bwmwifi", CmdBWMWifi, IfPm5, "Bring up BWM WiFi (STA + TCP server) for a tcp: connection (PM5)"},
     {"tune", CmdTune, IfPm3Lf, "Measure tuning of device antenna"},
     {"decay", CmdDecay, IfPm3Present, "Measure HF antenna decay after field-off"},
     {NULL, NULL, NULL, NULL}
