@@ -4,6 +4,7 @@
 #include "bwm_wifi.h"
 #include "bwm_uart_at32.h"   // bwm_uart_write / bwm_uart_rx_available / bwm_uart_read
 #include "bwm_forward.h"     // app_com header bytes + BWM_CMD_* forward codes
+#include "pm3_cmd.h"         // PM3_SUCCESS / PM3_ETIMEOUT / PM3_EFAILED / PM3_EOVFLOW
 #include "ticks_apis.h"      // GetTickCount / GetTickCountDelta
 #include "dbprint.h"
 #include "string.h"
