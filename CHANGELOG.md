@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `sim020.bin` - v4.60 of sim module firmware, better T=0 handling and clock etu handling (@iceman1001)
+- Fixed `hf seos sam` - now have a invalid pacs guard (@iceman1001)
+- Changed i2c comms to auto-negotiation and use ATR-keyed rate cache for speedier smart card comms (@iceman1001)
 - Changed `emv search` - now has better table output (@iceman1001)
 - Changed client side polling. Should make client more spiffy (@iceman1001)
 - Fixed `trace list -t 7816` - now handles contact vs contactless annotation better (@iceman1001)

@@ -1519,7 +1519,7 @@ int CmdTraceList(const char *Cmd) {
         }
 
         if (protocol == ISO_7816_4)
-            PrintAndLogEx(INFO, _YELLOW_("ISO7816-4 / Smartcard") " - Timings n/a");
+            PrintAndLogEx(INFO, _YELLOW_("ISO7816-4 / Smartcard") " - Timings in ticks (1/1.5MHz == 0.67us)");
 
         if (protocol == PROTO_CALYPSO)
             PrintAndLogEx(INFO, _YELLOW_("Calypso") " - Timings n/a");

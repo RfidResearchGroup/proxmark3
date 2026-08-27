@@ -113,6 +113,7 @@ void StartReconnectProxmark(void);
 size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, bool show_process, bool keep_raw_mode);
 bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
 bool WaitForResponseTimeout(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout);
+bool WaitForTxIdle(uint32_t ms_timeout);
 bool WaitForResponse(uint32_t cmd, PacketResponseNG *response);
 
 int SetHfFieldTimeout(uint32_t timeout_sec, bool quiet);

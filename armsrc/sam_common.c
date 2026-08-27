@@ -79,7 +79,19 @@ uint16_t sam_bd_offset(const uint8_t *response, uint16_t response_len) {
         // what tells a real response node apart from a 0xBD that happens to sit
         // in the routing tail - without it a SAM whose scFlag were 0xBD would
         // resolve to the wrong offset.
-        if ((uint16_t)(ofs + 2 + response[ofs + 1] + 2) == response_len) {
+        // Length is short form, or long form with one length byte (0x81 <len>),
+        // which is what an SNMP shaped reply over 127 bytes uses.
+        uint16_t hdr = 2;
+        uint16_t node_len = response[ofs + 1];
+        if (node_len == 0x81) {
+            if ((uint16_t)(ofs + 2) >= response_len) {
+                continue;
+            }
+            hdr = 3;
+            node_len = response[ofs + 2];
+        }
+
+        if ((uint16_t)(ofs + hdr + node_len + 2) == response_len) {
             return ofs;
         }
         if (fallback == 0) {
@@ -168,9 +180,10 @@ uint16_t sam_response_payload(const uint8_t *rx, uint16_t rx_len, uint16_t *payl
 
     *payload_len = 0;
 
-    // SNMP shaped reply carries a long form length: bd 81 <len> 8a 81 ...
-    if (((uint16_t)(ofs + 4) < rx_len) &&
-            (rx[ofs + 1] == 0x81) && (rx[ofs + 3] == 0x8a) && (rx[ofs + 4] == 0x81)) {
+    // An SNMP shaped reply over 127 bytes carries a long form length,
+    // bd 81 <len>. Read it from the length byte itself rather than matching one
+    // known inner tag, or any other node in that form parses as 0x81 + 2.
+    if (((uint16_t)(ofs + 2) < rx_len) && (rx[ofs + 1] == 0x81)) {
 
         *payload_len = (uint16_t)(rx[ofs + 2] + 3);
 
@@ -230,7 +243,7 @@ int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) 
         // The GET RESPONSE round below is ours, not the caller's, so log both
         // halves of it. Without this the trace shows a case 3 command coming
         // back with a full data answer, which T=0 cannot do.
-        LogTrace(resp, *resplen, 0, 0, NULL, false);
+        sc_log_trace(resp, *resplen, false);
     } else {
         // we done, return
         goto out;
@@ -244,7 +257,7 @@ int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) 
     }
 
     uint8_t cmd_getresp[] = {0x00, ISO7816_GET_RESPONSE, 0x00, 0x00, more_len};
-    LogTrace(cmd_getresp, sizeof(cmd_getresp), 0, 0, NULL, true);
+    sc_log_trace(cmd_getresp, sizeof(cmd_getresp), true);
 
     res = I2C_BufferWrite(cmd_getresp, sizeof(cmd_getresp), I2C_DEVICE_CMD_SEND_T0, I2C_DEVICE_ADDRESS_MAIN);
     if (res == false) {
@@ -347,7 +360,7 @@ int sam_send_payload_ex(
 
     uint16_t length = SAM_TX_ASN1_PREFIX_LENGTH + SAM_TX_APDU_PREFIX_LENGTH + (uint8_t) * payload_len;
 
-    LogTrace(buf, length, 0, 0, NULL, true);
+    sc_log_trace(buf, length, true);
     if (g_dbglevel >= DBG_INFO) {
         DbpString("SAM REQUEST APDU: ");
         Dbhexdump(length, buf, false);
@@ -360,7 +373,7 @@ int sam_send_payload_ex(
         goto out;
     }
 
-    LogTrace(response, *response_len, 0, 0, NULL, false);
+    sc_log_trace(response, *response_len, false);
     if (g_dbglevel >= DBG_INFO) {
         DbpString("SAM RESPONSE APDU: ");
         Dbhexdump(*response_len, response, false);

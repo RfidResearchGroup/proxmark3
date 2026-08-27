@@ -2370,6 +2370,21 @@ static int CmdHfSeosSAM(const char *Cmd) {
         //             07
     } else if (d[0] == 0xbd && d[2] == 0xb3 && d[4] == 0xa0) {
         const uint8_t *pacs = d + 6;
+        // The a0 content element normally starts with 80 <len> <PACS bits>.
+        // Some SAMs / cards return a status-only element with no access-bits
+        // field, e.g. a0 03 82 01 03 - here the first inner tag is 82, not 80.
+        // Don't parse the status byte as PACS (that yields a bogus
+        // "Invalid PACS value"); report that the card has no readable PACS.
+        if (pacs[0] != 0x80) {
+            PrintAndLogEx(WARNING, "No PACS/SIO access-bits returned by the SAM");
+            if (pacs[0] == 0x82 && pacs[1] == 0x01) {
+                PrintAndLogEx(INFO, "SAM content status: " _YELLOW_("0x%02X") " (no physicalAccessBits field)", pacs[2]);
+            }
+            if (verbose) {
+                print_hex(d, resp.length);
+            }
+            return PM3_ENOPACS;
+        }
         const uint8_t pacs_length = pacs[1];
         const uint8_t *pacs_data = pacs + 2;
         int res = HIDDumpPACSBits(pacs_data, pacs_length, verbose);

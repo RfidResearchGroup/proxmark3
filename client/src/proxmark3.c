@@ -687,7 +687,7 @@ check_script:
     if (g_session.pm3_present) {
         clearCommandBuffer();
         SendCommandNG(CMD_QUIT_SESSION, NULL, 0);
-        msleep(100); // Make sure command is sent before killing client
+        WaitForTxIdle(100); // make sure it really went out before killing the client
     }
 
     while (current_cmdscriptfile()) {

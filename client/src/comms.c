@@ -80,6 +80,30 @@ static uint64_t last_packet_time;
 
 static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
 
+// Wait until the comm thread has actually put a queued command on the wire.
+// Callers used to sleep a fixed guess instead, which was reasonable when a
+// command could sit in the buffer for a whole receive timeout; it is now sent
+// within a millisecond or so.
+bool WaitForTxIdle(uint32_t ms_timeout) {
+
+    uint64_t start = msclock();
+
+    for (;;) {
+
+        pthread_mutex_lock(&txBufferMutex);
+        bool pending = txBuffer_pending;
+        pthread_mutex_unlock(&txBufferMutex);
+
+        if (pending == false) {
+            return true;
+        }
+        if (msclock() - start >= ms_timeout) {
+            return false;
+        }
+        msleep(1);
+    }
+}
+
 // Simple alias to track usages linked to the Bootloader, these commands must not be migrated.
 // - commands sent to enter bootloader mode as we might have to talk to old firmwares
 // - commands sent to the bootloader as it only supports OLD frames (which will always be the case for old BL)

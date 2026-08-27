@@ -622,7 +622,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "smart upgrade",
                   "Upgrade RDV4 sim module firmware",
-                  "smart upgrade -f sim017.bin"
+                  "smart upgrade -f sim020.bin"
                  );
 
     void *argtable[] = {
@@ -927,7 +927,14 @@ static int CmdSmartPPS(const char *Cmd) {
                   "\n"
                   "Note `smart raw -1` already switches a card to T=1 by itself when\n"
                   "the ATR offers it; this is for negotiating Fi/Di explicitly.\n"
-                  "Needs SIM module firmware v4.51 or newer.",
+                  "Needs SIM module firmware v4.51 or newer.\n"
+                  "\n"
+                  "The negotiated rate only holds for the rest of this session, and\n"
+                  "only for commands that do not reset the card. Connecting a client\n"
+                  "reads the module version, which reboots the module back to the\n"
+                  "default rate while the card stays at the negotiated one - the next\n"
+                  "command then fails until something resets the card. `smart info`,\n"
+                  "or any `smart raw -s`, puts both back to the default.",
                   "smart pps -1                 -> select T=1\n"
                   "smart pps -0                 -> select T=0\n"
                   "smart pps -1 --ta1 96        -> select T=1 and F=512 / D=32"

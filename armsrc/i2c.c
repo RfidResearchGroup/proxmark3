@@ -53,6 +53,24 @@ static uint8_t s_card_protocols = 0;
 // sc_raw_device_cmd() runs per APDU, so report the choice once per card
 static bool s_proto_announced = false;
 
+// A negotiated rate lives in two places that reset independently: the module's
+// UART divisor, which any I2C_Reset_EnterMainProgram() wipes, and the card,
+// which only an RST pulse clears. Left alone the two drift apart and every
+// exchange fails until something resets the card.
+//
+// So remember what was negotiated, keyed by the ATR it was negotiated against,
+// and put it back after each ATR - the one window where PPS is legal
+// (ISO/IEC 7816-3 clause 9). A different card brings a different ATR and drops
+// the entry.
+static struct {
+    uint8_t atr[sizeof(((smart_card_atr_t *)0)->atr)];  // what it was negotiated against
+    uint8_t atr_len;
+    uint8_t ta1;                                        // 0 = nothing negotiated
+    uint8_t proto;
+    bool    reapply;                                    // off while SmartCardPPS negotiates
+    bool    tried;                                      // already negotiated against this ATR
+} s_pps = { {0}, 0, 0, 0, true, false };
+
 // try i2c bus recovery at 100kHz = 5us high, 5us low
 void I2C_recovery(void) {
 
@@ -818,6 +836,21 @@ int I2C_get_version(uint8_t *major, uint8_t *minor) {
 }
 
 // Will read response from smart card module,  retries 3 times to get the data.
+static uint32_t s_trace_tick = 0;
+
+void sc_log_trace_reset(void) {
+    s_trace_tick = GetTicks();
+}
+
+void sc_log_trace(const uint8_t *d, uint16_t len, bool reader2tag) {
+    uint32_t now = GetTicks();
+    if (s_trace_tick == 0) {
+        s_trace_tick = now;
+    }
+    LogTrace(d, len, s_trace_tick, now, NULL, reader2tag);
+    s_trace_tick = now;
+}
+
 bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait) {
 
     uint8_t i = 10;
@@ -920,6 +953,107 @@ uint8_t sc_raw_device_cmd(smartcard_command_t flags) {
     return I2C_DEVICE_CMD_SEND;
 }
 
+// The protocol of TD1, which is what the card runs if nothing is negotiated.
+static uint8_t atr_first_proto(const uint8_t *atr, uint8_t len) {
+    if ((len < 2) || ((atr[1] & 0x80) == 0)) {
+        return 0;
+    }
+    uint8_t i = 2;
+    if (atr[1] & 0x10) i++;
+    if (atr[1] & 0x20) i++;
+    if (atr[1] & 0x40) i++;
+    return (i < len) ? (uint8_t)(atr[i] & 0x0F) : 0;
+}
+
+// The fastest rate worth proposing to a card, or 0 for none.
+//
+// Two rules keep this safe, both learned on the bench rather than assumed:
+//
+//   - Keep the Fi the card advertised and only lower Di. Proposing a different
+//     Fi is refused: a SAM advertising Fi=512 took the whole Fi=512 family and
+//     rejected every Fi=768/1024/1536/2048 offer.
+//   - R = Fi / (16 * Di) is the module's UART reload. It has to be a whole
+//     number or the sampling point drifts - that is the +3.2% which makes
+//     Fi=372 unusable beyond Di=1 - and it must not fall below the floor: R=8
+//     (31250 bit/s) transfers cleanly here, R=4 does not.
+//
+// A card with no TA1 offers nothing but the default, so nothing is proposed.
+#define SC_PPS_MIN_RELOAD  8
+
+static uint8_t sc_pps_best_ta1(const uint8_t *atr, uint8_t len) {
+
+    static const uint16_t fi_tab[16] = {372, 372, 558, 744, 1116, 1488, 1860, 0,
+                                        0, 512, 768, 1024, 1536, 2048, 0, 0
+                                       };
+    static const uint8_t di_tab[16] = {0, 1, 2, 4, 8, 16, 32, 64, 12, 20, 0, 0, 0, 0, 0, 0};
+
+    if ((len < 3) || ((atr[1] & 0x10) == 0)) {
+        return 0;                       // no TA1 - default only
+    }
+
+    uint8_t fi_idx = (uint8_t)((atr[2] >> 4) & 0x0F);
+    uint16_t f = fi_tab[fi_idx];
+    if (f == 0) {
+        return 0;                       // RFU
+    }
+
+    uint8_t best = 0;
+    uint16_t best_clocks = 372;         // has to beat the default to be worth it
+
+    for (uint8_t di_idx = 1; di_idx < 16; di_idx++) {
+
+        uint8_t d = di_tab[di_idx];
+        if (d == 0) {
+            continue;
+        }
+        if ((f % (uint16_t)(16u * d)) != 0) {
+            continue;                   // divisor is not exact, the etu would drift
+        }
+        if ((f / (uint16_t)(16u * d)) < SC_PPS_MIN_RELOAD) {
+            continue;                   // faster than the module can receive
+        }
+
+        uint16_t clocks = (uint16_t)(f / d);
+        if (clocks >= best_clocks) {
+            continue;
+        }
+        best_clocks = clocks;
+        best = (uint8_t)((fi_idx << 4) | di_idx);
+    }
+
+    return best;
+}
+
+static bool sc_pps(uint8_t proto, uint8_t ta1) {
+    uint8_t req[2] = { (uint8_t)(proto & 0x0F), ta1 };
+    if (I2C_BufferWrite(req, sizeof(req), I2C_DEVICE_CMD_PPS, I2C_DEVICE_ADDRESS_MAIN) == false) {
+        return false;
+    }
+    uint8_t resp[8] = {0};
+    uint16_t len = sizeof(resp);
+    if ((sc_rx_bytes(resp, &len, SIM_WAIT_DELAY) == false) || (len < 3)) {
+        return false;
+    }
+    // resp is [ok][active protocol][ta1 in force]
+    return ((resp[0] == 1) && (resp[2] == ta1));
+}
+
+void sc_pps_remember(const uint8_t *atr, uint8_t atr_len, uint8_t proto, uint8_t ta1) {
+    if ((atr_len == 0) || (atr_len > sizeof(s_pps.atr))) {
+        return;
+    }
+    memcpy(s_pps.atr, atr, atr_len);
+    s_pps.atr_len = atr_len;
+    s_pps.ta1 = ta1;
+    s_pps.proto = proto;
+}
+
+void sc_pps_forget(void) {
+    s_pps.atr_len = 0;
+    s_pps.ta1 = 0;
+    s_pps.tried = false;
+}
+
 bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
 
     if (card_ptr == NULL) {
@@ -985,7 +1119,55 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
     }
 
     if (verbose) {
-        LogTrace(card_ptr->atr, card_ptr->atr_len, 0, 0, NULL, false);
+        sc_log_trace(card_ptr->atr, card_ptr->atr_len, false);
+    }
+
+    // Same card as the one a rate was negotiated for? Put it back. This is the
+    // only moment a PPS is legal, and the module has just come up at the
+    // default, so card and module move together.
+    if (s_pps.reapply && s_pps.ta1 && (s_pps.atr_len == card_ptr->atr_len) &&
+            (memcmp(s_pps.atr, card_ptr->atr, s_pps.atr_len) == 0)) {
+
+        if (sc_pps(s_pps.proto, s_pps.ta1)) {
+            if (g_dbglevel >= DBG_INFO) {
+                Dbprintf("SC: rate restored, TA1 %02X", s_pps.ta1);
+            }
+        } else {
+            // Refused or lost: the card stays at the default per 9.1, so drop
+            // the entry rather than keep failing on every ATR from now on.
+            if (g_dbglevel >= DBG_ERROR) {
+                Dbprintf("SC: could not restore TA1 %02X, back to the default", s_pps.ta1);
+            }
+            sc_pps_forget();
+        }
+
+    } else {
+
+        bool same_card = (s_pps.atr_len == card_ptr->atr_len) &&
+                         (memcmp(s_pps.atr, card_ptr->atr, s_pps.atr_len) == 0);
+
+        if (same_card == false) {
+            sc_pps_forget();            // different card, start over
+        }
+
+        // First sight of this card: ask for the best rate its ATR allows. Only
+        // once - a refusal is remembered so every later ATR does not retry it.
+        if (s_pps.reapply && (s_pps.tried == false)) {
+
+            uint8_t want = sc_pps_best_ta1(card_ptr->atr, card_ptr->atr_len);
+
+            memcpy(s_pps.atr, card_ptr->atr, card_ptr->atr_len);
+            s_pps.atr_len = card_ptr->atr_len;
+            s_pps.tried = true;
+
+            if (want && sc_pps(atr_first_proto(card_ptr->atr, card_ptr->atr_len), want)) {
+                s_pps.ta1 = want;
+                s_pps.proto = atr_first_proto(card_ptr->atr, card_ptr->atr_len);
+                if (g_dbglevel >= DBG_INFO) {
+                    Dbprintf("SC: negotiated TA1 %02X", want);
+                }
+            }
+        }
     }
 
     return true;
@@ -1057,7 +1239,7 @@ void SmartCardRaw(const smart_card_raw_t *p) {
             wait = I2C_ITERS_FOR_MS(ms);
         }
 
-        LogTrace(p->data, p->len, 0, 0, NULL, true);
+        sc_log_trace(p->data, p->len, true);
 
         bool res = I2C_BufferWrite(
                        p->data,
@@ -1078,7 +1260,7 @@ void SmartCardRaw(const smart_card_raw_t *p) {
         len = ISO7816_MAX_FRAME;
         res = sc_rx_bytes(resp, &len, wait);
         if (res) {
-            LogTrace(resp, len, 0, 0, NULL, false);
+            sc_log_trace(resp, len, false);
         } else {
             len = 0;
         }
@@ -1193,7 +1375,10 @@ void SmartCardPPS(const smart_card_pps_t *p) {
     I2C_Reset_EnterMainProgram();
 
     smart_card_atr_t card;
-    if (GetATR(&card, true) == false) {
+    s_pps.reapply = false;                // this call is the negotiation
+    bool got_atr = GetATR(&card, true);
+    s_pps.reapply = true;
+    if (got_atr == false) {
         reply_ng(CMD_SMART_PPS, PM3_ETIMEOUT, NULL, 0);
         goto out;
     }
@@ -1219,6 +1404,17 @@ void SmartCardPPS(const smart_card_pps_t *p) {
     if ((sc_rx_bytes(resp, &len, SIM_WAIT_DELAY) == false) || (len < 3)) {
         reply_ng(CMD_SMART_PPS, PM3_ETIMEOUT, NULL, 0);
         goto out;
+    }
+
+    // resp is [ok][active protocol][ta1 in force]. Remember a rate that is
+    // actually faster than the default so later ATRs can put it back; 0x11 is
+    // the default and means "forget what we had".
+    if (resp[0] == 1) {
+        if (resp[2] != 0x11) {
+            sc_pps_remember(card.atr, card.atr_len, resp[1], resp[2]);
+        } else {
+            sc_pps_forget();
+        }
     }
 
     reply_ng(CMD_SMART_PPS, PM3_SUCCESS, resp, 3);
