@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `emv search` - now has better table output (@iceman1001)
+- Changed client side polling. Should make client more spiffy (@iceman1001)
 - Fixed `trace list -t 7816` - now handles contact vs contactless annotation better (@iceman1001)
 - Added `smart pps` - ISO 7816-3 protocol and parameter selection exchange (@iceman1001)
 - Added `sim015.bin` - sim modul firmware now supports T=0 and T=1 (@iceman1001)
