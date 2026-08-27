@@ -226,6 +226,11 @@ int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) 
 
     if (resp[*resplen - 2] == 0x61 || resp[*resplen - 2] == 0x9F) {
         more_len = resp[*resplen - 1];
+
+        // The GET RESPONSE round below is ours, not the caller's, so log both
+        // halves of it. Without this the trace shows a case 3 command coming
+        // back with a full data answer, which T=0 cannot do.
+        LogTrace(resp, *resplen, 0, 0, NULL, false);
     } else {
         // we done, return
         goto out;
@@ -239,6 +244,7 @@ int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) 
     }
 
     uint8_t cmd_getresp[] = {0x00, ISO7816_GET_RESPONSE, 0x00, 0x00, more_len};
+    LogTrace(cmd_getresp, sizeof(cmd_getresp), 0, 0, NULL, true);
 
     res = I2C_BufferWrite(cmd_getresp, sizeof(cmd_getresp), I2C_DEVICE_CMD_SEND_T0, I2C_DEVICE_ADDRESS_MAIN);
     if (res == false) {
