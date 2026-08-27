@@ -2313,7 +2313,10 @@ static int CmdHfSeosSAM(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    if (IsHIDSamPresent(verbose) == false) {
+    // The ARM pings the SAM itself before anything else, so this costs a card
+    // reset and an ATR to learn what it is about to learn again. Only pay for
+    // it when the detail was asked for.
+    if (verbose && (IsHIDSamPresent(verbose) == false)) {
         return PM3_ESOFT;
     }
 
@@ -2337,6 +2340,7 @@ static int CmdHfSeosSAM(const char *Cmd) {
         }
         default: {
             PrintAndLogEx(WARNING, "SAM select failed");
+            PrintAndLogEx(HINT, "Hint: is a HID SAM in the slot? try `" _YELLOW_("smart info") "`");
             return resp.status;
         }
     }

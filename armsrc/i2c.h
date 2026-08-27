@@ -39,11 +39,10 @@
 //
 //   v4.42 - the stock firmware, T=0 only
 //   v4.51 - adds SEND_T1 (0x08) and PPS (0x09)
-//
-// Anything at or above the baseline is reported as ok, so a module does not go
-// red every time its firmware moves on.
+//   v4.56 - T=0 reads to the expected length instead of an idle timeout
+//   v4.57 - the ATR does too
 #define SIM_MODULE_VERS_MIN_HI      4
-#define SIM_MODULE_VERS_MIN_LO      42
+#define SIM_MODULE_VERS_MIN_LO      57
 #define SIM_MODULE_VERS_T1_HI       4
 #define SIM_MODULE_VERS_T1_LO       51
 
@@ -51,10 +50,15 @@
 #define  ISO7816_MAX_FRAME 270
 
 // Bit banged bus timing. 1CLK is spent twice per bit, 2CLK once, so the bit
-// period is 2 * 1CLK + 2CLK, here 17 us or about 59 kHz. Every timeout below
-// derives from these, so they are the only two numbers to change.
-#define I2C_DELAY_1CLK_US        5
-#define I2C_DELAY_2CLK_US        7
+// period is 2 * 1CLK + 2CLK, 62 us or about 16 kHz. Every timeout below derives
+// from these, so they are the only two numbers to change.
+//
+// 5/7 (59 kHz) has been tried twice and is too fast: the link works for a while
+// then corrupts, an ATR coming back with flipped bits and a mangled length
+// header rather than not arriving at all. Anything below 20/22 wants a scope on
+// SCL/SDA first.
+#define I2C_DELAY_1CLK_US       20
+#define I2C_DELAY_2CLK_US       22
 
 // The SCL wait loops spend one 1CLK per iteration, so their timeouts are
 // iteration counts. Written in ms and converted here so the two cannot drift.
