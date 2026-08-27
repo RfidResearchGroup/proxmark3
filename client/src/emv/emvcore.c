@@ -266,6 +266,11 @@ void TLVPrintAIDlistFromSelectTLV(struct tlvdb *tlv) {
         ttmp = tlvdb_find_next(ttmp, 0x6f);
     }
 
+    if (n == 0) {
+        PrintAndLogEx(INFO, "No applications found");
+        return;
+    }
+
     size_t w_aid  = strlen("AID");
     size_t w_prio = strlen("Priority");
     size_t w_name = strlen("Name");
@@ -288,10 +293,6 @@ void TLVPrintAIDlistFromSelectTLV(struct tlvdb *tlv) {
     PrintAndLogEx(INFO, "| %-*s | %-*s | %-*s |",
                   (int)w_aid, "AID", (int)w_prio, "Priority", (int)w_name, "Name");
     PrintAndLogEx(INFO, "%s", rule);
-
-    if (n == 0) {
-        PrintAndLogEx(INFO, "| %-*s |", (int)(w_aid + w_prio + w_name + 6), "none");
-    }
 
     for (size_t i = 0; i < n; i++) {
         PrintAndLogEx(INFO, "| " _YELLOW_("%-*s") " | %-*s | " _CYAN_("%-*s") " |",

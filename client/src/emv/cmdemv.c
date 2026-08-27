@@ -799,6 +799,16 @@ static int CmdEMVSearch(const char *Cmd) {
     struct tlvdb *t = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
 
     if (EMVSearch(channel, activateField, leaveSignalON, decodeTLV, t, false)) {
+
+        PrintAndLogEx(FAILED, "Search failed, no answer from the card");
+
+        // Without activation the ARM never reads the ATR, so it does not know
+        // which protocols the card offers and cannot redirect a T=0 request to
+        // a T=1 only card. That used to end here without a word.
+        if ((channel == CC_CONTACT) && (activateField == false)) {
+            PrintAndLogEx(HINT, "Hint: the card is activated by `" _YELLOW_("-s") "`, try `" _YELLOW_("emv search -w -s") "`");
+        }
+
         tlvdb_free(t);
         SetAPDULogging(false);
         return PM3_ERFTRANS;
