@@ -108,7 +108,7 @@ else
 endif
 
 ifneq (,$(findstring WITH_BWM_FORWARD,$(APP_CFLAGS)))
-    SRC_BWM = bwm_uart_at32.c bwm_forward.c
+    SRC_BWM = bwm_uart_at32.c bwm_forward.c bwm_wifi.c
 else
     SRC_BWM =
 endif
