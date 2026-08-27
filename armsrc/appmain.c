@@ -24,6 +24,7 @@
 #include "usb_cdc_apis.h"
 #ifdef WITH_BWM_FORWARD
 #include "bwm_uart_at32.h"
+#include "bwm_wifi.h"
 #endif
 #include "proxmark3_arm.h"
 #include "dbprint.h"
