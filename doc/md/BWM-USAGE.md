@@ -103,8 +103,8 @@ hw bwmautooff --on    # re-enable auto power-off
 ```
 
 > [!NOTE]
-> **Runtime only** — resets to `on` at each boot. Disable it for standalone /
-> BLE / WiFi use on battery.
+> **Runtime only** — resets to `on` at each boot. Disable it for uninterrupted move from USB to standalone / BLE / WiFi use on battery.
+For regular standalone / BLE / WiFi use on battery, one can just turn it on when needed, no need to touch that setting
 
 ---
 
