@@ -4181,8 +4181,9 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint16_t port = packet->data.asBytes[0] | (packet->data.asBytes[1] << 8);
                 char *ssid = (char *)&packet->data.asBytes[2];
                 char *pwd  = ssid + strlen(ssid) + 1;
+                char *host = pwd + strlen(pwd) + 1;
                 uint32_t ip = 0;
-                int res = bwm_wifi_forward_up(ssid, pwd, port, &ip);
+                int res = bwm_wifi_forward_up(ssid, pwd, host, port, &ip);
                 reply_ng (CMD_PM5_BWM_WIFI, res, (uint8_t *)&ip, sizeof(ip));
             #else
                 reply_ng(CMD_PM5_BWM_WIFI, PM3_ENOTIMPL, NULL, 0);
