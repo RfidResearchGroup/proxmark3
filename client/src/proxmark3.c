@@ -702,6 +702,7 @@ check_script:
     }
 
     CmdScriptCleanup();
+    pm3line_cleanup();
 }
 
 #ifndef LIBPM3

@@ -21,6 +21,8 @@
 
 #include "common.h"
 
+#define MAX_PM3_INPUT_ARGS_LENGTH    4096
+
 typedef struct command_s {
     const char *Name;
     int (*Parse)(const char *Cmd);
@@ -28,6 +30,14 @@ typedef struct command_s {
     const char *Help;
 } command_t;
 // command_t array are expected to be NULL terminated
+
+// Maximum nesting depth of the command tree supported by walkCommandsRecursive()
+#define CMD_WALK_MAX_DEPTH 8
+
+// Called by walkCommandsRecursive() for each leaf command.
+// path[0..depth-1] are the command_t entries from the top level category
+// down to the leaf command itself (path[depth-1]).
+typedef void (*command_visitor_t)(const command_t *const path[], size_t depth, void *ctx);
 
 // helpers for command_t IsAvailable
 bool AlwaysAvailable(void);
@@ -70,5 +80,7 @@ void CmdsLS(const command_t Commands[]);
 // Parse a command line
 int CmdsParse(const command_t Commands[], const char *Cmd);
 void dumpCommandsRecursive(const command_t cmds[], int markdown, bool full_help);
+// Walk the command tree, calling visitor for every leaf command
+void walkCommandsRecursive(const command_t cmds[], command_visitor_t visitor, void *ctx);
 
 #endif

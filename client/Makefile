@@ -912,6 +912,7 @@ SRCS =  mifare/aiddesfire.c \
         pm3_fit.c \
         preferences.c \
         pm3line.c \
+        pm3line_vocabulary.c \
         proxmark3.c \
         scandir.c \
         relay/relay_posix.c \
