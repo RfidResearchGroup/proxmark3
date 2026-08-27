@@ -617,16 +617,6 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
         FD_ZERO(&rfds);
         FD_SET(spu->fd, &rfds);
         tv = timeout;
-        if ((*pszRxLen == 0) &&
-                (spu->udpBuffer == NULL) &&
-                (timeout.tv_sec == 0) &&
-                (timeout.tv_usec <= UART_FPC_CLIENT_RX_TIMEOUT_MS * 1000)) {
-            // Nothing of a frame in hand yet - see the header note. Local links
-            // only: a network link keeps its own longer timeout, where polling
-            // this fast would cost more than it saves.
-            tv.tv_sec  = 0;
-            tv.tv_usec = UART_USB_CLIENT_RX_IDLE_TIMEOUT_MS * 1000;
-        }
         res = select(spu->fd + 1, &rfds, NULL, NULL, &tv);
 
         // Read error
