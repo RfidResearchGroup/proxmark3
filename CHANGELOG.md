@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf felica liteauth` - empty long option names for `-c` and `-k` made argtable read past the string (found by ASAN on `--fulltext`) (@Msprg)
 - Added `sim020.bin` - v4.60 of sim module firmware, better T=0 handling and clock etu handling (@iceman1001)
 - Fixed `hf seos sam` - now have a invalid pacs guard (@iceman1001)
 - Changed i2c comms to auto-negotiation and use ATR-keyed rate cache for speedier smart card comms (@iceman1001)

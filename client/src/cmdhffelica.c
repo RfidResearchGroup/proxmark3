@@ -8999,9 +8999,9 @@ static int CmdHFFelicaAuthenticationLite(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "key", "<hex>", "set card key, 16 bytes"),
-        arg_str0("c", "", "<hex>", "set random challenge, 16 bytes"),
+        arg_str0("c", NULL, "<hex>", "set random challenge, 16 bytes"),
         arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
-        arg_lit0("k", "", "keep signal field ON after receive"),
+        arg_lit0("k", NULL, "keep signal field ON after receive"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
