@@ -142,7 +142,7 @@ static int step(uint16_t cmd, const uint8_t *req, uint16_t rl,
 }
 
 int bwm_wifi_forward_up(const char *ssid, const char *password,
-                        uint16_t tcp_port, uint32_t *ip_out) {
+                        const char *hostname, uint16_t tcp_port, uint32_t *ip_out) {
     int r;
     uint8_t b;
     const uint32_t TO = 2000;   // per-config-step timeout (ms)
@@ -158,6 +158,9 @@ int bwm_wifi_forward_up(const char *ssid, const char *password,
     // 3) TCP listen port (LE)
     uint8_t p2[2] = { (uint8_t)(tcp_port & 0xFF), (uint8_t)(tcp_port >> 8) };
     if ((r = step(BWM_CMD_SET_TCP_SERVER_PORT, p2, 2, NULL, NULL, TO, "set tcp port")) != PM3_SUCCESS) return r;
+
+    // 3b) DHCP hostname - must be set before the join so it rides the DHCP request
+    if ((r = step(BWM_CMD_SET_WIFI_CFG_HOST_NAME, (const uint8_t *)hostname, (uint16_t)strlen(hostname), NULL, NULL, TO, "set hostname")) != PM3_SUCCESS) return r;
 
     // 4) join the AP and wait for it to finish (up to ~15s)
     if ((r = step(BWM_CMD_START_WIFI_CONNECT_TASK, NULL, 0, NULL, NULL, TO, "start connect")) != PM3_SUCCESS) return r;
