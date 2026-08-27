@@ -431,6 +431,132 @@ static void bwm_detect_and_init(void) {
 
 #endif // WITH_BWM_STATUS
 
+// ---------------------------------------------------------------------------
+// Low-battery audible warning (opt-in via WITH_BWM_LOWBATT_BEEP).
+//
+// Reuses the WITH_BWM_STATUS fuel-gauge/charger reads; the buzzer register
+// sequence is the proven one from QCTestPM5(). A beeping device surprises
+// people, so this is off by default and gated behind its own flag.
+// ---------------------------------------------------------------------------
+#ifdef WITH_BWM_LOWBATT_BEEP
+#ifndef WITH_BWM_STATUS
+#error "WITH_BWM_LOWBATT_BEEP requires WITH_BWM_STATUS (for the fuel-gauge reads)"
+#endif
+
+// AT32 timer/clock headers (also included later under #ifdef PM5 for QCTestPM5;
+// the header guards make the duplicate include a no-op).
+#include "at32f435_437_crm.h"
+#include "at32f435_437_tmr.h"
+
+// Thresholds - all overridable from the build if needed.
+#ifndef BWM_LOWBATT_SOC_PCT
+#define BWM_LOWBATT_SOC_PCT    10      // warn at or below this state-of-charge (%)
+#endif
+#ifndef BWM_LOWBATT_MV
+#define BWM_LOWBATT_MV         3500    // ...and only if pack voltage is under this (mV)
+#endif
+#ifndef BWM_LOWBATT_PERIOD_MS
+#define BWM_LOWBATT_PERIOD_MS  30000   // re-check at most this often
+#endif
+
+// Buzzer wiring on the BWM mainboard: PB13 enable, PC9 = TMR8_CH4 modulation.
+#define BWM_BEEP_EN_GPIO       GPIOB
+#define BWM_BEEP_EN_PIN        GPIO_PINS_13
+#define BWM_BEEP_MOD_GPIO      GPIOC
+#define BWM_BEEP_MOD_PIN       GPIO_PINS_9
+#define BWM_BEEP_MOD_SRC       GPIO_PINS_SOURCE9
+#define BWM_BEEP_MOD_MUX       GPIO_MUX_3
+#define BWM_BEEP_MOD_TMR       TMR8
+#define BWM_BEEP_MOD_TMR_CH    TMR_SELECT_CHANNEL_4
+
+// One-time TMR8/GPIO bring-up for the buzzer (same sequence as QCTestPM5).
+static void bwm_beeper_setup(void) {
+    crm_periph_clock_enable(CRM_GPIOB_PERIPH_CLOCK, TRUE);
+    crm_periph_clock_enable(CRM_GPIOC_PERIPH_CLOCK, TRUE);
+    crm_periph_clock_enable(CRM_TMR8_PERIPH_CLOCK, TRUE);
+
+    gpio_init_type gpio_init_struct;
+    gpio_default_para_init(&gpio_init_struct);
+    gpio_init_struct.gpio_drive_strength = GPIO_DRIVE_STRENGTH_STRONGER;
+    gpio_init_struct.gpio_out_type = GPIO_OUTPUT_PUSH_PULL;
+    gpio_init_struct.gpio_mode = GPIO_MODE_OUTPUT;
+    gpio_init_struct.gpio_pins = BWM_BEEP_EN_PIN;
+    gpio_init_struct.gpio_pull = GPIO_PULL_NONE;
+    gpio_init(BWM_BEEP_EN_GPIO, &gpio_init_struct);
+    gpio_bits_write(BWM_BEEP_EN_GPIO, BWM_BEEP_EN_PIN, FALSE);
+
+    gpio_init_struct.gpio_mode = GPIO_MODE_MUX;
+    gpio_init_struct.gpio_pins = BWM_BEEP_MOD_PIN;
+    gpio_init(BWM_BEEP_MOD_GPIO, &gpio_init_struct);
+    gpio_pin_mux_config(BWM_BEEP_MOD_GPIO, BWM_BEEP_MOD_SRC, BWM_BEEP_MOD_MUX);
+
+    tmr_internal_clock_set(BWM_BEEP_MOD_TMR);
+    tmr_reset(BWM_BEEP_MOD_TMR);
+    tmr_base_init(BWM_BEEP_MOD_TMR, 999, 95);   // ~2 kHz from 192 MHz
+    tmr_output_config_type tmr_output_struct;
+    tmr_output_default_para_init(&tmr_output_struct);
+    tmr_output_struct.oc_mode = TMR_OUTPUT_CONTROL_PWM_MODE_A;
+    tmr_output_struct.oc_polarity = TMR_OUTPUT_ACTIVE_HIGH;
+    tmr_output_struct.oc_output_state = TRUE;
+    tmr_output_channel_config(BWM_BEEP_MOD_TMR, BWM_BEEP_MOD_TMR_CH, &tmr_output_struct);
+    tmr_channel_value_set(BWM_BEEP_MOD_TMR, BWM_BEEP_MOD_TMR_CH, 500);   // 50% duty
+    tmr_counter_enable(BWM_BEEP_MOD_TMR, TRUE);
+    tmr_output_enable(BWM_BEEP_MOD_TMR, TRUE);
+}
+
+// Sound the buzzer for ms milliseconds. Blocking (SpinDelay) - only ever called
+// from the idle loop, never from inside an operation, so it cannot stall a
+// command mid-flight (handlers block inside PacketReceived()).
+static void bwm_beep(uint16_t ms) {
+    gpio_bits_write(BWM_BEEP_EN_GPIO, BWM_BEEP_EN_PIN, TRUE);
+    SpinDelay(ms);
+    gpio_bits_write(BWM_BEEP_EN_GPIO, BWM_BEEP_EN_PIN, FALSE);
+}
+
+// Two short chirps - the low-battery signature.
+static void bwm_beep_low_batt(void) {
+    bwm_beep(80);
+    SpinDelay(80);
+    bwm_beep(80);
+}
+
+// Throttled low-battery poll. Only warns on battery (USB absent) when BOTH the
+// state-of-charge and the pack voltage are below their floors. Silent while
+// charging or if the BWM/gauge is not present.
+static void bwm_lowbatt_check(void) {
+    static uint32_t last_tick = 0;
+    static bool beeper_ready = false;
+
+    if ((last_tick != 0) && (GetTickCountDelta(last_tick) < BWM_LOWBATT_PERIOD_MS)) {
+        return;
+    }
+    last_tick = GetTickCount();
+
+    uint8_t sysstat = 0;
+    if (I2C_BufferReadRaw(&sysstat, 1, BWM_CHG_REG_SYSSTAT, BWM_CHG_ADDR) <= 0) {
+        return;   // no BWM / I2C error - stay quiet
+    }
+    if (sysstat & 0x02) {
+        return;   // power good (USB present) -> charging/idle, don't warn
+    }
+
+    uint16_t soc = 0, mv = 0;
+    if ((bwm_gauge_read16(BWM_GAUGE_SOC, &soc) == false) ||
+            (bwm_gauge_read16(BWM_GAUGE_VOLTAGE, &mv) == false)) {
+        return;
+    }
+    if ((soc > BWM_LOWBATT_SOC_PCT) || (mv >= BWM_LOWBATT_MV)) {
+        return;   // still healthy
+    }
+
+    if (beeper_ready == false) {
+        bwm_beeper_setup();
+        beeper_ready = true;
+    }
+    bwm_beep_low_batt();
+}
+#endif // WITH_BWM_LOWBATT_BEEP
+
 #ifdef WITH_PM5_PWR_LED
 // "Alive on battery" indicator. When the PM5 runs on battery (USB unplugged) it
 // otherwise gives no sign it is on, so users leave it draining. This lights the
@@ -4310,6 +4436,9 @@ void __attribute__((noreturn)) AppMain(void) {
 #endif
 #ifdef WITH_PM5_AUTOOFF
         bwm_autooff_check();
+#endif
+#ifdef WITH_BWM_LOWBATT_BEEP
+        bwm_lowbatt_check();
 #endif
 
         if (*_stack_start != 0xdeadbeef) {
