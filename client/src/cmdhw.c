@@ -1550,6 +1550,14 @@ static int CmdBwmAutoOff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdBWMWifi(const char *Cmd) {
+    PrintAndLogEx(SUCCESS, "BWM on WiFi at %u.%u.%u.%u",
+                  ip & 0xFF, (ip>>8)&0xFF, (ip>>16)&0xFF, (ip>>24)&0xFF);
+    PrintAndLogEx(HINT, "Connect with: " _YELLOW_("pm3 -p tcp:%u.%u.%u.%u:%u"),
+                  ip & 0xFF, (ip>>8)&0xFF, (ip>>16)&0xFF, (ip>>24)&0xFF, port);
+    return PM3_SUCCESS;
+}
+
 static int CmdBwmCharge(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw bwmcharge",
