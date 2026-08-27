@@ -516,6 +516,7 @@ set (TARGET_SOURCES
 
         ${PM3_ROOT}/client/src/pm3_fit.c
         ${PM3_ROOT}/client/src/pm3line.c
+        ${PM3_ROOT}/client/src/pm3line_vocabulary.c
         ${PM3_ROOT}/client/src/scandir.c
         ${PM3_ROOT}/client/src/scripting.c
         ${PM3_ROOT}/client/src/ui.c

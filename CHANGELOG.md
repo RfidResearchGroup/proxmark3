@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed client tab completion - vocabulary is now built at runtime from the live command tree and uses the same availability rules as `help`, removing the generated `pm3line_vocabulary.h` and `pm3_help2list.py` (@Msprg)
 - Added `sim020.bin` - v4.60 of sim module firmware, better T=0 handling and clock etu handling (@iceman1001)
 - Fixed `hf seos sam` - now have a invalid pacs guard (@iceman1001)
 - Changed i2c comms to auto-negotiation and use ATR-keyed rate cache for speedier smart card comms (@iceman1001)
