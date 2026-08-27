@@ -1563,6 +1563,7 @@ static int CmdBWMWifi(const char *Cmd) {
         arg_str1(NULL, "ssid", "<ssid>", "WiFi SSID to join"),
         arg_str0(NULL, "pwd",  "<pwd>",  "WiFi password (omit for open network)"),
         arg_int0(NULL, "port", "<dec>",  "TCP server listen port (default 7777)"),
+        arg_str0(NULL, "hostname", "<name>", "DHCP hostname (default Proxmark5)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1576,6 +1577,14 @@ static int CmdBWMWifi(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 2), pwd, sizeof(pwd) - 1, &pwd_len);
 
     int port = arg_get_int_def(ctx, 3, 7777);
+
+    uint8_t host[33] = {0};
+    int host_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 4), host, sizeof(host) - 1, &host_len);
+    if (host_len == 0) {
+        strcpy((char *)host, "Proxmark5");
+        host_len = 9;
+    }
     CLIParserFree(ctx);
 
     if (ssid_len == 0) {
@@ -1587,13 +1596,14 @@ static int CmdBWMWifi(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    // payload: [port:u16 LE][ssid\0][pwd\0]
-    uint8_t data[140] = {0};
+    // payload: [port:u16 LE][ssid\0][pwd\0][hostname\0]
+    uint8_t data[200] = {0};
     int n = 0;
     data[n++] = (uint8_t)(port & 0xFF);
     data[n++] = (uint8_t)((port >> 8) & 0xFF);
     memcpy(&data[n], ssid, ssid_len); n += ssid_len; data[n++] = 0;
     memcpy(&data[n], pwd,  pwd_len);  n += pwd_len;  data[n++] = 0;
+    memcpy(&data[n], host, host_len); n += host_len; data[n++] = 0;
 
     PrintAndLogEx(INFO, "Bringing up BWM WiFi (SSID \"%s\", port %d)... this can take ~15s", ssid, port);
 
@@ -1615,6 +1625,7 @@ static int CmdBWMWifi(const char *Cmd) {
                   ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
     PrintAndLogEx(HINT, "Connect with: " _YELLOW_("pm3 -p tcp:%u.%u.%u.%u:%d"),
                   ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF, port);
+    PrintAndLogEx(HINT, "Or by name (router-dependent): " _YELLOW_("pm3 -p tcp:%s:%d"), host, port);
     return PM3_SUCCESS;
 }
 
