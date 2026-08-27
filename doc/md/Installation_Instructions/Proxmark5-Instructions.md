@@ -86,6 +86,7 @@ Standalone modes are disabled for now, to ease debugging.
 ⚠️ the BWM is not yet fully supported, it's better not to plug it for now.
 
 * [Installation instructions](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
+* The very first time, run ` hw bwmsetcap --cap 500` and do a full charge/discharge cycle for it to learn the real capacity
 * Pressing briefly the button will wake the device. The RGB will turn green
 * When the device is powered on, pressing and holding the button for a few seconds will start displaying a running light, and then releasing the button will power off the device
 
