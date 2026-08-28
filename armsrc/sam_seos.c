@@ -18,6 +18,7 @@
 //-----------------------------------------------------------------------------
 #include "sam_seos.h"
 #include "sam_common.h"
+#include "sam_sc.h"
 #include "iclass.h"
 
 #include "proxmark3_arm.h"
@@ -291,6 +292,10 @@ int sam_seos_get_pacs(PacketCommandNG *c) {
     int res = PM3_EFAILED;
 
     clear_trace();
+    // Like the PICOPASS dispatcher, this reset destroys a live SC session.
+    // Mark it stale so the next CMD_HF_SAM_SC call performs its reset/ATR
+    // synchronization path before sending a secured APDU.
+    sam_sc_session_invalidate();
     I2C_Reset_EnterMainProgram();
 
     set_tracing(true);

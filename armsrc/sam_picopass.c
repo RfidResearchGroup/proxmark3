@@ -17,6 +17,7 @@
 //-----------------------------------------------------------------------------
 #include "sam_picopass.h"
 #include "sam_common.h"
+#include "sam_sc.h"
 #include "iclass.h"
 #include "crc16.h"
 #include "proxmark3_arm.h"
@@ -636,6 +637,10 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
     uint8_t sam_response_len = 0;
 
     clear_trace();
+    // This path resets the SAM, invalidating any secure-channel state held by
+    // CMD_HF_SAM_SC. Ensure the next SC request reopens instead of sending
+    // into a reset SAM with a stale routing/session flag.
+    sam_sc_session_invalidate();
     I2C_Reset_EnterMainProgram();
 
     set_tracing(true);
