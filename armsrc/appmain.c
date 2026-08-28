@@ -3907,11 +3907,11 @@ void __attribute__((noreturn)) AppMain(void) {
             * So this is the trigger to execute a standalone mod.  Generic entrypoint by following the standalone/standalone.h headerfile
             * All standalone mod "main loop" should be the RunMod() function.
             */
-            // allow_send_wtx = false;
-            // RunMod();
-            // allow_send_wtx = true;
-
-#ifdef PM5 // TODO DXL Test long press to device shutdown, temporarily blocking standalone mod
+#ifndef PM5
+            allow_send_wtx = false;
+            RunMod();
+            allow_send_wtx = true;
+#else // TODO DXL Test long press to device shutdown, temporarily blocking standalone mod
 
             /*
             StartTicks();

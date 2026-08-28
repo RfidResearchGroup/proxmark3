@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed standalone modes - the one second button hold trigger was a no-op on all non-PM5 platforms, leaving `hw standalone` over USB as the only entry point (@ShawInnes)
 - Added `sim022.bin` - enabled burst mode transfers, which allows us to do TA1=96 in speeds (@iceman1001)
 - Fixed `hf felica liteauth` - empty long option names for `-c` and `-k` made argtable read past the string (found by ASAN on `--fulltext`) (@Msprg)
 - Added `sim020.bin` - v4.60 of sim module firmware, better T=0 handling and clock etu handling (@iceman1001)
