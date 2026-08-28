@@ -673,7 +673,8 @@ static int CmdHF14AReader(const char *Cmd) {
     CLIParserInit(&ctx, "hf 14a reader",
                   "Act as a ISO-14443a reader to identify tag. Look for ISO-14443a tags until Enter or the pm3 button is pressed",
                   "hf 14a reader\n"
-                  "hf 14a reader -@     -> Continuous mode\n"
+                  "hf 14a reader -n 100   -> Polls 100 times\n"
+                  "hf 14a reader -@       -> Continuous mode\n"
                  );
 
     void *argtable[] = {
@@ -682,6 +683,7 @@ static int CmdHF14AReader(const char *Cmd) {
         arg_lit0("s", "silent", "silent (no messages)"),
         arg_lit0(NULL, "drop", "just drop the signal field"),
         arg_lit0(NULL, "skip", "ISO14443-3 select only (skip RATS)"),
+        arg_int0("n", "num", "<dec>", "number of times to poll"),
         arg_lit0("@", NULL, "continuous reader mode"),
         arg_lit0("w", "wait", "wait for card"),
         arg_param_end
@@ -705,8 +707,10 @@ static int CmdHF14AReader(const char *Cmd) {
         cm |= ISO14A_NO_RATS;
     }
 
-    bool continuous = arg_get_lit(ctx, 5);
-    bool wait = arg_get_lit(ctx, 6);
+    int n = arg_get_int_def(ctx, 5, 1);
+
+    bool continuous = arg_get_lit(ctx, 6);
+    bool wait = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
     bool found = false;
@@ -714,7 +718,7 @@ static int CmdHF14AReader(const char *Cmd) {
         cm |= ISO14A_NO_DISCONNECT;
     }
 
-    if (continuous) {
+    if (n > 1 || continuous) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
 
@@ -798,7 +802,10 @@ plot:
             break;
         }
 
-    } while (continuous || (wait && (!found)));
+        if (!continuous && (n > 0)) {
+            n--;
+        }
+    } while (continuous || (wait && (!found)) || n > 0);
 
     if (disconnectAfter == false) {
         if (silent == false) {
