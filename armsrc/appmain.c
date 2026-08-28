@@ -81,531 +81,10 @@
 #include "sam_sc.h"
 #include "cmac_calc.h"
 #include "i2c.h"
+#include "bwm_charger.h"   // BWM charger / fuel-gauge + low-batt warning (WITH_BWM_*)
+#include "buzzer.h"        // PM5 mainboard buzzer API
+#include "rgb_indicator.h" // PM5 antenna-RGB power/battery indicator (WITH_PM5_PWR_LED)
 
-#ifdef WITH_BWM_CHARGERKICK
-// AW32001 charger on the BWM, I2C addr 0x93 (see test_bat_charger).
-#define BWM_CHG_ADDR         0x93
-#define BWM_CHG_REG_MAINCTL  0x06   // bit5 = FET_DIS: shipping mode -> VMIX/charge path off
-#define BWM_CHG_REG_PONCFG   0x01   // PowerOnConfig: charge-enable/current bits
-#define BWM_CHG_FET_DIS      (1u << 5)
-
-// Emergency charge-enable. Normal PM5 firmware never touches the charger, so a BWM
-// left in shipping/FET-disabled mode won't take charge even with USB present. This
-// wakes the power path at boot so the AW32001 can charge autonomously.
-//
-// SCOPE: runs from AppMain(), i.e. only once the PM5 has actually booted. It cannot
-// help a cell too flat to boot (that needs USB reaching VUSBIN in hardware), and it
-// cannot reroute VBUS to the charger input. It only ensures that when the charger
-// HAS input, its path is enabled.
-static void BWM_ChargerKick(void) {
-    I2C_init(true);
-    WaitMS(2);   // let the bus settle
-
-    uint8_t v = 0;
-    // No ACK -> BWM absent or charger dead. Nothing to do; leave the bus and return.
-    if (I2C_BufferReadRaw(&v, 1, BWM_CHG_REG_MAINCTL, BWM_CHG_ADDR) <= 0) {
-        return;
-    }
-
-    // Shipping / FET-disabled -> clear it so the power/charge path comes alive.
-    if (v & BWM_CHG_FET_DIS) {
-        uint8_t nv = v & ~BWM_CHG_FET_DIS;
-        if (I2C_BufferWrite(&nv, 1, BWM_CHG_REG_MAINCTL, BWM_CHG_ADDR)) {
-            Dbprintf("[BWM] charger was FET-disabled (0x%02x) - path re-enabled", v);
-        } else {
-            Dbprintf(_RED_("[BWM] charger FET-disabled; re-enable write failed"));
-        }
-    }
-}
-#endif // WITH_BWM_CHARGERKICK
-
-#ifdef WITH_BWM_STATUS
-// BWM battery telemetry for `hw status`.
-// Charger: AW32001 @ 0x93. Fuel gauge: BQ27427 @ 7-bit 0x55 (0xAA 8-bit).
-// Shared charger defines are #ifndef-guarded so this coexists with WITH_BWM_CHARGERKICK.
-// The BQ27427 address/commands and the current-sign convention are the TI standard set -
-// confirm against a known-charging module before trusting absolute values. If the gauge
-// or charger doesn't ACK, the corresponding lines print "not responding" rather than
-// reporting garbage, so this is safe to ship even if an address is wrong on a given board.
-static bool g_bwm_present = false;
-
-#ifndef BWM_CHG_ADDR
-#define BWM_CHG_ADDR         0x93
-#endif
-#ifndef BWM_CHG_REG_MAINCTL
-#define BWM_CHG_REG_MAINCTL  0x06
-#endif
-#ifndef BWM_CHG_FET_DIS
-#define BWM_CHG_FET_DIS      (1u << 5)
-#endif
-#define BWM_CHG_REG_FAULT    0x09   // AW32001 fault register (latched, read-on-clear)
-#define BWM_CHG_REG_SYSSTAT  0x08   // AW32001 system status (CHG_STAT / PG_STAT / THERM_STAT)
-#define BWM_GAUGE_ADDR       0xAA   // BQ27427, 7-bit 0x55 << 1
-
-// BQ27427 standard commands (16-bit, little-endian)
-#define BWM_GAUGE_TEMP       0x02   // 0.1 K
-#define BWM_GAUGE_VOLTAGE    0x04   // mV
-#define BWM_GAUGE_REMCAP     0x0C   // mAh
-#define BWM_GAUGE_FCC        0x0E   // mAh, FullChargeCapacity (health: FCC/design cap)
-#define BWM_DEFAULT_DESIGN_CAP_MAH   500   // VXE 502540 fitted cell (500 mAh, 3.7 V)
-#define BWM_GAUGE_CURRENT    0x10   // signed mA
-#define BWM_GAUGE_SOC        0x1C   // %
-
-static bool bwm_gauge_read16(uint8_t cmd, uint16_t *out) {
-    uint8_t d[2] = {0};
-    if (I2C_BufferReadRaw(d, 2, cmd, BWM_GAUGE_ADDR) <= 0) {
-        return false;
-    }
-    *out = (uint16_t)(d[0] | (d[1] << 8)); // little-endian
-    return true;
-}
-
-// Reads the BWM charger + fuel gauge and prints a battery section. Called from
-// SendStatus() under #ifdef PM5, so it only runs on a booted PM5 with I2C available.
-static bool bq_read_design_cap(uint16_t *cap);   // fwd decl (defined with the provisioning code below)
-static void print_pm5_battery_status(void) {
-    if (g_bwm_present == false) {
-        return;   // no BWM detected at boot; nothing to report
-    }
-    DbpString(_CYAN_("Battery / BWM"));
-
-    I2C_init(true);
-    WaitMS(2);   // let the bus settle
-
-    // --- charger (AW32001) ---
-    // REG09 (Fault) latches faults and is read-on-clear: read it TWICE - the 1st read
-    // returns the latched history, the 2nd returns the live state (datasheet: "read
-    // REG09 two times consecutively"). Bits [7:6] are the EN_SHIPPING_DGL config field,
-    // not faults, so mask to 0x3F. Fault bit map (AW32001E REG09H):
-    //   b5 VIN_FAULT  b4 THERM_SD  b3 BAT_OVP  b2 SAFETY_TMR  b1 NTC_HOT  b0 NTC_COLD
-    uint8_t mainctl = 0, f1 = 0, fault = 0, sysstat = 0;
-    if (I2C_BufferReadRaw(&mainctl, 1, BWM_CHG_REG_MAINCTL, BWM_CHG_ADDR) <= 0) {
-        Dbprintf("  Charger............. " _YELLOW_("not responding") " (BWM absent or I2C down)");
-    } else {
-        Dbprintf("  Charger MainCtl..... 0x%02x  %s", mainctl,
-                 (mainctl & BWM_CHG_FET_DIS) ? _RED_("FET_DIS (VMIX off / shipping)")
-                 : _GREEN_("power path enabled"));
-
-        I2C_BufferReadRaw(&f1,    1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR); // 1st = latched history
-        I2C_BufferReadRaw(&fault, 1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR); // 2nd = current state
-        fault &= 0x3F;
-
-        if (fault == 0) {
-            Dbprintf("  Charger fault....... 0x00 (none)");
-        } else {
-            Dbprintf("  Charger fault....... " _RED_("0x%02x") "%s%s%s%s%s%s", fault,
-                     (fault & 0x20) ? " VIN_FAULT"  : "",
-                     (fault & 0x10) ? " THERM_SD"   : "",
-                     (fault & 0x08) ? " BAT_OVP"    : "",
-                     (fault & 0x04) ? " SAFETY_TMR" : "",
-                     (fault & 0x02) ? " NTC_HOT"    : "",
-                     (fault & 0x01) ? " NTC_COLD"   : "");
-        }
-
-        // Live charge state from REG08 (System Status): CHG_STAT[4:3], PG_STAT[1], THERM_STAT[0]
-        if (I2C_BufferReadRaw(&sysstat, 1, BWM_CHG_REG_SYSSTAT, BWM_CHG_ADDR) > 0) {
-            static const char *cs[] = { "not charging", "pre-charge", "charging", "charge done" };
-            Dbprintf("  Charge status....... %s%s%s", cs[(sysstat >> 3) & 0x03],
-                     (sysstat & 0x02) ? ", power good" : ", power fail",
-                     (sysstat & 0x01) ? ", thermal-reg" : "");
-        }
-
-        // Configured charge profile (read-only). Decode tables from AW32001E datasheet V1.4:
-        //   IIN_LIM (REG00[3:0]): 0000=50mA, else 80mA + 30mA*(code-1)  [1111=500mA]
-        //   VIN_DPM (REG00[7:4]): 3880mV + 80mV*code                    [1000=4.52V default]
-        //   ICHG    (REG02[5:0]): 8mA * (code+1)                        [63=512mA]
-        uint8_t reg00 = 0, reg01 = 0, reg02 = 0;
-        if (I2C_BufferReadRaw(&reg00, 1, 0x00, BWM_CHG_ADDR) > 0) {
-            uint8_t iin = reg00 & 0x0F;
-            uint8_t vdpm = (reg00 >> 4) & 0x0F;
-            uint16_t iin_ma = (iin == 0) ? 50 : (80 + 30 * (iin - 1));
-            uint16_t vdpm_mv = 3880 + 80 * vdpm;
-            Dbprintf("  Input limit......... %u mA, VIN_DPM %u.%02u V",
-                     iin_ma, vdpm_mv / 1000, (vdpm_mv % 1000) / 10);
-        }
-        if (I2C_BufferReadRaw(&reg01, 1, 0x01, BWM_CHG_ADDR) > 0) {
-            Dbprintf("  Charge enable....... %s", (reg01 & (1u << 3)) ? _YELLOW_("disabled") : _GREEN_("enabled"));
-        }
-        if (I2C_BufferReadRaw(&reg02, 1, 0x02, BWM_CHG_ADDR) > 0) {
-            uint16_t ichg_ma = 8 * ((reg02 & 0x3F) + 1);
-            Dbprintf("  Charge current...... %u mA", ichg_ma);
-        }
-    }
-
-    // --- fuel gauge (BQ27427) ---
-    uint16_t soc = 0, mv = 0, rem = 0, temp = 0, raw_i = 0;
-    if (bwm_gauge_read16(BWM_GAUGE_SOC, &soc) && bwm_gauge_read16(BWM_GAUGE_VOLTAGE, &mv)) {
-        bwm_gauge_read16(BWM_GAUGE_REMCAP, &rem);
-        bwm_gauge_read16(BWM_GAUGE_TEMP, &temp);
-        bwm_gauge_read16(BWM_GAUGE_CURRENT, &raw_i);
-
-        int16_t cur = (int16_t)raw_i;      // +charge / -discharge (verify polarity on hw)
-        int tempC10 = (int)temp - 2732;    // 0.1 K -> 0.1 C
-        int tabs = (tempC10 < 0) ? -tempC10 : tempC10;
-
-        Dbprintf("  Battery SoC......... %u %%", soc);
-        Dbprintf("  Battery voltage..... %u mV", mv);
-        Dbprintf("  Battery current..... %d mA %s", cur,
-                 (cur > 5)  ? _GREEN_("(charging)") :
-                 (cur < -5) ? _YELLOW_("(discharging)") : "(idle)");
-        Dbprintf("  Remaining capacity.. %u mAh", rem);
-        // Measured drain / projected runtime: when running on battery the gauge
-        // Current is negative (discharging); |cur| is the real system draw, so
-        // remaining runtime ~= RemainingCapacity / draw. Only meaningful while
-        // discharging - on charge or idle there is no drain figure to report.
-        // (Projection is only as good as RemCap - provision Design Capacity first.)
-        if (cur < -5) {
-            uint16_t draw = (uint16_t)(-cur);            // mA drawn from the battery
-            uint32_t mins = ((uint32_t)rem * 60) / draw; // RemCap/draw -> hours, *60 -> mins
-            Dbprintf("  Battery drain....... %u mA (approx %u h %u min left)",
-                     draw, (unsigned)(mins / 60), (unsigned)(mins % 60));
-        }
-        Dbprintf("  Temp (gauge)........ %d.%d C", tempC10 / 10, tabs % 10);
-
-        // Battery health: FullChargeCapacity (0x0E) vs the gauge's programmed Design
-        // Capacity. FCC is the gauge's learned present full capacity; health = FCC/design.
-        // NOTE: only meaningful once the gauge has run an Impedance Track learning cycle
-        // (a full charge/discharge). Before that it is an unconverged estimate. If Design
-        // Capacity was never provisioned (hw bwmsetcap), the ratio is against the gauge
-        // default, not the fitted cell - so it can read wildly wrong.
-        uint16_t fcc = 0, design = 0;
-        if (bwm_gauge_read16(BWM_GAUGE_FCC, &fcc) && fcc > 0) {
-            if (bq_read_design_cap(&design) == false || design == 0) {
-                design = BWM_DEFAULT_DESIGN_CAP_MAH;   // fall back to the fitted-cell rating
-            }
-            unsigned health = (unsigned)(((uint32_t)fcc * 100) / design);
-            Dbprintf("  Full charge cap..... %u mAh (design %u)", fcc, design);
-            Dbprintf("  Battery health...... %u %% " _YELLOW_("(needs a full cycle to be accurate)"), health);
-        }
-    } else {
-        Dbprintf("  Fuel gauge.......... " _YELLOW_("not responding") " (BQ27427 absent or I2C down)");
-    }
-}
-
-// --- BQ27427 provisioning: set Design Capacity for the fitted cell -------------
-// One-time. The gauge ships with a ~1000+ mAh default profile, so RemainingCapacity
-// reads wrong for the fitted pack until Design Capacity is programmed. Invoked by the
-// `hw bwmsetcap` client command (CMD_PM5_BWM_SET_CAP) - deliberately NOT run at boot,
-// because a config-update cycle disrupts the Impedance Track learning cycle.
-// Per BQ27427 TRM (SLUUCD5): State subclass 82 (0x52), Design Capacity at offset 6
-// -> block addr 0x46 (MSB)/0x47 (LSB), big-endian. Assumes gauge UNSEALED (factory default).
-
-static bool bq_control(uint16_t sub) {
-    uint8_t d[2] = { (uint8_t)(sub & 0xFF), (uint8_t)(sub >> 8) };
-    return I2C_BufferWrite(d, 2, 0x00, BWM_GAUGE_ADDR);       // Control() 0x00
-}
-static bool bq_flags(uint16_t *f) {
-    uint8_t d[2] = {0};
-    if (I2C_BufferReadRaw(d, 2, 0x06, BWM_GAUGE_ADDR) <= 0) return false;
-    *f = (uint16_t)(d[0] | (d[1] << 8));                      // Flags() 0x06
-    return true;
-}
-static bool bq_select_state_block(void) {
-    uint8_t v;
-    v = 0x00;
-    if (!I2C_BufferWrite(&v, 1, 0x61, BWM_GAUGE_ADDR)) return false; // BlockDataControl
-    v = 0x52;
-    if (!I2C_BufferWrite(&v, 1, 0x3E, BWM_GAUGE_ADDR)) return false; // DataClass = 82 (State)
-    v = 0x00;
-    if (!I2C_BufferWrite(&v, 1, 0x3F, BWM_GAUGE_ADDR)) return false; // DataBlock = 0
-    WaitMS(5);
-    return true;
-}
-static bool bq_read_design_cap(uint16_t *cap) {
-    if (!bq_select_state_block()) return false;
-    uint8_t d[2] = {0};
-    if (I2C_BufferReadRaw(d, 2, 0x46, BWM_GAUGE_ADDR) <= 0) return false;
-    *cap = (uint16_t)((d[0] << 8) | d[1]);                    // big-endian
-    return true;
-}
-
-// Enable or disable battery charging by clearing/setting CEB (REG01[3]:
-// 0 = charge enabled, 1 = charge disabled). Read-modify-write to preserve the
-// other REG01 fields. NOTE: REG01 is watchdog-affected on the AW32001E - this
-// reverts to its default on watchdog expiry (~160 s) unless the watchdog is
-// serviced (REG02[6]=1) or disabled (REG05[6:5]=00), so treat it as a one-shot.
-static bool bwm_charger_set_charge(bool enable) {
-    uint8_t reg01 = 0;
-    if (I2C_BufferReadRaw(&reg01, 1, 0x01, BWM_CHG_ADDR) <= 0) {
-        return false;
-    }
-    if (enable) {
-        reg01 &= ~(1u << 3);   // CEB = 0 -> charge enabled
-    } else {
-        reg01 |= (1u << 3);    // CEB = 1 -> charge disabled
-    }
-    return I2C_BufferWrite(&reg01, 1, 0x01, BWM_CHG_ADDR);
-}
-
-// Program Design Capacity (and matching Design Energy). Idempotent: returns true
-// without a config-update cycle if the value is already correct.
-static bool bwm_gauge_provision_capacity(uint16_t cap_mah) {
-    uint16_t cur = 0;
-    if (bq_read_design_cap(&cur) && cur == cap_mah) {
-        return true;    // already correct - do NOT run another CFGUPDATE cycle
-    }
-
-    uint16_t energy_mwh = (uint16_t)(((uint32_t)cap_mah * 37) / 10);   // ~3.7 V nominal
-
-    // Enter CONFIG_UPDATE and wait for the gauge to acknowledge it.
-    if (bq_control(0x0013) == false) {   // SET_CFGUPDATE
-        return false;
-    }
-
-    uint16_t flags = 0;
-    int tries = 0;
-    do {
-        WaitMS(50);
-        if (bq_flags(&flags) == false) {
-            return false;
-        }
-    } while (((flags & 0x0010) == 0) && (++tries < 40));   // wait for CFGUPDATE (Flags bit 4), ~2 s
-
-    if ((flags & 0x0010) == 0) {
-        return false;
-    }
-
-    if (!bq_select_state_block()) return false;
-
-    uint8_t blk[32] = {0};
-    if (I2C_BufferReadRaw(blk, 32, 0x40, BWM_GAUGE_ADDR) <= 0) return false;
-
-    blk[6] = (uint8_t)(cap_mah >> 8);
-    blk[7] = (uint8_t)(cap_mah & 0xFF);      // DesignCapacity
-    blk[8] = (uint8_t)(energy_mwh >> 8);
-    blk[9] = (uint8_t)(energy_mwh & 0xFF);   // DesignEnergy
-    I2C_BufferWrite(&blk[6], 2, 0x46, BWM_GAUGE_ADDR);
-    I2C_BufferWrite(&blk[8], 2, 0x48, BWM_GAUGE_ADDR);
-
-    uint16_t sum = 0;                                         // block checksum = 255 - (sum mod 256)
-    for (int i = 0; i < 32; i++) sum += blk[i];
-    uint8_t csum = (uint8_t)(0xFF - (uint8_t)(sum & 0xFF));
-    I2C_BufferWrite(&csum, 1, 0x60, BWM_GAUGE_ADDR);          // commit block
-    WaitMS(10);
-
-    if (!bq_control(0x0042)) return false;                    // SOFT_RESET (exit CFGUPDATE)
-    tries = 0;
-    do { WaitMS(50); if (!bq_flags(&flags)) return false; }
-    while (((flags & 0x0010) != 0) && (++tries < 40));
-    return ((flags & 0x0010) == 0);
-}
-
-// Strong override of the weak UnitTestMain() in start.c. Vector() calls UnitTestMain()
-// after ConfigSystemClocks() and before AppMain(); the weak default is empty, so a
-// strong definition here runs at boot and then returns into AppMain() normally.
-//
-// This enables battery charging on the BWM by replicating the charger register writes
-// from at32_unit_test.c:test_bat_charger_only_settings() (upstream RRG values), WITHOUT
-// pulling in that file's unrelated UART-debug / RGB test routines. AW32001E @ 0x93:
-//   REG01[3] CEB      -> 0 : charge enabled
-//   REG02    ICHG     = 0x1F : 256 mA charge current
-//   REG05             = 0x1A : safety timer disabled (matches upstream; note the charger
-//                              watchdog is thus relied upon off - see REG05 handling)
-//   REG03             = 0xE1 : 3 A discharge current
-//   REG0B            = 0x6B : 11 mA pre-charge current
-
-// Probe for the BWM charger over I2C and, if found, apply the charge configuration.
-static void bwm_detect_and_init(void) {
-    I2C_init(true);
-
-    // Single bounded probe. Any non-ACK => no BWM fitted; skip everything.
-    uint8_t v = 0;
-    if (I2C_BufferReadRaw(&v, 1, 0x01, BWM_CHG_ADDR) <= 0) {
-        g_bwm_present = false;
-        return;
-    }
-    g_bwm_present = true;
-
-    // Enable charging (clear CEB, REG01[3]) + upstream charge profile
-    // (matches at32_unit_test.c:test_bat_charger_only_settings(), AW32001ECSR).
-    if (v & (1u << 3)) {
-        v &= ~(1u << 3);
-        I2C_BufferWrite(&v, 1, 0x01, BWM_CHG_ADDR);
-    }
-    uint8_t w;
-    w = 0x1F; I2C_BufferWrite(&w, 1, 0x02, BWM_CHG_ADDR); // charge current 256 mA
-    w = 0xE1; I2C_BufferWrite(&w, 1, 0x03, BWM_CHG_ADDR); // discharge current 3 A
-    w = 0x1A; I2C_BufferWrite(&w, 1, 0x05, BWM_CHG_ADDR); // safety timer disabled (upstream)
-    w = 0x6B; I2C_BufferWrite(&w, 1, 0x0B, BWM_CHG_ADDR); // pre-charge 11 mA
-}
-
-#endif // WITH_BWM_STATUS
-
-// ---------------------------------------------------------------------------
-// Low-battery audible warning (opt-in via WITH_BWM_LOWBATT_BEEP).
-//
-// Reuses the WITH_BWM_STATUS fuel-gauge/charger reads; the buzzer register
-// sequence is the proven one from QCTestPM5(). A beeping device surprises
-// people, so this is off by default and gated behind its own flag.
-// ---------------------------------------------------------------------------
-#ifdef WITH_BWM_LOWBATT_BEEP
-#ifndef WITH_BWM_STATUS
-#error "WITH_BWM_LOWBATT_BEEP requires WITH_BWM_STATUS (for the fuel-gauge reads)"
-#endif
-
-// AT32 timer/clock headers (also included later under #ifdef PM5 for QCTestPM5;
-// the header guards make the duplicate include a no-op).
-#include "at32f435_437_crm.h"
-#include "at32f435_437_tmr.h"
-
-// Thresholds - all overridable from the build if needed.
-#ifndef BWM_LOWBATT_SOC_PCT
-#define BWM_LOWBATT_SOC_PCT    10      // warn at or below this state-of-charge (%)
-#endif
-#ifndef BWM_LOWBATT_MV
-#define BWM_LOWBATT_MV         3500    // ...and only if pack voltage is under this (mV)
-#endif
-#ifndef BWM_LOWBATT_PERIOD_MS
-#define BWM_LOWBATT_PERIOD_MS  30000   // re-check at most this often
-#endif
-
-// Buzzer wiring on the BWM mainboard: PB13 enable, PC9 = TMR8_CH4 modulation.
-#define BWM_BEEP_EN_GPIO       GPIOB
-#define BWM_BEEP_EN_PIN        GPIO_PINS_13
-#define BWM_BEEP_MOD_GPIO      GPIOC
-#define BWM_BEEP_MOD_PIN       GPIO_PINS_9
-#define BWM_BEEP_MOD_SRC       GPIO_PINS_SOURCE9
-#define BWM_BEEP_MOD_MUX       GPIO_MUX_3
-#define BWM_BEEP_MOD_TMR       TMR8
-#define BWM_BEEP_MOD_TMR_CH    TMR_SELECT_CHANNEL_4
-
-// One-time TMR8/GPIO bring-up for the buzzer (same sequence as QCTestPM5).
-static void bwm_beeper_setup(void) {
-    crm_periph_clock_enable(CRM_GPIOB_PERIPH_CLOCK, TRUE);
-    crm_periph_clock_enable(CRM_GPIOC_PERIPH_CLOCK, TRUE);
-    crm_periph_clock_enable(CRM_TMR8_PERIPH_CLOCK, TRUE);
-
-    gpio_init_type gpio_init_struct;
-    gpio_default_para_init(&gpio_init_struct);
-    gpio_init_struct.gpio_drive_strength = GPIO_DRIVE_STRENGTH_STRONGER;
-    gpio_init_struct.gpio_out_type = GPIO_OUTPUT_PUSH_PULL;
-    gpio_init_struct.gpio_mode = GPIO_MODE_OUTPUT;
-    gpio_init_struct.gpio_pins = BWM_BEEP_EN_PIN;
-    gpio_init_struct.gpio_pull = GPIO_PULL_NONE;
-    gpio_init(BWM_BEEP_EN_GPIO, &gpio_init_struct);
-    gpio_bits_write(BWM_BEEP_EN_GPIO, BWM_BEEP_EN_PIN, FALSE);
-
-    gpio_init_struct.gpio_mode = GPIO_MODE_MUX;
-    gpio_init_struct.gpio_pins = BWM_BEEP_MOD_PIN;
-    gpio_init(BWM_BEEP_MOD_GPIO, &gpio_init_struct);
-    gpio_pin_mux_config(BWM_BEEP_MOD_GPIO, BWM_BEEP_MOD_SRC, BWM_BEEP_MOD_MUX);
-
-    tmr_internal_clock_set(BWM_BEEP_MOD_TMR);
-    tmr_reset(BWM_BEEP_MOD_TMR);
-    tmr_base_init(BWM_BEEP_MOD_TMR, 999, 95);   // ~2 kHz from 192 MHz
-    tmr_output_config_type tmr_output_struct;
-    tmr_output_default_para_init(&tmr_output_struct);
-    tmr_output_struct.oc_mode = TMR_OUTPUT_CONTROL_PWM_MODE_A;
-    tmr_output_struct.oc_polarity = TMR_OUTPUT_ACTIVE_HIGH;
-    tmr_output_struct.oc_output_state = TRUE;
-    tmr_output_channel_config(BWM_BEEP_MOD_TMR, BWM_BEEP_MOD_TMR_CH, &tmr_output_struct);
-    tmr_channel_value_set(BWM_BEEP_MOD_TMR, BWM_BEEP_MOD_TMR_CH, 500);   // 50% duty
-    tmr_counter_enable(BWM_BEEP_MOD_TMR, TRUE);
-    tmr_output_enable(BWM_BEEP_MOD_TMR, TRUE);
-}
-
-// Sound the buzzer for ms milliseconds. Blocking (SpinDelay) - only ever called
-// from the idle loop, never from inside an operation, so it cannot stall a
-// command mid-flight (handlers block inside PacketReceived()).
-static void bwm_beep(uint16_t ms) {
-    gpio_bits_write(BWM_BEEP_EN_GPIO, BWM_BEEP_EN_PIN, TRUE);
-    SpinDelay(ms);
-    gpio_bits_write(BWM_BEEP_EN_GPIO, BWM_BEEP_EN_PIN, FALSE);
-}
-
-// Two short chirps - the low-battery signature.
-static void bwm_beep_low_batt(void) {
-    bwm_beep(80);
-    SpinDelay(80);
-    bwm_beep(80);
-}
-
-// Throttled low-battery poll. Only warns on battery (USB absent) when BOTH the
-// state-of-charge and the pack voltage are below their floors. Silent while
-// charging or if the BWM/gauge is not present.
-static void bwm_lowbatt_check(void) {
-    static uint32_t last_tick = 0;
-    static bool beeper_ready = false;
-
-    if ((last_tick != 0) && (GetTickCountDelta(last_tick) < BWM_LOWBATT_PERIOD_MS)) {
-        return;
-    }
-    last_tick = GetTickCount();
-
-    uint8_t sysstat = 0;
-    if (I2C_BufferReadRaw(&sysstat, 1, BWM_CHG_REG_SYSSTAT, BWM_CHG_ADDR) <= 0) {
-        return;   // no BWM / I2C error - stay quiet
-    }
-    if (sysstat & 0x02) {
-        return;   // power good (USB present) -> charging/idle, don't warn
-    }
-
-    uint16_t soc = 0, mv = 0;
-    if ((bwm_gauge_read16(BWM_GAUGE_SOC, &soc) == false) ||
-            (bwm_gauge_read16(BWM_GAUGE_VOLTAGE, &mv) == false)) {
-        return;
-    }
-    if ((soc > BWM_LOWBATT_SOC_PCT) || (mv >= BWM_LOWBATT_MV)) {
-        return;   // still healthy
-    }
-
-    if (beeper_ready == false) {
-        bwm_beeper_setup();
-        beeper_ready = true;
-    }
-    bwm_beep_low_batt();
-}
-#endif // WITH_BWM_LOWBATT_BEEP
-
-#ifdef WITH_PM5_PWR_LED
-// "Alive on battery" indicator. When the PM5 runs on battery (USB unplugged) it
-// otherwise gives no sign it is on, so users leave it draining. This lights the
-// antenna RGB a dim green while on battery, and turns it off when on USB (where the
-// cable already signals power). Throttled + edge-triggered to avoid I2C spam and to
-// yield the RGB to hf/lf tune (which sets g_rgb_external while it owns the LED).
-#ifndef PM5_PWR_LED_PERIOD_MS
-#define PM5_PWR_LED_PERIOD_MS  1000   // re-evaluate at most once a second
-#endif
-
-// Set by CMD_PM5_RGB_SET so the indicator backs off while tune controls the RGB.
-volatile bool g_rgb_external = false;
-
-static bool s_pwr_led_setup = false;
-
-static void bwm_power_led_check(void) {
-    static uint32_t last_tick = 0;
-    static int last_state = -1;   // -1 unknown, 0 = off/USB, 1 = green/battery
-
-    if ((last_tick != 0) && (GetTickCountDelta(last_tick) < PM5_PWR_LED_PERIOD_MS)) {
-        return;
-    }
-    last_tick = GetTickCount();
-
-    // While tune (or any external RGB user) owns the LED, do nothing and force a
-    // refresh next time it is released.
-    if (g_rgb_external) {
-        last_state = -1;
-        return;
-    }
-
-    if (s_pwr_led_setup == false) {
-        gpio_vusb_setup();
-        s_pwr_led_setup = true;
-    }
-
-    int on_battery = (Gpio_VUSB_Read() == false) ? 1 : 0;
-    if (on_battery == last_state) {
-        return;   // edge-triggered: only write RGB when the state changes
-    }
-    last_state = on_battery;
-
-    if (on_battery) {
-        RgbLedSet(0, 8, 0);   // dim green: alive, on battery
-    } else {
-        RgbLedSet(0, 0, 0);   // on USB: off (cable already signals power)
-    }
-}
-#endif // WITH_PM5_PWR_LED
 
 #ifdef WITH_PM5_AUTOOFF
 // Automatic power-off on USB unplug. When the BWM keeps the PM5 alive on battery,
@@ -1092,7 +571,7 @@ static void SendStatus(uint32_t wait) {
     printHf14bConfig();   // HF 14b config
 #endif
 #if defined(PM5) && defined(WITH_BWM_STATUS)
-    print_pm5_battery_status();
+    bwm_print_battery_status();
 #endif
     printConnSpeed(wait);
     DbpString(_CYAN_("Various"));
@@ -1566,9 +1045,6 @@ void ListenReaderField(uint8_t limit) {
 
 #ifdef PM5
 
-#include "at32f435_437_crm.h"
-#include "at32f435_437_tmr.h"
-
 // TODO DXL: 一部分QC逻辑可以放在PM5设备端实现，这个函数后面记得复用代码，并且不要放在 appmain.c 中（考虑移动到平台专属的模块）
 // failed_item == 0: BLUE LED in Antenna
 // failed_item == 1: RGB in mainboard
@@ -1633,49 +1109,8 @@ static bool QCTestPM5(uint8_t *failed_item, uint32_t timeout_ms) {
     }
 
     // 在循环中测试LED、蜂鸣器、按钮
-
-#define BEEPER_EN_GPIO       GPIOB
-#define BEEPER_EN_GPIO_PIN   GPIO_PINS_13
-#define BEEPER_MOD_GPIO      GPIOC
-#define BEEPER_MOD_GPIO_PIN  GPIO_PINS_9
-#define BEEPER_MOD_GPIO_SRC  GPIO_PINS_SOURCE9
-#define BEEPER_MOD_GPIO_MUX  GPIO_MUX_3
-#define BEEPER_MOD_TMR       TMR8
-#define BEEPER_MOD_TMR_CH    TMR_SELECT_CHANNEL_4
-
-    // PB13 使能，PC9 调制，使用 TMR8_CH4 输出调制
-    crm_periph_clock_enable(CRM_GPIOB_PERIPH_CLOCK, TRUE);
-    crm_periph_clock_enable(CRM_GPIOC_PERIPH_CLOCK, TRUE);
-    crm_periph_clock_enable(CRM_TMR8_PERIPH_CLOCK, TRUE);
-
-    gpio_init_type gpio_init_struct;
-    gpio_default_para_init(&gpio_init_struct);
-    // 蜂鸣器使能脚
-    gpio_init_struct.gpio_drive_strength = GPIO_DRIVE_STRENGTH_STRONGER;
-    gpio_init_struct.gpio_out_type = GPIO_OUTPUT_PUSH_PULL;
-    gpio_init_struct.gpio_mode = GPIO_MODE_OUTPUT;
-    gpio_init_struct.gpio_pins = BEEPER_EN_GPIO_PIN;
-    gpio_init_struct.gpio_pull = GPIO_PULL_NONE;
-    gpio_init(BEEPER_EN_GPIO, &gpio_init_struct);
-    gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, FALSE);
-    // 蜂鸣器调制脚
-    gpio_init_struct.gpio_mode = GPIO_MODE_MUX;
-    gpio_init_struct.gpio_pins = BEEPER_MOD_GPIO_PIN;
-    gpio_init(BEEPER_MOD_GPIO, &gpio_init_struct);
-    gpio_pin_mux_config(BEEPER_MOD_GPIO, BEEPER_MOD_GPIO_SRC, BEEPER_MOD_GPIO_MUX);
-
-    tmr_internal_clock_set(BEEPER_MOD_TMR);
-    tmr_reset(BEEPER_MOD_TMR);
-    tmr_base_init(BEEPER_MOD_TMR, 999, 95); // 192M出2k
-    tmr_output_config_type tmr_output_struct;
-    tmr_output_default_para_init(&tmr_output_struct);
-    tmr_output_struct.oc_mode = TMR_OUTPUT_CONTROL_PWM_MODE_A;
-    tmr_output_struct.oc_polarity = TMR_OUTPUT_ACTIVE_HIGH;
-    tmr_output_struct.oc_output_state = TRUE;
-    tmr_output_channel_config(BEEPER_MOD_TMR, BEEPER_MOD_TMR_CH, &tmr_output_struct);
-    tmr_channel_value_set(BEEPER_MOD_TMR, BEEPER_MOD_TMR_CH, 500); // 比较值=500 (50%占空比)
-    tmr_counter_enable(BEEPER_MOD_TMR, TRUE);
-    tmr_output_enable(BEEPER_MOD_TMR, TRUE);
+    // 蜂鸣器 (PB13 使能, PC9 = TMR8_CH4 调制) 由通用 buzzer 模块驱动
+    BuzzerSetup();
 
     LEDsoff(); // 在开始测试之前线关闭所有LED
 
@@ -1699,10 +1134,7 @@ static bool QCTestPM5(uint8_t *failed_item, uint32_t timeout_ms) {
         }
 
         LED_A_ON();
-        BEEPER_MOD_TMR->pr = 999;
-        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, TRUE);
-        SpinDelay(20);
-        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, FALSE);
+        BuzzerTone(999, 500, 20);
         SpinDelay(200);
         LED_A_OFF();
 
@@ -1716,11 +1148,7 @@ static bool QCTestPM5(uint8_t *failed_item, uint32_t timeout_ms) {
         }
 
         LED_B_ON();
-        BEEPER_MOD_TMR->pr = 1100;
-        tmr_channel_value_set(BEEPER_MOD_TMR, BEEPER_MOD_TMR_CH, 550);
-        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, TRUE);
-        SpinDelay(20);
-        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, FALSE);
+        BuzzerTone(1100, 550, 20);
         SpinDelay(200);
         LED_B_OFF();
 
@@ -1734,11 +1162,7 @@ static bool QCTestPM5(uint8_t *failed_item, uint32_t timeout_ms) {
         }
 
         LED_C_ON();
-        BEEPER_MOD_TMR->pr = 1200;
-        tmr_channel_value_set(BEEPER_MOD_TMR, BEEPER_MOD_TMR_CH, 600);
-        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, TRUE);
-        SpinDelay(20);
-        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, FALSE);
+        BuzzerTone(1200, 600, 20);
         SpinDelay(200);
         LED_C_OFF();
 
@@ -1752,11 +1176,7 @@ static bool QCTestPM5(uint8_t *failed_item, uint32_t timeout_ms) {
         }
 
         LED_D_ON();
-        BEEPER_MOD_TMR->pr = 1300;
-        tmr_channel_value_set(BEEPER_MOD_TMR, BEEPER_MOD_TMR_CH, 650);
-        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, TRUE);
-        SpinDelay(20);
-        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, FALSE);
+        BuzzerTone(1300, 650, 20);
         SpinDelay(200);
         LED_D_OFF();
     }
@@ -4287,7 +3707,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 #ifdef WITH_PM5_PWR_LED
             // tune (or any external RGB user) now owns the LED; back the power
             // indicator off. A non-zero colour claims it; all-zero releases it.
-            g_rgb_external = (payload->r || payload->g || payload->b);
+            rgb_indicator_set_external(payload->r || payload->g || payload->b);
 #endif
             reply_ng(CMD_PM5_RGB_SET, PM3_SUCCESS, NULL, 0);
             break;
@@ -4431,14 +3851,14 @@ void __attribute__((noreturn)) AppMain(void) {
 #endif
 
 #ifdef WITH_BWM_CHARGERKICK
-    BWM_ChargerKick();
+    bwm_charger_kick();
 #endif
 
     for (;;) {
         WDT_HIT();
 
 #ifdef WITH_PM5_PWR_LED
-        bwm_power_led_check();
+        rgb_indicator_update();
 #endif
 #ifdef WITH_PM5_AUTOOFF
         bwm_autooff_check();
