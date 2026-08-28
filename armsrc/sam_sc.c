@@ -492,29 +492,45 @@ void sam_sc_handler(const PacketCommandNG *c) {
     LED_D_ON();
     set_tracing(true);
 
+    int res = PM3_SUCCESS;
+
     // Reset the SAM only if the caller asked for it OR this is the first SC
     // op since boot / since the previous session was released. Crucially
     // this dispatcher does NOT reset on every call the way sam_picopass_get_pacs
     // does, so the SAM-side session-flag binding established by ContinueAuth
     // survives across multiple CMD_HF_SAM_SC invocations.
     //
-    // After every reset we issue a sam_get_version() warmup ping. This
-    // mirrors what sam_picopass_get_pacs does (which is what `hf iclass sam
-    // --info` runs through). Without this warmup, the FIRST sam_send_payload_ex
-    // after I2C_Reset can time out - the 8051<->SAM UART link needs a
-    // sacrificial round-trip to settle. The version response is discarded.
+    // A module reset can leave an ATR pending and returns the module UART to
+    // its default rate. Consume the ATR first: besides preventing it from
+    // colliding with the warmup APDU, GetATR() restores the cached PPS rate so
+    // the module and SAM are synchronized again. This mirrors the direct
+    // PICOPASS SAM path.
+    //
+    // Then issue a sam_get_version() warmup ping. Without it, the first real
+    // sam_send_payload_ex() after I2C_Reset can time out while the 8051<->SAM
+    // UART link settles. Do not enter a session when either stage fails.
     //
     // NOTE: HF_SELECT / HF_OFF must NOT trigger a reset - they run inside an
     // already-open SC session and a reset would wipe the SAM-side session-flag
     // binding. They pass neither force_reset nor a cleared session flag.
     if (force_reset || s_sam_sc_session_active == false) {
+        // A forced reset may replace an otherwise valid active session. Do not
+        // leave it marked live if ATR recovery or the warmup subsequently
+        // fails.
+        s_sam_sc_session_active = false;
         I2C_Reset_EnterMainProgram();
         StartTicks();
-        sam_get_version(false);
+        smart_card_atr_t card;
+        if (GetATR(&card, false) == false) {
+            res = PM3_ECARDEXCHANGE;
+            goto out;
+        }
+        res = sam_get_version(false);
+        if (res != PM3_SUCCESS) {
+            goto out;
+        }
         s_sam_sc_session_active = true;
     }
-
-    int res = PM3_SUCCESS;
 
     // ---- HF_OFF: disarm the field (no SAM traffic) ----
     if (hf_off) {
