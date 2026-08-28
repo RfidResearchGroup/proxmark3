@@ -147,6 +147,14 @@ int bwm_wifi_forward_up(const char *ssid, const char *password,
     uint8_t b;
     const uint32_t TO = 2000;   // per-config-step timeout (ms)
 
+    // 0) force a clean slate. If the BWM is already in forward mode (persisted
+    //    NVS state or a failed boot auto-connect), SET_TO_WIFI_FORWARD_MODE
+    //    takes an "already forward, skip init" path and leaves the WiFi context
+    //    uninitialized, which then rejects SET_SSID. Disabling first guarantees
+    //    the next forward-mode command runs the init path. Best-effort: the
+    //    disable handler always acks, so ignore its result.
+    (void)bwm_cmd(BWM_CMD_SET_TO_WIFI_DISABLE_MODE, NULL, 0, NULL, NULL, TO);
+
     // 1) forwarding target = TCP server
     b = BWM_WIFI_FORWARD_TCP_SERVER;
     if ((r = step(BWM_CMD_SET_TO_WIFI_FORWARD_MODE, &b, 1, NULL, NULL, TO, "set forward mode")) != PM3_SUCCESS) return r;
@@ -164,17 +172,31 @@ int bwm_wifi_forward_up(const char *ssid, const char *password,
 
     // 4) join the AP and wait for it to finish (up to ~15s)
     if ((r = step(BWM_CMD_START_WIFI_CONNECT_TASK, NULL, 0, NULL, NULL, TO, "start connect")) != PM3_SUCCESS) return r;
-    uint8_t secs = 15;
+    uint8_t secs = 25;   // iPhone/phone hotspots can be slow to become joinable
     uint8_t wr[2]; uint16_t wl = sizeof(wr);
-    if ((r = step(BWM_CMD_WAIT_FOR_WIFI_CONNECT_TASK, &secs, 1, wr, &wl, 20000, "wait connect")) != PM3_SUCCESS) return r;
+    if ((r = step(BWM_CMD_WAIT_FOR_WIFI_CONNECT_TASK, &secs, 1, wr, &wl, 30000, "wait connect")) != PM3_SUCCESS) return r;
 
-    // 5) read the DHCP-assigned IP; a zero IP means the join did not succeed
-    uint8_t ipb[12]; uint16_t il = sizeof(ipb);
-    if ((r = step(BWM_CMD_GET_WIFI_CFG_IP_ADDR, NULL, 0, ipb, &il, TO, "get ip")) != PM3_SUCCESS) return r;
-    if (il < 4) return PM3_EFAILED;
-    uint32_t ip = (uint32_t)ipb[0] | ((uint32_t)ipb[1] << 8) | ((uint32_t)ipb[2] << 16) | ((uint32_t)ipb[3] << 24);
+    // 5) wait for DHCP. The STA reports "connected" on association, before it
+    //    has an address, so poll GET_IP until a non-zero IP appears. Phone
+    //    hotspots can take several seconds to hand one out.
+    uint32_t ip = 0;
+    uint32_t dhcp_start = GetTickCount();
+    for (;;) {
+        uint8_t ipb[12]; uint16_t il = sizeof(ipb);
+        if ((bwm_cmd(BWM_CMD_GET_WIFI_CFG_IP_ADDR, NULL, 0, ipb, &il, TO) == PM3_SUCCESS) && (il >= 4)) {
+            ip = (uint32_t)ipb[0] | ((uint32_t)ipb[1] << 8) | ((uint32_t)ipb[2] << 16) | ((uint32_t)ipb[3] << 24);
+            if (ip != 0) {
+                break;
+            }
+        }
+        if (GetTickCountDelta(dhcp_start) > BWM_WIFI_DHCP_WAIT_MS) {
+            break;   // gave up waiting for a lease
+        }
+        uint32_t t = GetTickCount();   // brief pause before re-polling
+        while (GetTickCountDelta(t) < BWM_WIFI_DHCP_POLL_MS) { }
+    }
     if (ip == 0) {
-        Dbprintf("[bwm-wifi] joined but no IP (connect_result=%u err=%u)", wr[0], wr[1]);
+        Dbprintf("[bwm-wifi] joined but no IP after DHCP wait (result=%u err=%u)", wr[0], wr[1]);
         return PM3_EFAILED;
     }
 
@@ -183,4 +205,10 @@ int bwm_wifi_forward_up(const char *ssid, const char *password,
 
     *ip_out = ip;
     return PM3_SUCCESS;
+}
+
+int bwm_wifi_forward_down(void) {
+    // Single command: the BWM deinits the TCP server + disconnects the STA and
+    // returns to BLE-only. It persists the disable mode to NVS.
+    return step(BWM_CMD_SET_TO_WIFI_DISABLE_MODE, NULL, 0, NULL, NULL, 2000, "wifi disable");
 }
