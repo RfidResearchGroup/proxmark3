@@ -9372,7 +9372,8 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     CLIParserInit(&ctx, "hf felica raw ",
                   "Send raw hex data to tag",
                   "hf felica raw -cs 20\n"
-                  "hf felica raw -cs 2008"
+                  "hf felica raw -cs 2008\n"
+                  "hw dbg -4; hf felica raw -acp 00ffff0000  -> measure antenna envelope, for reading distance"
                  );
 
     void *argtable[] = {
@@ -9381,6 +9382,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
         arg_lit0("c",  NULL, "calculate and append CRC"),
         arg_lit0("k",  NULL, "keep signal field ON after receive"),
         arg_u64_0("n", NULL, "<dec>", "number of bits"),
+        arg_lit0("p",  "probe", "report antenna envelope instead of decoding (needs `hw dbg -4`)"),
         arg_lit0("r",  NULL, "do not read response"),
         arg_lit0("s",  NULL, "active signal field ON with select"),
         arg_str1(NULL, NULL, "<hex>", "raw bytes to send"),
@@ -9392,20 +9394,25 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     bool crc = arg_get_lit(ctx, 2);
     bool keep_field_on = arg_get_lit(ctx, 3);
     uint16_t numbits = arg_get_u32_def(ctx, 4, 0) & 0xFFFF;
-    bool reply = (arg_get_lit(ctx, 5) == false);
-    bool active_select = arg_get_lit(ctx, 6);
+    bool probe = arg_get_lit(ctx, 5);
+    bool reply = (arg_get_lit(ctx, 6) == false);
+    bool active_select = arg_get_lit(ctx, 7);
 
     int datalen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE];
     memset(data, 0, sizeof(data));
 
-    CLIGetHexWithReturn(ctx, 7, data, &datalen);
+    CLIGetHexWithReturn(ctx, 8, data, &datalen);
     CLIParserFree(ctx);
 
     uint8_t flags = 0;
 
     if (crc) {
         flags |= FELICA_APPEND_CRC;
+    }
+
+    if (probe) {
+        flags |= FELICA_PROBE;
     }
 
     if (active || active_select) {

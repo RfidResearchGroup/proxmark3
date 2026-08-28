@@ -142,6 +142,7 @@
 #define FPGA_HF_ISO18092_FLAG_NOMOD                 ( 1 ) // 0001 disable modulation module
 #define FPGA_HF_ISO18092_FLAG_424K                  ( 2 ) // 0010 should enable 414k mode (untested). No autodetect
 #define FPGA_HF_ISO18092_FLAG_READER                ( 4 ) // 0100 enables antenna power, to act as a reader instead of tag
+#define FPGA_HF_ISO18092_FLAG_PROBE                 ( 8 ) // 1000 signal probe: stream envelope peak-to-peak instead of demodulated bits
 
 // Options for adc mux.
 // The mux is no longer set directly through the GPIO PIN to solve the problem of high coupling with the platform.
