@@ -18,6 +18,10 @@
 
 #include "bwm_charger.h"
 
+#if defined(WITH_PM5_LOWBATT_SHUTDOWN) && !defined(WITH_BWM_LOWBATT_BEEP)
+#error "WITH_PM5_LOWBATT_SHUTDOWN requires WITH_BWM_LOWBATT_BEEP (shares its poll + buzzer)"
+#endif
+
 #if defined(WITH_BWM_CHARGERKICK) || defined(WITH_BWM_STATUS)
 
 #include "i2c.h"
@@ -27,6 +31,11 @@
 
 #ifdef WITH_BWM_LOWBATT_BEEP
 #include "buzzer.h"        // generic mainboard buzzer API (not BWM-specific)
+#endif
+
+#ifdef WITH_PM5_LOWBATT_SHUTDOWN
+#include "gpio_apis.h"     // Gpio_ARM_Power_ON_Low (power-latch release)
+#include "util.h"          // LEDsoff
 #endif
 
 // --- AW32001E charger register map (I2C 8-bit address 0x93) --------------------
@@ -369,9 +378,8 @@ void bwm_detect_and_init(void) {
 #error "WITH_BWM_LOWBATT_BEEP requires WITH_BWM_STATUS (for the fuel-gauge reads)"
 #endif
 
-// Low-battery audible warning (opt-in via WITH_BWM_LOWBATT_BEEP). Reuses the
-// WITH_BWM_STATUS fuel-gauge/charger reads and the generic mainboard buzzer. A
-// beeping device surprises people, so this is off by default.
+// Low-battery audible warning (on by default; opt out with PLATFORM_EXTRAS=NO_LOWBATT_BEEP).
+// Reuses the WITH_BWM_STATUS fuel-gauge/charger reads and the generic mainboard buzzer.
 
 // Thresholds - all overridable from the build if needed.
 #ifndef BWM_LOWBATT_SOC_PCT
@@ -384,6 +392,22 @@ void bwm_detect_and_init(void) {
 #define BWM_LOWBATT_PERIOD_MS  30000   // re-check at most this often
 #endif
 
+#ifdef WITH_PM5_LOWBATT_SHUTDOWN
+// Critical shutdown floors (opt-in via WITH_PM5_LOWBATT_SHUTDOWN). Sits BELOW the
+// warn thresholds above so the beep fires first. Voltage is the hard gate: the
+// BQ27427 learns a FullChargeCapacity (~415 mAh on the fitted VXE 502540) below the
+// 500 mAh design rating, so SoC over-reports and is only a secondary trigger here.
+#ifndef BWM_SHUTDOWN_MV
+#define BWM_SHUTDOWN_MV        3300    // power off at/under this pack voltage (mV, under load)
+#endif
+#ifndef BWM_SHUTDOWN_SOC_PCT
+#define BWM_SHUTDOWN_SOC_PCT   3       // ...or at/under this SoC (%) - secondary, gauge may drift
+#endif
+#ifndef BWM_SHUTDOWN_CONFIRMATIONS
+#define BWM_SHUTDOWN_CONFIRMATIONS 3   // consecutive critical polls before power-off (debounce HF-field sag)
+#endif
+#endif // WITH_PM5_LOWBATT_SHUTDOWN
+
 // Two short chirps - the low-battery signature.
 static void bwm_beep_low_batt(void) {
     BuzzerBeep(80);
@@ -393,9 +417,14 @@ static void bwm_beep_low_batt(void) {
 
 // Throttled low-battery poll. Only warns on battery (USB absent) when BOTH the
 // state-of-charge and the pack voltage are below their floors. Silent while
-// charging or if the BWM/gauge is not present.
+// charging or if the BWM/gauge is not present. With WITH_PM5_LOWBATT_SHUTDOWN it
+// also powers the board off once the pack drops to the critical floor, confirmed
+// across several consecutive polls so a transient HF-field sag can't trip it.
 void bwm_lowbatt_check(void) {
     static uint32_t last_tick = 0;
+#ifdef WITH_PM5_LOWBATT_SHUTDOWN
+    static uint8_t crit = 0;
+#endif
 
     if ((last_tick != 0) && (GetTickCountDelta(last_tick) < BWM_LOWBATT_PERIOD_MS)) {
         return;
@@ -407,6 +436,9 @@ void bwm_lowbatt_check(void) {
         return;   // no BWM / I2C error - stay quiet
     }
     if (sysstat & 0x02) {
+#ifdef WITH_PM5_LOWBATT_SHUTDOWN
+        crit = 0;   // power good (USB present): charging -> reset the shutdown streak
+#endif
         return;   // power good (USB present) -> charging/idle, don't warn
     }
 
@@ -415,6 +447,23 @@ void bwm_lowbatt_check(void) {
             (bwm_gauge_read16(BWM_GAUGE_VOLTAGE, &mv) == false)) {
         return;
     }
+
+#ifdef WITH_PM5_LOWBATT_SHUTDOWN
+    // Critical: voltage-primary, SoC secondary. Require BWM_SHUTDOWN_CONFIRMATIONS
+    // consecutive sub-floor polls, then latch power off (same release as the
+    // long-press shutdown; a button press powers back on, in hardware).
+    if ((mv <= BWM_SHUTDOWN_MV) || (soc <= BWM_SHUTDOWN_SOC_PCT)) {
+        if (++crit >= BWM_SHUTDOWN_CONFIRMATIONS) {
+            bwm_beep_low_batt();   // final audible warning before cut-off
+            LEDsoff();
+            Gpio_ARM_Power_ON_Low();
+            while (1);             // wait for hardware power-off
+        }
+    } else {
+        crit = 0;                  // recovered above the floor -> reset the streak
+    }
+#endif
+
     if ((soc > BWM_LOWBATT_SOC_PCT) || (mv >= BWM_LOWBATT_MV)) {
         return;   // still healthy
     }
