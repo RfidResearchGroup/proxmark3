@@ -50,9 +50,9 @@ Known definitions:
 +--------------------------------------------+
 | BWM             | PM5 Battery Wireless Mod |
 +--------------------------------------------+
-| LOWBATT_BEEP    | PM5 low-battery beep     |
+| NO_LOWBATT_BEEP | PM5 disable low-batt beep|
 +--------------------------------------------+
-| LOWBATT_SHUTDOWN| PM5 low-batt power-off   |
+|NO_LOWBATT_SHUTDOWN| PM5 no low-batt cutoff |
 +--------------------------------------------+
 
 endef
@@ -184,10 +184,11 @@ else ifeq ($(PLATFORM),PM5)
     FPGA_BITSTREAMS = fpga_pm3_hf.bit # TODO DXL 虽然可以不把打包比特流，但是还是得把FPGA的版本信息给生成，让EXE依赖。
     SKIP_FPGA_EMBED = true # important!!! disable the fpga bit files pack to arm!
     SKIP_COMPRESSION = true # Skip data section compress. The new mcu has enough flash space.
-    PLATFORM_DEFS = -DWITH_FLASH -DPM5 -DCHIP_AT32F435_37 -DWITH_BWM_STATUS -DWITH_PM5_PWR_LED -DWITH_PM5_AUTOOFF # TODO 暂时不要编译i2c -DWITH_SMARTCARD
-                    # Low-batt audible alert / auto power-off are opt-in via PLATFORM_EXTRAS:
-                    #   PLATFORM_EXTRAS=LOWBATT_BEEP       ===== audible alert on low battery ====
-                    #   PLATFORM_EXTRAS=LOWBATT_SHUTDOWN   ===== alert, then power off at ~3.3V (implies LOWBATT_BEEP) ====
+    PLATFORM_DEFS = -DWITH_FLASH -DPM5 -DCHIP_AT32F435_37 -DWITH_BWM_STATUS -DWITH_PM5_PWR_LED -DWITH_PM5_AUTOOFF -DWITH_BWM_LOWBATT_BEEP -DWITH_PM5_LOWBATT_SHUTDOWN # TODO 暂时不要编译i2c -DWITH_SMARTCARD
+                    # Low-battery safety (beep + over-discharge power-off at ~3.3V) is ON by default.
+                    # Opt out via PLATFORM_EXTRAS:
+                    #   NO_LOWBATT_SHUTDOWN  ===== keep the beep, disable auto power-off ====
+                    #   NO_LOWBATT_BEEP      ===== disable the beep (also drops the shutdown poll) ====
     PLTNAME = Proxmark5
     PLATFORM_FPGA = GW1NR-LV2MG49GC6/i5
 else
@@ -225,20 +226,20 @@ ifneq (,$(findstring BWM,$(PLATFORM_EXTRAS_TMP)))
     PLATFORM_DEFS += -DWITH_BWM_FORWARD
     PLATFORM_EXTRAS_TMP := $(strip $(filter-out BWM,$(PLATFORM_EXTRAS_TMP)))
 endif
-ifneq (,$(findstring LOWBATT_SHUTDOWN,$(PLATFORM_EXTRAS_TMP)))
+ifneq (,$(findstring NO_LOWBATT_SHUTDOWN,$(PLATFORM_EXTRAS_TMP)))
     ifneq ($(PLATFORM),PM5)
-        $(error PLATFORM_EXTRAS token LOWBATT_SHUTDOWN is only valid on PLATFORM=PM5)
+        $(error PLATFORM_EXTRAS token NO_LOWBATT_SHUTDOWN is only valid on PLATFORM=PM5)
     endif
-    # shutdown builds on the low-batt beep poll, so pull the beep in with it
-    PLATFORM_DEFS += -DWITH_PM5_LOWBATT_SHUTDOWN -DWITH_BWM_LOWBATT_BEEP
-    PLATFORM_EXTRAS_TMP := $(strip $(filter-out LOWBATT_SHUTDOWN,$(PLATFORM_EXTRAS_TMP)))
+    PLATFORM_DEFS := $(filter-out -DWITH_PM5_LOWBATT_SHUTDOWN,$(PLATFORM_DEFS))
+    PLATFORM_EXTRAS_TMP := $(strip $(filter-out NO_LOWBATT_SHUTDOWN,$(PLATFORM_EXTRAS_TMP)))
 endif
-ifneq (,$(findstring LOWBATT_BEEP,$(PLATFORM_EXTRAS_TMP)))
+ifneq (,$(findstring NO_LOWBATT_BEEP,$(PLATFORM_EXTRAS_TMP)))
     ifneq ($(PLATFORM),PM5)
-        $(error PLATFORM_EXTRAS token LOWBATT_BEEP is only valid on PLATFORM=PM5)
+        $(error PLATFORM_EXTRAS token NO_LOWBATT_BEEP is only valid on PLATFORM=PM5)
     endif
-    PLATFORM_DEFS += -DWITH_BWM_LOWBATT_BEEP
-    PLATFORM_EXTRAS_TMP := $(strip $(filter-out LOWBATT_BEEP,$(PLATFORM_EXTRAS_TMP)))
+    # beep is the carrier for the shutdown poll, so dropping it drops shutdown too
+    PLATFORM_DEFS := $(filter-out -DWITH_BWM_LOWBATT_BEEP -DWITH_PM5_LOWBATT_SHUTDOWN,$(PLATFORM_DEFS))
+    PLATFORM_EXTRAS_TMP := $(strip $(filter-out NO_LOWBATT_BEEP,$(PLATFORM_EXTRAS_TMP)))
 endif
 ifneq (,$(PLATFORM_EXTRAS_TMP))
     $(error Unknown PLATFORM_EXTRAS token(s): $(PLATFORM_EXTRAS_TMP))
