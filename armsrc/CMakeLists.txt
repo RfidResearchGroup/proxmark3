@@ -178,6 +178,20 @@ else ()
     set(SRC_FPC)
 endif ()
 
+# BWM charger (AW32001) + fuel gauge (BQ27427), incl. the optional low-batt beep
+if ("${APP_CFLAGS}" MATCHES "WITH_BWM_STATUS" OR "${APP_CFLAGS}" MATCHES "WITH_BWM_CHARGERKICK")
+    set(SRC_BWM_CHARGER bwm_charger.c)
+else ()
+    set(SRC_BWM_CHARGER)
+endif ()
+
+# PM5 antenna-RGB power/battery indicator
+if ("${APP_CFLAGS}" MATCHES "WITH_PM5_PWR_LED")
+    set(SRC_RGB_INDICATOR rgb_indicator.c)
+else ()
+    set(SRC_RGB_INDICATOR)
+endif ()
+
 if ("${APP_CFLAGS}" MATCHES "WITH_HITAG")
     set(SRC_HITAG
             ../common/hitag2/hitag2_crypto.c
@@ -263,6 +277,8 @@ set(THUMBSRC
         ${SRC_FELICA}
         ${SRC_STANDALONE}
         ${SRC_ZX}
+        ${SRC_BWM_CHARGER}
+        ${SRC_RGB_INDICATOR}
         appmain.c
         printf.c
         dbprint.c
@@ -287,6 +303,7 @@ set(THUMBSRC
 if (PM5)
     list(APPEND THUMBSRC startup_at32f435_437.s)
     list(APPEND THUMBSRC i2c.c)
+    list(APPEND THUMBSRC buzzer.c) # generic mainboard buzzer (QC self-test + BWM low-batt)
     list(APPEND THUMBSRC at32_unit_test.c) # TODO DXL: AT32单元测试代码
 endif ()
 
