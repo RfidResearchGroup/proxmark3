@@ -1560,10 +1560,11 @@ static int CmdBWMWifi(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1(NULL, "ssid", "<ssid>", "WiFi SSID to join"),
+        arg_str0(NULL, "ssid", "<ssid>", "WiFi SSID to join (omit with --stop)"),
         arg_str0(NULL, "pwd",  "<pwd>",  "WiFi password (omit for open network)"),
         arg_int0(NULL, "port", "<dec>",  "TCP server listen port (default 7777)"),
         arg_str0(NULL, "hostname", "<name>", "DHCP hostname (default Proxmark5)"),
+        arg_lit0(NULL, "stop", "tear down WiFi and return to BLE-only"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1585,10 +1586,28 @@ static int CmdBWMWifi(const char *Cmd) {
         strcpy((char *)host, "Proxmark5");
         host_len = 9;
     }
+    bool stop = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
+    if (stop) {
+        uint8_t off[1] = { BWM_WIFI_ACTION_STOP };
+        clearCommandBuffer();
+        SendCommandNG(CMD_PM5_BWM_WIFI, off, sizeof(off));
+        PacketResponseNG r;
+        if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &r, 5000) == false) {
+            PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+            return PM3_ETIMEOUT;
+        }
+        if (r.status != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "failed to disable BWM WiFi");
+            return r.status;
+        }
+        PrintAndLogEx(SUCCESS, "BWM WiFi disabled (back to BLE-only)");
+        return PM3_SUCCESS;
+    }
+
     if (ssid_len == 0) {
-        PrintAndLogEx(FAILED, "an SSID is required");
+        PrintAndLogEx(FAILED, "an SSID is required (or use --stop to tear down)");
         return PM3_EINVARG;
     }
     if (port < 1 || port > 65535) {
@@ -1596,9 +1615,10 @@ static int CmdBWMWifi(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    // payload: [port:u16 LE][ssid\0][pwd\0][hostname\0]
+    // payload: [action:u8][port:u16 LE][ssid\0][pwd\0][hostname\0]
     uint8_t data[200] = {0};
     int n = 0;
+    data[n++] = BWM_WIFI_ACTION_START;
     data[n++] = (uint8_t)(port & 0xFF);
     data[n++] = (uint8_t)((port >> 8) & 0xFF);
     memcpy(&data[n], ssid, ssid_len); n += ssid_len; data[n++] = 0;
@@ -1611,7 +1631,7 @@ static int CmdBWMWifi(const char *Cmd) {
     SendCommandNG(CMD_PM5_BWM_WIFI, data, n);
     PacketResponseNG resp;
     // ARM blocks during the join (WAIT is up to ~15s), so allow a long client timeout
-    if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &resp, 25000) == false) {
+    if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &resp, 40000) == false) {
         PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
         return PM3_ETIMEOUT;
     }
