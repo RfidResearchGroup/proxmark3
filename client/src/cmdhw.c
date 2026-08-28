@@ -1656,20 +1656,26 @@ static int CmdBwmCharge(const char *Cmd) {
                   "AW32001E charge-enable bit (CEB, REG01[3]). PM5 only.\n"
                   _RED_("One-shot:") " the charger watchdog reverts this after ~160 s unless\n"
                   "serviced, so charging may stop on its own. Use to nudge a top-up.",
-                  "hw bwmcharge          --> enable charging\n"
+                  "hw bwmcharge -on      --> enable charging\n"
                   "hw bwmcharge --off    --> disable charging");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "off", "disable charging (default is enable)"),
+        arg_lit0(NULL, "on",  "enable charging (default)"),
+        arg_lit0(NULL, "off", "disable charging"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool disable = arg_get_lit(ctx, 1);
+    bool on  = arg_get_lit(ctx, 1);
+    bool off = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
-    uint8_t payload = disable ? 0 : 1;
-    PrintAndLogEx(INFO, "%s BWM battery charging...", disable ? "Disabling" : "Enabling");
+    if (on && off) {
+        PrintAndLogEx(WARNING, "pick one of --on / --off");
+        return PM3_EINVARG;
+    }
+    uint8_t payload = off ? 0 : 1;   // default (neither flag) = enable
+    PrintAndLogEx(INFO, "%s BWM battery charging...", off ? "Disabling" : "Enabling");
 
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_CHARGE_EN, &payload, sizeof(payload));
@@ -1683,8 +1689,8 @@ static int CmdBwmCharge(const char *Cmd) {
         return resp.status;
     }
     PrintAndLogEx(SUCCESS, "Charging %s. Verify with " _YELLOW_("hw status") ".",
-                  disable ? "disabled" : "enabled");
-    if (disable == false) {
+                  off ? "disabled" : "enabled");
+    if (off == false) {
         PrintAndLogEx(HINT, "Reverts on the charger watchdog (~160 s) if not serviced.");
     }
     return PM3_SUCCESS;
