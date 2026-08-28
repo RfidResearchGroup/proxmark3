@@ -1186,22 +1186,24 @@ static int seos_try_aid_select(const uint8_t *aid, int aid_len, bool activate_fi
     memcpy(aSELECT_AID + 5, aid, aid_len);
     aSELECT_AID[5 + aid_len] = 0x00;
 
+    // The caller owns the field. This is a probe - seos_aid_select() walks a list
+    // of AIDs with it - and dropping the field on a miss powers the card down, so
+    // the next candidate pays a full field-on, card boot, anticollision and RATS
+    // to ask a question the card was already up to answer. Every caller of
+    // seos_aid_select() drops the field itself when it gives up.
     int res = ExchangeAPDU14a(aSELECT_AID, 6 + aid_len, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res != PM3_SUCCESS) {
-        DropField();
         return res;
     }
 
     if (resplen < 2) {
         PrintAndLogEx(ERR, "Selecting SEOS applet aid %s failed (short response).", sprint_hex_inrow(aid, aid_len));
-        DropField();
         return PM3_EWRONGANSWER;
     }
 
     uint16_t sw = get_sw(response, resplen);
     if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting SEOS applet aid %s failed (%04x - %s).", sprint_hex_inrow(aid, aid_len), sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        DropField();
         return PM3_ESOFT;
     }
 
@@ -1225,6 +1227,16 @@ static int seos_aid_select(const uint8_t *custom_aid, int custom_aid_len) {
         res = seos_try_aid_select(aid, aid_len, activate_field, keep_field_on);
         if (res == PM3_SUCCESS) {
             return res;
+        }
+
+        // Only a card that answered is worth asking again: PM3_ESOFT is the one
+        // code that means "selected, but not that AID" - SelectCard14443A_4()
+        // reports PM3_ETIMEOUT or PM3_ECARDEXCHANGE when there is nothing there.
+        // Then the remaining candidates are one APDU each rather than a fresh
+        // activation apiece, and a missing card still fails on the select instead
+        // of waiting out an APDU timeout.
+        if (res == PM3_ESOFT) {
+            activate_field = false;
         }
     }
 
@@ -1384,7 +1396,10 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
                 PrintAndLogEx(SUCCESS, "Diversifier...................... "_YELLOW_("%s"), sprint_hex_inrow(diversifier, diversifier_length));          // Diversifier
             };
         } else {
-            seos_write_data(RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, write, write_len, ALGORITHM_INFO_value1, data_tag, data_tag_len);
+            res = seos_write_data(RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, write, write_len, ALGORITHM_INFO_value1, data_tag, data_tag_len);
+            if (res != PM3_SUCCESS) {
+                return res;
+            }
         }
 
     } else {
