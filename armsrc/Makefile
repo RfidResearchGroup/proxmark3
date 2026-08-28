@@ -113,6 +113,27 @@ else
     SRC_BWM =
 endif
 
+# BWM charger (AW32001) + fuel gauge (BQ27427), incl. the optional low-batt beep
+ifneq (,$(findstring WITH_BWM_STATUS,$(APP_CFLAGS))$(findstring WITH_BWM_CHARGERKICK,$(APP_CFLAGS)))
+    SRC_BWM_CHARGER = bwm_charger.c
+else
+    SRC_BWM_CHARGER =
+endif
+
+# Generic PM5 mainboard buzzer (QC self-test + BWM low-batt warning)
+ifeq ($(PLATFORM),PM5)
+    SRC_BUZZER = buzzer.c
+else
+    SRC_BUZZER =
+endif
+
+# PM5 antenna-RGB power/battery indicator
+ifneq (,$(findstring WITH_PM5_PWR_LED,$(APP_CFLAGS)))
+    SRC_RGB_INDICATOR = rgb_indicator.c
+else
+    SRC_RGB_INDICATOR =
+endif
+
 ifneq (,$(findstring WITH_HITAG,$(APP_CFLAGS)))
     SRC_HITAG = hitag2_crypto.c hitag_common.c hitag2.c hitagS.c hitagu.c hitag2_crack.c
     APP_CFLAGS += -I../common/hitag2
@@ -170,6 +191,9 @@ THUMBSRC = start.c \
     $(SRC_SMARTCARD) \
     $(SRC_FPC) \
     $(SRC_BWM) \
+    $(SRC_BWM_CHARGER) \
+    $(SRC_BUZZER) \
+    $(SRC_RGB_INDICATOR) \
     $(SRC_HITAG) \
     $(SRC_EM4x50) \
     $(SRC_EM4x70) \
