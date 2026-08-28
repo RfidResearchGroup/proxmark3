@@ -12,8 +12,18 @@
 #include "common.h"
 
 // app_com command codes (authoritative, from BWM main/app_com_defs.h)
+#define BWM_CMD_SET_TO_WIFI_DISABLE_MODE   2000   // no payload: tear down WiFi, back to BLE-only
 #define BWM_CMD_SET_TO_WIFI_FORWARD_MODE   2001   // payload: 1 byte forward type (0 = TCP server)
 #define BWM_CMD_GET_WIFI_CFG_IP_ADDR       2020   // resp: 3x uint32 LE {ip, netmask, gw}
+
+// After association the STA reports "connected" before DHCP completes, so we
+// poll GET_IP until a non-zero address appears (or give up).
+#ifndef BWM_WIFI_DHCP_WAIT_MS
+#define BWM_WIFI_DHCP_WAIT_MS   10000   // total time to wait for a DHCP lease
+#endif
+#ifndef BWM_WIFI_DHCP_POLL_MS
+#define BWM_WIFI_DHCP_POLL_MS   500     // gap between GET_IP polls
+#endif
 #define BWM_CMD_SET_WIFI_CONNECT_CFG_SSID  2023   // payload: SSID bytes
 #define BWM_CMD_SET_WIFI_CONNECT_CFG_PWD   2025   // payload: password bytes
 #define BWM_CMD_SET_WIFI_CFG_HOST_NAME     2021   // payload: hostname bytes (no NUL)
@@ -37,5 +47,9 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
 // BWM's IPv4 (host byte order, a in low byte) to *ip_out.
 int bwm_wifi_forward_up(const char *ssid, const char *password,
                         const char *hostname, uint16_t tcp_port, uint32_t *ip_out);
+
+// Tear down WiFi forward mode (disconnect STA + stop TCP server, back to
+// BLE-only). Persisted on the BWM so it stays off across reboots.
+int bwm_wifi_forward_down(void);
 
 #endif
