@@ -24,6 +24,7 @@
 #include <time.h>
 #include "cliparser.h"
 #include "cmdparser.h"
+#include "cmdhf14a.h"
 #include "comms.h"
 #include "ui.h"
 #include "util.h"
@@ -1241,7 +1242,7 @@ static void saflok_encode(
 //       perhaps by creating a struct to avoid having to pass a length parameter.
 static int saflok_read_sector(int sector, uint8_t *secdata) {
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select failed");

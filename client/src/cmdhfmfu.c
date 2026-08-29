@@ -338,7 +338,7 @@ int ul_read_uid(uint8_t *uid) {
     }
     // read uid from tag
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_RATS, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_RATS, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
@@ -367,7 +367,7 @@ int ul_read_uid(uint8_t *uid) {
 
 static void ul_switch_on_field(void) {
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, NULL, 0);
 }
 
 static int ul_send_cmd_raw(const uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength, bool schann) {
@@ -377,7 +377,7 @@ static int ul_send_cmd_raw(const uint8_t *cmd, uint8_t cmdlen, uint8_t *response
     if (schann) {
         param |= ISO14A_APPEND_CMAC;
     }
-    SendCommandMIX(CMD_HF_ISO14443A_READER, param, cmdlen, 0, cmd, cmdlen);
+    SendIso14aReader(param, cmd, cmdlen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
         return PM3_ETIMEOUT;
@@ -442,7 +442,7 @@ static bool ul_select_rats(iso14a_card_select_t *card) {
         if (resp.oldarg[0] == 2) { // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
             // get ATS
             uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
-            SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, sizeof(rats), 0, rats, sizeof(rats));
+            SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, rats, sizeof(rats));
             if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
                 PrintAndLogEx(WARNING, "command execution time out");
                 return false;
@@ -496,7 +496,7 @@ static int ulc_requestAuthentication(uint8_t *nonce, uint16_t nonceLength) {
 }
 
 int mfuc_test_authentication_support(void) {
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
@@ -802,7 +802,7 @@ static long long unsigned int ul_fudan_check(void) {
 
     uint8_t cmd[4] = {ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa7}; // wrong crc on purpose, should be 0xa8
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0, cmd, sizeof(cmd));
+    SendIso14aReader(ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, cmd, sizeof(cmd));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
         return MFU_TT_UL_ERROR;
@@ -2009,7 +2009,7 @@ static int mfulc_fingerprint(void) {
         return PM3_ESOFT;
     }
     uint8_t cmd0[] = {0xAF};
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS, sizeof(cmd0), 0, cmd0, sizeof(cmd0));
+    SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmd0, sizeof(cmd0));
     if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
         if ((resp.oldarg[0] == 11) && (resp.data.asBytes[0] == 0x00)) {
             PrintAndLogEx(SUCCESS, _GREEN_("Lab401 Ultralight-C compatible UID modifiable"));
@@ -2026,7 +2026,7 @@ static int mfulc_fingerprint(void) {
         return PM3_ESOFT;
     }
     uint8_t cmd1[] = {0x1A, 0x2F};
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS, sizeof(cmd1), 0, cmd1, sizeof(cmd1));
+    SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmd1, sizeof(cmd1));
     if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
         if ((resp.oldarg[0] == 11) && (resp.data.asBytes[0] == 0xAF)) {
             PrintAndLogEx(SUCCESS, _GREEN_("Feiju FJ8010"));
@@ -2043,7 +2043,7 @@ static int mfulc_fingerprint(void) {
         return PM3_ESOFT;
     }
     uint8_t cmd2[] = {0x1A};
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_RATS, sizeof(cmd2), 0, cmd2, sizeof(cmd2));
+    SendIso14aReader(ISO14A_RAW | ISO14A_NO_RATS, cmd2, sizeof(cmd2));
     if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
         if ((resp.oldarg[0] == 11) && (resp.data.asBytes[0] == 0xAF)) {
             uint8_t response[11] = {0};
@@ -2067,10 +2067,12 @@ static int mfulc_fingerprint(void) {
     // GT23SC4489
     uint8_t cmd3a[] = {0x26};
     uint8_t cmd3b[] = {0x30};
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT, 7 << 16, 0, cmd3a, sizeof(cmd3a));
+    // 7 bit REQA, so lenbits carries it and len stays 0
+    SendIso14aReaderEx(ISO14A_RAW | ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT
+                       , cmd3a, sizeof(cmd3a), 0, 7, 0, 0);
     if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
         if (resp.oldarg[0] == 2) {
-            SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_SELECT, sizeof(cmd3b), 0, cmd3b, sizeof(cmd3b));
+            SendIso14aReader(ISO14A_RAW | ISO14A_NO_SELECT, cmd3b, sizeof(cmd3b));
             if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
                 if (resp.oldarg[0] == 18) {
                     if ((resp.data.asBytes[0] == 0x04) && (resp.data.asBytes[6] == 0x15) && (resp.data.asBytes[7] == 0x89)) {
@@ -6117,7 +6119,7 @@ static int CmdHF14AMfUKeyGen(const char *Cmd) {
     if (read_tag) {
         // read uid from tag
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_RATS, 0, 0, NULL, 0);
+        SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_RATS, NULL, 0);
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");

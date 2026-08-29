@@ -656,7 +656,7 @@ static int fm11_collect_nonces_ex(const uint8_t *key, uint32_t flags, uint8_t fi
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "iso14443a card select timeout");
@@ -2757,7 +2757,7 @@ static int fm11_select_mifare_classic(iso14a_card_select_t *card_out) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
@@ -2778,7 +2778,7 @@ static int fm11_select_mifare_classic(iso14a_card_select_t *card_out) {
     if (select_status == 2) {
         uint8_t rats[] = { 0xE0, 0x80 };
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
+        SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, rats, sizeof(rats));
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
             DropField();

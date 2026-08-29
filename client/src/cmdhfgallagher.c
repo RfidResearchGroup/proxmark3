@@ -32,6 +32,7 @@
 #include "common.h"
 #include "commonutil.h"
 #include "cmdparser.h"
+#include "cmdhf14a.h"
 #include "cliparser.h"
 #include "comms.h"
 #include "ui.h"
@@ -1045,7 +1046,7 @@ static int hfgal_write_classic_card(GallagherCredentials_t *creds, uint8_t cred_
     clearCommandBuffer();
 
     // Select card to get UID
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         PrintAndLogEx(ERR, "Card select timeout");
@@ -1174,7 +1175,7 @@ static int hfgal_read_classic_card(uint8_t *site_key, bool verbose, bool quiet) 
     GallagherCredentials_t creds = {0};
 
     // Select card
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         if (!quiet) {
