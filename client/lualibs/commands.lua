@@ -199,9 +199,9 @@ function Command:sendNG( ignore_response, timeout )
 
     data = nil
     cmd = nil
-    local count, length, magic, status, reason, crc, arg0, arg1, arg2
+    local count, length, magic, status, reason, crc
 
-    count, cmd, length, magic, status, reason, crc, arg0, arg1, arg2 = bin.unpack('SSIccSLLL', response)
+    count, cmd, length, magic, status, reason, crc = bin.unpack('SSIccS', response)
     count, data, ng = bin.unpack('H'..length..'C', response, count)
 
 --[[  uncomment if you want to debug
@@ -211,10 +211,6 @@ function Command:sendNG( ignore_response, timeout )
     print('Magic  ::', string.format("0x%08X", magic), util.ConvertHexToAscii(string.format("0x%08X", magic)))
     print('Status ::', tostring(status))
     print('crc    ::', string.format("0x%02X", crc))
-    print('Args   ::', ("(%s, %s, %s)\r\n"):format(
-                    tostring(arg0),
-                    tostring(arg1),
-                    tostring(arg2)))
     print('NG     ::', ng)
     print('Data   ::', data)
 --]]
@@ -224,9 +220,6 @@ function Command:sendNG( ignore_response, timeout )
             Status = status,
             Reason = reason,
             Crc = crc,
-            Oldarg0 = arg0,
-            Oldarg1 = arg1,
-            Oldarg2 = arg2,
             Data = data,
             Ng = ng
     }
