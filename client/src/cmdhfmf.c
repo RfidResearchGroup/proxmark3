@@ -1389,16 +1389,25 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     memcpy(data, key, sizeof(key));
     memcpy(data + 10, block, sizeof(block));
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, keytype, 0, data, sizeof(data));
+    mf_writeblock_ex_t payload = {
+        .wakeup = MF_WAKE_WUPA,
+        .auth_cmd = MIFARE_AUTH_KEYA + (keytype & 0xF),
+        .write_cmd = ISO14443A_CMD_WRITEBLOCK,
+        .block_no = blockno,
+    };
+    memcpy(payload.key, data, MIFARE_KEY_SIZE);
+    memcpy(payload.block_data, data + 10, MFBLOCK_SIZE);
+
+    SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&payload, sizeof(payload));
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false) {
         PrintAndLogEx(FAILED, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
-    int status  = resp.oldarg[0];
-    if (status > 0) {
+    int status = resp.status;
+    if (status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf rdbl") "` to verify");
     } else if (status == PM3_ETEAROFF) {
@@ -1965,15 +1974,24 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                 uint16_t blockno = (mfFirstBlockOfSector(s) + b);
 
                 clearCommandBuffer();
-                SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, kt, 0, wdata, sizeof(wdata));
+                mf_writeblock_ex_t payload = {
+                    .wakeup = MF_WAKE_WUPA,
+                    .auth_cmd = MIFARE_AUTH_KEYA + (kt & 0xF),
+                    .write_cmd = ISO14443A_CMD_WRITEBLOCK,
+                    .block_no = blockno,
+                };
+                memcpy(payload.key, wdata, MIFARE_KEY_SIZE);
+                memcpy(payload.block_data, wdata + 10, MFBLOCK_SIZE);
+
+                SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&payload, sizeof(payload));
                 PacketResponseNG resp;
-                if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+                if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false) {
                     PrintAndLogEx(WARNING, "command execution time out");
                     continue;
                 }
 
-                int isOK  = resp.oldarg[0] & 0xff;
-                if (isOK == 1) {
+                int isOK = resp.status;
+                if (isOK == PM3_SUCCESS) {
                     // if success,  skip to next block
                     PrintAndLogEx(INFO, " %3d | %s| ( " _GREEN_("ok") " )", blockno, sprint_hex(bldata, sizeof(bldata)));
                     break;
@@ -8507,11 +8525,20 @@ static int CmdHF14AMfWipe(const char *Cmd) {
 
                 PrintAndLogEx(INFO, " %3d | %s" NOLF, mfFirstBlockOfSector(s) + b, sprint_hex(data + 10, MFBLOCK_SIZE));
                 clearCommandBuffer();
-                SendCommandMIX(CMD_HF_MIFARE_WRITEBL, mfFirstBlockOfSector(s) + b, kt, 0, data, sizeof(data));
+                mf_writeblock_ex_t payload = {
+                    .wakeup = MF_WAKE_WUPA,
+                    .auth_cmd = MIFARE_AUTH_KEYA + (kt & 0xF),
+                    .write_cmd = ISO14443A_CMD_WRITEBLOCK,
+                    .block_no = mfFirstBlockOfSector(s) + b,
+                };
+                memcpy(payload.key, data, MIFARE_KEY_SIZE);
+                memcpy(payload.block_data, data + 10, MFBLOCK_SIZE);
+
+                SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&payload, sizeof(payload));
                 PacketResponseNG resp;
-                if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-                    int8_t isOK = resp.oldarg[0];
-                    if (isOK == 1) {
+                if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500)) {
+                    int8_t isOK = resp.status;
+                    if (isOK == PM3_SUCCESS) {
                         PrintAndLogEx(NORMAL, "- key %c ( " _GREEN_("ok") " )", (kt == MF_KEY_A) ? 'A' : 'B');
                         break;
                     } else {
@@ -10961,15 +10988,24 @@ static int CmdHF14AMfValue(const char *Cmd) {
             writedata[25] = (blockno ^ 0xFF);
 
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, keytype, 0, writedata, sizeof(writedata));
+            mf_writeblock_ex_t payload = {
+                .wakeup = MF_WAKE_WUPA,
+                .auth_cmd = MIFARE_AUTH_KEYA + (keytype & 0xF),
+                .write_cmd = ISO14443A_CMD_WRITEBLOCK,
+                .block_no = blockno,
+            };
+            memcpy(payload.key, writedata, MIFARE_KEY_SIZE);
+            memcpy(payload.block_data, writedata + 10, MFBLOCK_SIZE);
+
+            SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&payload, sizeof(payload));
 
             PacketResponseNG resp;
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+            if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false) {
                 PrintAndLogEx(FAILED, "command execution time out");
                 return PM3_ETIMEOUT;
             }
 
-            isok = resp.oldarg[0] & 0xff;
+            isok = (resp.status == PM3_SUCCESS);
         }
 
         if (isok) {

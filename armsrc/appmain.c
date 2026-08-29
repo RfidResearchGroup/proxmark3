@@ -2269,22 +2269,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareReadSector(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
         }
-        case CMD_HF_MIFARE_WRITEBL: {
-            uint8_t block_no = packet->oldarg[0];
-            uint8_t key_type = packet->oldarg[1];
-            uint8_t *key = packet->data.asBytes;
-            uint8_t *block_data = packet->data.asBytes + 10;
-
-            int16_t retval = mifare_cmd_writeblocks(MF_WAKE_WUPA, MIFARE_AUTH_KEYA + (key_type & 0xF), key, ISO14443A_CMD_WRITEBLOCK, block_no, 1, block_data);
-
-            // convert ng style retval to old status
-            if (retval >= 0) {
-                retval = 1;
-            }
-
-            reply_mix(CMD_ACK, retval, 0, 0, 0, 0);
-            break;
-        }
         case CMD_HF_MIFARE_WRITEBL_EX: {
             mf_writeblock_ex_t *payload = (mf_writeblock_ex_t *)packet->data.asBytes;
             int16_t retval = mifare_cmd_writeblocks(payload->wakeup, payload->auth_cmd, payload->key, payload->write_cmd, payload->block_no, 1, payload->block_data);

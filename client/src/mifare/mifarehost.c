@@ -1029,14 +1029,24 @@ int mf_write_block(uint8_t blockno, uint8_t keyType, const uint8_t *key, const u
     memcpy(data + 10, block, MFBLOCK_SIZE);
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, keyType, 0, data, sizeof(data));
+    mf_writeblock_ex_t payload = {
+        .wakeup = MF_WAKE_WUPA,
+        .auth_cmd = MIFARE_AUTH_KEYA + (keyType & 0xF),
+        .write_cmd = ISO14443A_CMD_WRITEBLOCK,
+        .block_no = blockno,
+    };
+    memcpy(payload.key, data, MIFARE_KEY_SIZE);
+    memcpy(payload.block_data, data + 10, MFBLOCK_SIZE);
+
+    SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&payload, sizeof(payload));
+
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false) {
         PrintAndLogEx(FAILED, "mfWriteBlock execution time out");
         return PM3_ETIMEOUT;
     }
     int res = PM3_SUCCESS;
-    if ((resp.oldarg[0] & 0xff) != 1) {
+    if (resp.status != PM3_SUCCESS) {
         res = PM3_EFAILED;
     }
     return res;
