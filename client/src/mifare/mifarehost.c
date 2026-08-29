@@ -1269,23 +1269,28 @@ int mf_chinese_wipe(uint8_t *uid, const uint8_t *atqa, const uint8_t *sak, uint8
 
 int mf_chinese_set_block(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
 
+    uint8_t buf[PM3_CMD_DATA_SIZE] = {0};
+    mf_chinese_blk_t *payload = (mf_chinese_blk_t *)buf;
+    payload->params = params;
+    payload->blockno = blockNo;
+    memcpy(payload->data, data, MFBLOCK_SIZE);
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_CSETBL, params, blockNo, 0, data, MFBLOCK_SIZE);
+    SendCommandNG(CMD_HF_MIFARE_CSETBL, buf, sizeof(mf_chinese_blk_t) + MFBLOCK_SIZE);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 3500) == false) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_CSETBL, &resp, 3500) == false) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(WARNING, "Command execution time out");
         return PM3_ETIMEOUT;
     }
 
-    uint8_t isOK  = resp.oldarg[0] & 0xFF;
-    if (uid != NULL) {
+    if ((uid != NULL) && (resp.status == PM3_SUCCESS) && (resp.length >= 4)) {
         memcpy(uid, resp.data.asBytes, 4);
     }
 
-    if (isOK == 0) {
+    if (resp.status != PM3_SUCCESS) {
 
-        uint8_t reason = (resp.oldarg[1] & 0xFF);
+        uint8_t reason = (uint8_t)resp.reason;
         if (reason == 4) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "GDM magic write signature block failed");
@@ -1301,12 +1306,16 @@ int mf_chinese_set_block(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t p
 }
 
 int mf_chinese_get_block(uint8_t blockNo, uint8_t *data, uint8_t params) {
+    mf_chinese_blk_t payload = {
+        .params = params,
+        .blockno = blockNo,
+    };
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_CGETBL, params, blockNo, 0, NULL, 0);
+    SendCommandNG(CMD_HF_MIFARE_CGETBL, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.oldarg[0] & 0xff;
-        if (isOK == 0) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_CGETBL, &resp, 1500)) {
+        if (resp.status != PM3_SUCCESS || resp.length < MFBLOCK_SIZE) {
             return PM3_EUNDEF;
         }
         memcpy(data, resp.data.asBytes, MFBLOCK_SIZE);

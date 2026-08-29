@@ -399,6 +399,14 @@ typedef struct {
     uint8_t key[6];
 } PACKED mf_readsector_t;
 
+// CMD_HF_MIFARE_CSETBL / CMD_HF_MIFARE_CGETBL payload.
+// data[] carries the block to write for CSETBL, and is empty for CGETBL.
+typedef struct {
+    uint8_t params;    // MAGIC_* work flags
+    uint8_t blockno;
+    uint8_t data[];
+} PACKED mf_chinese_blk_t;
+
 // CMD_HF_MIFARE_GEN3UID payload
 typedef struct {
     uint8_t uidlen;

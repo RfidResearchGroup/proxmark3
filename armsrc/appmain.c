@@ -2427,11 +2427,21 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         // Gen1a / 1b - "magic Chinese" card
         case CMD_HF_MIFARE_CSETBL: {
-            MifareCSetBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+            if (packet->length < sizeof(mf_chinese_blk_t) + MIFARE_BLOCK_SIZE) {
+                reply_ng(CMD_HF_MIFARE_CSETBL, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            mf_chinese_blk_t *payload = (mf_chinese_blk_t *)packet->data.asBytes;
+            MifareCSetBlock(payload->params, payload->blockno, payload->data);
             break;
         }
         case CMD_HF_MIFARE_CGETBL: {
-            MifareCGetBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+            if (packet->length < sizeof(mf_chinese_blk_t)) {
+                reply_ng(CMD_HF_MIFARE_CGETBL, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            mf_chinese_blk_t *payload = (mf_chinese_blk_t *)packet->data.asBytes;
+            MifareCGetBlock(payload->params, payload->blockno, payload->data);
             break;
         }
         case CMD_HF_MIFARE_CIDENT: {

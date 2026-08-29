@@ -3051,9 +3051,9 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
     } // end while
 
     if (isOK)
-        reply_mix(CMD_ACK, 1, 0, 0, uid, sizeof(uid));
+        reply_ng(CMD_HF_MIFARE_CSETBL, PM3_SUCCESS, uid, sizeof(uid));
     else
-        OnErrorMagic(errormsg);
+        OnErrorMagic(CMD_HF_MIFARE_CSETBL, errormsg);
 
     if (workFlags & MAGIC_OFF)
         OnSuccessMagic();
@@ -3153,9 +3153,9 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
     } else {
 
         if (isOK) {
-            reply_old(CMD_ACK, 1, 0, 0, data, sizeof(data));
+            reply_ng(CMD_HF_MIFARE_CGETBL, PM3_SUCCESS, data, sizeof(data));
         } else {
-            OnErrorMagic(errormsg);
+            OnErrorMagic(CMD_HF_MIFARE_CGETBL, errormsg);
         }
 
     }
@@ -3667,9 +3667,9 @@ void OnSuccessMagic(void) {
     set_tracing(false);
 }
 
-void OnErrorMagic(uint8_t reason) {
-    //          ACK, ISOK, reason,0,0,0
-    reply_mix(CMD_ACK, 0, reason, 0, 0, 0);
+void OnErrorMagic(uint16_t cmd, uint8_t reason) {
+    // the failure reason rides in the NG reason field
+    reply_reason(cmd, PM3_EUNDEF, reason, NULL, 0);
     OnSuccessMagic();
 }
 

@@ -69,7 +69,7 @@ void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key);
 
 void MifareUSetKey(mful_setkey_t *packet);
 void OnSuccessMagic(void);
-void OnErrorMagic(uint8_t reason);
+void OnErrorMagic(uint16_t cmd, uint8_t reason);
 
 int32_t dist_nt(uint32_t nt1, uint32_t nt2);
 //void RAMFUNC SniffMifare(uint8_t param);
