@@ -9,11 +9,10 @@ static size_t g_buf_offset = 0;
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
-void usb_read_ng_init(const usb_read_ng_config_t *config)
-{
+void usb_read_ng_init(const usb_read_ng_config_t *config) {
     if (!config || !config->is_link_ready || !config->is_data_ready ||
-        !config->get_byte_count || !config->read_fifo ||
-        !config->clear_ready || !config->buffer || config->buffer_size == 0) {
+            !config->get_byte_count || !config->read_fifo ||
+            !config->clear_ready || !config->buffer || config->buffer_size == 0) {
         return;
     }
     g_config = config;
@@ -21,13 +20,11 @@ void usb_read_ng_init(const usb_read_ng_config_t *config)
     g_buf_offset = 0;
 }
 
-bool usb_read_ng_has_buffered_data(void)
-{
+bool usb_read_ng_has_buffered_data(void) {
     return g_buf_len > 0;
 }
 
-uint32_t usb_read_ng(uint8_t *data, size_t len)
-{
+uint32_t usb_read_ng(uint8_t *data, size_t len) {
     if (!g_config || !data || len == 0) {
         return 0;
     }
@@ -79,8 +76,7 @@ uint32_t usb_read_ng(uint8_t *data, size_t len)
             // gc gc gc gc !!!
             g_config->clear_ready();
             time_out = 0; // Timeout reset.
-        }
-        else {
+        } else {
             // usb link ready but no data. to check simple timeout.
             if (timeout_limit > 0) {
                 time_out++;

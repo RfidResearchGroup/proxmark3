@@ -48,23 +48,17 @@
   *         I2C1, I2C2, I2C3.
   * @retval none
   */
-void i2c_reset(i2c_type *i2c_x)
-{
-  if(i2c_x == I2C1)
-  {
-    crm_periph_reset(CRM_I2C1_PERIPH_RESET, TRUE);
-    crm_periph_reset(CRM_I2C1_PERIPH_RESET, FALSE);
-  }
-  else if(i2c_x == I2C2)
-  {
-    crm_periph_reset(CRM_I2C2_PERIPH_RESET, TRUE);
-    crm_periph_reset(CRM_I2C2_PERIPH_RESET, FALSE);
-  }
-  else if(i2c_x == I2C3)
-  {
-    crm_periph_reset(CRM_I2C3_PERIPH_RESET, TRUE);
-    crm_periph_reset(CRM_I2C3_PERIPH_RESET, FALSE);
-  }
+void i2c_reset(i2c_type *i2c_x) {
+    if (i2c_x == I2C1) {
+        crm_periph_reset(CRM_I2C1_PERIPH_RESET, TRUE);
+        crm_periph_reset(CRM_I2C1_PERIPH_RESET, FALSE);
+    } else if (i2c_x == I2C2) {
+        crm_periph_reset(CRM_I2C2_PERIPH_RESET, TRUE);
+        crm_periph_reset(CRM_I2C2_PERIPH_RESET, FALSE);
+    } else if (i2c_x == I2C3) {
+        crm_periph_reset(CRM_I2C3_PERIPH_RESET, TRUE);
+        crm_periph_reset(CRM_I2C3_PERIPH_RESET, FALSE);
+    }
 }
 
 /**
@@ -76,16 +70,15 @@ void i2c_reset(i2c_type *i2c_x)
   * @param  clk: i2c clock control register (0x00000000~0xFFFFFFFF).
   * @retval none
   */
-void i2c_init(i2c_type *i2c_x, uint8_t dfilters, uint32_t clk)
-{
-  /* disable i2c peripheral */
-  i2c_x->ctrl1_bit.i2cen = FALSE;
+void i2c_init(i2c_type *i2c_x, uint8_t dfilters, uint32_t clk) {
+    /* disable i2c peripheral */
+    i2c_x->ctrl1_bit.i2cen = FALSE;
 
-  /* write clkctrl register*/
-  i2c_x->clkctrl = clk;
+    /* write clkctrl register*/
+    i2c_x->clkctrl = clk;
 
-  /* write digital filter register*/
-  i2c_x->ctrl1_bit.dflt = dfilters;
+    /* write digital filter register*/
+    i2c_x->ctrl1_bit.dflt = dfilters;
 }
 
 /**
@@ -100,16 +93,15 @@ void i2c_init(i2c_type *i2c_x, uint8_t dfilters, uint32_t clk)
   * @param  address: own address 1, such as 0xB0.
   * @retval none
   */
-void i2c_own_address1_set(i2c_type *i2c_x, i2c_address_mode_type mode, uint16_t address)
-{
-  /* config address mode */
-  i2c_x->oaddr1_bit.addr1mode = mode;
+void i2c_own_address1_set(i2c_type *i2c_x, i2c_address_mode_type mode, uint16_t address) {
+    /* config address mode */
+    i2c_x->oaddr1_bit.addr1mode = mode;
 
-  /* config address */
-  i2c_x->oaddr1_bit.addr1 = address & 0x03FF;
+    /* config address */
+    i2c_x->oaddr1_bit.addr1 = address & 0x03FF;
 
-  /* enable address */
-  i2c_x->oaddr1_bit.addr1en = TRUE;
+    /* enable address */
+    i2c_x->oaddr1_bit.addr1en = TRUE;
 }
 
 /**
@@ -130,11 +122,10 @@ void i2c_own_address1_set(i2c_type *i2c_x, i2c_address_mode_type mode, uint16_t 
   *         - I2C_ADDR2_MASK07: response all addresses other than those reserved for i2c.
   * @retval none
   */
-void i2c_own_address2_set(i2c_type *i2c_x, uint8_t address, i2c_addr2_mask_type mask)
-{
-  i2c_x->oaddr2_bit.addr2mask = mask;
+void i2c_own_address2_set(i2c_type *i2c_x, uint8_t address, i2c_addr2_mask_type mask) {
+    i2c_x->oaddr2_bit.addr2mask = mask;
 
-  i2c_x->oaddr2_bit.addr2 = (address >> 1) & 0x7F;
+    i2c_x->oaddr2_bit.addr2 = (address >> 1) & 0x7F;
 }
 
 /**
@@ -145,9 +136,8 @@ void i2c_own_address2_set(i2c_type *i2c_x, uint8_t address, i2c_addr2_mask_type 
   * @param  new_state (TRUE or FALSE).
   * @retval none
   */
-void i2c_own_address2_enable(i2c_type *i2c_x, confirm_state new_state)
-{
-  i2c_x->oaddr2_bit.addr2en = new_state;
+void i2c_own_address2_enable(i2c_type *i2c_x, confirm_state new_state) {
+    i2c_x->oaddr2_bit.addr2en = new_state;
 }
 
 /**
@@ -162,19 +152,17 @@ void i2c_own_address2_enable(i2c_type *i2c_x, confirm_state new_state)
   * @param  new_state (TRUE or FALSE).
   * @retval none
   */
-void i2c_smbus_enable(i2c_type *i2c_x, i2c_smbus_mode_type mode, confirm_state new_state)
-{
-  switch (mode)
-  {
-    case I2C_SMBUS_MODE_DEVICE:
-      i2c_x->ctrl1_bit.devaddren = new_state;
-      break;
-    case I2C_SMBUS_MODE_HOST:
-       i2c_x->ctrl1_bit.haddren = new_state;
-      break;
-    default:
-      break;
-  }
+void i2c_smbus_enable(i2c_type *i2c_x, i2c_smbus_mode_type mode, confirm_state new_state) {
+    switch (mode) {
+        case I2C_SMBUS_MODE_DEVICE:
+            i2c_x->ctrl1_bit.devaddren = new_state;
+            break;
+        case I2C_SMBUS_MODE_HOST:
+            i2c_x->ctrl1_bit.haddren = new_state;
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -185,9 +173,8 @@ void i2c_smbus_enable(i2c_type *i2c_x, i2c_smbus_mode_type mode, confirm_state n
   * @param  new_state (TRUE or FALSE).
   * @retval none
   */
-void i2c_enable(i2c_type *i2c_x, confirm_state new_state)
-{
-  i2c_x->ctrl1_bit.i2cen = new_state;
+void i2c_enable(i2c_type *i2c_x, confirm_state new_state) {
+    i2c_x->ctrl1_bit.i2cen = new_state;
 }
 
 /**
@@ -198,9 +185,8 @@ void i2c_enable(i2c_type *i2c_x, confirm_state new_state)
   * @param  new_state (TRUE or FALSE).
   * @retval none
   */
-void i2c_clock_stretch_enable(i2c_type *i2c_x, confirm_state new_state)
-{
-  i2c_x->ctrl1_bit.stretch = (!new_state);
+void i2c_clock_stretch_enable(i2c_type *i2c_x, confirm_state new_state) {
+    i2c_x->ctrl1_bit.stretch = (!new_state);
 }
 
 /**
@@ -211,9 +197,8 @@ void i2c_clock_stretch_enable(i2c_type *i2c_x, confirm_state new_state)
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void i2c_ack_enable(i2c_type *i2c_x, confirm_state new_state)
-{
-  i2c_x->ctrl2_bit.nacken  = (!new_state);
+void i2c_ack_enable(i2c_type *i2c_x, confirm_state new_state) {
+    i2c_x->ctrl2_bit.nacken  = (!new_state);
 }
 
 /**
@@ -224,9 +209,8 @@ void i2c_ack_enable(i2c_type *i2c_x, confirm_state new_state)
   * @param  new_state (TRUE or FALSE).
   * @retval none
   */
-void i2c_addr10_mode_enable(i2c_type *i2c_x, confirm_state new_state)
-{
-  i2c_x->ctrl2_bit.addr10 = new_state;
+void i2c_addr10_mode_enable(i2c_type *i2c_x, confirm_state new_state) {
+    i2c_x->ctrl2_bit.addr10 = new_state;
 }
 
 /**
@@ -237,9 +221,8 @@ void i2c_addr10_mode_enable(i2c_type *i2c_x, confirm_state new_state)
   * @param  address: slave address.
   * @retval none
   */
-void i2c_transfer_addr_set(i2c_type *i2c_x, uint16_t address)
-{
-  i2c_x->ctrl2_bit.saddr = address & 0x03FF;
+void i2c_transfer_addr_set(i2c_type *i2c_x, uint16_t address) {
+    i2c_x->ctrl2_bit.saddr = address & 0x03FF;
 }
 
 /**
@@ -249,9 +232,8 @@ void i2c_transfer_addr_set(i2c_type *i2c_x, uint16_t address)
   *         I2C1, I2C2, I2C3.
   * @retval slave address
   */
-uint16_t i2c_transfer_addr_get(i2c_type *i2c_x)
-{
-  return i2c_x->ctrl2_bit.saddr;
+uint16_t i2c_transfer_addr_get(i2c_type *i2c_x) {
+    return i2c_x->ctrl2_bit.saddr;
 }
 
 /**
@@ -265,9 +247,8 @@ uint16_t i2c_transfer_addr_get(i2c_type *i2c_x)
   *         - I2C_DIR_RECEIVE: master request a read transfer.
   * @retval none
   */
-void i2c_transfer_dir_set(i2c_type *i2c_x, i2c_transfer_dir_type i2c_direction)
-{
-  i2c_x->ctrl2_bit.dir = i2c_direction;
+void i2c_transfer_dir_set(i2c_type *i2c_x, i2c_transfer_dir_type i2c_direction) {
+    i2c_x->ctrl2_bit.dir = i2c_direction;
 }
 
 /**
@@ -279,16 +260,12 @@ void i2c_transfer_dir_set(i2c_type *i2c_x, i2c_transfer_dir_type i2c_direction)
   *         - I2C_DIR_TRANSMIT: master request a write transfer, slave enters receiver mode.
   *         - I2C_DIR_RECEIVE: master request a read transfer, slave enters transmitter mode.
   */
-i2c_transfer_dir_type i2c_transfer_dir_get(i2c_type *i2c_x)
-{
-  if (i2c_x->sts_bit.sdir == 0)
-  {
-    return I2C_DIR_TRANSMIT;
-  }
-  else
-  {
-    return I2C_DIR_RECEIVE;
-  }
+i2c_transfer_dir_type i2c_transfer_dir_get(i2c_type *i2c_x) {
+    if (i2c_x->sts_bit.sdir == 0) {
+        return I2C_DIR_TRANSMIT;
+    } else {
+        return I2C_DIR_RECEIVE;
+    }
 }
 
 /**
@@ -298,9 +275,8 @@ i2c_transfer_dir_type i2c_transfer_dir_get(i2c_type *i2c_x)
   *         I2C1, I2C2, I2C3.
   * @retval slave matched address.
   */
-uint8_t i2c_matched_addr_get(i2c_type *i2c_x)
-{
-  return (i2c_x->sts_bit.addr << 1);
+uint8_t i2c_matched_addr_get(i2c_type *i2c_x) {
+    return (i2c_x->sts_bit.addr << 1);
 }
 
 /**
@@ -311,9 +287,8 @@ uint8_t i2c_matched_addr_get(i2c_type *i2c_x)
   * @param  new_state (TRUE or FALSE).
   * @retval none
   */
-void i2c_auto_stop_enable(i2c_type *i2c_x, confirm_state new_state)
-{
-  i2c_x->ctrl2_bit.astopen = new_state;
+void i2c_auto_stop_enable(i2c_type *i2c_x, confirm_state new_state) {
+    i2c_x->ctrl2_bit.astopen = new_state;
 }
 
 /**
@@ -324,9 +299,8 @@ void i2c_auto_stop_enable(i2c_type *i2c_x, confirm_state new_state)
   * @param  new_state (TRUE or FALSE).
   * @retval none
   */
-void i2c_reload_enable(i2c_type *i2c_x, confirm_state new_state)
-{
-  i2c_x->ctrl2_bit.rlden = new_state;
+void i2c_reload_enable(i2c_type *i2c_x, confirm_state new_state) {
+    i2c_x->ctrl2_bit.rlden = new_state;
 }
 
 /**
@@ -337,9 +311,8 @@ void i2c_reload_enable(i2c_type *i2c_x, confirm_state new_state)
   * @param  cnt: transfer cnt.
   * @retval none
   */
-void i2c_cnt_set(i2c_type *i2c_x, uint8_t cnt)
-{
-  i2c_x->ctrl2_bit.cnt = cnt;
+void i2c_cnt_set(i2c_type *i2c_x, uint8_t cnt) {
+    i2c_x->ctrl2_bit.cnt = cnt;
 }
 
 /**
@@ -351,9 +324,8 @@ void i2c_cnt_set(i2c_type *i2c_x, uint8_t cnt)
   * @param  new_state (TRUE or FALSE).
   * @retval none
   */
-void i2c_addr10_header_enable(i2c_type *i2c_x, confirm_state new_state)
-{
-  i2c_x->ctrl2_bit.readh10 = new_state;
+void i2c_addr10_header_enable(i2c_type *i2c_x, confirm_state new_state) {
+    i2c_x->ctrl2_bit.readh10 = new_state;
 }
 
 /**
@@ -364,9 +336,8 @@ void i2c_addr10_header_enable(i2c_type *i2c_x, confirm_state new_state)
   * @param  new_state (TRUE or FALSE).
   * @retval none
   */
-void i2c_general_call_enable(i2c_type *i2c_x, confirm_state new_state)
-{
-  i2c_x->ctrl1_bit.gcaen = new_state;
+void i2c_general_call_enable(i2c_type *i2c_x, confirm_state new_state) {
+    i2c_x->ctrl1_bit.gcaen = new_state;
 }
 
 /**
@@ -380,9 +351,8 @@ void i2c_general_call_enable(i2c_type *i2c_x, confirm_state new_state)
   *         - I2C_SMBUS_ALERT_HIGH: smbus alert set high.
   * @retval none
   */
-void i2c_smbus_alert_set(i2c_type *i2c_x, i2c_smbus_alert_set_type level)
-{
-  i2c_x->ctrl1_bit.smbalert = level;
+void i2c_smbus_alert_set(i2c_type *i2c_x, i2c_smbus_alert_set_type level) {
+    i2c_x->ctrl1_bit.smbalert = level;
 }
 
 /**
@@ -393,9 +363,8 @@ void i2c_smbus_alert_set(i2c_type *i2c_x, i2c_smbus_alert_set_type level)
   * @param  new_state (TRUE or FALSE).
   * @retval none
   */
-void i2c_slave_data_ctrl_enable(i2c_type *i2c_x, confirm_state new_state)
-{
-  i2c_x->ctrl1_bit.sctrl = new_state;
+void i2c_slave_data_ctrl_enable(i2c_type *i2c_x, confirm_state new_state) {
+    i2c_x->ctrl1_bit.sctrl = new_state;
 }
 
 /**
@@ -406,9 +375,8 @@ void i2c_slave_data_ctrl_enable(i2c_type *i2c_x, confirm_state new_state)
   * @param  new_state (TRUE or FALSE).
   * @retval none
   */
-void i2c_pec_calculate_enable(i2c_type *i2c_x, confirm_state new_state)
-{
-  i2c_x->ctrl1_bit.pecen = new_state;
+void i2c_pec_calculate_enable(i2c_type *i2c_x, confirm_state new_state) {
+    i2c_x->ctrl1_bit.pecen = new_state;
 }
 
 /**
@@ -419,9 +387,8 @@ void i2c_pec_calculate_enable(i2c_type *i2c_x, confirm_state new_state)
   * @param  new_state (TRUE or FALSE).
   * @retval none
   */
-void i2c_pec_transmit_enable(i2c_type *i2c_x, confirm_state new_state)
-{
-  i2c_x->ctrl2_bit.pecten = new_state;
+void i2c_pec_transmit_enable(i2c_type *i2c_x, confirm_state new_state) {
+    i2c_x->ctrl2_bit.pecten = new_state;
 }
 
 /**
@@ -431,9 +398,8 @@ void i2c_pec_transmit_enable(i2c_type *i2c_x, confirm_state new_state)
   *         I2C1, I2C2, I2C3.
   * @retval the value of the pec.
   */
-uint8_t i2c_pec_value_get(i2c_type *i2c_x)
-{
-  return (uint8_t)(i2c_x->pec_bit.pecval);
+uint8_t i2c_pec_value_get(i2c_type *i2c_x) {
+    return (uint8_t)(i2c_x->pec_bit.pecval);
 }
 
 /**
@@ -444,9 +410,8 @@ uint8_t i2c_pec_value_get(i2c_type *i2c_x)
   * @param  timeout: timeout (0x0000~0x0FFF).
   * @retval none
   */
-void i2c_timeout_set(i2c_type *i2c_x, uint16_t timeout)
-{
-  i2c_x->timeout_bit.totime = timeout;
+void i2c_timeout_set(i2c_type *i2c_x, uint16_t timeout) {
+    i2c_x->timeout_bit.totime = timeout;
 }
 
 /**
@@ -460,9 +425,8 @@ void i2c_timeout_set(i2c_type *i2c_x, uint16_t timeout)
   *         - I2C_TIMEOUT_DETCET_LOW: detect low level timeout.
   * @retval none
   */
-void i2c_timeout_detcet_set(i2c_type *i2c_x, i2c_timeout_detcet_type mode)
-{
-  i2c_x->timeout_bit.tomode = mode;
+void i2c_timeout_detcet_set(i2c_type *i2c_x, i2c_timeout_detcet_type mode) {
+    i2c_x->timeout_bit.tomode = mode;
 }
 
 /**
@@ -473,9 +437,8 @@ void i2c_timeout_detcet_set(i2c_type *i2c_x, i2c_timeout_detcet_type mode)
   * @param  new_state (TRUE or FALSE).
   * @retval none
   */
-void i2c_timeout_enable(i2c_type *i2c_x, confirm_state new_state)
-{
-  i2c_x->timeout_bit.toen = new_state;
+void i2c_timeout_enable(i2c_type *i2c_x, confirm_state new_state) {
+    i2c_x->timeout_bit.toen = new_state;
 }
 
 /**
@@ -486,9 +449,8 @@ void i2c_timeout_enable(i2c_type *i2c_x, confirm_state new_state)
   * @param  timeout: extend timeout (0x0000~0x0FFF).
   * @retval none
   */
-void i2c_ext_timeout_set(i2c_type *i2c_x, uint16_t timeout)
-{
-  i2c_x->timeout_bit.exttime = timeout;
+void i2c_ext_timeout_set(i2c_type *i2c_x, uint16_t timeout) {
+    i2c_x->timeout_bit.exttime = timeout;
 }
 
 /**
@@ -499,9 +461,8 @@ void i2c_ext_timeout_set(i2c_type *i2c_x, uint16_t timeout)
   * @param  new_state (TRUE or FALSE).
   * @retval none
   */
-void i2c_ext_timeout_enable(i2c_type *i2c_x, confirm_state new_state)
-{
-  i2c_x->timeout_bit.exten = new_state;
+void i2c_ext_timeout_enable(i2c_type *i2c_x, confirm_state new_state) {
+    i2c_x->timeout_bit.exten = new_state;
 }
 
 /**
@@ -521,16 +482,12 @@ void i2c_ext_timeout_enable(i2c_type *i2c_x, confirm_state new_state)
   * @param  new_state (TRUE or FALSE).
   * @retval none
   */
-void i2c_interrupt_enable(i2c_type *i2c_x, uint32_t source, confirm_state new_state)
-{
-  if (new_state != FALSE)
-  {
-    i2c_x->ctrl1 |= source;
-  }
-  else
-  {
-    i2c_x->ctrl1 &= (uint32_t)~source;
-  }
+void i2c_interrupt_enable(i2c_type *i2c_x, uint32_t source, confirm_state new_state) {
+    if (new_state != FALSE) {
+        i2c_x->ctrl1 |= source;
+    } else {
+        i2c_x->ctrl1 &= (uint32_t)~source;
+    }
 }
 
 /**
@@ -549,16 +506,12 @@ void i2c_interrupt_enable(i2c_type *i2c_x, uint32_t source, confirm_state new_st
   *         - I2C_ERR_INT: bus error interrupt.
   * @retval flag_status (SET or RESET)
   */
-flag_status i2c_interrupt_get(i2c_type *i2c_x, uint16_t source)
-{
-  if((i2c_x->ctrl1 & source) != RESET)
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+flag_status i2c_interrupt_get(i2c_type *i2c_x, uint16_t source) {
+    if ((i2c_x->ctrl1 & source) != RESET) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -573,16 +526,12 @@ flag_status i2c_interrupt_get(i2c_type *i2c_x, uint16_t source)
   * @param  new_state (TRUE or FALSE).
   * @retval none
   */
-void i2c_dma_enable(i2c_type *i2c_x, i2c_dma_request_type dma_req, confirm_state new_state)
-{
-  if(dma_req == I2C_DMA_REQUEST_TX)
-  {
-    i2c_x->ctrl1_bit.dmaten = new_state;
-  }
-  else
-  {
-    i2c_x->ctrl1_bit.dmaren = new_state;
-  }
+void i2c_dma_enable(i2c_type *i2c_x, i2c_dma_request_type dma_req, confirm_state new_state) {
+    if (dma_req == I2C_DMA_REQUEST_TX) {
+        i2c_x->ctrl1_bit.dmaten = new_state;
+    } else {
+        i2c_x->ctrl1_bit.dmaren = new_state;
+    }
 }
 
 /**
@@ -604,24 +553,23 @@ void i2c_dma_enable(i2c_type *i2c_x, i2c_dma_request_type dma_req, confirm_state
   *         - I2C_GEN_START_WRITE: send data and generate start.
   * @retval none
   */
-void i2c_transmit_set(i2c_type *i2c_x, uint16_t address, uint8_t cnt, i2c_reload_stop_mode_type rld_stop, i2c_start_mode_type start)
-{
-  uint32_t temp;
+void i2c_transmit_set(i2c_type *i2c_x, uint16_t address, uint8_t cnt, i2c_reload_stop_mode_type rld_stop, i2c_start_mode_type start) {
+    uint32_t temp;
 
-  /* copy ctrl2 value to temp */
-  temp = i2c_x->ctrl2;
+    /* copy ctrl2 value to temp */
+    temp = i2c_x->ctrl2;
 
-  /* clear ctrl2_bit specific bits */
-  temp &= ~0x03FF67FF;
+    /* clear ctrl2_bit specific bits */
+    temp &= ~0x03FF67FF;
 
-  /* transfer mode and address set */
-  temp |= address | rld_stop | start;
+    /* transfer mode and address set */
+    temp |= address | rld_stop | start;
 
-  /* transfer counter set */
-  temp |= (uint32_t)cnt << 16;
+    /* transfer counter set */
+    temp |= (uint32_t)cnt << 16;
 
-  /* update ctrl2 value */
-  i2c_x->ctrl2 = temp;
+    /* update ctrl2 value */
+    i2c_x->ctrl2 = temp;
 }
 
 /**
@@ -631,9 +579,8 @@ void i2c_transmit_set(i2c_type *i2c_x, uint16_t address, uint8_t cnt, i2c_reload
   *         I2C1, I2C2, I2C3.
   * @retval none
   */
-void i2c_start_generate(i2c_type *i2c_x)
-{
-  i2c_x->ctrl2_bit.genstart = TRUE;
+void i2c_start_generate(i2c_type *i2c_x) {
+    i2c_x->ctrl2_bit.genstart = TRUE;
 }
 
 /**
@@ -643,9 +590,8 @@ void i2c_start_generate(i2c_type *i2c_x)
   *         I2C1, I2C2, I2C3.
   * @retval none
   */
-void i2c_stop_generate(i2c_type *i2c_x)
-{
-  i2c_x->ctrl2_bit.genstop = TRUE;
+void i2c_stop_generate(i2c_type *i2c_x) {
+    i2c_x->ctrl2_bit.genstop = TRUE;
 }
 
 /**
@@ -656,9 +602,8 @@ void i2c_stop_generate(i2c_type *i2c_x)
   * @param  data: byte to be transmitted.
   * @retval none
   */
-void i2c_data_send(i2c_type *i2c_x, uint8_t data)
-{
-  i2c_x->txdt = data;
+void i2c_data_send(i2c_type *i2c_x, uint8_t data) {
+    i2c_x->txdt = data;
 }
 
 /**
@@ -668,9 +613,8 @@ void i2c_data_send(i2c_type *i2c_x, uint8_t data)
   *         I2C1, I2C2, I2C3.
   * @retval the value of the received data.
   */
-uint8_t i2c_data_receive(i2c_type *i2c_x)
-{
-  return (uint8_t)i2c_x->rxdt;
+uint8_t i2c_data_receive(i2c_type *i2c_x) {
+    return (uint8_t)i2c_x->rxdt;
 }
 
 /**
@@ -698,16 +642,12 @@ uint8_t i2c_data_receive(i2c_type *i2c_x)
   *         - I2C_SDIR_FLAG: slave data transmit direction.
   * @retval the new state of flag (SET or RESET).
   */
-flag_status i2c_flag_get(i2c_type *i2c_x, uint32_t flag)
-{
-  if((i2c_x->sts & flag) != RESET)
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+flag_status i2c_flag_get(i2c_type *i2c_x, uint32_t flag) {
+    if ((i2c_x->sts & flag) != RESET) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -733,52 +673,47 @@ flag_status i2c_flag_get(i2c_type *i2c_x, uint32_t flag)
   *         - I2C_ALERTF_FLAG: smbus alert flag.
   * @retval the new state of flag (SET or RESET).
   */
-flag_status i2c_interrupt_flag_get(i2c_type *i2c_x, uint32_t flag)
-{
-  __IO uint32_t iten = 0;
+flag_status i2c_interrupt_flag_get(i2c_type *i2c_x, uint32_t flag) {
+    __IO uint32_t iten = 0;
 
-  switch(flag)
-  {
-    case I2C_TDIS_FLAG:
-      iten = i2c_x->ctrl1_bit.tdien;
-      break;
-    case I2C_RDBF_FLAG:
-      iten = i2c_x->ctrl1_bit.rdien;
-      break;
-    case I2C_ADDRF_FLAG:
-      iten = i2c_x->ctrl1_bit.addrien;
-      break;
-    case I2C_ACKFAIL_FLAG:
-      iten = i2c_x->ctrl1_bit.ackfailien;
-      break;
-    case I2C_STOPF_FLAG:
-      iten = i2c_x->ctrl1_bit.stopien;
-      break;
-    case I2C_TDC_FLAG:
-    case I2C_TCRLD_FLAG:
-      iten = i2c_x->ctrl1_bit.tdcien;
-      break;
-    case I2C_BUSERR_FLAG:
-    case I2C_ARLOST_FLAG:
-    case I2C_OUF_FLAG:
-    case I2C_PECERR_FLAG:
-    case I2C_TMOUT_FLAG:
-    case I2C_ALERTF_FLAG:
-      iten = i2c_x->ctrl1_bit.errien;
-      break;
+    switch (flag) {
+        case I2C_TDIS_FLAG:
+            iten = i2c_x->ctrl1_bit.tdien;
+            break;
+        case I2C_RDBF_FLAG:
+            iten = i2c_x->ctrl1_bit.rdien;
+            break;
+        case I2C_ADDRF_FLAG:
+            iten = i2c_x->ctrl1_bit.addrien;
+            break;
+        case I2C_ACKFAIL_FLAG:
+            iten = i2c_x->ctrl1_bit.ackfailien;
+            break;
+        case I2C_STOPF_FLAG:
+            iten = i2c_x->ctrl1_bit.stopien;
+            break;
+        case I2C_TDC_FLAG:
+        case I2C_TCRLD_FLAG:
+            iten = i2c_x->ctrl1_bit.tdcien;
+            break;
+        case I2C_BUSERR_FLAG:
+        case I2C_ARLOST_FLAG:
+        case I2C_OUF_FLAG:
+        case I2C_PECERR_FLAG:
+        case I2C_TMOUT_FLAG:
+        case I2C_ALERTF_FLAG:
+            iten = i2c_x->ctrl1_bit.errien;
+            break;
 
-    default:
-      break;
-  }
+        default:
+            break;
+    }
 
-  if(((i2c_x->sts & flag) != RESET) && (iten))
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+    if (((i2c_x->sts & flag) != RESET) && (iten)) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -799,9 +734,8 @@ flag_status i2c_interrupt_flag_get(i2c_type *i2c_x, uint32_t flag)
   *         - I2C_ALERTF_FLAG: smbus alert flag.
   * @retval none
   */
-void i2c_flag_clear(i2c_type *i2c_x, uint32_t flag)
-{
-  i2c_x->clr = flag;
+void i2c_flag_clear(i2c_type *i2c_x, uint32_t flag) {
+    i2c_x->clr = flag;
 }
 
 /**

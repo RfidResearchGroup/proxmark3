@@ -27,8 +27,8 @@
  * limitations under the License.
  */
 
- #ifndef _ARM_MVE_TABLES_F16_H
- #define _ARM_MVE_TABLES_F16_H
+#ifndef _ARM_MVE_TABLES_F16_H
+#define _ARM_MVE_TABLES_F16_H
 
 #include "arm_math_types_f16.h"
 
@@ -38,7 +38,7 @@ extern "C"
 #endif
 
 
- 
+
 
 #if defined(ARM_MATH_MVE_FLOAT16) && !defined(ARM_MATH_AUTOVECTORIZE)
 

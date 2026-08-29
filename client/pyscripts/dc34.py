@@ -191,7 +191,7 @@ if True:  # Data classes
             if result is None:
                 raise ValueError(f"cell value must be one of {list(TicTacToe_CellValue._value2member_map_.keys())}, got 0x{value:02x}.")
             return TicTacToe_CellValue(value)
-        
+
         @classmethod
         def _validate_game_status(cls, value: int) -> TicTacToe_GameStatus:
             if not isinstance(value, int):
@@ -276,14 +276,14 @@ if True:  # Data classes
             if not re.fullmatch(r"^[A-Z_]{0,8}$", value):
                 raise ValueError(f"word mask string must match regex r'^[A-Z_]{{0,8}}$', got '{value}'.")
             return value
-        
+
         @classmethod
         def _validate_guessed_letter_bitmask(cls, value: bytes | bytearray | int) -> int:
             if not isinstance(value, (bytes, bytearray, int)):
                 raise ValueError("guessed letter bitmask must be int, bytes or bytearray.")
             if isinstance(value, int):
                 result = value
-            else:            
+            else:
                 if len(value) != 4:
                     raise ValueError(f"guessed letter bitmask must be an int or exactly 4 bytes, got {len(value)} bytes.")
                 result = int.from_bytes(value, byteorder="little")
@@ -494,7 +494,7 @@ if True:  # Commands ... HF14CommandBase and SelectApplet classes
             status = int.from_bytes(data[-2:], byteorder="big")
             data = data[:-2]
             return HF14aCommandResult(status = status, cmd = bytes(cmd), data = bytes(data))
-    
+
     # Classes to select a different applet on the card.
 
     class Cmd_SelectApplet_Base(HF14aCommandBase):
@@ -563,7 +563,7 @@ if True:  # TicTacToe applet commands
             super().__init__(ins = 0x08, p1 = 0x00, p2 = 0x00, expect_data_length = 2)
 
 if True:  # Hangman applet commands
-    
+
     class Cmd_Hangman_Base(HF14aCommandBase):
         def __init__(self, ins : int, p1 : int = 0x00, expect_data_length : int = 0):
             super().__init__(cla = 0x80, ins = ins, p1 = p1, p2 = 0x00, send_buffer = None, expect_data_length = expect_data_length)

@@ -55,46 +55,45 @@
   *         - EDMA_STREAM8
   * @retval none.
   */
-void edma_reset(edma_stream_type *edma_streamx)
-{
-  /* reset registers for the selected stream */
-  edma_streamx->ctrl_bit.sen = FALSE;
-  edma_streamx->ctrl = 0x0;
-  edma_streamx->dtcnt = 0x0;
-  edma_streamx->paddr = 0x0;
-  edma_streamx->m0addr = 0x0;
-  edma_streamx->m1addr = 0x0;
-  edma_streamx->fctrl = (uint32_t)0x00000021;
+void edma_reset(edma_stream_type *edma_streamx) {
+    /* reset registers for the selected stream */
+    edma_streamx->ctrl_bit.sen = FALSE;
+    edma_streamx->ctrl = 0x0;
+    edma_streamx->dtcnt = 0x0;
+    edma_streamx->paddr = 0x0;
+    edma_streamx->m0addr = 0x0;
+    edma_streamx->m1addr = 0x0;
+    edma_streamx->fctrl = (uint32_t)0x00000021;
 
-  /* reset interrupt pending bits for the selected stream */
-  switch((uint32_t)edma_streamx)
-  {
-    case EDMA_STREAM1_BASE:
-      EDMA->clr1 = EDMA_STREAM1_INT_MASK;
-      break;
-    case EDMA_STREAM2_BASE:
-      EDMA->clr1 = EDMA_STREAM2_INT_MASK;
-      break;
-    case EDMA_STREAM3_BASE:
-      EDMA->clr1 = EDMA_STREAM3_INT_MASK;
-      break;
-    case EDMA_STREAM4_BASE:
-      EDMA->clr1 = EDMA_STREAM4_INT_MASK;
-      break;
-    case EDMA_STREAM5_BASE:
-      EDMA->clr2 = EDMA_STREAM5_INT_MASK;
-      break;
-    case EDMA_STREAM6_BASE:
-      EDMA->clr2 = EDMA_STREAM6_INT_MASK;
-      break;
-    case EDMA_STREAM7_BASE:
-      EDMA->clr2 = EDMA_STREAM7_INT_MASK;
-      break;
-    case EDMA_STREAM8_BASE:
-      EDMA->clr2 = EDMA_STREAM8_INT_MASK;
-      break;
-    default: break;
-  }
+    /* reset interrupt pending bits for the selected stream */
+    switch ((uint32_t)edma_streamx) {
+        case EDMA_STREAM1_BASE:
+            EDMA->clr1 = EDMA_STREAM1_INT_MASK;
+            break;
+        case EDMA_STREAM2_BASE:
+            EDMA->clr1 = EDMA_STREAM2_INT_MASK;
+            break;
+        case EDMA_STREAM3_BASE:
+            EDMA->clr1 = EDMA_STREAM3_INT_MASK;
+            break;
+        case EDMA_STREAM4_BASE:
+            EDMA->clr1 = EDMA_STREAM4_INT_MASK;
+            break;
+        case EDMA_STREAM5_BASE:
+            EDMA->clr2 = EDMA_STREAM5_INT_MASK;
+            break;
+        case EDMA_STREAM6_BASE:
+            EDMA->clr2 = EDMA_STREAM6_INT_MASK;
+            break;
+        case EDMA_STREAM7_BASE:
+            EDMA->clr2 = EDMA_STREAM7_INT_MASK;
+            break;
+        case EDMA_STREAM8_BASE:
+            EDMA->clr2 = EDMA_STREAM8_INT_MASK;
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -112,49 +111,48 @@ void edma_reset(edma_stream_type *edma_streamx)
   * @param  edma_init_struct: pointer to a edma_init_type structure.
   * @retval none.
   */
-void edma_init(edma_stream_type *edma_streamx, edma_init_type *edma_init_struct)
-{
-  /* config dtd bits */
-  edma_streamx->ctrl_bit.dtd = edma_init_struct->direction;
+void edma_init(edma_stream_type *edma_streamx, edma_init_type *edma_init_struct) {
+    /* config dtd bits */
+    edma_streamx->ctrl_bit.dtd = edma_init_struct->direction;
 
-  /* config pincm bit */
-  edma_streamx->ctrl_bit.pincm = edma_init_struct->peripheral_inc_enable;
+    /* config pincm bit */
+    edma_streamx->ctrl_bit.pincm = edma_init_struct->peripheral_inc_enable;
 
-  /* config mincm bit*/
-  edma_streamx->ctrl_bit.mincm = edma_init_struct->memory_inc_enable;
+    /* config mincm bit*/
+    edma_streamx->ctrl_bit.mincm = edma_init_struct->memory_inc_enable;
 
-  /* config pwidth bits */
-  edma_streamx->ctrl_bit.pwidth = edma_init_struct->peripheral_data_width;
+    /* config pwidth bits */
+    edma_streamx->ctrl_bit.pwidth = edma_init_struct->peripheral_data_width;
 
-  /* config mwidth bits */
-  edma_streamx->ctrl_bit.mwidth = edma_init_struct->memory_data_width;
+    /* config mwidth bits */
+    edma_streamx->ctrl_bit.mwidth = edma_init_struct->memory_data_width;
 
-  /* config lm bit */
-  edma_streamx->ctrl_bit.lm = edma_init_struct->loop_mode_enable;
+    /* config lm bit */
+    edma_streamx->ctrl_bit.lm = edma_init_struct->loop_mode_enable;
 
-  /* config spl bits */
-  edma_streamx->ctrl_bit.spl = edma_init_struct->priority;
+    /* config spl bits */
+    edma_streamx->ctrl_bit.spl = edma_init_struct->priority;
 
-  /* config mct bits */
-  edma_streamx->ctrl_bit.mct = edma_init_struct->memory_burst_mode;
+    /* config mct bits */
+    edma_streamx->ctrl_bit.mct = edma_init_struct->memory_burst_mode;
 
-  /* config pct bits */
-  edma_streamx->ctrl_bit.pct = edma_init_struct->peripheral_burst_mode;
+    /* config pct bits */
+    edma_streamx->ctrl_bit.pct = edma_init_struct->peripheral_burst_mode;
 
-  /* config fen bits */
-  edma_streamx->fctrl_bit.fen = edma_init_struct->fifo_mode_enable;
+    /* config fen bits */
+    edma_streamx->fctrl_bit.fen = edma_init_struct->fifo_mode_enable;
 
-  /* config fthsel bits*/
-  edma_streamx->fctrl_bit.fthsel = edma_init_struct->fifo_threshold;
+    /* config fthsel bits*/
+    edma_streamx->fctrl_bit.fthsel = edma_init_struct->fifo_threshold;
 
-  /* config dtcnt */
-  edma_streamx->dtcnt = edma_init_struct->buffer_size;
+    /* config dtcnt */
+    edma_streamx->dtcnt = edma_init_struct->buffer_size;
 
-  /* config paddr */
-  edma_streamx->paddr = edma_init_struct->peripheral_base_addr;
+    /* config paddr */
+    edma_streamx->paddr = edma_init_struct->peripheral_base_addr;
 
-  /* config m0addr */
-  edma_streamx->m0addr = edma_init_struct->memory0_base_addr;
+    /* config m0addr */
+    edma_streamx->m0addr = edma_init_struct->memory0_base_addr;
 }
 
 /**
@@ -162,22 +160,21 @@ void edma_init(edma_stream_type *edma_streamx, edma_init_type *edma_init_struct)
   * @param  edma_init_struct: pointer to a edma_init_type structure which will be initialized.
   * @retval none.
   */
-void edma_default_para_init(edma_init_type *edma_init_struct)
-{
-  edma_init_struct->buffer_size = 0;
-  edma_init_struct->loop_mode_enable = FALSE;
-  edma_init_struct->direction = EDMA_DIR_PERIPHERAL_TO_MEMORY;
-  edma_init_struct->fifo_threshold = EDMA_FIFO_THRESHOLD_1QUARTER;
-  edma_init_struct->fifo_mode_enable = FALSE;
-  edma_init_struct->memory0_base_addr = 0;
-  edma_init_struct->memory_burst_mode = EDMA_MEMORY_SINGLE;
-  edma_init_struct->memory_data_width = EDMA_MEMORY_DATA_WIDTH_BYTE;
-  edma_init_struct->memory_inc_enable = FALSE;
-  edma_init_struct->peripheral_base_addr = 0;
-  edma_init_struct->peripheral_burst_mode = EDMA_PERIPHERAL_SINGLE;
-  edma_init_struct->peripheral_data_width = EDMA_PERIPHERAL_DATA_WIDTH_BYTE;
-  edma_init_struct->peripheral_inc_enable = FALSE;
-  edma_init_struct->priority = EDMA_PRIORITY_LOW;
+void edma_default_para_init(edma_init_type *edma_init_struct) {
+    edma_init_struct->buffer_size = 0;
+    edma_init_struct->loop_mode_enable = FALSE;
+    edma_init_struct->direction = EDMA_DIR_PERIPHERAL_TO_MEMORY;
+    edma_init_struct->fifo_threshold = EDMA_FIFO_THRESHOLD_1QUARTER;
+    edma_init_struct->fifo_mode_enable = FALSE;
+    edma_init_struct->memory0_base_addr = 0;
+    edma_init_struct->memory_burst_mode = EDMA_MEMORY_SINGLE;
+    edma_init_struct->memory_data_width = EDMA_MEMORY_DATA_WIDTH_BYTE;
+    edma_init_struct->memory_inc_enable = FALSE;
+    edma_init_struct->peripheral_base_addr = 0;
+    edma_init_struct->peripheral_burst_mode = EDMA_PERIPHERAL_SINGLE;
+    edma_init_struct->peripheral_data_width = EDMA_PERIPHERAL_DATA_WIDTH_BYTE;
+    edma_init_struct->peripheral_inc_enable = FALSE;
+    edma_init_struct->priority = EDMA_PRIORITY_LOW;
 }
 
 /**
@@ -195,9 +192,8 @@ void edma_default_para_init(edma_init_type *edma_init_struct)
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void edma_stream_enable(edma_stream_type *edma_streamx, confirm_state new_state)
-{
-  edma_streamx->ctrl_bit.sen = new_state;
+void edma_stream_enable(edma_stream_type *edma_streamx, confirm_state new_state) {
+    edma_streamx->ctrl_bit.sen = new_state;
 }
 
 /**
@@ -222,31 +218,22 @@ void edma_stream_enable(edma_stream_type *edma_streamx, confirm_state new_state)
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void edma_interrupt_enable(edma_stream_type *edma_streamx, uint32_t edma_int, confirm_state new_state)
-{
-  if((edma_int & EDMA_FERR_INT) != 0)
-  {
-    if(new_state != FALSE)
-    {
-      edma_streamx->fctrl |= (uint32_t)EDMA_FERR_INT;
+void edma_interrupt_enable(edma_stream_type *edma_streamx, uint32_t edma_int, confirm_state new_state) {
+    if ((edma_int & EDMA_FERR_INT) != 0) {
+        if (new_state != FALSE) {
+            edma_streamx->fctrl |= (uint32_t)EDMA_FERR_INT;
+        } else {
+            edma_streamx->fctrl &= ~(uint32_t)EDMA_FERR_INT;
+        }
     }
-    else
-    {
-      edma_streamx->fctrl &= ~(uint32_t)EDMA_FERR_INT;
-    }
-  }
 
-  if(edma_int != EDMA_FERR_INT)
-  {
-    if(new_state != FALSE)
-    {
-      edma_streamx->ctrl |= (uint32_t)edma_int;
+    if (edma_int != EDMA_FERR_INT) {
+        if (new_state != FALSE) {
+            edma_streamx->ctrl |= (uint32_t)edma_int;
+        } else {
+            edma_streamx->ctrl &= ~(uint32_t)edma_int;
+        }
     }
-    else
-    {
-      edma_streamx->ctrl &= ~(uint32_t)edma_int;
-    }
-  }
 }
 
 /**
@@ -267,9 +254,8 @@ void edma_interrupt_enable(edma_stream_type *edma_streamx, uint32_t edma_int, co
   *         - EDMA_PERIPHERAL_INC_4_BYTE
   * @retval none.
   */
-void edma_peripheral_inc_offset_set(edma_stream_type *edma_streamx, edma_peripheral_inc_offset_type offset)
-{
-  edma_streamx->ctrl_bit.pincos = offset;
+void edma_peripheral_inc_offset_set(edma_stream_type *edma_streamx, edma_peripheral_inc_offset_type offset) {
+    edma_streamx->ctrl_bit.pincos = offset;
 }
 
 /**
@@ -287,9 +273,8 @@ void edma_peripheral_inc_offset_set(edma_stream_type *edma_streamx, edma_periphe
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void edma_flow_controller_enable(edma_stream_type *edma_streamx, confirm_state new_state)
-{
-  edma_streamx->ctrl_bit.pfctrl = new_state;
+void edma_flow_controller_enable(edma_stream_type *edma_streamx, confirm_state new_state) {
+    edma_streamx->ctrl_bit.pfctrl = new_state;
 }
 
 /**
@@ -307,10 +292,9 @@ void edma_flow_controller_enable(edma_stream_type *edma_streamx, confirm_state n
   * @param  data_number: the number of data to be transferred (0x0000~0xFFFF).
   * @retval none.
   */
-void edma_data_number_set(edma_stream_type *edma_streamx, uint16_t data_number)
-{
-  /* write the number of data units to be transferred */
-  edma_streamx->dtcnt = data_number;
+void edma_data_number_set(edma_stream_type *edma_streamx, uint16_t data_number) {
+    /* write the number of data units to be transferred */
+    edma_streamx->dtcnt = data_number;
 }
 
 /**
@@ -327,9 +311,8 @@ void edma_data_number_set(edma_stream_type *edma_streamx, uint16_t data_number)
   *         - EDMA_STREAM8
   * @retval the number value.
   */
-uint16_t edma_data_number_get(edma_stream_type *edma_streamx)
-{
-  return ((uint16_t)(edma_streamx->dtcnt));
+uint16_t edma_data_number_get(edma_stream_type *edma_streamx) {
+    return ((uint16_t)(edma_streamx->dtcnt));
 }
 
 /**
@@ -351,18 +334,14 @@ uint16_t edma_data_number_get(edma_stream_type *edma_streamx)
   *         - EDMA_MEMORY_1
   * @retval none.
   */
-void edma_double_buffer_mode_init(edma_stream_type *edma_streamx, uint32_t memory1_addr, edma_memory_type current_memory)
-{
-  if(current_memory != EDMA_MEMORY_0)
-  {
-    edma_streamx->ctrl_bit.cm = 1;
-  }
-  else
-  {
-    edma_streamx->ctrl_bit.cm = 0;
-  }
+void edma_double_buffer_mode_init(edma_stream_type *edma_streamx, uint32_t memory1_addr, edma_memory_type current_memory) {
+    if (current_memory != EDMA_MEMORY_0) {
+        edma_streamx->ctrl_bit.cm = 1;
+    } else {
+        edma_streamx->ctrl_bit.cm = 0;
+    }
 
-  edma_streamx->m1addr = memory1_addr;
+    edma_streamx->m1addr = memory1_addr;
 }
 
 /**
@@ -380,16 +359,12 @@ void edma_double_buffer_mode_init(edma_stream_type *edma_streamx, uint32_t memor
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void edma_double_buffer_mode_enable(edma_stream_type *edma_streamx, confirm_state new_state)
-{
-  if(new_state != FALSE)
-  {
-    edma_streamx->ctrl_bit.dmm = 1;
-  }
-  else
-  {
-    edma_streamx->ctrl_bit.dmm = 0;
-  }
+void edma_double_buffer_mode_enable(edma_stream_type *edma_streamx, confirm_state new_state) {
+    if (new_state != FALSE) {
+        edma_streamx->ctrl_bit.dmm = 1;
+    } else {
+        edma_streamx->ctrl_bit.dmm = 0;
+    }
 }
 
 /**
@@ -411,16 +386,12 @@ void edma_double_buffer_mode_enable(edma_stream_type *edma_streamx, confirm_stat
   *         - EDMA_MEMORY_1
   * @retval none.
   */
-void edma_memory_addr_set(edma_stream_type *edma_streamx, uint32_t memory_addr, uint32_t memory_target)
-{
-  if(memory_target != EDMA_MEMORY_0)
-  {
-    edma_streamx->m1addr = memory_addr;
-  }
-  else
-  {
-    edma_streamx->m0addr = memory_addr;
-  }
+void edma_memory_addr_set(edma_stream_type *edma_streamx, uint32_t memory_addr, uint32_t memory_target) {
+    if (memory_target != EDMA_MEMORY_0) {
+        edma_streamx->m1addr = memory_addr;
+    } else {
+        edma_streamx->m0addr = memory_addr;
+    }
 }
 
 /**
@@ -439,9 +410,8 @@ void edma_memory_addr_set(edma_stream_type *edma_streamx, uint32_t memory_addr, 
   *         - EDMA_MEMORY_0
   *         - EDMA_MEMORY_1
   */
-edma_memory_type edma_memory_target_get(edma_stream_type *edma_streamx)
-{
-  return (edma_memory_type)(edma_streamx->ctrl_bit.cm);
+edma_memory_type edma_memory_target_get(edma_stream_type *edma_streamx) {
+    return (edma_memory_type)(edma_streamx->ctrl_bit.cm);
 }
 
 /**
@@ -458,16 +428,12 @@ edma_memory_type edma_memory_target_get(edma_stream_type *edma_streamx)
   *         - EDMA_STREAM8
   * @retval current state of the edma streamx (SET or RESET).
   */
-flag_status edma_stream_status_get(edma_stream_type *edma_streamx)
-{
-  if((edma_streamx->ctrl_bit.sen) != RESET)
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+flag_status edma_stream_status_get(edma_stream_type *edma_streamx) {
+    if ((edma_streamx->ctrl_bit.sen) != RESET) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -490,9 +456,8 @@ flag_status edma_stream_status_get(edma_stream_type *edma_streamx)
   *         - EDMA_FIFO_STATUS_EMPTY: fifo is empty.
   *         - EDMA_FIFO_STATUS_FULL: fifo is full.
   */
-uint8_t edma_fifo_status_get(edma_stream_type *edma_streamx)
-{
-  return (uint8_t)(edma_streamx->fctrl_bit.fsts);
+uint8_t edma_fifo_status_get(edma_stream_type *edma_streamx) {
+    return (uint8_t)(edma_streamx->fctrl_bit.fsts);
 }
 
 /**
@@ -509,27 +474,20 @@ uint8_t edma_fifo_status_get(edma_stream_type *edma_streamx)
   *         - EDMA_FERR8_FLAG   - EDMA_DMERR8_FLAG  - EDMA_DTERR8_FLAG  - EDMA_HDT8_FLAG   - EDMA_FDT8_FLAG
   * @retval the new state of edma flag (SET or RESET).
   */
-flag_status edma_flag_get(uint32_t edma_flag)
-{
-  uint32_t status;
+flag_status edma_flag_get(uint32_t edma_flag) {
+    uint32_t status;
 
-  if(edma_flag > ((uint32_t)0x20000000))
-  {
-    status = EDMA->sts2;
-  }
-  else
-  {
-    status = EDMA->sts1;
-  }
+    if (edma_flag > ((uint32_t)0x20000000)) {
+        status = EDMA->sts2;
+    } else {
+        status = EDMA->sts1;
+    }
 
-  if((status & edma_flag) != ((uint32_t)RESET))
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+    if ((status & edma_flag) != ((uint32_t)RESET)) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -546,27 +504,20 @@ flag_status edma_flag_get(uint32_t edma_flag)
   *         - EDMA_FERR8_FLAG   - EDMA_DMERR8_FLAG  - EDMA_DTERR8_FLAG  - EDMA_HDT8_FLAG   - EDMA_FDT8_FLAG
   * @retval the new state of edma flag (SET or RESET).
   */
-flag_status edma_interrupt_flag_get(uint32_t edma_flag)
-{
-  uint32_t status;
+flag_status edma_interrupt_flag_get(uint32_t edma_flag) {
+    uint32_t status;
 
-  if(edma_flag > ((uint32_t)0x20000000))
-  {
-    status = EDMA->sts2;
-  }
-  else
-  {
-    status = EDMA->sts1;
-  }
+    if (edma_flag > ((uint32_t)0x20000000)) {
+        status = EDMA->sts2;
+    } else {
+        status = EDMA->sts1;
+    }
 
-  if((status & edma_flag) != ((uint32_t)RESET))
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }  
+    if ((status & edma_flag) != ((uint32_t)RESET)) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -583,16 +534,12 @@ flag_status edma_interrupt_flag_get(uint32_t edma_flag)
   *         - EDMA_FERR8_FLAG   - EDMA_DMERR8_FLAG  - EDMA_DTERR8_FLAG  - EDMA_HDT8_FLAG   - EDMA_FDT8_FLAG
   * @retval none.
   */
-void edma_flag_clear(uint32_t edma_flag)
-{
-  if(edma_flag > ((uint32_t)0x20000000))
-  {
-    EDMA->clr2 = (uint32_t)(edma_flag & 0x0FFFFFFF);
-  }
-  else
-  {
-    EDMA->clr1 = edma_flag;
-  }
+void edma_flag_clear(uint32_t edma_flag) {
+    if (edma_flag > ((uint32_t)0x20000000)) {
+        EDMA->clr2 = (uint32_t)(edma_flag & 0x0FFFFFFF);
+    } else {
+        EDMA->clr1 = edma_flag;
+    }
 }
 
 /**
@@ -613,11 +560,10 @@ void edma_flag_clear(uint32_t edma_flag)
   * @param  ycnt: y dimension transfer count(0x0000~ 0xFFFF).
   * @retval none.
   */
-void edma_2d_init(edma_stream_2d_type *edma_streamx_2d, int16_t src_stride, int16_t dst_stride, uint16_t xcnt, uint16_t ycnt)
-{
-  edma_streamx_2d->s2dcnt = (uint32_t)((ycnt << 16) | (xcnt));
+void edma_2d_init(edma_stream_2d_type *edma_streamx_2d, int16_t src_stride, int16_t dst_stride, uint16_t xcnt, uint16_t ycnt) {
+    edma_streamx_2d->s2dcnt = (uint32_t)((ycnt << 16) | (xcnt));
 
-  edma_streamx_2d->stride = (uint32_t)((dst_stride << 16) | (src_stride));
+    edma_streamx_2d->stride = (uint32_t)((dst_stride << 16) | (src_stride));
 }
 
 /**
@@ -635,20 +581,16 @@ void edma_2d_init(edma_stream_2d_type *edma_streamx_2d, int16_t src_stride, int1
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void edma_2d_enable(edma_stream_2d_type *edma_streamx_2d, confirm_state new_state)
-{
-  uint32_t offset;
+void edma_2d_enable(edma_stream_2d_type *edma_streamx_2d, confirm_state new_state) {
+    uint32_t offset;
 
-  offset = ((uint32_t)edma_streamx_2d - EDMA_STREAM1_2D_BASE) / 4;
+    offset = ((uint32_t)edma_streamx_2d - EDMA_STREAM1_2D_BASE) / 4;
 
-  if(new_state != FALSE)
-  {
-    EDMA->s2dctrl |= (uint16_t)0x0001 << offset;
-  }
-  else
-  {
-    EDMA->s2dctrl &= ~((uint16_t)0x0001 << offset);
-  }
+    if (new_state != FALSE) {
+        EDMA->s2dctrl |= (uint16_t)0x0001 << offset;
+    } else {
+        EDMA->s2dctrl &= ~((uint16_t)0x0001 << offset);
+    }
 }
 
 /**
@@ -666,9 +608,8 @@ void edma_2d_enable(edma_stream_2d_type *edma_streamx_2d, confirm_state new_stat
   * @param  pointer: link list pointer.
   * @retval none.
   */
-void edma_link_list_init(edma_stream_link_list_type *edma_streamx_ll, uint32_t pointer)
-{
-  edma_streamx_ll->llp = pointer;
+void edma_link_list_init(edma_stream_link_list_type *edma_streamx_ll, uint32_t pointer) {
+    edma_streamx_ll->llp = pointer;
 }
 
 /**
@@ -686,20 +627,16 @@ void edma_link_list_init(edma_stream_link_list_type *edma_streamx_ll, uint32_t p
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void edma_link_list_enable(edma_stream_link_list_type *edma_streamx_ll, confirm_state new_state)
-{
-  uint32_t offset;
+void edma_link_list_enable(edma_stream_link_list_type *edma_streamx_ll, confirm_state new_state) {
+    uint32_t offset;
 
-  offset = ((uint32_t)edma_streamx_ll - EDMA_STREAM1_LL_BASE) / 4;
+    offset = ((uint32_t)edma_streamx_ll - EDMA_STREAM1_LL_BASE) / 4;
 
-  if(new_state != FALSE)
-  {
-    EDMA->llctrl |= (uint16_t)0x0001 << offset;
-  }
-  else
-  {
-    EDMA->llctrl &= ~((uint16_t)0x0001 << offset);
-  }
+    if (new_state != FALSE) {
+        EDMA->llctrl |= (uint16_t)0x0001 << offset;
+    } else {
+        EDMA->llctrl &= ~((uint16_t)0x0001 << offset);
+    }
 }
 
 /**
@@ -707,9 +644,8 @@ void edma_link_list_enable(edma_stream_link_list_type *edma_streamx_ll, confirm_
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void edmamux_enable(confirm_state new_state)
-{
-  EDMA->muxsel_bit.tblsel = new_state;
+void edmamux_enable(confirm_state new_state) {
+    EDMA->muxsel_bit.tblsel = new_state;
 }
 
 /**
@@ -752,9 +688,8 @@ void edmamux_enable(confirm_state new_state)
   *         - EDMAMUX_DMAREQ_ID_TMR20_TRIG   - EDMAMUX_DMAREQ_ID_TMR20_HALL   - EDMAMUX_DMAREQ_ID_DVP
   * @retval none.
   */
-void edmamux_init(edmamux_channel_type *edmamux_channelx, edmamux_requst_id_sel_type edmamux_req_id)
-{
-  edmamux_channelx->muxctrl_bit.reqsel = edmamux_req_id;
+void edmamux_init(edmamux_channel_type *edmamux_channelx, edmamux_requst_id_sel_type edmamux_req_id) {
+    edmamux_channelx->muxctrl_bit.reqsel = edmamux_req_id;
 }
 
 /**
@@ -762,13 +697,12 @@ void edmamux_init(edmamux_channel_type *edmamux_channelx, edmamux_requst_id_sel_
   * @param  edmamux_sync_init_struct: pointer to a edmamux_sync_init_type structure which will be initialized.
   * @retval none.
   */
-void edmamux_sync_default_para_init(edmamux_sync_init_type *edmamux_sync_init_struct)
-{
-  edmamux_sync_init_struct->sync_enable = FALSE;
-  edmamux_sync_init_struct->sync_event_enable = FALSE;
-  edmamux_sync_init_struct->sync_polarity = EDMAMUX_SYNC_POLARITY_DISABLE;
-  edmamux_sync_init_struct->sync_request_number = 0x0;
-  edmamux_sync_init_struct->sync_signal_sel = EDMAMUX_SYNC_ID_EXINT0;
+void edmamux_sync_default_para_init(edmamux_sync_init_type *edmamux_sync_init_struct) {
+    edmamux_sync_init_struct->sync_enable = FALSE;
+    edmamux_sync_init_struct->sync_event_enable = FALSE;
+    edmamux_sync_init_struct->sync_polarity = EDMAMUX_SYNC_POLARITY_DISABLE;
+    edmamux_sync_init_struct->sync_request_number = 0x0;
+    edmamux_sync_init_struct->sync_signal_sel = EDMAMUX_SYNC_ID_EXINT0;
 }
 
 /**
@@ -786,13 +720,12 @@ void edmamux_sync_default_para_init(edmamux_sync_init_type *edmamux_sync_init_st
   * @param  edmamux_sync_init_struct: ointer to a edmamux_sync_init_type structure.
   * @retval none.
   */
-void edmamux_sync_config(edmamux_channel_type *edmamux_channelx, edmamux_sync_init_type *edmamux_sync_init_struct)
-{
-  edmamux_channelx->muxctrl_bit.syncsel = edmamux_sync_init_struct->sync_signal_sel;
-  edmamux_channelx->muxctrl_bit.syncpol = edmamux_sync_init_struct->sync_polarity;
-  edmamux_channelx->muxctrl_bit.reqcnt  = edmamux_sync_init_struct->sync_request_number - 1;
-  edmamux_channelx->muxctrl_bit.evtgen  = edmamux_sync_init_struct->sync_event_enable;
-  edmamux_channelx->muxctrl_bit.syncen  = edmamux_sync_init_struct->sync_enable;
+void edmamux_sync_config(edmamux_channel_type *edmamux_channelx, edmamux_sync_init_type *edmamux_sync_init_struct) {
+    edmamux_channelx->muxctrl_bit.syncsel = edmamux_sync_init_struct->sync_signal_sel;
+    edmamux_channelx->muxctrl_bit.syncpol = edmamux_sync_init_struct->sync_polarity;
+    edmamux_channelx->muxctrl_bit.reqcnt  = edmamux_sync_init_struct->sync_request_number - 1;
+    edmamux_channelx->muxctrl_bit.evtgen  = edmamux_sync_init_struct->sync_event_enable;
+    edmamux_channelx->muxctrl_bit.syncen  = edmamux_sync_init_struct->sync_enable;
 }
 
 /**
@@ -800,12 +733,11 @@ void edmamux_sync_config(edmamux_channel_type *edmamux_channelx, edmamux_sync_in
   * @param  edmamux_gen_init_struct: pointer to a edmamux_gen_init_type structure which will be initialized.
   * @retval none.
   */
-void edmamux_generator_default_para_init(edmamux_gen_init_type *edmamux_gen_init_struct)
-{
-  edmamux_gen_init_struct->gen_enable         = FALSE;
-  edmamux_gen_init_struct->gen_polarity       = EDMAMUX_GEN_POLARITY_DISABLE;
-  edmamux_gen_init_struct->gen_request_number = 0x0;
-  edmamux_gen_init_struct->gen_signal_sel     = EDMAMUX_GEN_ID_EXINT0;
+void edmamux_generator_default_para_init(edmamux_gen_init_type *edmamux_gen_init_struct) {
+    edmamux_gen_init_struct->gen_enable         = FALSE;
+    edmamux_gen_init_struct->gen_polarity       = EDMAMUX_GEN_POLARITY_DISABLE;
+    edmamux_gen_init_struct->gen_request_number = 0x0;
+    edmamux_gen_init_struct->gen_signal_sel     = EDMAMUX_GEN_ID_EXINT0;
 }
 
 /**
@@ -813,12 +745,11 @@ void edmamux_generator_default_para_init(edmamux_gen_init_type *edmamux_gen_init
   * @param  edmamux_gen_init_struct: pointer to a edmamux_gen_init_type structure which will be initialized.
   * @retval none.
   */
-void edmamux_generator_config(edmamux_generator_type *edmamux_gen_x, edmamux_gen_init_type *edmamux_gen_init_struct)
-{
-  edmamux_gen_x->gctrl_bit.sigsel  = edmamux_gen_init_struct->gen_signal_sel;
-  edmamux_gen_x->gctrl_bit.gpol    = edmamux_gen_init_struct->gen_polarity;
-  edmamux_gen_x->gctrl_bit.greqcnt = edmamux_gen_init_struct->gen_request_number - 1;
-  edmamux_gen_x->gctrl_bit.gen     = edmamux_gen_init_struct->gen_enable;
+void edmamux_generator_config(edmamux_generator_type *edmamux_gen_x, edmamux_gen_init_type *edmamux_gen_init_struct) {
+    edmamux_gen_x->gctrl_bit.sigsel  = edmamux_gen_init_struct->gen_signal_sel;
+    edmamux_gen_x->gctrl_bit.gpol    = edmamux_gen_init_struct->gen_polarity;
+    edmamux_gen_x->gctrl_bit.greqcnt = edmamux_gen_init_struct->gen_request_number - 1;
+    edmamux_gen_x->gctrl_bit.gen     = edmamux_gen_init_struct->gen_enable;
 }
 
 /**
@@ -836,16 +767,12 @@ void edmamux_generator_config(edmamux_generator_type *edmamux_gen_x, edmamux_gen
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void edmamux_sync_interrupt_enable(edmamux_channel_type *edmamux_channelx, confirm_state new_state)
-{
-  if(new_state != FALSE)
-  {
-    edmamux_channelx->muxctrl_bit.syncovien = TRUE;
-  }
-  else
-  {
-    edmamux_channelx->muxctrl_bit.syncovien = FALSE;
-  }
+void edmamux_sync_interrupt_enable(edmamux_channel_type *edmamux_channelx, confirm_state new_state) {
+    if (new_state != FALSE) {
+        edmamux_channelx->muxctrl_bit.syncovien = TRUE;
+    } else {
+        edmamux_channelx->muxctrl_bit.syncovien = FALSE;
+    }
 }
 
 /**
@@ -859,16 +786,12 @@ void edmamux_sync_interrupt_enable(edmamux_channel_type *edmamux_channelx, confi
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void edmamux_generator_interrupt_enable(edmamux_generator_type *edmamux_gen_x, confirm_state new_state)
-{
-  if(new_state != FALSE)
-  {
-    edmamux_gen_x->gctrl_bit.trgovien = TRUE;
-  }
-  else
-  {
-    edmamux_gen_x->gctrl_bit.trgovien = FALSE;
-  }
+void edmamux_generator_interrupt_enable(edmamux_generator_type *edmamux_gen_x, confirm_state new_state) {
+    if (new_state != FALSE) {
+        edmamux_gen_x->gctrl_bit.trgovien = TRUE;
+    } else {
+        edmamux_gen_x->gctrl_bit.trgovien = FALSE;
+    }
 }
 
 /**
@@ -885,16 +808,12 @@ void edmamux_generator_interrupt_enable(edmamux_generator_type *edmamux_gen_x, c
   *         - EDMAMUX_SYNC_OV8_FLAG
   * @retval state of edmamux sync flag.
   */
-flag_status edmamux_sync_flag_get(uint32_t flag)
-{
-  if((EDMA->muxsyncsts & flag) != RESET)
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+flag_status edmamux_sync_flag_get(uint32_t flag) {
+    if ((EDMA->muxsyncsts & flag) != RESET) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -911,47 +830,31 @@ flag_status edmamux_sync_flag_get(uint32_t flag)
   *         - EDMAMUX_SYNC_OV8_FLAG
   * @retval state of edmamux sync flag.
   */
-flag_status edmamux_sync_interrupt_flag_get(uint32_t flag)
-{
-  uint32_t int_stat = 0;
-  
-  if(flag == EDMAMUX_SYNC_OV1_FLAG)
-  {
-    int_stat = (uint32_t)EDMAMUX_CHANNEL1->muxctrl_bit.syncovien;
-  }
-  else if(flag == EDMAMUX_SYNC_OV2_FLAG)
-  {
-    int_stat = (uint32_t)EDMAMUX_CHANNEL2->muxctrl_bit.syncovien;
-  }
-  else if(flag == EDMAMUX_SYNC_OV3_FLAG)
-  {
-    int_stat = (uint32_t)EDMAMUX_CHANNEL3->muxctrl_bit.syncovien;
-  }
-  else if(flag == EDMAMUX_SYNC_OV4_FLAG)
-  {
-    int_stat = (uint32_t)EDMAMUX_CHANNEL4->muxctrl_bit.syncovien;
-  }
-  else if(flag == EDMAMUX_SYNC_OV5_FLAG)
-  {
-    int_stat = (uint32_t)EDMAMUX_CHANNEL5->muxctrl_bit.syncovien;
-  }
-  else if(flag == EDMAMUX_SYNC_OV6_FLAG)
-  {
-    int_stat = (uint32_t)EDMAMUX_CHANNEL6->muxctrl_bit.syncovien;
-  }
-  else if(flag == EDMAMUX_SYNC_OV7_FLAG)
-  {
-    int_stat = (uint32_t)EDMAMUX_CHANNEL7->muxctrl_bit.syncovien;
-  }
-  else
-  {
-    int_stat = (uint32_t)EDMAMUX_CHANNEL8->muxctrl_bit.syncovien;
-  }
-  
-  if((int_stat != RESET) && ((EDMA->muxsyncsts & flag) != RESET))
-    return SET;
-  else
-    return RESET;
+flag_status edmamux_sync_interrupt_flag_get(uint32_t flag) {
+    uint32_t int_stat = 0;
+
+    if (flag == EDMAMUX_SYNC_OV1_FLAG) {
+        int_stat = (uint32_t)EDMAMUX_CHANNEL1->muxctrl_bit.syncovien;
+    } else if (flag == EDMAMUX_SYNC_OV2_FLAG) {
+        int_stat = (uint32_t)EDMAMUX_CHANNEL2->muxctrl_bit.syncovien;
+    } else if (flag == EDMAMUX_SYNC_OV3_FLAG) {
+        int_stat = (uint32_t)EDMAMUX_CHANNEL3->muxctrl_bit.syncovien;
+    } else if (flag == EDMAMUX_SYNC_OV4_FLAG) {
+        int_stat = (uint32_t)EDMAMUX_CHANNEL4->muxctrl_bit.syncovien;
+    } else if (flag == EDMAMUX_SYNC_OV5_FLAG) {
+        int_stat = (uint32_t)EDMAMUX_CHANNEL5->muxctrl_bit.syncovien;
+    } else if (flag == EDMAMUX_SYNC_OV6_FLAG) {
+        int_stat = (uint32_t)EDMAMUX_CHANNEL6->muxctrl_bit.syncovien;
+    } else if (flag == EDMAMUX_SYNC_OV7_FLAG) {
+        int_stat = (uint32_t)EDMAMUX_CHANNEL7->muxctrl_bit.syncovien;
+    } else {
+        int_stat = (uint32_t)EDMAMUX_CHANNEL8->muxctrl_bit.syncovien;
+    }
+
+    if ((int_stat != RESET) && ((EDMA->muxsyncsts & flag) != RESET))
+        return SET;
+    else
+        return RESET;
 }
 
 /**
@@ -968,9 +871,8 @@ flag_status edmamux_sync_interrupt_flag_get(uint32_t flag)
   *         - EDMAMUX_SYNC_OV8_FLAG
   * @retval none.
   */
-void edmamux_sync_flag_clear(uint32_t flag)
-{
-  EDMA->muxsyncclr = flag;
+void edmamux_sync_flag_clear(uint32_t flag) {
+    EDMA->muxsyncclr = flag;
 }
 
 /**
@@ -983,16 +885,12 @@ void edmamux_sync_flag_clear(uint32_t flag)
   *         - EDMAMUX_GEN_TRIG_OV4_FLAG
   * @retval state of edmamux sync flag.
   */
-flag_status edmamux_generator_flag_get(uint32_t flag)
-{
-  if((EDMA->muxgsts & flag) != RESET)
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+flag_status edmamux_generator_flag_get(uint32_t flag) {
+    if ((EDMA->muxgsts & flag) != RESET) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -1005,31 +903,23 @@ flag_status edmamux_generator_flag_get(uint32_t flag)
   *         - EDMAMUX_GEN_TRIG_OV4_FLAG
   * @retval state of edmamux sync flag.
   */
-flag_status edmamux_generator_interrupt_flag_get(uint32_t flag)
-{
-  uint32_t int_stat = 0;
-  
-  if(flag == EDMAMUX_GEN_TRIG_OV1_FLAG)
-  {
-    int_stat = EDMAMUX_GENERATOR1->gctrl_bit.trgovien;
-  }
-  else if(flag == EDMAMUX_GEN_TRIG_OV2_FLAG)
-  {
-    int_stat = EDMAMUX_GENERATOR2->gctrl_bit.trgovien;
-  }
-  else if(flag == EDMAMUX_GEN_TRIG_OV3_FLAG)
-  {
-    int_stat = EDMAMUX_GENERATOR3->gctrl_bit.trgovien;
-  }
-  else
-  {
-    int_stat = EDMAMUX_GENERATOR4->gctrl_bit.trgovien;
-  }
-  
-  if((int_stat != RESET) && ((EDMA->muxgsts & flag) != RESET))
-    return SET;
-  else
-    return RESET;
+flag_status edmamux_generator_interrupt_flag_get(uint32_t flag) {
+    uint32_t int_stat = 0;
+
+    if (flag == EDMAMUX_GEN_TRIG_OV1_FLAG) {
+        int_stat = EDMAMUX_GENERATOR1->gctrl_bit.trgovien;
+    } else if (flag == EDMAMUX_GEN_TRIG_OV2_FLAG) {
+        int_stat = EDMAMUX_GENERATOR2->gctrl_bit.trgovien;
+    } else if (flag == EDMAMUX_GEN_TRIG_OV3_FLAG) {
+        int_stat = EDMAMUX_GENERATOR3->gctrl_bit.trgovien;
+    } else {
+        int_stat = EDMAMUX_GENERATOR4->gctrl_bit.trgovien;
+    }
+
+    if ((int_stat != RESET) && ((EDMA->muxgsts & flag) != RESET))
+        return SET;
+    else
+        return RESET;
 }
 
 /**
@@ -1042,9 +932,8 @@ flag_status edmamux_generator_interrupt_flag_get(uint32_t flag)
   *         - EDMAMUX_GEN_TRIG_OV4_FLAG
   * @retval none.
   */
-void edmamux_generator_flag_clear(uint32_t flag)
-{
-  EDMA->muxgclr = flag;
+void edmamux_generator_flag_clear(uint32_t flag) {
+    EDMA->muxgclr = flag;
 }
 
 /**

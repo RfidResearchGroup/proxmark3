@@ -9,10 +9,10 @@ void gpio_button_setup(void) {
 
 void gpio_leds_setup(void) {
     AT91C_BASE_PIOA->PIO_PER = AT91C_BASE_PIOA->PIO_OER = // Chained assignment
-            GPIO_LED_A   |
-            GPIO_LED_B   |
-            GPIO_LED_C   |
-            GPIO_LED_D;
+                                   GPIO_LED_A   |
+                                   GPIO_LED_B   |
+                                   GPIO_LED_C   |
+                                   GPIO_LED_D;
 }
 
 void gpio_arm_power_on_setup(void) {
@@ -48,12 +48,12 @@ void gpio_fpga_switch_setup(void) {
 
 void gpio_adc_mux_setup(void) {
     AT91C_BASE_PIOA->PIO_PER = AT91C_BASE_PIOA->PIO_OER = // Chained assignment
-    GPIO_MUXSEL_HIPKD |
+                                   GPIO_MUXSEL_HIPKD |
 #ifndef WITH_FPC_USART // FPC USART uses HIRAW/LOWRAW pins, so they are excluded here.
-    GPIO_MUXSEL_LORAW |
-    GPIO_MUXSEL_HIRAW |
+                                   GPIO_MUXSEL_LORAW |
+                                   GPIO_MUXSEL_HIRAW |
 #endif
-    GPIO_MUXSEL_LOPKD;
+                                   GPIO_MUXSEL_LOPKD;
 }
 
 void gpio_fpga_download_setup(void) {

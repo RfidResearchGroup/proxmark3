@@ -46,10 +46,9 @@
   * @param  none
   * @retval none
   */
-void dvp_reset(void)
-{
-  crm_periph_reset(CRM_DVP_PERIPH_RESET, TRUE);
-  crm_periph_reset(CRM_DVP_PERIPH_RESET, FALSE);
+void dvp_reset(void) {
+    crm_periph_reset(CRM_DVP_PERIPH_RESET, TRUE);
+    crm_periph_reset(CRM_DVP_PERIPH_RESET, FALSE);
 }
 
 /**
@@ -57,9 +56,8 @@ void dvp_reset(void)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void dvp_capture_enable(confirm_state new_state)
-{
-  DVP->ctrl_bit.cap = new_state;
+void dvp_capture_enable(confirm_state new_state) {
+    DVP->ctrl_bit.cap = new_state;
 }
 
 /**
@@ -70,9 +68,8 @@ void dvp_capture_enable(confirm_state new_state)
   *         - DVP_CAP_FUNC_MODE_SINGLE
   * @retval none
   */
-void dvp_capture_mode_set(dvp_cfm_type cap_mode)
-{
-  DVP->ctrl_bit.cfm = cap_mode;
+void dvp_capture_mode_set(dvp_cfm_type cap_mode) {
+    DVP->ctrl_bit.cfm = cap_mode;
 }
 
 /**
@@ -80,9 +77,8 @@ void dvp_capture_mode_set(dvp_cfm_type cap_mode)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void dvp_window_crop_enable(confirm_state new_state)
-{
-  DVP->ctrl_bit.crp = new_state;
+void dvp_window_crop_enable(confirm_state new_state) {
+    DVP->ctrl_bit.crp = new_state;
 }
 
 /**
@@ -95,10 +91,9 @@ void dvp_window_crop_enable(confirm_state new_state)
   *         eg. y8:bytes = 1, rgb565:bytes = 2
   * @retval none
   */
-void dvp_window_crop_set(uint16_t crop_x, uint16_t crop_y, uint16_t crop_w, uint16_t crop_h, uint8_t bytes)
-{
-  DVP->cwst = ((crop_x * bytes) | (crop_y << 16));
-  DVP->cwsz = ((crop_w * bytes - 1) | ((crop_h - 1) << 16));
+void dvp_window_crop_set(uint16_t crop_x, uint16_t crop_y, uint16_t crop_w, uint16_t crop_h, uint8_t bytes) {
+    DVP->cwst = ((crop_x * bytes) | (crop_y << 16));
+    DVP->cwsz = ((crop_w * bytes - 1) | ((crop_h - 1) << 16));
 }
 
 /**
@@ -106,9 +101,8 @@ void dvp_window_crop_set(uint16_t crop_x, uint16_t crop_y, uint16_t crop_w, uint
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void dvp_jpeg_enable(confirm_state new_state)
-{
-  DVP->ctrl_bit.jpeg = new_state;
+void dvp_jpeg_enable(confirm_state new_state) {
+    DVP->ctrl_bit.jpeg = new_state;
 }
 
 /**
@@ -119,9 +113,8 @@ void dvp_jpeg_enable(confirm_state new_state)
   *         - DVP_SYNC_MODE_EMBEDDED
   * @retval none
   */
-void dvp_sync_mode_set(dvp_sm_type sync_mode)
-{
-  DVP->ctrl_bit.sm = sync_mode;
+void dvp_sync_mode_set(dvp_sm_type sync_mode) {
+    DVP->ctrl_bit.sm = sync_mode;
 }
 
 /**
@@ -132,9 +125,8 @@ void dvp_sync_mode_set(dvp_sm_type sync_mode)
   * @param  lnec(0x00~0xFF): line end code
   * @retval none
   */
-void dvp_sync_code_set(uint8_t fmsc, uint8_t fmec, uint8_t lnsc, uint8_t lnec)
-{
-  DVP->scr = (fmsc | (lnsc << 8) | (lnec << 16) | (fmec << 24));
+void dvp_sync_code_set(uint8_t fmsc, uint8_t fmec, uint8_t lnsc, uint8_t lnec) {
+    DVP->scr = (fmsc | (lnsc << 8) | (lnec << 16) | (fmec << 24));
 }
 
 /**
@@ -145,9 +137,8 @@ void dvp_sync_code_set(uint8_t fmsc, uint8_t fmec, uint8_t lnsc, uint8_t lnec)
   * @param  lneu(0x00~0xFF): line end unmask
   * @retval none
   */
-void dvp_sync_unmask_set(uint8_t fmsu, uint8_t fmeu, uint8_t lnsu, uint8_t lneu)
-{
-  DVP->sur = (fmsu | (lnsu << 8) | (lneu << 16) | (fmeu << 24));
+void dvp_sync_unmask_set(uint8_t fmsu, uint8_t fmeu, uint8_t lnsu, uint8_t lneu) {
+    DVP->sur = (fmsu | (lnsu << 8) | (lneu << 16) | (fmeu << 24));
 }
 
 /**
@@ -158,9 +149,8 @@ void dvp_sync_unmask_set(uint8_t fmsu, uint8_t fmeu, uint8_t lnsu, uint8_t lneu)
   *         - DVP_CLK_POLARITY_FALLING
   * @retval none
   */
-void dvp_pclk_polarity_set(dvp_ckp_type edge)
-{
-  DVP->ctrl_bit.ckp = edge;
+void dvp_pclk_polarity_set(dvp_ckp_type edge) {
+    DVP->ctrl_bit.ckp = edge;
 }
 
 /**
@@ -171,9 +161,8 @@ void dvp_pclk_polarity_set(dvp_ckp_type edge)
   *         - DVP_HSYNC_POLARITY_LOW
   * @retval none
   */
-void dvp_hsync_polarity_set(dvp_hsp_type hsync_pol)
-{
-  DVP->ctrl_bit.hsp = hsync_pol;
+void dvp_hsync_polarity_set(dvp_hsp_type hsync_pol) {
+    DVP->ctrl_bit.hsp = hsync_pol;
 }
 
 /**
@@ -184,9 +173,8 @@ void dvp_hsync_polarity_set(dvp_hsp_type hsync_pol)
   *         - DVP_VSYNC_POLARITY_HIGH
   * @retval none
   */
-void dvp_vsync_polarity_set(dvp_vsp_type vsync_pol)
-{
-  DVP->ctrl_bit.vsp = vsync_pol;
+void dvp_vsync_polarity_set(dvp_vsp_type vsync_pol) {
+    DVP->ctrl_bit.vsp = vsync_pol;
 }
 
 /**
@@ -199,9 +187,8 @@ void dvp_vsync_polarity_set(dvp_vsp_type vsync_pol)
   *         - DVP_BFRC_QUARTER
   * @retval none
   */
-void dvp_basic_frame_rate_control_set(dvp_bfrc_type dvp_bfrc)
-{
-  DVP->ctrl_bit.bfrc = dvp_bfrc;
+void dvp_basic_frame_rate_control_set(dvp_bfrc_type dvp_bfrc) {
+    DVP->ctrl_bit.bfrc = dvp_bfrc;
 }
 
 /**
@@ -214,9 +201,8 @@ void dvp_basic_frame_rate_control_set(dvp_bfrc_type dvp_bfrc)
   *         - DVP_PIXEL_DATA_LENGTH_14
   * @retval none
   */
-void dvp_pixel_data_length_set(dvp_pdl_type dvp_pdl)
-{
-  DVP->ctrl_bit.pdl = dvp_pdl;
+void dvp_pixel_data_length_set(dvp_pdl_type dvp_pdl) {
+    DVP->ctrl_bit.pdl = dvp_pdl;
 }
 
 /**
@@ -224,9 +210,8 @@ void dvp_pixel_data_length_set(dvp_pdl_type dvp_pdl)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void dvp_enable(confirm_state new_state)
-{
-  DVP->ctrl_bit.ena = new_state;
+void dvp_enable(confirm_state new_state) {
+    DVP->ctrl_bit.ena = new_state;
 }
 
 /**
@@ -237,9 +222,8 @@ void dvp_enable(confirm_state new_state)
   *         - DVP_PCDES_DROP_FIRST
   * @retval none
   */
-void dvp_zoomout_select(dvp_pcdes_type dvp_pcdes)
-{
-  DVP->actrl_bit.pcdes = dvp_pcdes;
+void dvp_zoomout_select(dvp_pcdes_type dvp_pcdes) {
+    DVP->actrl_bit.pcdes = dvp_pcdes;
 }
 
 /**
@@ -264,12 +248,11 @@ void dvp_zoomout_select(dvp_pcdes_type dvp_pcdes)
   *         - DVP_LCDS_DROP_FIRST
   * @retval none
   */
-void dvp_zoomout_set(dvp_pcdc_type dvp_pcdc, dvp_pcds_type dvp_pcds, dvp_lcdc_type dvp_lcdc, dvp_lcds_type dvp_lcds)
-{
-  DVP->ctrl_bit.pcdc = dvp_pcdc;
-  DVP->ctrl_bit.pcds = dvp_pcds;
-  DVP->ctrl_bit.lcdc = dvp_lcdc;
-  DVP->ctrl_bit.lcds = dvp_lcds;
+void dvp_zoomout_set(dvp_pcdc_type dvp_pcdc, dvp_pcds_type dvp_pcds, dvp_lcdc_type dvp_lcdc, dvp_lcds_type dvp_lcds) {
+    DVP->ctrl_bit.pcdc = dvp_pcdc;
+    DVP->ctrl_bit.pcds = dvp_pcds;
+    DVP->ctrl_bit.lcdc = dvp_lcdc;
+    DVP->ctrl_bit.lcds = dvp_lcds;
 }
 
 /**
@@ -281,20 +264,16 @@ void dvp_zoomout_set(dvp_pcdc_type dvp_pcdc, dvp_pcds_type dvp_pcds, dvp_lcdc_ty
   *         - DVP_STATUS_OFNE
   * @retval flag_status (SET or RESET)
   */
-flag_status dvp_basic_status_get(dvp_status_basic_type dvp_status_basic)
-{
-  flag_status status = RESET;
+flag_status dvp_basic_status_get(dvp_status_basic_type dvp_status_basic) {
+    flag_status status = RESET;
 
-  if ((DVP->sts & (0x1 << dvp_status_basic)) != (uint16_t)RESET)
-  {
-    status = SET;
-  }
-  else
-  {
-    status = RESET;
-  }
+    if ((DVP->sts & (0x1 << dvp_status_basic)) != (uint16_t)RESET) {
+        status = SET;
+    } else {
+        status = RESET;
+    }
 
-  return status;
+    return status;
 }
 
 /**
@@ -309,16 +288,12 @@ flag_status dvp_basic_status_get(dvp_status_basic_type dvp_status_basic)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void dvp_interrupt_enable(uint32_t dvp_int, confirm_state new_state)
-{
-  if(new_state == TRUE)
-  {
-    DVP->ier |= dvp_int;
-  }
-  else
-  {
-    DVP->ier &= ~dvp_int;
-  }
+void dvp_interrupt_enable(uint32_t dvp_int, confirm_state new_state) {
+    if (new_state == TRUE) {
+        DVP->ier |= dvp_int;
+    } else {
+        DVP->ier &= ~dvp_int;
+    }
 }
 
 /**
@@ -332,20 +307,16 @@ void dvp_interrupt_enable(uint32_t dvp_int, confirm_state new_state)
   *         - DVP_HS_INT_FLAG
   * @retval flag_status (SET or RESET)
   */
-flag_status dvp_interrupt_flag_get(uint32_t flag)
-{
-  flag_status status = RESET;
+flag_status dvp_interrupt_flag_get(uint32_t flag) {
+    flag_status status = RESET;
 
-  if((DVP->ists & flag) != RESET)
-  {
-    status = SET;
-  }
-  else
-  {
-    status = RESET;
-  }
+    if ((DVP->ists & flag) != RESET) {
+        status = SET;
+    } else {
+        status = RESET;
+    }
 
-  return status;
+    return status;
 }
 
 /**
@@ -359,21 +330,17 @@ flag_status dvp_interrupt_flag_get(uint32_t flag)
   *         - DVP_HS_EVT_FLAG
   * @retval flag_status (SET or RESET)
   */
-flag_status dvp_flag_get(uint32_t flag)
-{
-  flag_status status = RESET;
-  flag &= ~0x80000000;
-  
-  if((DVP->ests & flag) != RESET)
-  {
-    status = SET;
-  }
-  else
-  {
-    status = RESET;
-  }
-  
-  return status;
+flag_status dvp_flag_get(uint32_t flag) {
+    flag_status status = RESET;
+    flag &= ~0x80000000;
+
+    if ((DVP->ests & flag) != RESET) {
+        status = SET;
+    } else {
+        status = RESET;
+    }
+
+    return status;
 }
 
 /**
@@ -394,10 +361,9 @@ flag_status dvp_flag_get(uint32_t flag)
   *         - DVP_HS_INT_FLAG
   * @retval none
   */
-void dvp_flag_clear(uint32_t flag)
-{
-  flag &= ~0x80000000;
-  DVP->iclr = flag;
+void dvp_flag_clear(uint32_t flag) {
+    flag &= ~0x80000000;
+    DVP->iclr = flag;
 }
 
 /**
@@ -405,9 +371,8 @@ void dvp_flag_clear(uint32_t flag)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void dvp_enhanced_scaling_resize_enable(confirm_state new_state)
-{
-  DVP->actrl_bit.eisre = new_state;
+void dvp_enhanced_scaling_resize_enable(confirm_state new_state) {
+    DVP->actrl_bit.eisre = new_state;
 }
 /**
   * @brief  set dvp enhanced image scaling resize configuration
@@ -417,13 +382,11 @@ void dvp_enhanced_scaling_resize_enable(confirm_state new_state)
   * @param  des_h(0x0001~0x1FFF): vertical scaling resize target size (target image height)
   * @retval none
   */
-void dvp_enhanced_scaling_resize_set(uint16_t src_w, uint16_t des_w, uint16_t src_h, uint16_t des_h)
-{
-  if((!DVP->ctrl_bit.pcdc) && (!DVP->ctrl_bit.lcdc) && DVP->actrl_bit.efdf)
-  {
-    DVP->hscf = (src_w | (des_w << 16));
-    DVP->vscf = (src_h | (des_h << 16));
-  }
+void dvp_enhanced_scaling_resize_set(uint16_t src_w, uint16_t des_w, uint16_t src_h, uint16_t des_h) {
+    if ((!DVP->ctrl_bit.pcdc) && (!DVP->ctrl_bit.lcdc) && DVP->actrl_bit.efdf) {
+        DVP->hscf = (src_w | (des_w << 16));
+        DVP->vscf = (src_h | (des_h << 16));
+    }
 }
 
 /**
@@ -433,14 +396,12 @@ void dvp_enhanced_scaling_resize_set(uint16_t src_w, uint16_t des_w, uint16_t sr
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void dvp_enhanced_framerate_set(uint16_t efrcsf, uint16_t efrctf, confirm_state new_state)
-{
-  if((!DVP->ctrl_bit.cfm) && (!DVP->ctrl_bit.bfrc) && (efrctf <= efrcsf))
-  {
-    DVP->frf = (efrcsf | (efrctf << 8));
-  }
+void dvp_enhanced_framerate_set(uint16_t efrcsf, uint16_t efrctf, confirm_state new_state) {
+    if ((!DVP->ctrl_bit.cfm) && (!DVP->ctrl_bit.bfrc) && (efrctf <= efrcsf)) {
+        DVP->frf = (efrcsf | (efrctf << 8));
+    }
 
-  DVP->actrl_bit.efrce = new_state;
+    DVP->actrl_bit.efrce = new_state;
 }
 
 /**
@@ -449,10 +410,9 @@ void dvp_enhanced_framerate_set(uint16_t efrcsf, uint16_t efrctf, confirm_state 
   * @param  new_state: (TRUE or FALSE)
   * @retval none
   */
-void dvp_monochrome_image_binarization_set(uint8_t mibthd, confirm_state new_state)
-{
-  DVP->bth_bit.mibthd = mibthd;
-  DVP->actrl_bit.mibe = new_state;
+void dvp_monochrome_image_binarization_set(uint8_t mibthd, confirm_state new_state) {
+    DVP->bth_bit.mibthd = mibthd;
+    DVP->actrl_bit.mibe = new_state;
 }
 
 /**
@@ -466,9 +426,8 @@ void dvp_monochrome_image_binarization_set(uint8_t mibthd, confirm_state new_sta
   *         - DVP_EFDF_Y8
   * @retval none
   */
-void dvp_enhanced_data_format_set(dvp_efdf_type dvp_efdf)
-{
-  DVP->actrl_bit.efdf = dvp_efdf;
+void dvp_enhanced_data_format_set(dvp_efdf_type dvp_efdf) {
+    DVP->actrl_bit.efdf = dvp_efdf;
 }
 
 /**
@@ -485,10 +444,9 @@ void dvp_enhanced_data_format_set(dvp_efdf_type dvp_efdf)
   *         - DVP_IDUN_6
   * @retval none
   */
-void dvp_input_data_unused_set(dvp_idus_type dvp_idus, dvp_idun_type dvp_idun)
-{
-  DVP->actrl_bit.idus = dvp_idus;
-  DVP->actrl_bit.idun = dvp_idun;
+void dvp_input_data_unused_set(dvp_idus_type dvp_idus, dvp_idun_type dvp_idun) {
+    DVP->actrl_bit.idus = dvp_idus;
+    DVP->actrl_bit.idun = dvp_idun;
 }
 
 /**
@@ -499,9 +457,8 @@ void dvp_input_data_unused_set(dvp_idus_type dvp_idus, dvp_idun_type dvp_idun)
   *         - DVP_DMABT_BURST
   * @retval none
   */
-void dvp_dma_burst_set(dvp_dmabt_type dvp_dmabt)
-{
-  DVP->actrl_bit.dmabt = dvp_dmabt;
+void dvp_dma_burst_set(dvp_dmabt_type dvp_dmabt) {
+    DVP->actrl_bit.dmabt = dvp_dmabt;
 }
 
 /**
@@ -516,10 +473,9 @@ void dvp_dma_burst_set(dvp_dmabt_type dvp_dmabt)
   *         - DVP_VSEID_FRMAE_START
   * @retval none
   */
-void dvp_sync_event_interrupt_set(dvp_hseid_type dvp_hseid, dvp_vseid_type dvp_vseid)
-{
-  DVP->actrl_bit.hseid = dvp_hseid;
-  DVP->actrl_bit.vseid = dvp_vseid;
+void dvp_sync_event_interrupt_set(dvp_hseid_type dvp_hseid, dvp_vseid_type dvp_vseid) {
+    DVP->actrl_bit.hseid = dvp_hseid;
+    DVP->actrl_bit.vseid = dvp_vseid;
 }
 
 /**

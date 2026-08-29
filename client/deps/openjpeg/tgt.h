@@ -95,7 +95,7 @@ opj_tgt_tree_t *opj_tgt_create(OPJ_UINT32 numleafsh, OPJ_UINT32 numleafsv,
  * @param p_manager       the event manager
  * @return  a new tag-tree if successful, NULL otherwise
 */
-opj_tgt_tree_t *opj_tgt_init(opj_tgt_tree_t * p_tree,
+opj_tgt_tree_t *opj_tgt_init(opj_tgt_tree_t *p_tree,
                              OPJ_UINT32  p_num_leafs_h,
                              OPJ_UINT32  p_num_leafs_v, opj_event_mgr_t *p_manager);
 /**

@@ -626,7 +626,7 @@ static bool calypso_parse_fcp_value(const uint8_t *value, size_t value_len, caly
 
     if (value_len >= 0x16) {
         uint16_t tail = ((uint16_t)value[value_len - 2] << 8) | value[value_len - 1];
-                if (tail == 0x3F3F) {
+        if (tail == 0x3F3F) {
             return true;
         }
 
@@ -1420,7 +1420,7 @@ static int calypso_exchange_once(sAPDU_t apdu, bool include_le, uint16_t le, cal
     response->len = 0;
     response->sw = 0;
     int res = Iso7816ExchangeEx(CC_CONTACTLESS, false, true, apdu, include_le, le,
-                               response->data, sizeof(response->data), &response->len, &response->sw);
+                                response->data, sizeof(response->data), &response->len, &response->sw);
 
     // Iso7816ExchangeEx currently returns a positive status for a valid error
     // R-APDU only when APDU logging is enabled. A received SW is transport

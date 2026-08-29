@@ -863,15 +863,33 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool
                          (pcb & 0x0F) ? " error" : "");
             } else {
                 switch (pcb & 0x3F) {
-                    case 0x00: snprintf(exp, size, "S-block RESYNCH req");  break;
-                    case 0x20: snprintf(exp, size, "S-block RESYNCH resp"); break;
-                    case 0x01: snprintf(exp, size, "S-block IFS req");      break;
-                    case 0x21: snprintf(exp, size, "S-block IFS resp");     break;
-                    case 0x02: snprintf(exp, size, "S-block ABORT req");    break;
-                    case 0x22: snprintf(exp, size, "S-block ABORT resp");   break;
-                    case 0x03: snprintf(exp, size, "S-block WTX req");      break;
-                    case 0x23: snprintf(exp, size, "S-block WTX resp");     break;
-                    default:   snprintf(exp, size, "S-block");              break;
+                    case 0x00:
+                        snprintf(exp, size, "S-block RESYNCH req");
+                        break;
+                    case 0x20:
+                        snprintf(exp, size, "S-block RESYNCH resp");
+                        break;
+                    case 0x01:
+                        snprintf(exp, size, "S-block IFS req");
+                        break;
+                    case 0x21:
+                        snprintf(exp, size, "S-block IFS resp");
+                        break;
+                    case 0x02:
+                        snprintf(exp, size, "S-block ABORT req");
+                        break;
+                    case 0x22:
+                        snprintf(exp, size, "S-block ABORT resp");
+                        break;
+                    case 0x03:
+                        snprintf(exp, size, "S-block WTX req");
+                        break;
+                    case 0x23:
+                        snprintf(exp, size, "S-block WTX resp");
+                        break;
+                    default:
+                        snprintf(exp, size, "S-block");
+                        break;
                 }
             }
             return;

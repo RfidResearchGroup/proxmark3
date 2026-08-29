@@ -366,10 +366,14 @@ void bwm_detect_and_init(void) {
         I2C_BufferWrite(&v, 1, 0x01, BWM_CHG_ADDR);
     }
     uint8_t w;
-    w = 0x1F; I2C_BufferWrite(&w, 1, 0x02, BWM_CHG_ADDR); // charge current 256 mA
-    w = 0xE1; I2C_BufferWrite(&w, 1, 0x03, BWM_CHG_ADDR); // discharge current 3 A
-    w = 0x1A; I2C_BufferWrite(&w, 1, 0x05, BWM_CHG_ADDR); // safety timer disabled (upstream)
-    w = 0x6B; I2C_BufferWrite(&w, 1, 0x0B, BWM_CHG_ADDR); // pre-charge 11 mA
+    w = 0x1F;
+    I2C_BufferWrite(&w, 1, 0x02, BWM_CHG_ADDR); // charge current 256 mA
+    w = 0xE1;
+    I2C_BufferWrite(&w, 1, 0x03, BWM_CHG_ADDR); // discharge current 3 A
+    w = 0x1A;
+    I2C_BufferWrite(&w, 1, 0x05, BWM_CHG_ADDR); // safety timer disabled (upstream)
+    w = 0x6B;
+    I2C_BufferWrite(&w, 1, 0x0B, BWM_CHG_ADDR); // pre-charge 11 mA
 }
 #endif // WITH_BWM_STATUS
 

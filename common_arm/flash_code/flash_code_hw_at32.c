@@ -44,9 +44,9 @@ bool FlashCodeEWriteMinUnit(uint32_t flash_address, const uint32_t *data, uint32
 
     // Wait for operation to be completed
     *status = flash_operation_wait_for(ERASE_TIMEOUT);
-    if((*status == FLASH_PROGRAM_ERROR) || (*status == FLASH_EPP_ERROR)) {
+    if ((*status == FLASH_PROGRAM_ERROR) || (*status == FLASH_EPP_ERROR)) {
         flash_flag_clear(FLASH_PRGMERR_FLAG | FLASH_EPPERR_FLAG);
-    } else if(*status == FLASH_OPERATE_TIMEOUT) {
+    } else if (*status == FLASH_OPERATE_TIMEOUT) {
         return false;
     }
 
@@ -55,15 +55,15 @@ bool FlashCodeEWriteMinUnit(uint32_t flash_address, const uint32_t *data, uint32
 
     // Erase
     *status = flash_sector_erase(flash_address);
-    if(*status != FLASH_OPERATE_DONE) {
+    if (*status != FLASH_OPERATE_DONE) {
         return false;
     }
 
     // Write
-    for(uint32_t i = 0; i < min_ew_unit_u32; i++) {
+    for (uint32_t i = 0; i < min_ew_unit_u32; i++) {
         uint32_t w_addr = flash_address + i * sizeof(uint32_t);
         *status = flash_word_program(w_addr, data[i]);
-        if(*status != FLASH_OPERATE_DONE) {
+        if (*status != FLASH_OPERATE_DONE) {
             return false;
         }
     }

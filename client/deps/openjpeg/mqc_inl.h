@@ -71,8 +71,7 @@ Decode a symbol using raw-decoder. Cfr p.506 TAUBMAN
 @param mqc MQC handle
 @return Returns the decoded symbol (0 or 1)
 */
-static INLINE OPJ_UINT32 opj_mqc_raw_decode(opj_mqc_t *mqc)
-{
+static INLINE OPJ_UINT32 opj_mqc_raw_decode(opj_mqc_t *mqc) {
     OPJ_UINT32 d;
     if (mqc->ct == 0) {
         /* Given opj_mqc_raw_init_dec() we know that at some point we will */
@@ -172,8 +171,7 @@ static INLINE OPJ_UINT32 opj_mqc_raw_decode(opj_mqc_t *mqc)
 Input a byte
 @param mqc MQC handle
 */
-static INLINE void opj_mqc_bytein(opj_mqc_t *const mqc)
-{
+static INLINE void opj_mqc_bytein(opj_mqc_t *const mqc) {
     opj_mqc_bytein_macro(mqc, mqc->c, mqc->ct);
 }
 

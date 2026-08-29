@@ -75,9 +75,9 @@ typedef struct opj_tcd_layer {
 FIXME DOC
 */
 typedef struct opj_tcd_cblk_enc {
-    OPJ_BYTE* data;               /* Data */
-    opj_tcd_layer_t* layers;      /* layer information */
-    opj_tcd_pass_t* passes;       /* information about the passes */
+    OPJ_BYTE *data;               /* Data */
+    opj_tcd_layer_t *layers;      /* layer information */
+    opj_tcd_pass_t *passes;       /* information about the passes */
     OPJ_INT32 x0, y0, x1,
               y1;     /* dimension of the code-blocks : left upper corner (x0, y0) right low corner (x1,y1) */
     OPJ_UINT32 numbps;
@@ -95,7 +95,7 @@ typedef struct opj_tcd_seg_data_chunk {
     /* Point to tilepart buffer. We don't make a copy !
        So the tilepart buffer must be kept alive
        as long as we need to decode the codeblocks */
-    OPJ_BYTE * data;
+    OPJ_BYTE *data;
     OPJ_UINT32 len;                 /* Usable length of data */
 } opj_tcd_seg_data_chunk_t;
 
@@ -118,8 +118,8 @@ typedef struct opj_tcd_seg {
 
 /** Code-block for decoding */
 typedef struct opj_tcd_cblk_dec {
-    opj_tcd_seg_t* segs;            /* segments information */
-    opj_tcd_seg_data_chunk_t* chunks; /* Array of chunks */
+    opj_tcd_seg_t *segs;            /* segments information */
+    opj_tcd_seg_data_chunk_t *chunks; /* Array of chunks */
     /* position of the code-blocks : left upper corner (x0, y0) right low corner (x1,y1) */
     OPJ_INT32 x0, y0, x1, y1;
     /* Mb is The maximum number of bit-planes available for the representation of
@@ -140,7 +140,7 @@ typedef struct opj_tcd_cblk_dec {
     OPJ_UINT32 numchunks;           /* Number of valid chunks items */
     OPJ_UINT32 numchunksalloc;      /* Number of chunks item allocated */
     /* Decoded code-block. Only used for subtile decoding. Otherwise tilec->data is directly updated */
-    OPJ_INT32* decoded_data;
+    OPJ_INT32 *decoded_data;
     OPJ_BOOL corrupted; /* whether the code block data is corrupted */
 } opj_tcd_cblk_dec_t;
 
@@ -150,9 +150,9 @@ typedef struct opj_tcd_precinct {
     OPJ_INT32 x0, y0, x1, y1;
     OPJ_UINT32 cw, ch;              /* number of code-blocks, in width and height */
     union {                         /* code-blocks information */
-        opj_tcd_cblk_enc_t* enc;
-        opj_tcd_cblk_dec_t* dec;
-        void*               blocks;
+        opj_tcd_cblk_enc_t *enc;
+        opj_tcd_cblk_dec_t *dec;
+        void               *blocks;
     } cblks;
     OPJ_UINT32 block_size;          /* size taken by cblks (in bytes) */
     opj_tgt_tree_t *incltree;       /* inclusion tree */
@@ -278,7 +278,7 @@ typedef struct opj_tcd {
     /** tell if the tcd is a decoder. */
     OPJ_BITFIELD m_is_decoder : 1;
     /** Thread pool */
-    opj_thread_pool_t* thread_pool;
+    opj_thread_pool_t *thread_pool;
     /** Coordinates of the window of interest, in grid reference space */
     OPJ_UINT32 win_x0;
     OPJ_UINT32 win_y0;
@@ -287,7 +287,7 @@ typedef struct opj_tcd {
     /** Only valid for decoding. Whether the whole tile is decoded, or just the region in win_x0/win_y0/win_x1/win_y1 */
     OPJ_BOOL   whole_tile_decoding;
     /* Array of size image->numcomps indicating if a component must be decoded. NULL if all components must be decoded */
-    OPJ_BOOL* used_component;
+    OPJ_BOOL *used_component;
 } opj_tcd_t;
 
 /**
@@ -303,7 +303,7 @@ typedef struct opj_tcd_marker_info {
 
     /** OUT: Array of size packet_count, such that p_packet_size[i] is
      *       the size in bytes of the ith packet */
-    OPJ_UINT32* p_packet_size;
+    OPJ_UINT32 *p_packet_size;
 } opj_tcd_marker_info_t;
 
 /** @name Exported functions */
@@ -320,7 +320,7 @@ Create a new TCD handle
 @param p_is_decoder FIXME DOC
 @return Returns a new TCD handle if successful returns NULL otherwise
 */
-opj_tcd_t* opj_tcd_create(OPJ_BOOL p_is_decoder);
+opj_tcd_t *opj_tcd_create(OPJ_BOOL p_is_decoder);
 
 /**
 Destroy a previously created TCD handle
@@ -333,7 +333,7 @@ void opj_tcd_destroy(opj_tcd_t *tcd);
  * Create a new opj_tcd_marker_info_t* structure
  * @param need_PLT Whether information is needed to generate PLT markers.
  */
-opj_tcd_marker_info_t* opj_tcd_marker_info_create(OPJ_BOOL need_PLT);
+opj_tcd_marker_info_t *opj_tcd_marker_info_create(OPJ_BOOL need_PLT);
 
 
 /**
@@ -353,9 +353,9 @@ void opj_tcd_marker_info_destroy(opj_tcd_marker_info_t *p_tcd_marker_info);
  * @return true if the encoding values could be set (false otherwise).
 */
 OPJ_BOOL opj_tcd_init(opj_tcd_t *p_tcd,
-                      opj_image_t * p_image,
-                      opj_cp_t * p_cp,
-                      opj_thread_pool_t* p_tp);
+                      opj_image_t *p_image,
+                      opj_cp_t *p_cp,
+                      opj_thread_pool_t *p_tp);
 
 /**
  * Allocates memory for decoding a specific tile.
@@ -368,13 +368,13 @@ OPJ_BOOL opj_tcd_init(opj_tcd_t *p_tcd,
  * @return  true if the remaining data is sufficient.
  */
 OPJ_BOOL opj_tcd_init_decode_tile(opj_tcd_t *p_tcd, OPJ_UINT32 p_tile_no,
-                                  opj_event_mgr_t* p_manager);
+                                  opj_event_mgr_t *p_manager);
 
 /**
  * Gets the maximum tile size that will be taken by the tile once decoded.
  */
 OPJ_UINT32 opj_tcd_get_decoded_tile_size(opj_tcd_t *p_tcd,
-        OPJ_BOOL take_into_account_partial_decoding);
+                                         OPJ_BOOL take_into_account_partial_decoding);
 
 /**
  * Encodes a tile from the raw image into the given buffer.
@@ -391,10 +391,10 @@ OPJ_UINT32 opj_tcd_get_decoded_tile_size(opj_tcd_t *p_tcd,
 OPJ_BOOL opj_tcd_encode_tile(opj_tcd_t *p_tcd,
                              OPJ_UINT32 p_tile_no,
                              OPJ_BYTE *p_dest,
-                             OPJ_UINT32 * p_data_written,
+                             OPJ_UINT32 *p_data_written,
                              OPJ_UINT32 p_len,
                              struct opj_codestream_info *p_cstr_info,
-                             opj_tcd_marker_info_t* p_marker_info,
+                             opj_tcd_marker_info_t *p_marker_info,
                              opj_event_mgr_t *p_manager);
 
 
@@ -433,7 +433,7 @@ OPJ_BOOL opj_tcd_decode_tile(opj_tcd_t *tcd,
  * Copies tile data from the system onto the given memory block.
  */
 OPJ_BOOL opj_tcd_update_tile_data(opj_tcd_t *p_tcd,
-                                  OPJ_BYTE * p_dest,
+                                  OPJ_BYTE *p_dest,
                                   OPJ_UINT32 p_dest_length);
 
 /**
@@ -453,7 +453,7 @@ OPJ_SIZE_T opj_tcd_get_encoder_input_buffer_size(opj_tcd_t *p_tcd);
  * @return true if the encoding values could be set (false otherwise).
 */
 OPJ_BOOL opj_tcd_init_encode_tile(opj_tcd_t *p_tcd,
-                                  OPJ_UINT32 p_tile_no, opj_event_mgr_t* p_manager);
+                                  OPJ_UINT32 p_tile_no, opj_event_mgr_t *p_manager);
 
 /**
  * Copies tile data from the given memory block onto the system.
@@ -461,7 +461,7 @@ OPJ_BOOL opj_tcd_init_encode_tile(opj_tcd_t *p_tcd,
  * p_src_length must be equal to opj_tcd_get_encoder_input_buffer_size()
  */
 OPJ_BOOL opj_tcd_copy_tile_data(opj_tcd_t *p_tcd,
-                                OPJ_BYTE * p_src,
+                                OPJ_BYTE *p_src,
                                 OPJ_SIZE_T p_src_length);
 
 /**
@@ -475,10 +475,10 @@ OPJ_BOOL opj_alloc_tile_component_data(opj_tcd_tilecomp_t *l_tilec);
  * @param band Sub-band handle.
  * @return OPJ_TRUE whether the sub-band is empty.
  */
-OPJ_BOOL opj_tcd_is_band_empty(opj_tcd_band_t* band);
+OPJ_BOOL opj_tcd_is_band_empty(opj_tcd_band_t *band);
 
 /** Reinitialize a segment */
-void opj_tcd_reinit_segment(opj_tcd_seg_t* seg);
+void opj_tcd_reinit_segment(opj_tcd_seg_t *seg);
 
 
 /** Returns whether a sub-band region contributes to the area of interest
@@ -496,13 +496,13 @@ void opj_tcd_reinit_segment(opj_tcd_seg_t* seg);
  *                  interest.
  */
 OPJ_BOOL opj_tcd_is_subband_area_of_interest(opj_tcd_t *tcd,
-        OPJ_UINT32 compno,
-        OPJ_UINT32 resno,
-        OPJ_UINT32 bandno,
-        OPJ_UINT32 x0,
-        OPJ_UINT32 y0,
-        OPJ_UINT32 x1,
-        OPJ_UINT32 y1);
+                                             OPJ_UINT32 compno,
+                                             OPJ_UINT32 resno,
+                                             OPJ_UINT32 bandno,
+                                             OPJ_UINT32 x0,
+                                             OPJ_UINT32 y0,
+                                             OPJ_UINT32 x1,
+                                             OPJ_UINT32 y1);
 
 /* ----------------------------------------------------------------------- */
 /*@}*/

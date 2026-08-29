@@ -736,7 +736,7 @@ void gowin_jtag_start_config(gowin_config_ctx_t *cctx) {
     cctx->status = gowin_jtag_init();
     if (cctx->status == GOWIN_JTAG_OK) {
         uint32_t idcode = gowin_jtag_get_idcode();
-        const char* name = gowin_jtag_get_device_name();
+        const char *name = gowin_jtag_get_device_name();
         dbg_printf("gowin_jtag OK: idcode = 0x%04lX, name = %s", idcode, name);
         // Read and print the detailed status register
         gowin_status_reg_t status_reg;
@@ -767,7 +767,7 @@ void gowin_jtag_start_config(gowin_config_ctx_t *cctx) {
     }
 
     // Print a message to indicate the startup is complete
-    dbg_printf("gowin_jtag %s config started: %d", cctx->is_cfg_sram ? "sram" : "flash" , cctx->status);
+    dbg_printf("gowin_jtag %s config started: %d", cctx->is_cfg_sram ? "sram" : "flash", cctx->status);
 }
 
 void gowin_jtag_config_write(uint8_t *data, uint32_t data_length, gowin_config_ctx_t *cctx) {

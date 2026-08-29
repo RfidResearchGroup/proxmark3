@@ -2354,9 +2354,9 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         } hdr[] = {
             { "$.Card.uid",          tag->uid,                          sizeof(tag->uid), true  },
             { "$.Card.dsfid",        &tag->dsfid,                       1,                false },
-            { "$.Card.dsfidlock",    (uint8_t *)&tag->dsfidLock,        1,                false },
+            { "$.Card.dsfidlock", (uint8_t *) &tag->dsfidLock,        1,                false },
             { "$.Card.afi",          &tag->afi,                         1,                false },
-            { "$.Card.afilock",      (uint8_t *)&tag->afiLock,          1,                false },
+            { "$.Card.afilock", (uint8_t *) &tag->afiLock,          1,                false },
             { "$.Card.bytesperpage", &tag->bytesPerPage,                1,                true  },
             { "$.Card.pagescount",   pagescount,                        is_v5 ? 2 : 1,    true  },
         };
@@ -2393,7 +2393,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             { "$.Card.locks",         tag->locks,                 tag->pagesCount            },
             { "$.Card.random",        tag->random,                sizeof(tag->random)        },
             { "$.Card.privacypasswd", tag->privacyPasswd,         sizeof(tag->privacyPasswd) },
-            { "$.Card.state",         (uint8_t *)&tag->state,     1                          },
+            { "$.Card.state", (uint8_t *) &tag->state,     1                          },
         };
 
         for (size_t n = 0; n < ARRAYLEN(rest); n++) {

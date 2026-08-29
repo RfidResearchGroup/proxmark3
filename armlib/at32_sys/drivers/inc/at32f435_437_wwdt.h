@@ -60,61 +60,53 @@ extern "C" {
 /**
   * @brief wwdt division type
   */
-typedef enum
-{
-  WWDT_PCLK1_DIV_4096                    = 0x00, /*!< wwdt counter clock = (pclk1/4096)/1) */
-  WWDT_PCLK1_DIV_8192                    = 0x01, /*!< wwdt counter clock = (pclk1/4096)/2) */
-  WWDT_PCLK1_DIV_16384                   = 0x02, /*!< wwdt counter clock = (pclk1/4096)/4) */
-  WWDT_PCLK1_DIV_32768                   = 0x03  /*!< wwdt counter clock = (pclk1/4096)/8) */
+typedef enum {
+    WWDT_PCLK1_DIV_4096                    = 0x00, /*!< wwdt counter clock = (pclk1/4096)/1) */
+    WWDT_PCLK1_DIV_8192                    = 0x01, /*!< wwdt counter clock = (pclk1/4096)/2) */
+    WWDT_PCLK1_DIV_16384                   = 0x02, /*!< wwdt counter clock = (pclk1/4096)/4) */
+    WWDT_PCLK1_DIV_32768                   = 0x03  /*!< wwdt counter clock = (pclk1/4096)/8) */
 } wwdt_division_type;
 
 /**
   * @brief type define wwdt register all
   */
-typedef struct
-{
+typedef struct {
 
-  /**
-    * @brief wwdt ctrl register, offset:0x00
-    */
-  union
-  {
-    __IO uint32_t ctrl;
-    struct
-    {
-      __IO uint32_t cnt                  : 7; /* [6:0] */
-      __IO uint32_t wwdten               : 1; /* [7] */
-      __IO uint32_t reserved1            : 24;/* [31:8] */
-    } ctrl_bit;
-  };
+    /**
+      * @brief wwdt ctrl register, offset:0x00
+      */
+    union {
+        __IO uint32_t ctrl;
+        struct {
+            __IO uint32_t cnt                  : 7; /* [6:0] */
+            __IO uint32_t wwdten               : 1; /* [7] */
+            __IO uint32_t reserved1            : 24;/* [31:8] */
+        } ctrl_bit;
+    };
 
-  /**
-    * @brief wwdt cfg register, offset:0x04
-    */
-  union
-  {
-    __IO uint32_t cfg;
-    struct
-    {
-      __IO uint32_t win                  : 7; /* [6:0] */
-      __IO uint32_t div                  : 2; /* [8:7] */
-      __IO uint32_t rldien               : 1; /* [9] */
-      __IO uint32_t reserved1            : 22;/* [31:10] */
-    } cfg_bit;
-  };
+    /**
+      * @brief wwdt cfg register, offset:0x04
+      */
+    union {
+        __IO uint32_t cfg;
+        struct {
+            __IO uint32_t win                  : 7; /* [6:0] */
+            __IO uint32_t div                  : 2; /* [8:7] */
+            __IO uint32_t rldien               : 1; /* [9] */
+            __IO uint32_t reserved1            : 22;/* [31:10] */
+        } cfg_bit;
+    };
 
-  /**
-    * @brief wwdt cfg register, offset:0x08
-    */
-  union
-  {
-    __IO uint32_t sts;
-    struct
-    {
-      __IO uint32_t rldf                 : 1; /* [0] */
-      __IO uint32_t reserved1            : 31;/* [31:1] */
-    } sts_bit;
-  };
+    /**
+      * @brief wwdt cfg register, offset:0x08
+      */
+    union {
+        __IO uint32_t sts;
+        struct {
+            __IO uint32_t rldf                 : 1; /* [0] */
+            __IO uint32_t reserved1            : 31;/* [31:1] */
+        } sts_bit;
+    };
 
 } wwdt_type;
 

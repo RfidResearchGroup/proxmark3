@@ -60,27 +60,23 @@
   *         - DMA2_CHANNEL7
   * @retval none.
   */
-void dma_reset(dma_channel_type *dmax_channely)
-{
-  uint32_t temp = 0;
-  dmax_channely->ctrl_bit.chen = FALSE;
-  dmax_channely->ctrl = 0;
-  dmax_channely->dtcnt = 0;
-  dmax_channely->paddr = 0;
-  dmax_channely->maddr = 0;
+void dma_reset(dma_channel_type *dmax_channely) {
+    uint32_t temp = 0;
+    dmax_channely->ctrl_bit.chen = FALSE;
+    dmax_channely->ctrl = 0;
+    dmax_channely->dtcnt = 0;
+    dmax_channely->paddr = 0;
+    dmax_channely->maddr = 0;
 
-  temp = (uint32_t)dmax_channely;
+    temp = (uint32_t)dmax_channely;
 
-  if((temp & 0x6FF) < 0x608)
-  {
-    /* dma1 channel */
-    DMA1->clr |= (uint32_t)(0x0F << ((((temp & 0xFF) - 0x08) / 0x14) * 4));
-  }
-  else if((temp & 0x6FF) < 0x688)
-  {
-    /* dma2 channel */
-    DMA2->clr |= (uint32_t)(0x0F << ((((temp & 0xFF) - 0x08) / 0x14) * 4));
-  }
+    if ((temp & 0x6FF) < 0x608) {
+        /* dma1 channel */
+        DMA1->clr |= (uint32_t)(0x0F << ((((temp & 0xFF) - 0x08) / 0x14) * 4));
+    } else if ((temp & 0x6FF) < 0x688) {
+        /* dma2 channel */
+        DMA2->clr |= (uint32_t)(0x0F << ((((temp & 0xFF) - 0x08) / 0x14) * 4));
+    }
 }
 
 /**
@@ -104,9 +100,8 @@ void dma_reset(dma_channel_type *dmax_channely)
   * @param  data_number: the number of data to be transferred (0x0000~0xFFFF).
   * @retval none.
   */
-void dma_data_number_set(dma_channel_type *dmax_channely, uint16_t data_number)
-{
-  dmax_channely->dtcnt = data_number;
+void dma_data_number_set(dma_channel_type *dmax_channely, uint16_t data_number) {
+    dmax_channely->dtcnt = data_number;
 }
 
 /**
@@ -129,9 +124,8 @@ void dma_data_number_set(dma_channel_type *dmax_channely, uint16_t data_number)
   *         - DMA2_CHANNEL7
   * @retval the number value.
   */
-uint16_t dma_data_number_get(dma_channel_type *dmax_channely)
-{
-  return (uint16_t)dmax_channely->dtcnt;
+uint16_t dma_data_number_get(dma_channel_type *dmax_channely) {
+    return (uint16_t)dmax_channely->dtcnt;
 }
 
 /**
@@ -160,16 +154,12 @@ uint16_t dma_data_number_get(dma_channel_type *dmax_channely)
   * @param  new_state (TRUE or FALSE)
   * @retval none.
   */
-void dma_interrupt_enable(dma_channel_type *dmax_channely, uint32_t dma_int, confirm_state new_state)
-{
-  if(new_state != FALSE)
-  {
-    dmax_channely->ctrl |= dma_int;
-  }
-  else
-  {
-    dmax_channely->ctrl &= ~dma_int;
-  }
+void dma_interrupt_enable(dma_channel_type *dmax_channely, uint32_t dma_int, confirm_state new_state) {
+    if (new_state != FALSE) {
+        dmax_channely->ctrl |= dma_int;
+    } else {
+        dmax_channely->ctrl &= ~dma_int;
+    }
 }
 
 /**
@@ -193,9 +183,8 @@ void dma_interrupt_enable(dma_channel_type *dmax_channely, uint32_t dma_int, con
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void dma_channel_enable(dma_channel_type *dmax_channely, confirm_state new_state)
-{
-  dmax_channely->ctrl_bit.chen = new_state;
+void dma_channel_enable(dma_channel_type *dmax_channely, confirm_state new_state) {
+    dmax_channely->ctrl_bit.chen = new_state;
 }
 
 /**
@@ -217,27 +206,20 @@ void dma_channel_enable(dma_channel_type *dmax_channely, confirm_state new_state
   *         - DMA2_GL7_FLAG        - DMA2_FDT7_FLAG        - DMA2_HDT7_FLAG        - DMA2_DTERR7_FLAG
   * @retval state of dma flag.
   */
-flag_status dma_flag_get(uint32_t dmax_flag)
-{
-  uint32_t temp = 0;
+flag_status dma_flag_get(uint32_t dmax_flag) {
+    uint32_t temp = 0;
 
-  if(dmax_flag > 0x10000000)
-  {
-    temp = DMA2->sts;
-  }
-  else
-  {
-    temp = DMA1->sts;
-  }
+    if (dmax_flag > 0x10000000) {
+        temp = DMA2->sts;
+    } else {
+        temp = DMA1->sts;
+    }
 
-  if((temp & dmax_flag) != RESET)
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+    if ((temp & dmax_flag) != RESET) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -259,27 +241,20 @@ flag_status dma_flag_get(uint32_t dmax_flag)
   *         - DMA2_FDT7_FLAG        - DMA2_HDT7_FLAG        - DMA2_DTERR7_FLAG
   * @retval state of dma flag.
   */
-flag_status dma_interrupt_flag_get(uint32_t dmax_flag)
-{
-  uint32_t temp = 0;
+flag_status dma_interrupt_flag_get(uint32_t dmax_flag) {
+    uint32_t temp = 0;
 
-  if(dmax_flag > 0x10000000)
-  {
-    temp = DMA2->sts;
-  }
-  else
-  {
-    temp = DMA1->sts;
-  }
+    if (dmax_flag > 0x10000000) {
+        temp = DMA2->sts;
+    } else {
+        temp = DMA1->sts;
+    }
 
-  if((temp & dmax_flag) != RESET)
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+    if ((temp & dmax_flag) != RESET) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -302,16 +277,12 @@ flag_status dma_interrupt_flag_get(uint32_t dmax_flag)
   *         - DMA2_GL7_FLAG        - DMA2_FDT7_FLAG        - DMA2_HDT7_FLAG        - DMA2_DTERR7_FLAG
   * @retval none.
   */
-void dma_flag_clear(uint32_t dmax_flag)
-{
-  if(dmax_flag > ((uint32_t)0x10000000))
-  {
-    DMA2->clr = (uint32_t)(dmax_flag & 0x0FFFFFFF);
-  }
-  else
-  {
-    DMA1->clr = dmax_flag;
-  }
+void dma_flag_clear(uint32_t dmax_flag) {
+    if (dmax_flag > ((uint32_t)0x10000000)) {
+        DMA2->clr = (uint32_t)(dmax_flag & 0x0FFFFFFF);
+    } else {
+        DMA1->clr = dmax_flag;
+    }
 }
 
 /**
@@ -319,18 +290,17 @@ void dma_flag_clear(uint32_t dmax_flag)
   * @param  dma_init_struct: pointer to a dma_init_type structure which will be initialized.
   * @retval none.
   */
-void dma_default_para_init(dma_init_type *dma_init_struct)
-{
-  dma_init_struct->peripheral_base_addr = 0;
-  dma_init_struct->memory_base_addr = 0;
-  dma_init_struct->direction = DMA_DIR_PERIPHERAL_TO_MEMORY;
-  dma_init_struct->buffer_size = 0;
-  dma_init_struct->peripheral_inc_enable = FALSE;
-  dma_init_struct->memory_inc_enable = FALSE;
-  dma_init_struct->peripheral_data_width = DMA_PERIPHERAL_DATA_WIDTH_BYTE;
-  dma_init_struct->memory_data_width = DMA_MEMORY_DATA_WIDTH_BYTE;
-  dma_init_struct->loop_mode_enable = FALSE;
-  dma_init_struct->priority = DMA_PRIORITY_LOW;
+void dma_default_para_init(dma_init_type *dma_init_struct) {
+    dma_init_struct->peripheral_base_addr = 0;
+    dma_init_struct->memory_base_addr = 0;
+    dma_init_struct->direction = DMA_DIR_PERIPHERAL_TO_MEMORY;
+    dma_init_struct->buffer_size = 0;
+    dma_init_struct->peripheral_inc_enable = FALSE;
+    dma_init_struct->memory_inc_enable = FALSE;
+    dma_init_struct->peripheral_data_width = DMA_PERIPHERAL_DATA_WIDTH_BYTE;
+    dma_init_struct->memory_data_width = DMA_MEMORY_DATA_WIDTH_BYTE;
+    dma_init_struct->loop_mode_enable = FALSE;
+    dma_init_struct->priority = DMA_PRIORITY_LOW;
 }
 
 /**
@@ -354,21 +324,20 @@ void dma_default_para_init(dma_init_type *dma_init_struct)
   * @param  dma_init_struct: pointer to a dma_init_type structure.
   * @retval none.
   */
-void dma_init(dma_channel_type *dmax_channely, dma_init_type *dma_init_struct)
-{
-  /* clear ctrl register dtd bit and m2m bit */
-  dmax_channely->ctrl &= 0xbfef;
-  dmax_channely->ctrl |= dma_init_struct->direction;
+void dma_init(dma_channel_type *dmax_channely, dma_init_type *dma_init_struct) {
+    /* clear ctrl register dtd bit and m2m bit */
+    dmax_channely->ctrl &= 0xbfef;
+    dmax_channely->ctrl |= dma_init_struct->direction;
 
-  dmax_channely->ctrl_bit.chpl = dma_init_struct->priority;
-  dmax_channely->ctrl_bit.mwidth = dma_init_struct->memory_data_width;
-  dmax_channely->ctrl_bit.pwidth = dma_init_struct->peripheral_data_width;
-  dmax_channely->ctrl_bit.mincm = dma_init_struct->memory_inc_enable;
-  dmax_channely->ctrl_bit.pincm = dma_init_struct->peripheral_inc_enable;
-  dmax_channely->ctrl_bit.lm = dma_init_struct->loop_mode_enable;
-  dmax_channely->dtcnt_bit.cnt = dma_init_struct->buffer_size;
-  dmax_channely->paddr = dma_init_struct->peripheral_base_addr;
-  dmax_channely->maddr = dma_init_struct->memory_base_addr;
+    dmax_channely->ctrl_bit.chpl = dma_init_struct->priority;
+    dmax_channely->ctrl_bit.mwidth = dma_init_struct->memory_data_width;
+    dmax_channely->ctrl_bit.pwidth = dma_init_struct->peripheral_data_width;
+    dmax_channely->ctrl_bit.mincm = dma_init_struct->memory_inc_enable;
+    dmax_channely->ctrl_bit.pincm = dma_init_struct->peripheral_inc_enable;
+    dmax_channely->ctrl_bit.lm = dma_init_struct->loop_mode_enable;
+    dmax_channely->dtcnt_bit.cnt = dma_init_struct->buffer_size;
+    dmax_channely->paddr = dma_init_struct->peripheral_base_addr;
+    dmax_channely->maddr = dma_init_struct->memory_base_addr;
 }
 /**
   * @brief  dmamux init.
@@ -417,10 +386,9 @@ void dma_init(dma_channel_type *dmax_channely, dma_init_type *dma_init_struct)
   *         - DMAMUX_DMAREQ_ID_TMR20_TRIG   - DMAMUX_DMAREQ_ID_TMR20_HALL   - DMAMUX_DMAREQ_ID_DVP
   * @retval none.
   */
-void dma_flexible_config(dma_type* dma_x, dmamux_channel_type *dmamux_channelx, dmamux_requst_id_sel_type dmamux_req_sel)
-{
-  dma_x->muxsel_bit.tblsel = TRUE;
-  dmamux_channelx->muxctrl_bit.reqsel = dmamux_req_sel;
+void dma_flexible_config(dma_type *dma_x, dmamux_channel_type *dmamux_channelx, dmamux_requst_id_sel_type dmamux_req_sel) {
+    dma_x->muxsel_bit.tblsel = TRUE;
+    dmamux_channelx->muxctrl_bit.reqsel = dmamux_req_sel;
 }
 
 /**
@@ -429,9 +397,8 @@ void dma_flexible_config(dma_type* dma_x, dmamux_channel_type *dmamux_channelx, 
   * @param  new_state (TRUE or FALSE) .
   * @retval none.
   */
-void dmamux_enable(dma_type *dma_x, confirm_state new_state)
-{
-  dma_x->muxsel_bit.tblsel = new_state;
+void dmamux_enable(dma_type *dma_x, confirm_state new_state) {
+    dma_x->muxsel_bit.tblsel = new_state;
 }
 
 /**
@@ -480,9 +447,8 @@ void dmamux_enable(dma_type *dma_x, confirm_state new_state)
   *         - DMAMUX_DMAREQ_ID_TMR20_TRIG   - DMAMUX_DMAREQ_ID_TMR20_HALL   - DMAMUX_DMAREQ_ID_DVP
   * @retval none.
   */
-void dmamux_init(dmamux_channel_type *dmamux_channelx, dmamux_requst_id_sel_type dmamux_req_sel)
-{
-  dmamux_channelx->muxctrl_bit.reqsel = dmamux_req_sel;
+void dmamux_init(dmamux_channel_type *dmamux_channelx, dmamux_requst_id_sel_type dmamux_req_sel) {
+    dmamux_channelx->muxctrl_bit.reqsel = dmamux_req_sel;
 }
 
 /**
@@ -490,13 +456,12 @@ void dmamux_init(dmamux_channel_type *dmamux_channelx, dmamux_requst_id_sel_type
   * @param  dmamux_sync_init_struct: pointer to a dmamux_sync_init_type structure which will be initialized.
   * @retval none.
   */
-void dmamux_sync_default_para_init(dmamux_sync_init_type *dmamux_sync_init_struct)
-{
-  dmamux_sync_init_struct->sync_enable = FALSE;
-  dmamux_sync_init_struct->sync_event_enable = FALSE;
-  dmamux_sync_init_struct->sync_polarity = DMAMUX_SYNC_POLARITY_DISABLE;
-  dmamux_sync_init_struct->sync_request_number = 0x0;
-  dmamux_sync_init_struct->sync_signal_sel = (dmamux_sync_id_sel_type)0;
+void dmamux_sync_default_para_init(dmamux_sync_init_type *dmamux_sync_init_struct) {
+    dmamux_sync_init_struct->sync_enable = FALSE;
+    dmamux_sync_init_struct->sync_event_enable = FALSE;
+    dmamux_sync_init_struct->sync_polarity = DMAMUX_SYNC_POLARITY_DISABLE;
+    dmamux_sync_init_struct->sync_request_number = 0x0;
+    dmamux_sync_init_struct->sync_signal_sel = (dmamux_sync_id_sel_type)0;
 }
 
 /**
@@ -520,13 +485,12 @@ void dmamux_sync_default_para_init(dmamux_sync_init_type *dmamux_sync_init_struc
   * @param  dmamux_sync_init_struct: ointer to a dmamux_sync_init_type structure.
   * @retval none.
   */
-void dmamux_sync_config(dmamux_channel_type *dmamux_channelx, dmamux_sync_init_type *dmamux_sync_init_struct)
-{
-  dmamux_channelx->muxctrl_bit.syncsel = dmamux_sync_init_struct->sync_signal_sel;
-  dmamux_channelx->muxctrl_bit.syncpol = dmamux_sync_init_struct->sync_polarity;
-  dmamux_channelx->muxctrl_bit.reqcnt  = dmamux_sync_init_struct->sync_request_number - 1;
-  dmamux_channelx->muxctrl_bit.evtgen  = dmamux_sync_init_struct->sync_event_enable;
-  dmamux_channelx->muxctrl_bit.syncen  = dmamux_sync_init_struct->sync_enable;
+void dmamux_sync_config(dmamux_channel_type *dmamux_channelx, dmamux_sync_init_type *dmamux_sync_init_struct) {
+    dmamux_channelx->muxctrl_bit.syncsel = dmamux_sync_init_struct->sync_signal_sel;
+    dmamux_channelx->muxctrl_bit.syncpol = dmamux_sync_init_struct->sync_polarity;
+    dmamux_channelx->muxctrl_bit.reqcnt  = dmamux_sync_init_struct->sync_request_number - 1;
+    dmamux_channelx->muxctrl_bit.evtgen  = dmamux_sync_init_struct->sync_event_enable;
+    dmamux_channelx->muxctrl_bit.syncen  = dmamux_sync_init_struct->sync_enable;
 }
 
 /**
@@ -534,12 +498,11 @@ void dmamux_sync_config(dmamux_channel_type *dmamux_channelx, dmamux_sync_init_t
   * @param  dmamux_gen_init_struct: pointer to a dmamux_gen_init_type structure which will be initialized.
   * @retval none.
   */
-void dmamux_generator_default_para_init(dmamux_gen_init_type *dmamux_gen_init_struct)
-{
-  dmamux_gen_init_struct->gen_enable         = FALSE;
-  dmamux_gen_init_struct->gen_polarity       = DMAMUX_GEN_POLARITY_DISABLE;
-  dmamux_gen_init_struct->gen_request_number = 0x0;
-  dmamux_gen_init_struct->gen_signal_sel     = (dmamux_gen_id_sel_type)0x0;
+void dmamux_generator_default_para_init(dmamux_gen_init_type *dmamux_gen_init_struct) {
+    dmamux_gen_init_struct->gen_enable         = FALSE;
+    dmamux_gen_init_struct->gen_polarity       = DMAMUX_GEN_POLARITY_DISABLE;
+    dmamux_gen_init_struct->gen_request_number = 0x0;
+    dmamux_gen_init_struct->gen_signal_sel     = (dmamux_gen_id_sel_type)0x0;
 }
 
 /**
@@ -557,12 +520,11 @@ void dmamux_generator_default_para_init(dmamux_gen_init_type *dmamux_gen_init_st
   * @param  dmamux_gen_init_struct: pointer to a dmamux_gen_init_type structure which will be initialized.
   * @retval none.
   */
-void dmamux_generator_config(dmamux_generator_type *dmamux_gen_x, dmamux_gen_init_type *dmamux_gen_init_struct)
-{
-  dmamux_gen_x->gctrl_bit.sigsel  = dmamux_gen_init_struct->gen_signal_sel;
-  dmamux_gen_x->gctrl_bit.gpol    = dmamux_gen_init_struct->gen_polarity;
-  dmamux_gen_x->gctrl_bit.greqcnt = dmamux_gen_init_struct->gen_request_number - 1;
-  dmamux_gen_x->gctrl_bit.gen     = dmamux_gen_init_struct->gen_enable;
+void dmamux_generator_config(dmamux_generator_type *dmamux_gen_x, dmamux_gen_init_type *dmamux_gen_init_struct) {
+    dmamux_gen_x->gctrl_bit.sigsel  = dmamux_gen_init_struct->gen_signal_sel;
+    dmamux_gen_x->gctrl_bit.gpol    = dmamux_gen_init_struct->gen_polarity;
+    dmamux_gen_x->gctrl_bit.greqcnt = dmamux_gen_init_struct->gen_request_number - 1;
+    dmamux_gen_x->gctrl_bit.gen     = dmamux_gen_init_struct->gen_enable;
 }
 
 /**
@@ -586,16 +548,12 @@ void dmamux_generator_config(dmamux_generator_type *dmamux_gen_x, dmamux_gen_ini
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void dmamux_sync_interrupt_enable(dmamux_channel_type *dmamux_channelx, confirm_state new_state)
-{
-  if(new_state != FALSE)
-  {
-    dmamux_channelx->muxctrl_bit.syncovien = TRUE;
-  }
-  else
-  {
-    dmamux_channelx->muxctrl_bit.syncovien = FALSE;
-  }
+void dmamux_sync_interrupt_enable(dmamux_channel_type *dmamux_channelx, confirm_state new_state) {
+    if (new_state != FALSE) {
+        dmamux_channelx->muxctrl_bit.syncovien = TRUE;
+    } else {
+        dmamux_channelx->muxctrl_bit.syncovien = FALSE;
+    }
 }
 
 /**
@@ -613,16 +571,12 @@ void dmamux_sync_interrupt_enable(dmamux_channel_type *dmamux_channelx, confirm_
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void dmamux_generator_interrupt_enable(dmamux_generator_type *dmamux_gen_x, confirm_state new_state)
-{
-  if(new_state != FALSE)
-  {
-    dmamux_gen_x->gctrl_bit.trgovien = TRUE;
-  }
-  else
-  {
-    dmamux_gen_x->gctrl_bit.trgovien = FALSE;
-  }
+void dmamux_generator_interrupt_enable(dmamux_generator_type *dmamux_gen_x, confirm_state new_state) {
+    if (new_state != FALSE) {
+        dmamux_gen_x->gctrl_bit.trgovien = TRUE;
+    } else {
+        dmamux_gen_x->gctrl_bit.trgovien = FALSE;
+    }
 }
 
 /**
@@ -639,16 +593,12 @@ void dmamux_generator_interrupt_enable(dmamux_generator_type *dmamux_gen_x, conf
   *         - DMAMUX_SYNC_OV7_FLAG
   * @retval state of dmamux sync flag.
   */
-flag_status dmamux_sync_flag_get(dma_type *dma_x, uint32_t flag)
-{
-  if((dma_x->muxsyncsts & flag) != RESET)
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+flag_status dmamux_sync_flag_get(dma_type *dma_x, uint32_t flag) {
+    if ((dma_x->muxsyncsts & flag) != RESET) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -665,62 +615,45 @@ flag_status dmamux_sync_flag_get(dma_type *dma_x, uint32_t flag)
   *         - DMAMUX_SYNC_OV7_FLAG
   * @retval state of dmamux sync flag.
   */
-flag_status dmamux_sync_interrupt_flag_get(dma_type *dma_x, uint32_t flag)
-{
+flag_status dmamux_sync_interrupt_flag_get(dma_type *dma_x, uint32_t flag) {
 
-  flag_status bitstatus = RESET;
-  uint32_t sync_int_temp = flag;
-  uint32_t index = 0;
-  uint32_t tmpreg = 0, enablestatus = 0;
-  uint32_t regoffset = 0x4;
-  
-  while((sync_int_temp & 0x00000001) == RESET)
-  {
-    sync_int_temp = sync_int_temp >> 1;
-    index++;
-  }
-  
-  if(dma_x == DMA1)
-  {
-    tmpreg = *(uint32_t*)(DMA1MUX_BASE + (index * regoffset));
-  }
-  else
-  {
-    tmpreg = *(uint32_t*)(DMA2MUX_BASE + (index * regoffset));
-  }
-  
-  if((tmpreg & (uint32_t)0x00000100) != (uint32_t)RESET)
-  {
-    enablestatus = SET;
-  }
-  else
-  {
-    enablestatus = RESET;
-  }
-  
-  if(dma_x == DMA1)
-  {
-    if(((DMA1->muxsyncsts & flag) != (uint32_t)RESET) && (enablestatus != RESET))
-    {
-      bitstatus = SET;
+    flag_status bitstatus = RESET;
+    uint32_t sync_int_temp = flag;
+    uint32_t index = 0;
+    uint32_t tmpreg = 0, enablestatus = 0;
+    uint32_t regoffset = 0x4;
+
+    while ((sync_int_temp & 0x00000001) == RESET) {
+        sync_int_temp = sync_int_temp >> 1;
+        index++;
     }
-    else
-    {
-      bitstatus = RESET;
+
+    if (dma_x == DMA1) {
+        tmpreg = *(uint32_t *)(DMA1MUX_BASE + (index * regoffset));
+    } else {
+        tmpreg = *(uint32_t *)(DMA2MUX_BASE + (index * regoffset));
     }
-  }
-  else
-  {
-    if(((DMA2->muxsyncsts & flag) != (uint32_t)RESET) && (enablestatus != RESET))
-    {
-      bitstatus = SET;
+
+    if ((tmpreg & (uint32_t)0x00000100) != (uint32_t)RESET) {
+        enablestatus = SET;
+    } else {
+        enablestatus = RESET;
     }
-    else
-    {
-      bitstatus = RESET;
+
+    if (dma_x == DMA1) {
+        if (((DMA1->muxsyncsts & flag) != (uint32_t)RESET) && (enablestatus != RESET)) {
+            bitstatus = SET;
+        } else {
+            bitstatus = RESET;
+        }
+    } else {
+        if (((DMA2->muxsyncsts & flag) != (uint32_t)RESET) && (enablestatus != RESET)) {
+            bitstatus = SET;
+        } else {
+            bitstatus = RESET;
+        }
     }
-  }
-  return bitstatus;   
+    return bitstatus;
 }
 
 /**
@@ -737,9 +670,8 @@ flag_status dmamux_sync_interrupt_flag_get(dma_type *dma_x, uint32_t flag)
   *         - DMAMUX_SYNC_OV7_FLAG
   * @retval none.
   */
-void dmamux_sync_flag_clear(dma_type *dma_x, uint32_t flag)
-{
-  dma_x->muxsyncclr = flag;
+void dmamux_sync_flag_clear(dma_type *dma_x, uint32_t flag) {
+    dma_x->muxsyncclr = flag;
 }
 
 /**
@@ -753,16 +685,12 @@ void dmamux_sync_flag_clear(dma_type *dma_x, uint32_t flag)
   *         - DMAMUX_GEN_TRIG_OV4_FLAG
   * @retval state of dmamux sync flag.
   */
-flag_status dmamux_generator_flag_get(dma_type *dma_x, uint32_t flag)
-{
-  if((dma_x->muxgsts & flag) != RESET)
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+flag_status dmamux_generator_flag_get(dma_type *dma_x, uint32_t flag) {
+    if ((dma_x->muxgsts & flag) != RESET) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -776,57 +704,43 @@ flag_status dmamux_generator_flag_get(dma_type *dma_x, uint32_t flag)
   *         - DMAMUX_GEN_TRIG_OV4_FLAG
   * @retval state of dmamux sync flag.
   */
-flag_status dmamux_generator_interrupt_flag_get(dma_type *dma_x, uint32_t flag)
-{
-  flag_status bitstatus = RESET;
-  uint32_t sync_int_temp = flag;
-  uint32_t index = 0;
-  uint32_t tmpreg = 0, enablestatus = 0;
-  uint32_t regoffset = 0x4;
-  
-  while((sync_int_temp & 0x00000001) == RESET)
-  {
-    sync_int_temp = sync_int_temp >> 1;
-    index++;
-  }
-  
-  if(dma_x == DMA1)
-    tmpreg = *(uint32_t*)(DMA1MUX_GENERATOR1_BASE + (index * regoffset));
-  else
-    tmpreg = *(uint32_t*)(DMA2MUX_GENERATOR1_BASE + (index * regoffset));
-  
-  if((tmpreg & (uint32_t)0x00000100) != (uint32_t)RESET)
-  {
-    enablestatus = SET;
-  }
-  else
-  {
-    enablestatus = RESET;
-  }
-  if(dma_x == DMA1)
-  {
-    if(((DMA1->muxgsts & flag) != (uint32_t)RESET) && (enablestatus != RESET))
-    {
-      bitstatus = SET;
+flag_status dmamux_generator_interrupt_flag_get(dma_type *dma_x, uint32_t flag) {
+    flag_status bitstatus = RESET;
+    uint32_t sync_int_temp = flag;
+    uint32_t index = 0;
+    uint32_t tmpreg = 0, enablestatus = 0;
+    uint32_t regoffset = 0x4;
+
+    while ((sync_int_temp & 0x00000001) == RESET) {
+        sync_int_temp = sync_int_temp >> 1;
+        index++;
     }
+
+    if (dma_x == DMA1)
+        tmpreg = *(uint32_t *)(DMA1MUX_GENERATOR1_BASE + (index * regoffset));
     else
-    {
-      bitstatus = RESET;
+        tmpreg = *(uint32_t *)(DMA2MUX_GENERATOR1_BASE + (index * regoffset));
+
+    if ((tmpreg & (uint32_t)0x00000100) != (uint32_t)RESET) {
+        enablestatus = SET;
+    } else {
+        enablestatus = RESET;
     }
-  }
-  else
-  {
-    if(((DMA2->muxgsts & flag) != (uint32_t)RESET) && (enablestatus != RESET))
-    {
-      bitstatus = SET;
+    if (dma_x == DMA1) {
+        if (((DMA1->muxgsts & flag) != (uint32_t)RESET) && (enablestatus != RESET)) {
+            bitstatus = SET;
+        } else {
+            bitstatus = RESET;
+        }
+    } else {
+        if (((DMA2->muxgsts & flag) != (uint32_t)RESET) && (enablestatus != RESET)) {
+            bitstatus = SET;
+        } else {
+            bitstatus = RESET;
+        }
     }
-    else
-    {
-      bitstatus = RESET;
-    }
-  }
-  
-  return bitstatus; 
+
+    return bitstatus;
 }
 
 /**
@@ -840,9 +754,8 @@ flag_status dmamux_generator_interrupt_flag_get(dma_type *dma_x, uint32_t flag)
   *         - DMAMUX_GEN_TRIG_OV4_FLAG
   * @retval none.
   */
-void dmamux_generator_flag_clear(dma_type *dma_x, uint32_t flag)
-{
-  dma_x->muxgclr = flag;
+void dmamux_generator_flag_clear(dma_type *dma_x, uint32_t flag) {
+    dma_x->muxgclr = flag;
 }
 
 /**

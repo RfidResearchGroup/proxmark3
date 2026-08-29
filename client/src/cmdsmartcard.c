@@ -910,11 +910,11 @@ static int CmdSmartReader(const char *Cmd) {
 // ISO/IEC 7816-3 tables 7 and 8, so the negotiated rate can be printed back.
 static const uint16_t pps_fi_table[16] = {
     372,  372,  558,  744, 1116, 1488, 1860,    0,
-      0,  512,  768, 1024, 1536, 2048,    0,    0
+    0,  512,  768, 1024, 1536, 2048,    0,    0
 };
 static const uint8_t pps_di_table[16] = {
-      0,    1,    2,    4,    8,   16,   32,   64,
-     12,   20,    0,    0,    0,    0,    0,    0
+    0,    1,    2,    4,    8,   16,   32,   64,
+    12,   20,    0,    0,    0,    0,    0,    0
 };
 
 static int CmdSmartPPS(const char *Cmd) {

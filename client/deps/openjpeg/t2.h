@@ -80,15 +80,15 @@ Encode the packets of a tile to a destination buffer
 @param t2_mode          If == THRESH_CALC In Threshold calculation ,If == FINAL_PASS Final pass
 @param p_manager        the user event manager
 */
-OPJ_BOOL opj_t2_encode_packets(opj_t2_t* t2,
+OPJ_BOOL opj_t2_encode_packets(opj_t2_t *t2,
                                OPJ_UINT32 tileno,
                                opj_tcd_tile_t *tile,
                                OPJ_UINT32 maxlayers,
                                OPJ_BYTE *dest,
-                               OPJ_UINT32 * p_data_written,
+                               OPJ_UINT32 *p_data_written,
                                OPJ_UINT32 len,
                                opj_codestream_info_t *cstr_info,
-                               opj_tcd_marker_info_t* p_marker_info,
+                               opj_tcd_marker_info_t *p_marker_info,
                                OPJ_UINT32 tpnum,
                                OPJ_INT32 tppos,
                                OPJ_UINT32 pino,
@@ -109,12 +109,12 @@ Decode the packets of a tile from a source buffer
 
 @return FIXME DOC
  */
-OPJ_BOOL opj_t2_decode_packets(opj_tcd_t* tcd,
+OPJ_BOOL opj_t2_decode_packets(opj_tcd_t *tcd,
                                opj_t2_t *t2,
                                OPJ_UINT32 tileno,
                                opj_tcd_tile_t *tile,
                                OPJ_BYTE *src,
-                               OPJ_UINT32 * p_data_read,
+                               OPJ_UINT32 *p_data_read,
                                OPJ_UINT32 len,
                                opj_codestream_index_t *cstr_info,
                                opj_event_mgr_t *p_manager);
@@ -126,7 +126,7 @@ OPJ_BOOL opj_t2_decode_packets(opj_tcd_t* tcd,
  * @param   p_cp        Image coding parameters.
  * @return      a new T2 handle if successful, NULL otherwise.
 */
-opj_t2_t* opj_t2_create(opj_image_t *p_image, opj_cp_t *p_cp);
+opj_t2_t *opj_t2_create(opj_image_t *p_image, opj_cp_t *p_cp);
 
 /**
 Destroy a T2 handle

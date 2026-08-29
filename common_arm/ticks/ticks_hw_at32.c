@@ -150,13 +150,13 @@ uint32_t RAMFUNC GetTickCount(void) {
     ertc_time_type time;
     ertc_calendar_get(&time);
     return mktime_utc_fast(
-       // time.year is short length, not full, so 2025 is 25.
-       time.year + 2000,
-       // month & day & hour & min & sec is full length
-       time.month, time.day, time.hour, time.min, time.sec,
-       // this ms is from 0 -> 1000 of second, not timestamp value
-       // ms = ((divb + 1) - subsecond * 1000) / (divb + 1)
-       (3125 - ertc_sub_second_get()) * 1000 / 3125) - tick_start_val; // current - start = tick
+               // time.year is short length, not full, so 2025 is 25.
+               time.year + 2000,
+               // month & day & hour & min & sec is full length
+               time.month, time.day, time.hour, time.min, time.sec,
+               // this ms is from 0 -> 1000 of second, not timestamp value
+               // ms = ((divb + 1) - subsecond * 1000) / (divb + 1)
+               (3125 - ertc_sub_second_get()) * 1000 / 3125) - tick_start_val; // current - start = tick
 }
 
 //  -------------------------------------------------------------------------

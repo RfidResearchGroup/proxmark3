@@ -138,7 +138,7 @@ void FpgaSetupSsc(uint16_t fpga_mode) {
     spi_i2s_reset(SPI_SSC); // full reset spi-ti_mode
     spi_init(SPI_SSC, &spi_init_struct);
     spi_ti_mode_enable(SPI_SSC, TRUE); // enable ti mode(Somewhat similar to SSC of AT91)
-    spi_i2s_dma_receiver_enable(SPI_SSC,TRUE); // RX DMA enabled.
+    spi_i2s_dma_receiver_enable(SPI_SSC, TRUE); // RX DMA enabled.
     spi_enable(SPI_SSC, TRUE);
 }
 
@@ -184,13 +184,13 @@ bool FpgaSetupSscRxDmaSingle(void *buf, uint16_t len) {
     dma_init_struct.priority = DMA_PRIORITY_HIGH;
     dma_init_struct.loop_mode_enable = FALSE; // loop disabled, only one time running.
     dma_init_struct.memory_base_addr = (uint32_t)buf;
-    dma_init_struct.peripheral_base_addr = (uint32_t)&(SPI_SSC->dt);
+    dma_init_struct.peripheral_base_addr = (uint32_t) & (SPI_SSC->dt);
     dma_init_struct.direction = DMA_DIR_PERIPHERAL_TO_MEMORY; // receive data from SPI-TI_MODE(SSC)
     dma_init(DMA_CHANNEL_SSC, &dma_init_struct);
     dmamux_init(DMA_CHANNEL_MUX_SSC, DMA_MUX_REQ_ID_SSC);
 
     if (FPGA_SSC_RX_Ready()) {
-        ((uint8_t*)buf)[0] = FPGA_SSC_RX_Value(); // Readout and discard old byte. It's important!
+        ((uint8_t *)buf)[0] = FPGA_SSC_RX_Value(); // Readout and discard old byte. It's important!
     }
 
     FPGA_SSC_DMA_RX_Enable(); // Start rx channel
@@ -265,9 +265,9 @@ void FpgaSendCommand(uint16_t cmd, uint16_t v) {
     spi_cmd_setup();
     // Send data
     gpio_bits_reset(AT32_GPIO_SPI_CS, AT32_GPIO_SPI_CS_PIN); // CS LOW
-    while(spi_i2s_flag_get(SPI_CMD, SPI_I2S_TDBE_FLAG) == RESET) {}
+    while (spi_i2s_flag_get(SPI_CMD, SPI_I2S_TDBE_FLAG) == RESET) {}
     spi_i2s_data_transmit(SPI_CMD, cmd | v);
-    while(spi_i2s_flag_get(SPI_CMD, SPI_I2S_BF_FLAG) != RESET) {} // Waiting for SPI transmit finish.
+    while (spi_i2s_flag_get(SPI_CMD, SPI_I2S_BF_FLAG) != RESET) {} // Waiting for SPI transmit finish.
     gpio_bits_set(AT32_GPIO_SPI_CS, AT32_GPIO_SPI_CS_PIN); // CS HIGH
 }
 

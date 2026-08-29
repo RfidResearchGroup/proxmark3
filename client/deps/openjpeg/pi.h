@@ -108,7 +108,7 @@ typedef struct opj_pi_iterator {
     /** FIXME DOC*/
     OPJ_UINT32 dx, dy;
     /** event manager */
-    opj_event_mgr_t* manager;
+    opj_event_mgr_t *manager;
 } opj_pi_iterator_t;
 
 /** @name Exported functions */
@@ -126,10 +126,10 @@ typedef struct opj_pi_iterator {
  * @return  a list of packet iterator that points to the first packet of the tile (not true).
 */
 opj_pi_iterator_t *opj_pi_initialise_encode(const opj_image_t *image,
-        opj_cp_t *cp,
-        OPJ_UINT32 tileno,
-        J2K_T2_MODE t2_mode,
-        opj_event_mgr_t* manager);
+                                            opj_cp_t *cp,
+                                            OPJ_UINT32 tileno,
+                                            J2K_T2_MODE t2_mode,
+                                            opj_event_mgr_t *manager);
 
 /**
  * Updates the encoding parameters of the codec.
@@ -169,10 +169,10 @@ Create a packet iterator for Decoder
 @return Returns a packet iterator that points to the first packet of the tile
 @see opj_pi_destroy
 */
-opj_pi_iterator_t *opj_pi_create_decode(opj_image_t * image,
-                                        opj_cp_t * cp,
+opj_pi_iterator_t *opj_pi_create_decode(opj_image_t *image,
+                                        opj_cp_t *cp,
                                         OPJ_UINT32 tileno,
-                                        opj_event_mgr_t* manager);
+                                        opj_event_mgr_t *manager);
 /**
  * Destroys a packet iterator array.
  *
@@ -187,7 +187,7 @@ Modify the packet iterator to point to the next packet
 @param pi Packet iterator to modify
 @return Returns false if pi pointed to the last packet or else returns true
 */
-OPJ_BOOL opj_pi_next(opj_pi_iterator_t * pi);
+OPJ_BOOL opj_pi_next(opj_pi_iterator_t *pi);
 
 /**
  * Return the number of packets in the tile.
@@ -196,8 +196,8 @@ OPJ_BOOL opj_pi_next(opj_pi_iterator_t * pi);
  * @param tileno Number that identifies the tile.
  */
 OPJ_UINT32 opj_get_encoding_packet_count(const opj_image_t *p_image,
-        const opj_cp_t *p_cp,
-        OPJ_UINT32 p_tile_no);
+                                         const opj_cp_t *p_cp,
+                                         OPJ_UINT32 p_tile_no);
 
 /* ----------------------------------------------------------------------- */
 /*@}*/

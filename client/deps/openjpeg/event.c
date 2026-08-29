@@ -39,9 +39,8 @@
 
 #ifdef OPJ_CODE_NOT_USED
 #ifndef _WIN32
-static char*
-i2a(unsigned i, char *a, unsigned r)
-{
+static char *
+i2a(unsigned i, char *a, unsigned r) {
     if (i / r > 0) {
         a = i2a(i / r, a, r);
     }
@@ -58,8 +57,7 @@ i2a(unsigned i, char *a, unsigned r)
  @return Returns a
 */
 static char *
-_itoa(int i, char *a, int r)
-{
+_itoa(int i, char *a, int r) {
     r = ((r < 2) || (r > 36)) ? 10 : r;
     if (i < 0) {
         *a = '-';
@@ -78,8 +76,7 @@ _itoa(int i, char *a, int r)
  * Default callback function.
  * Do nothing.
  */
-static void opj_default_callback(const char *msg, void *client_data)
-{
+static void opj_default_callback(const char *msg, void *client_data) {
     OPJ_ARG_NOT_USED(msg);
     OPJ_ARG_NOT_USED(client_data);
 }
@@ -88,29 +85,28 @@ static void opj_default_callback(const char *msg, void *client_data)
 
 
 /* ----------------------------------------------------------------------- */
-OPJ_BOOL opj_event_msg(opj_event_mgr_t* p_event_mgr, OPJ_INT32 event_type,
-                       const char *fmt, ...)
-{
+OPJ_BOOL opj_event_msg(opj_event_mgr_t *p_event_mgr, OPJ_INT32 event_type,
+                       const char *fmt, ...) {
 #define OPJ_MSG_SIZE 512 /* 512 bytes should be more than enough for a short message */
     opj_msg_callback msg_handler = 00;
-    void * l_data = 00;
+    void *l_data = 00;
 
     if (p_event_mgr != 00) {
         switch (event_type) {
-        case EVT_ERROR:
-            msg_handler = p_event_mgr->error_handler;
-            l_data = p_event_mgr->m_error_data;
-            break;
-        case EVT_WARNING:
-            msg_handler = p_event_mgr->warning_handler;
-            l_data = p_event_mgr->m_warning_data;
-            break;
-        case EVT_INFO:
-            msg_handler = p_event_mgr->info_handler;
-            l_data = p_event_mgr->m_info_data;
-            break;
-        default:
-            break;
+            case EVT_ERROR:
+                msg_handler = p_event_mgr->error_handler;
+                l_data = p_event_mgr->m_error_data;
+                break;
+            case EVT_WARNING:
+                msg_handler = p_event_mgr->warning_handler;
+                l_data = p_event_mgr->m_warning_data;
+                break;
+            case EVT_INFO:
+                msg_handler = p_event_mgr->info_handler;
+                l_data = p_event_mgr->m_info_data;
+                break;
+            default:
+                break;
         }
         if (msg_handler == 00) {
             return OPJ_FALSE;
@@ -139,8 +135,7 @@ OPJ_BOOL opj_event_msg(opj_event_mgr_t* p_event_mgr, OPJ_INT32 event_type,
     return OPJ_TRUE;
 }
 
-void opj_set_default_event_handler(opj_event_mgr_t * p_manager)
-{
+void opj_set_default_event_handler(opj_event_mgr_t *p_manager) {
     p_manager->m_error_data = 00;
     p_manager->m_warning_data = 00;
     p_manager->m_info_data = 00;

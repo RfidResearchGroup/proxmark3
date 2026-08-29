@@ -135,8 +135,7 @@ static usbd_desc_t *get_winusb_os_string(void) {
 /**
   * @brief device descriptor handler structure
   */
-static usbd_desc_handler cdc_desc_handler =
-{
+static usbd_desc_handler cdc_desc_handler = {
     .get_device_descriptor = get_device_descriptor,
     .get_device_qualifier = get_device_qualifier,
     .get_device_configuration = get_device_configuration,
@@ -173,11 +172,11 @@ static void usb_clock48m_select(usb_clk48_s clk_s) {
         acc_write_c1(7980);
         acc_write_c2(8000);
         acc_write_c3(8020);
-#if (USB_ID == 0)
+        #if (USB_ID == 0)
         acc_sof_select(ACC_SOF_OTG1);
-#else
+        #else
         acc_sof_select(ACC_SOF_OTG2);
-#endif
+        #endif
         // open acc calibration
         acc_calibration_mode_enable(ACC_CAL_HICKTRIM, TRUE);
 
@@ -326,7 +325,7 @@ static bool usb_read_ng_link_ready(void) {
 
 // Implemented for read_ng
 static bool usb_read_ng_data_ready(void) {
-    cdc_struct_type *pcdc = (cdc_struct_type *) (udev->class_handler->pdata);
+    cdc_struct_type *pcdc = (cdc_struct_type *)(udev->class_handler->pdata);
     return pcdc->g_rx_completed;
 }
 
@@ -337,13 +336,13 @@ static uint16_t usb_read_ng_data_available(void) {
 
 // Implemented for read_ng
 static uint8_t usb_read_ng_data_read(void) {
-    cdc_struct_type *pcdc = (cdc_struct_type *) (udev->class_handler->pdata);
+    cdc_struct_type *pcdc = (cdc_struct_type *)(udev->class_handler->pdata);
     return pcdc->g_rx_buff[usb_read_ng_fifo_pos++];
 }
 
 // Implemented for read_ng
 static void usb_read_ng_clear(void) {
-    cdc_struct_type *pcdc = (cdc_struct_type *) (udev->class_handler->pdata);
+    cdc_struct_type *pcdc = (cdc_struct_type *)(udev->class_handler->pdata);
     // When receiving data from USB device is completed, the flag bit of receiving completion must be cleared,
     //  otherwise, it will enter the endless cycle of receiving completion and may repeatedly execute an instruction.
     pcdc->g_rx_completed = 0;
@@ -376,7 +375,7 @@ void usb_enable(void) {
     crm_periph_clock_enable(OTG_CLOCK, TRUE); // enable otgfs clock
     usb_clock48m_select(USB_CLK_HEXT); // select usb 48m clcok source
     nvic_irq_enable(OTG_IRQ, 0, 0); // enable otgfs irq
-    usbd_init(&otg_core_struct, USB_FULL_SPEED_CORE_ID,USB_ID, &cdc_class_handler, &cdc_desc_handler); // init usb
+    usbd_init(&otg_core_struct, USB_FULL_SPEED_CORE_ID, USB_ID, &cdc_class_handler, &cdc_desc_handler); // init usb
 
 #ifndef AS_BOOTROM
     usb_read_ng_init(&g_usb_read_ng_config);
@@ -409,7 +408,7 @@ bool usb_poll(void) {
         return false;
     }
     // g_rx_completed will set to 1 when irq event: USB_OTG_DOEPINT_XFERC_FLAG
-    cdc_struct_type *pcdc = (cdc_struct_type *) (udev->class_handler->pdata);
+    cdc_struct_type *pcdc = (cdc_struct_type *)(udev->class_handler->pdata);
     return pcdc->g_rx_completed;
 }
 
@@ -418,7 +417,7 @@ bool usb_poll(void) {
  * @return data length, if no data received, return 0.
  */
 uint16_t usb_available_length(void) {
-    cdc_struct_type *pcdc = (cdc_struct_type *) (udev->class_handler->pdata);
+    cdc_struct_type *pcdc = (cdc_struct_type *)(udev->class_handler->pdata);
     // Only when g_rx_completed is set, the g_rxlen is valid, otherwise, it may be 0 or invalid.
     if (pcdc->g_rx_completed) {
         return pcdc->g_rxlen;
@@ -500,7 +499,7 @@ int usb_write(const uint8_t *data, const size_t len) {
     }
 
     // wait for send complete
-    cdc_struct_type *pcdc = (cdc_struct_type *) (udev->class_handler->pdata);
+    cdc_struct_type *pcdc = (cdc_struct_type *)(udev->class_handler->pdata);
     while (pcdc->g_tx_completed != 1) {
         if (usb_check() == false) {
             return PM3_EIO;

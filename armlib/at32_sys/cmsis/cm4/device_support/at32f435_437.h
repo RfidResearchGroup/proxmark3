@@ -30,7 +30,7 @@ extern "C" {
 #endif
 
 #if defined (__CC_ARM)
- #pragma anon_unions
+#pragma anon_unions
 #endif
 
 
@@ -63,7 +63,7 @@ extern "C" {
     !defined (AT32F435VDT7) && !defined (AT32F435ZDT7) && !defined (AT32F437RDT7) && \
     !defined (AT32F437VDT7) && !defined (AT32F437ZDT7)
 
-    #error "Please select first the target device used in your application (in at32f435_437.h file)"
+#error "Please select first the target device used in your application (in at32f435_437.h file)"
 #endif
 
 #if defined (AT32F435CCU7) || defined (AT32F435CGU7) || defined (AT32F435CMU7) || \
@@ -74,7 +74,7 @@ extern "C" {
     defined (AT32F435CDU7) || defined (AT32F435CDT7) || defined (AT32F435RDT7) || \
     defined (AT32F435VDT7) || defined (AT32F435ZDT7)
 
-    #define AT32F435xx
+#define AT32F435xx
 #endif
 
 #if defined (AT32F437RCT7) || defined (AT32F437RGT7) || defined (AT32F437RMT7) || \
@@ -82,7 +82,7 @@ extern "C" {
     defined (AT32F437ZCT7) || defined (AT32F437ZGT7) || defined (AT32F437ZMT7) || \
     defined (AT32F437RDT7) || defined (AT32F437VDT7) || defined (AT32F437ZDT7)
 
-    #define AT32F437xx
+#define AT32F437xx
 #endif
 
 /**
@@ -91,44 +91,44 @@ extern "C" {
 #if defined (AT32F435ZCT7) || defined (AT32F435ZGT7) || defined (AT32F435ZMT7) || \
     defined (AT32F435ZDT7)
 
-    #define AT32F435Zx
+#define AT32F435Zx
 #endif
 
 #if defined (AT32F435VCT7) || defined (AT32F435VGT7) || defined (AT32F435VMT7) || \
     defined (AT32F435VDT7)
 
-    #define AT32F435Vx
+#define AT32F435Vx
 #endif
 
 #if defined (AT32F435RCT7) || defined (AT32F435RGT7) || defined (AT32F435RMT7) || \
     defined (AT32F435RDT7)
 
-    #define AT32F435Rx
+#define AT32F435Rx
 #endif
 
 #if defined (AT32F435CCU7) || defined (AT32F435CGU7) || defined (AT32F435CMU7) || \
     defined (AT32F435CCT7) || defined (AT32F435CGT7) || defined (AT32F435CMT7) || \
     defined (AT32F435CDU7) || defined (AT32F435CDT7)
 
-    #define AT32F435Cx
+#define AT32F435Cx
 #endif
 
 #if defined (AT32F437ZCT7) || defined (AT32F437ZGT7) || defined (AT32F437ZMT7) || \
     defined (AT32F437ZDT7)
 
-    #define AT32F437Zx
+#define AT32F437Zx
 #endif
 
 #if defined (AT32F437VCT7) || defined (AT32F437VGT7) || defined (AT32F437VMT7) || \
     defined (AT32F437VDT7)
 
-    #define AT32F437Vx
+#define AT32F437Vx
 #endif
 
 #if defined (AT32F437RCT7) || defined (AT32F437RGT7) || defined (AT32F437RMT7) || \
     defined (AT32F437RDT7)
 
-    #define AT32F437Rx
+#define AT32F437Rx
 #endif
 
 /**
@@ -137,45 +137,45 @@ extern "C" {
 #if defined (AT32F435CCU7) || defined (AT32F435CCT7) || defined (AT32F435RCT7) || \
     defined (AT32F435VCT7) || defined (AT32F435ZCT7)
 
-    #define AT32F435xC
+#define AT32F435xC
 #endif
 
 #if defined (AT32F435CDU7) || defined (AT32F435CDT7) || defined (AT32F435RDT7) || \
     defined (AT32F435VDT7) || defined (AT32F435ZDT7)
 
-    #define AT32F435xD
+#define AT32F435xD
 #endif
 
 #if defined (AT32F435CGU7) || defined (AT32F435CGT7) || defined (AT32F435RGT7) || \
     defined (AT32F435VGT7) || defined (AT32F435ZGT7)
 
-    #define AT32F435xG
+#define AT32F435xG
 #endif
 
 #if defined (AT32F435CMU7) || defined (AT32F435CMT7) || defined (AT32F435RMT7) || \
     defined (AT32F435VMT7) || defined (AT32F435ZMT7)
 
-    #define AT32F435xM
+#define AT32F435xM
 #endif
 
 #if defined (AT32F437RCT7) || defined (AT32F437VCT7) || defined (AT32F437ZCT7)
 
-    #define AT32F437xC
+#define AT32F437xC
 #endif
 
 #if defined (AT32F437RDT7) || defined (AT32F437VDT7) || defined (AT32F437ZDT7)
 
-    #define AT32F437xD
+#define AT32F437xD
 #endif
 
 #if defined (AT32F437RGT7) || defined (AT32F437VGT7) || defined (AT32F437ZGT7)
 
-    #define AT32F437xG
+#define AT32F437xG
 #endif
 
 #if defined (AT32F437RMT7) || defined (AT32F437VMT7) || defined (AT32F437ZMT7)
 
-    #define AT32F437xM
+#define AT32F437xM
 #endif
 
 #ifndef USE_STDPERIPH_DRIVER
@@ -184,12 +184,12 @@ extern "C" {
   * in this case, these drivers will not be included and the application code will
   * be based on direct access to peripherals registers
   */
-  #ifdef _RTE_
-    #include "RTE_Components.h"
-    #ifdef RTE_DEVICE_STDPERIPH_FRAMEWORK
-      #define USE_STDPERIPH_DRIVER
-    #endif
-  #endif
+#ifdef _RTE_
+#include "RTE_Components.h"
+#ifdef RTE_DEVICE_STDPERIPH_FRAMEWORK
+#define USE_STDPERIPH_DRIVER
+#endif
+#endif
 #endif
 
 /**
@@ -225,8 +225,7 @@ extern "C" {
   * @brief at32f435_437 interrupt number definition, according to the selected device
   *        in @ref library_configuration_section
   */
-typedef enum IRQn
-{
+typedef enum IRQn {
     /******  cortex-m4 processor exceptions numbers ***************************************************/
     Reset_IRQn                  = -15,    /*!< 1 reset vector, invoked on power up and warm reset   */
     NonMaskableInt_IRQn         = -14,    /*!< 2 non maskable interrupt                             */
@@ -339,84 +338,84 @@ typedef enum IRQn
 #endif
 
 #if defined (AT32F437xx)
-    ADC1_2_3_IRQn               = 18,     /*!< adc1 adc2 and adc3 global interrupt                  */
-    CAN1_TX_IRQn                = 19,     /*!< can1 tx interrupts                                   */
-    CAN1_RX0_IRQn               = 20,     /*!< can1 rx0 interrupts                                  */
-    CAN1_RX1_IRQn               = 21,     /*!< can1 rx1 interrupt                                   */
-    CAN1_SE_IRQn                = 22,     /*!< can1 se interrupt                                    */
-    EXINT9_5_IRQn               = 23,     /*!< external line[9:5] interrupts                        */
-    TMR1_BRK_TMR9_IRQn          = 24,     /*!< tmr1 brake interrupt                                 */
-    TMR1_OVF_TMR10_IRQn         = 25,     /*!< tmr1 overflow interrupt                              */
-    TMR1_TRG_HALL_TMR11_IRQn    = 26,     /*!< tmr1 trigger and hall interrupt                      */
-    TMR1_CH_IRQn                = 27,     /*!< tmr1 channel interrupt                               */
-    TMR2_GLOBAL_IRQn            = 28,     /*!< tmr2 global interrupt                                */
-    TMR3_GLOBAL_IRQn            = 29,     /*!< tmr3 global interrupt                                */
-    TMR4_GLOBAL_IRQn            = 30,     /*!< tmr4 global interrupt                                */
-    I2C1_EVT_IRQn               = 31,     /*!< i2c1 event interrupt                                 */
-    I2C1_ERR_IRQn               = 32,     /*!< i2c1 error interrupt                                 */
-    I2C2_EVT_IRQn               = 33,     /*!< i2c2 event interrupt                                 */
-    I2C2_ERR_IRQn               = 34,     /*!< i2c2 error interrupt                                 */
-    SPI1_IRQn                   = 35,     /*!< spi1 global interrupt                                */
-    SPI2_I2S2EXT_IRQn           = 36,     /*!< spi2 global interrupt                                */
-    USART1_IRQn                 = 37,     /*!< usart1 global interrupt                              */
-    USART2_IRQn                 = 38,     /*!< usart2 global interrupt                              */
-    USART3_IRQn                 = 39,     /*!< usart3 global interrupt                              */
-    EXINT15_10_IRQn             = 40,     /*!< external line[15:10] interrupts                      */
-    ERTCAlarm_IRQn              = 41,     /*!< ertc alarm through exint line interrupt              */
-    OTGFS1_WKUP_IRQn            = 42,     /*!< otgfs1 wakeup from suspend through exint line interrupt */
-    TMR8_BRK_TMR12_IRQn         = 43,     /*!< tmr8 brake interrupt                                 */
-    TMR8_OVF_TMR13_IRQn         = 44,     /*!< tmr8 overflow interrupt                              */
-    TMR8_TRG_HALL_TMR14_IRQn    = 45,     /*!< tmr8 trigger and hall interrupt                      */
-    TMR8_CH_IRQn                = 46,     /*!< tmr8 channel interrupt                               */
-    EDMA_Stream8_IRQn           = 47,     /*!< dma1 stream 8 global interrupt                       */
-    XMC_IRQn                    = 48,     /*!< xmc global interrupt                                 */
-    SDIO1_IRQn                  = 49,     /*!< sdio global interrupt                                */
-    TMR5_GLOBAL_IRQn            = 50,     /*!< tmr5 global interrupt                                */
-    SPI3_I2S3EXT_IRQn           = 51,     /*!< spi3 global interrupt                                */
-    UART4_IRQn                  = 52,     /*!< uart4 global interrupt                               */
-    UART5_IRQn                  = 53,     /*!< uart5 global interrupt                               */
-    TMR6_DAC_GLOBAL_IRQn        = 54,     /*!< tmr6 and dac global interrupt                        */
-    TMR7_GLOBAL_IRQn            = 55,     /*!< tmr7 global interrupt                                */
-    DMA1_Channel1_IRQn          = 56,     /*!< dma1 channel 0 global interrupt                      */
-    DMA1_Channel2_IRQn          = 57,     /*!< dma1 channel 1 global interrupt                      */
-    DMA1_Channel3_IRQn          = 58,     /*!< dma1 channel 2 global interrupt                      */
-    DMA1_Channel4_IRQn          = 59,     /*!< dma1 channel 3 global interrupt                      */
-    DMA1_Channel5_IRQn          = 60,     /*!< dma1 channel 4 global interrupt                      */
-    EMAC_IRQn                   = 61,     /*!< emac interrupt                                       */
-    EMAC_WKUP_IRQn              = 62,     /*!< emac wakeup interrupt                                */
-    CAN2_TX_IRQn                = 63,     /*!< can2 tx interrupt                                    */
-    CAN2_RX0_IRQn               = 64,     /*!< can2 rx0 interrupt                                   */
-    CAN2_RX1_IRQn               = 65,     /*!< can2 rx1 interrupt                                   */
-    CAN2_SE_IRQn                = 66,     /*!< can2 se interrupt                                    */
-    OTGFS1_IRQn                 = 67,     /*!< otgfs1 interrupt                                     */
-    DMA1_Channel6_IRQn          = 68,     /*!< dma1 channel 5 global interrupt                      */
-    DMA1_Channel7_IRQn          = 69,     /*!< dma1 channel 6 global interrupt                      */
-    USART6_IRQn                 = 71,     /*!< usart6 interrupt                                     */
-    I2C3_EVT_IRQn               = 72,     /*!< i2c3 event interrupt                                 */
-    I2C3_ERR_IRQn               = 73,     /*!< i2c3 error interrupt                                 */
-    OTGFS2_WKUP_IRQn            = 76,     /*!< otgfs2 wakeup from suspend through exint line interrupt */
-    OTGFS2_IRQn                 = 77,     /*!< otgfs2 interrupt                                     */
-    DVP_IRQn                    = 78,     /*!< dvp interrupt                                        */
-    FPU_IRQn                    = 81,     /*!< fpu interrupt                                        */
-    UART7_IRQn                  = 82,     /*!< uart7 interrupt                                      */
-    UART8_IRQn                  = 83,     /*!< uart8 interrupt                                      */
-    SPI4_IRQn                   = 84,     /*!< spi4 global interrupt                                */
-    QSPI2_IRQn                  = 91,     /*!< qspi2 global interrupt                               */
-    QSPI1_IRQn                  = 92,     /*!< qspi1 global interrupt                               */
-    DMAMUX_IRQn                 = 94,     /*!< dmamux global interrupt                              */
-    SDIO2_IRQn                  = 102,    /*!< sdio2 global interrupt                               */
-    ACC_IRQn                    = 103,    /*!< acc interrupt                                        */
-    TMR20_BRK_IRQn              = 104,    /*!< tmr20 brake interrupt                                */
-    TMR20_OVF_IRQn              = 105,    /*!< tmr20 overflow interrupt                             */
-    TMR20_TRG_HALL_IRQn         = 106,    /*!< tmr20 trigger and hall interrupt                     */
-    TMR20_CH_IRQn               = 107,    /*!< tmr20 channel interrupt                              */
-    DMA2_Channel1_IRQn          = 108,    /*!< dma2 channel 1 global interrupt                      */
-    DMA2_Channel2_IRQn          = 109,    /*!< dma2 channel 2 global interrupt                      */
-    DMA2_Channel3_IRQn          = 110,    /*!< dma2 channel 3 global interrupt                      */
-    DMA2_Channel4_IRQn          = 111,    /*!< dma2 channel 4 global interrupt                      */
-    DMA2_Channel5_IRQn          = 112,    /*!< dma2 channel 5 global interrupt                      */
-    DMA2_Channel6_IRQn          = 113,    /*!< dma2 channel 6 global interrupt                      */
-    DMA2_Channel7_IRQn          = 114     /*!< dma2 channel 7 global interrupt                      */
+                                  ADC1_2_3_IRQn               = 18,     /*!< adc1 adc2 and adc3 global interrupt                  */
+                                  CAN1_TX_IRQn                = 19,     /*!< can1 tx interrupts                                   */
+                                  CAN1_RX0_IRQn               = 20,     /*!< can1 rx0 interrupts                                  */
+                                  CAN1_RX1_IRQn               = 21,     /*!< can1 rx1 interrupt                                   */
+                                  CAN1_SE_IRQn                = 22,     /*!< can1 se interrupt                                    */
+                                  EXINT9_5_IRQn               = 23,     /*!< external line[9:5] interrupts                        */
+                                  TMR1_BRK_TMR9_IRQn          = 24,     /*!< tmr1 brake interrupt                                 */
+                                  TMR1_OVF_TMR10_IRQn         = 25,     /*!< tmr1 overflow interrupt                              */
+                                  TMR1_TRG_HALL_TMR11_IRQn    = 26,     /*!< tmr1 trigger and hall interrupt                      */
+                                  TMR1_CH_IRQn                = 27,     /*!< tmr1 channel interrupt                               */
+                                  TMR2_GLOBAL_IRQn            = 28,     /*!< tmr2 global interrupt                                */
+                                  TMR3_GLOBAL_IRQn            = 29,     /*!< tmr3 global interrupt                                */
+                                  TMR4_GLOBAL_IRQn            = 30,     /*!< tmr4 global interrupt                                */
+                                  I2C1_EVT_IRQn               = 31,     /*!< i2c1 event interrupt                                 */
+                                  I2C1_ERR_IRQn               = 32,     /*!< i2c1 error interrupt                                 */
+                                  I2C2_EVT_IRQn               = 33,     /*!< i2c2 event interrupt                                 */
+                                  I2C2_ERR_IRQn               = 34,     /*!< i2c2 error interrupt                                 */
+                                  SPI1_IRQn                   = 35,     /*!< spi1 global interrupt                                */
+                                  SPI2_I2S2EXT_IRQn           = 36,     /*!< spi2 global interrupt                                */
+                                  USART1_IRQn                 = 37,     /*!< usart1 global interrupt                              */
+                                  USART2_IRQn                 = 38,     /*!< usart2 global interrupt                              */
+                                  USART3_IRQn                 = 39,     /*!< usart3 global interrupt                              */
+                                  EXINT15_10_IRQn             = 40,     /*!< external line[15:10] interrupts                      */
+                                  ERTCAlarm_IRQn              = 41,     /*!< ertc alarm through exint line interrupt              */
+                                  OTGFS1_WKUP_IRQn            = 42,     /*!< otgfs1 wakeup from suspend through exint line interrupt */
+                                  TMR8_BRK_TMR12_IRQn         = 43,     /*!< tmr8 brake interrupt                                 */
+                                  TMR8_OVF_TMR13_IRQn         = 44,     /*!< tmr8 overflow interrupt                              */
+                                  TMR8_TRG_HALL_TMR14_IRQn    = 45,     /*!< tmr8 trigger and hall interrupt                      */
+                                  TMR8_CH_IRQn                = 46,     /*!< tmr8 channel interrupt                               */
+                                  EDMA_Stream8_IRQn           = 47,     /*!< dma1 stream 8 global interrupt                       */
+                                  XMC_IRQn                    = 48,     /*!< xmc global interrupt                                 */
+                                  SDIO1_IRQn                  = 49,     /*!< sdio global interrupt                                */
+                                  TMR5_GLOBAL_IRQn            = 50,     /*!< tmr5 global interrupt                                */
+                                  SPI3_I2S3EXT_IRQn           = 51,     /*!< spi3 global interrupt                                */
+                                  UART4_IRQn                  = 52,     /*!< uart4 global interrupt                               */
+                                  UART5_IRQn                  = 53,     /*!< uart5 global interrupt                               */
+                                  TMR6_DAC_GLOBAL_IRQn        = 54,     /*!< tmr6 and dac global interrupt                        */
+                                  TMR7_GLOBAL_IRQn            = 55,     /*!< tmr7 global interrupt                                */
+                                  DMA1_Channel1_IRQn          = 56,     /*!< dma1 channel 0 global interrupt                      */
+                                  DMA1_Channel2_IRQn          = 57,     /*!< dma1 channel 1 global interrupt                      */
+                                  DMA1_Channel3_IRQn          = 58,     /*!< dma1 channel 2 global interrupt                      */
+                                  DMA1_Channel4_IRQn          = 59,     /*!< dma1 channel 3 global interrupt                      */
+                                  DMA1_Channel5_IRQn          = 60,     /*!< dma1 channel 4 global interrupt                      */
+                                  EMAC_IRQn                   = 61,     /*!< emac interrupt                                       */
+                                  EMAC_WKUP_IRQn              = 62,     /*!< emac wakeup interrupt                                */
+                                  CAN2_TX_IRQn                = 63,     /*!< can2 tx interrupt                                    */
+                                  CAN2_RX0_IRQn               = 64,     /*!< can2 rx0 interrupt                                   */
+                                  CAN2_RX1_IRQn               = 65,     /*!< can2 rx1 interrupt                                   */
+                                  CAN2_SE_IRQn                = 66,     /*!< can2 se interrupt                                    */
+                                  OTGFS1_IRQn                 = 67,     /*!< otgfs1 interrupt                                     */
+                                  DMA1_Channel6_IRQn          = 68,     /*!< dma1 channel 5 global interrupt                      */
+                                  DMA1_Channel7_IRQn          = 69,     /*!< dma1 channel 6 global interrupt                      */
+                                  USART6_IRQn                 = 71,     /*!< usart6 interrupt                                     */
+                                  I2C3_EVT_IRQn               = 72,     /*!< i2c3 event interrupt                                 */
+                                  I2C3_ERR_IRQn               = 73,     /*!< i2c3 error interrupt                                 */
+                                  OTGFS2_WKUP_IRQn            = 76,     /*!< otgfs2 wakeup from suspend through exint line interrupt */
+                                  OTGFS2_IRQn                 = 77,     /*!< otgfs2 interrupt                                     */
+                                  DVP_IRQn                    = 78,     /*!< dvp interrupt                                        */
+                                  FPU_IRQn                    = 81,     /*!< fpu interrupt                                        */
+                                  UART7_IRQn                  = 82,     /*!< uart7 interrupt                                      */
+                                  UART8_IRQn                  = 83,     /*!< uart8 interrupt                                      */
+                                  SPI4_IRQn                   = 84,     /*!< spi4 global interrupt                                */
+                                  QSPI2_IRQn                  = 91,     /*!< qspi2 global interrupt                               */
+                                  QSPI1_IRQn                  = 92,     /*!< qspi1 global interrupt                               */
+                                  DMAMUX_IRQn                 = 94,     /*!< dmamux global interrupt                              */
+                                  SDIO2_IRQn                  = 102,    /*!< sdio2 global interrupt                               */
+                                  ACC_IRQn                    = 103,    /*!< acc interrupt                                        */
+                                  TMR20_BRK_IRQn              = 104,    /*!< tmr20 brake interrupt                                */
+                                  TMR20_OVF_IRQn              = 105,    /*!< tmr20 overflow interrupt                             */
+                                  TMR20_TRG_HALL_IRQn         = 106,    /*!< tmr20 trigger and hall interrupt                     */
+                                  TMR20_CH_IRQn               = 107,    /*!< tmr20 channel interrupt                              */
+                                  DMA2_Channel1_IRQn          = 108,    /*!< dma2 channel 1 global interrupt                      */
+                                  DMA2_Channel2_IRQn          = 109,    /*!< dma2 channel 2 global interrupt                      */
+                                  DMA2_Channel3_IRQn          = 110,    /*!< dma2 channel 3 global interrupt                      */
+                                  DMA2_Channel4_IRQn          = 111,    /*!< dma2 channel 4 global interrupt                      */
+                                  DMA2_Channel5_IRQn          = 112,    /*!< dma2 channel 5 global interrupt                      */
+                                  DMA2_Channel6_IRQn          = 113,    /*!< dma2 channel 6 global interrupt                      */
+                                  DMA2_Channel7_IRQn          = 114     /*!< dma2 channel 7 global interrupt                      */
 #endif
 
 } IRQn_Type;

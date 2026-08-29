@@ -181,7 +181,7 @@ static uint16_t sam_sc_emit_ber_len(uint8_t *out, uint16_t len) {
 }
 
 static uint16_t sam_sc_copy_payload_nfc2sam(uint8_t *out, uint16_t out_size,
-                                             const uint8_t *nfc, uint16_t nfc_len) {
+                                            const uint8_t *nfc, uint16_t nfc_len) {
     if (out == NULL || nfc == NULL || nfc_len == 0) return 0;
 
     const uint16_t inner_len = (uint16_t)(1 + sam_sc_ber_len_size(nfc_len) + nfc_len + 4);
@@ -266,7 +266,7 @@ static int sam_sc_card_api_loop(uint8_t *response, uint16_t *response_len,
                     memset(&card_info, 0, sizeof(card_info));
                     iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
                     bool selected = iso14443a_select_card(NULL, &card_info,
-                                                           NULL, true, 0, false);
+                                                          NULL, true, 0, false);
                     switch_clock_to_ticks();
                     if (selected == false || card_info.uidlen == 0 || card_info.uidlen > 10) {
                         static const uint8_t no_card[] = {0xbd, 0x02, 0x8a, 0x00};
@@ -367,7 +367,7 @@ static int sam_sc_card_api_loop(uint8_t *response, uint16_t *response_len,
                 if (iso14a) {
                     switch_clock_to_countsspclk();
                     int apdu_len = iso14_apdu((uint8_t *)op_value, op_len, false,
-                                               nfc_rx, sizeof(nfc_rx), NULL);
+                                              nfc_rx, sizeof(nfc_rx), NULL);
                     switch_clock_to_ticks();
                     if (apdu_len >= 2) {
                         nfc_rx_len = (uint16_t)(apdu_len - 2);
@@ -403,7 +403,7 @@ static int sam_sc_card_api_loop(uint8_t *response, uint16_t *response_len,
                         do {
                             iclass_send_as_reader((uint8_t *)op_value, op_len, &start_time, &eof_time, false);
                             res = GetIso15693AnswerFromTag(nfc_rx, sizeof(nfc_rx), timeout, &eof_time,
-                                                            false, true, &nfc_rx_len);
+                                                           false, true, &nfc_rx_len);
                             if (res == PM3_SUCCESS && nfc_rx_len > 0) break;
                             start_time = eof_time + ((DELAY_ICLASS_VICC_TO_VCD_READER +
                                                       DELAY_ISO15693_VCD_TO_VICC_READER +
@@ -415,7 +415,7 @@ static int sam_sc_card_api_loop(uint8_t *response, uint16_t *response_len,
 
                 if (res == PM3_SUCCESS && nfc_rx_len > 0) {
                     continuation_len = sam_sc_copy_payload_nfc2sam(continuation, ISO7816_MAX_FRAME,
-                                                                    nfc_rx, nfc_rx_len);
+                                                                   nfc_rx, nfc_rx_len);
                     if (continuation_len == 0)
                         res = PM3_ECARDEXCHANGE;
                 } else {
@@ -566,8 +566,8 @@ void sam_sc_handler(const PacketCommandNG *c) {
             iclass_send_as_reader((uint8_t *)read_aia, sizeof(read_aia),
                                   &start_time, &eof_time, false);
             res = GetIso15693AnswerFromTag(aia_rx, sizeof(aia_rx),
-                                            ICLASS_READER_TIMEOUT_ACTALL,
-                                            &eof_time, false, true, &aia_rx_len);
+                                           ICLASS_READER_TIMEOUT_ACTALL,
+                                           &eof_time, false, true, &aia_rx_len);
             if (res == PM3_SUCCESS && aia_rx_len == sizeof(aia_rx)) {
                 memcpy(aia, aia_rx, sizeof(aia));
                 got_aia = true;
@@ -662,12 +662,12 @@ void sam_sc_handler(const PacketCommandNG *c) {
 
         if (snmp_loader && res == PM3_SUCCESS) {
             reply_ng(CMD_HF_SAM_SC, PM3_SUCCESS, response, response_len);
-        // Reformat the buffer for the host: prepend the SAM-assigned scFlag,
-        // then the SAM payload.  Grace SAMs mirror either a five- or six-byte
-        // routing tail; deriving both positions from the BD success or BE
-        // error response node avoids exposing the final routing byte as part
-        // of the payload.
-        // memmove is safe across the overlapping ranges.
+            // Reformat the buffer for the host: prepend the SAM-assigned scFlag,
+            // then the SAM payload.  Grace SAMs mirror either a five- or six-byte
+            // routing tail; deriving both positions from the BD success or BE
+            // error response node avoids exposing the final routing byte as part
+            // of the payload.
+            // memmove is safe across the overlapping ranges.
         } else if (res == PM3_SUCCESS) {
             uint16_t reply_offset = sam_sc_reply_offset(response, response_len);
             if (reply_offset == 0) {

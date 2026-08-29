@@ -82,117 +82,101 @@ extern "C" {
 /**
   * @brief exint line mode type
   */
-typedef enum
-{
-  EXINT_LINE_INTERRUPUT                  = 0x00, /*!< external interrupt line interrupt mode */
-  EXINT_LINE_INTERRUPT                   = 0x00, /*!< same as EXINT_LINE_INTERRUPUT, fixed spelling error */
-  EXINT_LINE_EVENT                       = 0x01  /*!< external interrupt line event mode */
+typedef enum {
+    EXINT_LINE_INTERRUPUT                  = 0x00, /*!< external interrupt line interrupt mode */
+    EXINT_LINE_INTERRUPT                   = 0x00, /*!< same as EXINT_LINE_INTERRUPUT, fixed spelling error */
+    EXINT_LINE_EVENT                       = 0x01  /*!< external interrupt line event mode */
 } exint_line_mode_type;
 
 /**
   * @brief exint polarity configuration type
   */
-typedef enum
-{
-  EXINT_TRIGGER_RISING_EDGE              = 0x00, /*!< external interrupt line rising trigger mode */
-  EXINT_TRIGGER_FALLING_EDGE             = 0x01, /*!< external interrupt line falling trigger mode */
-  EXINT_TRIGGER_BOTH_EDGE                = 0x02  /*!< external interrupt line both rising and falling trigger mode */
+typedef enum {
+    EXINT_TRIGGER_RISING_EDGE              = 0x00, /*!< external interrupt line rising trigger mode */
+    EXINT_TRIGGER_FALLING_EDGE             = 0x01, /*!< external interrupt line falling trigger mode */
+    EXINT_TRIGGER_BOTH_EDGE                = 0x02  /*!< external interrupt line both rising and falling trigger mode */
 } exint_polarity_config_type;
 
 /**
   * @brief exint init type
   */
-typedef struct
-{
-  exint_line_mode_type                   line_mode;     /*!< choose mode event or interrupt mode */
-  uint32_t                               line_select;   /*!< select the exint line, availiable for single line or multiple lines */
-  exint_polarity_config_type             line_polarity; /*!< select the tregger polarity, with rising edge, falling edge or both edge */
-  confirm_state                          line_enable;   /*!< enable or disable exint */
+typedef struct {
+    exint_line_mode_type                   line_mode;     /*!< choose mode event or interrupt mode */
+    uint32_t                               line_select;   /*!< select the exint line, availiable for single line or multiple lines */
+    exint_polarity_config_type             line_polarity; /*!< select the tregger polarity, with rising edge, falling edge or both edge */
+    confirm_state                          line_enable;   /*!< enable or disable exint */
 } exint_init_type;
 
 /**
   * @brief type define exint register all
   */
-typedef struct
-{
+typedef struct {
 
-  /**
-    * @brief exint inten register, offset:0x00
-    */
-  union
-  {
-    __IO uint32_t inten;
-    struct
-    {
-      __IO uint32_t intenx               : 23;/* [22:0] */
-      __IO uint32_t reserved1            : 9; /* [31:23] */
-    } inten_bit;
-  };
+    /**
+      * @brief exint inten register, offset:0x00
+      */
+    union {
+        __IO uint32_t inten;
+        struct {
+            __IO uint32_t intenx               : 23;/* [22:0] */
+            __IO uint32_t reserved1            : 9; /* [31:23] */
+        } inten_bit;
+    };
 
-  /**
-    * @brief exint evten register, offset:0x04
-    */
-  union
-  {
-    __IO uint32_t evten;
-    struct
-    {
-      __IO uint32_t evtenx               : 23;/* [22:0] */
-      __IO uint32_t reserved1            : 9; /* [31:23] */
-    } evten_bit;
-  };
+    /**
+      * @brief exint evten register, offset:0x04
+      */
+    union {
+        __IO uint32_t evten;
+        struct {
+            __IO uint32_t evtenx               : 23;/* [22:0] */
+            __IO uint32_t reserved1            : 9; /* [31:23] */
+        } evten_bit;
+    };
 
-  /**
-    * @brief exint polcfg1 register, offset:0x08
-    */
-  union
-  {
-    __IO uint32_t polcfg1;
-    struct
-    {
-      __IO uint32_t rpx                  : 23;/* [22:0] */
-      __IO uint32_t reserved1            : 9; /* [31:23] */
-    } polcfg1_bit;
-  };
+    /**
+      * @brief exint polcfg1 register, offset:0x08
+      */
+    union {
+        __IO uint32_t polcfg1;
+        struct {
+            __IO uint32_t rpx                  : 23;/* [22:0] */
+            __IO uint32_t reserved1            : 9; /* [31:23] */
+        } polcfg1_bit;
+    };
 
-  /**
-    * @brief exint polcfg2 register, offset:0x0C
-    */
-  union
-  {
-    __IO uint32_t polcfg2;
-    struct
-    {
-      __IO uint32_t fpx                  : 23;/* [22:0] */
-      __IO uint32_t reserved1            : 9; /* [31:23] */
-    } polcfg2_bit;
-  };
+    /**
+      * @brief exint polcfg2 register, offset:0x0C
+      */
+    union {
+        __IO uint32_t polcfg2;
+        struct {
+            __IO uint32_t fpx                  : 23;/* [22:0] */
+            __IO uint32_t reserved1            : 9; /* [31:23] */
+        } polcfg2_bit;
+    };
 
-  /**
-    * @brief exint swtrg register, offset:0x10
-    */
-  union
-  {
-    __IO uint32_t swtrg;
-    struct
-    {
-      __IO uint32_t swtx                 : 23;/* [22:0] */
-      __IO uint32_t reserved1            : 9; /* [31:23] */
-    } swtrg_bit;
-  };
+    /**
+      * @brief exint swtrg register, offset:0x10
+      */
+    union {
+        __IO uint32_t swtrg;
+        struct {
+            __IO uint32_t swtx                 : 23;/* [22:0] */
+            __IO uint32_t reserved1            : 9; /* [31:23] */
+        } swtrg_bit;
+    };
 
-  /**
-    * @brief exint intsts register, offset:0x14
-    */
-  union
-  {
-    __IO uint32_t intsts;
-    struct
-    {
-      __IO uint32_t linex                : 23;/* [22:0] */
-      __IO uint32_t reserved1            : 9; /* [31:23] */
-    } intsts_bit;
-  };
+    /**
+      * @brief exint intsts register, offset:0x14
+      */
+    union {
+        __IO uint32_t intsts;
+        struct {
+            __IO uint32_t linex                : 23;/* [22:0] */
+            __IO uint32_t reserved1            : 9; /* [31:23] */
+        } intsts_bit;
+    };
 } exint_type;
 
 /**

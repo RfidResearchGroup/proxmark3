@@ -47,14 +47,13 @@
   * @param  num: number(0~99)
   * @retval bcd code.
   */
-uint8_t ertc_num_to_bcd(uint8_t num)
-{
-  uint8_t bcd_h = 0, bcd_l = 0;
+uint8_t ertc_num_to_bcd(uint8_t num) {
+    uint8_t bcd_h = 0, bcd_l = 0;
 
-  bcd_h = num / 10;
-  bcd_l = num % 10;
+    bcd_h = num / 10;
+    bcd_l = num % 10;
 
-  return  ((uint8_t)(bcd_h << 4) | bcd_l);
+    return ((uint8_t)(bcd_h << 4) | bcd_l);
 }
 
 /**
@@ -62,9 +61,8 @@ uint8_t ertc_num_to_bcd(uint8_t num)
   * @param  bcd: bcd code(0~99).
   * @retval number.
   */
-uint8_t ertc_bcd_to_num(uint8_t bcd)
-{
-  return ((((uint8_t)(bcd & (uint8_t)0xF0) >> 4) * 10) + (bcd & (uint8_t)0x0F));
+uint8_t ertc_bcd_to_num(uint8_t bcd) {
+    return ((((uint8_t)(bcd & (uint8_t)0xF0) >> 4) * 10) + (bcd & (uint8_t)0x0F));
 }
 
 /**
@@ -72,9 +70,8 @@ uint8_t ertc_bcd_to_num(uint8_t bcd)
   * @param  none.
   * @retval none
   */
-void ertc_write_protect_enable(void)
-{
-  ERTC->wp = 0xFF;
+void ertc_write_protect_enable(void) {
+    ERTC->wp = 0xFF;
 }
 
 /**
@@ -82,10 +79,9 @@ void ertc_write_protect_enable(void)
   * @param  none.
   * @retval none
   */
-void ertc_write_protect_disable(void)
-{
-  ERTC->wp = 0xCA;
-  ERTC->wp = 0x53;
+void ertc_write_protect_disable(void) {
+    ERTC->wp = 0xCA;
+    ERTC->wp = 0x53;
 }
 
 /**
@@ -93,24 +89,21 @@ void ertc_write_protect_disable(void)
   * @param  none.
   * @retval error_status (ERROR or SUCCESS).
   */
-error_status ertc_wait_update(void)
-{
-  uint32_t timeout = ERTC_TIMEOUT * 2;
+error_status ertc_wait_update(void) {
+    uint32_t timeout = ERTC_TIMEOUT * 2;
 
-  /* clear updf flag */
-  ERTC->sts = ~(ERTC_UPDF_FLAG | 0x00000080) | (ERTC->sts_bit.imen << 7);
+    /* clear updf flag */
+    ERTC->sts = ~(ERTC_UPDF_FLAG | 0x00000080) | (ERTC->sts_bit.imen << 7);
 
-  while(ERTC->sts_bit.updf == 0)
-  {
-    if(timeout == 0)
-    {
-      return ERROR;
+    while (ERTC->sts_bit.updf == 0) {
+        if (timeout == 0) {
+            return ERROR;
+        }
+
+        timeout--;
     }
 
-    timeout--;
-  }
-
-  return SUCCESS;
+    return SUCCESS;
 }
 
 /**
@@ -128,24 +121,21 @@ error_status ertc_wait_update(void)
   *         - RESET.
   * @retval error_status (ERROR or SUCCESS).
   */
-error_status ertc_wait_flag(uint32_t flag, flag_status status)
-{
-  uint32_t timeout = ERTC_TIMEOUT;
+error_status ertc_wait_flag(uint32_t flag, flag_status status) {
+    uint32_t timeout = ERTC_TIMEOUT;
 
-  while(ertc_flag_get(flag) == status)
-  {
-    if(timeout == 0)
-    {
-      /* enable write protection */
-      ertc_write_protect_enable();
+    while (ertc_flag_get(flag) == status) {
+        if (timeout == 0) {
+            /* enable write protection */
+            ertc_write_protect_enable();
 
-      return ERROR;
+            return ERROR;
+        }
+
+        timeout--;
     }
 
-    timeout--;
-  }
-
-  return SUCCESS;
+    return SUCCESS;
 }
 
 /**
@@ -153,30 +143,26 @@ error_status ertc_wait_flag(uint32_t flag, flag_status status)
   * @param  none.
   * @retval error_status (ERROR or SUCCESS).
   */
-error_status ertc_init_mode_enter(void)
-{
-  uint32_t timeout = ERTC_TIMEOUT * 2;
+error_status ertc_init_mode_enter(void) {
+    uint32_t timeout = ERTC_TIMEOUT * 2;
 
-  if(ERTC->sts_bit.imf == 0)
-  {
-    /* enter init mode */
-    ERTC->sts = 0xFFFFFFFF;
+    if (ERTC->sts_bit.imf == 0) {
+        /* enter init mode */
+        ERTC->sts = 0xFFFFFFFF;
 
-    while(ERTC->sts_bit.imf == 0)
-    {
-      if(timeout == 0)
-      {
-        /* enable write protection */
-        ertc_write_protect_enable();
+        while (ERTC->sts_bit.imf == 0) {
+            if (timeout == 0) {
+                /* enable write protection */
+                ertc_write_protect_enable();
 
-        return ERROR;
-      }
+                return ERROR;
+            }
 
-      timeout--;
+            timeout--;
+        }
     }
-  }
 
-  return SUCCESS;
+    return SUCCESS;
 }
 
 /**
@@ -184,9 +170,8 @@ error_status ertc_init_mode_enter(void)
   * @param  none.
   * @retval none.
   */
-void ertc_init_mode_exit(void)
-{
-  ERTC->sts = 0xFFFFFF7F;
+void ertc_init_mode_exit(void) {
+    ERTC->sts = 0xFFFFFF7F;
 }
 
 /**
@@ -194,42 +179,40 @@ void ertc_init_mode_exit(void)
   * @param  none.
   * @retval error_status (ERROR or SUCCESS).
   */
-error_status ertc_reset(void)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+error_status ertc_reset(void) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  ERTC->ctrl = (uint32_t)0x00000000;
+    ERTC->ctrl = (uint32_t)0x00000000;
 
-  /* enter init mode */
-  if(ertc_init_mode_enter() != SUCCESS)
-  {
-    return ERROR;
-  }
+    /* enter init mode */
+    if (ertc_init_mode_enter() != SUCCESS) {
+        return ERROR;
+    }
 
-  /* reset register */
-  ERTC->time   = (uint32_t)0x00000000;
-  ERTC->date   = (uint32_t)0x00002101;
-  ERTC->ctrl   = (uint32_t)0x00000000;
-  ERTC->div    = (uint32_t)0x007F00FF;
-  ERTC->wat    = (uint32_t)0x0000FFFF;
-  ERTC->ccal   = (uint32_t)0x00000000;
-  ERTC->ala    = (uint32_t)0x00000000;
-  ERTC->alb    = (uint32_t)0x00000000;
-  ERTC->tadj   = (uint32_t)0x00000000;
-  ERTC->scal   = (uint32_t)0x00000000;
-  ERTC->tamp   = (uint32_t)0x00000000;
-  ERTC->alasbs = (uint32_t)0x00000000;
-  ERTC->albsbs = (uint32_t)0x00000000;
-  ERTC->sts    = (uint32_t)0x00000000;
+    /* reset register */
+    ERTC->time   = (uint32_t)0x00000000;
+    ERTC->date   = (uint32_t)0x00002101;
+    ERTC->ctrl   = (uint32_t)0x00000000;
+    ERTC->div    = (uint32_t)0x007F00FF;
+    ERTC->wat    = (uint32_t)0x0000FFFF;
+    ERTC->ccal   = (uint32_t)0x00000000;
+    ERTC->ala    = (uint32_t)0x00000000;
+    ERTC->alb    = (uint32_t)0x00000000;
+    ERTC->tadj   = (uint32_t)0x00000000;
+    ERTC->scal   = (uint32_t)0x00000000;
+    ERTC->tamp   = (uint32_t)0x00000000;
+    ERTC->alasbs = (uint32_t)0x00000000;
+    ERTC->albsbs = (uint32_t)0x00000000;
+    ERTC->sts    = (uint32_t)0x00000000;
 
-  /* wait calendar update */
-  ertc_wait_update();
+    /* wait calendar update */
+    ertc_wait_update();
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 
-  return SUCCESS;
+    return SUCCESS;
 }
 
 /**
@@ -238,28 +221,26 @@ error_status ertc_reset(void)
   * @param  div_b: division b (0~0x7FFF).
   * @retval error_status (ERROR or SUCCESS).
   */
-error_status ertc_divider_set(uint16_t div_a, uint16_t div_b)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+error_status ertc_divider_set(uint16_t div_a, uint16_t div_b) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  /* enter init mode */
-  if(ertc_init_mode_enter() != SUCCESS)
-  {
-    return ERROR;
-  }
+    /* enter init mode */
+    if (ertc_init_mode_enter() != SUCCESS) {
+        return ERROR;
+    }
 
-  /* config the ertc divider */
-  ERTC->div_bit.diva = div_a;
-  ERTC->div_bit.divb = div_b;
+    /* config the ertc divider */
+    ERTC->div_bit.diva = div_a;
+    ERTC->div_bit.divb = div_b;
 
-  /* exit init mode */
-  ertc_init_mode_exit();
+    /* exit init mode */
+    ertc_init_mode_exit();
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 
-  return SUCCESS;
+    return SUCCESS;
 }
 
 /**
@@ -270,27 +251,25 @@ error_status ertc_divider_set(uint16_t div_a, uint16_t div_b)
   *         - ERTC_HOUR_MODE_12: 12-hour format.
   * @retval error_status (ERROR or SUCCESS).
   */
-error_status ertc_hour_mode_set(ertc_hour_mode_set_type mode)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+error_status ertc_hour_mode_set(ertc_hour_mode_set_type mode) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  /* enter init mode */
-  if(ertc_init_mode_enter() != SUCCESS)
-  {
-    return ERROR;
-  }
+    /* enter init mode */
+    if (ertc_init_mode_enter() != SUCCESS) {
+        return ERROR;
+    }
 
-  /* write register */
-  ERTC->ctrl_bit.hm = mode;
+    /* write register */
+    ERTC->ctrl_bit.hm = mode;
 
-  /* exit init mode */
-  ertc_init_mode_exit();
+    /* exit init mode */
+    ertc_init_mode_exit();
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 
-  return SUCCESS;
+    return SUCCESS;
 }
 
 /**
@@ -301,41 +280,38 @@ error_status ertc_hour_mode_set(ertc_hour_mode_set_type mode)
   * @param  week: week (1~7).
   * @retval error_status (ERROR or SUCCESS).
   */
-error_status ertc_date_set(uint8_t year, uint8_t month, uint8_t date, uint8_t week)
-{
-  ertc_reg_date_type reg;
+error_status ertc_date_set(uint8_t year, uint8_t month, uint8_t date, uint8_t week) {
+    ertc_reg_date_type reg;
 
-  reg.date = 0;
+    reg.date = 0;
 
-  reg.date_bit.y  = ertc_num_to_bcd(year);
-  reg.date_bit.m  = ertc_num_to_bcd(month);
-  reg.date_bit.d  = ertc_num_to_bcd(date);
-  reg.date_bit.wk = week;
+    reg.date_bit.y  = ertc_num_to_bcd(year);
+    reg.date_bit.m  = ertc_num_to_bcd(month);
+    reg.date_bit.d  = ertc_num_to_bcd(date);
+    reg.date_bit.wk = week;
 
-  /* disable write protection */
-  ertc_write_protect_disable();
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  /* enter init mode */
-  if(ertc_init_mode_enter() != SUCCESS)
-  {
-    return ERROR;
-  }
+    /* enter init mode */
+    if (ertc_init_mode_enter() != SUCCESS) {
+        return ERROR;
+    }
 
-  /* set the ertc_date register */
-  ERTC->date = reg.date;
+    /* set the ertc_date register */
+    ERTC->date = reg.date;
 
-  /* exit init mode */
-  ertc_init_mode_exit();
+    /* exit init mode */
+    ertc_init_mode_exit();
 
-  if(ERTC->ctrl_bit.dren == 0)
-  {
-    ertc_wait_update();
-  }
+    if (ERTC->ctrl_bit.dren == 0) {
+        ertc_wait_update();
+    }
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 
-  return SUCCESS;
+    return SUCCESS;
 }
 
 /**
@@ -350,40 +326,37 @@ error_status ertc_date_set(uint8_t year, uint8_t month, uint8_t date, uint8_t we
   *         - ERTC_PM: 12-hour format, post meridiem.
   * @retval error_status (ERROR or SUCCESS).
   */
-error_status ertc_time_set(uint8_t hour, uint8_t min, uint8_t sec, ertc_am_pm_type ampm)
-{
-  ertc_reg_time_type reg;
+error_status ertc_time_set(uint8_t hour, uint8_t min, uint8_t sec, ertc_am_pm_type ampm) {
+    ertc_reg_time_type reg;
 
-  reg.time = 0;
+    reg.time = 0;
 
-  reg.time_bit.h = ertc_num_to_bcd(hour);
-  reg.time_bit.m = ertc_num_to_bcd(min);
-  reg.time_bit.s = ertc_num_to_bcd(sec);
-  reg.time_bit.ampm = ampm;
+    reg.time_bit.h = ertc_num_to_bcd(hour);
+    reg.time_bit.m = ertc_num_to_bcd(min);
+    reg.time_bit.s = ertc_num_to_bcd(sec);
+    reg.time_bit.ampm = ampm;
 
-  /* disable write protection */
-  ertc_write_protect_disable();
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  /* enter init mode */
-  if(ertc_init_mode_enter() != SUCCESS)
-  {
-    return ERROR;
-  }
+    /* enter init mode */
+    if (ertc_init_mode_enter() != SUCCESS) {
+        return ERROR;
+    }
 
-  ERTC->time = reg.time;
+    ERTC->time = reg.time;
 
-  /* exit init mode */
-  ertc_init_mode_exit();
+    /* exit init mode */
+    ertc_init_mode_exit();
 
-  if(ERTC->ctrl_bit.dren == 0)
-  {
-    ertc_wait_update();
-  }
+    if (ERTC->ctrl_bit.dren == 0) {
+        ertc_wait_update();
+    }
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 
-  return SUCCESS;
+    return SUCCESS;
 }
 
 /**
@@ -391,23 +364,22 @@ error_status ertc_time_set(uint8_t hour, uint8_t min, uint8_t sec, ertc_am_pm_ty
   * @param  time: ertc time.
   * @retval none.
   */
-void ertc_calendar_get(ertc_time_type* time)
-{
-  ertc_reg_time_type reg_tm;
-  ertc_reg_date_type reg_dt;
+void ertc_calendar_get(ertc_time_type *time) {
+    ertc_reg_time_type reg_tm;
+    ertc_reg_date_type reg_dt;
 
-  reg_tm.time = ERTC->time;
-  reg_dt.date = ERTC->date;
+    reg_tm.time = ERTC->time;
+    reg_dt.date = ERTC->date;
 
-  time->hour  = ertc_bcd_to_num(reg_tm.time_bit.h);
-  time->min   = ertc_bcd_to_num(reg_tm.time_bit.m);
-  time->sec   = ertc_bcd_to_num(reg_tm.time_bit.s);
-  time->ampm  = (ertc_am_pm_type)reg_tm.time_bit.ampm;
+    time->hour  = ertc_bcd_to_num(reg_tm.time_bit.h);
+    time->min   = ertc_bcd_to_num(reg_tm.time_bit.m);
+    time->sec   = ertc_bcd_to_num(reg_tm.time_bit.s);
+    time->ampm  = (ertc_am_pm_type)reg_tm.time_bit.ampm;
 
-  time->year  = ertc_bcd_to_num(reg_dt.date_bit.y);
-  time->month = ertc_bcd_to_num(reg_dt.date_bit.m);
-  time->day   = ertc_bcd_to_num(reg_dt.date_bit.d);
-  time->week  = reg_dt.date_bit.wk;
+    time->year  = ertc_bcd_to_num(reg_dt.date_bit.y);
+    time->month = ertc_bcd_to_num(reg_dt.date_bit.m);
+    time->day   = ertc_bcd_to_num(reg_dt.date_bit.d);
+    time->week  = reg_dt.date_bit.wk;
 }
 
 /**
@@ -415,15 +387,14 @@ void ertc_calendar_get(ertc_time_type* time)
   * @param  none.
   * @retval sub second.
   */
-uint32_t ertc_sub_second_get(void)
-{
-  uint32_t reg = 0;
+uint32_t ertc_sub_second_get(void) {
+    uint32_t reg = 0;
 
-  reg = ERTC->sbs;
+    reg = ERTC->sbs;
 
-  (void) (ERTC->date);
+    (void)(ERTC->date);
 
-  return (reg);
+    return (reg);
 }
 
 /**
@@ -443,34 +414,30 @@ uint32_t ertc_sub_second_get(void)
   * @param  alarm: alarm para.
   * @retval none.
   */
-void ertc_alarm_mask_set(ertc_alarm_type alarm_x, uint32_t mask)
-{
-  uint32_t reg;
+void ertc_alarm_mask_set(ertc_alarm_type alarm_x, uint32_t mask) {
+    uint32_t reg;
 
-  /* disable write protection */
-  ertc_write_protect_disable();
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  if(alarm_x == ERTC_ALA)
-  {
-    reg = ERTC->ala;
+    if (alarm_x == ERTC_ALA) {
+        reg = ERTC->ala;
 
-    reg &= ~ERTC_ALARM_MASK_ALL;
-    reg |= mask;
+        reg &= ~ERTC_ALARM_MASK_ALL;
+        reg |= mask;
 
-    ERTC->ala= reg;
-  }
-  else
-  {
-    reg = ERTC->alb;
+        ERTC->ala = reg;
+    } else {
+        reg = ERTC->alb;
 
-    reg &= ~ERTC_ALARM_MASK_ALL;
-    reg |= mask;
+        reg &= ~ERTC_ALARM_MASK_ALL;
+        reg |= mask;
 
-    ERTC->alb= reg;
-  }
+        ERTC->alb = reg;
+    }
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -485,22 +452,18 @@ void ertc_alarm_mask_set(ertc_alarm_type alarm_x, uint32_t mask)
   *         - ERTC_SLECT_WEEK: slect week mode.
   * @retval none.
   */
-void ertc_alarm_week_date_select(ertc_alarm_type alarm_x, ertc_week_date_select_type wk)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_alarm_week_date_select(ertc_alarm_type alarm_x, ertc_week_date_select_type wk) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  if(alarm_x == ERTC_ALA)
-  {
-    ERTC->ala_bit.wksel = wk;
-  }
-  else
-  {
-    ERTC->alb_bit.wksel = wk;
-  }
+    if (alarm_x == ERTC_ALA) {
+        ERTC->ala_bit.wksel = wk;
+    } else {
+        ERTC->alb_bit.wksel = wk;
+    }
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -523,39 +486,32 @@ void ertc_alarm_week_date_select(ertc_alarm_type alarm_x, ertc_week_date_select_
   * @param  alarm: alarm para.
   * @retval none.
   */
-void ertc_alarm_set(ertc_alarm_type alarm_x, uint8_t week_date, uint8_t hour, uint8_t min, uint8_t sec, ertc_am_pm_type ampm)
-{
-  ertc_reg_alarm_type reg;
+void ertc_alarm_set(ertc_alarm_type alarm_x, uint8_t week_date, uint8_t hour, uint8_t min, uint8_t sec, ertc_am_pm_type ampm) {
+    ertc_reg_alarm_type reg;
 
-  if(alarm_x == ERTC_ALA)
-  {
-    reg.ala = ERTC->ala;
-  }
-  else
-  {
-    reg.ala = ERTC->alb;
-  }
+    if (alarm_x == ERTC_ALA) {
+        reg.ala = ERTC->ala;
+    } else {
+        reg.ala = ERTC->alb;
+    }
 
-  reg.ala_bit.d = ertc_num_to_bcd(week_date);
-  reg.ala_bit.h = ertc_num_to_bcd(hour);
-  reg.ala_bit.m = ertc_num_to_bcd(min);
-  reg.ala_bit.s = ertc_num_to_bcd(sec);
-  reg.ala_bit.ampm = ampm;
+    reg.ala_bit.d = ertc_num_to_bcd(week_date);
+    reg.ala_bit.h = ertc_num_to_bcd(hour);
+    reg.ala_bit.m = ertc_num_to_bcd(min);
+    reg.ala_bit.s = ertc_num_to_bcd(sec);
+    reg.ala_bit.ampm = ampm;
 
-  /* disable write protection */
-  ertc_write_protect_disable();
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  if(alarm_x == ERTC_ALA)
-  {
-    ERTC->ala= reg.ala;
-  }
-  else
-  {
-    ERTC->alb = reg.ala;
-  }
+    if (alarm_x == ERTC_ALA) {
+        ERTC->ala = reg.ala;
+    } else {
+        ERTC->alb = reg.ala;
+    }
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -585,24 +541,20 @@ void ertc_alarm_set(ertc_alarm_type alarm_x, uint8_t week_date, uint8_t hour, ui
   *         - ERTC_ALARM_SBS_MASK_NONE:  compare bit [14:0].
   * @retval none.
   */
-void ertc_alarm_sub_second_set(ertc_alarm_type alarm_x, uint32_t value, ertc_alarm_sbs_mask_type mask)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_alarm_sub_second_set(ertc_alarm_type alarm_x, uint32_t value, ertc_alarm_sbs_mask_type mask) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  if(alarm_x == ERTC_ALA)
-  {
-    ERTC->alasbs_bit.sbsmsk = mask;
-    ERTC->alasbs_bit.sbs = value;
-  }
-  else
-  {
-    ERTC->albsbs_bit.sbsmsk = mask;
-    ERTC->albsbs_bit.sbs = value;
-  }
+    if (alarm_x == ERTC_ALA) {
+        ERTC->alasbs_bit.sbsmsk = mask;
+        ERTC->alasbs_bit.sbs = value;
+    } else {
+        ERTC->albsbs_bit.sbsmsk = mask;
+        ERTC->albsbs_bit.sbs = value;
+    }
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -614,40 +566,32 @@ void ertc_alarm_sub_second_set(ertc_alarm_type alarm_x, uint32_t value, ertc_ala
   * @param  new_state (TRUE or FALSE).
   * @retval error_status (ERROR or SUCCESS).
   */
-error_status ertc_alarm_enable(ertc_alarm_type alarm_x, confirm_state new_state)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+error_status ertc_alarm_enable(ertc_alarm_type alarm_x, confirm_state new_state) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  if(alarm_x == ERTC_ALA)
-  {
-    ERTC->ctrl_bit.alaen = new_state;
+    if (alarm_x == ERTC_ALA) {
+        ERTC->ctrl_bit.alaen = new_state;
 
-    if(new_state == FALSE)
-    {
-      if(ertc_wait_flag(ERTC_ALAWF_FLAG, RESET) != SUCCESS)
-      {
-        return ERROR;
-      }
+        if (new_state == FALSE) {
+            if (ertc_wait_flag(ERTC_ALAWF_FLAG, RESET) != SUCCESS) {
+                return ERROR;
+            }
+        }
+    } else {
+        ERTC->ctrl_bit.alben = new_state;
+
+        if (new_state == FALSE) {
+            if (ertc_wait_flag(ERTC_ALBWF_FLAG, RESET) != SUCCESS) {
+                return ERROR;
+            }
+        }
     }
-  }
-  else
-  {
-    ERTC->ctrl_bit.alben = new_state;
 
-    if(new_state == FALSE)
-    {
-      if(ertc_wait_flag(ERTC_ALBWF_FLAG, RESET) != SUCCESS)
-      {
-        return ERROR;
-      }
-    }
-  }
+    /* enable write protection */
+    ertc_write_protect_enable();
 
-  /* enable write protection */
-  ertc_write_protect_enable();
-
-  return SUCCESS;
+    return SUCCESS;
 }
 
 /**
@@ -659,29 +603,25 @@ error_status ertc_alarm_enable(ertc_alarm_type alarm_x, confirm_state new_state)
   * @param  alarm: alarm para.
   * @retval none.
   */
-void ertc_alarm_get(ertc_alarm_type alarm_x, ertc_alarm_value_type* alarm)
-{
-  ertc_reg_alarm_type reg;
+void ertc_alarm_get(ertc_alarm_type alarm_x, ertc_alarm_value_type *alarm) {
+    ertc_reg_alarm_type reg;
 
-  reg.ala = 0;
+    reg.ala = 0;
 
-  if(alarm_x == ERTC_ALA)
-  {
-    reg.ala = ERTC->ala;
-  }
-  else
-  {
-    reg.ala = ERTC->alb;
-  }
+    if (alarm_x == ERTC_ALA) {
+        reg.ala = ERTC->ala;
+    } else {
+        reg.ala = ERTC->alb;
+    }
 
-  alarm->day           = ertc_bcd_to_num(reg.ala_bit.d);
-  alarm->week          = ertc_bcd_to_num(reg.ala_bit.d);
-  alarm->hour          = ertc_bcd_to_num(reg.ala_bit.h);
-  alarm->min           = ertc_bcd_to_num(reg.ala_bit.m);
-  alarm->sec           = ertc_bcd_to_num(reg.ala_bit.s);
-  alarm->ampm          = (ertc_am_pm_type)reg.ala_bit.ampm;
-  alarm->week_date_sel = reg.ala_bit.wksel;
-  alarm->mask          = reg.ala & ERTC_ALARM_MASK_ALL;
+    alarm->day           = ertc_bcd_to_num(reg.ala_bit.d);
+    alarm->week          = ertc_bcd_to_num(reg.ala_bit.d);
+    alarm->hour          = ertc_bcd_to_num(reg.ala_bit.h);
+    alarm->min           = ertc_bcd_to_num(reg.ala_bit.m);
+    alarm->sec           = ertc_bcd_to_num(reg.ala_bit.s);
+    alarm->ampm          = (ertc_am_pm_type)reg.ala_bit.ampm;
+    alarm->week_date_sel = reg.ala_bit.wksel;
+    alarm->mask          = reg.ala & ERTC_ALARM_MASK_ALL;
 }
 
 /**
@@ -692,16 +632,12 @@ void ertc_alarm_get(ertc_alarm_type alarm_x, ertc_alarm_value_type* alarm)
   *         - ERTC_ALB: alarm b.
   * @retval sub second.
   */
-uint32_t ertc_alarm_sub_second_get(ertc_alarm_type alarm_x)
-{
-  if(alarm_x == ERTC_ALA)
-  {
-    return (ERTC->alasbs_bit.sbs);
-  }
-  else
-  {
-    return (ERTC->albsbs_bit.sbs);
-  }
+uint32_t ertc_alarm_sub_second_get(ertc_alarm_type alarm_x) {
+    if (alarm_x == ERTC_ALA) {
+        return (ERTC->alasbs_bit.sbs);
+    } else {
+        return (ERTC->albsbs_bit.sbs);
+    }
 }
 
 /**
@@ -716,15 +652,14 @@ uint32_t ertc_alarm_sub_second_get(ertc_alarm_type alarm_x)
   *         - ERTC_WAT_CLK_CK_B_17BITS: CK_B, wakeup counter = ERTC_WAT + 65535.
   * @retval none.
   */
-void ertc_wakeup_clock_set(ertc_wakeup_clock_type clock)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_wakeup_clock_set(ertc_wakeup_clock_type clock) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  ERTC->ctrl_bit.watclk = clock;
+    ERTC->ctrl_bit.watclk = clock;
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -732,15 +667,14 @@ void ertc_wakeup_clock_set(ertc_wakeup_clock_type clock)
   * @param  counter: wakeup counter(0~65535).
   * @retval none.
   */
-void ertc_wakeup_counter_set(uint32_t counter)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_wakeup_counter_set(uint32_t counter) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  ERTC->wat_bit.val = counter;
+    ERTC->wat_bit.val = counter;
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -748,9 +682,8 @@ void ertc_wakeup_counter_set(uint32_t counter)
   * @param  none.
   * @retval wakeup counter.
   */
-uint16_t ertc_wakeup_counter_get(void)
-{
-  return ERTC->wat_bit.val;
+uint16_t ertc_wakeup_counter_get(void) {
+    return ERTC->wat_bit.val;
 }
 
 /**
@@ -758,25 +691,22 @@ uint16_t ertc_wakeup_counter_get(void)
   * @param  new_state (TRUE or FALSE).
   * @retval error_status (ERROR or SUCCESS).
   */
-error_status ertc_wakeup_enable(confirm_state new_state)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+error_status ertc_wakeup_enable(confirm_state new_state) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  ERTC->ctrl_bit.waten = new_state;
+    ERTC->ctrl_bit.waten = new_state;
 
-  if(new_state == FALSE)
-  {
-    if(ertc_wait_flag(ERTC_WATWF_FLAG, RESET) != SUCCESS)
-    {
-      return ERROR;
+    if (new_state == FALSE) {
+        if (ertc_wait_flag(ERTC_WATWF_FLAG, RESET) != SUCCESS) {
+            return ERROR;
+        }
     }
-  }
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 
-  return SUCCESS;
+    return SUCCESS;
 }
 
 /**
@@ -793,43 +723,40 @@ error_status ertc_wakeup_enable(confirm_state new_state)
   * @param  clk_dec: decrease clock(0~511).
   * @retval error_status (ERROR or SUCCESS).
   */
-error_status ertc_smooth_calibration_config(ertc_smooth_cal_period_type period, ertc_smooth_cal_clk_add_type clk_add, uint32_t clk_dec)
-{
-  ertc_reg_scal_type reg;
+error_status ertc_smooth_calibration_config(ertc_smooth_cal_period_type period, ertc_smooth_cal_clk_add_type clk_add, uint32_t clk_dec) {
+    ertc_reg_scal_type reg;
 
-  /* disable write protection */
-  ertc_write_protect_disable();
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  if(ertc_wait_flag(ERTC_CALUPDF_FLAG, SET) != SUCCESS)
-  {
-    return ERROR;
-  }
+    if (ertc_wait_flag(ERTC_CALUPDF_FLAG, SET) != SUCCESS) {
+        return ERROR;
+    }
 
-  reg.scal = 0;
+    reg.scal = 0;
 
-  switch (period)
-  {
-    case ERTC_SMOOTH_CAL_PERIOD_32:
-      break;
-    case ERTC_SMOOTH_CAL_PERIOD_16:
-       reg.scal_bit.cal16 = 1;
-      break;
-    case ERTC_SMOOTH_CAL_PERIOD_8:
-       reg.scal_bit.cal8 = 1;
-      break;
-    default:
-      break;
-  }
+    switch (period) {
+        case ERTC_SMOOTH_CAL_PERIOD_32:
+            break;
+        case ERTC_SMOOTH_CAL_PERIOD_16:
+            reg.scal_bit.cal16 = 1;
+            break;
+        case ERTC_SMOOTH_CAL_PERIOD_8:
+            reg.scal_bit.cal8 = 1;
+            break;
+        default:
+            break;
+    }
 
-  reg.scal_bit.add = clk_add;
-  reg.scal_bit.dec = clk_dec;
+    reg.scal_bit.add = clk_add;
+    reg.scal_bit.dec = clk_dec;
 
-  ERTC->scal = reg.scal;
+    ERTC->scal = reg.scal;
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 
-  return SUCCESS;
+    return SUCCESS;
 }
 
 /**
@@ -841,28 +768,26 @@ error_status ertc_smooth_calibration_config(ertc_smooth_cal_period_type period, 
   * @param  value: calibration value(0~31).
   * @retval error_status (ERROR or SUCCESS).
   */
-error_status ertc_coarse_calibration_set(ertc_cal_direction_type dir, uint32_t value)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+error_status ertc_coarse_calibration_set(ertc_cal_direction_type dir, uint32_t value) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  /* enter init mode */
-  if(ertc_init_mode_enter() == ERROR)
-  {
-    return ERROR;
-  }
+    /* enter init mode */
+    if (ertc_init_mode_enter() == ERROR) {
+        return ERROR;
+    }
 
-  ERTC->ccal_bit.caldir = dir;
+    ERTC->ccal_bit.caldir = dir;
 
-  ERTC->ccal_bit.calval = value;
+    ERTC->ccal_bit.calval = value;
 
-  /* exit init mode */
-  ertc_init_mode_exit();
+    /* exit init mode */
+    ertc_init_mode_exit();
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 
-  return SUCCESS;
+    return SUCCESS;
 }
 
 /**
@@ -870,26 +795,24 @@ error_status ertc_coarse_calibration_set(ertc_cal_direction_type dir, uint32_t v
   * @param  new_state (TRUE or FALSE).
   * @retval error_status (ERROR or SUCCESS).
   */
-error_status ertc_coarse_calibration_enable(confirm_state new_state)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+error_status ertc_coarse_calibration_enable(confirm_state new_state) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  /* enter init mode */
-  if(ertc_init_mode_enter() == ERROR)
-  {
-    return ERROR;
-  }
+    /* enter init mode */
+    if (ertc_init_mode_enter() == ERROR) {
+        return ERROR;
+    }
 
-  ERTC->ctrl_bit.ccalen = new_state;
+    ERTC->ctrl_bit.ccalen = new_state;
 
-  /* exit init mode */
-  ertc_init_mode_exit();
+    /* exit init mode */
+    ertc_init_mode_exit();
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 
-  return SUCCESS;
+    return SUCCESS;
 }
 
 /**
@@ -900,15 +823,14 @@ error_status ertc_coarse_calibration_enable(confirm_state new_state)
   *         - ERTC_CAL_OUTPUT_1HZ: output 1 hz.
   * @retval none.
   */
-void ertc_cal_output_select(ertc_cal_output_select_type output)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_cal_output_select(ertc_cal_output_select_type output) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  ERTC->ctrl_bit.calosel = output;
+    ERTC->ctrl_bit.calosel = output;
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -916,15 +838,14 @@ void ertc_cal_output_select(ertc_cal_output_select_type output)
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void ertc_cal_output_enable(confirm_state new_state)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_cal_output_enable(confirm_state new_state) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  ERTC->ctrl_bit.caloen = new_state;
+    ERTC->ctrl_bit.caloen = new_state;
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -936,42 +857,36 @@ void ertc_cal_output_enable(confirm_state new_state)
   * @param  decsbs: decrease sub second(0~0x7FFF).
   * @retval error_status (ERROR or SUCCESS).
   */
-error_status ertc_time_adjust(ertc_time_adjust_type add1s, uint32_t decsbs)
-{
-  ertc_reg_tadj_type reg;
+error_status ertc_time_adjust(ertc_time_adjust_type add1s, uint32_t decsbs) {
+    ertc_reg_tadj_type reg;
 
-  reg.tadj = 0;
+    reg.tadj = 0;
 
-  /* disable write protection */
-  ertc_write_protect_disable();
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  if(ertc_wait_flag(ERTC_TADJF_FLAG, SET) != SUCCESS)
-  {
-    return ERROR;
-  }
-
-  /* check if the reference clock detection is disabled */
-  if(ERTC->ctrl_bit.rcden == 0)
-  {
-    reg.tadj_bit.add1s = add1s;
-    reg.tadj_bit.decsbs = decsbs;
-
-    ERTC->tadj = reg.tadj;
-
-    if(ertc_wait_update() == ERROR)
-    {
-      return ERROR;
+    if (ertc_wait_flag(ERTC_TADJF_FLAG, SET) != SUCCESS) {
+        return ERROR;
     }
-  }
-  else
-  {
-    return ERROR;
-  }
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* check if the reference clock detection is disabled */
+    if (ERTC->ctrl_bit.rcden == 0) {
+        reg.tadj_bit.add1s = add1s;
+        reg.tadj_bit.decsbs = decsbs;
 
-  return SUCCESS;
+        ERTC->tadj = reg.tadj;
+
+        if (ertc_wait_update() == ERROR) {
+            return ERROR;
+        }
+    } else {
+        return ERROR;
+    }
+
+    /* enable write protection */
+    ertc_write_protect_enable();
+
+    return SUCCESS;
 }
 
 /**
@@ -986,24 +901,20 @@ error_status ertc_time_adjust(ertc_time_adjust_type add1s, uint32_t decsbs)
   *         - ERTC_DST_SAVE_1: set the bpr register value to 1.
   * @retval none.
   */
-void ertc_daylight_set(ertc_dst_operation_type operation, ertc_dst_save_type save)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_daylight_set(ertc_dst_operation_type operation, ertc_dst_save_type save) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  if(operation == ERTC_DST_ADD_1H)
-  {
-    ERTC->ctrl_bit.add1h = 1;
-  }
-  else
-  {
-    ERTC->ctrl_bit.dec1h = 1;
-  }
+    if (operation == ERTC_DST_ADD_1H) {
+        ERTC->ctrl_bit.add1h = 1;
+    } else {
+        ERTC->ctrl_bit.dec1h = 1;
+    }
 
-  ERTC->ctrl_bit.bpr = save;
+    ERTC->ctrl_bit.bpr = save;
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -1011,9 +922,8 @@ void ertc_daylight_set(ertc_dst_operation_type operation, ertc_dst_save_type sav
   * @param  none.
   * @retval bpr value.
   */
-uint8_t ertc_daylight_bpr_get(void)
-{
-  return ERTC->ctrl_bit.bpr;
+uint8_t ertc_daylight_bpr_get(void) {
+    return ERTC->ctrl_bit.bpr;
 }
 
 /**
@@ -1021,27 +931,25 @@ uint8_t ertc_daylight_bpr_get(void)
   * @param  new_state (TRUE or FALSE).
   * @retval error_status (ERROR or SUCCESS).
   */
-error_status ertc_refer_clock_detect_enable(confirm_state new_state)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+error_status ertc_refer_clock_detect_enable(confirm_state new_state) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  /* enter init mode */
-  if(ertc_init_mode_enter() != SUCCESS)
-  {
-    return ERROR;
-  }
+    /* enter init mode */
+    if (ertc_init_mode_enter() != SUCCESS) {
+        return ERROR;
+    }
 
-  /* write register */
-  ERTC->ctrl_bit.rcden = new_state;
+    /* write register */
+    ERTC->ctrl_bit.rcden = new_state;
 
-  /* exit init mode */
-  ertc_init_mode_exit();
+    /* exit init mode */
+    ertc_init_mode_exit();
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 
-  return SUCCESS;
+    return SUCCESS;
 }
 
 /**
@@ -1049,15 +957,14 @@ error_status ertc_refer_clock_detect_enable(confirm_state new_state)
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void ertc_direct_read_enable(confirm_state new_state)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_direct_read_enable(confirm_state new_state) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  ERTC->ctrl_bit.dren = new_state;
+    ERTC->ctrl_bit.dren = new_state;
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -1078,19 +985,18 @@ void ertc_direct_read_enable(confirm_state new_state)
   *         - ERTC_OUTPUT_TYPE_PUSH_PULL: push pull output.
   * @retval none.
   */
-void ertc_output_set(ertc_output_source_type source, ertc_output_polarity_type polarity, ertc_output_type type)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_output_set(ertc_output_source_type source, ertc_output_polarity_type polarity, ertc_output_type type) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  ERTC->ctrl_bit.outp = polarity;
+    ERTC->ctrl_bit.outp = polarity;
 
-  ERTC->tamp_bit.outtype = type;
+    ERTC->tamp_bit.outtype = type;
 
-  ERTC->ctrl_bit.outsel = source;
+    ERTC->ctrl_bit.outsel = source;
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -1101,15 +1007,14 @@ void ertc_output_set(ertc_output_source_type source, ertc_output_polarity_type p
   *         - ERTC_PIN_PA0: pa0 is used as timestamp detection pin.
   * @retval data value.
   */
-void ertc_timestamp_pin_select(ertc_pin_select_type pin)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_timestamp_pin_select(ertc_pin_select_type pin) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  ERTC->tamp_bit.tspin = pin;
+    ERTC->tamp_bit.tspin = pin;
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -1120,15 +1025,14 @@ void ertc_timestamp_pin_select(ertc_pin_select_type pin)
   *         - ERTC_TIMESTAMP_EDGE_FALLING: falling edge trigger.
   * @retval none.
   */
-void ertc_timestamp_valid_edge_set(ertc_timestamp_valid_edge_type edge)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_timestamp_valid_edge_set(ertc_timestamp_valid_edge_type edge) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  ERTC->ctrl_bit.tsedg = edge;
+    ERTC->ctrl_bit.tsedg = edge;
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -1136,15 +1040,14 @@ void ertc_timestamp_valid_edge_set(ertc_timestamp_valid_edge_type edge)
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void ertc_timestamp_enable(confirm_state new_state)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_timestamp_enable(confirm_state new_state) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  ERTC->ctrl_bit.tsen = new_state;
+    ERTC->ctrl_bit.tsen = new_state;
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -1153,22 +1056,21 @@ void ertc_timestamp_enable(confirm_state new_state)
   * @param  date: date.
   * @retval none.
   */
-void ertc_timestamp_get(ertc_time_type* time)
-{
-  ertc_reg_tstm_type tmtime;
-  ertc_reg_tsdt_type tmdate;
+void ertc_timestamp_get(ertc_time_type *time) {
+    ertc_reg_tstm_type tmtime;
+    ertc_reg_tsdt_type tmdate;
 
-  tmtime.tstm = ERTC->tstm;
-  tmdate.tsdt = ERTC->tsdt;
+    tmtime.tstm = ERTC->tstm;
+    tmdate.tsdt = ERTC->tsdt;
 
-  time->year  = 0;
-  time->month = ertc_bcd_to_num(tmdate.tsdt_bit.m);
-  time->day   = ertc_bcd_to_num(tmdate.tsdt_bit.d);
-  time->week  = ertc_bcd_to_num(tmdate.tsdt_bit.wk);
-  time->hour  = ertc_bcd_to_num(tmtime.tstm_bit.h);
-  time->min   = ertc_bcd_to_num(tmtime.tstm_bit.m);
-  time->sec   = ertc_bcd_to_num(tmtime.tstm_bit.s);
-  time->ampm  = (ertc_am_pm_type)tmtime.tstm_bit.ampm;
+    time->year  = 0;
+    time->month = ertc_bcd_to_num(tmdate.tsdt_bit.m);
+    time->day   = ertc_bcd_to_num(tmdate.tsdt_bit.d);
+    time->week  = ertc_bcd_to_num(tmdate.tsdt_bit.wk);
+    time->hour  = ertc_bcd_to_num(tmtime.tstm_bit.h);
+    time->min   = ertc_bcd_to_num(tmtime.tstm_bit.m);
+    time->sec   = ertc_bcd_to_num(tmtime.tstm_bit.s);
+    time->ampm  = (ertc_am_pm_type)tmtime.tstm_bit.ampm;
 }
 
 /**
@@ -1176,9 +1078,8 @@ void ertc_timestamp_get(ertc_time_type* time)
   * @param  none.
   * @retval timestamp sub second.
   */
-uint32_t ertc_timestamp_sub_second_get(void)
-{
-  return ERTC->tssbs_bit.sbs;
+uint32_t ertc_timestamp_sub_second_get(void) {
+    return ERTC->tssbs_bit.sbs;
 }
 
 /**
@@ -1189,15 +1090,14 @@ uint32_t ertc_timestamp_sub_second_get(void)
   *         - ERTC_PIN_PA0: pa0 is used as tamper 1 detection pin.
   * @retval data value.
   */
-void ertc_tamper_1_pin_select(ertc_pin_select_type pin)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_tamper_1_pin_select(ertc_pin_select_type pin) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  ERTC->tamp_bit.tp1pin = pin;
+    ERTC->tamp_bit.tp1pin = pin;
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -1205,15 +1105,14 @@ void ertc_tamper_1_pin_select(ertc_pin_select_type pin)
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void ertc_tamper_pull_up_enable(confirm_state new_state)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_tamper_pull_up_enable(confirm_state new_state) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  ERTC->tamp_bit.tppu = !new_state;
+    ERTC->tamp_bit.tppu = !new_state;
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -1226,15 +1125,14 @@ void ertc_tamper_pull_up_enable(confirm_state new_state)
   *         - ERTC_TAMPER_PR_8_ERTCCLK: pre-charge time is 8 ERTC_CLK.
   * @retval none.
   */
-void ertc_tamper_precharge_set(ertc_tamper_precharge_type precharge)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_tamper_precharge_set(ertc_tamper_precharge_type precharge) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  ERTC->tamp_bit.tppr = precharge;
+    ERTC->tamp_bit.tppr = precharge;
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -1247,15 +1145,14 @@ void ertc_tamper_precharge_set(ertc_tamper_precharge_type precharge)
   *         - ERTC_TAMPER_FILTER_8: 8 consecutive samples arw valid, effective tamper event.
   * @retval none.
   */
-void ertc_tamper_filter_set(ertc_tamper_filter_type filter)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_tamper_filter_set(ertc_tamper_filter_type filter) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  ERTC->tamp_bit.tpflt = filter;
+    ERTC->tamp_bit.tpflt = filter;
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -1272,15 +1169,14 @@ void ertc_tamper_filter_set(ertc_tamper_filter_type filter)
   *         - ERTC_TAMPER_FREQ_DIV_256: ERTC_CLK / 256.
   * @retval none.
   */
-void ertc_tamper_detect_freq_set(ertc_tamper_detect_freq_type freq)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_tamper_detect_freq_set(ertc_tamper_detect_freq_type freq) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  ERTC->tamp_bit.tpfreq = freq;
+    ERTC->tamp_bit.tpfreq = freq;
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -1298,22 +1194,18 @@ void ertc_tamper_detect_freq_set(ertc_tamper_detect_freq_type freq)
   * @param  alarm: alarm para.
   * @retval none.
   */
-void ertc_tamper_valid_edge_set(ertc_tamper_select_type tamper_x, ertc_tamper_valid_edge_type trigger)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_tamper_valid_edge_set(ertc_tamper_select_type tamper_x, ertc_tamper_valid_edge_type trigger) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  if(tamper_x == ERTC_TAMPER_1)
-  {
-    ERTC->tamp_bit.tp1edg = trigger;
-  }
-  else
-  {
-    ERTC->tamp_bit.tp2edg = trigger;
-  }
+    if (tamper_x == ERTC_TAMPER_1) {
+        ERTC->tamp_bit.tp1edg = trigger;
+    } else {
+        ERTC->tamp_bit.tp2edg = trigger;
+    }
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -1321,15 +1213,14 @@ void ertc_tamper_valid_edge_set(ertc_tamper_select_type tamper_x, ertc_tamper_va
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void ertc_tamper_timestamp_enable(confirm_state new_state)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_tamper_timestamp_enable(confirm_state new_state) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  ERTC->tamp_bit.tptsen = new_state;
+    ERTC->tamp_bit.tptsen = new_state;
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -1341,22 +1232,18 @@ void ertc_tamper_timestamp_enable(confirm_state new_state)
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void ertc_tamper_enable(ertc_tamper_select_type tamper_x, confirm_state new_state)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_tamper_enable(ertc_tamper_select_type tamper_x, confirm_state new_state) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  if(tamper_x == ERTC_TAMPER_1)
-  {
-    ERTC->tamp_bit.tp1en = new_state;
-  }
-  else
-  {
-    ERTC->tamp_bit.tp2en = new_state;
-  }
+    if (tamper_x == ERTC_TAMPER_1) {
+        ERTC->tamp_bit.tp1en = new_state;
+    } else {
+        ERTC->tamp_bit.tp2en = new_state;
+    }
 
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -1371,36 +1258,28 @@ void ertc_tamper_enable(ertc_tamper_select_type tamper_x, confirm_state new_stat
   * @param  new_state (TRUE or FALSE).
   * @retval none.
   */
-void ertc_interrupt_enable(uint32_t source, confirm_state new_state)
-{
-  /* disable write protection */
-  ertc_write_protect_disable();
+void ertc_interrupt_enable(uint32_t source, confirm_state new_state) {
+    /* disable write protection */
+    ertc_write_protect_disable();
 
-  if(source & ERTC_TP_INT)
-  {
-    if(new_state != FALSE)
-    {
-      ERTC->tamp |= ERTC_TP_INT;
-    }
-    else
-    {
-      ERTC->tamp &= ~ERTC_TP_INT;
+    if (source & ERTC_TP_INT) {
+        if (new_state != FALSE) {
+            ERTC->tamp |= ERTC_TP_INT;
+        } else {
+            ERTC->tamp &= ~ERTC_TP_INT;
+        }
+
+        source &= ~ERTC_TP_INT;
     }
 
-    source &= ~ERTC_TP_INT;
-  }
+    if (new_state != FALSE) {
+        ERTC->ctrl |= source;
+    } else {
+        ERTC->ctrl &= ~source;
+    }
 
-  if(new_state != FALSE)
-  {
-    ERTC->ctrl |= source;
-  }
-  else
-  {
-    ERTC->ctrl &= ~source;
-  }
-
-  /* enable write protection */
-  ertc_write_protect_enable();
+    /* enable write protection */
+    ertc_write_protect_enable();
 }
 
 /**
@@ -1414,28 +1293,20 @@ void ertc_interrupt_enable(uint32_t source, confirm_state new_state)
   *         - ERTC_TS_INT: timestamp interrupt.
   * @retval flag_status (SET or RESET)
   */
-flag_status ertc_interrupt_get(uint32_t source)
-{
-  if(source & ERTC_TP_INT)
-  {
-    if((ERTC->tamp & ERTC_TP_INT) != RESET)
-    {
-      return SET;
+flag_status ertc_interrupt_get(uint32_t source) {
+    if (source & ERTC_TP_INT) {
+        if ((ERTC->tamp & ERTC_TP_INT) != RESET) {
+            return SET;
+        } else {
+            return RESET;
+        }
     }
-    else
-    {
-      return RESET;
-    }
-  }
 
-  if((ERTC->ctrl & source) != RESET)
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+    if ((ERTC->ctrl & source) != RESET) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -1459,16 +1330,12 @@ flag_status ertc_interrupt_get(uint32_t source)
   *         - ERTC_CALUPDF_FLAG: calibration value update completed flag.
   * @retval the new state of flag (SET or RESET).
   */
-flag_status ertc_flag_get(uint32_t flag)
-{
-  if((ERTC->sts & flag) != (uint32_t)RESET)
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+flag_status ertc_flag_get(uint32_t flag) {
+    if ((ERTC->sts & flag) != (uint32_t)RESET) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -1483,41 +1350,36 @@ flag_status ertc_flag_get(uint32_t flag)
   *         - ERTC_TP2F_FLAG: tamper detection 2 flag.
   * @retval the new state of flag (SET or RESET).
   */
-flag_status ertc_interrupt_flag_get(uint32_t flag)
-{
-  __IO uint32_t iten = 0;
+flag_status ertc_interrupt_flag_get(uint32_t flag) {
+    __IO uint32_t iten = 0;
 
-  switch(flag)
-  {
-    case ERTC_ALAF_FLAG:
-      iten = ERTC->ctrl_bit.alaien;
-      break;
-    case ERTC_ALBF_FLAG:
-      iten = ERTC->ctrl_bit.albien;
-      break;
-    case ERTC_WATF_FLAG:
-      iten = ERTC->ctrl_bit.watien;
-      break;
-    case ERTC_TSF_FLAG:
-      iten = ERTC->ctrl_bit.tsien;
-      break;
-    case ERTC_TP1F_FLAG:
-    case ERTC_TP2F_FLAG:
-      iten = ERTC->tamp_bit.tpien;
-      break;
+    switch (flag) {
+        case ERTC_ALAF_FLAG:
+            iten = ERTC->ctrl_bit.alaien;
+            break;
+        case ERTC_ALBF_FLAG:
+            iten = ERTC->ctrl_bit.albien;
+            break;
+        case ERTC_WATF_FLAG:
+            iten = ERTC->ctrl_bit.watien;
+            break;
+        case ERTC_TSF_FLAG:
+            iten = ERTC->ctrl_bit.tsien;
+            break;
+        case ERTC_TP1F_FLAG:
+        case ERTC_TP2F_FLAG:
+            iten = ERTC->tamp_bit.tpien;
+            break;
 
-    default:
-      break;
-  }
+        default:
+            break;
+    }
 
-  if(((ERTC->sts & flag) != (uint32_t)RESET) && (iten))
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+    if (((ERTC->sts & flag) != (uint32_t)RESET) && (iten)) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -1541,9 +1403,8 @@ flag_status ertc_interrupt_flag_get(uint32_t flag)
   *         - ERTC_CALUPDF_FLAG: calibration value update completed flag.
   * @retval none
   */
-void ertc_flag_clear(uint32_t flag)
-{
-  ERTC->sts = ~(flag | 0x00000080) | (ERTC->sts_bit.imen << 7);
+void ertc_flag_clear(uint32_t flag) {
+    ERTC->sts = ~(flag | 0x00000080) | (ERTC->sts_bit.imen << 7);
 }
 
 /**
@@ -1558,13 +1419,12 @@ void ertc_flag_clear(uint32_t flag)
   * @param  data: data to be write.
   * @retval none.
   */
-void ertc_bpr_data_write(ertc_dt_type dt, uint32_t data)
-{
-  __IO uint32_t reg = 0;
+void ertc_bpr_data_write(ertc_dt_type dt, uint32_t data) {
+    __IO uint32_t reg = 0;
 
-  reg = ERTC_BASE + 0x50 + (dt * 4);
+    reg = ERTC_BASE + 0x50 + (dt * 4);
 
-  *(__IO uint32_t *)reg = data;
+    *(__IO uint32_t *)reg = data;
 }
 
 /**
@@ -1578,13 +1438,12 @@ void ertc_bpr_data_write(ertc_dt_type dt, uint32_t data)
   *         - ERTC_DT20
   * @retval data value.
   */
-uint32_t ertc_bpr_data_read(ertc_dt_type dt)
-{
-  __IO uint32_t reg = 0;
+uint32_t ertc_bpr_data_read(ertc_dt_type dt) {
+    __IO uint32_t reg = 0;
 
-  reg = ERTC_BASE + 0x50 + (dt * 4);
+    reg = ERTC_BASE + 0x50 + (dt * 4);
 
-  return (*(__IO uint32_t *)reg);
+    return (*(__IO uint32_t *)reg);
 }
 
 /**

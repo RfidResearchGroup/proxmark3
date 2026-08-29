@@ -17,7 +17,7 @@ STATIC_FORCE_INLINE uint32_t GetChipId(void) {
     return *(AT91C_DBGU_CIDR);
 }
 
-STATIC_FORCE_INLINE uint8_t* GetChipUniqueId(uint8_t *size) {
+STATIC_FORCE_INLINE uint8_t *GetChipUniqueId(uint8_t *size) {
     // !!! UNSUPPORTED !!!
     if (size) {
         *size = 0;
@@ -64,9 +64,9 @@ STATIC_FORCE_INLINE uint32_t GetChipFlashSize(void) {
 
 STATIC_FORCE_INLINE bool CheckRSTWithSRAMRetention(void) {
     if ((AT91C_BASE_RSTC->RSTC_RSR & AT91C_RSTC_RSTTYP) == AT91C_RSTC_RSTTYP_WATCHDOG ||
-        (AT91C_BASE_RSTC->RSTC_RSR & AT91C_RSTC_RSTTYP) == AT91C_RSTC_RSTTYP_SOFTWARE ||
-        (AT91C_BASE_RSTC->RSTC_RSR & AT91C_RSTC_RSTTYP) == AT91C_RSTC_RSTTYP_USER) {
-            return true;
+            (AT91C_BASE_RSTC->RSTC_RSR & AT91C_RSTC_RSTTYP) == AT91C_RSTC_RSTTYP_SOFTWARE ||
+            (AT91C_BASE_RSTC->RSTC_RSR & AT91C_RSTC_RSTTYP) == AT91C_RSTC_RSTTYP_USER) {
+        return true;
     }
     /* Otherwise, initialize it from scratch */
     return false;

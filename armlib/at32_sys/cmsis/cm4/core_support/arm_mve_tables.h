@@ -27,8 +27,8 @@
  * limitations under the License.
  */
 
- #ifndef _ARM_MVE_TABLES_H
- #define _ARM_MVE_TABLES_H
+#ifndef _ARM_MVE_TABLES_H
+#define _ARM_MVE_TABLES_H
 
 #include "arm_math_types.h"
 
@@ -38,7 +38,7 @@ extern "C"
 #endif
 
 
- 
+
 
 #if defined(ARM_MATH_MVEF) && !defined(ARM_MATH_AUTOVECTORIZE)
 

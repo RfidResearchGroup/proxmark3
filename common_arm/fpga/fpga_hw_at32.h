@@ -48,7 +48,7 @@ STATIC_FORCE_INLINE bool FPGA_SSC_RX_Ready(void) {
     // Only when the ROERR flag is set, it is necessary to read DT, so the '&&' condition is very important.
     // If the former does not hold, the DT register will not be read.
     return ((SPI_SSC->sts & (SPI_I2S_RDBF_FLAG | SPI_I2S_ROERR_FLAG)) == SPI_I2S_RDBF_FLAG)
-        || (((SPI_SSC->sts & SPI_I2S_ROERR_FLAG) == SPI_I2S_ROERR_FLAG) && (SPI_SSC->dt & 0)); // Readout data for clear the ROERR flag. IMPORTANT!
+           || (((SPI_SSC->sts & SPI_I2S_ROERR_FLAG) == SPI_I2S_ROERR_FLAG) && (SPI_SSC->dt & 0)); // Readout data for clear the ROERR flag. IMPORTANT!
 }
 
 STATIC_FORCE_INLINE bool FPGA_SSC_TX_Ready(void) {
@@ -107,7 +107,7 @@ STATIC_FORCE_INLINE void FPGA_SSC_DMA_RX_Enable(void) {
     DMA_CHANNEL_SSC->ctrl_bit.chen = 1;
 }
 
-STATIC_FORCE_INLINE uint32_t* FPGA_SSC_DMA_RX_Current_Address(void) {
+STATIC_FORCE_INLINE uint32_t *FPGA_SSC_DMA_RX_Current_Address(void) {
 
     // The DMA address of AT32 does not self increment. So reading the maddr register yields a fixed initial BUF starting address
     // We can calculate the current rx address: Starting address + Current rx count
@@ -118,7 +118,7 @@ STATIC_FORCE_INLINE uint32_t* FPGA_SSC_DMA_RX_Current_Address(void) {
 
     // Warn: Calc byte count first, last to convert to U32*
 
-    return (uint32_t*)((uint8_t*)DMA_CHANNEL_SSC->maddr + ((g_ssc_dma_rx_count - FPGA_SSC_DMA_RX_Remaining_Count()) * g_ssc_data_byte_width));
+    return (uint32_t *)((uint8_t *)DMA_CHANNEL_SSC->maddr + ((g_ssc_dma_rx_count - FPGA_SSC_DMA_RX_Remaining_Count()) * g_ssc_data_byte_width));
 }
 
 STATIC_FORCE_INLINE uint16_t FPGA_SSC_DMA_RX_Remaining_Count(void) {

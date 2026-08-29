@@ -409,6 +409,6 @@ void FpgaResetBitstream(void) {
 //----------------------------------------------------------------------------
 // The information of the bitstream of the FPGA that has been downloaded currently.
 //----------------------------------------------------------------------------
-const char* FpgaGetCurrentVersionString(void) {
+const char *FpgaGetCurrentVersionString(void) {
     return g_fpga_version_information[bitstream_target_to_index(downloaded_bitstream)].versionString;
 }

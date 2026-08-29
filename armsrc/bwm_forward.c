@@ -160,9 +160,13 @@ static void bwm_feed_byte(bwm_parser_t *p, uint8_t byte) {
     switch (p->state) {
         case S_IDLE:
             if (byte == BWM_HDR_SLAVE_BCAST_1) {
-                p->hdr1 = byte; p->is_bcast = true;  p->state = S_HDR2;
+                p->hdr1 = byte;
+                p->is_bcast = true;
+                p->state = S_HDR2;
             } else if (byte == BWM_HDR_SLAVE_RESP_1) {
-                p->hdr1 = byte; p->is_bcast = false; p->state = S_HDR2;
+                p->hdr1 = byte;
+                p->is_bcast = false;
+                p->state = S_HDR2;
             }
             // any other byte: stay idle (resync)
             break;
@@ -182,9 +186,21 @@ static void bwm_feed_byte(bwm_parser_t *p, uint8_t byte) {
             break;
         }
 
-        case S_CMD_LO:  p->cmd = byte;                 crc_step(p, byte); p->state = S_CMD_HI; break;
-        case S_CMD_HI:  p->cmd |= (uint16_t)byte << 8; crc_step(p, byte); p->state = S_LEN_LO; break;
-        case S_LEN_LO:  p->len = byte;                 crc_step(p, byte); p->state = S_LEN_HI; break;
+        case S_CMD_LO:
+            p->cmd = byte;
+            crc_step(p, byte);
+            p->state = S_CMD_HI;
+            break;
+        case S_CMD_HI:
+            p->cmd |= (uint16_t)byte << 8;
+            crc_step(p, byte);
+            p->state = S_LEN_LO;
+            break;
+        case S_LEN_LO:
+            p->len = byte;
+            crc_step(p, byte);
+            p->state = S_LEN_HI;
+            break;
         case S_LEN_HI:
             p->len |= (uint16_t)byte << 8;
             crc_step(p, byte);
@@ -204,7 +220,10 @@ static void bwm_feed_byte(bwm_parser_t *p, uint8_t byte) {
             }
             break;
 
-        case S_CRC_LO:  p->crc_recv = byte;                 p->state = S_CRC_HI; break;
+        case S_CRC_LO:
+            p->crc_recv = byte;
+            p->state = S_CRC_HI;
+            break;
         case S_CRC_HI:
             p->crc_recv |= (uint16_t)byte << 8;
             if (p->crc_recv == p->crc_calc) {
@@ -285,8 +304,8 @@ uint32_t bwm_read_ng(uint8_t *data, size_t len) {
             continue;
         }
         if (try++ >= maxtry) {
-            break;
-        }
+                break;
+            }
     }
     return out;
 }

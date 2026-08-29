@@ -91,7 +91,7 @@ typedef struct opj_mqc {
     /** Active context */
     const opj_mqc_state_t **curctx;
     /* lut_ctxno_zc shifted by (1 << 9) * bandno */
-    const OPJ_BYTE* lut_ctxno_zc_orient;
+    const OPJ_BYTE *lut_ctxno_zc_orient;
     /** Original value of the 2 bytes at end[0] and end[1] */
     OPJ_BYTE backup[OPJ_COMMON_CBLK_DATA_EXTRA];
 } opj_mqc_t;

@@ -274,7 +274,7 @@ int BUTTON_CLICKED(int ms) {
             if (BUTTON_PRESS())
                 return BUTTON_DOUBLE_CLICK;
 
-            // Have we ran out of time to double click?
+        // Have we ran out of time to double click?
             else if (ms <= 0)
                 // At least we did a single click
                 return BUTTON_SINGLE_CLICK;

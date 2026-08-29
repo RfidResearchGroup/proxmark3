@@ -288,7 +288,7 @@ static int check_segs(flash_file_t *ctx, int can_write_bl, flash_dev_t *flash_de
 static int print_and_validate_version(flash_file_t *ctx) {
     if (!CheckValidInformationMagic(ctx->ver_info)) {
         PrintAndLogEx(ERR, _RED_("ELF file does not contain valid version information"
-                           "(magic = 0x%08x)"), ctx->ver_info->magic);
+                                 "(magic = 0x%08x)"), ctx->ver_info->magic);
         return PM3_EFILE;
     }
 
@@ -733,7 +733,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, flash_dev
             PrintAndLogEx(ERR, _RED_("Bootloader does not support CMD_CHIP_TYPE, assuming AT91 platform"));
             flash_dev->chiptype = MAIN_CHIP_TYPE_AT91;
             flash_suggest_update_bootloader(bl_targeted);
-            // break; -> Don't break !!! We want to execute the code for MAIN_CHIP_TYPE_AT91 as well to initialize flash_dev with correct values.
+        // break; -> Don't break !!! We want to execute the code for MAIN_CHIP_TYPE_AT91 as well to initialize flash_dev with correct values.
 
         case MAIN_CHIP_TYPE_AT91:
         default:

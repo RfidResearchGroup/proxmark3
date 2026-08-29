@@ -60,49 +60,48 @@ unsigned int system_core_clock           = HICK_VALUE; /*!< system clock frequen
   * @param  none
   * @retval none
   */
-void SystemInit (void)
-{
+void SystemInit(void) {
 #if defined (__FPU_USED) && (__FPU_USED == 1U)
-  SCB->CPACR |= ((3U << 10U * 2U) |         /* set cp10 full access */
-                 (3U << 11U * 2U)  );       /* set cp11 full access */
+    SCB->CPACR |= ((3U << 10U * 2U) |         /* set cp10 full access */
+                   (3U << 11U * 2U));         /* set cp11 full access */
 #endif
 
-  /* reset the crm clock configuration to the default reset state(for debug purpose) */
-  /* set hicken bit */
-  CRM->ctrl_bit.hicken = TRUE;
+    /* reset the crm clock configuration to the default reset state(for debug purpose) */
+    /* set hicken bit */
+    CRM->ctrl_bit.hicken = TRUE;
 
-  /* wait hick stable */
-  while(CRM->ctrl_bit.hickstbl != SET);
+    /* wait hick stable */
+    while (CRM->ctrl_bit.hickstbl != SET);
 
-  /* hick used as system clock */
-  CRM->cfg_bit.sclksel = CRM_SCLK_HICK;
+    /* hick used as system clock */
+    CRM->cfg_bit.sclksel = CRM_SCLK_HICK;
 
-  /* wait sclk switch status */
-  while(CRM->cfg_bit.sclksts != CRM_SCLK_HICK);
+    /* wait sclk switch status */
+    while (CRM->cfg_bit.sclksts != CRM_SCLK_HICK);
 
-  /* reset hexten, hextbyps, cfden and pllen bits */
-  CRM->ctrl &= ~(0x010D0000U);
+    /* reset hexten, hextbyps, cfden and pllen bits */
+    CRM->ctrl &= ~(0x010D0000U);
 
-  /* reset cfg register, include sclk switch, ahbdiv, apb1div, apb2div, adcdiv, clkout bits */
-  CRM->cfg = 0;
+    /* reset cfg register, include sclk switch, ahbdiv, apb1div, apb2div, adcdiv, clkout bits */
+    CRM->cfg = 0;
 
-  /* reset pllms pllns pllfr pllrcs bits */
-  CRM->pllcfg = 0x00033002U;
+    /* reset pllms pllns pllfr pllrcs bits */
+    CRM->pllcfg = 0x00033002U;
 
-  /* reset clkout[3], usbbufs, hickdiv, clkoutdiv */
-  CRM->misc1 = 0;
+    /* reset clkout[3], usbbufs, hickdiv, clkoutdiv */
+    CRM->misc1 = 0;
 
-  /* disable all interrupts enable and clear pending bits  */
-  CRM->clkint = 0x009F0000U;
+    /* disable all interrupts enable and clear pending bits  */
+    CRM->clkint = 0x009F0000U;
 
-  /*
-   * TODO DXL 这里重新设置了中断向量表，有问题
-#ifdef VECT_TAB_SRAM
-  SCB->VTOR = SRAM_BASE  | VECT_TAB_OFFSET;  // vector table relocation in internal sram.
-#else
-  SCB->VTOR = FLASH_BASE | VECT_TAB_OFFSET;  // vector table relocation in internal flash.
-#endif
-   */
+    /*
+     * TODO DXL 这里重新设置了中断向量表，有问题
+    #ifdef VECT_TAB_SRAM
+    SCB->VTOR = SRAM_BASE  | VECT_TAB_OFFSET;  // vector table relocation in internal sram.
+    #else
+    SCB->VTOR = FLASH_BASE | VECT_TAB_OFFSET;  // vector table relocation in internal flash.
+    #endif
+     */
 }
 
 /**
@@ -113,72 +112,67 @@ void SystemInit (void)
   * @param  none
   * @retval none
   */
-void system_core_clock_update(void)
-{
-  uint32_t pll_ns = 0, pll_ms = 0, pll_fr = 0, pll_clock_source = 0, pllrcsfreq = 0;
-  uint32_t temp = 0, div_value = 0;
-  crm_sclk_type sclk_source;
+void system_core_clock_update(void) {
+    uint32_t pll_ns = 0, pll_ms = 0, pll_fr = 0, pll_clock_source = 0, pllrcsfreq = 0;
+    uint32_t temp = 0, div_value = 0;
+    crm_sclk_type sclk_source;
 
-  static const uint8_t sys_ahb_div_table[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};
-  static const uint8_t pll_fr_table[6] = {1, 2, 4, 8, 16, 32};
+    static const uint8_t sys_ahb_div_table[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};
+    static const uint8_t pll_fr_table[6] = {1, 2, 4, 8, 16, 32};
 
-  /* get sclk source */
-  sclk_source = crm_sysclk_switch_status_get();
+    /* get sclk source */
+    sclk_source = crm_sysclk_switch_status_get();
 
-  switch(sclk_source)
-  {
-    case CRM_SCLK_HICK:
-      if(((CRM->misc1_bit.hick_to_sclk) != RESET) && ((CRM->misc1_bit.hickdiv) != RESET))
-        system_core_clock = HICK_VALUE * 6;
-      else
-        system_core_clock = HICK_VALUE;
-      break;
-    case CRM_SCLK_HEXT:
-      system_core_clock = HEXT_VALUE;
-      break;
-    case CRM_SCLK_PLL:
-      /* get pll clock source */
-      pll_clock_source = CRM->pllcfg_bit.pllrcs;
+    switch (sclk_source) {
+        case CRM_SCLK_HICK:
+            if (((CRM->misc1_bit.hick_to_sclk) != RESET) && ((CRM->misc1_bit.hickdiv) != RESET))
+                system_core_clock = HICK_VALUE * 6;
+            else
+                system_core_clock = HICK_VALUE;
+            break;
+        case CRM_SCLK_HEXT:
+            system_core_clock = HEXT_VALUE;
+            break;
+        case CRM_SCLK_PLL:
+            /* get pll clock source */
+            pll_clock_source = CRM->pllcfg_bit.pllrcs;
 
-      /* get multiplication factor */
-      pll_ns = CRM->pllcfg_bit.pllns;
-      pll_ms = CRM->pllcfg_bit.pllms;
-      pll_fr = pll_fr_table[CRM->pllcfg_bit.pllfr];
+            /* get multiplication factor */
+            pll_ns = CRM->pllcfg_bit.pllns;
+            pll_ms = CRM->pllcfg_bit.pllms;
+            pll_fr = pll_fr_table[CRM->pllcfg_bit.pllfr];
 
-      if (pll_clock_source == CRM_PLL_SOURCE_HICK)
-      {
-        /* hick selected as pll clock entry */
-        pllrcsfreq = HICK_VALUE;
-      }
-      else
-      {
-        /* hext selected as pll clock entry */
-        pllrcsfreq = HEXT_VALUE;
-      }
+            if (pll_clock_source == CRM_PLL_SOURCE_HICK) {
+                /* hick selected as pll clock entry */
+                pllrcsfreq = HICK_VALUE;
+            } else {
+                /* hext selected as pll clock entry */
+                pllrcsfreq = HEXT_VALUE;
+            }
 
-      // TODO DXL For fix error: undefined reference to `__aeabi_uldivmod'
-      // 1. After code review, I found that pll_ns generally does not exceed 144, that is, it can be treated as u32.
-      //  However, for the robustness of firmware, we still need to make error judgments.
-      if (pllrcsfreq * pll_ns > UINT32_MAX) {
-        while (1) {
-          __NOP(); // !!! Fix me !!!
-        }
-      }
-      system_core_clock = pllrcsfreq * pll_ns / (pll_ms * pll_fr);
-      // 2. If u64 division is necessary, it is better to link to gcc(-lgcc), but the firmware size will increase.
-      // system_core_clock = (uint32_t)(((uint64_t)pllrcsfreq * pll_ns) / (pll_ms * pll_fr));
-      break;
-    default:
-      system_core_clock = HICK_VALUE;
-      break;
-  }
+            // TODO DXL For fix error: undefined reference to `__aeabi_uldivmod'
+            // 1. After code review, I found that pll_ns generally does not exceed 144, that is, it can be treated as u32.
+            //  However, for the robustness of firmware, we still need to make error judgments.
+            if (pllrcsfreq * pll_ns > UINT32_MAX) {
+                while (1) {
+                    __NOP(); // !!! Fix me !!!
+                }
+            }
+            system_core_clock = pllrcsfreq * pll_ns / (pll_ms * pll_fr);
+            // 2. If u64 division is necessary, it is better to link to gcc(-lgcc), but the firmware size will increase.
+            // system_core_clock = (uint32_t)(((uint64_t)pllrcsfreq * pll_ns) / (pll_ms * pll_fr));
+            break;
+        default:
+            system_core_clock = HICK_VALUE;
+            break;
+    }
 
-  /* compute sclk, ahbclk frequency */
-  /* get ahb division */
-  temp = CRM->cfg_bit.ahbdiv;
-  div_value = sys_ahb_div_table[temp];
-  /* ahbclk frequency */
-  system_core_clock = system_core_clock >> div_value;
+    /* compute sclk, ahbclk frequency */
+    /* get ahb division */
+    temp = CRM->cfg_bit.ahbdiv;
+    div_value = sys_ahb_div_table[temp];
+    /* ahbclk frequency */
+    system_core_clock = system_core_clock >> div_value;
 }
 /**
   * @}

@@ -64,7 +64,7 @@ void AdcSetupRssiChannel(adc_rssi_ch_t ch) {
     // get vref value, ADC_CHANNEL_17 is fixed, don't change!!!
     adc_ordinary_channel_set(AT32_RSSI_ADC, ADC_CHANNEL_17, 1, ADC_SAMPLETIME_640_5);
     AdcRssiConversionStart();
-    while(adc_flag_get(AT32_RSSI_ADC, ADC_OCCE_FLAG) == RESET); // Waiting for adc conversion done.
+    while (adc_flag_get(AT32_RSSI_ADC, ADC_OCCE_FLAG) == RESET); // Waiting for adc conversion done.
     // printf("vref_value = %f V\r\n", ((double)1.2 * 4095) / adc1_ordinary_value);
     g_adc_vref_value = adc_ordinary_conversion_data_get(AT32_RSSI_ADC);
 

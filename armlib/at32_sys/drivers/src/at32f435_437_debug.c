@@ -45,9 +45,8 @@
   * @param  none
   * @retval the debug device id
   */
-uint32_t debug_device_id_get(void)
-{
-  return DEBUGMCU->pid;
+uint32_t debug_device_id_get(void) {
+    return DEBUGMCU->pid;
 }
 /**
   * @brief  set periph debug mode
@@ -59,16 +58,12 @@ uint32_t debug_device_id_get(void)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void debug_low_power_mode_set(uint32_t low_power_mode, confirm_state new_state)
-{
-  if(new_state != FALSE)
-  {
-    DEBUGMCU->ctrl |= low_power_mode;
-  }
-  else
-  {
-    DEBUGMCU->ctrl &= ~low_power_mode;
-  }
+void debug_low_power_mode_set(uint32_t low_power_mode, confirm_state new_state) {
+    if (new_state != FALSE) {
+        DEBUGMCU->ctrl |= low_power_mode;
+    } else {
+        DEBUGMCU->ctrl &= ~low_power_mode;
+    }
 }
 /**
   * @brief  set apb1 periph debug mode
@@ -86,16 +81,12 @@ void debug_low_power_mode_set(uint32_t low_power_mode, confirm_state new_state)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void debug_apb1_periph_mode_set(uint32_t apb1_periph, confirm_state new_state)
-{
-  if(new_state != FALSE)
-  {
-    DEBUGMCU->apb1_frz |= apb1_periph;
-  }
-  else
-  {
-    DEBUGMCU->apb1_frz &= ~apb1_periph;
-  }
+void debug_apb1_periph_mode_set(uint32_t apb1_periph, confirm_state new_state) {
+    if (new_state != FALSE) {
+        DEBUGMCU->apb1_frz |= apb1_periph;
+    } else {
+        DEBUGMCU->apb1_frz &= ~apb1_periph;
+    }
 }
 /**
   * @brief  set apb2 periph debug mode
@@ -107,16 +98,12 @@ void debug_apb1_periph_mode_set(uint32_t apb1_periph, confirm_state new_state)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void debug_apb2_periph_mode_set(uint32_t apb2_periph, confirm_state new_state)
-{
-  if(new_state != FALSE)
-  {
-    DEBUGMCU->apb2_frz |= apb2_periph;
-  }
-  else
-  {
-    DEBUGMCU->apb2_frz &= ~apb2_periph;
-  }
+void debug_apb2_periph_mode_set(uint32_t apb2_periph, confirm_state new_state) {
+    if (new_state != FALSE) {
+        DEBUGMCU->apb2_frz |= apb2_periph;
+    } else {
+        DEBUGMCU->apb2_frz &= ~apb2_periph;
+    }
 }
 
 /**

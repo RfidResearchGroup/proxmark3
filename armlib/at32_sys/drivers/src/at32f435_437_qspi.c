@@ -48,18 +48,14 @@
   *         QSPI1,QSPI2.
   * @retval none
   */
-void qspi_reset(qspi_type* qspi_x)
-{
-  if(qspi_x == QSPI1)
-  {
-    crm_periph_reset(CRM_QSPI1_PERIPH_RESET, TRUE);
-    crm_periph_reset(CRM_QSPI1_PERIPH_RESET, FALSE);
-  }
-  else if(qspi_x == QSPI2)
-  {
-    crm_periph_reset(CRM_QSPI2_PERIPH_RESET, TRUE);
-    crm_periph_reset(CRM_QSPI2_PERIPH_RESET, FALSE);
-  }
+void qspi_reset(qspi_type *qspi_x) {
+    if (qspi_x == QSPI1) {
+        crm_periph_reset(CRM_QSPI1_PERIPH_RESET, TRUE);
+        crm_periph_reset(CRM_QSPI1_PERIPH_RESET, FALSE);
+    } else if (qspi_x == QSPI2) {
+        crm_periph_reset(CRM_QSPI2_PERIPH_RESET, TRUE);
+        crm_periph_reset(CRM_QSPI2_PERIPH_RESET, FALSE);
+    }
 }
 
 /**
@@ -71,9 +67,8 @@ void qspi_reset(qspi_type* qspi_x)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void qspi_encryption_enable(qspi_type* qspi_x, confirm_state new_state)
-{
-  qspi_x->ctrl_bit.keyen = new_state;
+void qspi_encryption_enable(qspi_type *qspi_x, confirm_state new_state) {
+    qspi_x->ctrl_bit.keyen = new_state;
 }
 
 /**
@@ -88,9 +83,8 @@ void qspi_encryption_enable(qspi_type* qspi_x, confirm_state new_state)
   *         - QSPI_SCK_MODE_3
   * @retval none
   */
-void qspi_sck_mode_set(qspi_type* qspi_x, qspi_clk_mode_type new_mode)
-{
-  qspi_x->ctrl_bit.sckmode = new_mode;
+void qspi_sck_mode_set(qspi_type *qspi_x, qspi_clk_mode_type new_mode) {
+    qspi_x->ctrl_bit.sckmode = new_mode;
 }
 
 /**
@@ -111,9 +105,8 @@ void qspi_sck_mode_set(qspi_type* qspi_x, qspi_clk_mode_type new_mode)
   *         - QSPI_CLK_DIV_12
   * @retval none
   */
-void qspi_clk_division_set(qspi_type* qspi_x, qspi_clk_div_type new_clkdiv)
-{
-  qspi_x->ctrl_bit.clkdiv = new_clkdiv;
+void qspi_clk_division_set(qspi_type *qspi_x, qspi_clk_div_type new_clkdiv) {
+    qspi_x->ctrl_bit.clkdiv = new_clkdiv;
 }
 
 /**
@@ -128,9 +121,8 @@ void qspi_clk_division_set(qspi_type* qspi_x, qspi_clk_div_type new_clkdiv)
   *         FALSE: enable cache
   * @retval none
   */
-void qspi_xip_cache_bypass_set(qspi_type* qspi_x, confirm_state new_state)
-{
-  qspi_x->xip_cmd_w3_bit.bypassc = new_state;
+void qspi_xip_cache_bypass_set(qspi_type *qspi_x, confirm_state new_state) {
+    qspi_x->xip_cmd_w3_bit.bypassc = new_state;
 }
 
 /**
@@ -142,9 +134,8 @@ void qspi_xip_cache_bypass_set(qspi_type* qspi_x, confirm_state new_state)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void qspi_interrupt_enable(qspi_type* qspi_x, confirm_state new_state)
-{
-  qspi_x->ctrl2_bit.cmdie = new_state;
+void qspi_interrupt_enable(qspi_type *qspi_x, confirm_state new_state) {
+    qspi_x->ctrl2_bit.cmdie = new_state;
 }
 
 /**
@@ -159,24 +150,22 @@ void qspi_interrupt_enable(qspi_type* qspi_x, confirm_state new_state)
   *         - QSPI_CMDSTS_FLAG
   * @retval the new state of the flag (SET or RESET).
   */
-flag_status qspi_flag_get(qspi_type* qspi_x, uint32_t flag)
-{
-  flag_status bit_status = RESET;
-  switch(flag)
-  {
-    case QSPI_RXFIFORDY_FLAG:
-      bit_status = (flag_status)qspi_x->fifosts_bit.rxfifordy;
-      break;
-    case QSPI_TXFIFORDY_FLAG:
-      bit_status = (flag_status)qspi_x->fifosts_bit.txfifordy;
-      break;
-    case QSPI_CMDSTS_FLAG:
-      bit_status = (flag_status)qspi_x->cmdsts_bit.cmdsts;
-      break;
-    default:
-      break;
-  }
-  return bit_status;
+flag_status qspi_flag_get(qspi_type *qspi_x, uint32_t flag) {
+    flag_status bit_status = RESET;
+    switch (flag) {
+        case QSPI_RXFIFORDY_FLAG:
+            bit_status = (flag_status)qspi_x->fifosts_bit.rxfifordy;
+            break;
+        case QSPI_TXFIFORDY_FLAG:
+            bit_status = (flag_status)qspi_x->fifosts_bit.txfifordy;
+            break;
+        case QSPI_CMDSTS_FLAG:
+            bit_status = (flag_status)qspi_x->cmdsts_bit.cmdsts;
+            break;
+        default:
+            break;
+    }
+    return bit_status;
 }
 
 /**
@@ -187,14 +176,13 @@ flag_status qspi_flag_get(qspi_type* qspi_x, uint32_t flag)
   * @param  flag: only QSPI_CMDSTS_FLAG valid.
   * @retval the new state of the flag (SET or RESET).
   */
-flag_status qspi_interrupt_flag_get(qspi_type* qspi_x, uint32_t flag)
-{
-  if(QSPI_CMDSTS_FLAG != flag)
-    return RESET;
-  if(qspi_x->cmdsts_bit.cmdsts && qspi_x->ctrl2_bit.cmdie)
-    return SET;
-  else
-    return RESET;
+flag_status qspi_interrupt_flag_get(qspi_type *qspi_x, uint32_t flag) {
+    if (QSPI_CMDSTS_FLAG != flag)
+        return RESET;
+    if (qspi_x->cmdsts_bit.cmdsts && qspi_x->ctrl2_bit.cmdie)
+        return SET;
+    else
+        return RESET;
 }
 
 /**
@@ -207,9 +195,8 @@ flag_status qspi_interrupt_flag_get(qspi_type* qspi_x, uint32_t flag)
   *         - QSPI_CMDSTS_FLAG
   * @retval none
   */
-void qspi_flag_clear(qspi_type* qspi_x, uint32_t flag)
-{
-  qspi_x->cmdsts = flag;
+void qspi_flag_clear(qspi_type *qspi_x, uint32_t flag) {
+    qspi_x->cmdsts = flag;
 }
 
 /**
@@ -225,9 +212,8 @@ void qspi_flag_clear(qspi_type* qspi_x, uint32_t flag)
   *         - QSPI_DMA_FIFO_THOD_WORD24
   * @retval none
   */
-void qspi_dma_rx_threshold_set(qspi_type* qspi_x, qspi_dma_fifo_thod_type new_threshold)
-{
-  qspi_x->ctrl2_bit.rxfifo_thod = new_threshold;
+void qspi_dma_rx_threshold_set(qspi_type *qspi_x, qspi_dma_fifo_thod_type new_threshold) {
+    qspi_x->ctrl2_bit.rxfifo_thod = new_threshold;
 }
 
 /**
@@ -243,9 +229,8 @@ void qspi_dma_rx_threshold_set(qspi_type* qspi_x, qspi_dma_fifo_thod_type new_th
   *         - QSPI_DMA_FIFO_THOD_WORD24
   * @retval none
   */
-void qspi_dma_tx_threshold_set(qspi_type* qspi_x, qspi_dma_fifo_thod_type new_threshold)
-{
-  qspi_x->ctrl2_bit.txfifo_thod = new_threshold;
+void qspi_dma_tx_threshold_set(qspi_type *qspi_x, qspi_dma_fifo_thod_type new_threshold) {
+    qspi_x->ctrl2_bit.txfifo_thod = new_threshold;
 }
 
 /**
@@ -257,9 +242,8 @@ void qspi_dma_tx_threshold_set(qspi_type* qspi_x, qspi_dma_fifo_thod_type new_th
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void qspi_dma_enable(qspi_type* qspi_x, confirm_state new_state)
-{
-  qspi_x->ctrl2_bit.dmaen = new_state;
+void qspi_dma_enable(qspi_type *qspi_x, confirm_state new_state) {
+    qspi_x->ctrl2_bit.dmaen = new_state;
 }
 
 /**
@@ -280,9 +264,8 @@ void qspi_dma_enable(qspi_type* qspi_x, confirm_state new_state)
   *         - QSPI_BUSY_OFFSET_7
   * @retval none
   */
-void qspi_busy_config(qspi_type* qspi_x, qspi_busy_pos_type busy_pos)
-{
-  qspi_x->ctrl_bit.busy = busy_pos;
+void qspi_busy_config(qspi_type *qspi_x, qspi_busy_pos_type busy_pos) {
+    qspi_x->ctrl_bit.busy = busy_pos;
 }
 
 /**
@@ -293,48 +276,43 @@ void qspi_busy_config(qspi_type* qspi_x, qspi_busy_pos_type busy_pos)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void qspi_xip_enable(qspi_type* qspi_x, confirm_state new_state)
-{
-  register uint16_t dly=0;
-  /* skip if state is no change */
-  if(new_state == (confirm_state)(qspi_x->ctrl_bit.xipsel))
-  {
-    return;
-  }
+void qspi_xip_enable(qspi_type *qspi_x, confirm_state new_state) {
+    register uint16_t dly = 0;
+    /* skip if state is no change */
+    if (new_state == (confirm_state)(qspi_x->ctrl_bit.xipsel)) {
+        return;
+    }
 
-  /* wait until tx fifo is empty*/
-  while(qspi_x->fifosts_bit.txfifordy == 0);
+    /* wait until tx fifo is empty*/
+    while (qspi_x->fifosts_bit.txfifordy == 0);
 
-  /* make sure IO is transmitted */
-  dly = 64;
-  while(dly--)
-  {
-    __NOP();
-  }
-  
-  /* flush and reset qspi state */
-  qspi_x->ctrl_bit.xiprcmdf = 1;
+    /* make sure IO is transmitted */
+    dly = 64;
+    while (dly--) {
+        __NOP();
+    }
 
-  /* wait until action is finished */
-  while(qspi_x->ctrl_bit.abort);
+    /* flush and reset qspi state */
+    qspi_x->ctrl_bit.xiprcmdf = 1;
 
-  /* make sure IO is transmitted */
-  dly = 64;
-  while(dly--)
-  {
-    __NOP();
-  }
-  /* set xip mode to new state */
-  qspi_x->ctrl_bit.xipsel = new_state;
+    /* wait until action is finished */
+    while (qspi_x->ctrl_bit.abort);
 
-  /* wait until abort is not set */
-  while(qspi_x->ctrl_bit.abort);
+    /* make sure IO is transmitted */
+    dly = 64;
+    while (dly--) {
+        __NOP();
+    }
+    /* set xip mode to new state */
+    qspi_x->ctrl_bit.xipsel = new_state;
 
-  /* wait until cache status valid*/
-  if(new_state == TRUE)
-  {
-    while( qspi_x->xip_cmd_w3_bit.csts );
-  }
+    /* wait until abort is not set */
+    while (qspi_x->ctrl_bit.abort);
+
+    /* wait until cache status valid*/
+    if (new_state == TRUE) {
+        while (qspi_x->xip_cmd_w3_bit.csts);
+    }
 }
 
 /**
@@ -345,31 +323,30 @@ void qspi_xip_enable(qspi_type* qspi_x, confirm_state new_state)
   * @param  qspi_cmd_struct: pointer to qspi cmd structure
   * @retval none
   */
-void qspi_cmd_operation_kick(qspi_type* qspi_x, qspi_cmd_type* qspi_cmd_struct)
-{
-  uint32_t w1_val = 0, w3_val = 0;
+void qspi_cmd_operation_kick(qspi_type *qspi_x, qspi_cmd_type *qspi_cmd_struct) {
+    uint32_t w1_val = 0, w3_val = 0;
 
-  /* config analyse cmd_w0 register */
-  qspi_x->cmd_w0 = (uint32_t)qspi_cmd_struct->address_code;
+    /* config analyse cmd_w0 register */
+    qspi_x->cmd_w0 = (uint32_t)qspi_cmd_struct->address_code;
 
-  /* config analyse cmd_w1 register */
-  w1_val = (uint32_t)qspi_cmd_struct->address_length;
-  w1_val |= (uint32_t)(qspi_cmd_struct->second_dummy_cycle_num << 16);
-  w1_val |= (uint32_t)(qspi_cmd_struct->instruction_length << 24);
-  w1_val |= (uint32_t)(qspi_cmd_struct->pe_mode_enable << 28);
-  qspi_x->cmd_w1 = w1_val;
+    /* config analyse cmd_w1 register */
+    w1_val = (uint32_t)qspi_cmd_struct->address_length;
+    w1_val |= (uint32_t)(qspi_cmd_struct->second_dummy_cycle_num << 16);
+    w1_val |= (uint32_t)(qspi_cmd_struct->instruction_length << 24);
+    w1_val |= (uint32_t)(qspi_cmd_struct->pe_mode_enable << 28);
+    qspi_x->cmd_w1 = w1_val;
 
-  /* config analyse cmd_w2 register */
-  qspi_x->cmd_w2 = (uint32_t)qspi_cmd_struct->data_counter;
+    /* config analyse cmd_w2 register */
+    qspi_x->cmd_w2 = (uint32_t)qspi_cmd_struct->data_counter;
 
-  /* config analyse cmd_w3 register */
-  w3_val = (uint32_t)(qspi_cmd_struct->write_data_enable << 1);
-  w3_val |= (uint32_t)(qspi_cmd_struct->read_status_enable << 2);
-  w3_val |= (uint32_t)(qspi_cmd_struct->read_status_config << 3);
-  w3_val |= (uint32_t)(qspi_cmd_struct->operation_mode << 5);
-  w3_val |= (uint32_t)(qspi_cmd_struct->pe_mode_operate_code << 16);
-  w3_val |= (uint32_t)(qspi_cmd_struct->instruction_code << 24);
-  qspi_x->cmd_w3 = w3_val;
+    /* config analyse cmd_w3 register */
+    w3_val = (uint32_t)(qspi_cmd_struct->write_data_enable << 1);
+    w3_val |= (uint32_t)(qspi_cmd_struct->read_status_enable << 2);
+    w3_val |= (uint32_t)(qspi_cmd_struct->read_status_config << 3);
+    w3_val |= (uint32_t)(qspi_cmd_struct->operation_mode << 5);
+    w3_val |= (uint32_t)(qspi_cmd_struct->pe_mode_operate_code << 16);
+    w3_val |= (uint32_t)(qspi_cmd_struct->instruction_code << 24);
+    qspi_x->cmd_w3 = w3_val;
 }
 
 /**
@@ -380,31 +357,30 @@ void qspi_cmd_operation_kick(qspi_type* qspi_x, qspi_cmd_type* qspi_cmd_struct)
   * @param  xip_init_struct: pointer to xip init structure.
   * @retval none.
   */
-void qspi_xip_init(qspi_type* qspi_x, qspi_xip_type* xip_init_struct)
-{
-  uint32_t xc0_val = 0, xc1_val = 0, xc2_val = 0;
-  /* config analyse xip_cmd_w0 register */
-  xc0_val = (uint32_t)xip_init_struct->read_second_dummy_cycle_num;
-  xc0_val |= (uint32_t)(xip_init_struct->read_operation_mode << 8);
-  xc0_val |= (uint32_t)(xip_init_struct->read_address_length << 11);
-  xc0_val |= (uint32_t)(xip_init_struct->read_instruction_code << 12);
-  qspi_x->xip_cmd_w0 = xc0_val;
+void qspi_xip_init(qspi_type *qspi_x, qspi_xip_type *xip_init_struct) {
+    uint32_t xc0_val = 0, xc1_val = 0, xc2_val = 0;
+    /* config analyse xip_cmd_w0 register */
+    xc0_val = (uint32_t)xip_init_struct->read_second_dummy_cycle_num;
+    xc0_val |= (uint32_t)(xip_init_struct->read_operation_mode << 8);
+    xc0_val |= (uint32_t)(xip_init_struct->read_address_length << 11);
+    xc0_val |= (uint32_t)(xip_init_struct->read_instruction_code << 12);
+    qspi_x->xip_cmd_w0 = xc0_val;
 
-  /* config analyse xip_cmd_w1 register */
-  xc1_val = (uint32_t)xip_init_struct->write_second_dummy_cycle_num;
-  xc1_val |= (uint32_t)(xip_init_struct->write_operation_mode << 8);
-  xc1_val |= (uint32_t)(xip_init_struct->write_address_length << 11);
-  xc1_val |= (uint32_t)(xip_init_struct->write_instruction_code << 12);
-  qspi_x->xip_cmd_w1 = xc1_val;
+    /* config analyse xip_cmd_w1 register */
+    xc1_val = (uint32_t)xip_init_struct->write_second_dummy_cycle_num;
+    xc1_val |= (uint32_t)(xip_init_struct->write_operation_mode << 8);
+    xc1_val |= (uint32_t)(xip_init_struct->write_address_length << 11);
+    xc1_val |= (uint32_t)(xip_init_struct->write_instruction_code << 12);
+    qspi_x->xip_cmd_w1 = xc1_val;
 
-  /* config analyse xip_cmd_w2 register */
-  xc2_val = (uint32_t)xip_init_struct->read_data_counter;
-  xc2_val |= (uint32_t)(xip_init_struct->read_time_counter << 8);
-  xc2_val |= (uint32_t)(xip_init_struct->read_select_mode << 15);
-  xc2_val |= (uint32_t)(xip_init_struct->write_data_counter << 16);
-  xc2_val |= (uint32_t)(xip_init_struct->write_time_counter << 24);
-  xc2_val |= (uint32_t)(xip_init_struct->write_select_mode << 31);
-  qspi_x->xip_cmd_w2 = xc2_val;
+    /* config analyse xip_cmd_w2 register */
+    xc2_val = (uint32_t)xip_init_struct->read_data_counter;
+    xc2_val |= (uint32_t)(xip_init_struct->read_time_counter << 8);
+    xc2_val |= (uint32_t)(xip_init_struct->read_select_mode << 15);
+    xc2_val |= (uint32_t)(xip_init_struct->write_data_counter << 16);
+    xc2_val |= (uint32_t)(xip_init_struct->write_time_counter << 24);
+    xc2_val |= (uint32_t)(xip_init_struct->write_select_mode << 31);
+    qspi_x->xip_cmd_w2 = xc2_val;
 }
 
 /**
@@ -412,9 +388,8 @@ void qspi_xip_init(qspi_type* qspi_x, qspi_xip_type* xip_init_struct)
   * @param  qspi_x: select the qspi peripheral.
   * @retval 8-bit data.
   */
-uint8_t qspi_byte_read(qspi_type* qspi_x)
-{
-  return qspi_x->dt_u8;
+uint8_t qspi_byte_read(qspi_type *qspi_x) {
+    return qspi_x->dt_u8;
 }
 
 /**
@@ -422,9 +397,8 @@ uint8_t qspi_byte_read(qspi_type* qspi_x)
   * @param  qspi_x: select the qspi peripheral.
   * @retval 16-bit data.
   */
-uint16_t qspi_half_word_read(qspi_type* qspi_x)
-{
-  return qspi_x->dt_u16;
+uint16_t qspi_half_word_read(qspi_type *qspi_x) {
+    return qspi_x->dt_u16;
 }
 
 /**
@@ -432,9 +406,8 @@ uint16_t qspi_half_word_read(qspi_type* qspi_x)
   * @param  qspi_x: select the qspi peripheral.
   * @retval 32-bit data.
   */
-uint32_t qspi_word_read(qspi_type* qspi_x)
-{
-  return qspi_x->dt;
+uint32_t qspi_word_read(qspi_type *qspi_x) {
+    return qspi_x->dt;
 }
 
 /**
@@ -443,9 +416,8 @@ uint32_t qspi_word_read(qspi_type* qspi_x)
   * @param  value:  8-bit data.
   * @retval none.
   */
-void qspi_byte_write(qspi_type* qspi_x, uint8_t value)
-{
-  qspi_x->dt_u8 = value;
+void qspi_byte_write(qspi_type *qspi_x, uint8_t value) {
+    qspi_x->dt_u8 = value;
 }
 
 /**
@@ -454,9 +426,8 @@ void qspi_byte_write(qspi_type* qspi_x, uint8_t value)
   * @param  value:  16-bit data.
   * @retval none.
   */
-void qspi_half_word_write(qspi_type* qspi_x, uint16_t value)
-{
-  qspi_x->dt_u16 = value;
+void qspi_half_word_write(qspi_type *qspi_x, uint16_t value) {
+    qspi_x->dt_u16 = value;
 }
 
 /**
@@ -465,9 +436,8 @@ void qspi_half_word_write(qspi_type* qspi_x, uint16_t value)
   * @param  value:  32-bit data.
   * @retval none.
   */
-void qspi_word_write(qspi_type* qspi_x, uint32_t value)
-{
-  qspi_x->dt = value;
+void qspi_word_write(qspi_type *qspi_x, uint32_t value) {
+    qspi_x->dt = value;
 }
 
 /**
@@ -475,13 +445,12 @@ void qspi_word_write(qspi_type* qspi_x, uint32_t value)
   * @param  qspi_x: select the qspi peripheral.
   * @retval none.
   */
-void qspi_auto_ispc_enable(qspi_type* qspi_x)
-{
-  qspi_x->ctrl3_bit.ispc = TRUE;
-  if(qspi_x == QSPI1)
-    qspi_x->ctrl3_bit.ispd = 56;
-  else if(qspi_x == QSPI2)
-    qspi_x->ctrl3_bit.ispd = 50;
+void qspi_auto_ispc_enable(qspi_type *qspi_x) {
+    qspi_x->ctrl3_bit.ispc = TRUE;
+    if (qspi_x == QSPI1)
+        qspi_x->ctrl3_bit.ispd = 56;
+    else if (qspi_x == QSPI2)
+        qspi_x->ctrl3_bit.ispd = 50;
 }
 
 /**

@@ -60,8 +60,8 @@ Apply a reversible multi-component transform to an image
 @param c2 Samples blue component
 @param n Number of samples for each component
 */
-void opj_mct_encode(OPJ_INT32* OPJ_RESTRICT c0, OPJ_INT32* OPJ_RESTRICT c1,
-                    OPJ_INT32* OPJ_RESTRICT c2, OPJ_SIZE_T n);
+void opj_mct_encode(OPJ_INT32 *OPJ_RESTRICT c0, OPJ_INT32 *OPJ_RESTRICT c1,
+                    OPJ_INT32 *OPJ_RESTRICT c2, OPJ_SIZE_T n);
 /**
 Apply a reversible multi-component inverse transform to an image
 @param c0 Samples for luminance component
@@ -69,8 +69,8 @@ Apply a reversible multi-component inverse transform to an image
 @param c2 Samples for blue chrominance component
 @param n Number of samples for each component
 */
-void opj_mct_decode(OPJ_INT32* OPJ_RESTRICT c0, OPJ_INT32* OPJ_RESTRICT c1,
-                    OPJ_INT32* OPJ_RESTRICT c2, OPJ_SIZE_T n);
+void opj_mct_decode(OPJ_INT32 *OPJ_RESTRICT c0, OPJ_INT32 *OPJ_RESTRICT c1,
+                    OPJ_INT32 *OPJ_RESTRICT c2, OPJ_SIZE_T n);
 /**
 Get norm of the basis function used for the reversible multi-component transform
 @param compno Number of the component (0->Y, 1->U, 2->V)
@@ -85,9 +85,9 @@ Apply an irreversible multi-component transform to an image
 @param c2 Samples blue component
 @param n Number of samples for each component
 */
-void opj_mct_encode_real(OPJ_FLOAT32* OPJ_RESTRICT c0,
-                         OPJ_FLOAT32* OPJ_RESTRICT c1,
-                         OPJ_FLOAT32* OPJ_RESTRICT c2, OPJ_SIZE_T n);
+void opj_mct_encode_real(OPJ_FLOAT32 *OPJ_RESTRICT c0,
+                         OPJ_FLOAT32 *OPJ_RESTRICT c1,
+                         OPJ_FLOAT32 *OPJ_RESTRICT c2, OPJ_SIZE_T n);
 /**
 Apply an irreversible multi-component inverse transform to an image
 @param c0 Samples for luminance component
@@ -95,8 +95,8 @@ Apply an irreversible multi-component inverse transform to an image
 @param c2 Samples for blue chrominance component
 @param n Number of samples for each component
 */
-void opj_mct_decode_real(OPJ_FLOAT32* OPJ_RESTRICT c0,
-                         OPJ_FLOAT32* OPJ_RESTRICT c1, OPJ_FLOAT32* OPJ_RESTRICT c2, OPJ_SIZE_T n);
+void opj_mct_decode_real(OPJ_FLOAT32 *OPJ_RESTRICT c0,
+                         OPJ_FLOAT32 *OPJ_RESTRICT c1, OPJ_FLOAT32 *OPJ_RESTRICT c2, OPJ_SIZE_T n);
 /**
 Get norm of the basis function used for the irreversible multi-component transform
 @param compno Number of the component (0->Y, 1->U, 2->V)
@@ -114,9 +114,9 @@ FIXME DOC
 @return OPJ_FALSE if function encounter a problem, OPJ_TRUE otherwise
 */
 OPJ_BOOL opj_mct_encode_custom(
-    OPJ_BYTE * p_coding_data,
+    OPJ_BYTE *p_coding_data,
     OPJ_SIZE_T n,
-    OPJ_BYTE ** p_data,
+    OPJ_BYTE **p_data,
     OPJ_UINT32 p_nb_comp,
     OPJ_UINT32 is_signed);
 /**
@@ -129,9 +129,9 @@ FIXME DOC
 @return OPJ_FALSE if function encounter a problem, OPJ_TRUE otherwise
 */
 OPJ_BOOL opj_mct_decode_custom(
-    OPJ_BYTE * pDecodingData,
+    OPJ_BYTE *pDecodingData,
     OPJ_SIZE_T n,
-    OPJ_BYTE ** pData,
+    OPJ_BYTE **pData,
     OPJ_UINT32 pNbComp,
     OPJ_UINT32 isSigned);
 /**
@@ -141,17 +141,17 @@ FIXME DOC
 @param pMatrix          components
 @return
 */
-void opj_calculate_norms(OPJ_FLOAT64 * pNorms,
+void opj_calculate_norms(OPJ_FLOAT64 *pNorms,
                          OPJ_UINT32 p_nb_comps,
-                         OPJ_FLOAT32 * pMatrix);
+                         OPJ_FLOAT32 *pMatrix);
 /**
 FIXME DOC
 */
-const OPJ_FLOAT64 * opj_mct_get_mct_norms(void);
+const OPJ_FLOAT64 *opj_mct_get_mct_norms(void);
 /**
 FIXME DOC
 */
-const OPJ_FLOAT64 * opj_mct_get_mct_norms_real(void);
+const OPJ_FLOAT64 *opj_mct_get_mct_norms_real(void);
 /* ----------------------------------------------------------------------- */
 /*@}*/
 

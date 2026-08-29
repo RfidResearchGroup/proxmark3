@@ -82,7 +82,7 @@ typedef struct opj_stream_private {
     /**
      * User data, be it files, ... The actual data depends on the type of the stream.
      */
-    void *                  m_user_data;
+    void                   *m_user_data;
 
     /**
      * Pointer to function to free m_user_data (NULL at initialization)
@@ -121,12 +121,12 @@ typedef struct opj_stream_private {
      * Actual data stored into the stream if read from. Data is read by chunk of fixed size.
      * you should never access this data directly.
      */
-    OPJ_BYTE *                  m_stored_data;
+    OPJ_BYTE                   *m_stored_data;
 
     /**
      * Pointer to the current read data.
      */
-    OPJ_BYTE *                  m_current_data;
+    OPJ_BYTE                   *m_current_data;
 
     /**
     * FIXME DOC.
@@ -173,7 +173,7 @@ opj_stream_private_t;
  * @param p_value       the value to write
  * @param p_nb_bytes    the number of bytes to write
 */
-void opj_write_bytes_BE(OPJ_BYTE * p_buffer, OPJ_UINT32 p_value,
+void opj_write_bytes_BE(OPJ_BYTE *p_buffer, OPJ_UINT32 p_value,
                         OPJ_UINT32 p_nb_bytes);
 
 /**
@@ -183,7 +183,7 @@ void opj_write_bytes_BE(OPJ_BYTE * p_buffer, OPJ_UINT32 p_value,
  * @param p_nb_bytes    the nb bytes to read.
  * @return              the number of bytes read or -1 if an error occurred.
  */
-void opj_read_bytes_BE(const OPJ_BYTE * p_buffer, OPJ_UINT32 * p_value,
+void opj_read_bytes_BE(const OPJ_BYTE *p_buffer, OPJ_UINT32 *p_value,
                        OPJ_UINT32 p_nb_bytes);
 
 /**
@@ -193,7 +193,7 @@ void opj_read_bytes_BE(const OPJ_BYTE * p_buffer, OPJ_UINT32 * p_value,
  * @param p_nb_bytes    the number of bytes to write
  * @return              the number of bytes written or -1 if an error occurred
 */
-void opj_write_bytes_LE(OPJ_BYTE * p_buffer, OPJ_UINT32 p_value,
+void opj_write_bytes_LE(OPJ_BYTE *p_buffer, OPJ_UINT32 p_value,
                         OPJ_UINT32 p_nb_bytes);
 
 /**
@@ -203,7 +203,7 @@ void opj_write_bytes_LE(OPJ_BYTE * p_buffer, OPJ_UINT32 p_value,
  * @param p_nb_bytes    the nb bytes to read.
  * @return              the number of bytes read or -1 if an error occurred.
  */
-void opj_read_bytes_LE(const OPJ_BYTE * p_buffer, OPJ_UINT32 * p_value,
+void opj_read_bytes_LE(const OPJ_BYTE *p_buffer, OPJ_UINT32 *p_value,
                        OPJ_UINT32 p_nb_bytes);
 
 
@@ -212,56 +212,56 @@ void opj_read_bytes_LE(const OPJ_BYTE * p_buffer, OPJ_UINT32 * p_value,
  * @param p_buffer      pointer the data buffer to write data to.
  * @param p_value       the value to write
  */
-void opj_write_double_LE(OPJ_BYTE * p_buffer, OPJ_FLOAT64 p_value);
+void opj_write_double_LE(OPJ_BYTE *p_buffer, OPJ_FLOAT64 p_value);
 
 /***
  * Write some bytes to the given data buffer, this function is used in Big Endian cpus.
  * @param p_buffer      pointer the data buffer to write data to.
  * @param p_value       the value to write
  */
-void opj_write_double_BE(OPJ_BYTE * p_buffer, OPJ_FLOAT64 p_value);
+void opj_write_double_BE(OPJ_BYTE *p_buffer, OPJ_FLOAT64 p_value);
 
 /**
  * Reads some bytes from the given data buffer, this function is used in Little Endian cpus.
  * @param p_buffer      pointer the data buffer to read data from.
  * @param p_value       pointer to the value that will store the data.
  */
-void opj_read_double_LE(const OPJ_BYTE * p_buffer, OPJ_FLOAT64 * p_value);
+void opj_read_double_LE(const OPJ_BYTE *p_buffer, OPJ_FLOAT64 *p_value);
 
 /**
  * Reads some bytes from the given data buffer, this function is used in Big Endian cpus.
  * @param p_buffer      pointer the data buffer to read data from.
  * @param p_value       pointer to the value that will store the data.
  */
-void opj_read_double_BE(const OPJ_BYTE * p_buffer, OPJ_FLOAT64 * p_value);
+void opj_read_double_BE(const OPJ_BYTE *p_buffer, OPJ_FLOAT64 *p_value);
 
 /**
  * Reads some bytes from the given data buffer, this function is used in Little Endian cpus.
  * @param p_buffer      pointer the data buffer to read data from.
  * @param p_value       pointer to the value that will store the data.
  */
-void opj_read_float_LE(const OPJ_BYTE * p_buffer, OPJ_FLOAT32 * p_value);
+void opj_read_float_LE(const OPJ_BYTE *p_buffer, OPJ_FLOAT32 *p_value);
 
 /**
  * Reads some bytes from the given data buffer, this function is used in Big Endian cpus.
  * @param p_buffer      pointer the data buffer to read data from.
  * @param p_value       pointer to the value that will store the data.
  */
-void opj_read_float_BE(const OPJ_BYTE * p_buffer, OPJ_FLOAT32 * p_value);
+void opj_read_float_BE(const OPJ_BYTE *p_buffer, OPJ_FLOAT32 *p_value);
 
 /**
  * Write some bytes to the given data buffer, this function is used in Little Endian cpus.
  * @param p_buffer      pointer the data buffer to write data to.
  * @param p_value       the value to write
  */
-void opj_write_float_LE(OPJ_BYTE * p_buffer, OPJ_FLOAT32 p_value);
+void opj_write_float_LE(OPJ_BYTE *p_buffer, OPJ_FLOAT32 p_value);
 
 /***
  * Write some bytes to the given data buffer, this function is used in Big Endian cpus.
  * @param p_buffer      pointer the data buffer to write data to.
  * @param p_value       the value to write
  */
-void opj_write_float_BE(OPJ_BYTE * p_buffer, OPJ_FLOAT32 p_value);
+void opj_write_float_BE(OPJ_BYTE *p_buffer, OPJ_FLOAT32 p_value);
 
 /**
  * Reads some bytes from the stream.
@@ -271,8 +271,8 @@ void opj_write_float_BE(OPJ_BYTE * p_buffer, OPJ_FLOAT32 p_value);
  * @param       p_event_mgr the user event manager to be notified of special events.
  * @return      the number of bytes read, or -1 if an error occurred or if the stream is at the end.
  */
-OPJ_SIZE_T opj_stream_read_data(opj_stream_private_t * p_stream,
-                                OPJ_BYTE * p_buffer, OPJ_SIZE_T p_size, struct opj_event_mgr * p_event_mgr);
+OPJ_SIZE_T opj_stream_read_data(opj_stream_private_t *p_stream,
+                                OPJ_BYTE *p_buffer, OPJ_SIZE_T p_size, struct opj_event_mgr *p_event_mgr);
 
 /**
  * Writes some bytes to the stream.
@@ -282,9 +282,9 @@ OPJ_SIZE_T opj_stream_read_data(opj_stream_private_t * p_stream,
  * @param       p_event_mgr the user event manager to be notified of special events.
  * @return      the number of bytes writtent, or -1 if an error occurred.
  */
-OPJ_SIZE_T opj_stream_write_data(opj_stream_private_t * p_stream,
-                                 const OPJ_BYTE * p_buffer, OPJ_SIZE_T p_size,
-                                 struct opj_event_mgr * p_event_mgr);
+OPJ_SIZE_T opj_stream_write_data(opj_stream_private_t *p_stream,
+                                 const OPJ_BYTE *p_buffer, OPJ_SIZE_T p_size,
+                                 struct opj_event_mgr *p_event_mgr);
 
 /**
  * Writes the content of the stream buffer to the stream.
@@ -292,8 +292,8 @@ OPJ_SIZE_T opj_stream_write_data(opj_stream_private_t * p_stream,
  * @param       p_event_mgr the user event manager to be notified of special events.
  * @return      true if the data could be flushed, false else.
  */
-OPJ_BOOL opj_stream_flush(opj_stream_private_t * p_stream,
-                          struct opj_event_mgr * p_event_mgr);
+OPJ_BOOL opj_stream_flush(opj_stream_private_t *p_stream,
+                          struct opj_event_mgr *p_event_mgr);
 
 /**
  * Skips a number of bytes from the stream.
@@ -302,8 +302,8 @@ OPJ_BOOL opj_stream_flush(opj_stream_private_t * p_stream,
  * @param       p_event_mgr the user event manager to be notified of special events.
  * @return      the number of bytes skipped, or -1 if an error occurred.
  */
-OPJ_OFF_T opj_stream_skip(opj_stream_private_t * p_stream, OPJ_OFF_T p_size,
-                          struct opj_event_mgr * p_event_mgr);
+OPJ_OFF_T opj_stream_skip(opj_stream_private_t *p_stream, OPJ_OFF_T p_size,
+                          struct opj_event_mgr *p_event_mgr);
 
 /**
  * Tells the byte offset on the stream (similar to ftell).
@@ -312,7 +312,7 @@ OPJ_OFF_T opj_stream_skip(opj_stream_private_t * p_stream, OPJ_OFF_T p_size,
  *
  * @return      the current position o fthe stream.
  */
-OPJ_OFF_T opj_stream_tell(const opj_stream_private_t * p_stream);
+OPJ_OFF_T opj_stream_tell(const opj_stream_private_t *p_stream);
 
 
 /**
@@ -323,7 +323,7 @@ OPJ_OFF_T opj_stream_tell(const opj_stream_private_t * p_stream);
  * @return      Number of bytes left before the end of the stream.
  */
 OPJ_OFF_T opj_stream_get_number_byte_left(const opj_stream_private_t *
-        p_stream);
+                                          p_stream);
 
 /**
  * Skips a number of bytes from the stream.
@@ -332,8 +332,8 @@ OPJ_OFF_T opj_stream_get_number_byte_left(const opj_stream_private_t *
  * @param       p_event_mgr the user event manager to be notified of special events.
  * @return      the number of bytes skipped, or -1 if an error occurred.
  */
-OPJ_OFF_T opj_stream_write_skip(opj_stream_private_t * p_stream,
-                                OPJ_OFF_T p_size, struct opj_event_mgr * p_event_mgr);
+OPJ_OFF_T opj_stream_write_skip(opj_stream_private_t *p_stream,
+                                OPJ_OFF_T p_size, struct opj_event_mgr *p_event_mgr);
 
 /**
  * Skips a number of bytes from the stream.
@@ -342,8 +342,8 @@ OPJ_OFF_T opj_stream_write_skip(opj_stream_private_t * p_stream,
  * @param       p_event_mgr the user event manager to be notified of special events.
  * @return      the number of bytes skipped, or -1 if an error occurred.
  */
-OPJ_OFF_T opj_stream_read_skip(opj_stream_private_t * p_stream,
-                               OPJ_OFF_T p_size, struct opj_event_mgr * p_event_mgr);
+OPJ_OFF_T opj_stream_read_skip(opj_stream_private_t *p_stream,
+                               OPJ_OFF_T p_size, struct opj_event_mgr *p_event_mgr);
 
 /**
  * Skips a number of bytes from the stream.
@@ -352,8 +352,8 @@ OPJ_OFF_T opj_stream_read_skip(opj_stream_private_t * p_stream,
  * @param       p_event_mgr the user event manager to be notified of special events.
  * @return      OPJ_TRUE if success, or OPJ_FALSE if an error occurred.
  */
-OPJ_BOOL opj_stream_read_seek(opj_stream_private_t * p_stream, OPJ_OFF_T p_size,
-                              struct opj_event_mgr * p_event_mgr);
+OPJ_BOOL opj_stream_read_seek(opj_stream_private_t *p_stream, OPJ_OFF_T p_size,
+                              struct opj_event_mgr *p_event_mgr);
 
 /**
  * Skips a number of bytes from the stream.
@@ -362,8 +362,8 @@ OPJ_BOOL opj_stream_read_seek(opj_stream_private_t * p_stream, OPJ_OFF_T p_size,
  * @param       p_event_mgr the user event manager to be notified of special events.
  * @return      the number of bytes skipped, or -1 if an error occurred.
  */
-OPJ_BOOL opj_stream_write_seek(opj_stream_private_t * p_stream,
-                               OPJ_OFF_T p_size, struct opj_event_mgr * p_event_mgr);
+OPJ_BOOL opj_stream_write_seek(opj_stream_private_t *p_stream,
+                               OPJ_OFF_T p_size, struct opj_event_mgr *p_event_mgr);
 
 /**
  * Seeks a number of bytes from the stream.
@@ -372,35 +372,35 @@ OPJ_BOOL opj_stream_write_seek(opj_stream_private_t * p_stream,
  * @param       p_event_mgr the user event manager to be notified of special events.
  * @return      true if the stream is seekable.
  */
-OPJ_BOOL opj_stream_seek(opj_stream_private_t * p_stream, OPJ_OFF_T p_size,
-                         struct opj_event_mgr * p_event_mgr);
+OPJ_BOOL opj_stream_seek(opj_stream_private_t *p_stream, OPJ_OFF_T p_size,
+                         struct opj_event_mgr *p_event_mgr);
 
 /**
  * Tells if the given stream is seekable.
  */
-OPJ_BOOL opj_stream_has_seek(const opj_stream_private_t * p_stream);
+OPJ_BOOL opj_stream_has_seek(const opj_stream_private_t *p_stream);
 
 /**
  * FIXME DOC.
  */
-OPJ_SIZE_T opj_stream_default_read(void * p_buffer, OPJ_SIZE_T p_nb_bytes,
-                                   void * p_user_data);
+OPJ_SIZE_T opj_stream_default_read(void *p_buffer, OPJ_SIZE_T p_nb_bytes,
+                                   void *p_user_data);
 
 /**
  * FIXME DOC.
  */
-OPJ_SIZE_T opj_stream_default_write(void * p_buffer, OPJ_SIZE_T p_nb_bytes,
-                                    void * p_user_data);
+OPJ_SIZE_T opj_stream_default_write(void *p_buffer, OPJ_SIZE_T p_nb_bytes,
+                                    void *p_user_data);
 
 /**
  * FIXME DOC.
  */
-OPJ_OFF_T opj_stream_default_skip(OPJ_OFF_T p_nb_bytes, void * p_user_data);
+OPJ_OFF_T opj_stream_default_skip(OPJ_OFF_T p_nb_bytes, void *p_user_data);
 
 /**
  * FIXME DOC.
  */
-OPJ_BOOL opj_stream_default_seek(OPJ_OFF_T p_nb_bytes, void * p_user_data);
+OPJ_BOOL opj_stream_default_seek(OPJ_OFF_T p_nb_bytes, void *p_user_data);
 
 /* ----------------------------------------------------------------------- */
 /*@}*/

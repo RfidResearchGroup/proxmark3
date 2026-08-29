@@ -115,451 +115,402 @@ extern "C" {
 /**
   * @brief sdio power state
   */
-typedef enum
-{
-  SDIO_POWER_OFF                         = 0x00, /*!< power-off, clock to card is stopped */
-  SDIO_POWER_ON                          = 0x03  /*!< power-on, the card is clocked */
+typedef enum {
+    SDIO_POWER_OFF                         = 0x00, /*!< power-off, clock to card is stopped */
+    SDIO_POWER_ON                          = 0x03  /*!< power-on, the card is clocked */
 } sdio_power_state_type;
 
 /**
   * @brief sdio edge phase
   */
-typedef enum
-{
-  SDIO_CLOCK_EDGE_RISING                 = 0x00, /*!< sdio bus clock generated on the rising edge of the master clock */
-  SDIO_CLOCK_EDGE_FALLING                = 0x01  /*!< sdio bus clock generated on the falling edge of the master clock */
+typedef enum {
+    SDIO_CLOCK_EDGE_RISING                 = 0x00, /*!< sdio bus clock generated on the rising edge of the master clock */
+    SDIO_CLOCK_EDGE_FALLING                = 0x01  /*!< sdio bus clock generated on the falling edge of the master clock */
 } sdio_edge_phase_type;
 
 /**
   * @brief sdio bus width
   */
-typedef enum
-{
-  SDIO_BUS_WIDTH_D1                      = 0x00, /*!< sdio wide bus select 1-bit */
-  SDIO_BUS_WIDTH_D4                      = 0x01, /*!< sdio wide bus select 4-bit */
-  SDIO_BUS_WIDTH_D8                      = 0x02  /*!< sdio wide bus select 8-bit */
+typedef enum {
+    SDIO_BUS_WIDTH_D1                      = 0x00, /*!< sdio wide bus select 1-bit */
+    SDIO_BUS_WIDTH_D4                      = 0x01, /*!< sdio wide bus select 4-bit */
+    SDIO_BUS_WIDTH_D8                      = 0x02  /*!< sdio wide bus select 8-bit */
 } sdio_bus_width_type;
 
 /**
   * @brief sdio response type
   */
-typedef enum
-{
-  SDIO_RESPONSE_NO                       = 0x00, /*!< no response */
-  SDIO_RESPONSE_SHORT                    = 0x01, /*!< short response */
-  SDIO_RESPONSE_LONG                     = 0x03  /*!< long response */
+typedef enum {
+    SDIO_RESPONSE_NO                       = 0x00, /*!< no response */
+    SDIO_RESPONSE_SHORT                    = 0x01, /*!< short response */
+    SDIO_RESPONSE_LONG                     = 0x03  /*!< long response */
 } sdio_reponse_type;
 
 /**
   * @brief sdio wait type
   */
-typedef enum
-{
-  SDIO_WAIT_FOR_NO                       = 0x00, /*!< no wait */
-  SDIO_WAIT_FOR_INT                      = 0x01, /*!< wait interrupt request */
-  SDIO_WAIT_FOR_PEND                     = 0x02  /*!< wait end of transfer */
+typedef enum {
+    SDIO_WAIT_FOR_NO                       = 0x00, /*!< no wait */
+    SDIO_WAIT_FOR_INT                      = 0x01, /*!< wait interrupt request */
+    SDIO_WAIT_FOR_PEND                     = 0x02  /*!< wait end of transfer */
 } sdio_wait_type;
 
 /**
   * @brief sdio response register index
   */
-typedef enum
-{
-  SDIO_RSP1_INDEX                        = 0x00, /*!< response index 1, corresponding to sdio_rsp register 1 */
-  SDIO_RSP2_INDEX                        = 0x01, /*!< response index 2, corresponding to sdio_rsp register 2 */
-  SDIO_RSP3_INDEX                        = 0x02, /*!< response index 3, corresponding to sdio_rsp register 3 */
-  SDIO_RSP4_INDEX                        = 0x03  /*!< response index 4, corresponding to sdio_rsp register 4 */
+typedef enum {
+    SDIO_RSP1_INDEX                        = 0x00, /*!< response index 1, corresponding to sdio_rsp register 1 */
+    SDIO_RSP2_INDEX                        = 0x01, /*!< response index 2, corresponding to sdio_rsp register 2 */
+    SDIO_RSP3_INDEX                        = 0x02, /*!< response index 3, corresponding to sdio_rsp register 3 */
+    SDIO_RSP4_INDEX                        = 0x03  /*!< response index 4, corresponding to sdio_rsp register 4 */
 } sdio_rsp_index_type;
 
 /**
   * @brief sdio data block size
   */
-typedef enum
-{
-  SDIO_DATA_BLOCK_SIZE_1B                = 0x00, /*!< data block size 1 byte */
-  SDIO_DATA_BLOCK_SIZE_2B                = 0x01, /*!< data block size 2 bytes */
-  SDIO_DATA_BLOCK_SIZE_4B                = 0x02, /*!< data block size 4 bytes */
-  SDIO_DATA_BLOCK_SIZE_8B                = 0x03, /*!< data block size 8 bytes */
-  SDIO_DATA_BLOCK_SIZE_16B               = 0x04, /*!< data block size 16 bytes */
-  SDIO_DATA_BLOCK_SIZE_32B               = 0x05, /*!< data block size 32 bytes */
-  SDIO_DATA_BLOCK_SIZE_64B               = 0x06, /*!< data block size 64 bytes */
-  SDIO_DATA_BLOCK_SIZE_128B              = 0x07, /*!< data block size 128 bytes */
-  SDIO_DATA_BLOCK_SIZE_256B              = 0x08, /*!< data block size 256 bytes */
-  SDIO_DATA_BLOCK_SIZE_512B              = 0x09, /*!< data block size 512 bytes */
-  SDIO_DATA_BLOCK_SIZE_1024B             = 0x0A, /*!< data block size 1024 bytes */
-  SDIO_DATA_BLOCK_SIZE_2048B             = 0x0B, /*!< data block size 2048 bytes */
-  SDIO_DATA_BLOCK_SIZE_4096B             = 0x0C, /*!< data block size 4096 bytes */
-  SDIO_DATA_BLOCK_SIZE_8192B             = 0x0D, /*!< data block size 8192 bytes */
-  SDIO_DATA_BLOCK_SIZE_16384B            = 0x0E  /*!< data block size 16384 bytes */
+typedef enum {
+    SDIO_DATA_BLOCK_SIZE_1B                = 0x00, /*!< data block size 1 byte */
+    SDIO_DATA_BLOCK_SIZE_2B                = 0x01, /*!< data block size 2 bytes */
+    SDIO_DATA_BLOCK_SIZE_4B                = 0x02, /*!< data block size 4 bytes */
+    SDIO_DATA_BLOCK_SIZE_8B                = 0x03, /*!< data block size 8 bytes */
+    SDIO_DATA_BLOCK_SIZE_16B               = 0x04, /*!< data block size 16 bytes */
+    SDIO_DATA_BLOCK_SIZE_32B               = 0x05, /*!< data block size 32 bytes */
+    SDIO_DATA_BLOCK_SIZE_64B               = 0x06, /*!< data block size 64 bytes */
+    SDIO_DATA_BLOCK_SIZE_128B              = 0x07, /*!< data block size 128 bytes */
+    SDIO_DATA_BLOCK_SIZE_256B              = 0x08, /*!< data block size 256 bytes */
+    SDIO_DATA_BLOCK_SIZE_512B              = 0x09, /*!< data block size 512 bytes */
+    SDIO_DATA_BLOCK_SIZE_1024B             = 0x0A, /*!< data block size 1024 bytes */
+    SDIO_DATA_BLOCK_SIZE_2048B             = 0x0B, /*!< data block size 2048 bytes */
+    SDIO_DATA_BLOCK_SIZE_4096B             = 0x0C, /*!< data block size 4096 bytes */
+    SDIO_DATA_BLOCK_SIZE_8192B             = 0x0D, /*!< data block size 8192 bytes */
+    SDIO_DATA_BLOCK_SIZE_16384B            = 0x0E  /*!< data block size 16384 bytes */
 } sdio_block_size_type;
 
 /**
   * @brief sdio data transfer mode
   */
-typedef enum
-{
-  SDIO_DATA_BLOCK_TRANSFER               = 0x00, /*!< the sdio block transfer mode */
-  SDIO_DATA_STREAM_TRANSFER              = 0x01  /*!< the sdio stream transfer mode */
+typedef enum {
+    SDIO_DATA_BLOCK_TRANSFER               = 0x00, /*!< the sdio block transfer mode */
+    SDIO_DATA_STREAM_TRANSFER              = 0x01  /*!< the sdio stream transfer mode */
 } sdio_transfer_mode_type;
 
 /**
   * @brief sdio data transfer direction
   */
-typedef enum
-{
-  SDIO_DATA_TRANSFER_TO_CARD             = 0x00, /*!< the sdio controller write */
-  SDIO_DATA_TRANSFER_TO_CONTROLLER       = 0x01  /*!< the sdio controller read */
+typedef enum {
+    SDIO_DATA_TRANSFER_TO_CARD             = 0x00, /*!< the sdio controller write */
+    SDIO_DATA_TRANSFER_TO_CONTROLLER       = 0x01  /*!< the sdio controller read */
 } sdio_transfer_direction_type;
 
 /**
   * @brief sdio read wait mode
   */
-typedef enum
-{
-  SDIO_READ_WAIT_CONTROLLED_BY_D2        = 0x00, /*!< the sdio read wait on data2 line */
-  SDIO_READ_WAIT_CONTROLLED_BY_CK        = 0x01  /*!< the sdio read wait on clock line */
+typedef enum {
+    SDIO_READ_WAIT_CONTROLLED_BY_D2        = 0x00, /*!< the sdio read wait on data2 line */
+    SDIO_READ_WAIT_CONTROLLED_BY_CK        = 0x01  /*!< the sdio read wait on clock line */
 } sdio_read_wait_mode_type;
 
 /**
   * @brief sdio command structure
   */
-typedef struct
-{
-  uint32_t                               argument;  /*!< the sdio command argument is sent to a card as part of command message */
-  uint8_t                                cmd_index; /*!< the sdio command index */
-  sdio_reponse_type                      rsp_type;  /*!< the sdio response type */
-  sdio_wait_type                         wait_type; /*!< the sdio wait for interrupt request is enabled or disable */
+typedef struct {
+    uint32_t                               argument;  /*!< the sdio command argument is sent to a card as part of command message */
+    uint8_t                                cmd_index; /*!< the sdio command index */
+    sdio_reponse_type                      rsp_type;  /*!< the sdio response type */
+    sdio_wait_type                         wait_type; /*!< the sdio wait for interrupt request is enabled or disable */
 } sdio_command_struct_type;
 
 /**
   * @brief sdio data structure
   */
-typedef struct
-{
-  uint32_t                               timeout;            /*!< the sdio data timeout period in car bus clock periods */
-  uint32_t                               data_length;        /*!< the sdio data length */
-  sdio_block_size_type                   block_size;         /*!< the sdio data block size of block transfer mode */
-  sdio_transfer_mode_type                transfer_mode;      /*!< the sdio transfer mode, block or stream */
-  sdio_transfer_direction_type           transfer_direction; /*!< the sdio data transfer direction */
+typedef struct {
+    uint32_t                               timeout;            /*!< the sdio data timeout period in car bus clock periods */
+    uint32_t                               data_length;        /*!< the sdio data length */
+    sdio_block_size_type                   block_size;         /*!< the sdio data block size of block transfer mode */
+    sdio_transfer_mode_type                transfer_mode;      /*!< the sdio transfer mode, block or stream */
+    sdio_transfer_direction_type           transfer_direction; /*!< the sdio data transfer direction */
 } sdio_data_struct_type;
 
 /**
   * @brief type define sdio register all
   */
-typedef struct
-{
-  /**
-    * @brief sdio pwrctrl register, offset:0x00
-    */
-  union
-  {
-    __IO uint32_t pwrctrl;
-    struct
-    {
-      __IO uint32_t ps                   : 2; /* [1:0] */
-      __IO uint32_t reserved1            : 30;/* [31:2] */
-    } pwrctrl_bit;
-  };
+typedef struct {
+    /**
+      * @brief sdio pwrctrl register, offset:0x00
+      */
+    union {
+        __IO uint32_t pwrctrl;
+        struct {
+            __IO uint32_t ps                   : 2; /* [1:0] */
+            __IO uint32_t reserved1            : 30;/* [31:2] */
+        } pwrctrl_bit;
+    };
 
-  /**
-    * @brief sdio clkctrl register, offset:0x04
-    */
-  union
-  {
-    __IO uint32_t clkctrl;
-    struct
-    {
-      __IO uint32_t clkdiv_l             : 8; /* [7:0] */
-      __IO uint32_t clkoen               : 1; /* [8] */
-      __IO uint32_t pwrsven              : 1; /* [9] */
-      __IO uint32_t bypsen               : 1; /* [10] */
-      __IO uint32_t busws                : 2; /* [12:11] */
-      __IO uint32_t clkegs               : 1; /* [13] */
-      __IO uint32_t hfcen                : 1; /* [14] */
-      __IO uint32_t clkdiv_h             : 2; /* [16:15] */
-      __IO uint32_t reserved1            : 15;/* [31:17] */
-    } clkctrl_bit;
-  };
+    /**
+      * @brief sdio clkctrl register, offset:0x04
+      */
+    union {
+        __IO uint32_t clkctrl;
+        struct {
+            __IO uint32_t clkdiv_l             : 8; /* [7:0] */
+            __IO uint32_t clkoen               : 1; /* [8] */
+            __IO uint32_t pwrsven              : 1; /* [9] */
+            __IO uint32_t bypsen               : 1; /* [10] */
+            __IO uint32_t busws                : 2; /* [12:11] */
+            __IO uint32_t clkegs               : 1; /* [13] */
+            __IO uint32_t hfcen                : 1; /* [14] */
+            __IO uint32_t clkdiv_h             : 2; /* [16:15] */
+            __IO uint32_t reserved1            : 15;/* [31:17] */
+        } clkctrl_bit;
+    };
 
-  /**
-    * @brief sdio argu register, offset:0x08
-    */
-  union
-  {
-    __IO uint32_t argu;
-    struct
-    {
-      __IO uint32_t argu                 : 32;/* [31:0] */
-    } argu_bit;
-  };
+    /**
+      * @brief sdio argu register, offset:0x08
+      */
+    union {
+        __IO uint32_t argu;
+        struct {
+            __IO uint32_t argu                 : 32;/* [31:0] */
+        } argu_bit;
+    };
 
-  /**
-    * @brief sdio cmdctrl register, offset:0x0C
-    */
-  union
-  {
-    __IO uint32_t cmdctrl;
-    struct
-    {
-      __IO uint32_t cmdidx               : 6; /* [5:0] */
-      __IO uint32_t rspwt                : 2; /* [7:6] */
-      __IO uint32_t intwt                : 1; /* [8] */
-      __IO uint32_t pndwt                : 1; /* [9] */
-      __IO uint32_t ccsmen               : 1; /* [10] */
-      __IO uint32_t iosusp               : 1; /* [11] */
-      __IO uint32_t reserved1            : 20;/* [31:12] */
-    } cmdctrl_bit;
-  };
+    /**
+      * @brief sdio cmdctrl register, offset:0x0C
+      */
+    union {
+        __IO uint32_t cmdctrl;
+        struct {
+            __IO uint32_t cmdidx               : 6; /* [5:0] */
+            __IO uint32_t rspwt                : 2; /* [7:6] */
+            __IO uint32_t intwt                : 1; /* [8] */
+            __IO uint32_t pndwt                : 1; /* [9] */
+            __IO uint32_t ccsmen               : 1; /* [10] */
+            __IO uint32_t iosusp               : 1; /* [11] */
+            __IO uint32_t reserved1            : 20;/* [31:12] */
+        } cmdctrl_bit;
+    };
 
-  /**
-    * @brief sdio rspcmd register, offset:0x10
-    */
-  union
-  {
-    __IO uint32_t rspcmd;
-    struct
-    {
-      __IO uint32_t rspcmd               : 6; /* [5:0] */
-      __IO uint32_t reserved1            : 26;/* [31:6] */
-    } rspcmd_bit;
-  };
+    /**
+      * @brief sdio rspcmd register, offset:0x10
+      */
+    union {
+        __IO uint32_t rspcmd;
+        struct {
+            __IO uint32_t rspcmd               : 6; /* [5:0] */
+            __IO uint32_t reserved1            : 26;/* [31:6] */
+        } rspcmd_bit;
+    };
 
-  /**
-    * @brief sdio rsp1 register, offset:0x14
-    */
-  union
-  {
-    __IO uint32_t rsp1;
-    struct
-    {
-      __IO uint32_t cardsts1             : 32;/* [31:0] */
-    } rsp1_bit;
-  };
+    /**
+      * @brief sdio rsp1 register, offset:0x14
+      */
+    union {
+        __IO uint32_t rsp1;
+        struct {
+            __IO uint32_t cardsts1             : 32;/* [31:0] */
+        } rsp1_bit;
+    };
 
-  /**
-    * @brief sdio rsp2 register, offset:0x18
-    */
-  union
-  {
-    __IO uint32_t rsp2;
-    struct
-    {
-      __IO uint32_t cardsts2             : 32;/* [31:0] */
-    } rsp2_bit;
-  };
+    /**
+      * @brief sdio rsp2 register, offset:0x18
+      */
+    union {
+        __IO uint32_t rsp2;
+        struct {
+            __IO uint32_t cardsts2             : 32;/* [31:0] */
+        } rsp2_bit;
+    };
 
-  /**
-    * @brief sdio rsp3 register, offset:0x1C
-    */
-  union
-  {
-    __IO uint32_t rsp3;
-    struct
-    {
-      __IO uint32_t cardsts3             : 32;/* [31:0] */
-    } rsp3_bit;
-  };
+    /**
+      * @brief sdio rsp3 register, offset:0x1C
+      */
+    union {
+        __IO uint32_t rsp3;
+        struct {
+            __IO uint32_t cardsts3             : 32;/* [31:0] */
+        } rsp3_bit;
+    };
 
-  /**
-    * @brief sdio rsp4 register, offset:0x20
-    */
-  union
-  {
-    __IO uint32_t rsp4;
-    struct
-    {
-      __IO uint32_t cardsts4             : 32;/* [31:0] */
-    } rsp4_bit;
-  };
+    /**
+      * @brief sdio rsp4 register, offset:0x20
+      */
+    union {
+        __IO uint32_t rsp4;
+        struct {
+            __IO uint32_t cardsts4             : 32;/* [31:0] */
+        } rsp4_bit;
+    };
 
-  /**
-    * @brief sdio dttmr register, offset:0x24
-    */
-  union
-  {
-    __IO uint32_t dttmr;
-    struct
-    {
-      __IO uint32_t timeout              : 32;/* [31:0] */
-    } dttmr_bit;
-  };
+    /**
+      * @brief sdio dttmr register, offset:0x24
+      */
+    union {
+        __IO uint32_t dttmr;
+        struct {
+            __IO uint32_t timeout              : 32;/* [31:0] */
+        } dttmr_bit;
+    };
 
-  /**
-    * @brief sdio dtlen register, offset:0x28
-    */
-  union
-  {
-    __IO uint32_t dtlen;
-    struct
-    {
-      __IO uint32_t dtlen                : 25;/* [24:0] */
-      __IO uint32_t reserved1            : 7; /* [31:25] */
-    } dtlen_bit;
-  };
+    /**
+      * @brief sdio dtlen register, offset:0x28
+      */
+    union {
+        __IO uint32_t dtlen;
+        struct {
+            __IO uint32_t dtlen                : 25;/* [24:0] */
+            __IO uint32_t reserved1            : 7; /* [31:25] */
+        } dtlen_bit;
+    };
 
-  /**
-    * @brief sdio dtctrl register, offset:0x2C
-    */
-  union
-  {
-    __IO uint32_t dtctrl;
-    struct
-    {
-      __IO uint32_t tfren                : 1; /* [0] */
-      __IO uint32_t tfrdir               : 1; /* [1] */
-      __IO uint32_t tfrmode              : 1; /* [2] */
-      __IO uint32_t dmaen                : 1; /* [3] */
-      __IO uint32_t blksize              : 4; /* [7:4] */
-      __IO uint32_t rdwtstart            : 1; /* [8] */
-      __IO uint32_t rdwtstop             : 1; /* [9] */
-      __IO uint32_t rdwtmode             : 1; /* [10] */
-      __IO uint32_t ioen                 : 1; /* [11] */
-      __IO uint32_t reserved1            : 20;/* [31:12] */
-    } dtctrl_bit;
-  };
+    /**
+      * @brief sdio dtctrl register, offset:0x2C
+      */
+    union {
+        __IO uint32_t dtctrl;
+        struct {
+            __IO uint32_t tfren                : 1; /* [0] */
+            __IO uint32_t tfrdir               : 1; /* [1] */
+            __IO uint32_t tfrmode              : 1; /* [2] */
+            __IO uint32_t dmaen                : 1; /* [3] */
+            __IO uint32_t blksize              : 4; /* [7:4] */
+            __IO uint32_t rdwtstart            : 1; /* [8] */
+            __IO uint32_t rdwtstop             : 1; /* [9] */
+            __IO uint32_t rdwtmode             : 1; /* [10] */
+            __IO uint32_t ioen                 : 1; /* [11] */
+            __IO uint32_t reserved1            : 20;/* [31:12] */
+        } dtctrl_bit;
+    };
 
-  /**
-    * @brief sdio dtcnt register, offset:0x30
-    */
-  union
-  {
-    __IO uint32_t dtcnt;
-    struct
-    {
-      __IO uint32_t cnt                  : 25;/* [24:0] */
-      __IO uint32_t reserved1            : 7; /* [31:25] */
-    } dtcnt_bit;
-  };
+    /**
+      * @brief sdio dtcnt register, offset:0x30
+      */
+    union {
+        __IO uint32_t dtcnt;
+        struct {
+            __IO uint32_t cnt                  : 25;/* [24:0] */
+            __IO uint32_t reserved1            : 7; /* [31:25] */
+        } dtcnt_bit;
+    };
 
-  /**
-    * @brief sdio sts register, offset:0x34
-    */
-  union
-  {
-    __IO uint32_t sts;
-    struct
-    {
-      __IO uint32_t cmdfail              : 1; /* [0] */
-      __IO uint32_t dtfail               : 1; /* [1] */
-      __IO uint32_t cmdtimeout           : 1; /* [2] */
-      __IO uint32_t dttimeout            : 1; /* [3] */
-      __IO uint32_t txerru               : 1; /* [4] */
-      __IO uint32_t rxerro               : 1; /* [5] */
-      __IO uint32_t cmdrspcmpl           : 1; /* [6] */
-      __IO uint32_t cmdcmpl              : 1; /* [7] */
-      __IO uint32_t dtcmpl               : 1; /* [8] */
-      __IO uint32_t sbiterr              : 1; /* [9] */
-      __IO uint32_t dtblkcmpl            : 1; /* [10] */
-      __IO uint32_t docmd                : 1; /* [11] */
-      __IO uint32_t dotx                 : 1; /* [12] */
-      __IO uint32_t dorx                 : 1; /* [13] */
-      __IO uint32_t txbufh               : 1; /* [14] */
-      __IO uint32_t rxbufh               : 1; /* [15] */
-      __IO uint32_t txbuff               : 1; /* [16] */
-      __IO uint32_t rxbuff               : 1; /* [17] */
-      __IO uint32_t txbufe               : 1; /* [18] */
-      __IO uint32_t rxbufe               : 1; /* [19] */
-      __IO uint32_t txbuf                : 1; /* [20] */
-      __IO uint32_t rxbuf                : 1; /* [21] */
-      __IO uint32_t ioif                 : 1; /* [22] */
-      __IO uint32_t reserved1            : 9; /* [31:23] */
-    } sts_bit;
-  };
+    /**
+      * @brief sdio sts register, offset:0x34
+      */
+    union {
+        __IO uint32_t sts;
+        struct {
+            __IO uint32_t cmdfail              : 1; /* [0] */
+            __IO uint32_t dtfail               : 1; /* [1] */
+            __IO uint32_t cmdtimeout           : 1; /* [2] */
+            __IO uint32_t dttimeout            : 1; /* [3] */
+            __IO uint32_t txerru               : 1; /* [4] */
+            __IO uint32_t rxerro               : 1; /* [5] */
+            __IO uint32_t cmdrspcmpl           : 1; /* [6] */
+            __IO uint32_t cmdcmpl              : 1; /* [7] */
+            __IO uint32_t dtcmpl               : 1; /* [8] */
+            __IO uint32_t sbiterr              : 1; /* [9] */
+            __IO uint32_t dtblkcmpl            : 1; /* [10] */
+            __IO uint32_t docmd                : 1; /* [11] */
+            __IO uint32_t dotx                 : 1; /* [12] */
+            __IO uint32_t dorx                 : 1; /* [13] */
+            __IO uint32_t txbufh               : 1; /* [14] */
+            __IO uint32_t rxbufh               : 1; /* [15] */
+            __IO uint32_t txbuff               : 1; /* [16] */
+            __IO uint32_t rxbuff               : 1; /* [17] */
+            __IO uint32_t txbufe               : 1; /* [18] */
+            __IO uint32_t rxbufe               : 1; /* [19] */
+            __IO uint32_t txbuf                : 1; /* [20] */
+            __IO uint32_t rxbuf                : 1; /* [21] */
+            __IO uint32_t ioif                 : 1; /* [22] */
+            __IO uint32_t reserved1            : 9; /* [31:23] */
+        } sts_bit;
+    };
 
-  /**
-    * @brief sdio intclr register, offset:0x38
-    */
-  union
-  {
-    __IO uint32_t intclr;
-    struct
-    {
-      __IO uint32_t cmdfail              : 1; /* [0] */
-      __IO uint32_t dtfail               : 1; /* [1] */
-      __IO uint32_t cmdtimeout           : 1; /* [2] */
-      __IO uint32_t dttimeout            : 1; /* [3] */
-      __IO uint32_t txerru               : 1; /* [4] */
-      __IO uint32_t rxerro               : 1; /* [5] */
-      __IO uint32_t cmdrspcmpl           : 1; /* [6] */
-      __IO uint32_t cmdcmpl              : 1; /* [7] */
-      __IO uint32_t dtcmpl               : 1; /* [8] */
-      __IO uint32_t sbiterr              : 1; /* [9] */
-      __IO uint32_t dtblkcmpl            : 1; /* [10] */
-      __IO uint32_t reserved1            : 11;/* [21:11] */
-      __IO uint32_t ioif                 : 1; /* [22] */
-      __IO uint32_t reserved2            : 9; /* [31:23] */
-    } intclr_bit;
-  };
+    /**
+      * @brief sdio intclr register, offset:0x38
+      */
+    union {
+        __IO uint32_t intclr;
+        struct {
+            __IO uint32_t cmdfail              : 1; /* [0] */
+            __IO uint32_t dtfail               : 1; /* [1] */
+            __IO uint32_t cmdtimeout           : 1; /* [2] */
+            __IO uint32_t dttimeout            : 1; /* [3] */
+            __IO uint32_t txerru               : 1; /* [4] */
+            __IO uint32_t rxerro               : 1; /* [5] */
+            __IO uint32_t cmdrspcmpl           : 1; /* [6] */
+            __IO uint32_t cmdcmpl              : 1; /* [7] */
+            __IO uint32_t dtcmpl               : 1; /* [8] */
+            __IO uint32_t sbiterr              : 1; /* [9] */
+            __IO uint32_t dtblkcmpl            : 1; /* [10] */
+            __IO uint32_t reserved1            : 11;/* [21:11] */
+            __IO uint32_t ioif                 : 1; /* [22] */
+            __IO uint32_t reserved2            : 9; /* [31:23] */
+        } intclr_bit;
+    };
 
-  /**
-    * @brief sdio inten register, offset:0x3C
-    */
-  union
-  {
-    __IO uint32_t inten;
-    struct
-    {
-      __IO uint32_t cmdfailien           : 1; /* [0] */
-      __IO uint32_t dtfailien            : 1; /* [1] */
-      __IO uint32_t cmdtimeoutien        : 1; /* [2] */
-      __IO uint32_t dttimeoutien         : 1; /* [3] */
-      __IO uint32_t txerruien            : 1; /* [4] */
-      __IO uint32_t rxerroien            : 1; /* [5] */
-      __IO uint32_t cmdrspcmplien        : 1; /* [6] */
-      __IO uint32_t cmdcmplien           : 1; /* [7] */
-      __IO uint32_t dtcmplien            : 1; /* [8] */
-      __IO uint32_t sbiterrien           : 1; /* [9] */
-      __IO uint32_t dtblkcmplien         : 1; /* [10] */
-      __IO uint32_t docmdien             : 1; /* [11] */
-      __IO uint32_t dotxien              : 1; /* [12] */
-      __IO uint32_t dorxien              : 1; /* [13] */
-      __IO uint32_t txbufhien            : 1; /* [14] */
-      __IO uint32_t rxbufhien            : 1; /* [15] */
-      __IO uint32_t txbuffien            : 1; /* [16] */
-      __IO uint32_t rxbuffien            : 1; /* [17] */
-      __IO uint32_t txbufeien            : 1; /* [18] */
-      __IO uint32_t rxbufeien            : 1; /* [19] */
-      __IO uint32_t txbufien             : 1; /* [20] */
-      __IO uint32_t rxbufien             : 1; /* [21] */
-      __IO uint32_t ioifien              : 1; /* [22] */
-      __IO uint32_t reserved1            : 9; /* [31:23] */
-    } inten_bit;
-  };
+    /**
+      * @brief sdio inten register, offset:0x3C
+      */
+    union {
+        __IO uint32_t inten;
+        struct {
+            __IO uint32_t cmdfailien           : 1; /* [0] */
+            __IO uint32_t dtfailien            : 1; /* [1] */
+            __IO uint32_t cmdtimeoutien        : 1; /* [2] */
+            __IO uint32_t dttimeoutien         : 1; /* [3] */
+            __IO uint32_t txerruien            : 1; /* [4] */
+            __IO uint32_t rxerroien            : 1; /* [5] */
+            __IO uint32_t cmdrspcmplien        : 1; /* [6] */
+            __IO uint32_t cmdcmplien           : 1; /* [7] */
+            __IO uint32_t dtcmplien            : 1; /* [8] */
+            __IO uint32_t sbiterrien           : 1; /* [9] */
+            __IO uint32_t dtblkcmplien         : 1; /* [10] */
+            __IO uint32_t docmdien             : 1; /* [11] */
+            __IO uint32_t dotxien              : 1; /* [12] */
+            __IO uint32_t dorxien              : 1; /* [13] */
+            __IO uint32_t txbufhien            : 1; /* [14] */
+            __IO uint32_t rxbufhien            : 1; /* [15] */
+            __IO uint32_t txbuffien            : 1; /* [16] */
+            __IO uint32_t rxbuffien            : 1; /* [17] */
+            __IO uint32_t txbufeien            : 1; /* [18] */
+            __IO uint32_t rxbufeien            : 1; /* [19] */
+            __IO uint32_t txbufien             : 1; /* [20] */
+            __IO uint32_t rxbufien             : 1; /* [21] */
+            __IO uint32_t ioifien              : 1; /* [22] */
+            __IO uint32_t reserved1            : 9; /* [31:23] */
+        } inten_bit;
+    };
 
-  /**
-    * @brief sdio reserved1 register, offset:0x40~0x44
-    */
-  __IO uint32_t reserved1[2];
+    /**
+      * @brief sdio reserved1 register, offset:0x40~0x44
+      */
+    __IO uint32_t reserved1[2];
 
-  /**
-    * @brief sdio bufcnt register, offset:0x48
-    */
-  union
-  {
-    __IO uint32_t bufcnt;
-    struct
-    {
-      __IO uint32_t cnt                  : 24;/* [23:0] */
-      __IO uint32_t reserved1            : 8; /* [31:24] */
-    } bufcnt_bit;
-  };
+    /**
+      * @brief sdio bufcnt register, offset:0x48
+      */
+    union {
+        __IO uint32_t bufcnt;
+        struct {
+            __IO uint32_t cnt                  : 24;/* [23:0] */
+            __IO uint32_t reserved1            : 8; /* [31:24] */
+        } bufcnt_bit;
+    };
 
-  /**
-    * @brief sdio reserved2 register, offset:0x4C~0x7C
-    */
-  __IO uint32_t reserved2[13];
+    /**
+      * @brief sdio reserved2 register, offset:0x4C~0x7C
+      */
+    __IO uint32_t reserved2[13];
 
-  /**
-    * @brief sdio buf register, offset:0x80
-    */
-  union
-  {
-    __IO uint32_t buf;
-    struct
-    {
-      __IO uint32_t dt                   : 32;/* [31:0] */
-    } buf_bit;
-  };
+    /**
+      * @brief sdio buf register, offset:0x80
+      */
+    union {
+        __IO uint32_t buf;
+        struct {
+            __IO uint32_t dt                   : 32;/* [31:0] */
+        } buf_bit;
+    };
 
 } sdio_type;
 

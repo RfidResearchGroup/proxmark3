@@ -45,9 +45,8 @@
   * @param  none
   * @retval none
   */
-void wdt_enable(void)
-{
-  WDT->cmd = WDT_CMD_ENABLE;
+void wdt_enable(void) {
+    WDT->cmd = WDT_CMD_ENABLE;
 }
 
 /**
@@ -55,9 +54,8 @@ void wdt_enable(void)
   * @param  none
   * @retval none
   */
-void wdt_counter_reload(void)
-{
-  WDT->cmd = WDT_CMD_RELOAD;
+void wdt_counter_reload(void) {
+    WDT->cmd = WDT_CMD_RELOAD;
 }
 
 /**
@@ -65,9 +63,8 @@ void wdt_counter_reload(void)
   * @param  reload_value (0x0000~0x0FFF)
   * @retval none
   */
-void wdt_reload_value_set(uint16_t reload_value)
-{
-  WDT->rld = reload_value;
+void wdt_reload_value_set(uint16_t reload_value) {
+    WDT->rld = reload_value;
 }
 
 /**
@@ -83,9 +80,8 @@ void wdt_reload_value_set(uint16_t reload_value)
   *         - WDT_CLK_DIV_256
   * @retval none
   */
-void wdt_divider_set(wdt_division_type division)
-{
-  WDT->div_bit.div = division;
+void wdt_divider_set(wdt_division_type division) {
+    WDT->div_bit.div = division;
 }
 
 /**
@@ -93,16 +89,12 @@ void wdt_divider_set(wdt_division_type division)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void wdt_register_write_enable( confirm_state new_state)
-{
-  if(new_state == FALSE)
-  {
-    WDT->cmd = WDT_CMD_LOCK;
-  }
-  else
-  {
-    WDT->cmd = WDT_CMD_UNLOCK;
-  }
+void wdt_register_write_enable(confirm_state new_state) {
+    if (new_state == FALSE) {
+        WDT->cmd = WDT_CMD_LOCK;
+    } else {
+        WDT->cmd = WDT_CMD_UNLOCK;
+    }
 }
 
 /**
@@ -114,20 +106,16 @@ void wdt_register_write_enable( confirm_state new_state)
   *         - WDT_WINF_UPDATE_FLAG: window value update complete flag.
   * @retval state of wdt flag
   */
-flag_status wdt_flag_get(uint16_t wdt_flag)
-{
-  flag_status status = RESET;
+flag_status wdt_flag_get(uint16_t wdt_flag) {
+    flag_status status = RESET;
 
-  if ((WDT->sts & wdt_flag) != (uint16_t)RESET)
-  {
-    status = SET;
-  }
-  else
-  {
-    status = RESET;
-  }
+    if ((WDT->sts & wdt_flag) != (uint16_t)RESET) {
+        status = SET;
+    } else {
+        status = RESET;
+    }
 
-  return status;
+    return status;
 }
 
 /**
@@ -135,9 +123,8 @@ flag_status wdt_flag_get(uint16_t wdt_flag)
   * @param  window_cnt (0x0000~0x0FFF)
   * @retval none
   */
-void wdt_window_counter_set(uint16_t window_cnt)
-{
-  WDT->win_bit.win = window_cnt;
+void wdt_window_counter_set(uint16_t window_cnt) {
+    WDT->win_bit.win = window_cnt;
 }
 
 /**

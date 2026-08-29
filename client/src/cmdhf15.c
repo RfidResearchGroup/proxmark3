@@ -3466,7 +3466,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
         [=]   16 | 77 66 55 44 | 0 | wfUD
         [=]   17 | 33 22 11 E0 | 0 | 3"..
         */
-        uint8_t blk_lo[4] = {0}; 
+        uint8_t blk_lo[4] = {0};
         uint8_t blk_hi[4] = {0};
         reverse_array_copy(payload.uid + 4, 4, blk_lo);
         reverse_array_copy(payload.uid, 4, blk_hi);

@@ -39,7 +39,7 @@
 #include "iso15693.h"
 #include "iclass_cmd.h"              // iclass_card_select_t struct
 #include "i2c.h"                     // i2c defines (SIM module access)
-#include "sam_common.h"              
+#include "sam_common.h"
 #include "printf.h"
 
 uint8_t get_pagemap(const picopass_hdr_t *hdr) {

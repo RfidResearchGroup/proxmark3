@@ -31,25 +31,23 @@
 
 #include "opj_includes.h"
 
-opj_image_t* opj_image_create0(void)
-{
-    opj_image_t *image = (opj_image_t*)opj_calloc(1, sizeof(opj_image_t));
+opj_image_t *opj_image_create0(void) {
+    opj_image_t *image = (opj_image_t *)opj_calloc(1, sizeof(opj_image_t));
     return image;
 }
 
-opj_image_t* OPJ_CALLCONV opj_image_create(OPJ_UINT32 numcmpts,
-        opj_image_cmptparm_t *cmptparms, OPJ_COLOR_SPACE clrspc)
-{
+opj_image_t *OPJ_CALLCONV opj_image_create(OPJ_UINT32 numcmpts,
+                                           opj_image_cmptparm_t *cmptparms, OPJ_COLOR_SPACE clrspc) {
     OPJ_UINT32 compno;
     opj_image_t *image = NULL;
 
-    image = (opj_image_t*) opj_calloc(1, sizeof(opj_image_t));
+    image = (opj_image_t *) opj_calloc(1, sizeof(opj_image_t));
     if (image) {
         image->color_space = clrspc;
         image->numcomps = numcmpts;
         /* allocate memory for the per-component information */
-        image->comps = (opj_image_comp_t*)opj_calloc(image->numcomps,
-                       sizeof(opj_image_comp_t));
+        image->comps = (opj_image_comp_t *)opj_calloc(image->numcomps,
+                                                      sizeof(opj_image_comp_t));
         if (!image->comps) {
             /* TODO replace with event manager, breaks API */
             /* fprintf(stderr,"Unable to allocate memory for image.\n"); */
@@ -73,7 +71,7 @@ opj_image_t* OPJ_CALLCONV opj_image_create(OPJ_UINT32 numcmpts,
                 opj_image_destroy(image);
                 return NULL;
             }
-            comp->data = (OPJ_INT32*) opj_image_data_alloc(
+            comp->data = (OPJ_INT32 *) opj_image_data_alloc(
                              (size_t)comp->w * comp->h * sizeof(OPJ_INT32));
             if (!comp->data) {
                 /* TODO replace with event manager, breaks API */
@@ -88,8 +86,7 @@ opj_image_t* OPJ_CALLCONV opj_image_create(OPJ_UINT32 numcmpts,
     return image;
 }
 
-void OPJ_CALLCONV opj_image_destroy(opj_image_t *image)
-{
+void OPJ_CALLCONV opj_image_destroy(opj_image_t *image) {
     if (image) {
         if (image->comps) {
             OPJ_UINT32 compno;
@@ -118,13 +115,12 @@ void OPJ_CALLCONV opj_image_destroy(opj_image_t *image)
  * @param p_image_header    the image header to update.
  * @param p_cp              the coding parameters from which to update the image.
  */
-void opj_image_comp_header_update(opj_image_t * p_image_header,
-                                  const struct opj_cp * p_cp)
-{
+void opj_image_comp_header_update(opj_image_t *p_image_header,
+                                  const struct opj_cp *p_cp) {
     OPJ_UINT32 i, l_width, l_height;
     OPJ_UINT32 l_x0, l_y0, l_x1, l_y1;
     OPJ_UINT32 l_comp_x0, l_comp_y0, l_comp_x1, l_comp_y1;
-    opj_image_comp_t* l_img_comp = NULL;
+    opj_image_comp_t *l_img_comp = NULL;
 
     l_x0 = opj_uint_max(p_cp->tx0, p_image_header->x0);
     l_y0 = opj_uint_max(p_cp->ty0, p_image_header->y0);
@@ -161,9 +157,8 @@ void opj_image_comp_header_update(opj_image_t * p_image_header,
  * @param   p_image_dest    the dest image
  *
  */
-void opj_copy_image_header(const opj_image_t* p_image_src,
-                           opj_image_t* p_image_dest)
-{
+void opj_copy_image_header(const opj_image_t *p_image_src,
+                           opj_image_t *p_image_dest) {
     OPJ_UINT32 compno;
 
     /* preconditions */
@@ -188,8 +183,8 @@ void opj_copy_image_header(const opj_image_t* p_image_src,
 
     p_image_dest->numcomps = p_image_src->numcomps;
 
-    p_image_dest->comps = (opj_image_comp_t*) opj_malloc(p_image_dest->numcomps *
-                          sizeof(opj_image_comp_t));
+    p_image_dest->comps = (opj_image_comp_t *) opj_malloc(p_image_dest->numcomps *
+                                                          sizeof(opj_image_comp_t));
     if (!p_image_dest->comps) {
         p_image_dest->comps = NULL;
         p_image_dest->numcomps = 0;
@@ -207,7 +202,7 @@ void opj_copy_image_header(const opj_image_t* p_image_src,
     p_image_dest->icc_profile_len = p_image_src->icc_profile_len;
 
     if (p_image_dest->icc_profile_len) {
-        p_image_dest->icc_profile_buf = (OPJ_BYTE*)opj_malloc(
+        p_image_dest->icc_profile_buf = (OPJ_BYTE *)opj_malloc(
                                             p_image_dest->icc_profile_len);
         if (!p_image_dest->icc_profile_buf) {
             p_image_dest->icc_profile_buf = NULL;
@@ -224,21 +219,20 @@ void opj_copy_image_header(const opj_image_t* p_image_src,
     return;
 }
 
-opj_image_t* OPJ_CALLCONV opj_image_tile_create(OPJ_UINT32 numcmpts,
-        opj_image_cmptparm_t *cmptparms, OPJ_COLOR_SPACE clrspc)
-{
+opj_image_t *OPJ_CALLCONV opj_image_tile_create(OPJ_UINT32 numcmpts,
+                                                opj_image_cmptparm_t *cmptparms, OPJ_COLOR_SPACE clrspc) {
     OPJ_UINT32 compno;
     opj_image_t *image = 00;
 
-    image = (opj_image_t*) opj_calloc(1, sizeof(opj_image_t));
+    image = (opj_image_t *) opj_calloc(1, sizeof(opj_image_t));
     if (image) {
 
         image->color_space = clrspc;
         image->numcomps = numcmpts;
 
         /* allocate memory for the per-component information */
-        image->comps = (opj_image_comp_t*)opj_calloc(image->numcomps,
-                       sizeof(opj_image_comp_t));
+        image->comps = (opj_image_comp_t *)opj_calloc(image->numcomps,
+                                                      sizeof(opj_image_comp_t));
         if (!image->comps) {
             opj_image_destroy(image);
             return 00;

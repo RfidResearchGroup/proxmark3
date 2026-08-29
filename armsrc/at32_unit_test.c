@@ -173,7 +173,7 @@ void test_i2c_rgb(void) {
         }
 
         if ((i2c_status = i2c_master_receive(&hi2cx, I2Cx_ADDRESS, rx_buf, I2C_RGB_TEST_BUF_SIZE, I2C_TIMEOUT)) !=
-            I2C_OK) {
+                I2C_OK) {
             dxl_print_dbg("读取异常：%d\r\n", i2c_status);
             continue; // 异常的话，直接跳过下面的代码，重新尝试执行
         }
@@ -202,7 +202,7 @@ void test_i2c_rgb(void) {
         dxl_print_dbg("开始写入... \r\n");
 
         if ((i2c_status = i2c_master_transmit(&hi2cx, I2Cx_ADDRESS, tx_buf, I2C_RGB_TEST_BUF_SIZE, I2C_TIMEOUT)) !=
-            I2C_OK) {
+                I2C_OK) {
             dxl_print_dbg("写入异常：%d\r\n", i2c_status);
             continue; // 异常的话，直接跳过下面的代码，重新尝试执行
         }
@@ -1000,7 +1000,7 @@ void test_beep(void) {
     gpio_init_struct.gpio_pins = BEEPER_EN_GPIO_PIN;
     gpio_init_struct.gpio_pull = GPIO_PULL_NONE;
     gpio_init(BEEPER_EN_GPIO, &gpio_init_struct);
-    gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, FALSE);
+    gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, FALSE);
     // 蜂鸣器调制脚
     gpio_init_struct.gpio_mode = GPIO_MODE_MUX;
     gpio_init_struct.gpio_pins = BEEPER_MOD_GPIO_PIN;
@@ -1022,27 +1022,27 @@ void test_beep(void) {
 
     while (1) {
         BEEPER_MOD_TMR->pr = 999;
-        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, TRUE);
+        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, TRUE);
         SpinDelay(20);
-        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, FALSE);
+        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, FALSE);
         SpinDelay(400);
         BEEPER_MOD_TMR->pr = 1100;
         tmr_channel_value_set(BEEPER_MOD_TMR, BEEPER_MOD_TMR_CH, 550);
-        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, TRUE);
+        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, TRUE);
         SpinDelay(20);
-        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, FALSE);
+        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, FALSE);
         SpinDelay(400);
         BEEPER_MOD_TMR->pr = 1200;
         tmr_channel_value_set(BEEPER_MOD_TMR, BEEPER_MOD_TMR_CH, 600);
-        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, TRUE);
+        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, TRUE);
         SpinDelay(20);
-        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, FALSE);
+        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, FALSE);
         SpinDelay(400);
         BEEPER_MOD_TMR->pr = 1300;
         tmr_channel_value_set(BEEPER_MOD_TMR, BEEPER_MOD_TMR_CH, 650);
-        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, TRUE);
+        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, TRUE);
         SpinDelay(20);
-        gpio_bits_write(BEEPER_EN_GPIO,BEEPER_EN_GPIO_PIN, FALSE);
+        gpio_bits_write(BEEPER_EN_GPIO, BEEPER_EN_GPIO_PIN, FALSE);
         SpinDelay(400);
 
         // 响完一轮之后直接软件reset
@@ -1703,9 +1703,9 @@ void test_24c02(void) {
                 uint8_t aes_key[16];
                 uint8_t reserved[147];
             }
-                    PACKED info;
+            PACKED info;
         }
-                PACKED;
+        PACKED;
         struct factory_info_v1 *factory_info = (struct factory_info_v1 *) data;
         // 打印全部信息
         dxl_print_dbg("factory_info_version: %d\n", factory_info->factory_info_version);
@@ -1800,12 +1800,12 @@ void test_bwm_uart(void) {
         // 测试发送和接收数据，看看BWM是否正常通信
         uint8_t data_tx[] = { 0x7c, 0xc7, 0xfa, 0x03, 0x00, 0x00, 0xb5, 0xba };
         for (size_t i = 0; i < sizeof(data_tx); ++i) {
-            while(usart_flag_get(UART4, USART_TDBE_FLAG) == RESET);
+            while (usart_flag_get(UART4, USART_TDBE_FLAG) == RESET);
             usart_data_transmit(UART4, data_tx[i]);
         }
         uint8_t data_rx[9] = { 0x00 }; // 应答是 2d3dfa03010001c8d1
         for (size_t i = 0; i < sizeof(data_rx); ++i) {
-            while(usart_flag_get(UART4, USART_RDBF_FLAG) == RESET);
+            while (usart_flag_get(UART4, USART_RDBF_FLAG) == RESET);
             data_rx[i] = usart_data_receive(UART4);
         }
         dxl_print_dbg("Received data from BWM: ");

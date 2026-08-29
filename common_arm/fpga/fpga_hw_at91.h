@@ -45,8 +45,8 @@ STATIC_FORCE_INLINE void FPGA_SSC_DMA_RX_Enable(void) {
     AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;
 }
 
-STATIC_FORCE_INLINE uint32_t* FPGA_SSC_DMA_RX_Current_Address(void) {
-    return (uint32_t*)AT91C_BASE_PDC_SSC->PDC_RPR;
+STATIC_FORCE_INLINE uint32_t *FPGA_SSC_DMA_RX_Current_Address(void) {
+    return (uint32_t *)AT91C_BASE_PDC_SSC->PDC_RPR;
 }
 
 STATIC_FORCE_INLINE uint16_t FPGA_SSC_DMA_RX_Remaining_Count(void) {

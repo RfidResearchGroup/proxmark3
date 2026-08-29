@@ -33,7 +33,7 @@ STATIC_FORCE_INLINE uint32_t GetChipId(void);
 // size: the size of the unique ID in bytes, set to 0 if no unique id available(and return null ptr).
 // Note: Not all chips have a unique ID(Such as AT91SAM7S).
 //-----------------------------------------------------------------------------
-STATIC_FORCE_INLINE uint8_t* GetChipUniqueId(uint8_t *size);
+STATIC_FORCE_INLINE uint8_t *GetChipUniqueId(uint8_t *size);
 
 //-----------------------------------------------------------------------------
 // Reset the chip processor

@@ -41,12 +41,11 @@ extern "C"
 #if defined(ARM_MATH_MVE_FLOAT16) && !defined(ARM_MATH_AUTOVECTORIZE)
 
 
-static const float16_t __logf_rng_f16=0.693147180f16;
+static const float16_t __logf_rng_f16 = 0.693147180f16;
 
 /* fast inverse approximation (3x newton) */
 __STATIC_INLINE f16x8_t vrecip_medprec_f16(
-    f16x8_t x)
-{
+    f16x8_t x) {
     q15x8_t         m;
     f16x8_t         b;
     any16x8_t       xinv;
@@ -79,8 +78,7 @@ __STATIC_INLINE f16x8_t vrecip_medprec_f16(
 
 /* fast inverse approximation (4x newton) */
 __STATIC_INLINE f16x8_t vrecip_hiprec_f16(
-    f16x8_t x)
-{
+    f16x8_t x) {
     q15x8_t         m;
     f16x8_t         b;
     any16x8_t       xinv;
@@ -115,8 +113,7 @@ __STATIC_INLINE f16x8_t vrecip_hiprec_f16(
 }
 
 __STATIC_INLINE f16x8_t vdiv_f16(
-    f16x8_t num, f16x8_t den)
-{
+    f16x8_t num, f16x8_t den) {
     return vmulq(num, vrecip_hiprec_f16(den));
 }
 
@@ -129,9 +126,8 @@ __STATIC_INLINE f16x8_t vdiv_f16(
  */
 
 __STATIC_INLINE float16x8_t vtaylor_polyq_f16(
-        float16x8_t           x,
-        const float16_t * coeffs)
-{
+    float16x8_t           x,
+    const float16_t *coeffs) {
     float16x8_t         A = vfmasq(vdupq_n_f16(coeffs[4]), x, coeffs[0]);
     float16x8_t         B = vfmasq(vdupq_n_f16(coeffs[6]), x, coeffs[2]);
     float16x8_t         C = vfmasq(vdupq_n_f16(coeffs[5]), x, coeffs[1]);
@@ -155,8 +151,7 @@ __STATIC_INLINE float16x8_t vtaylor_polyq_f16(
     vecExpUnBiased = n;   \
     vecTmpFlt1 = r.f;
 
-__STATIC_INLINE float16x8_t vlogq_f16(float16x8_t vecIn)
-{
+__STATIC_INLINE float16x8_t vlogq_f16(float16x8_t vecIn) {
     q15x8_t             vecExpUnBiased;
     float16x8_t         vecTmpFlt0, vecTmpFlt1;
     float16x8_t         vecAcc0, vecAcc1, vecAcc2, vecAcc3;
@@ -216,8 +211,7 @@ __STATIC_INLINE float16x8_t vlogq_f16(float16x8_t vecIn)
 }
 
 __STATIC_INLINE float16x8_t vexpq_f16(
-    float16x8_t x)
-{
+    float16x8_t x) {
     // Perform range reduction [-log(2),log(2)]
     int16x8_t       m = vcvtq_s16_f16(vmulq_n_f16(x, 1.4426950408f16));
     float16x8_t     val = vfmsq_f16(x, vcvtq_f16_s16(m), vdupq_n_f16(0.6931471805f16));
@@ -226,14 +220,13 @@ __STATIC_INLINE float16x8_t vexpq_f16(
     float16x8_t         poly = vtaylor_polyq_f16(val, exp_tab_f16);
 
     // Reconstruct
-    poly = (float16x8_t) (vqaddq_s16((int16x8_t) (poly), vqshlq_n_s16(m, 10)));
+    poly = (float16x8_t)(vqaddq_s16((int16x8_t)(poly), vqshlq_n_s16(m, 10)));
 
     poly = vdupq_m_n_f16(poly, 0.0f16, vcmpltq_n_s16(m, -14));
     return poly;
 }
 
-__STATIC_INLINE float16x8_t arm_vec_exponent_f16(float16x8_t x, int16_t nb)
-{
+__STATIC_INLINE float16x8_t arm_vec_exponent_f16(float16x8_t x, int16_t nb) {
     float16x8_t         r = x;
     nb--;
     while (nb > 0) {
@@ -245,15 +238,13 @@ __STATIC_INLINE float16x8_t arm_vec_exponent_f16(float16x8_t x, int16_t nb)
 
 __STATIC_INLINE f16x8_t vpowq_f16(
     f16x8_t val,
-    f16x8_t n)
-{
+    f16x8_t n) {
     return vexpq_f16(vmulq_f16(n, vlogq_f16(val)));
 }
 
 #define INV_NEWTON_INIT_F16  0x7773
 
-__STATIC_INLINE f16x8_t vrecip_f16(f16x8_t vecIn)
-{
+__STATIC_INLINE f16x8_t vrecip_f16(f16x8_t vecIn) {
     f16x8_t     vecSx, vecW, vecTmp;
     any16x8_t   v;
 
@@ -283,8 +274,7 @@ __STATIC_INLINE f16x8_t vrecip_f16(f16x8_t vecIn)
 }
 
 __STATIC_INLINE f16x8_t vtanhq_f16(
-    f16x8_t val)
-{
+    f16x8_t val) {
     f16x8_t         x =
         vminnmq_f16(vmaxnmq_f16(val, vdupq_n_f16(-10.f16)), vdupq_n_f16(10.0f16));
     f16x8_t         exp2x = vexpq_f16(vmulq_n_f16(x, 2.f16));

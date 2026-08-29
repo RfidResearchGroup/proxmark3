@@ -49,17 +49,13 @@
   * @param  new_state: specifies the acc calibration to be enabled or disabled.(TRUE or FALSE)
   * @retval none
   */
-void acc_calibration_mode_enable(uint16_t acc_trim, confirm_state new_state)
-{
-  if(acc_trim == ACC_CAL_HICKCAL)
-  {
-    ACC->ctrl1_bit.entrim = FALSE;
-  }
-  else
-  {
-    ACC->ctrl1_bit.entrim = TRUE;
-  }
-  ACC->ctrl1_bit.calon = new_state;
+void acc_calibration_mode_enable(uint16_t acc_trim, confirm_state new_state) {
+    if (acc_trim == ACC_CAL_HICKCAL) {
+        ACC->ctrl1_bit.entrim = FALSE;
+    } else {
+        ACC->ctrl1_bit.entrim = TRUE;
+    }
+    ACC->ctrl1_bit.calon = new_state;
 }
 
 /**
@@ -67,9 +63,8 @@ void acc_calibration_mode_enable(uint16_t acc_trim, confirm_state new_state)
   * @param  step_value:  value to be stored in the acc's ctrl1 register
   * @retval none
   */
-void acc_step_set(uint8_t step_value)
-{
-  ACC->ctrl1_bit.step = step_value;
+void acc_step_set(uint8_t step_value) {
+    ACC->ctrl1_bit.step = step_value;
 }
 
 /**
@@ -80,9 +75,8 @@ void acc_step_set(uint8_t step_value)
   *         @arg ACC_SOF_OTG2
   * @retval none
   */
-void acc_sof_select(uint16_t sof_sel)
-{
-  ACC->ctrl1 |= sof_sel;
+void acc_sof_select(uint16_t sof_sel) {
+    ACC->ctrl1 |= sof_sel;
 }
 
 /**
@@ -94,16 +88,12 @@ void acc_sof_select(uint16_t sof_sel)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void acc_interrupt_enable(uint16_t acc_int, confirm_state new_state)
-{
-  if(acc_int == ACC_CALRDYIEN_INT)
-  {
-    ACC->ctrl1_bit.calrdyien = new_state;
-  }
-  else
-  {
-    ACC->ctrl1_bit.eien = new_state;
-  }
+void acc_interrupt_enable(uint16_t acc_int, confirm_state new_state) {
+    if (acc_int == ACC_CALRDYIEN_INT) {
+        ACC->ctrl1_bit.calrdyien = new_state;
+    } else {
+        ACC->ctrl1_bit.eien = new_state;
+    }
 }
 
 /**
@@ -111,9 +101,8 @@ void acc_interrupt_enable(uint16_t acc_int, confirm_state new_state)
   * @param  none
   * @retval 8-bit hicktrim value.
   */
-uint8_t acc_hicktrim_get(void)
-{
-  return ((uint8_t)(ACC->ctrl2_bit.hicktrim));
+uint8_t acc_hicktrim_get(void) {
+    return ((uint8_t)(ACC->ctrl2_bit.hicktrim));
 }
 
 /**
@@ -121,9 +110,8 @@ uint8_t acc_hicktrim_get(void)
   * @param  none
   * @retval 8-bit hicktrim value.
   */
-uint8_t acc_hickcal_get(void)
-{
-  return ((uint8_t)(ACC->ctrl2_bit.hickcal));
+uint8_t acc_hickcal_get(void) {
+    return ((uint8_t)(ACC->ctrl2_bit.hickcal));
 }
 
 /**
@@ -131,9 +119,8 @@ uint8_t acc_hickcal_get(void)
   * @param  acc_c1_value
   * @retval none.
   */
-void acc_write_c1(uint16_t acc_c1_value)
-{
-  ACC->c1 = acc_c1_value;
+void acc_write_c1(uint16_t acc_c1_value) {
+    ACC->c1 = acc_c1_value;
 }
 
 /**
@@ -141,9 +128,8 @@ void acc_write_c1(uint16_t acc_c1_value)
   * @param  acc_c2_value
   * @retval none.
   */
-void acc_write_c2(uint16_t acc_c2_value)
-{
-  ACC->c2 = acc_c2_value;
+void acc_write_c2(uint16_t acc_c2_value) {
+    ACC->c2 = acc_c2_value;
 }
 
 /**
@@ -151,9 +137,8 @@ void acc_write_c2(uint16_t acc_c2_value)
   * @param  acc_c3_value
   * @retval none.
   */
-void acc_write_c3(uint16_t acc_c3_value)
-{
-  ACC->c3 = acc_c3_value;
+void acc_write_c3(uint16_t acc_c3_value) {
+    ACC->c3 = acc_c3_value;
 }
 
 /**
@@ -161,9 +146,8 @@ void acc_write_c3(uint16_t acc_c3_value)
   * @param  none
   * @retval 16-bit c1 value.
   */
-uint16_t acc_read_c1(void)
-{
-  return ((uint16_t)(ACC->c1));
+uint16_t acc_read_c1(void) {
+    return ((uint16_t)(ACC->c1));
 }
 
 /**
@@ -171,9 +155,8 @@ uint16_t acc_read_c1(void)
   * @param  none
   * @retval 16-bit c2 value.
   */
-uint16_t acc_read_c2(void)
-{
-  return ((uint16_t)(ACC->c2));
+uint16_t acc_read_c2(void) {
+    return ((uint16_t)(ACC->c2));
 }
 
 /**
@@ -181,9 +164,8 @@ uint16_t acc_read_c2(void)
   * @param  none
   * @retval 16-bit c3 value.
   */
-uint16_t acc_read_c3(void)
-{
-  return ((uint16_t)(ACC->c3));
+uint16_t acc_read_c3(void) {
+    return ((uint16_t)(ACC->c3));
 }
 
 /**
@@ -194,12 +176,11 @@ uint16_t acc_read_c3(void)
   *         - ACC_CALRDY_FLAG
   * @retval  flag_status (SET or RESET)
   */
-flag_status acc_flag_get(uint16_t acc_flag)
-{
-  if(acc_flag == ACC_CALRDY_FLAG)
-    return (flag_status)(ACC->sts_bit.calrdy);
-  else
-    return (flag_status)(ACC->sts_bit.rslost);
+flag_status acc_flag_get(uint16_t acc_flag) {
+    if (acc_flag == ACC_CALRDY_FLAG)
+        return (flag_status)(ACC->sts_bit.calrdy);
+    else
+        return (flag_status)(ACC->sts_bit.rslost);
 }
 
 /**
@@ -210,12 +191,11 @@ flag_status acc_flag_get(uint16_t acc_flag)
   *         - ACC_CALRDY_FLAG
   * @retval  flag_status (SET or RESET)
   */
-flag_status acc_interrupt_flag_get(uint16_t acc_flag)
-{
-  if(acc_flag == ACC_CALRDY_FLAG)
-    return (flag_status)(ACC->sts_bit.calrdy && ACC->ctrl1_bit.calrdyien);
-  else
-    return (flag_status)(ACC->sts_bit.rslost && ACC->ctrl1_bit.eien);
+flag_status acc_interrupt_flag_get(uint16_t acc_flag) {
+    if (acc_flag == ACC_CALRDY_FLAG)
+        return (flag_status)(ACC->sts_bit.calrdy && ACC->ctrl1_bit.calrdyien);
+    else
+        return (flag_status)(ACC->sts_bit.rslost && ACC->ctrl1_bit.eien);
 }
 
 
@@ -227,9 +207,8 @@ flag_status acc_interrupt_flag_get(uint16_t acc_flag)
   *         - ACC_CALRDY_FLAG
   * @retval  none
   */
-void acc_flag_clear(uint16_t acc_flag)
-{
-  ACC->sts = ~acc_flag;
+void acc_flag_clear(uint16_t acc_flag) {
+    ACC->sts = ~acc_flag;
 }
 
 /**

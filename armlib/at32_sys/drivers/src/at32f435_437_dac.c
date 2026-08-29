@@ -46,10 +46,9 @@
   * @param  none
   * @retval none
   */
-void dac_reset(void)
-{
-  crm_periph_reset(CRM_DAC_PERIPH_RESET, TRUE);
-  crm_periph_reset(CRM_DAC_PERIPH_RESET, FALSE);
+void dac_reset(void) {
+    crm_periph_reset(CRM_DAC_PERIPH_RESET, TRUE);
+    crm_periph_reset(CRM_DAC_PERIPH_RESET, FALSE);
 }
 
 /**
@@ -61,19 +60,17 @@ void dac_reset(void)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void dac_enable(dac_select_type dac_select, confirm_state new_state)
-{
-  switch(dac_select)
-  {
-    case DAC1_SELECT:
-      DAC->ctrl_bit.d1en = new_state;
-      break;
-    case DAC2_SELECT:
-      DAC->ctrl_bit.d2en = new_state;
-      break;
-    default:
-      break;
-  }
+void dac_enable(dac_select_type dac_select, confirm_state new_state) {
+    switch (dac_select) {
+        case DAC1_SELECT:
+            DAC->ctrl_bit.d1en = new_state;
+            break;
+        case DAC2_SELECT:
+            DAC->ctrl_bit.d2en = new_state;
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -85,20 +82,18 @@ void dac_enable(dac_select_type dac_select, confirm_state new_state)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void dac_output_buffer_enable(dac_select_type dac_select, confirm_state new_state)
-{
-  new_state = (confirm_state)!new_state;
-  switch(dac_select)
-  {
-    case DAC1_SELECT:
-      DAC->ctrl_bit.d1obdis = new_state;
-      break;
-    case DAC2_SELECT:
-      DAC->ctrl_bit.d2obdis = new_state;
-      break;
-    default:
-      break;
-  }
+void dac_output_buffer_enable(dac_select_type dac_select, confirm_state new_state) {
+    new_state = (confirm_state)!new_state;
+    switch (dac_select) {
+        case DAC1_SELECT:
+            DAC->ctrl_bit.d1obdis = new_state;
+            break;
+        case DAC2_SELECT:
+            DAC->ctrl_bit.d2obdis = new_state;
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -110,19 +105,17 @@ void dac_output_buffer_enable(dac_select_type dac_select, confirm_state new_stat
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void dac_trigger_enable(dac_select_type dac_select, confirm_state new_state)
-{
-  switch(dac_select)
-  {
-    case DAC1_SELECT:
-      DAC->ctrl_bit.d1trgen = new_state;
-      break;
-    case DAC2_SELECT:
-      DAC->ctrl_bit.d2trgen = new_state;
-      break;
-    default:
-      break;
-  }
+void dac_trigger_enable(dac_select_type dac_select, confirm_state new_state) {
+    switch (dac_select) {
+        case DAC1_SELECT:
+            DAC->ctrl_bit.d1trgen = new_state;
+            break;
+        case DAC2_SELECT:
+            DAC->ctrl_bit.d2trgen = new_state;
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -143,19 +136,17 @@ void dac_trigger_enable(dac_select_type dac_select, confirm_state new_state)
   *         - DAC_SOFTWARE_TRIGGER
   * @retval none
   */
-void dac_trigger_select(dac_select_type dac_select, dac_trigger_type dac_trigger_source)
-{
-  switch(dac_select)
-  {
-    case DAC1_SELECT:
-      DAC->ctrl_bit.d1trgsel = dac_trigger_source;
-      break;
-    case DAC2_SELECT:
-      DAC->ctrl_bit.d2trgsel = dac_trigger_source;
-      break;
-    default:
-      break;
-  }
+void dac_trigger_select(dac_select_type dac_select, dac_trigger_type dac_trigger_source) {
+    switch (dac_select) {
+        case DAC1_SELECT:
+            DAC->ctrl_bit.d1trgsel = dac_trigger_source;
+            break;
+        case DAC2_SELECT:
+            DAC->ctrl_bit.d2trgsel = dac_trigger_source;
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -166,19 +157,17 @@ void dac_trigger_select(dac_select_type dac_select, dac_trigger_type dac_trigger
   *         - DAC2_SELECT
   * @retval none
   */
-void dac_software_trigger_generate(dac_select_type dac_select)
-{
-  switch(dac_select)
-  {
-    case DAC1_SELECT:
-      DAC->swtrg_bit.d1swtrg = TRUE;
-      break;
-    case DAC2_SELECT:
-      DAC->swtrg_bit.d2swtrg = TRUE;
-      break;
-    default:
-      break;
-  }
+void dac_software_trigger_generate(dac_select_type dac_select) {
+    switch (dac_select) {
+        case DAC1_SELECT:
+            DAC->swtrg_bit.d1swtrg = TRUE;
+            break;
+        case DAC2_SELECT:
+            DAC->swtrg_bit.d2swtrg = TRUE;
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -186,9 +175,8 @@ void dac_software_trigger_generate(dac_select_type dac_select)
   * @param  none
   * @retval none
   */
-void dac_dual_software_trigger_generate(void)
-{
-  DAC->swtrg |= 0x03;
+void dac_dual_software_trigger_generate(void) {
+    DAC->swtrg |= 0x03;
 }
 
 /**
@@ -204,19 +192,17 @@ void dac_dual_software_trigger_generate(void)
   *         - DAC_WAVE_GENERATE_TRIANGLE
   * @retval none
   */
-void dac_wave_generate(dac_select_type dac_select, dac_wave_type dac_wave)
-{
-  switch(dac_select)
-  {
-    case DAC1_SELECT:
-      DAC->ctrl_bit.d1nm = dac_wave;
-      break;
-    case DAC2_SELECT:
-      DAC->ctrl_bit.d2nm = dac_wave;
-      break;
-    default:
-      break;
-  }
+void dac_wave_generate(dac_select_type dac_select, dac_wave_type dac_wave) {
+    switch (dac_select) {
+        case DAC1_SELECT:
+            DAC->ctrl_bit.d1nm = dac_wave;
+            break;
+        case DAC2_SELECT:
+            DAC->ctrl_bit.d2nm = dac_wave;
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -241,19 +227,17 @@ void dac_wave_generate(dac_select_type dac_select, dac_wave_type dac_wave)
   *         - DAC_LSFR_BITB0_AMPLITUDE_4095
   * @retval none
   */
-void dac_mask_amplitude_select(dac_select_type dac_select, dac_mask_amplitude_type dac_mask_amplitude)
-{
-  switch(dac_select)
-  {
-    case DAC1_SELECT:
-      DAC->ctrl_bit.d1nbsel = dac_mask_amplitude;
-      break;
-    case DAC2_SELECT:
-      DAC->ctrl_bit.d2nbsel = dac_mask_amplitude;
-      break;
-    default:
-      break;
-  }
+void dac_mask_amplitude_select(dac_select_type dac_select, dac_mask_amplitude_type dac_mask_amplitude) {
+    switch (dac_select) {
+        case DAC1_SELECT:
+            DAC->ctrl_bit.d1nbsel = dac_mask_amplitude;
+            break;
+        case DAC2_SELECT:
+            DAC->ctrl_bit.d2nbsel = dac_mask_amplitude;
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -265,19 +249,17 @@ void dac_mask_amplitude_select(dac_select_type dac_select, dac_mask_amplitude_ty
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void dac_dma_enable(dac_select_type dac_select, confirm_state new_state)
-{
-  switch(dac_select)
-  {
-    case DAC1_SELECT:
-      DAC->ctrl_bit.d1dmaen = new_state;
-      break;
-    case DAC2_SELECT:
-      DAC->ctrl_bit.d2dmaen = new_state;
-      break;
-    default:
-      break;
-  }
+void dac_dma_enable(dac_select_type dac_select, confirm_state new_state) {
+    switch (dac_select) {
+        case DAC1_SELECT:
+            DAC->ctrl_bit.d1dmaen = new_state;
+            break;
+        case DAC2_SELECT:
+            DAC->ctrl_bit.d2dmaen = new_state;
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -288,21 +270,19 @@ void dac_dma_enable(dac_select_type dac_select, confirm_state new_state)
   *         - DAC2_SELECT
   * @retval dac channel data output
   */
-uint16_t dac_data_output_get(dac_select_type dac_select)
-{
-  uint16_t data_output =0;
-  switch(dac_select)
-  {
-    case DAC1_SELECT:
-      data_output = DAC->d1odt_bit.d1odt;
-      break;
-    case DAC2_SELECT:
-      data_output = DAC->d2odt_bit.d2odt;
-      break;
-    default:
-      break;
-  }
-  return data_output;
+uint16_t dac_data_output_get(dac_select_type dac_select) {
+    uint16_t data_output = 0;
+    switch (dac_select) {
+        case DAC1_SELECT:
+            data_output = DAC->d1odt_bit.d1odt;
+            break;
+        case DAC2_SELECT:
+            data_output = DAC->d2odt_bit.d2odt;
+            break;
+        default:
+            break;
+    }
+    return data_output;
 }
 
 /**
@@ -315,9 +295,8 @@ uint16_t dac_data_output_get(dac_select_type dac_select)
   * @param  dac1_data :indecate from selected data holding register
   * @retval none
   */
-void dac_1_data_set(dac1_aligned_data_type dac1_aligned, uint16_t dac1_data)
-{
-  *(__IO uint32_t *) dac1_aligned = dac1_data;
+void dac_1_data_set(dac1_aligned_data_type dac1_aligned, uint16_t dac1_data) {
+    *(__IO uint32_t *) dac1_aligned = dac1_data;
 }
 
 /**
@@ -330,9 +309,8 @@ void dac_1_data_set(dac1_aligned_data_type dac1_aligned, uint16_t dac1_data)
   * @param  dac2_data :indecate from selected data holding register
   * @retval none
   */
-void dac_2_data_set(dac2_aligned_data_type dac2_aligned, uint16_t dac2_data)
-{
-  *(__IO uint32_t *) dac2_aligned = dac2_data;
+void dac_2_data_set(dac2_aligned_data_type dac2_aligned, uint16_t dac2_data) {
+    *(__IO uint32_t *) dac2_aligned = dac2_data;
 }
 
 /**
@@ -346,22 +324,20 @@ void dac_2_data_set(dac2_aligned_data_type dac2_aligned, uint16_t dac2_data)
   * @param  data2 :dac1 channel indecate from selected data holding register
   * @retval none
   */
-void dac_dual_data_set(dac_dual_data_type dac_dual, uint16_t data1, uint16_t data2)
-{
-  switch(dac_dual)
-  {
-    case DAC_DUAL_12BIT_RIGHT:
-      *(__IO uint32_t *) dac_dual = (uint32_t)(data1 | (data2 << 16));
-      break;
-    case DAC_DUAL_12BIT_LEFT:
-      *(__IO uint32_t *) dac_dual = (uint32_t)(data1 | (data2 << 16));
-      break;
-    case DAC_DUAL_8BIT_RIGHT:
-      *(__IO uint32_t *) dac_dual = (uint32_t)(data1 | (data2 << 8));
-      break;
-    default:
-      break;
-  }
+void dac_dual_data_set(dac_dual_data_type dac_dual, uint16_t data1, uint16_t data2) {
+    switch (dac_dual) {
+        case DAC_DUAL_12BIT_RIGHT:
+            *(__IO uint32_t *) dac_dual = (uint32_t)(data1 | (data2 << 16));
+            break;
+        case DAC_DUAL_12BIT_LEFT:
+            *(__IO uint32_t *) dac_dual = (uint32_t)(data1 | (data2 << 16));
+            break;
+        case DAC_DUAL_8BIT_RIGHT:
+            *(__IO uint32_t *) dac_dual = (uint32_t)(data1 | (data2 << 8));
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -373,19 +349,17 @@ void dac_dual_data_set(dac_dual_data_type dac_dual, uint16_t data1, uint16_t dat
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void dac_udr_enable(dac_select_type dac_select, confirm_state new_state)
-{
-  switch(dac_select)
-  {
-    case DAC1_SELECT:
-      DAC->ctrl_bit.d1dmaudrien = new_state;
-      break;
-    case DAC2_SELECT:
-      DAC->ctrl_bit.d2dmaudrien = new_state;
-      break;
-    default:
-      break;
-  }
+void dac_udr_enable(dac_select_type dac_select, confirm_state new_state) {
+    switch (dac_select) {
+        case DAC1_SELECT:
+            DAC->ctrl_bit.d1dmaudrien = new_state;
+            break;
+        case DAC2_SELECT:
+            DAC->ctrl_bit.d2dmaudrien = new_state;
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -396,24 +370,22 @@ void dac_udr_enable(dac_select_type dac_select, confirm_state new_state)
   *         - DAC2_SELECT
   * @retval the new state of dac udr flag status(SET or RESET).
   */
-flag_status dac_udr_flag_get(dac_select_type dac_select)
-{
-  flag_status status = RESET;
+flag_status dac_udr_flag_get(dac_select_type dac_select) {
+    flag_status status = RESET;
 
-  switch(dac_select)
-  {
-    case DAC1_SELECT:
-      if(DAC->sts_bit.d1dmaudrf != 0)
-        status = SET;
-      break;
-    case DAC2_SELECT:
-      if(DAC->sts_bit.d2dmaudrf != 0)
-        status = SET;
-      break;
-    default:
-      break;
-  }
-  return status;
+    switch (dac_select) {
+        case DAC1_SELECT:
+            if (DAC->sts_bit.d1dmaudrf != 0)
+                status = SET;
+            break;
+        case DAC2_SELECT:
+            if (DAC->sts_bit.d2dmaudrf != 0)
+                status = SET;
+            break;
+        default:
+            break;
+    }
+    return status;
 }
 
 /**
@@ -424,24 +396,22 @@ flag_status dac_udr_flag_get(dac_select_type dac_select)
   *         - DAC2_SELECT
   * @retval the new state of dac udr flag status(SET or RESET).
   */
-flag_status dac_udr_interrupt_flag_get(dac_select_type dac_select)
-{
-  flag_status status = RESET;
+flag_status dac_udr_interrupt_flag_get(dac_select_type dac_select) {
+    flag_status status = RESET;
 
-  switch(dac_select)
-  {
-    case DAC1_SELECT:
-      if((DAC->sts_bit.d1dmaudrf && DAC->ctrl_bit.d1dmaudrien) != 0)
-        status = SET;
-      break;
-    case DAC2_SELECT:
-      if((DAC->sts_bit.d2dmaudrf && DAC->ctrl_bit.d2dmaudrien) != 0)
-        status = SET;
-      break;
-    default:
-      break;
-  }
-  return status;
+    switch (dac_select) {
+        case DAC1_SELECT:
+            if ((DAC->sts_bit.d1dmaudrf && DAC->ctrl_bit.d1dmaudrien) != 0)
+                status = SET;
+            break;
+        case DAC2_SELECT:
+            if ((DAC->sts_bit.d2dmaudrf && DAC->ctrl_bit.d2dmaudrien) != 0)
+                status = SET;
+            break;
+        default:
+            break;
+    }
+    return status;
 }
 
 /**
@@ -452,19 +422,17 @@ flag_status dac_udr_interrupt_flag_get(dac_select_type dac_select)
   *         - DAC2_SELECT
   * @retval none
   */
-void dac_udr_flag_clear(dac_select_type dac_select)
-{
-  switch(dac_select)
-  {
-    case DAC1_SELECT:
-      DAC->sts = DAC1_D1DMAUDRF;
-      break;
-    case DAC2_SELECT:
-      DAC->sts = DAC2_D2DMAUDRF;
-      break;
-    default:
-      break;
-  }
+void dac_udr_flag_clear(dac_select_type dac_select) {
+    switch (dac_select) {
+        case DAC1_SELECT:
+            DAC->sts = DAC1_D1DMAUDRF;
+            break;
+        case DAC2_SELECT:
+            DAC->sts = DAC2_D2DMAUDRF;
+            break;
+        default:
+            break;
+    }
 }
 
 /**

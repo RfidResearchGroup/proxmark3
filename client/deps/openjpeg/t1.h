@@ -221,10 +221,10 @@ Encode the code-blocks of a tile
 @param mct_norms  FIXME DOC
 @param mct_numcomps Number of components used for MCT
 */
-OPJ_BOOL opj_t1_encode_cblks(opj_tcd_t* tcd,
+OPJ_BOOL opj_t1_encode_cblks(opj_tcd_t *tcd,
                              opj_tcd_tile_t *tile,
                              opj_tcp_t *tcp,
-                             const OPJ_FLOAT64 * mct_norms,
+                             const OPJ_FLOAT64 *mct_norms,
                              OPJ_UINT32 mct_numcomps);
 
 /**
@@ -237,12 +237,12 @@ Decode the code-blocks of a tile
 @param p_manager_mutex mutex for the event manager
 @param check_pterm whether PTERM correct termination should be checked
 */
-void opj_t1_decode_cblks(opj_tcd_t* tcd,
-                         volatile OPJ_BOOL* pret,
-                         opj_tcd_tilecomp_t* tilec,
-                         opj_tccp_t* tccp,
+void opj_t1_decode_cblks(opj_tcd_t *tcd,
+                         volatile OPJ_BOOL *pret,
+                         opj_tcd_tilecomp_t *tilec,
+                         opj_tccp_t *tccp,
                          opj_event_mgr_t *p_manager,
-                         opj_mutex_t* p_manager_mutex,
+                         opj_mutex_t *p_manager_mutex,
                          OPJ_BOOL check_pterm);
 
 
@@ -252,7 +252,7 @@ void opj_t1_decode_cblks(opj_tcd_t* tcd,
  * and initializes the look-up tables of the Tier-1 coder/decoder
  * @return a new T1 handle if successful, returns NULL otherwise
 */
-opj_t1_t* opj_t1_create(OPJ_BOOL isEncoder);
+opj_t1_t *opj_t1_create(OPJ_BOOL isEncoder);
 
 /**
  * Destroys a previously created T1 handle

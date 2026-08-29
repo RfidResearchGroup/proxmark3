@@ -455,11 +455,11 @@ static int CmdHFCryptoRFELoad(const char *Cmd) {
         return PM3_EFILE;
     }
 
-        // ICEMAN: Once we have CryptoRF dump files, we can implement an upload
+    // ICEMAN: Once we have CryptoRF dump files, we can implement an upload
     PrintAndLogEx(INFO, "to be implemented");
     //PrintAndLogEx(SUCCESS, "Uploading to emulator memory");
     //uint32_t bytes_sent = 0;
-   
+
     free(data);
     //PrintAndLogEx(SUCCESS, "sent " _YELLOW_("%d") " bytes of data to device emulator memory", bytes_sent);
     return PM3_SUCCESS;

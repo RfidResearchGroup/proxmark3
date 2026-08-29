@@ -46,10 +46,9 @@
   * @param  none
   * @retval none
   */
-void adc_reset(void)
-{
-  crm_periph_reset(CRM_ADC_PERIPH_RESET, TRUE);
-  crm_periph_reset(CRM_ADC_PERIPH_RESET, FALSE);
+void adc_reset(void) {
+    crm_periph_reset(CRM_ADC_PERIPH_RESET, TRUE);
+    crm_periph_reset(CRM_ADC_PERIPH_RESET, FALSE);
 }
 
 /**
@@ -61,9 +60,8 @@ void adc_reset(void)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void adc_enable(adc_type *adc_x, confirm_state new_state)
-{
-  adc_x->ctrl2_bit.adcen = new_state;
+void adc_enable(adc_type *adc_x, confirm_state new_state) {
+    adc_x->ctrl2_bit.adcen = new_state;
 }
 
 /**
@@ -81,12 +79,11 @@ void adc_enable(adc_type *adc_x, confirm_state new_state)
   *         - (0x1~0x10)
   * @retval none
   */
-void adc_base_default_para_init(adc_base_config_type *adc_base_struct)
-{
-  adc_base_struct->sequence_mode = FALSE;
-  adc_base_struct->repeat_mode = FALSE;
-  adc_base_struct->data_align = ADC_RIGHT_ALIGNMENT;
-  adc_base_struct->ordinary_channel_length = 1;
+void adc_base_default_para_init(adc_base_config_type *adc_base_struct) {
+    adc_base_struct->sequence_mode = FALSE;
+    adc_base_struct->repeat_mode = FALSE;
+    adc_base_struct->data_align = ADC_RIGHT_ALIGNMENT;
+    adc_base_struct->ordinary_channel_length = 1;
 }
 
 /**
@@ -107,12 +104,11 @@ void adc_base_default_para_init(adc_base_config_type *adc_base_struct)
   *         - (0x1~0x10)
   * @retval none
   */
-void adc_base_config(adc_type *adc_x, adc_base_config_type *adc_base_struct)
-{
-  adc_x->ctrl1_bit.sqen = adc_base_struct->sequence_mode;
-  adc_x->ctrl2_bit.rpen = adc_base_struct->repeat_mode;
-  adc_x->ctrl2_bit.dtalign = adc_base_struct->data_align;
-  adc_x->osq1_bit.oclen = adc_base_struct->ordinary_channel_length - 1;
+void adc_base_config(adc_type *adc_x, adc_base_config_type *adc_base_struct) {
+    adc_x->ctrl1_bit.sqen = adc_base_struct->sequence_mode;
+    adc_x->ctrl2_bit.rpen = adc_base_struct->repeat_mode;
+    adc_x->ctrl2_bit.dtalign = adc_base_struct->data_align;
+    adc_x->osq1_bit.oclen = adc_base_struct->ordinary_channel_length - 1;
 }
 
 /**
@@ -152,15 +148,14 @@ void adc_base_config(adc_type *adc_x, adc_base_config_type *adc_base_struct)
   *         this parameter can be:TRUE or FALSE
   * @retval none
   */
-void adc_common_default_para_init(adc_common_config_type *adc_common_struct)
-{
-  adc_common_struct->combine_mode = ADC_INDEPENDENT_MODE;
-  adc_common_struct->div = ADC_HCLK_DIV_2;
-  adc_common_struct->common_dma_mode = ADC_COMMON_DMAMODE_DISABLE;
-  adc_common_struct->common_dma_request_repeat_state = FALSE;
-  adc_common_struct->sampling_interval = ADC_SAMPLING_INTERVAL_5CYCLES;
-  adc_common_struct->tempervintrv_state = FALSE;
-  adc_common_struct->vbat_state = FALSE;
+void adc_common_default_para_init(adc_common_config_type *adc_common_struct) {
+    adc_common_struct->combine_mode = ADC_INDEPENDENT_MODE;
+    adc_common_struct->div = ADC_HCLK_DIV_2;
+    adc_common_struct->common_dma_mode = ADC_COMMON_DMAMODE_DISABLE;
+    adc_common_struct->common_dma_request_repeat_state = FALSE;
+    adc_common_struct->sampling_interval = ADC_SAMPLING_INTERVAL_5CYCLES;
+    adc_common_struct->tempervintrv_state = FALSE;
+    adc_common_struct->vbat_state = FALSE;
 }
 
 /**
@@ -200,23 +195,19 @@ void adc_common_default_para_init(adc_common_config_type *adc_common_struct)
   *         this parameter can be:TRUE or FALSE
   * @retval none
   */
-void adc_common_config(adc_common_config_type *adc_common_struct)
-{
-  ADCCOM->cctrl_bit.mssel = adc_common_struct->combine_mode;
-  ADCCOM->cctrl_bit.adcdiv = adc_common_struct->div;
-  if(adc_common_struct->common_dma_mode & 0x04)
-  {
-    ADCCOM->cctrl_bit.msdmasel_h = TRUE;
-  }
-  else
-  {
-    ADCCOM->cctrl_bit.msdmasel_h = FALSE;
-  }
-  ADCCOM->cctrl_bit.msdmasel_l = adc_common_struct->common_dma_mode &0x03;
-  ADCCOM->cctrl_bit.msdrcen = adc_common_struct->common_dma_request_repeat_state;
-  ADCCOM->cctrl_bit.asisel = adc_common_struct->sampling_interval;
-  ADCCOM->cctrl_bit.itsrven = adc_common_struct->tempervintrv_state;
-  ADCCOM->cctrl_bit.vbaten = adc_common_struct->vbat_state;
+void adc_common_config(adc_common_config_type *adc_common_struct) {
+    ADCCOM->cctrl_bit.mssel = adc_common_struct->combine_mode;
+    ADCCOM->cctrl_bit.adcdiv = adc_common_struct->div;
+    if (adc_common_struct->common_dma_mode & 0x04) {
+        ADCCOM->cctrl_bit.msdmasel_h = TRUE;
+    } else {
+        ADCCOM->cctrl_bit.msdmasel_h = FALSE;
+    }
+    ADCCOM->cctrl_bit.msdmasel_l = adc_common_struct->common_dma_mode & 0x03;
+    ADCCOM->cctrl_bit.msdrcen = adc_common_struct->common_dma_request_repeat_state;
+    ADCCOM->cctrl_bit.asisel = adc_common_struct->sampling_interval;
+    ADCCOM->cctrl_bit.itsrven = adc_common_struct->tempervintrv_state;
+    ADCCOM->cctrl_bit.vbaten = adc_common_struct->vbat_state;
 }
 
 /**
@@ -232,9 +223,8 @@ void adc_common_config(adc_common_config_type *adc_common_struct)
   *         - ADC_RESOLUTION_6B
   * @retval none
   */
-void adc_resolution_set(adc_type *adc_x, adc_resolution_type resolution)
-{
-  adc_x->ctrl1_bit.crsel = resolution;
+void adc_resolution_set(adc_type *adc_x, adc_resolution_type resolution) {
+    adc_x->ctrl1_bit.crsel = resolution;
 }
 
 /**
@@ -243,9 +233,8 @@ void adc_resolution_set(adc_type *adc_x, adc_resolution_type resolution)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void adc_voltage_battery_enable(confirm_state new_state)
-{
-  ADCCOM->cctrl_bit.vbaten = new_state;
+void adc_voltage_battery_enable(confirm_state new_state) {
+    ADCCOM->cctrl_bit.vbaten = new_state;
 }
 
 /**
@@ -257,9 +246,8 @@ void adc_voltage_battery_enable(confirm_state new_state)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void adc_dma_mode_enable(adc_type *adc_x, confirm_state new_state)
-{
-  adc_x->ctrl2_bit.ocdmaen = new_state;
+void adc_dma_mode_enable(adc_type *adc_x, confirm_state new_state) {
+    adc_x->ctrl2_bit.ocdmaen = new_state;
 }
 
 /**
@@ -271,9 +259,8 @@ void adc_dma_mode_enable(adc_type *adc_x, confirm_state new_state)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void adc_dma_request_repeat_enable(adc_type *adc_x, confirm_state new_state)
-{
-  adc_x->ctrl2_bit.ocdrcen = new_state;
+void adc_dma_request_repeat_enable(adc_type *adc_x, confirm_state new_state) {
+    adc_x->ctrl2_bit.ocdrcen = new_state;
 }
 
 /**
@@ -291,16 +278,12 @@ void adc_dma_request_repeat_enable(adc_type *adc_x, confirm_state new_state)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void adc_interrupt_enable(adc_type *adc_x, uint32_t adc_int, confirm_state new_state)
-{
-  if(new_state == TRUE)
-  {
-    adc_x->ctrl1 |= adc_int;
-  }
-  else if(new_state == FALSE)
-  {
-    adc_x->ctrl1 &= ~adc_int;
-  }
+void adc_interrupt_enable(adc_type *adc_x, uint32_t adc_int, confirm_state new_state) {
+    if (new_state == TRUE) {
+        adc_x->ctrl1 |= adc_int;
+    } else if (new_state == FALSE) {
+        adc_x->ctrl1 &= ~adc_int;
+    }
 }
 
 /**
@@ -313,9 +296,8 @@ void adc_interrupt_enable(adc_type *adc_x, uint32_t adc_int, confirm_state new_s
   *         - (0x00~0x7F)
   * @retval none
   */
-void adc_calibration_value_set(adc_type *adc_x, uint8_t adc_calibration_value)
-{
-  adc_x->calval = adc_calibration_value;
+void adc_calibration_value_set(adc_type *adc_x, uint8_t adc_calibration_value) {
+    adc_x->calval = adc_calibration_value;
 }
 
 /**
@@ -325,9 +307,8 @@ void adc_calibration_value_set(adc_type *adc_x, uint8_t adc_calibration_value)
   *         - ADC1, ADC2, ADC3.
   * @retval none
   */
-void adc_calibration_init(adc_type *adc_x)
-{
-  adc_x->ctrl2_bit.adcalinit = TRUE;
+void adc_calibration_init(adc_type *adc_x) {
+    adc_x->ctrl2_bit.adcalinit = TRUE;
 }
 
 /**
@@ -337,16 +318,12 @@ void adc_calibration_init(adc_type *adc_x)
   *         - ADC1, ADC2, ADC3.
   * @retval the new state of reset calibration register status(SET or RESET).
   */
-flag_status adc_calibration_init_status_get(adc_type *adc_x)
-{
-  if(adc_x->ctrl2_bit.adcalinit)
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+flag_status adc_calibration_init_status_get(adc_type *adc_x) {
+    if (adc_x->ctrl2_bit.adcalinit) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -356,9 +333,8 @@ flag_status adc_calibration_init_status_get(adc_type *adc_x)
   *         - ADC1, ADC2, ADC3.
   * @retval none
   */
-void adc_calibration_start(adc_type *adc_x)
-{
-  adc_x->ctrl2_bit.adcal = TRUE;
+void adc_calibration_start(adc_type *adc_x) {
+    adc_x->ctrl2_bit.adcal = TRUE;
 }
 
 /**
@@ -368,16 +344,12 @@ void adc_calibration_start(adc_type *adc_x)
   *         - ADC1, ADC2, ADC3.
   * @retval the new state of calibration status(SET or RESET).
   */
-flag_status adc_calibration_status_get(adc_type *adc_x)
-{
-  if(adc_x->ctrl2_bit.adcal)
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+flag_status adc_calibration_status_get(adc_type *adc_x) {
+    if (adc_x->ctrl2_bit.adcal) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -396,12 +368,11 @@ flag_status adc_calibration_status_get(adc_type *adc_x)
   *         - ADC_VMONITOR_NONE
   * @retval none
   */
-void adc_voltage_monitor_enable(adc_type *adc_x, adc_voltage_monitoring_type adc_voltage_monitoring)
-{
-  adc_x->ctrl1_bit.ocvmen = FALSE;
-  adc_x->ctrl1_bit.pcvmen = FALSE;
-  adc_x->ctrl1_bit.vmsgen = FALSE;
-  adc_x->ctrl1 |= adc_voltage_monitoring;
+void adc_voltage_monitor_enable(adc_type *adc_x, adc_voltage_monitoring_type adc_voltage_monitoring) {
+    adc_x->ctrl1_bit.ocvmen = FALSE;
+    adc_x->ctrl1_bit.pcvmen = FALSE;
+    adc_x->ctrl1_bit.vmsgen = FALSE;
+    adc_x->ctrl1 |= adc_voltage_monitoring;
 }
 
 /**
@@ -417,10 +388,9 @@ void adc_voltage_monitor_enable(adc_type *adc_x, adc_voltage_monitoring_type adc
   *         - (0x0000~0xFFFF)
   * @retval none
   */
-void adc_voltage_monitor_threshold_value_set(adc_type *adc_x, uint16_t adc_high_threshold, uint16_t adc_low_threshold)
-{
-  adc_x->vmhb_bit.vmhb = adc_high_threshold;
-  adc_x->vmlb_bit.vmlb = adc_low_threshold;
+void adc_voltage_monitor_threshold_value_set(adc_type *adc_x, uint16_t adc_high_threshold, uint16_t adc_low_threshold) {
+    adc_x->vmhb_bit.vmhb = adc_high_threshold;
+    adc_x->vmlb_bit.vmlb = adc_low_threshold;
 }
 
 /**
@@ -437,9 +407,8 @@ void adc_voltage_monitor_threshold_value_set(adc_type *adc_x, uint16_t adc_high_
   *         - ADC_CHANNEL_16   - ADC_CHANNEL_17   - ADC_CHANNEL_18
   * @retval none
   */
-void adc_voltage_monitor_single_channel_select(adc_type *adc_x, adc_channel_select_type adc_channel)
-{
-  adc_x->ctrl1_bit.vmcsel = adc_channel;
+void adc_voltage_monitor_single_channel_select(adc_type *adc_x, adc_channel_select_type adc_channel) {
+    adc_x->ctrl1_bit.vmcsel = adc_channel;
 }
 
 /**
@@ -469,45 +438,36 @@ void adc_voltage_monitor_single_channel_select(adc_type *adc_x, adc_channel_sele
   *         - ADC_SAMPLETIME_640_5
   * @retval none
   */
-void adc_ordinary_channel_set(adc_type *adc_x, adc_channel_select_type adc_channel, uint8_t adc_sequence, adc_sampletime_select_type adc_sampletime)
-{
-  uint32_t tmp_reg;
-  if(adc_channel < ADC_CHANNEL_10)
-  {
-    tmp_reg = adc_x->spt2;
-    tmp_reg &= ~(0x07 << 3 * adc_channel);
-    tmp_reg |= adc_sampletime << 3 * adc_channel;
-    adc_x->spt2 = tmp_reg;
-  }
-  else
-  {
-    tmp_reg = adc_x->spt1;
-    tmp_reg &= ~(0x07 << 3 * (adc_channel - ADC_CHANNEL_10));
-    tmp_reg |= adc_sampletime << 3 * (adc_channel - ADC_CHANNEL_10);
-    adc_x->spt1 = tmp_reg;
-  }
-  
-  if(adc_sequence >= 13)
-  {
-    tmp_reg = adc_x->osq1;
-    tmp_reg &= ~(0x01F << 5 * (adc_sequence - 13));
-    tmp_reg |= adc_channel << 5 * (adc_sequence - 13);
-    adc_x->osq1 = tmp_reg;
-  }
-  else if(adc_sequence >= 7)
-  {
-    tmp_reg = adc_x->osq2;
-    tmp_reg &= ~(0x01F << 5 * (adc_sequence - 7));
-    tmp_reg |= adc_channel << 5 * (adc_sequence - 7);
-    adc_x->osq2 = tmp_reg;
-  }
-  else
-  {
-    tmp_reg = adc_x->osq3;
-    tmp_reg &= ~(0x01F << 5 * (adc_sequence - 1));
-    tmp_reg |= adc_channel << 5 * (adc_sequence - 1);
-    adc_x->osq3 = tmp_reg;
-  }
+void adc_ordinary_channel_set(adc_type *adc_x, adc_channel_select_type adc_channel, uint8_t adc_sequence, adc_sampletime_select_type adc_sampletime) {
+    uint32_t tmp_reg;
+    if (adc_channel < ADC_CHANNEL_10) {
+        tmp_reg = adc_x->spt2;
+        tmp_reg &= ~(0x07 << 3 * adc_channel);
+        tmp_reg |= adc_sampletime << 3 * adc_channel;
+        adc_x->spt2 = tmp_reg;
+    } else {
+        tmp_reg = adc_x->spt1;
+        tmp_reg &= ~(0x07 << 3 * (adc_channel - ADC_CHANNEL_10));
+        tmp_reg |= adc_sampletime << 3 * (adc_channel - ADC_CHANNEL_10);
+        adc_x->spt1 = tmp_reg;
+    }
+
+    if (adc_sequence >= 13) {
+        tmp_reg = adc_x->osq1;
+        tmp_reg &= ~(0x01F << 5 * (adc_sequence - 13));
+        tmp_reg |= adc_channel << 5 * (adc_sequence - 13);
+        adc_x->osq1 = tmp_reg;
+    } else if (adc_sequence >= 7) {
+        tmp_reg = adc_x->osq2;
+        tmp_reg &= ~(0x01F << 5 * (adc_sequence - 7));
+        tmp_reg |= adc_channel << 5 * (adc_sequence - 7);
+        adc_x->osq2 = tmp_reg;
+    } else {
+        tmp_reg = adc_x->osq3;
+        tmp_reg &= ~(0x01F << 5 * (adc_sequence - 1));
+        tmp_reg |= adc_channel << 5 * (adc_sequence - 1);
+        adc_x->osq3 = tmp_reg;
+    }
 }
 
 /**
@@ -520,9 +480,8 @@ void adc_ordinary_channel_set(adc_type *adc_x, adc_channel_select_type adc_chann
   *         - (0x1~0x4)
   * @retval none
   */
-void adc_preempt_channel_length_set(adc_type *adc_x, uint8_t adc_channel_lenght)
-{
-  adc_x->psq_bit.pclen =  adc_channel_lenght - 1;
+void adc_preempt_channel_length_set(adc_type *adc_x, uint8_t adc_channel_lenght) {
+    adc_x->psq_bit.pclen =  adc_channel_lenght - 1;
 }
 
 /**
@@ -552,43 +511,38 @@ void adc_preempt_channel_length_set(adc_type *adc_x, uint8_t adc_channel_lenght)
   *         - ADC_SAMPLETIME_640_5
   * @retval none
   */
-void adc_preempt_channel_set(adc_type *adc_x, adc_channel_select_type adc_channel, uint8_t adc_sequence, adc_sampletime_select_type adc_sampletime)
-{
-  uint32_t tmp_reg;
-  uint8_t sequence_index; 
-  if(adc_channel < ADC_CHANNEL_10)
-  {
-    tmp_reg = adc_x->spt2;
-    tmp_reg &= ~(0x07 << 3 * adc_channel);
-    tmp_reg |= adc_sampletime << 3 * adc_channel;
-    adc_x->spt2 = tmp_reg;
-  }
-  else
-  {
-    tmp_reg = adc_x->spt1;
-    tmp_reg &= ~(0x07 << 3 * (adc_channel - ADC_CHANNEL_10));
-    tmp_reg |= adc_sampletime << 3 * (adc_channel - ADC_CHANNEL_10);
-    adc_x->spt1 = tmp_reg;
-  }
+void adc_preempt_channel_set(adc_type *adc_x, adc_channel_select_type adc_channel, uint8_t adc_sequence, adc_sampletime_select_type adc_sampletime) {
+    uint32_t tmp_reg;
+    uint8_t sequence_index;
+    if (adc_channel < ADC_CHANNEL_10) {
+        tmp_reg = adc_x->spt2;
+        tmp_reg &= ~(0x07 << 3 * adc_channel);
+        tmp_reg |= adc_sampletime << 3 * adc_channel;
+        adc_x->spt2 = tmp_reg;
+    } else {
+        tmp_reg = adc_x->spt1;
+        tmp_reg &= ~(0x07 << 3 * (adc_channel - ADC_CHANNEL_10));
+        tmp_reg |= adc_sampletime << 3 * (adc_channel - ADC_CHANNEL_10);
+        adc_x->spt1 = tmp_reg;
+    }
 
-  sequence_index = adc_sequence + 3 - adc_x->psq_bit.pclen;
-  switch(sequence_index)
-  {
-    case 1:
-      adc_x->psq_bit.psn1 = adc_channel;
-      break;
-    case 2:
-      adc_x->psq_bit.psn2 = adc_channel;
-      break;
-    case 3:
-      adc_x->psq_bit.psn3 = adc_channel;
-      break;
-    case 4:
-      adc_x->psq_bit.psn4 = adc_channel;
-      break;
-    default:
-      break;
-  }
+    sequence_index = adc_sequence + 3 - adc_x->psq_bit.pclen;
+    switch (sequence_index) {
+        case 1:
+            adc_x->psq_bit.psn1 = adc_channel;
+            break;
+        case 2:
+            adc_x->psq_bit.psn2 = adc_channel;
+            break;
+        case 3:
+            adc_x->psq_bit.psn3 = adc_channel;
+            break;
+        case 4:
+            adc_x->psq_bit.psn4 = adc_channel;
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -615,19 +569,15 @@ void adc_preempt_channel_set(adc_type *adc_x, adc_channel_select_type adc_channe
   *         - ADC_ORDINARY_TRIG_EDGE_RISING_FALLING
   * @retval none
   */
-void adc_ordinary_conversion_trigger_set(adc_type *adc_x, adc_ordinary_trig_select_type adc_ordinary_trig, adc_ordinary_trig_edge_type adc_ordinary_trig_edge)
-{
-  if(adc_ordinary_trig > ADC_ORDINARY_TRIG_EXINT11)
-  {
-    adc_x->ctrl2_bit.octesel_h = 1;
-    adc_x->ctrl2_bit.octesel_l = adc_ordinary_trig & 0x0F;
-  }
-  else
-  {
-    adc_x->ctrl2_bit.octesel_h = 0;
-    adc_x->ctrl2_bit.octesel_l = adc_ordinary_trig & 0x0F;
-  }
-  adc_x->ctrl2_bit.ocete = adc_ordinary_trig_edge;
+void adc_ordinary_conversion_trigger_set(adc_type *adc_x, adc_ordinary_trig_select_type adc_ordinary_trig, adc_ordinary_trig_edge_type adc_ordinary_trig_edge) {
+    if (adc_ordinary_trig > ADC_ORDINARY_TRIG_EXINT11) {
+        adc_x->ctrl2_bit.octesel_h = 1;
+        adc_x->ctrl2_bit.octesel_l = adc_ordinary_trig & 0x0F;
+    } else {
+        adc_x->ctrl2_bit.octesel_h = 0;
+        adc_x->ctrl2_bit.octesel_l = adc_ordinary_trig & 0x0F;
+    }
+    adc_x->ctrl2_bit.ocete = adc_ordinary_trig_edge;
 }
 
 /**
@@ -654,19 +604,15 @@ void adc_ordinary_conversion_trigger_set(adc_type *adc_x, adc_ordinary_trig_sele
   *         - ADC_PREEMPT_TRIG_EDGE_RISING_FALLING
   * @retval none
   */
-void adc_preempt_conversion_trigger_set(adc_type *adc_x, adc_preempt_trig_select_type adc_preempt_trig, adc_preempt_trig_edge_type adc_preempt_trig_edge)
-{
-  if(adc_preempt_trig > ADC_PREEMPT_TRIG_EXINT15)
-  {
-    adc_x->ctrl2_bit.pctesel_h = 1;
-    adc_x->ctrl2_bit.pctesel_l = adc_preempt_trig & 0x0F;
-  }
-  else
-  {
-    adc_x->ctrl2_bit.pctesel_h = 0;
-    adc_x->ctrl2_bit.pctesel_l = adc_preempt_trig & 0x0F;
-  }
-  adc_x->ctrl2_bit.pcete = adc_preempt_trig_edge;
+void adc_preempt_conversion_trigger_set(adc_type *adc_x, adc_preempt_trig_select_type adc_preempt_trig, adc_preempt_trig_edge_type adc_preempt_trig_edge) {
+    if (adc_preempt_trig > ADC_PREEMPT_TRIG_EXINT15) {
+        adc_x->ctrl2_bit.pctesel_h = 1;
+        adc_x->ctrl2_bit.pctesel_l = adc_preempt_trig & 0x0F;
+    } else {
+        adc_x->ctrl2_bit.pctesel_h = 0;
+        adc_x->ctrl2_bit.pctesel_l = adc_preempt_trig & 0x0F;
+    }
+    adc_x->ctrl2_bit.pcete = adc_preempt_trig_edge;
 }
 
 /**
@@ -685,25 +631,23 @@ void adc_preempt_conversion_trigger_set(adc_type *adc_x, adc_preempt_trig_select
   *         - (0x000~0xFFF)
   * @retval none
   */
-void adc_preempt_offset_value_set(adc_type *adc_x, adc_preempt_channel_type adc_preempt_channel, uint16_t adc_offset_value)
-{
-  switch(adc_preempt_channel)
-  {
-    case ADC_PREEMPT_CHANNEL_1:
-      adc_x->pcdto1_bit.pcdto1 = adc_offset_value;
-      break;
-    case ADC_PREEMPT_CHANNEL_2:
-      adc_x->pcdto2_bit.pcdto2 = adc_offset_value;
-      break;
-    case ADC_PREEMPT_CHANNEL_3:
-      adc_x->pcdto3_bit.pcdto3 = adc_offset_value;
-      break;
-    case ADC_PREEMPT_CHANNEL_4:
-      adc_x->pcdto4_bit.pcdto4 = adc_offset_value;
-      break;
-    default:
-      break;
-  }
+void adc_preempt_offset_value_set(adc_type *adc_x, adc_preempt_channel_type adc_preempt_channel, uint16_t adc_offset_value) {
+    switch (adc_preempt_channel) {
+        case ADC_PREEMPT_CHANNEL_1:
+            adc_x->pcdto1_bit.pcdto1 = adc_offset_value;
+            break;
+        case ADC_PREEMPT_CHANNEL_2:
+            adc_x->pcdto2_bit.pcdto2 = adc_offset_value;
+            break;
+        case ADC_PREEMPT_CHANNEL_3:
+            adc_x->pcdto3_bit.pcdto3 = adc_offset_value;
+            break;
+        case ADC_PREEMPT_CHANNEL_4:
+            adc_x->pcdto4_bit.pcdto4 = adc_offset_value;
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -716,10 +660,9 @@ void adc_preempt_offset_value_set(adc_type *adc_x, adc_preempt_channel_type adc_
   *         - (0x1~0x8)
   * @retval none
   */
-void adc_ordinary_part_count_set(adc_type *adc_x, uint8_t adc_channel_count)
-{
+void adc_ordinary_part_count_set(adc_type *adc_x, uint8_t adc_channel_count) {
 
-  adc_x->ctrl1_bit.ocpcnt =  adc_channel_count - 1;
+    adc_x->ctrl1_bit.ocpcnt =  adc_channel_count - 1;
 }
 
 /**
@@ -731,9 +674,8 @@ void adc_ordinary_part_count_set(adc_type *adc_x, uint8_t adc_channel_count)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void adc_ordinary_part_mode_enable(adc_type *adc_x, confirm_state new_state)
-{
-  adc_x->ctrl1_bit.ocpen = new_state;
+void adc_ordinary_part_mode_enable(adc_type *adc_x, confirm_state new_state) {
+    adc_x->ctrl1_bit.ocpen = new_state;
 }
 
 /**
@@ -745,9 +687,8 @@ void adc_ordinary_part_mode_enable(adc_type *adc_x, confirm_state new_state)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void adc_preempt_part_mode_enable(adc_type *adc_x, confirm_state new_state)
-{
-  adc_x->ctrl1_bit.pcpen = new_state;
+void adc_preempt_part_mode_enable(adc_type *adc_x, confirm_state new_state) {
+    adc_x->ctrl1_bit.pcpen = new_state;
 }
 
 /**
@@ -759,9 +700,8 @@ void adc_preempt_part_mode_enable(adc_type *adc_x, confirm_state new_state)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void adc_preempt_auto_mode_enable(adc_type *adc_x, confirm_state new_state)
-{
-  adc_x->ctrl1_bit.pcautoen = new_state;
+void adc_preempt_auto_mode_enable(adc_type *adc_x, confirm_state new_state) {
+    adc_x->ctrl1_bit.pcautoen = new_state;
 }
 
 /**
@@ -771,9 +711,8 @@ void adc_preempt_auto_mode_enable(adc_type *adc_x, confirm_state new_state)
   *         - ADC1, ADC2, ADC3.
   * @retval none
   */
-void adc_conversion_stop(adc_type *adc_x)
-{
-  adc_x->ctrl2_bit.adabrt = TRUE;
+void adc_conversion_stop(adc_type *adc_x) {
+    adc_x->ctrl2_bit.adabrt = TRUE;
 }
 
 /**
@@ -783,16 +722,12 @@ void adc_conversion_stop(adc_type *adc_x)
   *         - ADC1, ADC2, ADC3.
   * @retval the new state of stop conversion's status(SET or RESET).
   */
-flag_status adc_conversion_stop_status_get(adc_type *adc_x)
-{
-  if(adc_x->ctrl2_bit.adabrt)
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+flag_status adc_conversion_stop_status_get(adc_type *adc_x) {
+    if (adc_x->ctrl2_bit.adabrt) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -804,9 +739,8 @@ flag_status adc_conversion_stop_status_get(adc_type *adc_x)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void adc_occe_each_conversion_enable(adc_type *adc_x, confirm_state new_state)
-{
-  adc_x->ctrl2_bit.eocsfen = new_state;
+void adc_occe_each_conversion_enable(adc_type *adc_x, confirm_state new_state) {
+    adc_x->ctrl2_bit.eocsfen = new_state;
 }
 
 /**
@@ -818,9 +752,8 @@ void adc_occe_each_conversion_enable(adc_type *adc_x, confirm_state new_state)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void adc_ordinary_software_trigger_enable(adc_type *adc_x, confirm_state new_state)
-{
-  adc_x->ctrl2_bit.ocswtrg = new_state;
+void adc_ordinary_software_trigger_enable(adc_type *adc_x, confirm_state new_state) {
+    adc_x->ctrl2_bit.ocswtrg = new_state;
 }
 
 /**
@@ -830,16 +763,12 @@ void adc_ordinary_software_trigger_enable(adc_type *adc_x, confirm_state new_sta
   *         - ADC1, ADC2, ADC3.
   * @retval the new state of ordinary software start conversion status(SET or RESET).
   */
-flag_status adc_ordinary_software_trigger_status_get(adc_type *adc_x)
-{
-  if(adc_x->ctrl2_bit.ocswtrg)
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+flag_status adc_ordinary_software_trigger_status_get(adc_type *adc_x) {
+    if (adc_x->ctrl2_bit.ocswtrg) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -851,10 +780,9 @@ flag_status adc_ordinary_software_trigger_status_get(adc_type *adc_x)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void adc_preempt_software_trigger_enable(adc_type *adc_x, confirm_state new_state)
-{
-  adc_x->ctrl2_bit.pcswtrg = new_state;
-  adc_x->ctrl2_bit.pcswtrg = FALSE;
+void adc_preempt_software_trigger_enable(adc_type *adc_x, confirm_state new_state) {
+    adc_x->ctrl2_bit.pcswtrg = new_state;
+    adc_x->ctrl2_bit.pcswtrg = FALSE;
 }
 
 /**
@@ -864,16 +792,12 @@ void adc_preempt_software_trigger_enable(adc_type *adc_x, confirm_state new_stat
   *         - ADC1, ADC2, ADC3.
   * @retval the new state of preempt software start conversion status(SET or RESET).
   */
-flag_status adc_preempt_software_trigger_status_get(adc_type *adc_x)
-{
-  if(adc_x->ctrl2_bit.pcswtrg)
-  {
-    return SET;
-  }
-  else
-  {
-    return RESET;
-  }
+flag_status adc_preempt_software_trigger_status_get(adc_type *adc_x) {
+    if (adc_x->ctrl2_bit.pcswtrg) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
 /**
@@ -883,18 +807,16 @@ flag_status adc_preempt_software_trigger_status_get(adc_type *adc_x)
   *         - ADC1, ADC2, ADC3.
   * @retval the last conversion data for ordinary channel.
   */
-uint16_t adc_ordinary_conversion_data_get(adc_type *adc_x)
-{
-  return (uint16_t)(adc_x->odt_bit.odt);
+uint16_t adc_ordinary_conversion_data_get(adc_type *adc_x) {
+    return (uint16_t)(adc_x->odt_bit.odt);
 }
 
 /**
   * @brief  return the last ordinary conversion data of combine adc.
   * @retval the last conversion data for ordinary channel.
   */
-uint32_t adc_combine_ordinary_conversion_data_get(void)
-{
-  return (uint32_t)(ADCCOM->codt);
+uint32_t adc_combine_ordinary_conversion_data_get(void) {
+    return (uint32_t)(ADCCOM->codt);
 }
 
 /**
@@ -910,27 +832,25 @@ uint32_t adc_combine_ordinary_conversion_data_get(void)
   *         - ADC_PREEMPT_CHANNEL_4
   * @retval the conversion data for selection preempt channel.
   */
-uint16_t adc_preempt_conversion_data_get(adc_type *adc_x, adc_preempt_channel_type adc_preempt_channel)
-{
-  uint16_t preempt_conv_data_index = 0;
-  switch(adc_preempt_channel)
-  {
-    case ADC_PREEMPT_CHANNEL_1:
-      preempt_conv_data_index = (uint16_t)(adc_x->pdt1_bit.pdt1);
-      break;
-    case ADC_PREEMPT_CHANNEL_2:
-      preempt_conv_data_index = (uint16_t)(adc_x->pdt2_bit.pdt2);
-      break;
-    case ADC_PREEMPT_CHANNEL_3:
-      preempt_conv_data_index = (uint16_t)(adc_x->pdt3_bit.pdt3);
-      break;
-    case ADC_PREEMPT_CHANNEL_4:
-      preempt_conv_data_index = (uint16_t)(adc_x->pdt4_bit.pdt4);
-      break;
-    default:
-      break;
-  }
-  return preempt_conv_data_index;
+uint16_t adc_preempt_conversion_data_get(adc_type *adc_x, adc_preempt_channel_type adc_preempt_channel) {
+    uint16_t preempt_conv_data_index = 0;
+    switch (adc_preempt_channel) {
+        case ADC_PREEMPT_CHANNEL_1:
+            preempt_conv_data_index = (uint16_t)(adc_x->pdt1_bit.pdt1);
+            break;
+        case ADC_PREEMPT_CHANNEL_2:
+            preempt_conv_data_index = (uint16_t)(adc_x->pdt2_bit.pdt2);
+            break;
+        case ADC_PREEMPT_CHANNEL_3:
+            preempt_conv_data_index = (uint16_t)(adc_x->pdt3_bit.pdt3);
+            break;
+        case ADC_PREEMPT_CHANNEL_4:
+            preempt_conv_data_index = (uint16_t)(adc_x->pdt4_bit.pdt4);
+            break;
+        default:
+            break;
+    }
+    return preempt_conv_data_index;
 }
 
 /**
@@ -949,19 +869,15 @@ uint16_t adc_preempt_conversion_data_get(adc_type *adc_x, adc_preempt_channel_ty
   *         - ADC_RDY_FLAG(no interrupt associated)
   * @retval the new state of adc flag status(SET or RESET).
   */
-flag_status adc_flag_get(adc_type *adc_x, uint8_t adc_flag)
-{
-  flag_status status = RESET;
+flag_status adc_flag_get(adc_type *adc_x, uint8_t adc_flag) {
+    flag_status status = RESET;
 
-  if((adc_x->sts & adc_flag) == RESET)
-  {
-    status = RESET;
-  }
-  else
-  {
-    status = SET;
-  }
-  return status;
+    if ((adc_x->sts & adc_flag) == RESET) {
+        status = RESET;
+    } else {
+        status = SET;
+    }
+    return status;
 }
 
 /**
@@ -977,39 +893,33 @@ flag_status adc_flag_get(adc_type *adc_x, uint8_t adc_flag)
   *         - ADC_OCCO_FLAG
   * @retval the new state of adc flag status(SET or RESET).
   */
-flag_status adc_interrupt_flag_get(adc_type *adc_x, uint8_t adc_flag)
-{
-  flag_status status = RESET;
-  switch(adc_flag)
-  {
-    case ADC_VMOR_FLAG:
-      if(adc_x->sts_bit.vmor && adc_x->ctrl1_bit.vmorien)
-      {
-        status = SET;
-      }
-      break;
-    case ADC_OCCE_FLAG:
-      if(adc_x->sts_bit.occe && adc_x->ctrl1_bit.occeien)
-      {
-        status = SET;
-      }
-      break;
-    case ADC_PCCE_FLAG:
-      if(adc_x->sts_bit.pcce && adc_x->ctrl1_bit.pcceien)
-      {
-        status = SET;
-      }
-      break;
-    case ADC_OCCO_FLAG:
-      if(adc_x->sts_bit.occo && adc_x->ctrl1_bit.occoien)
-      {
-        status = SET;
-      }
-      break;
-    default:
-      break;
-  }
-  return status;
+flag_status adc_interrupt_flag_get(adc_type *adc_x, uint8_t adc_flag) {
+    flag_status status = RESET;
+    switch (adc_flag) {
+        case ADC_VMOR_FLAG:
+            if (adc_x->sts_bit.vmor && adc_x->ctrl1_bit.vmorien) {
+                status = SET;
+            }
+            break;
+        case ADC_OCCE_FLAG:
+            if (adc_x->sts_bit.occe && adc_x->ctrl1_bit.occeien) {
+                status = SET;
+            }
+            break;
+        case ADC_PCCE_FLAG:
+            if (adc_x->sts_bit.pcce && adc_x->ctrl1_bit.pcceien) {
+                status = SET;
+            }
+            break;
+        case ADC_OCCO_FLAG:
+            if (adc_x->sts_bit.occo && adc_x->ctrl1_bit.occoien) {
+                status = SET;
+            }
+            break;
+        default:
+            break;
+    }
+    return status;
 }
 
 /**
@@ -1028,9 +938,8 @@ flag_status adc_interrupt_flag_get(adc_type *adc_x, uint8_t adc_flag)
   *         - note:"ADC_RDY_FLAG" cannot be choose!rdy bit is readonly bit,it means the adc is ready to accept conversion request
   * @retval none
   */
-void adc_flag_clear(adc_type *adc_x, uint32_t adc_flag)
-{
-  adc_x->sts = ~adc_flag;
+void adc_flag_clear(adc_type *adc_x, uint32_t adc_flag) {
+    adc_x->sts = ~adc_flag;
 }
 
 /**
@@ -1042,9 +951,8 @@ void adc_flag_clear(adc_type *adc_x, uint32_t adc_flag)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void adc_ordinary_oversample_enable(adc_type *adc_x, confirm_state new_state)
-{
-  adc_x->ovsp_bit.oosen = new_state;
+void adc_ordinary_oversample_enable(adc_type *adc_x, confirm_state new_state) {
+    adc_x->ovsp_bit.oosen = new_state;
 }
 
 /**
@@ -1056,9 +964,8 @@ void adc_ordinary_oversample_enable(adc_type *adc_x, confirm_state new_state)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void adc_preempt_oversample_enable(adc_type *adc_x, confirm_state new_state)
-{
-  adc_x->ovsp_bit.posen = new_state;
+void adc_preempt_oversample_enable(adc_type *adc_x, confirm_state new_state) {
+    adc_x->ovsp_bit.posen = new_state;
 }
 
 /**
@@ -1089,10 +996,9 @@ void adc_preempt_oversample_enable(adc_type *adc_x, confirm_state new_state)
   *         - ADC_OVERSAMPLE_SHIFT_8
   * @retval none
   */
-void adc_oversample_ratio_shift_set(adc_type *adc_x, adc_oversample_ratio_type adc_oversample_ratio, adc_oversample_shift_type adc_oversample_shift)
-{
-  adc_x->ovsp_bit.osrsel = adc_oversample_ratio;
-  adc_x->ovsp_bit.osssel = adc_oversample_shift;
+void adc_oversample_ratio_shift_set(adc_type *adc_x, adc_oversample_ratio_type adc_oversample_ratio, adc_oversample_shift_type adc_oversample_shift) {
+    adc_x->ovsp_bit.osrsel = adc_oversample_ratio;
+    adc_x->ovsp_bit.osssel = adc_oversample_shift;
 }
 
 /**
@@ -1104,9 +1010,8 @@ void adc_oversample_ratio_shift_set(adc_type *adc_x, adc_oversample_ratio_type a
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void adc_ordinary_oversample_trig_enable(adc_type *adc_x, confirm_state new_state)
-{
-  adc_x->ovsp_bit.oostren = new_state;
+void adc_ordinary_oversample_trig_enable(adc_type *adc_x, confirm_state new_state) {
+    adc_x->ovsp_bit.oostren = new_state;
 }
 
 /**
@@ -1120,9 +1025,8 @@ void adc_ordinary_oversample_trig_enable(adc_type *adc_x, confirm_state new_stat
   *         - ADC_OVERSAMPLE_RESTART
   * @retval none
   */
-void adc_ordinary_oversample_restart_set(adc_type *adc_x, adc_ordinary_oversample_restart_type adc_ordinary_oversample_restart)
-{
-  adc_x->ovsp_bit.oosrsel = adc_ordinary_oversample_restart;
+void adc_ordinary_oversample_restart_set(adc_type *adc_x, adc_ordinary_oversample_restart_type adc_ordinary_oversample_restart) {
+    adc_x->ovsp_bit.oosrsel = adc_ordinary_oversample_restart;
 }
 
 /**

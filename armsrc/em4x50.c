@@ -1176,8 +1176,7 @@ static void em4x50_sim_wait_edge(const int mode) {
                 // Dbprintf("timeout wait clk(1)");
                 return;
             }
-        }
-        while (!Gpio_SSC_CLK_Read()); // wait to high
+        } while (!Gpio_SSC_CLK_Read()); // wait to high
     }
     if (mode & 0x02) {
         ticks_start = GET_TICKS; // reset start time value

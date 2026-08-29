@@ -29,7 +29,7 @@
    * \section intro Introduction
    *
    * This user manual describes the CMSIS DSP software library,
-   * a suite of common signal processing functions for use on Cortex-M and Cortex-A processor 
+   * a suite of common signal processing functions for use on Cortex-M and Cortex-A processor
    * based devices.
    *
    * The library is divided into a number of functions each covering a specific category:
@@ -101,12 +101,12 @@
    * - ARM_MATH_NEON:
    *
    * Define macro ARM_MATH_NEON to enable Neon versions of the DSP functions.
-   * It is not enabled by default when Neon is available because performances are 
+   * It is not enabled by default when Neon is available because performances are
    * dependent on the compiler and target architecture.
    *
    * - ARM_MATH_NEON_EXPERIMENTAL:
    *
-   * Define macro ARM_MATH_NEON_EXPERIMENTAL to enable experimental Neon versions of 
+   * Define macro ARM_MATH_NEON_EXPERIMENTAL to enable experimental Neon versions of
    * of some DSP functions. Experimental Neon versions currently do not have better
    * performances than the scalar versions.
    *
@@ -191,7 +191,7 @@
 #include "dsp/none.h"
 #include "dsp/utils.h"
 
-#include "dsp/basic_math_functions.h"  
+#include "dsp/basic_math_functions.h"
 #include "dsp/interpolation_functions.h"
 #include "dsp/bayes_functions.h"
 #include "dsp/matrix_functions.h"

@@ -153,15 +153,15 @@ typedef union {
         uint32_t program_spi_directly : 1;  ///< Program SPI Directly flag. Common to all series.
         /* Bit 9 */
         uint32_t autoboot_state       : 1;  ///< AutoBoot State.
-                                            ///< - Table 7-13: this field exists (for models supporting AutoBoot)
-                                            ///< - Table 7-12: this bit is 0 (models that don't support AutoBoot, e.g. GW1N-1/4B)
+        ///< - Table 7-13: this field exists (for models supporting AutoBoot)
+        ///< - Table 7-12: this bit is 0 (models that don't support AutoBoot, e.g. GW1N-1/4B)
         /* Bit 10 */
         uint32_t non_jtag_active      : 1;  ///< Non-JTAG Active flag (e.g. active during MSPI/SSPI configuration). Common to all series.
         /* Bit 11 */
         uint32_t bypass_state         : 1;  ///< Bypass State flag. Common to all series.
         /* Bit 12 */
         uint32_t vld                  : 1;  ///< Gowin VLD (1=normal, 0=abnormal). Internal Flash related parameter.
-                                            ///< Applies to all models with internal Flash (e.g. GW1NS, GW1NZ).
+        ///< Applies to all models with internal Flash (e.g. GW1NS, GW1NZ).
         /* Bit 13 */
         uint32_t done_final           : 1;  ///< Done Final (1=configuration completed successfully, 0=failed). Common to all series.
         /* Bit 14 */
@@ -172,9 +172,9 @@ typedef union {
         uint32_t por                  : 1;  ///< POR (Power-On Reset) status (1=normal, 0=abnormal). Common to all series.
         /* Bit 17 */
         uint32_t flash_lock           : 1;  ///< Flash Lock flag:
-                                            ///< - 1 = Flash locked (read-back disabled, but erase allowed)
-                                            ///< - Only present in the models listed in Table 7-13 (i.e. series with internal Flash, e.g. GW1NS/GW1NZ/GW1NSE)
-                                            ///< - On Table 7-12 models (e.g. GW1N-1/4B) this bit is 0 (no Flash Lock function)
+        ///< - 1 = Flash locked (read-back disabled, but erase allowed)
+        ///< - Only present in the models listed in Table 7-13 (i.e. series with internal Flash, e.g. GW1NS/GW1NZ/GW1NSE)
+        ///< - On Table 7-12 models (e.g. GW1N-1/4B) this bit is 0 (no Flash Lock function)
         /* Bits 18–31 */
         uint32_t reserved_18_31       : 14; ///< Reserved, always 0 (both tables state this explicitly).
     } bits;

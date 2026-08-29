@@ -622,130 +622,130 @@ void invert_hash0(uint8_t k[8]) {
 
         for (int zp_i = 0; zp_i < zP_count; zp_i++) {
 
-        uint64_t zP = zP_list[zp_i];
-        if (g_debugMode > 0) printState("0|0|z'", zP);
+            uint64_t zP = zP_list[zp_i];
+            if (g_debugMode > 0) printState("0|0|z'", zP);
 
-        // reverse the modulo transformation in the hash0 function for the six-bit chunks
+            // reverse the modulo transformation in the hash0 function for the six-bit chunks
 
-        uint64_t c = 0;
+            uint64_t c = 0;
 
-        for (int n = 0; n < 4; n++) {
-            uint8_t _zn = getSixBitByte(zP, n);
-            uint8_t _zn4 = getSixBitByte(zP, n + 4);
+            for (int n = 0; n < 4; n++) {
+                uint8_t _zn = getSixBitByte(zP, n);
+                uint8_t _zn4 = getSixBitByte(zP, n + 4);
 
-            uint8_t zn = (_zn + (63 - 2 * n)) % (63 - n);
-            uint8_t zn4 = (_zn4 + (64 - 2 * n)) % (64 - n);
+                uint8_t zn = (_zn + (63 - 2 * n)) % (63 - n);
+                uint8_t zn4 = (_zn4 + (64 - 2 * n)) % (64 - n);
 
-            pushbackSixBitByte(&c, zn, n);
-            pushbackSixBitByte(&c, zn4, n + 4);
-        }
-
-        // The Hydra: hash0() reduces every six-bit z chunk modulo a value that
-        // depends on the chunk position:
-        //
-        //     _zn  = (zn  % (63 - n)) + n         for n = 0..3
-        //     _zn4 = (zn4 % (64 - n)) + n         for n = 0..3  (chunks 4..7)
-        //
-        // Since the modulus is smaller than 0x40 the reduction is lossy, so a
-        // recovered residue r has a second pre-image at r + modulus whenever
-        // that value still fits in six bits. Each such chunk forks the search.
-
-        // Initialize an array of pointers to uint64_t (start with one value, initialized to 0)
-        uint64_t *hydra_heads = (uint64_t *)calloc(sizeof(uint64_t), 1); // Start with one uint64_t
-        if (hydra_heads == NULL) {
-            PrintAndLogEx(WARNING, "Failed to allocate memory");
-            return;
-        }
-        hydra_heads[0] = 0;  // Initialize first value to 0
-        int heads_count = 1;  // Track number of forks
-
-        for (int n = 0; n < 8; n++) {
-
-            uint8_t hydra_head = getSixBitByte(c, n);
-
-            // the modulus hash0() applied to this chunk, mirroring the loop there
-            uint8_t modulus = (n < 4) ? (63 - n) : (64 - (n - 4));
-
-            // the only other value that reduces to the same residue
-            uint8_t alt_head = hydra_head + modulus;
-
-            if (alt_head <= 0x3F) {
-
-                // Create new forks by duplicating existing uint64_t values
-                int new_head = heads_count * 2;
-
-                // proper realloc pattern
-                uint64_t *ptmp = (uint64_t *)realloc(hydra_heads, new_head * sizeof(uint64_t));
-                if (ptmp == NULL) {
-                    PrintAndLogEx(WARNING, "Failed to allocate memory");
-                    free(hydra_heads);
-                    return;
-                }
-                hydra_heads = ptmp;
-
-                // keep the residue in the existing branch, the alternative in the copy
-                for (int i = 0; i < heads_count; i++) {
-                    hydra_heads[heads_count + i] = hydra_heads[i];
-                    pushbackSixBitByte(&hydra_heads[i], hydra_head, n);
-                    pushbackSixBitByte(&hydra_heads[heads_count + i], alt_head, n);
-                }
-                // Update the count of total values
-                heads_count = new_head;
-            } else {
-                // no hydra head spawns
-                for (int i = 0; i < heads_count; i++) {
-                    pushbackSixBitByte(&hydra_heads[i], hydra_head, n);
-                }
-            }
-        }
-
-        for (int i = 0; i < heads_count; i++) {
-
-            // restore the two most significant bytes (x and y)
-            hydra_heads[i] |= ((uint64_t)x_array[img] << 56);
-            hydra_heads[i] |= ((uint64_t)y << 48);
-
-            if (g_debugMode > 0) {
-                PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
-                printState("origin_r1", hydra_heads[i]);
-            }
-            // reverse the swapZbalues function to get the original six-bit byte order
-            uint64_t original_z = swapZvalues(hydra_heads[i]);
-
-            if (g_debugMode > 0) {
-                PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
-                printState("origin_r2", original_z);
-                PrintAndLogEx(INFO, "--------------------------");
-            }
-            // run pre-image through hash0
-            uint8_t img_div_key[8] = {0};
-            hash0(original_z, img_div_key); // commented to avoid log spam
-
-            // verify result, if it matches add it to the list as a valid pre-image
-            bool image_match = true;
-            for (int v = 0; v < 8; v++) {
-
-                // compare against input key k
-                if (img_div_key[v] != k[v]) {
-                    image_match = false;
-                }
-
+                pushbackSixBitByte(&c, zn, n);
+                pushbackSixBitByte(&c, zn4, n + 4);
             }
 
-            uint8_t des_pre_image[8] = {0};
-            x_num_to_bytes(original_z, sizeof(original_z), des_pre_image);
+            // The Hydra: hash0() reduces every six-bit z chunk modulo a value that
+            // depends on the chunk position:
+            //
+            //     _zn  = (zn  % (63 - n)) + n         for n = 0..3
+            //     _zn4 = (zn4 % (64 - n)) + n         for n = 0..3  (chunks 4..7)
+            //
+            // Since the modulus is smaller than 0x40 the reduction is lossy, so a
+            // recovered residue r has a second pre-image at r + modulus whenever
+            // that value still fits in six bits. Each such chunk forks the search.
 
-            if (image_match) {
-                PrintAndLogEx(INFO, "Pre-image......... " _YELLOW_("%s") " ( "_GREEN_("ok") " )", sprint_hex_inrow(des_pre_image, sizeof(des_pre_image)));
-            } else {
+            // Initialize an array of pointers to uint64_t (start with one value, initialized to 0)
+            uint64_t *hydra_heads = (uint64_t *)calloc(sizeof(uint64_t), 1); // Start with one uint64_t
+            if (hydra_heads == NULL) {
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
+                return;
+            }
+            hydra_heads[0] = 0;  // Initialize first value to 0
+            int heads_count = 1;  // Track number of forks
+
+            for (int n = 0; n < 8; n++) {
+
+                uint8_t hydra_head = getSixBitByte(c, n);
+
+                // the modulus hash0() applied to this chunk, mirroring the loop there
+                uint8_t modulus = (n < 4) ? (63 - n) : (64 - (n - 4));
+
+                // the only other value that reduces to the same residue
+                uint8_t alt_head = hydra_head + modulus;
+
+                if (alt_head <= 0x3F) {
+
+                    // Create new forks by duplicating existing uint64_t values
+                    int new_head = heads_count * 2;
+
+                    // proper realloc pattern
+                    uint64_t *ptmp = (uint64_t *)realloc(hydra_heads, new_head * sizeof(uint64_t));
+                    if (ptmp == NULL) {
+                        PrintAndLogEx(WARNING, "Failed to allocate memory");
+                        free(hydra_heads);
+                        return;
+                    }
+                    hydra_heads = ptmp;
+
+                    // keep the residue in the existing branch, the alternative in the copy
+                    for (int i = 0; i < heads_count; i++) {
+                        hydra_heads[heads_count + i] = hydra_heads[i];
+                        pushbackSixBitByte(&hydra_heads[i], hydra_head, n);
+                        pushbackSixBitByte(&hydra_heads[heads_count + i], alt_head, n);
+                    }
+                    // Update the count of total values
+                    heads_count = new_head;
+                } else {
+                    // no hydra head spawns
+                    for (int i = 0; i < heads_count; i++) {
+                        pushbackSixBitByte(&hydra_heads[i], hydra_head, n);
+                    }
+                }
+            }
+
+            for (int i = 0; i < heads_count; i++) {
+
+                // restore the two most significant bytes (x and y)
+                hydra_heads[i] |= ((uint64_t)x_array[img] << 56);
+                hydra_heads[i] |= ((uint64_t)y << 48);
 
                 if (g_debugMode > 0) {
-                    PrintAndLogEx(INFO, "Pre-image......... " _YELLOW_("%s") " ( "_RED_("invalid") " )", sprint_hex_inrow(des_pre_image, sizeof(des_pre_image)));
+                    PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
+                    printState("origin_r1", hydra_heads[i]);
+                }
+                // reverse the swapZbalues function to get the original six-bit byte order
+                uint64_t original_z = swapZvalues(hydra_heads[i]);
+
+                if (g_debugMode > 0) {
+                    PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
+                    printState("origin_r2", original_z);
+                    PrintAndLogEx(INFO, "--------------------------");
+                }
+                // run pre-image through hash0
+                uint8_t img_div_key[8] = {0};
+                hash0(original_z, img_div_key); // commented to avoid log spam
+
+                // verify result, if it matches add it to the list as a valid pre-image
+                bool image_match = true;
+                for (int v = 0; v < 8; v++) {
+
+                    // compare against input key k
+                    if (img_div_key[v] != k[v]) {
+                        image_match = false;
+                    }
+
+                }
+
+                uint8_t des_pre_image[8] = {0};
+                x_num_to_bytes(original_z, sizeof(original_z), des_pre_image);
+
+                if (image_match) {
+                    PrintAndLogEx(INFO, "Pre-image......... " _YELLOW_("%s") " ( "_GREEN_("ok") " )", sprint_hex_inrow(des_pre_image, sizeof(des_pre_image)));
+                } else {
+
+                    if (g_debugMode > 0) {
+                        PrintAndLogEx(INFO, "Pre-image......... " _YELLOW_("%s") " ( "_RED_("invalid") " )", sprint_hex_inrow(des_pre_image, sizeof(des_pre_image)));
+                    }
                 }
             }
-        }
-        // Free allocated memory
-        free(hydra_heads);
+            // Free allocated memory
+            free(hydra_heads);
 
         } // for each zP candidate
     }

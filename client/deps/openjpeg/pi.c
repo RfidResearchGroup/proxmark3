@@ -51,31 +51,31 @@ Get next packet in layer-resolution-component-precinct order.
 @param pi packet iterator to modify
 @return returns false if pi pointed to the last packet or else returns true
 */
-static OPJ_BOOL opj_pi_next_lrcp(opj_pi_iterator_t * pi);
+static OPJ_BOOL opj_pi_next_lrcp(opj_pi_iterator_t *pi);
 /**
 Get next packet in resolution-layer-component-precinct order.
 @param pi packet iterator to modify
 @return returns false if pi pointed to the last packet or else returns true
 */
-static OPJ_BOOL opj_pi_next_rlcp(opj_pi_iterator_t * pi);
+static OPJ_BOOL opj_pi_next_rlcp(opj_pi_iterator_t *pi);
 /**
 Get next packet in resolution-precinct-component-layer order.
 @param pi packet iterator to modify
 @return returns false if pi pointed to the last packet or else returns true
 */
-static OPJ_BOOL opj_pi_next_rpcl(opj_pi_iterator_t * pi);
+static OPJ_BOOL opj_pi_next_rpcl(opj_pi_iterator_t *pi);
 /**
 Get next packet in precinct-component-resolution-layer order.
 @param pi packet iterator to modify
 @return returns false if pi pointed to the last packet or else returns true
 */
-static OPJ_BOOL opj_pi_next_pcrl(opj_pi_iterator_t * pi);
+static OPJ_BOOL opj_pi_next_pcrl(opj_pi_iterator_t *pi);
 /**
 Get next packet in component-precinct-resolution-layer order.
 @param pi packet iterator to modify
 @return returns false if pi pointed to the last packet or else returns true
 */
-static OPJ_BOOL opj_pi_next_cprl(opj_pi_iterator_t * pi);
+static OPJ_BOOL opj_pi_next_cprl(opj_pi_iterator_t *pi);
 
 /**
  * Updates the coding parameters if the encoding is used with Progression order changes and final (or cinema parameters are used).
@@ -92,15 +92,15 @@ static OPJ_BOOL opj_pi_next_cprl(opj_pi_iterator_t * pi);
  * @param   p_dy_min        the minimum dy of all the components of all the resolutions for the tile.
  */
 static void opj_pi_update_encode_poc_and_final(opj_cp_t *p_cp,
-        OPJ_UINT32 p_tileno,
-        OPJ_UINT32 p_tx0,
-        OPJ_UINT32 p_tx1,
-        OPJ_UINT32 p_ty0,
-        OPJ_UINT32 p_ty1,
-        OPJ_UINT32 p_max_prec,
-        OPJ_UINT32 p_max_res,
-        OPJ_UINT32 p_dx_min,
-        OPJ_UINT32 p_dy_min);
+                                               OPJ_UINT32 p_tileno,
+                                               OPJ_UINT32 p_tx0,
+                                               OPJ_UINT32 p_tx1,
+                                               OPJ_UINT32 p_ty0,
+                                               OPJ_UINT32 p_ty1,
+                                               OPJ_UINT32 p_max_prec,
+                                               OPJ_UINT32 p_max_res,
+                                               OPJ_UINT32 p_dx_min,
+                                               OPJ_UINT32 p_dy_min);
 
 /**
  * Updates the coding parameters if the encoding is not used with Progression order changes and final (and cinema parameters are used).
@@ -118,16 +118,16 @@ static void opj_pi_update_encode_poc_and_final(opj_cp_t *p_cp,
  * @param   p_dy_min        the minimum dy of all the components of all the resolutions for the tile.
  */
 static void opj_pi_update_encode_not_poc(opj_cp_t *p_cp,
-        OPJ_UINT32 p_num_comps,
-        OPJ_UINT32 p_tileno,
-        OPJ_UINT32 p_tx0,
-        OPJ_UINT32 p_tx1,
-        OPJ_UINT32 p_ty0,
-        OPJ_UINT32 p_ty1,
-        OPJ_UINT32 p_max_prec,
-        OPJ_UINT32 p_max_res,
-        OPJ_UINT32 p_dx_min,
-        OPJ_UINT32 p_dy_min);
+                                         OPJ_UINT32 p_num_comps,
+                                         OPJ_UINT32 p_tileno,
+                                         OPJ_UINT32 p_tx0,
+                                         OPJ_UINT32 p_tx1,
+                                         OPJ_UINT32 p_ty0,
+                                         OPJ_UINT32 p_ty1,
+                                         OPJ_UINT32 p_max_prec,
+                                         OPJ_UINT32 p_max_res,
+                                         OPJ_UINT32 p_dx_min,
+                                         OPJ_UINT32 p_dy_min);
 /**
  * Gets the encoding parameters needed to update the coding parameters and all the pocs.
  *
@@ -146,14 +146,14 @@ static void opj_pi_update_encode_not_poc(opj_cp_t *p_cp,
 static void opj_get_encoding_parameters(const opj_image_t *p_image,
                                         const opj_cp_t *p_cp,
                                         OPJ_UINT32  tileno,
-                                        OPJ_UINT32 * p_tx0,
-                                        OPJ_UINT32 * p_tx1,
-                                        OPJ_UINT32 * p_ty0,
-                                        OPJ_UINT32 * p_ty1,
-                                        OPJ_UINT32 * p_dx_min,
-                                        OPJ_UINT32 * p_dy_min,
-                                        OPJ_UINT32 * p_max_prec,
-                                        OPJ_UINT32 * p_max_res);
+                                        OPJ_UINT32 *p_tx0,
+                                        OPJ_UINT32 *p_tx1,
+                                        OPJ_UINT32 *p_ty0,
+                                        OPJ_UINT32 *p_ty1,
+                                        OPJ_UINT32 *p_dx_min,
+                                        OPJ_UINT32 *p_dy_min,
+                                        OPJ_UINT32 *p_max_prec,
+                                        OPJ_UINT32 *p_max_res);
 
 /**
  * Gets the encoding parameters needed to update the coding parameters and all the pocs.
@@ -176,17 +176,17 @@ static void opj_get_encoding_parameters(const opj_image_t *p_image,
  * @param   p_resolutions   pointer to an area corresponding to the one described above.
  */
 static void opj_get_all_encoding_parameters(const opj_image_t *p_image,
-        const opj_cp_t *p_cp,
-        OPJ_UINT32 tileno,
-        OPJ_UINT32 * p_tx0,
-        OPJ_UINT32 * p_tx1,
-        OPJ_UINT32 * p_ty0,
-        OPJ_UINT32 * p_ty1,
-        OPJ_UINT32 * p_dx_min,
-        OPJ_UINT32 * p_dy_min,
-        OPJ_UINT32 * p_max_prec,
-        OPJ_UINT32 * p_max_res,
-        OPJ_UINT32 ** p_resolutions);
+                                            const opj_cp_t *p_cp,
+                                            OPJ_UINT32 tileno,
+                                            OPJ_UINT32 *p_tx0,
+                                            OPJ_UINT32 *p_tx1,
+                                            OPJ_UINT32 *p_ty0,
+                                            OPJ_UINT32 *p_ty1,
+                                            OPJ_UINT32 *p_dx_min,
+                                            OPJ_UINT32 *p_dy_min,
+                                            OPJ_UINT32 *p_max_prec,
+                                            OPJ_UINT32 *p_max_res,
+                                            OPJ_UINT32 **p_resolutions);
 /**
  * Allocates memory for a packet iterator. Data and data sizes are set by this operation.
  * No other data is set. The include section of the packet  iterator is not allocated.
@@ -196,22 +196,22 @@ static void opj_get_all_encoding_parameters(const opj_image_t *p_image,
  * @param   tileno  the index of the tile from which creating the packet iterator.
  * @param   manager Event manager
  */
-static opj_pi_iterator_t * opj_pi_create(const opj_image_t *p_image,
-        const opj_cp_t *p_cp,
-        OPJ_UINT32 tileno,
-        opj_event_mgr_t* manager);
+static opj_pi_iterator_t *opj_pi_create(const opj_image_t *p_image,
+                                        const opj_cp_t *p_cp,
+                                        OPJ_UINT32 tileno,
+                                        opj_event_mgr_t *manager);
 /**
  * FIXME DOC
  */
-static void opj_pi_update_decode_not_poc(opj_pi_iterator_t * p_pi,
-        opj_tcp_t * p_tcp,
-        OPJ_UINT32 p_max_precision,
-        OPJ_UINT32 p_max_res);
+static void opj_pi_update_decode_not_poc(opj_pi_iterator_t *p_pi,
+                                         opj_tcp_t *p_tcp,
+                                         OPJ_UINT32 p_max_precision,
+                                         OPJ_UINT32 p_max_res);
 /**
  * FIXME DOC
  */
-static void opj_pi_update_decode_poc(opj_pi_iterator_t * p_pi,
-                                     opj_tcp_t * p_tcp,
+static void opj_pi_update_decode_poc(opj_pi_iterator_t *p_pi,
+                                     opj_tcp_t *p_tcp,
                                      OPJ_UINT32 p_max_precision,
                                      OPJ_UINT32 p_max_res);
 
@@ -234,8 +234,7 @@ static OPJ_BOOL opj_pi_check_next_level(OPJ_INT32 pos,
 ==========================================================
 */
 
-static OPJ_BOOL opj_pi_next_lrcp(opj_pi_iterator_t * pi)
-{
+static OPJ_BOOL opj_pi_next_lrcp(opj_pi_iterator_t *pi) {
     opj_pi_comp_t *comp = NULL;
     opj_pi_resolution_t *res = NULL;
     OPJ_UINT32 index = 0;
@@ -294,8 +293,7 @@ LABEL_SKIP:
     return OPJ_FALSE;
 }
 
-static OPJ_BOOL opj_pi_next_rlcp(opj_pi_iterator_t * pi)
-{
+static OPJ_BOOL opj_pi_next_rlcp(opj_pi_iterator_t *pi) {
     opj_pi_comp_t *comp = NULL;
     opj_pi_resolution_t *res = NULL;
     OPJ_UINT32 index = 0;
@@ -347,8 +345,7 @@ LABEL_SKIP:
     return OPJ_FALSE;
 }
 
-static OPJ_BOOL opj_pi_next_rpcl(opj_pi_iterator_t * pi)
-{
+static OPJ_BOOL opj_pi_next_rpcl(opj_pi_iterator_t *pi) {
     opj_pi_comp_t *comp = NULL;
     opj_pi_resolution_t *res = NULL;
     OPJ_UINT32 index = 0;
@@ -454,10 +451,10 @@ static OPJ_BOOL opj_pi_next_rpcl(opj_pi_iterator_t * pi)
                     }
 
                     prci = opj_uint_floordivpow2(opj_uint64_ceildiv_res_uint32((OPJ_UINT64)pi->x,
-                                                 ((OPJ_UINT64)comp->dx << levelno)), res->pdx)
+                                                                               ((OPJ_UINT64)comp->dx << levelno)), res->pdx)
                            - opj_uint_floordivpow2(trx0, res->pdx);
                     prcj = opj_uint_floordivpow2(opj_uint64_ceildiv_res_uint32((OPJ_UINT64)pi->y,
-                                                 ((OPJ_UINT64)comp->dy << levelno)), res->pdy)
+                                                                               ((OPJ_UINT64)comp->dy << levelno)), res->pdy)
                            - opj_uint_floordivpow2(try0, res->pdy);
                     pi->precno = prci + prcj * res->pw;
                     for (pi->layno = pi->poc.layno0; pi->layno < pi->poc.layno1; pi->layno++) {
@@ -482,8 +479,7 @@ LABEL_SKIP:
     return OPJ_FALSE;
 }
 
-static OPJ_BOOL opj_pi_next_pcrl(opj_pi_iterator_t * pi)
-{
+static OPJ_BOOL opj_pi_next_pcrl(opj_pi_iterator_t *pi) {
     opj_pi_comp_t *comp = NULL;
     opj_pi_resolution_t *res = NULL;
     OPJ_UINT32 index = 0;
@@ -588,10 +584,10 @@ static OPJ_BOOL opj_pi_next_pcrl(opj_pi_iterator_t * pi)
                     }
 
                     prci = opj_uint_floordivpow2(opj_uint64_ceildiv_res_uint32((OPJ_UINT64)pi->x,
-                                                 ((OPJ_UINT64)comp->dx << levelno)), res->pdx)
+                                                                               ((OPJ_UINT64)comp->dx << levelno)), res->pdx)
                            - opj_uint_floordivpow2(trx0, res->pdx);
                     prcj = opj_uint_floordivpow2(opj_uint64_ceildiv_res_uint32((OPJ_UINT64)pi->y,
-                                                 ((OPJ_UINT64)comp->dy << levelno)), res->pdy)
+                                                                               ((OPJ_UINT64)comp->dy << levelno)), res->pdy)
                            - opj_uint_floordivpow2(try0, res->pdy);
                     pi->precno = prci + prcj * res->pw;
                     for (pi->layno = pi->poc.layno0; pi->layno < pi->poc.layno1; pi->layno++) {
@@ -616,8 +612,7 @@ LABEL_SKIP:
     return OPJ_FALSE;
 }
 
-static OPJ_BOOL opj_pi_next_cprl(opj_pi_iterator_t * pi)
-{
+static OPJ_BOOL opj_pi_next_cprl(opj_pi_iterator_t *pi) {
     opj_pi_comp_t *comp = NULL;
     opj_pi_resolution_t *res = NULL;
     OPJ_UINT32 index = 0;
@@ -720,10 +715,10 @@ static OPJ_BOOL opj_pi_next_cprl(opj_pi_iterator_t * pi)
                     }
 
                     prci = opj_uint_floordivpow2(opj_uint64_ceildiv_res_uint32((OPJ_UINT64)pi->x,
-                                                 ((OPJ_UINT64)comp->dx << levelno)), res->pdx)
+                                                                               ((OPJ_UINT64)comp->dx << levelno)), res->pdx)
                            - opj_uint_floordivpow2(trx0, res->pdx);
                     prcj = opj_uint_floordivpow2(opj_uint64_ceildiv_res_uint32((OPJ_UINT64)pi->y,
-                                                 ((OPJ_UINT64)comp->dy << levelno)), res->pdy)
+                                                                               ((OPJ_UINT64)comp->dy << levelno)), res->pdy)
                            - opj_uint_floordivpow2(try0, res->pdy);
                     pi->precno = (OPJ_UINT32)(prci + prcj * res->pw);
                     for (pi->layno = pi->poc.layno0; pi->layno < pi->poc.layno1; pi->layno++) {
@@ -751,21 +746,20 @@ LABEL_SKIP:
 static void opj_get_encoding_parameters(const opj_image_t *p_image,
                                         const opj_cp_t *p_cp,
                                         OPJ_UINT32 p_tileno,
-                                        OPJ_UINT32 * p_tx0,
-                                        OPJ_UINT32  * p_tx1,
-                                        OPJ_UINT32  * p_ty0,
-                                        OPJ_UINT32  * p_ty1,
-                                        OPJ_UINT32 * p_dx_min,
-                                        OPJ_UINT32 * p_dy_min,
-                                        OPJ_UINT32 * p_max_prec,
-                                        OPJ_UINT32 * p_max_res)
-{
+                                        OPJ_UINT32 *p_tx0,
+                                        OPJ_UINT32   *p_tx1,
+                                        OPJ_UINT32   *p_ty0,
+                                        OPJ_UINT32   *p_ty1,
+                                        OPJ_UINT32 *p_dx_min,
+                                        OPJ_UINT32 *p_dy_min,
+                                        OPJ_UINT32 *p_max_prec,
+                                        OPJ_UINT32 *p_max_res) {
     /* loop */
     OPJ_UINT32  compno, resno;
     /* pointers */
     const opj_tcp_t *l_tcp = 00;
-    const opj_tccp_t * l_tccp = 00;
-    const opj_image_comp_t * l_img_comp = 00;
+    const opj_tccp_t *l_tccp = 00;
+    const opj_image_comp_t *l_img_comp = 00;
 
     /* position in x and y of tile */
     OPJ_UINT32 p, q;
@@ -833,9 +827,9 @@ static void opj_get_encoding_parameters(const opj_image_t *p_image,
             l_pdy = l_tccp->prch[resno];
 
             l_dx = l_img_comp->dx * ((OPJ_UINT64)1u << (l_pdx + l_tccp->numresolutions - 1 -
-                                     resno));
+                                                        resno));
             l_dy = l_img_comp->dy * ((OPJ_UINT64)1u << (l_pdy + l_tccp->numresolutions - 1 -
-                                     resno));
+                                                        resno));
 
             /* take the minimum size for dx for each comp and resolution */
             if (l_dx <= UINT_MAX) {
@@ -876,28 +870,27 @@ static void opj_get_encoding_parameters(const opj_image_t *p_image,
 
 
 static void opj_get_all_encoding_parameters(const opj_image_t *p_image,
-        const opj_cp_t *p_cp,
-        OPJ_UINT32 tileno,
-        OPJ_UINT32 * p_tx0,
-        OPJ_UINT32 * p_tx1,
-        OPJ_UINT32 * p_ty0,
-        OPJ_UINT32 * p_ty1,
-        OPJ_UINT32 * p_dx_min,
-        OPJ_UINT32 * p_dy_min,
-        OPJ_UINT32 * p_max_prec,
-        OPJ_UINT32 * p_max_res,
-        OPJ_UINT32 ** p_resolutions)
-{
+                                            const opj_cp_t *p_cp,
+                                            OPJ_UINT32 tileno,
+                                            OPJ_UINT32 *p_tx0,
+                                            OPJ_UINT32 *p_tx1,
+                                            OPJ_UINT32 *p_ty0,
+                                            OPJ_UINT32 *p_ty1,
+                                            OPJ_UINT32 *p_dx_min,
+                                            OPJ_UINT32 *p_dy_min,
+                                            OPJ_UINT32 *p_max_prec,
+                                            OPJ_UINT32 *p_max_res,
+                                            OPJ_UINT32 **p_resolutions) {
     /* loop*/
     OPJ_UINT32 compno, resno;
 
     /* pointers*/
     const opj_tcp_t *tcp = 00;
-    const opj_tccp_t * l_tccp = 00;
-    const opj_image_comp_t * l_img_comp = 00;
+    const opj_tccp_t *l_tccp = 00;
+    const opj_image_comp_t *l_img_comp = 00;
 
     /* to store l_dx, l_dy, w and h for each resolution and component.*/
-    OPJ_UINT32 * lResolutionPtr;
+    OPJ_UINT32 *lResolutionPtr;
 
     /* position in x and y of tile*/
     OPJ_UINT32 p, q;
@@ -1011,11 +1004,10 @@ static void opj_get_all_encoding_parameters(const opj_image_t *p_image,
     }
 }
 
-static opj_pi_iterator_t * opj_pi_create(const opj_image_t *image,
-        const opj_cp_t *cp,
-        OPJ_UINT32 tileno,
-        opj_event_mgr_t* manager)
-{
+static opj_pi_iterator_t *opj_pi_create(const opj_image_t *image,
+                                        const opj_cp_t *cp,
+                                        OPJ_UINT32 tileno,
+                                        opj_event_mgr_t *manager) {
     /* loop*/
     OPJ_UINT32 pino, compno;
     /* number of poc in the p_pi*/
@@ -1039,8 +1031,8 @@ static opj_pi_iterator_t * opj_pi_create(const opj_image_t *image,
     l_poc_bound = tcp->numpocs + 1;
 
     /* memory allocations*/
-    l_pi = (opj_pi_iterator_t*) opj_calloc((l_poc_bound),
-                                           sizeof(opj_pi_iterator_t));
+    l_pi = (opj_pi_iterator_t *) opj_calloc((l_poc_bound),
+                                            sizeof(opj_pi_iterator_t));
     if (!l_pi) {
         return NULL;
     }
@@ -1050,8 +1042,8 @@ static opj_pi_iterator_t * opj_pi_create(const opj_image_t *image,
 
         l_current_pi->manager = manager;
 
-        l_current_pi->comps = (opj_pi_comp_t*) opj_calloc(image->numcomps,
-                              sizeof(opj_pi_comp_t));
+        l_current_pi->comps = (opj_pi_comp_t *) opj_calloc(image->numcomps,
+                                                           sizeof(opj_pi_comp_t));
         if (! l_current_pi->comps) {
             opj_pi_destroy(l_pi, l_poc_bound);
             return NULL;
@@ -1064,8 +1056,8 @@ static opj_pi_iterator_t * opj_pi_create(const opj_image_t *image,
 
             tccp = &tcp->tccps[compno];
 
-            comp->resolutions = (opj_pi_resolution_t*) opj_calloc(tccp->numresolutions,
-                                sizeof(opj_pi_resolution_t));
+            comp->resolutions = (opj_pi_resolution_t *) opj_calloc(tccp->numresolutions,
+                                                                   sizeof(opj_pi_resolution_t));
             if (!comp->resolutions) {
                 opj_pi_destroy(l_pi, l_poc_bound);
                 return 00;
@@ -1079,22 +1071,21 @@ static opj_pi_iterator_t * opj_pi_create(const opj_image_t *image,
 }
 
 static void opj_pi_update_encode_poc_and_final(opj_cp_t *p_cp,
-        OPJ_UINT32 p_tileno,
-        OPJ_UINT32 p_tx0,
-        OPJ_UINT32 p_tx1,
-        OPJ_UINT32 p_ty0,
-        OPJ_UINT32 p_ty1,
-        OPJ_UINT32 p_max_prec,
-        OPJ_UINT32 p_max_res,
-        OPJ_UINT32 p_dx_min,
-        OPJ_UINT32 p_dy_min)
-{
+                                               OPJ_UINT32 p_tileno,
+                                               OPJ_UINT32 p_tx0,
+                                               OPJ_UINT32 p_tx1,
+                                               OPJ_UINT32 p_ty0,
+                                               OPJ_UINT32 p_ty1,
+                                               OPJ_UINT32 p_max_prec,
+                                               OPJ_UINT32 p_max_res,
+                                               OPJ_UINT32 p_dx_min,
+                                               OPJ_UINT32 p_dy_min) {
     /* loop*/
     OPJ_UINT32 pino;
     /* tile coding parameter*/
     opj_tcp_t *l_tcp = 00;
     /* current poc being updated*/
-    opj_poc_t * l_current_poc = 00;
+    opj_poc_t *l_current_poc = 00;
 
     /* number of pocs*/
     OPJ_UINT32 l_poc_bound;
@@ -1158,23 +1149,22 @@ static void opj_pi_update_encode_poc_and_final(opj_cp_t *p_cp,
 }
 
 static void opj_pi_update_encode_not_poc(opj_cp_t *p_cp,
-        OPJ_UINT32 p_num_comps,
-        OPJ_UINT32 p_tileno,
-        OPJ_UINT32 p_tx0,
-        OPJ_UINT32 p_tx1,
-        OPJ_UINT32 p_ty0,
-        OPJ_UINT32 p_ty1,
-        OPJ_UINT32 p_max_prec,
-        OPJ_UINT32 p_max_res,
-        OPJ_UINT32 p_dx_min,
-        OPJ_UINT32 p_dy_min)
-{
+                                         OPJ_UINT32 p_num_comps,
+                                         OPJ_UINT32 p_tileno,
+                                         OPJ_UINT32 p_tx0,
+                                         OPJ_UINT32 p_tx1,
+                                         OPJ_UINT32 p_ty0,
+                                         OPJ_UINT32 p_ty1,
+                                         OPJ_UINT32 p_max_prec,
+                                         OPJ_UINT32 p_max_res,
+                                         OPJ_UINT32 p_dx_min,
+                                         OPJ_UINT32 p_dy_min) {
     /* loop*/
     OPJ_UINT32 pino;
     /* tile coding parameter*/
     opj_tcp_t *l_tcp = 00;
     /* current poc being updated*/
-    opj_poc_t * l_current_poc = 00;
+    opj_poc_t *l_current_poc = 00;
     /* number of pocs*/
     OPJ_UINT32 l_poc_bound;
 
@@ -1212,19 +1202,18 @@ static void opj_pi_update_encode_not_poc(opj_cp_t *p_cp,
     }
 }
 
-static void opj_pi_update_decode_poc(opj_pi_iterator_t * p_pi,
-                                     opj_tcp_t * p_tcp,
+static void opj_pi_update_decode_poc(opj_pi_iterator_t *p_pi,
+                                     opj_tcp_t *p_tcp,
                                      OPJ_UINT32 p_max_precision,
-                                     OPJ_UINT32 p_max_res)
-{
+                                     OPJ_UINT32 p_max_res) {
     /* loop*/
     OPJ_UINT32 pino;
 
     /* encoding parameters to set*/
     OPJ_UINT32 l_bound;
 
-    opj_pi_iterator_t * l_current_pi = 00;
-    opj_poc_t* l_current_poc = 0;
+    opj_pi_iterator_t *l_current_pi = 00;
+    opj_poc_t *l_current_poc = 0;
 
     OPJ_ARG_NOT_USED(p_max_res);
 
@@ -1259,18 +1248,17 @@ static void opj_pi_update_decode_poc(opj_pi_iterator_t * p_pi,
     }
 }
 
-static void opj_pi_update_decode_not_poc(opj_pi_iterator_t * p_pi,
-        opj_tcp_t * p_tcp,
-        OPJ_UINT32 p_max_precision,
-        OPJ_UINT32 p_max_res)
-{
+static void opj_pi_update_decode_not_poc(opj_pi_iterator_t *p_pi,
+                                         opj_tcp_t *p_tcp,
+                                         OPJ_UINT32 p_max_precision,
+                                         OPJ_UINT32 p_max_res) {
     /* loop*/
     OPJ_UINT32 pino;
 
     /* encoding parameters to set*/
     OPJ_UINT32 l_bound;
 
-    opj_pi_iterator_t * l_current_pi = 00;
+    opj_pi_iterator_t *l_current_pi = 00;
     /* preconditions in debug*/
     assert(p_tcp != 00);
     assert(p_pi != 00);
@@ -1300,8 +1288,7 @@ static OPJ_BOOL opj_pi_check_next_level(OPJ_INT32 pos,
                                         opj_cp_t *cp,
                                         OPJ_UINT32 tileno,
                                         OPJ_UINT32 pino,
-                                        const OPJ_CHAR *prog)
-{
+                                        const OPJ_CHAR *prog) {
     OPJ_INT32 i;
     opj_tcp_t *tcps = &cp->tcps[tileno];
     opj_poc_t *tcp = &tcps->pocs[pino];
@@ -1309,45 +1296,9 @@ static OPJ_BOOL opj_pi_check_next_level(OPJ_INT32 pos,
     if (pos >= 0) {
         for (i = pos; i >= 0; i--) {
             switch (prog[i]) {
-            case 'R':
-                if (tcp->res_t == tcp->resE) {
-                    if (opj_pi_check_next_level(pos - 1, cp, tileno, pino, prog)) {
-                        return OPJ_TRUE;
-                    } else {
-                        return OPJ_FALSE;
-                    }
-                } else {
-                    return OPJ_TRUE;
-                }
-                break;
-            case 'C':
-                if (tcp->comp_t == tcp->compE) {
-                    if (opj_pi_check_next_level(pos - 1, cp, tileno, pino, prog)) {
-                        return OPJ_TRUE;
-                    } else {
-                        return OPJ_FALSE;
-                    }
-                } else {
-                    return OPJ_TRUE;
-                }
-                break;
-            case 'L':
-                if (tcp->lay_t == tcp->layE) {
-                    if (opj_pi_check_next_level(pos - 1, cp, tileno, pino, prog)) {
-                        return OPJ_TRUE;
-                    } else {
-                        return OPJ_FALSE;
-                    }
-                } else {
-                    return OPJ_TRUE;
-                }
-                break;
-            case 'P':
-                switch (tcp->prg) {
-                case OPJ_LRCP: /* fall through */
-                case OPJ_RLCP:
-                    if (tcp->prc_t == tcp->prcE) {
-                        if (opj_pi_check_next_level(i - 1, cp, tileno, pino, prog)) {
+                case 'R':
+                    if (tcp->res_t == tcp->resE) {
+                        if (opj_pi_check_next_level(pos - 1, cp, tileno, pino, prog)) {
                             return OPJ_TRUE;
                         } else {
                             return OPJ_FALSE;
@@ -1356,23 +1307,59 @@ static OPJ_BOOL opj_pi_check_next_level(OPJ_INT32 pos,
                         return OPJ_TRUE;
                     }
                     break;
-                default:
-                    if (tcp->tx0_t == tcp->txE) {
-                        /*TY*/
-                        if (tcp->ty0_t == tcp->tyE) {
-                            if (opj_pi_check_next_level(i - 1, cp, tileno, pino, prog)) {
-                                return OPJ_TRUE;
-                            } else {
-                                return OPJ_FALSE;
-                            }
-                        } else {
+                case 'C':
+                    if (tcp->comp_t == tcp->compE) {
+                        if (opj_pi_check_next_level(pos - 1, cp, tileno, pino, prog)) {
                             return OPJ_TRUE;
-                        }/*TY*/
+                        } else {
+                            return OPJ_FALSE;
+                        }
                     } else {
                         return OPJ_TRUE;
                     }
                     break;
-                }/*end case P*/
+                case 'L':
+                    if (tcp->lay_t == tcp->layE) {
+                        if (opj_pi_check_next_level(pos - 1, cp, tileno, pino, prog)) {
+                            return OPJ_TRUE;
+                        } else {
+                            return OPJ_FALSE;
+                        }
+                    } else {
+                        return OPJ_TRUE;
+                    }
+                    break;
+                case 'P':
+                    switch (tcp->prg) {
+                        case OPJ_LRCP: /* fall through */
+                        case OPJ_RLCP:
+                            if (tcp->prc_t == tcp->prcE) {
+                                if (opj_pi_check_next_level(i - 1, cp, tileno, pino, prog)) {
+                                    return OPJ_TRUE;
+                                } else {
+                                    return OPJ_FALSE;
+                                }
+                            } else {
+                                return OPJ_TRUE;
+                            }
+                            break;
+                        default:
+                            if (tcp->tx0_t == tcp->txE) {
+                                /*TY*/
+                                if (tcp->ty0_t == tcp->tyE) {
+                                    if (opj_pi_check_next_level(i - 1, cp, tileno, pino, prog)) {
+                                        return OPJ_TRUE;
+                                    } else {
+                                        return OPJ_FALSE;
+                                    }
+                                } else {
+                                    return OPJ_TRUE;
+                                }/*TY*/
+                            } else {
+                                return OPJ_TRUE;
+                            }
+                            break;
+                    }/*end case P*/
             }/*end switch*/
         }/*end for*/
     }/*end if*/
@@ -1388,8 +1375,7 @@ static OPJ_BOOL opj_pi_check_next_level(OPJ_INT32 pos,
 opj_pi_iterator_t *opj_pi_create_decode(opj_image_t *p_image,
                                         opj_cp_t *p_cp,
                                         OPJ_UINT32 p_tile_no,
-                                        opj_event_mgr_t* manager)
-{
+                                        opj_event_mgr_t *manager) {
     OPJ_UINT32 numcomps = p_image->numcomps;
 
     /* loop */
@@ -1397,8 +1383,8 @@ opj_pi_iterator_t *opj_pi_create_decode(opj_image_t *p_image,
     OPJ_UINT32 compno, resno;
 
     /* to store w, h, dx and dy for all components and resolutions */
-    OPJ_UINT32 * l_tmp_data;
-    OPJ_UINT32 ** l_tmp_ptr;
+    OPJ_UINT32 *l_tmp_data;
+    OPJ_UINT32 **l_tmp_ptr;
 
     /* encoding parameters to set */
     OPJ_UINT32 l_max_res;
@@ -1414,9 +1400,9 @@ opj_pi_iterator_t *opj_pi_create_decode(opj_image_t *p_image,
     opj_tcp_t *l_tcp = 00;
     const opj_tccp_t *l_tccp = 00;
     opj_pi_comp_t *l_current_comp = 00;
-    opj_image_comp_t * l_img_comp = 00;
-    opj_pi_iterator_t * l_current_pi = 00;
-    OPJ_UINT32 * l_encoding_value_ptr = 00;
+    opj_image_comp_t *l_img_comp = 00;
+    opj_pi_iterator_t *l_current_pi = 00;
+    OPJ_UINT32 *l_encoding_value_ptr = 00;
 
     /* preconditions in debug */
     assert(p_cp != 00);
@@ -1428,13 +1414,13 @@ opj_pi_iterator_t *opj_pi_create_decode(opj_image_t *p_image,
     l_bound = l_tcp->numpocs + 1;
 
     l_data_stride = 4 * OPJ_J2K_MAXRLVLS;
-    l_tmp_data = (OPJ_UINT32*)opj_malloc(
+    l_tmp_data = (OPJ_UINT32 *)opj_malloc(
                      l_data_stride * numcomps * sizeof(OPJ_UINT32));
     if
     (! l_tmp_data) {
         return 00;
     }
-    l_tmp_ptr = (OPJ_UINT32**)opj_malloc(
+    l_tmp_ptr = (OPJ_UINT32 **)opj_malloc(
                     numcomps * sizeof(OPJ_UINT32 *));
     if
     (! l_tmp_ptr) {
@@ -1476,7 +1462,7 @@ opj_pi_iterator_t *opj_pi_create_decode(opj_image_t *p_image,
     l_current_pi->include = 00;
     if (l_step_l <= (UINT_MAX / (l_tcp->numlayers + 1U))) {
         l_current_pi->include_size = (l_tcp->numlayers + 1U) * l_step_l;
-        l_current_pi->include = (OPJ_INT16*) opj_calloc(
+        l_current_pi->include = (OPJ_INT16 *) opj_calloc(
                                     l_current_pi->include_size, sizeof(OPJ_INT16));
     }
 
@@ -1585,9 +1571,8 @@ opj_pi_iterator_t *opj_pi_create_decode(opj_image_t *p_image,
 
 
 OPJ_UINT32 opj_get_encoding_packet_count(const opj_image_t *p_image,
-        const opj_cp_t *p_cp,
-        OPJ_UINT32 p_tile_no)
-{
+                                         const opj_cp_t *p_cp,
+                                         OPJ_UINT32 p_tile_no) {
     OPJ_UINT32 l_max_res;
     OPJ_UINT32 l_max_prec;
     OPJ_UINT32 l_tx0, l_tx1, l_ty0, l_ty1;
@@ -1608,11 +1593,10 @@ OPJ_UINT32 opj_get_encoding_packet_count(const opj_image_t *p_image,
 
 
 opj_pi_iterator_t *opj_pi_initialise_encode(const opj_image_t *p_image,
-        opj_cp_t *p_cp,
-        OPJ_UINT32 p_tile_no,
-        J2K_T2_MODE p_t2_mode,
-        opj_event_mgr_t* manager)
-{
+                                            opj_cp_t *p_cp,
+                                            OPJ_UINT32 p_tile_no,
+                                            J2K_T2_MODE p_t2_mode,
+                                            opj_event_mgr_t *manager) {
     OPJ_UINT32 numcomps = p_image->numcomps;
 
     /* loop*/
@@ -1620,8 +1604,8 @@ opj_pi_iterator_t *opj_pi_initialise_encode(const opj_image_t *p_image,
     OPJ_UINT32 compno, resno;
 
     /* to store w, h, dx and dy for all components and resolutions*/
-    OPJ_UINT32 * l_tmp_data;
-    OPJ_UINT32 ** l_tmp_ptr;
+    OPJ_UINT32 *l_tmp_data;
+    OPJ_UINT32 **l_tmp_ptr;
 
     /* encoding parameters to set*/
     OPJ_UINT32 l_max_res;
@@ -1637,9 +1621,9 @@ opj_pi_iterator_t *opj_pi_initialise_encode(const opj_image_t *p_image,
     opj_tcp_t *l_tcp = 00;
     const opj_tccp_t *l_tccp = 00;
     opj_pi_comp_t *l_current_comp = 00;
-    opj_image_comp_t * l_img_comp = 00;
-    opj_pi_iterator_t * l_current_pi = 00;
-    OPJ_UINT32 * l_encoding_value_ptr = 00;
+    opj_image_comp_t *l_img_comp = 00;
+    opj_pi_iterator_t *l_current_pi = 00;
+    OPJ_UINT32 *l_encoding_value_ptr = 00;
 
     /* preconditions in debug*/
     assert(p_cp != 00);
@@ -1651,13 +1635,13 @@ opj_pi_iterator_t *opj_pi_initialise_encode(const opj_image_t *p_image,
     l_bound = l_tcp->numpocs + 1;
 
     l_data_stride = 4 * OPJ_J2K_MAXRLVLS;
-    l_tmp_data = (OPJ_UINT32*)opj_malloc(
+    l_tmp_data = (OPJ_UINT32 *)opj_malloc(
                      l_data_stride * numcomps * sizeof(OPJ_UINT32));
     if (! l_tmp_data) {
         return 00;
     }
 
-    l_tmp_ptr = (OPJ_UINT32**)opj_malloc(
+    l_tmp_ptr = (OPJ_UINT32 **)opj_malloc(
                     numcomps * sizeof(OPJ_UINT32 *));
     if (! l_tmp_ptr) {
         opj_free(l_tmp_data);
@@ -1695,8 +1679,8 @@ opj_pi_iterator_t *opj_pi_initialise_encode(const opj_image_t *p_image,
 
     /* memory allocation for include*/
     l_current_pi->include_size = l_tcp->numlayers * l_step_l;
-    l_current_pi->include = (OPJ_INT16*) opj_calloc(l_current_pi->include_size,
-                            sizeof(OPJ_INT16));
+    l_current_pi->include = (OPJ_INT16 *) opj_calloc(l_current_pi->include_size,
+                                                     sizeof(OPJ_INT16));
     if (!l_current_pi->include) {
         opj_free(l_tmp_data);
         opj_free(l_tmp_ptr);
@@ -1806,8 +1790,7 @@ void opj_pi_create_encode(opj_pi_iterator_t *pi,
                           OPJ_UINT32 pino,
                           OPJ_UINT32 tpnum,
                           OPJ_INT32 tppos,
-                          J2K_T2_MODE t2_mode)
-{
+                          J2K_T2_MODE t2_mode) {
     const OPJ_CHAR *prog;
     OPJ_INT32 i;
     OPJ_UINT32 incr_top = 1, resetX = 0;
@@ -1820,8 +1803,8 @@ void opj_pi_create_encode(opj_pi_iterator_t *pi,
     pi[pino].poc.prg = tcp->prg;
 
     if (!(cp->m_specific_param.m_enc.m_tp_on && ((!OPJ_IS_CINEMA(cp->rsiz) &&
-            !OPJ_IS_IMF(cp->rsiz) &&
-            (t2_mode == FINAL_PASS)) || OPJ_IS_CINEMA(cp->rsiz) || OPJ_IS_IMF(cp->rsiz)))) {
+                                                  !OPJ_IS_IMF(cp->rsiz) &&
+                                                  (t2_mode == FINAL_PASS)) || OPJ_IS_CINEMA(cp->rsiz) || OPJ_IS_IMF(cp->rsiz)))) {
         pi[pino].poc.resno0 = tcp->resS;
         pi[pino].poc.resno1 = tcp->resE;
         pi[pino].poc.compno0 = tcp->compS;
@@ -1837,225 +1820,225 @@ void opj_pi_create_encode(opj_pi_iterator_t *pi,
     } else {
         for (i = tppos + 1; i < 4; i++) {
             switch (prog[i]) {
-            case 'R':
-                pi[pino].poc.resno0 = tcp->resS;
-                pi[pino].poc.resno1 = tcp->resE;
-                break;
-            case 'C':
-                pi[pino].poc.compno0 = tcp->compS;
-                pi[pino].poc.compno1 = tcp->compE;
-                break;
-            case 'L':
-                pi[pino].poc.layno0 = tcp->layS;
-                pi[pino].poc.layno1 = tcp->layE;
-                break;
-            case 'P':
-                switch (tcp->prg) {
-                case OPJ_LRCP:
-                case OPJ_RLCP:
-                    pi[pino].poc.precno0 = tcp->prcS;
-                    pi[pino].poc.precno1 = tcp->prcE;
+                case 'R':
+                    pi[pino].poc.resno0 = tcp->resS;
+                    pi[pino].poc.resno1 = tcp->resE;
                     break;
-                default:
-                    pi[pino].poc.tx0 = tcp->txS;
-                    pi[pino].poc.ty0 = tcp->tyS;
-                    pi[pino].poc.tx1 = tcp->txE;
-                    pi[pino].poc.ty1 = tcp->tyE;
+                case 'C':
+                    pi[pino].poc.compno0 = tcp->compS;
+                    pi[pino].poc.compno1 = tcp->compE;
                     break;
-                }
-                break;
+                case 'L':
+                    pi[pino].poc.layno0 = tcp->layS;
+                    pi[pino].poc.layno1 = tcp->layE;
+                    break;
+                case 'P':
+                    switch (tcp->prg) {
+                        case OPJ_LRCP:
+                        case OPJ_RLCP:
+                            pi[pino].poc.precno0 = tcp->prcS;
+                            pi[pino].poc.precno1 = tcp->prcE;
+                            break;
+                        default:
+                            pi[pino].poc.tx0 = tcp->txS;
+                            pi[pino].poc.ty0 = tcp->tyS;
+                            pi[pino].poc.tx1 = tcp->txE;
+                            pi[pino].poc.ty1 = tcp->tyE;
+                            break;
+                    }
+                    break;
             }
         }
 
         if (tpnum == 0) {
             for (i = tppos; i >= 0; i--) {
                 switch (prog[i]) {
-                case 'C':
-                    tcp->comp_t = tcp->compS;
-                    pi[pino].poc.compno0 = tcp->comp_t;
-                    pi[pino].poc.compno1 = tcp->comp_t + 1;
-                    tcp->comp_t += 1;
-                    break;
-                case 'R':
-                    tcp->res_t = tcp->resS;
-                    pi[pino].poc.resno0 = tcp->res_t;
-                    pi[pino].poc.resno1 = tcp->res_t + 1;
-                    tcp->res_t += 1;
-                    break;
-                case 'L':
-                    tcp->lay_t = tcp->layS;
-                    pi[pino].poc.layno0 = tcp->lay_t;
-                    pi[pino].poc.layno1 = tcp->lay_t + 1;
-                    tcp->lay_t += 1;
-                    break;
-                case 'P':
-                    switch (tcp->prg) {
-                    case OPJ_LRCP:
-                    case OPJ_RLCP:
-                        tcp->prc_t = tcp->prcS;
-                        pi[pino].poc.precno0 = tcp->prc_t;
-                        pi[pino].poc.precno1 = tcp->prc_t + 1;
-                        tcp->prc_t += 1;
+                    case 'C':
+                        tcp->comp_t = tcp->compS;
+                        pi[pino].poc.compno0 = tcp->comp_t;
+                        pi[pino].poc.compno1 = tcp->comp_t + 1;
+                        tcp->comp_t += 1;
                         break;
-                    default:
-                        tcp->tx0_t = tcp->txS;
-                        tcp->ty0_t = tcp->tyS;
-                        pi[pino].poc.tx0 = tcp->tx0_t;
-                        pi[pino].poc.tx1 = tcp->tx0_t + tcp->dx - (tcp->tx0_t % tcp->dx);
-                        pi[pino].poc.ty0 = tcp->ty0_t;
-                        pi[pino].poc.ty1 = tcp->ty0_t + tcp->dy - (tcp->ty0_t % tcp->dy);
-                        tcp->tx0_t = (OPJ_UINT32)pi[pino].poc.tx1;
-                        tcp->ty0_t = (OPJ_UINT32)pi[pino].poc.ty1;
+                    case 'R':
+                        tcp->res_t = tcp->resS;
+                        pi[pino].poc.resno0 = tcp->res_t;
+                        pi[pino].poc.resno1 = tcp->res_t + 1;
+                        tcp->res_t += 1;
                         break;
-                    }
-                    break;
+                    case 'L':
+                        tcp->lay_t = tcp->layS;
+                        pi[pino].poc.layno0 = tcp->lay_t;
+                        pi[pino].poc.layno1 = tcp->lay_t + 1;
+                        tcp->lay_t += 1;
+                        break;
+                    case 'P':
+                        switch (tcp->prg) {
+                            case OPJ_LRCP:
+                            case OPJ_RLCP:
+                                tcp->prc_t = tcp->prcS;
+                                pi[pino].poc.precno0 = tcp->prc_t;
+                                pi[pino].poc.precno1 = tcp->prc_t + 1;
+                                tcp->prc_t += 1;
+                                break;
+                            default:
+                                tcp->tx0_t = tcp->txS;
+                                tcp->ty0_t = tcp->tyS;
+                                pi[pino].poc.tx0 = tcp->tx0_t;
+                                pi[pino].poc.tx1 = tcp->tx0_t + tcp->dx - (tcp->tx0_t % tcp->dx);
+                                pi[pino].poc.ty0 = tcp->ty0_t;
+                                pi[pino].poc.ty1 = tcp->ty0_t + tcp->dy - (tcp->ty0_t % tcp->dy);
+                                tcp->tx0_t = (OPJ_UINT32)pi[pino].poc.tx1;
+                                tcp->ty0_t = (OPJ_UINT32)pi[pino].poc.ty1;
+                                break;
+                        }
+                        break;
                 }
             }
             incr_top = 1;
         } else {
             for (i = tppos; i >= 0; i--) {
                 switch (prog[i]) {
-                case 'C':
-                    pi[pino].poc.compno0 = tcp->comp_t - 1;
-                    pi[pino].poc.compno1 = tcp->comp_t;
-                    break;
-                case 'R':
-                    pi[pino].poc.resno0 = tcp->res_t - 1;
-                    pi[pino].poc.resno1 = tcp->res_t;
-                    break;
-                case 'L':
-                    pi[pino].poc.layno0 = tcp->lay_t - 1;
-                    pi[pino].poc.layno1 = tcp->lay_t;
-                    break;
-                case 'P':
-                    switch (tcp->prg) {
-                    case OPJ_LRCP:
-                    case OPJ_RLCP:
-                        pi[pino].poc.precno0 = tcp->prc_t - 1;
-                        pi[pino].poc.precno1 = tcp->prc_t;
-                        break;
-                    default:
-                        pi[pino].poc.tx0 = tcp->tx0_t - tcp->dx - (tcp->tx0_t % tcp->dx);
-                        pi[pino].poc.tx1 = tcp->tx0_t ;
-                        pi[pino].poc.ty0 = tcp->ty0_t - tcp->dy - (tcp->ty0_t % tcp->dy);
-                        pi[pino].poc.ty1 = tcp->ty0_t ;
-                        break;
-                    }
-                    break;
-                }
-                if (incr_top == 1) {
-                    switch (prog[i]) {
-                    case 'R':
-                        if (tcp->res_t == tcp->resE) {
-                            if (opj_pi_check_next_level(i - 1, cp, tileno, pino, prog)) {
-                                tcp->res_t = tcp->resS;
-                                pi[pino].poc.resno0 = tcp->res_t;
-                                pi[pino].poc.resno1 = tcp->res_t + 1;
-                                tcp->res_t += 1;
-                                incr_top = 1;
-                            } else {
-                                incr_top = 0;
-                            }
-                        } else {
-                            pi[pino].poc.resno0 = tcp->res_t;
-                            pi[pino].poc.resno1 = tcp->res_t + 1;
-                            tcp->res_t += 1;
-                            incr_top = 0;
-                        }
-                        break;
                     case 'C':
-                        if (tcp->comp_t == tcp->compE) {
-                            if (opj_pi_check_next_level(i - 1, cp, tileno, pino, prog)) {
-                                tcp->comp_t = tcp->compS;
-                                pi[pino].poc.compno0 = tcp->comp_t;
-                                pi[pino].poc.compno1 = tcp->comp_t + 1;
-                                tcp->comp_t += 1;
-                                incr_top = 1;
-                            } else {
-                                incr_top = 0;
-                            }
-                        } else {
-                            pi[pino].poc.compno0 = tcp->comp_t;
-                            pi[pino].poc.compno1 = tcp->comp_t + 1;
-                            tcp->comp_t += 1;
-                            incr_top = 0;
-                        }
+                        pi[pino].poc.compno0 = tcp->comp_t - 1;
+                        pi[pino].poc.compno1 = tcp->comp_t;
+                        break;
+                    case 'R':
+                        pi[pino].poc.resno0 = tcp->res_t - 1;
+                        pi[pino].poc.resno1 = tcp->res_t;
                         break;
                     case 'L':
-                        if (tcp->lay_t == tcp->layE) {
-                            if (opj_pi_check_next_level(i - 1, cp, tileno, pino, prog)) {
-                                tcp->lay_t = tcp->layS;
-                                pi[pino].poc.layno0 = tcp->lay_t;
-                                pi[pino].poc.layno1 = tcp->lay_t + 1;
-                                tcp->lay_t += 1;
-                                incr_top = 1;
-                            } else {
-                                incr_top = 0;
-                            }
-                        } else {
-                            pi[pino].poc.layno0 = tcp->lay_t;
-                            pi[pino].poc.layno1 = tcp->lay_t + 1;
-                            tcp->lay_t += 1;
-                            incr_top = 0;
-                        }
+                        pi[pino].poc.layno0 = tcp->lay_t - 1;
+                        pi[pino].poc.layno1 = tcp->lay_t;
                         break;
                     case 'P':
                         switch (tcp->prg) {
-                        case OPJ_LRCP:
-                        case OPJ_RLCP:
-                            if (tcp->prc_t == tcp->prcE) {
+                            case OPJ_LRCP:
+                            case OPJ_RLCP:
+                                pi[pino].poc.precno0 = tcp->prc_t - 1;
+                                pi[pino].poc.precno1 = tcp->prc_t;
+                                break;
+                            default:
+                                pi[pino].poc.tx0 = tcp->tx0_t - tcp->dx - (tcp->tx0_t % tcp->dx);
+                                pi[pino].poc.tx1 = tcp->tx0_t ;
+                                pi[pino].poc.ty0 = tcp->ty0_t - tcp->dy - (tcp->ty0_t % tcp->dy);
+                                pi[pino].poc.ty1 = tcp->ty0_t ;
+                                break;
+                        }
+                        break;
+                }
+                if (incr_top == 1) {
+                    switch (prog[i]) {
+                        case 'R':
+                            if (tcp->res_t == tcp->resE) {
                                 if (opj_pi_check_next_level(i - 1, cp, tileno, pino, prog)) {
-                                    tcp->prc_t = tcp->prcS;
-                                    pi[pino].poc.precno0 = tcp->prc_t;
-                                    pi[pino].poc.precno1 = tcp->prc_t + 1;
-                                    tcp->prc_t += 1;
+                                    tcp->res_t = tcp->resS;
+                                    pi[pino].poc.resno0 = tcp->res_t;
+                                    pi[pino].poc.resno1 = tcp->res_t + 1;
+                                    tcp->res_t += 1;
                                     incr_top = 1;
                                 } else {
                                     incr_top = 0;
                                 }
                             } else {
-                                pi[pino].poc.precno0 = tcp->prc_t;
-                                pi[pino].poc.precno1 = tcp->prc_t + 1;
-                                tcp->prc_t += 1;
+                                pi[pino].poc.resno0 = tcp->res_t;
+                                pi[pino].poc.resno1 = tcp->res_t + 1;
+                                tcp->res_t += 1;
                                 incr_top = 0;
                             }
                             break;
-                        default:
-                            if (tcp->tx0_t >= tcp->txE) {
-                                if (tcp->ty0_t >= tcp->tyE) {
-                                    if (opj_pi_check_next_level(i - 1, cp, tileno, pino, prog)) {
-                                        tcp->ty0_t = tcp->tyS;
-                                        pi[pino].poc.ty0 = tcp->ty0_t;
-                                        pi[pino].poc.ty1 = tcp->ty0_t + tcp->dy - (tcp->ty0_t % tcp->dy);
-                                        tcp->ty0_t = (OPJ_UINT32)pi[pino].poc.ty1;
-                                        incr_top = 1;
-                                        resetX = 1;
-                                    } else {
-                                        incr_top = 0;
-                                        resetX = 0;
-                                    }
+                        case 'C':
+                            if (tcp->comp_t == tcp->compE) {
+                                if (opj_pi_check_next_level(i - 1, cp, tileno, pino, prog)) {
+                                    tcp->comp_t = tcp->compS;
+                                    pi[pino].poc.compno0 = tcp->comp_t;
+                                    pi[pino].poc.compno1 = tcp->comp_t + 1;
+                                    tcp->comp_t += 1;
+                                    incr_top = 1;
                                 } else {
-                                    pi[pino].poc.ty0 = tcp->ty0_t;
-                                    pi[pino].poc.ty1 = tcp->ty0_t + tcp->dy - (tcp->ty0_t % tcp->dy);
-                                    tcp->ty0_t = (OPJ_UINT32)pi[pino].poc.ty1;
                                     incr_top = 0;
-                                    resetX = 1;
-                                }
-                                if (resetX == 1) {
-                                    tcp->tx0_t = tcp->txS;
-                                    pi[pino].poc.tx0 = tcp->tx0_t;
-                                    pi[pino].poc.tx1 = tcp->tx0_t + tcp->dx - (tcp->tx0_t % tcp->dx);
-                                    tcp->tx0_t = (OPJ_UINT32)pi[pino].poc.tx1;
                                 }
                             } else {
-                                pi[pino].poc.tx0 = tcp->tx0_t;
-                                pi[pino].poc.tx1 = tcp->tx0_t + tcp->dx - (tcp->tx0_t % tcp->dx);
-                                tcp->tx0_t = (OPJ_UINT32)pi[pino].poc.tx1;
+                                pi[pino].poc.compno0 = tcp->comp_t;
+                                pi[pino].poc.compno1 = tcp->comp_t + 1;
+                                tcp->comp_t += 1;
                                 incr_top = 0;
                             }
                             break;
-                        }
-                        break;
+                        case 'L':
+                            if (tcp->lay_t == tcp->layE) {
+                                if (opj_pi_check_next_level(i - 1, cp, tileno, pino, prog)) {
+                                    tcp->lay_t = tcp->layS;
+                                    pi[pino].poc.layno0 = tcp->lay_t;
+                                    pi[pino].poc.layno1 = tcp->lay_t + 1;
+                                    tcp->lay_t += 1;
+                                    incr_top = 1;
+                                } else {
+                                    incr_top = 0;
+                                }
+                            } else {
+                                pi[pino].poc.layno0 = tcp->lay_t;
+                                pi[pino].poc.layno1 = tcp->lay_t + 1;
+                                tcp->lay_t += 1;
+                                incr_top = 0;
+                            }
+                            break;
+                        case 'P':
+                            switch (tcp->prg) {
+                                case OPJ_LRCP:
+                                case OPJ_RLCP:
+                                    if (tcp->prc_t == tcp->prcE) {
+                                        if (opj_pi_check_next_level(i - 1, cp, tileno, pino, prog)) {
+                                            tcp->prc_t = tcp->prcS;
+                                            pi[pino].poc.precno0 = tcp->prc_t;
+                                            pi[pino].poc.precno1 = tcp->prc_t + 1;
+                                            tcp->prc_t += 1;
+                                            incr_top = 1;
+                                        } else {
+                                            incr_top = 0;
+                                        }
+                                    } else {
+                                        pi[pino].poc.precno0 = tcp->prc_t;
+                                        pi[pino].poc.precno1 = tcp->prc_t + 1;
+                                        tcp->prc_t += 1;
+                                        incr_top = 0;
+                                    }
+                                    break;
+                                default:
+                                    if (tcp->tx0_t >= tcp->txE) {
+                                        if (tcp->ty0_t >= tcp->tyE) {
+                                            if (opj_pi_check_next_level(i - 1, cp, tileno, pino, prog)) {
+                                                tcp->ty0_t = tcp->tyS;
+                                                pi[pino].poc.ty0 = tcp->ty0_t;
+                                                pi[pino].poc.ty1 = tcp->ty0_t + tcp->dy - (tcp->ty0_t % tcp->dy);
+                                                tcp->ty0_t = (OPJ_UINT32)pi[pino].poc.ty1;
+                                                incr_top = 1;
+                                                resetX = 1;
+                                            } else {
+                                                incr_top = 0;
+                                                resetX = 0;
+                                            }
+                                        } else {
+                                            pi[pino].poc.ty0 = tcp->ty0_t;
+                                            pi[pino].poc.ty1 = tcp->ty0_t + tcp->dy - (tcp->ty0_t % tcp->dy);
+                                            tcp->ty0_t = (OPJ_UINT32)pi[pino].poc.ty1;
+                                            incr_top = 0;
+                                            resetX = 1;
+                                        }
+                                        if (resetX == 1) {
+                                            tcp->tx0_t = tcp->txS;
+                                            pi[pino].poc.tx0 = tcp->tx0_t;
+                                            pi[pino].poc.tx1 = tcp->tx0_t + tcp->dx - (tcp->tx0_t % tcp->dx);
+                                            tcp->tx0_t = (OPJ_UINT32)pi[pino].poc.tx1;
+                                        }
+                                    } else {
+                                        pi[pino].poc.tx0 = tcp->tx0_t;
+                                        pi[pino].poc.tx1 = tcp->tx0_t + tcp->dx - (tcp->tx0_t % tcp->dx);
+                                        tcp->tx0_t = (OPJ_UINT32)pi[pino].poc.tx1;
+                                        incr_top = 0;
+                                    }
+                                    break;
+                            }
+                            break;
                     }
                 }
             }
@@ -2064,8 +2047,7 @@ void opj_pi_create_encode(opj_pi_iterator_t *pi,
 }
 
 void opj_pi_destroy(opj_pi_iterator_t *p_pi,
-                    OPJ_UINT32 p_nb_elements)
-{
+                    OPJ_UINT32 p_nb_elements) {
     OPJ_UINT32 compno, pino;
     opj_pi_iterator_t *l_current_pi = p_pi;
     if (p_pi) {
@@ -2097,8 +2079,7 @@ void opj_pi_destroy(opj_pi_iterator_t *p_pi,
 
 void opj_pi_update_encoding_parameters(const opj_image_t *p_image,
                                        opj_cp_t *p_cp,
-                                       OPJ_UINT32 p_tile_no)
-{
+                                       OPJ_UINT32 p_tile_no) {
     /* encoding parameters to set */
     OPJ_UINT32 l_max_res;
     OPJ_UINT32 l_max_prec;
@@ -2128,21 +2109,20 @@ void opj_pi_update_encoding_parameters(const opj_image_t *p_image,
     }
 }
 
-OPJ_BOOL opj_pi_next(opj_pi_iterator_t * pi)
-{
+OPJ_BOOL opj_pi_next(opj_pi_iterator_t *pi) {
     switch (pi->poc.prg) {
-    case OPJ_LRCP:
-        return opj_pi_next_lrcp(pi);
-    case OPJ_RLCP:
-        return opj_pi_next_rlcp(pi);
-    case OPJ_RPCL:
-        return opj_pi_next_rpcl(pi);
-    case OPJ_PCRL:
-        return opj_pi_next_pcrl(pi);
-    case OPJ_CPRL:
-        return opj_pi_next_cprl(pi);
-    case OPJ_PROG_UNKNOWN:
-        return OPJ_FALSE;
+        case OPJ_LRCP:
+            return opj_pi_next_lrcp(pi);
+        case OPJ_RLCP:
+            return opj_pi_next_rlcp(pi);
+        case OPJ_RPCL:
+            return opj_pi_next_rpcl(pi);
+        case OPJ_PCRL:
+            return opj_pi_next_pcrl(pi);
+        case OPJ_CPRL:
+            return opj_pi_next_cprl(pi);
+        case OPJ_PROG_UNKNOWN:
+            return OPJ_FALSE;
     }
 
     return OPJ_FALSE;

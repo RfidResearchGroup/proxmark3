@@ -46,10 +46,9 @@
   * @param  none
   * @retval none
   */
-void scfg_reset(void)
-{
-  crm_periph_reset(CRM_SCFG_PERIPH_RESET, TRUE);
-  crm_periph_reset(CRM_SCFG_PERIPH_RESET, FALSE);
+void scfg_reset(void) {
+    crm_periph_reset(CRM_SCFG_PERIPH_RESET, TRUE);
+    crm_periph_reset(CRM_SCFG_PERIPH_RESET, FALSE);
 }
 
 /**
@@ -62,9 +61,8 @@ void scfg_reset(void)
   *         - SCFG_XMC_SWAP_MODE3
   * @retval none
   */
-void scfg_xmc_mapping_swap_set(scfg_xmc_swap_type xmc_swap)
-{
-  SCFG->cfg1_bit.swap_xmc = xmc_swap;
+void scfg_xmc_mapping_swap_set(scfg_xmc_swap_type xmc_swap) {
+    SCFG->cfg1_bit.swap_xmc = xmc_swap;
 }
 
 /**
@@ -78,10 +76,9 @@ void scfg_xmc_mapping_swap_set(scfg_xmc_swap_type xmc_swap)
   *         - SCFG_IR_POLARITY_REVERSE
   * @retval none
   */
-void scfg_infrared_config(scfg_ir_source_type source, scfg_ir_polarity_type polarity)
-{
-  SCFG->cfg1_bit.ir_src_sel = source;
-  SCFG->cfg1_bit.ir_pol = polarity;
+void scfg_infrared_config(scfg_ir_source_type source, scfg_ir_polarity_type polarity) {
+    SCFG->cfg1_bit.ir_src_sel = source;
+    SCFG->cfg1_bit.ir_pol = polarity;
 }
 
 /**
@@ -95,9 +92,8 @@ void scfg_infrared_config(scfg_ir_source_type source, scfg_ir_polarity_type pola
   *         - SCFG_MEM_MAP_XMC_SDRAM_BANK1
   * @retval none
   */
-void scfg_mem_map_set(scfg_mem_map_type mem_map)
-{
-  SCFG->cfg1_bit.mem_map_sel = mem_map;
+void scfg_mem_map_set(scfg_mem_map_type mem_map) {
+    SCFG->cfg1_bit.mem_map_sel = mem_map;
 }
 
 /**
@@ -108,9 +104,8 @@ void scfg_mem_map_set(scfg_mem_map_type mem_map)
   *         - SCFG_EMAC_SELECT_RMII
   * @retval none
   */
-void scfg_emac_interface_set(scfg_emac_interface_type mode)
-{
-  SCFG->cfg2_bit.mii_rmii_sel = mode;
+void scfg_emac_interface_set(scfg_emac_interface_type mode) {
+    SCFG->cfg2_bit.mii_rmii_sel = mode;
 }
 
 /**
@@ -147,32 +142,30 @@ void scfg_emac_interface_set(scfg_emac_interface_type mode)
   *         - SCFG_PINS_SOURCE15
   * @retval none
   */
-void scfg_exint_line_config(scfg_port_source_type port_source, scfg_pins_source_type pin_source)
-{
-  uint32_t tmp = 0x00;
-  tmp = ((uint32_t)0x0F) << (0x04 * (pin_source & (uint8_t)0x03));
+void scfg_exint_line_config(scfg_port_source_type port_source, scfg_pins_source_type pin_source) {
+    uint32_t tmp = 0x00;
+    tmp = ((uint32_t)0x0F) << (0x04 * (pin_source & (uint8_t)0x03));
 
-  switch (pin_source >> 0x02)
-  {
-    case 0:
-      SCFG->exintc1 &= ~tmp;
-      SCFG->exintc1 |= (((uint32_t)port_source) << (0x04 * (pin_source & (uint8_t)0x03)));
-      break;
-    case 1:
-      SCFG->exintc2 &= ~tmp;
-      SCFG->exintc2 |= (((uint32_t)port_source) << (0x04 * (pin_source & (uint8_t)0x03)));
-      break;
-    case 2:
-      SCFG->exintc3 &= ~tmp;
-      SCFG->exintc3 |= (((uint32_t)port_source) << (0x04 * (pin_source & (uint8_t)0x03)));
-      break;
-    case 3:
-      SCFG->exintc4 &= ~tmp;
-      SCFG->exintc4 |= (((uint32_t)port_source) << (0x04 * (pin_source & (uint8_t)0x03)));
-      break;
-    default:
-      break;
-  }
+    switch (pin_source >> 0x02) {
+        case 0:
+            SCFG->exintc1 &= ~tmp;
+            SCFG->exintc1 |= (((uint32_t)port_source) << (0x04 * (pin_source & (uint8_t)0x03)));
+            break;
+        case 1:
+            SCFG->exintc2 &= ~tmp;
+            SCFG->exintc2 |= (((uint32_t)port_source) << (0x04 * (pin_source & (uint8_t)0x03)));
+            break;
+        case 2:
+            SCFG->exintc3 &= ~tmp;
+            SCFG->exintc3 |= (((uint32_t)port_source) << (0x04 * (pin_source & (uint8_t)0x03)));
+            break;
+        case 3:
+            SCFG->exintc4 &= ~tmp;
+            SCFG->exintc4 |= (((uint32_t)port_source) << (0x04 * (pin_source & (uint8_t)0x03)));
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -191,16 +184,12 @@ void scfg_exint_line_config(scfg_port_source_type port_source, scfg_pins_source_
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void scfg_pins_ultra_driven_enable(scfg_ultra_driven_pins_type value, confirm_state new_state)
-{
-  if(TRUE == new_state)
-  {
-    SCFG_REG(value) |= SCFG_REG_BIT(value);
-  }
-  else
-  {
-    SCFG_REG(value) &= ~(SCFG_REG_BIT(value));
-  }
+void scfg_pins_ultra_driven_enable(scfg_ultra_driven_pins_type value, confirm_state new_state) {
+    if (TRUE == new_state) {
+        SCFG_REG(value) |= SCFG_REG_BIT(value);
+    } else {
+        SCFG_REG(value) &= ~(SCFG_REG_BIT(value));
+    }
 }
 
 /**

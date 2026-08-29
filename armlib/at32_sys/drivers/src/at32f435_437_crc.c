@@ -45,10 +45,9 @@
   * @param  none
   * @retval none
   */
-void crc_data_reset(void)
-{
-  /* reset crc generator */
-  CRC->ctrl_bit.rst = 0x1;
+void crc_data_reset(void) {
+    /* reset crc generator */
+    CRC->ctrl_bit.rst = 0x1;
 }
 
 /**
@@ -56,10 +55,9 @@ void crc_data_reset(void)
   * @param  data: data word(32-bit) to compute its crc
   * @retval 32-bit crc
   */
-uint32_t crc_one_word_calculate(uint32_t data)
-{
-  CRC->dt = data;
-  return (CRC->dt);
+uint32_t crc_one_word_calculate(uint32_t data) {
+    CRC->dt = data;
+    return (CRC->dt);
 }
 
 /**
@@ -68,16 +66,14 @@ uint32_t crc_one_word_calculate(uint32_t data)
   * @param  length: length of the buffer to be computed
   * @retval 32-bit crc
   */
-uint32_t crc_block_calculate(uint32_t *pbuffer, uint32_t length)
-{
-  uint32_t index = 0;
+uint32_t crc_block_calculate(uint32_t *pbuffer, uint32_t length) {
+    uint32_t index = 0;
 
-  for(index = 0; index < length; index++)
-  {
-    CRC->dt = pbuffer[index];
-  }
+    for (index = 0; index < length; index++) {
+        CRC->dt = pbuffer[index];
+    }
 
-  return (CRC->dt);
+    return (CRC->dt);
 }
 
 /**
@@ -85,9 +81,8 @@ uint32_t crc_block_calculate(uint32_t *pbuffer, uint32_t length)
   * @param  none
   * @retval 32-bit crc
   */
-uint32_t crc_data_get(void)
-{
-  return (CRC->dt);
+uint32_t crc_data_get(void) {
+    return (CRC->dt);
 }
 
 /**
@@ -95,9 +90,8 @@ uint32_t crc_data_get(void)
   * @param  cdt_value: 8-bit value to be stored in the common data register
   * @retval none
   */
-void crc_common_data_set(uint8_t cdt_value)
-{
-  CRC->cdt_bit.cdt = cdt_value;
+void crc_common_data_set(uint8_t cdt_value) {
+    CRC->cdt_bit.cdt = cdt_value;
 }
 
 /**
@@ -105,9 +99,8 @@ void crc_common_data_set(uint8_t cdt_value)
   * @param  none
   * @retval 8-bit value of the common data register
   */
-uint8_t crc_common_data_get(void)
-{
-  return (CRC->cdt_bit.cdt);
+uint8_t crc_common_data_get(void) {
+    return (CRC->cdt_bit.cdt);
 }
 
 /**
@@ -115,9 +108,8 @@ uint8_t crc_common_data_get(void)
   * @param  value: initial data
   * @retval none
   */
-void crc_init_data_set(uint32_t value)
-{
-  CRC->idt = value;
+void crc_init_data_set(uint32_t value) {
+    CRC->idt = value;
 }
 
 /**
@@ -130,9 +122,8 @@ void crc_init_data_set(uint32_t value)
   *         - CRC_REVERSE_INPUT_BY_WORD
   * @retval none.
   */
-void crc_reverse_input_data_set(crc_reverse_input_type value)
-{
-  CRC->ctrl_bit.revid = value;
+void crc_reverse_input_data_set(crc_reverse_input_type value) {
+    CRC->ctrl_bit.revid = value;
 }
 
 /**
@@ -143,9 +134,8 @@ void crc_reverse_input_data_set(crc_reverse_input_type value)
   *         - CRC_REVERSE_OUTPUT_DATA
   * @retval none.
   */
-void crc_reverse_output_data_set(crc_reverse_output_type value)
-{
-  CRC->ctrl_bit.revod = value;
+void crc_reverse_output_data_set(crc_reverse_output_type value) {
+    CRC->ctrl_bit.revod = value;
 }
 
 /**
@@ -154,9 +144,8 @@ void crc_reverse_output_data_set(crc_reverse_output_type value)
   *         32-bit new data of crc poly value
   * @retval none.
   */
-void crc_poly_value_set(uint32_t value)
-{
-  CRC->poly = value;
+void crc_poly_value_set(uint32_t value) {
+    CRC->poly = value;
 }
 
 /**
@@ -164,9 +153,8 @@ void crc_poly_value_set(uint32_t value)
   * @param  none
   * @retval 32-bit value of the polynomial value.
   */
-uint32_t crc_poly_value_get(void)
-{
-  return (CRC->poly);
+uint32_t crc_poly_value_get(void) {
+    return (CRC->poly);
 }
 
 /**
@@ -179,9 +167,8 @@ uint32_t crc_poly_value_get(void)
   *         - CRC_POLY_SIZE_7B
   * @retval none.
   */
-void crc_poly_size_set(crc_poly_size_type size)
-{
-  CRC->ctrl_bit.poly_size = size;
+void crc_poly_size_set(crc_poly_size_type size) {
+    CRC->ctrl_bit.poly_size = size;
 }
 
 /**
@@ -189,9 +176,8 @@ void crc_poly_size_set(crc_poly_size_type size)
   * @param  none
   * @retval polynomial data size.
   */
-crc_poly_size_type crc_poly_size_get(void)
-{
-  return (crc_poly_size_type)(CRC->ctrl_bit.poly_size);
+crc_poly_size_type crc_poly_size_get(void) {
+    return (crc_poly_size_type)(CRC->ctrl_bit.poly_size);
 }
 
 /**

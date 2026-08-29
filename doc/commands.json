@@ -1532,6 +1532,7 @@
             "description": "Act as a ISO-14443a reader to identify tag. Look for ISO-14443a tags until Enter or the pm3 button is pressed",
             "notes": [
                 "hf 14a reader",
+                "hf 14a reader -n 100 -> Polls 100 times",
                 "hf 14a reader -@ -> Continuous mode"
             ],
             "offline": false,
@@ -1541,10 +1542,11 @@
                 "-s, --silent silent (no messages)",
                 "--drop just drop the signal field",
                 "--skip ISO14443-3 select only (skip RATS)",
+                "-n, --num <dec> number of times to poll",
                 "-@ continuous reader mode",
                 "-w, --wait wait for card"
             ],
-            "usage": "hf 14a reader [-hks@w] [--drop] [--skip]"
+            "usage": "hf 14a reader [-hks@w] [--drop] [--skip] [-n <dec>]"
         },
         "hf 14a sim": {
             "command": "hf 14a sim",
@@ -1961,11 +1963,11 @@
         },
         "hf 15 dump": {
             "command": "hf 15 dump",
-            "description": "This command dumps the contents of a ISO-15693 tag and save to file (bin/json)",
+            "description": "This command dumps the contents of a ISO-15693 tag and saves it to a JSON file. Writing .bin is no longer supported, the raw struct carries no layout information. Reading .bin/.eml/.json all still work.",
             "notes": [
                 "hf 15 dump",
                 "hf 15 dump -*",
-                "hf 15 dump -u E011223344556677 -f hf-15-my-dump.bin"
+                "hf 15 dump -u E011223344556677 -f hf-15-my-dump"
             ],
             "offline": false,
             "options": [
@@ -3171,7 +3173,8 @@
             "description": "Send raw hex data to tag",
             "notes": [
                 "hf felica raw -cs 20",
-                "hf felica raw -cs 2008"
+                "hf felica raw -cs 2008",
+                "hw dbg -4; hf felica raw -acp 00ffff0000 -> measure antenna envelope, for reading distance"
             ],
             "offline": false,
             "options": [
@@ -3180,11 +3183,12 @@
                 "-c calculate and append CRC",
                 "-k keep signal field ON after receive",
                 "-n <dec> number of bits",
+                "-p, --probe report antenna envelope instead of decoding (needs `hw dbg -4`)",
                 "-r do not read response",
                 "-s active signal field ON with select",
                 "<hex> raw bytes to send"
             ],
-            "usage": "hf felica raw [-hackrs] [-n <dec>] <hex>"
+            "usage": "hf felica raw [-hackprs] [-n <dec>] <hex>"
         },
         "hf felica rdbl": {
             "command": "hf felica rdbl",
@@ -4424,7 +4428,7 @@
                 "-k, --key <hex> Access key as 8 hex bytes",
                 "--ki <dec> Key index to select key from memory 'hf iclass managekeys'",
                 "--credit key is assumed to be the credit key",
-                "-s <dec> tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3 us",
+                "-s <dec> tearoff delay start (in us) must be between 1 and 65535 (65ms). Precision is about 1/3 us",
                 "-i <dec> tearoff delay increment (in us) - default 5",
                 "-e <dec> tearoff delay end (in us) must be a higher value than the start delay",
                 "-o, --otp <hex> Custom OTP value as 2 hex bytes",
@@ -5022,7 +5026,7 @@
                 "--nr replay of NR/MAC",
                 "-v, --verbose verbose output",
                 "--shallow use shallow (ASK) reader modulation instead of OOK",
-                "-s <dec> tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3 us",
+                "-s <dec> tearoff delay start (in us) must be between 1 and 65535 (65ms). Precision is about 1/3 us",
                 "-i <dec> tearoff delay increment (in us) - default 10",
                 "-e <dec> tearoff delay end (in us) must be a higher value than the start delay",
                 "--loop <dec> number of times to loop per tearoff time",
@@ -10843,15 +10847,16 @@
             "command": "hw bwmcharge",
             "description": "Enable or disable BWM battery charging by clearing/setting the AW32001E charge-enable bit (CEB, REG01[3]). PM5 only. One-shot: the charger watchdog reverts this after ~160 s unless serviced, so charging may stop on its own. Use to nudge a top-up.",
             "notes": [
-                "hw bwmcharge -> enable charging",
+                "hw bwmcharge -on -> enable charging",
                 "hw bwmcharge --off -> disable charging"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--off disable charging (default is enable)"
+                "--on enable charging (default)",
+                "--off disable charging"
             ],
-            "usage": "hw bwmcharge [-h] [--off]"
+            "usage": "hw bwmcharge [-h] [--on] [--off]"
         },
         "hw bwmsetcap": {
             "command": "hw bwmsetcap",
@@ -10877,12 +10882,13 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--ssid <ssid> WiFi SSID to join",
+                "--ssid <ssid> WiFi SSID to join (omit with --stop)",
                 "--pwd <pwd> WiFi password (omit for open network)",
                 "--port <dec> TCP server listen port (default 7777)",
-                "--hostname <name> DHCP hostname (default Proxmark5)"
+                "--hostname <name> DHCP hostname (default Proxmark5)",
+                "--stop tear down WiFi and return to BLE-only"
             ],
-            "usage": "hw bwmwifi [-h] --ssid <ssid> [--pwd <pwd>] [--port <dec>] [--hostname <name>]"
+            "usage": "hw bwmwifi [-h] [--ssid <ssid>] [--pwd <pwd>] [--port <dec>] [--hostname <name>] [--stop]"
         },
         "hw connect": {
             "command": "hw connect",
@@ -11133,7 +11139,7 @@
         },
         "hw tearoff": {
             "command": "hw tearoff",
-            "description": "Configure a tear-off hook for the next write command supporting tear-off After having been triggered by a write command, the tear-off hook is deactivated Delay (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us.",
+            "description": "Configure a tear-off hook for the next write command supporting tear-off After having been triggered by a write command, the tear-off hook is deactivated Delay (in us) must be between 1 and 65535 (65ms). Precision is about 1/3us.",
             "notes": [
                 "hw tearoff --delay 1200 -> define delay of 1200us",
                 "hw tearoff --on -> (re)activate a previously defined delay",
@@ -11143,7 +11149,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--delay <dec> Delay in us before triggering tear-off, must be between 1 and 43000",
+                "--delay <dec> Delay in us before triggering tear-off, must be between 1 and 65535",
                 "--on Activate tear-off hook",
                 "--off Deactivate tear-off hook",
                 "--skip <dec> Skip N triggers before activating the hook",
@@ -14016,18 +14022,6 @@
             ],
             "usage": "lf simask [-hiv] [-c <dec>] [--bi] [--am] [--ar] [--stt] [-d <hex>]"
         },
-        "lf simbidir": {
-            "command": "lf simbidir",
-            "description": "Simulate LF tag with bidirectional data transmission between reader and tag",
-            "notes": [
-                "lf simbidir"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help"
-            ],
-            "usage": "lf simbidir [-h]"
-        },
         "lf simfsk": {
             "command": "lf simfsk",
             "description": "Simulate FSK tag from DemodBuffer or input. There are about four FSK modulations to know of. FSK1 - where fc/8 = high and fc/5 = low FSK1a - is inverted FSK1, ie: fc/5 = high and fc/8 = low FSK2 - where fc/10 = high and fc/8 = low FSK2a - is inverted FSK2, ie: fc/10 = high and fc/8 = low NOTE: if you set one clock manually set them all manually",
@@ -16335,8 +16329,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 910,
+        "commands_extracted": 909,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-08-27T23:06:33+00:00"
+        "extracted_on": "2026-08-29T15:40:14+00:00"
     }
 }

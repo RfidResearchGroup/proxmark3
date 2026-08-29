@@ -60,32 +60,29 @@ extern "C" {
 /**
   * @brief nvic interrupt priority group
   */
-typedef enum
-{
-  NVIC_PRIORITY_GROUP_0                  = ((uint32_t)0x7), /*!< 0 bits for preemption priority, 4 bits for subpriority */
-  NVIC_PRIORITY_GROUP_1                  = ((uint32_t)0x6), /*!< 1 bits for preemption priority, 3 bits for subpriority */
-  NVIC_PRIORITY_GROUP_2                  = ((uint32_t)0x5), /*!< 2 bits for preemption priority, 2 bits for subpriority */
-  NVIC_PRIORITY_GROUP_3                  = ((uint32_t)0x4), /*!< 3 bits for preemption priority, 1 bits for subpriority */
-  NVIC_PRIORITY_GROUP_4                  = ((uint32_t)0x3)  /*!< 4 bits for preemption priority, 0 bits for subpriority */
+typedef enum {
+    NVIC_PRIORITY_GROUP_0                  = ((uint32_t)0x7), /*!< 0 bits for preemption priority, 4 bits for subpriority */
+    NVIC_PRIORITY_GROUP_1                  = ((uint32_t)0x6), /*!< 1 bits for preemption priority, 3 bits for subpriority */
+    NVIC_PRIORITY_GROUP_2                  = ((uint32_t)0x5), /*!< 2 bits for preemption priority, 2 bits for subpriority */
+    NVIC_PRIORITY_GROUP_3                  = ((uint32_t)0x4), /*!< 3 bits for preemption priority, 1 bits for subpriority */
+    NVIC_PRIORITY_GROUP_4                  = ((uint32_t)0x3)  /*!< 4 bits for preemption priority, 0 bits for subpriority */
 } nvic_priority_group_type;
 
 /**
   * @brief nvic low power mode
   */
-typedef enum
-{
-  NVIC_LP_SLEEPONEXIT                    = 0x02, /*!< enable sleep-on-exit feature */
-  NVIC_LP_SLEEPDEEP                      = 0x04, /*!< enable sleep-deep output signal when entering sleep mode */
-  NVIC_LP_SEVONPEND                      = 0x10  /*!< send event on pending */
+typedef enum {
+    NVIC_LP_SLEEPONEXIT                    = 0x02, /*!< enable sleep-on-exit feature */
+    NVIC_LP_SLEEPDEEP                      = 0x04, /*!< enable sleep-deep output signal when entering sleep mode */
+    NVIC_LP_SEVONPEND                      = 0x10  /*!< send event on pending */
 } nvic_lowpower_mode_type;
 
 /**
   * @brief systick clock source
   */
-typedef enum
-{
-  SYSTICK_CLOCK_SOURCE_AHBCLK_DIV8       = ((uint32_t)0x00000000), /*!< systick clock source from core clock div8 */
-  SYSTICK_CLOCK_SOURCE_AHBCLK_NODIV      = ((uint32_t)0x00000004)  /*!< systick clock source from core clock */
+typedef enum {
+    SYSTICK_CLOCK_SOURCE_AHBCLK_DIV8       = ((uint32_t)0x00000000), /*!< systick clock source from core clock div8 */
+    SYSTICK_CLOCK_SOURCE_AHBCLK_NODIV      = ((uint32_t)0x00000004)  /*!< systick clock source from core clock */
 } systick_clock_source_type;
 
 /**

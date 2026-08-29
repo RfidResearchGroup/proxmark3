@@ -40,14 +40,13 @@
 # define SIZE_MAX ((size_t) -1)
 #endif
 
-static INLINE void *opj_aligned_alloc_n(size_t alignment, size_t size)
-{
-    void* ptr;
+static INLINE void *opj_aligned_alloc_n(size_t alignment, size_t size) {
+    void *ptr;
 
     /* alignment shall be power of 2 */
     assert((alignment != 0U) && ((alignment & (alignment - 1U)) == 0U));
     /* alignment shall be at least sizeof(void*) */
-    assert(alignment >= sizeof(void*));
+    assert(alignment >= sizeof(void *));
 
     if (size == 0U) { /* prevent implementation defined behavior of realloc */
         return NULL;
@@ -90,29 +89,28 @@ static INLINE void *opj_aligned_alloc_n(size_t alignment, size_t size)
             return NULL;
         }
 
-        mem = (OPJ_UINT8*)malloc(size + overhead);
+        mem = (OPJ_UINT8 *)malloc(size + overhead);
         if (mem == NULL) {
             return mem;
         }
         /* offset = ((alignment + 1U) - ((size_t)(mem + sizeof(void*)) & alignment)) & alignment; */
         /* Use the fact that alignment + 1U is a power of 2 */
-        offset = ((alignment ^ ((size_t)(mem + sizeof(void*)) & alignment)) + 1U) &
+        offset = ((alignment ^ ((size_t)(mem + sizeof(void *)) & alignment)) + 1U) &
                  alignment;
-        ptr = (void *)(mem + sizeof(void*) + offset);
-        ((void**) ptr)[-1] = mem;
+        ptr = (void *)(mem + sizeof(void *) + offset);
+        ((void **) ptr)[-1] = mem;
     }
 #endif
     return ptr;
 }
 static INLINE void *opj_aligned_realloc_n(void *ptr, size_t alignment,
-        size_t new_size)
-{
+                                          size_t new_size) {
     void *r_ptr;
 
     /* alignment shall be power of 2 */
     assert((alignment != 0U) && ((alignment & (alignment - 1U)) == 0U));
     /* alignment shall be at least sizeof(void*) */
-    assert(alignment >= sizeof(void*));
+    assert(alignment >= sizeof(void *));
 
     if (new_size == 0U) { /* prevent implementation defined behavior of realloc */
         return NULL;
@@ -157,8 +155,8 @@ static INLINE void *opj_aligned_realloc_n(void *ptr, size_t alignment,
             return NULL;
         }
 
-        oldmem = ((void**) ptr)[-1];
-        newmem = (OPJ_UINT8*)realloc(oldmem, new_size + overhead);
+        oldmem = ((void **) ptr)[-1];
+        newmem = (OPJ_UINT8 *)realloc(oldmem, new_size + overhead);
         if (newmem == NULL) {
             return newmem;
         }
@@ -170,33 +168,31 @@ static INLINE void *opj_aligned_realloc_n(void *ptr, size_t alignment,
             size_t new_offset;
 
             /* realloc created a new copy, realign the copied memory block */
-            old_offset = (size_t)((OPJ_UINT8*)ptr - (OPJ_UINT8*)oldmem);
+            old_offset = (size_t)((OPJ_UINT8 *)ptr - (OPJ_UINT8 *)oldmem);
 
             /* offset = ((alignment + 1U) - ((size_t)(mem + sizeof(void*)) & alignment)) & alignment; */
             /* Use the fact that alignment + 1U is a power of 2 */
-            new_offset  = ((alignment ^ ((size_t)(newmem + sizeof(void*)) & alignment)) +
+            new_offset  = ((alignment ^ ((size_t)(newmem + sizeof(void *)) & alignment)) +
                            1U) & alignment;
-            new_offset += sizeof(void*);
+            new_offset += sizeof(void *);
             r_ptr = (void *)(newmem + new_offset);
 
             if (new_offset != old_offset) {
                 memmove(newmem + new_offset, newmem + old_offset, new_size);
             }
-            ((void**) r_ptr)[-1] = newmem;
+            ((void **) r_ptr)[-1] = newmem;
         }
     }
 #endif
     return r_ptr;
 }
-void * opj_malloc(size_t size)
-{
+void *opj_malloc(size_t size) {
     if (size == 0U) { /* prevent implementation defined behavior of realloc */
         return NULL;
     }
     return malloc(size);
 }
-void * opj_calloc(size_t num, size_t size)
-{
+void *opj_calloc(size_t num, size_t size) {
     if (num == 0 || size == 0) {
         /* prevent implementation defined behavior of realloc */
         return NULL;
@@ -204,26 +200,21 @@ void * opj_calloc(size_t num, size_t size)
     return calloc(num, size);
 }
 
-void *opj_aligned_malloc(size_t size)
-{
+void *opj_aligned_malloc(size_t size) {
     return opj_aligned_alloc_n(16U, size);
 }
-void * opj_aligned_realloc(void *ptr, size_t size)
-{
+void *opj_aligned_realloc(void *ptr, size_t size) {
     return opj_aligned_realloc_n(ptr, 16U, size);
 }
 
-void *opj_aligned_32_malloc(size_t size)
-{
+void *opj_aligned_32_malloc(size_t size) {
     return opj_aligned_alloc_n(32U, size);
 }
-void * opj_aligned_32_realloc(void *ptr, size_t size)
-{
+void *opj_aligned_32_realloc(void *ptr, size_t size) {
     return opj_aligned_realloc_n(ptr, 32U, size);
 }
 
-void opj_aligned_free(void* ptr)
-{
+void opj_aligned_free(void *ptr) {
 #if defined(OPJ_HAVE_POSIX_MEMALIGN) || defined(OPJ_HAVE_MEMALIGN)
     free(ptr);
 #elif defined(OPJ_HAVE__ALIGNED_MALLOC)
@@ -231,19 +222,17 @@ void opj_aligned_free(void* ptr)
 #else
     /* Generic implementation has malloced pointer stored in front of used area */
     if (ptr != NULL) {
-        free(((void**) ptr)[-1]);
+        free(((void **) ptr)[-1]);
     }
 #endif
 }
 
-void * opj_realloc(void *ptr, size_t new_size)
-{
+void *opj_realloc(void *ptr, size_t new_size) {
     if (new_size == 0U) { /* prevent implementation defined behavior of realloc */
         return NULL;
     }
     return realloc(ptr, new_size);
 }
-void opj_free(void *ptr)
-{
+void opj_free(void *ptr) {
     free(ptr);
 }

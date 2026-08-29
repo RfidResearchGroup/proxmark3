@@ -129,13 +129,12 @@ extern "C" {
 /**
   * @brief usb device connect state
   */
-typedef enum
-{
-  USB_CONN_STATE_DEFAULT                =1, /*!< usb device connect state default */
-  USB_CONN_STATE_ADDRESSED,                 /*!< usb device connect state address */
-  USB_CONN_STATE_CONFIGURED,                /*!< usb device connect state configured */
-  USB_CONN_STATE_SUSPENDED                  /*!< usb device connect state suspend */
-}usbd_conn_state;
+typedef enum {
+    USB_CONN_STATE_DEFAULT                = 1, /*!< usb device connect state default */
+    USB_CONN_STATE_ADDRESSED,                 /*!< usb device connect state address */
+    USB_CONN_STATE_CONFIGURED,                /*!< usb device connect state configured */
+    USB_CONN_STATE_SUSPENDED                  /*!< usb device connect state suspend */
+} usbd_conn_state;
 
 /**
   * @brief endpoint 0 state
@@ -214,13 +213,12 @@ typedef enum
 /**
   * @brief usb cdc class set line coding struct
   */
-typedef struct
-{
-  uint32_t bitrate;                      /* line coding baud rate */
-  uint8_t format;                        /* line coding foramt */
-  uint8_t parity;                        /* line coding parity */
-  uint8_t data;                          /* line coding data bit */
-}linecoding_type;
+typedef struct {
+    uint32_t bitrate;                      /* line coding baud rate */
+    uint8_t format;                        /* line coding foramt */
+    uint8_t parity;                        /* line coding parity */
+    uint8_t data;                          /* line coding data bit */
+} linecoding_type;
 
 /**
   * @brief usb hid class descriptor define
@@ -272,107 +270,100 @@ typedef struct
 /**
   * @brief usb return status
   */
-typedef enum
-{
-  USB_OK,              /*!< usb status ok */
-  USB_FAIL,            /*!< usb status fail */
-  USB_WAIT,            /*!< usb status wait */
-  USB_NOT_SUPPORT,     /*!< usb status not support */
-  USB_ERROR,           /*!< usb status error */
-}usb_sts_type;
+typedef enum {
+    USB_OK,              /*!< usb status ok */
+    USB_FAIL,            /*!< usb status fail */
+    USB_WAIT,            /*!< usb status wait */
+    USB_NOT_SUPPORT,     /*!< usb status not support */
+    USB_ERROR,           /*!< usb status error */
+} usb_sts_type;
 
 
 /**
   * @brief format of usb setup data
   */
-typedef struct
-{
-  uint8_t                                bmRequestType;                 /*!< characteristics of request */
-  uint8_t                                bRequest;                      /*!< specific request */
-  uint16_t                               wValue;                        /*!< word-sized field that varies according to request */
-  uint16_t                               wIndex;                        /*!< word-sized field that varies according to request
+typedef struct {
+    uint8_t                                bmRequestType;                 /*!< characteristics of request */
+    uint8_t                                bRequest;                      /*!< specific request */
+    uint16_t                               wValue;                        /*!< word-sized field that varies according to request */
+    uint16_t                               wIndex;                        /*!< word-sized field that varies according to request
                                                                            typically used to pass an index or offset */
-  uint16_t                               wLength;                       /*!< number of bytes to transfer if there is a data stage */
+    uint16_t                               wLength;                       /*!< number of bytes to transfer if there is a data stage */
 } usb_setup_type;
 
 /**
   * @brief format of standard device descriptor
   */
-typedef struct
-{
-  uint8_t                                bLength;                       /*!< size of this descriptor in bytes */
-  uint8_t                                bDescriptorType;               /*!< device descriptor type */
-  uint16_t                               bcdUSB;                        /*!< usb specification release number */
-  uint8_t                                bDeviceClass;                  /*!< class code (assigned by the usb-if) */
-  uint8_t                                bDeviceSubClass;               /*!< subclass code (assigned by the usb-if) */
-  uint8_t                                bDeviceProtocol;               /*!< protocol code ((assigned by the usb-if)) */
-  uint8_t                                bMaxPacketSize0;               /*!< maximum packet size for endpoint zero */
-  uint16_t                               idVendor;                      /*!< verndor id ((assigned by the usb-if)) */
-  uint16_t                               idProduct;                     /*!< product id ((assigned by the usb-if)) */
-  uint16_t                               bcdDevice;                     /*!< device release number in binary-coded decimal */
-  uint8_t                                iManufacturer;                 /*!< index of string descriptor describing manufacturer */
-  uint8_t                                iProduct;                      /*!< index of string descriptor describing product */
-  uint8_t                                iSerialNumber;                 /*!< index of string descriptor describing serial number */
-  uint8_t                                bNumConfigurations;            /*!< number of possible configurations */
+typedef struct {
+    uint8_t                                bLength;                       /*!< size of this descriptor in bytes */
+    uint8_t                                bDescriptorType;               /*!< device descriptor type */
+    uint16_t                               bcdUSB;                        /*!< usb specification release number */
+    uint8_t                                bDeviceClass;                  /*!< class code (assigned by the usb-if) */
+    uint8_t                                bDeviceSubClass;               /*!< subclass code (assigned by the usb-if) */
+    uint8_t                                bDeviceProtocol;               /*!< protocol code ((assigned by the usb-if)) */
+    uint8_t                                bMaxPacketSize0;               /*!< maximum packet size for endpoint zero */
+    uint16_t                               idVendor;                      /*!< verndor id ((assigned by the usb-if)) */
+    uint16_t                               idProduct;                     /*!< product id ((assigned by the usb-if)) */
+    uint16_t                               bcdDevice;                     /*!< device release number in binary-coded decimal */
+    uint8_t                                iManufacturer;                 /*!< index of string descriptor describing manufacturer */
+    uint8_t                                iProduct;                      /*!< index of string descriptor describing product */
+    uint8_t                                iSerialNumber;                 /*!< index of string descriptor describing serial number */
+    uint8_t                                bNumConfigurations;            /*!< number of possible configurations */
 } usb_device_desc_type;
 
 /**
   * @brief format of standard configuration descriptor
   */
-typedef struct
-{
-  uint8_t                                bLength;                        /*!< size of this descriptor in bytes */
-  uint8_t                                bDescriptorType;                /*!< configuration descriptor type */
-  uint16_t                               wTotalLength;                   /*!< total length of data returned for this configuration */
-  uint8_t                                bNumInterfaces;                 /*!< number of interfaces supported by this configuration */
-  uint8_t                                bConfigurationValue;            /*!< value to use as an argument to the SetConfiguration() request */
-  uint8_t                                iConfiguration;                 /*!< index of string descriptor describing this configuration */
-  uint8_t                                bmAttributes;                   /*!< configuration characteristics
+typedef struct {
+    uint8_t                                bLength;                        /*!< size of this descriptor in bytes */
+    uint8_t                                bDescriptorType;                /*!< configuration descriptor type */
+    uint16_t                               wTotalLength;                   /*!< total length of data returned for this configuration */
+    uint8_t                                bNumInterfaces;                 /*!< number of interfaces supported by this configuration */
+    uint8_t                                bConfigurationValue;            /*!< value to use as an argument to the SetConfiguration() request */
+    uint8_t                                iConfiguration;                 /*!< index of string descriptor describing this configuration */
+    uint8_t                                bmAttributes;                   /*!< configuration characteristics
                                                                             D7 reserved
                                                                             D6 self-powered
                                                                             D5 remote wakeup
                                                                             D4~D0 reserved */
-  uint8_t                                bMaxPower;                      /*!< maximum power consumption of the usb device from the bus */
+    uint8_t                                bMaxPower;                      /*!< maximum power consumption of the usb device from the bus */
 
 
-}usb_configuration_desc_type;
+} usb_configuration_desc_type;
 
 /**
   * @brief format of standard interface descriptor
   */
-typedef struct
-{
-  uint8_t                                bLength;                        /*!< size of this descriptor in bytes */
-  uint8_t                                bDescriptorType;                /*!< interface descriptor type */
-  uint8_t                                bInterfaceNumber;               /*!< number of this interface */
-  uint8_t                                bAlternateSetting;              /*!< value used to select this alternate setting for the interface */
-  uint8_t                                bNumEndpoints;                  /*!< number of endpoints used by this interface */
-  uint8_t                                bInterfaceClass;                /*!< class code (assigned by the usb-if) */
-  uint8_t                                bInterfaceSubClass;             /*!< subclass code (assigned by the usb-if) */
-  uint8_t                                bInterfaceProtocol;             /*!< protocol code (assigned by the usb-if) */
-  uint8_t                                iInterface;                     /*!< index of string descriptor describing this interface */
+typedef struct {
+    uint8_t                                bLength;                        /*!< size of this descriptor in bytes */
+    uint8_t                                bDescriptorType;                /*!< interface descriptor type */
+    uint8_t                                bInterfaceNumber;               /*!< number of this interface */
+    uint8_t                                bAlternateSetting;              /*!< value used to select this alternate setting for the interface */
+    uint8_t                                bNumEndpoints;                  /*!< number of endpoints used by this interface */
+    uint8_t                                bInterfaceClass;                /*!< class code (assigned by the usb-if) */
+    uint8_t                                bInterfaceSubClass;             /*!< subclass code (assigned by the usb-if) */
+    uint8_t                                bInterfaceProtocol;             /*!< protocol code (assigned by the usb-if) */
+    uint8_t                                iInterface;                     /*!< index of string descriptor describing this interface */
 } usb_interface_desc_type;
 
 /**
   * @brief format of standard endpoint descriptor
   */
-typedef struct
-{
-  uint8_t                                bLength;                        /*!< size of this descriptor in bytes */
-  uint8_t                                bDescriptorType;                /*!< endpoint descriptor type */
-  uint8_t                                bEndpointAddress;               /*!< the address of the endpoint on the usb device described by this descriptor */
-  uint8_t                                bmAttributes;                   /*!< describes the endpoints attributes when it is configured using bConfiguration value */
-  uint16_t                               wMaxPacketSize;                 /*!< maximum packet size this endpoint */
-  uint8_t                                bInterval;                      /*!< interval for polling endpoint for data transfers */
+typedef struct {
+    uint8_t                                bLength;                        /*!< size of this descriptor in bytes */
+    uint8_t                                bDescriptorType;                /*!< endpoint descriptor type */
+    uint8_t                                bEndpointAddress;               /*!< the address of the endpoint on the usb device described by this descriptor */
+    uint8_t                                bmAttributes;                   /*!< describes the endpoints attributes when it is configured using bConfiguration value */
+    uint16_t                               wMaxPacketSize;                 /*!< maximum packet size this endpoint */
+    uint8_t                                bInterval;                      /*!< interval for polling endpoint for data transfers */
 } usb_endpoint_desc_type;
 
 /**
   * @brief format of header
   */
-typedef struct
-{
-  uint8_t                                bLength;                        /*!< size of this descriptor in bytes */
-  uint8_t                                bDescriptorType;                /*!< descriptor type */
+typedef struct {
+    uint8_t                                bLength;                        /*!< size of this descriptor in bytes */
+    uint8_t                                bDescriptorType;                /*!< descriptor type */
 } usb_header_desc_type;
 
 

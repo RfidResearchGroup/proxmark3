@@ -23,9 +23,9 @@
  */
 
 #if   defined ( __ICCARM__ )
-  #pragma system_include         /* treat file as system include file for MISRA check */
+#pragma system_include         /* treat file as system include file for MISRA check */
 #elif defined (__clang__)
-  #pragma clang system_header    /* treat file as system include file */
+#pragma clang system_header    /* treat file as system include file */
 #endif
 
 #ifndef ARM_PMU_ARMV8_H
@@ -192,146 +192,132 @@ __STATIC_INLINE void ARM_PMU_Set_CNTR_IRQ_Disable(uint32_t mask);
 
 __STATIC_INLINE void ARM_PMU_CNTR_Increment(uint32_t mask);
 
-/** 
+/**
   \brief   Enable the PMU
 */
-__STATIC_INLINE void ARM_PMU_Enable(void) 
-{
-  PMU->CTRL |= PMU_CTRL_ENABLE_Msk;
+__STATIC_INLINE void ARM_PMU_Enable(void) {
+    PMU->CTRL |= PMU_CTRL_ENABLE_Msk;
 }
 
-/** 
+/**
   \brief   Disable the PMU
 */
-__STATIC_INLINE void ARM_PMU_Disable(void) 
-{
-  PMU->CTRL &= ~PMU_CTRL_ENABLE_Msk;
+__STATIC_INLINE void ARM_PMU_Disable(void) {
+    PMU->CTRL &= ~PMU_CTRL_ENABLE_Msk;
 }
 
-/** 
+/**
   \brief   Set event to count for PMU eventer counter
   \param [in]    num     Event counter (0-30) to configure
   \param [in]    type    Event to count
 */
-__STATIC_INLINE void ARM_PMU_Set_EVTYPER(uint32_t num, uint32_t type)
-{
-  PMU->EVTYPER[num] = type;
+__STATIC_INLINE void ARM_PMU_Set_EVTYPER(uint32_t num, uint32_t type) {
+    PMU->EVTYPER[num] = type;
 }
 
-/** 
+/**
   \brief  Reset cycle counter
 */
-__STATIC_INLINE void ARM_PMU_CYCCNT_Reset(void)
-{
-  PMU->CTRL |= PMU_CTRL_CYCCNT_RESET_Msk;
+__STATIC_INLINE void ARM_PMU_CYCCNT_Reset(void) {
+    PMU->CTRL |= PMU_CTRL_CYCCNT_RESET_Msk;
 }
 
-/** 
+/**
   \brief  Reset all event counters
 */
-__STATIC_INLINE void ARM_PMU_EVCNTR_ALL_Reset(void)
-{
-  PMU->CTRL |= PMU_CTRL_EVENTCNT_RESET_Msk;
+__STATIC_INLINE void ARM_PMU_EVCNTR_ALL_Reset(void) {
+    PMU->CTRL |= PMU_CTRL_EVENTCNT_RESET_Msk;
 }
 
-/** 
-  \brief  Enable counters 
+/**
+  \brief  Enable counters
   \param [in]     mask    Counters to enable
   \note   Enables one or more of the following:
           - event counters (0-30)
           - cycle counter
 */
-__STATIC_INLINE void ARM_PMU_CNTR_Enable(uint32_t mask)
-{
-  PMU->CNTENSET = mask;
+__STATIC_INLINE void ARM_PMU_CNTR_Enable(uint32_t mask) {
+    PMU->CNTENSET = mask;
 }
 
-/** 
+/**
   \brief  Disable counters
   \param [in]     mask    Counters to enable
   \note   Disables one or more of the following:
           - event counters (0-30)
           - cycle counter
 */
-__STATIC_INLINE void ARM_PMU_CNTR_Disable(uint32_t mask)
-{
-  PMU->CNTENCLR = mask;
+__STATIC_INLINE void ARM_PMU_CNTR_Disable(uint32_t mask) {
+    PMU->CNTENCLR = mask;
 }
 
-/** 
+/**
   \brief  Read cycle counter
   \return                 Cycle count
 */
-__STATIC_INLINE uint32_t ARM_PMU_Get_CCNTR(void)
-{
-  return PMU->CCNTR;
+__STATIC_INLINE uint32_t ARM_PMU_Get_CCNTR(void) {
+    return PMU->CCNTR;
 }
 
-/** 
+/**
   \brief   Read event counter
   \param [in]     num     Event counter (0-30) to read
   \return                 Event count
 */
-__STATIC_INLINE uint32_t ARM_PMU_Get_EVCNTR(uint32_t num)
-{
-  return PMU_EVCNTR_CNT_Msk & PMU->EVCNTR[num];
+__STATIC_INLINE uint32_t ARM_PMU_Get_EVCNTR(uint32_t num) {
+    return PMU_EVCNTR_CNT_Msk & PMU->EVCNTR[num];
 }
 
-/** 
+/**
   \brief   Read counter overflow status
   \return  Counter overflow status bits for the following:
           - event counters (0-30)
           - cycle counter
 */
-__STATIC_INLINE uint32_t ARM_PMU_Get_CNTR_OVS(void)
-{
-  return PMU->OVSSET;   
+__STATIC_INLINE uint32_t ARM_PMU_Get_CNTR_OVS(void) {
+    return PMU->OVSSET;
 }
 
-/** 
+/**
   \brief   Clear counter overflow status
   \param [in]     mask    Counter overflow status bits to clear
   \note    Clears overflow status bits for one or more of the following:
            - event counters (0-30)
            - cycle counter
 */
-__STATIC_INLINE void ARM_PMU_Set_CNTR_OVS(uint32_t mask)
-{
-  PMU->OVSCLR = mask;
+__STATIC_INLINE void ARM_PMU_Set_CNTR_OVS(uint32_t mask) {
+    PMU->OVSCLR = mask;
 }
 
-/** 
-  \brief   Enable counter overflow interrupt request 
+/**
+  \brief   Enable counter overflow interrupt request
   \param [in]     mask    Counter overflow interrupt request bits to set
   \note    Sets overflow interrupt request bits for one or more of the following:
            - event counters (0-30)
            - cycle counter
 */
-__STATIC_INLINE void ARM_PMU_Set_CNTR_IRQ_Enable(uint32_t mask)
-{
-  PMU->INTENSET = mask;
+__STATIC_INLINE void ARM_PMU_Set_CNTR_IRQ_Enable(uint32_t mask) {
+    PMU->INTENSET = mask;
 }
 
-/** 
-  \brief   Disable counter overflow interrupt request 
+/**
+  \brief   Disable counter overflow interrupt request
   \param [in]     mask    Counter overflow interrupt request bits to clear
   \note    Clears overflow interrupt request bits for one or more of the following:
            - event counters (0-30)
            - cycle counter
 */
-__STATIC_INLINE void ARM_PMU_Set_CNTR_IRQ_Disable(uint32_t mask)
-{
-  PMU->INTENCLR = mask;
+__STATIC_INLINE void ARM_PMU_Set_CNTR_IRQ_Disable(uint32_t mask) {
+    PMU->INTENCLR = mask;
 }
 
-/** 
-  \brief   Software increment event counter 
+/**
+  \brief   Software increment event counter
   \param [in]     mask    Counters to increment
   \note    Software increment bits for one or more event counters (0-30)
 */
-__STATIC_INLINE void ARM_PMU_CNTR_Increment(uint32_t mask)
-{
-  PMU->SWINC = mask;
+__STATIC_INLINE void ARM_PMU_CNTR_Increment(uint32_t mask) {
+    PMU->SWINC = mask;
 }
 
 #endif

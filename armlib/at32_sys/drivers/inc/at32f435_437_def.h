@@ -32,32 +32,32 @@ extern "C" {
 
 /* gnu compiler */
 #if defined (__GNUC__)
-  #ifndef ALIGNED_HEAD
-    #define ALIGNED_HEAD
-  #endif
-  #ifndef ALIGNED_TAIL
-    #define ALIGNED_TAIL                 __attribute__ ((aligned (4)))
-  #endif
+#ifndef ALIGNED_HEAD
+#define ALIGNED_HEAD
+#endif
+#ifndef ALIGNED_TAIL
+#define ALIGNED_TAIL                 __attribute__ ((aligned (4)))
+#endif
 #endif
 
 /* arm compiler */
 #if defined (__CC_ARM)
-  #ifndef ALIGNED_HEAD
-    #define ALIGNED_HEAD                 __align(4)
-  #endif
-  #ifndef ALIGNED_TAIL
-    #define ALIGNED_TAIL
-  #endif
+#ifndef ALIGNED_HEAD
+#define ALIGNED_HEAD                 __align(4)
+#endif
+#ifndef ALIGNED_TAIL
+#define ALIGNED_TAIL
+#endif
 #endif
 
 /* iar compiler */
 #if defined (__ICCARM__)
-  #ifndef ALIGNED_HEAD
-    #define ALIGNED_HEAD
-  #endif
-  #ifndef ALIGNED_TAIL
-    #define ALIGNED_TAIL
-  #endif
+#ifndef ALIGNED_HEAD
+#define ALIGNED_HEAD
+#endif
+#ifndef ALIGNED_TAIL
+#define ALIGNED_TAIL
+#endif
 #endif
 
 #define UNUSED(x)                        (void)x /* to avoid gcc/g++ warnings */

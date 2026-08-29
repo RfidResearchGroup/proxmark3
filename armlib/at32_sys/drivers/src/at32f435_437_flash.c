@@ -59,31 +59,29 @@
   *         - FLASH_USDERR_FLAG
   * @retval the new state of flash_flag (SET or RESET).
   */
-flag_status flash_flag_get(uint32_t flash_flag)
-{
-  flag_status status = RESET;
-  uint32_t flag_position;
-  flag_position = flash_flag & 0x70000000;
-  flash_flag &= 0x8FFFFFFF;
-  switch(flag_position)
-  {
-    case 0x00000000:
-      if(FLASH->sts & flash_flag)
-        status = SET;
-      break;
-    case 0x10000000:
-      if(FLASH->sts2 & flash_flag)
-        status = SET;
-      break;
-    case 0x40000000:
-      if(FLASH->usd & flash_flag)
-        status = SET;
-      break;
-    default:
-      break;
-  }
-  /* return the new state of flash_flag (SET or RESET) */
-  return status;
+flag_status flash_flag_get(uint32_t flash_flag) {
+    flag_status status = RESET;
+    uint32_t flag_position;
+    flag_position = flash_flag & 0x70000000;
+    flash_flag &= 0x8FFFFFFF;
+    switch (flag_position) {
+        case 0x00000000:
+            if (FLASH->sts & flash_flag)
+                status = SET;
+            break;
+        case 0x10000000:
+            if (FLASH->sts2 & flash_flag)
+                status = SET;
+            break;
+        case 0x40000000:
+            if (FLASH->usd & flash_flag)
+                status = SET;
+            break;
+        default:
+            break;
+    }
+    /* return the new state of flash_flag (SET or RESET) */
+    return status;
 }
 
 /**
@@ -101,22 +99,20 @@ flag_status flash_flag_get(uint32_t flash_flag)
   *         - FLASH_BANK2_EPPERR_FLAG
   * @retval none
   */
-void flash_flag_clear(uint32_t flash_flag)
-{
-  uint32_t flag_position;
-  flag_position = flash_flag & 0x70000000;
-  flash_flag &= 0x8FFFFFFF;
-  switch(flag_position)
-  {
-    case 0x00000000:
-      FLASH->sts = flash_flag;
-      break;
-    case 0x10000000:
-      FLASH->sts2 = flash_flag;
-      break;
-    default:
-      break;
-  }
+void flash_flag_clear(uint32_t flash_flag) {
+    uint32_t flag_position;
+    flag_position = flash_flag & 0x70000000;
+    flash_flag &= 0x8FFFFFFF;
+    switch (flag_position) {
+        case 0x00000000:
+            FLASH->sts = flash_flag;
+            break;
+        case 0x10000000:
+            FLASH->sts2 = flash_flag;
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -125,27 +121,19 @@ void flash_flag_clear(uint32_t flash_flag)
   * @retval status: the returned value can be: FLASH_OPERATE_BUSY,
   *         FLASH_PROGRAM_ERROR, FLASH_EPP_ERROR or FLASH_OPERATE_DONE.
   */
-flash_status_type flash_operation_status_get(void)
-{
-  flash_status_type flash_status = FLASH_OPERATE_DONE;
-  if(FLASH->sts_bit.obf != RESET)
-  {
-    flash_status = FLASH_OPERATE_BUSY;
-  }
-  else if(FLASH->sts_bit.prgmerr != RESET)
-  {
-    flash_status = FLASH_PROGRAM_ERROR;
-  }
-  else if(FLASH->sts_bit.epperr != RESET)
-  {
-    flash_status = FLASH_EPP_ERROR;
-  }
-  else
-  {
-    flash_status = FLASH_OPERATE_DONE;
-  }
-  /* return the flash status */
-  return flash_status;
+flash_status_type flash_operation_status_get(void) {
+    flash_status_type flash_status = FLASH_OPERATE_DONE;
+    if (FLASH->sts_bit.obf != RESET) {
+        flash_status = FLASH_OPERATE_BUSY;
+    } else if (FLASH->sts_bit.prgmerr != RESET) {
+        flash_status = FLASH_PROGRAM_ERROR;
+    } else if (FLASH->sts_bit.epperr != RESET) {
+        flash_status = FLASH_EPP_ERROR;
+    } else {
+        flash_status = FLASH_OPERATE_DONE;
+    }
+    /* return the flash status */
+    return flash_status;
 }
 
 /**
@@ -154,27 +142,19 @@ flash_status_type flash_operation_status_get(void)
   * @retval status: the returned value can be: FLASH_OPERATE_BUSY,
   *         FLASH_PROGRAM_ERROR, FLASH_EPP_ERROR or FLASH_OPERATE_DONE.
   */
-flash_status_type flash_bank1_operation_status_get(void)
-{
-  flash_status_type flash_status = FLASH_OPERATE_DONE;
-  if(FLASH->sts_bit.obf != RESET)
-  {
-    flash_status = FLASH_OPERATE_BUSY;
-  }
-  else if(FLASH->sts_bit.prgmerr != RESET)
-  {
-    flash_status = FLASH_PROGRAM_ERROR;
-  }
-  else if(FLASH->sts_bit.epperr != RESET)
-  {
-    flash_status = FLASH_EPP_ERROR;
-  }
-  else
-  {
-    flash_status = FLASH_OPERATE_DONE;
-  }
-  /* return the flash status */
-  return flash_status;
+flash_status_type flash_bank1_operation_status_get(void) {
+    flash_status_type flash_status = FLASH_OPERATE_DONE;
+    if (FLASH->sts_bit.obf != RESET) {
+        flash_status = FLASH_OPERATE_BUSY;
+    } else if (FLASH->sts_bit.prgmerr != RESET) {
+        flash_status = FLASH_PROGRAM_ERROR;
+    } else if (FLASH->sts_bit.epperr != RESET) {
+        flash_status = FLASH_EPP_ERROR;
+    } else {
+        flash_status = FLASH_OPERATE_DONE;
+    }
+    /* return the flash status */
+    return flash_status;
 }
 
 /**
@@ -183,27 +163,19 @@ flash_status_type flash_bank1_operation_status_get(void)
   * @retval status: the returned value can be: FLASH_OPERATE_BUSY,
   *         FLASH_PROGRAM_ERROR, FLASH_EPP_ERROR or FLASH_OPERATE_DONE.
   */
-flash_status_type flash_bank2_operation_status_get(void)
-{
-  flash_status_type flash_status = FLASH_OPERATE_DONE;
-  if(FLASH->sts2_bit.obf != RESET)
-  {
-    flash_status = FLASH_OPERATE_BUSY;
-  }
-  else if(FLASH->sts2_bit.prgmerr != RESET)
-  {
-    flash_status = FLASH_PROGRAM_ERROR;
-  }
-  else if(FLASH->sts2_bit.epperr != RESET)
-  {
-    flash_status = FLASH_EPP_ERROR;
-  }
-  else
-  {
-    flash_status = FLASH_OPERATE_DONE;
-  }
-  /* return the flash status */
-  return flash_status;
+flash_status_type flash_bank2_operation_status_get(void) {
+    flash_status_type flash_status = FLASH_OPERATE_DONE;
+    if (FLASH->sts2_bit.obf != RESET) {
+        flash_status = FLASH_OPERATE_BUSY;
+    } else if (FLASH->sts2_bit.prgmerr != RESET) {
+        flash_status = FLASH_PROGRAM_ERROR;
+    } else if (FLASH->sts2_bit.epperr != RESET) {
+        flash_status = FLASH_EPP_ERROR;
+    } else {
+        flash_status = FLASH_OPERATE_DONE;
+    }
+    /* return the flash status */
+    return flash_status;
 }
 
 /**
@@ -212,23 +184,20 @@ flash_status_type flash_bank2_operation_status_get(void)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_operation_wait_for(uint32_t time_out)
-{
-  flash_status_type status = FLASH_OPERATE_DONE;
-  /* check for the flash status */
-  status = flash_operation_status_get();
-
-  while((status == FLASH_OPERATE_BUSY) && (time_out != 0x00))
-  {
+flash_status_type flash_operation_wait_for(uint32_t time_out) {
+    flash_status_type status = FLASH_OPERATE_DONE;
+    /* check for the flash status */
     status = flash_operation_status_get();
-    time_out--;
-  }
-  if(time_out == 0x00)
-  {
-    status = FLASH_OPERATE_TIMEOUT;
-  }
-  /* return the status */
-  return status;
+
+    while ((status == FLASH_OPERATE_BUSY) && (time_out != 0x00)) {
+        status = flash_operation_status_get();
+        time_out--;
+    }
+    if (time_out == 0x00) {
+        status = FLASH_OPERATE_TIMEOUT;
+    }
+    /* return the status */
+    return status;
 }
 
 /**
@@ -237,23 +206,20 @@ flash_status_type flash_operation_wait_for(uint32_t time_out)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_bank1_operation_wait_for(uint32_t time_out)
-{
-  flash_status_type status = FLASH_OPERATE_DONE;
-  /* check for the flash status */
-  status = flash_bank1_operation_status_get();
-
-  while((status == FLASH_OPERATE_BUSY) && (time_out != 0x00))
-  {
+flash_status_type flash_bank1_operation_wait_for(uint32_t time_out) {
+    flash_status_type status = FLASH_OPERATE_DONE;
+    /* check for the flash status */
     status = flash_bank1_operation_status_get();
-    time_out--;
-  }
-  if(time_out == 0x00)
-  {
-    status = FLASH_OPERATE_TIMEOUT;
-  }
-  /* return the operation status */
-  return status;
+
+    while ((status == FLASH_OPERATE_BUSY) && (time_out != 0x00)) {
+        status = flash_bank1_operation_status_get();
+        time_out--;
+    }
+    if (time_out == 0x00) {
+        status = FLASH_OPERATE_TIMEOUT;
+    }
+    /* return the operation status */
+    return status;
 }
 
 /**
@@ -262,23 +228,20 @@ flash_status_type flash_bank1_operation_wait_for(uint32_t time_out)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_bank2_operation_wait_for(uint32_t time_out)
-{
-  flash_status_type status = FLASH_OPERATE_DONE;
-  /* check for the flash status */
-  status = flash_bank2_operation_status_get();
-
-  while((status == FLASH_OPERATE_BUSY) && (time_out != 0x00))
-  {
+flash_status_type flash_bank2_operation_wait_for(uint32_t time_out) {
+    flash_status_type status = FLASH_OPERATE_DONE;
+    /* check for the flash status */
     status = flash_bank2_operation_status_get();
-    time_out--;
-  }
-  if(time_out == 0x00)
-  {
-    status = FLASH_OPERATE_TIMEOUT;
-  }
-  /* return the operation status */
-  return status;
+
+    while ((status == FLASH_OPERATE_BUSY) && (time_out != 0x00)) {
+        status = flash_bank2_operation_status_get();
+        time_out--;
+    }
+    if (time_out == 0x00) {
+        status = FLASH_OPERATE_TIMEOUT;
+    }
+    /* return the operation status */
+    return status;
 }
 
 /**
@@ -286,12 +249,11 @@ flash_status_type flash_bank2_operation_wait_for(uint32_t time_out)
   * @param  none
   * @retval none
   */
-void flash_unlock(void)
-{
-  FLASH->unlock = FLASH_UNLOCK_KEY1;
-  FLASH->unlock = FLASH_UNLOCK_KEY2;
-  FLASH->unlock2 = FLASH_UNLOCK_KEY1;
-  FLASH->unlock2 = FLASH_UNLOCK_KEY2;
+void flash_unlock(void) {
+    FLASH->unlock = FLASH_UNLOCK_KEY1;
+    FLASH->unlock = FLASH_UNLOCK_KEY2;
+    FLASH->unlock2 = FLASH_UNLOCK_KEY1;
+    FLASH->unlock2 = FLASH_UNLOCK_KEY2;
 }
 
 /**
@@ -299,10 +261,9 @@ void flash_unlock(void)
   * @param  none
   * @retval none
   */
-void flash_bank1_unlock(void)
-{
-  FLASH->unlock = FLASH_UNLOCK_KEY1;
-  FLASH->unlock = FLASH_UNLOCK_KEY2;
+void flash_bank1_unlock(void) {
+    FLASH->unlock = FLASH_UNLOCK_KEY1;
+    FLASH->unlock = FLASH_UNLOCK_KEY2;
 }
 
 /**
@@ -310,10 +271,9 @@ void flash_bank1_unlock(void)
   * @param  none
   * @retval none
   */
-void flash_bank2_unlock(void)
-{
-  FLASH->unlock2 = FLASH_UNLOCK_KEY1;
-  FLASH->unlock2 = FLASH_UNLOCK_KEY2;
+void flash_bank2_unlock(void) {
+    FLASH->unlock2 = FLASH_UNLOCK_KEY1;
+    FLASH->unlock2 = FLASH_UNLOCK_KEY2;
 }
 
 /**
@@ -321,10 +281,9 @@ void flash_bank2_unlock(void)
   * @param  none
   * @retval none
   */
-void flash_lock(void)
-{
-  FLASH->ctrl_bit.oplk = TRUE;
-  FLASH->ctrl2_bit.oplk = TRUE;
+void flash_lock(void) {
+    FLASH->ctrl_bit.oplk = TRUE;
+    FLASH->ctrl2_bit.oplk = TRUE;
 }
 
 /**
@@ -332,9 +291,8 @@ void flash_lock(void)
   * @param  none
   * @retval none
   */
-void flash_bank1_lock(void)
-{
-  FLASH->ctrl_bit.oplk = TRUE;
+void flash_bank1_lock(void) {
+    FLASH->ctrl_bit.oplk = TRUE;
 }
 
 /**
@@ -342,9 +300,8 @@ void flash_bank1_lock(void)
   * @param  none
   * @retval none
   */
-void flash_bank2_lock(void)
-{
-  FLASH->ctrl2_bit.oplk = TRUE;
+void flash_bank2_lock(void) {
+    FLASH->ctrl2_bit.oplk = TRUE;
 }
 
 /**
@@ -353,36 +310,32 @@ void flash_bank2_lock(void)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_sector_erase(uint32_t sector_address)
-{
-  flash_status_type status = FLASH_OPERATE_DONE;
-  if((sector_address >= FLASH_BANK1_START_ADDR) && (sector_address <= FLASH_BANK1_END_ADDR))
-  {
-    FLASH->ctrl_bit.secers = TRUE;
-    FLASH->addr = sector_address;
-    FLASH->ctrl_bit.erstr = TRUE;
+flash_status_type flash_sector_erase(uint32_t sector_address) {
+    flash_status_type status = FLASH_OPERATE_DONE;
+    if ((sector_address >= FLASH_BANK1_START_ADDR) && (sector_address <= FLASH_BANK1_END_ADDR)) {
+        FLASH->ctrl_bit.secers = TRUE;
+        FLASH->addr = sector_address;
+        FLASH->ctrl_bit.erstr = TRUE;
 
-    /* wait for operation to be completed */
-    status = flash_bank1_operation_wait_for(ERASE_TIMEOUT);
+        /* wait for operation to be completed */
+        status = flash_bank1_operation_wait_for(ERASE_TIMEOUT);
 
-    /* disable the secers bit */
-    FLASH->ctrl_bit.secers = FALSE;
-  }
-  else if((sector_address >= FLASH_BANK2_START_ADDR) && (sector_address <= FLASH_BANK2_END_ADDR))
-  {
-    FLASH->ctrl2_bit.secers = TRUE;
-    FLASH->addr2 = sector_address;
-    FLASH->ctrl2_bit.erstr = TRUE;
+        /* disable the secers bit */
+        FLASH->ctrl_bit.secers = FALSE;
+    } else if ((sector_address >= FLASH_BANK2_START_ADDR) && (sector_address <= FLASH_BANK2_END_ADDR)) {
+        FLASH->ctrl2_bit.secers = TRUE;
+        FLASH->addr2 = sector_address;
+        FLASH->ctrl2_bit.erstr = TRUE;
 
-    /* wait for operation to be completed */
-    status = flash_bank2_operation_wait_for(ERASE_TIMEOUT);
+        /* wait for operation to be completed */
+        status = flash_bank2_operation_wait_for(ERASE_TIMEOUT);
 
-    /* disable the secers bit */
-    FLASH->ctrl2_bit.secers = FALSE;
-  }
+        /* disable the secers bit */
+        FLASH->ctrl2_bit.secers = FALSE;
+    }
 
-  /* return the erase status */
-  return status;
+    /* return the erase status */
+    return status;
 }
 
 /**
@@ -391,36 +344,32 @@ flash_status_type flash_sector_erase(uint32_t sector_address)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_block_erase(uint32_t block_address)
-{
-  flash_status_type status = FLASH_OPERATE_DONE;
-  if((block_address >= FLASH_BANK1_START_ADDR) && (block_address <= FLASH_BANK1_END_ADDR))
-  {
-    FLASH->ctrl_bit.blkers = TRUE;
-    FLASH->addr = block_address;
-    FLASH->ctrl_bit.erstr = TRUE;
+flash_status_type flash_block_erase(uint32_t block_address) {
+    flash_status_type status = FLASH_OPERATE_DONE;
+    if ((block_address >= FLASH_BANK1_START_ADDR) && (block_address <= FLASH_BANK1_END_ADDR)) {
+        FLASH->ctrl_bit.blkers = TRUE;
+        FLASH->addr = block_address;
+        FLASH->ctrl_bit.erstr = TRUE;
 
-    /* wait for operation to be completed */
-    status = flash_bank1_operation_wait_for(ERASE_TIMEOUT);
+        /* wait for operation to be completed */
+        status = flash_bank1_operation_wait_for(ERASE_TIMEOUT);
 
-    /* disable the blkers bit */
-    FLASH->ctrl_bit.blkers = FALSE;
-  }
-  else if((block_address >= FLASH_BANK2_START_ADDR) && (block_address <= FLASH_BANK2_END_ADDR))
-  {
-    FLASH->ctrl2_bit.blkers = TRUE;
-    FLASH->addr2 = block_address;
-    FLASH->ctrl2_bit.erstr = TRUE;
+        /* disable the blkers bit */
+        FLASH->ctrl_bit.blkers = FALSE;
+    } else if ((block_address >= FLASH_BANK2_START_ADDR) && (block_address <= FLASH_BANK2_END_ADDR)) {
+        FLASH->ctrl2_bit.blkers = TRUE;
+        FLASH->addr2 = block_address;
+        FLASH->ctrl2_bit.erstr = TRUE;
 
-    /* wait for operation to be completed */
-    status = flash_bank2_operation_wait_for(ERASE_TIMEOUT);
+        /* wait for operation to be completed */
+        status = flash_bank2_operation_wait_for(ERASE_TIMEOUT);
 
-    /* disable the blkers bit */
-    FLASH->ctrl2_bit.blkers = FALSE;
-  }
+        /* disable the blkers bit */
+        FLASH->ctrl2_bit.blkers = FALSE;
+    }
 
-  /* return the erase status */
-  return status;
+    /* return the erase status */
+    return status;
 }
 
 /**
@@ -429,33 +378,31 @@ flash_status_type flash_block_erase(uint32_t block_address)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_internal_all_erase(void)
-{
-  flash_status_type status = FLASH_OPERATE_DONE;
+flash_status_type flash_internal_all_erase(void) {
+    flash_status_type status = FLASH_OPERATE_DONE;
 
-  FLASH->ctrl_bit.bankers = TRUE;
-  FLASH->ctrl_bit.erstr = TRUE;
-
-  /* wait for operation to be completed */
-  status = flash_bank1_operation_wait_for(ERASE_TIMEOUT);
-
-  /* disable the bankers bit */
-  FLASH->ctrl_bit.bankers = FALSE;
-
-  if(status == FLASH_OPERATE_DONE)
-  {
-    /* if the previous operation is completed, continue to erase bank2 */
-    FLASH->ctrl2_bit.bankers = TRUE;
-    FLASH->ctrl2_bit.erstr = TRUE;
+    FLASH->ctrl_bit.bankers = TRUE;
+    FLASH->ctrl_bit.erstr = TRUE;
 
     /* wait for operation to be completed */
-    status = flash_bank2_operation_wait_for(ERASE_TIMEOUT);
+    status = flash_bank1_operation_wait_for(ERASE_TIMEOUT);
 
     /* disable the bankers bit */
-    FLASH->ctrl2_bit.bankers = FALSE;
-  }
-  /* return the erase status */
-  return status;
+    FLASH->ctrl_bit.bankers = FALSE;
+
+    if (status == FLASH_OPERATE_DONE) {
+        /* if the previous operation is completed, continue to erase bank2 */
+        FLASH->ctrl2_bit.bankers = TRUE;
+        FLASH->ctrl2_bit.erstr = TRUE;
+
+        /* wait for operation to be completed */
+        status = flash_bank2_operation_wait_for(ERASE_TIMEOUT);
+
+        /* disable the bankers bit */
+        FLASH->ctrl2_bit.bankers = FALSE;
+    }
+    /* return the erase status */
+    return status;
 }
 
 /**
@@ -464,21 +411,20 @@ flash_status_type flash_internal_all_erase(void)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_bank1_erase(void)
-{
-  flash_status_type status = FLASH_OPERATE_DONE;
+flash_status_type flash_bank1_erase(void) {
+    flash_status_type status = FLASH_OPERATE_DONE;
 
-  FLASH->ctrl_bit.bankers = TRUE;
-  FLASH->ctrl_bit.erstr = TRUE;
+    FLASH->ctrl_bit.bankers = TRUE;
+    FLASH->ctrl_bit.erstr = TRUE;
 
-  /* wait for operation to be completed */
-  status = flash_bank1_operation_wait_for(ERASE_TIMEOUT);
+    /* wait for operation to be completed */
+    status = flash_bank1_operation_wait_for(ERASE_TIMEOUT);
 
-  /* disable the bankers bit */
-  FLASH->ctrl_bit.bankers = FALSE;
+    /* disable the bankers bit */
+    FLASH->ctrl_bit.bankers = FALSE;
 
-  /* return the erase status */
-  return status;
+    /* return the erase status */
+    return status;
 }
 
 /**
@@ -487,21 +433,20 @@ flash_status_type flash_bank1_erase(void)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_bank2_erase(void)
-{
-  flash_status_type status = FLASH_OPERATE_DONE;
+flash_status_type flash_bank2_erase(void) {
+    flash_status_type status = FLASH_OPERATE_DONE;
 
-  FLASH->ctrl2_bit.bankers = TRUE;
-  FLASH->ctrl2_bit.erstr = TRUE;
+    FLASH->ctrl2_bit.bankers = TRUE;
+    FLASH->ctrl2_bit.erstr = TRUE;
 
-  /* wait for operation to be completed */
-  status = flash_bank2_operation_wait_for(ERASE_TIMEOUT);
+    /* wait for operation to be completed */
+    status = flash_bank2_operation_wait_for(ERASE_TIMEOUT);
 
-  /* disable the bankers bit */
-  FLASH->ctrl2_bit.bankers = FALSE;
+    /* disable the bankers bit */
+    FLASH->ctrl2_bit.bankers = FALSE;
 
-  /* return the erase status */
-  return status;
+    /* return the erase status */
+    return status;
 }
 
 /**
@@ -512,48 +457,45 @@ flash_status_type flash_bank2_erase(void)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_user_system_data_erase(void)
-{
-  flash_status_type status = FLASH_OPERATE_DONE;
-  uint16_t fap_val = FAP_RELIEVE_KEY;
-  /* get the flash access protection status */
-  if(flash_fap_status_get() != RESET)
-  {
-    fap_val = 0x0000;
-  }
+flash_status_type flash_user_system_data_erase(void) {
+    flash_status_type status = FLASH_OPERATE_DONE;
+    uint16_t fap_val = FAP_RELIEVE_KEY;
+    /* get the flash access protection status */
+    if (flash_fap_status_get() != RESET) {
+        fap_val = 0x0000;
+    }
 
-  /* unlock the user system data */
-  FLASH->usd_unlock = FLASH_UNLOCK_KEY1;
-  FLASH->usd_unlock = FLASH_UNLOCK_KEY2;
-  while(FLASH->ctrl_bit.usdulks==RESET);
+    /* unlock the user system data */
+    FLASH->usd_unlock = FLASH_UNLOCK_KEY1;
+    FLASH->usd_unlock = FLASH_UNLOCK_KEY2;
+    while (FLASH->ctrl_bit.usdulks == RESET);
 
-  /* erase the user system data */
-  FLASH->ctrl_bit.usders = TRUE;
-  FLASH->ctrl_bit.erstr = TRUE;
-
-  /* wait for operation to be completed */
-  status = flash_operation_wait_for(ERASE_TIMEOUT);
-
-  /* disable the usders bit */
-  FLASH->ctrl_bit.usders = FALSE;
-
-  if((status == FLASH_OPERATE_DONE) && (fap_val == FAP_RELIEVE_KEY))
-  {
-    /* enable the user system data programming operation */
-    FLASH->ctrl_bit.usdprgm = TRUE;
-
-    /* restore the last flash access protection value */
-    USD->fap = (uint16_t)fap_val;
+    /* erase the user system data */
+    FLASH->ctrl_bit.usders = TRUE;
+    FLASH->ctrl_bit.erstr = TRUE;
 
     /* wait for operation to be completed */
-    status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
+    status = flash_operation_wait_for(ERASE_TIMEOUT);
 
-    /*disable the usdprgm bit */
-    FLASH->ctrl_bit.usdprgm = FALSE;
-  }
+    /* disable the usders bit */
+    FLASH->ctrl_bit.usders = FALSE;
 
-  /* return the status */
-  return status;
+    if ((status == FLASH_OPERATE_DONE) && (fap_val == FAP_RELIEVE_KEY)) {
+        /* enable the user system data programming operation */
+        FLASH->ctrl_bit.usdprgm = TRUE;
+
+        /* restore the last flash access protection value */
+        USD->fap = (uint16_t)fap_val;
+
+        /* wait for operation to be completed */
+        status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
+
+        /*disable the usdprgm bit */
+        FLASH->ctrl_bit.usdprgm = FALSE;
+    }
+
+    /* return the status */
+    return status;
 }
 
 /**
@@ -572,29 +514,28 @@ flash_status_type flash_user_system_data_erase(void)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_eopb0_config(flash_usd_eopb0_type data)
-{
-  flash_status_type status = FLASH_OPERATE_DONE;
+flash_status_type flash_eopb0_config(flash_usd_eopb0_type data) {
+    flash_status_type status = FLASH_OPERATE_DONE;
 
-  /* unlock the user system data */
-  FLASH->usd_unlock = FLASH_UNLOCK_KEY1;
-  FLASH->usd_unlock = FLASH_UNLOCK_KEY2;
-  while(FLASH->ctrl_bit.usdulks==RESET);
+    /* unlock the user system data */
+    FLASH->usd_unlock = FLASH_UNLOCK_KEY1;
+    FLASH->usd_unlock = FLASH_UNLOCK_KEY2;
+    while (FLASH->ctrl_bit.usdulks == RESET);
 
-  /* enable the user system data programming operation */
-  FLASH->ctrl_bit.usdprgm = TRUE;
+    /* enable the user system data programming operation */
+    FLASH->ctrl_bit.usdprgm = TRUE;
 
-  /* restore the default eopb0 value */
-  USD->eopb0 = (uint16_t)data;
+    /* restore the default eopb0 value */
+    USD->eopb0 = (uint16_t)data;
 
-  /* wait for operation to be completed */
-  status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
+    /* wait for operation to be completed */
+    status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
 
-  /*disable the usdprgm bit */
-  FLASH->ctrl_bit.usdprgm = FALSE;
+    /*disable the usdprgm bit */
+    FLASH->ctrl_bit.usdprgm = FALSE;
 
-  /* return the status */
-  return status;
+    /* return the status */
+    return status;
 }
 
 /**
@@ -604,32 +545,28 @@ flash_status_type flash_eopb0_config(flash_usd_eopb0_type data)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_word_program(uint32_t address, uint32_t data)
-{
-  flash_status_type status = FLASH_OPERATE_DONE;
-  if((address >= FLASH_BANK1_START_ADDR) && (address <= FLASH_BANK1_END_ADDR))
-  {
-    FLASH->ctrl_bit.fprgm = TRUE;
-    *(__IO uint32_t*)address = data;
-    /* wait for operation to be completed */
-    status = flash_bank1_operation_wait_for(PROGRAMMING_TIMEOUT);
+flash_status_type flash_word_program(uint32_t address, uint32_t data) {
+    flash_status_type status = FLASH_OPERATE_DONE;
+    if ((address >= FLASH_BANK1_START_ADDR) && (address <= FLASH_BANK1_END_ADDR)) {
+        FLASH->ctrl_bit.fprgm = TRUE;
+        *(__IO uint32_t *)address = data;
+        /* wait for operation to be completed */
+        status = flash_bank1_operation_wait_for(PROGRAMMING_TIMEOUT);
 
-    /* disable the fprgm bit */
-    FLASH->ctrl_bit.fprgm = FALSE;
-  }
-  else if((address >= FLASH_BANK2_START_ADDR) && (address <= FLASH_BANK2_END_ADDR))
-  {
-    FLASH->ctrl2_bit.fprgm = TRUE;
-    *(__IO uint32_t*)address = data;
-    /* wait for operation to be completed */
-    status = flash_bank2_operation_wait_for(PROGRAMMING_TIMEOUT);
+        /* disable the fprgm bit */
+        FLASH->ctrl_bit.fprgm = FALSE;
+    } else if ((address >= FLASH_BANK2_START_ADDR) && (address <= FLASH_BANK2_END_ADDR)) {
+        FLASH->ctrl2_bit.fprgm = TRUE;
+        *(__IO uint32_t *)address = data;
+        /* wait for operation to be completed */
+        status = flash_bank2_operation_wait_for(PROGRAMMING_TIMEOUT);
 
-    /* disable the fprgm bit */
-    FLASH->ctrl2_bit.fprgm = FALSE;
-  }
+        /* disable the fprgm bit */
+        FLASH->ctrl2_bit.fprgm = FALSE;
+    }
 
-  /* return the program status */
-  return status;
+    /* return the program status */
+    return status;
 }
 
 /**
@@ -639,32 +576,28 @@ flash_status_type flash_word_program(uint32_t address, uint32_t data)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_halfword_program(uint32_t address, uint16_t data)
-{
-  flash_status_type status = FLASH_OPERATE_DONE;
-  if((address >= FLASH_BANK1_START_ADDR) && (address <= FLASH_BANK1_END_ADDR))
-  {
-    FLASH->ctrl_bit.fprgm = TRUE;
-    *(__IO uint16_t*)address = data;
-    /* wait for operation to be completed */
-    status = flash_bank1_operation_wait_for(PROGRAMMING_TIMEOUT);
+flash_status_type flash_halfword_program(uint32_t address, uint16_t data) {
+    flash_status_type status = FLASH_OPERATE_DONE;
+    if ((address >= FLASH_BANK1_START_ADDR) && (address <= FLASH_BANK1_END_ADDR)) {
+        FLASH->ctrl_bit.fprgm = TRUE;
+        *(__IO uint16_t *)address = data;
+        /* wait for operation to be completed */
+        status = flash_bank1_operation_wait_for(PROGRAMMING_TIMEOUT);
 
-    /* disable the fprgm bit */
-    FLASH->ctrl_bit.fprgm = FALSE;
-  }
-  else if((address >= FLASH_BANK2_START_ADDR) && (address <= FLASH_BANK2_END_ADDR))
-  {
-    FLASH->ctrl2_bit.fprgm = TRUE;
-    *(__IO uint16_t*)address = data;
-    /* wait for operation to be completed */
-    status = flash_bank2_operation_wait_for(PROGRAMMING_TIMEOUT);
+        /* disable the fprgm bit */
+        FLASH->ctrl_bit.fprgm = FALSE;
+    } else if ((address >= FLASH_BANK2_START_ADDR) && (address <= FLASH_BANK2_END_ADDR)) {
+        FLASH->ctrl2_bit.fprgm = TRUE;
+        *(__IO uint16_t *)address = data;
+        /* wait for operation to be completed */
+        status = flash_bank2_operation_wait_for(PROGRAMMING_TIMEOUT);
 
-    /* disable the fprgm bit */
-    FLASH->ctrl2_bit.fprgm = FALSE;
-  }
+        /* disable the fprgm bit */
+        FLASH->ctrl2_bit.fprgm = FALSE;
+    }
 
-  /* return the program status */
-  return status;
+    /* return the program status */
+    return status;
 }
 
 /**
@@ -675,31 +608,27 @@ flash_status_type flash_halfword_program(uint32_t address, uint16_t data)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_byte_program(uint32_t address, uint8_t data)
-{
-  flash_status_type status = FLASH_OPERATE_DONE;
-  if((address >= FLASH_BANK1_START_ADDR) && (address <= FLASH_BANK1_END_ADDR))
-  {
-    FLASH->ctrl_bit.fprgm = TRUE;
-    *(__IO uint8_t*)address = data;
-    /* wait for operation to be completed */
-    status = flash_bank1_operation_wait_for(PROGRAMMING_TIMEOUT);
+flash_status_type flash_byte_program(uint32_t address, uint8_t data) {
+    flash_status_type status = FLASH_OPERATE_DONE;
+    if ((address >= FLASH_BANK1_START_ADDR) && (address <= FLASH_BANK1_END_ADDR)) {
+        FLASH->ctrl_bit.fprgm = TRUE;
+        *(__IO uint8_t *)address = data;
+        /* wait for operation to be completed */
+        status = flash_bank1_operation_wait_for(PROGRAMMING_TIMEOUT);
 
-    /* disable the fprgm bit */
-    FLASH->ctrl_bit.fprgm = FALSE;
-  }
-  else if((address >= FLASH_BANK2_START_ADDR) && (address <= FLASH_BANK2_END_ADDR))
-  {
-    FLASH->ctrl2_bit.fprgm = TRUE;
-    *(__IO uint8_t*)address = data;
-    /* wait for operation to be completed */
-    status = flash_bank2_operation_wait_for(PROGRAMMING_TIMEOUT);
+        /* disable the fprgm bit */
+        FLASH->ctrl_bit.fprgm = FALSE;
+    } else if ((address >= FLASH_BANK2_START_ADDR) && (address <= FLASH_BANK2_END_ADDR)) {
+        FLASH->ctrl2_bit.fprgm = TRUE;
+        *(__IO uint8_t *)address = data;
+        /* wait for operation to be completed */
+        status = flash_bank2_operation_wait_for(PROGRAMMING_TIMEOUT);
 
-    /* disable the fprgm bit */
-    FLASH->ctrl2_bit.fprgm = FALSE;
-  }
-  /* return the program status */
-  return status;
+        /* disable the fprgm bit */
+        FLASH->ctrl2_bit.fprgm = FALSE;
+    }
+    /* return the program status */
+    return status;
 }
 
 /**
@@ -709,33 +638,31 @@ flash_status_type flash_byte_program(uint32_t address, uint8_t data)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_user_system_data_program(uint32_t address, uint8_t data)
-{
-  flash_status_type status = FLASH_OPERATE_DONE;
+flash_status_type flash_user_system_data_program(uint32_t address, uint8_t data) {
+    flash_status_type status = FLASH_OPERATE_DONE;
 
-  if(address == USD_BASE)
-  {
-    if(data != 0xA5)
-      return FLASH_OPERATE_DONE;
-  }
-  
-  /* unlock the user system data */
-  FLASH->usd_unlock = FLASH_UNLOCK_KEY1;
-  FLASH->usd_unlock = FLASH_UNLOCK_KEY2;
-  while(FLASH->ctrl_bit.usdulks==RESET);
+    if (address == USD_BASE) {
+        if (data != 0xA5)
+            return FLASH_OPERATE_DONE;
+    }
 
-  /* enable the user system data programming operation */
-  FLASH->ctrl_bit.usdprgm = TRUE;
-  *(__IO uint16_t*)address = data;
+    /* unlock the user system data */
+    FLASH->usd_unlock = FLASH_UNLOCK_KEY1;
+    FLASH->usd_unlock = FLASH_UNLOCK_KEY2;
+    while (FLASH->ctrl_bit.usdulks == RESET);
 
-  /* wait for operation to be completed */
-  status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
+    /* enable the user system data programming operation */
+    FLASH->ctrl_bit.usdprgm = TRUE;
+    *(__IO uint16_t *)address = data;
 
-  /* disable the usdprgm bit */
-  FLASH->ctrl_bit.usdprgm = FALSE;
+    /* wait for operation to be completed */
+    status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
 
-  /* return the user system data program status */
-  return status;
+    /* disable the usdprgm bit */
+    FLASH->ctrl_bit.usdprgm = FALSE;
+
+    /* return the user system data program status */
+    return status;
 }
 
 /**
@@ -747,80 +674,72 @@ flash_status_type flash_user_system_data_program(uint32_t address, uint8_t data)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_epp_set(uint32_t *sector_bits)
-{
-  uint16_t epp_data[4] = {0xFFFF,0xFFFF,0xFFFF,0xFFFF};
-  flash_status_type status = FLASH_OPERATE_DONE;
-  sector_bits[0] = (uint32_t)(~sector_bits[0]);
-  epp_data[0] = (uint16_t)((sector_bits[0] >> 0) & 0xFF);
-  epp_data[1] = (uint16_t)((sector_bits[0] >> 8) & 0xFF);
-  epp_data[2] = (uint16_t)((sector_bits[0] >> 16) & 0xFF);
-  epp_data[3] = (uint16_t)((sector_bits[0] >> 24) & 0xFF);
+flash_status_type flash_epp_set(uint32_t *sector_bits) {
+    uint16_t epp_data[4] = {0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF};
+    flash_status_type status = FLASH_OPERATE_DONE;
+    sector_bits[0] = (uint32_t)(~sector_bits[0]);
+    epp_data[0] = (uint16_t)((sector_bits[0] >> 0) & 0xFF);
+    epp_data[1] = (uint16_t)((sector_bits[0] >> 8) & 0xFF);
+    epp_data[2] = (uint16_t)((sector_bits[0] >> 16) & 0xFF);
+    epp_data[3] = (uint16_t)((sector_bits[0] >> 24) & 0xFF);
 
-  /* unlock the user system data */
-  FLASH->usd_unlock = FLASH_UNLOCK_KEY1;
-  FLASH->usd_unlock = FLASH_UNLOCK_KEY2;
-  while(FLASH->ctrl_bit.usdulks==RESET);
+    /* unlock the user system data */
+    FLASH->usd_unlock = FLASH_UNLOCK_KEY1;
+    FLASH->usd_unlock = FLASH_UNLOCK_KEY2;
+    while (FLASH->ctrl_bit.usdulks == RESET);
 
-  FLASH->ctrl_bit.usdprgm = TRUE;
-  USD->epp0 = epp_data[0];
-  /* wait for operation to be completed */
-  status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
+    FLASH->ctrl_bit.usdprgm = TRUE;
+    USD->epp0 = epp_data[0];
+    /* wait for operation to be completed */
+    status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
 
-  if(status == FLASH_OPERATE_DONE)
-  {
-    USD->epp1 = epp_data[1];
-    /* wait for operation to be completed */
-    status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
-  }
-  if(status == FLASH_OPERATE_DONE)
-  {
-    USD->epp2 = epp_data[2];
-    /* wait for operation to be completed */
-    status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
-  }
-  if(status == FLASH_OPERATE_DONE)
-  {
-    USD->epp3 = epp_data[3];
-    /* wait for operation to be completed */
-    status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
-  }
+    if (status == FLASH_OPERATE_DONE) {
+        USD->epp1 = epp_data[1];
+        /* wait for operation to be completed */
+        status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
+    }
+    if (status == FLASH_OPERATE_DONE) {
+        USD->epp2 = epp_data[2];
+        /* wait for operation to be completed */
+        status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
+    }
+    if (status == FLASH_OPERATE_DONE) {
+        USD->epp3 = epp_data[3];
+        /* wait for operation to be completed */
+        status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
+    }
 
-  sector_bits[1] = (uint32_t)(~sector_bits[1]);
-  epp_data[0] = (uint16_t)((sector_bits[1] >> 0) & 0xFF);
-  epp_data[1] = (uint16_t)((sector_bits[1] >> 8) & 0xFF);
-  epp_data[2] = (uint16_t)((sector_bits[1] >> 16) & 0xFF);
-  epp_data[3] = (uint16_t)((sector_bits[1] >> 24) & 0xFF);
-  if(status == FLASH_OPERATE_DONE)
-  {
-    USD->epp4 = epp_data[0];
-    /* wait for operation to be completed */
-    status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
-  }
-  if(status == FLASH_OPERATE_DONE)
-  {
-    USD->epp5 = epp_data[1];
-    /* wait for operation to be completed */
-    status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
-  }
-  if(status == FLASH_OPERATE_DONE)
-  {
-    USD->epp6 = epp_data[2];
-    /* wait for operation to be completed */
-    status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
-  }
-  if(status == FLASH_OPERATE_DONE)
-  {
-    USD->epp7 = epp_data[3];
-    /* wait for operation to be completed */
-    status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
-  }
+    sector_bits[1] = (uint32_t)(~sector_bits[1]);
+    epp_data[0] = (uint16_t)((sector_bits[1] >> 0) & 0xFF);
+    epp_data[1] = (uint16_t)((sector_bits[1] >> 8) & 0xFF);
+    epp_data[2] = (uint16_t)((sector_bits[1] >> 16) & 0xFF);
+    epp_data[3] = (uint16_t)((sector_bits[1] >> 24) & 0xFF);
+    if (status == FLASH_OPERATE_DONE) {
+        USD->epp4 = epp_data[0];
+        /* wait for operation to be completed */
+        status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
+    }
+    if (status == FLASH_OPERATE_DONE) {
+        USD->epp5 = epp_data[1];
+        /* wait for operation to be completed */
+        status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
+    }
+    if (status == FLASH_OPERATE_DONE) {
+        USD->epp6 = epp_data[2];
+        /* wait for operation to be completed */
+        status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
+    }
+    if (status == FLASH_OPERATE_DONE) {
+        USD->epp7 = epp_data[3];
+        /* wait for operation to be completed */
+        status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
+    }
 
-  /* disable the usdprgm bit */
-  FLASH->ctrl_bit.usdprgm = FALSE;
+    /* disable the usdprgm bit */
+    FLASH->ctrl_bit.usdprgm = FALSE;
 
-  /* return the erase/program protection operation status */
-  return status;
+    /* return the erase/program protection operation status */
+    return status;
 }
 
 /**
@@ -828,11 +747,10 @@ flash_status_type flash_epp_set(uint32_t *sector_bits)
   * @param  sector_bits: pointer to get the epps register.
   * @retval none
   */
-void flash_epp_status_get(uint32_t *sector_bits)
-{
-  /* return the flash erase/program protection register value */
-  sector_bits[0] = (uint32_t)(FLASH->epps0);
-  sector_bits[1] = (uint32_t)(FLASH->epps1);
+void flash_epp_status_get(uint32_t *sector_bits) {
+    /* return the flash erase/program protection register value */
+    sector_bits[0] = (uint32_t)(FLASH->epps0);
+    sector_bits[1] = (uint32_t)(FLASH->epps1);
 }
 
 /**
@@ -844,46 +762,43 @@ void flash_epp_status_get(uint32_t *sector_bits)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_fap_enable(confirm_state new_state)
-{
-  flash_status_type status = FLASH_OPERATE_DONE;
+flash_status_type flash_fap_enable(confirm_state new_state) {
+    flash_status_type status = FLASH_OPERATE_DONE;
 
-  /* unlock the user system data */
-  FLASH->usd_unlock = FLASH_UNLOCK_KEY1;
-  FLASH->usd_unlock = FLASH_UNLOCK_KEY2;
-  while(FLASH->ctrl_bit.usdulks==RESET);
+    /* unlock the user system data */
+    FLASH->usd_unlock = FLASH_UNLOCK_KEY1;
+    FLASH->usd_unlock = FLASH_UNLOCK_KEY2;
+    while (FLASH->ctrl_bit.usdulks == RESET);
 
-  FLASH->ctrl_bit.usders = TRUE;
-  FLASH->ctrl_bit.erstr = TRUE;
-  /* wait for operation to be completed */
-  status = flash_operation_wait_for(ERASE_TIMEOUT);
-
-  /* disable the usders bit */
-  FLASH->ctrl_bit.usders = FALSE;
-
-  if(status == FLASH_OPERATE_DONE)
-  {
-    /* enable the user system data programming operation */
-    FLASH->ctrl_bit.usdprgm = TRUE;
-
-    /* restore the default eopb0 value */
-    USD->eopb0 = (uint16_t)0x0002;
-
-    /* Wait for operation to be completed */
+    FLASH->ctrl_bit.usders = TRUE;
+    FLASH->ctrl_bit.erstr = TRUE;
+    /* wait for operation to be completed */
     status = flash_operation_wait_for(ERASE_TIMEOUT);
 
-    if(new_state == FALSE)
-    {
-      USD->fap = FAP_RELIEVE_KEY;
-      /* Wait for operation to be completed */
-      status = flash_operation_wait_for(ERASE_TIMEOUT);
-    }
-    /* disable the usdprgm bit */
-    FLASH->ctrl_bit.usdprgm = FALSE;
-  }
+    /* disable the usders bit */
+    FLASH->ctrl_bit.usders = FALSE;
 
-  /* return the flash access protection operation status */
-  return status;
+    if (status == FLASH_OPERATE_DONE) {
+        /* enable the user system data programming operation */
+        FLASH->ctrl_bit.usdprgm = TRUE;
+
+        /* restore the default eopb0 value */
+        USD->eopb0 = (uint16_t)0x0002;
+
+        /* Wait for operation to be completed */
+        status = flash_operation_wait_for(ERASE_TIMEOUT);
+
+        if (new_state == FALSE) {
+            USD->fap = FAP_RELIEVE_KEY;
+            /* Wait for operation to be completed */
+            status = flash_operation_wait_for(ERASE_TIMEOUT);
+        }
+        /* disable the usdprgm bit */
+        FLASH->ctrl_bit.usdprgm = FALSE;
+    }
+
+    /* return the flash access protection operation status */
+    return status;
 }
 
 /**
@@ -891,9 +806,8 @@ flash_status_type flash_fap_enable(confirm_state new_state)
   * @param  none
   * @retval flash access protection status(SET or RESET)
   */
-flag_status flash_fap_status_get(void)
-{
-  return (flag_status)FLASH->usd_bit.fap;
+flag_status flash_fap_status_get(void) {
+    return (flag_status)FLASH->usd_bit.fap;
 }
 
 /**
@@ -927,27 +841,26 @@ flag_status flash_fap_status_get(void)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_ssb_set(uint8_t usd_ssb)
-{
-  flash_status_type status = FLASH_OPERATE_DONE;
+flash_status_type flash_ssb_set(uint8_t usd_ssb) {
+    flash_status_type status = FLASH_OPERATE_DONE;
 
-  /* unlock the user system data */
-  FLASH->usd_unlock = FLASH_UNLOCK_KEY1;
-  FLASH->usd_unlock = FLASH_UNLOCK_KEY2;
-  while(FLASH->ctrl_bit.usdulks==RESET);
+    /* unlock the user system data */
+    FLASH->usd_unlock = FLASH_UNLOCK_KEY1;
+    FLASH->usd_unlock = FLASH_UNLOCK_KEY2;
+    while (FLASH->ctrl_bit.usdulks == RESET);
 
-  /* enable the user system data programming operation */
-  FLASH->ctrl_bit.usdprgm = TRUE;
+    /* enable the user system data programming operation */
+    FLASH->ctrl_bit.usdprgm = TRUE;
 
-  USD->ssb = usd_ssb;
-  /* wait for operation to be completed */
-  status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
+    USD->ssb = usd_ssb;
+    /* wait for operation to be completed */
+    status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
 
-  /* disable the usdprgm bit */
-  FLASH->ctrl_bit.usdprgm = FALSE;
+    /* disable the usdprgm bit */
+    FLASH->ctrl_bit.usdprgm = FALSE;
 
-  /* return the user system data program status */
-  return status;
+    /* return the user system data program status */
+    return status;
 }
 
 /**
@@ -956,10 +869,9 @@ flash_status_type flash_ssb_set(uint8_t usd_ssb)
   * @retval values from flash_usd register: wdt_ato_en(bit0), depslp_rst(bit1),
   *         stdby_rst(bit2) and btopt(bit3).
   */
-uint8_t flash_ssb_status_get(void)
-{
-  /* return the system setting byte status */
-  return (uint8_t)(FLASH->usd >> 2);
+uint8_t flash_ssb_status_get(void) {
+    /* return the system setting byte status */
+    return (uint8_t)(FLASH->usd >> 2);
 }
 
 /**
@@ -976,16 +888,15 @@ uint8_t flash_ssb_status_get(void)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void flash_interrupt_enable(uint32_t flash_int, confirm_state new_state)
-{
-  if(flash_int & FLASH_BANK1_ERR_INT)
-    FLASH->ctrl_bit.errie = new_state;
-  if(flash_int & FLASH_BANK1_ODF_INT)
-    FLASH->ctrl_bit.odfie = new_state;
-  if(flash_int & FLASH_BANK2_ERR_INT)
-    FLASH->ctrl2_bit.errie = new_state;
-  if(flash_int & FLASH_BANK2_ODF_INT)
-    FLASH->ctrl2_bit.odfie = new_state;
+void flash_interrupt_enable(uint32_t flash_int, confirm_state new_state) {
+    if (flash_int & FLASH_BANK1_ERR_INT)
+        FLASH->ctrl_bit.errie = new_state;
+    if (flash_int & FLASH_BANK1_ODF_INT)
+        FLASH->ctrl_bit.odfie = new_state;
+    if (flash_int & FLASH_BANK2_ERR_INT)
+        FLASH->ctrl2_bit.errie = new_state;
+    if (flash_int & FLASH_BANK2_ODF_INT)
+        FLASH->ctrl2_bit.odfie = new_state;
 }
 
 /**
@@ -997,37 +908,34 @@ void flash_interrupt_enable(uint32_t flash_int, confirm_state new_state)
   * @retval status: the returned value can be: FLASH_PROGRAM_ERROR,
   *         FLASH_EPP_ERROR, FLASH_OPERATE_DONE or FLASH_OPERATE_TIMEOUT.
   */
-flash_status_type flash_slib_enable(uint32_t pwd, uint16_t start_sector, uint16_t inst_start_sector, uint16_t end_sector)
-{
-  uint32_t slib_range;
-  flash_status_type status = FLASH_OPERATE_DONE;
+flash_status_type flash_slib_enable(uint32_t pwd, uint16_t start_sector, uint16_t inst_start_sector, uint16_t end_sector) {
+    uint32_t slib_range;
+    flash_status_type status = FLASH_OPERATE_DONE;
 
-  /*check range param limits*/
-  if((start_sector > inst_start_sector) || ((inst_start_sector > end_sector) && \
-     (inst_start_sector != 0xFFFF)) || (start_sector > end_sector))
-    return FLASH_PROGRAM_ERROR;
+    /*check range param limits*/
+    if ((start_sector > inst_start_sector) || ((inst_start_sector > end_sector) && \
+                                               (inst_start_sector != 0xFFFF)) || (start_sector > end_sector))
+        return FLASH_PROGRAM_ERROR;
 
-  /* unlock slib cfg register */
-  FLASH->slib_unlock = SLIB_UNLOCK_KEY;
-  while(FLASH->slib_misc_sts_bit.slib_ulkf==RESET);
+    /* unlock slib cfg register */
+    FLASH->slib_unlock = SLIB_UNLOCK_KEY;
+    while (FLASH->slib_misc_sts_bit.slib_ulkf == RESET);
 
-  /* configure slib, set pwd and range */
-  FLASH->slib_set_pwd = pwd;
-  status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
-  if(status == FLASH_OPERATE_DONE)
-  {
-    slib_range = ((uint32_t)(end_sector << 16) & FLASH_SLIB_END_SECTOR) | (start_sector & FLASH_SLIB_START_SECTOR);
-    FLASH->slib_set_range0 = slib_range;
+    /* configure slib, set pwd and range */
+    FLASH->slib_set_pwd = pwd;
     status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
-    if(status == FLASH_OPERATE_DONE)
-    {
-      slib_range = (inst_start_sector & FLASH_SLIB_INST_START_SECTOR) | 0x80000000;
-      FLASH->slib_set_range1 = slib_range;
-      status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
+    if (status == FLASH_OPERATE_DONE) {
+        slib_range = ((uint32_t)(end_sector << 16) & FLASH_SLIB_END_SECTOR) | (start_sector & FLASH_SLIB_START_SECTOR);
+        FLASH->slib_set_range0 = slib_range;
+        status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
+        if (status == FLASH_OPERATE_DONE) {
+            slib_range = (inst_start_sector & FLASH_SLIB_INST_START_SECTOR) | 0x80000000;
+            FLASH->slib_set_range1 = slib_range;
+            status = flash_operation_wait_for(PROGRAMMING_TIMEOUT);
+        }
     }
-  }
 
-  return status;
+    return status;
 }
 
 /**
@@ -1035,21 +943,19 @@ flash_status_type flash_slib_enable(uint32_t pwd, uint16_t start_sector, uint16_
   * @param  pwd: slib password
   * @retval success or error
   */
-error_status flash_slib_disable(uint32_t pwd)
-{
-  flash_status_type status = FLASH_OPERATE_DONE;
-  /* write password to disable slib */
-  FLASH->slib_pwd_clr = pwd;
+error_status flash_slib_disable(uint32_t pwd) {
+    flash_status_type status = FLASH_OPERATE_DONE;
+    /* write password to disable slib */
+    FLASH->slib_pwd_clr = pwd;
 
-  status = flash_operation_wait_for(ERASE_TIMEOUT);
-  if(status == FLASH_OPERATE_DONE)
-  {
-    if(FLASH->slib_misc_sts_bit.slib_pwd_ok)
-      return SUCCESS;
-    else
-      return ERROR;
-  }
-  return ERROR;
+    status = flash_operation_wait_for(ERASE_TIMEOUT);
+    if (status == FLASH_OPERATE_DONE) {
+        if (FLASH->slib_misc_sts_bit.slib_pwd_ok)
+            return SUCCESS;
+        else
+            return ERROR;
+    }
+    return ERROR;
 }
 
 /**
@@ -1057,9 +963,8 @@ error_status flash_slib_disable(uint32_t pwd)
  * @param  none
  * @retval uint32_t
  */
-uint32_t flash_slib_remaining_count_get(void)
-{
-  return (uint32_t)FLASH->slib_misc_sts_bit.slib_rcnt;
+uint32_t flash_slib_remaining_count_get(void) {
+    return (uint32_t)FLASH->slib_misc_sts_bit.slib_rcnt;
 }
 
 /**
@@ -1067,12 +972,11 @@ uint32_t flash_slib_remaining_count_get(void)
   * @param  none
   * @retval SET or RESET
   */
-flag_status flash_slib_state_get(void)
-{
-  if(FLASH->slib_sts0_bit.slib_enf)
-    return SET;
-  else
-    return RESET;
+flag_status flash_slib_state_get(void) {
+    if (FLASH->slib_sts0_bit.slib_enf)
+        return SET;
+    else
+        return RESET;
 }
 
 /**
@@ -1080,9 +984,8 @@ flag_status flash_slib_state_get(void)
  * @param  none
  * @retval uint16_t
  */
-uint16_t flash_slib_start_sector_get(void)
-{
-  return (uint16_t)FLASH->slib_sts1_bit.slib_ss;
+uint16_t flash_slib_start_sector_get(void) {
+    return (uint16_t)FLASH->slib_sts1_bit.slib_ss;
 }
 
 /**
@@ -1090,9 +993,8 @@ uint16_t flash_slib_start_sector_get(void)
  * @param  none
  * @retval uint16_t
  */
-uint16_t flash_slib_inststart_sector_get(void)
-{
-  return (uint16_t)FLASH->slib_sts2_bit.slib_inst_ss;
+uint16_t flash_slib_inststart_sector_get(void) {
+    return (uint16_t)FLASH->slib_sts2_bit.slib_inst_ss;
 }
 
 /**
@@ -1100,9 +1002,8 @@ uint16_t flash_slib_inststart_sector_get(void)
  * @param  none
  * @retval uint16_t
  */
-uint16_t flash_slib_end_sector_get(void)
-{
-  return (uint16_t)FLASH->slib_sts1_bit.slib_es;
+uint16_t flash_slib_end_sector_get(void) {
+    return (uint16_t)FLASH->slib_sts1_bit.slib_es;
 }
 
 /**
@@ -1111,13 +1012,12 @@ uint16_t flash_slib_end_sector_get(void)
   *         sector_cnt: crc calibration sector count
   * @retval uint32: crc calibration result
   */
-uint32_t flash_crc_calibrate(uint32_t start_sector, uint32_t sector_cnt)
-{
-  FLASH->crc_ctrl_bit.crc_ss = start_sector;
-  FLASH->crc_ctrl_bit.crc_sn = sector_cnt;
-  FLASH->crc_ctrl_bit.crc_strt = TRUE;
-  flash_operation_wait_for(OPERATION_TIMEOUT);
-  return FLASH->crc_chkr;
+uint32_t flash_crc_calibrate(uint32_t start_sector, uint32_t sector_cnt) {
+    FLASH->crc_ctrl_bit.crc_ss = start_sector;
+    FLASH->crc_ctrl_bit.crc_sn = sector_cnt;
+    FLASH->crc_ctrl_bit.crc_strt = TRUE;
+    flash_operation_wait_for(OPERATION_TIMEOUT);
+    return FLASH->crc_chkr;
 }
 
 /**
@@ -1126,9 +1026,8 @@ uint32_t flash_crc_calibrate(uint32_t start_sector, uint32_t sector_cnt)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void flash_nzw_boost_enable(confirm_state new_state)
-{
-  FLASH->psr_bit.nzw_bst = new_state;
+void flash_nzw_boost_enable(confirm_state new_state) {
+    FLASH->psr_bit.nzw_bst = new_state;
 }
 
 /**
@@ -1137,9 +1036,8 @@ void flash_nzw_boost_enable(confirm_state new_state)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void flash_continue_read_enable(confirm_state new_state)
-{
-  FLASH->contr_bit.fcontr_en = new_state;
+void flash_continue_read_enable(confirm_state new_state) {
+    FLASH->contr_bit.fcontr_en = new_state;
 }
 
 /**

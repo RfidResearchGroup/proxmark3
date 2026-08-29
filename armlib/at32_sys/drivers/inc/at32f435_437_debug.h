@@ -90,107 +90,96 @@ extern "C" {
 /**
   * @brief type define debug register all
   */
-typedef struct
-{
-  /**
-    * @brief debug idcode register, offset:0x00
-    */
-  union
-  {
-    __IO uint32_t pid;
-    struct
-    {
-      __IO uint32_t pid                  : 32;/* [31:0] */
-    } idcode_bit;
-  };
+typedef struct {
+    /**
+      * @brief debug idcode register, offset:0x00
+      */
+    union {
+        __IO uint32_t pid;
+        struct {
+            __IO uint32_t pid                  : 32;/* [31:0] */
+        } idcode_bit;
+    };
 
-  /**
-    * @brief debug ctrl register, offset:0x04
-    */
-  union
-  {
-    __IO uint32_t ctrl;
-    struct
-    {
-      __IO uint32_t sleep_debug          : 1;/* [0] */
-      __IO uint32_t deepsleep_debug      : 1;/* [1] */
-      __IO uint32_t standby_debug        : 1;/* [2] */
-      __IO uint32_t reserved1            : 29;/* [31:3] */
-    } ctrl_bit;
-  };
+    /**
+      * @brief debug ctrl register, offset:0x04
+      */
+    union {
+        __IO uint32_t ctrl;
+        struct {
+            __IO uint32_t sleep_debug          : 1;/* [0] */
+            __IO uint32_t deepsleep_debug      : 1;/* [1] */
+            __IO uint32_t standby_debug        : 1;/* [2] */
+            __IO uint32_t reserved1            : 29;/* [31:3] */
+        } ctrl_bit;
+    };
 
-  /**
-    * @brief debug apb1 frz register, offset:0x08
-    */
-  union
-  {
-    __IO uint32_t apb1_frz;
-    struct
-    {
-      __IO uint32_t tmr2_pause           : 1;/* [0] */
-      __IO uint32_t tmr3_pause           : 1;/* [1] */
-      __IO uint32_t tmr4_pause           : 1;/* [2] */
-      __IO uint32_t tmr5_pause           : 1;/* [3] */
-      __IO uint32_t tmr6_pause           : 1;/* [4] */
-      __IO uint32_t tmr7_pause           : 1;/* [5] */
-      __IO uint32_t tmr12_pause          : 1;/* [6] */
-      __IO uint32_t tmr13_pause          : 1;/* [7] */
-      __IO uint32_t tmr14_pause          : 1;/* [8] */
-      __IO uint32_t reserved1            : 1;/* [9] */
-      __IO uint32_t ertc_pause           : 1;/* [10] */
-      __IO uint32_t wwdt_pause           : 1;/* [11] */
-      __IO uint32_t wdt_pause            : 1;/* [12] */
-      __IO uint32_t reserved2            : 2;/* [14:13] */
-      __IO uint32_t ertc_512_pause       : 1;/* [15] */
-      __IO uint32_t reserved3            : 8;/* [23:16] */
-      __IO uint32_t i2c1_smbus_timeout   : 1;/* [24] */
-      __IO uint32_t can1_pause           : 1;/* [25] */
-      __IO uint32_t can2_pause           : 1;/* [26] */
-      __IO uint32_t i2c2_smbus_timeout   : 1;/* [27] */
-      __IO uint32_t i2c3_smbus_timeout   : 1;/* [28] */
-      __IO uint32_t reserved4            : 3;/* [31:29] */
-    } apb1_frz_bit;
-  };
+    /**
+      * @brief debug apb1 frz register, offset:0x08
+      */
+    union {
+        __IO uint32_t apb1_frz;
+        struct {
+            __IO uint32_t tmr2_pause           : 1;/* [0] */
+            __IO uint32_t tmr3_pause           : 1;/* [1] */
+            __IO uint32_t tmr4_pause           : 1;/* [2] */
+            __IO uint32_t tmr5_pause           : 1;/* [3] */
+            __IO uint32_t tmr6_pause           : 1;/* [4] */
+            __IO uint32_t tmr7_pause           : 1;/* [5] */
+            __IO uint32_t tmr12_pause          : 1;/* [6] */
+            __IO uint32_t tmr13_pause          : 1;/* [7] */
+            __IO uint32_t tmr14_pause          : 1;/* [8] */
+            __IO uint32_t reserved1            : 1;/* [9] */
+            __IO uint32_t ertc_pause           : 1;/* [10] */
+            __IO uint32_t wwdt_pause           : 1;/* [11] */
+            __IO uint32_t wdt_pause            : 1;/* [12] */
+            __IO uint32_t reserved2            : 2;/* [14:13] */
+            __IO uint32_t ertc_512_pause       : 1;/* [15] */
+            __IO uint32_t reserved3            : 8;/* [23:16] */
+            __IO uint32_t i2c1_smbus_timeout   : 1;/* [24] */
+            __IO uint32_t can1_pause           : 1;/* [25] */
+            __IO uint32_t can2_pause           : 1;/* [26] */
+            __IO uint32_t i2c2_smbus_timeout   : 1;/* [27] */
+            __IO uint32_t i2c3_smbus_timeout   : 1;/* [28] */
+            __IO uint32_t reserved4            : 3;/* [31:29] */
+        } apb1_frz_bit;
+    };
 
-  /**
-    * @brief debug apb2 frz register, offset:0x0C
-    */
-  union
-  {
-    __IO uint32_t apb2_frz;
-    struct
-    {
-      __IO uint32_t tmr1_pause           : 1;/* [0] */
-      __IO uint32_t tmr8_pause           : 1;/* [1] */
-      __IO uint32_t reserved1            : 4;/* [5:2] */
-      __IO uint32_t tmr20_pause          : 1;/* [6] */
-      __IO uint32_t reserved2            : 9;/* [15:7] */
-      __IO uint32_t tmr9_pause           : 1;/* [16] */
-      __IO uint32_t tmr10_pause          : 1;/* [17] */
-      __IO uint32_t tmr11_pause          : 1;/* [18] */
-      __IO uint32_t reserved3            : 13;/* [31:19] */
-    } apb2_frz_bit;
-  };
+    /**
+      * @brief debug apb2 frz register, offset:0x0C
+      */
+    union {
+        __IO uint32_t apb2_frz;
+        struct {
+            __IO uint32_t tmr1_pause           : 1;/* [0] */
+            __IO uint32_t tmr8_pause           : 1;/* [1] */
+            __IO uint32_t reserved1            : 4;/* [5:2] */
+            __IO uint32_t tmr20_pause          : 1;/* [6] */
+            __IO uint32_t reserved2            : 9;/* [15:7] */
+            __IO uint32_t tmr9_pause           : 1;/* [16] */
+            __IO uint32_t tmr10_pause          : 1;/* [17] */
+            __IO uint32_t tmr11_pause          : 1;/* [18] */
+            __IO uint32_t reserved3            : 13;/* [31:19] */
+        } apb2_frz_bit;
+    };
 
-  /**
-    * @brief debug reserved1 register, offset:0x10~0x1C
-    */
-  __IO uint32_t reserved1[4];
+    /**
+      * @brief debug reserved1 register, offset:0x10~0x1C
+      */
+    __IO uint32_t reserved1[4];
 
-  /**
-    * @brief debug ser id register, offset:0x20
-    */
-  union
-  {
-    __IO uint32_t ser_id;
-    struct
-    {
-      __IO uint32_t rev_id               : 3;/* [2:0] */
-      __IO uint32_t reserved1            : 5;/* [7:3] */
-      __IO uint32_t ser_id               : 8;/* [15:8] */
-      __IO uint32_t reserved2            : 16;/* [31:16] */
-    } ser_id_bit;
-  };
+    /**
+      * @brief debug ser id register, offset:0x20
+      */
+    union {
+        __IO uint32_t ser_id;
+        struct {
+            __IO uint32_t rev_id               : 3;/* [2:0] */
+            __IO uint32_t reserved1            : 5;/* [7:3] */
+            __IO uint32_t ser_id               : 8;/* [15:8] */
+            __IO uint32_t reserved2            : 16;/* [31:16] */
+        } ser_id_bit;
+    };
 
 } debug_type;
 

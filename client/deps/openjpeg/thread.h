@@ -55,22 +55,22 @@ typedef struct opj_mutex_t opj_mutex_t;
  * @return the mutex or NULL in case of error (can for example happen if the library
  * is built without thread support)
  */
-opj_mutex_t* opj_mutex_create(void);
+opj_mutex_t *opj_mutex_create(void);
 
 /** Lock/acquire the mutex.
  * @param mutex the mutex to acquire.
  */
-void opj_mutex_lock(opj_mutex_t* mutex);
+void opj_mutex_lock(opj_mutex_t *mutex);
 
 /** Unlock/release the mutex.
  * @param mutex the mutex to release.
  */
-void opj_mutex_unlock(opj_mutex_t* mutex);
+void opj_mutex_unlock(opj_mutex_t *mutex);
 
 /** Destroy a mutex
  * @param mutex the mutex to destroy.
  */
-void opj_mutex_destroy(opj_mutex_t* mutex);
+void opj_mutex_destroy(opj_mutex_t *mutex);
 
 /*@}*/
 
@@ -84,7 +84,7 @@ typedef struct opj_cond_t opj_cond_t;
  * @return the condition or NULL in case of error (can for example happen if the library
  * is built without thread support)
  */
-opj_cond_t* opj_cond_create(void);
+opj_cond_t *opj_cond_create(void);
 
 /** Wait for the condition to be signaled.
  * The semantics is the same as the POSIX pthread_cond_wait.
@@ -117,7 +117,7 @@ opj_cond_t* opj_cond_create(void);
  * @param cond the condition to wait.
  * @param mutex the mutex (in acquired state before calling this function)
  */
-void opj_cond_wait(opj_cond_t* cond, opj_mutex_t* mutex);
+void opj_cond_wait(opj_cond_t *cond, opj_mutex_t *mutex);
 
 /** Signal waiting threads on a condition.
  * One of the thread waiting with opj_cond_wait() will be waken up.
@@ -125,12 +125,12 @@ void opj_cond_wait(opj_cond_t* cond, opj_mutex_t* mutex);
  * by opj_cond_wait(), in a acquired state.
  * @param cond the condition to signal.
  */
-void opj_cond_signal(opj_cond_t* cond);
+void opj_cond_signal(opj_cond_t *cond);
 
 /** Destroy a condition
  * @param cond the condition to destroy.
  */
-void opj_cond_destroy(opj_cond_t* cond);
+void opj_cond_destroy(opj_cond_t *cond);
 
 /*@}*/
 
@@ -143,7 +143,7 @@ typedef struct opj_thread_t opj_thread_t;
 /** User function to execute in a thread
  * @param user_data user data provided with opj_thread_create()
  */
-typedef void (*opj_thread_fn)(void* user_data);
+typedef void (*opj_thread_fn)(void *user_data);
 
 /** Creates a new thread.
  * @param thread_fn Function to run in the new thread.
@@ -151,13 +151,13 @@ typedef void (*opj_thread_fn)(void* user_data);
  * @return a thread handle or NULL in case of failure (can for example happen if the library
  * is built without thread support)
  */
-opj_thread_t* opj_thread_create(opj_thread_fn thread_fn, void* user_data);
+opj_thread_t *opj_thread_create(opj_thread_fn thread_fn, void *user_data);
 
 /** Wait for a thread to be finished and release associated resources to the
  * thread handle.
  * @param thread the thread to wait for being finished.
  */
-void opj_thread_join(opj_thread_t* thread);
+void opj_thread_join(opj_thread_t *thread);
 
 /*@}*/
 
@@ -171,10 +171,10 @@ typedef struct opj_tls_t opj_tls_t;
  * @param key key whose value to retrieve.
  * @return value associated with the key, or NULL is missing.
  */
-void* opj_tls_get(opj_tls_t* tls, int key);
+void *opj_tls_get(opj_tls_t *tls, int key);
 
 /** Type of the function used to free a TLS value */
-typedef void (*opj_tls_free_func)(void* value);
+typedef void (*opj_tls_free_func)(void *value);
 
 /** Set a thread local value corresponding to the provided key.
  * @param tls thread local storage handle
@@ -183,7 +183,7 @@ typedef void (*opj_tls_free_func)(void* value);
  * @param free_func function to call currently installed value.
  * @return OPJ_TRUE if successful.
  */
-OPJ_BOOL opj_tls_set(opj_tls_t* tls, int key, void* value,
+OPJ_BOOL opj_tls_set(opj_tls_t *tls, int key, void *value,
                      opj_tls_free_func free_func);
 
 /*@}*/
@@ -204,13 +204,13 @@ typedef struct opj_thread_pool_t opj_thread_pool_t;
  * @return a thread pool handle, or NULL in case of failure (can for example happen if the library
  * is built without thread support)
  */
-opj_thread_pool_t* opj_thread_pool_create(int num_threads);
+opj_thread_pool_t *opj_thread_pool_create(int num_threads);
 
 /** User function to execute in a thread
  * @param user_data user data provided with opj_thread_create()
  * @param tls handle to thread local storage
  */
-typedef void (*opj_job_fn)(void* user_data, opj_tls_t* tls);
+typedef void (*opj_job_fn)(void *user_data, opj_tls_t *tls);
 
 
 /** Submit a new job to be run by one of the thread in the thread pool.
@@ -222,8 +222,8 @@ typedef void (*opj_job_fn)(void* user_data, opj_tls_t* tls);
  * @param user_data User data provided to thread_fn.
  * @return OPJ_TRUE if the job was successfully submitted.
  */
-OPJ_BOOL opj_thread_pool_submit_job(opj_thread_pool_t* tp, opj_job_fn job_fn,
-                                    void* user_data);
+OPJ_BOOL opj_thread_pool_submit_job(opj_thread_pool_t *tp, opj_job_fn job_fn,
+                                    void *user_data);
 
 /** Wait that no more than max_remaining_jobs jobs are remaining in the queue of
  * the thread pool. The aim of this function is to avoid submitting too many
@@ -234,7 +234,7 @@ OPJ_BOOL opj_thread_pool_submit_job(opj_thread_pool_t* tp, opj_job_fn job_fn,
  * @param tp the thread pool handle
  * @param max_remaining_jobs maximum number of jobs allowed to be queued without waiting.
  */
-void opj_thread_pool_wait_completion(opj_thread_pool_t* tp,
+void opj_thread_pool_wait_completion(opj_thread_pool_t *tp,
                                      int max_remaining_jobs);
 
 /** Return the number of threads associated with the thread pool.
@@ -242,12 +242,12 @@ void opj_thread_pool_wait_completion(opj_thread_pool_t* tp,
  * @param tp the thread pool handle.
  * @return number of threads associated with the thread pool.
  */
-int opj_thread_pool_get_thread_count(opj_thread_pool_t* tp);
+int opj_thread_pool_get_thread_count(opj_thread_pool_t *tp);
 
 /** Destroy a thread pool.
  * @param tp the thread pool handle.
  */
-void opj_thread_pool_destroy(opj_thread_pool_t* tp);
+void opj_thread_pool_destroy(opj_thread_pool_t *tp);
 
 /*@}*/
 

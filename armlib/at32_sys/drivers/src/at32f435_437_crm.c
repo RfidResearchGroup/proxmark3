@@ -45,35 +45,34 @@
   * @param  none
   * @retval none
   */
-void crm_reset(void)
-{
-  /* reset the crm clock configuration to the default reset state(for debug purpose) */
-  /* set hicken bit */
-  CRM->ctrl_bit.hicken = TRUE;
+void crm_reset(void) {
+    /* reset the crm clock configuration to the default reset state(for debug purpose) */
+    /* set hicken bit */
+    CRM->ctrl_bit.hicken = TRUE;
 
-  /* wait hick stable */
-  while(CRM->ctrl_bit.hickstbl != SET);
+    /* wait hick stable */
+    while (CRM->ctrl_bit.hickstbl != SET);
 
-  /* hick used as system clock */
-  CRM->cfg_bit.sclksel = CRM_SCLK_HICK;
+    /* hick used as system clock */
+    CRM->cfg_bit.sclksel = CRM_SCLK_HICK;
 
-  /* wait sclk switch status */
-  while(CRM->cfg_bit.sclksts != CRM_SCLK_HICK);
+    /* wait sclk switch status */
+    while (CRM->cfg_bit.sclksts != CRM_SCLK_HICK);
 
-  /* reset hexten, hextbyps, cfden and pllen bits */
-  CRM->ctrl &= ~(0x010D0000U);
+    /* reset hexten, hextbyps, cfden and pllen bits */
+    CRM->ctrl &= ~(0x010D0000U);
 
-  /* reset cfg register, include sclk switch, ahbdiv, apb1div, apb2div, adcdiv, clkout bits */
-  CRM->cfg = 0;
+    /* reset cfg register, include sclk switch, ahbdiv, apb1div, apb2div, adcdiv, clkout bits */
+    CRM->cfg = 0;
 
-  /* reset pllms pllns pllfr pllrcs bits */
-  CRM->pllcfg = 0x00033002U;
+    /* reset pllms pllns pllfr pllrcs bits */
+    CRM->pllcfg = 0x00033002U;
 
-  /* reset clkout[3], usbbufs, hickdiv, clkoutdiv */
-  CRM->misc1 = 0;
+    /* reset clkout[3], usbbufs, hickdiv, clkoutdiv */
+    CRM->misc1 = 0;
 
-  /* disable all interrupts enable and clear pending bits  */
-  CRM->clkint = 0x009F0000U;
+    /* disable all interrupts enable and clear pending bits  */
+    CRM->clkint = 0x009F0000U;
 }
 
 /**
@@ -81,9 +80,8 @@ void crm_reset(void)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void crm_lext_bypass(confirm_state new_state)
-{
-  CRM->bpdc_bit.lextbyps = new_state;
+void crm_lext_bypass(confirm_state new_state) {
+    CRM->bpdc_bit.lextbyps = new_state;
 }
 
 /**
@@ -91,9 +89,8 @@ void crm_lext_bypass(confirm_state new_state)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void crm_hext_bypass(confirm_state new_state)
-{
-  CRM->ctrl_bit.hextbyps = new_state;
+void crm_hext_bypass(confirm_state new_state) {
+    CRM->ctrl_bit.hextbyps = new_state;
 }
 
 /**
@@ -120,18 +117,14 @@ void crm_hext_bypass(confirm_state new_state)
   *         - CRM_CLOCK_FAILURE_INT_FLAG
   * @retval flag_status (SET or RESET)
   */
-flag_status crm_flag_get(uint32_t flag)
-{
-  flag_status status = RESET;
-  if((CRM_REG(flag) & CRM_REG_BIT(flag)) != CRM_REG_BIT(flag))
-  {
-    status = RESET;
-  }
-  else
-  {
-    status = SET;
-  }
-  return status;
+flag_status crm_flag_get(uint32_t flag) {
+    flag_status status = RESET;
+    if ((CRM_REG(flag) & CRM_REG_BIT(flag)) != CRM_REG_BIT(flag)) {
+        status = RESET;
+    } else {
+        status = SET;
+    }
+    return status;
 }
 
 /**
@@ -146,50 +139,42 @@ flag_status crm_flag_get(uint32_t flag)
   *         - CRM_CLOCK_FAILURE_INT_FLAG
   * @retval flag_status (SET or RESET)
   */
-flag_status crm_interrupt_flag_get(uint32_t flag)
-{
-  flag_status status = RESET;
-  switch(flag)
-  {
-    case CRM_LICK_READY_INT_FLAG:
-      if(CRM->clkint_bit.lickstblf && CRM->clkint_bit.lickstblien)
-      {
-        status = SET;
-      }
-      break;
-    case CRM_LEXT_READY_INT_FLAG:
-      if(CRM->clkint_bit.lextstblf && CRM->clkint_bit.lextstblien)
-      {
-        status = SET;
-      }
-      break;
-    case CRM_HICK_READY_INT_FLAG:
-      if(CRM->clkint_bit.hickstblf && CRM->clkint_bit.hickstblien)
-      {
-        status = SET;
-      }
-      break;
-    case CRM_HEXT_READY_INT_FLAG:
-      if(CRM->clkint_bit.hextstblf && CRM->clkint_bit.hextstblien)
-      {
-        status = SET;
-      }
-      break;
-    case CRM_PLL_READY_INT_FLAG:
-      if(CRM->clkint_bit.pllstblf && CRM->clkint_bit.pllstblien)
-      {
-        status = SET;
-      }
-      break;
-    case CRM_CLOCK_FAILURE_INT_FLAG:
-      if(CRM->clkint_bit.cfdf && CRM->ctrl_bit.cfden)
-      {
-        status = SET;
-      }
-      break;
-  }
+flag_status crm_interrupt_flag_get(uint32_t flag) {
+    flag_status status = RESET;
+    switch (flag) {
+        case CRM_LICK_READY_INT_FLAG:
+            if (CRM->clkint_bit.lickstblf && CRM->clkint_bit.lickstblien) {
+                status = SET;
+            }
+            break;
+        case CRM_LEXT_READY_INT_FLAG:
+            if (CRM->clkint_bit.lextstblf && CRM->clkint_bit.lextstblien) {
+                status = SET;
+            }
+            break;
+        case CRM_HICK_READY_INT_FLAG:
+            if (CRM->clkint_bit.hickstblf && CRM->clkint_bit.hickstblien) {
+                status = SET;
+            }
+            break;
+        case CRM_HEXT_READY_INT_FLAG:
+            if (CRM->clkint_bit.hextstblf && CRM->clkint_bit.hextstblien) {
+                status = SET;
+            }
+            break;
+        case CRM_PLL_READY_INT_FLAG:
+            if (CRM->clkint_bit.pllstblf && CRM->clkint_bit.pllstblien) {
+                status = SET;
+            }
+            break;
+        case CRM_CLOCK_FAILURE_INT_FLAG:
+            if (CRM->clkint_bit.cfdf && CRM->ctrl_bit.cfden) {
+                status = SET;
+            }
+            break;
+    }
 
-  return status;
+    return status;
 }
 
 /**
@@ -197,26 +182,21 @@ flag_status crm_interrupt_flag_get(uint32_t flag)
   * @param  none
   * @retval error_status (ERROR or SUCCESS)
   */
-error_status crm_hext_stable_wait(void)
-{
-  uint32_t stable_cnt = 0;
-  error_status status = ERROR;
+error_status crm_hext_stable_wait(void) {
+    uint32_t stable_cnt = 0;
+    error_status status = ERROR;
 
-  while((crm_flag_get(CRM_HEXT_STABLE_FLAG) != SET) && (stable_cnt < HEXT_STARTUP_TIMEOUT))
-  {
-    stable_cnt ++;
-  }
+    while ((crm_flag_get(CRM_HEXT_STABLE_FLAG) != SET) && (stable_cnt < HEXT_STARTUP_TIMEOUT)) {
+        stable_cnt ++;
+    }
 
-  if(crm_flag_get(CRM_HEXT_STABLE_FLAG) != SET)
-  {
-    status = ERROR;
-  }
-  else
-  {
-    status = SUCCESS;
-  }
+    if (crm_flag_get(CRM_HEXT_STABLE_FLAG) != SET) {
+        status = ERROR;
+    } else {
+        status = SUCCESS;
+    }
 
-  return status;
+    return status;
 }
 
 /**
@@ -224,9 +204,8 @@ error_status crm_hext_stable_wait(void)
   * @param  trim_value (0x00~0x3F)
   * @retval none
   */
-void crm_hick_clock_trimming_set(uint8_t trim_value)
-{
-  CRM->ctrl_bit.hicktrim = trim_value;
+void crm_hick_clock_trimming_set(uint8_t trim_value) {
+    CRM->ctrl_bit.hicktrim = trim_value;
 }
 
 /**
@@ -234,16 +213,15 @@ void crm_hick_clock_trimming_set(uint8_t trim_value)
   * @param  cali_value (0x00~0xFF)
   * @retval none
   */
-void crm_hick_clock_calibration_set(uint8_t cali_value)
-{
-  /* enable write hick calibration */
-  CRM->misc1_bit.hickcal_key = 0x5A;
+void crm_hick_clock_calibration_set(uint8_t cali_value) {
+    /* enable write hick calibration */
+    CRM->misc1_bit.hickcal_key = 0x5A;
 
-  /* write hick calibration value */
-  CRM->ctrl_bit.hickcal = cali_value;
+    /* write hick calibration value */
+    CRM->ctrl_bit.hickcal = cali_value;
 
-  /* disable write hick calibration */
-  CRM->misc1_bit.hickcal_key = 0x0;
+    /* disable write hick calibration */
+    CRM->misc1_bit.hickcal_key = 0x0;
 }
 
 /**
@@ -269,18 +247,15 @@ void crm_hick_clock_calibration_set(uint8_t cali_value)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void crm_periph_clock_enable(crm_periph_clock_type value, confirm_state new_state)
-{
-  /* enable periph clock */
-  if(TRUE == new_state)
-  {
-    CRM_REG(value) |= CRM_REG_BIT(value);
-  }
-  /* disable periph clock */
-  else
-  {
-    CRM_REG(value) &= ~(CRM_REG_BIT(value));
-  }
+void crm_periph_clock_enable(crm_periph_clock_type value, confirm_state new_state) {
+    /* enable periph clock */
+    if (TRUE == new_state) {
+        CRM_REG(value) |= CRM_REG_BIT(value);
+    }
+    /* disable periph clock */
+    else {
+        CRM_REG(value) &= ~(CRM_REG_BIT(value));
+    }
 }
 
 /**
@@ -305,18 +280,15 @@ void crm_periph_clock_enable(crm_periph_clock_type value, confirm_state new_stat
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void crm_periph_reset(crm_periph_reset_type value, confirm_state new_state)
-{
-  /* enable periph reset */
-  if(new_state == TRUE)
-  {
-    CRM_REG(value) |= (CRM_REG_BIT(value));
-  }
-  /* disable periph reset */
-  else
-  {
-    CRM_REG(value) &= ~(CRM_REG_BIT(value));
-  }
+void crm_periph_reset(crm_periph_reset_type value, confirm_state new_state) {
+    /* enable periph reset */
+    if (new_state == TRUE) {
+        CRM_REG(value) |= (CRM_REG_BIT(value));
+    }
+    /* disable periph reset */
+    else {
+        CRM_REG(value) &= ~(CRM_REG_BIT(value));
+    }
 }
 
 /**
@@ -343,18 +315,15 @@ void crm_periph_reset(crm_periph_reset_type value, confirm_state new_state)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void crm_periph_lowpower_mode_enable(crm_periph_clock_lowpower_type value, confirm_state new_state)
-{
-  /* enable periph clock in lowpower mode */
-  if(new_state == TRUE)
-  {
-    CRM_REG(value) |= (CRM_REG_BIT(value));
-  }
-  /* disable periph clock in lowpower mode */
-  else
-  {
-    CRM_REG(value) &= ~(CRM_REG_BIT(value));
-  }
+void crm_periph_lowpower_mode_enable(crm_periph_clock_lowpower_type value, confirm_state new_state) {
+    /* enable periph clock in lowpower mode */
+    if (new_state == TRUE) {
+        CRM_REG(value) |= (CRM_REG_BIT(value));
+    }
+    /* disable periph clock in lowpower mode */
+    else {
+        CRM_REG(value) &= ~(CRM_REG_BIT(value));
+    }
 }
 
 /**
@@ -369,27 +338,26 @@ void crm_periph_lowpower_mode_enable(crm_periph_clock_lowpower_type value, confi
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void crm_clock_source_enable(crm_clock_source_type source, confirm_state new_state)
-{
-  switch(source)
-  {
-    case CRM_CLOCK_SOURCE_HICK:
-      CRM->ctrl_bit.hicken = new_state;
-      break;
-    case CRM_CLOCK_SOURCE_HEXT:
-      CRM->ctrl_bit.hexten = new_state;
-      break;
-    case CRM_CLOCK_SOURCE_PLL:
-      CRM->ctrl_bit.pllen = new_state;
-      break;
-    case CRM_CLOCK_SOURCE_LEXT:
-      CRM->bpdc_bit.lexten = new_state;
-      break;
-    case CRM_CLOCK_SOURCE_LICK:
-      CRM->ctrlsts_bit.licken = new_state;
-      break;
-    default: break;
-  }
+void crm_clock_source_enable(crm_clock_source_type source, confirm_state new_state) {
+    switch (source) {
+        case CRM_CLOCK_SOURCE_HICK:
+            CRM->ctrl_bit.hicken = new_state;
+            break;
+        case CRM_CLOCK_SOURCE_HEXT:
+            CRM->ctrl_bit.hexten = new_state;
+            break;
+        case CRM_CLOCK_SOURCE_PLL:
+            CRM->ctrl_bit.pllen = new_state;
+            break;
+        case CRM_CLOCK_SOURCE_LEXT:
+            CRM->bpdc_bit.lexten = new_state;
+            break;
+        case CRM_CLOCK_SOURCE_LICK:
+            CRM->ctrlsts_bit.licken = new_state;
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -413,41 +381,39 @@ void crm_clock_source_enable(crm_clock_source_type source, confirm_state new_sta
   *         - CRM_CLOCK_FAILURE_INT_FLAG
   * @retval none
   */
-void crm_flag_clear(uint32_t flag)
-{
-  switch(flag)
-  {
-    case CRM_NRST_RESET_FLAG:
-    case CRM_POR_RESET_FLAG:
-    case CRM_SW_RESET_FLAG:
-    case CRM_WDT_RESET_FLAG:
-    case CRM_WWDT_RESET_FLAG:
-    case CRM_LOWPOWER_RESET_FLAG:
-    case CRM_ALL_RESET_FLAG:
-      CRM->ctrlsts_bit.rstfc = TRUE;
-      while(CRM->ctrlsts_bit.rstfc == TRUE);
-      break;
-    case CRM_LICK_READY_INT_FLAG:
-      CRM->clkint_bit.lickstblfc = TRUE;
-      break;
-    case CRM_LEXT_READY_INT_FLAG:
-      CRM->clkint_bit.lextstblfc = TRUE;
-      break;
-    case CRM_HICK_READY_INT_FLAG:
-      CRM->clkint_bit.hickstblfc = TRUE;
-      break;
-    case CRM_HEXT_READY_INT_FLAG:
-      CRM->clkint_bit.hextstblfc = TRUE;
-      break;
-    case CRM_PLL_READY_INT_FLAG:
-      CRM->clkint_bit.pllstblfc = TRUE;
-      break;
-    case CRM_CLOCK_FAILURE_INT_FLAG:
-      CRM->clkint_bit.cfdfc = TRUE;
-      break;
-    default:
-      break;
-  }
+void crm_flag_clear(uint32_t flag) {
+    switch (flag) {
+        case CRM_NRST_RESET_FLAG:
+        case CRM_POR_RESET_FLAG:
+        case CRM_SW_RESET_FLAG:
+        case CRM_WDT_RESET_FLAG:
+        case CRM_WWDT_RESET_FLAG:
+        case CRM_LOWPOWER_RESET_FLAG:
+        case CRM_ALL_RESET_FLAG:
+            CRM->ctrlsts_bit.rstfc = TRUE;
+            while (CRM->ctrlsts_bit.rstfc == TRUE);
+            break;
+        case CRM_LICK_READY_INT_FLAG:
+            CRM->clkint_bit.lickstblfc = TRUE;
+            break;
+        case CRM_LEXT_READY_INT_FLAG:
+            CRM->clkint_bit.lextstblfc = TRUE;
+            break;
+        case CRM_HICK_READY_INT_FLAG:
+            CRM->clkint_bit.hickstblfc = TRUE;
+            break;
+        case CRM_HEXT_READY_INT_FLAG:
+            CRM->clkint_bit.hextstblfc = TRUE;
+            break;
+        case CRM_PLL_READY_INT_FLAG:
+            CRM->clkint_bit.pllstblfc = TRUE;
+            break;
+        case CRM_CLOCK_FAILURE_INT_FLAG:
+            CRM->clkint_bit.cfdfc = TRUE;
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -489,10 +455,9 @@ void crm_flag_clear(uint32_t flag)
   *         - CRM_ERTC_CLOCK_HEXT_DIV_31
   * @retval none
   */
-void crm_ertc_clock_select(crm_ertc_clock_type value)
-{
-  CRM->cfg_bit.ertcdiv = ((value & 0x1F0) >> 4);
-  CRM->bpdc_bit.ertcsel = (value & 0xF);
+void crm_ertc_clock_select(crm_ertc_clock_type value) {
+    CRM->cfg_bit.ertcdiv = ((value & 0x1F0) >> 4);
+    CRM->bpdc_bit.ertcsel = (value & 0xF);
 }
 
 /**
@@ -500,9 +465,8 @@ void crm_ertc_clock_select(crm_ertc_clock_type value)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void crm_ertc_clock_enable(confirm_state new_state)
-{
-  CRM->bpdc_bit.ertcen = new_state;
+void crm_ertc_clock_enable(confirm_state new_state) {
+    CRM->bpdc_bit.ertcen = new_state;
 }
 
 /**
@@ -520,9 +484,8 @@ void crm_ertc_clock_enable(confirm_state new_state)
   *         - CRM_AHB_DIV_512
   * @retval none
   */
-void crm_ahb_div_set(crm_ahb_div_type value)
-{
-  CRM->cfg_bit.ahbdiv = value;
+void crm_ahb_div_set(crm_ahb_div_type value) {
+    CRM->cfg_bit.ahbdiv = value;
 }
 
 /**
@@ -537,9 +500,8 @@ void crm_ahb_div_set(crm_ahb_div_type value)
   *         - CRM_APB1_DIV_16
   * @retval none
   */
-void crm_apb1_div_set(crm_apb1_div_type value)
-{
-  CRM->cfg_bit.apb1div = value;
+void crm_apb1_div_set(crm_apb1_div_type value) {
+    CRM->cfg_bit.apb1div = value;
 }
 
 /**
@@ -554,9 +516,8 @@ void crm_apb1_div_set(crm_apb1_div_type value)
   *         - CRM_APB2_DIV_16
   * @retval none
   */
-void crm_apb2_div_set(crm_apb2_div_type value)
-{
-  CRM->cfg_bit.apb2div = value;
+void crm_apb2_div_set(crm_apb2_div_type value) {
+    CRM->cfg_bit.apb2div = value;
 }
 
 /**
@@ -578,8 +539,7 @@ void crm_apb2_div_set(crm_apb2_div_type value)
   *         - CRM_USB_DIV_7
   * @retval none
   */
-void crm_usb_clock_div_set(crm_usb_div_type value)
-{
+void crm_usb_clock_div_set(crm_usb_div_type value) {
     CRM->misc2_bit.usbdiv = value;
 }
 
@@ -588,9 +548,8 @@ void crm_usb_clock_div_set(crm_usb_div_type value)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void crm_clock_failure_detection_enable(confirm_state new_state)
-{
-  CRM->ctrl_bit.cfden = new_state;
+void crm_clock_failure_detection_enable(confirm_state new_state) {
+    CRM->ctrl_bit.cfden = new_state;
 }
 
 /**
@@ -598,9 +557,8 @@ void crm_clock_failure_detection_enable(confirm_state new_state)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void crm_battery_powered_domain_reset(confirm_state new_state)
-{
-  CRM->bpdc_bit.bpdrst = new_state;
+void crm_battery_powered_domain_reset(confirm_state new_state) {
+    CRM->bpdc_bit.bpdrst = new_state;
 }
 
 /**
@@ -608,12 +566,11 @@ void crm_battery_powered_domain_reset(confirm_state new_state)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void crm_auto_step_mode_enable(confirm_state new_state)
-{
-  if(new_state == TRUE)
-    CRM->misc2_bit.auto_step_en = CRM_AUTO_STEP_MODE_ENABLE;
-  else
-    CRM->misc2_bit.auto_step_en = CRM_AUTO_STEP_MODE_DISABLE;
+void crm_auto_step_mode_enable(confirm_state new_state) {
+    if (new_state == TRUE)
+        CRM->misc2_bit.auto_step_en = CRM_AUTO_STEP_MODE_ENABLE;
+    else
+        CRM->misc2_bit.auto_step_en = CRM_AUTO_STEP_MODE_DISABLE;
 }
 
 /**
@@ -624,9 +581,8 @@ void crm_auto_step_mode_enable(confirm_state new_state)
   *         - CRM_HICK48_NODIV
   * @retval none
   */
-void crm_hick_divider_select(crm_hick_div_6_type value)
-{
-  CRM->misc1_bit.hickdiv = value;
+void crm_hick_divider_select(crm_hick_div_6_type value) {
+    CRM->misc1_bit.hickdiv = value;
 }
 
 /**
@@ -637,10 +593,9 @@ void crm_hick_divider_select(crm_hick_div_6_type value)
   *         - CRM_HICK_SCLK_48MHZ
   * @retval none
   */
-void crm_hick_sclk_frequency_select(crm_hick_sclk_frequency_type value)
-{
-  crm_hick_divider_select(CRM_HICK48_NODIV);
-  CRM->misc1_bit.hick_to_sclk = value;
+void crm_hick_sclk_frequency_select(crm_hick_sclk_frequency_type value) {
+    crm_hick_divider_select(CRM_HICK48_NODIV);
+    CRM->misc1_bit.hick_to_sclk = value;
 }
 
 /**
@@ -651,13 +606,11 @@ void crm_hick_sclk_frequency_select(crm_hick_sclk_frequency_type value)
   *         - CRM_USB_CLOCK_SOURCE_HICK
   * @retval none
   */
-void crm_usb_clock_source_select(crm_usb_clock_source_type value)
-{
-  if(value == CRM_USB_CLOCK_SOURCE_HICK)
-  {
-    crm_hick_sclk_frequency_select(CRM_HICK_SCLK_48MHZ);
-  }
-  CRM->misc1_bit.hick_to_usb = value;
+void crm_usb_clock_source_select(crm_usb_clock_source_type value) {
+    if (value == CRM_USB_CLOCK_SOURCE_HICK) {
+        crm_hick_sclk_frequency_select(CRM_HICK_SCLK_48MHZ);
+    }
+    CRM->misc1_bit.hick_to_usb = value;
 }
 
 /**
@@ -665,9 +618,8 @@ void crm_usb_clock_source_select(crm_usb_clock_source_type value)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void crm_clkout_to_tmr10_enable(confirm_state new_state)
-{
-  CRM->misc2_bit.clk_to_tmr = new_state;
+void crm_clkout_to_tmr10_enable(confirm_state new_state) {
+    CRM->misc2_bit.clk_to_tmr = new_state;
 }
 
 /**
@@ -703,19 +655,17 @@ void crm_clkout_to_tmr10_enable(confirm_state new_state)
   * @retval none
   */
 void crm_pll_config(crm_pll_clock_source_type clock_source, uint16_t pll_ns, \
-                    uint16_t pll_ms, crm_pll_fr_type pll_fr)
-{
-  /* config pll clock source */
-  if(clock_source == CRM_PLL_SOURCE_HICK)
-  {
-    CRM->misc1_bit.hickdiv = CRM_HICK48_NODIV;
-  }
-  CRM->pllcfg_bit.pllrcs = clock_source;
+                    uint16_t pll_ms, crm_pll_fr_type pll_fr) {
+    /* config pll clock source */
+    if (clock_source == CRM_PLL_SOURCE_HICK) {
+        CRM->misc1_bit.hickdiv = CRM_HICK48_NODIV;
+    }
+    CRM->pllcfg_bit.pllrcs = clock_source;
 
-  /* config pll multiplication factor */
-  CRM->pllcfg_bit.pllns = pll_ns;
-  CRM->pllcfg_bit.pllms = pll_ms;
-  CRM->pllcfg_bit.pllfr = pll_fr;
+    /* config pll multiplication factor */
+    CRM->pllcfg_bit.pllns = pll_ns;
+    CRM->pllcfg_bit.pllms = pll_ms;
+    CRM->pllcfg_bit.pllfr = pll_fr;
 }
 
 /**
@@ -727,10 +677,9 @@ void crm_pll_config(crm_pll_clock_source_type clock_source, uint16_t pll_ns, \
   *         - CRM_SCLK_PLL
   * @retval none
   */
-void crm_sysclk_switch(crm_sclk_type value)
-{
-  CRM->cfg_bit.sclksel = value;
-  DUMMY_NOP();
+void crm_sysclk_switch(crm_sclk_type value) {
+    CRM->cfg_bit.sclksel = value;
+    DUMMY_NOP();
 }
 
 /**
@@ -742,9 +691,8 @@ void crm_sysclk_switch(crm_sclk_type value)
   *         - CRM_SCLK_HEXT
   *         - CRM_SCLK_PLL
   */
-crm_sclk_type crm_sysclk_switch_status_get(void)
-{
-  return (crm_sclk_type)CRM->cfg_bit.sclksts;
+crm_sclk_type crm_sysclk_switch_status_get(void) {
+    return (crm_sclk_type)CRM->cfg_bit.sclksts;
 }
 
 /**
@@ -753,86 +701,81 @@ crm_sclk_type crm_sysclk_switch_status_get(void)
   *         - pointer to the crm_clocks_freq_type structure
   * @retval none
   */
-void crm_clocks_freq_get(crm_clocks_freq_type *clocks_struct)
-{
-  uint32_t pll_ns = 0, pll_ms = 0, pll_fr = 0, pll_clock_source = 0, pllrcsfreq = 0;
-  uint32_t temp = 0, div_value = 0;
-  crm_sclk_type sclk_source;
+void crm_clocks_freq_get(crm_clocks_freq_type *clocks_struct) {
+    uint32_t pll_ns = 0, pll_ms = 0, pll_fr = 0, pll_clock_source = 0, pllrcsfreq = 0;
+    uint32_t temp = 0, div_value = 0;
+    crm_sclk_type sclk_source;
 
-  static const uint8_t sclk_ahb_div_table[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};
-  static const uint8_t ahb_apb1_div_table[8] = {0, 0, 0, 0, 1, 2, 3, 4};
-  static const uint8_t ahb_apb2_div_table[8] = {0, 0, 0, 0, 1, 2, 3, 4};
-  static const uint8_t pll_fr_table[6] = {1, 2, 4, 8, 16, 32};
+    static const uint8_t sclk_ahb_div_table[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};
+    static const uint8_t ahb_apb1_div_table[8] = {0, 0, 0, 0, 1, 2, 3, 4};
+    static const uint8_t ahb_apb2_div_table[8] = {0, 0, 0, 0, 1, 2, 3, 4};
+    static const uint8_t pll_fr_table[6] = {1, 2, 4, 8, 16, 32};
 
-  /* get sclk source */
-  sclk_source = crm_sysclk_switch_status_get();
+    /* get sclk source */
+    sclk_source = crm_sysclk_switch_status_get();
 
-  switch(sclk_source)
-  {
-    case CRM_SCLK_HICK:
-      if(((CRM->misc1_bit.hick_to_sclk) != RESET) && ((CRM->misc1_bit.hickdiv) != RESET))
-        clocks_struct->sclk_freq = HICK_VALUE * 6;
-      else
-        clocks_struct->sclk_freq = HICK_VALUE;
-      break;
-    case CRM_SCLK_HEXT:
-      clocks_struct->sclk_freq = HEXT_VALUE;
-      break;
-    case CRM_SCLK_PLL:
-      /* get pll clock source */
-      pll_clock_source = CRM->pllcfg_bit.pllrcs;
+    switch (sclk_source) {
+        case CRM_SCLK_HICK:
+            if (((CRM->misc1_bit.hick_to_sclk) != RESET) && ((CRM->misc1_bit.hickdiv) != RESET))
+                clocks_struct->sclk_freq = HICK_VALUE * 6;
+            else
+                clocks_struct->sclk_freq = HICK_VALUE;
+            break;
+        case CRM_SCLK_HEXT:
+            clocks_struct->sclk_freq = HEXT_VALUE;
+            break;
+        case CRM_SCLK_PLL:
+            /* get pll clock source */
+            pll_clock_source = CRM->pllcfg_bit.pllrcs;
 
-      /* get multiplication factor */
-      pll_ns = CRM->pllcfg_bit.pllns;
-      pll_ms = CRM->pllcfg_bit.pllms;
-      pll_fr = pll_fr_table[CRM->pllcfg_bit.pllfr];
+            /* get multiplication factor */
+            pll_ns = CRM->pllcfg_bit.pllns;
+            pll_ms = CRM->pllcfg_bit.pllms;
+            pll_fr = pll_fr_table[CRM->pllcfg_bit.pllfr];
 
-      if (pll_clock_source == CRM_PLL_SOURCE_HICK)
-      {
-        /* hick selected as pll clock entry */
-        pllrcsfreq = HICK_VALUE;
-      }
-      else
-      {
-        /* hext selected as pll clock entry */
-        pllrcsfreq = HEXT_VALUE;
-      }
+            if (pll_clock_source == CRM_PLL_SOURCE_HICK) {
+                /* hick selected as pll clock entry */
+                pllrcsfreq = HICK_VALUE;
+            } else {
+                /* hext selected as pll clock entry */
+                pllrcsfreq = HEXT_VALUE;
+            }
 
-      // TODO DXL For fix error: undefined reference to `__aeabi_uldivmod'
-      // 1. After code review, I found that pll_ns generally does not exceed 144, that is, it can be treated as u32.
-      //  However, for the robustness of firmware, we still need to make error judgments.
-      if (pllrcsfreq * pll_ns > UINT32_MAX) {
-        while (1) {
-          __NOP(); // !!! Fix me !!!
-        }
-      }
-      clocks_struct->sclk_freq = pllrcsfreq * pll_ns / (pll_ms * pll_fr);
-      // 2. If u64 division is necessary, it is better to link to gcc(-lgcc), but the firmware size will increase.
-      // clocks_struct->sclk_freq = (uint32_t)(((uint64_t)pllrcsfreq * pll_ns) / (pll_ms * pll_fr));
-      break;
-    default:
-      clocks_struct->sclk_freq = HICK_VALUE;
-      break;
-  }
+            // TODO DXL For fix error: undefined reference to `__aeabi_uldivmod'
+            // 1. After code review, I found that pll_ns generally does not exceed 144, that is, it can be treated as u32.
+            //  However, for the robustness of firmware, we still need to make error judgments.
+            if (pllrcsfreq * pll_ns > UINT32_MAX) {
+                while (1) {
+                    __NOP(); // !!! Fix me !!!
+                }
+            }
+            clocks_struct->sclk_freq = pllrcsfreq * pll_ns / (pll_ms * pll_fr);
+            // 2. If u64 division is necessary, it is better to link to gcc(-lgcc), but the firmware size will increase.
+            // clocks_struct->sclk_freq = (uint32_t)(((uint64_t)pllrcsfreq * pll_ns) / (pll_ms * pll_fr));
+            break;
+        default:
+            clocks_struct->sclk_freq = HICK_VALUE;
+            break;
+    }
 
-  /* compute sclk, ahbclk, abp1clk and apb2clk frequencies */
-  /* get ahb division */
-  temp = CRM->cfg_bit.ahbdiv;
-  div_value = sclk_ahb_div_table[temp];
-  /* ahbclk frequency */
-  clocks_struct->ahb_freq = clocks_struct->sclk_freq >> div_value;
+    /* compute sclk, ahbclk, abp1clk and apb2clk frequencies */
+    /* get ahb division */
+    temp = CRM->cfg_bit.ahbdiv;
+    div_value = sclk_ahb_div_table[temp];
+    /* ahbclk frequency */
+    clocks_struct->ahb_freq = clocks_struct->sclk_freq >> div_value;
 
-  /* get apb1 division */
-  temp = CRM->cfg_bit.apb1div;
-  div_value = ahb_apb1_div_table[temp];
-  /* apb1clk frequency */
-  clocks_struct->apb1_freq = clocks_struct->ahb_freq >> div_value;
+    /* get apb1 division */
+    temp = CRM->cfg_bit.apb1div;
+    div_value = ahb_apb1_div_table[temp];
+    /* apb1clk frequency */
+    clocks_struct->apb1_freq = clocks_struct->ahb_freq >> div_value;
 
-  /* get apb2 division */
-  temp = CRM->cfg_bit.apb2div;
-  div_value = ahb_apb2_div_table[temp];
-  /* apb2clk frequency */
-  clocks_struct->apb2_freq = clocks_struct->ahb_freq >> div_value;
+    /* get apb2 division */
+    temp = CRM->cfg_bit.apb2div;
+    div_value = ahb_apb2_div_table[temp];
+    /* apb2clk frequency */
+    clocks_struct->apb2_freq = clocks_struct->ahb_freq >> div_value;
 }
 
 /**
@@ -845,8 +788,7 @@ void crm_clocks_freq_get(crm_clocks_freq_type *clocks_struct)
   *         - CRM_CLKOUT1_PLL
   * @retval none
   */
-void crm_clock_out1_set(crm_clkout1_select_type clkout)
-{
+void crm_clock_out1_set(crm_clkout1_select_type clkout) {
     CRM->cfg_bit.clkout1_sel = clkout;
 }
 
@@ -864,17 +806,13 @@ void crm_clock_out1_set(crm_clkout1_select_type clkout)
   *         - CRM_CLKOUT2_LEXT
   * @retval none
   */
-void crm_clock_out2_set(crm_clkout2_select_type clkout)
-{
-  if(clkout < 0x10)
-  {
-    CRM->cfg_bit.clkout2_sel1 = (clkout & 0x3);
-  }
-  else
-  {
-    CRM->cfg_bit.clkout2_sel1 = 0x1;
-    CRM->misc1_bit.clkout2_sel2 = (clkout & 0xF);
-  }
+void crm_clock_out2_set(crm_clkout2_select_type clkout) {
+    if (clkout < 0x10) {
+        CRM->cfg_bit.clkout2_sel1 = (clkout & 0x3);
+    } else {
+        CRM->cfg_bit.clkout2_sel1 = 0x1;
+        CRM->misc1_bit.clkout2_sel2 = (clkout & 0xF);
+    }
 }
 
 /**
@@ -903,18 +841,14 @@ void crm_clock_out2_set(crm_clkout2_select_type clkout)
   *         - CRM_CLKOUT_DIV2_512
   * @retval none
   */
-void crm_clkout_div_set(crm_clkout_index_type index, crm_clkout_div1_type div1, crm_clkout_div2_type div2)
-{
-  if(index == CRM_CLKOUT_INDEX_1)
-  {
-    CRM->cfg_bit.clkout1div1 = div1;
-    CRM->misc1_bit.clkout1div2 = div2;
-  }
-  else
-  {
-    CRM->cfg_bit.clkout2div1 = div1;
-    CRM->misc1_bit.clkout2div2 = div2;
-  }
+void crm_clkout_div_set(crm_clkout_index_type index, crm_clkout_div1_type div1, crm_clkout_div2_type div2) {
+    if (index == CRM_CLKOUT_INDEX_1) {
+        CRM->cfg_bit.clkout1div1 = div1;
+        CRM->misc1_bit.clkout1div2 = div2;
+    } else {
+        CRM->cfg_bit.clkout2div1 = div1;
+        CRM->misc1_bit.clkout2div2 = div2;
+    }
 }
 
 /**
@@ -925,9 +859,8 @@ void crm_clkout_div_set(crm_clkout_index_type index, crm_clkout_div1_type div1, 
   *         - CRM_EMAC_PULSE_1SCLK
   * @retval none
   */
-void crm_emac_output_pulse_set(crm_emac_output_pulse_type width)
-{
-  CRM->misc2_bit.emac_pps_sel = width;
+void crm_emac_output_pulse_set(crm_emac_output_pulse_type width) {
+    CRM->misc2_bit.emac_pps_sel = width;
 }
 
 /**
@@ -942,12 +875,11 @@ void crm_emac_output_pulse_set(crm_emac_output_pulse_type width)
   * @param  new_state (TRUE or FALSE)
   * @retval none
   */
-void crm_interrupt_enable(uint32_t crm_int, confirm_state new_state)
-{
-  if(TRUE == new_state)
-    CRM->clkint |= crm_int;
-  else
-    CRM->clkint &= ~crm_int;
+void crm_interrupt_enable(uint32_t crm_int, confirm_state new_state) {
+    if (TRUE == new_state)
+        CRM->clkint |= crm_int;
+    else
+        CRM->clkint &= ~crm_int;
 }
 
 /**
@@ -977,73 +909,64 @@ void crm_interrupt_enable(uint32_t crm_int, confirm_state new_state)
   * @retval error_status (SUCCESS or ERROR)
   */
 error_status crm_pll_parameter_calculate(crm_pll_clock_source_type pll_rcs, uint32_t target_sclk_freq, \
-                                         uint16_t *ret_ms, uint16_t *ret_ns, uint16_t *ret_fr)
-{
-  uint32_t error_min = 0xFFFFFFFF;
-  uint32_t pll_rcs_freq = 0, result = 0, absolute_value = 0;
-  uint16_t ns = 0, ms = 0, ms_min = 0, ms_max = 0;
-  int16_t fr = 0;
+                                         uint16_t *ret_ms, uint16_t *ret_ns, uint16_t *ret_fr) {
+    uint32_t error_min = 0xFFFFFFFF;
+    uint32_t pll_rcs_freq = 0, result = 0, absolute_value = 0;
+    uint16_t ns = 0, ms = 0, ms_min = 0, ms_max = 0;
+    int16_t fr = 0;
 
-  /* reduce calculate accuracy, target_sclk_freq accuracy with khz */
-  target_sclk_freq = target_sclk_freq / 1000;
+    /* reduce calculate accuracy, target_sclk_freq accuracy with khz */
+    target_sclk_freq = target_sclk_freq / 1000;
 
-  /* get pll reference clock frequency, accuracy with khz */
-  if(pll_rcs == CRM_PLL_SOURCE_HICK)
-    pll_rcs_freq = HICK_VALUE / 1000;
-  else
-    pll_rcs_freq = HEXT_VALUE / 1000;
+    /* get pll reference clock frequency, accuracy with khz */
+    if (pll_rcs == CRM_PLL_SOURCE_HICK)
+        pll_rcs_freq = HICK_VALUE / 1000;
+    else
+        pll_rcs_freq = HEXT_VALUE / 1000;
 
-  /* polling ms range, accuracy with khz */
-  for(ms = 1; ms <= 15; ms ++)
-  {
-    result = pll_rcs_freq / ms;
-    if((result >= 2000U) && (result <= 16000U))
-    {
-      if(ms_min == 0)
-        ms_min = ms;
+    /* polling ms range, accuracy with khz */
+    for (ms = 1; ms <= 15; ms ++) {
+        result = pll_rcs_freq / ms;
+        if ((result >= 2000U) && (result <= 16000U)) {
+            if (ms_min == 0)
+                ms_min = ms;
 
-      ms_max = ms;
+            ms_max = ms;
+        }
     }
-  }
 
-  /* polling pll parameters */
-  for(ms = ms_min; ms <= ms_max; ms ++)
-  {
-    for(fr = 5; fr >= 0; fr --)
-    {
-      for(ns = 31; ns <= 500; ns ++)
-      {
-        result = (pll_rcs_freq * ns) / (ms);
-        /* check vco frequency range, accuracy with khz */
-        if((result < 500000U) || (result > 1200000U))
-        {
-          continue;
+    /* polling pll parameters */
+    for (ms = ms_min; ms <= ms_max; ms ++) {
+        for (fr = 5; fr >= 0; fr --) {
+            for (ns = 31; ns <= 500; ns ++) {
+                result = (pll_rcs_freq * ns) / (ms);
+                /* check vco frequency range, accuracy with khz */
+                if ((result < 500000U) || (result > 1200000U)) {
+                    continue;
+                }
+                /* calculate pll output frequency */
+                result = result / (0x1 << fr);
+                /* check frequency */
+                if (target_sclk_freq == result) {
+                    *ret_ms = ms;
+                    *ret_ns = ns;
+                    *ret_fr = (uint16_t)fr;
+                    /* the pll parameters that is equal to target_sclk_freq */
+                    return SUCCESS;
+                }
+                /* calculate error range, accuracy with khz */
+                absolute_value = (result > target_sclk_freq) ? (result - target_sclk_freq) : (target_sclk_freq - result);
+                if (absolute_value < error_min) {
+                    error_min = absolute_value;
+                    *ret_ms = ms;
+                    *ret_ns = ns;
+                    *ret_fr = (uint16_t)fr;
+                }
+            }
         }
-        /* calculate pll output frequency */
-        result = result / (0x1 << fr);
-        /* check frequency */
-        if(target_sclk_freq == result)
-        {
-          *ret_ms = ms;
-          *ret_ns = ns;
-          *ret_fr = (uint16_t)fr;
-          /* the pll parameters that is equal to target_sclk_freq */
-          return SUCCESS;
-        }
-        /* calculate error range, accuracy with khz */
-        absolute_value = (result > target_sclk_freq) ? (result - target_sclk_freq) : (target_sclk_freq - result);
-        if(absolute_value < error_min)
-        {
-          error_min = absolute_value;
-          *ret_ms = ms;
-          *ret_ns = ns;
-          *ret_fr = (uint16_t)fr;
-        }
-      }
     }
-  }
-  /* the pll parameters that is the closest approach to target_sclk_freq */
-  return ERROR;
+    /* the pll parameters that is the closest approach to target_sclk_freq */
+    return ERROR;
 }
 
 /**

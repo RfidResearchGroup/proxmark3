@@ -89,19 +89,35 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
                     }
                     break;
                 }
-                case W_CL: rcmd = byte;  rcrc_calc = wifi_crc16(&byte,1,rcrc_calc); st = W_CH; break;
-                case W_CH: rcmd |= (uint16_t)byte << 8; rcrc_calc = wifi_crc16(&byte,1,rcrc_calc); st = W_LL; break;
-                case W_LL: rlen = byte;  rcrc_calc = wifi_crc16(&byte,1,rcrc_calc); st = W_LH; break;
+                case W_CL:
+                    rcmd = byte;
+                    rcrc_calc = wifi_crc16(&byte, 1, rcrc_calc);
+                    st = W_CH;
+                    break;
+                case W_CH:
+                    rcmd |= (uint16_t)byte << 8;
+                    rcrc_calc = wifi_crc16(&byte, 1, rcrc_calc);
+                    st = W_LL;
+                    break;
+                case W_LL:
+                    rlen = byte;
+                    rcrc_calc = wifi_crc16(&byte, 1, rcrc_calc);
+                    st = W_LH;
+                    break;
                 case W_LH:
-                    rlen |= (uint16_t)byte << 8; rcrc_calc = wifi_crc16(&byte,1,rcrc_calc);
+                    rlen |= (uint16_t)byte << 8;
+                    rcrc_calc = wifi_crc16(&byte, 1, rcrc_calc);
                     st = (rlen ? W_PL : W_KL);
                     break;
                 case W_PL:
                     if (rgot < sizeof(pbuf)) pbuf[rgot] = byte;
-                    rcrc_calc = wifi_crc16(&byte,1,rcrc_calc);
+                    rcrc_calc = wifi_crc16(&byte, 1, rcrc_calc);
                     if (++rgot >= rlen) st = W_KL;
                     break;
-                case W_KL: rcrc_recv = byte; st = W_KH; break;
+                case W_KL:
+                    rcrc_recv = byte;
+                    st = W_KH;
+                    break;
                 case W_KH: {
                     rcrc_recv |= (uint16_t)byte << 8;
                     if (rcrc_recv == rcrc_calc) {
@@ -161,7 +177,7 @@ int bwm_wifi_forward_up(const char *ssid, const char *password,
 
     // 2) STA credentials
     if ((r = step(BWM_CMD_SET_WIFI_CONNECT_CFG_SSID, (const uint8_t *)ssid, (uint16_t)strlen(ssid), NULL, NULL, TO, "set ssid")) != PM3_SUCCESS) return r;
-    if ((r = step(BWM_CMD_SET_WIFI_CONNECT_CFG_PWD,  (const uint8_t *)password, (uint16_t)strlen(password), NULL, NULL, TO, "set password")) != PM3_SUCCESS) return r;
+    if ((r = step(BWM_CMD_SET_WIFI_CONNECT_CFG_PWD, (const uint8_t *)password, (uint16_t)strlen(password), NULL, NULL, TO, "set password")) != PM3_SUCCESS) return r;
 
     // 3) TCP listen port (LE)
     uint8_t p2[2] = { (uint8_t)(tcp_port & 0xFF), (uint8_t)(tcp_port >> 8) };
@@ -173,7 +189,8 @@ int bwm_wifi_forward_up(const char *ssid, const char *password,
     // 4) join the AP and wait for it to finish (up to ~15s)
     if ((r = step(BWM_CMD_START_WIFI_CONNECT_TASK, NULL, 0, NULL, NULL, TO, "start connect")) != PM3_SUCCESS) return r;
     uint8_t secs = 25;   // iPhone/phone hotspots can be slow to become joinable
-    uint8_t wr[2]; uint16_t wl = sizeof(wr);
+    uint8_t wr[2];
+    uint16_t wl = sizeof(wr);
     if ((r = step(BWM_CMD_WAIT_FOR_WIFI_CONNECT_TASK, &secs, 1, wr, &wl, 30000, "wait connect")) != PM3_SUCCESS) return r;
 
     // 5) wait for DHCP. The STA reports "connected" on association, before it
@@ -182,7 +199,8 @@ int bwm_wifi_forward_up(const char *ssid, const char *password,
     uint32_t ip = 0;
     uint32_t dhcp_start = GetTickCount();
     for (;;) {
-        uint8_t ipb[12]; uint16_t il = sizeof(ipb);
+        uint8_t ipb[12];
+        uint16_t il = sizeof(ipb);
         if ((bwm_cmd(BWM_CMD_GET_WIFI_CFG_IP_ADDR, NULL, 0, ipb, &il, TO) == PM3_SUCCESS) && (il >= 4)) {
             ip = (uint32_t)ipb[0] | ((uint32_t)ipb[1] << 8) | ((uint32_t)ipb[2] << 16) | ((uint32_t)ipb[3] << 24);
             if (ip != 0) {

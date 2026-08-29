@@ -89,7 +89,7 @@ bool FpgaSetupSscRxDmaSingle(void *buf, uint16_t len) {
     FPGA_SSC_DMA_RX_Disable();                         // Disable DMA Transfer
     AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) buf;      // start transfer to this memory address
     AT91C_BASE_PDC_SSC->PDC_RCR = len;                 // transfer this many samples
-    ((uint8_t*)buf)[0] = (uint8_t)FPGA_SSC_RX_Value(); // clear receive register
+    ((uint8_t *)buf)[0] = (uint8_t)FPGA_SSC_RX_Value(); // clear receive register
     FPGA_SSC_DMA_RX_Enable();                          // Start DMA transfer
 
     return true;

@@ -45,10 +45,9 @@
   * @brief  wwdt reset by crm reset register
   * @retval none
   */
-void wwdt_reset(void)
-{
-  crm_periph_reset(CRM_WWDT_PERIPH_RESET, TRUE);
-  crm_periph_reset(CRM_WWDT_PERIPH_RESET, FALSE);
+void wwdt_reset(void) {
+    crm_periph_reset(CRM_WWDT_PERIPH_RESET, TRUE);
+    crm_periph_reset(CRM_WWDT_PERIPH_RESET, FALSE);
 }
 
 /**
@@ -61,9 +60,8 @@ void wwdt_reset(void)
   *         - WWDT_PCLK1_DIV_32768       (wwdt counter clock = (pclk1/4096)/8)
   * @retval none
   */
-void wwdt_divider_set(wwdt_division_type division)
-{
-  WWDT->cfg_bit.div = division;
+void wwdt_divider_set(wwdt_division_type division) {
+    WWDT->cfg_bit.div = division;
 }
 
 /**
@@ -71,9 +69,8 @@ void wwdt_divider_set(wwdt_division_type division)
   * @param  none
   * @retval none
   */
-void wwdt_flag_clear(void)
-{
-  WWDT->sts = 0;
+void wwdt_flag_clear(void) {
+    WWDT->sts = 0;
 }
 
 /**
@@ -81,9 +78,8 @@ void wwdt_flag_clear(void)
   * @param  wwdt_cnt (0x40~0x7f)
   * @retval none
   */
-void wwdt_enable(uint8_t wwdt_cnt)
-{
-  WWDT->ctrl = wwdt_cnt | WWDT_EN_BIT;
+void wwdt_enable(uint8_t wwdt_cnt) {
+    WWDT->ctrl = wwdt_cnt | WWDT_EN_BIT;
 }
 
 /**
@@ -91,9 +87,8 @@ void wwdt_enable(uint8_t wwdt_cnt)
   * @param  none
   * @retval none
   */
-void wwdt_interrupt_enable(void)
-{
-  WWDT->cfg_bit.rldien = TRUE;
+void wwdt_interrupt_enable(void) {
+    WWDT->cfg_bit.rldien = TRUE;
 }
 
 /**
@@ -101,9 +96,8 @@ void wwdt_interrupt_enable(void)
   * @param  none
   * @retval state of reload counter interrupt flag
   */
-flag_status wwdt_flag_get(void)
-{
-  return (flag_status)WWDT->sts_bit.rldf;
+flag_status wwdt_flag_get(void) {
+    return (flag_status)WWDT->sts_bit.rldf;
 }
 
 /**
@@ -111,9 +105,8 @@ flag_status wwdt_flag_get(void)
   * @param  none
   * @retval state of reload counter interrupt flag
   */
-flag_status wwdt_interrupt_flag_get(void)
-{
-  return (flag_status)(WWDT->sts_bit.rldf && WWDT->cfg_bit.rldien);
+flag_status wwdt_interrupt_flag_get(void) {
+    return (flag_status)(WWDT->sts_bit.rldf && WWDT->cfg_bit.rldien);
 }
 
 /**
@@ -121,9 +114,8 @@ flag_status wwdt_interrupt_flag_get(void)
   * @param  wwdt_cnt (0x40~0x7f)
   * @retval none
   */
-void wwdt_counter_set(uint8_t wwdt_cnt)
-{
-  WWDT->ctrl_bit.cnt = wwdt_cnt;
+void wwdt_counter_set(uint8_t wwdt_cnt) {
+    WWDT->ctrl_bit.cnt = wwdt_cnt;
 }
 
 /**
@@ -131,9 +123,8 @@ void wwdt_counter_set(uint8_t wwdt_cnt)
   * @param  window_cnt (0x40~0x7f)
   * @retval none
   */
-void wwdt_window_counter_set(uint8_t window_cnt)
-{
-  WWDT->cfg_bit.win = window_cnt;
+void wwdt_window_counter_set(uint8_t window_cnt) {
+    WWDT->cfg_bit.win = window_cnt;
 }
 
 /**

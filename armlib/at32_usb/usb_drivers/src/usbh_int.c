@@ -42,63 +42,50 @@
   * @param  otgdev: to the structure of otg_core_type
   * @retval none
   */
-void usbh_irq_handler(otg_core_type *otgdev)
-{
-  otg_global_type *usbx = otgdev->usb_reg;
-  usbh_core_type *uhost = &otgdev->host;
+void usbh_irq_handler(otg_core_type *otgdev) {
+    otg_global_type *usbx = otgdev->usb_reg;
+    usbh_core_type *uhost = &otgdev->host;
 
-  if(usbx->gintsts_bit.curmode == 1)
-  {
-    if(usb_global_get_all_interrupt(usbx) & USB_OTG_RXFLVL_FLAG)
-    {
-      usbh_rx_qlvl_handler(uhost);
-      usb_global_clear_interrupt(usbx, USB_OTG_RXFLVL_FLAG);
+    if (usbx->gintsts_bit.curmode == 1) {
+        if (usb_global_get_all_interrupt(usbx) & USB_OTG_RXFLVL_FLAG) {
+            usbh_rx_qlvl_handler(uhost);
+            usb_global_clear_interrupt(usbx, USB_OTG_RXFLVL_FLAG);
+        }
+        if (usb_global_get_all_interrupt(usbx) & USB_OTG_HCH_FLAG) {
+            usbh_hch_handler(uhost);
+            usb_global_clear_interrupt(usbx, USB_OTG_HCH_FLAG);
+        }
+        if (usb_global_get_all_interrupt(usbx) & USB_OTG_SOF_FLAG) {
+            usbh_sof_handler(uhost);
+            usb_global_clear_interrupt(usbx, USB_OTG_SOF_FLAG);
+        }
+        if (usb_global_get_all_interrupt(usbx) & USB_OTG_MODEMIS_FLAG) {
+            usb_global_clear_interrupt(usbx, USB_OTG_MODEMIS_FLAG);
+        }
+        if (usb_global_get_all_interrupt(usbx) & USB_OTG_WKUP_FLAG) {
+            usbh_wakeup_handler(uhost);
+            usb_global_clear_interrupt(usbx, USB_OTG_WKUP_FLAG);
+        }
+        if (usb_global_get_all_interrupt(usbx) & USB_OTG_DISCON_FLAG) {
+            usbh_disconnect_handler(uhost);
+            usb_global_clear_interrupt(usbx, USB_OTG_DISCON_FLAG);
+        }
+        if (usb_global_get_all_interrupt(usbx) & USB_OTG_PRT_FLAG) {
+            usbh_port_handler(uhost);
+        }
+        if (usb_global_get_all_interrupt(usbx) & USB_OTG_INCOMPIP_INCOMPISOOUT_FLAG) {
+            usb_global_clear_interrupt(usbx, USB_OTG_INCOMPIP_INCOMPISOOUT_FLAG);
+        }
+        if (usb_global_get_all_interrupt(usbx) & USB_OTG_INCOMISOIN_FLAG) {
+            usb_global_clear_interrupt(usbx, USB_OTG_INCOMISOIN_FLAG);
+        }
+        if (usb_global_get_all_interrupt(usbx) & USB_OTG_PTXFEMP_FLAG) {
+            usb_global_clear_interrupt(usbx, USB_OTG_PTXFEMP_FLAG);
+        }
+        if (usb_global_get_all_interrupt(usbx) & USB_OTG_ISOOUTDROP_FLAG) {
+            usb_global_clear_interrupt(usbx, USB_OTG_ISOOUTDROP_FLAG);
+        }
     }
-    if(usb_global_get_all_interrupt(usbx) & USB_OTG_HCH_FLAG)
-    {
-      usbh_hch_handler(uhost);
-      usb_global_clear_interrupt(usbx, USB_OTG_HCH_FLAG);
-    }
-    if(usb_global_get_all_interrupt(usbx) & USB_OTG_SOF_FLAG)
-    {
-      usbh_sof_handler(uhost);
-      usb_global_clear_interrupt(usbx, USB_OTG_SOF_FLAG);
-    }
-    if(usb_global_get_all_interrupt(usbx) & USB_OTG_MODEMIS_FLAG)
-    {
-      usb_global_clear_interrupt(usbx, USB_OTG_MODEMIS_FLAG);
-    }
-    if(usb_global_get_all_interrupt(usbx) & USB_OTG_WKUP_FLAG)
-    {
-      usbh_wakeup_handler(uhost);
-      usb_global_clear_interrupt(usbx, USB_OTG_WKUP_FLAG);
-    }
-    if(usb_global_get_all_interrupt(usbx) & USB_OTG_DISCON_FLAG)
-    {
-      usbh_disconnect_handler(uhost);
-      usb_global_clear_interrupt(usbx, USB_OTG_DISCON_FLAG);
-    }
-    if(usb_global_get_all_interrupt(usbx) & USB_OTG_PRT_FLAG)
-    {
-      usbh_port_handler(uhost);
-    }
-    if(usb_global_get_all_interrupt(usbx) & USB_OTG_INCOMPIP_INCOMPISOOUT_FLAG)
-    {
-      usb_global_clear_interrupt(usbx, USB_OTG_INCOMPIP_INCOMPISOOUT_FLAG);
-    }
-    if(usb_global_get_all_interrupt(usbx) & USB_OTG_INCOMISOIN_FLAG)
-    {
-      usb_global_clear_interrupt(usbx, USB_OTG_INCOMISOIN_FLAG);
-    }
-    if(usb_global_get_all_interrupt(usbx) & USB_OTG_PTXFEMP_FLAG)
-    {
-      usb_global_clear_interrupt(usbx, USB_OTG_PTXFEMP_FLAG);
-    }
-    if(usb_global_get_all_interrupt(usbx) & USB_OTG_ISOOUTDROP_FLAG)
-    {
-      usb_global_clear_interrupt(usbx, USB_OTG_ISOOUTDROP_FLAG);
-    }
-  }
 }
 
 /**
@@ -106,9 +93,8 @@ void usbh_irq_handler(otg_core_type *otgdev)
   * @param  uhost: to the structure of usbh_core_type
   * @retval none
   */
-void usbh_wakeup_handler(usbh_core_type *uhost)
-{
-  uhost->global_state = USBH_WAKEUP;
+void usbh_wakeup_handler(usbh_core_type *uhost) {
+    uhost->global_state = USBH_WAKEUP;
 }
 
 /**
@@ -116,9 +102,8 @@ void usbh_wakeup_handler(usbh_core_type *uhost)
   * @param  uhost: to the structure of usbh_core_type
   * @retval none
   */
-void usbh_sof_handler(usbh_core_type *uhost)
-{
-  uhost->timer ++;
+void usbh_sof_handler(usbh_core_type *uhost) {
+    uhost->timer ++;
 }
 
 /**
@@ -126,23 +111,21 @@ void usbh_sof_handler(usbh_core_type *uhost)
   * @param  uhost: to the structure of usbh_core_type
   * @retval none
   */
-void usbh_disconnect_handler(usbh_core_type *uhost)
-{
-  otg_global_type *usbx = uhost->usb_reg;
+void usbh_disconnect_handler(usbh_core_type *uhost) {
+    otg_global_type *usbx = uhost->usb_reg;
 
-  uint8_t i_index;
+    uint8_t i_index;
 
-  usb_host_disable(usbx);
+    usb_host_disable(usbx);
 
-  uhost->conn_sts = 0;
+    uhost->conn_sts = 0;
 
-  uhost->global_state = USBH_DISCONNECT;
+    uhost->global_state = USBH_DISCONNECT;
 
-  for(i_index = 0; i_index < USB_HOST_CHANNEL_NUM; i_index ++)
-  {
-    usbh_free_channel(uhost, i_index);
-  }
-  usbh_fsls_clksel(usbx, USB_HCFG_CLK_48M);
+    for (i_index = 0; i_index < USB_HOST_CHANNEL_NUM; i_index ++) {
+        usbh_free_channel(uhost, i_index);
+    }
+    usbh_fsls_clksel(usbx, USB_HCFG_CLK_48M);
 }
 
 /**
@@ -151,133 +134,96 @@ void usbh_disconnect_handler(usbh_core_type *uhost)
   * @param  chn: channel number
   * @retval none
   */
-void usbh_hch_in_handler(usbh_core_type *uhost, uint8_t chn)
-{
-  otg_global_type *usbx = uhost->usb_reg;
-  otg_hchannel_type *usb_chh = USB_CHL(usbx, chn);
-  uint32_t hcint_value = usb_chh->hcint;
-  hcint_value &= usb_chh->hcintmsk;
+void usbh_hch_in_handler(usbh_core_type *uhost, uint8_t chn) {
+    otg_global_type *usbx = uhost->usb_reg;
+    otg_hchannel_type *usb_chh = USB_CHL(usbx, chn);
+    uint32_t hcint_value = usb_chh->hcint;
+    hcint_value &= usb_chh->hcintmsk;
 
-  if( hcint_value & USB_OTG_HC_ACK_FLAG)
-  {
-    usb_chh->hcint = USB_OTG_HC_ACK_FLAG;
-  }
-  else if(hcint_value & USB_OTG_HC_STALL_FLAG)
-  {
-    usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
-    usb_chh->hcint = USB_OTG_HC_NAK_FLAG | USB_OTG_HC_STALL_FLAG;
-    uhost->hch[chn].state = HCH_STALL;
-    usb_hch_halt(usbx, chn);
-  }
-  else if(hcint_value & USB_OTG_HC_DTGLERR_FLAG)
-  {
-    usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
-    usb_hch_halt(usbx, chn);
-    usb_chh->hcint = USB_OTG_HC_DTGLERR_FLAG | USB_OTG_HC_NAK_FLAG;
-    uhost->hch[chn].state = HCH_DATATGLERR;
-  }
+    if (hcint_value & USB_OTG_HC_ACK_FLAG) {
+        usb_chh->hcint = USB_OTG_HC_ACK_FLAG;
+    } else if (hcint_value & USB_OTG_HC_STALL_FLAG) {
+        usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
+        usb_chh->hcint = USB_OTG_HC_NAK_FLAG | USB_OTG_HC_STALL_FLAG;
+        uhost->hch[chn].state = HCH_STALL;
+        usb_hch_halt(usbx, chn);
+    } else if (hcint_value & USB_OTG_HC_DTGLERR_FLAG) {
+        usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
+        usb_hch_halt(usbx, chn);
+        usb_chh->hcint = USB_OTG_HC_DTGLERR_FLAG | USB_OTG_HC_NAK_FLAG;
+        uhost->hch[chn].state = HCH_DATATGLERR;
+    }
 
-  else if(hcint_value & USB_OTG_HC_FRMOVRRUN_FLAG)
-  {
-    usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
-    usb_hch_halt(usbx, chn);
-    usb_chh->hcint = USB_OTG_HC_FRMOVRRUN_FLAG;
-  }
-  else if(hcint_value & USB_OTG_HC_XFERC_FLAG)
-  {
-    uhost->hch[chn].state = HCH_XFRC;
-    usb_chh->hcint = USB_OTG_HC_XFERC_FLAG;
+    else if (hcint_value & USB_OTG_HC_FRMOVRRUN_FLAG) {
+        usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
+        usb_hch_halt(usbx, chn);
+        usb_chh->hcint = USB_OTG_HC_FRMOVRRUN_FLAG;
+    } else if (hcint_value & USB_OTG_HC_XFERC_FLAG) {
+        uhost->hch[chn].state = HCH_XFRC;
+        usb_chh->hcint = USB_OTG_HC_XFERC_FLAG;
 
-    if(usb_chh->hcchar_bit.eptype == EPT_BULK_TYPE || usb_chh->hcchar_bit.eptype == EPT_CONTROL_TYPE)
-    {
-      usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
-      usb_hch_halt(usbx, chn);
-      usb_chh->hcint = USB_OTG_HC_NAK_FLAG;
+        if (usb_chh->hcchar_bit.eptype == EPT_BULK_TYPE || usb_chh->hcchar_bit.eptype == EPT_CONTROL_TYPE) {
+            usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
+            usb_hch_halt(usbx, chn);
+            usb_chh->hcint = USB_OTG_HC_NAK_FLAG;
+        } else if (usb_chh->hcchar_bit.eptype == EPT_INT_TYPE) {
+            usb_chh->hcchar_bit.oddfrm = TRUE;
+            uhost->urb_state[chn] = URB_DONE;
+        } else if (usb_chh->hcchar_bit.eptype == EPT_ISO_TYPE) {
+            uhost->urb_state[chn] = URB_DONE;
+        }
+        uhost->hch[chn].toggle_in ^= 1;
+    } else if (hcint_value & USB_OTG_HC_CHHLTD_FLAG) {
+        usb_chh->hcintmsk_bit.chhltdmsk = FALSE;
+        if (uhost->hch[chn].state == HCH_XFRC) {
+            uhost->urb_state[chn]  = URB_DONE;
+        } else if (uhost->hch[chn].state == HCH_STALL) {
+            uhost->urb_state[chn]  = URB_STALL;
+        } else if (uhost->hch[chn].state == HCH_XACTERR ||
+                   uhost->hch[chn].state == HCH_DATATGLERR) {
+            uhost->err_cnt[chn] ++;
+            if (uhost->err_cnt[chn] > 3) {
+                uhost->urb_state[chn] = URB_ERROR;
+                uhost->err_cnt[chn] = 0;
+            } else {
+                uhost->urb_state[chn] = URB_NOTREADY;
+            }
+            if (usb_chh->hcchar_bit.eptype == EPT_CONTROL_TYPE ||
+                    usb_chh->hcchar_bit.eptype == EPT_BULK_TYPE) {
+                usb_chh->hcchar_bit.chdis = FALSE;
+                usb_chh->hcchar_bit.chena = TRUE;
+            }
+        } else if (uhost->hch[chn].state == HCH_NAK) {
+            if (usb_chh->hcchar_bit.eptype == EPT_CONTROL_TYPE ||
+                    usb_chh->hcchar_bit.eptype == EPT_BULK_TYPE) {
+                usb_chh->hcchar_bit.chdis = FALSE;
+                usb_chh->hcchar_bit.chena = TRUE;
+            }
+            uhost->urb_state[chn] = URB_NOTREADY;
+        }
+        usb_chh->hcint = USB_OTG_HC_CHHLTD_FLAG;
+    } else if (hcint_value & USB_OTG_HC_XACTERR_FLAG) {
+        usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
+        uhost->hch[chn].state = HCH_XACTERR;
+        usb_hch_halt(usbx, chn);
+        uhost->err_cnt[chn] ++;
+        usb_chh->hcint = USB_OTG_HC_XACTERR_FLAG;
+    } else if (hcint_value & USB_OTG_HC_NAK_FLAG) {
+        if (usb_chh->hcchar_bit.eptype == EPT_INT_TYPE) {
+            uhost->err_cnt[chn] = 0;
+            usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
+            usb_hch_halt(usbx, chn);
+        } else if (usb_chh->hcchar_bit.eptype == EPT_BULK_TYPE ||
+                   usb_chh->hcchar_bit.eptype == EPT_CONTROL_TYPE) {
+            uhost->err_cnt[chn] = 0;
+            usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
+            usb_hch_halt(usbx, chn);
+        }
+        uhost->hch[chn].state = HCH_NAK;
+        usb_chh->hcint = USB_OTG_HC_NAK_FLAG;
+    } else if (hcint_value & USB_OTG_HC_BBLERR_FLAG) {
+        usb_chh->hcint = USB_OTG_HC_BBLERR_FLAG;
     }
-    else if(usb_chh->hcchar_bit.eptype == EPT_INT_TYPE)
-    {
-      usb_chh->hcchar_bit.oddfrm = TRUE;
-      uhost->urb_state[chn] = URB_DONE;
-    }
-    else if(usb_chh->hcchar_bit.eptype == EPT_ISO_TYPE)
-    {
-      uhost->urb_state[chn] = URB_DONE;
-    }
-    uhost->hch[chn].toggle_in ^= 1;
-  }
-  else if(hcint_value & USB_OTG_HC_CHHLTD_FLAG)
-  {
-    usb_chh->hcintmsk_bit.chhltdmsk = FALSE;
-    if(uhost->hch[chn].state == HCH_XFRC )
-    {
-      uhost->urb_state[chn]  = URB_DONE;
-    }
-    else if(uhost->hch[chn].state == HCH_STALL)
-    {
-      uhost->urb_state[chn]  = URB_STALL;
-    }
-    else if(uhost->hch[chn].state == HCH_XACTERR ||
-            uhost->hch[chn].state == HCH_DATATGLERR)
-    {
-      uhost->err_cnt[chn] ++;
-      if(uhost->err_cnt[chn] > 3)
-      {
-        uhost->urb_state[chn] = URB_ERROR;
-        uhost->err_cnt[chn] = 0;
-      }
-      else
-      {
-        uhost->urb_state[chn] = URB_NOTREADY;
-      }
-      if(usb_chh->hcchar_bit.eptype == EPT_CONTROL_TYPE || 
-        usb_chh->hcchar_bit.eptype == EPT_BULK_TYPE)
-      {
-        usb_chh->hcchar_bit.chdis = FALSE;
-        usb_chh->hcchar_bit.chena = TRUE;
-      }
-    }
-    else if(uhost->hch[chn].state == HCH_NAK)
-    {
-      if(usb_chh->hcchar_bit.eptype == EPT_CONTROL_TYPE || 
-        usb_chh->hcchar_bit.eptype == EPT_BULK_TYPE)
-      {
-        usb_chh->hcchar_bit.chdis = FALSE;
-        usb_chh->hcchar_bit.chena = TRUE;
-      }
-      uhost->urb_state[chn] = URB_NOTREADY;
-    }
-    usb_chh->hcint = USB_OTG_HC_CHHLTD_FLAG;
-  }
-  else if(hcint_value & USB_OTG_HC_XACTERR_FLAG)
-  {
-    usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
-    uhost->hch[chn].state = HCH_XACTERR;
-    usb_hch_halt(usbx, chn);
-    uhost->err_cnt[chn] ++;
-    usb_chh->hcint = USB_OTG_HC_XACTERR_FLAG;
-  }
-  else if(hcint_value & USB_OTG_HC_NAK_FLAG)
-  {
-    if(usb_chh->hcchar_bit.eptype == EPT_INT_TYPE)
-    {
-      uhost->err_cnt[chn] = 0;
-      usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
-      usb_hch_halt(usbx, chn);
-    }
-    else if(usb_chh->hcchar_bit.eptype == EPT_BULK_TYPE ||
-      usb_chh->hcchar_bit.eptype == EPT_CONTROL_TYPE)
-    {
-      uhost->err_cnt[chn] = 0;
-      usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
-      usb_hch_halt(usbx, chn);
-    }
-    uhost->hch[chn].state = HCH_NAK;
-    usb_chh->hcint = USB_OTG_HC_NAK_FLAG;
-  }
-  else if(hcint_value & USB_OTG_HC_BBLERR_FLAG)
-  {
-    usb_chh->hcint = USB_OTG_HC_BBLERR_FLAG;
-  }
 }
 
 /**
@@ -286,99 +232,72 @@ void usbh_hch_in_handler(usbh_core_type *uhost, uint8_t chn)
   * @param  chn: channel number
   * @retval none
   */
-void usbh_hch_out_handler(usbh_core_type *uhost, uint8_t chn)
-{
-  otg_global_type *usbx = uhost->usb_reg;
-  otg_hchannel_type *usb_chh = USB_CHL(usbx, chn);
-  uint32_t hcint_value = usb_chh->hcint;
-  hcint_value &= usb_chh->hcintmsk;
+void usbh_hch_out_handler(usbh_core_type *uhost, uint8_t chn) {
+    otg_global_type *usbx = uhost->usb_reg;
+    otg_hchannel_type *usb_chh = USB_CHL(usbx, chn);
+    uint32_t hcint_value = usb_chh->hcint;
+    hcint_value &= usb_chh->hcintmsk;
 
-  if( hcint_value & USB_OTG_HC_ACK_FLAG)
-  {
-    usb_chh->hcint = USB_OTG_HC_ACK_FLAG;
-  }
-  else if( hcint_value & USB_OTG_HC_FRMOVRRUN_FLAG)
-  {
-    usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
-    usb_hch_halt(usbx, chn);
-    usb_chh->hcint = USB_OTG_HC_FRMOVRRUN_FLAG;
-  }
-  else if( hcint_value & USB_OTG_HC_XFERC_FLAG)
-  {
-    usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
-    usb_hch_halt(usbx, chn);
-    uhost->hch[chn].state = HCH_XFRC;
-    usb_chh->hcint = USB_OTG_HC_XFERC_FLAG;
-  }
-  else if( hcint_value & USB_OTG_HC_STALL_FLAG)
-  {
-    usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
-    usb_chh->hcint =  USB_OTG_HC_STALL_FLAG;
-    uhost->hch[chn].state = HCH_STALL;
-    usb_hch_halt(usbx, chn);
-  }
-  else if( hcint_value & USB_OTG_HC_DTGLERR_FLAG)
-  {
-    usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
-    usb_hch_halt(usbx, chn);
-    usb_chh->hcint = USB_OTG_HC_DTGLERR_FLAG | USB_OTG_HC_NAK_FLAG;
-    uhost->hch[chn].state = HCH_DATATGLERR;
-  }
-  else if( hcint_value & USB_OTG_HC_CHHLTD_FLAG)
-  {
-    usb_chh->hcintmsk_bit.chhltdmsk = FALSE;
-    if(uhost->hch[chn].state == HCH_XFRC)
-    {
-      uhost->urb_state[chn] = URB_DONE;
-      if(uhost->hch[chn].ept_type == EPT_BULK_TYPE ||
-        uhost->hch[chn].ept_type == EPT_INT_TYPE)
-      {
-        uhost->hch[chn].toggle_out ^= 1;
-      }
-    }
-    else if(uhost->hch[chn].state == HCH_NAK)
-    {
-      uhost->urb_state[chn] = URB_NOTREADY;
-    }
-    else if(uhost->hch[chn].state == HCH_STALL)
-    {
-      uhost->urb_state[chn] = URB_STALL;
-    }
-    else if(uhost->hch[chn].state == HCH_XACTERR ||
-            uhost->hch[chn].state == HCH_DATATGLERR)
-    {
-      uhost->err_cnt[chn] ++;
-      if(uhost->err_cnt[chn] > 3)
-      {
-        uhost->urb_state[chn] = URB_ERROR;
+    if (hcint_value & USB_OTG_HC_ACK_FLAG) {
+        usb_chh->hcint = USB_OTG_HC_ACK_FLAG;
+    } else if (hcint_value & USB_OTG_HC_FRMOVRRUN_FLAG) {
+        usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
+        usb_hch_halt(usbx, chn);
+        usb_chh->hcint = USB_OTG_HC_FRMOVRRUN_FLAG;
+    } else if (hcint_value & USB_OTG_HC_XFERC_FLAG) {
+        usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
+        usb_hch_halt(usbx, chn);
+        uhost->hch[chn].state = HCH_XFRC;
+        usb_chh->hcint = USB_OTG_HC_XFERC_FLAG;
+    } else if (hcint_value & USB_OTG_HC_STALL_FLAG) {
+        usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
+        usb_chh->hcint =  USB_OTG_HC_STALL_FLAG;
+        uhost->hch[chn].state = HCH_STALL;
+        usb_hch_halt(usbx, chn);
+    } else if (hcint_value & USB_OTG_HC_DTGLERR_FLAG) {
+        usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
+        usb_hch_halt(usbx, chn);
+        usb_chh->hcint = USB_OTG_HC_DTGLERR_FLAG | USB_OTG_HC_NAK_FLAG;
+        uhost->hch[chn].state = HCH_DATATGLERR;
+    } else if (hcint_value & USB_OTG_HC_CHHLTD_FLAG) {
+        usb_chh->hcintmsk_bit.chhltdmsk = FALSE;
+        if (uhost->hch[chn].state == HCH_XFRC) {
+            uhost->urb_state[chn] = URB_DONE;
+            if (uhost->hch[chn].ept_type == EPT_BULK_TYPE ||
+                    uhost->hch[chn].ept_type == EPT_INT_TYPE) {
+                uhost->hch[chn].toggle_out ^= 1;
+            }
+        } else if (uhost->hch[chn].state == HCH_NAK) {
+            uhost->urb_state[chn] = URB_NOTREADY;
+        } else if (uhost->hch[chn].state == HCH_STALL) {
+            uhost->urb_state[chn] = URB_STALL;
+        } else if (uhost->hch[chn].state == HCH_XACTERR ||
+                   uhost->hch[chn].state == HCH_DATATGLERR) {
+            uhost->err_cnt[chn] ++;
+            if (uhost->err_cnt[chn] > 3) {
+                uhost->urb_state[chn] = URB_ERROR;
+                uhost->err_cnt[chn] = 0;
+            } else {
+                uhost->urb_state[chn] = URB_NOTREADY;
+            }
+
+            usb_chh->hcchar_bit.chdis = FALSE;
+            usb_chh->hcchar_bit.chena = TRUE;
+        }
+        usb_chh->hcint = USB_OTG_HC_CHHLTD_FLAG;
+    } else if (hcint_value & USB_OTG_HC_XACTERR_FLAG) {
+        usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
+        uhost->err_cnt[chn] ++;
+        uhost->hch[chn].state = HCH_XACTERR;
+        usb_hch_halt(usbx, chn);
+        usb_chh->hcint = USB_OTG_HC_XACTERR_FLAG | USB_OTG_HC_NAK_FLAG;
+    } else if (hcint_value & USB_OTG_HC_NAK_FLAG) {
+        usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
         uhost->err_cnt[chn] = 0;
-      }
-      else
-      {
-        uhost->urb_state[chn] = URB_NOTREADY;
-      }
-
-      usb_chh->hcchar_bit.chdis = FALSE;
-      usb_chh->hcchar_bit.chena = TRUE;
+        usb_hch_halt(usbx, chn);
+        uhost->hch[chn].state = HCH_NAK;
+        usb_chh->hcint = USB_OTG_HC_NAK_FLAG;
     }
-    usb_chh->hcint = USB_OTG_HC_CHHLTD_FLAG;
-  }
-  else if( hcint_value & USB_OTG_HC_XACTERR_FLAG)
-  {
-    usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
-    uhost->err_cnt[chn] ++;
-    uhost->hch[chn].state = HCH_XACTERR;
-    usb_hch_halt(usbx, chn);
-    usb_chh->hcint = USB_OTG_HC_XACTERR_FLAG | USB_OTG_HC_NAK_FLAG;
-  }
-  else if( hcint_value & USB_OTG_HC_NAK_FLAG)
-  {
-    usb_chh->hcintmsk_bit.chhltdmsk = TRUE;
-    uhost->err_cnt[chn] = 0;
-    usb_hch_halt(usbx, chn);
-    uhost->hch[chn].state = HCH_NAK;
-    usb_chh->hcint = USB_OTG_HC_NAK_FLAG;
-  }
 }
 
 /**
@@ -386,29 +305,23 @@ void usbh_hch_out_handler(usbh_core_type *uhost, uint8_t chn)
   * @param  uhost: to the structure of usbh_core_type
   * @retval none
   */
-void usbh_hch_handler(usbh_core_type *uhost)
-{
-  otg_global_type *usbx = uhost->usb_reg;
-  otg_host_type *usb_host = OTG_HOST(usbx);
-  uint32_t intsts, i_index;
+void usbh_hch_handler(usbh_core_type *uhost) {
+    otg_global_type *usbx = uhost->usb_reg;
+    otg_host_type *usb_host = OTG_HOST(usbx);
+    uint32_t intsts, i_index;
 
-  intsts = usb_host->haint & 0xFFFF;
-  for(i_index = 0; i_index < 16; i_index ++)
-  {
-    if(intsts & (1 << i_index))
-    {
-      if(USB_CHL(usbx, i_index)->hcchar_bit.eptdir)
-      {
-        //hc in
-        usbh_hch_in_handler(uhost, i_index);
-      }
-      else
-      {
-        //hc out
-        usbh_hch_out_handler(uhost, i_index);
-      }
+    intsts = usb_host->haint & 0xFFFF;
+    for (i_index = 0; i_index < 16; i_index ++) {
+        if (intsts & (1 << i_index)) {
+            if (USB_CHL(usbx, i_index)->hcchar_bit.eptdir) {
+                //hc in
+                usbh_hch_in_handler(uhost, i_index);
+            } else {
+                //hc out
+                usbh_hch_out_handler(uhost, i_index);
+            }
+        }
     }
-  }
 }
 
 /**
@@ -416,50 +329,46 @@ void usbh_hch_handler(usbh_core_type *uhost)
   * @param  uhost: to the structure of usbh_core_type
   * @retval none
   */
-void usbh_rx_qlvl_handler(usbh_core_type *uhost)
-{
-  uint8_t chn;
-  uint32_t pktsts;
-  uint32_t pktcnt;
-  uint32_t tmp;
-  otg_hchannel_type *ch;
-  otg_global_type *usbx = uhost->usb_reg;
+void usbh_rx_qlvl_handler(usbh_core_type *uhost) {
+    uint8_t chn;
+    uint32_t pktsts;
+    uint32_t pktcnt;
+    uint32_t tmp;
+    otg_hchannel_type *ch;
+    otg_global_type *usbx = uhost->usb_reg;
 
-  usbx->gintmsk_bit.rxflvlmsk = 0;
+    usbx->gintmsk_bit.rxflvlmsk = 0;
 
-  tmp = usbx->grxstsp;
-  chn = tmp & 0xF;
-  pktsts = (tmp >> 17) & 0xF;
-  pktcnt = (tmp >> 4) & 0x7FF;
-  ch = USB_CHL(usbx, chn);
-  switch(pktsts)
-  {
-    case PKTSTS_IN_DATA_PACKET_RECV:
-      if(pktcnt > 0 && (uhost->hch[chn].trans_buf) != 0)
-      {
-        usb_read_packet(usbx, uhost->hch[chn].trans_buf, chn, pktcnt);
-        uhost->hch[chn].trans_buf += pktcnt;
-        uhost->hch[chn].trans_count += pktcnt;
+    tmp = usbx->grxstsp;
+    chn = tmp & 0xF;
+    pktsts = (tmp >> 17) & 0xF;
+    pktcnt = (tmp >> 4) & 0x7FF;
+    ch = USB_CHL(usbx, chn);
+    switch (pktsts) {
+        case PKTSTS_IN_DATA_PACKET_RECV:
+            if (pktcnt > 0 && (uhost->hch[chn].trans_buf) != 0) {
+                usb_read_packet(usbx, uhost->hch[chn].trans_buf, chn, pktcnt);
+                uhost->hch[chn].trans_buf += pktcnt;
+                uhost->hch[chn].trans_count += pktcnt;
 
-        if(ch->hctsiz_bit.pktcnt > 0)
-        {
-          ch->hcchar_bit.chdis = FALSE;
-          ch->hcchar_bit.chena = TRUE;
-          uhost->hch[chn].toggle_in ^= 1;
-        }
-      }
-      break;
-    case PKTSTS_IN_TRANSFER_COMPLETE:
-      break;
-    case PKTSTS_DATA_BIT_ERROR:
-      break;
-    case PKTSTS_CHANNEL_STOP:
-      break;
-    default:
-      break;
+                if (ch->hctsiz_bit.pktcnt > 0) {
+                    ch->hcchar_bit.chdis = FALSE;
+                    ch->hcchar_bit.chena = TRUE;
+                    uhost->hch[chn].toggle_in ^= 1;
+                }
+            }
+            break;
+        case PKTSTS_IN_TRANSFER_COMPLETE:
+            break;
+        case PKTSTS_DATA_BIT_ERROR:
+            break;
+        case PKTSTS_CHANNEL_STOP:
+            break;
+        default:
+            break;
 
-  }
-  usbx->gintmsk_bit.rxflvlmsk = 1;
+    }
+    usbx->gintmsk_bit.rxflvlmsk = 1;
 }
 
 /**
@@ -467,58 +376,47 @@ void usbh_rx_qlvl_handler(usbh_core_type *uhost)
   * @param  uhost: to the structure of usbh_core_type
   * @retval none
   */
-void usbh_port_handler(usbh_core_type *uhost)
-{
-  otg_global_type *usbx = uhost->usb_reg;
-  otg_host_type *usb_host = OTG_HOST(usbx);
+void usbh_port_handler(usbh_core_type *uhost) {
+    otg_global_type *usbx = uhost->usb_reg;
+    otg_host_type *usb_host = OTG_HOST(usbx);
 
-  uint32_t prt = 0, prt_0;
+    uint32_t prt = 0, prt_0;
 
-  prt = usb_host->hprt;
-  prt_0 = prt;
+    prt = usb_host->hprt;
+    prt_0 = prt;
 
-  prt_0 &= ~(USB_OTG_HPRT_PRTENA | USB_OTG_HPRT_PRTENCHNG |
+    prt_0 &= ~(USB_OTG_HPRT_PRTENA | USB_OTG_HPRT_PRTENCHNG |
                USB_OTG_HPRT_PRTOVRCACT | USB_OTG_HPRT_PRTCONDET);
-  if(prt & USB_OTG_HPRT_PRTCONDET)
-  {
-    if(prt & USB_OTG_HPRT_PRTCONSTS)
-    {
-      /* connect callback */
-      uhost->conn_sts = 1;
+    if (prt & USB_OTG_HPRT_PRTCONDET) {
+        if (prt & USB_OTG_HPRT_PRTCONSTS) {
+            /* connect callback */
+            uhost->conn_sts = 1;
+        }
+        prt_0 |= USB_OTG_HPRT_PRTCONDET;
     }
-    prt_0 |= USB_OTG_HPRT_PRTCONDET;
-  }
 
-  if(prt & USB_OTG_HPRT_PRTENCHNG)
-  {
-    prt_0 |= USB_OTG_HPRT_PRTENCHNG;
+    if (prt & USB_OTG_HPRT_PRTENCHNG) {
+        prt_0 |= USB_OTG_HPRT_PRTENCHNG;
 
-    if(prt & USB_OTG_HPRT_PRTENA)
-    {
-      if((prt & USB_OTG_HPRT_PRTSPD) == (USB_PRTSPD_LOW_SPEED << 17))
-      {
-        usbh_fsls_clksel(usbx, USB_HCFG_CLK_6M);
-      }
-      else
-      {
-        usbh_fsls_clksel(usbx, USB_HCFG_CLK_48M);
-      }
-      /* connect callback */
-      uhost->port_enable = 1;
+        if (prt & USB_OTG_HPRT_PRTENA) {
+            if ((prt & USB_OTG_HPRT_PRTSPD) == (USB_PRTSPD_LOW_SPEED << 17)) {
+                usbh_fsls_clksel(usbx, USB_HCFG_CLK_6M);
+            } else {
+                usbh_fsls_clksel(usbx, USB_HCFG_CLK_48M);
+            }
+            /* connect callback */
+            uhost->port_enable = 1;
+        } else {
+            /* clean up hprt */
+            uhost->port_enable = 0;
+        }
     }
-    else
-    {
-      /* clean up hprt */
-      uhost->port_enable = 0;
+
+    if (prt & USB_OTG_HPRT_PRTOVRCACT) {
+        prt_0 |= USB_OTG_HPRT_PRTOVRCACT;
     }
-  }
 
-  if(prt & USB_OTG_HPRT_PRTOVRCACT)
-  {
-    prt_0 |= USB_OTG_HPRT_PRTOVRCACT;
-  }
-
-  usb_host->hprt = prt_0;
+    usb_host->hprt = prt_0;
 }
 
 /**

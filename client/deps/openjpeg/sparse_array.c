@@ -39,15 +39,14 @@ struct opj_sparse_array_int32 {
     OPJ_UINT32 block_height;
     OPJ_UINT32 block_count_hor;
     OPJ_UINT32 block_count_ver;
-    OPJ_INT32** data_blocks;
+    OPJ_INT32 **data_blocks;
 };
 
-opj_sparse_array_int32_t* opj_sparse_array_int32_create(OPJ_UINT32 width,
-        OPJ_UINT32 height,
-        OPJ_UINT32 block_width,
-        OPJ_UINT32 block_height)
-{
-    opj_sparse_array_int32_t* sa;
+opj_sparse_array_int32_t *opj_sparse_array_int32_create(OPJ_UINT32 width,
+                                                        OPJ_UINT32 height,
+                                                        OPJ_UINT32 block_width,
+                                                        OPJ_UINT32 block_height) {
+    opj_sparse_array_int32_t *sa;
 
     if (width == 0 || height == 0 || block_width == 0 || block_height == 0) {
         return NULL;
@@ -56,8 +55,8 @@ opj_sparse_array_int32_t* opj_sparse_array_int32_create(OPJ_UINT32 width,
         return NULL;
     }
 
-    sa = (opj_sparse_array_int32_t*) opj_calloc(1,
-            sizeof(opj_sparse_array_int32_t));
+    sa = (opj_sparse_array_int32_t *) opj_calloc(1,
+                                                 sizeof(opj_sparse_array_int32_t));
     sa->width = width;
     sa->height = height;
     sa->block_width = block_width;
@@ -68,8 +67,8 @@ opj_sparse_array_int32_t* opj_sparse_array_int32_create(OPJ_UINT32 width,
         opj_free(sa);
         return NULL;
     }
-    sa->data_blocks = (OPJ_INT32**) opj_calloc(sizeof(OPJ_INT32*),
-                      (size_t) sa->block_count_hor * sa->block_count_ver);
+    sa->data_blocks = (OPJ_INT32 **) opj_calloc(sizeof(OPJ_INT32 *),
+                                                (size_t) sa->block_count_hor * sa->block_count_ver);
     if (sa->data_blocks == NULL) {
         opj_free(sa);
         return NULL;
@@ -78,8 +77,7 @@ opj_sparse_array_int32_t* opj_sparse_array_int32_create(OPJ_UINT32 width,
     return sa;
 }
 
-void opj_sparse_array_int32_free(opj_sparse_array_int32_t* sa)
-{
+void opj_sparse_array_int32_free(opj_sparse_array_int32_t *sa) {
     if (sa) {
         OPJ_UINT32 i;
         for (i = 0; i < sa->block_count_hor * sa->block_count_ver; i++) {
@@ -92,28 +90,26 @@ void opj_sparse_array_int32_free(opj_sparse_array_int32_t* sa)
     }
 }
 
-OPJ_BOOL opj_sparse_array_is_region_valid(const opj_sparse_array_int32_t* sa,
-        OPJ_UINT32 x0,
-        OPJ_UINT32 y0,
-        OPJ_UINT32 x1,
-        OPJ_UINT32 y1)
-{
+OPJ_BOOL opj_sparse_array_is_region_valid(const opj_sparse_array_int32_t *sa,
+                                          OPJ_UINT32 x0,
+                                          OPJ_UINT32 y0,
+                                          OPJ_UINT32 x1,
+                                          OPJ_UINT32 y1) {
     return !(x0 >= sa->width || x1 <= x0 || x1 > sa->width ||
              y0 >= sa->height || y1 <= y0 || y1 > sa->height);
 }
 
 static OPJ_BOOL opj_sparse_array_int32_read_or_write(
-    const opj_sparse_array_int32_t* sa,
+    const opj_sparse_array_int32_t *sa,
     OPJ_UINT32 x0,
     OPJ_UINT32 y0,
     OPJ_UINT32 x1,
     OPJ_UINT32 y1,
-    OPJ_INT32* buf,
+    OPJ_INT32 *buf,
     OPJ_UINT32 buf_col_stride,
     OPJ_UINT32 buf_line_stride,
     OPJ_BOOL forgiving,
-    OPJ_BOOL is_read_op)
-{
+    OPJ_BOOL is_read_op) {
     OPJ_UINT32 y, block_y;
     OPJ_UINT32 y_incr = 0;
     const OPJ_UINT32 block_width = sa->block_width;
@@ -135,7 +131,7 @@ static OPJ_BOOL opj_sparse_array_int32_read_or_write(
         for (x = x0; x < x1; block_x ++, x += x_incr) {
             OPJ_UINT32 j;
             OPJ_UINT32 block_x_offset;
-            OPJ_INT32* src_block;
+            OPJ_INT32 *src_block;
             x_incr = (x == x0) ? block_width - (x0 % block_width) : block_width;
             block_x_offset = block_width - x_incr;
             x_incr = opj_uint_min(x_incr, x1 - x);
@@ -143,14 +139,14 @@ static OPJ_BOOL opj_sparse_array_int32_read_or_write(
             if (is_read_op) {
                 if (src_block == NULL) {
                     if (buf_col_stride == 1) {
-                        OPJ_INT32* dest_ptr = buf + (y - y0) * (OPJ_SIZE_T)buf_line_stride +
+                        OPJ_INT32 *dest_ptr = buf + (y - y0) * (OPJ_SIZE_T)buf_line_stride +
                                               (x - x0) * buf_col_stride;
                         for (j = 0; j < y_incr; j++) {
                             memset(dest_ptr, 0, sizeof(OPJ_INT32) * x_incr);
                             dest_ptr += buf_line_stride;
                         }
                     } else {
-                        OPJ_INT32* dest_ptr = buf + (y - y0) * (OPJ_SIZE_T)buf_line_stride +
+                        OPJ_INT32 *dest_ptr = buf + (y - y0) * (OPJ_SIZE_T)buf_line_stride +
                                               (x - x0) * buf_col_stride;
                         for (j = 0; j < y_incr; j++) {
                             OPJ_UINT32 k;
@@ -161,10 +157,10 @@ static OPJ_BOOL opj_sparse_array_int32_read_or_write(
                         }
                     }
                 } else {
-                    const OPJ_INT32* OPJ_RESTRICT src_ptr = src_block + block_y_offset *
+                    const OPJ_INT32 *OPJ_RESTRICT src_ptr = src_block + block_y_offset *
                                                             (OPJ_SIZE_T)block_width + block_x_offset;
                     if (buf_col_stride == 1) {
-                        OPJ_INT32* OPJ_RESTRICT dest_ptr = buf + (y - y0) * (OPJ_SIZE_T)buf_line_stride
+                        OPJ_INT32 *OPJ_RESTRICT dest_ptr = buf + (y - y0) * (OPJ_SIZE_T)buf_line_stride
                                                            +
                                                            (x - x0) * buf_col_stride;
                         if (x_incr == 4) {
@@ -184,7 +180,7 @@ static OPJ_BOOL opj_sparse_array_int32_read_or_write(
                             }
                         }
                     } else {
-                        OPJ_INT32* OPJ_RESTRICT dest_ptr = buf + (y - y0) * (OPJ_SIZE_T)buf_line_stride
+                        OPJ_INT32 *OPJ_RESTRICT dest_ptr = buf + (y - y0) * (OPJ_SIZE_T)buf_line_stride
                                                            +
                                                            (x - x0) * buf_col_stride;
                         if (x_incr == 1) {
@@ -234,8 +230,8 @@ static OPJ_BOOL opj_sparse_array_int32_read_or_write(
                 }
             } else {
                 if (src_block == NULL) {
-                    src_block = (OPJ_INT32*) opj_calloc(1,
-                                                        (size_t) sa->block_width * sa->block_height * sizeof(OPJ_INT32));
+                    src_block = (OPJ_INT32 *) opj_calloc(1,
+                                                         (size_t) sa->block_width * sa->block_height * sizeof(OPJ_INT32));
                     if (src_block == NULL) {
                         return OPJ_FALSE;
                     }
@@ -243,9 +239,9 @@ static OPJ_BOOL opj_sparse_array_int32_read_or_write(
                 }
 
                 if (buf_col_stride == 1) {
-                    OPJ_INT32* OPJ_RESTRICT dest_ptr = src_block + block_y_offset *
+                    OPJ_INT32 *OPJ_RESTRICT dest_ptr = src_block + block_y_offset *
                                                        (OPJ_SIZE_T)block_width + block_x_offset;
-                    const OPJ_INT32* OPJ_RESTRICT src_ptr = buf + (y - y0) *
+                    const OPJ_INT32 *OPJ_RESTRICT src_ptr = buf + (y - y0) *
                                                             (OPJ_SIZE_T)buf_line_stride + (x - x0) * buf_col_stride;
                     if (x_incr == 4) {
                         /* Same code as general branch, but the compiler */
@@ -264,9 +260,9 @@ static OPJ_BOOL opj_sparse_array_int32_read_or_write(
                         }
                     }
                 } else {
-                    OPJ_INT32* OPJ_RESTRICT dest_ptr = src_block + block_y_offset *
+                    OPJ_INT32 *OPJ_RESTRICT dest_ptr = src_block + block_y_offset *
                                                        (OPJ_SIZE_T)block_width + block_x_offset;
-                    const OPJ_INT32* OPJ_RESTRICT src_ptr = buf + (y - y0) *
+                    const OPJ_INT32 *OPJ_RESTRICT src_ptr = buf + (y - y0) *
                                                             (OPJ_SIZE_T)buf_line_stride + (x - x0) * buf_col_stride;
                     if (x_incr == 1) {
                         for (j = 0; j < y_incr; j++) {
@@ -308,18 +304,17 @@ static OPJ_BOOL opj_sparse_array_int32_read_or_write(
     return OPJ_TRUE;
 }
 
-OPJ_BOOL opj_sparse_array_int32_read(const opj_sparse_array_int32_t* sa,
+OPJ_BOOL opj_sparse_array_int32_read(const opj_sparse_array_int32_t *sa,
                                      OPJ_UINT32 x0,
                                      OPJ_UINT32 y0,
                                      OPJ_UINT32 x1,
                                      OPJ_UINT32 y1,
-                                     OPJ_INT32* dest,
+                                     OPJ_INT32 *dest,
                                      OPJ_UINT32 dest_col_stride,
                                      OPJ_UINT32 dest_line_stride,
-                                     OPJ_BOOL forgiving)
-{
+                                     OPJ_BOOL forgiving) {
     return opj_sparse_array_int32_read_or_write(
-               (opj_sparse_array_int32_t*)sa, x0, y0, x1, y1,
+               (opj_sparse_array_int32_t *)sa, x0, y0, x1, y1,
                dest,
                dest_col_stride,
                dest_line_stride,
@@ -327,20 +322,19 @@ OPJ_BOOL opj_sparse_array_int32_read(const opj_sparse_array_int32_t* sa,
                OPJ_TRUE);
 }
 
-OPJ_BOOL opj_sparse_array_int32_write(opj_sparse_array_int32_t* sa,
+OPJ_BOOL opj_sparse_array_int32_write(opj_sparse_array_int32_t *sa,
                                       OPJ_UINT32 x0,
                                       OPJ_UINT32 y0,
                                       OPJ_UINT32 x1,
                                       OPJ_UINT32 y1,
-                                      const OPJ_INT32* src,
+                                      const OPJ_INT32 *src,
                                       OPJ_UINT32 src_col_stride,
                                       OPJ_UINT32 src_line_stride,
-                                      OPJ_BOOL forgiving)
-{
+                                      OPJ_BOOL forgiving) {
     return opj_sparse_array_int32_read_or_write(sa, x0, y0, x1, y1,
-            (OPJ_INT32*)src,
-            src_col_stride,
-            src_line_stride,
-            forgiving,
-            OPJ_FALSE);
+                                                (OPJ_INT32 *)src,
+                                                src_col_stride,
+                                                src_line_stride,
+                                                forgiving,
+                                                OPJ_FALSE);
 }

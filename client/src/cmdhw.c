@@ -1510,13 +1510,13 @@ static int CmdTearoff(const char *Cmd) {
 static int CmdBwmAutoOff(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw bwmautooff",
-        "Toggle automatic power-off when the PM5 is unplugged from USB (BWM only).\n"
-        "Default is " _GREEN_("on") ". When on, the board powers itself down ~10s after\n"
-        "USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery.\n"
-         "Button power-on is unaffected. Disable for standalone/BLE use on battery.\n"
-        _YELLOW_("Runtime only:") " resets to on at each boot.",
-        "hw bwmautooff --off   --> disable auto power-off\n"
-        "hw bwmautooff --on    --> re-enable auto power-off");
+                  "Toggle automatic power-off when the PM5 is unplugged from USB (BWM only).\n"
+                  "Default is " _GREEN_("on") ". When on, the board powers itself down ~10s after\n"
+                  "USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery.\n"
+                  "Button power-on is unaffected. Disable for standalone/BLE use on battery.\n"
+                  _YELLOW_("Runtime only:") " resets to on at each boot.",
+                  "hw bwmautooff --off   --> disable auto power-off\n"
+                  "hw bwmautooff --on    --> re-enable auto power-off");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1625,9 +1625,15 @@ static int CmdBWMWifi(const char *Cmd) {
     data[n++] = BWM_WIFI_ACTION_START;
     data[n++] = (uint8_t)(port & 0xFF);
     data[n++] = (uint8_t)((port >> 8) & 0xFF);
-    memcpy(&data[n], ssid, ssid_len); n += ssid_len; data[n++] = 0;
-    memcpy(&data[n], pwd,  pwd_len);  n += pwd_len;  data[n++] = 0;
-    memcpy(&data[n], host, host_len); n += host_len; data[n++] = 0;
+    memcpy(&data[n], ssid, ssid_len);
+    n += ssid_len;
+    data[n++] = 0;
+    memcpy(&data[n], pwd,  pwd_len);
+    n += pwd_len;
+    data[n++] = 0;
+    memcpy(&data[n], host, host_len);
+    n += host_len;
+    data[n++] = 0;
 
     PrintAndLogEx(INFO, "Bringing up BWM WiFi (SSID \"%s\", port %d)... this can take ~15s", ssid, port);
 
@@ -2000,7 +2006,7 @@ static int CmdPM5Ant(const char *Cmd) {
         .reg_type = rw_map ? 1 : 0,
     };
     clearCommandBuffer();
-    SendCommandNG(CMD_ANT_CONTROL_READ, (uint8_t*)&payload_read, sizeof(payload_read));
+    SendCommandNG(CMD_ANT_CONTROL_READ, (uint8_t *)&payload_read, sizeof(payload_read));
     if (WaitForResponseTimeout(CMD_ANT_CONTROL_READ, &resp, 1000) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
@@ -2012,7 +2018,7 @@ static int CmdPM5Ant(const char *Cmd) {
     PrintAndLogEx(INFO, "PM5 antenna register read: 0x%02X", resp.data.asBytes[0]);
 
     // Write the new value to the register(If need)
-    if (io != (uint64_t)-1) {
+    if (io != (uint64_t) -1) {
         struct {
             uint8_t data;
             uint8_t reg_type; // 0 is io reg, 1 is map reg.
@@ -2021,7 +2027,7 @@ static int CmdPM5Ant(const char *Cmd) {
             .data = io & 0xFF,
         };
         clearCommandBuffer();
-        SendCommandNG(CMD_ANT_CONTROL_WRITE, (uint8_t*)&payload_write, sizeof(payload_write));
+        SendCommandNG(CMD_ANT_CONTROL_WRITE, (uint8_t *)&payload_write, sizeof(payload_write));
         if (WaitForResponseTimeout(CMD_ANT_CONTROL_WRITE, &resp, 1000) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
@@ -2077,14 +2083,14 @@ static int CmdDeviceFactoryData(const char *Cmd) {
         PrintAndLogEx(INFO, " - Data raw(hex)     : 0x%s", sprint_hex_inrow(resp.data.asBytes, resp.length));
         PrintAndLogEx(INFO, " - Version           : %d", factory->factory_info_version);
         PrintAndLogEx(INFO, " - Signature         : %s",
-            sprint_hex_inrow(factory->ecdsa_secp256k1_signature, sizeof(factory->ecdsa_secp256k1_signature)));
+                      sprint_hex_inrow(factory->ecdsa_secp256k1_signature, sizeof(factory->ecdsa_secp256k1_signature)));
         PrintAndLogEx(INFO, " - Timestamp         : %" PRIu64, factory->info.unix_timestamp);
         PrintAndLogEx(INFO, " - Chip Unique ID    : %s",
-            sprint_hex_inrow(factory->info.chip_unique_id, sizeof(factory->info.chip_unique_id)));
+                      sprint_hex_inrow(factory->info.chip_unique_id, sizeof(factory->info.chip_unique_id)));
         PrintAndLogEx(INFO, " - Production ID     : %" PRIu32, factory->info.production_id);
         PrintAndLogEx(INFO, " - Hardware Version  : %" PRIu32, factory->info.hardware_version);
         PrintAndLogEx(INFO, " - AES key           : %s",
-            sprint_hex_inrow(factory->info.aes_key, sizeof(factory->info.aes_key)));
+                      sprint_hex_inrow(factory->info.aes_key, sizeof(factory->info.aes_key)));
     }
 
     // If data is provided, it needs to be written
@@ -2100,7 +2106,7 @@ static int CmdDeviceFactoryData(const char *Cmd) {
 
         if (datalen != resp.length) {
             PrintAndLogEx(WARNING, _RED_("The length of the data to write (%zu) does not match the length "
-                                   "of the factory data read from device (%u)."), datalen, (unsigned int)resp.length);
+                                         "of the factory data read from device (%u)."), datalen, (unsigned int)resp.length);
             free(data);
             return PM3_EINVARG;
         }
@@ -2550,7 +2556,7 @@ void pm3_version(bool verbose, bool oneliner) {
             SendCommandNG(CMD_MAIN_CHIP_UNIQUEID, NULL, 0);
             if (WaitForResponseTimeout(CMD_MAIN_CHIP_UNIQUEID, &resp, 1000)) {
                 if (resp.length) { // Some processor maybe no unique id.
-                    char* uniqueid_hex = sprint_hex_inrow(resp.data.asBytes, resp.length);
+                    char *uniqueid_hex = sprint_hex_inrow(resp.data.asBytes, resp.length);
                     PrintAndLogEx(NORMAL, "  --= Processor Unique ID: " _YELLOW_("0x%s"), uniqueid_hex);
                 }
             }

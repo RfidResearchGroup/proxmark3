@@ -23,7 +23,7 @@
 #include "fpga.h"
 
 int FpgaGetCurrent(void);
-const char* FpgaGetCurrentVersionString(void);
+const char *FpgaGetCurrentVersionString(void);
 void FpgaDownloadAndGo(int bitstream_target);
 void FpgaDownloadAndGo_keep_EM(int bitstream_target);
 void FpgaResetBitstream(void);

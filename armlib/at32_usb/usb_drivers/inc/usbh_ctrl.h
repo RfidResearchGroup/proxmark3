@@ -49,9 +49,9 @@ extern "C" {
 
 usb_sts_type usbh_ctrl_send_setup(usbh_core_type *uhost, uint8_t *buffer, uint8_t hc_num);
 usb_sts_type usbh_ctrl_recv_data(usbh_core_type *uhost, uint8_t *buffer,
-                            uint16_t length, uint16_t hc_num);
+                                 uint16_t length, uint16_t hc_num);
 usb_sts_type usbh_ctrl_send_data(usbh_core_type *uhost, uint8_t *buffer,
-                            uint16_t length, uint16_t hc_num);
+                                 uint16_t length, uint16_t hc_num);
 usb_sts_type usbh_ctrl_setup_handler(usbh_core_type *uhost);
 usb_sts_type usbh_ctrl_setup_wait_handler(usbh_core_type *uhost, uint32_t *timeout);
 usb_sts_type usbh_ctrl_data_in_handler(usbh_core_type *uhost);
@@ -68,20 +68,20 @@ usb_sts_type usbh_ctrl_complete_handler(usbh_core_type *uhost);
 usb_sts_type usbh_ctrl_transfer_loop(usbh_core_type *uhost);
 usb_sts_type usbh_ctrl_request(usbh_core_type *uhost, uint8_t *buffer, uint16_t length);
 usb_sts_type usbh_get_descriptor(usbh_core_type *uhost, uint16_t length,
-                            uint8_t req_type, uint16_t wvalue,
-                            uint8_t *buffer);
+                                 uint8_t req_type, uint16_t wvalue,
+                                 uint8_t *buffer);
 void usbh_parse_dev_desc(usbh_core_type *uhost, uint8_t *buffer, uint16_t length);
 usb_header_desc_type *usbh_get_next_header(uint8_t *buf, uint16_t *index_len);
 void usbh_parse_interface_desc(usb_interface_desc_type *intf, uint8_t *buf);
 void usbh_parse_endpoint_desc(usb_endpoint_desc_type *ept_desc, uint8_t *buf);
 usb_sts_type usbh_parse_configure_desc(usbh_core_type *uhost,
-                                  uint8_t *buffer, uint16_t length);
+                                       uint8_t *buffer, uint16_t length);
 uint8_t usbh_find_interface(usbh_core_type *uhost, uint8_t class_code, uint8_t sub_class, uint8_t protocol);
 void usbh_parse_string_desc(uint8_t *src, uint8_t *dest, uint16_t length);
 usb_sts_type usbh_get_device_descriptor(usbh_core_type *uhost, uint16_t length);
 usb_sts_type usbh_get_configure_descriptor(usbh_core_type *uhost, uint16_t length);
 usb_sts_type usbh_get_sting_descriptor(usbh_core_type *uhost, uint8_t string_id,
-                                  uint8_t *buffer, uint16_t length);
+                                       uint8_t *buffer, uint16_t length);
 usb_sts_type usbh_set_configuration(usbh_core_type *uhost, uint16_t config);
 usb_sts_type usbh_set_address(usbh_core_type *uhost, uint8_t address);
 usb_sts_type usbh_set_interface(usbh_core_type *uhost, uint8_t ept_num, uint8_t altsetting);

@@ -203,7 +203,7 @@ STATIC_FORCE_INLINE void FPGA_SSC_DMA_RX_Enable(void);
 
 // The buf address currently receiving and storing data (not the address of data that has already been received)
 // |done|done|done|working|  <- you will get 'working' address.
-STATIC_FORCE_INLINE uint32_t* FPGA_SSC_DMA_RX_Current_Address(void);
+STATIC_FORCE_INLINE uint32_t *FPGA_SSC_DMA_RX_Current_Address(void);
 
 // How much data still needs to be received?
 // After receiving an item each time, subtract 1 from this value.

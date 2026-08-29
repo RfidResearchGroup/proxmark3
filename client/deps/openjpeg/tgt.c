@@ -46,8 +46,7 @@
 */
 
 opj_tgt_tree_t *opj_tgt_create(OPJ_UINT32 numleafsh, OPJ_UINT32 numleafsv,
-                               opj_event_mgr_t *p_manager)
-{
+                               opj_event_mgr_t *p_manager) {
     OPJ_INT32 nplh[32];
     OPJ_INT32 nplv[32];
     opj_tgt_node_t *node = 00;
@@ -86,8 +85,8 @@ opj_tgt_tree_t *opj_tgt_create(OPJ_UINT32 numleafsh, OPJ_UINT32 numleafsv,
         return 00;
     }
 
-    tree->nodes = (opj_tgt_node_t*) opj_calloc(tree->numnodes,
-                  sizeof(opj_tgt_node_t));
+    tree->nodes = (opj_tgt_node_t *) opj_calloc(tree->numnodes,
+                                                sizeof(opj_tgt_node_t));
     if (!tree->nodes) {
         opj_event_msg(p_manager, EVT_ERROR,
                       "Not enough memory to create Tag-tree nodes\n");
@@ -133,9 +132,8 @@ opj_tgt_tree_t *opj_tgt_create(OPJ_UINT32 numleafsh, OPJ_UINT32 numleafsv,
  * @param       p_num_leafs_v           the height of the array of leafs of the tree
  * @return      a new tag-tree if successful, NULL otherwise
 */
-opj_tgt_tree_t *opj_tgt_init(opj_tgt_tree_t * p_tree, OPJ_UINT32 p_num_leafs_h,
-                             OPJ_UINT32 p_num_leafs_v, opj_event_mgr_t *p_manager)
-{
+opj_tgt_tree_t *opj_tgt_init(opj_tgt_tree_t *p_tree, OPJ_UINT32 p_num_leafs_h,
+                             OPJ_UINT32 p_num_leafs_v, opj_event_mgr_t *p_manager) {
     OPJ_INT32 l_nplh[32];
     OPJ_INT32 l_nplv[32];
     opj_tgt_node_t *l_node = 00;
@@ -176,8 +174,8 @@ opj_tgt_tree_t *opj_tgt_init(opj_tgt_tree_t * p_tree, OPJ_UINT32 p_num_leafs_h,
         l_node_size = p_tree->numnodes * (OPJ_UINT32)sizeof(opj_tgt_node_t);
 
         if (l_node_size > p_tree->nodes_size) {
-            opj_tgt_node_t* new_nodes = (opj_tgt_node_t*) opj_realloc(p_tree->nodes,
-                                        l_node_size);
+            opj_tgt_node_t *new_nodes = (opj_tgt_node_t *) opj_realloc(p_tree->nodes,
+                                                                       l_node_size);
             if (! new_nodes) {
                 opj_event_msg(p_manager, EVT_ERROR,
                               "Not enough memory to reinitialize the tag tree\n");
@@ -220,8 +218,7 @@ opj_tgt_tree_t *opj_tgt_init(opj_tgt_tree_t * p_tree, OPJ_UINT32 p_num_leafs_h,
     return p_tree;
 }
 
-void opj_tgt_destroy(opj_tgt_tree_t *p_tree)
-{
+void opj_tgt_destroy(opj_tgt_tree_t *p_tree) {
     if (! p_tree) {
         return;
     }
@@ -233,10 +230,9 @@ void opj_tgt_destroy(opj_tgt_tree_t *p_tree)
     opj_free(p_tree);
 }
 
-void opj_tgt_reset(opj_tgt_tree_t *p_tree)
-{
+void opj_tgt_reset(opj_tgt_tree_t *p_tree) {
     OPJ_UINT32 i;
-    opj_tgt_node_t * l_current_node = 00;;
+    opj_tgt_node_t *l_current_node = 00;;
 
     if (! p_tree) {
         return;
@@ -251,8 +247,7 @@ void opj_tgt_reset(opj_tgt_tree_t *p_tree)
     }
 }
 
-void opj_tgt_setvalue(opj_tgt_tree_t *tree, OPJ_UINT32 leafno, OPJ_INT32 value)
-{
+void opj_tgt_setvalue(opj_tgt_tree_t *tree, OPJ_UINT32 leafno, OPJ_INT32 value) {
     opj_tgt_node_t *node;
     node = &tree->nodes[leafno];
     while (node && node->value > value) {
@@ -262,8 +257,7 @@ void opj_tgt_setvalue(opj_tgt_tree_t *tree, OPJ_UINT32 leafno, OPJ_INT32 value)
 }
 
 void opj_tgt_encode(opj_bio_t *bio, opj_tgt_tree_t *tree, OPJ_UINT32 leafno,
-                    OPJ_INT32 threshold)
-{
+                    OPJ_INT32 threshold) {
     opj_tgt_node_t *stk[31];
     opj_tgt_node_t **stkptr;
     opj_tgt_node_t *node;
@@ -305,8 +299,7 @@ void opj_tgt_encode(opj_bio_t *bio, opj_tgt_tree_t *tree, OPJ_UINT32 leafno,
 }
 
 OPJ_UINT32 opj_tgt_decode(opj_bio_t *bio, opj_tgt_tree_t *tree,
-                          OPJ_UINT32 leafno, OPJ_INT32 threshold)
-{
+                          OPJ_UINT32 leafno, OPJ_INT32 threshold) {
     opj_tgt_node_t *stk[31];
     opj_tgt_node_t **stkptr;
     opj_tgt_node_t *node;

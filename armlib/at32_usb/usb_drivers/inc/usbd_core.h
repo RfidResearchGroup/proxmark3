@@ -96,15 +96,15 @@ typedef struct {
   * @brief usb device class handler
   */
 typedef struct {
-    usb_sts_type (*init_handler)(void *udev); /*!< usb class init handler */
-    usb_sts_type (*clear_handler)(void *udev); /*!< usb class clear handler */
-    usb_sts_type (*setup_handler)(void *udev, usb_setup_type *setup); /*!< usb class setup handler */
-    usb_sts_type (*ept0_tx_handler)(void *udev); /*!< usb class endpoint 0 tx complete handler */
-    usb_sts_type (*ept0_rx_handler)(void *udev); /*!< usb class endpoint 0 rx complete handler */
-    usb_sts_type (*in_handler)(void *udev, uint8_t ept_num); /*!< usb class in transfer complete handler */
-    usb_sts_type (*out_handler)(void *udev, uint8_t ept_num); /*!< usb class out transfer complete handler */
-    usb_sts_type (*sof_handler)(void *udev); /*!< usb class sof handler */
-    usb_sts_type (*event_handler)(void *udev, usbd_event_type event); /*!< usb class event handler */
+    usb_sts_type(*init_handler)(void *udev);  /*!< usb class init handler */
+    usb_sts_type(*clear_handler)(void *udev);  /*!< usb class clear handler */
+    usb_sts_type(*setup_handler)(void *udev, usb_setup_type *setup);  /*!< usb class setup handler */
+    usb_sts_type(*ept0_tx_handler)(void *udev);  /*!< usb class endpoint 0 tx complete handler */
+    usb_sts_type(*ept0_rx_handler)(void *udev);  /*!< usb class endpoint 0 rx complete handler */
+    usb_sts_type(*in_handler)(void *udev, uint8_t ept_num);  /*!< usb class in transfer complete handler */
+    usb_sts_type(*out_handler)(void *udev, uint8_t ept_num);  /*!< usb class out transfer complete handler */
+    usb_sts_type(*sof_handler)(void *udev);  /*!< usb class sof handler */
+    usb_sts_type(*event_handler)(void *udev, usbd_event_type event);  /*!< usb class event handler */
     void *pdata; /*!< usb class data pointer */
 } usbd_class_handler;
 

@@ -36,18 +36,17 @@
  */
 #define OPJ_VALIDATION_SIZE 10
 
-opj_procedure_list_t *  opj_procedure_list_create()
-{
+opj_procedure_list_t   *opj_procedure_list_create() {
     /* memory allocation */
-    opj_procedure_list_t * l_validation = (opj_procedure_list_t *) opj_calloc(1,
-                                          sizeof(opj_procedure_list_t));
+    opj_procedure_list_t *l_validation = (opj_procedure_list_t *) opj_calloc(1,
+                                         sizeof(opj_procedure_list_t));
     if (! l_validation) {
         return 00;
     }
     /* initialization */
     l_validation->m_nb_max_procedures = OPJ_VALIDATION_SIZE;
-    l_validation->m_procedures = (opj_procedure*)opj_calloc(OPJ_VALIDATION_SIZE,
-                                 sizeof(opj_procedure));
+    l_validation->m_procedures = (opj_procedure *)opj_calloc(OPJ_VALIDATION_SIZE,
+                                                             sizeof(opj_procedure));
     if (! l_validation->m_procedures) {
         opj_free(l_validation);
         return 00;
@@ -55,8 +54,7 @@ opj_procedure_list_t *  opj_procedure_list_create()
     return l_validation;
 }
 
-void  opj_procedure_list_destroy(opj_procedure_list_t * p_list)
-{
+void  opj_procedure_list_destroy(opj_procedure_list_t *p_list) {
     if (! p_list) {
         return;
     }
@@ -68,17 +66,16 @@ void  opj_procedure_list_destroy(opj_procedure_list_t * p_list)
 }
 
 OPJ_BOOL opj_procedure_list_add_procedure(opj_procedure_list_t *
-        p_validation_list, opj_procedure p_procedure, opj_event_mgr_t* p_manager)
-{
+                                          p_validation_list, opj_procedure p_procedure, opj_event_mgr_t *p_manager) {
 
     assert(p_manager != NULL);
 
     if (p_validation_list->m_nb_max_procedures ==
             p_validation_list->m_nb_procedures) {
-        opj_procedure * new_procedures;
+        opj_procedure *new_procedures;
 
         p_validation_list->m_nb_max_procedures += OPJ_VALIDATION_SIZE;
-        new_procedures = (opj_procedure*)opj_realloc(
+        new_procedures = (opj_procedure *)opj_realloc(
                              p_validation_list->m_procedures,
                              p_validation_list->m_nb_max_procedures * sizeof(opj_procedure));
         if (! new_procedures) {
@@ -100,18 +97,15 @@ OPJ_BOOL opj_procedure_list_add_procedure(opj_procedure_list_t *
 }
 
 OPJ_UINT32 opj_procedure_list_get_nb_procedures(opj_procedure_list_t *
-        p_validation_list)
-{
+                                                p_validation_list) {
     return p_validation_list->m_nb_procedures;
 }
 
-opj_procedure* opj_procedure_list_get_first_procedure(opj_procedure_list_t *
-        p_validation_list)
-{
+opj_procedure *opj_procedure_list_get_first_procedure(opj_procedure_list_t *
+                                                      p_validation_list) {
     return p_validation_list->m_procedures;
 }
 
-void opj_procedure_list_clear(opj_procedure_list_t * p_validation_list)
-{
+void opj_procedure_list_clear(opj_procedure_list_t *p_validation_list) {
     p_validation_list->m_nb_procedures = 0;
 }

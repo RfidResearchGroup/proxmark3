@@ -1522,7 +1522,7 @@ out:
     crypto1_deinit(pcs);
     LED_B_ON();
     if (reply) {
-        uint8_t respbuf[sizeof(mf_nonces_resp_t) + (MIFARE_BLOCK_SIZE *(MIFARE_1K_MAXSECTOR + 1))] = {0x00};
+        uint8_t respbuf[sizeof(mf_nonces_resp_t) + (MIFARE_BLOCK_SIZE * (MIFARE_1K_MAXSECTOR + 1))] = {0x00};
         mf_nonces_resp_t *response = (mf_nonces_resp_t *)respbuf;
         response->cuid = cuid;
         response->num_nonces = 0;

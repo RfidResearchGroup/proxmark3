@@ -49,11 +49,11 @@ used for
 */
 typedef struct opj_event_mgr {
     /** Data to call the event manager upon */
-    void *          m_error_data;
+    void           *m_error_data;
     /** Data to call the event manager upon */
-    void *          m_warning_data;
+    void           *m_warning_data;
     /** Data to call the event manager upon */
-    void *          m_info_data;
+    void           *m_info_data;
     /** Error message callback if available, NULL otherwise */
     opj_msg_callback error_handler;
     /** Warning message callback if available, NULL otherwise */
@@ -86,14 +86,14 @@ typedef struct opj_event_mgr {
  *
  * @return Returns true if successful, returns false otherwise
  */
-OPJ_BOOL opj_event_msg(opj_event_mgr_t* event_mgr, OPJ_INT32 event_type,
+OPJ_BOOL opj_event_msg(opj_event_mgr_t *event_mgr, OPJ_INT32 event_type,
                        const char *fmt, ...);
 /* ----------------------------------------------------------------------- */
 
 /**
  * Set the event manager with the default callback function for the 3 levels.
  */
-void opj_set_default_event_handler(opj_event_mgr_t * p_manager);
+void opj_set_default_event_handler(opj_event_mgr_t *p_manager);
 
 /*
 #ifdef __GNUC__

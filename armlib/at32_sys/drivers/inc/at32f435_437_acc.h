@@ -69,94 +69,81 @@ extern "C" {
 /**
   * @brief type define acc register all
   */
-typedef struct
-{
+typedef struct {
 
-  /**
-    * @brief acc sts register, offset:0x00
+    /**
+      * @brief acc sts register, offset:0x00
+      */
+    union {
+        __IO uint32_t sts;
+        struct {
+            __IO uint32_t calrdy               : 1; /* [0] */
+            __IO uint32_t rslost               : 1; /* [1] */
+            __IO uint32_t reserved1            : 30;/* [31:2] */
+        } sts_bit;
+    };
+
+    /**
+      * @brief acc ctrl1 register, offset:0x04
+      */
+    union {
+        __IO uint32_t ctrl1;
+        struct {
+            __IO uint32_t calon                : 1; /* [0] */
+            __IO uint32_t entrim               : 1; /* [1] */
+            __IO uint32_t reserved1            : 2; /* [3:2] */
+            __IO uint32_t eien                 : 1; /* [4] */
+            __IO uint32_t calrdyien            : 1; /* [5] */
+            __IO uint32_t reserved2            : 2; /* [7:6] */
+            __IO uint32_t step                 : 4; /* [11:8] */
+            __IO uint32_t reserved3            : 20;/* [31:12] */
+        } ctrl1_bit;
+    };
+
+    /**
+     * @brief acc ctrl2 register, offset:0x08
+     */
+    union {
+        __IO uint32_t ctrl2;
+        struct {
+            __IO uint32_t hickcal              : 8; /* [7:0] */
+            __IO uint32_t hicktrim             : 6; /* [13:8] */
+            __IO uint32_t reserved1            : 18;/* [31:14] */
+        } ctrl2_bit;
+    };
+
+    /**
+    * @brief acc acc_c1 register, offset:0x0C
     */
-  union
-  {
-    __IO uint32_t sts;
-    struct
-    {
-      __IO uint32_t calrdy               : 1; /* [0] */
-      __IO uint32_t rslost               : 1; /* [1] */
-      __IO uint32_t reserved1            : 30;/* [31:2] */
-    } sts_bit;
-  };
+    union {
+        __IO uint32_t c1;
+        struct {
+            __IO uint32_t c1                   : 16;/* [15:0] */
+            __IO uint32_t reserved1            : 16;/* [31:16] */
+        } c1_bit;
+    };
 
-  /**
-    * @brief acc ctrl1 register, offset:0x04
+    /**
+    * @brief acc acc_c2 register, offset:0x10
     */
-  union
-  {
-    __IO uint32_t ctrl1;
-    struct
-    {
-      __IO uint32_t calon                : 1; /* [0] */
-      __IO uint32_t entrim               : 1; /* [1] */
-      __IO uint32_t reserved1            : 2; /* [3:2] */
-      __IO uint32_t eien                 : 1; /* [4] */
-      __IO uint32_t calrdyien            : 1; /* [5] */
-      __IO uint32_t reserved2            : 2; /* [7:6] */
-      __IO uint32_t step                 : 4; /* [11:8] */
-      __IO uint32_t reserved3            : 20;/* [31:12] */
-    } ctrl1_bit;
-  };
+    union {
+        __IO uint32_t c2;
+        struct {
+            __IO uint32_t c2                   : 16;/* [15:0] */
+            __IO uint32_t reserved1            : 16;/* [31:16] */
+        } c2_bit;
+    };
 
-   /**
-    * @brief acc ctrl2 register, offset:0x08
+    /**
+    * @brief acc acc_c3 register, offset:0x14
     */
-  union
-  {
-    __IO uint32_t ctrl2;
-    struct
-    {
-      __IO uint32_t hickcal              : 8; /* [7:0] */
-      __IO uint32_t hicktrim             : 6; /* [13:8] */
-      __IO uint32_t reserved1            : 18;/* [31:14] */
-    } ctrl2_bit;
-  };
-
-  /**
-  * @brief acc acc_c1 register, offset:0x0C
-  */
-  union
-  {
-    __IO uint32_t c1;
-    struct
-    {
-      __IO uint32_t c1                   : 16;/* [15:0] */
-      __IO uint32_t reserved1            : 16;/* [31:16] */
-    } c1_bit;
-  };
-
-  /**
-  * @brief acc acc_c2 register, offset:0x10
-  */
-  union
-  {
-    __IO uint32_t c2;
-    struct
-    {
-      __IO uint32_t c2                   : 16;/* [15:0] */
-      __IO uint32_t reserved1            : 16;/* [31:16] */
-    } c2_bit;
-  };
-
-  /**
-  * @brief acc acc_c3 register, offset:0x14
-  */
-  union
-  {
-    __IO uint32_t c3;
-    struct
-    {
-      __IO uint32_t c3                   : 16;/* [15:0] */
-      __IO uint32_t reserved1            : 16;/* [31:16] */
-    } c3_bit;
-  };
+    union {
+        __IO uint32_t c3;
+        struct {
+            __IO uint32_t c3                   : 16;/* [15:0] */
+            __IO uint32_t reserved1            : 16;/* [31:16] */
+        } c3_bit;
+    };
 } acc_type;
 
 /**

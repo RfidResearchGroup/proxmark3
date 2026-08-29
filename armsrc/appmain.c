@@ -3867,23 +3867,23 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_PM5_BWM_WIFI: {
-            #if defined(WITH_BWM_FORWARD)
-                uint8_t action = packet->data.asBytes[0];
-                uint32_t ip = 0;
-                int res;
-                if (action == BWM_WIFI_ACTION_STOP) {
-                    res = bwm_wifi_forward_down();
-                } else {
-                    uint16_t port = packet->data.asBytes[1] | (packet->data.asBytes[2] << 8);
-                    char *ssid = (char *)&packet->data.asBytes[3];
-                    char *pwd  = ssid + strlen(ssid) + 1;
-                    char *host = pwd + strlen(pwd) + 1;
-                    res = bwm_wifi_forward_up(ssid, pwd, host, port, &ip);
-                }
-                reply_ng (CMD_PM5_BWM_WIFI, res, (uint8_t *)&ip, sizeof(ip));
-            #else
-                reply_ng(CMD_PM5_BWM_WIFI, PM3_ENOTIMPL, NULL, 0);
-            #endif
+#if defined(WITH_BWM_FORWARD)
+            uint8_t action = packet->data.asBytes[0];
+            uint32_t ip = 0;
+            int res;
+            if (action == BWM_WIFI_ACTION_STOP) {
+                res = bwm_wifi_forward_down();
+            } else {
+                uint16_t port = packet->data.asBytes[1] | (packet->data.asBytes[2] << 8);
+                char *ssid = (char *)&packet->data.asBytes[3];
+                char *pwd  = ssid + strlen(ssid) + 1;
+                char *host = pwd + strlen(pwd) + 1;
+                res = bwm_wifi_forward_up(ssid, pwd, host, port, &ip);
+            }
+            reply_ng(CMD_PM5_BWM_WIFI, res, (uint8_t *)&ip, sizeof(ip));
+#else
+            reply_ng(CMD_PM5_BWM_WIFI, PM3_ENOTIMPL, NULL, 0);
+#endif
             break;
         }
         case CMD_PM5_BWM_AUTOOFF: {

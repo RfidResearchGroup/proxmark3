@@ -66,7 +66,7 @@ typedef struct opj_procedure_list {
     /**
      * The array of procedures.
      */
-    opj_procedure * m_procedures;
+    opj_procedure *m_procedures;
 
 } opj_procedure_list_t;
 
@@ -77,14 +77,14 @@ typedef struct opj_procedure_list {
  *
  * @return  the newly created validation list.
  */
-opj_procedure_list_t *  opj_procedure_list_create(void);
+opj_procedure_list_t   *opj_procedure_list_create(void);
 
 /**
  * Destroys a validation list.
  *
  * @param p_list the list to destroy.
  */
-void  opj_procedure_list_destroy(opj_procedure_list_t * p_list);
+void  opj_procedure_list_destroy(opj_procedure_list_t *p_list);
 
 /**
  * Adds a new validation procedure.
@@ -96,7 +96,7 @@ void  opj_procedure_list_destroy(opj_procedure_list_t * p_list);
  * @return  OPJ_TRUE if the procedure could be added.
  */
 OPJ_BOOL opj_procedure_list_add_procedure(opj_procedure_list_t *
-        p_validation_list, opj_procedure p_procedure, opj_event_mgr_t* p_manager);
+                                          p_validation_list, opj_procedure p_procedure, opj_event_mgr_t *p_manager);
 
 /**
  * Gets the number of validation procedures.
@@ -106,7 +106,7 @@ OPJ_BOOL opj_procedure_list_add_procedure(opj_procedure_list_t *
  * @return the number of validation procedures.
  */
 OPJ_UINT32 opj_procedure_list_get_nb_procedures(opj_procedure_list_t *
-        p_validation_list);
+                                                p_validation_list);
 
 /**
  * Gets the pointer on the first validation procedure. This function is similar to the C++
@@ -117,8 +117,8 @@ OPJ_UINT32 opj_procedure_list_get_nb_procedures(opj_procedure_list_t *
  *
  * @return  a pointer to the first procedure.
  */
-opj_procedure* opj_procedure_list_get_first_procedure(opj_procedure_list_t *
-        p_validation_list);
+opj_procedure *opj_procedure_list_get_first_procedure(opj_procedure_list_t *
+                                                      p_validation_list);
 
 
 /**
@@ -127,7 +127,7 @@ opj_procedure* opj_procedure_list_get_first_procedure(opj_procedure_list_t *
  * @param   p_validation_list the list of procedure to clear.
  *
  */
-void opj_procedure_list_clear(opj_procedure_list_t * p_validation_list);
+void opj_procedure_list_clear(opj_procedure_list_t *p_validation_list);
 /*@}*/
 
 #endif /* OPJ_FUNCTION_LIST_H */

@@ -40,23 +40,23 @@ extern "C"
   @deprecated
  */
 #if   defined ( __CC_ARM )
-  #define __SIMD32_TYPE int32_t __packed
+#define __SIMD32_TYPE int32_t __packed
 #elif defined ( __ARMCC_VERSION ) && ( __ARMCC_VERSION >= 6010050 )
-  #define __SIMD32_TYPE int32_t
+#define __SIMD32_TYPE int32_t
 #elif defined ( __GNUC__ )
-  #define __SIMD32_TYPE int32_t
+#define __SIMD32_TYPE int32_t
 #elif defined ( __ICCARM__ )
-  #define __SIMD32_TYPE int32_t __packed
+#define __SIMD32_TYPE int32_t __packed
 #elif defined ( __TI_ARM__ )
-  #define __SIMD32_TYPE int32_t
+#define __SIMD32_TYPE int32_t
 #elif defined ( __CSMC__ )
-  #define __SIMD32_TYPE int32_t
+#define __SIMD32_TYPE int32_t
 #elif defined ( __TASKING__ )
-  #define __SIMD32_TYPE __un(aligned) int32_t
+#define __SIMD32_TYPE __un(aligned) int32_t
 #elif defined(_MSC_VER )
-  #define __SIMD32_TYPE int32_t
+#define __SIMD32_TYPE int32_t
 #else
-  #error Unknown compiler
+#error Unknown compiler
 #endif
 
 #define __SIMD32(addr)        (*(__SIMD32_TYPE **) & (addr))
@@ -73,18 +73,17 @@ extern "C"
   @param[in]     pQ15      points to input value
   @return        Q31 value
  */
-__STATIC_FORCEINLINE q31_t read_q15x2 (
-  q15_t const * pQ15)
-{
-  q31_t val;
+__STATIC_FORCEINLINE q31_t read_q15x2(
+    q15_t const *pQ15) {
+    q31_t val;
 
 #ifdef __ARM_FEATURE_UNALIGNED
-  memcpy (&val, pQ15, 4);
+    memcpy(&val, pQ15, 4);
 #else
-  val = (pQ15[1] << 16) | (pQ15[0] & 0x0FFFF) ;
+    val = (pQ15[1] << 16) | (pQ15[0] & 0x0FFFF) ;
 #endif
 
-  return (val);
+    return (val);
 }
 
 /**
@@ -107,19 +106,18 @@ __STATIC_FORCEINLINE q31_t read_q15x2 (
   @param[in]     value     Q31 value
   @return        none
  */
-__STATIC_FORCEINLINE void write_q15x2_ia (
-  q15_t ** pQ15,
-  q31_t    value)
-{
-  q31_t val = value;
+__STATIC_FORCEINLINE void write_q15x2_ia(
+    q15_t **pQ15,
+    q31_t    value) {
+    q31_t val = value;
 #ifdef __ARM_FEATURE_UNALIGNED
-  memcpy (*pQ15, &val, 4);
+    memcpy(*pQ15, &val, 4);
 #else
-  (*pQ15)[0] = (q15_t)(val & 0x0FFFF);
-  (*pQ15)[1] = (q15_t)((val >> 16) & 0x0FFFF);
+    (*pQ15)[0] = (q15_t)(val & 0x0FFFF);
+    (*pQ15)[1] = (q15_t)((val >> 16) & 0x0FFFF);
 #endif
 
- *pQ15 += 2;
+    *pQ15 += 2;
 }
 
 /**
@@ -128,17 +126,16 @@ __STATIC_FORCEINLINE void write_q15x2_ia (
   @param[in]     value     Q31 value
   @return        none
  */
-__STATIC_FORCEINLINE void write_q15x2 (
-  q15_t * pQ15,
-  q31_t   value)
-{
-  q31_t val = value;
+__STATIC_FORCEINLINE void write_q15x2(
+    q15_t *pQ15,
+    q31_t   value) {
+    q31_t val = value;
 
 #ifdef __ARM_FEATURE_UNALIGNED
-  memcpy (pQ15, &val, 4);
+    memcpy(pQ15, &val, 4);
 #else
-  pQ15[0] = (q15_t)(val & 0x0FFFF);
-  pQ15[1] = (q15_t)(val >> 16);
+    pQ15[0] = (q15_t)(val & 0x0FFFF);
+    pQ15[1] = (q15_t)(val >> 16);
 #endif
 }
 
@@ -148,17 +145,16 @@ __STATIC_FORCEINLINE void write_q15x2 (
   @param[in]     pQ7       points to input value
   @return        Q31 value
  */
-__STATIC_FORCEINLINE q31_t read_q7x4 (
-  q7_t const * pQ7)
-{
-  q31_t val;
+__STATIC_FORCEINLINE q31_t read_q7x4(
+    q7_t const *pQ7) {
+    q31_t val;
 
 #ifdef __ARM_FEATURE_UNALIGNED
-  memcpy (&val, pQ7, 4);
+    memcpy(&val, pQ7, 4);
 #else
-  val =((pQ7[3] & 0x0FF) << 24)  | ((pQ7[2] & 0x0FF) << 16)  | ((pQ7[1] & 0x0FF) << 8)  | (pQ7[0] & 0x0FF);
-#endif 
-  return (val);
+    val = ((pQ7[3] & 0x0FF) << 24)  | ((pQ7[2] & 0x0FF) << 16)  | ((pQ7[1] & 0x0FF) << 8)  | (pQ7[0] & 0x0FF);
+#endif
+    return (val);
 }
 
 /**
@@ -181,21 +177,20 @@ __STATIC_FORCEINLINE q31_t read_q7x4 (
   @param[in]     value     Q31 value
   @return        none
  */
-__STATIC_FORCEINLINE void write_q7x4_ia (
-  q7_t ** pQ7,
-  q31_t   value)
-{
-  q31_t val = value;
+__STATIC_FORCEINLINE void write_q7x4_ia(
+    q7_t **pQ7,
+    q31_t   value) {
+    q31_t val = value;
 #ifdef __ARM_FEATURE_UNALIGNED
-  memcpy (*pQ7, &val, 4);
+    memcpy(*pQ7, &val, 4);
 #else
-  (*pQ7)[0] = (q7_t)(val & 0x0FF);
-  (*pQ7)[1] = (q7_t)((val >> 8) & 0x0FF);
-  (*pQ7)[2] = (q7_t)((val >> 16) & 0x0FF);
-  (*pQ7)[3] = (q7_t)((val >> 24) & 0x0FF);
+    (*pQ7)[0] = (q7_t)(val & 0x0FF);
+    (*pQ7)[1] = (q7_t)((val >> 8) & 0x0FF);
+    (*pQ7)[2] = (q7_t)((val >> 16) & 0x0FF);
+    (*pQ7)[3] = (q7_t)((val >> 24) & 0x0FF);
 
 #endif
-  *pQ7 += 4;
+    *pQ7 += 4;
 }
 
 

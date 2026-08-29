@@ -45,13 +45,12 @@
   * @param  none
   * @retval none
   */
-void exint_reset(void)
-{
-  EXINT->inten = 0x00000000;
-  EXINT->polcfg1 = 0x00000000;
-  EXINT->polcfg2 = 0x00000000;
-  EXINT->evten = 0x00000000;
-  EXINT->intsts = 0x007FFFFF;
+void exint_reset(void) {
+    EXINT->inten = 0x00000000;
+    EXINT->polcfg1 = 0x00000000;
+    EXINT->polcfg2 = 0x00000000;
+    EXINT->evten = 0x00000000;
+    EXINT->intsts = 0x007FFFFF;
 }
 
 /**
@@ -60,12 +59,11 @@ void exint_reset(void)
   *         - to the structure of exint_init_type
   * @retval none
   */
-void exint_default_para_init(exint_init_type *exint_struct)
-{
-  exint_struct->line_enable = FALSE;
-  exint_struct->line_select = EXINT_LINE_NONE;
-  exint_struct->line_polarity = EXINT_TRIGGER_FALLING_EDGE;
-  exint_struct->line_mode = EXINT_LINE_EVENT;
+void exint_default_para_init(exint_init_type *exint_struct) {
+    exint_struct->line_enable = FALSE;
+    exint_struct->line_select = EXINT_LINE_NONE;
+    exint_struct->line_polarity = EXINT_TRIGGER_FALLING_EDGE;
+    exint_struct->line_mode = EXINT_LINE_EVENT;
 }
 
 /**
@@ -74,41 +72,31 @@ void exint_default_para_init(exint_init_type *exint_struct)
   *         - to the structure of exint_init_type
   * @retval none
   */
-void exint_init(exint_init_type *exint_struct)
-{
-  uint32_t line_index = 0;
-  line_index = exint_struct->line_select;
+void exint_init(exint_init_type *exint_struct) {
+    uint32_t line_index = 0;
+    line_index = exint_struct->line_select;
 
-  EXINT->inten &= ~line_index;
-  EXINT->evten &= ~line_index;
+    EXINT->inten &= ~line_index;
+    EXINT->evten &= ~line_index;
 
-  if(exint_struct->line_enable != FALSE)
-  {
-    if(exint_struct->line_mode == EXINT_LINE_INTERRUPT)
-    {
-      EXINT->inten |= line_index;
-    }
-    else
-    {
-      EXINT->evten |= line_index;
-    }
+    if (exint_struct->line_enable != FALSE) {
+        if (exint_struct->line_mode == EXINT_LINE_INTERRUPT) {
+            EXINT->inten |= line_index;
+        } else {
+            EXINT->evten |= line_index;
+        }
 
-    EXINT->polcfg1 &= ~line_index;
-    EXINT->polcfg2 &= ~line_index;
-    if(exint_struct->line_polarity == EXINT_TRIGGER_RISING_EDGE)
-    {
-      EXINT->polcfg1 |= line_index;
+        EXINT->polcfg1 &= ~line_index;
+        EXINT->polcfg2 &= ~line_index;
+        if (exint_struct->line_polarity == EXINT_TRIGGER_RISING_EDGE) {
+            EXINT->polcfg1 |= line_index;
+        } else if (exint_struct->line_polarity == EXINT_TRIGGER_FALLING_EDGE) {
+            EXINT->polcfg2 |= line_index;
+        } else {
+            EXINT->polcfg1 |= line_index;
+            EXINT->polcfg2 |= line_index;
+        }
     }
-    else if(exint_struct->line_polarity == EXINT_TRIGGER_FALLING_EDGE)
-    {
-      EXINT->polcfg2 |= line_index;
-    }
-    else
-    {
-      EXINT->polcfg1 |= line_index;
-      EXINT->polcfg2 |= line_index;
-    }
-  }
 }
 
 /**
@@ -122,9 +110,8 @@ void exint_init(exint_init_type *exint_struct)
   *         - EXINT_LINE_22
   * @retval none
   */
-void exint_flag_clear(uint32_t exint_line)
-{
-  EXINT->intsts = exint_line;
+void exint_flag_clear(uint32_t exint_line) {
+    EXINT->intsts = exint_line;
 }
 
 /**
@@ -138,20 +125,16 @@ void exint_flag_clear(uint32_t exint_line)
   *         - EXINT_LINE_22
   * @retval the new state of exint flag(SET or RESET).
   */
-flag_status exint_flag_get(uint32_t exint_line)
-{
-  flag_status status = RESET;
-  uint32_t exint_flag =0;
-  exint_flag = EXINT->intsts & exint_line;
-  if((exint_flag != (uint16_t)RESET))
-  {
-    status = SET;
-  }
-  else
-  {
-    status = RESET;
-  }
-  return status;
+flag_status exint_flag_get(uint32_t exint_line) {
+    flag_status status = RESET;
+    uint32_t exint_flag = 0;
+    exint_flag = EXINT->intsts & exint_line;
+    if ((exint_flag != (uint16_t)RESET)) {
+        status = SET;
+    } else {
+        status = RESET;
+    }
+    return status;
 }
 
 /**
@@ -165,22 +148,18 @@ flag_status exint_flag_get(uint32_t exint_line)
   *         - EXINT_LINE_22
   * @retval the new state of exint flag(SET or RESET).
   */
-flag_status exint_interrupt_flag_get(uint32_t exint_line)
-{
-  flag_status status = RESET;
-  uint32_t exint_flag = 0;
-  exint_flag = EXINT->intsts & exint_line;
-  exint_flag = exint_flag & EXINT->inten;
+flag_status exint_interrupt_flag_get(uint32_t exint_line) {
+    flag_status status = RESET;
+    uint32_t exint_flag = 0;
+    exint_flag = EXINT->intsts & exint_line;
+    exint_flag = exint_flag & EXINT->inten;
 
-  if((exint_flag != (uint16_t)RESET))
-  {
-    status = SET;
-  }
-  else
-  {
-    status = RESET;
-  }
-  return status;
+    if ((exint_flag != (uint16_t)RESET)) {
+        status = SET;
+    } else {
+        status = RESET;
+    }
+    return status;
 }
 
 /**
@@ -194,9 +173,8 @@ flag_status exint_interrupt_flag_get(uint32_t exint_line)
   *         - EXINT_LINE_22
   * @retval none
   */
-void exint_software_interrupt_event_generate(uint32_t exint_line)
-{
-  EXINT->swtrg |= exint_line;
+void exint_software_interrupt_event_generate(uint32_t exint_line) {
+    EXINT->swtrg |= exint_line;
 }
 
 /**
@@ -212,16 +190,12 @@ void exint_software_interrupt_event_generate(uint32_t exint_line)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void exint_interrupt_enable(uint32_t exint_line, confirm_state new_state)
-{
-  if(new_state == TRUE)
-  {
-    EXINT->inten |= exint_line;
-  }
-  else
-  {
-    EXINT->inten &= ~exint_line;
-  }
+void exint_interrupt_enable(uint32_t exint_line, confirm_state new_state) {
+    if (new_state == TRUE) {
+        EXINT->inten |= exint_line;
+    } else {
+        EXINT->inten &= ~exint_line;
+    }
 }
 
 /**
@@ -237,16 +211,12 @@ void exint_interrupt_enable(uint32_t exint_line, confirm_state new_state)
   *         this parameter can be: TRUE or FALSE.
   * @retval none
   */
-void exint_event_enable(uint32_t exint_line, confirm_state new_state)
-{
-  if(new_state == TRUE)
-  {
-    EXINT->evten |= exint_line;
-  }
-  else
-  {
-    EXINT->evten &= ~exint_line;
-  }
+void exint_event_enable(uint32_t exint_line, confirm_state new_state) {
+    if (new_state == TRUE) {
+        EXINT->evten |= exint_line;
+    } else {
+        EXINT->evten &= ~exint_line;
+    }
 }
 
 /**

@@ -286,1282 +286,1143 @@ extern "C" {
 /**
   * @brief  emac auto negotiation type
   */
-typedef enum
-{
-  EMAC_AUTO_NEGOTIATION_OFF              = 0x00, /*!< disable auto negotiation */
-  EMAC_AUTO_NEGOTIATION_ON               = 0x01  /*!< enable auto negotiation */
+typedef enum {
+    EMAC_AUTO_NEGOTIATION_OFF              = 0x00, /*!< disable auto negotiation */
+    EMAC_AUTO_NEGOTIATION_ON               = 0x01  /*!< enable auto negotiation */
 } emac_auto_negotiation_type;
 
 /**
   * @brief  emac back_off limit type
   */
-typedef enum
-{
-  EMAC_BACKOFF_LIMIT_0                   = 0x00, /*!< retransmission clock gap numbers betwenn n and 10 */
-  EMAC_BACKOFF_LIMIT_1                   = 0x01, /*!< retransmission clock gap numbers betwenn n and 8 */
-  EMAC_BACKOFF_LIMIT_2                   = 0x02, /*!< retransmission clock gap numbers betwenn n and 4 */
-  EMAC_BACKOFF_LIMIT_3                   = 0x03  /*!< retransmission clock gap numbers betwenn n and 1 */
+typedef enum {
+    EMAC_BACKOFF_LIMIT_0                   = 0x00, /*!< retransmission clock gap numbers betwenn n and 10 */
+    EMAC_BACKOFF_LIMIT_1                   = 0x01, /*!< retransmission clock gap numbers betwenn n and 8 */
+    EMAC_BACKOFF_LIMIT_2                   = 0x02, /*!< retransmission clock gap numbers betwenn n and 4 */
+    EMAC_BACKOFF_LIMIT_3                   = 0x03  /*!< retransmission clock gap numbers betwenn n and 1 */
 } emac_bol_type;
 
 /**
   * @brief  emac duplex type
   */
-typedef enum
-{
-  EMAC_HALF_DUPLEX                       = 0x00, /*!< half duplex */
-  EMAC_FULL_DUPLEX                       = 0x01  /*!< full duplex */
+typedef enum {
+    EMAC_HALF_DUPLEX                       = 0x00, /*!< half duplex */
+    EMAC_FULL_DUPLEX                       = 0x01  /*!< full duplex */
 } emac_duplex_type;
 
 /**
   * @brief  emac speed type
   */
-typedef enum
-{
-  EMAC_SPEED_10MBPS                      = 0x00, /*!< 10 mbps */
-  EMAC_SPEED_100MBPS                     = 0x01  /*!< 100 mbps */
+typedef enum {
+    EMAC_SPEED_10MBPS                      = 0x00, /*!< 10 mbps */
+    EMAC_SPEED_100MBPS                     = 0x01  /*!< 100 mbps */
 } emac_speed_type;
 
 /**
   * @brief  emac interframe gap type
   */
-typedef enum
-{
-  EMAC_INTERFRAME_GAP_96BIT              = 0x00, /*!< 96-bit numbers between two frames */
-  EMAC_INTERFRAME_GAP_88BIT              = 0x01, /*!< 88-bit numbers between two frames */
-  EMAC_INTERFRAME_GAP_80BIT              = 0x02, /*!< 80-bit numbers between two frames */
-  EMAC_INTERFRAME_GAP_72BIT              = 0x03, /*!< 72-bit numbers between two frames */
-  EMAC_INTERFRAME_GAP_64BIT              = 0x04, /*!< 64-bit numbers between two frames */
-  EMAC_INTERFRAME_GAP_56BIT              = 0x05, /*!< 56-bit numbers between two frames */
-  EMAC_INTERFRAME_GAP_48BIT              = 0x06, /*!< 48-bit numbers between two frames */
-  EMAC_INTERFRAME_GAP_40BIT              = 0x07  /*!< 40-bit numbers between two frames */
+typedef enum {
+    EMAC_INTERFRAME_GAP_96BIT              = 0x00, /*!< 96-bit numbers between two frames */
+    EMAC_INTERFRAME_GAP_88BIT              = 0x01, /*!< 88-bit numbers between two frames */
+    EMAC_INTERFRAME_GAP_80BIT              = 0x02, /*!< 80-bit numbers between two frames */
+    EMAC_INTERFRAME_GAP_72BIT              = 0x03, /*!< 72-bit numbers between two frames */
+    EMAC_INTERFRAME_GAP_64BIT              = 0x04, /*!< 64-bit numbers between two frames */
+    EMAC_INTERFRAME_GAP_56BIT              = 0x05, /*!< 56-bit numbers between two frames */
+    EMAC_INTERFRAME_GAP_48BIT              = 0x06, /*!< 48-bit numbers between two frames */
+    EMAC_INTERFRAME_GAP_40BIT              = 0x07  /*!< 40-bit numbers between two frames */
 } emac_intergrame_gap_type;
 
 /**
   * @brief  mdc clock range type
   */
-typedef enum
-{
-  EMAC_CLOCK_RANGE_60_TO_100             = 0x00, /*!< mdc is hclk/42 */
-  EMAC_CLOCK_RANGE_100_TO_150            = 0x01, /*!< mdc is hclk/62 */
-  EMAC_CLOCK_RANGE_20_TO_35              = 0x02, /*!< mdc is hclk/16 */
-  EMAC_CLOCK_RANGE_35_TO_60              = 0x03, /*!< mdc is hclk/26 */
-  EMAC_CLOCK_RANGE_150_TO_250            = 0x04, /*!< mdc is hclk/102 */
-  EMAC_CLOCK_RANGE_250_TO_288            = 0x05  /*!< mdc is hclk/102 */
+typedef enum {
+    EMAC_CLOCK_RANGE_60_TO_100             = 0x00, /*!< mdc is hclk/42 */
+    EMAC_CLOCK_RANGE_100_TO_150            = 0x01, /*!< mdc is hclk/62 */
+    EMAC_CLOCK_RANGE_20_TO_35              = 0x02, /*!< mdc is hclk/16 */
+    EMAC_CLOCK_RANGE_35_TO_60              = 0x03, /*!< mdc is hclk/26 */
+    EMAC_CLOCK_RANGE_150_TO_250            = 0x04, /*!< mdc is hclk/102 */
+    EMAC_CLOCK_RANGE_250_TO_288            = 0x05  /*!< mdc is hclk/102 */
 } emac_clock_range_type;
 
 /**
   * @brief  emac control frames filter type
   */
-typedef enum
-{
-  EMAC_CONTROL_FRAME_PASSING_NO               = 0x00, /*!< don't pass any control frame to application */
-  EMAC_CONTROL_FRAME_PASSING_ALL_EXCEPT_PAUSE = 0x01, /*!< pass all control frames to application except pause frame */
-  EMAC_CONTROL_FRAME_PASSING_ALL              = 0x02, /*!< pass all control frames to application */
-  EMAC_CONTROL_FRAME_PASSING_MATCH            = 0x03  /*!< only pass filtered control frames to application */
+typedef enum {
+    EMAC_CONTROL_FRAME_PASSING_NO               = 0x00, /*!< don't pass any control frame to application */
+    EMAC_CONTROL_FRAME_PASSING_ALL_EXCEPT_PAUSE = 0x01, /*!< pass all control frames to application except pause frame */
+    EMAC_CONTROL_FRAME_PASSING_ALL              = 0x02, /*!< pass all control frames to application */
+    EMAC_CONTROL_FRAME_PASSING_MATCH            = 0x03  /*!< only pass filtered control frames to application */
 } emac_control_frames_filter_type;
 
 /**
   * @brief  pause threshold type
   */
-typedef enum
-{
-  EMAC_PAUSE_4_SLOT_TIME                 = 0x00, /*!< pause time is 4 slot time */
-  EMAC_PAUSE_28_SLOT_TIME                = 0x01, /*!< pause time is 28 slot time */
-  EMAC_PAUSE_144_SLOT_TIME               = 0x02, /*!< pause time is 144 slot time */
-  EMAC_PAUSE_256_SLOT_TIME               = 0x03  /*!< pause time is 256 slot time */
+typedef enum {
+    EMAC_PAUSE_4_SLOT_TIME                 = 0x00, /*!< pause time is 4 slot time */
+    EMAC_PAUSE_28_SLOT_TIME                = 0x01, /*!< pause time is 28 slot time */
+    EMAC_PAUSE_144_SLOT_TIME               = 0x02, /*!< pause time is 144 slot time */
+    EMAC_PAUSE_256_SLOT_TIME               = 0x03  /*!< pause time is 256 slot time */
 } emac_pause_slot_threshold_type;
 
 /**
   * @brief  interrupt mask type
   */
-typedef enum
-{
-  EMAC_INTERRUPT_PMT_MASK                = 0x00, /*!< mask pmt interrupt */
-  EMAC_INTERRUPT_TST_MASK                = 0x01  /*!< mask tst interrupt */
+typedef enum {
+    EMAC_INTERRUPT_PMT_MASK                = 0x00, /*!< mask pmt interrupt */
+    EMAC_INTERRUPT_TST_MASK                = 0x01  /*!< mask tst interrupt */
 } emac_interrupt_mask_type;
 
 /**
   * @brief  mac address type
   */
-typedef enum
-{
-  EMAC_ADDRESS_FILTER_1                  = 0x01, /*!< mac address 1 filter */
-  EMAC_ADDRESS_FILTER_2                  = 0x02, /*!< mac address 2 filter */
-  EMAC_ADDRESS_FILTER_3                  = 0x03  /*!< mac address 3 filter */
+typedef enum {
+    EMAC_ADDRESS_FILTER_1                  = 0x01, /*!< mac address 1 filter */
+    EMAC_ADDRESS_FILTER_2                  = 0x02, /*!< mac address 2 filter */
+    EMAC_ADDRESS_FILTER_3                  = 0x03  /*!< mac address 3 filter */
 } emac_address_type;
 
 /**
   * @brief  address filter type
   */
-typedef enum
-{
-  EMAC_DESTINATION_FILTER                = 0x00, /*!< destination mac address filter */
-  EMAC_SOURCE_FILTER                     = 0x01  /*!< source mac address filter */
+typedef enum {
+    EMAC_DESTINATION_FILTER                = 0x00, /*!< destination mac address filter */
+    EMAC_SOURCE_FILTER                     = 0x01  /*!< source mac address filter */
 } emac_address_filter_type;
 
 /**
   * @brief  address mask type
   */
-typedef enum
-{
-  EMAC_ADDRESS_MASK_8L0                  = 0x01, /*!< byte 0 of mac address low register */
-  EMAC_ADDRESS_MASK_15L8                 = 0x02, /*!< byte 1 of mac address low register */
-  EMAC_ADDRESS_MASK_23L16                = 0x04, /*!< byte 2 of mac address low register */
-  EMAC_ADDRESS_MASK_31L24                = 0x08, /*!< byte 3 of mac address low register */
-  EMAC_ADDRESS_MASK_7H0                  = 0x10, /*!< byte 0 of mac address high register */
-  EMAC_ADDRESS_MASK_15H8                 = 0x20  /*!< byte 1 of mac address high register */
+typedef enum {
+    EMAC_ADDRESS_MASK_8L0                  = 0x01, /*!< byte 0 of mac address low register */
+    EMAC_ADDRESS_MASK_15L8                 = 0x02, /*!< byte 1 of mac address low register */
+    EMAC_ADDRESS_MASK_23L16                = 0x04, /*!< byte 2 of mac address low register */
+    EMAC_ADDRESS_MASK_31L24                = 0x08, /*!< byte 3 of mac address low register */
+    EMAC_ADDRESS_MASK_7H0                  = 0x10, /*!< byte 0 of mac address high register */
+    EMAC_ADDRESS_MASK_15H8                 = 0x20  /*!< byte 1 of mac address high register */
 } emac_address_mask_type;
 
 /**
   * @brief  rx tx priority ratio type
   */
-typedef enum
-{
-  EMAC_DMA_1_RX_1_TX                     = 0x00, /*!< rx/tx ratio is 1:1 */
-  EMAC_DMA_2_RX_1_TX                     = 0x01, /*!< rx/tx ratio is 2:1 */
-  EMAC_DMA_3_RX_1_TX                     = 0x02, /*!< rx/tx ratio is 3:1 */
-  EMAC_DMA_4_RX_1_TX                     = 0x03  /*!< rx/tx ratio is 4:1 */
+typedef enum {
+    EMAC_DMA_1_RX_1_TX                     = 0x00, /*!< rx/tx ratio is 1:1 */
+    EMAC_DMA_2_RX_1_TX                     = 0x01, /*!< rx/tx ratio is 2:1 */
+    EMAC_DMA_3_RX_1_TX                     = 0x02, /*!< rx/tx ratio is 3:1 */
+    EMAC_DMA_4_RX_1_TX                     = 0x03  /*!< rx/tx ratio is 4:1 */
 } emac_dma_rx_tx_ratio_type;
 
 /**
   * @brief  programmable burst length
   */
-typedef enum
-{
-  EMAC_DMA_PBL_1                         = 0x01, /*!< maximum 1 time of beats to be transferred in one dma transaction */
-  EMAC_DMA_PBL_2                         = 0x02, /*!< maximum 2 times of beats to be transferred in one dma transaction */
-  EMAC_DMA_PBL_4                         = 0x04, /*!< maximum 4 times of beats to be transferred in one dma transaction */
-  EMAC_DMA_PBL_8                         = 0x08, /*!< maximum 8 times of beats to be transferred in one dma transaction */
-  EMAC_DMA_PBL_16                        = 0x10, /*!< maximum 16 times of beats to be transferred in one dma transaction */
-  EMAC_DMA_PBL_32                        = 0x20  /*!< maximum 32 times of beats to be transferred in one dma transaction */
+typedef enum {
+    EMAC_DMA_PBL_1                         = 0x01, /*!< maximum 1 time of beats to be transferred in one dma transaction */
+    EMAC_DMA_PBL_2                         = 0x02, /*!< maximum 2 times of beats to be transferred in one dma transaction */
+    EMAC_DMA_PBL_4                         = 0x04, /*!< maximum 4 times of beats to be transferred in one dma transaction */
+    EMAC_DMA_PBL_8                         = 0x08, /*!< maximum 8 times of beats to be transferred in one dma transaction */
+    EMAC_DMA_PBL_16                        = 0x10, /*!< maximum 16 times of beats to be transferred in one dma transaction */
+    EMAC_DMA_PBL_32                        = 0x20  /*!< maximum 32 times of beats to be transferred in one dma transaction */
 } emac_dma_pbl_type;
 
 /**
   * @brief  dma tx rx type
   */
-typedef enum
-{
-  EMAC_DMA_TRANSMIT                      = 0x00, /*!< transmit dma */
-  EMAC_DMA_RECEIVE                       = 0x01  /*!< receive dma */
+typedef enum {
+    EMAC_DMA_TRANSMIT                      = 0x00, /*!< transmit dma */
+    EMAC_DMA_RECEIVE                       = 0x01  /*!< receive dma */
 } emac_dma_tx_rx_type;
 
 /**
   * @brief  dma receive process status type
   */
-typedef enum
-{
-  EMAC_DMA_RX_RESET_STOP_COMMAND         = 0x00, /*!< receive reset or stop command */
-  EMAC_DMA_RX_FETCH_DESCRIPTOR           = 0x01, /*!< rx dma is fetching descriptor */
-  EMAC_DMA_RX_WAITING_PACKET             = 0x03, /*!< rx dma is waiting for packets */
-  EMAC_DMA_RX_DESCRIPTOR_UNAVAILABLE     = 0x04, /*!< rx dma descriptor is unavailable */
-  EMAC_DMA_RX_CLOSE_DESCRIPTOR           = 0x05, /*!< rx dma is closing descriptor */
-  EMAC_DMA_RX_FIFO_TO_HOST               = 0x07  /*!< rx dma is transferring data from fifo to host */
+typedef enum {
+    EMAC_DMA_RX_RESET_STOP_COMMAND         = 0x00, /*!< receive reset or stop command */
+    EMAC_DMA_RX_FETCH_DESCRIPTOR           = 0x01, /*!< rx dma is fetching descriptor */
+    EMAC_DMA_RX_WAITING_PACKET             = 0x03, /*!< rx dma is waiting for packets */
+    EMAC_DMA_RX_DESCRIPTOR_UNAVAILABLE     = 0x04, /*!< rx dma descriptor is unavailable */
+    EMAC_DMA_RX_CLOSE_DESCRIPTOR           = 0x05, /*!< rx dma is closing descriptor */
+    EMAC_DMA_RX_FIFO_TO_HOST               = 0x07  /*!< rx dma is transferring data from fifo to host */
 } emac_dma_receive_process_status_type;
 
 /**
   * @brief  dma transmit process status type
   */
-typedef enum
-{
-  EMAC_DMA_TX_RESET_STOP_COMMAND         = 0x00, /*!< receive reset or stop command */
-  EMAC_DMA_TX_FETCH_DESCRIPTOR           = 0x01, /*!< tx dma is fetching descriptor */
-  EMAC_DMA_TX_WAITING_FOR_STATUS         = 0x02, /*!< tx dma is waiting for status message */
-  EMAC_DMA_TX_HOST_TO_FIFO               = 0x03, /*!< tx dma is reading data from host and forward data to fifo */
-  EMAC_DMA_TX_DESCRIPTOR_UNAVAILABLE     = 0x06, /*!< tx dma is unavailable or fifo underflow */
-  EMAC_DMA_TX_CLOSE_DESCRIPTOR           = 0x07  /*!< tx dma is closing descriptor */
+typedef enum {
+    EMAC_DMA_TX_RESET_STOP_COMMAND         = 0x00, /*!< receive reset or stop command */
+    EMAC_DMA_TX_FETCH_DESCRIPTOR           = 0x01, /*!< tx dma is fetching descriptor */
+    EMAC_DMA_TX_WAITING_FOR_STATUS         = 0x02, /*!< tx dma is waiting for status message */
+    EMAC_DMA_TX_HOST_TO_FIFO               = 0x03, /*!< tx dma is reading data from host and forward data to fifo */
+    EMAC_DMA_TX_DESCRIPTOR_UNAVAILABLE     = 0x06, /*!< tx dma is unavailable or fifo underflow */
+    EMAC_DMA_TX_CLOSE_DESCRIPTOR           = 0x07  /*!< tx dma is closing descriptor */
 } emac_dma_transmit_process_status_type;
 
 /**
   * @brief  dma operations type
   */
-typedef enum
-{
-  EMAC_DMA_OPS_START_STOP_RECEIVE        = 0x00, /*!< start/stop receive */
-  EMAC_DMA_OPS_SECOND_FRAME              = 0x01, /*!< operate on second frame */
-  EMAC_DMA_OPS_FORWARD_UNDERSIZED        = 0x02, /*!< forward undersized good frames*/
-  EMAC_DMA_OPS_FORWARD_ERROR             = 0x03, /*!< forward error frames */
-  EMAC_DMA_OPS_START_STOP_TRANSMIT       = 0x04, /*!< start/stop transmission */
-  EMAC_DMA_OPS_FLUSH_TRANSMIT_FIFO       = 0x05, /*!< flush transmit fifo */
-  EMAC_DMA_OPS_TRANSMIT_STORE_FORWARD    = 0x06, /*!< transmit store and forward */
-  EMAC_DMA_OPS_RECEIVE_FLUSH_DISABLE     = 0x07, /*!< disable flushing of received frames */
-  EMAC_DMA_OPS_RECEIVE_STORE_FORWARD     = 0x08, /*!< receive store and forward */
-  EMAC_DMA_OPS_DROP_ERROR_DISABLE        = 0x09  /*!< disbale dropping of tcp/ip checksum error frames */
+typedef enum {
+    EMAC_DMA_OPS_START_STOP_RECEIVE        = 0x00, /*!< start/stop receive */
+    EMAC_DMA_OPS_SECOND_FRAME              = 0x01, /*!< operate on second frame */
+    EMAC_DMA_OPS_FORWARD_UNDERSIZED        = 0x02, /*!< forward undersized good frames*/
+    EMAC_DMA_OPS_FORWARD_ERROR             = 0x03, /*!< forward error frames */
+    EMAC_DMA_OPS_START_STOP_TRANSMIT       = 0x04, /*!< start/stop transmission */
+    EMAC_DMA_OPS_FLUSH_TRANSMIT_FIFO       = 0x05, /*!< flush transmit fifo */
+    EMAC_DMA_OPS_TRANSMIT_STORE_FORWARD    = 0x06, /*!< transmit store and forward */
+    EMAC_DMA_OPS_RECEIVE_FLUSH_DISABLE     = 0x07, /*!< disable flushing of received frames */
+    EMAC_DMA_OPS_RECEIVE_STORE_FORWARD     = 0x08, /*!< receive store and forward */
+    EMAC_DMA_OPS_DROP_ERROR_DISABLE        = 0x09  /*!< disbale dropping of tcp/ip checksum error frames */
 } emac_dma_operations_type;
 
 /**
   * @brief  receive threshold control type
   */
-typedef enum
-{
-  EMAC_DMA_RX_THRESHOLD_64_BYTES         = 0x00, /*!< receive starts when the frame size within the receiv fifo is larger than 64 bytes */
-  EMAC_DMA_RX_THRESHOLD_32_BYTES         = 0x01, /*!< receive starts when the frame size within the receiv fifo is larger than 32 bytes */
-  EMAC_DMA_RX_THRESHOLD_96_BYTES         = 0x02, /*!< receive starts when the frame size within the receiv fifo is larger than 96 bytes */
-  EMAC_DMA_RX_THRESHOLD_128_BYTES        = 0x03  /*!< receive starts when the frame size within the receiv fifo is larger than 128 bytes */
+typedef enum {
+    EMAC_DMA_RX_THRESHOLD_64_BYTES         = 0x00, /*!< receive starts when the frame size within the receiv fifo is larger than 64 bytes */
+    EMAC_DMA_RX_THRESHOLD_32_BYTES         = 0x01, /*!< receive starts when the frame size within the receiv fifo is larger than 32 bytes */
+    EMAC_DMA_RX_THRESHOLD_96_BYTES         = 0x02, /*!< receive starts when the frame size within the receiv fifo is larger than 96 bytes */
+    EMAC_DMA_RX_THRESHOLD_128_BYTES        = 0x03  /*!< receive starts when the frame size within the receiv fifo is larger than 128 bytes */
 } emac_dma_receive_threshold_type;
 
 /**
   * @brief  transmit threshold control type
   */
-typedef enum
-{
-  EMAC_DMA_TX_THRESHOLD_64_BYTES         = 0x00, /*!< transmission starts when the frame size within the transmit FIFO is larger than 64 bytes */
-  EMAC_DMA_TX_THRESHOLD_128_BYTES        = 0x01, /*!< transmission starts when the frame size within the transmit FIFO is larger than 128 bytes */
-  EMAC_DMA_TX_THRESHOLD_192_BYTES        = 0x02, /*!< transmission starts when the frame size within the transmit FIFO is larger than 192 bytes */
-  EMAC_DMA_TX_THRESHOLD_256_BYTES        = 0x03, /*!< transmission starts when the frame size within the transmit FIFO is larger than 256 bytes */
-  EMAC_DMA_TX_THRESHOLD_40_BYTES         = 0x04, /*!< transmission starts when the frame size within the transmit FIFO is larger than 40 bytes */
-  EMAC_DMA_TX_THRESHOLD_32_BYTES         = 0x05, /*!< transmission starts when the frame size within the transmit FIFO is larger than 32 bytes */
-  EMAC_DMA_TX_THRESHOLD_24_BYTES         = 0x06, /*!< transmission starts when the frame size within the transmit FIFO is larger than 24 bytes */
-  EMAC_DMA_TX_THRESHOLD_16_BYTES         = 0x07  /*!< transmission starts when the frame size within the transmit FIFO is larger than 16 bytes */
+typedef enum {
+    EMAC_DMA_TX_THRESHOLD_64_BYTES         = 0x00, /*!< transmission starts when the frame size within the transmit FIFO is larger than 64 bytes */
+    EMAC_DMA_TX_THRESHOLD_128_BYTES        = 0x01, /*!< transmission starts when the frame size within the transmit FIFO is larger than 128 bytes */
+    EMAC_DMA_TX_THRESHOLD_192_BYTES        = 0x02, /*!< transmission starts when the frame size within the transmit FIFO is larger than 192 bytes */
+    EMAC_DMA_TX_THRESHOLD_256_BYTES        = 0x03, /*!< transmission starts when the frame size within the transmit FIFO is larger than 256 bytes */
+    EMAC_DMA_TX_THRESHOLD_40_BYTES         = 0x04, /*!< transmission starts when the frame size within the transmit FIFO is larger than 40 bytes */
+    EMAC_DMA_TX_THRESHOLD_32_BYTES         = 0x05, /*!< transmission starts when the frame size within the transmit FIFO is larger than 32 bytes */
+    EMAC_DMA_TX_THRESHOLD_24_BYTES         = 0x06, /*!< transmission starts when the frame size within the transmit FIFO is larger than 24 bytes */
+    EMAC_DMA_TX_THRESHOLD_16_BYTES         = 0x07  /*!< transmission starts when the frame size within the transmit FIFO is larger than 16 bytes */
 } emac_dma_transmit_threshold_type;
 
 /**
   * @brief  dma interrupt type
   */
-typedef enum
-{
-  EMAC_DMA_INTERRUPT_TX                  = 0x00, /*!< transmit interrupt */
-  EMAC_DMA_INTERRUPT_TX_STOP             = 0x01, /*!< transmit process stopped interrupt */
-  EMAC_DMA_INTERRUPT_TX_UNAVAILABLE      = 0x02, /*!< transmit buffer unavailable interrupt */
-  EMAC_DMA_INTERRUPT_TX_JABBER           = 0x03, /*!< transmit jabber timeout interrupt */
-  EMAC_DMA_INTERRUPT_RX_OVERFLOW         = 0x04, /*!< receive overflow interrupt */
-  EMAC_DMA_INTERRUPT_TX_UNDERFLOW        = 0x05, /*!< transmit underflow interrupt */
-  EMAC_DMA_INTERRUPT_RX                  = 0x06, /*!< receive interrupt */
-  EMAC_DMA_INTERRUPT_RX_UNAVAILABLE      = 0x07, /*!< receive buffer unavailable interrupt */
-  EMAC_DMA_INTERRUPT_RX_STOP             = 0x08, /*!< receive process stopped interrupt */
-  EMAC_DMA_INTERRUPT_RX_TIMEOUT          = 0x09, /*!< receive watchdog timeout interrupt */
-  EMAC_DMA_INTERRUPT_TX_EARLY            = 0x0A, /*!< early transmit interrupt */
-  EMAC_DMA_INTERRUPT_FATAL_BUS_ERROR     = 0x0B, /*!< fatal bus error interrupt */
-  EMAC_DMA_INTERRUPT_RX_EARLY            = 0x0C, /*!< early receive interrupt */
-  EMAC_DMA_INTERRUPT_ABNORMAL_SUMMARY    = 0x0D, /*!< abnormal interrupt summary */
-  EMAC_DMA_INTERRUPT_NORMAL_SUMMARY      = 0x0E  /*!< normal interrupt summary */
+typedef enum {
+    EMAC_DMA_INTERRUPT_TX                  = 0x00, /*!< transmit interrupt */
+    EMAC_DMA_INTERRUPT_TX_STOP             = 0x01, /*!< transmit process stopped interrupt */
+    EMAC_DMA_INTERRUPT_TX_UNAVAILABLE      = 0x02, /*!< transmit buffer unavailable interrupt */
+    EMAC_DMA_INTERRUPT_TX_JABBER           = 0x03, /*!< transmit jabber timeout interrupt */
+    EMAC_DMA_INTERRUPT_RX_OVERFLOW         = 0x04, /*!< receive overflow interrupt */
+    EMAC_DMA_INTERRUPT_TX_UNDERFLOW        = 0x05, /*!< transmit underflow interrupt */
+    EMAC_DMA_INTERRUPT_RX                  = 0x06, /*!< receive interrupt */
+    EMAC_DMA_INTERRUPT_RX_UNAVAILABLE      = 0x07, /*!< receive buffer unavailable interrupt */
+    EMAC_DMA_INTERRUPT_RX_STOP             = 0x08, /*!< receive process stopped interrupt */
+    EMAC_DMA_INTERRUPT_RX_TIMEOUT          = 0x09, /*!< receive watchdog timeout interrupt */
+    EMAC_DMA_INTERRUPT_TX_EARLY            = 0x0A, /*!< early transmit interrupt */
+    EMAC_DMA_INTERRUPT_FATAL_BUS_ERROR     = 0x0B, /*!< fatal bus error interrupt */
+    EMAC_DMA_INTERRUPT_RX_EARLY            = 0x0C, /*!< early receive interrupt */
+    EMAC_DMA_INTERRUPT_ABNORMAL_SUMMARY    = 0x0D, /*!< abnormal interrupt summary */
+    EMAC_DMA_INTERRUPT_NORMAL_SUMMARY      = 0x0E  /*!< normal interrupt summary */
 } emac_dma_interrupt_type;
 
 /**
   * @brief  dma tansfer address type
   */
-typedef enum
-{
-  EMAC_DMA_TX_DESCRIPTOR                 = 0x00, /*!< transmit descriptor address */
-  EMAC_DMA_RX_DESCRIPTOR                 = 0x01, /*!< receive descriptor address */
-  EMAC_DMA_TX_BUFFER                     = 0x02, /*!< transmit buffer address */
-  EMAC_DMA_RX_BUFFER                     = 0x03  /*!< receive buffer address */
+typedef enum {
+    EMAC_DMA_TX_DESCRIPTOR                 = 0x00, /*!< transmit descriptor address */
+    EMAC_DMA_RX_DESCRIPTOR                 = 0x01, /*!< receive descriptor address */
+    EMAC_DMA_TX_BUFFER                     = 0x02, /*!< transmit buffer address */
+    EMAC_DMA_RX_BUFFER                     = 0x03  /*!< receive buffer address */
 } emac_dma_transfer_address_type;
 
 /**
   * @brief  clock node type
   */
-typedef enum
-{
-  EMAC_PTP_NORMAL_CLOCK                  = 0x00, /*!< normal clock node */
-  EMAC_PTP_BOUNDARY_CLOCK                = 0x01, /*!< boundary clock node */
-  EMAC_PTP_END_TO_END_CLOCK              = 0x02, /*!< end to end transparent clock node */
-  EMAC_PTP_PEER_TO_PEER_CLOCK            = 0x03  /*!< peer to peer transparent clock node */
+typedef enum {
+    EMAC_PTP_NORMAL_CLOCK                  = 0x00, /*!< normal clock node */
+    EMAC_PTP_BOUNDARY_CLOCK                = 0x01, /*!< boundary clock node */
+    EMAC_PTP_END_TO_END_CLOCK              = 0x02, /*!< end to end transparent clock node */
+    EMAC_PTP_PEER_TO_PEER_CLOCK            = 0x03  /*!< peer to peer transparent clock node */
 } emac_ptp_clock_node_type;
 
 /**
   * @brief  time stamp status type
   */
-typedef enum
-{
-  EMAC_PTP_SECOND_OVERFLOW               = 0x00, /*!< time stamp second overflow */
-  EMAC_PTP_TARGET_TIME_REACH             = 0x01  /*!< time stamp target time reached */
+typedef enum {
+    EMAC_PTP_SECOND_OVERFLOW               = 0x00, /*!< time stamp second overflow */
+    EMAC_PTP_TARGET_TIME_REACH             = 0x01  /*!< time stamp target time reached */
 } emac_ptp_timestamp_status_type;
 
 /**
   * @brief  pps control type
   */
-typedef enum
-{
-  EMAC_PTP_PPS_1HZ                       = 0x00, /*!< pps frequency is 1 hz */
-  EMAC_PTP_PPS_2HZ                       = 0x01, /*!< pps frequency is 2 hz */
-  EMAC_PTP_PPS_4HZ                       = 0x02, /*!< pps frequency is 4 hz */
-  EMAC_PTP_PPS_8HZ                       = 0x03, /*!< pps frequency is 8 hz */
-  EMAC_PTP_PPS_16HZ                      = 0x04, /*!< pps frequency is 16 hz */
-  EMAC_PTP_PPS_32HZ                      = 0x05, /*!< pps frequency is 32 hz */
-  EMAC_PTP_PPS_64HZ                      = 0x06, /*!< pps frequency is 64 hz */
-  EMAC_PTP_PPS_128HZ                     = 0x07, /*!< pps frequency is 128 hz */
-  EMAC_PTP_PPS_256HZ                     = 0x08, /*!< pps frequency is 256 hz */
-  EMAC_PTP_PPS_512HZ                     = 0x09, /*!< pps frequency is 512 hz */
-  EMAC_PTP_PPS_1024HZ                    = 0x0A, /*!< pps frequency is 1024 hz */
-  EMAC_PTP_PPS_2048HZ                    = 0x0B, /*!< pps frequency is 2048 hz */
-  EMAC_PTP_PPS_4096HZ                    = 0x0C, /*!< pps frequency is 4096 hz */
-  EMAC_PTP_PPS_8192HZ                    = 0x0D, /*!< pps frequency is 8192 hz */
-  EMAC_PTP_PPS_16384HZ                   = 0x0E, /*!< pps frequency is 16384 hz */
-  EMAC_PTP_PPS_32768HZ                   = 0x0F  /*!< pps frequency is 32768 hz */
+typedef enum {
+    EMAC_PTP_PPS_1HZ                       = 0x00, /*!< pps frequency is 1 hz */
+    EMAC_PTP_PPS_2HZ                       = 0x01, /*!< pps frequency is 2 hz */
+    EMAC_PTP_PPS_4HZ                       = 0x02, /*!< pps frequency is 4 hz */
+    EMAC_PTP_PPS_8HZ                       = 0x03, /*!< pps frequency is 8 hz */
+    EMAC_PTP_PPS_16HZ                      = 0x04, /*!< pps frequency is 16 hz */
+    EMAC_PTP_PPS_32HZ                      = 0x05, /*!< pps frequency is 32 hz */
+    EMAC_PTP_PPS_64HZ                      = 0x06, /*!< pps frequency is 64 hz */
+    EMAC_PTP_PPS_128HZ                     = 0x07, /*!< pps frequency is 128 hz */
+    EMAC_PTP_PPS_256HZ                     = 0x08, /*!< pps frequency is 256 hz */
+    EMAC_PTP_PPS_512HZ                     = 0x09, /*!< pps frequency is 512 hz */
+    EMAC_PTP_PPS_1024HZ                    = 0x0A, /*!< pps frequency is 1024 hz */
+    EMAC_PTP_PPS_2048HZ                    = 0x0B, /*!< pps frequency is 2048 hz */
+    EMAC_PTP_PPS_4096HZ                    = 0x0C, /*!< pps frequency is 4096 hz */
+    EMAC_PTP_PPS_8192HZ                    = 0x0D, /*!< pps frequency is 8192 hz */
+    EMAC_PTP_PPS_16384HZ                   = 0x0E, /*!< pps frequency is 16384 hz */
+    EMAC_PTP_PPS_32768HZ                   = 0x0F  /*!< pps frequency is 32768 hz */
 } emac_ptp_pps_control_type;
 
 /**
   * @brief  ethernet mac control config type
   */
-typedef struct
-{
-  emac_auto_negotiation_type             auto_nego;             /*!< auto negotiatin enable */
-  confirm_state                          deferral_check;        /*!< deferral check enable */
-  emac_bol_type                          back_off_limit;        /*!< back-off limit setting */
-  confirm_state                          auto_pad_crc_strip;    /*!< automtic pad/crc stripping enable */
-  confirm_state                          retry_disable;         /*!< retry disable*/
-  confirm_state                          ipv4_checksum_offload; /*!< ipv4 checksum offload enable */
-  emac_duplex_type                       duplex_mode;           /*!< duplex mode enable */
-  confirm_state                          loopback_mode;         /*!< loopback mode enable */
-  confirm_state                          receive_own_disable;   /*!< receive own disbale */
-  emac_speed_type                        fast_ethernet_speed;   /*!< fast ethernet speed enable */
-  confirm_state                          carrier_sense_disable; /*!< carrier sense disable*/
-  emac_intergrame_gap_type               interframe_gap;        /*!< set interframe gap */
-  confirm_state                          jabber_disable;        /*!< jabber disbale */
-  confirm_state                          watchdog_disable;      /*!< watchdog disable */
+typedef struct {
+    emac_auto_negotiation_type             auto_nego;             /*!< auto negotiatin enable */
+    confirm_state                          deferral_check;        /*!< deferral check enable */
+    emac_bol_type                          back_off_limit;        /*!< back-off limit setting */
+    confirm_state                          auto_pad_crc_strip;    /*!< automtic pad/crc stripping enable */
+    confirm_state                          retry_disable;         /*!< retry disable*/
+    confirm_state                          ipv4_checksum_offload; /*!< ipv4 checksum offload enable */
+    emac_duplex_type                       duplex_mode;           /*!< duplex mode enable */
+    confirm_state                          loopback_mode;         /*!< loopback mode enable */
+    confirm_state                          receive_own_disable;   /*!< receive own disbale */
+    emac_speed_type                        fast_ethernet_speed;   /*!< fast ethernet speed enable */
+    confirm_state                          carrier_sense_disable; /*!< carrier sense disable*/
+    emac_intergrame_gap_type               interframe_gap;        /*!< set interframe gap */
+    confirm_state                          jabber_disable;        /*!< jabber disbale */
+    confirm_state                          watchdog_disable;      /*!< watchdog disable */
 } emac_control_config_type;
 
 /**
   * @brief  ethernet mac dma config type
   */
-typedef struct
-{
-  confirm_state                          aab_enable;        /*!< address-aligned beats enable */
-  confirm_state                          usp_enable;        /*!< separate PBL enable */
-  emac_dma_pbl_type                      rx_dma_pal;        /*!< rx dma pbl */
-  confirm_state                          fb_enable;         /*!< separate PBL enable */
-  emac_dma_pbl_type                      tx_dma_pal;        /*!< tx dma pbl */
-  uint8_t                                desc_skip_length;  /*!< descriptor skip length */
-  confirm_state                          da_enable;         /*!< dma arbitration enable */
-  emac_dma_rx_tx_ratio_type              priority_ratio;    /*!< priority ratio */
-  confirm_state                          dt_disable;        /*!< disable dropping of tcp/ip checksum error frames */
-  confirm_state                          rsf_enable;        /*!< enable receiving store or forward */
-  confirm_state                          flush_rx_disable;  /*!< disable flushing of received frames */
-  confirm_state                          tsf_enable;        /*!< enable transmitting store or forward */
-  emac_dma_transmit_threshold_type       tx_threshold;      /*!< transmit threshold control */
-  confirm_state                          fef_enable;        /*!< enable forward error frames */
-  confirm_state                          fugf_enable;       /*!< enable forward undersized good frames */
-  emac_dma_receive_threshold_type        rx_threshold;      /*!< receive threshold control */
-  confirm_state                          osf_enable;        /*!< enable operating on second frames */
+typedef struct {
+    confirm_state                          aab_enable;        /*!< address-aligned beats enable */
+    confirm_state                          usp_enable;        /*!< separate PBL enable */
+    emac_dma_pbl_type                      rx_dma_pal;        /*!< rx dma pbl */
+    confirm_state                          fb_enable;         /*!< separate PBL enable */
+    emac_dma_pbl_type                      tx_dma_pal;        /*!< tx dma pbl */
+    uint8_t                                desc_skip_length;  /*!< descriptor skip length */
+    confirm_state                          da_enable;         /*!< dma arbitration enable */
+    emac_dma_rx_tx_ratio_type              priority_ratio;    /*!< priority ratio */
+    confirm_state                          dt_disable;        /*!< disable dropping of tcp/ip checksum error frames */
+    confirm_state                          rsf_enable;        /*!< enable receiving store or forward */
+    confirm_state                          flush_rx_disable;  /*!< disable flushing of received frames */
+    confirm_state                          tsf_enable;        /*!< enable transmitting store or forward */
+    emac_dma_transmit_threshold_type       tx_threshold;      /*!< transmit threshold control */
+    confirm_state                          fef_enable;        /*!< enable forward error frames */
+    confirm_state                          fugf_enable;       /*!< enable forward undersized good frames */
+    emac_dma_receive_threshold_type        rx_threshold;      /*!< receive threshold control */
+    confirm_state                          osf_enable;        /*!< enable operating on second frames */
 } emac_dma_config_type;
 
 /**
   * @brief  dma desciptors data structure definition
   */
 typedef struct  {
-  uint32_t   status;                /*!< status */
-  uint32_t   controlsize;           /*!< control and buffer1, buffer2 lengths */
-  uint32_t   buf1addr;              /*!< buffer1 address pointer */
-  uint32_t   buf2nextdescaddr;      /*!< buffer2 or next descriptor address pointer */
-  uint32_t   extendedstatus;
-  uint32_t   reserved1;
-  uint32_t   timestamp_l;
-  uint32_t   timestamp_h;
+    uint32_t   status;                /*!< status */
+    uint32_t   controlsize;           /*!< control and buffer1, buffer2 lengths */
+    uint32_t   buf1addr;              /*!< buffer1 address pointer */
+    uint32_t   buf2nextdescaddr;      /*!< buffer2 or next descriptor address pointer */
+    uint32_t   extendedstatus;
+    uint32_t   reserved1;
+    uint32_t   timestamp_l;
+    uint32_t   timestamp_h;
 } emac_dma_desc_type;
 
 /**
   * @brief type define emac mac register all
   */
-typedef struct
-{
-  /**
-    * @brief emac mac ctrl register, offset:0x00
-    */
-  union
-  {
-    __IO uint32_t ctrl;
-    struct
-    {
-      __IO uint32_t reserved1            : 2; /* [0:1] */
-      __IO uint32_t re                   : 1; /* [2] */
-      __IO uint32_t te                   : 1; /* [3] */
-      __IO uint32_t dc                   : 1; /* [4] */
-      __IO uint32_t bl                   : 2; /* [5:6] */
-      __IO uint32_t acs                  : 1; /* [7] */
-      __IO uint32_t reserved2            : 1; /* [8] */
-      __IO uint32_t dr                   : 1; /* [9] */
-      __IO uint32_t ipc                  : 1; /* [10] */
-      __IO uint32_t dm                   : 1; /* [11] */
-      __IO uint32_t lm                   : 1; /* [12] */
-      __IO uint32_t dro                  : 1; /* [13] */
-      __IO uint32_t fes                  : 1; /* [14] */
-      __IO uint32_t reserved3            : 1; /* [15] */
-      __IO uint32_t dcs                  : 1; /* [16] */
-      __IO uint32_t ifg                  : 3; /* [17:19] */
-      __IO uint32_t reserved4            : 2; /* [20:21] */
-      __IO uint32_t jd                   : 1; /* [22] */
-      __IO uint32_t wd                   : 1; /* [23] */
-      __IO uint32_t reserved5            : 8; /* [24:31] */
-    } ctrl_bit;
-  };
+typedef struct {
+    /**
+      * @brief emac mac ctrl register, offset:0x00
+      */
+    union {
+        __IO uint32_t ctrl;
+        struct {
+            __IO uint32_t reserved1            : 2; /* [0:1] */
+            __IO uint32_t re                   : 1; /* [2] */
+            __IO uint32_t te                   : 1; /* [3] */
+            __IO uint32_t dc                   : 1; /* [4] */
+            __IO uint32_t bl                   : 2; /* [5:6] */
+            __IO uint32_t acs                  : 1; /* [7] */
+            __IO uint32_t reserved2            : 1; /* [8] */
+            __IO uint32_t dr                   : 1; /* [9] */
+            __IO uint32_t ipc                  : 1; /* [10] */
+            __IO uint32_t dm                   : 1; /* [11] */
+            __IO uint32_t lm                   : 1; /* [12] */
+            __IO uint32_t dro                  : 1; /* [13] */
+            __IO uint32_t fes                  : 1; /* [14] */
+            __IO uint32_t reserved3            : 1; /* [15] */
+            __IO uint32_t dcs                  : 1; /* [16] */
+            __IO uint32_t ifg                  : 3; /* [17:19] */
+            __IO uint32_t reserved4            : 2; /* [20:21] */
+            __IO uint32_t jd                   : 1; /* [22] */
+            __IO uint32_t wd                   : 1; /* [23] */
+            __IO uint32_t reserved5            : 8; /* [24:31] */
+        } ctrl_bit;
+    };
 
-  /**
-    * @brief emac mac frmf register, offset:0x04
-    */
-  union
-  {
-    __IO uint32_t frmf;
-    struct
-    {
-      __IO uint32_t pr                   : 1; /* [0] */
-      __IO uint32_t huc                  : 1; /* [1] */
-      __IO uint32_t hmc                  : 1; /* [2] */
-      __IO uint32_t daif                 : 1; /* [3] */
-      __IO uint32_t pmc                  : 1; /* [4] */
-      __IO uint32_t dbf                  : 1; /* [5] */
-      __IO uint32_t pcf                  : 2; /* [6:7] */
-      __IO uint32_t saif                 : 1; /* [8] */
-      __IO uint32_t saf                  : 1; /* [9] */
-      __IO uint32_t hpf                  : 1; /* [10] */
-      __IO uint32_t reserved1            : 20;/* [11:30] */
-      __IO uint32_t ra                   : 1; /* [31] */
-    } frmf_bit;
-  };
+    /**
+      * @brief emac mac frmf register, offset:0x04
+      */
+    union {
+        __IO uint32_t frmf;
+        struct {
+            __IO uint32_t pr                   : 1; /* [0] */
+            __IO uint32_t huc                  : 1; /* [1] */
+            __IO uint32_t hmc                  : 1; /* [2] */
+            __IO uint32_t daif                 : 1; /* [3] */
+            __IO uint32_t pmc                  : 1; /* [4] */
+            __IO uint32_t dbf                  : 1; /* [5] */
+            __IO uint32_t pcf                  : 2; /* [6:7] */
+            __IO uint32_t saif                 : 1; /* [8] */
+            __IO uint32_t saf                  : 1; /* [9] */
+            __IO uint32_t hpf                  : 1; /* [10] */
+            __IO uint32_t reserved1            : 20;/* [11:30] */
+            __IO uint32_t ra                   : 1; /* [31] */
+        } frmf_bit;
+    };
 
-  /**
-    * @brief emac mac hth register, offset:0x08
-    */
-  union
-  {
-    __IO uint32_t hth;
-    struct
-    {
-      __IO uint32_t hth                  : 32; /* [0:31] */
-    } hth_bit;
-  };
+    /**
+      * @brief emac mac hth register, offset:0x08
+      */
+    union {
+        __IO uint32_t hth;
+        struct {
+            __IO uint32_t hth                  : 32; /* [0:31] */
+        } hth_bit;
+    };
 
-  /**
-    * @brief emac mac htl register, offset:0x0c
-    */
-  union
-  {
-    __IO uint32_t htl;
-    struct
-    {
-      __IO uint32_t htl                  : 32; /* [0:31] */
-    } htl_bit;
-  };
+    /**
+      * @brief emac mac htl register, offset:0x0c
+      */
+    union {
+        __IO uint32_t htl;
+        struct {
+            __IO uint32_t htl                  : 32; /* [0:31] */
+        } htl_bit;
+    };
 
-  /**
-    * @brief emac mac miiaddr register, offset:0x10
-    */
-  union
-  {
-    __IO uint32_t miiaddr;
-    struct
-    {
-      __IO uint32_t mb                   : 1; /* [0] */
-      __IO uint32_t mw                   : 1; /* [1] */
-      __IO uint32_t cr                   : 4; /* [2:5] */
-      __IO uint32_t mii                  : 5; /* [6:10] */
-      __IO uint32_t pa                   : 5; /* [11:15] */
-      __IO uint32_t reserved1            : 16;/* [16:31] */
-    } miiaddr_bit;
-  };
+    /**
+      * @brief emac mac miiaddr register, offset:0x10
+      */
+    union {
+        __IO uint32_t miiaddr;
+        struct {
+            __IO uint32_t mb                   : 1; /* [0] */
+            __IO uint32_t mw                   : 1; /* [1] */
+            __IO uint32_t cr                   : 4; /* [2:5] */
+            __IO uint32_t mii                  : 5; /* [6:10] */
+            __IO uint32_t pa                   : 5; /* [11:15] */
+            __IO uint32_t reserved1            : 16;/* [16:31] */
+        } miiaddr_bit;
+    };
 
-  /**
-    * @brief emac mac miidt register, offset:0x14
-    */
-  union
-  {
-    __IO uint32_t miidt;
-    struct
-    {
-      __IO uint32_t md                   : 16;/* [0:15] */
-      __IO uint32_t reserved1            : 16;/* [16:31] */
-    } miidt_bit;
-  };
+    /**
+      * @brief emac mac miidt register, offset:0x14
+      */
+    union {
+        __IO uint32_t miidt;
+        struct {
+            __IO uint32_t md                   : 16;/* [0:15] */
+            __IO uint32_t reserved1            : 16;/* [16:31] */
+        } miidt_bit;
+    };
 
-  /**
-    * @brief emac mac fctrl register, offset:0x18
-    */
-  union
-  {
-    __IO uint32_t fctrl;
-    struct
-    {
-      __IO uint32_t fcbbpa               : 1; /* [0] */
-      __IO uint32_t etf                  : 1; /* [1] */
-      __IO uint32_t erf                  : 1; /* [2] */
-      __IO uint32_t dup                  : 1; /* [3] */
-      __IO uint32_t plt                  : 2; /* [4:5] */
-      __IO uint32_t reserved1            : 1; /* [6] */
-      __IO uint32_t dzqp                 : 1; /* [7] */
-      __IO uint32_t reserved2            : 8; /* [8:15] */
-      __IO uint32_t pt                   : 16;/* [16:31] */
-    } fctrl_bit;
-  };
+    /**
+      * @brief emac mac fctrl register, offset:0x18
+      */
+    union {
+        __IO uint32_t fctrl;
+        struct {
+            __IO uint32_t fcbbpa               : 1; /* [0] */
+            __IO uint32_t etf                  : 1; /* [1] */
+            __IO uint32_t erf                  : 1; /* [2] */
+            __IO uint32_t dup                  : 1; /* [3] */
+            __IO uint32_t plt                  : 2; /* [4:5] */
+            __IO uint32_t reserved1            : 1; /* [6] */
+            __IO uint32_t dzqp                 : 1; /* [7] */
+            __IO uint32_t reserved2            : 8; /* [8:15] */
+            __IO uint32_t pt                   : 16;/* [16:31] */
+        } fctrl_bit;
+    };
 
-  /**
-    * @brief emac mac vlt register, offset:0x1C
-    */
-  union
-  {
-    __IO uint32_t vlt;
-    struct
-    {
-      __IO uint32_t vti                  : 16;/* [0:15] */
-      __IO uint32_t etv                  : 1; /* [16] */
-      __IO uint32_t reserved1            : 15;/* [17:31] */
-    } vlt_bit;
-  };
+    /**
+      * @brief emac mac vlt register, offset:0x1C
+      */
+    union {
+        __IO uint32_t vlt;
+        struct {
+            __IO uint32_t vti                  : 16;/* [0:15] */
+            __IO uint32_t etv                  : 1; /* [16] */
+            __IO uint32_t reserved1            : 15;/* [17:31] */
+        } vlt_bit;
+    };
 
-  /**
-    * @brief emac mac reserved1 register, offset:0x20~0x24
-    */
-  __IO uint32_t reserved1[2];
+    /**
+      * @brief emac mac reserved1 register, offset:0x20~0x24
+      */
+    __IO uint32_t reserved1[2];
 
-  /**
-    * @brief emac mac rwff register, offset:0x28
-    */
-  __IO uint32_t rwff;
+    /**
+      * @brief emac mac rwff register, offset:0x28
+      */
+    __IO uint32_t rwff;
 
-  /**
-    * @brief emac mac pmtctrlsts register, offset:0x2C
-    */
-  union
-  {
-    __IO uint32_t pmtctrlsts;
-    struct
-    {
-      __IO uint32_t pd                   : 1; /* [0] */
-      __IO uint32_t emp                  : 1; /* [1] */
-      __IO uint32_t erwf                 : 1; /* [2] */
-      __IO uint32_t reserved1            : 2; /* [3:4] */
-      __IO uint32_t rmp                  : 1; /* [5] */
-      __IO uint32_t rrwf                 : 1; /* [6] */
-      __IO uint32_t reserved2            : 2; /* [7:8] */
-      __IO uint32_t guc                  : 1; /* [9] */
-      __IO uint32_t reserved3            : 21;/* [10:30] */
-      __IO uint32_t rwffpr               : 1; /* [31] */
-    } pmtctrlsts_bit;
-  };
+    /**
+      * @brief emac mac pmtctrlsts register, offset:0x2C
+      */
+    union {
+        __IO uint32_t pmtctrlsts;
+        struct {
+            __IO uint32_t pd                   : 1; /* [0] */
+            __IO uint32_t emp                  : 1; /* [1] */
+            __IO uint32_t erwf                 : 1; /* [2] */
+            __IO uint32_t reserved1            : 2; /* [3:4] */
+            __IO uint32_t rmp                  : 1; /* [5] */
+            __IO uint32_t rrwf                 : 1; /* [6] */
+            __IO uint32_t reserved2            : 2; /* [7:8] */
+            __IO uint32_t guc                  : 1; /* [9] */
+            __IO uint32_t reserved3            : 21;/* [10:30] */
+            __IO uint32_t rwffpr               : 1; /* [31] */
+        } pmtctrlsts_bit;
+    };
 
-  /**
-    * @brief emac mac reserved2 register, offset:0x30~0x34
-    */
-  __IO uint32_t reserved2[2];
+    /**
+      * @brief emac mac reserved2 register, offset:0x30~0x34
+      */
+    __IO uint32_t reserved2[2];
 
-  /**
-    * @brief emac mac ists register, offset:0x38
-    */
-  union
-  {
-    __IO uint32_t ists;
-    struct
-    {
-      __IO uint32_t reserved1            : 3; /* [0:2] */
-      __IO uint32_t pis                  : 1; /* [3] */
-      __IO uint32_t mis                  : 1; /* [4] */
-      __IO uint32_t mris                 : 1; /* [5] */
-      __IO uint32_t mtis                 : 1; /* [6] */
-      __IO uint32_t reserved2            : 2; /* [7:8] */
-      __IO uint32_t tis                  : 1; /* [9] */
-      __IO uint32_t reserved3            : 22;/* [10:31] */
-    } ists_bit;
-  };
+    /**
+      * @brief emac mac ists register, offset:0x38
+      */
+    union {
+        __IO uint32_t ists;
+        struct {
+            __IO uint32_t reserved1            : 3; /* [0:2] */
+            __IO uint32_t pis                  : 1; /* [3] */
+            __IO uint32_t mis                  : 1; /* [4] */
+            __IO uint32_t mris                 : 1; /* [5] */
+            __IO uint32_t mtis                 : 1; /* [6] */
+            __IO uint32_t reserved2            : 2; /* [7:8] */
+            __IO uint32_t tis                  : 1; /* [9] */
+            __IO uint32_t reserved3            : 22;/* [10:31] */
+        } ists_bit;
+    };
 
-  /**
-    * @brief emac mac imr register, offset:0x3C
-    */
-  union
-  {
-    __IO uint32_t imr;
-    struct
-    {
-      __IO uint32_t reserved1            : 3; /* [0:2] */
-      __IO uint32_t pim                  : 1; /* [3] */
-      __IO uint32_t reserved2            : 5; /* [4:8] */
-      __IO uint32_t tim                  : 1; /* [9] */
-      __IO uint32_t reserved3            : 22;/* [10:31] */
-    } imr_bit;
-  };
+    /**
+      * @brief emac mac imr register, offset:0x3C
+      */
+    union {
+        __IO uint32_t imr;
+        struct {
+            __IO uint32_t reserved1            : 3; /* [0:2] */
+            __IO uint32_t pim                  : 1; /* [3] */
+            __IO uint32_t reserved2            : 5; /* [4:8] */
+            __IO uint32_t tim                  : 1; /* [9] */
+            __IO uint32_t reserved3            : 22;/* [10:31] */
+        } imr_bit;
+    };
 
-  /**
-    * @brief emac mac a0h register, offset:0x40
-    */
-  union
-  {
-    __IO uint32_t a0h;
-    struct
-    {
-      __IO uint32_t ma0h                 : 16;/* [0:15] */
-      __IO uint32_t reserved1            : 15;/* [16:30] */
-      __IO uint32_t ae                   : 1; /* [31] */
-    } a0h_bit;
-  };
+    /**
+      * @brief emac mac a0h register, offset:0x40
+      */
+    union {
+        __IO uint32_t a0h;
+        struct {
+            __IO uint32_t ma0h                 : 16;/* [0:15] */
+            __IO uint32_t reserved1            : 15;/* [16:30] */
+            __IO uint32_t ae                   : 1; /* [31] */
+        } a0h_bit;
+    };
 
-   /**
-    * @brief emac mac a0l register, offset:0x44
-    */
-  union
-  {
-    __IO uint32_t a0l;
-    struct
-    {
-      __IO uint32_t ma0l                 : 32;/* [0:31] */
-    } a0l_bit;
-  };
+    /**
+     * @brief emac mac a0l register, offset:0x44
+     */
+    union {
+        __IO uint32_t a0l;
+        struct {
+            __IO uint32_t ma0l                 : 32;/* [0:31] */
+        } a0l_bit;
+    };
 
-  /**
-    * @brief emac mac a1h register, offset:0x48
-    */
-  union
-  {
-    __IO uint32_t a1h;
-    struct
-    {
-      __IO uint32_t ma1h                 : 16;/* [0:15] */
-      __IO uint32_t reserved1            : 8; /* [16:23] */
-      __IO uint32_t mbc                  : 6; /* [24:29] */
-      __IO uint32_t sa                   : 1; /* [30] */
-      __IO uint32_t ae                   : 1; /* [31] */
-    } a1h_bit;
-  };
+    /**
+      * @brief emac mac a1h register, offset:0x48
+      */
+    union {
+        __IO uint32_t a1h;
+        struct {
+            __IO uint32_t ma1h                 : 16;/* [0:15] */
+            __IO uint32_t reserved1            : 8; /* [16:23] */
+            __IO uint32_t mbc                  : 6; /* [24:29] */
+            __IO uint32_t sa                   : 1; /* [30] */
+            __IO uint32_t ae                   : 1; /* [31] */
+        } a1h_bit;
+    };
 
-  /**
-    * @brief emac mac a1l register, offset:0x4C
-    */
-  union
-  {
-    __IO uint32_t a1l;
-    struct
-    {
-      __IO uint32_t ma1l                 : 32;/* [0:31] */
-    } a1l_bit;
-  };
+    /**
+      * @brief emac mac a1l register, offset:0x4C
+      */
+    union {
+        __IO uint32_t a1l;
+        struct {
+            __IO uint32_t ma1l                 : 32;/* [0:31] */
+        } a1l_bit;
+    };
 
-  /**
-    * @brief emac mac a2h register, offset:0x50
-    */
-  union
-  {
-    __IO uint32_t a2h;
-    struct
-    {
-      __IO uint32_t ma2h                 : 16;/* [0:15] */
-      __IO uint32_t reserved1            : 8; /* [16:23] */
-      __IO uint32_t mbc                  : 6; /* [24:29] */
-      __IO uint32_t sa                   : 1; /* [30] */
-      __IO uint32_t ae                   : 1; /* [31] */
-    } a2h_bit;
-  };
+    /**
+      * @brief emac mac a2h register, offset:0x50
+      */
+    union {
+        __IO uint32_t a2h;
+        struct {
+            __IO uint32_t ma2h                 : 16;/* [0:15] */
+            __IO uint32_t reserved1            : 8; /* [16:23] */
+            __IO uint32_t mbc                  : 6; /* [24:29] */
+            __IO uint32_t sa                   : 1; /* [30] */
+            __IO uint32_t ae                   : 1; /* [31] */
+        } a2h_bit;
+    };
 
-  /**
-    * @brief emac mac a2l register, offset:0x54
-    */
-  union
-  {
-    __IO uint32_t a2l;
-    struct
-    {
-      __IO uint32_t ma2l                 : 32;/* [0:31] */
-    } a2l_bit;
-  };
+    /**
+      * @brief emac mac a2l register, offset:0x54
+      */
+    union {
+        __IO uint32_t a2l;
+        struct {
+            __IO uint32_t ma2l                 : 32;/* [0:31] */
+        } a2l_bit;
+    };
 
-  /**
-    * @brief emac mac a3h register, offset:0x58
-    */
-  union
-  {
-    __IO uint32_t a3h;
-    struct
-    {
-      __IO uint32_t ma3h                 : 16;/* [0:15] */
-      __IO uint32_t reserved1            : 8; /* [16:23] */
-      __IO uint32_t mbc                  : 6; /* [24:29] */
-      __IO uint32_t sa                   : 1; /* [30] */
-      __IO uint32_t ae                   : 1; /* [31] */
-    } a3h_bit;
-  };
+    /**
+      * @brief emac mac a3h register, offset:0x58
+      */
+    union {
+        __IO uint32_t a3h;
+        struct {
+            __IO uint32_t ma3h                 : 16;/* [0:15] */
+            __IO uint32_t reserved1            : 8; /* [16:23] */
+            __IO uint32_t mbc                  : 6; /* [24:29] */
+            __IO uint32_t sa                   : 1; /* [30] */
+            __IO uint32_t ae                   : 1; /* [31] */
+        } a3h_bit;
+    };
 
-  /**
-    * @brief emac mac a3l register, offset:0x5C
-    */
-  union
-  {
-    __IO uint32_t a3l;
-    struct
-    {
-      __IO uint32_t ma3l                 : 32;/* [0:31] */
-    } a3l_bit;
-  };
+    /**
+      * @brief emac mac a3l register, offset:0x5C
+      */
+    union {
+        __IO uint32_t a3l;
+        struct {
+            __IO uint32_t ma3l                 : 32;/* [0:31] */
+        } a3l_bit;
+    };
 } emac_type;
 
 /**
   * @brief type define emac mmc register all
   */
-typedef struct
-{
-  /**
-    * @brief emac mmc ctrl register, offset:0x0100
-    */
-  union
-  {
-    __IO uint32_t ctrl;
-    struct
-    {
-      __IO uint32_t rc                   : 1; /* [0] */
-      __IO uint32_t scr                  : 1; /* [1] */
-      __IO uint32_t rr                   : 1; /* [2] */
-      __IO uint32_t fmc                  : 1; /* [3] */
-      __IO uint32_t reserved1            : 28;/* [4:31] */
-    } ctrl_bit;
-  };
+typedef struct {
+    /**
+      * @brief emac mmc ctrl register, offset:0x0100
+      */
+    union {
+        __IO uint32_t ctrl;
+        struct {
+            __IO uint32_t rc                   : 1; /* [0] */
+            __IO uint32_t scr                  : 1; /* [1] */
+            __IO uint32_t rr                   : 1; /* [2] */
+            __IO uint32_t fmc                  : 1; /* [3] */
+            __IO uint32_t reserved1            : 28;/* [4:31] */
+        } ctrl_bit;
+    };
 
-  /**
-    * @brief emac mmc ri register, offset:0x0104
-    */
-  union
-  {
-    __IO uint32_t ri;
-    struct
-    {
-      __IO uint32_t reserved1            : 5; /* [0:4] */
-      __IO uint32_t rfce                 : 1; /* [5] */
-      __IO uint32_t rfae                 : 1; /* [6] */
-      __IO uint32_t reserved2            : 10;/* [7:16] */
-      __IO uint32_t rguf                 : 1; /* [17] */
-      __IO uint32_t reserved3            : 14;/* [18:31] */
-    } ri_bit;
-  };
+    /**
+      * @brief emac mmc ri register, offset:0x0104
+      */
+    union {
+        __IO uint32_t ri;
+        struct {
+            __IO uint32_t reserved1            : 5; /* [0:4] */
+            __IO uint32_t rfce                 : 1; /* [5] */
+            __IO uint32_t rfae                 : 1; /* [6] */
+            __IO uint32_t reserved2            : 10;/* [7:16] */
+            __IO uint32_t rguf                 : 1; /* [17] */
+            __IO uint32_t reserved3            : 14;/* [18:31] */
+        } ri_bit;
+    };
 
-  /**
-    * @brief emac mmc ti register, offset:0x0108
-    */
-  union
-  {
-    __IO uint32_t ti;
-    struct
-    {
-      __IO uint32_t reserved1            : 14;/* [0:13] */
-      __IO uint32_t tscgfci              : 1; /* [14] */
-      __IO uint32_t tgfmsc               : 1; /* [15] */
-      __IO uint32_t reserved2            : 5; /* [16:20] */
-      __IO uint32_t tgf                  : 1; /* [21] */
-      __IO uint32_t reserved3            : 10;/* [22:31] */
-    } ti_bit;
-  };
+    /**
+      * @brief emac mmc ti register, offset:0x0108
+      */
+    union {
+        __IO uint32_t ti;
+        struct {
+            __IO uint32_t reserved1            : 14;/* [0:13] */
+            __IO uint32_t tscgfci              : 1; /* [14] */
+            __IO uint32_t tgfmsc               : 1; /* [15] */
+            __IO uint32_t reserved2            : 5; /* [16:20] */
+            __IO uint32_t tgf                  : 1; /* [21] */
+            __IO uint32_t reserved3            : 10;/* [22:31] */
+        } ti_bit;
+    };
 
-  /**
-    * @brief emac mmc rim register, offset:0x010C
-    */
-  union
-  {
-    __IO uint32_t rim;
-    struct
-    {
-      __IO uint32_t reserved1            : 5; /* [0:4] */
-      __IO uint32_t rcefcim              : 1; /* [5] */
-      __IO uint32_t raefacim             : 1; /* [6] */
-      __IO uint32_t reserved2            : 10;/* [7:16] */
-      __IO uint32_t rugfcim              : 1; /* [17] */
-      __IO uint32_t reserved3            : 14;/* [18:31] */
-    } rim_bit;
-  };
+    /**
+      * @brief emac mmc rim register, offset:0x010C
+      */
+    union {
+        __IO uint32_t rim;
+        struct {
+            __IO uint32_t reserved1            : 5; /* [0:4] */
+            __IO uint32_t rcefcim              : 1; /* [5] */
+            __IO uint32_t raefacim             : 1; /* [6] */
+            __IO uint32_t reserved2            : 10;/* [7:16] */
+            __IO uint32_t rugfcim              : 1; /* [17] */
+            __IO uint32_t reserved3            : 14;/* [18:31] */
+        } rim_bit;
+    };
 
-  /**
-    * @brief emac mmc tim register, offset:0x0110
-    */
-  union
-  {
-    __IO uint32_t tim;
-    struct
-    {
-      __IO uint32_t reserved1            : 14;/* [0:13] */
-      __IO uint32_t tscgfcim             : 1; /* [14] */
-      __IO uint32_t tmcgfcim             : 1; /* [15] */
-      __IO uint32_t reserved2            : 5; /* [16:20] */
-      __IO uint32_t tgfcim               : 1; /* [21] */
-      __IO uint32_t reserved3            : 10;/* [22:31] */
-    } tim_bit;
-  };
+    /**
+      * @brief emac mmc tim register, offset:0x0110
+      */
+    union {
+        __IO uint32_t tim;
+        struct {
+            __IO uint32_t reserved1            : 14;/* [0:13] */
+            __IO uint32_t tscgfcim             : 1; /* [14] */
+            __IO uint32_t tmcgfcim             : 1; /* [15] */
+            __IO uint32_t reserved2            : 5; /* [16:20] */
+            __IO uint32_t tgfcim               : 1; /* [21] */
+            __IO uint32_t reserved3            : 10;/* [22:31] */
+        } tim_bit;
+    };
 
-  /**
-    * @brief emac mmc reserved1 register, offset:0x0114~0x0148
-    */
-  __IO uint32_t reserved1[14];
+    /**
+      * @brief emac mmc reserved1 register, offset:0x0114~0x0148
+      */
+    __IO uint32_t reserved1[14];
 
-  /**
-    * @brief emac mmc tfscc register, offset:0x014C
-    */
-  union
-  {
-    __IO uint32_t tfscc;
-    struct
-    {
-      __IO uint32_t tgfscc               : 32;/* [0:31] */
-    } tfscc_bit;
-  };
+    /**
+      * @brief emac mmc tfscc register, offset:0x014C
+      */
+    union {
+        __IO uint32_t tfscc;
+        struct {
+            __IO uint32_t tgfscc               : 32;/* [0:31] */
+        } tfscc_bit;
+    };
 
-  /**
-    * @brief emac mmc tfmscc register, offset:0x0150
-    */
-  union
-  {
-    __IO uint32_t tfmscc;
-    struct
-    {
-      __IO uint32_t tgfmscc              : 32;/* [0:31] */
-    } tfmscc_bit;
-  };
+    /**
+      * @brief emac mmc tfmscc register, offset:0x0150
+      */
+    union {
+        __IO uint32_t tfmscc;
+        struct {
+            __IO uint32_t tgfmscc              : 32;/* [0:31] */
+        } tfmscc_bit;
+    };
 
-  /**
-    * @brief emac mmc reserved2 register, offset:0x0154~0x0164
-    */
-  __IO uint32_t reserved2[5];
+    /**
+      * @brief emac mmc reserved2 register, offset:0x0154~0x0164
+      */
+    __IO uint32_t reserved2[5];
 
-  /**
-    * @brief emac mmc tfcnt register, offset:0x0168
-    */
-  union
-  {
-    __IO uint32_t tfcnt;
-    struct
-    {
-      __IO uint32_t tgfc                 : 32;/* [0:31] */
-    } tfcnt_bit;
-  };
+    /**
+      * @brief emac mmc tfcnt register, offset:0x0168
+      */
+    union {
+        __IO uint32_t tfcnt;
+        struct {
+            __IO uint32_t tgfc                 : 32;/* [0:31] */
+        } tfcnt_bit;
+    };
 
-  /**
-    * @brief emac mmc reserved3 register, offset:0x016C~0x0190
-    */
-  __IO uint32_t reserved3[10];
+    /**
+      * @brief emac mmc reserved3 register, offset:0x016C~0x0190
+      */
+    __IO uint32_t reserved3[10];
 
-  /**
-    * @brief emac mmc rfcecnt register, offset:0x0194
-    */
-  union
-  {
-    __IO uint32_t rfcecnt;
-    struct
-    {
-      __IO uint32_t rfcec                : 32;/* [0:31] */
-    } rfcecnt_bit;
-  };
+    /**
+      * @brief emac mmc rfcecnt register, offset:0x0194
+      */
+    union {
+        __IO uint32_t rfcecnt;
+        struct {
+            __IO uint32_t rfcec                : 32;/* [0:31] */
+        } rfcecnt_bit;
+    };
 
-  /**
-    * @brief emac mmc rfaecnt register, offset:0x0198
-    */
-  union
-  {
-    __IO uint32_t rfaecnt;
-    struct
-    {
-      __IO uint32_t rfaec                : 32;/* [0:31] */
-    } rfaecnt_bit;
-  };
+    /**
+      * @brief emac mmc rfaecnt register, offset:0x0198
+      */
+    union {
+        __IO uint32_t rfaecnt;
+        struct {
+            __IO uint32_t rfaec                : 32;/* [0:31] */
+        } rfaecnt_bit;
+    };
 
-  /**
-    * @brief emac mmc reserved4 register, offset:0x019C~0x01C0
-    */
-  __IO uint32_t reserved4[10];
+    /**
+      * @brief emac mmc reserved4 register, offset:0x019C~0x01C0
+      */
+    __IO uint32_t reserved4[10];
 
-  /**
-    * @brief emac mmc rgufcnt register, offset:0x01C4
-    */
-  union
-  {
-    __IO uint32_t rgufcnt;
-    struct
-    {
-      __IO uint32_t rgufc                : 32;/* [0:31] */
-    } rgufcnt_bit;
-  };
+    /**
+      * @brief emac mmc rgufcnt register, offset:0x01C4
+      */
+    union {
+        __IO uint32_t rgufcnt;
+        struct {
+            __IO uint32_t rgufc                : 32;/* [0:31] */
+        } rgufcnt_bit;
+    };
 } emac_mmc_type;
 
 /**
   * @brief type define emac ptp register all
   */
-typedef struct
-{
-  /**
-    * @brief emac ptp tsctrl register, offset:0x0700
-    */
-  union
-  {
-    __IO uint32_t tsctrl;
-    struct
-    {
-      __IO uint32_t te                   : 1; /* [0] */
-      __IO uint32_t tfcu                 : 1; /* [1] */
-      __IO uint32_t ti                   : 1; /* [2] */
-      __IO uint32_t tu                   : 1; /* [3] */
-      __IO uint32_t tite                 : 1; /* [4] */
-      __IO uint32_t aru                  : 1; /* [5] */
-      __IO uint32_t reserved1            : 2; /* [6:7] */
-      __IO uint32_t etaf                 : 1; /* [8] */
-      __IO uint32_t tdbrc                : 1; /* [9] */
-      __IO uint32_t eppv2f               : 1; /* [10] */
-      __IO uint32_t eppef                : 1; /* [11] */
-      __IO uint32_t eppfsip6u            : 1; /* [12] */
-      __IO uint32_t eppfsip4u            : 1; /* [13] */
-      __IO uint32_t etsfem               : 1; /* [14] */
-      __IO uint32_t esfmrtm              : 1; /* [15] */
-      __IO uint32_t sppfts               : 2; /* [16:17] */
-      __IO uint32_t emafpff              : 1; /* [18] */
-      __IO uint32_t reserved2            : 13;/* [19:31] */
-    } tsctrl_bit;
-  };
+typedef struct {
+    /**
+      * @brief emac ptp tsctrl register, offset:0x0700
+      */
+    union {
+        __IO uint32_t tsctrl;
+        struct {
+            __IO uint32_t te                   : 1; /* [0] */
+            __IO uint32_t tfcu                 : 1; /* [1] */
+            __IO uint32_t ti                   : 1; /* [2] */
+            __IO uint32_t tu                   : 1; /* [3] */
+            __IO uint32_t tite                 : 1; /* [4] */
+            __IO uint32_t aru                  : 1; /* [5] */
+            __IO uint32_t reserved1            : 2; /* [6:7] */
+            __IO uint32_t etaf                 : 1; /* [8] */
+            __IO uint32_t tdbrc                : 1; /* [9] */
+            __IO uint32_t eppv2f               : 1; /* [10] */
+            __IO uint32_t eppef                : 1; /* [11] */
+            __IO uint32_t eppfsip6u            : 1; /* [12] */
+            __IO uint32_t eppfsip4u            : 1; /* [13] */
+            __IO uint32_t etsfem               : 1; /* [14] */
+            __IO uint32_t esfmrtm              : 1; /* [15] */
+            __IO uint32_t sppfts               : 2; /* [16:17] */
+            __IO uint32_t emafpff              : 1; /* [18] */
+            __IO uint32_t reserved2            : 13;/* [19:31] */
+        } tsctrl_bit;
+    };
 
-  /**
-    * @brief emac ptp ssinc register, offset:0x0704
-    */
-  union
-  {
-    __IO uint32_t ssinc;
-    struct
-    {
-      __IO uint32_t ssiv                 : 8; /* [0] */
-      __IO uint32_t reserved1            : 24;/* [8:31] */
-    } ssinc_bit;
-  };
+    /**
+      * @brief emac ptp ssinc register, offset:0x0704
+      */
+    union {
+        __IO uint32_t ssinc;
+        struct {
+            __IO uint32_t ssiv                 : 8; /* [0] */
+            __IO uint32_t reserved1            : 24;/* [8:31] */
+        } ssinc_bit;
+    };
 
-  /**
-    * @brief emac ptp tsh register, offset:0x0708
-    */
-  union
-  {
-    __IO uint32_t tsh;
-    struct
-    {
-      __IO uint32_t ts                   : 32;/* [0:31] */
-    } tsh_bit;
-  };
+    /**
+      * @brief emac ptp tsh register, offset:0x0708
+      */
+    union {
+        __IO uint32_t tsh;
+        struct {
+            __IO uint32_t ts                   : 32;/* [0:31] */
+        } tsh_bit;
+    };
 
-  /**
-    * @brief emac ptp tsl register, offset:0x070C
-    */
-  union
-  {
-    __IO uint32_t tsl;
-    struct
-    {
-      __IO uint32_t tss                  : 31;/* [0:30] */
-      __IO uint32_t ast                  : 1; /* [31] */
-    } tsl_bit;
-  };
+    /**
+      * @brief emac ptp tsl register, offset:0x070C
+      */
+    union {
+        __IO uint32_t tsl;
+        struct {
+            __IO uint32_t tss                  : 31;/* [0:30] */
+            __IO uint32_t ast                  : 1; /* [31] */
+        } tsl_bit;
+    };
 
-  /**
-    * @brief emac ptp tshud register, offset:0x0710
-    */
-  union
-  {
-    __IO uint32_t tshud;
-    struct
-    {
-      __IO uint32_t ts                   : 32;/* [0:31] */
-    } tshud_bit;
-  };
+    /**
+      * @brief emac ptp tshud register, offset:0x0710
+      */
+    union {
+        __IO uint32_t tshud;
+        struct {
+            __IO uint32_t ts                   : 32;/* [0:31] */
+        } tshud_bit;
+    };
 
-  /**
-    * @brief emac ptp tslud register, offset:0x0714
-    */
-  union
-  {
-    __IO uint32_t tslud;
-    struct
-    {
-      __IO uint32_t tss                  : 31;/* [0:30] */
-      __IO uint32_t ast                  : 1; /* [31] */
-    } tslud_bit;
-  };
+    /**
+      * @brief emac ptp tslud register, offset:0x0714
+      */
+    union {
+        __IO uint32_t tslud;
+        struct {
+            __IO uint32_t tss                  : 31;/* [0:30] */
+            __IO uint32_t ast                  : 1; /* [31] */
+        } tslud_bit;
+    };
 
-  /**
-    * @brief emac ptp tsad register, offset:0x0718
-    */
-  union
-  {
-    __IO uint32_t tsad;
-    struct
-    {
-      __IO uint32_t tar                  : 32;/* [0:31] */
-    } tsad_bit;
-  };
+    /**
+      * @brief emac ptp tsad register, offset:0x0718
+      */
+    union {
+        __IO uint32_t tsad;
+        struct {
+            __IO uint32_t tar                  : 32;/* [0:31] */
+        } tsad_bit;
+    };
 
-  /**
-    * @brief emac ptp tth register, offset:0x071C
-    */
-  union
-  {
-    __IO uint32_t tth;
-    struct
-    {
-      __IO uint32_t ttsr                 : 32;/* [0:31] */
-    } tth_bit;
-  };
+    /**
+      * @brief emac ptp tth register, offset:0x071C
+      */
+    union {
+        __IO uint32_t tth;
+        struct {
+            __IO uint32_t ttsr                 : 32;/* [0:31] */
+        } tth_bit;
+    };
 
-  /**
-    * @brief emac ptp ttl register, offset:0x0720
-    */
-  union
-  {
-    __IO uint32_t ttl;
-    struct
-    {
-      __IO uint32_t ttlr                 : 32;/* [0:31] */
-    } ttl_bit;
-  };
+    /**
+      * @brief emac ptp ttl register, offset:0x0720
+      */
+    union {
+        __IO uint32_t ttl;
+        struct {
+            __IO uint32_t ttlr                 : 32;/* [0:31] */
+        } ttl_bit;
+    };
 
-  /**
-    * @brief emac ptp reserved register, offset:0x0724
-    */
-  __IO uint32_t reserved1;
+    /**
+      * @brief emac ptp reserved register, offset:0x0724
+      */
+    __IO uint32_t reserved1;
 
-   /**
-    * @brief emac ptp tssr register, offset:0x0728
-    */
-  union
-  {
-    __IO uint32_t tssr;
-    struct
-    {
-      __IO uint32_t tso                  : 1; /* [0] */
-      __IO uint32_t tttr                 : 1; /* [1] */
-      __IO uint32_t reserved1            : 30;/* [2:31] */
-    } tssr_bit;
-  };
+    /**
+     * @brief emac ptp tssr register, offset:0x0728
+     */
+    union {
+        __IO uint32_t tssr;
+        struct {
+            __IO uint32_t tso                  : 1; /* [0] */
+            __IO uint32_t tttr                 : 1; /* [1] */
+            __IO uint32_t reserved1            : 30;/* [2:31] */
+        } tssr_bit;
+    };
 
-  /**
-    * @brief emac ptp ppscr register, offset:0x072C
-    */
-  union
-  {
-    __IO uint32_t ppscr;
-    struct
-    {
-      __IO uint32_t pofc                 : 4; /* [0:3] */
-      __IO uint32_t reserved1            : 28;/* [4:31] */
-    } ppscr_bit;
-  };
+    /**
+      * @brief emac ptp ppscr register, offset:0x072C
+      */
+    union {
+        __IO uint32_t ppscr;
+        struct {
+            __IO uint32_t pofc                 : 4; /* [0:3] */
+            __IO uint32_t reserved1            : 28;/* [4:31] */
+        } ppscr_bit;
+    };
 } emac_ptp_type;
 
 /**
   * @brief type define emac ptp register all
   */
-typedef struct
-{
-  /**
-    * @brief emac dma bm register, offset:0x1000
-    */
-  union
-  {
-    __IO uint32_t bm;
-    struct
-    {
-      __IO uint32_t swr                  : 1; /* [0] */
-      __IO uint32_t da                   : 1; /* [1] */
-      __IO uint32_t dsl                  : 5; /* [2:6] */
-      __IO uint32_t atds                 : 1; /* [7] */
-      __IO uint32_t pbl                  : 6; /* [8:13] */
-      __IO uint32_t pr                   : 2; /* [14:15] */
-      __IO uint32_t fb                   : 1; /* [16] */
-      __IO uint32_t rdp                  : 6; /* [17:22] */
-      __IO uint32_t usp                  : 1; /* [23] */
-      __IO uint32_t pblx8                : 1; /* [24] */
-      __IO uint32_t aab                  : 1; /* [25] */
-      __IO uint32_t reserved             : 6; /* [26:31] */
-    } bm_bit;
-  };
+typedef struct {
+    /**
+      * @brief emac dma bm register, offset:0x1000
+      */
+    union {
+        __IO uint32_t bm;
+        struct {
+            __IO uint32_t swr                  : 1; /* [0] */
+            __IO uint32_t da                   : 1; /* [1] */
+            __IO uint32_t dsl                  : 5; /* [2:6] */
+            __IO uint32_t atds                 : 1; /* [7] */
+            __IO uint32_t pbl                  : 6; /* [8:13] */
+            __IO uint32_t pr                   : 2; /* [14:15] */
+            __IO uint32_t fb                   : 1; /* [16] */
+            __IO uint32_t rdp                  : 6; /* [17:22] */
+            __IO uint32_t usp                  : 1; /* [23] */
+            __IO uint32_t pblx8                : 1; /* [24] */
+            __IO uint32_t aab                  : 1; /* [25] */
+            __IO uint32_t reserved             : 6; /* [26:31] */
+        } bm_bit;
+    };
 
-  /**
-    * @brief emac dma tpd register, offset:0x1004
-    */
-  union
-  {
-    __IO uint32_t tpd;
-    struct
-    {
-      __IO uint32_t tpd                  : 32; /* [0:31] */
-    } tpd_bit;
-  };
+    /**
+      * @brief emac dma tpd register, offset:0x1004
+      */
+    union {
+        __IO uint32_t tpd;
+        struct {
+            __IO uint32_t tpd                  : 32; /* [0:31] */
+        } tpd_bit;
+    };
 
-  /**
-    * @brief emac dma rpd register, offset:0x1008
-    */
-  union
-  {
-    __IO uint32_t rpd;
-    struct
-    {
-      __IO uint32_t rpd                  : 32; /* [0:31] */
-    } rpd_bit;
-  };
+    /**
+      * @brief emac dma rpd register, offset:0x1008
+      */
+    union {
+        __IO uint32_t rpd;
+        struct {
+            __IO uint32_t rpd                  : 32; /* [0:31] */
+        } rpd_bit;
+    };
 
-  /**
-    * @brief emac dma rdladdr register, offset:0x100c
-    */
-  union
-  {
-    __IO uint32_t rdladdr;
-    struct
-    {
-      __IO uint32_t srl                  : 32; /* [0:31] */
-    } rdladdr_bit;
-  };
+    /**
+      * @brief emac dma rdladdr register, offset:0x100c
+      */
+    union {
+        __IO uint32_t rdladdr;
+        struct {
+            __IO uint32_t srl                  : 32; /* [0:31] */
+        } rdladdr_bit;
+    };
 
-  /**
-    * @brief emac dma tdladdr register, offset:0x1010
-    */
-  union
-  {
-    __IO uint32_t tdladdr;
-    struct
-    {
-      __IO uint32_t stl                  : 32; /* [0:31] */
-    } tdladdr_bit;
-  };
+    /**
+      * @brief emac dma tdladdr register, offset:0x1010
+      */
+    union {
+        __IO uint32_t tdladdr;
+        struct {
+            __IO uint32_t stl                  : 32; /* [0:31] */
+        } tdladdr_bit;
+    };
 
-  /**
-    * @brief emac dma sts register, offset:0x1014
-    */
-  union
-  {
-    __IO uint32_t sts;
-    struct
-    {
-      __IO uint32_t ti                   : 1; /* [0] */
-      __IO uint32_t tps                  : 1; /* [1] */
-      __IO uint32_t tbu                  : 1; /* [2] */
-      __IO uint32_t tjt                  : 1; /* [3] */
-      __IO uint32_t ovf                  : 1; /* [4] */
-      __IO uint32_t unf                  : 1; /* [5] */
-      __IO uint32_t ri                   : 1; /* [6] */
-      __IO uint32_t rbu                  : 1; /* [7] */
-      __IO uint32_t rps                  : 1; /* [8] */
-      __IO uint32_t rwt                  : 1; /* [9] */
-      __IO uint32_t eti                  : 1; /* [10] */
-      __IO uint32_t reserved1            : 2; /* [11:12] */
-      __IO uint32_t fbei                 : 1; /* [13] */
-      __IO uint32_t eri                  : 1; /* [14] */
-      __IO uint32_t ais                  : 1; /* [15] */
-      __IO uint32_t nis                  : 1; /* [16] */
-      __IO uint32_t rs                   : 3; /* [17:19] */
-      __IO uint32_t ts                   : 3; /* [20:22] */
-      __IO uint32_t eb                   : 3; /* [23:25] */
-      __IO uint32_t reserved2            : 1; /* [26] */
-      __IO uint32_t mmi                  : 1; /* [27] */
-      __IO uint32_t mpi                  : 1; /* [28] */
-      __IO uint32_t tti                  : 1; /* [29] */
-      __IO uint32_t reserved3            : 2; /* [30:31] */
-    } sts_bit;
-  };
+    /**
+      * @brief emac dma sts register, offset:0x1014
+      */
+    union {
+        __IO uint32_t sts;
+        struct {
+            __IO uint32_t ti                   : 1; /* [0] */
+            __IO uint32_t tps                  : 1; /* [1] */
+            __IO uint32_t tbu                  : 1; /* [2] */
+            __IO uint32_t tjt                  : 1; /* [3] */
+            __IO uint32_t ovf                  : 1; /* [4] */
+            __IO uint32_t unf                  : 1; /* [5] */
+            __IO uint32_t ri                   : 1; /* [6] */
+            __IO uint32_t rbu                  : 1; /* [7] */
+            __IO uint32_t rps                  : 1; /* [8] */
+            __IO uint32_t rwt                  : 1; /* [9] */
+            __IO uint32_t eti                  : 1; /* [10] */
+            __IO uint32_t reserved1            : 2; /* [11:12] */
+            __IO uint32_t fbei                 : 1; /* [13] */
+            __IO uint32_t eri                  : 1; /* [14] */
+            __IO uint32_t ais                  : 1; /* [15] */
+            __IO uint32_t nis                  : 1; /* [16] */
+            __IO uint32_t rs                   : 3; /* [17:19] */
+            __IO uint32_t ts                   : 3; /* [20:22] */
+            __IO uint32_t eb                   : 3; /* [23:25] */
+            __IO uint32_t reserved2            : 1; /* [26] */
+            __IO uint32_t mmi                  : 1; /* [27] */
+            __IO uint32_t mpi                  : 1; /* [28] */
+            __IO uint32_t tti                  : 1; /* [29] */
+            __IO uint32_t reserved3            : 2; /* [30:31] */
+        } sts_bit;
+    };
 
-  /**
-    * @brief emac dma opm register, offset:0x1018
-    */
-  union
-  {
-    __IO uint32_t opm;
-    struct
-    {
-      __IO uint32_t reserved1            : 1; /* [0] */
-      __IO uint32_t ssr                  : 1; /* [1] */
-      __IO uint32_t osf                  : 1; /* [2] */
-      __IO uint32_t rtc                  : 2; /* [3:4] */
-      __IO uint32_t reserved2            : 1; /* [5] */
-      __IO uint32_t fugf                 : 1; /* [6] */
-      __IO uint32_t fef                  : 1; /* [7] */
-      __IO uint32_t reserved3            : 5; /* [8:12] */
-      __IO uint32_t sstc                 : 1; /* [13] */
-      __IO uint32_t ttc                  : 3; /* [14:16] */
-      __IO uint32_t reserved4            : 3; /* [17:19] */
-      __IO uint32_t ftf                  : 1; /* [20] */
-      __IO uint32_t tsf                  : 1; /* [21] */
-      __IO uint32_t reserved5            : 2; /* [22:23] */
-      __IO uint32_t dfrf                 : 1; /* [24] */
-      __IO uint32_t rsf                  : 1; /* [25] */
-      __IO uint32_t dt                   : 1; /* [26] */
-      __IO uint32_t reserved6            : 5; /* [27:31] */
-    } opm_bit;
-  };
+    /**
+      * @brief emac dma opm register, offset:0x1018
+      */
+    union {
+        __IO uint32_t opm;
+        struct {
+            __IO uint32_t reserved1            : 1; /* [0] */
+            __IO uint32_t ssr                  : 1; /* [1] */
+            __IO uint32_t osf                  : 1; /* [2] */
+            __IO uint32_t rtc                  : 2; /* [3:4] */
+            __IO uint32_t reserved2            : 1; /* [5] */
+            __IO uint32_t fugf                 : 1; /* [6] */
+            __IO uint32_t fef                  : 1; /* [7] */
+            __IO uint32_t reserved3            : 5; /* [8:12] */
+            __IO uint32_t sstc                 : 1; /* [13] */
+            __IO uint32_t ttc                  : 3; /* [14:16] */
+            __IO uint32_t reserved4            : 3; /* [17:19] */
+            __IO uint32_t ftf                  : 1; /* [20] */
+            __IO uint32_t tsf                  : 1; /* [21] */
+            __IO uint32_t reserved5            : 2; /* [22:23] */
+            __IO uint32_t dfrf                 : 1; /* [24] */
+            __IO uint32_t rsf                  : 1; /* [25] */
+            __IO uint32_t dt                   : 1; /* [26] */
+            __IO uint32_t reserved6            : 5; /* [27:31] */
+        } opm_bit;
+    };
 
-  /**
-    * @brief emac dma ie register, offset:0x101C
-    */
-  union
-  {
-    __IO uint32_t ie;
-    struct
-    {
-      __IO uint32_t tie                  : 1; /* [0] */
-      __IO uint32_t tse                  : 1; /* [1] */
-      __IO uint32_t tue                  : 1; /* [2] */
-      __IO uint32_t tje                  : 1; /* [3] */
-      __IO uint32_t ove                  : 1; /* [4] */
-      __IO uint32_t une                  : 1; /* [5] */
-      __IO uint32_t rie                  : 1; /* [6] */
-      __IO uint32_t rbue                 : 1; /* [7] */
-      __IO uint32_t rse                  : 1; /* [8] */
-      __IO uint32_t rwte                 : 1; /* [9] */
-      __IO uint32_t eie                  : 1; /* [10] */
-      __IO uint32_t reserved1            : 2; /* [11:12] */
-      __IO uint32_t fbee                 : 1; /* [13] */
-      __IO uint32_t ere                  : 1; /* [14] */
-      __IO uint32_t aie                  : 1; /* [15] */
-      __IO uint32_t nie                  : 1; /* [16] */
-      __IO uint32_t reserved2            : 15;/* [17:31] */
-    } ie_bit;
-  };
+    /**
+      * @brief emac dma ie register, offset:0x101C
+      */
+    union {
+        __IO uint32_t ie;
+        struct {
+            __IO uint32_t tie                  : 1; /* [0] */
+            __IO uint32_t tse                  : 1; /* [1] */
+            __IO uint32_t tue                  : 1; /* [2] */
+            __IO uint32_t tje                  : 1; /* [3] */
+            __IO uint32_t ove                  : 1; /* [4] */
+            __IO uint32_t une                  : 1; /* [5] */
+            __IO uint32_t rie                  : 1; /* [6] */
+            __IO uint32_t rbue                 : 1; /* [7] */
+            __IO uint32_t rse                  : 1; /* [8] */
+            __IO uint32_t rwte                 : 1; /* [9] */
+            __IO uint32_t eie                  : 1; /* [10] */
+            __IO uint32_t reserved1            : 2; /* [11:12] */
+            __IO uint32_t fbee                 : 1; /* [13] */
+            __IO uint32_t ere                  : 1; /* [14] */
+            __IO uint32_t aie                  : 1; /* [15] */
+            __IO uint32_t nie                  : 1; /* [16] */
+            __IO uint32_t reserved2            : 15;/* [17:31] */
+        } ie_bit;
+    };
 
-  /**
-    * @brief emac dma mfbocnt register, offset:0x1020
-    */
-  union
-  {
-    __IO uint32_t mfbocnt;
-    struct
-    {
-      __IO uint32_t mfc                  : 16;/* [0:15] */
-      __IO uint32_t obmfc                : 1; /* [16] */
-      __IO uint32_t ofc                  : 11;/* [17:27] */
-      __IO uint32_t obfoc                : 1; /* [28] */
-      __IO uint32_t reserved1            : 3; /* [29:31] */
-    } mfbocnt_bit;
-  };
+    /**
+      * @brief emac dma mfbocnt register, offset:0x1020
+      */
+    union {
+        __IO uint32_t mfbocnt;
+        struct {
+            __IO uint32_t mfc                  : 16;/* [0:15] */
+            __IO uint32_t obmfc                : 1; /* [16] */
+            __IO uint32_t ofc                  : 11;/* [17:27] */
+            __IO uint32_t obfoc                : 1; /* [28] */
+            __IO uint32_t reserved1            : 3; /* [29:31] */
+        } mfbocnt_bit;
+    };
 
-  /**
-    * @brief emac dma reserved1 register, offset:0x1024~0x1044
-    */
-  __IO uint32_t reserved1[9];
+    /**
+      * @brief emac dma reserved1 register, offset:0x1024~0x1044
+      */
+    __IO uint32_t reserved1[9];
 
-  /**
-    * @brief emac ctd register, offset:0x1048
-    */
-  union
-  {
-    __IO uint32_t ctd;
-    struct
-    {
-      __IO uint32_t htdap                : 32;/* [0:31] */
-    } ctd_bit;
-  };
+    /**
+      * @brief emac ctd register, offset:0x1048
+      */
+    union {
+        __IO uint32_t ctd;
+        struct {
+            __IO uint32_t htdap                : 32;/* [0:31] */
+        } ctd_bit;
+    };
 
-  /**
-    * @brief emac crd register, offset:0x104C
-    */
-  union
-  {
-    __IO uint32_t crd;
-    struct
-    {
-      __IO uint32_t hrdap                : 32;/* [0:31] */
-    } crd_bit;
-  };
+    /**
+      * @brief emac crd register, offset:0x104C
+      */
+    union {
+        __IO uint32_t crd;
+        struct {
+            __IO uint32_t hrdap                : 32;/* [0:31] */
+        } crd_bit;
+    };
 
-  /**
-    * @brief emac ctbaddr register, offset:0x1050
-    */
-  union
-  {
-    __IO uint32_t ctbaddr;
-    struct
-    {
-      __IO uint32_t htbap                : 32;/* [0:31] */
-    } ctbaddr_bit;
-  };
+    /**
+      * @brief emac ctbaddr register, offset:0x1050
+      */
+    union {
+        __IO uint32_t ctbaddr;
+        struct {
+            __IO uint32_t htbap                : 32;/* [0:31] */
+        } ctbaddr_bit;
+    };
 
-  /**
-    * @brief emac crbaddr register, offset:0x1054
-    */
-  union
-  {
-    __IO uint32_t crbaddr;
-    struct
-    {
-      __IO uint32_t hrbap                : 32;/* [0:31] */
-    } crbaddr_bit;
-  };
+    /**
+      * @brief emac crbaddr register, offset:0x1054
+      */
+    union {
+        __IO uint32_t crbaddr;
+        struct {
+            __IO uint32_t hrbap                : 32;/* [0:31] */
+        } crbaddr_bit;
+    };
 } emac_dma_type;
 
 /**

@@ -132,8 +132,8 @@ uint16_t Flash_Write(uint32_t address, uint8_t *in, uint16_t len) {
             goto out;
     }
 
-    out:
-        FlashStop();
+out:
+    FlashStop();
     return len;
 }
 

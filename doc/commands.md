@@ -1049,7 +1049,6 @@ Check column "offline" for their availability.
 |`lf simask              `|N       |`Simulate ASK tag`
 |`lf simfsk              `|N       |`Simulate FSK tag`
 |`lf simpsk              `|N       |`Simulate PSK tag`
-|`lf simbidir            `|N       |`Simulate LF tag (with bidirectional data transmission between reader and tag)`
 |`lf sniff               `|N       |`Sniff LF traffic between reader and tag`
 |`lf tune                `|N       |`Continuously measure LF antenna tuning`
 

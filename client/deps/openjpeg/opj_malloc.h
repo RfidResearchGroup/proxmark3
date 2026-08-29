@@ -52,7 +52,7 @@ Allocate an uninitialized memory block
 @param size Bytes to allocate
 @return Returns a void pointer to the allocated space, or NULL if there is insufficient memory available
 */
-void * opj_malloc(size_t size);
+void *opj_malloc(size_t size);
 
 /**
 Allocate a memory block with elements initialized to 0
@@ -60,24 +60,24 @@ Allocate a memory block with elements initialized to 0
 @param sizeOfElements Bytes per block to allocate
 @return Returns a void pointer to the allocated space, or NULL if there is insufficient memory available
 */
-void * opj_calloc(size_t numOfElements, size_t sizeOfElements);
+void *opj_calloc(size_t numOfElements, size_t sizeOfElements);
 
 /**
 Allocate memory aligned to a 16 byte boundary
 @param size Bytes to allocate
 @return Returns a void pointer to the allocated space, or NULL if there is insufficient memory available
 */
-void * opj_aligned_malloc(size_t size);
-void * opj_aligned_realloc(void *ptr, size_t size);
-void opj_aligned_free(void* ptr);
+void *opj_aligned_malloc(size_t size);
+void *opj_aligned_realloc(void *ptr, size_t size);
+void opj_aligned_free(void *ptr);
 
 /**
 Allocate memory aligned to a 32 byte boundary
 @param size Bytes to allocate
 @return Returns a void pointer to the allocated space, or NULL if there is insufficient memory available
 */
-void * opj_aligned_32_malloc(size_t size);
-void * opj_aligned_32_realloc(void *ptr, size_t size);
+void *opj_aligned_32_malloc(size_t size);
+void *opj_aligned_32_realloc(void *ptr, size_t size);
 
 /**
 Reallocate memory blocks.
@@ -85,13 +85,13 @@ Reallocate memory blocks.
 @param s New size in bytes
 @return Returns a void pointer to the reallocated (and possibly moved) memory block
 */
-void * opj_realloc(void * m, size_t s);
+void *opj_realloc(void *m, size_t s);
 
 /**
 Deallocates or frees a memory block.
 @param m Previously allocated memory block to be freed
 */
-void opj_free(void * m);
+void opj_free(void *m);
 
 #if defined(__GNUC__) && !defined(OPJ_SKIP_POISON)
 #pragma GCC poison malloc calloc realloc free

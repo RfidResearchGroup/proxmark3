@@ -77,8 +77,7 @@ static OPJ_BOOL only_cleanup_pass_is_decoded = OPJ_FALSE;
   *   @param [in]  val is the value for which population count is sought
   */
 static INLINE
-OPJ_UINT32 population_count(OPJ_UINT32 val)
-{
+OPJ_UINT32 population_count(OPJ_UINT32 val) {
 #if defined(OPJ_COMPILER_MSVC) && (defined(_M_IX86) || defined(_M_AMD64))
     return (OPJ_UINT32)__popcnt(val);
 #elif defined(OPJ_COMPILER_MSVC) && defined(MSVC_NEON_INTRINSICS)
@@ -105,8 +104,7 @@ OPJ_UINT32 population_count(OPJ_UINT32 val)
 #pragma intrinsic(_BitScanReverse)
 #endif
 static INLINE
-OPJ_UINT32 count_leading_zeros(OPJ_UINT32 val)
-{
+OPJ_UINT32 count_leading_zeros(OPJ_UINT32 val) {
 #ifdef OPJ_COMPILER_MSVC
     unsigned long result = 0;
     _BitScanReverse(&result, val);
@@ -128,16 +126,15 @@ OPJ_UINT32 count_leading_zeros(OPJ_UINT32 val)
   *
   *   @param [in]  dataIn pointer to byte stream to read from
   */
-static INLINE OPJ_UINT32 read_le_uint32(const void* dataIn)
-{
+static INLINE OPJ_UINT32 read_le_uint32(const void *dataIn) {
 #if defined(OPJ_BIG_ENDIAN)
-    const OPJ_UINT8* data = (const OPJ_UINT8*)dataIn;
+    const OPJ_UINT8 *data = (const OPJ_UINT8 *)dataIn;
     return ((OPJ_UINT32)data[0]) | (OPJ_UINT32)(data[1] << 8) | (OPJ_UINT32)(
                data[2] << 16) | (((
                                       OPJ_UINT32)data[3]) <<
                                  24U);
 #else
-    return *(OPJ_UINT32*)dataIn;
+    return *(OPJ_UINT32 *)dataIn;
 #endif
 }
 
@@ -150,7 +147,7 @@ static INLINE OPJ_UINT32 read_le_uint32(const void* dataIn)
   */
 typedef struct dec_mel {
     // data decoding machinery
-    OPJ_UINT8* data;  //!<the address of data (or bitstream)
+    OPJ_UINT8 *data;  //!<the address of data (or bitstream)
     OPJ_UINT64 tmp;   //!<temporary buffer for read data
     int bits;         //!<number of bits stored in tmp
     int size;         //!<number of bytes in MEL code
@@ -175,8 +172,7 @@ typedef struct dec_mel {
   *  @param [in]  melp is a pointer to dec_mel_t structure
   */
 static INLINE
-void mel_read(dec_mel_t *melp)
-{
+void mel_read(dec_mel_t *melp) {
     OPJ_UINT32 val;
     int bits;
     OPJ_UINT32 t;
@@ -257,8 +253,7 @@ void mel_read(dec_mel_t *melp)
   *  @param [in]  melp is a pointer to dec_mel_t structure
   */
 static INLINE
-void mel_decode(dec_mel_t *melp)
-{
+void mel_decode(dec_mel_t *melp) {
     static const int mel_exp[13] = { //MEL exponents
         0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 4, 5
     };
@@ -307,8 +302,7 @@ void mel_decode(dec_mel_t *melp)
   *  @param [in]  scup is the length of MEL+VLC segments
   */
 static INLINE
-OPJ_BOOL mel_init(dec_mel_t *melp, OPJ_UINT8* bbuf, int lcup, int scup)
-{
+OPJ_BOOL mel_init(dec_mel_t *melp, OPJ_UINT8 *bbuf, int lcup, int scup) {
     int num;
     int i;
 
@@ -357,8 +351,7 @@ OPJ_BOOL mel_init(dec_mel_t *melp, OPJ_UINT8* bbuf, int lcup, int scup)
   * @param [in]  melp is a pointer to dec_mel_t structure
   */
 static INLINE
-int mel_get_run(dec_mel_t *melp)
-{
+int mel_get_run(dec_mel_t *melp) {
     int t;
     if (melp->num_runs == 0) { //if no runs, decode more bit from MEL segment
         mel_decode(melp);
@@ -376,7 +369,7 @@ int mel_get_run(dec_mel_t *melp)
   */
 typedef struct rev_struct {
     //storage
-    OPJ_UINT8* data;  //!<pointer to where to read data
+    OPJ_UINT8 *data;  //!<pointer to where to read data
     OPJ_UINT64 tmp;     //!<temporary buffer of read data
     OPJ_UINT32 bits;  //!<number of bits stored in tmp
     int size;         //!<number of bytes left
@@ -405,8 +398,7 @@ typedef struct rev_struct {
   *  @param [in]  vlcp is a pointer to rev_struct_t structure
   */
 static INLINE
-void rev_read(rev_struct_t *vlcp)
-{
+void rev_read(rev_struct_t *vlcp) {
     OPJ_UINT32 val;
     OPJ_UINT32 tmp;
     OPJ_UINT32 bits;
@@ -473,8 +465,7 @@ void rev_read(rev_struct_t *vlcp)
   *  @param [in]  scup is the length of MEL+VLC segments
   */
 static INLINE
-void rev_init(rev_struct_t *vlcp, OPJ_UINT8* data, int lcup, int scup)
-{
+void rev_init(rev_struct_t *vlcp, OPJ_UINT8 *data, int lcup, int scup) {
     OPJ_UINT32 d;
     int num, tnum, i;
 
@@ -518,8 +509,7 @@ void rev_init(rev_struct_t *vlcp, OPJ_UINT8* data, int lcup, int scup)
   *  @param [in]  vlcp is a pointer to rev_struct structure
   */
 static INLINE
-OPJ_UINT32 rev_fetch(rev_struct_t *vlcp)
-{
+OPJ_UINT32 rev_fetch(rev_struct_t *vlcp) {
     if (vlcp->bits < 32) { // if there are less then 32 bits, read more
         rev_read(vlcp);     // read 32 bits, but unstuffing might reduce this
         if (vlcp->bits < 32) { // if there is still space in vlcp->tmp for 32 bits
@@ -536,8 +526,7 @@ OPJ_UINT32 rev_fetch(rev_struct_t *vlcp)
   *  @param [in]  num_bits is the number of bits to be removed
   */
 static INLINE
-OPJ_UINT32 rev_advance(rev_struct_t *vlcp, OPJ_UINT32 num_bits)
-{
+OPJ_UINT32 rev_advance(rev_struct_t *vlcp, OPJ_UINT32 num_bits) {
     assert(num_bits <= vlcp->bits); // vlcp->tmp must have more than num_bits
     vlcp->tmp >>= num_bits;         // remove bits
     vlcp->bits -= num_bits;         // decrement the number of bits
@@ -556,8 +545,7 @@ OPJ_UINT32 rev_advance(rev_struct_t *vlcp, OPJ_UINT32 num_bits)
   *  @param [in]  mrp is a pointer to rev_struct structure
   */
 static INLINE
-void rev_read_mrp(rev_struct_t *mrp)
-{
+void rev_read_mrp(rev_struct_t *mrp) {
     OPJ_UINT32 val;
     OPJ_UINT32 tmp;
     OPJ_UINT32 bits;
@@ -625,8 +613,7 @@ void rev_read_mrp(rev_struct_t *mrp)
   *  @param [in]  len2 is the length of SPP+MRP segments
   */
 static INLINE
-void rev_init_mrp(rev_struct_t *mrp, OPJ_UINT8* data, int lcup, int len2)
-{
+void rev_init_mrp(rev_struct_t *mrp, OPJ_UINT8 *data, int lcup, int len2) {
     int num, i;
 
     mrp->data = data + lcup + len2 - 1;
@@ -663,8 +650,7 @@ void rev_init_mrp(rev_struct_t *mrp, OPJ_UINT8* data, int lcup, int len2)
   *  @param [in]  mrp is a pointer to rev_struct structure
   */
 static INLINE
-OPJ_UINT32 rev_fetch_mrp(rev_struct_t *mrp)
-{
+OPJ_UINT32 rev_fetch_mrp(rev_struct_t *mrp) {
     if (mrp->bits < 32) { // if there are less than 32 bits in mrp->tmp
         rev_read_mrp(mrp);    // read 30-32 bits from mrp
         if (mrp->bits < 32) { // if there is a space of 32 bits
@@ -681,8 +667,7 @@ OPJ_UINT32 rev_fetch_mrp(rev_struct_t *mrp)
   *  @param [in]  num_bits is the number of bits to be removed
   */
 static INLINE
-OPJ_UINT32 rev_advance_mrp(rev_struct_t *mrp, OPJ_UINT32 num_bits)
-{
+OPJ_UINT32 rev_advance_mrp(rev_struct_t *mrp, OPJ_UINT32 num_bits) {
     assert(num_bits <= mrp->bits); // we must not consume more than mrp->bits
     mrp->tmp >>= num_bits;         // discard the lowest num_bits bits
     mrp->bits -= num_bits;
@@ -701,8 +686,7 @@ OPJ_UINT32 rev_advance_mrp(rev_struct_t *mrp, OPJ_UINT32 num_bits)
   *               this value is a partial calculation of u + kappa.
   */
 static INLINE
-OPJ_UINT32 decode_init_uvlc(OPJ_UINT32 vlc, OPJ_UINT32 mode, OPJ_UINT32 *u)
-{
+OPJ_UINT32 decode_init_uvlc(OPJ_UINT32 vlc, OPJ_UINT32 mode, OPJ_UINT32 *u) {
     //table stores possible decoding three bits from vlc
     // there are 8 entries for xx1, x10, 100, 000, where x means do not care
     // table value is made up of
@@ -814,8 +798,7 @@ OPJ_UINT32 decode_init_uvlc(OPJ_UINT32 vlc, OPJ_UINT32 mode, OPJ_UINT32 *u)
   *               this value is a partial calculation of u + kappa.
   */
 static INLINE
-OPJ_UINT32 decode_noninit_uvlc(OPJ_UINT32 vlc, OPJ_UINT32 mode, OPJ_UINT32 *u)
-{
+OPJ_UINT32 decode_noninit_uvlc(OPJ_UINT32 vlc, OPJ_UINT32 mode, OPJ_UINT32 *u) {
     //table stores possible decoding three bits from vlc
     // there are 8 entries for xx1, x10, 100, 000, where x means do not care
     // table value is made up of
@@ -884,7 +867,7 @@ OPJ_UINT32 decode_noninit_uvlc(OPJ_UINT32 vlc, OPJ_UINT32 mode, OPJ_UINT32 *u)
   *         bitstreams; these are: MagSgn and SPP bitstreams
   */
 typedef struct frwd_struct {
-    const OPJ_UINT8* data; //!<pointer to bitstream
+    const OPJ_UINT8 *data; //!<pointer to bitstream
     OPJ_UINT64 tmp;        //!<temporary buffer of read data
     OPJ_UINT32 bits;       //!<number of bits stored in tmp
     OPJ_BOOL unstuff;      //!<true if a bit needs to be unstuffed from next byte
@@ -910,8 +893,7 @@ typedef struct frwd_struct {
   *
   */
 static INLINE
-void frwd_read(frwd_struct_t *msp)
-{
+void frwd_read(frwd_struct_t *msp) {
     OPJ_UINT32 val;
     OPJ_UINT32 bits;
     OPJ_UINT32 t;
@@ -969,9 +951,8 @@ void frwd_read(frwd_struct_t *msp)
   *               See frwd_read.
   */
 static INLINE
-void frwd_init(frwd_struct_t *msp, const OPJ_UINT8* data, int size,
-               OPJ_UINT32 X)
-{
+void frwd_init(frwd_struct_t *msp, const OPJ_UINT8 *data, int size,
+               OPJ_UINT32 X) {
     int num, i;
 
     msp->data = data;
@@ -1005,8 +986,7 @@ void frwd_init(frwd_struct_t *msp, const OPJ_UINT8* data, int size,
   *  @param [in]  num_bits is the number of bit to consume
   */
 static INLINE
-void frwd_advance(frwd_struct_t *msp, OPJ_UINT32 num_bits)
-{
+void frwd_advance(frwd_struct_t *msp, OPJ_UINT32 num_bits) {
     assert(num_bits <= msp->bits);
     msp->tmp >>= num_bits;  // consume num_bits
     msp->bits -= num_bits;
@@ -1018,8 +998,7 @@ void frwd_advance(frwd_struct_t *msp, OPJ_UINT32 num_bits)
   *  @param [in]  msp is a pointer to frwd_struct_t
   */
 static INLINE
-OPJ_UINT32 frwd_fetch(frwd_struct_t *msp)
-{
+OPJ_UINT32 frwd_fetch(frwd_struct_t *msp) {
     if (msp->bits < 32) {
         frwd_read(msp);
         if (msp->bits < 32) { //need to test
@@ -1039,8 +1018,7 @@ OPJ_UINT32 frwd_fetch(frwd_struct_t *msp)
 static OPJ_BOOL opj_t1_allocate_buffers(
     opj_t1_t *t1,
     OPJ_UINT32 w,
-    OPJ_UINT32 h)
-{
+    OPJ_UINT32 h) {
     OPJ_UINT32 flagssize;
 
     /* No risk of overflow. Prior checks ensure those assert are met */
@@ -1055,7 +1033,7 @@ static OPJ_BOOL opj_t1_allocate_buffers(
 
         if (datasize > t1->datasize) {
             opj_aligned_free(t1->data);
-            t1->data = (OPJ_INT32*)
+            t1->data = (OPJ_INT32 *)
                        opj_aligned_malloc(datasize * sizeof(OPJ_INT32));
             if (!t1->data) {
                 /* FIXME event manager error callback */
@@ -1079,7 +1057,7 @@ static OPJ_BOOL opj_t1_allocate_buffers(
         if (flagssize > t1->flagssize) {
 
             opj_aligned_free(t1->flags);
-            t1->flags = (opj_flag_t*) opj_aligned_malloc(flagssize * sizeof(opj_flag_t));
+            t1->flags = (opj_flag_t *) opj_aligned_malloc(flagssize * sizeof(opj_flag_t));
             if (!t1->flags) {
                 /* FIXME event manager error callback */
                 return OPJ_FALSE;
@@ -1108,12 +1086,12 @@ Decode 1 HT code-block
 @param check_pterm whether PTERM correct termination should be checked
 */
 OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
-                               opj_tcd_cblk_dec_t* cblk,
+                               opj_tcd_cblk_dec_t *cblk,
                                OPJ_UINT32 orient,
                                OPJ_UINT32 roishift,
                                OPJ_UINT32 cblksty,
                                opj_event_mgr_t *p_manager,
-                               opj_mutex_t* p_manager_mutex,
+                               opj_mutex_t *p_manager_mutex,
                                OPJ_BOOL check_pterm);
 
 //************************************************************************/
@@ -1130,17 +1108,16 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
   *  @param [in]       check_pterm: check termination (not used)
   */
 OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
-                               opj_tcd_cblk_dec_t* cblk,
+                               opj_tcd_cblk_dec_t *cblk,
                                OPJ_UINT32 orient,
                                OPJ_UINT32 roishift,
                                OPJ_UINT32 cblksty,
                                opj_event_mgr_t *p_manager,
-                               opj_mutex_t* p_manager_mutex,
-                               OPJ_BOOL check_pterm)
-{
-    OPJ_BYTE* cblkdata = NULL;
-    OPJ_UINT8* coded_data;
-    OPJ_UINT32* decoded_data;
+                               opj_mutex_t *p_manager_mutex,
+                               OPJ_BOOL check_pterm) {
+    OPJ_BYTE *cblkdata = NULL;
+    OPJ_UINT8 *coded_data;
+    OPJ_UINT32 *decoded_data;
     OPJ_UINT32 zero_bplanes;
     OPJ_UINT32 num_passes;
     OPJ_UINT32 lengths1;
@@ -1162,7 +1139,7 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
     OPJ_UINT32 vlc_val;              // fetched data from VLC bitstream
     OPJ_UINT32 qinf[2];
     OPJ_UINT32 c_q;
-    OPJ_UINT32* sp;
+    OPJ_UINT32 *sp;
     OPJ_INT32 x, y; // loop indices
     OPJ_BOOL stripe_causal = (cblksty & J2K_CCP_CBLKSTY_VSC) != 0;
     OPJ_UINT32 cblk_len = 0;
@@ -1212,7 +1189,7 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
 
         /* Allocate temporary memory if needed */
         if (cblk_len > t1->cblkdatabuffersize) {
-            cblkdata = (OPJ_BYTE*)opj_realloc(
+            cblkdata = (OPJ_BYTE *)opj_realloc(
                            t1->cblkdatabuffer, cblk_len);
             if (cblkdata == NULL) {
                 return OPJ_FALSE;
@@ -1242,7 +1219,7 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
     // OPJ_BYTE* coded_data is a pointer to bitstream
     coded_data = cblkdata;
     // OPJ_UINT32* decoded_data is a pointer to decoded codeblock data buf.
-    decoded_data = (OPJ_UINT32*)t1->data;
+    decoded_data = (OPJ_UINT32 *)t1->data;
     // OPJ_UINT32 num_passes is the number of passes: 1 if CUP only, 2 for
     // CUP+SPP, and 3 for CUP+SPP+MRP
     num_passes = cblk->numsegs > 0 ? cblk->segs[0].real_num_passes : 0;
@@ -2677,7 +2654,7 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
     {
         OPJ_INT32 x, y;
         for (y = 0; y < height; ++y) {
-            OPJ_INT32* sp = (OPJ_INT32*)decoded_data + y * stride;
+            OPJ_INT32 *sp = (OPJ_INT32 *)decoded_data + y * stride;
             for (x = 0; x < width; ++x, ++sp) {
                 OPJ_INT32 val = (*sp & 0x7FFFFFFF);
                 *sp = ((OPJ_UINT32) * sp & 0x80000000) ? -val : val;

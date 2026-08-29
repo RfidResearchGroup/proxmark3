@@ -184,12 +184,12 @@ static OPJ_FLOAT64 opj_t1_getwmsedec(
     OPJ_UINT32 qmfbid,
     OPJ_FLOAT64 stepsize,
     OPJ_UINT32 numcomps,
-    const OPJ_FLOAT64 * mct_norms,
+    const OPJ_FLOAT64 *mct_norms,
     OPJ_UINT32 mct_numcomps);
 
 /** Return "cumwmsedec" that should be used to increase tile->distotile */
 static double opj_t1_encode_cblk(opj_t1_t *t1,
-                                 opj_tcd_cblk_enc_t* cblk,
+                                 opj_tcd_cblk_enc_t *cblk,
                                  OPJ_UINT32 orient,
                                  OPJ_UINT32 compno,
                                  OPJ_UINT32 level,
@@ -197,7 +197,7 @@ static double opj_t1_encode_cblk(opj_t1_t *t1,
                                  OPJ_FLOAT64 stepsize,
                                  OPJ_UINT32 cblksty,
                                  OPJ_UINT32 numcomps,
-                                 const OPJ_FLOAT64 * mct_norms,
+                                 const OPJ_FLOAT64 *mct_norms,
                                  OPJ_UINT32 mct_numcomps);
 
 /**
@@ -212,12 +212,12 @@ Decode 1 code-block
 @param check_pterm whether PTERM correct termination should be checked
 */
 static OPJ_BOOL opj_t1_decode_cblk(opj_t1_t *t1,
-                                   opj_tcd_cblk_dec_t* cblk,
+                                   opj_tcd_cblk_dec_t *cblk,
                                    OPJ_UINT32 orient,
                                    OPJ_UINT32 roishift,
                                    OPJ_UINT32 cblksty,
                                    opj_event_mgr_t *p_manager,
-                                   opj_mutex_t* p_manager_mutex,
+                                   opj_mutex_t *p_manager_mutex,
                                    OPJ_BOOL check_pterm);
 
 /**
@@ -232,12 +232,12 @@ Decode 1 HT code-block
 @param check_pterm whether PTERM correct termination should be checked
 */
 OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
-                               opj_tcd_cblk_dec_t* cblk,
+                               opj_tcd_cblk_dec_t *cblk,
                                OPJ_UINT32 orient,
                                OPJ_UINT32 roishift,
                                OPJ_UINT32 cblksty,
                                opj_event_mgr_t *p_manager,
-                               opj_mutex_t* p_manager_mutex,
+                               opj_mutex_t *p_manager_mutex,
                                OPJ_BOOL check_pterm);
 
 
@@ -251,16 +251,14 @@ static OPJ_BOOL opj_t1_allocate_buffers(opj_t1_t *t1,
 
 /* ----------------------------------------------------------------------- */
 
-static INLINE OPJ_BYTE opj_t1_getctxno_zc(opj_mqc_t *mqc, OPJ_UINT32 f)
-{
+static INLINE OPJ_BYTE opj_t1_getctxno_zc(opj_mqc_t *mqc, OPJ_UINT32 f) {
     return mqc->lut_ctxno_zc_orient[(f & T1_SIGMA_NEIGHBOURS)];
 }
 
 static INLINE OPJ_UINT32 opj_t1_getctxtno_sc_or_spb_index(OPJ_UINT32 fX,
-        OPJ_UINT32 pfX,
-        OPJ_UINT32 nfX,
-        OPJ_UINT32 ci)
-{
+                                                          OPJ_UINT32 pfX,
+                                                          OPJ_UINT32 nfX,
+                                                          OPJ_UINT32 ci) {
     /*
       0 pfX T1_CHI_THIS           T1_LUT_SGN_W
       1 tfX T1_SIGMA_1            T1_LUT_SIG_N
@@ -286,25 +284,21 @@ static INLINE OPJ_UINT32 opj_t1_getctxtno_sc_or_spb_index(OPJ_UINT32 fX,
     return lu;
 }
 
-static INLINE OPJ_BYTE opj_t1_getctxno_sc(OPJ_UINT32 lu)
-{
+static INLINE OPJ_BYTE opj_t1_getctxno_sc(OPJ_UINT32 lu) {
     return lut_ctxno_sc[lu];
 }
 
-static INLINE OPJ_UINT32 opj_t1_getctxno_mag(OPJ_UINT32 f)
-{
+static INLINE OPJ_UINT32 opj_t1_getctxno_mag(OPJ_UINT32 f) {
     OPJ_UINT32 tmp = (f & T1_SIGMA_NEIGHBOURS) ? T1_CTXNO_MAG + 1 : T1_CTXNO_MAG;
     OPJ_UINT32 tmp2 = (f & T1_MU_0) ? T1_CTXNO_MAG + 2 : tmp;
     return tmp2;
 }
 
-static INLINE OPJ_BYTE opj_t1_getspb(OPJ_UINT32 lu)
-{
+static INLINE OPJ_BYTE opj_t1_getspb(OPJ_UINT32 lu) {
     return lut_spb[lu];
 }
 
-static OPJ_INT16 opj_t1_getnmsedec_sig(OPJ_UINT32 x, OPJ_UINT32 bitpos)
-{
+static OPJ_INT16 opj_t1_getnmsedec_sig(OPJ_UINT32 x, OPJ_UINT32 bitpos) {
     if (bitpos > 0) {
         return lut_nmsedec_sig[(x >> (bitpos)) & ((1 << T1_NMSEDEC_BITS) - 1)];
     }
@@ -312,8 +306,7 @@ static OPJ_INT16 opj_t1_getnmsedec_sig(OPJ_UINT32 x, OPJ_UINT32 bitpos)
     return lut_nmsedec_sig0[x & ((1 << T1_NMSEDEC_BITS) - 1)];
 }
 
-static OPJ_INT16 opj_t1_getnmsedec_ref(OPJ_UINT32 x, OPJ_UINT32 bitpos)
-{
+static OPJ_INT16 opj_t1_getnmsedec_ref(OPJ_UINT32 x, OPJ_UINT32 bitpos) {
     if (bitpos > 0) {
         return lut_nmsedec_ref[(x >> (bitpos)) & ((1 << T1_NMSEDEC_BITS) - 1)];
     }
@@ -352,8 +345,7 @@ static OPJ_INT16 opj_t1_getnmsedec_ref(OPJ_UINT32 x, OPJ_UINT32 bitpos)
 
 static INLINE void opj_t1_update_flags(opj_flag_t *flagsp, OPJ_UINT32 ci,
                                        OPJ_UINT32 s, OPJ_UINT32 stride,
-                                       OPJ_UINT32 vsc)
-{
+                                       OPJ_UINT32 vsc) {
     opj_t1_update_flags_macro(*flagsp, flagsp, ci, s, stride, vsc);
 }
 
@@ -415,8 +407,7 @@ static INLINE void opj_t1_dec_sigpass_step_raw(
     OPJ_INT32 *datap,
     OPJ_INT32 oneplushalf,
     OPJ_UINT32 vsc,
-    OPJ_UINT32 ci)
-{
+    OPJ_UINT32 ci) {
     OPJ_UINT32 v;
     opj_mqc_t *mqc = &(t1->mqc);       /* RAW component */
 
@@ -466,8 +457,7 @@ static INLINE void opj_t1_dec_sigpass_step_mqc(
     OPJ_INT32 oneplushalf,
     OPJ_UINT32 ci,
     OPJ_UINT32 flags_stride,
-    OPJ_UINT32 vsc)
-{
+    OPJ_UINT32 vsc) {
     OPJ_UINT32 v;
 
     opj_mqc_t *mqc = &(t1->mqc);       /* MQC component */
@@ -481,15 +471,14 @@ static void opj_t1_enc_sigpass(opj_t1_t *t1,
                                OPJ_INT32 *nmsedec,
                                OPJ_BYTE type,
                                OPJ_UINT32 cblksty
-                              )
-{
+                              ) {
     OPJ_UINT32 i, k;
     OPJ_INT32 const one = 1 << (bpno + T1_NMSEDEC_FRACBITS);
-    opj_flag_t* f = &T1_FLAGS(0, 0);
+    opj_flag_t *f = &T1_FLAGS(0, 0);
     OPJ_UINT32 const extra = 2;
-    opj_mqc_t* mqc = &(t1->mqc);
+    opj_mqc_t *mqc = &(t1->mqc);
     DOWNLOAD_MQC_VARIABLES(mqc, curctx, a, c, ct);
-    const OPJ_INT32* datap = t1->data;
+    const OPJ_INT32 *datap = t1->data;
 
     *nmsedec = 0;
 #ifdef DEBUG_ENC_SIG
@@ -582,8 +571,7 @@ static void opj_t1_enc_sigpass(opj_t1_t *t1,
 static void opj_t1_dec_sigpass_raw(
     opj_t1_t *t1,
     OPJ_INT32 bpno,
-    OPJ_INT32 cblksty)
-{
+    OPJ_INT32 cblksty) {
     OPJ_INT32 one, half, oneplushalf;
     OPJ_UINT32 i, j, k;
     OPJ_INT32 *data = t1->data;
@@ -689,30 +677,26 @@ static void opj_t1_dec_sigpass_raw(
 
 static void opj_t1_dec_sigpass_mqc_64x64_novsc(
     opj_t1_t *t1,
-    OPJ_INT32 bpno)
-{
+    OPJ_INT32 bpno) {
     opj_t1_dec_sigpass_mqc_internal(t1, bpno, OPJ_FALSE, 64, 64, 66);
 }
 
 static void opj_t1_dec_sigpass_mqc_64x64_vsc(
     opj_t1_t *t1,
-    OPJ_INT32 bpno)
-{
+    OPJ_INT32 bpno) {
     opj_t1_dec_sigpass_mqc_internal(t1, bpno, OPJ_TRUE, 64, 64, 66);
 }
 
 static void opj_t1_dec_sigpass_mqc_generic_novsc(
     opj_t1_t *t1,
-    OPJ_INT32 bpno)
-{
+    OPJ_INT32 bpno) {
     opj_t1_dec_sigpass_mqc_internal(t1, bpno, OPJ_FALSE, t1->w, t1->h,
                                     t1->w + 2U);
 }
 
 static void opj_t1_dec_sigpass_mqc_generic_vsc(
     opj_t1_t *t1,
-    OPJ_INT32 bpno)
-{
+    OPJ_INT32 bpno) {
     opj_t1_dec_sigpass_mqc_internal(t1, bpno, OPJ_TRUE, t1->w, t1->h,
                                     t1->w + 2U);
 }
@@ -720,8 +704,7 @@ static void opj_t1_dec_sigpass_mqc_generic_vsc(
 static void opj_t1_dec_sigpass_mqc(
     opj_t1_t *t1,
     OPJ_INT32 bpno,
-    OPJ_INT32 cblksty)
-{
+    OPJ_INT32 cblksty) {
     if (t1->w == 64 && t1->h == 64) {
         if (cblksty & J2K_CCP_CBLKSTY_VSC) {
             opj_t1_dec_sigpass_mqc_64x64_vsc(t1, bpno);
@@ -769,8 +752,7 @@ static INLINE void opj_t1_dec_refpass_step_raw(
     opj_flag_t *flagsp,
     OPJ_INT32 *datap,
     OPJ_INT32 poshalf,
-    OPJ_UINT32 ci)
-{
+    OPJ_UINT32 ci) {
     OPJ_UINT32 v;
 
     opj_mqc_t *mqc = &(t1->mqc);       /* RAW component */
@@ -801,8 +783,7 @@ static INLINE void opj_t1_dec_refpass_step_mqc(
     opj_flag_t *flagsp,
     OPJ_INT32 *datap,
     OPJ_INT32 poshalf,
-    OPJ_UINT32 ci)
-{
+    OPJ_UINT32 ci) {
     OPJ_UINT32 v;
 
     opj_mqc_t *mqc = &(t1->mqc);       /* MQC component */
@@ -815,15 +796,14 @@ static void opj_t1_enc_refpass(
     opj_t1_t *t1,
     OPJ_INT32 bpno,
     OPJ_INT32 *nmsedec,
-    OPJ_BYTE type)
-{
+    OPJ_BYTE type) {
     OPJ_UINT32 i, k;
     const OPJ_INT32 one = 1 << (bpno + T1_NMSEDEC_FRACBITS);
-    opj_flag_t* f = &T1_FLAGS(0, 0);
+    opj_flag_t *f = &T1_FLAGS(0, 0);
     const OPJ_UINT32 extra = 2U;
-    opj_mqc_t* mqc = &(t1->mqc);
+    opj_mqc_t *mqc = &(t1->mqc);
     DOWNLOAD_MQC_VARIABLES(mqc, curctx, a, c, ct);
-    const OPJ_INT32* datap = t1->data;
+    const OPJ_INT32 *datap = t1->data;
 
     *nmsedec = 0;
 #ifdef DEBUG_ENC_REF
@@ -924,8 +904,7 @@ static void opj_t1_enc_refpass(
 
 static void opj_t1_dec_refpass_raw(
     opj_t1_t *t1,
-    OPJ_INT32 bpno)
-{
+    OPJ_INT32 bpno) {
     OPJ_INT32 one, poshalf;
     OPJ_UINT32 i, j, k;
     OPJ_INT32 *data = t1->data;
@@ -1022,22 +1001,19 @@ static void opj_t1_dec_refpass_raw(
 
 static void opj_t1_dec_refpass_mqc_64x64(
     opj_t1_t *t1,
-    OPJ_INT32 bpno)
-{
+    OPJ_INT32 bpno) {
     opj_t1_dec_refpass_mqc_internal(t1, bpno, 64, 64, 66);
 }
 
 static void opj_t1_dec_refpass_mqc_generic(
     opj_t1_t *t1,
-    OPJ_INT32 bpno)
-{
+    OPJ_INT32 bpno) {
     opj_t1_dec_refpass_mqc_internal(t1, bpno, t1->w, t1->h, t1->w + 2U);
 }
 
 static void opj_t1_dec_refpass_mqc(
     opj_t1_t *t1,
-    OPJ_INT32 bpno)
-{
+    OPJ_INT32 bpno) {
     if (t1->w == 64 && t1->h == 64) {
         opj_t1_dec_refpass_mqc_64x64(t1, bpno);
     } else {
@@ -1149,8 +1125,7 @@ static void opj_t1_dec_clnpass_step(
     OPJ_INT32 *datap,
     OPJ_INT32 oneplushalf,
     OPJ_UINT32 ci,
-    OPJ_UINT32 vsc)
-{
+    OPJ_UINT32 vsc) {
     OPJ_UINT32 v;
 
     opj_mqc_t *mqc = &(t1->mqc);   /* MQC component */
@@ -1164,13 +1139,12 @@ static void opj_t1_enc_clnpass(
     opj_t1_t *t1,
     OPJ_INT32 bpno,
     OPJ_INT32 *nmsedec,
-    OPJ_UINT32 cblksty)
-{
+    OPJ_UINT32 cblksty) {
     OPJ_UINT32 i, k;
     const OPJ_INT32 one = 1 << (bpno + T1_NMSEDEC_FRACBITS);
-    opj_mqc_t* mqc = &(t1->mqc);
+    opj_mqc_t *mqc = &(t1->mqc);
     DOWNLOAD_MQC_VARIABLES(mqc, curctx, a, c, ct);
-    const OPJ_INT32* datap = t1->data;
+    const OPJ_INT32 *datap = t1->data;
     opj_flag_t *f = &T1_FLAGS(0, 0);
     const OPJ_UINT32 extra = 2U;
 
@@ -1340,10 +1314,9 @@ static void opj_t1_enc_clnpass(
     } \
 }
 
-static void opj_t1_dec_clnpass_check_segsym(opj_t1_t *t1, OPJ_INT32 cblksty)
-{
+static void opj_t1_dec_clnpass_check_segsym(opj_t1_t *t1, OPJ_INT32 cblksty) {
     if (cblksty & J2K_CCP_CBLKSTY_SEGSYM) {
-        opj_mqc_t* mqc = &(t1->mqc);
+        opj_mqc_t *mqc = &(t1->mqc);
         OPJ_UINT32 v, v2;
         opj_mqc_setcurctx(mqc, T1_CTXNO_UNI);
         opj_mqc_decode(v, mqc);
@@ -1363,30 +1336,26 @@ static void opj_t1_dec_clnpass_check_segsym(opj_t1_t *t1, OPJ_INT32 cblksty)
 
 static void opj_t1_dec_clnpass_64x64_novsc(
     opj_t1_t *t1,
-    OPJ_INT32 bpno)
-{
+    OPJ_INT32 bpno) {
     opj_t1_dec_clnpass_internal(t1, bpno, OPJ_FALSE, 64, 64, 66);
 }
 
 static void opj_t1_dec_clnpass_64x64_vsc(
     opj_t1_t *t1,
-    OPJ_INT32 bpno)
-{
+    OPJ_INT32 bpno) {
     opj_t1_dec_clnpass_internal(t1, bpno, OPJ_TRUE, 64, 64, 66);
 }
 
 static void opj_t1_dec_clnpass_generic_novsc(
     opj_t1_t *t1,
-    OPJ_INT32 bpno)
-{
+    OPJ_INT32 bpno) {
     opj_t1_dec_clnpass_internal(t1, bpno, OPJ_FALSE, t1->w, t1->h,
                                 t1->w + 2U);
 }
 
 static void opj_t1_dec_clnpass_generic_vsc(
     opj_t1_t *t1,
-    OPJ_INT32 bpno)
-{
+    OPJ_INT32 bpno) {
     opj_t1_dec_clnpass_internal(t1, bpno, OPJ_TRUE, t1->w, t1->h,
                                 t1->w + 2U);
 }
@@ -1394,8 +1363,7 @@ static void opj_t1_dec_clnpass_generic_vsc(
 static void opj_t1_dec_clnpass(
     opj_t1_t *t1,
     OPJ_INT32 bpno,
-    OPJ_INT32 cblksty)
-{
+    OPJ_INT32 cblksty) {
     if (t1->w == 64 && t1->h == 64) {
         if (cblksty & J2K_CCP_CBLKSTY_VSC) {
             opj_t1_dec_clnpass_64x64_vsc(t1, bpno);
@@ -1422,9 +1390,8 @@ static OPJ_FLOAT64 opj_t1_getwmsedec(
     OPJ_UINT32 qmfbid,
     OPJ_FLOAT64 stepsize,
     OPJ_UINT32 numcomps,
-    const OPJ_FLOAT64 * mct_norms,
-    OPJ_UINT32 mct_numcomps)
-{
+    const OPJ_FLOAT64 *mct_norms,
+    OPJ_UINT32 mct_numcomps) {
     OPJ_FLOAT64 w1 = 1, w2, wmsedec;
     OPJ_ARG_NOT_USED(numcomps);
 
@@ -1451,8 +1418,7 @@ static OPJ_FLOAT64 opj_t1_getwmsedec(
 static OPJ_BOOL opj_t1_allocate_buffers(
     opj_t1_t *t1,
     OPJ_UINT32 w,
-    OPJ_UINT32 h)
-{
+    OPJ_UINT32 h) {
     OPJ_UINT32 flagssize;
     OPJ_UINT32 flags_stride;
 
@@ -1468,7 +1434,7 @@ static OPJ_BOOL opj_t1_allocate_buffers(
 
         if (datasize > t1->datasize) {
             opj_aligned_free(t1->data);
-            t1->data = (OPJ_INT32*) opj_aligned_malloc(datasize * sizeof(OPJ_INT32));
+            t1->data = (OPJ_INT32 *) opj_aligned_malloc(datasize * sizeof(OPJ_INT32));
             if (!t1->data) {
                 /* FIXME event manager error callback */
                 return OPJ_FALSE;
@@ -1487,15 +1453,15 @@ static OPJ_BOOL opj_t1_allocate_buffers(
 
     flagssize *= flags_stride;
     {
-        opj_flag_t* p;
+        opj_flag_t *p;
         OPJ_UINT32 x;
         OPJ_UINT32 flags_height = (h + 3U) / 4U;
 
         if (flagssize > t1->flagssize) {
 
             opj_aligned_free(t1->flags);
-            t1->flags = (opj_flag_t*) opj_aligned_malloc(flagssize * sizeof(
-                            opj_flag_t));
+            t1->flags = (opj_flag_t *) opj_aligned_malloc(flagssize * sizeof(
+                                                              opj_flag_t));
             if (!t1->flags) {
                 /* FIXME event manager error callback */
                 return OPJ_FALSE;
@@ -1547,11 +1513,10 @@ static OPJ_BOOL opj_t1_allocate_buffers(
  * and initializes the look-up tables of the Tier-1 coder/decoder
  * @return a new T1 handle if successful, returns NULL otherwise
 */
-opj_t1_t* opj_t1_create(OPJ_BOOL isEncoder)
-{
+opj_t1_t *opj_t1_create(OPJ_BOOL isEncoder) {
     opj_t1_t *l_t1 = 00;
 
-    l_t1 = (opj_t1_t*) opj_calloc(1, sizeof(opj_t1_t));
+    l_t1 = (opj_t1_t *) opj_calloc(1, sizeof(opj_t1_t));
     if (!l_t1) {
         return 00;
     }
@@ -1567,8 +1532,7 @@ opj_t1_t* opj_t1_create(OPJ_BOOL isEncoder)
  *
  * @param p_t1 Tier 1 handle to destroy
 */
-void opj_t1_destroy(opj_t1_t *p_t1)
-{
+void opj_t1_destroy(opj_t1_t *p_t1) {
     if (! p_t1) {
         return;
     }
@@ -1591,38 +1555,36 @@ void opj_t1_destroy(opj_t1_t *p_t1)
 typedef struct {
     OPJ_BOOL whole_tile_decoding;
     OPJ_UINT32 resno;
-    opj_tcd_cblk_dec_t* cblk;
-    opj_tcd_band_t* band;
-    opj_tcd_tilecomp_t* tilec;
-    opj_tccp_t* tccp;
+    opj_tcd_cblk_dec_t *cblk;
+    opj_tcd_band_t *band;
+    opj_tcd_tilecomp_t *tilec;
+    opj_tccp_t *tccp;
     OPJ_BOOL mustuse_cblkdatabuffer;
-    volatile OPJ_BOOL* pret;
+    volatile OPJ_BOOL *pret;
     opj_event_mgr_t *p_manager;
-    opj_mutex_t* p_manager_mutex;
+    opj_mutex_t *p_manager_mutex;
     OPJ_BOOL check_pterm;
 } opj_t1_cblk_decode_processing_job_t;
 
-static void opj_t1_destroy_wrapper(void* t1)
-{
-    opj_t1_destroy((opj_t1_t*) t1);
+static void opj_t1_destroy_wrapper(void *t1) {
+    opj_t1_destroy((opj_t1_t *) t1);
 }
 
-static void opj_t1_clbl_decode_processor(void* user_data, opj_tls_t* tls)
-{
-    opj_tcd_cblk_dec_t* cblk;
-    opj_tcd_band_t* band;
-    opj_tcd_tilecomp_t* tilec;
-    opj_tccp_t* tccp;
-    OPJ_INT32* OPJ_RESTRICT datap;
+static void opj_t1_clbl_decode_processor(void *user_data, opj_tls_t *tls) {
+    opj_tcd_cblk_dec_t *cblk;
+    opj_tcd_band_t *band;
+    opj_tcd_tilecomp_t *tilec;
+    opj_tccp_t *tccp;
+    OPJ_INT32 *OPJ_RESTRICT datap;
     OPJ_UINT32 cblk_w, cblk_h;
     OPJ_INT32 x, y;
     OPJ_UINT32 i, j;
-    opj_t1_cblk_decode_processing_job_t* job;
-    opj_t1_t* t1;
+    opj_t1_cblk_decode_processing_job_t *job;
+    opj_t1_t *t1;
     OPJ_UINT32 resno;
     OPJ_UINT32 tile_w;
 
-    job = (opj_t1_cblk_decode_processing_job_t*) user_data;
+    job = (opj_t1_cblk_decode_processing_job_t *) user_data;
 
     cblk = job->cblk;
 
@@ -1630,8 +1592,8 @@ static void opj_t1_clbl_decode_processor(void* user_data, opj_tls_t* tls)
         cblk_w = (OPJ_UINT32)(cblk->x1 - cblk->x0);
         cblk_h = (OPJ_UINT32)(cblk->y1 - cblk->y0);
 
-        cblk->decoded_data = (OPJ_INT32*)opj_aligned_malloc(sizeof(OPJ_INT32) *
-                             cblk_w * cblk_h);
+        cblk->decoded_data = (OPJ_INT32 *)opj_aligned_malloc(sizeof(OPJ_INT32) *
+                                                             cblk_w * cblk_h);
         if (cblk->decoded_data == NULL) {
             if (job->p_manager_mutex) {
                 opj_mutex_lock(job->p_manager_mutex);
@@ -1667,7 +1629,7 @@ static void opj_t1_clbl_decode_processor(void* user_data, opj_tls_t* tls)
         return;
     }
 
-    t1 = (opj_t1_t*) opj_tls_get(tls, OPJ_TLS_KEY_T1);
+    t1 = (opj_t1_t *) opj_tls_get(tls, OPJ_TLS_KEY_T1);
     if (t1 == NULL) {
         t1 = opj_t1_create(OPJ_FALSE);
         if (t1 == NULL) {
@@ -1721,11 +1683,11 @@ static void opj_t1_clbl_decode_processor(void* user_data, opj_tls_t* tls)
     x = cblk->x0 - band->x0;
     y = cblk->y0 - band->y0;
     if (band->bandno & 1) {
-        opj_tcd_resolution_t* pres = &tilec->resolutions[resno - 1];
+        opj_tcd_resolution_t *pres = &tilec->resolutions[resno - 1];
         x += pres->x1 - pres->x0;
     }
     if (band->bandno & 2) {
-        opj_tcd_resolution_t* pres = &tilec->resolutions[resno - 1];
+        opj_tcd_resolution_t *pres = &tilec->resolutions[resno - 1];
         y += pres->y1 - pres->y0;
     }
 
@@ -1774,17 +1736,17 @@ static void opj_t1_clbl_decode_processor(void* user_data, opj_tls_t* tls)
                 const __m128 xmm_stepsize = _mm_set1_ps(stepsize);
                 for (; i < (cblk_size & ~15U); i += 16) {
                     __m128 xmm0_data = _mm_cvtepi32_ps(_mm_load_si128((__m128i * const)(
-                                                           datap + 0)));
+                                                                          datap + 0)));
                     __m128 xmm1_data = _mm_cvtepi32_ps(_mm_load_si128((__m128i * const)(
-                                                           datap + 4)));
+                                                                          datap + 4)));
                     __m128 xmm2_data = _mm_cvtepi32_ps(_mm_load_si128((__m128i * const)(
-                                                           datap + 8)));
+                                                                          datap + 8)));
                     __m128 xmm3_data = _mm_cvtepi32_ps(_mm_load_si128((__m128i * const)(
-                                                           datap + 12)));
-                    _mm_store_ps((float*)(datap +  0), _mm_mul_ps(xmm0_data, xmm_stepsize));
-                    _mm_store_ps((float*)(datap +  4), _mm_mul_ps(xmm1_data, xmm_stepsize));
-                    _mm_store_ps((float*)(datap +  8), _mm_mul_ps(xmm2_data, xmm_stepsize));
-                    _mm_store_ps((float*)(datap + 12), _mm_mul_ps(xmm3_data, xmm_stepsize));
+                                                                          datap + 12)));
+                    _mm_store_ps((float *)(datap +  0), _mm_mul_ps(xmm0_data, xmm_stepsize));
+                    _mm_store_ps((float *)(datap +  4), _mm_mul_ps(xmm1_data, xmm_stepsize));
+                    _mm_store_ps((float *)(datap +  8), _mm_mul_ps(xmm2_data, xmm_stepsize));
+                    _mm_store_ps((float *)(datap + 12), _mm_mul_ps(xmm3_data, xmm_stepsize));
                     datap += 16;
                 }
             }
@@ -1796,19 +1758,19 @@ static void opj_t1_clbl_decode_processor(void* user_data, opj_tls_t* tls)
             }
         }
     } else if (tccp->qmfbid == 1) {
-        OPJ_INT32* OPJ_RESTRICT tiledp = &tilec->data[(OPJ_SIZE_T)y * tile_w +
-                                                       (OPJ_SIZE_T)x];
+        OPJ_INT32 *OPJ_RESTRICT tiledp = &tilec->data[(OPJ_SIZE_T)y * tile_w +
+                                                                    (OPJ_SIZE_T)x];
         for (j = 0; j < cblk_h; ++j) {
             //positive -> round down aka.  (83)/2 =  41.5 ->  41
             //negative -> round up   aka. (-83)/2 = -41.5 -> -41
 #if defined(__AVX512F__)
-            OPJ_INT32* ptr_in = datap + (j * cblk_w);
-            OPJ_INT32* ptr_out = tiledp + (j * (OPJ_SIZE_T)tile_w);
+            OPJ_INT32 *ptr_in = datap + (j * cblk_w);
+            OPJ_INT32 *ptr_out = tiledp + (j * (OPJ_SIZE_T)tile_w);
             for (i = 0; i < cblk_w / 16; ++i) {
-                __m512i in_avx = _mm512_loadu_si512((__m512i*)(ptr_in));
+                __m512i in_avx = _mm512_loadu_si512((__m512i *)(ptr_in));
                 const __m512i add_avx = _mm512_srli_epi32(in_avx, 31);
                 in_avx = _mm512_add_epi32(in_avx, add_avx);
-                _mm512_storeu_si512((__m512i*)(ptr_out), _mm512_srai_epi32(in_avx, 1));
+                _mm512_storeu_si512((__m512i *)(ptr_out), _mm512_srai_epi32(in_avx, 1));
                 ptr_in += 16;
                 ptr_out += 16;
             }
@@ -1817,13 +1779,13 @@ static void opj_t1_clbl_decode_processor(void* user_data, opj_tls_t* tls)
                 ptr_out[i] = ptr_in[i] / 2;
             }
 #elif defined(__AVX2__)
-            OPJ_INT32* ptr_in = datap + (j * cblk_w);
-            OPJ_INT32* ptr_out = tiledp + (j * (OPJ_SIZE_T)tile_w);
+            OPJ_INT32 *ptr_in = datap + (j * cblk_w);
+            OPJ_INT32 *ptr_out = tiledp + (j * (OPJ_SIZE_T)tile_w);
             for (i = 0; i < cblk_w / 8; ++i) {
-                __m256i in_avx = _mm256_loadu_si256((__m256i*)(ptr_in));
+                __m256i in_avx = _mm256_loadu_si256((__m256i *)(ptr_in));
                 const __m256i add_avx = _mm256_srli_epi32(in_avx, 31);
                 in_avx = _mm256_add_epi32(in_avx, add_avx);
-                _mm256_storeu_si256((__m256i*)(ptr_out), _mm256_srai_epi32(in_avx, 1));
+                _mm256_storeu_si256((__m256i *)(ptr_out), _mm256_srai_epi32(in_avx, 1));
                 ptr_in += 8;
                 ptr_out += 8;
             }
@@ -1838,23 +1800,23 @@ static void opj_t1_clbl_decode_processor(void* user_data, opj_tls_t* tls)
                 OPJ_INT32 tmp1 = datap[(j * cblk_w) + i + 1U];
                 OPJ_INT32 tmp2 = datap[(j * cblk_w) + i + 2U];
                 OPJ_INT32 tmp3 = datap[(j * cblk_w) + i + 3U];
-                ((OPJ_INT32*)tiledp)[(j * (OPJ_SIZE_T)tile_w) + i + 0U] = tmp0 / 2;
-                ((OPJ_INT32*)tiledp)[(j * (OPJ_SIZE_T)tile_w) + i + 1U] = tmp1 / 2;
-                ((OPJ_INT32*)tiledp)[(j * (OPJ_SIZE_T)tile_w) + i + 2U] = tmp2 / 2;
-                ((OPJ_INT32*)tiledp)[(j * (OPJ_SIZE_T)tile_w) + i + 3U] = tmp3 / 2;
+                ((OPJ_INT32 *)tiledp)[(j * (OPJ_SIZE_T)tile_w) + i + 0U] = tmp0 / 2;
+                ((OPJ_INT32 *)tiledp)[(j * (OPJ_SIZE_T)tile_w) + i + 1U] = tmp1 / 2;
+                ((OPJ_INT32 *)tiledp)[(j * (OPJ_SIZE_T)tile_w) + i + 2U] = tmp2 / 2;
+                ((OPJ_INT32 *)tiledp)[(j * (OPJ_SIZE_T)tile_w) + i + 3U] = tmp3 / 2;
             }
             for (; i < cblk_w; ++i) {
                 OPJ_INT32 tmp = datap[(j * cblk_w) + i];
-                ((OPJ_INT32*)tiledp)[(j * (OPJ_SIZE_T)tile_w) + i] = tmp / 2;
+                ((OPJ_INT32 *)tiledp)[(j * (OPJ_SIZE_T)tile_w) + i] = tmp / 2;
             }
 #endif
         }
     } else {        /* if (tccp->qmfbid == 0) */
         const float stepsize = 0.5f * band->stepsize;
-        OPJ_FLOAT32* OPJ_RESTRICT tiledp = (OPJ_FLOAT32*) &tilec->data[(OPJ_SIZE_T)y *
+        OPJ_FLOAT32 *OPJ_RESTRICT tiledp = (OPJ_FLOAT32 *) &tilec->data[(OPJ_SIZE_T)y *
                                                          tile_w + (OPJ_SIZE_T)x];
         for (j = 0; j < cblk_h; ++j) {
-            OPJ_FLOAT32* OPJ_RESTRICT tiledp2 = tiledp;
+            OPJ_FLOAT32 *OPJ_RESTRICT tiledp2 = tiledp;
             for (i = 0; i < cblk_w; ++i) {
                 OPJ_FLOAT32 tmp = (OPJ_FLOAT32) * datap * stepsize;
                 *tiledp2 = tmp;
@@ -1869,16 +1831,15 @@ static void opj_t1_clbl_decode_processor(void* user_data, opj_tls_t* tls)
 }
 
 
-void opj_t1_decode_cblks(opj_tcd_t* tcd,
-                         volatile OPJ_BOOL* pret,
-                         opj_tcd_tilecomp_t* tilec,
-                         opj_tccp_t* tccp,
+void opj_t1_decode_cblks(opj_tcd_t *tcd,
+                         volatile OPJ_BOOL *pret,
+                         opj_tcd_tilecomp_t *tilec,
+                         opj_tccp_t *tccp,
                          opj_event_mgr_t *p_manager,
-                         opj_mutex_t* p_manager_mutex,
+                         opj_mutex_t *p_manager_mutex,
                          OPJ_BOOL check_pterm
-                        )
-{
-    opj_thread_pool_t* tp = tcd->thread_pool;
+                        ) {
+    opj_thread_pool_t *tp = tcd->thread_pool;
     OPJ_UINT32 resno, bandno, precno, cblkno;
 
 #ifdef DEBUG_VERBOSE
@@ -1887,24 +1848,24 @@ void opj_t1_decode_cblks(opj_tcd_t* tcd,
 #endif
 
     for (resno = 0; resno < tilec->minimum_num_resolutions; ++resno) {
-        opj_tcd_resolution_t* res = &tilec->resolutions[resno];
+        opj_tcd_resolution_t *res = &tilec->resolutions[resno];
 
         for (bandno = 0; bandno < res->numbands; ++bandno) {
-            opj_tcd_band_t* OPJ_RESTRICT band = &res->bands[bandno];
+            opj_tcd_band_t *OPJ_RESTRICT band = &res->bands[bandno];
 
             for (precno = 0; precno < res->pw * res->ph; ++precno) {
-                opj_tcd_precinct_t* precinct = &band->precincts[precno];
+                opj_tcd_precinct_t *precinct = &band->precincts[precno];
 
                 if (!opj_tcd_is_subband_area_of_interest(tcd,
-                        tilec->compno,
-                        resno,
-                        band->bandno,
-                        (OPJ_UINT32)precinct->x0,
-                        (OPJ_UINT32)precinct->y0,
-                        (OPJ_UINT32)precinct->x1,
-                        (OPJ_UINT32)precinct->y1)) {
+                                                         tilec->compno,
+                                                         resno,
+                                                         band->bandno,
+                                                         (OPJ_UINT32)precinct->x0,
+                                                         (OPJ_UINT32)precinct->y0,
+                                                         (OPJ_UINT32)precinct->x1,
+                                                         (OPJ_UINT32)precinct->y1)) {
                     for (cblkno = 0; cblkno < precinct->cw * precinct->ch; ++cblkno) {
-                        opj_tcd_cblk_dec_t* cblk = &precinct->cblks.dec[cblkno];
+                        opj_tcd_cblk_dec_t *cblk = &precinct->cblks.dec[cblkno];
                         if (cblk->decoded_data) {
 #ifdef DEBUG_VERBOSE
                             printf("Discarding codeblock %d,%d at resno=%d, bandno=%d\n",
@@ -1918,17 +1879,17 @@ void opj_t1_decode_cblks(opj_tcd_t* tcd,
                 }
 
                 for (cblkno = 0; cblkno < precinct->cw * precinct->ch; ++cblkno) {
-                    opj_tcd_cblk_dec_t* cblk = &precinct->cblks.dec[cblkno];
-                    opj_t1_cblk_decode_processing_job_t* job;
+                    opj_tcd_cblk_dec_t *cblk = &precinct->cblks.dec[cblkno];
+                    opj_t1_cblk_decode_processing_job_t *job;
 
                     if (!opj_tcd_is_subband_area_of_interest(tcd,
-                            tilec->compno,
-                            resno,
-                            band->bandno,
-                            (OPJ_UINT32)cblk->x0,
-                            (OPJ_UINT32)cblk->y0,
-                            (OPJ_UINT32)cblk->x1,
-                            (OPJ_UINT32)cblk->y1)) {
+                                                             tilec->compno,
+                                                             resno,
+                                                             band->bandno,
+                                                             (OPJ_UINT32)cblk->x0,
+                                                             (OPJ_UINT32)cblk->y0,
+                                                             (OPJ_UINT32)cblk->x1,
+                                                             (OPJ_UINT32)cblk->y1)) {
                         if (cblk->decoded_data) {
 #ifdef DEBUG_VERBOSE
                             printf("Discarding codeblock %d,%d at resno=%d, bandno=%d\n",
@@ -1959,8 +1920,8 @@ void opj_t1_decode_cblks(opj_tcd_t* tcd,
 #endif
                     }
 
-                    job = (opj_t1_cblk_decode_processing_job_t*) opj_calloc(1,
-                            sizeof(opj_t1_cblk_decode_processing_job_t));
+                    job = (opj_t1_cblk_decode_processing_job_t *) opj_calloc(1,
+                                                                             sizeof(opj_t1_cblk_decode_processing_job_t));
                     if (!job) {
                         *pret = OPJ_FALSE;
                         return;
@@ -1996,23 +1957,22 @@ void opj_t1_decode_cblks(opj_tcd_t* tcd,
 
 
 static OPJ_BOOL opj_t1_decode_cblk(opj_t1_t *t1,
-                                   opj_tcd_cblk_dec_t* cblk,
+                                   opj_tcd_cblk_dec_t *cblk,
                                    OPJ_UINT32 orient,
                                    OPJ_UINT32 roishift,
                                    OPJ_UINT32 cblksty,
                                    opj_event_mgr_t *p_manager,
-                                   opj_mutex_t* p_manager_mutex,
-                                   OPJ_BOOL check_pterm)
-{
+                                   opj_mutex_t *p_manager_mutex,
+                                   OPJ_BOOL check_pterm) {
     opj_mqc_t *mqc = &(t1->mqc);   /* MQC component */
 
     OPJ_INT32 bpno_plus_one;
     OPJ_UINT32 passtype;
     OPJ_UINT32 segno, passno;
-    OPJ_BYTE* cblkdata = NULL;
+    OPJ_BYTE *cblkdata = NULL;
     OPJ_UINT32 cblkdataindex = 0;
     OPJ_BYTE type = T1_TYPE_MQ; /* BYPASS mode */
-    OPJ_INT32* original_t1_data = NULL;
+    OPJ_INT32 *original_t1_data = NULL;
 
     mqc->lut_ctxno_zc_orient = lut_ctxno_zc + (orient << 9);
 
@@ -2064,8 +2024,8 @@ static OPJ_BOOL opj_t1_decode_cblk(opj_t1_t *t1,
 
         /* Allocate temporary memory if needed */
         if (cblk_len + OPJ_COMMON_CBLK_DATA_EXTRA > t1->cblkdatabuffersize) {
-            cblkdata = (OPJ_BYTE*)opj_realloc(t1->cblkdatabuffer,
-                                              cblk_len + OPJ_COMMON_CBLK_DATA_EXTRA);
+            cblkdata = (OPJ_BYTE *)opj_realloc(t1->cblkdatabuffer,
+                                               cblk_len + OPJ_COMMON_CBLK_DATA_EXTRA);
             if (cblkdata == NULL) {
                 return OPJ_FALSE;
             }
@@ -2115,23 +2075,23 @@ static OPJ_BOOL opj_t1_decode_cblk(opj_t1_t *t1,
         for (passno = 0; (passno < seg->real_num_passes) &&
                 (bpno_plus_one >= 1); ++passno) {
             switch (passtype) {
-            case 0:
-                if (type == T1_TYPE_RAW) {
-                    opj_t1_dec_sigpass_raw(t1, bpno_plus_one, (OPJ_INT32)cblksty);
-                } else {
-                    opj_t1_dec_sigpass_mqc(t1, bpno_plus_one, (OPJ_INT32)cblksty);
-                }
-                break;
-            case 1:
-                if (type == T1_TYPE_RAW) {
-                    opj_t1_dec_refpass_raw(t1, bpno_plus_one);
-                } else {
-                    opj_t1_dec_refpass_mqc(t1, bpno_plus_one);
-                }
-                break;
-            case 2:
-                opj_t1_dec_clnpass(t1, bpno_plus_one, (OPJ_INT32)cblksty);
-                break;
+                case 0:
+                    if (type == T1_TYPE_RAW) {
+                        opj_t1_dec_sigpass_raw(t1, bpno_plus_one, (OPJ_INT32)cblksty);
+                    } else {
+                        opj_t1_dec_sigpass_mqc(t1, bpno_plus_one, (OPJ_INT32)cblksty);
+                    }
+                    break;
+                case 1:
+                    if (type == T1_TYPE_RAW) {
+                        opj_t1_dec_refpass_raw(t1, bpno_plus_one);
+                    } else {
+                        opj_t1_dec_refpass_mqc(t1, bpno_plus_one);
+                    }
+                    break;
+                case 2:
+                    opj_t1_dec_clnpass(t1, bpno_plus_one, (OPJ_INT32)cblksty);
+                    break;
             }
 
             if ((cblksty & J2K_CCP_CBLKSTY_RESET) && type == T1_TYPE_MQ) {
@@ -2187,15 +2147,15 @@ static OPJ_BOOL opj_t1_decode_cblk(opj_t1_t *t1,
 typedef struct {
     OPJ_UINT32 compno;
     OPJ_UINT32 resno;
-    opj_tcd_cblk_enc_t* cblk;
+    opj_tcd_cblk_enc_t *cblk;
     opj_tcd_tile_t *tile;
-    opj_tcd_band_t* band;
-    opj_tcd_tilecomp_t* tilec;
-    opj_tccp_t* tccp;
-    const OPJ_FLOAT64 * mct_norms;
+    opj_tcd_band_t *band;
+    opj_tcd_tilecomp_t *tilec;
+    opj_tccp_t *tccp;
+    const OPJ_FLOAT64 *mct_norms;
     OPJ_UINT32 mct_numcomps;
-    volatile OPJ_BOOL* pret;
-    opj_mutex_t* mutex;
+    volatile OPJ_BOOL *pret;
+    opj_mutex_t *mutex;
 } opj_t1_cblk_encode_processing_job_t;
 
 /** Procedure to deal with a asynchronous code-block encoding job.
@@ -2203,19 +2163,18 @@ typedef struct {
  * @param user_data Pointer to a opj_t1_cblk_encode_processing_job_t* structure
  * @param tls       TLS handle.
  */
-static void opj_t1_cblk_encode_processor(void* user_data, opj_tls_t* tls)
-{
-    opj_t1_cblk_encode_processing_job_t* job =
-        (opj_t1_cblk_encode_processing_job_t*)user_data;
-    opj_tcd_cblk_enc_t* cblk = job->cblk;
-    const opj_tcd_band_t* band = job->band;
-    const opj_tcd_tilecomp_t* tilec = job->tilec;
-    const opj_tccp_t* tccp = job->tccp;
+static void opj_t1_cblk_encode_processor(void *user_data, opj_tls_t *tls) {
+    opj_t1_cblk_encode_processing_job_t *job =
+        (opj_t1_cblk_encode_processing_job_t *)user_data;
+    opj_tcd_cblk_enc_t *cblk = job->cblk;
+    const opj_tcd_band_t *band = job->band;
+    const opj_tcd_tilecomp_t *tilec = job->tilec;
+    const opj_tccp_t *tccp = job->tccp;
     const OPJ_UINT32 resno = job->resno;
-    opj_t1_t* t1;
+    opj_t1_t *t1;
     const OPJ_UINT32 tile_w = (OPJ_UINT32)(tilec->x1 - tilec->x0);
 
-    OPJ_INT32* OPJ_RESTRICT tiledp;
+    OPJ_INT32 *OPJ_RESTRICT tiledp;
     OPJ_UINT32 cblk_w;
     OPJ_UINT32 cblk_h;
     OPJ_UINT32 i, j;
@@ -2228,7 +2187,7 @@ static void opj_t1_cblk_encode_processor(void* user_data, opj_tls_t* tls)
         return;
     }
 
-    t1 = (opj_t1_t*) opj_tls_get(tls, OPJ_TLS_KEY_T1);
+    t1 = (opj_t1_t *) opj_tls_get(tls, OPJ_TLS_KEY_T1);
     if (t1 == NULL) {
         t1 = opj_t1_create(OPJ_TRUE); /* OPJ_TRUE == T1 for encoding */
         opj_tls_set(tls, OPJ_TLS_KEY_T1, t1, opj_t1_destroy_wrapper);
@@ -2266,28 +2225,28 @@ static void opj_t1_cblk_encode_processor(void* user_data, opj_tls_t* tls)
             * representation
             * Fixes https://github.com/uclouvain/openjpeg/issues/1053
             */
-        OPJ_UINT32* OPJ_RESTRICT tiledp_u = (OPJ_UINT32*) tiledp;
-        OPJ_UINT32* OPJ_RESTRICT t1data = (OPJ_UINT32*) t1->data;
+        OPJ_UINT32 *OPJ_RESTRICT tiledp_u = (OPJ_UINT32 *) tiledp;
+        OPJ_UINT32 *OPJ_RESTRICT t1data = (OPJ_UINT32 *) t1->data;
         /* Change from "natural" order to "zigzag" order of T1 passes */
         for (j = 0; j < (cblk_h & ~3U); j += 4) {
 #if defined(__AVX512F__)
             const __m512i perm1 = _mm512_setr_epi64(2, 3, 10, 11, 4, 5, 12, 13);
             const __m512i perm2 = _mm512_setr_epi64(6, 7, 14, 15, 0, 0, 0, 0);
-            OPJ_UINT32* ptr = tiledp_u;
+            OPJ_UINT32 *ptr = tiledp_u;
             for (i = 0; i < cblk_w / 16; ++i) {
                 //                      INPUT                                        OUTPUT
                 // 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F   00 10 20 30 01 11 21 31 02 12 22 32 03 13 23 33
                 // 10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F   04 14 24 34 05 15 25 35 06 16 26 36 07 17 27 37
                 // 20 21 22 23 24 25 26 27 28 29 2A 2B 2C 2D 2E 2F   08 18 28 38 09 19 29 39 0A 1A 2A 3A 0B 1B 2B 3B
                 // 30 31 32 33 34 35 36 37 38 39 3A 3B 3C 3D 3E 3F   0C 1C 2C 3C 0D 1D 2D 3D 0E 1E 2E 3E 0F 1F 2F 3F
-                __m512i in1 = _mm512_slli_epi32(_mm512_loadu_si512((__m512i*)(ptr +
-                                                (j + 0) * tile_w)), T1_NMSEDEC_FRACBITS);
-                __m512i in2 = _mm512_slli_epi32(_mm512_loadu_si512((__m512i*)(ptr +
-                                                (j + 1) * tile_w)), T1_NMSEDEC_FRACBITS);
-                __m512i in3 = _mm512_slli_epi32(_mm512_loadu_si512((__m512i*)(ptr +
-                                                (j + 2) * tile_w)), T1_NMSEDEC_FRACBITS);
-                __m512i in4 = _mm512_slli_epi32(_mm512_loadu_si512((__m512i*)(ptr +
-                                                (j + 3) * tile_w)), T1_NMSEDEC_FRACBITS);
+                __m512i in1 = _mm512_slli_epi32(_mm512_loadu_si512((__m512i *)(ptr +
+                                                                   (j + 0) * tile_w)), T1_NMSEDEC_FRACBITS);
+                __m512i in2 = _mm512_slli_epi32(_mm512_loadu_si512((__m512i *)(ptr +
+                                                                   (j + 1) * tile_w)), T1_NMSEDEC_FRACBITS);
+                __m512i in3 = _mm512_slli_epi32(_mm512_loadu_si512((__m512i *)(ptr +
+                                                                   (j + 2) * tile_w)), T1_NMSEDEC_FRACBITS);
+                __m512i in4 = _mm512_slli_epi32(_mm512_loadu_si512((__m512i *)(ptr +
+                                                                   (j + 3) * tile_w)), T1_NMSEDEC_FRACBITS);
 
                 __m512i tmp1 = _mm512_unpacklo_epi32(in1, in2);
                 __m512i tmp2 = _mm512_unpacklo_epi32(in3, in4);
@@ -2299,23 +2258,23 @@ static void opj_t1_cblk_encode_processor(void* user_data, opj_tls_t* tls)
                 in3 = _mm512_unpackhi_epi64(tmp1, tmp2);
                 in4 = _mm512_unpackhi_epi64(tmp3, tmp4);
 
-                _mm_storeu_si128((__m128i*)(t1data + 0), _mm512_castsi512_si128(in1));
-                _mm_storeu_si128((__m128i*)(t1data + 4), _mm512_castsi512_si128(in3));
-                _mm_storeu_si128((__m128i*)(t1data + 8), _mm512_castsi512_si128(in2));
-                _mm_storeu_si128((__m128i*)(t1data + 12), _mm512_castsi512_si128(in4));
+                _mm_storeu_si128((__m128i *)(t1data + 0), _mm512_castsi512_si128(in1));
+                _mm_storeu_si128((__m128i *)(t1data + 4), _mm512_castsi512_si128(in3));
+                _mm_storeu_si128((__m128i *)(t1data + 8), _mm512_castsi512_si128(in2));
+                _mm_storeu_si128((__m128i *)(t1data + 12), _mm512_castsi512_si128(in4));
 
                 tmp1 = _mm512_permutex2var_epi64(in1, perm1, in3);
                 tmp2 = _mm512_permutex2var_epi64(in2, perm1, in4);
 
-                _mm256_storeu_si256((__m256i*)(t1data + 16), _mm512_castsi512_si256(tmp1));
-                _mm256_storeu_si256((__m256i*)(t1data + 24), _mm512_castsi512_si256(tmp2));
-                _mm256_storeu_si256((__m256i*)(t1data + 32), _mm512_extracti64x4_epi64(tmp1,
+                _mm256_storeu_si256((__m256i *)(t1data + 16), _mm512_castsi512_si256(tmp1));
+                _mm256_storeu_si256((__m256i *)(t1data + 24), _mm512_castsi512_si256(tmp2));
+                _mm256_storeu_si256((__m256i *)(t1data + 32), _mm512_extracti64x4_epi64(tmp1,
                                     0x1));
-                _mm256_storeu_si256((__m256i*)(t1data + 40), _mm512_extracti64x4_epi64(tmp2,
+                _mm256_storeu_si256((__m256i *)(t1data + 40), _mm512_extracti64x4_epi64(tmp2,
                                     0x1));
-                _mm256_storeu_si256((__m256i*)(t1data + 48),
+                _mm256_storeu_si256((__m256i *)(t1data + 48),
                                     _mm512_castsi512_si256(_mm512_permutex2var_epi64(in1, perm2, in3)));
-                _mm256_storeu_si256((__m256i*)(t1data + 56),
+                _mm256_storeu_si256((__m256i *)(t1data + 56),
                                     _mm512_castsi512_si256(_mm512_permutex2var_epi64(in2, perm2, in4)));
                 t1data += 64;
                 ptr += 16;
@@ -2329,21 +2288,21 @@ static void opj_t1_cblk_encode_processor(void* user_data, opj_tls_t* tls)
                 ptr += 1;
             }
 #elif defined(__AVX2__)
-            OPJ_UINT32* ptr = tiledp_u;
+            OPJ_UINT32 *ptr = tiledp_u;
             for (i = 0; i < cblk_w / 8; ++i) {
                 //          INPUT                  OUTPUT
                 // 00 01 02 03 04 05 06 07   00 10 20 30 01 11 21 31
                 // 10 11 12 13 14 15 16 17   02 12 22 32 03 13 23 33
                 // 20 21 22 23 24 25 26 27   04 14 24 34 05 15 25 35
                 // 30 31 32 33 34 35 36 37   06 16 26 36 07 17 27 37
-                __m256i in1 = _mm256_slli_epi32(_mm256_loadu_si256((__m256i*)(ptr +
-                                                (j + 0) * tile_w)), T1_NMSEDEC_FRACBITS);
-                __m256i in2 = _mm256_slli_epi32(_mm256_loadu_si256((__m256i*)(ptr +
-                                                (j + 1) * tile_w)), T1_NMSEDEC_FRACBITS);
-                __m256i in3 = _mm256_slli_epi32(_mm256_loadu_si256((__m256i*)(ptr +
-                                                (j + 2) * tile_w)), T1_NMSEDEC_FRACBITS);
-                __m256i in4 = _mm256_slli_epi32(_mm256_loadu_si256((__m256i*)(ptr +
-                                                (j + 3) * tile_w)), T1_NMSEDEC_FRACBITS);
+                __m256i in1 = _mm256_slli_epi32(_mm256_loadu_si256((__m256i *)(ptr +
+                                                                   (j + 0) * tile_w)), T1_NMSEDEC_FRACBITS);
+                __m256i in2 = _mm256_slli_epi32(_mm256_loadu_si256((__m256i *)(ptr +
+                                                                   (j + 1) * tile_w)), T1_NMSEDEC_FRACBITS);
+                __m256i in3 = _mm256_slli_epi32(_mm256_loadu_si256((__m256i *)(ptr +
+                                                                   (j + 2) * tile_w)), T1_NMSEDEC_FRACBITS);
+                __m256i in4 = _mm256_slli_epi32(_mm256_loadu_si256((__m256i *)(ptr +
+                                                                   (j + 3) * tile_w)), T1_NMSEDEC_FRACBITS);
 
                 __m256i tmp1 = _mm256_unpacklo_epi32(in1, in2);
                 __m256i tmp2 = _mm256_unpacklo_epi32(in3, in4);
@@ -2355,13 +2314,13 @@ static void opj_t1_cblk_encode_processor(void* user_data, opj_tls_t* tls)
                 in3 = _mm256_unpackhi_epi64(tmp1, tmp2);
                 in4 = _mm256_unpackhi_epi64(tmp3, tmp4);
 
-                _mm_storeu_si128((__m128i*)(t1data + 0), _mm256_castsi256_si128(in1));
-                _mm_storeu_si128((__m128i*)(t1data + 4), _mm256_castsi256_si128(in3));
-                _mm_storeu_si128((__m128i*)(t1data + 8), _mm256_castsi256_si128(in2));
-                _mm_storeu_si128((__m128i*)(t1data + 12), _mm256_castsi256_si128(in4));
-                _mm256_storeu_si256((__m256i*)(t1data + 16), _mm256_permute2x128_si256(in1, in3,
+                _mm_storeu_si128((__m128i *)(t1data + 0), _mm256_castsi256_si128(in1));
+                _mm_storeu_si128((__m128i *)(t1data + 4), _mm256_castsi256_si128(in3));
+                _mm_storeu_si128((__m128i *)(t1data + 8), _mm256_castsi256_si128(in2));
+                _mm_storeu_si128((__m128i *)(t1data + 12), _mm256_castsi256_si128(in4));
+                _mm256_storeu_si256((__m256i *)(t1data + 16), _mm256_permute2x128_si256(in1, in3,
                                     0x31));
-                _mm256_storeu_si256((__m256i*)(t1data + 24), _mm256_permute2x128_si256(in2, in4,
+                _mm256_storeu_si256((__m256i *)(t1data + 24), _mm256_permute2x128_si256(in2, in4,
                                     0x31));
                 t1data += 32;
                 ptr += 8;
@@ -2394,8 +2353,8 @@ static void opj_t1_cblk_encode_processor(void* user_data, opj_tls_t* tls)
             }
         }
     } else {        /* if (tccp->qmfbid == 0) */
-        OPJ_FLOAT32* OPJ_RESTRICT tiledp_f = (OPJ_FLOAT32*) tiledp;
-        OPJ_INT32* OPJ_RESTRICT t1data = t1->data;
+        OPJ_FLOAT32 *OPJ_RESTRICT tiledp_f = (OPJ_FLOAT32 *) tiledp;
+        OPJ_INT32 *OPJ_RESTRICT t1data = t1->data;
         /* Change from "natural" order to "zigzag" order of T1 passes */
         for (j = 0; j < (cblk_h & ~3U); j += 4) {
             for (i = 0; i < cblk_w; ++i) {
@@ -2449,29 +2408,28 @@ static void opj_t1_cblk_encode_processor(void* user_data, opj_tls_t* tls)
 }
 
 
-OPJ_BOOL opj_t1_encode_cblks(opj_tcd_t* tcd,
+OPJ_BOOL opj_t1_encode_cblks(opj_tcd_t *tcd,
                              opj_tcd_tile_t *tile,
                              opj_tcp_t *tcp,
-                             const OPJ_FLOAT64 * mct_norms,
+                             const OPJ_FLOAT64 *mct_norms,
                              OPJ_UINT32 mct_numcomps
-                            )
-{
+                            ) {
     volatile OPJ_BOOL ret = OPJ_TRUE;
-    opj_thread_pool_t* tp = tcd->thread_pool;
+    opj_thread_pool_t *tp = tcd->thread_pool;
     OPJ_UINT32 compno, resno, bandno, precno, cblkno;
-    opj_mutex_t* mutex = opj_mutex_create();
+    opj_mutex_t *mutex = opj_mutex_create();
 
     tile->distotile = 0;
 
     for (compno = 0; compno < tile->numcomps; ++compno) {
-        opj_tcd_tilecomp_t* tilec = &tile->comps[compno];
-        opj_tccp_t* tccp = &tcp->tccps[compno];
+        opj_tcd_tilecomp_t *tilec = &tile->comps[compno];
+        opj_tccp_t *tccp = &tcp->tccps[compno];
 
         for (resno = 0; resno < tilec->numresolutions; ++resno) {
             opj_tcd_resolution_t *res = &tilec->resolutions[resno];
 
             for (bandno = 0; bandno < res->numbands; ++bandno) {
-                opj_tcd_band_t* OPJ_RESTRICT band = &res->bands[bandno];
+                opj_tcd_band_t *OPJ_RESTRICT band = &res->bands[bandno];
 
                 /* Skip empty bands */
                 if (opj_tcd_is_band_empty(band)) {
@@ -2481,11 +2439,11 @@ OPJ_BOOL opj_t1_encode_cblks(opj_tcd_t* tcd,
                     opj_tcd_precinct_t *prc = &band->precincts[precno];
 
                     for (cblkno = 0; cblkno < prc->cw * prc->ch; ++cblkno) {
-                        opj_tcd_cblk_enc_t* cblk = &prc->cblks.enc[cblkno];
+                        opj_tcd_cblk_enc_t *cblk = &prc->cblks.enc[cblkno];
 
-                        opj_t1_cblk_encode_processing_job_t* job =
-                            (opj_t1_cblk_encode_processing_job_t*) opj_calloc(1,
-                                    sizeof(opj_t1_cblk_encode_processing_job_t));
+                        opj_t1_cblk_encode_processing_job_t *job =
+                            (opj_t1_cblk_encode_processing_job_t *) opj_calloc(1,
+                                                                               sizeof(opj_t1_cblk_encode_processing_job_t));
                         if (!job) {
                             ret = OPJ_FALSE;
                             goto end;
@@ -2519,11 +2477,10 @@ end:
 }
 
 /* Returns whether the pass (bpno, passtype) is terminated */
-static int opj_t1_enc_is_term_pass(opj_tcd_cblk_enc_t* cblk,
+static int opj_t1_enc_is_term_pass(opj_tcd_cblk_enc_t *cblk,
                                    OPJ_UINT32 cblksty,
                                    OPJ_INT32 bpno,
-                                   OPJ_UINT32 passtype)
-{
+                                   OPJ_UINT32 passtype) {
     /* Is it the last cleanup pass ? */
     if (passtype == 2 && bpno == 0) {
         return OPJ_TRUE;
@@ -2550,7 +2507,7 @@ static int opj_t1_enc_is_term_pass(opj_tcd_cblk_enc_t* cblk,
 
 
 static OPJ_FLOAT64 opj_t1_encode_cblk(opj_t1_t *t1,
-                                      opj_tcd_cblk_enc_t* cblk,
+                                      opj_tcd_cblk_enc_t *cblk,
                                       OPJ_UINT32 orient,
                                       OPJ_UINT32 compno,
                                       OPJ_UINT32 level,
@@ -2558,9 +2515,8 @@ static OPJ_FLOAT64 opj_t1_encode_cblk(opj_t1_t *t1,
                                       OPJ_FLOAT64 stepsize,
                                       OPJ_UINT32 cblksty,
                                       OPJ_UINT32 numcomps,
-                                      const OPJ_FLOAT64 * mct_norms,
-                                      OPJ_UINT32 mct_numcomps)
-{
+                                      const OPJ_FLOAT64 *mct_norms,
+                                      OPJ_UINT32 mct_numcomps) {
     OPJ_FLOAT64 cumwmsedec = 0.0;
 
     opj_mqc_t *mqc = &(t1->mqc);   /* MQC component */
@@ -2573,7 +2529,7 @@ static OPJ_FLOAT64 opj_t1_encode_cblk(opj_t1_t *t1,
     OPJ_UINT32 i, j;
     OPJ_BYTE type = T1_TYPE_MQ;
     OPJ_FLOAT64 tempwmsedec;
-    OPJ_INT32* datap;
+    OPJ_INT32 *datap;
 
 #ifdef EXTRA_DEBUG
     printf("encode_cblk(x=%d,y=%d,x1=%d,y1=%d,orient=%d,compno=%d,level=%d\n",
@@ -2637,19 +2593,19 @@ static OPJ_FLOAT64 opj_t1_encode_cblk(opj_t1_t *t1,
         }
 
         switch (passtype) {
-        case 0:
-            opj_t1_enc_sigpass(t1, bpno, &nmsedec, type, cblksty);
-            break;
-        case 1:
-            opj_t1_enc_refpass(t1, bpno, &nmsedec, type);
-            break;
-        case 2:
-            opj_t1_enc_clnpass(t1, bpno, &nmsedec, cblksty);
-            /* code switch SEGMARK (i.e. SEGSYM) */
-            if (cblksty & J2K_CCP_CBLKSTY_SEGSYM) {
-                opj_mqc_segmark_enc(mqc);
-            }
-            break;
+            case 0:
+                opj_t1_enc_sigpass(t1, bpno, &nmsedec, type, cblksty);
+                break;
+            case 1:
+                opj_t1_enc_refpass(t1, bpno, &nmsedec, type);
+                break;
+            case 2:
+                opj_t1_enc_clnpass(t1, bpno, &nmsedec, cblksty);
+                /* code switch SEGMARK (i.e. SEGSYM) */
+                if (cblksty & J2K_CCP_CBLKSTY_SEGSYM) {
+                    opj_mqc_segmark_enc(mqc);
+                }
+                break;
         }
 
         tempwmsedec = opj_t1_getwmsedec(nmsedec, compno, level, orient, bpno, qmfbid,

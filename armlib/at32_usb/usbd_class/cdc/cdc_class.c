@@ -25,8 +25,7 @@ extern void usb_usart_config(linecoding_type linecoding);
 
 static void usb_vcp_cmd_process(void *udev, uint8_t cmd, uint8_t *buff, uint16_t len);
 
-linecoding_type linecoding =
-{
+linecoding_type linecoding = {
     115200,
     0,
     0,
@@ -37,8 +36,7 @@ linecoding_type linecoding =
 cdc_struct_type cdc_struct;
 
 /* usb device class handler */
-usbd_class_handler cdc_class_handler =
-{
+usbd_class_handler cdc_class_handler = {
     class_init_handler,
     class_clear_handler,
     class_setup_handler,
@@ -349,7 +347,7 @@ static void usb_vcp_cmd_process(void *udev, uint8_t cmd, uint8_t *buff, uint16_t
     cdc_struct_type *pcdc = (cdc_struct_type *) pudev->class_handler->pdata;
     switch (cmd) {
         case SET_LINE_CODING:
-            pcdc->linecoding.bitrate = (uint32_t) (buff[0] | (buff[1] << 8) | (buff[2] << 16) | (buff[3] << 24));
+            pcdc->linecoding.bitrate = (uint32_t)(buff[0] | (buff[1] << 8) | (buff[2] << 16) | (buff[3] << 24));
             pcdc->linecoding.format = buff[4];
             pcdc->linecoding.parity = buff[5];
             pcdc->linecoding.data = buff[6];
@@ -361,12 +359,12 @@ static void usb_vcp_cmd_process(void *udev, uint8_t cmd, uint8_t *buff, uint16_t
 
         case GET_LINE_CODING:
             buff[0] = (uint8_t) pcdc->linecoding.bitrate;
-            buff[1] = (uint8_t) (pcdc->linecoding.bitrate >> 8);
-            buff[2] = (uint8_t) (pcdc->linecoding.bitrate >> 16);
-            buff[3] = (uint8_t) (pcdc->linecoding.bitrate >> 24);
-            buff[4] = (uint8_t) (pcdc->linecoding.format);
-            buff[5] = (uint8_t) (pcdc->linecoding.parity);
-            buff[6] = (uint8_t) (pcdc->linecoding.data);
+            buff[1] = (uint8_t)(pcdc->linecoding.bitrate >> 8);
+            buff[2] = (uint8_t)(pcdc->linecoding.bitrate >> 16);
+            buff[3] = (uint8_t)(pcdc->linecoding.bitrate >> 24);
+            buff[4] = (uint8_t)(pcdc->linecoding.format);
+            buff[5] = (uint8_t)(pcdc->linecoding.parity);
+            buff[6] = (uint8_t)(pcdc->linecoding.data);
             break;
 
         default:
