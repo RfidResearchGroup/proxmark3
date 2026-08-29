@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf mfu format` - NDEF format Ultralight/NTAG tags, restores the NXP factory Capability Container for the detected type (@0x6r1an0y)
 - Added tools script `external_sam_read.py` enabling PM3 3 Easy and Proxmark 5 to use an external SIM/SAM reader for `hf iclass sam` and `hf seos sam` commands (@antiklesys)
 - Added `nfc encode` and `hf mfu ndefwrite` - build NDEF URI/Text/AAR records and write them to Ultralight tags (@0x6r1an0y)
 - Fixed `hf emrtd info` - the picture viewer now scales images to the window instead of pinning them at native size (@iceman1001)
