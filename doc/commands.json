@@ -6278,7 +6278,7 @@
         },
         "hf mf gdmsetcfg": {
             "command": "hf mf gdmsetcfg",
-            "description": "Set configuration data on a GDM card Can either write raw 16 bytes (-d) or configure specific flags. If flags are provided, it will read the config, update flags, and write it back. With no wakeup flag it auto-detects the card's access mode (WUPA magic auth, gen1a, or gdm alt). Note the two groups below are different things: --gdm / --gen1a / --wupa how THIS command talks to the card (access, not stored) --wakestyle / --cuid / ... what gets STORED in the card's config block",
+            "description": "Set configuration data on a GDM card Can either write raw 16 bytes (-d) or configure specific flags. If flags are provided, it will read the config, update flags, and write it back. With no wakeup flag it auto-detects the card's access mode (WUPA magic auth, gen1a, or gdm alt). `access:` flags select how this command talks to the card; `config:` flags change what is stored.",
             "notes": [
                 "hf mf gdmsetcfg -d 850000000000000000005A5A00000008",
                 "hf mf gdmsetcfg --cuid on --wakestyle gen1a",
