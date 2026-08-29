@@ -641,9 +641,9 @@ def main() -> int:
     parser.add_argument("-v", "--verbose", action="store_true", help="show PM3 and Reader-SAM exchanges")
     args = parser.parse_args()
 
-    if args.decode_pacs:
+    if args.decode:
         try:
-            pacs = bytes.fromhex(args.decode_pacs)
+            pacs = bytes.fromhex(args.decode)
             if len(pacs) < 2 or pacs[0] > 7:
                 raise ValueError("must be <pad 00-07><packed Wiegand bytes>")
             render_pacs(pacs)
@@ -652,8 +652,8 @@ def main() -> int:
             print(f"[-] invalid PACS: {exc}")
             return 2
 
-    pcsc = Pcsc(args.sam_reader)
-    if args.list_readers:
+    pcsc = Pcsc(args.sam)
+    if args.list:
         try:
             readers = pcsc.list_readers()
             print("PC/SC readers:" if readers else "No PC/SC readers found.")
@@ -667,7 +667,7 @@ def main() -> int:
 
     pm3: Optional[Proxmark] = None
     try:
-        pm3 = Proxmark(args.pm3_port, args.verbose)
+        pm3 = Proxmark(args.pm3, args.verbose)
         caps = pm3.open()
         print(f"[+] Proxmark: {pm3.port} (capabilities v{caps})")
         atr = pcsc.connect()
