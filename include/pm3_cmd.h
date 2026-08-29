@@ -399,6 +399,23 @@ typedef struct {
     uint8_t key[6];
 } PACKED mf_readsector_t;
 
+// CMD_HF_MIFARE_VALUE payload.
+// Replaces a 34 byte blob addressed by hardcoded offsets:
+//   arg0/1/2 = blockno / keytype / transfer keytype
+//   [0..5] key, [9] action, [10] transfer block, [11..26] block data,
+//   [27..32] transfer key, [33] nested auth flag
+typedef struct {
+    uint8_t blockno;
+    uint8_t keytype;
+    uint8_t transfer_keytype;
+    uint8_t action;             // 0 increment, 1 decrement, 2 restore
+    uint8_t transfer_blockno;
+    uint8_t need_auth;          // nested auth needed when transferring across sectors
+    uint8_t key[6];
+    uint8_t transfer_key[6];
+    uint8_t blockdata[16];
+} PACKED mf_value_t;
+
 // CMD_HF_MIFARE_CSETBL / CMD_HF_MIFARE_CGETBL payload.
 // data[] carries the block to write for CSETBL, and is empty for CGETBL.
 typedef struct {

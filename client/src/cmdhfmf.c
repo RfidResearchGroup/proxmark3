@@ -10926,9 +10926,14 @@ static int CmdHF14AMfValue(const char *Cmd) {
             uint8_t block[MFBLOCK_SIZE] = {0x00};
             memcpy(block, (uint8_t *)&value, 4);
 
-            uint8_t cmddata[34];
-            memcpy(cmddata, key, sizeof(key));
-            // Key == 6 data went to 10, so lets offset 9 for inc/dec
+            mf_value_t payload = {
+                .blockno = blockno,
+                .keytype = keytype,
+                .transfer_keytype = transferkeytype,
+                // 00 if increment, 01 if decrement, 02 if restore
+                .action = action,
+            };
+            memcpy(payload.key, key, sizeof(key));
 
             if (action == 0) {
                 PrintAndLogEx(INFO, "Value incremented by : %d", (int32_t)value);
@@ -10937,22 +10942,19 @@ static int CmdHF14AMfValue(const char *Cmd) {
                 PrintAndLogEx(INFO, "Value decremented by : %d", (int32_t)value);
             }
 
-            // 00 if increment, 01 if decrement, 02 if restore
-            cmddata[9] = action;
-
             if (trnval != -1) {
 
                 // transfer to block
-                cmddata[10] = trnval;
+                payload.transfer_blockno = trnval;
 
-                memcpy(cmddata + 27, transferkey, sizeof(transferkey));
+                memcpy(payload.transfer_key, transferkey, sizeof(transferkey));
                 if (mfSectorNum(trnval) != mfSectorNum(blockno)) {
-                    cmddata[33] = 1; // should send nested auth
+                    payload.need_auth = 1; // should send nested auth
                 }
                 PrintAndLogEx(INFO, "Transfer block no %u to block %" PRId64, blockno, trnval);
 
             } else {
-                cmddata[10] = 0;
+                payload.transfer_blockno = 0;
                 if (keytype < 2) {
                     PrintAndLogEx(INFO, "Writing block no %u, key type:%c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
                 } else {
@@ -10960,17 +10962,17 @@ static int CmdHF14AMfValue(const char *Cmd) {
                 }
             }
 
-            memcpy(cmddata + 11, block, sizeof(block));
+            memcpy(payload.blockdata, block, sizeof(block));
 
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_MIFARE_VALUE, blockno, keytype, transferkeytype, cmddata, sizeof(cmddata));
+            SendCommandNG(CMD_HF_MIFARE_VALUE, (uint8_t *)&payload, sizeof(payload));
 
             PacketResponseNG resp;
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+            if (WaitForResponseTimeout(CMD_HF_MIFARE_VALUE, &resp, 1500) == false) {
                 PrintAndLogEx(FAILED, "command execution time out");
                 return PM3_ETIMEOUT;
             }
-            isok = resp.oldarg[0] & 0xff;
+            isok = (resp.status == PM3_SUCCESS);
         } else { // set value
             // To set a value block (or setup) we can use the normal mifare classic write block
             // So build the command options can call CMD_HF_MIFARE_WRITEBL

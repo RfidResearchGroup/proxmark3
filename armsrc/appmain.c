@@ -2281,7 +2281,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_VALUE: {
-            MifareValue(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            if (packet->length != sizeof(mf_value_t)) {
+                reply_ng(CMD_HF_MIFARE_VALUE, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            MifareValue((mf_value_t *)packet->data.asBytes);
             break;
         }
         case CMD_HF_MIFAREU_WRITEBL: {

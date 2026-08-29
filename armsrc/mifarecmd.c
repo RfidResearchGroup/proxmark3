@@ -668,23 +668,21 @@ void MifareUReadCard(mful_readblock_t *packet) {
     set_tracing(false);
 }
 
-void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
+void MifareValue(const mf_value_t *payload) {
     // params
-    uint8_t blockNo = arg0;
-    uint8_t keyType = arg1;
-    uint8_t transferKeyType = arg2;
-    uint64_t ui64Key = 0;
-    uint64_t transferUi64Key = 0;
+    uint8_t blockNo = payload->blockno;
+    uint8_t keyType = payload->keytype;
+    uint8_t transferKeyType = payload->transfer_keytype;
     uint8_t blockdata[16] = {0x00};
 
-    ui64Key = bytes_to_num(datain, 6);
-    memcpy(blockdata, datain + 11, 16);
-    transferUi64Key = bytes_to_num(datain + 27, 6);
+    uint64_t ui64Key = bytes_to_num(payload->key, 6);
+    uint64_t transferUi64Key = bytes_to_num(payload->transfer_key, 6);
+    memcpy(blockdata, payload->blockdata, sizeof(blockdata));
 
     // variables
-    uint8_t action = datain[9];
-    uint8_t transferBlk = datain[10];
-    bool needAuth = datain[33];
+    uint8_t action = payload->action;
+    uint8_t transferBlk = payload->transfer_blockno;
+    bool needAuth = payload->need_auth;
     uint8_t isOK = 0;
     uint8_t uid[10] = {0x00};
     uint32_t cuid = 0;
@@ -748,7 +746,7 @@ void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 
     if (g_dbglevel >= DBG_INFO) DbpString("WRITE BLOCK FINISHED");
 
-    reply_mix(CMD_ACK, isOK, 0, 0, 0, 0);
+    reply_ng(CMD_HF_MIFARE_VALUE, (isOK) ? PM3_SUCCESS : PM3_EUNDEF, NULL, 0);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
