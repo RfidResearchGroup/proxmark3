@@ -4727,57 +4727,74 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
     else if (r3)
         downlink_mode = ref1of4;
 
-    t55xx_configurations_t configurations = {{{0}, {0}, {0}, {0}}};
+    t55xx_setconfig_t payload = {
+        .conf = {{{0}, {0}, {0}, {0}}},
+        .persist = (shall_persist) ? 1 : 0,
+        .rfu = 0,
+    };
 
     if (set_defaults) {
         // fixed bit length
-        configurations.m[T55XX_DLMODE_FIXED].start_gap  = 29 * 8;
-        configurations.m[T55XX_DLMODE_FIXED].write_gap  = 17 * 8;
-        configurations.m[T55XX_DLMODE_FIXED].write_0    = 15 * 8;
-        configurations.m[T55XX_DLMODE_FIXED].write_1    = 47 * 8;
-        configurations.m[T55XX_DLMODE_FIXED].read_gap   = 15 * 8;
-        configurations.m[T55XX_DLMODE_FIXED].write_2    = 0;
-        configurations.m[T55XX_DLMODE_FIXED].write_3    = 0;
+        payload.conf.m[T55XX_DLMODE_FIXED].start_gap  = 29 * 8;
+        payload.conf.m[T55XX_DLMODE_FIXED].write_gap  = 17 * 8;
+        payload.conf.m[T55XX_DLMODE_FIXED].write_0    = 15 * 8;
+        payload.conf.m[T55XX_DLMODE_FIXED].write_1    = 47 * 8;
+        payload.conf.m[T55XX_DLMODE_FIXED].read_gap   = 15 * 8;
+        payload.conf.m[T55XX_DLMODE_FIXED].write_2    = 0;
+        payload.conf.m[T55XX_DLMODE_FIXED].write_3    = 0;
 
         // long leading reference
-        configurations.m[T55XX_DLMODE_LLR].start_gap  = 29 * 8;
-        configurations.m[T55XX_DLMODE_LLR].write_gap  = 17 * 8;
-        configurations.m[T55XX_DLMODE_LLR].write_0    = 15 * 8;
-        configurations.m[T55XX_DLMODE_LLR].write_1    = 47 * 8;
-        configurations.m[T55XX_DLMODE_LLR].read_gap   = 15 * 8;
-        configurations.m[T55XX_DLMODE_LLR].write_2    = 0;
-        configurations.m[T55XX_DLMODE_LLR].write_3    = 0;
+        payload.conf.m[T55XX_DLMODE_LLR].start_gap  = 29 * 8;
+        payload.conf.m[T55XX_DLMODE_LLR].write_gap  = 17 * 8;
+        payload.conf.m[T55XX_DLMODE_LLR].write_0    = 15 * 8;
+        payload.conf.m[T55XX_DLMODE_LLR].write_1    = 47 * 8;
+        payload.conf.m[T55XX_DLMODE_LLR].read_gap   = 15 * 8;
+        payload.conf.m[T55XX_DLMODE_LLR].write_2    = 0;
+        payload.conf.m[T55XX_DLMODE_LLR].write_3    = 0;
 
         // leading zero
-        configurations.m[T55XX_DLMODE_LEADING_ZERO].start_gap  = 29 * 8;
-        configurations.m[T55XX_DLMODE_LEADING_ZERO].write_gap  = 17 * 8;
-        configurations.m[T55XX_DLMODE_LEADING_ZERO].write_0    = 15 * 8;
-        configurations.m[T55XX_DLMODE_LEADING_ZERO].write_1    = 40 * 8;
-        configurations.m[T55XX_DLMODE_LEADING_ZERO].read_gap   = 15 * 8;
-        configurations.m[T55XX_DLMODE_LEADING_ZERO].write_2    = 0;
-        configurations.m[T55XX_DLMODE_LEADING_ZERO].write_3    = 0;
+        payload.conf.m[T55XX_DLMODE_LEADING_ZERO].start_gap  = 29 * 8;
+        payload.conf.m[T55XX_DLMODE_LEADING_ZERO].write_gap  = 17 * 8;
+        payload.conf.m[T55XX_DLMODE_LEADING_ZERO].write_0    = 15 * 8;
+        payload.conf.m[T55XX_DLMODE_LEADING_ZERO].write_1    = 40 * 8;
+        payload.conf.m[T55XX_DLMODE_LEADING_ZERO].read_gap   = 15 * 8;
+        payload.conf.m[T55XX_DLMODE_LEADING_ZERO].write_2    = 0;
+        payload.conf.m[T55XX_DLMODE_LEADING_ZERO].write_3    = 0;
 
         // 1 of 4 coding reference
-        configurations.m[T55XX_DLMODE_1OF4].start_gap  = 29 * 8;
-        configurations.m[T55XX_DLMODE_1OF4].write_gap  = 17 * 8;
-        configurations.m[T55XX_DLMODE_1OF4].write_0    = 15 * 8;
-        configurations.m[T55XX_DLMODE_1OF4].write_1    = 31 * 8;
-        configurations.m[T55XX_DLMODE_1OF4].read_gap   = 15 * 8;
-        configurations.m[T55XX_DLMODE_1OF4].write_2    = 47 * 8;
-        configurations.m[T55XX_DLMODE_1OF4].write_3    = 63 * 8;
+        payload.conf.m[T55XX_DLMODE_1OF4].start_gap  = 29 * 8;
+        payload.conf.m[T55XX_DLMODE_1OF4].write_gap  = 17 * 8;
+        payload.conf.m[T55XX_DLMODE_1OF4].write_0    = 15 * 8;
+        payload.conf.m[T55XX_DLMODE_1OF4].write_1    = 31 * 8;
+        payload.conf.m[T55XX_DLMODE_1OF4].read_gap   = 15 * 8;
+        payload.conf.m[T55XX_DLMODE_1OF4].write_2    = 47 * 8;
+        payload.conf.m[T55XX_DLMODE_1OF4].write_3    = 63 * 8;
 
     } else {
-        configurations.m[downlink_mode].start_gap  = startgap * 8;
-        configurations.m[downlink_mode].write_gap  = writegap * 8;
-        configurations.m[downlink_mode].write_0    = write0   * 8;
-        configurations.m[downlink_mode].write_1    = write1   * 8;
-        configurations.m[downlink_mode].read_gap   = readgap  * 8;
-        configurations.m[downlink_mode].write_2    = write2   * 8;
-        configurations.m[downlink_mode].write_3    = write3   * 8;
+        payload.conf.m[downlink_mode].start_gap  = startgap * 8;
+        payload.conf.m[downlink_mode].write_gap  = writegap * 8;
+        payload.conf.m[downlink_mode].write_0    = write0   * 8;
+        payload.conf.m[downlink_mode].write_1    = write1   * 8;
+        payload.conf.m[downlink_mode].read_gap   = readgap  * 8;
+        payload.conf.m[downlink_mode].write_2    = write2   * 8;
+        payload.conf.m[downlink_mode].write_3    = write3   * 8;
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_T55XX_SET_CONFIG, shall_persist, 0, 0, &configurations, sizeof(t55xx_configurations_t));
+    SendCommandNG(CMD_LF_T55XX_SET_CONFIG, (uint8_t *)&payload, sizeof(payload));
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_LF_T55XX_SET_CONFIG, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Setting timings ( " _RED_("fail") " )");
+        return resp.status;
+    }
+
+    PrintAndLogEx(SUCCESS, "Setting timings ( " _GREEN_("ok") " )");
     return PM3_SUCCESS;
 }
 

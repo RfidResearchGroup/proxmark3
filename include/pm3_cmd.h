@@ -206,6 +206,16 @@ typedef struct {
     t55xx_config_t m[4]; // mode
 } t55xx_configurations_t;
 
+// T55XX - CMD_LF_T55XX_SET_CONFIG payload
+// Not PACKED on purpose: `conf` is uint16_t based and must stay 2-byte aligned for
+// the ARM7TDMI, which has no unaligned access.  The explicit `rfu` byte keeps the
+// size at 58 with no implicit padding, so the layout is identical on both ends.
+typedef struct {
+    t55xx_configurations_t conf;
+    uint8_t persist;          // save the timings to flash memory
+    uint8_t rfu;
+} t55xx_setconfig_t;
+
 // Capabilities struct to keep track of what functions was compiled in the device firmware
 typedef struct {
     uint8_t version;

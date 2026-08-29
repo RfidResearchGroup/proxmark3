@@ -1275,7 +1275,13 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
 #ifdef WITH_LF
         case CMD_LF_T55XX_SET_CONFIG: {
-            setT55xxConfig(packet->oldarg[0], (t55xx_configurations_t *) packet->data.asBytes);
+            if (packet->length != sizeof(t55xx_setconfig_t)) {
+                reply_ng(CMD_LF_T55XX_SET_CONFIG, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            const t55xx_setconfig_t *payload = (const t55xx_setconfig_t *)packet->data.asBytes;
+            setT55xxConfig(payload->persist, &payload->conf);
+            reply_ng(CMD_LF_T55XX_SET_CONFIG, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_LF_SAMPLING_PRINT_CONFIG: {
