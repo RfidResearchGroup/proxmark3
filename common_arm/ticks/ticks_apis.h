@@ -44,7 +44,7 @@ void SpinDelayUs(int us);
 // Wrap in #ifndef to avoid accidental bloat of bootrom
 
 void SpinDelay(int ms);
-void SpinDelayUsPrecision(int us);  // precision 0.6us , running for 43ms before
+void SpinDelayUsPrecision(int us);  // precision 0.6us, no upper bound on the delay
 
 void StartTickCount(void);
 uint32_t RAMFUNC GetTickCount(void);

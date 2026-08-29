@@ -71,6 +71,11 @@ static struct {
     bool    tried;                                      // already negotiated against this ATR
 } s_pps = { {0}, 0, 0, 0, true, false };
 
+// Defined further down, next to the Fi/Di tables it needs. Declared here
+// because the callers that reset the module without asking for an ATR come
+// first in this file.
+static void sc_rate_restore(void);
+
 // try i2c bus recovery at 100kHz = 5us high, 5us low
 void I2C_recovery(void) {
 
@@ -826,6 +831,10 @@ void I2C_print_status(void) {
 int I2C_get_version(uint8_t *major, uint8_t *minor) {
     uint8_t resp[] = {0, 0, 0, 0};
     I2C_Reset_EnterMainProgram();
+    // The capability probe runs this on every client connect. Without the
+    // restore, reconnecting a client leaves the module on the default rate and
+    // an already negotiated card unreachable.
+    sc_rate_restore();
     uint8_t len = I2C_BufferRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
     if (len > 1) {
         *major = resp[0];
@@ -986,19 +995,76 @@ static uint8_t atr_first_proto(const uint8_t *atr, uint8_t len) {
 // A card with no TA1 offers nothing but the default, so nothing is proposed.
 #define SC_PPS_MIN_RELOAD  2
 
-static uint8_t sc_pps_best_ta1(const uint8_t *atr, uint8_t len) {
+// ISO/IEC 7816-3 tables 7 and 8. 0 marks an RFU entry, which nothing may use.
+static const uint16_t s_fi_tab[16] = {372, 372, 558, 744, 1116, 1488, 1860, 0,
+                                      0, 512, 768, 1024, 1536, 2048, 0, 0
+                                     };
+static const uint8_t s_di_tab[16] = {0, 1, 2, 4, 8, 16, 32, 64, 12, 20, 0, 0, 0, 0, 0, 0};
 
-    static const uint16_t fi_tab[16] = {372, 372, 558, 744, 1116, 1488, 1860, 0,
-                                        0, 512, 768, 1024, 1536, 2048, 0, 0
-                                       };
-    static const uint8_t di_tab[16] = {0, 1, 2, 4, 8, 16, 32, 64, 12, 20, 0, 0, 0, 0, 0, 0};
+// The module's UART reload for a TA1, or 0 when the pair is unusable. Same
+// arithmetic as UART_Set_FiDi() in the module firmware: R = Fi / (16 * Di),
+// which has to come out whole or the sampling point drifts across a character.
+static uint16_t sc_ta1_reload(uint8_t ta1) {
+
+    uint16_t f = s_fi_tab[(ta1 >> 4) & 0x0F];
+    uint8_t  d = s_di_tab[ta1 & 0x0F];
+
+    if ((f == 0) || (d == 0)) {
+        return 0;
+    }
+    if ((f % (uint16_t)(16u * d)) != 0) {
+        return 0;
+    }
+    return (uint16_t)(f / (uint16_t)(16u * d));
+}
+
+// Put the module back on the negotiated rate without touching the card.
+//
+// A module reset returns its UART to the default divisor, but the card keeps
+// the rate a PPS put it at - only an RST pulse clears that, and the callers
+// below deliberately do not pulse one. Left alone the two sit at different
+// rates and every exchange after the reset is garbage; the only other cure is
+// an ATR, which resets the card and destroys a SAM's open secure channel.
+//
+// Only the rate is restored. TC1 and TC2 - guard time and WI - come from the
+// ATR and are gone with the reset, so a card naming non-default ones still
+// needs a fresh ATR. What the module comes up with is what those cards ran at
+// before their ATR was read anyway.
+static void sc_rate_restore(void) {
+
+    if ((s_pps.ta1 == 0) || (s_pps.ta1 == 0x11)) {
+        return;                         // nothing negotiated, the default is right
+    }
+
+    uint16_t r = sc_ta1_reload(s_pps.ta1);
+    if (r == 0) {
+        return;
+    }
+
+    // SETBAUD carries TH1, which the module turns back into 256 - TH1. R = 256
+    // wraps to 0, which is exactly what the timer wants.
+    uint8_t th1 = (uint8_t)((256u - r) & 0xFFu);
+
+    if (I2C_WriteByte(th1, I2C_DEVICE_CMD_SETBAUD, I2C_DEVICE_ADDRESS_MAIN) == false) {
+        if (g_dbglevel >= DBG_ERROR) {
+            DbpString("SC: could not put the module back on the negotiated rate");
+        }
+        return;
+    }
+
+    if (g_dbglevel >= DBG_INFO) {
+        Dbprintf("SC: module rate restored without a card reset, TA1 %02X (R=%u)", s_pps.ta1, r);
+    }
+}
+
+static uint8_t sc_pps_best_ta1(const uint8_t *atr, uint8_t len) {
 
     if ((len < 3) || ((atr[1] & 0x10) == 0)) {
         return 0;                       // no TA1 - default only
     }
 
     uint8_t fi_idx = (uint8_t)((atr[2] >> 4) & 0x0F);
-    uint16_t f = fi_tab[fi_idx];
+    uint16_t f = s_fi_tab[fi_idx];
     if (f == 0) {
         return 0;                       // RFU
     }
@@ -1008,7 +1074,7 @@ static uint8_t sc_pps_best_ta1(const uint8_t *atr, uint8_t len) {
 
     for (uint8_t di_idx = 1; di_idx < 16; di_idx++) {
 
-        uint8_t d = di_tab[di_idx];
+        uint8_t d = s_di_tab[di_idx];
         if (d == 0) {
             continue;
         }
@@ -1221,6 +1287,13 @@ void SmartCardRaw(const smart_card_raw_t *p) {
     if ((flags & SC_CONNECT) == SC_CONNECT) {
 
         I2C_Reset_EnterMainProgram();
+
+        // Without SC_SELECT there is no ATR to negotiate against, so put the
+        // rate back by hand. With it, GetATR() resets the card and runs the PPS
+        // itself - and the module has to be on the default to hear that ATR.
+        if ((flags & SC_SELECT) != SC_SELECT) {
+            sc_rate_restore();
+        }
 
         if ((flags & SC_SELECT) == SC_SELECT) {
             smart_card_atr_t card;
@@ -1460,6 +1533,9 @@ void SmartCardSetClock(uint64_t arg0) {
     LED_D_ON();
     set_tracing(true);
     I2C_Reset_EnterMainProgram();
+    // Fsys and the card clock move together, so a negotiated etu stays valid in
+    // card clocks - but the reset still wiped the divisor that produces it.
+    sc_rate_restore();
     // Send SIM CLC
     // start [C0 05 xx] stop
     I2C_WriteByte(arg0, I2C_DEVICE_CMD_SIM_CLC, I2C_DEVICE_ADDRESS_MAIN);

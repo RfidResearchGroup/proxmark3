@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed clock  `SpinDelayUsPrecision` to not wrap. Now more 43ms issues (@iceman1001)
 - Changed `hf felica raw` -  now can stream per-window envelope for better measurments (@iceman1001)
 - Updated `fpga_pm3_felica.bit` - FeliCa signal handling got refactored. (@iceman1001)
 - Changed client tab completion - vocabulary is now built at runtime from the live command tree and uses the same availability rules as `help`, removing the generated `pm3line_vocabulary.h` and `pm3_help2list.py` (@Msprg)

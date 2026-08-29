@@ -20,10 +20,30 @@
 #include "proxmark3_arm.h"
 
 
+// Both delays below run on PWM channel 0 and wait the same way.
+//
+// The wait is on the wrapped difference from a starting count, not on
+// `now == end`. Equality only holds if the loop happens to sample that exact
+// value, so an interrupt or a slow read that steps the counter past it used to
+// cost a full 16 bit period before it came round again - 1.39 s at this
+// prescaler, 43.7 ms at the precision one. It also needed an `if (end == 0)
+// end++` guard that the difference form does not.
+//
+// The counter is 16 bit, so one comparison spans at most 65535 ticks. Longer
+// waits are walked in chunks, advancing `start` by exactly the chunk that
+// elapsed so they join without drift; chunks are capped at half a period to
+// keep the unsigned difference unambiguous. The tick count used to be
+// truncated into a uint16, which silently returned early: a requested 60 ms
+// delay measured 17.5 ms on an RDV4, and `hw tearoff --delay` accepts values
+// right across that boundary.
+//
+// Keep this inline. Splitting the arming and the wait into helpers broke the
+// SIM module link outright - `smart info` could not read the module version -
+// with arithmetic that is otherwise identical.
+
 // timer counts in 21.3us increments (1024/48MHz), rounding applies
-// WARNING: timer can't measure more than 1.39s (21.3us * 0xffff)
 void SpinDelayUs(int us) {
-    int ticks = ((MCK / 1000000) * us + 512) >> 10;
+    uint32_t ticks = (us > 0) ? ((((uint32_t)(MCK / 1000000) * (uint32_t)us) + 512) >> 10) : 0;
 
     // Borrow a PWM unit for my real-time clock
     AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
@@ -33,19 +53,15 @@ void SpinDelayUs(int us) {
     AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;                            // Channel Duty Cycle Register
     AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xffff;                       // Channel Period Register
 
-    uint16_t end = AT91C_BASE_PWMC_CH0->PWMC_CCNTR + ticks;
-    if (end == 0) { // AT91C_BASE_PWMC_CH0->PWMC_CCNTR is never == 0
-        end++;      // so we have to end++ to avoid inivity loop
-    }
-
-    for (;;) {
-        uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
-
-        if (now == end) {
-            return;
+    uint32_t remaining = (uint32_t)ticks;
+    uint16_t start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+    while (remaining) {
+        uint16_t chunk = (remaining > 0x8000UL) ? 0x8000U : (uint16_t)remaining;
+        while ((uint16_t)(AT91C_BASE_PWMC_CH0->PWMC_CCNTR - start) < chunk) {
+            WDT_HIT();
         }
-
-        WDT_HIT();
+        start = (uint16_t)(start + chunk);
+        remaining -= chunk;
     }
 }
 
@@ -54,7 +70,7 @@ void SpinDelayUs(int us) {
 // timer counts in 666ns increments (32/48MHz), rounding applies
 // WARNING: timer can't measure more than 43ms (666ns * 0xFFFF)
 void SpinDelayUsPrecision(int us) {
-    int ticks = ((MCK / 1000000) * us + 16) >> 5;
+    uint32_t ticks = (us > 0) ? ((((uint32_t)(MCK / 1000000) * (uint32_t)us) + 16) >> 5) : 0;
 
     // Borrow a PWM unit for my real-time clock
     AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
@@ -64,19 +80,15 @@ void SpinDelayUsPrecision(int us) {
     AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;                           // Channel Duty Cycle Register
     AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xFFFF;                      // Channel Period Register
 
-    uint16_t end = AT91C_BASE_PWMC_CH0->PWMC_CCNTR + ticks;
-    if (end == 0) { // AT91C_BASE_PWMC_CH0->PWMC_CCNTR is never == 0
-        end++;      // so we have to end++ to avoid inivity loop
-    }
-
-    for (;;) {
-        uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
-
-        if (now == end) {
-            return;
+    uint32_t remaining = (uint32_t)ticks;
+    uint16_t start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+    while (remaining) {
+        uint16_t chunk = (remaining > 0x8000UL) ? 0x8000U : (uint16_t)remaining;
+        while ((uint16_t)(AT91C_BASE_PWMC_CH0->PWMC_CCNTR - start) < chunk) {
+            WDT_HIT();
         }
-
-        WDT_HIT();
+        start = (uint16_t)(start + chunk);
+        remaining -= chunk;
     }
 }
 
