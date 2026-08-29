@@ -4059,57 +4059,6 @@ void MifareSetMod(uint8_t *datain) {
     BigBuf_free();
 }
 
-//
-// DESFIRE
-//
-void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain) {
-    uint8_t dataout[12] = {0x00};
-    uint32_t cuid = 0;
-
-    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-    clear_trace();
-    set_tracing(true);
-
-    int len = iso14443a_select_card(NULL, NULL, &cuid, true, 0, false);
-    if (!len) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
-        OnError(1);
-        return;
-    };
-
-    if (mifare_desfire_des_auth1(cuid, dataout) != PM3_SUCCESS) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Authentication part1: Fail.");
-        OnError(4);
-        return;
-    }
-
-    if (g_dbglevel >= DBG_EXTENDED) DbpString("AUTH 1 FINISHED");
-    reply_mix(CMD_ACK, 1, cuid, 0, dataout, sizeof(dataout));
-}
-
-void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain) {
-    uint32_t cuid = arg0;
-    uint8_t key[16] = {0x00};
-    uint8_t dataout[12] = {0x00};
-    uint8_t isOK = 0;
-
-    memcpy(key, datain, 16);
-
-    isOK = mifare_desfire_des_auth2(cuid, key, dataout);
-
-    if (isOK != PM3_SUCCESS) {
-        if (g_dbglevel >= DBG_EXTENDED) Dbprintf("Authentication part2: Failed");
-        OnError(4);
-        return;
-    }
-
-    if (g_dbglevel >= DBG_EXTENDED) DbpString("AUTH 2 FINISHED");
-
-    reply_old(CMD_ACK, isOK, 0, 0, dataout, sizeof(dataout));
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    LEDsoff();
-    set_tracing(false);
-}
 
 //
 // Tear-off attack against MFU.
@@ -4147,8 +4096,9 @@ void MifareU_Otp_Tearoff(uint8_t blno, uint32_t tearoff_time, uint8_t *data_test
     // anticollision / select card
     if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == false) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
-        OnError(1);
         reply_ng(CMD_HF_MFU_OTP_TEAROFF, PM3_EFAILED, NULL, 0);
+        switch_off();
+        LEDsoff();
         return;
     };
     // send
@@ -4191,7 +4141,7 @@ void MifareU_Counter_Tearoff(uint8_t counter, uint32_t tearoff_time, uint8_t *da
     // anticollision / select card
     if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == false) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
-        OnError(1);
+        reply_ng(CMD_HF_MFU_COUNTER_TEAROFF, PM3_EFAILED, NULL, 0);
         switch_off();
         LEDsoff();
         return;

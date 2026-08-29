@@ -74,8 +74,6 @@ void OnErrorMagic(uint16_t cmd, uint8_t reason);
 int32_t dist_nt(uint32_t nt1, uint32_t nt2);
 //void RAMFUNC SniffMifare(uint8_t param);
 
-void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain);
-void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain);
 
 // Tear-off test for MFU
 void MifareU_Otp_Tearoff(uint8_t blno, uint32_t tearoff_time, uint8_t *data_testwrite);

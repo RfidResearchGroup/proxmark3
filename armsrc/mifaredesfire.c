@@ -63,7 +63,7 @@ bool InitDesfireCard(void) {
 
     if (iso14443a_select_card(NULL, &card, NULL, true, 0, false) == 0) {
         if (g_dbglevel >= DBG_ERROR) DbpString("Can't select card");
-        OnError(1);
+        OnErrorNG(CMD_HF_DESFIRE_COMMAND, 1);
         return false;
     }
     return true;
@@ -105,7 +105,7 @@ void MifareSendCommand(uint8_t *datain) {
         print_result("RESP <--: ", resp, len);
 
     if (len == 0) {
-        OnError(2);
+        OnErrorNG(CMD_HF_DESFIRE_COMMAND, 2);
         return;
     }
 
@@ -771,11 +771,6 @@ void OnSuccess(void) {
     }
 
     switch_off();
-}
-
-void OnError(uint8_t reason) {
-    reply_mix(CMD_ACK, 0, reason, 0, 0, 0);
-    OnSuccess();
 }
 
 void OnErrorNG(uint16_t cmd, uint8_t reason) {
