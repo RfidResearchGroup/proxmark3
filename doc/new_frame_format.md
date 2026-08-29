@@ -19,6 +19,8 @@ This is a step especially important for usage over FPC/USART/BT.
     - [On the Proxmark3, for sending frames](#on-the-proxmark3-for-sending-frames)
     - [On the client, for receiving frames](#on-the-client-for-receiving-frames)
   - [API transition](#api-transition)
+    - [Practical notes from converting the tree](#practical-notes-from-converting-the-tree)
+    - [Bulk downloads](#bulk-downloads)
   - [Bootrom](#bootrom)
     - [On the Proxmark3, for receiving frames](#on-the-proxmark3-for-receiving-frames-1)
     - [On the Proxmark3, for sending frames](#on-the-proxmark3-for-sending-frames-1)
@@ -121,11 +123,6 @@ serves them. Do not "convert" those.
 readers left are `client/src/flash.c` and `client/src/proxmark3.c`, both talking
 to the bootrom over `SendCommandBL`. The Lua binding no longer serialises the
 oldargs into the response it hands scripts.
-
-**The Lua scripts are not converted yet.** `client/lualibs/commands.lua` still
-offers `Command:sendMIX()` and around 20 call sites use it, several for commands
-whose device handlers no longer accept OLD/MIX frames. Python (`client/pyscripts`)
-never used the old API and needs nothing.
 
 The old frames are still supported by the transport, so `PacketCommandOLD` and
 `PacketResponseOLD` remain, abstracted from the developer view by the new API.
