@@ -1241,8 +1241,8 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 
     uint8_t *recv;
     PacketResponseNG resp;
-resend:
     uint16_t rlen_1245 = 0;
+resend:
     if (WaitForIso14aReply(&resp, 7000, &rlen_1245, NULL)) {
         recv = resp.data.asBytes;
         int iLen = rlen_1245;

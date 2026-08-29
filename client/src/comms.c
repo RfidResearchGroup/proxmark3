@@ -78,7 +78,7 @@ static uint64_t timeout_start_time;
 
 static uint64_t last_packet_time;
 
-static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
+static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd, uint32_t req_cmd);
 
 // Wait until the comm thread has actually put a queued command on the wire.
 // Callers used to sleep a fixed guess instead, which was reasonable when a
@@ -1222,20 +1222,30 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
 
     switch (memtype) {
         case BIG_BUF: {
-            SendCommandMIX(CMD_DOWNLOAD_BIGBUF, start_index, bytes, 0, NULL, 0);
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_DOWNLOADED_BIGBUF);
+            download_req_t req = { .start_index = start_index, .bytes = bytes };
+            SendCommandNG(CMD_DOWNLOAD_BIGBUF, (uint8_t *)&req, sizeof(req));
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_DOWNLOADED_BIGBUF, CMD_DOWNLOAD_BIGBUF);
         }
         case BIG_BUF_EML: {
-            SendCommandMIX(CMD_DOWNLOAD_EML_BIGBUF, start_index, bytes, 0, NULL, 0);
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_DOWNLOADED_EML_BIGBUF);
+            download_req_t req = { .start_index = start_index, .bytes = bytes };
+            SendCommandNG(CMD_DOWNLOAD_EML_BIGBUF, (uint8_t *)&req, sizeof(req));
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_DOWNLOADED_EML_BIGBUF, CMD_DOWNLOAD_EML_BIGBUF);
         }
         case SPIFFS: {
-            SendCommandMIX(CMD_SPIFFS_DOWNLOAD, start_index, bytes, 0, data, datalen);
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_SPIFFS_DOWNLOADED);
+            uint8_t sbuf[PM3_CMD_DATA_SIZE] = {0};
+            download_req_t *sreq = (download_req_t *)sbuf;
+            sreq->start_index = start_index;
+            sreq->bytes = bytes;
+            if (datalen && data) {
+                memcpy(sreq->data, data, datalen);
+            }
+            SendCommandNG(CMD_SPIFFS_DOWNLOAD, sbuf, sizeof(download_req_t) + datalen);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_SPIFFS_DOWNLOADED, CMD_SPIFFS_DOWNLOAD);
         }
         case FLASH_MEM: {
-            SendCommandMIX(CMD_FLASHMEM_DOWNLOAD, start_index, bytes, 0, NULL, 0);
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_FLASHMEM_DOWNLOADED);
+            download_req_t req = { .start_index = start_index, .bytes = bytes };
+            SendCommandNG(CMD_FLASHMEM_DOWNLOAD, (uint8_t *)&req, sizeof(req));
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_FLASHMEM_DOWNLOADED, CMD_FLASHMEM_DOWNLOAD);
         }
         case SIM_MEM: {
             //SendCommandMIX(CMD_DOWNLOAD_SIM_MEM, start_index, bytes, 0, NULL, 0);
@@ -1244,19 +1254,19 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
         }
         case FPGA_MEM: {
             SendCommandNG(CMD_FPGAMEM_DOWNLOAD, NULL, 0);
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_FPGAMEM_DOWNLOADED);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_FPGAMEM_DOWNLOADED, CMD_FPGAMEM_DOWNLOAD);
         }
         case MCU_FLASH:
         case MCU_MEM: {
             uint32_t flags = (memtype == MCU_MEM) ? READ_MEM_DOWNLOAD_FLAG_RAW : 0;
             SendCommandBL(CMD_READ_MEM_DOWNLOAD, start_index, bytes, flags, NULL, 0);
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_READ_MEM_DOWNLOADED);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_READ_MEM_DOWNLOADED, CMD_READ_MEM_DOWNLOAD);
         }
     }
     return false;
 }
 
-static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd) {
+static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd, uint32_t req_cmd) {
 
     uint32_t bytes_completed = 0;
     __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
@@ -1269,23 +1279,41 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
 
         if (getReply(response)) {
 
+            // the terminator is answered on the request opcode itself
+            if (response->cmd == req_cmd) {
+                if (response->status == PM3_EMALLOC) {
+                    return false;
+                }
+                return true;
+            }
+            // CMD_READ_MEM_DOWNLOAD is served by the bootrom, which only speaks
+            // OLD frames and still finishes with an anonymous ACK
             if (response->cmd == CMD_ACK)
                 return true;
-            if (response->cmd == CMD_SPIFFS_DOWNLOAD && response->status == PM3_EMALLOC)
-                return false;
-            // Spiffs // fpgamem-plot download is converted to NG,
-            if (response->cmd == CMD_SPIFFS_DOWNLOAD || response->cmd == CMD_FPGAMEM_DOWNLOAD)
-                return true;
 
-            // sample_buf is a array pointer, located in data.c
-            // arg0 = offset in transfer. Startindex of this chunk
-            // arg1 = length bytes to transfer
-            // arg2 = bigbuff tracelength (?)
             if (response->cmd == rec_cmd) {
 
-                uint32_t offset = response->oldarg[0];
-                uint32_t copy_bytes = MIN(bytes - bytes_completed, response->oldarg[1]);
-                //uint32_t tracelen = response->oldarg[2];
+                uint32_t offset, copy_bytes;
+                const uint8_t *src;
+
+                if (response->ng) {
+                    // NG chunk: offset in the header, size from the frame length
+                    if (response->length < sizeof(download_chunk_t)) {
+                        PrintAndLogEx(FAILED, "ERROR: short download chunk from device");
+                        break;
+                    }
+                    const download_chunk_t *chunk = (const download_chunk_t *)response->data.asBytes;
+                    offset = chunk->offset;
+                    copy_bytes = response->length - sizeof(download_chunk_t);
+                    src = chunk->data;
+                } else {
+                    // OLD chunk, bootrom path
+                    offset = response->oldarg[0];
+                    copy_bytes = response->oldarg[1];
+                    src = response->data.asBytes;
+                }
+
+                copy_bytes = MIN(bytes - bytes_completed, copy_bytes);
 
                 // extended bounds check1.  upper limit is PM3_CMD_DATA_SIZE
                 // shouldn't happen
@@ -1297,7 +1325,7 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
                     break;
                 }
 
-                memcpy(dest + offset, response->data.asBytes, copy_bytes);
+                memcpy(dest + offset, src, copy_bytes);
                 bytes_completed += copy_bytes;
             } else if (response->cmd == CMD_WTX && response->length == sizeof(uint16_t)) {
                 uint16_t wtx = response->data.asDwords[0] & 0xFFFF;

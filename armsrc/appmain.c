@@ -1195,6 +1195,28 @@ out:
 
 #endif
 
+// static, not on the stack: this is 512 bytes and PacketReceived is already deep
+// in the call chain on a device with a small stack
+static uint8_t g_dl_chunkbuf[sizeof(download_chunk_t) + DOWNLOAD_CHUNK_MAX];
+
+static int reply_download_chunk(uint16_t cmd, uint32_t offset, const uint8_t *data, uint16_t len) {
+    uint8_t *buf = g_dl_chunkbuf;
+    download_chunk_t *chunk = (download_chunk_t *)buf;
+    chunk->offset = offset;
+    if (len && data) {
+        memcpy(chunk->data, data, len);
+    }
+    return reply_ng(cmd, PM3_SUCCESS, buf, sizeof(download_chunk_t) + len);
+}
+
+static void reply_download_done(uint16_t cmd, uint32_t bytes_sent, uint32_t extra) {
+    download_done_t done = {
+        .bytes_sent = bytes_sent,
+        .extra = extra,
+    };
+    reply_ng(cmd, PM3_SUCCESS, (uint8_t *)&done, sizeof(done));
+}
+
 static void PacketReceived(PacketCommandNG *packet) {
     /*
     if (packet->ng) {
@@ -3078,23 +3100,27 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_DOWNLOAD_BIGBUF: {
             LED_B_ON();
             uint8_t *mem = BigBuf_get_addr();
-            uint32_t startidx = packet->oldarg[0];
-            uint32_t numofbytes = packet->oldarg[1];
+            if (packet->length < sizeof(download_req_t)) {
+                break;
+            }
+            const download_req_t *dreq = (const download_req_t *)packet->data.asBytes;
+            uint32_t startidx = dreq->start_index;
+            uint32_t numofbytes = dreq->bytes;
 
             // arg0 = startindex
             // arg1 = length bytes to transfer
             // arg2 = BigBuf tracelen
             //Dbprintf("transfer to client parameters: %" PRIu32 " | %" PRIu32 " | %" PRIu32, startidx, numofbytes, packet->oldarg[2]);
 
-            for (size_t offset = 0; offset < numofbytes; offset += PM3_CMD_DATA_SIZE) {
-                size_t len = MIN((numofbytes - offset), PM3_CMD_DATA_SIZE);
-                int result = reply_old(CMD_DOWNLOADED_BIGBUF, offset, len, BigBuf_get_traceLen(), &mem[startidx + offset], len);
+            for (size_t offset = 0; offset < numofbytes; offset += DOWNLOAD_CHUNK_MAX) {
+                size_t len = MIN((numofbytes - offset), DOWNLOAD_CHUNK_MAX);
+                int result = reply_download_chunk(CMD_DOWNLOADED_BIGBUF, offset, &mem[startidx + offset], len);
                 if (result != PM3_SUCCESS)
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", offset, offset + len, len, result);
             }
             // Trigger a finish downloading signal with an ACK frame
             // arg0 = status of download transfer
-            reply_mix(CMD_ACK, 1, 0, BigBuf_get_traceLen(), NULL, 0);
+            reply_download_done(CMD_DOWNLOAD_BIGBUF, numofbytes, BigBuf_get_traceLen());
             LED_B_OFF();
             break;
         }
@@ -3137,21 +3163,25 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_DOWNLOAD_EML_BIGBUF: {
             LED_B_ON();
             uint8_t *mem = BigBuf_get_EM_addr();
-            uint32_t startidx = packet->oldarg[0];
-            uint32_t numofbytes = packet->oldarg[1];
+            if (packet->length < sizeof(download_req_t)) {
+                break;
+            }
+            const download_req_t *dreq = (const download_req_t *)packet->data.asBytes;
+            uint32_t startidx = dreq->start_index;
+            uint32_t numofbytes = dreq->bytes;
 
             // arg0 = startindex
             // arg1 = length bytes to transfer
             // arg2 = RFU
 
-            for (size_t i = 0; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
-                size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
-                int result = reply_old(CMD_DOWNLOADED_EML_BIGBUF, i, len, 0, mem + startidx + i, len);
+            for (size_t i = 0; i < numofbytes; i += DOWNLOAD_CHUNK_MAX) {
+                size_t len = MIN((numofbytes - i), DOWNLOAD_CHUNK_MAX);
+                int result = reply_download_chunk(CMD_DOWNLOADED_EML_BIGBUF, i, mem + startidx + i, len);
                 if (result != PM3_SUCCESS)
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
             }
             // Trigger a finish downloading signal with an ACK frame
-            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_download_done(CMD_DOWNLOAD_EML_BIGBUF, numofbytes, 0);
             LED_B_OFF();
             break;
         }
@@ -3239,11 +3269,16 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_SPIFFS_DOWNLOAD: {
             LED_B_ON();
             uint8_t filename[32];
-            uint8_t *pfilename = packet->data.asBytes;
-            memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
+            if (packet->length < sizeof(download_req_t)) {
+                reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            const download_req_t *dreq = (const download_req_t *)packet->data.asBytes;
+            uint16_t fnlen = MIN((uint16_t)(packet->length - sizeof(download_req_t)), (uint16_t)SPIFFS_OBJ_NAME_LEN);
+            memcpy(filename, dreq->data, fnlen);
             if (g_dbglevel >= DBG_DEBUG) Dbprintf("Filename received for spiffs dump : %s", filename);
 
-            uint32_t size = packet->oldarg[1];
+            uint32_t size = dreq->bytes;
 
             uint8_t *buff = BigBuf_calloc(size);
             if (buff == NULL) {
@@ -3256,9 +3291,9 @@ static void PacketReceived(PacketCommandNG *packet) {
                 // arg1 = size
                 // arg2 = RFU
 
-                for (size_t i = 0; i < size; i += PM3_CMD_DATA_SIZE) {
-                    size_t len = MIN((size - i), PM3_CMD_DATA_SIZE);
-                    int result = reply_old(CMD_SPIFFS_DOWNLOADED, i, len, 0, buff + i, len);
+                for (size_t i = 0; i < size; i += DOWNLOAD_CHUNK_MAX) {
+                    size_t len = MIN((size - i), DOWNLOAD_CHUNK_MAX);
+                    int result = reply_download_chunk(CMD_SPIFFS_DOWNLOADED, i, buff + i, len);
                     if (result != PM3_SUCCESS)
                         Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
                 }
@@ -3459,8 +3494,12 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             LED_B_ON();
             uint8_t *mem = BigBuf_calloc(PM3_CMD_DATA_SIZE);
-            uint32_t startidx = packet->oldarg[0];
-            uint32_t numofbytes = packet->oldarg[1];
+            if (packet->length < sizeof(download_req_t)) {
+                break;
+            }
+            const download_req_t *dreq = (const download_req_t *)packet->data.asBytes;
+            uint32_t startidx = dreq->start_index;
+            uint32_t numofbytes = dreq->bytes;
             // arg0 = startindex
             // arg1 = length bytes to transfer
             // arg2 = RFU
@@ -3469,14 +3508,14 @@ static void PacketReceived(PacketCommandNG *packet) {
                 break;
             }
 
-            for (size_t i = 0; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
-                size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
+            for (size_t i = 0; i < numofbytes; i += DOWNLOAD_CHUNK_MAX) {
+                size_t len = MIN((numofbytes - i), DOWNLOAD_CHUNK_MAX);
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 uint16_t isok = Flash_ReadDataCont(startidx + i, mem, len);
                 if (isok == false) {
                     Dbprintf("reading flash memory failed with bytes between %d - %d", i, len);
                 }
-                isok = reply_old(CMD_FLASHMEM_DOWNLOADED, i, len, 0, mem, len);
+                isok = reply_download_chunk(CMD_FLASHMEM_DOWNLOADED, i, mem, len);
 
                 if (isok != PM3_SUCCESS) {
                     Dbprintf("transfer to client failed with bytes between %d - %d", i, len);
@@ -3484,7 +3523,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
             FlashStop();
 
-            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
+            reply_download_done(CMD_FLASHMEM_DOWNLOAD, numofbytes, 0);
             BigBuf_free();
             LED_B_OFF();
             break;

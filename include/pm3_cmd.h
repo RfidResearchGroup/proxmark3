@@ -417,6 +417,36 @@ typedef struct {
     uint32_t timings[];
 } epa_result_t;
 
+// Bulk download protocol, used by CMD_DOWNLOAD_BIGBUF, CMD_DOWNLOAD_EML_BIGBUF,
+// CMD_SPIFFS_DOWNLOAD and CMD_FLASHMEM_DOWNLOAD.
+//
+// Request:  download_req_t on the CMD_DOWNLOAD_* opcode
+// Chunks:   download_chunk_t on the matching CMD_DOWNLOADED_* opcode, one per
+//           frame; the payload length gives the chunk size, so no length field
+// Done:     download_done_t answered on the original CMD_DOWNLOAD_* opcode,
+//           which is what tells the client the transfer finished
+//
+// CMD_READ_MEM_DOWNLOAD deliberately keeps the old format: the bootrom serves it
+// and only speaks OLD frames. dl_it() handles both.
+typedef struct {
+    uint32_t start_index;
+    uint32_t bytes;
+    uint8_t data[];         // SPIFFS: the filename
+} PACKED download_req_t;
+
+typedef struct {
+    uint32_t offset;
+    uint8_t data[];
+} PACKED download_chunk_t;
+
+typedef struct {
+    uint32_t bytes_sent;
+    uint32_t extra;         // BigBuf trace length, otherwise 0
+} PACKED download_done_t;
+
+// payload bytes carried by one chunk frame
+#define DOWNLOAD_CHUNK_MAX (PM3_CMD_DATA_SIZE - sizeof(download_chunk_t))
+
 // CMD_LF_PCF7931_WRITE payload.
 // Replaces a uint32_t buf[10] that the device read as BYTES: the client wrote
 // OffsetWidth/OffsetPosition/InitDelay at byte offsets 28/32/36 while the device
