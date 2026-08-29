@@ -35,7 +35,6 @@ int CmdLFSim(const char *Cmd);
 int CmdLFaskSim(const char *Cmd);
 int CmdLFfskSim(const char *Cmd);
 int CmdLFpskSim(const char *Cmd);
-int CmdLFSimBidir(const char *Cmd);
 int CmdLFSniff(const char *Cmd);
 int CmdVchDemod(const char *Cmd);
 int CmdLFfind(const char *Cmd);

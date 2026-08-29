@@ -871,7 +871,7 @@ typedef struct {
 #define CMD_LF_HID_WATCH 0x020B
 #define CMD_LF_HID_SIMULATE 0x020C
 #define CMD_LF_SET_DIVISOR 0x020D
-#define CMD_LF_SIMULATE_BIDIR 0x020E
+// 0x020E was CMD_LF_SIMULATE_BIDIR, removed - the ARM handler was an empty stub
 #define CMD_SET_ADC_MUX 0x020F
 #define CMD_LF_HID_CLONE 0x0210
 #define CMD_LF_EM410X_CLONE 0x0211

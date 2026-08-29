@@ -1298,7 +1298,6 @@ void SmartCardRaw(const smart_card_raw_t *p) {
         if ((flags & SC_SELECT) == SC_SELECT) {
             smart_card_atr_t card;
             bool gotATR = GetATR(&card, true);
-            //reply_old(CMD_ACK, gotATR, sizeof(smart_card_atr_t), 0, &card, sizeof(smart_card_atr_t));
             if (gotATR == false) {
                 reply_ng(CMD_SMART_RAW, PM3_ESOFT, NULL, 0);
                 goto OUT;

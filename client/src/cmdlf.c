@@ -1513,28 +1513,6 @@ int CmdLFpskSim(const char *Cmd) {
     return lfsim_wait_check(CMD_LF_PSK_SIMULATE);
 }
 
-int CmdLFSimBidir(const char *Cmd) {
-
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf simbidir",
-                  "Simulate LF tag with bidirectional data transmission between reader and tag",
-                  "lf simbidir"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-
-    // Set ADC to twice the carrier for a slight supersampling
-    // HACK: not implemented in ARMSRC.
-    PrintAndLogEx(INFO, "Not implemented yet.");
-//    SendCommandNG(CMD_LF_SIMULATE_BIDIR, NULL, 0);  // needs an NG payload if revived
-    return PM3_SUCCESS;
-}
-
 // ICEMAN,  Verichip is Animal tag.  Tested against correct reader
 /*
 
@@ -2431,7 +2409,6 @@ static command_t CommandTable[] = {
     {"simfsk",      CmdLFfskSim,        IfPm3Lf,         "Simulate " _YELLOW_("FSK") " tag"},
     {"simpsk",      CmdLFpskSim,        IfPm3Lf,         "Simulate " _YELLOW_("PSK") " tag"},
 //    {"simnrz",      CmdLFnrzSim,        IfPm3Lf,         "Simulate " _YELLOW_("NRZ") " tag"},
-    {"simbidir",    CmdLFSimBidir,      IfPm3Lf,         "Simulate LF tag (with bidirectional data transmission between reader and tag)"},
     {"sniff",       CmdLFSniff,         IfPm3Lf,         "Sniff LF traffic between reader and tag"},
     {"tune",        CmdLFTune,          IfPm3Lf,         "Continuously measure LF antenna tuning"},
 //    {"vchdemod",    CmdVchDemod,        AlwaysAvailable, "Demodulate samples for VeriChip"},

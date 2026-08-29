@@ -1451,10 +1451,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_A_OFF();
             break;
         }
-        case CMD_LF_SIMULATE_BIDIR: {
-            SimulateTagLowFrequencyBidir(packet->oldarg[0], packet->oldarg[1]);
-            break;
-        }
         case CMD_LF_T55XX_READBL: {
             struct p {
                 uint32_t password;

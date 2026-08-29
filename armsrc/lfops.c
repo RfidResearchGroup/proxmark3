@@ -937,10 +937,6 @@ void SimulateTagLowFrequency(int period, int gap, bool ledcontrol) {
 }
 
 
-#define DEBUG_FRAME_CONTENTS 1
-void SimulateTagLowFrequencyBidir(int divisor, int max_bitlen) {
-}
-
 // compose fc/X fc/Y waveform (FSKx)
 static void fcAll(uint8_t fc, int *n, uint8_t clock, int16_t *remainder) {
     uint8_t *dest = BigBuf_get_addr();

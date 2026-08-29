@@ -577,13 +577,10 @@ failtag:
             if (key == -1) {
                 err = 1;
                 allKeysFound = false;
-                // used in portable imlementation on microcontroller: it reports back the fail and open the
-                // standalone lock reply_ng(CMD_CJB_FSMSTATE_MENU, NULL, 0);
                 break;
             } else if (key == -2) {
                 err = 1; // Can't select card.
                 allKeysFound = false;
-                // reply_old(CMD_CJB_FSMSTATE_MENU, 0, 0, 0, 0, 0);
                 break;
             } else {
                 /*  BRACE YOURSELF : AS LONG AS WE TRAP A KNOWN KEY, WE STOP CHECKING AND ENFORCE KNOWN SCHEMES */
@@ -592,7 +589,6 @@ failtag:
                 num_to_bytes(key64, 6, foundKey[type][sec]);
                 cjSetCursRight();
                 DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %012" PRIx64 " ; TYP: %i", sec, key64, type);
-                /*reply_old(CMD_CJB_INFORM_CLIENT_KEY, 12, sec, type, tosendkey, 12);*/
 
                 for (int i = 0; i < colin_total_schemas; i++) {
                     if (key64 == colin_Schemas[i].trigger) {
