@@ -50,7 +50,10 @@ typedef enum {
     jsfMfc_v2,
     jsfMfc_v3,
     jsfMfuMemory,
-    jsfHitag,
+    jsfHitag1,
+    jsfHitag2,
+    jsfHitagS,
+    jsfHitagU,
     jsfIclass,
     jsf14b,
     jsf14b_v2,
@@ -442,6 +445,9 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
  * @return PM3_SUCCESS if OK
  */
 int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
+// as pm3_save_dump, but lets the caller add fields the raw dump cannot carry,
+// such as the Hitag u UID and ICR which arrive separately from the pages
+int pm3_save_dump_cb(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, void (*callback)(json_t *));
 int pm3_save_dump_json(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
 
 /** STUB

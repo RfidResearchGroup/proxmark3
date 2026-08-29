@@ -29,6 +29,7 @@
 #include "cmdhficlass.h"  // pagemap
 #include "iclass_cmd.h"
 #include "iso15.h"
+#include "hitag.h"
 
 #ifdef _WIN32
 #include "scandir.h"
@@ -668,15 +669,53 @@ int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen,
             }
             break;
         }
-        case jsfHitag: {
-            uint8_t uid[4] = {0};
-            memcpy(uid, data, 4);
-            JsonSaveStr(root, "FileType", "hitag");
-            JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
+        // Hitag 1 and Hitag 2 both start with the UID in block 0.  Hitag 2 also
+        // carries its configuration in block 3, so record it when the dump is
+        // long enough to hold one.
+        case jsfHitag1:
+        case jsfHitag2: {
+            JsonSaveStr(root, "FileType", (ftype == jsfHitag1) ? "hitag1" : "hitag2");
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", data, HITAG_UID_SIZE);
 
-            for (size_t i = 0; i < (datalen / 4); i++) {
+            if ((ftype == jsfHitag2) && (datalen >= 16)) {
+                JsonSaveBufAsHexCompact(root, "$.Card.Config", data + 12, HITAG_BLOCK_SIZE);
+            }
+
+            JsonSaveInt(root, "$.Card.Blocks", (int)(datalen / HITAG_BLOCK_SIZE));
+
+            for (size_t i = 0; i < (datalen / HITAG_BLOCK_SIZE); i++) {
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
+                JsonSaveBufAsHexCompact(root, path, data + (i * HITAG_BLOCK_SIZE), HITAG_BLOCK_SIZE);
+            }
+            break;
+        }
+        // Hitag S keeps the UID in page 0 and the configuration in page 1
+        case jsfHitagS: {
+            JsonSaveStr(root, "FileType", "hitags");
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", data + (HITAGS_UID_PADR * HITAGS_PAGE_SIZE), HITAG_UID_SIZE);
+
+            if (datalen >= ((HITAGS_CONFIG_PADR + 1) * HITAGS_PAGE_SIZE)) {
+                JsonSaveBufAsHexCompact(root, "$.Card.Config", data + (HITAGS_CONFIG_PADR * HITAGS_PAGE_SIZE), HITAGS_PAGE_SIZE);
+            }
+
+            JsonSaveInt(root, "$.Card.Blocks", (int)(datalen / HITAGS_PAGE_SIZE));
+
+            for (size_t i = 0; i < (datalen / HITAGS_PAGE_SIZE); i++) {
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * HITAGS_PAGE_SIZE), HITAGS_PAGE_SIZE);
+            }
+            break;
+        }
+        // Hitag u has a 6 byte UID and an ICR that the tag reports separately from
+        // its pages, so neither can be recovered from `data`.  The caller supplies
+        // them through the save callback, see pm3_save_dump_cb().
+        case jsfHitagU: {
+            JsonSaveStr(root, "FileType", "hitagu");
+            JsonSaveInt(root, "$.Card.Blocks", (int)(datalen / HITAGU_BLOCK_SIZE));
+
+            for (size_t i = 0; i < (datalen / HITAGU_BLOCK_SIZE); i++) {
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * HITAGU_BLOCK_SIZE), HITAGU_BLOCK_SIZE);
             }
             break;
         }
@@ -2061,7 +2100,20 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         goto out;
     }
 
+    // The four Hitag flavours share one block layout on disk and differ only in
+    // how many blocks they carry, so one reader serves all of them.  A file
+    // written before the per-flavour types existed says only "hitag" and cannot
+    // say which tag it came from - treat those as Hitag 2 and tell the user.
     if (!strcmp(ctype, "hitag")) {
+        PrintAndLogEx(WARNING, "`" _YELLOW_("hitag") "` is the legacy dump type and does not record which tag it came from");
+        PrintAndLogEx(INFO, "Reading it as " _YELLOW_("Hitag 2") ", re-dump the tag to get a versioned file");
+    }
+
+    if (!strcmp(ctype, "hitag") ||
+            !strcmp(ctype, "hitag1") ||
+            !strcmp(ctype, "hitag2") ||
+            !strcmp(ctype, "hitags") ||
+            !strcmp(ctype, "hitagu")) {
         size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 4); i++) {
             if (sptr + 4 > maxdatalen) {
@@ -3926,6 +3978,20 @@ int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
 
     saveFile(fn, ".bin", d, n);
     saveFileJSON(fn, jsft, d, n, NULL);
+    return PM3_SUCCESS;
+}
+
+int pm3_save_dump_cb(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, void (*callback)(json_t *)) {
+    if (fn == NULL || strlen(fn) == 0) {
+        return PM3_EINVARG;
+    }
+    if (d == NULL || n == 0) {
+        PrintAndLogEx(INFO, "No data to save, skipping...");
+        return PM3_EINVARG;
+    }
+
+    saveFile(fn, ".bin", d, n);
+    saveFileJSON(fn, jsft, d, n, callback);
     return PM3_SUCCESS;
 }
 

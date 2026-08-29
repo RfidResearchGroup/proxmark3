@@ -1585,7 +1585,7 @@ out:
         FillFileNameByUID(fptr, data, "-dump", HITAG_UID_SIZE);
     }
 
-    pm3_save_dump(filename, data, HITAG2_MAX_BYTE_SIZE, jsfHitag);
+    pm3_save_dump(filename, data, HITAG2_MAX_BYTE_SIZE, jsfHitag2);
     return PM3_SUCCESS;
 }
 
@@ -1763,13 +1763,15 @@ static int CmdLFHitagSim(const char *Cmd) {
     CLIParserInit(&ctx, "lf hitag sim",
                   "Simulate Hitag transponder\n"
                   "You need to `lf hitag eload` first",
-                  "lf hitag sim -2"
+                  "lf hitag sim -2\n"
+                  "lf hitag sim -2 -t 30    -> set edge detect threshold to 30"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("1", "ht1", "simulate Hitag 1"),
         arg_lit0("2", "ht2", "simulate Hitag 2"),
+        arg_int0("t", "threshold", "<dec>", "set edge detect threshold (def: 127)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1777,7 +1779,13 @@ static int CmdLFHitagSim(const char *Cmd) {
     bool use_ht1 = arg_get_lit(ctx, 1);
     bool use_ht2 = arg_get_lit(ctx, 2);
     bool use_htm = false; // not implemented yet
+    int threshold = arg_get_int_def(ctx, 3, 127);
     CLIParserFree(ctx);
+
+    if (threshold < 0 || threshold > 255) {
+        PrintAndLogEx(ERR, "error, threshold must be 0..255");
+        return PM3_EINVARG;
+    }
 
     if ((use_ht1 + use_ht2 + use_htm) > 1) {
         PrintAndLogEx(ERR, "error, specify only one Hitag type");
@@ -1792,8 +1800,15 @@ static int CmdLFHitagSim(const char *Cmd) {
 //    if (use_ht1)
 //        cmd = CMD_LF_HITAG1_SIMULATE;
 
+    // the tag content comes from emulator memory, this only carries the threshold
+    hitag_sim_t payload = {
+        .tag_mem_supplied = false,
+        .rfu = 0,
+        .threshold = (uint16_t)threshold,
+    };
+
     clearCommandBuffer();
-    SendCommandNG(cmd, NULL, 0);
+    SendCommandNG(cmd, (uint8_t *)&payload, sizeof(payload));
     return PM3_SUCCESS;
 }
 
