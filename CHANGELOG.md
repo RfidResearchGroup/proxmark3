@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Change NG: convert CMD_LF_EM4X50_ESET to em4x50_eset_t  (@iceman1001)
 - Change NG: convert CMD_LF_T55XX_SET_CONFIG to t55xx_setconfig_t (@iceman1001)
 - Added a new ISo15693 v5 dump file format to handle 0x100 number of pages and 8 byte pages better (@iceman1001)
 - Fixed ISO15693 v4 file handling and converting to v5 (@iceman1001)

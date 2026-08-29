@@ -1697,7 +1697,20 @@ static void PacketReceived(PacketCommandNG *packet) {
             // destroy the Emulator Memory.
             //-----------------------------------------------------------------------------
             FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-            emlSet(packet->data.asBytes, packet->oldarg[0], packet->oldarg[1]);
+
+            if (packet->length < sizeof(em4x50_eset_t)) {
+                reply_ng(CMD_LF_EM4X50_ESET, PM3_EINVARG, NULL, 0);
+                break;
+            }
+
+            em4x50_eset_t *payload = (em4x50_eset_t *)packet->data.asBytes;
+            if (payload->len > packet->length - sizeof(em4x50_eset_t)) {
+                reply_ng(CMD_LF_EM4X50_ESET, PM3_EINVARG, NULL, 0);
+                break;
+            }
+
+            int res = emlSet(payload->data, payload->offset, payload->len);
+            reply_ng(CMD_LF_EM4X50_ESET, res, NULL, 0);
             break;
         }
         case CMD_LF_EM4X50_CHK: {
