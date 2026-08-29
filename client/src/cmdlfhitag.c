@@ -1793,7 +1793,7 @@ static int CmdLFHitagSim(const char *Cmd) {
 //        cmd = CMD_LF_HITAG1_SIMULATE;
 
     clearCommandBuffer();
-    SendCommandMIX(cmd, 0, 0, 0, NULL, 0);
+    SendCommandNG(cmd, NULL, 0);
     return PM3_SUCCESS;
 }
 
