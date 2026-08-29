@@ -312,8 +312,14 @@ static void EPA_PACE_Collect_Nonce_Abort(uint32_t cmd, uint8_t step, int func_re
     // power down the field
     EPA_Finish();
 
-    // send the USB packet
-    reply_mix(cmd, step, func_return, 0, 0, 0);
+    // send the full struct including a zeroed timing array: EPA_PACE_Simulate
+    // aborts through here too and its client reads timings unconditionally
+    uint8_t buf[sizeof(epa_result_t) + (5 * sizeof(uint32_t))] = {0};
+    epa_result_t *response = (epa_result_t *)buf;
+    response->step = step;
+    response->len = 0;
+    response->func_return = (int16_t)func_return;
+    reply_ng(cmd, PM3_ESOFT, buf, sizeof(buf));
 }
 
 //-----------------------------------------------------------------------------
@@ -385,7 +391,13 @@ void EPA_PACE_Collect_Nonce(const PacketCommandNG *c) {
     EPA_Finish();
 
     // save received information
-    reply_mix(CMD_HF_EPA_COLLECT_NONCE, 0, func_return, 0, nonce, func_return);
+    uint8_t noncebuf[sizeof(epa_result_t) + 256] = {0};
+    epa_result_t *nresponse = (epa_result_t *)noncebuf;
+    nresponse->step = 0;
+    nresponse->len = (uint8_t)func_return;
+    nresponse->func_return = (int16_t)func_return;
+    memcpy(noncebuf + sizeof(epa_result_t), nonce, func_return);
+    reply_ng(CMD_HF_EPA_COLLECT_NONCE, PM3_SUCCESS, noncebuf, sizeof(epa_result_t) + func_return);
 }
 
 //-----------------------------------------------------------------------------
@@ -498,26 +510,53 @@ static int EPA_PACE_MSE_Set_AT(const pace_version_info_t pace_version_info, uint
 //-----------------------------------------------------------------------------
 // Perform the PACE protocol by replaying given APDUs
 //-----------------------------------------------------------------------------
+static void reply_epa_result(uint16_t cmd, uint8_t step, int func_return, const uint32_t *timings) {
+    uint8_t buf[sizeof(epa_result_t) + (5 * sizeof(uint32_t))] = {0};
+    epa_result_t *response = (epa_result_t *)buf;
+    response->step = step;
+    response->len = 0;
+    response->func_return = (int16_t)func_return;
+    // always send the full timing array, zeroed when there is nothing measured
+    // yet, so the client never reads past the end of a short reply
+    uint16_t tlen = 5 * sizeof(uint32_t);
+    if (timings) {
+        memcpy(buf + sizeof(epa_result_t), timings, tlen);
+    }
+    reply_ng(cmd, (step == 0) ? PM3_SUCCESS : PM3_ESOFT, buf, sizeof(epa_result_t) + tlen);
+}
+
 void EPA_PACE_Replay(const PacketCommandNG *c) {
 
     uint32_t timings[ARRAYLEN(apdu_lengths_replay)] = {0};
 
+    if (c->length < sizeof(epa_replay_t)) {
+        reply_ng(CMD_HF_EPA_REPLAY, PM3_EINVARG, NULL, 0);
+        return;
+    }
+
+    const epa_replay_t *payload = (const epa_replay_t *)c->data.asBytes;
+
     // if an APDU has been passed, save it
-    if (c->oldarg[0] != 0) {
+    if (payload->apdu_num != 0) {
+
         // make sure it's not too big
-        if (c->oldarg[2] > apdus_replay[c->oldarg[0] - 1].len) {
-            reply_mix(CMD_ACK, 1, 0, 0, NULL, 0);
+        if ((payload->len > apdus_replay[payload->apdu_num - 1].len) ||
+                (payload->len > (c->length - sizeof(epa_replay_t)))) {
+            reply_ng(CMD_HF_EPA_REPLAY, PM3_EINVARG, NULL, 0);
+            return;
         }
-        memcpy(apdus_replay[c->oldarg[0] - 1].data + c->oldarg[1],
-               c->data.asBytes,
-               c->oldarg[2]);
+
+        memcpy(apdus_replay[payload->apdu_num - 1].data + payload->offset,
+               payload->data,
+               payload->len);
+
         // save/update APDU length
-        if (c->oldarg[1] == 0) {
-            apdu_lengths_replay[c->oldarg[0] - 1] = c->oldarg[2];
+        if (payload->offset == 0) {
+            apdu_lengths_replay[payload->apdu_num - 1] = payload->len;
         } else {
-            apdu_lengths_replay[c->oldarg[0] - 1] += c->oldarg[2];
+            apdu_lengths_replay[payload->apdu_num - 1] += payload->len;
         }
-        reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
+        reply_ng(CMD_HF_EPA_REPLAY, PM3_SUCCESS, NULL, 0);
         return;
     }
 
@@ -528,7 +567,7 @@ void EPA_PACE_Replay(const PacketCommandNG *c) {
     func_return = EPA_Setup();
     if (func_return != 0) {
         EPA_Finish();
-        reply_mix(CMD_ACK, 2, func_return, 0, NULL, 0);
+        reply_epa_result(CMD_HF_EPA_REPLAY, 2, func_return, NULL);
         return;
     }
 
@@ -553,12 +592,12 @@ void EPA_PACE_Replay(const PacketCommandNG *c) {
                     || response_apdu[func_return - 4] != 0x90
                     || response_apdu[func_return - 3] != 0x00)) {
             EPA_Finish();
-            reply_mix(CMD_ACK, 3 + i, func_return, 0, timings, 20);
+            reply_epa_result(CMD_HF_EPA_REPLAY, 3 + i, func_return, timings);
             return;
         }
     }
     EPA_Finish();
-    reply_mix(CMD_ACK, 0, 0, 0, timings, 20);
+    reply_epa_result(CMD_HF_EPA_REPLAY, 0, 0, timings);
     return;
 }
 

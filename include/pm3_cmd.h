@@ -392,6 +392,31 @@ typedef struct {
     uint8_t key[6];
 } PACKED mfc_eload_t;
 
+// CMD_HF_EPA_REPLAY payload.
+// apdu_num 0 runs the replay, otherwise it is a 1-based APDU index being uploaded.
+// Replaces oldargs: arg0 = apdu number, arg1 = offset, arg2 = length
+typedef struct {
+    uint8_t apdu_num;
+    uint16_t offset;
+    uint16_t len;
+    uint8_t data[];
+} PACKED epa_replay_t;
+
+// Reply for CMD_HF_EPA_REPLAY, CMD_HF_EPA_PACE_SIMULATE and
+// CMD_HF_EPA_COLLECT_NONCE. `step` is 0 on success, otherwise the step that
+// failed; it used to travel in arg0 of an anonymous CMD_ACK.
+// For COLLECT_NONCE, `len` is the nonce length and the nonce follows.
+// Not PACKED on purpose: timings[] is uint32_t and must stay 4 byte aligned for
+// the ARM7TDMI. 1+1+2 already fills 4 bytes, so there is no implicit padding and
+// the layout is identical on both ends. See mf_value_t / t55xx_setconfig_t for
+// the same reasoning.
+typedef struct {
+    uint8_t step;
+    uint8_t len;
+    int16_t func_return;
+    uint32_t timings[];
+} epa_result_t;
+
 // CMD_HF_MIFARE_READSC payload
 typedef struct {
     uint8_t sectorno;
