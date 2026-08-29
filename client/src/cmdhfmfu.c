@@ -7832,21 +7832,19 @@ int CmdHF14MfuNDEFWrite(const char *Cmd) {
 // ---------------------------------------------------------------------------
 // NDEF formatting
 //
-// Page 03h is the Capability Container. On every MIFARE Ultralight / NTAG type
-// it is a One Time Programmable page: a WRITE is bit-wise OR'ed with the current
-// content and a bit set to 1 can never be cleared again. Getting the value wrong
-// is therefore permanent, which is why an unknown tag type is refused rather than
-// guessed at, and why the requested value is checked for reachability first.
+// Page 03h is the Capability Container and is One Time Programmable on every type
+// below: a WRITE is bit-wise OR'ed with the current content and a bit set to 1 can
+// never be cleared again. A wrong value is permanent, hence an unknown tag type is
+// refused rather than guessed at.
 //
-// The table below restores the NXP "memory content at delivery" for pages 03h,
-// 04h and 05h. Note that NTAG212/213/213F ship with a Lock Control TLV in front
-// of the NDEF TLV while the other types do not, so the delivery content is copied
-// per type instead of being assembled here.
+// Each entry restores the NXP "memory content at delivery" for pages 03h, 04h and
+// 05h. NTAG212/213/213F/213TT ship a Lock Control TLV in front of the NDEF TLV and
+// the others do not, so the content is copied per type rather than assembled here.
 //
 // Only the NTAG21x family is delivered with a Capability Container at all. The
-// MF0ICU1 / MF0ICU2 / MF0ULx1 parts leave page 03h at 00 00 00 00, so their CC is
-// derived from the user memory page range given in the datasheet and they use the
-// plain "empty NDEF message" layout of NTAG210/215/216.
+// MF0ICU1 / MF0ICU2 / MF0ULx1 parts and NTAG203 leave page 03h as a blank OTP
+// page, so their CC is derived from the user memory page range and they get the
+// plain empty NDEF message.
 typedef struct {
     uint64_t tagtype;
     const char *name;
@@ -7854,169 +7852,166 @@ typedef struct {
 } mfu_ndef_format_t;
 
 static const mfu_ndef_format_t mfu_ndef_format_table[] = {
-    // https://www.nxp.com/docs/en/data-sheet/MF0ICU1.pdf
-    // MIFARE Ultralight  MLEN 06h = 48 bytes, user memory pages 04h-0Fh
-    //   NXP MF0ICU1, doc 028639, rev 3.9 - 23 July 2014
-    //     memory organization ........ section 7.5, Table 5, page 10 of 31
-    //     page 03h is OTP, no CC at delivery ..... section 7.5, page 10 of 31
-    //   CC derived from the user memory page range, not an NXP delivery value.
 
+    // MIFARE Ultralight  MF0ICU1  MLEN 06h = 48 bytes, user memory pages 04h-0Fh
+    //   https://www.nxp.com/docs/en/data-sheet/MF0ICU1.pdf  rev 3.9 - 23 July 2014
+    //     memory organization ........... section 7.5, Table 5, page 10 of 31
+    //     data pages .................... section 7.5, Table 5, page 10 of 31
+    //     page 03h is OTP, no CC at delivery - CC derived from the page range
     {
         MFU_TT_UL, "MIFARE Ultralight",
         {{0xE1, 0x10, 0x06, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
     },
 
-    // https://www.nxp.com/docs/en/data-sheet/MF0ICU2.pdf
-    // MIFARE Ultralight C  MLEN 12h = 144 bytes, user memory pages 04h-27h
-    //   NXP MF0ICU2, rev 3.5 - 30 January 2026
-    //     memory organization ........ section 7.5, Table 5, page 8 of 35
-    //     OTP bytes preset to all 0 .. section 7.5.4, page 11 of 35
-    //   CC derived from the user memory page range, not an NXP delivery value.
-    //   The data area ends at page 27h, right before the lock bytes at page 28h,
-    //   so no Lock Control TLV is required.
+    // MIFARE Ultralight C  MF0ICU2  MLEN 12h = 144 bytes, user memory pages 04h-27h
+    //   https://www.nxp.com/docs/en/data-sheet/MF0ICU2.pdf  rev 3.5 - 30 January 2026
+    //     memory organization ........... section 7.5, Table 5, page 8 of 35
+    //     data pages .................... section 7.5, Table 5, page 8 of 35
+    //     OTP preset to all 0 ........... section 7.5.4, page 11 of 35
+    //   CC derived from the page range. The data area ends at page 27h, right before
+    //   the lock bytes at page 28h, so no Lock Control TLV is needed.
     {
         MFU_TT_UL_C, "MIFARE Ultralight C",
         {{0xE1, 0x10, 0x12, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
     },
 
-    // https://www.nxp.com/docs/en/data-sheet/MF0ULX1.pdf
-    // MIFARE Ultralight EV1 48 (MF0UL11)  MLEN 06h = 48 bytes, user memory pages 04h-0Fh
-    //   NXP MF0ULX1, doc 234533, rev 3.3 - 9 April 2019
-    //     memory organization MF0UL11 ... section 8.5, Fig 5, page 10 of 45
-    //     OTP default 00 00 00 00h ...... section 8.5.4, page 13-14 of 45
+    // MIFARE Ultralight EV1 48  MF0UL11  MLEN 06h = 48 bytes, user memory pages 04h-0Fh
+    //   https://www.nxp.com/docs/en/data-sheet/MF0ULX1.pdf  rev 3.3 - 9 April 2019
+    //     memory organization ........... section 8.5, Fig 5, page 10 of 45
     //     data pages .................... section 8.5.5, page 14 of 45
-    //   CC derived from the user memory page range, not an NXP delivery value.
+    //     OTP default 00 00 00 00h ...... section 8.5.4, page 13-14 of 45
+    //   CC derived from the page range.
     {
         MFU_TT_UL_EV1_48, "MIFARE Ultralight EV1 48",
         {{0xE1, 0x10, 0x06, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
     },
-    // https://www.nxp.com/docs/en/data-sheet/MF0ULX1.pdf
-    // MIFARE Ultralight EV1 128 (MF0UL21) MLEN 10h = 128 bytes, user memory pages 04h-23h
-    //   NXP MF0ULX1, doc 234533, rev 3.3 - 9 April 2019
-    //     memory organization MF0UL21 ... section 8.5, Fig 6, page 11 of 45
-    //     OTP default 00 00 00 00h ...... section 8.5.4, page 13-14 of 45
+
+    // MIFARE Ultralight EV1 128  MF0UL21  MLEN 10h = 128 bytes, user memory pages 04h-23h
+    //   https://www.nxp.com/docs/en/data-sheet/MF0ULX1.pdf  rev 3.3 - 9 April 2019
+    //     memory organization ........... section 8.5, Fig 6, page 11 of 45
     //     data pages .................... section 8.5.5, page 14 of 45
-    //   CC derived from the user memory page range, not an NXP delivery value.
+    //     OTP default 00 00 00 00h ...... section 8.5.4, page 13-14 of 45
+    //   CC derived from the page range.
     {
         MFU_TT_UL_EV1_128, "MIFARE Ultralight EV1 128",
         {{0xE1, 0x10, 0x10, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
     },
 
-    // https://www.nxp.com/docs/en/data-sheet/NTAG210_212.pdf
-    // NTAG210  MLEN 06h = 48 bytes, user memory pages 04h-0Fh
-    //   NXP NTAG210/212, doc 242330, rev 3.0 - 14 March 2013
-    //     data pages ................. section 8.5.5, page 13 of 46
-    //     memory content at delivery . section 8.5.6, Table 4, page 14 of 46
+    // NTAG203  NT2H0301  MLEN 12h = 144 bytes, user memory pages 04h-27h
+    //   https://www.nxp.com/docs/en/data-sheet/NTAG203.pdf  rev 3.0 - 17 October 2011
+    //     memory organization ........... section 8.5, Table 5, page 10 of 30
+    //     data pages .................... section 8.5.4, page 13 of 30
+    //     OTP preset to all 0 ........... section 8.5.3, page 13 of 30
+    //   CC derived from the page range: page 03h is a plain OTP page here, not a
+    //   Capability Container, so there is no delivery value to copy. Its dynamic
+    //   lock bytes at page 28h use 4 page granularity (section 8.5.2, Fig 7, page
+    //   12 of 30) against 2 for NTAG213, so that Lock Control TLV would misdescribe
+    //   this part - the plain empty NDEF message is written instead.
+    {
+        MFU_TT_NTAG_203, "NTAG203",
+        {{0xE1, 0x10, 0x12, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
+    },
+
+    // NTAG210  NT2H1011  MLEN 06h = 48 bytes, user memory pages 04h-0Fh
+    //   https://www.nxp.com/docs/en/data-sheet/NTAG210_212.pdf  rev 3.0 - 14 March 2013
+    //     memory organization ........... section 8.5, Fig 4, page 10 of 46
+    //     data pages .................... section 8.5.5, page 13 of 46
+    //     content at delivery ........... section 8.5.6, Table 4, page 14 of 46
     {
         MFU_TT_NTAG_210, "NTAG210",
         {{0xE1, 0x10, 0x06, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
     },
 
-    // https://www.nxp.com/docs/en/data-sheet/NT2L1001_NT2H1001.pdf
-    // NTAG210u  same geometry as NTAG210
-    //   No dedicated datasheet was consulted. getTagType assigns this its own type
-    //   bit (an exclusive GET_VERSION match), but UL_MEMORY_ARRAY gives it
-    //   MAX_NTAG_210 and ul_print_type reports 48 bytes, so the user memory range -
-    //   and therefore the CC - is the same as NTAG210.
+    // NTAG210u  NT2L1001 / NT2H1001  MLEN 06h = 48 bytes, user memory blocks 04h-0Fh
+    //   https://www.nxp.com/docs/en/data-sheet/NT2L1001_NT2H1001.pdf  rev 3.0 - 7 September 2016
+    //     data blocks ................... section 9.5.4, page 11 of 32
+    //     content at delivery ........... section 9.5.5, Table 4, page 11 of 32
     {
         MFU_TT_NTAG_210u, "NTAG210u",
         {{0xE1, 0x10, 0x06, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
     },
 
-    // https://www.nxp.com/docs/en/data-sheet/NTAG210_212.pdf
-    // NTAG212  MLEN 10h = 128 bytes, user memory pages 04h-23h
-    //   NXP NTAG210/212, doc 242330, rev 3.0 - 14 March 2013
-    //     data pages ................. section 8.5.5, page 13 of 46
-    //     memory content at delivery . section 8.5.6, Table 5, page 14 of 46
-    //   Ships with a Lock Control TLV (01 03 90 0A 34) ahead of the NDEF TLV.
+    // NTAG212  NT2L1211  MLEN 10h = 128 bytes, user memory pages 04h-23h
+    //   https://www.nxp.com/docs/en/data-sheet/NTAG210_212.pdf  rev 3.0 - 14 March 2013
+    //     memory organization ........... section 8.5, Fig 5, page 10 of 46
+    //     data pages .................... section 8.5.5, page 13 of 46
+    //     content at delivery ........... section 8.5.6, Table 5, page 14 of 46
     {
         MFU_TT_NTAG_212, "NTAG212",
         {{0xE1, 0x10, 0x10, 0x00}, {0x01, 0x03, 0x90, 0x0A}, {0x34, 0x03, 0x00, 0xFE}}
     },
 
-    // https://www.nxp.com/docs/en/data-sheet/NTAG213_215_216.pdf
-    // NTAG213  MLEN 12h = 144 bytes, user memory pages 04h-27h
-    //   NXP NTAG213/215/216, doc 265332, rev 3.2 - 2 June 2015
-    //     memory organization ........ section 8.5, Fig 5, page 11 of 60
-    //     NDEF memory size ........... section 8.5.4, Table 4, page 16 of 60
-    //     data pages ................. section 8.5.5, page 16 of 60
-    //     memory content at delivery . section 8.5.6, Table 5, page 17 of 60
-    //   Ships with a Lock Control TLV (01 03 A0 0C 34) ahead of the NDEF TLV.
+    // NTAG213  NT2H1311  MLEN 12h = 144 bytes, user memory pages 04h-27h
+    //   https://www.nxp.com/docs/en/data-sheet/NTAG213_215_216.pdf  rev 3.2 - 2 June 2015
+    //     memory organization ........... section 8.5, Fig 5, page 11 of 60
+    //     data pages .................... section 8.5.5, page 16 of 60
+    //     content at delivery ........... section 8.5.6, Table 5, page 17 of 60
     {
         MFU_TT_NTAG_213, "NTAG213",
         {{0xE1, 0x10, 0x12, 0x00}, {0x01, 0x03, 0xA0, 0x0C}, {0x34, 0x03, 0x00, 0xFE}}
     },
 
-    // https://www.nxp.com/docs/en/data-sheet/NTAG213F_216F.pdf
-    // NTAG213F  identical delivery content to NTAG213
-    //   NXP NTAG213F/216F, doc 262236, rev 3.6 - 28 September 2015
-    //     memory content at delivery . section 8.5.6, Table 5, page 17 of 55
+    // NTAG213F  NT2H1311F  MLEN 12h = 144 bytes, user memory pages 04h-27h
+    //   https://www.nxp.com/docs/en/data-sheet/NTAG213F_216F.pdf  rev 3.6 - 28 September 2015
+    //     memory organization ........... section 8.5, Fig 6, page 12 of 55
+    //     data pages .................... section 8.5.5, page 16 of 55
+    //     content at delivery ........... section 8.5.6, Table 5, page 17 of 55
     {
         MFU_TT_NTAG_213_F, "NTAG213F",
         {{0xE1, 0x10, 0x12, 0x00}, {0x01, 0x03, 0xA0, 0x0C}, {0x34, 0x03, 0x00, 0xFE}}
     },
 
-    // https://www.nxp.com/docs/en/data-sheet/NT2H1311TT.pdf
-    // NTAG213TT and NTAG213C  same geometry as NTAG213
-    //   No dedicated datasheet was consulted for either. getTagType assigns each its
-    //   own type bit (exclusive GET_VERSION matches differing only in the product
-    //   version bytes, storage size stays 0Fh), but UL_MEMORY_ARRAY gives both
-    //   MAX_NTAG_213 and ul_print_type reports 144 bytes, so the user memory range -
-    //   and therefore the CC - is the same as NTAG213. Note only page 03h is
-    //   irreversible; pages 04h/05h are ordinary user memory and can be rewritten if
-    //   a variant turns out to ship a different Lock Control TLV.
+    // NTAG213TT  NT2H1311TT  MLEN 12h = 144 bytes, user memory pages 04h-27h
+    //   https://www.nxp.com/docs/en/data-sheet/NT2H1311TT.pdf  rev 1.1 - 28 March 2017
+    //     memory organization ........... section 8.5, Fig 4, page 11 of 57
+    //     data pages .................... section 8.5.5, page 14 of 57
+    //     content at delivery ........... section 8.5.6, Table 5, page 15 of 57
     {
         MFU_TT_NTAG_213_TT, "NTAG213TT",
         {{0xE1, 0x10, 0x12, 0x00}, {0x01, 0x03, 0xA0, 0x0C}, {0x34, 0x03, 0x00, 0xFE}}
     },
+
+    // NTAG213C  NT2H1311C1DTL  MLEN 12h = 144 bytes, user memory pages 04h-27h
+    //   NO DATA SHEET. NXP publishes nothing for this part number and no other
+    //   public documentation could be found.
+    //   Most data come from commit ad19f8384 (2020-09-26, "add accurate detection for
+    //   NT2H1311C1DTL")
     {
         MFU_TT_NTAG_213_C, "NTAG213C",
         {{0xE1, 0x10, 0x12, 0x00}, {0x01, 0x03, 0xA0, 0x0C}, {0x34, 0x03, 0x00, 0xFE}}
     },
 
-    // https://www.nxp.com/docs/en/data-sheet/NTAG213_215_216.pdf
-    // NTAG215  MLEN 3Eh = 496 bytes, user memory pages 04h-81h
-    //   NXP NTAG213/215/216, doc 265332, rev 3.2 - 2 June 2015
-    //     memory organization ........ section 8.5, Fig 6, page 11 of 60
-    //     NDEF memory size ........... section 8.5.4, Table 4, page 16 of 60
-    //     memory content at delivery . section 8.5.6, Table 6, page 17 of 60
-    //   The factory MLEN announces 496 bytes while the user memory holds 504.
-    //   The datasheet gives no reason for the 8 byte difference; the NXP value is
-    //   kept on purpose since under reporting can never push a write past the
-    //   user memory, while a larger value could.
+    // NTAG215  NT2H1511  MLEN 3Eh = 496 bytes, user memory pages 04h-81h
+    //   https://www.nxp.com/docs/en/data-sheet/NTAG213_215_216.pdf  rev 3.2 - 2 June 2015
+    //     memory organization ........... section 8.5, Fig 6, page 11 of 60
+    //     data pages .................... section 8.5.5, page 16 of 60
+    //     content at delivery ........... section 8.5.6, Table 6, page 17 of 60
+    //   The factory MLEN announces 496 bytes while the user memory holds 504. The
+    //   data sheet gives no reason for the 8 byte difference
     {
         MFU_TT_NTAG_215, "NTAG215",
         {{0xE1, 0x10, 0x3E, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
     },
 
-    // https://www.nxp.com/docs/en/data-sheet/NTAG213_215_216.pdf
-    // NTAG216  MLEN 6Dh = 872 bytes, user memory pages 04h-E1h
-    //   NXP NTAG213/215/216, doc 265332, rev 3.2 - 2 June 2015
-    //     memory organization ........ section 8.5, Fig 7, page 12 of 60
-    //     NDEF memory size ........... section 8.5.4, Table 4, page 16 of 60
-    //     memory content at delivery . section 8.5.6, Table 7, page 17 of 60
-    //   Same 16 byte under reporting as NTAG215, kept for the same reason.
+    // NTAG216  NT2H1611  MLEN 6Dh = 872 bytes, user memory pages 04h-E1h
+    //   https://www.nxp.com/docs/en/data-sheet/NTAG213_215_216.pdf  rev 3.2 - 2 June 2015
+    //     memory organization ........... section 8.5, Fig 7, page 12 of 60
+    //     data pages .................... section 8.5.5, page 16 of 60
+    //     content at delivery ........... section 8.5.6, Table 7, page 17 of 60
+    //   Announces 872 bytes against 888 of user memory.
     {
         MFU_TT_NTAG_216, "NTAG216",
         {{0xE1, 0x10, 0x6D, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
     },
 
-    // https://www.nxp.com/docs/en/data-sheet/NTAG213F_216F.pdf
-    // NTAG216F  identical delivery content to NTAG216
-    //   NXP NTAG213F/216F, doc 262236, rev 3.6 - 28 September 2015
-    //     memory content at delivery . section 8.5.6, Table 6, page 17 of 55
+    // NTAG216F  NT2H1611F  MLEN 6Dh = 872 bytes, user memory pages 04h-E1h
+    //   https://www.nxp.com/docs/en/data-sheet/NTAG213F_216F.pdf  rev 3.6 - 28 September 2015
+    //     memory organization ........... section 8.5, Fig 7, page 12 of 55
+    //     data pages .................... section 8.5.5, page 16 of 55
+    //     content at delivery ........... section 8.5.6, Table 6, page 17 of 55
     {
         MFU_TT_NTAG_216_F, "NTAG216F",
         {{0xE1, 0x10, 0x6D, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
-    },
-    // https://www.orangetags.com/wp-content/downloads/datasheet/NXP/NTAG203.pdf
-    // NTAG203  no datasheet of its own was consulted, but NTAG213/215/216
-    //   (doc 265332, rev 3.2, section 8.5, page 11 of 60) states that the
-    //   manufacturing data, lock bytes, capability container and user memory
-    //   pages of NTAG213 are compatible to NTAG203.
-    {
-        MFU_TT_NTAG_203, "NTAG203",
-        {{0xE1, 0x10, 0x12, 0x00}, {0x01, 0x03, 0xA0, 0x0C}, {0x34, 0x03, 0x00, 0xFE}}
     },
 };
 
