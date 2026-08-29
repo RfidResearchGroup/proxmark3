@@ -7832,19 +7832,13 @@ int CmdHF14MfuNDEFWrite(const char *Cmd) {
 // ---------------------------------------------------------------------------
 // NDEF formatting
 //
-// Page 03h is the Capability Container and is One Time Programmable on every type
-// below: a WRITE is bit-wise OR'ed with the current content and a bit set to 1 can
-// never be cleared again. A wrong value is permanent, hence an unknown tag type is
-// refused rather than guessed at.
-//
-// Each entry restores the NXP "memory content at delivery" for pages 03h, 04h and
-// 05h. NTAG212/213/213F/213TT ship a Lock Control TLV in front of the NDEF TLV and
-// the others do not, so the content is copied per type rather than assembled here.
-//
-// Only the NTAG21x family is delivered with a Capability Container at all. The
-// MF0ICU1 / MF0ICU2 / MF0ULx1 parts and NTAG203 leave page 03h as a blank OTP
-// page, so their CC is derived from the user memory page range and they get the
-// plain empty NDEF message.
+// Page 03h is the OTP Capability Container (CC): once written, it cannot be
+// changed. Refuse unknown types to avoid a permanent wrong CC.
+// Restore NXP's delivery content for pages 03h-05h. NTAG212/213/213F/213TT 
+// include a Lock Control TLV before the NDEF TLV; other types do not, so 
+// content is copied per type.
+// Only NTAG21x ships with a CC. MF0ICU1/2, MF0ULx1 and NTAG203 leave 03h 
+// blank; derive their CC from the user memory range and use an empty NDEF.
 typedef struct {
     uint64_t tagtype;
     const char *name;
@@ -8030,23 +8024,13 @@ int CmdHF14AMfUFormat(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu format",
                   "Format a MIFARE Ultralight / NTAG tag for NDEF by writing the Capability\n"
-                  "Container to block 3, followed by an empty NDEF message. This is what a tag\n"
-                  "needs before `hf mfu ndefwrite` will touch it.\n"
+                  "Container to block 3, followed by an empty NDEF message.\n"
                   "\n"
-                  "The values written are the NXP factory delivery content for the detected tag\n"
-                  "type. Block 3 is One Time Programmable on every supported type: a write is\n"
-                  "OR'ed with the current content and a bit set to 1 can never be cleared. An\n"
-                  "unknown tag type is therefore refused rather than guessed at, and a Capability\n"
-                  "Container that cannot be reached from the current content is refused as well.\n"
+                  "Writes NXP factory delivery content for the detected tag type. Block 3 is\n"
+                  "One Time Programmable; unknown types and unreachable CCs are refused.\n"
                   "\n"
-                  "Note: the tag is re-selected and re-authenticated for every block written.",
-                  "hf mfu format\n"
-                  "hf mfu format -v\n"
-                  "hf mfu format --erase\n"
-                  "hf mfu format -k FFFFFFFF\n"
-                  "hf mfu format -k 49454D4B41455242214E4143554F5946\n"
-                  "hf mfu format -d E1101200 --force"
-                 );
+                  "Note: the tag is re-selected and re-authenticated for each block written."
+                );
 
     void *argtable[] = {
         arg_param_begin,
