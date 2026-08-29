@@ -42,7 +42,6 @@ RESP_PREAMBLE_MAGIC = 0x62334D50
 CMD_PING = 0x0109
 CMD_CAPABILITIES = 0x0112
 CMD_WTX = 0x0116
-CMD_ACK = 0x00FF
 CMD_HF_ISO14443A_READER = 0x0385
 CMD_HF_ICLASS_RAW = 0x039F
 CMD_HF_DROPFIELD = 0x0430
@@ -105,23 +104,19 @@ class Proxmark:
         if self.verbose:
             print(f"[pm3] {message}")
 
-    def _write(self, cmd: int, data: bytes, ng: bool) -> None:
+    def _write(self, cmd: int, data: bytes) -> None:
         if self.ser is None:
             raise ReaderError("Proxmark port is not open")
         if len(data) > 512:
             raise ReaderError("Proxmark payload exceeds 512 bytes")
-        length = len(data) | (0x8000 if ng else 0)
+        length = len(data) | 0x8000  # the NG bit; MIX frames are no longer supported
         frame = struct.pack("<IHH", CMD_PREAMBLE_MAGIC, length, cmd & 0xFFFF)
         self.ser.write(frame + data + struct.pack("<H", CMD_POSTAMBLE_MAGIC))
         self.ser.flush()
         self._log(f"TX {cmd:04x}: {data.hex()}")
 
     def send_ng(self, cmd: int, data: bytes = b"") -> None:
-        self._write(cmd, data, True)
-
-    def send_mix(self, cmd: int, arg0: int = 0, arg1: int = 0, arg2: int = 0,
-                 data: bytes = b"") -> None:
-        self._write(cmd, struct.pack("<QQQ", arg0, arg1, arg2) + data, False)
+        self._write(cmd, data)
 
     def _read_exact(self, size: int, deadline: float) -> bytes:
         if self.ser is None:
@@ -197,30 +192,37 @@ class HfReader:
     def __init__(self, pm3: Proxmark):
         self.pm3 = pm3
 
-    def _reader14a(self, flags: int, arg1: int = 0, data: bytes = b"",
-                   timeout: float = 5) -> tuple[int, bytes]:
-        self.pm3.send_mix(CMD_HF_ISO14443A_READER, flags, arg1, 0, data)
-        reply = self.pm3.wait(CMD_ACK, timeout)
-        if len(reply.data) < 24:
-            return 0, b""
-        status, _unused, _unused2 = struct.unpack("<QQQ", reply.data[:24])
-        return status, reply.data[24:]
+    def _reader14a(self, flags: int, data: bytes = b"",
+                   timeout: float = 5) -> tuple[int, int, bytes]:
+        """Send an iso14a_raw_cmd_t and unpack the iso14a_raw_resp_t reply.
+
+        Returns (length, sel, payload). `sel` is the select status on a CONNECT,
+        `length` the number of payload bytes otherwise.
+        """
+        # iso14a_raw_cmd_t: u32 flags, u32 timeout, u32 wait_us, u16 len, u16 lenbits
+        req = struct.pack("<IIIHH", flags, 0, 0, len(data), 0) + data
+        self.pm3.send_ng(CMD_HF_ISO14443A_READER, req)
+        reply = self.pm3.wait(CMD_HF_ISO14443A_READER, timeout)
+        # iso14a_raw_resp_t: u16 len, u8 sel, u8 rfu, u8 data[]
+        if len(reply.data) < 4:
+            return 0, 0, b""
+        length, sel, _rfu = struct.unpack("<HBB", reply.data[:4])
+        return length, sel, reply.data[4:]
 
     def select_seos(self) -> Card14a:
-        status, data = self._reader14a(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT)
-        if status == 0 or len(data) < 15:
+        _len, sel, data = self._reader14a(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT)
+        if sel == 0 or len(data) < 15:
             raise ReaderError("no ISO14443-A / SEOS card in the Proxmark field")
         uid_len = data[10]
         if uid_len not in (4, 7, 10) or len(data) < 15 + data[14]:
             raise ReaderError("invalid ISO14443-A selection response")
         uid, atqa, sak = bytes(data[:uid_len]), bytes(data[11:13]), data[13]
-        if status == 2:  # card did not supply ATS; enter T=CL explicitly
-            self._reader14a(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT,
-                            len(b"\xe0\x80"), b"\xe0\x80")
+        if sel == 2:  # card did not supply ATS; enter T=CL explicitly
+            self._reader14a(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, b"\xe0\x80")
         return Card14a(uid, atqa, sak)
 
     def transceive_seos(self, apdu: bytes) -> bytes:
-        length, data = self._reader14a(ISO14A_APDU | ISO14A_NO_DISCONNECT, len(apdu), apdu, 10)
+        length, _sel, data = self._reader14a(ISO14A_APDU | ISO14A_NO_DISCONNECT, apdu, 10)
         if length <= 2 or len(data) < length:
             return b""
         return bytes(data[:length - 2])  # PM3 payload includes the T=CL CRC.
