@@ -1531,7 +1531,7 @@ int CmdLFSimBidir(const char *Cmd) {
     // Set ADC to twice the carrier for a slight supersampling
     // HACK: not implemented in ARMSRC.
     PrintAndLogEx(INFO, "Not implemented yet.");
-//    SendCommandMIX(CMD_LF_SIMULATE_BIDIR, 47, 384, 0, NULL, 0);
+//    SendCommandNG(CMD_LF_SIMULATE_BIDIR, NULL, 0);  // needs an NG payload if revived
     return PM3_SUCCESS;
 }
 

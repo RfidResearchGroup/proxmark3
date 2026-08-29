@@ -469,7 +469,7 @@ static int CmdHFCryptoRFELoad(const char *Cmd) {
             g_conn.block_after_ACK = false;
         }
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_CRYPTORF_EML_MEMSET, bytes_sent, bytes_in_packet, 0, data + bytes_sent, bytes_in_packet);
+        // NOTE: CMD_HF_CRYPTORF_EML_MEMSET has no device handler; needs one plus an NG payload if revived
         bytes_remaining -= bytes_in_packet;
         bytes_sent += bytes_in_packet;
     }
