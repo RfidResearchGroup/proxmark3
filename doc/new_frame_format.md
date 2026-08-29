@@ -103,7 +103,27 @@ But they are abstracted from the developer view with a new API. See below.
 ## Transition
 ^[Top](#top)
 
-Because it's a long transition to clean all the code from the old format and because we don't want to break stuffs when flashing the bootloader, the old frames are still supported together with the new frames. The old structure is now called `PacketCommandOLD` and `PacketResponseOLD` and it's also abstracted from the developer view with the new API.
+**Status: the C client and the ARM firmware are converted.**
+
+The client has no `SendCommandOLD` or `SendCommandMIX` call sites left. On the
+device only four legacy replies remain, and all four are deliberate:
+
+| Site | Why it stays |
+|---|---|
+| `armsrc/appmain.c` — `CMD_READ_MEM_DOWNLOADED` and its `CMD_ACK` terminator | also served by `bootrom.c`, which only speaks OLD |
+| `armsrc/appmain.c` — `CMD_DEVICE_INFO` | same, see `bootrom.c` |
+| `armsrc/hfsnoop.c` — `CMD_FPGAMEM_DOWNLOADED` | the FPGA trace loop is a DMA double-buffer sized to `PM3_CMD_DATA_SIZE`; an NG header does not fit alongside a full 512 byte DMA buffer, so converting it means reworking the DMA buffering |
+
+`SendCommandBL` marks the frames that must stay OLD because the bootloader
+serves them. Do not "convert" those.
+
+**The Lua scripts are not converted yet.** `client/lualibs/commands.lua` still
+offers `Command:sendMIX()` and around 20 call sites use it, several for commands
+whose device handlers no longer accept OLD/MIX frames. Python (`client/pyscripts`)
+never used the old API and needs nothing.
+
+The old frames are still supported by the transport, so `PacketCommandOLD` and
+`PacketResponseOLD` remain, abstracted from the developer view by the new API.
 
 ## New format API
 ^[Top](#top)
@@ -218,10 +238,45 @@ In short, to move from one format to the other, we need for each command:
 * (pm3 TX) `reply_old` ⇒ `reply_ng` (with all stuff in ad-hoc PACKED structs in `data` field)
 * (client RX) `PacketResponseNG` parsing, from `oldarg` to only the `data` field
 
-Meanwhile, a fast transition to MIX frames can be done with:
+A MIX frame was the historical halfway house (`SendCommandMIX` / `reply_mix`).
+Do not add new ones: the client is free of them and every device handler that
+mattered has been converted.
 
-* (client TX) `SendCommandOLD` ⇒ `SendCommandMIX` (but check the limited data size PM3_CMD_DATA_SIZE ⇒ PM3_CMD_DATA_SIZE_MIX)
-* (pm3 TX) `reply_old` ⇒ `reply_mix` (but check the limited data size PM3_CMD_DATA_SIZE ⇒ PM3_CMD_DATA_SIZE_MIX)
+### Practical notes from converting the tree
+
+* **Reply with the command's own opcode, never `CMD_ACK`.** An anonymous ACK is
+  what forced hacks like iCLASS putting `CMD_HF_ICLASS_SIMULATE` inside `arg0` of
+  its own reply so the client could tell replies apart.
+* **A success flag belongs in the NG `status` field**, not in a data byte, and a
+  second discriminator can use `reply_reason()`.
+* **Validate `packet->length` before casting**, on both sides. Several converted
+  commands previously read past the end of a short frame.
+* **`PACKED` is not free.** It sets the struct's alignment to 1, so taking the
+  address of any member wider than a byte trips
+  `-Werror=address-of-packed-member`, and on the ARM7TDMI an unaligned 32 bit
+  load silently rotates rather than faulting. Pack a struct only to *remove*
+  padding: if `sizeof` is the same either way, leave it unpacked. Compare
+  `epa_replay_t` (packed, its `uint16_t`s sit at odd offsets) with
+  `epa_result_t` and `t55xx_setconfig_t` (not packed, they already tile and
+  their members get addressed).
+* **`PM3_CMD_DATA_SIZE_MIX` is a MIX-only constant.** Any chunked transfer that
+  moves to NG must size its chunks as
+  `PM3_CMD_DATA_SIZE - sizeof(payload_t)` instead.
+* **`reply_old` always transmits `sizeof(PacketResponseOLD)`**, 544 bytes,
+  whatever `len` says. `reply_ng` sends only what you give it.
+* **A command can answer more than once.** `CMD_HF_ISO14443A_READER` with
+  `ISO14A_CONNECT | ISO14A_RAW` replies twice, select then raw exchange; the
+  client must consume both.
+
+### Bulk downloads
+
+`CMD_DOWNLOAD_BIGBUF`, `CMD_DOWNLOAD_EML_BIGBUF`, `CMD_SPIFFS_DOWNLOAD` and
+`CMD_FLASHMEM_DOWNLOAD` use `download_req_t` / `download_chunk_t` /
+`download_done_t` (see `include/pm3_cmd.h`). The chunk header carries only the
+offset, since the frame length gives the size, and the transfer ends with a
+`download_done_t` answered on the original `CMD_DOWNLOAD_*` opcode rather than an
+anonymous ACK. `dl_it()` in `client/src/comms.c` still understands the OLD chunk
+format because `CMD_READ_MEM_DOWNLOAD` is served by the bootrom.
 
 ## Bootrom
 ^[Top](#top)
