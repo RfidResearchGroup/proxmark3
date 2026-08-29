@@ -2339,7 +2339,16 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_CHKKEYS_FAST: {
-            MifareChkKeys_fast(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            if (packet->length < sizeof(mf_chkkeys_fast_t)) {
+                reply_ng(CMD_HF_MIFARE_CHKKEYS_FAST, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            mf_chkkeys_fast_t *payload = (mf_chkkeys_fast_t *)packet->data.asBytes;
+            if ((payload->key_count * 6) > (packet->length - sizeof(mf_chkkeys_fast_t))) {
+                reply_ng(CMD_HF_MIFARE_CHKKEYS_FAST, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            MifareChkKeys_fast(payload);
             break;
         }
         case CMD_HF_MIFARE_CHKKEYS_FILE: {

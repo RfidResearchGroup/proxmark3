@@ -399,6 +399,27 @@ typedef struct {
     uint8_t key[6];
 } PACKED mf_readsector_t;
 
+// CMD_HF_MIFARE_CHKKEYS_FAST payload.
+// Replaces three bit-packed oldargs:
+//   arg0 = sectorcnt | firstchunk<<8 | lastchunk<<12 | singlesector_params<<16
+//   arg1 = strategy | use_flashmemory<<8
+//   arg2 = key count
+// The key count is carried explicitly rather than derived, so a short frame is
+// caught instead of silently checking fewer keys.
+typedef struct {
+    uint8_t sectorcnt;
+    uint8_t first_chunk;
+    uint8_t last_chunk;
+    uint8_t strategy;
+    uint8_t use_flashmemory;
+    uint8_t key_count;
+    uint16_t singlesector_params;
+    uint8_t keys[];             // key_count * MIFARE_KEY_SIZE
+} PACKED mf_chkkeys_fast_t;
+
+// most keys that fit alongside the header in one frame
+#define MFC_CHKKEYS_FAST_MAX_KEYS ((PM3_CMD_DATA_SIZE - sizeof(mf_chkkeys_fast_t)) / 6)
+
 // CMD_HF_MIFARE_VALUE payload.
 // Replaces a 34 byte blob addressed by hardcoded offsets:
 //   arg0/1/2 = blockno / keytype / transfer keytype

@@ -41,7 +41,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 int MifareAcquireStaticEncryptedNonces(uint32_t flags, const uint8_t *key, bool reply, uint8_t first_block_no, uint8_t first_key_type);
 void MifareAcquireNonces(uint32_t arg0, uint32_t flags);
 void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem);
-void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
+void MifareChkKeys_fast(const mf_chkkeys_fast_t *payload);
 void MifareChkKeys_file(uint8_t *fn);
 
 int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key);

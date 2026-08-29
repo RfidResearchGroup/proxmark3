@@ -2100,16 +2100,17 @@ static void chkKey_loopBonly(struct chk_t *c, struct sector_t *k_sector, uint8_t
 // arg1 = clear trace
 // arg2 = antal nycklar i keychunk
 // datain = keys as array
-void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
+void MifareChkKeys_fast(const mf_chkkeys_fast_t *payload) {
 
     // first call or
-    uint8_t sectorcnt = arg0 & 0xFF; // 16;
-    uint8_t firstchunk = (arg0 >> 8) & 0xF;
-    uint8_t lastchunk = (arg0 >> 12) & 0xF;
-    uint16_t singleSectorParams = (arg0 >> 16) & 0xFFFF;
-    uint8_t strategy = arg1 & 0xFF;
-    uint8_t use_flashmem = (arg1 >> 8) & 0xFF;
-    uint16_t keyCount = arg2 & 0xFF;
+    uint8_t sectorcnt = payload->sectorcnt;
+    uint8_t firstchunk = payload->first_chunk;
+    uint8_t lastchunk = payload->last_chunk;
+    uint16_t singleSectorParams = payload->singlesector_params;
+    uint8_t strategy = payload->strategy;
+    uint8_t use_flashmem = payload->use_flashmemory;
+    uint16_t keyCount = payload->key_count;
+    const uint8_t *datain = payload->keys;
     uint8_t status = 0;
     bool singleSectorMode = (singleSectorParams >> 15) & 1;
     uint8_t keytype = (singleSectorParams >> 8) & 1;
@@ -2233,11 +2234,11 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
             chk_data.key = bytes_to_num(datain + (i * MF_KEY_LENGTH), MF_KEY_LENGTH);
             if (chkKey(&chk_data) == 0) {
                 foundkeys++;
-                reply_old(CMD_ACK, 1, 0, 0, datain + (i * MF_KEY_LENGTH), MF_KEY_LENGTH);
+                reply_ng(CMD_HF_MIFARE_CHKKEYS_FAST, 1, datain + (i * MF_KEY_LENGTH), MF_KEY_LENGTH);
                 goto out;
             }
         }
-        reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
+        reply_ng(CMD_HF_MIFARE_CHKKEYS_FAST, 0, NULL, 0);
 out:
         LEDsoff();
         crypto1_deinit(pcs);
@@ -2470,7 +2471,7 @@ OUT:
         tmp[488] = bar & 0xFF;
         tmp[489] = bar >> 8 & 0xFF;
 
-        reply_old(CMD_ACK, foundkeys, 0, 0, tmp, 480 + 10);
+        reply_ng(CMD_HF_MIFARE_CHKKEYS_FAST, foundkeys, tmp, 480 + 10);
 
         set_tracing(false);
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -2503,7 +2504,7 @@ OUT:
         }
     } else {
         // partial/none keys found
-        reply_mix(CMD_ACK, foundkeys, 0, 0, 0, 0);
+        reply_ng(CMD_HF_MIFARE_CHKKEYS_FAST, foundkeys, NULL, 0);
     }
 
     g_dbglevel = oldbg;

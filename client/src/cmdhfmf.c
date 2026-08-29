@@ -3395,7 +3395,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             res = mf_check_keys_fast(sector_cnt, true, true, 1, key_cnt, keyBlock, e_sector, use_flashmemory, verbose);
         } else {
 
-            uint32_t chunksize = key_cnt > (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE) ? (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE) : key_cnt;
+            uint32_t chunksize = key_cnt > MFC_CHKKEYS_FAST_MAX_KEYS ? MFC_CHKKEYS_FAST_MAX_KEYS : key_cnt;
             bool firstChunk = true, lastChunk = false;
 
             for (uint8_t strategy = 1; strategy < 3; strategy++) {
@@ -4045,7 +4045,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    uint32_t chunksize = (keycnt > (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE)) ? (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE) : keycnt;
+    uint32_t chunksize = (keycnt > MFC_CHKKEYS_FAST_MAX_KEYS) ? MFC_CHKKEYS_FAST_MAX_KEYS : keycnt;
     bool firstChunk = true, lastChunk = false;
 
     int i = 0;
@@ -4240,7 +4240,7 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint32_t chunksize = 100 > (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE) ? (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE) : 100;
+    uint32_t chunksize = 100 > MFC_CHKKEYS_FAST_MAX_KEYS ? MFC_CHKKEYS_FAST_MAX_KEYS : 100;
     uint8_t *keyBlock = calloc(MIFARE_KEY_SIZE, chunksize);
 
     if (keyBlock == NULL)

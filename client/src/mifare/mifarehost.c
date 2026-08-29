@@ -261,19 +261,30 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
 
     uint64_t t2 = msclock();
 
+    if (size > MFC_CHKKEYS_FAST_MAX_KEYS) {
+        PrintAndLogEx(WARNING, "chunk of %u keys is too large for one frame, max %zu", size, (size_t)MFC_CHKKEYS_FAST_MAX_KEYS);
+        return PM3_EOUTOFBOUND;
+    }
+
+    uint8_t buf[PM3_CMD_DATA_SIZE] = {0};
+    mf_chkkeys_fast_t *payload = (mf_chkkeys_fast_t *)buf;
+    payload->sectorcnt = sectorsCnt;
+    payload->first_chunk = firstChunk;
+    payload->last_chunk = lastChunk;
+    payload->strategy = strategy;
+    payload->use_flashmemory = use_flashmemory;
+    payload->key_count = size;
+    payload->singlesector_params = singleSectorParams;
+    memcpy(payload->keys, keyBlock, MIFARE_KEY_SIZE * size);
+
     // send keychunk
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFARE_CHKKEYS_FAST
-                   , (sectorsCnt | (firstChunk << 8) | (lastChunk << 12) | (singleSectorParams << 16))
-                   , ((use_flashmemory << 8) | strategy)
-                   , size
-                   , keyBlock
-                   , (MIFARE_KEY_SIZE * size)
-                  );
+    SendCommandNG(CMD_HF_MIFARE_CHKKEYS_FAST, buf, sizeof(mf_chkkeys_fast_t) + (MIFARE_KEY_SIZE * size));
+
     PacketResponseNG resp;
 
     uint32_t timeout = 0;
-    while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+    while (WaitForResponseTimeout(CMD_HF_MIFARE_CHKKEYS_FAST, &resp, 2000) == false) {
 
         while (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
@@ -304,7 +315,7 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
         PrintAndLogEx(NORMAL, "");
     }
     // time to convert the returned data.
-    uint8_t curr_keys = resp.oldarg[0];
+    uint8_t curr_keys = (uint8_t)resp.status;
 
     if ((singleSectorParams >> 15) & 1) {
 
