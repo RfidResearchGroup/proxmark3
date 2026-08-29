@@ -417,6 +417,47 @@ typedef struct {
     uint32_t timings[];
 } epa_result_t;
 
+// CMD_LF_PCF7931_WRITE payload.
+// Replaces a uint32_t buf[10] that the device read as BYTES: the client wrote
+// OffsetWidth/OffsetPosition/InitDelay at byte offsets 28/32/36 while the device
+// read bytes 7/8/9, so those three were uninitialised stack on arrival.
+typedef struct {
+    uint8_t pwd[7];
+    uint8_t offset_width;       // biased by +128
+    uint8_t offset_position;    // biased by +128
+    uint16_t init_delay;
+    uint8_t address;
+    uint8_t byte;
+    uint8_t data;
+} PACKED pcf7931_write_t;
+
+// CMD_LF_HITAGS_SIMULATE / CMD_LF_HITAGU_SIMULATE payload
+typedef struct {
+    uint8_t tag_mem_supplied;
+    uint8_t rfu;
+    uint16_t threshold;
+    uint8_t data[];
+} PACKED hitag_sim_t;
+
+// CMD_HF_MFU_OTP_TEAROFF payload
+typedef struct {
+    uint8_t blockno;
+    uint8_t rfu;
+    uint16_t tearoff_time;
+    uint8_t data[];
+} PACKED mfu_otp_tearoff_t;
+
+// CMD_FLASHMEM_WIPE payload
+typedef struct {
+    uint8_t page;
+    uint8_t initialwipe;
+} PACKED flashmem_wipe_t;
+
+// CMD_LCD payload
+typedef struct {
+    uint32_t cmd;
+} PACKED lcd_cmd_t;
+
 // CMD_HF_MIFARE_READSC payload
 typedef struct {
     uint8_t sectorno;

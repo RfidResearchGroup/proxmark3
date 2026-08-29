@@ -1476,13 +1476,19 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_PCF7931_WRITE: {
+            if (packet->length != sizeof(pcf7931_write_t)) {
+                reply_ng(CMD_LF_PCF7931_WRITE, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            pcf7931_write_t *payload = (pcf7931_write_t *)packet->data.asBytes;
             WritePCF7931(
-                packet->data.asBytes[0], packet->data.asBytes[1], packet->data.asBytes[2], packet->data.asBytes[3],
-                packet->data.asBytes[4], packet->data.asBytes[5], packet->data.asBytes[6], packet->data.asBytes[9],
-                packet->data.asBytes[7] - 128, packet->data.asBytes[8] - 128,
-                packet->oldarg[0],
-                packet->oldarg[1],
-                packet->oldarg[2],
+                payload->pwd[0], payload->pwd[1], payload->pwd[2], payload->pwd[3],
+                payload->pwd[4], payload->pwd[5], payload->pwd[6],
+                payload->init_delay,
+                payload->offset_width - 128, payload->offset_position - 128,
+                payload->address,
+                payload->byte,
+                payload->data,
                 true
             );
             break;
@@ -1598,7 +1604,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_HITAGS_SIMULATE: { // Simulate Hitag s tag, args = memory content
-            hts_simulate((bool)packet->oldarg[0], packet->oldarg[1], packet->data.asBytes, true);
+            if (packet->length < sizeof(hitag_sim_t)) {
+                reply_ng(CMD_LF_HITAGS_SIMULATE, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            hitag_sim_t *payload = (hitag_sim_t *)packet->data.asBytes;
+            hts_simulate((bool)payload->tag_mem_supplied, payload->threshold, payload->data, true);
             break;
         }
         case CMD_LF_HITAGS_TEST_TRACES: { // Tests every challenge within the given file
@@ -1642,7 +1653,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_HITAGU_SIMULATE: {
-            htu_simulate((bool)packet->oldarg[0], packet->oldarg[1], packet->data.asBytes, true);
+            if (packet->length < sizeof(hitag_sim_t)) {
+                reply_ng(CMD_LF_HITAGU_SIMULATE, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            hitag_sim_t *payload = (hitag_sim_t *)packet->data.asBytes;
+            htu_simulate((bool)payload->tag_mem_supplied, payload->threshold, payload->data, true);
             break;
         }
         case CMD_LF_HITAGU_UID: {
@@ -2591,7 +2607,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MFU_OTP_TEAROFF: {
-            MifareU_Otp_Tearoff(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+            if (packet->length < sizeof(mfu_otp_tearoff_t)) {
+                reply_ng(CMD_HF_MFU_OTP_TEAROFF, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            mfu_otp_tearoff_t *payload = (mfu_otp_tearoff_t *)packet->data.asBytes;
+            MifareU_Otp_Tearoff(payload->blockno, payload->tearoff_time, payload->data);
             break;
         }
         case CMD_HF_MFU_COUNTER_TEAROFF: {
@@ -3407,8 +3428,14 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_FLASHMEM_WIPE: {
             LED_B_ON();
-            uint8_t page = packet->oldarg[0];
-            uint8_t initialwipe = packet->oldarg[1];
+            if (packet->length != sizeof(flashmem_wipe_t)) {
+                reply_ng(CMD_FLASHMEM_WIPE, PM3_EINVARG, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
+            flashmem_wipe_t *wpayload = (flashmem_wipe_t *)packet->data.asBytes;
+            uint8_t page = wpayload->page;
+            uint8_t initialwipe = wpayload->initialwipe;
 
             bool isok = false;
             if (initialwipe) {
@@ -3606,7 +3633,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LCD: {
-            LCDSend(packet->oldarg[0]);
+            if (packet->length != sizeof(lcd_cmd_t)) {
+                break;
+            }
+            LCDSend(((lcd_cmd_t *)packet->data.asBytes)->cmd);
             break;
         }
 #endif

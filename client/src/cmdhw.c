@@ -658,7 +658,8 @@ static int CmdLCD(const char *Cmd) {
 
     while (j--) {
         clearCommandBuffer();
-        SendCommandMIX(CMD_LCD, raw[0], 0, 0, NULL, 0);
+        lcd_cmd_t payload = { .cmd = raw[0] };
+        SendCommandNG(CMD_LCD, (uint8_t *)&payload, sizeof(payload));
     }
     return PM3_SUCCESS;
 }

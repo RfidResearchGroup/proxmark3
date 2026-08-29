@@ -645,7 +645,11 @@ static int CmdFlashMemWipe(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_FLASHMEM_WIPE, page, initialwipe, 0, NULL, 0);
+    flashmem_wipe_t payload = {
+        .page = page,
+        .initialwipe = initialwipe,
+    };
+    SendCommandNG(CMD_FLASHMEM_WIPE, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_FLASHMEM_WIPE, &resp, 10000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");

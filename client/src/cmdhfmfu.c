@@ -6508,7 +6508,12 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         memcpy(post, resp.data.asBytes, sizeof(post));
 
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MFU_OTP_TEAROFF, blockno, current, 0, teardata, sizeof(teardata));
+        uint8_t tbuf[sizeof(mfu_otp_tearoff_t) + sizeof(teardata)] = {0};
+        mfu_otp_tearoff_t *tpayload = (mfu_otp_tearoff_t *)tbuf;
+        tpayload->blockno = blockno;
+        tpayload->tearoff_time = current;
+        memcpy(tpayload->data, teardata, sizeof(teardata));
+        SendCommandNG(CMD_HF_MFU_OTP_TEAROFF, tbuf, sizeof(tbuf));
 
         // we be getting ACK that we are silently ignoring here..
 

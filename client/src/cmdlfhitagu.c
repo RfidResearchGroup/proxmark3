@@ -703,7 +703,11 @@ static int CmdLFHitagUSim(const char *Cmd) {
     CLIParserFree(ctx);
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_HITAGU_SIMULATE, false, threshold, 0, NULL, 0);
+    hitag_sim_t payload = {
+        .tag_mem_supplied = false,
+        .threshold = threshold,
+    };
+    SendCommandNG(CMD_LF_HITAGU_SIMULATE, (uint8_t *)&payload, sizeof(payload));
     return PM3_SUCCESS;
 }
 
