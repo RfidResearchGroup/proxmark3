@@ -4321,7 +4321,7 @@ int CmdHF14ANdefWrite(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a ndefwrite",
                   "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.\n",
-                  "hf 14a ndefwrite -d 0300FE      -> write empty record to tag\n"
+                  "hf 14a ndefwrite -d 0000        -> write empty record to tag\n"
                   "hf 14a ndefwrite -f myfilename\n"
                   "hf 14a ndefwrite -d 003fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031\n"
                  );
@@ -4396,11 +4396,11 @@ int CmdHF14ANdefWrite(const char *Cmd) {
                 }
                 uint8_t tmp_raw[256];
                 memcpy(tmp_raw, raw, sizeof(tmp_raw));
-                raw[0] = 0x00;
+                raw[0] = 0x00; // the high byte of NLEN is always zero.
                 raw[1] = bytes;
                 memcpy(raw + 2, tmp_raw, sizeof(raw) - 2);
                 bytes += 2;
-                PrintAndLogEx(SUCCESS, "Added generic message header (0x03)");
+                PrintAndLogEx(SUCCESS, "Added NDEF length prefix (NLEN)");
             }
         }
     }
