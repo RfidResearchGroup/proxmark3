@@ -53,18 +53,6 @@ static uint8_t s_card_protocols = 0;
 // sc_raw_device_cmd() runs per APDU, so report the choice once per card
 static bool s_proto_announced = false;
 
-// The module opcode matching the protocol the card is actually running, taken
-// from the active-protocol byte of a PPS response. 0 = nothing negotiated, so
-// sc_active_device_cmd() falls back to T=0.
-//
-// Only a successful PPS sets this, which is what makes it safe to hand back
-// SEND_T1 without probing the module version: I2C_DEVICE_CMD_PPS and
-// I2C_DEVICE_CMD_SEND_T1 landed in the same module firmware
-// (SIM_MODULE_VERS_T1_*), so a module that answered a PPS at all is known to
-// understand T=1 too. An older module never answers, this stays 0, and callers
-// keep the T=0 they had before.
-static uint8_t s_pps_proto_cmd = 0;
-
 // A negotiated rate lives in two places that reset independently: the module's
 // UART divisor, which any I2C_Reset_EnterMainProgram() wipes, and the card,
 // which only an RST pulse clears. Left alone the two drift apart and every
@@ -156,10 +144,12 @@ void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA) {
 // Reset the SIM_Adapter, then  enter the main program
 // Note: the SIM_Adapter will not enter the main program after power up. Please run this function before use SIM_Adapter.
 void I2C_Reset_EnterMainProgram(void) {
-    // whatever we knew about the card is no longer trustworthy
+    // Whatever we knew about the card is no longer trustworthy - except the
+    // negotiated rate and protocol in s_pps. Those live on the card, which this
+    // does not reset (only an RST pulse does), so they are restored rather than
+    // forgotten. Same reason sc_rate_restore() exists.
     s_card_protocols = 0;
     s_proto_announced = false;
-    s_pps_proto_cmd = 0;
     StartTicks();
     I2C_init(true);
     I2C_SetResetStatus(0, 0, 0);
@@ -953,6 +943,21 @@ uint8_t sc_raw_device_cmd(smartcard_command_t flags) {
 
     if ((flags & SC_RAW_T0) == SC_RAW_T0) {
 
+        // A PPS moved the card off its default, and the card only listens on
+        // what it negotiated. SC_RAW_T0 is what ExchangeAPDUSC() and friends
+        // pass unconditionally, so it is a default rather than a request -
+        // honouring it over the negotiated protocol would send T=0 frames to a
+        // card that is no longer listening for them. An explicit SC_RAW_T1
+        // still wins; it is handled above and never reaches here.
+        if ((s_pps.ta1 != 0) && (s_pps.proto == 1)) {
+
+            if ((g_dbglevel >= DBG_INFO) && (s_proto_announced == false)) {
+                s_proto_announced = true;
+                DbpString("SC: card negotiated T=1, sending as T=1");
+            }
+            return I2C_DEVICE_CMD_SEND_T1;
+        }
+
         // A T=0 request to a card offering no T=0 cannot work - it simply will
         // not hear it. Most modern EMV/JCOP cards are T=1 only and callers like
         // ExchangeAPDUSC() ask for T=0 unconditionally. Redirect only that case;
@@ -1119,28 +1124,30 @@ static bool sc_pps(uint8_t proto, uint8_t ta1) {
     if ((sc_rx_bytes(resp, &len, SIM_WAIT_DELAY) == false) || (len < 3)) {
         return false;
     }
-    // resp is [ok][active protocol][ta1 in force]
-    if ((resp[0] != 1) || (resp[2] != ta1)) {
-        return false;
-    }
-
-    // Take the protocol from the module rather than from the request: the
-    // caller asked for one, this is the one that ended up in force.
-    s_pps_proto_cmd = ((resp[1] & 0x0f) == 1) ? I2C_DEVICE_CMD_SEND_T1
-                      : I2C_DEVICE_CMD_SEND_T0;
-    return true;
+    // resp is [ok][active protocol][ta1 in force]. Anything other than the
+    // protocol AND rate that were asked for counts as a refusal: carrying on
+    // would leave the module and the card on different settings, which is the
+    // one failure that cannot be recovered without resetting the card.
+    return ((resp[0] == 1) &&
+            (resp[2] == ta1) &&
+            ((resp[1] & 0x0f) == (proto & 0x0f)));
 }
 
 // The opcode to send an APDU with, for callers that have no protocol
 // preference of their own and just want to talk to the card the way it is
 // currently configured - the SAM path, which has no CLI flags to carry one.
 //
-// sc_raw_device_cmd() is the other half of this: it starts from a caller's
-// explicit SC_RAW_T0 / SC_RAW_T1 and only overrides it when the ATR says that
-// choice cannot work. Here there is nothing to override, so follow what PPS
-// actually negotiated and default to T=0 when nothing has been.
+// A non-zero s_pps.ta1 means a PPS succeeded, so s_pps.proto is what the card
+// is running. That is also what makes SEND_T1 safe without probing the module
+// version: I2C_DEVICE_CMD_PPS and I2C_DEVICE_CMD_SEND_T1 landed in the same
+// module firmware (SIM_MODULE_VERS_T1_*), so a module that answered a PPS is
+// known to understand T=1. An older module never answers, ta1 stays 0, and
+// every caller keeps the T=0 it had before.
 uint8_t sc_active_device_cmd(void) {
-    return (s_pps_proto_cmd != 0) ? s_pps_proto_cmd : I2C_DEVICE_CMD_SEND_T0;
+    if ((s_pps.ta1 != 0) && (s_pps.proto == 1)) {
+        return I2C_DEVICE_CMD_SEND_T1;
+    }
+    return I2C_DEVICE_CMD_SEND_T0;
 }
 
 void sc_pps_remember(const uint8_t *atr, uint8_t atr_len, uint8_t proto, uint8_t ta1) {
@@ -1156,8 +1163,8 @@ void sc_pps_remember(const uint8_t *atr, uint8_t atr_len, uint8_t proto, uint8_t
 void sc_pps_forget(void) {
     s_pps.atr_len = 0;
     s_pps.ta1 = 0;
+    s_pps.proto = 0;
     s_pps.tried = false;
-    s_pps_proto_cmd = 0;
 }
 
 bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
@@ -1265,16 +1272,38 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
         if (s_pps.reapply && (s_pps.tried == false)) {
 
             uint8_t want = sc_pps_best_ta1(card_ptr->atr, card_ptr->atr_len);
+            uint8_t proto = atr_first_proto(card_ptr->atr, card_ptr->atr_len);
 
             memcpy(s_pps.atr, card_ptr->atr, card_ptr->atr_len);
             s_pps.atr_len = card_ptr->atr_len;
             s_pps.tried = true;
 
-            if (want && sc_pps(atr_first_proto(card_ptr->atr, card_ptr->atr_len), want)) {
-                s_pps.ta1 = want;
-                s_pps.proto = atr_first_proto(card_ptr->atr, card_ptr->atr_len);
-                if (g_dbglevel >= DBG_INFO) {
-                    Dbprintf("SC: negotiated TA1 %02X", want);
+            // Ask for T=1 when the ATR offers it, even though TD1 names T=0 as
+            // the default. Under T=0 a case 3 command cannot carry its answer
+            // back, so every exchange costs a second module round trip for the
+            // 61xx GET RESPONSE - visible as the "61 XX" / "00 C0 00 00 XX"
+            // pair on every SAM frame in a trace. That doubling is the dominant
+            // cost of a SAM relay, where one host request fans out into dozens
+            // of exchanges. T=1 returns the answer with the command.
+            //
+            // PPS carries protocol and rate in one exchange, so this is not a
+            // trade against the rate: a T=1 PPS proposes the same TA1. If the
+            // card refuses it, fall back to the ATR default so the worst case
+            // is exactly the behaviour before this, rate included.
+            if (want) {
+
+                bool offers_t1 = ((s_card_protocols & SC_PROTO_T1) == SC_PROTO_T1);
+
+                if (offers_t1 && (proto != 1) && sc_pps(1, want)) {
+                    s_pps.ta1 = want;
+                    s_pps.proto = 1;
+                } else if (sc_pps(proto, want)) {
+                    s_pps.ta1 = want;
+                    s_pps.proto = proto;
+                }
+
+                if ((g_dbglevel >= DBG_INFO) && s_pps.ta1) {
+                    Dbprintf("SC: negotiated TA1 %02X, T=%u", s_pps.ta1, s_pps.proto);
                 }
             }
         }
