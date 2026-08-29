@@ -147,7 +147,7 @@ static int fudan_get_type(iso14a_card_select_t *card, bool verbose) {
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card->uid, card->uidlen));
     if (verbose) {
         PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card->atqa[1], card->atqa[0]);
-        PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%u]"), card->sak, select_status);
+        PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card->sak, select_status);
 
         if (card->ats_len >= 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
             if (card->ats_len == card->ats[0] + 2)

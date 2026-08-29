@@ -717,7 +717,7 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card->uid, card->uidlen));
     PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card->atqa[1], card->atqa[0]);
-    PrintAndLogEx(SUCCESS, " SAK: %02X [%u]", card->sak, select_status);
+    PrintAndLogEx(SUCCESS, " SAK: %02X [%" PRIu64 "]", card->sak, select_status);
 
     // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
     if (card->ats_len < 3) {
@@ -2891,7 +2891,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     PrintAndLogEx(INFO, "---------- " _CYAN_("ISO14443-A Information") " ----------");
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s") " %s", sprint_hex(card.uid, card.uidlen), get_uid_type(&card));
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
-    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%u]"), card.sak, select_status);
+    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, select_status);
     if (version_hw_available) {
         PrintAndLogEx(DEBUG, "GetV: " _GREEN_("%s"), sprint_hex((uint8_t *)&version_hw, sizeof(version_hw)));
     }

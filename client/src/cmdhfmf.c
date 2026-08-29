@@ -11350,7 +11350,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "--- " _CYAN_("ISO14443-a Information") " -----------------------------");
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
-    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%u]"), card.sak, select_status);
+    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, select_status);
 
 
     uint8_t ats_hist_pos = 0;
@@ -11966,7 +11966,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     PrintAndLogEx(INFO, "--- " _CYAN_("ISO14443-a Information") " -----------------------------");
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
-    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%u]"), card.sak, select_status);
+    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, select_status);
 
 //    if (setDeviceDebugLevel(DBG_DEBUG, false) != PM3_SUCCESS) {
     if (setDeviceDebugLevel(DBG_EXTENDED, false) != PM3_SUCCESS) {

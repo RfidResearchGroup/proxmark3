@@ -141,7 +141,7 @@ static int transceive_blocking(uint8_t *txBuf, uint16_t txBufLen, uint8_t *rxBuf
         uint16_t rlen_141 = 0;
         if (WaitForIso14aReply(&resp, 2000, &rlen_141, NULL)) {
             if (rlen_141 > rxBufLen) {
-                PrintAndLogEx(WARNING, "Received %"PRIu64 " bytes, rxBuf too small (%u)", rlen_141, rxBufLen);
+                PrintAndLogEx(WARNING, "Received %u bytes, rxBuf too small (%u)", rlen_141, rxBufLen);
                 memcpy(rxBuf, resp.data.asBytes, rxBufLen);
                 *actLen = rxBufLen;
                 return PM3_ESOFT;

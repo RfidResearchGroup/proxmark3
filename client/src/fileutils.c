@@ -3784,11 +3784,6 @@ int insert_line_if_not_exists(const char *preferredName, const char *keystr) {
     return PM3_SUCCESS;
 }
 
-// A dump file that is larger than the caller's buffer used to be clamped down to
-// maxdumplen and handed over as if it had that size. That is lossy, and callers
-// which sniff the format from the length -- `hf 15 ski` picks iso15_tag_t vs a
-// raw memory image by comparing against sizeof(iso15_tag_t) -- then misparse an
-// unrelated file as the exact struct they expected. Refuse instead.
 static int load_dump_check_len(const char *fn, void **pdump, size_t *dumplen, size_t maxdumplen) {
     if (*dumplen <= maxdumplen) {
         return PM3_SUCCESS;
