@@ -1560,7 +1560,8 @@ static int CmdBWMWifi(const char *Cmd) {
                   "Bring up the BWM in STA + TCP-server mode: join a WiFi network and\n"
                   "start a TCP server so the client can connect over WiFi. PM5 only.",
                   "hw bwmwifi --ssid Home --pwd secret            --> port 7777\n"
-                  "hw bwmwifi --ssid Home --pwd secret --port 9000");
+                  "hw bwmwifi --ssid Home --pwd secret --port 9000\n"
+                  "hw bwmwifi --status                            --> show connection state + IP");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1569,6 +1570,7 @@ static int CmdBWMWifi(const char *Cmd) {
         arg_int0(NULL, "port", "<dec>",  "TCP server listen port (default 7777)"),
         arg_str0(NULL, "hostname", "<name>", "DHCP hostname (default Proxmark5)"),
         arg_lit0(NULL, "stop", "tear down WiFi and return to BLE-only"),
+        arg_lit0(NULL, "status", "show current WiFi connection state + IP"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1591,7 +1593,37 @@ static int CmdBWMWifi(const char *Cmd) {
         host_len = 9;
     }
     bool stop = arg_get_lit(ctx, 5);
+    bool status = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
+
+    if (status) {
+        uint8_t q[1] = { BWM_WIFI_ACTION_STATUS };
+        clearCommandBuffer();
+        SendCommandNG(CMD_PM5_BWM_WIFI, q, sizeof(q));
+        PacketResponseNG r;
+        if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &r, 5000) == false) {
+            PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+            return PM3_ETIMEOUT;
+        }
+        if (r.status != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "could not query BWM WiFi status (BWM present?)");
+            return r.status;
+        }
+        uint8_t connected = (r.length >= 1) ? r.data.asBytes[0] : 0;
+        uint32_t ip = 0;
+        if (r.length >= 5) {
+            ip = r.data.asBytes[1] | (r.data.asBytes[2] << 8) | (r.data.asBytes[3] << 16) | ((uint32_t)r.data.asBytes[4] << 24);
+        }
+        if (connected && ip) {
+            PrintAndLogEx(SUCCESS, "BWM WiFi connected, IP " _YELLOW_("%u.%u.%u.%u"),
+                          ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
+            PrintAndLogEx(HINT, "Connect with: " _YELLOW_("pm3 -p tcp:%u.%u.%u.%u:<port>"),
+                          ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
+        } else {
+            PrintAndLogEx(INFO, "BWM WiFi not connected (no IP). If a join is in progress, re-check in a few seconds.");
+        }
+        return PM3_SUCCESS;
+    }
 
     if (stop) {
         uint8_t off[1] = { BWM_WIFI_ACTION_STOP };
@@ -1640,13 +1672,14 @@ static int CmdBWMWifi(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_WIFI, data, n);
     PacketResponseNG resp;
-    // ARM blocks during the join (WAIT is up to ~15s), so allow a long client timeout
-    if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &resp, 40000) == false) {
+    // ARM blocks during join + DHCP wait, so allow a long client timeout
+    if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &resp, 60000) == false) {
         PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
         return PM3_ETIMEOUT;
     }
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "BWM WiFi bring-up failed (check SSID/password and signal)");
+        PrintAndLogEx(HINT, "If it may have joined after DHCP, check: " _YELLOW_("hw bwmwifi --status"));
         return resp.status;
     }
 

@@ -3862,6 +3862,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_PM5_BWM_CHARGE_EN, ok ? PM3_SUCCESS : PM3_EFAILED, NULL, 0);
             break;
         }
+
         case CMD_PM5_BWM_WIFI: {
 #if defined(WITH_BWM_FORWARD)
             uint8_t action = packet->data.asBytes[0];
@@ -3869,14 +3870,22 @@ static void PacketReceived(PacketCommandNG *packet) {
             int res;
             if (action == BWM_WIFI_ACTION_STOP) {
                 res = bwm_wifi_forward_down();
+                reply_ng(CMD_PM5_BWM_WIFI, res, (uint8_t *)&ip, sizeof(ip));
+            } else if (action == BWM_WIFI_ACTION_STATUS) {
+                uint8_t connected = 0;
+                res = bwm_wifi_forward_status(&connected, &ip);
+                uint8_t st[5] = { connected,
+                                  (uint8_t)(ip & 0xFF), (uint8_t)((ip >> 8) & 0xFF),
+                                  (uint8_t)((ip >> 16) & 0xFF), (uint8_t)((ip >> 24) & 0xFF) };
+                reply_ng(CMD_PM5_BWM_WIFI, res, st, sizeof(st));
             } else {
                 uint16_t port = packet->data.asBytes[1] | (packet->data.asBytes[2] << 8);
                 char *ssid = (char *)&packet->data.asBytes[3];
                 char *pwd  = ssid + strlen(ssid) + 1;
                 char *host = pwd + strlen(pwd) + 1;
                 res = bwm_wifi_forward_up(ssid, pwd, host, port, &ip);
+                reply_ng(CMD_PM5_BWM_WIFI, res, (uint8_t *)&ip, sizeof(ip));
             }
-            reply_ng(CMD_PM5_BWM_WIFI, res, (uint8_t *)&ip, sizeof(ip));
 #else
             reply_ng(CMD_PM5_BWM_WIFI, PM3_ENOTIMPL, NULL, 0);
 #endif

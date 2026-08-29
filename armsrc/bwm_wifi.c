@@ -225,6 +225,23 @@ int bwm_wifi_forward_up(const char *ssid, const char *password,
     return PM3_SUCCESS;
 }
 
+int bwm_wifi_forward_status(uint8_t *connected, uint32_t *ip_out) {
+    const uint32_t TO = 2000;
+    uint32_t ip = 0;
+    uint8_t ipb[12];
+    uint16_t il = sizeof(ipb);
+    int r = bwm_cmd(BWM_CMD_GET_WIFI_CFG_IP_ADDR, NULL, 0, ipb, &il, TO);
+    if (r != PM3_SUCCESS) {
+        return r;   // BWM / UART not responding
+    }
+    if (il >= 4) {
+        ip = (uint32_t)ipb[0] | ((uint32_t)ipb[1] << 8) | ((uint32_t)ipb[2] << 16) | ((uint32_t)ipb[3] << 24);
+    }
+    *ip_out = ip;
+    *connected = (ip != 0) ? 1 : 0;   // a lease == a usable connection
+    return PM3_SUCCESS;
+}
+
 int bwm_wifi_forward_down(void) {
     // Single command: the BWM deinits the TCP server + disconnects the STA and
     // returns to BLE-only. It persists the disable mode to NVS.

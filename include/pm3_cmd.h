@@ -860,6 +860,7 @@ typedef struct {
 // CMD_PM5_BWM_WIFI payload: [action:u8][port:u16 LE][ssid\0][pwd\0][hostname\0]
 #define BWM_WIFI_ACTION_START  0x00   // join AP + start TCP server
 #define BWM_WIFI_ACTION_STOP   0x01   // tear down, back to BLE-only
+#define BWM_WIFI_ACTION_STATUS 0x02   // query current connection state + IP
 // For low-frequency tags
 #define CMD_LF_TI_READ 0x0202
 #define CMD_LF_TI_WRITE 0x0203

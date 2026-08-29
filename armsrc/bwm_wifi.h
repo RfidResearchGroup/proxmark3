@@ -19,7 +19,7 @@
 // After association the STA reports "connected" before DHCP completes, so we
 // poll GET_IP until a non-zero address appears (or give up).
 #ifndef BWM_WIFI_DHCP_WAIT_MS
-#define BWM_WIFI_DHCP_WAIT_MS   10000   // total time to wait for a DHCP lease
+#define BWM_WIFI_DHCP_WAIT_MS   20000   // total time to wait for a DHCP lease
 #endif
 #ifndef BWM_WIFI_DHCP_POLL_MS
 #define BWM_WIFI_DHCP_POLL_MS   500     // gap between GET_IP polls
@@ -51,5 +51,11 @@ int bwm_wifi_forward_up(const char *ssid, const char *password,
 // Tear down WiFi forward mode (disconnect STA + stop TCP server, back to
 // BLE-only). Persisted on the BWM so it stays off across reboots.
 int bwm_wifi_forward_down(void);
+
+// Query current forward-mode connection state without reconfiguring. Writes the
+// BWM IPv4 (host order, a in low byte; 0 if none) to *ip_out and 1/0 to
+// *connected (true == has a DHCP lease). Returns PM3_EFAILED if the BWM/UART
+// does not answer.
+int bwm_wifi_forward_status(uint8_t *connected, uint32_t *ip_out);
 
 #endif
