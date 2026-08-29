@@ -3108,7 +3108,10 @@ int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool 
         str_cleanrn(line, sizeof(line));
         str_lower(line);
 
-        if (str_startswith(line, "device type: ntag")) {
+        // older Flipper files name the exact chip, the current format writes
+        // the family name instead
+        if (str_startswith(line, "device type: ntag") ||
+                str_startswith(line, "device type: mifare ultralight")) {
             *dump_type = NFC_DF_MFU;
             break;
         }
