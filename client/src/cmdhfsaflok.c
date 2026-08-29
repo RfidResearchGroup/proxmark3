@@ -1244,7 +1244,7 @@ static int saflok_read_sector(int sector, uint8_t *secdata) {
     clearCommandBuffer();
     SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    if (WaitForIso14aReply(&resp, 2500, NULL, NULL) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select failed");
         DropField();
         return PM3_ERFTRANS;

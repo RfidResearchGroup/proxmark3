@@ -20,6 +20,7 @@
 #define _MIFARE_H_
 
 #include "common.h"
+#include "pm3_cmd.h"   // PM3_CMD_DATA_SIZE
 
 // These are also used to construct AUTH commands (60+x)
 #define MF_KEY_A 0
@@ -126,6 +127,20 @@ typedef struct {
 } PACKED iso14a_raw_cmd_t;
 
 #define ISO14A_RAW_LEN(x) (sizeof(iso14a_raw_cmd_t) + (x))
+
+// Reply to CMD_HF_ISO14443A_READER.
+// Replaces the anonymous CMD_ACK this command used to answer with:
+//   arg0 = select status on a CONNECT, otherwise the response length
+//   arg1 = uidlen on a CONNECT (also in the card struct), or the APDU res byte
+typedef struct {
+    uint16_t len;   // bytes in data[]
+    uint8_t sel;    // select status on CONNECT, APDU res byte, else 0
+    uint8_t rfu;
+    uint8_t data[];
+} PACKED iso14a_raw_resp_t;
+
+#define ISO14A_RESP_LEN(x) (sizeof(iso14a_raw_resp_t) + (x))
+#define ISO14A_RESP_MAXLEN (PM3_CMD_DATA_SIZE - sizeof(iso14a_raw_resp_t))
 
 typedef struct {
     uint8_t *response;

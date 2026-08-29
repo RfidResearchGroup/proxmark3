@@ -124,18 +124,19 @@ static int lto_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint16
     SendIso14aReaderEx(flags, cmd, len, len, lenbits, 0, 0);
     PacketResponseNG resp;
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    uint16_t rlen_127 = 0;
+    if (WaitForIso14aReply(&resp, 1500, &rlen_127, NULL) == false) {
         if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
-    if (resp.oldarg[0] == *response_len) {
-        *response_len = resp.oldarg[0];
+    if (rlen_127 == *response_len) {
+        *response_len = rlen_127;
         if (*response_len > 0) {
             memcpy(response, resp.data.asBytes, *response_len);
         }
     } else {
-        if (verbose) PrintAndLogEx(WARNING, "Wrong response length (%d != %" PRIu64 ")", *response_len, resp.oldarg[0]);
+        if (verbose) PrintAndLogEx(WARNING, "Wrong response length (%d != %u)", *response_len, rlen_127);
         return PM3_ESOFT;
     }
 

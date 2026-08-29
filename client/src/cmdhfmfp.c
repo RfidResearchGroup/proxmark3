@@ -128,13 +128,14 @@ static int mfp_read_card_id(iso14a_card_select_t *card, int *nxptype) {
     clearCommandBuffer();
     SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_131 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_131) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select failed");
         DropField();
         return PM3_ERFTRANS;
     }
 
-    uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK with ATS, 2: OK no ATS, 3: proprietary
+    uint64_t select_status = sel_131; // 0: couldn't read, 1: OK with ATS, 2: OK no ATS, 3: proprietary
     if (select_status == 0) {
         PrintAndLogEx(ERR, "No card present or card not responding");
         DropField();
@@ -290,7 +291,8 @@ static int CmdHFMFPInfo(const char *Cmd) {
     // Mifare Plus info
     SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+    uint8_t sel_294 = 0;
+    if (WaitForIso14aReply(&resp, 2000, NULL, &sel_294) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         DropField();
         return false;
@@ -299,7 +301,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
-    uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
+    uint64_t select_status = sel_294; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
 
     bool Version4BUID = false;
     bool supportVersion = false;

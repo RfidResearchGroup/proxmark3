@@ -658,11 +658,12 @@ static int fm11_collect_nonces_ex(const uint8_t *key, uint32_t flags, uint8_t fi
     clearCommandBuffer();
     SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_661 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_661) == false) {
         PrintAndLogEx(WARNING, "iso14443a card select timeout");
         return PM3_ETIMEOUT;
     }
-    if (resp.oldarg[0] == 0) {
+    if (sel_661 == 0) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
         return PM3_ESOFT;
     }
@@ -2759,13 +2760,14 @@ static int fm11_select_mifare_classic(iso14a_card_select_t *card_out) {
     clearCommandBuffer();
     SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    uint8_t sel_2763 = 0;
+    if (WaitForIso14aReply(&resp, 1500, NULL, &sel_2763) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         DropField();
         return PM3_ETIMEOUT;
     }
 
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_2763;
     if (select_status == 0) {
         PrintAndLogEx(FAILED, "No tag detected or other tag communication error");
         PrintAndLogEx(HINT, "Hint: Try some distance or position of the card");
@@ -2779,14 +2781,15 @@ static int fm11_select_mifare_classic(iso14a_card_select_t *card_out) {
         uint8_t rats[] = { 0xE0, 0x80 };
         clearCommandBuffer();
         SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, rats, sizeof(rats));
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        uint16_t rlen_2784 = 0;
+        if (WaitForIso14aReply(&resp, 2500, &rlen_2784, NULL) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
             DropField();
             return PM3_ETIMEOUT;
         }
 
-        memcpy(card.ats, resp.data.asBytes, resp.oldarg[0]);
-        card.ats_len = resp.oldarg[0];
+        memcpy(card.ats, resp.data.asBytes, rlen_2784);
+        card.ats_len = rlen_2784;
         if (card.ats_len > 3) {
             select_status = 4;
         }

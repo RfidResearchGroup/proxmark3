@@ -3787,15 +3787,16 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
     return len;
 }
 
+static void reply_iso14a_raw(iso14a_raw_resp_t *response, uint8_t *respbuf, uint16_t len) {
+    response->len = len;
+    response->sel = 0;
+    reply_ng(CMD_HF_ISO14443A_READER, PM3_SUCCESS, respbuf, ISO14A_RESP_LEN(len));
+}
+
 //-----------------------------------------------------------------------------
 // Read an ISO 14443a tag. Send out commands and store answers.
 //-----------------------------------------------------------------------------
-// NG callers send one iso14a_raw_cmd_t. OLD/MIX callers still pack:
-//   arg0      iso_14a flags
-//   arg1      high ::  number of bits, if you want to send 7bits etc
-//             low  ::  len of commandbytes
-//   arg2      high ::  wait_us,  low :: timeout
-//   d.asBytes command bytes to send
+// Callers send one iso14a_raw_cmd_t and get back one iso14a_raw_resp_t.
 void ReaderIso14443a(PacketCommandNG *c) {
 
     iso14a_command_t param;
@@ -3825,18 +3826,17 @@ void ReaderIso14443a(PacketCommandNG *c) {
         cmd = payload->data;
 
     } else {
-        // OLD/MIX callers, still the majority. See doc/new_frame_format.md
-        param = c->oldarg[0];
-        len = c->oldarg[1] & 0xffff;
-        lenbits = c->oldarg[1] >> 16;
-        timeout = c->oldarg[2] & 0xffffffff;
-        wait_us = c->oldarg[2] >> 32;
-        cmd = c->data.asBytes;
+        // every caller is NG now, OLD/MIX frames are no longer accepted
+        reply_ng(CMD_HF_ISO14443A_READER, PM3_EINVARG, NULL, 0);
+        return;
     }
 
     uint32_t arg0;
 
-    uint8_t buf[PM3_CMD_DATA_SIZE_MIX] = {0x00};
+    // the reply frame is built in place: `buf` is its data[] area
+    uint8_t respbuf[PM3_CMD_DATA_SIZE] = {0x00};
+    iso14a_raw_resp_t *response = (iso14a_raw_resp_t *)respbuf;
+    uint8_t *buf = response->data;
 
     if ((param & ISO14A_CONNECT) == ISO14A_CONNECT) {
         iso14_pcb_blocknum = 0;
@@ -3878,7 +3878,9 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 crypto1_deinit(&crypto1_state);
             }
 
-            reply_mix(CMD_ACK, arg0, card->uidlen, 0, buf, sizeof(iso14a_card_select_t));
+            response->len = sizeof(iso14a_card_select_t);
+            response->sel = arg0;
+            reply_ng(CMD_HF_ISO14443A_READER, PM3_SUCCESS, respbuf, ISO14A_RESP_LEN(sizeof(iso14a_card_select_t)));
             if (arg0 == 0) {
                 goto OUT;
             }
@@ -3906,11 +3908,13 @@ void ReaderIso14443a(PacketCommandNG *c) {
                    len,
                    ((param & ISO14A_SEND_CHAINING) == ISO14A_SEND_CHAINING),
                    buf,
-                   sizeof(buf),
+                   ISO14A_RESP_MAXLEN,
                    &res
                );
 
-        reply_mix(CMD_ACK, arg0, res, 0, buf, sizeof(buf));
+        response->len = arg0;
+        response->sel = res;
+        reply_ng(CMD_HF_ISO14443A_READER, PM3_SUCCESS, respbuf, ISO14A_RESP_LEN(arg0));
     }
 
     if ((param & ISO14A_RAW) == ISO14A_RAW) {
@@ -3928,7 +3932,10 @@ void ReaderIso14443a(PacketCommandNG *c) {
                     if (g_dbglevel >= DBG_INFO)    Dbprintf("Auth succeeded");
                     res = 0x0a;
                 }
-                reply_mix(CMD_ACK, 1, 0, 0, &res, 1);
+                response->len = 1;
+                response->sel = 0;
+                response->data[0] = res;
+                reply_ng(CMD_HF_ISO14443A_READER, PM3_SUCCESS, respbuf, ISO14A_RESP_LEN(1));
                 goto CMD_DONE;
             }
         }
@@ -4023,17 +4030,17 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 // tearoff occurred
                 if (tearoff_hook() == PM3_ETEAROFF) {
                     FpgaDisableTracing();
-                    reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
+                    reply_iso14a_raw(response, respbuf, 0);
                 } else {
-                    arg0 = ReaderReceive(buf, sizeof(buf), parity_array);
+                    arg0 = ReaderReceive(buf, ISO14A_RESP_MAXLEN, parity_array);
                     FpgaDisableTracing();
-                    reply_mix(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+                    reply_iso14a_raw(response, respbuf, arg0);
                 }
 
             } else {
-                arg0 = ReaderReceive(buf, sizeof(buf), parity_array);
+                arg0 = ReaderReceive(buf, ISO14A_RESP_MAXLEN, parity_array);
                 FpgaDisableTracing();
-                reply_mix(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+                reply_iso14a_raw(response, respbuf, arg0);
             }
 
         } else {
@@ -4041,9 +4048,9 @@ void ReaderIso14443a(PacketCommandNG *c) {
             // tearoff occurred
             if (tearoff_hook() == PM3_ETEAROFF) {
                 FpgaDisableTracing();
-                reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
+                reply_iso14a_raw(response, respbuf, 0);
             } else {
-                arg0 = ReaderReceive(buf, sizeof(buf), parity_array);
+                arg0 = ReaderReceive(buf, ISO14A_RESP_MAXLEN, parity_array);
 
                 if ((param & ISO14A_CRYPTO1MODE) == ISO14A_CRYPTO1MODE) {
                     mf_crypto1_decrypt(&crypto1_state, buf, arg0);
@@ -4053,7 +4060,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
                     increase_session_counter();
                 }
                 FpgaDisableTracing();
-                reply_mix(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+                reply_iso14a_raw(response, respbuf, arg0);
             }
         }
     }

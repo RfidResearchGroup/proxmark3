@@ -44,13 +44,13 @@ static bool st25ta_select(iso14a_card_select_t *card) {
     clearCommandBuffer();
     SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    if (WaitForIso14aReply(&resp, 1500, NULL, NULL) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         DropField();
         return false;
     } else {
 
-        uint16_t len = (resp.oldarg[1] & 0xFFFF);
+        uint16_t len = ((const iso14a_card_select_t *)resp.data.asBytes)->uidlen;
         if (len == 0) {
             PrintAndLogEx(DEBUG, "iso14443a card select failed");
             DropField();

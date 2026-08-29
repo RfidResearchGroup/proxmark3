@@ -1810,7 +1810,8 @@ static int CmdHF14aDesChk(const char *Cmd) {
         // MIFARE DESFire info
         SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
         PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        uint8_t sel_1813 = 0;
+        if (WaitForIso14aReply(&resp, 2500, NULL, &sel_1813) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
@@ -1818,7 +1819,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         iso14a_card_select_t card;
         memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
-        uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
+        uint64_t select_status = sel_1813; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
 
         uint8_t data[10 + 1 + 2 + 1 + 256 + (4 * 0xE * (24 + 1))] = {0};
         uint8_t atslen = 0;

@@ -113,7 +113,8 @@ static int fudan_get_type(iso14a_card_select_t *card, bool verbose) {
     clearCommandBuffer();
     SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_116 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_116) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         return PM3_ESOFT;
     }
@@ -126,7 +127,7 @@ static int fudan_get_type(iso14a_card_select_t *card, bool verbose) {
         2: OK, no ATS
         3: proprietary Anticollision
     */
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_116;
 
     if (select_status == 0) {
         PrintAndLogEx(DEBUG, "iso14443a card select failed");
@@ -146,7 +147,7 @@ static int fudan_get_type(iso14a_card_select_t *card, bool verbose) {
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card->uid, card->uidlen));
     if (verbose) {
         PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card->atqa[1], card->atqa[0]);
-        PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card->sak, select_status);
+        PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%u]"), card->sak, select_status);
 
         if (card->ats_len >= 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
             if (card->ats_len == card->ats[0] + 2)
@@ -312,7 +313,7 @@ static int CmdHFFudanDump(const char *Cmd) {
             PacketResponseNG resp;
             SendIso14aReaderEx(flags, cmd, sizeof(cmd), sizeof(cmd), numbits, argtimeout, 0);
 
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+            if (WaitForIso14aReply(&resp, 1500, NULL, NULL)) {
                 if (resp.status == PM3_SUCCESS) {
                     uint8_t *data  = resp.data.asBytes;
                     memcpy(carddata + (b * MAX_FUDAN_BLOCK_SIZE), data, MAX_FUDAN_BLOCK_SIZE);

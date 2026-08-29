@@ -1048,7 +1048,8 @@ static int hfgal_write_classic_card(GallagherCredentials_t *creds, uint8_t cred_
     // Select card to get UID
     SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_1051 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_1051) == false) {
         PrintAndLogEx(ERR, "Card select timeout");
         return PM3_ETIMEOUT;
     }
@@ -1056,7 +1057,7 @@ static int hfgal_write_classic_card(GallagherCredentials_t *creds, uint8_t cred_
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_1051;
     if (select_status == 0) {
         PrintAndLogEx(ERR, "Card select failed");
         return PM3_EFAILED;
@@ -1177,7 +1178,8 @@ static int hfgal_read_classic_card(uint8_t *site_key, bool verbose, bool quiet) 
     // Select card
     SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_1181 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_1181) == false) {
         if (!quiet) {
             PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         }
@@ -1193,7 +1195,7 @@ static int hfgal_read_classic_card(uint8_t *site_key, bool verbose, bool quiet) 
         2: OK, no ATS
         3: proprietary Anticollision
     */
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_1181;
 
     if (select_status == 0) {
         if (!quiet) {

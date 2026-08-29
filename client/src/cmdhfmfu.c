@@ -340,14 +340,15 @@ int ul_read_uid(uint8_t *uid) {
     clearCommandBuffer();
     SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_RATS, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_343 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_343) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_343;
     // 0: couldn't read
     // 1: OK with ATS
     // 2: OK, no ATS
@@ -379,15 +380,16 @@ static int ul_send_cmd_raw(const uint8_t *cmd, uint8_t cmdlen, uint8_t *response
     }
     SendIso14aReader(param, cmd, cmdlen);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    uint16_t rlen_383 = 0;
+    if (WaitForIso14aReply(&resp, 1500, &rlen_383, NULL) == false) {
         return PM3_ETIMEOUT;
     }
 
-    if ((resp.oldarg[0] == 0) && responseLength) {
+    if ((rlen_383 == 0) && responseLength) {
         return PM3_EWRONGANSWER;
     }
 
-    uint16_t resplen = (resp.oldarg[0] < responseLength) ? resp.oldarg[0] : responseLength;
+    uint16_t resplen = (rlen_383 < responseLength) ? rlen_383 : responseLength;
     memcpy(response, resp.data.asBytes, resplen);
     return resplen;
 }
@@ -397,13 +399,13 @@ static bool ul_select(iso14a_card_select_t *card) {
     ul_switch_on_field();
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+    if (WaitForIso14aReply(&resp, 2000, NULL, NULL) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         DropField();
         return false;
     } else {
 
-        uint16_t len = (resp.oldarg[1] & 0xFFFF);
+        uint16_t len = ((const iso14a_card_select_t *)resp.data.asBytes)->uidlen;
         if (len == 0) {
             PrintAndLogEx(DEBUG, "iso14443a card select failed");
             DropField();
@@ -422,13 +424,15 @@ static bool ul_select_rats(iso14a_card_select_t *card) {
     ul_switch_on_field();
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    uint8_t select_status = 0;
+    uint16_t ats_len = 0;
+    if (WaitForIso14aReply(&resp, 1500, NULL, &select_status) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         DropField();
         return false;
     } else {
 
-        uint16_t len = (resp.oldarg[1] & 0xFFFF);
+        uint16_t len = ((const iso14a_card_select_t *)resp.data.asBytes)->uidlen;
         if (len == 0) {
             PrintAndLogEx(DEBUG, "iso14443a card select failed");
             DropField();
@@ -439,18 +443,18 @@ static bool ul_select_rats(iso14a_card_select_t *card) {
             memcpy(card, resp.data.asBytes, sizeof(iso14a_card_select_t));
         }
 
-        if (resp.oldarg[0] == 2) { // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
+        if (select_status == 2) { // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
             // get ATS
             uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
             SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, rats, sizeof(rats));
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+            if (WaitForIso14aReply(&resp, 1500, &ats_len, NULL) == false) {
                 PrintAndLogEx(WARNING, "command execution time out");
                 return false;
             }
         }
 
         if (card) {
-            card->ats_len = resp.oldarg[0];
+            card->ats_len = ats_len;
             memcpy(card->ats, resp.data.asBytes, card->ats_len);
         }
 
@@ -498,7 +502,7 @@ static int ulc_requestAuthentication(uint8_t *nonce, uint16_t nonceLength) {
 int mfuc_test_authentication_support(void) {
     SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    if (WaitForIso14aReply(&resp, 2500, NULL, NULL) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         DropField();
         return PM3_ETIMEOUT;
@@ -804,10 +808,11 @@ static long long unsigned int ul_fudan_check(void) {
     clearCommandBuffer();
     SendIso14aReader(ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, cmd, sizeof(cmd));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    uint16_t rlen_810 = 0;
+    if (WaitForIso14aReply(&resp, 1500, &rlen_810, NULL) == false) {
         return MFU_TT_UL_ERROR;
     }
-    if (resp.oldarg[0] != 1) {
+    if (rlen_810 != 1) {
         return MFU_TT_UL_ERROR;
     }
 
@@ -2010,8 +2015,9 @@ static int mfulc_fingerprint(void) {
     }
     uint8_t cmd0[] = {0xAF};
     SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmd0, sizeof(cmd0));
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
-        if ((resp.oldarg[0] == 11) && (resp.data.asBytes[0] == 0x00)) {
+    uint16_t rlen_2017 = 0;
+    if (WaitForIso14aReply(&resp, 500, &rlen_2017, NULL)) {
+        if ((rlen_2017 == 11) && (resp.data.asBytes[0] == 0x00)) {
             PrintAndLogEx(SUCCESS, _GREEN_("Lab401 Ultralight-C compatible UID modifiable"));
             DropField();
             return PM3_SUCCESS;
@@ -2027,8 +2033,9 @@ static int mfulc_fingerprint(void) {
     }
     uint8_t cmd1[] = {0x1A, 0x2F};
     SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmd1, sizeof(cmd1));
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
-        if ((resp.oldarg[0] == 11) && (resp.data.asBytes[0] == 0xAF)) {
+    uint16_t rlen_2035 = 0;
+    if (WaitForIso14aReply(&resp, 500, &rlen_2035, NULL)) {
+        if ((rlen_2035 == 11) && (resp.data.asBytes[0] == 0xAF)) {
             PrintAndLogEx(SUCCESS, _GREEN_("Feiju FJ8010"));
             DropField();
             return PM3_SUCCESS;
@@ -2044,8 +2051,9 @@ static int mfulc_fingerprint(void) {
     }
     uint8_t cmd2[] = {0x1A};
     SendIso14aReader(ISO14A_RAW | ISO14A_NO_RATS, cmd2, sizeof(cmd2));
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
-        if ((resp.oldarg[0] == 11) && (resp.data.asBytes[0] == 0xAF)) {
+    uint16_t rlen_2053 = 0;
+    if (WaitForIso14aReply(&resp, 500, &rlen_2053, NULL)) {
+        if ((rlen_2053 == 11) && (resp.data.asBytes[0] == 0xAF)) {
             uint8_t response[11] = {0};
             memcpy(response, resp.data.asBytes, 9);
             compute_crc(CRC_14443_A, response, 9, response + 9, response + 10);
@@ -2070,11 +2078,13 @@ static int mfulc_fingerprint(void) {
     // 7 bit REQA, so lenbits carries it and len stays 0
     SendIso14aReaderEx(ISO14A_RAW | ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT
                        , cmd3a, sizeof(cmd3a), 0, 7, 0, 0);
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
-        if (resp.oldarg[0] == 2) {
+    uint16_t rlen_2080 = 0;
+    if (WaitForIso14aReply(&resp, 500, &rlen_2080, NULL)) {
+        if (rlen_2080 == 2) {
             SendIso14aReader(ISO14A_RAW | ISO14A_NO_SELECT, cmd3b, sizeof(cmd3b));
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
-                if (resp.oldarg[0] == 18) {
+            uint16_t rlen_2084 = 0;
+            if (WaitForIso14aReply(&resp, 500, &rlen_2084, NULL)) {
+                if (rlen_2084 == 18) {
                     if ((resp.data.asBytes[0] == 0x04) && (resp.data.asBytes[6] == 0x15) && (resp.data.asBytes[7] == 0x89)) {
                         PrintAndLogEx(SUCCESS, _GREEN_("GT23SC4489"));
                     } else {
@@ -6121,7 +6131,8 @@ static int CmdHF14AMfUKeyGen(const char *Cmd) {
         clearCommandBuffer();
         SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_RATS, NULL, 0);
         PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        uint8_t sel_6133 = 0;
+        if (WaitForIso14aReply(&resp, 2500, NULL, &sel_6133) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
@@ -6129,7 +6140,7 @@ static int CmdHF14AMfUKeyGen(const char *Cmd) {
         iso14a_card_select_t card;
         memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
-        uint64_t select_status = resp.oldarg[0];
+        uint64_t select_status = sel_6133;
         // 0: couldn't read,
         // 1: OK, with ATS
         // 2: OK, no ATS

@@ -3315,13 +3315,14 @@ int DesfireGetCardUID(DesfireContext_t *ctx) {
 
     SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_3318 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_3318) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_3318;
 
     if (select_status == 0 || select_status == 2 || select_status == 3) {
         return PM3_ESOFT;

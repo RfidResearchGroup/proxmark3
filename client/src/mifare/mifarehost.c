@@ -1405,28 +1405,32 @@ int detect_classic_prng(void) {
 
     clearCommandBuffer();
     SendIso14aReader(flags, cmd, sizeof(cmd));
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+
+    // CONNECT + RAW, so the device answers twice: select first, then the raw exchange
+    uint8_t select_status = 0;
+    if (WaitForIso14aReply(&resp, 2000, NULL, &select_status) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
     // if select tag failed.
-    if (resp.oldarg[0] == 0) {
+    if (select_status == 0) {
         PrintAndLogEx(ERR, "error:  selecting tag failed,  can't detect prng\n");
         return PM3_ERFTRANS;
     }
-    if (WaitForResponseTimeout(CMD_ACK, &respA, 2500) == false) {
+    uint16_t rlen = 0;
+    if (WaitForIso14aReply(&respA, 2500, &rlen, NULL) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
     // check respA
-    if (respA.oldarg[0] != 4) {
-        PrintAndLogEx(ERR, "PRNG data error: Wrong length: %"PRIu64, respA.oldarg[0]);
+    if (rlen != 4) {
+        PrintAndLogEx(ERR, "PRNG data error: Wrong length: %u", rlen);
         return PM3_ESOFT;
     }
 
-    uint32_t nonce = bytes_to_num(respA.data.asBytes, respA.oldarg[0]);
+    uint32_t nonce = bytes_to_num(respA.data.asBytes, rlen);
     return validate_prng_nonce(nonce);
 }
 
@@ -1445,23 +1449,27 @@ int detect_classic_auth(uint8_t key_type) {
 
     clearCommandBuffer();
     SendIso14aReader(flags, cmd, sizeof(cmd));
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+
+    // CONNECT + RAW, so the device answers twice: select first, then the raw exchange
+    uint8_t select_status = 0;
+    if (WaitForIso14aReply(&resp, 2000, NULL, &select_status) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
     // if select tag failed.
-    if (resp.oldarg[0] == 0) {
+    if (select_status == 0) {
         PrintAndLogEx(ERR, "error:  selecting tag failed,  can't detect nonce\n");
         return PM3_ERFTRANS;
     }
-    if (WaitForResponseTimeout(CMD_ACK, &respA, 2500) == false) {
+    uint16_t rlen = 0;
+    if (WaitForIso14aReply(&respA, 2500, &rlen, NULL) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
     // check respA for a nonce
-    return respA.oldarg[0] == 4;
+    return (rlen == 4);
 }
 
 /* Detect Mifare Classic NACK bug
