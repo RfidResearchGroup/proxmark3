@@ -669,31 +669,40 @@ static int fm11_collect_nonces_ex(const uint8_t *key, uint32_t flags, uint8_t fi
     }
     memcpy(card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
+    mf_acquire_nonces_t payload = {
+        .blockno = first_block_no,
+        .keytype = first_key_type,
+        .flags = flags,
+    };
+    memcpy(payload.key, key, sizeof(payload.key));
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, flags, first_block_no, first_key_type, key, MIFARE_KEY_SIZE);
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    SendCommandNG(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, (uint8_t *)&payload, sizeof(payload));
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         return PM3_ETIMEOUT;
     }
-    if (resp.oldarg[0] != PM3_SUCCESS) {
+    if (resp.status != PM3_SUCCESS || resp.length < sizeof(mf_nonces_resp_t)) {
         return PM3_ESOFT;
     }
 
+    const uint8_t *snonces = ((const mf_nonces_resp_t *)resp.data.asBytes)->nonces;
+
     memset(nonces, 0, sizeof(*nonces));
     for (uint8_t sec = 0; sec < FM11RF08S_SECTORS; sec++) {
-        uint32_t nt = bytes_to_num(resp.data.asBytes + ((sec * 2) * 8), 2);
+        uint32_t nt = bytes_to_num(snonces + ((sec * 2) * 8), 2);
         nt = (nt << 16) | prng_successor(nt, 16);
         num_to_bytes(nt, 4, nonces->nt[sec][0]);
 
-        nt = bytes_to_num(resp.data.asBytes + (((sec * 2) + 1) * 8), 2);
+        nt = bytes_to_num(snonces + (((sec * 2) + 1) * 8), 2);
         nt = (nt << 16) | prng_successor(nt, 16);
         num_to_bytes(nt, 4, nonces->nt[sec][1]);
     }
     for (uint8_t sec = 0; sec < FM11RF08S_SECTORS; sec++) {
-        memcpy(nonces->nt_enc[sec][0], resp.data.asBytes + ((sec * 2) * 8) + 4, 4);
-        memcpy(nonces->nt_enc[sec][1], resp.data.asBytes + (((sec * 2) + 1) * 8) + 4, 4);
-        nonces->par_err[sec][0] = resp.data.asBytes[((sec * 2) * 8) + 2];
-        nonces->par_err[sec][1] = resp.data.asBytes[(((sec * 2) + 1) * 8) + 2];
+        memcpy(nonces->nt_enc[sec][0], snonces + ((sec * 2) * 8) + 4, 4);
+        memcpy(nonces->nt_enc[sec][1], snonces + (((sec * 2) + 1) * 8) + 4, 4);
+        nonces->par_err[sec][0] = snonces[((sec * 2) * 8) + 2];
+        nonces->par_err[sec][1] = snonces[(((sec * 2) + 1) * 8) + 2];
     }
 
     if ((flags & 1) == 0) {

@@ -2297,15 +2297,28 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES: {
-            MifareAcquireEncryptedNonces(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            if (packet->length != sizeof(mf_acquire_nonces_t)) {
+                reply_ng(CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            MifareAcquireEncryptedNonces((mf_acquire_nonces_t *)packet->data.asBytes);
             break;
         }
         case CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES: {
-            MifareAcquireStaticEncryptedNonces(packet->oldarg[0], packet->data.asBytes, true, packet->oldarg[1], packet->oldarg[2]);
+            if (packet->length != sizeof(mf_acquire_nonces_t)) {
+                reply_ng(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            mf_acquire_nonces_t *payload = (mf_acquire_nonces_t *)packet->data.asBytes;
+            MifareAcquireStaticEncryptedNonces(payload->flags, payload->key, true, payload->blockno, payload->keytype);
             break;
         }
         case CMD_HF_MIFARE_ACQ_NONCES: {
-            MifareAcquireNonces(packet->oldarg[0], packet->oldarg[2]);
+            if (packet->length != sizeof(mf_acquire_nonces_t)) {
+                reply_ng(CMD_HF_MIFARE_ACQ_NONCES, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            MifareAcquireNonces((mf_acquire_nonces_t *)packet->data.asBytes);
             break;
         }
         case CMD_HF_MIFARE_NESTED: {

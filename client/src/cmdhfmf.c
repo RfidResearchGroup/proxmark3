@@ -6792,15 +6792,24 @@ static int CmdHF14AMfice(const char *Cmd) {
         flags |= initialize ? 0x0001 : 0;
         flags |= slow ? 0x0002 : 0;
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFARE_ACQ_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags, NULL, 0);
+        mf_acquire_nonces_t payload = {
+            .blockno = blockNo,
+            .keytype = keyType,
+            .trg_blockno = trgBlockNo,
+            .trg_keytype = trgKeyType,
+            .flags = flags,
+        };
+        SendCommandNG(CMD_HF_MIFARE_ACQ_NONCES, (uint8_t *)&payload, sizeof(payload));
 
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 3000) == false) {
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_ACQ_NONCES, &resp, 3000) == false) {
             goto out;
         }
-        if (resp.oldarg[0])  goto out;
+        if (resp.status != PM3_SUCCESS)  goto out;
+        if (resp.length < sizeof(mf_nonces_resp_t))  goto out;
 
-        uint32_t items = resp.oldarg[2];
-        fwrite(resp.data.asBytes, 1, items * 4, fnonces);
+        const mf_nonces_resp_t *nresp = (const mf_nonces_resp_t *)resp.data.asBytes;
+        uint32_t items = nresp->num_nonces;
+        fwrite(nresp->nonces, 1, items * 4, fnonces);
         fflush(fnonces);
 
         total_num_nonces += items;
@@ -6824,7 +6833,14 @@ out:
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_ACQ_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4, NULL, 0);
+    mf_acquire_nonces_t off_payload = {
+        .blockno = blockNo,
+        .keytype = keyType,
+        .trg_blockno = trgBlockNo,
+        .trg_keytype = trgKeyType,
+        .flags = 4,
+    };
+    SendCommandNG(CMD_HF_MIFARE_ACQ_NONCES, (uint8_t *)&off_payload, sizeof(off_payload));
     return PM3_SUCCESS;
 }
 */
@@ -11879,34 +11895,42 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     if (collect_fm11rf08s) {
         uint64_t t1 = msclock();
         uint32_t flags = collect_fm11rf08s_with_data | (collect_fm11rf08s_without_backdoor << 1);
-        SendCommandMIX(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, flags, blockn, keytype, key, sizeof(key));
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-            if (resp.oldarg[0] != PM3_SUCCESS) {
+        mf_acquire_nonces_t snpayload = {
+            .blockno = blockn,
+            .keytype = keytype,
+            .flags = flags,
+        };
+        memcpy(snpayload.key, key, sizeof(snpayload.key));
+        SendCommandNG(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, (uint8_t *)&snpayload, sizeof(snpayload));
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, &resp, 2500)) {
+            if (resp.status != PM3_SUCCESS || resp.length < sizeof(mf_nonces_resp_t)) {
                 return NONCE_FAIL;
             }
         } else {
             PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
             return PM3_ETIMEOUT;
         }
+
+        const uint8_t *snonces = ((const mf_nonces_resp_t *)resp.data.asBytes)->nonces;
         uint8_t num_sectors = MIFARE_1K_MAXSECTOR + 1;
         iso14a_fm11rf08s_nonces_with_data_t nonces_dump = {0};
         for (uint8_t sec = 0; sec < num_sectors; sec++) {
             // reconstruct full nt
             uint32_t nt;
-            nt = bytes_to_num(resp.data.asBytes + ((sec * 2) * 8), 2);
+            nt = bytes_to_num(snonces + ((sec * 2) * 8), 2);
             nt = nt << 16 | prng_successor(nt, 16);
             num_to_bytes(nt, 4, nonces_dump.nt[sec][0]);
-            nt = bytes_to_num(resp.data.asBytes + (((sec * 2) + 1) * 8), 2);
+            nt = bytes_to_num(snonces + (((sec * 2) + 1) * 8), 2);
             nt = nt << 16 | prng_successor(nt, 16);
             num_to_bytes(nt, 4, nonces_dump.nt[sec][1]);
         }
         for (uint8_t sec = 0; sec < num_sectors; sec++) {
-            memcpy(nonces_dump.nt_enc[sec][0], resp.data.asBytes + ((sec * 2) * 8) + 4, 4);
-            memcpy(nonces_dump.nt_enc[sec][1], resp.data.asBytes + (((sec * 2) + 1) * 8) + 4, 4);
+            memcpy(nonces_dump.nt_enc[sec][0], snonces + ((sec * 2) * 8) + 4, 4);
+            memcpy(nonces_dump.nt_enc[sec][1], snonces + (((sec * 2) + 1) * 8) + 4, 4);
         }
         for (uint8_t sec = 0; sec < num_sectors; sec++) {
-            nonces_dump.par_err[sec][0] = resp.data.asBytes[((sec * 2) * 8) + 2];
-            nonces_dump.par_err[sec][1] = resp.data.asBytes[(((sec * 2) + 1) * 8) + 2];
+            nonces_dump.par_err[sec][0] = snonces[((sec * 2) * 8) + 2];
+            nonces_dump.par_err[sec][1] = snonces[(((sec * 2) + 1) * 8) + 2];
         }
         if (collect_fm11rf08s_with_data) {
             int bytes = MIFARE_1K_MAXBLOCK * MFBLOCK_SIZE;

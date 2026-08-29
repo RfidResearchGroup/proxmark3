@@ -399,6 +399,30 @@ typedef struct {
     uint8_t key[6];
 } PACKED mf_readsector_t;
 
+// Request for the three nonce acquisition commands:
+//   CMD_HF_MIFARE_ACQ_NONCES, ACQ_ENCRYPTED_NONCES, ACQ_STATIC_ENCRYPTED_NONCES
+// Replaces oldargs that bit-packed block/keytype pairs into 16 bit halves.
+// The static variant reads blockno/keytype as its first block/key type and
+// ignores the trg_ fields.
+typedef struct {
+    uint8_t blockno;
+    uint8_t keytype;
+    uint8_t trg_blockno;
+    uint8_t trg_keytype;
+    uint32_t flags;
+    uint8_t key[6];
+} PACKED mf_acquire_nonces_t;
+
+// Reply for the same three commands. isOK travels in the NG status field.
+typedef struct {
+    uint32_t cuid;
+    uint16_t num_nonces;
+    uint8_t nonces[];
+} PACKED mf_nonces_resp_t;
+
+// most 4 byte nonces that fit alongside the reply header in one frame
+#define MFC_MAX_NONCES ((PM3_CMD_DATA_SIZE - sizeof(mf_nonces_resp_t)) / 4)
+
 // CMD_HF_MIFARE_CHKKEYS_FAST payload.
 // Replaces three bit-packed oldargs:
 //   arg0 = sectorcnt | firstchunk<<8 | lastchunk<<12 | singlesector_params<<16

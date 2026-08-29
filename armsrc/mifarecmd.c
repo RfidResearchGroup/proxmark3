@@ -985,7 +985,8 @@ static int valid_nonce(uint32_t Nt, uint32_t NtEnc, uint32_t Ks1, const uint8_t 
            ) ? 1 : 0;
 }
 
-void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
+void MifareAcquireNonces(const mf_acquire_nonces_t *payload) {
+    uint32_t flags = payload->flags;
 
     uint8_t uid[10] = {0x00};
     uint8_t answer[MAX_MIFARE_FRAME_SIZE] = {0x00};
@@ -995,8 +996,8 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
     int16_t isOK = 0;
     uint16_t num_nonces = 0;
     uint8_t cascade_levels = 0;
-    uint8_t blockNo = arg0 & 0xff;
-    uint8_t keyType = (arg0 >> 8) & 0xff;
+    uint8_t blockNo = payload->blockno;
+    uint8_t keyType = payload->keytype;
     bool initialize = flags & 0x0001;
     bool field_off = flags & 0x0004;
     bool have_uid = false;
@@ -1014,7 +1015,7 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
 
     LED_C_ON();
 
-    while (num_nonces < PM3_CMD_DATA_SIZE / 4) {
+    while (num_nonces < MFC_MAX_NONCES) {
 
         // Test if the action was cancelled
         if (BUTTON_PRESS()) {
@@ -1071,7 +1072,13 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
 
     LED_C_OFF();
     LED_B_ON();
-    reply_old(CMD_ACK, isOK, cuid, num_nonces, buf, sizeof(buf));
+    uint8_t respbuf[PM3_CMD_DATA_SIZE] = {0x00};
+    mf_nonces_resp_t *response = (mf_nonces_resp_t *)respbuf;
+    response->cuid = cuid;
+    response->num_nonces = num_nonces;
+    uint16_t noncelen = MIN((uint16_t)(num_nonces * 4), (uint16_t)(MFC_MAX_NONCES * 4));
+    memcpy(response->nonces, buf, noncelen);
+    reply_ng(CMD_HF_MIFARE_ACQ_NONCES, isOK, respbuf, sizeof(mf_nonces_resp_t) + noncelen);
     LED_B_OFF();
 
     if (g_dbglevel >= DBG_DEBUG) DbpString("AcquireNonces finished");
@@ -1089,7 +1096,8 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
 // Mifare Classic Cards" in Proceedings of the 22nd ACM SIGSAC Conference on
 // Computer and Communications Security, 2015
 //-----------------------------------------------------------------------------
-void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain) {
+void MifareAcquireEncryptedNonces(const mf_acquire_nonces_t *payload) {
+    uint32_t flags = payload->flags;
 
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
@@ -1100,16 +1108,16 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
     uint8_t par_enc[1] = {0x00};
     uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
 
-    uint64_t ui64Key = bytes_to_num(datain, 6);
+    uint64_t ui64Key = bytes_to_num(payload->key, 6);
     uint32_t cuid = 0;
     int16_t isOK = PM3_SUCCESS;
     uint16_t num_nonces = 0;
     uint8_t nt_par_enc = 0;
     uint8_t cascade_levels = 0;
-    uint8_t blockNo = arg0 & 0xff;
-    uint8_t keyType = (arg0 >> 8) & 0xff;
-    uint8_t targetBlockNo = arg1 & 0xff;
-    uint8_t targetKeyType = (arg1 >> 8) & 0xff;
+    uint8_t blockNo = payload->blockno;
+    uint8_t keyType = payload->keytype;
+    uint8_t targetBlockNo = payload->trg_blockno;
+    uint8_t targetKeyType = payload->trg_keytype;
     bool initialize = flags & 0x0001;
     bool slow = flags & 0x0002;
     bool field_off = flags & 0x0004;
@@ -1131,7 +1139,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
     uint8_t prev_enc_nt[] = {0, 0, 0, 0};
     uint8_t prev_counter = 0;
 
-    for (uint16_t i = 0; i <= PM3_CMD_DATA_SIZE - 9;) {
+    for (uint16_t i = 0; i <= (MFC_MAX_NONCES * 4) - 9;) {
 
         // Test if the action was cancelled
         if (BUTTON_PRESS()) {
@@ -1223,7 +1231,13 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
     LED_C_OFF();
     crypto1_deinit(pcs);
     LED_B_ON();
-    reply_old(CMD_ACK, isOK, cuid, num_nonces, buf, sizeof(buf));
+    uint8_t respbuf[PM3_CMD_DATA_SIZE] = {0x00};
+    mf_nonces_resp_t *response = (mf_nonces_resp_t *)respbuf;
+    response->cuid = cuid;
+    response->num_nonces = num_nonces;
+    uint16_t noncelen = MIN((uint16_t)(num_nonces * 4), (uint16_t)(MFC_MAX_NONCES * 4));
+    memcpy(response->nonces, buf, noncelen);
+    reply_ng(CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES, isOK, respbuf, sizeof(mf_nonces_resp_t) + noncelen);
     LED_B_OFF();
 
     if (field_off) {
@@ -1508,7 +1522,12 @@ out:
     crypto1_deinit(pcs);
     LED_B_ON();
     if (reply) {
-        reply_mix(CMD_ACK, isOK, cuid, 0, BigBuf_get_EM_addr() + CARD_MEMORY_RF08S_OFFSET, MIFARE_BLOCK_SIZE * (MIFARE_1K_MAXSECTOR + 1));
+        uint8_t respbuf[sizeof(mf_nonces_resp_t) + (MIFARE_BLOCK_SIZE *(MIFARE_1K_MAXSECTOR + 1))] = {0x00};
+        mf_nonces_resp_t *response = (mf_nonces_resp_t *)respbuf;
+        response->cuid = cuid;
+        response->num_nonces = 0;
+        memcpy(response->nonces, BigBuf_get_EM_addr() + CARD_MEMORY_RF08S_OFFSET, MIFARE_BLOCK_SIZE * (MIFARE_1K_MAXSECTOR + 1));
+        reply_ng(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, isOK, respbuf, sizeof(respbuf));
     }
     LED_B_OFF();
 

@@ -37,9 +37,9 @@ void MifareU3PassChkKeys(mful_3passchk_t *packet);
 void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, bool calibrate, uint8_t *key);
 void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t *key, uint8_t forceDetectDist);
 
-void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain);
+void MifareAcquireEncryptedNonces(const mf_acquire_nonces_t *payload);
 int MifareAcquireStaticEncryptedNonces(uint32_t flags, const uint8_t *key, bool reply, uint8_t first_block_no, uint8_t first_key_type);
-void MifareAcquireNonces(uint32_t arg0, uint32_t flags);
+void MifareAcquireNonces(const mf_acquire_nonces_t *payload);
 void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem);
 void MifareChkKeys_fast(const mf_chkkeys_fast_t *payload);
 void MifareChkKeys_file(uint8_t *fn);
