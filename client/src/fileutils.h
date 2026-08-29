@@ -56,6 +56,7 @@ typedef enum {
     jsf15_v2,
     jsf15_v3,
     jsf15_v4,
+    jsf15_v5,
     jsfLegic,
     jsfLegic_v2,
     jsfT55x7,
@@ -389,6 +390,17 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
  * @return PM3_SUCCESS for ok, PM3_ESOFT for fails
 */
 int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
+
+/**
+ * @brief Convert an ISO15693 dump to the current iso15_tag_t revision.
+ * A .bin has no version field, only a length, so the length selects the layout.
+ * A dump that already is the current revision is left untouched.
+ * @param dump pointer to loaded dump, replaced on conversion
+ * @param dumplen the number of bytes loaded, updated on conversion
+ * @param verbose - extra debug output
+ * @return PM3_SUCCESS for ok, PM3_ESOFT for an unrecognised length
+*/
+int convert_15_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
 mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose);
 int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool verbose);
 
@@ -428,6 +440,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
  * @return PM3_SUCCESS if OK
  */
 int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
+int pm3_save_dump_json(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
 
 /** STUB
  * @brief Utility function to save data to three file files (BIN/JSON).
