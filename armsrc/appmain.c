@@ -2266,7 +2266,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_READSC: {
-            MifareReadSector(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+            if (packet->length != sizeof(mf_readsector_t)) {
+                reply_ng(CMD_HF_MIFARE_READSC, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            mf_readsector_t *payload = (mf_readsector_t *)packet->data.asBytes;
+            MifareReadSector(payload->sectorno, payload->keytype, payload->key);
             break;
         }
         case CMD_HF_MIFARE_WRITEBL_EX: {
@@ -2441,11 +2446,29 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         // Gen 3 magic cards
         case CMD_HF_MIFARE_GEN3UID: {
-            MifareGen3UID(packet->oldarg[0], packet->data.asBytes);
+            if (packet->length < sizeof(mf_gen3uid_t)) {
+                reply_ng(CMD_HF_MIFARE_GEN3UID, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            mf_gen3uid_t *payload = (mf_gen3uid_t *)packet->data.asBytes;
+            if (payload->uidlen > (packet->length - sizeof(mf_gen3uid_t))) {
+                reply_ng(CMD_HF_MIFARE_GEN3UID, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            MifareGen3UID(payload->uidlen, payload->uid);
             break;
         }
         case CMD_HF_MIFARE_GEN3BLK: {
-            MifareGen3Blk(packet->oldarg[0], packet->data.asBytes);
+            if (packet->length < sizeof(mf_gen3blk_t)) {
+                reply_ng(CMD_HF_MIFARE_GEN3BLK, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            mf_gen3blk_t *payload = (mf_gen3blk_t *)packet->data.asBytes;
+            if (payload->blocklen > (packet->length - sizeof(mf_gen3blk_t))) {
+                reply_ng(CMD_HF_MIFARE_GEN3BLK, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            MifareGen3Blk(payload->blocklen, payload->block);
             break;
         }
         case CMD_HF_MIFARE_GEN3FREEZ: {

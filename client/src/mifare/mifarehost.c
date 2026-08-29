@@ -979,14 +979,23 @@ out:
 // MIFARE
 int mf_read_sector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t *data) {
 
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_READSC, sectorNo, keyType, 0, (uint8_t *)key, MIFARE_KEY_SIZE);
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.oldarg[0] & 0xFF;
+    mf_readsector_t payload = {
+        .sectorno = sectorNo,
+        .keytype = keyType,
+    };
+    memcpy(payload.key, key, MIFARE_KEY_SIZE);
 
-        if (isOK) {
-            memcpy(data, resp.data.asBytes, mfNumBlocksPerSector(sectorNo) * MFBLOCK_SIZE);
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_READSC, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_READSC, &resp, 1500)) {
+
+        if (resp.status == PM3_SUCCESS) {
+            size_t need = mfNumBlocksPerSector(sectorNo) * MFBLOCK_SIZE;
+            if (resp.length < need) {
+                return PM3_EUNDEF;
+            }
+            memcpy(data, resp.data.asBytes, need);
             return PM3_SUCCESS;
         } else {
             return PM3_EUNDEF;
@@ -1309,8 +1318,13 @@ int mf_chinese_get_block(uint8_t blockNo, uint8_t *data, uint8_t params) {
 }
 
 int mf_chinese_gen_3_uid(uint8_t *uid, uint8_t uidlen, uint8_t *oldUid) {
+    uint8_t buf[PM3_CMD_DATA_SIZE] = {0};
+    mf_gen3uid_t *payload = (mf_gen3uid_t *)buf;
+    payload->uidlen = uidlen;
+    memcpy(payload->uid, uid, uidlen);
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_GEN3UID, uidlen, 0, 0, uid, uidlen);
+    SendCommandNG(CMD_HF_MIFARE_GEN3UID, buf, sizeof(mf_gen3uid_t) + uidlen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_GEN3UID, &resp, 3500)) {
         if (resp.status == PM3_SUCCESS && oldUid) {
@@ -1324,8 +1338,13 @@ int mf_chinese_gen_3_uid(uint8_t *uid, uint8_t uidlen, uint8_t *oldUid) {
 }
 
 int mf_chinese_gen_3_block(uint8_t *block, int blockLen, uint8_t *newBlock) {
+    uint8_t buf[PM3_CMD_DATA_SIZE] = {0};
+    mf_gen3blk_t *payload = (mf_gen3blk_t *)buf;
+    payload->blocklen = blockLen;
+    memcpy(payload->block, block, MFBLOCK_SIZE);
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_GEN3BLK, blockLen, 0, 0, block, MFBLOCK_SIZE);
+    SendCommandNG(CMD_HF_MIFARE_GEN3BLK, buf, sizeof(mf_gen3blk_t) + MFBLOCK_SIZE);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_GEN3BLK, &resp, 3500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");

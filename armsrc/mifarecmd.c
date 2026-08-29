@@ -254,7 +254,7 @@ void MifareReadSector(uint8_t sector_no, uint8_t key_type, uint8_t *key) {
     uint8_t outbuf[16 * 16];
     int16_t retval = mifare_cmd_readblocks(MF_WAKE_WUPA, MIFARE_AUTH_KEYA + (key_type & 0xF), key, ISO14443A_CMD_READBLOCK, block_no, num_blocks, outbuf);
 
-    reply_old(CMD_ACK, retval == PM3_SUCCESS, 0, 0, outbuf, 16 * num_blocks);
+    reply_ng(CMD_HF_MIFARE_READSC, retval, outbuf, MIFARE_BLOCK_SIZE * num_blocks);
 }
 
 static int MifareUFastRead0(void) {

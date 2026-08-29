@@ -392,6 +392,25 @@ typedef struct {
     uint8_t key[6];
 } PACKED mfc_eload_t;
 
+// CMD_HF_MIFARE_READSC payload
+typedef struct {
+    uint8_t sectorno;
+    uint8_t keytype;
+    uint8_t key[6];
+} PACKED mf_readsector_t;
+
+// CMD_HF_MIFARE_GEN3UID payload
+typedef struct {
+    uint8_t uidlen;
+    uint8_t uid[];
+} PACKED mf_gen3uid_t;
+
+// CMD_HF_MIFARE_GEN3BLK payload
+typedef struct {
+    uint8_t blocklen;
+    uint8_t block[];
+} PACKED mf_gen3blk_t;
+
 typedef struct {
     uint16_t turn_off_field : 1;
     uint16_t try_auth : 1;
