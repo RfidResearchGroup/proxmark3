@@ -6395,8 +6395,8 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         PrintAndLogEx(WARNING, "end time smaller than increase value");
         return PM3_EINVARG;
     }
-    if (end > 43000) {
-        PrintAndLogEx(WARNING, "end time - out of 1 .. 43000 range");
+    if (end > 65535) {
+        PrintAndLogEx(WARNING, "end time - out of 1 .. 65535 range");
         return PM3_EINVARG;
     }
     if (start > (end - steps)) {
@@ -6703,8 +6703,8 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
         PrintAndLogEx(WARNING, "Wrong time limit number");
         return PM3_EINVARG;
     }
-    if (time_limit > 43000) {
-        PrintAndLogEx(WARNING, "You can't set delay out of 1..43000 range!");
+    if (time_limit > 65535) {
+        PrintAndLogEx(WARNING, "You can't set delay out of 1..65535 range!");
         return PM3_EINVARG;
     }
     uint8_t cnt_no = 0;

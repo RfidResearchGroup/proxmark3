@@ -4101,8 +4101,12 @@ void MifareU_Otp_Tearoff(uint8_t blno, uint32_t tearoff_time, uint8_t *data_test
 
     if (g_dbglevel >= DBG_DEBUG) DbpString("Preparing OTP tear-off");
 
-    if (tearoff_time > 43000) {
-        tearoff_time = 43000;
+    // Was 43000: past that the PWM tick count wrapped into 16 bits and the
+    // delay silently came up short. SpinDelayUsPrecision() chunks long waits
+    // now, so the ceiling is the host side one (uint16 us) rather than a
+    // property of the timer.
+    if (tearoff_time > 65535) {
+        tearoff_time = 65535;
     }
 
     g_tearoff_delay_us = tearoff_time;
@@ -4140,8 +4144,12 @@ void MifareU_Otp_Tearoff(uint8_t blno, uint32_t tearoff_time, uint8_t *data_test
 // Tear-off attack against MFU counter
 void MifareU_Counter_Tearoff(uint8_t counter, uint32_t tearoff_time, uint8_t *datain) {
 
-    if (tearoff_time > 43000) {
-        tearoff_time = 43000;
+    // Was 43000: past that the PWM tick count wrapped into 16 bits and the
+    // delay silently came up short. SpinDelayUsPrecision() chunks long waits
+    // now, so the ceiling is the host side one (uint16 us) rather than a
+    // property of the timer.
+    if (tearoff_time > 65535) {
+        tearoff_time = 65535;
     }
 
     LEDsoff();

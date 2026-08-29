@@ -1421,7 +1421,7 @@ static int CmdTearoff(const char *Cmd) {
     CLIParserInit(&ctx, "hw tearoff",
                   "Configure a tear-off hook for the next write command supporting tear-off\n"
                   "After having been triggered by a write command, the tear-off hook is deactivated\n"
-                  "Delay (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us.",
+                  "Delay (in us) must be between 1 and 65535 (65ms). Precision is about 1/3us.",
                   "hw tearoff --delay 1200 --> define delay of 1200us\n"
                   "hw tearoff --on --> (re)activate a previously defined delay\n"
                   "hw tearoff --off --> deactivate a previously activated but not yet triggered hook\n"
@@ -1429,7 +1429,7 @@ static int CmdTearoff(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0(NULL, "delay", "<dec>", "Delay in us before triggering tear-off, must be between 1 and 43000"),
+        arg_int0(NULL, "delay", "<dec>", "Delay in us before triggering tear-off, must be between 1 and 65535"),
         arg_lit0(NULL, "on", "Activate tear-off hook"),
         arg_lit0(NULL, "off", "Deactivate tear-off hook"),
         arg_int0(NULL, "skip", "<dec>", "Skip N triggers before activating the hook"),
@@ -1476,8 +1476,11 @@ static int CmdTearoff(const char *Cmd) {
     }
 
     if (delay != -1) {
-        if ((delay < 1) || (delay > 43000)) {
-            PrintAndLogEx(WARNING, "You can't set delay out of 1..43000 range!");
+        // 65535 is where tearoff_params_t.delay_us runs out, not where the
+        // timer does. The old 43000 was the point past which the PWM tick
+        // count wrapped into 16 bits and the delay silently came up short.
+        if ((delay < 1) || (delay > 65535)) {
+            PrintAndLogEx(WARNING, "You can't set delay out of 1..65535 range!");
             return PM3_EINVARG;
         }
     } else {
