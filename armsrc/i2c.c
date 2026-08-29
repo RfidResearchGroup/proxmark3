@@ -1420,22 +1420,6 @@ void SmartCardUpgrade(uint64_t arg0) {
     BigBuf_free();
 }
 
-// Send a single byte to the SIM module's CMD_SETBAUD opcode (0x04).
-// The 8051 firmware uses this to reload Timer1 (UART0 baud generator).
-// Until 2026 the implementation was an empty stub; the SIM module silently
-// ignored any host-driven baud renegotiation. Some smart cards (notably the
-// HID Artemis SLE88 SAM family) advertise non-default Fi/Di in TA1 and need
-// PPS to switch the bridge baud post-ATR.
-void SmartCardSetBaud(uint64_t arg0) {
-    LED_D_ON();
-    I2C_Reset_EnterMainProgram();
-    bool ok = I2C_WriteByte((uint8_t)(arg0 & 0xFF),
-                            I2C_DEVICE_CMD_SETBAUD,
-                            I2C_DEVICE_ADDRESS_MAIN);
-    reply_ng(CMD_SMART_SETBAUD, ok ? PM3_SUCCESS : PM3_ESOFT, NULL, 0);
-    LEDsoff();
-}
-
 /*
  * ISO/IEC 7816-3 clause 9 protocol and parameter selection.
  *

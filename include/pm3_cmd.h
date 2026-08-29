@@ -828,7 +828,8 @@ typedef struct {
 #define CMD_SMART_UPGRADE 0x0141
 #define CMD_SMART_UPLOAD 0x0142
 #define CMD_SMART_ATR 0x0143
-#define CMD_SMART_SETBAUD 0x0144
+// 0x0144 was CMD_SMART_SETBAUD, removed - never had a client caller; the SIM
+// module rate is driven by SmartCardPPS() and sc_rate_restore() instead
 #define CMD_SMART_SETCLOCK 0x0145
 #define CMD_SMART_PPS 0x0146
 

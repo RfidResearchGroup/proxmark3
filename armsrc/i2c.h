@@ -126,7 +126,6 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose);
 void SmartCardAtr(void);
 void SmartCardRaw(const smart_card_raw_t *p);
 void SmartCardUpgrade(uint64_t arg0);
-void SmartCardSetBaud(uint64_t arg0);
 void SmartCardSetClock(uint64_t arg0);
 void SmartCardPPS(const smart_card_pps_t *p);
 void I2C_print_status(void);
