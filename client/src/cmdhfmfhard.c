@@ -1821,12 +1821,12 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
             }
 
             // error during nested_hard
-            if (resp.oldarg[0]) {
+            if (resp.status != PM3_SUCCESS) {
                 if (nonce_file_write) {
                     fclose(fnonces);
                 }
                 DropField();
-                return resp.oldarg[0];
+                return resp.status;
             }
         }
 

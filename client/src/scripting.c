@@ -331,15 +331,6 @@ static int l_WaitForResponseTimeout(lua_State *L) {
     memcpy(foo + n, &resp.crc, sizeof(resp.crc));
     n += sizeof(resp.crc);
 
-    memcpy(foo + n, &resp.oldarg[0], sizeof(resp.oldarg[0]));
-    n += sizeof(resp.oldarg[0]);
-
-    memcpy(foo + n, &resp.oldarg[1], sizeof(resp.oldarg[1]));
-    n += sizeof(resp.oldarg[1]);
-
-    memcpy(foo + n, &resp.oldarg[2], sizeof(resp.oldarg[2]));
-    n += sizeof(resp.oldarg[2]);
-
     memcpy(foo + n, resp.data.asBytes, sizeof(resp.data));
     n += sizeof(resp.data);
 

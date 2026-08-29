@@ -483,6 +483,7 @@ static int get_proxmark_state(uint32_t *state) {
             break;
         }
         case CMD_DEVICE_INFO: {
+            // bootloader replies are OLD frames by design, see doc/new_frame_format.md
             *state = resp.oldarg[0];
             break;
         }

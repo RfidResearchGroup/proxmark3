@@ -937,6 +937,7 @@ static int dumpmem_pm3(char *serial_port_name, const char *filename, uint32_t ad
         PrintAndLogEx(ERR, "Could not get device info.");
         goto finish2;
     }
+    // bootrom path: CMD_DEVICE_INFO is served by bootrom.c, which only speaks OLD frames
     uint32_t dev_info = resp.oldarg[0];
     in_bootloader = (dev_info & DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM) != 0;
     if (in_bootloader) {
