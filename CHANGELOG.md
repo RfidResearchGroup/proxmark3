@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added a new ISo15693 v5 dump file format to handle 0x100 number of pages and 8 byte pages better (@iceman1001)
+- Fixed ISO15693 v4 file handling and converting to v5 (@iceman1001)
 - Fixed clock  `SpinDelayUsPrecision` to not wrap. Now more 43ms issues (@iceman1001)
 - Changed `hf felica raw` -  now can stream per-window envelope for better measurments (@iceman1001)
 - Updated `fpga_pm3_felica.bit` - FeliCa signal handling got refactored. (@iceman1001)
