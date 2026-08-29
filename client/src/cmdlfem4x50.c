@@ -165,51 +165,35 @@ static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len
 
 static int em4x50_seteml(const uint8_t *src, uint32_t offset, uint32_t numofbytes) {
 
-    const size_t max_chunk = PM3_CMD_DATA_SIZE - sizeof(em4x50_eset_t);
+    // an EM4x50 is 136 bytes, so the whole tag always fits in a single frame
+    if ((offset + numofbytes) > (PM3_CMD_DATA_SIZE - sizeof(em4x50_eset_t))) {
+        PrintAndLogEx(FAILED, "%u bytes at offset %u doesn't fit in one frame", numofbytes, offset);
+        return PM3_EOUTOFBOUND;
+    }
+
+    PrintAndLogEx(INFO, "uploading to emulator memory");
 
     uint8_t buf[PM3_CMD_DATA_SIZE] = {0};
     em4x50_eset_t *payload = (em4x50_eset_t *)buf;
+    payload->offset = offset;
+    payload->len = numofbytes;
+    memcpy(payload->data, src + offset, numofbytes);
 
-    PrintAndLogEx(INFO, "uploading to emulator memory");
-    PrintAndLogEx(INFO, "." NOLF);
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X50_ESET, buf, sizeof(em4x50_eset_t) + numofbytes);
 
-    // fast push mode
-    g_conn.block_after_ACK = true;
-    for (size_t i = offset; i < numofbytes; i += max_chunk) {
-
-        size_t len = MIN((numofbytes - i), max_chunk);
-        if (len == numofbytes - i) {
-            // Disable fast mode on last packet
-            g_conn.block_after_ACK = false;
-        }
-
-        payload->offset = i;
-        payload->len = len;
-        memcpy(payload->data, src + i, len);
-
-        clearCommandBuffer();
-        SendCommandNG(CMD_LF_EM4X50_ESET, buf, sizeof(em4x50_eset_t) + len);
-
-        PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_LF_EM4X50_ESET, &resp, 2000) == false) {
-            g_conn.block_after_ACK = false;
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(WARNING, "timeout while waiting for reply");
-            return PM3_ETIMEOUT;
-        }
-
-        if (resp.status != PM3_SUCCESS) {
-            g_conn.block_after_ACK = false;
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(FAILED, "uploading to emulator memory ( " _RED_("fail") " )");
-            return resp.status;
-        }
-
-        PrintAndLogEx(NORMAL, "." NOLF);
-        fflush(stdout);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_LF_EM4X50_ESET, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
     }
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", numofbytes);
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "uploading to emulator memory ( " _RED_("fail") " )");
+        return resp.status;
+    }
+
+    PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%u") " bytes to emulator memory", numofbytes);
     return PM3_SUCCESS;
 }
 
