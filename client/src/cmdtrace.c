@@ -1156,7 +1156,14 @@ static int download_trace(void) {
         return PM3_ETIMEOUT;
     }
 
-    gs_traceLen = resp.oldarg[2];
+    // the download terminator carries the trace length in download_done_t.extra
+    if (resp.length < sizeof(download_done_t)) {
+        PrintAndLogEx(WARNING, "short download reply from device");
+        free(gs_trace);
+        gs_trace = NULL;
+        return PM3_ESOFT;
+    }
+    gs_traceLen = ((const download_done_t *)resp.data.asBytes)->extra;
 
     // if tracelog buffer was larger and we need to download more.
     if (gs_traceLen > PM3_CMD_DATA_SIZE) {
