@@ -456,8 +456,11 @@ void bwm_lowbatt_check(void) {
     // Critical: voltage-primary, SoC secondary. Require BWM_SHUTDOWN_CONFIRMATIONS
     // consecutive sub-floor polls, then latch power off (same release as the
     // long-press shutdown; a button press powers back on, in hardware).
-    if ((mv <= BWM_SHUTDOWN_MV) || (soc <= BWM_SHUTDOWN_SOC_PCT)) {
-        if (++crit >= BWM_SHUTDOWN_CONFIRMATIONS) {
+    // voltage-primary; SoC can only *corroborate* (it over-reads on an
+    // uncalibrated gauge - e.g. <3% reported at 3.6 V). Never let SoC alone
+    // trigger power-off: require the pack to also be in the low-batt zone.
+    if ((mv <= BWM_SHUTDOWN_MV) ||
+            ((soc <= BWM_SHUTDOWN_SOC_PCT) && (mv <= BWM_LOWBATT_MV))) {        if (++crit >= BWM_SHUTDOWN_CONFIRMATIONS) {
             bwm_beep_low_batt();   // final audible warning before cut-off
             LEDsoff();
             Gpio_ARM_Power_ON_Low();
