@@ -169,9 +169,9 @@ void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, c
 //__atomic_test_and_set(&txcmd_pending, __ATOMIC_SEQ_CST);
 }
 
-static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool ng) {
+void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
 #ifdef COMMS_DEBUG
-    PrintAndLogEx(INFO, "Sending %s", ng ? "NG" : "MIX");
+    PrintAndLogEx(INFO, "Sending NG");
 #endif
 
     if (!g_session.pm3_present) {
@@ -196,7 +196,7 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
     }
 
     txBufferNG.pre.magic = COMMANDNG_PREAMBLE_MAGIC;
-    txBufferNG.pre.ng = ng;
+    txBufferNG.pre.ng = true;
     txBufferNG.pre.length = len;
     txBufferNG.pre.cmd = cmd;
     if (len > 0 && data) {
@@ -215,12 +215,7 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
 
 #ifdef COMMS_DEBUG_RAW
     print_hex_break((uint8_t *)&txBufferNG.pre, sizeof(PacketCommandNGPreamble), 32);
-    if (ng) {
-        print_hex_break((uint8_t *)&txBufferNG.data, len, 32);
-    } else {
-        print_hex_break((uint8_t *)&txBufferNG.data, 3 * sizeof(uint64_t), 32);
-        print_hex_break((uint8_t *)&txBufferNG.data + 3 * sizeof(uint64_t), len - 3 * sizeof(uint64_t), 32);
-    }
+    print_hex_break((uint8_t *)&txBufferNG.data, len, 32);
     print_hex_break((uint8_t *)tx_post, sizeof(PacketCommandNGPostamble), 32);
 #endif
     txBuffer_pending = true;
@@ -235,23 +230,6 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
     uart_wakeup();
 
 //__atomic_test_and_set(&txcmd_pending, __ATOMIC_SEQ_CST);
-}
-
-void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
-    SendCommandNG_internal(cmd, data, len, true);
-}
-
-void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len) {
-    uint64_t arg[3] = {arg0, arg1, arg2};
-    if (len > PM3_CMD_DATA_SIZE_MIX) {
-        PrintAndLogEx(WARNING, "Sending " _RED_("%zu") " bytes of payload is too much for MIX frames, abort", len);
-        return;
-    }
-    uint8_t cmddata[PM3_CMD_DATA_SIZE];
-    memcpy(cmddata, arg, sizeof(arg));
-    if (len && data)
-        memcpy(cmddata + sizeof(arg), data, len);
-    SendCommandNG_internal(cmd, cmddata, len + sizeof(arg), false);
 }
 
 
@@ -1248,7 +1226,7 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
             return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_FLASHMEM_DOWNLOADED, CMD_FLASHMEM_DOWNLOAD);
         }
         case SIM_MEM: {
-            //SendCommandMIX(CMD_DOWNLOAD_SIM_MEM, start_index, bytes, 0, NULL, 0);
+            //SendCommandNG(CMD_DOWNLOAD_SIM_MEM, (uint8_t *)&req, sizeof(req));
             //return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_DOWNLOADED_SIMMEM);
             return false;
         }

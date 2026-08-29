@@ -112,7 +112,7 @@ void MifareSendCommand(uint8_t *datain) {
     if (payload->flags & DISCONNECT)
         OnSuccess();
 
-    //reply_mix(CMD_ACK, 1, len, 0, resp, len);
+    //reply_ng(CMD_HF_DESFIRE_COMMAND, PM3_SUCCESS, resp, len);
     LED_B_ON();
 
 

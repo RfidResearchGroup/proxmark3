@@ -157,21 +157,6 @@ int reply_ng(uint16_t cmd, int8_t status, const uint8_t *data, size_t len) {
     return reply_ng_internal(cmd, status, PM3_REASON_UNKNOWN, data, len, true);
 }
 
-int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len) {
-    int8_t status = PM3_SUCCESS;
-    uint64_t arg[3] = {arg0, arg1, arg2};
-    if (len > PM3_CMD_DATA_SIZE - sizeof(arg)) {
-        len = PM3_CMD_DATA_SIZE - sizeof(arg);
-        status = PM3_EOVFLOW;
-    }
-    uint8_t cmddata[PM3_CMD_DATA_SIZE];
-    memcpy(cmddata, arg, sizeof(arg));
-    if (len && data) {
-        memcpy(cmddata + sizeof(arg), data, (int)len);
-    }
-
-    return reply_ng_internal((cmd & 0xFFFF), status, PM3_REASON_UNKNOWN, cmddata, len + sizeof(arg), false);
-}
 
 int reply_reason(uint16_t cmd, int8_t status, int8_t reason, const uint8_t *data, size_t len) {
     return reply_ng_internal(cmd, status, reason, data, len, true);
