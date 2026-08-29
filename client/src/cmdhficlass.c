@@ -1639,7 +1639,7 @@ static int CmdHFiClassTagSim(const char *Cmd) {
 
     PacketResponseNG resp;
     bool running = true;
-    bool arm_ended = false;  // true when ARM sent its own CMD_ACK (e.g. button press)
+    bool arm_ended = false;  // true when ARM sent its own reply (e.g. button press)
 
     // --- live FC/CN navigation (wiegand mode only; binary mode has no FC/CN to adjust)
     if (bin_len == 0) {
@@ -1649,7 +1649,7 @@ static int CmdHFiClassTagSim(const char *Cmd) {
 
         while (running) {
             // A non-zero-timeout poll lets us detect when the ARM ends the sim
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 100)) {
+            if (WaitForResponseTimeout(CMD_HF_ICLASS_SIMULATE, &resp, 100)) {
                 arm_ended = true;
                 running = false;
                 break;
@@ -1760,7 +1760,7 @@ static int CmdHFiClassTagSim(const char *Cmd) {
         tagsim_rawmode_enter();
 
         while (running) {
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 100)) {
+            if (WaitForResponseTimeout(CMD_HF_ICLASS_SIMULATE, &resp, 100)) {
                 arm_ended = true;
                 running = false;
                 break;
@@ -1776,10 +1776,10 @@ static int CmdHFiClassTagSim(const char *Cmd) {
 
     if (!arm_ended) {
         // Client exited the loop (Enter/Esc) but the ARM is still simulating.
-        // Tell it to stop and consume the resulting CMD_ACK so the ARM is
+        // Tell it to stop and consume the resulting reply so the ARM is
         // cleanly back in the main loop before we return.
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-        WaitForResponseTimeout(CMD_ACK, &resp, 2000);
+        WaitForResponseTimeout(CMD_HF_ICLASS_SIMULATE, &resp, 2000);
     }
 
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass esave -h") "` to save the emulator memory to file");

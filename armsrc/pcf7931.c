@@ -427,7 +427,7 @@ end:
         }
     */
 
-    reply_ng(CMD_LF_PCF7931_WRITE, PM3_SUCCESS, NULL, 0);
+    reply_ng(CMD_LF_PCF7931_READ, PM3_SUCCESS, NULL, 0);
 }
 
 static void RealWritePCF7931(

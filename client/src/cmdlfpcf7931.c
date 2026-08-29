@@ -80,7 +80,7 @@ static int CmdLFPCF7931Reader(const char *Cmd) {
         PacketResponseNG resp;
         clearCommandBuffer();
         SendCommandNG(CMD_LF_PCF7931_READ, NULL, 0);
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        if (WaitForResponseTimeout(CMD_LF_PCF7931_READ, &resp, 2500) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
         }
