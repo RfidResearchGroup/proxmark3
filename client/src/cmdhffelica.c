@@ -8873,7 +8873,8 @@ static int felica_external_authentication(
     const felica_auth_context_t *auth_ctx,
     bool keep) {
 
-    uint8_t data[PM3_CMD_DATA_SIZE_MIX];
+    // staging buffer for one CMD_HF_FELICA_COMMAND payload
+    uint8_t data[PM3_CMD_DATA_SIZE - sizeof(felica_raw_cmd_t)];
     memset(data, 0, sizeof(data));
 
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW | FELICA_NO_DISCONNECT);
