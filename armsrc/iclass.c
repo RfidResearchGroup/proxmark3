@@ -138,8 +138,15 @@ static void CodeIClassTagSOF(void) {
  * @param datain
  */
 // turn off afterwards
-void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
-    iclass_simulate(arg0, arg1, arg2, true, datain, NULL, NULL);
+
+static void reply_iclass_sim(uint16_t num_mac, const uint8_t *macs, uint16_t maclen) {
+    uint8_t respbuf[sizeof(iclass_sim_resp_t) + PM3_CMD_DATA_SIZE] = {0};
+    iclass_sim_resp_t *response = (iclass_sim_resp_t *)respbuf;
+    response->num_mac = num_mac;
+    if (maclen && macs) {
+        memcpy(response->mac, macs, maclen);
+    }
+    reply_ng(CMD_HF_ICLASS_SIMULATE, PM3_SUCCESS, respbuf, sizeof(iclass_sim_resp_t) + maclen);
 }
 
 void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool trace, uint8_t *datain, uint8_t *dataout, uint16_t *dataoutlen) {
@@ -187,7 +194,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool t
 
                 // Button pressed
                 if (send_reply)
-                    reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
+                    reply_iclass_sim(i, mac_responses, i * EPURSE_MAC_SIZE);
                 goto out;
             }
         }
@@ -195,7 +202,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool t
             *dataoutlen = i * EPURSE_MAC_SIZE;
 
         if (send_reply)
-            reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
+            reply_iclass_sim(i, mac_responses, i * EPURSE_MAC_SIZE);
 
     } else if (sim_type == ICLASS_SIM_MODE_FULL || sim_type == ICLASS_SIM_MODE_FULL_GLITCH || sim_type == ICLASS_SIM_MODE_FULL_GLITCH_KEY || sim_type == ICLASS_SIM_MODE_FULL_LIVE) {
 
@@ -210,7 +217,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool t
         }
 
         if (send_reply) {
-            reply_mix(CMD_ACK, CMD_HF_ICLASS_SIMULATE, 0, 0, NULL, 0);
+            reply_iclass_sim(0, NULL, 0);
         }
 
     } else if (sim_type == ICLASS_SIM_MODE_READER_ATTACK_KEYROLL) {
@@ -239,7 +246,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool t
                     *dataoutlen = i * EPURSE_MAC_SIZE * 2;
 
                 if (send_reply)
-                    reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
+                    reply_iclass_sim(i * 2, mac_responses, i * EPURSE_MAC_SIZE * 2);
 
                 // Button pressed
                 goto out;
@@ -252,7 +259,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool t
                     *dataoutlen = i * EPURSE_MAC_SIZE * 2;
 
                 if (send_reply)
-                    reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
+                    reply_iclass_sim(i * 2, mac_responses, i * EPURSE_MAC_SIZE * 2);
 
                 // Button pressed
                 goto out;
@@ -264,7 +271,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool t
 
         // double the amount of collected data.
         if (send_reply)
-            reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
+            reply_iclass_sim(i * 2, mac_responses, i * EPURSE_MAC_SIZE * 2);
 
     } else {
         // We may want a mode here where we hardcode the csns to use (from proxclone).

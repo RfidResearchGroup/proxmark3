@@ -2663,7 +2663,12 @@ static void PacketReceived(PacketCommandNG *packet) {
                         struct p *payload = (struct p *) packet->data.asBytes;
             */
 
-            SimulateIClass(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            if (packet->length < sizeof(iclass_sim_t)) {
+                reply_ng(CMD_HF_ICLASS_SIMULATE, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            iclass_sim_t *payload = (iclass_sim_t *)packet->data.asBytes;
+            iclass_simulate(payload->sim_type, payload->num_csns, payload->send_reply, true, payload->csns, NULL, NULL);
             break;
         }
         case CMD_HF_ICLASS_READER: {

@@ -1140,9 +1140,15 @@ static int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort");
             PacketResponseNG resp;
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, NUM_CSNS, 1, csns, NUM_CSNS * PICOPASS_BLOCK_SIZE);
+            uint8_t sbuf[sizeof(iclass_sim_t) + (NUM_CSNS * PICOPASS_BLOCK_SIZE)] = {0};
+            iclass_sim_t *spayload = (iclass_sim_t *)sbuf;
+            spayload->sim_type = sim_type;
+            spayload->num_csns = NUM_CSNS;
+            spayload->send_reply = 1;
+            memcpy(spayload->csns, csns, NUM_CSNS * PICOPASS_BLOCK_SIZE);
+            SendCommandNG(CMD_HF_ICLASS_SIMULATE, sbuf, sizeof(sbuf));
 
-            while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+            while (WaitForResponseTimeout(CMD_HF_ICLASS_SIMULATE, &resp, 2000) == false) {
                 tries++;
                 if (kbd_enter_pressed()) {
                     PrintAndLogEx(WARNING, "\naborted via keyboard.");
@@ -1153,7 +1159,8 @@ static int CmdHFiClassSim(const char *Cmd) {
                     return PM3_ETIMEOUT;
                 }
             }
-            uint8_t num_mac  = resp.oldarg[1];
+            const iclass_sim_resp_t *sresp = (const iclass_sim_resp_t *)resp.data.asBytes;
+            uint8_t num_mac = (resp.length >= sizeof(iclass_sim_resp_t)) ? sresp->num_mac : 0;
             bool success = (NUM_CSNS == num_mac);
             PrintAndLogEx((success) ? SUCCESS : WARNING, "[%c] %d out of %d MAC obtained [%s]", (success) ? '+' : '!', num_mac, NUM_CSNS, (success) ? "OK" : "FAIL");
 
@@ -1174,9 +1181,9 @@ static int CmdHFiClassSim(const char *Cmd) {
                 //copy CSN
                 memcpy(dump + (i * MAC_ITEM_SIZE), csns + i * 8, 8);
                 //copy epurse
-                memcpy(dump + (i * MAC_ITEM_SIZE) + 8, resp.data.asBytes + i * 16, 8);
+                memcpy(dump + (i * MAC_ITEM_SIZE) + 8, sresp->mac + i * 16, 8);
                 // NR_MAC (eight bytes from the response)  ( 8b csn + 8b epurse == 16)
-                memcpy(dump + (i * MAC_ITEM_SIZE) + 16, resp.data.asBytes + i * 16 + 8, 8);
+                memcpy(dump + (i * MAC_ITEM_SIZE) + 16, sresp->mac + i * 16 + 8, 8);
             }
             /** Now, save to dumpfile **/
             saveFile("iclass_mac_attack", ".bin", dump, datalen);
@@ -1191,9 +1198,15 @@ static int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort");
             PacketResponseNG resp;
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, NUM_CSNS, 1, csns, NUM_CSNS * PICOPASS_BLOCK_SIZE);
+            uint8_t sbuf[sizeof(iclass_sim_t) + (NUM_CSNS * PICOPASS_BLOCK_SIZE)] = {0};
+            iclass_sim_t *spayload = (iclass_sim_t *)sbuf;
+            spayload->sim_type = sim_type;
+            spayload->num_csns = NUM_CSNS;
+            spayload->send_reply = 1;
+            memcpy(spayload->csns, csns, NUM_CSNS * PICOPASS_BLOCK_SIZE);
+            SendCommandNG(CMD_HF_ICLASS_SIMULATE, sbuf, sizeof(sbuf));
 
-            while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+            while (WaitForResponseTimeout(CMD_HF_ICLASS_SIMULATE, &resp, 2000) == false) {
                 tries++;
                 if (kbd_enter_pressed()) {
                     PrintAndLogEx(WARNING, "\naborted via keyboard.");
@@ -1204,7 +1217,8 @@ static int CmdHFiClassSim(const char *Cmd) {
                     return PM3_ETIMEOUT;
                 }
             }
-            uint8_t num_mac = resp.oldarg[1];
+            const iclass_sim_resp_t *sresp = (const iclass_sim_resp_t *)resp.data.asBytes;
+            uint8_t num_mac = (resp.length >= sizeof(iclass_sim_resp_t)) ? sresp->num_mac : 0;
             bool success = ((NUM_CSNS * 2) == num_mac);
             PrintAndLogEx((success) ? SUCCESS : WARNING, "[%c] %d out of %d MAC obtained [%s]", (success) ? '+' : '!', num_mac, NUM_CSNS * 2, (success) ? "OK" : "FAIL");
 
@@ -1225,9 +1239,9 @@ static int CmdHFiClassSim(const char *Cmd) {
                 // copy CSN
                 memcpy(dump + (i * MAC_ITEM_SIZE), csns + i * 8, 8); //CSN
                 // copy EPURSE
-                memcpy(dump + (i * MAC_ITEM_SIZE) + 8, resp.data.asBytes + i * 16, 8);
+                memcpy(dump + (i * MAC_ITEM_SIZE) + 8, sresp->mac + i * 16, 8);
                 // copy NR_MAC (eight bytes from the response)  ( 8b csn + 8b epurse == 16)
-                memcpy(dump + (i * MAC_ITEM_SIZE) + 16, resp.data.asBytes + i * 16 + 8, 8);
+                memcpy(dump + (i * MAC_ITEM_SIZE) + 16, sresp->mac + i * 16 + 8, 8);
             }
             saveFile("iclass_mac_attack_keyroll_A", ".bin", dump, datalen);
 
@@ -1238,9 +1252,9 @@ static int CmdHFiClassSim(const char *Cmd) {
                 // Copy CSN
                 memcpy(dump + (i * MAC_ITEM_SIZE), csns + i * 8, 8);
                 // copy EPURSE
-                memcpy(dump + (i * MAC_ITEM_SIZE) + 8, resp.data.asBytes + resp_index, 8);
+                memcpy(dump + (i * MAC_ITEM_SIZE) + 8, sresp->mac + resp_index, 8);
                 // copy NR_MAC (eight bytes from the response)  ( 8b csn + 8 epurse == 16)
-                memcpy(dump + (i * MAC_ITEM_SIZE) + 16, resp.data.asBytes + resp_index + 8, 8);
+                memcpy(dump + (i * MAC_ITEM_SIZE) + 16, sresp->mac + resp_index + 8, 8);
                 resp_index++;
             }
             saveFile("iclass_mac_attack_keyroll_B", ".bin", dump, datalen);
@@ -1260,7 +1274,13 @@ static int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(INFO, "Press " _GREEN_("`pm3 button`") " to abort");
             uint8_t numberOfCSNs = 0;
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 0, csn, 8);
+            uint8_t sbuf[sizeof(iclass_sim_t) + 8] = {0};
+            iclass_sim_t *spayload = (iclass_sim_t *)sbuf;
+            spayload->sim_type = sim_type;
+            spayload->num_csns = numberOfCSNs;
+            spayload->send_reply = 0;
+            memcpy(spayload->csns, csn, 8);
+            SendCommandNG(CMD_HF_ICLASS_SIMULATE, sbuf, sizeof(sbuf));
 
             if (sim_type == ICLASS_SIM_MODE_FULL || sim_type ==  ICLASS_SIM_MODE_FULL_GLITCH || sim_type ==  ICLASS_SIM_MODE_FULL_GLITCH_KEY)
                 PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass esave -h") "` to save the emulator memory to file");
@@ -1609,7 +1629,13 @@ static int CmdHFiClassTagSim(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ICLASS_SIMULATE, ICLASS_SIM_MODE_FULL_LIVE, 0, 1, csn, 8);
+    uint8_t sbuf[sizeof(iclass_sim_t) + 8] = {0};
+    iclass_sim_t *spayload = (iclass_sim_t *)sbuf;
+    spayload->sim_type = ICLASS_SIM_MODE_FULL_LIVE;
+    spayload->num_csns = 0;
+    spayload->send_reply = 1;
+    memcpy(spayload->csns, csn, 8);
+    SendCommandNG(CMD_HF_ICLASS_SIMULATE, sbuf, sizeof(sbuf));
 
     PacketResponseNG resp;
     bool running = true;
@@ -7002,10 +7028,16 @@ static int CmdHFiClassLookUp(const char *Cmd) {
         // Device returns: epurse[8] + NR[4] + MAC_reader[4]
         PacketResponseNG resp;
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ICLASS_SIMULATE, ICLASS_SIM_MODE_READER_ATTACK, 1, 1, csn, 8);
+        uint8_t sbuf[sizeof(iclass_sim_t) + 8] = {0};
+        iclass_sim_t *spayload = (iclass_sim_t *)sbuf;
+        spayload->sim_type = ICLASS_SIM_MODE_READER_ATTACK;
+        spayload->num_csns = 1;
+        spayload->send_reply = 1;
+        memcpy(spayload->csns, csn, 8);
+        SendCommandNG(CMD_HF_ICLASS_SIMULATE, sbuf, sizeof(sbuf));
 
         uint8_t tries = 0;
-        while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+        while (WaitForResponseTimeout(CMD_HF_ICLASS_SIMULATE, &resp, 2000) == false) {
             tries++;
             if (kbd_enter_pressed()) {
                 PrintAndLogEx(WARNING, "\naborted via keyboard.");
@@ -7017,16 +7049,17 @@ static int CmdHFiClassLookUp(const char *Cmd) {
             }
         }
 
-        uint8_t num_mac = resp.oldarg[1];
+        const iclass_sim_resp_t *sresp = (const iclass_sim_resp_t *)resp.data.asBytes;
+        uint8_t num_mac = (resp.length >= sizeof(iclass_sim_resp_t)) ? sresp->num_mac : 0;
         if (num_mac == 0) {
             PrintAndLogEx(WARNING, "No CHECK command captured from reader");
             return PM3_ESOFT;
         }
 
         uint8_t cap_epurse[8], nr[4], mac_r[4];
-        memcpy(cap_epurse, resp.data.asBytes,      8);
-        memcpy(nr,         resp.data.asBytes + 8,  4);
-        memcpy(mac_r,      resp.data.asBytes + 12, 4);
+        memcpy(cap_epurse, sresp->mac,      8);
+        memcpy(nr,         sresp->mac + 8,  4);
+        memcpy(mac_r,      sresp->mac + 12, 4);
 
         PrintAndLogEx(SUCCESS, "Captured CHECK:");
         PrintAndLogEx(SUCCESS, "  ePurse.... %s", sprint_hex(cap_epurse, 8));
