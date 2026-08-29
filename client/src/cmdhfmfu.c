@@ -7829,16 +7829,9 @@ int CmdHF14MfuNDEFWrite(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// ---------------------------------------------------------------------------
-// NDEF formatting
-//
-// Page 03h is the OTP Capability Container (CC): once written, it cannot be
-// changed. Refuse unknown types to avoid a permanent wrong CC.
-// Restore NXP's delivery content for pages 03h-05h. NTAG212/213/213F/213TT 
-// include a Lock Control TLV before the NDEF TLV; other types do not, so 
-// content is copied per type.
-// Only NTAG21x ships with a CC. MF0ICU1/2, MF0ULx1 and NTAG203 leave 03h 
-// blank; derive their CC from the user memory range and use an empty NDEF.
+// NDEF formatting - restores the NXP factory delivery content (Capability
+// Container + empty NDEF message) for the detected tag type. Block 3 is OTP.
+// Per-type sources and rationale: doc/mfu_ndef_format_notes.md
 typedef struct {
     uint64_t tagtype;
     const char *name;
@@ -7846,167 +7839,21 @@ typedef struct {
 } mfu_ndef_format_t;
 
 static const mfu_ndef_format_t mfu_ndef_format_table[] = {
-
-    // MIFARE Ultralight  MF0ICU1  MLEN 06h = 48 bytes, user memory pages 04h-0Fh
-    //   https://www.nxp.com/docs/en/data-sheet/MF0ICU1.pdf  rev 3.9 - 23 July 2014
-    //     memory organization ........... section 7.5, Table 5, page 10 of 31
-    //     data pages .................... section 7.5, Table 5, page 10 of 31
-    //     page 03h is OTP, no CC at delivery - CC derived from the page range
-    {
-        MFU_TT_UL, "MIFARE Ultralight",
-        {{0xE1, 0x10, 0x06, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
-    },
-
-    // MIFARE Ultralight C  MF0ICU2  MLEN 12h = 144 bytes, user memory pages 04h-27h
-    //   https://www.nxp.com/docs/en/data-sheet/MF0ICU2.pdf  rev 3.5 - 30 January 2026
-    //     memory organization ........... section 7.5, Table 5, page 8 of 35
-    //     data pages .................... section 7.5, Table 5, page 8 of 35
-    //     OTP preset to all 0 ........... section 7.5.4, page 11 of 35
-    //   CC derived from the page range. The data area ends at page 27h, right before
-    //   the lock bytes at page 28h, so no Lock Control TLV is needed.
-    {
-        MFU_TT_UL_C, "MIFARE Ultralight C",
-        {{0xE1, 0x10, 0x12, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
-    },
-
-    // MIFARE Ultralight EV1 48  MF0UL11  MLEN 06h = 48 bytes, user memory pages 04h-0Fh
-    //   https://www.nxp.com/docs/en/data-sheet/MF0ULX1.pdf  rev 3.3 - 9 April 2019
-    //     memory organization ........... section 8.5, Fig 5, page 10 of 45
-    //     data pages .................... section 8.5.5, page 14 of 45
-    //     OTP default 00 00 00 00h ...... section 8.5.4, page 13-14 of 45
-    //   CC derived from the page range.
-    {
-        MFU_TT_UL_EV1_48, "MIFARE Ultralight EV1 48",
-        {{0xE1, 0x10, 0x06, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
-    },
-
-    // MIFARE Ultralight EV1 128  MF0UL21  MLEN 10h = 128 bytes, user memory pages 04h-23h
-    //   https://www.nxp.com/docs/en/data-sheet/MF0ULX1.pdf  rev 3.3 - 9 April 2019
-    //     memory organization ........... section 8.5, Fig 6, page 11 of 45
-    //     data pages .................... section 8.5.5, page 14 of 45
-    //     OTP default 00 00 00 00h ...... section 8.5.4, page 13-14 of 45
-    //   CC derived from the page range.
-    {
-        MFU_TT_UL_EV1_128, "MIFARE Ultralight EV1 128",
-        {{0xE1, 0x10, 0x10, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
-    },
-
-    // NTAG203  NT2H0301  MLEN 12h = 144 bytes, user memory pages 04h-27h
-    //   https://www.nxp.com/docs/en/data-sheet/NTAG203.pdf  rev 3.0 - 17 October 2011
-    //     memory organization ........... section 8.5, Table 5, page 10 of 30
-    //     data pages .................... section 8.5.4, page 13 of 30
-    //     OTP preset to all 0 ........... section 8.5.3, page 13 of 30
-    //   CC derived from the page range: page 03h is a plain OTP page here, not a
-    //   Capability Container, so there is no delivery value to copy. Its dynamic
-    //   lock bytes at page 28h use 4 page granularity (section 8.5.2, Fig 7, page
-    //   12 of 30) against 2 for NTAG213, so that Lock Control TLV would misdescribe
-    //   this part - the plain empty NDEF message is written instead.
-    {
-        MFU_TT_NTAG_203, "NTAG203",
-        {{0xE1, 0x10, 0x12, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
-    },
-
-    // NTAG210  NT2H1011  MLEN 06h = 48 bytes, user memory pages 04h-0Fh
-    //   https://www.nxp.com/docs/en/data-sheet/NTAG210_212.pdf  rev 3.0 - 14 March 2013
-    //     memory organization ........... section 8.5, Fig 4, page 10 of 46
-    //     data pages .................... section 8.5.5, page 13 of 46
-    //     content at delivery ........... section 8.5.6, Table 4, page 14 of 46
-    {
-        MFU_TT_NTAG_210, "NTAG210",
-        {{0xE1, 0x10, 0x06, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
-    },
-
-    // NTAG210u  NT2L1001 / NT2H1001  MLEN 06h = 48 bytes, user memory blocks 04h-0Fh
-    //   https://www.nxp.com/docs/en/data-sheet/NT2L1001_NT2H1001.pdf  rev 3.0 - 7 September 2016
-    //     data blocks ................... section 9.5.4, page 11 of 32
-    //     content at delivery ........... section 9.5.5, Table 4, page 11 of 32
-    {
-        MFU_TT_NTAG_210u, "NTAG210u",
-        {{0xE1, 0x10, 0x06, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
-    },
-
-    // NTAG212  NT2L1211  MLEN 10h = 128 bytes, user memory pages 04h-23h
-    //   https://www.nxp.com/docs/en/data-sheet/NTAG210_212.pdf  rev 3.0 - 14 March 2013
-    //     memory organization ........... section 8.5, Fig 5, page 10 of 46
-    //     data pages .................... section 8.5.5, page 13 of 46
-    //     content at delivery ........... section 8.5.6, Table 5, page 14 of 46
-    {
-        MFU_TT_NTAG_212, "NTAG212",
-        {{0xE1, 0x10, 0x10, 0x00}, {0x01, 0x03, 0x90, 0x0A}, {0x34, 0x03, 0x00, 0xFE}}
-    },
-
-    // NTAG213  NT2H1311  MLEN 12h = 144 bytes, user memory pages 04h-27h
-    //   https://www.nxp.com/docs/en/data-sheet/NTAG213_215_216.pdf  rev 3.2 - 2 June 2015
-    //     memory organization ........... section 8.5, Fig 5, page 11 of 60
-    //     data pages .................... section 8.5.5, page 16 of 60
-    //     content at delivery ........... section 8.5.6, Table 5, page 17 of 60
-    {
-        MFU_TT_NTAG_213, "NTAG213",
-        {{0xE1, 0x10, 0x12, 0x00}, {0x01, 0x03, 0xA0, 0x0C}, {0x34, 0x03, 0x00, 0xFE}}
-    },
-
-    // NTAG213F  NT2H1311F  MLEN 12h = 144 bytes, user memory pages 04h-27h
-    //   https://www.nxp.com/docs/en/data-sheet/NTAG213F_216F.pdf  rev 3.6 - 28 September 2015
-    //     memory organization ........... section 8.5, Fig 6, page 12 of 55
-    //     data pages .................... section 8.5.5, page 16 of 55
-    //     content at delivery ........... section 8.5.6, Table 5, page 17 of 55
-    {
-        MFU_TT_NTAG_213_F, "NTAG213F",
-        {{0xE1, 0x10, 0x12, 0x00}, {0x01, 0x03, 0xA0, 0x0C}, {0x34, 0x03, 0x00, 0xFE}}
-    },
-
-    // NTAG213TT  NT2H1311TT  MLEN 12h = 144 bytes, user memory pages 04h-27h
-    //   https://www.nxp.com/docs/en/data-sheet/NT2H1311TT.pdf  rev 1.1 - 28 March 2017
-    //     memory organization ........... section 8.5, Fig 4, page 11 of 57
-    //     data pages .................... section 8.5.5, page 14 of 57
-    //     content at delivery ........... section 8.5.6, Table 5, page 15 of 57
-    {
-        MFU_TT_NTAG_213_TT, "NTAG213TT",
-        {{0xE1, 0x10, 0x12, 0x00}, {0x01, 0x03, 0xA0, 0x0C}, {0x34, 0x03, 0x00, 0xFE}}
-    },
-
-    // NTAG213C  NT2H1311C1DTL  MLEN 12h = 144 bytes, user memory pages 04h-27h
-    //   NO DATA SHEET. NXP publishes nothing for this part number and no other
-    //   public documentation could be found.
-    //   Most data come from commit ad19f8384 (2020-09-26, "add accurate detection for
-    //   NT2H1311C1DTL")
-    {
-        MFU_TT_NTAG_213_C, "NTAG213C",
-        {{0xE1, 0x10, 0x12, 0x00}, {0x01, 0x03, 0xA0, 0x0C}, {0x34, 0x03, 0x00, 0xFE}}
-    },
-
-    // NTAG215  NT2H1511  MLEN 3Eh = 496 bytes, user memory pages 04h-81h
-    //   https://www.nxp.com/docs/en/data-sheet/NTAG213_215_216.pdf  rev 3.2 - 2 June 2015
-    //     memory organization ........... section 8.5, Fig 6, page 11 of 60
-    //     data pages .................... section 8.5.5, page 16 of 60
-    //     content at delivery ........... section 8.5.6, Table 6, page 17 of 60
-    //   The factory MLEN announces 496 bytes while the user memory holds 504. The
-    //   data sheet gives no reason for the 8 byte difference
-    {
-        MFU_TT_NTAG_215, "NTAG215",
-        {{0xE1, 0x10, 0x3E, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
-    },
-
-    // NTAG216  NT2H1611  MLEN 6Dh = 872 bytes, user memory pages 04h-E1h
-    //   https://www.nxp.com/docs/en/data-sheet/NTAG213_215_216.pdf  rev 3.2 - 2 June 2015
-    //     memory organization ........... section 8.5, Fig 7, page 12 of 60
-    //     data pages .................... section 8.5.5, page 16 of 60
-    //     content at delivery ........... section 8.5.6, Table 7, page 17 of 60
-    //   Announces 872 bytes against 888 of user memory.
-    {
-        MFU_TT_NTAG_216, "NTAG216",
-        {{0xE1, 0x10, 0x6D, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
-    },
-
-    // NTAG216F  NT2H1611F  MLEN 6Dh = 872 bytes, user memory pages 04h-E1h
-    //   https://www.nxp.com/docs/en/data-sheet/NTAG213F_216F.pdf  rev 3.6 - 28 September 2015
-    //     memory organization ........... section 8.5, Fig 7, page 12 of 55
-    //     data pages .................... section 8.5.5, page 16 of 55
-    //     content at delivery ........... section 8.5.6, Table 6, page 17 of 55
-    {
-        MFU_TT_NTAG_216_F, "NTAG216F",
-        {{0xE1, 0x10, 0x6D, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}}
-    },
+    { MFU_TT_UL,          "MIFARE Ultralight",         {{0xE1, 0x10, 0x06, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_UL_C,        "MIFARE Ultralight C",       {{0xE1, 0x10, 0x12, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_UL_EV1_48,   "MIFARE Ultralight EV1 48",  {{0xE1, 0x10, 0x06, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_UL_EV1_128,  "MIFARE Ultralight EV1 128", {{0xE1, 0x10, 0x10, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_NTAG_203,    "NTAG203",                   {{0xE1, 0x10, 0x12, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_NTAG_210,    "NTAG210",                   {{0xE1, 0x10, 0x06, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_NTAG_210u,   "NTAG210u",                  {{0xE1, 0x10, 0x06, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_NTAG_212,    "NTAG212",                   {{0xE1, 0x10, 0x10, 0x00}, {0x01, 0x03, 0x90, 0x0A}, {0x34, 0x03, 0x00, 0xFE}} },
+    { MFU_TT_NTAG_213,    "NTAG213",                   {{0xE1, 0x10, 0x12, 0x00}, {0x01, 0x03, 0xA0, 0x0C}, {0x34, 0x03, 0x00, 0xFE}} },
+    { MFU_TT_NTAG_213_F,  "NTAG213F",                  {{0xE1, 0x10, 0x12, 0x00}, {0x01, 0x03, 0xA0, 0x0C}, {0x34, 0x03, 0x00, 0xFE}} },
+    { MFU_TT_NTAG_213_TT, "NTAG213TT",                 {{0xE1, 0x10, 0x12, 0x00}, {0x01, 0x03, 0xA0, 0x0C}, {0x34, 0x03, 0x00, 0xFE}} },
+    { MFU_TT_NTAG_213_C,  "NTAG213C",                  {{0xE1, 0x10, 0x12, 0x00}, {0x01, 0x03, 0xA0, 0x0C}, {0x34, 0x03, 0x00, 0xFE}} },
+    { MFU_TT_NTAG_215,    "NTAG215",                   {{0xE1, 0x10, 0x3E, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_NTAG_216,    "NTAG216",                   {{0xE1, 0x10, 0x6D, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_NTAG_216_F,  "NTAG216F",                  {{0xE1, 0x10, 0x6D, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
 };
 
 static const mfu_ndef_format_t *mfu_get_ndef_format(uint64_t tagtype) {
@@ -8036,7 +7883,7 @@ int CmdHF14AMfUFormat(const char *Cmd) {
                   "hf mfu format -k FFFFFFFF\n"
                   "hf mfu format -k 49454D4B41455242214E4143554F5946\n"
                   "hf mfu format -d E1101200 --force"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -8134,10 +7981,7 @@ int CmdHF14AMfUFormat(const char *Cmd) {
 
     if (cc_len == MFU_BLOCK_SIZE) {
 
-        // A hand written Capability Container still must not announce more NDEF
-        // area than the tag physically holds. Block 3 is OTP, so an over reporting
-        // MLEN can never be taken back, and ndefwrite would then clamp against the
-        // whole chip - lock bytes, configuration and key pages included.
+        // -d must not announce more memory than this tag type actually has
         if ((fmt != NULL) && (cc_override[2] > fmt->page[0][2]) && (force == false)) {
             PrintAndLogEx(FAILED, "Capability Container announces more memory than this tag has");
             PrintAndLogEx(INFO, "    requested... %d bytes ( MLEN %02X )", cc_override[2] * 8, cc_override[2]);
@@ -8194,9 +8038,7 @@ int CmdHF14AMfUFormat(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    // Block 3 is OTP: a WRITE is OR'ed with what is already there and a bit that
-    // is set can never be cleared. Anything the OR can not produce is refused
-    // before a single byte goes to the tag.
+    // block 3 is OTP: refuse a target the current content can't reach via OR
     uint8_t *cur = data + (MFU_NDEF_CC_BLOCK * MFU_BLOCK_SIZE);
     bool blank = true;
     bool reachable = true;
@@ -8239,20 +8081,13 @@ int CmdHF14AMfUFormat(const char *Cmd) {
         }
     }
 
-    // The erase range is derived from the MLEN in the table, never from -d, so a
-    // hand written Capability Container can not push it past the user memory.
-    // Every table entry announces at most the user memory of that type, which
-    // keeps the last block below the lock bytes and configuration pages.
+    // erase range from the table MLEN, never from -d - can't run past user memory
     uint16_t last_block = MFU_NDEF_CC_BLOCK + 2;
     if (erase && (fmt != NULL)) {
         last_block = (uint16_t)(MFU_NDEF_CC_BLOCK + (fmt->page[0][2] * 2));
     }
 
-    // WRITE addresses blocks with a single byte, so block 255 is the last one
-    // reachable - the same limit MFU_NDEF_MAX_BYTES encodes for ndefread/ndefwrite.
-    // No current table entry comes close, but mfu_write_block takes a uint8_t and
-    // the cast below would silently wrap a larger block number back onto the UID
-    // and lock pages, so clamp here rather than rely on the table staying small.
+    // block 255 is the last one WRITE can reach with its single address byte
     if (last_block > 0xFF) {
         PrintAndLogEx(INFO, "Data area runs past block 255, stopping at the last addressable block");
         last_block = 0xFF;
@@ -8314,10 +8149,7 @@ int CmdHF14AMfUFormat(const char *Cmd) {
     DropField();
     PrintAndLogEx(NORMAL, "");
 
-    // Block 3 is one time programmable, so there is exactly one chance to get it
-    // right. A tag can ACK a WRITE and still not commit the page - a weak field, a
-    // tear, or a block locking bit that was already set - and the write status
-    // alone would not show it. Read the formatted blocks back rather than trust it.
+    // read the formatted blocks back rather than trust the write status alone
     if (ul_auth_select(&card, tagtype, (has_auth_key || has_pwd), auth_key_ptr, pack, sizeof(pack), use_schann) == PM3_ESOFT) {
         PrintAndLogEx(WARNING, "Wrote the tag but could not re-select it to verify");
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu ndefread") "` to check it yourself");
@@ -8345,9 +8177,7 @@ int CmdHF14AMfUFormat(const char *Cmd) {
 
     if (memcmp(verify + MFU_BLOCK_SIZE, pages[1], 2 * MFU_BLOCK_SIZE) != 0) {
         PrintAndLogEx(FAILED, "Capability Container is correct but the empty NDEF message is not");
-        // pages[1] and pages[2] are contiguous, and so are the two blocks in
-        // verify, so each side prints in a single call - sprint_hex_inrow hands
-        // back one shared static buffer, so two calls per line would alias.
+        // one sprint_hex_inrow() call per line: it returns a shared static buffer
         PrintAndLogEx(INFO, "    wanted...... " _GREEN_("%s"), sprint_hex_inrow(pages[1], 2 * MFU_BLOCK_SIZE));
         PrintAndLogEx(INFO, "    on tag now.. " _RED_("%s"), sprint_hex_inrow(verify + MFU_BLOCK_SIZE, 2 * MFU_BLOCK_SIZE));
         PrintAndLogEx(HINT, "Hint: these blocks are ordinary user memory, check the lock bytes");
