@@ -4300,12 +4300,7 @@ int CmdHF14ANdefWrite(const char *Cmd) {
                 }
                 uint8_t tmp_raw[256];
                 memcpy(tmp_raw, raw, sizeof(tmp_raw));
-                // A NFC Type 4 Tag NDEF file starts with the NLEN field, a two byte
-                // big endian length of the NDEF message that follows.  It is not a
-                // TLV container, so there is no 0x03 tag byte here.
-                // raw[] is 256 bytes and the bounds check above caps bytes at 254,
-                // hence the high byte of NLEN is always zero.
-                raw[0] = 0x00;
+                raw[0] = 0x00; // the high byte of NLEN is always zero.
                 raw[1] = bytes;
                 memcpy(raw + 2, tmp_raw, sizeof(raw) - 2);
                 bytes += 2;
