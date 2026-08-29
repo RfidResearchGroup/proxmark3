@@ -963,7 +963,7 @@ finish2:
     clearCommandBuffer();
     if (in_bootloader) {
         g_session.current_device->g_conn->run = false;
-        SendCommandOLD(CMD_PING, 0, 0, 0, NULL, 0);
+        SendCommandBL(CMD_PING, 0, 0, 0, NULL, 0);
     } else {
         SendCommandNG(CMD_QUIT_SESSION, NULL, 0);
         msleep(100);
