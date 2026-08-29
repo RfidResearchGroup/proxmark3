@@ -8029,7 +8029,13 @@ int CmdHF14AMfUFormat(const char *Cmd) {
                   "Writes NXP factory delivery content for the detected tag type. Block 3 is\n"
                   "One Time Programmable; unknown types and unreachable CCs are refused.\n"
                   "\n"
-                  "Note: the tag is re-selected and re-authenticated for each block written."
+                  "Note: the tag is re-selected and re-authenticated for each block written.",
+                  "hf mfu format\n"
+                  "hf mfu format -v\n"
+                  "hf mfu format --erase\n"
+                  "hf mfu format -k FFFFFFFF\n"
+                  "hf mfu format -k 49454D4B41455242214E4143554F5946\n"
+                  "hf mfu format -d E1101200 --force"
                 );
 
     void *argtable[] = {
