@@ -106,19 +106,9 @@ function sendRaw(rawdata, options)
     + lib14a.ISO14A_COMMAND.ISO14A_RAW
     + lib14a.ISO14A_COMMAND.ISO14A_APPEND_CRC
 
-    local command = Command:newMIX{
-        cmd = cmds.CMD_HF_ISO14443A_READER,
+    local command = Command:newRaw{ tech = '14a', flags = flags, data = rawdata }
 
-        -- arg1 is the defined flags for sending "raw" ISO 14443A package
-        arg1 = flags,
-
-        -- arg2 contains the length, which is half the length of the ASCII
-        -- string data
-        arg2 = string.len(rawdata) / 2,
-        data = rawdata
-    }
-
-    return command:sendMIX(options.ignore_response)
+    return command:sendNG(options.ignore_response)
 end
 
 -- Read the current one-time password (OTP)
@@ -139,8 +129,9 @@ function readOTP(show_output)
     end
 
     -- parse the response
-    local cmd_response = Command.parse(res)
-    local len = tonumber(cmd_response.arg1) * 2
+    local _rlen, _sel, _raw = parseRaw('14a', res)
+    local cmd_response = { arg1 = _rlen or 0, data = tohex(_raw or '') }
+    local len = (_rlen or 0) * 2
     local data = string.sub(tostring(cmd_response.data), 0, len - 4)
 
     -- check the response
@@ -185,8 +176,9 @@ function readInfo(show_output)
     end
 
     -- parse the response
-    local cmd_response = Command.parse(res)
-    local len = tonumber(cmd_response.arg1) * 2
+    local _rlen, _sel, _raw = parseRaw('14a', res)
+    local cmd_response = { arg1 = _rlen or 0, data = tohex(_raw or '') }
+    local len = (_rlen or 0) * 2
     local data = string.sub(tostring(cmd_response.data), 0, len - 4)
 
     -- check the response
@@ -263,8 +255,9 @@ function bruteforceCommands()
         end
 
         -- parse the response
-        local cmd_response = Command.parse(res)
-        local len = tonumber(cmd_response.arg1) * 2
+        local _rlen, _sel, _raw = parseRaw('14a', res)
+        local cmd_response = { arg1 = _rlen or 0, data = tohex(_raw or '') }
+        local len = (_rlen or 0) * 2
         local data = string.sub(tostring(cmd_response.data), 0, len - 4)
 
         -- check the response
@@ -308,8 +301,9 @@ function setTime(time, otp_interval)
     end
 
     -- parse the response
-    local cmd_response = Command.parse(res)
-    local len = tonumber(cmd_response.arg1) * 2
+    local _rlen, _sel, _raw = parseRaw('14a', res)
+    local cmd_response = { arg1 = _rlen or 0, data = tohex(_raw or '') }
+    local len = (_rlen or 0) * 2
     local data = string.sub(tostring(cmd_response.data), 0, len - 4)
 end
 

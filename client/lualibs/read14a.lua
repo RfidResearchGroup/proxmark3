@@ -87,26 +87,27 @@ end
 local function read14443a(dont_disconnect, no_rats)
     local command, result, info, err, data
 
-    command = Command:newMIX{
-            cmd = cmds.CMD_HF_ISO14443A_READER,
-            arg1 = ISO14A_COMMAND.ISO14A_CONNECT + ISO14A_COMMAND.ISO14A_CLEARTRACE
-            }
-
+    local flags = ISO14A_COMMAND.ISO14A_CONNECT + ISO14A_COMMAND.ISO14A_CLEARTRACE
     if dont_disconnect then
-        command.arg1 = command.arg1 + ISO14A_COMMAND.ISO14A_NO_DISCONNECT
+        flags = flags + ISO14A_COMMAND.ISO14A_NO_DISCONNECT
     end
     if no_rats then
-        command.arg1 = command.arg1 + ISO14A_COMMAND.ISO14A_NO_RATS
+        flags = flags + ISO14A_COMMAND.ISO14A_NO_RATS
     end
 
-    local result, err = command:sendMIX()
+    command = Command:newRaw{ tech = '14a', flags = flags }
+
+    local result, err = command:sendNG()
     if result then
-        local count, cmd, arg1, arg2, arg3 = bin.unpack('LLLL',result)
-        if arg1 == 0 then
+        -- on a CONNECT the extra value is the select status
+        local rlen, sel, carddata = parseRaw('14a', result)
+        if rlen == nil then
+            return nil, 'malformed response from device'
+        end
+        if sel == 0 then
             return nil, 'iso14443a card select failed'
         end
-        data = string.sub(result, count)
-        info = parse14443a(data)
+        info = parse14443a(carddata)
     else
         err = 'No response from card'
     end
@@ -134,10 +135,10 @@ end
 
 -- Sends an instruction to do nothing, only disconnect
 local function disconnect14443a()
-    local c = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER}
-    -- We can ignore the response here, no ACK is returned for this command
+    -- We can ignore the response here, no reply is returned for this command
     -- Check /armsrc/iso14443a.c, ReaderIso14443a() for details
-    return c:sendMIX(true)
+    local c = Command:newRaw{ tech = '14a' }
+    return c:sendNG(true)
 end
 
 local library = {

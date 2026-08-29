@@ -198,19 +198,14 @@ end
 local function sendRaw(rawdata, keep)
     flags = lib14a.ISO14A_COMMAND.ISO14A_RAW + lib14a.ISO14A_COMMAND.ISO14A_APPEND_CRC
     if keep == true then flags = flags + lib14a.ISO14A_COMMAND.ISO14A_NO_DISCONNECT end
-    local command = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER,
-                                    arg1 = flags, -- Send raw
-                                    arg2 = string.len(rawdata) / 2, -- arg2 contains the length, which is half the length of the ASCII-string rawdata
-                                    data = rawdata
-                                    }
+    local command = Command:newRaw{ tech = '14a', flags = flags, data = rawdata }
     local ignore_response = false
-    local result, err = command:sendMIX(ignore_response)
+    local result, err = command:sendNG(ignore_response)
     if result then
-        --local count,cmd,arg1,arg2,arg3,data = bin.unpack('LLLLH512',result)
-        local p = command.parse(result)
-        arg1 = p["arg1"]
-        data = p["data"]
-        returned_bytes = string.sub(data, 1, arg1 * 2)
+        local rlen, sel, raw = parseRaw('14a', result)
+        if rlen == nil then return nil end
+        local data = tohex(raw)
+        returned_bytes = data
         if #returned_bytes > 0 then return returned_bytes else return nil end
     end
 end

@@ -44,18 +44,17 @@ local function sendRaw(rawdata, crc, power)
         flags = flags + lib14a.ISO14A_COMMAND.ISO14A_NO_DISCONNECT
     end
 
-    local command = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER,
-                                arg1 = flags, -- Send raw
-                                arg2 = string.len(rawdata) / 2, -- arg2 contains the length, which is half the length of the ASCII-string rawdata
-                                data = rawdata
-                                }
+    local command = Command:newRaw{ tech = '14a', flags = flags, data = rawdata }
     local ignore_response = false
-    local result, err = command:sendMIX(ignore_response)
+    local result, err = command:sendNG(ignore_response)
     if result then
         --unpack the first 4 parts of the result as longs, and the last as an extremely long string to later be cut down based on arg1, the number of bytes returned
-        local count,cmd,arg1,arg2,arg3,data = bin.unpack('LLLLH512',result)
+        -- iso14a_raw_resp_t: u16 len, u8 sel, u8 rfu, u8 data[]
+        local rlen, sel, raw = parseRaw('14a', result)
+        if rlen == nil then return nil end
+        local data = tohex(raw)
 
-        returned_bytes = string.sub(data, 1, arg1 * 2)
+        returned_bytes = data
         if #returned_bytes > 0 then
             -- print(("<recvd>: %s"):format(returned_bytes)) -- need to multiply by 2 because the hex digits are actually two bytes when they are strings
             return returned_bytes

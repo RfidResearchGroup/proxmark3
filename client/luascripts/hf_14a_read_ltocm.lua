@@ -83,26 +83,21 @@ local function sendRaw(rawdata, options)
         flags = flags + lib14a.ISO14A_COMMAND.ISO14A_APPEND_CRC
     end
 
-    local arg2 = #rawdata / 2
+    local lenbits = 0
     if options.bits7 then
-       arg2 = arg2 + tonumber(lshift(7, 16))
+       lenbits = 7
     end
 
-    local command = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER,
-                                arg1 = flags, -- Send raw
-                                -- arg2 contains the length, which is half the length
-                                -- of the ASCII-string rawdata
-                                arg2 = arg2,
-                                data = rawdata}
-    return command:sendMIX(options.ignore_response)
+    local command = Command:newRaw{ tech = '14a', flags = flags, data = rawdata, lenbits = lenbits }
+    return command:sendNG(options.ignore_response)
 end
 
 ---
 -- get hex data from response
 local function getdata(usbpacket)
-    local cmd_response = Command.parse(usbpacket)
-    local len = tonumber(cmd_response.arg1) * 2
-    return string.sub(tostring(cmd_response.data), 0, len)
+    local _rlen, _sel, _raw = parseRaw('14a', usbpacket)
+    if _rlen == nil then return nil end
+    return tohex(_raw)
 end
 
 ---
