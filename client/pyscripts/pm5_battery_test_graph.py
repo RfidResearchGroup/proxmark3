@@ -7,6 +7,9 @@ closer together than 10s apart. This script keeps only one row per 10-second
 window (the first row seen in each window) before plotting, so the graphs
 aren't overcrowded with near-duplicate points.
 
+The X axis shows elapsed time in minutes, starting at 0 for the first
+sample, rather than absolute clock time.
+
 Usage:
     python plot_battery_log.py [input_csv] [output_png]
 
@@ -22,7 +25,6 @@ from datetime import datetime
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 from PIL import Image
 
 
@@ -59,7 +61,9 @@ def load_and_downsample(csv_path, min_interval_s=10):
 
 
 def plot(rows, output_path):
-    timestamps = [r["timestamp"] for r in rows]
+    t0 = rows[0]["timestamp"]
+    elapsed_min = [(r["timestamp"] - t0).total_seconds() / 60.0 for r in rows]
+
     fields = [
         ("voltage_mV", "Voltage (mV)"),
         ("current_mA", "Current (mA)"),
@@ -72,13 +76,11 @@ def plot(rows, output_path):
 
     for ax, (key, label) in zip(axes, fields):
         values = [r[key] for r in rows]
-        ax.plot(timestamps, values, marker="o", markersize=3, linewidth=1)
+        ax.plot(elapsed_min, values, marker="o", markersize=3, linewidth=1)
         ax.set_ylabel(label)
         ax.grid(True, alpha=0.3)
 
-    axes[-1].set_xlabel("Time")
-    axes[-1].xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
-    fig.autofmt_xdate()
+    axes[-1].set_xlabel("Elapsed time (minutes)")
     fig.suptitle("Battery status over time")
     fig.tight_layout(rect=[0, 0, 1, 0.97])
     fig.savefig(output_path, dpi=150)
