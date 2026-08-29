@@ -112,6 +112,11 @@ bool I2C_WriteFW(const uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uin
 // Which SIM module opcode a set of SC_RAW* flags asks for.
 uint8_t sc_raw_device_cmd(smartcard_command_t flags);
 
+// Which SIM module opcode matches the protocol the card is currently running,
+// for callers that carry no SC_RAW* flags of their own. T=0 until a PPS says
+// otherwise.
+uint8_t sc_active_device_cmd(void);
+
 // Log one smartcard frame, timestamped from the tick counter. Start is where
 // the previous frame ended, so a Tag frame's span is how long the card took to
 // answer and a Rdr frame's is how long the host took to ask.

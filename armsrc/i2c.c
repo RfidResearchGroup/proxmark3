@@ -53,6 +53,18 @@ static uint8_t s_card_protocols = 0;
 // sc_raw_device_cmd() runs per APDU, so report the choice once per card
 static bool s_proto_announced = false;
 
+// The module opcode matching the protocol the card is actually running, taken
+// from the active-protocol byte of a PPS response. 0 = nothing negotiated, so
+// sc_active_device_cmd() falls back to T=0.
+//
+// Only a successful PPS sets this, which is what makes it safe to hand back
+// SEND_T1 without probing the module version: I2C_DEVICE_CMD_PPS and
+// I2C_DEVICE_CMD_SEND_T1 landed in the same module firmware
+// (SIM_MODULE_VERS_T1_*), so a module that answered a PPS at all is known to
+// understand T=1 too. An older module never answers, this stays 0, and callers
+// keep the T=0 they had before.
+static uint8_t s_pps_proto_cmd = 0;
+
 // A negotiated rate lives in two places that reset independently: the module's
 // UART divisor, which any I2C_Reset_EnterMainProgram() wipes, and the card,
 // which only an RST pulse clears. Left alone the two drift apart and every
@@ -147,6 +159,7 @@ void I2C_Reset_EnterMainProgram(void) {
     // whatever we knew about the card is no longer trustworthy
     s_card_protocols = 0;
     s_proto_announced = false;
+    s_pps_proto_cmd = 0;
     StartTicks();
     I2C_init(true);
     I2C_SetResetStatus(0, 0, 0);
@@ -1107,7 +1120,27 @@ static bool sc_pps(uint8_t proto, uint8_t ta1) {
         return false;
     }
     // resp is [ok][active protocol][ta1 in force]
-    return ((resp[0] == 1) && (resp[2] == ta1));
+    if ((resp[0] != 1) || (resp[2] != ta1)) {
+        return false;
+    }
+
+    // Take the protocol from the module rather than from the request: the
+    // caller asked for one, this is the one that ended up in force.
+    s_pps_proto_cmd = ((resp[1] & 0x0f) == 1) ? I2C_DEVICE_CMD_SEND_T1
+                      : I2C_DEVICE_CMD_SEND_T0;
+    return true;
+}
+
+// The opcode to send an APDU with, for callers that have no protocol
+// preference of their own and just want to talk to the card the way it is
+// currently configured - the SAM path, which has no CLI flags to carry one.
+//
+// sc_raw_device_cmd() is the other half of this: it starts from a caller's
+// explicit SC_RAW_T0 / SC_RAW_T1 and only overrides it when the ATR says that
+// choice cannot work. Here there is nothing to override, so follow what PPS
+// actually negotiated and default to T=0 when nothing has been.
+uint8_t sc_active_device_cmd(void) {
+    return (s_pps_proto_cmd != 0) ? s_pps_proto_cmd : I2C_DEVICE_CMD_SEND_T0;
 }
 
 void sc_pps_remember(const uint8_t *atr, uint8_t atr_len, uint8_t proto, uint8_t ta1) {
@@ -1124,6 +1157,7 @@ void sc_pps_forget(void) {
     s_pps.atr_len = 0;
     s_pps.ta1 = 0;
     s_pps.tried = false;
+    s_pps_proto_cmd = 0;
 }
 
 bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {

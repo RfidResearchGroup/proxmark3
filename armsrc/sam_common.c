@@ -201,7 +201,12 @@ uint16_t sam_response_payload(const uint8_t *rx, uint16_t rx_len, uint16_t *payl
 }
 
 int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) {
-    bool res = I2C_BufferWrite(data, n, I2C_DEVICE_CMD_SEND_T0, I2C_DEVICE_ADDRESS_MAIN);
+    // Whatever protocol GetATR()/PPS left the card on, rather than an assumed
+    // T=0. Resolved once per exchange so the GET RESPONSE round below cannot
+    // end up on a different protocol than the command it belongs to.
+    const uint8_t dev_cmd = sc_active_device_cmd();
+
+    bool res = I2C_BufferWrite(data, n, dev_cmd, I2C_DEVICE_ADDRESS_MAIN);
     if (res == false) {
         DbpString("failed to send to SIM CARD");
         goto out;
@@ -259,7 +264,7 @@ int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) 
     uint8_t cmd_getresp[] = {0x00, ISO7816_GET_RESPONSE, 0x00, 0x00, more_len};
     sc_log_trace(cmd_getresp, sizeof(cmd_getresp), true);
 
-    res = I2C_BufferWrite(cmd_getresp, sizeof(cmd_getresp), I2C_DEVICE_CMD_SEND_T0, I2C_DEVICE_ADDRESS_MAIN);
+    res = I2C_BufferWrite(cmd_getresp, sizeof(cmd_getresp), dev_cmd, I2C_DEVICE_ADDRESS_MAIN);
     if (res == false) {
         DbpString("failed to send to SIM CARD 2");
         goto out;
