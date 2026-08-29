@@ -32,6 +32,7 @@
 #include "protocols.h"    // iclass defines
 #include "cmdhftopaz.h"   // TOPAZ defines
 #include "mifare/mifaredefault.h"     // MFP / AES defines
+#include "iso15.h"        // iso15_tag_t
 
 typedef union {
     void *v;
@@ -40,6 +41,7 @@ typedef union {
     topaz_tag_t *topaz;
     iso14a_mf_extdump_t *mfc;
     iso14a_mf_dump_ev1_t *mfc_ev1;
+    iso15_tag_t *iso15;
 } udata_t;
 
 typedef enum {

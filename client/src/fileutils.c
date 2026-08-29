@@ -1361,6 +1361,58 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
     return retval;
 }
 
+// Convert a run of "XX XX XX ..." hex text into bytes.
+//
+// `head` is the part of the line the caller already has, `more` says whether the
+// line continued past the caller's buffer, in which case the rest is pulled from
+// `f` one character at a time and converted as it goes.  That keeps the caller's
+// line buffer small: an ISO15693 "Data Content" line carries the whole tag and
+// runs to several thousand characters.
+//
+// Returns the number of bytes the text held, which may be larger than `destlen`.
+// Only the first `destlen` bytes are stored, so the caller can spot an overflow.
+static size_t hexstream_to_bytes(FILE *f, const char *head, bool more, uint8_t *dest, size_t destlen) {
+
+    size_t cnt = 0;
+    int hi = -1;
+
+    for (;;) {
+
+        int c;
+        if (*head) {
+            c = (unsigned char) * head++;
+        } else if (more) {
+            c = fgetc(f);
+        } else {
+            break;
+        }
+
+        if ((c == EOF) || (c == '\n') || (c == '\r')) {
+            break;
+        }
+
+        if (isxdigit(c) == 0) {
+            // separator
+            continue;
+        }
+
+        int v = (c <= '9') ? (c - '0') : ((c | 0x20) - 'a' + 10);
+
+        if (hi < 0) {
+            hi = v;
+            continue;
+        }
+
+        if (cnt < destlen) {
+            dest[cnt] = (hi << 4) | v;
+        }
+        cnt++;
+        hi = -1;
+    }
+
+    return cnt;
+}
+
 int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, nfc_df_e ft) {
 
     if (data == NULL) {
@@ -1391,6 +1443,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
     udata_t udata = (udata_t)data;
     int n = 0;
     uint32_t counter = 0;
+    size_t iso15_datalen = 0;
 
     while (!feof(f)) {
 
@@ -1409,14 +1462,74 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
             continue;
         }
 
+        // did this fgets reach the end of the line, or is the line longer than
+        // the buffer?  ISO15693 puts a whole tag on its "Data Content" line.
+        bool line_truncated = ((strchr(line, '\n') == NULL) && (feof(f) == false));
+
         str_cleanrn(line, sizeof(line));
         str_lower(line);
 
         if (str_startswith(line, "uid:")) {
             if (ft == NFC_DF_MFC) {
 //                param_gethex_to_eol(line + 4, 0, udata.mfc->card_info.uid, sizeof(udata.mfc->card_info.uid), &n);
+            } else if (ft == NFC_DF_15) {
+                // iso15_tag_t keeps the UID in transmission order (LSB first),
+                // Flipper writes it the way it is displayed (MSB first).
+                param_gethex_to_eol(line + 4, 0, udata.iso15->uid, sizeof(udata.iso15->uid), &n);
+                reverse_array(udata.iso15->uid, sizeof(udata.iso15->uid));
             }
             continue;
+        }
+
+        if (ft == NFC_DF_15) {
+
+            if (str_startswith(line, "dsfid:")) {
+                uint8_t v = 0;
+                param_gethex_to_eol(line + 6, 0, &v, sizeof(v), &n);
+                udata.iso15->dsfid = v;
+                continue;
+            }
+
+            if (str_startswith(line, "afi:")) {
+                uint8_t v = 0;
+                param_gethex_to_eol(line + 4, 0, &v, sizeof(v), &n);
+                udata.iso15->afi = v;
+                continue;
+            }
+
+            if (str_startswith(line, "ic reference:")) {
+                uint8_t v = 0;
+                param_gethex_to_eol(line + 13, 0, &v, sizeof(v), &n);
+                udata.iso15->ic = v;
+                continue;
+            }
+
+            // Flipper writes the block count in decimal but the block size in hex
+            if (str_startswith(line, "block count:")) {
+                int v = 0;
+                sscanf(line, "block count: %d", &v);
+                udata.iso15->pagesCount = v;
+                continue;
+            }
+
+            if (str_startswith(line, "block size:")) {
+                uint8_t v = 0;
+                param_gethex_to_eol(line + 11, 0, &v, sizeof(v), &n);
+                udata.iso15->bytesPerPage = v;
+                continue;
+            }
+
+            if (str_startswith(line, "data content:")) {
+                iso15_datalen = hexstream_to_bytes(f, line + 13, line_truncated
+                                                   , udata.iso15->data
+                                                   , sizeof(udata.iso15->data));
+                continue;
+            }
+
+            if (str_startswith(line, "password privacy:")) {
+                param_gethex_to_eol(line + 17, 0, udata.iso15->privacyPasswd, sizeof(udata.iso15->privacyPasswd), &n);
+                continue;
+            }
         }
 
         if (str_startswith(line, "atqa:")) {
@@ -1590,6 +1703,48 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
         *datalen = counter;
     } else if (ft == NFC_DF_MFU) {
         *datalen += MFU_DUMP_PREFIX_LENGTH;
+    } else if (ft == NFC_DF_15) {
+
+        if ((udata.iso15->pagesCount == 0) || (udata.iso15->bytesPerPage == 0)) {
+            fclose(f);
+            PrintAndLogEx(FAILED, "missing block count / block size in `" _YELLOW_("%s") "`", preferredName);
+            return PM3_ESOFT;
+        }
+
+        if (udata.iso15->pagesCount > ISO15693_TAG_MAX_PAGES) {
+            fclose(f);
+            PrintAndLogEx(FAILED, "block count ( %u ) exceeds max ( %u )"
+                          , udata.iso15->pagesCount
+                          , ISO15693_TAG_MAX_PAGES);
+            return PM3_ESOFT;
+        }
+
+        uint32_t expected = (uint32_t)udata.iso15->pagesCount * udata.iso15->bytesPerPage;
+        if (expected > ISO15693_TAG_MAX_SIZE) {
+            fclose(f);
+            PrintAndLogEx(FAILED, "tag memory ( %u bytes ) exceeds max ( %u bytes )"
+                          , expected
+                          , ISO15693_TAG_MAX_SIZE);
+            return PM3_ESOFT;
+        }
+
+        if (iso15_datalen > sizeof(udata.iso15->data)) {
+            fclose(f);
+            PrintAndLogEx(FAILED, "data content ( %zu bytes ) exceeds max ( %zu bytes )"
+                          , iso15_datalen
+                          , sizeof(udata.iso15->data));
+            return PM3_ESOFT;
+        }
+
+        if (iso15_datalen != expected) {
+            PrintAndLogEx(WARNING, "data content is %zu bytes, header says %u x %u = %u bytes"
+                          , iso15_datalen
+                          , udata.iso15->pagesCount
+                          , udata.iso15->bytesPerPage
+                          , expected);
+        }
+
+        *datalen = sizeof(iso15_tag_t);
     }
 
     fclose(f);
@@ -3015,6 +3170,7 @@ int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool 
                 break;
             case NFC_DF_15:
                 PrintAndLogEx(INFO, "Detected ISO15693 based dump format");
+                break;
             case NFC_DF_UNKNOWN:
                 PrintAndLogEx(WARNING, "Failed to detected dump format");
                 break;
