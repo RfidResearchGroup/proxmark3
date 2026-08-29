@@ -3790,18 +3790,50 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
 //-----------------------------------------------------------------------------
 // Read an ISO 14443a tag. Send out commands and store answers.
 //-----------------------------------------------------------------------------
-// arg0         iso_14a flags
-// arg1         high ::  number of bits, if you want to send 7bits etc
+// NG callers send one iso14a_raw_cmd_t. OLD/MIX callers still pack:
+//   arg0      iso_14a flags
+//   arg1      high ::  number of bits, if you want to send 7bits etc
 //             low  ::  len of commandbytes
-// arg2         timeout
-// d.asBytes command bytes to send
+//   arg2      high ::  wait_us,  low :: timeout
+//   d.asBytes command bytes to send
 void ReaderIso14443a(PacketCommandNG *c) {
-    iso14a_command_t param = c->oldarg[0];
-    size_t len = c->oldarg[1] & 0xffff;
-    size_t lenbits = c->oldarg[1] >> 16;
-    uint32_t timeout = c->oldarg[2] & 0xffffffff;
-    uint32_t wait_us = c->oldarg[2] >> 32;
-    uint8_t *cmd = c->data.asBytes;
+
+    iso14a_command_t param;
+    size_t len, lenbits;
+    uint32_t timeout, wait_us;
+    uint8_t *cmd;
+
+    if (c->ng) {
+
+        if (c->length < sizeof(iso14a_raw_cmd_t)) {
+            reply_ng(CMD_HF_ISO14443A_READER, PM3_EINVARG, NULL, 0);
+            return;
+        }
+
+        iso14a_raw_cmd_t *payload = (iso14a_raw_cmd_t *)c->data.asBytes;
+
+        if (payload->len > (c->length - sizeof(iso14a_raw_cmd_t))) {
+            reply_ng(CMD_HF_ISO14443A_READER, PM3_EINVARG, NULL, 0);
+            return;
+        }
+
+        param = payload->flags;
+        len = payload->len;
+        lenbits = payload->lenbits;
+        timeout = payload->timeout;
+        wait_us = payload->wait_us;
+        cmd = payload->data;
+
+    } else {
+        // OLD/MIX callers, still the majority. See doc/new_frame_format.md
+        param = c->oldarg[0];
+        len = c->oldarg[1] & 0xffff;
+        lenbits = c->oldarg[1] >> 16;
+        timeout = c->oldarg[2] & 0xffffffff;
+        wait_us = c->oldarg[2] >> 32;
+        cmd = c->data.asBytes;
+    }
+
     uint32_t arg0;
 
     uint8_t buf[PM3_CMD_DATA_SIZE_MIX] = {0x00};

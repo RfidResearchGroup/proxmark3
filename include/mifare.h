@@ -111,6 +111,22 @@ typedef enum ISO14A_COMMAND {
     ISO14A_CLEARTRACE = (1 << 17),
 } iso14a_command_t;
 
+// CMD_HF_ISO14443A_READER payload.
+// Replaces the oldarg packing this command used to ride on:
+//   arg0 = flags
+//   arg1 = (lenbits << 16) | len
+//   arg2 = (wait_us << 32) | timeout
+typedef struct {
+    uint32_t flags;     // iso14a_command_t bitmask, needs 18 bits today
+    uint32_t timeout;   // in ETUs, only read when ISO14A_SET_TIMEOUT is set
+    uint32_t wait_us;   // only read when ISO14A_SET_WAIT_US is set
+    uint16_t len;       // bytes in data[]
+    uint16_t lenbits;   // send this many bits instead of whole bytes, 0 = off
+    uint8_t data[];
+} PACKED iso14a_raw_cmd_t;
+
+#define ISO14A_RAW_LEN(x) (sizeof(iso14a_raw_cmd_t) + (x))
+
 typedef struct {
     uint8_t *response;
     uint8_t *modulation;

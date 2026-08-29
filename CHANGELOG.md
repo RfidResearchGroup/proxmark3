@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Change NG: iso14a_raw_cmd_t, convert hf 14a raw, dual-mode reader handler (@iceman1001)
 - Support for flipper ISO15693.nfc dump files (@iceman100)
 - Change NG: convert CMD_LF_EM4X50_ESET to em4x50_eset_t  (@iceman1001)
 - Change NG: convert CMD_LF_T55XX_SET_CONFIG to t55xx_setconfig_t (@iceman1001)

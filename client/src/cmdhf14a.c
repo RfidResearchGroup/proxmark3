@@ -1710,7 +1710,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     bool use_schann = arg_get_lit(ctx, 13);
 
     int datalen = 0;
-    uint8_t data[PM3_CMD_DATA_SIZE_MIX] = {0};
+    uint8_t data[PM3_CMD_DATA_SIZE - sizeof(iso14a_raw_cmd_t)] = {0};
     CLIGetHexWithReturn(ctx, 14, data, &datalen);
     CLIParserFree(ctx);
 
@@ -1754,11 +1754,9 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
             flags |= ISO14A_NO_SELECT;
     }
 
-    // 32b MSB encode wait_us, 32b LSB encode timeout
-    uint64_t argtimeout = 0;
+    uint32_t timeout_etu = 0;
     if (wait_us) {
         flags |= ISO14A_SET_WAIT_US;
-        argtimeout = ((uint64_t)wait_us) << 32;
     }
 
     if (bTimeout) {
@@ -1768,7 +1766,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
             timeout = MAX_TIMEOUT;
             PrintAndLogEx(INFO, "Set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
         }
-        argtimeout |= 13560000 / 1000 / (8 * 16) * timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
+        timeout_etu = 13560000 / 1000 / (8 * 16) * timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
     }
 
     if (keep_field_on) {
@@ -1795,11 +1793,23 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         flags |= ISO14A_NO_RATS;
     }
 
-    // Max buffer is PM3_CMD_DATA_SIZE_MIX
-    datalen = (datalen > PM3_CMD_DATA_SIZE_MIX) ? PM3_CMD_DATA_SIZE_MIX : datalen;
+    if (datalen > (int)sizeof(data)) {
+        datalen = sizeof(data);
+    }
+
+    uint8_t buf[PM3_CMD_DATA_SIZE] = {0};
+    iso14a_raw_cmd_t *payload = (iso14a_raw_cmd_t *)buf;
+    payload->flags = flags;
+    payload->timeout = timeout_etu;
+    payload->wait_us = wait_us;
+    payload->len = datalen;
+    payload->lenbits = numbits;
+    if (datalen) {
+        memcpy(payload->data, data, datalen);
+    }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, flags, (datalen & 0x1FF) | ((uint32_t)(numbits << 16)), argtimeout, data, datalen);
+    SendCommandNG(CMD_HF_ISO14443A_READER, buf, ISO14A_RAW_LEN(datalen));
 
     if (reply) {
         int res = 0;
