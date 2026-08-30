@@ -1685,13 +1685,22 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
     clear_trace();
     set_tracing(true);
 
+    // Two ISO15693_MAX_RESPONSE_LENGTH buffers are 4232 bytes, half of the whole ARM stack.
+    // This function is called from the AppMain command loop and from standalone modes, so keep
+    // them in BigBuf like the other readers in this file do.
+    uint8_t *response = BigBuf_calloc(ISO15693_MAX_RESPONSE_LENGTH);
+    uint8_t *response2 = BigBuf_calloc(ISO15693_MAX_RESPONSE_LENGTH);
+    if (response == NULL || response2 == NULL) {
+        if (g_dbglevel > DBG_ERROR) DbpString("Failed to allocate response buffers. Exiting");
+        switch_off();
+        return;
+    }
+
     DecodeTag_t dtag = {0};
-    uint8_t response[ISO15693_MAX_RESPONSE_LENGTH] = {0};
-    DecodeTagInit(&dtag, response, sizeof(response));
+    DecodeTagInit(&dtag, response, ISO15693_MAX_RESPONSE_LENGTH);
 
     DecodeTagFSK_t dtagfsk = {0};
-    uint8_t response2[ISO15693_MAX_RESPONSE_LENGTH] = {0};
-    DecodeTagFSKInit(&dtagfsk, response2, sizeof(response2));
+    DecodeTagFSKInit(&dtagfsk, response2, ISO15693_MAX_RESPONSE_LENGTH);
 
     DecodeReader_t dreader = {0};
     uint8_t cmd[ISO15693_MAX_COMMAND_LENGTH] = {0};
