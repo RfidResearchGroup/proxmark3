@@ -366,11 +366,7 @@ static int sam_sc_card_api_loop(uint8_t *response, uint16_t *response_len,
                 }
                 if (iso14a) {
                     switch_clock_to_countsspclk();
-                    // This counter is reset for the RF exchange so the SAM
-                    // path can return to millisecond ticks afterwards. Keep
-                    // ISO14443A's absolute transfer scheduler in the same
-                    // time base; otherwise it waits on a stale timestamp
-                    // from the preceding Card-API APDU.
+                    //Keep absolute transfer scheduler in the same time base; so it doesn't wait on a stale timestamp from the preceding Card-API APDU.
                     iso14a_rebase_transfer_time();
                     int apdu_len = iso14_apdu((uint8_t *)op_value, op_len, false,
                                               nfc_rx, sizeof(nfc_rx), NULL);
