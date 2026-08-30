@@ -175,8 +175,7 @@ void bwm_print_battery_status(void) {
             uint8_t vdpm = (reg00 >> 4) & 0x0F;
             uint16_t iin_ma = (iin == 0) ? 50 : (80 + 30 * (iin - 1));
             uint16_t vdpm_mv = 3880 + 80 * vdpm;
-            Dbprintf("  Input limit......... %u mA, VIN_DPM %u.%02u V",
-                     iin_ma, vdpm_mv / 1000, (vdpm_mv % 1000) / 10);
+            Dbprintf("  Input limit......... %u mA, VIN_DPM %u mV", iin_ma, vdpm_mv);
         }
         if (I2C_BufferReadRaw(&reg01, 1, 0x01, BWM_CHG_ADDR) > 0) {
             Dbprintf("  Charge enable....... %s", (reg01 & (1u << 3)) ? _YELLOW_("disabled") : _GREEN_("enabled"));
@@ -189,7 +188,7 @@ void bwm_print_battery_status(void) {
         if (I2C_BufferReadRaw(&reg04, 1, BWM_CHG_REG_VCHG, BWM_CHG_ADDR) > 0) {
             // VBAT_REG (REG04[7:2]): 3600mV + 15mV*code  [101000=4.200V default]
             uint16_t vchg_mv = BWM_CHG_VCHG_BASE_MV + ((reg04 >> BWM_CHG_VCHG_SHIFT) & 0x3F) * BWM_CHG_VCHG_STEP_MV;
-            Dbprintf("  Charge voltage...... %u.%03u V", vchg_mv / 1000, vchg_mv % 1000);
+            Dbprintf("  Charge voltage...... %u mV", vchg_mv);
         }
     }
 
