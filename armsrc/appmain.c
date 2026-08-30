@@ -688,8 +688,9 @@ static void SendStatus(uint32_t wait) {
 }
 
 static void SendCapabilities(void) {
-    capabilities_t capabilities;
+    capabilities_t capabilities = {0};
     capabilities.version = CAPABILITIES_VERSION;
+    capabilities.max_cmd_data_size = PM3_CMD_DATA_SIZE;
     capabilities.via_fpc = g_reply_via_fpc;
     capabilities.via_usb = g_reply_via_usb;
     capabilities.bigbuf_size = BigBuf_get_size();

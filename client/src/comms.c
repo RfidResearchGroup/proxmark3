@@ -40,6 +40,22 @@ static serial_port sp = NULL;
 communication_arg_t g_conn;
 capabilities_t g_pm3_capabilities;
 
+// Largest NG payload the attached device accepts.
+//
+// zero means no completed a capabilities handshake yet, 
+// Fall back to the OLD size 512,
+// Note a pre-v9 device does not reach this branch, TestProxmark() fills the field in for it.
+//
+// Capped by PM3_CMD_DATA_SIZE as well, since that is what sizes our own buffers.
+uint16_t pm3_max_cmd_data_size(void) {
+
+    uint16_t devmax = g_pm3_capabilities.max_cmd_data_size;
+    if (devmax == 0) {
+        devmax = CAPABILITIES_LEGACY_CMD_DATA_SIZE;
+    }
+    return MIN(devmax, (uint16_t)PM3_CMD_DATA_SIZE);
+}
+
 static pthread_t communication_thread;
 static pthread_t reconnect_thread;
 
@@ -178,8 +194,9 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
         PrintAndLogEx(INFO, "Sending bytes to proxmark failed - offline");
         return;
     }
-    if (len > PM3_CMD_DATA_SIZE) {
-        PrintAndLogEx(WARNING, "Sending " _RED_("%zu") " bytes of payload is too much, abort", len);
+    uint16_t maxlen = pm3_max_cmd_data_size();
+    if (len > maxlen) {
+        PrintAndLogEx(WARNING, "Sending " _RED_("%zu") " bytes of payload is too much for this device (max " _YELLOW_("%u") "), abort", len, maxlen);
         return;
     }
 
@@ -919,13 +936,39 @@ int TestProxmark(pm3_device_t *dev) {
         return PM3_ETIMEOUT;
     }
 
-    if ((resp.length != sizeof(g_pm3_capabilities)) || (resp.data.asBytes[0] != CAPABILITIES_VERSION)) {
-        PrintAndLogEx(ERR, _RED_("Capabilities structure version sent by Proxmark3 is not the same as the one used by the client!"));
-        PrintAndLogEx(ERR, _RED_("Please flash the Proxmark3 with the same version as the client."));
+    // Firmware older than the client is fine: capabilities_t only ever grows by
+    // appending, so an older struct is a prefix of ours. Zero first, copy what the
+    // device sent, and default the rest below. 
+    if ((resp.data.asBytes[0] > CAPABILITIES_VERSION) ||
+            (resp.length > sizeof(g_pm3_capabilities)) ||
+            (resp.length < offsetof(capabilities_t, max_cmd_data_size))) {
+        PrintAndLogEx(ERR, _RED_("Capabilities structure sent by Proxmark3 is not one this client understands!"));
+        PrintAndLogEx(ERR, _RED_("Device reports v%u/%u bytes, client understands up to v%u/%zu bytes."),
+                      resp.data.asBytes[0],
+                      resp.length,
+                      CAPABILITIES_VERSION,
+                      sizeof(g_pm3_capabilities)
+                );
+        PrintAndLogEx(ERR, _RED_("Please flash the Proxmark3 with a version matching the client."));
         return PM3_EDEVNOTSUPP;
     }
 
-    memcpy(&g_pm3_capabilities, resp.data.asBytes, sizeof(capabilities_t));
+    memset(&g_pm3_capabilities, 0, sizeof(g_pm3_capabilities));
+    memcpy(&g_pm3_capabilities, resp.data.asBytes, resp.length);
+
+    if (g_pm3_capabilities.version < CAPABILITIES_VERSION) {
+
+        // pre-v9 firmware could not report its frame size
+        if (g_pm3_capabilities.max_cmd_data_size == 0) {
+            g_pm3_capabilities.max_cmd_data_size = CAPABILITIES_LEGACY_CMD_DATA_SIZE;
+        }
+        PrintAndLogEx(WARNING, "Device capabilities v%u, client v%u. Command payloads limited to " _YELLOW_("%u") " bytes",
+                      g_pm3_capabilities.version,
+                      CAPABILITIES_VERSION,
+                      g_pm3_capabilities.max_cmd_data_size
+                );
+    }
+
     g_conn.send_via_fpc_usart = g_pm3_capabilities.via_fpc;
     g_conn.uart_speed = g_pm3_capabilities.baudrate;
 

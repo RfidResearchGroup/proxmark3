@@ -261,8 +261,15 @@ typedef struct {
     bool hw_available_i2c_eeprom : 1;
     bool is_pm5 : 1;
     bool is_pm5_std_ant : 1;
+
+    // Appended in version 9. Fields must only ever be APPENDED here: 
+    // the client accepts a shorter struct from older firmware
+    // PM5 can use this to inform which size they support oo.
+    uint16_t max_cmd_data_size;     // device side PM3_CMD_DATA_SIZE
 } PACKED capabilities_t;
-#define CAPABILITIES_VERSION 8
+#define CAPABILITIES_VERSION 9
+// what a pre-v9 device would have used, it could not tell us
+#define CAPABILITIES_LEGACY_CMD_DATA_SIZE 512
 extern capabilities_t g_pm3_capabilities;
 
 typedef struct {
