@@ -1814,7 +1814,7 @@ int read_iclass_csn(bool loop, bool verbose, bool shallow_mod) {
         payload.flags |= FLAG_ICLASS_READER_SHALLOW_MOD;
     }
 
-    int res = PM3_SUCCESS;
+    int res = PM3_ETIMEOUT;
 
     do {
         clearCommandBuffer();
@@ -1823,14 +1823,19 @@ int read_iclass_csn(bool loop, bool verbose, bool shallow_mod) {
 
         if (WaitForResponseTimeout(CMD_HF_ICLASS_READER, &resp, 2000)) {
 
-            iclass_card_select_resp_t *r = (iclass_card_select_resp_t *)resp.data.asBytes;
-            if (loop) {
-                if (resp.status == PM3_ERFTRANS) {
+            if (resp.status == PM3_ERFTRANS || resp.length < sizeof(iclass_card_select_resp_t)) {
+                if (loop) {
                     continue;
                 }
-            } else {
+                if (verbose) PrintAndLogEx(WARNING, "iCLASS / Picopass card select failed ( %d )", resp.status);
+                res = PM3_EOPABORTED;
+                break;
+            }
 
-                if (r->status == FLAG_ICLASS_NULL || resp.status == PM3_ERFTRANS) {
+            iclass_card_select_resp_t *r = (iclass_card_select_resp_t *)resp.data.asBytes;
+            if (loop == false) {
+
+                if (r->status == FLAG_ICLASS_NULL) {
                     if (verbose) PrintAndLogEx(WARNING, "iCLASS / Picopass card select failed ( %d , %d)", r->status, resp.status);
                     res = PM3_EOPABORTED;
                     break;
@@ -1851,6 +1856,12 @@ int read_iclass_csn(bool loop, bool verbose, bool shallow_mod) {
                 iclass_set_last_known_card(card);
                 free(card);
                 res = PM3_SUCCESS;
+            }
+        } else {
+            if (verbose) PrintAndLogEx(WARNING, "iCLASS / Picopass card select timeout");
+            res = PM3_ETIMEOUT;
+            if (loop == false) {
+                break;
             }
         }
     } while (loop && (kbd_enter_pressed() == false));
