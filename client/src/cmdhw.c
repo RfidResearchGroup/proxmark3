@@ -1739,6 +1739,50 @@ static int CmdBwmCharge(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdBwmVchg(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwmvchg",
+                  "Set the BWM charger (AW32001E) charge-voltage regulation target.\n"
+                  "Lowering it below 4.2 V reduces top-of-charge stress and extends cell\n"
+                  "life. Snaps to the nearest 15 mV step; clamped to 3600..4200 mV. This is\n"
+                  "a runtime register write (reverts on the charger watchdog / POR); the\n"
+                  "firmware re-applies the " _YELLOW_("4100 mV") " default at every boot. PM5 only.",
+                  "hw bwmvchg              --> set charge voltage to default 4100 mV (->4.095 V)\n"
+                  "hw bwmvchg --mv 4200    --> set charge voltage to 4200 mV");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "mv", "<mV>", "charge voltage in mV (default 4100, clamped 3600..4200)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int mv = arg_get_int_def(ctx, 1, 4100);
+    CLIParserFree(ctx);
+
+    if (mv < 3600 || mv > 4200) {
+        PrintAndLogEx(WARNING, "charge voltage out of range (3600..4200 mV): %d", mv);
+        return PM3_EINVARG;
+    }
+
+    uint8_t payload[2] = { (uint8_t)(mv & 0xFF), (uint8_t)((mv >> 8) & 0xFF) };
+    PrintAndLogEx(INFO, "Setting BWM charge voltage to " _YELLOW_("%d mV") "...", mv);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_SET_VCHG, payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_PM5_BWM_SET_VCHG, &resp, 5000) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "failed to set charge voltage - check BWM present");
+        return resp.status;
+    }
+    uint16_t applied = (resp.length >= 2) ? (resp.data.asBytes[0] | (resp.data.asBytes[1] << 8)) : 0;
+    PrintAndLogEx(SUCCESS, "Charge voltage set to " _YELLOW_("%u.%03u V") " (nearest 15 mV step).", applied / 1000, applied % 1000);
+    return PM3_SUCCESS;
+}
+
 static int CmdBwmSetCap(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw bwmsetcap",
@@ -2259,6 +2303,7 @@ static command_t CommandTable[] = {
     {"standalone", CmdStandalone, IfPm3Present, "Start installed standalone mode on device"},
     {"tia", CmdTia, IfPm3Present, "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
     {"bwmsetcap", CmdBwmSetCap, IfPm5, "Set BWM fuel-gauge design capacity (PM5, run once after battery change)"},
+    {"bwmvchg",   CmdBwmVchg,   IfPm5, "Set BWM charger charge-voltage target (PM5, default 4100 mV)"},
     {"bwmcharge", CmdBwmCharge, IfPm5, "Enable/disable BWM battery charging (PM5, one-shot)"},
     {"bwmautooff", CmdBwmAutoOff, IfPm5, "Toggle auto power-off on USB unplug (PM5, BWM)"},
     {"bwmwifi", CmdBWMWifi, IfPm5, "Bring up BWM WiFi (STA + TCP server) for a tcp: connection (PM5)"},
