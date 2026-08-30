@@ -27,6 +27,12 @@
 #include "string.h"
 
 #define T0_PCF 8 //period for the pcf7931 in us
+
+// Entries in the data frame array. Every AddBit/AddByte/AddPattern call appends 3 entries,
+// and a write frame is 2 patterns + 77 bits + 1 pattern = 80 calls = 240 entries. 256 leaves
+// the trailing zero the "tab[u] != 0" scans terminate on, and matches the uint8_t cursor in
+// AddBitPCF7931, which cannot address past 255 anyway.
+#define PCF7931_FRAME_ENTRIES 256
 #define ALLOC 16
 
 // IIR filter consts
@@ -437,7 +443,7 @@ static void RealWritePCF7931(
     uint8_t address, uint8_t byte, uint8_t data,
     bool ledcontrol) {
 
-    uint32_t tab[1024] = {0}; // data times frame
+    uint32_t tab[PCF7931_FRAME_ENTRIES] = {0}; // data times frame
     uint32_t u = 0;
     uint8_t parity = 0;
 
@@ -553,7 +559,9 @@ void SendCmdPCF7931(uint32_t *tab, bool ledcontrol) {
     if (ledcontrol) LED_A_ON();
 
     // rescale the values to match the time of the timer below.
-    for (u = 0; u < 500; ++u) {
+    // stop at the terminating zero like the loops below do, the caller's array
+    // is only as long as the frame needs
+    for (u = 0; tab[u] != 0; ++u) {
         tab[u] = (tab[u] * 3) / 2;
     }
 
