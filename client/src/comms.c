@@ -936,38 +936,15 @@ int TestProxmark(pm3_device_t *dev) {
         return PM3_ETIMEOUT;
     }
 
-    // Firmware older than the client is fine: capabilities_t only ever grows by
-    // appending, so an older struct is a prefix of ours. Zero first, copy what the
-    // device sent, and default the rest below. 
-    if ((resp.data.asBytes[0] > CAPABILITIES_VERSION) ||
-            (resp.length > sizeof(g_pm3_capabilities)) ||
-            (resp.length < offsetof(capabilities_t, max_cmd_data_size))) {
-        PrintAndLogEx(ERR, _RED_("Capabilities structure sent by Proxmark3 is not one this client understands!"));
-        PrintAndLogEx(ERR, _RED_("Device reports v%u/%u bytes, client understands up to v%u/%zu bytes."),
-                      resp.data.asBytes[0],
-                      resp.length,
-                      CAPABILITIES_VERSION,
-                      sizeof(g_pm3_capabilities)
-                );
+    if ((resp.length != sizeof(g_pm3_capabilities)) ||
+            (resp.data.asBytes[0] != CAPABILITIES_VERSION)) {
+        PrintAndLogEx(ERR, _RED_("Capabilities structure version sent by Proxmark3 is not the one expected by this client! (v%u != v%u)"), resp.data.asBytes[0], CAPABILITIES_VERSION);
         PrintAndLogEx(ERR, _RED_("Please flash the Proxmark3 with a version matching the client."));
         return PM3_EDEVNOTSUPP;
     }
 
     memset(&g_pm3_capabilities, 0, sizeof(g_pm3_capabilities));
     memcpy(&g_pm3_capabilities, resp.data.asBytes, resp.length);
-
-    if (g_pm3_capabilities.version < CAPABILITIES_VERSION) {
-
-        // pre-v9 firmware could not report its frame size
-        if (g_pm3_capabilities.max_cmd_data_size == 0) {
-            g_pm3_capabilities.max_cmd_data_size = CAPABILITIES_LEGACY_CMD_DATA_SIZE;
-        }
-        PrintAndLogEx(WARNING, "Device capabilities v%u, client v%u. Command payloads limited to " _YELLOW_("%u") " bytes",
-                      g_pm3_capabilities.version,
-                      CAPABILITIES_VERSION,
-                      g_pm3_capabilities.max_cmd_data_size
-                );
-    }
 
     g_conn.send_via_fpc_usart = g_pm3_capabilities.via_fpc;
     g_conn.uart_speed = g_pm3_capabilities.baudrate;
@@ -982,6 +959,8 @@ int TestProxmark(pm3_device_t *dev) {
                   (is_bt_conn) ? " over " _GREEN_("BT") : "",
                   (is_udp_conn) ? " over " _GREEN_("UDP") : ""
                  );
+    PrintAndLogEx(SUCCESS, "Max frame size: " _GREEN_("%u") " bytes",
+                  g_pm3_capabilities.max_cmd_data_size);
     if (g_conn.send_via_fpc_usart) {
         PrintAndLogEx(SUCCESS, "PM3 UART serial baudrate: " _GREEN_("%u") "\n", g_conn.uart_speed);
     } else {
