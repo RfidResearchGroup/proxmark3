@@ -3221,8 +3221,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
 
             if (isok) {
-                for (size_t pos = 0; pos < count; pos += PM3_CMD_DATA_SIZE) {
-                    size_t len = MIN((count - pos), PM3_CMD_DATA_SIZE);
+                // CMD_READ_MEM_DOWNLOADED is an OLD frame, also served by bootrom.c.
+                // Chunk by what reply_old can carry, not by the NG payload size.
+                for (size_t pos = 0; pos < count; pos += PM3_CMD_DATA_SIZE_OLD) {
+                    size_t len = MIN((count - pos), PM3_CMD_DATA_SIZE_OLD);
                     isok = (reply_old(CMD_READ_MEM_DOWNLOADED, pos, len, 0, &base[offset + pos], len) == PM3_SUCCESS);
                     if (isok == false) {
                         Dbprintf("transfer to client failed ::  | pos %u len %u", pos, len);

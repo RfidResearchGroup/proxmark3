@@ -1289,6 +1289,9 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
                     offset = response->oldarg[0];
                     copy_bytes = response->oldarg[1];
                     src = response->data.asBytes;
+                    // an OLD frame carries at most PM3_CMD_DATA_SIZE_OLD valid bytes,
+                    // whatever oldarg[1] claims
+                    copy_bytes = MIN(copy_bytes, (uint32_t)PM3_CMD_DATA_SIZE_OLD);
                 }
 
                 copy_bytes = MIN(bytes - bytes_completed, copy_bytes);
