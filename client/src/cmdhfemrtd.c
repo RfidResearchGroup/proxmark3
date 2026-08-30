@@ -2239,15 +2239,22 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
 }
 
 static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_t *dataout, size_t *dataoutlen) {
-    uint8_t top[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    uint8_t signeddata[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    uint8_t emrtdsigcontainer[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    uint8_t emrtdsig[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    uint8_t emrtdsigtext[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    uint8_t *buffers = calloc(5, EMRTD_MAX_FILE_SIZE);
+    if (buffers == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate EF_SOD parser buffers.");
+        return PM3_EMALLOC;
+    }
+
+    uint8_t *top = buffers;
+    uint8_t *signeddata = top + EMRTD_MAX_FILE_SIZE;
+    uint8_t *emrtdsigcontainer = signeddata + EMRTD_MAX_FILE_SIZE;
+    uint8_t *emrtdsig = emrtdsigcontainer + EMRTD_MAX_FILE_SIZE;
+    uint8_t *emrtdsigtext = emrtdsig + EMRTD_MAX_FILE_SIZE;
     size_t toplen, signeddatalen, emrtdsigcontainerlen, emrtdsiglen, emrtdsigtextlen = 0;
 
     if (emrtd_lds_get_data_by_tag(data, datalen, top, &toplen, 0x30, 0x00, false, true, 0) == false) {
         PrintAndLogEx(ERR, "Failed to read top from EF_SOD.");
+        free(buffers);
         return false;
     }
 
@@ -2255,6 +2262,7 @@ static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_
 
     if (emrtd_lds_get_data_by_tag(top, toplen, signeddata, &signeddatalen, 0xA0, 0x00, false, false, 0) == false) {
         PrintAndLogEx(ERR, "Failed to read signedData from EF_SOD.");
+        free(buffers);
         return false;
     }
 
@@ -2263,6 +2271,7 @@ static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_
     // Do true on reading into the tag as it's a "sequence"
     if (emrtd_lds_get_data_by_tag(signeddata, signeddatalen, emrtdsigcontainer, &emrtdsigcontainerlen, 0x30, 0x00, false, true, 0) == false) {
         PrintAndLogEx(ERR, "Failed to read eMRTDSignature container from EF_SOD.");
+        free(buffers);
         return false;
     }
 
@@ -2270,6 +2279,7 @@ static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_
 
     if (emrtd_lds_get_data_by_tag(emrtdsigcontainer, emrtdsigcontainerlen, emrtdsig, &emrtdsiglen, 0xA0, 0x00, false, false, 0) == false) {
         PrintAndLogEx(ERR, "Failed to read eMRTDSignature from EF_SOD.");
+        free(buffers);
         return false;
     }
 
@@ -2278,10 +2288,12 @@ static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_
     // TODO: Not doing memcpy here, it didn't work, fix it somehow
     if (emrtd_lds_get_data_by_tag(emrtdsig, emrtdsiglen, emrtdsigtext, &emrtdsigtextlen, 0x04, 0x00, false, false, 0) == false) {
         PrintAndLogEx(ERR, "Failed to read eMRTDSignature (text) from EF_SOD.");
+        free(buffers);
         return false;
     }
     memcpy(dataout, emrtdsigtext, emrtdsigtextlen);
     *dataoutlen = emrtdsigtextlen;
+    free(buffers);
     return PM3_SUCCESS;
 }
 
@@ -2324,8 +2336,14 @@ static int emrtd_parse_ef_sod_hash_algo(uint8_t *data, size_t datalen, int *hash
 }
 
 static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *hashes, int *hashalgo) {
-    uint8_t emrtdsig[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    uint8_t hashlist[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    uint8_t *buffers = calloc(2, EMRTD_MAX_FILE_SIZE);
+    if (buffers == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate EF_SOD hash buffers.");
+        return PM3_EMALLOC;
+    }
+
+    uint8_t *emrtdsig = buffers;
+    uint8_t *hashlist = emrtdsig + EMRTD_MAX_FILE_SIZE;
     uint8_t hash[64] = { 0x00 };
     size_t hashlen = 0;
 
@@ -2337,6 +2355,7 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
     size_t offset = 0;
 
     if (emrtd_ef_sod_extract_signatures(data, datalen, emrtdsig, &emrtdsiglen) != PM3_SUCCESS) {
+        free(buffers);
         return false;
     }
 
@@ -2346,6 +2365,7 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
 
     if (emrtd_lds_get_data_by_tag(emrtdsig, emrtdsiglen, hashlist, &hashlistlen, 0x30, 0x00, false, true, 1) == false) {
         PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD");
+        free(buffers);
         return false;
     }
 
@@ -2377,6 +2397,7 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
         offset += 1 + e_datalen + e_fieldlen;
     }
 
+    free(buffers);
     return PM3_SUCCESS;
 }
 
