@@ -421,8 +421,15 @@ bool hid_config_card_jam(const uint8_t *cmd, int len, uint8_t *dma_buf) {
 // ---------------------------------------------------------------------------
 
 int hid_config_card_iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint16_t data_len, uint8_t *res) {
+    // PCB(1) + CID(1) + APDU + CRC(2) has to fit inside one ISO14443 frame,
+    // which is also the limit ReaderTransmit() can encode into the tosend
+    // buffer.
+    if (cmd_len + 4 > MAX_FRAME_SIZE) {
+        return PM3_EINVARG;
+    }
+
     uint8_t parity[MAX_PARITY_SIZE] = {0};
-    uint8_t *real_cmd = BigBuf_calloc(cmd_len + 5); // PCB(1) + CID(1) + APDU + CRC(2)
+    uint8_t real_cmd[MAX_FRAME_SIZE] = {0};
 
     if (cmd_len) {
         real_cmd[0] = 0x0A; // I-block, CID present (bit 3), block number in bit 0
@@ -441,7 +448,6 @@ int hid_config_card_iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chainin
     ReaderTransmit(real_cmd, cmd_len + 4, NULL); // PCB(1) + CID(1) + APDU + CRC(2)
 
     if (tearoff_hook() == PM3_ETEAROFF) {
-        BigBuf_free();
         return -1;
     }
 
@@ -449,7 +455,6 @@ int hid_config_card_iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chainin
     uint8_t *data_bytes = (uint8_t *)data;
 
     if (len == 0) {
-        BigBuf_free();
         return 0;
     }
 
@@ -458,7 +463,6 @@ int hid_config_card_iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chainin
     // S-Block WTX
     while (len && ((data_bytes[0] & 0xF2) == 0xF2)) {
         if (BUTTON_PRESS() || data_available()) {
-            BigBuf_free();
             return -3;
         }
         send_wtx(38);
@@ -482,7 +486,6 @@ int hid_config_card_iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chainin
         *res = data_bytes[0];
 
     if (len >= 3 && !CheckCrc14A(data_bytes, len)) {
-        BigBuf_free();
         return -1;
     }
 
@@ -493,7 +496,6 @@ int hid_config_card_iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chainin
         memmove(data_bytes, data_bytes + header_len, len);
     }
 
-    BigBuf_free();
     return len;
 }
 

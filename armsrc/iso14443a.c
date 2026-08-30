@@ -3685,10 +3685,13 @@ b5,b6 = 00 - DESELECT
         11 - WTX
 */
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint16_t data_len, uint8_t *res) {
-    uint8_t *real_cmd = BigBuf_calloc(cmd_len + 4);
-    if (real_cmd == NULL) {
-        return -1;
+    // PCB(1) + APDU + CRC(2) has to fit inside one ISO14443 frame, which is
+    // also the limit ReaderTransmit() can encode into the tosend buffer.
+    if (cmd_len + 3 > MAX_FRAME_SIZE) {
+        return PM3_EINVARG;
     }
+
+    uint8_t real_cmd[MAX_FRAME_SIZE] = {0};
 
     if (cmd_len) {
         // ISO 14443 APDU frame: PCB [CID] [NAD] APDU CRC PCB=0x02
@@ -3710,7 +3713,6 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
 
     // tearoff occurred
     if (tearoff_hook() == PM3_ETEAROFF) {
-        BigBuf_free();
         return -1;
     }
 
@@ -3718,7 +3720,6 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
     uint8_t *data_bytes = (uint8_t *) data;
 
     if (len == 0) {
-        BigBuf_free();
         return 0; // DATA LINK ERROR
     }
 
@@ -3728,12 +3729,10 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
     while (len && ((data_bytes[0] & 0xF2) == 0xF2)) {
 
         if (BUTTON_PRESS() || data_available()) {
-            BigBuf_free();
             return -3;
         }
 
-        // Inform client of WTX of timeout in ms
-        // 38ms == MAX_ISO14A_TIMEOUT
+        // Inform client of WTX 38ms == MAX_ISO14A_TIMEOUT
         send_wtx(38);
 
         // byte1 - WTXM [1..59]. command FWT=FWT*WTXM
@@ -3754,7 +3753,6 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
 
     }
 
-    // restore timeout
     iso14a_set_timeout(save_iso14a_timeout);
 
     // if we received an I- or R(ACK)-Block with a block number equal to the
@@ -3771,22 +3769,18 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
         *res = data_bytes[0];
     }
 
-    // crc check
     if (len >= 3 && !CheckCrc14A(data_bytes, len)) {
-        BigBuf_free();
         return -1;
     }
 
     if (len) {
         // cut frame byte
         len -= 1;
-        // memmove(data_bytes, data_bytes + 1, len);
         for (int i = 0; i < len; i++) {
             data_bytes[i] = data_bytes[i + 1];
         }
     }
 
-    BigBuf_free();
     return len;
 }
 
