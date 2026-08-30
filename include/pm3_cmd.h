@@ -597,8 +597,11 @@ typedef struct {
 
 enum {
     MIFAREU3P_KEY_SIZE = 16,
-    MIFAREU3P_CHKKEY_HEADER = 2 + MIFAREU3P_KEY_SIZE
+    // 2 bitfield bytes + a whole byte for nkeys + the reference key
+    MIFAREU3P_CHKKEY_HEADER = 3 + MIFAREU3P_KEY_SIZE,
+    MIFAREU3P_CHKKEY_MAX_KEYS = 255
 };
+
 typedef struct {
     uint8_t key_index : 2;
     uint8_t firstchunk : 1;
@@ -607,8 +610,10 @@ typedef struct {
     uint8_t segment : 3;
     uint8_t check_answer : 1;
     uint8_t use_fastread0 : 1;
-    // max nkeys: (PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER) / MIFAREU3P_KEY_SIZE < 32
-    uint8_t nkeys : 6;
+    // a whole byte: a 6 bit field could not announce the 123 keys that already
+    // fit in one frame in segment mode. Callers still clamp to
+    // MIFAREU3P_CHKKEY_MAX_KEYS, which binds again above ~1040 byte frames.
+    uint8_t nkeys;
     uint8_t ref_key[MIFAREU3P_KEY_SIZE];
     uint8_t data[PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER];
 } PACKED mful_3passchk_t;

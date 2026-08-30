@@ -4422,8 +4422,6 @@ static int mfu_3pass_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, const cha
     return PM3_SUCCESS;
 }
 
-#define MIFAREU3P_CHKKEY_HEADER (3 + MIFAREU3P_KEY_SIZE)
-
 static int mfu_3pass_check_keys(uint8_t key_index, uint8_t firstChunk, uint8_t lastChunk,
                                 uint32_t nkeys, int segment, uint8_t *ref_key, bool xor_ref_key, uint8_t *keyBlock,
                                 bool verbose, bool quiet, uint32_t *auths, uint32_t *ms, bool check_answer, bool use_fastread0) {
@@ -4784,8 +4782,12 @@ static int CmdHF14AMfUCAuthChk(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint32_t chunksize = (keycnt > (PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER) / keysize) ?
-                         ((PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER) / keysize) : keycnt;
+    // cap by what fits in one frame, then by what the nkeys field can announce
+    uint32_t max_chunk = (PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER) / keysize;
+    if (max_chunk > MIFAREU3P_CHKKEY_MAX_KEYS) {
+        max_chunk = MIFAREU3P_CHKKEY_MAX_KEYS;
+    }
+    uint32_t chunksize = (keycnt > max_chunk) ? max_chunk : keycnt;
     bool firstChunk = true, lastChunk = false;
 
     int i = 0;
@@ -4999,8 +5001,12 @@ static int CmdHF14AMfUAESAuthChk(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint32_t chunksize = (keycnt > (PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER) / keysize) ?
-                         ((PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER) / keysize) : keycnt;
+    // cap by what fits in one frame, then by what the nkeys field can announce
+    uint32_t max_chunk = (PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER) / keysize;
+    if (max_chunk > MIFAREU3P_CHKKEY_MAX_KEYS) {
+        max_chunk = MIFAREU3P_CHKKEY_MAX_KEYS;
+    }
+    uint32_t chunksize = (keycnt > max_chunk) ? max_chunk : keycnt;
     bool firstChunk = true, lastChunk = false;
 
     int i = 0;

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mfu cchk` - now 3-pass key check all keys sent to device  (@iceman1001)
 - Changed iso15693 on device side to share one response buffer across the reader helpers (@iceman1001)
 - Changed version data on device side to not be inlined, freeing 1.5kB of stack in the main loop (@iceman1001)
 - Changed `lf pcf7931` - now use bigbuf_calloc and much smaller array (@iceman1001)
