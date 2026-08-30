@@ -3686,6 +3686,9 @@ b5,b6 = 00 - DESELECT
 */
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint16_t data_len, uint8_t *res) {
     uint8_t *real_cmd = BigBuf_calloc(cmd_len + 4);
+    if (real_cmd == NULL) {
+        return -1;
+    }
 
     if (cmd_len) {
         // ISO 14443 APDU frame: PCB [CID] [NAD] APDU CRC PCB=0x02
