@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed version data on device side not to be inlined. Moving from main thread ram to .bss. (@iceman1001)
 - Changed `lf pcf7931` - now use bigbuf_calloc and much smaller array (@iceman1001)
 - Changed `hf 15 sniff` - now uses bigbuf_calloc and lessen ram footprint on device (@iceman1001)
 - Added individual json dump formats for ht2, ht1, htS, htU. No more .bin files either for hitag (@iceman1001)

@@ -398,7 +398,9 @@ extern uint32_t _bootphase1_version_pointer[], _flash_start[], _flash_end[], __d
 #ifndef WITH_COMPRESSION
 extern uint32_t _bootrom_end[], _bootrom_start[], __os_size__[];
 #endif
-static void SendVersion(void) {
+// noinline: this holds three PM3_CMD_DATA_SIZE sized buffers. Inlined into AppMain they
+// would sit in its frame for the whole main loop, not just while CMD_VERSION is handled
+static void __attribute__((noinline)) SendVersion(void) {
     char temp[PM3_CMD_DATA_SIZE - 12]; /* Limited data payload in USB packets */
     char VersionString[PM3_CMD_DATA_SIZE - 12] = { '\0' };
 
