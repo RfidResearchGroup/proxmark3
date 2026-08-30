@@ -115,7 +115,7 @@ void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, c
 
     PacketCommandOLD c = {CMD_UNKNOWN, {0, 0, 0}, {{0}}};
 
-    if (len > PM3_CMD_DATA_SIZE) {
+    if (len > PM3_CMD_DATA_SIZE_OLD) {
         PrintAndLogEx(WARNING, "Sending " _RED_("%zu") " bytes of payload is too much for OLD frames, abort", len);
         return;
         // return PM3_EOUTOFBOUND;
@@ -622,7 +622,7 @@ __attribute__((force_align_arg_pointer))
                         rx.oldarg[0] = rx_old.arg[0];
                         rx.oldarg[1] = rx_old.arg[1];
                         rx.oldarg[2] = rx_old.arg[2];
-                        rx.length = PM3_CMD_DATA_SIZE;
+                        rx.length = PM3_CMD_DATA_SIZE_OLD;
                         memcpy(&rx.data, &rx_old.d, rx.length);
                         PacketResponseReceived(&rx);
                         if (rx.cmd == CMD_ACK) {

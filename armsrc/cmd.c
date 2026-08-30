@@ -44,9 +44,9 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const v
     txcmd.arg[1] = arg1;
     txcmd.arg[2] = arg2;
 
-    // Add the (optional) content to the frame, with a maximum size of PM3_CMD_DATA_SIZE
+    // Add the (optional) content to the frame, with a maximum size of PM3_CMD_DATA_SIZE_OLD
     if (data && len) {
-        len = MIN(len, PM3_CMD_DATA_SIZE);
+        len = MIN(len, PM3_CMD_DATA_SIZE_OLD);
         for (size_t i = 0; i < len; i++) {
             txcmd.d.asBytes[i] = ((const uint8_t *)data)[i];
         }
@@ -245,7 +245,7 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
         rx->oldarg[0] = rx_old.arg[0];
         rx->oldarg[1] = rx_old.arg[1];
         rx->oldarg[2] = rx_old.arg[2];
-        rx->length = PM3_CMD_DATA_SIZE;
+        rx->length = PM3_CMD_DATA_SIZE_OLD;
         memcpy(&rx->data, &rx_old.d.asBytes, rx->length);
     }
     return PM3_SUCCESS;

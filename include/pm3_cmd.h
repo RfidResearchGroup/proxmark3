@@ -26,13 +26,16 @@
 #define USART_SLOW_LINK
 
 #define PM3_CMD_DATA_SIZE 512
+// OLD frames are pinned at 512 independently of PM3_CMD_DATA_SIZE:
+// the bootloader only speaks OLD
+#define PM3_CMD_DATA_SIZE_OLD 512
 
 typedef struct {
     uint64_t cmd;
     uint64_t arg[3];
     union {
-        uint8_t asBytes[PM3_CMD_DATA_SIZE];
-        uint32_t asDwords[PM3_CMD_DATA_SIZE / 4];
+        uint8_t asBytes[PM3_CMD_DATA_SIZE_OLD];
+        uint32_t asDwords[PM3_CMD_DATA_SIZE_OLD / 4];
     } d;
 } PACKED PacketCommandOLD;
 
@@ -75,8 +78,8 @@ typedef struct {
     uint64_t cmd;
     uint64_t arg[3];
     union {
-        uint8_t asBytes[PM3_CMD_DATA_SIZE];
-        uint32_t asDwords[PM3_CMD_DATA_SIZE / 4];
+        uint8_t asBytes[PM3_CMD_DATA_SIZE_OLD];
+        uint32_t asDwords[PM3_CMD_DATA_SIZE_OLD / 4];
     } d;
 } PACKED PacketResponseOLD;
 

@@ -833,17 +833,17 @@ static void flash_write_err_software(int pm3_err) {
 }
 
 // Send finish write cmd and waiting for response.
-// The send_buf length is always 512byte(PM3_CMD_DATA_SIZE)
+// The send_buf length is always 512byte(PM3_CMD_DATA_SIZE_OLD)
 static int send_finish_write_cmd(uint32_t address, int magic, uint8_t *send_buf, PacketResponseNG *resp) {
-    // The sending length is always PM3_CMD_DATA_SIZE, which is 512 bytes, because of the limitation of the old frame.
-    const int send_len = PM3_CMD_DATA_SIZE;
+    // The sending length is always PM3_CMD_DATA_SIZE_OLD, which is 512 bytes, because of the limitation of the old frame.
+    const int send_len = PM3_CMD_DATA_SIZE_OLD;
 #if defined ICOPYX
     // To prevent users from flashing unsupported firmware, icopyx checks arg1 and arg2 in this command.
     // Therefore, when sending magic to the device, we should not choose a value that happens to be the same as icopyx.
     // In fact, neither PM3V nor PM5V will be 0xff or 0x1fd, so this should have strong robustness.
     SendCommandBL(CMD_FINISH_WRITE, address, 0xff, 0x1fd, send_buf, send_len);
 #else
-    // If it's an older version of the flashher or a flashher specific to icopyx, then arg1 should be 0x00 or 0xff,
+    // If it's an older version of the flasher or a flasher specific to icopyx, then arg1 should be 0x00 or 0xff,
     //  not a valid magic value. The client is specifically designed for icopyx.
     // ---
     // For devices with older firmware, it doesn't care about arg1,
@@ -867,14 +867,14 @@ static int send_finish_write_cmd(uint32_t address, int magic, uint8_t *send_buf,
 // Write a block of data to flash, padding to the block size if needed. The bootloader will read the entire block,
 // so we need to make sure to pad it with 0xFF if the data is smaller than the block size.
 static int write_block(uint32_t address, int magic, uint8_t *data, uint32_t length, flash_dev_t *flash_dev) {
-    // Align length to PM3_CMD_DATA_SIZE or block_size
+    // Align length to PM3_CMD_DATA_SIZE_OLD or block_size
     // It is necessary to align with the minimum write unit of the target chip,
     // otherwise it may cause the device to lose the data or offset errors.
-    uint32_t padded_len = length % MAX(PM3_CMD_DATA_SIZE, flash_dev->block_size);
+    uint32_t padded_len = length % MAX(PM3_CMD_DATA_SIZE_OLD, flash_dev->block_size);
     if (padded_len) {
-        padded_len = MAX(PM3_CMD_DATA_SIZE, flash_dev->block_size) - padded_len;
+        padded_len = MAX(PM3_CMD_DATA_SIZE_OLD, flash_dev->block_size) - padded_len;
     }
-    // After aligning PM3_CMD_DATA_SIZE, allocate a new buffer, copy the data, and pad the end with 0xFF.
+    // After aligning PM3_CMD_DATA_SIZE_OLD, allocate a new buffer, copy the data, and pad the end with 0xFF.
     uint32_t aligned_len = length + padded_len;
     uint8_t *block_buf = malloc(aligned_len);
     if (block_buf == NULL) {
@@ -904,7 +904,7 @@ static int write_block(uint32_t address, int magic, uint8_t *data, uint32_t leng
             }
             break;
         }
-        sent += PM3_CMD_DATA_SIZE;
+        sent += PM3_CMD_DATA_SIZE_OLD;
     }
     free(block_buf); // remember to free buffer
     return ret;

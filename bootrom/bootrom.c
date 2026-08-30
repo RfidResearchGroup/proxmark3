@@ -65,9 +65,9 @@ static int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, 
     txcmd.arg[1] = arg1;
     txcmd.arg[2] = arg2;
 
-    // Add the (optional) content to the frame, with a maximum size of PM3_CMD_DATA_SIZE
+    // Add the (optional) content to the frame, with a maximum size of PM3_CMD_DATA_SIZE_OLD
     if (data && len) {
-        len = MIN(len, PM3_CMD_DATA_SIZE);
+        len = MIN(len, PM3_CMD_DATA_SIZE_OLD);
         for (size_t i = 0; i < len; i++) {
             txcmd.d.asBytes[i] = ((uint8_t *)data)[i];
         }
@@ -188,8 +188,8 @@ static void UsbPacketReceived(uint8_t *packet) {
             }
 
             if (isok) {
-                for (size_t pos = 0; pos < count; pos += PM3_CMD_DATA_SIZE) {
-                    size_t len = MIN((count - pos), PM3_CMD_DATA_SIZE);
+                for (size_t pos = 0; pos < count; pos += PM3_CMD_DATA_SIZE_OLD) {
+                    size_t len = MIN((count - pos), PM3_CMD_DATA_SIZE_OLD);
                     isok = (0 == reply_old(CMD_READ_MEM_DOWNLOADED, pos, len, 0, &base[offset + pos], len));
                     if (!isok) {
                         break;
