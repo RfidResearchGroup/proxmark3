@@ -72,11 +72,17 @@ bool FpgaSetupSscRxDmaRepeat(void *buf, uint16_t len) {
         return false;
     }
 
+    // len is a count of PDC *transfers*, not bytes. SSC_RFMR.DATLEN sets the width:
+    // DATLEN <= 7 transfers bytes, 8..15 half-words. FpgaSetupSsc() picks 16 bits for
+    // FPGA_MAJOR_MODE_HF_READER on the HF/HF_15 bitstreams and 8 bits otherwise, so
+    // the same len is twice the memory on the reader paths - which is why get_dma16()
+    // allocates DMA_BUFFER_SIZE * sizeof(uint16_t) while get_dma8() allocates
+    // DMA_BUFFER_SIZE. Half-word transfers also need a 2 byte aligned buf.
     FPGA_SSC_DMA_RX_Disable();
     AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) buf;  // transfer to this memory address
-    AT91C_BASE_PDC_SSC->PDC_RCR = len;             // transfer this many bytes
+    AT91C_BASE_PDC_SSC->PDC_RCR = len;             // this many transfers
     AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) buf; // next transfer to same memory address
-    AT91C_BASE_PDC_SSC->PDC_RNCR = len;            // ... with same number of bytes
+    AT91C_BASE_PDC_SSC->PDC_RNCR = len;            // ... with the same count
     FPGA_SSC_DMA_RX_Enable();
     return true;
 }
