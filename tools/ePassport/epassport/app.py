@@ -32,17 +32,6 @@ if not _VERBOSE:
 os.environ.setdefault("OPENCV_LOG_LEVEL", "DEBUG" if _VERBOSE else "ERROR")
 os.environ.setdefault("OPENCV_VIDEOIO_DEBUG", "1" if _VERBOSE else "0")
 
-from kivy.config import Config  # noqa: E402
-
-# Set the minimum size here rather than on Window: assigning Window.minimum_*
-# warns while the other half of the pair is still zero, whichever order it is
-# done in.
-# Screen space is worth being careful with: the passport page scales as a
-# unit, so the window can go a long way down before anything stops being
-# readable.
-Config.set("graphics", "minimum_width", "760")
-Config.set("graphics", "minimum_height", "520")
-
 from kivy.app import App  # noqa: E402
 from kivy.clock import Clock  # noqa: E402
 from kivy.core.window import Window  # noqa: E402
@@ -70,9 +59,27 @@ log = logging.getLogger("epassport")
 #: What the window manager shows.
 APP_TITLE = "ePassport"
 
+#: The smallest window the passport page stays readable in.
+MIN_WINDOW_SIZE = (760, 520)
+
 #: How many files a full dump writes, for the progress bar's denominator when
 #: EF_COM has not been read yet.
 DEFAULT_EXPECTED_FILES = 9
+
+
+def apply_minimum_window_size(window) -> None:
+    """Constrain the window, once it exists.
+
+    Setting this through Config instead makes Kivy apply it inside
+    create_window(), where the resize recurses until the stack gives out.
+    """
+    minimum_width, minimum_height = MIN_WINDOW_SIZE
+    window.size = (
+        max(window.width, minimum_width),
+        max(window.height, minimum_height),
+    )
+    window.minimum_width = minimum_width
+    window.minimum_height = minimum_height
 
 
 class Root(BoxLayout):
@@ -139,8 +146,10 @@ class Pm3PassportApp(App):
     def _restore_window_size(self) -> None:
         """Reopen at the size the user last left, not a size we insist on."""
         width, height = self.settings.window_width, self.settings.window_height
-        if width >= 760 and height >= 520:
+        minimum_width, minimum_height = MIN_WINDOW_SIZE
+        if width >= minimum_width and height >= minimum_height:
             Window.size = (width, height)
+        apply_minimum_window_size(Window)
         Window.bind(on_resize=self._remember_window_size)
 
     def _remember_window_size(self, _window, width: int, height: int) -> None:
@@ -639,7 +648,11 @@ class _KivyNoise(logging.Filter):
     something the app never uses.
     """
 
-    NOISE = ("Cutbuffer", "Unable to find any valuable Cutbuffer provider")
+    NOISE = (
+        "Cutbuffer",
+        "Unable to find any valuable Cutbuffer provider",
+        "Both Window.minimum_width and Window.minimum_height",
+    )
 
     def filter(self, record: logging.LogRecord) -> bool:
         message = record.getMessage()
@@ -652,7 +665,11 @@ def _install_kivy_logging(verbose: bool) -> None:
 
     if verbose:
         return  # Kivy kept its own console handler
-    handler = logging.StreamHandler()
+    if sys.__stderr__ is None:
+        return  # pythonw and some frozen builds have no stderr
+    # Not sys.stderr: Kivy replaces it with a stream that feeds writes back
+    # in as warnings, so a handler on its own logger would loop.
+    handler = logging.StreamHandler(sys.__stderr__)
     handler.setFormatter(logging.Formatter("%(levelname)s kivy: %(message)s"))
     handler.addFilter(_KivyNoise())
     Logger.addHandler(handler)
