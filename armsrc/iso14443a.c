@@ -315,10 +315,8 @@ uint32_t iso14a_get_timeout(void) {
 }
 
 void iso14a_rebase_transfer_time(void) {
-    // NextTransferTime is expressed in absolute SSP-clock counts. A caller
-    // that restarts StartCountSspClk() resets that counter to zero; retaining
-    // the old value would make ReaderTransmit() wait for stale time from the
-    // preceding APDU. Do not reset PCB or ATS state here.
+    //Restarting StartCountSspClk() resets NextTransferTime clock-counts to zero; retaining old value makes ReaderTransmit() wait stale time from previous APDU.
+    //Do not reset PCB or ATS state here.
     NextTransferTime = 2 * DELAY_ARM2AIR_AS_READER;
 }
 
