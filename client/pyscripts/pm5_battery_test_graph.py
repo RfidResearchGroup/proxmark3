@@ -82,7 +82,7 @@ def plot(rows, output_path):
 
     axes[-1].set_xlabel("Elapsed time (minutes)")
     fig.suptitle("Battery status over time")
-    fig.tight_layout(rect=[0, 0, 1, 0.97])
+    fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.97))
     fig.savefig(output_path, dpi=150)
     print(f"Saved plot to {output_path}")
     return output_path
