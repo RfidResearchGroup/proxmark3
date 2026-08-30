@@ -44,6 +44,14 @@
 #define BWM_CHG_REG_SYSSTAT  0x08   // system status (CHG_STAT / PG_STAT / THERM_STAT)
 #define BWM_CHG_REG_FAULT    0x09   // fault register (latched, read-on-clear)
 #define BWM_CHG_FET_DIS      (1u << 5)
+#define BWM_CHG_REG_VCHG     0x04   // Charge Voltage: VBAT_REG[7:2], VBAT_PRE[1], VRECH[0]
+// AW32001E datasheet V1.2 REG04: VBAT_REG = 3600mV + 15mV*code, [7:2] (POR 0x28=4.200V)
+#define BWM_CHG_VCHG_BASE_MV 3600
+#define BWM_CHG_VCHG_STEP_MV 15
+#define BWM_CHG_VCHG_MASK    0xFC   // REG04[7:2]
+#define BWM_CHG_VCHG_SHIFT   2
+#define BWM_CHG_VCHG_MIN_MV  3600
+#define BWM_CHG_VCHG_MAX_MV  4200   // firmware safety ceiling (chip allows 4545)
 
 // --- BQ27427 fuel gauge (I2C 8-bit address 0xAA = 7-bit 0x55 << 1) -------------
 #define BWM_GAUGE_ADDR       0xAA
@@ -177,6 +185,12 @@ void bwm_print_battery_status(void) {
             uint16_t ichg_ma = 8 * ((reg02 & 0x3F) + 1);
             Dbprintf("  Charge current...... %u mA", ichg_ma);
         }
+        uint8_t reg04 = 0;
+        if (I2C_BufferReadRaw(&reg04, 1, BWM_CHG_REG_VCHG, BWM_CHG_ADDR) > 0) {
+            // VBAT_REG (REG04[7:2]): 3600mV + 15mV*code  [101000=4.200V default]
+            uint16_t vchg_mv = BWM_CHG_VCHG_BASE_MV + ((reg04 >> BWM_CHG_VCHG_SHIFT) & 0x3F) * BWM_CHG_VCHG_STEP_MV;
+            Dbprintf("  Charge voltage...... %u.%03u V", vchg_mv / 1000, vchg_mv % 1000);
+        }
     }
 
     // --- fuel gauge (BQ27427) ---
@@ -284,6 +298,33 @@ bool bwm_charger_set_charge(bool enable) {
     return I2C_BufferWrite(&reg01, 1, 0x01, BWM_CHG_ADDR);
 }
 
+// Set the charge-voltage regulation target (AW32001E REG04 VBAT_REG, bits [7:2]).
+// Clamps to 3600..4200 mV (the chip allows up to 4545, but we cap the ceiling in
+// firmware so a stray value can't over-stress the cell), rounds to the nearest
+// 15 mV step, and preserves REG04[1:0] (VBAT_PRE / VRECH). Read-modify-write.
+// Returns the mV actually applied, or 0 on I2C failure.
+uint16_t bwm_charger_set_vchg(uint16_t mv) {
+    if (mv < BWM_CHG_VCHG_MIN_MV) {
+        mv = BWM_CHG_VCHG_MIN_MV;
+    }
+    if (mv > BWM_CHG_VCHG_MAX_MV) {
+        mv = BWM_CHG_VCHG_MAX_MV;
+    }
+    uint16_t code = (uint16_t)(((mv - BWM_CHG_VCHG_BASE_MV) + (BWM_CHG_VCHG_STEP_MV / 2)) / BWM_CHG_VCHG_STEP_MV);
+    if (code > 0x3F) {
+        code = 0x3F;   // 6-bit field
+    }
+    uint8_t reg04 = 0;
+    if (I2C_BufferReadRaw(&reg04, 1, BWM_CHG_REG_VCHG, BWM_CHG_ADDR) <= 0) {
+        return 0;
+    }
+    reg04 = (uint8_t)((reg04 & ~BWM_CHG_VCHG_MASK) | ((code << BWM_CHG_VCHG_SHIFT) & BWM_CHG_VCHG_MASK));
+    if (I2C_BufferWrite(&reg04, 1, BWM_CHG_REG_VCHG, BWM_CHG_ADDR) == false) {
+        return 0;
+    }
+    return (uint16_t)(BWM_CHG_VCHG_BASE_MV + code * BWM_CHG_VCHG_STEP_MV);
+}
+
 // Program Design Capacity (and matching Design Energy). Idempotent: returns true
 // without a config-update cycle if the value is already correct.
 bool bwm_gauge_provision_capacity(uint16_t cap_mah) {
@@ -374,6 +415,9 @@ void bwm_detect_and_init(void) {
     I2C_BufferWrite(&w, 1, 0x05, BWM_CHG_ADDR); // safety timer disabled (upstream)
     w = 0x6B;
     I2C_BufferWrite(&w, 1, 0x0B, BWM_CHG_ADDR); // pre-charge 11 mA
+
+    // Pin the charge-voltage target (chip POR is 4.2V); default 4100 -> 4.095V.
+    bwm_charger_set_vchg(BWM_DEFAULT_VCHG_MV);
 }
 #endif // WITH_BWM_STATUS
 

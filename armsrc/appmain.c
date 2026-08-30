@@ -3845,6 +3845,17 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
 #ifdef WITH_BWM_STATUS
+        case CMD_PM5_BWM_SET_VCHG: {
+            // Set the AW32001E charge-voltage target (REG04 VBAT_REG).
+            // Payload: optional uint16 mV (LE); absent -> default.
+            uint16_t mv = (packet->length >= 2)
+                          ? (uint16_t)(packet->data.asBytes[0] | (packet->data.asBytes[1] << 8))
+                          : BWM_DEFAULT_VCHG_MV;
+            I2C_init(true);
+            uint16_t applied = bwm_charger_set_vchg(mv);
+            reply_ng(CMD_PM5_BWM_SET_VCHG, applied ? PM3_SUCCESS : PM3_EFAILED, (uint8_t *)&applied, sizeof(applied));
+            break;
+        }
         case CMD_PM5_BWM_SET_CAP: {
             // One-time BWM fuel-gauge (BQ27427) Design Capacity provisioning.
             // Payload: optional uint16 mAh (LE); absent -> reference default.

@@ -33,6 +33,7 @@
 // Used as the default target for `hw bwmsetcap` and as the fall-back divisor for
 // the battery-health estimate.
 #define BWM_DEFAULT_DESIGN_CAP_MAH   500
+#define BWM_DEFAULT_VCHG_MV          4100   // default charge-voltage target (mV); snaps to 4095 (15mV step)
 
 #ifdef WITH_BWM_CHARGERKICK
 // Emergency charge-path enable. Clears the AW32001 shipping/FET-disabled state so
@@ -58,6 +59,11 @@ bool bwm_gauge_provision_capacity(uint16_t cap_mah);
 // Enable/disable battery charging (clear/set AW32001E CEB, REG01[3]).
 // One-shot: reverts on the charger watchdog timeout (~160 s).
 bool bwm_charger_set_charge(bool enable);
+
+// Set the AW32001E charge-voltage regulation target (REG04 VBAT_REG). Clamps to a
+// safe window, rounds to the nearest hardware step, preserves REG04[1:0]. Returns
+// the actual mV applied, or 0 on I2C failure.
+uint16_t bwm_charger_set_vchg(uint16_t mv);
 #endif // WITH_BWM_STATUS
 
 #ifdef WITH_BWM_LOWBATT_BEEP
