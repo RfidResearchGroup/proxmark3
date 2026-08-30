@@ -804,7 +804,7 @@ static int ManchesterDecoding_Thinfilm(uint8_t bit) {
 // near the reader.
 // "hf 14a sniff"
 //-----------------------------------------------------------------------------
-void RAMFUNC SniffIso14443a(uint8_t param) {
+int RAMFUNC SniffIso14443a(uint8_t param) {
     LEDsoff();
     // param:
     // bit 0 - trigger from first card answer
@@ -824,6 +824,12 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     // The response (tag -> reader) that we're receiving.
     uint8_t *receivedResp = BigBuf_calloc(MAX_FRAME_SIZE);
     uint8_t *receivedRespPar = BigBuf_calloc(MAX_PARITY_SIZE);
+
+    if (receivedCmd == NULL || receivedCmdPar == NULL || receivedResp == NULL || receivedRespPar == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("Sniff 14a: failed to allocate buffers");
+        BigBuf_free();
+        return PM3_EMALLOC;
+    }
 
     uint8_t previous_data = 0;
     int dataLen;
@@ -847,7 +853,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     // Setup and start DMA.
     if (FpgaSetupSscRxDmaRepeat((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
         if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscRxDmaRepeat failed. Exiting");
-        return;
+        return PM3_EIO;
     }
 
     // We won't start recording the frames that we acquire until we trigger;
@@ -1010,6 +1016,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
         }
     }
     switch_off();
+    return PM3_SUCCESS;
 }
 
 //-----------------------------------------------------------------------------
@@ -1690,6 +1697,12 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
 #define ALLOCATED_TAG_MODULATION_BUFFER_SIZE (  ((77 + rATS_len) * 8) + 77 + rATS_len + 12 + 12 + 12)
 
     uint8_t *free_buffer = BigBuf_calloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
+    if (free_buffer == NULL) {
+        BigBuf_free_keep_EM();
+        if (g_dbglevel >= DBG_ERROR) DbpString("Failed to allocate modulation buffer");
+        return false;
+    }
+
     // modulation buffer pointer and current buffer free space size
     uint8_t *free_buffer_pointer = free_buffer;
     size_t free_buffer_size = ALLOCATED_TAG_MODULATION_BUFFER_SIZE;
@@ -3154,9 +3167,15 @@ void iso14443a_antifuzz(uint32_t flags) {
     uint8_t *received = BigBuf_calloc(MAX_FRAME_SIZE);
     uint8_t *receivedPar = BigBuf_calloc(MAX_PARITY_SIZE);
     uint8_t *resp = BigBuf_calloc(20);
+    if (received == NULL || receivedPar == NULL || resp == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("Anti-fuzz: failed to allocate buffers");
+        reply_ng(CMD_HF_ISO14443A_ANTIFUZZ, PM3_EMALLOC, NULL, 0);
+        switch_off();
+        BigBuf_free_keep_EM();
+        return;
+    }
 
-    memset(received, 0x00, MAX_FRAME_SIZE);
-    memset(received, 0x00, MAX_PARITY_SIZE);
+    // BigBuf_calloc() already zeroed the receive buffers
     memset(resp, 0xFF, 20);
 
     LED_A_ON();
