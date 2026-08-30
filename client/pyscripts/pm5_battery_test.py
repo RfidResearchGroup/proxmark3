@@ -44,8 +44,7 @@ scenarios = {
     },
     'hf_14a_polling': {
         "on_start": lambda _: None,
-        # one poll takes about 0.5s when a card is present
-        "in_loop": lambda p, s: p.console(f"hf 14a read -n {2*s}"),
+        "in_loop": lambda p, s: p.console(f"hf 14a read -n {7*int(s)}"),
         "on_stop": lambda _: None,
     }
 }
@@ -90,7 +89,6 @@ def fmt(v):
 def main():
 
     args = parse_args()
-    scenario = scenarios['idle']
 
     csv_path = args.csv or f"battery_log_{time.strftime('%Y-%m-%d_%H-%M-%S')}.csv"
 
@@ -105,12 +103,14 @@ def main():
         # interrupted or the device drops off mid-log.
         with open(csv_path, "w", newline="") as csv_file:
             writer = csv.writer(csv_file)
-            writer.writerow(["timestamp", "elapsed_s", "voltage_mV", "current_mA", "temp_C", "capacity_mAh", "soc_percent"])
+            writer.writerow(["timestamp", "elapsed_s", "voltage_mV", "current_mA",
+                             "temp_C", "capacity_mAh", "soc_percent"])
 
+            scenario = scenarios[args.scenario]
             scenario["on_start"](p)
             t0 = time.monotonic()
             n = 0
-            while args.limit == 0 or n < args.limit:
+            while True:
                 p.console("hw status --ms 0")
                 out = p.grabbed_output
 
@@ -150,9 +150,10 @@ def main():
                 if cline is not None and "idle" in cline:
                     print("Gauge current idle, stopping.")
                     break
-
-                scenario["in_loop"](p, args.interval)
                 n += 1
+                if args.limit > 0 and n >= args.limit:
+                    break
+                scenario["in_loop"](p, max(args.interval - 1, 1))
 
     except KeyboardInterrupt:
         print("\nInterrupted, stopping.")
