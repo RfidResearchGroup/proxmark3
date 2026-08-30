@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf xerox view` - now rejects a dump file too small to contain the info blocks instead of reading past it (@munzzyy)
 - Changed NG frame layout to align better with 64bytes frames. From 512 -> 624bytes (@iceman1001)
 - Changed `hf plot` - converted to NG frame (@iceman1001)
 - Fixed `hf mfu cchk` - now 3-pass key check all keys sent to device  (@iceman1001)
