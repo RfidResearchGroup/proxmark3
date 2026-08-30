@@ -175,36 +175,66 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len, uint
 }
 
 void HfPlotDownload(void) {
+    // Two chunk buffers laid back to back in the ToSend buffer. Each one is a
+    // download_chunk_t header followed by the samples the DMA writes straight
+    // into chunk->data, so a filled buffer is already a complete NG payload and
+    // can be handed to reply_ng without a copy.
+    // get_tosend() has to come after FpgaDownloadAndGo(): the FPGA loader frees
+    // BigBuf and reuses this region for its decompression ring buffer.
+    
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+    const size_t stride = sizeof(download_chunk_t) + DOWNLOAD_CHUNK_MAX;
 
     tosend_t *ts = get_tosend();
-    uint8_t *this_buf = ts->buf;
+    if (ts->buf == NULL || (2 * stride) > TOSEND_BUFFER_SIZE) {
+        reply_ng(CMD_FPGAMEM_DOWNLOAD, PM3_EMALLOC, NULL, 0);
+        return;
+    }
 
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+    download_chunk_t *chunk[2] = {
+        (download_chunk_t *)ts->buf,
+        (download_chunk_t *)(ts->buf + stride)
+    };
+    uint8_t idx = 0;
 
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_GET_TRACE);
 
-    FpgaSetupSscRxDmaSingle(this_buf, PM3_CMD_DATA_SIZE);
+    // Arm each transfer for exactly what is still coming. 
+    // FPGA_TRACE_SIZE is not a multiple of DOWNLOAD_CHUNK_MAX, 
+    // and the FPGA stops after its Block-RAM is out
+    FpgaSetupSscRxDmaSingle(chunk[idx]->data, MIN(FPGA_TRACE_SIZE, DOWNLOAD_CHUNK_MAX));
 
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_GET_TRACE);   // let FPGA transfer its internal Block-RAM
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_GET_TRACE);
 
     LED_B_ON();
-    for (size_t i = 0; i < FPGA_TRACE_SIZE; i += PM3_CMD_DATA_SIZE) {
-        size_t len = MIN(FPGA_TRACE_SIZE - i, PM3_CMD_DATA_SIZE);
-        // prepare next DMA transfer:
-        uint8_t *next_buf = ts->buf + ((i + PM3_CMD_DATA_SIZE) % (2 * PM3_CMD_DATA_SIZE));
+    for (size_t i = 0; i < FPGA_TRACE_SIZE; i += DOWNLOAD_CHUNK_MAX) {
 
-        while (!FPGA_SSC_DMA_RX_Done()) {}; // wait for DMA transfer to complete
+        size_t len = MIN(FPGA_TRACE_SIZE - i, DOWNLOAD_CHUNK_MAX);
+        download_chunk_t *this_chunk = chunk[idx];
+        idx ^= 1;
 
-        // The main buf has stopped receiving, so it needs to be refreshed.
-        FPGA_SSC_DMA_RX_Refresh_Single(next_buf, PM3_CMD_DATA_SIZE);
+        while (!FPGA_SSC_DMA_RX_Done()) {};
 
-        reply_old(CMD_FPGAMEM_DOWNLOADED, i, len, FPGA_TRACE_SIZE, this_buf, len);
-        this_buf = next_buf;
+        // The main buf has stopped receiving, so arm the other one first
+        size_t next = i + DOWNLOAD_CHUNK_MAX;
+        if (next < FPGA_TRACE_SIZE) {
+            FPGA_SSC_DMA_RX_Refresh_Single(
+                    chunk[idx]->data,
+                    MIN(FPGA_TRACE_SIZE - next, DOWNLOAD_CHUNK_MAX)
+                );
+        }
+
+        this_chunk->offset = i;
+        reply_ng(CMD_FPGAMEM_DOWNLOADED, PM3_SUCCESS, (uint8_t *)this_chunk, sizeof(download_chunk_t) + len);
     }
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
-    // Trigger a finish downloading signal with an ACK frame
-    reply_ng(CMD_FPGAMEM_DOWNLOAD, PM3_SUCCESS, NULL, 0);
+    download_done_t done = {
+        .bytes_sent = FPGA_TRACE_SIZE,
+        .extra = 0,
+    };
+    reply_ng(CMD_FPGAMEM_DOWNLOAD, PM3_SUCCESS, (uint8_t *)&done, sizeof(done));
     LED_B_OFF();
 }

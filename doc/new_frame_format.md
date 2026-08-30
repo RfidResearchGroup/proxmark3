@@ -43,6 +43,8 @@ Previously, frames were, in both directions like this:
     } d;
 
 with PM3_CMD_DATA_SIZE = 512 and there was no API abstraction, everybody was forging/parsing these frames.  
+These two structs now use `PM3_CMD_DATA_SIZE_OLD`, pinned at 512 independently of `PM3_CMD_DATA_SIZE`:
+the bootloader only speaks OLD, so growing them would break flashing against every deployed bootrom.  
 So the frame size was fixed, 544 bytes, even for simple ACKs.  
 When snooping the USB transfers, we can observe the host is sending 544b Bulk USB frames while the Proxmark3 is limited by its internal buffers and is sending 128b, 128b, 128b, 128b, 32b, so in total 5 packets.
 
@@ -108,16 +110,28 @@ But they are abstracted from the developer view with a new API. See below.
 **Status: the C client and the ARM firmware are converted.**
 
 The client has no `SendCommandOLD` or `SendCommandMIX` call sites left. On the
-device only four legacy replies remain, and all four are deliberate:
+device only three legacy replies remain, and all three are deliberate:
 
 | Site | Why it stays |
 |---|---|
 | `armsrc/appmain.c` — `CMD_READ_MEM_DOWNLOADED` and its `CMD_ACK` terminator | also served by `bootrom.c`, which only speaks OLD |
 | `armsrc/appmain.c` — `CMD_DEVICE_INFO` | same, see `bootrom.c` |
-| `armsrc/hfsnoop.c` — `CMD_FPGAMEM_DOWNLOADED` | the FPGA trace loop is a DMA double-buffer sized to `PM3_CMD_DATA_SIZE`; an NG header does not fit alongside a full 512 byte DMA buffer, so converting it means reworking the DMA buffering |
 
 `SendCommandBL` marks the frames that must stay OLD because the bootloader
 serves them. Do not "convert" those.
+
+These sites chunk by `PM3_CMD_DATA_SIZE_OLD`, not `PM3_CMD_DATA_SIZE`: `reply_old`
+clamps its payload to the OLD size, so a sender chunking by the NG size would build
+oversized chunks, have them truncated on the wire, and still announce the full length
+in `oldarg[1]`.
+
+`armsrc/hfsnoop.c` — `CMD_FPGAMEM_DOWNLOADED` used to be on this list because its
+FPGA trace loop is a DMA double-buffer and an NG header did not obviously fit
+alongside a full DMA buffer. It is converted: the DMA writes straight into
+`chunk->data` of a `download_chunk_t`, so a filled buffer is already a complete NG
+payload. Note the loop arms each transfer for exactly the bytes still expected -
+`FPGA_TRACE_SIZE` is not a multiple of `DOWNLOAD_CHUNK_MAX`, and arming a full
+chunk for the short last one waits forever on bytes the FPGA never sends.
 
 `PacketResponseNG.oldarg[]` is likewise almost gone on the client. The only
 readers left are `client/src/flash.c` and `client/src/proxmark3.c`, both talking
