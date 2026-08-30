@@ -533,20 +533,30 @@ static void printConnSpeed(uint32_t wait) {
     uint32_t start_time = GetTickCount();
     uint32_t delta_time = 0;
     uint32_t bytes_transferred = 0;
+    uint32_t frames_sent = 0;
 
     LED_B_ON();
 
     while (delta_time < wait) {
         reply_ng(CMD_DOWNLOADED_BIGBUF, PM3_SUCCESS, test_data, PM3_CMD_DATA_SIZE);
         bytes_transferred += PM3_CMD_DATA_SIZE;
+        frames_sent++;
         delta_time = GetTickCountDelta(start_time);
     }
     LED_B_OFF();
 
+    // What actually goes on the wire per reply: the payload plus NG framing. On USB
+    // that is ceil(wire_len / 64) bulk packets, and the packet rate is what the link
+    // caps - so frames/s and this length are what explain a bytes/s result, not the
+    // byte count on its own.
+    uint32_t wire_len = sizeof(PacketResponseNGPreamble) + PM3_CMD_DATA_SIZE + sizeof(PacketResponseNGPostamble);
+
     Dbprintf("  Time elapsed................... %dms", delta_time);
     Dbprintf("  Bytes transferred.............. %d", bytes_transferred);
+    Dbprintf("  Frames sent.................... %d ( %d bytes on the wire each )", frames_sent, wire_len);
     if (delta_time) {
         Dbprintf("  Transfer Speed PM3 -> Client... " _YELLOW_("%llu") " bytes/s", 1000 * (uint64_t)bytes_transferred / delta_time);
+        Dbprintf("  Frame rate..................... " _YELLOW_("%llu") " frames/s", 1000 * (uint64_t)frames_sent / delta_time);
     }
 }
 
