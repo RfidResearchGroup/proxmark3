@@ -314,6 +314,12 @@ uint32_t iso14a_get_timeout(void) {
     return iso14a_timeout - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 128 - 2;
 }
 
+void iso14a_rebase_transfer_time(void) {
+    //Restarting StartCountSspClk() resets NextTransferTime clock-counts to zero; retaining old value makes ReaderTransmit() wait stale time from previous APDU.
+    //Do not reset PCB or ATS state here.
+    NextTransferTime = 2 * DELAY_ARM2AIR_AS_READER;
+}
+
 //-----------------------------------------------------------------------------
 // Generate the parity value for a byte sequence
 //-----------------------------------------------------------------------------

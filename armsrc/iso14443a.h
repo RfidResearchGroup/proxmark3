@@ -129,6 +129,8 @@ void setHf14aConfig(const hf14a_config_t *hc);
 hf14a_config_t *getHf14aConfig(void);
 void iso14a_set_timeout(uint32_t timeout);
 uint32_t iso14a_get_timeout(void);
+// Rebase absolute reader-transfer schedule after a caller restarts the SSP clock counter.
+void iso14a_rebase_transfer_time(void);
 
 void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
 
