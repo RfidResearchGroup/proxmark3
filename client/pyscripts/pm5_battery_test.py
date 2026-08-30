@@ -151,7 +151,7 @@ def main():
                     print("Gauge current idle, stopping.")
                     break
 
-                scenario["in_loop"](p)
+                scenario["in_loop"](p, args.interval)
                 n += 1
 
     except KeyboardInterrupt:
