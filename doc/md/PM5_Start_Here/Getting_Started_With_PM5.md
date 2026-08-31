@@ -5,9 +5,11 @@
 - [Assumptions](#Assumptions)
 - [Makefile Changes](#Makefile-Changes)
 - [Build](#Build)
-- [Flash Bootrom](#Flash-Bootrom)
-- [Flash Fullimage](#Flash-Fullimage)
+- [Flashing](#Flashing)
+- [Flash the Bootrom](#Flash-The-Bootrom)
+- [Flash the Fullimage](#Flash-The-Fullimage)
 - [Flash FPGA](#Flash-FPGA)
+- [I Have A BWM Now What?](##I-Have-A-BWM--Now-What-)
 
 ---
 ## Extras
@@ -50,7 +52,7 @@ make -j
 
 For more options, look [here](#Build-Extras)
 
-## Flash Bootrom
+## Flashing
 
 ### Flashing Considerations
 * The same client can handle both Proxmark3 and Proxmark5, no need to compile separate clients if you own both hardwares.
@@ -60,64 +62,58 @@ For more options, look [here](#Build-Extras)
 
 ## Flash the Bootrom
 
-* DO use the USB Port on the same side as the button (Yellow)
 * DO NOT use the USB Port on the side.
-* Put your Proxmark into Boot Mode.  Plug in your Proxmark5 while holding the button for about 4 seconds until you see 2 LEDs illuminated (B and D) You are now in Boot Mode.
+* DO use the USB Port on the same side as the button (Yellow)
+* Put your Proxmark5 into Boot Mode.  Plug in your Proxmark5 while holding the button for about 4 seconds until you see 2 LEDs illuminated (B and D) You are now in Boot Mode.
 * If you see 2 lights (B & D) go on and then off, you're in DFU mode.  Unplug, and try the previous step again.
-
-
-Use the yellow USB-C on the same side as the button.
-
-You'll first need to update the bootrom with the latest code available on the repository.
-The bootrom in your device is not yet able to enter automatically the boot mode properly, so you will have to enter boot mode manually as follows, a procedure slightly different from the Proxmark3.
-
-* Plug in your Proxmark5 while holding the button for about 4 seconds until you see 2 LEDs illuminated (B and D). Don't wait too long. If the LEDs are now off again, you entered DFU mode. Unplug and try again.
-
 * Run `./pm3-flash-bootrom`
+* If the above hangs or thows and error, try this: [DFU Install](##DFU-Install)
 * Unplug.
-* Plug in your Proxmark5 while holding the button for about 4 seconds until you see 2 LEDs illuminated (B and D).
+
+## Flash the FullImage
+* Put your Proxmark5 into Boot Mode. (See above)
 * Run `./pm3-flash-fullimage`
 
-⚠️ In case your battery came pre-installed, we recommend to plug it back, connect the client, run `hw status` and check the charge level (line `Battery SoC`). If very low, let it charge for a while. Then shut the Proxmark5 off and remove the BWM.
 
-Next, follow [FPGA flashing instuctions](#fpga-flashing-instructions).
+### Did you Proxmark5 come with a battery pre-installed?  Do this next:
+* IF your Proxmark5 came with a battery pre-installed. 
+* [Reinstall the BWM now](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
+* Let it charge for a while (think an hour.)
+* Shut the Proxmark5 off and remove the BWM.
 
-### Devices with a firmware > 2026-08-20
+## Flash the FPGA
 
-With the new bootrom, you don't need to enter manually the boot mode by pressing the button anymore and the flashing experience will be as smooth as on the Proxmark3.
-
-* Use the yellow USB-C on the same side as the button.
-
-* Run `./pm3-flash-fullimage` to update the main image, and occasionally `./pm3-flash-bootrom` if needed.
-
-If you see "🚨 The elf file is not applicable to the currently connected device.", you probably forgot to add the `PLATFORM=PM5` when compiling.
-
-If the main image gets seriously buggy and can't jump to boot mode automatically, you can enter boot mode using the button as explained in [the previous section](#new-devices-with-factory-firmware).
-
-If the device seems unresponsive and unable to enter boot mode when the button is pressed when plugged, you can [reflash the bootrom over DFU](#recovery-flashing-via-dfu).
-
-## FPGA flashing instructions
-
-The FPGA code for the Proxmark5 has not yet been pushed to the repository. To flash the FGPA with the latest image:
+* If you followed the steps above...
+* You don't need to enter manually the boot mode by pressing the button anymore and the flashing experience will be as smooth as on the Proxmark3.
+* Get the latest FPGA image, it's not yet in the repo.
 
 ```
 wget https://github.com/user-attachments/files/31105593/PM5_FPGA_fix_loedge_bug.zip
 unzip PM5_FPGA_fix_loedge_bug.zip
+```
+
+* Update the FPGA, then make sure the radio is off.
+
+```
 ./pm3
 hw fpga config -f PM5_FPGA_fix_loedge_bug.bin
 hf 14a read --drop
 ```
 
-## Specific commands
+## I Have A BWM, Now What?
+### Install
+* You acknowledge that the BWM is not yet fully supported, it's better not to plug it for now. (If you insist... continue.)
+* [Physically install the BWM and (if applicable) Battery](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
 
-Do not use them unless you fully understand what you're doing.
 
-* `hw fpga config`: to upload the FPGA firmware
-* `hw fpga pwrpwm`: to adjust the antenna's drive voltage TODO: acceptable ranges?
-* `hw ant_pm5 -m --set <8bit data>` command can be used to modify the frequency and Q value. Note: High Q is only allowed at 125kHz/134kHz to prevent excessive resonant voltage from damaging the device.
-  > 8bit map: 125 134 250 375 500 HFLED LFLED Q (lsb)
-* `hw qc_pm5`: factory quality check command, will activate the RBG, the buzzer and the antenna LEDs. Press the button to report success. Use `-t/--timeout <s>` to change how long the test sequence runs before it fails (default 20 seconds).
-* `hw factorydata`: read/write the factory data (originality signature etc)
+
+## DFU Install
+
+
+
+
+
+
 
 ## Standalone Modes
 
@@ -182,4 +178,27 @@ You have several options:
 The factory firmware has some limitations, therefore the flashing procedure is slightly more complex.
 
 ⚠️ If you have a BWM (Battery Wireless Module), and if it came already plugged, disconnect it. See [here](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md) to understand how it's installed. The reason it came connected when delivered to some countries is customs regulations. But hte factory firmware does not support it and this creates issues when flashing, so just remove it.
+
+* Use the yellow USB-C on the same side as the button.
+
+* Run `./pm3-flash-fullimage` to update the main image, and occasionally `./pm3-flash-bootrom` if needed.
+
+If you see "🚨 The elf file is not applicable to the currently connected device.", you probably forgot to add the `PLATFORM=PM5` when compiling.
+
+
+If the device seems unresponsive and unable to enter boot mode when the button is pressed when plugged, you can [reflash the bootrom over DFU](#recovery-flashing-via-dfu).
+
+If the main image gets seriously buggy and can't jump to boot mode automatically, you can enter boot mode using the button as explained in [the previous section](#new-devices-with-factory-firmware).
+
+
+## Specific commands
+
+Do not use them unless you fully understand what you're doing.
+
+* `hw fpga config`: to upload the FPGA firmware
+* `hw fpga pwrpwm`: to adjust the antenna's drive voltage TODO: acceptable ranges?
+* `hw ant_pm5 -m --set <8bit data>` command can be used to modify the frequency and Q value. Note: High Q is only allowed at 125kHz/134kHz to prevent excessive resonant voltage from damaging the device.
+  > 8bit map: 125 134 250 375 500 HFLED LFLED Q (lsb)
+* `hw qc_pm5`: factory quality check command, will activate the RBG, the buzzer and the antenna LEDs. Press the button to report success. Use `-t/--timeout <s>` to change how long the test sequence runs before it fails (default 20 seconds).
+* `hw factorydata`: read/write the factory data (originality signature etc)
 
