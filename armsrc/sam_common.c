@@ -218,7 +218,10 @@ int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) 
     const uint8_t dev_cmd = active_cmd;
 #endif
 
+    uint32_t tx_start = GetTicks();
     bool res = I2C_BufferWrite(data, n, dev_cmd, I2C_DEVICE_ADDRESS_MAIN);
+    sc_log_trace_span(data, n, true, tx_start);
+
     if (res == false) {
         DbpString("failed to send to SIM CARD");
         goto out;
@@ -282,12 +285,11 @@ int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) 
                                 0x00, (uint8_t)(want >> 8), (uint8_t)want};
     const uint8_t *cmd_getresp = t1 ? cmd_getresp_t1 : cmd_getresp_t0;
     const uint16_t cmd_getresp_len = t1 ? sizeof(cmd_getresp_t1) : sizeof(cmd_getresp_t0);
-    sc_log_trace(cmd_getresp, cmd_getresp_len, true);
 
-    // Keep response assembly at the PM3, and use the ordinary active protocol
-    // opcode for the continuation rather than recursively selecting the
-    // compatibility alias.
+    tx_start = GetTicks();
     res = I2C_BufferWrite(cmd_getresp, cmd_getresp_len, active_cmd, I2C_DEVICE_ADDRESS_MAIN);
+    sc_log_trace_span(cmd_getresp, cmd_getresp_len, true, tx_start);
+
     if (res == false) {
         DbpString("failed to send to SIM CARD 2");
         goto out;
@@ -307,14 +309,21 @@ out:
     return res;
 }
 
+// The tick counter and the ssp_clk counter share the same timer block, so a SAM
+// session can only ever run one of them, and every handover starts the incoming
+// counter from zero.  The trace holds both halves, so each technology's frames
+// are timed from the moment that technology took the timer over
 void switch_clock_to_ticks(void) {
     StopTicks();
     StartTicks();
+    sc_log_trace_reset();
+    trace_restart_timeline();
 }
 
 void switch_clock_to_countsspclk(void) {
     StopTicks();
     StartCountSspClk();
+    trace_restart_timeline();
 }
 
 /**
@@ -411,7 +420,6 @@ int sam_send_payload_ex(
         buf[length++] = 0x00;
     }
 
-    sc_log_trace(buf, length, true);
     if (g_dbglevel >= DBG_INFO) {
         DbpString("SAM REQUEST APDU: ");
         Dbhexdump(length, buf, false);
