@@ -23,14 +23,15 @@
 
 
 ## Assumptions
-* You're BWM module is disconnected for the first full flashing (bootrom and fullimage)
-* You have compiled the source before and your PM3 is or was working on the target machine previously.  (If not, start [here](https://github.com/RfidResearchGroup/proxmark3/tree/master#proxmark3-installation-and-overview) for your OS of choice.
+* If the BWM is connected, disconnect it for the first full flashing. (bootrom and fullimage)
+* You have compiled the source before and your PM3 is or was working on the target machine previously.  (If not, start [here](https://github.com/RfidResearchGroup/proxmark3/tree/master#proxmark3-installation-and-overview) for your OS of choice.)
 
 
 
 ## Makefile Changes
 
 Your Makefile.platform should needs to specify PM5 as your PLATFORM along with any PLATFORM_EXTRAS that are appropriate for your configuration.
+
 Example:
 ```
 PLATFORM=PM5
@@ -39,26 +40,29 @@ PLATFORM_EXTRAS=BWM
 
 ## Build
 
-`make clean && make -j`
+* clone/pull the latest master from this repo then
+
+```make clean
+make -j
+```
 
 For more options, look [here](#Build-Extras)
 
 ## Flash Bootrom
 
+### Flashing Considerations
 * The same client can handle both Proxmark3 and Proxmark5, no need to compile separate clients if you own both hardwares.
 * Don't forget to [disable ModemManager](../Installation_Instructions/ModemManager-Must-Be-Discarded.md)
+* There can be only one proxmark plugged into your PC.  Do not plug in both a pm3 and pm5 during flashing.
 
-## Flashing instructions
 
-⚠️ As usual, make sure [ModemManager won't interfere](ModemManager-Must-Be-Discarded.md).
+## Flash the Bootrom
 
-⚠️ Make sure no other Proxmark (3 or 5) is plugged into your PC.
+* DO use the USB Port on the same side as the button (Yellow)
+* DO NOT use the USB Port on the side.
+* Put your Proxmark into Boot Mode.  Plug in your Proxmark5 while holding the button for about 4 seconds until you see 2 LEDs illuminated (B and D) You are now in Boot Mode.
+* If you see 2 lights (B & D) go on and then off, you're in DFU mode.  Unplug, and try the previous step again.
 
-### New devices with factory firmware
-
-The factory firmware has some limitations, therefore the flashing procedure is slightly more complex.
-
-⚠️ If you have a BWM (Battery Wireless Module), and if it came already plugged, disconnect it. See [here](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md) to understand how it's installed. The reason it came connected when delivered to some countries is customs regulations. But hte factory firmware does not support it and this creates issues when flashing, so just remove it.
 
 Use the yellow USB-C on the same side as the button.
 
@@ -170,4 +174,10 @@ You have several options:
 
 
 
+
+### New devices with factory firmware
+
+The factory firmware has some limitations, therefore the flashing procedure is slightly more complex.
+
+⚠️ If you have a BWM (Battery Wireless Module), and if it came already plugged, disconnect it. See [here](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md) to understand how it's installed. The reason it came connected when delivered to some countries is customs regulations. But hte factory firmware does not support it and this creates issues when flashing, so just remove it.
 
