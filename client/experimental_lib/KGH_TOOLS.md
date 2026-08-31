@@ -9,6 +9,8 @@ Examples:
 ```bash
 ./kgh_tools COM13 read_badge_number
 ./kgh_tools COM13 read_info
+./kgh_tools COM13 read_stamp
+./kgh_tools COM13 read_stamp -o stamp.bin
 ./kgh_tools COM13 write_card 600001 --stamp-file stamp.bin
 ```
 
@@ -16,6 +18,7 @@ Commands:
 
 - `read_badge_number` prints the badge number only.
 - `read_info` prints one-line JSON.
+- `read_stamp` prints the stamp as 8 hex chars, or writes raw 4 bytes with `-o/--output-file`.
 - `write_card <badge> (--stamp-file <path> | --stamp-hex <8hex>)` writes the card.
 
 Notes:

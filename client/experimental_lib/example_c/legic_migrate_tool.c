@@ -125,6 +125,17 @@ static bool load_stamp_file(const char *path, uint8_t stamp[4]) {
     return true;
 }
 
+static bool save_stamp_file(const char *path, const uint8_t stamp[4]) {
+    FILE *fp = fopen(path, "wb");
+    if (fp == NULL) {
+        return false;
+    }
+
+    size_t written = fwrite(stamp, 1, 4, fp);
+    fclose(fp);
+    return written == 4;
+}
+
 static bool get_arg_value(int argc, char *argv[], const char *flag, const char **value) {
     for (int i = 3; i < argc - 1; ++i) {
         if (strcmp(argv[i], flag) == 0) {
@@ -380,6 +391,15 @@ static bool decode_badge_value(const uint8_t *dump, uint16_t len, uint32_t *badg
     return decode_badge_bcd(&dump[31], badge_out);
 }
 
+static bool extract_stamp(const uint8_t *dump, uint16_t len, uint8_t stamp[4]) {
+    if (len <= 30) {
+        return false;
+    }
+
+    memcpy(stamp, dump + 27, 4);
+    return true;
+}
+
 static void print_json_string(const char *key, const char *value, bool last) {
     printf("\"%s\": \"%s\"%s", key, value, last ? "" : ",");
 }
@@ -510,6 +530,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Usage:\n");
         fprintf(stderr, "  %s <port> read_badge_number [-v|--verbose]\n", argv[0]);
         fprintf(stderr, "  %s <port> read_info\n", argv[0]);
+        fprintf(stderr, "  %s <port> read_stamp [-o|--output-file <path>]\n", argv[0]);
         fprintf(stderr, "  %s <port> write_card <badge> (--stamp-file <path> | --stamp-hex <8hex>)\n", argv[0]);
         return EXIT_FAILURE;
     }
@@ -534,6 +555,29 @@ int main(int argc, char *argv[]) {
             free_legic_read_result(&res);
         } else if (verbose) {
             fprintf(stderr, "failed to read card info\n");
+        }
+    } else if (strcmp(argv[2], "read_stamp") == 0) {
+        const char *output_file = NULL;
+        bool has_output = get_arg_value(argc, argv, "-o", &output_file) || get_arg_value(argc, argv, "--output-file", &output_file);
+
+        legic_read_result_t res;
+        if (read_legic_dump(&res, verbose)) {
+            uint8_t stamp[4] = {0};
+            if (extract_stamp(res.dump, res.len, stamp)) {
+                if (has_output) {
+                    if (save_stamp_file(output_file, stamp)) {
+                        rc = EXIT_SUCCESS;
+                    } else {
+                        fprintf(stderr, "failed to write stamp file\n");
+                    }
+                } else {
+                    printf("%02X%02X%02X%02X\n", stamp[0], stamp[1], stamp[2], stamp[3]);
+                    rc = EXIT_SUCCESS;
+                }
+            }
+            free_legic_read_result(&res);
+        } else if (verbose) {
+            fprintf(stderr, "failed to read stamp\n");
         }
     } else if (strcmp(argv[2], "write_card") == 0) {
         if (argc < 4) {
