@@ -552,7 +552,9 @@ typedef struct {
 } PACKED mf_chkkeys_fast_t;
 
 // most keys that fit alongside the header in one frame
-#define MFC_CHKKEYS_FAST_MAX_KEYS ((PM3_CMD_DATA_SIZE - sizeof(mf_chkkeys_fast_t)) / 6)
+#define MFC_CHKKEYS_FAST_MAX_KEYS \
+    (((PM3_CMD_DATA_SIZE - sizeof(mf_chkkeys_fast_t)) / 6) > 255 ? 255 : \
+     ((PM3_CMD_DATA_SIZE - sizeof(mf_chkkeys_fast_t)) / 6))
 
 // CMD_HF_MIFARE_VALUE payload.
 // Replaces a 34 byte blob addressed by hardcoded offsets:
