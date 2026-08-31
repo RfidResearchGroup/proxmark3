@@ -15,6 +15,7 @@
 
 #include "bwm_uart_at32.h"
 #include "pm3_cmd.h"    // PM3_CMD_DATA_SIZE, PM3_* return codes
+#include "ticks_apis.h" // SpinDelay
 #include "string.h"
 
 #ifndef MIN
@@ -53,6 +54,10 @@ static void bwm_pump(void);   // fwd decl: TX gate pumps RX to collect forward-f
 // send, decremented when a SLAVE_RESP echoing cmd=SEND_FORWARD_DATA arrives.
 // We may send while it is below BWM_FC_WINDOW; at the cap we wait for an ack.
 static volatile int16_t s_fwd_inflight = 0;
+
+// Set true by the parser when a SLAVE_RESP echoing BWM_CMD_SET_UART_BAUD arrives
+// (the ESP's ack for a baud-set request). Consumed by bwm_fwd_negotiate_baud().
+static volatile bool s_baud_ack = false;
 
 int bwm_fwd_writebuffer_sync(const uint8_t *data, size_t len) {
     static uint8_t frame[BWM_TX_BUFSZ];   // single-threaded bare-metal: static OK
@@ -236,6 +241,9 @@ static void bwm_feed_byte(bwm_parser_t *p, uint8_t byte) {
                     if (s_fwd_inflight > 0) {
                         s_fwd_inflight--;
                     }
+                } else if ((p->is_bcast == false) && p->cmd == BWM_CMD_SET_UART_BAUD) {
+                    // SLAVE_RESP ack for a baud-set request (see negotiate below)
+                    s_baud_ack = true;
                 }
             }
             // valid non-DATA_FORWARD frames and CRC failures alike: just resync
@@ -308,4 +316,64 @@ uint32_t bwm_read_ng(uint8_t *data, size_t len) {
             }
     }
     return out;
+}
+
+
+// ---------------------------------------------------------------------------
+// Runtime baud negotiation.
+// The ESP boots at BWM_UART_BAUD and accepts a HOST_CMD (cmd 1011) carrying a
+// u32 LE target baud. Its handler test-switches, rolls back, acks at the OLD
+// baud with a SLAVE_RESP echoing cmd 1011, then commits to the new baud. So we
+// send the request at the current baud, wait for that ack, then switch our own
+// UART4 to match. On timeout (old ESP without the command, or a lost ack) we
+// leave the link at the boot baud - it keeps working, just slower.
+// ---------------------------------------------------------------------------
+#define BWM_BAUD_ACK_WAIT_MS   300   // per-attempt wait for the ESP ack
+#define BWM_BAUD_ATTEMPTS      3     // resend attempts before giving up
+
+bool bwm_fwd_negotiate_baud(uint32_t target) {
+    if (target == 0 || target == bwm_uart_get_baud()) {
+        return false;
+    }
+
+    // Build the SET_UART_BAUD host-command frame once (payload = u32 LE baud).
+    uint8_t frame[2 + 2 + 2 + 4 + 2];
+    size_t idx = 0;
+    frame[idx++] = BWM_HDR_HOST_CMD_1;
+    frame[idx++] = BWM_HDR_HOST_CMD_2;
+    frame[idx++] = (uint8_t)(BWM_CMD_SET_UART_BAUD & 0xFF);
+    frame[idx++] = (uint8_t)((BWM_CMD_SET_UART_BAUD >> 8) & 0xFF);
+    frame[idx++] = (uint8_t)(4 & 0xFF);
+    frame[idx++] = (uint8_t)((4 >> 8) & 0xFF);
+    frame[idx++] = (uint8_t)(target & 0xFF);
+    frame[idx++] = (uint8_t)((target >> 8) & 0xFF);
+    frame[idx++] = (uint8_t)((target >> 16) & 0xFF);
+    frame[idx++] = (uint8_t)((target >> 24) & 0xFF);
+    uint16_t crc = bwm_crc16(frame, idx, BWM_CRC16_INIT);
+    frame[idx++] = (uint8_t)(crc & 0xFF);
+    frame[idx++] = (uint8_t)((crc >> 8) & 0xFF);
+
+    for (int attempt = 0; attempt < BWM_BAUD_ATTEMPTS; attempt++) {
+        s_baud_ack = false;
+        s_p.state = S_IDLE;          // drop any half-frame before we listen
+        bwm_uart_write(frame, idx);
+
+        for (int ms = 0; ms < BWM_BAUD_ACK_WAIT_MS; ms++) {
+            bwm_pump();              // parser sets s_baud_ack on the SLAVE_RESP
+            if (s_baud_ack) {
+                // ESP acked at the old baud and is committing to the new one.
+                // Switch our side and let both settle before any traffic.
+                bwm_uart_set_baud(target);
+                SpinDelay(5);
+                // Fresh start on the faster link: clear framer + de-fifo + window.
+                s_p.state    = S_IDLE;
+                s_fifo_head  = 0;
+                s_fifo_tail  = 0;
+                s_fwd_inflight = 0;
+                return true;
+            }
+            SpinDelay(1);
+        }
+    }
+    return false;   // no ack: stay at the boot baud, link still usable
 }

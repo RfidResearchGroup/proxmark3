@@ -47,6 +47,10 @@
 
 #define BWM_CMD_SEND_FORWARD_DATA   5000   // host cmd: payload -> BLE/WiFi endpoint
 #define BWM_CMD_DATA_FORWARD        8089   // slave bcast: payload came from endpoint
+// System command: set the ESP<->AT32 UART baud (app_com_defs.h, enum @1000).
+// SET is a HOST_CMD carrying u32 LE baud; the ESP replies with a SLAVE_RESP
+// echoing this cmd (len 0) at the OLD baud, then commits to the new baud.
+#define BWM_CMD_SET_UART_BAUD       1011
 // Flow control (ack window) - ARM-side only, no BWM firmware change required.
 // The ESP already replies to every forward frame with a SLAVE_RESP echoing
 // cmd=SEND_FORWARD_DATA, and it sends that ack only *after* app_ble_send() has
@@ -76,5 +80,11 @@ uint32_t bwm_read_ng(uint8_t *data, size_t len);
 
 // >0 when raw bytes are waiting on the FPC USART (gate for receive_ng()).
 uint16_t bwm_fwd_rxdata_available(void);
+
+// Negotiate the ESP<->AT32 UART up to `target` baud (app_com cmd 1011), then
+// re-init UART4 to match. Returns true if the ESP acked and the link switched;
+// false (link left at the boot baud) on timeout or an unsupported rate. Must be
+// called once after bwm_uart_init(), before normal forward traffic starts.
+bool bwm_fwd_negotiate_baud(uint32_t target);
 
 #endif // __BWM_FORWARD_H
