@@ -14,14 +14,11 @@
 
 #include "common.h"
 
-// Must match UART_BAUD_RATE_DEFAULT in the ESP firmware
-// (Proxmark5_BWM_esp32: components/app_uart_cmd/app_cmd_uart.h). Both ends
-// step together. RX is DMA-serviced, so this can be raised well past 460800;
-// the ceiling is the ESP's CONFIG_SOC_UART_BITRATE_MAX and PA0/PA1 signal
-// integrity. Validate on hardware before pushing beyond 921600.
-#define BWM_UART_BAUD   921600
+#define BWM_UART_BAUD   460800
 
 void bwm_uart_init(void);
+
+void UART4_IRQHandler(void);
 
 int bwm_uart_write(const uint8_t *data, size_t len);
 
