@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `PM5 auto-off` - no longer powers the board into a state it can't be woken from (@nemanjan00)
 - Fixed `tools/ePassport` - FILES and LOG panes no longer go blank on long content, and picture files now show the picture (@pkilar)
 - Fixed `hf xerox view` - now rejects a dump file too small to contain the info blocks instead of reading past it (@munzzyy)
 - Changed NG frame layout to align better with 64bytes frames. From 512 -> 624bytes (@iceman1001)
