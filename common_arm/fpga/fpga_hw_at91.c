@@ -194,9 +194,31 @@ static void SetupSpi(int mode) {
 
 void FpgaSendCommand(uint16_t cmd, uint16_t v) {
     SetupSpi(SPI_FPGA_MODE);
-    while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY) == 0); // wait for the transfer to complete
-    AT91C_BASE_SPI->SPI_TDR = AT91C_SPI_LASTXFER | cmd | v;    // send the data
-    while (!(AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF)) {};     // wait till transfer is complete
+
+    // RDRF is cleared only by reading SPI_RDR, or by an SPI software reset.  Nothing
+    // here used to read it, so it latched on the very first transfer and the wait at
+    // the end of this function became a no-op for every call after that one, leaving
+    // the word still shifting out when we returned.  That matters because the FPGA
+    // decodes shift_reg[15:12] on the rising edge of NCS with no bit count of its own
+    // (fpga_pm3_top.v): a word cut short latches whatever the *previous* word left in
+    // those four bits - a different command, or, since the case has no default, none
+    // at all, silently dropping the write.  The drains below are what make RDRF mean
+    // "this transfer finished" again.
+    while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY) == 0) {}; // wait for any previous transfer
+    (void)AT91C_BASE_SPI->SPI_RDR;                                // clear a stale RDRF
+
+    AT91C_BASE_SPI->SPI_TDR = AT91C_SPI_LASTXFER | cmd | v;       // send the data
+
+    // Bounded: 16 bits at MCK/6 = 4 MHz takes ~4us, so this is orders of magnitude of
+    // headroom.  It is a loop rather than a spin because a dead SPI - clock gated, or
+    // the bus reset underneath us by the shared flash driver - must not hang the device
+    // here, where there is no WDT_HIT().
+    for (uint32_t i = 0; i < 100000; i++) {
+        if (AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF) {
+            break;
+        }
+    }
+    (void)AT91C_BASE_SPI->SPI_RDR;                                // leave RDRF clear
 }
 
 void Fpga_print_status(void) {
