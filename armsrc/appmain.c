@@ -586,6 +586,9 @@ static void SendStatus(uint32_t wait) {
 #if defined(PM5) && defined(WITH_BWM_STATUS)
     bwm_print_battery_status();
 #endif
+#ifdef WITH_BWM_FORWARD
+    Dbprintf("  BWM link baud....... " _YELLOW_("%u") " bps", bwm_uart_get_baud());
+#endif
     printConnSpeed(wait);
     DbpString(_CYAN_("Various"));
 
