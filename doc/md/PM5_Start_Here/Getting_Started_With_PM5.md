@@ -13,14 +13,15 @@
 - [Build Extras](#Build-Extras)
 
 
+
+---
+
 - [1. Battery / BWM control](#1-battery--bwm-control)
 - [2. BLE](#2-ble)
 - [3. WiFi](#3-wifi)
 - [Notes](#notes)
 
 ---
-
-
 
 ## Assumptions
 * If the BWM is connected, disconnect it for the first full flashing. (bootrom and fullimage)
