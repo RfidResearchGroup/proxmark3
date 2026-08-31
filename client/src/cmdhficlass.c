@@ -307,7 +307,7 @@ static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t offset, uint16_t
     PrintAndLogEx(INFO, "." NOLF);
 
     while (bytes_remaining > 0) {
-        uint32_t bytes_in_packet = MIN(PM3_CMD_DATA_SIZE - 4, bytes_remaining);
+        uint32_t bytes_in_packet = MIN((uint32_t)(pm3_max_cmd_data_size() - 4), bytes_remaining);
         if (bytes_in_packet == bytes_remaining) {
             // Disable fast mode on last packet
             g_conn.block_after_ACK = false;
@@ -3565,8 +3565,8 @@ static int CmdHFiClassRestore(const char *Cmd) {
 
     uint32_t payload_size = sizeof(iclass_restore_req_t) + (sizeof(iclass_restore_item_t) * (endblock - startblock + 1));
 
-    if (payload_size > PM3_CMD_DATA_SIZE) {
-        PrintAndLogEx(NORMAL, "Trying to write too many blocks at once.  Max: %d", PM3_CMD_DATA_SIZE / 8);
+    if (payload_size > pm3_max_cmd_data_size()) {
+        PrintAndLogEx(NORMAL, "Trying to write too many blocks at once.  Max: %d", pm3_max_cmd_data_size() / 8);
         return PM3_EINVARG;
     }
 
@@ -6065,8 +6065,8 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
 
     // USB_COMMAND.  512/4 = 103 mac
     uint32_t max_chunk_size = 0;
-    if (keycount > ((PM3_CMD_DATA_SIZE - sizeof(iclass_chk_t)) / 4))
-        max_chunk_size = (PM3_CMD_DATA_SIZE - sizeof(iclass_chk_t)) / 4;
+    if (keycount > ((pm3_max_cmd_data_size() - sizeof(iclass_chk_t)) / 4))
+        max_chunk_size = (pm3_max_cmd_data_size() - sizeof(iclass_chk_t)) / 4;
     else
         max_chunk_size = keycount;
 

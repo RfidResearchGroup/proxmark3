@@ -166,7 +166,7 @@ static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len
 static int em4x50_seteml(const uint8_t *src, uint32_t offset, uint32_t numofbytes) {
 
     // an EM4x50 is 136 bytes, so the whole tag always fits in a single frame
-    if ((offset + numofbytes) > (PM3_CMD_DATA_SIZE - sizeof(em4x50_eset_t))) {
+    if ((offset + numofbytes) > (pm3_max_cmd_data_size() - sizeof(em4x50_eset_t))) {
         PrintAndLogEx(FAILED, "%u bytes at offset %u doesn't fit in one frame", numofbytes, offset);
         return PM3_EOUTOFBOUND;
     }
