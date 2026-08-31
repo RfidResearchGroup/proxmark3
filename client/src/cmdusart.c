@@ -71,7 +71,7 @@ static int usart_txrx(uint8_t *srcdata, size_t srclen, uint8_t *dstdata, size_t 
 
     payload.header.waittime = waittime;
 
-    if (srclen >= sizeof(payload.data)) {
+    if (srclen >= (size_t)(pm3_max_cmd_data_size() - sizeof(uint32_t))) {
         return PM3_EOVFLOW;
     }
 

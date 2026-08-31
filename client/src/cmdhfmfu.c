@@ -4445,7 +4445,7 @@ static int mfu_3pass_check_keys(uint8_t key_index, uint8_t firstChunk, uint8_t l
     } PACKED;
     uint8_t keysize = segment != -1 ? MIFAREU3P_KEY_SIZE / 4 : MIFAREU3P_KEY_SIZE;
     memcpy(payload.ref_key, ref_key, MIFAREU3P_KEY_SIZE);
-    if (nkeys * keysize > sizeof(payload.data)) {
+    if (nkeys * keysize > (uint32_t)(pm3_max_cmd_data_size() - MIFAREU3P_CHKKEY_HEADER)) {
         PrintAndLogEx(ERR, "Key chunk size exceeds payload size");
         return PM3_ESOFT;
     }

@@ -359,7 +359,7 @@ int CmdLFCommandRead(const char *Cmd) {
     memset(payload.symbol_extra, 0, sizeof(payload.symbol_extra));
     memset(payload.period_extra, 0, sizeof(payload.period_extra));
 
-    if (cmd_len > sizeof(payload.data) - 8 * add_crc_ht - 1) {
+    if (cmd_len > (size_t)(pm3_max_cmd_data_size() - PAYLOAD_HEADER_SIZE) - 8 * add_crc_ht - 1) {
         PrintAndLogEx(ERR, "cmd too long, max length is %zu", sizeof(cmd) - 1);
         return PM3_EINVARG;
     }
