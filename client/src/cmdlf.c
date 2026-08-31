@@ -1069,9 +1069,9 @@ int lfsim_upload_gb(void) {
 
     //can send only 512 bits at a time (1 byte sent per bit...)
     PrintAndLogEx(INFO, "." NOLF);
-    for (size_t i = 0; i < g_GraphTraceLen; i += PM3_CMD_DATA_SIZE - 3) {
+    for (size_t i = 0; i < g_GraphTraceLen; i += pm3_max_cmd_data_size() - 3) {
 
-        size_t len = MIN((g_GraphTraceLen - i), PM3_CMD_DATA_SIZE - 3);
+        size_t len = MIN((g_GraphTraceLen - i), (size_t)(pm3_max_cmd_data_size() - 3));
         clearCommandBuffer();
         payload_up.offset = i;
 
@@ -1236,10 +1236,10 @@ int CmdLFfskSim(const char *Cmd) {
     }
 
     size_t size = g_DemodBufferLen;
-    if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t))) {
-        PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t));
+    if (size > (pm3_max_cmd_data_size() - sizeof(lf_fsksim_t))) {
+        PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, (size_t)(pm3_max_cmd_data_size() - sizeof(lf_fsksim_t)));
         PrintAndLogEx(INFO, "Continuing with trimmed down data");
-        size = PM3_CMD_DATA_SIZE - sizeof(lf_fsksim_t);
+        size = pm3_max_cmd_data_size() - sizeof(lf_fsksim_t);
     }
 
     lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + size);
@@ -1353,10 +1353,10 @@ int CmdLFaskSim(const char *Cmd) {
     }
 
     size_t size = g_DemodBufferLen;
-    if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t))) {
-        PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t));
+    if (size > (pm3_max_cmd_data_size() - sizeof(lf_asksim_t))) {
+        PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, (size_t)(pm3_max_cmd_data_size() - sizeof(lf_asksim_t)));
         PrintAndLogEx(INFO, "Continuing with trimmed down data");
-        size = PM3_CMD_DATA_SIZE - sizeof(lf_asksim_t);
+        size = pm3_max_cmd_data_size() - sizeof(lf_asksim_t);
     }
 
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + size);
@@ -1489,10 +1489,10 @@ int CmdLFpskSim(const char *Cmd) {
     }
 
     size_t size = g_DemodBufferLen;
-    if (size > (PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t))) {
-        PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t));
+    if (size > (pm3_max_cmd_data_size() - sizeof(lf_psksim_t))) {
+        PrintAndLogEx(WARNING, "DemodBuffer too long for current implementation - length: %zu - max: %zu", size, (size_t)(pm3_max_cmd_data_size() - sizeof(lf_psksim_t)));
         PrintAndLogEx(INFO, "Continuing with trimmed down data");
-        size = PM3_CMD_DATA_SIZE - sizeof(lf_psksim_t);
+        size = pm3_max_cmd_data_size() - sizeof(lf_psksim_t);
     }
 
     lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + size);

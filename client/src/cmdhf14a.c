@@ -301,7 +301,7 @@ int hf14a_getversion_data(iso14a_card_select_t *card, uint64_t select_status, ve
 void SendIso14aReaderEx(uint32_t flags, const uint8_t *data, uint16_t datalen, uint16_t len,
                         uint16_t lenbits, uint32_t timeout, uint32_t wait_us) {
 
-    if (datalen > (PM3_CMD_DATA_SIZE - sizeof(iso14a_raw_cmd_t))) {
+    if (datalen > (pm3_max_cmd_data_size() - sizeof(iso14a_raw_cmd_t))) {
         PrintAndLogEx(WARNING, "Sending " _RED_("%u") " bytes of payload is too much, abort", datalen);
         return;
     }
@@ -1235,7 +1235,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     uint8_t data[PM3_CMD_DATA_SIZE] = { 0x0a | gs_frames_num, 0x00 };
     gs_frames_num ^= 1;
 
-    int min = MIN((PM3_CMD_DATA_SIZE - 2), (datainlen & 0x1FF));
+    int min = MIN((int)(pm3_max_cmd_data_size() - 2), (datainlen & 0x1FF));
     memcpy(&data[2], datain, min);
     SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, data, min + 2);
 
@@ -1541,7 +1541,7 @@ int ExchangeAPDU14a(const uint8_t *datain, int datainlen, bool activateField, bo
 
     // 3 byte here - 1b framing header, 2b crc16
     if (g_apdu_in_framing_enable &&
-            ((gs_frame_len && (datainlen > gs_frame_len - 3)) || (datainlen > PM3_CMD_DATA_SIZE - 3))) {
+            ((gs_frame_len && (datainlen > gs_frame_len - 3)) || (datainlen > pm3_max_cmd_data_size() - 3))) {
 
         int clen = 0;
 

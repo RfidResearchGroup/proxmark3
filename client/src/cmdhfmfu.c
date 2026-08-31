@@ -4687,7 +4687,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
             uint16_t max_retries_per_call = retries;
             if (collect_nonces) {
                 // Not strictly needed, but to avoid fw warning
-                max_retries_per_call = ((PM3_CMD_DATA_SIZE - sizeof(uint32_t) * 2) / sizeof(uint64_t)) - 1;
+                max_retries_per_call = ((pm3_max_cmd_data_size() - sizeof(uint32_t) * 2) / sizeof(uint64_t)) - 1;
             }
             isok = ul3pass_authentication(auth_key_ptr, MIFAREULC_KEY_INDEX, !keep_field_on, MIN(retries - auths, max_retries_per_call), &auths, &ms, false, !skip_auth, check_answer, use_fastread0, collect_nonces, (uint8_t *)(nonces + auths), reset_field, available_pairs, pairs);
         } while (skip_auth && auths < 1 + retries);
@@ -4783,7 +4783,7 @@ static int CmdHF14AMfUCAuthChk(const char *Cmd) {
     }
 
     // cap by what fits in one frame, then by what the nkeys field can announce
-    uint32_t max_chunk = (PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER) / keysize;
+    uint32_t max_chunk = (pm3_max_cmd_data_size() - MIFAREU3P_CHKKEY_HEADER) / keysize;
     if (max_chunk > MIFAREU3P_CHKKEY_MAX_KEYS) {
         max_chunk = MIFAREU3P_CHKKEY_MAX_KEYS;
     }
@@ -5002,7 +5002,7 @@ static int CmdHF14AMfUAESAuthChk(const char *Cmd) {
     }
 
     // cap by what fits in one frame, then by what the nkeys field can announce
-    uint32_t max_chunk = (PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER) / keysize;
+    uint32_t max_chunk = (pm3_max_cmd_data_size() - MIFAREU3P_CHKKEY_HEADER) / keysize;
     if (max_chunk > MIFAREU3P_CHKKEY_MAX_KEYS) {
         max_chunk = MIFAREU3P_CHKKEY_MAX_KEYS;
     }
@@ -8685,9 +8685,9 @@ static int CmdHF14AMfUeSetBlk(const char *Cmd) {
 
     // one esetblk is a single CMD_HF_MIFARE_EML_MEMSET; its payload (data + a 4-byte
     // header) must fit the command buffer. Larger sets should use `hf mfu eload`.
-    if (datalen > (int)(PM3_CMD_DATA_SIZE - 4)) {
+    if (datalen > (int)(pm3_max_cmd_data_size() - 4)) {
         PrintAndLogEx(WARNING, "too many pages for one command: max %d pages (%d bytes). Use " _YELLOW_("`hf mfu eload`") " for larger sets",
-                      (int)((PM3_CMD_DATA_SIZE - 4) / MFU_BLOCK_SIZE), (int)(PM3_CMD_DATA_SIZE - 4));
+                      (int)((pm3_max_cmd_data_size() - 4) / MFU_BLOCK_SIZE), (int)(pm3_max_cmd_data_size() - 4));
         return PM3_EINVARG;
     }
 
