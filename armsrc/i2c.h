@@ -34,6 +34,15 @@
 // LRC/CRC - the same way SEND_T0 handles the T=0 procedure bytes.
 #define I2C_DEVICE_CMD_SEND_T1      0x08
 #define I2C_DEVICE_CMD_PPS          0x09
+// SIM module firmware v4.65 and up.  A compatibility alias for T=0 in the
+// current SIM_C build.  Grace response assembly remains PM3-side.
+#define I2C_DEVICE_CMD_SEND_T0_AUTORESP 0x0A
+
+// Disabled: live testing showed that opcode 0x0A itself is not reliable on the
+// PM3<->SIM I2C path, even when the SIM handler is an exact SEND_T0 pass-through.
+// Keep T=0 traffic on the established 0x07 transport until that low-level issue
+// is understood.
+#define SAM_T0_AUTORESP             0
 
 // SIM module firmware versions this build knows about.
 //
@@ -45,6 +54,13 @@
 #define SIM_MODULE_VERS_MIN_LO      57
 #define SIM_MODULE_VERS_T1_HI       4
 #define SIM_MODULE_VERS_T1_LO       51
+
+// SAM secure-channel transport policy for the performance build.  Artemis
+// offers T=0 first in its ATR; request its advertised T=1 service explicitly
+// and use the validated Fi=512/Di=16 rate.  This is protocol selection only:
+// it does not enable APDU dumps or other bring-up diagnostics.
+#define SAM_SC_FORCE_T1_TA1_95      1
+#define SAM_SC_T1_TA1               0x95
 
 // The SIM module v4 supports up to 384 bytes for the length.
 #define  ISO7816_MAX_FRAME 270
@@ -116,6 +132,11 @@ uint8_t sc_raw_device_cmd(smartcard_command_t flags);
 // for callers that carry no SC_RAW* flags of their own. T=0 until a PPS says
 // otherwise.
 uint8_t sc_active_device_cmd(void);
+
+// Request the configured T=1 profile for the next SAM-only GetATR().  The
+// request is consumed once, so unrelated SmartCardRaw traffic still follows
+// its own ATR/PPS policy.
+void sc_request_sam_t1_profile(void);
 
 // Log one smartcard frame, timestamped from the tick counter. Start is where
 // the previous frame ended, so a Tag frame's span is how long the card took to
