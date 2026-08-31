@@ -1,4 +1,5 @@
 mcu_flash_size      = 1024K;
+stacksize           = 65536;
 
 /*
  * AT32F435RGT7 supports SRAM configuration of 512K at most, but after modifying mcu_sram_size,
