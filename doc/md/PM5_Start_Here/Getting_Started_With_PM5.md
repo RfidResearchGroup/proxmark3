@@ -8,6 +8,9 @@
 - [Flash Bootrom](#Flash-Bootrom)
 - [Flash Fullimage](#Flash-Fullimage)
 - [Flash FPGA](#Flash-FPGA)
+
+---
+## Extras
 - [Build Extras](#Build-Extras)
 
 
