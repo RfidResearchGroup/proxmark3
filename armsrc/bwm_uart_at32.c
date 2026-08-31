@@ -9,6 +9,13 @@
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // AT32F435 UART4 driver for the Proxmark5 BWM link - see bwm_uart_at32.h.
+//
+// RX is serviced by circular DMA (DMA1 channel 2) rather than a per-byte
+// RX interrupt. The old RDBF ISR dropped bytes on overrun as soon as the
+// main loop was busy (FPGA / USB) - fine at 460800, fatal at higher bauds,
+// where the dropped byte becomes an app_com CRC-16 failure and a stall.
+// Circular DMA lets the controller sink every byte independent of CPU load,
+// so BWM_UART_BAUD can be raised to lift BLE/WiFi transfer rates.
 //-----------------------------------------------------------------------------
 
 #include "bwm_uart_at32.h"
@@ -18,10 +25,10 @@
 #include "at32f435_437_crm.h"
 #include "at32f435_437_gpio.h"
 #include "at32f435_437_usart.h"
+#include "at32f435_437_dma.h"
 #include "at32f435_437_misc.h"
 
 #define BWM_UART            UART4
-#define BWM_UART_IRQn       UART4_IRQn
 #define BWM_UART_GPIO       GPIOA
 #define BWM_UART_TX_PIN     GPIO_PINS_0
 #define BWM_UART_RX_PIN     GPIO_PINS_1
@@ -29,12 +36,24 @@
 #define BWM_UART_RX_SRC     GPIO_PINS_SOURCE1
 #define BWM_UART_MUX        GPIO_MUX_8
 
+// SSC already owns DMA1 channel 1 (see fpga_hw_at32.c); UART4 RX uses channel 2.
+#define BWM_DMA_CHANNEL     DMA1_CHANNEL2
+#define BWM_DMA_MUX_CHANNEL DMA1MUX_CHANNEL2
+
+// Power-of-two so head/tail wrap with a mask. DMA target buffer.
 #define BWM_RX_RING_SZ      4096
 static volatile uint8_t  s_rx_ring[BWM_RX_RING_SZ];
-static volatile uint16_t s_rx_head = 0;
-static volatile uint16_t s_rx_tail = 0;
+static volatile uint16_t s_rx_tail = 0;   // software read cursor; head comes from DMA
 
 static volatile bool s_inited = false;
+
+// Bytes the DMA controller has written so far, wrapped into the ring.
+// The channel's DTCNT counts DOWN from buffer_size and reloads to buffer_size
+// at wrap (loop mode), so head = size - remaining, always in [0, size-1].
+static inline uint16_t bwm_uart_rx_head(void) {
+    return (uint16_t)((BWM_RX_RING_SZ - dma_data_number_get(BWM_DMA_CHANNEL))
+                      & (BWM_RX_RING_SZ - 1));
+}
 
 void bwm_uart_init(void) {
     if (s_inited) {
@@ -60,29 +79,36 @@ void bwm_uart_init(void) {
     usart_transmitter_enable(BWM_UART, TRUE);
     usart_receiver_enable(BWM_UART, TRUE);
 
-    s_rx_head = 0;
+    // --- RX via circular DMA (mirror of the SSC RX setup in fpga_hw_at32.c) ---
     s_rx_tail = 0;
 
-    usart_interrupt_enable(BWM_UART, USART_RDBF_INT, TRUE);
-    nvic_irq_enable(BWM_UART_IRQn, 2, 0);
+    crm_periph_clock_enable(CRM_DMA1_PERIPH_CLOCK, TRUE);
+
+    dma_reset(BWM_DMA_CHANNEL);
+
+    dma_init_type dma_init_struct;
+    dma_default_para_init(&dma_init_struct);
+    dma_init_struct.buffer_size           = BWM_RX_RING_SZ;
+    dma_init_struct.direction             = DMA_DIR_PERIPHERAL_TO_MEMORY;
+    dma_init_struct.peripheral_base_addr  = (uint32_t) & (BWM_UART->dt);
+    dma_init_struct.peripheral_inc_enable = FALSE;
+    dma_init_struct.memory_base_addr      = (uint32_t)s_rx_ring;
+    dma_init_struct.memory_inc_enable     = TRUE;
+    dma_init_struct.peripheral_data_width = DMA_PERIPHERAL_DATA_WIDTH_BYTE;
+    dma_init_struct.memory_data_width     = DMA_MEMORY_DATA_WIDTH_BYTE;
+    dma_init_struct.loop_mode_enable      = TRUE;   // circular: reloads at count 0
+    // MEDIUM: single-byte requests, must not starve the SSC bulk channel (HIGH).
+    dma_init_struct.priority              = DMA_PRIORITY_MEDIUM;
+    dma_init(BWM_DMA_CHANNEL, &dma_init_struct);
+
+    dmamux_enable(DMA1, TRUE);
+    dmamux_init(BWM_DMA_MUX_CHANNEL, DMAMUX_DMAREQ_ID_UART4_RX);
+
+    usart_dma_receiver_enable(BWM_UART, TRUE);
+    dma_channel_enable(BWM_DMA_CHANNEL, TRUE);
 
     usart_enable(BWM_UART, TRUE);
     s_inited = true;
-}
-
-void UART4_IRQHandler(void) {
-    if (usart_flag_get(BWM_UART, USART_RDBF_FLAG) != RESET) {
-        uint8_t b = (uint8_t)usart_data_receive(BWM_UART);
-        uint16_t next = (uint16_t)((s_rx_head + 1) & (BWM_RX_RING_SZ - 1));
-        if (next != s_rx_tail) {
-            s_rx_ring[s_rx_head] = b;
-            s_rx_head = next;
-        }
-    }
-    if (usart_flag_get(BWM_UART, USART_ROERR_FLAG) != RESET) {
-        usart_flag_clear(BWM_UART, USART_ROERR_FLAG);
-        (void)usart_data_receive(BWM_UART);
-    }
 }
 
 int bwm_uart_write(const uint8_t *data, size_t len) {
@@ -97,12 +123,13 @@ int bwm_uart_write(const uint8_t *data, size_t len) {
 }
 
 uint16_t bwm_uart_rx_available(void) {
-    return (uint16_t)((s_rx_head - s_rx_tail) & (BWM_RX_RING_SZ - 1));
+    return (uint16_t)((bwm_uart_rx_head() - s_rx_tail) & (BWM_RX_RING_SZ - 1));
 }
 
 uint32_t bwm_uart_read(uint8_t *data, size_t len) {
+    uint16_t head = bwm_uart_rx_head();
     uint32_t n = 0;
-    while (n < len && s_rx_tail != s_rx_head) {
+    while (n < len && s_rx_tail != head) {
         data[n++] = s_rx_ring[s_rx_tail];
         s_rx_tail = (uint16_t)((s_rx_tail + 1) & (BWM_RX_RING_SZ - 1));
     }
