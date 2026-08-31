@@ -101,9 +101,15 @@ hf 14a read --drop
 ```
 
 ## I Have A BWM, Now What?
+
 ### Install
 * You acknowledge that the BWM is not yet fully supported, it's better not to plug it for now. (If you insist... continue.)
 * [Physically install the BWM and (if applicable) Battery](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
+
+### Operation
+* Power on: Briefly pressing the button will wake the device. The RGB will turn green
+** The RGB will turn green.
+* When the device is powered on, pressing and holding the button for a few seconds will start displaying a running light, and then releasing the button will power off the device
 
 
 
@@ -115,9 +121,6 @@ hf 14a read --drop
 
 
 
-## Standalone Modes
-
-Standalone modes are disabled for now, to ease debugging.
 
 ## BWM aka Battery Wireless Module
 
@@ -125,8 +128,6 @@ Standalone modes are disabled for now, to ease debugging.
 
 * [Installation instructions](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
 * The very first time, run ` hw bwmsetcap --cap 500` and do a full charge/discharge cycle for it to learn the real capacity
-* Pressing briefly the button will wake the device. The RGB will turn green
-* When the device is powered on, pressing and holding the button for a few seconds will start displaying a running light, and then releasing the button will power off the device
 
 ## Recovery flashing via DFU
 
@@ -202,3 +203,7 @@ Do not use them unless you fully understand what you're doing.
 * `hw qc_pm5`: factory quality check command, will activate the RBG, the buzzer and the antenna LEDs. Press the button to report success. Use `-t/--timeout <s>` to change how long the test sequence runs before it fails (default 20 seconds).
 * `hw factorydata`: read/write the factory data (originality signature etc)
 
+
+## Standalone Modes
+
+Standalone modes are disabled for now, to ease debugging.
