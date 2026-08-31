@@ -204,6 +204,7 @@ class SecurityPage(TabPage):
                 ("Signer serial", sod.signer_serial),
                 ("Certificate valid from", sod.valid_from),
                 ("Certificate valid to", sod.valid_to),
+                ("PACE  ·  EF_CardAccess", "\n".join(sec.pace)),
                 ("DG14 protocols", "\n".join(sec.protocols)),
                 ("DG15 AA public key", f"{sec.aa_algorithm} {sec.aa_key_size}".strip()),
             )

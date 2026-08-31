@@ -400,6 +400,17 @@ class Pm3PassportApp(App):
             self.show_error(result.error)
             self.select_tab(5)
             return
+        if record is not None and record.is_empty:
+            # Nothing the classifier recognises went wrong, but no file was
+            # written.  Calling that a success drops you on an empty page.
+            self.status_bac = "failed"
+            self.status_auth = "None"
+            self.show_error(
+                errors.NothingReadError(),
+                detail=str(result.log_path or record.source_dir or ""),
+            )
+            self.select_tab(5)
+            return
         self.status_bac = "success"
         mechanism = errors.detect_mechanism(result.lines)
         if mechanism:

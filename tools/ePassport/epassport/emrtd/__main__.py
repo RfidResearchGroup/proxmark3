@@ -62,6 +62,11 @@ def render(record: PassportRecord) -> str:
                 add(f"  {key:<20}: {value}")
 
     s = record.security
+    if s.pace:
+        add("")
+        add("EF_CardAccess :")
+        for proto in s.pace:
+            add(f"  protocol            : {proto}")
     if s.protocols or s.aa_algorithm:
         add("")
         add("DG14/15       :")
