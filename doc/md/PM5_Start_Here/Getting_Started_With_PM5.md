@@ -30,7 +30,7 @@
 
 ## Makefile Changes
 
-Your Makefile.platform should needs to specify PM5 as your PLATFORM along with any PLATFORM_EXTRAS that are appropriate for your configuration.
+Your `Makefile.platform` should needs to specify `PM5` as your `PLATFORM` along with any `PLATFORM_EXTRAS` that are appropriate for your configuration.
 
 Example:
 ```
