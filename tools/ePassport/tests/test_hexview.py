@@ -68,3 +68,34 @@ def test_fit_row_bytes_before_layout_assumes_the_widest(monkeypatch) -> None:
     monkeypatch.setattr(hexview, "measure_row_width", lambda n: 500.0)
     view = hexview.HexView.__new__(hexview.HexView)
     assert view.fit_row_bytes(0) == 16
+
+
+# ------------------------------------- splitting a dump the GPU can draw
+def test_a_long_dump_is_split_into_blocks_a_texture_can_hold() -> None:
+    """One Label per dump made a DG2 vanish.
+
+    A Label is drawn into a single texture, and a dump line is about 13px, so
+    past roughly 1260 lines the texture exceeds the 16384px OpenGL maximum,
+    fails to be created, and the pane draws nothing at all - no error either.
+    """
+    blocks = hexview.hexdump_blocks(bytes(40_000), width=16)
+    assert len(blocks) > 1
+    assert all(b.count("\n") + 1 <= hexview.ROWS_PER_BLOCK for b in blocks)
+
+
+def test_blocks_join_back_into_exactly_the_one_piece_dump() -> None:
+    data = bytes(range(256)) * 20
+    assert "\n".join(hexview.hexdump_blocks(data, width=16)) == hexdump(data, width=16)
+
+
+def test_a_short_dump_stays_a_single_block() -> None:
+    assert hexview.hexdump_blocks(b"ABC") == [hexdump(b"ABC")]
+
+
+def test_empty_input_is_still_one_block() -> None:
+    assert hexview.hexdump_blocks(b"") == ["(empty)"]
+
+
+def test_rows_per_block_leaves_headroom_under_the_texture_limit() -> None:
+    """16384px is the common maximum; a smaller one must not be marginal."""
+    assert hexview.ROWS_PER_BLOCK * 13 <= 16384 / 2

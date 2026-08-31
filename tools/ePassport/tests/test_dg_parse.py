@@ -200,3 +200,19 @@ def test_present_optional_groups_are_not_marked_missing(record) -> None:
         record.issuing_authority,
     ):
         assert not record.is_missing(value)
+
+
+def test_image_for_returns_the_decoded_picture(record) -> None:
+    """The FILES tab shows a picture for the files that carry one."""
+    assert record.image_for("EF_DG2").startswith(b"\x89PNG")
+    assert record.image_for("EF_DG7").startswith(b"\x89PNG")
+
+
+def test_image_for_is_case_insensitive_like_file_lookup(record) -> None:
+    assert record.image_for("ef_dg2") == record.image_for("EF_DG2")
+
+
+def test_image_for_is_empty_for_files_that_carry_no_picture(record) -> None:
+    assert record.image_for("EF_COM") == b""
+    assert record.image_for("EF_SOD") == b""
+    assert record.image_for("nonsense") == b""
