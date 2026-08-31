@@ -56,8 +56,6 @@
 #define MIFARE_2K_MAX_KEY_SIZE      (MIFARE_2K_MAXSECTOR * 2 * MIFARE_KEY_SIZE)
 #define MIFARE_4K_MAX_KEY_SIZE      (MIFARE_4K_MAXSECTOR * 2 * MIFARE_KEY_SIZE)
 
-#define KEYS_IN_BLOCK   MIN((PM3_CMD_DATA_SIZE - 5) / MIFARE_KEY_SIZE, 255)
-
 typedef struct {
     uint8_t key_a[MIFARE_KEY_SIZE];
     uint8_t access[3];
