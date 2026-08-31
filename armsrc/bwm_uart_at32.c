@@ -45,7 +45,8 @@
 static volatile uint8_t  s_rx_ring[BWM_RX_RING_SZ];
 static volatile uint16_t s_rx_tail = 0;   // software read cursor; head comes from DMA
 
-static volatile bool s_inited = false;
+static volatile bool     s_inited = false;
+static volatile uint32_t s_cur_baud = BWM_UART_BAUD;
 
 // Bytes the DMA controller has written so far, wrapped into the ring.
 // The channel's DTCNT counts DOWN from buffer_size and reloads to buffer_size
@@ -55,13 +56,14 @@ static inline uint16_t bwm_uart_rx_head(void) {
                       & (BWM_RX_RING_SZ - 1));
 }
 
-void bwm_uart_init(void) {
-    if (s_inited) {
-        return;
-    }
-
+// Bring UART4 + circular RX DMA up at `baud`. Safe to call repeatedly: on a
+// re-config it tears the channel down first, so the ring restarts empty (which
+// also discards bytes straddling a baud switch). Mirrors the SSC RX setup in
+// fpga_hw_at32.c.
+static void bwm_uart_configure(uint32_t baud) {
     crm_periph_clock_enable(CRM_GPIOA_PERIPH_CLOCK, TRUE);
     crm_periph_clock_enable(CRM_UART4_PERIPH_CLOCK, TRUE);
+    crm_periph_clock_enable(CRM_DMA1_PERIPH_CLOCK, TRUE);
 
     gpio_init_type gpio_init_struct;
     gpio_default_para_init(&gpio_init_struct);
@@ -74,15 +76,17 @@ void bwm_uart_init(void) {
     gpio_pin_mux_config(BWM_UART_GPIO, BWM_UART_TX_SRC, BWM_UART_MUX);
     gpio_pin_mux_config(BWM_UART_GPIO, BWM_UART_RX_SRC, BWM_UART_MUX);
 
-    usart_init(BWM_UART, BWM_UART_BAUD, USART_DATA_8BITS, USART_STOP_1_BIT);
+    // Quiesce before reconfiguring (matters on the re-config path).
+    dma_channel_enable(BWM_DMA_CHANNEL, FALSE);
+    usart_enable(BWM_UART, FALSE);
+
+    usart_init(BWM_UART, baud, USART_DATA_8BITS, USART_STOP_1_BIT);
     usart_parity_selection_config(BWM_UART, USART_PARITY_NONE);
     usart_transmitter_enable(BWM_UART, TRUE);
     usart_receiver_enable(BWM_UART, TRUE);
 
-    // --- RX via circular DMA (mirror of the SSC RX setup in fpga_hw_at32.c) ---
+    // --- RX via circular DMA ---
     s_rx_tail = 0;
-
-    crm_periph_clock_enable(CRM_DMA1_PERIPH_CLOCK, TRUE);
 
     dma_reset(BWM_DMA_CHANNEL);
 
@@ -108,7 +112,26 @@ void bwm_uart_init(void) {
     dma_channel_enable(BWM_DMA_CHANNEL, TRUE);
 
     usart_enable(BWM_UART, TRUE);
+    s_cur_baud = baud;
+}
+
+void bwm_uart_init(void) {
+    if (s_inited) {
+        return;
+    }
+    bwm_uart_configure(BWM_UART_BAUD);
     s_inited = true;
+}
+
+void bwm_uart_set_baud(uint32_t baud) {
+    if (baud == 0 || baud == s_cur_baud) {
+        return;
+    }
+    bwm_uart_configure(baud);
+}
+
+uint32_t bwm_uart_get_baud(void) {
+    return s_cur_baud;
 }
 
 int bwm_uart_write(const uint8_t *data, size_t len) {
