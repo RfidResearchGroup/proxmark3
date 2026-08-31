@@ -2,8 +2,16 @@
 
 from __future__ import annotations
 
-from kivy.properties import NumericProperty, ObjectProperty, StringProperty
+from kivy.clock import Clock
+from kivy.properties import (
+    ListProperty,
+    NumericProperty,
+    ObjectProperty,
+    StringProperty,
+)
 from kivy.uix.boxlayout import BoxLayout
+
+from .textblocks import ROWS_PER_BLOCK, split_blocks  # noqa: F401
 
 #: Beyond this the pane renders a prefix and says so - a 25 kB DG2 as one
 #: Label would stall the UI thread for seconds.
@@ -27,6 +35,13 @@ def hexdump(data: bytes, *, width: int = 16, limit: int = MAX_BYTES) -> str:
     return "\n".join(rows)
 
 
+def hexdump_blocks(
+    data: bytes, *, width: int = 16, limit: int = MAX_BYTES
+) -> list[str]:
+    """:func:`hexdump`, split into chunks that each fit one texture."""
+    return split_blocks(hexdump(data, width=width, limit=limit).splitlines())
+
+
 #: Row widths to try, widest first.  A hex dump must not wrap, so instead of
 #: letting it overflow we fit fewer bytes per row into a narrow pane.
 ROW_WIDTHS = (16, 8, 4)
@@ -38,7 +53,9 @@ class HexView(BoxLayout):
     data = ObjectProperty(b"")
     title = StringProperty("")
     byte_count = NumericProperty(0)
-    text = StringProperty("(no file selected)")
+    #: The dump, one entry per Label.  See :data:`ROWS_PER_BLOCK`.
+    blocks = ListProperty([])
+    text_color = ListProperty([1, 1, 1, 1])
     #: Width available for the dump, in pixels.  Set from the ``.kv`` rule.
     available_width = NumericProperty(0)
     row_bytes = NumericProperty(16)
@@ -54,7 +71,36 @@ class HexView(BoxLayout):
         width = self.fit_row_bytes(self.available_width)
         if width != self.row_bytes:
             self.row_bytes = width
-        self.text = hexdump(self.data or b"", width=width)
+        self.blocks = hexdump_blocks(self.data or b"", width=width)
+
+    def on_blocks(self, *_args) -> None:
+        Clock.schedule_once(self._render, -1)
+
+    def on_text_color(self, *_args) -> None:
+        Clock.schedule_once(self._render, -1)
+
+    def _render(self, *_args) -> None:
+        box = self.ids.get("dump_box")
+        if box is None:
+            return
+        from kivy.metrics import sp
+        from kivy.uix.label import Label
+
+        from .. import theme
+
+        box.clear_widgets()
+        for block in self.blocks:
+            label = Label(
+                text=block,
+                font_name=theme.FONT_MONO,
+                font_size=sp(11),
+                color=self.text_color,
+                halign="left",
+                valign="top",
+                size_hint=(None, None),
+            )
+            label.bind(texture_size=label.setter("size"))
+            box.add_widget(label)
 
     def fit_row_bytes(self, available: float) -> int:
         """Largest row width whose rendered line fits in ``available`` pixels."""

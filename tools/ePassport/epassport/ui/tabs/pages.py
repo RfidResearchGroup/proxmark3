@@ -246,6 +246,7 @@ class FilesPage(TabPage):
     files = ListProperty([])
     selected_name = StringProperty("")
     selected_data = ObjectProperty(b"")
+    selected_image = ObjectProperty(b"")
     status = StringProperty("")
     dump_dir = StringProperty("")
 
@@ -254,6 +255,7 @@ class FilesPage(TabPage):
         if record is None:
             self.files = []
             self.selected_data = b""
+            self.selected_image = b""
             return
         self.dump_dir = str(record.source_dir or "")
         self.files = [
@@ -267,6 +269,7 @@ class FilesPage(TabPage):
         else:
             self.selected_name = ""
             self.selected_data = b""
+            self.selected_image = b""
 
     def on_files(self, *_args) -> None:
         Clock.schedule_once(self._rebuild, 0)
@@ -300,6 +303,7 @@ class FilesPage(TabPage):
         entry = record.file(name)
         self.selected_name = name
         self.selected_data = entry.data if entry else b""
+        self.selected_image = record.image_for(name)
 
     def export_selected(self, destination: str) -> str:
         """Copy the selected file elsewhere.  Returns a status message."""
