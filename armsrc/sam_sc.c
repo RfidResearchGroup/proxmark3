@@ -522,6 +522,9 @@ void sam_sc_handler(const PacketCommandNG *c) {
         s_sam_sc_session_active = false;
         I2C_Reset_EnterMainProgram();
         StartTicks();
+#if SAM_SC_FORCE_T1_TA1_95
+        sc_request_sam_t1_profile();
+#endif
         smart_card_atr_t card;
         if (GetATR(&card, false) == false) {
             res = PM3_ECARDEXCHANGE;
