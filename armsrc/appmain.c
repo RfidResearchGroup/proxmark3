@@ -24,6 +24,7 @@
 #include "usb_cdc_apis.h"
 #ifdef WITH_BWM_FORWARD
 #include "bwm_uart_at32.h"
+#include "bwm_forward.h"   // bwm_fwd_negotiate_baud()
 #include "bwm_wifi.h"
 #endif
 #include "proxmark3_arm.h"
@@ -700,10 +701,11 @@ static void SendCapabilities(void) {
         capabilities.baudrate = g_usart_baudrate;
 #endif
 #ifdef WITH_BWM_FORWARD
-    // BWM link runs at a fixed baud; report it so the client's timeout math
-    // (communication_delay: 12000000 / uart_speed) doesn't divide by zero.
+    // Report the negotiated link baud so the client's timeout math
+    // (communication_delay: 12000000 / uart_speed) matches reality and never
+    // divides by zero.
     if (g_reply_via_fpc)
-        capabilities.baudrate = BWM_UART_BAUD;
+        capabilities.baudrate = bwm_uart_get_baud();
 #endif
 
 #ifdef RDV4
@@ -4011,6 +4013,9 @@ void __attribute__((noreturn)) AppMain(void) {
 
 #ifdef WITH_BWM_FORWARD
     bwm_uart_init();         // AT32 UART4 <-> BWM app_com link; AFTER usb_enable()
+    // Negotiate the link up from the boot baud; harmless no-op if the ESP is
+    // older or the target is unreachable (stays at BWM_UART_BAUD).
+    bwm_fwd_negotiate_baud(BWM_UART_BAUD_TARGET);
 #endif
 
 #ifdef WITH_BWM_CHARGERKICK
