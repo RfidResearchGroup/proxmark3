@@ -3028,30 +3028,44 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
 #endif
         case CMD_MEASURE_ANTENNA_TUNING_HF: {
-            if (packet->length != 1)
+
+            if (packet->length != 1) {
                 reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EINVARG, NULL, 0);
+                break;
+            }
 
             switch (packet->data.asBytes[0]) {
-                case 1: // MEASURE_ANTENNA_TUNING_HF_START
+                case 1: { // MEASURE_ANTENNA_TUNING_HF_START
                     // Let the FPGA drive the high-frequency antenna around 13.56 MHz.
                     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
                     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_SUCCESS, NULL, 0);
                     break;
-                case 2:
+                }
+                case 2: {
                     if (button_status == BUTTON_SINGLE_CLICK) {
                         reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EOPABORTED, NULL, 0);
+                        break;
                     }
+                    // Re-assert the field on every sample.  It's a insurance for a missed packet.
+                    if (FpgaGetCurrent() != FPGA_BITSTREAM_HF) {
+                        FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+                    }
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
+
                     uint32_t volt = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_HF);
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_SUCCESS, (uint8_t *)&volt, sizeof(volt));
                     break;
-                case 3:
+                }
+                case 3: {
                     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_SUCCESS, NULL, 0);
                     break;
-                default:
+                }
+                default: {
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EINVARG, NULL, 0);
                     break;
+                }
             }
             break;
         }
