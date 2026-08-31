@@ -110,9 +110,20 @@ static bool s_autooff_setup = false;
 // unplugged at all (and the hw bwmautooff toggle would be unreachable, since setting it
 // needs a client/USB). So we require having seen USB present at least once this session
 // before an absent reading triggers shutdown.
+#ifndef PM5_AUTOOFF_CONFIRMATIONS
+// Consecutive absent samples required before powering off (x PM5_AUTOOFF_POLL_MS).
+// This is the grace period the comment above has always promised, and it is not only
+// glitch rejection: pulling VBUS puts the BWM charger into Battery Discharge Mode, and
+// BATFET is only turned fully on as part of that transition. Releasing the power latch
+// 250ms in leaves the charger mid-transition and the board will not power on again -
+// waiting lets DISCHG settle first.
+#define PM5_AUTOOFF_CONFIRMATIONS  20      // 20 x 250ms = 5s
+#endif
+
 static void bwm_autooff_check(void) {
     static uint32_t last_tick = 0;
     static bool usb_was_present = false;   // have we seen USB present since boot?
+    static uint8_t absent = 0;             // consecutive USB-absent samples
 
     if (g_autooff_enabled == false) {
         return;
@@ -130,12 +141,18 @@ static void bwm_autooff_check(void) {
     // Gpio_VUSB_Read() == true means USB power present.
     if (Gpio_VUSB_Read()) {
         usb_was_present = true;   // latch: USB has been present this session
+        absent = 0;               // present again -> restart the grace period
         return;
     }
 
     // USB absent. Only power off if USB had previously been present (a real unplug).
     // If it booted on battery and never saw USB, leave it running.
     if (usb_was_present == false) {
+        return;
+    }
+
+    // Require the absence to persist before acting on it.
+    if (++absent < PM5_AUTOOFF_CONFIRMATIONS) {
         return;
     }
 
