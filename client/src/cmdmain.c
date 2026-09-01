@@ -50,6 +50,7 @@
 #include "preferences.h"
 #include "cliparser.h"
 #include "cmdmqtt.h"
+#include "graph.h"               // MAX_GRAPH_TRACE_LEN
 
 static int CmdHelp(const char *Cmd);
 
@@ -175,7 +176,7 @@ static int CmdAuto(const char *Cmd) {
 
     CmdPlot("");
 
-    lf_read(false, 40000);
+    lf_read(false, MIN(g_pm3_capabilities.bigbuf_size - 1, MAX_GRAPH_TRACE_LEN));
 
     char *fname = calloc(100, sizeof(uint8_t));
     if (fname == NULL) {

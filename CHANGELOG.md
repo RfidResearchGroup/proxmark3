@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Added `tools/ePassport` - EF_DG13 is decoded, and a Polish document's PESEL is shown as the personal number when it carries no EF_DG11 (@pkilar)
+- Fixed `tools/ePassport` - a disabled button drew Kivy's banded disabled texture, which left its label unreadable (@pkilar)
 - Fixed `hf 14b` - a card asking for a waiting time extension of 4 or more left the timeout at zero, so any ISO14443-B card needing time to answer looked like it had stopped responding (@pkilar)
 - Fixed `hf mfdes chk` - now handles `-k` user supplied keys properly (@iceman1001)
 - Fixed `BigBuf_Clear_keep_EM()` - now also clear the trace length set (@iceman1001)

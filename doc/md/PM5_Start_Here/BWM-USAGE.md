@@ -331,7 +331,7 @@ hw bwmwifi --stop
 
 - Bulk transfers over BLE/WiFi (`lf read`, `mem dump`, trace download) are paced by
   the BWM flow control so they don't drop — expect them to be **slower than USB**.
-- COTAG / large realtime LF reads (**> 40000 samples**) use a separate streaming
+- COTAG / large realtime LF reads use a separate streaming
   path and are **not** covered by this flow control.
 - All BWM commands are **PM5-only** and require the firmware built with
   `PLATFORM_EXTRAS=BWM`.

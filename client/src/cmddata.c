@@ -1940,6 +1940,10 @@ static int CmdSamples(const char *Cmd) {
     int n = arg_get_int_def(ctx, 1, 0);
     bool verbose = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
+    if (n < 0 || n > MIN(g_pm3_capabilities.bigbuf_size - 1, MAX_GRAPH_TRACE_LEN)) {
+        PrintAndLogEx(WARNING, "invalid number of samples, must be between 0 and %d", MIN(g_pm3_capabilities.bigbuf_size - 1, MAX_GRAPH_TRACE_LEN));
+        return PM3_EINVARG;
+    }
     return getSamples(n, verbose);
 }
 

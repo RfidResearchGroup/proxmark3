@@ -872,7 +872,7 @@ int CmdLFRead(const char *Cmd) {
                   "Sniff low frequency signal.\n"
                   " - use " _YELLOW_("`lf config`") _CYAN_(" to set parameters.\n")
                   _CYAN_(" - use ") _YELLOW_("`data plot`") _CYAN_(" to look at it.\n")
-                  _CYAN_("If the number of samples is more than the device memory limit (40000 now), ")
+                  _CYAN_("If the number of samples is more than the device memory limit, ")
                   _CYAN_("it will try to use the real-time sampling mode."),
                   "lf read -v -s 12000   --> collect 12000 samples\n"
                   "lf read -s 3000 -@    --> oscilloscope style \n"
@@ -891,9 +891,9 @@ int CmdLFRead(const char *Cmd) {
     bool cm = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
-    // the 40000 there should be the result of BigBuf_max_traceLen(),
+    // it should be the result of BigBuf_max_traceLen(),
     // but IDK how to get it.
-    bool realtime = samples > 40000;
+    bool realtime = samples >= g_pm3_capabilities.bigbuf_size;
 
     if (g_session.pm3_present == false)
         return PM3_ENOTTY;
@@ -1000,7 +1000,7 @@ int CmdLFSniff(const char *Cmd) {
                   " - use " _YELLOW_("`lf config`") _CYAN_(" to set parameters.\n")
                   _CYAN_(" - use ") _YELLOW_("`data plot`") _CYAN_(" to look at sniff signal.\n")
                   _CYAN_(" - use ") _YELLOW_("`lf search -1`") _CYAN_(" to see if signal can be automatic decoded.\n")
-                  _CYAN_("If the number of samples is more than the device memory limit (40000 now), ")
+                  _CYAN_("If the number of samples is more than the device memory limit, ")
                   _CYAN_("it will try to use the real-time sampling mode."),
                   "lf sniff -v\n"
                   "lf sniff -s 3000 -@    --> oscilloscope style \n"
@@ -1019,9 +1019,9 @@ int CmdLFSniff(const char *Cmd) {
     bool cm = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
-    // the 40000 there should be the result of BigBuf_max_traceLen(),
+    // it should be the result of BigBuf_max_traceLen(),
     // but IDK how to get it.
-    bool realtime = samples > 40000;
+    bool realtime = samples >= g_pm3_capabilities.bigbuf_size;
 
     if (g_session.pm3_present == false)
         return PM3_ENOTTY;
@@ -1847,14 +1847,14 @@ int CmdLFRelay(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf relay",
                   "Relay LF signal between two Proxmark3 devices over TCP.\n"
-                  "By default it uses PORT 8000 and uses 40000 samples from Graphbuffer\n"
+                  "By default it uses PORT 8000 and uses 30000 samples from Graphbuffer\n"
                   "  --rdr  : Reading device, act as IP client and reads LF tag and sends data\n"
                   "  --tag  : Simulation device, act as IP server and simulates relayed data\n",
                   _WHITE_("Device A, reading LF tag, client") "\n"
                   "lf relay --rdr --ip 192.168.1.141           -> Client, connect to IP 192.168.1.141:8000\n"
                   "lf relay --rdr --ip 192.168.1.141 -p 18111  -> Client, connect to IP 192.168.1.141:18111 \n\n"
                   _WHITE_("Device B, simulate LF tag, server") "\n"
-                  "lf relay --tag -p 8111                     -> Server listening port 8111, recv 40000 samples\n"
+                  "lf relay --tag -p 8111                     -> Server listening port 8111, recv 30000 samples\n"
                   "lf relay --tag -s 10000                    -> Server listening port 8000, recv 10000 samples\n"
                  );
 
@@ -1863,7 +1863,7 @@ int CmdLFRelay(const char *Cmd) {
         arg_lit0(NULL, "tag", "Simulation device, act as Server"),
         arg_lit0(NULL, "rdr", "Sniffing device, act as client"),
         arg_str0("i", "ip", "<ipaddr>", "Target IPv4 address to send data to. Used with `--rdr`"),
-        arg_u64_0("s", "samples", "<dec>", "Number of samples to collect (def: 40000)"),
+        arg_u64_0("s", "samples", "<dec>", "Number of samples to collect (def: 30000)"),
         arg_u64_0("p", "port", "<dec>", "Port number (def: 8000)"),
         arg_param_end
     };
@@ -1877,7 +1877,7 @@ int CmdLFRelay(const char *Cmd) {
     char ip[256] = { 0 };
     CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)ip, sizeof(ip), &iplen);
 
-    uint64_t samples = arg_get_u64_def(ctx, 4, 40000);
+    uint64_t samples = arg_get_u64_def(ctx, 4, 30000);
     uint16_t port = arg_get_u32_def(ctx, 5, 8000) & 0xFFFF;
 
     CLIParserFree(ctx);
