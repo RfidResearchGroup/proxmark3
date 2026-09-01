@@ -9,25 +9,16 @@
 - [Flash the Bootrom](#Flash-The-Bootrom)
 - [Flash the Fullimage](#Flash-The-Fullimage)
 - [Flash FPGA](#Flash-FPGA)
-- [I Have A BWM Now What?](##I-Have-A-BWM--Now-What-)
-
----
-## Extras
+- [I Have A BWM Now What?](#I-Have-A-BWM--Now-What-)
 - [Build Extras](#Build-Extras)
-
-
-
----
-
-- [1. Battery / BWM control](#1-battery--bwm-control)
-- [2. BLE](#2-ble)
-- [3. WiFi](#3-wifi)
-- [Notes](#notes)
+- [Standalone Modes](#Standalone-Modes)
+- [The Danger Zone](#Specific-commands)
 
 ---
+
 
 ## Assumptions
-* If the BWM is connected, disconnect it for the first full flashing. (bootrom and fullimage)
+* If the BWM is connected, disconnect it for the first full flashing. (Bootrom and Fullimage)
 * You have compiled the source before and your PM3 is or was working on the target machine previously.  (If not, start [here](https://github.com/RfidResearchGroup/proxmark3/tree/master#proxmark3-installation-and-overview) for your OS of choice.)
 
 
@@ -64,9 +55,10 @@ For more options, look [here](#Build-Extras)
 
 * DO NOT use the USB Port on the side.
 * DO use the USB Port on the same side as the button (Yellow)
-* Put your Proxmark5 into Boot Mode.  Plug in your Proxmark5 while holding the button for about 4 seconds until you see 2 LEDs illuminated (B and D) You are now in Boot Mode.
-* If you see 2 lights (B & D) go on and then off, you're in DFU mode.  Unplug, and try the previous step again.
+* Put your Proxmark5 into *Boot Mode*.  Plug in your Proxmark5 while holding the button for about 4 seconds until you see 2 LEDs illuminated (B and D) You are now in *Boot Mode*.
+* If you see 2 lights (B & D) go on and then off, you're in *DFU mode*.  Unplug, and try the previous step again.
 * Run `./pm3-flash-bootrom`
+  * If you see "🚨 The elf file is not applicable to the currently connected device.", you probably forgot to add `PLATFORM=PM5` in your `Makefile.platform`
 * If the above hangs or thows and error, try this: [DFU Install](##DFU-Install)
 * Unplug.
 
@@ -92,7 +84,8 @@ wget https://github.com/user-attachments/files/31105593/PM5_FPGA_fix_loedge_bug.
 unzip PM5_FPGA_fix_loedge_bug.zip
 ```
 
-* Update the FPGA, then make sure the radio is off.
+* Plug in the Proxmark5
+* Update the FPGA, and then make sure the radio is off.
 
 ```
 ./pm3
@@ -106,59 +99,88 @@ hf 14a read --drop
 * You acknowledge that the BWM is not yet fully supported, it's better not to plug it for now. (If you insist... continue.)
 * [Physically install the BWM and (if applicable) Battery](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
 
-### Operation
-* Power on: Briefly pressing the button will wake the device. The RGB will turn green
-** The RGB will turn green.
-* When the device is powered on, pressing and holding the button for a few seconds will start displaying a running light, and then releasing the button will power off the device
+## Do this exactly once.
+* The very first time for a new battery:
+``` hw bwmsetcap --cap 500```
 
+
+## TODO, learn what this is and how to do it.
+ and do a full charge/discharge cycle for it to learn the real capacity
+
+
+
+### Operation
+* Power on: Briefly pressing the button will wake the Proxmark5.
+  * The RGB will turn green.
+* Power off: Press and hold the button.
+  * The LEDs will start running.
+  * Releasing the button will power off the Proxmark5.
+
+### Setup the BWM for first use
 
 
 ## DFU Install
 
+### Prepare for DFU
+* Install the dfu-util
+``` sudo apt-get install dfu-util```
 
 
 
+### Option 1: The device hangs while flashing over USB
+* Put your Proxmark5 into DFU Mode. [How do to that here](##Flash-the-Bootrom)
+* Backup the existing firmware
+```
+sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:1048576 -U pm5-full-flash-backup.bin
+```
+* Prep the files to use
+```
+rm -f /tmp/pm5-bootrom.bin /tmp/pm5-fullimage.bin
+arm-none-eabi-objcopy -O binary bootrom/obj/bootrom.elf  /tmp/pm5-bootrom.bin
+arm-none-eabi-objcopy -O binary armsrc/obj/fullimage.elf /tmp/pm5-fullimage.bin
+```
+* Flash the bootrom
+```
+sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000       -D /tmp/pm5-bootrom.bin
+```
+* Flash the Fullimage
+```
+sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08004000:leave -D /tmp/pm5-fullimage.bin
+```
+* Unplug
+* [Go back where you were in the process and continue from there.](##Flash-the-Bootrom)
 
 
+### Option 2: The device seems unresponsive and is unable to enter Boot Mode. Recover to factory/known safe firmware.
+* The Proxmark5 does not require J-Link or similar tools for unbricking.
+* Put your Proxmark5 into DFU Mode. [How do to that here](##Flash-the-Bootrom)
+* Optional: Backup the existing firmware
+```
+sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:1048576 -U pm5-full-flash-backup.bin
+```
+#### Method 1: Flash everthing together
+* Flash All to recovery version
+```
+sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:leave -D recovery/recovery.bin
+```
+#### Method 2: Flash Bootrom and Fullimage individually
 
+* Flash the Bootrom
+```
+sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000 -D recovery/bootrom.bin
+```
+* Flash the Fullimage
+```
+sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08004000:leave -D recovery/fullimage.bin
+```
 
-## BWM aka Battery Wireless Module
-
-⚠️ the BWM is not yet fully supported, it's better not to plug it for now.
-
-* [Installation instructions](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
-* The very first time, run ` hw bwmsetcap --cap 500` and do a full charge/discharge cycle for it to learn the real capacity
-
-## Recovery flashing via DFU
-
-If the device seems unresponsive and unable to enter boot mode when the button is pressed when plugged, you can reflash the bootrom over DFU. The Proxmark5 does not require J-Link or similar tools for unbricking.
-
-```sudo apt install dfu-util```
-
-Enter DFU mode: Plug in your Proxmark5 while holding the button for about 8 seconds until you see 2 LEDs (B and D) going on then off.
-
-Backup current flash content, if needed:
-
-```sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:1048576 -U pm5-full-flash-backup.bin```
-
-Flash bootrom:
-
-```sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000       -D recovery/bootrom.bin```
-
-Flash fullimage:
-
-```sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08004000:leave -D recovery/fullimage.bin```
-
-You can also flash bootrom and fullimage in one go:
-
-```sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:leave -D recovery/recovery.bin```
-
+### Windows Options
 
 On Windows, you can try the following:
 - Download and extract the [AT32 ISP Programmer](https://www.arterychip.com/file/download/1764)
 - Install the USB driver present in `Artery_DFU_DriverInstall/`
 - Enter DFU mode as explained above
-- Open the `Artery ISP Programmer` , select `HEX` file to flash, and use the bootrom & fullimage is required.
+- Open the `Artery ISP Programmer` , select `HEX` file to flash, and use the Bootrom & Fullimage is required.
 - When flash done, disconnect usb and reconnect for restart device to exit ISP mode.
 - Open the proxmark client to try to connect to verify your device is re-working.
 
@@ -172,25 +194,9 @@ You have several options:
 * ⚠️ Make sure to not have any conflicting `PLATFORM_EXTRAS` such as `BTADDON` or `FPC_USART_DEV` which are specific to the RDV4.
 
 
+## Standalone Modes
 
-
-### New devices with factory firmware
-
-The factory firmware has some limitations, therefore the flashing procedure is slightly more complex.
-
-⚠️ If you have a BWM (Battery Wireless Module), and if it came already plugged, disconnect it. See [here](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md) to understand how it's installed. The reason it came connected when delivered to some countries is customs regulations. But hte factory firmware does not support it and this creates issues when flashing, so just remove it.
-
-* Use the yellow USB-C on the same side as the button.
-
-* Run `./pm3-flash-fullimage` to update the main image, and occasionally `./pm3-flash-bootrom` if needed.
-
-If you see "🚨 The elf file is not applicable to the currently connected device.", you probably forgot to add the `PLATFORM=PM5` when compiling.
-
-
-If the device seems unresponsive and unable to enter boot mode when the button is pressed when plugged, you can [reflash the bootrom over DFU](#recovery-flashing-via-dfu).
-
-If the main image gets seriously buggy and can't jump to boot mode automatically, you can enter boot mode using the button as explained in [the previous section](#new-devices-with-factory-firmware).
-
+Standalone modes are disabled for now, to ease debugging.
 
 ## Specific commands
 
@@ -202,8 +208,3 @@ Do not use them unless you fully understand what you're doing.
   > 8bit map: 125 134 250 375 500 HFLED LFLED Q (lsb)
 * `hw qc_pm5`: factory quality check command, will activate the RBG, the buzzer and the antenna LEDs. Press the button to report success. Use `-t/--timeout <s>` to change how long the test sequence runs before it fails (default 20 seconds).
 * `hw factorydata`: read/write the factory data (originality signature etc)
-
-
-## Standalone Modes
-
-Standalone modes are disabled for now, to ease debugging.
