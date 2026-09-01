@@ -25,6 +25,10 @@
 #include "string.h"
 #include "usb_cdc_apis.h"
 #include "usart.h"
+#include "BigBuf.h"        // trace_restart_timeline
+#ifdef WITH_SMARTCARD
+#include "i2c.h"           // sc_log_trace_reset
+#endif
 
 size_t nbytes(size_t nbits) {
     return (nbits >> 3) + ((nbits % 8) > 0);
@@ -359,4 +363,19 @@ void convertToHexArray(uint32_t num, uint8_t *partialkey) {
         group[3] = '\0';  // Null-terminate the group string
         partialkey[i] = (uint8_t)strtoul(group, NULL, 2);
     }
+}
+
+void switch_clock_to_ticks(void) {
+    StopTicks();
+    StartTicks();
+#ifdef WITH_SMARTCARD
+    sc_log_trace_reset();
+#endif
+    trace_restart_timeline();
+}
+
+void switch_clock_to_countsspclk(void) {
+    StopTicks();
+    StartCountSspClk();
+    trace_restart_timeline();
 }
