@@ -106,10 +106,6 @@ hf 14a read --drop
 * Do a full charge/discharge cycle for it to learn the real capacity.
 
 
-## TODO, learn what this is and how to do it.
-
-
-
 ### Operation
 * Power on: Briefly pressing the button will wake the Proxmark5.
   * The RGB will turn green.
