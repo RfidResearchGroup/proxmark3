@@ -198,7 +198,7 @@ You have several options:
 
 Standalone modes are disabled for now, to ease debugging.
 
-## Specific commands (The Danger Zone)
+## Specific commands
 
 Do not use them unless you fully understand what you're doing.
 
