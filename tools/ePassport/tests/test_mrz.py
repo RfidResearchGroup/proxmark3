@@ -193,3 +193,67 @@ def test_split_names_handles_single_and_missing_given_names() -> None:
     assert mrz.split_names("ERIKSSON<<ANNA<MARIA<<<<") == ("ERIKSSON", "ANNA MARIA")
     assert mrz.split_names("ERIKSSON<<<<<<") == ("ERIKSSON", "")
     assert mrz.split_names("VAN<DER<BERG<<JAN<<<") == ("VAN DER BERG", "JAN")
+
+
+# --------------------------------- document numbers longer than nine characters
+def _td3_with_long_number(number: str = "AB1234567890") -> list[str]:
+    """ICAO puts the overflow in the optional-data field.
+
+    Positions 1-9 hold the first nine characters, position 10 a filler in
+    place of the check digit, and the optional-data field opens with the rest
+    of the number followed by the check digit for the whole of it.
+    """
+    head, rest = number[:9], number[9:]
+    dob, expiry = "740812", "120415"
+    optional = (rest + mrz.check_digit(number)).ljust(14, "<")
+    body = (
+        head
+        + "<"
+        + "UTO"
+        + dob
+        + mrz.check_digit(dob)
+        + "F"
+        + expiry
+        + mrz.check_digit(expiry)
+        + optional
+        + mrz.check_digit(optional)
+    )
+    line2 = body + mrz.check_digit(body[0:10] + body[13:20] + body[21:43])
+    return ["P<UTOERIKSSON<<ANNA<MARIA".ljust(44, "<"), line2]
+
+
+def test_a_long_document_number_is_put_back_together() -> None:
+    parsed = mrz.parse(_td3_with_long_number())
+    assert parsed.document_number.value == "AB1234567890"
+    assert parsed.document_number.ok is True
+
+
+def test_the_overflow_does_not_linger_in_the_optional_field() -> None:
+    """It is part of the document number, not data the State chose to add.
+
+    Left there it was reported as the holder's personal number, since that
+    falls back to the MRZ optional-data field when DG11 carries none.
+    """
+    parsed = mrz.parse(_td3_with_long_number())
+    assert parsed.optional_data.value == ""
+
+
+def test_a_nine_character_number_leaves_the_optional_field_alone() -> None:
+    dob, expiry = "740812", "120415"
+    optional = "ZE184226B".ljust(14, "<")
+    body = (
+        "L898902C"
+        + "<"
+        + mrz.check_digit("L898902C<")
+        + "UTO"
+        + dob
+        + mrz.check_digit(dob)
+        + "F"
+        + expiry
+        + mrz.check_digit(expiry)
+        + optional
+        + mrz.check_digit(optional)
+    )
+    line2 = body + mrz.check_digit(body[0:10] + body[13:20] + body[21:43])
+    parsed = mrz.parse(["P<UTOERIKSSON<<ANNA".ljust(44, "<"), line2])
+    assert parsed.optional_data.value == "ZE184226B"
