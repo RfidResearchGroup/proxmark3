@@ -59,7 +59,13 @@
 // flight, then block for an ack before sending more - which paces us to the real
 // BLE/WiFi rate and prevents the ESP UART-RX overrun that dropped bulk downloads.
 // WINDOW frames must fit the ESP UART RX FIFO + wireless send buffer.
-#define BWM_FC_WINDOW               4      // max un-acked forward frames in flight
+// Ceiling on un-acked forward frames. On a download the ESP acks steadily so
+// this never bites; it only matters on a bidirectional UPLOAD, where the ESP
+// defers the small acks while forwarding large incoming chunks. A tight value
+// (4) let inflight hit the cap and stall the AT32 past the client timeout, so
+// keep enough headroom to ride out delayed acks. Only ~1 response is ever
+// really in flight during an upload, so this does not risk an ESP overrun.
+#define BWM_FC_WINDOW               16     // max un-acked forward frames in flight
 #ifndef BWM_FC_ACK_TIMEOUT_SPINS
 #define BWM_FC_ACK_TIMEOUT_SPINS    200000 // safety valve: proceed if an ack is lost (avoid hard hang)
 #endif // safety valve: give up waiting for credit (avoid hard hang)
