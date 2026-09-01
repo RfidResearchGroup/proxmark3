@@ -25,15 +25,15 @@
 // Use it e.g. when using slow links such as BT
 #define USART_SLOW_LINK
 
-#if defined(ON_DEVICE) && !defined(PM5)
-  #define PM3_CMD_DATA_SIZE 624
-#else
-  #define PM3_CMD_DATA_SIZE 4064
-#endif
-
+#define PM3_CMD_DATA_SIZE 624
 // OLD frames are pinned at 512 independently of PM3_CMD_DATA_SIZE:
 // the bootloader only speaks OLD
 #define PM3_CMD_DATA_SIZE_OLD 512
+
+// Over the BWM/FPC link the forward buffers (AT32 DMA ring, ESP UART RX) are
+// small, so a full PM3_CMD_DATA_SIZE frame overruns them. Cap the payload the
+// device advertises and sends when replying via FPC. USB is unaffected.
+#define PM3_FPC_MAX_DATA 2048
 
 typedef struct {
     uint64_t cmd;
@@ -552,9 +552,7 @@ typedef struct {
 } PACKED mf_chkkeys_fast_t;
 
 // most keys that fit alongside the header in one frame
-#define MFC_CHKKEYS_FAST_MAX_KEYS \
-    (((PM3_CMD_DATA_SIZE - sizeof(mf_chkkeys_fast_t)) / 6) > 255 ? 255 : \
-     ((PM3_CMD_DATA_SIZE - sizeof(mf_chkkeys_fast_t)) / 6))
+#define MFC_CHKKEYS_FAST_MAX_KEYS ((PM3_CMD_DATA_SIZE - sizeof(mf_chkkeys_fast_t)) / 6)
 
 // CMD_HF_MIFARE_VALUE payload.
 // Replaces a 34 byte blob addressed by hardcoded offsets:
