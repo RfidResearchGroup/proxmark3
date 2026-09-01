@@ -1336,7 +1336,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 
         int hexlen = 0;
         uint8_t cmddata[PM3_CMD_DATA_SIZE];
-        int res = param_gethex_to_eol(caid, 0, cmddata, (int)(pm3_max_cmd_data_size() - sizeof(smart_card_raw_t)), &hexlen);
+        int res = param_gethex_to_eol(caid, 0, cmddata, sizeof(cmddata), &hexlen);
         if (res) {
             continue;
         }
