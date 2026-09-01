@@ -25,7 +25,12 @@
 // Use it e.g. when using slow links such as BT
 #define USART_SLOW_LINK
 
-#define PM3_CMD_DATA_SIZE 624
+#if defined(ON_DEVICE) && !defined(PM5)
+  #define PM3_CMD_DATA_SIZE 624
+#else
+  #define PM3_CMD_DATA_SIZE 4064   // PM5 firmware and the client
+#endif
+
 // OLD frames are pinned at 512 independently of PM3_CMD_DATA_SIZE:
 // the bootloader only speaks OLD
 #define PM3_CMD_DATA_SIZE_OLD 512
