@@ -1062,8 +1062,11 @@ int lfsim_upload_gb(void) {
     //        1 clear bigbuff
     payload_up.flag = 0x1;
 
-    // fast push mode
-    g_conn.block_after_ACK = true;
+    // No fast-push here: this upload is NG + synchronous WaitForResponse per chunk,
+    // and the block_after_ACK handshake (comms.c) desyncs over the higher-latency
+    // FPC/BWM link, killing the transfer after a few chunks. Also clears any state
+    // leaked by a previous run.
+    g_conn.block_after_ACK = false;
 
     PacketResponseNG resp;
 
