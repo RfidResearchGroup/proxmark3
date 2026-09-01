@@ -9,7 +9,7 @@
 - [Flash the Bootrom](#Flash-The-Bootrom)
 - [Flash the Fullimage](#Flash-The-Fullimage)
 - [Flash FPGA](#Flash-The-FPGA)
-- [I Have A BWM Now What?](#I-Have-A-BWM,-Now-What-)
+- [I Have A BWM Now What?](#I-Have-A-BWM-Now-What?)
 - [Build Extras](#Build-Extras)
 - [Standalone Modes](#Standalone-Modes)
 - [The Danger Zone](#Specific-commands)
@@ -94,7 +94,7 @@ hw fpga config -f PM5_FPGA_fix_loedge_bug.bin
 hf 14a read --drop
 ```
 
-## I Have A BWM, Now What?
+## I Have A BWM Now What?
 
 ### Install the BWM
 * You acknowledge that the BWM is not yet fully supported, it's better not to plug it for now. (If you insist... continue.)
