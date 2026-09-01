@@ -25,6 +25,7 @@ extern bool g_reply_with_crc_on_usb;
 extern bool g_reply_with_crc_on_fpc;
 // "Session" flag, to tell via which interface next msgs should be sent: USB and/or FPC USART
 extern bool g_reply_via_fpc;
+uint16_t reply_ng_max_data_size(void);
 extern bool g_reply_via_usb;
 
 int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len);
