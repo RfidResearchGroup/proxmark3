@@ -1078,7 +1078,7 @@ int lfsim_upload_gb(void) {
         for (size_t j = 0; j < len; j++)
             payload_up.data[j] = g_GraphBuffer[i + j];
 
-        SendCommandNG(CMD_LF_UPLOAD_SIM_SAMPLES, (uint8_t *)&payload_up, sizeof(struct pupload));
+        SendCommandNG(CMD_LF_UPLOAD_SIM_SAMPLES, (uint8_t *)&payload_up, 3 + len);  // header (flag+offset) + actual samples, not the padded struct
         WaitForResponse(CMD_LF_UPLOAD_SIM_SAMPLES, &resp);
         if (resp.status != PM3_SUCCESS) {
             PrintAndLogEx(INFO, "Bigbuf is full");

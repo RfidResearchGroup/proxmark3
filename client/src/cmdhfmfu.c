@@ -4452,7 +4452,7 @@ static int mfu_3pass_check_keys(uint8_t key_index, uint8_t firstChunk, uint8_t l
     memcpy(payload.data, keyBlock, nkeys * keysize);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFAREU3P_CHKKEY, (uint8_t *)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_MIFAREU3P_CHKKEY, (uint8_t *)&payload, MIFAREU3P_CHKKEY_HEADER + nkeys * keysize);
 
     PacketResponseNG resp;
 
