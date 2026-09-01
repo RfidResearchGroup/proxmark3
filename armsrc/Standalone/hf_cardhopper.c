@@ -67,10 +67,10 @@ static const uint8_t magicERR [4] = "\xff" "ERR";
 static const uint8_t magicACK [1] = "\xfe";
 
 // Forward declarations
-static void become_reader(void);
+static void __attribute__((noinline)) become_reader(void);
 static void select_card(void);
 
-static void become_card(void);
+static void __attribute__((noinline)) become_card(void);
 static void prepare_emulation(uint8_t *, uint16_t *, uint8_t *, packet_t *);
 static void cook_ats(packet_t *, uint8_t, uint8_t);
 static bool try_use_canned_response(const uint8_t *, int, tag_response_info_t *);
@@ -143,7 +143,7 @@ void RunMod(void) {
 }
 
 
-static void become_reader(void) {
+static void __attribute__((noinline)) become_reader(void) {
     iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
     select_card(); // also sends UID, ATS
 
@@ -227,12 +227,15 @@ static void select_card(void) {
 }
 
 
-static void become_card(void) {
+static void __attribute__((noinline)) become_card(void) {
     iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
     uint8_t tagType;
     uint16_t flags = 0;
-    uint8_t data[PM3_CMD_DATA_SIZE] = { 0 };
+    // only the UID is ever read out of this by SimulateIso14443aInit(), at most
+    // 10 bytes for a triple-cascade UID.  It used to be PM3_CMD_DATA_SIZE, which
+    // put 624 bytes on the stack for nothing.
+    uint8_t data[10] = {0x00};
     packet_t ats = { 0 };
     prepare_emulation(&tagType, &flags, data, &ats);
 

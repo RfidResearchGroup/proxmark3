@@ -374,6 +374,15 @@ int CmdHFTune(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
+    // All three modes of this command answer under the same command id 
+    // and there is no sequence number
+    if ((resp.status != PM3_SUCCESS) || (resp.length != 0)) {
+        PrintAndLogEx(WARNING, "unexpected reply to HF initialization (status %d, %u bytes)",
+                      resp.status,
+                      (unsigned)resp.length
+                );
+    }
+
     mode[0] = 2;
 
     uint32_t v_max = 0xFFFF;
@@ -389,6 +398,9 @@ int CmdHFTune(const char *Cmd) {
         if (kbd_enter_pressed()) {
             break;
         }
+
+        // Anything still queued is a leftover
+        clearCommandBuffer();
 
         SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
         if (WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000) == false) {
@@ -430,6 +442,7 @@ int CmdHFTune(const char *Cmd) {
     }
     mode[0] = 3;
 
+    clearCommandBuffer();
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
     if (WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for Proxmark HF shutdown, aborting");

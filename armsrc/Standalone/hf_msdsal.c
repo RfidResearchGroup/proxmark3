@@ -213,7 +213,10 @@ void RunMod(void) {
     uint8_t flags = 0;
     FLAG_SET_UID_IN_DATA(flags, 4);
     // in case there is a read command received we shouldn't break
-    uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
+    // only the UID is ever read out of this by SimulateIso14443aInit(), at most
+    // 10 bytes for a triple-cascade UID.  It used to be PM3_CMD_DATA_SIZE, which
+    // put 624 bytes on the stack for nothing.
+    uint8_t data[10] = {0x00};
 
     uint8_t visauid[7] = {0xE9, 0x66, 0x5D, 0x20};
     memcpy(data, visauid, 4);

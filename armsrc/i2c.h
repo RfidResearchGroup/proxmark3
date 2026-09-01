@@ -142,6 +142,7 @@ void sc_request_sam_t1_profile(void);
 // the previous frame ended, so a Tag frame's span is how long the card took to
 // answer and a Rdr frame's is how long the host took to ask.
 void sc_log_trace(const uint8_t *d, uint16_t len, bool reader2tag);
+void sc_log_trace_span(const uint8_t *d, uint16_t len, bool reader2tag, uint32_t start);
 void sc_log_trace_reset(void);
 
 bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait);

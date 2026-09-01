@@ -235,6 +235,14 @@ class PassportRecord:
                 return f
         return None
 
+    def image_for(self, name: str) -> bytes:
+        """The decoded PNG for a file that carries a picture, else empty."""
+        return {
+            "EF_DG2": self.portrait_png,
+            "EF_DG5": self.displayed_portrait_png,
+            "EF_DG7": self.signature_png,
+        }.get(name.upper(), b"")
+
     def has_dg(self, number: int) -> bool:
         f = self.file(f"EF_DG{number}")
         return f is not None and f.state == FileState.PRESENT

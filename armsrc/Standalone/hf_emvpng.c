@@ -218,7 +218,10 @@ void RunMod(void) {
     // UID 4 bytes(could be 7 bytes if needed it)
     uint8_t flags = FLAG_4B_UID_IN_DATA;
     // in case there is a read command received we shouldn't break
-    uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
+    // only the UID is ever read out of this by SimulateIso14443aInit(), at most
+    // 10 bytes for a triple-cascade UID.  It used to be PM3_CMD_DATA_SIZE, which
+    // put 624 bytes on the stack for nothing.
+    uint8_t data[10] = {0x00};
 
     uint8_t visauid[7] = {0x01, 0x02, 0x03, 0x04};
     memcpy(data, visauid, 4);
@@ -233,17 +236,21 @@ void RunMod(void) {
     uint8_t receivedCmd[MAX_FRAME_SIZE] = { 0x00 };
     uint8_t receivedCmdPar[MAX_PARITY_SIZE] = { 0x00 };
 
-    uint8_t dynamic_response_buffer[DYNAMIC_RESPONSE_BUFFER_SIZE] = {0};
-    uint8_t dynamic_modulation_buffer[DYNAMIC_MODULATION_BUFFER_SIZE] = {0};
+    // These live in BigBuf, not on the stack - together they are 1088 bytes on top
+    // of an already deep RunMod() frame.  Same pattern as SimulateIso14443aTagEx()
+    // in iso14443a.c.  Filled in after the emulator is initialized, because
+    // SimulateIso14443aInit() allocates from BigBuf too.
+    uint8_t *dynamic_response_buffer = NULL;
+    uint8_t *dynamic_modulation_buffer = NULL;
 
     // to know the transaction status
     uint8_t prevCmd = 0;
 
     // handler - command responses
     tag_response_info_t dynamic_response_info = {
-        .response = dynamic_response_buffer,
+        .response = NULL,
         .response_n = 0,
-        .modulation = dynamic_modulation_buffer,
+        .modulation = NULL,
         .modulation_n = 0
     };
 
@@ -391,6 +398,20 @@ void RunMod(void) {
                 DbpString("\n" _YELLOW_("!!") "Waiting for a Visa card...");
                 continue;
             }
+
+            dynamic_response_buffer = BigBuf_calloc(DYNAMIC_RESPONSE_BUFFER_SIZE);
+            dynamic_modulation_buffer = BigBuf_calloc(DYNAMIC_MODULATION_BUFFER_SIZE);
+            if (dynamic_response_buffer == NULL || dynamic_modulation_buffer == NULL) {
+                BigBuf_free_keep_EM();
+                reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
+                DbpString(_YELLOW_("!!") "Cannot allocate the response buffers!");
+                SpinDelay(500);
+                state = STATE_READ;
+                DbpString(_YELLOW_("[ ") "Initialized reading mode" _YELLOW_(" ]"));
+                continue;
+            }
+            dynamic_response_info.response = dynamic_response_buffer;
+            dynamic_response_info.modulation = dynamic_modulation_buffer;
 
             // We need to listen to the high-frequency, peak-detected path.
             iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);

@@ -659,7 +659,23 @@ __attribute__((force_align_arg_pointer))
         }
 
         is_receiving_raw_last = is_receiving_raw;
-        // TODO if error, shall we resync ?
+
+        // Resync after a framing error.
+        if (error && (is_receiving_raw == false)) {
+            uint8_t discard[256];
+            uint32_t discarded = 0;
+            for (uint8_t round = 0; round < 32; round++) {
+                uint32_t drained = 0;
+                if (uart_receive(sp, discard, sizeof(discard), &drained) != PM3_SUCCESS) {
+                    break;
+                }
+                if (drained == 0) {
+                    break;
+                }
+                discarded += drained;
+            }
+            PrintAndLogEx(WARNING, "Resynchronising, dropped %u byte(s)", discarded);
+        }
 
         pthread_mutex_lock(&txBufferMutex);
 

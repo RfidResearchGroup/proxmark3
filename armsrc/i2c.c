@@ -168,6 +168,7 @@ void I2C_Reset_EnterMainProgram(void) {
     s_proto_announced = false;
     s_pps_proto_cmd = 0;
     StartTicks();
+    sc_log_trace_reset();
     I2C_init(true);
     I2C_SetResetStatus(0, 0, 0);
     WaitMS(30);
@@ -864,17 +865,27 @@ int I2C_get_version(uint8_t *major, uint8_t *minor) {
     return PM3_EDEVNOTSUPP;
 }
 
-// Will read response from smart card module,  retries 3 times to get the data.
 static uint32_t s_trace_tick = 0;
+static bool s_trace_tick_valid = false;
 
 void sc_log_trace_reset(void) {
-    s_trace_tick = GetTicks();
+    s_trace_tick_valid = false;
 }
 
+void sc_log_trace_span(const uint8_t *d, uint16_t len, bool reader2tag, uint32_t start) {
+    uint32_t now = GetTicks();
+    LogTrace(d, len, start, now, NULL, reader2tag);
+    s_trace_tick = now;
+    s_trace_tick_valid = true;
+}
+
+// A frame that can only be timed from the end of the one before - the card's
+// answer, which is not known to have arrived until it has been read.
 void sc_log_trace(const uint8_t *d, uint16_t len, bool reader2tag) {
     uint32_t now = GetTicks();
-    if (s_trace_tick == 0) {
+    if (s_trace_tick_valid == false) {
         s_trace_tick = now;
+        s_trace_tick_valid = true;
     }
     LogTrace(d, len, s_trace_tick, now, NULL, reader2tag);
     s_trace_tick = now;
