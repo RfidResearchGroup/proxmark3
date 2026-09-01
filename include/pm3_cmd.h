@@ -26,9 +26,9 @@
 #define USART_SLOW_LINK
 
 #if defined(ON_DEVICE) && !defined(PM5)
-  #define PM3_CMD_DATA_SIZE 624
+#define PM3_CMD_DATA_SIZE 624
 #else
-  #define PM3_CMD_DATA_SIZE 4064   // PM5 firmware and the client
+#define PM3_CMD_DATA_SIZE 4064   // PM5 firmware and the client
 #endif
 
 // OLD frames are pinned at 512 independently of PM3_CMD_DATA_SIZE:
@@ -272,7 +272,7 @@ typedef struct {
     bool is_pm5 : 1;
     bool is_pm5_std_ant : 1;
 
-    // Appended in version 9. Fields must only ever be APPENDED here: 
+    // Appended in version 9. Fields must only ever be APPENDED here:
     // the client accepts a shorter struct from older firmware
     // PM5 can use this to inform which size they support oo.
     uint16_t max_cmd_data_size;     // device side PM3_CMD_DATA_SIZE
@@ -366,7 +366,7 @@ typedef struct {
 
 typedef struct {
     // 64KB SRAM -> 524288 bits(max sample num) < 2^30
-uint32_t samples :
+    uint32_t samples :
     LF_SAMPLES_BITS;
     bool realtime : 1;
     bool verbose : 1;
