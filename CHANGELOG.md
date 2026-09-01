@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mfdes chk` - now handles `-k` user supplied keys properly (@iceman1001)
 - Fixed `BigBuf_Clear_keep_EM()` - now also clear the trace length set (@iceman1001)
 - Fixed `BTADDON` - rx ring reported empty when filled to exactly its size, silently dropping 1kB of received data; now read straight from the PDC banks (@iceman1001)
 - Changed `hf 15|iclass` - poll for an abort once per 1024 sample bytes helps BTADDON builds stop blowing the DMA circular buffer (@iceman1001)

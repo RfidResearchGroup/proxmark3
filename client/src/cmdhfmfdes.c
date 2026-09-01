@@ -1675,15 +1675,13 @@ static int CmdHF14aDesChk(const char *Cmd) {
     }
 
     {
-        uint32_t deskeyCountTotal = 0;
-        uint32_t aeskeyCountTotal = 0;
-        uint32_t k3kkeyCountTotal = 0;
+        // seed with any key given on the command line (--key)
+        // pattern1b already filled the lists above
+        uint32_t deskeyCountTotal = deskeyListLen;
+        uint32_t aeskeyCountTotal = aeskeyListLen;
+        uint32_t k3kkeyCountTotal = k3kkeyListLen;
 
-        if (pattern1b) {
-            deskeyCountTotal = deskeyListLen;
-            aeskeyCountTotal = aeskeyListLen;
-            k3kkeyCountTotal = k3kkeyListLen;
-        } else if (pattern2b) {
+        if (pattern2b) {
             deskeyCountTotal = 0x10000 - startPattern;
             aeskeyCountTotal = 0x10000 - startPattern;
             k3kkeyCountTotal = 0x10000 - startPattern;
@@ -1724,6 +1722,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
         if (deskeyCountTotal + aeskeyCountTotal + k3kkeyCountTotal == 0) {
             PrintAndLogEx(ERR, "No keys provided. Nothing to check.");
+            DropField();
             return PM3_EINVARG;
         }
     }
@@ -1780,6 +1779,9 @@ static int CmdHF14aDesChk(const char *Cmd) {
                     if (res != PM3_SUCCESS)
                         k3kReadStart = k3kReadEnd;
                 }
+            } else {
+                // single key given with --key, one round is enough
+                loadedAllKeys = true;
             }
 
             res = AuthCheckDesfire(&dctx, secureChannel, &app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, cmdKDFAlgo, kdfInputLen, kdfInput, foundKeys, &foundKeyThisRound, verbose);
