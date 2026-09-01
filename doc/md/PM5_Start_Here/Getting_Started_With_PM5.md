@@ -10,6 +10,7 @@
 - [Flash the Fullimage](#Flash-The-Fullimage)
 - [Flash FPGA](#Flash-The-FPGA)
 - [I Have A BWM Now What?](#I-Have-A-BWM-Now-What)
+- [DFU Install](#DFU-Install)
 - [Build Extras](#Build-Extras)
 - [Standalone Modes](#Standalone-Modes)
 - [The Danger Zone](#Specific-commands)
@@ -112,7 +113,6 @@ hf 14a read --drop
 * Power off: Press and hold the button.
   * The LEDs will start running.
   * Releasing the button will power off the Proxmark5.
-
 
 
 ## DFU Install
