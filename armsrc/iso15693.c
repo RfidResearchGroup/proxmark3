@@ -1546,8 +1546,12 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
     }
     const uint8_t *upTo = dma->buf;
 
+    uint16_t poll_countdown = 0;
     uint32_t dma_start_time = GetCountSspClk() & 0xfffffff8;
 
+    // This loop has to consume one DMA byte per ~0.66 us
+    // ~31 CPU cycles at 48 MHz
+    // or the 512 byte circular buffer overruns
     for (;;) {
         volatile uint16_t behindBy = ((uint8_t *)FPGA_SSC_DMA_RX_Current_Address() - upTo) & (DMA_BUFFER_SIZE - 1);
         if (behindBy == 0) {
@@ -1590,12 +1594,17 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
             break;
         }
 
-        if (allow_usb_interrupt &&
-                (dr->state == STATE_READER_UNSYNCD ||
-                 dr->state == STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF) &&
-                data_available()) {
-            dr->byteCount = -2;
-            break;
+
+        // Only check data_available every 1024 DMA bytes, still reacts fast
+        // to client "hw break"
+        if (allow_usb_interrupt && (poll_countdown-- == 0)) {
+            poll_countdown = 1023;
+            if ((dr->state == STATE_READER_UNSYNCD ||
+                    dr->state == STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF) &&
+                    data_available()) {
+                dr->byteCount = -2;
+                break;
+            }
         }
 
         WDT_HIT();
