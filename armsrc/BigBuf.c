@@ -138,6 +138,7 @@ void BigBuf_Clear_EM(void) {
 
 void BigBuf_Clear_keep_EM(void) {
     memset(BigBuf, 0, s_bigbuf_hi);
+    clear_trace();
 }
 
 // allocate a chunk of memory from BigBuf. We allocate high memory first. The unallocated memory

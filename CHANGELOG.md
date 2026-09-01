@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `BigBuf_Clear_keep_EM()` - now also clear the trace length set (@iceman1001)
+- Fixed `BTADDON` - rx ring reported empty when filled to exactly its size, silently dropping 1kB of received data; now read straight from the PDC banks (@iceman1001)
+- Changed `hf 15|iclass` - poll for an abort once per 1024 sample bytes helps BTADDON builds stop blowing the DMA circular buffer (@iceman1001)
 - Fixed `tools/ePassport` - a read that dumped nothing is now reported as a failure with the client log kept beside the dump, and EF_CardAccess/DG14 protocols are decoded and correctly named (@pkilar)
 - Fixed `tools/ePassport` - FILES and LOG panes no longer go blank on long content, and picture files now show the picture (@pkilar)
 - Fixed `hf xerox view` - now rejects a dump file too small to contain the info blocks instead of reading past it (@munzzyy)
