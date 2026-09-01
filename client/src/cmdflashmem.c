@@ -182,7 +182,7 @@ static int pm3_sign_write(uint8_t *signature, uint8_t slen) {
 
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandNG(CMD_FLASHMEM_WRITE, (uint8_t *)&payload, sizeof(payload));
+    SendCommandNG(CMD_FLASHMEM_WRITE, (uint8_t *)&payload, (sizeof(payload) - sizeof(payload.data)) + payload.len);
 
     if (WaitForResponseTimeout(CMD_FLASHMEM_WRITE, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
@@ -516,7 +516,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
                 .len = bytes_in_packet,
             };
             memcpy(payload.data,  data + bytes_sent, bytes_in_packet);
-            SendCommandNG(CMD_FLASHMEM_WRITE, (uint8_t *)&payload, sizeof(payload));
+            SendCommandNG(CMD_FLASHMEM_WRITE, (uint8_t *)&payload, (sizeof(payload) - sizeof(payload.data)) + payload.len);
 
             bytes_remaining -= bytes_in_packet;
             bytes_sent += bytes_in_packet;
