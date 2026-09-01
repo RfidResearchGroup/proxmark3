@@ -316,7 +316,9 @@ out:
 void switch_clock_to_ticks(void) {
     StopTicks();
     StartTicks();
+#ifdef WITH_SMARTCARD
     sc_log_trace_reset();
+#endif
     trace_restart_timeline();
 }
 
