@@ -9,7 +9,7 @@
 - [Flash the Bootrom](#Flash-The-Bootrom)
 - [Flash the Fullimage](#Flash-The-Fullimage)
 - [Flash FPGA](#Flash-The-FPGA)
-- [I Have A BWM Now What?](#I-Have-A-BWM,-Now-What?)
+- [I Have A BWM Now What?](#I-Have-A-BWM,-Now-What-)
 - [Build Extras](#Build-Extras)
 - [Standalone Modes](#Standalone-Modes)
 - [The Danger Zone](#Specific-commands)
