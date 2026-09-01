@@ -15,9 +15,11 @@ from .model import (
     DocumentDetails,
     DumpFile,
     FileState,
+    OptionalDetails,
     PassportRecord,
     PersonalDetails,
     SecurityInfo,
+    is_pesel,  # noqa: F401  - re-exported, DG13 is where it is used
 )
 from .mrz import MrzError, parse as parse_mrz
 
@@ -203,6 +205,26 @@ def _clean_field(raw: bytes, *, numeric: bool = False) -> str:
     return text.replace("<<", ", ").replace("<", " ").strip().rstrip(",").strip()
 
 
+# --------------------------------------------------------------- EF_DG13
+#: A tag list, enumerating what follows.  Metadata, not a field of its own.
+_DG13_TAG_LIST = 0x5C
+
+
+def parse_dg13(data: bytes) -> OptionalDetails:
+    """Read DG13 as tagged values.  ICAO assigns it no meaning, so neither do we."""
+    out = OptionalDetails()
+    try:
+        nodes = tlv.parse(data)
+    except Exception:
+        return out
+    for node in nodes:
+        for child in node.children:
+            if child.constructed or child.tag == _DG13_TAG_LIST:
+                continue
+            out.fields.append((child.tag_hex, tlv.text(child.value)))
+    return out
+
+
 # ----------------------------------------------------------- EF_DG14/15
 def parse_security(dg14: bytes, dg15: bytes, card_access: bytes = b"") -> SecurityInfo:
     out = SecurityInfo()
@@ -303,6 +325,8 @@ def load_dump(directory: Path) -> PassportRecord:
         record.personal = parse_dg11(raw["EF_DG11"])
     if "EF_DG12" in raw:
         record.document = parse_dg12(raw["EF_DG12"])
+    if "EF_DG13" in raw:
+        record.optional = parse_dg13(raw["EF_DG13"])
     record.security = parse_security(
         raw.get("EF_DG14", b""),
         raw.get("EF_DG15", b""),

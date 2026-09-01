@@ -169,7 +169,7 @@
                         label_font_size: root.height * 0.0185
                     DataField:
                         size_hint_x: 0.44
-                        label_text: ("PERSONAL No. (FROM MRZ)" if (root.record and root.record.personal_number_source == "MRZ") else "PERSONAL No. / No. PERSONNEL")
+                        label_text: ("PERSONAL No. (FROM " + root.record.personal_number_source + ")") if (root.record and root.record.personal_number_source in ("MRZ", "DG13")) else "PERSONAL No. / No. PERSONNEL"
                         value_text: (root.record.personal_number or "-") if root.record else ""
                         dim: not (root.record and root.record.personal_number) or root.record.is_missing(root.record.personal_number)
                         value_font_size: root.height * 0.031
