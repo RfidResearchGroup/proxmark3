@@ -51,10 +51,15 @@ class DetailPage(TabPage):
 
 
 def _personal_number_label(record) -> str:
-    """Name the source when it is not DG11, so the row is not misread."""
+    """Name the source when it is not DG11, so the row is not misread.
+
+    Without the "from" it fits the caption column: dp(190) holds 167px of
+    "Personal number (DG13)" but not the 203px the longer wording needs, and
+    a caption that wraps drops the source onto a line of its own.
+    """
     source = record.personal_number_source
     if source in ("MRZ", "DG13"):
-        return f"Personal number (from {source})"
+        return f"Personal number ({source})"
     return "Personal number"
 
 
