@@ -539,8 +539,9 @@ static void printConnSpeed(uint32_t wait) {
     LED_B_ON();
 
     while (delta_time < wait) {
-        reply_ng(CMD_DOWNLOADED_BIGBUF, PM3_SUCCESS, test_data, PM3_CMD_DATA_SIZE);
-        bytes_transferred += PM3_CMD_DATA_SIZE;
+        uint16_t st_len = reply_ng_max_data_size();
+        reply_ng(CMD_DOWNLOADED_BIGBUF, PM3_SUCCESS, test_data, st_len);
+        bytes_transferred += st_len;
         frames_sent++;
         delta_time = GetTickCountDelta(start_time);
     }
@@ -694,7 +695,7 @@ static void SendStatus(uint32_t wait) {
 static void SendCapabilities(void) {
     capabilities_t capabilities = {0};
     capabilities.version = CAPABILITIES_VERSION;
-    capabilities.max_cmd_data_size = PM3_CMD_DATA_SIZE;
+    capabilities.max_cmd_data_size = reply_ng_max_data_size();
     capabilities.via_fpc = g_reply_via_fpc;
     capabilities.via_usb = g_reply_via_usb;
     capabilities.bigbuf_size = BigBuf_get_size();
@@ -3122,8 +3123,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             // arg2 = BigBuf tracelen
             //Dbprintf("transfer to client parameters: %" PRIu32 " | %" PRIu32 " | %" PRIu32, startidx, numofbytes, packet->oldarg[2]);
 
-            for (size_t offset = 0; offset < numofbytes; offset += DOWNLOAD_CHUNK_MAX) {
-                size_t len = MIN((numofbytes - offset), DOWNLOAD_CHUNK_MAX);
+            const size_t dl_chunk = reply_ng_max_data_size() - sizeof(download_chunk_t);
+            for (size_t offset = 0; offset < numofbytes; offset += dl_chunk) {
+                size_t len = MIN((numofbytes - offset), dl_chunk);
                 int result = reply_download_chunk(CMD_DOWNLOADED_BIGBUF, offset, &mem[startidx + offset], len);
                 if (result != PM3_SUCCESS)
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", offset, offset + len, len, result);
@@ -3184,8 +3186,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             // arg1 = length bytes to transfer
             // arg2 = RFU
 
-            for (size_t i = 0; i < numofbytes; i += DOWNLOAD_CHUNK_MAX) {
-                size_t len = MIN((numofbytes - i), DOWNLOAD_CHUNK_MAX);
+            const size_t dl_chunk = reply_ng_max_data_size() - sizeof(download_chunk_t);
+            for (size_t i = 0; i < numofbytes; i += dl_chunk) {
+                size_t len = MIN((numofbytes - i), dl_chunk);
                 int result = reply_download_chunk(CMD_DOWNLOADED_EML_BIGBUF, i, mem + startidx + i, len);
                 if (result != PM3_SUCCESS)
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
@@ -3303,8 +3306,9 @@ static void PacketReceived(PacketCommandNG *packet) {
                 // arg1 = size
                 // arg2 = RFU
 
-                for (size_t i = 0; i < size; i += DOWNLOAD_CHUNK_MAX) {
-                    size_t len = MIN((size - i), DOWNLOAD_CHUNK_MAX);
+                const size_t dl_chunk = reply_ng_max_data_size() - sizeof(download_chunk_t);
+                for (size_t i = 0; i < size; i += dl_chunk) {
+                    size_t len = MIN((size - i), dl_chunk);
                     int result = reply_download_chunk(CMD_SPIFFS_DOWNLOADED, i, buff + i, len);
                     if (result != PM3_SUCCESS)
                         Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
@@ -3520,8 +3524,9 @@ static void PacketReceived(PacketCommandNG *packet) {
                 break;
             }
 
-            for (size_t i = 0; i < numofbytes; i += DOWNLOAD_CHUNK_MAX) {
-                size_t len = MIN((numofbytes - i), DOWNLOAD_CHUNK_MAX);
+            const size_t dl_chunk = reply_ng_max_data_size() - sizeof(download_chunk_t);
+            for (size_t i = 0; i < numofbytes; i += dl_chunk) {
+                size_t len = MIN((numofbytes - i), dl_chunk);
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 uint16_t isok = Flash_ReadDataCont(startidx + i, mem, len);
                 if (isok == false) {

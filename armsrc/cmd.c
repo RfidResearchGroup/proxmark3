@@ -29,6 +29,15 @@ bool g_reply_with_crc_on_usb = false;
 bool g_reply_with_crc_on_fpc = true;
 // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
 bool g_reply_via_fpc = false;
+
+// Largest NG payload the device will put on the CURRENT reply link. Over FPC the
+// BWM buffers are smaller than a full frame, so cap there; USB uses the full size.
+uint16_t reply_ng_max_data_size(void) {
+    if (g_reply_via_fpc && (PM3_CMD_DATA_SIZE > PM3_FPC_MAX_DATA)) {
+        return PM3_FPC_MAX_DATA;
+    }
+    return PM3_CMD_DATA_SIZE;
+}
 bool g_reply_via_usb = false;
 
 int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len) {
