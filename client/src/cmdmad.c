@@ -601,7 +601,7 @@ static int CmdMADEncode(const char *Cmd) {
         memcpy(aid_str, val, 4);
         uint16_t aid_val = (uint16_t)strtoul(aid_str, NULL, 16);
 
-        uint8_t sectors[40] = {0};
+        uint8_t sectors[48] = {0};
         int nsectors = parse_sector_ranges(colon + 1, sectors, 40);
         if (nsectors <= 0) {
             PrintAndLogEx(ERR, "Invalid sector range in " _YELLOW_("'%s'"), val);
