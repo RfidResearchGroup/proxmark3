@@ -1719,11 +1719,12 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
             // byte1 - WTXM [1..59].
             uint8_t wtxm = data_bytes[1] & 0x3F;
 
-            // command FWT = FWT * WTXM
-            uint32_t fwt_temp = (s_iso14b_fwt * wtxm);
+            // command FWT = FWT * WTXM.  (32 << fwi) is the FWT in ETUs; scaling
+            // the shift instead overflows it at wtxm 4 and leaves a timeout of 0.
+            uint32_t fwt_temp = (32 << s_iso14b_fwt) * wtxm;
 
             // temporarily increase timeout
-            iso14b_set_timeout((32 << fwt_temp));
+            iso14b_set_timeout(fwt_temp);
 
             // Transmit WTX back
             data_bytes[1] = wtxm;
