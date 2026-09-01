@@ -113,7 +113,10 @@ void RunMod(void) {
 
     uint8_t flags = 0;
     FLAG_SET_UID_IN_DATA(flags, 7); // ST25TA have 7B UID
-    uint8_t data[PM3_CMD_DATA_SIZE] = {0x00}; // in case there is a read command received we shouldn't break
+    // only the UID is ever read out of this by SimulateIso14443aInit(), at most
+    // 10 bytes for a triple-cascade UID.  It used to be PM3_CMD_DATA_SIZE, which
+    // put 624 bytes on the stack for nothing.
+    uint8_t data[10] = {0x00};
 
     // to initialize the emulation
     uint8_t tagType = 10; // 10 = ST25TA IKEA Rothult
