@@ -161,19 +161,21 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     g_conn.block_after_ACK = true;
     for (int i = 0; i < ARRAYLEN(apdu_lengths); i++) {
 
+        // chunk size = what fits one frame to THIS device, minus the reply header
+        const int chunk = (int)(pm3_max_cmd_data_size() - sizeof(epa_replay_t));
         // transfer the APDU in several parts if necessary
-        for (int j = 0; j * sizeof(data) < apdu_lengths[i]; j++) {
+        for (int j = 0; j * chunk < apdu_lengths[i]; j++) {
             // amount of data in this packet
-            int packet_length = apdu_lengths[i] - (j * sizeof(data));
-            if (packet_length > sizeof(data)) {
-                packet_length = sizeof(data);
+            int packet_length = apdu_lengths[i] - (j * chunk);
+            if (packet_length > chunk) {
+                packet_length = chunk;
             }
-            if ((i == ARRAYLEN(apdu_lengths) - 1) && (j * sizeof(data) >= apdu_lengths[i] - 1)) {
+            if ((i == ARRAYLEN(apdu_lengths) - 1) && (j * chunk >= apdu_lengths[i] - 1)) {
                 // Disable fast mode on last packet
                 g_conn.block_after_ACK = false;
             }
-            memcpy(data, // + (j * sizeof(data)),
-                   apdus[i] + (j * sizeof(data)),
+            memcpy(data, // + (j * chunk),
+                   apdus[i] + (j * chunk),
                    packet_length);
 
             clearCommandBuffer();
@@ -182,7 +184,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
             uint8_t ubuf[sizeof(epa_replay_t) + sizeof(data)] = {0};
             epa_replay_t *upayload = (epa_replay_t *)ubuf;
             upayload->apdu_num = i + 1;
-            upayload->offset = j * sizeof(data);
+            upayload->offset = j * chunk;
             upayload->len = packet_length;
             memcpy(upayload->data, data, packet_length);
 

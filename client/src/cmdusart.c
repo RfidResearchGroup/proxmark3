@@ -637,7 +637,7 @@ static int CmdUsartTXhex(const char *Cmd) {
 
     int dlen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, (int)pm3_max_cmd_data_size(), &dlen);
     CLIParserFree(ctx);
 
     if (res) {
