@@ -13,7 +13,7 @@
 - [Build Extras](#Build-Extras)
 - [Standalone Modes](#Standalone-Modes)
 - [The Danger Zone](#Specific-commands)
-
+- [Further Readig](#Links-to-Further-Reading)
 ---
 
 
@@ -25,7 +25,7 @@
 
 ## Makefile Changes
 
-Your `Makefile.platform` should needs to specify `PM5` as your `PLATFORM` along with any `PLATFORM_EXTRAS` that are appropriate for your configuration.
+Your `Makefile.platform` needs to specify `PM5` as your `PLATFORM` along with any `PLATFORM_EXTRAS` that are appropriate for your configuration.
 
 Example:
 ```
@@ -35,7 +35,7 @@ PLATFORM_EXTRAS=BWM
 
 ## Build
 
-* Clone/pull the latest master from this repo then
+Clone/pull the latest master from this repo then
 
 ```make clean
 make -j
@@ -46,7 +46,7 @@ For more options, look [here](#Build-Extras)
 ## Flashing
 
 ### Flashing Considerations
-* The same client can handle both Proxmark3 and Proxmark5, no need to compile separate clients if you own both hardwares.
+* The same client can handle both Proxmark3 and Proxmark5, no need to compile separate clients if you own both pieces of hardware.
 * Don't forget to [disable ModemManager](../Installation_Instructions/ModemManager-Must-Be-Discarded.md)
 * There can be only one proxmark plugged into your PC.  Do not plug in both a pm3 and pm5 during flashing.
 
@@ -55,11 +55,11 @@ For more options, look [here](#Build-Extras)
 
 * DO NOT use the USB Port on the side.
 * DO use the USB Port on the same side as the button (Yellow)
-* Put your Proxmark5 into *Boot Mode*.  Plug in your Proxmark5 while holding the button for about 4 seconds until you see 2 LEDs illuminated (B and D) You are now in *Boot Mode*.
-* If you see 2 lights (B & D) go on and then off, you're in *DFU mode*.  Unplug, and try the previous step again.
+* Put your Proxmark5 into *Boot Mode*.  Plug in your Proxmark5 while holding the button for about 4 seconds until you see 2 LEDs (B and D) illuminated.  You are now in *Boot Mode*.
+* If you see 2 lights (B & D) go on and then OFF, you're in *DFU mode*.  Unplug, and try the previous step again.
 * Run `./pm3-flash-bootrom`
   * If you see "🚨 The elf file is not applicable to the currently connected device.", you probably forgot to add `PLATFORM=PM5` in your `Makefile.platform`
-* If the above hangs or thows and error, try this: [DFU Install](##DFU-Install)
+* If the above hangs or thows and error, try this: [DFU Install](#DFU-Install)
 * Unplug.
 
 ## Flash the FullImage
@@ -68,15 +68,15 @@ For more options, look [here](#Build-Extras)
 
 
 ### Did you Proxmark5 come with a battery pre-installed?  Do this next:
-* IF your Proxmark5 came with a battery pre-installed. 
+* **IF AND ONLY IF** your Proxmark5 came with a battery pre-installed. 
 * [Reinstall the BWM now](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
-* Let it charge for a while (think an hour.)
-* Shut the Proxmark5 off and remove the BWM.
+* Let it charge for a while (about an hour should do)
+* [Shut the Proxmark5 off](##Operation) and remove the BWM.
 
 ## Flash the FPGA
 
 * If you followed the steps above...
-* You don't need to enter manually the boot mode by pressing the button anymore and the flashing experience will be as smooth as on the Proxmark3.
+* You don't need to enter manually the boot mode by pressing the button anymore and future flashing will be as smooth as on the Proxmark3.
 * Get the latest FPGA image, it's not yet in the repo.
 
 ```
@@ -123,12 +123,14 @@ hf 14a read --drop
 
 ### Prepare for DFU
 * Install the dfu-util
-``` sudo apt-get install dfu-util```
+```sudo apt-get install dfu-util```
 
+### DFU Mode:
+* Press and hold the button while plugging in the Proxmark5 to the USB port on the same side as the button.  You will know that you are in DFU Mode when the lights go off.  Continue to hold the button down the entire time you are running `dfu-util` commands.
 
 
 ### Option 1: The device hangs while flashing over USB
-* Put your Proxmark5 into DFU Mode. [How do to that here](##Flash-the-Bootrom)
+* Put your Proxmark5 into [DFU Mode](###DFU-Mode)
 * Backup the existing firmware
 ```
 sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:1048576 -U pm5-full-flash-backup.bin
@@ -153,7 +155,7 @@ sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08004000:leave -D /tmp/pm5-fullimage.bin
 
 ### Option 2: The device seems unresponsive and is unable to enter Boot Mode. Recover to factory/known safe firmware.
 * The Proxmark5 does not require J-Link or similar tools for unbricking.
-* Put your Proxmark5 into DFU Mode. [How do to that here](##Flash-the-Bootrom)
+* Put your Proxmark5 into [DFU Mode](###DFU-Mode)
 * Optional: Backup the existing firmware
 ```
 sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:1048576 -U pm5-full-flash-backup.bin
@@ -198,7 +200,7 @@ You have several options:
 
 Standalone modes are disabled for now, to ease debugging.
 
-## Specific commands
+## Specific commands (The Danger Zone)
 
 Do not use them unless you fully understand what you're doing.
 
@@ -208,3 +210,7 @@ Do not use them unless you fully understand what you're doing.
   > 8bit map: 125 134 250 375 500 HFLED LFLED Q (lsb)
 * `hw qc_pm5`: factory quality check command, will activate the RBG, the buzzer and the antenna LEDs. Press the button to report success. Use `-t/--timeout <s>` to change how long the test sequence runs before it fails (default 20 seconds).
 * `hw factorydata`: read/write the factory data (originality signature etc)
+
+
+## Links to Further Reading
+- [BWM Usage Document](../BWM-USAGE.md)
