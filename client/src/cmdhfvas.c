@@ -702,7 +702,7 @@ static int VASGetData(const char *passIdentifier, const uint8_t *pidHash, bool h
         PrintAndLogEx(INFO, "Pass type id hash...... " _YELLOW_("%s"), hasPid ? sprint_hex_inrow(pidHash, 32) : "n/a");
     }
 
-    uint8_t getVasApdu[PM3_CMD_DATA_SIZE];
+    uint8_t getVasApdu[512]; // GET VAS DATA APDU: 6 + reqTlvLen, urlLen capped at 256 => <= 319 bytes
     int getVasApduLen = 0;
     int s = CreateGetVASDataCommand(pidHash, url, urlLen, vas_mode, isFinalRequest, getVasApdu, &getVasApduLen);
     if (s != PM3_SUCCESS) {
