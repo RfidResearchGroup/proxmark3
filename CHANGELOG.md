@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `tools/ePassport` - the personal number read from the MRZ optional-data field showed a filler character where a space belonged, and a document number longer than nine characters left its overflow there (@pkilar)
+- Fixed `tools/ePassport` - the detail tabs named the files their data came from as fixed text, so a document without EF_DG11 was told otherwise, and the personal-number caption wrapped (@pkilar)
 - Added `tools/ePassport` - EF_DG13 is decoded, and a Polish document's PESEL is shown as the personal number when it carries no EF_DG11 (@pkilar)
 - Fixed `tools/ePassport` - a disabled button drew Kivy's banded disabled texture, which left its label unreadable (@pkilar)
 - Fixed `hf 14b` - a card asking for a waiting time extension of 4 or more left the timeout at zero, so any ISO14443-B card needing time to answer looked like it had stopped responding (@pkilar)

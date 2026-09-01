@@ -305,6 +305,38 @@ class PassportRecord:
             "EF_DG7": self.signature_png,
         }.get(name.upper(), b"")
 
+    def has_file(self, name: str) -> bool:
+        entry = self.file(name)
+        return entry is not None and entry.state == FileState.PRESENT
+
+    @property
+    def personal_files(self) -> list[str]:
+        """The files the PERSONAL tab drew from, in file order.
+
+        Naming them beats a fixed caption: plenty of documents carry no DG11,
+        and the personal number can arrive from the MRZ or from DG13 instead.
+        """
+        out = []
+        if self.personal_number_source == "MRZ":
+            out.append("EF_DG1")
+        if self.has_dg(11):
+            out.append("EF_DG11")
+        if self.personal_number_source == "DG13":
+            out.append("EF_DG13")
+        return out
+
+    @property
+    def document_files(self) -> list[str]:
+        """The files the ISSUER tab drew from."""
+        return ["EF_DG12"] if self.has_dg(12) else []
+
+    @property
+    def security_files(self) -> list[str]:
+        """The files the SECURITY tab drew from."""
+        return [
+            name for name in ("EF_SOD", "EF_DG14", "EF_DG15") if self.has_file(name)
+        ]
+
     def has_dg(self, number: int) -> bool:
         f = self.file(f"EF_DG{number}")
         return f is not None and f.state == FileState.PRESENT
