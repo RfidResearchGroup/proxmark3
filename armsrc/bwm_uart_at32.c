@@ -41,7 +41,11 @@
 #define BWM_DMA_MUX_CHANNEL DMA1MUX_CHANNEL2
 
 // Power-of-two so head/tail wrap with a mask. DMA target buffer.
-#define BWM_RX_RING_SZ      4096
+// Must comfortably exceed one full forward frame or the DMA laps the reader.
+// A frame is app_com(6) + NG(10) + up to PM3_CMD_DATA_SIZE data + CRC(2); at
+// PM3_CMD_DATA_SIZE=4064 that is ~4082 bytes, so 4096 leaves ~14 bytes of slack
+// and overruns the instant the consumer lags. 4x headroom on a 512K part.
+#define BWM_RX_RING_SZ      16384
 static volatile uint8_t  s_rx_ring[BWM_RX_RING_SZ];
 static volatile uint16_t s_rx_tail = 0;   // software read cursor; head comes from DMA
 
