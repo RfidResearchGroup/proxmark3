@@ -13,7 +13,7 @@
 - [Build Extras](#Build-Extras)
 - [Standalone Modes](#Standalone-Modes)
 - [The Danger Zone](#Specific-commands)
-- [Further Readig](#Links-to-Further-Reading)
+- [Further Reading](#Links-to-Further-Reading)
 ---
 
 
