@@ -7,6 +7,13 @@
 #:import ScanScreen epassport.ui.scan.ScanScreen
 #:import BinButton epassport.ui.widgets.binbutton.BinButton
 
+# Kivy's disabled button texture is pale at the edges and dark in the middle,
+# which stretches into three bands and leaves the label unreadable.  Keep the
+# normal background and let the dimmed text carry the disabled state.
+<Button>:
+    background_disabled_normal: "atlas://data/images/defaulttheme/button"
+    disabled_color: 1, 1, 1, 0.45
+
 <Root>:
     orientation: "vertical"
     canvas.before:
