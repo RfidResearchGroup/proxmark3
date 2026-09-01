@@ -3132,7 +3132,7 @@ static int CmdHF14BAPDU(const char *Cmd) {
         arg_lit0("t",  "tlv",      "executes TLV decoder if it possible"),
         arg_lit0(NULL,  "decode",   "decode apdu request if it possible"),
         arg_str0("m",  "make",     "<hex>", "make apdu with head from this field and data from data field.\n"
-                 "                                   must be 4 bytes: <CLA INS P1 P2>"),
+        "                                   must be 4 bytes: <CLA INS P1 P2>"),
         arg_lit0("e",  "extended", "make extended length apdu if `m` parameter included"),
         arg_int0("l",  "le",       "<int>", "Le apdu parameter if `m` parameter included"),
         arg_str1("d", "data",     "<hex>", "<APDU | data> if `m` parameter included"),
