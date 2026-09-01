@@ -72,7 +72,7 @@ For more options, look [here](#Build-Extras)
 * **IF AND ONLY IF** your Proxmark5 came with a battery pre-installed. 
 * [Reinstall the BWM now](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
 * Let it charge for a while (about an hour should do)
-* [Shut the Proxmark5 off](##Operation) and remove the BWM.
+* [Shut the Proxmark5 off](#Operation) and remove the BWM.
 
 ## Flash the FPGA
 
