@@ -86,6 +86,7 @@ class SecurityInfo:
     """EF_DG14 / EF_DG15 - chip security options and AA public key."""
 
     protocols: list[str] = field(default_factory=list)
+    pace: list[str] = field(default_factory=list)
     aa_algorithm: str = ""
     aa_key_size: str = ""
     aa_public_key_hex: str = ""
@@ -234,6 +235,11 @@ class PassportRecord:
             if f.name.upper() == name.upper():
                 return f
         return None
+
+    @property
+    def is_empty(self) -> bool:
+        """True when the dump held no files at all - the read got nothing."""
+        return not any(f.state == FileState.PRESENT for f in self.files)
 
     def image_for(self, name: str) -> bytes:
         """The decoded PNG for a file that carries a picture, else empty."""

@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Iterable, Sequence
 
+from ..config import DUMP_LOG_NAME as LOG_NAME
 from . import errors
 
 #: Matches every ANSI CSI/OSC escape the client emits for colour.
@@ -217,6 +218,7 @@ class Pm3Result:
     error: errors.Pm3Error | None = None
     duration: float = 0.0
     dump_dir: Path | None = None
+    log_path: Path | None = None
 
     @property
     def ok(self) -> bool:
@@ -225,6 +227,44 @@ class Pm3Result:
     @property
     def text(self) -> str:
         return "\n".join(self.lines)
+
+
+#: The arguments that carry key material: MRZ line, document number, dates, CAN.
+_KEY_MATERIAL = re.compile(r"(?<![\w-])(--can|-[mnde])(\s+)(\S+)")
+
+
+def redact(text: str) -> str:
+    """Blank the key material out of a command line.
+
+    The client echoes its own command line back, so scrubbing what we write is
+    not enough on its own - every line has to go through this.
+    """
+    return _KEY_MATERIAL.sub(lambda m: f"{m.group(1)}{m.group(2)}<redacted>", text)
+
+
+def write_log(result: "Pm3Result") -> Path | None:
+    """Write the client output into the dump directory.  Returns the path.
+
+    A failed read leaves this where it used to leave an empty directory, so the
+    MRZ, document number and CAN are redacted: they would otherwise be a
+    plaintext copy of the holder's details written out as a side effect.
+    """
+    directory = result.dump_dir
+    if directory is None:
+        return None
+    directory = Path(directory)
+    header = (
+        f"# pm3 {redact(result.command)}"
+        f", exit {result.returncode}, {result.duration:.1f}s"
+    )
+    body = "\n".join(redact(line) for line in result.lines)
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / LOG_NAME
+        path.write_text(f"{header}\n{body}\n", encoding="utf-8")
+    except OSError:
+        return None
+    return path
 
 
 def find_pm3_binary(configured: str | os.PathLike[str] | None = None) -> Path | None:
@@ -394,6 +434,10 @@ class Pm3Client:
             )
         else:
             result.error = errors.classify(lines)
+        # Keyed on the directory, not the command: run() is handed the whole
+        # built command line, so matching a bare subcommand never fires.
+        if dump_dir is not None:
+            result.log_path = write_log(result)
         return result
 
     # -- cancellation -----------------------------------------------------

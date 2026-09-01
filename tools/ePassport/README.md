@@ -314,6 +314,11 @@ delete one with the bin button, open the folder in your file manager, or clear
 out the empty directories left behind by reads that failed. The path is also in
 the status bar (click it) and in the log at the start of every read.
 
+Every read also leaves `pm3.log` in its directory: the client output for that
+run, which is the only record of why a read that dumped nothing gave up. It
+holds what the LOG pane showed and not the MRZ or CAN you typed, and it does
+not count as a file when the app decides whether a read produced anything.
+
 Deleting always asks first, and says what it is about to destroy — a dump holds
 a real portrait and a real MRZ.
 

@@ -22,6 +22,10 @@ APP_NAME = "ePassport"
 #: them across rather than silently start a fresh, empty directory.
 LEGACY_NAMES = ("pm3-passport",)
 
+#: The client output kept beside a dump.  It is evidence about the read, not
+#: a file off the chip, so it does not count towards a dump's contents.
+DUMP_LOG_NAME = "pm3.log"
+
 
 def _adopt_legacy(base: Path, name: str) -> Path:
     """Return ``base/name``, moving an older directory into place first."""
@@ -120,7 +124,7 @@ def list_dumps() -> list[DumpEntry]:
     for entry in root.iterdir():
         if not entry.is_dir():
             continue
-        files = [f for f in entry.iterdir() if f.is_file()]
+        files = [f for f in entry.iterdir() if f.is_file() and f.name != DUMP_LOG_NAME]
         try:
             modified = entry.stat().st_mtime
         except OSError:
@@ -145,6 +149,9 @@ def prune_empty_dumps() -> int:
     for entry in list_dumps():
         if entry.is_empty:
             try:
+                # rmdir refuses a directory that still holds the log; drop that
+                # first, and let anything unexpected keep the directory alive.
+                (entry.path / DUMP_LOG_NAME).unlink(missing_ok=True)
                 entry.path.rmdir()
                 removed += 1
             except OSError as exc:
