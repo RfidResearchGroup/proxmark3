@@ -77,6 +77,7 @@ typedef struct {
     uint16_t last_command;
     bool listen_for_incoming;
     char serial_port_name[FILE_PATH_SIZE];
+    uint16_t max_cmd_data_size;
 } communication_arg_t;
 
 extern communication_arg_t g_conn;

@@ -40,20 +40,8 @@ static serial_port sp = NULL;
 communication_arg_t g_conn;
 capabilities_t g_pm3_capabilities;
 
-// Largest NG payload the attached device accepts.
-//
-// zero means no completed a capabilities handshake yet, 
-// Fall back to the OLD size 512,
-// Note a pre-v9 device does not reach this branch, TestProxmark() fills the field in for it.
-//
-// Capped by PM3_CMD_DATA_SIZE as well, since that is what sizes our own buffers.
 uint16_t pm3_max_cmd_data_size(void) {
-
-    uint16_t devmax = g_pm3_capabilities.max_cmd_data_size;
-    if (devmax == 0) {
-        devmax = CAPABILITIES_LEGACY_CMD_DATA_SIZE;
-    }
-    return MIN(devmax, (uint16_t)PM3_CMD_DATA_SIZE);
+    return g_conn.max_cmd_data_size;
 }
 
 static pthread_t communication_thread;
@@ -916,6 +904,8 @@ int SetHfFieldTimeout(uint32_t timeout_sec, bool quiet) {
 // check if we can communicate with Pm3
 int TestProxmark(pm3_device_t *dev) {
 
+    g_conn.max_cmd_data_size = CAPABILITIES_LEGACY_CMD_DATA_SIZE;
+
     uint16_t len = 32;
     uint8_t data[len];
     for (uint16_t i = 0; i < len; i++) {
@@ -964,6 +954,7 @@ int TestProxmark(pm3_device_t *dev) {
 
     g_conn.send_via_fpc_usart = g_pm3_capabilities.via_fpc;
     g_conn.uart_speed = g_pm3_capabilities.baudrate;
+    g_conn.max_cmd_data_size = MIN(g_pm3_capabilities.max_cmd_data_size, (uint16_t)PM3_CMD_DATA_SIZE);
 
     bool is_tcp_conn = (g_conn.send_via_ip == PM3_TCPv4 || g_conn.send_via_ip == PM3_TCPv6);
     bool is_bt_conn = (memcmp(g_conn.serial_port_name, "bt:", 3) == 0);
@@ -976,7 +967,7 @@ int TestProxmark(pm3_device_t *dev) {
                   (is_udp_conn) ? " over " _GREEN_("UDP") : ""
                  );
     PrintAndLogEx(SUCCESS, "Max frame size: " _GREEN_("%u") " bytes",
-                  g_pm3_capabilities.max_cmd_data_size);
+                  g_conn.max_cmd_data_size);
     if (g_conn.send_via_fpc_usart) {
         PrintAndLogEx(SUCCESS, "PM3 UART serial baudrate: " _GREEN_("%u") "\n", g_conn.uart_speed);
     } else {
