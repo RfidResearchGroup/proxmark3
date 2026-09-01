@@ -179,7 +179,8 @@ int mf_dark_side(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         *key = UINT64_C(-1);
         uint8_t keyBlock[PM3_CMD_DATA_SIZE];
         uint32_t max_keys = KEYS_IN_BLOCK;
-        {   // cap per-chunk keys to what fits one CHKKEYS frame to THIS device (5B header, uint8_t count)
+        {
+            // cap per-chunk keys to what fits one CHKKEYS frame to THIS device (5B header, uint8_t count)
             uint32_t rt = (pm3_max_cmd_data_size() - 5) / MIFARE_KEY_SIZE;
             if (max_keys > rt) max_keys = rt;
         }
