@@ -37,7 +37,8 @@ PLATFORM_EXTRAS=BWM
 
 Clone/pull the latest master from this repo then
 
-```make clean
+```
+make clean
 make -j
 ```
 
