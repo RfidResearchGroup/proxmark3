@@ -128,7 +128,7 @@ sudo apt-get install dfu-util
 
 
 ### Option 1: The device hangs while flashing over USB
-* Put your Proxmark5 into [DFU Mode](##DFU-Mode)
+* Put your Proxmark5 into [DFU Mode](#DFU-Mode)
 * Backup the existing firmware
 ```
 sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:1048576 -U pm5-full-flash-backup.bin
@@ -148,12 +148,12 @@ sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000       -D /tmp/pm5-bootrom.bin
 sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08004000:leave -D /tmp/pm5-fullimage.bin
 ```
 * Unplug
-* [Go back where you were in the process and continue from there.](##Flash-the-Bootrom)
+* [Go back where you were in the process and continue from there.](#Flash-the-Bootrom)
 
 
 ### Option 2: The device seems unresponsive and is unable to enter Boot Mode. Recover to factory/known safe firmware.
 * The Proxmark5 does not require J-Link or similar tools for unbricking.
-* Put your Proxmark5 into [DFU Mode](##DFU-Mode)
+* Put your Proxmark5 into [DFU Mode](#DFU-Mode)
 * Optional: Backup the existing firmware
 ```
 sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:1048576 -U pm5-full-flash-backup.bin
