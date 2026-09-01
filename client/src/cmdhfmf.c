@@ -3396,7 +3396,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         } else {
 
             uint32_t maxkeys = (pm3_max_cmd_data_size() - sizeof(mf_chkkeys_fast_t)) / 6;
-            if (maxkeys > 255) maxkeys = 255;
+            if (maxkeys > 255) {
+                maxkeys = 255;
+            }
             uint32_t chunksize = key_cnt > maxkeys ? maxkeys : key_cnt;
             bool firstChunk = true, lastChunk = false;
 
@@ -4048,7 +4050,9 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
     }
 
     uint32_t maxkeys = (pm3_max_cmd_data_size() - sizeof(mf_chkkeys_fast_t)) / 6;
-    if (maxkeys > 255) maxkeys = 255;
+    if (maxkeys > 255) {
+        maxkeys = 255;
+    }
     uint32_t chunksize = (keycnt > maxkeys) ? maxkeys : keycnt;
     bool firstChunk = true, lastChunk = false;
 
