@@ -47,7 +47,7 @@ For more options, look [here](#Build-Extras)
 ## Flashing
 
 ### Flashing Considerations
-* The same client can handle both Proxmark3 and Proxmark5, no need to compile separate clients if you own both pieces of hardware.
+* The same client can handle both Proxmark3 and Proxmark5, there is no need to compile separate clients if you own both pieces of hardware.
 * Don't forget to [disable ModemManager](../Installation_Instructions/ModemManager-Must-Be-Discarded.md)
 * There can be only one proxmark plugged into your PC.  Do not plug in both a pm3 and pm5 during flashing.
 
@@ -122,8 +122,10 @@ hf 14a read --drop
 ## DFU Install
 
 ### Prepare for DFU
-* Install the dfu-util
-```sudo apt-get install dfu-util```
+* Install dfu-util
+```
+sudo apt-get install dfu-util
+```
 
 ### DFU Mode:
 * Press and hold the button while plugging in the Proxmark5 to the USB port on the same side as the button.  You will know that you are in DFU Mode when the lights go off.  Continue to hold the button down the entire time you are running `dfu-util` commands.
