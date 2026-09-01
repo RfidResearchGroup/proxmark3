@@ -181,7 +181,7 @@ int mf_dark_side(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         uint32_t max_keys = KEYS_IN_BLOCK;
         {
             // cap per-chunk keys to what fits one CHKKEYS frame to THIS device (5B header, uint8_t count)
-            uint32_t rt = (pm3_max_cmd_data_size() - 5) / MIFARE_KEY_SIZE;
+            uint32_t rt = (g_conn.max_cmd_data_size - 5) / MIFARE_KEY_SIZE;
             if (max_keys > rt) max_keys = rt;
         }
         for (uint32_t i = 0; i < keycount; i += max_keys) {
@@ -495,7 +495,7 @@ int mf_key_brute(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint64_t 
     // keys per call is bounded by what THIS device accepts (negotiated at connect)
     // and by the uint8_t keycnt field. keyBlock stays sized to the compile-time
     // KEYS_IN_BLOCK, which is always >= this runtime value.
-    uint32_t per = (pm3_max_cmd_data_size() - 5) / MIFARE_KEY_SIZE;
+    uint32_t per = (g_conn.max_cmd_data_size - 5) / MIFARE_KEY_SIZE;
     if (per > 255) {
         per = 255;
     }
@@ -695,7 +695,7 @@ int mf_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo
     uint64_t key64 = -1;
 
     // The list may still contain several key candidates. Test each of them with mfCheckKeys
-    uint32_t kib = (pm3_max_cmd_data_size() - 5) / MIFARE_KEY_SIZE;
+    uint32_t kib = (g_conn.max_cmd_data_size - 5) / MIFARE_KEY_SIZE;
     if (kib > KEYS_IN_BLOCK) {
         kib = KEYS_IN_BLOCK;
     }
@@ -894,7 +894,7 @@ int mf_static_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trg
     if (IfPm3Flash()) {
         maxkeysinblock = 1000;              // uploaded to flash via chunked SPIFFS
     } else {
-        maxkeysinblock = (pm3_max_cmd_data_size() - 5) / MIFARE_KEY_SIZE;  // one CHKKEYS frame to THIS device
+        maxkeysinblock = (g_conn.max_cmd_data_size - 5) / MIFARE_KEY_SIZE;  // one CHKKEYS frame to THIS device
         if (maxkeysinblock > 255) {   // mf_check_keys keycnt is uint8_t
             maxkeysinblock = 255;
         }
@@ -1121,7 +1121,7 @@ int mf_eml_get_mem(uint8_t *data, int blockNum, int blocksCount) {
 int mf_eml_get_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth) {
 
     size_t size = ((size_t) blocksCount) * blockBtWidth;
-    if (size > pm3_max_cmd_data_size()) {
+    if (size > g_conn.max_cmd_data_size) {
         return PM3_ESOFT;
     }
 
@@ -1165,7 +1165,7 @@ int mf_eml_set_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtW
     } PACKED;
 
     size_t size = ((size_t) blocksCount) * blockBtWidth;
-    if (size > (pm3_max_cmd_data_size() - sizeof(struct p))) {
+    if (size > (g_conn.max_cmd_data_size - sizeof(struct p))) {
         return PM3_EINVARG;
     }
 

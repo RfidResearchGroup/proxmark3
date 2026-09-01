@@ -90,7 +90,7 @@ static int CmdConfigFpga(const char *Cmd) {
     // Start to send data in chunks
     size_t offset = 0;
     while (offset < datalen) {
-        size_t chunk_size = (datalen - offset) > pm3_max_cmd_data_size() ? pm3_max_cmd_data_size() : (datalen - offset);
+        size_t chunk_size = (datalen - offset) > g_conn.max_cmd_data_size ? g_conn.max_cmd_data_size : (datalen - offset);
         SendCommandNG(CMD_FPGA_BITSTREAM_CONFIG_WRITE, data + offset, chunk_size);
         // Wait for response before sending next chunk
         if (WaitForResponseTimeout(CMD_FPGA_BITSTREAM_CONFIG_WRITE, &resp, 5000) == false) {

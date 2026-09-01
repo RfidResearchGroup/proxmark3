@@ -1269,7 +1269,7 @@ static int CmdHF14BRaw(const char *Cmd) {
     }
 
     // Max buffer is PM3_CMD_DATA_SIZE
-    datalen = (datalen > pm3_max_cmd_data_size()) ? pm3_max_cmd_data_size() : datalen;
+    datalen = (datalen > g_conn.max_cmd_data_size) ? g_conn.max_cmd_data_size : datalen;
 
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + datalen);
     if (packet == NULL) {
@@ -2935,7 +2935,7 @@ int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field,
 
     // 3 byte here - 1b framing header, 2b crc16
     if (apdu_in_framing_enable &&
-            ((apdu_frame_length && (datainlen > apdu_frame_length - 3)) || (datainlen > pm3_max_cmd_data_size() - 3))) {
+            ((apdu_frame_length && (datainlen > apdu_frame_length - 3)) || (datainlen > g_conn.max_cmd_data_size - 3))) {
 
         int clen = 0;
         bool v_activate_field = activate_field;

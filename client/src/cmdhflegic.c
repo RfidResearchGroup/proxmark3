@@ -35,7 +35,7 @@ static int CmdHelp(const char *Cmd);
 #define LEGIC_PRIME_MIM256  256
 #define LEGIC_PRIME_MIM1024 1024
 #define LEGIC_BLOCK_SIZE    8
-#define LEGIC_PACKET_SIZE   (pm3_max_cmd_data_size() - sizeof(legic_packet_t))
+#define LEGIC_PACKET_SIZE   (g_conn.max_cmd_data_size - sizeof(legic_packet_t))
 
 static bool legic_xor(uint8_t *data, uint16_t cardsize) {
 

@@ -8252,7 +8252,7 @@ static int felica_sim_model_from_json(json_t *root, felica_sim_model_t *model_ou
 
 static int felica_sim_send_control(uint8_t subcommand, uint32_t total_len, uint32_t offset, uint16_t model_crc,
                                    const uint8_t *data, uint16_t data_len, uint32_t timeout_ms) {
-    if (data_len > (pm3_max_cmd_data_size() - sizeof(felica_sim_upload_t))) {
+    if (data_len > (g_conn.max_cmd_data_size - sizeof(felica_sim_upload_t))) {
         return PM3_EOVFLOW;
     }
 
@@ -8287,7 +8287,7 @@ static int felica_sim_upload_model(const felica_sim_model_t *model) {
         return ret;
     }
 
-    const uint16_t chunk_size = pm3_max_cmd_data_size() - sizeof(felica_sim_upload_t);
+    const uint16_t chunk_size = g_conn.max_cmd_data_size - sizeof(felica_sim_upload_t);
     uint32_t offset = 0;
     PrintAndLogEx(INFO, "Uploading simulator model");
     PrintAndLogEx(INFO, "." NOLF);
@@ -9438,7 +9438,7 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     }
 
     // Max transport buffer is PM3_CMD_DATA_SIZE
-    datalen = (datalen > pm3_max_cmd_data_size()) ? pm3_max_cmd_data_size() : datalen;
+    datalen = (datalen > g_conn.max_cmd_data_size) ? g_conn.max_cmd_data_size : datalen;
 
     PrintAndLogEx(SUCCESS, "Data: %s", sprint_hex(data, datalen));
 

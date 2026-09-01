@@ -40,10 +40,6 @@ static serial_port sp = NULL;
 communication_arg_t g_conn;
 capabilities_t g_pm3_capabilities;
 
-uint16_t pm3_max_cmd_data_size(void) {
-    return g_conn.max_cmd_data_size;
-}
-
 static pthread_t communication_thread;
 static pthread_t reconnect_thread;
 
@@ -182,7 +178,7 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
         PrintAndLogEx(INFO, "Sending bytes to proxmark failed - offline");
         return;
     }
-    uint16_t maxlen = pm3_max_cmd_data_size();
+    uint16_t maxlen = g_conn.max_cmd_data_size;
     if (len > maxlen) {
         PrintAndLogEx(WARNING, "Sending " _RED_("%zu") " bytes of payload is too much for this device (max " _YELLOW_("%u") "), abort", len, maxlen);
         return;

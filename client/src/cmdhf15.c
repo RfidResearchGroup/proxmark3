@@ -1649,7 +1649,7 @@ static int hf15EmlSetMem(const uint8_t *data, uint16_t count, size_t offset) {
         uint8_t data[];
     } PACKED;
 
-    if (count > (pm3_max_cmd_data_size() - sizeof(struct p))) {
+    if (count > (g_conn.max_cmd_data_size - sizeof(struct p))) {
         return PM3_ESOFT;
     }
 
@@ -2575,11 +2575,11 @@ static int CmdHF15Raw(const char *Cmd) {
     bool wait = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
-    datalen = (datalen >= pm3_max_cmd_data_size()) ? pm3_max_cmd_data_size() : datalen;
+    datalen = (datalen >= g_conn.max_cmd_data_size) ? g_conn.max_cmd_data_size : datalen;
 
     if (crc) {
 
-        if ((datalen - 2) < pm3_max_cmd_data_size()) {
+        if ((datalen - 2) < g_conn.max_cmd_data_size) {
             AddCrc15(data, datalen);
             datalen += 2;
         } else {

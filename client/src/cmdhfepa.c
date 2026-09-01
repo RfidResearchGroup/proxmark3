@@ -162,7 +162,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     for (int i = 0; i < ARRAYLEN(apdu_lengths); i++) {
 
         // chunk size = what fits one frame to THIS device, minus the reply header
-        const int chunk = (int)(pm3_max_cmd_data_size() - sizeof(epa_replay_t));
+        const int chunk = (int)(g_conn.max_cmd_data_size - sizeof(epa_replay_t));
         // transfer the APDU in several parts if necessary
         for (int j = 0; j * chunk < apdu_lengths[i]; j++) {
             // amount of data in this packet

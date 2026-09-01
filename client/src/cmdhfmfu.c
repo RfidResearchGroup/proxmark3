@@ -4445,7 +4445,7 @@ static int mfu_3pass_check_keys(uint8_t key_index, uint8_t firstChunk, uint8_t l
     } PACKED;
     uint8_t keysize = segment != -1 ? MIFAREU3P_KEY_SIZE / 4 : MIFAREU3P_KEY_SIZE;
     memcpy(payload.ref_key, ref_key, MIFAREU3P_KEY_SIZE);
-    if (nkeys * keysize > (uint32_t)(pm3_max_cmd_data_size() - MIFAREU3P_CHKKEY_HEADER)) {
+    if (nkeys * keysize > (uint32_t)(g_conn.max_cmd_data_size - MIFAREU3P_CHKKEY_HEADER)) {
         PrintAndLogEx(ERR, "Key chunk size exceeds payload size");
         return PM3_ESOFT;
     }
@@ -4687,7 +4687,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
             uint16_t max_retries_per_call = retries;
             if (collect_nonces) {
                 // Not strictly needed, but to avoid fw warning
-                max_retries_per_call = ((pm3_max_cmd_data_size() - sizeof(uint32_t) * 2) / sizeof(uint64_t)) - 1;
+                max_retries_per_call = ((g_conn.max_cmd_data_size - sizeof(uint32_t) * 2) / sizeof(uint64_t)) - 1;
             }
             isok = ul3pass_authentication(auth_key_ptr, MIFAREULC_KEY_INDEX, !keep_field_on, MIN(retries - auths, max_retries_per_call), &auths, &ms, false, !skip_auth, check_answer, use_fastread0, collect_nonces, (uint8_t *)(nonces + auths), reset_field, available_pairs, pairs);
         } while (skip_auth && auths < 1 + retries);
@@ -4783,7 +4783,7 @@ static int CmdHF14AMfUCAuthChk(const char *Cmd) {
     }
 
     // cap by what fits in one frame, then by what the nkeys field can announce
-    uint32_t max_chunk = (pm3_max_cmd_data_size() - MIFAREU3P_CHKKEY_HEADER) / keysize;
+    uint32_t max_chunk = (g_conn.max_cmd_data_size - MIFAREU3P_CHKKEY_HEADER) / keysize;
     if (max_chunk > MIFAREU3P_CHKKEY_MAX_KEYS) {
         max_chunk = MIFAREU3P_CHKKEY_MAX_KEYS;
     }
@@ -5002,7 +5002,7 @@ static int CmdHF14AMfUAESAuthChk(const char *Cmd) {
     }
 
     // cap by what fits in one frame, then by what the nkeys field can announce
-    uint32_t max_chunk = (pm3_max_cmd_data_size() - MIFAREU3P_CHKKEY_HEADER) / keysize;
+    uint32_t max_chunk = (g_conn.max_cmd_data_size - MIFAREU3P_CHKKEY_HEADER) / keysize;
     if (max_chunk > MIFAREU3P_CHKKEY_MAX_KEYS) {
         max_chunk = MIFAREU3P_CHKKEY_MAX_KEYS;
     }
@@ -8685,9 +8685,9 @@ static int CmdHF14AMfUeSetBlk(const char *Cmd) {
 
     // one esetblk is a single CMD_HF_MIFARE_EML_MEMSET; its payload (data + a 4-byte
     // header) must fit the command buffer. Larger sets should use `hf mfu eload`.
-    if (datalen > (int)(pm3_max_cmd_data_size() - 4)) {
+    if (datalen > (int)(g_conn.max_cmd_data_size - 4)) {
         PrintAndLogEx(WARNING, "too many pages for one command: max %d pages (%d bytes). Use " _YELLOW_("`hf mfu eload`") " for larger sets",
-                      (int)((pm3_max_cmd_data_size() - 4) / MFU_BLOCK_SIZE), (int)(pm3_max_cmd_data_size() - 4));
+                      (int)((g_conn.max_cmd_data_size - 4) / MFU_BLOCK_SIZE), (int)(g_conn.max_cmd_data_size - 4));
         return PM3_EINVARG;
     }
 

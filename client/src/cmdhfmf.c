@@ -3395,7 +3395,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             res = mf_check_keys_fast(sector_cnt, true, true, 1, key_cnt, keyBlock, e_sector, use_flashmemory, verbose);
         } else {
 
-            uint32_t maxkeys = (pm3_max_cmd_data_size() - sizeof(mf_chkkeys_fast_t)) / 6;
+            uint32_t maxkeys = (g_conn.max_cmd_data_size - sizeof(mf_chkkeys_fast_t)) / 6;
             if (maxkeys > 255) {
                 maxkeys = 255;
             }
@@ -4049,7 +4049,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    uint32_t maxkeys = (pm3_max_cmd_data_size() - sizeof(mf_chkkeys_fast_t)) / 6;
+    uint32_t maxkeys = (g_conn.max_cmd_data_size - sizeof(mf_chkkeys_fast_t)) / 6;
     if (maxkeys > 255) {
         maxkeys = 255;
     }
@@ -5437,7 +5437,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
     int cnt = 0;
 
     // 12 is the size of the struct the fct mf_eml_set_mem_xt uses to transfer to device
-    uint16_t max_avail_blocks = ((pm3_max_cmd_data_size() - 12) / block_width) * block_width;
+    uint16_t max_avail_blocks = ((g_conn.max_cmd_data_size - 12) / block_width) * block_width;
 
     while (bytes_read && cnt < block_cnt) {
         if (bytes_read == block_width) {
@@ -9412,7 +9412,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
         uint16_t bytes_left = bytes ;
 
         // 12 is the size of the struct the fct mf_eml_set_mem_xt uses to transfer to device
-        uint16_t max_avail_blocks = ((pm3_max_cmd_data_size() - 12) / MFBLOCK_SIZE) * MFBLOCK_SIZE;
+        uint16_t max_avail_blocks = ((g_conn.max_cmd_data_size - 12) / MFBLOCK_SIZE) * MFBLOCK_SIZE;
 
         while (bytes_left > 0 && cnt < block_cnt) {
             if (bytes_left == MFBLOCK_SIZE) {
