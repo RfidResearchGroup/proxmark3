@@ -50,6 +50,14 @@ class DetailPage(TabPage):
             box.add_widget(KeyValueRow(key=key, value=value, palette=self.palette))
 
 
+def _personal_number_label(record) -> str:
+    """Name the source when it is not DG11, so the row is not misread."""
+    source = record.personal_number_source
+    if source in ("MRZ", "DG13"):
+        return f"Personal number (from {source})"
+    return "Personal number"
+
+
 class PersonalPage(DetailPage):
     """EF_DG11 - additional personal details."""
 
@@ -63,7 +71,16 @@ class PersonalPage(DetailPage):
             [
                 ("Full name", p.full_name),
                 ("Other names", ", ".join(p.other_names)),
-                ("Personal number", p.personal_number),
+                (
+                    _personal_number_label(record),
+                    # The rest of this tab drops absent fields rather than
+                    # labelling them, and the placeholder would stand out.
+                    (
+                        ""
+                        if record.is_missing(record.personal_number)
+                        else record.personal_number
+                    ),
+                ),
                 (
                     "Full date of birth",
                     record.full_date_of_birth if p.full_date_of_birth else "",

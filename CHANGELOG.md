@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `tools/ePassport` - EF_DG13 is decoded, and a Polish document's PESEL is shown as the personal number when it carries no EF_DG11 (@pkilar)
 - Fixed `tools/ePassport` - a disabled button drew Kivy's banded disabled texture, which left its label unreadable (@pkilar)
 - Fixed `hf 14b` - a card asking for a waiting time extension of 4 or more left the timeout at zero, so any ISO14443-B card needing time to answer looked like it had stopped responding (@pkilar)
 - Fixed `hf mfdes chk` - now handles `-k` user supplied keys properly (@iceman1001)

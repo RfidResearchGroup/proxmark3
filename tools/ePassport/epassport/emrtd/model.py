@@ -81,6 +81,32 @@ class DocumentDetails:
         return not any(v for k, v in vars(self).items() if not k.startswith("image_"))
 
 
+#: Poland carries the PESEL, its national identity number, in this DG13 tag.
+PESEL_TAG = "5F70"
+
+_PESEL_WEIGHTS = (1, 3, 7, 9, 1, 3, 7, 9, 1, 3)
+
+
+def is_pesel(value: str) -> bool:
+    """11 digits whose PESEL check digit holds.
+
+    DG13 is issuer-defined, so the checksum is what separates a PESEL from
+    eleven digits that happen to sit under the same tag.
+    """
+    if len(value) != 11 or not value.isdigit():
+        return False
+    total = sum(int(digit) * weight for digit, weight in zip(value, _PESEL_WEIGHTS))
+    return (10 - total % 10) % 10 == int(value[10])
+
+
+@dataclass
+class OptionalDetails:
+    """EF_DG13 - optional details.  ICAO leaves the content to the issuer."""
+
+    #: ``(tag, text)`` in the order they appear, with no meaning attached.
+    fields: list[tuple[str, str]] = field(default_factory=list)
+
+
 @dataclass
 class SecurityInfo:
     """EF_DG14 / EF_DG15 - chip security options and AA public key."""
@@ -144,6 +170,7 @@ class PassportRecord:
     com: ComInfo = field(default_factory=ComInfo)
     personal: PersonalDetails = field(default_factory=PersonalDetails)
     document: DocumentDetails = field(default_factory=DocumentDetails)
+    optional: OptionalDetails = field(default_factory=OptionalDetails)
     security: SecurityInfo = field(default_factory=SecurityInfo)
     sod: SodInfo = field(default_factory=SodInfo)
     files: list[DumpFile] = field(default_factory=list)
@@ -208,7 +235,23 @@ class PassportRecord:
             optional = self.mrz.optional_data.value.strip()
             if optional:
                 return optional
+        if self.dg13_personal_number:
+            return self.dg13_personal_number
         return self._optional("", 11)
+
+    @property
+    def dg13_personal_number(self) -> str:
+        """The PESEL, for the Polish documents that carry it and no DG11.
+
+        Only for POL: DG13 means whatever the issuing state decided, so the
+        same tag elsewhere is not a personal number and is left unnamed.
+        """
+        if self.mrz is None or self.mrz.nationality.strip() != "POL":
+            return ""
+        for tag, value in self.optional.fields:
+            if tag == PESEL_TAG and is_pesel(value):
+                return value
+        return ""
 
     @property
     def personal_number_source(self) -> str:
@@ -217,6 +260,8 @@ class PassportRecord:
             return "DG11"
         if self.mrz is not None and self.mrz.optional_data.value.strip():
             return "MRZ"
+        if self.dg13_personal_number:
+            return "DG13"
         return ""
 
     def is_missing(self, value: str) -> bool:
