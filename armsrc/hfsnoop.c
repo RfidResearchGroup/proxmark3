@@ -181,7 +181,7 @@ void HfPlotDownload(void) {
     // can be handed to reply_ng without a copy.
     // get_tosend() has to come after FpgaDownloadAndGo(): the FPGA loader frees
     // BigBuf and reuses this region for its decompression ring buffer.
-    
+
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     const size_t stride = sizeof(download_chunk_t) + DOWNLOAD_CHUNK_MAX;   // buffer capacity (max)
@@ -201,8 +201,8 @@ void HfPlotDownload(void) {
 
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_GET_TRACE);
 
-    // Arm each transfer for exactly what is still coming. 
-    // FPGA_TRACE_SIZE is not a multiple of DOWNLOAD_CHUNK_MAX, 
+    // Arm each transfer for exactly what is still coming.
+    // FPGA_TRACE_SIZE is not a multiple of DOWNLOAD_CHUNK_MAX,
     // and the FPGA stops after its Block-RAM is out
     FpgaSetupSscRxDmaSingle(chunk[idx]->data, MIN(FPGA_TRACE_SIZE, dl_chunk));
 
@@ -221,9 +221,9 @@ void HfPlotDownload(void) {
         size_t next = i + dl_chunk;
         if (next < FPGA_TRACE_SIZE) {
             FPGA_SSC_DMA_RX_Refresh_Single(
-                    chunk[idx]->data,
-                    MIN(FPGA_TRACE_SIZE - next, dl_chunk)
-                );
+                chunk[idx]->data,
+                MIN(FPGA_TRACE_SIZE - next, dl_chunk)
+            );
         }
 
         this_chunk->offset = i;
