@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .mrz import Mrz
+from .mrz import FILLER, Mrz
 
 
 class FileState:
@@ -79,6 +79,17 @@ class DocumentDetails:
 
     def is_empty(self) -> bool:
         return not any(v for k, v in vars(self).items() if not k.startswith("image_"))
+
+
+def _mrz_personal_number(field: str) -> str:
+    """The MRZ optional-data field read as a personal number.
+
+    9303 replaces every space and special character in the number with ``<``
+    and then pads the field with the same character, so the trailing run is
+    padding while a filler inside the number stood for something we cannot
+    recover.  A space is the closest we can put back.
+    """
+    return field.rstrip(FILLER).replace(FILLER, " ").strip()
 
 
 #: Poland carries the PESEL, its national identity number, in this DG13 tag.
@@ -232,7 +243,7 @@ class PassportRecord:
         if self.personal.personal_number:
             return self.personal.personal_number
         if self.mrz is not None:
-            optional = self.mrz.optional_data.value.strip()
+            optional = _mrz_personal_number(self.mrz.optional_data.value)
             if optional:
                 return optional
         if self.dg13_personal_number:
@@ -258,7 +269,7 @@ class PassportRecord:
         """Where :attr:`personal_number` came from, for an honest caption."""
         if self.personal.personal_number:
             return "DG11"
-        if self.mrz is not None and self.mrz.optional_data.value.strip():
+        if self.mrz is not None and _mrz_personal_number(self.mrz.optional_data.value):
             return "MRZ"
         if self.dg13_personal_number:
             return "DG13"

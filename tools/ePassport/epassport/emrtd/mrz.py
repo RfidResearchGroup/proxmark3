@@ -483,8 +483,12 @@ def _parse_td3(lines: list[str], today: _dt.date | None) -> Mrz:
         date_of_birth=Checked(l2[13:19], l2[19], verify(l2[13:19], l2[19])),
         sex=l2[20],
         date_of_expiry=Checked(l2[21:27], l2[27], verify(l2[21:27], l2[27])),
+        # The value comes from what _extended_document_number left behind: a
+        # long document number spills into this field, and that spill belongs
+        # to the number, not to the State's optional data.  The check digit
+        # still answers for the field as transmitted, overflow included.
         optional_data=Checked(
-            l2[28:42].rstrip(FILLER), l2[42], verify(l2[28:42], l2[42])
+            optional.rstrip(FILLER), l2[42], verify(l2[28:42], l2[42])
         ),
         composite=Checked(
             "",
