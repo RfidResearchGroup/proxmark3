@@ -72,14 +72,21 @@ endif
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
 SRC_HF = hfops.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
-SRC_ISO14443a = iso14443a.c secc.c mifareutil.c mifarecmd.c epa.c mifaresim.c sam_common.c sam_mfc.c sam_seos.c sam_sc.c
+SRC_ISO14443a = iso14443a.c secc.c mifareutil.c mifarecmd.c epa.c mifaresim.c
+
+ifneq (,$(findstring WITH_SMARTCARD,$(APP_CFLAGS)))
+    SRC_ISO14443a += sam_common.c sam_mfc.c sam_seos.c sam_sc.c
+endif
 
 #UNUSED: mifaresniff.c
 SRC_ISO14443b = iso14443b.c
 SRC_FELICA = felica.c felicasim.c
 SRC_CRAPTO1 = crypto1.c des.c desfire_crypto.c mifaredesfire.c aes.c platform_util.c
 SRC_CRC = crc.c crc16.c crc32.c
-SRC_ICLASS = iclass.c optimized_cipherutils.c optimized_ikeys.c optimized_elite.c optimized_cipher.c sam_picopass.c
+SRC_ICLASS = iclass.c optimized_cipherutils.c optimized_ikeys.c optimized_elite.c optimized_cipher.c
+ifneq (,$(findstring WITH_SMARTCARD,$(APP_CFLAGS)))
+    SRC_ICLASS += sam_picopass.c
+endif
 SRC_SEOS = seos.c sha1.c sha256.c
 SRC_LEGIC = legicrf.c legicrfsim.c legic_prng.c
 SRC_NFCBARCODE = thinfilm.c
