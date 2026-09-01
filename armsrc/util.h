@@ -99,6 +99,10 @@ void SpinUp(uint32_t speed);
 
 int BUTTON_CLICKED(int ms);
 int BUTTON_HELD(int ms);
+
+void switch_clock_to_ticks(void);
+void switch_clock_to_countsspclk(void);
+
 bool data_available(void);
 bool data_available_fast(void);
 

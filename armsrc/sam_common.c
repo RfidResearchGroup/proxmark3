@@ -19,6 +19,7 @@
 
 #include <string.h>
 #include "sam_common.h"
+#include "util.h"          // switch_clock_to_ticks / _countsspclk
 #include "iclass.h"
 #include "proxmark3_arm.h"
 #include "BigBuf.h"
@@ -282,7 +283,8 @@ int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) 
     uint8_t cmd_getresp_t0[] = {0x00, ISO7816_GET_RESPONSE, 0x00, 0x00, more_len};
     uint16_t want = more_len ? more_len : 256;
     uint8_t cmd_getresp_t1[] = {0x00, ISO7816_GET_RESPONSE, 0x00, 0x00,
-                                0x00, (uint8_t)(want >> 8), (uint8_t)want};
+                                0x00, (uint8_t)(want >> 8), (uint8_t)want
+                               };
     const uint8_t *cmd_getresp = t1 ? cmd_getresp_t1 : cmd_getresp_t0;
     const uint16_t cmd_getresp_len = t1 ? sizeof(cmd_getresp_t1) : sizeof(cmd_getresp_t0);
 
@@ -309,22 +311,6 @@ out:
     return res;
 }
 
-// The tick counter and the ssp_clk counter share the same timer block, so a SAM
-// session can only ever run one of them, and every handover starts the incoming
-// counter from zero.  The trace holds both halves, so each technology's frames
-// are timed from the moment that technology took the timer over
-void switch_clock_to_ticks(void) {
-    StopTicks();
-    StartTicks();
-    sc_log_trace_reset();
-    trace_restart_timeline();
-}
-
-void switch_clock_to_countsspclk(void) {
-    StopTicks();
-    StartCountSspClk();
-    trace_restart_timeline();
-}
 
 /**
  * @brief Sends a payload to the SAM
@@ -468,12 +454,12 @@ int sam_get_version(bool info) {
     uint16_t payload_len = sizeof(payload);
 
     int exchange = sam_send_payload(
-        0x44, 0x0a, 0x44,
-        payload,
-        &payload_len,
-        response,
-        &response_len
-    );
+                       0x44, 0x0a, 0x44,
+                       payload,
+                       &payload_len,
+                       response,
+                       &response_len
+                   );
 
     if (exchange != PM3_SUCCESS) {
         res = exchange;

@@ -210,8 +210,8 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
         }
 
         if (try++ == maxtry) {
-            break;
-        }
+                break;
+            }
     }
 
     return bytes_rcv;
