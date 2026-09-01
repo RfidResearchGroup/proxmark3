@@ -18,6 +18,7 @@
 //-----------------------------------------------------------------------------
 #include "sam_seos.h"
 #include "sam_common.h"
+#include "util.h"          // switch_clock_to_ticks / _countsspclk
 #include "sam_sc.h"
 #include "iclass.h"
 

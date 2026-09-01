@@ -17,6 +17,7 @@
 //-----------------------------------------------------------------------------
 #include "sam_picopass.h"
 #include "sam_common.h"
+#include "util.h"          // switch_clock_to_ticks / _countsspclk
 #include "sam_sc.h"
 #include "iclass.h"
 #include "crc16.h"

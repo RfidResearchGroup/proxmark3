@@ -34,8 +34,6 @@ uint16_t sam_response_payload(const uint8_t *rx, uint16_t rx_len, uint16_t *payl
 
 int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen);
 
-void switch_clock_to_ticks(void);
-void switch_clock_to_countsspclk(void);
 
 // Backwards-compatible wrapper that calls sam_send_payload_ex with scFlag=0x00.
 int sam_send_payload(
