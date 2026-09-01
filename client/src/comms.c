@@ -100,7 +100,8 @@ bool WaitForTxIdle(uint32_t ms_timeout) {
         if (msclock() - start >= ms_timeout) {
             return false;
         }
-        msleep(1);
+        
+        xyield(); // just to avoid CPU busy loop
     }
 }
 
@@ -1174,8 +1175,8 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
             PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
             show_warning = false;
         }
-        // just to avoid CPU busy loop:
-        msleep(1);
+
+        xyield(); // just to avoid CPU busy loop
     }
     return false;
 }

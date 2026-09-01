@@ -24,11 +24,13 @@
 #ifdef _WIN32
 # include <windows.h>
 # define sleep(n) Sleep(1000 *(n))
-# define msleep(n) Sleep((n))
+# define msleep(n) Sleep((n))       // Sleep(1) may wait 15ms, which is a feature of Windows.
+# define xyield() Sleep(0)          // avoid cpu busy, yield to other threads
 #else
-void msleep(uint32_t n);    // sleep n milliseconds
+void msleep(uint32_t n);            // sleep n milliseconds
+# define xyield() msleep(1)
 #endif // _WIN32
 
-uint64_t msclock(void);     // a milliseconds clock
-uint64_t usclock(void);     // a microseconds clock
+uint64_t msclock(void);            // a milliseconds clock
+uint64_t usclock(void);            // a microseconds clock
 #endif
