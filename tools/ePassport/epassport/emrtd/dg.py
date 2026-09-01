@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from . import images, tlv
+from . import images, securityinfos, tlv
 from .model import (
     ComInfo,
     DocumentDetails,
@@ -204,55 +204,17 @@ def _clean_field(raw: bytes, *, numeric: bool = False) -> str:
 
 
 # ----------------------------------------------------------- EF_DG14/15
-_SECURITY_OIDS = {
-    "0.4.0.127.0.7.2.2.1.1": "PACE (DH, generic mapping)",
-    "0.4.0.127.0.7.2.2.1.2": "PACE (ECDH, generic mapping)",
-    "0.4.0.127.0.7.2.2.3.2": "Terminal Authentication (ECDSA)",
-    "0.4.0.127.0.7.2.2.4": "PACE info",
-    "0.4.0.127.0.7.2.2.5": "Chip Authentication (public key)",
-    "0.4.0.127.0.7.2.2.3.1": "Terminal Authentication (RSA)",
-    "2.23.136.1.1.5": "Active Authentication",
-    "0.4.0.127.0.7.2.2.1": "Chip Authentication",
-}
-
-
-def parse_security(dg14: bytes, dg15: bytes) -> SecurityInfo:
+def parse_security(dg14: bytes, dg15: bytes, card_access: bytes = b"") -> SecurityInfo:
     out = SecurityInfo()
     if dg14:
         out.dg14_hex = dg14.hex().upper()
-        out.protocols = _oid_summary(dg14)
+        out.protocols = [p.text for p in securityinfos.parse(dg14)]
     if dg15:
         out.dg15_hex = dg15.hex().upper()
         _describe_aa_key(dg15, out)
+    if card_access:
+        out.pace = [p.text for p in securityinfos.parse(card_access)]
     return out
-
-
-def _oid_summary(data: bytes) -> list[str]:
-    """Best-effort list of security protocol OIDs found in DG14."""
-    try:
-        from asn1crypto.core import ObjectIdentifier
-    except ImportError:
-        return []
-    found: list[str] = []
-    pos = 0
-    while True:
-        idx = data.find(b"\x06", pos)
-        if idx < 0 or idx + 1 >= len(data):
-            break
-        length = data[idx + 1]
-        chunk = data[idx : idx + 2 + length]
-        pos = idx + 1
-        if length == 0 or length > 32 or idx + 2 + length > len(data):
-            continue
-        try:
-            oid = ObjectIdentifier.load(chunk).dotted
-        except Exception:
-            continue
-        label = _SECURITY_OIDS.get(oid)
-        entry = f"{oid}  {label}" if label else oid
-        if entry not in found:
-            found.append(entry)
-    return found
 
 
 def _describe_aa_key(dg15: bytes, out: SecurityInfo) -> None:
@@ -313,7 +275,10 @@ def load_dump(directory: Path) -> PassportRecord:
     if "EF_COM" in raw:
         record.com = parse_com(raw["EF_COM"])
 
-    if "EF_DG1" in raw:
+    if not raw:
+        # Naming DG1 here sends you after the wrong file: nothing was read.
+        record.warnings.append("No files were read - the dump directory is empty.")
+    elif "EF_DG1" in raw:
         record.mrz = parse_dg1(raw["EF_DG1"])
         if record.mrz is None:
             record.warnings.append(
@@ -338,7 +303,11 @@ def load_dump(directory: Path) -> PassportRecord:
         record.personal = parse_dg11(raw["EF_DG11"])
     if "EF_DG12" in raw:
         record.document = parse_dg12(raw["EF_DG12"])
-    record.security = parse_security(raw.get("EF_DG14", b""), raw.get("EF_DG15", b""))
+    record.security = parse_security(
+        raw.get("EF_DG14", b""),
+        raw.get("EF_DG15", b""),
+        raw.get("EF_CardAccess", b"") or raw.get("EF_CardSecurity", b""),
+    )
 
     from .sod import parse_sod  # local import: optional dependencies
 

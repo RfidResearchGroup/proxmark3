@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from epassport.pm3 import errors
+from epassport.pm3 import client, errors
 from epassport.pm3.client import (
     BacInput,
     Pm3Client,
@@ -420,3 +420,223 @@ def test_a_recorded_wrong_can_session_classifies_as_a_wrong_can(logs: Path) -> N
     result = client.run("hf emrtd dump --can 111111 --pace")
     assert isinstance(result.error, errors.CanWrongError)
     assert errors.detect_mechanism(result.lines) == ""
+
+
+# ------------------------------------------------ keeping the client output
+def test_a_dump_leaves_its_log_behind(tmp_path: Path) -> None:
+    """A read that fails writes no files, so without this there is no evidence.
+
+    An empty dump directory is all a failed read used to leave, which made it
+    impossible to say afterwards why the chip gave up nothing.
+    """
+    result = Pm3Result(
+        command="dump",
+        argv=["pm3", "-c", "hf emrtd dump"],
+        returncode=0,
+        lines=["[=] Reading EF_COM", "[-] Failed"],
+        dump_dir=tmp_path,
+    )
+    path = client.write_log(result)
+    assert path == tmp_path / client.LOG_NAME
+    written = path.read_text()
+    assert "[-] Failed" in written
+    assert "[=] Reading EF_COM" in written
+
+
+MRZ_LINE2 = "FE21053688POL1003097M3312201<<<<<<<<<<<<<<04"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        f"hf emrtd dump -m {MRZ_LINE2} --dir /tmp/d",
+        "hf emrtd dump -n L898902C3 -d 740812 -e 120415 --dir /tmp/d",
+        "hf emrtd dump --can 123456 --dir /tmp/d",
+    ],
+)
+def test_the_log_does_not_carry_the_key_material(tmp_path: Path, command: str) -> None:
+    """A failed read leaves this behind where it used to leave nothing.
+
+    ``command`` is the whole built command line and the client echoes it back
+    in its own output, so the MRZ, the document number and the CAN all reach
+    the log unless they are scrubbed out of both.
+    """
+    result = Pm3Result(
+        command=command,
+        argv=["pm3", "-c", command],
+        returncode=0,
+        lines=[f"[+] execute command from commandline: {command}"],
+        dump_dir=tmp_path,
+    )
+    written = client.write_log(result).read_text()
+    for secret in (MRZ_LINE2, "L898902C3", "740812", "120415", "123456"):
+        assert secret not in written
+    assert "--dir" in written  # the dump path is not a secret and stays
+
+
+def test_writing_a_log_without_a_dump_dir_is_a_no_op() -> None:
+    result = Pm3Result(command="dump", argv=[], returncode=0, dump_dir=None)
+    assert client.write_log(result) is None
+
+
+@pytest.mark.parametrize(
+    "line, expected",
+    [
+        ("[!] PACE: invalid MRZ data", errors.BacFailedError),
+        (
+            "[!] PACE: this document offers no algorithm we can do",
+            errors.PaceAlgorithmError,
+        ),
+        (
+            "[!] PACE was forced but this document has no usable EF_CardAccess.",
+            errors.PaceAlgorithmError,
+        ),
+        ("[!] PACE: mapped generator is not on the curve", errors.PaceFailedError),
+        ("[!] PACE: shared secret is the point at infinity", errors.PaceFailedError),
+        ("[!] Couldn't reconnect to the document.", errors.CardLostError),
+        ("[!] Secure select got no response", errors.CardLostError),
+        ("[!] Secure select response failed the MAC check", errors.CardLostError),
+        (
+            "[!] Couldn't build the MRZ information string.",
+            errors.MissingBacInputError,
+        ),
+        (
+            "[!] Date of birth date format is incorrect, cannot continue.",
+            errors.MissingBacInputError,
+        ),
+        (
+            "[!] Expiry date format is incorrect, cannot continue.",
+            errors.MissingBacInputError,
+        ),
+    ],
+)
+def test_fatal_client_messages_classify(line: str, expected: type) -> None:
+    """Each of these ends in a return false in the client, and left no error.
+
+    Unmatched, they surfaced as the generic "read produced no files" instead
+    of saying which thing went wrong.
+    """
+    err = errors.classify([line])
+    assert isinstance(err, expected)
+    assert err.remedy
+
+
+def test_an_absent_optional_file_is_not_a_failure() -> None:
+    """The client selects each file in turn, so a missing one is answered 6A82.
+
+    That is ordinary during a good read - classifying it would turn a working
+    dump into an error.
+    """
+    lines = [
+        "[=] Reading EF_COM",
+        "[!] Secure select rejected by the document (6A82 - File not found)",
+        "[!] Failed to secure select 0103",
+        "[+] Read EF_DG1",
+    ]
+    assert errors.classify(lines) is None
+
+
+# --------------------------------- a failed attempt that was recovered from
+_FALLBACK = [
+    "[=] Read EF_CardAccess, len 22",
+    "[=] Trying PACE with the MRZ",
+    "[!!] PACE: step 4 (mutual authentication) failed (6300), the document rejected it",
+    "[=] PACE failed, falling back to BAC",
+    "[+] Basic Access Control successful",
+    "[+] Saved 93 bytes to binary file `EF_DG1.bin`",
+]
+
+
+def test_a_failed_pace_attempt_is_not_the_outcome_when_bac_gets_in() -> None:
+    """Falling back to BAC is ordinary, and the read that follows works.
+
+    Every line was matched on its own, so the superseded PACE failure was
+    reported as the result: a dump with every file in it announced itself as
+    "PACE authentication failed" and dropped the user on the log tab.
+    """
+    assert errors.detect_mechanism(_FALLBACK) == "BAC"
+    assert errors.classify(_FALLBACK) is None
+
+
+def test_a_failure_after_authentication_still_counts() -> None:
+    """Only the authentication attempt is superseded, not what follows it."""
+    lines = _FALLBACK + ["[!!] Couldn't reconnect to the document."]
+    assert isinstance(errors.classify(lines), errors.CardLostError)
+
+
+def test_both_mechanisms_failing_is_still_a_failure() -> None:
+    """Nothing got in here, so the MRZ verdict stands."""
+    lines = [
+        "[=] Trying PACE with the MRZ",
+        "[!!] PACE: step 4 (mutual authentication) failed (6300), the document rejected it",
+        "[=] PACE failed, falling back to BAC",
+        "[!!] Couldn't do external authentication. Did you supply the correct MRZ info?",
+    ]
+    assert errors.detect_mechanism(lines) == ""
+    assert isinstance(errors.classify(lines), errors.BacFailedError)
+
+
+def test_a_real_dump_run_leaves_its_log(tmp_path: Path) -> None:
+    """Exercise run(), not write_log().
+
+    run() received the whole built command - "hf emrtd dump -n ... --dir ..." -
+    and was comparing it to the bare subcommand, so the log was never written
+    for an actual read.  Calling write_log() directly in a test hid that.
+    """
+    fake = tmp_path / "pm3"
+    fake.write_text('#!/bin/sh\necho "[=] Read EF_CardAccess, len 22"\n')
+    fake.chmod(0o755)
+    dump_dir = tmp_path / "dump"
+    dump_dir.mkdir()
+
+    client_under_test = Pm3Client(fake)
+    command = Pm3Client.build_command("dump", None, dump_dir)
+    result = client_under_test.run(command, dump_dir=dump_dir)
+
+    assert result.log_path == dump_dir / client.LOG_NAME
+    assert "Read EF_CardAccess" in result.log_path.read_text()
+
+
+def test_a_card_that_stops_answering_is_not_an_mrz_problem() -> None:
+    """The client blames the MRZ whenever external authentication fails.
+
+    That line is printed regardless of why, so when the chip simply stopped
+    responding it still asked whether the MRZ was right - sending you to check
+    digits that were never tested.  No APDU came back at all here.
+    """
+    lines = [
+        "[=] Read EF_CardAccess, len 22",
+        "[=] Trying PACE with the MRZ",
+        "[!!] APDU: no APDU response",
+        "[!!] PACE: MSE:Set AT got no response",
+        "[=] PACE failed, falling back to BAC",
+        "[!!] APDU: no APDU response",
+        "[!!] Couldn't do external authentication. Did you supply the correct MRZ info?",
+    ]
+    err = errors.classify(lines)
+    assert isinstance(err, errors.NoApduResponseError)
+    assert "not an\nMRZ" in err.remedy
+
+
+def test_a_document_that_rejects_the_key_is_still_an_mrz_problem() -> None:
+    """The chip answered and said no - there the MRZ verdict is the right one."""
+    lines = [
+        "[=] Trying PACE with the MRZ",
+        "[!!] PACE: step 4 (mutual authentication) failed (6300), the document rejected it",
+        "[=] PACE failed, falling back to BAC",
+        "[!!] Couldn't do external authentication. Did you supply the correct MRZ info?",
+    ]
+    assert isinstance(errors.classify(lines), errors.BacFailedError)
+
+
+@pytest.mark.parametrize(
+    "line",
+    ["[!] No ISO14443-A Card in field", "[!] No ISO14443-B Card in field"],
+)
+def test_no_card_in_field_says_so(line: str) -> None:
+    """Both are printed when the poll finds nothing, A and B alike.
+
+    Unmatched, a read that never saw the passport was reported as one that
+    produced no files, which describes the outcome and not the cause.
+    """
+    assert isinstance(errors.classify([line]), errors.NoCardError)

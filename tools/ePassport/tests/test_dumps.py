@@ -155,3 +155,45 @@ def test_every_test_here_redirects_the_data_directory() -> None:
             for token in ("config.list_dumps", "config.data_dir", "prune_empty")
         ):
             assert "XDG_DATA_HOME" in source, f"{name} must redirect XDG_DATA_HOME"
+
+
+def _failed_read(root: Path, name: str = "20260101T000000Z") -> Path:
+    """A read that dumped nothing but left its client log behind."""
+    directory = root / "ePassport" / "dumps" / name
+    directory.mkdir(parents=True)
+    (directory / config.DUMP_LOG_NAME).write_text("# pm3 dump, exit 0\n[!] failed\n")
+    return directory
+
+
+def test_a_directory_holding_only_the_log_still_reads_as_empty(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """The log is evidence about the read, not a file off the chip.
+
+    Counting it would hide a failed read behind "1 files" and take it out of
+    reach of the empty-dump cleanup.
+    """
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    _failed_read(tmp_path)
+    (entry,) = config.list_dumps()
+    assert entry.is_empty
+    assert "did not complete" in entry.summary
+
+
+def test_pruning_clears_a_failed_read_along_with_its_log(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    directory = _failed_read(tmp_path)
+    assert config.prune_empty_dumps() == 1
+    assert not directory.exists()
+
+
+def test_pruning_leaves_a_directory_holding_real_files(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    directory = _dump(tmp_path, "20260101T000000Z", 2)
+    (directory / config.DUMP_LOG_NAME).write_text("# pm3 dump, exit 0\n")
+    assert config.prune_empty_dumps() == 0
+    assert directory.exists()

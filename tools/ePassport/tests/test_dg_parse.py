@@ -146,9 +146,17 @@ def test_td1_dump_without_sod(td1: Path) -> None:
 
 
 def test_empty_directory_yields_a_warning(tmp_path: Path) -> None:
+    """A read that dumped nothing used to surface as a DG1 problem.
+
+    Every file is missing when the directory is empty; DG1 was just the first
+    one checked, so "EF_DG1 is missing - no MRZ to render" sent you looking at
+    the wrong file instead of at the read that produced nothing.
+    """
     r = dg.load_dump(tmp_path)
     assert r.mrz is None
-    assert any("EF_DG1 is missing" in w for w in r.warnings)
+    assert r.is_empty
+    assert any("no files" in w.lower() for w in r.warnings)
+    assert not any("EF_DG1" in w for w in r.warnings)
 
 
 def test_uppercase_bin_suffix_is_accepted(tmp_path: Path, td3: Path) -> None:
@@ -216,3 +224,16 @@ def test_image_for_is_empty_for_files_that_carry_no_picture(record) -> None:
     assert record.image_for("EF_COM") == b""
     assert record.image_for("EF_SOD") == b""
     assert record.image_for("nonsense") == b""
+
+
+def test_a_dump_with_files_is_not_empty(record) -> None:
+    assert not record.is_empty
+
+
+def test_a_dump_missing_only_dg1_still_names_dg1(tmp_path: Path, td3: Path) -> None:
+    import shutil
+
+    shutil.copy(td3 / "EF_COM.bin", tmp_path / "EF_COM.bin")
+    r = dg.load_dump(tmp_path)
+    assert not r.is_empty
+    assert any("EF_DG1 is missing" in w for w in r.warnings)

@@ -55,9 +55,29 @@ class NoCardError(Pm3Error):
     )
 
 
+class NothingReadError(Pm3Error):
+    title = "The read produced no files"
+    remedy = (
+        "The client finished without reporting a failure, but wrote nothing.\n"
+        "Check the log pane for what it actually said - a mismatched MRZ or CAN,\n"
+        "or a chip that needs PACE the client could not negotiate, both land here."
+    )
+
+
 class CardLostError(Pm3Error):
     title = "Lost the card mid-transaction"
     remedy = "The chip left the field before the dump finished. Do not move the passport while it reads."
+
+
+class NoApduResponseError(Pm3Error):
+    title = "The chip stopped answering"
+    remedy = (
+        "A command got no reply, so the key was never tested - this is not an\n"
+        "MRZ or a CAN problem, and no attempt was counted against the chip.\n"
+        "Failing at the same step on every run points at the chip or the reader\n"
+        "rather than at the passport having moved.  pm3.log in the dump\n"
+        "directory has the exchange."
+    )
 
 
 class BacFailedError(Pm3Error):
@@ -143,6 +163,10 @@ RULES: tuple[_Rule, ...] = (
         PortBusyError,
     ),
     _Rule(re.compile(r"OFFLINE.*mode", re.I), NoDeviceError),
+    # Ranked above the MRZ verdict: the client prints that line whenever
+    # external authentication fails, so it also fires when the chip never
+    # answered and the key was consequently never tested.
+    _Rule(re.compile(r"APDU: no APDU response", re.I), NoApduResponseError),
     _Rule(re.compile(r"Did you supply the correct MRZ info", re.I), BacFailedError),
     _Rule(
         re.compile(r"Challenge failed, rnd_ifd does not match", re.I), BacFailedError
@@ -152,20 +176,50 @@ RULES: tuple[_Rule, ...] = (
         MissingBacInputError,
     ),
     _Rule(re.compile(r"Couldn't get challenge", re.I), CardLostError),
+    _Rule(re.compile(r"Couldn't reconnect to the document", re.I), CardLostError),
+    # "Secure select rejected" is deliberately absent: the client selects each
+    # file in turn, so an absent optional DG answers 6A82 during a good read.
+    _Rule(re.compile(r"Secure select got no response", re.I), CardLostError),
+    _Rule(
+        re.compile(r"Secure select response failed the MAC check", re.I), CardLostError
+    ),
     _Rule(re.compile(r"Couldn't select the MRTD application", re.I), NoCardError),
     _Rule(re.compile(r"Can't select card", re.I), NoCardError),
+    _Rule(re.compile(r"No ISO14443-[AB] Card in field", re.I), NoCardError),
     _Rule(
         re.compile(r"(iso14443a card select failed|No known/supported 14a tag)", re.I),
         NoCardError,
     ),
     _Rule(re.compile(r"Failed to read EF_COM", re.I), CardLostError),
+    _Rule(
+        re.compile(r"Couldn't build the MRZ information string", re.I),
+        MissingBacInputError,
+    ),
+    _Rule(
+        re.compile(r"(Date of birth|Expiry) date format is incorrect", re.I),
+        MissingBacInputError,
+    ),
     # PACE, most specific first: a wrong password is actionable, the rest is not.
     _Rule(re.compile(r"PACE.*wrong password", re.I), CanWrongError),
     _Rule(re.compile(r"PACE: invalid CAN", re.I), CanWrongError),
+    _Rule(re.compile(r"PACE: invalid MRZ data", re.I), BacFailedError),
     _Rule(
         re.compile(r"CAN (has to be numeric|length is incorrect)", re.I), CanWrongError
     ),
     _Rule(re.compile(r"PACE.*rejected the algorithm", re.I), PaceAlgorithmError),
+    _Rule(re.compile(r"PACE.*offers no algorithm we can do", re.I), PaceAlgorithmError),
+    _Rule(
+        re.compile(r"PACE was forced.*no usable EF_CardAccess", re.I),
+        PaceAlgorithmError,
+    ),
+    _Rule(
+        re.compile(
+            r"PACE: (mapped generator|shared secret).*"
+            r"(not on the curve|point at infinity)",
+            re.I,
+        ),
+        PaceFailedError,
+    ),
     _Rule(
         re.compile(r"PACE.*(authentication token is wrong|echoed our ephemeral)", re.I),
         PaceFailedError,
@@ -199,9 +253,25 @@ def detect_mechanism(lines: list[str]) -> str:
     return ""
 
 
+#: Failures that describe one authentication attempt.  The client tries PACE
+#: and falls back to BAC, so a later success means the attempt was superseded
+#: rather than fatal - reporting it would fail a dump that has every file.
+_ATTEMPT_ERRORS = (
+    BacFailedError,
+    CanWrongError,
+    MissingBacInputError,
+    PaceAlgorithmError,
+    PaceFailedError,
+    PaceOnlyError,
+)
+
+
 def classify(lines: list[str]) -> Pm3Error | None:
     """Return the most specific failure implied by the collected log lines."""
+    authenticated = bool(detect_mechanism(lines))
     for rule in RULES:
+        if authenticated and rule.exc in _ATTEMPT_ERRORS:
+            continue
         for line in lines:
             if rule.pattern.search(line):
                 return rule.exc(detail=line.strip())
