@@ -101,11 +101,11 @@ hf 14a read --drop
 
 ## Do this exactly once.
 * The very first time for a new battery:
-``` hw bwmsetcap --cap 500```
+```hw bwmsetcap --cap 500```
+* Do a full charge/discharge cycle for it to learn the real capacity.
 
 
 ## TODO, learn what this is and how to do it.
- and do a full charge/discharge cycle for it to learn the real capacity
 
 
 
@@ -116,7 +116,6 @@ hf 14a read --drop
   * The LEDs will start running.
   * Releasing the button will power off the Proxmark5.
 
-### Setup the BWM for first use
 
 
 ## DFU Install
