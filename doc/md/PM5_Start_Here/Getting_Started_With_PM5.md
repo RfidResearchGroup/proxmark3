@@ -211,4 +211,4 @@ Do not use them unless you fully understand what you're doing.
 
 
 ## Links to Further Reading
-- [BWM Usage Document](../BWM-USAGE.md)
+- [BWM Usage Document](./BWM-USAGE.md)
