@@ -96,7 +96,7 @@ hf 14a read --drop
 
 ## I Have A BWM, Now What?
 
-### Install
+### Install the BWM
 * You acknowledge that the BWM is not yet fully supported, it's better not to plug it for now. (If you insist... continue.)
 * [Physically install the BWM and (if applicable) Battery](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
 
