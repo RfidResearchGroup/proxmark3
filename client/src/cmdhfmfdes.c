@@ -1713,12 +1713,15 @@ static int CmdHF14aDesChk(const char *Cmd) {
             }
         }
 
-        if (deskeyCountTotal > 0)
+        if (deskeyCountTotal > 0) {
             PrintAndLogEx(INFO, "Loaded "  _YELLOW_("%"PRIu32) " des keys", deskeyCountTotal);
-        if (aeskeyCountTotal > 0)
+        }
+        if (aeskeyCountTotal > 0) {
             PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " aes keys", aeskeyCountTotal);
-        if (k3kkeyCountTotal > 0)
+        }
+        if (k3kkeyCountTotal > 0) {
             PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " k3kdes keys", k3kkeyCountTotal);
+        }
 
         if (deskeyCountTotal + aeskeyCountTotal + k3kkeyCountTotal == 0) {
             PrintAndLogEx(ERR, "No keys provided. Nothing to check.");
@@ -1730,7 +1733,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
     for (uint32_t x = 0; x < app_ids_len / 3; x++) {
 
         uint32_t curaid = (app_ids[x * 3] & 0xFF) + ((app_ids[(x * 3) + 1] & 0xFF) << 8) + ((app_ids[(x * 3) + 2] & 0xFF) << 16);
-        PrintAndLogEx(ERR, "Checking aid 0x%06X...", curaid);
+        PrintAndLogEx(INFO, "Checking aid " _YELLOW_("%06X"), curaid);
 
         bool loadedAllKeys = false;
         size_t desReadStart = 0;
@@ -1745,8 +1748,11 @@ static int CmdHF14aDesChk(const char *Cmd) {
             bool foundKeyThisRound = false;
 
             if (pattern1b) {
+
                 loadedAllKeys = true;
+
             } else if (pattern2b) {
+
                 if (pattern2bOffset < 0x10000) {
                     aeskeyListLen = 0;
                     deskeyListLen = 0;
@@ -1755,32 +1761,37 @@ static int CmdHF14aDesChk(const char *Cmd) {
                 } else {
                     loadedAllKeys = true;
                 }
+
             } else if (dict_filenamelen) {
+
                 deskeyListLen = 0;
                 if (desReadEnd != 0) {
                     res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 8, &deskeyListLen, desReadStart, &desReadEnd, false);
-                    if (res != PM3_SUCCESS)
+                    if (res != PM3_SUCCESS) {
                         desReadStart = desReadEnd;
+                    }
                 } else {
-                    // Every 16 byte or 24 byte key also gets read as a valid des key, so when desReadEnd == 0 there are absolutely no more keys of any kind left in the dictionary
+                    // Every 16 byte or 24 byte key also gets read as a valid des key
                     loadedAllKeys = true;
                 }
 
                 aeskeyListLen = 0;
                 if (aesReadEnd != 0) {
                     res = loadFileDICTIONARYEx((char *)dict_filename, aeskeyList, sizeof(aeskeyList), NULL, 16, &aeskeyListLen, aesReadStart, &aesReadEnd, false);
-                    if (res != PM3_SUCCESS)
+                    if (res != PM3_SUCCESS) {
                         aesReadStart = aesReadEnd;
+                    }
                 }
 
                 k3kkeyListLen = 0;
                 if (k3kReadEnd != 0) {
                     res = loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 24, &k3kkeyListLen, k3kReadStart, &k3kReadEnd, false);
-                    if (res != PM3_SUCCESS)
+                    if (res != PM3_SUCCESS) {
                         k3kReadStart = k3kReadEnd;
+                    }
                 }
             } else {
-                // single key given with --key, one round is enough
+                // single key given with --key
                 loadedAllKeys = true;
             }
 
@@ -1789,18 +1800,21 @@ static int CmdHF14aDesChk(const char *Cmd) {
                 break;
             }
 
-            result = result || foundKeyThisRound;
+            result = (result || foundKeyThisRound);
 
             if (foundKeyThisRound == true && verbose == false) {
-                if (pattern1b || pattern2b)
+                if (pattern1b || pattern2b) {
                     PrintAndLogEx(NORMAL, "p" NOLF);
-                else if (dict_filenamelen)
+                } else if (dict_filenamelen) {
                     PrintAndLogEx(NORMAL, "d" NOLF);
+                }
             }
         }
 
-        if (!loadedAllKeys)
+        if (loadedAllKeys == false) {
             break;
+        }
+
     }
     if (verbose == false) {
         PrintAndLogEx(NORMAL, "");

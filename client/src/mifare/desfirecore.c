@@ -2342,7 +2342,7 @@ int DesfireFillFileList(DesfireContext_t *dctx, FileList_t FileList, size_t *fil
 
     int res = DesfireGetFileIDList(dctx, buf, &buflen);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire GetFileIDList command " _RED_("error") ". Result: %d", res);
+        PrintAndLogEx(WARNING, "Desfire GetFileIDList command, res " _RED_("%d"), res);
         return PM3_ESOFT;
     }
 
@@ -2358,7 +2358,7 @@ int DesfireFillFileList(DesfireContext_t *dctx, FileList_t FileList, size_t *fil
     buflen = 0;
     res = DesfireGetFileISOIDList(dctx, buf, &buflen);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire GetFileISOIDList command " _RED_("error") ". Result: %d", res);
+        PrintAndLogEx(WARNING, "Desfire GetFileISOIDList command, res " _RED_("%d"), res);
     }
 
     size_t isoindx = 0;
