@@ -3,6 +3,18 @@
 mcu_flash_size      = 512K;
 mcu_sram_size       = 64K;
 
+/* Stack for the OS image.  Default in ldscript.common is 8488, but the AT91 only
+ * has 64K of SRAM and the stack is carved out of the same pool as BigBuf:
+ *   BigBuf = _stack_start - __bss_end__,  _stack_start = sram_end - stacksize - commonarea
+ * so every byte here is a byte BigBuf does not get.  Worst-case stack measured
+ * across all 41 standalone modes (-fstack-usage + call graph, VLA bounds added
+ * in) is 5408 bytes, so 7168 keeps ~1.7 kB of headroom and hands 1320 bytes back
+ * to BigBuf.  Re-measure before lowering this further - overflow grows silently
+ * down into the top of BigBuf, where BigBuf_malloc() hands out chunks.
+ * Not set for AT32/PM5, which has 512K of SRAM and no such pressure.
+ */
+stacksize           = 7168;
+
 mcu_flash_base_addr = 0x00100000;
 mcu_sram_base_addr  = 0x00200000;
 
