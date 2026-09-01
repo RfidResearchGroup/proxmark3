@@ -495,8 +495,12 @@ int mf_key_brute(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint64_t 
     // and by the uint8_t keycnt field. keyBlock stays sized to the compile-time
     // KEYS_IN_BLOCK, which is always >= this runtime value.
     uint32_t per = (pm3_max_cmd_data_size() - 5) / MIFARE_KEY_SIZE;
-    if (per > 255) per = 255;
-    if (per == 0)  per = 1;
+    if (per > 255) {
+        per = 255;
+    }
+    if (per == 0) {
+        per = 1;
+    }
     uint32_t block_bytes = per * MIFARE_KEY_SIZE;
 
     uint32_t counter, i;
@@ -691,7 +695,9 @@ int mf_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo
 
     // The list may still contain several key candidates. Test each of them with mfCheckKeys
     uint32_t kib = (pm3_max_cmd_data_size() - 5) / MIFARE_KEY_SIZE;
-    if (kib > KEYS_IN_BLOCK) kib = KEYS_IN_BLOCK;
+    if (kib > KEYS_IN_BLOCK) {
+        kib = KEYS_IN_BLOCK;
+    }
     uint32_t max_keys = keycnt > kib ? kib : keycnt;
     uint8_t keyBlock[PM3_CMD_DATA_SIZE] = {0x00};
 
@@ -888,7 +894,9 @@ int mf_static_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trg
         maxkeysinblock = 1000;              // uploaded to flash via chunked SPIFFS
     } else {
         maxkeysinblock = (pm3_max_cmd_data_size() - 5) / MIFARE_KEY_SIZE;  // one CHKKEYS frame to THIS device
-        if (maxkeysinblock > 255) maxkeysinblock = 255;                 // mf_check_keys keycnt is uint8_t
+        if (maxkeysinblock > 255) {   // mf_check_keys keycnt is uint8_t
+            maxkeysinblock = 255;
+        }
     }
     uint32_t max_keys_chunk = keycnt > maxkeysinblock ? maxkeysinblock : keycnt;
 
