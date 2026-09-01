@@ -627,7 +627,7 @@ pm3 --> lf t55xx wipe
 ## Data
 ^[Top](#top)
 
-Get raw samples [512-40000]
+Get raw samples, between 512 and Bigbuf_size
 ```
 pm3 --> data samples -n <size>
 ```
