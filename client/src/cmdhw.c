@@ -1809,7 +1809,7 @@ static int CmdBwmSetCap(const char *Cmd) {
 
     uint8_t payload[2] = { (uint8_t)(cap & 0xFF), (uint8_t)((cap >> 8) & 0xFF) };
     PrintAndLogEx(INFO, "Programming BWM gauge design capacity to " _YELLOW_("%d mAh") "...", cap);
-    PrintAndLogEx(INFO, "Run this " _YELLOW_("once") "; then perform a full charge/discharge learning cycle.");
+    PrintAndLogEx(INFO, "Run this " _YELLOW_("once"));
 
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_SET_CAP, payload, sizeof(payload));
