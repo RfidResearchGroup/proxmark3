@@ -75,6 +75,7 @@
 // cannot reroute VBUS to the charger input. It only ensures that when the charger
 // HAS input, its path is enabled.
 void bwm_charger_kick(void) {
+    StartTicks();
     I2C_init(true);
     WaitMS(2);   // let the bus settle
 
@@ -124,6 +125,7 @@ void bwm_print_battery_status(void) {
     }
     DbpString(_CYAN_("Battery / BWM"));
 
+    StartTicks();
     I2C_init(true);
     WaitMS(2);   // let the bus settle
 
@@ -327,11 +329,11 @@ uint16_t bwm_charger_set_vchg(uint16_t mv) {
 // Program Design Capacity (and matching Design Energy). Idempotent: returns true
 // without a config-update cycle if the value is already correct.
 bool bwm_gauge_provision_capacity(uint16_t cap_mah) {
+
     uint16_t cur = 0;
     if (bq_read_design_cap(&cur) && cur == cap_mah) {
         return true;    // already correct - do NOT run another CFGUPDATE cycle
     }
-
     uint16_t energy_mwh = (uint16_t)(((uint32_t)cap_mah * 37) / 10);   // ~3.7 V nominal
 
     // Enter CONFIG_UPDATE and wait for the gauge to acknowledge it.
@@ -389,6 +391,7 @@ bool bwm_gauge_provision_capacity(uint16_t cap_mah) {
 //
 // Probe for the BWM charger over I2C and, if found, apply the charge configuration.
 void bwm_detect_and_init(void) {
+    StartTicks();
     I2C_init(true);
 
     // Single bounded probe. Any non-ACK => no BWM fitted; skip everything.
@@ -478,13 +481,8 @@ void bwm_lowbatt_check(void) {
     }
     last_tick = GetTickCount();
 
-    // The I2C bit-bang uses WaitUS()/WaitTicks(), which busy-waits on the TMR5
-    // free-running counter. A command handler run just before this poll (e.g. the
-    // LEGIC probe in `hf search`) can leave TMR5 stopped via StopTicks(); WaitTicks()
-    // would then loop forever and the device would appear to lock up (WDT_HIT() is a
-    // no-op on AT32). Restart the counter first, exactly as RgbLedSet() does before
-    // its own idle-loop I2C access.
     StartTicks();
+    I2C_init(true);
 
     uint8_t sysstat = 0;
     if (I2C_BufferReadRaw(&sysstat, 1, BWM_CHG_REG_SYSSTAT, BWM_CHG_ADDR) <= 0) {
