@@ -3029,44 +3029,30 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
 #endif
         case CMD_MEASURE_ANTENNA_TUNING_HF: {
-
-            if (packet->length != 1) {
+            if (packet->length != 1)
                 reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EINVARG, NULL, 0);
-                break;
-            }
 
             switch (packet->data.asBytes[0]) {
-                case 1: { // MEASURE_ANTENNA_TUNING_HF_START
+                case 1: // MEASURE_ANTENNA_TUNING_HF_START
                     // Let the FPGA drive the high-frequency antenna around 13.56 MHz.
                     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
                     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_SUCCESS, NULL, 0);
                     break;
-                }
-                case 2: {
+                case 2:
                     if (button_status == BUTTON_SINGLE_CLICK) {
                         reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EOPABORTED, NULL, 0);
-                        break;
                     }
-                    // Re-assert the field on every sample.  It's a insurance for a missed packet.
-                    if (FpgaGetCurrent() != FPGA_BITSTREAM_HF) {
-                        FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-                    }
-                    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
-
                     uint32_t volt = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_HF);
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_SUCCESS, (uint8_t *)&volt, sizeof(volt));
                     break;
-                }
-                case 3: {
+                case 3:
                     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_SUCCESS, NULL, 0);
                     break;
-                }
-                default: {
+                default:
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EINVARG, NULL, 0);
                     break;
-                }
             }
             break;
         }
@@ -3886,7 +3872,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint16_t mv = (packet->length >= 2)
                           ? (uint16_t)(packet->data.asBytes[0] | (packet->data.asBytes[1] << 8))
                           : BWM_DEFAULT_VCHG_MV;
-            StartTicks();
             I2C_init(true);
             uint16_t applied = bwm_charger_set_vchg(mv);
             reply_ng(CMD_PM5_BWM_SET_VCHG, applied ? PM3_SUCCESS : PM3_EFAILED, (uint8_t *)&applied, sizeof(applied));
@@ -3898,7 +3883,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint16_t cap = (packet->length >= 2)
                            ? (uint16_t)(packet->data.asBytes[0] | (packet->data.asBytes[1] << 8))
                            : BWM_DEFAULT_DESIGN_CAP_MAH;
-            StartTicks();
             I2C_init(true);
             bool ok = bwm_gauge_provision_capacity(cap);
             reply_ng(CMD_PM5_BWM_SET_CAP, ok ? PM3_SUCCESS : PM3_EFAILED, (uint8_t *)&cap, sizeof(cap));
@@ -3909,7 +3893,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             // Payload: 1 byte, non-zero = enable (default), zero = disable.
             // One-shot: reverts on the charger watchdog timeout (~160 s).
             bool enable = (packet->length >= 1) ? (packet->data.asBytes[0] != 0) : true;
-            StartTicks();
             I2C_init(true);
             bool ok = bwm_charger_set_charge(enable);
             reply_ng(CMD_PM5_BWM_CHARGE_EN, ok ? PM3_SUCCESS : PM3_EFAILED, NULL, 0);
@@ -3925,9 +3908,9 @@ static void PacketReceived(PacketCommandNG *packet) {
                 res = bwm_wifi_forward_down();
                 reply_ng(CMD_PM5_BWM_WIFI, res, (uint8_t *)&ip, sizeof(ip));
             } else if (action == BWM_WIFI_ACTION_STATUS) {
-                uint8_t connected = 0;
-                res = bwm_wifi_forward_status(&connected, &ip);
-                uint8_t st[5] = { connected,
+                uint8_t state = 0;
+                res = bwm_wifi_forward_status(&state, &ip);
+                uint8_t st[5] = { state,
                                   (uint8_t)(ip & 0xFF), (uint8_t)((ip >> 8) & 0xFF),
                                   (uint8_t)((ip >> 16) & 0xFF), (uint8_t)((ip >> 24) & 0xFF) };
                 reply_ng(CMD_PM5_BWM_WIFI, res, st, sizeof(st));
