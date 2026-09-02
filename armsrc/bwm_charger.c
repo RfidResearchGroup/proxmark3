@@ -235,7 +235,7 @@ void bwm_print_battery_status(void) {
             }
             unsigned health = (unsigned)(((uint32_t)fcc * 100) / design);
             Dbprintf("  Full charge cap..... %u mAh (design %u)", fcc, design);
-            Dbprintf("  Battery health...... %u %% "), health);
+            Dbprintf("  Battery health...... %u"), health);
         }
     } else {
         Dbprintf("  Fuel gauge.......... " _YELLOW_("not responding") " (BQ27427 absent or I2C down)");
