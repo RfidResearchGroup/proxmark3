@@ -474,6 +474,7 @@ void bwm_lowbatt_check(void) {
     static uint32_t last_tick = 0;
 #ifdef WITH_PM5_LOWBATT_SHUTDOWN
     static uint8_t crit = 0;
+    static bool s_vusb_setup = false;
 #endif
 
     if ((last_tick != 0) && (GetTickCountDelta(last_tick) < BWM_LOWBATT_PERIOD_MS)) {
@@ -509,11 +510,23 @@ void bwm_lowbatt_check(void) {
     // uncalibrated gauge - e.g. <3% reported at 3.6 V). Never let SoC alone
     // trigger power-off: require the pack to also be in the low-batt zone.
     if ((mv <= BWM_SHUTDOWN_MV) ||
-            ((soc <= BWM_SHUTDOWN_SOC_PCT) && (mv <= BWM_LOWBATT_MV))) {        if (++crit >= BWM_SHUTDOWN_CONFIRMATIONS) {
-            bwm_beep_low_batt();   // final audible warning before cut-off
-            LEDsoff();
-            Gpio_ARM_Power_ON_Low();
-            while (1);             // wait for hardware power-off
+            ((soc <= BWM_SHUTDOWN_SOC_PCT) && (mv <= BWM_LOWBATT_MV))) {
+        if (++crit >= BWM_SHUTDOWN_CONFIRMATIONS) {
+            // Confirm on the VUSB pin, not the charger PG bit: PG can read
+            // "power fail" on USB under load, so only power off if USB is really out.
+            if (s_vusb_setup == false) {
+                gpio_vusb_setup();
+                s_vusb_setup = true;
+            }
+            if (Gpio_VUSB_Read()) {
+                crit = 0;          // USB present, not a real drain
+            } else {
+                Dbprintf(_RED_("[BWM] critical battery %u mV / %u%% - powering off"), mv, soc);
+                bwm_beep_low_batt();   // last warning before cut-off
+                LEDsoff();
+                Gpio_ARM_Power_ON_Low();
+                while (1);             // wait for power-off
+            }
         }
     } else {
         crit = 0;                  // recovered above the floor -> reset the streak
