@@ -51,6 +51,7 @@
 // SET is a HOST_CMD carrying u32 LE baud; the ESP replies with a SLAVE_RESP
 // echoing this cmd (len 0) at the OLD baud, then commits to the new baud.
 #define BWM_CMD_SET_UART_BAUD       1011
+#define BWM_CMD_GET_UART_BAUD       1009   // read back the ESP's live baud (negotiation verify)
 // Flow control (ack window) - ARM-side only, no BWM firmware change required.
 // The ESP already replies to every forward frame with a SLAVE_RESP echoing
 // cmd=SEND_FORWARD_DATA, and it sends that ack only *after* app_ble_send() has
@@ -66,8 +67,12 @@
 // keep enough headroom to ride out delayed acks. Only ~1 response is ever
 // really in flight during an upload, so this does not risk an ESP overrun.
 #define BWM_FC_WINDOW               16     // max un-acked forward frames in flight
-#ifndef BWM_FC_ACK_TIMEOUT_SPINS
-#define BWM_FC_ACK_TIMEOUT_SPINS    200000 // safety valve: proceed if an ack is lost (avoid hard hang)
+#ifndef BWM_FC_ACK_TIMEOUT_MS
+// Hard cap (ms) on how long a forward write may block the main loop waiting for
+// acks. A spin COUNT was unbounded in wall-clock time and could hang the main
+// loop long enough that the client gives up and the device looks dead (USB still
+// enumerates on interrupts). Time-bounded => the main loop is always serviced.
+#define BWM_FC_ACK_TIMEOUT_MS       50     // safety valve: proceed if acks stall, never hard-hang
 #endif // safety valve: give up waiting for credit (avoid hard hang)
 
 #define BWM_CRC16_POLY  0x1021
