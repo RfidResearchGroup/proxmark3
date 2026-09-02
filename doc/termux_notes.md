@@ -24,6 +24,7 @@
       - [USB-UART Bridge Application for UDP to USB bridging](#usb-uart-bridge-application-for-udp-to-usb-bridging)
     - [Bluetooth connection](#bluetooth-connection)
       - [BT-UART Bridge Application for TCP to BT bridging](#bt-uart-bridge-application-for-tcp-to-bt-bridging)
+      - [BLE bridging for the Proxmark5 BWM](#ble-bridging-for-the-proxmark5-bwm)
     - [TCP connection](#tcp-connection)
     - [UDP connection](#udp-connection)
     - [Troubleshooting](#troubleshooting-1)
@@ -183,6 +184,19 @@ In the app, select TCP server as 'Device A' and choose an unused port (e.g. 4321
 Choose your registered PM3 device as 'Device B' -> 'Connect to classic Bluetooth device'.
 Ensure 'Retransmission' is set to 'both ways'.
 It is possible to record the config as autostart, cf 'Settings' -> 'Autostart setting'.
+
+#### BLE bridging for the Proxmark5 BWM
+^[Top](#top)
+
+The Proxmark5 Battery Wireless Module (BWM) uses BLE, not classic Bluetooth.
+The [paid version of the BT/USB/TCP Bridge app](https://play.google.com/store/apps/details?id=masar.bluetoothbridge.pro) handles it (the free version works with 10 minute time limit, can be reset by restarting the app):
+
+In the app, select TCP server as 'Device A' (default port 54321).
+Choose 'Device B' -> 'Connect to BLE device' -> `Proxmark5`.
+When asked for the characteristic, choose: service UUID starting with `0000ae86`, characteristic starting with `0000ae88`, for RX+TX.
+No pairing is needed. Then connect from Termux as in [TCP connection](#tcp-connection) using port 54321.
+
+See [PM5-BWM-USAGE.md](md/PM5_Start_Here/PM5-BWM-USAGE.md) for the BWM firmware build flag and the WiFi alternative, which needs no bridge app at all.
 
 ### TCP connection
 ^[Top](#top)
