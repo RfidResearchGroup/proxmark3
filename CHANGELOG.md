@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf t55xx detect` - a psk3 tag read back as psk2 with a block 0 one bit out, and a freshly wiped psk2 tag was reported as psk3 on no evidence; the two are now reported as ambiguous where the waveform cannot separate them, and block 0 is narrowed using the subcarrier, the broadcast period and whether password mode is in use (@mfcarroll)
 - Added doc/md/PM5_Start_Here/Getting_Started_With_PM5.md now exists as a starting point for those who have their PM5 (@innocentbystanderproxmark)
 - Fixed `tools/ePassport` - the personal number read from the MRZ optional-data field showed a filler character where a space belonged, and a document number longer than nine characters left its overflow there (@pkilar)
 - Fixed `tools/ePassport` - the detail tabs named the files their data came from as fixed text, so a document without EF_DG11 was told otherwise, and the personal-number caption wrapped (@pkilar)
