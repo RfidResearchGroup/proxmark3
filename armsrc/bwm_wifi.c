@@ -256,12 +256,7 @@ int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out) {
 }
 
 int bwm_wifi_forward_down(void) {
-    // The ESP tears down the STA + TCP server and persists to NVS BEFORE it acks,
-    // and its command task blocks during the teardown - so that ack can outlast
-    // any timeout or be dropped. A plain ack-wait therefore reports failure on a
-    // disable that actually worked. Instead: fire the disable, then CONFIRM by
-    // polling the connect status. Once WiFi is gone the status query returns a
-    // non-timeout error (the subsystem is down) - that is our proof of success.
+    // Once WiFi is gone the status query returns a non-timeout error.
     (void)bwm_cmd(BWM_CMD_SET_TO_WIFI_DISABLE_MODE, NULL, 0, NULL, NULL, 3000);
 
     uint32_t t0 = GetTickCount();
