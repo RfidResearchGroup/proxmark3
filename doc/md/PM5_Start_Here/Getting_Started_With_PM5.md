@@ -123,56 +123,26 @@ hf 14a read --drop
 sudo apt-get install dfu-util
 ```
 
+
 ### DFU Mode
 * Press and hold the button while plugging in the Proxmark5 to the USB port on the same side as the button.  You will know that you are in DFU Mode when the lights go off.  Continue to hold the button down the entire time you are running `dfu-util` commands.
 
 
-### Option 1: The device hangs while flashing over USB
-* Put your Proxmark5 into [DFU Mode](#DFU-Mode)
-* Backup the existing firmware
-```
-sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:1048576 -U pm5-full-flash-backup.bin
-```
-* Prep the files to use
-```
-rm -f /tmp/pm5-bootrom.bin /tmp/pm5-fullimage.bin
-arm-none-eabi-objcopy -O binary bootrom/obj/bootrom.elf  /tmp/pm5-bootrom.bin
-arm-none-eabi-objcopy -O binary armsrc/obj/fullimage.elf /tmp/pm5-fullimage.bin
-```
-* Flash the bootrom
-```
-sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000       -D /tmp/pm5-bootrom.bin
-```
-* Flash the Fullimage
-```
-sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08004000:leave -D /tmp/pm5-fullimage.bin
-```
-* Unplug
-* [Go back where you were in the process and continue from there.](#Flash-the-Bootrom)
+### You're here because your Proxmark5 failed to flash or is unresponsive/won't enter *Boot Mode*.
 
-
-### Option 2: The device seems unresponsive and is unable to enter Boot Mode. Recover to factory/known safe firmware.
 * The Proxmark5 does not require J-Link or similar tools for unbricking.
 * Put your Proxmark5 into [DFU Mode](#DFU-Mode)
-* Optional: Backup the existing firmware
+* Backup the existing firmware ( technically optional )
 ```
 sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:1048576 -U pm5-full-flash-backup.bin
 ```
-#### Method 1: Flash everthing together
 * Flash All to recovery version
 ```
 sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000:leave -D recovery/recovery.bin
 ```
-#### Method 2: Flash Bootrom and Fullimage individually
+* Unplug
+* If this is your first time through this document [Go back where you were in the process and continue from there.](#Flash-the-Bootrom)
 
-* Flash the Bootrom
-```
-sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08000000 -D recovery/bootrom.bin
-```
-* Flash the Fullimage
-```
-sudo dfu-util -d 2e3c:df11 -a 0 -s 0x08004000:leave -D recovery/fullimage.bin
-```
 
 ### Windows Options
 
@@ -211,4 +181,8 @@ Do not use them unless you fully understand what you're doing.
 
 
 ## Links to Further Reading
-- [BWM Usage Document](./BWM-USAGE.md)
+- [BWM Usage Document](./PM5-BWM-USAGE.md)
+- [PM5 ANT Controller](./PM5_Controllers/PM5_ANT_Controller_RM.md)
+- [PM5 Button Controller](./PM5_Controllers/PM5_Button_Controller_RM.md)
+- [PM5 RGB Controller](./PM5_Controllers/PM5_RGB_Controller_RM.md)
+- [PM5 BWM Install](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)

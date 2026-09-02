@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added doc/md/PM5_Start_Here/Getting_Started_With_PM5.md now exists as a starting point for those who have their PM5 (@innocentbystanderproxmark)
 - Fixed `tools/ePassport` - the personal number read from the MRZ optional-data field showed a filler character where a space belonged, and a document number longer than nine characters left its overflow there (@pkilar)
 - Fixed `tools/ePassport` - the detail tabs named the files their data came from as fixed text, so a document without EF_DG11 was told otherwise, and the personal-number caption wrapped (@pkilar)
 - Added `tools/ePassport` - EF_DG13 is decoded, and a Polish document's PESEL is shown as the personal number when it carries no EF_DG11 (@pkilar)
