@@ -478,6 +478,14 @@ void bwm_lowbatt_check(void) {
     }
     last_tick = GetTickCount();
 
+    // The I2C bit-bang uses WaitUS()/WaitTicks(), which busy-waits on the TMR5
+    // free-running counter. A command handler run just before this poll (e.g. the
+    // LEGIC probe in `hf search`) can leave TMR5 stopped via StopTicks(); WaitTicks()
+    // would then loop forever and the device would appear to lock up (WDT_HIT() is a
+    // no-op on AT32). Restart the counter first, exactly as RgbLedSet() does before
+    // its own idle-loop I2C access.
+    StartTicks();
+
     uint8_t sysstat = 0;
     if (I2C_BufferReadRaw(&sysstat, 1, BWM_CHG_REG_SYSSTAT, BWM_CHG_ADDR) <= 0) {
         return;   // no BWM / I2C error - stay quiet
