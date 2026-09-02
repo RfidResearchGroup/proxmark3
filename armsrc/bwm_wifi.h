@@ -56,6 +56,13 @@ int bwm_wifi_forward_down(void);
 // BWM IPv4 (host order, a in low byte; 0 if none) to *ip_out and 1/0 to
 // *connected (true == has a DHCP lease). Returns PM3_EFAILED if the BWM/UART
 // does not answer.
-int bwm_wifi_forward_status(uint8_t *connected, uint32_t *ip_out);
+// WiFi connect state reported by --status (mirrors the ESP enum; 0xFF = off).
+#define BWM_WIFI_STATE_DISCONNECTED  0
+#define BWM_WIFI_STATE_CONNECTING    1
+#define BWM_WIFI_STATE_CONNECTED     2
+#define BWM_WIFI_STATE_RECONNECT     3
+#define BWM_WIFI_STATE_STOPPED       4
+#define BWM_WIFI_STATE_OFF           0xFF
+int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out);
 
 #endif

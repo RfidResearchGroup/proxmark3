@@ -1609,18 +1609,38 @@ static int CmdBWMWifi(const char *Cmd) {
             PrintAndLogEx(FAILED, "could not query BWM WiFi status (BWM present?)");
             return r.status;
         }
-        uint8_t connected = (r.length >= 1) ? r.data.asBytes[0] : 0;
+        uint8_t state = (r.length >= 1) ? r.data.asBytes[0] : 0xFF;
         uint32_t ip = 0;
         if (r.length >= 5) {
             ip = r.data.asBytes[1] | (r.data.asBytes[2] << 8) | (r.data.asBytes[3] << 16) | ((uint32_t)r.data.asBytes[4] << 24);
         }
-        if (connected && ip) {
-            PrintAndLogEx(SUCCESS, "BWM WiFi connected, IP " _YELLOW_("%u.%u.%u.%u"),
-                          ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
-            PrintAndLogEx(HINT, "Connect with: " _YELLOW_("pm3 -p tcp:%u.%u.%u.%u:<port>"),
-                          ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
-        } else {
-            PrintAndLogEx(INFO, "BWM WiFi not connected (no IP). If a join is in progress, re-check in a few seconds.");
+        switch (state) {
+            case 0xFF:
+                PrintAndLogEx(INFO, "BWM WiFi disabled (BLE-only). Bring it up with " _YELLOW_("hw bwmwifi --ssid <ssid> --pwd <pwd>"));
+                break;
+            case 2: // connected
+                if (ip) {
+                    PrintAndLogEx(SUCCESS, "BWM WiFi connected, IP " _YELLOW_("%u.%u.%u.%u"),
+                                  ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
+                    PrintAndLogEx(HINT, "Connect with: " _YELLOW_("pm3 -p tcp:%u.%u.%u.%u:<port>"),
+                                  ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
+                } else {
+                    PrintAndLogEx(INFO, "BWM WiFi associated, waiting for a DHCP lease...");
+                }
+                break;
+            case 1: // connecting
+                PrintAndLogEx(INFO, "BWM WiFi connecting...");
+                break;
+            case 3: // reconnect wait
+                PrintAndLogEx(INFO, "BWM WiFi reconnecting...");
+                break;
+            case 4: // task stopped
+                PrintAndLogEx(INFO, "BWM WiFi connect task stopped");
+                break;
+            case 0: // disconnected
+            default:
+                PrintAndLogEx(INFO, "BWM WiFi configured but not connected");
+                break;
         }
         return PM3_SUCCESS;
     }
@@ -1809,7 +1829,7 @@ static int CmdBwmSetCap(const char *Cmd) {
 
     uint8_t payload[2] = { (uint8_t)(cap & 0xFF), (uint8_t)((cap >> 8) & 0xFF) };
     PrintAndLogEx(INFO, "Programming BWM gauge design capacity to " _YELLOW_("%d mAh") "...", cap);
-    PrintAndLogEx(INFO, "Run this " _YELLOW_("once"));
+    PrintAndLogEx(INFO, "Run this " _YELLOW_("once") "; then perform a full charge/discharge learning cycle.");
 
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_SET_CAP, payload, sizeof(payload));
@@ -1910,9 +1930,9 @@ static int CmdPing(const char *Cmd) {
     uint32_t len = arg_get_u32_def(ctx, 1, 32);
     CLIParserFree(ctx);
 
-    if (len > g_conn.max_cmd_data_size)
-        len = g_conn.max_cmd_data_size;
-
+    if (len > PM3_CMD_DATA_SIZE)
+        len = PM3_CMD_DATA_SIZE;
+    
     if (len) {
         PrintAndLogEx(INFO, "Ping sent with payload len... " _YELLOW_("%d"), len);
     } else {
