@@ -1202,7 +1202,9 @@ static void t55xx_psk_coherent(int fitclk, uint8_t clk, t55xx_conf_block_t *test
 
     if (n >= 32) {
 
-        for (int variant = 0; variant < 4 && *hits == before; variant++) {
+        // three variants, not four: inverting does not move a stream's
+        // transitions, so a fourth barely differed from variant 2
+        for (int variant = 0; variant < 3 && *hits == before; variant++) {
 
             const bool inverted = ((variant & 1) != 0);
 
@@ -1217,7 +1219,7 @@ static void t55xx_psk_coherent(int fitclk, uint8_t clk, t55xx_conf_block_t *test
             setDemodBuff(work, n, 0);
             setClockGrid((uint32_t)(got_clk + 0.5), got_phase);
 
-            static const uint8_t modes[4] = { DEMOD_PSK1, DEMOD_PSK1, DEMOD_PSK2, DEMOD_PSK3 };
+            static const uint8_t modes[3] = { DEMOD_PSK1, DEMOD_PSK1, DEMOD_PSK2 };
 
             int bitRate = 0;
             if (test(modes[variant], &tests[*hits].offset, &bitRate, clk, &tests[*hits].Q5) == false) {
@@ -1776,20 +1778,13 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                     ++hits;
                 }
             } // inverse waves does not affect this demod
-            // PSK3 - needs a call to psk1TOpsk2.
-            if (PSKDemod(0, 0, 6, false) == PM3_SUCCESS) {
-                psk1TOpsk2(g_DemodBuffer, g_DemodBufferLen);
-                if (test(DEMOD_PSK3, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
-                    tests[hits].modulation = DEMOD_PSK3;
-                    tests[hits].psk_carrier = t55xx_observed_psk_carrier();
-                    tests[hits].bitrate = bitRate;
-                    tests[hits].inverted = false;
-                    tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
-                    tests[hits].ST = false;
-                    tests[hits].downlink_mode = downlink_mode;
-                    ++hits;
-                }
-            } // inverse waves does not affect this demod
+
+            // no psk3 candidate here on purpose: it would demodulate the same
+            // as psk2 and only differ in the test() constant, which wants two
+            // adjacent ones - and this demod recovers rising edges, which are
+            // never adjacent.  psk3 is reached by ruling psk2 out instead, see
+            // t55xx_psk3_resolve()
+
             //undo trim samples
             restore_bufferS32(saveState, g_GraphBuffer);
             g_GridOffset = saveState.offset;
