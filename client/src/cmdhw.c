@@ -1930,9 +1930,9 @@ static int CmdPing(const char *Cmd) {
     uint32_t len = arg_get_u32_def(ctx, 1, 32);
     CLIParserFree(ctx);
 
-    if (len > pm3_max_cmd_data_size())
-        len = pm3_max_cmd_data_size();
-
+    if (len > PM3_CMD_DATA_SIZE)
+        len = PM3_CMD_DATA_SIZE;
+    
     if (len) {
         PrintAndLogEx(INFO, "Ping sent with payload len... " _YELLOW_("%d"), len);
     } else {
