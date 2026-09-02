@@ -92,10 +92,11 @@ uint32_t bwm_read_ng(uint8_t *data, size_t len);
 // >0 when raw bytes are waiting on the FPC USART (gate for receive_ng()).
 uint16_t bwm_fwd_rxdata_available(void);
 
-// Negotiate the ESP<->AT32 UART up to `target` baud (app_com cmd 1011), then
-// re-init UART4 to match. Returns true if the ESP acked and the link switched;
-// false (link left at the boot baud) on timeout or an unsupported rate. Must be
-// called once after bwm_uart_init(), before normal forward traffic starts.
+// Bring the ESP<->AT32 UART to `target` baud: adopt it if the ESP is already
+// there (its baud survives an AT32-only reset), else negotiate up via app_com
+// cmd 1011 and re-init UART4 to match. Returns true if the link runs at
+// `target`; false (left at the boot baud) if no ESP answered or the switch
+// could not be verified. Call once after bwm_uart_init().
 bool bwm_fwd_negotiate_baud(uint32_t target);
 
 #endif // __BWM_FORWARD_H
