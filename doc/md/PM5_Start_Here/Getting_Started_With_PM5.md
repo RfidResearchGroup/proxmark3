@@ -181,4 +181,8 @@ Do not use them unless you fully understand what you're doing.
 
 
 ## Links to Further Reading
-- [BWM Usage Document](./BWM-USAGE.md)
+- [BWM Usage Document](./PM5-BWM-USAGE.md)
+- [PM5 ANT Controller](./PM5_Controllers/PM5_ANT_Controller_RM.md)
+- [PM5 Button Controller](./PM5_Controllers/PM5_Button_Controller_RM.md)
+- [PM5 RGB Controller](./PM5_Controllers/PM5_RGB_Controller_RM.md)
+- [PM5 BWM Install](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
