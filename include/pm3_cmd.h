@@ -883,6 +883,10 @@ typedef struct {
 #define CMD_PM5_BWM_AUTOOFF 0x017B
 #define CMD_PM5_BWM_WIFI    0x017C
 #define CMD_PM5_BWM_SET_VCHG 0x017D
+#define CMD_PM5_BWM_ESP_OTA  0x017E
+#define BWM_OTA_ACTION_BEGIN 0x00
+#define BWM_OTA_ACTION_WRITE 0x01
+#define BWM_OTA_ACTION_END   0x02
 // CMD_PM5_BWM_WIFI payload: [action:u8][port:u16 LE][ssid\0][pwd\0][hostname\0]
 #define BWM_WIFI_ACTION_START  0x00   // join AP + start TCP server
 #define BWM_WIFI_ACTION_STOP   0x01   // tear down, back to BLE-only
