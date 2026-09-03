@@ -256,7 +256,12 @@ int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out) {
 }
 
 int bwm_wifi_forward_down(void) {
-    // Once WiFi is gone the status query returns a non-timeout error.
+    // The ESP tears down the STA + TCP server and persists to NVS BEFORE it acks,
+    // and its command task blocks during the teardown - so that ack can outlast
+    // any timeout or be dropped. A plain ack-wait therefore reports failure on a
+    // disable that actually worked. Instead: fire the disable, then CONFIRM by
+    // polling the connect status. Once WiFi is gone the status query returns a
+    // non-timeout error (the subsystem is down) - that is our proof of success.
     (void)bwm_cmd(BWM_CMD_SET_TO_WIFI_DISABLE_MODE, NULL, 0, NULL, NULL, 3000);
 
     uint32_t t0 = GetTickCount();
@@ -273,4 +278,25 @@ int bwm_wifi_forward_down(void) {
         SpinDelay(300);
     }
     return PM3_ETIMEOUT;
+}
+
+// ---------------------------------------------------------------------------
+// ESP OTA forwarders. Each maps a host request to one ESP OTA app_com command.
+// esp_ota_begin erases the target partition and esp_ota_end finalizes + sets the
+// boot slot, so those get generous timeouts.
+// ---------------------------------------------------------------------------
+int bwm_esp_ota_begin(uint32_t total_size) {
+    uint8_t p[4] = {
+        (uint8_t)(total_size & 0xFF),         (uint8_t)((total_size >> 8) & 0xFF),
+        (uint8_t)((total_size >> 16) & 0xFF), (uint8_t)((total_size >> 24) & 0xFF)
+    };
+    return bwm_cmd(BWM_CMD_OTA_BEGIN, p, sizeof(p), NULL, NULL, 15000);
+}
+
+int bwm_esp_ota_write(const uint8_t *data, uint16_t len) {
+    return bwm_cmd(BWM_CMD_OTA_WRITE, data, len, NULL, NULL, 8000);
+}
+
+int bwm_esp_ota_end(void) {
+    return bwm_cmd(BWM_CMD_OTA_END, NULL, 0, NULL, NULL, 20000);
 }
