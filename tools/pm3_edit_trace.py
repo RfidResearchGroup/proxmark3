@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-pm3trace_edit.py — Proxmark3 binary trace file editor
+pm3_edit_trace.py — Proxmark3 binary trace file editor
 
 Binary record format (tracelog_hdr_t, include/pm3_cmd.h):
   [4]  timestamp  uint32 LE  — carrier periods (14a/thinfilm), ETU (hitag), etc.
@@ -10,8 +10,8 @@ Binary record format (tracelog_hdr_t, include/pm3_cmd.h):
   [P]  parity     ceil(data_len/8) bytes, bit j of byte i = odd-parity of data[i*8+j]
 
 Usage:
-  python3 pm3trace_edit.py <file.trace>          # interactive editor
-  python3 pm3trace_edit.py <file.trace> --dump   # dump to stdout and exit
+  python3 pm3_edit_trace.py <file.trace>          # interactive editor
+  python3 pm3_edit_trace.py <file.trace> --dump   # dump to stdout and exit
 
 Interactive commands:
   l / list [N]          list all frames, or frame N only
