@@ -3941,7 +3941,11 @@ static void PacketReceived(PacketCommandNG *packet) {
                     uint32_t total_size = 0;
                     if (packet->length >= 5) {
                         memcpy(&total_size, packet->data.asBytes + 1, sizeof(total_size));
-                    }
+                    } else if (action == BWM_OTA_ACTION_END) {
+                        res = bwm_esp_ota_end();
+                    } else if (action == BWM_OTA_ACTION_ABORT) {
+                        res = bwm_esp_ota_abort();
+                }
                     res = bwm_esp_ota_begin(total_size);
                     break;
                 }
