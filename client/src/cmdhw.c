@@ -2339,6 +2339,8 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen) {
         }
         sent += n;
         print_progress(sent, fwlen, STYLE_MIXED);
+        ///// DEBUG TEST FOR USB timeout
+        msleep(10);
     }
     free(buf);
     PrintAndLogEx(NORMAL, "");
