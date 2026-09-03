@@ -589,6 +589,18 @@ static void SendStatus(uint32_t wait) {
 #endif
 #ifdef WITH_BWM_FORWARD
     Dbprintf("  BWM link baud....... " _YELLOW_("%u") " bps", bwm_uart_get_baud());
+    {
+        // Read the ESP firmware version so hw status shows what the BWM runs
+        // (and lets you confirm an OTA took: the string flips after a reflash).
+        uint8_t bwm_ver[64] = {0};
+        uint16_t bwm_ver_len = sizeof(bwm_ver) - 1;
+        if (bwm_esp_get_version(bwm_ver, &bwm_ver_len) == PM3_SUCCESS) {
+            bwm_ver[bwm_ver_len] = 0x00;
+            Dbprintf("  BWM fw version...... " _YELLOW_("%s"), bwm_ver);
+        } else {
+            Dbprintf("  BWM fw version...... " _YELLOW_("%s"), "unknown");
+        }
+    }
 #endif
     printConnSpeed(wait);
     DbpString(_CYAN_("Various"));
