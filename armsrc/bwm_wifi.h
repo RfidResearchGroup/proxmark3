@@ -35,6 +35,8 @@
 
 #define BWM_WIFI_FORWARD_TCP_SERVER        0      // wifi_forward_type_t::WIFI_FORWARD_TCP_SERVER
 #define BWM_CMD_CMD_ERROR                  8091   // slave bcast: command error report
+#define BWM_CMD_LOG_FORWARD_ENABLE         1014   // payload: u8 (0=stop, non-zero=start)
+#define BWM_CMD_LOG_MESSAGE                8090   // slave bcast: ESP_LOGx output (string)
 
 // Low-level: send one app_com HOST_CMD and wait for its SLAVE_RESP.
 // resp/resp_len may be NULL if no response payload is expected.
