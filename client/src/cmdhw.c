@@ -2321,11 +2321,10 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen) {
     }
     size_t sent = 0;
     while (sent < fwlen) {
-        // msleep(10);
         size_t n = MIN(maxchunk, fwlen - sent);
         buf[0] = BWM_OTA_ACTION_WRITE;
         memcpy(buf + 1, fw + sent, n);
-        //clearCommandBuffer();
+        clearCommandBuffer();
         SendCommandNG(CMD_PM5_BWM_ESP_OTA, buf, (uint16_t)(n + 1));
         bool got = WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 15000);
         if (!got || resp.status != PM3_SUCCESS) {
@@ -2339,10 +2338,9 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen) {
             return PM3_EFAILED;
         }
         sent += n;
-        print_progress(sent, fwlen, STYLE_MIXED);        ///// DEBUG TEST FOR USB timeout
+        print_progress(sent, fwlen, STYLE_MIXED);
     }
     free(buf);
-    printf("\n");
     PrintAndLogEx(NORMAL, "");
 
     // END: finalize + set the new boot partition
@@ -2440,7 +2438,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
         // (that is what drops the finalize ack over BLE). Just wait for it to come
         // back and re-link, then confirm by version.
         PrintAndLogEx(INFO, "BWM rebooting into the new image (link drops briefly)...");
-        msleep(10000);   // reboot + re-negotiate baud + re-link
+        msleep(8000);   // reboot + re-negotiate baud + re-link
 
         char ver_after[64] = {0};
         bool have_after = (bwm_get_version(ver_after, sizeof(ver_after)) == PM3_SUCCESS);
@@ -2462,6 +2460,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
         // Could not re-read the version (link dropped on reboot, common over BLE).
         // All data was uploaded, so treat as done and let the user confirm.
         PrintAndLogEx(WARNING, "Could not re-read BWM version after reboot (link dropped?)");
+        PrintAndLogEx(HINT, "Reconnect and run " _YELLOW_("hw status") " to confirm the version.");
         free(fw);
         return PM3_SUCCESS;
     }
