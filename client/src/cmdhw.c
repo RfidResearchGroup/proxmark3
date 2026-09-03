@@ -2294,12 +2294,6 @@ static int CmdPM5QCTest(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void progressbar(long sent, long total, int style) {
-    int percent = (int)((double)sent / total * 100);
-    printf("\rProgress: [%d%%]", percent); 
-    fflush(stdout); 
-}
-
 // One full OTA attempt: BEGIN -> WRITE... -> END. The BWM OTA has no resume
 // (DEV.md 8.4): a dropped chunk can't be re-sent, so any failure here means the
 // caller must restart the whole thing.
@@ -2327,6 +2321,7 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen) {
     }
     size_t sent = 0;
     while (sent < fwlen) {
+        msleep(10);
         size_t n = MIN(maxchunk, fwlen - sent);
         buf[0] = BWM_OTA_ACTION_WRITE;
         memcpy(buf + 1, fw + sent, n);
@@ -2344,9 +2339,7 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen) {
             return PM3_EFAILED;
         }
         sent += n;
-        progressbar(sent, fwlen, STYLE_MIXED);
-        ///// DEBUG TEST FOR USB timeout
-        msleep(20);
+        print_progress(sent, fwlen, STYLE_MIXED);        ///// DEBUG TEST FOR USB timeout
     }
     free(buf);
     printf("\n");
