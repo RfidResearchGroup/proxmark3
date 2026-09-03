@@ -306,12 +306,13 @@ int bwm_wifi_forward_down(void) {
 // boot slot, so those get generous timeouts.
 // ---------------------------------------------------------------------------
 int bwm_esp_ota_begin(uint32_t total_size) {
-    // Best-effort: ask the ESP to forward its own ESP_LOGx output as broadcasts
-    // for the duration of the OTA, so a crash/reset shows its cause in the pm3
-    // debug console instead of just going silent. Ignore failure - OTA can
-    // still proceed without diagnostics if this doesn't take.
-    uint8_t on = 1;
-    (void)bwm_cmd(BWM_CMD_LOG_FORWARD_ENABLE, &on, 1, NULL, NULL, 500);
+    // SILENCE ESP log forwarding for the OTA. With it on, the ESP's background
+    // log broadcasts (WiFi/coex/BLE) interleave with the per-chunk acks across
+    // the thousands of round-trips; one landing in an ack window drops that
+    // chunk's reply -> random PM3_ETIMEOUT. Restored in bwm_esp_ota_end().
+    // Best-effort: ignore failure.
+    uint8_t off = 0;
+    (void)bwm_cmd(BWM_CMD_LOG_FORWARD_ENABLE, &off, 1, NULL, NULL, 500);
 
     uint8_t p[4] = {
         (uint8_t)(total_size & 0xFF),         (uint8_t)((total_size >> 8) & 0xFF),
@@ -321,11 +322,15 @@ int bwm_esp_ota_begin(uint32_t total_size) {
 }
 
 int bwm_esp_ota_write(const uint8_t *data, uint16_t len) {
-    return bwm_cmd(BWM_CMD_OTA_WRITE, data, len, NULL, NULL, 8000);
+    return bwm_cmd(BWM_CMD_OTA_WRITE, data, len, NULL, NULL, 15000);
 }
 
 int bwm_esp_ota_end(void) {
-    return bwm_cmd(BWM_CMD_OTA_END, NULL, 0, NULL, NULL, 20000);
+    int r = bwm_cmd(BWM_CMD_OTA_END, NULL, 0, NULL, NULL, 20000);
+    // Restore log forwarding (silenced for the OTA in bwm_esp_ota_begin).
+    uint8_t on = 1;
+    (void)bwm_cmd(BWM_CMD_LOG_FORWARD_ENABLE, &on, 1, NULL, NULL, 500);
+    return r;
 }
 
 int bwm_esp_reboot(void) {
