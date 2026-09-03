@@ -2297,7 +2297,7 @@ static int CmdPM5QCTest(const char *Cmd) {
 // One full OTA attempt: BEGIN -> WRITE... -> END. The BWM OTA has no resume
 // (DEV.md 8.4): a dropped chunk can't be re-sent, so any failure here means the
 // caller must restart the whole thing.
-static int bwm_ota_once(const uint8_t *fw, size_t fwlen) {
+static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms) {
     PacketResponseNG resp;
 
     // BEGIN: tell the BWM how many bytes are coming (it erases the target partition)
@@ -2339,6 +2339,15 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen) {
         }
         sent += n;
         print_progress(sent, fwlen, STYLE_MIXED);
+
+        // Pace the stream. The client->AT32 hop (USB/BLE) is far faster than the
+        // AT32->ESP UART, so back-to-back writes can outrun the UART and drop a
+        // chunk -> esp_ota_end() then sees written < total and aborts. A small
+        // gap gives the UART time to drain. (BLE is naturally paced, which is why
+        // it "worked" and bursty USB did not - see nemanjan00.)
+        if (write_delay_ms) {
+            msleep(write_delay_ms);
+        }
     }
     free(buf);
     PrintAndLogEx(NORMAL, "");
@@ -2351,15 +2360,19 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen) {
     if (got_end && (resp.status == PM3_SUCCESS)) {
         return PM3_SUCCESS;
     }
-    if (got_end == false) {
-        // All data was sent and OTA_END was issued. esp_ota_end + set_boot_partition
-        // is slow, so its ack is easily lost even though the flash completed - this
-        // is the case that used to discard a finished image and restart. Signal
-        // "reached END, unconfirmed" so the caller verifies by version instead.
-        return PM3_ETIMEOUT;
+    if (got_end) {
+        // The BWM answered END with an error. The common one is a size mismatch:
+        // esp_ota_end() found written < total, i.e. chunks were dropped in transit.
+        // That is a genuine failure (boot partition NOT switched) - restart, and
+        // hint at pacing, which is the usual cure.
+        PrintAndLogEx(WARNING, "OTA finalize rejected (status %d) - data was lost in transit", resp.status);
+        PrintAndLogEx(HINT, "Try a per-write delay: " _YELLOW_("hw bwmupgrade -f <fw> --delay 10"));
+        return PM3_EFAILED;
     }
-    PrintAndLogEx(WARNING, "OTA finalize rejected (status %d)", resp.status);
-    return PM3_EFAILED;
+    // No answer at all. Over BLE the END auto-reboot drops the link before the ack
+    // returns, so a timeout here means "reached END, reboot likely happened" -
+    // verify by version rather than discarding a possibly-good flash.
+    return PM3_ETIMEOUT;
 }
 
 // Query the BWM's running firmware version string (APP_CMD_GET_VERSION_INFO).
@@ -2387,12 +2400,14 @@ static int CmdBWMUpgrade(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "ESP32 firmware image (.bin)"),
+        arg_int0(NULL, "delay", "<ms>", "per-chunk delay to pace the slow AT32<->ESP UART (default 10)"),
         arg_param_end,
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int fnlen = 0;
     char fn[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)fn, sizeof(fn), &fnlen);
+    uint32_t write_delay_ms = (uint32_t)arg_get_int_def(ctx, 2, 10);
     CLIParserFree(ctx);
 
     if (fnlen == 0) {
@@ -2422,7 +2437,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
         if (attempt > 1) {
             PrintAndLogEx(INFO, "restarting OTA from the beginning (attempt " _YELLOW_("%d") "/%d)", attempt, max_attempts);
         }
-        int res = bwm_ota_once(fw, fwlen);
+        int res = bwm_ota_once(fw, fwlen, write_delay_ms);
 
         // Failed during BEGIN/WRITE: image incomplete, restart the whole thing.
         if ((res != PM3_SUCCESS) && (res != PM3_ETIMEOUT)) {
