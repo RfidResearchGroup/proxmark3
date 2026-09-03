@@ -2321,11 +2321,11 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen) {
     }
     size_t sent = 0;
     while (sent < fwlen) {
-        msleep(10);
+        // msleep(10);
         size_t n = MIN(maxchunk, fwlen - sent);
         buf[0] = BWM_OTA_ACTION_WRITE;
         memcpy(buf + 1, fw + sent, n);
-        clearCommandBuffer();
+        //clearCommandBuffer();
         SendCommandNG(CMD_PM5_BWM_ESP_OTA, buf, (uint16_t)(n + 1));
         bool got = WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 15000);
         if (!got || resp.status != PM3_SUCCESS) {
