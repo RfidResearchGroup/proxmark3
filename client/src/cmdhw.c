@@ -48,12 +48,10 @@
 #include "flash.h" // reboot to bootloader mode
 #include "proxgui.h"
 #include "graph.h" // for graph data
-#include "comms.h"
 
 #include "lua.h"
 
 static int CmdHelp(const char *Cmd);
-size_t pm3_max_cmd_data_size(void);
 
 static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used, uint32_t flash_size) {
     // AT32 (PM5): the chip id is an ARM DBGMCU IDCODE, not an Atmel CIDR, so the
