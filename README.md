@@ -75,11 +75,12 @@ The last hardware generation is called Proxmark5.  It has
   - TypeC Extended Port (CEP)
   - BLE / Wifi / Battery Addon, via a ESp32c2 
   - Swappable antennas (LF, HF, UHF)
-    - 125, 134, 250, 375, 500 KHz Low Frequency Antenna (LF
+    - 125, 134, 250, 375, 500 KHz Low Frequency Antenna (LF)
     - 13.56 MHz High Frequency Antenna (HF)
     - as a addon:  860-960 MHz Ultra High Frequency Antenna (UHF),  ** not developed yet **
    
-See the instruction links in the tables above to build, flash and run for your Proxmark5 device.
+At the moment, Proxmark5-specific instructions are all grouped in [a single Getting Started guide](doc/md/PM5_Start_Here/Getting_Started_With_PM5.md).
+Read it to build, flash and run your Proxmark5 device. See the instruction links in the tables above to get the compilation environment.
 - ⚠ The firmware is not stable at the moment and is actively being developed at.  
 - ⚠ Don't install the BWM addon board for now.
 
