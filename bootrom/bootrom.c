@@ -434,7 +434,7 @@ static bool check_goto_flash_mode(void) {
     }
 
     // Checked whatever the button did
-    if (!to_flash_mode) {
+    if (to_flash_mode == false) {
         if ((g_common_area.command == COMMON_AREA_COMMAND_ENTER_FLASH_MODE) || (*_osimage_entry == 0xffffffffU)) {
             to_flash_mode = true;
         }
