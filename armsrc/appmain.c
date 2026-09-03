@@ -3935,17 +3935,25 @@ static void PacketReceived(PacketCommandNG *packet) {
             //   END:   (no payload) finalize + set boot partition
 #if defined(WITH_BWM_FORWARD)
             uint8_t action = packet->data.asBytes[0];
-            int res;
+            int res = PM3_EINVARG;
+            bool replied = false;
             switch (action) {
+                case BWM_OTA_ACTION_VERSION: {
+                    // Return the running ESP firmware version string so the client
+                    // can confirm an update actually took (esp. when the finalize
+                    // ack is lost). Replies here with a payload, unlike the others.
+                    uint8_t ver[64];
+                    uint16_t vlen = sizeof(ver);
+                    res = bwm_esp_get_version(ver, &vlen);
+                    reply_ng(CMD_PM5_BWM_ESP_OTA, res, ver, (res == PM3_SUCCESS) ? vlen : 0);
+                    replied = true;
+                    break;
+                }
                 case BWM_OTA_ACTION_BEGIN: {
                     uint32_t total_size = 0;
                     if (packet->length >= 5) {
                         memcpy(&total_size, packet->data.asBytes + 1, sizeof(total_size));
-                    } else if (action == BWM_OTA_ACTION_END) {
-                        res = bwm_esp_ota_end();
-                    } else if (action == BWM_OTA_ACTION_ABORT) {
-                        res = bwm_esp_ota_abort();
-                }
+                    }
                     res = bwm_esp_ota_begin(total_size);
                     break;
                 }
@@ -3970,11 +3978,16 @@ static void PacketReceived(PacketCommandNG *packet) {
                         (void)bwm_esp_reboot();
                     }
                     break;
+                case BWM_OTA_ACTION_ABORT:
+                    res = bwm_esp_ota_abort();
+                    break;
                 default:
                     res = PM3_EINVARG;
                     break;
             }
-            reply_ng(CMD_PM5_BWM_ESP_OTA, res, NULL, 0);
+            if (replied == false) {
+                reply_ng(CMD_PM5_BWM_ESP_OTA, res, NULL, 0);
+            }
 #else
             reply_ng(CMD_PM5_BWM_ESP_OTA, PM3_ENOTIMPL, NULL, 0);
 #endif
