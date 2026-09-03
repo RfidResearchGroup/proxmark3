@@ -152,8 +152,9 @@ The BWM advertises as:
 > yours with `btmgmt find`, or use the bridge's name-scan (`-n Proxmark5`), which
 > avoids needing the address at all.
 
-There are two ways to connect: a **native transport** (Linux) and a **cross-platform
-Python bridge** (Linux / macOS / Windows / WSL / iOS).
+There are three ways to connect: a **native transport** (Linux), a **cross-platform
+Python bridge** (Linux / macOS / Windows / WSL / iOS), and a **bridge app** on Android
+([2.4](#24-android--termux--ble-bridge-app)).
 
 ### 2.1 Native BLE transport — Linux only, no bridge
 
@@ -239,6 +240,39 @@ python3 pm5_ble_bridge.py --connect 127.0.0.1:7777
 > [!NOTE]
 > For a plain **serial** port, `--wait` keeps its original meaning: wait ~20 s for
 > the device node to appear.
+
+### 2.4 Android — Termux + BLE bridge app
+
+Termux has no Bluetooth access, so a bridge app exposes the BWM's BLE characteristic
+as a local TCP port that the client then opens — same idea as
+[termux_notes.md](../../termux_notes.md), just BLE instead of classic Bluetooth.
+Tested with the paid
+[BT/USB/TCP Bridge](https://play.google.com/store/apps/details?id=masar.bluetoothbridge.pro)
+app, which lets you pick the GATT characteristic; the free version works too but is
+limited to 10 minutes per session (the limit resets after quitting the app).
+
+1. Build the client in Termux (see [termux_notes.md](../../termux_notes.md)).
+2. In the bridge app:
+
+| Setting          | Value                                                             |
+| ---------------- | ----------------------------------------------------------------- |
+| Device A         | Start TCP server (default port `54321`)                           |
+| Device B         | Connect to BLE device → `Proxmark5`                               |
+| Characteristic   | the last one: service `0000ae86-…`, characteristic `0000ae88-…`, for RX+TX |
+
+3. In Termux, connect over the local port:
+
+```
+./client/proxmark3 tcp:localhost:54321
+```
+
+No pairing is needed (the BWM has no BLE security). The same app also does classic
+Bluetooth, so one setup covers a Blueshark-equipped Proxmark3 too.
+
+> [!NOTE]
+> If you would rather not use a bridge app, put the phone in hotspot mode and use
+> WiFi instead ([3](#3-wifi-sta--tcp-server)): the client then connects straight to
+> the BWM's TCP server, with no app in between.
 
 ---
 
