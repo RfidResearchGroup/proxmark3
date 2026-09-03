@@ -161,6 +161,75 @@ bool path_is_regular_file(const char *path) {
     return S_ISREG(st.st_mode) != 0;
 }
 
+/**
+ * @brief checks if path is an absolute path.
+ * @param path
+ * @return
+ */
+bool path_is_absolute(const char *path) {
+    if (path == NULL || path[0] == '\0') {
+        return false;
+    }
+
+    if ((path[0] == '/') || (path[0] == '\\')) {
+        return true;
+    }
+
+#ifdef _WIN32
+    // drive letter,  "C:/..." or "C:\..."
+    if (isalpha((unsigned char)path[0]) && (path[1] == ':') && ((path[2] == '/') || (path[2] == '\\'))) {
+        return true;
+    }
+#endif
+    return false;
+}
+
+/**
+ * @brief expands a leading "~" into the user home directory.
+ *
+ * The pm3 prompt is not a shell, so nobody expands "~" for us and it wouldotherwise be taken as a directory named "~". 
+ * 
+ * "~user/..." is not supported and is returned unchanged.
+ *
+ * @param path
+ * @return newly allocated string, caller must free.  NULL on failure
+ */
+char *path_expand_homedir(const char *path) {
+    if (path == NULL) {
+        return NULL;
+    }
+
+    // only a leading "~", "~/" or "~\" is expanded
+    if ((path[0] != '~') || ((path[1] != '\0') && (path[1] != '/') && (path[1] != '\\'))) {
+        return str_dup(path);
+    }
+
+    const char *user_path = get_my_user_directory();
+    if (user_path == NULL) {
+        return str_dup(path);
+    }
+
+    // skip the "~" and the path separators directly after it
+    const char *tail = path + 1;
+    while ((*tail == '/') || (*tail == '\\')) {
+        tail++;
+    }
+
+    bool sep = ((*tail != '\0') &&
+                (str_endswith(user_path, "/") == false) &&
+                (str_endswith(user_path, "\\") == false));
+
+    size_t n = strlen(user_path) + (sep ? strlen(PATHSEP) : 0) + strlen(tail) + 1;
+    char *res = (char *)calloc(n, sizeof(uint8_t));
+    if (res == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return NULL;
+    }
+
+    snprintf(res, n, "%s%s%s", user_path, sep ? PATHSEP : "", tail);
+    return res;
+}
+
 const char *path_basename(const char *path) {
     if (path == NULL) {
         return "";
@@ -324,13 +393,21 @@ static char *filenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
     if (suffix == NULL) return NULL;
 
-    char *fileName = (char *) calloc(strlen(preferredName) + strlen(suffix) + 1, sizeof(uint8_t));
-    if (fileName == NULL) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
+    char *expanded = path_expand_homedir(preferredName);
+    if (expanded == NULL) {
         return NULL;
     }
 
-    strcpy(fileName, preferredName);
+    char *fileName = (char *) calloc(strlen(expanded) + strlen(suffix) + 1, sizeof(uint8_t));
+    if (fileName == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(expanded);
+        return NULL;
+    }
+
+    strcpy(fileName, expanded);
+    free(expanded);
+
     if (str_endswith(fileName, suffix)) {
         return fileName;
     }
@@ -355,6 +432,11 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
         return NULL;
     }
 
+    char *expanded = path_expand_homedir(preferredName);
+    if (expanded == NULL) {
+        return NULL;
+    }
+
     // 1: null terminator
     // 16: room for filenum to ensure new filename
     // save_path_len + strlen(PATHSEP):  the user preference save paths
@@ -363,13 +445,14 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
 
     char *fileName = (char *) calloc(len, sizeof(uint8_t));
     if (fileName == NULL) {
+        free(expanded);
         return NULL;
     }
 
     char *pfn = fileName;
 
     // if given path is not an absolute path
-    if ((preferredName[0] !=  '/') && (preferredName[0] !=  '\\')) {
+    if (path_is_absolute(expanded) == false) {
         // user preference save paths
         size_t save_path_len = path_size(e_save_path);
         if (save_path_len && save_path_len < (FILE_PATH_SIZE - strlen(PATHSEP))) {
@@ -380,8 +463,8 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
     }
 
     // remove file extension if exist in name
-    size_t p_namelen = strlen(preferredName);
-    if (str_endswith(preferredName, suffix)) {
+    size_t p_namelen = strlen(expanded);
+    if (str_endswith(expanded, suffix)) {
         p_namelen -= strlen(suffix);
     }
 
@@ -389,7 +472,7 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
     len -= p_namelen;
 
     // modify filename
-    snprintf(pfn, len, "%.*s%s", (int)p_namelen, preferredName, suffix);
+    snprintf(pfn, len, "%.*s%s", (int)p_namelen, expanded, suffix);
 
     // "-001"
     len -= 4;
@@ -398,10 +481,11 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
     // check complete path/filename if exists
     while (fileExists(fileName)) {
         // modify filename
-        snprintf(pfn, len, "%.*s-%03d%s", (int)p_namelen, preferredName, num, suffix);
+        snprintf(pfn, len, "%.*s-%03d%s", (int)p_namelen, expanded, num, suffix);
         num++;
     }
 
+    free(expanded);
     return fileName;
 }
 
@@ -3736,10 +3820,6 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
         return PM3_EINVARG;
     }
 
-    if (path_is_directory(searchname)) {
-        return PM3_EINVARG;
-    }
-
     char *filename = filenamemcopy(searchname, suffix);
     if (filename == NULL) {
         return PM3_EMALLOC;
@@ -3748,6 +3828,11 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
     if (strlen(filename) == 0) {
         free(filename);
         return PM3_EFILE;
+    }
+
+    if (path_is_directory(filename)) {
+        free(filename);
+        return PM3_EINVARG;
     }
 
     int res = searchFinalFile(foundpath, pm3dir, filename, silent);

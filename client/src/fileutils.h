@@ -131,6 +131,20 @@ bool path_is_directory(const char *path);
 bool path_is_regular_file(const char *path);
 
 /**
+ * @brief Check whether a path is absolute.
+ */
+bool path_is_absolute(const char *path);
+
+/**
+ * @brief Expand a leading "~" into the user home directory.
+ *
+ * The pm3 prompt is not a shell, so "~" reaches the client verbatim.
+ * Returns a newly allocated string which the caller must free, NULL on failure.
+ * "~user/..." is not supported and is returned unchanged.
+ */
+char *path_expand_homedir(const char *path);
+
+/**
  * @brief Return the final path component, or an empty string for NULL input.
  */
 const char *path_basename(const char *path);
