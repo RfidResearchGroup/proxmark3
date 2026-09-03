@@ -887,6 +887,7 @@ typedef struct {
 #define BWM_OTA_ACTION_BEGIN 0x00
 #define BWM_OTA_ACTION_WRITE 0x01
 #define BWM_OTA_ACTION_END   0x02
+#define BWM_OTA_ACTION_ABORT 0x03
 // Max firmware bytes per WRITE action. Bounded by the BWM app_com UART link's
 // internal frame buffer (bwm_wifi.c: bwm_cmd()'s `frame[8 + 256]`), which is
 // far smaller than the USB link's max_cmd_data_size - do not derive this from
