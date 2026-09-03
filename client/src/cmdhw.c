@@ -2294,7 +2294,7 @@ static int CmdPM5QCTest(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-void printprogress(long sent, long total, int style) {
+static void printprogress(long sent, long total, int style) {
     int percent = (int)((double)sent / total * 100);
     
     // Use \r at the start to move the cursor back to the beginning of the line
@@ -2348,7 +2348,7 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
             return PM3_EFAILED;
         }
         sent += n;
-        printprogress(sent, fwlen, STYLE_MIXED);
+        print_progress(sent, fwlen, STYLE_MIXED);
 
         // Pace the stream. The client->AT32 hop (USB/BLE) is far faster than the
         // AT32->ESP UART, so back-to-back writes can outrun the UART and drop a
