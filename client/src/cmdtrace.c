@@ -686,22 +686,18 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             if (j == 0) {
 
                 // handle partial bytes.  The parity array[0] is used to store number of left over bits from NBYTES
-                // This part prints the number of bits in the trace entry for hitag.
+                // The bit count now goes in the CRC column, which is unused for
+                // hitag, so the data field holds nothing but data.
                 uint8_t nbits = parityBytes[0];
 
                 // only apply this to lesser than one byte
+                // One leading space, so the hex lines up under the "Data" header.
                 if (data_len == 1 && nbits != 0) {
-
-                    snprintf(line[0], 120, "%2u: %02X  ", nbits, frame[0] >> (8 - nbits));
-
+                    snprintf(line[0], 120, " %02X  ", frame[0] >> (8 - nbits));
                 } else {
-                    if (nbits == 0) {
-                        snprintf(line[0], 120, "%2u: %02X  ", (uint16_t)(data_len * 8), frame[0]);
-                    } else {
-                        snprintf(line[0], 120, "%2u: %02X  ", (uint16_t)(((data_len - 1) * 8) + nbits), frame[0]);
-                    }
+                    snprintf(line[0], 120, " %02X  ", frame[0]);
                 }
-                offset = 4;
+                offset = 1;
 
             } else {
                 snprintf(line[j / 18] + ((j % 18) * 4) + offset, 120, "%02X  ", frame[j]);
@@ -778,6 +774,29 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         [TRACE_CRC_B_OK] = _GREEN_("B ok"),
     };
     const char *crc = crcstrings[crcStatus];
+
+    // Hitag carries no CRC, so the column shows the frame's bit count instead.
+    //
+    // It used to be printed as a "%2u: " prefix inside the data field, which cost
+    // four columns of every Hitag row and pushed the hex out of line with every
+    // other protocol.  The CRC column is exactly four wide and otherwise blank
+    // here, so the count fits with nothing displaced.
+    char hitag_nbits[8] = {0};
+    if ((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAG2) ||
+            (protocol == PROTO_HITAGS) || (protocol == PROTO_HITAGU)) {
+
+        uint8_t leftover = parityBytes[0];
+        uint16_t total;
+        if ((data_len == 1) && (leftover != 0)) {
+            total = leftover;
+        } else if (leftover == 0) {
+            total = (uint16_t)(data_len * 8);
+        } else {
+            total = (uint16_t)(((data_len - 1) * 8) + leftover);
+        }
+        snprintf(hitag_nbits, sizeof(hitag_nbits), "%3u ", total);
+        crc = hitag_nbits;
+    }
 
     // mark short bytes (less than 8 Bit + Parity)
     if (protocol == ISO_14443A ||
@@ -903,6 +922,37 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     int str_padder = 72;
     int num_lines = MIN((data_len - 1) / TRACE_MAX_HEX_BYTES + 1, TRACE_MAX_HEX_BYTES);
 
+    // Relative timing is shown as its own row, not as a pair of columns.
+    //
+    // It used to rename Start/End to Gap/Duration, which meant the two display
+    // modes could not be read the same way - the same column held an absolute
+    // timestamp in one and an interval in the other.  A frame delay row keeps the
+    // timestamps meaning one thing everywhere and puts the interval where the
+    // wait-cycle annotation already puts it, between the frames it separates.
+    if (prev_eot && (previous_end_of_transmission_timestamp != hdr->timestamp)) {
+
+        uint32_t fdt = hdr->timestamp - previous_end_of_transmission_timestamp;
+
+        // Carry the column rules through, so the row does not break the table.
+        //
+        // The width has to be corrected for the colour escapes, which take up
+        // bytes that %-*s counts but the terminal does not draw - the same
+        // adjustment the CRC column already makes below.
+        char fdt_txt[160] = {0};
+        int visible;
+        if (use_us) {
+            visible = snprintf(NULL, 0, " Frame Delay Time %.1f", (float)fdt / 13.56);
+            snprintf(fdt_txt, sizeof(fdt_txt), " Frame Delay Time " _CYAN_("%.1f"), (float)fdt / 13.56);
+        } else {
+            visible = snprintf(NULL, 0, " Frame Delay Time %u", fdt);
+            snprintf(fdt_txt, sizeof(fdt_txt), " Frame Delay Time " _CYAN_("%u"), fdt);
+        }
+
+        int fdt_pad = str_padder + (int)strlen(fdt_txt) - visible;
+        PrintAndLogEx(NORMAL, " %10s | %10s | %s |%-*s | %s| %s",
+                      "", "", "   ", fdt_pad, fdt_txt, "    ", "");
+    }
+
     for (int j = 0; j < num_lines ; j++) {
 
         bool last_line = (j == num_lines - 1);
@@ -913,10 +963,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
             uint32_t time1 = hdr->timestamp - first_hdr->timestamp;
             uint32_t time2 = end_of_transmission_timestamp - first_hdr->timestamp;
-            if (prev_eot) {
-                time1 = hdr->timestamp - previous_end_of_transmission_timestamp;
-                time2 = duration;
-            }
 
             // ansi codes addes extra chars that needs to be taken in consideration.
             if (last_line && (memcmp(crc, "\x20\x20\x20\x20", 4) != 0) && g_session.supports_colors && markCRCBytes) {
@@ -1107,18 +1153,28 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             time2 = next_hdr->timestamp - end_of_transmission_timestamp;
         }
 
+        // Same column rules as a data row, so the table is not broken.  The pad
+        // is corrected for the colour escapes, which %-*s counts but the terminal
+        // does not draw.
+        uint32_t fdt = next_hdr->timestamp - end_of_transmission_timestamp;
+        char fdt_txt[160] = {0};
+        int visible;
         if (use_us) {
-            PrintAndLogEx(NORMAL, " %10.1f | %10.1f | %s |Frame Delay Time " _CYAN_("%.1f"),
-                          (float)time1 / 13.56,
-                          (float)time2 / 13.56,
-                          "   ",
-                          (float)(next_hdr->timestamp - end_of_transmission_timestamp) / 13.56);
+            visible = snprintf(NULL, 0, " Frame Delay Time %.1f", (float)fdt / 13.56);
+            snprintf(fdt_txt, sizeof(fdt_txt), " Frame Delay Time " _CYAN_("%.1f"), (float)fdt / 13.56);
         } else {
-            PrintAndLogEx(NORMAL, " %10u | %10u | %s |Frame Delay Time " _CYAN_("%d"),
-                          time1,
-                          time2,
-                          "   ",
-                          (next_hdr->timestamp - end_of_transmission_timestamp));
+            visible = snprintf(NULL, 0, " Frame Delay Time %u", fdt);
+            snprintf(fdt_txt, sizeof(fdt_txt), " Frame Delay Time " _CYAN_("%u"), fdt);
+        }
+        int fdt_pad = 72 + (int)strlen(fdt_txt) - visible;
+
+        if (use_us) {
+            PrintAndLogEx(NORMAL, " %10.1f | %10.1f | %s |%-*s | %s| %s",
+                          (float)time1 / 13.56, (float)time2 / 13.56, "   ",
+                          fdt_pad, fdt_txt, "    ", "");
+        } else {
+            PrintAndLogEx(NORMAL, " %10u | %10u | %s |%-*s | %s| %s",
+                          time1, time2, "   ", fdt_pad, fdt_txt, "    ", "");
         }
     }
 
@@ -1335,7 +1391,7 @@ int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol) 
         arg_lit0("1", "buffer", "use data from trace buffer"),
         arg_lit0(NULL, "frame", "show frame delay times"),
         arg_lit0("c", NULL, "mark CRC bytes"),
-        arg_lit0("r", NULL, "show relative times (gap and duration)"),
+        arg_lit0("r", NULL, "show frame delay times relative to the previous transfer"),
         arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
         "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
@@ -1390,7 +1446,7 @@ int CmdTraceList(const char *Cmd) {
         arg_lit0("1", "buffer", "use data from trace buffer"),
         arg_lit0(NULL, "frame", "show frame delay times"),
         arg_lit0("c", NULL, "mark CRC bytes"),
-        arg_lit0("r", NULL, "show relative times (gap and duration)"),
+        arg_lit0("r", NULL, "show frame delay times relative to the previous transfer"),
         arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
         "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
@@ -1404,6 +1460,13 @@ int CmdTraceList(const char *Cmd) {
     bool show_wait_cycles = arg_get_lit(ctx, 2);
     bool mark_crc = arg_get_lit(ctx, 3);
     bool use_relative = arg_get_lit(ctx, 4);
+
+    // Both insert a Frame Delay Time row, so together they print it twice.
+    if (show_wait_cycles && use_relative) {
+        PrintAndLogEx(ERR, "Select only one of `--frame` and `-r`, they both show frame delay times");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
     bool use_us = arg_get_lit(ctx, 5);
     bool show_hex = arg_get_lit(ctx, 6);
 
@@ -1488,7 +1551,7 @@ int CmdTraceList(const char *Cmd) {
     } else {
 
         if (use_relative) {
-            PrintAndLogEx(INFO, _YELLOW_("gap") " = time between transfers. " _YELLOW_("duration") " = duration of data transfer. " _YELLOW_("src") " = source of transfer.");
+            PrintAndLogEx(INFO, _YELLOW_("start") " = start of start frame. " _YELLOW_("end") " = end of frame. " _YELLOW_("src") " = source of transfer. A " _YELLOW_("Frame Delay Time") " row shows the gap between transfers.");
         } else {
             PrintAndLogEx(INFO, _YELLOW_("start") " = start of start frame. " _YELLOW_("end") " = end of frame. " _YELLOW_("src") " = source of transfer.");
         }
@@ -1617,10 +1680,20 @@ int CmdTraceList(const char *Cmd) {
         }
 
         PrintAndLogEx(NORMAL, "");
+
+        // Hitag has no CRC; that column carries the frame's bit count instead,
+        // so label it for what it actually holds.  Both headings are three
+        // characters wide, which keeps the rule line below unchanged.
+        const char *col5 = "CRC";
+        if ((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAG2) ||
+                (protocol == PROTO_HITAGS) || (protocol == PROTO_HITAGU)) {
+            col5 = "Bit";
+        }
+
         if (use_relative) {
-            PrintAndLogEx(NORMAL, "        Gap |   Duration | Src | Data (! denotes parity error, ' denotes short bytes)                    | CRC | Annotation");
+            PrintAndLogEx(NORMAL, "      Start |        End | Src | Data (! denotes parity error, ' denotes short bytes)                    | %s | Annotation", col5);
         } else {
-            PrintAndLogEx(NORMAL, "      Start |        End | Src | Data (! denotes parity error)                                           | CRC | Annotation");
+            PrintAndLogEx(NORMAL, "      Start |        End | Src | Data (! denotes parity error)                                           | %s | Annotation", col5);
         }
         PrintAndLogEx(NORMAL, "------------+------------+-----+-------------------------------------------------------------------------+-----+--------------------");
 
