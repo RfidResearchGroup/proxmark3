@@ -79,6 +79,8 @@ int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out);
 #ifndef BWM_OTA_BAUD
 #define BWM_OTA_BAUD   460800
 #endif
+#define BWM_CMD_GET_VERSION_INFO   1000   // resp: running firmware version string
+int bwm_esp_get_version(uint8_t *buf, uint16_t *buflen);
 int bwm_esp_ota_begin(uint32_t total_size);
 int bwm_esp_ota_write(const uint8_t *data, uint16_t len);
 int bwm_esp_ota_end(void);
