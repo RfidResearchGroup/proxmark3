@@ -2356,9 +2356,14 @@ static int CmdBWMUpgrade(const char *Cmd) {
         memcpy(buf + 1, fw + sent, n);
         clearCommandBuffer();
         SendCommandNG(CMD_PM5_BWM_ESP_OTA, buf, (uint16_t)(n + 1));
-        if ((WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 12000) == false) || (resp.status != PM3_SUCCESS)) {
+        bool got = WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 12000);
+        if (!got || resp.status != PM3_SUCCESS) {
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(FAILED, "OTA write failed at offset %zu", sent);
+            if (!got) {
+                PrintAndLogEx(FAILED, "OTA write failed at offset %zu (no response - link/BWM unresponsive)", sent);
+            } else {
+                PrintAndLogEx(FAILED, "OTA write failed at offset %zu (status %d)", sent, resp.status);
+            }
             free(buf);
             free(fw);
             return PM3_EFAILED;
