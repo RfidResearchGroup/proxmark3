@@ -3866,25 +3866,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
 #ifdef WITH_BWM_STATUS
-        case CMD_PM5_BWM_ESP_OTA: {
-            uint8_t action = packet->data.asBytes[0];
-            int ret;
-            switch (action) {
-                case BWM_OTA_ACTION_BEGIN:
-                    ret = bwm_esp_ota_begin(*(uint32_t *)(packet->data.asBytes + 1));
-                    break;
-                case BWM_OTA_ACTION_WRITE:
-                    ret = bwm_esp_ota_write(packet->data.asBytes + 1, packet->length - 1);
-                    break;
-                case BWM_OTA_ACTION_END:
-                    ret = bwm_esp_ota_end();
-                    break;
-                default:
-                    ret = PM3_EINVARG;
-            }
-            reply_ng(CMD_PM5_BWM_ESP_OTA, ret, NULL, 0);
-            break;
-        }        
         case CMD_PM5_BWM_SET_VCHG: {
             // Set the AW32001E charge-voltage target (REG04 VBAT_REG).
             // Payload: optional uint16 mV (LE); absent -> default.
