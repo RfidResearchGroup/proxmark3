@@ -314,6 +314,11 @@ int bwm_esp_ota_begin(uint32_t total_size) {
     uint8_t off = 0;
     (void)bwm_cmd(BWM_CMD_LOG_FORWARD_ENABLE, &off, 1, NULL, NULL, 500);
 
+    // Drop the AT32<->ESP link to a slow, forgiving baud for the transfer. An OTA
+    // is one-shot so speed is irrelevant, and 921600 is marginal against the
+    // flash-write / BLE contention that drops the odd frame -> random timeouts.
+    (void)bwm_fwd_negotiate_baud(BWM_OTA_BAUD);
+
     uint8_t p[4] = {
         (uint8_t)(total_size & 0xFF),         (uint8_t)((total_size >> 8) & 0xFF),
         (uint8_t)((total_size >> 16) & 0xFF), (uint8_t)((total_size >> 24) & 0xFF)
@@ -331,11 +336,22 @@ int bwm_esp_ota_write(const uint8_t *data, uint16_t len) {
 }
 
 int bwm_esp_ota_end(void) {
+    // OTA_END goes out at the slow OTA baud (both ends still there); only after it
+    // do we restore the fast link and log forwarding (both set in _begin).
     int r = bwm_cmd(BWM_CMD_OTA_END, NULL, 0, NULL, NULL, 20000);
-    // Restore log forwarding (silenced for the OTA in bwm_esp_ota_begin).
+    (void)bwm_fwd_negotiate_baud(BWM_UART_BAUD_TARGET);
     uint8_t on = 1;
     (void)bwm_cmd(BWM_CMD_LOG_FORWARD_ENABLE, &on, 1, NULL, NULL, 500);
     return r;
+}
+
+int bwm_esp_ota_abort(void) {
+    // OTA gave up mid-transfer: restore the fast link + logs so the module is
+    // usable again. The ESP's incomplete OTA state is discarded by the next BEGIN.
+    (void)bwm_fwd_negotiate_baud(BWM_UART_BAUD_TARGET);
+    uint8_t on = 1;
+    (void)bwm_cmd(BWM_CMD_LOG_FORWARD_ENABLE, &on, 1, NULL, NULL, 500);
+    return PM3_SUCCESS;
 }
 
 int bwm_esp_reboot(void) {
