@@ -2440,7 +2440,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
         // (that is what drops the finalize ack over BLE). Just wait for it to come
         // back and re-link, then confirm by version.
         PrintAndLogEx(INFO, "BWM rebooting into the new image (link drops briefly)...");
-        msleep(8000);   // reboot + re-negotiate baud + re-link
+        msleep(10000);   // reboot + re-negotiate baud + re-link
 
         char ver_after[64] = {0};
         bool have_after = (bwm_get_version(ver_after, sizeof(ver_after)) == PM3_SUCCESS);
@@ -2462,7 +2462,6 @@ static int CmdBWMUpgrade(const char *Cmd) {
         // Could not re-read the version (link dropped on reboot, common over BLE).
         // All data was uploaded, so treat as done and let the user confirm.
         PrintAndLogEx(WARNING, "Could not re-read BWM version after reboot (link dropped?)");
-        PrintAndLogEx(HINT, "Reconnect and run " _YELLOW_("hw status") " to confirm the version.");
         free(fw);
         return PM3_SUCCESS;
     }
