@@ -48,6 +48,7 @@
 #include "flash.h" // reboot to bootloader mode
 #include "proxgui.h"
 #include "graph.h" // for graph data
+#include "comms.h"
 
 #include "lua.h"
 
