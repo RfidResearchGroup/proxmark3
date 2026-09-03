@@ -65,4 +65,13 @@ int bwm_wifi_forward_down(void);
 #define BWM_WIFI_STATE_OFF           0xFF
 int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out);
 
+// ESP OTA over the BWM UART link (no header/soldering): drives the ESP's own
+// OTA commands to reflash a *working* BWM to a new ESP image.
+#define BWM_CMD_OTA_BEGIN   1800   // req: u32 total size
+#define BWM_CMD_OTA_WRITE   1801   // req: firmware chunk
+#define BWM_CMD_OTA_END     1802   // no payload: finalize + set boot partition
+int bwm_esp_ota_begin(uint32_t total_size);
+int bwm_esp_ota_write(const uint8_t *data, uint16_t len);
+int bwm_esp_ota_end(void);
+
 #endif
