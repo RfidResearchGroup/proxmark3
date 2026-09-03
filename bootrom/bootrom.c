@@ -423,7 +423,7 @@ static bool check_goto_flash_mode(void) {
         to_flash_mode = true;
         
         if (BOOTROM_BUTTON_HOLD_MS > 0) {
-            for (uint32_t ms = 0; ms < BOOTROM_BUTTON_HOLD_MS; ms++) {
+            for (int16_t ms = 0; ms < BOOTROM_BUTTON_HOLD_MS; ms++) {
                 if (BUTTON_PRESS() == false) {
                     to_flash_mode = false; // released too early, this was not a bootloader request
                     break;
