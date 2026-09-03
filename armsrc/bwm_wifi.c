@@ -130,11 +130,18 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
                             }
                             return PM3_SUCCESS;
                         }
-                        // a CMD_ERROR broadcast referencing our cmd -> failure.
-                        // (payload carries the failing cmd; treat any error report
-                        // that arrives while we wait as a failure of this step.)
-                        if (!is_resp && rcmd == BWM_CMD_CMD_ERROR) {
-                            return PM3_EFAILED;
+                        // CMD_ERROR broadcasts are type 8091 regardless of which
+                        // command failed - the failing command is only identified
+                        // by the first 2 bytes of the payload (DEV.md 4.6). Other
+                        // subsystems (WiFi/BLE/SNTP, etc.) can raise CMD_ERROR for
+                        // their own commands while we're waiting here; only treat
+                        // this as our failure if the embedded cmd actually matches.
+                        if (!is_resp && rcmd == BWM_CMD_CMD_ERROR && rlen >= 2) {
+                            uint16_t failed_cmd = (uint16_t)pbuf[0] | ((uint16_t)pbuf[1] << 8);
+                            if (failed_cmd == cmd) {
+                                return PM3_EFAILED;
+                            }
+                            // unrelated command's error - ignore, keep waiting
                         }
                         // otherwise: some other frame (e.g. a stray broadcast) - ignore
                     }
@@ -299,4 +306,12 @@ int bwm_esp_ota_write(const uint8_t *data, uint16_t len) {
 
 int bwm_esp_ota_end(void) {
     return bwm_cmd(BWM_CMD_OTA_END, NULL, 0, NULL, NULL, 20000);
+}
+
+int bwm_esp_reboot(void) {
+    // The ESP acks then calls esp_restart() - the ack itself may or may not
+    // make it back before the UART goes away, so treat a timeout here as a
+    // benign race, not a failure: the reboot was still requested.
+    int r = bwm_cmd(BWM_CMD_REBOOT, NULL, 0, NULL, NULL, 3000);
+    return (r == PM3_ETIMEOUT) ? PM3_SUCCESS : r;
 }
