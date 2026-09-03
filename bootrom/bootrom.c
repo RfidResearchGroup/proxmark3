@@ -385,8 +385,14 @@ static void flash_mode(void) {
     }
 }
 
-// Detect whether to enter flash mode. If the button is pressed for more than 2s,
-// or if the command is set to enter flash mode, or if the OS image entry point is invalid, then enter flash mode.
+// On PM5 the button is also the power button, so a press at power up is not by
+// itself a request for the bootloader and has to be qualified by a hold.
+#ifdef PM5
+#define BOOTROM_BUTTON_HOLD_MS  3000
+#else
+#define BOOTROM_BUTTON_HOLD_MS  0
+#endif
+
 static bool check_goto_flash_mode(void) {
     int common_area_present = 0;
     // Check if RESET is SRAM retention? if not, the content of g_common_area in RAM is not reliable, must to init.
@@ -401,28 +407,37 @@ static bool check_goto_flash_mode(void) {
         /* Common area not ok, initialize it */
         size_t i;
         /* Makeshift memset, no need to drag util.c into this */
-        for (i = 0; i < sizeof(g_common_area); i++)
+        for (i = 0; i < sizeof(g_common_area); i++) {
             ((char *)&g_common_area)[i] = 0;
+        }
 
         g_common_area.magic = COMMON_AREA_MAGIC;
         g_common_area.version = 1;
     }
     g_common_area.flags.bootrom_present = 1;
 
-    // Handle the event of button startup separately. (Pressing the button is no longer considered as necessary to enter BOOT.)
+    // Handle the event of button startup separately.
     bool to_flash_mode = false;
-    if (!g_common_area.flags.button_pressed && BUTTON_PRESS()) {
-        uint32_t time_counter = 0;
+    if (g_common_area.flags.button_pressed == 0 && BUTTON_PRESS()) {
+
         to_flash_mode = true;
-        while (time_counter++ < 3000) { // It is necessary to press and hold the button for more than 2s before entering BOOT.
-            if (!BUTTON_PRESS()) {
-                to_flash_mode = false; // If the button is not pressed for more than 2s, exit BOOT.
-                break;
+        
+        if (BOOTROM_BUTTON_HOLD_MS > 0) {
+            for (uint32_t ms = 0; ms < BOOTROM_BUTTON_HOLD_MS; ms++) {
+                if (BUTTON_PRESS() == false) {
+                    to_flash_mode = false; // released too early, this was not a bootloader request
+                    break;
+                }
+                SpinDelayUs(1000); // 1ms
             }
-            SpinDelayUs(1000); // 1ms
         }
-    } else if ((g_common_area.command == COMMON_AREA_COMMAND_ENTER_FLASH_MODE) || (*_osimage_entry == 0xffffffffU)) {
-        to_flash_mode = true;
+    }
+
+    // Checked whatever the button did
+    if (!to_flash_mode) {
+        if ((g_common_area.command == COMMON_AREA_COMMAND_ENTER_FLASH_MODE) || (*_osimage_entry == 0xffffffffU)) {
+            to_flash_mode = true;
+        }
     }
 
     return to_flash_mode;
@@ -456,10 +471,12 @@ void BootROM(void) {
     // Initialize all system clocks
     ConfigSystemClocks();
 
+    // Light C before the decision
+    LED_C_ON();
+
     // Check whether to enter the FLASH mode.
     const bool to_flash_mode = check_goto_flash_mode();
 
-    LED_C_ON();
     LED_A_ON();
 
     // Keep running in BOOT or jump to App image?
