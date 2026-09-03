@@ -3927,6 +3927,40 @@ static void PacketReceived(PacketCommandNG *packet) {
 #endif
             break;
         }
+        case CMD_PM5_BWM_ESP_OTA: {
+            // ESP32 OTA over the existing BWM app_com link (see bwm_wifi.c).
+            // Payload: [action:u8] + action-specific data.
+            //   BEGIN: u32 LE total image size
+            //   WRITE: firmware chunk
+            //   END:   (no payload) finalize + set boot partition
+#if defined(WITH_BWM_FORWARD)
+            uint8_t action = packet->data.asBytes[0];
+            int res;
+            switch (action) {
+                case BWM_OTA_ACTION_BEGIN: {
+                    uint32_t total_size = 0;
+                    if (packet->length >= 5) {
+                        memcpy(&total_size, packet->data.asBytes + 1, sizeof(total_size));
+                    }
+                    res = bwm_esp_ota_begin(total_size);
+                    break;
+                }
+                case BWM_OTA_ACTION_WRITE:
+                    res = bwm_esp_ota_write(packet->data.asBytes + 1, packet->length - 1);
+                    break;
+                case BWM_OTA_ACTION_END:
+                    res = bwm_esp_ota_end();
+                    break;
+                default:
+                    res = PM3_EINVARG;
+                    break;
+            }
+            reply_ng(CMD_PM5_BWM_ESP_OTA, res, NULL, 0);
+#else
+            reply_ng(CMD_PM5_BWM_ESP_OTA, PM3_ENOTIMPL, NULL, 0);
+#endif
+            break;
+        }
         case CMD_PM5_BWM_AUTOOFF: {
             // Toggle automatic power-off on USB unplug (runtime, default on).
             // Payload: 1 byte, non-zero = enable (default), zero = disable.
