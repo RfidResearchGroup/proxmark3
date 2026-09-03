@@ -2361,7 +2361,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
             return PM3_EFAILED;
         }
         sent += n;
-        PrintAndLogEx(INPLACE, "   %zu / %zu bytes (%zu%%)", sent, fwlen, (sent * 100) / fwlen);
+        print_progress(sent, fwlen, STYLE_MIXED);
     }
     free(buf);
     PrintAndLogEx(NORMAL, "");
