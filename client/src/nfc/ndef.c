@@ -610,7 +610,7 @@ static const ndef_wifi_type_t wifi_crypt_types[] = {
     {"AES/TKIP", {0x00, 0x0C}}
 };
 
-static const char *ndef_wifi_crypt_lookup(uint8_t *d) {
+static const char *ndef_wifi_crypt_lookup(const uint8_t *d) {
     for (int i = 0; i < ARRAYLEN(wifi_crypt_types); ++i) {
         if (memcmp(d, wifi_crypt_types[i].bytes, 2) == 0) {
             return wifi_crypt_types[i].description;
@@ -629,7 +629,7 @@ static const ndef_wifi_type_t wifi_auth_types[] = {
     {"WPA/WPA2 PERSONAL", {0x00, 0x22}}
 };
 
-static const char *ndef_wifi_auth_lookup(uint8_t *d) {
+static const char *ndef_wifi_auth_lookup(const uint8_t *d) {
     for (int i = 0; i < ARRAYLEN(wifi_auth_types); ++i) {
         if (memcmp(d, wifi_auth_types[i].bytes, 2) == 0) {
             return wifi_auth_types[i].description;
@@ -638,6 +638,331 @@ static const char *ndef_wifi_auth_lookup(uint8_t *d) {
     return "";
 }
 
+static bool ndef_wifi_print_attribute_length(const char *name, size_t len, size_t min_len, size_t max_len, size_t multiple) {
+    bool valid = len >= min_len && len <= max_len;
+    if (multiple > 1) {
+        valid = valid && (len % multiple == 0);
+    }
+
+    if (valid) {
+        return true;
+    }
+
+    if (min_len == max_len) {
+        PrintAndLogEx(WARNING, "%s has invalid length %zu (expected %zu bytes)", name, len, min_len);
+    } else if (multiple > 1) {
+        PrintAndLogEx(WARNING, "%s has invalid length %zu (expected %zu-%zu bytes in multiples of %zu)",
+                      name, len, min_len, max_len, multiple);
+    } else {
+        PrintAndLogEx(WARNING, "%s has invalid length %zu (expected %zu-%zu bytes)", name, len, min_len, max_len);
+    }
+    return false;
+}
+
+static void ndef_wifi_print_string(const char *label, const uint8_t *value, size_t len) {
+    while (len > 0 && value[len - 1] == 0) {
+        len--;
+    }
+    PrintAndLogEx(INFO, "%s %s", label, sprint_hex_ascii(value, len));
+}
+
+static void ndef_wifi_print_device_type(const uint8_t *value) {
+    PrintAndLogEx(INFO, "  Category...... %u", (unsigned)MemBeToUint2byte(value));
+    PrintAndLogEx(INFO, "  OUI........... %s", sprint_hex(value + 2, 4));
+    PrintAndLogEx(INFO, "  Sub-category.. %u", (unsigned)MemBeToUint2byte(value + 6));
+}
+
+static void ndef_wifi_decode_oob_password(const uint8_t *value, size_t len) {
+    if (len < 22) {
+        ndef_wifi_print_attribute_length("OOB Device Password", len, 22, 54, 1);
+        PrintAndLogEx(INFO, "OOB Password.... %s", sprint_hex(value, len));
+        return;
+    }
+
+    uint16_t password_id = MemBeToUint2byte(value + 20);
+    size_t password_len = len - 22;
+
+    if (password_id == 0x0007) {
+        if (password_len != 0) {
+            PrintAndLogEx(WARNING, "OOB Device Password ID 0x0007 requires a zero-length password");
+        }
+    } else if (password_len < 16 || password_len > 32) {
+        PrintAndLogEx(WARNING, "OOB Device Password has invalid password length %zu (expected 16-32 bytes)", password_len);
+    }
+
+    PrintAndLogEx(INFO, "OOB Password");
+    PrintAndLogEx(INFO, "  Public key hash %s", sprint_hex(value, 20));
+    PrintAndLogEx(INFO, "  Password ID... 0x%04X", (unsigned)password_id);
+    PrintAndLogEx(INFO, "  Password....... %s", sprint_hex(value + 22, password_len));
+}
+
+static int ndef_wifi_decode_wfa_vendor_extension(const uint8_t *value, size_t len) {
+    if (!ndef_wifi_print_attribute_length("Vendor Extension", len, 3, 1024, 1) && len < 3) {
+        PrintAndLogEx(INFO, "Vendor Ext...... %s", sprint_hex(value, len));
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(INFO, "Vendor ID....... %s", sprint_hex(value, 3));
+    if (memcmp(value, "\x00\x37\x2A", 3) != 0) {
+        PrintAndLogEx(INFO, "Vendor data..... %s", sprint_hex(value + 3, len - 3));
+        return PM3_SUCCESS;
+    }
+    if (len == 3) {
+        PrintAndLogEx(WARNING, "WFA Vendor Extension contains no subelements");
+    }
+
+    size_t pos = 3;
+    while (pos < len) {
+        if (len - pos < 2) {
+            PrintAndLogEx(WARNING, "Malformed WFA vendor subelement header at offset %zu", pos);
+            return PM3_ESOFT;
+        }
+
+        uint8_t type = value[pos++];
+        uint8_t sub_len = value[pos++];
+        if (sub_len > len - pos) {
+            PrintAndLogEx(WARNING, "WFA vendor subelement 0x%02X exceeds the Vendor Extension", (unsigned)type);
+            return PM3_ESOFT;
+        }
+
+        const uint8_t *sub_value = value + pos;
+        switch (type) {
+            case 0x00:
+                if (ndef_wifi_print_attribute_length("WFA Version2", sub_len, 1, 1, 1)) {
+                    PrintAndLogEx(INFO, "WFA Version2.... %u.%u",
+                                  (unsigned)(sub_value[0] >> 4), (unsigned)(sub_value[0] & 0x0F));
+                } else {
+                    PrintAndLogEx(INFO, "WFA Version2.... %s", sprint_hex(sub_value, sub_len));
+                }
+                break;
+            case 0x01:
+                if (ndef_wifi_print_attribute_length("AuthorizedMACs", sub_len, 0, 30, 6)) {
+                    for (size_t i = 0; i < sub_len; i += 6) {
+                        PrintAndLogEx(INFO, "Authorized MAC. %s", sprint_hex(sub_value + i, 6));
+                    }
+                } else {
+                    PrintAndLogEx(INFO, "AuthorizedMACs.. %s", sprint_hex(sub_value, sub_len));
+                }
+                break;
+            case 0x02:
+                if (ndef_wifi_print_attribute_length("Network Key Shareable", sub_len, 1, 1, 1)) {
+                    PrintAndLogEx(INFO, "Key Shareable... %s", sub_value[0] ? "true" : "false");
+                } else {
+                    PrintAndLogEx(INFO, "Key Shareable... %s", sprint_hex(sub_value, sub_len));
+                }
+                break;
+            case 0x03:
+                if (ndef_wifi_print_attribute_length("Request to Enroll", sub_len, 1, 1, 1)) {
+                    PrintAndLogEx(INFO, "Request Enroll.. %s", sub_value[0] ? "true" : "false");
+                } else {
+                    PrintAndLogEx(INFO, "Request Enroll.. %s", sprint_hex(sub_value, sub_len));
+                }
+                break;
+            case 0x04:
+                if (ndef_wifi_print_attribute_length("Settings Delay Time", sub_len, 1, 1, 1)) {
+                    PrintAndLogEx(INFO, "Settings Delay.. %u", (unsigned)sub_value[0]);
+                } else {
+                    PrintAndLogEx(INFO, "Settings Delay.. %s", sprint_hex(sub_value, sub_len));
+                }
+                break;
+            case 0x05:
+                if (ndef_wifi_print_attribute_length("Registrar Configuration Methods", sub_len, 2, 2, 1)) {
+                    PrintAndLogEx(INFO, "Config Methods.. 0x%04X", (unsigned)MemBeToUint2byte(sub_value));
+                } else {
+                    PrintAndLogEx(INFO, "Config Methods.. %s", sprint_hex(sub_value, sub_len));
+                }
+                break;
+            case 0x06:
+            case 0x07:
+                ndef_wifi_print_attribute_length("EasyMesh reserved subelement", sub_len, 1, 1, 1);
+                PrintAndLogEx(INFO, "EasyMesh 0x%02X.. %s", (unsigned)type, sprint_hex(sub_value, sub_len));
+                break;
+            case 0x08:
+                ndef_wifi_print_attribute_length("EasyMesh reserved subelement", sub_len, 2, 2, 1);
+                PrintAndLogEx(INFO, "EasyMesh 0x08.. %s", sprint_hex(sub_value, sub_len));
+                break;
+            default:
+                PrintAndLogEx(INFO, "WFA subelem 0x%02X %s", (unsigned)type, sprint_hex(sub_value, sub_len));
+                break;
+        }
+
+        pos += sub_len;
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int ndefDecodeMime_wifi_wsc_attributes(const uint8_t *payload, size_t payload_len, uint8_t depth) {
+    size_t pos = 0;
+
+    while (pos < payload_len) {
+        if (payload_len - pos < 4) {
+            PrintAndLogEx(WARNING, "Malformed WSC attribute header at offset %zu", pos);
+            return PM3_ESOFT;
+        }
+
+        uint16_t type = MemBeToUint2byte(payload + pos);
+        uint16_t len = MemBeToUint2byte(payload + pos + 2);
+        pos += 4;
+
+        if (len > payload_len - pos) {
+            PrintAndLogEx(WARNING, "WSC attribute 0x%04X exceeds the payload", (unsigned)type);
+            return PM3_ESOFT;
+        }
+
+        const uint8_t *value = payload + pos;
+        // See Table 28, Wi-Fi Protected Setup Specification, Version 2.0.10
+        switch (type) {
+            case 0x1001:
+                if (ndef_wifi_print_attribute_length("AP Channel", len, 2, 2, 1)) {
+                    PrintAndLogEx(INFO, "AP Channel...... %u", (unsigned)MemBeToUint2byte(value));
+                } else {
+                    PrintAndLogEx(INFO, "AP Channel...... %s", sprint_hex(value, len));
+                }
+                break;
+            case 0x1003:
+                if (ndef_wifi_print_attribute_length("Authentication Type", len, 2, 2, 1)) {
+                    PrintAndLogEx(INFO, "Auth type....... %s ( " _YELLOW_("%s") " )",
+                                  sprint_hex(value, len), ndef_wifi_auth_lookup(value));
+                } else {
+                    PrintAndLogEx(INFO, "Auth type....... %s", sprint_hex(value, len));
+                }
+                break;
+            case 0x100E:
+                PrintAndLogEx(INFO, "Credential...... %u bytes", (unsigned)len);
+                if (depth != 0) {
+                    PrintAndLogEx(WARNING, "A Credential must not contain another Credential");
+                    return PM3_ESOFT;
+                }
+                if (ndefDecodeMime_wifi_wsc_attributes(value, len, depth + 1) != PM3_SUCCESS) {
+                    return PM3_ESOFT;
+                }
+                break;
+            case 0x100F:
+                if (ndef_wifi_print_attribute_length("Encryption Type", len, 2, 2, 1)) {
+                    PrintAndLogEx(INFO, "Crypt type...... %s ( " _YELLOW_("%s") " )",
+                                  sprint_hex(value, len), ndef_wifi_crypt_lookup(value));
+                } else {
+                    PrintAndLogEx(INFO, "Crypt type...... %s", sprint_hex(value, len));
+                }
+                break;
+            case 0x1011:
+                ndef_wifi_print_attribute_length("Device Name", len, 0, 32, 1);
+                ndef_wifi_print_string("Device Name.....", value, len);
+                break;
+            case 0x1020:
+                ndef_wifi_print_attribute_length("MAC Address", len, 6, 6, 1);
+                PrintAndLogEx(INFO, "MAC Address..... %s", sprint_hex(value, len));
+                break;
+            case 0x1021:
+                ndef_wifi_print_attribute_length("Manufacturer", len, 0, 64, 1);
+                ndef_wifi_print_string("Manufacturer....", value, len);
+                break;
+            case 0x1023:
+                ndef_wifi_print_attribute_length("Model Name", len, 0, 32, 1);
+                ndef_wifi_print_string("Model Name......", value, len);
+                break;
+            case 0x1024:
+                ndef_wifi_print_attribute_length("Model Number", len, 0, 32, 1);
+                ndef_wifi_print_string("Model Number....", value, len);
+                break;
+            case 0x1026:
+                if (ndef_wifi_print_attribute_length("Network Index", len, 1, 1, 1)) {
+                    PrintAndLogEx(INFO, "Network Index... %u", (unsigned)value[0]);
+                } else {
+                    PrintAndLogEx(INFO, "Network Index... %s", sprint_hex(value, len));
+                }
+                break;
+            case 0x1027:
+                ndef_wifi_print_attribute_length("Network Key", len, 0, 64, 1);
+                ndef_wifi_print_string("Network key.....", value, len);
+                break;
+            case 0x102C:
+                ndef_wifi_decode_oob_password(value, len);
+                break;
+            case 0x103C:
+                if (ndef_wifi_print_attribute_length("RF Bands", len, 1, 1, 1)) {
+                    PrintAndLogEx(INFO, "RF Bands........ 0x%02X", (unsigned)value[0]);
+                    if (value[0] & 0x01) {
+                        PrintAndLogEx(INFO, "                 " _YELLOW_("2.4 GHz"));
+                    }
+                    if (value[0] & 0x02) {
+                        PrintAndLogEx(INFO, "                 " _YELLOW_("5 GHz"));
+                    }
+                    if (value[0] & 0x04) {
+                        PrintAndLogEx(INFO, "                 " _YELLOW_("60 GHz"));
+                    }
+                    if (value[0] & 0xF8) {
+                        PrintAndLogEx(WARNING, "RF Bands contains unknown bits 0x%02X", (unsigned)(value[0] & 0xF8));
+                    }
+                } else {
+                    PrintAndLogEx(INFO, "RF Bands........ %s", sprint_hex(value, len));
+                }
+                break;
+            case 0x1042:
+                ndef_wifi_print_attribute_length("Serial Number", len, 0, 32, 1);
+                ndef_wifi_print_string("Serial Number...", value, len);
+                break;
+            case 0x1045:
+                ndef_wifi_print_attribute_length("SSID", len, 0, 32, 1);
+                ndef_wifi_print_string("SSID............", value, len);
+                break;
+            case 0x1047:
+                ndef_wifi_print_attribute_length("UUID-E", len, 16, 16, 1);
+                PrintAndLogEx(INFO, "UUID-E.......... %s", sprint_hex(value, len));
+                break;
+            case 0x1048:
+                ndef_wifi_print_attribute_length("UUID-R", len, 16, 16, 1);
+                PrintAndLogEx(INFO, "UUID-R.......... %s", sprint_hex(value, len));
+                break;
+            case 0x1049:
+                if (ndef_wifi_decode_wfa_vendor_extension(value, len) != PM3_SUCCESS) {
+                    return PM3_ESOFT;
+                }
+                break;
+            case 0x104A:
+                if (ndef_wifi_print_attribute_length("Version", len, 1, 1, 1)) {
+                    PrintAndLogEx(INFO, "Version......... %u.%u",
+                                  (unsigned)(value[0] >> 4), (unsigned)(value[0] & 0x0F));
+                } else {
+                    PrintAndLogEx(INFO, "Version......... %s", sprint_hex(value, len));
+                }
+                break;
+            case 0x1054:
+                if (ndef_wifi_print_attribute_length("Primary Device Type", len, 8, 8, 1)) {
+                    PrintAndLogEx(INFO, "Primary Dev Type %s", sprint_hex(value, len));
+                    ndef_wifi_print_device_type(value);
+                } else {
+                    PrintAndLogEx(INFO, "Primary Dev Type %s", sprint_hex(value, len));
+                }
+                break;
+            case 0x1055:
+                if (ndef_wifi_print_attribute_length("Secondary Device Type List", len, 8, 128, 8)) {
+                    PrintAndLogEx(INFO, "Secondary Types. %u", (unsigned)(len / 8));
+                    for (size_t i = 0; i < len; i += 8) {
+                        ndef_wifi_print_device_type(value + i);
+                    }
+                } else {
+                    PrintAndLogEx(INFO, "Secondary Types. %s", sprint_hex(value, len));
+                }
+                break;
+            case 0x1061:
+                if (ndef_wifi_print_attribute_length("Key Provided Automatically", len, 1, 1, 1)) {
+                    PrintAndLogEx(INFO, "Key Automatic... %s", value[0] ? "true" : "false");
+                } else {
+                    PrintAndLogEx(INFO, "Key Automatic... %s", sprint_hex(value, len));
+                }
+                break;
+            default:
+                PrintAndLogEx(INFO, "WSC attr 0x%04X. %s", (unsigned)type, sprint_hex(value, len));
+                break;
+        }
+
+        pos += len;
+    }
+
+    return PM3_SUCCESS;
+}
 
 static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
     if (ndef->PayloadLen == 0) {
@@ -647,177 +972,7 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
 
     PrintAndLogEx(INFO, _CYAN_("NDEF Wifi Simple Config Record"));
     PrintAndLogEx(INFO, "Type............ " _YELLOW_("%.*s"), (int)ndef->TypeLen, ndef->Type);
-
-    size_t n = ndef->PayloadLen;
-    size_t pos = 0;
-    while (n) {
-
-        if (ndef->Payload[pos] != 0x10) {
-            n -= 1;
-            pos += 1;
-            continue;
-        }
-
-        // VERSION
-        if (memcmp(&ndef->Payload[pos], "\x10\x4A", 2) == 0) {
-            uint8_t len = 1;
-            PrintAndLogEx(INFO, "Version......... %s", sprint_hex(&ndef->Payload[pos + 2], len));
-            n -= 2;
-            n -= len;
-            pos += 2;
-            pos += len;
-        }
-
-        // CREDENTIAL
-        if (memcmp(&ndef->Payload[pos], "\x10\x0E", 2) == 0) {
-            //  10 0E 00 39
-            uint8_t len = 2;
-            PrintAndLogEx(INFO, "Credential...... %s", sprint_hex(&ndef->Payload[pos + 2], len));
-            n -= 2;
-            n -= len;
-            pos += 2;
-            pos += len;
-        }
-
-        // AUTH_TYPE
-        if (memcmp(&ndef->Payload[pos], "\x10\x03", 2) == 0) {
-            // 10 03 00 02 00 20
-            uint8_t len = 4;
-            PrintAndLogEx(INFO, "Auth type....... %s ( " _YELLOW_("%s")" )",
-                          sprint_hex(&ndef->Payload[pos + 2], len),
-                          ndef_wifi_auth_lookup(&ndef->Payload[pos + 2])
-                         );
-            n -= 2;
-            n -= len;
-            pos += 2;
-            pos += len;
-        }
-
-        // CRYPT_TYPE
-        if (memcmp(&ndef->Payload[pos], "\x10\x0F", 2) == 0) {
-            // 10 0F 00 02 00 04
-            uint8_t len = 4;
-            PrintAndLogEx(INFO, "Crypt type...... %s ( " _YELLOW_("%s")" )",
-                          sprint_hex(&ndef->Payload[pos + 2], len),
-                          ndef_wifi_crypt_lookup(&ndef->Payload[pos + 2])
-                         );
-            n -= 2;
-            n -= len;
-            pos += 2;
-            pos += len;
-        }
-
-        // MAC_ADDRESS
-        if (memcmp(&ndef->Payload[pos], "\x10\x20", 2) == 0) {
-            // 10 20 00 06 FF FF FF FF FF FF
-            uint8_t len = ndef->Payload[pos + 3];
-            PrintAndLogEx(INFO, "MAC Address..... %s", sprint_hex_ascii(&ndef->Payload[pos + 4], len));
-            n -= 4;
-            n -= len;
-            pos += 4;
-            pos += len;
-        }
-
-        // NETWORK_IDX - always set to 1, deprecated
-        if (memcmp(&ndef->Payload[pos], "\x10\x26", 2) == 0) {
-            // 10 26 00 01 01
-            uint8_t len = 3;
-            PrintAndLogEx(INFO, "Network Index... %s", sprint_hex(&ndef->Payload[pos + 2], len));
-            n -= 2;
-            n -= len;
-            pos += 2;
-            pos += len;
-        }
-
-        // NETWORK_KEY
-        if (memcmp(&ndef->Payload[pos], "\x10\x27", 2) == 0) {
-            // 10 27 00 10 74 72 69 73 74 61 6E 2D 73 70 72 69 6E 67 65 72
-            uint8_t len = ndef->Payload[pos + 3];
-            PrintAndLogEx(INFO, "Network key..... %s", sprint_hex_ascii(&ndef->Payload[pos + 4], len));
-            n -= 4;
-            n -= len;
-            pos += 4;
-            pos += len;
-        }
-        // NETWORK_NAME
-        if (memcmp(&ndef->Payload[pos], "\x10\x45", 2) == 0) {
-            // 10 45 00 06 69 63 65 73 71 6C
-            uint8_t len = ndef->Payload[pos + 3];
-            PrintAndLogEx(INFO, "Network Name.... %s", sprint_hex_ascii(&ndef->Payload[pos + 4], len));
-            n -= 4;
-            n -= len;
-            pos += 4;
-            pos += len;
-        }
-
-        // OOB_PASSWORD
-        // unknown the length.
-        if (memcmp(&ndef->Payload[pos], "\x10\x2C", 2) == 0) {
-            uint8_t len = 1;
-            PrintAndLogEx(INFO, "OOB Password......... %s", sprint_hex(&ndef->Payload[pos + 2], len));
-            n -= 2;
-            n -= len;
-            pos += 2;
-            pos += len;
-        }
-        // VENDOR_EXT
-        // unknown the length.
-        if (memcmp(&ndef->Payload[pos], "\x10\x49", 2) == 0) {
-            uint8_t len = 1;
-            PrintAndLogEx(INFO, "Vendor Ext......... %s", sprint_hex(&ndef->Payload[pos + 2], len));
-            n -= 2;
-            n -= len;
-            pos += 2;
-            pos += len;
-        }
-        // VENDOR_WFA
-        // unknown the length.
-        if (memcmp(&ndef->Payload[pos], "\x10\x30\x2A", 3) == 0) {
-            uint8_t len = 1;
-            PrintAndLogEx(INFO, "Vendor WFA......... %s", sprint_hex(&ndef->Payload[pos + 2], len));
-            n -= 2;
-            n -= len;
-            pos += 2;
-            pos += len;
-        }
-
-        // rf-bands
-        if (memcmp(&ndef->Payload[pos], "\x10\x3C", 2) == 0) {
-            uint8_t len = 3;
-
-            if (ndef->Payload[pos + 2 + 2] == 0x01) {
-                PrintAndLogEx(INFO, "RF Bands........ %s ( " _YELLOW_("2.4 GHZ")" )", sprint_hex(&ndef->Payload[pos + 2], len));
-            } else if (ndef->Payload[pos + 2 + 2] == 0x02) {
-                PrintAndLogEx(INFO, "RF Bands........ %s ( " _YELLOW_("5.0 GHZ")" )", sprint_hex(&ndef->Payload[pos + 2], len));
-            }
-
-            n -= 2;
-            n -= len;
-            pos += 2;
-            pos += len;
-        }
-    }
-
-    /*
-        ap-channel   0,  6
-    +        credential
-        device-name
-
-        manufacturer
-        model-name
-        model-number
-    +        oob-password
-        primary-device-type
-        secondary-device-type-list
-        serial-number
-        ssid
-        uuid-enrollee
-        uuid-registrar
-    +        vendor-extension
-        version-1
-     */
-
-    return PM3_SUCCESS;
+    return ndefDecodeMime_wifi_wsc_attributes(ndef->Payload, ndef->PayloadLen, 0);
 }
 static int ndefDecodeMime_wifi_p2p(NDEFHeader_t *ndef) {
     if (ndef->PayloadLen == 0) {
