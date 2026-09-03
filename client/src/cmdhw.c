@@ -2339,8 +2339,11 @@ static int CmdBWMUpgrade(const char *Cmd) {
     }
     PrintAndLogEx(INFO, "Uploading " _YELLOW_("%zu") " bytes of ESP firmware over the BWM link...", fwlen);
 
-    // WRITE chunks (one action byte + as much firmware as fits the negotiated frame)
-    size_t maxchunk = (size_t)g_conn.max_cmd_data_size - 1;
+    // WRITE chunks (one action byte + as much firmware as fits the negotiated frame).
+    // Bounded by BWM_OTA_CHUNK_MAX, not just the USB link's max_cmd_data_size: the
+    // firmware forwards each WRITE over the BWM app_com UART link, which has its
+    // own much smaller frame buffer (see bwm_wifi.c: bwm_cmd()).
+    size_t maxchunk = MIN((size_t)g_conn.max_cmd_data_size - 1, (size_t)BWM_OTA_CHUNK_MAX);
     uint8_t *buf = calloc(1, maxchunk + 1);
     if (buf == NULL) {
         free(fw);
