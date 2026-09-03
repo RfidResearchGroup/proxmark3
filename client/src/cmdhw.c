@@ -2294,13 +2294,9 @@ static int CmdPM5QCTest(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-void progressbar(long sent, long total, int style) {
+static void progressbar(long sent, long total, int style) {
     int percent = (int)((double)sent / total * 100);
-    
-    // Use \r at the start to move the cursor back to the beginning of the line
     printf("\rProgress: [%d%%]", percent); 
-    
-    // Force stdout to print immediately without waiting for a newline
     fflush(stdout); 
 }
 
