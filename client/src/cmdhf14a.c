@@ -1106,6 +1106,7 @@ int CmdHF14ASim(const char *Cmd) {
         bool ulauth_1a2_mirror;
     } PACKED payload;
 
+    memset(&payload, 0x00, sizeof(payload));
     payload.tagtype = tagtype;
     payload.flags = flags;
     payload.exitAfter = exitAfterNReads;

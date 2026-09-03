@@ -27,6 +27,7 @@
 #include "bwm_forward.h"   // bwm_fwd_negotiate_baud()
 #include "bwm_wifi.h"
 #endif
+#include "pm3_cmd.h"
 #include "proxmark3_arm.h"
 #include "dbprint.h"
 #include "pmflash.h"
