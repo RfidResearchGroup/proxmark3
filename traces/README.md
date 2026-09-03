@@ -113,3 +113,17 @@
 |--------|-----------|
 |lf_hitag_crypto_dump.trace              |Execution of `lf hitag dump --crypto` against Hitag2 card in crypto mode|
 
+
+## LF emulator dumps
+
+Tag images for `lf hitag eload`, used to simulate a Hitag 2 in each of its
+operating modes. Byte 0 of page 3 is the configuration byte that selects the
+mode, so the files differ mainly in that one byte.
+
+|filename|description|
+|--------|-----------|
+|lf-hitag-CE129911-dump.bin               |Hitag2 in password mode (config `0x06`), password `BDF5E846`|
+|lf_ht2_crypto.bin                        |Hitag2 in crypto mode (config `0x0E`), key `4F4EBDF5E846`|
+|lf_ht2_publicA.bin                       |Hitag2 in Public Mode A (config `0x02`), Manchester, pages 4-5, carries an EM4102 payload|
+|lf_ht2_publicB.bin                       |Hitag2 in Public Mode B (config `0x00`), biphase 32 T0, pages 4-7|
+|lf_ht2_publicC.bin                       |Hitag2 in Public Mode C (config `0x04`), biphase 64 T0, pages 4-7|
