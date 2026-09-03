@@ -149,7 +149,14 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
                             }
                             // unrelated command's error - ignore, keep waiting
                         }
-                        // otherwise: some other frame (e.g. a stray broadcast) - ignore
+                        // otherwise: some other frame - surface ESP log lines so a
+                        // crash/reset shows its cause instead of just going silent;
+                        // anything else (e.g. a stray unrelated broadcast) is ignored.
+                        if (!is_resp && rcmd == BWM_CMD_LOG_MESSAGE && rlen > 0) {
+                            uint16_t plen = MIN(rlen, (uint16_t)(sizeof(pbuf) - 1));
+                            pbuf[plen] = 0;
+                            Dbprintf("[esp-log] %s", (const char *)pbuf);
+                        }
                     }
                     st = W_H1;
                     break;
@@ -299,6 +306,13 @@ int bwm_wifi_forward_down(void) {
 // boot slot, so those get generous timeouts.
 // ---------------------------------------------------------------------------
 int bwm_esp_ota_begin(uint32_t total_size) {
+    // Best-effort: ask the ESP to forward its own ESP_LOGx output as broadcasts
+    // for the duration of the OTA, so a crash/reset shows its cause in the pm3
+    // debug console instead of just going silent. Ignore failure - OTA can
+    // still proceed without diagnostics if this doesn't take.
+    uint8_t on = 1;
+    (void)bwm_cmd(BWM_CMD_LOG_FORWARD_ENABLE, &on, 1, NULL, NULL, 500);
+
     uint8_t p[4] = {
         (uint8_t)(total_size & 0xFF),         (uint8_t)((total_size >> 8) & 0xFF),
         (uint8_t)((total_size >> 16) & 0xFF), (uint8_t)((total_size >> 24) & 0xFF)
