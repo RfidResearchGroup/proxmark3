@@ -64,6 +64,12 @@ test):
 - If your change adds/changes a client command, run `make commands` to
   regenerate `doc/commands.md` and `doc/commands.json` — don't hand-edit
   those generated files.
+- **Keep comments short and direct.** This codebase comments in brief fragments,
+  usually one line. Match the surrounding file. No walls of text. A comment earns
+  its place by saying something the code cannot e.g. a return contract, where a
+  magic number came from, or why something is deliberately absent. Do not restate
+  the code or place commit message content, reasoning, or justification into the
+  source. Anything longer than 3-4 lines usually belongs in the PR instead.
 - **Preserve existing comments** in code you touch or move. Don't drop,
   "clean up", or silently reword neighboring comments as a side effect of an
   unrelated change.
@@ -107,6 +113,7 @@ Structure the PR description in these sections:
 - [ ] Platform-sensitive code reasoned about / tested on Linux, Windows
       (ProxSpace/WSL), and macOS (if applicable) — state which were tested
 - [ ] Existing comments in touched files preserved
+- [ ] New comments short and direct, no restated code or PR prose
 - [ ] `doc/commands.md` / `doc/commands.json` regenerated if commands changed
 
 ## Commit attribution
