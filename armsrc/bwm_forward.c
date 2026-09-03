@@ -334,11 +334,15 @@ uint32_t bwm_read_ng(uint8_t *data, size_t len) {
 // send the request at the current baud, wait for that ack, then switch our own
 // UART4 to match. On timeout (old ESP without the command, or a lost ack) we
 // leave the link at the boot baud - it keeps working, just slower.
+//
+// The ESP keeps its baud across an AT32-only reset (bootloader, hw reset,
+// flash), so probe both rates first and adopt the one it answers at.
 // ---------------------------------------------------------------------------
 #define BWM_BAUD_ACK_WAIT_MS   300   // per-attempt wait for the ESP ack
 #define BWM_BAUD_ATTEMPTS      3     // resend attempts before giving up
 #define BWM_BAUD_VERIFY_MS     150   // per-probe wait for the GET_BAUD reply
 #define BWM_BAUD_VERIFY_TRIES  5     // GET_BAUD probes before declaring the switch failed
+#define BWM_BAUD_PROBE_ROUNDS  4     // boot/target probe pairs
 
 // Probe the ESP at the CURRENT baud with GET_UART_BAUD; true only if it answers,
 // i.e. it really is running at the baud we just switched to. Retried by the
@@ -370,8 +374,48 @@ static bool bwm_verify_baud(void) {
     return false;
 }
 
+// Switch to `baud` and probe up to `tries` times.
+static bool bwm_probe_at(uint32_t baud, int tries) {
+    bwm_uart_set_baud(baud);
+    SpinDelay(2);
+    for (int v = 0; v < tries; v++) {
+        if (bwm_verify_baud()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Reset framer, FIFO and flow control after a baud change.
+static void bwm_link_reset(void) {
+    s_p.state      = S_IDLE;
+    s_fifo_head    = 0;
+    s_fifo_tail    = 0;
+    s_fwd_inflight = 0;
+}
+
 bool bwm_fwd_negotiate_baud(uint32_t target) {
     if (target == 0 || target == bwm_uart_get_baud()) {
+        return false;
+    }
+    const uint32_t boot_baud = bwm_uart_get_baud();
+
+    // Locate the ESP: alternate so a cold-booted one (boot baud) and one that
+    // survived our reset (target baud) are both found.
+    bool at_boot = false, at_target = false;
+    for (int r = 0; r < BWM_BAUD_PROBE_ROUNDS && !at_boot && !at_target; r++) {
+        at_boot = bwm_probe_at(boot_baud, 1);
+        if (!at_boot) {
+            at_target = bwm_probe_at(target, 1);
+        }
+    }
+    if (at_target) {
+        bwm_link_reset();          // already at target
+        return true;
+    }
+    if (!at_boot) {
+        bwm_uart_set_baud(boot_baud);   // no ESP: stay at boot baud
+        bwm_link_reset();
         return false;
     }
 
@@ -400,43 +444,18 @@ bool bwm_fwd_negotiate_baud(uint32_t target) {
         for (int ms = 0; ms < BWM_BAUD_ACK_WAIT_MS; ms++) {
             bwm_pump();              // parser sets s_baud_ack on the SLAVE_RESP
             if (s_baud_ack) {
-                // ESP acked at the old baud and is committing to the new one.
-                // Switch our side and let it settle.
-                bwm_uart_set_baud(target);
-                SpinDelay(5);
-
-                // VERIFY the ESP is really at the new baud before trusting it. A
-                // lost or spurious ack must not leave the two ends at different
-                // bauds - that silently breaks every AT32<->ESP exchange (forward
-                // traffic, hw bwmwifi, ...). Retry so one dropped probe on a good
-                // link does not cause a needless fallback.
-                bool verified = false;
-                for (int v = 0; v < BWM_BAUD_VERIFY_TRIES; v++) {
-                    if (bwm_verify_baud()) {
-                        verified = true;
-                        break;
-                    }
+                // ESP acked and is switching; verify it before trusting the
+                // new baud, else fall back so both ends stay in sync.
+                bool verified = bwm_probe_at(target, BWM_BAUD_VERIFY_TRIES);
+                if (verified == false) {
+                    bwm_uart_set_baud(boot_baud);
                 }
-
-                s_p.state      = S_IDLE;   // fresh framer either way
-                s_fifo_head    = 0;
-                s_fifo_tail    = 0;
-                s_fwd_inflight = 0;
-
-                if (verified) {
-                    return true;
-                }
-
-                // Could not confirm the ESP at the new baud: fall back so the
-                // ends stay in sync. 460800 is the always-safe boot default.
-                bwm_uart_set_baud(BWM_UART_BAUD);
-                s_p.state    = S_IDLE;
-                s_fifo_head  = 0;
-                s_fifo_tail  = 0;
-                return false;
+                bwm_link_reset();
+                return verified;
             }
             SpinDelay(1);
         }
     }
+    bwm_link_reset();
     return false;   // no ack: stay at the boot baud, link still usable
 }
