@@ -70,8 +70,12 @@ int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out);
 #define BWM_CMD_OTA_BEGIN   1800   // req: u32 total size
 #define BWM_CMD_OTA_WRITE   1801   // req: firmware chunk
 #define BWM_CMD_OTA_END     1802   // no payload: finalize + set boot partition
+// After a working OTA_END, the ESP has marked the new partition bootable but
+// does not reboot on its own - REBOOT must be sent explicitly (DEV.md 12.8).
+#define BWM_CMD_REBOOT      1803
 int bwm_esp_ota_begin(uint32_t total_size);
 int bwm_esp_ota_write(const uint8_t *data, uint16_t len);
 int bwm_esp_ota_end(void);
+int bwm_esp_reboot(void);
 
 #endif
