@@ -52,8 +52,6 @@
 
 #include "lua.h"
 
-size_t pm3_max_cmd_data_size(void);
-
 static int CmdHelp(const char *Cmd);
 
 static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used, uint32_t flash_size) {
