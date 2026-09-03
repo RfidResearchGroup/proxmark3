@@ -322,6 +322,11 @@ int bwm_esp_ota_begin(uint32_t total_size) {
 }
 
 int bwm_esp_ota_write(const uint8_t *data, uint16_t len) {
+    // Documented OTA has no resume/offset: the payload is the raw chunk, written
+    // sequentially. A dropped chunk cannot be re-sent (it would double-write and
+    // fail the OTA_END size check) - recovery is to restart the whole OTA, which
+    // the client does. Keep a generous timeout so a slow flash write is not
+    // mistaken for a drop.
     return bwm_cmd(BWM_CMD_OTA_WRITE, data, len, NULL, NULL, 15000);
 }
 
