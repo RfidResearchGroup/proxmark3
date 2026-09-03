@@ -2401,6 +2401,12 @@ static int CmdBWMUpgrade(const char *Cmd) {
     free(fw);
 
     if (res != PM3_SUCCESS) {
+        // Restore the fast link + logs that the OTA lowered at BEGIN.
+        PacketResponseNG resp;
+        uint8_t ab[1] = { BWM_OTA_ACTION_ABORT };
+        clearCommandBuffer();
+        SendCommandNG(CMD_PM5_BWM_ESP_OTA, ab, sizeof(ab));
+        (void)WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 8000);
         PrintAndLogEx(FAILED, "BWM firmware update failed after %d attempts", max_attempts);
         return res;
     }
