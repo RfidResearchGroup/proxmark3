@@ -2345,11 +2345,11 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen) {
         }
         sent += n;
         progressbar(sent, fwlen, STYLE_MIXED);
-        printf("\n");
         ///// DEBUG TEST FOR USB timeout
         msleep(10);
     }
     free(buf);
+    printf("\n");
     PrintAndLogEx(NORMAL, "");
 
     // END: finalize + set the new boot partition
