@@ -75,9 +75,14 @@ int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out);
 // After a working OTA_END, the ESP has marked the new partition bootable but
 // does not reboot on its own - REBOOT must be sent explicitly (DEV.md 12.8).
 #define BWM_CMD_REBOOT      1803
+// Run the OTA at a slow, reliable baud (restored to the fast rate at end/abort).
+#ifndef BWM_OTA_BAUD
+#define BWM_OTA_BAUD   460800
+#endif
 int bwm_esp_ota_begin(uint32_t total_size);
 int bwm_esp_ota_write(const uint8_t *data, uint16_t len);
 int bwm_esp_ota_end(void);
 int bwm_esp_reboot(void);
+int bwm_esp_ota_abort(void);
 
 #endif
