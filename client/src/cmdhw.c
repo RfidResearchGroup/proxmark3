@@ -2347,10 +2347,33 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen) {
     uint8_t end[1] = { BWM_OTA_ACTION_END };
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_ESP_OTA, end, sizeof(end));
-    if ((WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 30000) == false) || (resp.status != PM3_SUCCESS)) {
-        PrintAndLogEx(WARNING, "OTA finalize failed");
+    bool got_end = WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 30000);
+    if (got_end && (resp.status == PM3_SUCCESS)) {
+        return PM3_SUCCESS;
+    }
+    if (got_end == false) {
+        // All data was sent and OTA_END was issued. esp_ota_end + set_boot_partition
+        // is slow, so its ack is easily lost even though the flash completed - this
+        // is the case that used to discard a finished image and restart. Signal
+        // "reached END, unconfirmed" so the caller verifies by version instead.
+        return PM3_ETIMEOUT;
+    }
+    PrintAndLogEx(WARNING, "OTA finalize rejected (status %d)", resp.status);
+    return PM3_EFAILED;
+}
+
+// Query the BWM's running firmware version string (APP_CMD_GET_VERSION_INFO).
+static int bwm_get_version(char *out, size_t outlen) {
+    uint8_t a[1] = { BWM_OTA_ACTION_VERSION };
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_ESP_OTA, a, sizeof(a));
+    PacketResponseNG r;
+    if ((WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &r, 5000) == false) || (r.status != PM3_SUCCESS)) {
         return PM3_EFAILED;
     }
+    uint16_t n = (r.length < (uint16_t)(outlen - 1)) ? r.length : (uint16_t)(outlen - 1);
+    memcpy(out, r.data.asBytes, n);
+    out[n] = 0;
     return PM3_SUCCESS;
 }
 
@@ -2384,35 +2407,76 @@ static int CmdBWMUpgrade(const char *Cmd) {
         return PM3_EFILE;
     }
 
-    // The BWM OTA has no resume (DEV.md 8.4): a dropped chunk must restart the
-    // whole transfer. The link can drop the odd frame over thousands of chunks,
-    // so retry the full upload a few times before giving up.
+    // Record the running version first, so we can confirm the update actually took
+    // even when the finalize ack is lost (the case that used to discard a completed
+    // flash and restart from scratch).
+    char ver_before[64] = {0};
+    bool have_before = (bwm_get_version(ver_before, sizeof(ver_before)) == PM3_SUCCESS);
+    if (have_before) {
+        PrintAndLogEx(INFO, "Current BWM firmware..... " _YELLOW_("%s"), ver_before);
+    }
+
+    // No resume (DEV.md 8.4): a chunk lost mid-transfer restarts the whole upload.
     const int max_attempts = 3;
-    int res = PM3_EFAILED;
     for (int attempt = 1; attempt <= max_attempts; attempt++) {
         if (attempt > 1) {
             PrintAndLogEx(INFO, "restarting OTA from the beginning (attempt " _YELLOW_("%d") "/%d)", attempt, max_attempts);
         }
-        res = bwm_ota_once(fw, fwlen);
-        if (res == PM3_SUCCESS) {
-            break;
+        int res = bwm_ota_once(fw, fwlen);
+
+        // Failed during BEGIN/WRITE: image incomplete, restart the whole thing.
+        if ((res != PM3_SUCCESS) && (res != PM3_ETIMEOUT)) {
+            continue;
         }
+
+        // Reached OTA_END (acked, or ack lost). The image is written and the boot
+        // partition is set - reboot into it and confirm by version.
+        if (res == PM3_ETIMEOUT) {
+            PrintAndLogEx(INFO, "finalize ack not seen - all data was sent, confirming by version...");
+        }
+        uint8_t rb[1] = { BWM_OTA_ACTION_REBOOT };
+        clearCommandBuffer();
+        SendCommandNG(CMD_PM5_BWM_ESP_OTA, rb, sizeof(rb));
+        PacketResponseNG rr;
+        (void)WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &rr, 5000);
+
+        PrintAndLogEx(INFO, "Rebooting BWM into the new image (the BWM link drops briefly)...");
+        msleep(7000);   // reboot + re-negotiate baud + re-link
+
+        char ver_after[64] = {0};
+        bool have_after = (bwm_get_version(ver_after, sizeof(ver_after)) == PM3_SUCCESS);
+
+        if (have_after && have_before) {
+            if (strncmp(ver_before, ver_after, sizeof(ver_before)) != 0) {
+                PrintAndLogEx(SUCCESS, "BWM firmware updated: %s -> " _YELLOW_("%s"), ver_before, ver_after);
+                free(fw);
+                return PM3_SUCCESS;
+            }
+            PrintAndLogEx(WARNING, "BWM still reports " _YELLOW_("%s") " - update did not take, retrying", ver_after);
+            continue;
+        }
+        if (have_after) {
+            PrintAndLogEx(SUCCESS, "BWM now running " _YELLOW_("%s"), ver_after);
+            free(fw);
+            return PM3_SUCCESS;
+        }
+        // Could not re-read the version (link dropped on reboot, common over BLE).
+        // All data was uploaded, so treat as done and let the user confirm.
+        PrintAndLogEx(WARNING, "Could not re-read BWM version after reboot (link dropped?)");
+        PrintAndLogEx(HINT, "Reconnect and run " _YELLOW_("hw status") " to confirm the version.");
+        free(fw);
+        return PM3_SUCCESS;
     }
     free(fw);
 
-    if (res != PM3_SUCCESS) {
-        // Restore the fast link + logs that the OTA lowered at BEGIN.
-        PacketResponseNG resp;
-        uint8_t ab[1] = { BWM_OTA_ACTION_ABORT };
-        clearCommandBuffer();
-        SendCommandNG(CMD_PM5_BWM_ESP_OTA, ab, sizeof(ab));
-        (void)WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 8000);
-        PrintAndLogEx(FAILED, "BWM firmware update failed after %d attempts", max_attempts);
-        return res;
-    }
-    PrintAndLogEx(SUCCESS, "BWM firmware updated - the BWM will reboot into the new image");
-    PrintAndLogEx(HINT, "Give it a few seconds, then re-check with " _YELLOW_("hw status"));
-    return PM3_SUCCESS;
+    // Exhausted retries without a confirmed update - restore the link and report.
+    PacketResponseNG resp;
+    uint8_t ab[1] = { BWM_OTA_ACTION_ABORT };
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_ESP_OTA, ab, sizeof(ab));
+    (void)WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 8000);
+    PrintAndLogEx(FAILED, "BWM firmware update could not be confirmed after %d attempts", max_attempts);
+    return PM3_EFAILED;
 }
 static command_t CommandTable[] = {
     {"help", CmdHelp, AlwaysAvailable, "This help"},
