@@ -150,14 +150,20 @@ def serialise_trace(frames: list[Frame]) -> bytes:
 
 HEADER = (
     f"{'#':>5}  {'Timestamp':>10}  {'Dur':>6}  {'Src':>3}  "
-    f"{'Data (hex)':<50}  {'Par':>3}"
+    f"{'Data (hex)':<50}"
 )
 SEP = '-' * len(HEADER)
 
+# reader lines in yellow, when stdout is a terminal
+YELLOW = '\033[33m' if sys.stdout.isatty() else ''
+RESET = '\033[0m' if sys.stdout.isatty() else ''
+
 
 def print_frame(idx: int, f: Frame) -> None:
-    print(f'{idx:>5}  {f.timestamp:>10}  {f.duration:>6}  {f.src:>3}  '
-          f'{f.data_hex():<50}  {f.parity_status:>3}')
+    colour = '' if f.is_response else YELLOW
+    reset = '' if f.is_response else RESET
+    print(f'{colour}{idx:>5}  {f.timestamp:>10}  {f.duration:>6}  {f.src:>3}  '
+          f'{f.data_hex():<50}{reset}')
 
 
 def cmd_list(frames: list[Frame], args: list[str]) -> None:
