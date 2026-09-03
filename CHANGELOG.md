@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf_legic_rdv4` - Standalone mode for managing 7 persistent legic dumps (@digitalhoax)
 - Fixed `lf t55xx detect` - dropped the psk3 candidates, which run the same demodulation as the psk2 one beside them and so can never match a psk3 tag, only fire on demodulation errors (@mfcarroll)
 - Fixed `lf t55xx detect` - a psk3 tag read back as psk2 with a block 0 one bit out, and a freshly wiped psk2 tag was reported as psk3 on no evidence; the two are now reported as ambiguous where the waveform cannot separate them, and block 0 is narrowed using the subcarrier, the broadcast period and whether password mode is in use (@mfcarroll)
 - Added doc/md/PM5_Start_Here/Getting_Started_With_PM5.md now exists as a starting point for those who have their PM5 (@innocentbystanderproxmark)
