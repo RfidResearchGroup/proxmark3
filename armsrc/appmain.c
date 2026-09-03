@@ -3958,6 +3958,13 @@ static void PacketReceived(PacketCommandNG *packet) {
                     break;
                 case BWM_OTA_ACTION_END:
                     res = bwm_esp_ota_end();
+                    if (res == PM3_SUCCESS) {
+                        // Finalize succeeded and the new partition is now marked
+                        // bootable; the ESP won't switch to it on its own, so
+                        // kick the reboot here (DEV.md 12.8). Best-effort: don't
+                        // fail the whole OTA over a lost reboot ack.
+                        (void)bwm_esp_reboot();
+                    }
                     break;
                 default:
                     res = PM3_EINVARG;
