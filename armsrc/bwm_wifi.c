@@ -139,6 +139,12 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
                         if (!is_resp && rcmd == BWM_CMD_CMD_ERROR && rlen >= 2) {
                             uint16_t failed_cmd = (uint16_t)pbuf[0] | ((uint16_t)pbuf[1] << 8);
                             if (failed_cmd == cmd) {
+                                int32_t esp_err = 0;
+                                if (rlen >= 6) {
+                                    esp_err = (int32_t)((uint32_t)pbuf[2] | ((uint32_t)pbuf[3] << 8) |
+                                                         ((uint32_t)pbuf[4] << 16) | ((uint32_t)pbuf[5] << 24));
+                                }
+                                Dbprintf("[bwm-wifi] cmd 0x%04x failed, esp_err=0x%08x", (unsigned)cmd, (unsigned)esp_err);
                                 return PM3_EFAILED;
                             }
                             // unrelated command's error - ignore, keep waiting
