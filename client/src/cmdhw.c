@@ -2340,7 +2340,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
     PrintAndLogEx(INFO, "Uploading " _YELLOW_("%zu") " bytes of ESP firmware over the BWM link...", fwlen);
 
     // WRITE chunks (one action byte + as much firmware as fits the negotiated frame)
-    size_t maxchunk = (size_t)pm3_max_cmd_data_size() - 1;
+    size_t maxchunk = (size_t)g_conn.max_cmd_data_size - 1;
     uint8_t *buf = calloc(1, maxchunk + 1);
     if (buf == NULL) {
         free(fw);
