@@ -2434,14 +2434,11 @@ static int CmdBWMUpgrade(const char *Cmd) {
         if (res == PM3_ETIMEOUT) {
             PrintAndLogEx(INFO, "finalize ack not seen - all data was sent, confirming by version...");
         }
-        uint8_t rb[1] = { BWM_OTA_ACTION_REBOOT };
-        clearCommandBuffer();
-        SendCommandNG(CMD_PM5_BWM_ESP_OTA, rb, sizeof(rb));
-        PacketResponseNG rr;
-        (void)WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &rr, 5000);
-
-        PrintAndLogEx(INFO, "Rebooting BWM into the new image (the BWM link drops briefly)...");
-        msleep(7000);   // reboot + re-negotiate baud + re-link
+        // The device's OTA_END handler already reboots the ESP into the new image
+        // (that is what drops the finalize ack over BLE). Just wait for it to come
+        // back and re-link, then confirm by version.
+        PrintAndLogEx(INFO, "BWM rebooting into the new image (link drops briefly)...");
+        msleep(8000);   // reboot + re-negotiate baud + re-link
 
         char ver_after[64] = {0};
         bool have_after = (bwm_get_version(ver_after, sizeof(ver_after)) == PM3_SUCCESS);
