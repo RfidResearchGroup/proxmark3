@@ -2346,7 +2346,7 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen) {
         sent += n;
         progressbar(sent, fwlen, STYLE_MIXED);
         ///// DEBUG TEST FOR USB timeout
-        msleep(10);
+        msleep(20);
     }
     free(buf);
     printf("\n");
