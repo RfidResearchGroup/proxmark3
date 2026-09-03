@@ -3946,7 +3946,15 @@ static void PacketReceived(PacketCommandNG *packet) {
                     break;
                 }
                 case BWM_OTA_ACTION_WRITE:
-                    res = bwm_esp_ota_write(packet->data.asBytes + 1, packet->length - 1);
+                    // Defensive: bwm_esp_ota_write()'s app_com frame buffer caps a
+                    // single chunk at BWM_OTA_CHUNK_MAX (see bwm_wifi.c: bwm_cmd()).
+                    // The client is expected to respect this, but fail explicitly
+                    // here rather than let bwm_cmd() silently overflow/reject.
+                    if (packet->length - 1 > BWM_OTA_CHUNK_MAX) {
+                        res = PM3_EOVFLOW;
+                    } else {
+                        res = bwm_esp_ota_write(packet->data.asBytes + 1, packet->length - 1);
+                    }
                     break;
                 case BWM_OTA_ACTION_END:
                     res = bwm_esp_ota_end();
