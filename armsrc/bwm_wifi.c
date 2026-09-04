@@ -130,12 +130,6 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
                             }
                             return PM3_SUCCESS;
                         }
-                        // CMD_ERROR broadcasts are type 8091 regardless of which
-                        // command failed - the failing command is only identified
-                        // by the first 2 bytes of the payload (DEV.md 4.6). Other
-                        // subsystems (WiFi/BLE/SNTP, etc.) can raise CMD_ERROR for
-                        // their own commands while we're waiting here; only treat
-                        // this as our failure if the embedded cmd actually matches.
                         if (!is_resp && rcmd == BWM_CMD_CMD_ERROR && rlen >= 2) {
                             uint16_t failed_cmd = (uint16_t)pbuf[0] | ((uint16_t)pbuf[1] << 8);
                             if (failed_cmd == cmd) {
@@ -147,15 +141,6 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
                                 Dbprintf("[bwm-wifi] cmd 0x%04x failed, esp_err=0x%08x", (unsigned)cmd, (unsigned)esp_err);
                                 return PM3_EFAILED;
                             }
-                            // unrelated command's error - ignore, keep waiting
-                        }
-                        // otherwise: some other frame - surface ESP log lines so a
-                        // crash/reset shows its cause instead of just going silent;
-                        // anything else (e.g. a stray unrelated broadcast) is ignored.
-                        if (!is_resp && rcmd == BWM_CMD_LOG_MESSAGE && rlen > 0) {
-                            uint16_t plen = MIN(rlen, (uint16_t)(sizeof(pbuf) - 1));
-                            pbuf[plen] = 0;
-                            Dbprintf("[esp-log] %s", (const char *)pbuf);
                         }
                     }
                     st = W_H1;
