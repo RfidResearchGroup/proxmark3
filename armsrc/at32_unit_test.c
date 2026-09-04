@@ -1050,18 +1050,23 @@ void test_beep(void) {
     }
 }
 
-void test_power_of_by_btn(void) {
+void test_power_off_by_btn(void) {
     usb_enable();
     SpinDelay(1000);
-    dxl_print_dbg("SystemStart\n");
+    // dxl_print_dbg("SystemStart\n");
     while (1) {
+        // 第一阶段，等按下
         if (is_btn_pressed()) {
+            // 第二阶段，等抬起
+            while (is_btn_pressed()) {}
+            // 第三阶段，等一会儿
+            SpinDelay(50);
             // 拉低直接关机
-            dxl_print_dbg("SystemOff\n");
+            // dxl_print_dbg("SystemOff\n");
             Gpio_ARM_Power_ON_Low();
             // 拉低关机的话，还会有一段PWR电容放电时间，此时我们应当让系统进入死循环，不再处理任何事情
             while (1) {
-                dxl_print_dbg("Waiting Power Off\n");
+                // dxl_print_dbg("Waiting Power Off\n");
             }
         }
     }
@@ -1880,6 +1885,21 @@ void test_max_power(void) {
     test_beep();
 }
 
+void test_nvic_reset(void) {
+    LED_A_ON();
+    SpinDelay(100);
+    LED_A_OFF();
+    LED_B_ON();
+    while (1) {
+        if (is_btn_pressed()) {
+            LED_B_OFF();
+            LED_C_ON();
+            while (is_btn_pressed()) {}
+            NVIC_SystemReset();
+        }
+    }
+}
+
 // 覆盖 UnitTestMain 实现单元测试
 void UnitTestMain(void);
 
@@ -1907,6 +1927,9 @@ void UnitTestMain(void) {
     // 不然的话调试的时候也会很发热
     SpinDelay(500);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
+    // ------------------------------- 测试 NVIC 系统复位 -------------------------------
+    // test_nvic_reset();
 
     // ------------------------------- 测试 配置UART TX2为DBGIO输出 -------------------------------
     // test_config_uart_tx2_to_dbgio();
@@ -1942,7 +1965,7 @@ void UnitTestMain(void) {
     // test_i2c_ant_software();
 
     // ------------------------------- 测试按钮关机 -------------------------------
-    // test_power_of_by_btn();
+    // test_power_off_by_btn();
 
     // ------------------------------- 测试蜂鸣器 -------------------------------
     // usb_enable();
