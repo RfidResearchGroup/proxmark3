@@ -38,7 +38,7 @@
 // Over the BWM/FPC link the forward buffers (AT32 DMA ring, ESP UART RX) are
 // small, so a full PM3_CMD_DATA_SIZE frame overruns them. Cap the payload the
 // device advertises and sends when replying via FPC. USB is unaffected.
-#define PM3_FPC_MAX_DATA 2048
+#define PM3_FPC_MAX_DATA 240
 
 typedef struct {
     uint64_t cmd;
