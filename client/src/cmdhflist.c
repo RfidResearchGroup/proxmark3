@@ -410,7 +410,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 break;
             case MIFARE_ULEV1_AUTH:
                 if (cmdsize == 7)
-                    snprintf(exp, size, "PWD-AUTH: " _GREEN_("0x%02X%02X%02X%02X"), cmd[1], cmd[2], cmd[3], cmd[4]);
+                    snprintf(exp, size, "PWD-AUTH: " _GREEN_("%02X%02X%02X%02X"), cmd[1], cmd[2], cmd[3], cmd[4]);
                 else
                     snprintf(exp, size, "PWD-AUTH");
                 break;
