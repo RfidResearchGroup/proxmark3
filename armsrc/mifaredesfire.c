@@ -23,13 +23,14 @@
 #include "desfire_crypto.h"
 #include "cmd.h"
 #include "dbprint.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
 #include "iso14443a.h"
 #include "crc16.h"
 #include "commonutil.h"
 #include "util.h"
 #include "mifare.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "protocols.h"
 
 #define MAX_APPLICATION_COUNT 28
@@ -62,7 +63,7 @@ bool InitDesfireCard(void) {
 
     if (iso14443a_select_card(NULL, &card, NULL, true, 0, false) == 0) {
         if (g_dbglevel >= DBG_ERROR) DbpString("Can't select card");
-        OnError(1);
+        OnErrorNG(CMD_HF_DESFIRE_COMMAND, 1);
         return false;
     }
     return true;
@@ -104,14 +105,14 @@ void MifareSendCommand(uint8_t *datain) {
         print_result("RESP <--: ", resp, len);
 
     if (len == 0) {
-        OnError(2);
+        OnErrorNG(CMD_HF_DESFIRE_COMMAND, 2);
         return;
     }
 
     if (payload->flags & DISCONNECT)
         OnSuccess();
 
-    //reply_mix(CMD_ACK, 1, len, 0, resp, len);
+    //reply_ng(CMD_HF_DESFIRE_COMMAND, PM3_SUCCESS, resp, len);
     LED_B_ON();
 
 
@@ -770,11 +771,6 @@ void OnSuccess(void) {
     }
 
     switch_off();
-}
-
-void OnError(uint8_t reason) {
-    reply_mix(CMD_ACK, 0, reason, 0, 0, 0);
-    OnSuccess();
 }
 
 void OnErrorNG(uint16_t cmd, uint8_t reason) {

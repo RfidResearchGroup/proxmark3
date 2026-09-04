@@ -25,15 +25,27 @@
 // Use it e.g. when using slow links such as BT
 #define USART_SLOW_LINK
 
-#define PM3_CMD_DATA_SIZE 512
-#define PM3_CMD_DATA_SIZE_MIX (PM3_CMD_DATA_SIZE - 3 * sizeof(uint64_t))
+#if defined(ON_DEVICE) && !defined(PM5)
+#define PM3_CMD_DATA_SIZE 624
+#else
+#define PM3_CMD_DATA_SIZE 4064   // PM5 firmware and the client
+#endif
+
+// OLD frames are pinned at 512 independently of PM3_CMD_DATA_SIZE:
+// the bootloader only speaks OLD
+#define PM3_CMD_DATA_SIZE_OLD 512
+
+// Over the BWM/FPC link the forward buffers (AT32 DMA ring, ESP UART RX) are
+// small, so a full PM3_CMD_DATA_SIZE frame overruns them. Cap the payload the
+// device advertises and sends when replying via FPC. USB is unaffected.
+#define PM3_FPC_MAX_DATA 2048
 
 typedef struct {
     uint64_t cmd;
     uint64_t arg[3];
     union {
-        uint8_t asBytes[PM3_CMD_DATA_SIZE];
-        uint32_t asDwords[PM3_CMD_DATA_SIZE / 4];
+        uint8_t asBytes[PM3_CMD_DATA_SIZE_OLD];
+        uint32_t asDwords[PM3_CMD_DATA_SIZE_OLD / 4];
     } d;
 } PACKED PacketCommandOLD;
 
@@ -76,8 +88,8 @@ typedef struct {
     uint64_t cmd;
     uint64_t arg[3];
     union {
-        uint8_t asBytes[PM3_CMD_DATA_SIZE];
-        uint32_t asDwords[PM3_CMD_DATA_SIZE / 4];
+        uint8_t asBytes[PM3_CMD_DATA_SIZE_OLD];
+        uint32_t asDwords[PM3_CMD_DATA_SIZE_OLD / 4];
     } d;
 } PACKED PacketResponseOLD;
 
@@ -206,6 +218,16 @@ typedef struct {
     t55xx_config_t m[4]; // mode
 } t55xx_configurations_t;
 
+// T55XX - CMD_LF_T55XX_SET_CONFIG payload
+// Not PACKED on purpose: `conf` is uint16_t based and must stay 2-byte aligned for
+// the ARM7TDMI, which has no unaligned access.  The explicit `rfu` byte keeps the
+// size at 58 with no implicit padding, so the layout is identical on both ends.
+typedef struct {
+    t55xx_configurations_t conf;
+    uint8_t persist;          // save the timings to flash memory
+    uint8_t rfu;
+} t55xx_setconfig_t;
+
 // Capabilities struct to keep track of what functions was compiled in the device firmware
 typedef struct {
     uint8_t version;
@@ -243,8 +265,21 @@ typedef struct {
     bool hw_available_flash : 1;
     bool hw_available_smartcard : 1;
     bool is_rdv4 : 1;
+
+    // pm5
+    bool hw_available_fpga_flash : 1;
+    bool hw_available_i2c_eeprom : 1;
+    bool is_pm5 : 1;
+    bool is_pm5_std_ant : 1;
+
+    // Appended in version 9. Fields must only ever be APPENDED here:
+    // the client accepts a shorter struct from older firmware
+    // PM5 can use this to inform which size they support oo.
+    uint16_t max_cmd_data_size;     // device side PM3_CMD_DATA_SIZE
 } PACKED capabilities_t;
-#define CAPABILITIES_VERSION 7
+#define CAPABILITIES_VERSION 9
+// what a pre-v9 device would have used, it could not tell us
+#define CAPABILITIES_LEGACY_CMD_DATA_SIZE 512
 extern capabilities_t g_pm3_capabilities;
 
 typedef struct {
@@ -331,7 +366,7 @@ typedef struct {
 
 typedef struct {
     // 64KB SRAM -> 524288 bits(max sample num) < 2^30
-uint32_t samples :
+    uint32_t samples :
     LF_SAMPLES_BITS;
     bool realtime : 1;
     bool verbose : 1;
@@ -376,6 +411,194 @@ typedef struct {
     uint8_t key[6];
 } PACKED mfc_eload_t;
 
+// CMD_HF_EPA_REPLAY payload.
+// apdu_num 0 runs the replay, otherwise it is a 1-based APDU index being uploaded.
+// Replaces oldargs: arg0 = apdu number, arg1 = offset, arg2 = length
+typedef struct {
+    uint8_t apdu_num;
+    uint16_t offset;
+    uint16_t len;
+    uint8_t data[];
+} PACKED epa_replay_t;
+
+// Reply for CMD_HF_EPA_REPLAY, CMD_HF_EPA_PACE_SIMULATE and
+// CMD_HF_EPA_COLLECT_NONCE. `step` is 0 on success, otherwise the step that
+// failed; it used to travel in arg0 of an anonymous CMD_ACK.
+// For COLLECT_NONCE, `len` is the nonce length and the nonce follows.
+// Not PACKED on purpose: timings[] is uint32_t and must stay 4 byte aligned for
+// the ARM7TDMI. 1+1+2 already fills 4 bytes, so there is no implicit padding and
+// the layout is identical on both ends. See mf_value_t / t55xx_setconfig_t for
+// the same reasoning.
+typedef struct {
+    uint8_t step;
+    uint8_t len;
+    int16_t func_return;
+    uint32_t timings[];
+} epa_result_t;
+
+// Bulk download protocol, used by CMD_DOWNLOAD_BIGBUF, CMD_DOWNLOAD_EML_BIGBUF,
+// CMD_SPIFFS_DOWNLOAD and CMD_FLASHMEM_DOWNLOAD.
+//
+// Request:  download_req_t on the CMD_DOWNLOAD_* opcode
+// Chunks:   download_chunk_t on the matching CMD_DOWNLOADED_* opcode, one per
+//           frame; the payload length gives the chunk size, so no length field
+// Done:     download_done_t answered on the original CMD_DOWNLOAD_* opcode,
+//           which is what tells the client the transfer finished
+//
+// CMD_READ_MEM_DOWNLOAD deliberately keeps the old format: the bootrom serves it
+// and only speaks OLD frames. dl_it() handles both.
+typedef struct {
+    uint32_t start_index;
+    uint32_t bytes;
+    uint8_t data[];         // SPIFFS: the filename
+} PACKED download_req_t;
+
+typedef struct {
+    uint32_t offset;
+    uint8_t data[];
+} PACKED download_chunk_t;
+
+typedef struct {
+    uint32_t bytes_sent;
+    uint32_t extra;         // BigBuf trace length, otherwise 0
+} PACKED download_done_t;
+
+// payload bytes carried by one chunk frame
+#define DOWNLOAD_CHUNK_MAX (PM3_CMD_DATA_SIZE - sizeof(download_chunk_t))
+
+// CMD_LF_PCF7931_WRITE payload.
+// Replaces a uint32_t buf[10] that the device read as BYTES: the client wrote
+// OffsetWidth/OffsetPosition/InitDelay at byte offsets 28/32/36 while the device
+// read bytes 7/8/9, so those three were uninitialised stack on arrival.
+typedef struct {
+    uint8_t pwd[7];
+    uint8_t offset_width;       // biased by +128
+    uint8_t offset_position;    // biased by +128
+    uint16_t init_delay;
+    uint8_t address;
+    uint8_t byte;
+    uint8_t data;
+} PACKED pcf7931_write_t;
+
+// CMD_LF_HITAGS_SIMULATE / CMD_LF_HITAGU_SIMULATE payload
+typedef struct {
+    uint8_t tag_mem_supplied;
+    uint8_t flags;              // bit0: invert load modulation polarity
+    uint16_t threshold;
+    uint16_t twait;             // tag response delay in T0, 0 = firmware default
+    uint8_t sof;                // SOF bits in the tag answer, 0 = firmware default (5)
+    uint8_t duty;               // carrier periods loaded per half bit, 0 = firmware default (16)
+    uint8_t data[];
+} PACKED hitag_sim_t;
+
+// CMD_HF_MFU_OTP_TEAROFF payload
+typedef struct {
+    uint8_t blockno;
+    uint8_t rfu;
+    uint16_t tearoff_time;
+    uint8_t data[];
+} PACKED mfu_otp_tearoff_t;
+
+// CMD_FLASHMEM_WIPE payload
+typedef struct {
+    uint8_t page;
+    uint8_t initialwipe;
+} PACKED flashmem_wipe_t;
+
+// CMD_LCD payload
+typedef struct {
+    uint32_t cmd;
+} PACKED lcd_cmd_t;
+
+// CMD_HF_MIFARE_READSC payload
+typedef struct {
+    uint8_t sectorno;
+    uint8_t keytype;
+    uint8_t key[6];
+} PACKED mf_readsector_t;
+
+// Request for the three nonce acquisition commands:
+//   CMD_HF_MIFARE_ACQ_NONCES, ACQ_ENCRYPTED_NONCES, ACQ_STATIC_ENCRYPTED_NONCES
+// Replaces oldargs that bit-packed block/keytype pairs into 16 bit halves.
+// The static variant reads blockno/keytype as its first block/key type and
+// ignores the trg_ fields.
+typedef struct {
+    uint8_t blockno;
+    uint8_t keytype;
+    uint8_t trg_blockno;
+    uint8_t trg_keytype;
+    uint32_t flags;
+    uint8_t key[6];
+} PACKED mf_acquire_nonces_t;
+
+// Reply for the same three commands. isOK travels in the NG status field.
+typedef struct {
+    uint32_t cuid;
+    uint16_t num_nonces;
+    uint8_t nonces[];
+} PACKED mf_nonces_resp_t;
+
+// most 4 byte nonces that fit alongside the reply header in one frame
+#define MFC_MAX_NONCES ((PM3_CMD_DATA_SIZE - sizeof(mf_nonces_resp_t)) / 4)
+
+// CMD_HF_MIFARE_CHKKEYS_FAST payload.
+// Replaces three bit-packed oldargs:
+//   arg0 = sectorcnt | firstchunk<<8 | lastchunk<<12 | singlesector_params<<16
+//   arg1 = strategy | use_flashmemory<<8
+//   arg2 = key count
+// The key count is carried explicitly rather than derived, so a short frame is
+// caught instead of silently checking fewer keys.
+typedef struct {
+    uint8_t sectorcnt;
+    uint8_t first_chunk;
+    uint8_t last_chunk;
+    uint8_t strategy;
+    uint8_t use_flashmemory;
+    uint8_t key_count;
+    uint16_t singlesector_params;
+    uint8_t keys[];             // key_count * MIFARE_KEY_SIZE
+} PACKED mf_chkkeys_fast_t;
+
+// most keys that fit alongside the header in one frame
+#define MFC_CHKKEYS_FAST_MAX_KEYS ((PM3_CMD_DATA_SIZE - sizeof(mf_chkkeys_fast_t)) / 6)
+
+// CMD_HF_MIFARE_VALUE payload.
+// Replaces a 34 byte blob addressed by hardcoded offsets:
+//   arg0/1/2 = blockno / keytype / transfer keytype
+//   [0..5] key, [9] action, [10] transfer block, [11..26] block data,
+//   [27..32] transfer key, [33] nested auth flag
+typedef struct {
+    uint8_t blockno;
+    uint8_t keytype;
+    uint8_t transfer_keytype;
+    uint8_t action;             // 0 increment, 1 decrement, 2 restore
+    uint8_t transfer_blockno;
+    uint8_t need_auth;          // nested auth needed when transferring across sectors
+    uint8_t key[6];
+    uint8_t transfer_key[6];
+    uint8_t blockdata[16];
+} PACKED mf_value_t;
+
+// CMD_HF_MIFARE_CSETBL / CMD_HF_MIFARE_CGETBL payload.
+// data[] carries the block to write for CSETBL, and is empty for CGETBL.
+typedef struct {
+    uint8_t params;    // MAGIC_* work flags
+    uint8_t blockno;
+    uint8_t data[];
+} PACKED mf_chinese_blk_t;
+
+// CMD_HF_MIFARE_GEN3UID payload
+typedef struct {
+    uint8_t uidlen;
+    uint8_t uid[];
+} PACKED mf_gen3uid_t;
+
+// CMD_HF_MIFARE_GEN3BLK payload
+typedef struct {
+    uint8_t blocklen;
+    uint8_t block[];
+} PACKED mf_gen3blk_t;
+
 typedef struct {
     uint16_t turn_off_field : 1;
     uint16_t try_auth : 1;
@@ -394,8 +617,11 @@ typedef struct {
 
 enum {
     MIFAREU3P_KEY_SIZE = 16,
-    MIFAREU3P_CHKKEY_HEADER = 2 + MIFAREU3P_KEY_SIZE
+    // 2 bitfield bytes + a whole byte for nkeys + the reference key
+    MIFAREU3P_CHKKEY_HEADER = 3 + MIFAREU3P_KEY_SIZE,
+    MIFAREU3P_CHKKEY_MAX_KEYS = 255
 };
+
 typedef struct {
     uint8_t key_index : 2;
     uint8_t firstchunk : 1;
@@ -404,8 +630,10 @@ typedef struct {
     uint8_t segment : 3;
     uint8_t check_answer : 1;
     uint8_t use_fastread0 : 1;
-    // max nkeys: (PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER) / MIFAREU3P_KEY_SIZE < 32
-    uint8_t nkeys : 6;
+    // a whole byte: a 6 bit field could not announce the 123 keys that already
+    // fit in one frame in segment mode. Callers still clamp to
+    // MIFAREU3P_CHKKEY_MAX_KEYS, which binds again above ~1040 byte frames.
+    uint8_t nkeys;
     uint8_t ref_key[MIFAREU3P_KEY_SIZE];
     uint8_t data[PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER];
 } PACKED mful_3passchk_t;
@@ -421,7 +649,7 @@ typedef struct {
 
 typedef struct {
     uint16_t bytelen;
-    uint16_t startidx;
+    uint32_t startidx;
 } PACKED mful_readblock_resp_t;
 
 typedef struct {
@@ -495,14 +723,41 @@ typedef enum SMARTCARD_COMMAND {
     SC_CLEARLOG = (1 << 5),
     SC_LOG = (1 << 6),
     SC_WAIT = (1 << 7),
+    SC_RAW_T1 = (1 << 8),
 } smartcard_command_t;
 
 typedef struct {
-    uint8_t flags;
+    // 16 bit since SC_RAW_T1 took the ninth flag.  Note this is a wire struct:
+    // client and ARM image have to be built and flashed together.
+    uint16_t flags;
     uint32_t wait_delay;
     uint16_t len;
     uint8_t data[];
 } PACKED smart_card_raw_t;
+
+// A PPS has to name a protocol - PPS0 has no "leave it alone" encoding - so
+// when the caller only wants a rate, ask for the one the card already runs and
+// the exchange changes nothing but Fi/Di.
+#define SC_PPS_PROTO_CARD_DEFAULT  0xFF
+
+typedef struct {
+    uint8_t protocol;   // T to select, 0 or 1, or SC_PPS_PROTO_CARD_DEFAULT
+    uint8_t ta1;        // FI << 4 | DI, only read when use_ta1 is set
+    uint8_t use_ta1;
+} PACKED smart_card_pps_t;
+
+typedef struct {
+    uint8_t factory_info_version;
+    uint8_t ecdsa_secp256k1_signature[64];
+    struct {
+        uint64_t unix_timestamp;
+        uint8_t chip_unique_id[12];
+        uint32_t production_id;
+        uint32_t hardware_version;
+        uint8_t aes_key[16];
+        uint8_t reserved[147];
+    } PACKED info;
+} PACKED proxmark5_factory_info_v1_t;
 
 // For the bootloader
 #define CMD_DEVICE_INFO 0x0000
@@ -512,6 +767,7 @@ typedef struct {
 #define CMD_START_FLASH 0x0005
 #define CMD_CHIP_INFO 0x0006
 #define CMD_BL_VERSION 0x0007
+#define CMD_CHIP_TYPE 0x0008
 #define CMD_NACK 0x00fe
 #define CMD_ACK 0x00ff
 
@@ -525,6 +781,7 @@ typedef struct {
 #define CMD_READ_MEM 0x0106 // legacy
 #define CMD_READ_MEM_DOWNLOAD 0x010A
 #define CMD_READ_MEM_DOWNLOADED 0x010B
+#define CMD_MAIN_CHIP_UNIQUEID 0x010C
 #define CMD_VERSION 0x0107
 #define CMD_STATUS 0x0108
 #define CMD_PING 0x0109
@@ -546,7 +803,8 @@ typedef struct {
 #define CMD_FLASHMEM_WIPE 0x0122
 #define CMD_FLASHMEM_DOWNLOAD 0x0123
 #define CMD_FLASHMEM_DOWNLOADED 0x0124
-#define CMD_FLASHMEM_INFO 0x0125
+// DXL: I found that this command did not seem to have been used before, so it can be used to obtain the unique ID of FLASH MEM.
+#define CMD_FLASHMEM_GET_ID 0x0125
 #define CMD_FLASHMEM_SET_SPIBAUDRATE 0x0126
 #define CMD_FLASHMEM_PAGES64K 0x0127
 
@@ -598,8 +856,10 @@ typedef struct {
 #define CMD_SMART_UPGRADE 0x0141
 #define CMD_SMART_UPLOAD 0x0142
 #define CMD_SMART_ATR 0x0143
-#define CMD_SMART_SETBAUD 0x0144
+// 0x0144 was CMD_SMART_SETBAUD, removed - never had a client caller; the SIM
+// module rate is driven by SmartCardPPS() and sc_rate_restore() instead
 #define CMD_SMART_SETCLOCK 0x0145
+#define CMD_SMART_PPS 0x0146
 
 // RDV40,  FPC USART
 #define CMD_USART_RX 0x0160
@@ -607,6 +867,29 @@ typedef struct {
 #define CMD_USART_TXRX 0x0162
 #define CMD_USART_CONFIG 0x0163
 
+// PM5, Dual frequency antenna control.
+#define CMD_ANT_CONTROL_WRITE 0x0170
+#define CMD_ANT_CONTROL_READ 0x0171
+// PM5, EPPROM of factory info store
+#define CMD_EEPROM_FACTORY_INFO_READ 0x0172
+#define CMD_EEPROM_FACTORY_INFO_WRITE 0x0173
+// PM5, QC test for the hardware
+#define CMD_PM5_QC_TEST 0x0177
+// PM5, set the antenna RGB LED colour (payload: r,g,b). Used by `hf/lf tune --rgb`.
+#define CMD_PM5_RGB_SET 0x0178
+// PM5, provision BWM fuel-gauge (BQ27427) Design Capacity. Used by `hw bwmsetcap`.
+#define CMD_PM5_BWM_SET_CAP 0x0179
+#define CMD_PM5_BWM_SET_CAP 0x0179
+// PM5, enable/disable BWM battery charging (AW32001E CEB). Used by `hw bwmcharge`.
+#define CMD_PM5_BWM_CHARGE_EN 0x017A
+// PM5, toggle automatic power-off on USB unplug. Used by `hw bwmautooff`.
+#define CMD_PM5_BWM_AUTOOFF 0x017B
+#define CMD_PM5_BWM_WIFI    0x017C
+#define CMD_PM5_BWM_SET_VCHG 0x017D
+// CMD_PM5_BWM_WIFI payload: [action:u8][port:u16 LE][ssid\0][pwd\0][hostname\0]
+#define BWM_WIFI_ACTION_START  0x00   // join AP + start TCP server
+#define BWM_WIFI_ACTION_STOP   0x01   // tear down, back to BLE-only
+#define BWM_WIFI_ACTION_STATUS 0x02   // query current connection state + IP
 // For low-frequency tags
 #define CMD_LF_TI_READ 0x0202
 #define CMD_LF_TI_WRITE 0x0203
@@ -619,7 +902,7 @@ typedef struct {
 #define CMD_LF_HID_WATCH 0x020B
 #define CMD_LF_HID_SIMULATE 0x020C
 #define CMD_LF_SET_DIVISOR 0x020D
-#define CMD_LF_SIMULATE_BIDIR 0x020E
+// 0x020E was CMD_LF_SIMULATE_BIDIR, removed - the ARM handler was an empty stub
 #define CMD_SET_ADC_MUX 0x020F
 #define CMD_LF_HID_CLONE 0x0210
 #define CMD_LF_EM410X_CLONE 0x0211
@@ -765,6 +1048,7 @@ typedef struct {
 #define CMD_HF_ICLASS_CREDIT_EPURSE 0x039C
 #define CMD_HF_ICLASS_RECOVER 0x039D
 #define CMD_HF_ICLASS_TEARBL 0x039E
+#define CMD_HF_ICLASS_RAW 0x039F
 
 // For ISO1092 / FeliCa
 #define CMD_HF_FELICA_SIMULATE 0x03A0
@@ -798,6 +1082,14 @@ typedef struct {
 // For direct FPGA control
 #define CMD_FPGA_MAJOR_MODE_OFF 0x0500
 
+// For fpga config bitstream
+#define CMD_FPGA_BITSTREAM_CONFIG_START 0x0501
+#define CMD_FPGA_BITSTREAM_CONFIG_WRITE 0x0502
+#define CMD_FPGA_BITSTREAM_CONFIG_FINISH 0x0503
+
+// For fpga set pwm output for driver voltage adjust
+#define CMD_PM5_FPGA_SET_PWR_PWM_LOW_COUNT                                0x0504
+
 // For mifare commands
 #define CMD_HF_MIFARE_EML_MEMCLR 0x0601
 #define CMD_HF_MIFARE_EML_MEMSET 0x0602
@@ -824,7 +1116,7 @@ typedef struct {
 #define CMD_HF_MIFAREU_READBL 0x0720
 #define CMD_HF_MIFARE_READSC 0x0621
 #define CMD_HF_MIFAREU_READCARD 0x0721
-#define CMD_HF_MIFARE_WRITEBL 0x0622
+// 0x0622 was CMD_HF_MIFARE_WRITEBL, superseded by CMD_HF_MIFARE_WRITEBL_EX
 #define CMD_HF_MIFARE_WRITEBL_EX 0x0629
 #define CMD_HF_MIFARE_VALUE 0x0627
 #define CMD_HF_MIFAREU_WRITEBL 0x0722
@@ -1120,6 +1412,9 @@ typedef struct {
 
 /* Set if this device understands the read memory command */
 #define DEVICE_INFO_FLAG_UNDERSTANDS_READ_MEM (1 << 7)
+
+/* Set if this device understands the chip type command */
+#define DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_TYPE (1<<8)
 
 #define BL_VERSION_MAJOR(version) ((uint32_t)(version) >> 22)
 #define BL_VERSION_MINOR(version) (((uint32_t)(version) >> 12) & 0x3ff)

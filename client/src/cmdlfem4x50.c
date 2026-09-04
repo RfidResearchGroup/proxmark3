@@ -163,26 +163,38 @@ static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len
     return PM3_SUCCESS;
 }
 
-static void em4x50_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
+static int em4x50_seteml(const uint8_t *src, uint32_t offset, uint32_t numofbytes) {
+
+    // an EM4x50 is 136 bytes, so the whole tag always fits in a single frame
+    if ((offset + numofbytes) > (g_conn.max_cmd_data_size - sizeof(em4x50_eset_t))) {
+        PrintAndLogEx(FAILED, "%u bytes at offset %u doesn't fit in one frame", numofbytes, offset);
+        return PM3_EOUTOFBOUND;
+    }
 
     PrintAndLogEx(INFO, "uploading to emulator memory");
-    PrintAndLogEx(INFO, "." NOLF);
-    // fast push mode
-    g_conn.block_after_ACK = true;
-    for (size_t i = offset; i < numofbytes; i += PM3_CMD_DATA_SIZE_MIX) {
 
-        size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE_MIX);
-        if (len == numofbytes - i) {
-            // Disable fast mode on last packet
-            g_conn.block_after_ACK = false;
-        }
-        clearCommandBuffer();
-        SendCommandMIX(CMD_LF_EM4X50_ESET, i, len, 0, src + i, len);
-        PrintAndLogEx(NORMAL, "." NOLF);
-        fflush(stdout);
+    uint8_t buf[PM3_CMD_DATA_SIZE] = {0};
+    em4x50_eset_t *payload = (em4x50_eset_t *)buf;
+    payload->offset = offset;
+    payload->len = numofbytes;
+    memcpy(payload->data, src + offset, numofbytes);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X50_ESET, buf, sizeof(em4x50_eset_t) + numofbytes);
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_LF_EM4X50_ESET, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
     }
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", numofbytes);
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "uploading to emulator memory ( " _RED_("fail") " )");
+        return resp.status;
+    }
+
+    PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%u") " bytes to emulator memory", numofbytes);
+    return PM3_SUCCESS;
 }
 
 static int CmdEM4x50ELoad(const char *Cmd) {
@@ -214,7 +226,11 @@ static int CmdEM4x50ELoad(const char *Cmd) {
     }
 
     // upload to emulator memory
-    em4x50_seteml(data, 0, EM4X50_DUMP_FILESIZE);
+    int res = em4x50_seteml(data, 0, EM4X50_DUMP_FILESIZE);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
     PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("lf em 4x50 sim -h") "` to simulate");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;

@@ -74,10 +74,10 @@ end
 --
 -- Sends an instruction to do nothing, only disconnect
 function disconnect()
-    local command = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER, arg1 = 0,}
+    local command = Command:newRaw{ tech = '14a', flags = 0 }
     -- We can ignore the response here, no ACK is returned for this command
     -- Check /armsrc/iso14443a.c, ReaderIso14443a() for details
-    return command:sendMIX(true)
+    return command:sendNG(true)
 end
 ---
 --
@@ -86,9 +86,11 @@ local function getblockdata(response)
         return nil, 'No response from device'
     end
 
-    local count, cmd, arg0, arg1, arg2, data = bin.unpack('LLLLH40', response)
-    if arg0 == 1 then
-        return data:sub(1, 32)
+    if response == nil or type(response) ~= 'table' then
+        return nil, "malformed response from device"
+    end
+    if response.Status == 0 and response.Length >= 16 then
+        return response.Data:sub(1, 32)
     end
 
     return nil, "Couldn't read block"
@@ -98,8 +100,13 @@ end
 -- @return nil, errormessage if unsuccessful
 local function getBlock(blockno)
     local block, err
-    local c = Command:newMIX{cmd = cmds.CMD_HF_MIFAREU_READBL, arg1 = blockno, data = 0}
-    block, err = getblockdata(c:sendMIX(false))
+    -- mful_readblock_t { bool use_schann, u8 block_no, u8 num_of_blocks,
+    --                     u8 keytype, u8 keylen, u8 key[16] }
+    -- mful_readblock_t { bool use_schann, u8 block_no, u8 num_of_blocks,
+    --                     u8 keytype, u8 keylen, u8 key[16] }
+    local rb_payload = ('%02X%02X%02X%02X%02X'):format(0, blockno, 1, 0, 0) .. string.rep('00', 16)
+    local c = Command:newNG{cmd = cmds.CMD_HF_MIFAREU_READBL, data = rb_payload}
+    block, err = getblockdata(c:sendNG(false))
     if not block then return oops(err) end
 
     if #block < 32 then

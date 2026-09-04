@@ -1269,7 +1269,7 @@ static int CmdHF14BRaw(const char *Cmd) {
     }
 
     // Max buffer is PM3_CMD_DATA_SIZE
-    datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
+    datalen = (datalen > g_conn.max_cmd_data_size) ? g_conn.max_cmd_data_size : datalen;
 
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + datalen);
     if (packet == NULL) {
@@ -2935,7 +2935,7 @@ int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field,
 
     // 3 byte here - 1b framing header, 2b crc16
     if (apdu_in_framing_enable &&
-            ((apdu_frame_length && (datainlen > apdu_frame_length - 3)) || (datainlen > PM3_CMD_DATA_SIZE - 3))) {
+            ((apdu_frame_length && (datainlen > apdu_frame_length - 3)) || (datainlen > g_conn.max_cmd_data_size - 3))) {
 
         int clen = 0;
         bool v_activate_field = activate_field;
@@ -3132,7 +3132,7 @@ static int CmdHF14BAPDU(const char *Cmd) {
         arg_lit0("t",  "tlv",      "executes TLV decoder if it possible"),
         arg_lit0(NULL,  "decode",   "decode apdu request if it possible"),
         arg_str0("m",  "make",     "<hex>", "make apdu with head from this field and data from data field.\n"
-                 "                                   must be 4 bytes: <CLA INS P1 P2>"),
+        "                                   must be 4 bytes: <CLA INS P1 P2>"),
         arg_lit0("e",  "extended", "make extended length apdu if `m` parameter included"),
         arg_int0("l",  "le",       "<int>", "Le apdu parameter if `m` parameter included"),
         arg_str1("d", "data",     "<hex>", "<APDU | data> if `m` parameter included"),

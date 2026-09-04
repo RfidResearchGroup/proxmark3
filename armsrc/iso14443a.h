@@ -129,6 +129,8 @@ void setHf14aConfig(const hf14a_config_t *hc);
 hf14a_config_t *getHf14aConfig(void);
 void iso14a_set_timeout(uint32_t timeout);
 uint32_t iso14a_get_timeout(void);
+// Rebase absolute reader-transfer schedule after a caller restarts the SSP clock counter.
+void iso14a_rebase_transfer_time(void);
 
 void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
 
@@ -141,7 +143,7 @@ void Uart14aInit(uint8_t *d, uint16_t n, uint8_t *par);
 RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time);
 RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time);
 
-void RAMFUNC SniffIso14443a(uint8_t param);
+int RAMFUNC SniffIso14443a(uint8_t param);
 void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uint8_t exitAfterNReads);
 
 void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, uint8_t exitAfterNReads,

@@ -19,9 +19,13 @@
 
 #include <immintrin.h>
 
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(__ANDROID__)
+#if !defined(__ANDROID__)
+#if defined(__clang__)
+#pragma clang attribute push(__attribute__((target("avx512f"))), apply_to = function)
+#elif defined(__GNUC__)
 #pragma GCC push_options
 #pragma GCC target("avx512f")
+#endif
 #endif
 
 #define BS_ZERO   _mm512_setzero_si512()
@@ -291,8 +295,12 @@ void doMAC_brute_match512(const uint64_t y_bits_bs[96 * BS512_WORDS],
     _mm512_storeu_si512((void *)match_out, mac_match);
 }
 
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(__ANDROID__)
+#if !defined(__ANDROID__)
+#if defined(__clang__)
+#pragma clang attribute pop
+#elif defined(__GNUC__)
 #pragma GCC pop_options
+#endif
 #endif
 
 bool bs_avx512_supported(void) {

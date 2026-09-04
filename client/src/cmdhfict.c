@@ -403,9 +403,10 @@ static int ict_select_card(iso14a_card_select_t *card) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_408 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_408) == false) {
         return PM3_ESOFT;
     }
 
@@ -415,7 +416,7 @@ static int ict_select_card(iso14a_card_select_t *card) {
         2: OK, no ATS
         3: proprietary Anticollision
     */
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_408;
     if (select_status == 0) {
         return PM3_ESOFT;
     }

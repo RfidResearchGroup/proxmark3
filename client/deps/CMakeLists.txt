@@ -25,6 +25,12 @@ endif()
 if (NOT TARGET pm3rrg_rdv4_mqtt)
   include(mqtt.cmake)
 endif()
+# JPEG2000 is only decoded by the Qt picture viewer, so don't build it for
+# targets without a GUI (experimental_lib links guidummy.cpp instead).
+# Condition must match the one guarding proxgui.cpp in client/CMakeLists.txt
+if ((NOT TARGET pm3rrg_rdv4_openjpeg) AND (NOT SKIPQT EQUAL 1) AND (Qt5_FOUND OR Qt6_FOUND))
+  include(openjpeg.cmake)
+endif()
 if (NOT TARGET pm3rrg_rdv4_reveng)
   include(reveng.cmake)
 endif()

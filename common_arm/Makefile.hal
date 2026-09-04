@@ -40,11 +40,19 @@ Known definitions:
 +--------------------------------------------------+
 | PM3ULTIMATE     | Proxmark3 Ultimate with XC2S50 |
 +--------------------------------------------------+
+| PM5             | Proxmark5 ICEMAN Edition       |
++--------------------------------------------------+
 
 +============================================+
 | PLATFORM_EXTRAS | DESCRIPTION              |
 +============================================+
 | BTADDON         | Proxmark3 RDV4 BT add-on |
++--------------------------------------------+
+| BWM             | PM5 Battery Wireless Mod |
++--------------------------------------------+
+| NO_LOWBATT_BEEP | PM5 disable low-batt beep|
++--------------------------------------------+
+|NO_LOWBATT_SHUTDOWN| PM5 no low-batt cutoff |
 +--------------------------------------------+
 
 endef
@@ -111,7 +119,7 @@ ifeq ($(PLATFORM),PM3RDV4)
     ifneq ($(SKIP_ISO15693),1)
         FPGA_BITSTREAMS += fpga_pm3_hf_15.bit
     endif
-    PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH -DRDV4
+    PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH -DRDV4 -DCHIP_AT91SAM7S
     PLTNAME = Proxmark3 RDV4
     PLATFORM_FPGA = xc2s30
     RDV4 = yes
@@ -131,7 +139,7 @@ else ifeq ($(PLATFORM),PM3OTHER)
     PLTNAME = Proxmark3 generic target
     PLATFORM_FPGA = xc2s30
     ifeq ($(LED_ORDER),PM3EASY)
-        PLATFORM_DEFS = -DLED_ORDER_PM3EASY
+        PLATFORM_DEFS = -DLED_ORDER_PM3EASY -DCHIP_AT91SAM7S
     endif
 else ifeq ($(PLATFORM),PM3GENERIC)
     # FPGA bitstream files, the order doesn't matter anymore
@@ -148,12 +156,12 @@ else ifeq ($(PLATFORM),PM3GENERIC)
     PLTNAME = Proxmark3 generic target
     PLATFORM_FPGA = xc2s30
     ifeq ($(LED_ORDER),PM3EASY)
-        PLATFORM_DEFS = -DLED_ORDER_PM3EASY
+        PLATFORM_DEFS = -DLED_ORDER_PM3EASY -DCHIP_AT91SAM7S
     endif
 else ifeq ($(PLATFORM),PM3ICOPYX)
     # FPGA bitstream files, the order doesn't matter anymore - only hf has a bitstream
     FPGA_BITSTREAMS = fpga_icopyx_hf.bit
-    PLATFORM_DEFS = -DWITH_FLASH -DICOPYX -DXC3
+    PLATFORM_DEFS = -DWITH_FLASH -DICOPYX -DXC3 -DCHIP_AT91SAM7S
     PLTNAME = iCopy-X with XC3S100E
     PLATFORM_FPGA = xc3s100e
 else ifeq ($(PLATFORM),PM3ULTIMATE)
@@ -168,9 +176,21 @@ else ifeq ($(PLATFORM),PM3ULTIMATE)
     ifneq ($(SKIP_ISO15693),1)
         FPGA_BITSTREAMS += fpga_pm3_ult_hf_15.bit
     endif
-    PLATFORM_DEFS = -DWITH_FLASH -DXC2S50
+    PLATFORM_DEFS = -DWITH_FLASH -DXC2S50 -DCHIP_AT91SAM7S
     PLTNAME = Proxmark3 Ultimate with XC2S50
     PLATFORM_FPGA = xc2s50
+else ifeq ($(PLATFORM),PM5)
+    # TODO DXL 我们暂时不需要指定FPGA比特流文件，因为实际上我们大概率要做FPGA的静态烧录，而不是附加到ARM固件中动态下载
+    FPGA_BITSTREAMS = fpga_pm3_hf.bit # TODO DXL 虽然可以不把打包比特流，但是还是得把FPGA的版本信息给生成，让EXE依赖。
+    SKIP_FPGA_EMBED = true # important!!! disable the fpga bit files pack to arm!
+    SKIP_COMPRESSION = true # Skip data section compress. The new mcu has enough flash space.
+    PLATFORM_DEFS = -DWITH_FLASH -DPM5 -DCHIP_AT32F435_37 -DWITH_BWM_STATUS -DWITH_PM5_PWR_LED -DWITH_PM5_AUTOOFF -DWITH_BWM_LOWBATT_BEEP -DWITH_PM5_LOWBATT_SHUTDOWN # TODO 暂时不要编译i2c -DWITH_SMARTCARD
+                    # Low-battery safety (beep + over-discharge power-off at ~3.3V) is ON by default.
+                    # Opt out via PLATFORM_EXTRAS:
+                    #   NO_LOWBATT_SHUTDOWN  ===== keep the beep, disable auto power-off ====
+                    #   NO_LOWBATT_BEEP      ===== disable the beep (also drops the shutdown poll) ====
+    PLTNAME = Proxmark5
+    PLATFORM_FPGA = GW1NR-LV2MG49GC6/i5
 else
     $(error Invalid or empty PLATFORM: $(PLATFORM). $(KNOWN_DEFINITIONS))
 endif
@@ -186,12 +206,40 @@ ifneq (,$(findstring FLASH,$(PLATFORM_EXTRAS_TMP)))
     PLATFORM_EXTRAS_TMP := $(strip $(filter-out FLASH,$(PLATFORM_EXTRAS_TMP)))
 endif
 ifneq (,$(findstring BTADDON,$(PLATFORM_EXTRAS_TMP)))
+    ifeq ($(PLATFORM),PM5)
+        $(error Incompatible PLATFORM_EXTRAS token BTADDON)
+    endif
     PLATFORM_DEFS += -DWITH_FPC_USART_HOST
     PLATFORM_EXTRAS_TMP := $(strip $(filter-out BTADDON,$(PLATFORM_EXTRAS_TMP)))
 endif
 ifneq (,$(findstring FPC_USART_DEV,$(PLATFORM_EXTRAS_TMP)))
+    ifeq ($(PLATFORM),PM5)
+        $(error Incompatible PLATFORM_EXTRAS token FPC_USART_DEV)
+    endif
     PLATFORM_DEFS += -DWITH_FPC_USART_DEV
     PLATFORM_EXTRAS_TMP := $(strip $(filter-out FPC_USART_DEV,$(PLATFORM_EXTRAS_TMP)))
+endif
+ifneq (,$(findstring BWM,$(PLATFORM_EXTRAS_TMP)))
+    ifneq ($(PLATFORM),PM5)
+        $(error PLATFORM_EXTRAS token BWM is only valid on PLATFORM=PM5)
+    endif
+    PLATFORM_DEFS += -DWITH_BWM_FORWARD
+    PLATFORM_EXTRAS_TMP := $(strip $(filter-out BWM,$(PLATFORM_EXTRAS_TMP)))
+endif
+ifneq (,$(findstring NO_LOWBATT_SHUTDOWN,$(PLATFORM_EXTRAS_TMP)))
+    ifneq ($(PLATFORM),PM5)
+        $(error PLATFORM_EXTRAS token NO_LOWBATT_SHUTDOWN is only valid on PLATFORM=PM5)
+    endif
+    PLATFORM_DEFS := $(filter-out -DWITH_PM5_LOWBATT_SHUTDOWN,$(PLATFORM_DEFS))
+    PLATFORM_EXTRAS_TMP := $(strip $(filter-out NO_LOWBATT_SHUTDOWN,$(PLATFORM_EXTRAS_TMP)))
+endif
+ifneq (,$(findstring NO_LOWBATT_BEEP,$(PLATFORM_EXTRAS_TMP)))
+    ifneq ($(PLATFORM),PM5)
+        $(error PLATFORM_EXTRAS token NO_LOWBATT_BEEP is only valid on PLATFORM=PM5)
+    endif
+    # beep is the carrier for the shutdown poll, so dropping it drops shutdown too
+    PLATFORM_DEFS := $(filter-out -DWITH_BWM_LOWBATT_BEEP -DWITH_PM5_LOWBATT_SHUTDOWN,$(PLATFORM_DEFS))
+    PLATFORM_EXTRAS_TMP := $(strip $(filter-out NO_LOWBATT_BEEP,$(PLATFORM_EXTRAS_TMP)))
 endif
 ifneq (,$(PLATFORM_EXTRAS_TMP))
     $(error Unknown PLATFORM_EXTRAS token(s): $(PLATFORM_EXTRAS_TMP))

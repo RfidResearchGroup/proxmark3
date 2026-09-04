@@ -41,32 +41,33 @@
 static topaz_tag_t topaz_tag;
 
 static void topaz_switch_on_field(void) {
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT | ISO14A_TOPAZMODE | ISO14A_NO_RATS, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT | ISO14A_TOPAZMODE | ISO14A_NO_RATS, NULL, 0);
 }
 
 static void topaz_switch_off_field(void) {
     SetISODEPState(ISODEP_INACTIVE);
-    SendCommandMIX(CMD_HF_ISO14443A_READER, 0, 0, 0, NULL, 0);
+    SendIso14aReader(0, NULL, 0);
 }
 
 // send a raw topaz command, returns the length of the response (0 in case of error)
 static int topaz_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint16_t *response_len, bool verbose) {
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_TOPAZMODE | ISO14A_NO_RATS, len, 0, cmd, len);
+    SendIso14aReader(ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_TOPAZMODE | ISO14A_NO_RATS, cmd, len);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    uint16_t rlen_56 = 0;
+    if (WaitForIso14aReply(&resp, 1500, &rlen_56, NULL) == false) {
         if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
-    if (resp.oldarg[0] == *response_len) {
-        *response_len = resp.oldarg[0];
+    if (rlen_56 == *response_len) {
+        *response_len = rlen_56;
 
         PrintAndLogEx(DEBUG, "%s", sprint_hex(resp.data.asBytes, *response_len));
         if (*response_len > 0) {
             memcpy(response, resp.data.asBytes, *response_len);
         }
     } else {
-        if (verbose) PrintAndLogEx(WARNING, "Wrong response length (%d != %" PRIu64 ")", *response_len, resp.oldarg[0]);
+        if (verbose) PrintAndLogEx(WARNING, "Wrong response length (%d != %u)", *response_len, rlen_56);
         return PM3_ESOFT;
     }
     return PM3_SUCCESS;

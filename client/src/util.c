@@ -33,6 +33,8 @@
 #include <time.h> // Mingw
 
 #include "ui.h"     // PrintAndLog
+#include "comms.h"  // SendCommandNG / WaitForResponseTimeout (set_rgb)
+#include "pm3_cmd.h" // CMD_PM5_RGB_SET
 
 #define UTIL_BUFFER_SIZE_SPRINT 8196
 // global client debug variable
@@ -270,7 +272,10 @@ void hex_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, 
         m = hex_max_len;
     }
 
-    while (m--) {
+    // Pad up to m, the way ascii_to_buffer() above does. This used to write m
+    // spaces from wherever it had got to, so a padded field came out i
+    // characters too wide - a 7 byte AID asked to fill 16 produced 30.
+    for (; i < m; i++) {
         *(tmp++) = ' ';
     }
 
@@ -2047,4 +2052,16 @@ int str_copy_without_whitespace(const char *src, char *dst, size_t dst_size, siz
     dst[out] = '\0';
     *dst_len = out;
     return PM3_SUCCESS;
+}
+
+void set_rgb(uint8_t r, uint8_t g, uint8_t b) {
+    struct {
+        uint8_t r;
+        uint8_t g;
+        uint8_t b;
+    } PACKED payload = { r, g, b };
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_RGB_SET, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    WaitForResponseTimeout(CMD_PM5_RGB_SET, &resp, 200);
 }

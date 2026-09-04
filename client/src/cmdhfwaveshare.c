@@ -23,6 +23,7 @@
 #include <ctype.h>
 #include "comms.h"
 #include "cmdparser.h"
+#include "cmdhf14a.h"
 #include "ui.h"
 #include "util.h"
 #include "fileutils.h"
@@ -135,17 +136,18 @@ static int transceive_blocking(uint8_t *txBuf, uint16_t txBufLen, uint8_t *rxBuf
 
     while (1) {
         PacketResponseNG resp;
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, txBufLen, 0, txBuf, txBufLen);
+        SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, txBuf, txBufLen);
         rxBuf[0] = 1;
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
-            if (resp.oldarg[0] > rxBufLen) {
-                PrintAndLogEx(WARNING, "Received %"PRIu64 " bytes, rxBuf too small (%u)", resp.oldarg[0], rxBufLen);
+        uint16_t rlen_141 = 0;
+        if (WaitForIso14aReply(&resp, 2000, &rlen_141, NULL)) {
+            if (rlen_141 > rxBufLen) {
+                PrintAndLogEx(WARNING, "Received %u bytes, rxBuf too small (%u)", rlen_141, rxBufLen);
                 memcpy(rxBuf, resp.data.asBytes, rxBufLen);
                 *actLen = rxBufLen;
                 return PM3_ESOFT;
             }
-            memcpy(rxBuf, resp.data.asBytes, resp.oldarg[0]);
-            *actLen = resp.oldarg[0];
+            memcpy(rxBuf, resp.data.asBytes, rlen_141);
+            *actLen = rlen_141;
         }
 
         if ((retransmit) && (rxBuf[0] != 0 || rxBuf[1] != 0)) {
@@ -249,9 +251,10 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
     uint16_t actrxlen[20];
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_256 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_256) == false) {
         PrintAndLogEx(ERR, "No tag found");
         DropField();
         return PM3_ETIMEOUT;
@@ -260,7 +263,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_256;
 
     if (select_status == 0) {
         PrintAndLogEx(ERR, "Tag select error");

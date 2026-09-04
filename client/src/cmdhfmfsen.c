@@ -656,43 +656,53 @@ static int fm11_collect_nonces_ex(const uint8_t *key, uint32_t flags, uint8_t fi
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_661 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_661) == false) {
         PrintAndLogEx(WARNING, "iso14443a card select timeout");
         return PM3_ETIMEOUT;
     }
-    if (resp.oldarg[0] == 0) {
+    if (sel_661 == 0) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
         return PM3_ESOFT;
     }
     memcpy(card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
+    mf_acquire_nonces_t payload = {
+        .blockno = first_block_no,
+        .keytype = first_key_type,
+        .flags = flags,
+    };
+    memcpy(payload.key, key, sizeof(payload.key));
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, flags, first_block_no, first_key_type, key, MIFARE_KEY_SIZE);
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    SendCommandNG(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, (uint8_t *)&payload, sizeof(payload));
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         return PM3_ETIMEOUT;
     }
-    if (resp.oldarg[0] != PM3_SUCCESS) {
+    if (resp.status != PM3_SUCCESS || resp.length < sizeof(mf_nonces_resp_t)) {
         return PM3_ESOFT;
     }
 
+    const uint8_t *snonces = ((const mf_nonces_resp_t *)resp.data.asBytes)->nonces;
+
     memset(nonces, 0, sizeof(*nonces));
     for (uint8_t sec = 0; sec < FM11RF08S_SECTORS; sec++) {
-        uint32_t nt = bytes_to_num(resp.data.asBytes + ((sec * 2) * 8), 2);
+        uint32_t nt = bytes_to_num(snonces + ((sec * 2) * 8), 2);
         nt = (nt << 16) | prng_successor(nt, 16);
         num_to_bytes(nt, 4, nonces->nt[sec][0]);
 
-        nt = bytes_to_num(resp.data.asBytes + (((sec * 2) + 1) * 8), 2);
+        nt = bytes_to_num(snonces + (((sec * 2) + 1) * 8), 2);
         nt = (nt << 16) | prng_successor(nt, 16);
         num_to_bytes(nt, 4, nonces->nt[sec][1]);
     }
     for (uint8_t sec = 0; sec < FM11RF08S_SECTORS; sec++) {
-        memcpy(nonces->nt_enc[sec][0], resp.data.asBytes + ((sec * 2) * 8) + 4, 4);
-        memcpy(nonces->nt_enc[sec][1], resp.data.asBytes + (((sec * 2) + 1) * 8) + 4, 4);
-        nonces->par_err[sec][0] = resp.data.asBytes[((sec * 2) * 8) + 2];
-        nonces->par_err[sec][1] = resp.data.asBytes[(((sec * 2) + 1) * 8) + 2];
+        memcpy(nonces->nt_enc[sec][0], snonces + ((sec * 2) * 8) + 4, 4);
+        memcpy(nonces->nt_enc[sec][1], snonces + (((sec * 2) + 1) * 8) + 4, 4);
+        nonces->par_err[sec][0] = snonces[((sec * 2) * 8) + 2];
+        nonces->par_err[sec][1] = snonces[(((sec * 2) + 1) * 8) + 2];
     }
 
     if ((flags & 1) == 0) {
@@ -943,42 +953,24 @@ static int fm11_generate_1nt_candidates(uint32_t uid, uint32_t nt, uint32_t nt_e
     return PM3_SUCCESS;
 }
 
-static uint16_t fm11_i_lfsr16[1 << 16] = {0};
-static uint16_t fm11_s_lfsr16[1 << 16] = {0};
-static uint16_t fm11_prev8_lfsr16[1 << 16] = {0};
-static uint16_t fm11_prev14_lfsr16[1 << 16] = {0};
+static uint16_t fm11_prev8_lfsr16[1 << 16];
+static uint16_t fm11_prev14_lfsr16[1 << 16];
 static bool fm11_lfsr16_ready = false;
-
-static uint16_t fm11_prev_lfsr16(uint16_t nonce);
 
 static void fm11_init_lfsr16_table(void) {
     if (fm11_lfsr16_ready) {
         return;
     }
+    uint16_t buffer[16] = { 0 };
     uint16_t x = 1;
-    for (uint16_t i = 1; i; ++i) {
-        fm11_i_lfsr16[(x & 0xff) << 8 | x >> 8] = i;
-        fm11_s_lfsr16[i] = (x & 0xff) << 8 | x >> 8;
+    for (uint32_t i = 0; i < 65536 + 16; ++i) {
+        fm11_prev8_lfsr16[buffer[(i + 8) % 16]] = buffer[i % 16];
+        fm11_prev14_lfsr16[buffer[(i + 14) % 16]] = buffer[i % 16];
+
         x = x >> 1 | (x ^ x >> 2 ^ x >> 3 ^ x >> 5) << 15;
-    }
-    for (uint32_t nonce = 0; nonce <= UINT16_MAX; nonce++) {
-        uint16_t p = nonce;
-        for (uint8_t i = 0; i < 8; i++) {
-            p = fm11_prev_lfsr16(p);
-        }
-        fm11_prev8_lfsr16[nonce] = p;
-        for (uint8_t i = 8; i < 14; i++) {
-            p = fm11_prev_lfsr16(p);
-        }
-        fm11_prev14_lfsr16[nonce] = p;
+        buffer[i % 16] = (x & 0xFF) << 8 | x >> 8;
     }
     fm11_lfsr16_ready = true;
-}
-
-static uint16_t fm11_prev_lfsr16(uint16_t nonce) {
-    uint16_t i = fm11_i_lfsr16[nonce];
-    i = (i == 1) ? 0xffff : i - 1;
-    return fm11_s_lfsr16[i];
 }
 
 static uint16_t fm11_compute_seednt16_nt32(uint32_t nt32, uint64_t key) {
@@ -2295,13 +2287,6 @@ static int fm11_check_default_keys(uint32_t uid,
         return PM3_EMALLOC;
     }
 
-    bool was_found[FM11RF08S_SECTORS][2] = {{false}};
-    for (uint8_t sec = 0; sec < FM11RF08S_SECTORS; sec++) {
-        for (uint8_t kt = 0; kt < 2; kt++) {
-            was_found[sec][kt] = found_key[sec][kt];
-        }
-    }
-
     for (uint8_t sec = 0; sec < FM11RF08S_NORMAL_SECTORS; sec++) {
         for (uint8_t kt = 0; kt < 2; kt++) {
             if (found_key[sec][kt]) {
@@ -2378,8 +2363,9 @@ normal_out:
             fm11_sen_keycheck_progress("def", real_sec32, kt, sec32_done, sec32_total, matches.count);
             progress_shown = true;
             if (res == PM3_SUCCESS) {
-                keys_found[sec32][kt] = out_key & 0xFFFFFFFFFFFFULL;
+                keys_found[sec32][kt] = out_key;
                 found_key[sec32][kt] = true;
+                fm11_print_key_hit_row(nonce_count, sec32, kt, keys_found[sec32][kt], found_key);
                 break;
             }
             if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
@@ -2394,18 +2380,14 @@ normal_out:
 
     for (uint8_t sec = 0; sec < FM11RF08S_NORMAL_SECTORS; sec++) {
         for (uint8_t kt = 0; kt < 2; kt++) {
-            if (e_sector[sec].foundKey[kt]) {
-                keys_found[sec][kt] = e_sector[sec].Key[kt] & 0xFFFFFFFFFFFFULL;
-                found_key[sec][kt] = true;
-                if (was_found[sec][kt] == false) {
-                    fm11_print_key_hit_row(nonce_count, sec, kt, keys_found[sec][kt], found_key);
-                }
+            if (found_key[sec][kt]) {
+                continue;
             }
-        }
-    }
-    for (uint8_t kt = 0; kt < 2; kt++) {
-        if (found_key[sec32][kt] && was_found[sec32][kt] == false) {
-            fm11_print_key_hit_row(nonce_count, sec32, kt, keys_found[sec32][kt], found_key);
+            if (e_sector[sec].foundKey[kt]) {
+                keys_found[sec][kt] = e_sector[sec].Key[kt];
+                found_key[sec][kt] = true;
+                fm11_print_key_hit_row(nonce_count, sec, kt, keys_found[sec][kt], found_key);
+            }
         }
     }
     free(e_sector);
@@ -2467,11 +2449,11 @@ static uint32_t fm11_propagate_key_reuse_online(uint32_t nonce_count, uint64_t k
         int res = mf_check_keys(mfFirstBlockOfSector(real_sec32), kt, false, 1, key_block, &out_key);
         fm11_sen_keycheck_progress("use", real_sec32, kt, (pass_total * 2) + kt + 1, (pass_total * 2) + 2, pass_total + 2);
         progress_shown = true;
-        if (res == PM3_SUCCESS && ((out_key & 0xFFFFFFFFFFFFULL) == key)) {
+        if (res == PM3_SUCCESS && out_key == key) {
             keys_found[sec32][kt] = key;
             found_key[sec32][kt] = true;
             newly_found++;
-            fm11_print_key_hit_row(nonce_count, sec32, kt, key, found_key);
+            fm11_print_key_hit_row(nonce_count, sec32, kt, keys_found[sec32][kt], found_key);
         }
     }
     if (progress_shown) {
@@ -2480,11 +2462,14 @@ static uint32_t fm11_propagate_key_reuse_online(uint32_t nonce_count, uint64_t k
 
     for (uint8_t sec = 0; sec < FM11RF08S_NORMAL_SECTORS; sec++) {
         for (uint8_t kt = 0; kt < 2; kt++) {
-            if (e_sector[sec].foundKey[kt] && found_key[sec][kt] == false) {
+            if (found_key[sec][kt]) {
+                continue;
+            }
+            if (e_sector[sec].foundKey[kt] && e_sector[sec].Key[kt] == key) {
                 keys_found[sec][kt] = key;
                 found_key[sec][kt] = true;
                 newly_found++;
-                fm11_print_key_hit_row(nonce_count, sec, kt, key, found_key);
+                fm11_print_key_hit_row(nonce_count, sec, kt, keys_found[sec][kt], found_key);
             }
         }
     }
@@ -2626,6 +2611,9 @@ static int fm11_verify_candidates(uint8_t real_sec, uint8_t key_type, const fm11
     uint32_t last_progress = 0;
     fm11_sen_candidate_progress(real_sec, key_type, 0, list->count);
     while (idx < list->count) {
+        if (kbd_enter_pressed()) {
+            return PM3_EOPABORTED;
+        }
         uint8_t key_block[KEYBLOCK_SIZE] = {0};
         uint8_t chunk = MIN(KEYS_IN_BLOCK, list->count - idx);
         for (uint8_t i = 0; i < chunk; i++) {
@@ -2779,15 +2767,16 @@ static int fm11_select_mifare_classic(iso14a_card_select_t *card_out) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    uint8_t sel_2763 = 0;
+    if (WaitForIso14aReply(&resp, 1500, NULL, &sel_2763) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         DropField();
         return PM3_ETIMEOUT;
     }
 
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_2763;
     if (select_status == 0) {
         PrintAndLogEx(FAILED, "No tag detected or other tag communication error");
         PrintAndLogEx(HINT, "Hint: Try some distance or position of the card");
@@ -2800,15 +2789,16 @@ static int fm11_select_mifare_classic(iso14a_card_select_t *card_out) {
     if (select_status == 2) {
         uint8_t rats[] = { 0xE0, 0x80 };
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, rats, sizeof(rats));
+        uint16_t rlen_2784 = 0;
+        if (WaitForIso14aReply(&resp, 2500, &rlen_2784, NULL) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
             DropField();
             return PM3_ETIMEOUT;
         }
 
-        memcpy(card.ats, resp.data.asBytes, resp.oldarg[0]);
-        card.ats_len = resp.oldarg[0];
+        memcpy(card.ats, resp.data.asBytes, rlen_2784);
+        card.ats_len = rlen_2784;
         if (card.ats_len > 3) {
             select_status = 4;
         }
@@ -2915,7 +2905,13 @@ int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline
         active_key = active_key_bytes;
     }
 
-    uint32_t uid = bytes_to_num(card.uid, 4);
+    uint32_t uid;
+    if (card.uidlen == 7) {
+        uid = bytes_to_num(card.uid + 3, 4);
+    } else {
+        uid = bytes_to_num(card.uid, 4);
+    }
+
     uint32_t nonce_count = FM11RF08S_SECTORS * 2;
     char activity[80];
     snprintf(activity, sizeof(activity), "Loaded card UID %08X using %s key %s", uid,
@@ -3070,8 +3066,6 @@ int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline
                 fm11_sen_progress(nonce_count, activity, derived, 0);
             }
         }
-    }
-    {
     }
 
     uint32_t total_candidates = 0;

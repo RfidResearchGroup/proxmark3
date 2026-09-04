@@ -575,6 +575,24 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen, bool verbose
     return PM3_SUCCESS;
 }
 
+// Resolve --t0 / --t1 for the contact interface. The ARM switches a card
+// offering no T=0 over by itself; this is for one that offers both.
+static int emv_set_protocol(bool use_t0, bool use_t1, Iso7816CommandChannel channel) {
+
+    if (use_t0 && use_t1) {
+        PrintAndLogEx(FAILED, "Choose either --t0 or --t1, not both");
+        return PM3_EINVARG;
+    }
+
+    if ((use_t0 || use_t1) && (channel != CC_CONTACT)) {
+        PrintAndLogEx(FAILED, "--t0 and --t1 only apply to the contact interface, add -w");
+        return PM3_EINVARG;
+    }
+
+    SetSmartcardProtocolT1(use_t1);
+    return PM3_SUCCESS;
+}
+
 static int CmdEMVSelect(const char *Cmd) {
     uint8_t data[APDU_AID_LEN] = {0};
     int datalen = 0;
@@ -593,6 +611,8 @@ static int CmdEMVSelect(const char *Cmd) {
         arg_lit0("t",  "tlv",     "TLV decode results"),
         arg_lit0("w",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
         arg_str1(NULL, NULL, "<hex>", "Applet AID"),
+        arg_lit0(NULL, "t0", "use protocol T=0 on the contact interface (default)"),
+        arg_lit0(NULL, "t1", "use protocol T=1 on the contact interface"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -606,7 +626,13 @@ static int CmdEMVSelect(const char *Cmd) {
         channel = CC_CONTACT;
     PrintChannel(channel);
     CLIGetHexWithReturn(ctx, 6, data, &datalen);
+    bool use_t0 = arg_get_lit(ctx, 7);
+    bool use_t1 = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
+
+    if (emv_set_protocol(use_t0, use_t1, channel) != PM3_SUCCESS) {
+        return PM3_EINVARG;
+    }
 
     SetAPDULogging(show_apdu);
 
@@ -619,8 +645,23 @@ static int CmdEMVSelect(const char *Cmd) {
     if (sw)
         PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
 
-    if (res)
+    if (res) {
+        // No status word means the card said nothing at all, as opposed to
+        // answering with an error - worth distinguishing, and worth saying:
+        // this used to return silently and look like the command had worked.
+        if (sw == 0) {
+            PrintAndLogEx(FAILED, "No answer from card ( %d )", res);
+            if (channel == CC_CONTACT) {
+                if (GetSmartcardProtocolT1()) {
+                    PrintAndLogEx(HINT, "Hint: card was driven as T=1, drop `" _YELLOW_("--t1") "` to use T=0");
+                } else {
+                    PrintAndLogEx(HINT, "Hint: is the card T=1? try `" _YELLOW_("--t1") "`");
+                }
+            }
+        }
+        SetAPDULogging(false);
         return res;
+    }
 
     if (decodeTLV)
         TLVPrintFromBuffer(buf, len);
@@ -727,6 +768,8 @@ static int CmdEMVSearch(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("t",  "tlv",     "TLV decode results of selected applets"),
         arg_lit0("w",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
+        arg_lit0(NULL, "t0", "use protocol T=0 on the contact interface (default)"),
+        arg_lit0(NULL, "t1", "use protocol T=1 on the contact interface"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -742,7 +785,13 @@ static int CmdEMVSearch(const char *Cmd) {
     }
 
     PrintChannel(channel);
+    bool use_t0 = arg_get_lit(ctx, 6);
+    bool use_t1 = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
+
+    if (emv_set_protocol(use_t0, use_t1, channel) != PM3_SUCCESS) {
+        return PM3_EINVARG;
+    }
 
     SetAPDULogging(show_apdu);
 
@@ -750,6 +799,16 @@ static int CmdEMVSearch(const char *Cmd) {
     struct tlvdb *t = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
 
     if (EMVSearch(channel, activateField, leaveSignalON, decodeTLV, t, false)) {
+
+        PrintAndLogEx(FAILED, "Search failed, no answer from the card");
+
+        // Without activation the ARM never reads the ATR, so it does not know
+        // which protocols the card offers and cannot redirect a T=0 request to
+        // a T=1 only card. That used to end here without a word.
+        if ((channel == CC_CONTACT) && (activateField == false)) {
+            PrintAndLogEx(HINT, "Hint: the card is activated by `" _YELLOW_("-s") "`, try `" _YELLOW_("emv search -w -s") "`");
+        }
+
         tlvdb_free(t);
         SetAPDULogging(false);
         return PM3_ERFTRANS;
@@ -785,6 +844,8 @@ static int CmdEMVPPSE(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("t",  "tlv",     "TLV decode results of selected applets"),
         arg_lit0("w",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
+        arg_lit0(NULL, "t0", "use protocol T=0 on the contact interface (default)"),
+        arg_lit0(NULL, "t1", "use protocol T=1 on the contact interface"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -806,7 +867,13 @@ static int CmdEMVPPSE(const char *Cmd) {
         channel = CC_CONTACT;
     }
     PrintChannel(channel);
+    bool use_t0 = arg_get_lit(ctx, 8);
+    bool use_t1 = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
+
+    if (emv_set_protocol(use_t0, use_t1, channel) != PM3_SUCCESS) {
+        return PM3_EINVARG;
+    }
 
     SetAPDULogging(show_apdu);
 
@@ -850,6 +917,8 @@ static int CmdEMVGPO(const char *Cmd) {
         arg_lit0("t",  "tlv",     "TLV decode results of selected applets"),
         arg_lit0("w",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
         arg_strx0(NULL,  NULL,    "<hex>", "PDOLdata/PDOL"),
+        arg_lit0(NULL, "t0", "use protocol T=0 on the contact interface (default)"),
+        arg_lit0(NULL, "t1", "use protocol T=1 on the contact interface"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -865,7 +934,13 @@ static int CmdEMVGPO(const char *Cmd) {
     }
     PrintChannel(channel);
     CLIGetHexWithReturn(ctx, 7, data, &datalen);
+    bool use_t0 = arg_get_lit(ctx, 8);
+    bool use_t1 = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
+
+    if (emv_set_protocol(use_t0, use_t1, channel) != PM3_SUCCESS) {
+        return PM3_EINVARG;
+    }
 
     SetAPDULogging(show_apdu);
 
@@ -962,6 +1037,8 @@ static int CmdEMVReadRecord(const char *Cmd) {
         arg_lit0("t",  "tlv",     "TLV decode results of selected applets"),
         arg_lit0("w",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
         arg_strx1(NULL, NULL,     "<hex>", "<SFI 1 byte><SFIrecord 1 byte"),
+        arg_lit0(NULL, "t0", "use protocol T=0 on the contact interface (default)"),
+        arg_lit0(NULL, "t1", "use protocol T=1 on the contact interface"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -975,7 +1052,13 @@ static int CmdEMVReadRecord(const char *Cmd) {
     }
     PrintChannel(channel);
     CLIGetHexWithReturn(ctx, 5, data, &datalen);
+    bool use_t0 = arg_get_lit(ctx, 6);
+    bool use_t1 = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
+
+    if (emv_set_protocol(use_t0, use_t1, channel) != PM3_SUCCESS) {
+        return PM3_EINVARG;
+    }
 
     if (datalen != 2) {
         PrintAndLogEx(ERR, "Command needs to have 2 bytes of data");
@@ -1028,6 +1111,8 @@ static int CmdEMVAC(const char *Cmd) {
         arg_lit0("t",  "tlv",      "TLV decode results of selected applets"),
         arg_lit0("w",  "wired",    "Send data via contact (iso7816) interface. (def: Contactless interface)"),
         arg_strx1(NULL, NULL,      "<hex>", "CDOLdata/CDOL"),
+        arg_lit0(NULL, "t0", "use protocol T=0 on the contact interface (default)"),
+        arg_lit0(NULL, "t1", "use protocol T=1 on the contact interface"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1070,7 +1155,13 @@ static int CmdEMVAC(const char *Cmd) {
 
     PrintChannel(channel);
     CLIGetHexWithReturn(ctx, 9, data, &datalen);
+    bool use_t0 = arg_get_lit(ctx, 10);
+    bool use_t1 = arg_get_lit(ctx, 11);
     CLIParserFree(ctx);
+
+    if (emv_set_protocol(use_t0, use_t1, channel) != PM3_SUCCESS) {
+        return PM3_EINVARG;
+    }
 
     SetAPDULogging(show_apdu);
 
@@ -1152,6 +1243,8 @@ static int CmdEMVGenerateChallenge(const char *Cmd) {
         arg_lit0("k",  "keep",    "Keep field ON for next command"),
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("w",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
+        arg_lit0(NULL, "t0", "use protocol T=0 on the contact interface (default)"),
+        arg_lit0(NULL, "t1", "use protocol T=1 on the contact interface"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1163,7 +1256,13 @@ static int CmdEMVGenerateChallenge(const char *Cmd) {
         channel = CC_CONTACT;
     }
     PrintChannel(channel);
+    bool use_t0 = arg_get_lit(ctx, 4);
+    bool use_t1 = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
+
+    if (emv_set_protocol(use_t0, use_t1, channel) != PM3_SUCCESS) {
+        return PM3_EINVARG;
+    }
 
     SetAPDULogging(show_apdu);
 
@@ -1211,6 +1310,8 @@ static int CmdEMVInternalAuthenticate(const char *Cmd) {
         arg_lit0("t",  "tlv",     "TLV decode results of selected applets"),
         arg_lit0("w",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
         arg_strx1(NULL, NULL,     "<hex>", "DDOLdata/DDOL"),
+        arg_lit0(NULL, "t0", "use protocol T=0 on the contact interface (default)"),
+        arg_lit0(NULL, "t1", "use protocol T=1 on the contact interface"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1226,7 +1327,13 @@ static int CmdEMVInternalAuthenticate(const char *Cmd) {
     }
     PrintChannel(channel);
     CLIGetHexWithReturn(ctx, 7, data, &datalen);
+    bool use_t0 = arg_get_lit(ctx, 8);
+    bool use_t1 = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
+
+    if (emv_set_protocol(use_t0, use_t1, channel) != PM3_SUCCESS) {
+        return PM3_EINVARG;
+    }
 
     SetAPDULogging(show_apdu);
 
@@ -1439,6 +1546,8 @@ static int CmdEMVExec(const char *Cmd) {
         arg_lit0("x",  "vsdc",     "Transaction type - VSDC. For test only. Not a standard behavior"),
         arg_lit0("g",  "acgpo",    "VISA. generate AC from GPO"),
         arg_lit0("w",  "wired",    "Send data via contact (iso7816) interface. (def: Contactless interface)"),
+        arg_lit0(NULL, "t0", "use protocol T=0 on the contact interface (default)"),
+        arg_lit0(NULL, "t1", "use protocol T=1 on the contact interface"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1472,7 +1581,13 @@ static int CmdEMVExec(const char *Cmd) {
 
     PrintChannel(channel);
     uint8_t psenum = (channel == CC_CONTACT) ? 1 : 2;
+    bool use_t0 = arg_get_lit(ctx, 12);
+    bool use_t1 = arg_get_lit(ctx, 13);
     CLIParserFree(ctx);
+
+    if (emv_set_protocol(use_t0, use_t1, channel) != PM3_SUCCESS) {
+        return PM3_EINVARG;
+    }
 
     if (IfPm3Smartcard() == false) {
         if (channel == CC_CONTACT) {
@@ -1508,12 +1623,12 @@ static int CmdEMVExec(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "* PPSE.");
         SetAPDULogging(show_apdu);
-        res = EMVSearchPSE(channel, activateField, true, psenum, decodeTLV, tlvSelect);
+        res = EMVSearchPSE(channel, activateField, true, psenum, decodeTLV, tlvSelect, true);
 
         // check PPSE instead of PSE and vice versa
         if (res) {
             PrintAndLogEx(INFO, "Check PPSE instead of PSE and vice versa...");
-            res = EMVSearchPSE(channel, false, true, psenum == 1 ? 2 : 1, decodeTLV, tlvSelect);
+            res = EMVSearchPSE(channel, false, true, psenum == 1 ? 2 : 1, decodeTLV, tlvSelect, false);
         }
 
         // check PPSE and select application id
@@ -2090,6 +2205,8 @@ static int CmdEMVScan(const char *Cmd) {
         arg_lit0("m",  "merge",    "Merge output file with card's data. (warning: the file may be corrupted!)"),
         arg_lit0("w",  "wired",    "Send data via contact (iso7816) interface. (def: Contactless interface)"),
         arg_str1(NULL,  NULL,      "<fn>", "JSON output file name"),
+        arg_lit0(NULL, "t0", "use protocol T=0 on the contact interface (default)"),
+        arg_lit0(NULL, "t1", "use protocol T=1 on the contact interface"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2126,7 +2243,13 @@ static int CmdEMVScan(const char *Cmd) {
     int filenamelen = sizeof(filename) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 12, filename, &filenamelen);
 
+    bool use_t0 = arg_get_lit(ctx, 13);
+    bool use_t1 = arg_get_lit(ctx, 14);
     CLIParserFree(ctx);
+
+    if (emv_set_protocol(use_t0, use_t1, channel) != PM3_SUCCESS) {
+        return PM3_EINVARG;
+    }
 
     if (IfPm3Smartcard() == false) {
         if (channel == CC_CONTACT) {
@@ -2222,7 +2345,7 @@ static int CmdEMVScan(const char *Cmd) {
         tlvdb_free(fci);
     }
 
-    res = EMVSearchPSE(channel, false, true, psenum, decodeTLV, tlvSelect);
+    res = EMVSearchPSE(channel, false, true, psenum, decodeTLV, tlvSelect, false);
 
     // check PPSE and select application id
     if (!res) {
@@ -2510,6 +2633,8 @@ static int CmdEMVRoca(const char *Cmd) {
         arg_lit0(NULL, "test",   "Perform self tests"),
         arg_lit0("a",  "apdu",     "Show APDU requests and responses"),
         arg_lit0("w",  "wired",    "Send data via contact (iso7816) interface. (def: Contactless interface)"),
+        arg_lit0(NULL, "t0", "use protocol T=0 on the contact interface (default)"),
+        arg_lit0(NULL, "t1", "use protocol T=1 on the contact interface"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2525,7 +2650,13 @@ static int CmdEMVRoca(const char *Cmd) {
     if (arg_get_lit(ctx, 3))
         channel = CC_CONTACT;
 
+    bool use_t0 = arg_get_lit(ctx, 4);
+    bool use_t1 = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
+
+    if (emv_set_protocol(use_t0, use_t1, channel) != PM3_SUCCESS) {
+        return PM3_EINVARG;
+    }
     PrintChannel(channel);
 
     if (IfPm3Smartcard() == false) {
@@ -2555,7 +2686,7 @@ static int CmdEMVRoca(const char *Cmd) {
 
     // EMV PPSE
     PrintAndLogEx(INFO, "PPSE");
-    res = EMVSearchPSE(channel, false, true, psenum, false, tlvSelect);
+    res = EMVSearchPSE(channel, false, true, psenum, false, tlvSelect, false);
 
     // check PPSE and select application id
     if (!res) {
@@ -2776,13 +2907,17 @@ static int CmdEMVReader(const char *Cmd) {
                   "In `verbose` mode it will also try to extract and decode the transaction logs stored on card in either channel.\n",
                   "emv reader\n"
                   "emv reader -v\n"
-                  "emv reader -@     -> Continuous mode\n"
+                  "emv reader -w        -> contact interface\n"
+                  "emv reader -w --t1   -> contact interface, protocol T=1\n"
+                  "emv reader -@      -> Continuous mode\n"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("w", "wired", "Send data via contact (iso7816) interface. (def: Contactless interface)"),
         arg_lit0("v", "verbose", "Verbose output"),
         arg_lit0("@",  NULL,   "continuous reader mode"),
+        arg_lit0(NULL, "t0", "use protocol T=0 on the contact interface (default)"),
+        arg_lit0(NULL, "t1", "use protocol T=1 on the contact interface"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2795,7 +2930,13 @@ static int CmdEMVReader(const char *Cmd) {
     uint8_t psenum = (channel == CC_CONTACT) ? 1 : 2;
     bool verbose = arg_get_lit(ctx, 2);
     bool continuous = arg_get_lit(ctx, 3);
+    bool use_t0 = arg_get_lit(ctx, 4);
+    bool use_t1 = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
+
+    if (emv_set_protocol(use_t0, use_t1, channel) != PM3_SUCCESS) {
+        return PM3_EINVARG;
+    }
 
     if (continuous) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
@@ -2820,14 +2961,27 @@ static int CmdEMVReader(const char *Cmd) {
         const char *al = "Applets";
         struct tlvdb *tlvSelect = tlvdb_fixed(1, strlen(al), (const unsigned char *)al);
 
-        res = EMVSelectPSE(channel, true, true, 2, buf, sizeof(buf), &len, &sw);
+        // Search the expected directory then the other - a card may carry 1PAY
+        // or 2PAY and plenty carry only one. First call activates the field,
+        // the fallback reuses it. Both stay quiet: a card without the
+        // directory we guessed at is ordinary, and the AID sweep below is the
+        // real fallback, so its failure is the one worth reporting.
+        res = EMVSearchPSE(channel, true, true, psenum, false, tlvSelect, true);
+        if (res) {
+            res = EMVSearchPSE(channel, false, true, (psenum == 1) ? 2 : 1, false, tlvSelect, true);
+        }
 
-        // search PSE / PPSE
-        res |= EMVSearchPSE(channel, false, true, psenum, false, tlvSelect);
         if (res) {
             // EMV SEARCH with AID list
             DropFieldEx(channel);
             if (EMVSearch(channel, true, true, false, tlvSelect, false)) {
+                PrintAndLogEx(FAILED, "No EMV application found (no PSE, no PPSE, no known AID)");
+                if (channel == CC_CONTACT) {
+                    smart_card_atr_t atr;
+                    if (smart_select(false, &atr) == false) {
+                        PrintAndLogEx(HINT, "Hint: no answer at all - is a card in the slot? try `" _YELLOW_("smart info") "`");
+                    }
+                }
                 tlvdb_free(tlvSelect);
                 DropFieldEx(channel);
                 continue;

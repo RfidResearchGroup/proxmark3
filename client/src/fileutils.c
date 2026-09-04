@@ -29,6 +29,7 @@
 #include "cmdhficlass.h"  // pagemap
 #include "iclass_cmd.h"
 #include "iso15.h"
+#include "hitag.h"
 
 #ifdef _WIN32
 #include "scandir.h"
@@ -158,6 +159,75 @@ bool path_is_regular_file(const char *path) {
         return false;
 #endif
     return S_ISREG(st.st_mode) != 0;
+}
+
+/**
+ * @brief checks if path is an absolute path.
+ * @param path
+ * @return
+ */
+bool path_is_absolute(const char *path) {
+    if (path == NULL || path[0] == '\0') {
+        return false;
+    }
+
+    if ((path[0] == '/') || (path[0] == '\\')) {
+        return true;
+    }
+
+#ifdef _WIN32
+    // drive letter,  "C:/..." or "C:\..."
+    if (isalpha((unsigned char)path[0]) && (path[1] == ':') && ((path[2] == '/') || (path[2] == '\\'))) {
+        return true;
+    }
+#endif
+    return false;
+}
+
+/**
+ * @brief expands a leading "~" into the user home directory.
+ *
+ * The pm3 prompt is not a shell, so nobody expands "~" for us and it wouldotherwise be taken as a directory named "~". 
+ * 
+ * "~user/..." is not supported and is returned unchanged.
+ *
+ * @param path
+ * @return newly allocated string, caller must free.  NULL on failure
+ */
+char *path_expand_homedir(const char *path) {
+    if (path == NULL) {
+        return NULL;
+    }
+
+    // only a leading "~", "~/" or "~\" is expanded
+    if ((path[0] != '~') || ((path[1] != '\0') && (path[1] != '/') && (path[1] != '\\'))) {
+        return str_dup(path);
+    }
+
+    const char *user_path = get_my_user_directory();
+    if (user_path == NULL) {
+        return str_dup(path);
+    }
+
+    // skip the "~" and the path separators directly after it
+    const char *tail = path + 1;
+    while ((*tail == '/') || (*tail == '\\')) {
+        tail++;
+    }
+
+    bool sep = ((*tail != '\0') &&
+                (str_endswith(user_path, "/") == false) &&
+                (str_endswith(user_path, "\\") == false));
+
+    size_t n = strlen(user_path) + (sep ? strlen(PATHSEP) : 0) + strlen(tail) + 1;
+    char *res = (char *)calloc(n, sizeof(uint8_t));
+    if (res == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return NULL;
+    }
+
+    snprintf(res, n, "%s%s%s", user_path, sep ? PATHSEP : "", tail);
+    return res;
 }
 
 const char *path_basename(const char *path) {
@@ -323,13 +393,21 @@ static char *filenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
     if (suffix == NULL) return NULL;
 
-    char *fileName = (char *) calloc(strlen(preferredName) + strlen(suffix) + 1, sizeof(uint8_t));
-    if (fileName == NULL) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
+    char *expanded = path_expand_homedir(preferredName);
+    if (expanded == NULL) {
         return NULL;
     }
 
-    strcpy(fileName, preferredName);
+    char *fileName = (char *) calloc(strlen(expanded) + strlen(suffix) + 1, sizeof(uint8_t));
+    if (fileName == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(expanded);
+        return NULL;
+    }
+
+    strcpy(fileName, expanded);
+    free(expanded);
+
     if (str_endswith(fileName, suffix)) {
         return fileName;
     }
@@ -354,6 +432,11 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
         return NULL;
     }
 
+    char *expanded = path_expand_homedir(preferredName);
+    if (expanded == NULL) {
+        return NULL;
+    }
+
     // 1: null terminator
     // 16: room for filenum to ensure new filename
     // save_path_len + strlen(PATHSEP):  the user preference save paths
@@ -362,13 +445,14 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
 
     char *fileName = (char *) calloc(len, sizeof(uint8_t));
     if (fileName == NULL) {
+        free(expanded);
         return NULL;
     }
 
     char *pfn = fileName;
 
     // if given path is not an absolute path
-    if ((preferredName[0] !=  '/') && (preferredName[0] !=  '\\')) {
+    if (path_is_absolute(expanded) == false) {
         // user preference save paths
         size_t save_path_len = path_size(e_save_path);
         if (save_path_len && save_path_len < (FILE_PATH_SIZE - strlen(PATHSEP))) {
@@ -379,8 +463,8 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
     }
 
     // remove file extension if exist in name
-    size_t p_namelen = strlen(preferredName);
-    if (str_endswith(preferredName, suffix)) {
+    size_t p_namelen = strlen(expanded);
+    if (str_endswith(expanded, suffix)) {
         p_namelen -= strlen(suffix);
     }
 
@@ -388,7 +472,7 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
     len -= p_namelen;
 
     // modify filename
-    snprintf(pfn, len, "%.*s%s", (int)p_namelen, preferredName, suffix);
+    snprintf(pfn, len, "%.*s%s", (int)p_namelen, expanded, suffix);
 
     // "-001"
     len -= 4;
@@ -397,10 +481,11 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
     // check complete path/filename if exists
     while (fileExists(fileName)) {
         // modify filename
-        snprintf(pfn, len, "%.*s-%03d%s", (int)p_namelen, preferredName, num, suffix);
+        snprintf(pfn, len, "%.*s-%03d%s", (int)p_namelen, expanded, num, suffix);
         num++;
     }
 
+    free(expanded);
     return fileName;
 }
 
@@ -476,6 +561,47 @@ int saveFileTXT(const char *preferredName, const char *suffix, const void *data,
     PrintAndLogEx(SUCCESS, "Saved " _YELLOW_("%zu") " bytes to text file `" _YELLOW_("%s") "`", datalen, fileName);
     free(fileName);
     return PM3_SUCCESS;
+}
+
+// Writes the iso15_tag_t body of a `15693 v4` or `15693 v5` JSON.
+//
+// The two revisions differ in exactly one field: v4 stored pagesCount in a byte,
+// v5 in two, once 0xA0 pages stopped being enough for an SLIX2. Everything else
+// is identical, so the width is a parameter rather than a second copy.
+//
+// pagesCount is serialized little endian, byte for byte what an x86 client
+// writes out of the struct, so dumps stay readable across hosts.
+static void json15_save_tag(json_t *root, const iso15_tag_t *tag, size_t pagescount_len) {
+
+    char path[PATH_MAX_LENGTH] = {0};
+    uint8_t pagescount[2] = { tag->pagesCount & 0xFF, (tag->pagesCount >> 8) & 0xFF };
+
+    JsonSaveBufAsHexCompact(root, "$.Card.uid", (uint8_t *)tag->uid, sizeof(tag->uid));
+    JsonSaveBufAsHexCompact(root, "$.Card.dsfid", (uint8_t *)&tag->dsfid, 1);
+    JsonSaveBufAsHexCompact(root, "$.Card.dsfidlock", (uint8_t *)&tag->dsfidLock, 1);
+    JsonSaveBufAsHexCompact(root, "$.Card.afi", (uint8_t *)&tag->afi, 1);
+    JsonSaveBufAsHexCompact(root, "$.Card.afilock", (uint8_t *)&tag->afiLock, 1);
+    JsonSaveBufAsHexCompact(root, "$.Card.bytesperpage", (uint8_t *)&tag->bytesPerPage, 1);
+    JsonSaveBufAsHexCompact(root, "$.Card.pagescount", pagescount, pagescount_len);
+    JsonSaveBufAsHexCompact(root, "$.Card.ic", (uint8_t *)&tag->ic, 1);
+    JsonSaveBufAsHexCompact(root, "$.Card.locks", (uint8_t *)tag->locks, tag->pagesCount);
+    JsonSaveBufAsHexCompact(root, "$.Card.random", (uint8_t *)tag->random, sizeof(tag->random));
+    JsonSaveBufAsHexCompact(root, "$.Card.privacypasswd", (uint8_t *)tag->privacyPasswd, sizeof(tag->privacyPasswd));
+    JsonSaveBufAsHexCompact(root, "$.Card.state", (uint8_t *)&tag->state, 1);
+
+    for (uint16_t i = 0 ; i < tag->pagesCount ; i++) {
+
+        if (((i + 1) * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) {
+            break;
+        }
+
+        snprintf(path, sizeof(path), "$.blocks.%u", i);
+        JsonSaveBufAsHexCompact(root
+                                , path
+                                , (uint8_t *)&tag->data[i * tag->bytesPerPage]
+                                , tag->bytesPerPage
+                               );
+    }
 }
 
 int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *)) {
@@ -627,15 +753,53 @@ int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen,
             }
             break;
         }
-        case jsfHitag: {
-            uint8_t uid[4] = {0};
-            memcpy(uid, data, 4);
-            JsonSaveStr(root, "FileType", "hitag");
-            JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
+        // Hitag 1 and Hitag 2 both start with the UID in block 0.  Hitag 2 also
+        // carries its configuration in block 3, so record it when the dump is
+        // long enough to hold one.
+        case jsfHitag1:
+        case jsfHitag2: {
+            JsonSaveStr(root, "FileType", (ftype == jsfHitag1) ? "hitag1" : "hitag2");
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", data, HITAG_UID_SIZE);
 
-            for (size_t i = 0; i < (datalen / 4); i++) {
+            if ((ftype == jsfHitag2) && (datalen >= 16)) {
+                JsonSaveBufAsHexCompact(root, "$.Card.Config", data + 12, HITAG_BLOCK_SIZE);
+            }
+
+            JsonSaveInt(root, "$.Card.Blocks", (int)(datalen / HITAG_BLOCK_SIZE));
+
+            for (size_t i = 0; i < (datalen / HITAG_BLOCK_SIZE); i++) {
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
+                JsonSaveBufAsHexCompact(root, path, data + (i * HITAG_BLOCK_SIZE), HITAG_BLOCK_SIZE);
+            }
+            break;
+        }
+        // Hitag S keeps the UID in page 0 and the configuration in page 1
+        case jsfHitagS: {
+            JsonSaveStr(root, "FileType", "hitags");
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", data + (HITAGS_UID_PADR * HITAGS_PAGE_SIZE), HITAG_UID_SIZE);
+
+            if (datalen >= ((HITAGS_CONFIG_PADR + 1) * HITAGS_PAGE_SIZE)) {
+                JsonSaveBufAsHexCompact(root, "$.Card.Config", data + (HITAGS_CONFIG_PADR * HITAGS_PAGE_SIZE), HITAGS_PAGE_SIZE);
+            }
+
+            JsonSaveInt(root, "$.Card.Blocks", (int)(datalen / HITAGS_PAGE_SIZE));
+
+            for (size_t i = 0; i < (datalen / HITAGS_PAGE_SIZE); i++) {
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * HITAGS_PAGE_SIZE), HITAGS_PAGE_SIZE);
+            }
+            break;
+        }
+        // Hitag u has a 6 byte UID and an ICR that the tag reports separately from
+        // its pages, so neither can be recovered from `data`.  The caller supplies
+        // them through the save callback, see pm3_save_dump_cb().
+        case jsfHitagU: {
+            JsonSaveStr(root, "FileType", "hitagu");
+            JsonSaveInt(root, "$.Card.Blocks", (int)(datalen / HITAGU_BLOCK_SIZE));
+
+            for (size_t i = 0; i < (datalen / HITAGU_BLOCK_SIZE); i++) {
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * HITAGU_BLOCK_SIZE), HITAGU_BLOCK_SIZE);
             }
             break;
         }
@@ -688,35 +852,10 @@ int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen,
             break;
         }
         // handles ISO15693 in iso15_tag_t format
-        case jsf15_v4: {
-            JsonSaveStr(root, "FileType", "15693 v4");
-            iso15_tag_t *tag = (iso15_tag_t *)data;
-            JsonSaveBufAsHexCompact(root, "$.Card.uid", tag->uid, sizeof(tag->uid));
-            JsonSaveBufAsHexCompact(root, "$.Card.dsfid", &tag->dsfid, 1);
-            JsonSaveBufAsHexCompact(root, "$.Card.dsfidlock", (uint8_t *)&tag->dsfidLock, 1);
-            JsonSaveBufAsHexCompact(root, "$.Card.afi", &tag->afi, 1);
-            JsonSaveBufAsHexCompact(root, "$.Card.afilock", (uint8_t *)&tag->afiLock, 1);
-            JsonSaveBufAsHexCompact(root, "$.Card.bytesperpage", &tag->bytesPerPage, 1);
-            JsonSaveBufAsHexCompact(root, "$.Card.pagescount", &tag->pagesCount, 1);
-            JsonSaveBufAsHexCompact(root, "$.Card.ic", &tag->ic, 1);
-            JsonSaveBufAsHexCompact(root, "$.Card.locks", tag->locks, tag->pagesCount);
-            JsonSaveBufAsHexCompact(root, "$.Card.random", tag->random, 2);
-            JsonSaveBufAsHexCompact(root, "$.Card.privacypasswd", tag->privacyPasswd, sizeof(tag->privacyPasswd));
-            JsonSaveBufAsHexCompact(root, "$.Card.state", (uint8_t *)&tag->state, 1);
-
-            for (uint8_t i = 0 ; i < tag->pagesCount ; i++) {
-
-                if (((i + 1) * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) {
-                    break;
-                }
-
-                snprintf(path, sizeof(path), "$.blocks.%u", i);
-                JsonSaveBufAsHexCompact(root
-                                        , path
-                                        , &tag->data[i * tag->bytesPerPage]
-                                        , tag->bytesPerPage
-                                       );
-            }
+        case jsf15_v4:
+        case jsf15_v5: {
+            JsonSaveStr(root, "FileType", (ftype == jsf15_v5) ? "15693 v5" : "15693 v4");
+            json15_save_tag(root, (iso15_tag_t *)data, (ftype == jsf15_v5) ? 2 : 1);
             break;
         }
         case jsfLegic_v2: {
@@ -1345,6 +1484,58 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
     return retval;
 }
 
+// Convert a run of "XX XX XX ..." hex text into bytes.
+//
+// `head` is the part of the line the caller already has, `more` says whether the
+// line continued past the caller's buffer, in which case the rest is pulled from
+// `f` one character at a time and converted as it goes.  That keeps the caller's
+// line buffer small: an ISO15693 "Data Content" line carries the whole tag and
+// runs to several thousand characters.
+//
+// Returns the number of bytes the text held, which may be larger than `destlen`.
+// Only the first `destlen` bytes are stored, so the caller can spot an overflow.
+static size_t hexstream_to_bytes(FILE *f, const char *head, bool more, uint8_t *dest, size_t destlen) {
+
+    size_t cnt = 0;
+    int hi = -1;
+
+    for (;;) {
+
+        int c;
+        if (*head) {
+            c = (unsigned char) * head++;
+        } else if (more) {
+            c = fgetc(f);
+        } else {
+            break;
+        }
+
+        if ((c == EOF) || (c == '\n') || (c == '\r')) {
+            break;
+        }
+
+        if (isxdigit(c) == 0) {
+            // separator
+            continue;
+        }
+
+        int v = (c <= '9') ? (c - '0') : ((c | 0x20) - 'a' + 10);
+
+        if (hi < 0) {
+            hi = v;
+            continue;
+        }
+
+        if (cnt < destlen) {
+            dest[cnt] = (hi << 4) | v;
+        }
+        cnt++;
+        hi = -1;
+    }
+
+    return cnt;
+}
+
 int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, nfc_df_e ft) {
 
     if (data == NULL) {
@@ -1375,6 +1566,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
     udata_t udata = (udata_t)data;
     int n = 0;
     uint32_t counter = 0;
+    size_t iso15_datalen = 0;
 
     while (!feof(f)) {
 
@@ -1393,14 +1585,74 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
             continue;
         }
 
+        // did this fgets reach the end of the line, or is the line longer than
+        // the buffer?  ISO15693 puts a whole tag on its "Data Content" line.
+        bool line_truncated = ((strchr(line, '\n') == NULL) && (feof(f) == false));
+
         str_cleanrn(line, sizeof(line));
         str_lower(line);
 
         if (str_startswith(line, "uid:")) {
             if (ft == NFC_DF_MFC) {
 //                param_gethex_to_eol(line + 4, 0, udata.mfc->card_info.uid, sizeof(udata.mfc->card_info.uid), &n);
+            } else if (ft == NFC_DF_15) {
+                // iso15_tag_t keeps the UID in transmission order (LSB first),
+                // Flipper writes it the way it is displayed (MSB first).
+                param_gethex_to_eol(line + 4, 0, udata.iso15->uid, sizeof(udata.iso15->uid), &n);
+                reverse_array(udata.iso15->uid, sizeof(udata.iso15->uid));
             }
             continue;
+        }
+
+        if (ft == NFC_DF_15) {
+
+            if (str_startswith(line, "dsfid:")) {
+                uint8_t v = 0;
+                param_gethex_to_eol(line + 6, 0, &v, sizeof(v), &n);
+                udata.iso15->dsfid = v;
+                continue;
+            }
+
+            if (str_startswith(line, "afi:")) {
+                uint8_t v = 0;
+                param_gethex_to_eol(line + 4, 0, &v, sizeof(v), &n);
+                udata.iso15->afi = v;
+                continue;
+            }
+
+            if (str_startswith(line, "ic reference:")) {
+                uint8_t v = 0;
+                param_gethex_to_eol(line + 13, 0, &v, sizeof(v), &n);
+                udata.iso15->ic = v;
+                continue;
+            }
+
+            // Flipper writes the block count in decimal but the block size in hex
+            if (str_startswith(line, "block count:")) {
+                int v = 0;
+                sscanf(line, "block count: %d", &v);
+                udata.iso15->pagesCount = v;
+                continue;
+            }
+
+            if (str_startswith(line, "block size:")) {
+                uint8_t v = 0;
+                param_gethex_to_eol(line + 11, 0, &v, sizeof(v), &n);
+                udata.iso15->bytesPerPage = v;
+                continue;
+            }
+
+            if (str_startswith(line, "data content:")) {
+                iso15_datalen = hexstream_to_bytes(f, line + 13, line_truncated
+                                                   , udata.iso15->data
+                                                   , sizeof(udata.iso15->data));
+                continue;
+            }
+
+            if (str_startswith(line, "password privacy:")) {
+                param_gethex_to_eol(line + 17, 0, udata.iso15->privacyPasswd, sizeof(udata.iso15->privacyPasswd), &n);
+                continue;
+            }
         }
 
         if (str_startswith(line, "atqa:")) {
@@ -1574,6 +1826,48 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
         *datalen = counter;
     } else if (ft == NFC_DF_MFU) {
         *datalen += MFU_DUMP_PREFIX_LENGTH;
+    } else if (ft == NFC_DF_15) {
+
+        if ((udata.iso15->pagesCount == 0) || (udata.iso15->bytesPerPage == 0)) {
+            fclose(f);
+            PrintAndLogEx(FAILED, "missing block count / block size in `" _YELLOW_("%s") "`", preferredName);
+            return PM3_ESOFT;
+        }
+
+        if (udata.iso15->pagesCount > ISO15693_TAG_MAX_PAGES) {
+            fclose(f);
+            PrintAndLogEx(FAILED, "block count ( %u ) exceeds max ( %u )"
+                          , udata.iso15->pagesCount
+                          , ISO15693_TAG_MAX_PAGES);
+            return PM3_ESOFT;
+        }
+
+        uint32_t expected = (uint32_t)udata.iso15->pagesCount * udata.iso15->bytesPerPage;
+        if (expected > ISO15693_TAG_MAX_SIZE) {
+            fclose(f);
+            PrintAndLogEx(FAILED, "tag memory ( %u bytes ) exceeds max ( %u bytes )"
+                          , expected
+                          , ISO15693_TAG_MAX_SIZE);
+            return PM3_ESOFT;
+        }
+
+        if (iso15_datalen > sizeof(udata.iso15->data)) {
+            fclose(f);
+            PrintAndLogEx(FAILED, "data content ( %zu bytes ) exceeds max ( %zu bytes )"
+                          , iso15_datalen
+                          , sizeof(udata.iso15->data));
+            return PM3_ESOFT;
+        }
+
+        if (iso15_datalen != expected) {
+            PrintAndLogEx(WARNING, "data content is %zu bytes, header says %u x %u = %u bytes"
+                          , iso15_datalen
+                          , udata.iso15->pagesCount
+                          , udata.iso15->bytesPerPage
+                          , expected);
+        }
+
+        *datalen = sizeof(iso15_tag_t);
     }
 
     fclose(f);
@@ -1684,6 +1978,37 @@ static int load_file_sanity(char *s, uint32_t datalen, int i, size_t len) {
 int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, void (*callback)(json_t *)) {
     return loadFileJSONex(preferredName, data, maxdatalen, datalen, true, callback);
 }
+// Loads one metadata field of an iso15_tag_t.
+//
+// JsonLoadBufAsHex writes whatever it managed to parse *before* it bails, so a
+// caller that discards the return value keeps a half-written field. Dumps in the
+// wild carry a two byte `pagescount` from when that member was a uint16_t; the
+// old code took the first byte of it ("0001" -> 0) and then tripped over its own
+// layout check with a message that pointed nowhere near the real problem.
+//
+// A malformed value is always fatal. A missing key is only fatal for the fields
+// the memory layout is computed from.
+static int json15_load_field(json_t *root, const char *path, uint8_t *dst, size_t len, size_t *datalen, bool required) {
+
+    int res = JsonLoadBufAsHex(root, path, dst, len, datalen);
+    if (res == 0) {
+        return PM3_SUCCESS;
+    }
+
+    // do not leave a partial value behind
+    memset(dst, 0, len);
+
+    if (res == 1) {
+        if (required == false) {
+            return PM3_SUCCESS;
+        }
+        PrintAndLogEx(ERR, "loadFileJSONex: `" _YELLOW_("%s") "` is missing", path);
+    } else {
+        PrintAndLogEx(ERR, "loadFileJSONex: `" _YELLOW_("%s") "` is not a %zu byte hex value", path, len);
+    }
+    return PM3_EFILE;
+}
+
 int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, bool verbose, void (*callback)(json_t *)) {
 
     if (data == NULL) {
@@ -1859,7 +2184,20 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         goto out;
     }
 
+    // The four Hitag flavours share one block layout on disk and differ only in
+    // how many blocks they carry, so one reader serves all of them.  A file
+    // written before the per-flavour types existed says only "hitag" and cannot
+    // say which tag it came from - treat those as Hitag 2 and tell the user.
     if (!strcmp(ctype, "hitag")) {
+        PrintAndLogEx(WARNING, "`" _YELLOW_("hitag") "` is the legacy dump type and does not record which tag it came from");
+        PrintAndLogEx(INFO, "Reading it as " _YELLOW_("Hitag 2") ", re-dump the tag to get a versioned file");
+    }
+
+    if (!strcmp(ctype, "hitag") ||
+            !strcmp(ctype, "hitag1") ||
+            !strcmp(ctype, "hitag2") ||
+            !strcmp(ctype, "hitags") ||
+            !strcmp(ctype, "hitagu")) {
         size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 4); i++) {
             if (sptr + 4 > maxdatalen) {
@@ -2118,15 +2456,55 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         goto out;
     }
 
-    if (!strcmp(ctype, "15693 v4")) {
+    if (!strcmp(ctype, "15693 v4") || !strcmp(ctype, "15693 v5")) {
+
+        bool is_v5 = (strcmp(ctype, "15693 v5") == 0);
+        if (is_v5 == false) {
+            PrintAndLogEx(WARNING, "loadFileJSONex: loading deprecated 15693 v4 format");
+        }
+
+        if (maxdatalen < sizeof(iso15_tag_t)) {
+            PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu, need %zu for an iso15_tag_t"
+                          , maxdatalen
+                          , sizeof(iso15_tag_t)
+                         );
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+
         iso15_tag_t *tag = (iso15_tag_t *)udata.bytes;
-        JsonLoadBufAsHex(root, "$.Card.uid", tag->uid, 8, datalen);
-        JsonLoadBufAsHex(root, "$.Card.dsfid", &tag->dsfid, 1, datalen);
-        JsonLoadBufAsHex(root, "$.Card.dsfidlock", (uint8_t *)&tag->dsfidLock, 1, datalen);
-        JsonLoadBufAsHex(root, "$.Card.afi", &tag->afi, 1, datalen);
-        JsonLoadBufAsHex(root, "$.Card.afilock", (uint8_t *)&tag->afiLock, 1, datalen);
-        JsonLoadBufAsHex(root, "$.Card.bytesperpage", &tag->bytesPerPage, 1, datalen);
-        JsonLoadBufAsHex(root, "$.Card.pagescount", &tag->pagesCount, 1, datalen);
+
+        // pagesCount is the only field the two revisions disagree on: one byte
+        // in v4, two in v5, little endian. The width belongs to the format, so
+        // it is taken from the FileType and a value of the wrong width is an
+        // error, not something to accommodate. Read into a scratch buffer and
+        // assemble, so a v4 file cannot leave the high byte of a uint16_t
+        // member holding whatever the caller's buffer had in it.
+        uint8_t pagescount[2] = {0};
+
+        const struct {
+            const char *path;
+            uint8_t *dst;
+            size_t len;
+            bool required;
+        } hdr[] = {
+            { "$.Card.uid",          tag->uid,                          sizeof(tag->uid), true  },
+            { "$.Card.dsfid",        &tag->dsfid,                       1,                false },
+            { "$.Card.dsfidlock", (uint8_t *) &tag->dsfidLock,        1,                false },
+            { "$.Card.afi",          &tag->afi,                         1,                false },
+            { "$.Card.afilock", (uint8_t *) &tag->afiLock,          1,                false },
+            { "$.Card.bytesperpage", &tag->bytesPerPage,                1,                true  },
+            { "$.Card.pagescount",   pagescount,                        is_v5 ? 2 : 1,    true  },
+        };
+
+        for (size_t n = 0; n < ARRAYLEN(hdr); n++) {
+            retval = json15_load_field(root, hdr[n].path, hdr[n].dst, hdr[n].len, datalen, hdr[n].required);
+            if (retval != PM3_SUCCESS) {
+                goto out;
+            }
+        }
+
+        tag->pagesCount = pagescount[0] | (pagescount[1] << 8);
 
         if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
                 ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
@@ -2142,14 +2520,27 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             goto out;
         }
 
-        JsonLoadBufAsHex(root, "$.Card.ic", &tag->ic, 1, datalen);
-        JsonLoadBufAsHex(root, "$.Card.locks", tag->locks, tag->pagesCount, datalen);
-        JsonLoadBufAsHex(root, "$.Card.random", tag->random, 2, datalen);
-        JsonLoadBufAsHex(root, "$.Card.privacypasswd", tag->privacyPasswd, 4, datalen);
-        JsonLoadBufAsHex(root, "$.Card.state", (uint8_t *)&tag->state, 1, datalen);
+        const struct {
+            const char *path;
+            uint8_t *dst;
+            size_t len;
+        } rest[] = {
+            { "$.Card.ic",            &tag->ic,                   1                          },
+            { "$.Card.locks",         tag->locks,                 tag->pagesCount            },
+            { "$.Card.random",        tag->random,                sizeof(tag->random)        },
+            { "$.Card.privacypasswd", tag->privacyPasswd,         sizeof(tag->privacyPasswd) },
+            { "$.Card.state", (uint8_t *) &tag->state,     1                          },
+        };
+
+        for (size_t n = 0; n < ARRAYLEN(rest); n++) {
+            retval = json15_load_field(root, rest[n].path, rest[n].dst, rest[n].len, datalen, false);
+            if (retval != PM3_SUCCESS) {
+                goto out;
+            }
+        }
 
         size_t sptr = 0;
-        for (uint8_t i = 0; i < tag->pagesCount ; i++) {
+        for (uint16_t i = 0; i < tag->pagesCount ; i++) {
 
             if (((i + 1) * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) {
                 PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen"
@@ -2404,6 +2795,12 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         *datalen = sptr;
         goto out;
     }
+
+    // Nothing above claimed this file. Falling through to `out` used to return
+    // PM3_SUCCESS with datalen 0, which reads to the caller as "loaded, empty".
+    PrintAndLogEx(ERR, "loadFileJSONex: unsupported FileType `" _YELLOW_("%s") "`", ctype);
+    PrintAndLogEx(HINT, "Hint: the file may have been written by a newer client version");
+    retval = PM3_EFILE;
 
 out:
     if (callback != NULL) {
@@ -2847,7 +3244,10 @@ int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool 
         str_cleanrn(line, sizeof(line));
         str_lower(line);
 
-        if (str_startswith(line, "device type: ntag")) {
+        // older Flipper files name the exact chip, the current format writes
+        // the family name instead
+        if (str_startswith(line, "device type: ntag") ||
+                str_startswith(line, "device type: mifare ultralight")) {
             *dump_type = NFC_DF_MFU;
             break;
         }
@@ -2909,6 +3309,7 @@ int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool 
                 break;
             case NFC_DF_15:
                 PrintAndLogEx(INFO, "Detected ISO15693 based dump format");
+                break;
             case NFC_DF_UNKNOWN:
                 PrintAndLogEx(WARNING, "Failed to detected dump format");
                 break;
@@ -3008,6 +3409,127 @@ int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
         default:
             return PM3_ESOFT;
     }
+}
+
+// Every iso15_tag_t revision carries the same fields in the same order and
+// differs only in the width of pagesCount and the length of locks[]. A .bin has
+// no version field, so its length is its version -- and a conversion is a matter
+// of reading the fields at the right offsets, not one struct type per revision.
+//
+//    bytes   pagesCount   locks[]   note
+//    2139    u8           0x40
+//    2235    u8           0xA0      ISO15_V4_DUMP_LENGTH, iso15_tag_v4_t
+//    2236    u16          0xA0      pagesCount widened first
+//    2331    u16          0xFF      then locks[], briefly to 0xFF
+//    2332    u16          0x100     ISO15_V5_DUMP_LENGTH, the current struct
+//
+// The two lengths that have a struct to compare against are asserted below, so a
+// future edit to iso15_tag_t cannot drift away from this table unnoticed.
+_Static_assert(sizeof(iso15_tag_t) == ISO15_V5_DUMP_LENGTH, "iso15_tag_t is not ISO15_V5_DUMP_LENGTH bytes");
+_Static_assert(sizeof(iso15_tag_v4_t) == ISO15_V4_DUMP_LENGTH, "iso15_tag_v4_t is not ISO15_V4_DUMP_LENGTH bytes");
+
+static const struct {
+    size_t len;
+    uint8_t pagescount_sz;
+    uint16_t locks_sz;
+} g_iso15_layouts[] = {
+    { 2139,                 1, 0x40  },
+    { ISO15_V4_DUMP_LENGTH, 1, 0xA0  },
+    { 2236,                 2, 0xA0  },
+    { 2331,                 2, 0xFF  },
+    { ISO15_V5_DUMP_LENGTH, 2, 0x100 },
+};
+
+// Upgrades a raw iso15_tag_t dump to the current struct revision. A dump that
+// already is the current revision passes through untouched, so this is safe to
+// call on any buffer that came out of pm3_load_dump().
+int convert_15_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
+
+    if ((dump == NULL) || (*dump == NULL) || (dumplen == NULL)) {
+        return PM3_EINVARG;
+    }
+
+    if (*dumplen == ISO15_V5_DUMP_LENGTH) {
+        return PM3_SUCCESS;
+    }
+
+    size_t n = 0;
+    for (; n < ARRAYLEN(g_iso15_layouts); n++) {
+        if (g_iso15_layouts[n].len == *dumplen) {
+            break;
+        }
+    }
+
+    if (n == ARRAYLEN(g_iso15_layouts)) {
+        PrintAndLogEx(FAILED, "Unsupported ISO15693 dump length ( %zu bytes )", *dumplen);
+        PrintAndLogEx(HINT, "Hint: known lengths are 2139, %d, 2236, 2331 and %d bytes"
+                      , ISO15_V4_DUMP_LENGTH
+                      , ISO15_V5_DUMP_LENGTH
+                     );
+        return PM3_ESOFT;
+    }
+
+    uint8_t pagescount_sz = g_iso15_layouts[n].pagescount_sz;
+    uint16_t locks_sz = g_iso15_layouts[n].locks_sz;
+
+    iso15_tag_t *tag = (iso15_tag_t *)calloc(1, sizeof(iso15_tag_t));
+    if (tag == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    const uint8_t *old = *dump;
+    size_t o = 0;
+
+    memcpy(tag->uid, old + o, sizeof(tag->uid));
+    o += sizeof(tag->uid);
+
+    tag->dsfid = old[o++];
+    tag->dsfidLock = (old[o++] != 0);
+    tag->afi = old[o++];
+    tag->afiLock = (old[o++] != 0);
+    tag->bytesPerPage = old[o++];
+
+    tag->pagesCount = old[o];
+    if (pagescount_sz == 2) {
+        tag->pagesCount |= (old[o + 1] << 8);
+    }
+    o += pagescount_sz;
+
+    tag->ic = old[o++];
+
+    // a shorter locks[] leaves the tail of the current one zeroed
+    memcpy(tag->locks, old + o, MIN(locks_sz, sizeof(tag->locks)));
+    o += locks_sz;
+
+    memcpy(tag->data, old + o, sizeof(tag->data));
+    o += sizeof(tag->data);
+    memcpy(tag->random, old + o, sizeof(tag->random));
+    o += sizeof(tag->random);
+    memcpy(tag->privacyPasswd, old + o, sizeof(tag->privacyPasswd));
+    o += sizeof(tag->privacyPasswd);
+
+    // the state enumerators have never been renumbered, so the value carries over
+    memcpy(&tag->state, old + o, sizeof(tag->state));
+    o += sizeof(tag->state);
+
+    tag->expectFast = (old[o++] != 0);
+    tag->expectFsk = (old[o++] != 0);
+
+    free(*dump);
+    *dump = (uint8_t *)tag;
+    *dumplen = ISO15_V5_DUMP_LENGTH;
+
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Converted ISO15693 dump, " _YELLOW_("%zu") " byte layout -> " _GREEN_("v5")
+                      "  ( pagesCount u%u, locks[0x%X] )"
+                      , g_iso15_layouts[n].len
+                      , pagescount_sz * 8
+                      , locks_sz
+                     );
+    }
+
+    return PM3_SUCCESS;
 }
 
 static int filelist(const char *path, const char *ext, uint8_t last, bool tentative, uint8_t indent, uint16_t strip) {
@@ -3298,10 +3820,6 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
         return PM3_EINVARG;
     }
 
-    if (path_is_directory(searchname)) {
-        return PM3_EINVARG;
-    }
-
     char *filename = filenamemcopy(searchname, suffix);
     if (filename == NULL) {
         return PM3_EMALLOC;
@@ -3310,6 +3828,11 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
     if (strlen(filename) == 0) {
         free(filename);
         return PM3_EFILE;
+    }
+
+    if (path_is_directory(filename)) {
+        free(filename);
+        return PM3_EINVARG;
     }
 
     int res = searchFinalFile(foundpath, pm3dir, filename, silent);
@@ -3398,6 +3921,24 @@ int insert_line_if_not_exists(const char *preferredName, const char *keystr) {
     return PM3_SUCCESS;
 }
 
+static int load_dump_check_len(const char *fn, void **pdump, size_t *dumplen, size_t maxdumplen) {
+    if (*dumplen <= maxdumplen) {
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(FAILED, "`" _YELLOW_("%s") "` is %zu bytes, expected at most %zu"
+                  , fn
+                  , *dumplen
+                  , maxdumplen
+                 );
+    PrintAndLogEx(HINT, "Hint: the file may come from a different client version, or not be a dump of this tag type");
+
+    free(*pdump);
+    *pdump = NULL;
+    *dumplen = 0;
+    return PM3_EFILE;
+}
+
 int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumplen) {
 
     int res = PM3_SUCCESS;
@@ -3405,15 +3946,15 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
     switch (dt) {
         case BIN: {
             res = loadFile_safe(fn, ".bin", pdump, dumplen);
-            if (res == PM3_SUCCESS && *dumplen > maxdumplen) {
-                *dumplen = maxdumplen;
+            if (res == PM3_SUCCESS) {
+                res = load_dump_check_len(fn, pdump, dumplen, maxdumplen);
             }
             break;
         }
         case EML: {
             res = loadFileEML_safe(fn, pdump, dumplen);
-            if (res == PM3_SUCCESS && *dumplen > maxdumplen) {
-                *dumplen = maxdumplen;
+            if (res == PM3_SUCCESS) {
+                res = load_dump_check_len(fn, pdump, dumplen, maxdumplen);
             }
             break;
         }
@@ -3444,8 +3985,8 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
         }
         case MCT: {
             res = loadFileMCT_safe(fn, pdump, dumplen);
-            if (res == PM3_SUCCESS && *dumplen > maxdumplen) {
-                *dumplen = maxdumplen;
+            if (res == PM3_SUCCESS) {
+                res = load_dump_check_len(fn, pdump, dumplen, maxdumplen);
             }
             break;
         }
@@ -3490,6 +4031,27 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
     return res;
 }
 
+// Saves a dump as JSON only, no .bin alongside.
+//
+// For ISO15693 the .bin is the raw iso15_tag_t, and its only identity on disk is
+// its length. Nothing in the file says which struct revision wrote it or what
+// the block size is -- you have to already know the layout to find the field
+// that tells you. Every past change to the struct therefore turned older .bin
+// files into silently misparsed ones. The JSON names every field, so it survives
+// the next change. Reading .bin stays supported, writing it does not.
+int pm3_save_dump_json(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
+    if (fn == NULL || strlen(fn) == 0) {
+        return PM3_EINVARG;
+    }
+    if (d == NULL || n == 0) {
+        PrintAndLogEx(INFO, "No data to save, skipping...");
+        return PM3_EINVARG;
+    }
+
+    saveFileJSON(fn, jsft, d, n, NULL);
+    return PM3_SUCCESS;
+}
+
 int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
     if (fn == NULL || strlen(fn) == 0) {
         return PM3_EINVARG;
@@ -3501,6 +4063,20 @@ int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
 
     saveFile(fn, ".bin", d, n);
     saveFileJSON(fn, jsft, d, n, NULL);
+    return PM3_SUCCESS;
+}
+
+int pm3_save_dump_cb(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, void (*callback)(json_t *)) {
+    if (fn == NULL || strlen(fn) == 0) {
+        return PM3_EINVARG;
+    }
+    if (d == NULL || n == 0) {
+        PrintAndLogEx(INFO, "No data to save, skipping...");
+        return PM3_EINVARG;
+    }
+
+    saveFile(fn, ".bin", d, n);
+    saveFileJSON(fn, jsft, d, n, callback);
     return PM3_SUCCESS;
 }
 

@@ -129,6 +129,10 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_HF_LEGIC,$(APP_CFLAGS)))
    SRC_STANDALONE = hf_legic.c
 endif
+# WITH_STANDALONE_HF_LEGIC_RDV4
+ifneq (,$(findstring WITH_STANDALONE_HF_LEGIC_RDV4,$(APP_CFLAGS)))
+   SRC_STANDALONE = hf_legic_rdv4.c
+endif
 # WITH_STANDALONE_HF_LEGICSIM
 ifneq (,$(findstring WITH_STANDALONE_HF_LEGICSIM,$(APP_CFLAGS)))
    SRC_STANDALONE = hf_legicsim.c

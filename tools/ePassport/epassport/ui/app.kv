@@ -1,0 +1,433 @@
+#:import theme epassport.ui.theme
+#:import TabStrip epassport.ui.tabs.tabs.TabStrip
+#:import BookTab epassport.ui.tabs.tabs.BookTab
+#:import PageTurn epassport.ui.tabs.tabs.PageTurn
+#:import ErrorPanel epassport.ui.entry.ErrorPanel
+#:import EntryScreen epassport.ui.entry.EntryScreen
+#:import ScanScreen epassport.ui.scan.ScanScreen
+#:import BinButton epassport.ui.widgets.binbutton.BinButton
+
+# Kivy's disabled button texture is pale at the edges and dark in the middle,
+# which stretches into three bands and leaves the label unreadable.  Keep the
+# normal background and let the dimmed text carry the disabled state.
+<Button>:
+    background_disabled_normal: "atlas://data/images/defaulttheme/button"
+    disabled_color: 1, 1, 1, 0.45
+
+<Root>:
+    orientation: "vertical"
+    canvas.before:
+        Color:
+            rgba: app.palette["bg"]
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    # ---- toolbar ---------------------------------------------------------
+    BoxLayout:
+        size_hint_y: None
+        height: dp(32)
+        padding: dp(8), dp(4)
+        spacing: dp(6)
+        canvas.before:
+            Color:
+                rgba: app.palette["panel"]
+            Rectangle:
+                pos: self.pos
+                size: self.size
+            Color:
+                rgba: app.palette["border"]
+            Line:
+                points: [self.x, self.y, self.right, self.y]
+                width: 1
+
+        Button:
+            text: "New read"
+            size_hint_x: None
+            width: dp(96)
+            font_name: theme.FONT_LABEL
+            font_size: sp(12)
+            on_release: app.goto_entry()
+
+        Button:
+            text: "Dumps…"
+            size_hint_x: None
+            width: dp(74)
+            font_name: theme.FONT_LABEL
+            font_size: sp(11)
+            on_release: app.open_dumps_browser()
+
+        Button:
+            text: "Delete dump"
+            size_hint_x: None
+            width: dp(110)
+            font_name: theme.FONT_LABEL
+            font_size: sp(12)
+            disabled: not app.status_dump_dir
+            on_release: app.delete_dump()
+
+        Widget:
+
+        Button:
+            text: "True size" if app.scale_mode == "fit" else "Fit window"
+            size_hint_x: None
+            width: dp(90)
+            font_name: theme.FONT_LABEL
+            font_size: sp(11)
+            on_release: app.toggle_scale_mode()
+
+        Button:
+            text: "Dark chrome" if not app.dark else "Light chrome"
+            size_hint_x: None
+            width: dp(120)
+            font_name: theme.FONT_LABEL
+            font_size: sp(12)
+            on_release: app.toggle_dark()
+
+    # ---- screens ---------------------------------------------------------
+    ScreenManager:
+        id: sm
+
+        ViewerScreen:
+            name: "viewer"
+
+        EntryScreen:
+            name: "entry"
+            palette: app.palette
+
+        ScanScreen:
+            name: "scan"
+            palette: app.palette
+
+    # ---- status bar ------------------------------------------------------
+    BoxLayout:
+        size_hint_y: None
+        height: dp(21)
+        padding: dp(8), 0
+        spacing: dp(10)
+        canvas.before:
+            Color:
+                rgba: app.palette["panel"]
+            Rectangle:
+                pos: self.pos
+                size: self.size
+            Color:
+                rgba: app.palette["border"]
+            Line:
+                points: [self.x, self.top, self.right, self.top]
+                width: 1
+
+        Label:
+            text: app.status_connection
+            font_name: theme.FONT_MONO
+            font_size: sp(10)
+            color: app.palette["text_dim"]
+            halign: "left"
+            valign: "middle"
+            text_size: self.size
+            shorten: True
+
+        Label:
+            text: "BAC: " + app.status_bac
+            font_name: theme.FONT_MONO
+            font_size: sp(10)
+            color: theme.OK if app.status_bac == "success" else (theme.BAD if app.status_bac == "failed" else app.palette["text_dim"])
+            size_hint_x: None
+            width: dp(120)
+            halign: "left"
+            valign: "middle"
+            text_size: self.size
+
+        Label:
+            text: "auth: " + app.status_auth
+            font_name: theme.FONT_MONO
+            font_size: sp(10)
+            color: app.palette["text_dim"]
+            size_hint_x: None
+            width: dp(120)
+            halign: "left"
+            valign: "middle"
+            text_size: self.size
+
+        Button:
+            text: app.status_dump_dir or "no dump"
+            font_name: theme.FONT_MONO
+            font_size: sp(10)
+            color: app.palette["accent"] if app.status_dump_dir else app.palette["text_dim"]
+            background_color: 0, 0, 0, 0
+            disabled: not app.status_dump_dir
+            halign: "right"
+            valign: "middle"
+            text_size: self.size
+            shorten: True
+            shorten_from: "left"
+            on_release: app.open_dump_dir()
+
+<ViewerScreen>:
+    BoxLayout:
+        orientation: "vertical"
+
+        # progress + cancel
+        BoxLayout:
+            size_hint_y: None
+            height: dp(28) if app.busy else 0
+            opacity: 1 if app.busy else 0
+            padding: dp(12), dp(4)
+            spacing: dp(10)
+            Label:
+                text: app.progress_text
+                font_name: theme.FONT_MONO
+                font_size: sp(11)
+                color: app.palette["text_dim"]
+                size_hint_x: None
+                width: dp(240)
+                halign: "left"
+                valign: "middle"
+                text_size: self.size
+            ProgressBar:
+                max: 1.0
+                value: app.progress
+            Button:
+                text: "Cancel"
+                size_hint_x: None
+                width: dp(90)
+                font_name: theme.FONT_LABEL_BOLD
+                font_size: sp(12)
+                on_release: app.cancel_read()
+
+        ErrorPanel:
+            id: error_panel
+            palette: app.palette
+
+        TabStrip:
+            id: tabs
+            palette: app.palette
+            on_kv_post:
+                self.clear_widgets()
+                [self.add_widget(BookTab(text=t, index=i, palette=app.palette, on_release=lambda w: app.select_tab(w.index))) for i, t in enumerate(theme.TAB_TITLES)]
+
+        BoxLayout:
+            padding: dp(6), 0, dp(6), dp(6)
+            PageTurn:
+                id: pages
+
+<ChooseDirPopup>:
+    title: "Choose a folder"
+    size_hint: 0.8, 0.8
+    title_color: theme.POPUP_TITLE
+    separator_color: app.palette["accent"]
+    on_kv_post: root.build_shortcuts()
+    BoxLayout:
+        orientation: "vertical"
+        spacing: dp(6)
+        padding: dp(8)
+        canvas.before:
+            Color:
+                rgba: app.palette["panel"]
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # Jump straight to the places dumps actually live.
+        BoxLayout:
+            id: shortcuts
+            size_hint_y: None
+            height: dp(28)
+            spacing: dp(6)
+
+        # ...and type or paste anything else.
+        BoxLayout:
+            size_hint_y: None
+            height: dp(30)
+            spacing: dp(6)
+            TextInput:
+                id: pathbox
+                text: chooser.path
+                multiline: False
+                font_name: theme.FONT_MONO
+                font_size: sp(11)
+                padding: dp(6), dp(6)
+                background_color: app.palette["field_bg"]
+                foreground_color: app.palette["text"]
+                cursor_color: app.palette["accent"]
+                on_text_validate: root.go_to_typed(self.text)
+            Button:
+                text: "Go"
+                size_hint_x: None
+                width: dp(50)
+                font_size: sp(11)
+                on_release: root.go_to_typed(pathbox.text)
+
+        FileChooserListView:
+            id: chooser
+            path: root.start
+            dirselect: True
+            on_selection: root.on_chooser_selection(self.selection)
+
+        Label:
+            text: root.selection
+            font_name: theme.FONT_MONO
+            font_size: sp(11)
+            color: app.palette["text"]
+            size_hint_y: None
+            height: dp(20)
+            halign: "left"
+            valign: "middle"
+            text_size: self.size
+            shorten: True
+            shorten_from: "left"
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(34)
+            spacing: dp(8)
+            Button:
+                text: "Cancel"
+                on_release: root.dismiss()
+            Button:
+                text: "Choose this folder"
+                on_release: root.choose()
+
+<ConfirmPopup>:
+    title: root.title_text
+    size_hint: None, None
+    size: dp(480), dp(240)
+    title_color: theme.POPUP_TITLE
+    separator_color: theme.BAD
+    BoxLayout:
+        orientation: "vertical"
+        padding: dp(14)
+        spacing: dp(10)
+        canvas.before:
+            Color:
+                rgba: app.palette["panel"]
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        Label:
+            text: root.message
+            font_name: theme.FONT_LABEL
+            font_size: sp(12)
+            color: app.palette["text"]
+            halign: "left"
+            valign: "top"
+            text_size: self.size
+        BoxLayout:
+            size_hint_y: None
+            height: dp(38)
+            spacing: dp(8)
+            Button:
+                text: "Cancel"
+                on_release: root.dismiss()
+            Button:
+                text: root.confirm_text
+                on_release: root.confirm()
+
+<DumpRow>:
+    size_hint_y: None
+    height: dp(40)
+    spacing: dp(8)
+    padding: dp(6), 0
+    BoxLayout:
+        orientation: "vertical"
+        Label:
+            text: root.when
+            font_name: theme.FONT_LABEL_BOLD
+            font_size: sp(12)
+            color: app.palette["text_dim"] if root.empty else app.palette["text"]
+            halign: "left"
+            valign: "bottom"
+            text_size: self.size
+        Label:
+            text: root.summary
+            font_name: theme.FONT_MONO
+            font_size: sp(10)
+            color: theme.WARN if root.empty else app.palette["text_dim"]
+            halign: "left"
+            valign: "top"
+            text_size: self.size
+    Button:
+        text: "Open"
+        size_hint_x: None
+        width: dp(66)
+        font_name: theme.FONT_LABEL
+        font_size: sp(11)
+        disabled: root.empty
+        on_release: root.dispatch("on_open")
+    BinButton:
+        size_hint: None, None
+        size: dp(30), dp(30)
+        pos_hint: {"center_y": 0.5}
+        tint: app.palette["text_dim"]
+        on_release: root.dispatch("on_delete")
+
+<DumpsPopup>:
+    title: "Dumps read by this app"
+    size_hint: 0.8, 0.8
+    title_color: theme.POPUP_TITLE
+    separator_color: app.palette["accent"]
+    BoxLayout:
+        orientation: "vertical"
+        padding: dp(8)
+        spacing: dp(6)
+        # Kivy's default modal background is dark whatever our palette says,
+        # so paint the panel ourselves and keep control of the contrast.
+        canvas.before:
+            Color:
+                rgba: app.palette["panel"]
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        Label:
+            text: root.status
+            font_name: theme.FONT_MONO
+            font_size: sp(10)
+            color: app.palette["text_dim"]
+            size_hint_y: None
+            height: dp(20)
+            halign: "left"
+            valign: "middle"
+            text_size: self.size
+            shorten: True
+            shorten_from: "left"
+        ScrollView:
+            bar_width: dp(6)
+            GridLayout:
+                id: rows
+                cols: 1
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(2)
+        BoxLayout:
+            size_hint_y: None
+            height: dp(34)
+            spacing: dp(6)
+            Button:
+                text: "Open folder"
+                font_name: theme.FONT_LABEL
+                font_size: sp(11)
+                on_release: root.open_folder()
+            Button:
+                text: "Remove empty"
+                font_name: theme.FONT_LABEL
+                font_size: sp(11)
+                on_release: root.prune()
+            Button:
+                text: "Samples…"
+                font_name: theme.FONT_LABEL
+                font_size: sp(11)
+                disabled: not root.has_samples
+                on_release: root.dismiss() or app.open_samples_dialog()
+            Button:
+                text: "Browse…"
+                font_name: theme.FONT_LABEL
+                font_size: sp(11)
+                on_release: root.dismiss() or app.open_dump_dialog()
+            Widget:
+            Button:
+                text: "Close"
+                size_hint_x: None
+                width: dp(80)
+                font_name: theme.FONT_LABEL
+                font_size: sp(11)
+                on_release: root.dismiss()

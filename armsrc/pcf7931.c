@@ -18,14 +18,21 @@
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
+#include "ticks_apis.h"
 #include "dbprint.h"
 #include "util.h"
 #include "lfsampling.h"
 #include "string.h"
 
 #define T0_PCF 8 //period for the pcf7931 in us
+
+// Entries in the data frame array. Every AddBit/AddByte/AddPattern call appends 3 entries,
+// and a write frame is 2 patterns + 77 bits + 1 pattern = 80 calls = 240 entries. 256 leaves
+// the trailing zero the "tab[u] != 0" scans terminate on, and matches the uint8_t cursor in
+// AddBitPCF7931, which cannot address past 255 anyway.
+#define PCF7931_FRAME_ENTRIES 256
 #define ALLOC 16
 
 // IIR filter consts
@@ -426,7 +433,7 @@ end:
         }
     */
 
-    reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
+    reply_ng(CMD_LF_PCF7931_READ, PM3_SUCCESS, NULL, 0);
 }
 
 static void RealWritePCF7931(
@@ -436,7 +443,7 @@ static void RealWritePCF7931(
     uint8_t address, uint8_t byte, uint8_t data,
     bool ledcontrol) {
 
-    uint32_t tab[1024] = {0}; // data times frame
+    uint32_t tab[PCF7931_FRAME_ENTRIES] = {0}; // data times frame
     uint32_t u = 0;
     uint8_t parity = 0;
 
@@ -552,7 +559,9 @@ void SendCmdPCF7931(uint32_t *tab, bool ledcontrol) {
     if (ledcontrol) LED_A_ON();
 
     // rescale the values to match the time of the timer below.
-    for (u = 0; u < 500; ++u) {
+    // stop at the terminating zero like the loops below do, the caller's array
+    // is only as long as the frame needs
+    for (u = 0; tab[u] != 0; ++u) {
         tab[u] = (tab[u] * 3) / 2;
     }
 
@@ -564,39 +573,30 @@ void SendCmdPCF7931(uint32_t *tab, bool ledcontrol) {
             break;
         }
 
-
     // steal this pin from the SSP and use it to control the modulation
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+    gpio_fpga_mod_only_setup();
 
-    //initialization of the timer
-    AT91C_BASE_PMC->PMC_PCER |= (0x1 << AT91C_ID_TC0);
-    AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_NONE | AT91C_TCB_TC1XC1S_TIOA0 | AT91C_TCB_TC2XC2S_NONE;
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;                 // timer disable
-    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;  // clock at 48/32 MHz (48Mhz clock, 32 = prescaler (div3))
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN;
+    //initialization of the timer (free-running 1.5 MHz precision counter on TC0)
+    StartPrecisionCounter();
 
-    // Assert a sync signal. This sets all timers to 0 on next active clock edge
-    AT91C_BASE_TCB->TCB_BCR = 1;
-
-    tempo = AT91C_BASE_TC0->TC_CV;
+    tempo = GetPrecisionCounter();
     for (u = 0; tab[u] != 0; u += 3) {
         // modulate antenna
-        HIGH(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_High();
         while ((uint32_t)tempo < tab[u]) {
-            tempo = AT91C_BASE_TC0->TC_CV;
+            tempo = GetPrecisionCounter();
         }
 
         // stop modulating antenna
-        LOW(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_Low();
         while ((uint32_t)tempo < tab[u + 1]) {
-            tempo = AT91C_BASE_TC0->TC_CV;
+            tempo = GetPrecisionCounter();
         }
 
         // modulate antenna
-        HIGH(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_High();
         while ((uint32_t)tempo < tab[u + 2]) {
-            tempo = AT91C_BASE_TC0->TC_CV;
+            tempo = GetPrecisionCounter();
         }
     }
 
@@ -604,7 +604,7 @@ void SendCmdPCF7931(uint32_t *tab, bool ledcontrol) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     SpinDelay(200);
 
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS; // timer disable
+    StopPrecisionCounter();
 }
 
 

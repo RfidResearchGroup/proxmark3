@@ -501,9 +501,9 @@ static int CmdMADDecode(const char *Cmd) {
 
 // --- Encode ---
 
-// parse "1-3,5,7-9" into sector numbers, returns count or -1 on error
-static int parse_sector_ranges(const char *str, uint8_t *sectors, int max_sectors) {
-    int count = 0;
+// parse "1-3,5,7-9" into a bitmask of sector numbers, returns count or -1 on error
+static int parse_sector_ranges(const char *str, uint64_t *sector_mask) {
+    uint64_t mask = 0;
     const char *p = str;
 
     while (*p) {
@@ -541,10 +541,7 @@ static int parse_sector_ranges(const char *str, uint8_t *sectors, int max_sector
                 PrintAndLogEx(ERR, "Sector " _YELLOW_("%ld") " is reserved for MAD directory", s);
                 return -1;
             }
-            if (count >= max_sectors) {
-                return -1;
-            }
-            sectors[count++] = (uint8_t)s;
+            mask |= (1ULL << s);
         }
 
         p = end;
@@ -553,7 +550,9 @@ static int parse_sector_ranges(const char *str, uint8_t *sectors, int max_sector
             p++;
         }
     }
-    return count;
+
+    *sector_mask = mask;
+    return __builtin_popcountll(mask);
 }
 
 static int CmdMADEncode(const char *Cmd) {
@@ -601,16 +600,20 @@ static int CmdMADEncode(const char *Cmd) {
         memcpy(aid_str, val, 4);
         uint16_t aid_val = (uint16_t)strtoul(aid_str, NULL, 16);
 
-        uint8_t sectors[40] = {0};
-        int nsectors = parse_sector_ranges(colon + 1, sectors, 40);
+        uint64_t sector_mask = 0;
+        int nsectors = parse_sector_ranges(colon + 1, &sector_mask);
         if (nsectors <= 0) {
             PrintAndLogEx(ERR, "Invalid sector range in " _YELLOW_("'%s'"), val);
             CLIParserFree(ctx);
             return PM3_EINVARG;
         }
 
-        for (int s = 0; s < nsectors; s++) {
-            uint8_t sno = sectors[s];
+        for (uint8_t sno = 1; sno < 40; sno++) {
+
+            if ((sector_mask & (1ULL << sno)) == 0) {
+                continue;
+            }
+
             if (sector_aids[sno] != 0) {
                 PrintAndLogEx(ERR, "Sector " _YELLOW_("%d") " already assigned to AID " _YELLOW_("0x%04X"), sno, sector_aids[sno]);
                 CLIParserFree(ctx);

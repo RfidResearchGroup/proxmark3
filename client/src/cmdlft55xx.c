@@ -55,9 +55,12 @@
 
 #define T55XX_PSK3_MAX_CAND 32
 
-static size_t t55xx_psk3_block0_candidates(uint32_t observed, uint8_t clk, uint32_t *out, size_t max);
+static size_t t55xx_psk3_block0_candidates(uint32_t observed, uint8_t clk, uint8_t carrier, uint32_t *out, size_t max);
 static bool t55xx_config_psk3_ambiguous(void);
 static bool t55xx_psk3_probe(bool usepwd, uint32_t password, uint8_t downlink_mode);
+static uint8_t t55xx_measure_broadcast_blocks(bool usepwd, uint32_t password, uint8_t downlink_mode);
+static uint8_t t55xx_measure_broadcast_blocks_once(bool usepwd, uint32_t password, uint8_t downlink_mode);
+static size_t t55xx_psk3_resolve(uint8_t nblk, uint32_t *only);
 
 // Default configuration
 static t55xx_conf_block_t config = {
@@ -982,6 +985,9 @@ static int CmdT55xxDetect(const char *Cmd) {
 
     // detect called so clear data blocks
     T55x7_ClearAllBlockData();
+    config.broadcast_blocks = 0;
+    config.psk3_favoured = false;
+    config.pwd_known = false;
 
     // sanity check.
     if (SanityOfflineCheck(use_gb) != PM3_SUCCESS)
@@ -1014,7 +1020,7 @@ static int CmdT55xxDetect(const char *Cmd) {
                         if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, (try_with_pwd && usepwd), password, m) == false)
                             continue;
 
-                        if (t55xxTryDetectModulationEx(m, T55XX_PrintConfig, 0, (try_with_pwd && usepwd) ? password : -1) == false)
+                        if (t55xxTryDetectModulationEx(m, T55XX_DontPrintConfig, 0, (try_with_pwd && usepwd) ? password : -1) == false)
                             continue;
 
                         found = true;
@@ -1032,7 +1038,7 @@ static int CmdT55xxDetect(const char *Cmd) {
                     }
 
                     if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, downlink_mode)) {
-                        found = t55xxTryDetectModulationEx(downlink_mode, T55XX_PrintConfig, 0, (usepwd) ? password : -1);
+                        found = t55xxTryDetectModulationEx(downlink_mode, T55XX_DontPrintConfig, 0, (usepwd) ? password : -1);
                     }
                 }
 
@@ -1049,24 +1055,65 @@ static int CmdT55xxDetect(const char *Cmd) {
             usewake = !usewake;
         } while (found == false && usewake);
     } else {
-        found = t55xxTryDetectModulation(downlink_mode, T55XX_PrintConfig);
+        found = t55xxTryDetectModulation(downlink_mode, T55XX_DontPrintConfig);
     }
 
+    // password mode gates direct access, so a live detect tells us which mode
+    // the tag is in.  set before the narrowing below, which uses it
+    config.pwd_known = (found && use_gb == false);
+
+    uint8_t nblk = 0;
+    bool psk2_out = false, favoured = false;
+
     // With a tag on the antenna the psk2 / psk3 ambiguity can be settled rather
-    // than merely reported: read a few data blocks and apply the adjacent ones
-    // invariant.  It needs the card, so it is skipped offline, where the single
-    // saved block 0 buffer cannot answer the question either way.
+    // than merely reported: measure the broadcast period, or read a few data
+    // blocks and apply the adjacent ones invariant.  It needs the card, so it
+    // is skipped offline, where the single saved block 0 buffer cannot answer
+    // the question either way.
     if (found && use_gb == false && t55xx_config_psk3_ambiguous()) {
 
-        if (t55xx_psk3_probe(config.usepwd, config.pwd, config.downlink_mode)) {
+        // the broadcast period constrains maxblock, which narrows block 0
+        nblk = t55xx_measure_broadcast_blocks(config.usepwd, config.pwd, config.downlink_mode);
+        config.broadcast_blocks = nblk;
+
+        // ruling psk2 out beats the probe's weighing, so try it first
+        uint32_t only = 0;
+        const size_t nleft = (nblk != 0) ? t55xx_psk3_resolve(nblk, &only) : 0;
+
+        if (nleft) {
+            psk2_out = true;
             config.modulation = DEMOD_PSK3;
-            PrintAndLogEx(SUCCESS, "Data blocks agree this is " _GREEN_("psk3") ", not psk2 - block 0 is one of the words listed above");
+
+            // one word left, so report it rather than the collapsed image
+            if (nleft == 1) {
+                config.block0 = only;
+            }
+
+        } else {
+            // the probe only leans, so it does not get to name the modulation
+            favoured = t55xx_psk3_probe(config.usepwd, config.pwd, config.downlink_mode);
+            config.psk3_favoured = favoured;
         }
 
         // put the configuration block back in the demod buffer, so anything
-        // reading it after us sees block 0 rather than the last probed block
+        // reading it after us sees block 0 rather than whatever we last read
         if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, config.usepwd, config.pwd, config.downlink_mode)) {
             DecodeT55xxBlock();
+        }
+    }
+
+    if (found) {
+
+        printConfiguration(config);
+
+        if (nblk) {
+            PrintAndLogEx(SUCCESS, "Broadcast repeats every " _GREEN_("%u") " block(s), so maxblock is a multiple of %u", nblk, nblk);
+        }
+
+        if (psk2_out) {
+            PrintAndLogEx(SUCCESS, "psk2 " _RED_("ruled out") " - the psk2 reading of block 0 carries a maxblock contradicted by the broadcast");
+        } else if (favoured) {
+            PrintAndLogEx(SUCCESS, "Data blocks favour " _GREEN_("psk3") " over psk2, but do not settle it");
         }
     }
 
@@ -1092,6 +1139,13 @@ static bool block0_repeats_at_stride(uint8_t offset) {
         return false;
     }
     return (PackBits(offset, 32, g_DemodBuffer) == PackBits((uint8_t)(offset + 32), 32, g_DemodBuffer));
+}
+
+// psk subcarrier in field clocks, or 0 when it could not be measured, so
+// callers can skip the constraint rather than filter on a bad reading
+static uint8_t t55xx_observed_psk_carrier(void) {
+    const int fc = GetPskCarrier(false);
+    return (fc == 2 || fc == 4 || fc == 8) ? (uint8_t)fc : 0;
 }
 
 static void t55xx_psk_coherent(int fitclk, uint8_t clk, t55xx_conf_block_t *tests, uint8_t *hits, uint8_t downlink_mode) {
@@ -1148,7 +1202,9 @@ static void t55xx_psk_coherent(int fitclk, uint8_t clk, t55xx_conf_block_t *test
 
     if (n >= 32) {
 
-        for (int variant = 0; variant < 4 && *hits == before; variant++) {
+        // three variants, not four: inverting does not move a stream's
+        // transitions, so a fourth barely differed from variant 2
+        for (int variant = 0; variant < 3 && *hits == before; variant++) {
 
             const bool inverted = ((variant & 1) != 0);
 
@@ -1163,7 +1219,7 @@ static void t55xx_psk_coherent(int fitclk, uint8_t clk, t55xx_conf_block_t *test
             setDemodBuff(work, n, 0);
             setClockGrid((uint32_t)(got_clk + 0.5), got_phase);
 
-            static const uint8_t modes[4] = { DEMOD_PSK1, DEMOD_PSK1, DEMOD_PSK2, DEMOD_PSK3 };
+            static const uint8_t modes[3] = { DEMOD_PSK1, DEMOD_PSK1, DEMOD_PSK2 };
 
             int bitRate = 0;
             if (test(modes[variant], &tests[*hits].offset, &bitRate, clk, &tests[*hits].Q5) == false) {
@@ -1171,6 +1227,7 @@ static void t55xx_psk_coherent(int fitclk, uint8_t clk, t55xx_conf_block_t *test
             }
 
             tests[*hits].modulation = modes[variant];
+            tests[*hits].psk_carrier = t55xx_observed_psk_carrier();
             tests[*hits].bitrate = bitRate;
             tests[*hits].inverted = inverted;
             tests[*hits].block0 = PackBits(tests[*hits].offset, 32, g_DemodBuffer);
@@ -1357,6 +1414,7 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
             psk1TOpsk2(g_DemodBuffer, g_DemodBufferLen);
             if (test(DEMOD_PSK2, &tests[*hits].offset, &bitRate, clk, &tests[*hits].Q5)) {
                 tests[*hits].modulation = DEMOD_PSK2;
+                tests[*hits].psk_carrier = t55xx_observed_psk_carrier();
                 tests[*hits].bitrate = bitRate;
                 tests[*hits].inverted = false;
                 tests[*hits].block0 = PackBits(tests[*hits].offset, 32, g_DemodBuffer);
@@ -1574,7 +1632,7 @@ static void t55xx_detect_fallback(t55xx_conf_block_t *tests, uint8_t *hits, uint
 
 bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wanted_conf, uint64_t pwd) {
 
-    t55xx_conf_block_t tests[15];
+    t55xx_conf_block_t tests[15] = {0};
     int bitRate = 0, clk = 0, firstClockEdge = 0;
     uint8_t hits = 0, fc1 = 0, fc2 = 0, ans = 0;
 
@@ -1711,6 +1769,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 psk1TOpsk2(g_DemodBuffer, g_DemodBufferLen);
                 if (test(DEMOD_PSK2, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
                     tests[hits].modulation = DEMOD_PSK2;
+                    tests[hits].psk_carrier = t55xx_observed_psk_carrier();
                     tests[hits].bitrate = bitRate;
                     tests[hits].inverted = false;
                     tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
@@ -1719,19 +1778,13 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                     ++hits;
                 }
             } // inverse waves does not affect this demod
-            // PSK3 - needs a call to psk1TOpsk2.
-            if (PSKDemod(0, 0, 6, false) == PM3_SUCCESS) {
-                psk1TOpsk2(g_DemodBuffer, g_DemodBufferLen);
-                if (test(DEMOD_PSK3, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
-                    tests[hits].modulation = DEMOD_PSK3;
-                    tests[hits].bitrate = bitRate;
-                    tests[hits].inverted = false;
-                    tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
-                    tests[hits].ST = false;
-                    tests[hits].downlink_mode = downlink_mode;
-                    ++hits;
-                }
-            } // inverse waves does not affect this demod
+
+            // no psk3 candidate here on purpose: it would demodulate the same
+            // as psk2 and only differ in the test() constant, which wants two
+            // adjacent ones - and this demod recovers rising edges, which are
+            // never adjacent.  psk3 is reached by ruling psk2 out instead, see
+            // t55xx_psk3_resolve()
+
             //undo trim samples
             restore_bufferS32(saveState, g_GraphBuffer);
             g_GridOffset = saveState.offset;
@@ -1752,6 +1805,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
         config.block0 = tests[0].block0;
         config.Q5 = tests[0].Q5;
         config.ST = tests[0].ST;
+        config.psk_carrier = tests[0].psk_carrier;
         config.downlink_mode = downlink_mode;
         if (pwd != -1) {
             config.usepwd = true;
@@ -1784,6 +1838,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 config.block0 = tests[i].block0;
                 config.Q5 = tests[i].Q5;
                 config.ST = tests[i].ST;
+                config.psk_carrier = tests[i].psk_carrier;
                 config.downlink_mode = tests[i].downlink_mode;
 
                 if (pwd != -1) {
@@ -1866,24 +1921,53 @@ static bool t55xx_config_psk3_ambiguous(void) {
     const uint8_t clk = basic[config.bitrate & 0x07];
 
     uint32_t cand[T55XX_PSK3_MAX_CAND];
-    return (t55xx_psk3_block0_candidates(config.block0, clk, cand, ARRAYLEN(cand)) > 0);
+    return (t55xx_psk3_block0_candidates(config.block0, clk, config.psk_carrier, cand, ARRAYLEN(cand)) > 0);
 }
 
-#define T55XX_PSK3_PROBE_BLOCKS 7
 #define T55XX_PSK3_PROBE_TRIES  3
 #define T55XX_PSK3_PROBE_MIN    3
+
+typedef struct {
+    uint8_t page;
+    uint8_t blk;
+} t55xx_probe_block_t;
+
+// blocks the probe samples.  page 1 is writable so it is not trustworthy trace
+// data, just more blocks in which an adjacent pair can turn up
+static const t55xx_probe_block_t t55xx_psk3_probe_blocks[] = {
+    { T55x7_PAGE0, 1 }, { T55x7_PAGE0, 2 }, { T55x7_PAGE0, 3 }, { T55x7_PAGE0, 4 },
+    { T55x7_PAGE0, 5 }, { T55x7_PAGE0, 6 }, { T55x7_PAGE0, 7 },
+    { T55x7_PAGE1, T55x7_TRACE_BLOCK1 }, { T55x7_PAGE1, T55x7_TRACE_BLOCK2 },
+    { T55x7_PAGE1, 3 },
+};
+
+// evidence threshold as a probability scaled by 65536.  one percent
+#define T55XX_PSK3_PROBE_MAX_P  655
+
+// P(32 bit word with k one bits has no cyclically adjacent pair) * 65536,
+// (32 / (32 - k)) * C(32 - k, k) / C(32, k).  zero from k = 15, adjacency
+// forced.  zeroes score 1.0, so a wiped tag proves nothing
+static const uint32_t t55xx_p_no_adjacent[] = {
+    65536, 65536, 61308, 53274, 42646, 31138, 20493, 11980,
+    6110,  2657,   956,   273,    59,     9,     1,     0
+};
 
 static bool t55xx_psk3_probe(bool usepwd, uint32_t password, uint8_t downlink_mode) {
 
     size_t usable = 0, clean = 0;
+    uint64_t prob = 65536;
 
-    for (uint8_t b = 1; b <= T55XX_PSK3_PROBE_BLOCKS; b++) {
+    for (size_t i = 0; i < ARRAYLEN(t55xx_psk3_probe_blocks); i++) {
+
+        const uint8_t page = t55xx_psk3_probe_blocks[i].page;
+        const uint8_t blk = t55xx_psk3_probe_blocks[i].blk;
 
         bool got = false, ok = false;
+        uint32_t seen = 0;
 
         for (uint8_t t = 0; t < T55XX_PSK3_PROBE_TRIES; t++) {
 
-            if (AcquireData(T55x7_PAGE0, b, usepwd, password, downlink_mode) == false) {
+            if (AcquireData(page, blk, usepwd, password, downlink_mode) == false) {
                 continue;
             }
             if (DecodeT55xxBlock() == false) {
@@ -1896,6 +1980,7 @@ static bool t55xx_psk3_probe(bool usepwd, uint32_t password, uint8_t downlink_mo
             }
 
             got = true;
+            seen = val;
 
             if (t55xx_has_adjacent_ones(val) == false) {
                 ok = true;
@@ -1910,10 +1995,149 @@ static bool t55xx_psk3_probe(bool usepwd, uint32_t password, uint8_t downlink_mo
         usable++;
         if (ok) {
             clean++;
+
+            const uint32_t k = bitcount32(seen);
+            const uint32_t bp = (k < ARRAYLEN(t55xx_p_no_adjacent)) ? t55xx_p_no_adjacent[k] : 0;
+            prob = (prob * bp) / 65536;
         }
     }
 
-    return (usable >= T55XX_PSK3_PROBE_MIN && clean == usable);
+    // every readable block has to be clean - one adjacent pair disproves psk3 -
+    // and the one bits present have to make that a surprise, not a given
+    return (usable >= T55XX_PSK3_PROBE_MIN && clean == usable && prob <= T55XX_PSK3_PROBE_MAX_P);
+}
+
+// regular-read cycles blocks 1 to MAXBLK, so the stream repeats every
+// MAXBLK * 32 bits.  returns that block count, or 0 when it cannot be measured.
+// blocks holding the same word repeat sooner, so this is a divisor of MAXBLK
+// rather than MAXBLK itself.  needs two full periods, so 6 or 7 read as
+// unmeasurable
+static uint8_t t55xx_measure_broadcast_blocks_once(bool usepwd, uint32_t password, uint8_t downlink_mode) {
+
+    // the acquisition misses often enough to be worth a couple of retries
+    bool got = false;
+    for (uint8_t t = 0; t < T55XX_PSK3_PROBE_TRIES && got == false; t++) {
+        if (AcquireData(T55x7_PAGE0, REGULAR_READ_MODE_BLOCK, usepwd, password, downlink_mode) == false) {
+            continue;
+        }
+        if (DecodeT55xxBlock() == false) {
+            continue;
+        }
+        got = (g_DemodBufferLen >= 64);
+    }
+
+    if (got == false) {
+        return 0;
+    }
+
+    for (uint8_t n = 1; n <= 7; n++) {
+
+        const size_t stride = (size_t)n * 32;
+
+        // two full periods, or it is not a demonstrated repeat
+        if (g_DemodBufferLen < stride * 2) {
+            break;
+        }
+
+        const size_t cmp = g_DemodBufferLen - stride;
+        size_t bad = 0;
+        for (size_t i = 0; i < cmp; i++) {
+            if (g_DemodBuffer[i] != g_DemodBuffer[i + stride]) {
+                bad++;
+            }
+        }
+
+        // the stream carries the odd bit error, so this cannot want an exact
+        // repeat - but the allowance has to be absolute, not proportional: a
+        // real difference between blocks recurs every period, bit errors do not
+        if (bad <= 2) {
+            // a one block period rules nothing out, and also catches an
+            // acquisition that never left block 0.  report it as unmeasured
+            return (n > 1) ? n : 0;
+        }
+    }
+
+    return 0;
+}
+
+// believing a spurious period is expensive - it excludes psk2 and can name the
+// wrong word - so require two attempts to agree
+#define T55XX_PSK3_PERIOD_TRIES 4
+
+static uint8_t t55xx_measure_broadcast_blocks(bool usepwd, uint32_t password, uint8_t downlink_mode) {
+
+    uint8_t seen = 0;
+
+    for (uint8_t t = 0; t < T55XX_PSK3_PERIOD_TRIES; t++) {
+
+        const uint8_t n = t55xx_measure_broadcast_blocks_once(usepwd, password, downlink_mode);
+
+        // an attempt that could not measure at all says nothing either way
+        if (n == 0) {
+            continue;
+        }
+
+        if (seen == 0) {
+            seen = n;
+            continue;
+        }
+
+        if (seen == n) {
+            return n;
+        }
+
+        // measured twice and disagreed, nothing here says which is wrong
+        return 0;
+    }
+
+    return 0;
+}
+
+// the broadcast period constrains maxblock, and so every reading of block 0,
+// the psk2 one included.  returns 0 when psk2 still fits, otherwise how many
+// words block 0 could be, with *only set when that is exactly one
+static size_t t55xx_psk3_resolve(uint8_t nblk, uint32_t *only) {
+
+    static const uint8_t basic[] = {8, 16, 32, 40, 50, 64, 100, 128};
+
+    uint32_t cand[T55XX_PSK3_MAX_CAND];
+    size_t n = t55xx_psk3_block0_candidates(config.block0, basic[config.bitrate & 0x07],
+                                            config.psk_carrier, cand, ARRAYLEN(cand));
+    if (n == 0) {
+        return 0;
+    }
+
+    const uint8_t seen = (config.block0 >> 5) & 0x07;
+    const bool psk2_fits = (seen != 0) && ((seen % nblk) == 0);
+
+    size_t kept = 0;
+    for (size_t i = 0; i < n; i++) {
+        const uint8_t mb = (cand[i] >> 5) & 0x07;
+
+        // a measured period rules out ST, which would add four bit periods
+        if (((cand[i] >> 3) & 1) != 0) {
+            continue;
+        }
+
+        // and the password bit has to match the mode the detect succeeded in
+        if (config.pwd_known && ((((cand[i] >> 4) & 1) != 0) != config.usepwd)) {
+            continue;
+        }
+        if (mb != 0 && (mb % nblk) == 0) {
+            cand[kept++] = cand[i];
+        }
+    }
+
+    // nothing left means the measurement is what is wrong, not every reading
+    if (psk2_fits || kept == 0) {
+        return 0;
+    }
+
+    if (kept == 1) {
+        *only = cand[0];
+    }
+
+    return kept;
 }
 
 void printT55xxBlock(uint8_t blockNum, bool page1) {
@@ -2260,10 +2484,11 @@ int CmdT55xxSpecial(const char *Cmd) {
 // the bit rate the demodulation settled on?
 //
 // Only rules that are certainly true are applied - master key, the fixed zero
-// bits, the bit rate, modulation field 3 and a psk carrier that exists.  A
-// candidate list one entry too long is harmless; one that has dropped the real
-// word is not, so nothing merely probable is tested here.
-static bool t55xx_psk3_block0_plausible(uint32_t b, uint8_t clk) {
+// bits, the bit rate, modulation field 3, a psk carrier that exists and, where
+// it was measured, the one the tag is transmitting on.  A candidate list one
+// entry too long is harmless; one that has dropped the real word is not, so
+// nothing merely probable is tested here.
+static bool t55xx_psk3_block0_plausible(uint32_t b, uint8_t clk, uint8_t carrier) {
 
     const uint8_t master = (uint8_t)((b >> 28) & 0x0F);
     const bool xmode = (((b >> 17) & 1) != 0) && (master == 0x6 || master == 0x9);
@@ -2291,6 +2516,16 @@ static bool t55xx_psk3_block0_plausible(uint32_t b, uint8_t clk) {
         return false;
     }
 
+    // the subcarrier was measured off the same waveform, so a candidate naming
+    // a different one is not this tag's word.  0 = not measured
+    if (carrier != 0) {
+        // 4th entry is the reserved carrier 11, which matches no real subcarrier
+        static const uint8_t pskcf[] = {2, 4, 8, 0};
+        if (pskcf[(b >> 10) & 0x03] != carrier) {
+            return false;
+        }
+    }
+
     if (xmode) {
         return (EM4x05_GET_BITRATE((b >> 18) & 0x3F) == clk);
     }
@@ -2299,7 +2534,7 @@ static bool t55xx_psk3_block0_plausible(uint32_t b, uint8_t clk) {
     return (basic[(b >> 18) & 0x07] == clk);
 }
 
-static size_t t55xx_psk3_block0_candidates(uint32_t observed, uint8_t clk, uint32_t *out, size_t max) {
+static size_t t55xx_psk3_block0_candidates(uint32_t observed, uint8_t clk, uint8_t carrier, uint32_t *out, size_t max) {
 
     if (out == NULL || max == 0 || observed == 0) {
         return 0;
@@ -2337,7 +2572,7 @@ static size_t t55xx_psk3_block0_candidates(uint32_t observed, uint8_t clk, uint3
             }
         }
 
-        if (t55xx_psk3_block0_plausible(d, clk)) {
+        if (t55xx_psk3_block0_plausible(d, clk, carrier)) {
 
             bool dup = false;
             for (size_t i = 0; i < found; i++) {
@@ -2372,23 +2607,56 @@ static size_t t55xx_psk3_block0_candidates(uint32_t observed, uint8_t clk, uint3
 }
 
 int printConfiguration(t55xx_conf_block_t b) {
-    PrintAndLogEx(INFO, " Chip type......... " _GREEN_("%s"), (b.Q5) ? "Q5/T5555" : "T55x7");
-    PrintAndLogEx(INFO, " Modulation........ " _GREEN_("%s"), GetSelectedModulationStr(b.modulation));
-    PrintAndLogEx(INFO, " Bit rate.......... %s", GetBitRateStr(b.bitrate, (b.block0 & T55x7_X_MODE && (b.block0 >> 28 == 6 || b.block0 >> 28 == 9))));
-    PrintAndLogEx(INFO, " Inverted.......... %s", (b.inverted) ? _GREEN_("Yes") : "No");
-    PrintAndLogEx(INFO, " Offset............ %d", b.offset);
-    PrintAndLogEx(INFO, " Seq. terminator... %s", (b.ST) ? _GREEN_("Yes") : "No");
-    PrintAndLogEx(INFO, " Block0............ %08X %s", b.block0, GetConfigBlock0Source(b.block0Status));
 
-    if (b.modulation == DEMOD_PSK2 && b.Q5 == false) {
+    // psk3 changes phase on the rising edge, so the psk2 demod both share keeps
+    // only the leading bit of each run of ones.  a word with a legal psk3
+    // pre-image is consistent with either, so work that out before printing
+    uint32_t cand[T55XX_PSK3_MAX_CAND];
+    size_t ncand = 0;
+
+    if ((b.modulation == DEMOD_PSK2 || b.modulation == DEMOD_PSK3) && b.Q5 == false) {
 
         static const uint8_t basic[] = {8, 16, 32, 40, 50, 64, 100, 128};
         const uint8_t clk = basic[b.bitrate & 0x07];
 
-        uint32_t cand[T55XX_PSK3_MAX_CAND];
-        size_t n = t55xx_psk3_block0_candidates(b.block0, clk, cand, ARRAYLEN(cand));
+        ncand = t55xx_psk3_block0_candidates(b.block0, clk, b.psk_carrier, cand, ARRAYLEN(cand));
 
-        for (size_t i = 1; i < n; i++) {
+        // password mode gates the direct access block 0 was read with, so
+        // candidates disagreeing with the mode we got in are not this tag's
+        if (b.pwd_known) {
+            size_t kept = 0;
+            for (size_t i = 0; i < ncand; i++) {
+                if ((((cand[i] >> 4) & 1) != 0) == b.usepwd) {
+                    cand[kept++] = cand[i];
+                }
+            }
+            if (kept) {
+                ncand = kept;
+            }
+        }
+
+        // drop candidates whose maxblock could not have produced the measured
+        // period.  none left means the measurement is wrong, so keep the lot
+        if (b.broadcast_blocks) {
+            size_t kept = 0;
+            for (size_t i = 0; i < ncand; i++) {
+                const uint8_t mb = (cand[i] >> 5) & 0x07;
+                // ST adds four bit periods per cycle, so a whole number of 32
+                // bit blocks rules it out.  leans on the measurement, not on
+                // config.ST, which the psk paths hardcode rather than detect
+                if (((cand[i] >> 3) & 1) != 0) {
+                    continue;
+                }
+                if (mb != 0 && (mb % b.broadcast_blocks) == 0) {
+                    cand[kept++] = cand[i];
+                }
+            }
+            if (kept) {
+                ncand = kept;
+            }
+        }
+
+        for (size_t i = 1; i < ncand; i++) {
             uint32_t v = cand[i];
             size_t j = i;
             while (j > 0 && cand[j - 1] > v) {
@@ -2397,13 +2665,45 @@ int printConfiguration(t55xx_conf_block_t b) {
             }
             cand[j] = v;
         }
+    }
 
-        if (n > 0) {
-            PrintAndLogEx(INFO, " psk3 ambiguity.... this read is also consistent with a " _YELLOW_("psk3") " tag holding");
-            for (size_t i = 0; i < n; i++) {
-                PrintAndLogEx(INFO, "                    %08X", cand[i]);
-            }
+    PrintAndLogEx(INFO, " Chip type......... " _GREEN_("%s"), (b.Q5) ? "Q5/T5555" : "T55x7");
+
+    if (ncand > 0 && b.modulation == DEMOD_PSK2) {
+        // the probe weighs modulation, not any one word
+        PrintAndLogEx(INFO, " Modulation........ " _YELLOW_("PSK2 or PSK3") " ( ambiguous%s )",
+                      (b.psk3_favoured) ? ", psk3 favoured" : "");
+    } else {
+        PrintAndLogEx(INFO, " Modulation........ " _GREEN_("%s"), GetSelectedModulationStr(b.modulation));
+    }
+
+    PrintAndLogEx(INFO, " Bit rate.......... %s", GetBitRateStr(b.bitrate, (b.block0 & T55x7_X_MODE && (b.block0 >> 28 == 6 || b.block0 >> 28 == 9))));
+    PrintAndLogEx(INFO, " Inverted.......... %s", (b.inverted) ? _GREEN_("Yes") : "No");
+    PrintAndLogEx(INFO, " Offset............ %d", b.offset);
+    PrintAndLogEx(INFO, " Seq. terminator... %s", (b.ST) ? _GREEN_("Yes") : "No");
+    // list the words block 0 could be.  where psk3 is settled the demodulated
+    // value is the collapsed image, which the tag cannot hold, so it is left out
+    if (ncand > 0 && b.modulation == DEMOD_PSK2) {
+
+        // both readings live: demodulated word under psk2, candidates under psk3
+        PrintAndLogEx(INFO, " Block0............ " _YELLOW_("ambiguous, one of:"));
+        PrintAndLogEx(INFO, "                    %08X " _YELLOW_("( psk2 )"), b.block0);
+
+        for (size_t i = 0; i < ncand; i++) {
+            PrintAndLogEx(INFO, "                    %08X " _YELLOW_("( psk3 )"), cand[i]);
         }
+
+    } else if (ncand > 0) {
+
+        // psk3 settled, more than one word still fits it
+        PrintAndLogEx(INFO, " Block0............ " _YELLOW_("ambiguous, one of:"));
+
+        for (size_t i = 0; i < ncand; i++) {
+            PrintAndLogEx(INFO, "                    %08X", cand[i]);
+        }
+
+    } else {
+        PrintAndLogEx(INFO, " Block0............ %08X %s", b.block0, GetConfigBlock0Source(b.block0Status));
     }
 
     PrintAndLogEx(INFO, " Downlink mode..... %s", GetDownlinkModeStr(b.downlink_mode));
@@ -4727,57 +5027,74 @@ static int CmdT55xxSetDeviceConfig(const char *Cmd) {
     else if (r3)
         downlink_mode = ref1of4;
 
-    t55xx_configurations_t configurations = {{{0}, {0}, {0}, {0}}};
+    t55xx_setconfig_t payload = {
+        .conf = {{{0}, {0}, {0}, {0}}},
+        .persist = (shall_persist) ? 1 : 0,
+        .rfu = 0,
+    };
 
     if (set_defaults) {
         // fixed bit length
-        configurations.m[T55XX_DLMODE_FIXED].start_gap  = 29 * 8;
-        configurations.m[T55XX_DLMODE_FIXED].write_gap  = 17 * 8;
-        configurations.m[T55XX_DLMODE_FIXED].write_0    = 15 * 8;
-        configurations.m[T55XX_DLMODE_FIXED].write_1    = 47 * 8;
-        configurations.m[T55XX_DLMODE_FIXED].read_gap   = 15 * 8;
-        configurations.m[T55XX_DLMODE_FIXED].write_2    = 0;
-        configurations.m[T55XX_DLMODE_FIXED].write_3    = 0;
+        payload.conf.m[T55XX_DLMODE_FIXED].start_gap  = 29 * 8;
+        payload.conf.m[T55XX_DLMODE_FIXED].write_gap  = 17 * 8;
+        payload.conf.m[T55XX_DLMODE_FIXED].write_0    = 15 * 8;
+        payload.conf.m[T55XX_DLMODE_FIXED].write_1    = 47 * 8;
+        payload.conf.m[T55XX_DLMODE_FIXED].read_gap   = 15 * 8;
+        payload.conf.m[T55XX_DLMODE_FIXED].write_2    = 0;
+        payload.conf.m[T55XX_DLMODE_FIXED].write_3    = 0;
 
         // long leading reference
-        configurations.m[T55XX_DLMODE_LLR].start_gap  = 29 * 8;
-        configurations.m[T55XX_DLMODE_LLR].write_gap  = 17 * 8;
-        configurations.m[T55XX_DLMODE_LLR].write_0    = 15 * 8;
-        configurations.m[T55XX_DLMODE_LLR].write_1    = 47 * 8;
-        configurations.m[T55XX_DLMODE_LLR].read_gap   = 15 * 8;
-        configurations.m[T55XX_DLMODE_LLR].write_2    = 0;
-        configurations.m[T55XX_DLMODE_LLR].write_3    = 0;
+        payload.conf.m[T55XX_DLMODE_LLR].start_gap  = 29 * 8;
+        payload.conf.m[T55XX_DLMODE_LLR].write_gap  = 17 * 8;
+        payload.conf.m[T55XX_DLMODE_LLR].write_0    = 15 * 8;
+        payload.conf.m[T55XX_DLMODE_LLR].write_1    = 47 * 8;
+        payload.conf.m[T55XX_DLMODE_LLR].read_gap   = 15 * 8;
+        payload.conf.m[T55XX_DLMODE_LLR].write_2    = 0;
+        payload.conf.m[T55XX_DLMODE_LLR].write_3    = 0;
 
         // leading zero
-        configurations.m[T55XX_DLMODE_LEADING_ZERO].start_gap  = 29 * 8;
-        configurations.m[T55XX_DLMODE_LEADING_ZERO].write_gap  = 17 * 8;
-        configurations.m[T55XX_DLMODE_LEADING_ZERO].write_0    = 15 * 8;
-        configurations.m[T55XX_DLMODE_LEADING_ZERO].write_1    = 40 * 8;
-        configurations.m[T55XX_DLMODE_LEADING_ZERO].read_gap   = 15 * 8;
-        configurations.m[T55XX_DLMODE_LEADING_ZERO].write_2    = 0;
-        configurations.m[T55XX_DLMODE_LEADING_ZERO].write_3    = 0;
+        payload.conf.m[T55XX_DLMODE_LEADING_ZERO].start_gap  = 29 * 8;
+        payload.conf.m[T55XX_DLMODE_LEADING_ZERO].write_gap  = 17 * 8;
+        payload.conf.m[T55XX_DLMODE_LEADING_ZERO].write_0    = 15 * 8;
+        payload.conf.m[T55XX_DLMODE_LEADING_ZERO].write_1    = 40 * 8;
+        payload.conf.m[T55XX_DLMODE_LEADING_ZERO].read_gap   = 15 * 8;
+        payload.conf.m[T55XX_DLMODE_LEADING_ZERO].write_2    = 0;
+        payload.conf.m[T55XX_DLMODE_LEADING_ZERO].write_3    = 0;
 
         // 1 of 4 coding reference
-        configurations.m[T55XX_DLMODE_1OF4].start_gap  = 29 * 8;
-        configurations.m[T55XX_DLMODE_1OF4].write_gap  = 17 * 8;
-        configurations.m[T55XX_DLMODE_1OF4].write_0    = 15 * 8;
-        configurations.m[T55XX_DLMODE_1OF4].write_1    = 31 * 8;
-        configurations.m[T55XX_DLMODE_1OF4].read_gap   = 15 * 8;
-        configurations.m[T55XX_DLMODE_1OF4].write_2    = 47 * 8;
-        configurations.m[T55XX_DLMODE_1OF4].write_3    = 63 * 8;
+        payload.conf.m[T55XX_DLMODE_1OF4].start_gap  = 29 * 8;
+        payload.conf.m[T55XX_DLMODE_1OF4].write_gap  = 17 * 8;
+        payload.conf.m[T55XX_DLMODE_1OF4].write_0    = 15 * 8;
+        payload.conf.m[T55XX_DLMODE_1OF4].write_1    = 31 * 8;
+        payload.conf.m[T55XX_DLMODE_1OF4].read_gap   = 15 * 8;
+        payload.conf.m[T55XX_DLMODE_1OF4].write_2    = 47 * 8;
+        payload.conf.m[T55XX_DLMODE_1OF4].write_3    = 63 * 8;
 
     } else {
-        configurations.m[downlink_mode].start_gap  = startgap * 8;
-        configurations.m[downlink_mode].write_gap  = writegap * 8;
-        configurations.m[downlink_mode].write_0    = write0   * 8;
-        configurations.m[downlink_mode].write_1    = write1   * 8;
-        configurations.m[downlink_mode].read_gap   = readgap  * 8;
-        configurations.m[downlink_mode].write_2    = write2   * 8;
-        configurations.m[downlink_mode].write_3    = write3   * 8;
+        payload.conf.m[downlink_mode].start_gap  = startgap * 8;
+        payload.conf.m[downlink_mode].write_gap  = writegap * 8;
+        payload.conf.m[downlink_mode].write_0    = write0   * 8;
+        payload.conf.m[downlink_mode].write_1    = write1   * 8;
+        payload.conf.m[downlink_mode].read_gap   = readgap  * 8;
+        payload.conf.m[downlink_mode].write_2    = write2   * 8;
+        payload.conf.m[downlink_mode].write_3    = write3   * 8;
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_T55XX_SET_CONFIG, shall_persist, 0, 0, &configurations, sizeof(t55xx_configurations_t));
+    SendCommandNG(CMD_LF_T55XX_SET_CONFIG, (uint8_t *)&payload, sizeof(payload));
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_LF_T55XX_SET_CONFIG, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Setting timings ( " _RED_("fail") " )");
+        return resp.status;
+    }
+
+    PrintAndLogEx(SUCCESS, "Setting timings ( " _GREEN_("ok") " )");
     return PM3_SUCCESS;
 }
 

@@ -19,11 +19,11 @@
 #include "standalone.h" // standalone definitions
 #include "proxmark3_arm.h"
 #include "appmain.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
 #include "lfops.h"
 #include "util.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 
 #define OPTS 2
 

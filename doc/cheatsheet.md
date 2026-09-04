@@ -627,7 +627,7 @@ pm3 --> lf t55xx wipe
 ## Data
 ^[Top](#top)
 
-Get raw samples [512-40000]
+Get raw samples, between 512 and Bigbuf_size
 ```
 pm3 --> data samples -n <size>
 ```
@@ -749,13 +749,13 @@ Options
 -a                             active smartcard without select (reset sc module)
 -s                             active smartcard with select (get ATR)
 -t, --tlv                      executes TLV decoder if it possible
--0                             use protocol T=0
+--t0                           use protocol T=0
 -d, --data <hex>               bytes to send
 
-pm3 --> smart raw -s -0 -d 00a404000e315041592e5359532e4444463031
-pm3 --> smart raw -0 -d 00a404000e325041592e5359532e4444463031
-pm3 --> smart raw -0 -t -d 00a4040007a0000000041010
-pm3 --> smart raw -0 -t -d 00a4040007a0000000031010
+pm3 --> smart raw -s --t0 -d 00a404000e315041592e5359532e4444463031
+pm3 --> smart raw --t0 -d 00a404000e325041592e5359532e4444463031
+pm3 --> smart raw --t0 -t -d 00a4040007a0000000041010
+pm3 --> smart raw --t0 -t -d 00a4040007a0000000031010
 ````
 
 Bruteforce SPI

@@ -48,6 +48,7 @@
 
 void SniffIClass(uint8_t jam_search_len, uint8_t *jam_search_string);
 void ReaderIClass(uint8_t *flags);
+void iClass_Raw(uint8_t *msg);
 
 void iClass_WriteBlock(uint8_t *msg);
 void iclass_credit_epurse(iclass_credit_epurse_t *payload);
@@ -57,7 +58,6 @@ void iClass_Restore(iclass_restore_req_t *msg);
 
 int do_iclass_simulation_nonsec(void);
 int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf);
-void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool trace, uint8_t *datain, uint8_t *dataout,  uint16_t *dataoutlen);
 
 void iClass_Authentication_fast(iclass_chk_t *p);

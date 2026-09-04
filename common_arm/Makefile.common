@@ -42,9 +42,13 @@ CROSS_OBJCOPY = $(CROSS)objcopy
 OBJDIR = obj
 
 INCLUDE = -I../include -I../common_arm -I../common_fpga -I../common -I.
+INCLUDE += -I../common_arm/flash_code -I../common_arm/flash_data -I../common_arm/fpga -I../common_arm/gpio
+INCLUDE += -I../common_arm/rssi -I../common_arm/rgb -I../common_arm/sys -I../common_arm/ticks -I../common_arm/usb -I../common_arm/wdt
 
 # Also search prerequisites in the common directory (for usb.c), the fpga directory (for fpga.bit), and the lz4 directory
 VPATH = . ../common_arm ../common ../common/crapto1 ../common/mbedtls ../common/lz4 ../fpga ../armsrc/Standalone ../common/hitag2
+VPATH += ../common_arm/flash_code ../common_arm/flash_data ../common_arm/fpga ../common_arm/gpio
+VPATH += ../common_arm/rssi ../common_arm/rgb ../common_arm/sys ../common_arm/ticks ../common_arm/usb ../common_arm/wdt
 
 INCLUDES = ../include/proxmark3_arm.h ../include/at91sam7s512.h ../include/config_gpio.h ../include/pm3_cmd.h
 
@@ -53,15 +57,10 @@ DEFCFLAGS = -Wall -Werror -Os -pedantic -fstrict-aliasing -pipe
 # Some more warnings we want as errors:
 DEFCFLAGS += -Wbad-function-cast -Wchar-subscripts -Wundef -Wunused -Wuninitialized -Wpointer-arith -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wempty-body -Wignored-qualifiers -Wmissing-field-initializers -Wtype-limits
 
-# Some more warnings we need first to eliminate, so temporarely tolerated:
-DEFCFLAGS += -Wshadow -Wno-error=shadow
-DEFCFLAGS += -Winline -Wno-error=inline
-DEFCFLAGS += -Wmissing-prototypes -Wno-error=missing-prototypes
-DEFCFLAGS += -Wmissing-declarations  -Wno-error=missing-declarations
-DEFCFLAGS += -Wstrict-prototypes -Wno-error=strict-prototypes
-# still vsnprintf etc to sort out...
-#DEFCFLAGS += -Wredundant-decls -Wno-error=redundant-decls
-#DEFCFLAGS += -Wcast-align -Wno-error=cast-align
+# Warnings temporarily tolerated (kept as howto examples)
+#DEFCFLAGS += -Wshadow -Wno-error=shadow
+#DEFCFLAGS += -Winline -Wno-error=inline
+#DEFCFLAGS += -Wmissing-prototypes -Wno-error=missing-prototypes
 
 # Next ones are activated only if GCCEXTRA=1
 EXTRACFLAGS =
@@ -106,7 +105,7 @@ CROSS_CFLAGS += -DON_DEVICE $(INCLUDE) $(APP_CFLAGS)
 CROSS_LDFLAGS += -nostartfiles -nodefaultlibs -Wl,--gc-sections -Wl,--build-id=none -Wl,--nmagic
 #CROSS_LDFLAGS += -Wl,--print-gc-sections
 
-LIBS = -lgcc
+LIBS += -lgcc
 
 # Flags to generate temporary dependency files
 DEPFLAGS = -MT $@ -MMD -MP -MF $(OBJDIR)/$*.Td

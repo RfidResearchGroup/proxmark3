@@ -32,7 +32,6 @@ void AcquireTiType(bool ledcontrol);
 void AcquireRawBitsTI(void);
 void SimulateTagLowFrequencyEx(int period, int gap, bool ledcontrol, int numcycles);
 void SimulateTagLowFrequency(int period, int gap, bool ledcontrol);
-void SimulateTagLowFrequencyBidir(int divisor, int max_bitlen);
 
 bool add_HID_preamble(uint32_t *hi2, uint32_t *hi, uint32_t *lo, uint8_t length);
 void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool ledcontrol, int numcycles);
@@ -80,7 +79,7 @@ void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd, bool ledcontro
 
 void cotag_start_pulse(void);
 void Cotag(uint32_t arg0, bool ledcontrol);
-void setT55xxConfig(uint8_t arg0, const t55xx_configurations_t *c);
+void setT55xxConfig(uint8_t persist, const t55xx_configurations_t *c);
 t55xx_configurations_t *getT55xxConfig(void);
 void printT55xxConfig(void);
 void loadT55xxConfig(void);

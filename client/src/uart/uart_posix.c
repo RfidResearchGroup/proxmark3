@@ -36,10 +36,12 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <errno.h>
+#include <pthread.h>
 
 #ifdef HAVE_BLUEZ
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/rfcomm.h>
+#include "ble_posix.h"
 #endif
 
 #include "comms.h"
@@ -60,6 +62,7 @@ typedef struct {
     term_info tiOld;  // Terminal info before using the port
     term_info tiNew;  // Terminal info during the transaction
     RingBuffer *udpBuffer;
+    void *ble;        // ble_conn_t* when connected via ble: (HAVE_BLUEZ), else NULL
 } serial_port_unix_t_t;
 
 // see pm3_cmd.h
@@ -71,6 +74,36 @@ struct timeval timeout = {
 static uint32_t newtimeout_value = 0;
 static bool newtimeout_pending = false;
 static uint8_t rx_empty_counter = 0;
+
+// Self pipe used to interrupt the select() in uart_receive(). Created once, on
+// first use, and never closed - two descriptors for the life of the process,
+// and both ends have to stay valid for whichever thread touches them.
+static int wakeup_pipe[2] = { -1, -1 };
+static pthread_once_t wakeup_once = PTHREAD_ONCE_INIT;
+
+static void uart_wakeup_create(void) {
+    if (pipe(wakeup_pipe) != 0) {
+        wakeup_pipe[0] = -1;
+        wakeup_pipe[1] = -1;
+        return;
+    }
+    // Neither end may ever block: a full pipe already means a wakeup is
+    // pending, which is all the reader needs to know.
+    fcntl(wakeup_pipe[0], F_SETFL, O_NONBLOCK);
+    fcntl(wakeup_pipe[1], F_SETFL, O_NONBLOCK);
+}
+
+void uart_wakeup(void) {
+    pthread_once(&wakeup_once, uart_wakeup_create);
+
+    if (wakeup_pipe[1] < 0) {
+        return;
+    }
+
+    const uint8_t b = 1;
+    ssize_t res = write(wakeup_pipe[1], &b, 1);
+    (void)res;   // EAGAIN just means a wakeup is already queued
+}
 
 int uart_reconfigure_timeouts(uint32_t value) {
     newtimeout_value = value;
@@ -108,6 +141,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
     bool isTCP = false;
     bool isUDP = false;
     bool isBluetooth = false;
+    bool isBLE = false;
     bool isUnixSocket = false;
     if (strlen(prefix) > 4) {
         isTCP = (memcmp(prefix, "tcp:", 4) == 0);
@@ -115,6 +149,9 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
     }
     if (strlen(prefix) > 3) {
         isBluetooth = (memcmp(prefix, "bt:", 3) == 0);
+    }
+    if (strlen(prefix) > 4) {
+        isBLE = (memcmp(prefix, "ble:", 4) == 0);
     }
     if (strlen(prefix) > 7) {
         isUnixSocket = (memcmp(prefix, "socket:", 7) == 0);
@@ -208,6 +245,60 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
         }
 
         int sfd;
+
+        // --wait on a tcp: port -> act as a server: bind, listen, accept one client.
+        if (isTCP && g_conn.listen_for_incoming) {
+            int lfd = -1;
+            for (rp = addr; rp != NULL; rp = rp->ai_next) {
+                lfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+                if (lfd == -1) {
+                    continue;
+                }
+                int one = 1;
+                setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+                if (bind(lfd, rp->ai_addr, rp->ai_addrlen) == 0) {
+                    break;  // bound
+                }
+                close(lfd);
+                lfd = -1;
+            }
+
+            freeaddrinfo(addr);
+            free(addrPortStr);
+
+            if (lfd == -1) {
+                PrintAndLogEx(ERR, "error: could not bind for --wait listen");
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+            if (listen(lfd, 1) != 0) {
+                PrintAndLogEx(ERR, "error: listen() failed. errno: %d", errno);
+                close(lfd);
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+
+            // blocking accept; interruptible with Ctrl-C
+            int cfd = accept(lfd, NULL, NULL);
+            close(lfd);
+            if (cfd == -1) {
+                if (slient == false) {
+                    PrintAndLogEx(ERR, "error: accept() failed. errno: %d", errno);
+                }
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+
+            sp->fd = cfd;
+            int one = 1;
+            if (setsockopt(sp->fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one)) != 0) {
+                close(cfd);
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+            return sp;
+        }
+
         for (rp = addr; rp != NULL; rp = rp->ai_next) {
             sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 
@@ -309,6 +400,34 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
         return sp;
 #else // HAVE_BLUEZ
         PrintAndLogEx(ERR, "Sorry, this client doesn't support native Bluetooth addresses");
+        free(sp);
+        return INVALID_SERIAL_PORT;
+#endif // HAVE_BLUEZ
+    }
+
+    if (isBLE) {
+#ifdef HAVE_BLUEZ
+        free(prefix);
+        // we must use max timeout for the BLE link
+        timeout.tv_usec = UART_NET_CLIENT_RX_TIMEOUT_MS * 1000;
+
+        ble_conn_t *bc = calloc(1, sizeof(ble_conn_t));
+        if (bc == NULL) {
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+        // pcPortName is "ble:<MAC>"
+        if (ble_connect(pcPortName + 4, BLE_SPP_CHR_UUID16, bc) != 0) {
+            free(bc);
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+        sp->ble = bc;
+        sp->fd = bc->fd;      // real fd; receive/send branch on sp->ble
+        g_conn.send_via_ip = PM3_NONE;
+        return sp;
+#else
+        PrintAndLogEx(ERR, "Sorry, this client was built without BLE (bluez) support");
         free(sp);
         return INVALID_SERIAL_PORT;
 #endif // HAVE_BLUEZ
@@ -451,6 +570,15 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
 
 void uart_close(const serial_port sp) {
     serial_port_unix_t_t *spu = (serial_port_unix_t_t *)sp;
+#ifdef HAVE_BLUEZ
+    if (spu->ble) {
+        ble_close((ble_conn_t *)spu->ble);
+        free(spu->ble);
+        spu->ble = NULL;
+        free(sp);
+        return;
+    }
+#endif
     msleep(100);
     tcflush(spu->fd, TCIOFLUSH);
     tcsetattr(spu->fd, TCSANOW, &(spu->tiOld));
@@ -483,6 +611,19 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
     }
     // Reset the output count
     *pszRxLen = 0;
+
+#ifdef HAVE_BLUEZ
+    if (spu->ble) {
+        size_t got = 0;
+        int ms = (int)(timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
+        int r = ble_recv((ble_conn_t *)spu->ble, pbtRx, pszMaxRxLen, &got, ms);
+        *pszRxLen = (uint32_t)got;
+        if (r < 0)
+            return PM3_ENOTTY;
+        return (got > 0) ? PM3_SUCCESS : PM3_ENODATA;
+    }
+#endif
+
     do {
         int res;
         if (spu->udpBuffer != NULL) {
@@ -506,8 +647,22 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
         // Reset file descriptor
         FD_ZERO(&rfds);
         FD_SET(spu->fd, &rfds);
+        int maxfd = spu->fd;
+
+        // Only watch the wakeup while no part of a frame is in hand. Cutting a
+        // frame short would hand the caller a partial packet, and leaving the
+        // pipe readable while mid frame would spin.
+        pthread_once(&wakeup_once, uart_wakeup_create);
+        bool watch_wakeup = ((*pszRxLen == 0) && (wakeup_pipe[0] >= 0));
+        if (watch_wakeup) {
+            FD_SET(wakeup_pipe[0], &rfds);
+            if (wakeup_pipe[0] > maxfd) {
+                maxfd = wakeup_pipe[0];
+            }
+        }
+
         tv = timeout;
-        res = select(spu->fd + 1, &rfds, NULL, NULL, &tv);
+        res = select(maxfd + 1, &rfds, NULL, NULL, &tv);
 
         // Read error
         if (res < 0) {
@@ -522,6 +677,19 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
             } else {
                 // We received some data, but nothing more is available
                 return PM3_SUCCESS;
+            }
+        }
+
+        if (watch_wakeup && FD_ISSET(wakeup_pipe[0], &rfds)) {
+
+            uint8_t drain[64];
+            while (read(wakeup_pipe[0], drain, sizeof(drain)) > 0) { };
+
+            // Nothing on the wire, only a send waiting. Return before the
+            // FIONREAD below, which counts empty reads towards declaring the
+            // device gone.
+            if (FD_ISSET(spu->fd, &rfds) == false) {
+                return PM3_ENODATA;
             }
         }
 
@@ -596,6 +764,12 @@ int uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
     struct timeval tv;
     const serial_port_unix_t_t *spu = (serial_port_unix_t_t *)sp;
 
+#ifdef HAVE_BLUEZ
+    if (spu->ble) {
+        return (ble_send((ble_conn_t *)spu->ble, pbtTx, len) == 0) ? PM3_SUCCESS : PM3_EIO;
+    }
+#endif
+
     while (pos < len) {
         // Reset file descriptor
         FD_ZERO(&rfds);
@@ -629,6 +803,12 @@ int uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
 
 bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
     const serial_port_unix_t_t *spu = (serial_port_unix_t_t *)sp;
+#ifdef HAVE_BLUEZ
+    if (spu->ble) {
+        // no termios baud on a BLE socket; accept silently
+        return true;
+    }
+#endif
     speed_t stPortSpeed;
     switch (uiPortSpeed) {
         case 0:
@@ -735,6 +915,14 @@ uint32_t uart_get_speed(const serial_port sp) {
     struct termios ti;
     uint32_t uiPortSpeed;
     const serial_port_unix_t_t *spu = (serial_port_unix_t_t *)sp;
+
+#ifdef HAVE_BLUEZ
+    if (spu->ble) {
+        // BLE has no termios baud; report the BWM link rate so the client's
+        // timeout math (12000000 / uart_speed) never divides by zero.
+        return 460800;
+    }
+#endif
 
     if (tcgetattr(spu->fd, &ti) == -1)
         return 0;

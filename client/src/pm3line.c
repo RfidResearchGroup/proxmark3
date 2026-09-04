@@ -35,27 +35,29 @@
 #if defined(HAVE_READLINE)
 
 static char *rl_command_generator(const char *text, int state) {
-    static int index;
+    static size_t index;
     static size_t len;
+    static size_t count;
+    static const vocabulary_t *vocabulary;
     size_t rlen = strlen(rl_line_buffer);
-    const char *command;
 
     if (!state) {
         index = 0;
         len = strlen(text);
+        vocabulary = pm3line_vocabulary_get(&count);
     }
 
-    while ((command = vocabulary[index].name))  {
+    while (index < count) {
 
-        // When no pm3 device present
-        // and the command is not available offline,
-        // we skip it.
-        if ((g_session.pm3_present == false) && (vocabulary[index].offline == false))  {
-            index++;
+        const vocabulary_t *entry = &vocabulary[index++];
+
+        // Skip commands which are not available right now,
+        // using the same rules as "help"
+        if (pm3line_vocabulary_is_available(entry) == false) {
             continue;
         }
 
-        index++;
+        const char *command = entry->name;
 
         if (strncmp(command, rl_line_buffer, rlen) == 0) {
             const char *next = command + (rlen - len);
@@ -77,22 +79,23 @@ static char **rl_command_completion(const char *text, int start, int end) {
 
 #elif defined(HAVE_LINENOISE)
 static void ln_command_completion(const char *text, linenoiseCompletions *lc) {
-    int index = 0;
     const char *prev_match = "";
     size_t prev_match_len = 0;
     size_t len = strlen(text);
-    const char *command;
-    while ((command = vocabulary[index].name))  {
+    size_t count = 0;
+    const vocabulary_t *vocabulary = pm3line_vocabulary_get(&count);
 
-        // When no pm3 device present
-        // and the command is not available offline,
-        // we skip it.
-        if ((g_session.pm3_present == false) && (vocabulary[index].offline == false))  {
-            index++;
+    for (size_t index = 0; index < count; index++) {
+
+        const vocabulary_t *entry = &vocabulary[index];
+
+        // Skip commands which are not available right now,
+        // using the same rules as "help"
+        if (pm3line_vocabulary_is_available(entry) == false) {
             continue;
         }
 
-        index++;
+        const char *command = entry->name;
 
         if (strncmp(command, text, len) == 0) {
             const char *space = strstr(command + len, " ");
@@ -156,6 +159,10 @@ void pm3line_install_signals(void) {
 }
 
 void pm3line_init(void) {
+#if defined(HAVE_READLINE) || defined(HAVE_LINENOISE)
+    // Build the completion vocabulary from the live command tree
+    pm3line_vocabulary_build();
+#endif
 #if defined(HAVE_READLINE)
     /* initialize history */
     using_history();
@@ -186,21 +193,33 @@ char *pm3line_read(const char *s) {
     return linenoise(s);
 #else
     printf("%s", s);
-    char *answer = NULL;
-    size_t anslen = 0;
-    int ret;
-    if ((ret = getline(&answer, &anslen, stdin)) < 0) {
-        // TODO this happens also when kbd_enter_pressed() is used, with a key pressed or not
-        printf("DEBUG: getline returned %i", ret);
-        free(answer);
-        answer = NULL;
+    // MinGW/ProxSpace builds do not provide getline() in this fallback path.
+    char input[1024] = {0};
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        return NULL;
     }
+
+    size_t len = strlen(input);
+    while (len > 0 && (input[len - 1] == '\n' || input[len - 1] == '\r')) {
+        input[--len] = '\0';
+    }
+
+    char *answer = calloc(len + 1, sizeof(char));
+    if (answer == NULL) {
+        return NULL;
+    }
+
+    memcpy(answer, input, len);
     return answer;
 #endif
 }
 
 void pm3line_free(void *ref) {
     free(ref);
+}
+
+void pm3line_cleanup(void) {
+    pm3line_vocabulary_free();
 }
 
 void pm3line_update_prompt(const char *prompt) {

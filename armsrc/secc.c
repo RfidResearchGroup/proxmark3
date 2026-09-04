@@ -25,7 +25,8 @@
 #include "dbprint.h"
 #include "BigBuf.h"            // DMA_BUFFER_SIZE, MAX_PARITY_SIZE
 #include "crc16.h"             // AddCrc14A, CheckCrc14A
-#include "fpgaloader.h"        // FpgaWriteConfWord, FpgaSetupSscDma
+#include "fpga_loader.h"       // FpgaWriteConfWord, FpgaSetupSscDma
+#include "fpga_apis.h"         // FPGA_MAJOR_MODE_HF_ISO14443A
 #include "desfire_crypto.h"    // tdes_nxp_send
 #include "mbedtls/des.h"       // mbedtls_des_*, mbedtls_des3_*
 #include "iso14443a.h"         // ReaderTransmit, ReaderReceive, iso14a_get/set_timeout, iso14a_get/toggle_pcb_blocknum, MAX_ISO14A_TIMEOUT
@@ -34,7 +35,7 @@
 #include "cmd.h"               // reply_ng
 #include "pm3_cmd.h"           // CMD_HF_HIDCONFIG_SIM, CMD_HF_HIDCONFIG_SNIFF
 #include "dbprint.h"           // Dbprintf, LED_*
-#include "ticks.h"             // WDT_HIT
+#include "ticks_apis.h"        // WDT_HIT
 #include "protocols.h"         // ISO14443A_CMD_* constants
 
 // ---------------------------------------------------------------------------
@@ -404,8 +405,8 @@ bool hid_config_card_jam(const uint8_t *cmd, int len, uint8_t *dma_buf) {
     // Restore sniffer FPGA mode and re-arm DMA
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_SNIFFER);
 
-    if (FpgaSetupSscDma(dma_buf, DMA_BUFFER_SIZE) == false) {
-        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
+    if (FpgaSetupSscRxDmaRepeat(dma_buf, DMA_BUFFER_SIZE) == false) {
+        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscRxDmaRepeat failed. Exiting");
         return false;
     }
 
@@ -420,8 +421,15 @@ bool hid_config_card_jam(const uint8_t *cmd, int len, uint8_t *dma_buf) {
 // ---------------------------------------------------------------------------
 
 int hid_config_card_iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint16_t data_len, uint8_t *res) {
+    // PCB(1) + CID(1) + APDU + CRC(2) has to fit inside one ISO14443 frame,
+    // which is also the limit ReaderTransmit() can encode into the tosend
+    // buffer.
+    if (cmd_len + 4 > MAX_FRAME_SIZE) {
+        return PM3_EINVARG;
+    }
+
     uint8_t parity[MAX_PARITY_SIZE] = {0};
-    uint8_t *real_cmd = BigBuf_calloc(cmd_len + 5); // PCB(1) + CID(1) + APDU + CRC(2)
+    uint8_t real_cmd[MAX_FRAME_SIZE] = {0};
 
     if (cmd_len) {
         real_cmd[0] = 0x0A; // I-block, CID present (bit 3), block number in bit 0
@@ -440,7 +448,6 @@ int hid_config_card_iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chainin
     ReaderTransmit(real_cmd, cmd_len + 4, NULL); // PCB(1) + CID(1) + APDU + CRC(2)
 
     if (tearoff_hook() == PM3_ETEAROFF) {
-        BigBuf_free();
         return -1;
     }
 
@@ -448,7 +455,6 @@ int hid_config_card_iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chainin
     uint8_t *data_bytes = (uint8_t *)data;
 
     if (len == 0) {
-        BigBuf_free();
         return 0;
     }
 
@@ -457,7 +463,6 @@ int hid_config_card_iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chainin
     // S-Block WTX
     while (len && ((data_bytes[0] & 0xF2) == 0xF2)) {
         if (BUTTON_PRESS() || data_available()) {
-            BigBuf_free();
             return -3;
         }
         send_wtx(38);
@@ -481,7 +486,6 @@ int hid_config_card_iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chainin
         *res = data_bytes[0];
 
     if (len >= 3 && !CheckCrc14A(data_bytes, len)) {
-        BigBuf_free();
         return -1;
     }
 
@@ -492,7 +496,6 @@ int hid_config_card_iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chainin
         memmove(data_bytes, data_bytes + header_len, len);
     }
 
-    BigBuf_free();
     return len;
 }
 

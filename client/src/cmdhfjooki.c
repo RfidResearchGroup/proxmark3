@@ -547,7 +547,7 @@ static int CmdHF14AJookiSim(const char *Cmd) {
     uint8_t blockno = 0;
 
     // 12 is the size of the struct the fct mf_eml_set_mem_xt uses to transfer to device
-    uint16_t max_avail_blocks = ((PM3_CMD_DATA_SIZE - 12) / blockwidth);
+    uint16_t max_avail_blocks = ((g_conn.max_cmd_data_size - 12) / blockwidth);
 
     while (datalen) {
         if (datalen == blockwidth) {

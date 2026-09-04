@@ -71,7 +71,7 @@ static int usart_txrx(uint8_t *srcdata, size_t srclen, uint8_t *dstdata, size_t 
 
     payload.header.waittime = waittime;
 
-    if (srclen >= sizeof(payload.data)) {
+    if (srclen >= (size_t)(g_conn.max_cmd_data_size - sizeof(uint32_t))) {
         return PM3_EOVFLOW;
     }
 
@@ -637,7 +637,7 @@ static int CmdUsartTXhex(const char *Cmd) {
 
     int dlen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, (int)g_conn.max_cmd_data_size, &dlen);
     CLIParserFree(ctx);
 
     if (res) {

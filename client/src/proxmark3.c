@@ -30,6 +30,7 @@
 #include "cmdmain.h"
 #include "ui.h"
 #include "cmdhw.h"
+#include "cmdparser.h"    // IfPm5 (PM5 banner selection)
 #include "whereami.h"
 #include "comms.h"
 #include "fileutils.h"
@@ -49,7 +50,7 @@ static int mainret = PM3_SUCCESS;
 #define BANNERMSG2 ""
 #define BANNERMSG3 ""
 
-typedef enum LogoMode { UTF8, ANSI, ASCII } LogoMode;
+typedef enum LogoMode { UTF8, ANSI, ASCII, UTF8_PM5, ANSI_PM5, ASCII_PM5 } LogoMode;
 
 static void showBanner_logo(LogoMode mode) {
     switch (mode) {
@@ -99,6 +100,55 @@ static void showBanner_logo(LogoMode mode) {
             PrintAndLogEx(NORMAL, "  888        888  Y8P  888 888    888    ");
             PrintAndLogEx(NORMAL, "  888        888   \"   888 Y88b  d88P " BANNERMSG1);
             PrintAndLogEx(NORMAL, "  888        888       888  \"Y8888P\"");
+            PrintAndLogEx(NORMAL, "  " BANNERMSG2);
+            break;
+        }
+        case UTF8_PM5: {
+            const char *sq = "\xE2\x96\x88"; // square block
+            const char *tr = "\xE2\x95\x97"; // top right corner
+            const char *tl = "\xE2\x95\x94"; // top left corner
+            const char *br = "\xE2\x95\x9D"; // bottom right corner
+            const char *bl = "\xE2\x95\x9A"; // bottom left corner
+            const char *hl = "\xE2\x95\x90"; // horiz line
+            const char *vl = "\xE2\x95\x91"; // vert line
+            const char *__ = " ";
+
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"),
+                          sq, sq, sq, sq, sq, sq, tr, __, sq, sq, sq, tr, __, __, __, sq, sq, sq, tr, sq, sq, sq, sq, sq, sq, tr);
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"),
+                          sq, sq, tl, hl, hl, sq, sq, tr, sq, sq, sq, sq, tr, __, sq, sq, sq, sq, vl, sq, sq, tl, hl, hl, hl, br);
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"),
+                          sq, sq, sq, sq, sq, sq, tl, br, sq, sq, tl, sq, sq, sq, sq, tl, sq, sq, vl, sq, sq, sq, sq, sq, tr, __);
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"),
+                          sq, sq, tl, hl, hl, hl, br, __, sq, sq, vl, bl, sq, sq, tl, br, sq, sq, vl, bl, hl, hl, hl, sq, sq, tr);
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s")" " BANNERMSG1,
+                          sq, sq, vl, __, __, __, __, __, sq, sq, vl, __, bl, hl, br, __, sq, sq, vl, sq, sq, sq, sq, sq, sq, vl);
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"),
+                          bl, hl, br, __, __, __, __, __, bl, hl, br, __, __, __, __, __, bl, hl, br, bl, hl, hl, hl, hl, hl, br);
+            PrintAndLogEx(NORMAL, "  " BANNERMSG2);
+            break;
+        }
+        case ANSI_PM5: {
+            PrintAndLogEx(NORMAL, "  " _CYAN_("8888888b.  888b     d888 888888888 "));
+            PrintAndLogEx(NORMAL, "  " _CYAN_("888   Y88b 8888b   d8888 888       "));
+            PrintAndLogEx(NORMAL, "  " _CYAN_("888    888 88888b.d88888 888       "));
+            PrintAndLogEx(NORMAL, "  " _CYAN_("888   d88P 888Y88888P888 8888888b. "));
+            PrintAndLogEx(NORMAL, "  " _CYAN_("8888888P\"  888 Y888P 888      \"Y88b"));
+            PrintAndLogEx(NORMAL, "  " _CYAN_("888        888  Y8P  888        888"));
+            PrintAndLogEx(NORMAL, "  " _CYAN_("888        888   \"   888 Y88b  d88P") " " BANNERMSG1);
+            PrintAndLogEx(NORMAL, "  " _CYAN_("888        888       888  \"Y8888P\" "));
+            PrintAndLogEx(NORMAL, "  " BANNERMSG2);
+            break;
+        }
+        case ASCII_PM5: {
+            PrintAndLogEx(NORMAL, "  8888888b.  888b     d888 888888888 ");
+            PrintAndLogEx(NORMAL, "  888   Y88b 8888b   d8888 888       ");
+            PrintAndLogEx(NORMAL, "  888    888 88888b.d88888 888       ");
+            PrintAndLogEx(NORMAL, "  888   d88P 888Y88888P888 8888888b. ");
+            PrintAndLogEx(NORMAL, "  8888888P\"  888 Y888P 888      \"Y88b");
+            PrintAndLogEx(NORMAL, "  888        888  Y8P  888        888");
+            PrintAndLogEx(NORMAL, "  888        888   \"   888 Y88b  d88P " BANNERMSG1);
+            PrintAndLogEx(NORMAL, "  888        888       888  \"Y8888P\" ");
             PrintAndLogEx(NORMAL, "  " BANNERMSG2);
             break;
         }
@@ -241,14 +291,14 @@ static void showBanner(void) {
 #if defined(_WIN32)
     if (GetConsoleCP() == 65001) {
         // If on Windows and using UTF-8 then we need utf-8 ascii art for banner.
-        showBanner_logo(UTF8);
+        showBanner_logo(IfPm5() ? UTF8_PM5 : UTF8);
     } else {
-        showBanner_logo(ANSI);
+        showBanner_logo(IfPm5() ? ANSI_PM5 : ANSI);
     }
 #elif defined(__linux__) || defined(__APPLE__)
-    showBanner_logo(ANSI);
+    showBanner_logo(IfPm5() ? ANSI_PM5 : ANSI);
 #else
-    showBanner_logo(ASCII);
+    showBanner_logo(IfPm5() ? ASCII_PM5 : ASCII);
 #endif
 
     PrintAndLogEx(NORMAL, "  [ " _YELLOW_("%s!")" :coffee: ]", get_quote());
@@ -300,10 +350,11 @@ static void prompt_set(void) {
 }
 
 static void prompt_compose(char *buf, size_t buflen, const char *promptctx, const char *promptdev, const char *promptnet, bool no_newline) {
+    const char *dev_name = IfPm5() ? "pm5" : "pm3";
     if (no_newline) {
-        snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
+        snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx, dev_name);
     } else {
-        snprintf(buf, buflen - 1, _CLR_LINE_ "\r" PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
+        snprintf(buf, buflen - 1, _CLR_LINE_ "\r" PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx, dev_name);
     }
 }
 
@@ -636,7 +687,7 @@ check_script:
     if (g_session.pm3_present) {
         clearCommandBuffer();
         SendCommandNG(CMD_QUIT_SESSION, NULL, 0);
-        msleep(100); // Make sure command is sent before killing client
+        WaitForTxIdle(100); // make sure it really went out before killing the client
     }
 
     while (current_cmdscriptfile()) {
@@ -651,6 +702,7 @@ check_script:
     }
 
     CmdScriptCleanup();
+    pm3line_cleanup();
 }
 
 #ifndef LIBPM3
@@ -778,7 +830,8 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      -h/--help                           this help");
         PrintAndLogEx(NORMAL, "      -v/--version                        print client version");
         PrintAndLogEx(NORMAL, "      -p/--port                           serial port to connect to");
-        PrintAndLogEx(NORMAL, "      -w/--wait                           20sec waiting the serial port to appear in the OS");
+        PrintAndLogEx(NORMAL, "      -w/--wait                           20sec waiting the serial port to appear in the OS\n"
+                      "                                          with a tcp: port, listen and wait for an incoming connection instead");
         PrintAndLogEx(NORMAL, "      -f/--flush                          output will be flushed after every print");
         PrintAndLogEx(NORMAL, "      -d/--debug <0|1|2>                  set debugmode");
         PrintAndLogEx(NORMAL, "\nOptions in client mode:");
@@ -884,6 +937,7 @@ static int dumpmem_pm3(char *serial_port_name, const char *filename, uint32_t ad
         PrintAndLogEx(ERR, "Could not get device info.");
         goto finish2;
     }
+    // bootrom path: CMD_DEVICE_INFO is served by bootrom.c, which only speaks OLD frames
     uint32_t dev_info = resp.oldarg[0];
     in_bootloader = (dev_info & DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM) != 0;
     if (in_bootloader) {
@@ -910,7 +964,7 @@ finish2:
     clearCommandBuffer();
     if (in_bootloader) {
         g_session.current_device->g_conn->run = false;
-        SendCommandOLD(CMD_PING, 0, 0, 0, NULL, 0);
+        SendCommandBL(CMD_PING, 0, 0, 0, NULL, 0);
     } else {
         SendCommandNG(CMD_QUIT_SESSION, NULL, 0);
         msleep(100);
@@ -931,8 +985,8 @@ finish:
 static int flash_pm3(char *serial_port_name, uint8_t num_files, const char *filenames[FLASH_MAX_FILES], bool can_write_bl, bool force) {
 
     int ret = PM3_EUNDEF;
-    flash_file_t files[FLASH_MAX_FILES];
-    memset(files, 0, sizeof(files));
+    flash_file_t files[FLASH_MAX_FILES] = {0};
+    flash_dev_t flash_dev = {0};
 
     if (serial_port_name == NULL) {
         PrintAndLogEx(ERR, "You must specify a port.\n");
@@ -977,8 +1031,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, const char *file
         goto finish2;
     }
 
-    uint32_t max_allowed = 0;
-    ret = flash_start_flashing(can_write_bl, serial_port_name, &max_allowed);
+    ret = flash_start_flashing(can_write_bl, serial_port_name, &flash_dev, files, num_files);
     if (ret != PM3_SUCCESS) {
         goto finish;
     }
@@ -988,7 +1041,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, const char *file
     }
 
     for (int i = 0 ; i < num_files; ++i) {
-        ret = flash_prepare(&files[i], can_write_bl, max_allowed * ONE_KB);
+        ret = flash_prepare(&files[i], can_write_bl, &flash_dev);
         if (ret != PM3_SUCCESS) {
             goto finish;
         }
@@ -998,7 +1051,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, const char *file
     PrintAndLogEx(SUCCESS, _CYAN_("Flashing..."));
 
     for (int i = 0; i < num_files; i++) {
-        ret = flash_write(&files[i]);
+        ret = flash_write(&files[i], &flash_dev);
         if (ret != PM3_SUCCESS) {
             goto finish;
         }
@@ -1074,7 +1127,6 @@ int main(int argc, char *argv[]) {
     char *port = NULL;
     uint32_t speed = 0;
 
-    pm3line_init();
 
     char exec_name[100] = {0};
     strncpy(exec_name, basename(argv[0]), sizeof(exec_name) - 1);
@@ -1481,6 +1533,9 @@ int main(int argc, char *argv[]) {
 
     // try to open USB connection to Proxmark
     if (port != NULL) {
+        // --wait on a tcp: port means "listen and accept an incoming connection"
+        // rather than the usual "retry connecting until the endpoint appears".
+        g_conn.listen_for_incoming = waitCOMPort && (strncmp(port, "tcp:", 4) == 0);
         OpenProxmark(&g_session.current_device, port, waitCOMPort, 20, false, speed);
     }
 
@@ -1522,6 +1577,8 @@ int main(int argc, char *argv[]) {
             PrintAndLogEx(WARNING,"Proxmark3 not ready to set debug level");
     }
     */
+
+    pm3line_init();
 
 #ifdef HAVE_GUI
 

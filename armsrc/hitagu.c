@@ -14,6 +14,10 @@
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Low frequency HITAG µ (micro) functions
+// HitagU. There are two frequency models, of which the 125kHz model has been discontinued.
+// 125k clock: https://www.nxp.com/products/no-longer-manufactured/hitag-%CE%BC-iso18000-2-transponder-ic:HTMS8301FTK
+// 134k clock: https://www.nxp.com/products/rfid-nfc/hitag-lf/hitag-%C2%B5-advanced-advanced-plus:HTMS1X01_HTMS8X01
+//-----------------------------------------------------------------------------
 
 #include "hitagu.h"
 #include "hitag_common.h"
@@ -24,19 +28,19 @@
 #include "commonutil.h"
 #include "crc16.h"
 #include "dbprint.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
 #include "hitag2/hitag2_crypto.h"
-#include "lfadc.h"
 #include "protocols.h"
 #include "proxmark3_arm.h"
 #include "string.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "util.h"
 
 // Hitag µ specific definitions
 #define HTU_SOF_BITS 4     // Start of frame bits is always 3 for Hitag µ (110) plus 1 bit error flag
 
-MOD M = MC4K;  // Modulation type
+hitag_mod_t M = MC4K;  // Modulation type
 
 // Structure to hold the state of the Hitag µ tag
 static struct hitagU_tag tag = {
@@ -358,16 +362,16 @@ static void htu_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_t *
 /*
  * Simulates a Hitag µ Tag with the given data
  */
-void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, bool ledcontrol) {
+void htu_simulate(int8_t threshold, bool ledcontrol) {
 
     uint8_t rx[HITAG_FRAME_LEN] = {0};
     size_t rxlen = 0;
     uint8_t tx[HITAG_FRAME_LEN] = {0};
     size_t txlen = 0;
 
-    // Free any allocated BigBuf memory
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
+    // keep emulator memory, that is where eload put the tag content
+    BigBuf_free_keep_EM();
+    BigBuf_Clear_keep_EM();
 
     DbpString("Starting Hitag µ simulation");
 
@@ -376,13 +380,24 @@ void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
     tag.max_page = 64;  // Default maximum page
     RESET_AUTHENTICATION();
 
-    // Read tag data into memory if supplied
-    if (tag_mem_supplied) {
-        DbpString("Loading Hitag µ memory...");
-        // First 6 bytes are the UID (48 bits)
-        memcpy(tag.uid, data, 6);
-        // Rest is page data
-        memcpy(tag.data.pages, data + 6, sizeof(tag.data.pages));
+    // Take the tag content from emulator memory, where `lf hitag eload -m` put it:
+    // UID first, then the pages.  The old inline path copied UID + 1024 bytes out
+    // of the command payload, which is more than an NG frame can ever carry.
+    uint8_t *em = BigBuf_get_EM_addr();
+    bool em_empty = true;
+    for (size_t i = 0; i < HITAGU_UID_SIZE + sizeof(tag.data.pages); i++) {
+        if (em[i] != 0) {
+            em_empty = false;
+            break;
+        }
+    }
+
+    if (em_empty) {
+        DbpString("Emulator memory is empty, simulating the last read tag");
+    } else {
+        DbpString("Loading Hitag u memory from emulator memory...");
+        memcpy(tag.uid, em, HITAGU_UID_SIZE);
+        memcpy(tag.data.pages, em + HITAGU_UID_SIZE, sizeof(tag.data.pages));
     }
 
     // Update max_page based on configuration
@@ -414,7 +429,7 @@ void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             LogTraceBits(rx, rxlen, start_time, TIMESTAMP, true);
 
             // Disable timer 1 with external trigger to avoid triggers during our own modulation
-            AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+            StopLoEdgeCapture();
 
             // Prepare tag response (tx)
             memset(tx, 0x00, sizeof(tx));
@@ -428,7 +443,7 @@ void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             // with respect to the falling edge, we need to wait actually (T_Wait1 - T_Low)
             // periods. The gap time T_Low varies (4..10). All timer values are in
             // terms of T0 units
-            while (AT91C_BASE_TC0->TC_CV < T0 * (HITAG_T_WAIT_RESP - HITAG_T_LOW)) {
+            while (GetPrecisionCounter() < T0 * (HITAG_T_WAIT_RESP - HITAG_T_LOW)) {
             };
 
             // Send and store the tag answer (if there is any)
@@ -440,7 +455,7 @@ void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             }
 
             // Enable and reset external trigger in timer for capturing future frames
-            AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+            EnableLoEdgeCapture();
 
             // Reset the received frame and response timing info
             memset(rx, 0x00, sizeof(rx));
@@ -449,14 +464,14 @@ void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
         // Reset the frame length
         rxlen = 0;
         // Save the timer overflow, will be 0 when frame was received
-        overflow += (AT91C_BASE_TC1->TC_CV / T0);
+        overflow += (GetLoEdgeCaptureCount() / T0);
         // Reset the timer to restart while-loop that receives frames
-        AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
+        ResetLoEdgeCapture();
     }
 
     hitag_cleanup(ledcontrol);
-    // Release allocated memory from BigBuf
-    BigBuf_free();
+    // release BigBuf, but keep emulator memory for eview / esave
+    BigBuf_free_keep_EM();
 
     DbpString("Simulation stopped");
 }
@@ -470,14 +485,13 @@ static int htu_reader_send_receive(uint8_t *tx, size_t txlen, uint8_t *rx, size_
     memset(rx, 0x00, sizeofrx);
 
     // Disable timer 1 with external trigger to avoid triggers during our own modulation
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+    StopLoEdgeCapture();
 
     DBG Dbprintf("tx %d bits:", txlen);
     DBG Dbhexdump((txlen + 7) / 8, tx, false);
 
     // Wait until we can send the command
-    while (AT91C_BASE_TC0->TC_CV < T0 * t_wait) {
-    };
+    while (GetPrecisionCounter() < T0 * t_wait) {};
 
     // Set up tracing
     uint32_t start_time = TIMESTAMP;
@@ -492,7 +506,7 @@ static int htu_reader_send_receive(uint8_t *tx, size_t txlen, uint8_t *rx, size_
     LogTraceBits(tx, txlen, start_time, TIMESTAMP, true);
 
     // Enable and reset external trigger in timer for capturing future frames
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    EnableLoEdgeCapture();
 
     // Capture response - SOF is automatically stripped by hitag_reader_receive_frame
     hitag_reader_receive_frame(rx, sizeofrx, rxlen, &start_time, ledcontrol, modulation, sof_bits);

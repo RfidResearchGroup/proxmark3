@@ -76,6 +76,13 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed);
  */
 uint32_t uart_get_speed(const serial_port sp);
 
+/* Wake a thread blocked in uart_receive() so it can get on and service a
+ * queued send. The comm thread receives before it transmits, so without this a
+ * command sits in the buffer until the receive phase times out.
+ * Safe to call from another thread; a no-op where it is not implemented.
+ */
+void uart_wakeup(void);
+
 /* Reconfigure timeouts (ms)
  */
 int uart_reconfigure_timeouts(uint32_t value);

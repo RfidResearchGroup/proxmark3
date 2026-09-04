@@ -452,7 +452,7 @@ static int CmdCOTAGReader(const char *Cmd) {
                                                            "(which is assumed " STR(LF_COTAG_DIVISOR) " for cotag. Use --divisor to override).\n")
                   _CYAN_(" - use ") _YELLOW_("`data plot`") _CYAN_(" to look at it.\n")
                   _CYAN_(" - use ") _YELLOW_("`lf cotag demod`") _CYAN_(" to try to demodulate it.\n")
-                  _CYAN_("If the number of samples is more than the device memory limit (40000 now), ")
+                  _CYAN_("If the number of samples is more than the device memory limit, ")
                   _CYAN_("it will try to use the real-time sampling mode.\n\n")
                   _CYAN_("Note: Cotag has an extremely slow data rate - RF/" STR(LF_COTAG_CLOCK) " ")
                   _CYAN_("-- capturing a full " STR(LF_COTAG_DATA_LEN) " bit card read requires a minimum of ")
@@ -477,7 +477,7 @@ static int CmdCOTAGReader(const char *Cmd) {
     int16_t divisor = arg_get_int_def(ctx, 4, -1);
     CLIParserFree(ctx);
 
-    bool realtime = (samples > 40000);
+    bool realtime = (samples >= g_pm3_capabilities.bigbuf_size);
 
     if (divisor > -1 && (divisor < 19 || divisor > 255)) {
         PrintAndLogEx(ERR, "divisor must be between 19 and 255");

@@ -160,8 +160,15 @@ Current usages:
 
 Busy wait based on 46.875 kHz PWM Channel 0
 
-* 21.3 us precision and maximum 1.39 s
-* *Precision* variant: 0.7 us precision and maximum 43 ms
+* 21.3 us precision, no upper bound on the delay
+* *Precision* variant: 0.7 us precision, no upper bound on the delay
+
+Both used to truncate their tick count into the 16 bit PWM counter and so
+returned early past those two limits without saying so: a requested 60 ms
+`SpinDelayUsPrecision()` measured 17.5 ms on an RDV4, and `hw tearoff --delay`
+accepts values right across that boundary. Longer waits are now walked in
+chunks of half a counter period. `SpinDelay()` still clamps its own argument at
+1390 ms and complains above that.
 
 ## Occasional TC0+TC1 / CountUS functions
 ^[Top](#top)

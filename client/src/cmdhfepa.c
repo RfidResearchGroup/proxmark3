@@ -76,10 +76,17 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
         WaitForResponse(CMD_HF_EPA_COLLECT_NONCE, &resp);
 
         // check if command failed
-        if (resp.oldarg[0] != 0) {
-            PrintAndLogEx(FAILED, "Error in step %" PRId64 ", Return code: %" PRId64, resp.oldarg[0], resp.oldarg[1]);
+        if (resp.length < sizeof(epa_result_t)) {
+            PrintAndLogEx(FAILED, "Short reply from device");
+            return PM3_ESOFT;
+        }
+
+        const epa_result_t *r = (const epa_result_t *)resp.data.asBytes;
+
+        if (r->step != 0) {
+            PrintAndLogEx(FAILED, "Error in step %u, Return code: %d", r->step, r->func_return);
         } else {
-            size_t nonce_length = resp.oldarg[1];
+            size_t nonce_length = r->len;
 
             char *nonce = (char *) calloc(2 * nonce_length + 1, sizeof(uint8_t));
             if (nonce == NULL) {
@@ -88,7 +95,7 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
             }
 
             // print nonce
-            PrintAndLogEx(SUCCESS, "Length: %zu, Nonce: %s", nonce_length, sprint_hex_inrow(resp.data.asBytes, nonce_length));
+            PrintAndLogEx(SUCCESS, "Length: %zu, Nonce: %s", nonce_length, sprint_hex_inrow(resp.data.asBytes + sizeof(epa_result_t), nonce_length));
             free(nonce);
         }
         if (i < n - 1) {
@@ -154,30 +161,39 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     g_conn.block_after_ACK = true;
     for (int i = 0; i < ARRAYLEN(apdu_lengths); i++) {
 
+        // chunk size = what fits one frame to THIS device, minus the reply header
+        const int chunk = (int)(g_conn.max_cmd_data_size - sizeof(epa_replay_t));
         // transfer the APDU in several parts if necessary
-        for (int j = 0; j * sizeof(data) < apdu_lengths[i]; j++) {
+        for (int j = 0; j * chunk < apdu_lengths[i]; j++) {
             // amount of data in this packet
-            int packet_length = apdu_lengths[i] - (j * sizeof(data));
-            if (packet_length > sizeof(data)) {
-                packet_length = sizeof(data);
+            int packet_length = apdu_lengths[i] - (j * chunk);
+            if (packet_length > chunk) {
+                packet_length = chunk;
             }
-            if ((i == ARRAYLEN(apdu_lengths) - 1) && (j * sizeof(data) >= apdu_lengths[i] - 1)) {
+            if ((i == ARRAYLEN(apdu_lengths) - 1) && (j * chunk >= apdu_lengths[i] - 1)) {
                 // Disable fast mode on last packet
                 g_conn.block_after_ACK = false;
             }
-            memcpy(data, // + (j * sizeof(data)),
-                   apdus[i] + (j * sizeof(data)),
+            memcpy(data, // + (j * chunk),
+                   apdus[i] + (j * chunk),
                    packet_length);
 
             clearCommandBuffer();
             // arg0: APDU number
             // arg1: offset into the APDU
-            SendCommandMIX(CMD_HF_EPA_REPLAY, i + 1, j * sizeof(data), packet_length, data, packet_length);
+            uint8_t ubuf[sizeof(epa_replay_t) + sizeof(data)] = {0};
+            epa_replay_t *upayload = (epa_replay_t *)ubuf;
+            upayload->apdu_num = i + 1;
+            upayload->offset = j * chunk;
+            upayload->len = packet_length;
+            memcpy(upayload->data, data, packet_length);
+
+            SendCommandNG(CMD_HF_EPA_REPLAY, ubuf, sizeof(epa_replay_t) + packet_length);
             if (WaitForResponseTimeout(CMD_HF_EPA_REPLAY, &resp, 2500) == false) {
                 PrintAndLogEx(WARNING, "command time out");
                 return PM3_ETIMEOUT;
             }
-            if (resp.oldarg[0] != 0) {
+            if (resp.status != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "Transfer of APDU #%d Part %d failed!", i, j);
                 return PM3_ESOFT;
             }
@@ -186,24 +202,32 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
 
     // now perform the replay
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_EPA_REPLAY, 0, 0, 0, NULL, 0);
-    WaitForResponse(CMD_ACK, &resp);
+    epa_replay_t run = {0};
+    SendCommandNG(CMD_HF_EPA_REPLAY, (uint8_t *)&run, sizeof(run));
+    WaitForResponse(CMD_HF_EPA_REPLAY, &resp);
 
-    if (resp.oldarg[0] != 0) {
-        PrintAndLogEx(SUCCESS, "\nPACE replay failed in step %u!", (uint32_t)resp.oldarg[0]);
+    if (resp.length < sizeof(epa_result_t) + (5 * sizeof(uint32_t))) {
+        PrintAndLogEx(WARNING, "Short reply from device");
+        return PM3_ESOFT;
+    }
+
+    const epa_result_t *rr = (const epa_result_t *)resp.data.asBytes;
+
+    if (rr->step != 0) {
+        PrintAndLogEx(SUCCESS, "\nPACE replay failed in step %u!", rr->step);
         PrintAndLogEx(SUCCESS, "Measured times:");
-        PrintAndLogEx(SUCCESS, "MSE Set AT: %u us", resp.data.asDwords[0]);
-        PrintAndLogEx(SUCCESS, "GA Get Nonce: %u us", resp.data.asDwords[1]);
-        PrintAndLogEx(SUCCESS, "GA Map Nonce: %u us", resp.data.asDwords[2]);
-        PrintAndLogEx(SUCCESS, "GA Perform Key Agreement: %u us", resp.data.asDwords[3]);
-        PrintAndLogEx(SUCCESS, "GA Mutual Authenticate: %u us", resp.data.asDwords[4]);
+        PrintAndLogEx(SUCCESS, "MSE Set AT: %u us", rr->timings[0]);
+        PrintAndLogEx(SUCCESS, "GA Get Nonce: %u us", rr->timings[1]);
+        PrintAndLogEx(SUCCESS, "GA Map Nonce: %u us", rr->timings[2]);
+        PrintAndLogEx(SUCCESS, "GA Perform Key Agreement: %u us", rr->timings[3]);
+        PrintAndLogEx(SUCCESS, "GA Mutual Authenticate: %u us", rr->timings[4]);
     } else {
         PrintAndLogEx(SUCCESS, "PACE replay successful!");
-        PrintAndLogEx(SUCCESS, "MSE Set AT: %u us", resp.data.asDwords[0]);
-        PrintAndLogEx(SUCCESS, "GA Get Nonce: %u us", resp.data.asDwords[1]);
-        PrintAndLogEx(SUCCESS, "GA Map Nonce: %u us", resp.data.asDwords[2]);
-        PrintAndLogEx(SUCCESS, "GA Perform Key Agreement: %u us", resp.data.asDwords[3]);
-        PrintAndLogEx(SUCCESS, "GA Mutual Authenticate: %u us", resp.data.asDwords[4]);
+        PrintAndLogEx(SUCCESS, "MSE Set AT: %u us", rr->timings[0]);
+        PrintAndLogEx(SUCCESS, "GA Get Nonce: %u us", rr->timings[1]);
+        PrintAndLogEx(SUCCESS, "GA Map Nonce: %u us", rr->timings[2]);
+        PrintAndLogEx(SUCCESS, "GA Perform Key Agreement: %u us", rr->timings[3]);
+        PrintAndLogEx(SUCCESS, "GA Mutual Authenticate: %u us", rr->timings[4]);
     }
     return PM3_SUCCESS;
 }
@@ -240,14 +264,20 @@ static int CmdHFEPAPACESimulate(const char *Cmd) {
 
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_EPA_PACE_SIMULATE, 0, 0, 0, pwd, plen);
+    SendCommandNG(CMD_HF_EPA_PACE_SIMULATE, pwd, plen);
     PacketResponseNG resp;
-    WaitForResponse(CMD_ACK, &resp);
+    WaitForResponse(CMD_HF_EPA_PACE_SIMULATE, &resp);
 
-    uint32_t *data = resp.data.asDwords;
+    if (resp.length < sizeof(epa_result_t) + (5 * sizeof(uint32_t))) {
+        PrintAndLogEx(WARNING, "Short reply from device");
+        return PM3_ESOFT;
+    }
 
-    if (resp.oldarg[0] != 0) {
-        PrintAndLogEx(INFO, "\nPACE failed in step %u!", (uint32_t)resp.oldarg[0]);
+    const epa_result_t *sr = (const epa_result_t *)resp.data.asBytes;
+    const uint32_t *data = sr->timings;
+
+    if (sr->step != 0) {
+        PrintAndLogEx(INFO, "\nPACE failed in step %u!", sr->step);
         PrintAndLogEx(INFO, "MSE Set AT: %u us", data[0]);
         PrintAndLogEx(INFO, "GA Get Nonce: %u us", data[1]);
         PrintAndLogEx(INFO, "GA Map Nonce: %u us", data[2]);

@@ -376,9 +376,10 @@ int mfc_ev1_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, in
 
 int mf_read_uid(uint8_t *uid, int *uidlen, int *nxptype) {
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_381 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_381) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select failed");
         DropField();
         return PM3_ERFTRANS;
@@ -387,20 +388,21 @@ int mf_read_uid(uint8_t *uid, int *uidlen, int *nxptype) {
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_381;
 
     // try to request ATS even if tag claims not to support it. If yes => 4
     if (select_status == 2) {
         uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, rats, sizeof(rats));
+        uint16_t rlen_398 = 0;
+        if (WaitForIso14aReply(&resp, 2500, &rlen_398, NULL) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
 
-        memcpy(card.ats, resp.data.asBytes, resp.oldarg[0]);
-        card.ats_len = resp.oldarg[0]; // note: ats_len includes CRC Bytes
+        memcpy(card.ats, resp.data.asBytes, rlen_398);
+        card.ats_len = rlen_398; // note: ats_len includes CRC Bytes
         if (card.ats_len > 3) {
             select_status = 4;
         }
@@ -914,14 +916,15 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
 
     // Select card to get UID/UIDLEN/ATQA/SAK information
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    uint8_t sel_921 = 0;
+    if (WaitForIso14aReply(&resp, 1500, NULL, &sel_921) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         return PM3_ETIMEOUT;
     }
 
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_921;
     if (select_status == 0) {
         PrintAndLogEx(DEBUG, "iso14443a card select failed");
         return PM3_ESOFT;
@@ -1085,9 +1088,12 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
                     uint8_t *data  = resp.data.asBytes;
 
                     if (mfIsSectorTrailerBasedOnBlocks(sectorNo, blockNo)) {
-                        // sector trailer. Fill in the keys.
+                        // sector trailer. Key A is never readable; preserve Key B when ACL allows it.
                         memcpy(data, keyA + (sectorNo * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
-                        memcpy(data + 10, keyB + (sectorNo * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
+                        uint8_t trailer_acl = mf_get_accesscondition(3, &data[6]);
+                        if (trailer_acl != 0 && trailer_acl != 1 && trailer_acl != 2) {
+                            memcpy(data + 10, keyB + (sectorNo * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
+                        }
                     }
 
                     memcpy(carddata + (MFBLOCK_SIZE * (mfFirstBlockOfSector(sectorNo) + blockNo)), data, MFBLOCK_SIZE);
@@ -1383,16 +1389,25 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     memcpy(data, key, sizeof(key));
     memcpy(data + 10, block, sizeof(block));
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, keytype, 0, data, sizeof(data));
+    mf_writeblock_ex_t payload = {
+        .wakeup = MF_WAKE_WUPA,
+        .auth_cmd = MIFARE_AUTH_KEYA + (keytype & 0xF),
+        .write_cmd = ISO14443A_CMD_WRITEBLOCK,
+        .block_no = blockno,
+    };
+    memcpy(payload.key, data, MIFARE_KEY_SIZE);
+    memcpy(payload.block_data, data + 10, MFBLOCK_SIZE);
+
+    SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&payload, sizeof(payload));
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false) {
         PrintAndLogEx(FAILED, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
-    int status  = resp.oldarg[0];
-    if (status > 0) {
+    int status = resp.status;
+    if (status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf rdbl") "` to verify");
     } else if (status == PM3_ETEAROFF) {
@@ -1959,15 +1974,24 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                 uint16_t blockno = (mfFirstBlockOfSector(s) + b);
 
                 clearCommandBuffer();
-                SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, kt, 0, wdata, sizeof(wdata));
+                mf_writeblock_ex_t payload = {
+                    .wakeup = MF_WAKE_WUPA,
+                    .auth_cmd = MIFARE_AUTH_KEYA + (kt & 0xF),
+                    .write_cmd = ISO14443A_CMD_WRITEBLOCK,
+                    .block_no = blockno,
+                };
+                memcpy(payload.key, wdata, MIFARE_KEY_SIZE);
+                memcpy(payload.block_data, wdata + 10, MFBLOCK_SIZE);
+
+                SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&payload, sizeof(payload));
                 PacketResponseNG resp;
-                if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+                if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false) {
                     PrintAndLogEx(WARNING, "command execution time out");
                     continue;
                 }
 
-                int isOK  = resp.oldarg[0] & 0xff;
-                if (isOK == 1) {
+                int isOK = resp.status;
+                if (isOK == PM3_SUCCESS) {
                     // if success,  skip to next block
                     PrintAndLogEx(INFO, " %3d | %s| ( " _GREEN_("ok") " )", blockno, sprint_hex(bldata, sizeof(bldata)));
                     break;
@@ -3085,15 +3109,16 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     // Select card to get UID/UIDLEN/ATQA/SAK information
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    uint8_t sel_3096 = 0;
+    if (WaitForIso14aReply(&resp, 1500, NULL, &sel_3096) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         DropField();
         return PM3_ETIMEOUT;
     }
 
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_3096;
     if (select_status == 0) {
         // iso14443a card select failed
         PrintAndLogEx(FAILED, "No tag detected or other tag communication error");
@@ -3109,14 +3134,15 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     if (select_status == 2) {
         uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, rats, sizeof(rats));
+        uint16_t rlen_3120 = 0;
+        if (WaitForIso14aReply(&resp, 2500, &rlen_3120, NULL) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
 
-        memcpy(card.ats, resp.data.asBytes, resp.oldarg[0]);
-        card.ats_len = resp.oldarg[0]; // note: ats_len includes CRC Bytes
+        memcpy(card.ats, resp.data.asBytes, rlen_3120);
+        card.ats_len = rlen_3120; // note: ats_len includes CRC Bytes
         if (card.ats_len > 3) {
             select_status = 4;
         }
@@ -3369,7 +3395,11 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             res = mf_check_keys_fast(sector_cnt, true, true, 1, key_cnt, keyBlock, e_sector, use_flashmemory, verbose);
         } else {
 
-            uint32_t chunksize = key_cnt > (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE) ? (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE) : key_cnt;
+            uint32_t maxkeys = (g_conn.max_cmd_data_size - sizeof(mf_chkkeys_fast_t)) / 6;
+            if (maxkeys > 255) {
+                maxkeys = 255;
+            }
+            uint32_t chunksize = key_cnt > maxkeys ? maxkeys : key_cnt;
             bool firstChunk = true, lastChunk = false;
 
             for (uint8_t strategy = 1; strategy < 3; strategy++) {
@@ -4019,7 +4049,11 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    uint32_t chunksize = (keycnt > (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE)) ? (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE) : keycnt;
+    uint32_t maxkeys = (g_conn.max_cmd_data_size - sizeof(mf_chkkeys_fast_t)) / 6;
+    if (maxkeys > 255) {
+        maxkeys = 255;
+    }
+    uint32_t chunksize = (keycnt > maxkeys) ? maxkeys : keycnt;
     bool firstChunk = true, lastChunk = false;
 
     int i = 0;
@@ -4214,7 +4248,7 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint32_t chunksize = 100 > (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE) ? (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE) : 100;
+    uint32_t chunksize = 100 > MFC_CHKKEYS_FAST_MAX_KEYS ? MFC_CHKKEYS_FAST_MAX_KEYS : 100;
     uint8_t *keyBlock = calloc(MIFARE_KEY_SIZE, chunksize);
 
     if (keyBlock == NULL)
@@ -5092,7 +5126,7 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
                       _YELLOW_("H") ":Hardnested / "
                       _YELLOW_("C") ":statiCnested / "
                       _YELLOW_("A") ":keyA "
-                      " )"
+                            " )"
                      );
         if (sectorscnt == 18) {
             PrintAndLogEx(INFO, "( " _MAGENTA_("*") " ) These sectors used for signature. Lays outside of user memory");
@@ -5403,7 +5437,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
     int cnt = 0;
 
     // 12 is the size of the struct the fct mf_eml_set_mem_xt uses to transfer to device
-    uint16_t max_avail_blocks = ((PM3_CMD_DATA_SIZE - 12) / block_width) * block_width;
+    uint16_t max_avail_blocks = ((g_conn.max_cmd_data_size - 12) / block_width) * block_width;
 
     while (bytes_read && cnt < block_cnt) {
         if (bytes_read == block_width) {
@@ -6349,9 +6383,10 @@ static int CmdHF14AMfCSave(const char *Cmd) {
 
     // Select card to get UID/UIDLEN information
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    uint8_t sel_6362 = 0;
+    if (WaitForIso14aReply(&resp, 1500, NULL, &sel_6362) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         return PM3_ETIMEOUT;
     }
@@ -6362,7 +6397,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
         2: OK, no ATS
         3: proprietary Anticollision
     */
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_6362;
     if (select_status == 0) {
         PrintAndLogEx(DEBUG, "iso14443a card select failed");
         return PM3_SUCCESS;
@@ -6499,9 +6534,10 @@ static int CmdHF14AMfCView(const char *Cmd) {
 
     // Select card to get UID/UIDLEN information
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    uint8_t sel_6513 = 0;
+    if (WaitForIso14aReply(&resp, 1500, NULL, &sel_6513) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         return PM3_ETIMEOUT;
     }
@@ -6512,7 +6548,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
         2: OK, no ATS
         3: proprietary Anticollision
     */
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_6513;
 
     if (select_status == 0) {
         PrintAndLogEx(DEBUG, "iso14443a card select failed");
@@ -6694,112 +6730,6 @@ static int CmdHf14AMfNack(const char *Cmd) {
     detect_classic_nackbug(verbose);
     return PM3_SUCCESS;
 }
-
-/*
-static int CmdHF14AMfice(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mf ice",
-                  "Collect MIFARE Classic nonces to file",
-                  "hf mf ice\n"
-                  "hf mf ice -f nonces.bin");
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of nonce dump"),
-        arg_u64_0(NULL, "limit", "<dec>", "nonces to be collected"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-
-    int fnlen = 0;
-    char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-
-    uint32_t limit = arg_get_u32_def(ctx, 2, 50000);
-
-    CLIParserFree(ctx);
-
-    // Validations
-    char *fptr;
-
-    if (filename[0] == '\0') {
-        fptr = GenerateFilename("hf-mf-", "-nonces.bin");
-        if (fptr == NULL)
-            return PM3_EFILE;
-        strncpy(filename, fptr, sizeof(filename) - 1);
-        free(fptr);
-    }
-
-    uint8_t blockNo = 0;
-    uint8_t keyType = MF_KEY_A;
-    uint8_t trgBlockNo = 0;
-    uint8_t trgKeyType = MF_KEY_B;
-    bool slow = false;
-    bool initialize = true;
-    bool acquisition_completed = false;
-    uint32_t total_num_nonces = 0;
-    PacketResponseNG resp;
-
-    uint32_t part_limit = 3000;
-
-    PrintAndLogEx(NORMAL, "Collecting "_YELLOW_("%u")" nonces \n", limit);
-
-    FILE *fnonces = NULL;
-    if ((fnonces = fopen(filename, "wb")) == NULL) {
-        PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), filename);
-        return PM3_EFILE;
-    }
-
-    clearCommandBuffer();
-
-    uint64_t t1 = msclock();
-
-    do {
-        if (kbd_enter_pressed()) {
-            PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
-            break;
-        }
-
-        uint32_t flags = 0;
-        flags |= initialize ? 0x0001 : 0;
-        flags |= slow ? 0x0002 : 0;
-        clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFARE_ACQ_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags, NULL, 0);
-
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 3000) == false) {
-            goto out;
-        }
-        if (resp.oldarg[0])  goto out;
-
-        uint32_t items = resp.oldarg[2];
-        fwrite(resp.data.asBytes, 1, items * 4, fnonces);
-        fflush(fnonces);
-
-        total_num_nonces += items;
-        if (total_num_nonces > part_limit) {
-            PrintAndLogEx(INFO, "Total nonces %u\n", total_num_nonces);
-            part_limit += 3000;
-        }
-
-        acquisition_completed = (total_num_nonces > limit);
-
-        initialize = false;
-
-    } while (!acquisition_completed);
-
-out:
-    PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds\n", (msclock() - t1) / 1000);
-
-    if (fnonces) {
-        fflush(fnonces);
-        fclose(fnonces);
-    }
-
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_ACQ_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, 4, NULL, 0);
-    return PM3_SUCCESS;
-}
-*/
 
 static int CmdHF14AMfAuth4(const char *Cmd) {
     uint8_t keyn[20] = {0};
@@ -7396,14 +7326,15 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
 
     // Select card to get UID/UIDLEN/ATQA/SAK information
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    uint8_t sel_7411 = 0;
+    if (WaitForIso14aReply(&resp, 1500, NULL, &sel_7411) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         return PM3_ETIMEOUT;
     }
 
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_7411;
     if (select_status == 0) {
         PrintAndLogEx(DEBUG, "iso14443a card select failed");
         return PM3_SUCCESS;
@@ -8135,17 +8066,19 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
             uint8_t data[] = {0xAA, 0xA8, 0x00, i};
             uint32_t flags = ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS;
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_ISO14443A_READER, flags, sizeof(data), 0, data, sizeof(data));
-            if (WaitForResponseTimeout(CMD_ACK, NULL, 1500) == false) {
+            SendIso14aReader(flags, data, sizeof(data));
+            // CONNECT + RAW, so the device answers twice: select first, then the raw exchange
+            if (WaitForIso14aReply(NULL, 1500, NULL, NULL) == false) {
                 break;
             }
 
             PacketResponseNG resp;
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+            uint16_t len = 0;
+            if (WaitForIso14aReply(&resp, 1500, &len, NULL) == false) {
                 break;
             }
 
-            uint16_t len = resp.oldarg[0] & 0xFFFF;
+            len &= 0xFFFF;
             if (len != 20) {
                 break; // Not trace data
             }
@@ -8166,17 +8099,19 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
         uint8_t data[] = {0x30, i};
         uint32_t flags = ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS;
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443A_READER, flags, sizeof(data), 0, data, sizeof(data));
-        if (WaitForResponseTimeout(CMD_ACK, NULL, 1500) == false) {
+        SendIso14aReader(flags, data, sizeof(data));
+        // CONNECT + RAW, so the device answers twice: select first, then the raw exchange
+        if (WaitForIso14aReply(NULL, 1500, NULL, NULL) == false) {
             break;
         }
 
         PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        uint16_t len = 0;
+        if (WaitForIso14aReply(&resp, 1500, &len, NULL) == false) {
             break;
         }
 
-        uint16_t len = resp.oldarg[0] & 0xFFFF;
+        len &= 0xFFFF;
         if (len != 18) {
             break; // Not trace data
         }
@@ -8492,11 +8427,20 @@ static int CmdHF14AMfWipe(const char *Cmd) {
 
                 PrintAndLogEx(INFO, " %3d | %s" NOLF, mfFirstBlockOfSector(s) + b, sprint_hex(data + 10, MFBLOCK_SIZE));
                 clearCommandBuffer();
-                SendCommandMIX(CMD_HF_MIFARE_WRITEBL, mfFirstBlockOfSector(s) + b, kt, 0, data, sizeof(data));
+                mf_writeblock_ex_t payload = {
+                    .wakeup = MF_WAKE_WUPA,
+                    .auth_cmd = MIFARE_AUTH_KEYA + (kt & 0xF),
+                    .write_cmd = ISO14443A_CMD_WRITEBLOCK,
+                    .block_no = mfFirstBlockOfSector(s) + b,
+                };
+                memcpy(payload.key, data, MIFARE_KEY_SIZE);
+                memcpy(payload.block_data, data + 10, MFBLOCK_SIZE);
+
+                SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&payload, sizeof(payload));
                 PacketResponseNG resp;
-                if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-                    int8_t isOK = resp.oldarg[0];
-                    if (isOK == 1) {
+                if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500)) {
+                    int8_t isOK = resp.status;
+                    if (isOK == PM3_SUCCESS) {
                         PrintAndLogEx(NORMAL, "- key %c ( " _GREEN_("ok") " )", (kt == MF_KEY_A) ? 'A' : 'B');
                         break;
                     } else {
@@ -9392,9 +9336,10 @@ static int CmdHF14AGen4Save(const char *Cmd) {
 
     // Select card to get UID/UIDLEN information
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    uint8_t sel_9410 = 0;
+    if (WaitForIso14aReply(&resp, 1500, NULL, &sel_9410) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         return PM3_ETIMEOUT;
     }
@@ -9405,7 +9350,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
         2: OK, no ATS
         3: proprietary Anticollision
     */
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_9410;
     if (select_status == 0) {
         PrintAndLogEx(DEBUG, "iso14443a card select failed");
         return PM3_SUCCESS;
@@ -9467,7 +9412,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
         uint16_t bytes_left = bytes ;
 
         // 12 is the size of the struct the fct mf_eml_set_mem_xt uses to transfer to device
-        uint16_t max_avail_blocks = ((PM3_CMD_DATA_SIZE - 12) / MFBLOCK_SIZE) * MFBLOCK_SIZE;
+        uint16_t max_avail_blocks = ((g_conn.max_cmd_data_size - 12) / MFBLOCK_SIZE) * MFBLOCK_SIZE;
 
         while (bytes_left > 0 && cnt < block_cnt) {
             if (bytes_left == MFBLOCK_SIZE) {
@@ -10883,9 +10828,14 @@ static int CmdHF14AMfValue(const char *Cmd) {
             uint8_t block[MFBLOCK_SIZE] = {0x00};
             memcpy(block, (uint8_t *)&value, 4);
 
-            uint8_t cmddata[34];
-            memcpy(cmddata, key, sizeof(key));
-            // Key == 6 data went to 10, so lets offset 9 for inc/dec
+            mf_value_t payload = {
+                .blockno = blockno,
+                .keytype = keytype,
+                .transfer_keytype = transferkeytype,
+                // 00 if increment, 01 if decrement, 02 if restore
+                .action = action,
+            };
+            memcpy(payload.key, key, sizeof(key));
 
             if (action == 0) {
                 PrintAndLogEx(INFO, "Value incremented by : %d", (int32_t)value);
@@ -10894,22 +10844,19 @@ static int CmdHF14AMfValue(const char *Cmd) {
                 PrintAndLogEx(INFO, "Value decremented by : %d", (int32_t)value);
             }
 
-            // 00 if increment, 01 if decrement, 02 if restore
-            cmddata[9] = action;
-
             if (trnval != -1) {
 
                 // transfer to block
-                cmddata[10] = trnval;
+                payload.transfer_blockno = trnval;
 
-                memcpy(cmddata + 27, transferkey, sizeof(transferkey));
+                memcpy(payload.transfer_key, transferkey, sizeof(transferkey));
                 if (mfSectorNum(trnval) != mfSectorNum(blockno)) {
-                    cmddata[33] = 1; // should send nested auth
+                    payload.need_auth = 1; // should send nested auth
                 }
                 PrintAndLogEx(INFO, "Transfer block no %u to block %" PRId64, blockno, trnval);
 
             } else {
-                cmddata[10] = 0;
+                payload.transfer_blockno = 0;
                 if (keytype < 2) {
                     PrintAndLogEx(INFO, "Writing block no %u, key type:%c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
                 } else {
@@ -10917,17 +10864,17 @@ static int CmdHF14AMfValue(const char *Cmd) {
                 }
             }
 
-            memcpy(cmddata + 11, block, sizeof(block));
+            memcpy(payload.blockdata, block, sizeof(block));
 
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_MIFARE_VALUE, blockno, keytype, transferkeytype, cmddata, sizeof(cmddata));
+            SendCommandNG(CMD_HF_MIFARE_VALUE, (uint8_t *)&payload, sizeof(payload));
 
             PacketResponseNG resp;
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+            if (WaitForResponseTimeout(CMD_HF_MIFARE_VALUE, &resp, 1500) == false) {
                 PrintAndLogEx(FAILED, "command execution time out");
                 return PM3_ETIMEOUT;
             }
-            isok = resp.oldarg[0] & 0xff;
+            isok = (resp.status == PM3_SUCCESS);
         } else { // set value
             // To set a value block (or setup) we can use the normal mifare classic write block
             // So build the command options can call CMD_HF_MIFARE_WRITEBL
@@ -10945,15 +10892,24 @@ static int CmdHF14AMfValue(const char *Cmd) {
             writedata[25] = (blockno ^ 0xFF);
 
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, keytype, 0, writedata, sizeof(writedata));
+            mf_writeblock_ex_t payload = {
+                .wakeup = MF_WAKE_WUPA,
+                .auth_cmd = MIFARE_AUTH_KEYA + (keytype & 0xF),
+                .write_cmd = ISO14443A_CMD_WRITEBLOCK,
+                .block_no = blockno,
+            };
+            memcpy(payload.key, writedata, MIFARE_KEY_SIZE);
+            memcpy(payload.block_data, writedata + 10, MFBLOCK_SIZE);
+
+            SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&payload, sizeof(payload));
 
             PacketResponseNG resp;
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+            if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false) {
                 PrintAndLogEx(FAILED, "command execution time out");
                 return PM3_ETIMEOUT;
             }
 
-            isok = resp.oldarg[0] & 0xff;
+            isok = (resp.status == PM3_SUCCESS);
         }
 
         if (isok) {
@@ -11224,9 +11180,10 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_11243 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_11243) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         DropField();
         return PM3_ETIMEOUT;
@@ -11241,20 +11198,21 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         2: OK, no ATS
         3: proprietary Anticollision
     */
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_11243;
 
     // try to request ATS even if tag claims not to support it. If yes => 4
     if (select_status == 2) {
         uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, rats, sizeof(rats));
+        uint16_t rlen_11266 = 0;
+        if (WaitForIso14aReply(&resp, 2500, &rlen_11266, NULL) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
 
-        memcpy(card.ats, resp.data.asBytes, resp.oldarg[0]);
-        card.ats_len = resp.oldarg[0]; // note: ats_len includes CRC Bytes
+        memcpy(card.ats, resp.data.asBytes, rlen_11266);
+        card.ats_len = rlen_11266; // note: ats_len includes CRC Bytes
         if (card.ats_len > 3) {
             select_status = 4;
         }
@@ -11278,7 +11236,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "--- " _CYAN_("ISO14443-a Information") " -----------------------------");
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
-    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
+    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, select_status);
 
 
     uint8_t ats_hist_pos = 0;
@@ -11792,9 +11750,10 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_11813 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_11813) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         return 0;
     }
@@ -11808,7 +11767,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
         2: OK, no ATS
         3: proprietary Anticollision
     */
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_11813;
 
     if (select_status == 0) {
         PrintAndLogEx(DEBUG, "iso14443a card select failed");
@@ -11822,34 +11781,42 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     if (collect_fm11rf08s) {
         uint64_t t1 = msclock();
         uint32_t flags = collect_fm11rf08s_with_data | (collect_fm11rf08s_without_backdoor << 1);
-        SendCommandMIX(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, flags, blockn, keytype, key, sizeof(key));
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-            if (resp.oldarg[0] != PM3_SUCCESS) {
+        mf_acquire_nonces_t snpayload = {
+            .blockno = blockn,
+            .keytype = keytype,
+            .flags = flags,
+        };
+        memcpy(snpayload.key, key, sizeof(snpayload.key));
+        SendCommandNG(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, (uint8_t *)&snpayload, sizeof(snpayload));
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, &resp, 2500)) {
+            if (resp.status != PM3_SUCCESS || resp.length < sizeof(mf_nonces_resp_t)) {
                 return NONCE_FAIL;
             }
         } else {
             PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
             return PM3_ETIMEOUT;
         }
+
+        const uint8_t *snonces = ((const mf_nonces_resp_t *)resp.data.asBytes)->nonces;
         uint8_t num_sectors = MIFARE_1K_MAXSECTOR + 1;
         iso14a_fm11rf08s_nonces_with_data_t nonces_dump = {0};
         for (uint8_t sec = 0; sec < num_sectors; sec++) {
             // reconstruct full nt
             uint32_t nt;
-            nt = bytes_to_num(resp.data.asBytes + ((sec * 2) * 8), 2);
+            nt = bytes_to_num(snonces + ((sec * 2) * 8), 2);
             nt = nt << 16 | prng_successor(nt, 16);
             num_to_bytes(nt, 4, nonces_dump.nt[sec][0]);
-            nt = bytes_to_num(resp.data.asBytes + (((sec * 2) + 1) * 8), 2);
+            nt = bytes_to_num(snonces + (((sec * 2) + 1) * 8), 2);
             nt = nt << 16 | prng_successor(nt, 16);
             num_to_bytes(nt, 4, nonces_dump.nt[sec][1]);
         }
         for (uint8_t sec = 0; sec < num_sectors; sec++) {
-            memcpy(nonces_dump.nt_enc[sec][0], resp.data.asBytes + ((sec * 2) * 8) + 4, 4);
-            memcpy(nonces_dump.nt_enc[sec][1], resp.data.asBytes + (((sec * 2) + 1) * 8) + 4, 4);
+            memcpy(nonces_dump.nt_enc[sec][0], snonces + ((sec * 2) * 8) + 4, 4);
+            memcpy(nonces_dump.nt_enc[sec][1], snonces + (((sec * 2) + 1) * 8) + 4, 4);
         }
         for (uint8_t sec = 0; sec < num_sectors; sec++) {
-            nonces_dump.par_err[sec][0] = resp.data.asBytes[((sec * 2) * 8) + 2];
-            nonces_dump.par_err[sec][1] = resp.data.asBytes[(((sec * 2) + 1) * 8) + 2];
+            nonces_dump.par_err[sec][0] = snonces[((sec * 2) * 8) + 2];
+            nonces_dump.par_err[sec][1] = snonces[(((sec * 2) + 1) * 8) + 2];
         }
         if (collect_fm11rf08s_with_data) {
             int bytes = MIFARE_1K_MAXBLOCK * MFBLOCK_SIZE;
@@ -11885,7 +11852,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     PrintAndLogEx(INFO, "--- " _CYAN_("ISO14443-a Information") " -----------------------------");
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
-    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
+    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, select_status);
 
 //    if (setDeviceDebugLevel(DBG_DEBUG, false) != PM3_SUCCESS) {
     if (setDeviceDebugLevel(DBG_EXTENDED, false) != PM3_SUCCESS) {

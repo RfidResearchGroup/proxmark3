@@ -17,19 +17,22 @@
 //-----------------------------------------------------------------------------
 #include "sam_picopass.h"
 #include "sam_common.h"
+#include "util.h"          // switch_clock_to_ticks / _countsspclk
+#include "sam_sc.h"
 #include "iclass.h"
 #include "crc16.h"
 #include "proxmark3_arm.h"
 #include "BigBuf.h"
 #include "cmd.h"
 #include "commonutil.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "dbprint.h"
 #include "i2c.h"
 #include "iso15693.h"
 #include "protocols.h"
 #include "optimized_cipher.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
 #include "pm3_cmd.h"
 
 /**
@@ -93,15 +96,15 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
         sam_rx_buf, &sam_rx_len
     );
 
-    if (sam_rx_buf[1] == 0x61) { // commands to be relayed to card starts with 0x61
+    if (sam_relay_pending(sam_rx_buf, sam_rx_len)) { // commands to be relayed to card starts with 0x61
         switch_clock_to_countsspclk();
         // tag <-> SAM exchange starts here
 
-        while (sam_rx_buf[1] == 0x61) {
+        while (sam_relay_pending(sam_rx_buf, sam_rx_len)) {
             uint32_t start_time = GetCountSspClk();
             uint32_t eof_time = start_time + DELAY_ICLASS_VICC_TO_VCD_READER;
 
-            nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf);
+            nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf, sam_rx_len);
 
             bool is_cmd_check = ((nfc_tx_buf[0] & 0x0F) == ICLASS_CMD_CHECK);
 
@@ -183,7 +186,7 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
 
             // last SAM->TAG
             // c1 61 c1 00 00 a1 02 >>82<< 00 90 00
-            if (sam_rx_buf[7] == 0x82) {
+            if (sam_relay_complete(sam_rx_buf, sam_rx_len)) {
                 // tag <-> SAM exchange ends here
                 break;
             }
@@ -226,10 +229,13 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
     //           82 01
     //              07
     // 90 00
+    uint16_t plen = 0;
+    uint16_t ofs = sam_response_payload(sam_rx_buf, sam_rx_len, &plen);
+
     if (request_len == 0) {
 
-        if (!(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0x8a && sam_rx_buf[5 + 4] == 0x03) &&
-                !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0xb3 && sam_rx_buf[5 + 4] == 0xa0)) {
+        if (!(sam_rx_buf[ofs] == 0xbd && sam_rx_buf[ofs + 2] == 0x8a && sam_rx_buf[ofs + 4] == 0x03) &&
+                !(sam_rx_buf[ofs] == 0xbd && sam_rx_buf[ofs + 2] == 0xb3 && sam_rx_buf[ofs + 4] == 0xa0)) {
 
             if (g_dbglevel >= DBG_ERROR) {
                 Dbprintf("No PACS data in SAM response");
@@ -238,17 +244,13 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
         }
     }
 
-    if (sam_rx_buf[6] == 0x81 && sam_rx_buf[8] == 0x8a && sam_rx_buf[9] == 0x81) { //check if the response is an SNMP message
-        *response_len = sam_rx_buf[5 + 2] + 3;
-    } else { //if not, use the old logic
-        *response_len = sam_rx_buf[5 + 1] + 2;
+    *response_len = (uint8_t)plen;
+
+    if (sam_rx_buf[ofs] == 0xBD && sam_rx_buf[ofs - 1] != 0x00) { //secure channel flag is not 0x00
+        Dbprintf(_YELLOW_("Secure channel flag set to: ")"%02x", sam_rx_buf[ofs - 1]);
     }
 
-    if (sam_rx_buf[5] == 0xBD && sam_rx_buf[4] != 0x00) { //secure channel flag is not 0x00
-        Dbprintf(_YELLOW_("Secure channel flag set to: ")"%02x", sam_rx_buf[4]);
-    }
-
-    memcpy(response, sam_rx_buf + 5, *response_len);
+    memcpy(response, sam_rx_buf + ofs, *response_len);
 
     goto out;
 
@@ -344,9 +346,9 @@ static int sam_send_request_emulated(const uint8_t *const request, const uint8_t
         Dbprintf("Emulate: initial SAM resp[1]=%02x rx_len=%u", sam_rx_buf[1], sam_rx_len);
     }
 
-    if (sam_rx_buf[1] == 0x61) {
-        while (sam_rx_buf[1] == 0x61) {
-            nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf);
+    if (sam_relay_pending(sam_rx_buf, sam_rx_len)) {
+        while (sam_relay_pending(sam_rx_buf, sam_rx_len)) {
+            nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf, sam_rx_len);
 
             if (g_dbglevel >= DBG_INFO) {
                 Dbprintf("Emulate: SAM NFC cmd [%u]: %02x %02x ...", nfc_tx_len,
@@ -473,7 +475,7 @@ static int sam_send_request_emulated(const uint8_t *const request, const uint8_t
                 Dbprintf("Emulate: SAM rx[1]=%02x rx[7]=%02x", sam_rx_buf[1], sam_rx_buf[7]);
             }
 
-            if (sam_rx_buf[7] == 0x82) {
+            if (sam_relay_complete(sam_rx_buf, sam_rx_len)) {
                 break;
             }
         }
@@ -497,9 +499,12 @@ static int sam_send_request_emulated(const uint8_t *const request, const uint8_t
         Dbhexdump(sam_rx_len, sam_rx_buf, false);
     }
 
+    uint16_t plen = 0;
+    uint16_t ofs = sam_response_payload(sam_rx_buf, sam_rx_len, &plen);
+
     if (request_len == 0) {
-        if (!(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0x8a && sam_rx_buf[5 + 4] == 0x03) &&
-                !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0xb3 && sam_rx_buf[5 + 4] == 0xa0)) {
+        if (!(sam_rx_buf[ofs] == 0xbd && sam_rx_buf[ofs + 2] == 0x8a && sam_rx_buf[ofs + 4] == 0x03) &&
+                !(sam_rx_buf[ofs] == 0xbd && sam_rx_buf[ofs + 2] == 0xb3 && sam_rx_buf[ofs + 4] == 0xa0)) {
 
             if (g_dbglevel >= DBG_ERROR) {
                 Dbprintf("No PACS data in SAM response");
@@ -511,17 +516,13 @@ static int sam_send_request_emulated(const uint8_t *const request, const uint8_t
         }
     }
 
-    if (sam_rx_buf[6] == 0x81 && sam_rx_buf[8] == 0x8a && sam_rx_buf[9] == 0x81) {
-        *response_len = sam_rx_buf[5 + 2] + 3;
-    } else {
-        *response_len = sam_rx_buf[5 + 1] + 2;
+    *response_len = (uint8_t)plen;
+
+    if (sam_rx_buf[ofs] == 0xBD && sam_rx_buf[ofs - 1] != 0x00) {
+        Dbprintf(_YELLOW_("Secure channel flag set to: ")"%02x", sam_rx_buf[ofs - 1]);
     }
 
-    if (sam_rx_buf[5] == 0xBD && sam_rx_buf[4] != 0x00) {
-        Dbprintf(_YELLOW_("Secure channel flag set to: ")"%02x", sam_rx_buf[4]);
-    }
-
-    memcpy(response, sam_rx_buf + 5, *response_len);
+    memcpy(response, sam_rx_buf + ofs, *response_len);
 
     goto out;
 
@@ -582,7 +583,7 @@ static int sam_set_card_detected_picopass(const picopass_hdr_t *card_select) {
     //     8a 00 <- empty response (accepted)
     // 90 00
 
-    if (response[5] != 0xbd) {
+    if (sam_bd_offset(response, response_len) == 0) {
         if (g_dbglevel >= DBG_ERROR)
             Dbprintf("Invalid SAM response");
         goto error;
@@ -637,10 +638,27 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
     uint8_t sam_response_len = 0;
 
     clear_trace();
+    // This path resets the SAM, invalidating any secure-channel state held by
+    // CMD_HF_SAM_SC. Ensure the next SC request reopens instead of sending
+    // into a reset SAM with a stale routing/session flag.
+    sam_sc_session_invalidate();
     I2C_Reset_EnterMainProgram();
 
     set_tracing(true);
     StartTicks();
+
+    // Resetting the module resets the card, which then sends an ATR nobody
+    // asked for. Read it here rather than letting the first SAM APDU collide
+    // with it, and take the chance to say plainly when the slot holds
+    // something that is not a SAM.
+    smart_card_atr_t card;
+    if (GetATR(&card, false) == false) {
+        if (g_dbglevel >= DBG_ERROR) {
+            DbpString("SAM: no ATR - is a SAM in the slot?");
+        }
+        res = PM3_ECARDEXCHANGE;
+        goto err;
+    }
 
     // step 1: ping SAM
     sam_get_version(info);

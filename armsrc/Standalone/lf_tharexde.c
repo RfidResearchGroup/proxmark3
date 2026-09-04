@@ -17,13 +17,13 @@
 // main code for EM4x50 simulator and collector aka THAREXDE
 //-----------------------------------------------------------------------------
 #include <inttypes.h>
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "standalone.h"
 #include "proxmark3_arm.h"
 #include "appmain.h"
 #include "BigBuf.h"
 #include "commonutil.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
 #include "util.h"
 #include "dbprint.h"
 #include "spiffs.h"
@@ -279,11 +279,7 @@ void RunMod(void) {
             }
         }
 
-        // reset timer
-        AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG; // re-enable timer and wait for TC0
-        AT91C_BASE_TC0->TC_RC  = 0; // set TIOA (carry bit) on overflow, return to zero
-        AT91C_BASE_TC0->TC_RA  = 1; // clear carry bit on next clock cycle
-        AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG; // reset and re-enable timer
+        ResetTicks();
     }
 
     if (state == STATE_READ) {

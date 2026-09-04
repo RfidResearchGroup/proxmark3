@@ -80,7 +80,7 @@ static int CmdLFPCF7931Reader(const char *Cmd) {
         PacketResponseNG resp;
         clearCommandBuffer();
         SendCommandNG(CMD_LF_PCF7931_READ, NULL, 0);
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        if (WaitForResponseTimeout(CMD_LF_PCF7931_READ, &resp, 2500) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
         }
@@ -184,14 +184,24 @@ static int CmdLFPCF7931Write(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Writing block %u at idx %u with data 0x%02X", block, idx, data[0]);
 
-    uint32_t buf[10]; // TODO sparse struct, 7 *bytes* then words at offset 4*7!
-    memcpy(buf, configPcf.Pwd, sizeof(configPcf.Pwd));
-    buf[7] = (configPcf.OffsetWidth + 128);
-    buf[8] = (configPcf.OffsetPosition + 128);
-    buf[9] = configPcf.InitDelay;
+    pcf7931_write_t payload = {
+        .offset_width = (uint8_t)(configPcf.OffsetWidth + 128),
+        .offset_position = (uint8_t)(configPcf.OffsetPosition + 128),
+        .init_delay = configPcf.InitDelay,
+        .address = block,
+        .byte = idx,
+        .data = data[0],
+    };
+    memcpy(payload.pwd, configPcf.Pwd, sizeof(payload.pwd));
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_PCF7931_WRITE, block, idx, data[0], buf, sizeof(buf));
+    SendCommandNG(CMD_LF_PCF7931_WRITE, (uint8_t *)&payload, sizeof(payload));
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_LF_PCF7931_WRITE, &resp, 4000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
+    }
 
     PrintAndLogEx(SUCCESS, "Done!");
     PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf pcf7931 reader`") " to verify");

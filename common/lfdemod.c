@@ -1657,7 +1657,14 @@ uint16_t manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alig
 
     *alignPos = bestRun;
     // decode
-    for (i = bestRun; i < *size; i += 2) {
+    //
+    // i + 1 < *size, not i < *size: the body reads bits[i + 1], so the old bound
+    // ran one pair past the end whenever the chosen alignment left a lone sample
+    // at the tail (bestRun == 1 with an even size, say).  That out of range read
+    // produced a spurious trailing symbol, marked 7 as an impossible Manchester
+    // pair, and callers that then stop at the first 7 lost the last real bit -
+    // a Hitag 2 tag answering CE129911 decoded as CE129910, one bit short.
+    for (i = bestRun; i + 1 < *size; i += 2) {
 
         if (bits[i] == 1 && (bits[i + 1] == 0)) {
             bits[bitnum++] = invert;

@@ -76,6 +76,13 @@ static dmabuf8_t s_dma_8 = {
 static uint32_t s_trace_len = 0;
 static bool s_tracing = true;
 
+static uint32_t s_trace_origin = 0;
+static bool s_trace_origin_valid = false;
+
+void trace_restart_timeline(void) {
+    s_trace_origin_valid = false;
+}
+
 // compute the available size for BigBuf
 void BigBuf_initialize(void) {
     s_bigbuf_size = (uint32_t)_stack_start - (uint32_t)__bss_end__;
@@ -131,6 +138,7 @@ void BigBuf_Clear_EM(void) {
 
 void BigBuf_Clear_keep_EM(void) {
     memset(BigBuf, 0, s_bigbuf_hi);
+    clear_trace();
 }
 
 // allocate a chunk of memory from BigBuf. We allocate high memory first. The unallocated memory
@@ -215,6 +223,7 @@ uint16_t BigBuf_max_traceLen(void) {
 
 void clear_trace(void) {
     s_trace_len = 0;
+    trace_restart_timeline();
 }
 
 void set_tracelen(uint32_t value) {
@@ -264,8 +273,16 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
         return false;
     }
 
+    // the first frame of a phase is the zero the rest of it is measured from
+    if ((s_trace_origin_valid == false) || (timestamp_start < s_trace_origin)) {
+        s_trace_origin = timestamp_start;
+        s_trace_origin_valid = true;
+    }
+    timestamp_start -= s_trace_origin;
+    timestamp_end -= s_trace_origin;
+
     uint32_t duration;
-    if (timestamp_end > timestamp_start) {
+    if (timestamp_end >= timestamp_start) {
         duration = timestamp_end - timestamp_start;
     } else {
         duration = (UINT32_MAX - timestamp_start) + timestamp_end;

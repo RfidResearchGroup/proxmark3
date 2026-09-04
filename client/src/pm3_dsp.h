@@ -21,6 +21,7 @@
 
 #include <stdbool.h>
 #include "common.h"
+#include "graph.h"      // MAX_GRAPH_TRACE_LEN
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,7 +29,7 @@ extern "C" {
 
 #define PM3_DSP_MAX_FFT     262144
 #define PM3_DSP_DC_GUARD    2
-#define PM3_DSP_MAX_RESAMPLE (40000 * 32)
+#define PM3_DSP_MAX_RESAMPLE (MAX_GRAPH_TRACE_LEN * 32)
 #define PM3_DSP_NYQUIST_CLK  2.5
 #define PM3_DSP_ENVELOPE_SMOOTH 8
 #define PM3_DSP_ENVELOPE_DEPTH 0.6

@@ -59,9 +59,9 @@ end
 
 --- Parses response data
 local function parseResponse(rawResponse)
-    local resp = Command.parse(rawResponse)
-    local len = tonumber(resp.arg1) * 2
-    return string.sub(tostring(resp.data), 0, len);
+    local _rlen, _sel, _raw = parseRaw('14a', rawResponse)
+    if _rlen == nil then return nil end
+    return tohex(_raw)
 end
 ---
 
@@ -86,16 +86,13 @@ local function sendRaw(rawdata, options)
         flags = flags + lib14a.ISO14A_COMMAND.ISO14A_APPEND_CRC
     end
 
-    local arg2 = #rawdata / 2
+    local lenbits = 0
     if options.bits7 then
-       arg2 = arg2 | tonumber(bit32.lshift(7, 16))
+       lenbits = 7
     end
 
-    local command = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER,
-                    arg1 = flags,
-                    arg2 = arg2,
-                    data = rawdata}
-    return command:sendMIX(options.ignore_response)
+    local command = Command:newRaw{ tech = '14a', flags = flags, data = rawdata, lenbits = lenbits }
+    return command:sendNG(options.ignore_response)
 end
 ---
 

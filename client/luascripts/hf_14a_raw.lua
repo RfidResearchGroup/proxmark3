@@ -151,11 +151,14 @@ end
 -- and displays the data
 -- @param usbpacket the data received from the device
 function showdata(usbpacket)
-    local cmd_response = Command.parse(usbpacket)
-    local len = tonumber(cmd_response.arg1) *2
-    --print("data length:",len)
-    local data = string.sub(tostring(cmd_response.data), 0, len);
-    print("<< ",data)
+    -- iso14a_raw_resp_t: u16 len, u8 sel, u8 rfu, u8 data[]
+    local rlen, sel, raw = parseRaw('14a', usbpacket)
+    if rlen == nil then
+        print("<< ", "malformed response")
+        return
+    end
+    local hex = tohex(raw)
+    print("<< ", hex)
 end
 
 function sendRaw(rawdata, options)
@@ -170,13 +173,8 @@ function sendRaw(rawdata, options)
         flags = flags + lib14a.ISO14A_COMMAND.ISO14A_APPEND_CRC
     end
 
-    local command = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER,
-                                arg1 = flags, -- Send raw
-                                -- arg2 contains the length, which is half the length
-                                -- of the ASCII-string rawdata
-                                arg2 = string.len(rawdata)/2,
-                                data = rawdata}
-    return  command:sendMIX(options.ignore_response)
+    local command = Command:newRaw{ tech = '14a', flags = flags, data = rawdata }
+    return  command:sendNG(options.ignore_response)
 end
 
 

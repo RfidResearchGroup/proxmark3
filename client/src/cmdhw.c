@@ -36,6 +36,7 @@
 #include "ui.h"
 #include "fpga.h"
 #include "cmdhw.h"
+#include "cmdfpga.h"
 #include "cmddata.h"
 #include "commonutil.h"
 #include "preferences.h"
@@ -52,7 +53,20 @@
 
 static int CmdHelp(const char *Cmd);
 
-static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used) {
+static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used, uint32_t flash_size) {
+    // AT32 (PM5): the chip id is an ARM DBGMCU IDCODE, not an Atmel CIDR, so the
+    // AT91 decode below does not apply (it would print "Unknown" and a bogus flash
+    // size). Report the MCU and use the real flash size the device reported.
+    if (IfPm5()) {
+        PrintAndLogEx(NORMAL, "    MCU....... " _YELLOW_("%s"), "AT32F437");
+        uint32_t mem_kb = flash_size / 1024;
+        PrintAndLogEx(NORMAL, "    Memory.... " _YELLOW_("%u") " KB ( " _YELLOW_("%2.0f%%") " used )"
+                      , mem_kb
+                      , mem_kb == 0 ? 0.0f : (float)mem_used / (mem_kb * 1024) * 100
+                     );
+        return;
+    }
+
     const char *asBuff;
     switch (iChipID) {
         case 0x270B0A40:
@@ -156,10 +170,23 @@ static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used) {
                  );
 }
 
-static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
+static void lookupChipID(uint32_t iChipID, uint32_t mem_used, uint32_t flash_size) {
     const char *asBuff;
     uint32_t mem_avail = 0;
     PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Hardware") " ]");
+
+    // AT32 (PM5): the chip id is an ARM DBGMCU IDCODE, not an Atmel CIDR, so the
+    // verbose AT91 decode below does not apply. Print a short AT32 summary instead.
+    if (IfPm5()) {
+        PrintAndLogEx(NORMAL, "  --= uC: AT32F437");
+        uint32_t mem_kb = flash_size / 1024;
+        PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Size: %u KB, Used: %u bytes (%2.0f%%)"
+                      , mem_kb
+                      , mem_used
+                      , mem_kb == 0 ? 0.0f : (float)mem_used / (mem_kb * 1024) * 100
+                     );
+        return;
+    }
 
     switch (iChipID) {
         case 0x270B0A40:
@@ -631,7 +658,8 @@ static int CmdLCD(const char *Cmd) {
 
     while (j--) {
         clearCommandBuffer();
-        SendCommandMIX(CMD_LCD, raw[0], 0, 0, NULL, 0);
+        lcd_cmd_t payload = { .cmd = raw[0] };
+        SendCommandNG(CMD_LCD, (uint8_t *)&payload, sizeof(payload));
     }
     return PM3_SUCCESS;
 }
@@ -1148,21 +1176,24 @@ static int CmdTune(const char *Cmd) {
         double lfq2 = (double)package->peak_v * 3.14 / 2 / vdd;
         PrintAndLogEx(SUCCESS, "Peak voltage.......... " _YELLOW_("%.1lf"), lfq2);
         // cross-check results
-        if (lfq1 > 3) {
-            double approx_vdd = (double)package->peak_v * 3.14 / 2 / lfq1;
-            // Got 8858 on a RDV4 with large antenna 134/14
-            // Got 8761 on a non-RDV4
-            const double approx_vdd_other_max = 8840;
+        // TODO DXL pm5 to be covered
+        if (IfPm5() == false) {
+            if (lfq1 > 3) {
+                double approx_vdd = (double)package->peak_v * 3.14 / 2 / lfq1;
+                // Got 8858 on a RDV4 with large antenna 134/14
+                // Got 8761 on a non-RDV4
+                const double approx_vdd_other_max = 8840;
 
-            // 1% over threshold and supposedly non-RDV4
-            if ((approx_vdd > approx_vdd_other_max * 1.01) && (!IfPm3Rdv4Fw())) {
-                PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3GENERIC firmware on a RDV4"));
-                PrintAndLogEx(WARNING, "False positives is possible but please check your setup");
-            }
-            // 1% below threshold and supposedly RDV4
-            if ((approx_vdd < approx_vdd_other_max * 0.99) && (IfPm3Rdv4Fw())) {
-                PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_RDV4 firmware on a generic device"));
-                PrintAndLogEx(WARNING, "False positives is possible but please check your setup");
+                // 1% over threshold and supposedly non-RDV4
+                if ((approx_vdd > approx_vdd_other_max * 1.01) && (!IfPm3Rdv4Fw())) {
+                    PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3GENERIC firmware on a RDV4"));
+                    PrintAndLogEx(WARNING, "False positives is possible but please check your setup");
+                }
+                // 1% below threshold and supposedly RDV4
+                if ((approx_vdd < approx_vdd_other_max * 0.99) && (IfPm3Rdv4Fw())) {
+                    PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_RDV4 firmware on a generic device"));
+                    PrintAndLogEx(WARNING, "False positives is possible but please check your setup");
+                }
             }
         }
     }
@@ -1391,7 +1422,7 @@ static int CmdTearoff(const char *Cmd) {
     CLIParserInit(&ctx, "hw tearoff",
                   "Configure a tear-off hook for the next write command supporting tear-off\n"
                   "After having been triggered by a write command, the tear-off hook is deactivated\n"
-                  "Delay (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us.",
+                  "Delay (in us) must be between 1 and 65535 (65ms). Precision is about 1/3us.",
                   "hw tearoff --delay 1200 --> define delay of 1200us\n"
                   "hw tearoff --on --> (re)activate a previously defined delay\n"
                   "hw tearoff --off --> deactivate a previously activated but not yet triggered hook\n"
@@ -1399,7 +1430,7 @@ static int CmdTearoff(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0(NULL, "delay", "<dec>", "Delay in us before triggering tear-off, must be between 1 and 43000"),
+        arg_int0(NULL, "delay", "<dec>", "Delay in us before triggering tear-off, must be between 1 and 65535"),
         arg_lit0(NULL, "on", "Activate tear-off hook"),
         arg_lit0(NULL, "off", "Deactivate tear-off hook"),
         arg_int0(NULL, "skip", "<dec>", "Skip N triggers before activating the hook"),
@@ -1446,8 +1477,11 @@ static int CmdTearoff(const char *Cmd) {
     }
 
     if (delay != -1) {
-        if ((delay < 1) || (delay > 43000)) {
-            PrintAndLogEx(WARNING, "You can't set delay out of 1..43000 range!");
+        // 65535 is where tearoff_params_t.delay_us runs out, not where the
+        // timer does. The old 43000 was the point past which the PWM tick
+        // count wrapped into 16 bits and the delay silently came up short.
+        if ((delay < 1) || (delay > 65535)) {
+            PrintAndLogEx(WARNING, "You can't set delay out of 1..65535 range!");
             return PM3_EINVARG;
         }
     } else {
@@ -1471,6 +1505,345 @@ static int CmdTearoff(const char *Cmd) {
     }
 
     return handle_tearoff(&params, !silent);
+}
+
+static int CmdBwmAutoOff(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwmautooff",
+                  "Toggle automatic power-off when the PM5 is unplugged from USB (BWM only).\n"
+                  "Default is " _GREEN_("on") ". When on, the board powers itself down ~10s after\n"
+                  "USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery.\n"
+                  "Button power-on is unaffected. Disable for standalone/BLE use on battery.\n"
+                  _YELLOW_("Runtime only:") " resets to on at each boot.",
+                  "hw bwmautooff --off   --> disable auto power-off\n"
+                  "hw bwmautooff --on    --> re-enable auto power-off");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "on",  "enable auto power-off (default)"),
+        arg_lit0(NULL, "off", "disable auto power-off"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool on  = arg_get_lit(ctx, 1);
+    bool off = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    if (on && off) {
+        PrintAndLogEx(WARNING, "pick one of --on / --off");
+        return PM3_EINVARG;
+    }
+    uint8_t payload = off ? 0 : 1;   // default (neither flag) = enable
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_AUTOOFF, &payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_PM5_BWM_AUTOOFF, &resp, 2500) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5?)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status == PM3_ENOTIMPL) {
+        PrintAndLogEx(WARNING, "firmware built without auto power-off support");
+        return resp.status;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "failed to set auto power-off");
+        return resp.status;
+    }
+    PrintAndLogEx(SUCCESS, "Auto power-off %s.", payload ? _GREEN_("enabled") : _YELLOW_("disabled"));
+    return PM3_SUCCESS;
+}
+
+static int CmdBWMWifi(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwmwifi",
+                  "Bring up the BWM in STA + TCP-server mode: join a WiFi network and\n"
+                  "start a TCP server so the client can connect over WiFi. PM5 only.",
+                  "hw bwmwifi --ssid Home --pwd secret            --> port 7777\n"
+                  "hw bwmwifi --ssid Home --pwd secret --port 9000\n"
+                  "hw bwmwifi --status                            --> show connection state + IP");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "ssid", "<ssid>", "WiFi SSID to join (omit with --stop)"),
+        arg_str0(NULL, "pwd",  "<pwd>",  "WiFi password (omit for open network)"),
+        arg_int0(NULL, "port", "<dec>",  "TCP server listen port (default 7777)"),
+        arg_str0(NULL, "hostname", "<name>", "DHCP hostname (default Proxmark5)"),
+        arg_lit0(NULL, "stop", "tear down WiFi and return to BLE-only"),
+        arg_lit0(NULL, "status", "show current WiFi connection state + IP"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t ssid[64] = {0};
+    int ssid_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 1), ssid, sizeof(ssid) - 1, &ssid_len);
+
+    uint8_t pwd[64] = {0};
+    int pwd_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 2), pwd, sizeof(pwd) - 1, &pwd_len);
+
+    int port = arg_get_int_def(ctx, 3, 7777);
+
+    uint8_t host[33] = {0};
+    int host_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 4), host, sizeof(host) - 1, &host_len);
+    if (host_len == 0) {
+        strcpy((char *)host, "Proxmark5");
+        host_len = 9;
+    }
+    bool stop = arg_get_lit(ctx, 5);
+    bool status = arg_get_lit(ctx, 6);
+    CLIParserFree(ctx);
+
+    if (status) {
+        uint8_t q[1] = { BWM_WIFI_ACTION_STATUS };
+        clearCommandBuffer();
+        SendCommandNG(CMD_PM5_BWM_WIFI, q, sizeof(q));
+        PacketResponseNG r;
+        if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &r, 5000) == false) {
+            PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+            return PM3_ETIMEOUT;
+        }
+        if (r.status != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "could not query BWM WiFi status (BWM present?)");
+            return r.status;
+        }
+        uint8_t state = (r.length >= 1) ? r.data.asBytes[0] : 0xFF;
+        uint32_t ip = 0;
+        if (r.length >= 5) {
+            ip = r.data.asBytes[1] | (r.data.asBytes[2] << 8) | (r.data.asBytes[3] << 16) | ((uint32_t)r.data.asBytes[4] << 24);
+        }
+        switch (state) {
+            case 0xFF:
+                PrintAndLogEx(INFO, "BWM WiFi disabled (BLE-only). Bring it up with " _YELLOW_("hw bwmwifi --ssid <ssid> --pwd <pwd>"));
+                break;
+            case 2: // connected
+                if (ip) {
+                    PrintAndLogEx(SUCCESS, "BWM WiFi connected, IP " _YELLOW_("%u.%u.%u.%u"),
+                                  ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
+                    PrintAndLogEx(HINT, "Connect with: " _YELLOW_("pm3 -p tcp:%u.%u.%u.%u:<port>"),
+                                  ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
+                } else {
+                    PrintAndLogEx(INFO, "BWM WiFi associated, waiting for a DHCP lease...");
+                }
+                break;
+            case 1: // connecting
+                PrintAndLogEx(INFO, "BWM WiFi connecting...");
+                break;
+            case 3: // reconnect wait
+                PrintAndLogEx(INFO, "BWM WiFi reconnecting...");
+                break;
+            case 4: // task stopped
+                PrintAndLogEx(INFO, "BWM WiFi connect task stopped");
+                break;
+            case 0: // disconnected
+            default:
+                PrintAndLogEx(INFO, "BWM WiFi configured but not connected");
+                break;
+        }
+        return PM3_SUCCESS;
+    }
+
+    if (stop) {
+        uint8_t off[1] = { BWM_WIFI_ACTION_STOP };
+        clearCommandBuffer();
+        SendCommandNG(CMD_PM5_BWM_WIFI, off, sizeof(off));
+        PacketResponseNG r;
+        if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &r, 5000) == false) {
+            PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+            return PM3_ETIMEOUT;
+        }
+        if (r.status != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "failed to disable BWM WiFi");
+            return r.status;
+        }
+        PrintAndLogEx(SUCCESS, "BWM WiFi disabled (back to BLE-only)");
+        return PM3_SUCCESS;
+    }
+
+    if (ssid_len == 0) {
+        PrintAndLogEx(FAILED, "an SSID is required (or use --stop to tear down)");
+        return PM3_EINVARG;
+    }
+    if (port < 1 || port > 65535) {
+        PrintAndLogEx(FAILED, "port must be 1..65535");
+        return PM3_EINVARG;
+    }
+
+    // payload: [action:u8][port:u16 LE][ssid\0][pwd\0][hostname\0]
+    uint8_t data[200] = {0};
+    int n = 0;
+    data[n++] = BWM_WIFI_ACTION_START;
+    data[n++] = (uint8_t)(port & 0xFF);
+    data[n++] = (uint8_t)((port >> 8) & 0xFF);
+    memcpy(&data[n], ssid, ssid_len);
+    n += ssid_len;
+    data[n++] = 0;
+    memcpy(&data[n], pwd,  pwd_len);
+    n += pwd_len;
+    data[n++] = 0;
+    memcpy(&data[n], host, host_len);
+    n += host_len;
+    data[n++] = 0;
+
+    PrintAndLogEx(INFO, "Bringing up BWM WiFi (SSID \"%s\", port %d)... this can take ~15s", ssid, port);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_WIFI, data, n);
+    PacketResponseNG resp;
+    // ARM blocks during join + DHCP wait, so allow a long client timeout
+    if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &resp, 60000) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "BWM WiFi bring-up failed (check SSID/password and signal)");
+        PrintAndLogEx(HINT, "If it may have joined after DHCP, check: " _YELLOW_("hw bwmwifi --status"));
+        return resp.status;
+    }
+
+    uint32_t ip = resp.data.asDwords[0];
+    PrintAndLogEx(SUCCESS, "BWM on WiFi at %u.%u.%u.%u",
+                  ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
+    PrintAndLogEx(HINT, "Connect with: " _YELLOW_("pm3 -p tcp:%u.%u.%u.%u:%d"),
+                  ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF, port);
+    PrintAndLogEx(HINT, "Or by name (router-dependent): " _YELLOW_("pm3 -p tcp:%s:%d"), host, port);
+    return PM3_SUCCESS;
+}
+
+static int CmdBwmCharge(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwmcharge",
+                  "Enable or disable BWM battery charging by clearing/setting the\n"
+                  "AW32001E charge-enable bit (CEB, REG01[3]). PM5 only.\n"
+                  _RED_("One-shot:") " the charger watchdog reverts this after ~160 s unless\n"
+                  "serviced, so charging may stop on its own. Use to nudge a top-up.",
+                  "hw bwmcharge -on      --> enable charging\n"
+                  "hw bwmcharge --off    --> disable charging");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "on",  "enable charging (default)"),
+        arg_lit0(NULL, "off", "disable charging"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool on  = arg_get_lit(ctx, 1);
+    bool off = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    if (on && off) {
+        PrintAndLogEx(WARNING, "pick one of --on / --off");
+        return PM3_EINVARG;
+    }
+    uint8_t payload = off ? 0 : 1;   // default (neither flag) = enable
+    PrintAndLogEx(INFO, "%s BWM battery charging...", off ? "Disabling" : "Enabling");
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_CHARGE_EN, &payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_PM5_BWM_CHARGE_EN, &resp, 2500) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "charger did not respond (check BWM present)");
+        return resp.status;
+    }
+    PrintAndLogEx(SUCCESS, "Charging %s. Verify with " _YELLOW_("hw status") ".",
+                  off ? "disabled" : "enabled");
+    if (off == false) {
+        PrintAndLogEx(HINT, "Reverts on the charger watchdog (~160 s) if not serviced.");
+    }
+    return PM3_SUCCESS;
+}
+
+static int CmdBwmVchg(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwmvchg",
+                  "Set the BWM charger (AW32001E) charge-voltage regulation target.\n"
+                  "Lowering it below 4.2 V reduces top-of-charge stress and extends cell\n"
+                  "life. Snaps to the nearest 15 mV step; clamped to 3600..4200 mV. This is\n"
+                  "a runtime register write (reverts on the charger watchdog / POR); the\n"
+                  "firmware re-applies the " _YELLOW_("4100 mV") " default at every boot. PM5 only.",
+                  "hw bwmvchg              --> set charge voltage to default 4100 mV (->4.095 V)\n"
+                  "hw bwmvchg --mv 4200    --> set charge voltage to 4200 mV");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "mv", "<mV>", "charge voltage in mV (default 4100, clamped 3600..4200)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int mv = arg_get_int_def(ctx, 1, 4100);
+    CLIParserFree(ctx);
+
+    if (mv < 3600 || mv > 4200) {
+        PrintAndLogEx(WARNING, "charge voltage out of range (3600..4200 mV): %d", mv);
+        return PM3_EINVARG;
+    }
+
+    uint8_t payload[2] = { (uint8_t)(mv & 0xFF), (uint8_t)((mv >> 8) & 0xFF) };
+    PrintAndLogEx(INFO, "Setting BWM charge voltage to " _YELLOW_("%d mV") "...", mv);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_SET_VCHG, payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_PM5_BWM_SET_VCHG, &resp, 5000) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "failed to set charge voltage - check BWM present");
+        return resp.status;
+    }
+    uint16_t applied = (resp.length >= 2) ? (resp.data.asBytes[0] | (resp.data.asBytes[1] << 8)) : 0;
+    PrintAndLogEx(SUCCESS, "Charge voltage set to " _YELLOW_("%u.%03u V") " (nearest 15 mV step).", applied / 1000, applied % 1000);
+    return PM3_SUCCESS;
+}
+
+static int CmdBwmSetCap(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwmsetcap",
+                  "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell.\n"
+                  "Run ONCE after fitting or replacing the battery. This triggers a gauge\n"
+                  "config-update; do not run it repeatedly, as that disrupts the Impedance\n"
+                  "Track learning cycle. PM5 only.",
+                  "hw bwmsetcap             --> set design capacity to default 500 mAh\n"
+                  "hw bwmsetcap --cap 500   --> set design capacity to 500 mAh");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "cap", "<mAh>", "design capacity in mAh (default 500)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int cap = arg_get_int_def(ctx, 1, 500);
+    CLIParserFree(ctx);
+
+    if (cap <= 0 || cap > 32000) {
+        PrintAndLogEx(WARNING, "capacity out of range: %d mAh", cap);
+        return PM3_EINVARG;
+    }
+
+    uint8_t payload[2] = { (uint8_t)(cap & 0xFF), (uint8_t)((cap >> 8) & 0xFF) };
+    PrintAndLogEx(INFO, "Programming BWM gauge design capacity to " _YELLOW_("%d mAh") "...", cap);
+    PrintAndLogEx(INFO, "Run this " _YELLOW_("once") "; then perform a full charge/discharge learning cycle.");
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_SET_CAP, payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_PM5_BWM_SET_CAP, &resp, 5000) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "gauge provisioning failed - check BWM present and gauge unsealed");
+        return resp.status;
+    }
+    PrintAndLogEx(SUCCESS, "Design capacity programmed. `hw status` should now report sane capacity.");
+    return PM3_SUCCESS;
 }
 
 static int CmdTia(const char *Cmd) {
@@ -1559,7 +1932,7 @@ static int CmdPing(const char *Cmd) {
 
     if (len > PM3_CMD_DATA_SIZE)
         len = PM3_CMD_DATA_SIZE;
-
+    
     if (len) {
         PrintAndLogEx(INFO, "Ping sent with payload len... " _YELLOW_("%d"), len);
     } else {
@@ -1701,6 +2074,226 @@ int set_fpga_mode(uint8_t mode) {
     return resp.status;
 }
 
+static int CmdPM5Ant(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw ant_pm5",
+                  "Control the antennal of pm5",
+                  "hw ant_pm5 --set <u8_data>         -> Write the data of IO data register\n"
+                  "hw ant_pm5 -m --set <u8_data>      -> Write the data of IO map register\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("m", "map", "Write the IO map register"),
+        arg_u64_0("s", "set", "<u8_data>", "Set PM5 antenna"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool rw_map = arg_get_lit(ctx, 1);
+    uint64_t io = arg_get_u64_def(ctx, 2, -1);
+    CLIParserFree(ctx);
+
+    PacketResponseNG resp;
+
+    // Read the current value of the register before writing
+    struct {
+        uint8_t reg_type; // 0 is io reg, 1 is map reg.
+    } PACKED payload_read = {
+        .reg_type = rw_map ? 1 : 0,
+    };
+    clearCommandBuffer();
+    SendCommandNG(CMD_ANT_CONTROL_READ, (uint8_t *)&payload_read, sizeof(payload_read));
+    if (WaitForResponseTimeout(CMD_ANT_CONTROL_READ, &resp, 1000) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to read PM5 antenna register");
+        return resp.status;
+    }
+    PrintAndLogEx(INFO, "PM5 antenna register read: 0x%02X", resp.data.asBytes[0]);
+
+    // Write the new value to the register(If need)
+    if (io != (uint64_t) -1) {
+        struct {
+            uint8_t data;
+            uint8_t reg_type; // 0 is io reg, 1 is map reg.
+        } PACKED payload_write = {
+            .reg_type = rw_map ? 1 : 0,
+            .data = io & 0xFF,
+        };
+        clearCommandBuffer();
+        SendCommandNG(CMD_ANT_CONTROL_WRITE, (uint8_t *)&payload_write, sizeof(payload_write));
+        if (WaitForResponseTimeout(CMD_ANT_CONTROL_WRITE, &resp, 1000) == false) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
+        }
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "failed to write PM5 antenna register");
+            return resp.status;
+        }
+        PrintAndLogEx(INFO, "PM5 antenna register written: 0x%02X", payload_write.data);
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int CmdDeviceFactoryData(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw factorydata",
+                  "Get/Set the factory data for Device",
+                  "hw factorydata --load <file>           -> Write the factory data to device from file\n"
+                  "hw factorydata                         -> Read and parse the factory data from device\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "load", "<fn>", "Load factory data from file to device"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    CLIParserFree(ctx);
+
+    // Read the factory data from device
+    clearCommandBuffer();
+    SendCommandNG(CMD_EEPROM_FACTORY_INFO_READ, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_EEPROM_FACTORY_INFO_READ, &resp, 1000) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to read factory data, maybe eeprom unavailable.");
+        return resp.status;
+    }
+    // Parse the factory data
+    if (resp.length) {
+        proxmark5_factory_info_v1_t *factory = (proxmark5_factory_info_v1_t *)resp.data.asBytes;
+        PrintAndLogEx(INFO, "Factory data read from device:");
+        PrintAndLogEx(INFO, " - Data raw(hex)     : 0x%s", sprint_hex_inrow(resp.data.asBytes, resp.length));
+        PrintAndLogEx(INFO, " - Version           : %d", factory->factory_info_version);
+        PrintAndLogEx(INFO, " - Signature         : %s",
+                      sprint_hex_inrow(factory->ecdsa_secp256k1_signature, sizeof(factory->ecdsa_secp256k1_signature)));
+        PrintAndLogEx(INFO, " - Timestamp         : %" PRIu64, factory->info.unix_timestamp);
+        PrintAndLogEx(INFO, " - Chip Unique ID    : %s",
+                      sprint_hex_inrow(factory->info.chip_unique_id, sizeof(factory->info.chip_unique_id)));
+        PrintAndLogEx(INFO, " - Production ID     : %" PRIu32, factory->info.production_id);
+        PrintAndLogEx(INFO, " - Hardware Version  : %" PRIu32, factory->info.hardware_version);
+        PrintAndLogEx(INFO, " - AES key           : %s",
+                      sprint_hex_inrow(factory->info.aes_key, sizeof(factory->info.aes_key)));
+    }
+
+    // If data is provided, it needs to be written
+    if (fnlen) {
+        // Load the file content into data buffer
+        uint8_t *data = NULL;
+        size_t datalen = 0;
+        int res = loadFile_safe(filename, ".bin", (void **)&data, &datalen);
+        if (res != PM3_SUCCESS) {
+            free(data);
+            return PM3_EFILE;
+        }
+
+        if (datalen != resp.length) {
+            PrintAndLogEx(WARNING, _RED_("The length of the data to write (%zu) does not match the length "
+                                         "of the factory data read from device (%u)."), datalen, (unsigned int)resp.length);
+            free(data);
+            return PM3_EINVARG;
+        }
+        // Write the data to the device
+        clearCommandBuffer();
+        SendCommandNG(CMD_EEPROM_FACTORY_INFO_WRITE, data, datalen);
+        PacketResponseNG resp_write;
+        if (WaitForResponseTimeout(CMD_EEPROM_FACTORY_INFO_WRITE, &resp_write, 1000) == false) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            free(data);
+            return PM3_ETIMEOUT;
+        }
+        if (resp_write.status != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "failed to write factory data, maybe eeprom unavailable.");
+            free(data);
+            return resp_write.status;
+        }
+        // Verify the data write
+        clearCommandBuffer();
+        SendCommandNG(CMD_EEPROM_FACTORY_INFO_READ, NULL, 0);
+        if (WaitForResponseTimeout(CMD_EEPROM_FACTORY_INFO_READ, &resp, 1000) == false) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            free(data);
+            return PM3_ETIMEOUT;
+        }
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "failed to read factory data after write, maybe eeprom unavailable.");
+            free(data);
+            return resp.status;
+        }
+        bool verify_result = false;
+        if (resp.length == datalen) {
+            verify_result = memcmp(resp.data.asBytes, data, datalen) == 0;
+        }
+        if (verify_result) {
+            PrintAndLogEx(SUCCESS, "Factory data written and verified successfully.");
+        } else {
+            PrintAndLogEx(ERR, "Factory data verification failed after write.");
+            free(data);
+            return PM3_EFAILED;
+        }
+        free(data);
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int CmdPM5QCTest(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw qc_pm5", "QC Test for the PM5",
+                  "hw qc_pm5             -> run QC test with default 20 second timeout\n"
+                  "hw qc_pm5 -t 3        -> run QC test with a 3 second timeout");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("t", "timeout", "<s>", "test sequence timeout in seconds (default 20)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t timeout_ms = arg_get_u32_def(ctx, 1, 20);
+    timeout_ms *= 1000;
+    CLIParserFree(ctx);
+
+    if (timeout_ms == 0) {
+        PrintAndLogEx(ERR, "timeout must be greater than zero");
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(INFO, "Performing QC test for the PM5...");
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_QC_TEST, (uint8_t *)&timeout_ms, sizeof(timeout_ms));
+
+    PacketResponseNG resp;
+    // wait a bit longer than the device side sequence timeout, with headroom for RTC drift
+    if (WaitForResponseTimeout(CMD_PM5_QC_TEST, &resp, timeout_ms + (timeout_ms / 5) + 1000) == false) {
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to perform QC test on PM5, failed item: %d", resp.data.asBytes[0]);
+        return resp.status;
+    }
+    PrintAndLogEx(INFO, "PM5 QC test successful.");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help", CmdHelp, AlwaysAvailable, "This help"},
     {"-------------", CmdHelp, AlwaysAvailable, "----------------------- " _CYAN_("Operation") " -----------------------"},
@@ -1714,7 +2307,11 @@ static command_t CommandTable[] = {
     {"bootloader", CmdBootloader, IfPm3Present, "Reboot into bootloader mode"},
     {"connect", CmdConnect, AlwaysAvailable, "Connect to the device via serial port"},
     {"dbg", CmdDbg, IfPm3Present, "Set device side debug level"},
+    {"fpga", CmdFPGA, IfPm3Present, "Fpga commands"},
     {"fpgaoff", CmdFPGAOff, IfPm3Present, "Turn off FPGA on device"},
+    {"ant_pm5", CmdPM5Ant, IfPm5StdAnt, "Control the antennal of pm5"},
+    {"qc_pm5", CmdPM5QCTest, IfPm5, "Perform QC test for the PM5"},
+    {"factorydata", CmdDeviceFactoryData, IfI2cEeprom, "Get/Set the factory data for Device"},
     {"lcd", CmdLCD, IfPm3Lcd, "Send command/data to LCD"},
     {"lcdreset", CmdLCDReset, IfPm3Lcd, "Hardware reset LCD"},
     {"ping", CmdPing, IfPm3Present, "Test if the Proxmark3 is responsive"},
@@ -1725,6 +2322,11 @@ static command_t CommandTable[] = {
     {"setmux", CmdSetMux, IfPm3Present, "Set the ADC mux to a specific value"},
     {"standalone", CmdStandalone, IfPm3Present, "Start installed standalone mode on device"},
     {"tia", CmdTia, IfPm3Present, "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
+    {"bwmsetcap", CmdBwmSetCap, IfPm5, "Set BWM fuel-gauge design capacity (PM5, run once after battery change)"},
+    {"bwmvchg",   CmdBwmVchg,   IfPm5, "Set BWM charger charge-voltage target (PM5, default 4100 mV)"},
+    {"bwmcharge", CmdBwmCharge, IfPm5, "Enable/disable BWM battery charging (PM5, one-shot)"},
+    {"bwmautooff", CmdBwmAutoOff, IfPm5, "Toggle auto power-off on USB unplug (PM5, BWM)"},
+    {"bwmwifi", CmdBWMWifi, IfPm5, "Bring up BWM WiFi (STA + TCP server) for a tcp: connection (PM5)"},
     {"tune", CmdTune, IfPm3Lf, "Measure tuning of device antenna"},
     {"decay", CmdDecay, IfPm3Present, "Measure HF antenna decay after field-off"},
     {NULL, NULL, NULL, NULL}
@@ -1795,7 +2397,11 @@ int CmdHW(const char *Cmd) {
 
 void pm3_version_short(void) {
     //    PrintAndLogEx(NORMAL, "  [ " _CYAN_("Proxmark3 RFID instrument") " ]");
-    PrintAndLogEx(NORMAL, "  [ " _CYAN_(_URL_("https://github.com/RfidResearchGroup/proxmark3", "Proxmark3")) " ]");
+    if (IfPm5()) {
+        PrintAndLogEx(NORMAL, "  [ " _CYAN_(_URL_("https://github.com/RfidResearchGroup/proxmark3", "Proxmark5")) " ]");
+    } else {
+        PrintAndLogEx(NORMAL, "  [ " _CYAN_(_URL_("https://github.com/RfidResearchGroup/proxmark3", "Proxmark3")) " ]");
+    }
     PrintAndLogEx(NORMAL, "");
 
     if (g_session.pm3_present) {
@@ -1815,9 +2421,18 @@ void pm3_version_short(void) {
 
             struct p *payload = (struct p *)&resp.data.asBytes;
 
-            lookup_chipid_short(payload->id, payload->section_size);
+            // Flash size (bytes) is appended after the version string by newer
+            // firmware; 0 if the device didn't send it (older firmware).
+            uint32_t flash_size = 0;
+            if (resp.length >= 12 + payload->versionstr_len + sizeof(uint32_t)) {
+                memcpy(&flash_size, payload->versionstr + payload->versionstr_len, sizeof(flash_size));
+            }
 
-            if (IfPm3Rdv4Fw()) {
+            lookup_chipid_short(payload->id, payload->section_size, flash_size);
+
+            if (IfPm5()) {
+                PrintAndLogEx(NORMAL, "    Target.... %s", _YELLOW_("PM5"));
+            } else if (IfPm3Rdv4Fw()) {
 
                 // validate signature data
                 rdv40_validation_t mem;
@@ -1902,7 +2517,7 @@ void pm3_version(bool verbose, bool oneliner) {
         return;
     }
 
-    PrintAndLogEx(NORMAL, "\n [ " _CYAN_("Proxmark3") " ]");
+    PrintAndLogEx(NORMAL, "\n [ " _CYAN_("%s") " ]", IfPm5() ? "Proxmark5" : "Proxmark3");
     PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Client") " ]");
     FormatVersionInformation(temp, sizeof(temp), "  ", &g_version_information);
     PrintAndLogEx(NORMAL, "%s", temp);
@@ -1954,7 +2569,10 @@ void pm3_version(bool verbose, bool oneliner) {
         SendCommandNG(CMD_VERSION, NULL, 0);
 
         if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
-            if (IfPm3Rdv4Fw()) {
+            if (IfPm5()) {
+                PrintAndLogEx(NORMAL, "  Firmware.................. " _GREEN_("PM5"));
+                PrintAndLogEx(NORMAL, "  External flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
+            } else if (IfPm3Rdv4Fw()) {
 
                 // validate signature data
                 rdv40_validation_t mem;
@@ -2016,11 +2634,31 @@ void pm3_version(bool verbose, bool oneliner) {
                 }
             }
             PrintAndLogEx(NORMAL, payload->versionstr);
-            if (strstr(payload->versionstr, FPGA_TYPE) == NULL) {
+            // PM5 doesn't report a built-in FPGA version (Gowin bitstream is loaded
+            // externally), so skip the Xilinx FPGA_TYPE match check for it.
+            if (!IfPm5() && strstr(payload->versionstr, FPGA_TYPE) == NULL) {
                 PrintAndLogEx(NORMAL, "  FPGA firmware... %s", _RED_("chip mismatch"));
             }
 
-            lookupChipID(payload->id, payload->section_size);
+            // Flash size (bytes) is appended after the version string by newer
+            // firmware; 0 if the device didn't send it (older firmware).
+            uint32_t flash_size = 0;
+            if (resp.length >= 12 + payload->versionstr_len + sizeof(uint32_t)) {
+                memcpy(&flash_size, payload->versionstr + payload->versionstr_len, sizeof(flash_size));
+            }
+
+            lookupChipID(payload->id, payload->section_size, flash_size);
+
+            // Get unique id of mainchip
+            clearCommandBuffer();
+            SendCommandNG(CMD_MAIN_CHIP_UNIQUEID, NULL, 0);
+            if (WaitForResponseTimeout(CMD_MAIN_CHIP_UNIQUEID, &resp, 1000)) {
+                if (resp.length) { // Some processor maybe no unique id.
+                    char *uniqueid_hex = sprint_hex_inrow(resp.data.asBytes, resp.length);
+                    PrintAndLogEx(NORMAL, "  --= Processor Unique ID: " _YELLOW_("0x%s"), uniqueid_hex);
+                }
+            }
+
             if (armsrc_mismatch) {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(WARNING, _RED_("ARM firmware does not match the source at the time the client was compiled"));

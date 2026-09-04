@@ -20,6 +20,7 @@
 #define _MIFARE_H_
 
 #include "common.h"
+#include "pm3_cmd.h"   // PM3_CMD_DATA_SIZE
 
 // These are also used to construct AUTH commands (60+x)
 #define MF_KEY_A 0
@@ -110,6 +111,36 @@ typedef enum ISO14A_COMMAND {
     ISO14A_APPEND_CMAC = (1 << 16),
     ISO14A_CLEARTRACE = (1 << 17),
 } iso14a_command_t;
+
+// CMD_HF_ISO14443A_READER payload.
+// Replaces the oldarg packing this command used to ride on:
+//   arg0 = flags
+//   arg1 = (lenbits << 16) | len
+//   arg2 = (wait_us << 32) | timeout
+typedef struct {
+    uint32_t flags;     // iso14a_command_t bitmask, needs 18 bits today
+    uint32_t timeout;   // in ETUs, only read when ISO14A_SET_TIMEOUT is set
+    uint32_t wait_us;   // only read when ISO14A_SET_WAIT_US is set
+    uint16_t len;       // bytes in data[]
+    uint16_t lenbits;   // send this many bits instead of whole bytes, 0 = off
+    uint8_t data[];
+} PACKED iso14a_raw_cmd_t;
+
+#define ISO14A_RAW_LEN(x) (sizeof(iso14a_raw_cmd_t) + (x))
+
+// Reply to CMD_HF_ISO14443A_READER.
+// Replaces the anonymous CMD_ACK this command used to answer with:
+//   arg0 = select status on a CONNECT, otherwise the response length
+//   arg1 = uidlen on a CONNECT (also in the card struct), or the APDU res byte
+typedef struct {
+    uint16_t len;   // bytes in data[]
+    uint8_t sel;    // select status on CONNECT, APDU res byte, else 0
+    uint8_t rfu;
+    uint8_t data[];
+} PACKED iso14a_raw_resp_t;
+
+#define ISO14A_RESP_LEN(x) (sizeof(iso14a_raw_resp_t) + (x))
+#define ISO14A_RESP_MAXLEN (PM3_CMD_DATA_SIZE - sizeof(iso14a_raw_resp_t))
 
 typedef struct {
     uint8_t *response;

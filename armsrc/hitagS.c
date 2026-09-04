@@ -24,8 +24,9 @@
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
+#include "ticks_apis.h"
 #include "dbprint.h"
 #include "util.h"
 #include "string.h"
@@ -56,7 +57,7 @@ static int block_data_left = 0;
 static bool enable_page_tearoff = false;
 
 static uint8_t protocol_mode = HITAGS_UID_REQ_ADV1;
-static MOD m = AC2K;                                // used modulation
+static hitag_mod_t m = AC2K;                                // used modulation
 static uint32_t reader_selected_uid;
 static int rotate_uid = 0;
 static int sof_bits;                                // number of start-of-frame bits
@@ -370,28 +371,39 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
 /*
  * Emulates a Hitag S Tag with the given data from the .hts file
  */
-void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, bool ledcontrol) {
+void hts_simulate(int8_t threshold, bool ledcontrol) {
     int overflow = 0;
     uint8_t rx[HITAG_FRAME_LEN] = {0};
     size_t rxlen = 0;
     uint8_t tx[HITAG_FRAME_LEN];
     size_t txlen = 0;
 
-    // free eventually allocated BigBuf memory
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
+    // keep emulator memory, that is where eload put the tag content
+    BigBuf_free_keep_EM();
+    BigBuf_Clear_keep_EM();
 
     DbpString("Starting Hitag S simulation");
 
     tag.pstate = HT_READY;
     tag.tstate = HT_NO_OP;
 
-    // read tag data into memory
-    if (tag_mem_supplied) {
-        DbpString("Loading hitag S memory...");
-        memcpy(tag.data.pages, data, HITAGS_MAX_BYTE_SIZE);
+    // Take the tag content from emulator memory, where `lf hitag eload -s` put
+    // it.  An all-zero emulator memory means nothing was loaded, so keep whatever
+    // the last read left behind rather than simulating a tag of all zeroes.
+    uint8_t *em = BigBuf_get_EM_addr();
+    bool em_empty = true;
+    for (size_t i = 0; i < HITAGS_MAX_BYTE_SIZE; i++) {
+        if (em[i] != 0) {
+            em_empty = false;
+            break;
+        }
+    }
+
+    if (em_empty) {
+        DbpString("Emulator memory is empty, simulating the last read tag");
     } else {
-        // use the last read tag
+        DbpString("Loading Hitag S memory from emulator memory...");
+        memcpy(tag.data.pages, em, HITAGS_MAX_BYTE_SIZE);
     }
 
     // max_page
@@ -423,7 +435,7 @@ void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             LogTraceBits(rx, rxlen, start_time, TIMESTAMP, true);
 
             // Disable timer 1 with external trigger to avoid triggers during our own modulation
-            AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+            StopLoEdgeCapture();
 
             // Process the incoming frame (rx) and prepare the outgoing frame (tx)
             hts_handle_reader_command(rx, rxlen, tx, &txlen);
@@ -433,7 +445,7 @@ void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             // with respect to the falling edge, we need to wait actually (T_Wait1 - T_Low)
             // periods. The gap time T_Low varies (4..10). All timer values are in
             // terms of T0 units
-            while (AT91C_BASE_TC0->TC_CV < T0 * (HITAG_T_WAIT_RESP - HITAG_T_LOW)) {};
+            while (GetPrecisionCounter() < T0 * (HITAG_T_WAIT_RESP - HITAG_T_LOW)) {};
 
             // Send and store the tag answer (if there is any)
             if (txlen > 0) {
@@ -444,7 +456,7 @@ void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             }
 
             // Enable and reset external trigger in timer for capturing future frames
-            AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+            EnableLoEdgeCapture();
 
             // Reset the received frame and response timing info
             memset(rx, 0x00, sizeof(rx));
@@ -454,15 +466,15 @@ void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
         // Reset the frame length
         rxlen = 0;
         // Save the timer overflow, will be 0 when frame was received
-        overflow += (AT91C_BASE_TC1->TC_CV / T0);
+        overflow += (GetLoEdgeCaptureCount() / T0);
         // Reset the timer to restart while-loop that receives frames
-        AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
+        ResetLoEdgeCapture();
 
     }
 
     hitag_cleanup(ledcontrol);
-    // release allocated memory from BigBuff.
-    BigBuf_free();
+    // release BigBuf, but keep emulator memory for eview / esave
+    BigBuf_free_keep_EM();
 
     DbpString("Sim stopped");
 }
@@ -472,7 +484,7 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
 
     // Send and store the reader command
     // Disable timer 1 with external trigger to avoid triggers during our own modulation
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+    StopLoEdgeCapture();
 
     DBG Dbprintf("tx %d bits:", txlen);
     DBG Dbhexdump((txlen + 7) / 8, tx, false);
@@ -482,7 +494,7 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
     // falling edge occurred halfway the period. with respect to this falling edge,
     // we need to wait (T_Wait2 + half_tag_period) when the last was a 'one'.
     // All timer values are in terms of T0 units
-    while (AT91C_BASE_TC0->TC_CV < T0 * t_wait) {};
+    while (GetPrecisionCounter() < T0 * t_wait) {};
 
     start_time = TIMESTAMP;
 
@@ -496,7 +508,7 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
     LogTraceBits(tx, txlen, start_time, TIMESTAMP, true);
 
     // Enable and reset external trigger in timer for capturing future frames
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    EnableLoEdgeCapture();
 
     hts_set_frame_modulation(protocol_mode, ac_seq);
 

@@ -18,6 +18,8 @@
 //-----------------------------------------------------------------------------
 #include "sam_seos.h"
 #include "sam_common.h"
+#include "util.h"          // switch_clock_to_ticks / _countsspclk
+#include "sam_sc.h"
 #include "iclass.h"
 
 #include "proxmark3_arm.h"
@@ -29,12 +31,13 @@
 #include "BigBuf.h"
 #include "cmd.h"
 #include "commonutil.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "dbprint.h"
 #include "i2c.h"
 #include "protocols.h"
 #include "optimized_cipher.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
 #include "pm3_cmd.h"
 
 #include "cmd.h"
@@ -89,7 +92,7 @@ static int sam_set_card_detected_seos(iso14a_card_select_t *card_select) {
     //     8a 00 <- empty response (accepted)
     // 90 00
 
-    if (response[5] != 0xbd) {
+    if (sam_bd_offset(response, response_len) == 0) {
         if (g_dbglevel >= DBG_ERROR)
             Dbprintf("Invalid SAM response");
         goto error;
@@ -176,23 +179,34 @@ static int sam_send_request_iso14a(const uint8_t *const request, const uint8_t r
         sam_rx_buf, &sam_rx_len
     );
 
-    if (sam_rx_buf[1] == 0x61) { // commands to be relayed to card starts with 0x61
+    if (sam_relay_pending(sam_rx_buf, sam_rx_len)) { // commands to be relayed to card starts with 0x61
         // tag <-> SAM exchange starts here
-        while (sam_rx_buf[1] == 0x61) {
+        while (sam_relay_pending(sam_rx_buf, sam_rx_len)) {
             switch_clock_to_countsspclk();
-            nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf);
+            nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf, sam_rx_len);
 
-            nfc_rx_len = iso14_apdu(nfc_tx_buf, nfc_tx_len, false, nfc_rx_buf, ISO7816_MAX_FRAME, NULL);
-            // iceman:  should check nfc_rx_len ,  if negative something went wrong...
+            int nfc_res = iso14_apdu(nfc_tx_buf, nfc_tx_len, false, nfc_rx_buf, ISO7816_MAX_FRAME, NULL);
 
             switch_clock_to_ticks();
+
+            // A card that went away returns negative, which wrapped through
+            // uint16_t and was relayed on as a 253 byte answer.
+            if (nfc_res < 2) {
+                if (g_dbglevel >= DBG_ERROR) {
+                    Dbprintf("SEOS relay: card exchange failed (%d)", nfc_res);
+                }
+                res = PM3_ECARDEXCHANGE;
+                goto out;
+            }
+
+            nfc_rx_len = (uint16_t)nfc_res;
             sam_tx_len = sam_copy_payload_nfc2sam(sam_tx_buf, nfc_rx_buf, nfc_rx_len - 2);
 
             sam_send_payload(0x14, 0x0a, 0x14, sam_tx_buf, &sam_tx_len, sam_rx_buf, &sam_rx_len);
 
             // last SAM->TAG
             // c1 61 c1 00 00 a1 02 >>82<< 00 90 00
-            if (sam_rx_buf[7] == 0x82) {
+            if (sam_relay_complete(sam_rx_buf, sam_rx_len)) {
                 // tag <-> SAM exchange ends here
                 break;
             }
@@ -233,11 +247,14 @@ static int sam_send_request_iso14a(const uint8_t *const request, const uint8_t r
     //           82 01
     //              07
     // 90 00
+    uint16_t plen = 0;
+    uint16_t ofs = sam_response_payload(sam_rx_buf, sam_rx_len, &plen);
+
     if (request_len == 0) {
 
         if (
-            !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0x8a && sam_rx_buf[5 + 4] == 0x03) &&
-            !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0xb3 && sam_rx_buf[5 + 4] == 0xa0)
+            !(sam_rx_buf[ofs] == 0xbd && sam_rx_buf[ofs + 2] == 0x8a && sam_rx_buf[ofs + 4] == 0x03) &&
+            !(sam_rx_buf[ofs] == 0xbd && sam_rx_buf[ofs + 2] == 0xb3 && sam_rx_buf[ofs + 4] == 0xa0)
         ) {
 
             if (g_dbglevel >= DBG_ERROR) {
@@ -247,8 +264,8 @@ static int sam_send_request_iso14a(const uint8_t *const request, const uint8_t r
         }
     }
 
-    *response_len = sam_rx_buf[5 + 1] + 2;
-    memcpy(response, sam_rx_buf + 5, *response_len);
+    *response_len = (uint8_t)plen;
+    memcpy(response, sam_rx_buf + ofs, *response_len);
 
 out:
     BigBuf_free();
@@ -276,10 +293,27 @@ int sam_seos_get_pacs(PacketCommandNG *c) {
     int res = PM3_EFAILED;
 
     clear_trace();
+    // Like the PICOPASS dispatcher, this reset destroys a live SC session.
+    // Mark it stale so the next CMD_HF_SAM_SC call performs its reset/ATR
+    // synchronization path before sending a secured APDU.
+    sam_sc_session_invalidate();
     I2C_Reset_EnterMainProgram();
 
     set_tracing(true);
     StartTicks();
+
+    // Resetting the module resets the card, which then sends an ATR nobody
+    // asked for. Read it here rather than letting the first SAM APDU collide
+    // with it, and take the chance to say plainly when the slot holds
+    // something that is not a SAM.
+    smart_card_atr_t card;
+    if (GetATR(&card, false) == false) {
+        if (g_dbglevel >= DBG_ERROR) {
+            DbpString("SAM: no ATR - is a SAM in the slot?");
+        }
+        res = PM3_ECARDEXCHANGE;
+        goto err;
+    }
 
     // step 1: ping SAM
     sam_get_version(false);

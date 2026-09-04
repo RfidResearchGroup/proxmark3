@@ -209,7 +209,7 @@ int readHFCryptoRF(bool loop, bool verbose) {
         clearCommandBuffer();
         SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
         PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+        if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
 
             if (loop) {
                 if (resp.status != PM3_SUCCESS) {
@@ -455,27 +455,13 @@ static int CmdHFCryptoRFELoad(const char *Cmd) {
         return PM3_EFILE;
     }
 
-    PrintAndLogEx(SUCCESS, "Uploading to emulator memory");
+    // ICEMAN: Once we have CryptoRF dump files, we can implement an upload
+    PrintAndLogEx(INFO, "to be implemented");
+    //PrintAndLogEx(SUCCESS, "Uploading to emulator memory");
+    //uint32_t bytes_sent = 0;
 
-    uint32_t bytes_sent = 0;
-    /*
-    //Send to device
-    uint32_t bytes_remaining  = bytes_read;
-
-    while (bytes_remaining > 0) {
-        uint32_t bytes_in_packet = MIN(PM3_CMD_DATA_SIZE, bytes_remaining);
-        if (bytes_in_packet == bytes_remaining) {
-            // Disable fast mode on last packet
-            g_conn.block_after_ACK = false;
-        }
-        clearCommandBuffer();
-        SendCommandMIX(CMD_HF_CRYPTORF_EML_MEMSET, bytes_sent, bytes_in_packet, 0, data + bytes_sent, bytes_in_packet);
-        bytes_remaining -= bytes_in_packet;
-        bytes_sent += bytes_in_packet;
-    }
-    */
     free(data);
-    PrintAndLogEx(SUCCESS, "sent " _YELLOW_("%d") " bytes of data to device emulator memory", bytes_sent);
+    //PrintAndLogEx(SUCCESS, "sent " _YELLOW_("%d") " bytes of data to device emulator memory", bytes_sent);
     return PM3_SUCCESS;
 }
 

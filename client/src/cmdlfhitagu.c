@@ -494,6 +494,17 @@ static int CmdLFHitagURead(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// A Hitag u reports its UID and IC revision separately from its pages, so
+// neither survives in the raw dump buffer.  saveFileJSON's callback takes only
+// the json root, so park them here for the duration of the save.
+static uint8_t s_htu_uid[HITAGU_UID_SIZE] = {0};
+static uint8_t s_htu_icr = 0;
+
+static void htu_json_callback(json_t *root) {
+    JsonSaveBufAsHexCompact(root, "$.Card.UID", s_htu_uid, sizeof(s_htu_uid));
+    JsonSaveBufAsHexCompact(root, "$.Card.ICR", &s_htu_icr, sizeof(s_htu_icr));
+}
+
 static int CmdLFHitagUDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag htu dump",
@@ -587,7 +598,9 @@ static int CmdLFHitagUDump(const char *Cmd) {
         FillFileNameByUID(fptr, card->uid, "-dump", HITAGU_UID_SIZE);
     }
 
-    pm3_save_dump(filename, (uint8_t *)card->pages, mem_size, jsfHitag);
+    memcpy(s_htu_uid, card->uid, sizeof(s_htu_uid));
+    s_htu_icr = card->icr;
+    pm3_save_dump_cb(filename, (uint8_t *)card->pages, mem_size, jsfHitagU, htu_json_callback);
 
     return PM3_SUCCESS;
 }
@@ -703,7 +716,11 @@ static int CmdLFHitagUSim(const char *Cmd) {
     CLIParserFree(ctx);
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_HITAGU_SIMULATE, false, threshold, 0, NULL, 0);
+    hitag_sim_t payload = {
+        .tag_mem_supplied = false,
+        .threshold = threshold,
+    };
+    SendCommandNG(CMD_LF_HITAGU_SIMULATE, (uint8_t *)&payload, sizeof(payload));
     return PM3_SUCCESS;
 }
 

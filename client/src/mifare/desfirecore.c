@@ -1404,8 +1404,8 @@ static int DesfireAuthenticateEV1(DesfireContext_t *dctx, DesfireSecureChannel s
     DesfireCryptoEncDecEx(dctx, DCOMainKey, encRndB, rndlen, RndB, false, false, IV);
 
     if (g_debugMode > 1) {
-        PrintAndLogEx(DEBUG, "encRndB: %s", sprint_hex(encRndB, 8));
-        PrintAndLogEx(DEBUG, "RndB: %s", sprint_hex(RndB, 8));
+        PrintAndLogEx(DEBUG, "encRndB: %s", sprint_hex(encRndB, rndlen));
+        PrintAndLogEx(DEBUG, "RndB: %s", sprint_hex(RndB, rndlen));
     }
 
     // - Rotate RndB by 8 bits
@@ -1435,7 +1435,7 @@ static int DesfireAuthenticateEV1(DesfireContext_t *dctx, DesfireSecureChannel s
         memcpy(tmp + rndlen, rotRndB, rndlen);
         if (g_debugMode > 1) {
             PrintAndLogEx(DEBUG, "rotRndB: %s", sprint_hex(rotRndB, rndlen));
-            PrintAndLogEx(DEBUG, "Both   : %s", sprint_hex(tmp, 32));
+            PrintAndLogEx(DEBUG, "Both   : %s", sprint_hex(tmp, rndlen * 2));
         }
         DesfireCryptoEncDecEx(dctx, DCOMainKey, tmp, rndlen * 2, both, true, true, IV);
     }
@@ -2342,7 +2342,7 @@ int DesfireFillFileList(DesfireContext_t *dctx, FileList_t FileList, size_t *fil
 
     int res = DesfireGetFileIDList(dctx, buf, &buflen);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire GetFileIDList command " _RED_("error") ". Result: %d", res);
+        PrintAndLogEx(WARNING, "Desfire GetFileIDList command, res " _RED_("%d"), res);
         return PM3_ESOFT;
     }
 
@@ -2358,7 +2358,7 @@ int DesfireFillFileList(DesfireContext_t *dctx, FileList_t FileList, size_t *fil
     buflen = 0;
     res = DesfireGetFileISOIDList(dctx, buf, &buflen);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire GetFileISOIDList command " _RED_("error") ". Result: %d", res);
+        PrintAndLogEx(WARNING, "Desfire GetFileISOIDList command, res " _RED_("%d"), res);
     }
 
     size_t isoindx = 0;
@@ -3313,15 +3313,16 @@ int DesfireISOAppendRecord(DesfireContext_t *dctx, uint8_t fileid, uint8_t *data
 int DesfireGetCardUID(DesfireContext_t *ctx) {
     iso14a_card_select_t card = {0};
 
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_3318 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_3318) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_3318;
 
     if (select_status == 0 || select_status == 2 || select_status == 3) {
         return PM3_ESOFT;

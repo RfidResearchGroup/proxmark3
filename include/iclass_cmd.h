@@ -209,4 +209,22 @@ typedef struct {
     uint8_t data[PICOPASS_MAX_BYTES];
 } PACKED iclass_tag_t;
 
+// CMD_HF_ICLASS_SIMULATE payload.
+// Replaces oldargs: arg0 = sim_type, arg1 = num_csns, arg2 = send_reply
+typedef struct {
+    uint8_t sim_type;
+    uint8_t num_csns;
+    uint8_t send_reply;
+    uint8_t rfu;
+    uint8_t csns[];
+} PACKED iclass_sim_t;
+
+// Reply for the reader-attack sim modes. The old reply put the opcode itself
+// into arg0 so the client could tell anonymous CMD_ACKs apart; NG carries the
+// opcode in the frame, so only the mac count is left to send.
+typedef struct {
+    uint16_t num_mac;
+    uint8_t mac[];
+} PACKED iclass_sim_resp_t;
+
 #endif // _ICLASS_H_

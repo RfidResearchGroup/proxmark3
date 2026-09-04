@@ -32,6 +32,10 @@
 #include <limits.h>
 #include <stdio.h>
 #include <QSlider>
+#include <QScrollArea>
+#include <QTabWidget>
+#include <QLabel>
+#include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <string.h>
 #include <QtGui>
@@ -64,12 +68,12 @@ void ProxGuiQT::HideGraphWindow(void) {
 }
 
 // emit picture viewer signals
-void ProxGuiQT::ShowPictureWindow(const QImage &img) {
-    emit ShowPictureWindowSignal(img);
+void ProxGuiQT::ShowPictureWindow(const QString &title, const QImage &img) {
+    emit ShowPictureWindowSignal(title, img);
 }
 
-void ProxGuiQT::ShowBase64PictureWindow(char *b64) {
-    emit ShowBase64PictureWindowSignal(b64);
+void ProxGuiQT::ClearPictureWindow(void) {
+    emit ClearPictureWindowSignal();
 }
 
 void ProxGuiQT::RepaintPictureWindow(void) {
@@ -115,7 +119,7 @@ void ProxGuiQT::_HideGraphWindow(void) {
 }
 
 // picture viewer
-void ProxGuiQT::_ShowPictureWindow(const QImage &img) {
+void ProxGuiQT::_ShowPictureWindow(const QString &title, const QImage &img) {
 
     if (!plotapp)
         return;
@@ -132,69 +136,16 @@ void ProxGuiQT::_ShowPictureWindow(const QImage &img) {
         pictureWidget = new PictureWidget();
     }
 
-    QPixmap pm = QPixmap::fromImage(img);
-
-    //QPixmap newPixmap = pm.scaled(QSize(50,50),  Qt::KeepAspectRatio);
-    //pm = pm.scaled(pictureController->lbl_pm->size(),  Qt::KeepAspectRatio);
-
-    pictureController->lbl_pm->setPixmap(pm);
-    pictureController->lbl_pm->setScaledContents(false);
-    pictureController->lbl_pm->setAlignment(Qt::AlignCenter);
-
-    QString s = QString("w: %1  h: %2")
-                .arg(pm.size().width())
-                .arg(pm.size().height()
-                    );
-    pictureController->lbl_sz->setText(s);
+    pictureWidget->addPicture(title, img);
     pictureWidget->show();
-
+    pictureWidget->raise();
 }
 
-void ProxGuiQT::_ShowBase64PictureWindow(char *b64) {
-
-    if (!plotapp)
+void ProxGuiQT::_ClearPictureWindow(void) {
+    if (!plotapp || !pictureWidget)
         return;
 
-    if (b64 == NULL)
-        return;
-
-    size_t slen = strlen(b64);
-    if (slen == 0)
-        return;
-
-    char *myb64data = (char *)calloc(slen + 1, sizeof(uint8_t));
-    if (myb64data == NULL)
-        return;
-
-    memcpy(myb64data, b64, slen);
-
-    if (!pictureWidget) {
-
-#if defined(__MACH__) && defined(__APPLE__)
-        makeFocusable();
-#endif
-
-        pictureWidget = new PictureWidget();
-    }
-
-    QPixmap pm;
-    if (pm.loadFromData(QByteArray::fromBase64(myb64data), "PNG") == false) {
-        qWarning("Failed to read base64 data: %s", myb64data);
-    }
-    free(myb64data);
-    //free(b64);
-
-    pictureController->lbl_pm->setPixmap(pm);
-    pictureController->lbl_pm->setScaledContents(false);
-    pictureController->lbl_pm->setAlignment(Qt::AlignCenter);
-
-    QString s = QString("w: %1  h: %2")
-                .arg(pm.size().width())
-                .arg(pm.size().height()
-                    );
-    pictureController->lbl_sz->setText(s);
-    pictureWidget->show();
-
+    pictureWidget->clearPictures();
 }
 
 void ProxGuiQT::_RepaintPictureWindow(void) {
@@ -230,10 +181,8 @@ void ProxGuiQT::_StartProxmarkThread(void) {
 void ProxGuiQT::MainLoop() {
     plotapp = new QApplication(argc, argv);
 
-    // Setup the picture widget
+    // Setup the picture widget,  it builds its own UI and owns the image array
     pictureWidget = new PictureWidget();
-    pictureController = new Ui::PictureForm();
-    pictureController->setupUi(pictureWidget);
 //    pictureWidget->setAttribute(Qt::WA_DeleteOnClose,true);
 
     // Set picture widget position if no settings.
@@ -250,8 +199,8 @@ void ProxGuiQT::MainLoop() {
     connect(this, SIGNAL(ExitSignal()), this, SLOT(_Exit()));
 
     // hook up picture viewer signals
-    connect(this, SIGNAL(ShowPictureWindowSignal(const QImage &)), this, SLOT(_ShowPictureWindow(const QImage &)));
-    connect(this, SIGNAL(ShowBase64PictureWindowSignal(char *)), this, SLOT(_ShowBase64PictureWindow(char *)));
+    connect(this, SIGNAL(ShowPictureWindowSignal(const QString &, const QImage &)), this, SLOT(_ShowPictureWindow(const QString &, const QImage &)));
+    connect(this, SIGNAL(ClearPictureWindowSignal()), this, SLOT(_ClearPictureWindow()));
     connect(this, SIGNAL(RepaintPictureWindowSignal()), this, SLOT(_RepaintPictureWindow()));
     connect(this, SIGNAL(HidePictureWindowSignal()), this, SLOT(_HidePictureWindow()));
 
@@ -267,16 +216,11 @@ void ProxGuiQT::MainLoop() {
 }
 
 ProxGuiQT::ProxGuiQT(int argc, char **argv, WorkerThread *wthread) :
-    plotapp(NULL), plotwidget(NULL), pictureController(NULL), pictureWidget(NULL), argc(argc), argv(argv), proxmarkThread(wthread) {
+    plotapp(NULL), plotwidget(NULL), pictureWidget(NULL), argc(argc), argv(argv), proxmarkThread(wthread) {
 
 }
 
 ProxGuiQT::~ProxGuiQT(void) {
-
-    if (pictureController) {
-        delete pictureController;
-        pictureController = NULL;
-    }
 
     if (pictureWidget) {
         pictureWidget->close();
@@ -294,12 +238,115 @@ ProxGuiQT::~ProxGuiQT(void) {
 // Slider Widget form based on a class to enable
 // Event override functions
 // -------------------------------------------------
-PictureWidget::PictureWidget() {
+PictureWidget::PictureWidget() : m_ui(new Ui::PictureForm) {
+
+    m_ui->setupUi(this);
+
     // Set the initial position and size from settings
 //    if (g_session.preferences_loaded)
 //        setGeometry(g_session.pw.x, g_session.pw.y, g_session.pw.w, g_session.pw.h);
 //    else
     resize(400, 400);
+    updateTitle();
+}
+
+PictureWidget::~PictureWidget(void) {
+    delete m_ui;
+    m_ui = NULL;
+}
+
+void PictureWidget::updateTitle(void) {
+    if (m_images.isEmpty()) {
+        setWindowTitle(QString("Picture Viewer"));
+    } else {
+        setWindowTitle(QString("Picture Viewer (%1)").arg(m_images.size()));
+    }
+}
+
+const PictureItem *PictureWidget::pictureAt(int i) const {
+    if (i < 0 || i >= m_images.size())
+        return NULL;
+
+    return &m_images.at(i);
+}
+
+ScaledPictureLabel::ScaledPictureLabel(const QImage &img, QWidget *parent)
+    : QLabel(parent), m_image(img) {
+
+    setAlignment(Qt::AlignCenter);
+    setMinimumSize(1, 1);
+    // let the layout hand us whatever is going, we adapt to it
+    setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+    rescale();
+}
+
+QSize ScaledPictureLabel::sizeHint(void) const {
+    return m_image.size();
+}
+
+void ScaledPictureLabel::resizeEvent(QResizeEvent *event) {
+    QLabel::resizeEvent(event);
+    rescale();
+}
+
+void ScaledPictureLabel::rescale(void) {
+
+    if (m_image.isNull())
+        return;
+
+    QSize room = size();
+    if (room.width() < 1 || room.height() < 1)
+        return;
+
+    // Qt::KeepAspectRatio fits the image inside the box without distorting it.
+    // Scaling up is wanted here, a 240x320 portrait in a 400x400 window should
+    // fill the window rather than sit in the middle of it.
+    setPixmap(QPixmap::fromImage(m_image.scaled(room, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+}
+
+// Append one image to the array and give it its own tab
+void PictureWidget::addPicture(const QString &title, const QImage &img) {
+
+    if (img.isNull())
+        return;
+
+    m_images.append(PictureItem(title, img));
+
+    QWidget *page = new QWidget();
+    QVBoxLayout *layout = new QVBoxLayout(page);
+
+    ScaledPictureLabel *lbl_pm = new ScaledPictureLabel(img, page);
+    layout->addWidget(lbl_pm, 1);
+
+    QLabel *lbl_sz = new QLabel(page);
+    lbl_sz->setText(QString("w: %1  h: %2")
+                    .arg(img.width())
+                    .arg(img.height())
+                   );
+    lbl_sz->setAlignment(Qt::AlignCenter);
+    layout->addWidget(lbl_sz);
+
+    QString name = title.trimmed();
+    if (name.isEmpty()) {
+        name = QString("Image %1").arg(m_images.size());
+    }
+
+    int idx = m_ui->tabs->addTab(page, name);
+    m_ui->tabs->setCurrentIndex(idx);
+    updateTitle();
+}
+
+// Drop all images,  called before a new dump fills the viewer again
+void PictureWidget::clearPictures(void) {
+
+    while (m_ui->tabs->count() > 0) {
+        QWidget *page = m_ui->tabs->widget(0);
+        m_ui->tabs->removeTab(0);
+        delete page;
+    }
+
+    m_images.clear();
+    updateTitle();
 }
 
 void PictureWidget::closeEvent(QCloseEvent *event) {

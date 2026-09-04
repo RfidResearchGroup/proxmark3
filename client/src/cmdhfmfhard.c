@@ -1681,23 +1681,37 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         flags |= initialize ? 0x0001 : 0;
         flags |= slow ? 0x0002 : 0;
         flags |= field_off ? 0x0004 : 0;
+        mf_acquire_nonces_t payload = {
+            .blockno = blockNo,
+            .keytype = keyType,
+            .trg_blockno = trgBlockNo,
+            .trg_keytype = trgKeyType,
+            .flags = flags,
+        };
+        memcpy(payload.key, key, sizeof(payload.key));
+
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags, key, 6);
+        SendCommandNG(CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES, (uint8_t *)&payload, sizeof(payload));
 
         if (initialize) {
 
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 3000) == false) {
+            if (WaitForResponseTimeout(CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES, &resp, 3000) == false) {
                 DropField();
                 return PM3_ETIMEOUT;
             }
 
             // error during nested_hard
-            if (resp.oldarg[0]) {
+            if (resp.status != PM3_SUCCESS) {
                 DropField();
-                return resp.oldarg[0];
+                return resp.status;
             }
 
-            cuid = resp.oldarg[1];
+            if (resp.length < sizeof(mf_nonces_resp_t)) {
+                DropField();
+                return PM3_ESOFT;
+            }
+
+            cuid = ((const mf_nonces_resp_t *)resp.data.asBytes)->cuid;
             if (nonce_file_write && fnonces == NULL) {
 
                 if ((fnonces = fopen(filename, "wb")) == NULL) {
@@ -1718,8 +1732,9 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 
         if (initialize == false) {
 
-            uint16_t num_sampled_nonces = resp.oldarg[2];
-            uint8_t *bufp = resp.data.asBytes;
+            const mf_nonces_resp_t *nresp = (const mf_nonces_resp_t *)resp.data.asBytes;
+            uint16_t num_sampled_nonces = nresp->num_nonces;
+            const uint8_t *bufp = nresp->nonces;
 
             for (uint16_t i = 0; i < num_sampled_nonces; i += 2) {
                 uint32_t nt_enc1 = bytes_to_num(bufp, 4);
@@ -1792,12 +1807,12 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         }
 
         if (acquisition_completed) {
-            field_off = true; // switch off field with next SendCommandMIX and then finish
+            field_off = true; // switch off field with the next command and then finish
         }
 
         if (initialize == false) {
 
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 3000) == false) {
+            if (WaitForResponseTimeout(CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES, &resp, 3000) == false) {
                 if (nonce_file_write) {
                     fclose(fnonces);
                 }
@@ -1806,12 +1821,12 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
             }
 
             // error during nested_hard
-            if (resp.oldarg[0]) {
+            if (resp.status != PM3_SUCCESS) {
                 if (nonce_file_write) {
                     fclose(fnonces);
                 }
                 DropField();
-                return resp.oldarg[0];
+                return resp.status;
             }
         }
 

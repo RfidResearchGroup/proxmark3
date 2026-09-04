@@ -281,6 +281,7 @@ Check column "offline" for their availability.
 |`hf 15 writeafi         `|N       |`Writes the AFI on an ISO-15693 tag`
 |`hf 15 writedsfid       `|N       |`Writes the DSFID on an ISO-15693 tag`
 |`hf 15 csetuid          `|N       |`Set UID for magic card`
+|`hf 15 cfinalize        `|N       |`Finalize a magic V3 tag (irreversible)`
 
 
 ### hf aliro
@@ -353,6 +354,7 @@ Check column "offline" for their availability.
 |`hf emrtd dump          `|N       |`Dump eMRTD files to binary files`
 |`hf emrtd info          `|Y       |`Tag information`
 |`hf emrtd list          `|Y       |`List ISO 14443A/7816 history`
+|`hf emrtd test          `|Y       |`Regression tests`
 
 
 ### hf felica
@@ -364,12 +366,12 @@ Check column "offline" for their availability.
 |`hf felica help         `|Y       |`This help`
 |`hf felica list         `|Y       |`List ISO 18092/FeliCa history`
 |`hf felica info         `|N       |`Tag information`
-|`hf felica seacinfo     `|N       |`FeliCa SEAC tag information`
 |`hf felica raw          `|N       |`Send raw hex data to tag`
 |`hf felica rdbl         `|N       |`read block data from authentication-not-required Service.`
 |`hf felica reader       `|N       |`Act like an ISO18092/FeliCa reader`
 |`hf felica sniff        `|N       |`Sniff ISO 18092/FeliCa traffic`
 |`hf felica wrbl         `|N       |`write block data to an authentication-not-required Service.`
+|`hf felica seacauth1    `|N       |`FeliCa SEAC Authentication1`
 |`hf felica dump         `|N       |`Wait for and try dumping FeliCa`
 |`hf felica discnodes    `|N       |`discover Area Code and Service Code nodes.`
 |`hf felica sim          `|N       |`Emulate FeliCa Standard from dump file`
@@ -537,7 +539,7 @@ Check column "offline" for their availability.
 |`hf iclass decrypt      `|Y       |`Decrypt given block data or tag dump file`
 |`hf iclass managekeys   `|Y       |`Manage keys to use with iclass commands`
 |`hf iclass permutekey   `|Y       |`Permute function from 'heart of darkness' paper`
-|`hf iclass sam          `|N       |`SAM ops: PACS extract + secure channel (scopen/scsend/scclose)`
+|`hf iclass sam          `|N       |`Extract PACS from a HID SAM`
 
 
 ### hf ict
@@ -758,6 +760,7 @@ Check column "offline" for their availability.
 |`hf mfu incr            `|N       |`Increments Ev1/NTAG counter`
 |`hf mfu info            `|N       |`Tag information`
 |`hf mfu ndefread        `|N       |`Prints NDEF records from card`
+|`hf mfu ndefwrite       `|N       |`Write NDEF records to card`
 |`hf mfu rdbl            `|N       |`Read block`
 |`hf mfu restore         `|N       |`Restore a dump file onto a tag`
 |`hf mfu tamper          `|N       |`NTAG 213TT - Configure the tamper feature`
@@ -1007,7 +1010,11 @@ Check column "offline" for their availability.
 |`hw bootloader          `|N       |`Reboot into bootloader mode`
 |`hw connect             `|Y       |`Connect to the device via serial port`
 |`hw dbg                 `|N       |`Set device side debug level`
+|`hw fpga                `|N       |`Fpga commands`
 |`hw fpgaoff             `|N       |`Turn off FPGA on device`
+|`hw ant_pm5             `|N       |`Control the antennal of pm5`
+|`hw qc_pm5              `|N       |`Perform QC test for the PM5`
+|`hw factorydata         `|N       |`Get/Set the factory data for Device`
 |`hw lcd                 `|N       |`Send command/data to LCD`
 |`hw lcdreset            `|N       |`Hardware reset LCD`
 |`hw ping                `|N       |`Test if the Proxmark3 is responsive`
@@ -1018,6 +1025,11 @@ Check column "offline" for their availability.
 |`hw setmux              `|N       |`Set the ADC mux to a specific value`
 |`hw standalone          `|N       |`Start installed standalone mode on device`
 |`hw tia                 `|N       |`Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider`
+|`hw bwmsetcap           `|N       |`Set BWM fuel-gauge design capacity (PM5, run once after battery change)`
+|`hw bwmvchg             `|N       |`Set BWM charger charge-voltage target (PM5, default 4100 mV)`
+|`hw bwmcharge           `|N       |`Enable/disable BWM battery charging (PM5, one-shot)`
+|`hw bwmautooff          `|N       |`Toggle auto power-off on USB unplug (PM5, BWM)`
+|`hw bwmwifi             `|N       |`Bring up BWM WiFi (STA + TCP server) for a tcp: connection (PM5)`
 |`hw tune                `|N       |`Measure tuning of device antenna`
 |`hw decay               `|N       |`Measure HF antenna decay after field-off`
 
@@ -1038,7 +1050,6 @@ Check column "offline" for their availability.
 |`lf simask              `|N       |`Simulate ASK tag`
 |`lf simfsk              `|N       |`Simulate FSK tag`
 |`lf simpsk              `|N       |`Simulate PSK tag`
-|`lf simbidir            `|N       |`Simulate LF tag (with bidirectional data transmission between reader and tag)`
 |`lf sniff               `|N       |`Sniff LF traffic between reader and tag`
 |`lf tune                `|N       |`Continuously measure LF antenna tuning`
 
@@ -1244,6 +1255,7 @@ Check column "offline" for their availability.
 |`lf hitag sniff         `|N       |`Eavesdrop Hitag communication`
 |`lf hitag view          `|Y       |`Display content from tag dump file`
 |`lf hitag wrbl          `|N       |`Write a block (page) in Hitag memory`
+|`lf hitag restore       `|N       |`Restore a dump file to a Hitag 2 tag`
 |`lf hitag eload         `|N       |`Upload file into emulator memory`
 |`lf hitag eview         `|N       |`View emulator memory`
 |`lf hitag sim           `|N       |`Simulate Hitag transponder`
@@ -1633,6 +1645,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`nfc help               `|Y       |`This help`
 |`nfc decode             `|Y       |`Decode NDEF records`
+|`nfc encode             `|Y       |`Encode NDEF records`
 
 
 ### nfc type1
@@ -1652,6 +1665,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`nfc type2 read         `|N       |`read NFC Forum Tag Type 2`
+|`nfc type2 write        `|N       |`write NFC Forum Tag Type 2`
 |`nfc type2 help         `|Y       |`This help`
 
 
@@ -1733,6 +1747,7 @@ Check column "offline" for their availability.
 |`smart brute            `|N       |`Bruteforce SFI`
 |`smart info             `|N       |`Tag information`
 |`smart pcsc             `|Y       |`Turn pm3 into pcsc reader and relay to host OS via vpcd`
+|`smart pps              `|N       |`Run an ISO 7816-3 PPS exchange`
 |`smart reader           `|N       |`Act like an IS07816 reader`
 |`smart raw              `|N       |`Send raw hex data to tag`
 |`smart upgrade          `|Y       |`Upgrade sim module firmware`

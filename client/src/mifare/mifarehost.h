@@ -66,7 +66,7 @@ typedef struct {
     //uint8_t foundKey[2];
 } icesector_t;
 
-#define KEYS_IN_BLOCK   ((PM3_CMD_DATA_SIZE - 5) / MIFARE_KEY_SIZE)
+#define KEYS_IN_BLOCK   MIN((PM3_CMD_DATA_SIZE - 5) / MIFARE_KEY_SIZE, 255)  // mf_check_keys keycnt is uint8_t
 #define KEYBLOCK_SIZE   (KEYS_IN_BLOCK * MIFARE_KEY_SIZE)
 #define CANDIDATE_SIZE  (0xFFFF * MIFARE_KEY_SIZE)
 

@@ -32,7 +32,18 @@
 #define FPGA_TYPE "2s30vq100"
 #define FPGA_CONFIG_SIZE                    42336L  // FPGA .bit file rounded up to next multiple of FPGA_INTERLEAVE_SIZE
 #endif
-#define FPGA_RING_BUFFER_BYTES              (1024 * 30)
+// LZ4 sliding-window / staging size for ONE compressed block, not the image:
+// fpga_compress chops the interleaved bitstreams into blocks of at most this
+// size, and the ARM decompresses them one at a time while DownloadFPGA() shifts
+// the bytes out to the FPGA.  It is allocated out of BigBuf, which on AT91 is
+// only ~31-33 kB, so 30 kB left nothing for the caller. 
+// Smaller window = slightly worse compression 
+// Measured on flash: 
+//     30 kB -> 102555 bytes
+//     16 kB -> 107121 bytes
+// This does NOT bound the firmware's .data section
+// fpga_compress gives the single-input case its own 1 MB block, because start.c only decompresses one.
+#define FPGA_RING_BUFFER_BYTES              (1024 * 16)
 #define FPGA_TRACE_SIZE                     3072
 
 // definitions for multiple FPGA config files support

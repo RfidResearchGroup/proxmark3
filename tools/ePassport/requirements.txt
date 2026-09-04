@@ -1,0 +1,19 @@
+# ePassport runtime dependencies.  Everything runs offline; nothing here
+# phones home.  Install with:  python3 -m pip install -r requirements.txt
+kivy>=2.3.0
+
+# Optional - the app degrades gracefully when these are absent.
+opencv-python-headless>=4.8 ; python_version >= "3.10"   # camera capture (Scan screen)
+pytesseract>=0.3.10                                      # MRZ OCR (needs the tesseract binary)
+Pillow>=10.0                                             # JPEG portrait decode
+glymur>=0.12                                             # JPEG2000 portrait decode (DG2 is usually JP2)
+asn1crypto>=1.5                                          # EF_SOD inspection
+cryptography>=41.0                                       # EF_SOD certificate details
+
+# Development only.
+pytest>=7.0
+black>=23.0
+
+# Generation only - not needed at runtime. Used by tools_gen_countries.py to
+# bridge the proxmark3 client's ISO-3166 numeric table to MRZ alpha-3 codes.
+pycountry>=23.12

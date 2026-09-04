@@ -49,10 +49,18 @@ client/CMakeFiles/
 client/deps/**
 !client/deps/id48/
 !client/deps/id48/**
+# vendored openjpeg, sources only. openjpeg.a and obj/ stay ignored
+!client/deps/openjpeg/
+!client/deps/openjpeg/*.c
+!client/deps/openjpeg/*.h
+!client/deps/openjpeg/Makefile
+!client/deps/openjpeg/LICENSE
+!client/deps/openjpeg/README.pm3
 client/build/
 client/android/build/
 CMakeCache.txt
 *.cmake
+!client/deps/openjpeg.cmake
 .cache
 
 # Coverity
@@ -120,6 +128,9 @@ fpga_version_info.c
 !.vscode/templates/*.json
 !.vscode/extensions.json
 !.vscode/tasks.json
+
+# IDEA files
+.idea/
 
 # docs
 !doc/*.json

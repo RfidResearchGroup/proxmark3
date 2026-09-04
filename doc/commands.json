@@ -996,9 +996,11 @@
                 "-h, --help This help",
                 "-k, --keep Keep field ON for next command",
                 "-a, --apdu Show APDU requests and responses",
-                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv challenge [-hkaw]"
+            "usage": "emv challenge [-hkaw] [--t0] [--t1]"
         },
         "emv exec": {
             "command": "emv exec",
@@ -1020,9 +1022,11 @@
                 "-c, --qvsdccda Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)",
                 "-x, --vsdc Transaction type - VSDC. For test only. Not a standard behavior",
                 "-g, --acgpo VISA. generate AC from GPO",
-                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv exec [-hsatjcxgw] [--force] By default: [--qvsdc]"
+            "usage": "emv exec [-hsatjcxgw] [--force] By default: [--qvsdc] [--t0] [--t1]"
         },
         "emv genac": {
             "command": "emv genac",
@@ -1044,9 +1048,11 @@
                 "-a, --apdu Show APDU requests and responses",
                 "-t, --tlv TLV decode results of selected applets",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
-                "<hex> CDOLdata/CDOL"
+                "<hex> CDOLdata/CDOL",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv genac [-hkcpmatw] [-d <aac|tc|arqc>] <hex> [<hex>]..."
+            "usage": "emv genac [-hkcpmatw] [-d <aac|tc|arqc>] <hex> [<hex>]... [--t0] [--t1]"
         },
         "emv gpo": {
             "command": "emv gpo",
@@ -1065,9 +1071,11 @@
                 "-a, --apdu Show APDU requests and responses",
                 "-t, --tlv TLV decode results of selected applets",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
-                "<hex> PDOLdata/PDOL"
+                "<hex> PDOLdata/PDOL",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv gpo [-hkpmatw] [<hex>]..."
+            "usage": "emv gpo [-hkpmatw] [<hex>]... [--t0] [--t1]"
         },
         "emv help": {
             "command": "emv help",
@@ -1082,7 +1090,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -1107,9 +1115,11 @@
                 "-a, --apdu Show APDU requests and responses",
                 "-t, --tlv TLV decode results of selected applets",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
-                "<hex> DDOLdata/DDOL"
+                "<hex> DDOLdata/DDOL",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv intauth [-hkpmatw] <hex> [<hex>]..."
+            "usage": "emv intauth [-hkpmatw] <hex> [<hex>]... [--t0] [--t1]"
         },
         "emv pse": {
             "command": "emv pse",
@@ -1127,9 +1137,11 @@
                 "-2, --ppse PPSE (2PAY.SYS.DDF01) mode (def)",
                 "-a, --apdu Show APDU requests and responses",
                 "-t, --tlv TLV decode results of selected applets",
-                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv pse [-hsk12atw]"
+            "usage": "emv pse [-hsk12atw] [--t0] [--t1]"
         },
         "emv reader": {
             "command": "emv reader",
@@ -1137,6 +1149,8 @@
             "notes": [
                 "emv reader",
                 "emv reader -v",
+                "emv reader -w -> contact interface",
+                "emv reader -w --t1 -> contact interface, protocol T=1",
                 "emv reader -@ -> Continuous mode"
             ],
             "offline": false,
@@ -1144,9 +1158,11 @@
                 "-h, --help This help",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
                 "-v, --verbose Verbose output",
-                "-@ continuous reader mode"
+                "-@ continuous reader mode",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv reader [-hwv@]"
+            "usage": "emv reader [-hwv@] [--t0] [--t1]"
         },
         "emv readrec": {
             "command": "emv readrec",
@@ -1162,9 +1178,11 @@
                 "-a, --apdu Show APDU requests and responses",
                 "-t, --tlv TLV decode results of selected applets",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
-                "<hex> <SFI 1 byte><SFIrecord 1 byte"
+                "<hex> <SFI 1 byte><SFIrecord 1 byte",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv readrec [-hkatw] <hex> [<hex>]..."
+            "usage": "emv readrec [-hkatw] <hex> [<hex>]... [--t0] [--t1]"
         },
         "emv roca": {
             "command": "emv roca",
@@ -1178,9 +1196,11 @@
                 "-h, --help This help",
                 "--test Perform self tests",
                 "-a, --apdu Show APDU requests and responses",
-                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv roca [-haw] [--test]"
+            "usage": "emv roca [-haw] [--test] [--t0] [--t1]"
         },
         "emv scan": {
             "command": "emv scan",
@@ -1203,9 +1223,11 @@
                 "-g, --acgpo VISA. generate AC from GPO",
                 "-m, --merge Merge output file with card's data. (warning: the file may be corrupted!)",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
-                "<fn> JSON output file name"
+                "<fn> JSON output file name",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv scan [-hatejcxgmw] By default: [--qvsdc] <fn>"
+            "usage": "emv scan [-hatejcxgmw] By default: [--qvsdc] <fn> [--t0] [--t1]"
         },
         "emv search": {
             "command": "emv search",
@@ -1221,9 +1243,11 @@
                 "-k, --keep Keep field ON for next command",
                 "-a, --apdu Show APDU requests and responses",
                 "-t, --tlv TLV decode results of selected applets",
-                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv search [-hskatw]"
+            "usage": "emv search [-hskatw] [--t0] [--t1]"
         },
         "emv select": {
             "command": "emv select",
@@ -1240,9 +1264,11 @@
                 "-a, --apdu Show APDU requests and responses",
                 "-t, --tlv TLV decode results",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
-                "<hex> Applet AID"
+                "<hex> Applet AID",
+                "--t0 use protocol T=0 on the contact interface (default)",
+                "--t1 use protocol T=1 on the contact interface"
             ],
-            "usage": "emv select [-hskatw] <hex>"
+            "usage": "emv select [-hskatw] <hex> [--t0] [--t1]"
         },
         "emv smart2nfc": {
             "command": "emv smart2nfc",
@@ -1400,7 +1426,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -1455,7 +1481,7 @@
             "command": "hf 14a ndefwrite",
             "description": "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.",
             "notes": [
-                "hf 14a ndefwrite -d 0300FE -> write empty record to tag",
+                "hf 14a ndefwrite -d 0000 -> write empty record to tag",
                 "hf 14a ndefwrite -f myfilename",
                 "hf 14a ndefwrite -d 003fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031"
             ],
@@ -1506,6 +1532,7 @@
             "description": "Act as a ISO-14443a reader to identify tag. Look for ISO-14443a tags until Enter or the pm3 button is pressed",
             "notes": [
                 "hf 14a reader",
+                "hf 14a reader -n 100 -> Polls 100 times",
                 "hf 14a reader -@ -> Continuous mode"
             ],
             "offline": false,
@@ -1515,10 +1542,11 @@
                 "-s, --silent silent (no messages)",
                 "--drop just drop the signal field",
                 "--skip ISO14443-3 select only (skip RATS)",
+                "-n, --num <dec> number of times to poll",
                 "-@ continuous reader mode",
                 "-w, --wait wait for card"
             ],
-            "usage": "hf 14a reader [-hks@w] [--drop] [--skip]"
+            "usage": "hf 14a reader [-hks@w] [--drop] [--skip] [-n <dec>]"
         },
         "hf 14a sim": {
             "command": "hf 14a sim",
@@ -1677,7 +1705,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -1891,20 +1919,35 @@
             ],
             "usage": "hf 14b wrbl [-h] [-b <dec>] -d <hex> [--512] [--4k] [--sb] [--force]"
         },
+        "hf 15 cfinalize": {
+            "command": "hf 15 cfinalize",
+            "description": "Finalize a magic ISO15693 'V3' tag. This operation is irreversible. After finalize the configuration area is erased and the UID can no longer be changed. Set the UID with `hf 15 csetuid --v3` first, then lock it in with this command.",
+            "notes": [
+                "hf 15 cfinalize -y"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-y, --yes Confirm the irreversible finalize operation"
+            ],
+            "usage": "hf 15 cfinalize [-hy]"
+        },
         "hf 15 csetuid": {
             "command": "hf 15 csetuid",
-            "description": "Set UID for magic Chinese card (only works with such cards)",
+            "description": "Set UID for magic Chinese card (only works with such cards) For magic 'V3' tags this writes the UID configuration only and is repeatable; run `hf 15 cfinalize` afterwards to lock the UID permanently.",
             "notes": [
                 "hf 15 csetuid -u E011223344556677 -> use gen1 command",
-                "hf 15 csetuid -u E011223344556677 --v2 -> use gen2 command"
+                "hf 15 csetuid -u E011223344556677 --v2 -> use gen2 command",
+                "hf 15 csetuid -u E011223344556677 --v3 -> use gen3 (V3) magic tag"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-u, --uid <hex> UID, 8 hex bytes",
-                "-2, --v2 Use gen2 magic command"
+                "-2, --v2 Use gen2 magic command",
+                "-3, --v3 Use gen3 (V3) magic tag (repeatable, needs cfinalize)"
             ],
-            "usage": "hf 15 csetuid [-h2] -u <hex>"
+            "usage": "hf 15 csetuid [-h23] -u <hex>"
         },
         "hf 15 demod": {
             "command": "hf 15 demod",
@@ -1920,11 +1963,11 @@
         },
         "hf 15 dump": {
             "command": "hf 15 dump",
-            "description": "This command dumps the contents of a ISO-15693 tag and save to file (bin/json)",
+            "description": "This command dumps the contents of a ISO-15693 tag and saves it to a JSON file. Writing .bin is no longer supported, the raw struct carries no layout information. Reading .bin/.eml/.json all still work.",
             "notes": [
                 "hf 15 dump",
                 "hf 15 dump -*",
-                "hf 15 dump -u E011223344556677 -f hf-15-my-dump.bin"
+                "hf 15 dump -u E011223344556677 -f hf-15-my-dump"
             ],
             "offline": false,
             "options": [
@@ -2008,7 +2051,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -2398,7 +2441,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -2491,7 +2534,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -2836,11 +2879,14 @@
         },
         "hf emrtd help": {
             "command": "hf emrtd help",
-            "description": "help This help info Tag information list List ISO 14443A/7816 history --------------------------------------------------------------------------------------- hf emrtd dump available offline: no Dump all files on an eMRTD",
+            "description": "help This help info Tag information list List ISO 14443A/7816 history test Regression tests --------------------------------------------------------------------------------------- hf emrtd dump available offline: no Dump all files on an eMRTD",
             "notes": [
                 "hf emrtd dump",
                 "hf emrtd dump --dir ../dump",
-                "hf emrtd dump -n 123456789 -d 890101 -e 250401"
+                "hf emrtd dump -n 123456789 -d 890101 -e 250401",
+                "hf emrtd dump --can 123456 -> PACE with the Card Access Number",
+                "hf emrtd dump --can 123456 --pace -> PACE only, no BAC fallback",
+                "hf emrtd dump -n 123456789 -d 890101 -e 250401 --bac -> force BAC"
             ],
             "offline": true,
             "options": [
@@ -2849,9 +2895,12 @@
                 "-d, --date <YYMMDD> date of birth in YYMMDD format",
                 "-e, --expiry <YYMMDD> expiry in YYMMDD format",
                 "-m, --mrz <[0-9A-Z<]> 2nd line of MRZ, 44 chars",
+                "--can <digits> Card Access Number, PACE password instead of the MRZ",
+                "--pace force PACE, fail instead of falling back to BAC",
+                "--bac force BAC, skip PACE",
                 "--dir <str> save dump to the given dirpath"
             ],
-            "usage": "hf emrtd dump [-h] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--dir <str>]"
+            "usage": "hf emrtd dump [-h] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--can <digits>] [--pace] [--bac] [--dir <str>]"
         },
         "hf emrtd info": {
             "command": "hf emrtd info",
@@ -2860,7 +2909,9 @@
                 "hf emrtd info",
                 "hf emrtd info --dir ../dumps",
                 "hf emrtd info -n 123456789 -d 890101 -e 250401",
-                "hf emrtd info -n 123456789 -d 890101 -e 250401 -i"
+                "hf emrtd info -n 123456789 -d 890101 -e 250401 -i",
+                "hf emrtd info --can 123456 -> PACE with the Card Access Number",
+                "hf emrtd info --can 123456 --pace -> PACE only, no BAC fallback"
             ],
             "offline": true,
             "options": [
@@ -2869,10 +2920,13 @@
                 "-d, --date <YYMMDD> date of birth in YYMMDD format",
                 "-e, --expiry <YYMMDD> expiry in YYMMDD format",
                 "-m, --mrz <[0-9A-Z<]> 2nd line of MRZ, 44 chars (passports only)",
+                "--can <digits> Card Access Number, PACE password instead of the MRZ",
+                "--pace force PACE, fail instead of falling back to BAC",
+                "--bac force BAC, skip PACE",
                 "--dir <str> display info from offline dump stored in dirpath",
                 "-i, --images show images"
             ],
-            "usage": "hf emrtd info [-hi] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--dir <str>]"
+            "usage": "hf emrtd info [-hi] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--can <digits>] [--pace] [--bac] [--dir <str>]"
         },
         "hf emrtd list": {
             "command": "hf emrtd list",
@@ -2887,13 +2941,25 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
                 "-f, --file <fn> filename of dictionary"
             ],
             "usage": "hf emrtd list [-h1crux] [--frame] [-f <fn>]"
+        },
+        "hf emrtd test": {
+            "command": "hf emrtd test",
+            "description": "Regression tests for the PACE and secure messaging primitives",
+            "notes": [
+                "hf emrtd test"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hf emrtd test [-h]"
         },
         "hf epa help": {
             "command": "hf epa help",
@@ -3014,13 +3080,14 @@
                 "--no-auth read public services",
                 "-r, --retry <dec> number of retries",
                 "--idm <hex> use custom IDm",
-                "-f, --file <fn> Specify a filename for JSON dump file"
+                "-f, --file <fn> Specify a filename for JSON dump file",
+                "--no-ic-optimizations attempt all commands even if the IC is known not to support them"
             ],
-            "usage": "hf felica dump [-h] [--no-auth] [-r <dec>] [--idm <hex>] [-f <fn>]"
+            "usage": "hf felica dump [-h] [--no-auth] [-r <dec>] [--idm <hex>] [-f <fn>] [--no-ic-optimizations]"
         },
         "hf felica help": {
             "command": "hf felica help",
-            "description": "----------- ----------------------- General ----------------------- help This help list List ISO 18092/FeliCa history ----------- ----------------------- Operations ----------------------- ----------- ----------------------- FeliCa Standard ----------------------- ----------- ----------------------- FeliCa Light ----------------------- --------------------------------------------------------------------------------------- hf felica list available offline: yes Alias of `trace list -t felica` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "----------- ----------------------- General ----------------------- help This help list List ISO 18092/FeliCa history ----------- ----------------------- Operations ----------------------- ----------- ----------------------- FeliCa SEAC ----------------------- ----------- ----------------------- FeliCa Standard ----------------------- ----------- ----------------------- FeliCa Light ----------------------- --------------------------------------------------------------------------------------- hf felica list available offline: yes Alias of `trace list -t felica` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf felica list --frame -> show frame delay times",
                 "hf felica list -1 -> use trace buffer"
@@ -3031,7 +3098,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -3043,13 +3110,17 @@
             "command": "hf felica info",
             "description": "Reader for FeliCa based tags",
             "notes": [
-                "hf felica info"
+                "hf felica info",
+                "hf felica info -v -> show authentication trace",
+                "hf felica info --no-ic-optimizations -> probe all commands, ignoring known IC support"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-v, --verbose verbose output (authentication trace)",
+                "--no-ic-optimizations attempt all commands even if the IC is known not to support them"
             ],
-            "usage": "hf felica info [-h]"
+            "usage": "hf felica info [-hv] [--no-ic-optimizations]"
         },
         "hf felica liteauth": {
             "command": "hf felica liteauth",
@@ -3064,9 +3135,9 @@
             "options": [
                 "-h, --help This help",
                 "--key <hex> set card key, 16 bytes",
-                "-c, <hex> set random challenge, 16 bytes",
+                "-c <hex> set random challenge, 16 bytes",
                 "--idm <hex> set custom IDm",
-                "-k, keep signal field ON after receive"
+                "-k keep signal field ON after receive"
             ],
             "usage": "hf felica liteauth [-hk] [--key <hex>] [-c <hex>] [--idm <hex>]"
         },
@@ -3102,7 +3173,8 @@
             "description": "Send raw hex data to tag",
             "notes": [
                 "hf felica raw -cs 20",
-                "hf felica raw -cs 2008"
+                "hf felica raw -cs 2008",
+                "hw dbg -4; hf felica raw -acp 00ffff0000 -> measure antenna envelope, for reading distance"
             ],
             "offline": false,
             "options": [
@@ -3111,11 +3183,12 @@
                 "-c calculate and append CRC",
                 "-k keep signal field ON after receive",
                 "-n <dec> number of bits",
+                "-p, --probe report antenna envelope instead of decoding (needs `hw dbg -4`)",
                 "-r do not read response",
                 "-s active signal field ON with select",
                 "<hex> raw bytes to send"
             ],
-            "usage": "hf felica raw [-hackrs] [-n <dec>] <hex>"
+            "usage": "hf felica raw [-hackprs] [-n <dec>] <hex>"
         },
         "hf felica rdbl": {
             "command": "hf felica rdbl",
@@ -3248,17 +3321,22 @@
             ],
             "usage": "hf felica scsvcode [-h] [-r <dec>] [--idm <hex>]"
         },
-        "hf felica seacinfo": {
-            "command": "hf felica seacinfo",
-            "description": "Get info about FeliCa SEAC cards",
+        "hf felica seacauth1": {
+            "command": "hf felica seacauth1",
+            "description": "Send FeliCa SEAC Authentication1",
             "notes": [
-                "hf felica seacinfo"
+                "hf felica seacauth1",
+                "hf felica seacauth1 --selector 0F",
+                "hf felica seacauth1 --challenge 0001020304050607",
+                "hf felica seacauth1 -s 0F -c FFFFFFFFFFFFFFFF"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-s, --selector <hex> selector, 1 byte (default 01)",
+                "-c, --challenge <hex> Challenge1a, 8 bytes (default all zero)"
             ],
-            "usage": "hf felica seacinfo [-h]"
+            "usage": "hf felica seacauth1 [-h] [-s <hex>] [-c <hex>]"
         },
         "hf felica sim": {
             "command": "hf felica sim",
@@ -3371,7 +3449,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -4255,7 +4333,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -4329,7 +4407,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -4350,7 +4428,7 @@
                 "-k, --key <hex> Access key as 8 hex bytes",
                 "--ki <dec> Key index to select key from memory 'hf iclass managekeys'",
                 "--credit key is assumed to be the credit key",
-                "-s <dec> tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3 us",
+                "-s <dec> tearoff delay start (in us) must be between 1 and 65535 (65ms). Precision is about 1/3 us",
                 "-i <dec> tearoff delay increment (in us) - default 5",
                 "-e <dec> tearoff delay end (in us) must be a higher value than the start delay",
                 "-o, --otp <hex> Custom OTP value as 2 hex bytes",
@@ -4616,7 +4694,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -4835,16 +4913,30 @@
         },
         "hf iclass sam": {
             "command": "hf iclass sam",
-            "description": "hf iclass sam - HID SAM operations Secure-channel subcommands: Legacy PACS-extraction flags (no subcommand, applied to hf iclass sam directly): --info get SAM version + serial number (also warms up the SAM) -d, --data <hex> DER-encoded SAMCommand to send (raw, no SC) -s, --snmp --data is in SNMP format without the A0/94 headers -p, --prevent fake the e-purse update during PACS extraction --break stop tag interaction at nr-mac (for SIO extract) -f, --file <fn> emulate from a dump file instead of a real card -n, --nodetect skip card detect + SetDetectedCardInfo -k, --keep keep the field active after the command -t, --tlv decode the response as TLV --shallow shallow modulation -v, --verbose verbose output Examples: hf iclass sam extract PACS via SAM (defaults) hf iclass sam --info get SAM version + serial (warmup ping) hf iclass sam scopen open Artemis secure channel hf iclass sam scsend --payload 8200 send wrapped SAMCommand hf iclass sam scclose terminate the SC session ======================================================================================= hf ict { ICT MFC/DESfire RFIDs... } --------------------------------------------------------------------------------------- hf ict help available offline: yes help This help list List ICT history reader Act like an IS14443-a reader --------------------------------------------------------------------------------------- hf ict credential available offline: no Read ICT sector from tag and decode",
+            "description": "Extract PACS via a HID SAM",
             "notes": [
-                "hf ict credential"
+                "hf iclass sam",
+                "hf iclass sam -p -d a005a103800104 -> get PACS data, prevent epurse update",
+                "hf iclass sam --break -> get Nr-MAC for extracting encrypted SIO",
+                "hf iclass sam -f hf-iclass-dump.bin -> emulate card from dump file to SAM",
+                "hf iclass sam --info -> get SAM version + serial (also warms up the SAM)"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "-k, --keep keep the field active after command executed",
+                "-n, --nodetect skip selecting the card and sending card details to SAM",
+                "-t, --tlv decode TLV",
+                "--break stop tag interaction on nr-mac",
+                "-p, --prevent fake epurse update",
+                "--shallow shallow mod",
+                "-d, --data <hex> DER encoded command to send to SAM",
+                "-s, --snmp data is in snmp format without headers",
+                "--info get SAM infos (version, serial number)",
+                "-f, --file <fn> dump file to emulate to SAM instead of a real card"
             ],
-            "usage": "hf ict credential [-hv]"
+            "usage": "hf iclass sam [-hvkntps] [--break] [--shallow] [-d <hex>]... [--info] [-f <fn>]"
         },
         "hf iclass sim": {
             "command": "hf iclass sim",
@@ -4934,7 +5026,7 @@
                 "--nr replay of NR/MAC",
                 "-v, --verbose verbose output",
                 "--shallow use shallow (ASK) reader modulation instead of OOK",
-                "-s <dec> tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3 us",
+                "-s <dec> tearoff delay start (in us) must be between 1 and 65535 (65ms). Precision is about 1/3 us",
                 "-i <dec> tearoff delay increment (in us) - default 10",
                 "-e <dec> tearoff delay end (in us) must be a higher value than the start delay",
                 "--loop <dec> number of times to loop per tearoff time",
@@ -5003,6 +5095,19 @@
             ],
             "usage": "hf iclass wrbl [-hv@] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow]"
         },
+        "hf ict help": {
+            "command": "hf ict help",
+            "description": "help This help list List ICT history reader Act like an IS14443-a reader --------------------------------------------------------------------------------------- hf ict credential available offline: no Read ICT sector from tag and decode",
+            "notes": [
+                "hf ict credential"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf ict credential [-hv]"
+        },
         "hf ict info": {
             "command": "hf ict info",
             "description": "Get info from ICT encoded credential tags (MIFARE Classic / DESfire)",
@@ -5028,7 +5133,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -5340,7 +5445,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -5510,7 +5615,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -6518,7 +6623,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -8090,7 +8195,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -8252,6 +8357,7 @@
             "notes": [
                 "hf mfdes pc --key 00000000000000000000000000000000",
                 "hf mfdes pc --key 00112233445566778899aabbccddeeff --rounds 4",
+                "hf mfdes pc --aid 123456 --key 00112233445566778899aabbccddeeff",
                 "hf mfdes pc --key 00112233445566778899aabbccddeeff -c native -a"
             ],
             "offline": false,
@@ -8261,9 +8367,10 @@
                 "-v, --verbose Verbose output",
                 "-k, --key <hex> Key (AES-128, exactly 16 bytes)",
                 "-r, --rounds <dec> Number of rounds (1..8), default 8",
-                "-c, --ccset <native|niso> Communication command set (default from `hf mfdes default`)"
+                "-c, --ccset <native|niso> Communication command set (default from `hf mfdes default`)",
+                "--aid <hex> Application ID (3 hex bytes, big endian)"
             ],
-            "usage": "hf mfdes pc [-hav] -k <hex> [-r <dec>] [-c <native|niso>]"
+            "usage": "hf mfdes pc [-hav] -k <hex> [-r <dec>] [-c <native|niso>] [--aid <hex>]"
         },
         "hf mfdes read": {
             "command": "hf mfdes read",
@@ -8719,7 +8826,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -9249,7 +9356,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -9326,6 +9433,35 @@
                 "--schann use secure channel. Must have key"
             ],
             "usage": "hf mfu ndefread [-hlv] [-k Replace default key for NDEF] [-f <fn>] [--schann]"
+        },
+        "hf mfu ndefwrite": {
+            "command": "hf mfu ndefwrite",
+            "description": "Write NFC Data Exchange Format (NDEF) records to a MIFARE Ultralight / NTAG tag. The tag must already be NDEF formatted, ie carry a Capability Container in block 3. Combine several of --uri, --text and --aar to build a multi record message, records are added in that order. Alternatively supply raw NDEF bytes with -d or -f, those get wrapped in a TLV container automatically when they are not already. Use `nfc encode` to build such raw bytes offline. Note: the tag is re-selected and re-authenticated for every block written, so a large message takes a while.",
+            "notes": [
+                "hf mfu ndefwrite --uri https://proxmark.com",
+                "hf mfu ndefwrite --uri tel:+123456789",
+                "hf mfu ndefwrite --text \"hello world\"",
+                "hf mfu ndefwrite --aar com.example.app",
+                "hf mfu ndefwrite --uri https://proxmark.com --aar com.example.app",
+                "hf mfu ndefwrite --uri https://proxmark.com -k ffffffff",
+                "hf mfu ndefwrite -d 0311D1010D550270726F786D61726B2E636F6DFE",
+                "hf mfu ndefwrite -f myfilename"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --key <hex> Authentication key (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)",
+                "-l Swap entered key endianness",
+                "--uri <str> URI record. URL, tel:, mailto:, ...",
+                "--text <str> Text record",
+                "--lang <str> language code for the text record (default: en)",
+                "--aar <str> Android Application Record, ie an app package name",
+                "-d, --data <hex> Raw NDEF bytes to write",
+                "-f, --file <fn> Raw NDEF file to write",
+                "-v, --verbose Verbose output",
+                "--schann use secure channel. Must have key"
+            ],
+            "usage": "hf mfu ndefwrite [-hlv] [-k <hex>] [--uri <str>] [--text <str>] [--lang <str>] [--aar <str>] [-d <hex>] [-f <fn>] [--schann]"
         },
         "hf mfu otptear": {
             "command": "hf mfu otptear",
@@ -9949,7 +10085,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -10120,7 +10256,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -10218,7 +10354,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -10288,7 +10424,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -10337,7 +10473,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -10465,9 +10601,10 @@
                 "--bar bar style",
                 "--mix mixed style",
                 "--value values style",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--rgb (PM5) mirror the tuning level on the antenna RGB LED"
             ],
-            "usage": "hf tune [-hv] [-n <dec>] [--bar] [--mix] [--value]"
+            "usage": "hf tune [-hv] [-n <dec>] [--bar] [--mix] [--value] [--rgb]"
         },
         "hf vas decrypt": {
             "command": "hf vas decrypt",
@@ -10573,7 +10710,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -10652,6 +10789,21 @@
             ],
             "usage": "hints [-h10]"
         },
+        "hw ant_pm5": {
+            "command": "hw ant_pm5",
+            "description": "Control the antennal of pm5",
+            "notes": [
+                "hw ant_pm5 --set <u8_data> -> Write the data of IO data register",
+                "hw ant_pm5 -m --set <u8_data> -> Write the data of IO map register"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-m, --map Write the IO map register",
+                "-s, --set <u8_data> Set PM5 antenna"
+            ],
+            "usage": "hw ant_pm5 [-hm] [-s <u8_data>]"
+        },
         "hw bootloader": {
             "command": "hw bootloader",
             "description": "Reboot Proxmark3 into bootloader mode",
@@ -10675,6 +10827,84 @@
                 "-h, --help This help"
             ],
             "usage": "hw break [-h]"
+        },
+        "hw bwmautooff": {
+            "command": "hw bwmautooff",
+            "description": "Toggle automatic power-off when the PM5 is unplugged from USB (BWM only). Default is on. When on, the board powers itself down ~10s after USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery. Button power-on is unaffected. Disable for standalone/BLE use on battery. Runtime only: resets to on at each boot.",
+            "notes": [
+                "hw bwmautooff --off -> disable auto power-off",
+                "hw bwmautooff --on -> re-enable auto power-off"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--on enable auto power-off (default)",
+                "--off disable auto power-off"
+            ],
+            "usage": "hw bwmautooff [-h] [--on] [--off]"
+        },
+        "hw bwmcharge": {
+            "command": "hw bwmcharge",
+            "description": "Enable or disable BWM battery charging by clearing/setting the AW32001E charge-enable bit (CEB, REG01[3]). PM5 only. One-shot: the charger watchdog reverts this after ~160 s unless serviced, so charging may stop on its own. Use to nudge a top-up.",
+            "notes": [
+                "hw bwmcharge -on -> enable charging",
+                "hw bwmcharge --off -> disable charging"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--on enable charging (default)",
+                "--off disable charging"
+            ],
+            "usage": "hw bwmcharge [-h] [--on] [--off]"
+        },
+        "hw bwmsetcap": {
+            "command": "hw bwmsetcap",
+            "description": "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell. Run ONCE after fitting or replacing the battery. This triggers a gauge config-update; do not run it repeatedly, as that disrupts the Impedance Track learning cycle. PM5 only.",
+            "notes": [
+                "hw bwmsetcap -> set design capacity to default 500 mAh",
+                "hw bwmsetcap --cap 500 -> set design capacity to 500 mAh"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--cap <mAh> design capacity in mAh (default 500)"
+            ],
+            "usage": "hw bwmsetcap [-h] [--cap <mAh>]"
+        },
+        "hw bwmvchg": {
+            "command": "hw bwmvchg",
+            "description": "Set the BWM charger (AW32001E) charge-voltage regulation target. Lowering it below 4.2 V reduces top-of-charge stress and extends cell life. Snaps to the nearest 15 mV step; clamped to 3600..4200 mV. This is a runtime register write (reverts on the charger watchdog / POR); the firmware re-applies the 4100 mV default at every boot. PM5 only.",
+            "notes": [
+                "hw bwmvchg -> set charge voltage to default 4100 mV (->4.095 V)",
+                "hw bwmvchg --mv 4200 -> set charge voltage to 4200 mV"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--mv <mV> charge voltage in mV (default 4100, clamped 3600..4200)"
+            ],
+            "usage": "hw bwmvchg [-h] [--mv <mV>]"
+        },
+        "hw bwmwifi": {
+            "command": "hw bwmwifi",
+            "description": "Bring up the BWM in STA + TCP-server mode: join a WiFi network and start a TCP server so the client can connect over WiFi. PM5 only.",
+            "notes": [
+                "hw bwmwifi --ssid Home --pwd secret -> port 7777",
+                "hw bwmwifi --ssid Home --pwd secret --port 9000",
+                "hw bwmwifi --status -> show connection state + IP"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--ssid <ssid> WiFi SSID to join (omit with --stop)",
+                "--pwd <pwd> WiFi password (omit for open network)",
+                "--port <dec> TCP server listen port (default 7777)",
+                "--hostname <name> DHCP hostname (default Proxmark5)",
+                "--stop tear down WiFi and return to BLE-only",
+                "--status show current WiFi connection state + IP"
+            ],
+            "usage": "hw bwmwifi [-h] [--ssid <ssid>] [--pwd <pwd>] [--port <dec>] [--hostname <name>] [--stop] [--status]"
         },
         "hw connect": {
             "command": "hw connect",
@@ -10725,9 +10955,23 @@
             ],
             "usage": "hw decay [-h] [--ms <dec>] [--us <dec>]"
         },
-        "hw fpgaoff": {
-            "command": "hw fpgaoff",
-            "description": "Turn of fpga and antenna field",
+        "hw factorydata": {
+            "command": "hw factorydata",
+            "description": "Get/Set the factory data for Device",
+            "notes": [
+                "hw factorydata --load <file> -> Write the factory data to device from file",
+                "hw factorydata -> Read and parse the factory data from device"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--load <fn> Load factory data from file to device"
+            ],
+            "usage": "hw factorydata [-h] [--load <fn>]"
+        },
+        "hw fpga": {
+            "command": "hw fpga",
+            "description": "help This help ------------- ----------------------- Operation ----------------------- --------------------------------------------------------------------------------------- hw fpgaoff available offline: no Turn of fpga and antenna field",
             "notes": [
                 "hw fpgaoff"
             ],
@@ -10791,6 +11035,20 @@
                 "-l, --len <dec> length of payload to send"
             ],
             "usage": "hw ping [-h] [-l <dec>]"
+        },
+        "hw qc_pm5": {
+            "command": "hw qc_pm5",
+            "description": "QC Test for the PM5",
+            "notes": [
+                "hw qc_pm5 -> run QC test with default 20 second timeout",
+                "hw qc_pm5 -t 3 -> run QC test with a 3 second timeout"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-t, --timeout <s> test sequence timeout in seconds (default 20)"
+            ],
+            "usage": "hw qc_pm5 [-h] [-t <s>]"
         },
         "hw readmem": {
             "command": "hw readmem",
@@ -10897,7 +11155,7 @@
         },
         "hw tearoff": {
             "command": "hw tearoff",
-            "description": "Configure a tear-off hook for the next write command supporting tear-off After having been triggered by a write command, the tear-off hook is deactivated Delay (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us.",
+            "description": "Configure a tear-off hook for the next write command supporting tear-off After having been triggered by a write command, the tear-off hook is deactivated Delay (in us) must be between 1 and 65535 (65ms). Precision is about 1/3us.",
             "notes": [
                 "hw tearoff --delay 1200 -> define delay of 1200us",
                 "hw tearoff --on -> (re)activate a previously defined delay",
@@ -10907,7 +11165,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--delay <dec> Delay in us before triggering tear-off, must be between 1 and 43000",
+                "--delay <dec> Delay in us before triggering tear-off, must be between 1 and 65535",
                 "--on Activate tear-off hook",
                 "--off Deactivate tear-off hook",
                 "--skip <dec> Skip N triggers before activating the hook",
@@ -11122,7 +11380,7 @@
         },
         "lf cotag reader": {
             "command": "lf cotag reader",
-            "description": "Read a COTAG tag. - use `lf config` to set parameters except divisor (which is assumed 90 for cotag. Use --divisor to override). - use `data plot` to look at it. - use `lf cotag demod` to try to demodulate it. If the number of samples is more than the device memory limit (40000 now), it will try to use the real-time sampling mode. Note: Cotag has an extremely slow data rate - RF/768 -- capturing a full 128 bit card read requires a minimum of 128 x 768 samples, or a multiple thereof.",
+            "description": "Read a COTAG tag. - use `lf config` to set parameters except divisor (which is assumed 90 for cotag. Use --divisor to override). - use `data plot` to look at it. - use `lf cotag demod` to try to demodulate it. If the number of samples is more than the device memory limit, it will try to use the real-time sampling mode. Note: Cotag has an extremely slow data rate - RF/768 -- capturing a full 128 bit card read requires a minimum of 128 x 768 samples, or a multiple thereof.",
             "notes": [
                 "lf cotag reader -v -s 700000 -> collect 700000 samples",
                 "lf cotag reader -v --divisor 89 -s 700000 -> use divisor 89, collect 700000 samples"
@@ -12275,7 +12533,7 @@
         },
         "lf hitag crack2": {
             "command": "lf hitag crack2",
-            "description": "This command tries to recover 2048 bits of Hitag 2 crypto stream data.",
+            "description": "This command tries to recover 2048 bits of Hitag 2 crypto stream data from card. Put card on pm3 before running this command",
             "notes": [
                 "lf hitag crack2 --nrar 73AA5A62EAB8529C"
             ],
@@ -12329,14 +12587,19 @@
             "command": "lf hitag eview",
             "description": "It displays emulator memory",
             "notes": [
-                "lf hitag eview"
+                "lf hitag eview -2",
+                "lf hitag eview -s"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose Verbose output"
+                "-v, --verbose Verbose output",
+                "-1, --ht1 Card type Hitag 1",
+                "-2, --ht2 Card type Hitag 2 (default)",
+                "-s, --hts Card type Hitag S",
+                "-m, --htm Card type Hitag \u03bc"
             ],
-            "usage": "lf hitag eview [-hv]"
+            "usage": "lf hitag eview [-hv12sm]"
         },
         "lf hitag help": {
             "command": "lf hitag help",
@@ -12351,7 +12614,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -12395,7 +12658,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -12532,7 +12795,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -12608,15 +12871,18 @@
         },
         "lf hitag info": {
             "command": "lf hitag info",
-            "description": "Hitag 2 tag information",
+            "description": "Hitag 2 tag information The configuration byte lives in page 3, which needs authentication. Without a key the two factory defaults are tried.",
             "notes": [
-                "lf hitag info"
+                "lf hitag info",
+                "lf hitag info -k 4D494B52 -> 4 bytes, password mode",
+                "lf hitag info -k 4F4E4D494B52 -> 6 bytes, crypto mode"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-k, --key <hex> key, 4 bytes for password mode, 6 bytes for crypto mode"
             ],
-            "usage": "lf hitag info [-h]"
+            "usage": "lf hitag info [-h] [-k <hex>]"
         },
         "lf hitag lookup": {
             "command": "lf hitag lookup",
@@ -12674,31 +12940,59 @@
             ],
             "usage": "lf hitag reader [-h@]"
         },
+        "lf hitag restore": {
+            "command": "lf hitag restore",
+            "description": "Write a Hitag 2 dump file back to a tag. Pages are written in dependency order: user pages first, then the key material in pages 1 and 2, and the configuration in page 3 last - because page 3 is what switches the tag's mode, and pages 1 and 2 change the very credential needed to write it. Page 0 holds the UID and is never written.",
+            "notes": [
+                "lf hitag restore -f dump.bin -k 4D494B52",
+                "lf hitag restore -f dump.bin -k 4F4E4D494B52",
+                "lf hitag restore -f dump.bin -> try the factory defaults"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> specify dump filename",
+                "-k, --key <hex> key, 4 bytes for password mode, 6 bytes for crypto mode",
+                "--force write even if the configuration byte looks wrong"
+            ],
+            "usage": "lf hitag restore [-h] -f <fn> [-k <hex>] [--force]"
+        },
         "lf hitag sim": {
             "command": "lf hitag sim",
             "description": "Simulate Hitag transponder You need to `lf hitag eload` first",
             "notes": [
-                "lf hitag sim -2"
+                "lf hitag sim -2",
+                "lf hitag sim -2 -t 20 -> set edge detect threshold to 20"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-1, --ht1 simulate Hitag 1",
-                "-2, --ht2 simulate Hitag 2"
+                "-2, --ht2 simulate Hitag 2",
+                "-t, --threshold <dec> edge detect threshold, 0 = auto (def: 0)",
+                "--twait <dec> tag response delay in T0, 0 = default 227",
+                "--invert invert load modulation polarity",
+                "--noalt answer every START_AUTH, not every second",
+                "--hold diagnostic: hold coil load on",
+                "--diag <dec> diagnostic flag bits, ORed into flags (32 = slope, now default)",
+                "--sof <dec> SOF bits in the tag answer (def: 6)",
+                "--duty <dec> carrier periods loaded per half bit, 1..16 (def: 16)"
             ],
-            "usage": "lf hitag sim [-h12]"
+            "usage": "lf hitag sim [-h12] [-t <dec>] [--twait <dec>] [--invert] [--noalt] [--hold] [--diag <dec>] [--sof <dec>] [--duty <dec>]"
         },
         "lf hitag sniff": {
             "command": "lf hitag sniff",
             "description": "Sniff the communication between reader and tag Use `lf hitag list` to view collected data.",
             "notes": [
-                "lf hitag sniff"
+                "lf hitag sniff",
+                "lf hitag sniff -t 20 -> lower edge detect threshold"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-t, --threshold <dec> edge detect threshold, 0 = default 32"
             ],
-            "usage": "lf hitag sniff [-h]"
+            "usage": "lf hitag sniff [-h] [-t <dec>]"
         },
         "lf hitag test": {
             "command": "lf hitag test",
@@ -13632,7 +13926,7 @@
         },
         "lf read": {
             "command": "lf read",
-            "description": "Sniff low frequency signal. - use `lf config` to set parameters. - use `data plot` to look at it. If the number of samples is more than the device memory limit (40000 now), it will try to use the real-time sampling mode.",
+            "description": "Sniff low frequency signal. - use `lf config` to set parameters. - use `data plot` to look at it. If the number of samples is more than the device memory limit, it will try to use the real-time sampling mode.",
             "notes": [
                 "lf read -v -s 12000 -> collect 12000 samples",
                 "lf read -s 3000 -@ -> oscilloscope style"
@@ -13648,14 +13942,14 @@
         },
         "lf relay": {
             "command": "lf relay",
-            "description": "Relay LF signal between two Proxmark3 devices over TCP. By default it uses PORT 8000 and uses 40000 samples from Graphbuffer --rdr : Reading device, act as IP client and reads LF tag and sends data --tag : Simulation device, act as IP server and simulates relayed data",
+            "description": "Relay LF signal between two Proxmark3 devices over TCP. By default it uses PORT 8000 and uses 30000 samples from Graphbuffer --rdr : Reading device, act as IP client and reads LF tag and sends data --tag : Simulation device, act as IP server and simulates relayed data",
             "notes": [
                 "Device A, reading LF tag, client",
                 "lf relay --rdr --ip 192.168.1.141 -> Client, connect to IP 192.168.1.141:8000",
                 "lf relay --rdr --ip 192.168.1.141 -p 18111 -> Client, connect to IP 192.168.1.141:18111",
                 "",
                 "Device B, simulate LF tag, server",
-                "lf relay --tag -p 8111 -> Server listening port 8111, recv 40000 samples",
+                "lf relay --tag -p 8111 -> Server listening port 8111, recv 30000 samples",
                 "lf relay --tag -s 10000 -> Server listening port 8000, recv 10000 samples"
             ],
             "offline": false,
@@ -13664,7 +13958,7 @@
                 "--tag Simulation device, act as Server",
                 "--rdr Sniffing device, act as client",
                 "-i, --ip <ipaddr> Target IPv4 address to send data to. Used with `--rdr`",
-                "-s, --samples <dec> Number of samples to collect (def: 40000)",
+                "-s, --samples <dec> Number of samples to collect (def: 30000)",
                 "-p, --port <dec> Port number (def: 8000)"
             ],
             "usage": "lf relay [-h] [--tag] [--rdr] [-i <ipaddr>] [-s <dec>] [-p <dec>]"
@@ -13780,18 +14074,6 @@
             ],
             "usage": "lf simask [-hiv] [-c <dec>] [--bi] [--am] [--ar] [--stt] [-d <hex>]"
         },
-        "lf simbidir": {
-            "command": "lf simbidir",
-            "description": "Simulate LF tag with bidirectional data transmission between reader and tag",
-            "notes": [
-                "lf simbidir"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help"
-            ],
-            "usage": "lf simbidir [-h]"
-        },
         "lf simfsk": {
             "command": "lf simfsk",
             "description": "Simulate FSK tag from DemodBuffer or input. There are about four FSK modulations to know of. FSK1 - where fc/8 = high and fc/5 = low FSK1a - is inverted FSK1, ie: fc/5 = high and fc/8 = low FSK2 - where fc/10 = high and fc/8 = low FSK2a - is inverted FSK2, ie: fc/10 = high and fc/8 = low NOTE: if you set one clock manually set them all manually",
@@ -13840,7 +14122,7 @@
         },
         "lf sniff": {
             "command": "lf sniff",
-            "description": "Sniff low frequency signal. You need to configure the LF part on the Proxmark3 device manually. Usually a trigger and skip samples is a good thing to set before doing a low frequency sniff. - use `lf config` to set parameters. - use `data plot` to look at sniff signal. - use `lf search -1` to see if signal can be automatic decoded. If the number of samples is more than the device memory limit (40000 now), it will try to use the real-time sampling mode.",
+            "description": "Sniff low frequency signal. You need to configure the LF part on the Proxmark3 device manually. Usually a trigger and skip samples is a good thing to set before doing a low frequency sniff. - use `lf config` to set parameters. - use `data plot` to look at sniff signal. - use `lf search -1` to see if signal can be automatic decoded. If the number of samples is more than the device memory limit, it will try to use the real-time sampling mode.",
             "notes": [
                 "lf sniff -v",
                 "lf sniff -s 3000 -@ -> oscilloscope style"
@@ -14388,9 +14670,10 @@
                 "--bar bar style",
                 "--mix mixed style",
                 "--value values style",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--rgb (PM5) mirror the tuning level on the antenna RGB LED"
             ],
-            "usage": "lf tune [-hv] [-n <dec>] [-q <dec>] [-f <float>] [--bar] [--mix] [--value]"
+            "usage": "lf tune [-hv] [-n <dec>] [-q <dec>] [-f <float>] [--bar] [--mix] [--value] [--rgb]"
         },
         "lf viking clone": {
             "command": "lf viking clone",
@@ -14958,9 +15241,33 @@
             ],
             "usage": "hf thinfilm sim [-h] -d <hex> [--raw]"
         },
+        "nfc encode": {
+            "command": "nfc encode",
+            "description": "Encode NFC Data Exchange Format (NDEF) records. Combine several options to build a multi record message, records are added in the order listed below. By default a bare NDEF message is emitted. Use `--tlv` to wrap it in a NFC Forum Type 2 tag container ( 03 <len> ... FE ), which is what the `-d` parameter of `hf mf ndefwrite` and `hf 14a ndefwrite` expects. `hf mfu ndefwrite` adds the container itself, so it does not need `--tlv`",
+            "notes": [
+                "nfc encode --uri https://proxmark.com",
+                "nfc encode --uri tel:+123456789",
+                "nfc encode --text \"hello world\"",
+                "nfc encode --aar com.example.app",
+                "nfc encode --uri https://proxmark.com --aar com.example.app",
+                "nfc encode --uri https://proxmark.com --tlv -f myfilename"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--uri <str> URI record. URL, tel:, mailto:, ...",
+                "--text <str> Text record",
+                "--lang <str> language code for the text record (default: en)",
+                "--aar <str> Android Application Record, ie an app package name",
+                "--tlv wrap message in a NFC Forum Type 2 tag TLV container",
+                "-f, --file <fn> save raw bytes to file",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "nfc encode [-hv] [--uri <str>] [--text <str>] [--lang <str>] [--aar <str>] [--tlv] [-f <fn>]"
+        },
         "nfc help": {
             "command": "nfc help",
-            "description": "-------- --------------------- NFC Tags -------------------- type1 { NFC Forum Tag Type 1... } type2 { NFC Forum Tag Type 2... } type4a { NFC Forum Tag Type 4 ISO14443A... } type4b { NFC Forum Tag Type 4 ISO14443B... } mf { NFC Type MIFARE Classic/Plus Tag... } barcode { NFC Barcode Tag... } -------- --------------------- General --------------------- help This help decode Decode NDEF records --------------------------------------------------------------------------------------- nfc decode available offline: yes Decode and print NFC Data Exchange Format (NDEF) You must provide either data in hex or a filename, but not both",
+            "description": "-------- --------------------- NFC Tags -------------------- type1 { NFC Forum Tag Type 1... } type2 { NFC Forum Tag Type 2... } type4a { NFC Forum Tag Type 4 ISO14443A... } type4b { NFC Forum Tag Type 4 ISO14443B... } mf { NFC Type MIFARE Classic/Plus Tag... } barcode { NFC Barcode Tag... } -------- --------------------- General --------------------- help This help decode Decode NDEF records encode Encode NDEF records --------------------------------------------------------------------------------------- nfc decode available offline: yes Decode and print NFC Data Exchange Format (NDEF) You must provide either data in hex or a filename, but not both",
             "notes": [
                 "nfc decode -d 9101085402656e48656c6c6f5101085402656e576f726c64",
                 "nfc decode -d 0103d020240203e02c040300fe",
@@ -15098,6 +15405,35 @@
             ],
             "usage": "hf 14a ndefformat [-hv]"
         },
+        "nfc type2 write": {
+            "command": "nfc type2 write",
+            "description": "Write NFC Data Exchange Format (NDEF) records to a MIFARE Ultralight / NTAG tag. The tag must already be NDEF formatted, ie carry a Capability Container in block 3. Combine several of --uri, --text and --aar to build a multi record message, records are added in that order. Alternatively supply raw NDEF bytes with -d or -f, those get wrapped in a TLV container automatically when they are not already. Use `nfc encode` to build such raw bytes offline. Note: the tag is re-selected and re-authenticated for every block written, so a large message takes a while.",
+            "notes": [
+                "hf mfu ndefwrite --uri https://proxmark.com",
+                "hf mfu ndefwrite --uri tel:+123456789",
+                "hf mfu ndefwrite --text \"hello world\"",
+                "hf mfu ndefwrite --aar com.example.app",
+                "hf mfu ndefwrite --uri https://proxmark.com --aar com.example.app",
+                "hf mfu ndefwrite --uri https://proxmark.com -k ffffffff",
+                "hf mfu ndefwrite -d 0311D1010D550270726F786D61726B2E636F6DFE",
+                "hf mfu ndefwrite -f myfilename"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --key <hex> Authentication key (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)",
+                "-l Swap entered key endianness",
+                "--uri <str> URI record. URL, tel:, mailto:, ...",
+                "--text <str> Text record",
+                "--lang <str> language code for the text record (default: en)",
+                "--aar <str> Android Application Record, ie an app package name",
+                "-d, --data <hex> Raw NDEF bytes to write",
+                "-f, --file <fn> Raw NDEF file to write",
+                "-v, --verbose Verbose output",
+                "--schann use secure channel. Must have key"
+            ],
+            "usage": "hf mfu ndefwrite [-hlv] [-k <hex>] [--uri <str>] [--text <str>] [--lang <str>] [--aar <str>] [-d <hex>] [-f <fn>] [--schann]"
+        },
         "nfc type4a help": {
             "command": "nfc type4a help",
             "description": "-------- --------- NFC Forum Tag Type 4 ISO14443A ---------- -------- --------------------- General --------------------- help This help ======================================================================================= nfc type4b { NFC Forum Tag Type 4 ISO14443B... } --------------------------------------------------------------------------------------- nfc type4b read available offline: no Print NFC Data Exchange Format (NDEF)",
@@ -15148,7 +15484,7 @@
             "command": "nfc type4a write",
             "description": "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.",
             "notes": [
-                "hf 14a ndefwrite -d 0300FE -> write empty record to tag",
+                "hf 14a ndefwrite -d 0000 -> write empty record to tag",
                 "hf 14a ndefwrite -f myfilename",
                 "hf 14a ndefwrite -d 003fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031"
             ],
@@ -15235,7 +15571,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -15677,7 +16013,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -15719,14 +16055,35 @@
             ],
             "usage": "smart pcsc [-hvabc] [--host <str>] [-p <int>]"
         },
+        "smart pps": {
+            "command": "smart pps",
+            "description": "Run an ISO 7816-3 protocol and parameter selection exchange. With neither --t0 nor --t1 the card keeps the protocol its ATR says it runs, so --ta1 on its own changes the rate and nothing else. The card is reset and its ATR read first, because PPS is only legal in the window straight after the ATR. Note `smart raw --t1` already switches a card to T=1 by itself when the ATR offers it; this is for negotiating Fi/Di explicitly. Needs SIM module firmware v4.51 or newer. A negotiated rate is remembered against this card's ATR and put back after every later ATR, so it survives resets and reconnects. A different card drops it, and `--ta1 11` forgets it. A protocol change is not remembered: it applies until the next reset only, so it cannot silently break commands that build for the other protocol.",
+            "notes": [
+                "smart pps --ta1 93 -> rate only, framing left alone",
+                "smart pps --ta1 11 -> back to the default rate",
+                "smart pps --t1 -> select T=1",
+                "smart pps --t0 -> select T=0",
+                "smart pps --t1 --ta1 96 -> select T=1 and F=512 / D=32"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--t0 select protocol T=0",
+                "--t1 select protocol T=1",
+                "--ta1 <hex> also negotiate this TA1 (FI << 4 | DI)"
+            ],
+            "usage": "smart pps [-h] [--t0] [--t1] [--ta1 <hex>]"
+        },
         "smart raw": {
             "command": "smart raw",
             "description": "Sends raw bytes to card",
             "notes": [
                 "smart raw -s -0 -d 00a404000e315041592e5359532e4444463031 -> `1PAY.SYS.DDF01` PPSE directory with get ATR",
-                "smart raw -0 -d 00a404000e325041592e5359532e4444463031 -> `2PAY.SYS.DDF01` PPSE directory",
-                "smart raw -0 -t -d 00a4040007a0000000041010 -> Mastercard",
-                "smart raw -0 -t -d 00a4040007a0000000031010 -> Visa"
+                "smart raw --t0 -d 00a404000e325041592e5359532e4444463031 -> `2PAY.SYS.DDF01` PPSE directory",
+                "smart raw --t0 -t -d 00a4040007a0000000041010 -> Mastercard",
+                "smart raw --t0 -t -d 00a4040007a0000000031010 -> Visa",
+                "smart raw --t1 -s -d 00a404000e325041592e5359532e444446303100 -> PPSE over T=1",
+                "(T=1 carries the whole APDU, so case 4 needs its Le)"
             ],
             "offline": false,
             "options": [
@@ -15735,11 +16092,12 @@
                 "-a active smartcard without select (reset sc module)",
                 "-s active smartcard with select (get ATR)",
                 "-t, --tlv executes TLV decoder if it possible",
-                "-0 use protocol T=0",
+                "--t0 use protocol T=0",
+                "--t1 use protocol T=1 (needs SIM module fw v4.51+)",
                 "--timeout <ms> Timeout in MS waiting for SIM to respond. (def 337ms)",
                 "-d, --data <hex> bytes to send"
             ],
-            "usage": "smart raw [-hrast0] [--timeout <ms>] -d <hex>"
+            "usage": "smart raw [-hrast] [--t0] [--t1] [--timeout <ms>] -d <hex>"
         },
         "smart reader": {
             "command": "smart reader",
@@ -15822,7 +16180,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -16023,8 +16381,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 896,
+        "commands_extracted": 912,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-07-30T14:44:57+00:00"
+        "extracted_on": "2026-09-04T11:31:07+00:00"
     }
 }

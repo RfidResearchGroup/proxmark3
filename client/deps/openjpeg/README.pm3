@@ -1,0 +1,59 @@
+openjpeg (openjp2) - vendored for Proxmark3
+===========================================
+
+Why
+---
+Qt has no JPEG2000 image handler.  The old JasPer based `jp2` plugin was
+dropped from qtimageformats and neither Debian/Ubuntu nor Fedora ship a
+replacement -- `qt5-image-formats-plugins` and `qt6-image-formats-plugins`
+contain only ICNS, MNG, TGA, TIFF, WBMP and WEBP.
+
+Most eMRTD passports store EF_DG2 (the portrait) as JPEG2000, and EF_DG4
+(iris) uses it as well, so without a decoder of our own `hf emrtd info`
+could not show the very images people run it for.
+
+Origin
+------
+  https://github.com/uclouvain/openjpeg
+  tag v2.5.4
+  license: 2-clause BSD, see LICENSE in this directory
+
+2-clause BSD is GPL compatible, so it mixes with the Proxmark3 GPLv3
+codebase.  Keep the per file BSD headers intact, they are not ours to
+relicense.
+
+Upstream's own notice applies and is repeated here:
+
+  "This software may be subject to other third party and contributor
+   rights, including patent rights, and no such rights are granted under
+   this license."
+
+What was taken
+--------------
+Only the sources listed in upstream's `OPENJPEG_SRCS`
+(src/lib/openjp2/CMakeLists.txt), which is the openjp2 core library.
+
+Left out on purpose:
+  - the JPIP index box code (cidx_manager.c, indexbox_manager.h,
+    phix/ppix/thix/tpix_manager.c).  It is `#ifdef USE_JPIP` only and we
+    never define that.
+  - the bin/ codec applications, tests, benchmarks and the LUT generators
+    (t1_generate_luts.c, t1_ht_generate_luts.c, bench_dwt.c,
+    test_sparse_array.c).  The pre-generated LUT headers are kept.
+
+Local changes
+-------------
+  - opj_config.h and opj_config_private.h are hand written replacements
+    for the CMake generated ones.  They decide everything from compiler
+    predefines instead of configure time probes, so no CMake config step
+    is needed.  On Windows/MinGW no aligned-alloc macro is defined, which
+    makes openjpeg use its own portable fallback.
+  - Makefile added, for the non-CMake build.  The CMake side lives in
+    ../openjpeg.cmake
+
+No openjpeg .c or .h file was otherwise modified.
+
+Updating
+--------
+Copy the OPENJPEG_SRCS files from a new upstream tag over this directory,
+then keep opj_config.h, opj_config_private.h, Makefile and this README.

@@ -80,9 +80,11 @@ int Iso7816Connect(Iso7816CommandChannel channel) {
     return res;
 }
 
-int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool leave_field_on,
-                      sAPDU_t apdu, bool include_le, uint16_t le, uint8_t *result,
-                      size_t max_result_len, size_t *result_len, uint16_t *sw) {
+// allow_le_retry gates the 6Cxx reissue below; the retry itself passes false
+static int iso7816_exchange_core(Iso7816CommandChannel channel, bool activate_field, bool leave_field_on,
+                                 sAPDU_t apdu, bool include_le, uint16_t le, uint8_t *result,
+                                 size_t max_result_len, size_t *result_len, uint16_t *sw,
+                                 bool allow_le_retry) {
 
     *result_len = 0;
     if (sw) {
@@ -178,6 +180,29 @@ int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool l
         *sw = isw;
     }
 
+    // 6Cxx is "wrong length, ask again for xx". Handled here rather than per
+    // command since any case 2/4 APDU can get it - READ RECORD and GET DATA
+    // both do. Once only; the card has named the length.
+    if (allow_le_retry && ((isw >> 8) == 0x6C)) {
+
+        if (APDULogging) {
+            PrintAndLogEx(INFO, ">>> wrong length, reissuing with Le=%02X...", isw & 0xFF);
+        }
+
+        return iso7816_exchange_core(channel
+                                     , false
+                                     , leave_field_on
+                                     , apdu
+                                     , true
+                                     , (uint16_t)(isw & 0xFF)
+                                     , result
+                                     , max_result_len
+                                     , result_len
+                                     , sw
+                                     , false
+                                    );
+    }
+
     if (isw != ISO7816_OK) {
         if (APDULogging) {
             if (*sw >> 8 == 0x61) {
@@ -189,6 +214,14 @@ int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool l
         }
     }
     return PM3_SUCCESS;
+}
+
+int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool leave_field_on,
+                      sAPDU_t apdu, bool include_le, uint16_t le, uint8_t *result,
+                      size_t max_result_len, size_t *result_len, uint16_t *sw) {
+
+    return iso7816_exchange_core(channel, activate_field, leave_field_on, apdu, include_le, le,
+                                 result, max_result_len, result_len, sw, true);
 }
 
 int Iso7816Exchange(Iso7816CommandChannel channel, bool leave_field_on, sAPDU_t apdu, uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
@@ -208,9 +241,9 @@ int Iso7816Exchange(Iso7816CommandChannel channel, bool leave_field_on, sAPDU_t 
 int Iso7816Select(Iso7816CommandChannel channel, bool activate_field, bool leave_field_on, uint8_t *aid, size_t aid_len,
                   uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
 
-    return Iso7816ExchangeEx(channel
-                             , activate_field
-                             , leave_field_on
+    int res = Iso7816ExchangeEx(channel
+                                , activate_field
+                                , leave_field_on
     , (sAPDU_t) {0x00, 0xa4, 0x04, 0x00, aid_len, aid}
     , (channel == CC_CONTACTLESS)
     , 0
@@ -218,5 +251,30 @@ int Iso7816Select(Iso7816CommandChannel channel, bool activate_field, bool leave
     , max_result_len
     , result_len
     , sw
-                            );
+                               );
+
+    // T=1 carries the whole APDU in one block, so a case 4 command must include
+    // Le - unlike T=0, which answers 61xx and hands the data over via GET
+    // RESPONSE. A strict card answers 6700 without it. Reissue rather than work
+    // out which protocol the link ended up on.
+    if ((channel == CC_CONTACT) && (sw != NULL) && ((*sw == 0x6700) || (*sw == 0x6F00))) {
+
+        if (APDULogging) {
+            PrintAndLogEx(INFO, ">>> wrong length, reissuing SELECT with Le...");
+        }
+
+        res = Iso7816ExchangeEx(channel
+                                , false
+                                , leave_field_on
+        , (sAPDU_t) {0x00, 0xa4, 0x04, 0x00, aid_len, aid}
+        , true
+        , 0
+        , result
+        , max_result_len
+        , result_len
+        , sw
+                               );
+    }
+
+    return res;
 }

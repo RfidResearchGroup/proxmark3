@@ -30,6 +30,11 @@
 int CmdSmartcard(const char *Cmd);
 
 bool smart_select(bool verbose, smart_card_atr_t *atr);
+// Ask the contact exchanges for T=1 rather than the default T=0.  Only needed
+// for a card that offers both - the ARM redirects a T=1 only card by itself.
+void SetSmartcardProtocolT1(bool use_t1);
+bool GetSmartcardProtocolT1(void);
+
 int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
 
 #endif

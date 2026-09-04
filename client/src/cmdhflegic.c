@@ -35,7 +35,7 @@ static int CmdHelp(const char *Cmd);
 #define LEGIC_PRIME_MIM256  256
 #define LEGIC_PRIME_MIM1024 1024
 #define LEGIC_BLOCK_SIZE    8
-#define LEGIC_PACKET_SIZE   (PM3_CMD_DATA_SIZE - sizeof(legic_packet_t))
+#define LEGIC_PACKET_SIZE   (g_conn.max_cmd_data_size - sizeof(legic_packet_t))
 
 static bool legic_xor(uint8_t *data, uint16_t cardsize) {
 
@@ -570,7 +570,7 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
             // for printing the complete segment we need at least wrc + wrp_len + remain_seg_payload_len bytes
             if ((i + wrc + wrp_len + remain_seg_payload_len) > card_size) {
                 PrintAndLogEx(FAILED, "Cannot read segment body, because the input buffer is too small. "
-                              "Please check that the data is correct and properly aligned. ");
+                                      "Please check that the data is correct and properly aligned. ");
                 return_value = PM3_EOUTOFBOUND;
                 goto out;
             }
@@ -654,7 +654,7 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
         // for printing the complete segment we need at least wrc + wrp_len + remain_seg_payload_len bytes
         if ((i + wrc + wrp_len + remain_seg_payload_len) > card_size) {
             PrintAndLogEx(FAILED, "Cannot read segment body, because the input buffer is too small. "
-                          "Please check that the data is correct and properly aligned. ");
+                                  "Please check that the data is correct and properly aligned. ");
             return_value = PM3_EOUTOFBOUND;
             goto out;
         }

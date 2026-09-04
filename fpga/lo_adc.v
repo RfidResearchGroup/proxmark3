@@ -26,6 +26,7 @@ module lo_adc(
     input [7:0] adc_d,
     input [7:0] divisor,
     input lf_field,
+    input lf_weak_load,
     input ssp_dout,
 
     output ssp_din,
@@ -56,8 +57,10 @@ assign pwr_hi  = 1'b0;
 // low frequency outputs
 assign pwr_lo  = reader_modulation;
 assign pwr_oe2 = 1'b0;  // 33 Ohms
-assign pwr_oe3 = tag_modulation; // base antenna load = 33 Ohms
-assign pwr_oe4 = 1'b0;  // 10k Ohms
+// lf_weak_load moves the modulation from the 33 Ohm leg to the 10k one, so the
+// depth measured here matches what lo_edge_detect does in the same mode.
+assign pwr_oe3 = tag_modulation & ~lf_weak_load; // base antenna load = 33 Ohms
+assign pwr_oe4 = tag_modulation & lf_weak_load;  // 10k Ohms
 
 // Debug Output ADC clock
 assign debug = adc_clk;

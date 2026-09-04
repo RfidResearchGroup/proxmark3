@@ -24,8 +24,10 @@
 #include "cmd.h"
 #include "appmain.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "ticks_apis.h"
+#include "fpga_apis.h"
+#include "rssi_apis.h"
 #include "dbprint.h"
 #include "util.h"
 #include "parity.h"
@@ -37,15 +39,13 @@
 #include "desfire_crypto.h"  // UL-C authentication helpers
 #include "mifare.h"  // for iso14a_polling_frame_t structure
 #include "cmac_calc.h"
-#include "usb_cdc.h"
+#include "usb_cdc_apis.h"
 
 // Forward declaration: HID Config Card jam support (implemented in secc.c).
 // Called from SniffIso14443a when param bit 0x04 is set.
 bool hid_config_card_jam(const uint8_t *cmd, int len, uint8_t *dma_buf);
 
 static uint32_t iso14a_timeout;
-
-static uint8_t colpos = 0;
 
 // the block number for the ISO14443-4 PCB
 static uint8_t iso14_pcb_blocknum = 0;
@@ -312,6 +312,12 @@ void iso14a_set_timeout(uint32_t timeout) {
 
 uint32_t iso14a_get_timeout(void) {
     return iso14a_timeout - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 128 - 2;
+}
+
+void iso14a_rebase_transfer_time(void) {
+    //Restarting StartCountSspClk() resets NextTransferTime clock-counts to zero; retaining old value makes ReaderTransmit() wait stale time from previous APDU.
+    //Do not reset PCB or ATS state here.
+    NextTransferTime = 2 * DELAY_ARM2AIR_AS_READER;
 }
 
 //-----------------------------------------------------------------------------
@@ -804,7 +810,7 @@ static int ManchesterDecoding_Thinfilm(uint8_t bit) {
 // near the reader.
 // "hf 14a sniff"
 //-----------------------------------------------------------------------------
-void RAMFUNC SniffIso14443a(uint8_t param) {
+int RAMFUNC SniffIso14443a(uint8_t param) {
     LEDsoff();
     // param:
     // bit 0 - trigger from first card answer
@@ -825,8 +831,14 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     uint8_t *receivedResp = BigBuf_calloc(MAX_FRAME_SIZE);
     uint8_t *receivedRespPar = BigBuf_calloc(MAX_PARITY_SIZE);
 
+    if (receivedCmd == NULL || receivedCmdPar == NULL || receivedResp == NULL || receivedRespPar == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("Sniff 14a: failed to allocate buffers");
+        BigBuf_free();
+        return PM3_EMALLOC;
+    }
+
     uint8_t previous_data = 0;
-    int maxDataLen = 0, dataLen;
+    int dataLen;
     bool TagIsActive = false;
     bool ReaderIsActive = false;
 
@@ -845,9 +857,9 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     uint8_t *data = dma->buf;
 
     // Setup and start DMA.
-    if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
-        return;
+    if (FpgaSetupSscRxDmaRepeat((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
+        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscRxDmaRepeat failed. Exiting");
+        return PM3_EIO;
     }
 
     // We won't start recording the frames that we acquire until we trigger;
@@ -859,7 +871,6 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     uint32_t rx_samples = 0;
     uint32_t overrun_skips = 0;
     uint32_t dma_stalls = 0;
-
     uint16_t checker = 12000;
 
     // loop and listen
@@ -875,24 +886,17 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
         }
 
         register int readBufDataP = data - dma->buf;
-        register int dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
+        register int dmaBufDataP = DMA_BUFFER_SIZE - FPGA_SSC_DMA_RX_Remaining_Count();
         if (readBufDataP <= dmaBufDataP) {
             dataLen = dmaBufDataP - readBufDataP;
         } else {
             dataLen = DMA_BUFFER_SIZE - readBufDataP + dmaBufDataP;
         }
 
-        if (dataLen > maxDataLen) {
-            maxDataLen = dataLen;
-        }
-
         // DMA fully stalled: both buffers exhausted. Re-arm primary + secondary,
         // resync the read pointer, and drop the in-flight frame.
-        if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
-            AT91C_BASE_PDC_SSC->PDC_RPR  = (uint32_t) dma->buf;
-            AT91C_BASE_PDC_SSC->PDC_RCR  = DMA_BUFFER_SIZE;
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+        if (FPGA_SSC_DMA_RX_Primary_Done()) {
+            FPGA_SSC_DMA_RX_Refresh_Both(dma->buf, DMA_BUFFER_SIZE);
             data = dma->buf;
             rx_samples += DMA_BUFFER_SIZE;
             Uart14aReset();
@@ -914,14 +918,14 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
             continue;
         }
 
+        // The MCU is processing data fast enough that the DMA has not yet received any new data.
         if (dataLen < 1) {
             continue;
         }
 
         // secondary buffer exhausted, primary still running — refill secondary
-        if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+        if (FPGA_SSC_DMA_RX_Secondary_Done()) {
+            FPGA_SSC_DMA_RX_Refresh_Secondary(dma->buf, DMA_BUFFER_SIZE);
         }
 
         LED_A_OFF();
@@ -929,6 +933,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
         // Need two samples to feed Miller and Manchester-Decoder
         if (rx_samples & 0x01) {
 
+            // Reader -> Tag
             // no need to try decoding reader data if the tag is sending
             if (TagIsActive == false) {
 
@@ -967,6 +972,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
                 ReaderIsActive = (Uart.state != STATE_14A_UNSYNCD);
             }
 
+            // Tag -> Reader
             // no need to try decoding tag data if the reader is sending - and we cannot afford the time
             if (ReaderIsActive == false) {
 
@@ -1016,6 +1022,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
         }
     }
     switch_off();
+    return PM3_SUCCESS;
 }
 
 //-----------------------------------------------------------------------------
@@ -1151,7 +1158,7 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint16_t received_maxlen, 
     Uart14aInit(received, received_maxlen, par);
 
     // clear RXRDY:
-    uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
     (void)b;
 
     uint8_t flip = 0;
@@ -1180,8 +1187,8 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint16_t received_maxlen, 
             checker = 4000;
         }
 
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            b = (uint8_t)FPGA_SSC_RX_Value();
             if (MillerDecoding(b, 0)) {
                 *len = Uart.len;
                 return true;
@@ -1696,6 +1703,12 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
 #define ALLOCATED_TAG_MODULATION_BUFFER_SIZE (  ((77 + rATS_len) * 8) + 77 + rATS_len + 12 + 12 + 12)
 
     uint8_t *free_buffer = BigBuf_calloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
+    if (free_buffer == NULL) {
+        BigBuf_free_keep_EM();
+        if (g_dbglevel >= DBG_ERROR) DbpString("Failed to allocate modulation buffer");
+        return false;
+    }
+
     // modulation buffer pointer and current buffer free space size
     uint8_t *free_buffer_pointer = free_buffer;
     size_t free_buffer_size = ALLOCATED_TAG_MODULATION_BUFFER_SIZE;
@@ -2597,7 +2610,6 @@ static void PrepareDelayedTransfer(uint16_t delay) {
     }
 }
 
-
 //-------------------------------------------------------------------------------------
 // Transmit the command (to the tag) that was placed in ToSend[].
 // Parameter timing:
@@ -2613,7 +2625,10 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
         return;
     }
 
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+    // DXL: If the mode is set to FPGA_MAJOR_MODE_OFF before transmission, the timing wait will freeze.
+    //  If you need to handle this situation, you can uncomment the code below(SPEED is affected).
+    //  And do not use the FPGA_HF_ISO14443A_READER_MOD!!!
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_LISTEN);
 
     if (timing) {
 
@@ -2632,14 +2647,28 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
         ThisTransferTime = ((MAX(NextTransferTime, GetCountSspClk()) & 0xfffffff8) + 8);
 
         while (GetCountSspClk() < ThisTransferTime) {};
-
         LastTimeProxToAirStart = ThisTransferTime;
+
     }
+
+    // DXL: Switch to this mode before actually starting to send. Otherwise, it may cause delays between frames to fail.
+    //  14b also has this problem, which requires waiting for the frame delay to complete
+    //  before switching to modulation transmission mode to send data.
+    //  If we don't do this, there is a possibility of randomly encountering communication exception bugs
+    //  on high-performance processors such as AT32, which is very fatal!
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
+
+    // If the transmission is not cleared, there is a high probability of communication abnormalities.
+    // I suspect that the wrong DOUT level may have modulated data that should not have been modulated.
+    // If further research is needed, an oscilloscope needs to be used to observe the specific DOUT modulation status.
+    // ---
+    // Clear TXRDY:
+    FPGA_SSC_TX_Value(SEC_Y);
 
     uint16_t c = 0;
     while (c < len) {
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-            AT91C_BASE_SSC->SSC_THR = cmd[c];
+        if (FPGA_SSC_TX_Ready()) {
+            FPGA_SSC_TX_Value(cmd[c]);
             c++;
         }
     }
@@ -2750,23 +2779,13 @@ int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_
     LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
-    // Set ADC to read field strength
-    AT91C_BASE_ADC->ADC_CR = AT91C_ADC_SWRST;
-    AT91C_BASE_ADC->ADC_MR =
-        ADC_MODE_PRESCALE(63) |
-        ADC_MODE_STARTUP_TIME(1) |
-        ADC_MODE_SAMPLE_HOLD_TIME(15);
-
-    AT91C_BASE_ADC->ADC_CHER = ADC_CHANNEL(ADC_CHAN_HF);
-
-    // start ADC
-    AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
+    AdcSetupRssiChannel(ADC_RSSI_CH_HF);
 
     // Now run a 'software UART' on the stream of incoming samples.
     Uart14aInit(received, received_max_len, par);
 
     // Clear RXRDY:
-    uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
     (void)b;
 
     uint8_t flip = 0;
@@ -2802,17 +2821,17 @@ int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_
 
 
         // test if the field exists
-        if (AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ADC_CHAN_HF)) {
+        if (AdcRssiDataReady(ADC_RSSI_CH_HF)) {
 
             analogCnt++;
 
-            analogAVG += (AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF] & 0x3FF);
+            analogAVG += AdcRssiDataRead(ADC_RSSI_CH_HF);
 
-            AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
+            AdcRssiConversionStart();
 
             if (analogCnt >= 32) {
 
-                if ((MAX_ADC_HF_VOLTAGE * (analogAVG / analogCnt) >> 10) < MF_MINFIELDV) {
+                if (AdcRssiDataToMilliVolt(analogAVG / analogCnt, ADC_RSSI_CH_HF) < MF_MINFIELDV) {
 
                     if (timer == 0) {
                         timer = GetTickCount();
@@ -2831,8 +2850,8 @@ int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_
         }
 
         // receive and test the miller decoding
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            b = (uint8_t)FPGA_SSC_RX_Value();
             if (MillerDecoding(b, 0)) {
                 *len = Uart.len;
                 return 0;
@@ -2862,14 +2881,14 @@ int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
     i = (correction_needed) ? 0 : 1;
 
     // clear receiving shift register and holding register
-    while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
-    b = AT91C_BASE_SSC->SSC_RHR;
+    FPGA_SSC_RX_READY_WAIT();
+    b = FPGA_SSC_RX_Value();
     (void) b;
 
     // wait for the FPGA to signal fdt_indicator == 1 (the FPGA is ready to queue new data in its delay line)
     for (uint8_t j = 0; j < 5; j++) {    // allow timeout - better late than never
-        while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
-        if (AT91C_BASE_SSC->SSC_RHR) {
+        FPGA_SSC_RX_READY_WAIT();
+        if (FPGA_SSC_RX_Value()) {
             break;
         }
     }
@@ -2877,22 +2896,24 @@ int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
     while ((ThisTransferTime = GetCountSspClk()) & 0x00000007);
 
     // Clear TXRDY:
-    AT91C_BASE_SSC->SSC_THR = SEC_F;
+    FPGA_SSC_TX_Value(SEC_F);
 
     // send cycle
     for (; i < respLen;) {
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-            AT91C_BASE_SSC->SSC_THR = resp[i++];
-            FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_TX_Ready()) {
+            FPGA_SSC_TX_Value(resp[i++]);
+            FPGA_SSC_RX_READY_WAIT();
+            FpgaSendQueueDelay = (uint8_t)FPGA_SSC_RX_Value();
         }
     }
 
     // Ensure that the FPGA Delay Queue is empty before we switch to TAGSIM_LISTEN again:
     uint8_t fpga_queued_bits = FpgaSendQueueDelay >> 3;
     for (i = 0; i <= (fpga_queued_bits >> 3) + 1;) {
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-            AT91C_BASE_SSC->SSC_THR = SEC_F;
-            FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_TX_Ready()) {
+            FPGA_SSC_TX_Value(SEC_F);
+            FPGA_SSC_RX_READY_WAIT();
+            FpgaSendQueueDelay = (uint8_t)FPGA_SSC_RX_Value();
             i++;
         }
     }
@@ -3014,7 +3035,7 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_
     Demod14aInit(receivedResponse, rec_maxlen, NULL);
 
     // clear RXRDY:
-    uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
     (void)b;
 
     uint32_t timeout = iso14a_get_timeout();
@@ -3023,8 +3044,8 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_
     for (;;) {
         WDT_HIT();
 
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            b = (uint8_t)FPGA_SSC_RX_Value();
             if (ManchesterDecoding_Thinfilm(b)) {
                 *received_len = Demod.len;
                 LogTrace(receivedResponse, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, NULL, false);
@@ -3064,7 +3085,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint16_t rec_max
     Demod14aInit(receivedResponse, rec_maxlen, receivedResponsePar);
 
     // clear RXRDY:
-    uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
     (void)b;
 
     volatile uint32_t c = 0;
@@ -3073,8 +3094,8 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint16_t rec_max
     for (;;) {
         WDT_HIT();
 
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            b = (uint8_t)FPGA_SSC_RX_Value();
             if (ManchesterDecoding(b, offset, 0)) {
                 NextTransferTime = MAX(NextTransferTime, Demod.endTime - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 16 + FRAME_DELAY_TIME_PICC_TO_PCD);
                 return true;
@@ -3152,9 +3173,15 @@ void iso14443a_antifuzz(uint32_t flags) {
     uint8_t *received = BigBuf_calloc(MAX_FRAME_SIZE);
     uint8_t *receivedPar = BigBuf_calloc(MAX_PARITY_SIZE);
     uint8_t *resp = BigBuf_calloc(20);
+    if (received == NULL || receivedPar == NULL || resp == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("Anti-fuzz: failed to allocate buffers");
+        reply_ng(CMD_HF_ISO14443A_ANTIFUZZ, PM3_EMALLOC, NULL, 0);
+        switch_off();
+        BigBuf_free_keep_EM();
+        return;
+    }
 
-    memset(received, 0x00, MAX_FRAME_SIZE);
-    memset(received, 0x00, MAX_PARITY_SIZE);
+    // BigBuf_calloc() already zeroed the receive buffers
     memset(resp, 0xFF, 20);
 
     LED_A_ON();
@@ -3186,11 +3213,9 @@ void iso14443a_antifuzz(uint32_t flags) {
             resp[2] = 0xFF;
             resp[3] = 0xFF;
             resp[4] =  resp[0] ^ resp[1] ^ resp[2] ^ resp[3];
-            colpos = 0;
 
             if (IS_FLAG_UID_IN_DATA(flags, 7)) {
                 resp[0] = MIFARE_SELECT_CT;
-                colpos = 8;
             }
 
             // trigger a faulty/collision response
@@ -3277,6 +3302,11 @@ int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, const iso14a_po
         // Receive the ATQA
         len = ReaderReceive(resp, resp_len, resp_par);
 
+        // DXL: Check response length is not 2 and no collision, set len to 0 for skip this data
+        if (len != 2 && !Demod.collisionPos) {
+            len = 0; // maybe an incorrect data, discard it.
+        }
+
         // We set the start_time here otherwise in some cases we miss the window and only ever try once
         if (first_try) {
             start_time = GetTickCount();
@@ -3324,6 +3354,21 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
         p_card->ats_len = 0;
     }
 
+    /*
+     * DXL:
+     * If the specifications of manual 14443-3 are strictly followed, ATQA should also participate in the anti-collision process.
+     * When encountering conflicts, it should directly enter the card selection stage of anti-collision.
+     * However, at present, all operations rely on the first ATQA request and do not follow ATQA's anti-collision standards.
+     * ---
+     * After testing, in some cases, the device may decode an incorrect/collision ATQA,
+     * and using this ATQA data for subsequent logical operations may result in unexpected things.
+     * Note: It is easier to reproduce this problem when placing the card from high to low for card reading.
+     * Invalid AQTA infos: length = 1, data = 0000, collision = 0
+     * ---
+     * Therefore, I think the best solution is to consider ATQA invalid if there are no conflicts and the data length of ATQA is less than two bytes.
+     * In order to improve the stability of card reading as much as possible,
+     * I implemented this logic inside the GetATQA function.
+     */
     if (GetATQA(resp, sizeof(resp), parity_array, polling_parameters) == 0) {
         return 0;
     }
@@ -3615,7 +3660,7 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
     // Set up the synchronous serial port
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_ISO14443A);
     // connect Demodulated Signal to ADC:
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
 
     LED_D_OFF();
     // Signal field is on with the appropriate LED
@@ -3665,7 +3710,13 @@ b5,b6 = 00 - DESELECT
         11 - WTX
 */
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint16_t data_len, uint8_t *res) {
-    uint8_t *real_cmd = BigBuf_calloc(cmd_len + 4);
+    // PCB(1) + APDU + CRC(2) has to fit inside one ISO14443 frame, which is
+    // also the limit ReaderTransmit() can encode into the tosend buffer.
+    if (cmd_len + 3 > MAX_FRAME_SIZE) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t real_cmd[MAX_FRAME_SIZE] = {0};
 
     if (cmd_len) {
         // ISO 14443 APDU frame: PCB [CID] [NAD] APDU CRC PCB=0x02
@@ -3687,7 +3738,6 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
 
     // tearoff occurred
     if (tearoff_hook() == PM3_ETEAROFF) {
-        BigBuf_free();
         return -1;
     }
 
@@ -3695,7 +3745,6 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
     uint8_t *data_bytes = (uint8_t *) data;
 
     if (len == 0) {
-        BigBuf_free();
         return 0; // DATA LINK ERROR
     }
 
@@ -3705,12 +3754,10 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
     while (len && ((data_bytes[0] & 0xF2) == 0xF2)) {
 
         if (BUTTON_PRESS() || data_available()) {
-            BigBuf_free();
             return -3;
         }
 
-        // Inform client of WTX of timeout in ms
-        // 38ms == MAX_ISO14A_TIMEOUT
+        // Inform client of WTX 38ms == MAX_ISO14A_TIMEOUT
         send_wtx(38);
 
         // byte1 - WTXM [1..59]. command FWT=FWT*WTXM
@@ -3731,7 +3778,6 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
 
     }
 
-    // restore timeout
     iso14a_set_timeout(save_iso14a_timeout);
 
     // if we received an I- or R(ACK)-Block with a block number equal to the
@@ -3748,43 +3794,71 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
         *res = data_bytes[0];
     }
 
-    // crc check
     if (len >= 3 && !CheckCrc14A(data_bytes, len)) {
-        BigBuf_free();
         return -1;
     }
 
     if (len) {
         // cut frame byte
         len -= 1;
-        // memmove(data_bytes, data_bytes + 1, len);
         for (int i = 0; i < len; i++) {
             data_bytes[i] = data_bytes[i + 1];
         }
     }
 
-    BigBuf_free();
     return len;
+}
+
+static void reply_iso14a_raw(iso14a_raw_resp_t *response, uint8_t *respbuf, uint16_t len) {
+    response->len = len;
+    response->sel = 0;
+    reply_ng(CMD_HF_ISO14443A_READER, PM3_SUCCESS, respbuf, ISO14A_RESP_LEN(len));
 }
 
 //-----------------------------------------------------------------------------
 // Read an ISO 14443a tag. Send out commands and store answers.
 //-----------------------------------------------------------------------------
-// arg0         iso_14a flags
-// arg1         high ::  number of bits, if you want to send 7bits etc
-//             low  ::  len of commandbytes
-// arg2         timeout
-// d.asBytes command bytes to send
+// Callers send one iso14a_raw_cmd_t and get back one iso14a_raw_resp_t.
 void ReaderIso14443a(PacketCommandNG *c) {
-    iso14a_command_t param = c->oldarg[0];
-    size_t len = c->oldarg[1] & 0xffff;
-    size_t lenbits = c->oldarg[1] >> 16;
-    uint32_t timeout = c->oldarg[2] & 0xffffffff;
-    uint32_t wait_us = c->oldarg[2] >> 32;
-    uint8_t *cmd = c->data.asBytes;
+
+    iso14a_command_t param;
+    size_t len, lenbits;
+    uint32_t timeout, wait_us;
+    uint8_t *cmd;
+
+    if (c->ng) {
+
+        if (c->length < sizeof(iso14a_raw_cmd_t)) {
+            reply_ng(CMD_HF_ISO14443A_READER, PM3_EINVARG, NULL, 0);
+            return;
+        }
+
+        iso14a_raw_cmd_t *payload = (iso14a_raw_cmd_t *)c->data.asBytes;
+
+        if (payload->len > (c->length - sizeof(iso14a_raw_cmd_t))) {
+            reply_ng(CMD_HF_ISO14443A_READER, PM3_EINVARG, NULL, 0);
+            return;
+        }
+
+        param = payload->flags;
+        len = payload->len;
+        lenbits = payload->lenbits;
+        timeout = payload->timeout;
+        wait_us = payload->wait_us;
+        cmd = payload->data;
+
+    } else {
+        // every caller is NG now, OLD/MIX frames are no longer accepted
+        reply_ng(CMD_HF_ISO14443A_READER, PM3_EINVARG, NULL, 0);
+        return;
+    }
+
     uint32_t arg0;
 
-    uint8_t buf[PM3_CMD_DATA_SIZE_MIX] = {0x00};
+    // the reply frame is built in place: `buf` is its data[] area
+    uint8_t respbuf[PM3_CMD_DATA_SIZE] = {0x00};
+    iso14a_raw_resp_t *response = (iso14a_raw_resp_t *)respbuf;
+    uint8_t *buf = response->data;
 
     if ((param & ISO14A_CONNECT) == ISO14A_CONNECT) {
         iso14_pcb_blocknum = 0;
@@ -3826,7 +3900,9 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 crypto1_deinit(&crypto1_state);
             }
 
-            reply_mix(CMD_ACK, arg0, card->uidlen, 0, buf, sizeof(iso14a_card_select_t));
+            response->len = sizeof(iso14a_card_select_t);
+            response->sel = arg0;
+            reply_ng(CMD_HF_ISO14443A_READER, PM3_SUCCESS, respbuf, ISO14A_RESP_LEN(sizeof(iso14a_card_select_t)));
             if (arg0 == 0) {
                 goto OUT;
             }
@@ -3854,11 +3930,13 @@ void ReaderIso14443a(PacketCommandNG *c) {
                    len,
                    ((param & ISO14A_SEND_CHAINING) == ISO14A_SEND_CHAINING),
                    buf,
-                   sizeof(buf),
+                   ISO14A_RESP_MAXLEN,
                    &res
                );
 
-        reply_mix(CMD_ACK, arg0, res, 0, buf, sizeof(buf));
+        response->len = arg0;
+        response->sel = res;
+        reply_ng(CMD_HF_ISO14443A_READER, PM3_SUCCESS, respbuf, ISO14A_RESP_LEN(arg0));
     }
 
     if ((param & ISO14A_RAW) == ISO14A_RAW) {
@@ -3876,7 +3954,10 @@ void ReaderIso14443a(PacketCommandNG *c) {
                     if (g_dbglevel >= DBG_INFO)    Dbprintf("Auth succeeded");
                     res = 0x0a;
                 }
-                reply_mix(CMD_ACK, 1, 0, 0, &res, 1);
+                response->len = 1;
+                response->sel = 0;
+                response->data[0] = res;
+                reply_ng(CMD_HF_ISO14443A_READER, PM3_SUCCESS, respbuf, ISO14A_RESP_LEN(1));
                 goto CMD_DONE;
             }
         }
@@ -3971,17 +4052,17 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 // tearoff occurred
                 if (tearoff_hook() == PM3_ETEAROFF) {
                     FpgaDisableTracing();
-                    reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
+                    reply_iso14a_raw(response, respbuf, 0);
                 } else {
-                    arg0 = ReaderReceive(buf, sizeof(buf), parity_array);
+                    arg0 = ReaderReceive(buf, ISO14A_RESP_MAXLEN, parity_array);
                     FpgaDisableTracing();
-                    reply_mix(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+                    reply_iso14a_raw(response, respbuf, arg0);
                 }
 
             } else {
-                arg0 = ReaderReceive(buf, sizeof(buf), parity_array);
+                arg0 = ReaderReceive(buf, ISO14A_RESP_MAXLEN, parity_array);
                 FpgaDisableTracing();
-                reply_mix(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+                reply_iso14a_raw(response, respbuf, arg0);
             }
 
         } else {
@@ -3989,9 +4070,9 @@ void ReaderIso14443a(PacketCommandNG *c) {
             // tearoff occurred
             if (tearoff_hook() == PM3_ETEAROFF) {
                 FpgaDisableTracing();
-                reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
+                reply_iso14a_raw(response, respbuf, 0);
             } else {
-                arg0 = ReaderReceive(buf, sizeof(buf), parity_array);
+                arg0 = ReaderReceive(buf, ISO14A_RESP_MAXLEN, parity_array);
 
                 if ((param & ISO14A_CRYPTO1MODE) == ISO14A_CRYPTO1MODE) {
                     mf_crypto1_decrypt(&crypto1_state, buf, arg0);
@@ -4001,7 +4082,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
                     increase_session_counter();
                 }
                 FpgaDisableTracing();
-                reply_mix(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+                reply_iso14a_raw(response, respbuf, arg0);
             }
         }
     }

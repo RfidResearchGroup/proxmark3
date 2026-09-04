@@ -29,6 +29,9 @@
 // The windows serial port implementation
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+#endif
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -37,6 +40,8 @@ typedef struct {
     HANDLE hPort;          // Serial port handle
     DCB dcb;               // Device control settings
     COMMTIMEOUTS ct;       // Serial port time-out configuration
+    HANDLE hCommEvent;     // Event for the in-flight WaitCommEvent (EV_RXCHAR)
+    HANDLE hIoEvent;       // Event for the single in-flight overlapped read/write
     SOCKET hSocket;        // Socket handle
     RingBuffer *udpBuffer; // Buffer for UDP
 } serial_port_windows_t;
@@ -50,6 +55,22 @@ struct timeval timeout = {
 uint32_t newtimeout_value = 0;
 bool newtimeout_pending = false;
 uint8_t rx_empty_counter = 0;
+
+// Manual-reset event set by uart_wakeup() to interrupt the comm thread's idle
+// WaitCommEvent(). Only the serial (USB-CDC/FPC) path ever creates this; TCP/UDP
+// keep their select() timeouts and are left untouched.
+static HANDLE hWakeEvent = NULL;
+
+// Interrupt a blocking serial wait so the comm thread can service a queued send
+// right away instead of waiting out the COMMTIMEOUTS. This is a *soft* signal:
+// it only wakes the comm thread's WaitCommEvent() wait; a pending data ReadFile()
+// is never cancelled, so in-flight bytes are not discarded. TCP/UDP are
+// unaffected: hWakeEvent is only ever a serial wake event.
+void uart_wakeup(void) {
+    if (hWakeEvent != NULL) {
+        SetEvent(hWakeEvent);
+    }
+}
 
 int uart_reconfigure_timeouts(uint32_t value) {
     newtimeout_value = value;
@@ -214,6 +235,63 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
         }
 
         SOCKET hSocket = INVALID_SOCKET;
+
+        // --wait on a tcp: port -> act as a server: bind, listen, accept one client.
+        if (isTCP && g_conn.listen_for_incoming) {
+            SOCKET lsock = INVALID_SOCKET;
+            for (rp = addr; rp != NULL; rp = rp->ai_next) {
+                lsock = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+                if (lsock == INVALID_SOCKET) {
+                    continue;
+                }
+                int one = 1;
+                setsockopt(lsock, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+                if (bind(lsock, rp->ai_addr, (int)rp->ai_addrlen) == 0) {
+                    break;  // bound
+                }
+                closesocket(lsock);
+                lsock = INVALID_SOCKET;
+            }
+
+            freeaddrinfo(addr);
+            free(addrPortStr);
+
+            if (lsock == INVALID_SOCKET) {
+                PrintAndLogEx(ERR, "error: could not bind for --wait listen. error: %u", WSAGetLastError());
+                WSACleanup();
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+            if (listen(lsock, 1) != 0) {
+                PrintAndLogEx(ERR, "error: listen() failed. error: %u", WSAGetLastError());
+                closesocket(lsock);
+                WSACleanup();
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+
+            SOCKET csock = accept(lsock, NULL, NULL);
+            closesocket(lsock);
+            if (csock == INVALID_SOCKET) {
+                if (slient == false) {
+                    PrintAndLogEx(ERR, "error: accept() failed. error: %u", WSAGetLastError());
+                }
+                WSACleanup();
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+
+            sp->hSocket = csock;
+            int one = 1;
+            if (setsockopt(sp->hSocket, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one)) != 0) {
+                closesocket(csock);
+                WSACleanup();
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+            return sp;
+        }
+
         for (rp = addr; rp != NULL; rp = rp->ai_next) {
             hSocket = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 
@@ -276,8 +354,17 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
 
     // Try to open the serial port
     // r/w,  none-share comport, no security, existing, no overlapping, no templates
-    sp->hPort = CreateFileA(acPortName, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+    // FILE_FLAG_OVERLAPPED is required for overlapped WaitCommEvent/ReadFile/WriteFile.
+    sp->hPort = CreateFileA(acPortName, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
     if (sp->hPort == INVALID_HANDLE_VALUE) {
+        uart_close(sp);
+        return INVALID_SERIAL_PORT;
+    }
+
+    sp->hCommEvent = CreateEvent(NULL, TRUE, FALSE, NULL); // manual reset, for WaitCommEvent
+    sp->hIoEvent   = CreateEvent(NULL, TRUE, FALSE, NULL); // manual reset, for ReadFile/WriteFile
+    hWakeEvent     = CreateEvent(NULL, TRUE, FALSE, NULL); // manual reset, for uart_wakeup()
+    if (sp->hCommEvent == NULL || sp->hIoEvent == NULL || hWakeEvent == NULL) {
         uart_close(sp);
         return INVALID_SERIAL_PORT;
     }
@@ -324,8 +411,19 @@ void uart_close(const serial_port sp) {
         WSACleanup();
     }
     RingBuf_destroy(spw->udpBuffer);
-    if (spw->hPort != INVALID_HANDLE_VALUE)
+    if (spw->hPort != INVALID_HANDLE_VALUE) {
         CloseHandle(spw->hPort);
+    }
+    if (spw->hCommEvent != NULL) {
+        CloseHandle(spw->hCommEvent);
+    }
+    if (spw->hIoEvent != NULL) {
+        CloseHandle(spw->hIoEvent);
+    }
+    if (spw->hSocket == INVALID_SOCKET && hWakeEvent != NULL) {
+        CloseHandle(hWakeEvent);
+        hWakeEvent = NULL;
+    }
     free(sp);
 }
 
@@ -365,23 +463,104 @@ uint32_t uart_get_speed(const serial_port sp) {
     return 0;
 }
 
+// Read data from the serial port after it has been reported available (via
+// ClearCommError or WaitCommEvent). Reuses hIoEvent for the single in-flight
+// overlapped operation in the comm thread.
+static int uart_read_serial(const serial_port_windows_t *spw, uint8_t *pbtRx, uint32_t pszMaxRxLen, uint32_t *pszRxLen) {
+    OVERLAPPED ov;
+    memset(&ov, 0, sizeof(ov));
+    ov.hEvent = spw->hIoEvent;
+    ResetEvent(ov.hEvent);
+
+    DWORD bytesRead = 0;
+    BOOL ok = ReadFile(spw->hPort, pbtRx, pszMaxRxLen, &bytesRead, &ov);
+    if (!ok && GetLastError() == ERROR_IO_PENDING) {
+        WaitForSingleObject(ov.hEvent, INFINITE);
+        ok = GetOverlappedResult(spw->hPort, &ov, &bytesRead, FALSE);
+    }
+    if (!ok) {
+        DWORD err = GetLastError();
+        *pszRxLen = 0;
+        if (err == ERROR_OPERATION_ABORTED) {
+            return PM3_ENODATA;
+        }
+        if (err == ERROR_FILE_NOT_FOUND) {
+            return PM3_EIO;
+        }
+        return PM3_ENOTTY;
+    }
+    *pszRxLen = bytesRead;
+    return PM3_SUCCESS;
+}
+
 int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uint32_t *pszRxLen) {
     const serial_port_windows_t *spw = (serial_port_windows_t *)sp;
     if (spw->hSocket == INVALID_SOCKET) {
         // serial port
         uart_reconfigure_timeouts_polling(sp);
 
-        int res = ReadFile(spw->hPort, pbtRx, pszMaxRxLen, (LPDWORD)pszRxLen, NULL);
-        if (res)
-            return PM3_SUCCESS;
-
-        int errorcode = GetLastError();
-
-        if (res == 0 && errorcode == 2) {
-            return PM3_EIO;
+        DWORD rx_timeout_ms = spw->ct.ReadTotalTimeoutConstant;
+        if (rx_timeout_ms == 0) {
+            rx_timeout_ms = UART_USB_CLIENT_RX_TIMEOUT_MS;
         }
 
-        return PM3_ENOTTY;
+        // Fast path: if bytes are already queued, read them without waiting. This
+        // also sidesteps WaitCommEvent's re-arm race, where data arriving between
+        // two waits would otherwise be missed.
+        DWORD comErrors;
+        COMSTAT comStat;
+        if (ClearCommError(spw->hPort, &comErrors, &comStat) && comStat.cbInQue > 0) {
+            return uart_read_serial(spw, pbtRx, pszMaxRxLen, pszRxLen);
+        }
+
+        // Nothing queued yet: wait for EV_RXCHAR or a wake signal.
+        SetCommMask(spw->hPort, EV_RXCHAR);
+        OVERLAPPED ov;
+        memset(&ov, 0, sizeof(ov));
+        ov.hEvent = spw->hCommEvent;
+        ResetEvent(ov.hEvent);
+        DWORD eventMask = 0;
+        BOOL ok = WaitCommEvent(spw->hPort, &eventMask, &ov);
+        if (!ok) {
+            DWORD err = GetLastError();
+            if (err != ERROR_IO_PENDING) {
+                *pszRxLen = 0;
+                if (err == ERROR_OPERATION_ABORTED) {
+                    return PM3_ENODATA;
+                }
+                return PM3_ENOTTY;
+            }
+
+            HANDLE handles[2] = {ov.hEvent, hWakeEvent};
+            DWORD waitRes = WaitForMultipleObjects(2, handles, FALSE, rx_timeout_ms);
+
+            if (waitRes == WAIT_TIMEOUT) {
+                // No data within the COMMTIMEOUTS window: abort the *wait* (not a
+                // data read) and report nothing, matching the old ReadFile timeout.
+                CancelIoEx(spw->hPort, &ov);
+                *pszRxLen = 0;
+                return PM3_SUCCESS;
+            }
+            if (waitRes == WAIT_OBJECT_0 + 1) {
+                // Woken to send: cancel the pending WaitCommEvent (the wait only),
+                // leaving any already-queued bytes in the driver buffer.
+                ResetEvent(hWakeEvent);
+                CancelIoEx(spw->hPort, &ov);
+                *pszRxLen = 0;
+                return PM3_ENODATA;
+            }
+            if (waitRes == WAIT_FAILED) {
+                CancelIoEx(spw->hPort, &ov);
+                *pszRxLen = 0;
+                return PM3_ENOTTY;
+            }
+            // EV_RXCHAR fired; finalize the wait.
+            DWORD dummy;
+            GetOverlappedResult(spw->hPort, &ov, &dummy, TRUE);
+        }
+
+        // Data is now available; read it.
+        return uart_read_serial(spw, pbtRx, pszMaxRxLen, pszRxLen);
     } else {
         // TCP or UDP
         uint32_t byteCount;  // FIONREAD returns size on 32b
@@ -506,13 +685,23 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
 int uart_send(const serial_port sp, const uint8_t *p_tx, const uint32_t len) {
     const serial_port_windows_t *spw = (serial_port_windows_t *)sp;
     if (spw->hSocket == INVALID_SOCKET) { // serial port
+        OVERLAPPED ov;
+        memset(&ov, 0, sizeof(ov));
+        ov.hEvent = spw->hIoEvent;
+        ResetEvent(ov.hEvent);
+
         DWORD txlen = 0;
-        int res = WriteFile(spw->hPort, p_tx, len, &txlen, NULL);
-        if (res)
+        BOOL ok = WriteFile(spw->hPort, p_tx, len, &txlen, &ov);
+        if (!ok && GetLastError() == ERROR_IO_PENDING) {
+            WaitForSingleObject(ov.hEvent, INFINITE);
+            ok = GetOverlappedResult(spw->hPort, &ov, &txlen, FALSE);
+        }
+
+        if (ok)
             return PM3_SUCCESS;
 
         int errorcode = GetLastError();
-        if (res == 0 && errorcode == 2) {
+        if (errorcode == ERROR_FILE_NOT_FOUND) {
             return PM3_EIO;
         }
         return PM3_ENOTTY;

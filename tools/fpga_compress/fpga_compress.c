@@ -83,6 +83,19 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
 
     } while (all_feof(infile, num_infiles) == false);
 
+    // Block size for the LZ4 stream.  Two very different consumers:
+    //
+    //  - many infiles: the interleaved FPGA bitstreams.  armsrc decompresses them
+    //    one block at a time into a FPGA_RING_BUFFER_BYTES buffer taken from BigBuf
+    //    (see get_from_fpga_combined_stream()), so the block size must match.
+    //
+    //  - one infile: the firmware's .data section.  start.c's
+    //    uncompress_data_section() reads ONE 4-byte length and does ONE
+    //    LZ4_decompress_safe(), so this must come out as a SINGLE block - it has no
+    //    loop over blocks, and a short result is not treated as an error, so a
+    //    second block would silently leave the tail of .data uninitialized.
+    //    That is why it gets its own, much larger, block size and must not be
+    //    tied to FPGA_RING_BUFFER_BYTES.
     uint32_t buffer_size = FPGA_RING_BUFFER_BYTES;
 
     if (num_infiles == 1) {
@@ -110,12 +123,24 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
     LZ4_streamHC_t *lz4_streamhc = LZ4_createStreamHC();
     LZ4_resetStreamHC_fast(lz4_streamhc, LZ4HC_CLEVEL_MAX);
 
+    if (num_infiles == 1 && total_size > buffer_size) {
+        fprintf(stderr, "error: %u bytes does not fit in a single %u byte block, and start.c only decompresses one\n"
+                , total_size
+                , buffer_size
+            );
+        free(ring_buffer);
+        free(outbuf);
+        free(fpga_config);
+        LZ4_freeStreamHC(lz4_streamhc);
+        return (EXIT_FAILURE);
+    }
+
     int current_in = 0;
     int current_out = 0;
 
     while (current_in < total_size) {
 
-        int bytes_to_copy = MIN(FPGA_RING_BUFFER_BYTES, (total_size - current_in));
+        int bytes_to_copy = MIN(buffer_size, (total_size - current_in));
 
         memcpy(ring_buffer, fpga_config + current_in, bytes_to_copy);
 

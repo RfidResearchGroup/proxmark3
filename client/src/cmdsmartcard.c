@@ -327,7 +327,34 @@ static int smart_wait(uint8_t *out, int maxoutlen, bool verbose) {
     return -1;
 }
 
-static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
+// Class byte for a GET RESPONSE after 61xx / 9Fxx. No single rule works: a GSM
+// SIM needs 'A0 C0' and rejects '00 C0', a HID iCLASS SE SAM is the other way
+// round, and EMV fixes it at '00'. Try '00' first, then the command's own.
+#define GETRESP_TRY_FIRST   0
+#define GETRESP_TRY_RETRY   1
+
+static uint8_t get_response_cla(uint8_t cla, int attempt) {
+    if (attempt == GETRESP_TRY_FIRST) {
+        // class '00', keeping only the logical channel bits
+        return (uint8_t)(cla & 0x03);
+    }
+    return cla;
+}
+
+// 6D00 / 6E00: the card did not recognise the instruction or the class.
+static bool getresp_class_rejected(const uint8_t *sw, int len) {
+    if (len < 2) {
+        return false;
+    }
+    return ((sw[len - 2] == 0x6D) || (sw[len - 2] == 0x6E));
+}
+
+// cla   - class byte of the command whose response we are fetching.
+// proto - SC_RAW, SC_RAW_T0 or SC_RAW_T1, the protocol the GET RESPONSE must
+//         go out on.  It has to match the command that produced the 61xx/9Fxx:
+//         a bare APDU pushed onto a T=1 link is not a block and the card will
+//         not answer it.
+static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose, uint8_t cla, smartcard_command_t proto) {
 
     int datalen = smart_wait(out, maxoutlen, verbose);
     int totallen = datalen;
@@ -364,29 +391,53 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
 
         if (verbose) PrintAndLogEx(INFO, "Requesting " _YELLOW_("0x%02X") " bytes response", len);
 
-        uint8_t cmd_getresp[] = {0x00, ISO7816_GET_RESPONSE, 0x00, 0x00, len};
-        smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + sizeof(cmd_getresp));
-        if (payload == NULL) {
-            PrintAndLogEx(WARNING, "Failed to allocate memory");
-            goto out;
+        // '00' first, then the command's own class if the card rejects it
+        for (int attempt = GETRESP_TRY_FIRST; attempt <= GETRESP_TRY_RETRY; attempt++) {
+
+            uint8_t cmd_getresp[] = {
+                get_response_cla(cla, attempt), ISO7816_GET_RESPONSE, 0x00, 0x00, len
+            };
+
+            if (attempt == GETRESP_TRY_RETRY) {
+                if (cmd_getresp[0] == get_response_cla(cla, GETRESP_TRY_FIRST)) {
+                    break;              // the retry would send the same thing
+                }
+                if (verbose) {
+                    PrintAndLogEx(INFO, "GetResponse refused, retrying with CLA %02X", cmd_getresp[0]);
+                }
+            }
+
+            smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + sizeof(cmd_getresp));
+            if (payload == NULL) {
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
+                goto out;
+            }
+            payload->flags = proto | SC_LOG;
+            payload->len = sizeof(cmd_getresp);
+            payload->wait_delay = 0;
+            memcpy(payload->data, cmd_getresp, sizeof(cmd_getresp));
+
+            clearCommandBuffer();
+            SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + sizeof(cmd_getresp));
+            free(payload);
+
+            datalen = smart_wait(&out[ofs], maxoutlen, verbose);
+
+            if (getresp_class_rejected(&out[ofs], datalen) == false) {
+                break;
+            }
         }
-        payload->flags = SC_RAW | SC_LOG;
-        payload->len = sizeof(cmd_getresp);
-        payload->wait_delay = 0;
-        memcpy(payload->data, cmd_getresp, sizeof(cmd_getresp));
-
-        clearCommandBuffer();
-        SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + sizeof(cmd_getresp));
-        free(payload);
-
-        datalen = smart_wait(&out[ofs], maxoutlen, verbose);
 
         if (datalen < 2) {
             goto out;
         }
 
-        // data wo ACK
-        if (datalen != len + 2) {
+        // Two valid shapes: len+2 is data plus SW, which SEND_T0 gives since
+        // the module strips the procedure byte; len+2+1 still has it in front,
+        // as the raw pass through leaves it.
+        if (datalen == len + 2) {
+            totallen += datalen;
+        } else {
             // data with ACK
             if (datalen == len + 2 + 1) { // 2 - response, 1 - ACK
                 if (out[ofs] != ISO7816_GET_RESPONSE) {
@@ -403,7 +454,10 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
             } else {
                 // wrong length
                 if (verbose) {
-                    PrintAndLogEx(WARNING, "GetResponse wrong length. Must be 0x%02X got 0x%02X", len, datalen - 3);
+                    // datalen - 3 goes negative when the card answered with a
+                    // bare status word, and printing that as %02X rendered it
+                    // as 0xFFFFFFFF.  Report what actually arrived instead.
+                    PrintAndLogEx(WARNING, "GetResponse wrong length. Expected 0x%02X data bytes, got %d byte(s)", len, datalen);
                 }
             }
         }
@@ -413,8 +467,8 @@ out:
     return totallen;
 }
 
-static int smart_response(uint8_t *out, int maxoutlen) {
-    return smart_responseEx(out, maxoutlen, true);
+static int smart_response(uint8_t *out, int maxoutlen, uint8_t cla, smartcard_command_t proto) {
+    return smart_responseEx(out, maxoutlen, true, cla, proto);
 }
 
 static int CmdSmartRaw(const char *Cmd) {
@@ -422,9 +476,11 @@ static int CmdSmartRaw(const char *Cmd) {
     CLIParserInit(&ctx, "smart raw",
                   "Sends raw bytes to card",
                   "smart raw -s -0 -d 00a404000e315041592e5359532e4444463031  -> `1PAY.SYS.DDF01` PPSE directory with get ATR\n"
-                  "smart raw -0 -d 00a404000e325041592e5359532e4444463031     -> `2PAY.SYS.DDF01` PPSE directory\n"
-                  "smart raw -0 -t -d 00a4040007a0000000041010                -> Mastercard\n"
-                  "smart raw -0 -t -d 00a4040007a0000000031010                -> Visa"
+                  "smart raw --t0 -d 00a404000e325041592e5359532e4444463031   -> `2PAY.SYS.DDF01` PPSE directory\n"
+                  "smart raw --t0 -t -d 00a4040007a0000000041010              -> Mastercard\n"
+                  "smart raw --t0 -t -d 00a4040007a0000000031010              -> Visa\n"
+                  "smart raw --t1 -s -d 00a404000e325041592e5359532e444446303100 -> PPSE over T=1\n"
+                  "                                                              (T=1 carries the whole APDU, so case 4 needs its Le)"
                  );
 
     void *argtable[] = {
@@ -433,7 +489,8 @@ static int CmdSmartRaw(const char *Cmd) {
         arg_lit0("a", NULL, "active smartcard without select (reset sc module)"),
         arg_lit0("s", NULL, "active smartcard with select (get ATR)"),
         arg_lit0("t", "tlv", "executes TLV decoder if it possible"),
-        arg_lit0("0", NULL, "use protocol T=0"),
+        arg_lit0(NULL, "t0", "use protocol T=0"),
+        arg_lit0(NULL, "t1", "use protocol T=1 (needs SIM module fw v4.51+)"),
         arg_int0(NULL, "timeout", "<ms>", "Timeout in MS waiting for SIM to respond. (def 337ms)"),
         arg_str1("d", "data", "<hex>", "bytes to send"),
         arg_param_end
@@ -445,15 +502,21 @@ static int CmdSmartRaw(const char *Cmd) {
     bool active_select = arg_get_lit(ctx, 3);
     bool decode_tlv = arg_get_lit(ctx, 4);
     bool use_t0 = arg_get_lit(ctx, 5);
-    int timeout = arg_get_int_def(ctx, 6, -1);
+    bool use_t1 = arg_get_lit(ctx, 6);
+    int timeout = arg_get_int_def(ctx, 7, -1);
 
     int dlen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 7), data, sizeof(data), &dlen);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 8), data, sizeof(data), &dlen);
     CLIParserFree(ctx);
 
     if (res) {
         PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
+    }
+
+    if (use_t0 && use_t1) {
+        PrintAndLogEx(FAILED, "Choose either -0 or -1, not both");
         return PM3_EINVARG;
     }
 
@@ -480,11 +543,18 @@ static int CmdSmartRaw(const char *Cmd) {
     }
     PrintAndLogEx(DEBUG, "SIM Card timeout... %u ms", payload->wait_delay);
 
+    // The protocol the exchange runs on.  It is reused for any GET RESPONSE the
+    // answer turns out to need, so the follow-up cannot end up on a different
+    // one than the command it belongs to.
+    smartcard_command_t proto = SC_RAW;
+    if (use_t1) {
+        proto = SC_RAW_T1;
+    } else if (use_t0) {
+        proto = SC_RAW_T0;
+    }
+
     if (dlen > 0) {
-        if (use_t0)
-            payload->flags |= SC_RAW_T0;
-        else
-            payload->flags |= SC_RAW;
+        payload->flags |= proto;
     }
 
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
@@ -502,22 +572,25 @@ static int CmdSmartRaw(const char *Cmd) {
     }
 
     // reading response from smart card
-    int len = smart_response(buf, PM3_CMD_DATA_SIZE);
+    int len = smart_response(buf, PM3_CMD_DATA_SIZE, (dlen > 0) ? data[0] : 0x00, proto);
     if (len < 0) {
         free(payload);
         free(buf);
         return PM3_ESOFT;
     }
 
-    if (buf[0] == 0x6C) {
+    // 6Cxx says "wrong Le, use xx".  Test the status word where it actually
+    // lives: buf[0] is only the SW when the answer is a bare status word, and
+    // on a zero length answer it is whatever the previous exchange left behind.
+    if (len >= 2 && dlen > 4 && buf[len - 2] == 0x6C) {
 
         // request more bytes to download
-        data[4] = buf[1];
+        data[4] = buf[len - 1];
         memcpy(payload->data, data, dlen);
         clearCommandBuffer();
         SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + dlen);
 
-        len = smart_response(buf, PM3_CMD_DATA_SIZE);
+        len = smart_response(buf, PM3_CMD_DATA_SIZE, data[0], proto);
 
         data[4] = 0;
     }
@@ -549,7 +622,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "smart upgrade",
                   "Upgrade RDV4 sim module firmware",
-                  "smart upgrade -f sim014.bin"
+                  "smart upgrade -f sim020.bin"
                  );
 
     void *argtable[] = {
@@ -729,15 +802,14 @@ static int CmdSmartInfo(const char *Cmd) {
     SendCommandNG(CMD_SMART_ATR, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_SMART_ATR, &resp, 2500) == false) {
-        if (verbose) {
-            PrintAndLogEx(WARNING, "smart card timeout");
-        }
+        PrintAndLogEx(WARNING, "smart card timeout");
         return PM3_ETIMEOUT;
     }
 
     if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "no ATR - check the card is present and seated");
         if (verbose) {
-            PrintAndLogEx(WARNING, "smart card select failed");
+            PrintAndLogEx(INFO, "module returned status %d", resp.status);
         }
         return PM3_ESOFT;
     }
@@ -832,6 +904,121 @@ static int CmdSmartReader(const char *Cmd) {
     hex_to_buffer((uint8_t *)hexstr, card->atr, card->atr_len, (card->atr_len << 1), 0, 0, true);
     PrintAndLogEx(INFO, "Fingerprint..... %s", getAtrInfo(hexstr));
     free(hexstr);
+    return PM3_SUCCESS;
+}
+
+// ISO/IEC 7816-3 tables 7 and 8, so the negotiated rate can be printed back.
+static const uint16_t pps_fi_table[16] = {
+    372,  372,  558,  744, 1116, 1488, 1860,    0,
+    0,  512,  768, 1024, 1536, 2048,    0,    0
+};
+static const uint8_t pps_di_table[16] = {
+    0,    1,    2,    4,    8,   16,   32,   64,
+    12,   20,    0,    0,    0,    0,    0,    0
+};
+
+static int CmdSmartPPS(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "smart pps",
+                  "Run an ISO 7816-3 protocol and parameter selection exchange.\n""\n"
+                  "With neither --t0 nor --t1 the card keeps the protocol its ATR\n"
+                  "says it runs, so --ta1 on its own changes the rate and nothing else.\n"
+                  "The card is reset and its ATR read first, because PPS is only\n"
+                  "legal in the window straight after the ATR.\n"
+                  "\n"
+                  "Note `smart raw --t1` already switches a card to T=1 by itself when\n"
+                  "the ATR offers it; this is for negotiating Fi/Di explicitly.\n"
+                  "Needs SIM module firmware v4.51 or newer.\n"
+                  "\n"
+                  "A negotiated rate is remembered against this card's ATR and put\n"
+                  "back after every later ATR, so it survives resets and reconnects.\n"
+                  "A different card drops it, and `--ta1 11` forgets it.\n"
+                  "\n"
+                  "A protocol change is not remembered: it applies until the next\n"
+                  "reset only, so it cannot silently break commands that build for\n"
+                  "the other protocol.",
+                  "smart pps --ta1 93           -> rate only, framing left alone\n"
+                  "smart pps --ta1 11           -> back to the default rate\n"
+                  "smart pps --t1               -> select T=1\n"
+                  "smart pps --t0               -> select T=0\n"
+                  "smart pps --t1 --ta1 96      -> select T=1 and F=512 / D=32"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "t0", "select protocol T=0"),
+        arg_lit0(NULL, "t1", "select protocol T=1"),
+        arg_str0(NULL, "ta1", "<hex>", "also negotiate this TA1 (FI << 4 | DI)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool use_t0 = arg_get_lit(ctx, 1);
+    bool use_t1 = arg_get_lit(ctx, 2);
+
+    int ta1len = 0;
+    uint8_t ta1[1] = {0};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 3), ta1, sizeof(ta1), &ta1len);
+    CLIParserFree(ctx);
+
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing TA1");
+        return PM3_EINVARG;
+    }
+
+    if (use_t0 && use_t1) {
+        PrintAndLogEx(FAILED, "Choose either -0 or -1, not both");
+        return PM3_EINVARG;
+    }
+
+    smart_card_pps_t payload = {
+        // Neither flag: negotiate the rate and leave the framing alone. The
+        // device resolves this to whatever the card's ATR says it runs.
+        .protocol = use_t0 ? 0 : (use_t1 ? 1 : SC_PPS_PROTO_CARD_DEFAULT),
+        .ta1 = (ta1len > 0) ? ta1[0] : 0x11,
+        .use_ta1 = (ta1len > 0) ? 1 : 0,
+    };
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_SMART_PPS, (uint8_t *)&payload, sizeof(payload));
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_SMART_PPS, &resp, 4000) == false) {
+        PrintAndLogEx(WARNING, "smart card timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS || resp.length < 3) {
+        PrintAndLogEx(FAILED, "PPS exchange failed");
+        return PM3_ESOFT;
+    }
+
+    const uint8_t *r = resp.data.asBytes;
+    bool ok = (r[0] != 0);
+    uint8_t proto = r[1];
+    uint8_t got_ta1 = r[2];
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("PPS") " ---------------------------");
+    PrintAndLogEx(INFO, "Result.......... %s", ok ? _GREEN_("accepted") : _RED_("refused"));
+    PrintAndLogEx(INFO, "Protocol........ T=%u", proto);
+    PrintAndLogEx(INFO, "TA1............. 0x%02X", got_ta1);
+
+    uint16_t fi = pps_fi_table[(got_ta1 >> 4) & 0x0F];
+    uint8_t di = pps_di_table[got_ta1 & 0x0F];
+    if (fi && di) {
+        PrintAndLogEx(INFO, "  Fi / Di....... %u / %u", fi, di);
+        PrintAndLogEx(INFO, "  Cycles/ETU.... %u", fi / di);
+        PrintAndLogEx(INFO, "  bits/sec ..... %u at 4 MHz", 4000000U / (fi / di));
+    } else {
+        PrintAndLogEx(INFO, "  Fi / Di....... " _YELLOW_("RFU"));
+    }
+    PrintAndLogEx(NORMAL, "");
+
+    if (ok == false) {
+        return PM3_ESOFT;
+    }
     return PM3_SUCCESS;
 }
 
@@ -940,7 +1127,7 @@ static void smart_brute_prim(void) {
         SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + 5);
         free(payload);
 
-        int len = smart_responseEx(buf, PM3_CMD_DATA_SIZE, false);
+        int len = smart_responseEx(buf, PM3_CMD_DATA_SIZE, false, get_card_data[i], SC_RAW);
         if (len > 2) {
             PrintAndLogEx(SUCCESS, "\tHEX  %d |: %s", len, sprint_hex(buf, len));
         }
@@ -990,15 +1177,15 @@ static int smart_brute_sfi(bool decodeTLV) {
             clearCommandBuffer();
             SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) +  sizeof(READ_RECORD));
 
-            len = smart_responseEx(buf, PM3_CMD_DATA_SIZE, false);
+            len = smart_responseEx(buf, PM3_CMD_DATA_SIZE, false, READ_RECORD[0], SC_RAW);
 
-            if (buf[0] == 0x6C) {
-                READ_RECORD[4] = buf[1];
+            if (len >= 2 && buf[len - 2] == 0x6C) {
+                READ_RECORD[4] = buf[len - 1];
 
                 memcpy(payload->data, READ_RECORD, sizeof(READ_RECORD));
                 clearCommandBuffer();
                 SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) +  sizeof(READ_RECORD));
-                len = smart_responseEx(buf, PM3_CMD_DATA_SIZE, false);
+                len = smart_responseEx(buf, PM3_CMD_DATA_SIZE, false, READ_RECORD[0], SC_RAW);
 
                 READ_RECORD[4] = 0;
             }
@@ -1049,7 +1236,7 @@ static void smart_brute_options(bool decodeTLV) {
     SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + sizeof(GET_PROCESSING_OPTIONS));
     free(payload);
 
-    int len = smart_responseEx(buf, PM3_CMD_DATA_SIZE, false);
+    int len = smart_responseEx(buf, PM3_CMD_DATA_SIZE, false, GET_PROCESSING_OPTIONS[0], SC_RAW);
     if (len > 4) {
         PrintAndLogEx(SUCCESS, "Got processing options");
         if (decodeTLV) {
@@ -1171,7 +1358,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + hexlen);
         free(payload);
 
-        int len = smart_responseEx(buf, PM3_CMD_DATA_SIZE, false);
+        int len = smart_responseEx(buf, PM3_CMD_DATA_SIZE, false, (hexlen > 0) ? cmddata[0] : 0x00, SC_RAW);
         if (len < 3) {
             continue;
         }
@@ -1439,6 +1626,7 @@ static command_t CommandTable[] = {
     {"brute",      CmdSmartBruteforceSFI, IfPm3Smartcard,  "Bruteforce SFI"},
     {"info",       CmdSmartInfo,          IfPm3Smartcard,  "Tag information"},
     {"pcsc",       CmdPCSC,               AlwaysAvailable, "Turn pm3 into pcsc reader and relay to host OS via vpcd"},
+    {"pps",        CmdSmartPPS,           IfPm3Smartcard,  "Run an ISO 7816-3 PPS exchange"},
     {"reader",     CmdSmartReader,        IfPm3Smartcard,  "Act like an IS07816 reader"},
     {"raw",        CmdSmartRaw,           IfPm3Smartcard,  "Send raw hex data to tag"},
     {"upgrade",    CmdSmartUpgrade,       AlwaysAvailable, "Upgrade sim module firmware"},
@@ -1457,6 +1645,18 @@ int CmdSmartcard(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
+// Protocol the contact exchanges ask for. T=0 by default; the ARM redirects a
+// card offering no T=0 by itself, so this is for one that offers both.
+static smartcard_command_t s_sc_protocol = SC_RAW_T0;
+
+void SetSmartcardProtocolT1(bool use_t1) {
+    s_sc_protocol = use_t1 ? SC_RAW_T1 : SC_RAW_T0;
+}
+
+bool GetSmartcardProtocolT1(void) {
+    return (s_sc_protocol == SC_RAW_T1);
+}
+
 int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCard, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
 
     *dataoutlen = 0;
@@ -1466,7 +1666,7 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
-    payload->flags = (SC_RAW_T0 | SC_LOG);
+    payload->flags = (s_sc_protocol | SC_LOG);
     if (activateCard) {
         payload->flags |= (SC_SELECT | SC_CONNECT);
     }
@@ -1477,7 +1677,7 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
     clearCommandBuffer();
     SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + datainlen);
 
-    int len = smart_responseEx(dataout, maxdataoutlen, verbose);
+    int len = smart_responseEx(dataout, maxdataoutlen, verbose, (datainlen > 0) ? datain[0] : 0x00, s_sc_protocol);
     if (len < 0) {
         free(payload);
         return PM3_ESOFT;
@@ -1486,7 +1686,7 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
     // retry
     if (len > 1 && dataout[len - 2] == 0x6c && datainlen > 4) {
 
-        payload->flags = SC_RAW_T0;
+        payload->flags = s_sc_protocol;
         payload->len = 5;
         // transfer length via T=0
         datain[4] = dataout[len - 1];
@@ -1494,7 +1694,7 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
         clearCommandBuffer();
         SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + 5);
         datain[4] = 0;
-        len = smart_responseEx(dataout, maxdataoutlen, verbose);
+        len = smart_responseEx(dataout, maxdataoutlen, verbose, datain[0], s_sc_protocol);
         if (len < 0) {
             free(payload);
             return PM3_ESOFT;

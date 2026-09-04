@@ -639,7 +639,7 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext_t *d
     return PM3_SUCCESS;
 }
 
-static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDES_PC_KEY_LEN], uint8_t rounds, bool verbose) {
+static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDES_PC_KEY_LEN], uint8_t rounds, bool activate_field, bool verbose) {
     if (dctx == NULL || proximity_key == NULL || rounds < 1 || rounds > MFDES_PC_MAX_ROUNDS) {
         return PM3_EINVARG;
     }
@@ -655,7 +655,7 @@ static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDE
     uint8_t prepare_resp[APDU_RES_LEN] = {0};
     size_t prepare_resp_len = 0;
     uint8_t respcode = 0xFF;
-    res = DesfireExchangeEx(true, dctx, MFDES_PREPARE_PC, NULL, 0, &respcode, prepare_resp, &prepare_resp_len, true, 0);
+    res = DesfireExchangeEx(activate_field, dctx, MFDES_PREPARE_PC, NULL, 0, &respcode, prepare_resp, &prepare_resp_len, true, 0);
     if (res != PM3_SUCCESS) {
         uint16_t sw = status(respcode);
         PrintAndLogEx(ERR, "Prepare proximity check command failed. Result: %d %s", res, DesfireGetErrorString(res, &sw));
@@ -1258,7 +1258,7 @@ static void DesFill2bPattern(
             memcpy(&k3kkeyList[*k3kkeyListLen][2], &k3kkeyList[*k3kkeyListLen][0], 2);
             memcpy(&k3kkeyList[*k3kkeyListLen][4], &k3kkeyList[*k3kkeyListLen][0], 4);
             memcpy(&k3kkeyList[*k3kkeyListLen][8], &k3kkeyList[*k3kkeyListLen][0], 8);
-            memcpy(&k3kkeyList[*k3kkeyListLen][16], &k3kkeyList[*k3kkeyListLen][0], 4);
+            memcpy(&k3kkeyList[*k3kkeyListLen][16], &k3kkeyList[*k3kkeyListLen][0], 8);
             (*k3kkeyListLen)++;
         }
 
@@ -1639,56 +1639,6 @@ static int CmdHF14aDesChk(const char *Cmd) {
         k3kkeyListLen = 0x100;
     }
 
-    // 2-byte pattern search mode
-    if (pattern2b) {
-        DesFill2bPattern(deskeyList, &deskeyListLen, aeskeyList, &aeskeyListLen, k3kkeyList, &k3kkeyListLen, &startPattern);
-    }
-
-    // dictionary mode
-    size_t endFilePosition = 0;
-    if (dict_filenamelen) {
-
-        res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 8, &deskeyListLen, 0, &endFilePosition, true);
-        if (res == PM3_SUCCESS && endFilePosition) {
-            PrintAndLogEx(SUCCESS, "First part of des dictionary successfully loaded.");
-        }
-
-        endFilePosition = 0;
-        res = loadFileDICTIONARYEx((char *)dict_filename, aeskeyList, sizeof(aeskeyList), NULL, 16, &aeskeyListLen, 0, &endFilePosition, true);
-        if (res == PM3_SUCCESS && endFilePosition) {
-            PrintAndLogEx(SUCCESS, "First part of aes dictionary successfully loaded.");
-        }
-
-        endFilePosition = 0;
-        res = loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 24, &k3kkeyListLen, 0, &endFilePosition, true);
-        if (res == PM3_SUCCESS && endFilePosition) {
-            PrintAndLogEx(SUCCESS, "First part of k3kdes dictionary successfully loaded.");
-        }
-
-        endFilePosition = 0;
-    }
-
-    if (aeskeyListLen == 0 && deskeyListLen == 0 && k3kkeyListLen == 0) {
-        PrintAndLogEx(ERR, "No keys provided. Nothing to check.");
-        return PM3_EINVARG;
-    }
-
-    if (aeskeyListLen != 0) {
-        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " aes keys", aeskeyListLen);
-    }
-
-    if (deskeyListLen != 0) {
-        PrintAndLogEx(INFO, "Loaded "  _YELLOW_("%"PRIu32) " des keys", deskeyListLen);
-    }
-
-    if (k3kkeyListLen != 0) {
-        PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " k3kdes keys", k3kkeyListLen);
-    }
-
-    if (verbose == false) {
-        PrintAndLogEx(INFO, "Search keys:");
-    }
-
     bool result = false;
     uint8_t app_ids[78] = {0};
     size_t app_ids_len = 0;
@@ -1724,53 +1674,147 @@ static int CmdHF14aDesChk(const char *Cmd) {
         app_ids_len = 3;
     }
 
+    {
+        // seed with any key given on the command line (--key)
+        // pattern1b already filled the lists above
+        uint32_t deskeyCountTotal = deskeyListLen;
+        uint32_t aeskeyCountTotal = aeskeyListLen;
+        uint32_t k3kkeyCountTotal = k3kkeyListLen;
+
+        if (pattern2b) {
+            deskeyCountTotal = 0x10000 - startPattern;
+            aeskeyCountTotal = 0x10000 - startPattern;
+            k3kkeyCountTotal = 0x10000 - startPattern;
+        } else if (dict_filenamelen) {
+            size_t readStart = 0;
+            size_t readEnd = 1;
+            uint32_t n = 0;
+
+            while (readEnd != 0) {
+                loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 8, &n, readStart, &readEnd, false);
+                readStart = readEnd;
+                deskeyCountTotal += n;
+            }
+
+            readStart = 0;
+            readEnd = 1;
+            while (readEnd != 0) {
+                loadFileDICTIONARYEx((char *)dict_filename, aeskeyList, sizeof(aeskeyList), NULL, 16, &n, readStart, &readEnd, false);
+                readStart = readEnd;
+                aeskeyCountTotal += n;
+            }
+
+            readStart = 0;
+            readEnd = 1;
+            while (readEnd != 0) {
+                loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 24, &n, readStart, &readEnd, false);
+                readStart = readEnd;
+                k3kkeyCountTotal += n;
+            }
+        }
+
+        if (deskeyCountTotal > 0) {
+            PrintAndLogEx(INFO, "Loaded "  _YELLOW_("%"PRIu32) " des keys", deskeyCountTotal);
+        }
+        if (aeskeyCountTotal > 0) {
+            PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " aes keys", aeskeyCountTotal);
+        }
+        if (k3kkeyCountTotal > 0) {
+            PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " k3kdes keys", k3kkeyCountTotal);
+        }
+
+        if (deskeyCountTotal + aeskeyCountTotal + k3kkeyCountTotal == 0) {
+            PrintAndLogEx(ERR, "No keys provided. Nothing to check.");
+            DropField();
+            return PM3_EINVARG;
+        }
+    }
+
     for (uint32_t x = 0; x < app_ids_len / 3; x++) {
 
         uint32_t curaid = (app_ids[x * 3] & 0xFF) + ((app_ids[(x * 3) + 1] & 0xFF) << 8) + ((app_ids[(x * 3) + 2] & 0xFF) << 16);
-        PrintAndLogEx(ERR, "Checking aid 0x%06X...", curaid);
+        PrintAndLogEx(INFO, "Checking aid " _YELLOW_("%06X"), curaid);
 
-        res = AuthCheckDesfire(&dctx, secureChannel, &app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, cmdKDFAlgo, kdfInputLen, kdfInput, foundKeys, &result, (verbose == false));
-        if (res == PM3_EOPABORTED) {
+        bool loadedAllKeys = false;
+        size_t desReadStart = 0;
+        size_t desReadEnd = 1;
+        size_t aesReadStart = 0;
+        size_t aesReadEnd = 1;
+        size_t k3kReadStart = 0;
+        size_t k3kReadEnd = 1;
+        uint32_t pattern2bOffset = startPattern;
+
+        while (!loadedAllKeys) {
+            bool foundKeyThisRound = false;
+
+            if (pattern1b) {
+
+                loadedAllKeys = true;
+
+            } else if (pattern2b) {
+
+                if (pattern2bOffset < 0x10000) {
+                    aeskeyListLen = 0;
+                    deskeyListLen = 0;
+                    k3kkeyListLen = 0;
+                    DesFill2bPattern(deskeyList, &deskeyListLen, aeskeyList, &aeskeyListLen, k3kkeyList, &k3kkeyListLen, &pattern2bOffset);
+                } else {
+                    loadedAllKeys = true;
+                }
+
+            } else if (dict_filenamelen) {
+
+                deskeyListLen = 0;
+                if (desReadEnd != 0) {
+                    res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 8, &deskeyListLen, desReadStart, &desReadEnd, false);
+                    if (res != PM3_SUCCESS) {
+                        desReadStart = desReadEnd;
+                    }
+                } else {
+                    // Every 16 byte or 24 byte key also gets read as a valid des key
+                    loadedAllKeys = true;
+                }
+
+                aeskeyListLen = 0;
+                if (aesReadEnd != 0) {
+                    res = loadFileDICTIONARYEx((char *)dict_filename, aeskeyList, sizeof(aeskeyList), NULL, 16, &aeskeyListLen, aesReadStart, &aesReadEnd, false);
+                    if (res != PM3_SUCCESS) {
+                        aesReadStart = aesReadEnd;
+                    }
+                }
+
+                k3kkeyListLen = 0;
+                if (k3kReadEnd != 0) {
+                    res = loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 24, &k3kkeyListLen, k3kReadStart, &k3kReadEnd, false);
+                    if (res != PM3_SUCCESS) {
+                        k3kReadStart = k3kReadEnd;
+                    }
+                }
+            } else {
+                // single key given with --key
+                loadedAllKeys = true;
+            }
+
+            res = AuthCheckDesfire(&dctx, secureChannel, &app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, cmdKDFAlgo, kdfInputLen, kdfInput, foundKeys, &foundKeyThisRound, verbose);
+            if (res == PM3_EOPABORTED) {
+                break;
+            }
+
+            result = (result || foundKeyThisRound);
+
+            if (foundKeyThisRound == true && verbose == false) {
+                if (pattern1b || pattern2b) {
+                    PrintAndLogEx(NORMAL, "p" NOLF);
+                } else if (dict_filenamelen) {
+                    PrintAndLogEx(NORMAL, "d" NOLF);
+                }
+            }
+        }
+
+        if (loadedAllKeys == false) {
             break;
         }
 
-        if (pattern2b && startPattern < 0x10000) {
-            if (verbose == false) {
-                PrintAndLogEx(NORMAL, "p" NOLF);
-            }
-
-            aeskeyListLen = 0;
-            deskeyListLen = 0;
-            k3kkeyListLen = 0;
-            DesFill2bPattern(deskeyList, &deskeyListLen, aeskeyList, &aeskeyListLen, k3kkeyList, &k3kkeyListLen, &startPattern);
-            continue;
-        }
-
-        if (dict_filenamelen) {
-            if (verbose == false) {
-                PrintAndLogEx(NORMAL, "d" NOLF);
-            }
-
-            uint32_t keycnt = 0;
-            res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
-            if (res == PM3_SUCCESS && endFilePosition) {
-                deskeyListLen = keycnt;
-            }
-
-            keycnt = 0;
-            res = loadFileDICTIONARYEx((char *)dict_filename, aeskeyList, sizeof(aeskeyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
-            if (res == PM3_SUCCESS && endFilePosition) {
-                aeskeyListLen = keycnt;
-            }
-
-            keycnt = 0;
-            res = loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 16, &keycnt, endFilePosition, &endFilePosition, false);
-            if (res == PM3_SUCCESS && endFilePosition) {
-                k3kkeyListLen = keycnt;
-            }
-
-            continue;
-        }
     }
     if (verbose == false) {
         PrintAndLogEx(NORMAL, "");
@@ -1780,9 +1824,10 @@ static int CmdHF14aDesChk(const char *Cmd) {
     if ((jsonnamelen > 0) && result) {
         DropField();
         // MIFARE DESFire info
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
+        SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
         PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        uint8_t sel_1813 = 0;
+        if (WaitForIso14aReply(&resp, 2500, NULL, &sel_1813) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
@@ -1790,7 +1835,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         iso14a_card_select_t card;
         memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
-        uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
+        uint64_t select_status = sel_1813; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
 
         uint8_t data[10 + 1 + 2 + 1 + 256 + (4 * 0xE * (24 + 1))] = {0};
         uint8_t atslen = 0;
@@ -4591,6 +4636,7 @@ static int CmdHF14ADesPC(const char *Cmd) {
                   "This command uses plain communication with a dedicated 16-byte AES proximity key.",
                   "hf mfdes pc --key 00000000000000000000000000000000\n"
                   "hf mfdes pc --key 00112233445566778899aabbccddeeff --rounds 4\n"
+                  "hf mfdes pc --aid 123456 --key 00112233445566778899aabbccddeeff\n"
                   "hf mfdes pc --key 00112233445566778899aabbccddeeff -c native -a");
 
     void *argtable[] = {
@@ -4600,6 +4646,7 @@ static int CmdHF14ADesPC(const char *Cmd) {
         arg_str1("k",  "key",    "<hex>", "Key (AES-128, exactly 16 bytes)"),
         arg_int0("r",  "rounds", "<dec>", "Number of rounds (1..8), default 8"),
         arg_str0("c",  "ccset",  "<native|niso>", "Communication command set (default from `hf mfdes default`)"),
+        arg_str0(NULL, "aid",     "<hex>", "Application ID (3 hex bytes, big endian)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4635,6 +4682,13 @@ static int CmdHF14ADesPC(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    uint32_t appid = 0;
+    bool appid_present = false;
+    if (CLIGetUint32Hex(ctx, 6, 0, &appid, &appid_present, 3, "AID must have 3 bytes length")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
@@ -4643,7 +4697,16 @@ static int CmdHF14ADesPC(const char *Cmd) {
     DesfireSetCommMode(&dctx, DCMPlain);
     DesfireSetSecureChannel(&dctx, DACNone);
 
-    int res = DesfirePCRun(&dctx, proximity_key, rounds, verbose);
+    int res = PM3_SUCCESS;
+    if (appid_present) {
+        res = DesfireSelectAndAuthenticateAppW(&dctx, DACNone, ISW6bAID, appid, true, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+    }
+
+    res = DesfirePCRun(&dctx, proximity_key, rounds, !appid_present, verbose);
     DropField();
     return res;
 }

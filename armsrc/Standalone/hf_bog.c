@@ -37,9 +37,10 @@ from the client to view the stored quadlets.
 #include "util.h"
 #include "spiffs.h"
 #include "appmain.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "BigBuf.h"
 #include "string.h"
 
@@ -89,9 +90,9 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
     Uart14aInit(receivedCmd, MAX_FRAME_SIZE, receivedCmdPar);
 
     // Setup and start DMA.
-    if (FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE) == false) {
+    if (FpgaSetupSscRxDmaRepeat((uint8_t *)dmaBuf, DMA_BUFFER_SIZE) == false) {
         if (g_dbglevel > DBG_ERROR) {
-            Dbprintf("FpgaSetupSscDma failed. Exiting");
+            Dbprintf("FpgaSetupSscRxDmaRepeat failed. Exiting");
         }
         return;
     }
@@ -118,7 +119,7 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
         LED_A_ON();
 
         int register readBufDataP = data - dmaBuf;
-        int register dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
+        int register dmaBufDataP = DMA_BUFFER_SIZE - FPGA_SSC_DMA_RX_Remaining_Count();
         if (readBufDataP <= dmaBufDataP)
             dataLen = dmaBufDataP - readBufDataP;
         else
@@ -132,16 +133,8 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
         if (dataLen < 1)
             continue;
 
-        // primary buffer was stopped( <-- we lost data!
-        if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
-            AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t)dmaBuf;
-            AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-            // Dbprintf("[-] RxEmpty ERROR | data length %d", dataLen); // temporary
-        }
-        // secondary buffer sets as primary, secondary buffer was stopped
-        if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t)dmaBuf;
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+        if (FPGA_SSC_DMA_RX_Done()) {
+            FPGA_SSC_DMA_RX_Refresh_Repeat(dmaBuf, DMA_BUFFER_SIZE);
         }
 
         LED_A_OFF();
@@ -216,7 +209,7 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
         }
     } // end main loop
 
-    FpgaDisableSscDma();
+    FPGA_SSC_DMA_RX_Disable();
     set_tracing(false);
 
     Dbprintf("Stopped sniffing");

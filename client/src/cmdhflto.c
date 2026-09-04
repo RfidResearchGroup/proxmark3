@@ -103,46 +103,40 @@ static int CmdHelp(const char *Cmd);
 
 static void lto_switch_off_field(void) {
     SetISODEPState(ISODEP_INACTIVE);
-    SendCommandMIX(CMD_HF_ISO14443A_READER, 0, 0, 0, NULL, 0);
+    SendIso14aReader(0, NULL, 0);
 }
 
 static void lto_switch_on_field(void) {
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, NULL, 0);
 }
 
 // send a raw LTO-CM command, returns the length of the response (0 in case of error)
 static int lto_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint16_t *response_len, bool addcrc, bool is7bits, bool verbose) {
 
-    uint64_t arg0 = ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS;
-    uint32_t arg1;
+    uint32_t flags = ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS;
 
     if (addcrc) {
-        arg0 |= ISO14A_APPEND_CRC;
+        flags |= ISO14A_APPEND_CRC;
     }
 
-    if (is7bits) {
-        arg1 = 7 << 16;
-    } else {
-        arg1 = 0;
-    }
+    uint16_t lenbits = (is7bits) ? 7 : 0;
 
-    arg1 |= len;
-
-    SendCommandMIX(CMD_HF_ISO14443A_READER, arg0, arg1, 0, cmd, len);
+    SendIso14aReaderEx(flags, cmd, len, len, lenbits, 0, 0);
     PacketResponseNG resp;
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    uint16_t rlen_127 = 0;
+    if (WaitForIso14aReply(&resp, 1500, &rlen_127, NULL) == false) {
         if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
-    if (resp.oldarg[0] == *response_len) {
-        *response_len = resp.oldarg[0];
+    if (rlen_127 == *response_len) {
+        *response_len = rlen_127;
         if (*response_len > 0) {
             memcpy(response, resp.data.asBytes, *response_len);
         }
     } else {
-        if (verbose) PrintAndLogEx(WARNING, "Wrong response length (%d != %" PRIu64 ")", *response_len, resp.oldarg[0]);
+        if (verbose) PrintAndLogEx(WARNING, "Wrong response length (%d != %u)", *response_len, rlen_127);
         return PM3_ESOFT;
     }
 

@@ -23,8 +23,10 @@
 #include "appmain.h"
 #include "BigBuf.h"
 #include "iso14443a.h"
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "ticks_apis.h"
+#include "fpga_apis.h"
+#include "rssi_apis.h"
 #include "dbprint.h"
 #include "util.h"
 
@@ -59,7 +61,7 @@ void ReadThinFilm(void) {
 #define SEC_F 0x00
 
 static uint16_t ReadReaderField(void) {
-    return AvgAdc(ADC_CHAN_HF);
+    return AdcRssiAvg(ADC_RSSI_CH_HF);
 }
 
 static void CodeThinfilmAsTag(const uint8_t *cmd, uint16_t len) {
@@ -86,34 +88,35 @@ static int EmSendCmdThinfilmRaw(const uint8_t *resp, uint16_t respLen) {
     uint32_t ThisTransferTime ;
 
     // clear receiving shift register and holding register
-    while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
-    b = AT91C_BASE_SSC->SSC_RHR;
+    FPGA_SSC_RX_READY_WAIT();
+    b = FPGA_SSC_RX_Value();
     (void) b;
 
     // wait for the FPGA to signal fdt_indicator == 1 (the FPGA is ready to queue new data in its delay line)
     for (uint8_t j = 0; j < 5; j++) {    // allow timeout - better late than never
-        while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
-        if (AT91C_BASE_SSC->SSC_RHR) {
+        FPGA_SSC_RX_READY_WAIT();
+        if (FPGA_SSC_RX_Value()) {
             break;
         }
     }
     while ((ThisTransferTime = GetCountSspClk()) & 0x00000007);
 
     // Clear TXRDY:
-    AT91C_BASE_SSC->SSC_THR = SEC_F;
+    FPGA_SSC_TX_Value(SEC_F);
 
     uint16_t FpgaSendQueueDelay = 0;
 
     // send cycle
     size_t i = 0;
     for (; i < respLen;) {
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-            AT91C_BASE_SSC->SSC_THR = resp[i++];
-            FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_TX_Ready()) {
+            FPGA_SSC_TX_Value(resp[i++]);
+            FPGA_SSC_RX_READY_WAIT();
+            FpgaSendQueueDelay = (uint8_t)FPGA_SSC_RX_Value();
         }
 
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            b = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
+        if (FPGA_SSC_RX_Ready()) {
+            b = (uint8_t)(FPGA_SSC_RX_Value());
             (void)b;
         }
         if (BUTTON_PRESS()) break;
@@ -124,9 +127,10 @@ static int EmSendCmdThinfilmRaw(const uint8_t *resp, uint16_t respLen) {
     fpga_queued_bits >>= 3; // divide by 8 (again?)
     fpga_queued_bits += 1u;
     for (i = 0; i <= fpga_queued_bits;) {
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
-            AT91C_BASE_SSC->SSC_THR = SEC_F;
-            FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_TX_Ready()) {
+            FPGA_SSC_TX_Value(SEC_F);
+            FPGA_SSC_RX_READY_WAIT();
+            FpgaSendQueueDelay = (uint8_t)FPGA_SSC_RX_Value();
             i++;
         }
     }
@@ -147,7 +151,7 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
     Dbprintf("Simulate " _YELLOW_("%i-bit Thinfilm") " tag", len * 8);
 
     // connect Demodulated Signal to ADC:
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
 
     // Set up the synchronous serial port
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
@@ -185,14 +189,12 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
 
         uint16_t hf_av = ReadReaderField();
 
+        /* TODO DXL: Do not use the ADC value directly, which will result in cross platform failure.
         if (hf_av < hf_baseline) {
             hf_baseline = hf_av;
         }
-
         if (hf_av > hf_baseline + 10) {
-
             EmSendCmdThinfilmRaw(ts->buf, ts->max);
-
             if (len == 16) {
                 // wait 3.6ms
                 SpinDelayUs(3600);
@@ -201,6 +203,23 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
                 SpinDelayUs(2400);
             }
         }
+        */
+
+        if (hf_av < hf_baseline) {
+            hf_baseline = hf_av;
+        } else if (hf_av > hf_baseline) {
+            if (AdcRssiDataToMilliVolt(hf_av - hf_baseline, ADC_RSSI_CH_HF) > 1375) {
+                EmSendCmdThinfilmRaw(ts->buf, ts->max);
+                if (len == 16) {
+                    // wait 3.6ms
+                    SpinDelayUs(3600);
+                } else {
+                    // wait 2.4ms
+                    SpinDelayUs(2400);
+                }
+            }
+        }
+
     }
 
     LED_A_OFF();

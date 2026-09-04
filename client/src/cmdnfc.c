@@ -178,6 +178,183 @@ static int CmdNfcDecode(const char *Cmd) {
     return res;
 }
 
+static int CmdNfcEncode(const char *Cmd) {
+
+#ifndef MAX_NDEF_LEN
+#define MAX_NDEF_LEN  2048
+#endif
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "nfc encode",
+                  "Encode NFC Data Exchange Format (NDEF) records.\n"
+                  "Combine several options to build a multi record message,\n"
+                  "records are added in the order listed below.\n"
+                  "\n"
+                  "By default a bare NDEF message is emitted. Use `--tlv` to wrap it in a\n"
+                  "NFC Forum Type 2 tag container ( 03 <len> ... FE ), which is what the\n"
+                  "`-d` parameter of `hf mf ndefwrite` and `hf 14a ndefwrite` expects.\n"
+                  "`hf mfu ndefwrite` adds the container itself, so it does not need `--tlv`",
+                  "nfc encode --uri https://proxmark.com\n"
+                  "nfc encode --uri tel:+123456789\n"
+                  "nfc encode --text \"hello world\"\n"
+                  "nfc encode --aar com.example.app\n"
+                  "nfc encode --uri https://proxmark.com --aar com.example.app\n"
+                  "nfc encode --uri https://proxmark.com --tlv -f myfilename"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "uri",  "<str>", "URI record. URL, tel:, mailto:, ..."),
+        arg_str0(NULL, "text", "<str>", "Text record"),
+        arg_str0(NULL, "lang", "<str>", "language code for the text record (default: en)"),
+        arg_str0(NULL, "aar",  "<str>", "Android Application Record, ie an app package name"),
+        arg_lit0(NULL, "tlv",  "wrap message in a NFC Forum Type 2 tag TLV container"),
+        arg_str0("f",  "file", "<fn>", "save raw bytes to file"),
+        arg_lit0("v",  "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    // CLIParamStrToBuf copies the trailing NUL as well but only rejects lengths
+    // strictly above maxdatalen, so leave room for that byte
+    int urilen = 0;
+    char uri[1024] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)uri, sizeof(uri) - 1, &urilen);
+
+    int textlen = 0;
+    char text[1024] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)text, sizeof(text) - 1, &textlen);
+
+    int langlen = 0;
+    char lang[32] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)lang, sizeof(lang) - 1, &langlen);
+
+    int aarlen = 0;
+    char aar[256] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)aar, sizeof(aar) - 1, &aarlen);
+
+    bool use_tlv = arg_get_lit(ctx, 5);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool verbose = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
+
+    if ((urilen == 0) && (textlen == 0) && (aarlen == 0)) {
+        PrintAndLogEx(ERR, "Must specify at least one record. See `" _YELLOW_("nfc encode -h") "`");
+        return PM3_EINVARG;
+    }
+
+    if ((langlen != 0) && (textlen == 0)) {
+        PrintAndLogEx(WARNING, "`--lang` only applies to a text record, ignoring");
+    }
+
+    NDEFRecordDesc_t recs[3] = {{0}};
+    size_t count = 0;
+    int res = PM3_SUCCESS;
+
+    uint8_t p_uri[sizeof(uri) + 1] = {0};
+    size_t p_uri_len = 0;
+    if (urilen) {
+        res = NDEFEncodePayloadURI(uri, p_uri, sizeof(p_uri), &p_uri_len);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to encode URI record");
+            return res;
+        }
+        recs[count].tnf = tnfWellKnownRecord;
+        recs[count].type = (const uint8_t *)NDEF_TYPE_URI;
+        recs[count].typeLen = strlen(NDEF_TYPE_URI);
+        recs[count].payload = p_uri;
+        recs[count].payloadLen = p_uri_len;
+        count++;
+    }
+
+    uint8_t p_text[sizeof(text) + sizeof(lang) + 1] = {0};
+    size_t p_text_len = 0;
+    if (textlen) {
+        res = NDEFEncodePayloadText(text, lang, p_text, sizeof(p_text), &p_text_len);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to encode Text record");
+            return res;
+        }
+        recs[count].tnf = tnfWellKnownRecord;
+        recs[count].type = (const uint8_t *)NDEF_TYPE_TEXT;
+        recs[count].typeLen = strlen(NDEF_TYPE_TEXT);
+        recs[count].payload = p_text;
+        recs[count].payloadLen = p_text_len;
+        count++;
+    }
+
+    uint8_t p_aar[sizeof(aar)] = {0};
+    size_t p_aar_len = 0;
+    if (aarlen) {
+        res = NDEFEncodePayloadAAR(aar, p_aar, sizeof(p_aar), &p_aar_len);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to encode Android Application Record");
+            return res;
+        }
+        recs[count].tnf = tnfExternalRecord;
+        recs[count].type = (const uint8_t *)NDEF_ANDROID_AAR;
+        recs[count].typeLen = strlen(NDEF_ANDROID_AAR);
+        recs[count].payload = p_aar;
+        recs[count].payloadLen = p_aar_len;
+        count++;
+    }
+
+    uint8_t msg[MAX_NDEF_LEN] = {0};
+    size_t msglen = 0;
+    res = NDEFEncodeMessage(recs, count, msg, sizeof(msg), &msglen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to encode NDEF message");
+        return res;
+    }
+
+    uint8_t tlv[MAX_NDEF_LEN] = {0};
+    uint8_t *out = msg;
+    size_t outlen = msglen;
+
+    if (use_tlv) {
+        size_t tlvlen = 0;
+        res = NDEFEncodeTLV(msg, msglen, tlv, sizeof(tlv), &tlvlen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to wrap NDEF message in a TLV container");
+            return res;
+        }
+        out = tlv;
+        outlen = tlvlen;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("NDEF encoding") " ----------------");
+    PrintAndLogEx(SUCCESS, "Records......... " _YELLOW_("%zu"), count);
+    PrintAndLogEx(SUCCESS, "Message size.... " _YELLOW_("%zu") " bytes", msglen);
+    if (use_tlv) {
+        PrintAndLogEx(SUCCESS, "TLV size........ " _YELLOW_("%zu") " bytes", outlen);
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    if (outlen > 64) {
+        print_hex_noascii_break(out, outlen, 32);
+    } else {
+        PrintAndLogEx(SUCCESS, _GREEN_("%s"), sprint_hex_inrow(out, outlen));
+    }
+
+    if (fnlen) {
+        saveFile(filename, ".bin", out, outlen);
+    }
+
+    // round trip it back through the decoder, so the user can see what a reader will see
+    if (use_tlv) {
+        NDEFDecodeAndPrint(out, outlen, verbose);
+    } else {
+        NDEFRecordsDecodeAndPrint(out, outlen, verbose);
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int CmdNFCType1Read(const char *Cmd) {
     return CmdHFTopazInfo(Cmd);
 }
@@ -210,6 +387,10 @@ static int CmdNFCType2Read(const char *Cmd) {
     return CmdHF14MfuNDEFRead(Cmd);
 }
 
+static int CmdNFCType2Write(const char *Cmd) {
+    return CmdHF14MfuNDEFWrite(Cmd);
+}
+
 static int CmdNFCType2Help(const char *Cmd);
 
 static command_t CommandNFCType2Table[] = {
@@ -217,7 +398,7 @@ static command_t CommandNFCType2Table[] = {
     {"--------",    CmdNFCType2Help,  AlwaysAvailable, "-------------- " _CYAN_("NFC Forum Tag Type 2") " ---------------"},
 //    {"format",     CmdNFCType2Format,  IfPm3Iso14443a,  "format ISO-14443-a tag as NFC Tag"},
     {"read",        CmdNFCType2Read,  IfPm3Iso14443a,  "read NFC Forum Tag Type 2"},
-//    {"write",        CmdNFCType2Write, IfPm3Iso14443a, "write NFC Forum Tag Type 2"},
+    {"write",       CmdNFCType2Write, IfPm3Iso14443a,  "write NFC Forum Tag Type 2"},
     {"--------",    CmdNFCType2Help,  AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"help",        CmdNFCType2Help,  AlwaysAvailable, "This help"},
     {NULL, NULL, NULL, NULL}
@@ -459,7 +640,7 @@ static command_t CommandTable[] = {
     {"--------",    CmdHelp,          AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"help",        CmdHelp,          AlwaysAvailable, "This help"},
     {"decode",      CmdNfcDecode,     AlwaysAvailable, "Decode NDEF records"},
-//    {"encode",      CmdNfcEncode,     AlwaysAvailable, "Encode NDEF records"},
+    {"encode",      CmdNfcEncode,     AlwaysAvailable, "Encode NDEF records"},
     {NULL, NULL, NULL, NULL}
 };
 

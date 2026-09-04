@@ -23,7 +23,8 @@
 #include "BigBuf.h"
 #include "string.h"
 #include "mifareutil.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "protocols.h"
@@ -32,7 +33,7 @@
 #include "commonutil.h"
 #include "crc16.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "i2c.h"
 #include "i2c_direct.h"
 
@@ -79,13 +80,17 @@ static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint
 
     uint32_t wait = SIM_WAIT_DELAY;
 
-    if (((flags & SC_RAW) == SC_RAW) || ((flags & SC_RAW_T0) == SC_RAW_T0)) {
+    if (((flags & SC_RAW) == SC_RAW) ||
+            ((flags & SC_RAW_T0) == SC_RAW_T0) ||
+            ((flags & SC_RAW_T1) == SC_RAW_T1)) {
 
         if ((flags & SC_WAIT) == SC_WAIT) {
-            // wait_delay is in ms; one WaitSCL_H_delay iteration is ~3.07us.
-            // Integer-only conversion via uint64_t to avoid soft-float and
-            // avoid overflow at large wait_delay values.
-            wait = (uint32_t)(((uint64_t)p->wait_delay * 100000U + 153U) / 307U);
+            // see the same conversion in SmartCardRaw()
+            uint32_t ms = p->wait_delay;
+            if (ms > I2C_WAIT_MAX_MS) {
+                ms = I2C_WAIT_MAX_MS;
+            }
+            wait = I2C_ITERS_FOR_MS(ms);
         }
 
         LogTrace(p->data, p->len, 0, 0, NULL, true);
@@ -93,7 +98,7 @@ static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint
         bool res = I2C_BufferWrite(
                        p->data,
                        p->len,
-                       (((flags & SC_RAW_T0) == SC_RAW_T0) ? I2C_DEVICE_CMD_SEND_T0 : I2C_DEVICE_CMD_SEND),
+                       sc_raw_device_cmd(flags),
                        I2C_DEVICE_ADDRESS_MAIN
                    );
 

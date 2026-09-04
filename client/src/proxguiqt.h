@@ -27,6 +27,7 @@
 #include <QObject>
 #include <QWidget>
 #include <QPainter>
+#include <QLabel>
 #include <QtGui>
 
 #include "proxgui.h"
@@ -91,12 +92,57 @@ class SliderWidget : public QWidget {
     SliderWidget();
 };
 
-// Added class for SliderWidget to allow move/resize event override
+/**
+ * @brief One decoded image together with the label it is shown under
+ */
+class PictureItem {
+  public:
+    PictureItem() = default;
+    PictureItem(const QString &t, const QImage &i) : title(t), image(i) {}
+    QString title;
+    QImage image;
+};
+
+/**
+ * @brief A label that keeps its image scaled to whatever room it is given
+ *
+ * Portraits in EF_DG2 are small (often 240x320) and signatures in EF_DG7 are
+ * wide and short.  Painting either one at native size in a fixed window leaves
+ * it stranded in a corner, so the pixmap is rebuilt from the original image on
+ * every resize, fitted to the widget and keeping the aspect ratio.
+ */
+class ScaledPictureLabel : public QLabel {
+  public:
+    explicit ScaledPictureLabel(const QImage &img, QWidget *parent = nullptr);
+    QSize sizeHint(void) const override;
+
+  protected:
+    void resizeEvent(QResizeEvent *event) override;
+
+  private:
+    void rescale(void);
+    QImage m_image;
+};
+
+// Picture viewer window.  Holds an array of images, one tab per image, so that
+// several pictures of the same document (portrait, signature, other biometrics)
+// can be shown side by side
 class PictureWidget : public QWidget {
   protected:
     void closeEvent(QCloseEvent *event);
   public:
     PictureWidget();
+    ~PictureWidget(void);
+
+    void addPicture(const QString &title, const QImage &img);
+    void clearPictures(void);
+    int pictureCount(void) const { return m_images.size(); }
+    const PictureItem *pictureAt(int i) const;
+
+  private:
+    Ui::PictureForm *m_ui;
+    QVector<PictureItem> m_images;
+    void updateTitle(void);
 };
 
 /**
@@ -156,7 +202,6 @@ class ProxGuiQT : public QObject {
   private:
     QApplication *plotapp;
     ProxWidget *plotwidget;
-    Ui::PictureForm *pictureController;
     PictureWidget *pictureWidget;
 
     int argc;
@@ -172,8 +217,8 @@ class ProxGuiQT : public QObject {
     void HideGraphWindow(void);
 
     // hook up picture viewer
-    void ShowPictureWindow(const QImage &img);
-    void ShowBase64PictureWindow(char *b64);
+    void ShowPictureWindow(const QString &title, const QImage &img);
+    void ClearPictureWindow(void);
     void HidePictureWindow(void);
     void RepaintPictureWindow(void);
 
@@ -186,8 +231,8 @@ class ProxGuiQT : public QObject {
     void _HideGraphWindow(void);
 
     // hook up picture viewer
-    void _ShowPictureWindow(const QImage &img);
-    void _ShowBase64PictureWindow(char *b64);
+    void _ShowPictureWindow(const QString &title, const QImage &img);
+    void _ClearPictureWindow(void);
     void _HidePictureWindow(void);
     void _RepaintPictureWindow(void);
 
@@ -201,8 +246,8 @@ class ProxGuiQT : public QObject {
     void ExitSignal(void);
 
     // hook up picture viewer signals
-    void ShowPictureWindowSignal(const QImage &img);
-    void ShowBase64PictureWindowSignal(char *b64);
+    void ShowPictureWindowSignal(const QString &title, const QImage &img);
+    void ClearPictureWindowSignal(void);
     void HidePictureWindowSignal(void);
     void RepaintPictureWindowSignal(void);
 };

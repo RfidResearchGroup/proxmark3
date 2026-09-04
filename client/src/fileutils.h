@@ -32,6 +32,7 @@
 #include "protocols.h"    // iclass defines
 #include "cmdhftopaz.h"   // TOPAZ defines
 #include "mifare/mifaredefault.h"     // MFP / AES defines
+#include "iso15.h"        // iso15_tag_t
 
 typedef union {
     void *v;
@@ -40,6 +41,7 @@ typedef union {
     topaz_tag_t *topaz;
     iso14a_mf_extdump_t *mfc;
     iso14a_mf_dump_ev1_t *mfc_ev1;
+    iso15_tag_t *iso15;
 } udata_t;
 
 typedef enum {
@@ -48,7 +50,10 @@ typedef enum {
     jsfMfc_v2,
     jsfMfc_v3,
     jsfMfuMemory,
-    jsfHitag,
+    jsfHitag1,
+    jsfHitag2,
+    jsfHitagS,
+    jsfHitagU,
     jsfIclass,
     jsf14b,
     jsf14b_v2,
@@ -56,6 +61,7 @@ typedef enum {
     jsf15_v2,
     jsf15_v3,
     jsf15_v4,
+    jsf15_v5,
     jsfLegic,
     jsfLegic_v2,
     jsfT55x7,
@@ -123,6 +129,20 @@ bool path_is_directory(const char *path);
  * @brief Check whether a path exists and is a regular file.
  */
 bool path_is_regular_file(const char *path);
+
+/**
+ * @brief Check whether a path is absolute.
+ */
+bool path_is_absolute(const char *path);
+
+/**
+ * @brief Expand a leading "~" into the user home directory.
+ *
+ * The pm3 prompt is not a shell, so "~" reaches the client verbatim.
+ * Returns a newly allocated string which the caller must free, NULL on failure.
+ * "~user/..." is not supported and is returned unchanged.
+ */
+char *path_expand_homedir(const char *path);
 
 /**
  * @brief Return the final path component, or an empty string for NULL input.
@@ -389,6 +409,17 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
  * @return PM3_SUCCESS for ok, PM3_ESOFT for fails
 */
 int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
+
+/**
+ * @brief Convert an ISO15693 dump to the current iso15_tag_t revision.
+ * A .bin has no version field, only a length, so the length selects the layout.
+ * A dump that already is the current revision is left untouched.
+ * @param dump pointer to loaded dump, replaced on conversion
+ * @param dumplen the number of bytes loaded, updated on conversion
+ * @param verbose - extra debug output
+ * @return PM3_SUCCESS for ok, PM3_ESOFT for an unrecognised length
+*/
+int convert_15_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
 mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose);
 int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool verbose);
 
@@ -428,6 +459,10 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
  * @return PM3_SUCCESS if OK
  */
 int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
+// as pm3_save_dump, but lets the caller add fields the raw dump cannot carry,
+// such as the Hitag u UID and ICR which arrive separately from the pages
+int pm3_save_dump_cb(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, void (*callback)(json_t *));
+int pm3_save_dump_json(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
 
 /** STUB
  * @brief Utility function to save data to three file files (BIN/JSON).

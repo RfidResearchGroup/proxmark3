@@ -60,11 +60,12 @@ static int mfG4ExCommand(uint8_t cmd, uint8_t *pwd, uint8_t *data, size_t datale
     int resplen = 0;
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_RAW | ISO14A_NO_RATS | ISO14A_APPEND_CRC, 6 + datalen, 0, (uint8_t *)&payload, 6 + datalen);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_RAW | ISO14A_NO_RATS | ISO14A_APPEND_CRC, (uint8_t *)&payload, 6 + datalen);
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        if (resp.oldarg[0] != 2) {
+    uint8_t sel_66 = 0;
+    if (WaitForIso14aReply(&resp, 1500, NULL, &sel_66)) {
+        if (sel_66 != 2) {
             if (verbose) PrintAndLogEx(ERR, "No card in the field.");
             return PM3_ETIMEOUT;
         }
@@ -74,15 +75,17 @@ static int mfG4ExCommand(uint8_t cmd, uint8_t *pwd, uint8_t *data, size_t datale
         if (verbose) {
             PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
             PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
-            PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
+            PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%u]"), card.sak, sel_66);
         }
     } else {
         if (verbose) PrintAndLogEx(ERR, "No card in the field.");
         return PM3_ETIMEOUT;
     }
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        resplen = resp.oldarg[0];
+    // CONNECT + RAW, so the device answers twice: select above, raw exchange here
+    uint16_t rlen = 0;
+    if (WaitForIso14aReply(&resp, 1500, &rlen, NULL)) {
+        resplen = rlen;
 
         if (!resplen) {
             if (verbose) PrintAndLogEx(ERR, "No card response.");

@@ -86,6 +86,9 @@
 typedef enum FELICA_COMMAND {
     FELICA_CONNECT = (1 << 0),
     FELICA_NO_DISCONNECT = (1 << 1),
+    // stream the antenna envelope peak-to-peak instead of demodulated bits,
+    // so reading distance and coupling can be measured rather than guessed
+    FELICA_PROBE = (1 << 2),
     FELICA_RAW = (1 << 3),
     FELICA_APPEND_CRC = (1 << 5),
     FELICA_NO_SELECT = (1 << 6),

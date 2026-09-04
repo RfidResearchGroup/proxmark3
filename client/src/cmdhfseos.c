@@ -16,6 +16,7 @@
 // SEOS commands
 //-----------------------------------------------------------------------------
 #include "cmdhfseos.h"
+#include "cmdhficlass.h"         // shared Artemis SCP02 SEOS read implementation
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1185,22 +1186,24 @@ static int seos_try_aid_select(const uint8_t *aid, int aid_len, bool activate_fi
     memcpy(aSELECT_AID + 5, aid, aid_len);
     aSELECT_AID[5 + aid_len] = 0x00;
 
+    // The caller owns the field. This is a probe - seos_aid_select() walks a list
+    // of AIDs with it - and dropping the field on a miss powers the card down, so
+    // the next candidate pays a full field-on, card boot, anticollision and RATS
+    // to ask a question the card was already up to answer. Every caller of
+    // seos_aid_select() drops the field itself when it gives up.
     int res = ExchangeAPDU14a(aSELECT_AID, 6 + aid_len, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res != PM3_SUCCESS) {
-        DropField();
         return res;
     }
 
     if (resplen < 2) {
         PrintAndLogEx(ERR, "Selecting SEOS applet aid %s failed (short response).", sprint_hex_inrow(aid, aid_len));
-        DropField();
         return PM3_EWRONGANSWER;
     }
 
     uint16_t sw = get_sw(response, resplen);
     if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting SEOS applet aid %s failed (%04x - %s).", sprint_hex_inrow(aid, aid_len), sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        DropField();
         return PM3_ESOFT;
     }
 
@@ -1224,6 +1227,16 @@ static int seos_aid_select(const uint8_t *custom_aid, int custom_aid_len) {
         res = seos_try_aid_select(aid, aid_len, activate_field, keep_field_on);
         if (res == PM3_SUCCESS) {
             return res;
+        }
+
+        // Only a card that answered is worth asking again: PM3_ESOFT is the one
+        // code that means "selected, but not that AID" - SelectCard14443A_4()
+        // reports PM3_ETIMEOUT or PM3_ECARDEXCHANGE when there is nothing there.
+        // Then the remaining candidates are one APDU each rather than a fresh
+        // activation apiece, and a missing card still fails on the select instead
+        // of waiting out an APDU timeout.
+        if (res == PM3_ESOFT) {
+            activate_field = false;
         }
     }
 
@@ -1383,7 +1396,10 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
                 PrintAndLogEx(SUCCESS, "Diversifier...................... "_YELLOW_("%s"), sprint_hex_inrow(diversifier, diversifier_length));          // Diversifier
             };
         } else {
-            seos_write_data(RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, write, write_len, ALGORITHM_INFO_value1, data_tag, data_tag_len);
+            res = seos_write_data(RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, write, write_len, ALGORITHM_INFO_value1, data_tag, data_tag_len);
+            if (res != PM3_SUCCESS) {
+                return res;
+            }
         }
 
     } else {
@@ -2305,14 +2321,17 @@ static int CmdHfSeosSAM(const char *Cmd) {
     data[0] = flags;
 
     int cmdlen = 0;
-    if (CLIParamHexToBuf(arg_get_str(ctx, 5), data + 1, PM3_CMD_DATA_SIZE - 1, &cmdlen) != PM3_SUCCESS) {
+    if (CLIParamHexToBuf(arg_get_str(ctx, 5), data + 1, g_conn.max_cmd_data_size - 1, &cmdlen) != PM3_SUCCESS) {
         CLIParserFree(ctx);
         return PM3_ESOFT;
     }
 
     CLIParserFree(ctx);
 
-    if (IsHIDSamPresent(verbose) == false) {
+    // The ARM pings the SAM itself before anything else, so this costs a card
+    // reset and an ATR to learn what it is about to learn again. Only pay for
+    // it when the detail was asked for.
+    if (verbose && (IsHIDSamPresent(verbose) == false)) {
         return PM3_ESOFT;
     }
 
@@ -2336,6 +2355,7 @@ static int CmdHfSeosSAM(const char *Cmd) {
         }
         default: {
             PrintAndLogEx(WARNING, "SAM select failed");
+            PrintAndLogEx(HINT, "Hint: is a HID SAM in the slot? try `" _YELLOW_("smart info") "`");
             return resp.status;
         }
     }
@@ -2365,6 +2385,21 @@ static int CmdHfSeosSAM(const char *Cmd) {
         //             07
     } else if (d[0] == 0xbd && d[2] == 0xb3 && d[4] == 0xa0) {
         const uint8_t *pacs = d + 6;
+        // The a0 content element normally starts with 80 <len> <PACS bits>.
+        // Some SAMs / cards return a status-only element with no access-bits
+        // field, e.g. a0 03 82 01 03 - here the first inner tag is 82, not 80.
+        // Don't parse the status byte as PACS (that yields a bogus
+        // "Invalid PACS value"); report that the card has no readable PACS.
+        if (pacs[0] != 0x80) {
+            PrintAndLogEx(WARNING, "No PACS/SIO access-bits returned by the SAM");
+            if (pacs[0] == 0x82 && pacs[1] == 0x01) {
+                PrintAndLogEx(INFO, "SAM content status: " _YELLOW_("0x%02X") " (no physicalAccessBits field)", pacs[2]);
+            }
+            if (verbose) {
+                print_hex(d, resp.length);
+            }
+            return PM3_ENOPACS;
+        }
         const uint8_t pacs_length = pacs[1];
         const uint8_t *pacs_data = pacs + 2;
         int res = HIDDumpPACSBits(pacs_data, pacs_length, verbose);
@@ -2372,14 +2407,31 @@ static int CmdHfSeosSAM(const char *Cmd) {
             return res;
         }
 
-        const uint8_t *oid = pacs + 2 + pacs_length;
-        const uint8_t oid_length = oid[1];
-        const uint8_t *oid_data = oid + 2;
-        PrintAndLogEx(SUCCESS, "SIO OID.......: " _GREEN_("%s"), sprint_hex_inrow(oid_data, oid_length));
+        // The a0 element holds 80 (PACS) and optionally 81 (SIO OID) and 82
+        // (media type). An iCLASS SE credential often omits 81, so walk the
+        // nodes rather than assuming all three are present in order.
+        const uint8_t *p = pacs + 2 + pacs_length;
+        const uint8_t *end = d + 6 + d[5];
+        if (end > d + resp.length) {
+            end = d + resp.length;
+        }
 
-        const uint8_t *mediaType = oid + 2 + oid_length;
-        const uint8_t mediaType_data = mediaType[2];
-        PrintAndLogEx(SUCCESS, "SIO Media Type: " _GREEN_("%s"), getSioMediaTypeInfo(mediaType_data));
+        while (p + 1 < end) {
+
+            uint8_t tag = p[0];
+            uint8_t len = p[1];
+            if (p + 2 + len > end) {
+                break;
+            }
+
+            if (tag == 0x81) {
+                PrintAndLogEx(SUCCESS, "SIO OID.......: " _GREEN_("%s"), sprint_hex_inrow(p + 2, len));
+            } else if ((tag == 0x82) && (len >= 1)) {
+                PrintAndLogEx(SUCCESS, "SIO Media Type: " _GREEN_("%s"), getSioMediaTypeInfo(p[2]));
+            }
+
+            p += 2 + len;
+        }
 
     } else {
         print_hex(d, resp.length);

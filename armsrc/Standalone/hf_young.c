@@ -21,10 +21,11 @@
 #include <inttypes.h>
 #include "proxmark3_arm.h"
 #include "appmain.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "util.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "string.h"
 #include "commonutil.h"
 #include "mifarecmd.h"
@@ -162,10 +163,11 @@ void RunMod(void) {
             SpinDelay(500);
             // Begin clone function here:
             /* Example from client/mifarehost.c for commanding a block write for "magic Chinese" cards:
-                    SendCommandMIX(CMD_HF_MIFARE_CSETBL, params & (0xFE | (uid == NULL ? 0:1)), blockNo, 0, data, 16);
+                    SendCommandNG(CMD_HF_MIFARE_CSETBL, payload, sizeof(mf_chinese_blk_t) + 16);
+                    where payload is mf_chinese_blk_t { u8 params, u8 blockno, u8 data[] }
 
                 Block read is similar:
-                    SendCommandMIX(CMD_HF_MIFARE_CGETBL, params, blockNo, 0,...};
+                    SendCommandNG(CMD_HF_MIFARE_CGETBL, payload, sizeof(mf_chinese_blk_t));
                 We need to imitate that call with blockNo 0 to set a uid.
 
                 The get and set commands are handled in this file:

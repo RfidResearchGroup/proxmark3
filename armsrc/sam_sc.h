@@ -76,6 +76,11 @@
 #define SAM_SC_FLAG_FORCE_RESET (1 << 0)
 #define SAM_SC_FLAG_RELEASE     (1 << 1)
 #define SAM_SC_FLAG_NO_PAYLOAD  (1 << 2)
+#define SAM_SC_FLAG_HF_RELAY    (1 << 3)
+#define SAM_SC_FLAG_HF_SELECT   (1 << 4)
+#define SAM_SC_FLAG_HF_OFF      (1 << 5)
+#define SAM_SC_FLAG_CARD_API    (1 << 6)
+#define SAM_SC_FLAG_PREVENT_EPURSE_UPDATE (1 << 7)
 
 // Wire-layout offsets within the CMD_HF_SAM_SC packet body.
 #define SAM_SC_OFF_FLAGS        0
@@ -84,6 +89,8 @@
 #define SAM_SC_OFF_ADDR_REPLY   3
 #define SAM_SC_OFF_SCFLAG       4
 #define SAM_SC_HEADER_LEN       5
+
+#define SAM_SC_ADDR_SNMP_LOADER 0xff
 
 void sam_sc_handler(const PacketCommandNG *c);
 

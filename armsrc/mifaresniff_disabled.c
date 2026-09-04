@@ -83,8 +83,8 @@ void RAMFUNC SniffMifare(uint8_t param) {
 
     // Setup and start DMA.
     // set transfer address and number of bytes. Start transfer.
-    if (FpgaSetupSscDma(dmaBuf, DMA_BUFFER_SIZE) == false) {
-        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
+    if (FpgaSetupSscRxDmaRepeat(dmaBuf, DMA_BUFFER_SIZE) == false) {
+        if (g_dbglevel > DBG_ERROR) Dbprintf("[!] FpgaSetupSscRxDmaRepeat failed. Exiting");
         return;
     }
 
@@ -111,7 +111,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
                         maxDataLen = 0;
                         ReaderIsActive = false;
                         TagIsActive = false;
-                        FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE); // set transfer address and number of bytes. Start transfer.
+                        FpgaSetupSscRxDmaRepeat((uint8_t *)dmaBuf, DMA_BUFFER_SIZE); // set transfer address and number of bytes. Start transfer.
                     }
                 }
                 */
@@ -119,7 +119,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
         // number of bytes we have processed so far
         int register readBufDataP = data - dmaBuf;
         // number of bytes already transferred
-        int register dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
+        int register dmaBufDataP = DMA_BUFFER_SIZE - FPGA_SSC_DMA_RX_Remaining_Length();
         if (readBufDataP <= dmaBufDataP)            // we are processing the same block of data which is currently being transferred
             dataLen = dmaBufDataP - readBufDataP;   // number of bytes still to be processed
         else
@@ -135,16 +135,8 @@ void RAMFUNC SniffMifare(uint8_t param) {
         }
         if (dataLen < 1) continue;
 
-        // primary buffer was stopped ( <-- we lost data!
-        if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
-            AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t)dmaBuf;
-            AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-            Dbprintf("[-] RxEmpty ERROR | data length %d", dataLen); // temporary
-        }
-        // secondary buffer sets as primary, secondary buffer was stopped
-        if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t)dmaBuf;
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+        if (FPGA_SSC_DMA_RX_Done()) {
+            FPGA_SSC_DMA_RX_Refresh_Repeat(dmaBuf, DMA_BUFFER_SIZE);
         }
 
         LED_A_OFF();

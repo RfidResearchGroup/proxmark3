@@ -32,8 +32,12 @@ void HideGraphWindow(void);
 void RepaintGraphWindow(void);
 
 // hook up picture viewer
-void ShowPictureWindow(uint8_t *data, int len);
-void ShowBase64PictureWindow(char *b64);
+// The picture viewer keeps an array of images, one tab per image,
+// so several pictures (portrait, signature, other biometrics...) can be shown at once.
+// "title" is used as tab label,  NULL gives a generic "Image N" label
+void ShowPictureWindow(const char *title, uint8_t *data, int len);
+void ShowBase64PictureWindow(const char *title, char *b64);
+void ClearPictureWindow(void);
 void HidePictureWindow(void);
 void RepaintPictureWindow(void);
 

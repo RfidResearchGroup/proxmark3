@@ -28,6 +28,8 @@
 #include "iso7816/apduinfo.h"       // GetAPDUCodeDescription
 #include "iso7816/iso7816core.h"    // Iso7816ExchangeEx etc
 #include "crypto/libpcrypto.h"      // Hash calculation (sha1, sha256, sha512), des_encrypt/des_decrypt
+#include "emrtd/emrtd_pace.h"       // PACE primitives and secure messaging session
+#include "emrtd/emrtd_pacetest.h"   // emrtd_test
 #include "des.h"                    // mbedtls_des_key_set_parity
 #include "crapto1/crapto1.h"        // prng_successor
 #include "commonutil.h"             // num_to_bytes
@@ -181,46 +183,6 @@ static emrtd_hashalg_t hashalg_table[] = {
     {NULL,      NULL,       0,  0,  {0}}
 };
 
-static emrtd_pacealg_t pacealg_table[] = {
-//  name                                       keygen descriptor
-    {"DH, Generic Mapping, 3DES-CBC-CBC",      NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x01, 0x01}},
-    {"DH, Generic Mapping, AES-CMAC-128",      NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x01, 0x02}},
-    {"DH, Generic Mapping, AES-CMAC-192",      NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x01, 0x03}},
-    {"DH, Generic Mapping, AES-CMAC-256",      NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x01, 0x04}},
-    {"ECDH, Generic Mapping, 3DES-CBC-CBC",    NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x02, 0x01}},
-    {"ECDH, Generic Mapping, AES-CMAC-128",    NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x02, 0x02}},
-    {"ECDH, Generic Mapping, AES-CMAC-192",    NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x02, 0x03}},
-    {"ECDH, Generic Mapping, AES-CMAC-256",    NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x02, 0x04}},
-    {"DH, Integrated Mapping, 3DES-CBC-CBC",   NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x03, 0x01}},
-    {"DH, Integrated Mapping, AES-CMAC-128",   NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x03, 0x02}},
-    {"DH, Integrated Mapping, AES-CMAC-192",   NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x03, 0x03}},
-    {"DH, Integrated Mapping, AES-CMAC-256",   NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x03, 0x04}},
-    {"ECDH, Integrated Mapping, 3DES-CBC-CBC", NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x04, 0x01}},
-    {"ECDH, Integrated Mapping, AES-CMAC-128", NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x04, 0x02}},
-    {"ECDH, Integrated Mapping, AES-CMAC-192", NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x04, 0x03}},
-    {"ECDH, Integrated Mapping, AES-CMAC-256", NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x04, 0x04}},
-    {NULL, NULL, {0}}
-};
-
-static emrtd_pacesdp_t pacesdp_table[] = {
-//   id  name                                                     size
-    {0,  "1024-bit MODP Group with 160-bit Prime Order Subgroup", 1024},
-    {1,  "2048-bit MODP Group with 224-bit Prime Order Subgroup", 2048},
-    {2,  "2048-bit MODP Group with 256-bit Prime Order Subgroup", 2048},
-    {8,  "NIST P-192 (secp192r1)",                                192},
-    {10, "NIST P-224 (secp224r1)",                                224},
-    {12, "NIST P-256 (secp256r1)",                                256},
-    {15, "NIST P-384 (secp384r1)",                                384},
-    {18, "NIST P-521 (secp521r1)",                                521},
-    {9,  "BrainpoolP192r1",                                       192},
-    {11, "BrainpoolP224r1",                                       224},
-    {13, "BrainpoolP256r1",                                       256},
-    {14, "BrainpoolP320r1",                                       320},
-    {16, "BrainpoolP384r1",                                       384},
-    {17, "BrainpoolP521r1",                                       521},
-    {32, NULL, 0}
-};
-
 static emrtd_dg_t *emrtd_tag_to_dg(uint8_t tag) {
     for (int dgi = 0; dg_table[dgi].filename != NULL; dgi++) {
         if (dg_table[dgi].tag == tag) {
@@ -259,26 +221,6 @@ static int emrtd_exchange_commands_noout(sAPDU_t apdu, bool activate_field, bool
     uint8_t response[PM3_CMD_DATA_SIZE] = {0};
     size_t resplen = 0;
     return emrtd_exchange_commands(apdu, false, 0, response, 0, &resplen, activate_field, keep_field_on);
-}
-
-static char emrtd_calculate_check_digit(char *data) {
-    const int mrz_weight[] = {7, 3, 1};
-    int value, cd = 0;
-
-    for (int i = 0; i < strlen(data); i++) {
-        char d = data[i];
-        if ('A' <= d && d <= 'Z') {
-            value = d - 55;
-        } else if ('a' <= d && d <= 'z') {
-            value = d - 87;
-        } else if (d == '<') {
-            value = 0;
-        } else {  // Numbers
-            value = d - 48;
-        }
-        cd += value * mrz_weight[i % 3];
-    }
-    return cd % 10;
 }
 
 static int emrtd_get_asn1_data_length(uint8_t *datain, int datainlen, int offset) {
@@ -325,86 +267,6 @@ static int emrtd_get_asn1_field_length(uint8_t *datain, int datainlen, int offse
         return 4;
     }
     return 0;
-}
-
-static void des3_encrypt_cbc(uint8_t *iv, uint8_t *key, uint8_t *input, int inputlen, uint8_t *output) {
-    mbedtls_des3_context ctx;
-    mbedtls_des3_set2key_enc(&ctx, key);
-
-    mbedtls_des3_crypt_cbc(&ctx  // des3_context
-                           , MBEDTLS_DES_ENCRYPT    // int mode
-                           , inputlen               // length
-                           , iv                     // iv[8]
-                           , input                  // input
-                           , output                 // output
-                          );
-    mbedtls_des3_free(&ctx);
-}
-
-static void des3_decrypt_cbc(uint8_t *iv, uint8_t *key, uint8_t *input, int inputlen, uint8_t *output) {
-    mbedtls_des3_context ctx;
-    mbedtls_des3_set2key_dec(&ctx, key);
-
-    mbedtls_des3_crypt_cbc(&ctx  // des3_context
-                           , MBEDTLS_DES_DECRYPT    // int mode
-                           , inputlen               // length
-                           , iv                     // iv[8]
-                           , input                  // input
-                           , output                 // output
-                          );
-    mbedtls_des3_free(&ctx);
-}
-
-static int pad_block(uint8_t *input, int inputlen, uint8_t *output) {
-    const uint8_t padding[8] = {0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-    memcpy(output, input, inputlen);
-
-    int to_pad = (8 - (inputlen % 8));
-
-    for (int i = 0; i < to_pad; i++) {
-        output[inputlen + i] = padding[i];
-    }
-
-    return inputlen + to_pad;
-}
-
-static void retail_mac(uint8_t *key, uint8_t *input, int inputlen, uint8_t *output) {
-    // This code assumes blocklength (n) = 8, and input len of up to 240 or so chars
-    // This code takes inspirations from https://github.com/devinvenable/iso9797algorithm3
-    uint8_t k0[8];
-    uint8_t k1[8];
-    uint8_t intermediate[8] = {0x00};
-    uint8_t intermediate_des[256];
-    uint8_t block[8];
-    uint8_t message[256];
-
-    // Populate keys
-    memcpy(k0, key, 8);
-    memcpy(k1, key + 8, 8);
-
-    // Prepare message
-    int blocksize = pad_block(input, inputlen, message);
-
-    // Do chaining and encryption
-    for (int i = 0; i < (blocksize / 8); i++) {
-        memcpy(block, message + (i * 8), 8);
-
-        // XOR
-        for (int x = 0; x < 8; x++) {
-            intermediate[x] = intermediate[x] ^ block[x];
-        }
-
-        des_encrypt(intermediate_des, intermediate, k0);
-        memcpy(intermediate, intermediate_des, 8);
-    }
-
-
-    des_decrypt(intermediate_des, intermediate, k1);
-    memcpy(intermediate, intermediate_des, 8);
-
-    des_encrypt(intermediate_des, intermediate, k0);
-    memcpy(output, intermediate_des, 8);
 }
 
 static void emrtd_deskey(uint8_t *seed, const uint8_t *type, int length, uint8_t *dataout) {
@@ -457,193 +319,205 @@ static int _emrtd_read_binary(int offset, int bytes_to_read, uint8_t *dataout, s
     return emrtd_exchange_commands((sAPDU_t) {0, ISO7816_READ_BINARY, offset >> 8, offset & 0xFF, 0, NULL}, true, bytes_to_read, dataout, maxdataoutlen, dataoutlen, false, true);
 }
 
-static void emrtd_bump_ssc(uint8_t *ssc) {
-    PrintAndLogEx(DEBUG, "ssc-b: %s", sprint_hex_inrow(ssc, 8));
-    for (int i = 7; i > 0; i--) {
-        if ((*(ssc + i)) == 0xFF) {
-            // Set anything already FF to 0, we'll do + 1 on num to left anyways
-            (*(ssc + i)) = 0;
-        } else {
-            (*(ssc + i)) += 1;
-            PrintAndLogEx(DEBUG, "ssc-a: %s", sprint_hex_inrow(ssc, 8));
-            return;
+// Walks the secure messaging response DOs. Returns the offset of DO'8E' and,
+// when present, the offset and length of the encrypted data object DO'87'.
+static bool emrtd_sm_split_rapdu(const uint8_t *rapdu, size_t rapdulen, size_t *off8e,
+                                 const uint8_t **do87, size_t *do87len) {
+    const uint8_t *cur = rapdu;
+    const uint8_t *end = rapdu + rapdulen;
+    uint32_t tag = 0;
+    const uint8_t *val = NULL;
+    size_t vlen = 0;
+
+    *do87 = NULL;
+    *do87len = 0;
+
+    while (cur < end) {
+        const uint8_t *tlvstart = cur;
+        if (emrtd_tlv_next(&cur, end, &tag, &val, &vlen) == false) {
+            PrintAndLogEx(DEBUG, "SM: malformed response DO at offset %zu", (size_t)(tlvstart - rapdu));
+            return false;
+        }
+
+        if (tag == 0x8E) {
+            if (vlen != 8) {
+                PrintAndLogEx(DEBUG, "SM: DO'8E' has unexpected length %zu", vlen);
+                return false;
+            }
+            *off8e = (size_t)(tlvstart - rapdu);
+            return true;
+        }
+
+        if (tag == 0x87) {
+            *do87 = val;
+            *do87len = vlen;
         }
     }
+
+    PrintAndLogEx(DEBUG, "SM: response has no DO'8E'");
+    return false;
 }
 
-static bool emrtd_check_cc(uint8_t *ssc, uint8_t *key, uint8_t *rapdu, int rapdulength) {
+// ICAO 9303-11 9.8.6: MAC over SSC || every response DO that precedes DO'8E'
+static bool emrtd_check_cc(emrtd_session_t *ssn, uint8_t *rapdu, size_t rapdulength) {
     // https://elixi.re/i/clarkson.png
-    uint8_t k[500] = { 0x00 };
-    uint8_t cc[500] = { 0x00 };
+    uint8_t k[EMRTD_SM_MAX_BLOCK_LEN + 512] = { 0x00 };
+    uint8_t cc[8] = { 0x00 };
+    size_t off8e = 0;
+    const uint8_t *do87 = NULL;
+    size_t do87len = 0;
 
-    emrtd_bump_ssc(ssc);
+    emrtd_sm_bump_ssc(ssn);
 
-    memcpy(k, ssc, 8);
-    int length = 0;
-    int length2 = 0;
-
-    if (*(rapdu) == 0x87) {
-        length += 2 + (*(rapdu + 1));
-        memcpy(k + 8, rapdu, length);
-        PrintAndLogEx(DEBUG, "len1: %i", length);
-    }
-
-    if ((*(rapdu + length)) == 0x99) {
-        length2 += 2 + (*(rapdu + (length + 1)));
-        memcpy(k + length + 8, rapdu + length, length2);
-        PrintAndLogEx(DEBUG, "len2: %i", length2);
-    }
-
-    int klength = length + length2 + 8;
-
-    retail_mac(key, k, klength, cc);
-    PrintAndLogEx(DEBUG, "cc: %s", sprint_hex_inrow(cc, 8));
-    PrintAndLogEx(DEBUG, "rapdu: %s", sprint_hex_inrow(rapdu, rapdulength));
-    PrintAndLogEx(DEBUG, "rapdu cut: %s", sprint_hex_inrow(rapdu + (rapdulength - 8), 8));
-    PrintAndLogEx(DEBUG, "k: %s", sprint_hex_inrow(k, klength));
-
-    return memcmp(cc, rapdu + (rapdulength - 8), 8) == 0;
-}
-
-static bool emrtd_secure_select_file_by_ef(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint16_t file) {
-    uint8_t response[PM3_CMD_DATA_SIZE] = { 0x00 };
-    size_t resplen = 0;
-
-    // convert fileid to bytes
-    uint8_t file_id[2] = { 0x00 };
-    _emrtd_convert_fileid(file, file_id);
-
-    uint8_t iv[8] = { 0x00 };
-    uint8_t cmd[8] = { 0x00 };
-    uint8_t data[21] = { 0x00 };
-    uint8_t temp[8] = {0x0c, 0xa4, EMRTD_P1_SELECT_BY_EF, 0x0c};
-
-    int cmdlen = pad_block(temp, 4, cmd);
-    int datalen = pad_block(file_id, 2, data);
-    PrintAndLogEx(DEBUG, "cmd: %s", sprint_hex_inrow(cmd, cmdlen));
-    PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, datalen));
-
-    des3_encrypt_cbc(iv, kenc, data, datalen, temp);
-    PrintAndLogEx(DEBUG, "temp: %s", sprint_hex_inrow(temp, datalen));
-    uint8_t do87[11] = {0x87, 0x09, 0x01};
-    memcpy(do87 + 3, temp, datalen);
-    PrintAndLogEx(DEBUG, "do87: %s", sprint_hex_inrow(do87, datalen + 3));
-
-    uint8_t m[19];
-    memcpy(m, cmd, cmdlen);
-    memcpy(m + cmdlen, do87, (datalen + 3));
-    PrintAndLogEx(DEBUG, "m: %s", sprint_hex_inrow(m, datalen + cmdlen + 3));
-
-    emrtd_bump_ssc(ssc);
-
-    uint8_t n[27];
-    memcpy(n, ssc, 8);
-    memcpy(n + 8, m, (cmdlen + datalen + 3));
-    PrintAndLogEx(DEBUG, "n: %s", sprint_hex_inrow(n, (cmdlen + datalen + 11)));
-
-    uint8_t cc[8];
-    retail_mac(kmac, n, (cmdlen + datalen + 11), cc);
-    PrintAndLogEx(DEBUG, "cc: %s", sprint_hex_inrow(cc, 8));
-
-    uint8_t do8e[10] = {0x8E, 0x08};
-    memcpy(do8e + 2, cc, 8);
-    PrintAndLogEx(DEBUG, "do8e: %s", sprint_hex_inrow(do8e, 10));
-
-    int lc = datalen + 3 + 10;
-    PrintAndLogEx(DEBUG, "lc: %i", lc);
-
-    memcpy(data, do87, datalen + 3);
-    memcpy(data + (datalen + 3), do8e, 10);
-    PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, lc));
-
-    if (emrtd_exchange_commands((sAPDU_t) {0x0C, ISO7816_SELECT_FILE, EMRTD_P1_SELECT_BY_EF, 0x0C, lc, data}, true, 0, response, sizeof(response), &resplen, false, true) == false) {
+    if (emrtd_sm_split_rapdu(rapdu, rapdulength, &off8e, &do87, &do87len) == false) {
         return false;
     }
 
-    return emrtd_check_cc(ssc, kmac, response, resplen);
+    if ((ssn->ssclen + off8e) > sizeof(k)) {
+        PrintAndLogEx(ERR, "error (emrtd_check_cc) response out-of-bounds");
+        return false;
+    }
+
+    memcpy(k, ssn->ssc, ssn->ssclen);
+    memcpy(k + ssn->ssclen, rapdu, off8e);
+    size_t klength = ssn->ssclen + off8e;
+
+    if (emrtd_sm_mac(ssn, k, klength, cc) != PM3_SUCCESS) {
+        return false;
+    }
+
+    PrintAndLogEx(DEBUG, "cc: %s", sprint_hex_inrow(cc, 8));
+    PrintAndLogEx(DEBUG, "rapdu: %s", sprint_hex_inrow(rapdu, rapdulength));
+    PrintAndLogEx(DEBUG, "rapdu cc: %s", sprint_hex_inrow(rapdu + off8e + 2, 8));
+    PrintAndLogEx(DEBUG, "k: %s", sprint_hex_inrow(k, klength));
+
+    return memcmp(cc, rapdu + off8e + 2, 8) == 0;
 }
 
-static bool _emrtd_secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, size_t maxdataoutlen, size_t *dataoutlen) {
-    uint8_t cmd[8] = { 0x00 };
-    uint8_t data[21] = { 0x00 };
-    uint8_t temp[8] = {0x0c, 0xb0};
+// Builds the trailing DO'8E' of a protected command over
+// SSC || padded command header || the command DOs
+static bool emrtd_sm_finish_command(emrtd_session_t *ssn, const uint8_t *header, const uint8_t *dos,
+                                    size_t doslen, uint8_t *out, size_t outlen, size_t *lc) {
+    uint8_t n[EMRTD_SM_MAX_BLOCK_LEN * 2 + 64] = { 0x00 };
+    size_t blocksize = emrtd_sm_blocksize(ssn);
+    size_t nlen = 0;
 
-    PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, EMRTD_KMAC_LEN));
+    if ((ssn->ssclen + blocksize + doslen) > sizeof(n)) {
+        PrintAndLogEx(ERR, "error (emrtd_sm_finish_command) command out-of-bounds");
+        return false;
+    }
 
-    // Set p1 and p2
-    temp[2] = (uint8_t)(offset >> 8);
-    temp[3] = (uint8_t)(offset >> 0);
-
-    int cmdlen = pad_block(temp, 4, cmd);
-    PrintAndLogEx(DEBUG, "cmd: %s", sprint_hex_inrow(cmd, cmdlen));
-
-    uint8_t do97[3] = {0x97, 0x01, bytes_to_read};
-
-    uint8_t m[11] = { 0x00 };
-    memcpy(m, cmd, 8);
-    memcpy(m + 8, do97, 3);
-
-    emrtd_bump_ssc(ssc);
-
-    uint8_t n[19] = { 0x00 };
-    memcpy(n, ssc, 8);
-    memcpy(n + 8, m, 11);
-    PrintAndLogEx(DEBUG, "n: %s", sprint_hex_inrow(n, sizeof(n)));
+    memcpy(n, ssn->ssc, ssn->ssclen);
+    nlen += ssn->ssclen;
+    nlen += emrtd_pad_block(header, 4, blocksize, n + nlen);
+    memcpy(n + nlen, dos, doslen);
+    nlen += doslen;
+    PrintAndLogEx(DEBUG, "n: %s", sprint_hex_inrow(n, nlen));
 
     uint8_t cc[8] = { 0x00 };
-    retail_mac(kmac, n, 19, cc);
-    PrintAndLogEx(DEBUG, "cc: %s", sprint_hex_inrow(cc, sizeof(cc)));
+    if (emrtd_sm_mac(ssn, n, nlen, cc) != PM3_SUCCESS) {
+        return false;
+    }
+    PrintAndLogEx(DEBUG, "cc: %s", sprint_hex_inrow(cc, 8));
 
-    uint8_t do8e[10] = {0x8E, 0x08};
-    memcpy(do8e + 2, cc, 8);
-    PrintAndLogEx(DEBUG, "do8e: %s", sprint_hex_inrow(do8e, sizeof(do8e)));
+    if ((doslen + 10) > outlen) {
+        PrintAndLogEx(ERR, "error (emrtd_sm_finish_command) data out-of-bounds");
+        return false;
+    }
 
-    int lc = 13;
-    PrintAndLogEx(DEBUG, "lc: %i", lc);
+    memcpy(out, dos, doslen);
+    out[doslen] = 0x8E;
+    out[doslen + 1] = 0x08;
+    memcpy(out + doslen + 2, cc, 8);
+    *lc = doslen + 10;
+    PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(out, *lc));
+    return true;
+}
 
-    memcpy(data, do97, 3);
-    memcpy(data + 3, do8e, 10);
-    PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, lc));
+static bool emrtd_secure_select(emrtd_session_t *ssn, uint8_t p1, const uint8_t *sel, size_t sellen);
+
+static bool emrtd_secure_select_file_by_ef(emrtd_session_t *ssn, uint16_t file) {
+    uint8_t file_id[2] = { 0x00 };
+    _emrtd_convert_fileid(file, file_id);
+    return emrtd_secure_select(ssn, EMRTD_P1_SELECT_BY_EF, file_id, sizeof(file_id));
+}
+
+static bool _emrtd_secure_read_binary(emrtd_session_t *ssn, int offset, int bytes_to_read, uint8_t *dataout, size_t maxdataoutlen, size_t *dataoutlen) {
+    const uint8_t header[4] = {0x0C, ISO7816_READ_BINARY, (uint8_t)(offset >> 8), (uint8_t)(offset & 0xFF)};
+    uint8_t do97[3] = {0x97, 0x01, (uint8_t)bytes_to_read};
+
+    emrtd_sm_bump_ssc(ssn);
+
+    uint8_t data[16] = { 0x00 };
+    size_t lc = 0;
+    if (emrtd_sm_finish_command(ssn, header, do97, sizeof(do97), data, sizeof(data), &lc) == false) {
+        return false;
+    }
 
     if (emrtd_exchange_commands((sAPDU_t) {0x0C, ISO7816_READ_BINARY, offset >> 8, offset & 0xFF, lc, data}, true, 0, dataout, maxdataoutlen, dataoutlen, false, true) == false) {
         return false;
     }
 
-    return emrtd_check_cc(ssc, kmac, dataout, *dataoutlen);
+    return emrtd_check_cc(ssn, dataout, *dataoutlen);
 }
 
-static bool _emrtd_secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, size_t *dataoutlen) {
+static bool _emrtd_secure_read_binary_decrypt(emrtd_session_t *ssn, int offset, int bytes_to_read, uint8_t *dataout, size_t *dataoutlen) {
     uint8_t response[500] = { 0x00 };
     uint8_t temp[500] = { 0x00 };
-    size_t resplen, cutat = 0;
-    uint8_t iv[8] = { 0x00 };
+    size_t resplen = 0;
+    size_t off8e = 0;
+    const uint8_t *do87 = NULL;
+    size_t do87len = 0;
 
-    if (_emrtd_secure_read_binary(kmac, ssc, offset, bytes_to_read, response, sizeof(response), &resplen) == false) {
+    if (_emrtd_secure_read_binary(ssn, offset, bytes_to_read, response, sizeof(response), &resplen) == false) {
         return false;
     }
 
     PrintAndLogEx(DEBUG, "secreadbindec, offset %i on read %i: encrypted: %s", offset, bytes_to_read, sprint_hex_inrow(response, resplen));
 
-    cutat = ((int) response[1]) - 1;
+    if (emrtd_sm_split_rapdu(response, resplen, &off8e, &do87, &do87len) == false) {
+        return false;
+    }
 
-    des3_decrypt_cbc(iv, kenc, response + 3, cutat, temp);
+    // DO'87' content is 01 || cryptogram
+    if ((do87 == NULL) || (do87len < 2) || (do87[0] != 0x01)) {
+        PrintAndLogEx(ERR, "error (emrtd_secure_read_binary_decrypt) no encrypted data in response");
+        return false;
+    }
+
+    size_t cryptolen = do87len - 1;
+    if ((cryptolen > sizeof(temp)) || ((cryptolen % emrtd_sm_blocksize(ssn)) != 0)) {
+        PrintAndLogEx(ERR, "error (emrtd_secure_read_binary_decrypt) cryptogram out-of-bounds, %zu bytes", cryptolen);
+        return false;
+    }
+
+    if ((size_t)bytes_to_read > cryptolen) {
+        PrintAndLogEx(ERR, "error (emrtd_secure_read_binary_decrypt) short read, wanted %i got %zu", bytes_to_read, cryptolen);
+        return false;
+    }
+
+    if (emrtd_sm_decrypt(ssn, do87 + 1, cryptolen, temp) != PM3_SUCCESS) {
+        return false;
+    }
+
     memcpy(dataout, temp, bytes_to_read);
-    PrintAndLogEx(DEBUG, "secreadbindec, offset %i on read %i: decrypted: %s", offset, bytes_to_read, sprint_hex_inrow(temp, cutat));
+    PrintAndLogEx(DEBUG, "secreadbindec, offset %i on read %i: decrypted: %s", offset, bytes_to_read, sprint_hex_inrow(temp, cryptolen));
     PrintAndLogEx(DEBUG, "secreadbindec, offset %i on read %i: decrypted and cut: %s", offset, bytes_to_read, sprint_hex_inrow(dataout, bytes_to_read));
     *dataoutlen = bytes_to_read;
     return true;
 }
 
-static int emrtd_read_file(uint8_t *dataout, size_t *dataoutlen, uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, bool use_secure) {
+static int emrtd_read_file(uint8_t *dataout, size_t *dataoutlen, emrtd_session_t *ssn) {
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     size_t resplen = 0;
     uint8_t tempresponse[500] = { 0x00 };
     size_t tempresplen = 0;
     int toread = 4;
     int offset = 0;
+    bool use_secure = (ssn->type != EMRTD_SM_NONE);
 
     if (use_secure) {
-        if (_emrtd_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, response, &resplen) == false) {
+        if (_emrtd_secure_read_binary_decrypt(ssn, offset, toread, response, &resplen) == false) {
             return false;
         }
     } else {
@@ -665,7 +539,7 @@ static int emrtd_read_file(uint8_t *dataout, size_t *dataoutlen, uint8_t *kenc, 
         }
 
         if (use_secure) {
-            if (_emrtd_secure_read_binary_decrypt(kenc, kmac, ssc, offset, toread, tempresponse, &tempresplen) == false) {
+            if (_emrtd_secure_read_binary_decrypt(ssn, offset, toread, tempresponse, &tempresplen) == false) {
                 PrintAndLogEx(NORMAL, "");
                 return false;
             }
@@ -745,9 +619,9 @@ static bool emrtd_lds_get_data_by_tag(uint8_t *datain, size_t datainlen, uint8_t
     return false;
 }
 
-static bool emrtd_select_and_read(uint8_t *dataout, size_t *dataoutlen, uint16_t file, uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, bool use_secure) {
-    if (use_secure) {
-        if (emrtd_secure_select_file_by_ef(ks_enc, ks_mac, ssc, file) == false) {
+static bool emrtd_select_and_read(uint8_t *dataout, size_t *dataoutlen, uint16_t file, emrtd_session_t *ssn) {
+    if (ssn->type != EMRTD_SM_NONE) {
+        if (emrtd_secure_select_file_by_ef(ssn, file) == false) {
             PrintAndLogEx(ERR, "Failed to secure select %04X", file);
             return false;
         }
@@ -758,7 +632,7 @@ static bool emrtd_select_and_read(uint8_t *dataout, size_t *dataoutlen, uint16_t
         }
     }
 
-    if (emrtd_read_file(dataout, dataoutlen, ks_enc, ks_mac, ssc, use_secure) == false) {
+    if (emrtd_read_file(dataout, dataoutlen, ssn) == false) {
         PrintAndLogEx(ERR, "Failed to read %04X", file);
         return false;
     }
@@ -899,14 +773,7 @@ static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length, const c
     return PM3_ESOFT;
 }
 
-static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, uint16_t file, const char *name, bool use_secure, const char *path) {
-    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    size_t resplen = 0;
-
-    if (emrtd_select_and_read(response, &resplen, file, ks_enc, ks_mac, ssc, use_secure) == false) {
-        return false;
-    }
-
+static bool emrtd_save_file(uint8_t *response, size_t resplen, uint16_t file, const char *name, const char *path) {
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
     if (filepath == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
@@ -933,15 +800,28 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, uint
     return true;
 }
 
-static void rng(int length, uint8_t *dataout) {
-    // Do very very secure prng operations
-    //for (int i = 0; i < (length / 4); i++) {
-    //    num_to_bytes(prng_successor(msclock() + i, 32), 4, &dataout[i * 4]);
-    //}
-    memset(dataout, 0x00, length);
+static bool emrtd_dump_file(emrtd_session_t *ssn, uint16_t file, const char *name, const char *path) {
+    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    size_t resplen = 0;
+
+    if (emrtd_select_and_read(response, &resplen, file, ssn) == false) {
+        return false;
+    }
+
+    return emrtd_save_file(response, resplen, file, name, path);
 }
 
-static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t *ssc, uint8_t *ks_enc, uint8_t *ks_mac) {
+static void rng(int length, uint8_t *dataout) {
+    // Zero nonces are fatal for PACE and were never a good idea for BAC either,
+    // so this is a real CSPRNG (mbedtls CTR_DRBG seeded from mbedtls entropy).
+    if (pcrypto_rng_fill_oneshot(dataout, length, "emrtd") != PM3_SUCCESS) {
+        // Never hand back a predictable nonce, the caller has to fail instead
+        memset(dataout, 0x00, length);
+        PrintAndLogEx(ERR, "Failed to generate random data");
+    }
+}
+
+static bool emrtd_do_bac(const char *documentnumber, const char *dob, const char *expiry, emrtd_session_t *ssn) {
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     size_t resplen = 0;
 
@@ -951,7 +831,8 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
     uint8_t k_icc[16] = { 0x00 };
     uint8_t S[32] = { 0x00 };
 
-    uint8_t rnd_ifd[8], k_ifd[16];
+    uint8_t rnd_ifd[8] = { 0x00 };
+    uint8_t k_ifd[16] = { 0x00 };
     rng(8, rnd_ifd);
     rng(16, k_ifd);
 
@@ -959,12 +840,11 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
     PrintAndLogEx(DEBUG, "dob............... " _GREEN_("%s"), dob);
     PrintAndLogEx(DEBUG, "exp............... " _GREEN_("%s"), expiry);
 
-    char documentnumbercd = emrtd_calculate_check_digit(documentnumber);
-    char dobcd = emrtd_calculate_check_digit(dob);
-    char expirycd = emrtd_calculate_check_digit(expiry);
-
     char kmrz[25] = { 0x00 };
-    snprintf(kmrz, sizeof(kmrz), "%s%i%s%i%s%i", documentnumber, documentnumbercd, dob, dobcd, expiry, expirycd);
+    if (emrtd_pace_kmrz(documentnumber, dob, expiry, kmrz, sizeof(kmrz)) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Couldn't build the MRZ information string.");
+        return false;
+    }
     PrintAndLogEx(DEBUG, "kmrz.............. " _GREEN_("%s"), kmrz);
 
     uint8_t kseed[20] = { 0x00 };
@@ -992,12 +872,12 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
     uint8_t iv[8] = { 0x00 };
     uint8_t e_ifd[32] = { 0x00 };
 
-    des3_encrypt_cbc(iv, kenc, S, sizeof(S), e_ifd);
+    emrtd_des3_encrypt_cbc(iv, kenc, S, sizeof(S), e_ifd);
     PrintAndLogEx(DEBUG, "e_ifd............. %s", sprint_hex_inrow(e_ifd, 32));
 
     uint8_t m_ifd[8] = { 0x00 };
 
-    retail_mac(kmac, e_ifd, 32, m_ifd);
+    emrtd_retail_mac(kmac, e_ifd, 32, m_ifd);
     PrintAndLogEx(DEBUG, "m_ifd............. %s", sprint_hex_inrow(m_ifd, 8));
 
     uint8_t cmd_data[40];
@@ -1012,7 +892,7 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
     PrintAndLogEx(INFO, "External authentication with BAC successful");
 
     uint8_t dec_output[32] = { 0x00 };
-    des3_decrypt_cbc(iv, kenc, response, 32, dec_output);
+    emrtd_des3_decrypt_cbc(iv, kenc, response, 32, dec_output);
     PrintAndLogEx(DEBUG, "dec_output........ %s", sprint_hex_inrow(dec_output, 32));
 
     if (memcmp(rnd_ifd, dec_output + 8, 8) != 0) {
@@ -1029,16 +909,22 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
 
     PrintAndLogEx(DEBUG, "kseed............ %s", sprint_hex_inrow(kseed, 16));
 
+    uint8_t ks_enc[EMRTD_KMAC_LEN] = { 0x00 };
+    uint8_t ks_mac[EMRTD_KMAC_LEN] = { 0x00 };
     emrtd_deskey(kseed, KENC_type, 16, ks_enc);
     emrtd_deskey(kseed, KMAC_type, 16, ks_mac);
 
     PrintAndLogEx(DEBUG, "ks_enc........ %s", sprint_hex_inrow(ks_enc, 16));
     PrintAndLogEx(DEBUG, "ks_mac........ %s", sprint_hex_inrow(ks_mac, 16));
 
-    memcpy(ssc, rnd_ic + 4, 4);
-    memcpy(ssc + 4, rnd_ifd + 4, 4);
+    if (emrtd_sm_setup(ssn, EMRTD_PACE_CIPHER_3DES, ks_enc, ks_mac) != PM3_SUCCESS) {
+        return false;
+    }
 
-    PrintAndLogEx(DEBUG, "ssc........... %s", sprint_hex_inrow(ssc, 8));
+    memcpy(ssn->ssc, rnd_ic + 4, 4);
+    memcpy(ssn->ssc + 4, rnd_ifd + 4, 4);
+
+    PrintAndLogEx(DEBUG, "ssc........... %s", sprint_hex_inrow(ssn->ssc, ssn->ssclen));
 
     return true;
 }
@@ -1048,10 +934,627 @@ static bool emrtd_connect(void) {
     return res == PM3_SUCCESS;
 }
 
-static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BAC_available, bool *BAC, uint8_t *ssc, uint8_t *ks_enc, uint8_t *ks_mac) {
+//-----------------------------------------------------------------------------
+// PACE, ICAO 9303-11 4.4 and TR-03110 part 3, 3.2
+//-----------------------------------------------------------------------------
+
+#define EMRTD_INS_MSE                   0x22
+#define EMRTD_INS_GENERAL_AUTHENTICATE  0x86
+
+#define EMRTD_PACE_PWD_MRZ              0x01
+#define EMRTD_PACE_PWD_CAN              0x02
+
+// Like emrtd_exchange_commands(), but hands the status word back so that the
+// caller can report the 63CX retry counter of a wrong PACE password.
+static bool emrtd_exchange_commands_sw(sAPDU_t apdu, bool include_le, uint16_t le, uint8_t *dataout,
+                                       size_t maxdataoutlen, size_t *dataoutlen, uint16_t *sw) {
+    uint16_t lsw = 0;
+    int res = Iso7816ExchangeEx(CC_CONTACTLESS, false, true, apdu, include_le, le, dataout, maxdataoutlen, dataoutlen, &lsw);
+
+    *sw = lsw;
+
+    if ((res != PM3_SUCCESS) && (lsw == 0)) {
+        return false;
+    }
+
+    if (lsw != ISO7816_OK) {
+        PrintAndLogEx(DEBUG, "Command failed (%04x - %s).", lsw, GetAPDUCodeDescription(lsw >> 8, lsw & 0xff));
+        return false;
+    }
+    return true;
+}
+
+static bool emrtd_secure_select(emrtd_session_t *ssn, uint8_t p1, const uint8_t *sel, size_t sellen) {
+    uint8_t response[PM3_CMD_DATA_SIZE] = { 0x00 };
+    size_t resplen = 0;
+
+    size_t blocksize = emrtd_sm_blocksize(ssn);
+    const uint8_t header[4] = {0x0C, ISO7816_SELECT_FILE, p1, 0x0C};
+
+    uint8_t plain[EMRTD_SM_MAX_BLOCK_LEN * 2] = { 0x00 };
+    if ((sellen + 1) > sizeof(plain)) {
+        return false;
+    }
+    size_t plainlen = emrtd_pad_block(sel, sellen, blocksize, plain);
+
+    // the AES IV depends on the SSC, so it has to be bumped before encrypting
+    emrtd_sm_bump_ssc(ssn);
+
+    uint8_t cryptogram[sizeof(plain)] = { 0x00 };
+    if (emrtd_sm_encrypt(ssn, plain, plainlen, cryptogram) != PM3_SUCCESS) {
+        return false;
+    }
+
+    uint8_t do87[sizeof(plain) + 3] = {0x87, 0x00, 0x01};
+    do87[1] = (uint8_t)(plainlen + 1);
+    memcpy(do87 + 3, cryptogram, plainlen);
+    PrintAndLogEx(DEBUG, "do87: %s", sprint_hex_inrow(do87, plainlen + 3));
+
+    uint8_t data[sizeof(do87) + 16] = { 0x00 };
+    size_t lc = 0;
+    if (emrtd_sm_finish_command(ssn, header, do87, plainlen + 3, data, sizeof(data), &lc) == false) {
+        return false;
+    }
+
+    uint16_t sw = 0;
+    if (emrtd_exchange_commands_sw((sAPDU_t) {0x0C, ISO7816_SELECT_FILE, p1, 0x0C, lc, data}, true, 0, response, sizeof(response), &resplen, &sw) == false) {
+        if (sw != 0) {
+            PrintAndLogEx(ERR, "Secure select rejected by the document (%04X - %s)", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xFF));
+        } else {
+            PrintAndLogEx(ERR, "Secure select got no response");
+        }
+        return false;
+    }
+
+    if (emrtd_check_cc(ssn, response, resplen) == false) {
+        PrintAndLogEx(ERR, "Secure select response failed the MAC check");
+        PrintAndLogEx(ERR, "response.......... %s", sprint_hex_inrow(response, resplen));
+        return false;
+    }
+    return true;
+}
+
+// MSE:Set AT, ICAO 9303-11 4.4.4.1
+static bool emrtd_mse_set_at(const emrtd_paceinfo_t *info, uint8_t password_ref) {
+    uint8_t data[32] = { 0x00 };
+    size_t o = 0;
+
+    data[o++] = 0x80;
+    data[o++] = (uint8_t)info->oidlen;
+    memcpy(data + o, info->oid, info->oidlen);
+    o += info->oidlen;
+
+    data[o++] = 0x83;
+    data[o++] = 0x01;
+    data[o++] = password_ref;
+
+    if (info->has_param) {
+        data[o++] = 0x84;
+        data[o++] = 0x01;
+        data[o++] = info->param_id;
+    }
+
+    PrintAndLogEx(DEBUG, "MSE:Set AT........ %s", sprint_hex_inrow(data, o));
+
+    uint8_t response[16] = { 0x00 };
+    size_t resplen = 0;
+    uint16_t sw = 0;
+
+    if (emrtd_exchange_commands_sw((sAPDU_t) {0x00, EMRTD_INS_MSE, 0xC1, 0xA4, o, data}, false, 0, response, sizeof(response), &resplen, &sw)) {
+        return true;
+    }
+
+    if ((sw & 0xFFF0) == 0x63C0) {
+        PrintAndLogEx(ERR, "PACE: wrong password, " _RED_("%i") " attempt(s) left before the password is blocked", sw & 0x000F);
+    } else if (sw == 0x6A80) {
+        PrintAndLogEx(ERR, "PACE: the document rejected the algorithm we selected (6A80)");
+    } else if (sw != 0) {
+        PrintAndLogEx(ERR, "PACE: MSE:Set AT failed (%04X - %s)", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xFF));
+    } else {
+        PrintAndLogEx(ERR, "PACE: MSE:Set AT got no response");
+    }
+    return false;
+}
+
+// One step of the GENERAL AUTHENTICATE chain. inner_tag 0 sends an empty 7C.
+// Pulls one data object out of the dynamic authentication data of a response
+static bool emrtd_ga_get(const uint8_t *dyn, size_t dynlen, uint8_t wanted,
+                         uint8_t *out, size_t maxout, size_t *outlen) {
+    const uint8_t *cur = dyn;
+    const uint8_t *end = dyn + dynlen;
+    uint32_t tag = 0;
+    const uint8_t *val = NULL;
+    size_t vlen = 0;
+
+    while (emrtd_tlv_next(&cur, end, &tag, &val, &vlen)) {
+        if (tag != wanted) {
+            continue;
+        }
+        if (vlen > maxout) {
+            PrintAndLogEx(ERR, "PACE: response object %02X is too large (%zu bytes)", wanted, vlen);
+            return false;
+        }
+        memcpy(out, val, vlen);
+        *outlen = vlen;
+        return true;
+    }
+    return false;
+}
+
+// Runs one step of the chain and hands back the content of the response's 7C
+static bool emrtd_general_authenticate(const char *step, bool more, uint8_t inner_tag, const uint8_t *payload, size_t payloadlen,
+                                       uint8_t *out, size_t maxout, size_t *outlen) {
+    uint8_t inner[EMRTD_EC_POINT_MAXLEN + 8] = { 0x00 };
+    size_t innerlen = 0;
+
+    if (inner_tag != 0) {
+        innerlen = emrtd_tlv_write_header(inner, sizeof(inner), inner_tag, payloadlen);
+        if ((innerlen == 0) || ((innerlen + payloadlen) > sizeof(inner))) {
+            PrintAndLogEx(ERR, "PACE: general authenticate payload out-of-bounds");
+            return false;
+        }
+        memcpy(inner + innerlen, payload, payloadlen);
+        innerlen += payloadlen;
+    }
+
+    uint8_t data[sizeof(inner) + 8] = { 0x00 };
+    size_t datalen = emrtd_tlv_write_header(data, sizeof(data), 0x7C, innerlen);
+    if (datalen == 0) {
+        return false;
+    }
+    memcpy(data + datalen, inner, innerlen);
+    datalen += innerlen;
+
+    if (datalen > 0xFF) {
+        PrintAndLogEx(ERR, "PACE: general authenticate command too long for a short APDU");
+        return false;
+    }
+
+    PrintAndLogEx(DEBUG, "GA >>............. %s", sprint_hex_inrow(data, datalen));
+
+    uint8_t response[PM3_CMD_DATA_SIZE] = { 0x00 };
+    size_t resplen = 0;
+    uint16_t sw = 0;
+
+    // CLA 0x10 marks every step of the chain except the last one
+    uint8_t cla = more ? 0x10 : 0x00;
+
+    if (emrtd_exchange_commands_sw((sAPDU_t) {cla, EMRTD_INS_GENERAL_AUTHENTICATE, 0x00, 0x00, datalen, data}, true, 0, response, sizeof(response), &resplen, &sw) == false) {
+        if ((sw & 0xFFF0) == 0x63C0) {
+            PrintAndLogEx(ERR, "PACE: wrong password, " _RED_("%i") " attempt(s) left before the password is blocked", sw & 0x000F);
+        } else if (sw == 0x6300) {
+            // no counter given, but at the mutual authentication step this can
+            // only mean our token did not match, i.e. the password is wrong
+            PrintAndLogEx(ERR, "PACE: %s failed (6300), the document rejected it", step);
+        } else if (sw != 0) {
+            PrintAndLogEx(ERR, "PACE: %s failed (%04X - %s)", step, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xFF));
+        } else {
+            PrintAndLogEx(ERR, "PACE: %s got no response", step);
+        }
+        return false;
+    }
+
+    PrintAndLogEx(DEBUG, "GA <<............. %s", sprint_hex_inrow(response, resplen));
+
+    const uint8_t *cur = response;
+    const uint8_t *end = response + resplen;
+    uint32_t tag = 0;
+    const uint8_t *val = NULL;
+    size_t vlen = 0;
+
+    if ((emrtd_tlv_next(&cur, end, &tag, &val, &vlen) == false) || (tag != 0x7C)) {
+        PrintAndLogEx(ERR, "PACE: %s returned malformed dynamic authentication data", step);
+        return false;
+    }
+
+    if (vlen > maxout) {
+        PrintAndLogEx(ERR, "PACE: %s response is too large (%zu bytes)", step, vlen);
+        return false;
+    }
+
+    memcpy(out, val, vlen);
+    *outlen = vlen;
+    return true;
+}
+
+// Runs one step and picks a single expected data object out of the response
+static bool emrtd_general_authenticate_one(const char *step, bool more, uint8_t inner_tag,
+                                           const uint8_t *payload, size_t payloadlen,
+                                           uint8_t expect_tag, uint8_t *out, size_t maxout, size_t *outlen) {
+    uint8_t dyn[PM3_CMD_DATA_SIZE] = { 0x00 };
+    size_t dynlen = 0;
+
+    if (emrtd_general_authenticate(step, more, inner_tag, payload, payloadlen, dyn, sizeof(dyn), &dynlen) == false) {
+        return false;
+    }
+
+    if (emrtd_ga_get(dyn, dynlen, expect_tag, out, maxout, outlen) == false) {
+        PrintAndLogEx(ERR, "PACE: %s response is missing data object %02X", step, expect_tag);
+        return false;
+    }
+    return true;
+}
+
+static int emrtd_do_pace(const emrtd_paceinfo_t *info, const uint8_t *password, size_t passwordlen,
+                         uint8_t password_ref, emrtd_session_t *ssn) {
+    const emrtd_pacealg_t *alg = info->alg;
+    mbedtls_ecp_group_id curve = info->sdp->curve;
+
+    uint8_t kpi[EMRTD_SM_MAX_KEY_LEN] = { 0x00 };
+    size_t kpilen = 0;
+
+    // Kpi = KDF(K, 3)
+    if (emrtd_pace_kdf(alg->cipher, password, passwordlen, 3, kpi, &kpilen) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(DEBUG, "kpi............... %s", sprint_hex_inrow(kpi, kpilen));
+
+    if (emrtd_mse_set_at(info, password_ref) == false) {
+        return PM3_ESOFT;
+    }
+
+    uint8_t response[EMRTD_EC_POINT_MAXLEN] = { 0x00 };
+    size_t resplen = 0;
+
+    // Step 1, encrypted nonce
+    if (emrtd_general_authenticate_one("step 1 (encrypted nonce)", true, 0x00, NULL, 0, 0x80, response, sizeof(response), &resplen) == false) {
+        return PM3_ESOFT;
+    }
+
+    uint8_t s[32] = { 0x00 };
+    if (emrtd_pace_decrypt_nonce(alg->cipher, kpi, response, resplen, s) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+    size_t slen = resplen;
+    PrintAndLogEx(DEBUG, "nonce s........... %s", sprint_hex_inrow(s, slen));
+
+    // Step 2, map the nonce
+    uint8_t priv1[EMRTD_PACE_SECRET_MAXLEN] = { 0x00 };
+    uint8_t pub1[EMRTD_EC_POINT_MAXLEN] = { 0x00 };
+    size_t priv1len = 0, pub1len = 0;
+
+    if (emrtd_pace_ec_keygen(curve, NULL, 0, priv1, &priv1len, pub1, &pub1len) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(DEBUG, "PK.Map.IFD........ %s", sprint_hex_inrow(pub1, pub1len));
+
+    if (emrtd_general_authenticate_one("step 2 (map nonce)", true, 0x81, pub1, pub1len, 0x82, response, sizeof(response), &resplen) == false) {
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(DEBUG, "PK.Map.IC......... %s", sprint_hex_inrow(response, resplen));
+
+    // Chip Authentication Mapping proves this key belongs to the chip's static
+    // CA key, which can only be checked once EF_DG14 is readable
+    if (alg->mapping == EMRTD_PACE_MAP_CAM) {
+        ssn->cam.negotiated = true;
+        ssn->cam.curve = curve;
+        memcpy(ssn->cam.pk_map_ic, response, resplen);
+        ssn->cam.pk_map_iclen = resplen;
+        // the terminal half of the Chip Authentication ECDH
+        memcpy(ssn->cam.sk_map_ifd, priv1, priv1len);
+        ssn->cam.sk_map_ifdlen = priv1len;
+    }
+
+    uint8_t mapped[EMRTD_EC_POINT_MAXLEN] = { 0x00 };
+    size_t mappedlen = 0;
+    if (emrtd_pace_ec_gm(curve, s, slen, priv1, priv1len, response, resplen, mapped, &mappedlen) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(DEBUG, "mapped generator.. %s", sprint_hex_inrow(mapped, mappedlen));
+
+    // Step 3, key agreement over the mapped generator
+    uint8_t priv2[EMRTD_PACE_SECRET_MAXLEN] = { 0x00 };
+    uint8_t pub2[EMRTD_EC_POINT_MAXLEN] = { 0x00 };
+    size_t priv2len = 0, pub2len = 0;
+
+    if (emrtd_pace_ec_keygen(curve, mapped, mappedlen, priv2, &priv2len, pub2, &pub2len) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(DEBUG, "PK.DH.IFD......... %s", sprint_hex_inrow(pub2, pub2len));
+
+    if (ssn->cam.negotiated) {
+        memcpy(ssn->cam.sk_dh_ifd, priv2, priv2len);
+        ssn->cam.sk_dh_ifdlen = priv2len;
+    }
+
+    uint8_t pk2_ic[EMRTD_EC_POINT_MAXLEN] = { 0x00 };
+    size_t pk2_iclen = 0;
+    if (emrtd_general_authenticate_one("step 3 (key agreement)", true, 0x83, pub2, pub2len, 0x84, pk2_ic, sizeof(pk2_ic), &pk2_iclen) == false) {
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(DEBUG, "PK.DH.IC.......... %s", sprint_hex_inrow(pk2_ic, pk2_iclen));
+
+    if (ssn->cam.negotiated) {
+        memcpy(ssn->cam.pk_dh_ic, pk2_ic, pk2_iclen);
+        ssn->cam.pk_dh_iclen = pk2_iclen;
+    }
+
+    // ICAO 9303-11 4.4.3.3, the two ephemeral keys must differ
+    if ((pk2_iclen == pub2len) && (memcmp(pk2_ic, pub2, pub2len) == 0)) {
+        PrintAndLogEx(ERR, "PACE: the document echoed our ephemeral public key back, aborting");
+        return PM3_ESOFT;
+    }
+
+    uint8_t shared[EMRTD_PACE_SECRET_MAXLEN] = { 0x00 };
+    size_t sharedlen = 0;
+    if (emrtd_pace_ec_shared_x(curve, priv2, priv2len, pk2_ic, pk2_iclen, shared, &sharedlen) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+
+    // Step 4, session keys and mutual authentication tokens
+    uint8_t ks_enc[EMRTD_SM_MAX_KEY_LEN] = { 0x00 };
+    uint8_t ks_mac[EMRTD_SM_MAX_KEY_LEN] = { 0x00 };
+    size_t kslen = 0;
+
+    if ((emrtd_pace_kdf(alg->cipher, shared, sharedlen, 1, ks_enc, &kslen) != PM3_SUCCESS) ||
+            (emrtd_pace_kdf(alg->cipher, shared, sharedlen, 2, ks_mac, &kslen) != PM3_SUCCESS)) {
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(DEBUG, "ks_enc............ %s", sprint_hex_inrow(ks_enc, kslen));
+    PrintAndLogEx(DEBUG, "ks_mac............ %s", sprint_hex_inrow(ks_mac, kslen));
+
+    uint8_t t_ifd[8] = { 0x00 };
+    if (emrtd_pace_token(alg, ks_mac, pk2_ic, pk2_iclen, t_ifd) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+
+    uint8_t dyn[PM3_CMD_DATA_SIZE] = { 0x00 };
+    size_t dynlen = 0;
+    if (emrtd_general_authenticate("step 4 (mutual authentication)", false, 0x85, t_ifd, sizeof(t_ifd), dyn, sizeof(dyn), &dynlen) == false) {
+        return PM3_ESOFT;
+    }
+
+    uint8_t t_ic[8] = { 0x00 };
+    size_t t_iclen = 0;
+    if (emrtd_ga_get(dyn, dynlen, 0x86, t_ic, sizeof(t_ic), &t_iclen) == false) {
+        PrintAndLogEx(ERR, "PACE: step 4 (mutual authentication) response is missing data object 86");
+        return PM3_ESOFT;
+    }
+
+    if (ssn->cam.negotiated) {
+        // DO'8A', TR-03110 part 3, 3.4.4
+        if (emrtd_ga_get(dyn, dynlen, 0x8A, ssn->cam.enc_data, sizeof(ssn->cam.enc_data), &ssn->cam.enc_datalen) == false) {
+            PrintAndLogEx(WARNING, "PACE-CAM: the document returned no encrypted chip authentication data");
+            ssn->cam.negotiated = false;
+        } else {
+            PrintAndLogEx(DEBUG, "CAM data.......... %s", sprint_hex_inrow(ssn->cam.enc_data, ssn->cam.enc_datalen));
+        }
+    }
+
+    uint8_t t_ic_expected[8] = { 0x00 };
+    if (emrtd_pace_token(alg, ks_mac, pub2, pub2len, t_ic_expected) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+
+    if ((t_iclen != sizeof(t_ic_expected)) || (memcmp(t_ic, t_ic_expected, sizeof(t_ic_expected)) != 0)) {
+        PrintAndLogEx(ERR, "PACE: the document's authentication token is wrong, aborting");
+        PrintAndLogEx(DEBUG, "T_IC got.......... %s", sprint_hex_inrow(t_ic, t_iclen));
+        PrintAndLogEx(DEBUG, "T_IC expected..... %s", sprint_hex_inrow(t_ic_expected, sizeof(t_ic_expected)));
+        return PM3_ESOFT;
+    }
+
+    if (emrtd_sm_setup(ssn, alg->cipher, ks_enc, ks_mac) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+
+    // SSC starts at zero after PACE, ICAO 9303-11 9.8.6.3
+    ssn->pace = true;
+    ssn->pace_alg = alg->name;
+    ssn->pace_curve = info->sdp->name;
+
+    PrintAndLogEx(INFO, "Authentication with PACE successful ( " _GREEN_("%s") ", %s )", alg->name, info->sdp->name);
+    return PM3_SUCCESS;
+}
+
+// Picks the PACE password out of what the user supplied
+static int emrtd_pace_password(const emrtd_auth_t *auth, uint8_t *k, size_t *klen, uint8_t *password_ref) {
+    if (auth->can_available) {
+        if (emrtd_pace_password_can(auth->can, k, klen) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "PACE: invalid CAN");
+            return PM3_EINVARG;
+        }
+        *password_ref = EMRTD_PACE_PWD_CAN;
+        return PM3_SUCCESS;
+    }
+
+    if (auth->mrz_available) {
+        if (emrtd_pace_password_mrz(auth->documentnumber, auth->dob, auth->expiry, k, klen) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "PACE: invalid MRZ data");
+            return PM3_EINVARG;
+        }
+        *password_ref = EMRTD_PACE_PWD_MRZ;
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(ERR, "PACE needs a password, supply `" _YELLOW_("--can") "` or `" _YELLOW_("-n") "` `" _YELLOW_("-d") "` `" _YELLOW_("-e") "`");
+    return PM3_EINVARG;
+}
+
+// Orders every usable SecurityInfo strongest first, returns how many there are
+static size_t emrtd_pace_candidates(const emrtd_cardaccess_t *ca, size_t *order, size_t maxorder) {
+    size_t count = 0;
+
+    for (size_t i = 0; i < ca->count; i++) {
+
+        if (emrtd_pace_rank(&ca->infos[i]) <= 0) {
+            continue;
+        }
+
+        if (count >= maxorder) {
+            break;
+        }
+
+        // insertion sort, the list is never longer than EMRTD_PACE_MAX_INFOS
+        size_t pos = count;
+        while ((pos > 0) && (emrtd_pace_rank(&ca->infos[order[pos - 1]]) < emrtd_pace_rank(&ca->infos[i]))) {
+            order[pos] = order[pos - 1];
+            pos--;
+        }
+        order[pos] = i;
+        count++;
+    }
+
+    return count;
+}
+
+// Reads EF_DG14 over the freshly established session and checks the chip's
+// Chip Authentication Mapping proof against the key it publishes there.
+//
+// Note: while no encoding of DO'8A' has been confirmed against real hardware, a
+// check that does not come out is reported as "unverified" rather than as a
+// failure, because our own support is the far likelier culprit. Once a document
+// verifies, drop the probing in emrtd_pace_cam_verify(), keep only the encoding
+// that worked, and make a mismatch loud again: at that point it means a clone.
+static void emrtd_check_cam(emrtd_session_t *ssn) {
+    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    size_t resplen = 0;
+
+    PrintAndLogEx(INFO, "Verifying Chip Authentication Mapping");
+
+    if (emrtd_select_and_read(response, &resplen, dg_table[EF_DG14].fileid, ssn) == false) {
+        PrintAndLogEx(WARNING, "Chip Authentication.. " _YELLOW_("unverified") " ( couldn't read EF_DG14 )");
+        return;
+    }
+
+    uint8_t pk_icc[EMRTD_EC_POINT_MAXLEN] = { 0x00 };
+    size_t pk_icclen = 0;
+    size_t expected = emrtd_pace_ec_pointlen(ssn->cam.curve);
+    bool found_any = false;
+
+    // a document may publish more than one chip authentication key
+    for (size_t i = 0; i < EMRTD_PACE_MAX_INFOS; i++) {
+
+        if (emrtd_pace_find_ca_pubkey(response, resplen, i, pk_icc, &pk_icclen) != PM3_SUCCESS) {
+            break;
+        }
+
+        found_any = true;
+        PrintAndLogEx(DEBUG, "PK.CA.IC[%zu]....... %s", i, sprint_hex_inrow(pk_icc, pk_icclen));
+
+        if (pk_icclen != expected) {
+            PrintAndLogEx(DEBUG, "CAM: key %zu is %zu bytes, the PACE curve needs %zu, skipping", i, pk_icclen, expected);
+            continue;
+        }
+
+        const char *mode = NULL;
+        if (emrtd_pace_cam_verify(ssn, pk_icc, pk_icclen, &mode) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Chip Authentication.. " _GREEN_("verified") " ( the chip is genuine, not a clone )");
+            PrintAndLogEx(INFO, "CAM encoding...... %s", mode);
+            return;
+        }
+    }
+
+    if (found_any == false) {
+        PrintAndLogEx(WARNING, "Chip Authentication.. " _YELLOW_("unverified") " ( no EC chip authentication key in EF_DG14 )");
+        return;
+    }
+
+    PrintAndLogEx(WARNING, "Chip Authentication.. " _YELLOW_("not verified") " ( we cannot check this document's CAM proof )");
+    PrintAndLogEx(HINT, "Hint: the secure channel is valid and every file is authentic. Only the anti-clone");
+    PrintAndLogEx(HINT, "Hint: proof is unchecked, which is a known gap, not a sign of a bad document");
+    PrintAndLogEx(HINT, "Hint: if you want to help close it, please report everything below");
+    emrtd_pace_cam_dump(ssn, pk_icc, pk_icclen);
+}
+
+static bool emrtd_do_auth(const emrtd_auth_t *auth, const emrtd_cardaccess_t *ca, bool ca_valid,
+                          bool *BAC, emrtd_session_t *ssn) {
+    uint8_t aid[] = EMRTD_AID_MRTD;
+
+    *BAC = false;
+
+    //-------------------------------------------------------------------------
+    // PACE. EF_CardAccess lives on the MF, so this runs before the LDS applet
+    // is selected. On success the applet is selected under secure messaging.
+    //-------------------------------------------------------------------------
+    bool try_pace = (auth->force_bac == false) && ca_valid;
+
+    if (auth->force_pace && (ca_valid == false)) {
+        PrintAndLogEx(ERR, "PACE was forced but this document has no usable EF_CardAccess.");
+        return false;
+    }
+
+    if (try_pace) {
+
+        size_t order[EMRTD_PACE_MAX_INFOS] = { 0 };
+        size_t candidates = emrtd_pace_candidates(ca, order, ARRAYLEN(order));
+
+        uint8_t k[EMRTD_PACE_SECRET_MAXLEN] = { 0x00 };
+        size_t klen = 0;
+        uint8_t password_ref = 0;
+
+        if (candidates == 0) {
+            PrintAndLogEx(ERR, "PACE: this document offers no algorithm we can do");
+            for (size_t i = 0; i < ca->count; i++) {
+                if (ca->infos[i].reason != NULL) {
+                    PrintAndLogEx(ERR, "  %s: %s",
+                                  (ca->infos[i].alg != NULL) ? ca->infos[i].alg->name : "unknown protocol",
+                                  ca->infos[i].reason);
+                }
+            }
+        }
+
+        if ((candidates != 0) && (emrtd_pace_password(auth, k, &klen, &password_ref) == PM3_SUCCESS)) {
+
+            PrintAndLogEx(INFO, "Trying PACE with the %s", (password_ref == EMRTD_PACE_PWD_CAN) ? "CAN" : "MRZ");
+
+            // strongest first, and drop down a rung if the document does not
+            // actually honour what it advertised
+            for (size_t i = 0; i < candidates; i++) {
+
+                const emrtd_paceinfo_t *info = &ca->infos[order[i]];
+
+                if (i != 0) {
+                    PrintAndLogEx(INFO, "Retrying with " _YELLOW_("%s"), info->alg->name);
+                    DropField();
+                    msleep(50);
+                    if (emrtd_connect() == false) {
+                        PrintAndLogEx(ERR, "Couldn't reconnect to the document.");
+                        return false;
+                    }
+                }
+
+                if (emrtd_do_pace(info, k, klen, password_ref, ssn) != PM3_SUCCESS) {
+                    emrtd_sm_clear(ssn);
+                    continue;
+                }
+
+                if (emrtd_secure_select(ssn, EMRTD_P1_SELECT_BY_NAME, aid, sizeof(aid)) == false) {
+                    PrintAndLogEx(ERR, "Couldn't select the MRTD application over PACE.");
+                    emrtd_sm_clear(ssn);
+                    continue;
+                }
+
+                if (ssn->cam.negotiated) {
+                    emrtd_check_cam(ssn);
+                }
+
+                *BAC = true;
+                return true;
+            }
+        }
+
+        emrtd_sm_clear(ssn);
+
+        if (auth->force_pace) {
+            PrintAndLogEx(ERR, "PACE was forced, not falling back to BAC.");
+            return false;
+        }
+
+        PrintAndLogEx(INFO, "PACE failed, falling back to BAC");
+        // the document is in an undefined state after a failed PACE run
+        DropField();
+        msleep(50);
+        if (emrtd_connect() == false) {
+            PrintAndLogEx(ERR, "Couldn't reconnect to the document.");
+            return false;
+        }
+    }
+
+    //-------------------------------------------------------------------------
+    // BAC
+    //-------------------------------------------------------------------------
 
     // Select MRTD applet
-    uint8_t aid[] = EMRTD_AID_MRTD;
     if (emrtd_select_file_by_name(sizeof(aid), aid) == false) {
         PrintAndLogEx(ERR, "Couldn't select the MRTD application.");
         return false;
@@ -1069,7 +1572,9 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
 
         size_t resplen = 0;
         uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-        if (emrtd_read_file(response, &resplen, NULL, NULL, NULL, false) == false) {
+        emrtd_session_t plain;
+        emrtd_sm_clear(&plain);
+        if (emrtd_read_file(response, &resplen, &plain) == false) {
             *BAC = true;
             PrintAndLogEx(INFO, "Authentication is enforced");
             PrintAndLogEx(INFO, "Switching to external authentication");
@@ -1081,26 +1586,30 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
     // Do Basic Access Control
     if (*BAC) {
         // If BAC isn't available, exit out and warn user.
-        if (BAC_available == false) {
+        if (auth->mrz_available == false) {
             PrintAndLogEx(ERR, "This eMRTD enforces authentication, but you didn't supply MRZ data. Cannot proceed.");
             PrintAndLogEx(HINT, "Hint: Check out `" _YELLOW_("hf emrtd info/dump --h") "`, supply data with `-n` `-d` and `-e`");
             return false;
         }
 
-        if (emrtd_do_bac(documentnumber, dob, expiry, ssc, ks_enc, ks_mac) == false) {
+        if (emrtd_do_bac(auth->documentnumber, auth->dob, auth->expiry, ssn) == false) {
             return false;
         }
     }
     return true;
 }
 
-int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available, const char *path) {
+int dumpHF_EMRTD(const emrtd_auth_t *auth, const char *path) {
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     size_t resplen = 0;
-    uint8_t ssc[8] = { 0x00 };
-    uint8_t ks_enc[EMRTD_KMAC_LEN] = { 0x00 };
-    uint8_t ks_mac[EMRTD_KMAC_LEN] = { 0x00 };
+    emrtd_session_t ssn;
+    emrtd_cardaccess_t ca;
+    bool ca_valid = false;
     bool BAC = false;
+
+    emrtd_sm_clear(&ssn);
+    memset(&ca, 0, sizeof(ca));
+    ca.best = -1;
 
     // Select the eMRTD
     if (emrtd_connect() == false) {
@@ -1108,20 +1617,27 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         return PM3_ESOFT;
     }
 
-    // Dump EF_CardAccess (if available)
-    if (emrtd_dump_file(ks_enc, ks_mac, ssc, dg_table[EF_CardAccess].fileid, dg_table[EF_CardAccess].filename, BAC, path) == false) {
-        PrintAndLogEx(INFO, "Couldn't dump EF_CardAccess, card does not support PACE");
+    // Read and dump EF_CardAccess (if available). This lives on the MF and is
+    // readable without authentication, so it has to happen before anything else.
+    if (emrtd_select_and_read(response, &resplen, dg_table[EF_CardAccess].fileid, &ssn) == false) {
+        PrintAndLogEx(INFO, "Couldn't read EF_CardAccess, card does not support PACE");
         PrintAndLogEx(HINT, "Hint: This is expected behavior for cards without PACE and isn't something to be worried about");
+    } else {
+        emrtd_save_file(response, resplen, dg_table[EF_CardAccess].fileid, dg_table[EF_CardAccess].filename, path);
+        ca_valid = (emrtd_pace_parse_cardaccess(response, resplen, &ca) == PM3_SUCCESS);
+        if (ca_valid == false) {
+            PrintAndLogEx(WARNING, "Couldn't parse EF_CardAccess, PACE is not available");
+        }
     }
 
     // Authenticate with the eMRTD
-    if (emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac) == false) {
+    if (emrtd_do_auth(auth, &ca, ca_valid, &BAC, &ssn) == false) {
         DropField();
         return PM3_ESOFT;
     }
 
     // Select EF_COM
-    if (emrtd_select_and_read(response, &resplen, dg_table[EF_COM].fileid, ks_enc, ks_mac, ssc, BAC) == false) {
+    if (emrtd_select_and_read(response, &resplen, dg_table[EF_COM].fileid, &ssn) == false) {
         PrintAndLogEx(ERR, "Failed to read EF_COM");
         DropField();
         return PM3_ESOFT;
@@ -1164,8 +1680,10 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
             continue;
         }
         PrintAndLogEx(DEBUG, "Current file... %s", dg->filename);
-        if (!dg->pace && !dg->eac) {
-            emrtd_dump_file(ks_enc, ks_mac, ssc, dg->fileid, dg->filename, BAC, path);
+        // dg->pace files are only reachable once a PACE session is up, dg->eac
+        // files need EAC which we do not implement at all
+        if ((!dg->pace || ssn.pace) && !dg->eac) {
+            emrtd_dump_file(&ssn, dg->fileid, dg->filename, path);
         }
     }
     DropField();
@@ -1515,79 +2033,62 @@ static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen) {
     return PM3_SUCCESS;
 }
 
-static int emrtd_print_ef_dg2_info(uint8_t *data, size_t datalen) {
+// Extract an image out of a data group and hand it to the picture viewer.
+// The viewer keeps an array of images, so DG2 / DG5 / DG7 all end up
+// side by side, each in its own tab named by "title"
+static int emrtd_print_image(const char *title, uint8_t *data, size_t datalen) {
 
-    int offset = 0;
+    if (data == NULL || datalen < 6) {
+        return PM3_ESOFT;
+    }
 
     // This is a hacky impl that just looks for the image header. I'll improve it eventually.
     // based on mrpkey.py
     // Note: Doing datalen - 6 to account for the longest data we're checking.
     // Checks first byte before the rest to reduce overhead
+    bool found = false;
+    size_t offset = 0;
     for (offset = 0; offset < datalen - 6; offset++) {
-        if ((data[offset] == 0xFF && memcmp(jpeg_header, data + offset, 4) == 0) ||
-                (data[offset] == 0x00 && memcmp(jpeg2k_header, data + offset, 6) == 0)) {
-            datalen = datalen - offset;
+
+        if (data[offset] == 0xFF) {
+            // JPEG SOI + any APPn marker,  JFIF (FFE0) is the common one but
+            // Exif (FFE1) / raw DQT (FFDB) show up as well
+            if (memcmp(jpeg_header, data + offset, 3) == 0) {
+                found = true;
+                break;
+            }
+            // JPEG2000 raw codestream, no JP2 container
+            if (memcmp(jpeg2k_cs_header, data + offset, 4) == 0) {
+                found = true;
+                break;
+            }
+        } else if (data[offset] == 0x00 && memcmp(jpeg2k_header, data + offset, 6) == 0) {
+            // JPEG2000 in a JP2 container
+            found = true;
             break;
         }
     }
 
-    // If we didn't get any data, return false.
-    if (datalen == 0) {
+    // If we didn't find any image, return false.
+    if (found == false) {
+        PrintAndLogEx(DEBUG, "No image header found in %s", title);
         return PM3_ESOFT;
     }
 
-    ShowPictureWindow(data + offset, datalen);
+    ShowPictureWindow(title, data + offset, (int)(datalen - offset));
     return PM3_SUCCESS;
+}
+
+static int emrtd_print_ef_dg2_info(uint8_t *data, size_t datalen) {
+    return emrtd_print_image("DG2 - Encoded Face", data, datalen);
 }
 
 static int emrtd_print_ef_dg5_info(uint8_t *data, size_t datalen) {
-
-    int offset = 0;
-
-    // This is a hacky impl that just looks for the image header. I'll improve it eventually.
-    // based on mrpkey.py
-    // Note: Doing datalen - 6 to account for the longest data we're checking.
-    // Checks first byte before the rest to reduce overhead
-    for (offset = 0; offset < datalen - 6; offset++) {
-        if ((data[offset] == 0xFF && memcmp(jpeg_header, data + offset, 4) == 0) ||
-                (data[offset] == 0x00 && memcmp(jpeg2k_header, data + offset, 6) == 0)) {
-            datalen = datalen - offset;
-            break;
-        }
-    }
-
-    // If we didn't get any data, return false.
-    if (datalen == 0) {
-        return PM3_ESOFT;
-    }
-
-    ShowPictureWindow(data + offset, datalen);
-    return PM3_SUCCESS;
+    return emrtd_print_image("DG5 - Displayed Portrait", data, datalen);
 }
 
 static int emrtd_print_ef_dg7_info(uint8_t *data, size_t datalen) {
-
-    int offset = 0;
-
-    // This is a hacky impl that just looks for the image header. I'll improve it eventually.
-    // based on mrpkey.py
-    // Note: Doing datalen - 6 to account for the longest data we're checking.
-    // Checks first byte before the rest to reduce overhead
-    for (offset = 0; offset < datalen - 6; offset++) {
-        if ((data[offset] == 0xFF && memcmp(jpeg_header, data + offset, 4) == 0) ||
-                (data[offset] == 0x00 && memcmp(jpeg2k_header, data + offset, 6) == 0)) {
-            datalen = datalen - offset;
-            break;
-        }
-    }
-
-    // If we didn't get any data, return false.
-    if (datalen == 0) {
-        return PM3_ESOFT;
-    }
-
-    ShowPictureWindow(data + offset, datalen);
-    return PM3_SUCCESS;
+    return emrtd_print_image("DG7 - Signature", data, datalen);
 }
 
 static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen) {
@@ -1738,15 +2239,22 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
 }
 
 static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_t *dataout, size_t *dataoutlen) {
-    uint8_t top[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    uint8_t signeddata[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    uint8_t emrtdsigcontainer[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    uint8_t emrtdsig[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    uint8_t emrtdsigtext[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    uint8_t *buffers = calloc(5, EMRTD_MAX_FILE_SIZE);
+    if (buffers == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate EF_SOD parser buffers.");
+        return PM3_EMALLOC;
+    }
+
+    uint8_t *top = buffers;
+    uint8_t *signeddata = top + EMRTD_MAX_FILE_SIZE;
+    uint8_t *emrtdsigcontainer = signeddata + EMRTD_MAX_FILE_SIZE;
+    uint8_t *emrtdsig = emrtdsigcontainer + EMRTD_MAX_FILE_SIZE;
+    uint8_t *emrtdsigtext = emrtdsig + EMRTD_MAX_FILE_SIZE;
     size_t toplen, signeddatalen, emrtdsigcontainerlen, emrtdsiglen, emrtdsigtextlen = 0;
 
     if (emrtd_lds_get_data_by_tag(data, datalen, top, &toplen, 0x30, 0x00, false, true, 0) == false) {
         PrintAndLogEx(ERR, "Failed to read top from EF_SOD.");
+        free(buffers);
         return false;
     }
 
@@ -1754,6 +2262,7 @@ static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_
 
     if (emrtd_lds_get_data_by_tag(top, toplen, signeddata, &signeddatalen, 0xA0, 0x00, false, false, 0) == false) {
         PrintAndLogEx(ERR, "Failed to read signedData from EF_SOD.");
+        free(buffers);
         return false;
     }
 
@@ -1762,6 +2271,7 @@ static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_
     // Do true on reading into the tag as it's a "sequence"
     if (emrtd_lds_get_data_by_tag(signeddata, signeddatalen, emrtdsigcontainer, &emrtdsigcontainerlen, 0x30, 0x00, false, true, 0) == false) {
         PrintAndLogEx(ERR, "Failed to read eMRTDSignature container from EF_SOD.");
+        free(buffers);
         return false;
     }
 
@@ -1769,6 +2279,7 @@ static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_
 
     if (emrtd_lds_get_data_by_tag(emrtdsigcontainer, emrtdsigcontainerlen, emrtdsig, &emrtdsiglen, 0xA0, 0x00, false, false, 0) == false) {
         PrintAndLogEx(ERR, "Failed to read eMRTDSignature from EF_SOD.");
+        free(buffers);
         return false;
     }
 
@@ -1777,10 +2288,12 @@ static int emrtd_ef_sod_extract_signatures(uint8_t *data, size_t datalen, uint8_
     // TODO: Not doing memcpy here, it didn't work, fix it somehow
     if (emrtd_lds_get_data_by_tag(emrtdsig, emrtdsiglen, emrtdsigtext, &emrtdsigtextlen, 0x04, 0x00, false, false, 0) == false) {
         PrintAndLogEx(ERR, "Failed to read eMRTDSignature (text) from EF_SOD.");
+        free(buffers);
         return false;
     }
     memcpy(dataout, emrtdsigtext, emrtdsigtextlen);
     *dataoutlen = emrtdsigtextlen;
+    free(buffers);
     return PM3_SUCCESS;
 }
 
@@ -1823,8 +2336,14 @@ static int emrtd_parse_ef_sod_hash_algo(uint8_t *data, size_t datalen, int *hash
 }
 
 static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *hashes, int *hashalgo) {
-    uint8_t emrtdsig[EMRTD_MAX_FILE_SIZE] = { 0x00 };
-    uint8_t hashlist[EMRTD_MAX_FILE_SIZE] = { 0x00 };
+    uint8_t *buffers = calloc(2, EMRTD_MAX_FILE_SIZE);
+    if (buffers == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate EF_SOD hash buffers.");
+        return PM3_EMALLOC;
+    }
+
+    uint8_t *emrtdsig = buffers;
+    uint8_t *hashlist = emrtdsig + EMRTD_MAX_FILE_SIZE;
     uint8_t hash[64] = { 0x00 };
     size_t hashlen = 0;
 
@@ -1836,6 +2355,7 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
     size_t offset = 0;
 
     if (emrtd_ef_sod_extract_signatures(data, datalen, emrtdsig, &emrtdsiglen) != PM3_SUCCESS) {
+        free(buffers);
         return false;
     }
 
@@ -1845,6 +2365,7 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
 
     if (emrtd_lds_get_data_by_tag(emrtdsig, emrtdsiglen, hashlist, &hashlistlen, 0x30, 0x00, false, true, 1) == false) {
         PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD");
+        free(buffers);
         return false;
     }
 
@@ -1876,6 +2397,7 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
         offset += 1 + e_datalen + e_fieldlen;
     }
 
+    free(buffers);
     return PM3_SUCCESS;
 }
 
@@ -1910,7 +2432,13 @@ static int emrtd_print_ef_sod_info(uint8_t *dg_hashes_calc, uint8_t *dg_hashes_s
 
             if (calc_all_zero == true) {
 
-                if (fastdump && !dg_table[i].fastdump && !dg_table[i].pace && !dg_table[i].eac) {
+                if (dg_table[i].eac) {
+                    // Terminal Authentication with a country signed inspection
+                    // system certificate, which we neither have nor implement
+                    PrintAndLogEx(SUCCESS, _YELLOW_("EF_DG%-2i") " %s%.*s " _YELLOW_("Needs EAC"), i, dg_table[i].desc, n, pad);
+                } else if (dg_table[i].pace) {
+                    PrintAndLogEx(SUCCESS, _YELLOW_("EF_DG%-2i") " %s%.*s " _YELLOW_("Needs PACE"), i, dg_table[i].desc, n, pad);
+                } else if (fastdump && !dg_table[i].fastdump) {
                     PrintAndLogEx(SUCCESS, _YELLOW_("EF_DG%-2i") " %s%.*s File was skipped, but is in EF_SOD", i, dg_table[i].desc, n, pad);
                 } else {
                     PrintAndLogEx(SUCCESS, _YELLOW_("EF_DG%-2i") " %s%.*s File couldn't be read, but is in EF_SOD", i, dg_table[i].desc, n, pad);
@@ -1929,72 +2457,80 @@ static int emrtd_print_ef_sod_info(uint8_t *dg_hashes_calc, uint8_t *dg_hashes_s
     return PM3_SUCCESS;
 }
 
-static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen) {
-    uint8_t dataset[100] = { 0x00 };
-    size_t datasetlen = 0;
-    uint8_t datafromtag[100] = { 0x00 };
-    size_t datafromtaglen = 0;
-    uint8_t parsednum = 0;
-
+static void emrtd_print_cardaccess(const emrtd_cardaccess_t *ca) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--------------------- " _CYAN_("EF_CardAccess") " --------------------");
 
-    if (emrtd_lds_get_data_by_tag(data, datalen, dataset, &datasetlen, 0x30, 0x00, false, true, 0) == false) {
-        PrintAndLogEx(ERR, "Failed to read set from EF_CardAccess.");
-        return PM3_ESOFT;
-    }
+    for (size_t i = 0; i < ca->count; i++) {
+        const emrtd_paceinfo_t *info = &ca->infos[i];
 
-    // Get PACE version
-    if (emrtd_lds_get_data_by_tag(dataset, datasetlen, datafromtag, &datafromtaglen, 0x02, 0x00, false, false, 0) == false) {
-        PrintAndLogEx(ERR, "Failed to read PACE version from EF_CardAccess.");
-        return PM3_ESOFT;
-    }
-    // TODO: hack!!!
-    memcpy(&parsednum, datafromtag, datafromtaglen);
-    PrintAndLogEx(SUCCESS, "PACE version............. " _YELLOW_("%i"), parsednum);
+        if (i != 0) {
+            PrintAndLogEx(SUCCESS, "");
+        }
 
-    // Get PACE algorithm
-    if (emrtd_lds_get_data_by_tag(dataset, datasetlen, datafromtag, &datafromtaglen, 0x06, 0x00, false, false, 0) == false) {
-        PrintAndLogEx(ERR, "Failed to read PACE algorithm from EF_CardAccess.");
-        return PM3_ESOFT;
-    }
+        if (info->alg != NULL) {
+            PrintAndLogEx(SUCCESS, "PACE algorithm........... " _YELLOW_("%s"), info->alg->name);
+        } else {
+            PrintAndLogEx(SUCCESS, "PACE algorithm........... " _YELLOW_("unknown") " ( OID %s )",
+                          sprint_hex_inrow((uint8_t *)info->oid, info->oidlen));
+        }
 
-    for (int pacei = 0; pacealg_table[pacei].name != NULL; pacei++) {
-        PrintAndLogEx(DEBUG, "Trying: %s", pacealg_table[pacei].name);
+        if (info->version != 0) {
+            PrintAndLogEx(SUCCESS, "PACE version............. " _YELLOW_("%u"), info->version);
+        }
 
-        if (memcmp(pacealg_table[pacei].descriptor, datafromtag, datafromtaglen) == 0) {
-            PrintAndLogEx(SUCCESS, "PACE algorithm........... " _YELLOW_("%s"), pacealg_table[pacei].name);
+        if (info->has_param) {
+            if (info->sdp != NULL) {
+                PrintAndLogEx(SUCCESS, "PACE parameter........... " _YELLOW_("%s") " ( id %u )", info->sdp->name, info->param_id);
+            } else {
+                // TR-03110 part 3, table A.2 leaves 3-7 and 19-31 reserved
+                PrintAndLogEx(SUCCESS, "PACE parameter........... " _YELLOW_("RFU / unknown") " ( id %u )", info->param_id);
+            }
+        }
+
+        if (info->supported) {
+            PrintAndLogEx(SUCCESS, "Supported by this client. " _GREEN_("yes")
+                          "%s", ((int)i == ca->best) ? _GREEN_(" (selected)") : "");
+        } else {
+            PrintAndLogEx(SUCCESS, "Supported by this client. " _YELLOW_("no") " ( %s )",
+                          (info->reason != NULL) ? info->reason : "unsupported");
         }
     }
 
-    // Get PACE parameter ID
-    if (emrtd_lds_get_data_by_tag(dataset, datasetlen, datafromtag, &datafromtaglen, 0x02, 0x00, false, false, 1) == false) {
-        PrintAndLogEx(ERR, "Failed to read PACE parameter ID from EF_CardAccess.");
-        return PM3_ESOFT;
+    if (ca->best < 0) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(WARNING, "None of the offered PACE algorithms is supported by this client");
+    }
+}
+
+// dg_table parser entry point, used by the offline path
+static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen) {
+    emrtd_cardaccess_t ca;
+
+    int res = emrtd_pace_parse_cardaccess(data, datalen, &ca);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--------------------- " _CYAN_("EF_CardAccess") " --------------------");
+        PrintAndLogEx(ERR, "Failed to parse EF_CardAccess.");
+        return res;
     }
 
-    // TODO: hack!!!
-    memcpy(&parsednum, datafromtag, datafromtaglen);
-    for (int pacepari = 0; pacesdp_table[pacepari].id != 32; pacepari++) {
-        PrintAndLogEx(DEBUG, "Trying: %s", pacesdp_table[pacepari].name);
-
-        if (pacesdp_table[pacepari].id == parsednum) {
-            PrintAndLogEx(SUCCESS, "PACE parameter........... " _YELLOW_("%s"), pacesdp_table[pacepari].name);
-        }
-        // TODO: account for RFU
-    }
-
+    emrtd_print_cardaccess(&ca);
     return PM3_SUCCESS;
 }
 
-int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available, bool only_fast) {
+int infoHF_EMRTD(const emrtd_auth_t *auth, bool only_fast) {
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     size_t resplen = 0;
-    uint8_t ssc[8] = { 0x00 };
-    uint8_t ks_enc[16] = { 0x00 };
-    uint8_t ks_mac[16] = { 0x00 };
-    bool BAC = false;
+    emrtd_session_t ssn;
+    emrtd_cardaccess_t ca;
+    bool ca_valid = false;
     bool PACE_available = true;
+    bool BAC = false;
+
+    emrtd_sm_clear(&ssn);
+    memset(&ca, 0, sizeof(ca));
+    ca.best = -1;
 
     // Select the eMRTD
     if (emrtd_connect() == false) {
@@ -2004,13 +2540,18 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     bool use14b = (GetISODEPState() == ISODEP_NFCB);
 
     // Read EF_CardAccess
-    if (emrtd_select_and_read(response, &resplen, dg_table[EF_CardAccess].fileid, ks_enc, ks_mac, ssc, BAC) == false) {
+    if (emrtd_select_and_read(response, &resplen, dg_table[EF_CardAccess].fileid, &ssn) == false) {
         PACE_available = false;
         PrintAndLogEx(HINT, "Hint: The error above this is normal. It just means that your eMRTD lacks PACE.");
+    } else {
+        ca_valid = (emrtd_pace_parse_cardaccess(response, resplen, &ca) == PM3_SUCCESS);
+        if (ca_valid == false) {
+            PrintAndLogEx(WARNING, "Couldn't parse EF_CardAccess, PACE is not available");
+        }
     }
 
     // Select and authenticate with the eMRTD
-    bool auth_result = emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac);
+    bool auth_result = emrtd_do_auth(auth, &ca, ca_valid, &BAC, &ssn);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "---------------------- " _CYAN_("Basic Info") " ----------------------");
@@ -2019,8 +2560,18 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     PrintAndLogEx(SUCCESS, "PACE..................... %s", PACE_available ? _GREEN_("Available") : _YELLOW_("Not available"));
     PrintAndLogEx(SUCCESS, "Authentication result.... %s", auth_result ? _GREEN_("Successful") : _RED_("Failed"));
 
-    if (PACE_available) {
-        emrtd_print_ef_cardaccess_info(response, resplen);
+    if (auth_result) {
+        if (ssn.pace) {
+            PrintAndLogEx(SUCCESS, "Session.................. " _GREEN_("PACE") " ( %s, %s )", ssn.pace_alg, ssn.pace_curve);
+        } else if (ssn.type == EMRTD_SM_3DES) {
+            PrintAndLogEx(SUCCESS, "Session.................. " _GREEN_("BAC") " ( 3DES-CBC-CBC )");
+        } else {
+            PrintAndLogEx(SUCCESS, "Session.................. " _YELLOW_("plain") " ( no secure messaging )");
+        }
+    }
+
+    if (ca_valid) {
+        emrtd_print_cardaccess(&ca);
     }
 
     if (auth_result == false) {
@@ -2029,7 +2580,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
 
     // Read EF_COM to get file list
-    if (emrtd_select_and_read(response, &resplen, dg_table[EF_COM].fileid, ks_enc, ks_mac, ssc, BAC) == false) {
+    if (emrtd_select_and_read(response, &resplen, dg_table[EF_COM].fileid, &ssn) == false) {
         PrintAndLogEx(ERR, "Failed to read EF_COM");
         DropField();
         return PM3_ESOFT;
@@ -2055,7 +2606,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     uint8_t dg_hashes_calc[17][64] = { { 0 } };
     int hash_algo = 0;
 
-    if (!emrtd_select_and_read(response, &resplen, dg_table[EF_SOD].fileid, ks_enc, ks_mac, ssc, BAC)) {
+    if (!emrtd_select_and_read(response, &resplen, dg_table[EF_SOD].fileid, &ssn)) {
         PrintAndLogEx(ERR, "Failed to read EF_SOD.");
         DropField();
         return PM3_ESOFT;
@@ -2066,6 +2617,9 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD. Hash checks will fail");
     }
 
+    // start with an empty picture viewer,  the data groups below fill it up
+    ClearPictureWindow();
+
     // Dump all files in the file list
     for (int i = 0; i < filelistlen; i++) {
 
@@ -2075,8 +2629,10 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
             continue;
         }
 
-        if (((dg->fastdump && only_fast) || !only_fast) && !dg->pace && !dg->eac) {
-            if (emrtd_select_and_read(response, &resplen, dg->fileid, ks_enc, ks_mac, ssc, BAC)) {
+        // dg->pace files are only reachable once a PACE session is up, dg->eac
+        // files need EAC which we do not implement at all
+        if (((dg->fastdump && only_fast) || !only_fast) && (!dg->pace || ssn.pace) && !dg->eac) {
+            if (emrtd_select_and_read(response, &resplen, dg->fileid, &ssn)) {
                 if (dg->parser != NULL)
                     dg->parser(response, resplen);
 
@@ -2174,6 +2730,9 @@ int infoHF_EMRTD_offline(const char *path) {
     }
     free(data);
 
+    // start with an empty picture viewer,  the data groups below fill it up
+    ClearPictureWindow();
+
     // Read files in the file list
     for (int i = 0; i < filelistlen; i++) {
 
@@ -2228,13 +2787,74 @@ static bool validate_date(uint8_t *data, int datalen) {
     return !(day <= 0 || day > 31 || month <= 0 || month > 12);
 }
 
+static bool emrtd_validate_can(const char *can, int canlen) {
+    if ((canlen < 1) || (canlen > 14)) {
+        PrintAndLogEx(ERR, "CAN length is incorrect, it should be 1 to 14 chars, not %i", canlen);
+        return false;
+    }
+
+    for (int i = 0; i < canlen; i++) {
+        if (isdigit((unsigned char)can[i]) == false) {
+            PrintAndLogEx(ERR, "CAN has to be numeric.");
+            return false;
+        }
+    }
+
+    if (canlen != 6) {
+        PrintAndLogEx(WARNING, "CAN is usually 6 digits, yours is %i. Continuing anyway.", canlen);
+    }
+    return true;
+}
+
+static bool emrtd_check_auth_args(bool mrz, bool can, bool force_pace, bool force_bac) {
+    if (mrz && can) {
+        PrintAndLogEx(ERR, "`" _YELLOW_("--can") "` and the MRZ arguments are mutually exclusive as PACE passwords.");
+        PrintAndLogEx(HINT, "Hint: pick one, the CAN with `" _YELLOW_("--can") "` or the MRZ with `" _YELLOW_("-n") "` `" _YELLOW_("-d") "` `" _YELLOW_("-e") "`");
+        return false;
+    }
+
+    if (force_pace && force_bac) {
+        PrintAndLogEx(ERR, "`" _YELLOW_("--pace") "` and `" _YELLOW_("--bac") "` are mutually exclusive.");
+        return false;
+    }
+
+    if (force_bac && can && (mrz == false)) {
+        PrintAndLogEx(ERR, "BAC needs MRZ data, the CAN is a PACE only password.");
+        return false;
+    }
+
+    if (force_pace && (mrz == false) && (can == false)) {
+        PrintAndLogEx(ERR, "PACE needs a password, supply `" _YELLOW_("--can") "` or `" _YELLOW_("-n") "` `" _YELLOW_("-d") "` `" _YELLOW_("-e") "`");
+        return false;
+    }
+
+    return true;
+}
+
+static void emrtd_fill_auth(emrtd_auth_t *auth, const char *docnum, const char *dob, const char *expiry,
+                            const char *can, bool mrz_available, bool can_available,
+                            bool force_pace, bool force_bac) {
+    memset(auth, 0, sizeof(emrtd_auth_t));
+    snprintf(auth->documentnumber, sizeof(auth->documentnumber), "%s", docnum);
+    snprintf(auth->dob, sizeof(auth->dob), "%s", dob);
+    snprintf(auth->expiry, sizeof(auth->expiry), "%s", expiry);
+    snprintf(auth->can, sizeof(auth->can), "%s", can);
+    auth->mrz_available = mrz_available;
+    auth->can_available = can_available;
+    auth->force_pace = force_pace;
+    auth->force_bac = force_bac;
+}
+
 static int CmdHFeMRTDDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf emrtd dump",
                   "Dump all files on an eMRTD",
                   "hf emrtd dump\n"
                   "hf emrtd dump --dir ../dump\n"
-                  "hf emrtd dump -n 123456789 -d 890101 -e 250401"
+                  "hf emrtd dump -n 123456789 -d 890101 -e 250401\n"
+                  "hf emrtd dump --can 123456                    -> PACE with the Card Access Number\n"
+                  "hf emrtd dump --can 123456 --pace             -> PACE only, no BAC fallback\n"
+                  "hf emrtd dump -n 123456789 -d 890101 -e 250401 --bac -> force BAC"
                  );
 
     void *argtable[] = {
@@ -2243,6 +2863,9 @@ static int CmdHFeMRTDDump(const char *Cmd) {
         arg_str0("d", "date", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
         arg_str0("m", "mrz", "<[0-9A-Z<]>", "2nd line of MRZ, 44 chars"),
+        arg_str0(NULL, "can", "<digits>", "Card Access Number, PACE password instead of the MRZ"),
+        arg_lit0(NULL, "pace", "force PACE, fail instead of falling back to BAC"),
+        arg_lit0(NULL, "bac", "force BAC, skip PACE"),
         arg_str0(NULL, "dir", "<str>", "save dump to the given dirpath"),
         arg_param_end
     };
@@ -2310,12 +2933,29 @@ static int CmdHFeMRTDDump(const char *Cmd) {
         }
     }
 
+    uint8_t can[15] = { 0x00 };
+    bool CAN = false;
+    if (CLIParamStrToBuf(arg_get_str(ctx, 5), can, sizeof(can) - 1, &slen) == 0 && slen != 0) {
+        CAN = true;
+        if (emrtd_validate_can((const char *)can, slen) == false) {
+            error = true;
+        }
+    }
+
+    bool force_pace = arg_get_lit(ctx, 6);
+    bool force_bac = arg_get_lit(ctx, 7);
+
     uint8_t path[FILENAME_MAX] = { 0x00 };
-    if (CLIParamStrToBuf(arg_get_str(ctx, 5), path, sizeof(path), &slen) != 0 || slen == 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 8), path, sizeof(path), &slen) != 0 || slen == 0) {
         path[0] = '.';
     }
 
     CLIParserFree(ctx);
+
+    if (emrtd_check_auth_args(BAC, CAN, force_pace, force_bac) == false) {
+        error = true;
+    }
+
     if (error) {
         return PM3_ESOFT;
     }
@@ -2326,7 +2966,11 @@ static int CmdHFeMRTDDump(const char *Cmd) {
 
     uint64_t t1 = msclock();
 
-    int res = dumpHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC, (const char *)path);
+    emrtd_auth_t auth;
+    emrtd_fill_auth(&auth, (const char *)docnum, (const char *)dob, (const char *)expiry,
+                    (const char *)can, BAC, CAN, force_pace, force_bac);
+
+    int res = dumpHF_EMRTD(&auth, (const char *)path);
 
     PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds\n", (msclock() - t1) / 1000);
 
@@ -2341,7 +2985,9 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
                   "hf emrtd info\n"
                   "hf emrtd info --dir ../dumps\n"
                   "hf emrtd info -n 123456789 -d 890101 -e 250401\n"
-                  "hf emrtd info -n 123456789 -d 890101 -e 250401 -i"
+                  "hf emrtd info -n 123456789 -d 890101 -e 250401 -i\n"
+                  "hf emrtd info --can 123456                    -> PACE with the Card Access Number\n"
+                  "hf emrtd info --can 123456 --pace             -> PACE only, no BAC fallback"
                  );
 
     void *argtable[] = {
@@ -2350,6 +2996,9 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
         arg_str0("d", "date", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
         arg_str0("m", "mrz", "<[0-9A-Z<]>", "2nd line of MRZ, 44 chars (passports only)"),
+        arg_str0(NULL, "can", "<digits>", "Card Access Number, PACE password instead of the MRZ"),
+        arg_lit0(NULL, "pace", "force PACE, fail instead of falling back to BAC"),
+        arg_lit0(NULL, "bac", "force BAC, skip PACE"),
         arg_str0(NULL, "dir", "<str>", "display info from offline dump stored in dirpath"),
         arg_lit0("i", "images", "show images"),
         arg_param_end
@@ -2416,13 +3065,29 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
             }
         }
     }
+    uint8_t can[15] = { 0x00 };
+    bool CAN = false;
+    if (CLIParamStrToBuf(arg_get_str(ctx, 5), can, sizeof(can) - 1, &slen) == 0 && slen != 0) {
+        CAN = true;
+        if (emrtd_validate_can((const char *)can, slen) == false) {
+            error = true;
+        }
+    }
+
+    bool force_pace = arg_get_lit(ctx, 6);
+    bool force_bac = arg_get_lit(ctx, 7);
+
     uint8_t path[FILENAME_MAX] = { 0x00 };
-    bool is_offline = CLIParamStrToBuf(arg_get_str(ctx, 5), path, sizeof(path), &slen) == 0 && slen > 0;
-    bool show_images = arg_get_lit(ctx, 6);
+    bool is_offline = CLIParamStrToBuf(arg_get_str(ctx, 8), path, sizeof(path), &slen) == 0 && slen > 0;
+    bool show_images = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
 
     if ((IfPm3Iso14443() == false) && (is_offline == false)) {
         PrintAndLogEx(WARNING, "Only offline mode is available");
+        error = true;
+    }
+
+    if ((is_offline == false) && (emrtd_check_auth_args(BAC, CAN, force_pace, force_bac) == false)) {
         error = true;
     }
 
@@ -2437,10 +3102,30 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
         if (g_debugMode >= 2) {
             SetAPDULogging(true);
         }
-        int res = infoHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC, !show_images);
+        emrtd_auth_t auth;
+        emrtd_fill_auth(&auth, (const char *)docnum, (const char *)dob, (const char *)expiry,
+                        (const char *)can, BAC, CAN, force_pace, force_bac);
+
+        int res = infoHF_EMRTD(&auth, !show_images);
         SetAPDULogging(restore_apdu_logging);
         return res;
     }
+}
+
+static int CmdHFeMRTDTest(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf emrtd test",
+                  "Regression tests for the PACE and secure messaging primitives",
+                  "hf emrtd test");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    return emrtd_test(true) ? PM3_SUCCESS : PM3_ESOFT;
 }
 
 static int CmdHFeMRTDList(const char *Cmd) {
@@ -2453,6 +3138,7 @@ static command_t CommandTable[] = {
     {"dump",    CmdHFeMRTDDump,    IfPm3Iso14443,   "Dump eMRTD files to binary files"},
     {"info",        CmdHFeMRTDInfo,    AlwaysAvailable, "Tag information"},
     {"list",    CmdHFeMRTDList,    AlwaysAvailable, "List ISO 14443A/7816 history"},
+    {"test",    CmdHFeMRTDTest,    AlwaysAvailable, "Regression tests"},
     {NULL, NULL, NULL, NULL}
 };
 

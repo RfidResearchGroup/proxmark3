@@ -952,6 +952,19 @@ static int CmdHFXeroxView(const char *Cmd) {
         return res;
     }
 
+    uint8_t info_max_block = 0;
+    for (uint8_t i = 0; i < ARRAYLEN(info_blocks); i++) {
+        if (info_blocks[i] > info_max_block) {
+            info_max_block = info_blocks[i];
+        }
+    }
+    size_t info_min = (info_max_block + 1) * XEROX_BLOCK_SIZE;
+    if (bytes_read < info_min) {
+        PrintAndLogEx(FAILED, "Error, dump file is too small to be a valid Xerox dump - bytes: %zu, expected at least: %zu", bytes_read, info_min);
+        free(dump);
+        return PM3_EFILE;
+    }
+
     uint16_t blockno = bytes_read / XEROX_BLOCK_SIZE;
 
     if (verbose) {

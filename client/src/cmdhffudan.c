@@ -111,9 +111,10 @@ static int fudan_get_type(iso14a_card_select_t *card, bool verbose) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_116 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_116) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         return PM3_ESOFT;
     }
@@ -126,7 +127,7 @@ static int fudan_get_type(iso14a_card_select_t *card, bool verbose) {
         2: OK, no ATS
         3: proprietary Anticollision
     */
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_116;
 
     if (select_status == 0) {
         PrintAndLogEx(DEBUG, "iso14443a card select failed");
@@ -310,9 +311,9 @@ static int CmdHFFudanDump(const char *Cmd) {
 
             clearCommandBuffer();
             PacketResponseNG resp;
-            SendCommandMIX(CMD_HF_ISO14443A_READER, flags, sizeof(cmd) | ((uint32_t)(numbits << 16)), argtimeout, cmd, sizeof(cmd));
+            SendIso14aReaderEx(flags, cmd, sizeof(cmd), sizeof(cmd), numbits, argtimeout, 0);
 
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+            if (WaitForIso14aReply(&resp, 1500, NULL, NULL)) {
                 if (resp.status == PM3_SUCCESS) {
                     uint8_t *data  = resp.data.asBytes;
                     memcpy(carddata + (b * MAX_FUDAN_BLOCK_SIZE), data, MAX_FUDAN_BLOCK_SIZE);
@@ -401,19 +402,25 @@ static int CmdHFFudanWrBl(const char *Cmd) {
     PrintAndLogEx(INFO, "Writing block no %d, key %s", blockno, sprint_hex_inrow(key, sizeof(key)));
     PrintAndLogEx(INFO, "data: %s", sprint_hex(block, sizeof(block)));
 
-    uint8_t data[26];
-    memcpy(data, key, sizeof(key));
-    memcpy(data + 10, block, sizeof(block));
+    mf_writeblock_ex_t payload = {
+        .wakeup = MF_WAKE_WUPA,
+        .auth_cmd = MIFARE_AUTH_KEYA,
+        .write_cmd = ISO14443A_CMD_WRITEBLOCK,
+        .block_no = blockno,
+    };
+    memcpy(payload.key, key, MIFARE_KEY_SIZE);
+    memcpy(payload.block_data, block, MFBLOCK_SIZE);
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, 0, 0, data, sizeof(data));
+    SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&payload, sizeof(payload));
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false) {
         PrintAndLogEx(FAILED, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
-    uint8_t isok  = resp.oldarg[0] & 0xff;
+    uint8_t isok = (resp.status == PM3_SUCCESS);
     if (isok) {
         PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf fudan rdbl") "` to verify");

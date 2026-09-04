@@ -1,6 +1,8 @@
-# Iceman Fork - Proxmark3
+# Iceman Fork - Proxmark
 
-The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the vast majority of RFID tags on a global scale. Originally built by Jonathan Westhues, the device is now the goto tool for RFID Analysis for the enthusiast. Iceman repository is considered to be the pinnacle of features and functionality, enabling a huge range of extremely useful and convenient commands and LUA scripts to automate chip identification, penetration testing, and programming
+The Proxmark is the swiss-army tool of RFID, allowing for interactions with the vast majority of RFID tags on a global scale. Originally built by Jonathan Westhues, the device is now the goto tool for RFID Analysis for the enthusiast.
+
+Iceman repository is considered to be the pinnacle of features and functionality, enabling a huge range of extremely useful and convenient commands and Python/LUA scripts to automate chip identification, penetration testing, and programming.
 
 
 | Latest Release | Coverity | Contributors |
@@ -13,11 +15,12 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 | [![MacOS Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/macos.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/macos.yml) | [![Ubuntu Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/ubuntu.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/ubuntu.yml) | [![Windows Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml) |
 
 # Table of Contents
-- [Iceman Fork - Proxmark3](#iceman-fork---proxmark3)
+- [Iceman Fork - Proxmark](#iceman-fork---proxmark)
 - [Table of Contents](#table-of-contents)
 - [PROXMARK3 INSTALLATION AND OVERVIEW](#proxmark3-installation-and-overview)
   - [Notes / helpful documents](#notes--helpful-documents)
 - [How to build?](#how-to-build)
+  - [Proxmark5](#proxmark5)
   - [Proxmark3 RDV4](#proxmark3-rdv4)
   - [Generic Proxmark3 platforms](#generic-proxmark3-platforms)
 - [What has changed?](#what-has-changed)
@@ -65,6 +68,23 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 
 # How to build?
 
+## Proxmark5
+The last hardware generation is called Proxmark5.  It has 
+  - MCU:  AT32F435,  a 288 MHz Artery Cortex-M4 
+  - Gowin FPGA
+  - TypeC Extended Port (CEP)
+  - BLE / Wifi / Battery Addon, via a ESp32c2 
+  - Swappable antennas (LF, HF, UHF)
+    - 125, 134, 250, 375, 500 KHz Low Frequency Antenna (LF)
+    - 13.56 MHz High Frequency Antenna (HF)
+    - as a addon:  860-960 MHz Ultra High Frequency Antenna (UHF),  ** not developed yet **
+   
+At the moment, Proxmark5-specific instructions are all grouped in [a single Getting Started guide](doc/md/PM5_Start_Here/Getting_Started_With_PM5.md).
+Read it to build, flash and run your Proxmark5 device. See the instruction links in the tables above to get the compilation environment.
+- ⚠ The firmware is not stable at the moment and is actively being developed at.  
+- ⚠ Don't install the BWM addon board for now.
+
+
 ## Proxmark3 RDV4
 
 See the instruction links in the tables above to build, flash and run for your Proxmark3 RDV4 device.
@@ -84,6 +104,9 @@ We define generic Proxmark3 platforms as following devices.
   - Proxmark3 X
     - **Note**: Community tested
     - **Note**: unknown device hw
+  - iCopy-X
+    - **Note**: Compatible **ONLY** after installation of [iCopy-X Open Source firmware](https://github.com/lab-401/icopy-x)
+    - Factory firmware is **not** compatible (Client Commands are different / Factory UI closed source / Factory Firmware enforces tag DRM) 
 
 **Not supported**
  - ⚠  Proxmark Evolution (EVO) 
@@ -93,10 +116,6 @@ We define generic Proxmark3 platforms as following devices.
    - **Note**: Company have disappeared, leaving their customers in the dark.
 
 **Experimental support**
- - ⚠  iCopy-X
-   - **Note**: currently incompatible with iCopy-X GUI as Proxmark client commands using different syntax
-   - **Note**: see also [icopyx-community repos](https://github.com/iCopy-X-Community/) for upstream sources, reversed hw etc.
-   - **Note**: Uses DRM to lock down tags, ignores the open source licences. Use on your own risk. 
 -  ⚠ Proxmark3 Ultimate
    - **Note**: unknown device hw
    - **Note**: FPGA images is building for it.  Use on your own risk.
@@ -119,58 +138,9 @@ When it comes to these new unknown models we are depending on the community to r
 >
 > [OBS! Read the 256KB flash memory advisory](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#256KB-versions)
 
-
 # What has changed?
 
-Proxmark3 RDV4 hardware modifications:
-  * added flash memory 256KB
-  * added smart card module
-  * added FPC connector for peripherals such as Bluetooth+battery addon
-  * improved antennas
-    * swappable
-    * LF Q factor switch
-    * LF 125/134 frequency switch
-  * tiny PCB form factor
-  * ABS case
-
-This repo vs official Proxmark3 repo:
-
 See the [Changelog file](CHANGELOG.md) which we try to keep updated.
-
-In short this repo gives you a completely different user experience when it comes to Proxmark3.
-
-  * Supports command tab complete
-  * Richer CLI with use of colors / emojis
-  * Help text system implemented everywhere
-  * Hints system
-  * User preference settings
-  * Extensive testing with continuous integration build systems on Linux, OSX and Windows, and regular usage of static analysis tools like 
-    * [Coverity Scan](https://scan.coverity.com/projects/proxmark3-rrg-iceman-repo/)
-    * Cppcheck (v2.6)
-    * GCC and Clang aggressive enforcement of diagnostic flags
-  * Auto detection of serial ports and seamless integration with Bluetooth addon
-  * Reconnect to device from inside client
-  * Supports tearoff attacks
-  * Supports NFC NDEF type1, type2, type4a, type4b, mifare, barcode
-  * Supports pm3 client scripts,  lua scripts,  python scripts
-  * Most comprehensive collection of scripts available
-  * Wiegand encoding, decoding.
-  * Supports EMV
-  * Supports CIPURSE
-  * Most standalone modes available with easy compilation
-  * Extensive test script for client and external tools
-  * Most comprehensive compiled known keys dictionaries
-  * Slimed down usb communications with NG-frames
-  * The most compiled public known key recovery software
-  * The fastest implementations of said software
-  * Support multiple fileformats for dump files (BIN/EML/JSON) 
-  * Interoperability of said fileformats with libnfc, MFC tool app etc
-  * Supports more RFID based protocols than ever
-  * Easy install for package maintainers, distro maintainers
-  * Supports cmake, make
-  * Builds without errors or warnings on more OS/platforms than ever
-  * Available as package on known distros like Gentoo, Kali, Termux, Macports, Homebrew
-  * Much more documentation 
 
 
 # Development
@@ -206,7 +176,8 @@ See [Proxmark3 precompiled builds](https://www.proxmarkbuilds.org/)
 
 ## Proxmark3 GUI
 
-The official PM3-GUI from Gaucho will not work. Not to mention is quite old and not maintained any longer.
+Most community driven GUI for Proxmark tends to be quite old and out-of-date.
+Here is a list of a few:
 
 - [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) will work more or less.
 - [Proxmark3 GUI cross-compiled](https://github.com/wh201906/Proxmark3GUI/) which is recently updated and claims to support latest source of this repo.
@@ -218,7 +189,6 @@ Where do you find the community?
    - [RFID Hacking community discord server](https://t.ly/d4_C)
    - [Proxmark3 IRC channel](https://web.libera.chat/?channels=#proxmark3)
    - [Proxmark3 sub reddit](https://www.reddit.com/r/proxmark3/)
-   - [Proxmark3 forum](http://www.proxmark.org/forum/index.php)
 
 
 ## Maintainers

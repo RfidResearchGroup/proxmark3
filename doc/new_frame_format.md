@@ -19,6 +19,8 @@ This is a step especially important for usage over FPC/USART/BT.
     - [On the Proxmark3, for sending frames](#on-the-proxmark3-for-sending-frames)
     - [On the client, for receiving frames](#on-the-client-for-receiving-frames)
   - [API transition](#api-transition)
+    - [Practical notes from converting the tree](#practical-notes-from-converting-the-tree)
+    - [Bulk downloads](#bulk-downloads)
   - [Bootrom](#bootrom)
     - [On the Proxmark3, for receiving frames](#on-the-proxmark3-for-receiving-frames-1)
     - [On the Proxmark3, for sending frames](#on-the-proxmark3-for-sending-frames-1)
@@ -41,6 +43,8 @@ Previously, frames were, in both directions like this:
     } d;
 
 with PM3_CMD_DATA_SIZE = 512 and there was no API abstraction, everybody was forging/parsing these frames.  
+These two structs now use `PM3_CMD_DATA_SIZE_OLD`, pinned at 512 independently of `PM3_CMD_DATA_SIZE`:
+the bootloader only speaks OLD, so growing them would break flashing against every deployed bootrom.  
 So the frame size was fixed, 544 bytes, even for simple ACKs.  
 When snooping the USB transfers, we can observe the host is sending 544b Bulk USB frames while the Proxmark3 is limited by its internal buffers and is sending 128b, 128b, 128b, 128b, 32b, so in total 5 packets.
 
@@ -103,7 +107,39 @@ But they are abstracted from the developer view with a new API. See below.
 ## Transition
 ^[Top](#top)
 
-Because it's a long transition to clean all the code from the old format and because we don't want to break stuffs when flashing the bootloader, the old frames are still supported together with the new frames. The old structure is now called `PacketCommandOLD` and `PacketResponseOLD` and it's also abstracted from the developer view with the new API.
+**Status: the C client and the ARM firmware are converted.**
+
+The client has no `SendCommandOLD` or `SendCommandMIX` call sites left. On the
+device only three legacy replies remain, and all three are deliberate:
+
+| Site | Why it stays |
+|---|---|
+| `armsrc/appmain.c` — `CMD_READ_MEM_DOWNLOADED` and its `CMD_ACK` terminator | also served by `bootrom.c`, which only speaks OLD |
+| `armsrc/appmain.c` — `CMD_DEVICE_INFO` | same, see `bootrom.c` |
+
+`SendCommandBL` marks the frames that must stay OLD because the bootloader
+serves them. Do not "convert" those.
+
+These sites chunk by `PM3_CMD_DATA_SIZE_OLD`, not `PM3_CMD_DATA_SIZE`: `reply_old`
+clamps its payload to the OLD size, so a sender chunking by the NG size would build
+oversized chunks, have them truncated on the wire, and still announce the full length
+in `oldarg[1]`.
+
+`armsrc/hfsnoop.c` — `CMD_FPGAMEM_DOWNLOADED` used to be on this list because its
+FPGA trace loop is a DMA double-buffer and an NG header did not obviously fit
+alongside a full DMA buffer. It is converted: the DMA writes straight into
+`chunk->data` of a `download_chunk_t`, so a filled buffer is already a complete NG
+payload. Note the loop arms each transfer for exactly the bytes still expected -
+`FPGA_TRACE_SIZE` is not a multiple of `DOWNLOAD_CHUNK_MAX`, and arming a full
+chunk for the short last one waits forever on bytes the FPGA never sends.
+
+`PacketResponseNG.oldarg[]` is likewise almost gone on the client. The only
+readers left are `client/src/flash.c` and `client/src/proxmark3.c`, both talking
+to the bootrom over `SendCommandBL`. The Lua binding no longer serialises the
+oldargs into the response it hands scripts.
+
+The old frames are still supported by the transport, so `PacketCommandOLD` and
+`PacketResponseOLD` remain, abstracted from the developer view by the new API.
 
 ## New format API
 ^[Top](#top)
@@ -152,16 +188,21 @@ After the full transition, we might remove the fields `oldarg` and `ng`.
     void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len);
     void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
     void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
-    void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
 
-So cmds should make the transition from `SendCommandOLD` to `SendCommandNG` to benefit from smaller frames (and armsrc handlers adjusted accordingly of course).  
-`SendCommandBL` is for Bootloader-related activities, see Bootrom section.  
-`SendCommandMIX` is a transition fct: it uses the same API as `SendCommandOLD` but benefits somehow from variable length frames. It occupies at least 24b of data for the oldargs and real data is therefore limited to PM3_CMD_DATA_SIZE - 24 (defined as PM3_CMD_DATA_SIZE_MIX). Besides the size limitation, the receiver handler doesn't know if this was an OLD frame or a MIX frame, it gets its oldargs and data as usual.  
-Warning : it makes sense to move from `SendCommandOLD` to `SendCommandMIX` only for *commands with small payloads*.
-* otherwise both have about the same size
-* `SendCommandMIX` has a smaller payload (PM3_CMD_DATA_SIZE_MIX < PM3_CMD_DATA_SIZE) so it's risky to blindly move from OLD to MIX if there is a large payload.
+`SendCommandNG` is what every command uses. Put everything in an ad-hoc PACKED
+struct in the `data` field.
 
-Internally these functions prepare the new or old frames and call `uart_communication` which calls `uart_send`.
+`SendCommandBL` is for Bootloader-related activities, see the Bootrom section. It
+is a thin alias over `SendCommandOLD` and exists so that the frames which *must*
+stay OLD are visibly tagged as such. `SendCommandOLD` has no other caller.
+
+`SendCommandMIX` and `PM3_CMD_DATA_SIZE_MIX` **have been removed.** MIX was the
+halfway house: an NG-framed packet that still carried the three 64 bit oldargs in
+the first 24 bytes of the payload. Nothing uses it any more, and the client can no
+longer construct one.
+
+Internally these functions prepare the frame and call `uart_communication` which
+calls `uart_send`.
 
 ### On the Proxmark3, for receiving frames
 ^[Top](#top)
@@ -182,20 +223,29 @@ Old handlers will still find their stuff in `PacketCommandNG.oldarg` field.
 
     int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len);
     int reply_ng(uint16_t cmd, int8_t status, const uint8_t *data, size_t len);
-    int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len);
     int reply_reason(uint16_t cmd, int8_t status, int8_t reason, const uint8_t *data, size_t len);
 
-So replies should make the transition from `reply_old` to `reply_ng` to benefit from smaller frames (and client reception adjusted accordingly of course).  
-`reply_mix` is a transition fct: it uses the same API as reply_old but benefits somehow from variable length frames. It occupies at least 24b of data for the oldargs and real data is therefore limited to PM3_CMD_DATA_SIZE - 24. Besides the size limitation, the client command doesn't know if this was an OLD frame or a MIX frame, it gets its oldargs and data as usual.
+`reply_mix` **has been removed**. `reply_old` survives only for the handlers the
+bootrom also serves; note it always transmits `sizeof(PacketResponseOLD)`, 544
+bytes, no matter what `len` says, whereas `reply_ng` sends exactly what you give
+it.
 
-Example of a handler that supports both OLD/MIX and NG command styles and replies with the new frame format when it receives new command format:
+A handler now simply validates the length and answers on its own opcode:
 
-    if (packet->ng) {
-        reply_ng(CMD_FOOBAR, PM3_SUCCESS, packet->data.asBytes, packet->length);
-    } else {
-        // reply_old(CMD_ACK, 0, 0, 0, packet->data.asBytes, packet->length);
-        reply_mix(CMD_ACK, 0, 0, 0, packet->data.asBytes, packet->length);
+    case CMD_FOOBAR: {
+        if (packet->length != sizeof(foobar_t)) {
+            reply_ng(CMD_FOOBAR, PM3_EINVARG, NULL, 0);
+            break;
+        }
+        foobar_t *payload = (foobar_t *)packet->data.asBytes;
+        ...
+        reply_ng(CMD_FOOBAR, PM3_SUCCESS, resp, resplen);
+        break;
     }
+
+During the transition some handlers carried a `if (packet->ng) { ... } else { ... }`
+dual-mode branch so converted and unconverted callers could coexist. None remain;
+a frame arriving without the `ng` bit is now answered with `PM3_EINVARG`.
 
 ### On the client, for receiving frames
 ^[Top](#top)
@@ -218,10 +268,45 @@ In short, to move from one format to the other, we need for each command:
 * (pm3 TX) `reply_old` ⇒ `reply_ng` (with all stuff in ad-hoc PACKED structs in `data` field)
 * (client RX) `PacketResponseNG` parsing, from `oldarg` to only the `data` field
 
-Meanwhile, a fast transition to MIX frames can be done with:
+A MIX frame was the historical halfway house (`SendCommandMIX` / `reply_mix`).
+Do not add new ones: the client is free of them and every device handler that
+mattered has been converted.
 
-* (client TX) `SendCommandOLD` ⇒ `SendCommandMIX` (but check the limited data size PM3_CMD_DATA_SIZE ⇒ PM3_CMD_DATA_SIZE_MIX)
-* (pm3 TX) `reply_old` ⇒ `reply_mix` (but check the limited data size PM3_CMD_DATA_SIZE ⇒ PM3_CMD_DATA_SIZE_MIX)
+### Practical notes from converting the tree
+
+* **Reply with the command's own opcode, never `CMD_ACK`.** An anonymous ACK is
+  what forced hacks like iCLASS putting `CMD_HF_ICLASS_SIMULATE` inside `arg0` of
+  its own reply so the client could tell replies apart.
+* **A success flag belongs in the NG `status` field**, not in a data byte, and a
+  second discriminator can use `reply_reason()`.
+* **Validate `packet->length` before casting**, on both sides. Several converted
+  commands previously read past the end of a short frame.
+* **`PACKED` is not free.** It sets the struct's alignment to 1, so taking the
+  address of any member wider than a byte trips
+  `-Werror=address-of-packed-member`, and on the ARM7TDMI an unaligned 32 bit
+  load silently rotates rather than faulting. Pack a struct only to *remove*
+  padding: if `sizeof` is the same either way, leave it unpacked. Compare
+  `epa_replay_t` (packed, its `uint16_t`s sit at odd offsets) with
+  `epa_result_t` and `t55xx_setconfig_t` (not packed, they already tile and
+  their members get addressed).
+* **`PM3_CMD_DATA_SIZE_MIX` is a MIX-only constant.** Any chunked transfer that
+  moves to NG must size its chunks as
+  `PM3_CMD_DATA_SIZE - sizeof(payload_t)` instead.
+* **`reply_old` always transmits `sizeof(PacketResponseOLD)`**, 544 bytes,
+  whatever `len` says. `reply_ng` sends only what you give it.
+* **A command can answer more than once.** `CMD_HF_ISO14443A_READER` with
+  `ISO14A_CONNECT | ISO14A_RAW` replies twice, select then raw exchange; the
+  client must consume both.
+
+### Bulk downloads
+
+`CMD_DOWNLOAD_BIGBUF`, `CMD_DOWNLOAD_EML_BIGBUF`, `CMD_SPIFFS_DOWNLOAD` and
+`CMD_FLASHMEM_DOWNLOAD` use `download_req_t` / `download_chunk_t` /
+`download_done_t` (see `include/pm3_cmd.h`). The chunk header carries only the
+offset, since the frame length gives the size, and the transfer ends with a
+`download_done_t` answered on the original `CMD_DOWNLOAD_*` opcode rather than an
+anonymous ACK. `dl_it()` in `client/src/comms.c` still understands the OLD chunk
+format because `CMD_READ_MEM_DOWNLOAD` is served by the bootrom.
 
 ## Bootrom
 ^[Top](#top)
@@ -446,8 +531,8 @@ Or if it's too complex to determine when we're sending the last command:
     // fast push mode
     conn.block_after_ACK = true;
     some loop {
-        SendCommandOLD / SendCommandMIX
-        if (WaitForResponseTimeout(CMD_ACK, &resp, some_timeout) == false) {
+        SendCommandNG
+        if (WaitForResponseTimeout(CMD_FOOBAR, &resp, some_timeout) == false) {
             ....
             conn.block_after_ACK = false;
             return PM3_ETIMEOUT;

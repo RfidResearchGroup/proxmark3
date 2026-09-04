@@ -25,11 +25,11 @@ extern bool g_reply_with_crc_on_usb;
 extern bool g_reply_with_crc_on_fpc;
 // "Session" flag, to tell via which interface next msgs should be sent: USB and/or FPC USART
 extern bool g_reply_via_fpc;
+uint16_t reply_ng_max_data_size(void);
 extern bool g_reply_via_usb;
 
 int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len);
 int reply_ng(uint16_t cmd, int8_t status, const uint8_t *data, size_t len);
-int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len);
 int reply_reason(uint16_t cmd, int8_t status, int8_t reason, const uint8_t *data, size_t len);
 int receive_ng(PacketCommandNG *rx);
 

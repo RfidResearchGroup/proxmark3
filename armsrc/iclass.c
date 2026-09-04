@@ -29,15 +29,17 @@
 
 #include "appmain.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
 #include "string.h"
 #include "util.h"
 #include "dbprint.h"
 #include "protocols.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "iso15693.h"
 #include "iclass_cmd.h"              // iclass_card_select_t struct
 #include "i2c.h"                     // i2c defines (SIM module access)
+#include "sam_common.h"
 #include "printf.h"
 
 uint8_t get_pagemap(const picopass_hdr_t *hdr) {
@@ -136,8 +138,15 @@ static void CodeIClassTagSOF(void) {
  * @param datain
  */
 // turn off afterwards
-void SimulateIClass(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
-    iclass_simulate(arg0, arg1, arg2, true, datain, NULL, NULL);
+
+static void reply_iclass_sim(uint16_t num_mac, const uint8_t *macs, uint16_t maclen) {
+    uint8_t respbuf[sizeof(iclass_sim_resp_t) + PM3_CMD_DATA_SIZE] = {0};
+    iclass_sim_resp_t *response = (iclass_sim_resp_t *)respbuf;
+    response->num_mac = num_mac;
+    if (maclen && macs) {
+        memcpy(response->mac, macs, maclen);
+    }
+    reply_ng(CMD_HF_ICLASS_SIMULATE, PM3_SUCCESS, respbuf, sizeof(iclass_sim_resp_t) + maclen);
 }
 
 void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool trace, uint8_t *datain, uint8_t *dataout, uint16_t *dataoutlen) {
@@ -185,7 +194,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool t
 
                 // Button pressed
                 if (send_reply)
-                    reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
+                    reply_iclass_sim(i, mac_responses, i * EPURSE_MAC_SIZE);
                 goto out;
             }
         }
@@ -193,7 +202,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool t
             *dataoutlen = i * EPURSE_MAC_SIZE;
 
         if (send_reply)
-            reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
+            reply_iclass_sim(i, mac_responses, i * EPURSE_MAC_SIZE);
 
     } else if (sim_type == ICLASS_SIM_MODE_FULL || sim_type == ICLASS_SIM_MODE_FULL_GLITCH || sim_type == ICLASS_SIM_MODE_FULL_GLITCH_KEY || sim_type == ICLASS_SIM_MODE_FULL_LIVE) {
 
@@ -208,7 +217,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool t
         }
 
         if (send_reply) {
-            reply_mix(CMD_ACK, CMD_HF_ICLASS_SIMULATE, 0, 0, NULL, 0);
+            reply_iclass_sim(0, NULL, 0);
         }
 
     } else if (sim_type == ICLASS_SIM_MODE_READER_ATTACK_KEYROLL) {
@@ -237,7 +246,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool t
                     *dataoutlen = i * EPURSE_MAC_SIZE * 2;
 
                 if (send_reply)
-                    reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
+                    reply_iclass_sim(i * 2, mac_responses, i * EPURSE_MAC_SIZE * 2);
 
                 // Button pressed
                 goto out;
@@ -250,7 +259,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool t
                     *dataoutlen = i * EPURSE_MAC_SIZE * 2;
 
                 if (send_reply)
-                    reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
+                    reply_iclass_sim(i * 2, mac_responses, i * EPURSE_MAC_SIZE * 2);
 
                 // Button pressed
                 goto out;
@@ -262,7 +271,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, bool t
 
         // double the amount of collected data.
         if (send_reply)
-            reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i * 2, 0, mac_responses, i * EPURSE_MAC_SIZE * 2);
+            reply_iclass_sim(i * 2, mac_responses, i * EPURSE_MAC_SIZE * 2);
 
     } else {
         // We may want a mode here where we hardcode the csns to use (from proxclone).
@@ -1598,6 +1607,62 @@ void ReaderIClass(uint8_t *msg) {
 
 out:
     switch_off();
+}
+
+// Raw iCLASS reader exchange that leaves the field ON
+// The field is only dropped by CMD_HF_DROPFIELD (or a failed select).
+void iClass_Raw(uint8_t *msg) {
+    uint8_t flags = msg[0];
+    uint16_t rawlen = (uint16_t)msg[1] | ((uint16_t)msg[2] << 8);
+    uint8_t *raw = msg + 3;
+
+    uint32_t start_time = 0, eof_time = 0;
+
+    if (flags & 0x01) {                         // INIT: energize + select
+        Iso15693InitReader();
+        picopass_hdr_t hdr = {0};
+        if (select_iclass_tag(&hdr, false, &eof_time, false) == false) {
+            switch_off();
+            reply_ng(CMD_HF_ICLASS_RAW, PM3_ERFTRANS, NULL, 0);
+            return;
+        }
+        if (rawlen == 0) {                      // scan: return the header, keep field ON
+            switch_clock_to_ticks();
+            reply_ng(CMD_HF_ICLASS_RAW, PM3_SUCCESS, (uint8_t *)&hdr, sizeof(picopass_hdr_t));
+            return;
+        }
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+    } else {
+        switch_clock_to_countsspclk();
+    }
+
+    uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
+    uint16_t resp_len = 0;
+
+    start_time = GetCountSspClk();
+    bool is_update = rawlen > 0 && ((raw[0] & 0x0F) == ICLASS_CMD_UPDATE);
+    uint8_t tries = is_update ? 1 : 3;
+    uint16_t timeout = is_update ? ICLASS_READER_TIMEOUT_UPDATE : ICLASS_READER_TIMEOUT_ACTALL;
+    int res = PM3_ECARDEXCHANGE;
+    while (tries-- > 0) {
+        iclass_send_as_reader(raw, rawlen, &start_time, &eof_time, false);
+        resp_len = 0;
+        res = GetIso15693AnswerFromTag(resp, sizeof(resp), timeout, &eof_time,
+                                       false, true, &resp_len);
+        if (res == PM3_SUCCESS && resp_len > 0) {
+            break;
+        }
+        start_time = eof_time + ((DELAY_ICLASS_VICC_TO_VCD_READER +
+                                  DELAY_ISO15693_VCD_TO_VICC_READER +
+                                  (8 * 8 * 8 * 16)) * 2);
+    }
+    switch_clock_to_ticks();
+    if (res == PM3_SUCCESS && resp_len > 0) {
+        reply_ng(CMD_HF_ICLASS_RAW, PM3_SUCCESS, resp, resp_len);
+    } else {
+        reply_ng(CMD_HF_ICLASS_RAW, PM3_ECARDEXCHANGE, NULL, 0);
+    }
+    // field left ON; the host drops it via CMD_HF_DROPFIELD
 }
 
 bool authenticate_iclass_tag(iclass_auth_req_t *payload, picopass_hdr_t *hdr, uint32_t *start_time, uint32_t *eof_time, uint8_t *mac_out) {

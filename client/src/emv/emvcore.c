@@ -187,31 +187,125 @@ void TLVPrintFromTLV(struct tlvdb *tlv) {
     TLVPrintFromTLVLev(tlv, 0);
 }
 
+#define AIDLIST_MAX_ROWS  32
+#define AIDLIST_MAX_CELL  66
+
+typedef struct {
+    char aid[AIDLIST_MAX_CELL];
+    char prio[8];
+    char name[AIDLIST_MAX_CELL];
+} aidlist_row_t;
+
+// A rule of '-' the width of one padded column, plus its trailing '+'.
+static void aidlist_rule(char *dst, size_t dstlen, size_t w_aid, size_t w_prio, size_t w_name) {
+    const size_t widths[3] = { w_aid, w_prio, w_name };
+    size_t pos = 0;
+
+    if (dstlen == 0) {
+        return;
+    }
+
+    dst[pos++] = '+';
+    for (size_t c = 0; c < 3; c++) {
+        for (size_t i = 0; (i < widths[c] + 2) && (pos + 2 < dstlen); i++) {
+            dst[pos++] = '-';
+        }
+        if (pos + 1 < dstlen) {
+            dst[pos++] = '+';
+        }
+    }
+    dst[pos] = 0;
+}
+
 void TLVPrintAIDlistFromSelectTLV(struct tlvdb *tlv) {
-    PrintAndLogEx(INFO, "|------------------+--------+-------------------------|");
-    PrintAndLogEx(INFO, "|    AID           |Priority| Name                    |");
-    PrintAndLogEx(INFO, "|------------------+--------+-------------------------|");
 
+    static aidlist_row_t rows[AIDLIST_MAX_ROWS];
+    size_t n = 0;
+    bool truncated = false;
+
+    // Collect first: the column widths come from the data, and the sprint_*
+    // helpers hand back a shared static buffer that the next call overwrites.
     struct tlvdb *ttmp = tlvdb_find(tlv, 0x6f);
-    if (ttmp == NULL)
-        PrintAndLogEx(INFO, "|                         none                        |");
-
     while (ttmp) {
+
         const struct tlv *tgAID = tlvdb_get_inchild(ttmp, 0x84, NULL);
         const struct tlv *tgName = tlvdb_get_inchild(ttmp, 0x50, NULL);
         const struct tlv *tgPrio = tlvdb_get_inchild(ttmp, 0x87, NULL);
-        if (!tgAID) {
+        if (tgAID == NULL) {
             break;
         }
-        PrintAndLogEx(INFO, "| %s|   %s  | %s|",
-                      sprint_hex_inrow_ex(tgAID->value, tgAID->len, 16),
-                      (tgPrio) ? sprint_hex(tgPrio->value, 1) : "   ",
-                      (tgName) ? sprint_ascii_ex(tgName->value, tgName->len, 24) : "                        ");
 
+        if (n >= AIDLIST_MAX_ROWS) {
+            truncated = true;
+            break;
+        }
+
+        snprintf(rows[n].aid, sizeof(rows[n].aid), "%s",
+                 sprint_hex_inrow_ex(tgAID->value, tgAID->len, 0));
+
+        if (tgPrio && tgPrio->len) {
+            snprintf(rows[n].prio, sizeof(rows[n].prio), "%02X", tgPrio->value[0]);
+        } else {
+            snprintf(rows[n].prio, sizeof(rows[n].prio), "-");
+        }
+
+        rows[n].name[0] = 0;
+        if (tgName && tgName->len) {
+            size_t len = tgName->len;
+            if (len > sizeof(rows[n].name) - 1) {
+                len = sizeof(rows[n].name) - 1;
+            }
+            for (size_t i = 0; i < len; i++) {
+                uint8_t c = tgName->value[i];
+                rows[n].name[i] = (c >= 0x20 && c < 0x7F) ? (char)c : '.';
+            }
+            rows[n].name[len] = 0;
+        }
+
+        n++;
         ttmp = tlvdb_find_next(ttmp, 0x6f);
     }
 
-    PrintAndLogEx(INFO, "|------------------+--------+-------------------------|");
+    if (n == 0) {
+        PrintAndLogEx(INFO, "No applications found");
+        return;
+    }
+
+    size_t w_aid  = strlen("AID");
+    size_t w_prio = strlen("Priority");
+    size_t w_name = strlen("Name");
+
+    for (size_t i = 0; i < n; i++) {
+        size_t l = strlen(rows[i].aid);
+        if (l > w_aid) {
+            w_aid = l;
+        }
+        l = strlen(rows[i].name);
+        if (l > w_name) {
+            w_name = l;
+        }
+    }
+
+    char rule[AIDLIST_MAX_CELL * 3 + 16];
+    aidlist_rule(rule, sizeof(rule), w_aid, w_prio, w_name);
+
+    PrintAndLogEx(INFO, "%s", rule);
+    PrintAndLogEx(INFO, "| %-*s | %-*s | %-*s |",
+                  (int)w_aid, "AID", (int)w_prio, "Priority", (int)w_name, "Name");
+    PrintAndLogEx(INFO, "%s", rule);
+
+    for (size_t i = 0; i < n; i++) {
+        PrintAndLogEx(INFO, "| " _YELLOW_("%-*s") " | %-*s | " _CYAN_("%-*s") " |",
+                      (int)w_aid, rows[i].aid,
+                      (int)w_prio, rows[i].prio,
+                      (int)w_name, rows[i].name);
+    }
+
+    PrintAndLogEx(INFO, "%s", rule);
+
+    if (truncated) {
+        PrintAndLogEx(INFO, "( showing first %d applications )", AIDLIST_MAX_ROWS);
+    }
 }
 
 struct tlvdb *GetPANFromTrack2(const struct tlv *track2) {
@@ -329,6 +423,12 @@ static int EMVSelectWithRetry(Iso7816CommandChannel channel, bool ActivateField,
 
         // retry if error and not returned sw error
         if (res && res != 5) {
+
+            // a PM3_E* transport failure will not be fixed by asking again
+            if (res < 0) {
+                return res;
+            }
+
             if (++retrycnt < 3) {
                 continue;
             } else {
@@ -379,7 +479,9 @@ static int EMVCheckAID(Iso7816CommandChannel channel, bool decodeTLV, struct tlv
     return res;
 }
 
-int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, bool decodeTLV, struct tlvdb *tlv) {
+// quiet: the caller has a fallback lined up, so a failure here is a probe
+// rather than a problem and should not be reported as one.
+int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, bool decodeTLV, struct tlvdb *tlv, bool quiet) {
     uint8_t data[APDU_RES_LEN] = {0};
     size_t datalen = 0;
     uint16_t sw = 0;
@@ -391,7 +493,9 @@ int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFi
 
     if (!res) {
         if (sw != ISO7816_OK) {
-            PrintAndLogEx(FAILED, "Select PSE error. APDU error: %04x.", sw);
+            if (quiet == false) {
+                PrintAndLogEx(FAILED, "Select PSE error. APDU error: %04x.", sw);
+            }
             return 1;
         }
 
@@ -463,8 +567,19 @@ int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFi
         } else {
             PrintAndLogEx(WARNING, "%s ERROR: Can't get TLV from response.", PSE_or_PPSE);
         }
-    } else {
+    } else if (quiet == false) {
         PrintAndLogEx(ERR, "%s ERROR: Can't select PPSE AID. Error: %d", PSE_or_PPSE, res);
+
+        // an empty slot and a card that is simply not an EMV card both land
+        // here, so ask the module which one it is
+        if ((res < 0) && (channel == CC_CONTACT)) {
+            smart_card_atr_t atr;
+            if (smart_select(false, &atr)) {
+                PrintAndLogEx(HINT, "Hint: card answered its ATR but not the APDU - is this an EMV card? try `" _YELLOW_("smart info") "`");
+            } else {
+                PrintAndLogEx(HINT, "Hint: no answer at all - is a card in the slot? try `" _YELLOW_("smart info") "`");
+            }
+        }
     }
 
     if (!LeaveFieldON)
@@ -492,6 +607,20 @@ int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveField
         int res = EMVSelect(channel, (i == 0) ? ActivateField : false, true, aidbuf, aidlen, data, sizeof(data), &datalen, &sw, tlv);
         // retry if error and not returned sw error
         if (res && res != 5) {
+
+            // A negative result is a PM3_E* transport failure, not something
+            // the card said. Retrying cannot fix it, nor can the ~150 AIDs
+            // still to come.
+            if (res < 0) {
+                if (LeaveFieldON == false) {
+                    DropFieldEx(channel);
+                }
+                if (verbose) {
+                    PrintAndLogEx(WARNING, "exiting...");
+                }
+                return 1;
+            }
+
             if (++retrycnt < 3) {
                 i--;
             } else {

@@ -50,29 +50,6 @@ Command = {
         o.data = data
         return o
     end,
-    newMIX = function(self, o)
-
-        local o = o or {}   -- create object if user does not provide one
-        setmetatable(o, self) -- DIY inheritance a'la javascript
-        self.__index = self
-
-        o.cmd = o.cmd or _commands.CMD_UNKNOWN
-        o.arg1 = o.arg1 or 0
-        o.arg2 = o.arg2 or 0
-        o.arg3 = o.arg3 or 0
-        local data = o.data or ''
-
-        if (type(data) == 'string') then
-            if (#data > 1024) then
-                -- OOps, a bit too much data here
-                print( ( "WARNING: data size too large, was %s chars, will be truncated "):format( #data) )
-                --
-                data = data:sub(1, 1024)
-            end
-        end
-        o.data = data
-        return o
-    end,
     newNG = function(self, o)
 
         local o = o or {}   -- create object if user does not provide one
@@ -93,12 +70,6 @@ Command = {
         o.data = data
         return o
     end,
-    parse = function(packet)
-            local count, cmd, arg1, arg2, arg3, data = bin.unpack('LLLL', packet)
-            local length = #packet - count + 1
-            count, data = bin.unpack('H'..length, packet, count)
-            return Command:new{cmd = cmd, arg1 = arg1, arg2 = arg2, arg3 = arg3, data = data}
-    end
 }
 -- commented out,  not used.
 function Command:__tostring()
@@ -111,55 +82,108 @@ function Command:__tostring()
     return output
 end
 
-function Command:getBytes()
-    --If a hex-string has been used
-    local data  = self.data
-    local cmd = self.cmd
-    local arg1, arg2, arg3 = self.arg1, self.arg2, self.arg3
-    return bin.pack("LLLLH",cmd, arg1, arg2, arg3, data);
+
+
+
+
+
+
+
+--- Raw command support, uniform across card technologies.
+--
+-- The device takes a different struct per technology, but the Lua side is the
+-- same for all of them. Build with Command:newRaw{} using these named fields:
+--
+--   tech     '14a' | '14b' | '15'      which technology
+--   flags    transport flag bitmask    (ISO14A_* / ISO14B_* / ISO15_*)
+--   data     payload as a hex string   optional, defaults to empty
+--   timeout  device-side timeout       14a and 14b only, ignored for 15
+--   wait_us  pre-transmit delay        14a only, ignored elsewhere
+--   lenbits  send this many bits       14a only, ignored elsewhere
+--
+-- The payload length is always derived from `data`, never passed separately.
+--
+-- On the wire these become, little endian:
+--   14a  iso14a_raw_cmd_t  u32 flags, u32 timeout, u32 wait_us, u16 len, u16 lenbits, u8 data[]
+--   14b  iso14b_raw_cmd_t  u16 flags, u32 timeout, u16 rawlen, u8 raw[]
+--   15   iso15_raw_cmd_t   u8  flags, u16 rawlen, u8 raw[]
+
+--- hex string -> raw byte string
+function fromhex(hexstr)
+    return (hexstr:gsub('%x%x', function(cc) return string.char(tonumber(cc, 16)) end))
 end
 
---- Sends a packet to the device
--- @param command - the usb packet to send
--- @param ignoreresponse - if set to true, we don't read the device answer packet
---     which is usually recipe for fail. If not sent, the host will wait 2s for a
---     response of type CMD_ACK or like NG use the CMD as ack..
--- @return packet,nil if successful
---         nil, errormessage if unsuccessful
-function Command:sendMIX( ignore_response, timeout, use_cmd_ack)
-    if timeout == nil then timeout = TIMEOUT end
-    local data = self.data
-    local cmd = self.cmd
-    local arg1, arg2, arg3 = self.arg1, self.arg2, self.arg3
-
-    local err, msg = core.SendCommandMIX(cmd, arg1, arg2, arg3, data)
-    if err == nil then return err, msg end
-    if ignore_response then return true, nil end
-
-    local ack = _commands.CMD_ACK
-    if use_cmd_ack then
-        ack = cmd
-    end
-
-    local response, msg = core.WaitForResponseTimeout(ack, timeout)
-    if response == nil then
-        return nil, 'Error, waiting for response timed out :: '..msg
-    end
-    -- lets digest
-    data = nil
-    cmd = nil
-    arg1 = nil
-    arg2 = nil
-    arg3 = nil
-    local count, length, magic, status, reason, crc, ng
-
---         S    S       I      c       c        S    L     L     L
-    count, cmd, length, magic, status, reason, crc, arg1, arg2, arg3 = bin.unpack('SSIccSLLL', response)
-    count, data, ng = bin.unpack('H'..length..'C', response, count)
-
-    local packed = bin.pack("LLLLH", cmd, arg1, arg2, arg3, data)
-    return packed, nil;
+--- raw byte string -> uppercase hex string
+function tohex(raw)
+    return (raw:gsub('.', function(c) return string.format('%02X', string.byte(c)) end))
 end
+
+-- little endian hex for a value of n bytes
+local function le(value, nbytes)
+    local out = ''
+    local v = value or 0
+    for _ = 1, nbytes do
+        out = out .. string.format('%02X', v % 256)
+        v = math.floor(v / 256)
+    end
+    return out
+end
+
+local RAW_CMD = {
+    ['14a'] = _commands.CMD_HF_ISO14443A_READER,
+    ['14b'] = _commands.CMD_HF_ISO14443B_COMMAND,
+    ['15']  = _commands.CMD_HF_ISO15693_COMMAND,
+}
+
+--- Build a raw command for any of 14a / 14b / 15.
+-- @return a Command ready for :sendNG()
+function Command:newRaw(o)
+    o = o or {}
+    local tech = o.tech or '14a'
+    local cmd = RAW_CMD[tech]
+    if cmd == nil then
+        error('Command:newRaw - unknown tech "'..tostring(tech)..'", expected 14a, 14b or 15')
+    end
+
+    local data = o.data or ''
+    local len = #data / 2
+
+    local hdr
+    if tech == '14a' then
+        hdr = le(o.flags, 4) .. le(o.timeout, 4) .. le(o.wait_us, 4) .. le(len, 2) .. le(o.lenbits, 2)
+    elseif tech == '14b' then
+        hdr = le(o.flags, 2) .. le(o.timeout, 4) .. le(len, 2)
+    else
+        hdr = le(o.flags, 1) .. le(len, 2)
+    end
+
+    local c = Command:newNG{ cmd = cmd, data = hdr .. data }
+    c.tech = tech
+    return c
+end
+
+--- Unpack the reply to a raw command, uniform across technologies.
+-- @param tech  '14a' | '14b' | '15'
+-- @param resp  the table returned by :sendNG()
+-- @return len, extra, data
+--         len   number of payload bytes
+--         extra 14a: the select status on a CONNECT, otherwise nil
+--         data  payload as a raw byte string (use tohex() to print it)
+function parseRaw(tech, resp)
+    if resp == nil or type(resp) ~= 'table' or resp.Data == nil then
+        return nil, nil, nil
+    end
+    if tech == '14a' then
+        -- iso14a_raw_resp_t: u16 len, u8 sel, u8 rfu, u8 data[]
+        if #resp.Data < 8 then return nil, nil, nil end
+        local len = tonumber(resp.Data:sub(1, 2), 16) + (tonumber(resp.Data:sub(3, 4), 16) * 256)
+        local sel = tonumber(resp.Data:sub(5, 6), 16)
+        return len, sel, fromhex(resp.Data:sub(9, 8 + (len * 2)))
+    end
+    -- 14b and 15 answer with the payload only
+    return resp.Length, nil, fromhex(resp.Data:sub(1, resp.Length * 2))
+end
+
 function Command:sendNG( ignore_response, timeout )
     if timeout == nil then timeout = TIMEOUT end
     local data = self.data
@@ -175,9 +199,9 @@ function Command:sendNG( ignore_response, timeout )
 
     data = nil
     cmd = nil
-    local count, length, magic, status, reason, crc, arg0, arg1, arg2
+    local count, length, magic, status, reason, crc
 
-    count, cmd, length, magic, status, reason, crc, arg0, arg1, arg2 = bin.unpack('SSIccSLLL', response)
+    count, cmd, length, magic, status, reason, crc = bin.unpack('SSIccS', response)
     count, data, ng = bin.unpack('H'..length..'C', response, count)
 
 --[[  uncomment if you want to debug
@@ -187,10 +211,6 @@ function Command:sendNG( ignore_response, timeout )
     print('Magic  ::', string.format("0x%08X", magic), util.ConvertHexToAscii(string.format("0x%08X", magic)))
     print('Status ::', tostring(status))
     print('crc    ::', string.format("0x%02X", crc))
-    print('Args   ::', ("(%s, %s, %s)\r\n"):format(
-                    tostring(arg0),
-                    tostring(arg1),
-                    tostring(arg2)))
     print('NG     ::', ng)
     print('Data   ::', data)
 --]]
@@ -200,9 +220,6 @@ function Command:sendNG( ignore_response, timeout )
             Status = status,
             Reason = reason,
             Crc = crc,
-            Oldarg0 = arg0,
-            Oldarg1 = arg1,
-            Oldarg2 = arg2,
             Data = data,
             Ng = ng
     }

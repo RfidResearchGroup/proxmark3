@@ -20,9 +20,9 @@
 #define COMMS_H_
 
 #include "common.h"
-#include "pm3_cmd.h"    // Packet structs
-#include "util.h"       // FILE_PATH_SIZE
-#include "iso7816/iso7816core.h" // SetISODEPState
+#include "pm3_cmd.h"
+#include "util.h"
+#include "iso7816/iso7816core.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,7 +40,6 @@ extern "C" {
     }
 #endif
 
-//For storing command that are received from the device
 #ifndef CMD_BUFFER_SIZE
 #define CMD_BUFFER_SIZE 100
 #endif
@@ -67,21 +66,18 @@ typedef enum {
 } CommunicationProtocol_t;
 
 typedef struct {
-    bool run; // If TRUE, continue running the uart_communication thread
-    bool block_after_ACK; // if true, block after receiving an ACK package
-    // Flags to tell where to add CRC on sent replies
+    bool run;
+    bool block_after_ACK;
     bool send_with_crc_on_usb;
     bool send_with_crc_on_fpc;
-    // "Session" flag, to tell via which interface next msgs are sent: USB or FPC USART
     bool send_via_fpc_usart;
-    // to tell if we are using TCP/UDP/TCP(IPv6)/UDP(IPv6)
     CommunicationProtocol_t send_via_ip;
-    // to tell if the target address is local address(127.0.0.1/localhost/::1)
     bool send_via_local_ip;
-    // To memorise baudrate
     uint32_t uart_speed;
     uint16_t last_command;
+    bool listen_for_incoming;
     char serial_port_name[FILE_PATH_SIZE];
+    uint16_t max_cmd_data_size;
 } communication_arg_t;
 
 extern communication_arg_t g_conn;
@@ -98,7 +94,6 @@ void *uart_receiver(void *targ);
 void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
 void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len);
 void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len);
-void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len);
 void clearCommandBuffer(void);
 
 #define FLASHMODE_SPEED 460800
@@ -115,14 +110,14 @@ int TestProxmark(pm3_device_t *dev);
 void CloseProxmark(pm3_device_t *dev);
 void StartReconnectProxmark(void);
 
-size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, bool show_process);
+size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, bool show_process, bool keep_raw_mode);
 bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
 bool WaitForResponseTimeout(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout);
+bool WaitForTxIdle(uint32_t ms_timeout);
 bool WaitForResponse(uint32_t cmd, PacketResponseNG *response);
 
 int SetHfFieldTimeout(uint32_t timeout_sec, bool quiet);
 
-//bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
 bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, uint8_t *data, uint32_t datalen, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
 
 #ifdef __cplusplus

@@ -294,6 +294,70 @@ int hf14a_getversion_data(iso14a_card_select_t *card, uint64_t select_status, ve
     return res;
 }
 
+// Build and send a single CMD_HF_ISO14443A_READER frame.
+//  `datalen` is how many bytes travel in the frame
+//  `len` / `lenbits` are what the device is told to transmit
+// They are the same for almost every caller, see SendIso14aReader() below.
+void SendIso14aReaderEx(uint32_t flags, const uint8_t *data, uint16_t datalen, uint16_t len,
+                        uint16_t lenbits, uint32_t timeout, uint32_t wait_us) {
+
+    if (datalen > (g_conn.max_cmd_data_size - sizeof(iso14a_raw_cmd_t))) {
+        PrintAndLogEx(WARNING, "Sending " _RED_("%u") " bytes of payload is too much, abort", datalen);
+        return;
+    }
+
+    uint8_t buf[PM3_CMD_DATA_SIZE] = {0};
+    iso14a_raw_cmd_t *payload = (iso14a_raw_cmd_t *)buf;
+    payload->flags = flags;
+    payload->timeout = timeout;
+    payload->wait_us = wait_us;
+    payload->len = len;
+    payload->lenbits = lenbits;
+
+    if (datalen && data) {
+        memcpy(payload->data, data, datalen);
+    }
+
+    SendCommandNG(CMD_HF_ISO14443A_READER, buf, ISO14A_RAW_LEN(datalen));
+}
+
+// Receive the reply to a CMD_HF_ISO14443A_READER frame.
+//  `len` gets the payload size, 0 meaning the card did not answer
+//  `sel` gets the select status on a CONNECT, or the APDU res byte
+// Either may be NULL. On success resp->data.asBytes holds the payload itself,
+// so callers read it exactly as they did with the old CMD_ACK reply.
+bool WaitForIso14aReply(PacketResponseNG *resp, uint32_t timeout_ms, uint16_t *len, uint8_t *sel) {
+
+    PacketResponseNG local;
+    PacketResponseNG *r = (resp) ? resp : &local;
+
+    if (WaitForResponseTimeout(CMD_HF_ISO14443A_READER, r, timeout_ms) == false) {
+        return false;
+    }
+
+    if (r->status != PM3_SUCCESS || r->length < sizeof(iso14a_raw_resp_t)) {
+        return false;
+    }
+
+    const iso14a_raw_resp_t *payload = (const iso14a_raw_resp_t *)r->data.asBytes;
+
+    if (len) {
+        *len = payload->len;
+    }
+    if (sel) {
+        *sel = payload->sel;
+    }
+
+    // shift the payload down so data.asBytes[0] is the first response byte
+    r->length -= sizeof(iso14a_raw_resp_t);
+    memmove(r->data.asBytes, r->data.asBytes + sizeof(iso14a_raw_resp_t), r->length);
+    return true;
+}
+
+void SendIso14aReader(uint32_t flags, const uint8_t *data, uint16_t len) {
+    SendIso14aReaderEx(flags, data, len, len, 0, 0, 0);
+}
+
 static int CmdHF14AList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf 14a", "14a -c");
 }
@@ -618,16 +682,17 @@ static const char *get_uid_type(iso14a_card_select_t *card) {
 
 int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_687 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_687) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
     memcpy(card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
-    uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
+    uint64_t select_status = sel_687; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
 
     if (select_status == 0) {
         PrintAndLogEx(ERR, "iso14443a card select failed");
@@ -652,7 +717,7 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card->uid, card->uidlen));
     PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card->atqa[1], card->atqa[0]);
-    PrintAndLogEx(SUCCESS, " SAK: %02X [%" PRIu64 "]", card->sak, resp.oldarg[0]);
+    PrintAndLogEx(SUCCESS, " SAK: %02X [%" PRIu64 "]", card->sak, select_status);
 
     // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
     if (card->ats_len < 3) {
@@ -673,7 +738,8 @@ static int CmdHF14AReader(const char *Cmd) {
     CLIParserInit(&ctx, "hf 14a reader",
                   "Act as a ISO-14443a reader to identify tag. Look for ISO-14443a tags until Enter or the pm3 button is pressed",
                   "hf 14a reader\n"
-                  "hf 14a reader -@     -> Continuous mode\n"
+                  "hf 14a reader -n 100   -> Polls 100 times\n"
+                  "hf 14a reader -@       -> Continuous mode\n"
                  );
 
     void *argtable[] = {
@@ -682,6 +748,7 @@ static int CmdHF14AReader(const char *Cmd) {
         arg_lit0("s", "silent", "silent (no messages)"),
         arg_lit0(NULL, "drop", "just drop the signal field"),
         arg_lit0(NULL, "skip", "ISO14443-3 select only (skip RATS)"),
+        arg_int0("n", "num", "<dec>", "number of times to poll"),
         arg_lit0("@", NULL, "continuous reader mode"),
         arg_lit0("w", "wait", "wait for card"),
         arg_param_end
@@ -705,8 +772,10 @@ static int CmdHF14AReader(const char *Cmd) {
         cm |= ISO14A_NO_RATS;
     }
 
-    bool continuous = arg_get_lit(ctx, 5);
-    bool wait = arg_get_lit(ctx, 6);
+    int n = arg_get_int_def(ctx, 5, 1);
+
+    bool continuous = arg_get_lit(ctx, 6);
+    bool wait = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
     bool found = false;
@@ -714,18 +783,19 @@ static int CmdHF14AReader(const char *Cmd) {
         cm |= ISO14A_NO_DISCONNECT;
     }
 
-    if (continuous) {
+    if (n > 1 || continuous) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
 
     int res = PM3_SUCCESS;
     do {
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
+        SendIso14aReader(cm, NULL, 0);
 
         if ((cm & ISO14A_CONNECT) == ISO14A_CONNECT) {
             PacketResponseNG resp;
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+            uint8_t sel_797 = 0;
+            if (WaitForIso14aReply(&resp, 2500, NULL, &sel_797) == false) {
                 DropField();
                 res = PM3_ESOFT;
                 goto plot;
@@ -740,7 +810,7 @@ static int CmdHF14AReader(const char *Cmd) {
                 2: OK, no ATS
                 3: proprietary Anticollision
             */
-            uint64_t select_status = resp.oldarg[0];
+            uint64_t select_status = sel_797;
 
             found = (select_status != 0);
 
@@ -771,7 +841,7 @@ static int CmdHF14AReader(const char *Cmd) {
 
             if (!(silent && continuous)) {
                 PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
-                PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
+                PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%u]"), card.sak, sel_797);
 
                 if (card.ats_len >= 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
                     if (card.ats_len == card.ats[0] + 2)
@@ -798,7 +868,10 @@ plot:
             break;
         }
 
-    } while (continuous || (wait && (!found)));
+        if (!continuous && (n > 0)) {
+            n--;
+        }
+    } while (continuous || (wait && (!found)) || n > 0);
 
     if (disconnectAfter == false) {
         if (silent == false) {
@@ -873,10 +946,11 @@ static int CmdHF14ACUIDs(const char *Cmd) {
         }
 
         // execute anticollision procedure
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_RATS, 0, 0, NULL, 0);
+        SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_RATS, NULL, 0);
         PacketResponseNG resp;
 
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        uint8_t sel_952 = 0;
+        if (WaitForIso14aReply(&resp, 2500, NULL, &sel_952) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
@@ -884,7 +958,7 @@ static int CmdHF14ACUIDs(const char *Cmd) {
         iso14a_card_select_t *card = (iso14a_card_select_t *) resp.data.asBytes;
 
         // check if command failed
-        if (resp.oldarg[0] == 0) {
+        if (sel_952 == 0) {
             PrintAndLogEx(WARNING, "card select failed.");
         } else {
             PrintAndLogEx(SUCCESS, "%s", sprint_hex_inrow(card->uid, card->uidlen));
@@ -1161,16 +1235,17 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     uint8_t data[PM3_CMD_DATA_SIZE] = { 0x0a | gs_frames_num, 0x00 };
     gs_frames_num ^= 1;
 
-    int min = MIN((PM3_CMD_DATA_SIZE - 2), (datainlen & 0x1FF));
+    int min = MIN((int)(g_conn.max_cmd_data_size - 2), (datainlen & 0x1FF));
     memcpy(&data[2], datain, min);
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, (datainlen & 0xFFFF) + 2, 0, data, min + 2);
+    SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, data, min + 2);
 
     uint8_t *recv;
     PacketResponseNG resp;
+    uint16_t rlen_1245 = 0;
 resend:
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 7000)) {
+    if (WaitForIso14aReply(&resp, 7000, &rlen_1245, NULL)) {
         recv = resp.data.asBytes;
-        int iLen = resp.oldarg[0];
+        int iLen = rlen_1245;
 
         if (iLen == 0) {
             if (silentMode == false) {
@@ -1201,7 +1276,8 @@ resend:
             // WARNING for users of this function:
             // This NO_DISCONNECT flag will NOT save you. If you run your commands with LeaveSignalOn set to false, they will still fail if a card asks for WTX.
             // Better keep the flag on and do a DropField(); at the end.
-            SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | cmdc, 5, 0, recv, min); // 2b frame +1b "data" + 2b crc. Hardcode length to 5 and reply to response
+            // 2b frame + 1b "data" + 2b crc. Hardcode length to 5 and reply to response
+            SendIso14aReader(ISO14A_RAW | ISO14A_NO_DISCONNECT | cmdc, recv, 5);
             goto resend;
         }
         // OBS
@@ -1248,26 +1324,29 @@ int SelectCard14443A_4_WithParameters(bool disconnect, bool verbose, iso14a_card
     // Anticollision + SELECT card
     PacketResponseNG resp;
     if (polling_parameters != NULL) {
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT | ISO14A_USE_CUSTOM_POLLING, 0, 0, (uint8_t *)polling_parameters, sizeof(iso14a_polling_parameters_t));
+        SendIso14aReaderEx(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT | ISO14A_USE_CUSTOM_POLLING
+                           , (uint8_t *)polling_parameters, sizeof(iso14a_polling_parameters_t)
+                           , 0, 0, 0, 0);
     } else {
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+        SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, NULL, 0);
     }
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+    uint8_t sel_1334 = 0;
+    if (WaitForIso14aReply(&resp, 2000, NULL, &sel_1334) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
     // check result
-    if (resp.oldarg[0] == 0) {
+    if (sel_1334 == 0) {
         if (verbose) {
             PrintAndLogEx(WARNING, "No ISO14443-A Card in field");
         }
         return PM3_ECARDEXCHANGE;
     }
 
-    if (resp.oldarg[0] != 1 && resp.oldarg[0] != 2) {
-        PrintAndLogEx(WARNING, "Card not in iso14443-4, res=%" PRId64 ".", resp.oldarg[0]);
+    if (sel_1334 != 1 && sel_1334 != 2) {
+        PrintAndLogEx(WARNING, "Card not in iso14443-4, res=%d.", sel_1334);
         return PM3_ECARDEXCHANGE;
     }
 
@@ -1276,16 +1355,17 @@ int SelectCard14443A_4_WithParameters(bool disconnect, bool verbose, iso14a_card
         memcpy(card, vcard, sizeof(iso14a_card_select_t));
     }
 
-    if (resp.oldarg[0] == 2) { // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
+    if (sel_1334 == 2) { // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
         // get ATS
         uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, sizeof(rats), 0, rats, sizeof(rats));
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, rats, sizeof(rats));
+        uint16_t rlen_1362 = 0;
+        if (WaitForIso14aReply(&resp, 1500, &rlen_1362, NULL) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
         }
 
-        if (resp.oldarg[0] == 0) { // ats_len
+        if (rlen_1362 == 0) { // ats_len
             if (verbose) {
                 PrintAndLogEx(FAILED, "Can't get ATS");
             }
@@ -1293,7 +1373,7 @@ int SelectCard14443A_4_WithParameters(bool disconnect, bool verbose, iso14a_card
         }
 
         // get frame length from ATS in data field
-        if (resp.oldarg[0] > 1) {
+        if (rlen_1362 > 1) {
             uint8_t fsci = resp.data.asBytes[1] & 0x0f;
             if (fsci < ARRAYLEN(atsFSC)) {
                 gs_frame_len = atsFSC[fsci];
@@ -1301,7 +1381,7 @@ int SelectCard14443A_4_WithParameters(bool disconnect, bool verbose, iso14a_card
         }
 
         if (card) {
-            card->ats_len = resp.oldarg[0];
+            card->ats_len = rlen_1362;
             memcpy(card->ats, resp.data.asBytes, card->ats_len);
         }
     } else {
@@ -1380,21 +1460,23 @@ static int CmdExchangeAPDU(bool chainingin, const uint8_t *datain, int datainlen
     // here length PM3_CMD_DATA_SIZE=512
     // timeout must be authomatically set by "get ATS"
     if (datain) {
-        SendCommandMIX(CMD_HF_ISO14443A_READER, cmdc, (datainlen & 0x1FF), 0, datain, (datainlen & 0x1FF));
+        SendIso14aReader(cmdc, datain, (datainlen & 0x1FF));
     } else {
-        SendCommandMIX(CMD_HF_ISO14443A_READER, cmdc, 0, 0, NULL, 0);
+        SendIso14aReader(cmdc, NULL, 0);
     }
 
     PacketResponseNG resp;
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, timeout) == false) {
+    uint16_t rlen_1470 = 0;
+    uint8_t apdu_res = 0;
+    if (WaitForIso14aReply(&resp, timeout, &rlen_1470, &apdu_res) == false) {
         PrintAndLogEx(DEBUG, "ERR: APDU: Reply timeout");
         return PM3_EAPDU_FAIL;
     }
 
     const uint8_t *recv = resp.data.asBytes;
-    int iLen = resp.oldarg[0];
-    uint8_t res = resp.oldarg[1];
+    int iLen = rlen_1470;
+    uint8_t res = apdu_res;
 
     int dlen = iLen - 2;
     if (dlen < 0) {
@@ -1459,7 +1541,7 @@ int ExchangeAPDU14a(const uint8_t *datain, int datainlen, bool activateField, bo
 
     // 3 byte here - 1b framing header, 2b crc16
     if (g_apdu_in_framing_enable &&
-            ((gs_frame_len && (datainlen > gs_frame_len - 3)) || (datainlen > PM3_CMD_DATA_SIZE - 3))) {
+            ((gs_frame_len && (datainlen > gs_frame_len - 3)) || (datainlen > g_conn.max_cmd_data_size - 3))) {
 
         int clen = 0;
 
@@ -1703,7 +1785,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     bool use_schann = arg_get_lit(ctx, 13);
 
     int datalen = 0;
-    uint8_t data[PM3_CMD_DATA_SIZE_MIX] = {0};
+    uint8_t data[PM3_CMD_DATA_SIZE - sizeof(iso14a_raw_cmd_t)] = {0};
     CLIGetHexWithReturn(ctx, 14, data, &datalen);
     CLIParserFree(ctx);
 
@@ -1747,11 +1829,9 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
             flags |= ISO14A_NO_SELECT;
     }
 
-    // 32b MSB encode wait_us, 32b LSB encode timeout
-    uint64_t argtimeout = 0;
+    uint32_t timeout_etu = 0;
     if (wait_us) {
         flags |= ISO14A_SET_WAIT_US;
-        argtimeout = ((uint64_t)wait_us) << 32;
     }
 
     if (bTimeout) {
@@ -1761,7 +1841,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
             timeout = MAX_TIMEOUT;
             PrintAndLogEx(INFO, "Set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
         }
-        argtimeout |= 13560000 / 1000 / (8 * 16) * timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
+        timeout_etu = 13560000 / 1000 / (8 * 16) * timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
     }
 
     if (keep_field_on) {
@@ -1788,11 +1868,23 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         flags |= ISO14A_NO_RATS;
     }
 
-    // Max buffer is PM3_CMD_DATA_SIZE_MIX
-    datalen = (datalen > PM3_CMD_DATA_SIZE_MIX) ? PM3_CMD_DATA_SIZE_MIX : datalen;
+    if (datalen > (int)sizeof(data)) {
+        datalen = sizeof(data);
+    }
+
+    uint8_t buf[PM3_CMD_DATA_SIZE] = {0};
+    iso14a_raw_cmd_t *payload = (iso14a_raw_cmd_t *)buf;
+    payload->flags = flags;
+    payload->timeout = timeout_etu;
+    payload->wait_us = wait_us;
+    payload->len = datalen;
+    payload->lenbits = numbits;
+    if (datalen) {
+        memcpy(payload->data, data, datalen);
+    }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, flags, (datalen & 0x1FF) | ((uint32_t)(numbits << 16)), argtimeout, data, datalen);
+    SendCommandNG(CMD_HF_ISO14443A_READER, buf, ISO14A_RAW_LEN(datalen));
 
     if (reply) {
         int res = 0;
@@ -1806,11 +1898,12 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
 
 static int waitCmd(bool i_select, uint32_t timeout, bool verbose) {
     PacketResponseNG resp;
+    uint16_t rlen = 0;
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, timeout + 1500)) {
-        uint16_t len = (resp.oldarg[0] & 0xFFFF);
+    if (WaitForIso14aReply(&resp, timeout + 1500, &rlen, NULL)) {
+        uint16_t len = rlen;
         if (i_select) {
-            len = (resp.oldarg[1] & 0xFFFF);
+            len = ((const iso14a_card_select_t *)resp.data.asBytes)->uidlen;
             if (len) {
                 if (verbose) {
                     PrintAndLogEx(SUCCESS, "Card selected. UID[%u]:", len);
@@ -2719,9 +2812,10 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_2815 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_2815) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         DropField();
         return PM3_ETIMEOUT;
@@ -2737,7 +2831,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         3: proprietary Anticollision
         4: OK, SAK = no ATS but RATS possible (tested below)
     */
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_2815;
 
     if (select_status == 0) {
         PrintAndLogEx(DEBUG, "iso14443a card select failed");
@@ -2767,14 +2861,15 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     if (select_status == 2) {
         uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, rats, sizeof(rats));
+        uint16_t rlen_2863 = 0;
+        if (WaitForIso14aReply(&resp, 2500, &rlen_2863, NULL) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
 
-        memcpy(card.ats, resp.data.asBytes, resp.oldarg[0]);
-        card.ats_len = resp.oldarg[0]; // note: ats_len includes CRC Bytes
+        memcpy(card.ats, resp.data.asBytes, rlen_2863);
+        card.ats_len = rlen_2863; // note: ats_len includes CRC Bytes
         if (card.ats_len > 3) {
             select_status = 4;
         }
@@ -2936,8 +3031,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
                         // reconnect for further tests
                         clearCommandBuffer();
-                        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
-                        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+                        SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, NULL, 0);
+                        uint8_t sel_3033 = 0;
+                        if (WaitForIso14aReply(&resp, 2500, NULL, &sel_3033) == false) {
                             PrintAndLogEx(WARNING, "timeout while waiting for reply");
                             DropField();
                             return PM3_ETIMEOUT;
@@ -2945,7 +3041,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
                         memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
-                        select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS
+                        select_status = sel_3033; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS
 
                         if (select_status == 0) {
                             DropField();
@@ -3030,7 +3126,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 int16_t fsci = card.ats[1] & 0x0f;
 
                 PrintAndLogEx(INFO, "     ..." _YELLOW_("%02X") "............  T0    TA1 is%s present, TB1 is%s present, "
-                              "TC1 is%s present, FSCI is %d (FSC = %d)",
+                                    "TC1 is%s present, FSCI is %d (FSC = %d)",
                               card.ats[1],
                               (ta1 ? "" : _RED_(" NOT")),
                               (tb1 ? "" : _RED_(" NOT")),
@@ -3052,7 +3148,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 if (strlen(ds) != 0) ds[strlen(ds) - 2] = '\0';
                 if (strlen(dr) != 0) dr[strlen(dr) - 2] = '\0';
                 PrintAndLogEx(INFO, "     ......" _YELLOW_("%02X") ".........  TA1   different divisors are%s supported, "
-                              "DR: [%s], DS: [%s]",
+                                    "DR: [%s], DS: [%s]",
                               card.ats[pos],
                               ((card.ats[pos] & 0x80) ? _RED_(" NOT") : ""),
                               dr,
@@ -4225,7 +4321,7 @@ int CmdHF14ANdefWrite(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a ndefwrite",
                   "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.\n",
-                  "hf 14a ndefwrite -d 0300FE      -> write empty record to tag\n"
+                  "hf 14a ndefwrite -d 0000        -> write empty record to tag\n"
                   "hf 14a ndefwrite -f myfilename\n"
                   "hf 14a ndefwrite -d 003fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031\n"
                  );
@@ -4300,11 +4396,11 @@ int CmdHF14ANdefWrite(const char *Cmd) {
                 }
                 uint8_t tmp_raw[256];
                 memcpy(tmp_raw, raw, sizeof(tmp_raw));
-                raw[0] = 0x00;
+                raw[0] = 0x00; // the high byte of NLEN is always zero.
                 raw[1] = bytes;
                 memcpy(raw + 2, tmp_raw, sizeof(raw) - 2);
                 bytes += 2;
-                PrintAndLogEx(SUCCESS, "Added generic message header (0x03)");
+                PrintAndLogEx(SUCCESS, "Added NDEF length prefix (NLEN)");
             }
         }
     }
