@@ -2288,11 +2288,11 @@ static int CmdPM5QCTest(const char *Cmd) {
     PrintAndLogEx(INFO, "Performing QC test for the PM5...");
 
     clearCommandBuffer();
-    SendCommandNG(CMD_PM5_QC_TEST, (uint8_t *)&timeout_ms, sizeof(timeout_ms));
+    SendCommandNG(CMD_PM5_QC_TEST_HW, (uint8_t *)&timeout_ms, sizeof(timeout_ms));
 
     PacketResponseNG resp;
     // wait a bit longer than the device side sequence timeout, with headroom for RTC drift
-    if (WaitForResponseTimeout(CMD_PM5_QC_TEST, &resp, timeout_ms + (timeout_ms / 5) + 1000) == false) {
+    if (WaitForResponseTimeout(CMD_PM5_QC_TEST_HW, &resp, timeout_ms + (timeout_ms / 5) + 1000) == false) {
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
