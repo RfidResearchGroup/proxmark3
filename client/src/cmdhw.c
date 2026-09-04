@@ -2308,13 +2308,13 @@ static void progressbar(long sent, long total, int style) {
 // (DEV.md 8.4): a dropped chunk can't be re-sent, so any failure here means the
 // caller must restart the whole thing.
 static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms) {
+    clearCommandBuffer();
     PacketResponseNG resp;
 
     // BEGIN: tell the BWM how many bytes are coming (it erases the target partition)
     uint8_t beg[5] = { BWM_OTA_ACTION_BEGIN,
                        (uint8_t)(fwlen & 0xFF),         (uint8_t)((fwlen >> 8) & 0xFF),
                        (uint8_t)((fwlen >> 16) & 0xFF), (uint8_t)((fwlen >> 24) & 0xFF) };
-    clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_ESP_OTA, beg, sizeof(beg));
     if ((WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 20000) == false) || (resp.status != PM3_SUCCESS)) {
         PrintAndLogEx(FAILED, "OTA begin failed (is a responsive BWM fitted?)");
@@ -2334,7 +2334,7 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
         size_t n = MIN(maxchunk, fwlen - sent);
         buf[0] = BWM_OTA_ACTION_WRITE;
         memcpy(buf + 1, fw + sent, n);
-        clearCommandBuffer();
+        // clearCommandBuffer();
         SendCommandNG(CMD_PM5_BWM_ESP_OTA, buf, (uint16_t)(n + 1));
         bool got = WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 15000);
         if (!got || resp.status != PM3_SUCCESS) {
