@@ -1026,6 +1026,7 @@ Check column "offline" for their availability.
 |`hw standalone          `|N       |`Start installed standalone mode on device`
 |`hw tia                 `|N       |`Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider`
 |`hw bwmsetcap           `|N       |`Set BWM fuel-gauge design capacity (PM5, run once after battery change)`
+|`hw bwmvchg             `|N       |`Set BWM charger charge-voltage target (PM5, default 4100 mV)`
 |`hw bwmcharge           `|N       |`Enable/disable BWM battery charging (PM5, one-shot)`
 |`hw bwmautooff          `|N       |`Toggle auto power-off on USB unplug (PM5, BWM)`
 |`hw bwmwifi             `|N       |`Bring up BWM WiFi (STA + TCP server) for a tcp: connection (PM5)`
@@ -1254,6 +1255,7 @@ Check column "offline" for their availability.
 |`lf hitag sniff         `|N       |`Eavesdrop Hitag communication`
 |`lf hitag view          `|Y       |`Display content from tag dump file`
 |`lf hitag wrbl          `|N       |`Write a block (page) in Hitag memory`
+|`lf hitag restore       `|N       |`Restore a dump file to a Hitag 2 tag`
 |`lf hitag eload         `|N       |`Upload file into emulator memory`
 |`lf hitag eview         `|N       |`View emulator memory`
 |`lf hitag sim           `|N       |`Simulate Hitag transponder`
