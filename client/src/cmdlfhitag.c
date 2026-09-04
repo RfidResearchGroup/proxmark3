@@ -713,17 +713,17 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
             uint8_t page = hitag2_get_page(binstr);
 
             if (memcmp(binstr, HITAG2_BINSTR_READ_PAGE, 2) == 0) {
-                snprintf(exp, size, "READ PAGE (" _MAGENTA_("%u") ")", page);
+                snprintf(exp, size, "READ PAGE " _WHITE_("(") _MAGENTA_("%u") ")", page);
                 break;
             }
 
             if (memcmp(binstr, HITAG2_BINSTR_READ_PAGE_INVERTED, 2) == 0) {
-                snprintf(exp, size, "READ PAGE INV (" _MAGENTA_("%u") ")", page);
+                snprintf(exp, size, "READ PAGE INV " _WHITE_("(") _MAGENTA_("%u") ")", page);
                 break;
             }
 
             if (memcmp(binstr, HITAG2_BINSTR_WRITE_PAGE, 2) == 0) {
-                snprintf(exp, size, "WRITE PAGE (" _MAGENTA_("%u") ")", page);
+                snprintf(exp, size, "WRITE PAGE " _WHITE_("(") _MAGENTA_("%u") ")", page);
                 break;
             }
             break;
@@ -738,7 +738,7 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
                     rev_msb_array(uid, 4);
                     _ht2state.uid = MemLeToUint4byte(uid);
                 } else  {
-                    snprintf(exp, size, "PWD: " _GREEN_("0x%02X%02X%02X%02X"), cmd[0], cmd[1], cmd[2], cmd[3]);
+                    snprintf(exp, size, "PWD " _GREEN_("%02X%02X%02X%02X"), cmd[0], cmd[1], cmd[2], cmd[3]);
                     _ht2state.state = STATE_AUTH;
                 }
                 break;
@@ -764,9 +764,10 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
         case 64: {       // crypto handshake
 
             if (_ht2state.state == STATE_START_AUTH) {
+
                 _ht2state.state = STATE_START_ENCRYPTED;
 
-                // need to be called with filename...
+                // dictionary attack
                 if (ht2_check_cryptokeys(keys, keycount, cmd)) {
 
                     _ht2state.cipher_state = ht2_hitag2_init(
@@ -778,13 +779,13 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
 
                     uint64_t key = REV64(_ht2state.key);
                     key = BSWAP_48(key);
-                    snprintf(exp, size, "Nr Ar " _WHITE_("( ")  _GREEN_("%012" PRIx64)  " )", key);
+                    snprintf(exp, size, "NrAr " _WHITE_("( ")  _GREEN_("%012" PRIx64)  " )", key);
 
                 } else {
-                    snprintf(exp, size, "AUTH: Nr Ar");
+                    snprintf(exp, size, "AUTH NrAr");
                 }
             } else {
-                snprintf(exp, size, "AUTH: Nr Ar");
+                snprintf(exp, size, "NrAr decrypted");
             }
             break;
         }
@@ -2213,7 +2214,8 @@ static int CmdLFHitag2Lookup(const char *Cmd) {
 static int CmdLFHitag2Crack2(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag crack2",
-                  "This command tries to recover 2048 bits of Hitag 2 crypto stream data.\n",
+                  "This command tries to recover 2048 bits of Hitag 2 crypto stream data from card.\n"
+                  "Put card on pm3 before running this command\n",
                   "lf hitag crack2 --nrar 73AA5A62EAB8529C"
                  );
 
@@ -2250,9 +2252,6 @@ static int CmdLFHitag2Crack2(const char *Cmd) {
     // loop
     uint8_t attempt = 50;
     do {
-
-//        PrintAndLogEx(INPLACE, "Attack 2 running...");
-//        fflush(stdout);
 
         if (WaitForResponseTimeout(CMD_LF_HITAG2_CRACK_2, &resp, 1000) == false) {
             attempt--;
