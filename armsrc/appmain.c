@@ -3839,13 +3839,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
 #ifdef PM5
-        case CMD_PM5_QC_TEST: {
+        case CMD_PM5_QC_TEST_HW: {
             uint8_t failed_item = 0;
             uint32_t timeout_ms = 0;
             if (packet->length >= sizeof(timeout_ms)) {
                 memcpy(&timeout_ms, packet->data.asBytes, sizeof(timeout_ms));
             }
-            reply_ng(CMD_PM5_QC_TEST, QCTestPM5(&failed_item, timeout_ms) ? PM3_SUCCESS : PM3_EFAILED, &failed_item, 1);
+            reply_ng(CMD_PM5_QC_TEST_HW, QCTestPM5(&failed_item, timeout_ms) ? PM3_SUCCESS : PM3_EFAILED, &failed_item, 1);
             break;
         }
         case CMD_PM5_RGB_SET: {
