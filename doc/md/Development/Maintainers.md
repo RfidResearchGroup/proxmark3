@@ -63,7 +63,7 @@ It's also possible to skip parts even if libraries are present in the compilatio
 * `make client SKIPQT6=1` to skip Qt6 even if Qt6 is present, anf fallback on Qt5
 * `make client SKIPBT=1` to skip native Bluetooth support even if libbluetooth is present
 * `make client SKIPGD=1` to skip NFC ePaper support even if libgd is present
-* `make client SKIPZPIB=1` to skip decompressing compressed Google Smart Tap payloads support even if libzlib is present
+* `make client SKIPZLIB=1` to skip decompressing compressed Google Smart Tap payloads support even if libzlib is present
 * `make client SKIPPYTHON=1` to skip embedded Python 3 interpreter even if libpython3 is present
 * `make client SKIPLUASYSTEM=1` to skip system Lua lib even if liblua5.2 is present, use embedded Lua lib instead
 * `make client SKIPJANSSONSYSTEM=1` to skip system Jansson lib even if libjansson is present, use embedded Jansson lib instead
@@ -97,7 +97,7 @@ Inversely, it's possible to mandate parts and make sure the compilation will fai
 * `make client FORCEQT6=1` to make sure Qt6 is present
 * `make client FORCEBT=1` to make sure libbluetooth is present
 * `make client FORCEGD=1` to make sure libgd is present
-* `make client FORCEZPIB=1` to make sure libzlib is present
+* `make client FORCEZLIB=1` to make sure libzlib is present
 * `make client FORCEPYTHON=1` to make sure libpython3 is present
 * `make client FORCELUASYSTEM=1` to make sure liblua5.2 is present in the system
 * `make client FORCEJANSSONSYSTEM=1` to make sure libjansson is present in the system
