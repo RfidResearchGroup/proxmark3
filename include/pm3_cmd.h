@@ -894,7 +894,7 @@ typedef struct {
 // internal frame buffer (bwm_wifi.c: bwm_cmd()'s `frame[8 + 256]`), which is
 // far smaller than the USB link's max_cmd_data_size - do not derive this from
 // g_conn.max_cmd_data_size.
-#define BWM_OTA_CHUNK_MAX     240
+#define BWM_OTA_CHUNK_MAX     196
 // CMD_PM5_BWM_WIFI payload: [action:u8][port:u16 LE][ssid\0][pwd\0][hostname\0]
 #define BWM_WIFI_ACTION_START  0x00   // join AP + start TCP server
 #define BWM_WIFI_ACTION_STOP   0x01   // tear down, back to BLE-only
