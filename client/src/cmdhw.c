@@ -2310,6 +2310,7 @@ static void progressbar(long sent, long total, int style) {
 static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms) {
     PacketResponseNG resp;
     clearCommandBuffer();
+
     // BEGIN: tell the BWM how many bytes are coming (it erases the target partition)
     uint8_t beg[5] = { BWM_OTA_ACTION_BEGIN,
                        (uint8_t)(fwlen & 0xFF),         (uint8_t)((fwlen >> 8) & 0xFF),
@@ -2350,7 +2351,10 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
         progressbar(sent, fwlen, STYLE_MIXED);
 
         // Pace the stream. The client->AT32 hop (USB/BLE) is far faster than the
-        // AT32->ESP UART)
+        // AT32->ESP UART, so back-to-back writes can outrun the UART and drop a
+        // chunk -> esp_ota_end() then sees written < total and aborts. A small
+        // gap gives the UART time to drain. (BLE is naturally paced, which is why
+        // it "worked" and bursty USB did not - see nemanjan00.)
         if (write_delay_ms) {
             msleep(write_delay_ms);
         }
@@ -2367,12 +2371,17 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
         return PM3_SUCCESS;
     }
     if (got_end) {
-        // The BWM answered END with an error.
+        // The BWM answered END with an error. The common one is a size mismatch:
+        // esp_ota_end() found written < total, i.e. chunks were dropped in transit.
+        // That is a genuine failure (boot partition NOT switched) - restart, and
+        // hint at pacing, which is the usual cure.
         PrintAndLogEx(WARNING, "OTA finalize rejected (status %d) - data was lost in transit", resp.status);
         PrintAndLogEx(HINT, "Try a per-write delay: " _YELLOW_("hw bwmupgrade -f <fw> --delay 10"));
         return PM3_EFAILED;
     }
-    // No answer at all.
+    // No answer at all. Over BLE the END auto-reboot drops the link before the ack
+    // returns, so a timeout here means "reached END, reboot likely happened" -
+    // verify by version rather than discarding a possibly-good flash.
     return PM3_ETIMEOUT;
 }
 
@@ -2382,7 +2391,7 @@ static int bwm_get_version(char *out, size_t outlen) {
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_ESP_OTA, a, sizeof(a));
     PacketResponseNG r;
-    if ((WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &r, 500) == false) || (r.status != PM3_SUCCESS)) {
+    if ((WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &r, 5000) == false) || (r.status != PM3_SUCCESS)) {
         return PM3_EFAILED;
     }
     uint16_t n = (r.length < (uint16_t)(outlen - 1)) ? r.length : (uint16_t)(outlen - 1);
@@ -2471,8 +2480,11 @@ static int CmdBWMUpgrade(const char *Cmd) {
         if (res == PM3_ETIMEOUT) {
             PrintAndLogEx(INFO, "finalize ack not seen - all data was sent, confirming by version...");
         }
+        // The device's OTA_END handler already reboots the ESP into the new image
+        // (that is what drops the finalize ack over BLE). Just wait for it to come
+        // back and re-link, then confirm by version.
         PrintAndLogEx(INFO, "BWM rebooting into the new image (link drops briefly)...");
-        msleep(500);   // reboot + re-negotiate baud + re-link
+        msleep(8000);   // reboot + re-negotiate baud + re-link
 
         char ver_after[64] = {0};
         bool have_after = (bwm_get_version(ver_after, sizeof(ver_after)) == PM3_SUCCESS);
