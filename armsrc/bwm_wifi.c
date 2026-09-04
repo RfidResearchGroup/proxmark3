@@ -24,8 +24,29 @@ static uint16_t wifi_crc16(const uint8_t *d, size_t n, uint16_t crc) {
 // Runs only during setup, so it fully owns the RX stream here.
 typedef enum { W_H1, W_H2, W_CL, W_CH, W_LL, W_LH, W_PL, W_KL, W_KH } wstate_t;
 
+#ifndef MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
+
+// Drop whatever is already sitting in the UART RX ring so a late ACK from a
+// timed-out command cannot be consumed as the next command's response (same
+// cmd code, e.g. a slow OTA_BEGIN ack arriving after we already gave up).
+static void bwm_cmd_drain_rx(void) {
+    uint8_t buf[64];
+    uint32_t t0 = GetTickCount();
+    while (bwm_uart_rx_available()) {
+        uint16_t avail = bwm_uart_rx_available();
+        (void)bwm_uart_read(buf, (uint32_t)MIN(avail, (uint16_t)sizeof(buf)));
+        if (GetTickCountDelta(t0) > 50) {
+            break;
+        }
+    }
+}
+
 int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
             uint8_t *resp, uint16_t *resp_len, uint32_t timeout_ms) {
+
+    bwm_cmd_drain_rx();
 
     // ---- build + send HOST_CMD frame ----
     uint8_t frame[8 + 256];
@@ -63,6 +84,7 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
         uint8_t buf[64];
         uint16_t avail = bwm_uart_rx_available();
         if (avail == 0) {
+            SpinDelay(1);
             continue;
         }
         uint32_t n = bwm_uart_read(buf, (uint32_t)MIN(avail, (uint16_t)sizeof(buf)));
@@ -304,16 +326,20 @@ int bwm_esp_ota_begin(uint32_t total_size) {
     uint8_t off = 0;
     (void)bwm_cmd(BWM_CMD_LOG_FORWARD_ENABLE, &off, 1, NULL, NULL, 500);
 
-    // Drop the AT32<->ESP link to a slow, forgiving baud for the transfer. An OTA
-    // is one-shot so speed is irrelevant, and 921600 is marginal against the
-    // flash-write / BLE contention that drops the odd frame -> random timeouts.
-    (void)bwm_fwd_negotiate_baud(BWM_OTA_BAUD);
+    // Stop BLE so NimBLE is not hitting flash (NVS / auto-suspend) while we
+    // erase and program the OTA slot. WiFi stays as-is: tearing it down here
+    // is slow and the USB OTA path does not need it off.
+    (void)bwm_cmd(BWM_CMD_STOP_BLE_SPP, NULL, 0, NULL, NULL, 2000);
+
+    // Do NOT retune the UART here. Version already proved the current baud
+    // works; dropping 921600 -> 460800/460000 can leave the ESP on one rate
+    // and the AT32 on the other, after which every OTA_BEGIN times out.
 
     uint8_t p[4] = {
         (uint8_t)(total_size & 0xFF),         (uint8_t)((total_size >> 8) & 0xFF),
         (uint8_t)((total_size >> 16) & 0xFF), (uint8_t)((total_size >> 24) & 0xFF)
     };
-    return bwm_cmd(BWM_CMD_OTA_BEGIN, p, sizeof(p), NULL, NULL, 15000);
+    return bwm_cmd(BWM_CMD_OTA_BEGIN, p, sizeof(p), NULL, NULL, BWM_OTA_BEGIN_TIMEOUT_MS);
 }
 
 int bwm_esp_ota_write(const uint8_t *data, uint16_t len) {
@@ -322,25 +348,23 @@ int bwm_esp_ota_write(const uint8_t *data, uint16_t len) {
     // fail the OTA_END size check) - recovery is to restart the whole OTA, which
     // the client does. Keep a generous timeout so a slow flash write is not
     // mistaken for a drop.
-    return bwm_cmd(BWM_CMD_OTA_WRITE, data, len, NULL, NULL, 15000);
+    return bwm_cmd(BWM_CMD_OTA_WRITE, data, len, NULL, NULL, BWM_OTA_WRITE_TIMEOUT_MS);
 }
 
 int bwm_esp_ota_end(void) {
-    // OTA_END goes out at the slow OTA baud (both ends still there); only after it
-    // do we restore the fast link and log forwarding (both set in _begin).
     int r = bwm_cmd(BWM_CMD_OTA_END, NULL, 0, NULL, NULL, 20000);
-    (void)bwm_fwd_negotiate_baud(BWM_UART_BAUD_TARGET);
     uint8_t on = 1;
     (void)bwm_cmd(BWM_CMD_LOG_FORWARD_ENABLE, &on, 1, NULL, NULL, 500);
+    (void)bwm_cmd(BWM_CMD_START_BLE_SPP, NULL, 0, NULL, NULL, 2000);
     return r;
 }
 
 int bwm_esp_ota_abort(void) {
-    // OTA gave up mid-transfer: restore the fast link + logs so the module is
-    // usable again. The ESP's incomplete OTA state is discarded by the next BEGIN.
-    (void)bwm_fwd_negotiate_baud(BWM_UART_BAUD_TARGET);
+    // Restore logs + BLE. Leave the UART baud alone (see begin). The ESP's
+    // incomplete OTA state is discarded by the next BEGIN.
     uint8_t on = 1;
     (void)bwm_cmd(BWM_CMD_LOG_FORWARD_ENABLE, &on, 1, NULL, NULL, 500);
+    (void)bwm_cmd(BWM_CMD_START_BLE_SPP, NULL, 0, NULL, NULL, 2000);
     return PM3_SUCCESS;
 }
 

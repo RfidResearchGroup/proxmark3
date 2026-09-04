@@ -2310,15 +2310,23 @@ static void progressbar(long sent, long total, int style) {
 static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms) {
     PacketResponseNG resp;
 
-    // BEGIN: tell the BWM how many bytes are coming (it erases the target partition)
+    // BEGIN: tell the BWM how many bytes are coming. The ESP erases the idle
+    // OTA slot here; that can take 20-40 s on a 4 MB ESP32-C2, so wait longer
+    // than the device-side 60 s timeout plus USB round-trip.
     uint8_t beg[5] = { BWM_OTA_ACTION_BEGIN,
                        (uint8_t)(fwlen & 0xFF),         (uint8_t)((fwlen >> 8) & 0xFF),
                        (uint8_t)((fwlen >> 16) & 0xFF), (uint8_t)((fwlen >> 24) & 0xFF) };
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_ESP_OTA, beg, sizeof(beg));
-    if ((WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 20000) == false) || (resp.status != PM3_SUCCESS)) {
-        PrintAndLogEx(FAILED, "OTA begin failed (is a responsive BWM fitted?)");
-        return PM3_EFAILED;
+    if (WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 75000) == false) {
+        PrintAndLogEx(FAILED, "OTA begin timed out (ESP is likely still erasing the OTA slot)");
+        PrintAndLogEx(HINT, "Wait a few seconds and retry; do not power-cycle mid-erase.");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "OTA begin failed (status %d)%s", resp.status,
+                      (resp.status == PM3_ETIMEOUT) ? " - UART timeout waiting for ESP" : "");
+        return resp.status;
     }
     PrintAndLogEx(INFO, "Uploading " _YELLOW_("%zu") " bytes of ESP firmware over the BWM link...", fwlen);
 
@@ -2336,11 +2344,13 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
         memcpy(buf + 1, fw + sent, n);
         clearCommandBuffer();
         SendCommandNG(CMD_PM5_BWM_ESP_OTA, buf, (uint16_t)(n + 1));
-        bool got = WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 15000);
+        bool got = WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 25000);
         if (!got || resp.status != PM3_SUCCESS) {
             PrintAndLogEx(NORMAL, "");
             if (!got) {
                 PrintAndLogEx(WARNING, "OTA write stalled at offset %zu (no response)", sent);
+            } else if (resp.status == PM3_ETIMEOUT) {
+                PrintAndLogEx(WARNING, "OTA write timed out at offset %zu (ESP did not ACK that chunk)", sent);
             } else {
                 PrintAndLogEx(WARNING, "OTA write rejected at offset %zu (status %d)", sent, resp.status);
             }
@@ -2376,7 +2386,7 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
         // That is a genuine failure (boot partition NOT switched) - restart, and
         // hint at pacing, which is the usual cure.
         PrintAndLogEx(WARNING, "OTA finalize rejected (status %d) - data was lost in transit", resp.status);
-        PrintAndLogEx(HINT, "Try a per-write delay: " _YELLOW_("hw bwm upgrade -f <fw> --delay 10"));
+        PrintAndLogEx(HINT, "Try a per-write delay: " _YELLOW_("hw bwm upgrade -f <fw> --delay 20"));
         return PM3_EFAILED;
     }
     // No answer at all. Over BLE the END auto-reboot drops the link before the ack
@@ -2410,14 +2420,14 @@ static int CmdBWMUpgrade(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "ESP32 firmware image (.bin)"),
-        arg_int0(NULL, "delay", "<ms>", "per-chunk delay to pace the slow AT32<->ESP UART (default 10)"),
+        arg_int0(NULL, "delay", "<ms>", "per-chunk delay to pace the slow AT32<->ESP UART (default 20)"),
         arg_param_end,
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int fnlen = 0;
     char fn[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)fn, sizeof(fn), &fnlen);
-    uint32_t write_delay_ms = (uint32_t)arg_get_int_def(ctx, 2, 10);
+    uint32_t write_delay_ms = (uint32_t)arg_get_int_def(ctx, 2, 20);
     CLIParserFree(ctx);
 
     if (fnlen == 0) {
@@ -2468,7 +2478,16 @@ static int CmdBWMUpgrade(const char *Cmd) {
                                   // retry (offset-idempotent ESP write) lands.
     for (int attempt = 1; attempt <= max_attempts; attempt++) {
         if (attempt > 1) {
+            // Abort the in-flight ESP OTA (if any) and give a slow erase a chance
+            // to finish before we BEGIN again. Otherwise attempt N's BEGIN races
+            // attempt N-1's still-running erase and times out.
             PrintAndLogEx(INFO, "restarting OTA from the beginning (attempt " _YELLOW_("%d") "/%d)", attempt, max_attempts);
+            uint8_t ab[1] = { BWM_OTA_ACTION_ABORT };
+            clearCommandBuffer();
+            SendCommandNG(CMD_PM5_BWM_ESP_OTA, ab, sizeof(ab));
+            PacketResponseNG abortr;
+            (void)WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &abortr, 8000);
+            msleep(3000);
         }
         int res = bwm_ota_once(fw, fwlen, write_delay_ms);
 
