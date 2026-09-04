@@ -6,169 +6,2869 @@
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// AT32F435 UART4 driver for the Proxmark5 BWM link - see bwm_uart_at32.h.
-//
-// RX is serviced by circular DMA (DMA1 channel 2) rather than a per-byte
-// RX interrupt. The old RDBF ISR dropped bytes on overrun as soon as the
-// main loop was busy (FPGA / USB) - fine at 460800, fatal at higher bauds,
-// where the dropped byte becomes an app_com CRC-16 failure and a stall.
-// Circular DMA lets the controller sink every byte independent of CPU load,
-// so BWM_UART_BAUD can be raised to lift BLE/WiFi transfer rates.
+// Hardware commands
+// low-level hardware control
 //-----------------------------------------------------------------------------
 
-#include "bwm_uart_at32.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 
+#ifdef HAVE_PYTHON
+#ifdef _POSIX_C_SOURCE
+#undef _POSIX_C_SOURCE
+#endif
+#include <Python.h>
+#endif
+
+#include "cmdparser.h" // command_t
+#include "cliparser.h"
+#include "comms.h"
+#include "usart_defs.h"
+#include "ui.h"
+#include "fpga.h"
+#include "cmdhw.h"
+#include "cmdfpga.h"
+#include "cmddata.h"
+#include "commonutil.h"
+#include "preferences.h"
 #include "pm3_cmd.h"
-#include "at32f435_437.h"
-#include "at32f435_437_crm.h"
-#include "at32f435_437_gpio.h"
-#include "at32f435_437_usart.h"
-#include "at32f435_437_dma.h"
-#include "at32f435_437_misc.h"
+#include "pmflash.h"     // rdv40validation_t
+#include "cmdflashmem.h" // get_signature..
+#include "uart/uart.h"   // configure timeout
+#include "util_posix.h"
+#include "flash.h" // reboot to bootloader mode
+#include "proxgui.h"
+#include "graph.h" // for graph data
 
-#define BWM_UART            UART4
-#define BWM_UART_GPIO       GPIOA
-#define BWM_UART_TX_PIN     GPIO_PINS_0
-#define BWM_UART_RX_PIN     GPIO_PINS_1
-#define BWM_UART_TX_SRC     GPIO_PINS_SOURCE0
-#define BWM_UART_RX_SRC     GPIO_PINS_SOURCE1
-#define BWM_UART_MUX        GPIO_MUX_8
+#include "lua.h"
 
-// SSC already owns DMA1 channel 1 (see fpga_hw_at32.c); UART4 RX uses channel 2.
-#define BWM_DMA_CHANNEL     DMA1_CHANNEL2
-#define BWM_DMA_MUX_CHANNEL DMA1MUX_CHANNEL2
+static int CmdHelp(const char *Cmd);
 
-// Power-of-two so head/tail wrap with a mask. DMA target buffer.
-// Must comfortably exceed one full forward frame or the DMA laps the reader.
-// A frame is app_com(6) + NG(10) + up to PM3_CMD_DATA_SIZE data + CRC(2); at
-// PM3_CMD_DATA_SIZE=4064 that is ~4082 bytes, so 4096 leaves ~14 bytes of slack
-// and overruns the instant the consumer lags. 4x headroom on a 512K part.
-#define BWM_RX_RING_SZ      16384
-static volatile uint8_t  s_rx_ring[BWM_RX_RING_SZ];
-static volatile uint16_t s_rx_tail = 0;   // software read cursor; head comes from DMA
-
-static volatile bool     s_inited = false;
-static volatile uint32_t s_cur_baud = BWM_UART_BAUD;
-
-// Bytes the DMA controller has written so far, wrapped into the ring.
-// The channel's DTCNT counts DOWN from buffer_size and reloads to buffer_size
-// at wrap (loop mode), so head = size - remaining, always in [0, size-1].
-static inline uint16_t bwm_uart_rx_head(void) {
-    return (uint16_t)((BWM_RX_RING_SZ - dma_data_number_get(BWM_DMA_CHANNEL))
-                      & (BWM_RX_RING_SZ - 1));
-}
-
-// Bring UART4 + circular RX DMA up at `baud`. Safe to call repeatedly: on a
-// re-config it tears the channel down first, so the ring restarts empty (which
-// also discards bytes straddling a baud switch). Mirrors the SSC RX setup in
-// fpga_hw_at32.c.
-static void bwm_uart_configure(uint32_t baud) {
-    crm_periph_clock_enable(CRM_GPIOA_PERIPH_CLOCK, TRUE);
-    crm_periph_clock_enable(CRM_UART4_PERIPH_CLOCK, TRUE);
-    crm_periph_clock_enable(CRM_DMA1_PERIPH_CLOCK, TRUE);
-
-    gpio_init_type gpio_init_struct;
-    gpio_default_para_init(&gpio_init_struct);
-    gpio_init_struct.gpio_mode           = GPIO_MODE_MUX;
-    gpio_init_struct.gpio_out_type       = GPIO_OUTPUT_PUSH_PULL;
-    gpio_init_struct.gpio_pull           = GPIO_PULL_NONE;
-    gpio_init_struct.gpio_drive_strength = GPIO_DRIVE_STRENGTH_STRONGER;
-    gpio_init_struct.gpio_pins           = BWM_UART_TX_PIN | BWM_UART_RX_PIN;
-    gpio_init(BWM_UART_GPIO, &gpio_init_struct);
-    gpio_pin_mux_config(BWM_UART_GPIO, BWM_UART_TX_SRC, BWM_UART_MUX);
-    gpio_pin_mux_config(BWM_UART_GPIO, BWM_UART_RX_SRC, BWM_UART_MUX);
-
-    // Quiesce before reconfiguring (matters on the re-config path).
-    dma_channel_enable(BWM_DMA_CHANNEL, FALSE);
-    usart_enable(BWM_UART, FALSE);
-
-    usart_init(BWM_UART, baud, USART_DATA_8BITS, USART_STOP_1_BIT);
-    usart_parity_selection_config(BWM_UART, USART_PARITY_NONE);
-    usart_transmitter_enable(BWM_UART, TRUE);
-    usart_receiver_enable(BWM_UART, TRUE);
-
-    // --- RX via circular DMA ---
-    s_rx_tail = 0;
-
-    dma_reset(BWM_DMA_CHANNEL);
-
-    dma_init_type dma_init_struct;
-    dma_default_para_init(&dma_init_struct);
-    dma_init_struct.buffer_size           = BWM_RX_RING_SZ;
-    dma_init_struct.direction             = DMA_DIR_PERIPHERAL_TO_MEMORY;
-    dma_init_struct.peripheral_base_addr  = (uint32_t) & (BWM_UART->dt);
-    dma_init_struct.peripheral_inc_enable = FALSE;
-    dma_init_struct.memory_base_addr      = (uint32_t)s_rx_ring;
-    dma_init_struct.memory_inc_enable     = TRUE;
-    dma_init_struct.peripheral_data_width = DMA_PERIPHERAL_DATA_WIDTH_BYTE;
-    dma_init_struct.memory_data_width     = DMA_MEMORY_DATA_WIDTH_BYTE;
-    dma_init_struct.loop_mode_enable      = TRUE;   // circular: reloads at count 0
-    // MEDIUM: single-byte requests, must not starve the SSC bulk channel (HIGH).
-    dma_init_struct.priority              = DMA_PRIORITY_MEDIUM;
-    dma_init(BWM_DMA_CHANNEL, &dma_init_struct);
-
-    dmamux_enable(DMA1, TRUE);
-    dmamux_init(BWM_DMA_MUX_CHANNEL, DMAMUX_DMAREQ_ID_UART4_RX);
-
-    usart_dma_receiver_enable(BWM_UART, TRUE);
-    dma_channel_enable(BWM_DMA_CHANNEL, TRUE);
-
-    usart_enable(BWM_UART, TRUE);
-    s_cur_baud = baud;
-}
-
-void bwm_uart_init(void) {
-    if (s_inited) {
+static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used, uint32_t flash_size) {
+    // AT32 (PM5): the chip id is an ARM DBGMCU IDCODE, not an Atmel CIDR, so the
+    // AT91 decode below does not apply (it would print "Unknown" and a bogus flash
+    // size). Report the MCU and use the real flash size the device reported.
+    if (IfPm5()) {
+        PrintAndLogEx(NORMAL, "    MCU....... " _YELLOW_("%s"), "AT32F437");
+        uint32_t mem_kb = flash_size / 1024;
+        PrintAndLogEx(NORMAL, "    Memory.... " _YELLOW_("%u") " KB ( " _YELLOW_("%2.0f%%") " used )"
+                      , mem_kb
+                      , mem_kb == 0 ? 0.0f : (float)mem_used / (mem_kb * 1024) * 100
+                     );
         return;
     }
-    bwm_uart_configure(BWM_UART_BAUD);
-    s_inited = true;
+
+    const char *asBuff;
+    switch (iChipID) {
+        case 0x270B0A40:
+            asBuff = "AT91SAM7S512 Rev A";
+            break;
+        case 0x270B0A4E:
+        case 0x270B0A4F:
+            asBuff = "AT91SAM7S512 Rev B";
+            break;
+        case 0x270D0940:
+            asBuff = "AT91SAM7S256 Rev A";
+            break;
+        case 0x270B0941:
+            asBuff = "AT91SAM7S256 Rev B";
+            break;
+        case 0x270B0942:
+            asBuff = "AT91SAM7S256 Rev C";
+            break;
+        case 0x270B0943:
+            asBuff = "AT91SAM7S256 Rev D";
+            break;
+        case 0x270C0740:
+            asBuff = "AT91SAM7S128 Rev A";
+            break;
+        case 0x270A0741:
+            asBuff = "AT91SAM7S128 Rev B";
+            break;
+        case 0x270A0742:
+            asBuff = "AT91SAM7S128 Rev C";
+            break;
+        case 0x270A0743:
+            asBuff = "AT91SAM7S128 Rev D";
+            break;
+        case 0x27090540:
+            asBuff = "AT91SAM7S64 Rev A";
+            break;
+        case 0x27090543:
+            asBuff = "AT91SAM7S64 Rev B";
+            break;
+        case 0x27090544:
+            asBuff = "AT91SAM7S64 Rev C";
+            break;
+        case 0x27080342:
+            asBuff = "AT91SAM7S321 Rev A";
+            break;
+        case 0x27080340:
+            asBuff = "AT91SAM7S32 Rev A";
+            break;
+        case 0x27080341:
+            asBuff = "AT91SAM7S32 Rev B";
+            break;
+        case 0x27050241:
+            asBuff = "AT9SAM7S161 Rev A";
+            break;
+        case 0x27050240:
+            asBuff = "AT91SAM7S16 Rev A";
+            break;
+        default:
+            asBuff = "Unknown";
+            break;
+    }
+    PrintAndLogEx(NORMAL, "    MCU....... " _YELLOW_("%s"), asBuff);
+
+    uint32_t mem_avail = 0;
+    switch ((iChipID & 0xF00) >> 8) {
+        case 0:
+            mem_avail = 0;
+            break;
+        case 1:
+            mem_avail = 8;
+            break;
+        case 2:
+            mem_avail = 16;
+            break;
+        case 3:
+            mem_avail = 32;
+            break;
+        case 5:
+            mem_avail = 64;
+            break;
+        case 7:
+            mem_avail = 128;
+            break;
+        case 9:
+            mem_avail = 256;
+            break;
+        case 10:
+            mem_avail = 512;
+            break;
+        case 12:
+            mem_avail = 1024;
+            break;
+        case 14:
+            mem_avail = 2048;
+            break;
+    }
+
+    PrintAndLogEx(NORMAL, "    Memory.... " _YELLOW_("%u") " KB ( " _YELLOW_("%2.0f%%") " used )"
+                  , mem_avail
+                  , mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100
+                 );
 }
 
-void bwm_uart_set_baud(uint32_t baud) {
-    if (baud == 0 || baud == s_cur_baud) {
+static void lookupChipID(uint32_t iChipID, uint32_t mem_used, uint32_t flash_size) {
+    const char *asBuff;
+    uint32_t mem_avail = 0;
+    PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Hardware") " ]");
+
+    // AT32 (PM5): the chip id is an ARM DBGMCU IDCODE, not an Atmel CIDR, so the
+    // verbose AT91 decode below does not apply. Print a short AT32 summary instead.
+    if (IfPm5()) {
+        PrintAndLogEx(NORMAL, "  --= uC: AT32F437");
+        uint32_t mem_kb = flash_size / 1024;
+        PrintAndLogEx(NORMAL, "  --= Nonvolatile Program Memory Size: %u KB, Used: %u bytes (%2.0f%%)"
+                      , mem_kb
+                      , mem_used
+                      , mem_kb == 0 ? 0.0f : (float)mem_used / (mem_kb * 1024) * 100
+                     );
         return;
     }
-    bwm_uart_configure(baud);
-}
 
-uint32_t bwm_uart_get_baud(void) {
-    return s_cur_baud;
-}
-
-int bwm_uart_write(const uint8_t *data, size_t len) {
-    for (size_t i = 0; i < len; i++) {
-        while (usart_flag_get(BWM_UART, USART_TDBE_FLAG) == RESET) {
-        }
-        usart_data_transmit(BWM_UART, data[i]);
+    switch (iChipID) {
+        case 0x270B0A40:
+            asBuff = "AT91SAM7S512 Rev A";
+            break;
+        case 0x270B0A4E:
+        case 0x270B0A4F:
+            asBuff = "AT91SAM7S512 Rev B";
+            break;
+        case 0x270D0940:
+            asBuff = "AT91SAM7S256 Rev A";
+            break;
+        case 0x270B0941:
+            asBuff = "AT91SAM7S256 Rev B";
+            break;
+        case 0x270B0942:
+            asBuff = "AT91SAM7S256 Rev C";
+            break;
+        case 0x270B0943:
+            asBuff = "AT91SAM7S256 Rev D";
+            break;
+        case 0x270C0740:
+            asBuff = "AT91SAM7S128 Rev A";
+            break;
+        case 0x270A0741:
+            asBuff = "AT91SAM7S128 Rev B";
+            break;
+        case 0x270A0742:
+            asBuff = "AT91SAM7S128 Rev C";
+            break;
+        case 0x270A0743:
+            asBuff = "AT91SAM7S128 Rev D";
+            break;
+        case 0x27090540:
+            asBuff = "AT91SAM7S64 Rev A";
+            break;
+        case 0x27090543:
+            asBuff = "AT91SAM7S64 Rev B";
+            break;
+        case 0x27090544:
+            asBuff = "AT91SAM7S64 Rev C";
+            break;
+        case 0x27080342:
+            asBuff = "AT91SAM7S321 Rev A";
+            break;
+        case 0x27080340:
+            asBuff = "AT91SAM7S32 Rev A";
+            break;
+        case 0x27080341:
+            asBuff = "AT91SAM7S32 Rev B";
+            break;
+        case 0x27050241:
+            asBuff = "AT9SAM7S161 Rev A";
+            break;
+        case 0x27050240:
+            asBuff = "AT91SAM7S16 Rev A";
+            break;
+        default:
+            asBuff = "Unknown";
+            break;
     }
-    while (usart_flag_get(BWM_UART, USART_TDC_FLAG) == RESET) {
+    PrintAndLogEx(NORMAL, "  --= uC: " _YELLOW_("%s"), asBuff);
+
+    switch ((iChipID & 0xE0) >> 5) {
+        case 1:
+            asBuff = "ARM946ES";
+            break;
+        case 2:
+            asBuff = "ARM7TDMI";
+            break;
+        case 4:
+            asBuff = "ARM920T";
+            break;
+        case 5:
+            asBuff = "ARM926EJS";
+            break;
+        default:
+            asBuff = "Unknown";
+            break;
+    }
+    PrintAndLogEx(NORMAL, "  --= Embedded Processor: %s", asBuff);
+
+    switch ((iChipID & 0xF0000) >> 16) {
+        case 1:
+            asBuff = "1K bytes";
+            break;
+        case 2:
+            asBuff = "2K bytes";
+            break;
+        case 3:
+            asBuff = "6K bytes";
+            break;
+        case 4:
+            asBuff = "112K bytes";
+            break;
+        case 5:
+            asBuff = "4K bytes";
+            break;
+        case 6:
+            asBuff = "80K bytes";
+            break;
+        case 7:
+            asBuff = "160K bytes";
+            break;
+        case 8:
+            asBuff = "8K bytes";
+            break;
+        case 9:
+            asBuff = "16K bytes";
+            break;
+        case 10:
+            asBuff = "32K bytes";
+            break;
+        case 11:
+            asBuff = "64K bytes";
+            break;
+        case 12:
+            asBuff = "128K bytes";
+            break;
+        case 13:
+            asBuff = "256K bytes";
+            break;
+        case 14:
+            asBuff = "96K bytes";
+            break;
+        case 15:
+            asBuff = "512K bytes";
+            break;
+        default:
+            asBuff = "Unknown";
+            break;
+    }
+    PrintAndLogEx(NORMAL, "  --= Internal SRAM size: %s", asBuff);
+
+    switch ((iChipID & 0xFF00000) >> 20) {
+        case 0x19:
+            asBuff = "AT91SAM9xx Series";
+            break;
+        case 0x29:
+            asBuff = "AT91SAM9XExx Series";
+            break;
+        case 0x34:
+            asBuff = "AT91x34 Series";
+            break;
+        case 0x37:
+            asBuff = "CAP7 Series";
+            break;
+        case 0x39:
+            asBuff = "CAP9 Series";
+            break;
+        case 0x3B:
+            asBuff = "CAP11 Series";
+            break;
+        case 0x40:
+            asBuff = "AT91x40 Series";
+            break;
+        case 0x42:
+            asBuff = "AT91x42 Series";
+            break;
+        case 0x55:
+            asBuff = "AT91x55 Series";
+            break;
+        case 0x60:
+            asBuff = "AT91SAM7Axx Series";
+            break;
+        case 0x61:
+            asBuff = "AT91SAM7AQxx Series";
+            break;
+        case 0x63:
+            asBuff = "AT91x63 Series";
+            break;
+        case 0x70:
+            asBuff = "AT91SAM7Sxx Series";
+            break;
+        case 0x71:
+            asBuff = "AT91SAM7XCxx Series";
+            break;
+        case 0x72:
+            asBuff = "AT91SAM7SExx Series";
+            break;
+        case 0x73:
+            asBuff = "AT91SAM7Lxx Series";
+            break;
+        case 0x75:
+            asBuff = "AT91SAM7Xxx Series";
+            break;
+        case 0x92:
+            asBuff = "AT91x92 Series";
+            break;
+        case 0xF0:
+            asBuff = "AT75Cxx Series";
+            break;
+        default:
+            asBuff = "Unknown";
+            break;
+    }
+    PrintAndLogEx(NORMAL, "  --= Architecture identifier: %s", asBuff);
+
+    switch ((iChipID & 0x70000000) >> 28) {
+        case 0:
+            asBuff = "ROM";
+            break;
+        case 1:
+            asBuff = "ROMless or on-chip Flash";
+            break;
+        case 2:
+            asBuff = "Embedded flash memory";
+            break;
+        case 3:
+            asBuff = "ROM and Embedded flash memory\nNVPSIZ is ROM size\nNVPSIZ2 is Flash size";
+            break;
+        case 4:
+            asBuff = "SRAM emulating ROM";
+            break;
+        default:
+            asBuff = "Unknown";
+            break;
+    }
+    switch ((iChipID & 0xF00) >> 8) {
+        case 0:
+            mem_avail = 0;
+            break;
+        case 1:
+            mem_avail = 8;
+            break;
+        case 2:
+            mem_avail = 16;
+            break;
+        case 3:
+            mem_avail = 32;
+            break;
+        case 5:
+            mem_avail = 64;
+            break;
+        case 7:
+            mem_avail = 128;
+            break;
+        case 9:
+            mem_avail = 256;
+            break;
+        case 10:
+            mem_avail = 512;
+            break;
+        case 12:
+            mem_avail = 1024;
+            break;
+        case 14:
+            mem_avail = 2048;
+            break;
+    }
+
+    PrintAndLogEx(NORMAL, "  --= %s " _YELLOW_("%uK") " bytes ( " _YELLOW_("%2.0f%%") " used )"
+                  , asBuff
+                  , mem_avail
+                  , mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100
+                 );
+
+    /*
+    switch ((iChipID & 0xF000) >> 12) {
+        case 0:
+            asBuff = "None");
+            break;
+        case 1:
+            asBuff = "8K bytes");
+            break;
+        case 2:
+            asBuff = "16K bytes");
+            break;
+        case 3:
+            asBuff = "32K bytes");
+            break;
+        case 5:
+            asBuff = "64K bytes");
+            break;
+        case 7:
+            asBuff = "128K bytes");
+            break;
+        case 9:
+            asBuff = "256K bytes");
+            break;
+        case 10:
+            asBuff = "512K bytes");
+            break;
+        case 12:
+            asBuff = "1024K bytes");
+            break;
+        case 14:
+            asBuff = "2048K bytes");
+            break;
+    }
+    PrintAndLogEx(NORMAL, "  --= Second nonvolatile program memory size: %s", asBuff);
+    */
+}
+
+static int CmdDbg(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw dbg",
+                  "Set device side debug level output.\n"
+                  "Note: option `-4`, this option may cause malfunction itself by\n"
+                  "introducing delays in time critical functions like simulation or sniffing",
+                  "hw dbg    --> get current log level\n"
+                  "hw dbg -1 --> set log level to _error_\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("0", NULL, "no debug messages"),
+        arg_lit0("1", NULL, "error messages"),
+        arg_lit0("2", NULL, "plus information messages"),
+        arg_lit0("3", NULL, "plus debug messages"),
+        arg_lit0("4", NULL, "print even debug messages in timing critical functions"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool lv0 = arg_get_lit(ctx, 1);
+    bool lv1 = arg_get_lit(ctx, 2);
+    bool lv2 = arg_get_lit(ctx, 3);
+    bool lv3 = arg_get_lit(ctx, 4);
+    bool lv4 = arg_get_lit(ctx, 5);
+    CLIParserFree(ctx);
+
+    if ((lv0 + lv1 + lv2 + lv3 + lv4) > 1) {
+        PrintAndLogEx(INFO, "Can only set one debug level");
+        return PM3_EINVARG;
+    }
+
+    uint8_t curr = DBG_NONE;
+    if (getDeviceDebugLevel(&curr) != PM3_SUCCESS)
+        return PM3_EFAILED;
+
+    const char *dbglvlstr;
+    switch (curr) {
+        case DBG_NONE:
+            dbglvlstr = "none";
+            break;
+        case DBG_ERROR:
+            dbglvlstr = "error";
+            break;
+        case DBG_INFO:
+            dbglvlstr = "info";
+            break;
+        case DBG_DEBUG:
+            dbglvlstr = "debug";
+            break;
+        case DBG_EXTENDED:
+            dbglvlstr = "extended";
+            break;
+        default:
+            dbglvlstr = "unknown";
+            break;
+    }
+    PrintAndLogEx(INFO, "  Current debug log level..... %d ( " _YELLOW_("%s") " )", curr, dbglvlstr);
+
+    if ((lv0 + lv1 + lv2 + lv3 + lv4) == 1) {
+        uint8_t dbg = 0;
+        if (lv0)
+            dbg = 0;
+        else if (lv1)
+            dbg = 1;
+        else if (lv2)
+            dbg = 2;
+        else if (lv3)
+            dbg = 3;
+        else if (lv4)
+            dbg = 4;
+
+        if (setDeviceDebugLevel(dbg, true) != PM3_SUCCESS)
+            return PM3_EFAILED;
     }
     return PM3_SUCCESS;
 }
 
-uint16_t bwm_uart_rx_available(void) {
-    // An unhandled overrun (ROERR) latches on this USART and stops it feeding the
-    // DMA - after one overrun every subsequent byte is lost until a re-init, which
-    // is why a stalled OTA "recovers on re-run" but mostly fails in a session.
-    // Clear it here so reception resumes on its own. ROERR clears by reading STS
-    // then DT; we only do that when the flag is actually set - the DMA is stalled
-    // then, so the byte we consume is the already-lost overrun byte.
-    if (usart_flag_get(BWM_UART, USART_ROERR_FLAG) != RESET) {
-        (void)BWM_UART->sts;
-        (void)BWM_UART->dt;
+static int CmdDetectReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw detectreader",
+                  "Start to detect presences of reader field",
+                  "hw detectreader\n"
+                  "hw detectreader -L\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("L", "LF", "only detect low frequency 125/134 kHz"),
+        arg_lit0("H", "HF", "only detect high frequency 13.56 MHZ"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool lf = arg_get_lit(ctx, 1);
+    bool hf = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    // 0: Detect both frequency in mode 1
+    // 1: LF_ONLY
+    // 2: HF_ONLY
+    uint8_t arg = 0;
+    if (lf == true && hf == false) {
+        arg = 1;
+    } else if (hf == true && lf == false) {
+        arg = 2;
     }
-    return (uint16_t)((bwm_uart_rx_head() - s_rx_tail) & (BWM_RX_RING_SZ - 1));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LISTEN_READER_FIELD, (uint8_t *)&arg, sizeof(arg));
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to change modes and exit");
+
+    for (;;) {
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, _GREEN_("<Enter>") " pressed");
+        }
+
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_LISTEN_READER_FIELD, &resp, 1000)) {
+            if (resp.status != PM3_EOPABORTED) {
+                PrintAndLogEx(ERR, "Unexpected response: %d", resp.status);
+            }
+            break;
+        }
+    }
+    PrintAndLogEx(INFO, "Done!");
+    return PM3_SUCCESS;
 }
 
-uint32_t bwm_uart_read(uint8_t *data, size_t len) {
-    uint16_t head = bwm_uart_rx_head();
-    uint32_t n = 0;
-    while (n < len && s_rx_tail != head) {
-        data[n++] = s_rx_ring[s_rx_tail];
-        s_rx_tail = (uint16_t)((s_rx_tail + 1) & (BWM_RX_RING_SZ - 1));
+// ## FPGA Control
+static int CmdFPGAOff(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw fpgaoff",
+                  "Turn of fpga and antenna field",
+                  "hw fpgaoff\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
+    return PM3_SUCCESS;
+}
+
+static int CmdLCD(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw lcd",
+                  "Send command/data to LCD",
+                  "hw lcd -r AA -c 03    -> sends 0xAA three times"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("r", "raw", "<hex>", "data "),
+        arg_int1("c", "cnt", "<dec>", "number of times to send"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int r_len = 0;
+    uint8_t raw[1] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &r_len);
+    int j = arg_get_int_def(ctx, 2, 1);
+    CLIParserFree(ctx);
+    if (j < 1) {
+        PrintAndLogEx(WARNING, "Count must be larger than zero");
+        return PM3_EINVARG;
     }
-    return n;
+
+    while (j--) {
+        clearCommandBuffer();
+        lcd_cmd_t payload = { .cmd = raw[0] };
+        SendCommandNG(CMD_LCD, (uint8_t *)&payload, sizeof(payload));
+    }
+    return PM3_SUCCESS;
+}
+
+static int CmdLCDReset(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw lcdreset",
+                  "Hardware reset LCD",
+                  "hw lcdreset\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    clearCommandBuffer();
+    SendCommandNG(CMD_LCD_RESET, NULL, 0);
+    return PM3_SUCCESS;
+}
+
+static int CmdReadmem(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw readmem",
+                  "Reads processor flash memory into a file or views on console",
+                  "hw readmem -f myfile                    -> save 512KB processor flash memory to file\n"
+                  "hw readmem -a 8192 -l 512               -> display 512 bytes from offset 8192\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("a", "adr", "<dec>", "flash address to start reading from"),
+        arg_u64_0("l", "len", "<dec>", "length (default 32 or 512KB)"),
+        arg_str0("f", "file", "<fn>", "save to file"),
+        arg_u64_0("c", "cols", "<dec>", "column breaks"),
+        arg_lit0("r", "raw", "use raw address mode: read from anywhere, not just flash"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    // check for -file option first to determine the output mode
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool save_to_file = fnlen > 0;
+
+    // default len to 512KB when saving to file, to 32 bytes when viewing on the console.
+    uint32_t default_len = save_to_file ? 512 * 1024 : 32;
+
+    uint32_t address = arg_get_u32_def(ctx, 1, 0);
+    uint32_t len = arg_get_u32_def(ctx, 2, default_len);
+    int breaks = arg_get_int_def(ctx, 4, 32);
+    bool raw = arg_get_lit(ctx, 5);
+    CLIParserFree(ctx);
+
+    uint8_t *buffer = calloc(len, sizeof(uint8_t));
+    if (buffer == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    const char *flash_str = raw ? "" : " flash";
+    PrintAndLogEx(INFO, "reading " _YELLOW_("%u") " bytes from processor%s memory",
+                  len, flash_str);
+
+    DeviceMemType_t type = raw ? MCU_MEM : MCU_FLASH;
+    if (!GetFromDevice(type, buffer, len, address, NULL, 0, NULL, -1, true)) {
+        PrintAndLogEx(FAILED, "ERROR; reading from MCU flash memory");
+        free(buffer);
+        return PM3_EFLASH;
+    }
+
+    if (save_to_file) {
+        saveFile(filename, ".bin", buffer, len);
+    } else {
+        PrintAndLogEx(INFO, "---- " _CYAN_("processor%s memory") " ----", flash_str);
+        print_hex_break(buffer, len, breaks);
+    }
+
+    free(buffer);
+    return PM3_SUCCESS;
+}
+
+static int CmdReset(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw reset",
+                  "Reset the Proxmark3 device.",
+                  "hw reset"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    clearCommandBuffer();
+    SendCommandNG(CMD_HARDWARE_RESET, NULL, 0);
+    PrintAndLogEx(INFO, "Proxmark3 has been reset.");
+    return PM3_SUCCESS;
+}
+
+/*
+ * Sets the divisor for LF frequency clock: lets the user choose any LF frequency below
+ * 600kHz.
+ */
+static int CmdSetDivisor(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw setlfdivisor",
+                  "Drive LF antenna at 12 MHz / (divisor + 1).",
+                  "hw setlfdivisor -d 88"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1("d", "div", "<dec>", "19 - 255 divisor value (def 95)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint8_t arg = arg_get_u32_def(ctx, 1, 95);
+    CLIParserFree(ctx);
+
+    if (arg < 19) {
+        PrintAndLogEx(ERR, "Divisor must be between " _YELLOW_("19") " and " _YELLOW_("255"));
+        return PM3_EINVARG;
+    }
+    // 12 000 000 (12MHz)
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_SET_DIVISOR, (uint8_t *)&arg, sizeof(arg));
+    PrintAndLogEx(SUCCESS, "Divisor set, expected " _YELLOW_("%.1f") " kHz", ((double)12000 / (arg + 1)));
+    return PM3_SUCCESS;
+}
+
+static int CmdSetHFThreshold(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw sethfthresh",
+                  "Set thresholds in HF/14a and Legic mode.",
+                  "hw sethfthresh -t 7 -i 20 -l 8"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("t", "thresh", "<dec>", "threshold, used in 14a reader mode (def 7)"),
+        arg_int0("i", "high", "<dec>", "high threshold, used in 14a sniff mode (def 20)"),
+        arg_int0("l", "legic", "<dec>", "threshold used in Legic mode (def 8)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    struct {
+        uint8_t threshold;
+        uint8_t threshold_high;
+        uint8_t legic_threshold;
+    } PACKED params;
+
+    params.threshold = arg_get_int_def(ctx, 1, 7);
+    params.threshold_high = arg_get_int_def(ctx, 2, 20);
+    params.legic_threshold = arg_get_int_def(ctx, 3, 8);
+    CLIParserFree(ctx);
+
+    if ((params.threshold < 1) || (params.threshold > 63) || (params.threshold_high < 1) || (params.threshold_high > 63)) {
+        PrintAndLogEx(ERR, "Thresholds must be between " _YELLOW_("1") " and " _YELLOW_("63"));
+        return PM3_EINVARG;
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO14443A_SET_THRESHOLDS, (uint8_t *)&params, sizeof(params));
+    PrintAndLogEx(SUCCESS, "Thresholds set.");
+    return PM3_SUCCESS;
+}
+
+static int CmdSetMux(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw setmux",
+                  "Set the ADC mux to a specific value",
+                  "hw setmux --hipkd    -> set HIGH PEAK\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "lopkd", "low peak"),
+        arg_lit0(NULL, "loraw", "low raw"),
+        arg_lit0(NULL, "hipkd", "high peak"),
+        arg_lit0(NULL, "hiraw", "high raw"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool lopkd = arg_get_lit(ctx, 1);
+    bool loraw = arg_get_lit(ctx, 2);
+    bool hipkd = arg_get_lit(ctx, 3);
+    bool hiraw = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    if ((lopkd + loraw + hipkd + hiraw) > 1) {
+        PrintAndLogEx(INFO, "Can only set one mux");
+        return PM3_EINVARG;
+    }
+
+#ifdef WITH_FPC_USART
+    if (loraw || hiraw) {
+        PrintAndLogEx(INFO, "this ADC mux option is unavailable on RDV4 compiled with FPC USART");
+        return PM3_EINVARG;
+    }
+#endif
+
+    uint8_t arg = 0;
+    if (lopkd)
+        arg = 0;
+    else if (loraw)
+        arg = 1;
+    else if (hipkd)
+        arg = 2;
+    else if (hiraw)
+        arg = 3;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_SET_ADC_MUX, (uint8_t *)&arg, sizeof(arg));
+    return PM3_SUCCESS;
+}
+
+static int CmdStandalone(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw standalone",
+                  "Start standalone mode",
+                  "hw standalone       -> start \n"
+                  "hw standalone -a 1  -> start and send arg 1"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("a", "arg", "<dec>", "argument byte"),
+        arg_str0("b", NULL, "<str>", "UniSniff arg: 14a, 14b, 15, iclass"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    struct p {
+        uint8_t arg;
+        uint8_t mlen;
+        uint8_t mode[10];
+    } PACKED packet;
+
+    packet.arg = arg_get_u32_def(ctx, 1, 1);
+    int mlen = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 2), packet.mode, sizeof(packet.mode), &mlen);
+    if (mlen) {
+        packet.mlen = mlen;
+    }
+    CLIParserFree(ctx);
+    clearCommandBuffer();
+    SendCommandNG(CMD_STANDALONE, (uint8_t *)&packet, sizeof(struct p));
+    return PM3_SUCCESS;
+}
+
+static int CmdDecay(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw decay",
+                  "Measure HF antenna decay after field-off.\n"
+                  "Captures how quickly the peak-detect capacitor voltage drops\n"
+                  "after the 13.56 MHz field is turned off. Different antenna loading\n"
+                  "(unloaded, booster board, damaged) produces different decay profiles.",
+                  "hw decay\n"
+                  "hw decay --ms 100  --> stabilize for 100ms before measurement\n"
+                  "hw decay --us 5000 --> measure 5ms decay window\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "ms", "<dec>", "Field stabilization time in ms (default: 50)"),
+        arg_int0(NULL, "us", "<dec>", "Measurement window in us (default: 2000)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint16_t stabilize_ms = arg_get_int_def(ctx, 1, 50);
+    uint16_t measure_us = arg_get_int_def(ctx, 2, 2000);
+    CLIParserFree(ctx);
+
+    // Build parameter packet
+    hf_decay_params_t decay_params = {
+        .stabilize_ms = stabilize_ms,
+        .measure_us = measure_us,
+    };
+
+    PrintAndLogEx(INFO, "Measuring HF antenna decay...");
+    PrintAndLogEx(INFO, "  Field stabilization: " _YELLOW_("%d") " ms", stabilize_ms);
+    PrintAndLogEx(INFO, "  Measurement window:  " _YELLOW_("%d") " us", measure_us);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_DECAY, (uint8_t *)&decay_params, sizeof(decay_params));
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_DECAY, &resp, 5000) == false) {
+        PrintAndLogEx(WARNING, "Timeout waiting for decay measurement");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Decay measurement failed");
+        return PM3_ESOFT;
+    }
+
+    // Parse response header
+    hf_decay_response_t *decay_resp = (hf_decay_response_t *)resp.data.asBytes;
+    uint16_t baseline_mv = decay_resp->baseline_mv;
+    uint16_t num_samples = decay_resp->num_samples;
+    uint16_t sample_interval_us = decay_resp->sample_interval_us;
+    uint16_t measure_window_us = decay_resp->measure_window_us;
+    uint16_t samples[num_samples];
+    memcpy(samples, decay_resp->samples_mv, num_samples * sizeof(uint16_t));
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------- " _CYAN_("HF Decay Measurement") " ----------");
+    PrintAndLogEx(SUCCESS, "Baseline (field on).... " _YELLOW_("%d") " mV  (%.2f V)",
+                  baseline_mv, baseline_mv / 1000.0);
+    PrintAndLogEx(SUCCESS, "Samples captured....... %d", num_samples);
+    PrintAndLogEx(SUCCESS, "Sample interval........ ~%d us", sample_interval_us);
+    PrintAndLogEx(SUCCESS, "Total window........... %d us", measure_window_us);
+
+    if (num_samples == 0) {
+        PrintAndLogEx(WARNING, "No samples captured");
+        return PM3_ESOFT;
+    }
+
+    // Decay samples use fast ADC (reduced S&H) for ~5us/sample resolution.
+    // Absolute mV values are ~11% of truth due to RC charging limitation,
+    // but relative decay shape is accurate. Use first sample as 100% reference.
+    uint16_t ref_mv = samples[0];
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, " idx | time (us) |  raw  |  %% of peak");
+    PrintAndLogEx(INFO, "-----+-----------+-------+-------------");
+
+    for (uint16_t i = 0; i < num_samples; i++) {
+        uint32_t time_us = (num_samples > 1)
+                           ? (uint32_t)i * measure_window_us / (num_samples - 1)
+                           : 0;
+        double pct = (ref_mv > 0)
+                     ? 100.0 * samples[i] / ref_mv
+                     : 0;
+        PrintAndLogEx(INFO, " %3d | %7d   | %5d | %.1f%%",
+                      i, time_us, samples[i], pct);
+    }
+
+    // Find time to 50% decay (relative to first sample)
+    uint16_t half_ref = ref_mv / 2;
+    int t_half_idx = -1;
+    for (uint16_t i = 0; i < num_samples; i++) {
+        if (samples[i] <= half_ref) {
+            t_half_idx = i;
+            break;
+        }
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    if (t_half_idx >= 0) {
+        uint32_t t_half_us = (num_samples > 1)
+                             ? (uint32_t)t_half_idx * measure_window_us / (num_samples - 1)
+                             : 0;
+        PrintAndLogEx(SUCCESS, "Time to 50%% decay..... ~" _YELLOW_("%d") " us (sample %d)", t_half_us, t_half_idx);
+    } else {
+        PrintAndLogEx(INFO, "Voltage did not reach 50%% decay within measurement window");
+    }
+
+    uint16_t final_mv = samples[num_samples - 1];
+    double final_pct = (ref_mv > 0) ? 100.0 * final_mv / ref_mv : 0;
+    PrintAndLogEx(SUCCESS, "Final voltage.......... %d raw (%.1f%% of peak)", final_mv, final_pct);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Note: decay samples use fast ADC (~5us/sample, relative values)");
+
+    // Load into graph window
+    for (uint16_t i = 0; i < num_samples; i++) {
+        g_GraphBuffer[i] = (int)samples[i];
+    }
+    g_GraphTraceLen = num_samples;
+    ShowGraphWindow();
+    RepaintGraphWindow();
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Decay curve loaded into graph window (mV vs sample index)");
+    PrintAndLogEx(NORMAL, "");
+
+    return PM3_SUCCESS;
+}
+
+static int CmdTune(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw tune",
+                  "Measure tuning of device antenna. Results shown in graph window.\n"
+                  "This command doesn't actively tune your antennas, \n"
+                  "it's only informative by measuring voltage that the antennas will generate",
+                  "hw tune"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+#define NON_VOLTAGE 1000
+#define LF_UNUSABLE_V 2000
+#define LF_MARGINAL_V 10000
+#define HF_UNUSABLE_V 3000
+#define HF_MARGINAL_V 5000
+#define ANTENNA_ERROR 1.00 // current algo has 3% error margin.
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------- " _CYAN_("Reminder") " ----------------------------");
+    PrintAndLogEx(INFO, "`" _YELLOW_("hw tune") "` doesn't actively tune your antennas.");
+    PrintAndLogEx(INFO, "It's only informative.");
+    PrintAndLogEx(INFO, "Measuring antenna characteristics...");
+
+    // hide demod plot line
+    g_DemodBufferLen = 0;
+    setClockGrid(0, 0);
+    RepaintGraphWindow();
+    int timeout = 0;
+    int timeout_max = 20;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_MEASURE_ANTENNA_TUNING, NULL, 0);
+    PacketResponseNG resp;
+    PrintAndLogEx(INPLACE, "% 3i", timeout_max - timeout);
+
+    while (WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING, &resp, 500) == false) {
+
+        fflush(stdout);
+        if (timeout >= timeout_max) {
+            PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
+            return PM3_ETIMEOUT;
+        }
+
+        timeout++;
+        PrintAndLogEx(INPLACE, "% 3i", timeout_max - timeout);
+    }
+
+    PrintAndLogEx(NORMAL, "");
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Antenna tuning failed");
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------- " _CYAN_("LF Antenna") " ----------");
+    // in mVolt
+    struct p {
+        uint32_t v_lf134;
+        uint32_t v_lf125;
+        uint32_t v_lfconf;
+        uint32_t v_hf;
+        uint32_t peak_v;
+        uint32_t peak_f;
+        int divisor;
+        uint8_t results[256];
+    } PACKED;
+
+    struct p *package = (struct p *)resp.data.asBytes;
+
+    if (package->v_lf125 > NON_VOLTAGE)
+        PrintAndLogEx(SUCCESS, "%.2f kHz ........... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(LF_DIVISOR_125), (package->v_lf125 * ANTENNA_ERROR) / 1000.0);
+
+    if (package->v_lf134 > NON_VOLTAGE)
+        PrintAndLogEx(SUCCESS, "%.2f kHz ........... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(LF_DIVISOR_134), (package->v_lf134 * ANTENNA_ERROR) / 1000.0);
+
+    if (package->v_lfconf > NON_VOLTAGE && package->divisor > 0 && package->divisor != LF_DIVISOR_125 && package->divisor != LF_DIVISOR_134)
+        PrintAndLogEx(SUCCESS, "%.2f kHz ........... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(package->divisor), (package->v_lfconf * ANTENNA_ERROR) / 1000.0);
+
+    if (package->peak_v > NON_VOLTAGE && package->peak_f > 0)
+        PrintAndLogEx(SUCCESS, "%.2f kHz optimal.... " _BACK_GREEN_("%5.2f") " V", LF_DIV2FREQ(package->peak_f), (package->peak_v * ANTENNA_ERROR) / 1000.0);
+
+    // Empirical measures in mV
+    const double vdd_rdv4 = 9000;
+    const double vdd_other = 5400;
+    double vdd = IfPm3Rdv4Fw() ? vdd_rdv4 : vdd_other;
+
+    if (package->peak_v > NON_VOLTAGE && package->peak_f > 0) {
+
+        // Q measure with Q=f/delta_f
+        double v_3db_scaled = (double)(package->peak_v * 0.707) / 512; // /512 == >>9
+        uint32_t s2 = 0, s4 = 0;
+        for (int i = 1; i < 256; i++) {
+            if ((s2 == 0) && (package->results[i] > v_3db_scaled)) {
+                s2 = i;
+            }
+            if ((s2 != 0) && (package->results[i] < v_3db_scaled)) {
+                s4 = i;
+                break;
+            }
+        }
+
+        PrintAndLogEx(SUCCESS, "");
+        PrintAndLogEx(SUCCESS, "Approx. Q factor measurement");
+        double lfq1 = 0;
+        if (s4 != 0) {
+            // we got all our points of interest
+            double a = package->results[s2 - 1];
+            double b = package->results[s2];
+            double f1 = LF_DIV2FREQ(s2 - 1 + (v_3db_scaled - a) / (b - a));
+            double c = package->results[s4 - 1];
+            double d = package->results[s4];
+            double f2 = LF_DIV2FREQ(s4 - 1 + (c - v_3db_scaled) / (c - d));
+            lfq1 = LF_DIV2FREQ(package->peak_f) / (f1 - f2);
+            PrintAndLogEx(SUCCESS, "Frequency bandwidth... " _YELLOW_("%.1lf"), lfq1);
+        }
+
+        // Q measure with Vlr=Q*(2*Vdd/pi)
+        double lfq2 = (double)package->peak_v * 3.14 / 2 / vdd;
+        PrintAndLogEx(SUCCESS, "Peak voltage.......... " _YELLOW_("%.1lf"), lfq2);
+        // cross-check results
+        // TODO DXL pm5 to be covered
+        if (IfPm5() == false) {
+            if (lfq1 > 3) {
+                double approx_vdd = (double)package->peak_v * 3.14 / 2 / lfq1;
+                // Got 8858 on a RDV4 with large antenna 134/14
+                // Got 8761 on a non-RDV4
+                const double approx_vdd_other_max = 8840;
+
+                // 1% over threshold and supposedly non-RDV4
+                if ((approx_vdd > approx_vdd_other_max * 1.01) && (!IfPm3Rdv4Fw())) {
+                    PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3GENERIC firmware on a RDV4"));
+                    PrintAndLogEx(WARNING, "False positives is possible but please check your setup");
+                }
+                // 1% below threshold and supposedly RDV4
+                if ((approx_vdd < approx_vdd_other_max * 0.99) && (IfPm3Rdv4Fw())) {
+                    PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_RDV4 firmware on a generic device"));
+                    PrintAndLogEx(WARNING, "False positives is possible but please check your setup");
+                }
+            }
+        }
+    }
+
+    char judgement[20];
+    memset(judgement, 0, sizeof(judgement));
+    // LF evaluation
+    if (package->peak_v < LF_UNUSABLE_V)
+        snprintf(judgement, sizeof(judgement), _RED_("unusable"));
+    else if (package->peak_v < LF_MARGINAL_V)
+        snprintf(judgement, sizeof(judgement), _YELLOW_("marginal"));
+    else
+        snprintf(judgement, sizeof(judgement), _GREEN_("ok"));
+
+    // PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna ( %s )", judgement);
+    PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna............ %s", judgement);
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------- " _CYAN_("HF Antenna") " ----------");
+    // HF evaluation
+    if (package->v_hf > NON_VOLTAGE) {
+        PrintAndLogEx(SUCCESS, "13.56 MHz............. " _BACK_GREEN_("%5.2f") " V", (package->v_hf * ANTENNA_ERROR) / 1000.0);
+    }
+
+    memset(judgement, 0, sizeof(judgement));
+
+    // If HF is unusable or marginal, run a quick decay measurement to check
+    // for booster board. With a booster, the first fast-ADC decay sample reads
+    // 50-500 (rapid discharge). Without a booster, it reads >1000.
+    bool hf_booster_detected = false;
+    if (!IfPm3Rdv4Fw() && package->v_hf < HF_MARGINAL_V) {
+        hf_decay_params_t decay_params = {
+            .stabilize_ms = 50,
+            .measure_us = 50,
+        };
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_DECAY, (uint8_t *)&decay_params, sizeof(decay_params));
+
+        if (WaitForResponseTimeout(CMD_HF_DECAY, &resp, 3000) && resp.status == PM3_SUCCESS) {
+            hf_decay_response_t *decay_resp = (hf_decay_response_t *)resp.data.asBytes;
+            if (decay_resp->num_samples > 0) {
+                uint16_t samples[1];
+                memcpy(samples, decay_resp->samples_mv, sizeof(uint16_t));
+                if (samples[0] >= 50 && samples[0] <= 500) {
+                    hf_booster_detected = true;
+                }
+            }
+        }
+    }
+
+    if (hf_booster_detected) {
+        PrintAndLogEx(SUCCESS, "");
+        PrintAndLogEx(SUCCESS, "Your HF antenna measurement shows");
+        PrintAndLogEx(SUCCESS, "low voltage that is consistent");
+        PrintAndLogEx(SUCCESS, "with the installation of a booster");
+        PrintAndLogEx(SUCCESS, "board. If you do not have a");
+        PrintAndLogEx(SUCCESS, "booster board installed, either");
+        PrintAndLogEx(SUCCESS, "your antenna is malfunctioning or");
+        PrintAndLogEx(SUCCESS, "you have a tag on the HF antenna.");
+    }
+
+    PrintAndLogEx(SUCCESS, "");
+    PrintAndLogEx(SUCCESS, "Approx. Q factor measurement");
+
+    if (package->v_hf >= HF_UNUSABLE_V) {
+        // Q measure with Vlr=Q*(2*Vdd/pi)
+        double hfq = (double)package->v_hf * 3.14 / 2 / vdd;
+        PrintAndLogEx(SUCCESS, "Peak voltage.......... " _YELLOW_("%.1lf"), hfq);
+    }
+
+    if (package->v_hf < HF_UNUSABLE_V)
+        snprintf(judgement, sizeof(judgement), _RED_("unusable"));
+    else if (package->v_hf < HF_MARGINAL_V)
+        snprintf(judgement, sizeof(judgement), _YELLOW_("marginal"));
+    else
+        snprintf(judgement, sizeof(judgement), _GREEN_("ok"));
+
+    PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna ( %s )", judgement);
+
+    // If HF voltage is ok/marginal but below 13V, check for
+    // surface interference via decay measurement.
+    // Only on PM3 Easy — RDV4 has different voltage divider.
+    if (!IfPm3Rdv4Fw() && package->v_hf >= HF_MARGINAL_V && package->v_hf < 13000) {
+        hf_decay_params_t surface_params = {
+            .stabilize_ms = 50,
+            .measure_us = 50,
+        };
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_DECAY, (uint8_t *)&surface_params, sizeof(surface_params));
+
+        if (WaitForResponseTimeout(CMD_HF_DECAY, &resp, 3000) && resp.status == PM3_SUCCESS) {
+            hf_decay_response_t *surface_resp = (hf_decay_response_t *)resp.data.asBytes;
+            if (surface_resp->num_samples > 0) {
+                uint16_t samples[1];
+                memcpy(samples, surface_resp->samples_mv, sizeof(uint16_t));
+                if (samples[0] >= 600 && samples[0] <= 900) {
+                    PrintAndLogEx(SUCCESS, "");
+                    PrintAndLogEx(SUCCESS, "The surface your proxmark is on could");
+                    PrintAndLogEx(SUCCESS, "contain interfering materials. Try again");
+                    PrintAndLogEx(SUCCESS, "while holding the proxmark in free space.");
+                }
+            }
+        }
+    }
+
+    // graph LF measurements
+    // even here, these values has 3% error.
+    uint16_t test1 = 0;
+    for (int i = 0; i < 256; i++) {
+        g_GraphBuffer[i] = package->results[i] - 128;
+        test1 += package->results[i];
+    }
+
+    if (test1 > 0) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "-------- " _CYAN_("LF tuning graph") " ------------");
+        PrintAndLogEx(SUCCESS, "Orange line - divisor %d / %.2f kHz"
+                      , LF_DIVISOR_125
+                      , LF_DIV2FREQ(LF_DIVISOR_125)
+                     );
+        PrintAndLogEx(SUCCESS, "Blue line - divisor   %d / %.2f kHz\n\n"
+                      , LF_DIVISOR_134
+                      , LF_DIV2FREQ(LF_DIVISOR_134)
+                     );
+        g_GraphTraceLen = 256;
+        g_MarkerC.pos = LF_DIVISOR_125;
+        g_MarkerD.pos = LF_DIVISOR_134;
+        ShowGraphWindow();
+        RepaintGraphWindow();
+    } else {
+        PrintAndLogEx(FAILED, "\nAll values are zero. Not showing LF tuning graph\n\n");
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Q factor must be measured without tag on the antenna");
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
+static int CmdVersion(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw version",
+                  "Show version information about the client and the connected Proxmark3",
+                  "hw version"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    pm3_version(true, false);
+    return PM3_SUCCESS;
+}
+
+static int CmdStatus(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw status",
+                  "Show runtime status information about the connected Proxmark3",
+                  "hw status\n"
+                  "hw status --ms 1000 -> Test connection speed with 1000ms timeout\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("m", "ms", "<ms>", "speed test timeout in micro seconds"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int32_t speedTestTimeout = arg_get_int_def(ctx, 1, -1);
+    CLIParserFree(ctx);
+
+    clearCommandBuffer();
+    PacketResponseNG resp;
+    if (speedTestTimeout < 0) {
+        speedTestTimeout = 0;
+        SendCommandNG(CMD_STATUS, NULL, 0);
+    } else {
+        SendCommandNG(CMD_STATUS, (uint8_t *)&speedTestTimeout, sizeof(speedTestTimeout));
+    }
+
+    if (WaitForResponseTimeout(CMD_STATUS, &resp, 2000 + speedTestTimeout) == false) {
+        PrintAndLogEx(WARNING, "Status command timeout. Communication speed test timed out");
+        return PM3_ETIMEOUT;
+    }
+    return PM3_SUCCESS;
+}
+
+int handle_tearoff(tearoff_params_t *params, bool verbose) {
+
+    if (params == NULL)
+        return PM3_EINVARG;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_SET_TEAROFF, (uint8_t *)params, sizeof(tearoff_params_t));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_SET_TEAROFF, &resp, 500) == false) {
+        PrintAndLogEx(WARNING, "Tear-off command timeout.");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status == PM3_SUCCESS) {
+        if (params->delay_us > 0 && verbose)
+            PrintAndLogEx(INFO, "Tear-off hook configured with delay of " _GREEN_("%i us"), params->delay_us);
+
+        if (params->skip > 0 && verbose)
+            PrintAndLogEx(INFO, "Tear-off hook will be skipped " _YELLOW_("%i times") " before being activated", params->skip);
+        if (params->skip == 0 && verbose)
+            PrintAndLogEx(INFO, "Tear-off hook skipping " _GREEN_("disabled"));
+
+        if (params->on && verbose)
+            PrintAndLogEx(INFO, "Tear-off hook " _GREEN_("enabled"));
+
+        if (params->off && verbose)
+            PrintAndLogEx(INFO, "Tear-off hook " _RED_("disabled"));
+    } else if (verbose)
+        PrintAndLogEx(WARNING, "Tear-off command failed.");
+    return resp.status;
+}
+
+static int CmdTearoff(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw tearoff",
+                  "Configure a tear-off hook for the next write command supporting tear-off\n"
+                  "After having been triggered by a write command, the tear-off hook is deactivated\n"
+                  "Delay (in us) must be between 1 and 65535 (65ms). Precision is about 1/3us.",
+                  "hw tearoff --delay 1200 --> define delay of 1200us\n"
+                  "hw tearoff --on --> (re)activate a previously defined delay\n"
+                  "hw tearoff --off --> deactivate a previously activated but not yet triggered hook\n"
+                  "hw tearoff --list --> list commands implementing tear-off hooks\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "delay", "<dec>", "Delay in us before triggering tear-off, must be between 1 and 65535"),
+        arg_lit0(NULL, "on", "Activate tear-off hook"),
+        arg_lit0(NULL, "off", "Deactivate tear-off hook"),
+        arg_int0(NULL, "skip", "<dec>", "Skip N triggers before activating the hook"),
+        arg_lit0("s", "silent", "less verbose output"),
+        arg_lit0(NULL, "list", "List commands implementing tear-off hooks"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    tearoff_params_t params;
+    int delay = arg_get_int_def(ctx, 1, -1);
+    params.on = arg_get_lit(ctx, 2);
+    params.off = arg_get_lit(ctx, 3);
+    int skip = arg_get_int_def(ctx, 4, -1);
+    bool silent = arg_get_lit(ctx, 5);
+    bool list = arg_get_lit(ctx, 6);
+    CLIParserFree(ctx);
+
+    if (list) {
+        PrintAndLogEx(INFO, "Commands implementing tear-off hooks:");
+        PrintAndLogEx(INFO, "  hf 14a raw");
+        PrintAndLogEx(INFO, "  hf 14b apdu");
+        PrintAndLogEx(INFO, "  hf 14b raw");
+        PrintAndLogEx(INFO, "  hf 15 raw");
+        PrintAndLogEx(INFO, "  hf iclass creditepurse");
+        PrintAndLogEx(INFO, "  hf iclass wrbl");
+        PrintAndLogEx(INFO, "  hf mf wrbl");
+        PrintAndLogEx(INFO, "  hf mfu wrbl (with --skip 3)");
+        PrintAndLogEx(INFO, "  hf topaz wrbl");
+        PrintAndLogEx(INFO, "  lf em 4x05 write");
+        PrintAndLogEx(INFO, "  lf em 4x50 wrbl");
+        PrintAndLogEx(INFO, "  lf em 4x50 wrpwd");
+        PrintAndLogEx(INFO, "  lf hitag wrbl");
+        PrintAndLogEx(INFO, "  lf hitag hts wrbl");
+        PrintAndLogEx(INFO, "");
+        PrintAndLogEx(INFO, "See also commands implementing tearing-off on their own:");
+        PrintAndLogEx(INFO, "  lf em 4x05_unlock");
+        PrintAndLogEx(INFO, "  lf t55xx dangerraw");
+        PrintAndLogEx(INFO, "  hf iclass tear");
+        PrintAndLogEx(INFO, "  hf iclass blacktears");
+        PrintAndLogEx(INFO, "  hf mfu otptear");
+        PrintAndLogEx(INFO, "  Standalone mode HF_ST25_TEAROFF");
+        return PM3_SUCCESS;
+    }
+
+    if (delay != -1) {
+        // 65535 is where tearoff_params_t.delay_us runs out, not where the
+        // timer does. The old 43000 was the point past which the PWM tick
+        // count wrapped into 16 bits and the delay silently came up short.
+        if ((delay < 1) || (delay > 65535)) {
+            PrintAndLogEx(WARNING, "You can't set delay out of 1..65535 range!");
+            return PM3_EINVARG;
+        }
+    } else {
+        delay = 0; // will be ignored by ARM
+    }
+
+    params.delay_us = delay;
+
+    if (skip != -1) {
+        if ((skip < 0) || (skip > 127)) {
+            PrintAndLogEx(WARNING, "You can't set skip out of 0..127 range!");
+            return PM3_EINVARG;
+        }
+    }
+
+    params.skip = skip;
+
+    if (params.on && params.off) {
+        PrintAndLogEx(WARNING, "You can't set both --on and --off!");
+        return PM3_EINVARG;
+    }
+
+    return handle_tearoff(&params, !silent);
+}
+
+static int CmdBwmAutoOff(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwmautooff",
+                  "Toggle automatic power-off when the PM5 is unplugged from USB (BWM only).\n"
+                  "Default is " _GREEN_("on") ". When on, the board powers itself down ~10s after\n"
+                  "USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery.\n"
+                  "Button power-on is unaffected. Disable for standalone/BLE use on battery.\n"
+                  _YELLOW_("Runtime only:") " resets to on at each boot.",
+                  "hw bwmautooff --off   --> disable auto power-off\n"
+                  "hw bwmautooff --on    --> re-enable auto power-off");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "on",  "enable auto power-off (default)"),
+        arg_lit0(NULL, "off", "disable auto power-off"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool on  = arg_get_lit(ctx, 1);
+    bool off = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    if (on && off) {
+        PrintAndLogEx(WARNING, "pick one of --on / --off");
+        return PM3_EINVARG;
+    }
+    uint8_t payload = off ? 0 : 1;   // default (neither flag) = enable
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_AUTOOFF, &payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_PM5_BWM_AUTOOFF, &resp, 2500) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5?)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status == PM3_ENOTIMPL) {
+        PrintAndLogEx(WARNING, "firmware built without auto power-off support");
+        return resp.status;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "failed to set auto power-off");
+        return resp.status;
+    }
+    PrintAndLogEx(SUCCESS, "Auto power-off %s.", payload ? _GREEN_("enabled") : _YELLOW_("disabled"));
+    return PM3_SUCCESS;
+}
+
+static int CmdBWMWifi(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwmwifi",
+                  "Bring up the BWM in STA + TCP-server mode: join a WiFi network and\n"
+                  "start a TCP server so the client can connect over WiFi. PM5 only.",
+                  "hw bwmwifi --ssid Home --pwd secret            --> port 7777\n"
+                  "hw bwmwifi --ssid Home --pwd secret --port 9000\n"
+                  "hw bwmwifi --status                            --> show connection state + IP");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "ssid", "<ssid>", "WiFi SSID to join (omit with --stop)"),
+        arg_str0(NULL, "pwd",  "<pwd>",  "WiFi password (omit for open network)"),
+        arg_int0(NULL, "port", "<dec>",  "TCP server listen port (default 7777)"),
+        arg_str0(NULL, "hostname", "<name>", "DHCP hostname (default Proxmark5)"),
+        arg_lit0(NULL, "stop", "tear down WiFi and return to BLE-only"),
+        arg_lit0(NULL, "status", "show current WiFi connection state + IP"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t ssid[64] = {0};
+    int ssid_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 1), ssid, sizeof(ssid) - 1, &ssid_len);
+
+    uint8_t pwd[64] = {0};
+    int pwd_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 2), pwd, sizeof(pwd) - 1, &pwd_len);
+
+    int port = arg_get_int_def(ctx, 3, 7777);
+
+    uint8_t host[33] = {0};
+    int host_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 4), host, sizeof(host) - 1, &host_len);
+    if (host_len == 0) {
+        strcpy((char *)host, "Proxmark5");
+        host_len = 9;
+    }
+    bool stop = arg_get_lit(ctx, 5);
+    bool status = arg_get_lit(ctx, 6);
+    CLIParserFree(ctx);
+
+    if (status) {
+        uint8_t q[1] = { BWM_WIFI_ACTION_STATUS };
+        clearCommandBuffer();
+        SendCommandNG(CMD_PM5_BWM_WIFI, q, sizeof(q));
+        PacketResponseNG r;
+        if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &r, 5000) == false) {
+            PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+            return PM3_ETIMEOUT;
+        }
+        if (r.status != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "could not query BWM WiFi status (BWM present?)");
+            return r.status;
+        }
+        uint8_t state = (r.length >= 1) ? r.data.asBytes[0] : 0xFF;
+        uint32_t ip = 0;
+        if (r.length >= 5) {
+            ip = r.data.asBytes[1] | (r.data.asBytes[2] << 8) | (r.data.asBytes[3] << 16) | ((uint32_t)r.data.asBytes[4] << 24);
+        }
+        switch (state) {
+            case 0xFF:
+                PrintAndLogEx(INFO, "BWM WiFi disabled (BLE-only). Bring it up with " _YELLOW_("hw bwmwifi --ssid <ssid> --pwd <pwd>"));
+                break;
+            case 2: // connected
+                if (ip) {
+                    PrintAndLogEx(SUCCESS, "BWM WiFi connected, IP " _YELLOW_("%u.%u.%u.%u"),
+                                  ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
+                    PrintAndLogEx(HINT, "Connect with: " _YELLOW_("pm3 -p tcp:%u.%u.%u.%u:<port>"),
+                                  ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
+                } else {
+                    PrintAndLogEx(INFO, "BWM WiFi associated, waiting for a DHCP lease...");
+                }
+                break;
+            case 1: // connecting
+                PrintAndLogEx(INFO, "BWM WiFi connecting...");
+                break;
+            case 3: // reconnect wait
+                PrintAndLogEx(INFO, "BWM WiFi reconnecting...");
+                break;
+            case 4: // task stopped
+                PrintAndLogEx(INFO, "BWM WiFi connect task stopped");
+                break;
+            case 0: // disconnected
+            default:
+                PrintAndLogEx(INFO, "BWM WiFi configured but not connected");
+                break;
+        }
+        return PM3_SUCCESS;
+    }
+
+    if (stop) {
+        uint8_t off[1] = { BWM_WIFI_ACTION_STOP };
+        clearCommandBuffer();
+        SendCommandNG(CMD_PM5_BWM_WIFI, off, sizeof(off));
+        PacketResponseNG r;
+        if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &r, 5000) == false) {
+            PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+            return PM3_ETIMEOUT;
+        }
+        if (r.status != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "failed to disable BWM WiFi");
+            return r.status;
+        }
+        PrintAndLogEx(SUCCESS, "BWM WiFi disabled (back to BLE-only)");
+        return PM3_SUCCESS;
+    }
+
+    if (ssid_len == 0) {
+        PrintAndLogEx(FAILED, "an SSID is required (or use --stop to tear down)");
+        return PM3_EINVARG;
+    }
+    if (port < 1 || port > 65535) {
+        PrintAndLogEx(FAILED, "port must be 1..65535");
+        return PM3_EINVARG;
+    }
+
+    // payload: [action:u8][port:u16 LE][ssid\0][pwd\0][hostname\0]
+    uint8_t data[200] = {0};
+    int n = 0;
+    data[n++] = BWM_WIFI_ACTION_START;
+    data[n++] = (uint8_t)(port & 0xFF);
+    data[n++] = (uint8_t)((port >> 8) & 0xFF);
+    memcpy(&data[n], ssid, ssid_len);
+    n += ssid_len;
+    data[n++] = 0;
+    memcpy(&data[n], pwd,  pwd_len);
+    n += pwd_len;
+    data[n++] = 0;
+    memcpy(&data[n], host, host_len);
+    n += host_len;
+    data[n++] = 0;
+
+    PrintAndLogEx(INFO, "Bringing up BWM WiFi (SSID \"%s\", port %d)... this can take ~15s", ssid, port);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_WIFI, data, n);
+    PacketResponseNG resp;
+    // ARM blocks during join + DHCP wait, so allow a long client timeout
+    if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &resp, 60000) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "BWM WiFi bring-up failed (check SSID/password and signal)");
+        PrintAndLogEx(HINT, "If it may have joined after DHCP, check: " _YELLOW_("hw bwmwifi --status"));
+        return resp.status;
+    }
+
+    uint32_t ip = resp.data.asDwords[0];
+    PrintAndLogEx(SUCCESS, "BWM on WiFi at %u.%u.%u.%u",
+                  ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
+    PrintAndLogEx(HINT, "Connect with: " _YELLOW_("pm3 -p tcp:%u.%u.%u.%u:%d"),
+                  ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF, port);
+    PrintAndLogEx(HINT, "Or by name (router-dependent): " _YELLOW_("pm3 -p tcp:%s:%d"), host, port);
+    return PM3_SUCCESS;
+}
+
+static int CmdBwmCharge(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwmcharge",
+                  "Enable or disable BWM battery charging by clearing/setting the\n"
+                  "AW32001E charge-enable bit (CEB, REG01[3]). PM5 only.\n"
+                  _RED_("One-shot:") " the charger watchdog reverts this after ~160 s unless\n"
+                  "serviced, so charging may stop on its own. Use to nudge a top-up.",
+                  "hw bwmcharge -on      --> enable charging\n"
+                  "hw bwmcharge --off    --> disable charging");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "on",  "enable charging (default)"),
+        arg_lit0(NULL, "off", "disable charging"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool on  = arg_get_lit(ctx, 1);
+    bool off = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    if (on && off) {
+        PrintAndLogEx(WARNING, "pick one of --on / --off");
+        return PM3_EINVARG;
+    }
+    uint8_t payload = off ? 0 : 1;   // default (neither flag) = enable
+    PrintAndLogEx(INFO, "%s BWM battery charging...", off ? "Disabling" : "Enabling");
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_CHARGE_EN, &payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_PM5_BWM_CHARGE_EN, &resp, 2500) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "charger did not respond (check BWM present)");
+        return resp.status;
+    }
+    PrintAndLogEx(SUCCESS, "Charging %s. Verify with " _YELLOW_("hw status") ".",
+                  off ? "disabled" : "enabled");
+    if (off == false) {
+        PrintAndLogEx(HINT, "Reverts on the charger watchdog (~160 s) if not serviced.");
+    }
+    return PM3_SUCCESS;
+}
+
+static int CmdBwmVchg(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwmvchg",
+                  "Set the BWM charger (AW32001E) charge-voltage regulation target.\n"
+                  "Lowering it below 4.2 V reduces top-of-charge stress and extends cell\n"
+                  "life. Snaps to the nearest 15 mV step; clamped to 3600..4200 mV. This is\n"
+                  "a runtime register write (reverts on the charger watchdog / POR); the\n"
+                  "firmware re-applies the " _YELLOW_("4100 mV") " default at every boot. PM5 only.",
+                  "hw bwmvchg              --> set charge voltage to default 4100 mV (->4.095 V)\n"
+                  "hw bwmvchg --mv 4200    --> set charge voltage to 4200 mV");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "mv", "<mV>", "charge voltage in mV (default 4100, clamped 3600..4200)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int mv = arg_get_int_def(ctx, 1, 4100);
+    CLIParserFree(ctx);
+
+    if (mv < 3600 || mv > 4200) {
+        PrintAndLogEx(WARNING, "charge voltage out of range (3600..4200 mV): %d", mv);
+        return PM3_EINVARG;
+    }
+
+    uint8_t payload[2] = { (uint8_t)(mv & 0xFF), (uint8_t)((mv >> 8) & 0xFF) };
+    PrintAndLogEx(INFO, "Setting BWM charge voltage to " _YELLOW_("%d mV") "...", mv);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_SET_VCHG, payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_PM5_BWM_SET_VCHG, &resp, 5000) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "failed to set charge voltage - check BWM present");
+        return resp.status;
+    }
+    uint16_t applied = (resp.length >= 2) ? (resp.data.asBytes[0] | (resp.data.asBytes[1] << 8)) : 0;
+    PrintAndLogEx(SUCCESS, "Charge voltage set to " _YELLOW_("%u.%03u V") " (nearest 15 mV step).", applied / 1000, applied % 1000);
+    return PM3_SUCCESS;
+}
+
+static int CmdBwmSetCap(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwmsetcap",
+                  "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell.\n"
+                  "Run ONCE after fitting or replacing the battery. This triggers a gauge\n"
+                  "config-update; do not run it repeatedly, as that disrupts the Impedance\n"
+                  "Track learning cycle. PM5 only.",
+                  "hw bwmsetcap             --> set design capacity to default 500 mAh\n"
+                  "hw bwmsetcap --cap 500   --> set design capacity to 500 mAh");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "cap", "<mAh>", "design capacity in mAh (default 500)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int cap = arg_get_int_def(ctx, 1, 500);
+    CLIParserFree(ctx);
+
+    if (cap <= 0 || cap > 32000) {
+        PrintAndLogEx(WARNING, "capacity out of range: %d mAh", cap);
+        return PM3_EINVARG;
+    }
+
+    uint8_t payload[2] = { (uint8_t)(cap & 0xFF), (uint8_t)((cap >> 8) & 0xFF) };
+    PrintAndLogEx(INFO, "Programming BWM gauge design capacity to " _YELLOW_("%d mAh") "...", cap);
+    PrintAndLogEx(INFO, "Run this " _YELLOW_("once") "; then perform a full charge/discharge learning cycle.");
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_SET_CAP, payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_PM5_BWM_SET_CAP, &resp, 5000) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "gauge provisioning failed - check BWM present and gauge unsealed");
+        return resp.status;
+    }
+    PrintAndLogEx(SUCCESS, "Design capacity programmed. `hw status` should now report sane capacity.");
+    return PM3_SUCCESS;
+}
+
+static int CmdTia(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw tia",
+                  "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider",
+                  "hw tia"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(INFO, "Triggering new Timing Interval Acquisition (TIA)...");
+    clearCommandBuffer();
+    SendCommandNG(CMD_TIA, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_TIA, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "TIA command timeout. You probably need to unplug the Proxmark3.");
+        return PM3_ETIMEOUT;
+    }
+    PrintAndLogEx(INFO, "TIA done.");
+    return PM3_SUCCESS;
+}
+
+static int CmdTimeout(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw timeout",
+                  "Set the communication timeout on the client side",
+                  "hw timeout            --> Show current timeout\n"
+                  "hw timeout -m 20      --> Set the timeout to 20ms\n"
+                  "hw timeout --ms 500   --> Set the timeout to 500ms\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("m", "ms", "<ms>", "timeout in micro seconds"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int32_t arg = arg_get_int_def(ctx, 1, -1);
+    CLIParserFree(ctx);
+
+    uint32_t oldTimeout = uart_get_timeouts();
+
+    // timeout is not given/invalid, just show the current timeout then return
+    if (arg < 0) {
+        PrintAndLogEx(INFO, "Current communication timeout... " _GREEN_("%u") " ms", oldTimeout);
+        return PM3_SUCCESS;
+    }
+
+    uint32_t newTimeout = arg;
+    // UART_USB_CLIENT_RX_TIMEOUT_MS is considered as the minimum required timeout.
+    if (newTimeout < UART_USB_CLIENT_RX_TIMEOUT_MS) {
+        PrintAndLogEx(WARNING, "Timeout less than %u ms might cause errors.", UART_USB_CLIENT_RX_TIMEOUT_MS);
+    } else if (newTimeout > 5000) {
+        PrintAndLogEx(WARNING, "Timeout greater than 5000 ms makes the client unresponsive.");
+    }
+    uart_reconfigure_timeouts(newTimeout);
+    PrintAndLogEx(INFO, "Old communication timeout... %u ms", oldTimeout);
+    PrintAndLogEx(INFO, "New communication timeout... " _GREEN_("%u") " ms", newTimeout);
+    return PM3_SUCCESS;
+}
+
+static int CmdPing(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw ping",
+                  "Test if the Proxmark3 is responsive",
+                  "hw ping\n"
+                  "hw ping --len 32"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("l", "len", "<dec>", "length of payload to send"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t len = arg_get_u32_def(ctx, 1, 32);
+    CLIParserFree(ctx);
+
+    if (len > PM3_CMD_DATA_SIZE)
+        len = PM3_CMD_DATA_SIZE;
+
+    if (len) {
+        PrintAndLogEx(INFO, "Ping sent with payload len... " _YELLOW_("%d"), len);
+    } else {
+        PrintAndLogEx(INFO, "Ping sent");
+    }
+
+    clearCommandBuffer();
+    PacketResponseNG resp;
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0};
+
+    for (uint16_t i = 0; i < len; i++) {
+        data[i] = i & 0xFF;
+    }
+
+    uint64_t tms = msclock();
+    SendCommandNG(CMD_PING, data, len);
+    if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
+        tms = msclock() - tms;
+        if (len) {
+            bool error = (memcmp(data, resp.data.asBytes, len) != 0);
+            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received")
+                          " in " _YELLOW_("%" PRIu64) " ms and content ( %s )",
+                          tms, error ? _RED_("fail") : _GREEN_("ok"));
+        } else {
+            PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received")
+                          " in " _YELLOW_("%" PRIu64) " ms", tms);
+        }
+    } else
+        PrintAndLogEx(WARNING, "Ping response " _RED_("timeout"));
+    return PM3_SUCCESS;
+}
+
+static int CmdConnect(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw connect",
+                  "Connects to a Proxmark3 device via specified serial port.\n"
+                  "Baudrate here is only for physical UART or UART-BT, NOT for USB-CDC or blue shark add-on",
+                  "hw connect -p " SERIAL_PORT_EXAMPLE_H "\n"
+                  "hw connect -p "SERIAL_PORT_EXAMPLE_H" -b 115200"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("p", "port", "<str>", "Serial port to connect to, else retry the last used one"),
+        arg_u64_0("b", "baud", "<dec>", "Baudrate"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    char port[FILE_PATH_SIZE] = {0};
+    int p_len = sizeof(port) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated;
+    CLIGetStrWithReturn(ctx, 1, (uint8_t *)port, &p_len);
+    uint32_t baudrate = arg_get_u32_def(ctx, 2, USART_BAUD_RATE);
+    CLIParserFree(ctx);
+
+    if (baudrate == 0) {
+        PrintAndLogEx(WARNING, "Baudrate can't be zero");
+        return PM3_EINVARG;
+    }
+
+    // default back to previous used serial port
+    if (strlen(port) == 0) {
+        if (strlen(g_conn.serial_port_name) == 0) {
+            PrintAndLogEx(WARNING, "Must specify a serial port");
+            return PM3_EINVARG;
+        }
+        memcpy(port, g_conn.serial_port_name, sizeof(port));
+    }
+
+    if (g_session.pm3_present) {
+        CloseProxmark(g_session.current_device);
+    }
+
+    // 10 second timeout
+    OpenProxmark(&g_session.current_device, port, false, 10, false, baudrate);
+
+    if (g_session.pm3_present && (TestProxmark(g_session.current_device) != PM3_SUCCESS)) {
+        PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark3\n");
+        CloseProxmark(g_session.current_device);
+        return PM3_ENOTTY;
+    }
+    return PM3_SUCCESS;
+}
+
+static int CmdBreak(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw break",
+                  "send break loop package",
+                  "hw break\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    clearCommandBuffer();
+    SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+    return PM3_SUCCESS;
+}
+
+static int CmdBootloader(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bootloader",
+                  "Reboot Proxmark3 into bootloader mode",
+                  "hw bootloader\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    clearCommandBuffer();
+    flash_reboot_bootloader(g_conn.serial_port_name, false);
+    return PM3_SUCCESS;
+}
+
+int set_fpga_mode(uint8_t mode) {
+    if (mode < FPGA_BITSTREAM_MIN || mode > FPGA_BITSTREAM_MAX) {
+        return PM3_EINVARG;
+    }
+    uint8_t d[] = {mode};
+    clearCommandBuffer();
+    SendCommandNG(CMD_SET_FPGAMODE, d, sizeof(d));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_SET_FPGAMODE, &resp, 1000) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to set FPGA mode");
+    }
+    return resp.status;
+}
+
+static int CmdPM5Ant(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw ant_pm5",
+                  "Control the antennal of pm5",
+                  "hw ant_pm5 --set <u8_data>         -> Write the data of IO data register\n"
+                  "hw ant_pm5 -m --set <u8_data>      -> Write the data of IO map register\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("m", "map", "Write the IO map register"),
+        arg_u64_0("s", "set", "<u8_data>", "Set PM5 antenna"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool rw_map = arg_get_lit(ctx, 1);
+    uint64_t io = arg_get_u64_def(ctx, 2, -1);
+    CLIParserFree(ctx);
+
+    PacketResponseNG resp;
+
+    // Read the current value of the register before writing
+    struct {
+        uint8_t reg_type; // 0 is io reg, 1 is map reg.
+    } PACKED payload_read = {
+        .reg_type = rw_map ? 1 : 0,
+    };
+    clearCommandBuffer();
+    SendCommandNG(CMD_ANT_CONTROL_READ, (uint8_t *)&payload_read, sizeof(payload_read));
+    if (WaitForResponseTimeout(CMD_ANT_CONTROL_READ, &resp, 1000) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to read PM5 antenna register");
+        return resp.status;
+    }
+    PrintAndLogEx(INFO, "PM5 antenna register read: 0x%02X", resp.data.asBytes[0]);
+
+    // Write the new value to the register(If need)
+    if (io != (uint64_t) -1) {
+        struct {
+            uint8_t data;
+            uint8_t reg_type; // 0 is io reg, 1 is map reg.
+        } PACKED payload_write = {
+            .reg_type = rw_map ? 1 : 0,
+            .data = io & 0xFF,
+        };
+        clearCommandBuffer();
+        SendCommandNG(CMD_ANT_CONTROL_WRITE, (uint8_t *)&payload_write, sizeof(payload_write));
+        if (WaitForResponseTimeout(CMD_ANT_CONTROL_WRITE, &resp, 1000) == false) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
+        }
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "failed to write PM5 antenna register");
+            return resp.status;
+        }
+        PrintAndLogEx(INFO, "PM5 antenna register written: 0x%02X", payload_write.data);
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int CmdDeviceFactoryData(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw factorydata",
+                  "Get/Set the factory data for Device",
+                  "hw factorydata --load <file>           -> Write the factory data to device from file\n"
+                  "hw factorydata                         -> Read and parse the factory data from device\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "load", "<fn>", "Load factory data from file to device"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    CLIParserFree(ctx);
+
+    // Read the factory data from device
+    clearCommandBuffer();
+    SendCommandNG(CMD_EEPROM_FACTORY_INFO_READ, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_EEPROM_FACTORY_INFO_READ, &resp, 1000) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to read factory data, maybe eeprom unavailable.");
+        return resp.status;
+    }
+    // Parse the factory data
+    if (resp.length) {
+        proxmark5_factory_info_v1_t *factory = (proxmark5_factory_info_v1_t *)resp.data.asBytes;
+        PrintAndLogEx(INFO, "Factory data read from device:");
+        PrintAndLogEx(INFO, " - Data raw(hex)     : 0x%s", sprint_hex_inrow(resp.data.asBytes, resp.length));
+        PrintAndLogEx(INFO, " - Version           : %d", factory->factory_info_version);
+        PrintAndLogEx(INFO, " - Signature         : %s",
+                      sprint_hex_inrow(factory->ecdsa_secp256k1_signature, sizeof(factory->ecdsa_secp256k1_signature)));
+        PrintAndLogEx(INFO, " - Timestamp         : %" PRIu64, factory->info.unix_timestamp);
+        PrintAndLogEx(INFO, " - Chip Unique ID    : %s",
+                      sprint_hex_inrow(factory->info.chip_unique_id, sizeof(factory->info.chip_unique_id)));
+        PrintAndLogEx(INFO, " - Production ID     : %" PRIu32, factory->info.production_id);
+        PrintAndLogEx(INFO, " - Hardware Version  : %" PRIu32, factory->info.hardware_version);
+        PrintAndLogEx(INFO, " - AES key           : %s",
+                      sprint_hex_inrow(factory->info.aes_key, sizeof(factory->info.aes_key)));
+    }
+
+    // If data is provided, it needs to be written
+    if (fnlen) {
+        // Load the file content into data buffer
+        uint8_t *data = NULL;
+        size_t datalen = 0;
+        int res = loadFile_safe(filename, ".bin", (void **)&data, &datalen);
+        if (res != PM3_SUCCESS) {
+            free(data);
+            return PM3_EFILE;
+        }
+
+        if (datalen != resp.length) {
+            PrintAndLogEx(WARNING, _RED_("The length of the data to write (%zu) does not match the length "
+                                         "of the factory data read from device (%u)."), datalen, (unsigned int)resp.length);
+            free(data);
+            return PM3_EINVARG;
+        }
+        // Write the data to the device
+        clearCommandBuffer();
+        SendCommandNG(CMD_EEPROM_FACTORY_INFO_WRITE, data, datalen);
+        PacketResponseNG resp_write;
+        if (WaitForResponseTimeout(CMD_EEPROM_FACTORY_INFO_WRITE, &resp_write, 1000) == false) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            free(data);
+            return PM3_ETIMEOUT;
+        }
+        if (resp_write.status != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "failed to write factory data, maybe eeprom unavailable.");
+            free(data);
+            return resp_write.status;
+        }
+        // Verify the data write
+        clearCommandBuffer();
+        SendCommandNG(CMD_EEPROM_FACTORY_INFO_READ, NULL, 0);
+        if (WaitForResponseTimeout(CMD_EEPROM_FACTORY_INFO_READ, &resp, 1000) == false) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            free(data);
+            return PM3_ETIMEOUT;
+        }
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "failed to read factory data after write, maybe eeprom unavailable.");
+            free(data);
+            return resp.status;
+        }
+        bool verify_result = false;
+        if (resp.length == datalen) {
+            verify_result = memcmp(resp.data.asBytes, data, datalen) == 0;
+        }
+        if (verify_result) {
+            PrintAndLogEx(SUCCESS, "Factory data written and verified successfully.");
+        } else {
+            PrintAndLogEx(ERR, "Factory data verification failed after write.");
+            free(data);
+            return PM3_EFAILED;
+        }
+        free(data);
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int CmdPM5QCTest(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw qc_pm5", "QC Test for the PM5",
+                  "hw qc_pm5             -> run QC test with default 20 second timeout\n"
+                  "hw qc_pm5 -t 3        -> run QC test with a 3 second timeout");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("t", "timeout", "<s>", "test sequence timeout in seconds (default 20)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t timeout_ms = arg_get_u32_def(ctx, 1, 20);
+    timeout_ms *= 1000;
+    CLIParserFree(ctx);
+
+    if (timeout_ms == 0) {
+        PrintAndLogEx(ERR, "timeout must be greater than zero");
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(INFO, "Performing QC test for the PM5...");
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_QC_TEST, (uint8_t *)&timeout_ms, sizeof(timeout_ms));
+
+    PacketResponseNG resp;
+    // wait a bit longer than the device side sequence timeout, with headroom for RTC drift
+    if (WaitForResponseTimeout(CMD_PM5_QC_TEST, &resp, timeout_ms + (timeout_ms / 5) + 1000) == false) {
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to perform QC test on PM5, failed item: %d", resp.data.asBytes[0]);
+        return resp.status;
+    }
+    PrintAndLogEx(INFO, "PM5 QC test successful.");
+    return PM3_SUCCESS;
+}
+
+// One full OTA attempt: BEGIN -> WRITE... -> END. The BWM OTA has no resume
+// (DEV.md 8.4): a dropped chunk can't be re-sent, so any failure here means the
+// caller must restart the whole thing.
+static int bwm_ota_once(const uint8_t *fw, size_t fwlen) {
+    PacketResponseNG resp;
+
+    // BEGIN: tell the BWM how many bytes are coming (it erases the target partition)
+    uint8_t beg[5] = { BWM_OTA_ACTION_BEGIN,
+                       (uint8_t)(fwlen & 0xFF),         (uint8_t)((fwlen >> 8) & 0xFF),
+                       (uint8_t)((fwlen >> 16) & 0xFF), (uint8_t)((fwlen >> 24) & 0xFF) };
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_ESP_OTA, beg, sizeof(beg));
+    if ((WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 20000) == false) || (resp.status != PM3_SUCCESS)) {
+        PrintAndLogEx(FAILED, "OTA begin failed (is a responsive BWM fitted?)");
+        return PM3_EFAILED;
+    }
+    PrintAndLogEx(INFO, "Uploading " _YELLOW_("%zu") " bytes of ESP firmware over the BWM link...", fwlen);
+
+    // WRITE chunks. Bounded by BWM_OTA_CHUNK_MAX (the ESP forwards each WRITE over
+    // its own small app_com UART frame - see bwm_wifi.c), not just the USB frame.
+    size_t maxchunk = MIN((size_t)g_conn.max_cmd_data_size - 1, (size_t)BWM_OTA_CHUNK_MAX);
+    uint8_t *buf = calloc(1, maxchunk + 1);
+    if (buf == NULL) {
+        return PM3_EMALLOC;
+    }
+    size_t sent = 0;
+    while (sent < fwlen) {
+        msleep(10);
+        size_t n = MIN(maxchunk, fwlen - sent);
+        buf[0] = BWM_OTA_ACTION_WRITE;
+        memcpy(buf + 1, fw + sent, n);
+        clearCommandBuffer();
+        SendCommandNG(CMD_PM5_BWM_ESP_OTA, buf, (uint16_t)(n + 1));
+        bool got = WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 15000);
+        if (!got || resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, "");
+            if (!got) {
+                PrintAndLogEx(WARNING, "OTA write stalled at offset %zu (no response)", sent);
+            } else {
+                PrintAndLogEx(WARNING, "OTA write rejected at offset %zu (status %d)", sent, resp.status);
+            }
+            free(buf);
+            return PM3_EFAILED;
+        }
+        sent += n;
+        print_progress(sent, fwlen, STYLE_MIXED);        ///// DEBUG TEST FOR USB timeout
+    }
+    free(buf);
+    printf("\n");
+    PrintAndLogEx(NORMAL, "");
+
+    // END: finalize + set the new boot partition
+    uint8_t end[1] = { BWM_OTA_ACTION_END };
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_ESP_OTA, end, sizeof(end));
+    bool got_end = WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 30000);
+    if (got_end && (resp.status == PM3_SUCCESS)) {
+        return PM3_SUCCESS;
+    }
+    if (got_end == false) {
+        // All data was sent and OTA_END was issued. esp_ota_end + set_boot_partition
+        // is slow, so its ack is easily lost even though the flash completed - this
+        // is the case that used to discard a finished image and restart. Signal
+        // "reached END, unconfirmed" so the caller verifies by version instead.
+        return PM3_ETIMEOUT;
+    }
+    PrintAndLogEx(WARNING, "OTA finalize rejected (status %d)", resp.status);
+    return PM3_EFAILED;
+}
+
+// Query the BWM's running firmware version string (APP_CMD_GET_VERSION_INFO).
+static int bwm_get_version(char *out, size_t outlen) {
+    uint8_t a[1] = { BWM_OTA_ACTION_VERSION };
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_ESP_OTA, a, sizeof(a));
+    PacketResponseNG r;
+    if ((WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &r, 5000) == false) || (r.status != PM3_SUCCESS)) {
+        return PM3_EFAILED;
+    }
+    uint16_t n = (r.length < (uint16_t)(outlen - 1)) ? r.length : (uint16_t)(outlen - 1);
+    memcpy(out, r.data.asBytes, n);
+    out[n] = 0;
+    return PM3_SUCCESS;
+}
+
+static int CmdBWMUpgrade(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwmupgrade",
+                  "Reflash the BWM (ESP32) firmware over the BWM link - no header, no soldering.\n"
+                  "Requires a BWM that still responds; this updates a wrong-version ESP, it cannot\n"
+                  "recover a fully bricked one (that still needs the 5-pin header + esptool).",
+                  "hw bwmupgrade -f bwm_esp32.bin");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "ESP32 firmware image (.bin)"),
+        arg_param_end,
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int fnlen = 0;
+    char fn[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)fn, sizeof(fn), &fnlen);
+    CLIParserFree(ctx);
+
+    if (fnlen == 0) {
+        PrintAndLogEx(FAILED, "no filename given");
+        return PM3_EINVARG;
+    }
+
+    uint8_t *fw = NULL;
+    size_t fwlen = 0;
+    if ((loadFile_safe(fn, "", (void **)&fw, &fwlen) != PM3_SUCCESS) || (fwlen == 0)) {
+        PrintAndLogEx(FAILED, "could not read " _YELLOW_("%s"), fn);
+        return PM3_EFILE;
+    }
+
+    // Safeguard: refuse to flash anything that is not an ESP32-C2 app image. The
+    // BWM ESP is an ESP32-C2; a wrong/other-chip image would brick it.
+    //   [0x00]       == 0xE9   -> ESP image magic
+    //   [0x0C..0x0D] == 0x000C -> chip_id ESP32-C2 (LE uint16)
+    if (fwlen < 16) {
+        PrintAndLogEx(FAILED, "file is too small to be an ESP firmware image (%zu bytes)", fwlen);
+        free(fw);
+        return PM3_EFILE;
+    }
+    if (fw[0] != 0xE9) {
+        PrintAndLogEx(FAILED, "refusing to flash: not an ESP image (magic " _YELLOW_("0x%02X") ", expected 0xE9)", fw[0]);
+        free(fw);
+        return PM3_EFILE;
+    }
+    uint16_t chip_id = (uint16_t)(fw[0x0C] | (fw[0x0D] << 8));
+    if (chip_id != 0x000C) {
+        PrintAndLogEx(FAILED, "refusing to flash: image chip_id " _YELLOW_("0x%04X") " is not ESP32-C2 (0x000C)", chip_id);
+        free(fw);
+        return PM3_EFILE;
+    }
+    
+    // Record the running version first, so we can confirm the update actually took
+    // even when the finalize ack is lost (the case that used to discard a completed
+    // flash and restart from scratch).
+    char ver_before[64] = {0};
+    bool have_before = (bwm_get_version(ver_before, sizeof(ver_before)) == PM3_SUCCESS);
+    if (have_before) {
+        PrintAndLogEx(INFO, "Current BWM firmware..... " _YELLOW_("%s"), ver_before);
+    }
+
+    // No resume (DEV.md 8.4): a chunk lost mid-transfer restarts the whole upload.
+    const int max_attempts = 3;
+    for (int attempt = 1; attempt <= max_attempts; attempt++) {
+        if (attempt > 1) {
+            PrintAndLogEx(INFO, "restarting OTA from the beginning (attempt " _YELLOW_("%d") "/%d)", attempt, max_attempts);
+        }
+        int res = bwm_ota_once(fw, fwlen);
+
+        // Failed during BEGIN/WRITE: image incomplete, restart the whole thing.
+        if ((res != PM3_SUCCESS) && (res != PM3_ETIMEOUT)) {
+            continue;
+        }
+
+        // Reached OTA_END (acked, or ack lost). The image is written and the boot
+        // partition is set - reboot into it and confirm by version.
+        if (res == PM3_ETIMEOUT) {
+            PrintAndLogEx(INFO, "finalize ack not seen - all data was sent, confirming by version...");
+        }
+        // The device's OTA_END handler already reboots the ESP into the new image
+        // (that is what drops the finalize ack over BLE). Just wait for it to come
+        // back and re-link, then confirm by version.
+        PrintAndLogEx(INFO, "BWM rebooting into the new image (link drops briefly)...");
+        msleep(10000);   // reboot + re-negotiate baud + re-link
+
+        char ver_after[64] = {0};
+        bool have_after = (bwm_get_version(ver_after, sizeof(ver_after)) == PM3_SUCCESS);
+
+        if (have_after && have_before) {
+            if (strncmp(ver_before, ver_after, sizeof(ver_before)) != 0) {
+                PrintAndLogEx(SUCCESS, "BWM firmware updated: %s -> " _YELLOW_("%s"), ver_before, ver_after);
+                free(fw);
+                return PM3_SUCCESS;
+            }
+            PrintAndLogEx(WARNING, "BWM still reports " _YELLOW_("%s") " - update did not take, retrying", ver_after);
+            continue;
+        }
+        if (have_after) {
+            PrintAndLogEx(SUCCESS, "BWM now running " _YELLOW_("%s"), ver_after);
+            free(fw);
+            return PM3_SUCCESS;
+        }
+        // Could not re-read the version (link dropped on reboot, common over BLE).
+        // All data was uploaded, so treat as done and let the user confirm.
+        PrintAndLogEx(WARNING, "Could not re-read BWM version after reboot (link dropped?)");
+        free(fw);
+        return PM3_SUCCESS;
+    }
+    free(fw);
+
+    // Exhausted retries without a confirmed update - restore the link and report.
+    PacketResponseNG resp;
+    uint8_t ab[1] = { BWM_OTA_ACTION_ABORT };
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_ESP_OTA, ab, sizeof(ab));
+    (void)WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 8000);
+    PrintAndLogEx(FAILED, "BWM firmware update could not be confirmed after %d attempts", max_attempts);
+    return PM3_EFAILED;
+}
+static command_t CommandTable[] = {
+    {"help", CmdHelp, AlwaysAvailable, "This help"},
+    {"-------------", CmdHelp, AlwaysAvailable, "----------------------- " _CYAN_("Operation") " -----------------------"},
+    {"detectreader", CmdDetectReader, IfPm3Present, "Detect external reader field"},
+    {"status", CmdStatus, IfPm3Present, "Show runtime status information about the connected Proxmark3"},
+    {"tearoff", CmdTearoff, IfPm3Present, "Program a tearoff hook for the next command supporting tearoff"},
+    {"timeout", CmdTimeout, AlwaysAvailable, "Set the communication timeout on the client side"},
+    {"version", CmdVersion, AlwaysAvailable, "Show version information about the client and Proxmark3"},
+    {"-------------", CmdHelp, AlwaysAvailable, "----------------------- " _CYAN_("Hardware") " -----------------------"},
+    {"break", CmdBreak, IfPm3Present, "Send break loop usb command"},
+    {"bootloader", CmdBootloader, IfPm3Present, "Reboot into bootloader mode"},
+    {"connect", CmdConnect, AlwaysAvailable, "Connect to the device via serial port"},
+    {"dbg", CmdDbg, IfPm3Present, "Set device side debug level"},
+    {"fpga", CmdFPGA, IfPm3Present, "Fpga commands"},
+    {"fpgaoff", CmdFPGAOff, IfPm3Present, "Turn off FPGA on device"},
+    {"ant_pm5", CmdPM5Ant, IfPm5StdAnt, "Control the antennal of pm5"},
+    {"qc_pm5", CmdPM5QCTest, IfPm5, "Perform QC test for the PM5"},
+    {"factorydata", CmdDeviceFactoryData, IfI2cEeprom, "Get/Set the factory data for Device"},
+    {"lcd", CmdLCD, IfPm3Lcd, "Send command/data to LCD"},
+    {"lcdreset", CmdLCDReset, IfPm3Lcd, "Hardware reset LCD"},
+    {"ping", CmdPing, IfPm3Present, "Test if the Proxmark3 is responsive"},
+    {"readmem", CmdReadmem, IfPm3Present, "Read from MCU flash"},
+    {"reset", CmdReset, IfPm3Present, "Reset the device"},
+    {"setlfdivisor", CmdSetDivisor, IfPm3Lf, "Drive LF antenna at 12MHz / (divisor + 1)"},
+    {"sethfthresh", CmdSetHFThreshold, IfPm3Iso14443a, "Set thresholds in HF/14a mode"},
+    {"setmux", CmdSetMux, IfPm3Present, "Set the ADC mux to a specific value"},
+    {"standalone", CmdStandalone, IfPm3Present, "Start installed standalone mode on device"},
+    {"tia", CmdTia, IfPm3Present, "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
+    {"bwmsetcap", CmdBwmSetCap, IfPm5, "Set BWM fuel-gauge design capacity (PM5, run once after battery change)"},
+    {"bwmvchg",   CmdBwmVchg,   IfPm5, "Set BWM charger charge-voltage target (PM5, default 4100 mV)"},
+    {"bwmcharge", CmdBwmCharge, IfPm5, "Enable/disable BWM battery charging (PM5, one-shot)"},
+    {"bwmautooff", CmdBwmAutoOff, IfPm5, "Toggle auto power-off on USB unplug (PM5, BWM)"},
+    {"bwmwifi", CmdBWMWifi, IfPm5, "Bring up BWM WiFi (STA + TCP server) for a tcp: connection (PM5)"},
+    {"bwmupgrade", CmdBWMUpgrade, IfPm5, "Reflash BWM (ESP32) firmware over the BWM link, no header (PM5)"},
+    {"tune", CmdTune, IfPm3Lf, "Measure tuning of device antenna"},
+    {"decay", CmdDecay, IfPm3Present, "Measure HF antenna decay after field-off"},
+    {NULL, NULL, NULL, NULL}
+};
+
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return PM3_SUCCESS;
+}
+
+int CmdHW(const char *Cmd) {
+    clearCommandBuffer();
+    return CmdsParse(CommandTable, Cmd);
+}
+
+#if defined(__MINGW64__)
+#define PM3CLIENTCOMPILER "MinGW-w64 "
+#elif defined(__MINGW32__)
+#define PM3CLIENTCOMPILER "MinGW "
+#elif defined(__clang__)
+#define PM3CLIENTCOMPILER "Clang/LLVM "
+#elif defined(__GNUC__) || defined(__GNUG__)
+#define PM3CLIENTCOMPILER "GCC "
+#else
+#define PM3CLIENTCOMPILER "unknown compiler "
+#endif
+
+#if defined(__APPLE__) || defined(__MACH__)
+#define PM3HOSTOS "OSX"
+#elif defined(__ANDROID__) || defined(ANDROID)
+// must be tested before __linux__
+#define PM3HOSTOS "Android"
+#elif defined(__linux__)
+#define PM3HOSTOS "Linux"
+#elif defined(__FreeBSD__)
+#define PM3HOSTOS "FreeBSD"
+#elif defined(__NetBSD__)
+#define PM3HOSTOS "NetBSD"
+#elif defined(__OpenBSD__)
+#define PM3HOSTOS "OpenBSD"
+#elif defined(__CYGWIN__)
+#define PM3HOSTOS "Cygwin"
+#elif defined(_WIN64) || defined(__WIN64__)
+// must be tested before _WIN32
+#define PM3HOSTOS "Windows (64b)"
+#elif defined(_WIN32) || defined(__WIN32__)
+#define PM3HOSTOS "Windows (32b)"
+#else
+#define PM3HOSTOS "unknown"
+#endif
+
+#if defined(__x86_64__)
+#define PM3HOSTARCH "x86_64"
+#elif defined(__i386__)
+#define PM3HOSTARCH "x86"
+#elif defined(__aarch64__)
+#define PM3HOSTARCH "aarch64"
+#elif defined(__arm__)
+#define PM3HOSTARCH "arm"
+#elif defined(__powerpc64__)
+#define PM3HOSTARCH "powerpc64"
+#elif defined(__mips__)
+#define PM3HOSTARCH "mips"
+#else
+#define PM3HOSTARCH "unknown"
+#endif
+
+void pm3_version_short(void) {
+    //    PrintAndLogEx(NORMAL, "  [ " _CYAN_("Proxmark3 RFID instrument") " ]");
+    if (IfPm5()) {
+        PrintAndLogEx(NORMAL, "  [ " _CYAN_(_URL_("https://github.com/RfidResearchGroup/proxmark3", "Proxmark5")) " ]");
+    } else {
+        PrintAndLogEx(NORMAL, "  [ " _CYAN_(_URL_("https://github.com/RfidResearchGroup/proxmark3", "Proxmark3")) " ]");
+    }
+    PrintAndLogEx(NORMAL, "");
+
+    if (g_session.pm3_present) {
+
+        PacketResponseNG resp;
+        clearCommandBuffer();
+        SendCommandNG(CMD_VERSION, NULL, 0);
+
+        if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
+
+            struct p {
+                uint32_t id;
+                uint32_t section_size;
+                uint32_t versionstr_len;
+                char versionstr[PM3_CMD_DATA_SIZE - 12];
+            } PACKED;
+
+            struct p *payload = (struct p *)&resp.data.asBytes;
+
+            // Flash size (bytes) is appended after the version string by newer
+            // firmware; 0 if the device didn't send it (older firmware).
+            uint32_t flash_size = 0;
+            if (resp.length >= 12 + payload->versionstr_len + sizeof(uint32_t)) {
+                memcpy(&flash_size, payload->versionstr + payload->versionstr_len, sizeof(flash_size));
+            }
+
+            lookup_chipid_short(payload->id, payload->section_size, flash_size);
+
+            if (IfPm5()) {
+                PrintAndLogEx(NORMAL, "    Target.... %s", _YELLOW_("PM5"));
+            } else if (IfPm3Rdv4Fw()) {
+
+                // validate signature data
+                rdv40_validation_t mem;
+                signature_e type;
+
+                if (pm3_get_signature(&mem) == PM3_SUCCESS) {
+                    if (pm3_validate(&mem, &type) == PM3_SUCCESS) {
+
+                        if (type == SIGN_RDV4) {
+                            PrintAndLogEx(NORMAL, "    Target.... %s", _YELLOW_("RDV4"));
+                        } else if (type == SIGN_GENERIC) {
+                            PrintAndLogEx(NORMAL, "    Target.... %s", _YELLOW_("GENERIC"));
+                        } else {
+                            PrintAndLogEx(NORMAL, "    Target.... %s", _RED_("device / fw mismatch"));
+                        }
+                    }
+                }
+            } else {
+                PrintAndLogEx(NORMAL, "    Target.... %s", _YELLOW_("PM3 GENERIC"));
+            }
+            PrintAndLogEx(NORMAL, "");
+
+            // client
+            char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
+            format_version_information_short(temp, sizeof(temp), &g_version_information);
+            PrintAndLogEx(NORMAL, "    Client.... %s", temp);
+
+            bool armsrc_mismatch = false;
+            char *ptr = strstr(payload->versionstr, "OS......... ");
+            if (ptr != NULL) {
+                ptr = strstr(ptr, "\n");
+                if ((ptr != NULL) && (strlen(g_version_information.armsrc) == 9)) {
+                    if (strncmp(ptr - 9, g_version_information.armsrc, 9) != 0) {
+                        armsrc_mismatch = true;
+                    }
+                }
+            }
+
+            // bootrom
+            ptr = strstr(payload->versionstr, "Bootrom.... ");
+            if (ptr != NULL) {
+                char *ptr_end = strstr(ptr, "\n");
+                if (ptr_end != NULL) {
+                    uint8_t len = ptr_end - 12 - ptr;
+                    PrintAndLogEx(NORMAL, "    Bootrom... %.*s", len, ptr + 12);
+                }
+            }
+
+            // os:
+            ptr = strstr(payload->versionstr, "OS......... ");
+            if (ptr != NULL) {
+                char *ptr_end = strstr(ptr, "\n");
+                if (ptr_end != NULL) {
+                    uint8_t len = ptr_end - 12 - ptr;
+                    PrintAndLogEx(NORMAL, "    OS........ %.*s", len, ptr + 12);
+                }
+            }
+            PrintAndLogEx(NORMAL, "");
+
+            if (armsrc_mismatch) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(WARNING, " --> " _RED_("ARM firmware does not match the source at the time the client was compiled"));
+                PrintAndLogEx(WARNING, " --> Make sure to flash a correct and up-to-date version");
+            }
+        }
+    }
+    PrintAndLogEx(NORMAL, "");
+}
+
+void pm3_version(bool verbose, bool oneliner) {
+
+    char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
+
+    if (oneliner) {
+        // For "proxmark3 -v", simple printf, avoid logging
+        FormatVersionInformation(temp, sizeof(temp), "Client: ", &g_version_information);
+        PrintAndLogEx(NORMAL, "%s compiler: " PM3CLIENTCOMPILER __VERSION__ " OS:" PM3HOSTOS " ARCH:" PM3HOSTARCH "\n", temp);
+        return;
+    }
+
+    if (!verbose) {
+        return;
+    }
+
+    PrintAndLogEx(NORMAL, "\n [ " _CYAN_("%s") " ]", IfPm5() ? "Proxmark5" : "Proxmark3");
+    PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Client") " ]");
+    FormatVersionInformation(temp, sizeof(temp), "  ", &g_version_information);
+    PrintAndLogEx(NORMAL, "%s", temp);
+    PrintAndLogEx(NORMAL, "  Compiler.................. " PM3CLIENTCOMPILER __VERSION__);
+    PrintAndLogEx(NORMAL, "  Platform.................. " PM3HOSTOS " / " PM3HOSTARCH);
+#if defined(HAVE_READLINE)
+    PrintAndLogEx(NORMAL, "  Readline support.......... " _GREEN_("present"));
+#elif defined(HAVE_LINENOISE)
+    PrintAndLogEx(NORMAL, "  Linenoise support......... " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  Readline/Linenoise support." _YELLOW_("absent"));
+#endif
+#ifdef HAVE_GUI
+    PrintAndLogEx(NORMAL, "  QT GUI support............ " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  QT GUI support............ " _YELLOW_("absent"));
+#endif
+#ifdef HAVE_BLUEZ
+    PrintAndLogEx(NORMAL, "  Native BT support......... " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  Native BT support......... " _YELLOW_("absent"));
+#endif
+
+#ifdef HAVE_PYTHON
+#ifndef PY_VERSION
+#define PY_VERSION "unknown version"
+#endif
+    PrintAndLogEx(NORMAL, "  Python script support..... " _GREEN_("present") " ( " _YELLOW_(PY_VERSION) " )");
+#else
+    PrintAndLogEx(NORMAL, "  Python script support..... " _YELLOW_("absent"));
+#endif
+#ifdef HAVE_PYTHON_SWIG
+    PrintAndLogEx(NORMAL, "  Python SWIG support....... " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  Python SWIG support....... " _YELLOW_("absent"));
+#endif
+    PrintAndLogEx(NORMAL, "  Lua script support........ " _GREEN_("present") " ( " _YELLOW_("%s.%s.%s") " )", LUA_VERSION_MAJOR, LUA_VERSION_MINOR, LUA_VERSION_RELEASE);
+#ifdef HAVE_LUA_SWIG
+    PrintAndLogEx(NORMAL, "  Lua SWIG support.......... " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  Lua SWIG support.......... " _YELLOW_("absent"));
+#endif
+
+    if (g_session.pm3_present) {
+        PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Model") " ]");
+
+        PacketResponseNG resp;
+        clearCommandBuffer();
+        SendCommandNG(CMD_VERSION, NULL, 0);
+
+        if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
+            if (IfPm5()) {
+                PrintAndLogEx(NORMAL, "  Firmware.................. " _GREEN_("PM5"));
+                PrintAndLogEx(NORMAL, "  External flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
+            } else if (IfPm3Rdv4Fw()) {
+
+                // validate signature data
+                rdv40_validation_t mem;
+                signature_e type;
+
+                if (pm3_get_signature(&mem) == PM3_SUCCESS) {
+                    if (pm3_validate(&mem, &type) == PM3_SUCCESS) {
+
+                        if (type == SIGN_RDV4) {
+                            PrintAndLogEx(NORMAL, "  Device.................... " _GREEN_("RDV4"));
+                            PrintAndLogEx(NORMAL, "  Firmware.................. " _GREEN_("RDV4"));
+                        } else if (type == SIGN_GENERIC) {
+                            PrintAndLogEx(NORMAL, "  Device.................... ", _GREEN_("GENERIC"));
+                            PrintAndLogEx(NORMAL, "  Firmware.................. ", _GREEN_("GENERIC"));
+                        } else {
+                            PrintAndLogEx(NORMAL, "  Device.................... " _RED_("Bad signature detected!"));
+                            PrintAndLogEx(NORMAL, "  Firmware.................. " _YELLOW_("N/A"));
+                        }
+                    }
+                }
+
+                PrintAndLogEx(NORMAL, "  External flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
+                PrintAndLogEx(NORMAL, "  Smartcard reader.......... %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
+                PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
+            } else {
+                PrintAndLogEx(NORMAL, "  Firmware.................. %s", _YELLOW_("PM3 GENERIC"));
+                if (IfPm3Flash()) {
+                    PrintAndLogEx(NORMAL, "  External flash............ %s", _GREEN_("present"));
+                }
+
+                if (IfPm3FpcUsartHost()) {
+                    PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", _GREEN_("present"));
+                }
+            }
+
+            if (IfPm3FpcUsartDevFromUsb()) {
+                PrintAndLogEx(NORMAL, "  FPC USART for developer... %s", _GREEN_("present"));
+            }
+
+            PrintAndLogEx(NORMAL, "");
+
+            struct p {
+                uint32_t id;
+                uint32_t section_size;
+                uint32_t versionstr_len;
+                char versionstr[PM3_CMD_DATA_SIZE - 12];
+            } PACKED;
+
+            struct p *payload = (struct p *)&resp.data.asBytes;
+
+            bool armsrc_mismatch = false;
+            char *ptr = strstr(payload->versionstr, "OS......... ");
+            if (ptr != NULL) {
+                ptr = strstr(ptr, "\n");
+                if ((ptr != NULL) && (strlen(g_version_information.armsrc) == 9)) {
+                    if (strncmp(ptr - 9, g_version_information.armsrc, 9) != 0) {
+                        armsrc_mismatch = true;
+                    }
+                }
+            }
+            PrintAndLogEx(NORMAL, payload->versionstr);
+            // PM5 doesn't report a built-in FPGA version (Gowin bitstream is loaded
+            // externally), so skip the Xilinx FPGA_TYPE match check for it.
+            if (!IfPm5() && strstr(payload->versionstr, FPGA_TYPE) == NULL) {
+                PrintAndLogEx(NORMAL, "  FPGA firmware... %s", _RED_("chip mismatch"));
+            }
+
+            // Flash size (bytes) is appended after the version string by newer
+            // firmware; 0 if the device didn't send it (older firmware).
+            uint32_t flash_size = 0;
+            if (resp.length >= 12 + payload->versionstr_len + sizeof(uint32_t)) {
+                memcpy(&flash_size, payload->versionstr + payload->versionstr_len, sizeof(flash_size));
+            }
+
+            lookupChipID(payload->id, payload->section_size, flash_size);
+
+            // Get unique id of mainchip
+            clearCommandBuffer();
+            SendCommandNG(CMD_MAIN_CHIP_UNIQUEID, NULL, 0);
+            if (WaitForResponseTimeout(CMD_MAIN_CHIP_UNIQUEID, &resp, 1000)) {
+                if (resp.length) { // Some processor maybe no unique id.
+                    char *uniqueid_hex = sprint_hex_inrow(resp.data.asBytes, resp.length);
+                    PrintAndLogEx(NORMAL, "  --= Processor Unique ID: " _YELLOW_("0x%s"), uniqueid_hex);
+                }
+            }
+
+            if (armsrc_mismatch) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(WARNING, _RED_("ARM firmware does not match the source at the time the client was compiled"));
+                PrintAndLogEx(WARNING, "Make sure to flash a correct and up-to-date version");
+            }
+        }
+    }
+    PrintAndLogEx(NORMAL, "");
 }
