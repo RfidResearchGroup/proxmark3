@@ -523,26 +523,17 @@ endif(NOT SKIPREADLINE EQUAL 1)
 
 if (BZIP2_FOUND)
     set(ADDITIONAL_DIRS ${BZIP2_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
-    if (MINGW)
-        set(BZIP2_LIBRARIES /mingw64/lib/libbz2.a)
-    endif()
     set(ADDITIONAL_LNK ${BZIP2_LIBRARIES} ${ADDITIONAL_LNK})
 endif (BZIP2_FOUND)
 
 if (LZ4_FOUND)
     set(ADDITIONAL_DIRS ${LZ4_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
-    if (MINGW)
-        set(LZ4_LIBRARIES /mingw64/lib/liblz4.a)
-    endif()
     set(ADDITIONAL_LNK ${LZ4_LIBRARIES} ${ADDITIONAL_LNK})
 endif (LZ4_FOUND)
 
 if (ZLIB_FOUND)
     add_definitions("-DHAVE_ZLIB")
     set(ADDITIONAL_DIRS ${ZLIB_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
-    if (MINGW)
-        set(ZLIB_LIBRARIES /mingw64/lib/libz.a)
-    endif()
     set(ADDITIONAL_LNK ${ZLIB_LIBRARIES} ${ADDITIONAL_LNK})
 endif (ZLIB_FOUND)
 
@@ -715,25 +706,19 @@ add_library(pm3rrg_rdv4_static STATIC
         ${ADDITIONAL_SRC}
 )
 
-add_executable(kgh_tools
-        ${PM3_ROOT}/client/experimental_lib/example_c/legic_migrate_tool.c
-)
-
-set_target_properties(kgh_tools PROPERTIES OUTPUT_NAME "kgh_tools")
-if (MINGW)
-    target_link_options(kgh_tools PRIVATE -static -static-libgcc)
-endif()
-
-target_link_libraries(kgh_tools PRIVATE pm3rrg_rdv4_static)
-target_include_directories(kgh_tools PRIVATE
-        ${PM3_ROOT}/common
-        ${PM3_ROOT}/client/include
-        ${PM3_ROOT}/client/src
-        ${PM3_ROOT}/include
-)
-
-target_compile_definitions(pm3rrg_rdv4 PRIVATE LIBPM3)
-target_compile_definitions(pm3rrg_rdv4_static PRIVATE LIBPM3)
+set(PM3_LIBRARY_TARGETS pm3rrg_rdv4 pm3rrg_rdv4_static)
+foreach (target IN LISTS PM3_LIBRARY_TARGETS)
+    target_compile_definitions(${target} PRIVATE LIBPM3)
+    target_compile_options(${target} PUBLIC -Wall -Werror -O3)
+    target_include_directories(${target} PRIVATE
+            ${PM3_ROOT}/common
+            ${PM3_ROOT}/common_fpga
+            ${PM3_ROOT}/include
+            ${PM3_ROOT}/client/src
+            ${PM3_ROOT}/client/include
+            ${ADDITIONAL_DIRS}
+    )
+endforeach()
 
 if (UNIX AND NOT APPLE)
     # Fail the build if a client source file is missing from TARGET_SOURCES.
@@ -741,18 +726,22 @@ if (UNIX AND NOT APPLE)
     set_property(TARGET pm3rrg_rdv4 APPEND_STRING PROPERTY LINK_FLAGS " -Wl,--no-undefined")
 endif()
 
-target_compile_options(pm3rrg_rdv4 PUBLIC -Wall -Werror -O3)
-target_compile_options(pm3rrg_rdv4_static PUBLIC -Wall -Werror -O3)
 if (EMBED_READLINE)
     if (NOT SKIPREADLINE EQUAL 1)
-        add_dependencies(pm3rrg_rdv4 ncurses readline)
+        foreach (target IN LISTS PM3_LIBRARY_TARGETS)
+            add_dependencies(${target} ncurses readline)
+        endforeach()
     endif (NOT SKIPREADLINE EQUAL 1)
 endif (EMBED_READLINE)
 if (EMBED_BZIP2)
-    add_dependencies(pm3rrg_rdv4 bzip2)
+    foreach (target IN LISTS PM3_LIBRARY_TARGETS)
+        add_dependencies(${target} bzip2)
+    endforeach()
 endif (EMBED_BZIP2)
 if (EMBED_LZ4)
-    add_dependencies(pm3rrg_rdv4 lz4)
+    foreach (target IN LISTS PM3_LIBRARY_TARGETS)
+        add_dependencies(${target} lz4)
+    endforeach()
 endif (EMBED_LZ4)
 
 if (MINGW)
@@ -760,7 +749,9 @@ if (MINGW)
     # and setting _ISOC99_SOURCE sets internally __USE_MINGW_ANSI_STDIO=1
     # FTR __USE_MINGW_ANSI_STDIO seems deprecated in Mingw32
     # but not Mingw64 https://fr.osdn.net/projects/mingw/lists/archive/users/2019-January/000199.html
-    target_compile_definitions(pm3rrg_rdv4 PRIVATE _ISOC99_SOURCE)
+    foreach (target IN LISTS PM3_LIBRARY_TARGETS)
+        target_compile_definitions(${target} PRIVATE _ISOC99_SOURCE)
+    endforeach()
 
     set(CMAKE_C_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_CXX_FLAGS}")
@@ -768,24 +759,6 @@ if (MINGW)
     # link Winsock2
     set(ADDITIONAL_LNK ws2_32 ${ADDITIONAL_LNK})
 endif (MINGW)
-
-target_include_directories(pm3rrg_rdv4 PRIVATE
-        ${PM3_ROOT}/common
-        ${PM3_ROOT}/common_fpga
-        ${PM3_ROOT}/include
-        ${PM3_ROOT}/client/src
-        ${PM3_ROOT}/client/include
-        ${ADDITIONAL_DIRS}
-)
-
-target_include_directories(pm3rrg_rdv4_static PRIVATE
-        ${PM3_ROOT}/common
-        ${PM3_ROOT}/common_fpga
-        ${PM3_ROOT}/include
-        ${PM3_ROOT}/client/src
-        ${PM3_ROOT}/client/include
-        ${ADDITIONAL_DIRS}
-)
 
 if (NOT APPLE)
     # required for Raspberry Pi, but breaks with clang (OSX). Need to be at the end of the linker line.
@@ -810,37 +783,26 @@ if (NOT WHEREAMI_FOUND)
     set(ADDITIONAL_LNK pm3rrg_rdv4_whereami ${ADDITIONAL_LNK})
 endif (NOT WHEREAMI_FOUND)
 
-target_link_libraries(pm3rrg_rdv4 PRIVATE
-        m
-        pm3rrg_rdv4_mbedtls
-        pm3rrg_rdv4_cliparser
-        pm3rrg_rdv4_lua
-        pm3rrg_rdv4_tinycbor
-        pm3rrg_rdv4_amiibo
-        pm3rrg_rdv4_reveng
-        pm3rrg_rdv4_hardnested
-        pm3rrg_rdv4_id48
-        pm3rrg_rdv4_mqtt
-        pm3rrg_rdv4_vec
-        ${ADDITIONAL_LNK})
-
-target_link_libraries(pm3rrg_rdv4_static PRIVATE
-        m
-        pm3rrg_rdv4_mbedtls
-        pm3rrg_rdv4_cliparser
-        pm3rrg_rdv4_lua
-        pm3rrg_rdv4_tinycbor
-        pm3rrg_rdv4_amiibo
-        pm3rrg_rdv4_reveng
-        pm3rrg_rdv4_hardnested
-        pm3rrg_rdv4_id48
-        pm3rrg_rdv4_mqtt
-        pm3rrg_rdv4_vec
-        ${ADDITIONAL_LNK})
+foreach (target IN LISTS PM3_LIBRARY_TARGETS)
+    target_link_libraries(${target} PRIVATE
+            m
+            pm3rrg_rdv4_mbedtls
+            pm3rrg_rdv4_cliparser
+            pm3rrg_rdv4_lua
+            pm3rrg_rdv4_tinycbor
+            pm3rrg_rdv4_amiibo
+            pm3rrg_rdv4_reveng
+            pm3rrg_rdv4_hardnested
+            pm3rrg_rdv4_id48
+            pm3rrg_rdv4_mqtt
+            pm3rrg_rdv4_vec
+            ${ADDITIONAL_LNK})
+endforeach()
 
 if (NOT SKIPPTHREAD EQUAL 1)
-    target_link_libraries(pm3rrg_rdv4 PRIVATE pthread)
-    target_link_libraries(pm3rrg_rdv4_static PRIVATE pthread)
+    foreach (target IN LISTS PM3_LIBRARY_TARGETS)
+        target_link_libraries(${target} PRIVATE pthread)
+    endforeach()
 endif (NOT SKIPPTHREAD EQUAL 1)
 
 if (NOT SKIPPYTHON EQUAL 1)
@@ -852,4 +814,6 @@ if (NOT SKIPPYTHON EQUAL 1)
     endif (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
 endif (NOT SKIPPYTHON EQUAL 1)
 
-target_link_directories(pm3rrg_rdv4 PRIVATE ${ADDITIONAL_LNKDIRS})
+foreach (target IN LISTS PM3_LIBRARY_TARGETS)
+    target_link_directories(${target} PRIVATE ${ADDITIONAL_LNKDIRS})
+endforeach()

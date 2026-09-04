@@ -1,3 +1,19 @@
+//-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -238,6 +254,14 @@ static void free_legic_read_result(legic_read_result_t *res) {
     memset(&res->card, 0, sizeof(res->card));
 }
 
+static bool is_kgh_card(const uint8_t *dump, uint16_t len) {
+    return len >= sizeof(k_legic_template_head) &&
+           dump[5] == 0x60 && dump[6] == 0xEA &&
+           dump[7] == 0x9F && dump[8] == 0xFF &&
+           dump[22] == 0x0D && dump[23] == 0xC0 &&
+           dump[24] == 0x08 && dump[25] == 0x00;
+}
+
 static const char *classify_legic_card(const uint8_t *dump, uint16_t len) {
     if (len < 9) {
         return "unknown";
@@ -252,7 +276,7 @@ static const char *classify_legic_card(const uint8_t *dump, uint16_t len) {
         return "IAM";
     }
 
-    if ((dump[7] & 0x0F) == 0x0F && dump[8] == 0xFF) {
+    if (is_kgh_card(dump, len)) {
         return "KGH";
     }
 
@@ -519,7 +543,11 @@ static int read_badge_from_card(uint32_t *badge_out) {
         dump[i] ^= crc;
     }
 
-    bool ok = decode_badge_bcd(&dump[31], badge_out);
+    bool is_kgh = is_kgh_card(dump, datalen);
+    bool ok = is_kgh && decode_badge_bcd(&dump[31], badge_out);
+    if (!is_kgh) {
+        fprintf(stderr, "not a supported KGH card\n");
+    }
     free(dump);
     g_printAndLog = prev_print;
     return ok ? 0 : 1;
@@ -563,7 +591,7 @@ int main(int argc, char *argv[]) {
         legic_read_result_t res;
         if (read_legic_dump(&res, verbose)) {
             uint8_t stamp[4] = {0};
-            if (extract_stamp(res.dump, res.len, stamp)) {
+            if (is_kgh_card(res.dump, res.len) && extract_stamp(res.dump, res.len, stamp)) {
                 if (has_output) {
                     if (save_stamp_file(output_file, stamp)) {
                         rc = EXIT_SUCCESS;
@@ -574,6 +602,8 @@ int main(int argc, char *argv[]) {
                     printf("%02X%02X%02X%02X\n", stamp[0], stamp[1], stamp[2], stamp[3]);
                     rc = EXIT_SUCCESS;
                 }
+            } else {
+                fprintf(stderr, "not a supported KGH card\n");
             }
             free_legic_read_result(&res);
         } else if (verbose) {
@@ -614,7 +644,7 @@ int main(int argc, char *argv[]) {
 
             uint8_t dump[35] = {0};
             build_migration_dump(badge, stamp, dump, sizeof(dump));
-            if (legic_migrate_dump(dump, sizeof(dump), true, (const uint8_t[2]){0x60, 0xEA}, true) == PM3_SUCCESS) {
+            if (legic_migrate_dump(dump, sizeof(dump), true, (const uint8_t[2]) {0x60, 0xEA}, true) == PM3_SUCCESS) {
                 rc = EXIT_SUCCESS;
             } else {
                 fprintf(stderr, "failed to write card\n");
