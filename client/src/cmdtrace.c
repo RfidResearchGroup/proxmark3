@@ -1099,18 +1099,14 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
                 if (j == 0) {
 
-                    // only apply this to lesser than one byte
+                    // Bit count goes in the Bit column, same as the frame above.
+                    // One leading space so the hex lines up under "Data".
                     if (n == 1) {
-                        snprintf(line[0], 120, "%2u: %02X  ", nbits, ht2plain[0] >> (8 - nbits));
+                        snprintf(line[0], 120, " %02X  ", ht2plain[0] >> (8 - nbits));
                     } else {
-
-                        if (nbits == 0) {
-                            snprintf(line[0], 120, "%2u: %02X  ", (uint16_t)(n * 8), ht2plain[0]);
-                        } else {
-                            snprintf(line[0], 120, "%2u: %02X  ", (uint16_t)(((n - 1) * 8) + nbits), ht2plain[0]);
-                        }
+                        snprintf(line[0], 120, " %02X  ", ht2plain[0]);
                     }
-                    offset = 4;
+                    offset = 1;
 
                 } else {
                     snprintf(line[j / 18] + ((j % 18) * 4) + offset, 120, "%02X  ", ht2plain[j]);
@@ -1119,18 +1115,28 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
             num_lines = MIN((n - 1) / TRACE_MAX_HEX_BYTES + 1, TRACE_MAX_HEX_BYTES);
 
+            char plain_nbits[8] = {0};
+            if (n == 1) {
+                snprintf(plain_nbits, sizeof(plain_nbits), "%3u ", nbits);
+            } else if (nbits == 0) {
+                snprintf(plain_nbits, sizeof(plain_nbits), "%3u ", (uint16_t)(n * 8));
+            } else {
+                snprintf(plain_nbits, sizeof(plain_nbits), "%3u ", (uint16_t)(((n - 1) * 8) + nbits));
+            }
+
             for (int j = 0; j < num_lines ; j++) {
+                bool last = (j == num_lines - 1);
                 if (hdr->isResponse) {
-                    PrintAndLogEx(NORMAL, "            |            |  *  |%-*s | %-4s| %s",
+                    PrintAndLogEx(NORMAL, "            |            |  *  |%-*s | %s| %s",
                                   str_padder,
                                   line[j],
-                                  "    ",
+                                  (last) ? plain_nbits : "    ",
                                   explanation);
                 } else {
                     PrintAndLogEx(NORMAL, "            |            |  *  |" _YELLOW_("%-*s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
                                   str_padder,
                                   line[j],
-                                  "    ",
+                                  (last) ? plain_nbits : "    ",
                                   explanation);
                 }
 

@@ -362,16 +362,16 @@ static void htu_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_t *
 /*
  * Simulates a Hitag µ Tag with the given data
  */
-void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, bool ledcontrol) {
+void htu_simulate(int8_t threshold, bool ledcontrol) {
 
     uint8_t rx[HITAG_FRAME_LEN] = {0};
     size_t rxlen = 0;
     uint8_t tx[HITAG_FRAME_LEN] = {0};
     size_t txlen = 0;
 
-    // Free any allocated BigBuf memory
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
+    // keep emulator memory, that is where eload put the tag content
+    BigBuf_free_keep_EM();
+    BigBuf_Clear_keep_EM();
 
     DbpString("Starting Hitag µ simulation");
 
@@ -380,13 +380,24 @@ void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
     tag.max_page = 64;  // Default maximum page
     RESET_AUTHENTICATION();
 
-    // Read tag data into memory if supplied
-    if (tag_mem_supplied) {
-        DbpString("Loading Hitag µ memory...");
-        // First 6 bytes are the UID (48 bits)
-        memcpy(tag.uid, data, 6);
-        // Rest is page data
-        memcpy(tag.data.pages, data + 6, sizeof(tag.data.pages));
+    // Take the tag content from emulator memory, where `lf hitag eload -m` put it:
+    // UID first, then the pages.  The old inline path copied UID + 1024 bytes out
+    // of the command payload, which is more than an NG frame can ever carry.
+    uint8_t *em = BigBuf_get_EM_addr();
+    bool em_empty = true;
+    for (size_t i = 0; i < HITAGU_UID_SIZE + sizeof(tag.data.pages); i++) {
+        if (em[i] != 0) {
+            em_empty = false;
+            break;
+        }
+    }
+
+    if (em_empty) {
+        DbpString("Emulator memory is empty, simulating the last read tag");
+    } else {
+        DbpString("Loading Hitag u memory from emulator memory...");
+        memcpy(tag.uid, em, HITAGU_UID_SIZE);
+        memcpy(tag.data.pages, em + HITAGU_UID_SIZE, sizeof(tag.data.pages));
     }
 
     // Update max_page based on configuration
@@ -459,8 +470,8 @@ void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
     }
 
     hitag_cleanup(ledcontrol);
-    // Release allocated memory from BigBuf
-    BigBuf_free();
+    // release BigBuf, but keep emulator memory for eview / esave
+    BigBuf_free_keep_EM();
 
     DbpString("Simulation stopped");
 }

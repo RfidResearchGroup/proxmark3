@@ -107,6 +107,22 @@
 #define FPGA_LF_EDGE_DETECT_READER_FIELD            ( 1 )
 #define FPGA_LF_EDGE_DETECT_TOGGLE_MODE             ( 2 )
 
+// Modulate the coil on the 10k leg alone instead of the 33 Ohm one, for a
+// shallower tag answer.  Understood by LF_EDGE_DETECT and LF_ADC.
+#define FPGA_LF_WEAK_LOAD                           ( 4 )
+
+// Hold the envelope follower while the tag simulator is modulating, so its own
+// answer does not drag the slicing levels away from the reader's signal.
+#define FPGA_LF_EDGE_DETECT_HOLD_TRACKER            ( 8 )
+
+// Let the edge detector keep working on a small tracked span, so a reader frame
+// riding on a recovering envelope is still sliced instead of being ignored.
+#define FPGA_LF_EDGE_DETECT_SENSITIVE               ( 16 )
+
+// Detect edges from the slope of the signal rather than from a level, so a frame
+// riding on a recovering envelope is still resolved.
+#define FPGA_LF_EDGE_DETECT_SLOPE                   ( 32 )
+
 // Options for the generic HF reader
 #define FPGA_HF_READER_MODE_RECEIVE_IQ              ( 0 )
 #define FPGA_HF_READER_MODE_RECEIVE_AMPLITUDE       ( 1 )

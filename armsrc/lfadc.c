@@ -22,6 +22,7 @@
 #include "ticks_apis.h"
 #include "fpga_apis.h"
 #include "dbprint.h"
+#include "commonutil.h"   // ARRAYLEN
 #include "appmain.h"
 
 // Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
@@ -66,6 +67,13 @@ bool lf_test_periods(size_t expected, size_t count) {
 //////////////////////////////////////////////////////////////////////////////
 static uint8_t previous_adc_val = 0; // 0xFF;
 static uint8_t adc_avg = 0;
+// The same average, kept as the raw sum of 32 samples (i.e. avg scaled by 32).
+// adc_avg alone is truncated to whole ADC counts, so a threshold built from it
+// cannot be placed finer than one count - which is why LIMIT_DEV could not be
+// lowered without the edge detector chattering on quantisation noise.
+static uint32_t adc_avg_q5 = 0;
+
+#define LIMIT_DEV_Q5_REPORT  (20 * 32)
 static uint8_t adc_max;
 static uint8_t adc_min;
 
@@ -87,19 +95,34 @@ void lf_sample_mean(void) {
             periods++;
         }
     }
+    adc_avg_q5 = adc_sum;   // avg * 32, no rounding thrown away
     adc_avg = adc_sum >> 5; // division by 32
     previous_adc_val = adc_avg;
-    DBG Dbprintf("LF ADC average %u, max %u, min %u, diff %u", adc_avg, adc_max, adc_min, adc_max - adc_min);
+    DBG Dbprintf("LF ADC average %u, max %u, min %u, diff %u  (threshold is +/-%u counts)",
+             adc_avg, adc_max, adc_min, adc_max - adc_min, (unsigned)(LIMIT_DEV_Q5_REPORT / 32));
 }
 
 static size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
-#define LIMIT_DEV  20
+// Deviation from the mean that counts as an edge, in 1/32 ADC counts, so the
+// threshold is no longer stuck on whole ADC counts the way adc_avg + LIMIT_DEV
+// was.  20 counts is the long standing value and is kept here (20 * 32).
+//
+// Measured, in case it is tempting to lower it: a Proxmark simulating a Hitag 2
+// tag modulates only about 2 counts deep, where a genuine fob clears 20 at the
+// same position.  Dropping to 6 gained nothing, and 2 only made the detector
+// trigger on noise and decode UID FFFFFFFF.  The simulator's dip is the problem,
+// not this threshold.
+// Measured: lowering this from 20 to 10, to let a simulating Proxmark answer
+// shallower and so recover faster, stops the reader reading anything at all -
+// 0 of 3 UID reads at every modulation duty.  The existing note below already
+// said 6 gained nothing and 2 triggered on noise; 10 is past the edge too.
+#define LIMIT_DEV_Q5  (20 * 32)
 
     // timeout limit to 100 000 w/o
     uint32_t timeout = 100000;
     size_t periods = 0;
-    uint8_t avg_peak = adc_avg + LIMIT_DEV;
-    uint8_t avg_through = adc_avg - LIMIT_DEV;
+    uint32_t avg_peak_q5 = adc_avg_q5 + LIMIT_DEV_Q5;
+    uint32_t avg_through_q5 = (adc_avg_q5 > LIMIT_DEV_Q5) ? (adc_avg_q5 - LIMIT_DEV_Q5) : 0;
 
     while (BUTTON_PRESS() == false) {
         WDT_HIT();
@@ -123,6 +146,7 @@ static size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
         timeout = 100000; // reset timeout
         volatile uint8_t adc_val = FPGA_SSC_RX_Value(); // Get current adc value.
 
+
         if (g_logging) {
             logSampleSimple(adc_val);
         }
@@ -138,24 +162,24 @@ static size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
             } else {
                 if (g_edge_mode == LF_ADC_WAV_REVERSED) {
                     if (rising_edge) {
-                        if ((previous_adc_val > avg_peak) && (adc_val <= previous_adc_val)) {
+                        if ((((uint32_t)previous_adc_val << 5) > avg_peak_q5) && (adc_val <= previous_adc_val)) {
                             rising_edge = false;
                             return periods;
                         }
                     } else {
-                        if ((previous_adc_val < avg_through) && (adc_val >= previous_adc_val)) {
+                        if ((((uint32_t)previous_adc_val << 5) < avg_through_q5) && (adc_val >= previous_adc_val)) {
                             rising_edge = true;
                             return periods;
                         }
                     }
                 } else if (g_edge_mode == LF_ADC_NOT_REVERSED) {
                     if (rising_edge) {
-                        if (adc_val <= adc_avg && adc_val <= avg_through) {
+                        if ((((uint32_t)adc_val << 5) <= adc_avg_q5) && (((uint32_t)adc_val << 5) <= avg_through_q5)) {
                             rising_edge = false;
                             return periods;
                         }
                     } else {
-                        if (adc_val >= avg_peak) {
+                        if (((uint32_t)adc_val << 5) >= avg_peak_q5) {
                             rising_edge = true;
                             return periods;
                         }
@@ -273,6 +297,7 @@ void lf_init(lf_adc_init_mode_t init_mode, lf_adc_edge_mode_t edge_mode, bool le
 }
 
 void lf_finalize(bool ledcontrol) {
+
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     if (ledcontrol) LEDsoff();
 }

@@ -14,6 +14,7 @@ TESTMFHIDENCODE=false
 TESTICLASSREADER=false
 TESTSMARTCARD=false
 TESTICLASSEMU=false
+TESTHITAG2=false
 NEED_MF_HID_ENCODE_WIPE=false
 TESTMANUAL=false
 
@@ -23,7 +24,7 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--pm3bin /path/to/pm3] [--pm3port /dev/tty...] [desfire_value|hid_wiegand|mf_hid_encode|iclass_emu|iclass_reader]
+Usage: $0 [--pm3bin /path/to/pm3] [--pm3port /dev/tty...] [desfire_value|hid_wiegand|mf_hid_encode|iclass_emu|iclass_reader|hitag2]
     --pm3bin ...:    Specify path to pm3 binary to test
     --pm3port ...:   Specify serial port for client/proxmark3
     --manual ...:    Pause after successful online LF HID clone/read checks for external reader verification
@@ -33,6 +34,7 @@ Usage: $0 [--pm3bin /path/to/pm3] [--pm3port /dev/tty...] [desfire_value|hid_wie
     iclass_emu:      Test iCLASS emulator memory load/write/read flows
     iclass_reader:   Load iCLASS HID credentials into emulator memory for external reader verification
     smartcard:       Test the RDV4 SIM module and an ISO 7816 contact card
+    hitag2:          Test Hitag 2 against a genuine card and a genuine reader
     You must specify a test target - no default 'all' for online tests
 """
       exit 0
@@ -89,6 +91,11 @@ Usage: $0 [--pm3bin /path/to/pm3] [--pm3port /dev/tty...] [desfire_value|hid_wie
       TESTICLASSEMU=true
       shift
       ;;
+    hitag2)
+      TESTALL=false
+      TESTHITAG2=true
+      shift
+      ;;
     -*|--*=) # unsupported flags
       echo "Error: Unsupported flag $1" >&2
       exit 1
@@ -101,6 +108,8 @@ Usage: $0 [--pm3bin /path/to/pm3] [--pm3port /dev/tty...] [desfire_value|hid_wie
 done
 # set positional arguments in their proper place
 eval set -- "$PARAMS"
+
+HITAG2_DUMP="${HITAG2_DUMP:-traces/lf-hitag-CE129911-dump.bin}"
 
 C_RED='\033[0;31m'
 C_GREEN='\033[0;32m'
@@ -348,12 +357,27 @@ function CheckMfHidEncodeCleanup() {
 function WaitForEnter() {
   echo ""
   echo "$1"
-  echo "Press Enter when ready, or Ctrl-C to abort."
-  if [ -r /dev/tty ]; then
+
+  # Only prompt when there is really a terminal to prompt on.
+  #
+  # `[ -r /dev/tty ]` is not that test: the node can exist and be readable by
+  # mode bits while the process has no controlling terminal, and the redirect
+  # then fails with "No such device or address" and the run carries on with the
+  # rig unconfirmed.  Opening it is the only reliable check.
+  if [ -n "${PM3_ONLINE_NOPROMPT:-}" ]; then
+    echo "PM3_ONLINE_NOPROMPT set - assuming the rig is ready."
+    return
+  fi
+
+  if (exec < /dev/tty) 2>/dev/null; then
+    echo "Press Enter when ready, or Ctrl-C to abort."
     stty sane < /dev/tty 2>/dev/null || true
     IFS= read -r < /dev/tty
+  elif [ -t 0 ]; then
+    echo "Press Enter when ready, or Ctrl-C to abort."
+    IFS= read -r
   else
-    read -r
+    echo "No terminal to prompt on - assuming the rig is ready."
   fi
 }
 
@@ -372,7 +396,7 @@ if command -v git >/dev/null && git rev-parse --is-inside-work-tree >/dev/null 2
 fi
 
 # Check that user specified a test
-if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHIDWIEGAND" = false ] && [ "$TESTMFHIDENCODE" = false ] && [ "$TESTICLASSEMU" = false ] && [ "$TESTICLASSREADER" = false ] && [ "$TESTSMARTCARD" = false ]; then
+if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHIDWIEGAND" = false ] && [ "$TESTMFHIDENCODE" = false ] && [ "$TESTICLASSEMU" = false ] && [ "$TESTICLASSREADER" = false ] && [ "$TESTSMARTCARD" = false ] && [ "$TESTHITAG2" = false ]; then
   echo "Error: You must specify a test target. Use -h for help."
   exit 1
 fi
@@ -447,6 +471,50 @@ while true; do
       if ! CheckExecute "hf 15 uid sim resets emu state" "timeout 15 $PM3CMD -c 'hf 15 sim -u E011223344556677 -t 100; hf 15 eview' 2>&1 | LC_ALL=C tr -cd '\11\12\15\40-\176' | tr '\n' ' '" "UID.*E0 11 22 33 44 55 66 77.*4 bytes / blocks x 64 blocks"; then break; fi
     fi
 
+    # Hitag 2, against a genuine card and a genuine reader.
+    #
+    # The card is a password mode Hitag 2 (configuration byte 0x06).  Its UID and
+    # password are read from the card itself rather than hardcoded, so the tests
+    # work with whatever fob is on the bench; only the ones that need a known
+    # password use HITAG2_KEY, which defaults to the Paxton fob this was developed
+    # against and can be overridden from the environment.
+    if $TESTHITAG2; then
+      echo -e "\n${C_BLUE}Testing Hitag 2 with a genuine card and reader${C_NC} ${PM3BIN:=./pm3}"
+      if ! CheckFileExist "pm3 exists"                "$PM3BIN"; then break; fi
+      PM3CMD="$PM3BIN"
+      if [ -n "${PM3PORT:-}" ]; then
+        echo "Using PM3 port: $PM3PORT"
+        PM3CMD="$PM3CMD -p $PM3PORT"
+      fi
+      HITAG2_KEY="${HITAG2_KEY:-BDF5E846}"
+
+      WaitForEnter "PLACE THE GENUINE HITAG 2 CARD ON THE PM3 LF ANTENNA"
+
+      # Reading the card: identification, then a full password mode dump.  The
+      # config byte has to come back as a Hitag 2 in password mode, and every one
+      # of the eight pages has to be present - a partial dump is the failure this
+      # is here to catch, since one lost frame used to end the read early.
+      if ! CheckExecute "lf hitag info genuine card" "$PM3CMD -c 'lf hitag info' 2>&1 | LC_ALL=C tr -cd '\11\12\15\40-\176' | tr '\n' ' '" "UID.*Password mode.*Hitag 2"; then break; fi
+      if ! CheckExecute "lf hitag read genuine card" "$PM3CMD -c 'lf hitag read -2 --pwd -k $HITAG2_KEY' 2>&1 | LC_ALL=C tr -cd '\11\12\15\40-\176' | tr '\n' ' '" "0/0x00.*1/0x01.*2/0x02.*3/0x03.*4/0x04.*5/0x05.*6/0x06.*7/0x07"; then break; fi
+
+      # Writing: put a known value in page 4 and read it back.  Page 4 is the
+      # first user page, so this does not touch the UID, the key or the config.
+      if ! CheckExecute "lf hitag wrbl genuine card"  "$PM3CMD -c 'lf hitag wrbl -2 -k $HITAG2_KEY -p 4 -d 11223344' 2>&1" "Write \( ok \)"; then break; fi
+      if ! CheckExecute "lf hitag write readback"     "$PM3CMD -c 'lf hitag read -2 --pwd -k $HITAG2_KEY' 2>&1 | LC_ALL=C tr -cd '\11\12\15\40-\176' | tr '\n' ' '" "4/0x04 \| 11 22 33 44"; then break; fi
+
+      # Sniffing a genuine exchange.  Both directions have to appear: the reader's
+      # START_AUTH and password, and the tag's answers.  A capture with reader
+      # frames but no tag frames is the defect this catches - the tag side decoder
+      # used to fabricate rows with no card present and miss real ones.
+      WaitForEnter "PUT THE PM3 BETWEEN THE GENUINE CARD AND THE GENUINE READER, THEN PRESS ENTER. PRESS ENTER AGAIN IN THE CLIENT TO STOP THE SNIFF"
+      if ! CheckExecute "lf hitag sniff genuine pair" "$PM3CMD -c 'lf hitag sniff; lf hitag list' 2>&1 | LC_ALL=C tr -cd '\11\12\15\40-\176' | tr '\n' ' '" "Rdr.*START AUTH.*Tag.*32:"; then break; fi
+
+      # Simulating to a genuine reader.  Only the operator can confirm the reader
+      # actually accepted it, so this asks - the client cannot see the beep.
+      WaitForEnter "REMOVE THE CARD, PRESENT THE PM3 TO THE GENUINE READER. THE SIM RUNS FOR 20s - LISTEN FOR THE READER TO BEEP, THEN PRESS ENTER"
+      if ! CheckExecute "lf hitag sim to reader"      "timeout 30 $PM3CMD -c 'lf hitag eload -f $HITAG2_DUMP -2; lf hitag sim -2' 2>&1 | LC_ALL=C tr -cd '\11\12\15\40-\176' | tr '\n' ' '" "Starting Hitag 2 simulation"; then break; fi
+      WaitForEnter "DID THE READER BEEP / ACCEPT THE SIMULATED CARD? PRESS ENTER IF YES, CTRL-C IF NO"
+    fi
     if $TESTICLASSREADER; then
       echo -e "\n${C_BLUE}Testing iCLASS reader verification${C_NC} ${PM3BIN:=./pm3}"
       if ! CheckFileExist "pm3 exists"               "$PM3BIN"; then break; fi

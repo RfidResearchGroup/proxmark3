@@ -22,7 +22,7 @@
 #include "common.h"
 #include "hitag.h"
 
-void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, bool ledcontrol);
+void htu_simulate(int8_t threshold, bool ledcontrol);
 void htu_read(const lf_hitag_data_t *payload, bool ledcontrol);
 void htu_write_page(const lf_hitag_data_t *payload, bool ledcontrol);
 int htu_read_uid(uint64_t *uid, bool ledcontrol, bool send_answer);

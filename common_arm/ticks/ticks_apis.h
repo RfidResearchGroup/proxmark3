@@ -72,10 +72,24 @@ void WaitMS(uint32_t ms);
 // -------------------------------------------------------------------------
 
 // Free-running precision counter @ 1.5 MHz (12 counts = 1 T0 = 8 us).
-void     StartPrecisionCounter(void);   // configure + start + reset
+//
+// The counter is never stopped or zeroed while a session is running.  It is
+// 16 bit, so it wraps every 43.7 ms, and every reading here is a difference:
+// unsigned 16 bit subtraction gives the right answer straight across a wrap, for
+// any interval shorter than a full turn of the counter.
+//
+// ResetPrecisionCounter() therefore only moves the reference the plain
+// GetPrecisionCounter() is measured from; it does not touch the hardware.  That
+// keeps all the "time since the last mark" call sites reading the same as
+// before, without a software trigger whose effect has to be waited for - waiting
+// for the counter to read exactly zero could step over the window and then sit
+// out a whole 43.7 ms wrap before zero came round again.
+void     StartPrecisionCounter(void);   // configure + start
 void     StopPrecisionCounter(void);
-void     ResetPrecisionCounter(void);   // software reset to 0
-uint16_t RAMFUNC GetPrecisionCounter(void); // current count (16-bit)
+void     ResetPrecisionCounter(void);   // mark a new reference point
+uint16_t RAMFUNC GetPrecisionCounter(void);      // ticks since that reference
+uint16_t RAMFUNC GetPrecisionCounterRaw(void);   // the free running counter itself
+uint16_t RAMFUNC GetPrecisionCounterDelta(uint16_t start); // ticks since `start`
 
 // Input capture(LF_EDGE_DETECT): rising/falling edges of an external signal.
 void      StartLoEdgeCapture(void);       // configure + start + reset
