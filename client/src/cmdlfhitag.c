@@ -820,7 +820,7 @@ static const char *identify_transponder_hitag2(uint32_t uid) {
     return "";
 }
 
-static bool ht2_get_uid(uint32_t *uid) {
+static bool ht2_get_uid(uint32_t *uid, bool verbose) {
 
     lf_hitag_data_t packet;
     memset(&packet, 0, sizeof(packet));
@@ -830,7 +830,10 @@ static bool ht2_get_uid(uint32_t *uid) {
     SendCommandNG(CMD_LF_HITAG_READER, (uint8_t *) &packet, sizeof(packet));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_LF_HITAG_READER, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        if (verbose) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        }
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         return false;
     }
 
@@ -902,8 +905,6 @@ static int CmdLFHitagInfo(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, userkey, &ukeylen);
     CLIParserFree(ctx);
 
-    // The length picks the mode, so a wrong one is worth catching here rather
-    // than sending it and reporting a puzzling authentication failure.
     if ((ukeylen != 0) && (ukeylen != HITAG_PASSWORD_SIZE) && (ukeylen != HITAG_CRYPTOKEY_SIZE)) {
         PrintAndLogEx(ERR, "Key must be %u bytes (password) or %u bytes (crypto), got %i",
                       HITAG_PASSWORD_SIZE, HITAG_CRYPTOKEY_SIZE, ukeylen);
@@ -912,22 +913,11 @@ static int CmdLFHitagInfo(const char *Cmd) {
 
     // read UID
     uint32_t uid = 0;
-    if (ht2_get_uid(&uid) == false) {
+    if (ht2_get_uid(&uid, true) == false) {
         return PM3_ESOFT;
     }
-    // Read the configuration byte instead of guessing it.
-    //
-    // This used to print a hardcoded 0x06, so every tag was reported as
-    // "Password mode" whatever it actually was - a crypto mode card sitting on
-    // the antenna was described as password mode, which is worse than saying
-    // nothing.  The configuration lives in page 3 and page 3 needs
-    // authentication, so try the two factory defaults and report what comes
-    // back; if neither opens the tag, say the mode is unknown rather than
-    // inventing one, and point at the command whose job searching actually is.
-    //
-    // Deliberately only the two factory values: running the dictionary here was
-    // tried and removed.  `info` should be quick and answer from the tag itself,
-    // and a key search is what `lf hitag chk` exists for.
+    // Read the configuration byte may need password or key.
+    // Check only the two factory values
     static const uint8_t default_pwd[HITAG_PASSWORD_SIZE] = {0x4D, 0x49, 0x4B, 0x52};                    // "MIKR"
     static const uint8_t default_key[HITAG_CRYPTOKEY_SIZE] = {0x4F, 0x4E, 0x4D, 0x49, 0x4B, 0x52};       // "ONMIKR"
 
@@ -1006,10 +996,15 @@ static int CmdLFHitagReader(const char *Cmd) {
     do {
         // read UID
         uint32_t uid = 0;
-        if (ht2_get_uid(&uid)) {
+        if (ht2_get_uid(&uid, (cm == false))) {
             PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%08X"), uid);
         }
     } while (cm && (kbd_enter_pressed() == false));
+
+    // Stop the device before returning.
+    if (cm) {
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+    }
 
     return PM3_SUCCESS;
 }
@@ -1610,10 +1605,7 @@ static int CmdLFHitag2Restore(const char *Cmd) {
 
     free(dump);
 
-    // Report the credential the tag wants NOW, which follows the configuration
-    // just written - not the one used to get in.  Restoring a crypto dump onto a
-    // password tag changes which of the two applies, and getting this wrong locks
-    // the operator out of a tag they just wrote.
+    // report back which key/pwd was just set
     PrintAndLogEx(NORMAL, "");
     if ((new_cfg & 0x08) != 0) {
         PrintAndLogEx(SUCCESS, "Tag is in " _GREEN_("Crypto") " mode");
@@ -2861,7 +2853,7 @@ static int CmdLFHitag2Selftest(const char *Cmd) {
 
 int ht2_read_uid(void) {
     uint32_t uid = 0;
-    if (ht2_get_uid(&uid) == false) {
+    if (ht2_get_uid(&uid, true) == false) {
         return PM3_ESOFT;
     }
 
