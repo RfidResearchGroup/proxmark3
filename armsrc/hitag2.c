@@ -3258,8 +3258,6 @@ static uint32_t g_ht2_per_n;
 static void ht2_normalise_head(uint8_t *nrz_samples, size_t *nrzs);
 
 void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
-    uint32_t d_txreal[4] = {0}, d_txnom[4] = {0}, d_txbits[4] = {0};
-    uint8_t d_txn = 0;
     uint32_t d_norx = 0, d_nodec = 0;
     uint16_t d_lastn = 0;
 
@@ -3435,24 +3433,7 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
     int16_t checked = 0;
     uint32_t signal_size = 10000;
 
-    // TEMP INSTRUMENT: how long one pass of this loop actually takes, so the USB
-    // poll interval below can be argued from a measurement rather than a guess.
-    uint32_t d_iter = 0, d_max = 0;
-    uint16_t d_t0 = GetPrecisionCounterRaw(), d_prev = 0;
-
     while (bStop == false && BUTTON_PRESS() == false) {
-
-        {
-            uint16_t now = GetPrecisionCounterRaw();
-            if (d_iter != 0) {
-                uint32_t dt = (uint16_t)(now - d_prev) / T0;
-                if (dt > d_max) {
-                    d_max = dt;
-                }
-            }
-            d_prev = now;
-            d_iter++;
-        }
 
         // use malloc
         initSampleBufferEx(&signal_size, true);
@@ -3525,21 +3506,7 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
         }
 
         // Transmit the reader frame
-        // TEMP INSTRUMENT: how long the frame really took, against the nominal
-        // count hitag2_reader_send_frame() returns.  The bit loop waits on ADC
-        // sample counts, so if it is running slow it misses samples and each
-        // "period" costs more real time - which stretches the frame on the air.
-        {
-            uint16_t t_tx = GetPrecisionCounterRaw();
-            command_duration = hitag2_reader_send_frame(tx, txlen);
-            uint32_t real = (uint16_t)(GetPrecisionCounterRaw() - t_tx) / T0;
-            if (d_txn < 4) {
-                d_txreal[d_txn] = real;
-                d_txnom[d_txn] = command_duration;
-                d_txbits[d_txn] = txlen;
-                d_txn++;
-            }
-        }
+        command_duration = hitag2_reader_send_frame(tx, txlen);
         response_start = command_start + command_duration;
 
         // Let the antenna and ADC values settle
@@ -3662,12 +3629,6 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
 out:
 
     DBG Dbprintf("RXFAIL no_signal=%u undecodable=%u last_samples=%u", d_norx, d_nodec, d_lastn);
-    DBG for (uint8_t i = 0; i < d_txn; i++) {
-        Dbprintf("TXFRAME %u bits: real=%u T0 nominal=%u T0", d_txbits[i], d_txreal[i], d_txnom[i]);
-    }
-
-    DBG Dbprintf("RDRLOOP passes=%u span=%u T0 max_pass=%u T0",
-                 d_iter, (unsigned)((uint16_t)(GetPrecisionCounterRaw() - d_t0) / T0), d_max);
 
     StopTimestamp();
     lf_finalize(ledcontrol);
@@ -3688,8 +3649,6 @@ out:
 }
 
 void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
-    uint32_t d_txreal[4] = {0}, d_txnom[4] = {0}, d_txbits[4] = {0};
-    uint8_t d_txn = 0;
     // TEMP INSTRUMENT: why an answer was not taken.  d_noans counts silent
     // windows, d_badn the decodes that failed and d_badnrz their sample counts.
     uint16_t d_noans = 0, d_badn = 0, d_badnrz[6] = {0}, d_badraw[6] = {0};
@@ -3872,21 +3831,7 @@ void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
         }
 
         // Transmit the reader frame
-        // TEMP INSTRUMENT: how long the frame really took, against the nominal
-        // count hitag2_reader_send_frame() returns.  The bit loop waits on ADC
-        // sample counts, so if it is running slow it misses samples and each
-        // "period" costs more real time - which stretches the frame on the air.
-        {
-            uint16_t t_tx = GetPrecisionCounterRaw();
-            command_duration = hitag2_reader_send_frame(tx, txlen);
-            uint32_t real = (uint16_t)(GetPrecisionCounterRaw() - t_tx) / T0;
-            if (d_txn < 4) {
-                d_txreal[d_txn] = real;
-                d_txnom[d_txn] = command_duration;
-                d_txbits[d_txn] = txlen;
-                d_txn++;
-            }
-        }
+        command_duration = hitag2_reader_send_frame(tx, txlen);
 
         // global write state variable used
         // tearoff occurred
@@ -4015,9 +3960,6 @@ void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
     }
 
 out:
-    DBG for (uint8_t i = 0; i < d_txn; i++) {
-        Dbprintf("TXFRAME %u bits: real=%u T0 nominal=%u T0", d_txbits[i], d_txreal[i], d_txnom[i]);
-    }
     if (d_badpern) {
         DBG Dbprintf("WRXPER %u %u %u %u %u %u %u %u %u %u %u %u",
                  d_badper[0], d_badper[1], d_badper[2], d_badper[3],
