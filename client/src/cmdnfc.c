@@ -392,7 +392,7 @@ static int CmdNFCType2Write(const char *Cmd) {
 }
 
 static int CmdNFCType2Format(const char *Cmd) {
-    return CmdHF14AMfUFormat(Cmd);
+    return CmdHF14MfuNDEFFormat(Cmd);
 }
 
 static int CmdNFCType2Help(const char *Cmd);
