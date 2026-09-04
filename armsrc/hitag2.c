@@ -2204,12 +2204,12 @@ void SimulateHitag2(uint8_t threshold, uint16_t twait, uint8_t flags, uint8_t so
     if ((slope != 0) && (threshold == 0)) {
         active_threshold = HITAG2_SIM_THRESHOLD;
         FpgaSendCommand(FPGA_CMD_SET_EDGE_DETECT_THRESHOLD, active_threshold);
-        Dbprintf("Slope detect threshold %u", active_threshold);
+        DBG Dbprintf("Slope detect threshold %u", active_threshold);
     } else if (threshold == 0) {
         uint8_t tuned = hitag_autotune_threshold();
         FpgaSendCommand(FPGA_CMD_SET_EDGE_DETECT_THRESHOLD, tuned);
         active_threshold = tuned;
-        Dbprintf("Edge detect threshold auto-tuned to %u", tuned);
+        DBG Dbprintf("Edge detect threshold auto-tuned to %u", tuned);
     }
 
     // hitag_setup_fpga() uses gpio_fpga_mod_only_setup(), which claims SSC_DOUT
@@ -2239,7 +2239,7 @@ void SimulateHitag2(uint8_t threshold, uint16_t twait, uint8_t flags, uint8_t so
     // bits is the post-answer threshold dropping the last edges, and it is the
     // difference between a reader that authenticates and one that gives up.
     uint32_t d_auth64 = 0, d_auth_short = 0, d_pwd_ok = 0, d_read_ok = 0;
-    uint32_t d_thr_steps = 0, d_post_steps = 0, d_post_eval = 0;
+    uint32_t d_post_eval = 0;
     uint8_t d_span = 0;
     bool thr_measured = false;
     uint8_t d_p50 = 0, d_p90 = 0, d_p99 = 0, d_pmax = 0;
@@ -2357,7 +2357,7 @@ void SimulateHitag2(uint8_t threshold, uint16_t twait, uint8_t flags, uint8_t so
         // by 3-4 counts) while a toggling one produces a large swing.  EM410x sim
         // toggles, and swings the same reader's ADC rail to rail from this coil,
         // so this shows whether our toggling is comparable.
-        DbpString("Hitag 2: toggling coil load at RF/32 (diagnostic)");
+        DBG DbpString("Hitag 2: toggling coil load at RF/32 (diagnostic)");
         while ((BUTTON_PRESS() == false) && (data_available() == false)) {
             WDT_HIT();
             for (uint32_t half = 0; half < HITAG_T_TAG_HALF_PERIOD; half++) {
@@ -2564,7 +2564,6 @@ void SimulateHitag2(uint8_t threshold, uint16_t twait, uint8_t flags, uint8_t so
                 // signal that is not there yet.
                 post_idx = (post_idx + 1) % ARRAYLEN(post_cand);
                 post_thr = post_cand[post_idx];
-                d_post_steps++;
             }
             if (threshold == 0) {
                 FpgaSendCommand(FPGA_CMD_SET_EDGE_DETECT_THRESHOLD, active_threshold);
@@ -2975,7 +2974,6 @@ meas_done:
                         }
                         active_threshold = thr_cand[thr_idx];
                         FpgaSendCommand(FPGA_CMD_SET_EDGE_DETECT_THRESHOLD, active_threshold);
-                        d_thr_steps++;
                     }
 
                     thr_seen = 0;
@@ -3185,10 +3183,10 @@ hitag_tag_send_frame_mc4k_sync(tx, txlen, sof_bits, ledcontrol);
         ResetLoEdgeCapture();
     }
 
-    Dbprintf("LISTEN blocks=%u adc_valid=%u flags=%u", d_listen5, s_adc_valid, flags);
+    DBG Dbprintf("LISTEN blocks=%u adc_valid=%u flags=%u", d_listen5, s_adc_valid, flags);
 
     if (s_adc_valid) {
-        for (uint32_t k = 0; k < ADCSNAP; k += 8) {
+        DBG for (uint32_t k = 0; k < ADCSNAP; k += 8) {
             Dbprintf("  env[%u] %u-%u %u-%u %u-%u %u-%u %u-%u %u-%u %u-%u %u-%u",
                      k * 16,
                      s_adc_mn[k],     s_adc_mx[k],     s_adc_mn[k + 1], s_adc_mx[k + 1],
@@ -3198,7 +3196,7 @@ hitag_tag_send_frame_mc4k_sync(tx, txlen, sof_bits, ledcontrol);
         }
     }
 
-    for (uint8_t i = 0; i < s_nsnap; i++) {
+    DBG for (uint8_t i = 0; i < s_nsnap; i++) {
         Dbprintf("SNAP%u wait=%u txdur=%u rearm=%u gap=%u rxlen=%u edges=%u skip=%u clk300=%u",
                  i, s_wait[i], s_txdur[i], s_rearm[i], s_gap[i], s_rxl[i], s_ivn[i], s_skip[i], s_clk[i]);
         // The first two exchanges: the START_AUTH the threshold locked on, and the
@@ -3625,7 +3623,7 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
             d_nodec++;
             d_lastn = (uint16_t)nrzs;
             if (d_nodec == 1) {
-                for (uint32_t k = 0; (k + 9) < g_ht2_per_n; k += 10) {
+                DBG for (uint32_t k = 0; (k + 9) < g_ht2_per_n; k += 10) {
                     Dbprintf("PER[%2u] %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u", k,
                              g_ht2_per[k], g_ht2_per[k+1], g_ht2_per[k+2], g_ht2_per[k+3], g_ht2_per[k+4],
                              g_ht2_per[k+5], g_ht2_per[k+6], g_ht2_per[k+7], g_ht2_per[k+8], g_ht2_per[k+9]);
@@ -3664,7 +3662,7 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
 out:
 
     DBG Dbprintf("RXFAIL no_signal=%u undecodable=%u last_samples=%u", d_norx, d_nodec, d_lastn);
-    for (uint8_t i = 0; i < d_txn; i++) {
+    DBG for (uint8_t i = 0; i < d_txn; i++) {
         Dbprintf("TXFRAME %u bits: real=%u T0 nominal=%u T0", d_txbits[i], d_txreal[i], d_txnom[i]);
     }
 
@@ -4017,7 +4015,7 @@ void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
     }
 
 out:
-    for (uint8_t i = 0; i < d_txn; i++) {
+    DBG for (uint8_t i = 0; i < d_txn; i++) {
         Dbprintf("TXFRAME %u bits: real=%u T0 nominal=%u T0", d_txbits[i], d_txreal[i], d_txnom[i]);
     }
     if (d_badpern) {
