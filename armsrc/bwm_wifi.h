@@ -77,7 +77,7 @@ int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out);
 #define BWM_CMD_REBOOT      1803
 // Run the OTA at a slow, reliable baud (restored to the fast rate at end/abort).
 #ifndef BWM_OTA_BAUD
-#define BWM_OTA_BAUD   115200
+#define BWM_OTA_BAUD   921600
 #endif
 #define BWM_CMD_GET_VERSION_INFO   1000   // resp: running firmware version string
 int bwm_esp_get_version(uint8_t *buf, uint16_t *buflen);
