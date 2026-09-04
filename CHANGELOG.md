@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `lf hitag` - refactoring hitag2 operations and now they work much better (@iceman1001)
 - Fixed `lf hitag list` - now prints in same style like the rest (@iceman1001)
 - Changed pathing - client now supports `~/` tilde sign in paths (@iceman1001)
 - Added `hf_legic_rdv4` - Standalone mode for managing 7 persistent legic dumps (@digitalhoax)

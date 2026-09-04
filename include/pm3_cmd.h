@@ -483,8 +483,11 @@ typedef struct {
 // CMD_LF_HITAGS_SIMULATE / CMD_LF_HITAGU_SIMULATE payload
 typedef struct {
     uint8_t tag_mem_supplied;
-    uint8_t rfu;
+    uint8_t flags;              // bit0: invert load modulation polarity
     uint16_t threshold;
+    uint16_t twait;             // tag response delay in T0, 0 = firmware default
+    uint8_t sof;                // SOF bits in the tag answer, 0 = firmware default (5)
+    uint8_t duty;               // carrier periods loaded per half bit, 0 = firmware default (16)
     uint8_t data[];
 } PACKED hitag_sim_t;
 

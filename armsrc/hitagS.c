@@ -371,28 +371,39 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
 /*
  * Emulates a Hitag S Tag with the given data from the .hts file
  */
-void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, bool ledcontrol) {
+void hts_simulate(int8_t threshold, bool ledcontrol) {
     int overflow = 0;
     uint8_t rx[HITAG_FRAME_LEN] = {0};
     size_t rxlen = 0;
     uint8_t tx[HITAG_FRAME_LEN];
     size_t txlen = 0;
 
-    // free eventually allocated BigBuf memory
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
+    // keep emulator memory, that is where eload put the tag content
+    BigBuf_free_keep_EM();
+    BigBuf_Clear_keep_EM();
 
     DbpString("Starting Hitag S simulation");
 
     tag.pstate = HT_READY;
     tag.tstate = HT_NO_OP;
 
-    // read tag data into memory
-    if (tag_mem_supplied) {
-        DbpString("Loading hitag S memory...");
-        memcpy(tag.data.pages, data, HITAGS_MAX_BYTE_SIZE);
+    // Take the tag content from emulator memory, where `lf hitag eload -s` put
+    // it.  An all-zero emulator memory means nothing was loaded, so keep whatever
+    // the last read left behind rather than simulating a tag of all zeroes.
+    uint8_t *em = BigBuf_get_EM_addr();
+    bool em_empty = true;
+    for (size_t i = 0; i < HITAGS_MAX_BYTE_SIZE; i++) {
+        if (em[i] != 0) {
+            em_empty = false;
+            break;
+        }
+    }
+
+    if (em_empty) {
+        DbpString("Emulator memory is empty, simulating the last read tag");
     } else {
-        // use the last read tag
+        DbpString("Loading Hitag S memory from emulator memory...");
+        memcpy(tag.data.pages, em, HITAGS_MAX_BYTE_SIZE);
     }
 
     // max_page
@@ -462,8 +473,8 @@ void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
     }
 
     hitag_cleanup(ledcontrol);
-    // release allocated memory from BigBuff.
-    BigBuf_free();
+    // release BigBuf, but keep emulator memory for eview / esave
+    BigBuf_free_keep_EM();
 
     DbpString("Sim stopped");
 }

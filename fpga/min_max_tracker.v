@@ -27,6 +27,7 @@ module min_max_tracker(
     input clk,
     input [7:0] adc_d,
     input [7:0] threshold,
+    input freeze,
     output [7:0] min,
     output [7:0] max
 );
@@ -37,7 +38,14 @@ reg [7:0] cur_min_val = 255;
 reg [7:0] cur_max_val = 0;
 reg [1:0] state = 0;
 
+// `freeze` holds every register still.  A tag simulator's own load modulation
+// is far deeper than the reader's, so letting it into this follower drags min and
+// max to the extremes and the slicing levels derived from them no longer bracket
+// the reader's much shallower signal - measured on a Proxmark simulating Hitag 2,
+// that left the receiver deaf for ~1200 T0 after every answer.  Holding the
+// follower across our own transmission keeps it converged on the reader.
 always @(posedge clk)
+if (!freeze)
 begin
     case (state)
     0: // initialize

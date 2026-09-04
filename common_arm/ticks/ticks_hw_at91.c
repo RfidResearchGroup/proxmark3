@@ -220,6 +220,31 @@ uint32_t RAMFUNC GetCountSspClk(void) {
 // TC2 overflow count, combined with the TC2 counter for ~47 min timing.
 static uint16_t timestamp_high = 0;
 
+
+// Wait for a software trigger to take effect, without ever spinning on an exact
+// value.
+//
+// TC_CV restarts on the next TIMER_CLOCK3 edge, 32 MCK cycles away, and reading
+// a timer register costs a good fraction of that.  A loop that waits for exactly
+// 0 can therefore step straight over the window, and the counter then has to run
+// all the way round its 16 bits - 43.7 ms - before zero comes past again.  In
+// ResetPrecisionCounter(), which the Hitag reader calls once per transmitted
+// bit, that turns into a stall long enough that the Proxmark stops answering USB
+// and looks like it has hung.  Accept any value that is plainly post-reset, and
+// give up rather than wait forever.
+#define TC_WAIT_RESTART(tc)                        \
+    do {                                           \
+        for (uint32_t _i = 0; _i < 256; _i++) {    \
+            if ((tc)->TC_CV < 4) {                 \
+                break;                             \
+            }                                      \
+        }                                          \
+    } while (0)
+
+// Reference the plain GetPrecisionCounter() measures from.  See ticks_apis.h:
+// this moves, the hardware counter does not.
+static uint16_t precision_ref = 0;
+
 void StartPrecisionCounter(void) {
     // Enable peripheral clock for TC0 (precision counter).
     AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0);
@@ -230,7 +255,8 @@ void StartPrecisionCounter(void) {
     // TC0: capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers (free-running).
     AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC0->TC_CV != 0) {};  // wait until the reset takes effect
+    TC_WAIT_RESTART(AT91C_BASE_TC0);  // wait until the reset takes effect
+    precision_ref = 0;
 }
 
 void StopPrecisionCounter(void) {
@@ -238,12 +264,19 @@ void StopPrecisionCounter(void) {
 }
 
 void ResetPrecisionCounter(void) {
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC0->TC_CV != 0) {};
+    precision_ref = (uint16_t)AT91C_BASE_TC0->TC_CV;
 }
 
 uint16_t RAMFUNC GetPrecisionCounter(void) {
+    return (uint16_t)(AT91C_BASE_TC0->TC_CV - precision_ref);
+}
+
+uint16_t RAMFUNC GetPrecisionCounterRaw(void) {
     return (uint16_t)AT91C_BASE_TC0->TC_CV;
+}
+
+uint16_t RAMFUNC GetPrecisionCounterDelta(uint16_t start) {
+    return (uint16_t)(AT91C_BASE_TC0->TC_CV - start);
 }
 
 void StartLoEdgeCapture(void) {
@@ -264,7 +297,7 @@ void StartLoEdgeCapture(void) {
                              | AT91C_TC_LDRA_RISING          // load RA on rising edge of TIOA
                              | AT91C_TC_LDRB_FALLING;        // load RB on falling edge of TIOA
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC1->TC_CV != 0) {};  // wait until the reset takes effect
+    TC_WAIT_RESTART(AT91C_BASE_TC1);  // wait until the reset takes effect
 }
 
 void StopLoEdgeCapture(void) {
@@ -313,9 +346,17 @@ void StartTimestamp(void) {
     // TC2: capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers (free-running).
     AT91C_BASE_TC2->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
     AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC2->TC_CV != 0) {};  // wait until the reset takes effect
+    TC_WAIT_RESTART(AT91C_BASE_TC2);  // wait until the reset takes effect
 
-    // Reset the overflow accumulator.
+    // Reset the overflow accumulator, and the hardware flag it counts.
+    //
+    // Reading TC_SR is what clears COVFS.  Without this, an overflow left over
+    // from a previous run is still pending, so the very first GetTimestamp()
+    // counts it and every timestamp for the rest of the session is 65536 ticks -
+    // 5461 T0 - too high.  It shows up in a trace as a frame whose end is exactly
+    // start + 65536, followed by rows with negative looking start times where the
+    // client subtracts the inflated value.
+    (void)AT91C_BASE_TC2->TC_SR;
     timestamp_high = 0;
 }
 
@@ -324,11 +365,30 @@ void StopTimestamp(void) {
 }
 
 uint32_t RAMFUNC GetTimestamp(void) {
-    // Reading TC_SR clears the COVFS overflow flag.
-    if (AT91C_BASE_TC2->TC_SR & AT91C_TC_COVFS) {
+    // Read the counter on both sides of the overflow check.
+    //
+    // TC2 is 16 bits at MCK/32, so it wraps every 43.7 ms, and reading TC_SR is
+    // what latches that wrap into timestamp_high - and clears the flag, so it may
+    // only be read once.  Checking the flag first and reading TC_CV afterwards
+    // leaves a window: a wrap landing between the two reads is not seen, the low
+    // half has already restarted near zero, and the result comes back 65536 ticks
+    // (5461 T0) BELOW the previous one.  Timestamps that go backwards break every
+    // caller that measures with an unsigned difference; the Hitag 2 simulator's
+    // turnaround, `while ((TIMESTAMP - rx_end) < ...)`, wraps to a huge value and
+    // stops waiting at once, putting the answer on the air a full frame early.
+    //
+    // Sampling either side of the flag read closes it: if the flag is set the
+    // wrap is at or before the flag read, so the second sample is the one that
+    // belongs with the incremented high half.
+    uint16_t cv_before = (uint16_t)AT91C_BASE_TC2->TC_CV;
+    bool overflowed = (AT91C_BASE_TC2->TC_SR & AT91C_TC_COVFS) != 0;
+    uint16_t cv_after = (uint16_t)AT91C_BASE_TC2->TC_CV;
+
+    if (overflowed) {
         timestamp_high++;
+        cv_before = cv_after;
     }
-    return (((uint32_t)timestamp_high << 16) + AT91C_BASE_TC2->TC_CV) / TICKS_PER_CARRIER_PERIOD;
+    return (((uint32_t)timestamp_high << 16) + cv_before) / TICKS_PER_CARRIER_PERIOD;
 }
 
 #endif // #ifndef AS_BOOTROM

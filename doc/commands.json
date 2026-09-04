@@ -1090,7 +1090,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -1426,7 +1426,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -1481,7 +1481,7 @@
             "command": "hf 14a ndefwrite",
             "description": "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.",
             "notes": [
-                "hf 14a ndefwrite -d 0300FE -> write empty record to tag",
+                "hf 14a ndefwrite -d 0000 -> write empty record to tag",
                 "hf 14a ndefwrite -f myfilename",
                 "hf 14a ndefwrite -d 003fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031"
             ],
@@ -1705,7 +1705,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -2051,7 +2051,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -2441,7 +2441,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -2534,7 +2534,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -2941,7 +2941,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -3098,7 +3098,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -3449,7 +3449,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -4333,7 +4333,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -4407,7 +4407,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -4694,7 +4694,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -5133,7 +5133,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -5445,7 +5445,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -5615,7 +5615,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -6623,7 +6623,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -8195,7 +8195,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -8826,7 +8826,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -9356,7 +9356,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -10085,7 +10085,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -10256,7 +10256,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -10354,7 +10354,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -10424,7 +10424,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -10473,7 +10473,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -10710,7 +10710,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -10872,12 +10872,27 @@
             ],
             "usage": "hw bwmsetcap [-h] [--cap <mAh>]"
         },
+        "hw bwmvchg": {
+            "command": "hw bwmvchg",
+            "description": "Set the BWM charger (AW32001E) charge-voltage regulation target. Lowering it below 4.2 V reduces top-of-charge stress and extends cell life. Snaps to the nearest 15 mV step; clamped to 3600..4200 mV. This is a runtime register write (reverts on the charger watchdog / POR); the firmware re-applies the 4100 mV default at every boot. PM5 only.",
+            "notes": [
+                "hw bwmvchg -> set charge voltage to default 4100 mV (->4.095 V)",
+                "hw bwmvchg --mv 4200 -> set charge voltage to 4200 mV"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--mv <mV> charge voltage in mV (default 4100, clamped 3600..4200)"
+            ],
+            "usage": "hw bwmvchg [-h] [--mv <mV>]"
+        },
         "hw bwmwifi": {
             "command": "hw bwmwifi",
             "description": "Bring up the BWM in STA + TCP-server mode: join a WiFi network and start a TCP server so the client can connect over WiFi. PM5 only.",
             "notes": [
                 "hw bwmwifi --ssid Home --pwd secret -> port 7777",
-                "hw bwmwifi --ssid Home --pwd secret --port 9000"
+                "hw bwmwifi --ssid Home --pwd secret --port 9000",
+                "hw bwmwifi --status -> show connection state + IP"
             ],
             "offline": false,
             "options": [
@@ -10886,9 +10901,10 @@
                 "--pwd <pwd> WiFi password (omit for open network)",
                 "--port <dec> TCP server listen port (default 7777)",
                 "--hostname <name> DHCP hostname (default Proxmark5)",
-                "--stop tear down WiFi and return to BLE-only"
+                "--stop tear down WiFi and return to BLE-only",
+                "--status show current WiFi connection state + IP"
             ],
-            "usage": "hw bwmwifi [-h] [--ssid <ssid>] [--pwd <pwd>] [--port <dec>] [--hostname <name>] [--stop]"
+            "usage": "hw bwmwifi [-h] [--ssid <ssid>] [--pwd <pwd>] [--port <dec>] [--hostname <name>] [--stop] [--status]"
         },
         "hw connect": {
             "command": "hw connect",
@@ -11364,7 +11380,7 @@
         },
         "lf cotag reader": {
             "command": "lf cotag reader",
-            "description": "Read a COTAG tag. - use `lf config` to set parameters except divisor (which is assumed 90 for cotag. Use --divisor to override). - use `data plot` to look at it. - use `lf cotag demod` to try to demodulate it. If the number of samples is more than the device memory limit (40000 now), it will try to use the real-time sampling mode. Note: Cotag has an extremely slow data rate - RF/768 -- capturing a full 128 bit card read requires a minimum of 128 x 768 samples, or a multiple thereof.",
+            "description": "Read a COTAG tag. - use `lf config` to set parameters except divisor (which is assumed 90 for cotag. Use --divisor to override). - use `data plot` to look at it. - use `lf cotag demod` to try to demodulate it. If the number of samples is more than the device memory limit, it will try to use the real-time sampling mode. Note: Cotag has an extremely slow data rate - RF/768 -- capturing a full 128 bit card read requires a minimum of 128 x 768 samples, or a multiple thereof.",
             "notes": [
                 "lf cotag reader -v -s 700000 -> collect 700000 samples",
                 "lf cotag reader -v --divisor 89 -s 700000 -> use divisor 89, collect 700000 samples"
@@ -12517,7 +12533,7 @@
         },
         "lf hitag crack2": {
             "command": "lf hitag crack2",
-            "description": "This command tries to recover 2048 bits of Hitag 2 crypto stream data.",
+            "description": "This command tries to recover 2048 bits of Hitag 2 crypto stream data from card. Put card on pm3 before running this command",
             "notes": [
                 "lf hitag crack2 --nrar 73AA5A62EAB8529C"
             ],
@@ -12571,14 +12587,19 @@
             "command": "lf hitag eview",
             "description": "It displays emulator memory",
             "notes": [
-                "lf hitag eview"
+                "lf hitag eview -2",
+                "lf hitag eview -s"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose Verbose output"
+                "-v, --verbose Verbose output",
+                "-1, --ht1 Card type Hitag 1",
+                "-2, --ht2 Card type Hitag 2 (default)",
+                "-s, --hts Card type Hitag S",
+                "-m, --htm Card type Hitag \u03bc"
             ],
-            "usage": "lf hitag eview [-hv]"
+            "usage": "lf hitag eview [-hv12sm]"
         },
         "lf hitag help": {
             "command": "lf hitag help",
@@ -12593,7 +12614,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -12637,7 +12658,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -12774,7 +12795,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -12850,15 +12871,18 @@
         },
         "lf hitag info": {
             "command": "lf hitag info",
-            "description": "Hitag 2 tag information",
+            "description": "Hitag 2 tag information The configuration byte lives in page 3, which needs authentication. Without a key the two factory defaults are tried.",
             "notes": [
-                "lf hitag info"
+                "lf hitag info",
+                "lf hitag info -k 4D494B52 -> 4 bytes, password mode",
+                "lf hitag info -k 4F4E4D494B52 -> 6 bytes, crypto mode"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-k, --key <hex> key, 4 bytes for password mode, 6 bytes for crypto mode"
             ],
-            "usage": "lf hitag info [-h]"
+            "usage": "lf hitag info [-h] [-k <hex>]"
         },
         "lf hitag lookup": {
             "command": "lf hitag lookup",
@@ -12916,31 +12940,59 @@
             ],
             "usage": "lf hitag reader [-h@]"
         },
+        "lf hitag restore": {
+            "command": "lf hitag restore",
+            "description": "Write a Hitag 2 dump file back to a tag. Pages are written in dependency order: user pages first, then the key material in pages 1 and 2, and the configuration in page 3 last - because page 3 is what switches the tag's mode, and pages 1 and 2 change the very credential needed to write it. Page 0 holds the UID and is never written.",
+            "notes": [
+                "lf hitag restore -f dump.bin -k 4D494B52",
+                "lf hitag restore -f dump.bin -k 4F4E4D494B52",
+                "lf hitag restore -f dump.bin -> try the factory defaults"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> specify dump filename",
+                "-k, --key <hex> key, 4 bytes for password mode, 6 bytes for crypto mode",
+                "--force write even if the configuration byte looks wrong"
+            ],
+            "usage": "lf hitag restore [-h] -f <fn> [-k <hex>] [--force]"
+        },
         "lf hitag sim": {
             "command": "lf hitag sim",
             "description": "Simulate Hitag transponder You need to `lf hitag eload` first",
             "notes": [
-                "lf hitag sim -2"
+                "lf hitag sim -2",
+                "lf hitag sim -2 -t 20 -> set edge detect threshold to 20"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-1, --ht1 simulate Hitag 1",
-                "-2, --ht2 simulate Hitag 2"
+                "-2, --ht2 simulate Hitag 2",
+                "-t, --threshold <dec> edge detect threshold, 0 = auto (def: 0)",
+                "--twait <dec> tag response delay in T0, 0 = default 227",
+                "--invert invert load modulation polarity",
+                "--noalt answer every START_AUTH, not every second",
+                "--hold diagnostic: hold coil load on",
+                "--diag <dec> diagnostic flag bits, ORed into flags (32 = slope, now default)",
+                "--sof <dec> SOF bits in the tag answer (def: 6)",
+                "--duty <dec> carrier periods loaded per half bit, 1..16 (def: 16)"
             ],
-            "usage": "lf hitag sim [-h12]"
+            "usage": "lf hitag sim [-h12] [-t <dec>] [--twait <dec>] [--invert] [--noalt] [--hold] [--diag <dec>] [--sof <dec>] [--duty <dec>]"
         },
         "lf hitag sniff": {
             "command": "lf hitag sniff",
             "description": "Sniff the communication between reader and tag Use `lf hitag list` to view collected data.",
             "notes": [
-                "lf hitag sniff"
+                "lf hitag sniff",
+                "lf hitag sniff -t 20 -> lower edge detect threshold"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-t, --threshold <dec> edge detect threshold, 0 = default 32"
             ],
-            "usage": "lf hitag sniff [-h]"
+            "usage": "lf hitag sniff [-h] [-t <dec>]"
         },
         "lf hitag test": {
             "command": "lf hitag test",
@@ -13874,7 +13926,7 @@
         },
         "lf read": {
             "command": "lf read",
-            "description": "Sniff low frequency signal. - use `lf config` to set parameters. - use `data plot` to look at it. If the number of samples is more than the device memory limit (40000 now), it will try to use the real-time sampling mode.",
+            "description": "Sniff low frequency signal. - use `lf config` to set parameters. - use `data plot` to look at it. If the number of samples is more than the device memory limit, it will try to use the real-time sampling mode.",
             "notes": [
                 "lf read -v -s 12000 -> collect 12000 samples",
                 "lf read -s 3000 -@ -> oscilloscope style"
@@ -13890,14 +13942,14 @@
         },
         "lf relay": {
             "command": "lf relay",
-            "description": "Relay LF signal between two Proxmark3 devices over TCP. By default it uses PORT 8000 and uses 40000 samples from Graphbuffer --rdr : Reading device, act as IP client and reads LF tag and sends data --tag : Simulation device, act as IP server and simulates relayed data",
+            "description": "Relay LF signal between two Proxmark3 devices over TCP. By default it uses PORT 8000 and uses 30000 samples from Graphbuffer --rdr : Reading device, act as IP client and reads LF tag and sends data --tag : Simulation device, act as IP server and simulates relayed data",
             "notes": [
                 "Device A, reading LF tag, client",
                 "lf relay --rdr --ip 192.168.1.141 -> Client, connect to IP 192.168.1.141:8000",
                 "lf relay --rdr --ip 192.168.1.141 -p 18111 -> Client, connect to IP 192.168.1.141:18111",
                 "",
                 "Device B, simulate LF tag, server",
-                "lf relay --tag -p 8111 -> Server listening port 8111, recv 40000 samples",
+                "lf relay --tag -p 8111 -> Server listening port 8111, recv 30000 samples",
                 "lf relay --tag -s 10000 -> Server listening port 8000, recv 10000 samples"
             ],
             "offline": false,
@@ -13906,7 +13958,7 @@
                 "--tag Simulation device, act as Server",
                 "--rdr Sniffing device, act as client",
                 "-i, --ip <ipaddr> Target IPv4 address to send data to. Used with `--rdr`",
-                "-s, --samples <dec> Number of samples to collect (def: 40000)",
+                "-s, --samples <dec> Number of samples to collect (def: 30000)",
                 "-p, --port <dec> Port number (def: 8000)"
             ],
             "usage": "lf relay [-h] [--tag] [--rdr] [-i <ipaddr>] [-s <dec>] [-p <dec>]"
@@ -14070,7 +14122,7 @@
         },
         "lf sniff": {
             "command": "lf sniff",
-            "description": "Sniff low frequency signal. You need to configure the LF part on the Proxmark3 device manually. Usually a trigger and skip samples is a good thing to set before doing a low frequency sniff. - use `lf config` to set parameters. - use `data plot` to look at sniff signal. - use `lf search -1` to see if signal can be automatic decoded. If the number of samples is more than the device memory limit (40000 now), it will try to use the real-time sampling mode.",
+            "description": "Sniff low frequency signal. You need to configure the LF part on the Proxmark3 device manually. Usually a trigger and skip samples is a good thing to set before doing a low frequency sniff. - use `lf config` to set parameters. - use `data plot` to look at sniff signal. - use `lf search -1` to see if signal can be automatic decoded. If the number of samples is more than the device memory limit, it will try to use the real-time sampling mode.",
             "notes": [
                 "lf sniff -v",
                 "lf sniff -s 3000 -@ -> oscilloscope style"
@@ -15432,7 +15484,7 @@
             "command": "nfc type4a write",
             "description": "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.",
             "notes": [
-                "hf 14a ndefwrite -d 0300FE -> write empty record to tag",
+                "hf 14a ndefwrite -d 0000 -> write empty record to tag",
                 "hf 14a ndefwrite -f myfilename",
                 "hf 14a ndefwrite -d 003fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031"
             ],
@@ -15519,7 +15571,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -15961,7 +16013,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -16128,7 +16180,7 @@
                 "-1, --buffer use data from trace buffer",
                 "--frame show frame delay times",
                 "-c mark CRC bytes",
-                "-r show relative times (gap and duration)",
+                "-r show frame delay times relative to the previous transfer",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
@@ -16329,8 +16381,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 909,
+        "commands_extracted": 912,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-08-29T15:40:14+00:00"
+        "extracted_on": "2026-09-04T11:31:07+00:00"
     }
 }

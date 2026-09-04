@@ -845,36 +845,130 @@ static bool ht2_get_uid(uint32_t *uid) {
     return true;
 }
 
+// Try to actually read the configuration byte, rather than assume one.
+//
+// Returns true and fills config/uid if the tag authenticated with this key.
+static bool ht2_try_auth_read(uint8_t cmdtype, const uint8_t *key, uint32_t *uid, uint8_t *config) {
+
+    lf_hitag_data_t packet;
+    memset(&packet, 0, sizeof(packet));
+    packet.cmd = cmdtype;
+
+    if (cmdtype == HT2F_PASSWORD) {
+        memcpy(packet.pwd, key, HITAG_PASSWORD_SIZE);
+    } else {
+        memcpy(packet.key, key, HITAG_CRYPTOKEY_SIZE);
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_HITAG_READER, (uint8_t *)&packet, sizeof(packet));
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_LF_HITAG_READER, &resp, 2000) == false) {
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        return false;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        return false;
+    }
+
+    uint8_t *data = resp.data.asBytes;
+    *uid = bytes_to_num(data, HITAG_UID_SIZE);
+    *config = data[HITAG_BLOCK_SIZE * 3];
+    return true;
+}
+
 static int CmdLFHitagInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag info",
-                  "Hitag 2 tag information",
-                  "lf hitag info"
+                  "Hitag 2 tag information\n"
+                  "The configuration byte lives in page 3, which needs authentication.\n"
+                  "Without a key the two factory defaults are tried.",
+                  "lf hitag info\n"
+                  "lf hitag info -k 4D494B52          -> 4 bytes, password mode\n"
+                  "lf hitag info -k 4F4E4D494B52      -> 6 bytes, crypto mode"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_str0("k", "key", "<hex>", "key, 4 bytes for password mode, 6 bytes for crypto mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t userkey[HITAG_CRYPTOKEY_SIZE] = {0};
+    int ukeylen = 0;
+    CLIGetHexWithReturn(ctx, 1, userkey, &ukeylen);
     CLIParserFree(ctx);
+
+    // The length picks the mode, so a wrong one is worth catching here rather
+    // than sending it and reporting a puzzling authentication failure.
+    if ((ukeylen != 0) && (ukeylen != HITAG_PASSWORD_SIZE) && (ukeylen != HITAG_CRYPTOKEY_SIZE)) {
+        PrintAndLogEx(ERR, "Key must be %u bytes (password) or %u bytes (crypto), got %i",
+                      HITAG_PASSWORD_SIZE, HITAG_CRYPTOKEY_SIZE, ukeylen);
+        return PM3_EINVARG;
+    }
 
     // read UID
     uint32_t uid = 0;
     if (ht2_get_uid(&uid) == false) {
         return PM3_ESOFT;
     }
-    // how to determine Hitag types?
-    // need auth / pwd to get it.
-    // we could try the default key/pwd and print if successful
-    // read block3,  get configuration byte.
+    // Read the configuration byte instead of guessing it.
+    //
+    // This used to print a hardcoded 0x06, so every tag was reported as
+    // "Password mode" whatever it actually was - a crypto mode card sitting on
+    // the antenna was described as password mode, which is worse than saying
+    // nothing.  The configuration lives in page 3 and page 3 needs
+    // authentication, so try the two factory defaults and report what comes
+    // back; if neither opens the tag, say the mode is unknown rather than
+    // inventing one, and point at the command whose job searching actually is.
+    //
+    // Deliberately only the two factory values: running the dictionary here was
+    // tried and removed.  `info` should be quick and answer from the tag itself,
+    // and a key search is what `lf hitag chk` exists for.
+    static const uint8_t default_pwd[HITAG_PASSWORD_SIZE] = {0x4D, 0x49, 0x4B, 0x52};                    // "MIKR"
+    static const uint8_t default_key[HITAG_CRYPTOKEY_SIZE] = {0x4F, 0x4E, 0x4D, 0x49, 0x4B, 0x52};       // "ONMIKR"
 
-    // common configurations.
-    print_hitag2_configuration(uid, 0x06);   // pwd mode enabled / AM
-    // print_hitag2_configuration(uid,  0x0E);  // crypto mode enabled / AM
-    // print_hitag2_configuration(uid,  0x02);
-    // print_hitag2_configuration(uid,  0x00);
-    // print_hitag2_configuration(uid,  0x04);
+    uint8_t config = 0;
+    uint32_t cfg_uid = 0;
+    const char *opened_with = NULL;
+
+    char opened_buf[64] = {0};
+
+    // A supplied key is tried first, and its length picks the mode: 4 bytes is a
+    // password, 6 bytes a crypto key.  The factory defaults still follow, so
+    // giving a key that turns out to be wrong is no worse than giving none.
+    if ((ukeylen == HITAG_PASSWORD_SIZE) &&
+            ht2_try_auth_read(HT2F_PASSWORD, userkey, &cfg_uid, &config)) {
+
+        snprintf(opened_buf, sizeof(opened_buf), "password " _YELLOW_("%s"),
+                 sprint_hex_inrow(userkey, HITAG_PASSWORD_SIZE));
+        opened_with = opened_buf;
+
+    } else if ((ukeylen == HITAG_CRYPTOKEY_SIZE) &&
+               ht2_try_auth_read(HT2F_CRYPTO, userkey, &cfg_uid, &config)) {
+
+        snprintf(opened_buf, sizeof(opened_buf), "key " _YELLOW_("%s"),
+                 sprint_hex_inrow(userkey, HITAG_CRYPTOKEY_SIZE));
+        opened_with = opened_buf;
+
+    } else if (ht2_try_auth_read(HT2F_PASSWORD, default_pwd, &cfg_uid, &config)) {
+        opened_with = "default password " _YELLOW_("4D494B52");
+    } else if (ht2_try_auth_read(HT2F_CRYPTO, default_key, &cfg_uid, &config)) {
+        opened_with = "default key " _YELLOW_("4F4E4D494B52");
+    }
+
+    if (opened_with != NULL) {
+        print_hitag2_configuration(uid, config);
+        PrintAndLogEx(INFO, "Configuration read with %s", opened_with);
+    } else {
+        PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information"));
+        PrintAndLogEx(SUCCESS, "UID...... " _GREEN_("%08X"), uid);
+        PrintAndLogEx(INFO, "Config... " _YELLOW_("unknown") " ( page 3 needs authentication )");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf hitag chk") "` to search for the key");
+    }
 
     PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
     const char *s = identify_transponder_hitag2(uid);
@@ -1328,6 +1422,212 @@ static int CmdLFHitagWriter(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// Write one page, authenticating with the given credential.
+//
+// 4 byte credential is a password, 6 byte is a crypto key, matching every other
+// Hitag 2 command here.
+static int ht2_restore_write_page(uint8_t page, const uint8_t *data, const uint8_t *cred, uint8_t credlen) {
+
+    lf_hitag_data_t packet;
+    memset(&packet, 0, sizeof(packet));
+    packet.page = page;
+    memcpy(packet.data, data, HITAG_BLOCK_SIZE);
+
+    if (credlen == HITAG_PASSWORD_SIZE) {
+        packet.cmd = HT2F_PASSWORD;
+        memcpy(packet.pwd, cred, HITAG_PASSWORD_SIZE);
+    } else {
+        packet.cmd = HT2F_CRYPTO;
+        memcpy(packet.key, cred, HITAG_CRYPTOKEY_SIZE);
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_HITAG2_WRITE, (uint8_t *)&packet, sizeof(packet));
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_LF_HITAG2_WRITE, &resp, 4000) == false) {
+        return PM3_ETIMEOUT;
+    }
+    return resp.status;
+}
+
+// Is this a configuration byte a Hitag 2 can actually hold?
+//
+// Bits 7..4 are RFU and are zero on every tag seen; bit 3 picks crypto or
+// password; bits 2..1 pick Hitag 2 (11) or one of the read only public modes;
+// bit 0 is the encoding.  Writing rubbish here is the one page that can make a
+// tag useless, so refuse rather than pass it through.
+static bool ht2_config_is_sane(uint8_t cfg, const char **why) {
+
+    if ((cfg & 0xF0) != 0) {
+        *why = "RFU bits 7..4 are not zero";
+        return false;
+    }
+    return true;
+}
+
+static int CmdLFHitag2Restore(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hitag restore",
+                  "Write a Hitag 2 dump file back to a tag.\n"
+                  "Pages are written in dependency order: user pages first, then the key\n"
+                  "material in pages 1 and 2, and the configuration in page 3 last - because\n"
+                  "page 3 is what switches the tag's mode, and pages 1 and 2 change the very\n"
+                  "credential needed to write it.\n"
+                  "Page 0 holds the UID and is never written.",
+                  "lf hitag restore -f dump.bin -k 4D494B52\n"
+                  "lf hitag restore -f dump.bin -k 4F4E4D494B52\n"
+                  "lf hitag restore -f dump.bin                  -> try the factory defaults"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "specify dump filename"),
+        arg_str0("k", "key", "<hex>", "key, 4 bytes for password mode, 6 bytes for crypto mode"),
+        arg_lit0(NULL, "force", "write even if the configuration byte looks wrong"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    uint8_t userkey[HITAG_CRYPTOKEY_SIZE] = {0};
+    int ukeylen = 0;
+    CLIGetHexWithReturn(ctx, 2, userkey, &ukeylen);
+    bool force = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    if ((ukeylen != 0) && (ukeylen != HITAG_PASSWORD_SIZE) && (ukeylen != HITAG_CRYPTOKEY_SIZE)) {
+        
+        PrintAndLogEx(ERR, "Key must be %u bytes (password) or %u bytes (crypto), got %i",
+                    HITAG_PASSWORD_SIZE,
+                    HITAG_CRYPTOKEY_SIZE,
+                    ukeylen
+        );
+        return PM3_EINVARG;
+    }
+
+    // load the dump
+    uint8_t *dump = NULL;
+    size_t dumplen = 0;
+    if (loadFile_safe(filename, ".bin", (void **)&dump, &dumplen) != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    if (dumplen != HITAG2_MAX_BYTE_SIZE) {
+        PrintAndLogEx(ERR, "Expected %u bytes, got %zu", HITAG2_MAX_BYTE_SIZE, dumplen);
+        free(dump);
+        return PM3_EFILE;
+    }
+
+    const uint8_t new_cfg = dump[HITAG_BLOCK_SIZE * 3];
+    const char *why = NULL;
+    if (ht2_config_is_sane(new_cfg, &why) == false) {
+        PrintAndLogEx(ERR, "Configuration byte " _RED_("0x%02X") " looks wrong: %s", new_cfg, why);
+        if (force == false) {
+            PrintAndLogEx(INFO, "Use `" _YELLOW_("--force") "` to write it anyway");
+            free(dump);
+            return PM3_EINVARG;
+        }
+        PrintAndLogEx(WARNING, "--force given, writing it anyway");
+    }
+
+    // A public mode is read only, so say so before making it permanent.
+    if ((new_cfg & 0x06) != 0x06) {
+        PrintAndLogEx(WARNING, "Configuration " _YELLOW_("0x%02X") " selects a read only public mode", new_cfg);
+        PrintAndLogEx(WARNING, "The tag will not accept writes afterwards");
+    }
+
+    // Find a credential that opens the tag as it is NOW.
+    uint8_t cred[HITAG_CRYPTOKEY_SIZE] = {0};
+    uint8_t credlen = 0;
+    uint8_t cur_cfg = 0;
+    uint32_t cur_uid = 0;
+
+    static const uint8_t default_pwd[HITAG_PASSWORD_SIZE] = {0x4D, 0x49, 0x4B, 0x52};
+    static const uint8_t default_key[HITAG_CRYPTOKEY_SIZE] = {0x4F, 0x4E, 0x4D, 0x49, 0x4B, 0x52};
+
+    if ((ukeylen == HITAG_PASSWORD_SIZE) && ht2_try_auth_read(HT2F_PASSWORD, userkey, &cur_uid, &cur_cfg)) {
+        memcpy(cred, userkey, HITAG_PASSWORD_SIZE);
+        credlen = HITAG_PASSWORD_SIZE;
+    } else if ((ukeylen == HITAG_CRYPTOKEY_SIZE) && ht2_try_auth_read(HT2F_CRYPTO, userkey, &cur_uid, &cur_cfg)) {
+        memcpy(cred, userkey, HITAG_CRYPTOKEY_SIZE);
+        credlen = HITAG_CRYPTOKEY_SIZE;
+    } else if (ht2_try_auth_read(HT2F_PASSWORD, default_pwd, &cur_uid, &cur_cfg)) {
+        memcpy(cred, default_pwd, HITAG_PASSWORD_SIZE);
+        credlen = HITAG_PASSWORD_SIZE;
+        PrintAndLogEx(INFO, "Opened with default password " _YELLOW_("4D494B52"));
+    } else if (ht2_try_auth_read(HT2F_CRYPTO, default_key, &cur_uid, &cur_cfg)) {
+        memcpy(cred, default_key, HITAG_CRYPTOKEY_SIZE);
+        credlen = HITAG_CRYPTOKEY_SIZE;
+        PrintAndLogEx(INFO, "Opened with default key " _YELLOW_("4F4E4D494B52"));
+    } else {
+        PrintAndLogEx(FAILED, "Could not authenticate to the tag");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf hitag chk") "` to search for the key");
+        free(dump);
+        return PM3_EFAILED;
+    }
+
+    PrintAndLogEx(INFO, "Tag UID... " _GREEN_("%08X") ", config " _GREEN_("0x%02X"), cur_uid, cur_cfg);
+
+    // What pages 1 and 2 will make the credential.
+    //
+    // The password is page 1.  The crypto key is the last two bytes of page 2
+    // followed by page 1, which is why writing either page changes both.
+    uint8_t new_pwd[HITAG_PASSWORD_SIZE] = {0};
+    uint8_t new_key[HITAG_CRYPTOKEY_SIZE] = {0};
+    memcpy(new_pwd, dump + HITAG_BLOCK_SIZE, HITAG_PASSWORD_SIZE);
+    new_key[0] = dump[(HITAG_BLOCK_SIZE * 2) + 2];
+    new_key[1] = dump[(HITAG_BLOCK_SIZE * 2) + 3];
+    memcpy(new_key + 2, dump + HITAG_BLOCK_SIZE, HITAG_BLOCK_SIZE);
+
+    // Page 3 is written last, so the tag is still in its OLD mode at that point
+    // and wants the new credential expressed in that mode.
+    const uint8_t *new_cred = (credlen == HITAG_PASSWORD_SIZE) ? new_pwd : new_key;
+
+    // user pages, then key material, then the configuration
+    const uint8_t order[] = { 4, 5, 6, 7, 2, 1, 3 };
+
+    for (uint8_t i = 0; i < ARRAYLEN(order); i++) {
+
+        uint8_t page = order[i];
+        const uint8_t *pd = dump + (page * HITAG_BLOCK_SIZE);
+
+        // Pages 1 and 2 replace the credential, so page 3 needs the new one.
+        const uint8_t *use_cred = (page == 3) ? new_cred : cred;
+
+        int res = ht2_restore_write_page(page, pd, use_cred, credlen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Page %u ( " _RED_("fail") " ) - stopping here", page);
+            PrintAndLogEx(WARNING, "The tag is part written; pages before this one were changed");
+            free(dump);
+            return res;
+        }
+        PrintAndLogEx(SUCCESS, "Page %u  %s ( " _GREEN_("ok") " )", page, sprint_hex_inrow(pd, HITAG_BLOCK_SIZE));
+    }
+
+    free(dump);
+
+    // Report the credential the tag wants NOW, which follows the configuration
+    // just written - not the one used to get in.  Restoring a crypto dump onto a
+    // password tag changes which of the two applies, and getting this wrong locks
+    // the operator out of a tag they just wrote.
+    PrintAndLogEx(NORMAL, "");
+    if ((new_cfg & 0x08) != 0) {
+        PrintAndLogEx(SUCCESS, "Tag is in " _GREEN_("Crypto") " mode");
+        PrintAndLogEx(SUCCESS, "New key... " _GREEN_("%s"), sprint_hex_inrow(new_key, HITAG_CRYPTOKEY_SIZE));
+    } else {
+        PrintAndLogEx(SUCCESS, "Tag is in " _GREEN_("Password") " mode");
+        PrintAndLogEx(SUCCESS, "New password... " _GREEN_("%s"), sprint_hex_inrow(new_pwd, HITAG_PASSWORD_SIZE));
+    }
+
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf hitag info") "` to verify");
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
 static int CmdLFHitag2Dump(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -1672,16 +1972,50 @@ static int CmdLFHitagEload(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    // A Hitag u image is the 6 byte UID followed by its pages, and is the largest
+    // of the four.  Everything still fits one NG frame.
+    #define HITAGU_EIMAGE_SIZE  (HITAGU_UID_SIZE + (HITAGU_MAX_PAGE_ADVANCED_PLUS * HITAGU_BLOCK_SIZE))
+
     // read dump file
     uint8_t *dump = NULL;
-    size_t bytes_read = (4 * 64);
-    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (HITAG_BLOCK_SIZE * 64));
+    size_t bytes_read = HITAGU_EIMAGE_SIZE;
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, HITAGU_EIMAGE_SIZE);
     if (res != PM3_SUCCESS) {
         return res;
     }
 
-    // check dump len..
-    if (bytes_read == HITAG2_MAX_BYTE_SIZE || bytes_read == (HITAG_BLOCK_SIZE * 64)) {
+    // Validate against the card type the user selected rather than a fixed pair of
+    // sizes.  The old check accepted only 32 or 256 bytes, so a Hitag 1 dump (64)
+    // and every Hitag u dump were rejected even though -1 and -m were accepted.
+    size_t expected = HITAG2_MAX_BYTE_SIZE;
+    const char *tname = "Hitag 2";
+    if (use_ht1) {
+        expected = HITAG1_MAX_BYTE_SIZE;
+        tname = "Hitag 1";
+    } else if (use_hts) {
+        expected = HITAGS_MAX_BYTE_SIZE;
+        tname = "Hitag S";
+    } else if (use_htm) {
+        // a u dump is sized by the tag's ICR, so accept anything that fits
+        expected = 0;
+        tname = "Hitag \xce\xbc";
+    }
+
+    if (use_htm) {
+        if ((bytes_read < HITAGU_UID_SIZE) || (bytes_read > HITAGU_EIMAGE_SIZE)) {
+            PrintAndLogEx(ERR, "error, wrong dump file size for %s. got %zu, expected %u..%u",
+                          tname, bytes_read, (unsigned)HITAGU_UID_SIZE, (unsigned)HITAGU_EIMAGE_SIZE);
+            free(dump);
+            return PM3_EINVARG;
+        }
+    } else if (bytes_read != expected) {
+        PrintAndLogEx(ERR, "error, wrong dump file size for %s. got %zu, expected %zu",
+                      tname, bytes_read, expected);
+        free(dump);
+        return PM3_EINVARG;
+    }
+
+    {
 
         lf_hitag_t *payload = calloc(1, sizeof(lf_hitag_t) + bytes_read);
         if (payload == NULL) {
@@ -1708,8 +2042,6 @@ static int CmdLFHitagEload(const char *Cmd) {
         clearCommandBuffer();
         SendCommandNG(CMD_LF_HITAG_ELOAD, (uint8_t *)payload, 3 + bytes_read);
         free(payload);
-    } else {
-        PrintAndLogEx(ERR, "error, wrong dump file size. got %zu", bytes_read);
     }
 
     free(dump);
@@ -1720,18 +2052,41 @@ static int CmdLFHitagEview(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag eview",
                   "It displays emulator memory",
-                  "lf hitag eview\n"
+                  "lf hitag eview -2\n"
+                  "lf hitag eview -s\n"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v", "verbose", "Verbose output"),
+        arg_lit0("1", "ht1", "Card type Hitag 1"),
+        arg_lit0("2", "ht2", "Card type Hitag 2 (default)"),
+        arg_lit0("s", "hts", "Card type Hitag S"),
+        arg_lit0("m", "htm", "Card type Hitag \xce\xbc"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool verbose = arg_get_lit(ctx, 1);
+    bool use_ht1 = arg_get_lit(ctx, 2);
+    bool use_ht2 = arg_get_lit(ctx, 3);
+    bool use_hts = arg_get_lit(ctx, 4);
+    bool use_htm = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
+    if ((use_ht1 + use_ht2 + use_hts + use_htm) > 1) {
+        PrintAndLogEx(ERR, "error, specify only one Hitag type");
+        return PM3_EINVARG;
+    }
+
+    // Hitag 2 stays the default so `lf hitag eview` keeps working as before
     int bytes = HITAG2_MAX_BYTE_SIZE;
+    if (use_ht1) {
+        bytes = HITAG1_MAX_BYTE_SIZE;
+    } else if (use_hts) {
+        bytes = HITAGS_MAX_BYTE_SIZE;
+    } else if (use_htm) {
+        // a Hitag u image is the 6 byte UID followed by its pages
+        bytes = HITAGU_UID_SIZE + (HITAGU_MAX_PAGE_ADVANCED_PLUS * HITAGU_BLOCK_SIZE);
+    }
 
     // reserve memory
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
@@ -1747,14 +2102,15 @@ static int CmdLFHitagEview(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    if (verbose) {
+    // the configuration and Paxton decoding are Hitag 2 specific
+    if (verbose && ((use_ht1 + use_hts + use_htm) == 0)) {
         // block3, 1 byte
         uint8_t config = dump[HITAG2_CONFIG_OFFSET];
         uint32_t uid = bytes_to_num(dump, HITAG_UID_SIZE);
         print_hitag2_configuration(uid, config);
         print_hitag2_paxton(true, dump);
     }
-    print_hitag2_blocks(dump, HITAG2_MAX_BYTE_SIZE);
+    print_hitag2_blocks(dump, bytes);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -1765,14 +2121,21 @@ static int CmdLFHitagSim(const char *Cmd) {
                   "Simulate Hitag transponder\n"
                   "You need to `lf hitag eload` first",
                   "lf hitag sim -2\n"
-                  "lf hitag sim -2 -t 30    -> set edge detect threshold to 30"
+                  "lf hitag sim -2 -t 20    -> set edge detect threshold to 20"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("1", "ht1", "simulate Hitag 1"),
         arg_lit0("2", "ht2", "simulate Hitag 2"),
-        arg_int0("t", "threshold", "<dec>", "set edge detect threshold (def: 127)"),
+        arg_int0("t", "threshold", "<dec>", "edge detect threshold, 0 = auto (def: 0)"),
+        arg_int0(NULL, "twait", "<dec>", "tag response delay in T0, 0 = default 227"),
+        arg_lit0(NULL, "invert", "invert load modulation polarity"),
+        arg_lit0(NULL, "noalt", "answer every START_AUTH, not every second"),
+        arg_lit0(NULL, "hold", "diagnostic: hold coil load on"),
+        arg_int0(NULL, "diag", "<dec>", "diagnostic flag bits, ORed into flags (32 = slope, now default)"),
+        arg_int0(NULL, "sof", "<dec>", "SOF bits in the tag answer (def: 6)"),
+        arg_int0(NULL, "duty", "<dec>", "carrier periods loaded per half bit, 1..16 (def: 16)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1780,8 +2143,30 @@ static int CmdLFHitagSim(const char *Cmd) {
     bool use_ht1 = arg_get_lit(ctx, 1);
     bool use_ht2 = arg_get_lit(ctx, 2);
     bool use_htm = false; // not implemented yet
-    int threshold = arg_get_int_def(ctx, 3, 127);
+    int threshold = arg_get_int_def(ctx, 3, 0);
+    int twait = arg_get_int_def(ctx, 4, 0);
+    bool invert = arg_get_lit(ctx, 5);
+    bool noalt = arg_get_lit(ctx, 6);
+    bool hold = arg_get_lit(ctx, 7);
+    int diag = arg_get_int_def(ctx, 8, 0);
+    int sof = arg_get_int_def(ctx, 9, 0);
+    int duty = arg_get_int_def(ctx, 10, 0);
     CLIParserFree(ctx);
+
+    if (duty < 0 || duty > 16) {
+        PrintAndLogEx(ERR, "error, duty must be 0..16");
+        return PM3_EINVARG;
+    }
+
+    if (sof < 0 || sof > 200) {
+        PrintAndLogEx(ERR, "error, sof must be 0..200");
+        return PM3_EINVARG;
+    }
+
+    if (twait < 0 || twait > 4000) {
+        PrintAndLogEx(ERR, "error, twait must be 0..4000");
+        return PM3_EINVARG;
+    }
 
     if (threshold < 0 || threshold > 255) {
         PrintAndLogEx(ERR, "error, threshold must be 0..255");
@@ -1804,8 +2189,16 @@ static int CmdLFHitagSim(const char *Cmd) {
     // the tag content comes from emulator memory, this only carries the threshold
     hitag_sim_t payload = {
         .tag_mem_supplied = false,
-        .rfu = 0,
+        // --diag is documented as "ORed into flags", so OR all of it.  Masking it
+        // with 0xF8 silently dropped bits 0..2, which made --diag 1, 2 and 4 do
+        // nothing at all while still looking like they had been applied - two
+        // no-alternation measurements were taken that way before it was noticed.
+        // The named options set the same bits, so they simply agree.
+        .flags = (uint8_t)((invert ? 1 : 0) | (noalt ? 2 : 0) | (hold ? 4 : 0) | (diag & 0xFF)),
         .threshold = (uint16_t)threshold,
+        .twait = (uint16_t)twait,
+        .sof = (uint8_t)sof,
+        .duty = (uint8_t)duty,
     };
 
     clearCommandBuffer();
@@ -1818,22 +2211,47 @@ static int CmdLFHitagSniff(const char *Cmd) {
     CLIParserInit(&ctx, "lf hitag sniff",
                   "Sniff the communication between reader and tag\n"
                   "Use `lf hitag list` to view collected data.",
-                  " lf hitag sniff"
+                  " lf hitag sniff\n"
+                  " lf hitag sniff -t 20     -> lower edge detect threshold"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_int0("t", "threshold", "<dec>", "edge detect threshold, 0 = default 32"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int threshold = arg_get_int_def(ctx, 1, 0);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort sniffing");
+    if (threshold < 0 || threshold > 255) {
+        PrintAndLogEx(ERR, "error, threshold must be 0..255");
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort sniffing");
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_HITAG_SNIFF, NULL, 0);
-    WaitForResponse(CMD_LF_HITAG_SNIFF, &resp);
+    uint8_t payload = (uint8_t)threshold;
+    SendCommandNG(CMD_LF_HITAG_SNIFF, &payload, sizeof(payload));
+
+    // Wait the way the other long running LF commands do, rather than blocking
+    // in WaitForResponse().  Blocking there means the client never reads another
+    // command, so the device's own data_available() abort can never be reached -
+    // `hw break` sits unread in the input and the session looks hung even though
+    // the firmware is willing to stop.
+    for (;;) {
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "\naborted via keyboard!");
+            break;
+        }
+        if (WaitForResponseTimeout(CMD_LF_HITAG_SNIFF, &resp, 1000)) {
+            break;
+        }
+    }
+
     PrintAndLogEx(INFO, "Done!");
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf hitag list")"` to view captured tracelog");
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
@@ -2497,6 +2915,7 @@ static command_t CommandTable[] = {
     {"sniff",       CmdLFHitagSniff,            IfPm3Hitag,      "Eavesdrop Hitag communication"},
     {"view",        CmdLFHitagView,             AlwaysAvailable, "Display content from tag dump file"},
     {"wrbl",        CmdLFHitagWriter,           IfPm3Hitag,      "Write a block (page) in Hitag memory"},
+    {"restore",     CmdLFHitag2Restore,         IfPm3Hitag,      "Restore a dump file to a Hitag 2 tag"},
     {"-----------", CmdHelp,                    IfPm3Hitag,      "----------------------- " _CYAN_("Simulation") " -----------------------"},
     {"eload",       CmdLFHitagEload,            IfPm3Hitag,      "Upload file into emulator memory"},
 //    {"esave",       CmdLFHitagESave,            IfPm3Hitag,      "Save emulator memory to file"},

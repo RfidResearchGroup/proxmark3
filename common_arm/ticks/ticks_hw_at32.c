@@ -332,12 +332,19 @@ void StopTimestamp(void) {
 }
 
 uint32_t RAMFUNC GetTimestamp(void) {
-    if (tmr_flag_get(AT32_TMR_TIMESTAMP, TMR_OVF_FLAG)) {
+    // Sample the counter on both sides of the overflow check, so a wrap that
+    // lands between the two cannot make the timestamp go backwards.  See the
+    // AT91 version for why that matters.
+    uint16_t cv_before = (uint16_t)tmr_counter_value_get(AT32_TMR_TIMESTAMP);
+    bool overflowed = tmr_flag_get(AT32_TMR_TIMESTAMP, TMR_OVF_FLAG);
+    uint16_t cv_after = (uint16_t)tmr_counter_value_get(AT32_TMR_TIMESTAMP);
+
+    if (overflowed) {
         tmr_flag_clear(AT32_TMR_TIMESTAMP, TMR_OVF_FLAG);
         timestamp_high++;
+        cv_before = cv_after;
     }
-    uint16_t cv = (uint16_t)tmr_counter_value_get(AT32_TMR_TIMESTAMP);
-    return (((uint32_t)timestamp_high << 16) + cv) / TICKS_PER_CARRIER_PERIOD;
+    return (((uint32_t)timestamp_high << 16) + cv_before) / TICKS_PER_CARRIER_PERIOD;
 }
 
 #endif // #ifndef AS_BOOTROM

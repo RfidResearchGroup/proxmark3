@@ -1618,13 +1618,30 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_HITAG
         case CMD_LF_HITAG_SNIFF: { // Eavesdrop Hitag tag, args = type
-            SniffHitag2(true);
+            // threshold comes from `lf hitag sniff -t`, 0 = the slope default
+            uint8_t sniff_thr = (packet->length >= 1) ? packet->data.asBytes[0] : 0;
+            SniffHitag2(true, sniff_thr);
             //hitag_sniff();
             reply_ng(CMD_LF_HITAG_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
-        case CMD_LF_HITAG_SIMULATE: { // Simulate Hitag tag, args = memory content
-            SimulateHitag2(true);
+        case CMD_LF_HITAG_SIMULATE: {
+            // The tag content comes from emulator memory, so the payload only
+            // carries the edge detect threshold.  Older clients send nothing.
+            uint8_t threshold = 127;
+            uint16_t twait = 0;
+            uint8_t flags = 0;
+            uint8_t sof = 0;
+            uint8_t duty = 0;
+            if (packet->length >= sizeof(hitag_sim_t)) {
+                hitag_sim_t *payload = (hitag_sim_t *)packet->data.asBytes;
+                threshold = (uint8_t)payload->threshold;
+                twait = payload->twait;
+                flags = payload->flags;
+                sof = payload->sof;
+                duty = payload->duty;
+            }
+            SimulateHitag2(threshold, twait, flags, sof, duty, true);
             break;
         }
         case CMD_LF_HITAG2_CRACK: {
@@ -1658,7 +1675,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 break;
             }
             hitag_sim_t *payload = (hitag_sim_t *)packet->data.asBytes;
-            hts_simulate((bool)payload->tag_mem_supplied, payload->threshold, payload->data, true);
+            hts_simulate((int8_t)payload->threshold, true);
             break;
         }
         case CMD_LF_HITAGS_TEST_TRACES: { // Tests every challenge within the given file
@@ -1707,7 +1724,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 break;
             }
             hitag_sim_t *payload = (hitag_sim_t *)packet->data.asBytes;
-            htu_simulate((bool)payload->tag_mem_supplied, payload->threshold, payload->data, true);
+            htu_simulate((int8_t)payload->threshold, true);
             break;
         }
         case CMD_LF_HITAGU_UID: {
@@ -2188,8 +2205,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ISO14443A_SNIFF: {
-            SniffIso14443a(packet->data.asBytes[0]);
-            reply_ng(CMD_HF_ISO14443A_SNIFF, PM3_SUCCESS, NULL, 0);
+            reply_ng(CMD_HF_ISO14443A_SNIFF, SniffIso14443a(packet->data.asBytes[0]), NULL, 0);
             break;
         }
         case CMD_HF_HIDCONFIG_SNIFF: {
