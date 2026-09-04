@@ -232,6 +232,20 @@ uint16_t RAMFUNC GetPrecisionCounter(void) {
     return (uint16_t)tmr_counter_value_get(AT32_TMR_PRECISE_COUNTER);
 }
 
+// The free running counter itself, and the distance from a captured value.
+//
+// Declared in ticks_apis.h and used by the Hitag paths, which need a reference
+// they can subtract from rather than a value relative to the last reset.  These
+// were added for AT91 without an AT32 counterpart, which left the PM5 build
+// failing to link with undefined references to both.
+uint16_t RAMFUNC GetPrecisionCounterRaw(void) {
+    return (uint16_t)tmr_counter_value_get(AT32_TMR_PRECISE_COUNTER);
+}
+
+uint16_t RAMFUNC GetPrecisionCounterDelta(uint16_t start) {
+    return (uint16_t)((uint16_t)tmr_counter_value_get(AT32_TMR_PRECISE_COUNTER) - start);
+}
+
 void StartLoEdgeCapture(void) {
     crm_periph_clock_enable(CRM_GPIO_PERIPH_INPUT_CAPTURE, TRUE);
     crm_periph_clock_enable(AT32_CRM_TMR_PERIPH_INPUT_CAPTURE, TRUE);
