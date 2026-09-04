@@ -2333,7 +2333,7 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
         size_t n = MIN(maxchunk, fwlen - sent);
         buf[0] = BWM_OTA_ACTION_WRITE;
         memcpy(buf + 1, fw + sent, n);
-        // clearCommandBuffer();
+        clearCommandBuffer();
         SendCommandNG(CMD_PM5_BWM_ESP_OTA, buf, (uint16_t)(n + 1));
         bool got = WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 15000);
         if (!got || resp.status != PM3_SUCCESS) {
@@ -2350,10 +2350,7 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
         progressbar(sent, fwlen, STYLE_MIXED);
 
         // Pace the stream. The client->AT32 hop (USB/BLE) is far faster than the
-        // AT32->ESP UART, so back-to-back writes can outrun the UART and drop a
-        // chunk -> esp_ota_end() then sees written < total and aborts. A small
-        // gap gives the UART time to drain. (BLE is naturally paced, which is why
-        // it "worked" and bursty USB did not - see nemanjan00.)
+        // AT32->ESP UART)
         if (write_delay_ms) {
             msleep(write_delay_ms);
         }
