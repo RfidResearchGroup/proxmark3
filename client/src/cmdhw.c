@@ -2294,17 +2294,26 @@ static int CmdPM5QCTest(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static void progressbar(long sent, long total, int style) {
+    int percent = (int)((double)sent / total * 100);
+    
+    // Use \r at the start to move the cursor back to the beginning of the line
+    printf("\rProgress: [%d%%]", percent); 
+    
+    // Force stdout to print immediately without waiting for a newline
+    fflush(stdout); 
+}
+
 // One full OTA attempt: BEGIN -> WRITE... -> END. The BWM OTA has no resume
 // (DEV.md 8.4): a dropped chunk can't be re-sent, so any failure here means the
 // caller must restart the whole thing.
-static int bwm_ota_once(const uint8_t *fw, size_t fwlen) {
+static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms) {
     PacketResponseNG resp;
-
+    clearCommandBuffer();
     // BEGIN: tell the BWM how many bytes are coming (it erases the target partition)
     uint8_t beg[5] = { BWM_OTA_ACTION_BEGIN,
                        (uint8_t)(fwlen & 0xFF),         (uint8_t)((fwlen >> 8) & 0xFF),
                        (uint8_t)((fwlen >> 16) & 0xFF), (uint8_t)((fwlen >> 24) & 0xFF) };
-    clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_ESP_OTA, beg, sizeof(beg));
     if ((WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 20000) == false) || (resp.status != PM3_SUCCESS)) {
         PrintAndLogEx(FAILED, "OTA begin failed (is a responsive BWM fitted?)");
@@ -2321,7 +2330,6 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen) {
     }
     size_t sent = 0;
     while (sent < fwlen) {
-        msleep(10);
         size_t n = MIN(maxchunk, fwlen - sent);
         buf[0] = BWM_OTA_ACTION_WRITE;
         memcpy(buf + 1, fw + sent, n);
@@ -2339,10 +2347,15 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen) {
             return PM3_EFAILED;
         }
         sent += n;
-        print_progress(sent, fwlen, STYLE_MIXED);        ///// DEBUG TEST FOR USB timeout
+        progressbar(sent, fwlen, STYLE_MIXED);
+
+        // Pace the stream. The client->AT32 hop (USB/BLE) is far faster than the
+        // AT32->ESP UART)
+        if (write_delay_ms) {
+            msleep(write_delay_ms);
+        }
     }
     free(buf);
-    printf("\n");
     PrintAndLogEx(NORMAL, "");
 
     // END: finalize + set the new boot partition
@@ -2353,15 +2366,14 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen) {
     if (got_end && (resp.status == PM3_SUCCESS)) {
         return PM3_SUCCESS;
     }
-    if (got_end == false) {
-        // All data was sent and OTA_END was issued. esp_ota_end + set_boot_partition
-        // is slow, so its ack is easily lost even though the flash completed - this
-        // is the case that used to discard a finished image and restart. Signal
-        // "reached END, unconfirmed" so the caller verifies by version instead.
-        return PM3_ETIMEOUT;
+    if (got_end) {
+        // The BWM answered END with an error.
+        PrintAndLogEx(WARNING, "OTA finalize rejected (status %d) - data was lost in transit", resp.status);
+        PrintAndLogEx(HINT, "Try a per-write delay: " _YELLOW_("hw bwmupgrade -f <fw> --delay 10"));
+        return PM3_EFAILED;
     }
-    PrintAndLogEx(WARNING, "OTA finalize rejected (status %d)", resp.status);
-    return PM3_EFAILED;
+    // No answer at all.
+    return PM3_ETIMEOUT;
 }
 
 // Query the BWM's running firmware version string (APP_CMD_GET_VERSION_INFO).
@@ -2370,7 +2382,7 @@ static int bwm_get_version(char *out, size_t outlen) {
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_ESP_OTA, a, sizeof(a));
     PacketResponseNG r;
-    if ((WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &r, 5000) == false) || (r.status != PM3_SUCCESS)) {
+    if ((WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &r, 500) == false) || (r.status != PM3_SUCCESS)) {
         return PM3_EFAILED;
     }
     uint16_t n = (r.length < (uint16_t)(outlen - 1)) ? r.length : (uint16_t)(outlen - 1);
@@ -2389,12 +2401,14 @@ static int CmdBWMUpgrade(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "ESP32 firmware image (.bin)"),
+        arg_int0(NULL, "delay", "<ms>", "per-chunk delay to pace the slow AT32<->ESP UART (default 10)"),
         arg_param_end,
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int fnlen = 0;
     char fn[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)fn, sizeof(fn), &fnlen);
+    uint32_t write_delay_ms = (uint32_t)arg_get_int_def(ctx, 2, 10);
     CLIParserFree(ctx);
 
     if (fnlen == 0) {
@@ -2445,7 +2459,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
         if (attempt > 1) {
             PrintAndLogEx(INFO, "restarting OTA from the beginning (attempt " _YELLOW_("%d") "/%d)", attempt, max_attempts);
         }
-        int res = bwm_ota_once(fw, fwlen);
+        int res = bwm_ota_once(fw, fwlen, write_delay_ms);
 
         // Failed during BEGIN/WRITE: image incomplete, restart the whole thing.
         if ((res != PM3_SUCCESS) && (res != PM3_ETIMEOUT)) {
@@ -2457,11 +2471,8 @@ static int CmdBWMUpgrade(const char *Cmd) {
         if (res == PM3_ETIMEOUT) {
             PrintAndLogEx(INFO, "finalize ack not seen - all data was sent, confirming by version...");
         }
-        // The device's OTA_END handler already reboots the ESP into the new image
-        // (that is what drops the finalize ack over BLE). Just wait for it to come
-        // back and re-link, then confirm by version.
         PrintAndLogEx(INFO, "BWM rebooting into the new image (link drops briefly)...");
-        msleep(10000);   // reboot + re-negotiate baud + re-link
+        msleep(500);   // reboot + re-negotiate baud + re-link
 
         char ver_after[64] = {0};
         bool have_after = (bwm_get_version(ver_after, sizeof(ver_after)) == PM3_SUCCESS);
@@ -2483,6 +2494,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
         // Could not re-read the version (link dropped on reboot, common over BLE).
         // All data was uploaded, so treat as done and let the user confirm.
         PrintAndLogEx(WARNING, "Could not re-read BWM version after reboot (link dropped?)");
+        PrintAndLogEx(HINT, "Reconnect and run " _YELLOW_("hw status") " to confirm the version.");
         free(fw);
         return PM3_SUCCESS;
     }
