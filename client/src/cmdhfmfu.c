@@ -7866,10 +7866,10 @@ static const mfu_ndef_format_t *mfu_get_ndef_format(uint64_t tagtype) {
     return NULL;
 }
 
-int CmdHF14AMfUFormat(const char *Cmd) {
+int CmdHF14MfuNDEFFormat(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfu format",
+    CLIParserInit(&ctx, "hf mfu ndefformat",
                   "Format a MIFARE Ultralight / NTAG tag for NDEF by writing the Capability\n"
                   "Container to block 3, followed by an empty NDEF message.\n"
                   "\n"
@@ -7877,12 +7877,12 @@ int CmdHF14AMfUFormat(const char *Cmd) {
                   "One Time Programmable; unknown types and unreachable CCs are refused.\n"
                   "\n"
                   "Note: the tag is re-selected and re-authenticated for each block written.",
-                  "hf mfu format\n"
-                  "hf mfu format -v\n"
-                  "hf mfu format --erase\n"
-                  "hf mfu format -k FFFFFFFF\n"
-                  "hf mfu format -k 49454D4B41455242214E4143554F5946\n"
-                  "hf mfu format -d E1101200 --force"
+                  "hf mfu ndefformat\n"
+                  "hf mfu ndefformat -v\n"
+                  "hf mfu ndefformat --erase\n"
+                  "hf mfu ndefformat -k FFFFFFFF\n"
+                  "hf mfu ndefformat -k 49454D4B41455242214E4143554F5946\n"
+                  "hf mfu ndefformat -d E1101200 --force"
                  );
 
     void *argtable[] = {
@@ -7953,7 +7953,7 @@ int CmdHF14AMfUFormat(const char *Cmd) {
             PrintAndLogEx(FAILED, "Don't know the Capability Container for this tag type");
             PrintAndLogEx(INFO, "Block 3 is One Time Programmable, a wrong value can not be undone,");
             PrintAndLogEx(INFO, "so this command will not guess one.");
-            PrintAndLogEx(HINT, "Hint: supply it yourself with `" _YELLOW_("hf mfu format -d <hex> --force") "`");
+            PrintAndLogEx(HINT, "Hint: supply it yourself with `" _YELLOW_("hf mfu ndefformat -d <hex> --force") "`");
             return PM3_ENOTIMPL;
         }
         if (force == false) {
@@ -9062,9 +9062,9 @@ static command_t CommandTable[] = {
     {"aesgetuid",  CmdHF14AMfUAESGetUID,    IfPm3Iso14443a,  "Ultralight-AES - Get UID when RID in use"},
     {"setkey",   CmdHF14AMfUSetKey,         IfPm3Iso14443a,  "Ultralight C/AES - Set 3DES/AES keys"},
     {"dump",     CmdHF14AMfUDump,           IfPm3Iso14443a,  "Dump MIFARE Ultralight family tag to binary file"},
-    {"format",   CmdHF14AMfUFormat,         IfPm3Iso14443a,  "Format tag as NDEF, writes the Capability Container"},
     {"incr",     CmdHF14AMfUIncr,           IfPm3Iso14443a,  "Increments Ev1/NTAG counter"},
     {"info",     CmdHF14AMfUInfo,           IfPm3Iso14443a,  "Tag information"},
+    {"ndefformat", CmdHF14MfuNDEFFormat,    IfPm3Iso14443a,  "Format tag as NDEF, writes the Capability Container"},
     {"ndefread", CmdHF14MfuNDEFRead,        IfPm3Iso14443a,  "Prints NDEF records from card"},
     {"ndefwrite", CmdHF14MfuNDEFWrite,      IfPm3Iso14443a,  "Write NDEF records to card"},
     {"rdbl",     CmdHF14AMfURdBl,           IfPm3Iso14443a,  "Read block"},
