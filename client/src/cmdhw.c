@@ -1509,14 +1509,14 @@ static int CmdTearoff(const char *Cmd) {
 
 static int CmdBwmAutoOff(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hw bwmautooff",
+    CLIParserInit(&ctx, "hw bwm autooff",
                   "Toggle automatic power-off when the PM5 is unplugged from USB (BWM only).\n"
                   "Default is " _GREEN_("on") ". When on, the board powers itself down ~10s after\n"
                   "USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery.\n"
                   "Button power-on is unaffected. Disable for standalone/BLE use on battery.\n"
                   _YELLOW_("Runtime only:") " resets to on at each boot.",
-                  "hw bwmautooff --off   --> disable auto power-off\n"
-                  "hw bwmautooff --on    --> re-enable auto power-off");
+                  "hw bwm autooff --off   --> disable auto power-off\n"
+                  "hw bwm autooff --on    --> re-enable auto power-off");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1556,12 +1556,12 @@ static int CmdBwmAutoOff(const char *Cmd) {
 
 static int CmdBWMWifi(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hw bwmwifi",
+    CLIParserInit(&ctx, "hw bwm wifi",
                   "Bring up the BWM in STA + TCP-server mode: join a WiFi network and\n"
                   "start a TCP server so the client can connect over WiFi. PM5 only.",
-                  "hw bwmwifi --ssid Home --pwd secret            --> port 7777\n"
-                  "hw bwmwifi --ssid Home --pwd secret --port 9000\n"
-                  "hw bwmwifi --status                            --> show connection state + IP");
+                  "hw bwm wifi --ssid Home --pwd secret            --> port 7777\n"
+                  "hw bwm wifi --ssid Home --pwd secret --port 9000\n"
+                  "hw bwm wifi --status                            --> show connection state + IP");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1616,7 +1616,7 @@ static int CmdBWMWifi(const char *Cmd) {
         }
         switch (state) {
             case 0xFF:
-                PrintAndLogEx(INFO, "BWM WiFi disabled (BLE-only). Bring it up with " _YELLOW_("hw bwmwifi --ssid <ssid> --pwd <pwd>"));
+                PrintAndLogEx(INFO, "BWM WiFi disabled (BLE-only). Bring it up with " _YELLOW_("hw bwm wifi --ssid <ssid> --pwd <pwd>"));
                 break;
             case 2: // connected
                 if (ip) {
@@ -1699,7 +1699,7 @@ static int CmdBWMWifi(const char *Cmd) {
     }
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "BWM WiFi bring-up failed (check SSID/password and signal)");
-        PrintAndLogEx(HINT, "If it may have joined after DHCP, check: " _YELLOW_("hw bwmwifi --status"));
+        PrintAndLogEx(HINT, "If it may have joined after DHCP, check: " _YELLOW_("hw bwm wifi --status"));
         return resp.status;
     }
 
@@ -1714,13 +1714,13 @@ static int CmdBWMWifi(const char *Cmd) {
 
 static int CmdBwmCharge(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hw bwmcharge",
+    CLIParserInit(&ctx, "hw bwm charge",
                   "Enable or disable BWM battery charging by clearing/setting the\n"
                   "AW32001E charge-enable bit (CEB, REG01[3]). PM5 only.\n"
                   _RED_("One-shot:") " the charger watchdog reverts this after ~160 s unless\n"
                   "serviced, so charging may stop on its own. Use to nudge a top-up.",
-                  "hw bwmcharge -on      --> enable charging\n"
-                  "hw bwmcharge --off    --> disable charging");
+                  "hw bwm charge --on     --> enable charging\n"
+                  "hw bwm charge --off    --> disable charging");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1761,14 +1761,14 @@ static int CmdBwmCharge(const char *Cmd) {
 
 static int CmdBwmVchg(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hw bwmvchg",
+    CLIParserInit(&ctx, "hw bwm vchg",
                   "Set the BWM charger (AW32001E) charge-voltage regulation target.\n"
                   "Lowering it below 4.2 V reduces top-of-charge stress and extends cell\n"
                   "life. Snaps to the nearest 15 mV step; clamped to 3600..4200 mV. This is\n"
                   "a runtime register write (reverts on the charger watchdog / POR); the\n"
                   "firmware re-applies the " _YELLOW_("4100 mV") " default at every boot. PM5 only.",
-                  "hw bwmvchg              --> set charge voltage to default 4100 mV (->4.095 V)\n"
-                  "hw bwmvchg --mv 4200    --> set charge voltage to 4200 mV");
+                  "hw bwm vchg              --> set charge voltage to default 4100 mV (->4.095 V)\n"
+                  "hw bwm vchg --mv 4200    --> set charge voltage to 4200 mV");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1805,13 +1805,13 @@ static int CmdBwmVchg(const char *Cmd) {
 
 static int CmdBwmSetCap(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hw bwmsetcap",
+    CLIParserInit(&ctx, "hw bwm setcap",
                   "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell.\n"
                   "Run ONCE after fitting or replacing the battery. This triggers a gauge\n"
                   "config-update; do not run it repeatedly, as that disrupts the Impedance\n"
                   "Track learning cycle. PM5 only.",
-                  "hw bwmsetcap             --> set design capacity to default 500 mAh\n"
-                  "hw bwmsetcap --cap 500   --> set design capacity to 500 mAh");
+                  "hw bwm setcap             --> set design capacity to default 500 mAh\n"
+                  "hw bwm setcap --cap 500   --> set design capacity to 500 mAh");
 
     void *argtable[] = {
         arg_param_begin,
@@ -2309,12 +2309,12 @@ static void progressbar(long sent, long total, int style) {
 // caller must restart the whole thing.
 static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms) {
     PacketResponseNG resp;
-    clearCommandBuffer();
 
     // BEGIN: tell the BWM how many bytes are coming (it erases the target partition)
     uint8_t beg[5] = { BWM_OTA_ACTION_BEGIN,
                        (uint8_t)(fwlen & 0xFF),         (uint8_t)((fwlen >> 8) & 0xFF),
                        (uint8_t)((fwlen >> 16) & 0xFF), (uint8_t)((fwlen >> 24) & 0xFF) };
+    clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_ESP_OTA, beg, sizeof(beg));
     if ((WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 20000) == false) || (resp.status != PM3_SUCCESS)) {
         PrintAndLogEx(FAILED, "OTA begin failed (is a responsive BWM fitted?)");
@@ -2376,7 +2376,7 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
         // That is a genuine failure (boot partition NOT switched) - restart, and
         // hint at pacing, which is the usual cure.
         PrintAndLogEx(WARNING, "OTA finalize rejected (status %d) - data was lost in transit", resp.status);
-        PrintAndLogEx(HINT, "Try a per-write delay: " _YELLOW_("hw bwmupgrade -f <fw> --delay 10"));
+        PrintAndLogEx(HINT, "Try a per-write delay: " _YELLOW_("hw bwm upgrade -f <fw> --delay 10"));
         return PM3_EFAILED;
     }
     // No answer at all. Over BLE the END auto-reboot drops the link before the ack
@@ -2402,11 +2402,11 @@ static int bwm_get_version(char *out, size_t outlen) {
 
 static int CmdBWMUpgrade(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hw bwmupgrade",
+    CLIParserInit(&ctx, "hw bwm upgrade",
                   "Reflash the BWM (ESP32) firmware over the BWM link - no header, no soldering.\n"
                   "Requires a BWM that still responds; this updates a wrong-version ESP, it cannot\n"
                   "recover a fully bricked one (that still needs the 5-pin header + esptool).",
-                  "hw bwmupgrade -f bwm_esp32.bin");
+                  "hw bwm upgrade -f bwm_esp32.bin");
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "ESP32 firmware image (.bin)"),
@@ -2463,7 +2463,9 @@ static int CmdBWMUpgrade(const char *Cmd) {
     }
 
     // No resume (DEV.md 8.4): a chunk lost mid-transfer restarts the whole upload.
-    const int max_attempts = 3;
+    const int max_attempts = 6;   // a single dropped chunk restarts the whole upload;
+                                  // more attempts make an all-fail run rare until per-chunk
+                                  // retry (offset-idempotent ESP write) lands.
     for (int attempt = 1; attempt <= max_attempts; attempt++) {
         if (attempt > 1) {
             PrintAndLogEx(INFO, "restarting OTA from the beginning (attempt " _YELLOW_("%d") "/%d)", attempt, max_attempts);
@@ -2521,6 +2523,30 @@ static int CmdBWMUpgrade(const char *Cmd) {
     PrintAndLogEx(FAILED, "BWM firmware update could not be confirmed after %d attempts", max_attempts);
     return PM3_EFAILED;
 }
+static int CmdHelpBwm(const char *Cmd);
+
+static command_t BwmCommandTable[] = {
+    {"help",     CmdHelpBwm,    AlwaysAvailable, "This help"},
+    {"autooff",  CmdBwmAutoOff, IfPm5, "Toggle auto power-off on USB unplug"},
+    {"charge",   CmdBwmCharge,  IfPm5, "Enable/disable battery charging (one-shot)"},
+    {"setcap",   CmdBwmSetCap,  IfPm5, "Set fuel-gauge design capacity (run once after battery change)"},
+    {"upgrade",  CmdBWMUpgrade, IfPm5, "Reflash BWM (ESP32) firmware over the BWM link, no header"},
+    {"vchg",     CmdBwmVchg,    IfPm5, "Set charger charge-voltage target (default 4100 mV)"},
+    {"wifi",     CmdBWMWifi,    IfPm5, "Bring up WiFi (STA + TCP server) for a tcp: connection"},
+    {NULL, NULL, NULL, NULL}
+};
+
+static int CmdHelpBwm(const char *Cmd) {
+    (void)Cmd;
+    CmdsHelp(BwmCommandTable);
+    return PM3_SUCCESS;
+}
+
+static int CmdBwm(const char *Cmd) {
+    clearCommandBuffer();
+    return CmdsParse(BwmCommandTable, Cmd);
+}
+
 static command_t CommandTable[] = {
     {"help", CmdHelp, AlwaysAvailable, "This help"},
     {"-------------", CmdHelp, AlwaysAvailable, "----------------------- " _CYAN_("Operation") " -----------------------"},
@@ -2549,12 +2575,7 @@ static command_t CommandTable[] = {
     {"setmux", CmdSetMux, IfPm3Present, "Set the ADC mux to a specific value"},
     {"standalone", CmdStandalone, IfPm3Present, "Start installed standalone mode on device"},
     {"tia", CmdTia, IfPm3Present, "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
-    {"bwmsetcap", CmdBwmSetCap, IfPm5, "Set BWM fuel-gauge design capacity (PM5, run once after battery change)"},
-    {"bwmvchg",   CmdBwmVchg,   IfPm5, "Set BWM charger charge-voltage target (PM5, default 4100 mV)"},
-    {"bwmcharge", CmdBwmCharge, IfPm5, "Enable/disable BWM battery charging (PM5, one-shot)"},
-    {"bwmautooff", CmdBwmAutoOff, IfPm5, "Toggle auto power-off on USB unplug (PM5, BWM)"},
-    {"bwmwifi", CmdBWMWifi, IfPm5, "Bring up BWM WiFi (STA + TCP server) for a tcp: connection (PM5)"},
-    {"bwmupgrade", CmdBWMUpgrade, IfPm5, "Reflash BWM (ESP32) firmware over the BWM link, no header (PM5)"},
+    {"bwm", CmdBwm, IfPm5, "{ BWM (battery/wireless module) commands... }"},
     {"tune", CmdTune, IfPm3Lf, "Measure tuning of device antenna"},
     {"decay", CmdDecay, IfPm3Present, "Measure HF antenna decay after field-off"},
     {NULL, NULL, NULL, NULL}
