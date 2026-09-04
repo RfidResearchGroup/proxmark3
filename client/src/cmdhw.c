@@ -2308,7 +2308,6 @@ static void progressbar(long sent, long total, int style) {
 // (DEV.md 8.4): a dropped chunk can't be re-sent, so any failure here means the
 // caller must restart the whole thing.
 static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms) {
-    clearCommandBuffer();
     PacketResponseNG resp;
 
     // BEGIN: tell the BWM how many bytes are coming (it erases the target partition)
@@ -2330,6 +2329,7 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
         return PM3_EMALLOC;
     }
     size_t sent = 0;
+    clearCommandBuffer();
     while (sent < fwlen) {
         size_t n = MIN(maxchunk, fwlen - sent);
         buf[0] = BWM_OTA_ACTION_WRITE;
