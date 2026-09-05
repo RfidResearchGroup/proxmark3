@@ -10,6 +10,7 @@ is compiled in with the BWM platform extra.
 - [1. Battery / BWM control](#1-battery--bwm-control)
 - [2. BLE](#2-ble)
 - [3. WiFi](#3-wifi)
+- [4. Update BWM firmware](#4-update-bwm-firmware)
 - [Notes](#notes)
 
 ---
@@ -53,7 +54,7 @@ charge state, input limit, charge current/voltage/enable) and the **BQ27427** fu
 gauge (state-of-charge %, voltage, current, remaining/full capacity, temperature,
 health).
 
-### `hw bwmsetcap` — set fuel-gauge design capacity
+### `hw bwm setcap` — set fuel-gauge design capacity
 
 Program the BQ27427 **Design Capacity** for the fitted cell.
 
@@ -62,32 +63,33 @@ Program the BQ27427 **Design Capacity** for the fitted cell.
 | `--cap <mAh>` | Design capacity in mAh (default `500`) |
 
 ```
-hw bwmsetcap             # set design capacity to the default 500 mAh
-hw bwmsetcap --cap 500   # set design capacity to 500 mAh
+hw bwm setcap             # set design capacity to the default 500 mAh
+hw bwm setcap --cap 500   # set design capacity to 500 mAh
 ```
 
 > [!WARNING]
 > Run this **once** after fitting or replacing the battery. Running it repeatedly
 > triggers a gauge config-update and disrupts the Impedance Track learning cycle.
 
-### `hw bwmcharge` — enable/disable charging (one-shot)
+### `hw bwm charge` — enable/disable charging (one-shot)
 
 Clears/sets the AW32001E charge-enable bit (`CEB`, `REG01[3]`).
 
-| Argument | Description                          |
-| -------- | ------------------------------------ |
-| `--off`  | Disable charging (default is enable) |
+| Sub-action | Description       |
+| ---------- | ----------------- |
+| `on`       | Enable charging   |
+| `off`      | Disable charging  |
 
 ```
-hw bwmcharge          # enable charging
-hw bwmcharge --off    # disable charging
+hw bwm charge on     # enable charging
+hw bwm charge off    # disable charging
 ```
 
 > [!NOTE]
 > **One-shot:** the charger watchdog reverts this after ~160 s unless serviced, so
 > charging may stop on its own. Use it to nudge a top-up.
 
-### `hw bwmvchg` — set charge-voltage limit
+### `hw bwm vchg` — set charge-voltage limit
 
 Sets the AW32001E charge-voltage regulation target (`VBAT_REG`, `REG04[7:2]`).
 Lowering it below 4.2 V reduces top-of-charge stress and extends cell life.
@@ -97,8 +99,8 @@ Lowering it below 4.2 V reduces top-of-charge stress and extends cell life.
 | `--mv <mV>` | Charge voltage in mV (default `4100`, clamped `3600`..`4200`) |
 
 ```
-hw bwmvchg            # set the default 4100 mV target (-> 4.095 V)
-hw bwmvchg --mv 4200  # set 4200 mV
+hw bwm vchg            # set the default 4100 mV target (-> 4.095 V)
+hw bwm vchg --mv 4200  # set 4200 mV
 ```
 
 The value snaps to the nearest 15 mV hardware step, and the command reports the
@@ -111,20 +113,20 @@ voltage actually applied (e.g. `4100` → `4.095 V`; `4110` would be the next st
 > the next power cycle (which re-applies it), so you don't need to re-run it per
 > charge.
 
-### `hw bwmautooff` — auto power-off on USB unplug
+### `hw bwm autooff` — auto power-off on USB unplug
 
 Toggles automatic power-off when the PM5 is unplugged from USB. **Default is `on`:**
 the board powers down after USB is removed so a BWM-equipped PM5 doesn't silently
 drain the battery. Button power-on is unaffected.
 
-| Argument | Description                     |
-| -------- | ------------------------------- |
-| `--on`   | Enable auto power-off (default) |
-| `--off`  | Disable auto power-off          |
+| Sub-action | Description             |
+| ---------- | ----------------------- |
+| `on`       | Enable auto power-off   |
+| `off`      | Disable auto power-off  |
 
 ```
-hw bwmautooff --off   # disable auto power-off
-hw bwmautooff --on    # re-enable auto power-off
+hw bwm autooff off   # disable auto power-off
+hw bwm autooff on    # re-enable auto power-off
 ```
 
 > [!NOTE]
@@ -278,15 +280,15 @@ Bluetooth, so one setup covers a Blueshark-equipped Proxmark3 too.
 
 ## 3. WiFi (STA + TCP server)
 
-`hw bwmwifi` joins your WiFi network as a **station** and starts a **TCP server** on
-the BWM. You then connect the client over plain TCP. Run `hw bwmwifi` over an
-existing link (USB, or an existing BLE connection). Use `--status` to check an
+`hw bwm wifi` joins your WiFi network as a **station** and starts a **TCP server** on
+the BWM. You then connect the client over plain TCP. Run `hw bwm wifi` over an
+existing link (USB, or an existing BLE connection). Use `hw bwm wifi status` to check an
 existing connection without touching the config.
 
 ### 3.1 Bring up WiFi
 
 ```
-hw bwmwifi --ssid <ssid> [--pwd <password>] [--port <n>] [--hostname <name>]
+hw bwm wifi --ssid <ssid> [--pwd <password>] [--port <n>] [--hostname <name>]
 ```
 
 | Argument            | Description                              |
@@ -295,13 +297,14 @@ hw bwmwifi --ssid <ssid> [--pwd <password>] [--port <n>] [--hostname <name>]
 | `--pwd <password>`  | WiFi password (omit for an open network) |
 | `--port <dec>`      | TCP server listen port (default `7777`)  |
 | `--hostname <name>` | DHCP hostname (default `Proxmark5`)      |
-| `--status`          | Show current WiFi connection state + IP (no reconnect) |
-| `--stop`            | Tear down WiFi and return to BLE-only     |
+
+Two sub-actions take no other arguments and are positional (no dashes):
+`hw bwm wifi status` and `hw bwm wifi stop` (see 3.3 and 3.4).
 
 ```
-hw bwmwifi --ssid Home --pwd secret
-hw bwmwifi --ssid Home --pwd secret --port 9000 --hostname pm5-lab
-hw bwmwifi --ssid OpenGuestWiFi                       # open network
+hw bwm wifi --ssid Home --pwd secret
+hw bwm wifi --ssid Home --pwd secret --port 9000 --hostname pm5-lab
+hw bwm wifi --ssid OpenGuestWiFi                       # open network
 ```
 
 The join can take ~15 s. On success it prints the assigned IP and the connect
@@ -325,7 +328,7 @@ strings:
 > don't do it at all). There is **no mDNS / `.local`** responder, so the IP is the
 > reliable path.
 
-### 3.3 Check WiFi status — `hw bwmwifi --status`
+### 3.3 Check WiFi status — `hw bwm wifi status`
 
 Queries the BWM's current connection state and IP **without** reconnecting or
 changing the WiFi config. Handy to confirm a join actually completed — the
@@ -333,7 +336,7 @@ bring-up occasionally reports failure if the DHCP lease lands late, even though
 the STA connected a moment later.
 
 ```
-hw bwmwifi --status
+hw bwm wifi status
 ```
 
 ```
@@ -346,18 +349,60 @@ hw bwmwifi --status
 > not connected right after a bring-up, wait a few seconds and re-check — the
 > lease may still be in flight.
 
-### 3.4 Stop WiFi — `hw bwmwifi --stop`
+### 3.4 Stop WiFi — `hw bwm wifi stop`
 
 Tears down the WiFi station and TCP server and returns the BWM to **BLE-only**.
 Run it over an existing link (USB or BLE); it does not need any other arguments.
 
 ```
-hw bwmwifi --stop
+hw bwm wifi stop
 ```
 
 > [!NOTE]
-> If you issue `--stop` over the **WiFi** connection itself, that connection
+> If you issue `hw bwm wifi stop` over the **WiFi** connection itself, that connection
 > drops as the TCP server goes away — reconnect over USB or BLE afterwards.
+
+---
+
+## 4. Update BWM firmware — `hw bwm upgrade`
+
+Reflashes the BWM (ESP32-C2) firmware **over the existing BWM link** — no 5-pin
+header, no soldering, no `esptool`. Run it over whatever link you already have
+(USB or BLE). It updates a BWM that still responds; it **cannot** recover a fully
+bricked one — that still needs the production 5-pin header + `esptool`.
+
+```
+hw bwm upgrade -f <bwm_esp32.bin> [--delay <ms>]
+```
+
+| Argument       | Description                                                   |
+| -------------- | ------------------------------------------------------------- |
+| `-f`, `--file` | ESP32-C2 firmware image `.bin` **(required)**                 |
+| `--delay <ms>` | Per-chunk delay pacing the slow AT32-ESP UART (default `20`) |
+
+The client refuses to flash anything that is not an ESP32-C2 app image (it checks
+the ESP image magic `0xE9` and `chip_id 0x000C`), so a wrong-chip image can't
+brick the module.
+
+It prints the running version first, uploads the image, then reboots the ESP into
+the new image and confirms by reading the version back:
+
+```
+[=] Current BWM firmware..... v1.2.3
+[=] Uploading 812345 bytes of ESP firmware over the BWM link...
+[=] BWM rebooting into the new image (link drops briefly)...
+[+] BWM firmware updated: v1.2.3 -> v1.3.0
+```
+
+> [!NOTE]
+> There is **no resume**: a chunk dropped mid-transfer restarts the whole upload,
+> and the client retries automatically (up to 6 attempts). If uploads keep failing
+> on the slow link, raise the pacing, e.g. `--delay 40`.
+
+> [!NOTE]
+> The link drops briefly while the ESP reboots into the new image. Over BLE the
+> post-reboot version read sometimes can't complete even though the flash
+> succeeded — reconnect and run `hw status` to confirm the running version.
 
 ---
 
