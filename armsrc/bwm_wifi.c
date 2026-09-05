@@ -24,8 +24,29 @@ static uint16_t wifi_crc16(const uint8_t *d, size_t n, uint16_t crc) {
 // Runs only during setup, so it fully owns the RX stream here.
 typedef enum { W_H1, W_H2, W_CL, W_CH, W_LL, W_LH, W_PL, W_KL, W_KH } wstate_t;
 
+#ifndef MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
+
+// Drop whatever is already sitting in the UART RX ring so a late ACK from a
+// timed-out command cannot be consumed as the next command's response (same
+// cmd code, e.g. a slow OTA_BEGIN ack arriving after we already gave up).
+static void bwm_cmd_drain_rx(void) {
+    uint8_t buf[64];
+    uint32_t t0 = GetTickCount();
+    while (bwm_uart_rx_available()) {
+        uint16_t avail = bwm_uart_rx_available();
+        (void)bwm_uart_read(buf, (uint32_t)MIN(avail, (uint16_t)sizeof(buf)));
+        if (GetTickCountDelta(t0) > 50) {
+            break;
+        }
+    }
+}
+
 int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
             uint8_t *resp, uint16_t *resp_len, uint32_t timeout_ms) {
+
+    bwm_cmd_drain_rx();
 
     // ---- build + send HOST_CMD frame ----
     uint8_t frame[8 + 256];
@@ -63,6 +84,7 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
         uint8_t buf[64];
         uint16_t avail = bwm_uart_rx_available();
         if (avail == 0) {
+            SpinDelay(1);
             continue;
         }
         uint32_t n = bwm_uart_read(buf, (uint32_t)MIN(avail, (uint16_t)sizeof(buf)));
@@ -130,13 +152,18 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
                             }
                             return PM3_SUCCESS;
                         }
-                        // a CMD_ERROR broadcast referencing our cmd -> failure.
-                        // (payload carries the failing cmd; treat any error report
-                        // that arrives while we wait as a failure of this step.)
-                        if (!is_resp && rcmd == BWM_CMD_CMD_ERROR) {
-                            return PM3_EFAILED;
+                        if (!is_resp && rcmd == BWM_CMD_CMD_ERROR && rlen >= 2) {
+                            uint16_t failed_cmd = (uint16_t)pbuf[0] | ((uint16_t)pbuf[1] << 8);
+                            if (failed_cmd == cmd) {
+                                int32_t esp_err = 0;
+                                if (rlen >= 6) {
+                                    esp_err = (int32_t)((uint32_t)pbuf[2] | ((uint32_t)pbuf[3] << 8) |
+                                                         ((uint32_t)pbuf[4] << 16) | ((uint32_t)pbuf[5] << 24));
+                                }
+                                Dbprintf("[bwm-wifi] cmd 0x%04x failed, esp_err=0x%08x", (unsigned)cmd, (unsigned)esp_err);
+                                return PM3_EFAILED;
+                            }
                         }
-                        // otherwise: some other frame (e.g. a stray broadcast) - ignore
                     }
                     st = W_H1;
                     break;
@@ -256,7 +283,12 @@ int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out) {
 }
 
 int bwm_wifi_forward_down(void) {
-    // Once WiFi is gone the status query returns a non-timeout error.
+    // The ESP tears down the STA + TCP server and persists to NVS BEFORE it acks,
+    // and its command task blocks during the teardown - so that ack can outlast
+    // any timeout or be dropped. A plain ack-wait therefore reports failure on a
+    // disable that actually worked. Instead: fire the disable, then CONFIRM by
+    // polling the connect status. Once WiFi is gone the status query returns a
+    // non-timeout error (the subsystem is down) - that is our proof of success.
     (void)bwm_cmd(BWM_CMD_SET_TO_WIFI_DISABLE_MODE, NULL, 0, NULL, NULL, 3000);
 
     uint32_t t0 = GetTickCount();
@@ -273,4 +305,73 @@ int bwm_wifi_forward_down(void) {
         SpinDelay(300);
     }
     return PM3_ETIMEOUT;
+}
+
+// ---------------------------------------------------------------------------
+// ESP OTA forwarders. Each maps a host request to one ESP OTA app_com command.
+// esp_ota_begin erases the target partition and esp_ota_end finalizes + sets the
+// boot slot, so those get generous timeouts.
+// ---------------------------------------------------------------------------
+// Read the ESP's running firmware version string (APP_CMD_GET_VERSION_INFO).
+int bwm_esp_get_version(uint8_t *buf, uint16_t *buflen) {
+    return bwm_cmd(BWM_CMD_GET_VERSION_INFO, NULL, 0, buf, buflen, 3000);
+}
+
+int bwm_esp_ota_begin(uint32_t total_size) {
+    // SILENCE ESP log forwarding for the OTA. With it on, the ESP's background
+    // log broadcasts (WiFi/coex/BLE) interleave with the per-chunk acks across
+    // the thousands of round-trips; one landing in an ack window drops that
+    // chunk's reply -> random PM3_ETIMEOUT. Restored in bwm_esp_ota_end().
+    // Best-effort: ignore failure.
+    uint8_t off = 0;
+    (void)bwm_cmd(BWM_CMD_LOG_FORWARD_ENABLE, &off, 1, NULL, NULL, 500);
+
+    // Stop BLE so NimBLE is not hitting flash (NVS / auto-suspend) while we
+    // erase and program the OTA slot. WiFi stays as-is: tearing it down here
+    // is slow and the USB OTA path does not need it off.
+    (void)bwm_cmd(BWM_CMD_STOP_BLE_SPP, NULL, 0, NULL, NULL, 2000);
+
+    // Do NOT retune the UART here. Version already proved the current baud
+    // works; dropping 921600 -> 460800/460000 can leave the ESP on one rate
+    // and the AT32 on the other, after which every OTA_BEGIN times out.
+
+    uint8_t p[4] = {
+        (uint8_t)(total_size & 0xFF),         (uint8_t)((total_size >> 8) & 0xFF),
+        (uint8_t)((total_size >> 16) & 0xFF), (uint8_t)((total_size >> 24) & 0xFF)
+    };
+    return bwm_cmd(BWM_CMD_OTA_BEGIN, p, sizeof(p), NULL, NULL, BWM_OTA_BEGIN_TIMEOUT_MS);
+}
+
+int bwm_esp_ota_write(const uint8_t *data, uint16_t len) {
+    // Documented OTA has no resume/offset: the payload is the raw chunk, written
+    // sequentially. A dropped chunk cannot be re-sent (it would double-write and
+    // fail the OTA_END size check) - recovery is to restart the whole OTA, which
+    // the client does. Keep a generous timeout so a slow flash write is not
+    // mistaken for a drop.
+    return bwm_cmd(BWM_CMD_OTA_WRITE, data, len, NULL, NULL, BWM_OTA_WRITE_TIMEOUT_MS);
+}
+
+int bwm_esp_ota_end(void) {
+    int r = bwm_cmd(BWM_CMD_OTA_END, NULL, 0, NULL, NULL, 20000);
+    uint8_t on = 1;
+    (void)bwm_cmd(BWM_CMD_LOG_FORWARD_ENABLE, &on, 1, NULL, NULL, 500);
+    (void)bwm_cmd(BWM_CMD_START_BLE_SPP, NULL, 0, NULL, NULL, 2000);
+    return r;
+}
+
+int bwm_esp_ota_abort(void) {
+    // Restore logs + BLE. Leave the UART baud alone (see begin). The ESP's
+    // incomplete OTA state is discarded by the next BEGIN.
+    uint8_t on = 1;
+    (void)bwm_cmd(BWM_CMD_LOG_FORWARD_ENABLE, &on, 1, NULL, NULL, 500);
+    (void)bwm_cmd(BWM_CMD_START_BLE_SPP, NULL, 0, NULL, NULL, 2000);
+    return PM3_SUCCESS;
+}
+
+int bwm_esp_reboot(void) {
+    // The ESP acks then calls esp_restart() - the ack itself may or may not
+    // make it back before the UART goes away, so treat a timeout here as a
+    // benign race, not a failure: the reboot was still requested.
+    int r = bwm_cmd(BWM_CMD_REBOOT, NULL, 0, NULL, NULL, 3000);
+    return (r == PM3_ETIMEOUT) ? PM3_SUCCESS : r;
 }

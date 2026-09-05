@@ -150,6 +150,16 @@ int bwm_uart_write(const uint8_t *data, size_t len) {
 }
 
 uint16_t bwm_uart_rx_available(void) {
+    // An unhandled overrun (ROERR) latches on this USART and stops it feeding the
+    // DMA - after one overrun every subsequent byte is lost until a re-init, which
+    // is why a stalled OTA "recovers on re-run" but mostly fails in a session.
+    // Clear it here so reception resumes on its own. ROERR clears by reading STS
+    // then DT; we only do that when the flag is actually set - the DMA is stalled
+    // then, so the byte we consume is the already-lost overrun byte.
+    if (usart_flag_get(BWM_UART, USART_ROERR_FLAG) != RESET) {
+        (void)BWM_UART->sts;
+        (void)BWM_UART->dt;
+    }
     return (uint16_t)((bwm_uart_rx_head() - s_rx_tail) & (BWM_RX_RING_SZ - 1));
 }
 
