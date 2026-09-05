@@ -496,6 +496,15 @@ void sam_sc_handler(const PacketCommandNG *c) {
 
     int res = PM3_SUCCESS;
 
+    // ---- HF_OFF: disarm the field (no SAM traffic) ----
+    // This also runs after RELEASE or before the first session. Do not reset
+    // or warm up the SAM just to turn off the RF field.
+    if (hf_off) {
+        switch_off();
+        reply_ng(CMD_HF_SAM_SC, PM3_SUCCESS, NULL, 0);
+        goto done;
+    }
+
     // Reset the SAM only if the caller asked for it OR this is the first SC
     // op since boot / since the previous session was released. Crucially
     // this dispatcher does NOT reset on every call the way sam_picopass_get_pacs
@@ -535,13 +544,6 @@ void sam_sc_handler(const PacketCommandNG *c) {
             goto out;
         }
         s_sam_sc_session_active = true;
-    }
-
-    // ---- HF_OFF: disarm the field (no SAM traffic) ----
-    if (hf_off) {
-        switch_off();
-        reply_ng(CMD_HF_SAM_SC, PM3_SUCCESS, NULL, 0);
-        goto done;
     }
 
     // ---- HF_SELECT: energize field + select an iCLASS tag, return CSN/AIA ----
