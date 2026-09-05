@@ -35,6 +35,8 @@
 
 #define BWM_WIFI_FORWARD_TCP_SERVER        0      // wifi_forward_type_t::WIFI_FORWARD_TCP_SERVER
 #define BWM_CMD_CMD_ERROR                  8091   // slave bcast: command error report
+#define BWM_CMD_LOG_FORWARD_ENABLE         1014   // payload: u8 (0=stop, non-zero=start)
+#define BWM_CMD_LOG_MESSAGE                8090   // slave bcast: ESP_LOGx output (string)
 
 // Low-level: send one app_com HOST_CMD and wait for its SLAVE_RESP.
 // resp/resp_len may be NULL if no response payload is expected.
@@ -64,5 +66,31 @@ int bwm_wifi_forward_down(void);
 #define BWM_WIFI_STATE_STOPPED       4
 #define BWM_WIFI_STATE_OFF           0xFF
 int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out);
+
+// ESP OTA over the BWM UART link (no header/soldering): drives the ESP's own
+// OTA commands to reflash a *working* BWM to a new ESP image.
+#define BWM_CMD_OTA_BEGIN   1800   // req: u32 total size
+#define BWM_CMD_OTA_WRITE   1801   // req: firmware chunk
+#define BWM_CMD_OTA_END     1802   // no payload: finalize + set boot partition
+// After a working OTA_END, the ESP has marked the new partition bootable but
+// does not reboot on its own - REBOOT must be sent explicitly (DEV.md 12.8).
+#define BWM_CMD_REBOOT      1803
+// BEGIN erases (or finishes aborting) an OTA slot. A 1.8 MB erase on ESP32-C2
+// commonly takes 20-40 s, so this must be well above the old 15 s race.
+#ifndef BWM_OTA_BEGIN_TIMEOUT_MS
+#define BWM_OTA_BEGIN_TIMEOUT_MS   60000
+#endif
+#ifndef BWM_OTA_WRITE_TIMEOUT_MS
+#define BWM_OTA_WRITE_TIMEOUT_MS   20000
+#endif
+#define BWM_CMD_GET_VERSION_INFO   1000   // resp: running firmware version string
+#define BWM_CMD_STOP_BLE_SPP       4022   // no payload: stop BLE during OTA (flash contention)
+#define BWM_CMD_START_BLE_SPP      4021   // no payload: restore BLE after OTA
+int bwm_esp_get_version(uint8_t *buf, uint16_t *buflen);
+int bwm_esp_ota_begin(uint32_t total_size);
+int bwm_esp_ota_write(const uint8_t *data, uint16_t len);
+int bwm_esp_ota_end(void);
+int bwm_esp_reboot(void);
+int bwm_esp_ota_abort(void);
 
 #endif

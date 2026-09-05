@@ -589,6 +589,18 @@ static void SendStatus(uint32_t wait) {
 #endif
 #ifdef WITH_BWM_FORWARD
     Dbprintf("  BWM link baud....... " _YELLOW_("%u") " bps", bwm_uart_get_baud());
+    {
+        // Read the ESP firmware version so hw status shows what the BWM runs
+        // (and lets you confirm an OTA took: the string flips after a reflash).
+        uint8_t bwm_ver[64] = {0};
+        uint16_t bwm_ver_len = sizeof(bwm_ver) - 1;
+        if (bwm_esp_get_version(bwm_ver, &bwm_ver_len) == PM3_SUCCESS) {
+            bwm_ver[bwm_ver_len] = 0x00;
+            Dbprintf("  BWM fw version...... " _YELLOW_("%s"), bwm_ver);
+        } else {
+            Dbprintf("  BWM fw version...... " _YELLOW_("%s"), "unknown");
+        }
+    }
 #endif
     printConnSpeed(wait);
     DbpString(_CYAN_("Various"));
@@ -3940,6 +3952,72 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
 #else
             reply_ng(CMD_PM5_BWM_WIFI, PM3_ENOTIMPL, NULL, 0);
+#endif
+            break;
+        }
+        case CMD_PM5_BWM_ESP_OTA: {
+            // ESP32 OTA over the existing BWM app_com link (see bwm_wifi.c).
+            // Payload: [action:u8] + action-specific data.
+            //   BEGIN: u32 LE total image size
+            //   WRITE: firmware chunk
+            //   END:   (no payload) finalize + set boot partition
+#if defined(WITH_BWM_FORWARD)
+            uint8_t action = packet->data.asBytes[0];
+            int res = PM3_EINVARG;
+            bool replied = false;
+            switch (action) {
+                case BWM_OTA_ACTION_VERSION: {
+                    // Return the running ESP firmware version string so the client
+                    // can confirm an update actually took (esp. when the finalize
+                    // ack is lost). Replies here with a payload, unlike the others.
+                    uint8_t ver[64];
+                    uint16_t vlen = sizeof(ver);
+                    res = bwm_esp_get_version(ver, &vlen);
+                    reply_ng(CMD_PM5_BWM_ESP_OTA, res, ver, (res == PM3_SUCCESS) ? vlen : 0);
+                    replied = true;
+                    break;
+                }
+                case BWM_OTA_ACTION_BEGIN: {
+                    uint32_t total_size = 0;
+                    if (packet->length >= 5) {
+                        memcpy(&total_size, packet->data.asBytes + 1, sizeof(total_size));
+                    }
+                    res = bwm_esp_ota_begin(total_size);
+                    break;
+                }
+                case BWM_OTA_ACTION_WRITE:
+                    // Defensive: bwm_esp_ota_write()'s app_com frame buffer caps a
+                    // single chunk at BWM_OTA_CHUNK_MAX (see bwm_wifi.c: bwm_cmd()).
+                    // The client is expected to respect this, but fail explicitly
+                    // here rather than let bwm_cmd() silently overflow/reject.
+                    if (packet->length - 1 > BWM_OTA_CHUNK_MAX) {
+                        res = PM3_EOVFLOW;
+                    } else {
+                        res = bwm_esp_ota_write(packet->data.asBytes + 1, packet->length - 1);
+                    }
+                    break;
+                case BWM_OTA_ACTION_END:
+                    res = bwm_esp_ota_end();
+                    if (res == PM3_SUCCESS) {
+                        // Finalize succeeded and the new partition is now marked
+                        // bootable; the ESP won't switch to it on its own, so
+                        // kick the reboot here (DEV.md 12.8). Best-effort: don't
+                        // fail the whole OTA over a lost reboot ack.
+                        (void)bwm_esp_reboot();
+                    }
+                    break;
+                case BWM_OTA_ACTION_ABORT:
+                    res = bwm_esp_ota_abort();
+                    break;
+                default:
+                    res = PM3_EINVARG;
+                    break;
+            }
+            if (replied == false) {
+                reply_ng(CMD_PM5_BWM_ESP_OTA, res, NULL, 0);
+            }
+#else
+            reply_ng(CMD_PM5_BWM_ESP_OTA, PM3_ENOTIMPL, NULL, 0);
 #endif
             break;
         }
