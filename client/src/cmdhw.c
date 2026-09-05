@@ -1508,32 +1508,35 @@ static int CmdTearoff(const char *Cmd) {
 }
 
 static int CmdBwmAutoOff(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hw bwm autooff",
-                  "Toggle automatic power-off when the PM5 is unplugged from USB (BWM only).\n"
-                  "Default is " _GREEN_("on") ". When on, the board powers itself down ~10s after\n"
-                  "USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery.\n"
-                  "Button power-on is unaffected. Disable for standalone/BLE use on battery.\n"
-                  _YELLOW_("Runtime only:") " resets to on at each boot.",
-                  "hw bwm autooff --off   --> disable auto power-off\n"
-                  "hw bwm autooff --on    --> re-enable auto power-off");
+    // Positional sub-action (no dashes): hw bwm autooff on | off
+    char verb[16] = {0};
+    sscanf(Cmd, "%15s", verb);
+    bool on  = (strcmp(verb, "on")  == 0);
+    bool off = (strcmp(verb, "off") == 0);
 
-    void *argtable[] = {
-        arg_param_begin,
-        arg_lit0(NULL, "on",  "enable auto power-off (default)"),
-        arg_lit0(NULL, "off", "disable auto power-off"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool on  = arg_get_lit(ctx, 1);
-    bool off = arg_get_lit(ctx, 2);
-    CLIParserFree(ctx);
-
-    if (on && off) {
-        PrintAndLogEx(WARNING, "pick one of --on / --off");
+    if (!on && !off) {
+        // Not a recognised sub-action: render help (also serves -h / empty),
+        // or error on a stray token, then stop.
+        CLIParserContext *ctx;
+        CLIParserInit(&ctx, "hw bwm autooff",
+                      "Toggle automatic power-off when the PM5 is unplugged from USB (BWM only).\n"
+                      "Default is " _GREEN_("on") ". When on, the board powers itself down ~10s after\n"
+                      "USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery.\n"
+                      "Button power-on is unaffected. Disable for standalone/BLE use on battery.\n"
+                      _YELLOW_("Runtime only:") " resets to on at each boot.",
+                      "hw bwm autooff off   --> disable auto power-off\n"
+                      "hw bwm autooff on    --> re-enable auto power-off");
+        void *argtable[] = {
+            arg_param_begin,
+            arg_param_end
+        };
+        CLIExecWithReturn(ctx, Cmd, argtable, true);
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "specify " _YELLOW_("on") " or " _YELLOW_("off"));
         return PM3_EINVARG;
     }
-    uint8_t payload = off ? 0 : 1;   // default (neither flag) = enable
+
+    uint8_t payload = off ? 0 : 1;   // on -> 1 (enable), off -> 0 (disable)
 
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_AUTOOFF, &payload, sizeof(payload));
@@ -1555,48 +1558,15 @@ static int CmdBwmAutoOff(const char *Cmd) {
 }
 
 static int CmdBWMWifi(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hw bwm wifi",
-                  "Bring up the BWM in STA + TCP-server mode: join a WiFi network and\n"
-                  "start a TCP server so the client can connect over WiFi. PM5 only.",
-                  "hw bwm wifi --ssid Home --pwd secret            --> port 7777\n"
-                  "hw bwm wifi --ssid Home --pwd secret --port 9000\n"
-                  "hw bwm wifi --status                            --> show connection state + IP");
+    // Sub-actions that carry no other arguments are positional keywords now:
+    //   hw bwm wifi status   (was --status)
+    //   hw bwm wifi stop     (was --stop)
+    // Bringing WiFi up still takes value flags, so it stays the default
+    // (no-keyword) form: hw bwm wifi --ssid <ssid> --pwd <pwd> [--port <n>]
+    char verb[16] = {0};
+    sscanf(Cmd, "%15s", verb);
 
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str0(NULL, "ssid", "<ssid>", "WiFi SSID to join (omit with --stop)"),
-        arg_str0(NULL, "pwd",  "<pwd>",  "WiFi password (omit for open network)"),
-        arg_int0(NULL, "port", "<dec>",  "TCP server listen port (default 7777)"),
-        arg_str0(NULL, "hostname", "<name>", "DHCP hostname (default Proxmark5)"),
-        arg_lit0(NULL, "stop", "tear down WiFi and return to BLE-only"),
-        arg_lit0(NULL, "status", "show current WiFi connection state + IP"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-
-    uint8_t ssid[64] = {0};
-    int ssid_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 1), ssid, sizeof(ssid) - 1, &ssid_len);
-
-    uint8_t pwd[64] = {0};
-    int pwd_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 2), pwd, sizeof(pwd) - 1, &pwd_len);
-
-    int port = arg_get_int_def(ctx, 3, 7777);
-
-    uint8_t host[33] = {0};
-    int host_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 4), host, sizeof(host) - 1, &host_len);
-    if (host_len == 0) {
-        strcpy((char *)host, "Proxmark5");
-        host_len = 9;
-    }
-    bool stop = arg_get_lit(ctx, 5);
-    bool status = arg_get_lit(ctx, 6);
-    CLIParserFree(ctx);
-
-    if (status) {
+    if (strcmp(verb, "status") == 0) {
         uint8_t q[1] = { BWM_WIFI_ACTION_STATUS };
         clearCommandBuffer();
         SendCommandNG(CMD_PM5_BWM_WIFI, q, sizeof(q));
@@ -1645,7 +1615,7 @@ static int CmdBWMWifi(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
-    if (stop) {
+    if (strcmp(verb, "stop") == 0) {
         uint8_t off[1] = { BWM_WIFI_ACTION_STOP };
         clearCommandBuffer();
         SendCommandNG(CMD_PM5_BWM_WIFI, off, sizeof(off));
@@ -1662,8 +1632,47 @@ static int CmdBWMWifi(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwm wifi",
+                  "Bring up the BWM in STA + TCP-server mode: join a WiFi network and\n"
+                  "start a TCP server so the client can connect over WiFi. PM5 only.\n"
+                  "Sub-actions (no dashes): 'status' shows state, 'stop' tears WiFi down.",
+                  "hw bwm wifi status                              --> show connection state + IP\n"
+                  "hw bwm wifi stop                                --> tear down WiFi, back to BLE-only\n"
+                  "hw bwm wifi --ssid Home --pwd secret            --> bring up, port 7777\n"
+                  "hw bwm wifi --ssid Home --pwd secret --port 9000");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "ssid", "<ssid>", "WiFi SSID to join"),
+        arg_str0(NULL, "pwd",  "<pwd>",  "WiFi password (omit for open network)"),
+        arg_int0(NULL, "port", "<dec>",  "TCP server listen port (default 7777)"),
+        arg_str0(NULL, "hostname", "<name>", "DHCP hostname (default Proxmark5)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t ssid[64] = {0};
+    int ssid_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 1), ssid, sizeof(ssid) - 1, &ssid_len);
+
+    uint8_t pwd[64] = {0};
+    int pwd_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 2), pwd, sizeof(pwd) - 1, &pwd_len);
+
+    int port = arg_get_int_def(ctx, 3, 7777);
+
+    uint8_t host[33] = {0};
+    int host_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 4), host, sizeof(host) - 1, &host_len);
+    if (host_len == 0) {
+        strcpy((char *)host, "Proxmark5");
+        host_len = 9;
+    }
+    CLIParserFree(ctx);
+
     if (ssid_len == 0) {
-        PrintAndLogEx(FAILED, "an SSID is required (or use --stop to tear down)");
+        PrintAndLogEx(FAILED, "an SSID is required (or " _YELLOW_("hw bwm wifi stop") " to tear down)");
         return PM3_EINVARG;
     }
     if (port < 1 || port > 65535) {
@@ -1699,7 +1708,7 @@ static int CmdBWMWifi(const char *Cmd) {
     }
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "BWM WiFi bring-up failed (check SSID/password and signal)");
-        PrintAndLogEx(HINT, "If it may have joined after DHCP, check: " _YELLOW_("hw bwm wifi --status"));
+        PrintAndLogEx(HINT, "If it may have joined after DHCP, check: " _YELLOW_("hw bwm wifi status"));
         return resp.status;
     }
 
@@ -1713,31 +1722,34 @@ static int CmdBWMWifi(const char *Cmd) {
 }
 
 static int CmdBwmCharge(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hw bwm charge",
-                  "Enable or disable BWM battery charging by clearing/setting the\n"
-                  "AW32001E charge-enable bit (CEB, REG01[3]). PM5 only.\n"
-                  _RED_("One-shot:") " the charger watchdog reverts this after ~160 s unless\n"
-                  "serviced, so charging may stop on its own. Use to nudge a top-up.",
-                  "hw bwm charge --on     --> enable charging\n"
-                  "hw bwm charge --off    --> disable charging");
+    // Positional sub-action (no dashes): hw bwm charge on | off
+    char verb[16] = {0};
+    sscanf(Cmd, "%15s", verb);
+    bool on  = (strcmp(verb, "on")  == 0);
+    bool off = (strcmp(verb, "off") == 0);
 
-    void *argtable[] = {
-        arg_param_begin,
-        arg_lit0(NULL, "on",  "enable charging (default)"),
-        arg_lit0(NULL, "off", "disable charging"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool on  = arg_get_lit(ctx, 1);
-    bool off = arg_get_lit(ctx, 2);
-    CLIParserFree(ctx);
-
-    if (on && off) {
-        PrintAndLogEx(WARNING, "pick one of --on / --off");
+    if (!on && !off) {
+        // Not a recognised sub-action: render help (also serves -h / empty),
+        // or error on a stray token, then stop.
+        CLIParserContext *ctx;
+        CLIParserInit(&ctx, "hw bwm charge",
+                      "Enable or disable BWM battery charging by clearing/setting the\n"
+                      "AW32001E charge-enable bit (CEB, REG01[3]). PM5 only.\n"
+                      _RED_("One-shot:") " the charger watchdog reverts this after ~160 s unless\n"
+                      "serviced, so charging may stop on its own. Use to nudge a top-up.",
+                      "hw bwm charge off    --> disable charging\n"
+                      "hw bwm charge on     --> enable charging");
+        void *argtable[] = {
+            arg_param_begin,
+            arg_param_end
+        };
+        CLIExecWithReturn(ctx, Cmd, argtable, true);
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "specify " _YELLOW_("on") " or " _YELLOW_("off"));
         return PM3_EINVARG;
     }
-    uint8_t payload = off ? 0 : 1;   // default (neither flag) = enable
+
+    uint8_t payload = off ? 0 : 1;   // on -> 1 (enable), off -> 0 (disable)
     PrintAndLogEx(INFO, "%s BWM battery charging...", off ? "Disabling" : "Enabling");
 
     clearCommandBuffer();
