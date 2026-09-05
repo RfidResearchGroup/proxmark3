@@ -453,6 +453,15 @@ static int sam_sc_card_api_loop(uint8_t *response, uint16_t *response_len,
     return res;
 }
 
+void sam_sc_handler_no_trace(const PacketCommandNG *c) {
+    const bool tracing = get_tracing();
+    const bool blocked = set_tracing_blocked(true);
+    clear_trace();
+    sam_sc_handler(c);
+    set_tracing_blocked(blocked);
+    set_tracing(tracing);
+}
+
 void sam_sc_handler(const PacketCommandNG *c) {
 
     if (c == NULL || c->length < SAM_SC_HEADER_LEN) {
@@ -496,6 +505,15 @@ void sam_sc_handler(const PacketCommandNG *c) {
 
     int res = PM3_SUCCESS;
 
+    // ---- HF_OFF: disarm the field (no SAM traffic) ----
+    // This also runs after RELEASE or before the first session. Do not reset
+    // or warm up the SAM just to turn off the RF field.
+    if (hf_off) {
+        switch_off();
+        reply_ng(CMD_HF_SAM_SC, PM3_SUCCESS, NULL, 0);
+        goto done;
+    }
+
     // Reset the SAM only if the caller asked for it OR this is the first SC
     // op since boot / since the previous session was released. Crucially
     // this dispatcher does NOT reset on every call the way sam_picopass_get_pacs
@@ -522,7 +540,7 @@ void sam_sc_handler(const PacketCommandNG *c) {
         s_sam_sc_session_active = false;
         I2C_Reset_EnterMainProgram();
         StartTicks();
-#if SAM_SC_FORCE_T1_TA1_95
+#if SAM_SC_FORCE_T1_PROFILE
         sc_request_sam_t1_profile();
 #endif
         smart_card_atr_t card;
@@ -535,13 +553,6 @@ void sam_sc_handler(const PacketCommandNG *c) {
             goto out;
         }
         s_sam_sc_session_active = true;
-    }
-
-    // ---- HF_OFF: disarm the field (no SAM traffic) ----
-    if (hf_off) {
-        switch_off();
-        reply_ng(CMD_HF_SAM_SC, PM3_SUCCESS, NULL, 0);
-        goto done;
     }
 
     // ---- HF_SELECT: energize field + select an iCLASS tag, return CSN/AIA ----

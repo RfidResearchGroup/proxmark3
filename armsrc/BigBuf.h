@@ -55,6 +55,7 @@ void BigBuf_print_status(void);
 uint32_t BigBuf_get_traceLen(void);
 void clear_trace(void);
 void set_tracing(bool enable);
+bool set_tracing_blocked(bool blocked); // Returns the previous block state.
 void set_tracelen(uint32_t value);
 bool get_tracing(void);
 

@@ -75,6 +75,7 @@ static dmabuf8_t s_dma_8 = {
 // trace related variables
 static uint32_t s_trace_len = 0;
 static bool s_tracing = true;
+static bool s_tracing_blocked = false;
 
 static uint32_t s_trace_origin = 0;
 static bool s_trace_origin_valid = false;
@@ -231,7 +232,14 @@ void set_tracelen(uint32_t value) {
 }
 
 void set_tracing(bool enable) {
-    s_tracing = enable;
+    s_tracing = enable && !s_tracing_blocked;
+}
+
+bool set_tracing_blocked(bool blocked) {
+    bool previous = s_tracing_blocked;
+    s_tracing_blocked = blocked;
+    if (blocked) s_tracing = false;
+    return previous;
 }
 
 bool get_tracing(void) {

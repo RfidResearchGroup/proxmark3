@@ -57,10 +57,10 @@
 
 // SAM secure-channel transport policy for the performance build.  Artemis
 // offers T=0 first in its ATR; request its advertised T=1 service explicitly
-// and use the validated Fi=512/Di=16 rate.  This is protocol selection only:
+// and use Fi=512/Di=32 with SIM firmware v4.66.  This is protocol selection only:
 // it does not enable APDU dumps or other bring-up diagnostics.
-#define SAM_SC_FORCE_T1_TA1_95      1
-#define SAM_SC_T1_TA1               0x95
+#define SAM_SC_FORCE_T1_PROFILE     1
+#define SAM_SC_T1_TA1               0x96
 
 // The SIM module v4 supports up to 384 bytes for the length.
 #define  ISO7816_MAX_FRAME 270

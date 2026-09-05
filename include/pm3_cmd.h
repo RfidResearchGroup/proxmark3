@@ -1205,6 +1205,7 @@ typedef struct {
 // session state must persist across calls (no I2C reset, no GetVersion ping,
 // no iso15 NFC-relay loop) and the routing scFlag byte must be host-supplied.
 #define CMD_HF_SAM_SC 0x0904
+#define CMD_HF_SAM_SC_NO_TRACE 0x0905 // Same payload and reply command as CMD_HF_SAM_SC.
 
 #define CMD_UNKNOWN 0xFFFF
 
