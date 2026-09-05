@@ -522,7 +522,7 @@ void sam_sc_handler(const PacketCommandNG *c) {
         s_sam_sc_session_active = false;
         I2C_Reset_EnterMainProgram();
         StartTicks();
-#if SAM_SC_FORCE_T1_TA1_95
+#if SAM_SC_FORCE_T1_PROFILE
         sc_request_sam_t1_profile();
 #endif
         smart_card_atr_t card;

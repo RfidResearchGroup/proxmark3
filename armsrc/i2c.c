@@ -65,7 +65,7 @@ static bool s_proto_announced = false;
 // keep the T=0 they had before.
 static uint8_t s_pps_proto_cmd = 0;
 
-#if SAM_SC_FORCE_T1_TA1_95
+#if SAM_SC_FORCE_T1_PROFILE
 // One-shot request used by the SAM secure-channel path.  Keep it separate
 // from generic SmartCardRaw PPS selection so the performance policy does not
 // alter unrelated contact-card commands.
@@ -1138,7 +1138,7 @@ static bool sc_pps(uint8_t proto, uint8_t ta1) {
         return false;
     }
     // resp is [ok][active protocol][ta1 in force]
-    if ((resp[0] != 1) || (resp[2] != ta1)) {
+    if ((resp[0] != 1) || (resp[1] != (proto & 0x0F)) || (resp[2] != ta1)) {
         return false;
     }
 
@@ -1162,7 +1162,7 @@ uint8_t sc_active_device_cmd(void) {
 }
 
 void sc_request_sam_t1_profile(void) {
-#if SAM_SC_FORCE_T1_TA1_95
+#if SAM_SC_FORCE_T1_PROFILE
     s_sam_t1_profile_requested = true;
 #endif
 }
@@ -1241,7 +1241,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
 
     s_card_protocols = atr_protocols(card_ptr->atr, card_ptr->atr_len);
     s_proto_announced = false;
-#if SAM_SC_FORCE_T1_TA1_95
+#if SAM_SC_FORCE_T1_PROFILE
     const bool request_sam_t1 = s_sam_t1_profile_requested;
     s_sam_t1_profile_requested = false;
     if (request_sam_t1) {
@@ -1300,7 +1300,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
             uint8_t want_proto = atr_first_proto(card_ptr->atr, card_ptr->atr_len);
             uint8_t want = sc_pps_best_ta1(card_ptr->atr, card_ptr->atr_len);
 
-#if SAM_SC_FORCE_T1_TA1_95
+#if SAM_SC_FORCE_T1_PROFILE
             if (request_sam_t1 && (s_card_protocols & SC_PROTO_T1)) {
                 want_proto = 1;
                 want = SAM_SC_T1_TA1;
