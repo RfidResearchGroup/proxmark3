@@ -93,6 +93,7 @@
 #define SAM_SC_ADDR_SNMP_LOADER 0xff
 
 void sam_sc_handler(const PacketCommandNG *c);
+void sam_sc_handler_no_trace(const PacketCommandNG *c);
 
 // Forces the next sam_sc_handler() call to perform an I2C reset before sending
 // its payload. Intended to be called by other firmware paths that may have

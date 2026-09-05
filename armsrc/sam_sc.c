@@ -453,6 +453,15 @@ static int sam_sc_card_api_loop(uint8_t *response, uint16_t *response_len,
     return res;
 }
 
+void sam_sc_handler_no_trace(const PacketCommandNG *c) {
+    const bool tracing = get_tracing();
+    const bool blocked = set_tracing_blocked(true);
+    clear_trace();
+    sam_sc_handler(c);
+    set_tracing_blocked(blocked);
+    set_tracing(tracing);
+}
+
 void sam_sc_handler(const PacketCommandNG *c) {
 
     if (c == NULL || c->length < SAM_SC_HEADER_LEN) {

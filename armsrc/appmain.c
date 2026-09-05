@@ -2936,6 +2936,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             sam_sc_handler(packet);
             break;
         }
+        case CMD_HF_SAM_SC_NO_TRACE: {
+            sam_sc_handler_no_trace(packet);
+            break;
+        }
 
 #endif
 
