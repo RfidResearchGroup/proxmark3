@@ -1143,7 +1143,7 @@ static bool QCTestPM5(uint8_t *failed_item, uint32_t timeout_ms) {
     // 蜂鸣器 (PB13 使能, PC9 = TMR8_CH4 调制) 由通用 buzzer 模块驱动
     BuzzerSetup();
 
-    LEDsoff(); // 在开始测试之前线关闭所有LED
+    LEDsoff(); // 在开始测试之前先关闭所有LED
 
     *failed_item = 2;
     // 在开始测试之前，如果按钮是按下的，则认为失败，有可能按钮不良卡住了
@@ -1222,6 +1222,59 @@ out:
         I2C_BufferWrite(&data_u8, 1, 0x02, addr_ant << 1);
     }
     return result;
+}
+
+static int8_t QCTestPM5IO(uint16_t index, uint8_t status) {
+    // !!! No one is allowed to modify the definition and order of this list except DXL.
+    // Otherwise, the PM5 factory tester will fail to check.
+    struct qc_io_map {
+        crm_periph_clock_type gpio_clk;
+        gpio_type *gpio_group;
+        uint16_t gpio_pin;
+    } const qc_io_map[] = {
+        {.gpio_clk = CRM_GPIOA_PERIPH_CLOCK, .gpio_group = GPIOA, .gpio_pin = GPIO_PINS_14}, // SIGIN1-5x2P-SWD-CLK
+        {.gpio_clk = CRM_GPIOA_PERIPH_CLOCK, .gpio_group = GPIOA, .gpio_pin = GPIO_PINS_13}, // SIGIN2-5x2P-SWD-DIO
+        {.gpio_clk = CRM_GPIOA_PERIPH_CLOCK, .gpio_group = GPIOA, .gpio_pin = GPIO_PINS_3}, // SIGIN3-5x2P-UART_RX
+        {.gpio_clk = CRM_GPIOA_PERIPH_CLOCK, .gpio_group = GPIOA, .gpio_pin = GPIO_PINS_2}, // SIGIN4-5x2P-UART_TX
+        {.gpio_clk = CRM_GPIOA_PERIPH_CLOCK, .gpio_group = GPIOA, .gpio_pin = GPIO_PINS_7}, // SIGIN5-CEP-USB_RXP(MOSI)
+        {.gpio_clk = CRM_GPIOA_PERIPH_CLOCK, .gpio_group = GPIOA, .gpio_pin = GPIO_PINS_6}, // SIGIN6-CEP-USB_RXN(MISO)
+        {.gpio_clk = CRM_GPIOA_PERIPH_CLOCK, .gpio_group = GPIOA, .gpio_pin = GPIO_PINS_9}, // SIGIN7-CEP-USB_SBU(UART-1-line)
+        {.gpio_clk = CRM_GPIOA_PERIPH_CLOCK, .gpio_group = GPIOA, .gpio_pin = GPIO_PINS_11}, // SIGIN8-CEP-USB_DN
+        {.gpio_clk = CRM_GPIOA_PERIPH_CLOCK, .gpio_group = GPIOA, .gpio_pin = GPIO_PINS_4}, // SIGIN9-CEP-USB_TXP(CSN)
+        {.gpio_clk = CRM_GPIOA_PERIPH_CLOCK, .gpio_group = GPIOA, .gpio_pin = GPIO_PINS_12}, // SIGIN10-CEP-USB_DP
+        {.gpio_clk = CRM_GPIOA_PERIPH_CLOCK, .gpio_group = GPIOA, .gpio_pin = GPIO_PINS_5}, // SIGIN11-CEP-USB_TXN(CLK)
+    };
+    if (index >= ARRAYLEN(qc_io_map)) {
+        return PM3_EINVARG;
+    }
+    // For RXP/RXN/TXP/TXN
+    gpio_inter_usb_spi_role_setup();
+    Gpio_Inter_USB_SPI_Role_High();
+    // Enable the clock for the GPIO port and configure the pin as output
+    crm_periph_clock_enable(qc_io_map[index].gpio_clk, TRUE);
+    // Configure the GPIO pin as output or input based on the status parameter
+    gpio_init_type gpio_init_struct;
+    gpio_default_para_init(&gpio_init_struct);
+    gpio_init_struct.gpio_pins = qc_io_map[index].gpio_pin;
+    gpio_init_struct.gpio_mode = GPIO_MODE_OUTPUT;
+    // Set the GPIO pin state or RESET to default based on the status parameter( -> Preset <- )
+    if (status == 0) {
+        gpio_bits_reset(qc_io_map[index].gpio_group, qc_io_map[index].gpio_pin);
+    } else if (status == 1) {
+        gpio_bits_set(qc_io_map[index].gpio_group, qc_io_map[index].gpio_pin);
+    } else {
+        // Reset to Default state or MUX
+        if (index == 0 || index == 1) {
+            // SIGIN1-SWD-CLK or SIGIN2-SWD-DIO
+            gpio_init_struct.gpio_mode = GPIO_MODE_MUX;
+            gpio_init_struct.gpio_pull = index == 0 ?  GPIO_PULL_DOWN : GPIO_PULL_UP;
+            gpio_pin_mux_config(qc_io_map[index].gpio_group, qc_io_map[index].gpio_pin, GPIO_MUX_0);
+        } else {
+            gpio_init_struct.gpio_mode = GPIO_MODE_INPUT;
+        }
+    }
+    gpio_init(qc_io_map[index].gpio_group, &gpio_init_struct);
+    return PM3_SUCCESS;
 }
 
 #endif
@@ -3874,6 +3927,23 @@ static void PacketReceived(PacketCommandNG *packet) {
                 memcpy(&timeout_ms, packet->data.asBytes, sizeof(timeout_ms));
             }
             reply_ng(CMD_PM5_QC_TEST_HW, QCTestPM5(&failed_item, timeout_ms) ? PM3_SUCCESS : PM3_EFAILED, &failed_item, 1);
+            break;
+        }
+        case CMD_PM5_QC_TEST_IO: {
+            struct p {
+                uint32_t pwd;   // 0xDEADBEEF
+                uint16_t index; // index of the IO to test
+                uint8_t status; // 0 = low, 1 = high, 2 = float or RESET TO DEFAULT
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            // !!! IMPORTANT !!!
+            // This password must not be written in the client software.
+            // Users should never use this command without knowing its purpose, otherwise it may damage the device.
+            if (payload->pwd != 0xDEADBEEF) {
+                reply_ng(CMD_PM5_QC_TEST_IO, PM3_EFAILED, NULL, 0);
+                break;
+            }
+            reply_ng(CMD_PM5_QC_TEST_IO, QCTestPM5IO(payload->index, payload->status), NULL, 0);
             break;
         }
         case CMD_PM5_RGB_SET: {
