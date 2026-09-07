@@ -607,7 +607,8 @@ void Demod14aInit(uint8_t *d, uint16_t n, uint8_t *par) {
 }
 
 // use parameter non_real_time to provide a timestamp. Set to 0 if the decoder should measure real time
-RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time) {
+static RAMFUNC int ManchesterDecodingEx(uint8_t bit, uint16_t offset, uint32_t non_real_time, bool no_parity) {
+    const uint8_t frame_bits = no_parity ? 8 : 9;
 
     if (Demod.len == Demod.output_len) {
         // Flush last parity bits
@@ -653,8 +654,8 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
             }                                                           // modulation in first half only - Sequence D = 1
             Demod.bitCount++;
             Demod.shiftReg = (Demod.shiftReg >> 1) | 0x100;             // in both cases, add a 1 to the shiftreg
-            if (Demod.bitCount == 9) {                                  // if we decoded a full byte (including parity)
-                Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);
+            if (Demod.bitCount == frame_bits) {                                  // if we decoded a full byte (including parity)
+                Demod.output[Demod.len++] = ((Demod.shiftReg >> (no_parity ? 1 : 0)) & 0xff);
                 Demod.parityBits <<= 1;                                 // make room for the parity bit
                 Demod.parityBits |= ((Demod.shiftReg >> 8) & 0x01);     // store parity bit
                 Demod.bitCount = 0;
@@ -664,13 +665,13 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
                     Demod.parityBits = 0;
                 }
             }
-            Demod.endTime = Demod.startTime + 8 * (9 * Demod.len + Demod.bitCount + 1) - 4;
+            Demod.endTime = Demod.startTime + 8 * (frame_bits * Demod.len + Demod.bitCount + 1) - 4;
         } else {                                                        // no modulation in first half
             if (IsManchesterModulationNibble2(Demod.twoBits >> Demod.syncBit)) {    // and modulation in second half = Sequence E = 0
                 Demod.bitCount++;
                 Demod.shiftReg = (Demod.shiftReg >> 1);                 // add a 0 to the shiftreg
-                if (Demod.bitCount >= 9) {                              // if we decoded a full byte (including parity)
-                    Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);
+                if (Demod.bitCount >= frame_bits) {                              // if we decoded a full byte (including parity)
+                    Demod.output[Demod.len++] = ((Demod.shiftReg >> (no_parity ? 1 : 0)) & 0xff);
                     Demod.parityBits <<= 1;                             // make room for the new parity bit
                     Demod.parityBits |= ((Demod.shiftReg >> 8) & 0x01); // store parity bit
                     Demod.bitCount = 0;
@@ -680,7 +681,7 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
                         Demod.parityBits = 0;
                     }
                 }
-                Demod.endTime = Demod.startTime + 8 * (9 * Demod.len + Demod.bitCount + 1);
+                Demod.endTime = Demod.startTime + 8 * (frame_bits * Demod.len + Demod.bitCount + 1);
             } else {                                                    // no modulation in both halves - End of communication
 
                 if (Demod.bitCount > 0) {                               // there are some remaining data bits
@@ -706,6 +707,10 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
     return false;    // not finished yet, need more data
 }
 
+
+RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time) {
+    return ManchesterDecodingEx(bit, offset, non_real_time, false);
+}
 
 // Thinfilm, Kovio mangles ISO14443A in the way that they don't use start bit nor parity bits.
 static int ManchesterDecoding_Thinfilm(uint8_t bit) {
@@ -3107,7 +3112,7 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_
 //  If a response is captured return TRUE
 //  If it takes too long return FALSE
 //-----------------------------------------------------------------------------
-static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint16_t rec_maxlen, uint8_t *receivedResponsePar, uint16_t offset) {
+static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint16_t rec_maxlen, uint8_t *receivedResponsePar, uint16_t offset, bool no_parity) {
     if (g_hf_field_active == false) {
         Dbprintf("Warning: HF field is off");
         return false;
@@ -3134,7 +3139,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint16_t rec_max
 
         if (FPGA_SSC_RX_Ready()) {
             b = (uint8_t)FPGA_SSC_RX_Value();
-            if (ManchesterDecoding(b, offset, 0)) {
+            if (ManchesterDecodingEx(b, offset, 0, no_parity)) {
                 NextTransferTime = MAX(NextTransferTime, Demod.endTime - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 16 + FRAME_DELAY_TIME_PICC_TO_PCD);
                 return true;
             } else if (c++ > timeout && Demod.state == DEMOD_14A_UNSYNCD) {
@@ -3177,20 +3182,24 @@ void ReaderTransmit(const uint8_t *frame, uint16_t len, uint32_t *timing) {
 }
 
 static uint16_t ReaderReceiveOffset(uint8_t *receivedAnswer, uint16_t answer_len, uint16_t offset, uint8_t *par) {
-    if (GetIso14443aAnswerFromTag(receivedAnswer, answer_len, par, offset) == false) {
+    if (GetIso14443aAnswerFromTag(receivedAnswer, answer_len, par, offset, false) == false) {
         return 0;
     }
     LogTrace(receivedAnswer, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, par, false);
     return Demod.len;
 }
 
-uint16_t ReaderReceive(uint8_t *receivedAnswer, uint16_t answer_maxlen, uint8_t *par) {
-    if (GetIso14443aAnswerFromTag(receivedAnswer, answer_maxlen, par, 0) == false) {
+static uint16_t ReaderReceiveEx(uint8_t *receivedAnswer, uint16_t answer_maxlen, uint8_t *par, bool no_parity) {
+    if (GetIso14443aAnswerFromTag(receivedAnswer, answer_maxlen, par, 0, no_parity) == false) {
         return 0;
     }
 
-    LogTrace(receivedAnswer, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, par, false);
+    LogTrace(receivedAnswer, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, no_parity ? NULL : par, false);
     return Demod.len;
+}
+
+uint16_t ReaderReceive(uint8_t *receivedAnswer, uint16_t answer_maxlen, uint8_t *par) {
+    return ReaderReceiveEx(receivedAnswer, answer_maxlen, par, false);
 }
 
 // This function misstreats the ISO 14443a anticollision procedure.
@@ -4033,7 +4042,9 @@ void ReaderIso14443a(PacketCommandNG *c) {
             lenbits = len * 8;
         }
 
-        if (lenbits > 0) {
+        if (param & ISO14A_NO_PARITY) {
+            ReaderTransmitBitsPar(cmd, lenbits ? lenbits : len * 8, NULL, NULL);
+        } else if (lenbits > 0) {
 
             // want to send a specific number of bits (e.g. short commands)
 
@@ -4110,7 +4121,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 FpgaDisableTracing();
                 reply_iso14a_raw(response, respbuf, 0);
             } else {
-                arg0 = ReaderReceive(buf, ISO14A_RESP_MAXLEN, parity_array);
+                arg0 = ReaderReceiveEx(buf, ISO14A_RESP_MAXLEN, parity_array, (param & ISO14A_NO_PARITY) != 0);
 
                 if ((param & ISO14A_CRYPTO1MODE) == ISO14A_CRYPTO1MODE) {
                     mf_crypto1_decrypt(&crypto1_state, buf, arg0);

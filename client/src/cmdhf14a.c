@@ -733,6 +733,101 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
     return PM3_SUCCESS;
 }
 
+// Annex C uses CRC-B and continuous frames without parity.
+static int hf14a_timeslot_exchange(const uint8_t *data, uint16_t len, bool request,
+                                  PacketResponseNG *resp, uint16_t *rlen) {
+    uint8_t frame[11];
+    if (len > sizeof(frame) - 2) {
+        return PM3_EINVARG;
+    }
+    memcpy(frame, data, len);
+    uint32_t flags = ISO14A_RAW | ISO14A_NO_PARITY | ISO14A_NO_DISCONNECT |
+                     ISO14A_SET_TIMEOUT | ISO14A_SET_WAIT_US;
+    if (request) {
+        flags |= ISO14A_CONNECT | ISO14A_NO_SELECT;
+    } else {
+        compute_crc(CRC_14443_B, frame, len, &frame[len], &frame[len + 1]);
+        len += 2;
+    }
+
+    clearCommandBuffer();
+    // Timeouts in 128/fc units; inter-frame delay in microseconds.
+    SendIso14aReaderEx(flags, frame, len, len, request ? 7 : 0,
+                      request ? 79 : 547, request ? 0 : 1100);
+    if (WaitForIso14aReply(resp, 1500, rlen, NULL) == false || *rlen == 0) {
+        return PM3_ETIMEOUT;
+    }
+    if (*rlen > resp->length) {
+        return PM3_ESOFT;
+    }
+    if (request == false) {
+        if (*rlen < 3 || check_crc(CRC_14443_B, resp->data.asBytes, *rlen) == false) {
+            return PM3_ECRC;
+        }
+        *rlen -= 2;
+    }
+    return PM3_SUCCESS;
+}
+
+static int hf14a_timeslot_select(bool disconnect_after, bool verbose, bool print_info) {
+    const uint8_t reqa_t[] = {0x35};
+    const uint8_t req_id[] = {0x08, 0x44, 0x00};
+    uint8_t sel_t[9] = {0x40}; // CID_t 0
+    PacketResponseNG resp;
+    uint16_t len = 0;
+    const char *stage = "REQA_t";
+    DropField();
+    int res = hf14a_timeslot_exchange(reqa_t, sizeof(reqa_t), true, &resp, &len);
+    if (res != PM3_SUCCESS) {
+        goto out;
+    }
+    uint8_t atqa = resp.data.asBytes[0];
+
+    stage = "REQ-ID";
+    res = hf14a_timeslot_exchange(req_id, sizeof(req_id), false, &resp, &len);
+    if (res != PM3_SUCCESS) {
+        goto out;
+    }
+    if (len != 9 || resp.data.asBytes[0] != 0x06) {
+        res = PM3_ESOFT;
+        goto out;
+    }
+    memcpy(sel_t + 1, resp.data.asBytes + 1, 8);
+
+    stage = "SEL_t";
+    res = hf14a_timeslot_exchange(sel_t, sizeof(sel_t), false, &resp, &len);
+    if (res != PM3_SUCCESS) {
+        goto out;
+    }
+    if (len > 33 || (len > 1 && resp.data.asBytes[0] != 0x3b)) {
+        res = PM3_ESOFT;
+        goto out;
+    }
+    if (print_info) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "---------- " _CYAN_("ISO14443-A Timeslot Information") " ----------");
+    }
+    PrintAndLogEx(SUCCESS, "   UID: " _GREEN_("%s"), sprint_hex(sel_t + 1, 8));
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "ATQA_T: " _GREEN_("%02X"), atqa);
+        if (len == 1) {
+            PrintAndLogEx(SUCCESS, " SAK_T: " _GREEN_("%02X"), resp.data.asBytes[0]);
+        } else {
+            // ProxIC 13.8.1: ATR with CRC-B in place of the contact ATR checksum.
+            PrintAndLogEx(SUCCESS, "   ATR: " _GREEN_("%s"), sprint_hex(resp.data.asBytes, len));
+        }
+        PrintAndLogEx(NORMAL, "");
+    }
+out:
+    if (disconnect_after || res != PM3_SUCCESS) {
+        DropField();
+    }
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(DEBUG, "Timeslot %s failed (%d)", stage, res);
+    }
+    return res;
+}
+
 static int CmdHF14AReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a reader",
@@ -815,8 +910,8 @@ static int CmdHF14AReader(const char *Cmd) {
             found = (select_status != 0);
 
             if (select_status == 0) {
-                DropField();
-                res = PM3_ESOFT;
+                res = hf14a_timeslot_select(disconnectAfter, !(silent && continuous), false);
+                found = (res == PM3_SUCCESS);
                 goto plot;
             }
 
@@ -2836,8 +2931,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     if (select_status == 0) {
         PrintAndLogEx(DEBUG, "iso14443a card select failed");
-        DropField();
-        return select_status;
+        // Status 5 avoids the standard ISO14443-4 application probe in hf search.
+        return hf14a_timeslot_select(true, true, true) == PM3_SUCCESS ? 5 : 0;
     }
 
     PrintAndLogEx(NORMAL, "");
