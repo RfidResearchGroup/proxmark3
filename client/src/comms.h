@@ -107,6 +107,7 @@ size_t GetCommunicationRawReceiveNum(void);
 bool OpenProxmarkSilent(pm3_device_t **dev, const char *port, uint32_t speed);
 bool OpenProxmark(pm3_device_t **dev, const char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed);
 int TestProxmark(pm3_device_t *dev);
+int DeviceInfoProxmark(pm3_device_t *dev);
 void CloseProxmark(pm3_device_t *dev);
 void StartReconnectProxmark(void);
 

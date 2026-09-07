@@ -818,9 +818,9 @@ static void show_help(bool showFullHelp, char *exec_name) {
 
     PrintAndLogEx(NORMAL, "\nsyntax: %s [-h|-t|-m|--fulltext]", exec_name);
 #ifdef HAVE_PYTHON
-    PrintAndLogEx(NORMAL, "        %s [[-p] <port>] [-b] [-w] [-f] [-d <0|1|2>] [--incognito] [--ncpu <num_cores>] [-c \"<command>\"]|[-l <lua_script_file>]|[-y <python_script_file>]|[-s <cmd_script_file>] [-i] [-- <arg0> <arg1>...]", exec_name);
+    PrintAndLogEx(NORMAL, "        %s [[-p] <port>] [-b] [-w] [-f] [-d <0|1|2>] [--incognito] [--device-info] [--ncpu <num_cores>] [-c \"<command>\"]|[-l <lua_script_file>]|[-y <python_script_file>]|[-s <cmd_script_file>] [-i] [-- <arg0> <arg1>...]", exec_name);
 #else // HAVE_PYTHON
-    PrintAndLogEx(NORMAL, "        %s [[-p] <port>] [-b] [-w] [-f] [-d <0|1|2>] [--incognito] [--ncpu <num_cores>] [-c \"<command>\"]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i] [-- <arg0> <arg1>...]", exec_name);
+    PrintAndLogEx(NORMAL, "        %s [[-p] <port>] [-b] [-w] [-f] [-d <0|1|2>] [--incognito] [--device-info] [--ncpu <num_cores>] [-c \"<command>\"]|[-l <lua_script_file>]|[-s <cmd_script_file>] [-i] [-- <arg0> <arg1>...]", exec_name);
 #endif // HAVE_PYTHON
     PrintAndLogEx(NORMAL, "        %s [-p] <port> --flash [--unlock-bootloader] [--image <imagefile>]+ [-w] [-f] [-d <0|1|2>]", exec_name);
 
@@ -840,6 +840,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      -m/--markdown                       dump all interactive command list at once in markdown syntax");
         PrintAndLogEx(NORMAL, "      -b/--baud                           serial port speed (only needed for physical UART, not for USB-CDC or BT)");
         PrintAndLogEx(NORMAL, "      --incognito                         do not use history, prefs file nor log files");
+        PrintAndLogEx(NORMAL, "      --device-info                       print device version and capabilities, then exit");
         PrintAndLogEx(NORMAL, "      --ncpu <num_cores>                  override number of CPU cores");
         PrintAndLogEx(NORMAL, "      -c/--command \"<command>\"          execute one Proxmark3 command (or several separated by ';').");
         PrintAndLogEx(NORMAL, "      -l/--lua <lua_script_file>          execute Lua script.");
@@ -1136,6 +1137,7 @@ int main(int argc, char *argv[]) {
     bool flash_can_write_bl = false;
     bool flash_force = false;
     bool debug_mode_forced = false;
+    bool device_info_mode = false;
     int flash_num_files = 0;
     const char *flash_filenames[FLASH_MAX_FILES];
     bool dumpmem_mode = false;
@@ -1369,6 +1371,11 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+        if (strcmp(argv[i], "--device-info") == 0) {
+            device_info_mode = true;
+            continue;
+        }
+
         // go to dump mode
         if (strcmp(argv[i], "--dumpmem") == 0) {
             dumpmem_mode = true;
@@ -1537,6 +1544,17 @@ int main(int argc, char *argv[]) {
         // rather than the usual "retry connecting until the endpoint appears".
         g_conn.listen_for_incoming = waitCOMPort && (strncmp(port, "tcp:", 4) == 0);
         OpenProxmark(&g_session.current_device, port, waitCOMPort, 20, false, speed);
+    }
+
+    if (device_info_mode) {
+        if (g_session.pm3_present == false) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " device info requires a connected Proxmark3\n");
+            exit(EXIT_FAILURE);
+        }
+
+        int ret = DeviceInfoProxmark(g_session.current_device);
+        CloseProxmark(g_session.current_device);
+        exit((ret == PM3_SUCCESS) ? EXIT_SUCCESS : EXIT_FAILURE);
     }
 
     if (g_session.pm3_present && (TestProxmark(g_session.current_device) != PM3_SUCCESS)) {

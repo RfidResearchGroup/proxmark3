@@ -939,9 +939,9 @@ int TestProxmark(pm3_device_t *dev) {
         return PM3_ETIMEOUT;
     }
 
-    if ((resp.length != sizeof(g_pm3_capabilities)) ||
-            (resp.data.asBytes[0] != CAPABILITIES_VERSION)) {
-        PrintAndLogEx(ERR, _RED_("Capabilities structure version sent by Proxmark3 is not the one expected by this client! (v%u != v%u)"), resp.data.asBytes[0], CAPABILITIES_VERSION);
+    uint8_t reported_version = (resp.length > 0) ? resp.data.asBytes[0] : 0;
+    if ((resp.length != sizeof(g_pm3_capabilities)) || (reported_version != CAPABILITIES_VERSION)) {
+        PrintAndLogEx(ERR, _RED_("Capabilities structure version sent by Proxmark3 is not the one expected by this client! (v%u != v%u)"), reported_version, CAPABILITIES_VERSION);
         PrintAndLogEx(ERR, _RED_("Please flash the Proxmark3 with a version matching the client."));
         return PM3_EDEVNOTSUPP;
     }
@@ -988,6 +988,74 @@ int TestProxmark(pm3_device_t *dev) {
             PrintAndLogEx(WARNING, "Failed to apply HF field timeout (" _YELLOW_("%u") " s)", g_session.hf_field_timeout_sec);
         }
     }
+    return PM3_SUCCESS;
+}
+
+int DeviceInfoProxmark(pm3_device_t *dev) {
+    (void)dev;
+
+    g_conn.max_cmd_data_size = CAPABILITIES_LEGACY_CMD_DATA_SIZE;
+
+    uint16_t len = 32;
+    uint8_t data[len];
+    for (uint16_t i = 0; i < len; i++) {
+        data[i] = i & 0xFF;
+    }
+
+    __atomic_store_n(&last_packet_time, msclock(), __ATOMIC_SEQ_CST);
+    clearCommandBuffer();
+    SendCommandNG(CMD_PING, data, len);
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeoutW(CMD_PING, &resp, 1000, false) == false) {
+        return PM3_ETIMEOUT;
+    }
+    if (memcmp(data, resp.data.asBytes, len) != 0) {
+        return PM3_EIO;
+    }
+
+    SendCommandNG(CMD_CAPABILITIES, NULL, 0);
+    if (WaitForResponseTimeoutW(CMD_CAPABILITIES, &resp, 1000, false) == false) {
+        return PM3_ETIMEOUT;
+    }
+
+    uint8_t reported_version = (resp.length > 0) ? resp.data.asBytes[0] : 0;
+    PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Device Info") " ]");
+    PrintAndLogEx(NORMAL, "  Capabilities payload...... %u bytes", resp.length);
+    PrintAndLogEx(NORMAL, "  Capabilities version...... v%u (client expects v%u)%s",
+                  reported_version,
+                  CAPABILITIES_VERSION,
+                  (reported_version == CAPABILITIES_VERSION) ? "" : " " _YELLOW_("mismatch"));
+
+    memset(&g_pm3_capabilities, 0, sizeof(g_pm3_capabilities));
+    if (resp.length == sizeof(g_pm3_capabilities)) {
+        memcpy(&g_pm3_capabilities, resp.data.asBytes, resp.length);
+        g_conn.max_cmd_data_size = MIN(g_pm3_capabilities.max_cmd_data_size, (uint16_t)PM3_CMD_DATA_SIZE);
+        PrintAndLogEx(NORMAL, "  Baudrate.................. %u", g_pm3_capabilities.baudrate);
+        PrintAndLogEx(NORMAL, "  Big buffer................ %u", g_pm3_capabilities.bigbuf_size);
+        PrintAndLogEx(NORMAL, "  Via FPC................... %s", g_pm3_capabilities.via_fpc ? "yes" : "no");
+        PrintAndLogEx(NORMAL, "  Via USB................... %s", g_pm3_capabilities.via_usb ? "yes" : "no");
+    } else {
+        g_pm3_capabilities.version = reported_version;
+        PrintAndLogEx(NORMAL, "  Raw capabilities:");
+        print_hex_break(resp.data.asBytes, resp.length, 32);
+    }
+
+    struct p {
+        uint32_t id;
+        uint32_t section_size;
+        uint32_t versionstr_len;
+        char versionstr[PM3_CMD_DATA_SIZE - 12];
+    } PACKED;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_VERSION, NULL, 0);
+    if (WaitForResponseTimeoutW(CMD_VERSION, &resp, 1000, false) == false) {
+        return PM3_ETIMEOUT;
+    }
+
+    struct p *payload = (struct p *)&resp.data.asBytes;
+    PrintAndLogEx(NORMAL, "\n  Firmware version:\n%s", payload->versionstr);
     return PM3_SUCCESS;
 }
 

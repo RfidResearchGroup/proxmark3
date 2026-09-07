@@ -2564,6 +2564,15 @@ void pm3_version(bool verbose, bool oneliner) {
     if (g_session.pm3_present) {
         PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Model") " ]");
 
+        if (g_pm3_capabilities.version != 0) {
+            PrintAndLogEx(NORMAL, "  Capabilities.............. v%u (client expects v%u)%s",
+                          g_pm3_capabilities.version,
+                          CAPABILITIES_VERSION,
+                          (g_pm3_capabilities.version == CAPABILITIES_VERSION) ? "" : " " _YELLOW_("mismatch"));
+        } else {
+            PrintAndLogEx(NORMAL, "  Capabilities.............. unavailable");
+        }
+
         PacketResponseNG resp;
         clearCommandBuffer();
         SendCommandNG(CMD_VERSION, NULL, 0);
