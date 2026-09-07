@@ -878,11 +878,11 @@ typedef struct {
 #define CMD_PM5_QC_TEST_HW 0x0177
 // PM5, set the antenna RGB LED colour (payload: r,g,b). Used by `hf/lf tune --rgb`.
 #define CMD_PM5_RGB_SET 0x0178
-// PM5, provision BWM fuel-gauge (BQ27427) Design Capacity. Used by `hw bwmsetcap`.
+// PM5, provision BWM fuel-gauge (BQ27427) Design Capacity. Used by `hw bwm setcap`.
 #define CMD_PM5_BWM_SET_CAP 0x0179
-// PM5, enable/disable BWM battery charging (AW32001E CEB). Used by `hw bwmcharge`.
+// PM5, enable/disable BWM battery charging (AW32001E CEB). Used by `hw bwm charge`.
 #define CMD_PM5_BWM_CHARGE_EN 0x017A
-// PM5, toggle automatic power-off on USB unplug. Used by `hw bwmautooff`.
+// PM5, toggle automatic power-off on USB unplug. Used by `hw bwm autooff`.
 #define CMD_PM5_BWM_AUTOOFF 0x017B
 #define CMD_PM5_BWM_WIFI    0x017C
 #define CMD_PM5_BWM_SET_VCHG 0x017D

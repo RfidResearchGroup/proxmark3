@@ -228,7 +228,7 @@ void bwm_print_battery_status(void) {
         // Capacity. FCC is the gauge's learned present full capacity; health = FCC/design.
         // NOTE: only meaningful once the gauge has run an Impedance Track learning cycle
         // (a full charge/discharge). Before that it is an unconverged estimate. If Design
-        // Capacity was never provisioned (hw bwmsetcap), the ratio is against the gauge
+        // Capacity was never provisioned (hw bwm setcap), the ratio is against the gauge
         // default, not the fitted cell - so it can read wildly wrong.
         uint16_t fcc = 0, design = 0;
         if (bwm_gauge_read16(BWM_GAUGE_FCC, &fcc) && fcc > 0) {
@@ -247,7 +247,7 @@ void bwm_print_battery_status(void) {
 // --- BQ27427 provisioning: set Design Capacity for the fitted cell -------------
 // One-time. The gauge ships with a ~1000+ mAh default profile, so RemainingCapacity
 // reads wrong for the fitted pack until Design Capacity is programmed. Invoked by the
-// `hw bwmsetcap` client command (CMD_PM5_BWM_SET_CAP) - deliberately NOT run at boot,
+// `hw bwm setcap` client command (CMD_PM5_BWM_SET_CAP) - deliberately NOT run at boot,
 // because a config-update cycle disrupts the Impedance Track learning cycle.
 // Per BQ27427 TRM (SLUUCD5): State subclass 82 (0x52), Design Capacity at offset 6
 // -> block addr 0x46 (MSB)/0x47 (LSB), big-endian. Assumes gauge UNSEALED (factory default).
