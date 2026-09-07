@@ -449,9 +449,9 @@
     "description": "Default system code used by FeliCa Lite/Lite-S tags",
     "services": [
       {
-        "name": "Konami",
-        "type": "e-amusement",
-        "description": "Konami E-amusement",
+        "name": "Konami e-amusement pass",
+        "type": "arcade",
+        "description": "Konami e-amusement pass (AIC)",
         "nodes": [
           {
             "code": "0b00",
@@ -475,9 +475,9 @@
         ]
       },
       {
-        "name": "Aime",
-        "type": "e-amusement",
-        "description": "AIME E-amusement",
+        "name": "Sega Aime",
+        "type": "arcade",
+        "description": "Sega Aime (AIC)",
         "nodes": [
           {
             "code": "0b00",
@@ -488,9 +488,9 @@
         ]
       },
       {
-        "name": "NESiCA",
-        "type": "e-amusement",
-        "description": "NESiCA E-amusement",
+        "name": "Taito NESiCA",
+        "type": "arcade",
+        "description": "Taito NESiCA (AIC)",
         "nodes": [
           {
             "code": "0b00",
@@ -501,9 +501,9 @@
         ]
       },
       {
-        "name": "Bandai Namco Pasport",
-        "type": "e-amusement",
-        "description": "Bandai Namco Pasport E-amusement",
+        "name": "Bandai Namco Passport",
+        "type": "arcade",
+        "description": "Bandai Namco Passport (AIC)",
         "nodes": [
           {
             "code": "0b00",
