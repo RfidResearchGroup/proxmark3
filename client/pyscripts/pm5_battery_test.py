@@ -7,7 +7,7 @@ Polls `hw status` at a fixed interval and logs the fuel-gauge readings to CSV
 (plot with pm5_battery_test_graph.py).
 
 If not yet done, you should set up the gauge first for meaningful numbers:
-    hw bwmsetcap --cap 500  # your cell's mAh
+    hw bwm setcap --cap 500  # your cell's mAh
 then fully charge
 
 Usage:

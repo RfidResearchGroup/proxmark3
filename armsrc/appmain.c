@@ -107,7 +107,7 @@ static bool s_autooff_setup = false;
 // Auto power-off on USB unplug. CRITICAL: only powers off on a USB-present -> absent
 // TRANSITION - i.e. the board was running on USB and the cable was pulled. A board that
 // booted on battery (button press, no USB) must NOT auto-off, or it could never be used
-// unplugged at all (and the hw bwmautooff toggle would be unreachable, since setting it
+// unplugged at all (and the hw bwm autooff toggle would be unreachable, since setting it
 // needs a client/USB). So we require having seen USB present at least once this session
 // before an absent reading triggers shutdown.
 static void bwm_autooff_check(void) {
