@@ -3,7 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `trace list -t topaz` - now parses topaz reader frames up to 16 bytes (@iceman1001)
+- Fixed `hw bwm` - doc and comment references still named the flat `hw bwmsetcap`/`bwmcharge`/`bwmautooff` commands from before the subgroup move (@xilni)
 - Added TA1=96 support via pwm to sim module `sim024.bin` - v4.66 (@antiklesys)
+- Added `hf mfu ndefformat` - NDEF format Ultralight/NTAG tags, restores the NXP factory Capability Container for the detected type (@0x6r1an0y)
 - Changed `lf hitag` - refactoring hitag2 operations and now they work much better (@iceman1001)
 - Fixed `lf hitag list` - now prints in same style like the rest (@iceman1001)
 - Changed pathing - client now supports `~/` tilde sign in paths (@iceman1001)
@@ -79,6 +82,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed `hf_mf_uscuid_prog.lua` - corrected the script name shown in its usage text (@c-barron)
 - Added `hf felica seacauth1` command (@kormax)
 - Added `lf trovan` commands to support Trovan Animal ID (@iceman1001)
+- Added support for emulating ST25TA tag (IKEA Rothult) with custom NDEF response (@sanduuz)
 - Added `hf mf gdmgetblk/gdmgethidblk/gdmsethidblk/gdmsetuid/gdmwipe/gdmsetsig` (@0x6r1an0y)
 - Changed `hf mf gdmparsecfg/gdmsetblk` (@0x6r1an0y)
 - Renamed `hf mf gdmcfg` (@0x6r1an0y)

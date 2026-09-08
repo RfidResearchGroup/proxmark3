@@ -1050,18 +1050,23 @@ void test_beep(void) {
     }
 }
 
-void test_power_of_by_btn(void) {
+void test_power_off_by_btn(void) {
     usb_enable();
     SpinDelay(1000);
-    dxl_print_dbg("SystemStart\n");
+    // dxl_print_dbg("SystemStart\n");
     while (1) {
+        // 第一阶段，等按下
         if (is_btn_pressed()) {
+            // 第二阶段，等抬起
+            while (is_btn_pressed()) {}
+            // 第三阶段，等一会儿
+            SpinDelay(50);
             // 拉低直接关机
-            dxl_print_dbg("SystemOff\n");
+            // dxl_print_dbg("SystemOff\n");
             Gpio_ARM_Power_ON_Low();
             // 拉低关机的话，还会有一段PWR电容放电时间，此时我们应当让系统进入死循环，不再处理任何事情
             while (1) {
-                dxl_print_dbg("Waiting Power Off\n");
+                // dxl_print_dbg("Waiting Power Off\n");
             }
         }
     }
@@ -1827,6 +1832,74 @@ void test_config_uart_tx2_to_dbgio(void) {
     gpio_init(GPIOA, &gpio_init_struct); // PA2_TX
 }
 
+#include "fpga_loader.h"
+#include "lfsampling.h"
+
+void test_max_power(void) {
+    FpgaResetComInterface();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
+    SpinDelay(100);
+    FpgaSetup24MHzClk();
+
+    uint8_t data;
+
+    // 开所有的灯
+    LED_A_ON();
+    LED_B_ON();
+    LED_C_ON();
+    LED_D_ON();
+    test_i2c_rgb_simple();
+
+    // 0x03 DischargeCurrentControl 寄存器
+    data = 0xE1; // 修改放电电流到 3A
+    I2C_BufferWrite(&data, 1, 0x03, 0x93);
+    // 0x05 ChargerTermination/TimerControl 寄存器
+    data = 0x1A; // 禁用定时器，正常为了安全可能需要在MainLoop喂狗
+    I2C_BufferWrite(&data, 1, 0x05, 0x93);
+
+#if 0
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
+#else
+
+    // 开场
+    // FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD
+    // FPGA_MAJOR_MODE_HF_READER
+    // FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
+    LFSetupFPGAForADC(LF_DIVISOR_125, true);
+
+    gpio_fpga_mod_only_setup();
+    Gpio_SSC_DOUT_Low();
+
+    // 配置低频高Q
+    data = 0x87; // 0x87 = 10000111: 125k + 高Q + 开启两个LED
+    I2C_BufferWrite(&data, 1, 0x02, 0x51 << 1);
+
+#endif
+
+    // 调到最高输出电压
+    FpgaSendCommand(FPGA_CMD_SET_PWR_PWM_LOW_COUNT, 4095u & 0xFFF);
+
+    // 蜂鸣器持续响着
+    test_beep();
+}
+
+void test_nvic_reset(void) {
+    LED_A_ON();
+    SpinDelay(100);
+    LED_A_OFF();
+    LED_B_ON();
+    while (1) {
+        if (is_btn_pressed()) {
+            LED_B_OFF();
+            LED_C_ON();
+            while (is_btn_pressed()) {}
+            NVIC_SystemReset();
+        }
+    }
+}
+
 // 覆盖 UnitTestMain 实现单元测试
 void UnitTestMain(void);
 
@@ -1847,13 +1920,19 @@ void UnitTestMain(void) {
     // ------------------------------- 关闭所有的LED -------------------------------
     LEDsoff();
 
+    // ------------------------------- 功耗测试 -------------------------------
+    // test_max_power();
+
     // ------------------------------- 关闭FPGA输出 -------------------------------
     // 不然的话调试的时候也会很发热
     SpinDelay(500);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
+    // ------------------------------- 测试 NVIC 系统复位 -------------------------------
+    // test_nvic_reset();
+
     // ------------------------------- 测试 配置UART TX2为DBGIO输出 -------------------------------
-    test_config_uart_tx2_to_dbgio();
+    // test_config_uart_tx2_to_dbgio();
 
     // ------------------------------- 测试 蓝牙电池套件UART通信 -------------------------------
     // test_bwm_uart();
@@ -1886,7 +1965,7 @@ void UnitTestMain(void) {
     // test_i2c_ant_software();
 
     // ------------------------------- 测试按钮关机 -------------------------------
-    // test_power_of_by_btn();
+    // test_power_off_by_btn();
 
     // ------------------------------- 测试蜂鸣器 -------------------------------
     // usb_enable();

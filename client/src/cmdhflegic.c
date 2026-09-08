@@ -58,13 +58,13 @@ static bool legic_xor(uint8_t *data, uint16_t cardsize) {
     return true;
 }
 
-static void legic_xor_with_crc(uint8_t *data, uint16_t cardsize, uint8_t crc) {
+void legic_xor_with_crc(uint8_t *data, uint16_t cardsize, uint8_t crc) {
     for (uint16_t i = 22; i < cardsize; i++) {
         data[i] ^= crc;
     }
 }
 
-static bool legic_clone_update_segment_crcs(uint8_t *data, size_t bytes_read, const uint8_t uid[4]) {
+bool legic_clone_update_segment_crcs(uint8_t *data, size_t bytes_read, const uint8_t uid[4]) {
     // Segment headers are parsed from offset 22 everywhere else in LEGIC decoding.
     size_t start = 22;
     bool found_segment = false;
@@ -96,7 +96,7 @@ static bool legic_clone_update_segment_crcs(uint8_t *data, size_t bytes_read, co
     return true;
 }
 
-static bool legic_clone_update_kgh_crcs(uint8_t *data, size_t bytes_read, const uint8_t uid[4]) {
+bool legic_clone_update_kgh_crcs(uint8_t *data, size_t bytes_read, const uint8_t uid[4]) {
     // Decoded segmented payload starts at byte 22.
     size_t start = 22;
     bool found_kgh = false;
@@ -142,7 +142,7 @@ static bool legic_clone_update_kgh_crcs(uint8_t *data, size_t bytes_read, const 
     return true;
 }
 
-static int legic_write_bytes_to_tag(uint16_t offset, uint8_t iv, const uint8_t *data, size_t bytes_read, const char *verb) {
+int legic_write_bytes_to_tag(uint16_t offset, uint8_t iv, const uint8_t *data, size_t bytes_read, const char *verb) {
     PrintAndLogEx(SUCCESS, "%s", verb);
 
     // fast push mode
@@ -183,19 +183,66 @@ static int legic_write_bytes_to_tag(uint16_t offset, uint8_t iv, const uint8_t *
         PrintAndLogEx(NORMAL, "");
 
         if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Failed writing tag");
+            PrintAndLogEx(WARNING, "Failed writing tag at offset %zu len %zu. Status: %d", i, len, resp.status);
             g_conn.block_after_ACK = false;
             return PM3_ERFTRANS;
         }
-        PrintAndLogEx(SUCCESS, "Wrote chunk [offset %zu | len %zu | total %zu", i, len, i + len);
+        PrintAndLogEx(SUCCESS, "Wrote chunk [offset %zu | len %zu | end %zu of %zu]", i, len, i + len, bytes_read);
     }
 
     g_conn.block_after_ACK = false;
     return PM3_SUCCESS;
 }
 
-static int legic_write_dump_to_tag(uint8_t *dump, size_t bytes_read) {
+int legic_write_dump_to_tag(uint8_t *dump, size_t bytes_read) {
     return legic_write_bytes_to_tag(7, 0x55, dump, bytes_read, "Restoring to card");
+}
+
+int legic_migrate_dump(uint8_t *dump, size_t bytes_read, bool rewrite_kgh, const uint8_t dcf[2], bool allow_dcf) {
+    if (dump == NULL || bytes_read <= 22) {
+        return PM3_EINVARG;
+    }
+
+    if (dcf != NULL && !allow_dcf) {
+        return PM3_EINVARG;
+    }
+
+    legic_card_select_t card;
+    if (legic_get_type(&card) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+
+    if (card.cardsize < bytes_read) {
+        return PM3_EFILE;
+    }
+
+    uint8_t target_uid[4] = {0};
+    memcpy(target_uid, card.uid, sizeof(target_uid));
+    uint8_t target_mcc = (uint8_t)CRC8Legic(target_uid, sizeof(target_uid));
+
+    if (!legic_clone_update_segment_crcs(dump, bytes_read, target_uid)) {
+        return PM3_EFAILED;
+    }
+    if (rewrite_kgh && !legic_clone_update_kgh_crcs(dump, bytes_read, target_uid)) {
+        return PM3_EFAILED;
+    }
+
+    memcpy(dump, target_uid, sizeof(target_uid));
+    dump[4] = target_mcc;
+    legic_xor_with_crc(dump, bytes_read, dump[4]);
+
+    int write_res = legic_write_dump_to_tag(dump, bytes_read);
+    if (write_res != PM3_SUCCESS) {
+        return write_res;
+    }
+
+    if (dcf != NULL) {
+        uint8_t dcf_dump[7] = {0};
+        memcpy(dcf_dump + 5, dcf, 2);
+        return legic_write_bytes_to_tag(5, 0x55, dcf_dump, sizeof(dcf_dump), "Applying explicit DCF update");
+    }
+
+    return PM3_SUCCESS;
 }
 
 static int CmdLegicMigrate(const char *Cmd) {

@@ -874,15 +874,15 @@ typedef struct {
 #define CMD_EEPROM_FACTORY_INFO_READ 0x0172
 #define CMD_EEPROM_FACTORY_INFO_WRITE 0x0173
 // PM5, QC test for the hardware
-#define CMD_PM5_QC_TEST 0x0177
+#define CMD_PM5_QC_TEST_IO 0x0176
+#define CMD_PM5_QC_TEST_HW 0x0177
 // PM5, set the antenna RGB LED colour (payload: r,g,b). Used by `hf/lf tune --rgb`.
 #define CMD_PM5_RGB_SET 0x0178
-// PM5, provision BWM fuel-gauge (BQ27427) Design Capacity. Used by `hw bwmsetcap`.
+// PM5, provision BWM fuel-gauge (BQ27427) Design Capacity. Used by `hw bwm setcap`.
 #define CMD_PM5_BWM_SET_CAP 0x0179
-#define CMD_PM5_BWM_SET_CAP 0x0179
-// PM5, enable/disable BWM battery charging (AW32001E CEB). Used by `hw bwmcharge`.
+// PM5, enable/disable BWM battery charging (AW32001E CEB). Used by `hw bwm charge`.
 #define CMD_PM5_BWM_CHARGE_EN 0x017A
-// PM5, toggle automatic power-off on USB unplug. Used by `hw bwmautooff`.
+// PM5, toggle automatic power-off on USB unplug. Used by `hw bwm autooff`.
 #define CMD_PM5_BWM_AUTOOFF 0x017B
 #define CMD_PM5_BWM_WIFI    0x017C
 #define CMD_PM5_BWM_SET_VCHG 0x017D
@@ -1208,6 +1208,16 @@ typedef struct {
 #define CMD_HF_SAM_SC_NO_TRACE 0x0905 // Same payload and reply command as CMD_HF_SAM_SC.
 
 #define CMD_UNKNOWN 0xFFFF
+
+// ST25TA simulation data in emulator memory:
+// magic[4] || len_le[2] || uid_len[1] || uid[7] || READ BINARY response bytes
+#define ST25TA_EML_MAGIC_OFFSET 0
+#define ST25TA_EML_LEN_OFFSET 4
+#define ST25TA_EML_UIDLEN_OFFSET 6
+#define ST25TA_EML_UID_OFFSET 7
+#define ST25TA_EML_DATA_OFFSET 14
+#define ST25TA_EML_NDEF_MAX 256
+#define ST25TA_EML_MAGIC "ST25"
 
 // Mifare simulation flags
 //  In interactive mode, we are expected to finish the operation with an ACK

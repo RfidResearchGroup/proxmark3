@@ -59,6 +59,7 @@ int mfuc_test_authentication_support(void);
 int CmdHFMFUltra(const char *Cmd);
 int CmdHF14MfuNDEFRead(const char *Cmd);   // used by cmdnfc.c
 int CmdHF14MfuNDEFWrite(const char *Cmd);  // used by cmdnfc.c
+int CmdHF14MfuNDEFFormat(const char *Cmd); // used by cmdnfc.c
 int CmdHF14MfUTamper(const char *Cmd);
 
 #define MFU_TT_UNKNOWN          0x0ULL

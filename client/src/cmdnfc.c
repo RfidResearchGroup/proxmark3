@@ -391,12 +391,16 @@ static int CmdNFCType2Write(const char *Cmd) {
     return CmdHF14MfuNDEFWrite(Cmd);
 }
 
+static int CmdNFCType2Format(const char *Cmd) {
+    return CmdHF14MfuNDEFFormat(Cmd);
+}
+
 static int CmdNFCType2Help(const char *Cmd);
 
 static command_t CommandNFCType2Table[] = {
 
     {"--------",    CmdNFCType2Help,  AlwaysAvailable, "-------------- " _CYAN_("NFC Forum Tag Type 2") " ---------------"},
-//    {"format",     CmdNFCType2Format,  IfPm3Iso14443a,  "format ISO-14443-a tag as NFC Tag"},
+    {"format",      CmdNFCType2Format, IfPm3Iso14443a,  "format MIFARE Ultralight / NTAG as NFC Forum Tag Type 2"},
     {"read",        CmdNFCType2Read,  IfPm3Iso14443a,  "read NFC Forum Tag Type 2"},
     {"write",       CmdNFCType2Write, IfPm3Iso14443a,  "write NFC Forum Tag Type 2"},
     {"--------",    CmdNFCType2Help,  AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},

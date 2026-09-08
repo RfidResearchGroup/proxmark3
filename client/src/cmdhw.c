@@ -2267,18 +2267,94 @@ static int CmdPM5QCTest(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw qc_pm5", "QC Test for the PM5",
-                  "hw qc_pm5             -> run QC test with default 20 second timeout\n"
-                  "hw qc_pm5 -t 3        -> run QC test with a 3 second timeout");
+                  "hw qc_pm5                  -> run hardware QC test with default 20 second timeout\n"
+                  "hw qc_pm5 -t 3             -> run hardware QC test with a 3 second timeout\n"
+                  "hw qc_pm5 --iolow <index> --pwd <hex>   -> drive PM5 test IO <index> low\n"
+                  "hw qc_pm5 --iohigh <index> --pwd <hex>  -> drive PM5 test IO <index> high\n"
+                  "hw qc_pm5 --ioreset <index> --pwd <hex> -> reset PM5 test IO <index> to default");
 
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0("t", "timeout", "<s>", "test sequence timeout in seconds (default 20)"),
+        arg_u64_0(NULL, "iolow", "<index>", "drive PM5 test IO <index> low"),
+        arg_u64_0(NULL, "iohigh", "<index>", "drive PM5 test IO <index> high"),
+        arg_u64_0(NULL, "ioreset", "<index>", "reset PM5 test IO <index> to default"),
+        arg_str0(NULL, "pwd", "<hex>", "QC test password in hex (required for IO tests)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
     uint32_t timeout_ms = arg_get_u32_def(ctx, 1, 20);
     timeout_ms *= 1000;
+
+    bool io_low = arg_get_u64_count(ctx, 2) > 0;
+    bool io_high = arg_get_u64_count(ctx, 3) > 0;
+    bool io_reset = arg_get_u64_count(ctx, 4) > 0;
+    int io_count = (io_low ? 1 : 0) + (io_high ? 1 : 0) + (io_reset ? 1 : 0);
+
+    uint16_t io_index = 0;
+    uint8_t io_status = 0;
+    if (io_low) {
+        io_index = (uint16_t)arg_get_u32(ctx, 2);
+        io_status = 0;
+    } else if (io_high) {
+        io_index = (uint16_t)arg_get_u32(ctx, 3);
+        io_status = 1;
+    } else if (io_reset) {
+        io_index = (uint16_t)arg_get_u32(ctx, 4);
+        io_status = 2;
+    }
+
+    uint8_t pwd[4];
+    int dlen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 5),  pwd, sizeof(pwd), &dlen);
     CLIParserFree(ctx);
+
+    if (io_count > 1) {
+        PrintAndLogEx(ERR, "only one of --iolow, --iohigh, --ioreset may be specified");
+        return PM3_EINVARG;
+    }
+
+    if (io_count == 1) {
+        if (res || dlen != sizeof(pwd)) {
+            PrintAndLogEx(ERR, "invalid password format, must be hex(8 chars)");
+            return PM3_EINVARG;
+        }
+
+        PrintAndLogEx(WARNING, _RED_("!!! WARNING: PM5 IO QC test drives the test IO pins directly !!!"));
+        PrintAndLogEx(WARNING, _RED_("!!! This can damage the device if used incorrectly !!!"));
+        PrintAndLogEx(WARNING, _RED_("!!! Only proceed if you know exactly what you are doing !!!"));
+        PrintAndLogEx(INFO, "PM5 IO QC test password: 0x%02X%02X%02X%02X", pwd[0], pwd[1], pwd[2], pwd[3]);
+
+        struct {
+            uint32_t pwd;   // QC password, verified by the device
+            uint16_t index; // index of the IO to test
+            uint8_t status; // 0 = low, 1 = high, 2 = float or RESET TO DEFAULT
+        } PACKED payload = {
+            .pwd = BYTES2UINT32_BE(pwd),
+            .index = io_index,
+            .status = io_status,
+        };
+
+        PrintAndLogEx(INFO, "Performing PM5 IO QC test (index %u, status %u)...", io_index, io_status);
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_PM5_QC_TEST_IO, (uint8_t *)&payload, sizeof(payload));
+
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_PM5_QC_TEST_IO, &resp, 1000) == false) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
+        }
+
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "failed to perform IO QC test on PM5 (wrong password?)");
+            return resp.status;
+        }
+        PrintAndLogEx(INFO, "PM5 IO QC test successful.");
+        return PM3_SUCCESS;
+    }
 
     if (timeout_ms == 0) {
         PrintAndLogEx(ERR, "timeout must be greater than zero");
@@ -2288,11 +2364,11 @@ static int CmdPM5QCTest(const char *Cmd) {
     PrintAndLogEx(INFO, "Performing QC test for the PM5...");
 
     clearCommandBuffer();
-    SendCommandNG(CMD_PM5_QC_TEST, (uint8_t *)&timeout_ms, sizeof(timeout_ms));
+    SendCommandNG(CMD_PM5_QC_TEST_HW, (uint8_t *)&timeout_ms, sizeof(timeout_ms));
 
     PacketResponseNG resp;
     // wait a bit longer than the device side sequence timeout, with headroom for RTC drift
-    if (WaitForResponseTimeout(CMD_PM5_QC_TEST, &resp, timeout_ms + (timeout_ms / 5) + 1000) == false) {
+    if (WaitForResponseTimeout(CMD_PM5_QC_TEST_HW, &resp, timeout_ms + (timeout_ms / 5) + 1000) == false) {
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
@@ -2594,7 +2670,7 @@ static command_t CommandTable[] = {
     {"fpga", CmdFPGA, IfPm3Present, "Fpga commands"},
     {"fpgaoff", CmdFPGAOff, IfPm3Present, "Turn off FPGA on device"},
     {"ant_pm5", CmdPM5Ant, IfPm5StdAnt, "Control the antennal of pm5"},
-    {"qc_pm5", CmdPM5QCTest, IfPm5, "Perform QC test for the PM5"},
+    {"qc_pm5", CmdPM5QCTest, IfPm5, "Perform QC test (hardware or IO) for the PM5"},
     {"factorydata", CmdDeviceFactoryData, IfI2cEeprom, "Get/Set the factory data for Device"},
     {"lcd", CmdLCD, IfPm3Lcd, "Send command/data to LCD"},
     {"lcdreset", CmdLCDReset, IfPm3Lcd, "Hardware reset LCD"},

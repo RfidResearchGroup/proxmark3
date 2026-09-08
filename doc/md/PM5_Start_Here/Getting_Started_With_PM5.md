@@ -103,7 +103,7 @@ hf 14a read --drop
 
 ## Do this exactly once.
 * The very first time for a new battery:
-```hw bwmsetcap --cap 500```
+```hw bwm setcap --cap 500```
 * Do a full charge/discharge cycle for it to learn the real capacity.
 
 
