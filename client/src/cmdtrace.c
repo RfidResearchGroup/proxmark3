@@ -56,10 +56,12 @@ static bool next_record_is_response(uint16_t tracepos, uint8_t *trace) {
     return (hdr->isResponse);
 }
 
+// Topaz reader commands are at most 16 bytes long (RSEG/READ8/WRITE-*8:
+// cmd + adds + 8 data bytes + 4 UID bytes + 2 CRC bytes)
+#define MAX_TOPAZ_READER_CMD_LEN 16
+
 static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, uint16_t *tracepos, uint16_t traceLen,
                                       uint8_t *trace, const uint8_t *frame, uint8_t *topaz_reader_command, uint16_t *data_len) {
-
-#define MAX_TOPAZ_READER_CMD_LEN 16
 
     uint32_t last_timestamp = timestamp + *duration;
 
@@ -515,7 +517,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     }
 
     uint32_t end_of_transmission_timestamp = 0;
-    uint8_t topaz_reader_command[9];
+    uint8_t topaz_reader_command[MAX_TOPAZ_READER_CMD_LEN];
     char explanation[60] = {0};
     tracelog_hdr_t *first_hdr = (tracelog_hdr_t *)(trace);
     tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
