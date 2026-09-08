@@ -545,10 +545,10 @@
     },
     {
         "AID": "FE137A",
-        "Vendor": "Fermax Australia Pty Ltd",
-        "Country": "AU",
-        "Name": "Fermax High Security DESFire Credential",
-        "Description": "Fermax Australia PACS Access Control",
+        "Vendor": "Fermax Electronica SAU",
+        "Country": "ES",
+        "Name": "Fermax AC-MAX",
+        "Description": "Fermax Proximity Card/Keyring DESFire EV2/EV3 2k Credential",
         "Type": "pacs"
     },
     {
