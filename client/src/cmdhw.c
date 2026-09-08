@@ -2534,6 +2534,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
     // BWM ESP is an ESP32-C2; a wrong/other-chip image would brick it.
     //   [0x00]       == 0xE9   -> ESP image magic
     //   [0x0C..0x0D] == 0x000C -> chip_id ESP32-C2 (LE uint16)
+    //   [0xABCD5432..0x20] == 0xABCD5432 -> app descriptor (LE uint32)
     if (fwlen < 16) {
         PrintAndLogEx(FAILED, "file is too small to be an ESP firmware image (%zu bytes)", fwlen);
         free(fw);
@@ -2544,9 +2545,19 @@ static int CmdBWMUpgrade(const char *Cmd) {
         free(fw);
         return PM3_EFILE;
     }
-    uint16_t chip_id = (uint16_t)(fw[0x0C] | (fw[0x0D] << 8));
+    
+    // Check Chip ID at offset 0x0C (2 bytes, little-endian)
+    uint16_t chip_id = MemLeToUint2byte(fw + 0x0C);
     if (chip_id != 0x000C) {
         PrintAndLogEx(FAILED, "refusing to flash: image chip_id " _YELLOW_("0x%04X") " is not ESP32-C2 (0x000C)", chip_id);
+        free(fw);
+        return PM3_EFILE;
+    }
+
+    // Check Application Signature at offset 0x20 (4 bytes, little-endian)
+    uint32_t app_sign = MemLeToUint4byte(fw + 0x20);
+    if (app_sign != 0xABCD5432) {
+        PrintAndLogEx(FAILED, "refusing to flash: image app_sign " _YELLOW_("0x%08X") " is invalid (expected 0xABCD5432)", app_sign);
         free(fw);
         return PM3_EFILE;
     }
