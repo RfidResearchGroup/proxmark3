@@ -872,11 +872,27 @@
         "Type": "student"
     },
     {
+        "AID": "008800",
+        "Vendor": "Bank Mega",
+        "Country": "ID",
+        "Name": "MegaCash",
+        "Description": "Indonesian stored-value card // FIDs 01: Card Identification; 02: Stored Value; 03: Transaction Records",
+        "Type": "payment system"
+    },
+    {
         "AID": "1010F6",
         "Vendor": "VDE",
         "Country": "DE",
         "Name": "VDE EV charging",
         "Description": "Found on a DESFire card",
+        "Type": "payment system"
+    },
+    {
+        "AID": "168711",
+        "Vendor": "icash Co., Ltd.",
+        "Country": "TW",
+        "Name": "ICASH 2.0",
+        "Description": "Multi-purpose reloadable electronic wallet",
         "Type": "payment system"
     },
     {
@@ -972,7 +988,7 @@
         "Vendor": "Invalid / Reserved",
         "Country": "",
         "Name": "Invalid / Reserved",
-        "Description": "Used by ATL Breeze, EWR SmartLink, IAD Smart Trip (Mobile), LJU Urbana, MIA Easy, PHL FREEDOM, and YVR Compass",
+        "Description": "Used by ATL Breeze, EWR SmartLink, IAD Smart Trip (Mobile), LJU Urbana, MIA Easy, PHL FREEDOM, BRI BRIZZI, and YVR Compass",
         "Type": "transport"
     },
     {
