@@ -82,6 +82,8 @@
 // SCL falls (spec 0.3 us) and SCL high width (spec 4 us) - so they get the
 // standard mode minimum with margin instead of a full clock.
 #define I2C_DELAY_SDA_US        15
+#define I2C_DELAY_SDA_APP_US    8
+#define I2C_APP_FAST_TIMING     1
 #define I2C_DELAY_HOLD_US       2
 #define I2C_DELAY_HIGH_US       6
 
