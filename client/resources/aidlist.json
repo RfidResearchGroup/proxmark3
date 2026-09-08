@@ -1352,6 +1352,14 @@
         "Type": "EMV"
     },
     {
+        "AID": "A000000322100701",
+        "Vendor": "EasyCard Corporation",
+        "Country": "Taiwan",
+        "Name": "SuperCard",
+        "Description": "EasyCard stored-value card with NFC mobile top-up",
+        "Type": ""
+    },
+    {
         "AID": "A00000032301",
         "Vendor": "Identity Alliance",
         "Country": "United States",
@@ -1887,6 +1895,14 @@
         "Sources": [
             "android://com.jaklingkoindonesia.app"
         ]
+    },
+    {
+        "AID": "A000424E49999999",
+        "Vendor": "Bank Negara Indonesia (BNI)",
+        "Country": "Indonesia",
+        "Name": "BNI TapCash",
+        "Description": "Alternative AID for the BNI TapCash stored-value and transit card",
+        "Type": "transport"
     },
     {
         "AID": "B012345678",
@@ -2641,6 +2657,14 @@
             "android://com.google.android.gms",
             "android://com.samsung.android.dkey"
         ]
+    },
+    {
+        "AID": "A000000936000101",
+        "Vendor": "Metropolitan Atlanta Rapid Transit Authority (MARTA)",
+        "Country": "United States",
+        "Name": "MARTA Breeze",
+        "Description": "MARTA Breeze transit card",
+        "Type": "transport"
     },
     {
         "AID": "A000000396564341",
