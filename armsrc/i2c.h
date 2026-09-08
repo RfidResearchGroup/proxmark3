@@ -82,6 +82,8 @@
 // SCL falls (spec 0.3 us) and SCL high width (spec 4 us) - so they get the
 // standard mode minimum with margin instead of a full clock.
 #define I2C_DELAY_SDA_US        15
+#define I2C_DELAY_SDA_APP_US    8
+#define I2C_APP_FAST_TIMING     1
 #define I2C_DELAY_HOLD_US       2
 #define I2C_DELAY_HIGH_US       6
 
@@ -145,6 +147,9 @@ void sc_log_trace_span(const uint8_t *d, uint16_t len, bool reader2tag, uint32_t
 void sc_log_trace_reset(void);
 
 bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait);
+
+// Returns the previous app timing state.
+bool sc_set_app_i2c_timing(bool enabled);
 //
 bool GetATR(smart_card_atr_t *card_ptr, bool verbose);
 

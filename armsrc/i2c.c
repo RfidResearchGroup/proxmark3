@@ -41,9 +41,17 @@
 // cannot drift apart.
 #define I2C_DELAY_1CLK    SpinDelayUsPrecision(I2C_DELAY_1CLK_US)
 #define I2C_DELAY_2CLK    SpinDelayUsPrecision(I2C_DELAY_2CLK_US)
-#define I2C_DELAY_SDA     SpinDelayUsPrecision(I2C_DELAY_SDA_US)
+#define I2C_DELAY_SDA     SpinDelayUsPrecision(s_app_i2c_timing ? I2C_DELAY_SDA_APP_US : I2C_DELAY_SDA_US)
 #define I2C_DELAY_HOLD    SpinDelayUsPrecision(I2C_DELAY_HOLD_US)
 #define I2C_DELAY_HIGH    SpinDelayUsPrecision(I2C_DELAY_HIGH_US)
+
+static bool s_app_i2c_timing = false;
+
+bool sc_set_app_i2c_timing(bool enabled) {
+    bool previous = s_app_i2c_timing;
+    s_app_i2c_timing = enabled && I2C_APP_FAST_TIMING;
+    return previous;
+}
 
 #define SC_PROTO_T0     (1 << 0)
 #define SC_PROTO_T1     (1 << 1)
