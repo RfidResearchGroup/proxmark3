@@ -2534,7 +2534,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
     // BWM ESP is an ESP32-C2; a wrong/other-chip image would brick it.
     //   [0x00]       == 0xE9   -> ESP image magic
     //   [0x0C..0x0D] == 0x000C -> chip_id ESP32-C2 (LE uint16)
-    //   [0xABCD5432..0x20] == 0x000C -> app descriptor (LE uint32)
+    //   [0xABCD5432..0x20] == 0xABCD5432 -> app descriptor (LE uint32)
     if (fwlen < 16) {
         PrintAndLogEx(FAILED, "file is too small to be an ESP firmware image (%zu bytes)", fwlen);
         free(fw);
