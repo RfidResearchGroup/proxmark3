@@ -28,6 +28,7 @@
 #include <string.h>
 
 #include "cmdhfmf.h"
+#include "comms.h"
 #include "cmdparser.h"
 #include "cliparser.h"
 #include "commonutil.h"
@@ -51,6 +52,17 @@
  * per-sector dynamic loop is more efficient (cascade avoids the bulk scan) */
 #define FM11RF08S_MAX_GLOBAL_PRIORITY_KEYS 8000U
 #define FM11RF08S_DEFAULT_DICT "mfc_default_keys"
+
+static uint8_t fm11_keys_per_frame(void) {
+    uint32_t n = (g_conn.max_cmd_data_size - sizeof(mf_chkkeys_fast_t)) / MIFARE_KEY_SIZE;
+    if (n > KEYS_IN_BLOCK) {
+        n = KEYS_IN_BLOCK;
+    }
+    if (n == 0) {
+        n = 1;
+    }
+    return (uint8_t)n;
+}
 
 typedef enum {
     FM11_PHASE_COLLECT = 0,
@@ -765,15 +777,17 @@ static int fm11_collect_nonces_from_default_key_fallback(const fm11_keylist_t *d
     uint32_t total = defaults->count * (FM11RF08S_SECTORS * 2);
     uint32_t done = 0;
 
+    const uint8_t keys_per_frame = fm11_keys_per_frame();
+
     PrintAndLogEx(INFO, "Searching " _YELLOW_("%u") " default/dictionary keys for an initial auth key", defaults->count);
-    for (uint32_t idx = 0; idx < defaults->count && retval == PM3_ESOFT; idx += KEYS_IN_BLOCK) {
+    for (uint32_t idx = 0; idx < defaults->count && retval == PM3_ESOFT; idx += keys_per_frame) {
         if (kbd_enter_pressed()) {
             retval = PM3_EOPABORTED;
             break;
         }
 
         uint8_t key_block[KEYBLOCK_SIZE] = {0};
-        uint8_t chunk = MIN(KEYS_IN_BLOCK, defaults->count - idx);
+        uint8_t chunk = MIN(keys_per_frame, defaults->count - idx);
         for (uint8_t i = 0; i < chunk; i++) {
             num_to_bytes(defaults->data[idx + i].key, MIFARE_KEY_SIZE, key_block + (i * MIFARE_KEY_SIZE));
         }
@@ -2099,18 +2113,19 @@ static int fm11_verify_global_priority_keys(const fm11_keylist_t *priority,
         }
     }
 
+    const uint8_t keys_per_frame = fm11_keys_per_frame();
     int retval = PM3_SUCCESS;
     bool progress_shown = false;
     for (uint8_t strategy = 1; strategy < 3; strategy++) {
         bool first_chunk = true;
-        for (uint32_t idx = 0; idx < priority->count; idx += KEYS_IN_BLOCK) {
+        for (uint32_t idx = 0; idx < priority->count; idx += keys_per_frame) {
             if (kbd_enter_pressed()) {
                 retval = PM3_EOPABORTED;
                 goto out;
             }
 
             uint8_t key_block[KEYBLOCK_SIZE] = {0};
-            uint8_t chunk = MIN(KEYS_IN_BLOCK, priority->count - idx);
+            uint8_t chunk = MIN(keys_per_frame, priority->count - idx);
             bool last_chunk = (idx + chunk) >= priority->count;
             for (uint8_t i = 0; i < chunk; i++) {
                 num_to_bytes(priority->data[idx + i].key, MIFARE_KEY_SIZE, key_block + (i * MIFARE_KEY_SIZE));
@@ -2296,18 +2311,19 @@ static int fm11_check_default_keys(uint32_t uid,
         }
     }
 
+    const uint8_t keys_per_frame = fm11_keys_per_frame();
     uint32_t pass_total = matches.count * FM11RF08S_NORMAL_SECTORS * 2;
     bool progress_shown = false;
     for (uint8_t strategy = 1; strategy < 3; strategy++) {
         bool first_chunk = true;
-        for (uint32_t idx = 0; idx < matches.count; idx += KEYS_IN_BLOCK) {
+        for (uint32_t idx = 0; idx < matches.count; idx += keys_per_frame) {
             if (kbd_enter_pressed()) {
                 retval = PM3_EOPABORTED;
                 goto normal_out;
             }
 
             uint8_t key_block[KEYBLOCK_SIZE] = {0};
-            uint8_t chunk = MIN(KEYS_IN_BLOCK, matches.count - idx);
+            uint8_t chunk = MIN(keys_per_frame, matches.count - idx);
             bool last_chunk = (idx + chunk) >= matches.count;
             for (uint8_t i = 0; i < chunk; i++) {
                 num_to_bytes(matches.data[idx + i].key, MIFARE_KEY_SIZE, key_block + (i * MIFARE_KEY_SIZE));
@@ -2347,13 +2363,13 @@ normal_out:
             sec32_done += matches.count;
             continue;
         }
-        for (uint32_t idx = 0; idx < matches.count; idx += KEYS_IN_BLOCK) {
+        for (uint32_t idx = 0; idx < matches.count; idx += keys_per_frame) {
             if (kbd_enter_pressed()) {
                 retval = PM3_EOPABORTED;
                 break;
             }
             uint8_t key_block[KEYBLOCK_SIZE] = {0};
-            uint8_t chunk = MIN(KEYS_IN_BLOCK, matches.count - idx);
+            uint8_t chunk = MIN(keys_per_frame, matches.count - idx);
             for (uint8_t i = 0; i < chunk; i++) {
                 num_to_bytes(matches.data[idx + i].key, MIFARE_KEY_SIZE, key_block + (i * MIFARE_KEY_SIZE));
             }
@@ -2605,6 +2621,7 @@ static int fm11_verify_candidates(uint8_t real_sec, uint8_t key_type, const fm11
         return PM3_ESOFT;
     }
 
+    const uint8_t keys_per_frame = fm11_keys_per_frame();
     uint8_t block_no = real_sec * 4;
     uint32_t idx = 0;
     uint8_t timeout_retries = 0;
@@ -2615,7 +2632,7 @@ static int fm11_verify_candidates(uint8_t real_sec, uint8_t key_type, const fm11
             return PM3_EOPABORTED;
         }
         uint8_t key_block[KEYBLOCK_SIZE] = {0};
-        uint8_t chunk = MIN(KEYS_IN_BLOCK, list->count - idx);
+        uint8_t chunk = MIN(keys_per_frame, list->count - idx);
         for (uint8_t i = 0; i < chunk; i++) {
             num_to_bytes(list->data[idx + i].key, MIFARE_KEY_SIZE, key_block + (i * MIFARE_KEY_SIZE));
         }
@@ -2653,7 +2670,7 @@ static int fm11_verify_candidates(uint8_t real_sec, uint8_t key_type, const fm11
         if (res == PM3_ETIMEOUT && timeout_retries++ < 2) {
             fm11_sen_clear_inplace();
             PrintAndLogEx(WARNING, "Transient timeout checking sector %03u key %c candidates, retrying chunk %u",
-                          real_sec, key_type ? 'B' : 'A', (idx / KEYS_IN_BLOCK) + 1);
+                          real_sec, key_type ? 'B' : 'A', (idx / keys_per_frame) + 1);
             fm11_sen_candidate_progress(real_sec, key_type, idx, list->count);
             continue;
         }
