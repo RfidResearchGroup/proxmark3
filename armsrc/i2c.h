@@ -147,6 +147,9 @@ void sc_log_trace_span(const uint8_t *d, uint16_t len, bool reader2tag, uint32_t
 void sc_log_trace_reset(void);
 
 bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait);
+
+// Returns the previous app timing state.
+bool sc_set_app_i2c_timing(bool enabled);
 //
 bool GetATR(smart_card_atr_t *card_ptr, bool verbose);
 
