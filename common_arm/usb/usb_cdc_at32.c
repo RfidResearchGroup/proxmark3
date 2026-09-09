@@ -508,6 +508,21 @@ int usb_write(const uint8_t *data, const size_t len) {
         //  Have a cup of tea?
     }
 
+    // End a packet-aligned CDC transfer with a zero-length packet. Without
+    // this short packet, a host read larger than this reply can remain pending.
+    // Use the low-level sender: usb_write() intentionally rejects len == 0.
+    // Keep this in the synchronous path, not the asynchronous sample stream.
+    if ((len % USBD_CDC_IN_MAXPACKET_SIZE) == 0) {
+        if (usb_vcp_send_data(udev, (uint8_t *) data, 0) != SUCCESS) {
+            return PM3_EIO;
+        }
+        while (pcdc->g_tx_completed != 1) {
+            if (usb_check() == false) {
+                return PM3_EIO;
+            }
+        }
+    }
+
     return PM3_SUCCESS;
 }
 
