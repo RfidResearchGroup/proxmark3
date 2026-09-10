@@ -67,6 +67,9 @@ size_t restore_buffer32(buffer_savestate_t saveState, uint32_t *dest);
 size_t restore_bufferS32(buffer_savestate_t saveState, int32_t *dest);
 size_t restore_buffer8(buffer_savestate_t saveState, uint8_t *dest);
 
+buffer_savestate_t save_graphbuffer(void);
+void restore_graphbuffer(buffer_savestate_t saveState);
+
 #define MAX_GRAPH_TRACE_LEN (40000 * 32)
 #define GRAPH_SAVE 1
 #define GRAPH_RESTORE 0
