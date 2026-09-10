@@ -114,12 +114,12 @@ hf 14a read --drop
   * Scroll all the way to the bottom, you'll see **Artifacts**
   * Click on "proxmark5_bwm_master" which will start a download for `proxmark5_bwm_master.zip`
   * Unzip this file somehwere, remember that location
-  * The upgrade command is: `hw bwm upgrade -f  <PATH-TO>\proxmark5_ble_wifi_module.bin`
+  * The upgrade command is: `hw bwm upgrade -f  </path/to/unzipped/contents/>proxmark5_ble_wifi_module.bin`
   * This will take some time, you'll see the Progress in % displayed on the screen until the process is done.
   * Once you see "BWM Rebooting into the new image" you know the upgrade finished.
   * Wait a few seconds (under 10) and unplug and replug the Proxmark5 back into the usb port.
   * Once reconnected, you can run `hw status` and you'll see:
-    * `BWM fw version......XX` where XX is the fw version.
+    * `BWM fw version...... 1` where 1 is the current fw version. As of 2026-09-10, the most current version is 1.
   * You have finished flashing the BWM.
 
 
