@@ -76,12 +76,15 @@ static t55xx_conf_block_t config = {
 
 static t55xx_memory_item_t cardmem[T55x7_BLOCK_COUNT] = {{0}};
 
-// A block read repeats one 32 bit word for as long as the field is on, so a
-// demodulation that starts one bit late yields a rotation of the block with
-// nothing in the data to mark it as wrong.  `offset` is a bit index into a
-// demod buffer that no longer exists once the next acquisition lands, and the
-// demodulators do not all start on the same bit: manchester anchors on the
-// sequence terminator, psk starts at whatever phase transition it finds first.
+// true when the graph buffer holds an addressed block read, where the tag repeats one word every 32 bits.
+// Regular read mode cycles several blocks and a buffer loaded from a file could be either
+static bool s_block_read_capture = false;
+
+// A block read repeats one 32 bit word for as long as the field is on.
+// `offset` is a bit index into a demod buffer that no longer exists once the next acquisition lands,
+// and the demodulators do not all start on the same bit: 
+//   manchester anchors on the sequence terminator,
+//   psk starts at whatever phase transition it finds first.
 static void t55xx_anchor(t55xx_conf_block_t *c, uint8_t offset) {
     c->offset = offset;
     c->anchor_valid = (g_DemodClock > 0);
@@ -109,9 +112,9 @@ static bool t55xx_demod_offset(uint8_t *idx) {
 
     // a different graph length is a different signal, not another read of the
     // same one - fall back to the plain offset rather than resolve against it
-    if (config.anchor_valid && 
-        g_DemodClock > 0 &&
-        (config.anchor_tracelen == (int32_t)g_GraphTraceLen)) {
+    if (config.anchor_valid &&
+            g_DemodClock > 0 &&
+            (config.anchor_tracelen == (int32_t)g_GraphTraceLen)) {
 
         // negative when this demodulation started later than the anchored one
         const int32_t delta = config.anchor_sample - g_DemodStartIdx;
@@ -816,11 +819,11 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
 
     // block 0 is the one block whose content is known before it is read, so use
     // it to re-anchor this capture rather than trusting the one detect left
-    if (block == T55x7_CONFIGURATION_BLOCK && 
+    if (block == T55x7_CONFIGURATION_BLOCK &&
         page1 == false &&
-        config.block0Status == AUTODETECT && 
+        config.block0Status == AUTODETECT &&
         config.block0 != 0) {
-        
+
         t55xx_stream_holds(config.block0);
     }
 
@@ -1130,6 +1133,11 @@ static int CmdT55xxDetect(const char *Cmd) {
     if (SanityOfflineCheck(use_gb) != PM3_SUCCESS)
         return PM3_ESOFT;
 
+    // a replayed buffer carries no promise about how it was captured
+    if (use_gb) {
+        s_block_read_capture = false;
+    }
+
     if (use_gb == false) {
 
         char wakecmd[20] = { 0x00 };
@@ -1270,6 +1278,40 @@ bool t55xxTryDetectModulation(uint8_t downlink_mode, bool print_config) {
 
 #define PM3_T55_FALLBACK_MAXERR 100
 
+// A demodulation that recovers far fewer bits than its clock implies never locked onto the tag,
+// Measured on a T5577 over 56 configurations: 
+// every correct detection recovered at least 98.8% of g_GraphTraceLen / clk bits
+// while the fsk aliasing that invents a configuration out of an RF/8 signal recovered 59 to 64%. 
+#define T55XX_MIN_DEMOD_YIELD_PCT 80
+
+static bool t55xx_demod_yield_ok(uint8_t clk) {
+
+    // what actually produced the bits, which is not always what was asked for
+    const uint32_t used = (g_DemodClock > 0) ? (uint32_t)g_DemodClock : clk;
+
+    if (used == 0 || g_GraphTraceLen == 0) {
+        return true;
+    }
+
+    const size_t expected = g_GraphTraceLen / used;
+
+    // too short to say anything either way
+    if (expected < 32) {
+        return true;
+    }
+
+    if (g_DemodBufferLen * 100 >= expected * T55XX_MIN_DEMOD_YIELD_PCT) {
+        return true;
+    }
+
+    PrintAndLogEx(DEBUG, "DEBUG: (t55xx test) clk %u recovered %zu bits of %zu, too few to trust"
+                  , used
+                  , g_DemodBufferLen
+                  , expected
+                 );
+    return false;
+}
+
 static bool block0_repeats_at_stride(uint8_t offset) {
 
     if ((size_t)offset + 64 > g_DemodBufferLen || offset > 255 - 32) {
@@ -1278,8 +1320,16 @@ static bool block0_repeats_at_stride(uint8_t offset) {
     return (PackBits(offset, 32, g_DemodBuffer) == PackBits((uint8_t)(offset + 32), 32, g_DemodBuffer));
 }
 
-// psk subcarrier in field clocks, or 0 when it could not be measured, so
-// callers can skip the constraint rather than filter on a bad reading
+// psk subcarrier in field clocks, or 0 when it could not be measured
+// At RF/128 a capture is 93 bits, so a word sitting past bit 29 has no second copy to compare against
+static bool block0_stride_not_disproved(uint8_t offset) {
+
+    if ((size_t)offset + 64 > g_DemodBufferLen) {
+        return true;
+    }
+    return block0_repeats_at_stride(offset);
+}
+
 static uint8_t t55xx_observed_psk_carrier(void) {
     const int fc = GetPskCarrier(false);
     return (fc == 2 || fc == 4 || fc == 8) ? (uint8_t)fc : 0;
@@ -1474,13 +1524,21 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
 
     if (mod == PM3_MOD_FSK) {
 
-        static const uint8_t rates[] = { 32, 40, 50, 64, 100, 128 };
+        // RF/8 is left out on purpose.  A bit period of 8 field clocks cannot
+        // hold a whole cycle of both tones of either legal pair, and measured
+        // on a T5577 no fsk variant reads back at RF/8 even with the config
+        // forced and both inversions tried. 
+        static const uint8_t rates[] = { 16, 32, 40, 50, 64, 100, 128 };
 
         const uint8_t pairs[3][2] = {
             { (uint8_t)fc_hi, (uint8_t)fc_lo }, { 8, 5 }, { 10, 8 }
         };
 
-        for (int strict = 1; strict >= 0; strict--) {
+        // An addressed block read repeats the word every 32 bits,
+        // a candidate that does not is not a configuration
+        const int last_pass = s_block_read_capture ? 1 : 0;
+
+        for (int strict = 1; strict >= last_pass; strict--) {
             for (size_t p = 0; p < ARRAYLEN(pairs); p++) {
 
                 if (pairs[p][0] == 0 || pairs[p][1] == 0) {
@@ -1497,7 +1555,7 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
                             continue;
                         }
 
-                        if (strict && block0_repeats_at_stride(tests[*hits].offset) == false) {
+                        if (strict && block0_stride_not_disproved(tests[*hits].offset) == false) {
                             continue;
                         }
 
@@ -1916,18 +1974,18 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 }
             } // inverse waves does not affect this demod
 
-            // no psk3 candidate here on purpose: it would demodulate the same
-            // as psk2 and only differ in the test() constant, which wants two
-            // adjacent ones - and this demod recovers rising edges, which are
-            // never adjacent.  psk3 is reached by ruling psk2 out instead, see
-            // t55xx_psk3_resolve()
-
             //undo trim samples
             restore_bufferS32(saveState, g_GraphBuffer);
             g_GridOffset = saveState.offset;
             // t55xx_search_config_psk(g_GraphBuffer, 1);
             // t55xx_search_config_psk(g_GraphBuffer, 2);
         }
+    }
+
+    // The tag only has two legal fsk pair
+    // An fsk1 tag at RF/32 counts field clocks as 5 and 6 here
+    if (hits == 0) {
+        t55xx_fallback_try(PM3_MOD_FSK, 0, 0, 0, 0, tests, &hits, downlink_mode, false);
     }
 
     if (hits == 0) {
@@ -2496,6 +2554,12 @@ static bool test_scan(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t cl
         //uint8_t nml01    = PackBits(si, 1, g_DemodBuffer); si += 1+5;   //bit 24, 30, 31 could be tested for 0 if not extended mode
         //uint8_t nml02    = PackBits(si, 2, g_DemodBuffer); si += 2;
 
+        // Bit 14 selects extended mode, and extended mode only exists under master key 6 or 9.
+        // Set with any other key the word is not a valid configuration
+        if (extend && safer != 0x6 && safer != 0x9) {
+            continue;
+        }
+
         //if extended mode
         bool extMode = ((safer == 0x6 || safer == 0x9) && extend) ? true : false;
 
@@ -2522,6 +2586,15 @@ static bool test_scan(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t cl
 
         *fndBitRate = bitRate;
         *offset = (uint8_t)idx;
+
+        PrintAndLogEx(DEBUG, "DEBUG: (t55xx test) accepted mode %u clk %u rate %d offset %u bits %zu of %zu"
+                      , mode
+                      , clk
+                      , bitRate
+                      , idx
+                      , g_DemodBufferLen
+                      , (clk > 0) ? (g_GraphTraceLen / clk) : 0
+                     );
         return true;
     }
 
@@ -2540,6 +2613,10 @@ bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
     // block read demodulates to 49 bits - the whole capture is only 93 bit
     // periods long.
     if (g_DemodBufferLen < 32) {
+        return false;
+    }
+
+    if (t55xx_demod_yield_ok(clk) == false) {
         return false;
     }
 
@@ -3850,6 +3927,8 @@ bool AcquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, u
     payload.page          = page & 0x1;
     payload.pwdmode       = pwdmode;
     payload.downlink_mode = downlink_mode;
+
+    s_block_read_capture = (block != REGULAR_READ_MODE_BLOCK);
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_READBL, (uint8_t *)&payload, sizeof(payload));
