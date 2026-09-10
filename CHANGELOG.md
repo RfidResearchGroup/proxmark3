@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf emrtd info` - now correctly pretty print algos (@iceman1001)
 - Fixed `trace list -t topaz` - now parses topaz reader frames up to 16 bytes (@iceman1001)
 - Fixed `hw bwm` - doc and comment references still named the flat `hw bwmsetcap`/`bwmcharge`/`bwmautooff` commands from before the subgroup move (@xilni)
 - Added TA1=96 support via pwm to sim module `sim024.bin` - v4.66 (@antiklesys)

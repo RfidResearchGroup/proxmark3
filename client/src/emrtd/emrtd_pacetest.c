@@ -547,6 +547,67 @@ static bool test_cardaccess(void) {
     return res;
 }
 
+static bool test_cardaccess_secinfo(void) {
+    // EF_CardAccess is a SET OF SecurityInfo, not a list of PACE algorithms.
+    // This is the shape a document with EAC has:
+    //   PACEInfo                    ECDH-GM-AES-CMAC-128, v2, BrainpoolP256r1
+    //   TerminalAuthenticationInfo  id-TA, v1
+    //   ChipAuthenticationInfo      id-CA-ECDH-AES-CBC-CMAC-128, v1, keyId 16
+    const char *blob =
+        "3137"
+        "3012" "060A04007F0007020204020202010202010D"
+        "300D" "060804007F0007020202" "020101"
+        "3012" "060A04007F00070202030202" "020101" "020110";
+
+    uint8_t data[128] = { 0x00 };
+    size_t datalen = unhex(blob, data, sizeof(data));
+
+    emrtd_cardaccess_t ca;
+    bool res = (datalen > 0);
+    res = res && (emrtd_pace_parse_cardaccess(data, datalen, &ca) == PM3_SUCCESS);
+    // the non-PACE entries must survive parsing, they used to be dropped or
+    // reported as unknown PACE algorithms
+    res = res && (ca.count == 3);
+    res = res && (ca.best == 0);
+
+    res = res && (ca.infos[0].kind == EMRTD_SI_PACE) && (ca.infos[0].supported);
+    res = res && (ca.infos[0].has_param) && (ca.infos[0].param_id == 13);
+
+    res = res && (ca.infos[1].kind == EMRTD_SI_TA);
+    res = res && (ca.infos[1].alg == NULL) && (ca.infos[1].supported == false);
+    res = res && (ca.infos[1].version == 1);
+    res = res && (ca.infos[1].protocol != NULL) &&
+          (strcmp(ca.infos[1].protocol, "Terminal Authentication") == 0);
+
+    res = res && (ca.infos[2].kind == EMRTD_SI_CA);
+    res = res && (ca.infos[2].alg == NULL) && (ca.infos[2].supported == false);
+    res = res && (ca.infos[2].version == 1);
+    res = res && (ca.infos[2].protocol != NULL) &&
+          (strcmp(ca.infos[2].protocol, "Chip Authentication, ECDH, AES-CMAC-128") == 0);
+    // a ChipAuthenticationInfo keyId is not a standardized domain parameter id
+    res = res && (ca.infos[2].has_param == false);
+    res = res && (ca.infos[2].has_key_id) && (ca.infos[2].key_id == 16);
+    res = res && (ca.infos[2].sdp == NULL);
+
+    // an id-TA arc we did not enumerate still resolves to its family
+    const uint8_t ta_odd[] = {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x02, 0x02, 0x7F};
+    emrtd_si_t kind = EMRTD_SI_UNKNOWN;
+    const char *name = emrtd_secinfo_name(ta_odd, sizeof(ta_odd), &kind);
+    res = res && (kind == EMRTD_SI_TA) && (name != NULL);
+
+    // and something outside both roots must stay unknown
+    const uint8_t bogus[] = {0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D};
+    res = res && (emrtd_secinfo_name(bogus, sizeof(bogus), &kind) == NULL);
+    res = res && (kind == EMRTD_SI_UNKNOWN);
+
+    char oidstr[64] = { 0x00 };
+    emrtd_oid_to_str(ca.infos[1].oid, ca.infos[1].oidlen, oidstr, sizeof(oidstr));
+    res = res && (strcmp(oidstr, "0.4.0.127.0.7.2.2.2") == 0);
+
+    PrintAndLogEx(SUCCESS, "SecurityInfos.... ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
+    return res;
+}
+
 // Chip Authentication Mapping.
 //
 // The chip sends t = SK.Map.IC * SK.CA.IC^-1 mod n encrypted with KSenc, so
@@ -667,6 +728,7 @@ bool emrtd_test(bool verbose) {
     res = test_kdf() && res;
     res = test_nonce() && res;
     res = test_cardaccess() && res;
+    res = test_cardaccess_secinfo() && res;
     res = test_gm() && res;
     res = test_ec_keygen() && res;
     res = test_token() && res;

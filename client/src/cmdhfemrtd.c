@@ -2468,15 +2468,28 @@ static void emrtd_print_cardaccess(const emrtd_cardaccess_t *ca) {
             PrintAndLogEx(SUCCESS, "");
         }
 
-        if (info->alg != NULL) {
-            PrintAndLogEx(SUCCESS, "PACE algorithm........... " _YELLOW_("%s"), info->alg->name);
-        } else {
-            PrintAndLogEx(SUCCESS, "PACE algorithm........... " _YELLOW_("unknown") " ( OID %s )",
-                          sprint_hex_inrow((uint8_t *)info->oid, info->oidlen));
+        char oidstr[64] = { 0x00 };
+        emrtd_oid_to_str(info->oid, info->oidlen, oidstr, sizeof(oidstr));
+        if (oidstr[0] == 0x00) {
+            snprintf(oidstr, sizeof(oidstr), "%s", sprint_hex_inrow((uint8_t *)info->oid, info->oidlen));
         }
 
+        bool is_pace = ((info->kind == EMRTD_SI_PACE) || (info->kind == EMRTD_SI_PACE_DP));
+
+        if (info->protocol != NULL) {
+            PrintAndLogEx(SUCCESS, "%s " _YELLOW_("%s"),
+                          is_pace ? "PACE algorithm..........." : "Protocol.................",
+                          info->protocol);
+        } else {
+            PrintAndLogEx(SUCCESS, "Protocol................. " _YELLOW_("unknown"));
+        }
+
+        PrintAndLogEx(SUCCESS, "OID...................... %s", oidstr);
+
         if (info->version != 0) {
-            PrintAndLogEx(SUCCESS, "PACE version............. " _YELLOW_("%u"), info->version);
+            PrintAndLogEx(SUCCESS, "%s " _YELLOW_("%u"),
+                          is_pace ? "PACE version............." : "Version..................",
+                          info->version);
         }
 
         if (info->has_param) {
@@ -2488,18 +2501,40 @@ static void emrtd_print_cardaccess(const emrtd_cardaccess_t *ca) {
             }
         }
 
+        if (info->has_key_id) {
+            PrintAndLogEx(SUCCESS, "Key id................... " _YELLOW_("%u"), info->key_id);
+        }
+
         if (info->supported) {
             PrintAndLogEx(SUCCESS, "Supported by this client. " _GREEN_("yes")
                           "%s", ((int)i == ca->best) ? _GREEN_(" (selected)") : "");
-        } else {
+        } else if (is_pace) {
             PrintAndLogEx(SUCCESS, "Supported by this client. " _YELLOW_("no") " ( %s )",
                           (info->reason != NULL) ? info->reason : "unsupported");
+        } else {
+            // not a PACE protocol at all, "unsupported PACE algorithm" would be
+            // the wrong thing to tell the user
+            PrintAndLogEx(SUCCESS, "Note..................... %s",
+                          (info->reason != NULL) ? info->reason : "not a PACE protocol");
         }
     }
 
     if (ca->best < 0) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(WARNING, "None of the offered PACE algorithms is supported by this client");
+
+        bool pace_offered = false;
+        for (size_t i = 0; i < ca->count; i++) {
+            if (ca->infos[i].kind == EMRTD_SI_PACE) {
+                pace_offered = true;
+                break;
+            }
+        }
+
+        if (pace_offered) {
+            PrintAndLogEx(WARNING, "None of the offered PACE algorithms is supported by this client");
+        } else {
+            PrintAndLogEx(WARNING, "EF_CardAccess does not offer any PACE algorithm");
+        }
     }
 }
 

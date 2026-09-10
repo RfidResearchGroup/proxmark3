@@ -26,6 +26,8 @@
 #include <mbedtls/cmac.h>
 #include <mbedtls/cipher.h>
 #include <mbedtls/bignum.h>
+#include <mbedtls/asn1.h>
+#include <mbedtls/oid.h>
 
 #include "crypto/libpcrypto.h"      // sha1hash, sha256hash, des_encrypt/decrypt, pcrypto_rng_*
 #include "ui.h"                     // PrintAndLogEx
@@ -85,6 +87,140 @@ static const emrtd_pacesdp_t pacesdp_table[] = {
     {18, "NIST P-521 (secp521r1)",                                521,  true,  MBEDTLS_ECP_DP_SECP521R1},
     {32, NULL, 0, false, MBEDTLS_ECP_DP_NONE}
 };
+
+// Every SecurityInfo protocol that can share EF_CardAccess / EF_DG14 with the
+// PACE entries. EF_CardAccess is a SET OF SecurityInfo, so a document lists
+// everything it supports in there, not just PACE. TR-03110 part 3, A.1.1.1
+// covers the 0.4.0.127.0.7.2.2.x arcs, ICAO 9303-11 section 9 the ICAO ones.
+// We do not run these protocols, but naming them beats printing a hex blob.
+typedef struct {
+    size_t oidlen;
+    uint8_t oid[EMRTD_PACE_OID_MAXLEN];
+    emrtd_si_t kind;
+    const char *name;
+} emrtd_secinfo_t;
+
+// 0.4.0.127.0.7.2.2, bsi-de protocols(2) smartcard(2)
+#define BSI_SC      0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02
+// 2.23.136.1.1, id-icao-mrtd-security
+#define ICAO_SEC    0x67, 0x81, 0x08, 0x01, 0x01
+
+static const emrtd_secinfo_t secinfo_table[] = {
+//   len  oid                                 kind                  name
+    // id-PK, ChipAuthenticationPublicKeyInfo
+    {8,  {BSI_SC, 0x01},                      EMRTD_SI_PK,          "Chip Authentication Public Key"},
+    {9,  {BSI_SC, 0x01, 0x01},                EMRTD_SI_PK,          "Chip Authentication Public Key, DH"},
+    {9,  {BSI_SC, 0x01, 0x02},                EMRTD_SI_PK,          "Chip Authentication Public Key, ECDH"},
+
+    // id-TA, TerminalAuthenticationInfo. The signature arcs below it show up in
+    // CV certificates rather than in EF_CardAccess, they are here for lookups.
+    {8,  {BSI_SC, 0x02},                      EMRTD_SI_TA,          "Terminal Authentication"},
+    {9,  {BSI_SC, 0x02, 0x01},                EMRTD_SI_TA,          "Terminal Authentication, RSA"},
+    {10, {BSI_SC, 0x02, 0x01, 0x01},          EMRTD_SI_TA,          "Terminal Authentication, RSA PKCS#1 v1.5 SHA-1"},
+    {10, {BSI_SC, 0x02, 0x01, 0x02},          EMRTD_SI_TA,          "Terminal Authentication, RSA PKCS#1 v1.5 SHA-256"},
+    {10, {BSI_SC, 0x02, 0x01, 0x03},          EMRTD_SI_TA,          "Terminal Authentication, RSA PSS SHA-1"},
+    {10, {BSI_SC, 0x02, 0x01, 0x04},          EMRTD_SI_TA,          "Terminal Authentication, RSA PSS SHA-256"},
+    {10, {BSI_SC, 0x02, 0x01, 0x05},          EMRTD_SI_TA,          "Terminal Authentication, RSA PKCS#1 v1.5 SHA-512"},
+    {10, {BSI_SC, 0x02, 0x01, 0x06},          EMRTD_SI_TA,          "Terminal Authentication, RSA PSS SHA-512"},
+    {9,  {BSI_SC, 0x02, 0x02},                EMRTD_SI_TA,          "Terminal Authentication, ECDSA"},
+    {10, {BSI_SC, 0x02, 0x02, 0x01},          EMRTD_SI_TA,          "Terminal Authentication, ECDSA SHA-1"},
+    {10, {BSI_SC, 0x02, 0x02, 0x02},          EMRTD_SI_TA,          "Terminal Authentication, ECDSA SHA-224"},
+    {10, {BSI_SC, 0x02, 0x02, 0x03},          EMRTD_SI_TA,          "Terminal Authentication, ECDSA SHA-256"},
+    {10, {BSI_SC, 0x02, 0x02, 0x04},          EMRTD_SI_TA,          "Terminal Authentication, ECDSA SHA-384"},
+    {10, {BSI_SC, 0x02, 0x02, 0x05},          EMRTD_SI_TA,          "Terminal Authentication, ECDSA SHA-512"},
+
+    // id-CA. The 9 byte arcs are ChipAuthenticationDomainParameterInfo, the
+    // 10 byte ones ChipAuthenticationInfo.
+    {8,  {BSI_SC, 0x03},                      EMRTD_SI_CA,          "Chip Authentication"},
+    {9,  {BSI_SC, 0x03, 0x01},                EMRTD_SI_CA_DP,       "Chip Authentication, DH"},
+    {10, {BSI_SC, 0x03, 0x01, 0x01},          EMRTD_SI_CA,          "Chip Authentication, DH, 3DES-CBC-CBC"},
+    {10, {BSI_SC, 0x03, 0x01, 0x02},          EMRTD_SI_CA,          "Chip Authentication, DH, AES-CMAC-128"},
+    {10, {BSI_SC, 0x03, 0x01, 0x03},          EMRTD_SI_CA,          "Chip Authentication, DH, AES-CMAC-192"},
+    {10, {BSI_SC, 0x03, 0x01, 0x04},          EMRTD_SI_CA,          "Chip Authentication, DH, AES-CMAC-256"},
+    {9,  {BSI_SC, 0x03, 0x02},                EMRTD_SI_CA_DP,       "Chip Authentication, ECDH"},
+    {10, {BSI_SC, 0x03, 0x02, 0x01},          EMRTD_SI_CA,          "Chip Authentication, ECDH, 3DES-CBC-CBC"},
+    {10, {BSI_SC, 0x03, 0x02, 0x02},          EMRTD_SI_CA,          "Chip Authentication, ECDH, AES-CMAC-128"},
+    {10, {BSI_SC, 0x03, 0x02, 0x03},          EMRTD_SI_CA,          "Chip Authentication, ECDH, AES-CMAC-192"},
+    {10, {BSI_SC, 0x03, 0x02, 0x04},          EMRTD_SI_CA,          "Chip Authentication, ECDH, AES-CMAC-256"},
+
+    // id-PACE. The leaves live in pacealg_table, these two are the
+    // PACEDomainParameterInfo arcs.
+    {8,  {BSI_SC, 0x04},                      EMRTD_SI_PACE,        "PACE"},
+    {9,  {BSI_SC, 0x04, 0x01},                EMRTD_SI_PACE_DP,     "PACE, DH domain parameters"},
+    {9,  {BSI_SC, 0x04, 0x02},                EMRTD_SI_PACE_DP,     "PACE, ECDH domain parameters"},
+
+    // id-RI. 9 byte arcs are RestrictedIdentificationDomainParameterInfo.
+    {8,  {BSI_SC, 0x05},                      EMRTD_SI_RI,          "Restricted Identification"},
+    {9,  {BSI_SC, 0x05, 0x01},                EMRTD_SI_RI_DP,       "Restricted Identification, DH"},
+    {10, {BSI_SC, 0x05, 0x01, 0x01},          EMRTD_SI_RI,          "Restricted Identification, DH, SHA-1"},
+    {10, {BSI_SC, 0x05, 0x01, 0x02},          EMRTD_SI_RI,          "Restricted Identification, DH, SHA-224"},
+    {10, {BSI_SC, 0x05, 0x01, 0x03},          EMRTD_SI_RI,          "Restricted Identification, DH, SHA-256"},
+    {10, {BSI_SC, 0x05, 0x01, 0x04},          EMRTD_SI_RI,          "Restricted Identification, DH, SHA-384"},
+    {10, {BSI_SC, 0x05, 0x01, 0x05},          EMRTD_SI_RI,          "Restricted Identification, DH, SHA-512"},
+    {9,  {BSI_SC, 0x05, 0x02},                EMRTD_SI_RI_DP,       "Restricted Identification, ECDH"},
+    {10, {BSI_SC, 0x05, 0x02, 0x01},          EMRTD_SI_RI,          "Restricted Identification, ECDH, SHA-1"},
+    {10, {BSI_SC, 0x05, 0x02, 0x02},          EMRTD_SI_RI,          "Restricted Identification, ECDH, SHA-224"},
+    {10, {BSI_SC, 0x05, 0x02, 0x03},          EMRTD_SI_RI,          "Restricted Identification, ECDH, SHA-256"},
+    {10, {BSI_SC, 0x05, 0x02, 0x04},          EMRTD_SI_RI,          "Restricted Identification, ECDH, SHA-384"},
+    {10, {BSI_SC, 0x05, 0x02, 0x05},          EMRTD_SI_RI,          "Restricted Identification, ECDH, SHA-512"},
+
+    {8,  {BSI_SC, 0x06},                      EMRTD_SI_CI,          "Card Info Locator"},
+    {8,  {BSI_SC, 0x07},                      EMRTD_SI_EIDSECURITY, "eID Security"},
+    {8,  {BSI_SC, 0x08},                      EMRTD_SI_PT,          "Privileged Terminal"},
+
+    {5,  {ICAO_SEC},                          EMRTD_SI_UNKNOWN,     "ICAO MRTD security"},
+    {6,  {ICAO_SEC, 0x05},                    EMRTD_SI_AA,          "Active Authentication"},
+    {6,  {ICAO_SEC, 0x0D},                    EMRTD_SI_EFDIR,       "EF.DIR"},
+
+    {0,  {0},                                 EMRTD_SI_UNKNOWN,     NULL}
+};
+
+#undef BSI_SC
+#undef ICAO_SEC
+
+const char *emrtd_secinfo_name(const uint8_t *oid, size_t oidlen, emrtd_si_t *kind) {
+    const emrtd_secinfo_t *best = NULL;
+
+    // longest prefix wins, so an arc we did not enumerate still resolves to its
+    // family instead of falling through to "unknown"
+    for (int i = 0; secinfo_table[i].name != NULL; i++) {
+        const emrtd_secinfo_t *e = &secinfo_table[i];
+        if ((e->oidlen > oidlen) || (memcmp(e->oid, oid, e->oidlen) != 0)) {
+            continue;
+        }
+        if ((best == NULL) || (e->oidlen > best->oidlen)) {
+            best = e;
+        }
+    }
+
+    if (best == NULL) {
+        if (kind != NULL) {
+            *kind = EMRTD_SI_UNKNOWN;
+        }
+        return NULL;
+    }
+
+    if (kind != NULL) {
+        *kind = best->kind;
+    }
+    return best->name;
+}
+
+void emrtd_oid_to_str(const uint8_t *oid, size_t oidlen, char *out, size_t outlen) {
+    if ((out == NULL) || (outlen == 0)) {
+        return;
+    }
+    out[0] = 0x00;
+
+    mbedtls_asn1_buf buf;
+    buf.tag = MBEDTLS_ASN1_OID;
+    buf.len = oidlen;
+    buf.p = (uint8_t *)oid;
+
+    if (mbedtls_oid_get_numeric_string(out, outlen, &buf) < 0) {
+        out[0] = 0x00;
+    }
+}
 
 const emrtd_pacealg_t *emrtd_pace_alg_by_oid(const uint8_t *oid, size_t oidlen) {
     for (int i = 0; pacealg_table[i].name != NULL; i++) {
@@ -492,14 +628,51 @@ static bool emrtd_asn1_uint(const uint8_t *value, size_t valuelen, uint32_t *out
 
 // The PACEDomainParameterInfo protocol OIDs, TR-03110 part 3, A.1.1.
 // 0.4.0.127.0.7.2.2.4.1 (DH) and .2 (ECDH)
+// 0.4.0.127.0.7.2.2.4, id-PACE itself
+static const uint8_t oid_pace[]         = {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04};
 static const uint8_t oid_pace_dh_dp[]   = {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x01};
 static const uint8_t oid_pace_ecdh_dp[] = {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x02};
 
 static void emrtd_pace_classify(emrtd_paceinfo_t *info) {
     info->supported = false;
 
+    // Only PACEInfo entries are candidates for the session. The rest of
+    // EF_CardAccess describes protocols this client does not run, say so
+    // instead of calling them unsupported PACE algorithms.
+    switch (info->kind) {
+        case EMRTD_SI_PACE:
+            break;
+        case EMRTD_SI_PACE_DP:
+            info->reason = "domain parameter definition, informational";
+            return;
+        case EMRTD_SI_CA:
+        case EMRTD_SI_CA_DP:
+        case EMRTD_SI_PK:
+            info->reason = "not a PACE protocol, EAC Chip Authentication is not implemented";
+            return;
+        case EMRTD_SI_TA:
+            info->reason = "not a PACE protocol, needs an EAC inspection system certificate";
+            return;
+        case EMRTD_SI_RI:
+        case EMRTD_SI_RI_DP:
+            info->reason = "not a PACE protocol, needs an EAC sector key";
+            return;
+        case EMRTD_SI_AA:
+            info->reason = "not a PACE protocol, uses the public key in EF_DG15";
+            return;
+        case EMRTD_SI_CI:
+        case EMRTD_SI_EIDSECURITY:
+        case EMRTD_SI_PT:
+        case EMRTD_SI_EFDIR:
+            info->reason = "informational, not a PACE protocol";
+            return;
+        case EMRTD_SI_UNKNOWN:
+            info->reason = "unknown protocol OID";
+            return;
+    }
+
     if (info->alg == NULL) {
-        info->reason = "unknown protocol OID";
+        info->reason = "unknown PACE algorithm OID";
         return;
     }
 
@@ -601,43 +774,45 @@ static void emrtd_pace_parse_securityinfo(const uint8_t *seq, size_t seqlen, emr
     memcpy(info->oid, val, vlen);
     info->oidlen = vlen;
     info->alg = emrtd_pace_alg_by_oid(val, vlen);
+    info->protocol = emrtd_secinfo_name(val, vlen, &info->kind);
 
-    if (is_domain_param) {
-        // SEQUENCE { OID, AlgorithmIdentifier, INTEGER parameterId OPTIONAL }
-        if (emrtd_tlv_next(&cur, end, &tag, &val, &vlen) == false) {
-            return;
-        }
-        if (emrtd_tlv_next(&cur, end, &tag, &val, &vlen) && (tag == ASN1_TAG_INTEGER)) {
-            uint32_t v = 0;
-            if (emrtd_asn1_uint(val, vlen, &v) && (v <= 0xFF)) {
-                info->has_param = true;
-                info->param_id = (uint8_t)v;
-                info->sdp = emrtd_pace_sdp_by_id(info->param_id);
-            }
-        }
-        info->supported = false;
-        info->reason = "domain parameter definition, informational";
-        out->count++;
-        return;
+    if (info->alg != NULL) {
+        // a PACEInfo we can act on, pacealg_table has the better name
+        info->kind = EMRTD_SI_PACE;
+        info->protocol = info->alg->name;
+    } else if (is_domain_param) {
+        info->kind = EMRTD_SI_PACE_DP;
+    } else if ((vlen > sizeof(oid_pace)) && (memcmp(val, oid_pace, sizeof(oid_pace)) == 0)) {
+        // an id-PACE arc we do not implement, still a PACEInfo and not a
+        // domain parameter definition
+        info->kind = EMRTD_SI_PACE;
     }
 
-    // PACEInfo ::= SEQUENCE { protocol OID, version INTEGER, parameterId INTEGER OPTIONAL }
-    if (emrtd_tlv_next(&cur, end, &tag, &val, &vlen) == false) {
-        return;
-    }
-    if (tag != ASN1_TAG_INTEGER) {
-        return;
-    }
-    if (emrtd_asn1_uint(val, vlen, &info->version) == false) {
-        return;
+    // Second element:
+    //   PACEInfo / ChipAuthenticationInfo / TerminalAuthenticationInfo  version INTEGER
+    //   PACEDomainParameterInfo / ChipAuthenticationPublicKeyInfo       an AlgorithmIdentifier
+    //                                                                   or SubjectPublicKeyInfo
+    // Take it as the version only when it really is an INTEGER.
+    if (emrtd_tlv_next(&cur, end, &tag, &val, &vlen) && (tag == ASN1_TAG_INTEGER)) {
+        emrtd_asn1_uint(val, vlen, &info->version);
     }
 
+    // Third element, an optional INTEGER. For the PACE entries that is the
+    // standardized domain parameter id of table A.2, for the Chip
+    // Authentication ones it is a keyId and must not be read as a curve.
     if (emrtd_tlv_next(&cur, end, &tag, &val, &vlen) && (tag == ASN1_TAG_INTEGER)) {
         uint32_t v = 0;
-        if (emrtd_asn1_uint(val, vlen, &v) && (v <= 0xFF)) {
-            info->has_param = true;
-            info->param_id = (uint8_t)v;
-            info->sdp = emrtd_pace_sdp_by_id(info->param_id);
+        if (emrtd_asn1_uint(val, vlen, &v)) {
+            if ((info->kind == EMRTD_SI_PACE) || (info->kind == EMRTD_SI_PACE_DP)) {
+                if (v <= 0xFF) {
+                    info->has_param = true;
+                    info->param_id = (uint8_t)v;
+                    info->sdp = emrtd_pace_sdp_by_id(info->param_id);
+                }
+            } else {
+                info->has_key_id = true;
+                info->key_id = v;
+            }
         }
     }
 
