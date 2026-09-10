@@ -547,13 +547,16 @@ size_t pskFindFirstPhaseShift(const uint8_t *samples, size_t size, uint8_t *curP
 
     uint16_t avgWaveVal = 0, lastAvgWaveVal;
     size_t i = waveStart, waveEnd, waveLenCnt, firstFullWave;
+    // waveStart starts as wherever the caller began looking, so the first length is part of a wave,
+    // not a wave, and judging it accepts a shift that is not there.  Baseline on the first peak.
+    bool wave_from_peak = false;
     for (; i < loopCnt; i++) {
         // find peak // was "samples[i] + fc" but why?  must have been used to weed out some wave error... removed..
         if (samples[i] < samples[i + 1] && samples[i + 1] >= samples[i + 2]) {
             waveEnd = i + 1;
             if (g_debugMode == 2) prnt("DEBUG PSK: waveEnd: %zu, waveStart: %zu", waveEnd, waveStart);
             waveLenCnt = waveEnd - waveStart;
-            if (waveLenCnt > fc && waveStart > fc && !(waveLenCnt > fc + 8)) { //not first peak and is a large wave but not out of whack
+            if (wave_from_peak && waveLenCnt > fc && waveStart > fc && !(waveLenCnt > fc + 8)) { //not first peak and is a large wave but not out of whack
                 lastAvgWaveVal = avgWaveVal / (waveLenCnt);
                 firstFullWave = waveStart;
                 *fullWaveLen = waveLenCnt;
@@ -562,6 +565,7 @@ size_t pskFindFirstPhaseShift(const uint8_t *samples, size_t size, uint8_t *curP
                 return firstFullWave;
             }
             waveStart = i + 1;
+            wave_from_peak = true;
             avgWaveVal = 0;
         }
         avgWaveVal += samples[i + 2];
@@ -2161,14 +2165,22 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, const int *invert, 
         i = findModStart(dest, *size, fc);
         //find first phase shift
         firstFullWave = pskFindFirstPhaseShift(dest, *size, &curPhase, i, fc, &fullWaveLen);
-        if (firstFullWave == 0) {
-            // no phase shift detected - could be all 1's or 0's - doesn't matter where we start
-            // so skip a little to ensure we are past any Start Signal
-            firstFullWave = 160;
-            memset(dest, curPhase, firstFullWave / *clock);
-        } else {
-            memset(dest, curPhase ^ 1, firstFullWave / *clock);
-        }
+    }
+
+    // A first shift less than a bit period in is lead-in, not data.  Counting it toggles curPhase
+    // once too often, and the emitted bit is the running phase, so the rest of the word inverts.
+    const size_t bit_period = (size_t)(*clock);
+    if (firstFullWave != 0 && firstFullWave < bit_period) {
+        curPhase = *invert;
+        fullWaveLen = 0;
+        firstFullWave = pskFindFirstPhaseShift(dest, *size, &curPhase, bit_period, fc, &fullWaveLen);
+    }
+
+    if (firstFullWave == 0) {
+        // no phase shift detected - could be all 1's or 0's - doesn't matter where we start
+        // so skip a little to ensure we are past any Start Signal
+        firstFullWave = 160;
+        memset(dest, curPhase, firstFullWave / *clock);
     } else {
         memset(dest, curPhase ^ 1, firstFullWave / *clock);
     }

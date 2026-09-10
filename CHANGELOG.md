@@ -5,6 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed `lf t55xx detect` - PSK1 now detects at every bit rate and subcarrier. (@iceman1001)
 - Fixed `lf t55xx detect` - FSK was skipped entirely when the field-clock pair measured as neither legal pair, losing FSK1 at RF/32 and RF/40 and every variant at RF/16 (@iceman1001)
+- Fixed `lf psk demod` - lead-in samples were accepted as a phase shift, complementing the rest of the word (@mfcarroll)
 - Fixed `lf fsk demod` - a leading run too short to be a bit was forced to one, fabricating a bit and shifting the word (@mfcarroll)
 - Fixed `lf nrz demod` - the samples before the first level change were counted as bits, rotating the word whenever that edge moved (@mfcarroll)
 - Fixed `lf t55xx dump/read` - blocks were extracted at a bit offset cached from the last `detect`  The offset is now anchored in graph samples (@iceman1001)
