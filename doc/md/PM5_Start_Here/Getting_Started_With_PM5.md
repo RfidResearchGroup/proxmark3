@@ -104,7 +104,23 @@ hf 14a read --drop
 ## Do this exactly once.
 * The very first time for a new battery:
 ```hw bwm setcap --cap 500```
-* Do a full charge/discharge cycle for it to learn the real capacity.
+* Your PM5 will learn about the battery through usage.
+
+## Flash the BWM
+* Make sure your BWM has enough charge in the battery `hw status` 50%+ should work.
+* Get the latest firmware:
+  * Go [here](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/actions/workflows/esp-idf-build.yml):
+  * Click on the latest workflow run (As of this writing that's "Merge pull request #3 from nieldk/master")
+  * Scroll all the way to the bottom, you'll see **Artifacts**
+  * Click on "proxmark5_bwm_master" which will start a download for `proxmark5_bwm_master.zip`
+  * Unzip this file somehwere, remember that location
+  * The upgrade command is: `hw bwm upgrade -f  <PATH-TO>\proxmark5_ble_wifi_module.bin`
+  * This will take some time, you'll see the Progress in % displayed on the screen until the process is done.
+  * Once you see "BWM Rebooting into the new image" you know the upgrade finished.
+  * Wait a few seconds (under 10) and unplug and replug the Proxmark5 back into the usb port.
+  * Once reconnected, you can run `hw status` and you'll see:
+    * `BWM fw version......XX` where XX is the fw version.
+  * You have finished flashing the BWM.
 
 
 ### Operation
