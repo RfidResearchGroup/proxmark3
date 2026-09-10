@@ -76,6 +76,110 @@ static t55xx_conf_block_t config = {
 
 static t55xx_memory_item_t cardmem[T55x7_BLOCK_COUNT] = {{0}};
 
+// A block read repeats one 32 bit word for as long as the field is on, so a
+// demodulation that starts one bit late yields a rotation of the block with
+// nothing in the data to mark it as wrong.  `offset` is a bit index into a
+// demod buffer that no longer exists once the next acquisition lands, and the
+// demodulators do not all start on the same bit: manchester anchors on the
+// sequence terminator, psk starts at whatever phase transition it finds first.
+static void t55xx_anchor(t55xx_conf_block_t *c, uint8_t offset) {
+    c->offset = offset;
+    c->anchor_valid = (g_DemodClock > 0);
+    c->anchor_sample = g_DemodStartIdx + ((int32_t)offset * g_DemodClock);
+    c->anchor_tracelen = (int32_t)g_GraphTraceLen;
+}
+
+// records a detect candidate against the demodulation that is loaded right now
+static void t55xx_record_hit(t55xx_conf_block_t *t) {
+    t->block0 = PackBits(t->offset, 32, g_DemodBuffer);
+    t->anchor_valid = (g_DemodClock > 0);
+    t->anchor_sample = g_DemodStartIdx + ((int32_t)t->offset * g_DemodClock);
+    t->anchor_tracelen = (int32_t)g_GraphTraceLen;
+}
+
+// the bit offset to read a block at in the demod buffer loaded right now
+static bool t55xx_demod_offset(uint8_t *idx) {
+
+    if (g_DemodBufferLen < 32) {
+        PrintAndLogEx(DEBUG, "DEBUG: (t55xx) demod buffer holds %zu bits, need 32", g_DemodBufferLen);
+        return false;
+    }
+
+    int32_t bit = config.offset;
+
+    // a different graph length is a different signal, not another read of the
+    // same one - fall back to the plain offset rather than resolve against it
+    if (config.anchor_valid && 
+        g_DemodClock > 0 &&
+        (config.anchor_tracelen == (int32_t)g_GraphTraceLen)) {
+
+        // negative when this demodulation started later than the anchored one
+        const int32_t delta = config.anchor_sample - g_DemodStartIdx;
+        const int32_t half = g_DemodClock / 2;
+
+        bit = (delta >= 0) ? ((delta + half) / g_DemodClock) : -((-delta + half) / g_DemodClock);
+
+        // landing outside the buffer means this demodulation started a long way
+        // from the anchored one.  an addressed block read repeats every 32 bits,
+        // so whole periods can be added or dropped to bring the window back in.
+        // that is a rescue, not a normalisation - a regular read mode capture
+        // cycles several blocks and would answer with a different one
+        while (bit < 0) {
+            bit += 32;
+        }
+        while (bit + 32 > (int32_t)g_DemodBufferLen) {
+            bit -= 32;
+        }
+    }
+
+    if (bit < 0 || bit + 32 > (int32_t)g_DemodBufferLen) {
+        PrintAndLogEx(WARNING, "The configured offset %d is too big. Possible offset: %zu)", bit, g_DemodBufferLen - 32);
+        return false;
+    }
+
+    *idx = (uint8_t)bit;
+    return true;
+}
+
+// a word that is its own rotation cannot say where the boundary is
+static bool t55xx_rotation_unique(uint32_t v) {
+    for (uint8_t r = 1; r < 32; r++) {
+        if ((((v << r) | (v >> (32 - r))) & 0xFFFFFFFF) == v) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// true when the demodulated stream carries `data` at some offset.  a block read
+// repeats the addressed word, so a hit anywhere proves the tag holds it, no
+// matter which bit the demodulator started on.  a false hit needs a 32 bit
+// coincidence in a few hundred positions.  re-anchors on the hit, which is the
+// one place a data block can say where its own boundary is
+static bool t55xx_stream_holds(uint32_t data) {
+
+    if (g_DemodBufferLen < 32) {
+        return false;
+    }
+
+    for (size_t i = 0; i + 32 <= g_DemodBufferLen; i++) {
+
+        if (PackBits(0, 32, g_DemodBuffer + i) != data) {
+            continue;
+        }
+
+        if (i <= 255 && t55xx_rotation_unique(data)) {
+            const uint8_t before = config.offset;
+            t55xx_anchor(&config, (uint8_t)i);
+            if (before != config.offset) {
+                PrintAndLogEx(DEBUG, "DEBUG: (t55xx) re-anchored offset %u -> %u", before, config.offset);
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
 t55xx_conf_block_t Get_t55xx_Config(void) {
     return config;
 }
@@ -333,7 +437,7 @@ bool t55xxAcquireAndCompareBlock0(bool usepwd, uint32_t password, uint32_t known
         for (size_t i = 0; i < g_DemodBufferLen - 32; i++) {
             uint32_t tmp = PackBits(i, 32, g_DemodBuffer);
             if (tmp == known_block0) {
-                config.offset = i;
+                t55xx_anchor(&config, (uint8_t)i);
                 config.downlink_mode = m;
                 return true;
             }
@@ -351,7 +455,10 @@ bool t55xxAcquireAndDetect(bool usepwd, uint32_t password, uint32_t known_block0
         if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, usepwd, password, m) == false)
             continue;
 
-        if (t55xxTryDetectModulationEx(m, verbose, known_block0, (usepwd) ? password : -1) == false)
+        // password is uint32_t here, so an untyped -1 would be truncated to
+        // 0xFFFFFFFF by the ternary before it widens, and the `pwd != -1`
+        // sentinel check inside would read it as a known password
+        if (t55xxTryDetectModulationEx(m, verbose, known_block0, (usepwd) ? (uint64_t)password : (uint64_t) - 1) == false)
             continue;
 
         config.downlink_mode = m;
@@ -362,9 +469,10 @@ bool t55xxAcquireAndDetect(bool usepwd, uint32_t password, uint32_t known_block0
     return false;
 }
 
-bool t55xxVerifyWrite(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, uint32_t data) {
+static bool t55xx_verify_write_ex(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, uint32_t data, bool redetect) {
 
     uint32_t read_data = 0;
+    bool ok = false;
 
     if (downlink_mode == 0xFF)
         downlink_mode = config.downlink_mode;
@@ -372,23 +480,37 @@ bool t55xxVerifyWrite(uint8_t block, bool page1, bool usepwd, uint8_t override, 
     int res = T55xxReadBlockEx(block, page1, usepwd, override, password, downlink_mode, false);
     if (res == PM3_SUCCESS) {
 
-        if (GetT55xxBlockData(&read_data) == false)
-            return false;
+        // the value being anywhere in the stream is the proof, not the value at
+        // one cached offset.  a correct write read back on a different bit
+        // boundary used to report as a validation failure
+        ok = t55xx_stream_holds(data);
 
-    } else if (res == PM3_EWRONGANSWER) {
-
-        // couldn't decode.  Lets see if this was a block 0 write and try read/detect it auto.
-        // this messes up with ppl config..
-        if (block == 0 && page1 == false) {
-
-            if (t55xxAcquireAndDetect(usepwd, password, data, true) == false)
-                return false;
-
-            return t55xxVerifyWrite(block, page1, usepwd, 2, password, config.downlink_mode, data);
+        if (ok == false && GetT55xxBlockData(&read_data)) {
+            ok = (read_data == data);
         }
     }
 
-    return (read_data == data);
+    if (ok) {
+        return true;
+    }
+
+    // A block 0 write changes how the tag talks, so the configuration held from before the write is stale.
+    // A: he demodulator fails outright, or
+    // B:_it succeeds on the wrong modulation and answers with garbage
+    if (block == 0 && page1 == false && redetect) {
+
+        if (t55xxAcquireAndDetect(usepwd, password, data, true) == false) {
+            return false;
+        }
+
+        return t55xx_verify_write_ex(block, page1, usepwd, 2, password, config.downlink_mode, data, false);
+    }
+
+    return false;
+}
+
+bool t55xxVerifyWrite(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, uint32_t data) {
+    return t55xx_verify_write_ex(block, page1, usepwd, override, password, downlink_mode, data, true);
 }
 
 int t55xxWrite(uint8_t block, bool page1, bool usepwd, bool testMode, uint32_t password, uint8_t downlink_mode, uint32_t data) {
@@ -461,6 +583,9 @@ void SetConfigWithBlock0Ex(uint32_t block0, uint8_t offset, bool Q5) {
     config.Q5 = Q5;
     config.ST = sst;
     config.usepwd = pwd;
+    if (config.offset != offset) {
+        config.anchor_valid = false;
+    }
     config.offset = offset;
     config.block0 = block0;
 }
@@ -580,6 +705,7 @@ static int CmdT55xxSetConfig(const char *Cmd) {
     // validate user specified offset
     if (offset > -1 && offset < 0x100) {
         config.offset = offset;
+        config.anchor_valid = false;
     }
 
     // validate user specific T5555 / Q5 - use the flag to toggle between T5577 and Q5
@@ -688,8 +814,19 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
     if (DecodeT55xxBlock() == false)
         return PM3_EWRONGANSWER;
 
-    if (verbose)
+    // block 0 is the one block whose content is known before it is read, so use
+    // it to re-anchor this capture rather than trusting the one detect left
+    if (block == T55x7_CONFIGURATION_BLOCK && 
+        page1 == false &&
+        config.block0Status == AUTODETECT && 
+        config.block0 != 0) {
+        
+        t55xx_stream_holds(config.block0);
+    }
+
+    if (verbose) {
         printT55xxBlock(block, page1);
+    }
 
     return PM3_SUCCESS;
 }
@@ -1230,7 +1367,7 @@ static void t55xx_psk_coherent(int fitclk, uint8_t clk, t55xx_conf_block_t *test
             tests[*hits].psk_carrier = t55xx_observed_psk_carrier();
             tests[*hits].bitrate = bitRate;
             tests[*hits].inverted = inverted;
-            tests[*hits].block0 = PackBits(tests[*hits].offset, 32, g_DemodBuffer);
+            t55xx_record_hit(&tests[*hits]);
             tests[*hits].ST = false;
             tests[*hits].downlink_mode = downlink_mode;
             (*hits)++;
@@ -1314,7 +1451,7 @@ static void t55xx_ask_coherent(int fitclk, uint8_t clk, t55xx_conf_block_t *test
             tests[*hits].modulation = mode;
             tests[*hits].bitrate = bitRate;
             tests[*hits].inverted = (invert != 0);
-            tests[*hits].block0 = PackBits(tests[*hits].offset, 32, g_DemodBuffer);
+            t55xx_record_hit(&tests[*hits]);
             tests[*hits].ST = false;
             tests[*hits].downlink_mode = downlink_mode;
             (*hits)++;
@@ -1374,7 +1511,7 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
                         tests[*hits].modulation = m;
                         tests[*hits].bitrate = bitRate;
                         tests[*hits].inverted = (inv != 0);
-                        tests[*hits].block0 = PackBits(tests[*hits].offset, 32, g_DemodBuffer);
+                        t55xx_record_hit(&tests[*hits]);
                         tests[*hits].ST = false;
                         tests[*hits].downlink_mode = downlink_mode;
                         (*hits)++;
@@ -1402,7 +1539,7 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
             tests[*hits].modulation = DEMOD_PSK1;
             tests[*hits].bitrate = bitRate;
             tests[*hits].inverted = (inv != 0);
-            tests[*hits].block0 = PackBits(tests[*hits].offset, 32, g_DemodBuffer);
+            t55xx_record_hit(&tests[*hits]);
             tests[*hits].ST = false;
             tests[*hits].downlink_mode = downlink_mode;
             (*hits)++;
@@ -1417,7 +1554,7 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
                 tests[*hits].psk_carrier = t55xx_observed_psk_carrier();
                 tests[*hits].bitrate = bitRate;
                 tests[*hits].inverted = false;
-                tests[*hits].block0 = PackBits(tests[*hits].offset, 32, g_DemodBuffer);
+                t55xx_record_hit(&tests[*hits]);
                 tests[*hits].ST = false;
                 tests[*hits].downlink_mode = downlink_mode;
                 (*hits)++;
@@ -1449,7 +1586,7 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
             tests[*hits].modulation = DEMOD_NRZ;
             tests[*hits].bitrate = bitRate;
             tests[*hits].inverted = (inv != 0);
-            tests[*hits].block0 = PackBits(tests[*hits].offset, 32, g_DemodBuffer);
+            t55xx_record_hit(&tests[*hits]);
             tests[*hits].ST = false;
             tests[*hits].downlink_mode = downlink_mode;
             (*hits)++;
@@ -1465,7 +1602,7 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
         tests[*hits].modulation = DEMOD_ASK;
         tests[*hits].bitrate = bitRate;
         tests[*hits].inverted = false;
-        tests[*hits].block0 = PackBits(tests[*hits].offset, 32, g_DemodBuffer);
+        t55xx_record_hit(&tests[*hits]);
         tests[*hits].downlink_mode = downlink_mode;
         (*hits)++;
         return true;
@@ -1478,7 +1615,7 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
         tests[*hits].modulation = DEMOD_ASK;
         tests[*hits].bitrate = bitRate;
         tests[*hits].inverted = true;
-        tests[*hits].block0 = PackBits(tests[*hits].offset, 32, g_DemodBuffer);
+        t55xx_record_hit(&tests[*hits]);
         tests[*hits].downlink_mode = downlink_mode;
         (*hits)++;
         return true;
@@ -1490,7 +1627,7 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
         tests[*hits].modulation = DEMOD_BI;
         tests[*hits].bitrate = bitRate;
         tests[*hits].inverted = false;
-        tests[*hits].block0 = PackBits(tests[*hits].offset, 32, g_DemodBuffer);
+        t55xx_record_hit(&tests[*hits]);
         tests[*hits].ST = false;
         tests[*hits].downlink_mode = downlink_mode;
         (*hits)++;
@@ -1503,7 +1640,7 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
         tests[*hits].modulation = DEMOD_BIa;
         tests[*hits].bitrate = bitRate;
         tests[*hits].inverted = true;
-        tests[*hits].block0 = PackBits(tests[*hits].offset, 32, g_DemodBuffer);
+        t55xx_record_hit(&tests[*hits]);
         tests[*hits].ST = false;
         tests[*hits].downlink_mode = downlink_mode;
         (*hits)++;
@@ -1647,7 +1784,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_FSK2;
             tests[hits].bitrate = bitRate;
             tests[hits].inverted = false;
-            tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
+            t55xx_record_hit(&tests[hits]);
             tests[hits].ST = false;
             tests[hits].downlink_mode = downlink_mode;
             ++hits;
@@ -1660,7 +1797,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_FSK2a;
             tests[hits].bitrate = bitRate;
             tests[hits].inverted = true;
-            tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
+            t55xx_record_hit(&tests[hits]);
             tests[hits].ST = false;
             tests[hits].downlink_mode = downlink_mode;
             ++hits;
@@ -1678,7 +1815,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_ASK;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = false;
-                tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
+                t55xx_record_hit(&tests[hits]);
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
             }
@@ -1692,7 +1829,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_ASK;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = true;
-                tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
+                t55xx_record_hit(&tests[hits]);
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
             }
@@ -1700,7 +1837,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_BI;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = false;
-                tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
+                t55xx_record_hit(&tests[hits]);
                 tests[hits].ST = false;
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
@@ -1709,7 +1846,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_BIa;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = true;
-                tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
+                t55xx_record_hit(&tests[hits]);
                 tests[hits].ST = false;
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
@@ -1721,7 +1858,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_NRZ;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = false;
-                tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
+                t55xx_record_hit(&tests[hits]);
                 tests[hits].ST = false;
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
@@ -1731,7 +1868,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_NRZ;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = true;
-                tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
+                t55xx_record_hit(&tests[hits]);
                 tests[hits].ST = false;
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
@@ -1749,7 +1886,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_PSK1;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = false;
-                tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
+                t55xx_record_hit(&tests[hits]);
                 tests[hits].ST = false;
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
@@ -1758,7 +1895,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].modulation = DEMOD_PSK1;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = true;
-                tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
+                t55xx_record_hit(&tests[hits]);
                 tests[hits].ST = false;
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
@@ -1772,7 +1909,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                     tests[hits].psk_carrier = t55xx_observed_psk_carrier();
                     tests[hits].bitrate = bitRate;
                     tests[hits].inverted = false;
-                    tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
+                    t55xx_record_hit(&tests[hits]);
                     tests[hits].ST = false;
                     tests[hits].downlink_mode = downlink_mode;
                     ++hits;
@@ -1802,6 +1939,9 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
         config.bitrate = tests[0].bitrate;
         config.inverted = tests[0].inverted;
         config.offset = tests[0].offset;
+        config.anchor_sample = tests[0].anchor_sample;
+        config.anchor_tracelen = tests[0].anchor_tracelen;
+        config.anchor_valid = tests[0].anchor_valid;
         config.block0 = tests[0].block0;
         config.Q5 = tests[0].Q5;
         config.ST = tests[0].ST;
@@ -1835,6 +1975,9 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 config.bitrate = tests[i].bitrate;
                 config.inverted = tests[i].inverted;
                 config.offset = tests[i].offset;
+                config.anchor_sample = tests[i].anchor_sample;
+                config.anchor_tracelen = tests[i].anchor_tracelen;
+                config.anchor_valid = tests[i].anchor_valid;
                 config.block0 = tests[i].block0;
                 config.Q5 = tests[i].Q5;
                 config.ST = tests[i].ST;
@@ -1892,13 +2035,8 @@ bool testKnownConfigBlock(uint32_t block0) {
 
 bool GetT55xxBlockData(uint32_t *blockdata) {
 
-    if (g_DemodBufferLen == 0)
-        return false;
-
-    uint8_t idx = config.offset;
-
-    if (idx + 32 > g_DemodBufferLen) {
-        PrintAndLogEx(WARNING, "The configured offset %d is too big. Possible offset: %zu)", idx, g_DemodBufferLen - 32);
+    uint8_t idx = 0;
+    if (t55xx_demod_offset(&idx) == false) {
         return false;
     }
 
@@ -2142,9 +2280,12 @@ static size_t t55xx_psk3_resolve(uint8_t nblk, uint32_t *only) {
 
 void printT55xxBlock(uint8_t blockNum, bool page1) {
 
-    uint32_t val = 0;
-    if (GetT55xxBlockData(&val) == false)
+    uint8_t idx = 0;
+    if (t55xx_demod_offset(&idx) == false) {
         return;
+    }
+
+    uint32_t val = PackBits(0, 32, g_DemodBuffer + idx);
 
     uint8_t bytes[4] = {0};
     num_to_bytes(val, 4, bytes);
@@ -2153,7 +2294,7 @@ void printT55xxBlock(uint8_t blockNum, bool page1) {
 
     const char *note = t55xx_config_psk3_ambiguous() ? _YELLOW_(" <- psk2/psk3 ambiguous") : "";
 
-    PrintAndLogEx(SUCCESS, " %02d | %08X | %s | %s%s", blockNum, val, sprint_bytebits_bin(g_DemodBuffer + config.offset, 32), sprint_ascii(bytes, 4), note);
+    PrintAndLogEx(SUCCESS, " %02d | %08X | %s | %s%s", blockNum, val, sprint_bytebits_bin(g_DemodBuffer + idx, 32), sprint_ascii(bytes, 4), note);
 }
 
 static bool testModulation(uint8_t mode, uint8_t modread) {
@@ -3302,13 +3443,12 @@ static int CmdT55xxInfo(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        // too little space to start with
-        if (g_DemodBufferLen < 32 + config.offset) {
+        uint8_t boff = 0;
+        if (t55xx_demod_offset(&boff) == false) {
             return PM3_ESOFT;
         }
 
-        //PrintAndLogEx(NORMAL, "Offset+32 ==%d\n DemodLen == %d", config.offset + 32, g_DemodBufferLen);
-        block0 = PackBits(config.offset, 32, g_DemodBuffer);
+        block0 = PackBits(0, 32, g_DemodBuffer + boff);
     }
 
     PrintAndLogEx(NORMAL, "");

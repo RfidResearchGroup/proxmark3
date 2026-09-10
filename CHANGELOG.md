@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf t55xx dump/read` - blocks were extracted at a bit offset cached from the last `detect`  The offset is now anchored in graph samples (@iceman1001)
+- Fixed `lf t55xx write --verify` - a successful write could be reported as a validation failure, both from the rotated read above and from the pre-write config decoding the post-write signal into garbage (@iceman1001)
+- Fixed `lf t55xx detect` - the automatic detect after a block 0 write reported a password that was never supplied (@iceman1001)
 - Fixed `hf emrtd info` - now correctly pretty print algos (@iceman1001)
 - Fixed `trace list -t topaz` - now parses topaz reader frames up to 16 bytes (@iceman1001)
 - Fixed `hw bwm` - doc and comment references still named the flat `hw bwmsetcap`/`bwmcharge`/`bwmautooff` commands from before the subgroup move (@xilni)
