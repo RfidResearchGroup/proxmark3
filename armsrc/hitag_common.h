@@ -75,7 +75,7 @@ void hitag_reader_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uin
 int hitag_reader_transfer(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t sizeofrx, size_t *rxlen, int t_wait,
                           bool ledcontrol, hitag_mod_t modulation, uint8_t sof_bits, uint8_t send_sof);
 void hitag_tag_receive_frame_ex(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint32_t *start_time,
-                               bool ledcontrol, int *overflow, bool sof_is_bit);
+                                bool ledcontrol, int *overflow, bool sof_is_bit);
 void hitag_tag_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint32_t *start_time, bool ledcontrol, int *overflow);
 void hitag_tag_send_bit_mc4k_sync(int bit, bool ledcontrol);
 void hitag_tag_set_mod_polarity(bool invert);

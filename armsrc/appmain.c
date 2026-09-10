@@ -4015,7 +4015,8 @@ static void PacketReceived(PacketCommandNG *packet) {
                 res = bwm_wifi_forward_status(&state, &ip);
                 uint8_t st[5] = { state,
                                   (uint8_t)(ip & 0xFF), (uint8_t)((ip >> 8) & 0xFF),
-                                  (uint8_t)((ip >> 16) & 0xFF), (uint8_t)((ip >> 24) & 0xFF) };
+                                  (uint8_t)((ip >> 16) & 0xFF), (uint8_t)((ip >> 24) & 0xFF)
+                                };
                 reply_ng(CMD_PM5_BWM_WIFI, res, st, sizeof(st));
             } else {
                 uint16_t port = packet->data.asBytes[1] | (packet->data.asBytes[2] << 8);

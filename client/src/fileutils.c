@@ -187,8 +187,8 @@ bool path_is_absolute(const char *path) {
 /**
  * @brief expands a leading "~" into the user home directory.
  *
- * The pm3 prompt is not a shell, so nobody expands "~" for us and it wouldotherwise be taken as a directory named "~". 
- * 
+ * The pm3 prompt is not a shell, so nobody expands "~" for us and it wouldotherwise be taken as a directory named "~".
+ *
  * "~user/..." is not supported and is returned unchanged.
  *
  * @param path

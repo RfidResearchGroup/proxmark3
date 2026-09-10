@@ -421,7 +421,7 @@ static bool check_goto_flash_mode(void) {
     if (g_common_area.flags.button_pressed == 0 && BUTTON_PRESS()) {
 
         to_flash_mode = true;
-        
+
         if (BOOTROM_BUTTON_HOLD_MS > 0) {
             for (int16_t ms = 0; ms < BOOTROM_BUTTON_HOLD_MS; ms++) {
                 if (BUTTON_PRESS() == false) {

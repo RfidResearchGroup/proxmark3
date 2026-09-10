@@ -36,9 +36,9 @@
 // fpga_compress chops the interleaved bitstreams into blocks of at most this
 // size, and the ARM decompresses them one at a time while DownloadFPGA() shifts
 // the bytes out to the FPGA.  It is allocated out of BigBuf, which on AT91 is
-// only ~31-33 kB, so 30 kB left nothing for the caller. 
-// Smaller window = slightly worse compression 
-// Measured on flash: 
+// only ~31-33 kB, so 30 kB left nothing for the caller.
+// Smaller window = slightly worse compression
+// Measured on flash:
 //     30 kB -> 102555 bytes
 //     16 kB -> 107121 bytes
 // This does NOT bound the firmware's .data section

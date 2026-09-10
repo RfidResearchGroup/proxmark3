@@ -61,10 +61,14 @@ static uint8_t get_slot_led_mask(uint8_t slot_1_to_7) {
 
 static const char *get_tagtype_name(uint8_t tagtype) {
     switch (tagtype) {
-        case 0: return "MIM22";
-        case 1: return "MIM256";
-        case 2: return "MIM1024";
-        default: return "Unknown";
+        case 0:
+            return "MIM22";
+        case 1:
+            return "MIM256";
+        case 2:
+            return "MIM1024";
+        default:
+            return "Unknown";
     }
 }
 
@@ -358,10 +362,18 @@ void RunMod(void) {
                 if (p_card && p_card->cardsize > 0) {
                     uint8_t ct = 2;
                     switch (p_card->tagtype) {
-                        case 0x0D: ct = 0; break;
-                        case 0x1D: ct = 1; break;
-                        case 0x3D: ct = 2; break;
-                        default: ct = 2; break;
+                        case 0x0D:
+                            ct = 0;
+                            break;
+                        case 0x1D:
+                            ct = 1;
+                            break;
+                        case 0x3D:
+                            ct = 2;
+                            break;
+                        default:
+                            ct = 2;
+                            break;
                     }
 
                     Dbprintf(_GREEN_("[+] [TAG DETECTED] Read successful on Slot %u!"), (unsigned int)(current_slot + 1));

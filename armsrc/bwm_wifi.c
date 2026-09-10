@@ -158,7 +158,7 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
                                 int32_t esp_err = 0;
                                 if (rlen >= 6) {
                                     esp_err = (int32_t)((uint32_t)pbuf[2] | ((uint32_t)pbuf[3] << 8) |
-                                                         ((uint32_t)pbuf[4] << 16) | ((uint32_t)pbuf[5] << 24));
+                                                        ((uint32_t)pbuf[4] << 16) | ((uint32_t)pbuf[5] << 24));
                                 }
                                 Dbprintf("[bwm-wifi] cmd 0x%04x failed, esp_err=0x%08x", (unsigned)cmd, (unsigned)esp_err);
                                 return PM3_EFAILED;
@@ -336,7 +336,7 @@ int bwm_esp_ota_begin(uint32_t total_size) {
     // and the AT32 on the other, after which every OTA_BEGIN times out.
 
     uint8_t p[4] = {
-        (uint8_t)(total_size & 0xFF),         (uint8_t)((total_size >> 8) & 0xFF),
+        (uint8_t)(total_size & 0xFF), (uint8_t)((total_size >> 8) & 0xFF),
         (uint8_t)((total_size >> 16) & 0xFF), (uint8_t)((total_size >> 24) & 0xFF)
     };
     return bwm_cmd(BWM_CMD_OTA_BEGIN, p, sizeof(p), NULL, NULL, BWM_OTA_BEGIN_TIMEOUT_MS);

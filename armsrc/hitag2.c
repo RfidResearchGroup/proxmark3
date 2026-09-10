@@ -1519,7 +1519,9 @@ void SniffHitag2(bool ledcontrol, uint8_t threshold) {
 
     if (ledcontrol) LED_D_ON();
     hitag_edges_reset();
-    g_tx_samples = 0; g_tx_bails = 0; g_tx_frames = 0;
+    g_tx_samples = 0;
+    g_tx_bails = 0;
+    g_tx_frames = 0;
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
@@ -1976,10 +1978,10 @@ void SniffHitag2(bool ledcontrol, uint8_t threshold) {
     DBG Dbprintf("frames.......... %d", frame_count);
     for (uint8_t i = 0; i < d_tagf; i++) {
         DBG Dbprintf("TAGIV%u n=%u: %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u", i, d_tagn[i],
-                 d_tag[i][0], d_tag[i][1], d_tag[i][2], d_tag[i][3],
-                 d_tag[i][4], d_tag[i][5], d_tag[i][6], d_tag[i][7],
-                 d_tag[i][8], d_tag[i][9], d_tag[i][10], d_tag[i][11],
-                 d_tag[i][12], d_tag[i][13], d_tag[i][14], d_tag[i][15]);
+                     d_tag[i][0], d_tag[i][1], d_tag[i][2], d_tag[i][3],
+                     d_tag[i][4], d_tag[i][5], d_tag[i][6], d_tag[i][7],
+                     d_tag[i][8], d_tag[i][9], d_tag[i][10], d_tag[i][11],
+                     d_tag[i][12], d_tag[i][13], d_tag[i][14], d_tag[i][15]);
     }
     Dbprintf("Auth attempts... crypto %u, password %u",
              (unsigned)crypto_attempts, (unsigned)pwd_attempts);
@@ -3045,7 +3047,7 @@ meas_done:
                     s_wait[s_nsnap] = start_time - rx_end;
                 }
                 // Clock the answer off the reader's carrier, not our timer
-hitag_tag_send_frame_mc4k_sync(tx, txlen, sof_bits, ledcontrol);
+                hitag_tag_send_frame_mc4k_sync(tx, txlen, sof_bits, ledcontrol);
 
                 last_tx_end = TIMESTAMP;
                 if (s_nsnap < SIMSNAP) {
@@ -3225,16 +3227,16 @@ hitag_tag_send_frame_mc4k_sync(tx, txlen, sof_bits, ledcontrol);
     // transitions.  The threshold has to sit between the shoulder and the tail, so
     // it is their separation that matters, not any one of them.
     DBG Dbprintf("THRSTAT thr=%u p50=%u p90=%u p99=%u max=%u n=%u",
-             active_threshold, d_p50, d_p90, d_p99, d_pmax, d_nsteps);
+                 active_threshold, d_p50, d_p90, d_p99, d_pmax, d_nsteps);
     DBG Dbprintf("THRSTAT2 span=%u big=%u locked=%u post=%u",
-             d_span, d_nbig, thr_locked, post_thr);
+                 d_span, d_nbig, thr_locked, post_thr);
     DBG Dbprintf("THRSTAT3 settle_t0=%u measured=%u rearmed=%u", d_meas, d_meas_n, d_rearm_n);
     DBG Dbprintf("POSTSTAT evaluated=%u", d_post_eval);
     DBG Dbprintf("SIMSTAT loops=%u edges=%u frames=%u start_auth=%u answers=%u tracelen=%u",
-             d_loops, (unsigned)g_hitag_edges, d_frames, d_bits5, d_answers,
-             (unsigned)BigBuf_get_traceLen());
+                 d_loops, (unsigned)g_hitag_edges, d_frames, d_bits5, d_answers,
+                 (unsigned)BigBuf_get_traceLen());
     DBG Dbprintf("SIMSTAT2 auth64=%u authshort=%u pwd_ok=%u read_ok=%u",
-             d_auth64, d_auth_short, d_pwd_ok, d_read_ok);
+                 d_auth64, d_auth_short, d_pwd_ok, d_read_ok);
 
 
     hitag_cleanup(ledcontrol);
@@ -3592,8 +3594,8 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
             if (d_nodec == 1) {
                 DBG for (uint32_t k = 0; (k + 9) < g_ht2_per_n; k += 10) {
                     Dbprintf("PER[%2u] %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u", k,
-                             g_ht2_per[k], g_ht2_per[k+1], g_ht2_per[k+2], g_ht2_per[k+3], g_ht2_per[k+4],
-                             g_ht2_per[k+5], g_ht2_per[k+6], g_ht2_per[k+7], g_ht2_per[k+8], g_ht2_per[k+9]);
+                             g_ht2_per[k], g_ht2_per[k + 1], g_ht2_per[k + 2], g_ht2_per[k + 3], g_ht2_per[k + 4],
+                             g_ht2_per[k + 5], g_ht2_per[k + 6], g_ht2_per[k + 7], g_ht2_per[k + 8], g_ht2_per[k + 9]);
                 }
             }
             // One frame we could not decode is not the end of the exchange.
@@ -3838,7 +3840,7 @@ void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
         if ((writestate == WRITE_STATE_PROG) && (tearoff_hook() == PM3_ETEAROFF)) {
             reply_ng(CMD_LF_HITAG2_WRITE, PM3_ETEAROFF, NULL, 0);
             StopTimestamp();
-    lf_finalize(ledcontrol);
+            lf_finalize(ledcontrol);
             BigBuf_free();
             return;
         }
@@ -3962,13 +3964,13 @@ void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
 out:
     if (d_badpern) {
         DBG Dbprintf("WRXPER %u %u %u %u %u %u %u %u %u %u %u %u",
-                 d_badper[0], d_badper[1], d_badper[2], d_badper[3],
-                 d_badper[4], d_badper[5], d_badper[6], d_badper[7],
-                 d_badper[8], d_badper[9], d_badper[10], d_badper[11]);
+                     d_badper[0], d_badper[1], d_badper[2], d_badper[3],
+                     d_badper[4], d_badper[5], d_badper[6], d_badper[7],
+                     d_badper[8], d_badper[9], d_badper[10], d_badper[11]);
     }
     DBG Dbprintf("WRXSTAT silent=%u undecodable=%u bits: %u %u %u %u raw: %u %u %u %u",
-             d_noans, d_badn, d_badnrz[0], d_badnrz[1], d_badnrz[2], d_badnrz[3],
-             d_badraw[0], d_badraw[1], d_badraw[2], d_badraw[3]);
+                 d_noans, d_badn, d_badnrz[0], d_badnrz[1], d_badnrz[2], d_badnrz[3],
+                 d_badraw[0], d_badraw[1], d_badraw[2], d_badraw[3]);
 
     StopTimestamp();
     lf_finalize(ledcontrol);
@@ -4455,7 +4457,8 @@ bool ht2_packbits(uint8_t *nrz_samples, size_t nrzs, uint8_t *rx, size_t *rxlen)
 
     *rxlen = len;
     return true;
-}int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_field_up) {
+}
+int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_field_up) {
 
     g_logging = false;
 

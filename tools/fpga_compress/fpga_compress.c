@@ -127,7 +127,7 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
         fprintf(stderr, "error: %u bytes does not fit in a single %u byte block, and start.c only decompresses one\n"
                 , total_size
                 , buffer_size
-            );
+               );
         free(ring_buffer);
         free(outbuf);
         free(fpga_config);
