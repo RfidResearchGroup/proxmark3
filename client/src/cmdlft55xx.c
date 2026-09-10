@@ -82,6 +82,13 @@ static t55xx_memory_item_t cardmem[T55x7_BLOCK_COUNT] = {{0}};
 // Regular read mode cycles several blocks and a buffer loaded from a file could be either
 static bool s_block_read_capture = false;
 
+// samples dropped from the head of a capture before psk demodulation
+#define T55XX_PSK_SETTLE_TRIM 160
+
+// non-zero while the capture is trimmed, so an anchor recorded inside the trim
+// still names an untrimmed sample
+static int32_t s_sample_bias = 0;
+
 // A block read repeats one 32 bit word for as long as the field is on.
 // `offset` is a bit index into a demod buffer that no longer exists once the next acquisition lands,
 // and the demodulators do not all start on the same bit:
@@ -90,16 +97,36 @@ static bool s_block_read_capture = false;
 static void t55xx_anchor(t55xx_conf_block_t *c, uint8_t offset) {
     c->offset = offset;
     c->anchor_valid = (g_DemodClock > 0);
-    c->anchor_sample = g_DemodStartIdx + ((int32_t)offset * g_DemodClock);
-    c->anchor_tracelen = (int32_t)g_GraphTraceLen;
+    c->anchor_sample = g_DemodStartIdx + ((int32_t)offset * g_DemodClock) + s_sample_bias;
+    c->anchor_tracelen = (int32_t)g_GraphTraceLen + s_sample_bias;
 }
 
 // records a detect candidate against the demodulation that is loaded right now
 static void t55xx_record_hit(t55xx_conf_block_t *t) {
     t->block0 = PackBits(t->offset, 32, g_DemodBuffer);
     t->anchor_valid = (g_DemodClock > 0);
-    t->anchor_sample = g_DemodStartIdx + ((int32_t)t->offset * g_DemodClock);
-    t->anchor_tracelen = (int32_t)g_GraphTraceLen;
+    t->anchor_sample = g_DemodStartIdx + ((int32_t)t->offset * g_DemodClock) + s_sample_bias;
+    t->anchor_tracelen = (int32_t)g_GraphTraceLen + s_sample_bias;
+}
+
+// skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
+static buffer_savestate_t t55xx_psk_trim_head(void) {
+    buffer_savestate_t st = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
+    st.offset = g_GridOffset;
+
+    char ltrim[16];
+    snprintf(ltrim, sizeof(ltrim), "-i %d", T55XX_PSK_SETTLE_TRIM);
+    CmdLtrim(ltrim);
+
+    s_sample_bias = T55XX_PSK_SETTLE_TRIM;
+    return st;
+}
+
+static void t55xx_psk_untrim_head(buffer_savestate_t st) {
+    s_sample_bias = 0;
+    // restore_bufferS32 returns the length it put back; dropping it leaves the trim in place
+    g_GraphTraceLen = restore_bufferS32(st, g_GraphBuffer);
+    g_GridOffset = st.offset;
 }
 
 // the bit offset to read a block at in the demod buffer loaded right now
@@ -1617,9 +1644,7 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
 
     if (mod == PM3_MOD_PSK) {
 
-        buffer_savestate_t saveState = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
-        saveState.offset = g_GridOffset;
-        CmdLtrim("-i 160");
+        buffer_savestate_t saveState = t55xx_psk_trim_head();
 
         for (int inv = 0; inv < 2; inv++) {
             if (PSKDemod(fitclk, inv, PM3_T55_FALLBACK_MAXERR, false) != PM3_SUCCESS) {
@@ -1653,8 +1678,7 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
             }
         }
 
-        restore_bufferS32(saveState, g_GraphBuffer);
-        g_GridOffset = saveState.offset;
+        t55xx_psk_untrim_head(saveState);
 
         if (*hits == before && coherent_ok) {
             t55xx_psk_coherent(fitclk, clk, tests, hits, downlink_mode);
@@ -2002,10 +2026,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
         clk = GetPskClock("", false);
         if (clk > 0) {
             // allow undo
-            buffer_savestate_t saveState = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
-            saveState.offset = g_GridOffset;
-            // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
-            CmdLtrim("-i 160");
+            buffer_savestate_t saveState = t55xx_psk_trim_head();
             if ((PSKDemod(0, 0, 6, false) == PM3_SUCCESS) && test(DEMOD_PSK1, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
                 tests[hits].modulation = DEMOD_PSK1;
                 tests[hits].bitrate = bitRate;
@@ -2041,8 +2062,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
             } // inverse waves does not affect this demod
 
             //undo trim samples
-            restore_bufferS32(saveState, g_GraphBuffer);
-            g_GridOffset = saveState.offset;
+            t55xx_psk_untrim_head(saveState);
             // t55xx_search_config_psk(g_GraphBuffer, 1);
             // t55xx_search_config_psk(g_GraphBuffer, 2);
         }
