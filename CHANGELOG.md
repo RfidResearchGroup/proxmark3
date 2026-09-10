@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf t55xx detect` - PSK1 now detects at every bit rate and subcarrier. (@iceman1001)
 - Fixed `lf t55xx detect` - FSK was skipped entirely when the field-clock pair measured as neither legal pair, losing FSK1 at RF/32 and RF/40 and every variant at RF/16 (@iceman1001)
 - Fixed `lf t55xx dump/read` - blocks were extracted at a bit offset cached from the last `detect`  The offset is now anchored in graph samples (@iceman1001)
 - Fixed `lf t55xx write --verify` - a successful write could be reported as a validation failure, both from the rotated read above and from the pre-write config decoding the post-write signal into garbage (@iceman1001)

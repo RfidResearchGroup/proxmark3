@@ -82,7 +82,7 @@ static bool s_block_read_capture = false;
 
 // A block read repeats one 32 bit word for as long as the field is on.
 // `offset` is a bit index into a demod buffer that no longer exists once the next acquisition lands,
-// and the demodulators do not all start on the same bit: 
+// and the demodulators do not all start on the same bit:
 //   manchester anchors on the sequence terminator,
 //   psk starts at whatever phase transition it finds first.
 static void t55xx_anchor(t55xx_conf_block_t *c, uint8_t offset) {
@@ -820,9 +820,9 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
     // block 0 is the one block whose content is known before it is read, so use
     // it to re-anchor this capture rather than trusting the one detect left
     if (block == T55x7_CONFIGURATION_BLOCK &&
-        page1 == false &&
-        config.block0Status == AUTODETECT &&
-        config.block0 != 0) {
+            page1 == false &&
+            config.block0Status == AUTODETECT &&
+            config.block0 != 0) {
 
         t55xx_stream_holds(config.block0);
     }
@@ -1279,9 +1279,8 @@ bool t55xxTryDetectModulation(uint8_t downlink_mode, bool print_config) {
 #define PM3_T55_FALLBACK_MAXERR 100
 
 // A demodulation that recovers far fewer bits than its clock implies never locked onto the tag,
-// Measured on a T5577 over 56 configurations: 
+// Measured on a T5577 over 56 configurations:
 // every correct detection recovered at least 98.8% of g_GraphTraceLen / clk bits
-// while the fsk aliasing that invents a configuration out of an RF/8 signal recovered 59 to 64%. 
 #define T55XX_MIN_DEMOD_YIELD_PCT 80
 
 static bool t55xx_demod_yield_ok(uint8_t clk) {
@@ -1413,6 +1412,11 @@ static void t55xx_psk_coherent(int fitclk, uint8_t clk, t55xx_conf_block_t *test
                 continue;
             }
 
+            // sweeping the bit rates means a wrong one can fit first where an RF/16 signal answers at RF/8
+            if (s_block_read_capture && block0_stride_not_disproved(tests[*hits].offset) == false) {
+                continue;
+            }
+
             tests[*hits].modulation = modes[variant];
             tests[*hits].psk_carrier = t55xx_observed_psk_carrier();
             tests[*hits].bitrate = bitRate;
@@ -1498,6 +1502,11 @@ static void t55xx_ask_coherent(int fitclk, uint8_t clk, t55xx_conf_block_t *test
                 continue;
             }
 
+            // sweeping the bit rates means a wrong one can fit first, so hold a block read to the 32 bit stride
+            if (s_block_read_capture && block0_stride_not_disproved(tests[*hits].offset) == false) {
+                continue;
+            }
+
             tests[*hits].modulation = mode;
             tests[*hits].bitrate = bitRate;
             tests[*hits].inverted = (invert != 0);
@@ -1527,7 +1536,10 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
         // RF/8 is left out on purpose.  A bit period of 8 field clocks cannot
         // hold a whole cycle of both tones of either legal pair, and measured
         // on a T5577 no fsk variant reads back at RF/8 even with the config
-        // forced and both inversions tried. 
+        // forced and both inversions tried.
+        // RF/8 stays out: it gains nothing measured, and on a replayed capture,
+        // where the 32 bit stride cannot be demanded, it aliases a Q5 fsk2a trace
+        // into a confident wrong answer
         static const uint8_t rates[] = { 16, 32, 40, 50, 64, 100, 128 };
 
         const uint8_t pairs[3][2] = {
@@ -1825,6 +1837,38 @@ static void t55xx_detect_fallback(t55xx_conf_block_t *tests, uint8_t *hits, uint
     free(sig);
 }
 
+// The coherent psk detector is only reached when the fitter ranks psk above ask and nrz, and on a weak psk signal it does not at all.
+static void t55xx_psk_sweep(t55xx_conf_block_t *tests, uint8_t *hits, uint8_t downlink_mode) {
+
+    if (s_block_read_capture == false) {
+        return;
+    }
+
+    static const uint8_t rates[] = { 8, 16, 32, 40, 50, 64, 100, 128 };
+
+    const uint8_t before = *hits;
+
+    for (size_t r = 0; r < ARRAYLEN(rates) && *hits == before; r++) {
+        t55xx_psk_coherent(rates[r], rates[r], tests, hits, downlink_mode);
+    }
+}
+
+// same argument as t55xx_psk_sweep, for the ask and biphase side
+static void t55xx_ask_sweep(t55xx_conf_block_t *tests, uint8_t *hits, uint8_t downlink_mode) {
+
+    if (s_block_read_capture == false) {
+        return;
+    }
+
+    static const uint8_t rates[] = { 8, 16, 32, 40, 50, 64, 100, 128 };
+
+    const uint8_t before = *hits;
+
+    for (size_t r = 0; r < ARRAYLEN(rates) && *hits == before; r++) {
+        t55xx_ask_coherent(rates[r], rates[r], tests, hits, downlink_mode);
+    }
+}
+
 bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wanted_conf, uint64_t pwd) {
 
     t55xx_conf_block_t tests[15] = {0};
@@ -1984,8 +2028,16 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
 
     // The tag only has two legal fsk pair
     // An fsk1 tag at RF/32 counts field clocks as 5 and 6 here
-    if (hits == 0) {
+    if (hits == 0 && s_block_read_capture) {
         t55xx_fallback_try(PM3_MOD_FSK, 0, 0, 0, 0, tests, &hits, downlink_mode, false);
+    }
+
+    if (hits == 0) {
+        t55xx_psk_sweep(tests, &hits, downlink_mode);
+    }
+
+    if (hits == 0) {
+        t55xx_ask_sweep(tests, &hits, downlink_mode);
     }
 
     if (hits == 0) {
