@@ -312,6 +312,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "F70090",
+        "Vendor": "ASSA ABLOY (Timelox / VingCard Elsafe)",
+        "Country": "SE",
+        "Name": "Visionline",
+        "Description": "Hotel access credential",
+        "Type": "pacs"
+    },
+    {
         "AID": "F51BC0",
         "Vendor": "STid Group",
         "Country": "FR",
