@@ -11,7 +11,6 @@ if [ ! -f "${ZP}.zip" ]; then
     wget -O "${ZP}.zip" https://github.com/arangodb/linenoise-ng/archive/v$version.zip
 fi
 unzip -o -j "${ZP}.zip" $ZP/src/ConvertUTF.cpp $ZP/src/ConvertUTF.h $ZP/LICENSE $ZP/src/linenoise.cpp $ZP/include/linenoise.h $ZP/README.md $ZP/src/wcwidth.cpp -d linenoise
-#echo "Please do make style"
 
 echo "Generating linenoise.cmake..."
 cat > linenoise.cmake << EOF

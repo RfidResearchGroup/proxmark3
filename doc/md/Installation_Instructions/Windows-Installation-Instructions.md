@@ -96,12 +96,6 @@ git clone https://github.com/RfidResearchGroup/proxmark3.git
 cd proxmark3
 ```
 
-If you're a contributing developer, you probably want to be able to use `make style`. If so, you've got to install astyle:
-
-```sh
-pacman -S mingw-w64-x86_64-astyle
-```
-
 ## Compile and use the project
 ^[Top](#top)
 

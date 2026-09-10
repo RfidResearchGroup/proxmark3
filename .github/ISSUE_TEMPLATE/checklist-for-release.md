@@ -10,6 +10,7 @@ assignees: doegox, iceman1001
 # Checklist
 
 - [ ] `make style`
+- [ ] `make commands`
 - [ ] `make miscchecks`
 - [ ] `make clean; make host CC=clang CXX=clang++ LD=clang++` on recent Debian or Ubuntu
 - [ ] `mymanualchecks.sh`
