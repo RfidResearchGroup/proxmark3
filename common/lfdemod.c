@@ -1902,18 +1902,31 @@ int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, const int *invert, int *s
         if (dest[i] <= low)  bit = 0;
         dest[i] = bit;
     }
-    //now demod based on clock (rf/32 = 32 1's for one 1 bit, 32 0's for one 0 bit)
+    // start on the first level change: it is the earliest sample known to be a
+    // bit boundary.  counting the samples before it as bits rotated the stream
+    // whenever that edge moved by one, and left startIdx naming no sample
     size_t lastBit = 0;
     size_t numBits = 0;
+    bool anchored = false;
     for (i = 21; i < *size - 20; i++) {
+
+        bool edge = (dest[i] != dest[i - 1]);
+
+        if (anchored == false) {
+            if (edge == false) {
+                continue;
+            }
+            *startIdx = (int)i;
+            if (g_debugMode == 2) prnt("DEBUG NRZ: startIdx %i", *startIdx);
+            lastBit = i - 1;
+            anchored = true;
+            continue;
+        }
+
         //if transition detected or large number of same bits - store the passed bits
-        if (dest[i] != dest[i - 1] || (i - lastBit) == (10 * *clk)) {
+        if (edge || (i - lastBit) == (10 * *clk)) {
             memset(dest + numBits, dest[i - 1] ^ *invert, (i - lastBit + (*clk / 4)) / *clk);
             numBits += (i - lastBit + (*clk / 4)) / *clk;
-            if (lastBit == 0) {
-                *startIdx = i - (numBits * *clk);
-                if (g_debugMode == 2) prnt("DEBUG NRZ: startIdx %i", *startIdx);
-            }
             lastBit = i - 1;
         }
     }
