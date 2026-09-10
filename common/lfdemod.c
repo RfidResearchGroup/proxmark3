@@ -2051,6 +2051,13 @@ static size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t clk, uint8_t in
             // 0->1 crossing
             n = (n * fchigh + hclk) / clk;
 
+        // A leading run that rounds to no bits is lead-in, not data.  Forcing it to one fabricates
+        // a bit and shifts the word; mid-stream a zero would lose a bit the tag did send.
+        if (n == 0 && numBits == 0) {
+            lastval = dest[i];
+            continue;
+        }
+
         if (n == 0)
             n = 1;
 
