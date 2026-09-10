@@ -222,13 +222,11 @@ help:
 	@echo "+ cryptorf        - Make tools/cryptorf"
 	@echo "+ mfc_card_only   - Make tools/mfc/card_only"
 	@echo "+ mfc_card_reader - Make tools/mfc/card_reader"
-	@echo "+ mfulc_des_brute        - Make tools/mfulc_des_brute"
+	@echo "+ mfulc_des_brute - Make tools/mfulc_des_brute"
 	@echo "+ mfd_aes_brute   - Make tools/mfd_aes_brute"
 	@echo "+ hitag2crack     - Make tools/hitag2crack"
 	@echo "+ fpga_compress   - Make tools/fpga_compress"
 	@echo
-	@echo "+ style           - Apply some automated source code formatting rules"
-	@echo "+ commands        - Regenerate commands documentation files (doc/commands.md, doc/commands.json)"
 	@echo "+ check           - Run offline tests. Set CHECKARGS to pass arguments to the test script"
 	@echo "+ .../check       - Run offline tests against specific target. See above."
 	@echo "+ miscchecks      - Detect various encoding issues in source code"
@@ -241,6 +239,10 @@ help:
 	@echo
 	@echo "For verbose mode"
 	@echo "   make V=1"
+	@echo
+	@echo "DO NOT USE THESE, they are for Maintainers Only and are run on a periodic basis"
+	@echo "+ style           - Apply some automated source code formatting rules"
+	@echo "+ commands        - Regenerate commands documentation files (doc/commands.md, doc/commands.json)"
 	@echo
 
 client: client/all

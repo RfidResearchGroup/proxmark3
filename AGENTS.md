@@ -61,9 +61,6 @@ test):
   --align-pointer=name` and on `*.cpp`/`*.hpp` (same, minus `--pad-oper`).
   Don't hand-format C/C++ differently from what `astyle` produces.
 - Don't reformat existing code outside of your changes, only format your own code.
-- If your change adds/changes a client command, run `make commands` to
-  regenerate `doc/commands.md` and `doc/commands.json` — don't hand-edit
-  those generated files.
 - **Keep comments short and direct.** This codebase comments in brief fragments,
   usually one line. Match the surrounding file. No walls of text. A comment earns
   its place by saying something the code cannot e.g. a return contract, where a
@@ -75,6 +72,9 @@ test):
   unrelated change.
 - Keep the GPLv3 file header banner (see any existing `.c`/`.h`/`Makefile`)
   on new files; copy it verbatim from a neighboring file of the same type.
+- DO NOT run `make style` or `make commands` These commands are run by the
+  maintainers on a periodic basis.  See CONTRIBUTING.md for more detailed
+  information on this. (TLDR: every OS/configuration produces different output)
 
 ## PR description format
 
