@@ -33,6 +33,14 @@
 #include "cmdhftopaz.h"   // TOPAZ defines
 #include "mifare/mifaredefault.h"     // MFP / AES defines
 #include "iso15.h"        // iso15_tag_t
+#include "desfire.h"      // desfire_app_keys_t
+
+// keys recovered from a DESFire PICC by `hf mfdes chk`,  one entry per application
+typedef struct {
+    iso14a_card_select_t card_info;
+    uint8_t appcount;
+    desfire_app_keys_t app[DESFIRE_MAX_APP_COUNT];
+} desfire_keys_dump_t;
 
 typedef union {
     void *v;
@@ -42,6 +50,7 @@ typedef union {
     iso14a_mf_extdump_t *mfc;
     iso14a_mf_dump_ev1_t *mfc_ev1;
     iso15_tag_t *iso15;
+    desfire_keys_dump_t *mfdes;
 } udata_t;
 
 typedef enum {
@@ -69,6 +78,7 @@ typedef enum {
     jsfMfPlusKeys,
     jsfCustom,
     jsfMfDesfireKeys,
+    jsfMfDesfireKeys_v2,
     jsfEM4x05,
     jsfEM4x69,
     jsfEM4x50,

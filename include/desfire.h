@@ -30,4 +30,16 @@ typedef enum {
     T_AES = 0x03
 } DesfireCryptoAlgorithm;
 
+#define DESFIRE_MAX_ALGO_COUNT  4       // T_DES ... T_AES
+#define DESFIRE_MAX_KEY_COUNT   0x0E    // key numbers 0x00 ... 0x0D
+#define DESFIRE_MAX_APP_COUNT   64      // applications we keep track of per PICC
+
+// Keys recovered for one application.
+// keys[algo][keyno][0] is the found flag,  keys[algo][keyno][1..] the key itself.
+// `algo` is a DesfireCryptoAlgorithm,  `keyno` the DESFire key number.
+typedef struct {
+    uint32_t aid;
+    uint8_t keys[DESFIRE_MAX_ALGO_COUNT][DESFIRE_MAX_KEY_COUNT][DESFIRE_MAX_KEY_SIZE + 1];
+} desfire_app_keys_t;
+
 #endif

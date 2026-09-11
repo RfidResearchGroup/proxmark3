@@ -57,6 +57,8 @@
 
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
+// how many errors in a row from the card before we give up on a key number
+#define MFDES_CHK_MAX_ERRORS 10
 #define MFDES_BRUTEAID_RESELECT_ATTEMPTS 5
 #define MFDES_BRUTEAID_RESELECT_WAIT_MS  200
 #define MFDES_BRUTEAID_MAD_START         0xF0000FU
@@ -1272,14 +1274,95 @@ static void DesFill2bPattern(
     (*startPattern)++;
 }
 
+// Try every key in `keyList` against every key number the `usedkeys` map marks as
+// in use on the currently selected application.  Found keys are stored in `found`.
+// Returns PM3_SUCCESS, or an error when the application can no longer be selected.
+static int AuthCheckDesfireKeyType(DesfireContext_t *dctx,
+                                   DesfireSecureChannel secureChannel,
+                                   uint32_t curaid,
+                                   DesfireCryptoAlgorithm keytype,
+                                   const char *keytypestr,
+                                   const uint8_t *keyList, size_t keyListStride, uint32_t keyListLen,
+                                   const int *usedkeys,
+                                   desfire_app_keys_t *found,
+                                   bool *result) {
+
+    size_t keylen = desfire_get_key_length(keytype);
+
+    for (uint8_t keyno = 0; keyno < DESFIRE_MAX_KEY_COUNT; keyno++) {
+
+        if (usedkeys[keyno] != 1 || found->keys[keytype][keyno][0] != 0) {
+            continue;
+        }
+
+        size_t errcount = 0;
+
+        for (uint32_t curkey = 0; curkey < keyListLen; curkey++) {
+
+            const uint8_t *key = &keyList[curkey * keyListStride];
+
+            DesfireSetKeyNoClear(dctx, keyno, keytype, (uint8_t *)key);
+
+            int res = DesfireAuthenticate(dctx, secureChannel, false);
+            if (res == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "AID 0x%06X, Found %s Key %02u... " _GREEN_("%s"),
+                              curaid, keytypestr, keyno, sprint_hex_inrow(key, keylen));
+
+                found->keys[keytype][keyno][0] = 0x01;
+                memcpy(&found->keys[keytype][keyno][1], key, keylen);
+                *result = true;
+                break;
+            }
+
+            // anything below 7 means the card gave up before the crypto stage,
+            // the channel is gone and the application has to be selected again
+            if (res < 7) {
+                DropField();
+                int selres = DesfireSelectAIDHex(dctx, curaid, false, 0);
+                if (selres != PM3_SUCCESS) {
+                    return selres;
+                }
+            }
+
+            // 4  - answer length doesn't match the algo
+            // 50 - PICC didn't answer AES,  51 - PICC didn't answer LRP
+            // the application doesn't use this key type, skip the rest of it
+            if (res == 4 || res == 50 || res == 51) {
+                return PM3_SUCCESS;
+            }
+
+            // 3 - invalid key number.  Every key fails the same way, but the
+            // remaining key numbers are still worth checking
+            if (res == 3) {
+                break;
+            }
+
+            // 1, 2, 5, 6 - transmit or local crypto error.  Carry on with the next
+            // key and only give up on this key number after a run of them
+            if (res < 7) {
+                errcount++;
+                if (errcount > MFDES_CHK_MAX_ERRORS) {
+                    if (g_debugMode) {
+                        PrintAndLogEx(DEBUG, "AID 0x%06X, %s key %02u... too many errors from card, skipping", curaid, keytypestr, keyno);
+                    }
+                    break;
+                }
+            } else {
+                errcount = 0;
+            }
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int AuthCheckDesfire(DesfireContext_t *dctx,
                             DesfireSecureChannel secureChannel,
                             const uint8_t *aid,
                             uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t deskeyListLen,
                             uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t aeskeyListLen,
                             uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], uint32_t k3kkeyListLen,
-                            uint8_t cmdKdfAlgo, uint8_t kdfInputLen, uint8_t *kdfInput,
-                            uint8_t foundKeys[4][0xE][24 + 1],
+                            desfire_app_keys_t *found,
                             bool *result,
                             bool verbose) {
 
@@ -1292,7 +1375,7 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
         return PM3_ESOFT;
     }
 
-    int usedkeys[0xF] = {0};
+    int usedkeys[DESFIRE_MAX_KEY_COUNT + 1] = {0};
     bool des = false;
     bool tdes = false;
     bool aes = false;
@@ -1343,11 +1426,11 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
                         usedkeys[fileList[i].fileSettings.chAccess] = 1;
                 }
             } else {
-                for (int i = 0; i < 0xE; i++)
+                for (int i = 0; i < DESFIRE_MAX_KEY_COUNT; i++)
                     usedkeys[i] = 1;
             }
         } else {
-            for (int i = 0; i < 0xE; i++)
+            for (int i = 0; i < DESFIRE_MAX_KEY_COUNT; i++)
                 usedkeys[i] = 1;
         }
     }
@@ -1355,141 +1438,41 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
     if (verbose) {
         PrintAndLogEx(INFO, "Check: %s %s %s %s " NOLF, (des) ? "DES" : "", (tdes) ? "2TDEA" : "", (k3kdes) ? "3TDEA" : "", (aes) ? "AES" : "");
         PrintAndLogEx(NORMAL, "keys: " NOLF);
-        for (int i = 0; i < 0xE; i++)
+        for (int i = 0; i < DESFIRE_MAX_KEY_COUNT; i++)
             if (usedkeys[i] == 1)
                 PrintAndLogEx(NORMAL, "%02x " NOLF, i);
         PrintAndLogEx(NORMAL, "");
     }
 
-    bool badlen = false;
+    const struct {
+        bool check;
+        DesfireCryptoAlgorithm keytype;
+        const char *name;
+        const uint8_t *list;
+        size_t stride;
+        uint32_t len;
+    } checks[] = {
+        { des,    T_DES,    "DES", (const uint8_t *)deskeyList, sizeof(deskeyList[0]), deskeyListLen },
+        { tdes,   T_3DES,   "2TDEA", (const uint8_t *)aeskeyList, sizeof(aeskeyList[0]), aeskeyListLen },
+        { aes,    T_AES,    "AES", (const uint8_t *)aeskeyList, sizeof(aeskeyList[0]), aeskeyListLen },
+        { k3kdes, T_3K3DES, "3TDEA", (const uint8_t *)k3kkeyList, sizeof(k3kkeyList[0]), k3kkeyListLen },
+    };
 
-    if (des) {
+    for (size_t i = 0; i < ARRAYLEN(checks); i++) {
 
-        for (uint8_t keyno = 0; keyno < 0xE; keyno++) {
+        if (checks[i].check == false) {
+            continue;
+        }
 
-            if (usedkeys[keyno] == 1 && foundKeys[0][keyno][0] == 0) {
-                for (uint32_t curkey = 0; curkey < deskeyListLen; curkey++) {
-                    DesfireSetKeyNoClear(dctx, keyno, T_DES, deskeyList[curkey]);
-                    res = DesfireAuthenticate(dctx, secureChannel, false);
-                    if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found DES Key %02u... " _GREEN_("%s"), curaid, keyno, sprint_hex(deskeyList[curkey], 8));
-                        foundKeys[0][keyno][0] = 0x01;
-                        *result = true;
-                        memcpy(&foundKeys[0][keyno][1], deskeyList[curkey], 8);
-                        break;
-                    } else if (res < 7) {
-                        badlen = true;
-                        DropField();
-                        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
-                        if (res != PM3_SUCCESS) {
-                            return res;
-                        }
-                        break;
-                    }
-                }
-                if (badlen == true) {
-                    badlen = false;
-                    break;
-                }
-            }
+        res = AuthCheckDesfireKeyType(dctx, secureChannel, curaid, checks[i].keytype, checks[i].name,
+                                      checks[i].list, checks[i].stride, checks[i].len,
+                                      usedkeys, found, result);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
         }
     }
 
-    if (tdes) {
-
-        for (uint8_t keyno = 0; keyno < 0xE; keyno++) {
-
-            if (usedkeys[keyno] == 1 && foundKeys[1][keyno][0] == 0) {
-                for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
-                    DesfireSetKeyNoClear(dctx, keyno, T_3DES, aeskeyList[curkey]);
-                    res = DesfireAuthenticate(dctx, secureChannel, false);
-                    if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 2TDEA Key %02u... " _GREEN_("%s"), curaid, keyno, sprint_hex_inrow(aeskeyList[curkey], 16));
-                        foundKeys[1][keyno][0] = 0x01;
-                        *result = true;
-                        memcpy(&foundKeys[1][keyno][1], aeskeyList[curkey], 16);
-                        break;
-                    } else if (res < 7) {
-                        badlen = true;
-                        DropField();
-                        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
-                        if (res != PM3_SUCCESS) {
-                            return res;
-                        }
-                        break;
-                    }
-                }
-                if (badlen == true) {
-                    badlen = false;
-                    break;
-                }
-            }
-        }
-    }
-
-    if (aes) {
-
-        for (uint8_t keyno = 0; keyno < 0xE; keyno++) {
-
-            if (usedkeys[keyno] == 1 && foundKeys[2][keyno][0] == 0) {
-                for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
-                    DesfireSetKeyNoClear(dctx, keyno, T_AES, aeskeyList[curkey]);
-                    res = DesfireAuthenticate(dctx, secureChannel, false);
-                    if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found AES Key %02u... " _GREEN_("%s"), curaid, keyno, sprint_hex_inrow(aeskeyList[curkey], 16));
-                        foundKeys[2][keyno][0] = 0x01;
-                        *result = true;
-                        memcpy(&foundKeys[2][keyno][1], aeskeyList[curkey], 16);
-                        break;
-                    } else if (res < 7) {
-                        badlen = true;
-                        DropField();
-                        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
-                        if (res != PM3_SUCCESS) {
-                            return res;
-                        }
-                        break;
-                    }
-                }
-                if (badlen == true) {
-                    badlen = false;
-                    break;
-                }
-            }
-        }
-    }
-
-    if (k3kdes) {
-
-        for (uint8_t keyno = 0; keyno < 0xE; keyno++) {
-
-            if (usedkeys[keyno] == 1 && foundKeys[3][keyno][0] == 0) {
-                for (uint32_t curkey = 0; curkey < k3kkeyListLen; curkey++) {
-                    DesfireSetKeyNoClear(dctx, keyno, T_3K3DES, k3kkeyList[curkey]);
-                    res = DesfireAuthenticate(dctx, secureChannel, false);
-                    if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3TDEA Key %02u... " _GREEN_("%s"), curaid, keyno, sprint_hex_inrow(k3kkeyList[curkey], 24));
-                        foundKeys[3][keyno][0] = 0x01;
-                        *result = true;
-                        memcpy(&foundKeys[3][keyno][1], k3kkeyList[curkey], 16);
-                        break;
-                    } else if (res < 7) {
-                        badlen = true;
-                        DropField();
-                        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
-                        if (res != PM3_SUCCESS) {
-                            return res;
-                        }
-                        break;
-                    }
-                }
-
-                if (badlen == true) {
-                    break;
-                }
-            }
-        }
-    }
     DropField();
     return PM3_SUCCESS;
 }
@@ -1502,21 +1485,21 @@ static int CmdHF14aDesChk(const char *Cmd) {
     uint32_t deskeyListLen = 0;
     uint32_t aeskeyListLen = 0;
     uint32_t k3kkeyListLen = 0;
-    uint8_t foundKeys[4][0xE][24 + 1] = {{{0}}};
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes chk",
                   "Checks keys with MIFARE DESFire card.",
-                  "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f  -> check key on aid 0x123456\n"
-                  "hf mfdes chk -f mfdes_default_keys                     -> check keys against all existing aid on card\n"
-                  "hf mfdes chk -f mfdes_default_keys --aid 123456        -> check keys against aid 0x123456\n"
-                  "hf mfdes chk --aid 123456 --pattern1b -j keys          -> check all 1-byte keys pattern on aid 0x123456 and save found keys to `keys.json`\n"
-                  "hf mfdes chk --aid 123456 --pattern2b --startp2b FA00  -> check all 2-byte keys pattern on aid 0x123456. Start from key FA00FA00...FA00");
+                  "hf mfdes chk -f mfdes_default_keys                             -> check keys against all existing AID on card\n"
+                  "hf mfdes chk --aid 123456 -f mfdes_default_keys                -> check keys against AID 0x123456\n"
+                  "hf mfdes chk --aid 123456 --pattern1b -j keys                  -> check all 1-byte keys pattern on AID 0x123456 and save found keys to `keys.json`\n"
+                  "hf mfdes chk --aid 123456 --pattern2b --startp2b FA00          -> check all 2-byte keys pattern on AID 0x123456. Start from key FA00FA00...FA00\n"
+                  "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f  -> check key on AID 0x123456\n"
+                );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "aid",        "<hex>", "Use specific AID (3 hex bytes, big endian)"),
-        arg_str0("k",  "key",        "<hex>", "Key for checking (HEX 16 bytes)"),
+        arg_str0("k",  "key",        "<hex>", "Key for checking (HEX 8, 16 or 24 bytes)"),
         arg_str0("f", "file",        "<fn>",  "Filename of dictionary"),
         arg_lit0(NULL, "pattern1b",  "Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)"),
         arg_lit0(NULL, "pattern2b",  "Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)"),
@@ -1536,7 +1519,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     swap24(aid);
 
-    uint8_t vkey[16] = {0};
+    uint8_t vkey[MAX_KEY_LEN] = {0};
     int vkeylen = 0;
     CLIGetHexWithReturn(ctx, 2, vkey, &vkeylen);
 
@@ -1548,7 +1531,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
             memcpy(&aeskeyList[aeskeyListLen], vkey, 16);
             aeskeyListLen++;
         } else if (vkeylen == 24) {
-            memcpy(&k3kkeyList[k3kkeyListLen], vkey, 16);
+            memcpy(&k3kkeyList[k3kkeyListLen], vkey, 24);
             k3kkeyListLen++;
         } else {
             PrintAndLogEx(ERR, "Specified key must have 8, 16 or 24 bytes length.");
@@ -1640,7 +1623,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
     }
 
     bool result = false;
-    uint8_t app_ids[78] = {0};
+    uint8_t app_ids[DESFIRE_MAX_APP_COUNT * 3] = {0};
     size_t app_ids_len = 0;
 
     clearCommandBuffer();
@@ -1662,12 +1645,22 @@ static int CmdHF14aDesChk(const char *Cmd) {
     }
 
 
-    res = DesfireGetAIDList(&dctx, app_ids, &app_ids_len);
+    uint8_t aidbuf[250] = {0};
+    size_t aidbuflen = 0;
+    res = DesfireGetAIDList(&dctx, aidbuf, &aidbuflen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't get list of applications on tag");
         DropField();
         return PM3_ESOFT;
     }
+
+    if (aidbuflen > sizeof(app_ids)) {
+        PrintAndLogEx(WARNING, "Card returned " _YELLOW_("%zu") " applications, only checking the first " _YELLOW_("%d"), aidbuflen / 3, DESFIRE_MAX_APP_COUNT);
+        aidbuflen = sizeof(app_ids);
+    }
+
+    memcpy(app_ids, aidbuf, aidbuflen);
+    app_ids_len = aidbuflen;
 
     if (aidlength != 0) {
         memcpy(&app_ids[0], aid, 3);
@@ -1730,10 +1723,23 @@ static int CmdHF14aDesChk(const char *Cmd) {
         }
     }
 
+    desfire_keys_dump_t *dump = calloc(1, sizeof(desfire_keys_dump_t));
+    if (dump == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        DropField();
+        return PM3_EMALLOC;
+    }
+    dump->appcount = app_ids_len / 3;
+
     for (uint32_t x = 0; x < app_ids_len / 3; x++) {
 
         uint32_t curaid = (app_ids[x * 3] & 0xFF) + ((app_ids[(x * 3) + 1] & 0xFF) << 8) + ((app_ids[(x * 3) + 2] & 0xFF) << 16);
         PrintAndLogEx(INFO, "Checking aid " _YELLOW_("%06X"), curaid);
+
+        // found keys are tracked per application.  A key number recovered on one
+        // AID must not stop us from checking the same key number on the next one
+        desfire_app_keys_t *found = &dump->app[x];
+        found->aid = curaid;
 
         bool loadedAllKeys = false;
         size_t desReadStart = 0;
@@ -1795,7 +1801,11 @@ static int CmdHF14aDesChk(const char *Cmd) {
                 loadedAllKeys = true;
             }
 
-            res = AuthCheckDesfire(&dctx, secureChannel, &app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, cmdKDFAlgo, kdfInputLen, kdfInput, foundKeys, &foundKeyThisRound, verbose);
+            res = AuthCheckDesfire(&dctx, secureChannel, &app_ids[x * 3],
+                                   deskeyList, deskeyListLen,
+                                   aeskeyList, aeskeyListLen,
+                                   k3kkeyList, k3kkeyListLen,
+                                   found, &foundKeyThisRound, verbose);
             if (res == PM3_EOPABORTED) {
                 break;
             }
@@ -1829,31 +1839,19 @@ static int CmdHF14aDesChk(const char *Cmd) {
         uint8_t sel_1813 = 0;
         if (WaitForIso14aReply(&resp, 2500, NULL, &sel_1813) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
+            free(dump);
             return PM3_ETIMEOUT;
         }
 
-        iso14a_card_select_t card;
-        memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
-
         uint64_t select_status = sel_1813; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
-
-        uint8_t data[10 + 1 + 2 + 1 + 256 + (4 * 0xE * (24 + 1))] = {0};
-        uint8_t atslen = 0;
         if (select_status == 1 || select_status == 2) {
-            memcpy(data, card.uid, card.uidlen);
-            data[10] = card.sak;
-            data[11] = card.atqa[1];
-            data[12] = card.atqa[0];
-            atslen = card.ats_len;
-            data[13] = atslen;
-            memcpy(&data[14], card.ats, atslen);
+            memcpy(&dump->card_info, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
         }
 
-        // length: UID(10b)+SAK(1b)+ATQA(2b)+ATSlen(1b)+ATS(atslen)+foundKeys[2][64][AES_KEY_LEN + 1]
-        memcpy(&data[14 + atslen], foundKeys, 4 * 0xE * (24 + 1));
-        saveFileJSON((char *)jsonname, jsfMfDesfireKeys, data, 0xE, NULL);
+        saveFileJSON((char *)jsonname, jsfMfDesfireKeys_v2, (uint8_t *)dump, sizeof(desfire_keys_dump_t), NULL);
     }
 
+    free(dump);
     DropField();
     return PM3_SUCCESS;
 }
