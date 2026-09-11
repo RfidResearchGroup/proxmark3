@@ -1235,7 +1235,7 @@ void MifareAcquireEncryptedNonces(const mf_acquire_nonces_t *payload) {
     mf_nonces_resp_t *response = (mf_nonces_resp_t *)respbuf;
     response->cuid = cuid;
     response->num_nonces = num_nonces;
-    uint16_t noncelen = MIN((uint16_t)(num_nonces * 4), (uint16_t)(MFC_MAX_NONCES * 4));
+    uint16_t noncelen = (num_nonces / 2) * 9;
     memcpy(response->nonces, buf, noncelen);
     reply_ng(CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES, isOK, respbuf, sizeof(mf_nonces_resp_t) + noncelen);
     LED_B_OFF();
