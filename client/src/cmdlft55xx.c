@@ -111,8 +111,7 @@ static void t55xx_record_hit(t55xx_conf_block_t *t) {
 
 // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
 static buffer_savestate_t t55xx_psk_trim_head(void) {
-    buffer_savestate_t st = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
-    st.offset = g_GridOffset;
+    buffer_savestate_t st = save_graphbuffer();
 
     char ltrim[16];
     snprintf(ltrim, sizeof(ltrim), "-i %d", T55XX_PSK_SETTLE_TRIM);
@@ -124,9 +123,7 @@ static buffer_savestate_t t55xx_psk_trim_head(void) {
 
 static void t55xx_psk_untrim_head(buffer_savestate_t st) {
     s_sample_bias = 0;
-    // restore_bufferS32 returns the length it put back; dropping it leaves the trim in place
-    g_GraphTraceLen = restore_bufferS32(st, g_GraphBuffer);
-    g_GridOffset = st.offset;
+    restore_graphbuffer(st);
 }
 
 // the bit offset to read a block at in the demod buffer loaded right now
