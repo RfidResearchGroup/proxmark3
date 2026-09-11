@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mfdes detect` - with no `-f` it drew candidates from the MIFARE Plus 16 byte key list,it now defaults to the bundled `mfdes_default_keys` dictionary (@iceman1001)
+- Fixed `hf mfdes detect` - LRP was only found when the key settings happened to be unreadable (@iceman1001)
 - Added `hf mfdes chk --schann` - now detect the secure channel EV/EV2/LRP mode; detected per application and can be overridden (@iceman1001)
 - Fixed `hf mfdes chk` - found keys were tracked per key number instead of per application, so a key number recovered on one AID was skipped later (@iceman1001)
 - Fixed `data modulation` - the 160 sample antenna settle trim was never undone, so the graph buffer stayed short for everything after it (@mfcarroll)

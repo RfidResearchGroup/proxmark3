@@ -59,6 +59,8 @@
 #define MAX_KEYS_LIST_LEN  1024
 // how many errors in a row from the card before we give up on a key number
 #define MFDES_CHK_MAX_ERRORS 10
+// bundled dictionary used when no -f is given
+#define MFDES_DEFAULT_DICT "mfdes_default_keys"
 #define MFDES_BRUTEAID_RESELECT_ATTEMPTS 5
 #define MFDES_BRUTEAID_RESELECT_WAIT_MS  200
 #define MFDES_BRUTEAID_MAD_START         0xF0000FU
@@ -1971,8 +1973,8 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfdes detect",
                   "Detect key type and tries to find one from the list.",
                   "hf mfdes detect                            -> detect key 0 from PICC level\n"
-                  "hf mfdes detect --schann d40               -> detect key 0 from PICC level via secure channel D40\n"
-                  "hf mfdes detect -f mfdes_default_keys      -> detect key 0 from PICC level with help of the standard dictionary\n"
+                  "hf mfdes detect --schann d40               -> detect key 0 from PICC level via secure channel D40, skipping channel detection\n"
+                  "hf mfdes detect -f my_keys                 -> detect key 0 from PICC level with your own dictionary\n"
                   "hf mfdes detect --aid 123456 -n 2 --save   -> detect key 2 from app 123456 and if succeed - save params to defaults (`default` command)\n"
                   "hf mfdes detect --isoid df01 --save        -> detect key 0 and save to defaults with card in the LRP mode");
 
@@ -1991,7 +1993,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
         arg_str0(NULL, "aid",     "<hex>", "Application ID (3 hex bytes, big endian)"),
         arg_str0(NULL, "isoid",   "<hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_str0(NULL, "dfname",  "<hex>", "Application ISO DF Name (5-16 hex bytes, big endian)"),
-        arg_str0("f", "file",     "<fn>",  "Filename of dictionary"),
+        arg_str0("f", "file",     "<fn>",  "Filename of dictionary (default: `" MFDES_DEFAULT_DICT "`)"),
         arg_lit0(NULL, "save",    "Save found key and parameters to defaults"),
         arg_param_end
     };
@@ -2019,6 +2021,16 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     }
 
     bool save = arg_get_lit(ctx, 15);
+
+    // whether the user pinned a secure channel, or we get to detect one
+    bool schannset = (arg_get_str(ctx, 10)->count > 0);
+
+    // no dictionary given - use the bundled DESFire one.  The built-in
+    // g_mifare_plus_default_keys list is 16 byte AES only, so it can produce
+    // neither the DES nor the 3K3DES defaults this card family ships with
+    if (dict_filenamelen == 0) {
+        dict_filenamelen = snprintf((char *)dict_filename, sizeof(dict_filename), "%s", MFDES_DEFAULT_DICT);
+    }
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
@@ -2100,6 +2112,26 @@ static int CmdHF14aDesDetect(const char *Cmd) {
         }
     }
 
+    // An AES application runs either the EV1/EV2 channel or LRP, and the key
+    // settings byte reads the same for both, so it takes one probe to tell them
+    // apart.  Without this an LRP card is only caught when the key settings
+    // happen to be unreadable and the fallback above runs.
+    if (schannset == false && uselrp == false && keytypes[T_AES]) {
+
+        uselrp = DesfireCheckAuthCmd(selectway, id, dctx.keyNum, MFDES_AUTHENTICATE_EV2F, true);
+        if (uselrp) {
+            securechann = DACLRP;
+        }
+
+        // the probe dropped the field behind us
+        res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, true, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") " after the LRP probe. Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
+            return res;
+        }
+    }
+
     if (verbose) {
 
         if (DesfireMFSelected(selectway, id)) {
@@ -2132,27 +2164,28 @@ static int CmdHF14aDesDetect(const char *Cmd) {
             PrintAndLogEx(INFO, "Scan key type: %s", CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType));
         }
 
-        if (dict_filenamelen == 0) {
-            // keys from mifaredefault.h
-            for (int i = 0; i < g_mifare_plus_default_keys_len; i++) {
+        // candidate keys come from the dictionary
+        uint8_t keyList[MAX_KEYS_LIST_LEN * MAX_KEY_LEN] = {0};
+        uint32_t keyListLen = 0;
+        size_t keylen = desfire_get_key_length(dctx.keyType);
+        size_t endFilePosition = 0;
 
-                uint8_t key[DESFIRE_MAX_KEY_SIZE] = {0};
-                if (hex_to_bytes(g_mifare_plus_default_keys[i], key, 16) != 16) {
-                    continue;
-                }
+        while (found == false) {
 
-                if (ktype == T_3K3DES) {
-                    memcpy(&key[16], key, 8);
-                }
+            res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, keylen, &keyListLen, endFilePosition, &endFilePosition, verbose);
+            if (res != 1 && res != PM3_SUCCESS) {
+                break;
+            }
 
-                res = DesfireAuthCheck(&dctx, selectway, id, securechann, key);
+            for (int i = 0; i < keyListLen; i++) {
+
+                res = DesfireAuthCheck(&dctx, selectway, id, securechann, &keyList[i * keylen]);
                 if (res == PM3_SUCCESS) {
                     found = true;
                     break; // all the params already in the dctx
                 }
 
                 if (res == -10) {
-
                     if (verbose) {
                         PrintAndLogEx(ERR, "Can't select AID. There is no connection with card.");
                     }
@@ -2174,60 +2207,12 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                 } else {
                     errcount = 0;
                 }
+
             }
 
-        } else {
-            // keys from file
-            uint8_t keyList[MAX_KEYS_LIST_LEN * MAX_KEY_LEN] = {0};
-            uint32_t keyListLen = 0;
-            size_t keylen = desfire_get_key_length(dctx.keyType);
-            size_t endFilePosition = 0;
-
-            while (found == false) {
-
-                res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, keylen, &keyListLen, endFilePosition, &endFilePosition, verbose);
-                if (res != 1 && res != PM3_SUCCESS) {
-                    break;
-                }
-
-                for (int i = 0; i < keyListLen; i++) {
-
-                    res = DesfireAuthCheck(&dctx, selectway, id, securechann, &keyList[i * keylen]);
-                    if (res == PM3_SUCCESS) {
-                        found = true;
-                        break; // all the params already in the dctx
-                    }
-
-                    if (res == -10) {
-                        if (verbose) {
-                            PrintAndLogEx(ERR, "Can't select AID. There is no connection with card.");
-                        }
-
-                        found = false;
-                        break; // we can't select app after invalid 1st auth stages
-                    }
-
-                    if (res == -11) {
-
-                        if (errcount > 10) {
-                            if (verbose) {
-                                PrintAndLogEx(ERR, "Too much errors (%zu) from card", errcount);
-                            }
-                            break;
-                        }
-                        errcount++;
-
-                    } else {
-                        errcount = 0;
-                    }
-
-                }
-
-                if (endFilePosition == 0) {
-                    break;
-                }
+            if (endFilePosition == 0) {
+                break;
             }
-
         }
 
         if (found) {
