@@ -2170,7 +2170,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
         snprintf(algostr, sizeof(algostr), "unknown");
     }
 
-    PrintAndLogEx(INFO, "%s... key num " _YELLOW_("0x%02x") "-" _YELLOW_("0x%02x") ", algo " _YELLOW_("%s") ", channel " _YELLOW_("%s"),
+    PrintAndLogEx(INFO, "%s... key num " _YELLOW_("0x%02x") ".." _YELLOW_("0x%02x") ", algo " _YELLOW_("%s") ", channel " _YELLOW_("%s"),
                   (DesfireMFSelected(selectway, id)) ? "PICC level" : DesfireWayIDStr(selectway, id),
                   keynofirst,
                   keynolast,
