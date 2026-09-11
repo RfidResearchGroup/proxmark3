@@ -16,13 +16,21 @@ A strict T55x7 test suite:
 
     lf t55xx wipe
     lf t55xx write -b 1 -d 00000000
-    lf t55xx write -b 2 -d ffffffff
+    lf t55xx write -b 2 -d aa5500ff
     lf t55xx write -b 3 -d 80000000
     lf t55xx write -b 4 -d 00000001
 
 Each row names the configuration word, what it means, what `lf t55xx detect`
 made of it and how many of the four data blocks read back intact.  Markers are
 also written into the session log ( `rem [ERR:...]` and `rem [SUMMARY:...]` )
+
+Every block is read three times.  A block that reads back differently between
+those is marked `unstable`, which is the fault a single read cannot see: the
+value is silently wrong rather than missing.  A block that is wrong the same way
+each time is named where it can be - `rol1`, `ror5`, `inverted`, `shr1` - because
+a rotation points at the word boundary and an inversion at psk phase, and the two
+want different fixes.  Block 1 is `00000000`, which is equal to all of its own
+rotations, so a rotated read of it cannot be told from a correct one.
 
 Note: that the card is wiped before each modulation.
 
@@ -161,30 +169,98 @@ local function prepare()
     return true
 end
 
+-- a block is read this many times, so that a value which is silently wrong on
+-- only some reads is not mistaken for one that is right
+local READS = 3
+
+local function rol32(v, n)
+    n = n % 32
+    if n == 0 then return v end
+    return ((v << n) | (v >> (32 - n))) & 0xFFFFFFFF
+end
+
 ---
--- Read blocks 1-4 back.  Returns how many matched and a short note naming the
--- ones that did not.
+-- Name how `got` differs from `want`, when it can be named.  A rotation says the
+-- word boundary moved, an inversion says psk picked the opposite phase, and a
+-- shift says a demodulation opened a bit early and padded with zero - different
+-- faults wanting different fixes, so worth telling apart.  A word equal to all of
+-- its own rotations carries no boundary information and only gets 'differs'.
+local function classify(want, got)
+
+    if got == want then return 'ok' end
+
+    if rol32(want, 1) == want then return 'differs' end
+
+    for n = 1, 31 do
+        if rol32(want, n) == got then
+            return (n <= 16) and ('rol' .. n) or ('ror' .. (32 - n))
+        end
+    end
+
+    if (want ~ 0xFFFFFFFF) == got then return 'inverted' end
+
+    for n = 1, 31 do
+        if (rol32(want, n) ~ 0xFFFFFFFF) == got then
+            return 'inv+' .. ((n <= 16) and ('rol' .. n) or ('ror' .. (32 - n)))
+        end
+    end
+
+    for n = 1, 8 do
+        if ((want >> n) & 0xFFFFFFFF) == got then return 'shr' .. n end
+        if ((want << n) & 0xFFFFFFFF) == got then return 'shl' .. n end
+    end
+
+    return 'differs'
+end
+
+---
+-- Read blocks 1-4 back, READS times each.  Returns how many matched on every
+-- read and a short note naming what went wrong with the ones that did not.
 local function read_back(config)
 
     local good, bad = 0, {}
 
     for block, want in ipairs(DATA_BLOCKS) do
 
-        local data = core.t55xx_readblock(block, '0', '0', '')
-        local got = data and ('%08X'):format(data) or ''
+        local wantv = tonumber(want, 16)
+        local seen, first, stable = {}, nil, true
 
-        if got:lower() == want:lower() then
+        for _ = 1, READS do
+            local data = core.t55xx_readblock(block, '0', '0', '')
+            local v = data and (data & 0xFFFFFFFF) or nil
+            table.insert(seen, v)
+            if first == nil then
+                first = v
+            elseif v ~= first then
+                stable = false
+            end
+        end
+
+        if stable and first == wantv then
             good = good + 1
         else
-            table.insert(bad, tostring(block))
-            core.console(format('rem [ERR:READ:%s:%d] block %d: read %s instead of %s',
-                                config, block, block, got, want), false, true)
+            local what
+            if stable == false then
+                what = 'unstable'
+            else
+                what = classify(wantv, first)
+            end
+
+            table.insert(bad, format('b%d %s', block, what))
+
+            local reads = {}
+            for _, v in ipairs(seen) do
+                table.insert(reads, v and ('%08X'):format(v) or '----')
+            end
+            core.console(format('rem [ERR:READ:%s:%d] block %d: %s, wanted %s, read %s',
+                                config, block, block, what, want,
+                                table.concat(reads, ' ')), false, true)
         end
     end
 
     local note = ''
     if #bad > 0 then
-        note = 'block ' .. table.concat(bad, ',') .. ' bad'
+        note = table.concat(bad, ' ')
     end
     return good, note
 end
