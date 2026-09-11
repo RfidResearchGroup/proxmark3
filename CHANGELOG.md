@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `tests/lf_t55xx_writetest.lua` - reads each block three times and names how a bad read differs (`rol1`, `ror5`, `inverted`, `shr1`) instead of only pass/fail (@mfcarroll)
 - Fixed `lf t55xx detect` - PSK1 now detects at every bit rate and subcarrier. (@iceman1001)
 - Fixed `lf t55xx detect` - FSK was skipped entirely when the field-clock pair measured as neither legal pair, losing FSK1 at RF/32 and RF/40 and every variant at RF/16 (@iceman1001)
 - Fixed `lf t55xx dump/read` - blocks were extracted at a bit offset cached from the last `detect`  The offset is now anchored in graph samples (@iceman1001)
