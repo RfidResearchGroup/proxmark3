@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mfdes detect` - with no `-n` it now sweeps every key number the application declares instead of only key 0; the first hit pins the algo for the rest (@iceman1001)
+- Fixed `hf mfdes detect` - the card error counter was shared by every key type, so a bad run during the DES pass could abort the AES pass before it tried a single key (@iceman1001)
 - Fixed `hf mfdes detect` - with no `-f` it drew candidates from the MIFARE Plus 16 byte key list,it now defaults to the bundled `mfdes_default_keys` dictionary (@iceman1001)
 - Fixed `hf mfdes detect` - LRP was only found when the key settings happened to be unreadable (@iceman1001)
 - Added `hf mfdes chk --schann` - now detect the secure channel EV/EV2/LRP mode; detected per application and can be overridden (@iceman1001)
