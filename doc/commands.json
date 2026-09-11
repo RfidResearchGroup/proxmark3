@@ -6223,7 +6223,7 @@
         },
         "hf mf gdmgetblk": {
             "command": "hf mf gdmgetblk",
-            "description": "Read public block(s) from a GDM card",
+            "description": "Read public block(s) from a GDM card. With no wakeup flag it auto-detects the card's access mode (WUPA magic auth, gen1a, or gdm alt).",
             "notes": [
                 "hf mf gdmgetblk --blk 0",
                 "hf mf gdmgetblk --sec 1 --gdm"
@@ -6234,15 +6234,15 @@
                 "--blk <dec> block to read",
                 "--sec <dec> sector to read",
                 "-k, --key <hex> key 6 bytes (only for --wupa mode)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)"
+                "--gdm use gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)"
             ],
             "usage": "hf mf gdmgetblk [-h] [--blk <dec>] [--sec <dec>] [-k <hex>] [--gdm] [--gen1a] [--wupa]"
         },
         "hf mf gdmgetcfg": {
             "command": "hf mf gdmgetcfg",
-            "description": "Get configuration data from a GDM card. By default uses GDM alt wakeup (20/23). Use `--gen1a` or `--wupa` to override.",
+            "description": "Get configuration data from a GDM card. With no wakeup flag it auto-detects the card's access mode (tries WUPA magic auth, then gen1a, then gdm alt). Use `--gdm`/`--gen1a`/`--wupa` to force one.",
             "notes": [
                 "hf mf gdmgetcfg",
                 "hf mf gdmgetcfg --gen1a",
@@ -6252,15 +6252,15 @@
             "options": [
                 "-h, --help This help",
                 "-k, --key <hex> key 6 bytes (only for --wupa mode)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)"
+                "--gdm use gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)"
             ],
             "usage": "hf mf gdmgetcfg [-h] [-k <hex>] [--gdm] [--gen1a] [--wupa]"
         },
         "hf mf gdmgethidblk": {
             "command": "hf mf gdmgethidblk",
-            "description": "Read hidden block(s) from a GDM card",
+            "description": "Read hidden block(s) from a GDM card. With no wakeup flag it auto-detects the card's access mode (WUPA magic auth, gen1a, or gdm alt).",
             "notes": [
                 "hf mf gdmgethidblk --blk 0",
                 "hf mf gdmgethidblk --sec 1 --gdm"
@@ -6271,9 +6271,9 @@
                 "--blk <dec> block to read",
                 "--sec <dec> sector to read",
                 "-k, --key <hex> key 6 bytes (only for --wupa mode)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)"
+                "--gdm use gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)"
             ],
             "usage": "hf mf gdmgethidblk [-h] [--blk <dec>] [--sec <dec>] [-k <hex>] [--gdm] [--gen1a] [--wupa]"
         },
@@ -6292,7 +6292,7 @@
         },
         "hf mf gdmsetblk": {
             "command": "hf mf gdmsetblk",
-            "description": "Set public block data on a GDM card By default uses GDM alt wakeup (20/23). Use `--gen1a` or `--wupa` to override. `--force` param is used to override warnings like bad ACL writes. if not specified, it will exit if detected",
+            "description": "Set public block data on a GDM card With no wakeup flag it auto-detects the card's access mode (gen1a, gdm alt, or WUPA magic auth). `--force` param is used to override warnings like bad ACL writes. if not specified, it will exit if detected",
             "notes": [
                 "hf mf gdmsetblk --blk 1 -d 000102030405060708090a0b0c0d0e0f",
                 "hf mf gdmsetblk --blk 1 -d 000102030405060708090a0b0c0d0e0f --gen1a",
@@ -6304,19 +6304,20 @@
                 "--blk <dec> public block number",
                 "-d, --data <hex> bytes to write, 16 hex bytes",
                 "-k, --key <hex> key, 6 hex bytes (only for --wupa mode)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)",
+                "--gdm access: force gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)",
                 "--force override warnings"
             ],
             "usage": "hf mf gdmsetblk [-h] --blk <dec> -d <hex> [-k <hex>] [--gdm] [--gen1a] [--wupa] [--force]"
         },
         "hf mf gdmsetcfg": {
             "command": "hf mf gdmsetcfg",
-            "description": "Set configuration data on a GDM card Can either write raw 16 bytes (-d) or configure specific flags. If flags are provided, it will read the config, update flags, and write it back.",
+            "description": "Set configuration data on a GDM card Can either write raw 16 bytes (-d) or configure specific flags. If flags are provided, it will read the config, update flags, and write it back. With no wakeup flag it auto-detects the card's access mode (WUPA magic auth, gen1a, or gdm alt). `access:` flags select how this command talks to the card; `config:` flags change what is stored.",
             "notes": [
                 "hf mf gdmsetcfg -d 850000000000000000005A5A00000008",
-                "hf mf gdmsetcfg --cuid on --gen1 on",
+                "hf mf gdmsetcfg --cuid on --wakestyle gen1a",
+                "hf mf gdmsetcfg --wakestyle off",
                 "hf mf gdmsetcfg --shadow off --sigsec off --wupa -k FFFFFFFFFFFF"
             ],
             "offline": false,
@@ -6324,22 +6325,22 @@
                 "-h, --help This help",
                 "-d, --data <hex> raw bytes to write, 16 hex bytes",
                 "-k, --key <hex> key 6 bytes (only for regular wakeup)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)",
-                "--gen1 <on|off> Gen1 mode (7A FF)",
-                "--cuid <on|off> Gen2/CUID mode",
-                "--cl2 <on|off> CL2 mode (7-byte UID) - pair with `hf mf gdmsetuid -u <7-byte>` to set a valid UID",
-                "--shadow <on|off> Shadow mode",
-                "--magicauth <on|off> Magic auth",
-                "--statenc <on|off> Static encrypted nonce",
-                "--sigsec <on|off> Signature sector"
+                "--gdm access: force gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)",
+                "--cuid <on|off> config: Gen2/CUID mode",
+                "--cl2 <on|off> config: CL2 mode (7-byte UID) - pair with `hf mf gdmsetuid -u <7-byte>`",
+                "--shadow <on|off> config: Shadow mode",
+                "--magicauth <on|off> config: Magic auth (what --wupa uses)",
+                "--statenc <on|off> config: Static encrypted nonce",
+                "--sigsec <on|off> config: Signature sector",
+                "--wakestyle <gdm|gen1a|off> config: backdoor - gdm (7AFF85), gen1a (7AFF00), or off (8500, seal)"
             ],
-            "usage": "hf mf gdmsetcfg [-h] [-d <hex>] [-k <hex>] [--gdm] [--gen1a] [--wupa] [--gen1 <on|off>] [--cuid <on|off>] [--cl2 <on|off>] [--shadow <on|off>] [--magicauth <on|off>] [--statenc <on|off>] [--sigsec <on|off>]"
+            "usage": "hf mf gdmsetcfg [-h] [-d <hex>] [-k <hex>] [--gdm] [--gen1a] [--wupa] [--cuid <on|off>] [--cl2 <on|off>] [--shadow <on|off>] [--magicauth <on|off>] [--statenc <on|off>] [--sigsec <on|off>] [--wakestyle <gdm|gen1a|off>]"
         },
         "hf mf gdmsethidblk": {
             "command": "hf mf gdmsethidblk",
-            "description": "Write hidden block data on a GDM card. Hidden blocks 0-7 map to the card's hidden sector area. By default uses GDM alt wakeup (20/23). Use `--gen1a` or `--wupa` to override. `--force` param is used to override warnings like bad BCC or ACL writes. if not specified, it will exit if detected",
+            "description": "Write hidden block data on a GDM card. Hidden blocks 0-7 map to the card's hidden sector area. With no wakeup flag it auto-detects a backdoor (gen1a or gdm alt); a WUPA-only card is rejected. `--force` param is used to override warnings like bad BCC or ACL writes. if not specified, it will exit if detected",
             "notes": [
                 "hf mf gdmsethidblk --blk 0 -d 880494716904EA0C2394510800000000",
                 "hf mf gdmsethidblk --blk 0 -d 880494716904EA0C2394510800000000 --gen1a",
@@ -6352,16 +6353,16 @@
                 "--blk <dec> hidden block number (0-7)",
                 "-d, --data <hex> bytes to write, 16 hex bytes",
                 "-k, --key <hex> key 6 bytes (only for --wupa mode)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)",
+                "--gdm access: force gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)",
                 "--force override warnings"
             ],
             "usage": "hf mf gdmsethidblk [-h] --blk <dec> -d <hex> [-k <hex>] [--gdm] [--gen1a] [--wupa] [--force]"
         },
         "hf mf gdmsetsig": {
             "command": "hf mf gdmsetsig",
-            "description": "Set MFC EV1 signature on a GDM card",
+            "description": "Set MFC EV1 signature on a GDM card. With no wakeup flag it auto-detects a backdoor (gen1a or gdm alt); a WUPA-only card is rejected.",
             "notes": [
                 "hf mf gdmsetsig -s <64 hex chars>"
             ],
@@ -6370,15 +6371,15 @@
                 "-h, --help This help",
                 "-s, --sig <hex> 32-byte signature (64 hex characters)",
                 "-k, --key <hex> key 6 bytes (only for --wupa mode)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)"
+                "--gdm access: force gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)"
             ],
             "usage": "hf mf gdmsetsig [-h] -s <hex> [-k <hex>] [--gdm] [--gen1a] [--wupa]"
         },
         "hf mf gdmsetuid": {
             "command": "hf mf gdmsetuid",
-            "description": "Set UID on a GDM card",
+            "description": "Set UID on a GDM card. With no wakeup flag it auto-detects a backdoor (gen1a or gdm alt); a WUPA-only card is rejected.",
             "notes": [
                 "hf mf gdmsetuid -u 01020304",
                 "hf mf gdmsetuid -u 01020304050607 --gen1a"
@@ -6388,16 +6389,16 @@
                 "-h, --help This help",
                 "-u, --uid <hex> UID to set (4 or 7 hex bytes)",
                 "-k, --key <hex> key 6 bytes (only for --wupa mode)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)",
+                "--gdm access: force gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)",
                 "--f3d use F3 perso mode (writes to hidden block 1 instead of 0)"
             ],
             "usage": "hf mf gdmsetuid [-h] -u <hex> [-k <hex>] [--gdm] [--gen1a] [--wupa] [--f3d]"
         },
         "hf mf gdmwipe": {
             "command": "hf mf gdmwipe",
-            "description": "Wipe a GDM card to factory defaults",
+            "description": "Wipe a GDM card to factory defaults. With no wakeup flag it auto-detects a backdoor (gen1a or gdm alt); a WUPA-only card is rejected.",
             "notes": [
                 "hf mf gdmwipe --gdm"
             ],
@@ -6405,9 +6406,9 @@
             "options": [
                 "-h, --help This help",
                 "-k, --key <hex> key 6 bytes (only for --wupa mode)",
-                "--gdm use gdm alt (20/23) magic wakeup (default)",
-                "--gen1a use gen1a (40/43) magic wakeup",
-                "--wupa use regular wakeup (WUPA + magic auth with key)",
+                "--gdm access: force gdm alt (20/23) magic wakeup",
+                "--gen1a access: force gen1a (40/43) magic wakeup",
+                "--wupa access: force regular wakeup (WUPA + magic auth with key)",
                 "-a, --all wipe 4K card (40 sectors) instead of 1K card (16 sectors)"
             ],
             "usage": "hf mf gdmwipe [-ha] [-k <hex>] [--gdm] [--gen1a] [--wupa]"
@@ -7367,17 +7368,17 @@
             "command": "hf mfdes chk",
             "description": "Checks keys with MIFARE DESFire card.",
             "notes": [
-                "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f -> check key on aid 0x123456",
-                "hf mfdes chk -f mfdes_default_keys -> check keys against all existing aid on card",
-                "hf mfdes chk -f mfdes_default_keys --aid 123456 -> check keys against aid 0x123456",
-                "hf mfdes chk --aid 123456 --pattern1b -j keys -> check all 1-byte keys pattern on aid 0x123456 and save found keys to `keys.json`",
-                "hf mfdes chk --aid 123456 --pattern2b --startp2b FA00 -> check all 2-byte keys pattern on aid 0x123456. Start from key FA00FA00...FA00"
+                "hf mfdes chk -f mfdes_default_keys -> check keys against all existing AID on card",
+                "hf mfdes chk --aid 123456 -f mfdes_default_keys -> check keys against AID 0x123456",
+                "hf mfdes chk --aid 123456 --pattern1b -j keys -> check all 1-byte keys pattern on AID 0x123456 and save found keys to `keys.json`",
+                "hf mfdes chk --aid 123456 --pattern2b --startp2b FA00 -> check all 2-byte keys pattern on AID 0x123456. Start from key FA00FA00...FA00",
+                "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f -> check key on AID 0x123456"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "--aid <hex> Use specific AID (3 hex bytes, big endian)",
-                "-k, --key <hex> Key for checking (HEX 16 bytes)",
+                "-k, --key <hex> Key for checking (HEX 8, 16 or 24 bytes)",
                 "-f, --file <fn> Filename of dictionary",
                 "--pattern1b Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)",
                 "--pattern2b Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)",
@@ -9416,6 +9417,30 @@
             ],
             "usage": "hf mfu keygen [-hr] [-u <hex>] [-b <dec>]"
         },
+        "hf mfu ndefformat": {
+            "command": "hf mfu ndefformat",
+            "description": "Format a MIFARE Ultralight / NTAG tag for NDEF by writing the Capability Container to block 3, followed by an empty NDEF message. Writes NXP factory delivery content for the detected tag type. Block 3 is One Time Programmable; unknown types and unreachable CCs are refused. Note: the tag is re-selected and re-authenticated for each block written.",
+            "notes": [
+                "hf mfu ndefformat",
+                "hf mfu ndefformat -v",
+                "hf mfu ndefformat --erase",
+                "hf mfu ndefformat -k FFFFFFFF",
+                "hf mfu ndefformat -k 49454D4B41455242214E4143554F5946",
+                "hf mfu ndefformat -d E1101200 --force"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --key <hex> Authentication key (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)",
+                "-l Swap entered key endianness",
+                "-d, --data <hex> Capability Container to write, 4 bytes. Overrides the detected type",
+                "--erase Also zero the rest of the NDEF data area",
+                "--force Continue on an unknown tag type, or with an oversized -d value",
+                "-v, --verbose Verbose output",
+                "--schann use secure channel. Must have key"
+            ],
+            "usage": "hf mfu ndefformat [-hlv] [-k <hex>] [-d <hex>] [--erase] [--force] [--schann]"
+        },
         "hf mfu ndefread": {
             "command": "hf mfu ndefread",
             "description": "Prints NFC Data Exchange Format (NDEF)",
@@ -10874,83 +10899,92 @@
             ],
             "usage": "hw break [-h]"
         },
-        "hw bwmautooff": {
-            "command": "hw bwmautooff",
-            "description": "Toggle automatic power-off when the PM5 is unplugged from USB (BWM only). Default is on. When on, the board powers itself down ~10s after USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery. Button power-on is unaffected. Disable for standalone/BLE use on battery. Runtime only: resets to on at each boot.",
-            "notes": [
-                "hw bwmautooff --off -> disable auto power-off",
-                "hw bwmautooff --on -> re-enable auto power-off"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "--on enable auto power-off (default)",
-                "--off disable auto power-off"
-            ],
-            "usage": "hw bwmautooff [-h] [--on] [--off]"
-        },
-        "hw bwmcharge": {
-            "command": "hw bwmcharge",
+        "hw bwm charge": {
+            "command": "hw bwm charge",
             "description": "Enable or disable BWM battery charging by clearing/setting the AW32001E charge-enable bit (CEB, REG01[3]). PM5 only. One-shot: the charger watchdog reverts this after ~160 s unless serviced, so charging may stop on its own. Use to nudge a top-up.",
             "notes": [
-                "hw bwmcharge -on -> enable charging",
-                "hw bwmcharge --off -> disable charging"
+                "hw bwm charge off -> disable charging",
+                "hw bwm charge on -> enable charging"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help",
-                "--on enable charging (default)",
-                "--off disable charging"
+                "-h, --help This help"
             ],
-            "usage": "hw bwmcharge [-h] [--on] [--off]"
+            "usage": "hw bwm charge [-h]"
         },
-        "hw bwmsetcap": {
-            "command": "hw bwmsetcap",
+        "hw bwm help": {
+            "command": "hw bwm help",
+            "description": "help This help --------------------------------------------------------------------------------------- hw bwm autooff available offline: no Toggle automatic power-off when the PM5 is unplugged from USB (BWM only). Default is on. When on, the board powers itself down ~10s after USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery. Button power-on is unaffected. Disable for standalone/BLE use on battery. Runtime only: resets to on at each boot.",
+            "notes": [
+                "hw bwm autooff off -> disable auto power-off",
+                "hw bwm autooff on -> re-enable auto power-off"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hw bwm autooff [-h]"
+        },
+        "hw bwm setcap": {
+            "command": "hw bwm setcap",
             "description": "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell. Run ONCE after fitting or replacing the battery. This triggers a gauge config-update; do not run it repeatedly, as that disrupts the Impedance Track learning cycle. PM5 only.",
             "notes": [
-                "hw bwmsetcap -> set design capacity to default 500 mAh",
-                "hw bwmsetcap --cap 500 -> set design capacity to 500 mAh"
+                "hw bwm setcap -> set design capacity to default 500 mAh",
+                "hw bwm setcap --cap 500 -> set design capacity to 500 mAh"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "--cap <mAh> design capacity in mAh (default 500)"
             ],
-            "usage": "hw bwmsetcap [-h] [--cap <mAh>]"
+            "usage": "hw bwm setcap [-h] [--cap <mAh>]"
         },
-        "hw bwmvchg": {
-            "command": "hw bwmvchg",
+        "hw bwm upgrade": {
+            "command": "hw bwm upgrade",
+            "description": "Reflash the BWM (ESP32) firmware over the BWM link - no header, no soldering. Requires a BWM that still responds; this updates a wrong-version ESP, it cannot recover a fully bricked one (that still needs the 5-pin header + esptool).",
+            "notes": [
+                "hw bwm upgrade -f bwm_esp32.bin"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> ESP32 firmware image (.bin)",
+                "--delay <ms> per-chunk delay to pace the slow AT32<->ESP UART (default 20)"
+            ],
+            "usage": "hw bwm upgrade [-h] -f <fn> [--delay <ms>]"
+        },
+        "hw bwm vchg": {
+            "command": "hw bwm vchg",
             "description": "Set the BWM charger (AW32001E) charge-voltage regulation target. Lowering it below 4.2 V reduces top-of-charge stress and extends cell life. Snaps to the nearest 15 mV step; clamped to 3600..4200 mV. This is a runtime register write (reverts on the charger watchdog / POR); the firmware re-applies the 4100 mV default at every boot. PM5 only.",
             "notes": [
-                "hw bwmvchg -> set charge voltage to default 4100 mV (->4.095 V)",
-                "hw bwmvchg --mv 4200 -> set charge voltage to 4200 mV"
+                "hw bwm vchg -> set charge voltage to default 4100 mV (->4.095 V)",
+                "hw bwm vchg --mv 4200 -> set charge voltage to 4200 mV"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "--mv <mV> charge voltage in mV (default 4100, clamped 3600..4200)"
             ],
-            "usage": "hw bwmvchg [-h] [--mv <mV>]"
+            "usage": "hw bwm vchg [-h] [--mv <mV>]"
         },
-        "hw bwmwifi": {
-            "command": "hw bwmwifi",
-            "description": "Bring up the BWM in STA + TCP-server mode: join a WiFi network and start a TCP server so the client can connect over WiFi. PM5 only.",
+        "hw bwm wifi": {
+            "command": "hw bwm wifi",
+            "description": "Bring up the BWM in STA + TCP-server mode: join a WiFi network and start a TCP server so the client can connect over WiFi. PM5 only. Sub-actions (no dashes): 'status' shows state, 'stop' tears WiFi down.",
             "notes": [
-                "hw bwmwifi --ssid Home --pwd secret -> port 7777",
-                "hw bwmwifi --ssid Home --pwd secret --port 9000",
-                "hw bwmwifi --status -> show connection state + IP"
+                "hw bwm wifi status -> show connection state + IP",
+                "hw bwm wifi stop -> tear down WiFi, back to BLE-only",
+                "hw bwm wifi --ssid Home --pwd secret -> bring up, port 7777",
+                "hw bwm wifi --ssid Home --pwd secret --port 9000"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--ssid <ssid> WiFi SSID to join (omit with --stop)",
+                "--ssid <ssid> WiFi SSID to join",
                 "--pwd <pwd> WiFi password (omit for open network)",
                 "--port <dec> TCP server listen port (default 7777)",
-                "--hostname <name> DHCP hostname (default Proxmark5)",
-                "--stop tear down WiFi and return to BLE-only",
-                "--status show current WiFi connection state + IP"
+                "--hostname <name> DHCP hostname (default Proxmark5)"
             ],
-            "usage": "hw bwmwifi [-h] [--ssid <ssid>] [--pwd <pwd>] [--port <dec>] [--hostname <name>] [--stop] [--status]"
+            "usage": "hw bwm wifi [-h] [--ssid <ssid>] [--pwd <pwd>] [--port <dec>] [--hostname <name>]"
         },
         "hw connect": {
             "command": "hw connect",
@@ -11086,15 +11120,22 @@
             "command": "hw qc_pm5",
             "description": "QC Test for the PM5",
             "notes": [
-                "hw qc_pm5 -> run QC test with default 20 second timeout",
-                "hw qc_pm5 -t 3 -> run QC test with a 3 second timeout"
+                "hw qc_pm5 -> run hardware QC test with default 20 second timeout",
+                "hw qc_pm5 -t 3 -> run hardware QC test with a 3 second timeout",
+                "hw qc_pm5 --iolow <index> --pwd <hex> -> drive PM5 test IO <index> low",
+                "hw qc_pm5 --iohigh <index> --pwd <hex> -> drive PM5 test IO <index> high",
+                "hw qc_pm5 --ioreset <index> --pwd <hex> -> reset PM5 test IO <index> to default"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-t, --timeout <s> test sequence timeout in seconds (default 20)"
+                "-t, --timeout <s> test sequence timeout in seconds (default 20)",
+                "--iolow <index> drive PM5 test IO <index> low",
+                "--iohigh <index> drive PM5 test IO <index> high",
+                "--ioreset <index> reset PM5 test IO <index> to default",
+                "--pwd <hex> QC test password in hex (required for IO tests)"
             ],
-            "usage": "hw qc_pm5 [-h] [-t <s>]"
+            "usage": "hw qc_pm5 [-h] [-t <s>] [--iolow <index>] [--iohigh <index>] [--ioreset <index>] [--pwd <hex>]"
         },
         "hw readmem": {
             "command": "hw readmem",
@@ -15407,21 +15448,27 @@
         },
         "nfc type1 help": {
             "command": "nfc type1 help",
-            "description": "-------- -------------- NFC Forum Tag Type 1 --------------- -------- --------------------- General --------------------- help This help ======================================================================================= nfc type2 { NFC Forum Tag Type 2... } --------------------------------------------------------------------------------------- nfc type2 read available offline: no Prints NFC Data Exchange Format (NDEF)",
+            "description": "-------- -------------- NFC Forum Tag Type 1 --------------- -------- --------------------- General --------------------- help This help ======================================================================================= nfc type2 { NFC Forum Tag Type 2... } --------------------------------------------------------------------------------------- nfc type2 format available offline: no Format a MIFARE Ultralight / NTAG tag for NDEF by writing the Capability Container to block 3, followed by an empty NDEF message. Writes NXP factory delivery content for the detected tag type. Block 3 is One Time Programmable; unknown types and unreachable CCs are refused. Note: the tag is re-selected and re-authenticated for each block written.",
             "notes": [
-                "hf mfu ndefread -> shows NDEF data",
-                "hf mfu ndefread -k ffffffff -> shows NDEF data with key",
-                "hf mfu ndefread -f myfilename -> save raw NDEF to file"
+                "hf mfu ndefformat",
+                "hf mfu ndefformat -v",
+                "hf mfu ndefformat --erase",
+                "hf mfu ndefformat -k FFFFFFFF",
+                "hf mfu ndefformat -k 49454D4B41455242214E4143554F5946",
+                "hf mfu ndefformat -d E1101200 --force"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-l Swap entered key's endianness",
-                "-f, --file <fn> Save raw NDEF to file",
+                "-k, --key <hex> Authentication key (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)",
+                "-l Swap entered key endianness",
+                "-d, --data <hex> Capability Container to write, 4 bytes. Overrides the detected type",
+                "--erase Also zero the rest of the NDEF data area",
+                "--force Continue on an unknown tag type, or with an oversized -d value",
                 "-v, --verbose Verbose output",
                 "--schann use secure channel. Must have key"
             ],
-            "usage": "hf mfu ndefread [-hlv] [-k Replace default key for NDEF] [-f <fn>] [--schann]"
+            "usage": "hf mfu ndefformat [-hlv] [-k <hex>] [-d <hex>] [--erase] [--force] [--schann]"
         },
         "nfc type1 read": {
             "command": "nfc type1 read",
@@ -15450,6 +15497,24 @@
                 "-v, --verbose verbose output"
             ],
             "usage": "hf 14a ndefformat [-hv]"
+        },
+        "nfc type2 read": {
+            "command": "nfc type2 read",
+            "description": "Prints NFC Data Exchange Format (NDEF)",
+            "notes": [
+                "hf mfu ndefread -> shows NDEF data",
+                "hf mfu ndefread -k ffffffff -> shows NDEF data with key",
+                "hf mfu ndefread -f myfilename -> save raw NDEF to file"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-l Swap entered key's endianness",
+                "-f, --file <fn> Save raw NDEF to file",
+                "-v, --verbose Verbose output",
+                "--schann use secure channel. Must have key"
+            ],
+            "usage": "hf mfu ndefread [-hlv] [-k Replace default key for NDEF] [-f <fn>] [--schann]"
         },
         "nfc type2 write": {
             "command": "nfc type2 write",
@@ -16427,8 +16492,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 912,
+        "commands_extracted": 918,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-04T11:31:07+00:00"
+        "extracted_on": "2026-09-11T08:39:52+00:00"
     }
 }
