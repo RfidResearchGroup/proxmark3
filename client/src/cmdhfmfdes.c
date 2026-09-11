@@ -1311,6 +1311,10 @@ static int AuthCheckDesfireKeyType(DesfireContext_t *dctx,
                 found->keys[keytype][keyno][0] = 0x01;
                 memcpy(&found->keys[keytype][keyno][1], key, keylen);
                 *result = true;
+
+                // EV2 and LRP turn an authenticated context into a "non first"
+                // auth for the next key number.  Start each one clean instead.
+                DesfireClearSession(dctx);
                 break;
             }
 
@@ -1362,6 +1366,7 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
                             uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t deskeyListLen,
                             uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t aeskeyListLen,
                             uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], uint32_t k3kkeyListLen,
+                            bool autoschann,
                             desfire_app_keys_t *found,
                             bool *result,
                             bool verbose) {
@@ -1381,28 +1386,72 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
     bool aes = false;
     bool k3kdes = false;
 
+    bool uselrp = false;
+
     uint8_t data[250] = {0};
     size_t datalen = 0;
 
     res = DesfireGetKeySettings(dctx, data, &datalen);
-    if (res != PM3_SUCCESS && datalen < 2) {
-        PrintAndLogEx(ERR, "Could not get key settings");
-        return res;
-    }
-    uint8_t num_keys = data[1];
-    switch (num_keys >> 6) {
-        case 0:
+    if (res == PM3_SUCCESS && datalen >= 2) {
+
+        switch (data[1] >> 6) {
+            case 0:
+                des = true;
+                tdes = true;
+                break;
+            case 1:
+                k3kdes = true;
+                break;
+            case 2:
+                aes = true;
+                break;
+            default:
+                break;
+        }
+
+    } else {
+
+        // key settings are not readable.  Ask the card which AUTH commands it
+        // answers instead, the same way `hf mfdes detect` does
+        AuthCommandsChk_t authCmdCheck = {0};
+        DesfireCheckAuthCommands(ISW6bAID, curaid, NULL, 0, &authCmdCheck);
+
+        if (authCmdCheck.checked == false) {
+            PrintAndLogEx(ERR, "AID 0x%06X, could not get key settings", curaid);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (authCmdCheck.auth) {
             des = true;
             tdes = true;
-            break;
-        case 1:
-            k3kdes = true;
-            break;
-        case 2:
+            if (authCmdCheck.authISO) {
+                k3kdes = true;
+            }
+        }
+
+        if (authCmdCheck.authAES || authCmdCheck.authEV2) {
             aes = true;
-            break;
-        default:
-            break;
+        }
+
+        if (authCmdCheck.authLRP) {
+            aes = true;
+            uselrp = true;
+        }
+
+        if (des == false && tdes == false && aes == false && k3kdes == false) {
+            PrintAndLogEx(ERR, "AID 0x%06X, card answers no known auth command", curaid);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        // the probe dropped the field behind us
+        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "AID 0x%06X, can't re-select after the auth command probe", curaid);
+            DropField();
+            return PM3_ESOFT;
+        }
     }
 
     // always check master key
@@ -1435,8 +1484,28 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
         }
     }
 
+    // An AES application runs either the EV1/EV2 channel or LRP and the key
+    // settings don't say which, so it takes one probe to tell them apart.
+    if (autoschann && aes && uselrp == false) {
+
+        uselrp = DesfireCheckAuthCmd(ISW6bAID, curaid, 0, MFDES_AUTHENTICATE_EV2F, true);
+
+        // the probe dropped the field behind us
+        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "AID 0x%06X, can't re-select after the LRP probe", curaid);
+            DropField();
+            return PM3_ESOFT;
+        }
+    }
+
+    if (autoschann && uselrp) {
+        secureChannel = DACLRP;
+    }
+
     if (verbose) {
         PrintAndLogEx(INFO, "Check: %s %s %s %s " NOLF, (des) ? "DES" : "", (tdes) ? "2TDEA" : "", (k3kdes) ? "3TDEA" : "", (aes) ? "AES" : "");
+        PrintAndLogEx(NORMAL, "channel: %s " NOLF, CLIGetOptionListStr(DesfireSecureChannelOpts, secureChannel));
         PrintAndLogEx(NORMAL, "keys: " NOLF);
         for (int i = 0; i < DESFIRE_MAX_KEY_COUNT; i++)
             if (usedkeys[i] == 1)
@@ -1461,6 +1530,11 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
     for (size_t i = 0; i < ARRAYLEN(checks); i++) {
 
         if (checks[i].check == false) {
+            continue;
+        }
+
+        // LRP only ever carries AES keys
+        if (secureChannel == DACLRP && checks[i].keytype != T_AES) {
             continue;
         }
 
@@ -1494,7 +1568,8 @@ static int CmdHF14aDesChk(const char *Cmd) {
                   "hf mfdes chk --aid 123456 --pattern1b -j keys                  -> check all 1-byte keys pattern on AID 0x123456 and save found keys to `keys.json`\n"
                   "hf mfdes chk --aid 123456 --pattern2b --startp2b FA00          -> check all 2-byte keys pattern on AID 0x123456. Start from key FA00FA00...FA00\n"
                   "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f  -> check key on AID 0x123456\n"
-                );
+                  "hf mfdes chk -f mfdes_default_keys --schann lrp                -> check keys, forcing the LRP secure channel\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1508,6 +1583,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         arg_lit0("v",  "verbose",    "Verbose output"),
         arg_int0(NULL, "kdf",        "<0|1|2>", "Key Derivation Function (KDF) (0=None, 1=AN10922, 2=Gallagher)"),
         arg_str0("i",  "kdfi",       "<hex>", "KDF input (1-31 hex bytes)"),
+        arg_str0(NULL, "schann",     "<d40|ev1|ev2|lrp>", "Secure channel (default: detected per application)"),
         arg_lit0("a",  "apdu",       "Show APDU requests and responses"),
         arg_param_end
     };
@@ -1597,7 +1673,19 @@ static int CmdHF14aDesChk(const char *Cmd) {
     int kdfInputLen = 0;
     CLIGetHexWithReturn(ctx, 10, kdfInput, &kdfInputLen);
 
-    bool APDULogging = arg_get_lit(ctx, 11);
+    // the secure channel is detected per application unless the user pins one
+    DesfireSecureChannel secureChannel = DACEV1;
+    bool autoschann = (arg_get_str(ctx, 11)->count == 0);
+    if (autoschann == false) {
+        int schann = DACEV1;
+        if (CLIGetOptionList(arg_get_str(ctx, 11), DesfireSecureChannelOpts, &schann)) {
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+        secureChannel = schann;
+    }
+
+    bool APDULogging = arg_get_lit(ctx, 12);
 
     CLIParserFree(ctx);
     SetAPDULogging(APDULogging);
@@ -1632,7 +1720,6 @@ static int CmdHF14aDesChk(const char *Cmd) {
     DesfireSetKdf(&dctx, cmdKDFAlgo, kdfInput, kdfInputLen);
     DesfireSetCommandSet(&dctx, DCCNativeISO);
     DesfireSetCommMode(&dctx, DCMPlain);
-    DesfireSecureChannel secureChannel = DACEV1;
 
     // save card UID to dctx
     DesfireGetCardUID(&dctx);
@@ -1805,7 +1892,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
                                    deskeyList, deskeyListLen,
                                    aeskeyList, aeskeyListLen,
                                    k3kkeyList, k3kkeyListLen,
-                                   found, &foundKeyThisRound, verbose);
+                                   autoschann, found, &foundKeyThisRound, verbose);
             if (res == PM3_EOPABORTED) {
                 break;
             }

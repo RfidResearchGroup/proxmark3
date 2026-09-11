@@ -7372,7 +7372,8 @@
                 "hf mfdes chk --aid 123456 -f mfdes_default_keys -> check keys against AID 0x123456",
                 "hf mfdes chk --aid 123456 --pattern1b -j keys -> check all 1-byte keys pattern on AID 0x123456 and save found keys to `keys.json`",
                 "hf mfdes chk --aid 123456 --pattern2b --startp2b FA00 -> check all 2-byte keys pattern on AID 0x123456. Start from key FA00FA00...FA00",
-                "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f -> check key on AID 0x123456"
+                "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f -> check key on AID 0x123456",
+                "hf mfdes chk -f mfdes_default_keys --schann lrp -> check keys, forcing the LRP secure channel"
             ],
             "offline": false,
             "options": [
@@ -7387,9 +7388,10 @@
                 "-v, --verbose Verbose output",
                 "--kdf <0|1|2> Key Derivation Function (KDF) (0=None, 1=AN10922, 2=Gallagher)",
                 "-i, --kdfi <hex> KDF input (1-31 hex bytes)",
+                "--schann <d40|ev1|ev2|lrp> Secure channel (default: detected per application)",
                 "-a, --apdu Show APDU requests and responses"
             ],
-            "usage": "hf mfdes chk [-hva] [--aid <hex>] [-k <hex>] [-f <fn>] [--pattern1b] [--pattern2b] [--startp2b <pattern>] [-j <fn>] [--kdf <0|1|2>] [-i <hex>]"
+            "usage": "hf mfdes chk [-hva] [--aid <hex>] [-k <hex>] [-f <fn>] [--pattern1b] [--pattern2b] [--startp2b <pattern>] [-j <fn>] [--kdf <0|1|2>] [-i <hex>] [--schann <d40|ev1|ev2|lrp>]"
         },
         "hf mfdes chkeysettings": {
             "command": "hf mfdes chkeysettings",
@@ -16494,6 +16496,6 @@
     "metadata": {
         "commands_extracted": 918,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-11T08:39:52+00:00"
+        "extracted_on": "2026-09-11T09:05:59+00:00"
     }
 }
