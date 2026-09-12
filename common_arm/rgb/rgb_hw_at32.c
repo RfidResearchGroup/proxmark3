@@ -12,11 +12,17 @@
 #define RGB_REG_INDEX  0x02
 #define RGB_REG_DATA   0x03
 
-void RgbLedSet(uint8_t r, uint8_t g, uint8_t b) {
+bool RgbLedSet(uint8_t r, uint8_t g, uint8_t b) {
     uint8_t rgb[3] = { r, g, b };
     StartTicks();
     I2C_init(true);
-    I2C_WriteByte(0, RGB_REG_INDEX, RGB_I2C_ADDR); // address LED index 0
-    I2C_WriteByte(1, RGB_REG_COUNT, RGB_I2C_ADDR); // 1 LED on the string
-    I2C_BufferWrite(rgb, sizeof(rgb), RGB_REG_DATA, RGB_I2C_ADDR);
+    // Report NAK: on a cold boot the controller may still be powering up when the
+    // first write fires. The caller uses this to retry instead of latching a failed
+    // write (which previously left the LED dark until the next state change - i.e.
+    // "worked once after flash, dark on every cold boot" on battery).
+    bool ok = true;
+    ok &= I2C_WriteByte(0, RGB_REG_INDEX, RGB_I2C_ADDR); // address LED index 0
+    ok &= I2C_WriteByte(1, RGB_REG_COUNT, RGB_I2C_ADDR); // 1 LED on the string
+    ok &= I2C_BufferWrite(rgb, sizeof(rgb), RGB_REG_DATA, RGB_I2C_ADDR);
+    return ok;
 }
