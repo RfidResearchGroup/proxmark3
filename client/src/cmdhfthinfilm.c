@@ -205,6 +205,59 @@ int CmdHfThinFilmSim(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHfThinFilmSniff(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf thinfilm sniff",
+                  "Sniff the frames a Thinfilm / NFC Barcode tag beams at a reader.\n"
+                  "The tag talks first and the reader sends nothing, so only the tag side\n"
+                  "is decoded. Use `hf thinfilm list` to view collected data.",
+                  "hf thinfilm sniff\n"
+                  "hf thinfilm sniff -i"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("i", "interactive", "Console will not be returned until sniff finishes or is aborted"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool interactive = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_THINFILM_SNIFF, NULL, 0);
+
+    if (interactive == false) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort sniffing");
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort sniffing");
+
+    PacketResponseNG resp;
+    bool keypress = kbd_enter_pressed();
+
+    while (keypress == false) {
+        keypress = kbd_enter_pressed();
+
+        if (WaitForResponseTimeout(CMD_HF_THINFILM_SNIFF, &resp, 500)) {
+            break;
+        }
+    }
+
+    if (keypress) {
+        // inform device to break the sniff loop since client has exited
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        WaitForResponse(CMD_HF_THINFILM_SNIFF, &resp);
+    }
+
+    PrintAndLogEx(INFO, "Done!");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf thinfilm list") "` to view captured tracelog");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
+    return PM3_SUCCESS;
+}
+
 static int CmdHfThinFilmList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf thinfilm", "thinfilm");
 }
@@ -214,6 +267,7 @@ static command_t CommandTable[] = {
     {"info",    CmdHfThinFilmInfo,  IfPm3NfcBarcode, "Tag information"},
     {"list",    CmdHfThinFilmList,  AlwaysAvailable, "List NFC Barcode / Thinfilm history"},
     {"sim",     CmdHfThinFilmSim,   IfPm3NfcBarcode, "Fake Thinfilm tag"},
+    {"sniff",   CmdHfThinFilmSniff, IfPm3NfcBarcode, "Sniff Thinfilm tag communication"},
     {NULL, NULL, NULL, NULL}
 };
 

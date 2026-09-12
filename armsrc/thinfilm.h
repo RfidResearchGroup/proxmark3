@@ -22,6 +22,7 @@
 #include "common.h"
 
 void ReadThinFilm(void);
+int SniffThinFilm(void);
 void SimulateThinFilm(uint8_t *data, size_t len);
 
 #endif /* __ISO14443A_H */
