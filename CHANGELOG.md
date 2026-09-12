@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `mem spiffs upload`/`mem spiffs dump` - both now print inline progress, and a refused write is reported with the byte it stopped at instead of claiming success (@iceman1001)
+- Fixed `mem spiffs dump` - a file of 64K or more wrapped the uint16_t `BigBuf_calloc()` takes, the download now streams one frame at a time (@iceman1001)
+- Fixed SPIFFS flash layer - a failed erase was reported to SPIFFS as success, letting it write into an un-erased sector where NOR AND-semantics silently mangled file data (@iceman1001)
 - Fixed `hf thinfilm sim` - a 32 sample field read between every frame cost 3.8ms and nearly doubled the frame repeat period (@iceman1001)
 - Added `hf thinfilm sim` - it now traces, so `trace list -t thinfilm` works on the sim side (@iceman1001)
 - Fixed `hf texkom reader -v` - now no ovewflow in the general decoder (@iceman1001)

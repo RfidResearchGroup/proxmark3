@@ -48,6 +48,11 @@ typedef struct rdv40_spiffs_fsinfo {
 
 int rdv40_spiffs_read_as_filetype(const char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level);
 
+// one call per chunk read by rdv40_spiffs_read_stream(), `offset` is relative to
+// the start of the transfer.  Return PM3_SUCCESS to carry on, anything else stops
+typedef int (*spiffs_chunk_cb_t)(uint32_t offset, const uint8_t *data, uint16_t len);
+int rdv40_spiffs_read_stream(const char *filename, uint32_t offset, uint32_t size, uint8_t *chunkbuf, uint16_t chunklen, spiffs_chunk_cb_t cb, RDV40SpiFFSSafetyLevel level);
+
 int rdv40_spiffs_check(void);
 int rdv40_spiffs_lazy_unmount(void);
 int rdv40_spiffs_lazy_mount(void);
@@ -58,6 +63,9 @@ int rdv40_spiffs_rename(const char *old_filename, const char *new_filename, RDV4
 int rdv40_spiffs_remove(const char *filename, RDV40SpiFFSSafetyLevel level);
 int rdv40_spiffs_read_as_symlink(const char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level);
 void write_to_spiffs(const char *filename, const uint8_t *src, uint32_t size);
+
+// SPIFFS_OK, or the SPIFFS errno of the last write_to_spiffs()/append_to_spiffs()
+int rdv40_spiffs_write_status(void);
 void read_from_spiffs(const char *filename, uint8_t *dst, uint32_t size);
 void test_spiffs(void);
 void rdv40_spiffs_safe_print_tree(void);

@@ -56,12 +56,20 @@
 #include "spiffs.h"
 #include "BigBuf.h"
 #include "dbprint.h"
+#include "pm3_cmd.h"
+#include "string.h"
 
 ///// FLASH LEVEL R/W/E operations  for feeding SPIFFS Driver/////////////////
+//
+// SPIFFS_CHECK_RES() only treats a NEGATIVE result as an error, so the 128 / 129 / 130
+// these used to return meant every flash failure was reported to SPIFFS as success.
+// A failed erase that reads back as success is the worst of them: SPIFFS then writes
+// into a sector that still holds the old content, and since a NOR write can only clear
+// bits, page headers and file data silently AND together instead of being replaced.
 static s32_t rdv40_spiffs_llread(u32_t addr, u32_t size, u8_t *dst) {
 
     if (!Flash_ReadData(addr, dst, size)) {
-        return 128;
+        return SPIFFS_ERR_NOT_READABLE;
     }
     return SPIFFS_OK;
 }
@@ -69,19 +77,50 @@ static s32_t rdv40_spiffs_llread(u32_t addr, u32_t size, u8_t *dst) {
 static s32_t rdv40_spiffs_llwrite(u32_t addr, u32_t size, u8_t *src) {
 
     if (FlashInit() == false) {
-        return 129;
+        return SPIFFS_ERR_NOT_WRITABLE;
     }
-    Flash_Write(addr, src, size);
+
+    if (Flash_Write(addr, src, size) != size) {
+        return SPIFFS_ERR_NOT_WRITABLE;
+    }
     return SPIFFS_OK;
 }
 
+// A sector erase that did not take - the chip was still busy, or the write enable
+// latch was gone by the time the command arrived - leaves the old content in place.
+// Flash_Erase4k() only reports that the command was sent, so read the sector back.
+static bool flash_sector_is_erased(uint32_t addr) {
+
+    static uint8_t buf[64];
+
+    for (uint32_t offset = 0; offset < SPIFFS_CFG_LOG_BLOCK_SZ; offset += sizeof(buf)) {
+
+        if (Flash_ReadDataCont(addr + offset, buf, sizeof(buf)) != sizeof(buf)) {
+            return false;
+        }
+
+        for (uint32_t i = 0; i < sizeof(buf); i++) {
+            if (buf[i] != 0xFF) {
+                if (g_dbglevel >= DBG_DEBUG) {
+                    Dbprintf("SPIFFS erase verify failed at 0x%05x, read %02x", addr + offset + i, buf[i]);
+                }
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 static s32_t rdv40_spiffs_llerase(u32_t addr, u32_t size) {
+    (void)size;             // always one SPIFFS_CFG_LOG_BLOCK_SZ sector
+
     if (FlashInit() == false) {
-        return 130;
+        return SPIFFS_ERR_ERASE_FAIL;
     }
 
     if (g_dbglevel >= DBG_DEBUG) Dbprintf("LLERASEDBG : Orig addr : %d\n", addr);
 
+    uint32_t sector_addr = addr;
     uint8_t block, sector = 0;
     block = addr / RDV40_LLERASE_BLOCKSIZE;
     if (block) {
@@ -91,18 +130,40 @@ static s32_t rdv40_spiffs_llerase(u32_t addr, u32_t size) {
     if (g_dbglevel >= DBG_DEBUG) Dbprintf("LLERASEDBG : Result addr : %d\n", addr);
 
     sector = addr / SPIFFS_CFG_LOG_BLOCK_SZ;
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    Flash_WriteEnable();
 
     if (g_dbglevel >= DBG_DEBUG) Dbprintf("LLERASEDBG : block : %d, sector : %d \n", block, sector);
 
-    uint8_t erased = Flash_Erase4k(block, sector);
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    FlashStop();
+    for (uint8_t attempt = 0; attempt < 2; attempt++) {
 
-    // iceman:   SPIFFS_OK expands to 0,    erased is bool from Flash_Erase4k,  which returns TRUE if ok.
-    // so this return logic looks wrong.
-    return (SPIFFS_OK == erased);
+        // true == still busy when the timeout ran out
+        if (Flash_CheckBusy(BUSY_TIMEOUT)) {
+            Dbprintf("SPIFFS erase: flash still busy before erasing sector 0x%05x", sector_addr);
+            continue;
+        }
+
+        Flash_WriteEnable();
+
+        if (Flash_Erase4k(block, sector) == false) {
+            Dbprintf("SPIFFS erase: bad sector address, block %u sector %u", block, sector);
+            break;
+        }
+
+        if (Flash_CheckBusy(BUSY_TIMEOUT)) {
+            Dbprintf("SPIFFS erase: sector 0x%05x did not finish in %u us", sector_addr, BUSY_TIMEOUT);
+            continue;
+        }
+
+        if (flash_sector_is_erased(sector_addr)) {
+            FlashStop();
+            return SPIFFS_OK;
+        }
+
+        Dbprintf("SPIFFS erase: sector 0x%05x did not erase, retrying", sector_addr);
+    }
+
+    FlashStop();
+    Dbprintf(_RED_("SPIFFS erase of sector 0x%05x failed, filesystem not written"), sector_addr);
+    return SPIFFS_ERR_ERASE_FAIL;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -195,20 +256,44 @@ int rdv40_spiffs_check(void) {
 
 ///// Base RDV40_SPIFFS_SAFETY_NORMAL operations////////////////////////////////
 
+// RDV40_SPIFFS_SAFE_FUNCTION() returns the mount-change flag, not a result, so a
+// failed write had no way of reaching the caller - the client happily reported
+// "Wrote N bytes" for a file the device never stored.  The last write result is
+// kept here instead, see rdv40_spiffs_write_status()
+static int g_spiffs_write_res = SPIFFS_OK;
+
+int rdv40_spiffs_write_status(void) {
+    return g_spiffs_write_res;
+}
+
 void write_to_spiffs(const char *filename, const uint8_t *src, uint32_t size) {
+    g_spiffs_write_res = SPIFFS_OK;
     spiffs_file fd = SPIFFS_open(&fs, filename, SPIFFS_CREAT | SPIFFS_TRUNC | SPIFFS_RDWR, 0);
+    if (fd < 0) {
+        g_spiffs_write_res = SPIFFS_errno(&fs);
+        Dbprintf("open errno %i\n", g_spiffs_write_res);
+        return;
+    }
     // Note: SPIFFS_write() doesn't declare third parameter as const (but should)
     if (SPIFFS_write(&fs, fd, (void *)src, size) < 0) {
-        Dbprintf("wr errno %i\n", SPIFFS_errno(&fs));
+        g_spiffs_write_res = SPIFFS_errno(&fs);
+        Dbprintf("wr errno %i\n", g_spiffs_write_res);
     }
     SPIFFS_close(&fs, fd);
 }
 
 void append_to_spiffs(const char *filename, const uint8_t *src, uint32_t size) {
+    g_spiffs_write_res = SPIFFS_OK;
     spiffs_file fd = SPIFFS_open(&fs, filename, SPIFFS_APPEND | SPIFFS_RDWR, 0);
+    if (fd < 0) {
+        g_spiffs_write_res = SPIFFS_errno(&fs);
+        Dbprintf("open errno %i\n", g_spiffs_write_res);
+        return;
+    }
     // Note: SPIFFS_write() doesn't declare third parameter as const (but should)
     if (SPIFFS_write(&fs, fd, (void *)src, size) < 0) {
-        Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+        g_spiffs_write_res = SPIFFS_errno(&fs);
+        Dbprintf("errno %i\n", g_spiffs_write_res);
     }
     SPIFFS_close(&fs, fd);
 }
@@ -268,7 +353,8 @@ int exists_in_spiffs(const char *filename) {
 
 static RDV40SpiFFSFileType filetype_in_spiffs(const char *filename) {
     RDV40SpiFFSFileType filetype = RDV40_SPIFFS_FILETYPE_UNKNOWN;
-    char symlinked[SPIFFS_OBJ_NAME_LEN];
+    // SPIFFS_OBJ_NAME_LEN + 4 : a 31 char name plus ".lnk" and the terminator
+    char symlinked[SPIFFS_OBJ_NAME_LEN + 4];
     sprintf(symlinked, "%s.lnk", filename);
 
     if (exists_in_spiffs(filename)) {
@@ -301,20 +387,47 @@ static RDV40SpiFFSFileType filetype_in_spiffs(const char *filename) {
     }
     return filetype;
 }
-/*
-static int is_valid_filename(const char *filename) {
-    if (filename == NULL) {
-        return false;
-    }
-    uint32_t len = strlen(filename);
-    return len > 0 && len < SPIFFS_OBJ_NAME_LEN;
-}
-*/
+
 static void copy_in_spiffs(const char *src, const char *dst) {
-    uint32_t size = size_in_spiffs(src);
-    uint8_t *mem = BigBuf_calloc(size);
-    read_from_spiffs(src, (uint8_t *)mem, size);
-    write_to_spiffs(dst, (uint8_t *)mem, size);
+
+    // no BigBuf_calloc(filesize) here: a file can be bigger than BigBuf, and bigger
+    // than the uint16_t BigBuf_calloc() takes.  Copy it in SPIFFS_WRITE_CHUNK_SIZE
+    // chunks instead, which is also what rdv40_spiffs_write() writes in
+    uint8_t *mem = BigBuf_calloc(SPIFFS_WRITE_CHUNK_SIZE);
+    if (mem == NULL) {
+        Dbprintf("error, cannot allocate copy buffer");
+        return;
+    }
+
+    spiffs_file fd = SPIFFS_open(&fs, src, SPIFFS_RDONLY, 0);
+    if (fd < 0) {
+        Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+        return;
+    }
+
+    bool first = true;
+    while (true) {
+
+        s32_t len = SPIFFS_read(&fs, fd, mem, SPIFFS_WRITE_CHUNK_SIZE);
+        if (len < 0) {
+            Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+            break;
+        }
+
+        if (len == 0) {
+            break;
+        }
+
+        // the first chunk creates / truncates the destination, the rest append to it
+        if (first) {
+            write_to_spiffs(dst, mem, (uint32_t)len);
+            first = false;
+        } else {
+            append_to_spiffs(dst, mem, (uint32_t)len);
+        }
+    }
+
+    SPIFFS_close(&fs, fd);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -525,7 +638,7 @@ int rdv40_spiffs_is_symlink(const char *s) {
     return ret;
 }
 
-// since FILENAME can't be longer than 32Bytes as of hard configuration, we're
+// since FILENAME can't be longer than 32 Bytes as of hard configuration, we're
 // safe with Such maximum. So the "size" variable is actually the known/intended
 // size of DESTINATION file, may it be known (may we provide a "stat from
 // symlink ?")
@@ -535,7 +648,7 @@ int rdv40_spiffs_read_as_symlink(const char *filename, uint8_t *dst, uint32_t si
 
     RDV40_SPIFFS_SAFE_FUNCTION(
         char linkdest[SPIFFS_OBJ_NAME_LEN];
-        char linkfilename[SPIFFS_OBJ_NAME_LEN];
+        char linkfilename[SPIFFS_OBJ_NAME_LEN + 4];
         sprintf(linkfilename, "%s.lnk", filename);
 
         if (g_dbglevel >= DBG_DEBUG)
@@ -564,7 +677,7 @@ int rdv40_spiffs_read_as_symlink(const char *filename, uint8_t *dst, uint32_t si
 // TODO : FORBID creating a symlink with a basename (before.lnk) which already exists as a file !
 int rdv40_spiffs_make_symlink(const char *linkdest, const char *filename, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(
-        char linkfilename[SPIFFS_OBJ_NAME_LEN];
+        char linkfilename[SPIFFS_OBJ_NAME_LEN + 4];
         sprintf(linkfilename, "%s.lnk", filename);
         write_to_spiffs(linkfilename, (const uint8_t *)linkdest, SPIFFS_OBJ_NAME_LEN);
     )
@@ -598,6 +711,115 @@ int rdv40_spiffs_read_as_filetype(const char *filename, uint8_t *dst, uint32_t s
         }
     }
     )
+}
+
+// Resolve a filename to the real file it names, following a .lnk symlink the same
+// way rdv40_spiffs_read_as_filetype() does.  Expects the filesystem to be mounted.
+static int resolve_in_spiffs(const char *filename, char *dst, uint16_t dstlen) {
+
+    switch (filetype_in_spiffs(filename)) {
+        case RDV40_SPIFFS_FILETYPE_REAL: {
+            strncpy(dst, filename, dstlen - 1);
+            dst[dstlen - 1] = 0;
+            return PM3_SUCCESS;
+        }
+        case RDV40_SPIFFS_FILETYPE_SYMLINK: {
+            char linkfilename[SPIFFS_OBJ_NAME_LEN + 4];
+            sprintf(linkfilename, "%s.lnk", filename);
+            read_from_spiffs(linkfilename, (uint8_t *)dst, MIN(dstlen, (uint16_t)SPIFFS_OBJ_NAME_LEN));
+            dst[dstlen - 1] = 0;
+            return PM3_SUCCESS;
+        }
+        case RDV40_SPIFFS_FILETYPE_BOTH:
+        case RDV40_SPIFFS_FILETYPE_UNKNOWN:
+        default: {
+            break;
+        }
+    }
+    return PM3_EFILE;
+}
+
+// Read a file out in chunks, handing each one to `cb` as it arrives.
+// Expects the filesystem to be mounted. Returns bytes streamed, or a negative PM3_E*
+static int stream_from_spiffs(const char *filename, uint32_t offset, uint32_t size, uint8_t *chunkbuf, uint16_t chunklen, spiffs_chunk_cb_t cb) {
+
+    char target[SPIFFS_OBJ_NAME_LEN] = {0};
+    int res = resolve_in_spiffs(filename, target, sizeof(target));
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    spiffs_file fd = SPIFFS_open(&fs, target, SPIFFS_RDONLY, 0);
+    if (fd < 0) {
+        Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+        return PM3_EFILE;
+    }
+
+    if (offset && (SPIFFS_lseek(&fs, fd, offset, SPIFFS_SEEK_SET) < 0)) {
+        Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+        SPIFFS_close(&fs, fd);
+        return PM3_EFILE;
+    }
+
+    res = PM3_SUCCESS;
+    uint32_t sent = 0;
+
+    while (sent < size) {
+
+        // SPIFFS_read clamps to the end of the file and returns 0 once there
+        s32_t len = SPIFFS_read(&fs, fd, chunkbuf, MIN(size - sent, (uint32_t)chunklen));
+        if (len < 0) {
+            Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+            res = PM3_EFILE;
+            break;
+        }
+
+        if (len == 0) {
+            break;
+        }
+
+        // offsets are relative to the start of the transfer, not to the file
+        res = cb(sent, chunkbuf, (uint16_t)len);
+        if (res != PM3_SUCCESS) {
+            break;
+        }
+
+        sent += (uint32_t)len;
+    }
+
+    SPIFFS_close(&fs, fd);
+    return (res == PM3_SUCCESS) ? (int)sent : res;
+}
+
+// Stream `size` bytes from `offset` of a file, one `chunklen` chunk at a time.
+//
+// The download path used to read the whole file into BigBuf first.  That caps a
+// download at what BigBuf holds and, since BigBuf_calloc() takes a uint16_t, the
+// request wrapped for files >= 64KB: a short buffer, then a full size read run
+// straight past the end of it.  Here the file is opened once and only one chunk
+// is ever buffered, so file size no longer enters into it.
+//
+// Returns the number of bytes streamed, or a negative PM3_E* on failure.
+//
+// Not RDV40_SPIFFS_SAFE_FUNCTION() : that macro returns the mount-change flag,
+// and the caller needs to know how much of the file actually went out.
+int rdv40_spiffs_read_stream(const char *filename, uint32_t offset, uint32_t size, uint8_t *chunkbuf, uint16_t chunklen, spiffs_chunk_cb_t cb, RDV40SpiFFSSafetyLevel level) {
+
+    if ((filename == NULL) || (chunkbuf == NULL) || (chunklen == 0) || (cb == NULL)) {
+        return PM3_EINVARG;
+    }
+
+    int changed = 0;
+    if ((level == RDV40_SPIFFS_SAFETY_LAZY) || (level == RDV40_SPIFFS_SAFETY_SAFE)) {
+        changed = rdv40_spiffs_lazy_mount();
+    }
+
+    int res = stream_from_spiffs(filename, offset, size, chunkbuf, chunklen, cb);
+
+    if (level == RDV40_SPIFFS_SAFETY_SAFE) {
+        rdv40_spiffs_lazy_mount_rollback(changed);
+    }
+    return res;
 }
 
 // TODO regarding reads/write and symlinks :

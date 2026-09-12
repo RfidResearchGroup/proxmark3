@@ -1275,6 +1275,11 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
     uint32_t bytes_completed = 0;
     __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
 
+    // inline feedback. Small transfers finish before a line could be read, so
+    // only the ones that actually take time say anything
+    const bool show_progress = (bytes > 4096);
+    uint64_t last_update = 0;
+
     // Add delay depending on the communication channel & speed
     if (ms_timeout != (size_t) - 1)
         ms_timeout += communication_delay();
@@ -1283,17 +1288,22 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
 
         if (getReply(response)) {
 
-            // the terminator is answered on the request opcode itself
+            // the terminator is answered on the request opcode itself, and carries
+            // the status of the transfer, ie: PM3_EMALLOC / PM3_EFILE
             if (response->cmd == req_cmd) {
-                if (response->status == PM3_EMALLOC) {
-                    return false;
+                if (show_progress) {
+                    PrintAndLogEx(NORMAL, "");
                 }
-                return true;
+                return (response->status == PM3_SUCCESS);
             }
             // CMD_READ_MEM_DOWNLOAD is served by the bootrom, which only speaks
             // OLD frames and still finishes with an anonymous ACK
-            if (response->cmd == CMD_ACK)
+            if (response->cmd == CMD_ACK) {
+                if (show_progress) {
+                    PrintAndLogEx(NORMAL, "");
+                }
                 return true;
+            }
 
             if (response->cmd == rec_cmd) {
 
@@ -1334,6 +1344,15 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
 
                 memcpy(dest + offset, src, copy_bytes);
                 bytes_completed += copy_bytes;
+
+                if (show_progress && ((msclock() - last_update > 100) || (bytes_completed == bytes))) {
+                    PrintAndLogEx(INPLACE, "Received " _YELLOW_("%u") " / " _YELLOW_("%u") " bytes  (" _YELLOW_("%u") "%%)"
+                                  , bytes_completed
+                                  , bytes
+                                  , (bytes_completed * 100) / bytes
+                                 );
+                    last_update = msclock();
+                }
             } else if (response->cmd == CMD_WTX && response->length == sizeof(uint16_t)) {
                 uint16_t wtx = response->data.asDwords[0] & 0xFFFF;
                 PrintAndLogEx(DEBUG, "Got Waiting Time eXtension request %i ms", wtx);
@@ -1348,12 +1367,17 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
             break;
         }
 
+
         if (msclock() - tmp_clk > 3000 && show_warning) {
             // 3 seconds elapsed (but this doesn't mean the timeout was exceeded)
             PrintAndLogEx(INFO, "Waiting for a response from the Proxmark3...");
             PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
             show_warning = false;
         }
+    }
+
+    if (show_progress) {
+        PrintAndLogEx(NORMAL, "");
     }
     return false;
 }

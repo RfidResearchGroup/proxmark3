@@ -22,6 +22,7 @@
 #include "pmflash.h"
 #include "fileutils.h"  //saveFile
 #include "comms.h"      //getfromdevice
+#include "util_posix.h" // msclock
 #include "cliparser.h"
 
 static int CmdHelp(const char *Cmd);
@@ -40,6 +41,13 @@ int flashmem_spiffs_load(const char *destfn, const uint8_t *data, size_t datalen
 
     // fast push mode
     g_conn.block_after_ACK = true;
+
+    // inline feedback, an upload is one packet per FLASH_MEM_BLOCK_SIZE bytes.
+    // Time based, not byte based: SPIFFS garbage collection can make a single
+    // packet take seconds on a full filesystem, and a counter that only moves
+    // every 16 packets is indistinguishable from a hang
+    const bool show_progress = (datalen > FLASH_MEM_BLOCK_SIZE);
+    uint64_t last_update = 0;
 
     while (bytes_remaining > 0) {
 
@@ -69,9 +77,6 @@ int flashmem_spiffs_load(const char *destfn, const uint8_t *data, size_t datalen
 
         free(payload);
 
-        bytes_remaining -= bytes_in_packet;
-        bytes_sent += bytes_in_packet;
-
         uint8_t retry = 3;
         while (WaitForResponseTimeout(CMD_SPIFFS_WRITE, &resp, 2000) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
@@ -81,9 +86,38 @@ int flashmem_spiffs_load(const char *destfn, const uint8_t *data, size_t datalen
                 goto out;
             }
         }
+
+        // the device only counts a packet once SPIFFS took it
+        if (resp.status != PM3_SUCCESS) {
+            int32_t serr = (resp.length >= sizeof(int32_t)) ? (int32_t)resp.data.asDwords[0] : 0;
+            if (show_progress) {
+                PrintAndLogEx(NORMAL, "");
+            }
+            PrintAndLogEx(FAILED, "device refused the write at " _YELLOW_("%u") " / " _YELLOW_("%zu") " bytes (spiffs errno %d)", bytes_sent, datalen, serr);
+            if (serr == SPIFFS_ERR_FULL_RDV) {
+                PrintAndLogEx(HINT, "Hint: filesystem is full, try `" _YELLOW_("mem spiffs tree") "` and remove what you don't need");
+            }
+            ret_val = PM3_EFLASH;
+            goto out;
+        }
+
+        bytes_remaining -= bytes_in_packet;
+        bytes_sent += bytes_in_packet;
+
+        if (show_progress && ((msclock() - last_update > 100) || (bytes_remaining == 0))) {
+            PrintAndLogEx(INPLACE, "Sent " _YELLOW_("%u") " / " _YELLOW_("%zu") " bytes  (" _YELLOW_("%u") "%%)"
+                          , bytes_sent
+                          , datalen
+                          , (uint32_t)((bytes_sent * 100) / datalen)
+                         );
+            last_update = msclock();
+        }
     }
 
 out:
+    if (show_progress) {
+        PrintAndLogEx(NORMAL, "");
+    }
     clearCommandBuffer();
 
     // turn off fast push mode
@@ -532,9 +566,9 @@ static int CmdFlashMemSpiFFSUpload(const char *Cmd) {
 
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu") " bytes to file "_GREEN_("%s"), datalen, dst);
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("mem spiffs tree") "` to verify");
     }
 
-    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("mem spiffs tree") "` to verify");
     return res;
 }
 
