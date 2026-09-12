@@ -10474,7 +10474,7 @@
         },
         "hf thinfilm help": {
             "command": "hf thinfilm help",
-            "description": "help This help list List NFC Barcode / Thinfilm history - not correct --------------------------------------------------------------------------------------- hf thinfilm info available offline: no Get info from Thinfilm tags",
+            "description": "help This help list List NFC Barcode / Thinfilm history --------------------------------------------------------------------------------------- hf thinfilm info available offline: no Get info from Thinfilm tags",
             "notes": [
                 "hf thinfilm info"
             ],
@@ -10926,6 +10926,20 @@
                 "-h, --help This help"
             ],
             "usage": "hw bwm autooff [-h]"
+        },
+        "hw bwm name": {
+            "command": "hw bwm name",
+            "description": "Get or set the BWM BLE advertising name (stored on the BWM, in NVS). With no --set, prints the current name. Setting a name stores it and reboots the BWM to apply it - this briefly drops a BLE/WiFi connection; reconnect after a few seconds. Over USB the reboot is not noticeable.",
+            "notes": [
+                "hw bwm name -> show current BLE name",
+                "hw bwm name --set MyPM5 -> set BLE name to 'MyPM5'"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--set <name> new BLE name (1-31 chars); omit to read current name"
+            ],
+            "usage": "hw bwm name [-h] [--set <name>]"
         },
         "hw bwm setcap": {
             "command": "hw bwm setcap",
@@ -16494,8 +16508,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 918,
+        "commands_extracted": 919,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-11T13:13:54+00:00"
+        "extracted_on": "2026-09-12T12:14:59+00:00"
     }
 }

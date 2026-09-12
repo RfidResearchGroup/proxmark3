@@ -938,7 +938,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf thinfilm help       `|Y       |`This help`
 |`hf thinfilm info       `|N       |`Tag information`
-|`hf thinfilm list       `|Y       |`List NFC Barcode / Thinfilm history - not correct`
+|`hf thinfilm list       `|Y       |`List NFC Barcode / Thinfilm history`
 |`hf thinfilm sim        `|N       |`Fake Thinfilm tag`
 
 
@@ -1042,6 +1042,7 @@ Check column "offline" for their availability.
 |`hw bwm help            `|Y       |`This help`
 |`hw bwm autooff         `|N       |`Toggle auto power-off on USB unplug`
 |`hw bwm charge          `|N       |`Enable/disable battery charging (one-shot)`
+|`hw bwm name            `|N       |`Get/set the BWM BLE advertising name`
 |`hw bwm setcap          `|N       |`Set fuel-gauge design capacity (run once after battery change)`
 |`hw bwm upgrade         `|N       |`Reflash BWM (ESP32) firmware over the BWM link, no header`
 |`hw bwm vchg            `|N       |`Set charger charge-voltage target (default 4100 mV)`

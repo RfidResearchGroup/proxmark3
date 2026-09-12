@@ -60,6 +60,11 @@ void ReadThinFilm(void) {
 #define SEC_E 0x0f
 #define SEC_F 0x00
 
+// Frame delimiter.  A reader needs some unmodulated carrier to find the start of a
+// frame (our own demod wants three quiet bytes), but a Kovio tag is only read by
+// landing a frame inside the reader's poll slot, so keep the gap short.
+#define THINFILM_FRAME_GAP_US 500
+
 // A 32 sample average costs about 3.8 ms, since every sample pays a 42.7 us ADC
 // startup and a 40 us sample & hold.  That is fine once, for the baseline, but in
 // the send loop it costs more than the deliberate inter frame delay and nearly
@@ -231,13 +236,7 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
                 // one tosend byte == one 106 kbit/s bit == 8 ssp clk ticks
                 LogTrace(data, len, start_time * 16, (start_time + (ts->max * 8)) * 16, NULL, false);
 
-                if (len == 16) {
-                    // wait 3.6ms
-                    SpinDelayUs(3600);
-                } else {
-                    // wait 2.4ms
-                    SpinDelayUs(2400);
-                }
+                SpinDelayUs(THINFILM_FRAME_GAP_US);
             }
         }
 
