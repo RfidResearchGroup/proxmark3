@@ -4315,9 +4315,9 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             }
 
             if (tearoff_loop > 1) {
-                PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us - "_YELLOW_("%3u")" iter", params.delay_us, (tearoff_end & 0xFFFF), loop_count + 1);
+                PrintAndLogEx(INPLACE, "Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us - "_YELLOW_("%3u")" iter", params.delay_us, (tearoff_end & 0xFFFF), loop_count + 1);
             } else {
-                PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us", params.delay_us, (tearoff_end & 0xFFFF));
+                PrintAndLogEx(INPLACE, "Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us", params.delay_us, (tearoff_end & 0xFFFF));
             }
 
             // write block - don't check the return value. As a tear-off occurred, the write failed.
@@ -4814,9 +4814,9 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
         }
 
         if (tearoff_loop > 1) {
-            PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us - "_YELLOW_("%3u")" iter", params.delay_us, (tearoff_end & 0xFFFF), loop_count + 1);
+            PrintAndLogEx(INPLACE, "Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us - "_YELLOW_("%3u")" iter", params.delay_us, (tearoff_end & 0xFFFF), loop_count + 1);
         } else {
-            PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us", params.delay_us, (tearoff_end & 0xFFFF));
+            PrintAndLogEx(INPLACE, "Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us", params.delay_us, (tearoff_end & 0xFFFF));
         }
 
         // write block - don't check the return value. As a tear-off occurred, the write failed.

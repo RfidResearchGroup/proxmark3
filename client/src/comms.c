@@ -78,7 +78,7 @@ static uint64_t timeout_start_time;
 
 static uint64_t last_packet_time;
 
-static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd, uint32_t req_cmd);
+static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, size_t ms_timeout, bool show_warning, bool show_progress, uint32_t rec_cmd, uint32_t req_cmd);
 
 // Wait until the comm thread has actually put a queued command on the wire.
 // Callers used to sleep a fixed guess instead, which was reasonable when a
@@ -1047,8 +1047,9 @@ static size_t communication_delay(void) {
  * @return the number of received bytes
  */
 size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, bool show_process, bool keep_raw_mode) {
-    uint8_t print_counter = 0;
     size_t last_pos = 0;
+    uint64_t last_update = 0;
+    bool printed_progress = false;
 
     // Add delay depending on the communication channel & speed
     if (ms_timeout != (size_t) - 1) {
@@ -1084,16 +1085,26 @@ size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, boo
                 break;
             }
         } else {
-            // Print process when (print_counter % 64) == 0
-            if (show_process && (print_counter & 0x3F) == 0) {
-                PrintAndLogEx(INFO, "[%zu/%zu]", pos, len);
+            // one line that updates in place, not a line per update
+            if (show_process && ((msclock() - last_update > 100) || (pos == len))) {
+                PrintAndLogEx(INPLACE, "Received " _YELLOW_("%zu") " / " _YELLOW_("%zu") " bytes  (" _YELLOW_("%zu") "%%)"
+                              , pos
+                              , len
+                              , (pos * 100) / len
+                             );
+                last_update = msclock();
+                printed_progress = true;
             }
         }
 
-        print_counter++;
         last_pos = pos;
         msleep(10);
     }
+
+    if (printed_progress) {
+        PrintAndLogEx(NORMAL, "");
+    }
+
     if (pos == len && (ms_timeout != (size_t) - 1) && (keep_raw_mode == false)) {
         // If ms_timeout != -1, when the desired data is received, tell the arm side
         // to stop the current process, and wait for some time to make sure the process
@@ -1228,12 +1239,12 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
         case BIG_BUF: {
             download_req_t req = { .start_index = start_index, .bytes = bytes };
             SendCommandNG(CMD_DOWNLOAD_BIGBUF, (uint8_t *)&req, sizeof(req));
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_DOWNLOADED_BIGBUF, CMD_DOWNLOAD_BIGBUF);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, false, CMD_DOWNLOADED_BIGBUF, CMD_DOWNLOAD_BIGBUF);
         }
         case BIG_BUF_EML: {
             download_req_t req = { .start_index = start_index, .bytes = bytes };
             SendCommandNG(CMD_DOWNLOAD_EML_BIGBUF, (uint8_t *)&req, sizeof(req));
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_DOWNLOADED_EML_BIGBUF, CMD_DOWNLOAD_EML_BIGBUF);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, false, CMD_DOWNLOADED_EML_BIGBUF, CMD_DOWNLOAD_EML_BIGBUF);
         }
         case SPIFFS: {
             uint8_t sbuf[PM3_CMD_DATA_SIZE] = {0};
@@ -1244,40 +1255,42 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
                 memcpy(sreq->data, data, datalen);
             }
             SendCommandNG(CMD_SPIFFS_DOWNLOAD, sbuf, sizeof(download_req_t) + datalen);
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_SPIFFS_DOWNLOADED, CMD_SPIFFS_DOWNLOAD);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, true, CMD_SPIFFS_DOWNLOADED, CMD_SPIFFS_DOWNLOAD);
         }
         case FLASH_MEM: {
             download_req_t req = { .start_index = start_index, .bytes = bytes };
             SendCommandNG(CMD_FLASHMEM_DOWNLOAD, (uint8_t *)&req, sizeof(req));
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_FLASHMEM_DOWNLOADED, CMD_FLASHMEM_DOWNLOAD);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, true, CMD_FLASHMEM_DOWNLOADED, CMD_FLASHMEM_DOWNLOAD);
         }
         case SIM_MEM: {
             //SendCommandNG(CMD_DOWNLOAD_SIM_MEM, (uint8_t *)&req, sizeof(req));
-            //return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_DOWNLOADED_SIMMEM);
+            //return dl_it(dest, bytes, response, ms_timeout, show_warning, false, CMD_DOWNLOADED_SIMMEM);
             return false;
         }
         case FPGA_MEM: {
             SendCommandNG(CMD_FPGAMEM_DOWNLOAD, NULL, 0);
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_FPGAMEM_DOWNLOADED, CMD_FPGAMEM_DOWNLOAD);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, false, CMD_FPGAMEM_DOWNLOADED, CMD_FPGAMEM_DOWNLOAD);
         }
         case MCU_FLASH:
         case MCU_MEM: {
             uint32_t flags = (memtype == MCU_MEM) ? READ_MEM_DOWNLOAD_FLAG_RAW : 0;
             SendCommandBL(CMD_READ_MEM_DOWNLOAD, start_index, bytes, flags, NULL, 0);
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_READ_MEM_DOWNLOADED, CMD_READ_MEM_DOWNLOAD);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, true, CMD_READ_MEM_DOWNLOADED, CMD_READ_MEM_DOWNLOAD);
         }
     }
     return false;
 }
 
-static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd, uint32_t req_cmd) {
+static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, size_t ms_timeout, bool show_warning, bool show_progress, uint32_t rec_cmd, uint32_t req_cmd) {
 
     uint32_t bytes_completed = 0;
     __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
 
-    // inline feedback. Small transfers finish before a line could be read, so
-    // only the ones that actually take time say anything
-    const bool show_progress = (bytes > 4096);
+    // Inline feedback, only for the flash backed transfers the caller asked it
+    // for.  BigBuf reads are a memcpy over USB and every command does them, so
+    // a progress line there is just noise.  Small transfers finish before a
+    // line could be read.
+    show_progress = (show_progress && (bytes > 4096));
     uint64_t last_update = 0;
 
     // Add delay depending on the communication channel & speed

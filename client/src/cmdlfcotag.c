@@ -512,6 +512,9 @@ static int CmdCOTAGReader(const char *Cmd) {
     }
 
     if (cm || realtime) {
+        // close any inline line the caller left open, ie: `lf search` printing
+        // "Searching for COTAG tag..." right before this
+        PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
 

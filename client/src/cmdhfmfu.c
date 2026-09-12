@@ -6873,7 +6873,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
             post_tear_check = (post_tear == 0xBD);
             a = (pre[0] | pre[1] << 8 | pre[2]  << 16);
             b = (post[0] | post[1] << 8 | post[2]  << 16);
-            PrintAndLogEx(INPLACE, " Delay: " _YELLOW_("%d") "   Tear: %s   Counter: " _YELLOW_("%s") ""
+            PrintAndLogEx(INPLACE, "Delay: " _YELLOW_("%d") "   Tear: %s   Counter: " _YELLOW_("%s") ""
                           , delay_bd
                           , sprint_hex_inrow(tear, sizeof(tear))
                           , poststr
@@ -6984,7 +6984,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
         post_tear_check = (post_tear == 0xBD);
 
-        PrintAndLogEx(INPLACE, " Delay: " _YELLOW_("%d") "   Tear: %s   Counter: " _YELLOW_("%s") ""
+        PrintAndLogEx(INPLACE, "Delay: " _YELLOW_("%d") "   Tear: %s   Counter: " _YELLOW_("%s") ""
                       , delay_00
                       , sprint_hex_inrow(tear, sizeof(tear))
                       , poststr

@@ -765,7 +765,7 @@ static int CmdLFHitagSRestore(const char *Cmd) {
         packet.page = page;
         memcpy(packet.data, &dump_bytes[offset], HITAGS_PAGE_SIZE);
 
-        PrintAndLogEx(INPLACE, " Writing page "_YELLOW_("%d")", data: " _GREEN_("%02X %02X %02X %02X"), page,
+        PrintAndLogEx(INPLACE, "Writing page "_YELLOW_("%d")", data: " _GREEN_("%02X %02X %02X %02X"), page,
                       dump_bytes[offset],
                       dump_bytes[offset + 1],
                       dump_bytes[offset + 2],

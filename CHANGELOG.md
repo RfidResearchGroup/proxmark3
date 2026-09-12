@@ -7,6 +7,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added `hf thinfilm sniff` - passively records the frames a Thinfilm / NFC Barcode tag beams at a reader (@iceman1001)
 - Fixed `hf thinfilm sim` - it now holds the genuine tag's measured 65536 carrier period frame rate instead of a fixed delay (@iceman1001)
 - Changed `mem spiffs upload`/`mem spiffs dump` - both now print inline progress, and a refused write is reported with the byte it stopped at instead of claiming success (@iceman1001)
+- Changed real-time LF sample reads `lf read`, `lf sniff`, `lf cotag reader`(@iceman1001)
+- Changed the `INPLACE` spinner prefix (@iceman1001)
 - Fixed `mem spiffs dump` - a file of 64K or more wrapped the uint16_t `BigBuf_calloc()` takes, the download now streams one frame at a time (@iceman1001)
 - Fixed SPIFFS flash layer - a failed erase was reported to SPIFFS as success, letting it write into an un-erased sector where NOR AND-semantics silently mangled file data (@iceman1001)
 - Fixed `hf thinfilm sim` - a 32 sample field read between every frame cost 3.8ms and nearly doubled the frame repeat period (@iceman1001)

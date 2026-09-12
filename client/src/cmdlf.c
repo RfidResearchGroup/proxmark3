@@ -831,7 +831,11 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples, bool 
             sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true, false);
         }
         samples = sample_bytes * 8 / bits_per_sample;
-        PrintAndLogEx(INFO, "Done: %" PRIu64 " samples (%zu bytes)", samples, sample_bytes);
+        // the inline "Received x / y bytes" counter already says the transfer is
+        // done, so only repeat it in samples when asked
+        if (verbose) {
+            PrintAndLogEx(INFO, "Done: %" PRIu64 " samples (%zu bytes)", samples, sample_bytes);
+        }
         if (samples != 0) {
             getSamplesFromBufEx(realtimeBuf, samples, bits_per_sample, verbose);
         }
@@ -966,7 +970,11 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
             sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true, false);
         }
         samples = sample_bytes * 8 / bits_per_sample;
-        PrintAndLogEx(INFO, "Done: %" PRIu64 " samples (%zu bytes)", samples, sample_bytes);
+        // the inline "Received x / y bytes" counter already says the transfer is
+        // done, so only repeat it in samples when asked
+        if (verbose) {
+            PrintAndLogEx(INFO, "Done: %" PRIu64 " samples (%zu bytes)", samples, sample_bytes);
+        }
         if (samples != 0) {
             getSamplesFromBufEx(realtimeBuf, samples, bits_per_sample, verbose);
         }
