@@ -158,6 +158,31 @@ There are three ways to connect: a **native transport** (Linux), a **cross-platf
 Python bridge** (Linux / macOS / Windows / WSL / iOS), and a **bridge app** on Android
 ([2.4](#24-android--termux--ble-bridge-app)).
 
+### `hw bwm name` — get/set the BLE advertising name
+
+Reads or changes the name the BWM advertises over BLE. With no argument it prints
+the current name; `--set` changes it (1–31 characters).
+
+| Argument        | Description                                          |
+| --------------- | ---------------------------------------------------- |
+| `--set <name>`  | New BLE name, 1–31 chars; omit to read current name  |
+
+```
+hw bwm name                # show the current BLE name
+hw bwm name --set MyPM5    # set the BLE name to 'MyPM5'
+```
+
+The name is stored on the BWM in NVS, so it persists across power cycles. The BWM
+applies the advertised name at BLE start-up, so setting a name reboots the BWM to
+make it take effect — this briefly drops a BLE or WiFi connection, so reconnect
+after a few seconds. Over USB the reboot is not noticeable, since the client stays
+connected to the PM5 while only the BWM's ESP restarts.
+
+> [!NOTE]
+> If a device is connected over BLE when you change the name, the running
+> advertisement can't change mid-connection; the new name shows up on the next
+> scan after the reboot.
+
 ### 2.1 Native BLE transport — Linux only, no bridge
 
 Uses a raw L2CAP/ATT socket — no `bleak`, no `bluetoothd` daemon dependency.
