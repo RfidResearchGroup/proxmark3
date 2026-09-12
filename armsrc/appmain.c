@@ -4096,6 +4096,44 @@ static void PacketReceived(PacketCommandNG *packet) {
 #endif
             break;
         }
+        case CMD_PM5_BWM_BLE_NAME: {
+#ifdef WITH_BWM_FORWARD
+            // Payload: [action:u8][name bytes if SET]. GET replies with the current
+            // BLE device name string. SET stores it on the ESP (persisted to NVS) and
+            // then reboots the ESP so the new advertising name takes effect - the ESP
+            // only applies the name at BLE startup, and rebooting is easier for users
+            // than a physical power-cycle.
+            if (packet->length < 1) {
+                reply_ng(CMD_PM5_BWM_BLE_NAME, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            uint8_t action = packet->data.asBytes[0];
+            if (action == BWM_BLE_NAME_ACTION_GET) {
+                uint8_t name[BWM_BLE_NAME_MAX_LEN + 1] = {0};
+                uint16_t nlen = sizeof(name);
+                int res = bwm_esp_get_ble_name(name, &nlen);
+                reply_ng(CMD_PM5_BWM_BLE_NAME, res, name, (res == PM3_SUCCESS) ? nlen : 0);
+            } else if (action == BWM_BLE_NAME_ACTION_SET) {
+                uint16_t nlen = packet->length - 1;
+                if (nlen == 0 || nlen > BWM_BLE_NAME_MAX_LEN) {
+                    reply_ng(CMD_PM5_BWM_BLE_NAME, PM3_EINVARG, NULL, 0);
+                    break;
+                }
+                int res = bwm_esp_set_ble_name(packet->data.asBytes + 1, nlen);
+                if (res == PM3_SUCCESS) {
+                    // Best-effort: the name is already saved to NVS, so even if the
+                    // reboot ack is lost it applies on the next BLE startup anyway.
+                    (void)bwm_esp_reboot();
+                }
+                reply_ng(CMD_PM5_BWM_BLE_NAME, res, NULL, 0);
+            } else {
+                reply_ng(CMD_PM5_BWM_BLE_NAME, PM3_EINVARG, NULL, 0);
+            }
+#else
+            reply_ng(CMD_PM5_BWM_BLE_NAME, PM3_ENOTIMPL, NULL, 0);
+#endif
+            break;
+        }
         case CMD_PM5_BWM_AUTOOFF: {
             // Toggle automatic power-off on USB unplug (runtime, default on).
             // Payload: 1 byte, non-zero = enable (default), zero = disable.
