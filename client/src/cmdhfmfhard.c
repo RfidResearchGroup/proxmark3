@@ -1733,8 +1733,17 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         if (initialize == false) {
 
             const mf_nonces_resp_t *nresp = (const mf_nonces_resp_t *)resp.data.asBytes;
-            uint16_t num_sampled_nonces = nresp->num_nonces;
+            uint16_t num_sampled_nonces = nresp->num_nonces & ~1;   // nonces come in pairs
             const uint8_t *bufp = nresp->nonces;
+
+            if (resp.length < sizeof(mf_nonces_resp_t) + ((num_sampled_nonces / 2) * MFC_NONCE_PAIR_SIZE)) {
+                PrintAndLogEx(FAILED, "Truncated nonce reply, got %u bytes for %u nonces", resp.length, num_sampled_nonces);
+                if (nonce_file_write) {
+                    fclose(fnonces);
+                }
+                DropField();
+                return PM3_ESOFT;
+            }
 
             for (uint16_t i = 0; i < num_sampled_nonces; i += 2) {
                 uint32_t nt_enc1 = bytes_to_num(bufp, 4);
@@ -1760,10 +1769,10 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
                 num_acquired_nonces += add_res;
 
                 if (nonce_file_write) {
-                    fwrite(bufp, 1, 9, fnonces);
+                    fwrite(bufp, 1, MFC_NONCE_PAIR_SIZE, fnonces);
                     fflush(fnonces);
                 }
-                bufp += 9;
+                bufp += MFC_NONCE_PAIR_SIZE;
             }
             //total_num_nonces += num_sampled_nonces;
 

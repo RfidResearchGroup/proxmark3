@@ -541,6 +541,14 @@ typedef struct {
 // most 4 byte nonces that fit alongside the reply header in one frame
 #define MFC_MAX_NONCES ((PM3_CMD_DATA_SIZE - sizeof(mf_nonces_resp_t)) / 4)
 
+// ACQ_ENCRYPTED_NONCES does not store bare nonces. It stores pairs: two 4 byte
+// encrypted nonces followed by one byte holding both their encrypted parity
+// nibbles, high nibble first. num_nonces in the reply counts nonces, so the
+// payload is always (num_nonces / 2) * MFC_NONCE_PAIR_SIZE bytes and
+// num_nonces is always even.
+#define MFC_NONCE_PAIR_SIZE 9
+#define MFC_MAX_NONCE_PAIRS ((PM3_CMD_DATA_SIZE - sizeof(mf_nonces_resp_t)) / MFC_NONCE_PAIR_SIZE)
+
 // CMD_HF_MIFARE_CHKKEYS_FAST payload.
 // Replaces three bit-packed oldargs:
 //   arg0 = sectorcnt | firstchunk<<8 | lastchunk<<12 | singlesector_params<<16
