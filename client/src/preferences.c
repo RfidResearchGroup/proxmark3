@@ -59,7 +59,14 @@ static  bool setDefaultMqttServer(const char *srv) {
         return false;
     }
 
-    g_session.mqtt_server = (char *)realloc(g_session.mqtt_server,  strlen(srv) + 1);
+    char *tmp = (char *)realloc(g_session.mqtt_server, strlen(srv) + 1);
+    if (tmp == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(g_session.mqtt_server);
+        g_session.mqtt_server = NULL;
+        return false;
+    }
+    g_session.mqtt_server = tmp;
     strcpy(g_session.mqtt_server, srv);
     return true;
 }
@@ -75,7 +82,14 @@ static bool setDefaultMqttPort(const char *port) {
         return false;
     }
 
-    g_session.mqtt_port = (char *)realloc(g_session.mqtt_port,  strlen(port) + 1);
+    char *tmp = (char *)realloc(g_session.mqtt_port, strlen(port) + 1);
+    if (tmp == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(g_session.mqtt_port);
+        g_session.mqtt_port = NULL;
+        return false;
+    }
+    g_session.mqtt_port = tmp;
     strcpy(g_session.mqtt_port, port);
     return true;
 }
@@ -91,7 +105,14 @@ static bool setDefaultMqttTopic(const char *topic) {
         return false;
     }
 
-    g_session.mqtt_topic = (char *)realloc(g_session.mqtt_topic, strlen(topic) + 1);
+    char *tmp = (char *)realloc(g_session.mqtt_topic, strlen(topic) + 1);
+    if (tmp == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(g_session.mqtt_topic);
+        g_session.mqtt_topic = NULL;
+        return false;
+    }
+    g_session.mqtt_topic = tmp;
     strcpy(g_session.mqtt_topic, topic);
     return true;
 }
@@ -343,7 +364,7 @@ void preferences_load_callback(json_t *root) {
     int b1;
     int i1;
     const char *s1;
-    char tempStr [500]; // to use str_lower() since json unpack uses const char *
+    char tempStr [500] = {0};
 
     // Logging Level
     if (json_unpack_ex(root, &up_error, 0, "{s:s}", "client.debug.level", &s1) == 0) {
