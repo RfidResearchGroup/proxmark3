@@ -175,6 +175,38 @@ static u8_t spiffs_cache_buf[RDV40_SPIFFS_CACHE_SZ] __attribute__((aligned));
 
 static spiffs fs;
 
+// One file descriptor held open across the packets of an upload.
+//
+// SPIFFS has no directory: SPIFFS_open() by name walks the object lookup page of
+// every block and reads the header of each index page it meets to compare names.
+// Doing that per packet makes an upload cost packets x filesystem size - measured
+// on a 2MB filesystem, one open reads ~120KB of flash, so storing a 512KB file
+// spent 16MB of reads finding the same file 131 times over.
+//
+// Only append_to_spiffs() fills this in.  Every other path into the filesystem
+// calls spiffs_close_cached() first, so a held descriptor can never be seen by
+// another operation - the descriptor is closed, and its writes flushed, before
+// anything else looks at the file.
+static spiffs_file g_cached_fd = -1;
+static char g_cached_fn[SPIFFS_OBJ_NAME_LEN] = {0};
+
+static int rdv40_spiffs_mounted(void);
+
+static void spiffs_close_cached(void) {
+
+    if (g_cached_fd < 0) {
+        return;
+    }
+
+    // an unmount already invalidated it, do not touch the dead handle
+    if (rdv40_spiffs_mounted()) {
+        SPIFFS_close(&fs, g_cached_fd);
+    }
+
+    g_cached_fd = -1;
+    g_cached_fn[0] = '\0';
+}
+
 static enum spiffs_mount_status {
     RDV40_SPIFFS_UNMOUNTED,
     RDV40_SPIFFS_MOUNTED,
@@ -234,6 +266,9 @@ int rdv40_spiffs_unmount(void) {
         return SPIFFS_ERR_NOT_MOUNTED;
     }
 
+    // the descriptor does not survive the unmount, flush it out first
+    spiffs_close_cached();
+
     SPIFFS_clearerr(&fs);
     SPIFFS_unmount(&fs);
 
@@ -245,6 +280,7 @@ int rdv40_spiffs_unmount(void) {
 }
 
 int rdv40_spiffs_check(void) {
+    spiffs_close_cached();
     rdv40_spiffs_lazy_mount();
     SPIFFS_check(&fs);
     SPIFFS_gc_quick(&fs, 0);
@@ -268,6 +304,7 @@ int rdv40_spiffs_write_status(void) {
 
 void write_to_spiffs(const char *filename, const uint8_t *src, uint32_t size) {
     g_spiffs_write_res = SPIFFS_OK;
+    spiffs_close_cached();
     spiffs_file fd = SPIFFS_open(&fs, filename, SPIFFS_CREAT | SPIFFS_TRUNC | SPIFFS_RDWR, 0);
     if (fd < 0) {
         g_spiffs_write_res = SPIFFS_errno(&fs);
@@ -284,21 +321,35 @@ void write_to_spiffs(const char *filename, const uint8_t *src, uint32_t size) {
 
 void append_to_spiffs(const char *filename, const uint8_t *src, uint32_t size) {
     g_spiffs_write_res = SPIFFS_OK;
-    spiffs_file fd = SPIFFS_open(&fs, filename, SPIFFS_APPEND | SPIFFS_RDWR, 0);
-    if (fd < 0) {
-        g_spiffs_write_res = SPIFFS_errno(&fs);
-        Dbprintf("open errno %i\n", g_spiffs_write_res);
-        return;
+
+    // reuse the descriptor when this is another packet of the same file
+    if ((g_cached_fd < 0) || (strncmp(filename, g_cached_fn, sizeof(g_cached_fn)) != 0)) {
+
+        spiffs_close_cached();
+
+        spiffs_file fd = SPIFFS_open(&fs, filename, SPIFFS_APPEND | SPIFFS_RDWR, 0);
+        if (fd < 0) {
+            g_spiffs_write_res = SPIFFS_errno(&fs);
+            Dbprintf("open errno %i\n", g_spiffs_write_res);
+            return;
+        }
+
+        g_cached_fd = fd;
+        strncpy(g_cached_fn, filename, sizeof(g_cached_fn) - 1);
+        g_cached_fn[sizeof(g_cached_fn) - 1] = '\0';
     }
+
     // Note: SPIFFS_write() doesn't declare third parameter as const (but should)
-    if (SPIFFS_write(&fs, fd, (void *)src, size) < 0) {
+    if (SPIFFS_write(&fs, g_cached_fd, (void *)src, size) < 0) {
         g_spiffs_write_res = SPIFFS_errno(&fs);
         Dbprintf("errno %i\n", g_spiffs_write_res);
+        // do not hold on to a descriptor that just failed
+        spiffs_close_cached();
     }
-    SPIFFS_close(&fs, fd);
 }
 
 void read_from_spiffs(const char *filename, uint8_t *dst, uint32_t size) {
+    spiffs_close_cached();
     spiffs_file fd = SPIFFS_open(&fs, filename, SPIFFS_RDWR, 0);
     if (SPIFFS_read(&fs, fd, dst, size) < 0) {
         Dbprintf("errno %i\n", SPIFFS_errno(&fs));
@@ -307,18 +358,21 @@ void read_from_spiffs(const char *filename, uint8_t *dst, uint32_t size) {
 }
 
 static void rename_in_spiffs(const char *old_filename, const char *new_filename) {
+    spiffs_close_cached();
     if (SPIFFS_rename(&fs, old_filename, new_filename) < 0) {
         Dbprintf("errno %i\n", SPIFFS_errno(&fs));
     }
 }
 
 static void remove_from_spiffs(const char *filename) {
+    spiffs_close_cached();
     if (SPIFFS_remove(&fs, filename) < 0) {
         Dbprintf("errno %i\n", SPIFFS_errno(&fs));
     }
 }
 
 uint32_t size_in_spiffs(const char *filename) {
+    spiffs_close_cached();
     spiffs_stat s;
     if (SPIFFS_stat(&fs, filename, &s) < 0) {
         Dbprintf("errno %i\n", SPIFFS_errno(&fs));
@@ -328,6 +382,7 @@ uint32_t size_in_spiffs(const char *filename) {
 }
 
 static rdv40_spiffs_fsinfo info_of_spiffs(void) {
+    spiffs_close_cached();
     rdv40_spiffs_fsinfo fsinfo;
     fsinfo.blockSize = SPIFFS_CFG_LOG_BLOCK_SZ;
     fsinfo.pageSize = LOG_PAGE_SIZE;
@@ -346,6 +401,7 @@ static rdv40_spiffs_fsinfo info_of_spiffs(void) {
 }
 
 int exists_in_spiffs(const char *filename) {
+    spiffs_close_cached();
     spiffs_stat stat;
     int rc = SPIFFS_stat(&fs, filename, &stat);
     return (rc == SPIFFS_OK);
@@ -389,6 +445,8 @@ static RDV40SpiFFSFileType filetype_in_spiffs(const char *filename) {
 }
 
 static void copy_in_spiffs(const char *src, const char *dst) {
+
+    spiffs_close_cached();
 
     // no BigBuf_calloc(filesize) here: a file can be bigger than BigBuf, and bigger
     // than the uint16_t BigBuf_calloc() takes.  Copy it in SPIFFS_WRITE_CHUNK_SIZE
@@ -743,6 +801,8 @@ static int resolve_in_spiffs(const char *filename, char *dst, uint16_t dstlen) {
 // Expects the filesystem to be mounted. Returns bytes streamed, or a negative PM3_E*
 static int stream_from_spiffs(const char *filename, uint32_t offset, uint32_t size, uint8_t *chunkbuf, uint16_t chunklen, spiffs_chunk_cb_t cb) {
 
+    spiffs_close_cached();
+
     char target[SPIFFS_OBJ_NAME_LEN] = {0};
     int res = resolve_in_spiffs(filename, target, sizeof(target));
     if (res != PM3_SUCCESS) {
@@ -866,6 +926,8 @@ void rdv40_spiffs_safe_print_tree(void) {
     struct spiffs_dirent e;
     struct spiffs_dirent *pe = &e;
 
+    spiffs_close_cached();
+
     char *resolvedlink = (char *)BigBuf_calloc(11 + SPIFFS_OBJ_NAME_LEN);
     char *linkdest = (char *)BigBuf_calloc(SPIFFS_OBJ_NAME_LEN);
     bool printed = false;
@@ -898,6 +960,8 @@ void rdv40_spiffs_safe_print_tree(void) {
 }
 
 void rdv40_spiffs_safe_wipe(void) {
+
+    spiffs_close_cached();
 
     int changed = rdv40_spiffs_lazy_mount();
 
