@@ -998,7 +998,7 @@ void MifareAcquireNonces(const mf_acquire_nonces_t *payload) {
     uint8_t *buf = response->nonces;
 
     uint32_t cuid = 0;
-    int16_t isOK = PM3_SUCCESS;
+    int8_t isOK = PM3_SUCCESS;      // reply_ng() takes int8_t, match it
     uint16_t num_nonces = 0;
     uint8_t cascade_levels = 0;
     uint8_t blockNo = payload->blockno;
@@ -1119,7 +1119,7 @@ void MifareAcquireEncryptedNonces(const mf_acquire_nonces_t *payload) {
 
     uint64_t ui64Key = bytes_to_num(payload->key, 6);
     uint32_t cuid = 0;
-    int16_t isOK = PM3_SUCCESS;
+    int8_t isOK = PM3_SUCCESS;      // reply_ng() takes int8_t, match it
     uint16_t num_nonces = 0;
     uint16_t num_pairs = 0;
     uint8_t nt_par_enc = 0;
@@ -1287,7 +1287,7 @@ int MifareAcquireStaticEncryptedNonces(uint32_t flags, const uint8_t *key, bool 
         return PM3_EINVARG;
     }
     uint32_t cuid = 0;
-    int16_t isOK = PM3_SUCCESS;
+    int8_t isOK = PM3_SUCCESS;      // reply_ng() takes int8_t, match it
     uint8_t cascade_levels = 0;
     bool have_uid = false;
 
