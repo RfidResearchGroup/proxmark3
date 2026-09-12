@@ -1825,7 +1825,7 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
     BigBuf_Clear_ext(false);
     set_tracing(true);
 
-    int16_t isOK = PM3_ESOFT;
+    int8_t isOK = PM3_ESOFT;        // reply_ng() takes int8_t, match it
     LED_C_ON();
 
     // Main loop - get crypted nonces for target sector
@@ -2677,7 +2677,7 @@ void MifareChkKeys_file(uint8_t *fn) {
 //-----------------------------------------------------------------------------
 void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key) {
 
-    uint16_t isOK = PM3_EUNDEF;
+    int8_t isOK = PM3_EUNDEF;       // reply_ng() takes int8_t, match it
     uint8_t uid[10] = { 0 };
     uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
@@ -4074,7 +4074,7 @@ void MifareSetMod(uint8_t *datain) {
     uint64_t ui64Key = bytes_to_num(datain + 1, 6);
 
     // variables
-    uint16_t isOK = PM3_EUNDEF;
+    int8_t isOK = PM3_EUNDEF;       // reply_ng() takes int8_t, match it
     uint8_t *uid = BigBuf_calloc(10);
 
     uint32_t cuid = 0;
