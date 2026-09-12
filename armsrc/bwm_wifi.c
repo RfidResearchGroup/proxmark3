@@ -317,6 +317,16 @@ int bwm_esp_get_version(uint8_t *buf, uint16_t *buflen) {
     return bwm_cmd(BWM_CMD_GET_VERSION_INFO, NULL, 0, buf, buflen, 3000);
 }
 
+int bwm_esp_get_ble_name(uint8_t *buf, uint16_t *buflen) {
+    return bwm_cmd(BWM_CMD_GET_BLE_DEVICE_NAME, NULL, 0, buf, buflen, 3000);
+}
+
+int bwm_esp_set_ble_name(const uint8_t *name, uint16_t len) {
+    // The ESP validates length and stores the name in NVS; it applies at BLE
+    // startup, so the caller reboots the ESP afterwards to make it take effect.
+    return bwm_cmd(BWM_CMD_SET_BLE_DEVICE_NAME, name, len, NULL, NULL, 3000);
+}
+
 int bwm_esp_ota_begin(uint32_t total_size) {
     // SILENCE ESP log forwarding for the OTA. With it on, the ESP's background
     // log broadcasts (WiFi/coex/BLE) interleave with the per-chunk acks across

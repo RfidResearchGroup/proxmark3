@@ -2643,10 +2643,70 @@ static int CmdBWMUpgrade(const char *Cmd) {
 }
 static int CmdHelpBwm(const char *Cmd);
 
+static int CmdBwmName(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwm name",
+                  "Get or set the BWM BLE advertising name (stored on the BWM, in NVS).\n"
+                  "With no --set, prints the current name. Setting a name stores it and reboots\n"
+                  "the BWM to apply it - this briefly drops a BLE/WiFi connection; reconnect after\n"
+                  "a few seconds. Over USB the reboot is not noticeable.",
+                  "hw bwm name                 --> show current BLE name\n"
+                  "hw bwm name --set MyPM5      --> set BLE name to 'MyPM5'");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "set", "<name>", "new BLE name (1-31 chars); omit to read current name"),
+        arg_param_end,
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t name[64] = {0};
+    int nlen = sizeof(name) - 1; // CLIGetStrWithReturn does not guarantee NUL-termination
+    CLIGetStrWithReturn(ctx, 1, name, &nlen);
+    CLIParserFree(ctx);
+
+    if (nlen == 0) {
+        // GET
+        uint8_t a[1] = { BWM_BLE_NAME_ACTION_GET };
+        clearCommandBuffer();
+        SendCommandNG(CMD_PM5_BWM_BLE_NAME, a, sizeof(a));
+        PacketResponseNG r;
+        if ((WaitForResponseTimeout(CMD_PM5_BWM_BLE_NAME, &r, 5000) == false) || (r.status != PM3_SUCCESS)) {
+            PrintAndLogEx(FAILED, "failed to read BWM BLE name (is a responsive BWM fitted?)");
+            return PM3_EFAILED;
+        }
+        char out[BWM_BLE_NAME_MAX_LEN + 1] = {0};
+        uint16_t n = (r.length < sizeof(out) - 1) ? r.length : (uint16_t)(sizeof(out) - 1);
+        memcpy(out, r.data.asBytes, n);
+        PrintAndLogEx(SUCCESS, "BWM BLE name..... " _YELLOW_("%s"), out);
+        return PM3_SUCCESS;
+    }
+
+    // SET
+    if (nlen > BWM_BLE_NAME_MAX_LEN) {
+        PrintAndLogEx(FAILED, "name too long: %d chars (max " _YELLOW_("%d") ")", nlen, BWM_BLE_NAME_MAX_LEN);
+        return PM3_EINVARG;
+    }
+    uint8_t payload[1 + BWM_BLE_NAME_MAX_LEN];
+    payload[0] = BWM_BLE_NAME_ACTION_SET;
+    memcpy(payload + 1, name, nlen);
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_BLE_NAME, payload, (uint16_t)(1 + nlen));
+    PacketResponseNG r;
+    if ((WaitForResponseTimeout(CMD_PM5_BWM_BLE_NAME, &r, 5000) == false) || (r.status != PM3_SUCCESS)) {
+        PrintAndLogEx(FAILED, "failed to set BWM BLE name (is a responsive BWM fitted?)");
+        return PM3_EFAILED;
+    }
+    PrintAndLogEx(SUCCESS, "BWM BLE name set to " _YELLOW_("%s"), name);
+    PrintAndLogEx(INFO, "BWM is rebooting to apply the new name...");
+    PrintAndLogEx(HINT, "If you are connected over BLE or WiFi the link will drop briefly - reconnect after a few seconds");
+    return PM3_SUCCESS;
+}
+
 static command_t BwmCommandTable[] = {
     {"help",     CmdHelpBwm,    AlwaysAvailable, "This help"},
     {"autooff",  CmdBwmAutoOff, IfPm5, "Toggle auto power-off on USB unplug"},
     {"charge",   CmdBwmCharge,  IfPm5, "Enable/disable battery charging (one-shot)"},
+    {"name",     CmdBwmName,    IfPm5, "Get/set the BWM BLE advertising name"},
     {"setcap",   CmdBwmSetCap,  IfPm5, "Set fuel-gauge design capacity (run once after battery change)"},
     {"upgrade",  CmdBWMUpgrade, IfPm5, "Reflash BWM (ESP32) firmware over the BWM link, no header"},
     {"vchg",     CmdBwmVchg,    IfPm5, "Set charger charge-voltage target (default 4100 mV)"},

@@ -86,7 +86,11 @@ int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out);
 #define BWM_CMD_GET_VERSION_INFO   1000   // resp: running firmware version string
 #define BWM_CMD_STOP_BLE_SPP       4022   // no payload: stop BLE during OTA (flash contention)
 #define BWM_CMD_START_BLE_SPP      4021   // no payload: restore BLE after OTA
+#define BWM_CMD_SET_BLE_DEVICE_NAME 4002   // req: name bytes
+#define BWM_CMD_GET_BLE_DEVICE_NAME 4003   // resp: current BLE device name string
 int bwm_esp_get_version(uint8_t *buf, uint16_t *buflen);
+int bwm_esp_get_ble_name(uint8_t *buf, uint16_t *buflen);
+int bwm_esp_set_ble_name(const uint8_t *name, uint16_t len);
 int bwm_esp_ota_begin(uint32_t total_size);
 int bwm_esp_ota_write(const uint8_t *data, uint16_t len);
 int bwm_esp_ota_end(void);
