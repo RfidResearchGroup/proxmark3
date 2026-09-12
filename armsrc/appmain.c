@@ -89,6 +89,7 @@
 #include "bwm_charger.h"   // BWM charger / fuel-gauge + low-batt warning (WITH_BWM_*)
 #include "buzzer.h"        // PM5 mainboard buzzer API
 #include "rgb_indicator.h" // PM5 antenna-RGB power/battery indicator (WITH_PM5_PWR_LED)
+#include "pm5_power.h"     // PM5 power-save idle (clock scaling + WFI)
 
 
 #ifdef WITH_PM5_AUTOOFF
@@ -605,6 +606,9 @@ static void SendStatus(uint32_t wait) {
             Dbprintf("  BWM fw version...... " _YELLOW_("%s"), "unknown");
         }
     }
+#endif
+#ifdef PM5
+    pm5_power_print_status();
 #endif
     printConnSpeed(wait);
     DbpString(_CYAN_("Various"));
@@ -4286,8 +4290,15 @@ static void PacketReceived(PacketCommandNG *packet) {
 #endif
             break;
         }
-#endif
-#endif
+#endif // WITH_BWM_STATUS
+        case CMD_PM5_POWERSAVE: {
+            // Payload: 1 byte, non-zero = enable (the default), zero = disable.
+            pm5_power_set_enabled((packet->length >= 1) ? (packet->data.asBytes[0] != 0) : true);
+            uint8_t state = pm5_power_get_enabled() ? 1 : 0;
+            reply_ng(CMD_PM5_POWERSAVE, PM3_SUCCESS, &state, 1);
+            break;
+        }
+#endif // PM5
         default: {
             Dbprintf("%s: 0x%04x", "unknown command:", packet->cmd);
             break;
@@ -4372,10 +4383,17 @@ void __attribute__((noreturn)) AppMain(void) {
     // Negotiate the link up from the boot baud; harmless no-op if the ESP is
     // older or the target is unreachable (stays at BWM_UART_BAUD).
     bwm_fwd_negotiate_baud(BWM_UART_BAUD_TARGET);
+    // The ESP only light-sleeps once it has seen a preamble, and ours went out
+    // while it was still booting if both powered up together: send it again.
+    bwm_uart_wake_next();
 #endif
 
 #ifdef WITH_BWM_CHARGERKICK
     bwm_charger_kick();
+#endif
+
+#ifdef PM5
+    pm5_power_init();
 #endif
 
     for (;;) {
@@ -4405,7 +4423,13 @@ void __attribute__((noreturn)) AppMain(void) {
 
         int ret = receive_ng(&rx);
         if (ret == PM3_SUCCESS) {
+#ifdef PM5
+            pm5_power_boost();   // commands assume the full 288 MHz clock
+#endif
             PacketReceived(&rx);
+#ifdef PM5
+            pm5_power_unboost();
+#endif
             last_activity_label = GetTickCountLabel();
             last_activity_tick = GetTickCount();
         } else if (ret != PM3_ENODATA) {
@@ -4494,5 +4518,9 @@ void __attribute__((noreturn)) AppMain(void) {
 
 #endif
         }
+
+#ifdef PM5
+        pm5_power_idle();
+#endif
     }
 }

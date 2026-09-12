@@ -11254,6 +11254,19 @@
             ],
             "usage": "hw ping [-h] [-l <dec>]"
         },
+        "hw powersave": {
+            "command": "hw powersave",
+            "description": "Toggle the PM5 power-save idle. Default is on: between commands the core drops from 288 to 48 MHz with the PLL off, the FPGA clock stopped and the CPU halted (WFI) until the next interrupt or the 1 ms wake tick. Commands run at full speed; turn it off to keep the core at 288 MHz and spinning. Runtime only: resets to on at each boot. See `hw status` for the idle stats.",
+            "notes": [
+                "hw powersave off -> stay at 288 MHz, no idle sleep",
+                "hw powersave on -> re-enable the power-save idle"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hw powersave [-h]"
+        },
         "hw qc_pm5": {
             "command": "hw qc_pm5",
             "description": "QC Test for the PM5",
@@ -16644,8 +16657,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 926,
+        "commands_extracted": 927,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-18T16:52:04+00:00"
+        "extracted_on": "2026-09-18T21:19:12+00:00"
     }
 }

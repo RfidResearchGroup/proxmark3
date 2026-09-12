@@ -1029,6 +1029,7 @@ Check column "offline" for their availability.
 |`hw lcd                 `|N       |`Send command/data to LCD`
 |`hw lcdreset            `|N       |`Hardware reset LCD`
 |`hw ping                `|N       |`Test if the Proxmark3 is responsive`
+|`hw powersave           `|N       |`Enable/disable the PM5 power-save idle`
 |`hw readmem             `|N       |`Read from MCU flash`
 |`hw reset               `|N       |`Reset the device`
 |`hw setlfdivisor        `|N       |`Drive LF antenna at 12MHz / (divisor + 1)`

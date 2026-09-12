@@ -313,6 +313,7 @@ if (PM5)
     list(APPEND THUMBSRC startup_at32f435_437.s)
     list(APPEND THUMBSRC i2c.c)
     list(APPEND THUMBSRC buzzer.c) # generic mainboard buzzer (QC self-test + BWM low-batt)
+    list(APPEND THUMBSRC pm5_power.c) # low-power idle (core clock scaling + WFI)
     list(APPEND THUMBSRC at32_unit_test.c) # TODO DXL: AT32单元测试代码
 endif ()
 
