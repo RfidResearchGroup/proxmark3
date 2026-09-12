@@ -895,6 +895,10 @@ typedef struct {
 #define CMD_PM5_BWM_WIFI    0x017C
 #define CMD_PM5_BWM_SET_VCHG 0x017D
 #define CMD_PM5_BWM_ESP_OTA  0x017E
+#define CMD_PM5_BWM_BLE_NAME 0x017F   // payload: [action:u8][name bytes if SET]
+#define BWM_BLE_NAME_ACTION_GET 0x00  // resp: current BLE device name string
+#define BWM_BLE_NAME_ACTION_SET 0x01  // req: name bytes follow the action byte; BWM reboots to apply
+#define BWM_BLE_NAME_MAX_LEN    31    // usable chars; ESP name buffer is 32 incl NUL
 #define BWM_OTA_ACTION_BEGIN 0x00
 #define BWM_OTA_ACTION_WRITE 0x01
 #define BWM_OTA_ACTION_END   0x02
