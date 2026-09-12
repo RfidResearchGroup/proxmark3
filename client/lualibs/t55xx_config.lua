@@ -131,11 +131,25 @@ function Config.detect(offline)
               .. 'Rebuild with `make client` and start a new pm3 session', 0)
     end
 
-    local block0 = out:match('Block0%.+%s*(%x%x%x%x%x%x%x%x)')
-    if block0 == nil then return nil, out end
+    -- Everything between the Block0 label and the next field.  That covers both
+    -- forms detect prints: one word, or `ambiguous, one of:` followed by a
+    -- candidate per line.  PSK2 and PSK3 are the same waveform under a
+    -- different reading, so a candidate list is detect being honest, not
+    -- detect failing, and the suite has to be able to score it
+    local seg = out:match('Block0%.+(.-)Downlink mode') or out:match('Block0%.+([^\n]*)')
+
+    local cands = {}
+    if seg ~= nil then
+        for w in seg:gmatch('(%x%x%x%x%x%x%x%x)') do
+            table.insert(cands, w)
+        end
+    end
+
+    if #cands == 0 then return nil, out end
 
     return {
-        block0 = block0,
+        block0 = cands[1],
+        candidates = cands,
         modulation = out:match('Modulation%.+%s*([^\n]-)%s*\n'),
         bitrate = out:match('Bit rate%.+%s*([^\n]-)%s*\n'),
         offset = out:match('Offset%.+%s*(%d+)'),
@@ -265,7 +279,26 @@ function Config.check(report, block0, opts)
     local found = Config.detect(opts.offline)
     core.clearCommandBuffer()
 
-    local res = report:add(block0, found and found.block0 or nil)
+    local got, extra = nil, {}
+
+    if found ~= nil then
+
+        got = found.block0
+
+        -- a word the tag could be holding counts as read back.  Say how many
+        -- readings were live, so an ambiguous pass is not mistaken for a clean one
+        if #found.candidates > 1 then
+
+            for _, c in ipairs(found.candidates) do
+                if c:upper() == block0:upper() then got = c end
+            end
+
+            extra.ok = (got:upper() == block0:upper())
+            extra.note = extra.ok and ('ambiguous, 1 of ' .. #found.candidates) or 'MISMATCH'
+        end
+    end
+
+    local res = report:add(block0, got, extra)
 
     if opts.verbose then
         core.console('lf t55xx info')

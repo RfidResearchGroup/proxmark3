@@ -759,6 +759,7 @@ Check column "offline" for their availability.
 |`hf mfu dump            `|N       |`Dump MIFARE Ultralight family tag to binary file`
 |`hf mfu incr            `|N       |`Increments Ev1/NTAG counter`
 |`hf mfu info            `|N       |`Tag information`
+|`hf mfu ndefformat      `|N       |`Format tag as NDEF, writes the Capability Container`
 |`hf mfu ndefread        `|N       |`Prints NDEF records from card`
 |`hf mfu ndefwrite       `|N       |`Write NDEF records to card`
 |`hf mfu rdbl            `|N       |`Read block`
@@ -1016,7 +1017,7 @@ Check column "offline" for their availability.
 |`hw fpga                `|N       |`Fpga commands`
 |`hw fpgaoff             `|N       |`Turn off FPGA on device`
 |`hw ant_pm5             `|N       |`Control the antennal of pm5`
-|`hw qc_pm5              `|N       |`Perform QC test for the PM5`
+|`hw qc_pm5              `|N       |`Perform QC test (hardware or IO) for the PM5`
 |`hw factorydata         `|N       |`Get/Set the factory data for Device`
 |`hw lcd                 `|N       |`Send command/data to LCD`
 |`hw lcdreset            `|N       |`Hardware reset LCD`
@@ -1028,13 +1029,23 @@ Check column "offline" for their availability.
 |`hw setmux              `|N       |`Set the ADC mux to a specific value`
 |`hw standalone          `|N       |`Start installed standalone mode on device`
 |`hw tia                 `|N       |`Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider`
-|`hw bwmsetcap           `|N       |`Set BWM fuel-gauge design capacity (PM5, run once after battery change)`
-|`hw bwmvchg             `|N       |`Set BWM charger charge-voltage target (PM5, default 4100 mV)`
-|`hw bwmcharge           `|N       |`Enable/disable BWM battery charging (PM5, one-shot)`
-|`hw bwmautooff          `|N       |`Toggle auto power-off on USB unplug (PM5, BWM)`
-|`hw bwmwifi             `|N       |`Bring up BWM WiFi (STA + TCP server) for a tcp: connection (PM5)`
 |`hw tune                `|N       |`Measure tuning of device antenna`
 |`hw decay               `|N       |`Measure HF antenna decay after field-off`
+
+
+### hw bwm
+
+ { BWM (battery/wireless module) commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hw bwm help            `|Y       |`This help`
+|`hw bwm autooff         `|N       |`Toggle auto power-off on USB unplug`
+|`hw bwm charge          `|N       |`Enable/disable battery charging (one-shot)`
+|`hw bwm setcap          `|N       |`Set fuel-gauge design capacity (run once after battery change)`
+|`hw bwm upgrade         `|N       |`Reflash BWM (ESP32) firmware over the BWM link, no header`
+|`hw bwm vchg            `|N       |`Set charger charge-voltage target (default 4100 mV)`
+|`hw bwm wifi            `|N       |`Bring up WiFi (STA + TCP server) for a tcp: connection`
 
 
 ### lf
@@ -1667,6 +1678,7 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
+|`nfc type2 format       `|N       |`format MIFARE Ultralight / NTAG as NFC Forum Tag Type 2`
 |`nfc type2 read         `|N       |`read NFC Forum Tag Type 2`
 |`nfc type2 write        `|N       |`write NFC Forum Tag Type 2`
 |`nfc type2 help         `|Y       |`This help`

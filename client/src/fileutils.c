@@ -982,6 +982,53 @@ int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen,
             }
             break;
         }
+        case jsfMfDesfireKeys_v2: {
+
+            // key lengths and names, indexed by DesfireCryptoAlgorithm
+            static const char *algo_name[DESFIRE_MAX_ALGO_COUNT] = {"DES", "2TDEA", "3TDEA", "AES"};
+            static const uint8_t algo_keylen[DESFIRE_MAX_ALGO_COUNT] = {
+                DES_KEY_LEN, T2DES_KEY_LEN, T3DES_KEY_LEN, AES_KEY_LEN
+            };
+
+            desfire_keys_dump_t *dump = (desfire_keys_dump_t *)(void *)data;
+
+            JsonSaveStr(root, "FileType", "mfdes v2");
+
+            if (dump->card_info.uidlen > 0) {
+                JsonSaveBufAsHexCompact(root, "$.Card.UID", dump->card_info.uid, dump->card_info.uidlen);
+                JsonSaveBufAsHexCompact(root, "$.Card.SAK", &dump->card_info.sak, 1);
+                JsonSaveBufAsHexCompact(root, "$.Card.ATQA", dump->card_info.atqa, 2);
+                if (dump->card_info.ats_len > 0) {
+                    JsonSaveBufAsHexCompact(root, "$.Card.ATS", dump->card_info.ats, dump->card_info.ats_len);
+                }
+            }
+
+            uint8_t appcount = dump->appcount;
+            if (appcount > DESFIRE_MAX_APP_COUNT) {
+                appcount = DESFIRE_MAX_APP_COUNT;
+            }
+
+            for (uint8_t i = 0; i < appcount; i++) {
+
+                desfire_app_keys_t *app = &dump->app[i];
+
+                for (uint8_t algo = 0; algo < DESFIRE_MAX_ALGO_COUNT; algo++) {
+
+                    for (uint8_t keyno = 0; keyno < DESFIRE_MAX_KEY_COUNT; keyno++) {
+
+                        if (app->keys[algo][keyno][0] == 0) {
+                            continue;
+                        }
+
+                        snprintf(path, sizeof(path), "$.Applications.%06X.%s.%u.Key",
+                                 app->aid, algo_name[algo], keyno);
+
+                        JsonSaveBufAsHexCompact(root, path, &app->keys[algo][keyno][1], algo_keylen[algo]);
+                    }
+                }
+            }
+            break;
+        }
         case jsfCustom: {
             (*callback)(root);
             break;
@@ -2697,6 +2744,65 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         */
 //        memcpy(&data[14 + atslen], dvdata, 4 * 0xE * (24 + 1));
 
+        goto out;
+    }
+
+    if (!strcmp(ctype, "mfdes v2")) {
+
+        if (maxdatalen < sizeof(desfire_keys_dump_t)) {
+            PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu, need %zu for a mfdes v2 dump", maxdatalen, sizeof(desfire_keys_dump_t));
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+
+        JsonLoadBufAsHex(root, "$.Card.UID", udata.mfdes->card_info.uid, sizeof(udata.mfdes->card_info.uid), &len);
+        udata.mfdes->card_info.uidlen = len;
+        JsonLoadBufAsHex(root, "$.Card.SAK", &udata.mfdes->card_info.sak, 1, &len);
+        JsonLoadBufAsHex(root, "$.Card.ATQA", udata.mfdes->card_info.atqa, 2, &len);
+        JsonLoadBufAsHex(root, "$.Card.ATS", udata.mfdes->card_info.ats, sizeof(udata.mfdes->card_info.ats), &len);
+        udata.mfdes->card_info.ats_len = len;
+
+        // key lengths indexed by DesfireCryptoAlgorithm
+        static const char *algo_name[DESFIRE_MAX_ALGO_COUNT] = {"DES", "2TDEA", "3TDEA", "AES"};
+        static const uint8_t algo_keylen[DESFIRE_MAX_ALGO_COUNT] = {
+            DES_KEY_LEN, T2DES_KEY_LEN, T3DES_KEY_LEN, AES_KEY_LEN
+        };
+
+        json_t *apps = json_object_get(root, "Applications");
+        if (json_is_object(apps)) {
+
+            const char *aidstr = NULL;
+            json_t *value = NULL;
+
+            json_object_foreach(apps, aidstr, value) {
+
+                if (udata.mfdes->appcount >= DESFIRE_MAX_APP_COUNT) {
+                    PrintAndLogEx(WARNING, "loadFileJSONex: more than %d applications in file, ignoring the rest", DESFIRE_MAX_APP_COUNT);
+                    break;
+                }
+
+                desfire_app_keys_t *app = &udata.mfdes->app[udata.mfdes->appcount];
+                app->aid = strtoul(aidstr, NULL, 16) & 0xFFFFFF;
+
+                for (uint8_t algo = 0; algo < DESFIRE_MAX_ALGO_COUNT; algo++) {
+
+                    for (uint8_t keyno = 0; keyno < DESFIRE_MAX_KEY_COUNT; keyno++) {
+
+                        snprintf(blocks, sizeof(blocks), "$.%s.%u.Key", algo_name[algo], keyno);
+
+                        len = 0;
+                        JsonLoadBufAsHex(value, blocks, &app->keys[algo][keyno][1], algo_keylen[algo], &len);
+                        if (len == algo_keylen[algo]) {
+                            app->keys[algo][keyno][0] = 0x01;
+                        }
+                    }
+                }
+
+                udata.mfdes->appcount++;
+            }
+        }
+
+        *datalen = sizeof(desfire_keys_dump_t);
         goto out;
     }
 

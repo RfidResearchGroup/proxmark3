@@ -20,6 +20,7 @@
 #define CMDLFT55XX_H__
 
 #include "common.h"
+#include <stdbool.h>
 
 #define T55x7_CONFIGURATION_BLOCK       0x00
 #define T55x7_PWD_BLOCK                 0x07
@@ -158,10 +159,13 @@ typedef struct {
     } bitrate;
     bool Q5;
     bool ST;
-    uint8_t psk_carrier;    // observed psk subcarrier in field clocks, 2/4/8. 0 = not measured
-    uint8_t broadcast_blocks; // measured blocks per regular-read cycle. 0 = not measured
-    bool psk3_favoured;      // data blocks lean psk3, but do not settle it
-    bool pwd_known;         // usepwd below reflects a live detect, not a default
+    int32_t anchor_sample;
+    int32_t anchor_tracelen;   // graph length it was taken on, so a loaded file
+    bool anchor_valid;         // anchor_sample came from a live demodulation
+    uint8_t psk_carrier;       // observed psk subcarrier in field clocks, 2/4/8. 0 = not measured
+    uint8_t broadcast_blocks;  // measured blocks per regular-read cycle. 0 = not measured
+    bool psk3_favoured;        // data blocks lean psk3, but do not settle it
+    bool pwd_known;            // usepwd below reflects a live detect, not a default
     bool usepwd;
     uint32_t pwd;
     enum {

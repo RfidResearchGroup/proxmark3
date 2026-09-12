@@ -84,8 +84,7 @@ static uint8_t visa_parity(uint32_t id) {
 //see ASKDemod for what args are accepted
 int demodVisa2k(bool verbose) {
     (void) verbose; // unused so far
-    buffer_savestate_t saveState = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
-    saveState.offset = g_GridOffset;
+    buffer_savestate_t saveState = save_graphbuffer();
 
     //CmdAskEdgeDetect("");
 
@@ -93,8 +92,7 @@ int demodVisa2k(bool verbose) {
     bool st = true;
     if (ASKDemod_ext(64, 0, 0, 0, false, false, false, 1, &st) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ASK/Manchester Demod failed");
-        restore_bufferS32(saveState, g_GraphBuffer);
-        g_GridOffset = saveState.offset;
+        restore_graphbuffer(saveState);
         return PM3_ESOFT;
     }
     size_t size = g_DemodBufferLen;
@@ -109,8 +107,7 @@ int demodVisa2k(bool verbose) {
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ans: %d", ans);
 
-        restore_bufferS32(saveState, g_GraphBuffer);
-        g_GridOffset = saveState.offset;
+        restore_graphbuffer(saveState);
         return PM3_ESOFT;
     }
     setDemodBuff(g_DemodBuffer, 96, ans);
@@ -128,8 +125,7 @@ int demodVisa2k(bool verbose) {
     // test checksums
     if (chk != calc) {
         PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 checksum (%s) %x - %x\n", _RED_("fail"), chk, calc);
-        restore_bufferS32(saveState, g_GraphBuffer);
-        g_GridOffset = saveState.offset;
+        restore_graphbuffer(saveState);
         return PM3_ESOFT;
     }
     // parity
@@ -137,8 +133,7 @@ int demodVisa2k(bool verbose) {
     uint8_t chk_par = (raw3 & 0xFF0) >> 4;
     if (calc_par != chk_par) {
         PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 parity (%s) %x - %x\n", _RED_("fail"), chk_par, calc_par);
-        restore_bufferS32(saveState, g_GraphBuffer);
-        g_GridOffset = saveState.offset;
+        restore_graphbuffer(saveState);
         return PM3_ESOFT;
     }
     PrintAndLogEx(SUCCESS, "Visa2000 - Card " _GREEN_("%u") ", Raw: %08X%08X%08X", raw2,  raw1, raw2, raw3);

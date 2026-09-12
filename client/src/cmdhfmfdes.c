@@ -57,6 +57,10 @@
 
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
+// how many errors in a row from the card before we give up on a key number
+#define MFDES_CHK_MAX_ERRORS 10
+// bundled dictionary used when no -f is given
+#define MFDES_DEFAULT_DICT "mfdes_default_keys"
 #define MFDES_BRUTEAID_RESELECT_ATTEMPTS 5
 #define MFDES_BRUTEAID_RESELECT_WAIT_MS  200
 #define MFDES_BRUTEAID_MAD_START         0xF0000FU
@@ -818,14 +822,14 @@ static int CmdHF14ADesDefault(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("n",  "keyno", "<dec>", "Key number"),
-        arg_str0("t",  "algo", "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
-        arg_str0("k",  "key", "<hex>", "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
-        arg_str0(NULL, "kdf", "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
-        arg_str0("i",  "kdfi", "<hex>", "KDF input (1-31 hex bytes)"),
-        arg_str0("m",  "cmode", "<plain|mac|encrypt>", "Communicaton mode"),
-        arg_str0("c",  "ccset", "<native|niso|iso>", "Communicaton command set"),
-        arg_str0(NULL,  "schann", "<d40|ev1|ev2|lrp>", "Secure channel"),
+        arg_int0("n",  "keyno",  "<dec>", "Key number"),
+        arg_str0("t",  "algo",   "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
+        arg_str0("k",  "key",    "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
+        arg_str0(NULL, "kdf",    "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
+        arg_str0("i",  "kdfi",   "<hex>", "KDF input (1-31 hex bytes)"),
+        arg_str0("m",  "cmode",  "<plain|mac|encrypt>", "Communicaton mode"),
+        arg_str0("c",  "ccset",  "<native|niso|iso>", "Communicaton command set"),
+        arg_str0(NULL, "schann", "<d40|ev1|ev2|lrp>", "Secure channel"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -856,14 +860,14 @@ static int CmdHF14ADesDefault(const char *Cmd) {
 
     PrintAndLogEx(INFO, "-----------" _CYAN_("Default parameters") "---------------------------------");
 
-    PrintAndLogEx(INFO, "Key Num     : %d", defaultKeyNum);
-    PrintAndLogEx(INFO, "Algo        : %s", CLIGetOptionListStr(DesfireAlgoOpts, defaultAlgoId));
-    PrintAndLogEx(INFO, "Key         : %s", sprint_hex(defaultKey, desfire_get_key_length(defaultAlgoId)));
-    PrintAndLogEx(INFO, "KDF algo    : %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, defaultKdfAlgo));
-    PrintAndLogEx(INFO, "KDF input   : [%d] %s", defaultKdfInputLen, sprint_hex(defaultKdfInput, defaultKdfInputLen));
-    PrintAndLogEx(INFO, "Secure chan : %s", CLIGetOptionListStr(DesfireSecureChannelOpts, defaultSecureChannel));
-    PrintAndLogEx(INFO, "Command set : %s", CLIGetOptionListStr(DesfireCommandSetOpts, defaultCommSet));
-    PrintAndLogEx(INFO, "Comm mode   : %s", CLIGetOptionListStr(DesfireCommunicationModeOpts, defaultCommMode));
+    PrintAndLogEx(INFO, "Key num........ %d", defaultKeyNum);
+    PrintAndLogEx(INFO, "Algo........... %s", CLIGetOptionListStr(DesfireAlgoOpts, defaultAlgoId));
+    PrintAndLogEx(INFO, "Key............ %s", sprint_hex_inrow(defaultKey, desfire_get_key_length(defaultAlgoId)));
+    PrintAndLogEx(INFO, "KDF algo....... %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, defaultKdfAlgo));
+    PrintAndLogEx(INFO, "KDF input...... [%d] %s", defaultKdfInputLen, sprint_hex_inrow(defaultKdfInput, defaultKdfInputLen));
+    PrintAndLogEx(INFO, "Sec chann...... %s", CLIGetOptionListStr(DesfireSecureChannelOpts, defaultSecureChannel));
+    PrintAndLogEx(INFO, "Command set.... %s", CLIGetOptionListStr(DesfireCommandSetOpts, defaultCommSet));
+    PrintAndLogEx(INFO, "Command mode... %s", CLIGetOptionListStr(DesfireCommunicationModeOpts, defaultCommMode));
 
     return PM3_SUCCESS;
 }
@@ -1272,14 +1276,100 @@ static void DesFill2bPattern(
     (*startPattern)++;
 }
 
+// Try every key in `keyList` against every key number the `usedkeys` map marks as
+// in use on the currently selected application.  Found keys are stored in `found`.
+// Returns PM3_SUCCESS, or an error when the application can no longer be selected.
+static int AuthCheckDesfireKeyType(DesfireContext_t *dctx,
+                                   DesfireSecureChannel secureChannel,
+                                   uint32_t curaid,
+                                   DesfireCryptoAlgorithm keytype,
+                                   const char *keytypestr,
+                                   const uint8_t *keyList, size_t keyListStride, uint32_t keyListLen,
+                                   const int *usedkeys,
+                                   desfire_app_keys_t *found,
+                                   bool *result) {
+
+    size_t keylen = desfire_get_key_length(keytype);
+
+    for (uint8_t keyno = 0; keyno < DESFIRE_MAX_KEY_COUNT; keyno++) {
+
+        if (usedkeys[keyno] != 1 || found->keys[keytype][keyno][0] != 0) {
+            continue;
+        }
+
+        size_t errcount = 0;
+
+        for (uint32_t curkey = 0; curkey < keyListLen; curkey++) {
+
+            const uint8_t *key = &keyList[curkey * keyListStride];
+
+            DesfireSetKeyNoClear(dctx, keyno, keytype, (uint8_t *)key);
+
+            int res = DesfireAuthenticate(dctx, secureChannel, false);
+            if (res == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "AID 0x%06X, Found %s Key %02u... " _GREEN_("%s"),
+                              curaid, keytypestr, keyno, sprint_hex_inrow(key, keylen));
+
+                found->keys[keytype][keyno][0] = 0x01;
+                memcpy(&found->keys[keytype][keyno][1], key, keylen);
+                *result = true;
+
+                // EV2 and LRP turn an authenticated context into a "non first"
+                // auth for the next key number.  Start each one clean instead.
+                DesfireClearSession(dctx);
+                break;
+            }
+
+            // anything below 7 means the card gave up before the crypto stage,
+            // the channel is gone and the application has to be selected again
+            if (res < 7) {
+                DropField();
+                int selres = DesfireSelectAIDHex(dctx, curaid, false, 0);
+                if (selres != PM3_SUCCESS) {
+                    return selres;
+                }
+            }
+
+            // 4  - answer length doesn't match the algo
+            // 50 - PICC didn't answer AES,  51 - PICC didn't answer LRP
+            // the application doesn't use this key type, skip the rest of it
+            if (res == 4 || res == 50 || res == 51) {
+                return PM3_SUCCESS;
+            }
+
+            // 3 - invalid key number.  Every key fails the same way, but the
+            // remaining key numbers are still worth checking
+            if (res == 3) {
+                break;
+            }
+
+            // 1, 2, 5, 6 - transmit or local crypto error.  Carry on with the next
+            // key and only give up on this key number after a run of them
+            if (res < 7) {
+                errcount++;
+                if (errcount > MFDES_CHK_MAX_ERRORS) {
+                    if (g_debugMode) {
+                        PrintAndLogEx(DEBUG, "AID 0x%06X, %s key %02u... too many errors from card, skipping", curaid, keytypestr, keyno);
+                    }
+                    break;
+                }
+            } else {
+                errcount = 0;
+            }
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int AuthCheckDesfire(DesfireContext_t *dctx,
                             DesfireSecureChannel secureChannel,
                             const uint8_t *aid,
                             uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t deskeyListLen,
                             uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t aeskeyListLen,
                             uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], uint32_t k3kkeyListLen,
-                            uint8_t cmdKdfAlgo, uint8_t kdfInputLen, uint8_t *kdfInput,
-                            uint8_t foundKeys[4][0xE][24 + 1],
+                            bool autoschann,
+                            desfire_app_keys_t *found,
                             bool *result,
                             bool verbose) {
 
@@ -1292,34 +1382,78 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
         return PM3_ESOFT;
     }
 
-    int usedkeys[0xF] = {0};
+    int usedkeys[DESFIRE_MAX_KEY_COUNT + 1] = {0};
     bool des = false;
     bool tdes = false;
     bool aes = false;
     bool k3kdes = false;
 
+    bool uselrp = false;
+
     uint8_t data[250] = {0};
     size_t datalen = 0;
 
     res = DesfireGetKeySettings(dctx, data, &datalen);
-    if (res != PM3_SUCCESS && datalen < 2) {
-        PrintAndLogEx(ERR, "Could not get key settings");
-        return res;
-    }
-    uint8_t num_keys = data[1];
-    switch (num_keys >> 6) {
-        case 0:
+    if (res == PM3_SUCCESS && datalen >= 2) {
+
+        switch (data[1] >> 6) {
+            case 0:
+                des = true;
+                tdes = true;
+                break;
+            case 1:
+                k3kdes = true;
+                break;
+            case 2:
+                aes = true;
+                break;
+            default:
+                break;
+        }
+
+    } else {
+
+        // key settings are not readable.  Ask the card which AUTH commands it
+        // answers instead, the same way `hf mfdes detect` does
+        AuthCommandsChk_t authCmdCheck = {0};
+        DesfireCheckAuthCommands(ISW6bAID, curaid, NULL, 0, &authCmdCheck);
+
+        if (authCmdCheck.checked == false) {
+            PrintAndLogEx(ERR, "AID 0x%06X, could not get key settings", curaid);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (authCmdCheck.auth) {
             des = true;
             tdes = true;
-            break;
-        case 1:
-            k3kdes = true;
-            break;
-        case 2:
+            if (authCmdCheck.authISO) {
+                k3kdes = true;
+            }
+        }
+
+        if (authCmdCheck.authAES || authCmdCheck.authEV2) {
             aes = true;
-            break;
-        default:
-            break;
+        }
+
+        if (authCmdCheck.authLRP) {
+            aes = true;
+            uselrp = true;
+        }
+
+        if (des == false && tdes == false && aes == false && k3kdes == false) {
+            PrintAndLogEx(ERR, "AID 0x%06X, card answers no known auth command", curaid);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        // the probe dropped the field behind us
+        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "AID 0x%06X, can't re-select after the auth command probe", curaid);
+            DropField();
+            return PM3_ESOFT;
+        }
     }
 
     // always check master key
@@ -1343,153 +1477,78 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
                         usedkeys[fileList[i].fileSettings.chAccess] = 1;
                 }
             } else {
-                for (int i = 0; i < 0xE; i++)
+                for (int i = 0; i < DESFIRE_MAX_KEY_COUNT; i++)
                     usedkeys[i] = 1;
             }
         } else {
-            for (int i = 0; i < 0xE; i++)
+            for (int i = 0; i < DESFIRE_MAX_KEY_COUNT; i++)
                 usedkeys[i] = 1;
         }
     }
 
+    // An AES application runs either the EV1/EV2 channel or LRP and the key
+    // settings don't say which, so it takes one probe to tell them apart.
+    if (autoschann && aes && uselrp == false) {
+
+        uselrp = DesfireCheckAuthCmd(ISW6bAID, curaid, 0, MFDES_AUTHENTICATE_EV2F, true);
+
+        // the probe dropped the field behind us
+        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "AID 0x%06X, can't re-select after the LRP probe", curaid);
+            DropField();
+            return PM3_ESOFT;
+        }
+    }
+
+    if (autoschann && uselrp) {
+        secureChannel = DACLRP;
+    }
+
     if (verbose) {
         PrintAndLogEx(INFO, "Check: %s %s %s %s " NOLF, (des) ? "DES" : "", (tdes) ? "2TDEA" : "", (k3kdes) ? "3TDEA" : "", (aes) ? "AES" : "");
+        PrintAndLogEx(NORMAL, "channel: %s " NOLF, CLIGetOptionListStr(DesfireSecureChannelOpts, secureChannel));
         PrintAndLogEx(NORMAL, "keys: " NOLF);
-        for (int i = 0; i < 0xE; i++)
+        for (int i = 0; i < DESFIRE_MAX_KEY_COUNT; i++)
             if (usedkeys[i] == 1)
                 PrintAndLogEx(NORMAL, "%02x " NOLF, i);
         PrintAndLogEx(NORMAL, "");
     }
 
-    bool badlen = false;
+    const struct {
+        bool check;
+        DesfireCryptoAlgorithm keytype;
+        const char *name;
+        const uint8_t *list;
+        size_t stride;
+        uint32_t len;
+    } checks[] = {
+        { des,    T_DES,    "DES", (const uint8_t *)deskeyList, sizeof(deskeyList[0]), deskeyListLen },
+        { tdes,   T_3DES,   "2TDEA", (const uint8_t *)aeskeyList, sizeof(aeskeyList[0]), aeskeyListLen },
+        { aes,    T_AES,    "AES", (const uint8_t *)aeskeyList, sizeof(aeskeyList[0]), aeskeyListLen },
+        { k3kdes, T_3K3DES, "3TDEA", (const uint8_t *)k3kkeyList, sizeof(k3kkeyList[0]), k3kkeyListLen },
+    };
 
-    if (des) {
+    for (size_t i = 0; i < ARRAYLEN(checks); i++) {
 
-        for (uint8_t keyno = 0; keyno < 0xE; keyno++) {
+        if (checks[i].check == false) {
+            continue;
+        }
 
-            if (usedkeys[keyno] == 1 && foundKeys[0][keyno][0] == 0) {
-                for (uint32_t curkey = 0; curkey < deskeyListLen; curkey++) {
-                    DesfireSetKeyNoClear(dctx, keyno, T_DES, deskeyList[curkey]);
-                    res = DesfireAuthenticate(dctx, secureChannel, false);
-                    if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found DES Key %02u... " _GREEN_("%s"), curaid, keyno, sprint_hex(deskeyList[curkey], 8));
-                        foundKeys[0][keyno][0] = 0x01;
-                        *result = true;
-                        memcpy(&foundKeys[0][keyno][1], deskeyList[curkey], 8);
-                        break;
-                    } else if (res < 7) {
-                        badlen = true;
-                        DropField();
-                        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
-                        if (res != PM3_SUCCESS) {
-                            return res;
-                        }
-                        break;
-                    }
-                }
-                if (badlen == true) {
-                    badlen = false;
-                    break;
-                }
-            }
+        // LRP only ever carries AES keys
+        if (secureChannel == DACLRP && checks[i].keytype != T_AES) {
+            continue;
+        }
+
+        res = AuthCheckDesfireKeyType(dctx, secureChannel, curaid, checks[i].keytype, checks[i].name,
+                                      checks[i].list, checks[i].stride, checks[i].len,
+                                      usedkeys, found, result);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
         }
     }
 
-    if (tdes) {
-
-        for (uint8_t keyno = 0; keyno < 0xE; keyno++) {
-
-            if (usedkeys[keyno] == 1 && foundKeys[1][keyno][0] == 0) {
-                for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
-                    DesfireSetKeyNoClear(dctx, keyno, T_3DES, aeskeyList[curkey]);
-                    res = DesfireAuthenticate(dctx, secureChannel, false);
-                    if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 2TDEA Key %02u... " _GREEN_("%s"), curaid, keyno, sprint_hex_inrow(aeskeyList[curkey], 16));
-                        foundKeys[1][keyno][0] = 0x01;
-                        *result = true;
-                        memcpy(&foundKeys[1][keyno][1], aeskeyList[curkey], 16);
-                        break;
-                    } else if (res < 7) {
-                        badlen = true;
-                        DropField();
-                        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
-                        if (res != PM3_SUCCESS) {
-                            return res;
-                        }
-                        break;
-                    }
-                }
-                if (badlen == true) {
-                    badlen = false;
-                    break;
-                }
-            }
-        }
-    }
-
-    if (aes) {
-
-        for (uint8_t keyno = 0; keyno < 0xE; keyno++) {
-
-            if (usedkeys[keyno] == 1 && foundKeys[2][keyno][0] == 0) {
-                for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
-                    DesfireSetKeyNoClear(dctx, keyno, T_AES, aeskeyList[curkey]);
-                    res = DesfireAuthenticate(dctx, secureChannel, false);
-                    if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found AES Key %02u... " _GREEN_("%s"), curaid, keyno, sprint_hex_inrow(aeskeyList[curkey], 16));
-                        foundKeys[2][keyno][0] = 0x01;
-                        *result = true;
-                        memcpy(&foundKeys[2][keyno][1], aeskeyList[curkey], 16);
-                        break;
-                    } else if (res < 7) {
-                        badlen = true;
-                        DropField();
-                        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
-                        if (res != PM3_SUCCESS) {
-                            return res;
-                        }
-                        break;
-                    }
-                }
-                if (badlen == true) {
-                    badlen = false;
-                    break;
-                }
-            }
-        }
-    }
-
-    if (k3kdes) {
-
-        for (uint8_t keyno = 0; keyno < 0xE; keyno++) {
-
-            if (usedkeys[keyno] == 1 && foundKeys[3][keyno][0] == 0) {
-                for (uint32_t curkey = 0; curkey < k3kkeyListLen; curkey++) {
-                    DesfireSetKeyNoClear(dctx, keyno, T_3K3DES, k3kkeyList[curkey]);
-                    res = DesfireAuthenticate(dctx, secureChannel, false);
-                    if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3TDEA Key %02u... " _GREEN_("%s"), curaid, keyno, sprint_hex_inrow(k3kkeyList[curkey], 24));
-                        foundKeys[3][keyno][0] = 0x01;
-                        *result = true;
-                        memcpy(&foundKeys[3][keyno][1], k3kkeyList[curkey], 16);
-                        break;
-                    } else if (res < 7) {
-                        badlen = true;
-                        DropField();
-                        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
-                        if (res != PM3_SUCCESS) {
-                            return res;
-                        }
-                        break;
-                    }
-                }
-
-                if (badlen == true) {
-                    break;
-                }
-            }
-        }
-    }
     DropField();
     return PM3_SUCCESS;
 }
@@ -1502,21 +1561,22 @@ static int CmdHF14aDesChk(const char *Cmd) {
     uint32_t deskeyListLen = 0;
     uint32_t aeskeyListLen = 0;
     uint32_t k3kkeyListLen = 0;
-    uint8_t foundKeys[4][0xE][24 + 1] = {{{0}}};
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes chk",
                   "Checks keys with MIFARE DESFire card.",
-                  "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f  -> check key on aid 0x123456\n"
-                  "hf mfdes chk -f mfdes_default_keys                     -> check keys against all existing aid on card\n"
-                  "hf mfdes chk -f mfdes_default_keys --aid 123456        -> check keys against aid 0x123456\n"
-                  "hf mfdes chk --aid 123456 --pattern1b -j keys          -> check all 1-byte keys pattern on aid 0x123456 and save found keys to `keys.json`\n"
-                  "hf mfdes chk --aid 123456 --pattern2b --startp2b FA00  -> check all 2-byte keys pattern on aid 0x123456. Start from key FA00FA00...FA00");
+                  "hf mfdes chk -f mfdes_default_keys                             -> check keys against all existing AID on card\n"
+                  "hf mfdes chk --aid 123456 -f mfdes_default_keys                -> check keys against AID 0x123456\n"
+                  "hf mfdes chk --aid 123456 --pattern1b -j keys                  -> check all 1-byte keys pattern on AID 0x123456 and save found keys to `keys.json`\n"
+                  "hf mfdes chk --aid 123456 --pattern2b --startp2b FA00          -> check all 2-byte keys pattern on AID 0x123456. Start from key FA00FA00...FA00\n"
+                  "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f  -> check key on AID 0x123456\n"
+                  "hf mfdes chk -f mfdes_default_keys --schann lrp                -> check keys, forcing the LRP secure channel\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "aid",        "<hex>", "Use specific AID (3 hex bytes, big endian)"),
-        arg_str0("k",  "key",        "<hex>", "Key for checking (HEX 16 bytes)"),
+        arg_str0("k",  "key",        "<hex>", "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0("f", "file",        "<fn>",  "Filename of dictionary"),
         arg_lit0(NULL, "pattern1b",  "Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)"),
         arg_lit0(NULL, "pattern2b",  "Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)"),
@@ -1525,6 +1585,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         arg_lit0("v",  "verbose",    "Verbose output"),
         arg_int0(NULL, "kdf",        "<0|1|2>", "Key Derivation Function (KDF) (0=None, 1=AN10922, 2=Gallagher)"),
         arg_str0("i",  "kdfi",       "<hex>", "KDF input (1-31 hex bytes)"),
+        arg_str0(NULL, "schann",     "<d40|ev1|ev2|lrp>", "Secure channel (default: detected per application)"),
         arg_lit0("a",  "apdu",       "Show APDU requests and responses"),
         arg_param_end
     };
@@ -1536,7 +1597,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     swap24(aid);
 
-    uint8_t vkey[16] = {0};
+    uint8_t vkey[MAX_KEY_LEN] = {0};
     int vkeylen = 0;
     CLIGetHexWithReturn(ctx, 2, vkey, &vkeylen);
 
@@ -1548,7 +1609,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
             memcpy(&aeskeyList[aeskeyListLen], vkey, 16);
             aeskeyListLen++;
         } else if (vkeylen == 24) {
-            memcpy(&k3kkeyList[k3kkeyListLen], vkey, 16);
+            memcpy(&k3kkeyList[k3kkeyListLen], vkey, 24);
             k3kkeyListLen++;
         } else {
             PrintAndLogEx(ERR, "Specified key must have 8, 16 or 24 bytes length.");
@@ -1614,7 +1675,19 @@ static int CmdHF14aDesChk(const char *Cmd) {
     int kdfInputLen = 0;
     CLIGetHexWithReturn(ctx, 10, kdfInput, &kdfInputLen);
 
-    bool APDULogging = arg_get_lit(ctx, 11);
+    // the secure channel is detected per application unless the user pins one
+    DesfireSecureChannel secureChannel = DACEV1;
+    bool autoschann = (arg_get_str(ctx, 11)->count == 0);
+    if (autoschann == false) {
+        int schann = DACEV1;
+        if (CLIGetOptionList(arg_get_str(ctx, 11), DesfireSecureChannelOpts, &schann)) {
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+        secureChannel = schann;
+    }
+
+    bool APDULogging = arg_get_lit(ctx, 12);
 
     CLIParserFree(ctx);
     SetAPDULogging(APDULogging);
@@ -1640,7 +1713,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
     }
 
     bool result = false;
-    uint8_t app_ids[78] = {0};
+    uint8_t app_ids[DESFIRE_MAX_APP_COUNT * 3] = {0};
     size_t app_ids_len = 0;
 
     clearCommandBuffer();
@@ -1649,7 +1722,6 @@ static int CmdHF14aDesChk(const char *Cmd) {
     DesfireSetKdf(&dctx, cmdKDFAlgo, kdfInput, kdfInputLen);
     DesfireSetCommandSet(&dctx, DCCNativeISO);
     DesfireSetCommMode(&dctx, DCMPlain);
-    DesfireSecureChannel secureChannel = DACEV1;
 
     // save card UID to dctx
     DesfireGetCardUID(&dctx);
@@ -1662,12 +1734,22 @@ static int CmdHF14aDesChk(const char *Cmd) {
     }
 
 
-    res = DesfireGetAIDList(&dctx, app_ids, &app_ids_len);
+    uint8_t aidbuf[250] = {0};
+    size_t aidbuflen = 0;
+    res = DesfireGetAIDList(&dctx, aidbuf, &aidbuflen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't get list of applications on tag");
         DropField();
         return PM3_ESOFT;
     }
+
+    if (aidbuflen > sizeof(app_ids)) {
+        PrintAndLogEx(WARNING, "Card returned " _YELLOW_("%zu") " applications, only checking the first " _YELLOW_("%d"), aidbuflen / 3, DESFIRE_MAX_APP_COUNT);
+        aidbuflen = sizeof(app_ids);
+    }
+
+    memcpy(app_ids, aidbuf, aidbuflen);
+    app_ids_len = aidbuflen;
 
     if (aidlength != 0) {
         memcpy(&app_ids[0], aid, 3);
@@ -1730,10 +1812,23 @@ static int CmdHF14aDesChk(const char *Cmd) {
         }
     }
 
+    desfire_keys_dump_t *dump = calloc(1, sizeof(desfire_keys_dump_t));
+    if (dump == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        DropField();
+        return PM3_EMALLOC;
+    }
+    dump->appcount = app_ids_len / 3;
+
     for (uint32_t x = 0; x < app_ids_len / 3; x++) {
 
         uint32_t curaid = (app_ids[x * 3] & 0xFF) + ((app_ids[(x * 3) + 1] & 0xFF) << 8) + ((app_ids[(x * 3) + 2] & 0xFF) << 16);
         PrintAndLogEx(INFO, "Checking aid " _YELLOW_("%06X"), curaid);
+
+        // found keys are tracked per application.  A key number recovered on one
+        // AID must not stop us from checking the same key number on the next one
+        desfire_app_keys_t *found = &dump->app[x];
+        found->aid = curaid;
 
         bool loadedAllKeys = false;
         size_t desReadStart = 0;
@@ -1795,7 +1890,18 @@ static int CmdHF14aDesChk(const char *Cmd) {
                 loadedAllKeys = true;
             }
 
-            res = AuthCheckDesfire(&dctx, secureChannel, &app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, cmdKDFAlgo, kdfInputLen, kdfInput, foundKeys, &foundKeyThisRound, verbose);
+            res = AuthCheckDesfire(&dctx,
+                        secureChannel,
+                        &app_ids[x * 3],
+                        deskeyList, deskeyListLen,
+                        aeskeyList, aeskeyListLen,
+                        k3kkeyList, k3kkeyListLen,
+                        autoschann, 
+                        found, 
+                        &foundKeyThisRound, 
+                        verbose
+                );
+
             if (res == PM3_EOPABORTED) {
                 break;
             }
@@ -1829,31 +1935,19 @@ static int CmdHF14aDesChk(const char *Cmd) {
         uint8_t sel_1813 = 0;
         if (WaitForIso14aReply(&resp, 2500, NULL, &sel_1813) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
+            free(dump);
             return PM3_ETIMEOUT;
         }
 
-        iso14a_card_select_t card;
-        memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
-
         uint64_t select_status = sel_1813; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
-
-        uint8_t data[10 + 1 + 2 + 1 + 256 + (4 * 0xE * (24 + 1))] = {0};
-        uint8_t atslen = 0;
         if (select_status == 1 || select_status == 2) {
-            memcpy(data, card.uid, card.uidlen);
-            data[10] = card.sak;
-            data[11] = card.atqa[1];
-            data[12] = card.atqa[0];
-            atslen = card.ats_len;
-            data[13] = atslen;
-            memcpy(&data[14], card.ats, atslen);
+            memcpy(&dump->card_info, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
         }
 
-        // length: UID(10b)+SAK(1b)+ATQA(2b)+ATSlen(1b)+ATS(atslen)+foundKeys[2][64][AES_KEY_LEN + 1]
-        memcpy(&data[14 + atslen], foundKeys, 4 * 0xE * (24 + 1));
-        saveFileJSON((char *)jsonname, jsfMfDesfireKeys, data, 0xE, NULL);
+        saveFileJSON((char *)jsonname, jsfMfDesfireKeys_v2, (uint8_t *)dump, sizeof(desfire_keys_dump_t), NULL);
     }
 
+    free(dump);
     DropField();
     return PM3_SUCCESS;
 }
@@ -1884,20 +1978,22 @@ static int DesfireAuthCheck(DesfireContext_t *dctx, DesfireISOSelectWay way, uin
 static int CmdHF14aDesDetect(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes detect",
-                  "Detect key type and tries to find one from the list.",
-                  "hf mfdes detect                            -> detect key 0 from PICC level\n"
-                  "hf mfdes detect --schann d40               -> detect key 0 from PICC level via secure channel D40\n"
-                  "hf mfdes detect -f mfdes_default_keys      -> detect key 0 from PICC level with help of the standard dictionary\n"
-                  "hf mfdes detect --aid 123456 -n 2 --save   -> detect key 2 from app 123456 and if succeed - save params to defaults (`default` command)\n"
-                  "hf mfdes detect --isoid df01 --save        -> detect key 0 and save to defaults with card in the LRP mode");
+                  "Detect PICC master key, key type, communication mode, command set and channel mode.\n"
+                  "Uses `mfdes_default_keys.dic` per default\n"
+                  "   `--save` it saves details to be used with `hf mfdes default`\n",
+                  "hf mfdes detect\n"
+                  "hf mfdes detect --schann d40               -> detect from PICC level via secure channel D40\n"
+                  "hf mfdes detect -f my_keys                 -> detect from PICC level with your own dictionary\n"
+                  "hf mfdes detect --aid 123456 -n 2 --save   -> detect key 2 from app 123456 and save params to defaults\n"
+                  "hf mfdes detect --isoid df01 --save        -> detect and save to defaults with card in the LRP mode");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
-        arg_int0("n",  "keyno",   "<dec>", "Key number"),
+        arg_int0("n",  "keyno",   "<dec>", "Key number (def: all)"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>", "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>", "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -1906,7 +2002,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
         arg_str0(NULL, "aid",     "<hex>", "Application ID (3 hex bytes, big endian)"),
         arg_str0(NULL, "isoid",   "<hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_str0(NULL, "dfname",  "<hex>", "Application ISO DF Name (5-16 hex bytes, big endian)"),
-        arg_str0("f", "file",     "<fn>",  "Filename of dictionary"),
+        arg_str0("f", "file",     "<fn>",  "Filename of dictionary (default: `" MFDES_DEFAULT_DICT "`)"),
         arg_lit0(NULL, "save",    "Save found key and parameters to defaults"),
         arg_param_end
     };
@@ -1935,6 +2031,19 @@ static int CmdHF14aDesDetect(const char *Cmd) {
 
     bool save = arg_get_lit(ctx, 15);
 
+    // whether the user pinned a secure channel, or we get to detect one
+    bool schannset = (arg_get_str(ctx, 10)->count > 0);
+
+    // whether the user asked for one key number, or we sweep the application
+    bool keynoset = (arg_get_int_count(ctx, 3) > 0);
+
+    // no dictionary given - use the bundled DESFire one.  The built-in
+    // g_mifare_plus_default_keys list is 16 byte AES only, so it can produce
+    // neither the DES nor the 3K3DES defaults this card family ships with
+    if (dict_filenamelen == 0) {
+        dict_filenamelen = snprintf((char *)dict_filename, sizeof(dict_filename), "%s", MFDES_DEFAULT_DICT);
+    }
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
@@ -1948,6 +2057,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
 
     bool keytypes[4] = {0};
     bool uselrp = false;
+    uint8_t numkeys = 0;
 
     uint8_t data[250] = {0};
     size_t datalen = 0;
@@ -1956,6 +2066,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     if (res == PM3_SUCCESS && datalen >= 2) {
 
         uint8_t num_keys = data[1];
+        numkeys = num_keys & 0x0F;
 
         switch (num_keys >> 6) {
             case 0: {
@@ -2015,14 +2126,59 @@ static int CmdHF14aDesDetect(const char *Cmd) {
         }
     }
 
-    if (verbose) {
+    // An AES application runs either the EV1/EV2 channel or LRP, and the key
+    // settings byte reads the same for both, so it takes one probe to tell them
+    // apart.  Without this an LRP card is only caught when the key settings
+    // happen to be unreadable and the fallback above runs.
+    if (schannset == false && uselrp == false && keytypes[T_AES]) {
 
-        if (DesfireMFSelected(selectway, id)) {
-            PrintAndLogEx(INFO, "Check PICC key num: %d (0x%02x)", dctx.keyNum, dctx.keyNum);
-        } else {
-            PrintAndLogEx(INFO, "Check: %s key num: %d (0x%02x)", DesfireWayIDStr(selectway, id), dctx.keyNum, dctx.keyNum);
+        uselrp = DesfireCheckAuthCmd(selectway, id, dctx.keyNum, MFDES_AUTHENTICATE_EV2F, true);
+        if (uselrp) {
+            securechann = DACLRP;
         }
 
+        // the probe dropped the field behind us
+        res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, true, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") " after the LRP probe. Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
+            return res;
+        }
+    }
+
+    // Without -n we sweep every key number the application declares.  All keys
+    // in one DESFire application share an algo, so the first key number that
+    // succeeds pins the type down for the rest.
+    uint8_t keynofirst = dctx.keyNum;
+    uint8_t keynolast = dctx.keyNum;
+    if (keynoset == false) {
+        keynofirst = 0;
+        keynolast = (numkeys > 0 && numkeys <= DESFIRE_MAX_KEY_COUNT) ? (numkeys - 1) : (DESFIRE_MAX_KEY_COUNT - 1);
+    }
+
+    // What we worked out about the target.  Worth printing even when no key is
+    // found - knowing the app is AES on LRP with 3 keys is half the answer.
+    char algostr[64] = {0};
+    size_t algolen = 0;
+    for (uint8_t t = T_DES; t <= T_AES; t++) {
+        if (keytypes[t] == false) {
+            continue;
+        }
+        algolen += snprintf(algostr + algolen, sizeof(algostr) - algolen, "%s%s", (algolen) ? "/" : "", CLIGetOptionListStr(DesfireAlgoOpts, t));
+    }
+    if (algolen == 0) {
+        snprintf(algostr, sizeof(algostr), "unknown");
+    }
+
+    PrintAndLogEx(INFO, "%s... key num " _YELLOW_("0x%02x") ".." _YELLOW_("0x%02x") ", algo " _YELLOW_("%s") ", channel " _YELLOW_("%s"),
+                  (DesfireMFSelected(selectway, id)) ? "PICC level" : DesfireWayIDStr(selectway, id),
+                  keynofirst,
+                  keynolast,
+                  algostr,
+                  CLIGetOptionListStr(DesfireSecureChannelOpts, securechann)
+                 );
+
+    if (verbose) {
         PrintAndLogEx(INFO, "keys: DES: %s 2TDEA: %s 3TDEA: %s AES: %s LRP: %s",
                       keytypes[T_DES] ? _GREEN_("YES") : _RED_("NO"),
                       keytypes[T_3DES] ? _GREEN_("YES") : _RED_("NO"),
@@ -2032,71 +2188,41 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                      );
     }
 
-    // for key types
-    bool found = false;
-    size_t errcount = 0;
-    for (uint8_t ktype = T_DES; ktype <= T_AES; ktype++) {
+    uint8_t foundcount = 0;
+    uint8_t totalkeys = keynolast - keynofirst + 1;
+    bool nocard = false;
 
-        if (keytypes[ktype] == false) {
-            continue;
-        }
+    // the first key we find is what --save stores
+    DesfireContext_t savedctx = {0};
+    bool savedctxvalid = false;
 
-        dctx.keyType = ktype;
+    for (uint8_t keyno = keynofirst; keyno <= keynolast && nocard == false; keyno++) {
 
-        if (verbose) {
-            PrintAndLogEx(INFO, "Scan key type: %s", CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType));
-        }
+        dctx.keyNum = keyno;
+        bool found = false;
 
-        if (dict_filenamelen == 0) {
-            // keys from mifaredefault.h
-            for (int i = 0; i < g_mifare_plus_default_keys_len; i++) {
+        // for key types
+        for (uint8_t ktype = T_DES; ktype <= T_AES && found == false; ktype++) {
 
-                uint8_t key[DESFIRE_MAX_KEY_SIZE] = {0};
-                if (hex_to_bytes(g_mifare_plus_default_keys[i], key, 16) != 16) {
-                    continue;
-                }
-
-                if (ktype == T_3K3DES) {
-                    memcpy(&key[16], key, 8);
-                }
-
-                res = DesfireAuthCheck(&dctx, selectway, id, securechann, key);
-                if (res == PM3_SUCCESS) {
-                    found = true;
-                    break; // all the params already in the dctx
-                }
-
-                if (res == -10) {
-
-                    if (verbose) {
-                        PrintAndLogEx(ERR, "Can't select AID. There is no connection with card.");
-                    }
-
-                    found = false;
-                    break; // we can't select app after invalid 1st auth stages
-                }
-
-                if (res == -11) {
-
-                    if (errcount > 10) {
-                        if (verbose) {
-                            PrintAndLogEx(ERR, "Too much errors (%zu) from card", errcount);
-                        }
-                        break;
-                    }
-                    errcount++;
-
-                } else {
-                    errcount = 0;
-                }
+            if (keytypes[ktype] == false) {
+                continue;
             }
 
-        } else {
-            // keys from file
+            dctx.keyType = ktype;
+
+            if (verbose) {
+                PrintAndLogEx(INFO, "Scan key num %d (0x%02x) type: %s", keyno, keyno, CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType));
+            }
+
+            // candidate keys come from the dictionary
             uint8_t keyList[MAX_KEYS_LIST_LEN * MAX_KEY_LEN] = {0};
             uint32_t keyListLen = 0;
             size_t keylen = desfire_get_key_length(dctx.keyType);
             size_t endFilePosition = 0;
+
+            // errors are counted per key type.  A bad run on one must not cut
+            // the next one short before it has tried a single key
+            size_t errcount = 0;
 
             while (found == false) {
 
@@ -2105,7 +2231,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                     break;
                 }
 
-                for (int i = 0; i < keyListLen; i++) {
+                for (uint32_t i = 0; i < keyListLen; i++) {
 
                     res = DesfireAuthCheck(&dctx, selectway, id, securechann, &keyList[i * keylen]);
                     if (res == PM3_SUCCESS) {
@@ -2118,7 +2244,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                             PrintAndLogEx(ERR, "Can't select AID. There is no connection with card.");
                         }
 
-                        found = false;
+                        nocard = true;
                         break; // we can't select app after invalid 1st auth stages
                     }
 
@@ -2135,51 +2261,69 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                     } else {
                         errcount = 0;
                     }
+                }
 
+                if (nocard) {
+                    break;
                 }
 
                 if (endFilePosition == 0) {
                     break;
                 }
             }
-
         }
 
         if (found) {
-            break;
+
+            foundcount++;
+
+            if (DesfireMFSelected(selectway, id)) {
+                PrintAndLogEx(INFO, _GREEN_("Found") " key num: %d (0x%02x)", dctx.keyNum, dctx.keyNum);
+            } else {
+                PrintAndLogEx(INFO, "Found key for: %s key num: %d (0x%02x)", DesfireWayIDStr(selectway, id), dctx.keyNum, dctx.keyNum);
+            }
+
+            PrintAndLogEx(INFO, "Channel " _GREEN_("%s") " key " _GREEN_("%s") " [%d]: " _GREEN_("%s"),
+                          CLIGetOptionListStr(DesfireSecureChannelOpts, securechann),
+                          CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType),
+                          desfire_get_key_length(dctx.keyType),
+                          sprint_hex_inrow(dctx.key, desfire_get_key_length(dctx.keyType))
+                        );
+
+            // every key in an application uses the same algo,  so the rest of
+            // the key numbers only have to try the one that just worked
+            for (uint8_t t = T_DES; t <= T_AES; t++) {
+                keytypes[t] = (t == dctx.keyType);
+            }
+
+            if (savedctxvalid == false) {
+                savedctx = dctx;
+                savedctxvalid = true;
+            }
+
+        } else if (verbose && nocard == false) {
+            PrintAndLogEx(INFO, "Key num: %d (0x%02x) " _RED_("not found"), keyno, keyno);
         }
     }
 
-    if (found) {
-
-        if (DesfireMFSelected(selectway, id)) {
-            PrintAndLogEx(INFO, _GREEN_("Found") " key num: %d (0x%02x)", dctx.keyNum, dctx.keyNum);
-        } else {
-            PrintAndLogEx(INFO, "Found key for: %s key num: %d (0x%02x)", DesfireWayIDStr(selectway, id), dctx.keyNum, dctx.keyNum);
-        }
-
-        PrintAndLogEx(INFO, "channel " _GREEN_("%s") " key " _GREEN_("%s") " [%d]: " _GREEN_("%s"),
-                      CLIGetOptionListStr(DesfireSecureChannelOpts, securechann),
-                      CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType),
-                      desfire_get_key_length(dctx.keyType),
-                      sprint_hex(dctx.key, desfire_get_key_length(dctx.keyType)));
-
-    } else {
+    if (foundcount == 0) {
         PrintAndLogEx(INFO, "Key " _RED_("not found"));
+    } else if (totalkeys > 1) {
+        PrintAndLogEx(INFO, "Found " _GREEN_("%u") " of %u keys", foundcount, totalkeys);
     }
 
     DropField();
 
-    if (found && save) {
+    if (savedctxvalid && save) {
 
-        defaultKeyNum = dctx.keyNum;
-        defaultAlgoId = dctx.keyType;
-        memcpy(defaultKey, dctx.key, DESFIRE_MAX_KEY_SIZE);
-        defaultKdfAlgo = dctx.kdfAlgo;
-        defaultKdfInputLen = dctx.kdfInputLen;
-        memcpy(defaultKdfInput, dctx.kdfInput, sizeof(dctx.kdfInput));
+        defaultKeyNum = savedctx.keyNum;
+        defaultAlgoId = savedctx.keyType;
+        memcpy(defaultKey, savedctx.key, DESFIRE_MAX_KEY_SIZE);
+        defaultKdfAlgo = savedctx.kdfAlgo;
+        defaultKdfInputLen = savedctx.kdfInputLen;
+        memcpy(defaultKdfInput, savedctx.kdfInput, sizeof(savedctx.kdfInput));
         defaultSecureChannel = securechann;
-        defaultCommSet = dctx.cmdSet;
+        defaultCommSet = savedctx.cmdSet;
 
         PrintAndLogEx(INFO, "-----------" _CYAN_("Default parameters") "---------------------------------");
         PrintAndLogEx(INFO, "Key Num....... %d", defaultKeyNum);
@@ -2215,7 +2359,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -2389,7 +2533,7 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3332,7 +3476,7 @@ static int CmdHF14ADesBruteDAMSlots(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number (default: 0 / PICC key)"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3538,7 +3682,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>", "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3637,7 +3781,7 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3735,8 +3879,8 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
                   "Change crypto algorithm for PICC key is possible, \n"
                   "but for APP keys crypto algorithm is set by createapp command and can't be changed wo application delete\n"
                   "\n"
-                  "hf mfdes changekey --aid 123456    -> execute with default factory setup. change des key 0 in the app 123456 from 00..00 to 00..00\n"
-                  "hf mfdes changekey --isoid df01 -t aes --schann lrp --newkeyno 01    -> change key 01 via lrp channel"
+                  "hf mfdes changekey --aid 123456                                                                    -> execute with default factory setup. change des key 0 in the app 123456 from 00..00 to 00..00\n"
+                  "hf mfdes changekey --isoid df01 -t aes --schann lrp --newkeyno 01                                  -> change key 01 via lrp channel"
                   "hf mfdes changekey -t des --newalgo aes --newkey 11223344556677889900112233445566 --newver a5      -> change card master key to AES one\n"
                   "hf mfdes changekey --aid 123456 -t aes --key 00000000000000000000000000000000 --newkey 11223344556677889900112233445566 -> change app master key\n"
                   "hf mfdes changekey --aid 123456 -t des -n 0 --newkeyno 1 --oldkey 5555555555555555 --newkey 1122334455667788  -> change key 1 with auth from key 0\n"
@@ -3748,7 +3892,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3910,7 +4054,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4087,7 +4231,7 @@ static int CmdHF14ADesCreateDelegateApp(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4404,7 +4548,7 @@ static int CmdHF14ADesGetDelegateAppInfo(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number (default: 0 / PICC key)"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4496,7 +4640,7 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4560,7 +4704,7 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4723,7 +4867,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4780,7 +4924,7 @@ static int CmdHF14ADesGetFreeMem(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4845,7 +4989,7 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4919,7 +5063,7 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number for authentication"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5024,7 +5168,7 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5104,7 +5248,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5176,7 +5320,7 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5239,9 +5383,10 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes getfileids",
                   "Get File IDs list from card. Master key needs to be provided or flag --no-auth set.",
-                  "hf mfdes getfileids --aid 123456 -> execute with defaults from `default` command\n"
-                  "hf mfdes getfileids -n 0 -t des -k 0000000000000000 --kdf none --aid 123456   -> execute with default factory setup\n"
-                  "hf mfdes getfileids --dfname D2760000850100 -> select DF by name and get file IDs");
+                  "hf mfdes getfileids --aid 123456                                   -> execute with defaults from `default` command\n"
+                  "hf mfdes getfileids --dfname D2760000850100                        -> select DF by name and get file IDs\n"
+                  "hf mfdes getfileids -n 0 -t des -k 0000000000000000 --aid 123456   -> execute with default factory setup\n"                 
+                );
 
     void *argtable[] = {
         arg_param_begin,
@@ -5249,7 +5394,7 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5326,7 +5471,7 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5401,7 +5546,7 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5572,7 +5717,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5715,7 +5860,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5853,7 +5998,7 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo (deft: 2TDEA)"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5979,7 +6124,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -6098,7 +6243,7 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
         arg_lit0("v",  "verbose",   "Verbose output"),
         arg_int0("n",  "keyno",     "<dec>", "Key number"),
         arg_str0("t",  "algo",      "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",       "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",       "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",      "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",     "<plain|mac|encrypt>", "Communicaton mode"),
@@ -6215,7 +6360,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -6293,7 +6438,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo (deft: 2TDEA)"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -6478,7 +6623,7 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes clearrecfile",
                   "Clear record file. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
-                  "hf mfdes clearrecfile --aid 123456 --fid 01 -> clear record file for: app=123456, file=01 with defaults from `default` command\n"
+                  "hf mfdes clearrecfile --aid 123456 --fid 01                          -> clear record file for: app=123456, file=01 with defaults from `default` command\n"
                   "hf mfdes clearrecfile --isoid df01 --fid 01 --schann lrp -t aes -n 3 -> clear record file for lrp channel with key number 3");
 
     void *argtable[] = {
@@ -6487,7 +6632,7 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -6658,7 +6803,7 @@ static int CmdHF14ADesMakeMFCLicense(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v", "verbose",                     "Show more output"),
-        arg_str0("k",  "key", "<hex>",               "Key for computing the MAC, must be HEX 16(AES)"),
+        arg_str0("k",  "key", "<hex>",               "Key for computing the MAC (16 hex bytes)"),
         arg_str0("b",  "blk", "<num>[,<num>[,...]]", "The MFC blocks to map, must be given in ascending order (use the special value 'all' for all blocks)"),
         arg_lit0(NULL, "ka",                         "Allow updating key A from inside sector trailers mapped to DESFire files"),
         arg_lit0(NULL, "kb",                         "Allow updating key B from inside sector trailers mapped to DESFire files"),
@@ -6893,7 +7038,7 @@ static int CmdHF14ADesCreateMFCMapping(const char *Cmd) {
         arg_lit0("v",  "verbose",                         "Verbose output"),
         arg_int0("n",  "keyno", "<dec>",                  "Key number"),
         arg_str0("t",  "algo", "<DES|2TDEA|3TDEA|AES>",   "Crypt algo"),
-        arg_str0("k",  "key", "<hex>",                    "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf", "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi", "<hex>",                   "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode", "<plain|mac|encrypt>",    "Communicaton mode"),
@@ -7410,7 +7555,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -7582,7 +7727,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -7922,7 +8067,7 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -7997,7 +8142,7 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -8063,7 +8208,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -9413,7 +9558,7 @@ static int CmdHF14ADesVerifyCert(const char *Cmd) {
         arg_lit0("v",  "verbose",   "Verbose output"), // 3
         arg_int0("n",  "keyno",     "<dec>", "Key number for DESFire authentication"), // 4
         arg_str0("t",  "algo",      "<DES|2TDEA|3TDEA|AES>",  "DESFire auth crypt algo"), // 5
-        arg_str0("k",  "key",       "<hex>", "DESFire authentication key"), // 6
+        arg_str0("k",  "key",       "<hex>", "Key for authenticate (8|16|24 hex bytes)"), // 6
         arg_str0(NULL, "kdf",       "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"), // 7
         arg_str0("i",  "kdfi",      "<hex>", "KDF input (1-31 hex bytes)"), // 8
         arg_str0("m",  "cmode",     "<plain|mac|encrypt>", "Communication mode"), // 9

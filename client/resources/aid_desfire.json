@@ -312,6 +312,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "F70090",
+        "Vendor": "ASSA ABLOY (Timelox / VingCard Elsafe)",
+        "Country": "SE",
+        "Name": "Visionline",
+        "Description": "Hotel access credential",
+        "Type": "pacs"
+    },
+    {
         "AID": "F51BC0",
         "Vendor": "STid Group",
         "Country": "FR",
@@ -873,9 +881,9 @@
     },
     {
         "AID": "008800",
-        "Vendor": "Bank Mega",
+        "Vendor": "PT Bank Mega Tbk",
         "Country": "ID",
-        "Name": "MegaCash",
+        "Name": "MEGACASH",
         "Description": "Indonesian stored-value card // FIDs 01: Card Identification; 02: Stored Value; 03: Transaction Records",
         "Type": "payment system"
     },

@@ -991,9 +991,14 @@ void MifareAcquireNonces(const mf_acquire_nonces_t *payload) {
     uint8_t uid[10] = {0x00};
     uint8_t answer[MAX_MIFARE_FRAME_SIZE] = {0x00};
     uint8_t par[1] = {0x00};
-    uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
+
+    // collect straight into the reply buffer, no second copy on the stack
+    uint8_t respbuf[sizeof(mf_nonces_resp_t) + (MFC_MAX_NONCES * 4)] = {0x00};
+    mf_nonces_resp_t *response = (mf_nonces_resp_t *)respbuf;
+    uint8_t *buf = response->nonces;
+
     uint32_t cuid = 0;
-    int16_t isOK = 0;
+    int16_t isOK = PM3_SUCCESS;
     uint16_t num_nonces = 0;
     uint8_t cascade_levels = 0;
     uint8_t blockNo = payload->blockno;
@@ -1019,7 +1024,7 @@ void MifareAcquireNonces(const mf_acquire_nonces_t *payload) {
 
         // Test if the action was cancelled
         if (BUTTON_PRESS()) {
-            isOK = 2;
+            isOK = PM3_EOPABORTED;
             field_off = true;
             break;
         }
@@ -1072,12 +1077,12 @@ void MifareAcquireNonces(const mf_acquire_nonces_t *payload) {
 
     LED_C_OFF();
     LED_B_ON();
-    uint8_t respbuf[PM3_CMD_DATA_SIZE] = {0x00};
-    mf_nonces_resp_t *response = (mf_nonces_resp_t *)respbuf;
+
+    // one bare 4 byte nonce per entry here, unlike the paired layout used by
+    // MifareAcquireEncryptedNonces. The loop above already caps num_nonces
+    uint16_t noncelen = num_nonces * 4;
     response->cuid = cuid;
     response->num_nonces = num_nonces;
-    uint16_t noncelen = MIN((uint16_t)(num_nonces * 4), (uint16_t)(MFC_MAX_NONCES * 4));
-    memcpy(response->nonces, buf, noncelen);
     reply_ng(CMD_HF_MIFARE_ACQ_NONCES, isOK, respbuf, sizeof(mf_nonces_resp_t) + noncelen);
     LED_B_OFF();
 
@@ -1106,12 +1111,17 @@ void MifareAcquireEncryptedNonces(const mf_acquire_nonces_t *payload) {
     uint8_t uid[10] = {0x00};
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
     uint8_t par_enc[1] = {0x00};
-    uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
+
+    // collect straight into the reply buffer, no second copy on the stack
+    uint8_t respbuf[sizeof(mf_nonces_resp_t) + (MFC_MAX_NONCE_PAIRS * MFC_NONCE_PAIR_SIZE)] = {0x00};
+    mf_nonces_resp_t *response = (mf_nonces_resp_t *)respbuf;
+    uint8_t *buf = response->nonces;
 
     uint64_t ui64Key = bytes_to_num(payload->key, 6);
     uint32_t cuid = 0;
     int16_t isOK = PM3_SUCCESS;
     uint16_t num_nonces = 0;
+    uint16_t num_pairs = 0;
     uint8_t nt_par_enc = 0;
     uint8_t cascade_levels = 0;
     uint8_t blockNo = payload->blockno;
@@ -1139,7 +1149,7 @@ void MifareAcquireEncryptedNonces(const mf_acquire_nonces_t *payload) {
     uint8_t prev_enc_nt[] = {0, 0, 0, 0};
     uint8_t prev_counter = 0;
 
-    for (uint16_t i = 0; i <= (MFC_MAX_NONCES * 4) - 9;) {
+    while (num_pairs < MFC_MAX_NONCE_PAIRS) {
 
         // Test if the action was cancelled
         if (BUTTON_PRESS()) {
@@ -1196,14 +1206,15 @@ void MifareAcquireEncryptedNonces(const mf_acquire_nonces_t *payload) {
         }
 
         num_nonces++;
+        uint16_t ofs = num_pairs * MFC_NONCE_PAIR_SIZE;
         if (num_nonces % 2) {
-            memcpy(buf + i, receivedAnswer, 4);
+            memcpy(buf + ofs, receivedAnswer, 4);
             nt_par_enc = par_enc[0] & 0xf0;
         } else {
             nt_par_enc |= par_enc[0] >> 4;
-            memcpy(buf + i + 4, receivedAnswer, 4);
-            memcpy(buf + i + 8, &nt_par_enc, 1);
-            i += 9;
+            memcpy(buf + ofs + 4, receivedAnswer, 4);
+            buf[ofs + 8] = nt_par_enc;
+            num_pairs++;
         }
 
 
@@ -1231,12 +1242,12 @@ void MifareAcquireEncryptedNonces(const mf_acquire_nonces_t *payload) {
     LED_C_OFF();
     crypto1_deinit(pcs);
     LED_B_ON();
-    uint8_t respbuf[PM3_CMD_DATA_SIZE] = {0x00};
-    mf_nonces_resp_t *response = (mf_nonces_resp_t *)respbuf;
+
+    // only whole pairs are transferred. An abort or a static nonce bailout can
+    // leave a dangling first nonce, it has no parity nibble yet so it is dropped
+    uint16_t noncelen = num_pairs * MFC_NONCE_PAIR_SIZE;
     response->cuid = cuid;
-    response->num_nonces = num_nonces;
-    uint16_t noncelen = MIN((uint16_t)(num_nonces * 4), (uint16_t)(MFC_MAX_NONCES * 4));
-    memcpy(response->nonces, buf, noncelen);
+    response->num_nonces = num_pairs * 2;
     reply_ng(CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES, isOK, respbuf, sizeof(mf_nonces_resp_t) + noncelen);
     LED_B_OFF();
 

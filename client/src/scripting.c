@@ -416,12 +416,51 @@ static int l_kbd_enter_pressed(lua_State *L) {
 /**
  * @brief Calls the command line parser to deal with the command. This enables
  * lua-scripts to do stuff like "core.console('hf mf mifare')"
+ *     core.console(cmd [, capture [, quiet]])
+ *
+ *  Same idea as the python binding 
+ *     `capture` hands the command's output back as a string, 
+ *     `quiet` keeps it off the// terminal
  * @param L
  * @return
  */
 static int l_CmdConsole(lua_State *L) {
-    CommandReceived((char *)luaL_checkstring(L, 1));
-    return 0;
+
+    const char *cmd = luaL_checkstring(L, 1);
+
+    const bool capture = (lua_isnoneornil(L, 2) == 0) && lua_toboolean(L, 2);
+    const bool quiet = (lua_isnoneornil(L, 3) == 0) && lua_toboolean(L, 3);
+
+    const uint8_t prev_printAndLog = g_printAndLog;
+
+    if (capture) {
+        g_printAndLog |= PRINTANDLOG_GRAB;
+        // anything left in the grabber belongs to an earlier call
+        g_grabbed_output.idx = 0;
+    }
+
+    if (quiet) {
+        g_printAndLog &= ~PRINTANDLOG_PRINT;
+    }
+
+    CommandReceived((char *)cmd);
+
+    g_printAndLog = prev_printAndLog;
+
+    if (capture == false) {
+        return 0;
+    }
+
+    if (g_grabbed_output.ptr == NULL) {
+        lua_pushstring(L, "");
+        return 1;
+    }
+
+    g_grabbed_output.ptr[g_grabbed_output.idx] = 0;
+    lua_pushstring(L, g_grabbed_output.ptr);
+
+    g_grabbed_output.idx = 0;
+    return 1;
 }
 
 static int l_iso15693_crc(lua_State *L) {

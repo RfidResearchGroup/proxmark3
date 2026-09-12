@@ -57,6 +57,27 @@ typedef enum {
     EMRTD_PACE_CIPHER_AES256,
 } emrtd_pace_cipher_t;
 
+// EF_CardAccess is a SET OF SecurityInfo, not a list of PACE algorithms. A
+// document announces everything it can do in there, so Chip Authentication and
+// Terminal Authentication share the file with the PACE entries. Only
+// EMRTD_SI_PACE entries are candidates for the session we are about to open.
+typedef enum {
+    EMRTD_SI_UNKNOWN = 0,
+    EMRTD_SI_PACE,          // PACEInfo
+    EMRTD_SI_PACE_DP,       // PACEDomainParameterInfo
+    EMRTD_SI_CA,            // ChipAuthenticationInfo
+    EMRTD_SI_CA_DP,         // ChipAuthenticationDomainParameterInfo
+    EMRTD_SI_PK,            // ChipAuthenticationPublicKeyInfo
+    EMRTD_SI_TA,            // TerminalAuthenticationInfo
+    EMRTD_SI_RI,            // RestrictedIdentificationInfo
+    EMRTD_SI_RI_DP,         // RestrictedIdentificationDomainParameterInfo
+    EMRTD_SI_CI,            // CardInfoLocator
+    EMRTD_SI_EIDSECURITY,   // eIDSecurityInfo
+    EMRTD_SI_PT,            // PrivilegedTerminalInfo
+    EMRTD_SI_AA,            // ActiveAuthenticationInfo
+    EMRTD_SI_EFDIR,         // EFDIRInfo
+} emrtd_si_t;
+
 typedef struct emrtd_pacealg_s {
     const char *name;
     emrtd_pace_ka_t ka;
@@ -79,12 +100,16 @@ typedef struct emrtd_pacesdp_s {
 
 // One parsed SecurityInfo out of EF_CardAccess
 typedef struct {
-    const emrtd_pacealg_t *alg;             // NULL when the OID is unknown to us
+    const emrtd_pacealg_t *alg;             // NULL unless this is a PACEInfo we know
+    emrtd_si_t kind;                        // which SecurityInfo this is
+    const char *protocol;                   // pretty name, NULL when the OID is unknown
     uint8_t oid[EMRTD_PACE_OID_MAXLEN];
     size_t oidlen;
     uint32_t version;
     bool has_param;
     uint8_t param_id;
+    bool has_key_id;                        // ChipAuthentication* keyId, not a PACE thing
+    uint32_t key_id;
     const emrtd_pacesdp_t *sdp;             // NULL when param_id is unknown/absent
     bool supported;
     const char *reason;                     // why not supported, NULL when it is
@@ -151,6 +176,11 @@ int emrtd_retail_mac(const uint8_t *key, const uint8_t *input, size_t inputlen, 
 // Table lookups
 //-----------------------------------------------------------------------------
 const emrtd_pacealg_t *emrtd_pace_alg_by_oid(const uint8_t *oid, size_t oidlen);
+// Names any SecurityInfo protocol OID, PACE or not. Longest prefix wins, so an
+// arc we did not enumerate still resolves to its family. NULL when unknown.
+const char *emrtd_secinfo_name(const uint8_t *oid, size_t oidlen, emrtd_si_t *kind);
+// Dotted decimal form of a BER encoded OID body, for reporting
+void emrtd_oid_to_str(const uint8_t *oid, size_t oidlen, char *out, size_t outlen);
 const emrtd_pacesdp_t *emrtd_pace_sdp_by_id(uint8_t id);
 const char *emrtd_pace_cipher_name(emrtd_pace_cipher_t cipher);
 
