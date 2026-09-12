@@ -27,6 +27,7 @@
 #include "i2c.h"
 #include "dbprint.h"
 #include "ticks_apis.h"   // WaitMS / GetTickCount / GetTickCountDelta
+#include "pm5_power.h"    // pm5_power_boost / unboost around the low-batt poll
 #include "ansi.h"
 
 #ifdef WITH_BWM_LOWBATT_BEEP
@@ -470,17 +471,11 @@ static void bwm_beep_low_batt(void) {
 // charging or if the BWM/gauge is not present. With WITH_PM5_LOWBATT_SHUTDOWN it
 // also powers the board off once the pack drops to the critical floor, confirmed
 // across several consecutive polls so a transient HF-field sag can't trip it.
-void bwm_lowbatt_check(void) {
-    static uint32_t last_tick = 0;
+static void bwm_lowbatt_poll(void) {
 #ifdef WITH_PM5_LOWBATT_SHUTDOWN
     static uint8_t crit = 0;
     static bool s_vusb_setup = false;
 #endif
-
-    if ((last_tick != 0) && (GetTickCountDelta(last_tick) < BWM_LOWBATT_PERIOD_MS)) {
-        return;
-    }
-    last_tick = GetTickCount();
 
     StartTicks();
     I2C_init(true);
@@ -538,5 +533,19 @@ void bwm_lowbatt_check(void) {
     }
 
     bwm_beep_low_batt();   // BuzzerBeep() lazily sets the buzzer up on first use
+}
+
+void bwm_lowbatt_check(void) {
+    static uint32_t last_tick = 0;
+
+    if ((last_tick != 0) && (GetTickCountDelta(last_tick) < BWM_LOWBATT_PERIOD_MS)) {
+        return;
+    }
+    last_tick = GetTickCount();
+
+    // Ticks timer, I2C and buzzer timing assume the full core clock.
+    pm5_power_boost();
+    bwm_lowbatt_poll();
+    pm5_power_unboost();
 }
 #endif // WITH_BWM_LOWBATT_BEEP

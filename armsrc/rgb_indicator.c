@@ -21,6 +21,7 @@
 #ifdef WITH_PM5_PWR_LED
 
 #include "rgb_apis.h"     // RgbLedSet
+#include "pm5_power.h"    // pm5_power_boost / unboost
 #include "gpio_apis.h"    // gpio_vusb_setup / Gpio_VUSB_Read (USB-present detection)
 #include "ticks_apis.h"   // GetTickCount / GetTickCountDelta
 
@@ -68,6 +69,7 @@ void rgb_indicator_update(void) {
         return;   // edge-triggered: only write RGB when the state changes
     }
 
+    pm5_power_boost();   // I2C bit-bang timing assumes the full core clock
     // Commit last_state only if the controller actually ACKed. On a cold boot the
     // I2C RGB controller can still be powering up when the first write fires; if we
     // latched last_state regardless, a NAK here would leave the LED dark until the
@@ -78,6 +80,7 @@ void rgb_indicator_update(void) {
     if (ok) {
         last_state = on_battery;
     }
+    pm5_power_unboost();
 }
 
 #endif // WITH_PM5_PWR_LED

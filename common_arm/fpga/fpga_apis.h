@@ -328,6 +328,11 @@ void FpgaSendCommand(uint16_t cmd, uint16_t v);
 void FpgaWriteConfWord(uint16_t v);
 
 //-----------------------------------------------------------------------------
+// True when the last configuration word selected FPGA_MAJOR_MODE_OFF.
+//-----------------------------------------------------------------------------
+bool FpgaIsOff(void);
+
+//-----------------------------------------------------------------------------
 // enable FPGA internal tracing
 //-----------------------------------------------------------------------------
 void FpgaEnableTracing(void);
