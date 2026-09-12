@@ -2741,6 +2741,20 @@ int MifareECardLoadExt(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
     return retval;
 }
 
+// Re-select the card and start a fresh crypto1 session on a sector.
+// A read the card NAKs aborts the session, so this is the only way back.
+static int mfec_reauth(struct Crypto1State *pcs, uint8_t *uid, uint8_t cascade_levels,
+                       uint32_t cuid, uint8_t blockno, uint8_t keytype, uint64_t ui64Key) {
+
+    if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
+        return PM3_ERFTRANS;
+    }
+    if (mifare_classic_auth(pcs, cuid, blockno, keytype, ui64Key, AUTH_FIRST)) {
+        return PM3_EFAILED;
+    }
+    return PM3_SUCCESS;
+}
+
 int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
 
     if ((keytype > MF_KEY_B) && (key == NULL)) {
@@ -2778,6 +2792,10 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
     for (uint8_t s = 0; s < sectorcnt; s++) {
 
         uint64_t ui64Key = emlGetKey(s, keytype);
+
+        // which key actually opened this sector. The auth fallback below and
+        // the read fallback further down can both move it to the other key
+        uint8_t auth_kt = keytype;
 
         // MIFARE Classic 1K Ev1  ,  MIFARE Classic MINI Ev1
         if (sectorcnt == 18) {
@@ -2862,6 +2880,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
                 }
                 continue;
             }
+            auth_kt = MF_KEY_B;
         }
 
 
@@ -2876,11 +2895,51 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
             for (; r < MAX_RETRIES; r++) {
 
                 int res = mifare_classic_readblock(pcs, tb, data);
+
+                // A NAK aborts the crypto1 session. The card leaves the
+                // authenticated state, so every later read in this sector comes
+                // back with len 0 and the retry loop just spins on it. That is
+                // what turned one unreadable block into a whole lost sector.
+                //
+                // Recover the session, and try the other key while we are here:
+                // the access conditions can deny a read with A and allow it with
+                // B, which is why the client side `hf mf dump` gets blocks this
+                // one does not. Only A/B can be swapped, a backdoor key has no
+                // counterpart.
+                if (res == 1 && keytype <= MF_KEY_B) {
+
+                    uint8_t other_kt = (auth_kt == MF_KEY_A) ? MF_KEY_B : MF_KEY_A;
+                    bool recovered = false;
+
+                    if (mfec_reauth(pcs, uid, cascade_levels, cuid, FirstBlockOfSector(s), other_kt, emlGetKey(s, other_kt)) == PM3_SUCCESS) {
+                        if (mifare_classic_readblock(pcs, tb, data) == 0) {
+                            // stay on it, the rest of the sector reads the same way
+                            auth_kt = other_kt;
+                            recovered = true;
+                        }
+                    }
+
+                    if (recovered == false) {
+                        retval |= PM3_EPARTIAL;
+                        if (g_dbglevel >= DBG_ERROR) {
+                            Dbprintf("Error No rights reading sector %2d block %2d", s, b);
+                        }
+                        // put the session back so the remaining blocks still read
+                        mfec_reauth(pcs, uid, cascade_levels, cuid, FirstBlockOfSector(s), auth_kt, emlGetKey(s, auth_kt));
+                        break;
+                    }
+
+                    res = 0;
+                }
+
                 if (res == 1) {
                     retval |= PM3_EPARTIAL;
                     if (g_dbglevel >= DBG_ERROR) {
                         Dbprintf("Error No rights reading sector %2d block %2d", s, b);
                     }
+                    // the backdoor session is dead too, make the next sector
+                    // re-select and re-auth instead of reading into the void
+                    bd_authenticated = false;
                     break;
                 }
                 // retry if wrong len.
