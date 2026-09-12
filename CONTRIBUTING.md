@@ -3,7 +3,11 @@
 
 :+1::tada: First off, thanks for taking the time to contribute! :tada::+1:
 
-This guide covers mostly coding style for submitting pull requests, but you can also contribute by [Reporting Bugs](https://github.com/RfidResearchGroup/proxmark3/issues) and [Suggesting Enhancements](https://github.com/RfidResearchGroup/proxmark3/issues) after having carefully checked that a corresponding issue doesn't exist yet.
+This guide covers mostly coding style for submitting pull requests:
+You can also contribute by:
+* [Reporting Bugs](https://github.com/RfidResearchGroup/proxmark3/issues) and 
+* [Suggesting Enhancements](https://github.com/RfidResearchGroup/proxmark3/issues)
+After having carefully checked that a corresponding issue doesn't exist yet.
 
 Beware we're all very busy so the best way is by providing yourself some fixes and enhancements via [Pull Requests](https://github.com/RfidResearchGroup/proxmark3/pulls) respecting the following coding style.
 
@@ -36,21 +40,18 @@ We have established a set of coding style guidelines in order to
 clean up the code consistently and keep it consistent in the future.
 Look around and respect the same style.
 
-Helper script to get some uniformity in the style:
+Of particular note:
+Do not run `make style` or `make commands` as these are run periodically 
+by the maintainers.
 
-```bash
-$ make style
-```
-
-It makes use of `astyle` so be sure to install it first.
-
+But WHY?!  You might ask.  Good question.  Different OSes and configurations 
+(Ubuntu/Windows/WSL1/proxspace/Debian) generate different output.
+Leading to many unneeded white space commits, and this wastes maintainers time.
 
 ## Indentation
 
 Don't use tabs, editors are messing them up too easily.
 Increment unit is four spaces.
-
-If you use `make style`, this will be done for you.
 
 ## Width
 
@@ -97,12 +98,10 @@ otherwise you're tempted to write:
 ```
 and you'll fail.
 
-`make style` will take care of pointers & reference operators.
-
 ## Expressions
 
 In general, use whitespace around binary operators - no unspaced blobs of an
-expression. `make style` will take care of whitespaces around operators.
+expression.
 
 For example,
 ```c
@@ -122,7 +121,6 @@ Put the opening brace on the same line, with a space before it.
 There should be a space between the construct name (if/for/whatever) and the
 opening parenthesis, and there should be a space between the closing parenthesis
 and the opening brace, and no space between parenthesis and expression.
-`make style` will take care of all that.
 
 If you do split the condition, put the binary operators that join the lines at
 the beginning of the following lines, not at the end of the prior lines.
@@ -152,7 +150,6 @@ You can skip braces around 1-line statements but don't mix braces vs. no braces.
 Put the return type on the same line.
 Put a space after a comma in argument lists.
 Open the brace after the declaration (after a space).
-`make style` will take care of all that.
 ```c
 void foo(int a_thing, int something_else) {
     ...
@@ -215,7 +212,6 @@ switch(bar) {
         break;
 }
 ```
-`make style` will take care of the indentation.
 
 If you fall through into another case, add an explicit comment;
 otherwise, it can look confusing.
@@ -305,5 +301,3 @@ you shouldn't use it (same for `_FOOBAR_H`).
 
 Avoid trailing whitespace (no line should end in tab or space).
 Keep a newline (blank line) at the end of each file.
-
-`make style` will take care of both.
