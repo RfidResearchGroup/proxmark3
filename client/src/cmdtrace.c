@@ -518,7 +518,10 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     uint32_t end_of_transmission_timestamp = 0;
     uint8_t topaz_reader_command[MAX_TOPAZ_READER_CMD_LEN];
-    char explanation[60] = {0};
+    // Shared by every annotate* function below.
+    // annotateHitagU() and annotateHitagS() accumulate into it without clamping.
+    // annotateHitagU(): 76 chars for flags PEXT|INV|RFU|NOS|CRCT on a WRITE SINGLE BLOCK
+    char explanation[80] = {0};
     tracelog_hdr_t *first_hdr = (tracelog_hdr_t *)(trace);
     tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
 

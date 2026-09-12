@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `trace list` - a Hitag U LOGIN or WRITE SINGLE BLOCK frame could write up to 17 bytes past the end of the 60 byte annotation buffer (@iceman1001)
 - Fixed `hf mf autopwn` - it now re-authenticates and retries the block with the other key (@iceman1001)
 - Fixed `hf mf hardnested` - the device declared `num_nonces * 4` bytes but packs 9 bytes per nonce pair. Thanks @TheArchitect0880 (@iceman1001)
 - Changed `hf mfdes detect` - with no `-n` it now sweeps every key number the application declares instead of only key 0 (@iceman1001)
