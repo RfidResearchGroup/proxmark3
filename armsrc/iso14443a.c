@@ -713,7 +713,9 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
 }
 
 // Thinfilm, Kovio mangles ISO14443A in the way that they don't use start bit nor parity bits.
-static int ManchesterDecoding_Thinfilm(uint8_t bit) {
+// non_real_time is the sample count to timestamp with when called from a DMA sniff
+// loop, where GetCountSspClk() has already run on past the frame.  0 = read the clock.
+RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit, uint32_t non_real_time) {
 
     if (Demod.len == Demod.output_len) {
         // Flush last parity bits
@@ -746,7 +748,7 @@ static int ManchesterDecoding_Thinfilm(uint8_t bit) {
             else if ((Demod.twoBits & 0x00EE) == 0x00E0) Demod.syncBit = 0;
 
             if (Demod.syncBit != 0xFFFF) {
-                Demod.startTime = (GetCountSspClk() & 0xfffffff8);
+                Demod.startTime = non_real_time ? non_real_time : (GetCountSspClk() & 0xfffffff8);
                 Demod.startTime -= Demod.syncBit;
                 Demod.bitCount = 1;            // number of decoded data bits
                 Demod.shiftReg = 1;
@@ -3089,7 +3091,7 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_
 
         if (FPGA_SSC_RX_Ready()) {
             b = (uint8_t)FPGA_SSC_RX_Value();
-            if (ManchesterDecoding_Thinfilm(b)) {
+            if (ManchesterDecoding_Thinfilm(b, 0)) {
                 *received_len = Demod.len;
                 LogTrace(receivedResponse, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, NULL, false);
                 return true;
