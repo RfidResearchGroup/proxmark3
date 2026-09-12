@@ -33,6 +33,7 @@
 
 #include "iso14443a.h"
 #include "BigBuf.h"
+#include "fpga_loader.h"
 #include "string.h"
 #include "mifareutil.h"
 #include "fpga_apis.h"
@@ -460,6 +461,11 @@ bool MifareSimInit(uint16_t flags, uint8_t *uid, uint16_t atqa, uint8_t sak, tag
 #define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 571
 
     uint8_t *free_buffer = BigBuf_calloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
+    if (free_buffer == NULL) {
+        Dbprintf("ERROR: " _RED_("Failed to allocate modulation buffer"));
+        return false;
+    }
+
     // modulation buffer pointer and current buffer free space size
     uint8_t *free_buffer_pointer = free_buffer;
     size_t free_buffer_size = ALLOCATED_TAG_MODULATION_BUFFER_SIZE;
@@ -541,8 +547,17 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
 
     const tUart14a *uart = GetUart14a();
 
+    //-----------------------------------------------------------------------------
+    // Note: we call FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF) here although the
+    // FPGA isn't needed yet. iso14443a_setup() below does it otherwise, and a
+    // bitstream download frees and clears BigBuf - which by then holds the
+    // Emulator Memory and the precompiled anticollision responses.
+    //-----------------------------------------------------------------------------
+    FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
+
     // free eventually allocated BigBuf memory but keep Emulator Memory
     BigBuf_free_keep_EM();
+    clear_trace();
 
     if (MifareSimInit(flags, uid, atqa, sak, &responses, &cuid, &uid_len, &rats, &rats_len) == false) {
         BigBuf_free_keep_EM();
@@ -552,8 +567,6 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
     // We need to listen to the high-frequency, peak-detected path.
     iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
-    // clear trace
-    clear_trace();
     set_tracing(true);
     LED_D_ON();
     ResetSspClk();

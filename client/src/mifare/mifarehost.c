@@ -1152,15 +1152,16 @@ int mf_eml_get_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtW
 }
 
 int mf_elm_set_mem(uint8_t *data, int blockNum, int blocksCount) {
-    return mf_eml_set_mem_xt(data, blockNum, blocksCount, MFBLOCK_SIZE);
+    return mf_eml_set_mem_xt(data, blockNum, blocksCount, MFBLOCK_SIZE, 0);
 }
 
-int mf_eml_set_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth) {
+int mf_eml_set_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth, uint8_t flags) {
 
     struct p {
         uint16_t blockno;
         uint8_t blockcnt;
         uint8_t blockwidth;
+        uint8_t flags;
         uint8_t data[];
     } PACKED;
 
@@ -1179,6 +1180,7 @@ int mf_eml_set_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtW
     payload->blockno = blockNum;
     payload->blockcnt = blocksCount;
     payload->blockwidth = blockBtWidth;
+    payload->flags = flags;
     memcpy(payload->data, data, size);
 
     clearCommandBuffer();

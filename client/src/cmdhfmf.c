@@ -5448,7 +5448,11 @@ int CmdHF14AMfELoad(const char *Cmd) {
         uint16_t chunk_size = MIN(max_avail_blocks, bytes_read);
         uint16_t blocks_to_send = chunk_size / block_width;
 
-        if (mf_eml_set_mem_xt(data + offset, cnt, blocks_to_send, block_width) != PM3_SUCCESS) {
+        // the first chunk zeroes the emulator memory device side, so a dump smaller
+        // than the previous one can't leave a tail behind that reads back as card data
+        uint8_t flags = (cnt == 0) ? MFEMUL_MEMSET_CLEAR : 0;
+
+        if (mf_eml_set_mem_xt(data + offset, cnt, blocks_to_send, block_width, flags) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Can't set emulator mem at block: %3d", cnt);
             free(data);
             return PM3_ESOFT;
@@ -9423,7 +9427,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
             uint16_t chunk_size = MIN(max_avail_blocks, bytes_left);
             uint16_t blocks_to_send = chunk_size / MFBLOCK_SIZE;
 
-            if (mf_eml_set_mem_xt(dump + offset, cnt, blocks_to_send, MFBLOCK_SIZE) != PM3_SUCCESS) {
+            if (mf_eml_set_mem_xt(dump + offset, cnt, blocks_to_send, MFBLOCK_SIZE, 0) != PM3_SUCCESS) {
                 PrintAndLogEx(FAILED, "Can't set emulator mem at block: %3d", cnt);
                 free(dump);
                 return PM3_ESOFT;

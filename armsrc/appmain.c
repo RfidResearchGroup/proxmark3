@@ -2548,13 +2548,21 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_EML_MEMSET: {
-            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+            // keep the Emulator Memory, a partial update must not wipe the rest of it
+            FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
             struct p {
                 uint16_t blockno;
                 uint8_t blockcnt;
                 uint8_t blockwidth;
+                uint8_t flags;
                 uint8_t data[];
             } PACKED;
+
+            if (packet->length < sizeof(struct p)) {
+                reply_ng(CMD_HF_MIFARE_EML_MEMSET, PM3_EINVARG, NULL, 0);
+                break;
+            }
+
             struct p *payload = (struct p *) packet->data.asBytes;
 
             // backwards compat... default bytewidth
@@ -2562,12 +2570,19 @@ static void PacketReceived(PacketCommandNG *packet) {
                 payload->blockwidth = MIFARE_BLOCK_SIZE;
             }
 
+            // a whole-dump upload zeroes what was there first, so a smaller dump can't
+            // leave a tail behind that reads back as card data. esetblk never sets this.
+            if (payload->flags & MFEMUL_MEMSET_CLEAR) {
+                BigBuf_Clear_EM();
+            }
+
             emlSetMem_xt(payload->data, payload->blockno, payload->blockcnt, payload->blockwidth);
             break;
         }
         case CMD_HF_MIFARE_EML_MEMGET: {
 
-            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+            // keep the Emulator Memory, we are about to read it back
+            FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
             struct p {
                 uint16_t blockno;
                 uint8_t blockcnt;
@@ -3563,6 +3578,10 @@ static void PacketReceived(PacketCommandNG *packet) {
                 LED_B_OFF();
                 break;
             }
+
+            // a dump smaller than the emulator memory must not leave the tail of a
+            // previous one behind
+            BigBuf_Clear_EM();
 
             rdv40_spiffs_read_as_filetype(fn, em, size, RDV40_SPIFFS_SAFETY_SAFE);
             reply_ng(CMD_SPIFFS_ELOAD, PM3_SUCCESS, NULL, 0);

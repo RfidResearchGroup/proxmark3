@@ -3,7 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- - Changed `mem spiffs upload` - the file is held open across packets instead of being reopened by name for each one (@iceman1001)
+- Changed `hf mf eload` - the device now zeroes the emulator memory before the upload (@iceman1001)
+- Fixed `hf mf sim` / `hf 14a sim` - the anticollision responses were prepared in BigBuf before `iso14443a_setup()` (@iceman1001)
+- Changed `CAPABILITIES_VERSION` to 10 - `hf mf eload` sends a flags byte the device did not have before, so client and firmware must be flashed as a pair (@iceman1001)
+- Changed `mem spiffs upload` - the file is held open across packets instead of being reopened by name for each one (@iceman1001)
 - Added `hf thinfilm sniff` - passively records the frames a Thinfilm / NFC Barcode tag beams at a reader (@iceman1001)
 - Fixed `hf thinfilm sim` - it now holds the genuine tag's measured 65536 carrier period frame rate instead of a fixed delay (@iceman1001)
 - Changed `mem spiffs upload`/`mem spiffs dump` - both now print inline progress, and a refused write is reported with the byte it stopped at instead of claiming success (@iceman1001)

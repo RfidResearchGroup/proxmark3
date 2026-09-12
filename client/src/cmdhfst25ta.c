@@ -462,7 +462,7 @@ static int st25ta_upload_sim_data(const uint8_t *uid, uint8_t uid_len, const uin
 
     for (uint16_t offset = 0; offset < data_len;) {
         uint8_t chunk_len = MIN(data_len - offset, UINT8_MAX);
-        int res = mf_eml_set_mem_xt(data + offset, offset, chunk_len, 1);
+        int res = mf_eml_set_mem_xt(data + offset, offset, chunk_len, 1, 0);
         if (res != PM3_SUCCESS) {
             return res;
         }

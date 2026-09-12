@@ -94,7 +94,7 @@ int mf_write_sector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8
 int mf_eml_get_mem(uint8_t *data, int blockNum, int blocksCount);
 int mf_eml_get_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth);
 int mf_elm_set_mem(uint8_t *data, int blockNum, int blocksCount);
-int mf_eml_set_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth);
+int mf_eml_set_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth, uint8_t flags);
 
 int mf_chinese_set_uid(uint8_t *uid, uint8_t uidlen, const uint8_t *atqa, const uint8_t *sak, uint8_t *old_uid, uint8_t *verifed_uid, uint8_t wipecard, uint8_t gdm);
 int mf_chinese_wipe(uint8_t *uid, const uint8_t *atqa, const uint8_t *sak, uint8_t gdm);

@@ -9059,7 +9059,7 @@ static int CmdHF14AMfUeSetBlk(const char *Cmd) {
 
     // MFU emulator page data starts after the 56-byte mfu_dump_t prefix, so shift the
     // page index by MFU_DUMP_PREFIX_LENGTH/MFU_BLOCK_SIZE (=14), width = MFU_BLOCK_SIZE (4).
-    res = mf_eml_set_mem_xt(data, blk + (MFU_DUMP_PREFIX_LENGTH / MFU_BLOCK_SIZE), count, MFU_BLOCK_SIZE);
+    res = mf_eml_set_mem_xt(data, blk + (MFU_DUMP_PREFIX_LENGTH / MFU_BLOCK_SIZE), count, MFU_BLOCK_SIZE, 0);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Failed to set emulator memory");
         return res;

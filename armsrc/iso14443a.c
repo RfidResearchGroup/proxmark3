@@ -1776,8 +1776,20 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
     uint8_t receivedCmd[MAX_FRAME_SIZE] = { 0x00 };
     uint8_t receivedCmdPar[MAX_PARITY_SIZE] = { 0x00 };
 
+    //-----------------------------------------------------------------------------
+    // Note: we call FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF) here although the
+    // FPGA isn't needed yet. iso14443a_setup() below does it otherwise, and a
+    // bitstream download frees and clears BigBuf - which by then holds the
+    // Emulator Memory and the precompiled anticollision responses.
+    //-----------------------------------------------------------------------------
+    FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
+
     // free eventually allocated BigBuf memory but keep Emulator Memory
     BigBuf_free_keep_EM();
+
+    // clear trace before allocating. The response buffers come out of the same
+    // pool and BigBuf_malloc() won't hand out memory the trace still occupies.
+    clear_trace();
 
     // Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
     // Such a response is less time critical, so we can prepare them on the fly
@@ -1880,7 +1892,6 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
     bool odd_reply = true;
 
-    clear_trace();
     set_tracing(true);
     LED_A_ON();
 
@@ -4782,8 +4793,20 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
         return;
     }
 
+    //-----------------------------------------------------------------------------
+    // Note: we call FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF) here although the
+    // FPGA isn't needed yet. iso14443a_setup() below does it otherwise, and a
+    // bitstream download frees and clears BigBuf - which by then holds the
+    // Emulator Memory and the precompiled anticollision responses.
+    //-----------------------------------------------------------------------------
+    FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
+
     // free eventually allocated BigBuf memory but keep Emulator Memory
     BigBuf_free_keep_EM();
+
+    // clear trace before allocating. The response buffers come out of the same
+    // pool and BigBuf_malloc() won't hand out memory the trace still occupies.
+    clear_trace();
 
     // Response payloads must fit within the dynamic response buffer,
     // accounting for 1-byte IBlock header + 1-byte optional CID (offset 0 or 1)
@@ -4830,7 +4853,6 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
     int sentCount = 0;
     bool odd_reply = true;
 
-    clear_trace();
     set_tracing(true);
     LED_A_ON();
 
