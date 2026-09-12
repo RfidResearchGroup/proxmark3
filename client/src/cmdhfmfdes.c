@@ -2146,9 +2146,8 @@ static int CmdHF14aDesDetect(const char *Cmd) {
         }
     }
 
-    // Without -n we sweep every key number the application declares.  All keys
-    // in one DESFire application share an algo, so the first key number that
-    // succeeds pins the type down for the rest.
+    // Without -n we sweep every key number the application declares.
+    // All keys in one DESFire application share an algo
     uint8_t keynofirst = dctx.keyNum;
     uint8_t keynolast = dctx.keyNum;
     if (keynoset == false) {
@@ -2156,15 +2155,22 @@ static int CmdHF14aDesDetect(const char *Cmd) {
         keynolast = (numkeys > 0 && numkeys <= DESFIRE_MAX_KEY_COUNT) ? (numkeys - 1) : (DESFIRE_MAX_KEY_COUNT - 1);
     }
 
-    // What we worked out about the target.  Worth printing even when no key is
-    // found - knowing the app is AES on LRP with 3 keys is half the answer.
     char algostr[64] = {0};
     size_t algolen = 0;
     for (uint8_t t = T_DES; t <= T_AES; t++) {
         if (keytypes[t] == false) {
             continue;
         }
-        algolen += snprintf(algostr + algolen, sizeof(algostr) - algolen, "%s%s", (algolen) ? "/" : "", CLIGetOptionListStr(DesfireAlgoOpts, t));
+
+        int n = snprintf(algostr + algolen, sizeof(algostr) - algolen, "%s%s", (algolen) ? "/" : "", CLIGetOptionListStr(DesfireAlgoOpts, t));
+        if (n < 0) {
+            break;
+        }
+        algolen += (size_t)n;
+        if (algolen >= sizeof(algostr)) {
+            algolen = sizeof(algostr) - 1;
+            break;
+        }
     }
     if (algolen == 0) {
         snprintf(algostr, sizeof(algostr), "unknown");
