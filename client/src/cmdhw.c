@@ -1508,32 +1508,35 @@ static int CmdTearoff(const char *Cmd) {
 }
 
 static int CmdBwmAutoOff(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hw bwm autooff",
-                  "Toggle automatic power-off when the PM5 is unplugged from USB (BWM only).\n"
-                  "Default is " _GREEN_("on") ". When on, the board powers itself down ~10s after\n"
-                  "USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery.\n"
-                  "Button power-on is unaffected. Disable for standalone/BLE use on battery.\n"
-                  _YELLOW_("Runtime only:") " resets to on at each boot.",
-                  "hw bwm autooff --off   --> disable auto power-off\n"
-                  "hw bwm autooff --on    --> re-enable auto power-off");
+    // Positional sub-action (no dashes): hw bwm autooff on | off
+    char verb[16] = {0};
+    sscanf(Cmd, "%15s", verb);
+    bool on  = (strcmp(verb, "on")  == 0);
+    bool off = (strcmp(verb, "off") == 0);
 
-    void *argtable[] = {
-        arg_param_begin,
-        arg_lit0(NULL, "on",  "enable auto power-off (default)"),
-        arg_lit0(NULL, "off", "disable auto power-off"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool on  = arg_get_lit(ctx, 1);
-    bool off = arg_get_lit(ctx, 2);
-    CLIParserFree(ctx);
-
-    if (on && off) {
-        PrintAndLogEx(WARNING, "pick one of --on / --off");
+    if (!on && !off) {
+        // Not a recognised sub-action: render help (also serves -h / empty),
+        // or error on a stray token, then stop.
+        CLIParserContext *ctx;
+        CLIParserInit(&ctx, "hw bwm autooff",
+                      "Toggle automatic power-off when the PM5 is unplugged from USB (BWM only).\n"
+                      "Default is " _GREEN_("on") ". When on, the board powers itself down ~10s after\n"
+                      "USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery.\n"
+                      "Button power-on is unaffected. Disable for standalone/BLE use on battery.\n"
+                      _YELLOW_("Runtime only:") " resets to on at each boot.",
+                      "hw bwm autooff off   --> disable auto power-off\n"
+                      "hw bwm autooff on    --> re-enable auto power-off");
+        void *argtable[] = {
+            arg_param_begin,
+            arg_param_end
+        };
+        CLIExecWithReturn(ctx, Cmd, argtable, true);
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "specify " _YELLOW_("on") " or " _YELLOW_("off"));
         return PM3_EINVARG;
     }
-    uint8_t payload = off ? 0 : 1;   // default (neither flag) = enable
+
+    uint8_t payload = off ? 0 : 1;   // on -> 1 (enable), off -> 0 (disable)
 
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_AUTOOFF, &payload, sizeof(payload));
@@ -1555,48 +1558,15 @@ static int CmdBwmAutoOff(const char *Cmd) {
 }
 
 static int CmdBWMWifi(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hw bwm wifi",
-                  "Bring up the BWM in STA + TCP-server mode: join a WiFi network and\n"
-                  "start a TCP server so the client can connect over WiFi. PM5 only.",
-                  "hw bwm wifi --ssid Home --pwd secret            --> port 7777\n"
-                  "hw bwm wifi --ssid Home --pwd secret --port 9000\n"
-                  "hw bwm wifi --status                            --> show connection state + IP");
+    // Sub-actions that carry no other arguments are positional keywords now:
+    //   hw bwm wifi status   (was --status)
+    //   hw bwm wifi stop     (was --stop)
+    // Bringing WiFi up still takes value flags, so it stays the default
+    // (no-keyword) form: hw bwm wifi --ssid <ssid> --pwd <pwd> [--port <n>]
+    char verb[16] = {0};
+    sscanf(Cmd, "%15s", verb);
 
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str0(NULL, "ssid", "<ssid>", "WiFi SSID to join (omit with --stop)"),
-        arg_str0(NULL, "pwd",  "<pwd>",  "WiFi password (omit for open network)"),
-        arg_int0(NULL, "port", "<dec>",  "TCP server listen port (default 7777)"),
-        arg_str0(NULL, "hostname", "<name>", "DHCP hostname (default Proxmark5)"),
-        arg_lit0(NULL, "stop", "tear down WiFi and return to BLE-only"),
-        arg_lit0(NULL, "status", "show current WiFi connection state + IP"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-
-    uint8_t ssid[64] = {0};
-    int ssid_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 1), ssid, sizeof(ssid) - 1, &ssid_len);
-
-    uint8_t pwd[64] = {0};
-    int pwd_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 2), pwd, sizeof(pwd) - 1, &pwd_len);
-
-    int port = arg_get_int_def(ctx, 3, 7777);
-
-    uint8_t host[33] = {0};
-    int host_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 4), host, sizeof(host) - 1, &host_len);
-    if (host_len == 0) {
-        strcpy((char *)host, "Proxmark5");
-        host_len = 9;
-    }
-    bool stop = arg_get_lit(ctx, 5);
-    bool status = arg_get_lit(ctx, 6);
-    CLIParserFree(ctx);
-
-    if (status) {
+    if (strcmp(verb, "status") == 0) {
         uint8_t q[1] = { BWM_WIFI_ACTION_STATUS };
         clearCommandBuffer();
         SendCommandNG(CMD_PM5_BWM_WIFI, q, sizeof(q));
@@ -1645,7 +1615,7 @@ static int CmdBWMWifi(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
-    if (stop) {
+    if (strcmp(verb, "stop") == 0) {
         uint8_t off[1] = { BWM_WIFI_ACTION_STOP };
         clearCommandBuffer();
         SendCommandNG(CMD_PM5_BWM_WIFI, off, sizeof(off));
@@ -1662,8 +1632,47 @@ static int CmdBWMWifi(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwm wifi",
+                  "Bring up the BWM in STA + TCP-server mode: join a WiFi network and\n"
+                  "start a TCP server so the client can connect over WiFi. PM5 only.\n"
+                  "Sub-actions (no dashes): 'status' shows state, 'stop' tears WiFi down.",
+                  "hw bwm wifi status                              --> show connection state + IP\n"
+                  "hw bwm wifi stop                                --> tear down WiFi, back to BLE-only\n"
+                  "hw bwm wifi --ssid Home --pwd secret            --> bring up, port 7777\n"
+                  "hw bwm wifi --ssid Home --pwd secret --port 9000");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "ssid", "<ssid>", "WiFi SSID to join"),
+        arg_str0(NULL, "pwd",  "<pwd>",  "WiFi password (omit for open network)"),
+        arg_int0(NULL, "port", "<dec>",  "TCP server listen port (default 7777)"),
+        arg_str0(NULL, "hostname", "<name>", "DHCP hostname (default Proxmark5)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t ssid[64] = {0};
+    int ssid_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 1), ssid, sizeof(ssid) - 1, &ssid_len);
+
+    uint8_t pwd[64] = {0};
+    int pwd_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 2), pwd, sizeof(pwd) - 1, &pwd_len);
+
+    int port = arg_get_int_def(ctx, 3, 7777);
+
+    uint8_t host[33] = {0};
+    int host_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 4), host, sizeof(host) - 1, &host_len);
+    if (host_len == 0) {
+        strcpy((char *)host, "Proxmark5");
+        host_len = 9;
+    }
+    CLIParserFree(ctx);
+
     if (ssid_len == 0) {
-        PrintAndLogEx(FAILED, "an SSID is required (or use --stop to tear down)");
+        PrintAndLogEx(FAILED, "an SSID is required (or " _YELLOW_("hw bwm wifi stop") " to tear down)");
         return PM3_EINVARG;
     }
     if (port < 1 || port > 65535) {
@@ -1699,7 +1708,7 @@ static int CmdBWMWifi(const char *Cmd) {
     }
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "BWM WiFi bring-up failed (check SSID/password and signal)");
-        PrintAndLogEx(HINT, "If it may have joined after DHCP, check: " _YELLOW_("hw bwm wifi --status"));
+        PrintAndLogEx(HINT, "If it may have joined after DHCP, check: " _YELLOW_("hw bwm wifi status"));
         return resp.status;
     }
 
@@ -1713,31 +1722,34 @@ static int CmdBWMWifi(const char *Cmd) {
 }
 
 static int CmdBwmCharge(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hw bwm charge",
-                  "Enable or disable BWM battery charging by clearing/setting the\n"
-                  "AW32001E charge-enable bit (CEB, REG01[3]). PM5 only.\n"
-                  _RED_("One-shot:") " the charger watchdog reverts this after ~160 s unless\n"
-                  "serviced, so charging may stop on its own. Use to nudge a top-up.",
-                  "hw bwm charge --on     --> enable charging\n"
-                  "hw bwm charge --off    --> disable charging");
+    // Positional sub-action (no dashes): hw bwm charge on | off
+    char verb[16] = {0};
+    sscanf(Cmd, "%15s", verb);
+    bool on  = (strcmp(verb, "on")  == 0);
+    bool off = (strcmp(verb, "off") == 0);
 
-    void *argtable[] = {
-        arg_param_begin,
-        arg_lit0(NULL, "on",  "enable charging (default)"),
-        arg_lit0(NULL, "off", "disable charging"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool on  = arg_get_lit(ctx, 1);
-    bool off = arg_get_lit(ctx, 2);
-    CLIParserFree(ctx);
-
-    if (on && off) {
-        PrintAndLogEx(WARNING, "pick one of --on / --off");
+    if (!on && !off) {
+        // Not a recognised sub-action: render help (also serves -h / empty),
+        // or error on a stray token, then stop.
+        CLIParserContext *ctx;
+        CLIParserInit(&ctx, "hw bwm charge",
+                      "Enable or disable BWM battery charging by clearing/setting the\n"
+                      "AW32001E charge-enable bit (CEB, REG01[3]). PM5 only.\n"
+                      _RED_("One-shot:") " the charger watchdog reverts this after ~160 s unless\n"
+                      "serviced, so charging may stop on its own. Use to nudge a top-up.",
+                      "hw bwm charge off    --> disable charging\n"
+                      "hw bwm charge on     --> enable charging");
+        void *argtable[] = {
+            arg_param_begin,
+            arg_param_end
+        };
+        CLIExecWithReturn(ctx, Cmd, argtable, true);
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "specify " _YELLOW_("on") " or " _YELLOW_("off"));
         return PM3_EINVARG;
     }
-    uint8_t payload = off ? 0 : 1;   // default (neither flag) = enable
+
+    uint8_t payload = off ? 0 : 1;   // on -> 1 (enable), off -> 0 (disable)
     PrintAndLogEx(INFO, "%s BWM battery charging...", off ? "Disabling" : "Enabling");
 
     clearCommandBuffer();
@@ -2255,18 +2267,94 @@ static int CmdPM5QCTest(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw qc_pm5", "QC Test for the PM5",
-                  "hw qc_pm5             -> run QC test with default 20 second timeout\n"
-                  "hw qc_pm5 -t 3        -> run QC test with a 3 second timeout");
+                  "hw qc_pm5                  -> run hardware QC test with default 20 second timeout\n"
+                  "hw qc_pm5 -t 3             -> run hardware QC test with a 3 second timeout\n"
+                  "hw qc_pm5 --iolow <index> --pwd <hex>   -> drive PM5 test IO <index> low\n"
+                  "hw qc_pm5 --iohigh <index> --pwd <hex>  -> drive PM5 test IO <index> high\n"
+                  "hw qc_pm5 --ioreset <index> --pwd <hex> -> reset PM5 test IO <index> to default");
 
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0("t", "timeout", "<s>", "test sequence timeout in seconds (default 20)"),
+        arg_u64_0(NULL, "iolow", "<index>", "drive PM5 test IO <index> low"),
+        arg_u64_0(NULL, "iohigh", "<index>", "drive PM5 test IO <index> high"),
+        arg_u64_0(NULL, "ioreset", "<index>", "reset PM5 test IO <index> to default"),
+        arg_str0(NULL, "pwd", "<hex>", "QC test password in hex (required for IO tests)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
     uint32_t timeout_ms = arg_get_u32_def(ctx, 1, 20);
     timeout_ms *= 1000;
+
+    bool io_low = arg_get_u64_count(ctx, 2) > 0;
+    bool io_high = arg_get_u64_count(ctx, 3) > 0;
+    bool io_reset = arg_get_u64_count(ctx, 4) > 0;
+    int io_count = (io_low ? 1 : 0) + (io_high ? 1 : 0) + (io_reset ? 1 : 0);
+
+    uint16_t io_index = 0;
+    uint8_t io_status = 0;
+    if (io_low) {
+        io_index = (uint16_t)arg_get_u32(ctx, 2);
+        io_status = 0;
+    } else if (io_high) {
+        io_index = (uint16_t)arg_get_u32(ctx, 3);
+        io_status = 1;
+    } else if (io_reset) {
+        io_index = (uint16_t)arg_get_u32(ctx, 4);
+        io_status = 2;
+    }
+
+    uint8_t pwd[4];
+    int dlen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 5),  pwd, sizeof(pwd), &dlen);
     CLIParserFree(ctx);
+
+    if (io_count > 1) {
+        PrintAndLogEx(ERR, "only one of --iolow, --iohigh, --ioreset may be specified");
+        return PM3_EINVARG;
+    }
+
+    if (io_count == 1) {
+        if (res || dlen != sizeof(pwd)) {
+            PrintAndLogEx(ERR, "invalid password format, must be hex(8 chars)");
+            return PM3_EINVARG;
+        }
+
+        PrintAndLogEx(WARNING, _RED_("!!! WARNING: PM5 IO QC test drives the test IO pins directly !!!"));
+        PrintAndLogEx(WARNING, _RED_("!!! This can damage the device if used incorrectly !!!"));
+        PrintAndLogEx(WARNING, _RED_("!!! Only proceed if you know exactly what you are doing !!!"));
+        PrintAndLogEx(INFO, "PM5 IO QC test password: 0x%02X%02X%02X%02X", pwd[0], pwd[1], pwd[2], pwd[3]);
+
+        struct {
+            uint32_t pwd;   // QC password, verified by the device
+            uint16_t index; // index of the IO to test
+            uint8_t status; // 0 = low, 1 = high, 2 = float or RESET TO DEFAULT
+        } PACKED payload = {
+            .pwd = BYTES2UINT32_BE(pwd),
+            .index = io_index,
+            .status = io_status,
+        };
+
+        PrintAndLogEx(INFO, "Performing PM5 IO QC test (index %u, status %u)...", io_index, io_status);
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_PM5_QC_TEST_IO, (uint8_t *)&payload, sizeof(payload));
+
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_PM5_QC_TEST_IO, &resp, 1000) == false) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
+        }
+
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "failed to perform IO QC test on PM5 (wrong password?)");
+            return resp.status;
+        }
+        PrintAndLogEx(INFO, "PM5 IO QC test successful.");
+        return PM3_SUCCESS;
+    }
 
     if (timeout_ms == 0) {
         PrintAndLogEx(ERR, "timeout must be greater than zero");
@@ -2276,11 +2364,11 @@ static int CmdPM5QCTest(const char *Cmd) {
     PrintAndLogEx(INFO, "Performing QC test for the PM5...");
 
     clearCommandBuffer();
-    SendCommandNG(CMD_PM5_QC_TEST, (uint8_t *)&timeout_ms, sizeof(timeout_ms));
+    SendCommandNG(CMD_PM5_QC_TEST_HW, (uint8_t *)&timeout_ms, sizeof(timeout_ms));
 
     PacketResponseNG resp;
     // wait a bit longer than the device side sequence timeout, with headroom for RTC drift
-    if (WaitForResponseTimeout(CMD_PM5_QC_TEST, &resp, timeout_ms + (timeout_ms / 5) + 1000) == false) {
+    if (WaitForResponseTimeout(CMD_PM5_QC_TEST_HW, &resp, timeout_ms + (timeout_ms / 5) + 1000) == false) {
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
@@ -2310,15 +2398,23 @@ static void progressbar(long sent, long total, int style) {
 static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms) {
     PacketResponseNG resp;
 
-    // BEGIN: tell the BWM how many bytes are coming (it erases the target partition)
+    // BEGIN: tell the BWM how many bytes are coming. The ESP erases the idle
+    // OTA slot here; that can take 20-40 s on a 4 MB ESP32-C2, so wait longer
+    // than the device-side 60 s timeout plus USB round-trip.
     uint8_t beg[5] = { BWM_OTA_ACTION_BEGIN,
                        (uint8_t)(fwlen & 0xFF),         (uint8_t)((fwlen >> 8) & 0xFF),
                        (uint8_t)((fwlen >> 16) & 0xFF), (uint8_t)((fwlen >> 24) & 0xFF) };
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_ESP_OTA, beg, sizeof(beg));
-    if ((WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 20000) == false) || (resp.status != PM3_SUCCESS)) {
-        PrintAndLogEx(FAILED, "OTA begin failed (is a responsive BWM fitted?)");
-        return PM3_EFAILED;
+    if (WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 75000) == false) {
+        PrintAndLogEx(FAILED, "OTA begin timed out (ESP is likely still erasing the OTA slot)");
+        PrintAndLogEx(HINT, "Wait a few seconds and retry; do not power-cycle mid-erase.");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "OTA begin failed (status %d)%s", resp.status,
+                      (resp.status == PM3_ETIMEOUT) ? " - UART timeout waiting for ESP" : "");
+        return resp.status;
     }
     PrintAndLogEx(INFO, "Uploading " _YELLOW_("%zu") " bytes of ESP firmware over the BWM link...", fwlen);
 
@@ -2336,11 +2432,13 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
         memcpy(buf + 1, fw + sent, n);
         clearCommandBuffer();
         SendCommandNG(CMD_PM5_BWM_ESP_OTA, buf, (uint16_t)(n + 1));
-        bool got = WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 15000);
+        bool got = WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 25000);
         if (!got || resp.status != PM3_SUCCESS) {
             PrintAndLogEx(NORMAL, "");
             if (!got) {
                 PrintAndLogEx(WARNING, "OTA write stalled at offset %zu (no response)", sent);
+            } else if (resp.status == PM3_ETIMEOUT) {
+                PrintAndLogEx(WARNING, "OTA write timed out at offset %zu (ESP did not ACK that chunk)", sent);
             } else {
                 PrintAndLogEx(WARNING, "OTA write rejected at offset %zu (status %d)", sent, resp.status);
             }
@@ -2376,7 +2474,7 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
         // That is a genuine failure (boot partition NOT switched) - restart, and
         // hint at pacing, which is the usual cure.
         PrintAndLogEx(WARNING, "OTA finalize rejected (status %d) - data was lost in transit", resp.status);
-        PrintAndLogEx(HINT, "Try a per-write delay: " _YELLOW_("hw bwm upgrade -f <fw> --delay 10"));
+        PrintAndLogEx(HINT, "Try a per-write delay: " _YELLOW_("hw bwm upgrade -f <fw> --delay 20"));
         return PM3_EFAILED;
     }
     // No answer at all. Over BLE the END auto-reboot drops the link before the ack
@@ -2410,14 +2508,14 @@ static int CmdBWMUpgrade(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "ESP32 firmware image (.bin)"),
-        arg_int0(NULL, "delay", "<ms>", "per-chunk delay to pace the slow AT32<->ESP UART (default 10)"),
+        arg_int0(NULL, "delay", "<ms>", "per-chunk delay to pace the slow AT32<->ESP UART (default 20)"),
         arg_param_end,
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int fnlen = 0;
     char fn[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)fn, sizeof(fn), &fnlen);
-    uint32_t write_delay_ms = (uint32_t)arg_get_int_def(ctx, 2, 10);
+    uint32_t write_delay_ms = (uint32_t)arg_get_int_def(ctx, 2, 20);
     CLIParserFree(ctx);
 
     if (fnlen == 0) {
@@ -2436,6 +2534,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
     // BWM ESP is an ESP32-C2; a wrong/other-chip image would brick it.
     //   [0x00]       == 0xE9   -> ESP image magic
     //   [0x0C..0x0D] == 0x000C -> chip_id ESP32-C2 (LE uint16)
+    //   [0xABCD5432..0x20] == 0xABCD5432 -> app descriptor (LE uint32)
     if (fwlen < 16) {
         PrintAndLogEx(FAILED, "file is too small to be an ESP firmware image (%zu bytes)", fwlen);
         free(fw);
@@ -2446,9 +2545,19 @@ static int CmdBWMUpgrade(const char *Cmd) {
         free(fw);
         return PM3_EFILE;
     }
-    uint16_t chip_id = (uint16_t)(fw[0x0C] | (fw[0x0D] << 8));
+    
+    // Check Chip ID at offset 0x0C (2 bytes, little-endian)
+    uint16_t chip_id = MemLeToUint2byte(fw + 0x0C);
     if (chip_id != 0x000C) {
         PrintAndLogEx(FAILED, "refusing to flash: image chip_id " _YELLOW_("0x%04X") " is not ESP32-C2 (0x000C)", chip_id);
+        free(fw);
+        return PM3_EFILE;
+    }
+
+    // Check Application Signature at offset 0x20 (4 bytes, little-endian)
+    uint32_t app_sign = MemLeToUint4byte(fw + 0x20);
+    if (app_sign != 0xABCD5432) {
+        PrintAndLogEx(FAILED, "refusing to flash: image app_sign " _YELLOW_("0x%08X") " is invalid (expected 0xABCD5432)", app_sign);
         free(fw);
         return PM3_EFILE;
     }
@@ -2468,7 +2577,16 @@ static int CmdBWMUpgrade(const char *Cmd) {
                                   // retry (offset-idempotent ESP write) lands.
     for (int attempt = 1; attempt <= max_attempts; attempt++) {
         if (attempt > 1) {
+            // Abort the in-flight ESP OTA (if any) and give a slow erase a chance
+            // to finish before we BEGIN again. Otherwise attempt N's BEGIN races
+            // attempt N-1's still-running erase and times out.
             PrintAndLogEx(INFO, "restarting OTA from the beginning (attempt " _YELLOW_("%d") "/%d)", attempt, max_attempts);
+            uint8_t ab[1] = { BWM_OTA_ACTION_ABORT };
+            clearCommandBuffer();
+            SendCommandNG(CMD_PM5_BWM_ESP_OTA, ab, sizeof(ab));
+            PacketResponseNG abortr;
+            (void)WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &abortr, 8000);
+            msleep(3000);
         }
         int res = bwm_ota_once(fw, fwlen, write_delay_ms);
 
@@ -2528,10 +2646,10 @@ static int CmdHelpBwm(const char *Cmd);
 static int CmdBwmName(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw bwm name",
-                  "Get or set the BWM BLE advertising name (persisted on the BWM, in NVS).\n"
-                  "With no --set, prints the current name. Setting a name stores it on the\n"
-                  "BWM (NVS) and reboots the BWM to apply it - this briefly drops a BLE/WiFi\n"
-                  "connection; reconnect after a few seconds.",
+                  "Get or set the BWM BLE advertising name (stored on the BWM, in NVS).\n"
+                  "With no --set, prints the current name. Setting a name stores it and reboots\n"
+                  "the BWM to apply it - this briefly drops a BLE/WiFi connection; reconnect after\n"
+                  "a few seconds. Over USB the reboot is not noticeable.",
                   "hw bwm name                 --> show current BLE name\n"
                   "hw bwm name --set MyPM5      --> set BLE name to 'MyPM5'");
     void *argtable[] = {
@@ -2542,7 +2660,7 @@ static int CmdBwmName(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     uint8_t name[64] = {0};
-    int nlen = 0;
+    int nlen = sizeof(name) - 1; // CLIGetStrWithReturn does not guarantee NUL-termination
     CLIGetStrWithReturn(ctx, 1, name, &nlen);
     CLIParserFree(ctx);
 
@@ -2579,16 +2697,6 @@ static int CmdBwmName(const char *Cmd) {
         return PM3_EFAILED;
     }
     PrintAndLogEx(SUCCESS, "BWM BLE name set to " _YELLOW_("%s"), name);
-
-    // The BWM applies the stored name at BLE startup, so reboot it now to make the
-    // change take effect (reusing the OTA path's reboot). Best-effort: the name is
-    // already saved to NVS, so even if the reboot ack is lost it applies on the next
-    // power-up regardless.
-    uint8_t rb[1] = { BWM_OTA_ACTION_REBOOT };
-    clearCommandBuffer();
-    SendCommandNG(CMD_PM5_BWM_ESP_OTA, rb, sizeof(rb));
-    PacketResponseNG rr;
-    (void)WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &rr, 5000);
     PrintAndLogEx(INFO, "BWM is rebooting to apply the new name...");
     PrintAndLogEx(HINT, "If you are connected over BLE or WiFi the link will drop briefly - reconnect after a few seconds");
     return PM3_SUCCESS;
@@ -2598,8 +2706,8 @@ static command_t BwmCommandTable[] = {
     {"help",     CmdHelpBwm,    AlwaysAvailable, "This help"},
     {"autooff",  CmdBwmAutoOff, IfPm5, "Toggle auto power-off on USB unplug"},
     {"charge",   CmdBwmCharge,  IfPm5, "Enable/disable battery charging (one-shot)"},
-    {"setcap",   CmdBwmSetCap,  IfPm5, "Set fuel-gauge design capacity (run once after battery change)"},
     {"name",     CmdBwmName,    IfPm5, "Get/set the BWM BLE advertising name"},
+    {"setcap",   CmdBwmSetCap,  IfPm5, "Set fuel-gauge design capacity (run once after battery change)"},
     {"upgrade",  CmdBWMUpgrade, IfPm5, "Reflash BWM (ESP32) firmware over the BWM link, no header"},
     {"vchg",     CmdBwmVchg,    IfPm5, "Set charger charge-voltage target (default 4100 mV)"},
     {"wifi",     CmdBWMWifi,    IfPm5, "Bring up WiFi (STA + TCP server) for a tcp: connection"},
@@ -2633,7 +2741,7 @@ static command_t CommandTable[] = {
     {"fpga", CmdFPGA, IfPm3Present, "Fpga commands"},
     {"fpgaoff", CmdFPGAOff, IfPm3Present, "Turn off FPGA on device"},
     {"ant_pm5", CmdPM5Ant, IfPm5StdAnt, "Control the antennal of pm5"},
-    {"qc_pm5", CmdPM5QCTest, IfPm5, "Perform QC test for the PM5"},
+    {"qc_pm5", CmdPM5QCTest, IfPm5, "Perform QC test (hardware or IO) for the PM5"},
     {"factorydata", CmdDeviceFactoryData, IfI2cEeprom, "Get/Set the factory data for Device"},
     {"lcd", CmdLCD, IfPm3Lcd, "Send command/data to LCD"},
     {"lcdreset", CmdLCDReset, IfPm3Lcd, "Hardware reset LCD"},
