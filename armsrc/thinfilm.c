@@ -60,8 +60,12 @@ void ReadThinFilm(void) {
 #define SEC_E 0x0f
 #define SEC_F 0x00
 
-static uint16_t ReadReaderField(void) {
-    return AdcRssiAvg(ADC_RSSI_CH_HF);
+// A 32 sample average costs about 3.8 ms, since every sample pays a 42.7 us ADC
+// startup and a 40 us sample & hold.  That is fine once, for the baseline, but in
+// the send loop it costs more than the deliberate inter frame delay and nearly
+// doubles the frame repeat period.  Poll with far fewer samples.
+static uint16_t ReadReaderField(uint8_t samples) {
+    return AdcRssiSum(ADC_RSSI_CH_HF, samples) / samples;
 }
 
 static void CodeThinfilmAsTag(const uint8_t *cmd, uint16_t len) {
@@ -148,13 +152,16 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
     // allocate command receive buffer
     BigBuf_free();
 
+    clear_trace();
+    set_tracing(true);
+
     Dbprintf("Simulate " _YELLOW_("%i-bit Thinfilm") " tag", len * 8);
 
     // connect Demodulated Signal to ADC:
     SetAdcMuxFor(ADC_MUXSEL_HIPKD);
 
     // Set up the synchronous serial port
-    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_ISO14443A);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_MOD);
 
@@ -163,17 +170,21 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
     // Start the timer
     StartCountSspClk();
 
-    uint16_t hf_baseline = ReadReaderField();
+    uint16_t hf_baseline = ReadReaderField(32);
+    uint16_t hf_peak = hf_baseline;
+    uint32_t sends = 0;
 
     int8_t status = PM3_SUCCESS;
     CodeThinfilmAsTag(data, len);
 
     tosend_t *ts = get_tosend();
 
-    for (int i = 0; i < ts->max; i += 16) {
-        Dbhexdump(16, ts->buf + i, false);
+    if (g_dbglevel >= DBG_DEBUG) {
+        for (int i = 0; i < ts->max; i += 16) {
+            Dbhexdump(MIN(16, ts->max - i), ts->buf + i, false);
+        }
+        DbpString("------------------------------------------");
     }
-    DbpString("------------------------------------------");
 
     LED_A_ON();
 
@@ -187,7 +198,7 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
             break;
         }
 
-        uint16_t hf_av = ReadReaderField();
+        uint16_t hf_av = ReadReaderField(4);
 
         /* TODO DXL: Do not use the ADC value directly, which will result in cross platform failure.
         if (hf_av < hf_baseline) {
@@ -208,8 +219,18 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
         if (hf_av < hf_baseline) {
             hf_baseline = hf_av;
         } else if (hf_av > hf_baseline) {
+            if (hf_av > hf_peak) {
+                hf_peak = hf_av;
+            }
             if (AdcRssiDataToMilliVolt(hf_av - hf_baseline, ADC_RSSI_CH_HF) > 1375) {
+
+                uint32_t start_time = GetCountSspClk();
                 EmSendCmdThinfilmRaw(ts->buf, ts->max);
+                sends++;
+
+                // one tosend byte == one 106 kbit/s bit == 8 ssp clk ticks
+                LogTrace(data, len, start_time * 16, (start_time + (ts->max * 8)) * 16, NULL, false);
+
                 if (len == 16) {
                     // wait 3.6ms
                     SpinDelayUs(3600);
@@ -223,5 +244,16 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
     }
 
     LED_A_OFF();
+
+    if (g_dbglevel >= DBG_INFO) {
+        Dbprintf("Thinfilm sim, sent " _YELLOW_("%u") " frames | field baseline %u, peak %u ( delta %u mV )",
+                 sends,
+                 hf_baseline,
+                 hf_peak,
+                 AdcRssiDataToMilliVolt(hf_peak - hf_baseline, ADC_RSSI_CH_HF)
+                );
+    }
+
+    set_tracing(false);
     reply_ng(CMD_HF_THINFILM_SIMULATE, status, NULL, 0);
 }

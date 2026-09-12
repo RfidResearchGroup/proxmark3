@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf thinfilm sim` - a 32 sample field read between every frame cost 3.8ms and nearly doubled the frame repeat period (@iceman1001)
+- Added `hf thinfilm sim` - it now traces, so `trace list -t thinfilm` works on the sim side (@iceman1001)
 - Fixed `hf texkom reader -v` - now no ovewflow in the general decoder (@iceman1001)
 - Changed `trace list` - the Hitag U and Hitag S annotators now build their text with the `strlen()` offset (@iceman1001)
 - Fixed `hf felica` - the service code footer wrote its closing bar past the end of a 128 byte buffer (@iceman1001)
