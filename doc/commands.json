@@ -10519,6 +10519,20 @@
             ],
             "usage": "hf thinfilm sim [-h] -d <hex> [--raw]"
         },
+        "hf thinfilm sniff": {
+            "command": "hf thinfilm sniff",
+            "description": "Sniff the frames a Thinfilm / NFC Barcode tag beams at a reader. The tag talks first and the reader sends nothing, so only the tag side is decoded. Use `hf thinfilm list` to view collected data.",
+            "notes": [
+                "hf thinfilm sniff",
+                "hf thinfilm sniff -i"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-i, --interactive Console will not be returned until sniff finishes or is aborted"
+            ],
+            "usage": "hf thinfilm sniff [-hi]"
+        },
         "hf topaz dump": {
             "command": "hf topaz dump",
             "description": "Dump TOPAZ tag to file (bin/json) If no <name> given, UID will be used as filename",
@@ -16508,8 +16522,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 919,
+        "commands_extracted": 920,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-12T12:14:59+00:00"
+        "extracted_on": "2026-09-12T12:22:55+00:00"
     }
 }

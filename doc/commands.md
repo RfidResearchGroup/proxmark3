@@ -940,6 +940,7 @@ Check column "offline" for their availability.
 |`hf thinfilm info       `|N       |`Tag information`
 |`hf thinfilm list       `|Y       |`List NFC Barcode / Thinfilm history`
 |`hf thinfilm sim        `|N       |`Fake Thinfilm tag`
+|`hf thinfilm sniff      `|N       |`Sniff Thinfilm tag communication`
 
 
 ### hf topaz
