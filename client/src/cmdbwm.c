@@ -30,7 +30,8 @@
 #include "cmdhw.h"
 #include "commonutil.h"
 #include "pm3_cmd.h"
-#include "cmdflashmem.h" // loadFile_safe
+#include "cmdflashmem.h" // get_signature..
+#include "fileutils.h"   // loadFile_safe
 #include "util_posix.h"
 
 static int CmdBwmAutoOff(const char *Cmd) {
