@@ -70,22 +70,22 @@ int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out);
 // ESP OTA over the BWM UART link (no header/soldering): drives the ESP's own
 // OTA commands to reflash a *working* BWM to a new ESP image.
 #define BWM_CMD_OTA_BEGIN   1800   // req: u32 total size
-#define BWM_CMD_OTA_WRITE   1801   // req: [offset:u32 LE][firmware chunk] (idempotent by offset)
+#define BWM_CMD_OTA_WRITE   1801   // req: firmware chunk
 #define BWM_CMD_OTA_END     1802   // no payload: finalize + set boot partition
 // After a working OTA_END, the ESP has marked the new partition bootable but
 // does not reboot on its own - REBOOT must be sent explicitly (DEV.md 12.8).
 #define BWM_CMD_REBOOT      1803
-// Run the OTA at a slow, reliable baud (restored to the fast rate at end/abort).
-#ifndef BWM_OTA_WRITE_RETRIES
-#define BWM_OTA_WRITE_RETRIES  4      // per-chunk retries (ESP is idempotent on offset)
+// BEGIN erases (or finishes aborting) an OTA slot. A 1.8 MB erase on ESP32-C2
+// commonly takes 20-40 s, so this must be well above the old 15 s race.
+#ifndef BWM_OTA_BEGIN_TIMEOUT_MS
+#define BWM_OTA_BEGIN_TIMEOUT_MS   60000
 #endif
-#ifndef BWM_OTA_WRITE_TO
-#define BWM_OTA_WRITE_TO       3000   // per-try ack wait (ms); 4x stays under client 15s
-#endif
-#ifndef BWM_OTA_BAUD
-#define BWM_OTA_BAUD   460800
+#ifndef BWM_OTA_WRITE_TIMEOUT_MS
+#define BWM_OTA_WRITE_TIMEOUT_MS   20000
 #endif
 #define BWM_CMD_GET_VERSION_INFO   1000   // resp: running firmware version string
+#define BWM_CMD_STOP_BLE_SPP       4022   // no payload: stop BLE during OTA (flash contention)
+#define BWM_CMD_START_BLE_SPP      4021   // no payload: restore BLE after OTA
 #define BWM_CMD_SET_BLE_DEVICE_NAME 4002   // req: name bytes
 #define BWM_CMD_GET_BLE_DEVICE_NAME 4003   // resp: current BLE device name string
 int bwm_esp_get_version(uint8_t *buf, uint16_t *buflen);
