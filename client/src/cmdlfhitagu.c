@@ -16,6 +16,7 @@
 // Low frequency Hitag µ support
 //-----------------------------------------------------------------------------
 #include "cmdlfhitagu.h"
+#include <string.h>   // strlen
 
 #include "cliparser.h"
 #include "cmddata.h"  // setDemodBuff
@@ -53,41 +54,41 @@ void annotateHitagU(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
         uint8_t command = ((reflect8(cmd[0]) >> 5) & 0x07) | ((reflect8(cmd[1]) & 0x07) << 3);
         bool has_uid = false;
 
-        size_t exp_len = snprintf(exp, size, "Flg:");
+        snprintf(exp, size, "Flg:");
 
         if ((flag & HITAGU_FLAG_PEXT) == HITAGU_FLAG_PEXT) {
-            exp_len += snprintf(exp + exp_len, size - exp_len, " PEXT");
+            snprintf(exp + strlen(exp), size - strlen(exp), " PEXT");
         }
 
         if ((flag & HITAGU_FLAG_INV) == HITAGU_FLAG_INV) {
 
-            exp_len += snprintf(exp + exp_len, size - exp_len, " INV");
+            snprintf(exp + strlen(exp), size - strlen(exp), " INV");
 
             if ((flag & HITAGU_FLAG_RFU) == HITAGU_FLAG_RFU) {
-                exp_len += snprintf(exp + exp_len, size - exp_len, " RFU");
+                snprintf(exp + strlen(exp), size - strlen(exp), " RFU");
             }
 
             if ((flag & HITAGU_FLAG_NOS) == HITAGU_FLAG_NOS) {
-                exp_len += snprintf(exp + exp_len, size - exp_len, " NOS");
+                snprintf(exp + strlen(exp), size - strlen(exp), " NOS");
             }
 
         } else {
 
             if ((flag & HITAGU_FLAG_SEL) == HITAGU_FLAG_SEL) {
-                exp_len += snprintf(exp + exp_len, size - exp_len, " SEL");
+                snprintf(exp + strlen(exp), size - strlen(exp), " SEL");
             }
 
             if ((flag & HITAGU_FLAG_ADR) == HITAGU_FLAG_ADR) {
-                exp_len += snprintf(exp + exp_len, size - exp_len, " ADR");
+                snprintf(exp + strlen(exp), size - strlen(exp), " ADR");
                 has_uid = true;
             }
         }
 
         if ((flag & HITAGU_FLAG_CRCT) == HITAGU_FLAG_CRCT) {
-            exp_len += snprintf(exp + exp_len, size - exp_len, " CRCT");
+            snprintf(exp + strlen(exp), size - strlen(exp), " CRCT");
         }
 
-        exp_len += snprintf(exp + exp_len, size - exp_len, "|Cmd: ");
+        snprintf(exp + strlen(exp), size - strlen(exp), "|Cmd: ");
 
         switch (command) {
             case HITAGU_CMD_LOGIN: {
@@ -96,29 +97,29 @@ void annotateHitagU(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
 
                 if (cmdsize == (6 + (has_uid * HITAGU_UID_SIZE)) || cmdsize == (8 + (has_uid * HITAGU_UID_SIZE))) {
 
-                    exp_len += snprintf(exp + exp_len, size - exp_len, "8265 LOGIN");
+                    snprintf(exp + strlen(exp), size - strlen(exp), "8265 LOGIN");
 
                 } else if (cmdsize == (7 + (has_uid * HITAGU_UID_SIZE)) || cmdsize == (9 + (has_uid * HITAGU_UID_SIZE))) {
 
                     uint8_t mfc = 0;
                     concatbits(&mfc, 0, cmd, 5 + 6 + 8 + 32, 8, false);
-                    exp_len += snprintf(exp + exp_len, size - exp_len, "LOGIN mfc:%02x ", mfc);
+                    snprintf(exp + strlen(exp), size - strlen(exp), "LOGIN mfc:%02x ", mfc);
                     has_mfc = true;
                 }
 
                 if (has_uid) {
                     uint8_t uid[HITAGU_UID_SIZE] = {0};
                     concatbits(uid, 0, cmd, 5 + 6 + has_mfc * 8 + 32, HITAGU_UID_SIZE * 8, false);
-                    exp_len += snprintf(exp + exp_len, size - exp_len, " uid:%s", sprint_hex_inrow(uid, HITAGU_UID_SIZE));
+                    snprintf(exp + strlen(exp), size - strlen(exp), " uid:%s", sprint_hex_inrow(uid, HITAGU_UID_SIZE));
                 }
 
                 uint8_t password[HITAG_PASSWORD_SIZE] = {0};
                 concatbits(password, 0, cmd, 5 + 6 + has_mfc * 8 + has_uid * HITAGU_UID_SIZE * 8, HITAG_PASSWORD_SIZE * 8, false);
-                exp_len += snprintf(exp + exp_len, size - exp_len, " pwd:%s", sprint_hex_inrow(password, HITAG_PASSWORD_SIZE));
+                snprintf(exp + strlen(exp), size - strlen(exp), " pwd:%s", sprint_hex_inrow(password, HITAG_PASSWORD_SIZE));
                 break;
             }
             case HITAGU_CMD_INVENTORY: {
-                exp_len += snprintf(exp + exp_len, size - exp_len, "INVENTORY");
+                snprintf(exp + strlen(exp), size - strlen(exp), "INVENTORY");
                 break;
             }
             case HITAGU_CMD_READ_MULTIPLE_BLOCK: {
@@ -128,7 +129,7 @@ void annotateHitagU(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
                 uint8_t block_count = 0;
                 concatbits(&block_count, 0, cmd, 5 + 6 + 8, 8, false);
 
-                exp_len += snprintf(exp + exp_len, size - exp_len, "READ MULTIPLE BLOCK start:%d num:%d"
+                snprintf(exp + strlen(exp), size - strlen(exp), "READ MULTIPLE BLOCK start:%d num:%d"
                                     , reflect8(block_addr)
                                     , reflect8(block_count)
                                    );
@@ -141,30 +142,30 @@ void annotateHitagU(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
                 uint8_t block_data[4] = {0};
                 concatbits(block_data, 0, cmd, 5 + 6 + 8, 32, false);
 
-                exp_len += snprintf(exp + exp_len, size - exp_len, "WRITE SINGLE BLOCK start:%d data:[%s]"
+                snprintf(exp + strlen(exp), size - strlen(exp), "WRITE SINGLE BLOCK start:%d data:[%s]"
                                     , reflect8(block_addr)
                                     , sprint_hex_inrow(block_data, 4)
                                    );
                 break;
             }
             case HITAGU_CMD_SELECT: {
-                exp_len += snprintf(exp + exp_len, size - exp_len, "SELECT");
+                snprintf(exp + strlen(exp), size - strlen(exp), "SELECT");
                 break;
             }
             case HITAGU_CMD_SYSINFO: {
-                exp_len += snprintf(exp + exp_len, size - exp_len, "GET SYSTEM INFORMATION");
+                snprintf(exp + strlen(exp), size - strlen(exp), "GET SYSTEM INFORMATION");
                 break;
             }
             case HITAGU_CMD_READ_UID: {
-                exp_len += snprintf(exp + exp_len, size - exp_len, "READ UID");
+                snprintf(exp + strlen(exp), size - strlen(exp), "READ UID");
                 break;
             }
             case HITAGU_CMD_STAY_QUIET: {
-                exp_len += snprintf(exp + exp_len, size - exp_len, "STAY QUIET");
+                snprintf(exp + strlen(exp), size - strlen(exp), "STAY QUIET");
                 break;
             }
             default: {
-                exp_len += snprintf(exp + exp_len, size - exp_len, "Unknown 0x%02X", command);
+                snprintf(exp + strlen(exp), size - strlen(exp), "Unknown 0x%02X", command);
                 break;
             }
         }

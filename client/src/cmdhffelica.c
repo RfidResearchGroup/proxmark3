@@ -5313,13 +5313,12 @@ static void felica_scsvcode_print_footer(const felica_scsvcode_context_t *scsv_c
         return;
     }
 
-    char bar[128];
-    size_t pos = 0;
-    pos += snprintf(bar + pos, sizeof(bar) - pos, "└");
-    for (int i = 0; i < scsv_ctx->depth - 1 && pos < sizeof(bar); i++) {
-        pos += snprintf(bar + pos, sizeof(bar) - pos, "───┴");
+    char bar[128] = {0};
+    str_append(bar, sizeof(bar), "└");
+    for (int i = 0; i < scsv_ctx->depth - 1; i++) {
+        str_append(bar, sizeof(bar), "───┴");
     }
-    snprintf(bar + pos, sizeof(bar) - pos, "───────────────────────");
+    str_append(bar, sizeof(bar), "───────────────────────");
     PrintAndLogEx(INFO, "%s", bar);
 }
 
