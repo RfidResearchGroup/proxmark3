@@ -42,16 +42,25 @@ int flashmem_spiffs_load(const char *destfn, const uint8_t *data, size_t datalen
     // fast push mode
     g_conn.block_after_ACK = true;
 
-    // inline feedback, an upload is one packet per FLASH_MEM_BLOCK_SIZE bytes.
-    // Time based, not byte based: SPIFFS garbage collection can make a single
-    // packet take seconds on a full filesystem, and a counter that only moves
-    // every 16 packets is indistinguishable from a hang
-    const bool show_progress = (datalen > FLASH_MEM_BLOCK_SIZE);
+    // One packet per frame, not per 256 byte flash page.  SPIFFS pages the data
+    // itself, so FLASH_MEM_BLOCK_SIZE was never a transport limit - and every
+    // packet costs a SPIFFS_open() by name, which walks the object lookup tables
+    // of the whole filesystem.  Measured on a 2MB (PM5) filesystem, storing 512KB
+    // reads 243MB of flash at 256 bytes a packet against 16MB at 4029
+    uint32_t max_packet = FLASH_MEM_BLOCK_SIZE;
+    if (g_conn.max_cmd_data_size > sizeof(flashmem_write_t)) {
+        max_packet = g_conn.max_cmd_data_size - sizeof(flashmem_write_t);
+    }
+
+    // inline feedback. Time based, not byte based: SPIFFS garbage collection can
+    // make a single packet take seconds on a full filesystem, and a counter that
+    // only moves every 16 packets is indistinguishable from a hang
+    const bool show_progress = (datalen > max_packet);
     uint64_t last_update = 0;
 
     while (bytes_remaining > 0) {
 
-        uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
+        uint32_t bytes_in_packet = MIN(max_packet, bytes_remaining);
 
         flashmem_write_t *payload = calloc(1, sizeof(flashmem_write_t) + bytes_in_packet);
         if (payload == NULL) {

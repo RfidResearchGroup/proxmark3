@@ -1294,6 +1294,17 @@ static int reply_download_chunk(uint16_t cmd, uint32_t offset, const uint8_t *da
     return reply_ng(cmd, PM3_SUCCESS, buf, sizeof(download_chunk_t) + len);
 }
 
+#ifdef WITH_FLASH
+// CMD_SPIFFS_DOWNLOAD streams the file out chunk by chunk, this is the sink
+static int spiffs_download_chunk(uint32_t offset, const uint8_t *data, uint16_t len) {
+    int res = reply_download_chunk(CMD_SPIFFS_DOWNLOADED, offset, data, len);
+    if (res != PM3_SUCCESS) {
+        Dbprintf("transfer to client failed ::  | bytes between %u - %u (%u) | result: %d", offset, offset + len, len, res);
+    }
+    return res;
+}
+#endif
+
 static void reply_download_done(uint16_t cmd, uint32_t bytes_sent, uint32_t extra) {
     download_done_t done = {
         .bytes_sent = bytes_sent,
@@ -2780,6 +2791,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             SimulateThinFilm(packet->data.asBytes, packet->length);
             break;
         }
+        case CMD_HF_THINFILM_SNIFF: {
+            int res = SniffThinFilm();
+            reply_ng(CMD_HF_THINFILM_SNIFF, res, NULL, 0);
+            break;
+        }
 #endif
 
 #ifdef WITH_ICLASS
@@ -3369,40 +3385,41 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_SPIFFS_DOWNLOAD: {
             LED_B_ON();
-            uint8_t filename[32];
             if (packet->length < sizeof(download_req_t)) {
                 reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_EINVARG, NULL, 0);
+                LED_B_OFF();
                 break;
             }
+
+            // a client can fill the name field, keep room for the terminator
+            char filename[SPIFFS_OBJ_NAME_LEN] = {0};
             const download_req_t *dreq = (const download_req_t *)packet->data.asBytes;
-            uint16_t fnlen = MIN((uint16_t)(packet->length - sizeof(download_req_t)), (uint16_t)SPIFFS_OBJ_NAME_LEN);
+            uint16_t fnlen = MIN((uint16_t)(packet->length - sizeof(download_req_t)), (uint16_t)(SPIFFS_OBJ_NAME_LEN - 1));
             memcpy(filename, dreq->data, fnlen);
             if (g_dbglevel >= DBG_DEBUG) Dbprintf("Filename received for spiffs dump : %s", filename);
 
-            uint32_t size = dreq->bytes;
-
-            uint8_t *buff = BigBuf_calloc(size);
-            if (buff == NULL) {
+            // a file can be bigger than BigBuf, so it is streamed out one frame at a
+            // time.  Reading it into BigBuf first wrapped the uint16_t BigBuf_calloc()
+            // takes at 64KB and then read the whole file into the short buffer
+            const uint16_t dl_chunk = reply_ng_max_data_size() - sizeof(download_chunk_t);
+            uint8_t *chunkbuf = BigBuf_calloc(dl_chunk);
+            if (chunkbuf == NULL) {
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Failed to allocate memory");
                 // Trigger a finish downloading signal with an PM3_EMALLOC
                 reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_EMALLOC, NULL, 0);
-            } else {
-                rdv40_spiffs_read_as_filetype((char *)filename, (uint8_t *)buff, size, RDV40_SPIFFS_SAFETY_SAFE);
-                // arg0 = filename
-                // arg1 = size
-                // arg2 = RFU
-
-                const size_t dl_chunk = reply_ng_max_data_size() - sizeof(download_chunk_t);
-                for (size_t i = 0; i < size; i += dl_chunk) {
-                    size_t len = MIN((size - i), dl_chunk);
-                    int result = reply_download_chunk(CMD_SPIFFS_DOWNLOADED, i, buff + i, len);
-                    if (result != PM3_SUCCESS)
-                        Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
-                }
-                // Trigger a finish downloading signal with an ACK frame
-                reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_SUCCESS, NULL, 0);
-                BigBuf_free();
+                LED_B_OFF();
+                break;
             }
+
+            int res = rdv40_spiffs_read_stream(filename, dreq->start_index, dreq->bytes, chunkbuf, dl_chunk, spiffs_download_chunk, RDV40_SPIFFS_SAFETY_SAFE);
+            if (res < 0) {
+                reply_ng(CMD_SPIFFS_DOWNLOAD, res, NULL, 0);
+            } else {
+                // Trigger a finish downloading signal with an ACK frame
+                reply_download_done(CMD_SPIFFS_DOWNLOAD, (uint32_t)res, 0);
+            }
+
+            BigBuf_free();
             LED_B_OFF();
             break;
         }
@@ -3479,6 +3496,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 Dbprintf("Destination... %s", payload->dest);
             }
             rdv40_spiffs_copy((char *)payload->src, (char *)payload->dest, RDV40_SPIFFS_SAFETY_SAFE);
+            BigBuf_free();
             reply_ng(CMD_SPIFFS_COPY, PM3_SUCCESS, NULL, 0);
             LED_B_OFF();
             break;
@@ -3486,7 +3504,21 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_SPIFFS_WRITE: {
             LED_B_ON();
 
+            if (packet->length < sizeof(flashmem_write_t)) {
+                reply_ng(CMD_SPIFFS_WRITE, PM3_EINVARG, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
+
             flashmem_write_t *payload = (flashmem_write_t *)packet->data.asBytes;
+
+            // the packet size follows the negotiated frame, so do not take the
+            // client's word for how much data is in it
+            if (payload->bytes_in_packet > (packet->length - sizeof(flashmem_write_t))) {
+                reply_ng(CMD_SPIFFS_WRITE, PM3_EINVARG, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
 
             if (g_dbglevel >= DBG_DEBUG) {
                 Dbprintf("SPIFFS WRITE, dest `%s` with APPEND set to: %c", payload->fn, payload->append ? 'Y' : 'N');
@@ -3498,7 +3530,10 @@ static void PacketReceived(PacketCommandNG *packet) {
                 rdv40_spiffs_write((char *) payload->fn, payload->data, payload->bytes_in_packet, RDV40_SPIFFS_SAFETY_SAFE);
             }
 
-            reply_ng(CMD_SPIFFS_WRITE, PM3_SUCCESS, NULL, 0);
+            // tell the client whether the bytes actually landed.  The SPIFFS errno
+            // rides along so it can name the reason, ie: -10001 filesystem full
+            int32_t res = rdv40_spiffs_write_status();
+            reply_ng(CMD_SPIFFS_WRITE, (res == SPIFFS_OK) ? PM3_SUCCESS : PM3_EFLASH, (uint8_t *)&res, sizeof(res));
             LED_B_OFF();
             break;
         }
