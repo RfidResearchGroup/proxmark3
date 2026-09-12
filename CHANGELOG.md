@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf texkom reader -v` - now no ovewflow in the general decoder (@iceman1001)
 - Changed `trace list` - the Hitag U and Hitag S annotators now build their text with the `strlen()` offset (@iceman1001)
 - Fixed `hf felica` - the service code footer wrote its closing bar past the end of a 128 byte buffer (@iceman1001)
 - Fixed `trace list` - a Hitag U LOGIN or WRITE SINGLE BLOCK frame could write up to 17 bytes past the end of the 60 byte annotation buffer (@iceman1001)
