@@ -7156,7 +7156,8 @@ static int CmdHFFelicaDump(const char *Cmd) {
     if (res != PM3_SUCCESS || discovered_systems.count == 0) {
         DropField();
         PrintAndLogEx(FAILED, "Unable to discover FeliCa systems.");
-        return res;
+        // discovery can succeed and still find nothing, res is PM3_SUCCESS then
+        return (res != PM3_SUCCESS) ? res : PM3_ESOFT;
     }
 
     PrintAndLogEx(INFO, "Discovered " _GREEN_("%u") " system(s).", (unsigned int)discovered_systems.count);
