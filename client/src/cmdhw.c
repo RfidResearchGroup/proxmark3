@@ -2600,34 +2600,17 @@ static int CmdBWMUpgrade(const char *Cmd) {
         if (res == PM3_ETIMEOUT) {
             PrintAndLogEx(INFO, "finalize ack not seen - all data was sent, confirming by version...");
         }
-        // The device's OTA_END handler already reboots the ESP into the new image
-        // (that is what drops the finalize ack over BLE). Just wait for it to come
-        // back and re-link, then confirm by version.
-        PrintAndLogEx(INFO, "BWM rebooting into the new image (link drops briefly)...");
-        msleep(8000);   // reboot + re-negotiate baud + re-link
-
-        char ver_after[64] = {0};
-        bool have_after = (bwm_get_version(ver_after, sizeof(ver_after)) == PM3_SUCCESS);
-
-        if (have_after && have_before) {
-            if (strncmp(ver_before, ver_after, sizeof(ver_before)) != 0) {
-                PrintAndLogEx(SUCCESS, "BWM firmware updated: %s -> " _YELLOW_("%s"), ver_before, ver_after);
-                free(fw);
-                return PM3_SUCCESS;
-            }
-            PrintAndLogEx(WARNING, "BWM still reports " _YELLOW_("%s") " - update did not take, retrying", ver_after);
-            continue;
-        }
-        if (have_after) {
-            PrintAndLogEx(SUCCESS, "BWM now running " _YELLOW_("%s"), ver_after);
-            free(fw);
-            return PM3_SUCCESS;
-        }
-        // Could not re-read the version (link dropped on reboot, common over BLE).
-        // All data was uploaded, so treat as done and let the user confirm.
-        PrintAndLogEx(WARNING, "Could not re-read BWM version after reboot (link dropped?)");
-        PrintAndLogEx(HINT, "Reconnect and run " _YELLOW_("hw status") " to confirm the version.");
+        // Upload is complete and the ESP is rebooting into the new image. The
+        // AT32<->ESP link is now desynced (the ESP comes back at its boot-default
+        // baud), and the AT32 only re-negotiates on its own reset - so reset the PM5
+        // to re-sync the link cleanly rather than trying to re-link in place. This
+        // drops the client link; the user reconnects to a cleanly re-linked PM5.
+        (void)have_before;
+        PrintAndLogEx(SUCCESS, "BWM firmware uploaded; resetting the PM5 to re-sync the link...");
         free(fw);
+        clearCommandBuffer();
+        SendCommandNG(CMD_HARDWARE_RESET, NULL, 0);
+        PrintAndLogEx(INFO, "PM5 has been reset - reconnect, then run " _YELLOW_("hw status") " to confirm the new BWM version.");
         return PM3_SUCCESS;
     }
     free(fw);
@@ -2697,8 +2680,15 @@ static int CmdBwmName(const char *Cmd) {
         return PM3_EFAILED;
     }
     PrintAndLogEx(SUCCESS, "BWM BLE name set to " _YELLOW_("%s"), name);
-    PrintAndLogEx(INFO, "BWM is rebooting to apply the new name...");
-    PrintAndLogEx(HINT, "If you are connected over BLE or WiFi the link will drop briefly - reconnect after a few seconds");
+
+    // The ESP applies the name at BLE start-up, so it reboots (device-side) to pick
+    // it up. That reboot leaves the AT32<->ESP link desynced (the ESP comes back at
+    // its boot-default baud, and the AT32 only re-negotiates on its own reset), so
+    // reset the PM5 to re-sync. This drops the client link - reconnect afterwards.
+    PrintAndLogEx(INFO, "Resetting the PM5 to apply the new name and re-sync the BWM link...");
+    clearCommandBuffer();
+    SendCommandNG(CMD_HARDWARE_RESET, NULL, 0);
+    PrintAndLogEx(INFO, "PM5 has been reset - reconnect after a few seconds.");
     return PM3_SUCCESS;
 }
 
