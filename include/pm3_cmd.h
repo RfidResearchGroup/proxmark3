@@ -1188,6 +1188,7 @@ typedef struct {
 // For ThinFilm Kovio
 #define CMD_HF_THINFILM_READ 0x0810
 #define CMD_HF_THINFILM_SIMULATE 0x0811
+#define CMD_HF_THINFILM_SNIFF 0x0812
 
 // For Atmel CryptoRF
 #define CMD_HF_CRYPTORF_SIM 0x0820
