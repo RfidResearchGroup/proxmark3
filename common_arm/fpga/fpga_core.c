@@ -15,8 +15,15 @@ bool FpgaIs16BitMsbMode(uint16_t fpga_mode) {
     return false;
 }
 
+#ifdef PM5
+static uint16_t s_fpga_conf_word = FPGA_MAJOR_MODE_OFF;
+#endif
+
 void FpgaWriteConfWord(uint16_t v) {
     const int current = FpgaGetCurrent();
+#ifdef PM5
+    s_fpga_conf_word = v;
+#endif
 
     // Keep track of whether or not we should be monitoring the HF field timeout
     if (current == FPGA_BITSTREAM_HF || current == FPGA_BITSTREAM_HF_15 || current == FPGA_BITSTREAM_HF_FELICA) {
@@ -43,6 +50,12 @@ void FpgaWriteConfWord(uint16_t v) {
 
     FpgaSendCommand(FPGA_CMD_SET_CONFREG, v);
 }
+
+#ifdef PM5
+bool FpgaIsOff(void) {
+    return (s_fpga_conf_word & FPGA_MAJOR_MODE_MASK) == FPGA_MAJOR_MODE_OFF;
+}
+#endif
 
 void FpgaEnableTracing(void) {
     FpgaSendCommand(FPGA_CMD_TRACE_ENABLE, 1);
