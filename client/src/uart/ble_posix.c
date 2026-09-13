@@ -17,7 +17,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <strings.h>   // strcasecmp
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
@@ -293,9 +292,11 @@ int ble_resolve_name(const char *name, char *out_mac, size_t out_mac_sz, int tim
         FD_ZERO(&rs);
         FD_SET(dd, &rs);
         int s = select(dd + 1, &rs, NULL, NULL, &tv);
-        if (s < 0) { if (errno == EINTR) break; break; }   // Ctrl-C or error -> give up cleanly
-        if (s == 0) break;                                  // timeout
-
+        if (s < 0) {
+            if (errno == EINTR) continue; // Interrupted by signal, try again
+            break;                        // Unrecoverable error, break loop
+        }
+        if (s == 0) break;                // Timeout, handle gracefully
         int n = read(dd, buf, sizeof(buf));
         if (n < (int)(1 + HCI_EVENT_HDR_SIZE + 1)) continue;
         uint8_t *pkt_end = buf + n;
