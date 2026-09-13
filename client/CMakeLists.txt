@@ -509,7 +509,6 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/parsers/parsehrt.c
         ${PM3_ROOT}/client/src/parsers/parsehid.c
         ${PM3_ROOT}/client/src/parsers/parsevigik.c
-        ${PM3_ROOT}/client/src/parsers/parsehexact.c
         ${PM3_ROOT}/client/src/parsers/hrtparser/hrtparser.c
         ${PM3_ROOT}/client/src/pla.c
         ${PM3_ROOT}/client/src/preferences.c
@@ -968,6 +967,27 @@ endif (NOT SKIPPYTHON EQUAL 1)
 target_link_directories(proxmark3 PRIVATE ${ADDITIONAL_LNKDIRS})
 
 install(TARGETS proxmark3 DESTINATION "bin")
+
+# Grant the capabilities the BLE connect-by-name scan needs (raw HCI: CAP_NET_RAW
+# + CAP_NET_ADMIN). Linux + Bluez only, and non-fatal: if setcap is absent, the
+# target filesystem lacks xattr support, or this is a staged/packaged install,
+# it just warns. Connect-by-address (-p ble:<MAC>) never needs this.
+if (BLUEZ_FOUND AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_program(SETCAP_EXECUTABLE setcap)
+    if (SETCAP_EXECUTABLE)
+        install(CODE "
+            set(_pm3_bin \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/bin/proxmark3\")
+            execute_process(
+                COMMAND \"${SETCAP_EXECUTABLE}\" cap_net_raw,cap_net_admin+eip \"\${_pm3_bin}\"
+                RESULT_VARIABLE _pm3_setcap_rc)
+            if (NOT _pm3_setcap_rc EQUAL 0)
+                message(WARNING \"setcap failed - BLE connect-by-name (-p ble:<name>) will need sudo; connect-by-MAC is unaffected\")
+            endif ()
+        ")
+    else ()
+        message(STATUS "setcap not found - BLE connect-by-name will need sudo at runtime")
+    endif ()
+endif ()
 install(DIRECTORY cmdscripts lualibs luascripts pyscripts resources dictionaries DESTINATION "share/proxmark3")
 
 add_custom_command(OUTPUT lualibs/pm3_cmd.lua
