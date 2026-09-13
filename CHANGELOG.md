@@ -5,6 +5,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed `fpga_compress` - a build with only one FPGA bitstream (`SKIP_LF`, `SKIP_FELICA`, `SKIP_ISO15693`) packed it as a single 1 MB block the ARM could not decompress, `inflate returned: -13247` (@iceman1001)
 - Fixed `FpgaDownloadAndGo` - a failed FPGA decompress leaked the ring buffer, leaving BigBuf 16 kB short for the rest of the session (@iceman1001)
+- Added `hf mf dump --sk` - save extracted keys to binary file (@iceman1001)
+- Changed `hf mf dump --ns` - now runs the same analysis as `hf mf view`(@iceman1001)
 - Changed `tools/pm3_online_tests.sh desfire_value` - the plain/mac assertion pairs sent byte identical APDUs (@iceman1001)
 - Fixed `smart raw --t1` - a card runs the protocol its ATR names until a PPS changes it (@iceman1001)
 - Fixed `tools/pm3_online_tests.sh smartcard` - the T=0 checks used the non existent `-0` flag (@iceman1001)

@@ -859,6 +859,70 @@ static void mf_analyse_acl(uint16_t n, uint8_t *d) {
     }
 }
 
+// Everything `hf mf view` shows once the block data is in hand. Shared so a dump
+// read straight off the card gets the same treatment as one loaded from a file -
+// the key extraction and the VIGIK decode used to be reachable only via a file.
+static int mf_view_dump(uint8_t *dump, size_t bytes_read, uint16_t block_cnt, bool verbose, bool save_keys) {
+
+    mf_print_blocks(block_cnt, dump, verbose);
+
+    if (verbose) {
+        mf_print_keys(block_cnt, dump);
+        mf_analyse_acl(block_cnt, dump);
+    }
+
+    if (save_keys) {
+        mf_save_keys_from_arr(block_cnt, dump);
+    }
+
+    const mad1_sector_t *vigik_s0 = (bytes_read >= sizeof(mad1_sector_t)) ? (const mad1_sector_t *)dump : NULL;
+
+    int sector = vigik_s0 ? DetectHID(vigik_s0, 0x4910) : -1;
+    if (sector < 0) {
+        return PM3_SUCCESS;
+    }
+
+    // decode it
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, _CYAN_("VIGIK PACS detected"));
+
+    mad_entry_list_t mad_list = {0};
+    int res = MADDecode(vigik_s0, NULL, &mad_list, false, true);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "can't decode MAD");
+        return res;
+    }
+
+    typedef union UDATA {
+        uint8_t *bytes;
+        mfc_vigik_t *vigik;
+    } UDATA;
+    UDATA d;
+    d.bytes = calloc(bytes_read, sizeof(uint8_t));
+    if (d.bytes == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    uint16_t dlen = 0;
+
+    // vigik structure sector 0
+    memcpy(d.bytes + dlen, dump, MFBLOCK_SIZE * 3);
+    dlen += MFBLOCK_SIZE * 3;
+
+    for (size_t i = 0; i < mad_list.len; i++) {
+        if (0x4910 == mad_list.entries[i].aid || 0x4916 == mad_list.entries[i].aid) {
+            uint8_t sno = mad_list.entries[i].sector;
+            uint32_t offset = sno * MFBLOCK_SIZE * 4;
+            memcpy(d.bytes + dlen, dump + offset, MFBLOCK_SIZE * 3);
+            dlen += MFBLOCK_SIZE * 3;
+        }
+    }
+
+    vigik_annotate(d.vigik);
+    free(d.bytes);
+    return PM3_SUCCESS;
+}
+
 /*
  Sector trailer sanity checks.
  Warn if ACL is strict read-only,  or invalid ACL.
@@ -1655,6 +1719,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0(NULL, "ns", "no save to file"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "sk", "Save extracted keys to binary file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1673,6 +1738,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
     bool m4 = arg_get_lit(ctx, 6);
     bool nosave = arg_get_lit(ctx, 7);
     bool verbose = arg_get_lit(ctx, 8);
+    bool save_keys = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
 
     uint64_t t1 = msclock();
@@ -1725,12 +1791,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds\n", (msclock() - t1) / 1000);
 
-    mf_print_blocks(block_cnt, mem, verbose);
-
-    if (verbose) {
-        mf_print_keys(block_cnt, mem);
-        mf_analyse_acl(block_cnt, mem);
-    }
+    mf_view_dump(mem, bytes, block_cnt, verbose, save_keys);
 
     // Skip saving card data to file
     if (nosave) {
@@ -8510,64 +8571,9 @@ static int CmdHF14AMfView(const char *Cmd) {
         PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
     }
 
-    mf_print_blocks(block_cnt, dump, verbose);
-
-    if (verbose) {
-        mf_print_keys(block_cnt, dump);
-        mf_analyse_acl(block_cnt, dump);
-    }
-
-    if (save_keys) {
-        mf_save_keys_from_arr(block_cnt, dump);
-    }
-
-    const mad1_sector_t *vigik_s0 = (bytes_read >= sizeof(mad1_sector_t)) ? (const mad1_sector_t *)dump : NULL;
-
-    int sector = vigik_s0 ? DetectHID(vigik_s0, 0x4910) : -1;
-    if (sector > -1) {
-        // decode it
-        PrintAndLogEx(INFO, "");
-        PrintAndLogEx(INFO, _CYAN_("VIGIK PACS detected"));
-
-        mad_entry_list_t mad_list = {0};
-        res = MADDecode(vigik_s0, NULL, &mad_list, false, true);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "can't decode MAD");
-            return res;
-        }
-
-        typedef union UDATA {
-            uint8_t *bytes;
-            mfc_vigik_t *vigik;
-        } UDATA;
-        UDATA d;
-        d.bytes = calloc(bytes_read, sizeof(uint8_t));
-        if (d.bytes == NULL) {
-            PrintAndLogEx(WARNING, "Failed to allocate memory");
-            return PM3_EMALLOC;
-        }
-        uint16_t dlen = 0;
-
-        // vigik structure sector 0
-        memcpy(d.bytes + dlen, dump, MFBLOCK_SIZE * 3);
-        dlen += MFBLOCK_SIZE * 3;
-
-        for (size_t i = 0; i < mad_list.len; i++) {
-            if (0x4910 == mad_list.entries[i].aid || 0x4916 == mad_list.entries[i].aid) {
-                uint8_t sno = mad_list.entries[i].sector;
-                uint32_t offset = sno * MFBLOCK_SIZE * 4;
-                memcpy(d.bytes + dlen, dump + offset, MFBLOCK_SIZE * 3);
-                dlen += MFBLOCK_SIZE * 3;
-            }
-        }
-
-//          convert_mfc_2_arr(pdump, bytes_read, d, &dlen);
-        vigik_annotate(d.vigik);
-        free(d.bytes);
-    }
-
+    res = mf_view_dump(dump, bytes_read, block_cnt, verbose, save_keys);
     free(dump);
-    return PM3_SUCCESS;
+    return res;
 }
 
 static int parse_gtu_cfg(uint8_t *d, size_t n) {
