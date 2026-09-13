@@ -26,6 +26,8 @@
 #include "util.h"
 #include "protocols.h"          // MFBLOCK_SIZE
 #include "mifare/mad.h"
+#include "mifare/mifare4.h"        // mfFirstBlockOfSector
+#include "mifare/mifaredefault.h"  // MIFARE_KEY_SIZE
 #include "mbedtls/bignum.h"
 
 static const vigik_pk_t vigik_rsa_pk[] = {
@@ -334,11 +336,133 @@ int vigik_annotate(mfc_vigik_t *d) {
 
 }
 
+// Key layouts of the VIGIK family building access systems. Every one of these
+// ships the same keys on every card, so matching the whole set identifies the
+// system outright - no guessing from the payload. Sourced from the schemas in
+// armsrc/Standalone/hf_colin.c, with the Hexact sector 15 key B measured on a
+// card here; hf_colin.c leaves that slot empty.
+typedef struct {
+    const char *name;
+    uint64_t key_a[16];
+    uint64_t key_b[16];
+} vigik_schema_t;
+
+static const vigik_schema_t vigik_schemas[] = {
+    {
+        "Infineon / Hexact / COGELEC / Intratone",
+        {
+            0x484558414354ULL, 0x484558414354ULL, 0x484558414354ULL, 0x484558414354ULL,
+            0x484558414354ULL, 0x484558414354ULL, 0x484558414354ULL, 0x484558414354ULL,
+            0x484558414354ULL, 0x484558414354ULL, 0x484558414354ULL, 0x484558414354ULL,
+            0x484558414354ULL, 0x484558414354ULL, 0x484558414354ULL, 0x484558414354ULL
+        },
+        {
+            0xa22ae129c013ULL, 0x49fae4e3849fULL, 0x38fcf33072e0ULL, 0x8ad5517b4b18ULL,
+            0x509359f131b1ULL, 0x6c78928e1317ULL, 0xaa0720018738ULL, 0xa6cac2886412ULL,
+            0x62d0c424ed8eULL, 0xe64a986a5d94ULL, 0x8fa1d601d0a2ULL, 0x89347350bd36ULL,
+            0x66d2b7dc39efULL, 0x6bc1e1ae547dULL, 0x22729a9bd40fULL, 0x484558414354ULL
+        }
+    },
+    {
+        "Noralsy",
+        {
+            0x414c41524f4eULL, 0x414c41524f4eULL, 0x414c41524f4eULL, 0x414c41524f4eULL,
+            0x414c41524f4eULL, 0x414c41524f4eULL, 0x414c41524f4eULL, 0x414c41524f4eULL,
+            0x414c41524f4eULL, 0x414c41524f4eULL, 0x414c41524f4eULL, 0x414c41524f4eULL,
+            0x414c41524f4eULL, 0x414c41524f4eULL, 0x414c41524f4eULL, 0x414c41524f4eULL
+        },
+        {
+            0x424c41524f4eULL, 0x424c41524f4eULL, 0x424c41524f4eULL, 0x424c41524f4eULL,
+            0x424c41524f4eULL, 0x424c41524f4eULL, 0x424c41524f4eULL, 0x424c41524f4eULL,
+            0x424c41524f4eULL, 0x424c41524f4eULL, 0x424c41524f4eULL, 0x424c41524f4eULL,
+            0x424c41524f4eULL, 0x424c41524f4eULL, 0x424c41524f4eULL, 0x424c41524f4eULL
+        }
+    },
+    {
+        "Urmet Captiv",
+        {
+            0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL,
+            0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL,
+            0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL,
+            0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL
+        },
+        {
+            0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL,
+            0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL,
+            0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL,
+            0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL
+        }
+    },
+    {
+        "VIGIK service badge",
+        {
+            0xa0a1a2a3a4a5ULL, 0x314b49474956ULL, 0x314b49474956ULL, 0x314b49474956ULL,
+            0x314b49474956ULL, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY,
+            VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY,
+            VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY
+        },
+        {
+            0x010203040506ULL, 0x010203040506ULL, 0x010203040506ULL, 0x010203040506ULL,
+            0x010203040506ULL, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY,
+            VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY,
+            VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY
+        }
+    },
+};
+
+// Key A or key B out of a sector trailer, VIGIK_KEY_ANY when the dump is short
+static uint64_t vigik_sector_key(const uint8_t *dump, size_t dumplen, uint8_t sector, bool keyb) {
+    size_t trailer = (mfFirstBlockOfSector(sector) + mfNumBlocksPerSector(sector) - 1) * MFBLOCK_SIZE;
+    if (trailer + MFBLOCK_SIZE > dumplen) {
+        return VIGIK_KEY_ANY;
+    }
+    const uint8_t *p = dump + trailer + (keyb ? 10 : 0);
+    uint64_t key = 0;
+    for (uint8_t i = 0; i < MIFARE_KEY_SIZE; i++) {
+        key = (key << 8) | p[i];
+    }
+    return key;
+}
+
+const char *vigik_detect_schema(const uint8_t *dump, size_t dumplen) {
+
+    if (dump == NULL) {
+        return NULL;
+    }
+
+    for (size_t i = 0; i < ARRAYLEN(vigik_schemas); i++) {
+
+        const vigik_schema_t *schema = &vigik_schemas[i];
+        bool match = true;
+
+        for (uint8_t s = 0; s < 16 && match; s++) {
+
+            if (schema->key_a[s] != VIGIK_KEY_ANY &&
+                    schema->key_a[s] != vigik_sector_key(dump, dumplen, s, false)) {
+                match = false;
+            }
+
+            if (schema->key_b[s] != VIGIK_KEY_ANY &&
+                    schema->key_b[s] != vigik_sector_key(dump, dumplen, s, true)) {
+                match = false;
+            }
+        }
+
+        if (match) {
+            return schema->name;
+        }
+    }
+    return NULL;
+}
+
 bool is_valid_vigik_card(const uint8_t *dump, size_t dumplen) {
     if (dump == NULL || dumplen < sizeof(mad1_sector_t)) {
         return false;
     }
-    return (DetectHID((const mad1_sector_t *)dump, VIGIK_MAD_AID) > -1);
+    if (DetectHID((const mad1_sector_t *)dump, VIGIK_MAD_AID) > -1) {
+        return true;
+    }
+    return (vigik_detect_schema(dump, dumplen) != NULL);
 }
 
 int vigik_parser_parse(const uint8_t *dump, size_t dumplen) {
@@ -351,6 +475,19 @@ int vigik_parser_parse(const uint8_t *dump, size_t dumplen) {
 
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, _CYAN_("VIGIK PACS detected"));
+
+    const char *schema = vigik_detect_schema(dump, dumplen);
+    if (schema != NULL) {
+        PrintAndLogEx(SUCCESS, "System............. " _YELLOW_("%s"), schema);
+    }
+
+    // Only the deployments that publish a MAD can be taken apart any further.
+    // The others keep the same structure somewhere else on the card, and where
+    // that is has not been worked out, so say so instead of printing nonsense.
+    if (DetectHID(s0, VIGIK_MAD_AID) < 0) {
+        PrintAndLogEx(INFO, "No MAD on this card, structure " _YELLOW_("not decoded"));
+        return PM3_SUCCESS;
+    }
 
     mad_entry_list_t mad_list = {0};
     int res = MADDecode(s0, NULL, &mad_list, false, true);

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mf view` / `hf mf dump --ns` - identify VIGIK family systems (@iceman1001)
 - Added `parsehid.c` - HID PACS decoding for MIFARE Classic dumps
 - Added `parsevigik.c` - VIGIK PACS decoding for MIFARE Classic dumps (@iceman1001)
 - Changed `hf mf view` - now decode a HID PACS credential (@iceman1001)

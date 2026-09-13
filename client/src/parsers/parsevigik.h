@@ -26,7 +26,17 @@
 #define VIGIK_MAD_AID       0x4910
 #define VIGIK_MAD_AID_ALT   0x4916
 
-// True when the MAD of this dump advertises the VIGIK application
+// A key slot the schema does not pin down. Not a valid 48 bit key, so it can
+// never collide with one read off a card.
+#define VIGIK_KEY_ANY   0xFFFFFFFFFFFFFFFFULL
+
+// Name of the VIGIK family system whose key layout this dump matches, NULL when
+// none does. The key sets below are static across every card of a given system,
+// so a full match identifies it outright.
+const char *vigik_detect_schema(const uint8_t *dump, size_t dumplen);
+
+// True when this dump carries the VIGIK application in its MAD, or its keys
+// match a known VIGIK family schema
 bool is_valid_vigik_card(const uint8_t *dump, size_t dumplen);
 
 // Collect the VIGIK sectors out of a whole card dump and print them
