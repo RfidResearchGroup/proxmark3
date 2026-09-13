@@ -907,7 +907,6 @@ SRCS =  mifare/aiddesfire.c \
         parsers/parsehrt.c \
         parsers/parsehid.c \
         parsers/parsevigik.c \
-        parsers/parsehexact.c \
         parsers/hrtparser/hrtparser.c \
         pm3.c \
         pm3_binlib.c \
@@ -1068,6 +1067,9 @@ install: all
 ifneq (,$(INSTALLBIN))
 	    $(Q)$(INSTALLSUDO) $(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLBINRELPATH)
 	    $(Q)$(INSTALLSUDO) $(CP) $(INSTALLBIN) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLBINRELPATH)
+ifeq ($(platform),Linux)
+	    $(Q)$(INSTALLSUDO) setcap 'cap_net_raw,cap_net_admin+eip' $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLBINRELPATH)$(PATHSEP)$(INSTALLBIN) || echo "[!] setcap failed - BLE connect-by-name (-p ble:<name>) will need sudo; connect-by-MAC is unaffected"
+endif
 endif
 ifneq (,$(INSTALLSHARE))
 	    $(Q)$(INSTALLSUDO) $(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLSHARERELPATH)
