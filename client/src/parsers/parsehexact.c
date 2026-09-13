@@ -22,7 +22,8 @@
 //   sector 0  block 2   8 byte per card identifier, then a constant tail
 //   sector 9            48 bytes, differs completely between cards
 //   sector 11           32 bytes, differs completely between cards
-//   sector 15           the system identifier, the same on every card
+//   sector 15           the system text, the same on every card, and in block 2
+//                       the number printed on the fob, little endian
 //   sector 16, 17       MIFARE Classic EV1 signature, not application data
 //
 // The sector 9 and 11 payload is not decoded. It carries no structure in common
@@ -83,12 +84,30 @@ int hexact_parser_parse(const uint8_t *dump, size_t dumplen) {
     const uint8_t *id1 = hexact_sector(dump, dumplen, HEXACT_ID_SECTOR, 1);
     const uint8_t *id2 = hexact_sector(dump, dumplen, HEXACT_ID_SECTOR, 2);
 
-    PrintAndLogEx(INFO, "System............. %.16s", (const char *)id0);
+    // The sector spells the system out across its three blocks and it reads as
+    // one line, so join them. Each block pads its text with spaces, and the
+    // last one keeps four bytes of its own before the text starts.
+    char system[16 + 16 + 12 + 3] = {0};
+    str_append(system, sizeof(system), "%.16s", (const char *)id0);
+    str_trim(system);
+
     if (id1) {
-        PrintAndLogEx(INFO, "                    %.16s", (const char *)id1);
+        str_append(system, sizeof(system), " %.16s", (const char *)id1);
+        str_trim(system);
     }
+
     if (id2) {
-        PrintAndLogEx(INFO, "                    %.12s", (const char *)(id2 + 4));
+        str_append(system, sizeof(system), " %.12s", (const char *)(id2 + 4));
+        str_trim(system);
+    }
+
+    PrintAndLogEx(INFO, "System............. " _YELLOW_("%s"), system);
+
+    // Sector 15 block 2 keeps the number engraved on the fob as a little endian
+    // value in front of the INTRATONE text. Checked against the engraving on
+    // four fobs, all four matched.
+    if (id2) {
+        PrintAndLogEx(INFO, "Printed serial..... " _YELLOW_("%u"), MemLeToUint4byte(id2));
     }
 
     // sector 0 block 2 holds a per card value followed by a tail that is the
