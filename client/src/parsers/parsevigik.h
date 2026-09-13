@@ -47,4 +47,7 @@ const char *vigik_get_service(uint16_t service_code);
 int vigik_verify(mfc_vigik_t *d);
 int vigik_annotate(mfc_vigik_t *d);
 
+// Recover and check the signature of a known good expired card
+int vigik_selftest(void);
+
 #endif

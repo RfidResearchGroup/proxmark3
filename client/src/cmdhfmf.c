@@ -45,6 +45,7 @@
 #include "mifare/gen4.h"
 #include "parsers/parsehid.h"
 #include "parsers/parsevigik.h"
+#include "parsers/parsehexact.h"
 #include "generator.h"              // keygens.
 #include "fpga.h"
 #include "mifare/mifarehost.h"
@@ -883,6 +884,10 @@ static int mf_view_dump(uint8_t *dump, size_t bytes_read, uint16_t block_cnt, bo
 
     if (is_valid_vigik_card(dump, bytes_read)) {
         (void)vigik_parser_parse(dump, bytes_read);
+    }
+
+    if (is_valid_hexact_card(dump, bytes_read)) {
+        (void)hexact_parser_parse(dump, bytes_read);
     }
 
     return PM3_SUCCESS;
@@ -8466,13 +8471,15 @@ static int CmdHF14AMfView(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf view",
                   "Print a MIFARE Classic dump file (bin/eml/json)",
-                  "hf mf view -f hf-mf-01020304-dump.bin"
+                  "hf mf view -f hf-mf-01020304-dump.bin\n"
+                  "hf mf view --selftest"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "sk", "Save extracted keys to binary file"),
+        arg_lit0(NULL, "selftest", "Run the dump parsers self tests and exit"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -8481,7 +8488,17 @@ static int CmdHF14AMfView(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
     bool save_keys = arg_get_lit(ctx, 3);
+    bool selftest = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
+
+    if (selftest) {
+        return vigik_selftest();
+    }
+
+    if (fnlen == 0) {
+        PrintAndLogEx(ERR, "Specify a filename with `-f` or run `--selftest`");
+        return PM3_EINVARG;
+    }
 
     // read dump file
     uint8_t *dump = NULL;
