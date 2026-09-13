@@ -2228,6 +2228,9 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
             case PM3_EFAILED:
                 PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n");
                 break;
+            case PM3_EWRONGANSWER:
+                PrintAndLogEx(FAILED, "Tag refused the nested authentication for block " _YELLOW_("%u") "\n", trgBlockNo);
+                break;
             case PM3_ESOFT:
                 PrintAndLogEx(FAILED, "No valid key found");
                 break;
@@ -2331,6 +2334,11 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
                         case PM3_EFAILED :
                             PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is not predictable)\n");
                             break;
+                        case PM3_EWRONGANSWER:
+                            // tag refused this block,  nothing to gain by retrying it
+                            PrintAndLogEx(FAILED, "Tag refused the nested authentication for sector " _YELLOW_("%u") "\n", sectorNo);
+                            calibrate = false;
+                            continue;
                         case PM3_ESOFT:
                             //key not found
                             calibrate = false;
@@ -2940,6 +2948,20 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
         DropField();
     }
     return isOK;
+}
+
+// how many keys are in hand right now.  a sector that can't be cracked should
+// not cost the ones that already came out
+static uint8_t mfc_found_key_count(const sector_t *e_sector, uint8_t sector_cnt) {
+    uint8_t n = 0;
+    for (uint8_t i = 0; i < sector_cnt; i++) {
+        for (uint8_t j = MF_KEY_A; j <= MF_KEY_B; j++) {
+            if (e_sector[i].foundKey[j]) {
+                n++;
+            }
+        }
+    }
+    return n;
 }
 
 static int CmdHF14AMfAutoPWN(const char *Cmd) {
@@ -3706,9 +3728,28 @@ tryNested:
                         switch (isOK) {
                             case PM3_ETIMEOUT: {
                                 PrintAndLogEx(ERR, "\nError: No response from Proxmark3.");
+
+                                uint8_t havekeys = mfc_found_key_count(e_sector, sector_cnt);
+                                if (havekeys) {
+                                    PrintAndLogEx(INFO, "Keeping the " _YELLOW_("%u") " key%s recovered so far",
+                                                  havekeys,
+                                                  (havekeys == 1) ? "" : "s"
+                                                 );
+                                    goto all_found;
+                                }
+
                                 free(e_sector);
                                 free(fptr);
                                 return isOK;
+                            }
+                            case PM3_EWRONGANSWER: {
+                                // the tag NAKed the nested auth for this block.  it is a
+                                // refusal, so move on rather than grind the same sector
+                                PrintAndLogEx(FAILED, "Tag refused the nested authentication, skipping sector " _YELLOW_("%3d") " key type " _YELLOW_("%c"),
+                                              current_sector_i,
+                                              (current_key_type_i == MF_KEY_B) ? 'B' : 'A'
+                                             );
+                                continue;
                             }
                             case PM3_EOPABORTED: {
                                 PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
