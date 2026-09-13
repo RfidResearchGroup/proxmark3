@@ -21,7 +21,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <time.h>
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <bluetooth/bluetooth.h>
@@ -29,8 +28,9 @@
 #include <bluetooth/hci.h>
 #include <bluetooth/hci_lib.h>
 
-#include "ui.h"        // PrintAndLogEx
-#include "pm3_cmd.h"   // PM3_* (only for messaging parity; returns are 0/neg here)
+#include "ui.h"          // PrintAndLogEx
+#include "pm3_cmd.h"     // PM3_SUCCESS / PM3_E*
+#include "util_posix.h"  // msclock, msleep
 
 #define ATT_CID                 4
 
@@ -193,12 +193,6 @@ static int att_subscribe(int fd, uint16_t cccd_handle) {
 #define BLE_ADV_NAME_SHORT   0x08
 #define BLE_ADV_NAME_FULL    0x09
 
-static long ble_now_ms(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return ts.tv_sec * 1000L + ts.tv_nsec / 1000000L;
-}
-
 // Walk the AD structures of one advertising/scan-response report, looking for a
 // Local Name (complete or shortened) that equals `want` (case-insensitive).
 // Copies whatever name it finds into `found` for logging. Returns 1 on match.
@@ -240,20 +234,20 @@ static void ble_print_caps_hint(void) {
 }
 
 int ble_resolve_name(const char *name, char *out_mac, size_t out_mac_sz, int timeout_ms) {
-    if (name == NULL || out_mac == NULL || out_mac_sz < 18) return -1;
+    if (name == NULL || out_mac == NULL || out_mac_sz < 18) return PM3_EINVARG;
     out_mac[0] = 0;
 
     int dev_id = hci_get_route(NULL);
     if (dev_id < 0) {
         PrintAndLogEx(ERR, "BLE: no local Bluetooth adapter found (%s)", strerror(errno));
-        return -1;
+        return PM3_EIO;
     }
     int dd = hci_open_dev(dev_id);
     if (dd < 0) {
         PrintAndLogEx(ERR, "BLE: cannot open hci%d (%s)", dev_id, strerror(errno));
         if (errno == EPERM || errno == EACCES)
             ble_print_caps_hint();
-        return -1;
+        return PM3_EIO;
     }
 
     // NOTE: despite the header naming its first arg `dev_id`, BlueZ's
@@ -271,7 +265,7 @@ int ble_resolve_name(const char *name, char *out_mac, size_t out_mac_sz, int tim
         if (errno == EPERM || errno == EACCES)
             ble_print_caps_hint();
         hci_close_dev(dd);
-        return -1;
+        return PM3_EIO;
     }
 
     // Receive only HCI event packets carrying LE meta events; save/restore the
@@ -286,13 +280,13 @@ int ble_resolve_name(const char *name, char *out_mac, size_t out_mac_sz, int tim
 
     PrintAndLogEx(INFO, "BLE: scanning up to " _YELLOW_("%d") " ms for " _YELLOW_("%s") " ...", timeout_ms, name);
 
-    int rc = -1;
+    int rc = PM3_ETIMEOUT;
     char nm[64];
-    long deadline = ble_now_ms() + timeout_ms;
+    uint64_t deadline = msclock() + (uint64_t)timeout_ms;
     uint8_t buf[HCI_MAX_EVENT_SIZE];
 
-    while (ble_now_ms() < deadline) {
-        long rem = deadline - ble_now_ms();
+    while (msclock() < deadline) {
+        int64_t rem = (int64_t)(deadline - msclock());
         if (rem <= 0) break;
         struct timeval tv = { .tv_sec = rem / 1000, .tv_usec = (rem % 1000) * 1000 };
         fd_set rs;
@@ -321,19 +315,19 @@ int ble_resolve_name(const char *name, char *out_mac, size_t out_mac_sz, int tim
             if (ble_ad_name_matches(name, info->data, info->length, nm, sizeof(nm))) {
                 ba2str(&info->bdaddr, out_mac);
                 PrintAndLogEx(SUCCESS, "BLE: found " _GREEN_("%s") " at " _GREEN_("%s"), nm, out_mac);
-                rc = 0;
+                rc = PM3_SUCCESS;
                 break;
             }
             p = next;
         }
-        if (rc == 0) break;
+        if (rc == PM3_SUCCESS) break;
     }
 
     hci_le_set_scan_enable(dd, 0x00, 0x00, 1000);
     if (have_of) setsockopt(dd, SOL_HCI, HCI_FILTER, &of, sizeof(of));
     hci_close_dev(dd);
 
-    if (rc != 0)
+    if (rc != PM3_SUCCESS)
         PrintAndLogEx(ERR, "BLE: no advertising device named " _YELLOW_("%s") " seen within %d ms", name, timeout_ms);
     return rc;
 }
@@ -346,9 +340,12 @@ int ble_resolve_name(const char *name, char *out_mac, size_t out_mac_sz, int tim
 #define BLE_CONNECT_TRIES        6
 #define BLE_CONNECT_BACKOFF_MS   150
 
-// Open an L2CAP/ATT socket and connect to `mac`. Returns the fd on success,
-// -1 on a retryable connect failure (errno set to the connect error), or
-// -2 on a hard setup failure (socket/bind), which is already logged.
+// Open an L2CAP/ATT socket and connect to `mac`. Returns the fd (>= 0) on
+// success, -1 on a retryable connect failure (errno set to the connect
+// error), or -2 on a hard setup failure (socket/bind), which is already
+// logged. Private helper: intentionally NOT PM3_E*-coded since it returns a
+// real fd on success and PM3_SUCCESS (0) would collide with a valid fd 0;
+// ble_connect() below translates its result to PM3_E* for the public API.
 static int ble_l2cap_connect(const char *mac) {
     int fd = socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
     if (fd < 0) {
@@ -395,15 +392,15 @@ int ble_connect(const char *mac, uint16_t chr_uuid16, ble_conn_t *conn) {
     for (int attempt = 1; attempt <= BLE_CONNECT_TRIES; attempt++) {
         fd = ble_l2cap_connect(mac);
         if (fd >= 0) break;
-        if (fd == -2) return -1;              // hard setup failure, already logged
+        if (fd == -2) return PM3_EIO;         // hard setup failure, already logged
         last_errno = errno;                   // retryable connect failure
         if (attempt < BLE_CONNECT_TRIES) {
-            usleep(BLE_CONNECT_BACKOFF_MS * 1000);
+            msleep(BLE_CONNECT_BACKOFF_MS);
         }
     }
     if (fd < 0) {
         PrintAndLogEx(ERR, "BLE: cannot connect to " _YELLOW_("%s") " (%s)", mac, strerror(last_errno));
-        return -1;
+        return PM3_EIO;
     }
 
     conn->fd = fd;
@@ -430,16 +427,16 @@ int ble_connect(const char *mac, uint16_t chr_uuid16, ble_conn_t *conn) {
 
     PrintAndLogEx(SUCCESS, "BLE connected, MTU " _GREEN_("%u") ", char handle " _GREEN_("0x%04X"),
                   conn->mtu, conn->val_handle);
-    return 0;
+    return PM3_SUCCESS;
 
 fail:
     close(fd);
     conn->fd = -1;
-    return -1;
+    return PM3_EIO;
 }
 
 int ble_send(ble_conn_t *conn, const uint8_t *data, size_t len) {
-    if (conn->fd < 0) return -1;
+    if (conn->fd < 0) return PM3_ENOTTY;
     size_t chunk = (conn->mtu > 3) ? (size_t)(conn->mtu - 3) : 20;
     uint8_t pdu[3 + 517];
     for (size_t off = 0; off < len; off += chunk) {
@@ -448,14 +445,14 @@ int ble_send(ble_conn_t *conn, const uint8_t *data, size_t len) {
         put16(&pdu[1], conn->val_handle);
         memcpy(&pdu[3], data + off, clen);
         if (att_write_pdu(conn->fd, pdu, 3 + clen) != 0) {
-            return -1;
+            return PM3_EIO;
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int ble_recv(ble_conn_t *conn, uint8_t *buf, size_t maxlen, size_t *out_len, int timeout_ms) {
-    if (conn->fd < 0) return -1;
+    if (conn->fd < 0) return PM3_ENOTTY;
     size_t got = 0;
 
     // 1) drain any leftover payload from a previous oversized notification
@@ -466,7 +463,7 @@ int ble_recv(ble_conn_t *conn, uint8_t *buf, size_t maxlen, size_t *out_len, int
         size_t rem = conn->leftover_len - take;
         if (rem) memmove(conn->leftover, conn->leftover + take, rem);
         conn->leftover_len = rem;
-        if (got == maxlen) { *out_len = got; return 0; }
+        if (got == maxlen) { *out_len = got; return PM3_SUCCESS; }
     }
 
     // 2) pull notifications until buffer full or a real timeout.
@@ -479,7 +476,7 @@ int ble_recv(ble_conn_t *conn, uint8_t *buf, size_t maxlen, size_t *out_len, int
     uint8_t pdu[3 + 517];
     for (;;) {
         int n = att_read_pdu(conn->fd, pdu, sizeof(pdu), timeout_ms);
-        if (n < 0) { *out_len = got; return (got > 0) ? 0 : -1; }
+        if (n < 0) { *out_len = got; return (got > 0) ? PM3_SUCCESS : PM3_EIO; }
         if (n == 0) break;                                  // real timeout / no more
         if ((pdu[0] != ATT_OP_HANDLE_NOTIFY && pdu[0] != ATT_OP_HANDLE_INDICATE) || n < 3)
             continue;                                       // ignore non-notifications
@@ -500,7 +497,7 @@ int ble_recv(ble_conn_t *conn, uint8_t *buf, size_t maxlen, size_t *out_len, int
     }
 
     *out_len = got;
-    return 0;
+    return PM3_SUCCESS;
 }
 
 void ble_close(ble_conn_t *conn) {
