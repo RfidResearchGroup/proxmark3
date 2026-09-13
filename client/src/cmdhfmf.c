@@ -3612,8 +3612,14 @@ noValidKeyFound:
     num_to_bytes(0, MIFARE_KEY_SIZE, tmp_key);
     bool nested_failed = false;
 
+    // a refused sector prints a single line,  so it should not be wrapped in the
+    // blank line that separates the multi line output of a real attack
+    bool skipped_last = false;
+
     // Iterate over each sector and key(A/B)
     for (current_sector_i = 0; current_sector_i < sector_cnt; current_sector_i++) {
+
+        skipped_last = false;
 
         for (current_key_type_i = MF_KEY_A; current_key_type_i <= MF_KEY_B; current_key_type_i++) {
 
@@ -3715,7 +3721,10 @@ skipReadBKey:
                     if (prng_type && (nested_failed == false)) {
                         uint8_t retries = 0;
 
-                        PrintAndLogEx(NORMAL, "");
+                        if (skipped_last == false) {
+                            PrintAndLogEx(NORMAL, "");
+                        }
+
                         if (verbose) {
                             PrintAndLogEx(INFO, "--- " _CYAN_("Enter nested key recovery mode") " -----------------------------");
                             PrintAndLogEx(INFO, "Sector " _YELLOW_("%3d") " key type " _YELLOW_("%c"),
@@ -3749,6 +3758,7 @@ tryNested:
                                               current_sector_i,
                                               (current_key_type_i == MF_KEY_B) ? 'B' : 'A'
                                              );
+                                skipped_last = true;
                                 continue;
                             }
                             case PM3_EOPABORTED: {
